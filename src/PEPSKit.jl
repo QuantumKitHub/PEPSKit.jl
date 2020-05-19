@@ -1,5 +1,5 @@
 module PEPSKit
-    using TensorKit, KrylovKit, MPSKit#, OptimKit
+    using TensorKit, KrylovKit, MPSKit, OptimKit
 
     export InfPEPS,FinPEPS
     export nonsym_nn_ising_ham
@@ -33,7 +33,7 @@ module PEPSKit
 
     include("algorithms/expval.jl")
     include("algorithms/derivs.jl")
-    #include("algorithms/optimhook.jl")
+    include("algorithms/groundstate/optimhook.jl")
 
     include("models/ising.jl")
 end # module

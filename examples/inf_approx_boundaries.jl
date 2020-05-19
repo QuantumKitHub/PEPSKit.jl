@@ -23,7 +23,7 @@ pars = params(peps);
 row = 2
 col = 2
 direction = North;
-(AL,AC,AR) = boundary(pars,row,col,North)
+pars.AL[North,row,col]
 
 # this tensor will fit on the peps tensor [row,col]
 @show space(AC,2),space(peps[row,col],North)

@@ -157,6 +157,14 @@ git-tree-sha1 = "d9f196d911f55aeaff11b11f681b135980783824"
 uuid = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
 version = "0.6.6"
 
+[[OptimKit]]
+deps = ["LinearAlgebra", "Printf"]
+git-tree-sha1 = "2a8bb5784a24c5cb3a040b59a3868a37f9595442"
+repo-rev = "master"
+repo-url = "https://github.com/Jutho/OptimKit.jl.git"
+uuid = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
+version = "0.0.0"
+
 [[OrderedCollections]]
 git-tree-sha1 = "12ce190210d278e12644bcadf5b21cbdcf225cd3"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
