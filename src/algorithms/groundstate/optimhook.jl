@@ -1,4 +1,4 @@
-function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.OptimizationAlgorithm;pars=params(peps,ham),finalize! =(x,f,g,numiter)->(x,f,g))
+function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.OptimizationAlgorithm;pars=params(peps,ham),bound_finalize =(iter,state,ham,pars)->(state,pars))
     #to call optimkit we will pack (peps,prevpars) together in a tuple
     #the gradient type will simply be a 2d array of tensors
     function objfun(x)
@@ -24,7 +24,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
             @tensor npe[i,j][-1 -2 -3 -4;-5]+=(α*cgr[i,j])[-1,-2,-3,-4,-5]
             npe[i,j]=npe[i,j]/norm(npe[i,j])
         end
-        MPSKit.recalculate!(npr,npe)
+        MPSKit.recalculate!(npr,npe,bound_finalize=bound_finalize)
 
         #should also calculate "local gradient along that path"
         return (npe,npr),cgr
@@ -49,7 +49,6 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
         transport! = transport!,
         scale! = scale!,
         add! = add!,
-        finalize! = finalize!,
         isometrictransport = false)
 
     return (x[1],x[2],normgradhistory[end])
