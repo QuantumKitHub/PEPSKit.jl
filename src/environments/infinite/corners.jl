@@ -15,6 +15,12 @@ function northwest_corner_tensors(init,nbound,npars,wbound,wpars,peps;verbose=tr
         curl = [rightenv(wpars,s,nrows-i+1,wbound) for s in 1:ncols];
         botl = nbound.AL[i,1:ncols];
 
+        if (space(init[i,1],1) != space(botl[1],1)) || (space(init[i,1],2)' != space(curl[1],1))
+            #check if init is actually compatible
+            #if not; initialize with a random one
+            init[i,1] = TensorMap(rand,ComplexF64,space(botl[1],1),space(curl[1],1))
+        end
+
         (vals,vecs,convhist)=eigsolve(x->transfer_left(x,curl,botl),init[i,1],1,:LM,Arnoldi());
         convhist.converged == 0 && @info "lcorner failed to converge"
         lfps[i,1] = vecs[1]
@@ -29,7 +35,7 @@ function northwest_corner_tensors(init,nbound,npars,wbound,wpars,peps;verbose=tr
         curr = [leftenv(npars,1-s,i,nbound) for s in 1:nrows];
         botr = wbound.AR[i,1:nrows];
 
-        (vals,vecs,convhist)=eigsolve(x->transfer_right(x,curr,botr),init[1,i],1,:LM,Arnoldi());
+        (vals,vecs,convhist)=eigsolve(x->transfer_right(x,curr,botr),lfps[1,i],1,:LM,Arnoldi());
         convhist.converged == 0 && @info "rcorner failed to converge"
         rfps[1,i] = vecs[1]
 
