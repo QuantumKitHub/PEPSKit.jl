@@ -91,12 +91,10 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
         if space(pars.rw[i,end],1) != space(bmps.AR[i,end],4)' || space(pars.rw[i,end],4)' != space(bmps.AR[i+1,end],4)'
             pars.rw[i,end] = TensorMap(rand,ComplexF64,space(bmps.AR[i,end],4)'*space(peps[i,end],3)'*space(peps[i,end],3),space(bmps.AR[i+1,end],4)')
         end
-
         (vals,vecs,convhist) = eigsolve(x->transfer_right(x,peps[i,:],bmps.AR[i,:],bmps.AR[i+1,:]),pars.rw[i,end],1,:LM,Arnoldi());
         convhist.converged == 0 && @info "rboundary failed to converge"
         pars.rw[i,end] = vecs[1];
 
-		phases[i] = vals[1]/abs(vals[1])
 	end
 
 	#fix the normalization and transfer through
