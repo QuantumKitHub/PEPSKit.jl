@@ -1,6 +1,6 @@
 #leverage mpskit to find the leading boundary
-function north_boundary_mps(peps,init;tol=1e-10,verbose=false,maxiter=100,bondmanage=bondmanage)
-	(init,pars,err) = leading_boundary(init,peps,Vumps(tol_galerkin=tol,verbose=verbose,maxiter=maxiter,manager=bondmanage))
+function north_boundary_mps(peps,init;tol=1e-10,verbose=false,maxiter=100)
+	(init,pars,err) = leading_boundary(init,peps,Vumps(tol_galerkin=tol,verbose=verbose,maxiter=maxiter))
 
 	#=
 		we have the leading bounary mps in the sense that it's (approximate) eigenvalue after transferring over the entire unit cell is maximal
@@ -78,7 +78,7 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
 	# need a better solution in future
 	solutions = similar(phases);
 	solutions[1] = 1.0;
-	
+
 	for i in 2:size(bmps,1)
 		solutions[i] = solutions[i-1]/phases[i-1]
 		rmul!(bmps.AL[i,1],1/solutions[i])

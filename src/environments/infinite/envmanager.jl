@@ -74,12 +74,12 @@ function MPSKit.params(peps::InfPEPS;kwargs...)
     return MPSKit.recalculate!(InfEnvManager(peps,boundaries,corners,fp0,fp1,fp2),peps;kwargs...)
 end
 
-function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10,bondmanage=SimpleManager())
+function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10)
     prevenv.peps = peps;
 
     #pars == the boundary mps parameters
     pars = map(Dirs) do dir
-        (prevenv.boundaries[dir],par,err) = north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bondmanage=bondmanage);
+        (prevenv.boundaries[dir],par,err) = north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol);
         par
     end
 
@@ -105,55 +105,48 @@ function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = fals
 end
 
 function renormalize!(man::InfEnvManager;verbose=false)
+
     #=
         In this bit of code we try to fix all free parameters
         such that the consistency equations are all mostly valid
     =#
 
     for (i,j) in Iterators.product(1:size(man.peps,1),1:size(man.peps,2))
+
         nw = man.corners[NorthWest][i,j];
         ne = man.corners[NorthEast][end-j+2,i];
         se = man.corners[SouthEast][end-i+2,end-j+2];
         sw = man.corners[SouthWest][j,end-i+2];
+
+        n0 = man.fp0[North][i,j];
+        e0 = man.fp0[East][end-j+2,i];
+        s0 = man.fp0[South][end-i+2,end-j+2];
+        w0 = man.fp0[West][j,end-i+2];
 
         n = man.boundaries[North].CR[i,j-1];
         e = man.boundaries[East].CR[end-j+2,i-1];
         s = man.boundaries[South].CR[end-i+2,end-j+1];
         w = man.boundaries[West].CR[j,end-i+1];
 
-        a = tr(nw*ne*se*sw);
-        b = tr(n*e*s*w);
+        a = dot(n,nw*n0*ne);
+        b = dot(e,ne*e0*se);
+        c = dot(s,se*s0*sw);
+        d = dot(w,sw*w0*nw);
 
-        val = b/a;
-        val /= abs(val);
+        #an approximate solution for the problem is given by:
+        rmul!(ne,1/a);
+        rmul!(se,d/c)
+        rmul!(sw,1/d)
 
-        rmul!(nw,val); # this has to hold - otherwise the norm won't be real
-    end
+        # a*c should equal b*d - we are not able to do change that
+        # assuming this is equal, the consistency equation can be fully solved
+        verbose && println("fp0 inconsistency $(abs(a*c-b*d))")
 
-
-    #solve fp0 inconcistency (we fix some bounary phase things as well in the meantime)
-    for dir in [East,North]
-        nw = man.corners[dir];ne = man.corners[right(dir)];
-        n = man.boundaries[dir];
-        e = man.boundaries[right(dir)];
-        w = man.boundaries[left(dir)];
-        n0 = man.fp0[dir];
-        s0 = man.fp0[right(right(dir))];
-
-        (tnr,tnc) = rotate_north(size(man.peps),dir)
-        for (i,j) in Iterators.product(1:tnr,1:tnc)
-            val = dot(n.CR[i,j-1],nw[i,j]*n0[i,j]*ne[end-j+2,i])
-            val /= abs(val);
-            rmul!(n0[i,j],1/val)
-            rmul!(s0[end-i,end-j+2],val)
-
-            rmul!(e.AL[end-j+2,i],val);
-            rmul!(e.AR[end-j+2,i],val);
-            rmul!(e.AC[end-j+2,i],val);
-            rmul!(e.AL[end-j+2,i-1],1/val);
-            rmul!(e.AR[end-j+2,i-1],1/val);
-            rmul!(e.AC[end-j+2,i-1],1/val);;
-        end
+        #these are all the consistency equations we impose in this step : ...
+        verbose && println("fp0 - nw inconsistency $(norm(nw*n0*ne-n))")
+        verbose && println("fp0 - ne inconsistency $(norm(ne*e0*se-e))")
+        verbose && println("fp0 - se inconsistency $(norm(se*s0*sw-s))")
+        verbose && println("fp0 - sw inconsistency $(norm(sw*w0*nw-w))")
     end
 
     for dir in Dirs
