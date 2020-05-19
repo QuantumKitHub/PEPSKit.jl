@@ -74,12 +74,12 @@ function MPSKit.params(peps::InfPEPS;kwargs...)
     return MPSKit.recalculate!(InfEnvManager(peps,boundaries,corners,fp0,fp1,fp2),peps;kwargs...)
 end
 
-function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10)
+function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10,bound_finalize = (iter,state,ham,pars)->(state,pars))
     prevenv.peps = peps;
 
     #pars == the boundary mps parameters
     pars = map(Dirs) do dir
-        (prevenv.boundaries[dir],par,err) = north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol);
+        (prevenv.boundaries[dir],par,err) = north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize);
         par
     end
 
