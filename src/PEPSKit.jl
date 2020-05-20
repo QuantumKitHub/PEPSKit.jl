@@ -2,7 +2,7 @@ module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit
 
     export InfPEPS,FinPEPS
-    export nonsym_nn_ising_ham
+    export nonsym_nn_ising_ham,nonsym_nn_xxz_ham
 
     export North,East,South,West
     export NorthEast,SouthEast,SouthWest,NorthWest
@@ -36,4 +36,5 @@ module PEPSKit
     include("algorithms/groundstate/optimhook.jl")
 
     include("models/ising.jl")
+    include("models/xxz.jl")
 end # module
