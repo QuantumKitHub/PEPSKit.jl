@@ -17,7 +17,6 @@ module PEPSKit
     include("utility/transfers.jl")
 
     include("states/infinite_peps.jl")
-    include("states/finite_peps.jl")
 
     include("operators/nearest_neighbour.jl")
 
