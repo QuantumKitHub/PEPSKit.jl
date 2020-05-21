@@ -37,6 +37,6 @@ peps = InfPEPS(map(Iterators.product(1:2,1:2)) do (i,j)
 end);
 
 optalg = GradientDescent(linesearch = HagerZhangLineSearch(ϵ = 1e-3,verbosity=0),maxiter=50,verbosity=20,gradtol=1e-3)
-reval = find_groundstate(peps,ham,optalg,bound_finalize=bound_finalize)
+(peps,pars,err) = find_groundstate(peps,ham,optalg,bound_finalize=bound_finalize)
 
 @show expectation_value(peps,ham,pars)

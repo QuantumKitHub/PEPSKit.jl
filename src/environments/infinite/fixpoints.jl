@@ -26,7 +26,8 @@ function fp0!(east,west;verbose=false)
 
         pref = (1.0/lva[1])^(1/(2*nrows));
 
-        #first we change the phase of up.AL to make lva real
+        # first we change the phase AND AMPLITUDE of up.AL to make lva real
+        # it's a bit annoying because mpskit assumes things to be orthonormalized
         for temp in 1:nrows
             rmul!(east.AL[end-i+2,temp],pref)
             rmul!(east.AC[end-i+2,temp],pref)

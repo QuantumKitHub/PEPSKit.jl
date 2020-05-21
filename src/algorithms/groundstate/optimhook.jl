@@ -15,7 +15,9 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
 
     function retract(x, cgr, α)
         (cpe,cpr) = x;
+
         @info "trying stepsize $α"
+        flush(stdout)
 
         #we on't want retract to overwrite the old state!
         npe = deepcopy(cpe)
