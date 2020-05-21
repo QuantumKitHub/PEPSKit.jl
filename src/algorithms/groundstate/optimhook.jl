@@ -10,24 +10,35 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
             permute(heff*v - dot(v,heff*v)*neff*v,(1,2,3,4),(5,))
         end
 
-        real(expectation_value(cpe,ham,cpr)),cg
+        real(expectation_value(cpe,ham,cpr))/(size(cpe,1)*size(cpe,2)),cg
     end
 
     function retract(x, cgr, α)
         (cpe,cpr) = x;
+        @info "trying stepsize $α"
 
         #we on't want retract to overwrite the old state!
         npe = deepcopy(cpe)
         npr = deepcopy(cpr);
 
+
         for (i,j) in Iterators.product(1:size(cpe,1),1:size(cpe,2))
             @tensor npe[i,j][-1 -2 -3 -4;-5]+=(α*cgr[i,j])[-1,-2,-3,-4,-5]
             npe[i,j]=npe[i,j]/norm(npe[i,j])
         end
+
+        prevnorms = map(norm,npe);
         MPSKit.recalculate!(npr,npe,bound_finalize=bound_finalize)
+        newnorms = map(norm,npe);
+
+        newgrad = deepcopy(cgr);
+        for (i,j) in Iterators.product(1:size(cpe,1),1:size(cpe,2))
+            newgrad[i,j]*=newnorms[i,j]/prevnorms[i,j]
+        end
+
 
         #should also calculate "local gradient along that path"
-        return (npe,npr),cgr
+        return (npe,npr),newgrad
     end
 
     function inner(x, v1, v2)
@@ -43,6 +54,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
     scale!(v, α) = v.*α
     add!(vdst, vsrc, α) = vdst+α.*vsrc
 
+
     (x,fx,gx,normgradhistory)=optimize(objfun,(peps,pars),alg;
         retract = retract,
         inner = inner,
@@ -52,4 +64,6 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
         isometrictransport = false)
 
     return (x[1],x[2],normgradhistory[end])
+
+    #return optimtest(objfun, (peps,pars), objfun((peps,pars))[2]; alpha= 0:0.01:0.1,retract = retract, inner = inner)
 end

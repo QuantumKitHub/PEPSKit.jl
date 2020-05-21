@@ -15,13 +15,13 @@ function fp0!(east,west;verbose=false)
         initl = TensorMap(rand,ComplexF64,space(west.AL[i,end],4)',space(east.AL[end-i+2,1],1))
 
         (lva,lve,convhist) = eigsolve(x->crosstransfer(x,east.AL[end-i+2,:],reverse(west.AR[i,:])),initl,1,:LM,Arnoldi());
-        convhist.converged == 0 && @info "lfp0 failed to converge"
+        convhist.converged == 0 && @warn "lfp0 failed to converge"
         (rva,rve,convhist) = eigsolve(x->crosstransfer(x,west.AL[i,:],reverse(east.AR[end-i+2,:])),initr,1,:LM,Arnoldi());
-        convhist.converged == 0 && @info "rfp0 failed to converge"
+        convhist.converged == 0 && @warn "rfp0 failed to converge"
 
         verbose && println("leading lfp0 val $((lva[1]))")
         verbose && println("leading rfp0 val $((rva[1]))")
-        @assert rva[1] ≈ lva[1]
+        rva[1] ≈ lva[1] || @warn "leading eigenvalues don't match up $(rva[1]) $(lva[1])"
 
 
         pref = (1.0/lva[1])^(1/(2*nrows));
@@ -76,11 +76,10 @@ function north_fp1(west,peps,east;verbose = false)
         (lva,lve,convhist) = eigsolve(x->crosstransfer(x,peps[:,i],east.AL[end-i+1,:],reverse(west.AR[i,:])),initl,1,:LM,Arnoldi());
         convhist.converged == 0 && @info "fp1 failed to converge"
         verbose && println("leading fp1 val $(lva[1]))")
-
         nfps[1,i] = lve[1];
 
         for j in 2:nrows
-            nfps[j,i] = crosstransfer(nfps[j-1,i],peps[j-1,i],east.AL[end-i+1,j-1],west.AR[i,nrows-j+2])
+            nfps[j,i] = crosstransfer(nfps[j-1,i],peps[j-1,i],east.AL[end-i+1,j-1],west.AR[i,end-j+2])
         end
     end
 

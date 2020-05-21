@@ -74,12 +74,12 @@ function MPSKit.params(peps::InfPEPS;kwargs...)
     return MPSKit.recalculate!(InfEnvManager(peps,boundaries,corners,fp0,fp1,fp2),peps;kwargs...)
 end
 
-function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10,bound_finalize = (iter,state,ham,pars)->(state,pars))
+function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10,bound_finalize = (iter,state,ham,pars)->(state,pars),maxiter=1000)
     prevenv.peps = peps;
 
     #pars == the boundary mps parameters
     pars = map(Dirs) do dir
-        (prevenv.boundaries[dir],par,err) = north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize);
+        (prevenv.boundaries[dir],par,err) = north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize,maxiter=1000);
         par
     end
 
@@ -155,22 +155,22 @@ function renormalize!(man::InfEnvManager;verbose=false)
 
         (tnr,tnc) = rotate_north(size(man.peps),dir)
         for (i,j) in Iterators.product(1:tnr,1:tnc)
-            #solve fp1 inconsistency
-            val = @tensor conj(n.AC[i,j][-1,-2,-3,-4])*nw[i,j][-1,2]*n1[i,j][2,-2,-3,3]*ne[end-j+1,i][3,-4]
-            rmul!(n1[i,j],1/val)
+            @tensor tout[-1 -2 -3;-4]:=nw[i,j][-1,2]*n1[i,j][2,-2,-3,3]*ne[end-j+1,i][3,-4]
+            val = dot(tout,n.AC[i,j])/(norm(tout)*norm(tout));
+            rmul!(n1[i,j],val)
 
-            #show remaining inconsistency
             @tensor tout[-1 -2 -3;-4]:=nw[i,j][-1,2]*n1[i,j][2,-2,-3,3]*ne[end-j+1,i][3,-4]
             verbose && println("fp1 inconsistency $(norm(tout-n.AC[i,j]))");
 
-            #solve fp2 inconsistency
-            val = @tensor conj(n.AC[i,j][-1,-2,-3,4])*conj(n.AR[i,j+1][4,-4,-5,-6])*nw[i,j][-1,2]*n2[i,j][2,-2,-3,-4,-5,3]*ne[end-j,i][3,-6]
-            rmul!(n2[i,j],1/val)
 
-            #show remaining inconsistency
-            @tensor tout[-1 -2 -3; -4 -5 -6]:=nw[i,j][-1,2]*n2[i,j][2,-2,-3,-4,-5,3]*ne[end-j,i][3,-6]
-            shouldbe = n.AC[i,j]*MPSKit._permute_tail(n.AR[i,j+1])
+            @tensor tout[-1 -2 -3 -4 -5;-6]:=nw[i,j][-1,2]*n2[i,j][2,-2,-3,-4,-5,3]*ne[end-j,i][3,-6]
+            @tensor shouldbe[-1 -2 -3 -4 -5;-6]:=n.AC[i,j][-1,-2,-3,1]*n.AR[i,j+1][1,-4,-5,-6]
+            val = dot(tout,shouldbe)/(norm(tout)*norm(tout));
+            rmul!(n2[i,j],val)
+
+            @tensor tout[-1 -2 -3 -4 -5;-6]:=nw[i,j][-1,2]*n2[i,j][2,-2,-3,-4,-5,3]*ne[end-j,i][3,-6]
             verbose && println("fp2 inconsistency $(norm(tout-shouldbe))");
+
         end
     end
 
@@ -191,6 +191,7 @@ function renormalize!(man::InfEnvManager;verbose=false)
         verbose && println("localnorm was |$(ans)| = $(abs(ans))")
         rmul!(man.peps[i,j],1/sqrt(abs(ans)))
     end
+
 end
 
 Base.rotl90(envm::InfEnvManager) = InfEnvManager(   rotl90(envm.peps),

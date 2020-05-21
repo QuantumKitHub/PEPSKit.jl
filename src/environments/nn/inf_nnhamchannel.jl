@@ -35,9 +35,9 @@ function MPSKit.recalculate!(prevenv::NNHamChannels,peps::InfPEPS;kwargs...)
 end
 
 # j == the collumn
-function north_inf_sum(v,man,j)
+function north_inf_sum_RL(v,man,j)
     downfp = man.fp1LR[South,0,j];
-    upfp = man.fp1LR[North,1,j];
+    upfp = man.fp1RL[North,1,j];
     @tensor v[-1 -2 -3; -4]-=downfp[4,2,3,1]*v[1,2,3,4]*upfp[-1,-2,-3,-4]
 
     (v,chist) = linsolve(v,v,GMRES()) do x
@@ -46,7 +46,23 @@ function north_inf_sum(v,man,j)
 
         y=x-y
     end
-    chist.converged == 0 && @info "failed to converge $(chist.normres)"
+    chist.converged == 0 && @info "failed to converge _ RL $(chist.normres)"
+
+    return v
+end
+
+function north_inf_sum_LR(v,man,j)
+    downfp = man.fp1RL[South,0,j];
+    upfp = man.fp1LR[North,1,j];
+    @tensor v[-1 -2 -3; -4]-=downfp[4,2,3,1]*v[1,2,3,4]*upfp[-1,-2,-3,-4]
+
+    (v,chist) = linsolve(v,v,GMRES()) do x
+        y=crosstransfer(x,man.peps[:,j],man.AL[East,:,j],man.AR[West,:,j])
+        @tensor y[-1 -2 -3; -4]-=downfp[4,2,3,1]*y[1,2,3,4]*(upfp)[-1,-2,-3,-4]
+
+        y=x-y
+    end
+    chist.converged == 0 && @info "failed to converge _ LR $(chist.normres)"
 
     return v
 end
@@ -82,7 +98,7 @@ function north_nncontr_impl(man::InfEnvManager,nn::NN)
         end
 
         #infinite sum
-        ecnt = north_inf_sum(cnt,man,j);
+        ecnt = north_inf_sum_LR(cnt,man,j);
     end
 
     # of course, we also want to know the sum of contributions above other unit cells ...
@@ -92,11 +108,6 @@ function north_nncontr_impl(man::InfEnvManager,nn::NN)
             lines[i,j] = sums[j]
         else
             lines[i,j] = north_linecontr_local(lines[i-1,j],man,nn,i-1,j)
-
-            #subtract fp
-            @tensor lines[i,j][-1 -2 -3; -4]-=man.fp1RL[South,i-1,j][4,2,3,1]*
-                lines[i,j][1,2,3,4]*
-                man.fp1LR[North,i,j][-1,-2,-3,-4]
         end
     end
 
@@ -187,7 +198,7 @@ function north_nntchannel_impl(man::InfEnvManager,lines,nn::NN)
             cnt = north_nntchannel_loctransfer(cnt,man,lines,nn,i,j)
         end
 
-        ecnt = north_inf_sum(cnt,man,j)
+        ecnt = north_inf_sum_RL(cnt,man,j)
     end
 
     # of course, we also want to know the sum of contributions above other unit cells ...
@@ -197,11 +208,6 @@ function north_nntchannel_impl(man::InfEnvManager,lines,nn::NN)
             ts[i,j] = sums[j]
         else
             ts[i,j] = north_nntchannel_loctransfer(ts[i-1,j],man,lines,nn,i-1,j)
-
-            #subtract fp
-            @tensor ts[i,j][-1 -2 -3; -4]-=man.fp1RL[South,i-1,j][4,2,3,1]*
-                ts[i,j][1,2,3,4]*
-                man.fp1LR[North,i,j][-1,-2,-3,-4]
         end
     end
 
