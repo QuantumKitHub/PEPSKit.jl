@@ -1,8 +1,13 @@
 function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.OptimizationAlgorithm;pars=params(peps,ham),bound_finalize =(iter,state,ham,pars)->(state,pars))
+    #=
+        - I need to clean this up
+        - transition map was needed to define transport (and therefore used lbfgs,cg)
+    =#
+
     #to call optimkit we will pack (peps,prevpars) together in a tuple
     #the gradient type will simply be a 2d array of tensors
     function objfun(x)
-        (cpe,cpr) = x;
+        (cpe,cpr,old_tm) = x;
 
         cg = map(Iterators.product(1:size(cpe,1),1:size(cpe,2))) do (i,j)
             (heff,neff) = effectivehn(cpr,i,j);
@@ -14,7 +19,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
     end
 
     function retract(x, cgr, α)
-        (cpe,cpr) = x;
+        (cpe,cpr,old_tm) = x;
 
         @info "trying stepsize $α"
         flush(stdout)
@@ -22,25 +27,24 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
         #we on't want retract to overwrite the old state!
         npe = deepcopy(cpe)
         npr = deepcopy(cpr);
-
-
         for (i,j) in Iterators.product(1:size(cpe,1),1:size(cpe,2))
             @tensor npe[i,j][-1 -2 -3 -4;-5]+=(α*cgr[i,j])[-1,-2,-3,-4,-5]
-            npe[i,j]=npe[i,j]/norm(npe[i,j])
         end
 
         prevnorms = map(norm,npe);
         MPSKit.recalculate!(npr,npe,bound_finalize=bound_finalize)
         newnorms = map(norm,npe);
 
+        new_tm = copy(old_tm);
         newgrad = deepcopy(cgr);
         for (i,j) in Iterators.product(1:size(cpe,1),1:size(cpe,2))
-            newgrad[i,j]*=newnorms[i,j]/prevnorms[i,j]
+            new_tm[i,j] = newnorms[i,j]/prevnorms[i,j];
+            newgrad[i,j]*=new_tm[i,j];
         end
 
 
         #should also calculate "local gradient along that path"
-        return (npe,npr),newgrad
+        return (npe,npr,new_tm),newgrad
     end
 
     function inner(x, v1, v2)
@@ -52,12 +56,20 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
 
         return tot
     end
-    transport!(v, xold, d, α, xnew) = v
+    function transport!(v, xold, d, α, xnew)
+        (_,_,tm) = xnew;
+        for i in 1:size(v,1)
+            for j in 1:size(v,2)
+                v[i,j]*=tm[i,j]
+            end
+        end
+        v
+    end
     scale!(v, α) = v.*α
     add!(vdst, vsrc, α) = vdst+α.*vsrc
 
 
-    (x,fx,gx,normgradhistory)=optimize(objfun,(peps,pars),alg;
+    (x,fx,gx,normgradhistory)=optimize(objfun,(peps,pars,ones(size(peps,1),size(peps,2))),alg;
         retract = retract,
         inner = inner,
         transport! = transport!,
