@@ -36,7 +36,7 @@ peps = InfPEPS(map(Iterators.product(1:2,1:2)) do (i,j)
     TensorMap(rand,ComplexF64,ℂ^2*ℂ^2*(ℂ^2)'*(ℂ^2)',ℂ^2)
 end);
 
-optalg = GradientDescent(linesearch = HagerZhangLineSearch(ϵ = 1e-3,verbosity=0),maxiter=50,verbosity=20,gradtol=1e-3)
+optalg = LBFGS(linesearch = HagerZhangLineSearch(ϵ = 1e-3,verbosity=0),maxiter=50,verbosity=20,gradtol=1e-3)
 (peps,pars,err) = find_groundstate(peps,ham,optalg,bound_finalize=bound_finalize)
 
 @show expectation_value(peps,ham,pars)

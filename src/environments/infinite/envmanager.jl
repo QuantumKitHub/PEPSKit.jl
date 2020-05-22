@@ -79,8 +79,12 @@ function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = fals
     prevenv.peps = peps;
 
     #pars == the boundary mps parameters
+    boundpars = pmap(Dirs) do dir
+        north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize,maxiter=1000);
+    end
+
     pars = map(Dirs) do dir
-        (prevenv.boundaries[dir],par,err) = north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize,maxiter=1000);
+        (prevenv.boundaries[dir],par,err) = boundpars[dir]
         par
     end
 
@@ -95,9 +99,16 @@ function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = fals
     (prevenv.fp0[West],prevenv.fp0[East]) = fp0!(prevenv.boundaries[North],prevenv.boundaries[South],verbose=verbose)
     (prevenv.fp0[North],prevenv.fp0[South]) = fp0!(prevenv.boundaries[East],prevenv.boundaries[West],verbose=verbose)
     #determine 1 and 2 size channel fixpoints
+
+    fps = pmap(Dirs) do dir
+        fp1 = north_fp1(prevenv.boundaries[left(dir)],rotate_north(peps,dir),prevenv.boundaries[right(dir)],verbose=verbose);
+        #fp2 = north_fp2(prevenv.boundaries[left(dir)],rotate_north(peps,dir),prevenv.boundaries[right(dir)],verbose=verbose);
+        (fp1,#=fp2=#)
+    end
+
     for dir in Dirs
-        prevenv.fp1[dir] = north_fp1(prevenv.boundaries[left(dir)],rotate_north(peps,dir),prevenv.boundaries[right(dir)],verbose=verbose);
-        #prevenv.fp2[dir] = north_fp2(prevenv.boundaries[left(dir)],rotate_north(peps,dir),prevenv.boundaries[right(dir)],verbose=verbose);
+        prevenv.fp1[dir] = fps[dir][1];
+        #prevenv.fp2[dir] = fps[dir][2];
     end
 
     renormalize!(prevenv,verbose=verbose)
