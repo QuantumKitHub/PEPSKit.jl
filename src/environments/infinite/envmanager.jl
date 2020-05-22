@@ -4,14 +4,14 @@
         - corner tensors (channel approximation)
         - precomputed fixpoints
 =#
-mutable struct InfEnvManager{T,A,B,C,D,E} <: Cache
+mutable struct InfEnvManager{T,A,B,C,D} <: Cache
     peps::T
     boundaries::A
     corners::B
 
     fp0::C
     fp1::D
-    fp2::E
+    #fp2::E
 end
 
 function MPSKit.params(peps::InfPEPS;kwargs...)
@@ -61,6 +61,7 @@ function MPSKit.params(peps::InfPEPS;kwargs...)
     end)
 
     #generate trivial fp2
+    #=
     fp2 = PeriodicArray(map(Dirs) do dir
         (numrows,numcols) = size(boundaries[dir]);
 
@@ -70,8 +71,8 @@ function MPSKit.params(peps::InfPEPS;kwargs...)
             TensorMap(rand,ComplexF64,ou*pspace1*pspace1'*pspace2*pspace2',ou)
         end)
     end)
-
-    return MPSKit.recalculate!(InfEnvManager(peps,boundaries,corners,fp0,fp1,fp2),peps;kwargs...)
+    =#
+    return MPSKit.recalculate!(InfEnvManager(peps,boundaries,corners,fp0,fp1#=,fp2=#),peps;kwargs...)
 end
 
 function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10,bound_finalize = (iter,state,ham,pars)->(state,pars),maxiter=1000)
@@ -96,7 +97,7 @@ function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = fals
     #determine 1 and 2 size channel fixpoints
     for dir in Dirs
         prevenv.fp1[dir] = north_fp1(prevenv.boundaries[left(dir)],rotate_north(peps,dir),prevenv.boundaries[right(dir)],verbose=verbose);
-        prevenv.fp2[dir] = north_fp2(prevenv.boundaries[left(dir)],rotate_north(peps,dir),prevenv.boundaries[right(dir)],verbose=verbose);
+        #prevenv.fp2[dir] = north_fp2(prevenv.boundaries[left(dir)],rotate_north(peps,dir),prevenv.boundaries[right(dir)],verbose=verbose);
     end
 
     renormalize!(prevenv,verbose=verbose)
@@ -151,7 +152,7 @@ function renormalize!(man::InfEnvManager;verbose=false)
 
     for dir in Dirs
         nw = man.corners[dir];ne = man.corners[right(dir)];n = man.boundaries[dir]
-        n1 = man.fp1[dir];n2 = man.fp2[dir];
+        n1 = man.fp1[dir];#n2 = man.fp2[dir];
 
         (tnr,tnc) = rotate_north(size(man.peps),dir)
         for (i,j) in Iterators.product(1:tnr,1:tnc)
@@ -162,7 +163,7 @@ function renormalize!(man::InfEnvManager;verbose=false)
             @tensor tout[-1 -2 -3;-4]:=nw[i,j][-1,2]*n1[i,j][2,-2,-3,3]*ne[end-j+1,i][3,-4]
             verbose && println("fp1 inconsistency $(norm(tout-n.AC[i,j]))");
 
-
+            #=
             @tensor tout[-1 -2 -3 -4 -5;-6]:=nw[i,j][-1,2]*n2[i,j][2,-2,-3,-4,-5,3]*ne[end-j,i][3,-6]
             @tensor shouldbe[-1 -2 -3 -4 -5;-6]:=n.AC[i,j][-1,-2,-3,1]*n.AR[i,j+1][1,-4,-5,-6]
             val = dot(tout,shouldbe)/(norm(tout)*norm(tout));
@@ -170,7 +171,7 @@ function renormalize!(man::InfEnvManager;verbose=false)
 
             @tensor tout[-1 -2 -3 -4 -5;-6]:=nw[i,j][-1,2]*n2[i,j][2,-2,-3,-4,-5,3]*ne[end-j,i][3,-6]
             verbose && println("fp2 inconsistency $(norm(tout-shouldbe))");
-
+            =#
         end
     end
 
@@ -199,10 +200,10 @@ Base.rotl90(envm::InfEnvManager) = InfEnvManager(   rotl90(envm.peps),
                                                     circshift(envm.corners,1),
                                                     circshift(envm.fp0,1),
                                                     circshift(envm.fp1,1),
-                                                    circshift(envm.fp2,1))
+                                                    #=circshift(envm.fp2,1)=#)
 Base.rotr90(envm::InfEnvManager) = InfEnvManager(   rotr90(envm.peps),
                                                     circshift(envm.boundaries,-1),
                                                     circshift(envm.corners,-1),
                                                     circshift(envm.fp0,-1),
                                                     circshift(envm.fp1,-1),
-                                                    circshift(envm.fp2,-1))
+                                                    #=circshift(envm.fp2,-1)=#)
