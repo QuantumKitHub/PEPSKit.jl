@@ -30,6 +30,8 @@ mutable struct Bpars{M,P,T} <: MPSKit.AbstractInfEnv
 
 	lw::T
 	rw::T
+
+	lock::ReentrantLock
 end
 
 function MPSKit.params(bmps,peps::InfPEPS;tol=1e-10,maxiter=400)
@@ -44,7 +46,7 @@ function MPSKit.params(bmps,peps::InfPEPS;tol=1e-10,maxiter=400)
     	TensorMap(rand,ComplexF64,space(bmps.AR[i,j],4)'*space(peps[i,j],3)'*space(peps[i,j],3),space(bmps.AR[i+1,j],4)')
 	end)
 
-    pars = Bpars(peps,bmps,tol,maxiter,leftfps,rightfps)
+    pars = Bpars(peps,bmps,tol,maxiter,leftfps,rightfps,ReentrantLock())
 
 	#call recalculate
 	MPSKit.recalculate!(pars,bmps;tol=tol,maxiter=maxiter)
@@ -56,7 +58,6 @@ end
 =#
 function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
 	peps = pars.peps;
-	pars.dependency = bmps;
 
 	phases = Vector{ComplexF64}(undef,size(bmps,1))
 	#recalculate pars.lw[i,1]
@@ -112,6 +113,8 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
         end
     end
 
+	pars.dependency = bmps;
+	
 	return pars
 end
 
