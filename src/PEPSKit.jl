@@ -1,5 +1,5 @@
 module PEPSKit
-    using TensorKit, KrylovKit, MPSKit, OptimKit, Distributed
+    using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads
 
     export InfPEPS,FinPEPS
     export nonsym_nn_ising_ham,nonsym_nn_xxz_ham

@@ -21,15 +21,15 @@ end
 function MPSKit.recalculate!(prevenv::NNHamChannels,peps::InfPEPS;kwargs...)
     MPSKit.recalculate!(prevenv.envm,peps;kwargs...);
 
-    prevenv.lines = PeriodicArray(pmap(Dirs) do dir
-        north_nncontr_impl(rotate_north(prevenv.envm,dir),rotate_north(prevenv.opperator,dir))
-    end)
+    prevenv.lines = PeriodicArray(fetch.(map(Dirs) do dir
+        @Threads.spawn north_nncontr_impl(rotate_north(prevenv.envm,dir),rotate_north(prevenv.opperator,dir))
+    end))
 
-    prevenv.ts = PeriodicArray(pmap(Dirs) do dir
-        north_nntchannel_impl(  rotate_north(prevenv.envm,dir),
+    prevenv.ts = PeriodicArray(fetch.(map(Dirs) do dir
+        @Threads.spawn north_nntchannel_impl(  rotate_north(prevenv.envm,dir),
                                 circshift(prevenv.lines,4-dir),
                                 rotate_north(prevenv.opperator,dir));
-    end)
+    end))
 
     prevenv
 end
