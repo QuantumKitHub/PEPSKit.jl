@@ -80,7 +80,7 @@ function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = fals
 
     #pars == the boundary mps parameters
     boundpars = map(Dirs) do dir
-        @Threads.spawn north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize,maxiter=1000);
+        @Threads.spawn north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize,maxiter=maxiter);
     end
 
     pars = map(Dirs) do dir

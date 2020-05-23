@@ -60,18 +60,33 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
 	peps = pars.peps;
 
 	phases = Vector{ComplexF64}(undef,size(bmps,1))
-	#recalculate pars.lw[i,1]
-	for i in 1:size(bmps,1)
+
+	#recalculate pars.lw[i,1]/pars.rw[i,end]
+	jobs = map(1:size(bmps,1)) do i
 		#if the bond dimension changed, then we cannot reuse the old solution as initial guess
 		if space(pars.lw[i,1],1) != space(bmps.AL[i+1,1],1) || space(pars.lw[i,1],4) != space(bmps.AL[i,1],1)'
 			pars.lw[i,1] = TensorMap(rand,ComplexF64,space(bmps.AL[i+1,1],1)*space(peps[i,1],1)'*space(peps[i,1],1),space(bmps.AL[i,1],1))
 		end
 
-        (vals,vecs,convhist) = eigsolve(x->transfer_left(x,peps[i,:],bmps.AL[i,:],bmps.AL[i+1,:]),pars.lw[i,1],1,:LM,Arnoldi());
-        convhist.converged == 0 && @info "lboundary failed to converge"
-        pars.lw[i,1] = vecs[1];
+        lj = @Threads.spawn eigsolve(x->transfer_left(x,peps[i,:],bmps.AL[i,:],bmps.AL[i+1,:]),pars.lw[i,1],1,:LM,Arnoldi());
 
+		if space(pars.rw[i,end],1) != space(bmps.AR[i,end],4)' || space(pars.rw[i,end],4)' != space(bmps.AR[i+1,end],4)'
+            pars.rw[i,end] = TensorMap(rand,ComplexF64,space(bmps.AR[i,end],4)'*space(peps[i,end],3)'*space(peps[i,end],3),space(bmps.AR[i+1,end],4)')
+        end
+        rj = @Threads.spawn eigsolve(x->transfer_right(x,peps[i,:],bmps.AR[i,:],bmps.AR[i+1,:]),pars.rw[i,end],1,:LM,Arnoldi());
+
+		(lj,rj)
+	end
+
+	for i in 1:size(bmps,1)
+		(vals,vecs,convhist) = fetch(jobs[i][1])
+		convhist.converged == 0 && @info "lboundary failed to converge"
+		pars.lw[i,1] = vecs[1];
 		phases[i] = vals[1]/abs(vals[1])
+
+		(vals,vecs,convhist) = fetch(jobs[i][2])
+        convhist.converged == 0 && @info "rboundary failed to converge"
+        pars.rw[i,end] = vecs[1];
 	end
 
 	# it turns out that these lines are very important - but they're introduced in a weird place
@@ -85,17 +100,6 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
 		rmul!(bmps.AL[i,1],1/solutions[i])
 		rmul!(bmps.AR[i,1],1/solutions[i])
 		rmul!(bmps.AC[i,1],1/solutions[i])
-	end
-
-	#recalculate pars.rw[i,end]
-	for i in 1:size(bmps,1)
-        if space(pars.rw[i,end],1) != space(bmps.AR[i,end],4)' || space(pars.rw[i,end],4)' != space(bmps.AR[i+1,end],4)'
-            pars.rw[i,end] = TensorMap(rand,ComplexF64,space(bmps.AR[i,end],4)'*space(peps[i,end],3)'*space(peps[i,end],3),space(bmps.AR[i+1,end],4)')
-        end
-        (vals,vecs,convhist) = eigsolve(x->transfer_right(x,peps[i,:],bmps.AR[i,:],bmps.AR[i+1,:]),pars.rw[i,end],1,:LM,Arnoldi());
-        convhist.converged == 0 && @info "rboundary failed to converge"
-        pars.rw[i,end] = vecs[1];
-
 	end
 
 	#fix the normalization and transfer through
@@ -114,7 +118,7 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
     end
 
 	pars.dependency = bmps;
-	
+
 	return pars
 end
 
