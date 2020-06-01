@@ -20,6 +20,9 @@ module PEPSKit
 
     include("operators/nearest_neighbour.jl")
 
+    #1d Environments
+    include("mpskit_glue/inf_boundary_pars.jl")
+
     #general environments
     include("environments/infinite/planes.jl")
     include("environments/infinite/fixpoints.jl")
