@@ -11,9 +11,20 @@ struct Transformed_Propview{T<:InfEnvManager} <: AbstractArray{Any,3}
     fun::Symbol
 end
 
+function Base.getindex(d::Transformed_Propview,peps::InfPEPS,dir::Int,row::Int,col::Int)
+    if peps != d.envm.peps
+        #using warn because this is still kinda experimental
+        @warn "environment of different peps, recalculating"
+        recalculate!(d.envm,peps)
+    end
+    @eval $(d.fun)($(d.envm),$(dir),$(row),$(col))
+end
+
+#getindex of currently stored peps - environment
 function Base.getindex(d::Transformed_Propview,dir::Int,row::Int,col::Int)
     @eval $(d.fun)($(d.envm),$(dir),$(row),$(col))
 end
+
 Base.setindex!(d::Transformed_Propview,args...) = throw(ArgumentError("not supported"))
 Base.size(d::Transformed_Propview) = (4,size(d.envm.peps,1),size(d.envm.peps,2))
 
