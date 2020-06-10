@@ -30,12 +30,17 @@ module PEPSKit
     include("environments/infinite/fixpoints.jl")
     include("environments/infinite/corners.jl")
     include("environments/infinite/envmanager.jl")
-    include("environments/infinite/dirview.jl")
 
+    include("environments/finite/envmanager.jl")
     include("environments/finite/planes.jl")
+    include("environments/finite/corners.jl")
+    include("environments/finite/fixpoints.jl")
 
     #hamiltonian dependent environments
     include("environments/nn/inf_nnhamchannel.jl")
+
+    #makes working with environments slightly more bearable
+    include("environments/dirview.jl")
 
     include("algorithms/expval.jl")
     include("algorithms/derivs.jl")
