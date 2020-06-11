@@ -6,12 +6,12 @@
 =#
 struct Transformed_Propview{E,T<:Union{InfEnvManager,FinEnvManager}} <: AbstractArray{E,3}
     envm::T
-    fun::Symbol
+    fun::Function
 end
 
 #getindex of currently stored peps - environment
 function Base.getindex(d::Transformed_Propview{E,T},dir::Int,row::Int,col::Int) where{E,T}
-    retval::E = @eval $(d.fun)($(d.envm),$(dir),$(row),$(col))
+    d.fun(d.envm,dir,row,col)::E
 end
 
 Base.setindex!(d::Transformed_Propview,args...) = throw(ArgumentError("not supported"))
@@ -25,15 +25,14 @@ function Base.getproperty(man::Union{InfEnvManager,FinEnvManager},prop::Symbol)
         prop == :fp1RL
 
         elt = eltype(man.fp1[1])
-
-        return Transformed_Propview{elt,typeof(man)}(man,prop)
+        return Transformed_Propview{elt,typeof(man)}(man,getfield(PEPSKit,prop))
     elseif prop == :CR ||
         prop == :corner ||
         prop == :fp0LR ||
         prop == :fp0RL
 
         elt = eltype(man.corners[1]);
-        return Transformed_Propview{elt,typeof(man)}(man,prop)
+        return Transformed_Propview{elt,typeof(man)}(man,getfield(PEPSKit,prop))
     else
         return getfield(man,prop)
     end
