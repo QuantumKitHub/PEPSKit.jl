@@ -1,4 +1,4 @@
-mutable struct NNHamChannels{E<:InfEnvManager,B,C,O<:NN} <: Cache
+mutable struct InfNNHamChannels{E<:InfEnvManager,B,C,O<:NN} <: Cache
     opperator :: O
     envm::E
 
@@ -12,13 +12,13 @@ function MPSKit.params(peps::InfPEPS,opperator::NN;kwargs ...)
     lines = PeriodicArray{Any}(undef,4);
     ts = PeriodicArray{Any}(undef,4);
 
-    pars = NNHamChannels(opperator,params(peps;kwargs...),lines,ts);
+    pars = InfNNHamChannels(opperator,params(peps;kwargs...),lines,ts);
 
     return MPSKit.recalculate!(pars,peps;kwargs...)
 end
 
 #recalculate everything
-function MPSKit.recalculate!(prevenv::NNHamChannels,peps::InfPEPS;kwargs...)
+function MPSKit.recalculate!(prevenv::InfNNHamChannels,peps::InfPEPS;kwargs...)
     MPSKit.recalculate!(prevenv.envm,peps;kwargs...);
 
     prevenv.lines = PeriodicArray(fetch.(map(Dirs) do dir

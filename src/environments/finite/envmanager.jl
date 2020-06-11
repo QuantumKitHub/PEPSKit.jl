@@ -82,3 +82,16 @@ function MPSKit.recalculate!(pars::FinEnvManager,peps::FinPEPS)
     recalc_fp0!(peps,pars);
     recalc_fp1!(peps,pars);
 end
+
+Base.rotl90(envm::FinEnvManager) = FinEnvManager(   rotl90(envm.peps),
+                                                    envm.algorithm,
+                                                    circshift(envm.boundaries,1),
+                                                    circshift(envm.corners,1),
+                                                    circshift(envm.fp0,1),
+                                                    circshift(envm.fp1,1))
+Base.rotr90(envm::FinEnvManager) = FinEnvManager(   rotr90(envm.peps),
+                                                    envm.algorithm,
+                                                    circshift(envm.boundaries,-1),
+                                                    circshift(envm.corners,-1),
+                                                    circshift(envm.fp0,-1),
+                                                    circshift(envm.fp1,-1))

@@ -10,8 +10,8 @@ struct Transformed_Propview{E,T<:Union{InfEnvManager,FinEnvManager}} <: Abstract
 end
 
 #getindex of currently stored peps - environment
-function Base.getindex(d::Transformed_Propview,dir::Int,row::Int,col::Int)
-    @eval $(d.fun)($(d.envm),$(dir),$(row),$(col))
+function Base.getindex(d::Transformed_Propview{E,T},dir::Int,row::Int,col::Int) where{E,T}
+    retval::E = @eval $(d.fun)($(d.envm),$(dir),$(row),$(col))
 end
 
 Base.setindex!(d::Transformed_Propview,args...) = throw(ArgumentError("not supported"))
