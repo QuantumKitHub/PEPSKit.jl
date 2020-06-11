@@ -77,6 +77,7 @@ function MPSKit.params(peps::FinPEPS,alg::MPSKit.Algorithm)
 end
 
 function MPSKit.recalculate!(pars::FinEnvManager,peps::FinPEPS)
+    pars.peps = peps;
     recalc_planes!(peps,pars.boundaries,pars.algorithm);
     recalc_corners!(peps,pars.corners,pars.boundaries);
     recalc_fp0!(peps,pars);
