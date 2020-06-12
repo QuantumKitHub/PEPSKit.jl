@@ -31,3 +31,30 @@ function approximate(init,pepsline,state,alg::Dmrg2,pars=params(init,pepsline,st
 
     return init,pars,delta
 end
+
+function approximate(init, pepsline,state,alg::Dmrg,pars = params(init,pepsline,state))
+    tol=alg.tol;maxiter=alg.maxiter
+    iter = 0; delta = 2*tol
+
+    while iter < maxiter && delta > tol
+        delta=0.0
+
+        #finalize
+        (init,pars) = alg.finalize(iter,init,(pepsline,state),pars);
+
+        for pos = [1:(length(state)-1);length(state):-1:2]
+            newac = downproject(pos,init,pepsline,state,pars)
+
+            delta = max(delta,norm(newac-init.AC[pos])/norm(newac))
+
+            init.AC[pos] = newac
+        end
+
+        alg.verbose && @show (iter,delta)
+        flush(stdout)
+
+        iter += 1
+    end
+
+    return init,pars,delta
+end
