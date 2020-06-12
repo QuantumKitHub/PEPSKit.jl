@@ -50,6 +50,25 @@ function MPSKit.params(peps::FinPEPS,alg::MPSKit.Algorithm)
         end
     end)
 
+    #we have to fix corners ...
+    for dir in Dirs
+        (tnr,tnc) = rotate_north(size(peps),dir)
+
+        total = 1;
+        for i in 1:tnr
+            (ni,nj) = inv_rotate_north((i,1),size(peps),dir)
+            total *= dim(space(peps[ni,nj],left(dir)))
+            corners[dir][i+1,1]*=sqrt(total);
+        end
+
+        total = 1;
+        for i in 1:tnc
+            (ni,nj) = inv_rotate_north((1,i),size(peps),dir)
+            total *= dim(space(peps[ni,nj],dir))
+            corners[dir][1,i+1]*=sqrt(total);
+        end
+    end
+
     fp0 = PeriodicArray(map(Dirs) do dir
         (tnr,tnc) = rotate_north(size(peps),dir)
 

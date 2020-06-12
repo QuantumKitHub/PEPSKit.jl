@@ -96,8 +96,7 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
             permute(heff*v - (dot(v,heff*v)/n)*neff*v,(1,2,3,4),(5,))/n
         end
 
-        #I don't know why I have to multiply, whereas I had to divide for infinite....
-        en = real(expectation_value(cpe,ham,cpr))*(size(cpe,1)*size(cpe,2))
+        en = real(expectation_value(cpe,ham,cpr))/(size(cpe,1)*size(cpe,2))
         en,cg
     end
 
