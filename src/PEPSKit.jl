@@ -9,7 +9,8 @@ module PEPSKit
 
     export boundary
     export expectation_value
-
+    export GradStep
+    
     abstract type Cache end
 
     include("utility/typedef.jl")
@@ -47,6 +48,7 @@ module PEPSKit
     include("algorithms/derivs.jl")
     include("algorithms/approximating/vomps.jl")
     include("algorithms/groundstate/optimhook.jl")
+    include("algorithms/timestep/gradstep.jl")
 
     include("models/ising.jl")
     include("models/xxz.jl")
