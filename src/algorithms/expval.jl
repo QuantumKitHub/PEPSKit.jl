@@ -98,3 +98,15 @@ function MPSKit.expectation_value(state::FinPEPS,nn::NN,pars::FinNNHamChannels =
 
     normalcount*tot/normalization
 end
+
+function MPSKit.expectation_value(state::FinPEPS,opp::MPSKit.MPSBondTensor,pars::FinNNHamChannels)
+    expval = map(Iterators.product(1:size(state,1),1:size(state,2))) do (i,j)
+        man = pars.envm;
+        e = @tensor fp1LR(man,North,i,j)[1,2,3,4]*AC(man,East,i,j)[4,5,6,7]*fp1LR(man,South,i,j)[7,8,9,10]*AC(man,West,i,j)[10,11,12,1]*
+            state[i,j][11,8,5,2,13]*conj(state[i,j][12,9,6,3,14])*opp[13,14]
+        n = @tensor fp1LR(man,North,i,j)[1,2,3,4]*AC(man,East,i,j)[4,5,6,7]*fp1LR(man,South,i,j)[7,8,9,10]*AC(man,West,i,j)[10,11,12,1]*
+            state[i,j][11,8,5,2,13]*conj(state[i,j][12,9,6,3,13])
+
+        e/n
+    end
+end
