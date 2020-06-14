@@ -6,8 +6,10 @@ function recalc_north_planes!(peps::FinPEPS,oldplanes,algorithm)
 end
 
 function recalc_planes!(peps::FinPEPS,planes,algorithm)
-    for dir in Dirs
-        tpeps = rotate_north(peps,dir);
-        recalc_north_planes!(tpeps,planes[dir],algorithm)
+    @sync for dir in Dirs
+        @Threads.spawn begin
+            tpeps = rotate_north(peps,dir);
+            recalc_north_planes!(tpeps,planes[dir],algorithm)
+        end
     end
 end
