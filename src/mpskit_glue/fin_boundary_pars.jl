@@ -22,7 +22,7 @@ function MPSKit.params(below::S,middle::Vector{P},above::S,leftstart::C,rightsta
         push!(rightenvs,similar(rightstart))
     end
 
-    return LineEnv{S,P,C}(above,middle,similar.(below.site_tensors),similar.(below.site_tensors),leftenvs,reverse(rightenvs))
+    return LineEnv{S,P,C}(above,middle,similar.(below.AL[1:end]),similar.(below.AR[1:end]),leftenvs,reverse(rightenvs))
 end
 
 function MPSKit.params(below::S,middle::Vector{P},above::S) where {S <: FiniteMPS,P<:PEPSType}

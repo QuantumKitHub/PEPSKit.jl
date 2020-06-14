@@ -1,7 +1,7 @@
 struct GradStep <: MPSKit.Algorithm
 end
 
-function timestep(state::FinPEPS, H::NN, timestep::Number,alg::GradStep,pars::FinNNHamChannels)
+function MPSKit.timestep(state::FinPEPS, H::NN, timestep::Number,alg::GradStep,pars::FinNNHamChannels)
     newpeps = copy(state);
     for (i,j) in Iterators.product(1:size(state,1),1:size(state,2))
         (h_eff,n_eff) = effectivehn(pars,i,j)

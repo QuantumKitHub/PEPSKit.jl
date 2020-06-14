@@ -17,7 +17,7 @@ function approximate(init,pepsline,state,alg::Dmrg2,pars=params(init,pepsline,st
             olda2c = MPSKit._permute_front(init.AL[pos])*init.CR[pos]*MPSKit._permute_tail(init.AR[pos+1])
 
             init.AC[pos] = (al,complex(c))
-            init.AR[pos+1] = MPSKit._permute_front(ar);
+            init.AC[pos+1] = (complex(c),MPSKit._permute_front(ar));
 
             newa2c = MPSKit._permute_front(init.AL[pos])*init.CR[pos]*MPSKit._permute_tail(init.AR[pos+1])
             delta = max(delta,norm(olda2c-newa2c)/(1e-14+norm(newa2c)));
