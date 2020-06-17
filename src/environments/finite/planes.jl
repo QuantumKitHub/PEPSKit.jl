@@ -1,15 +1,24 @@
 function recalc_north_planes!(peps::FinPEPS,oldplanes,algorithm)
     #notice how oldplanes[1] is a boundary condition that cannot be changed!
-    for i in 1:size(peps,1)
-        (oldplanes[i+1],_) = approximate(oldplanes[i+1],peps[i,:],oldplanes[i],algorithm)
+
+    bpars = map(1:size(peps,1)) do i
+        (oldplanes[i+1],fpars) = approximate(oldplanes[i+1],peps[i,:],oldplanes[i],algorithm)
+        fpars
     end
+    return bpars
 end
 
+#=
+We update planes in-place, and also return the boundary environments
+This will then be re-used in corners.jl
+=#
 function recalc_planes!(peps::FinPEPS,planes,algorithm)
-    @sync for dir in Dirs
-        @Threads.spawn begin
+    tasks = map(Dirs) do dir
+        ctask = @Threads.spawn begin
             tpeps = rotate_north(peps,dir);
             recalc_north_planes!(tpeps,planes[dir],algorithm)
         end
     end
+
+    bpars = fetch.(tasks)
 end

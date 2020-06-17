@@ -97,8 +97,10 @@ end
 
 function MPSKit.recalculate!(pars::FinEnvManager,peps::FinPEPS)
     pars.peps = peps;
-    recalc_planes!(peps,pars.boundaries,pars.algorithm);
-    recalc_corners!(peps,pars.corners,pars.boundaries);
+
+    plane_pars = recalc_planes!(peps,pars.boundaries,pars.algorithm);
+    recalc_corners!(peps,pars.corners,pars.boundaries,plane_pars);
+
     recalc_fp0!(peps,pars);
     recalc_fp1!(peps,pars);
 end
