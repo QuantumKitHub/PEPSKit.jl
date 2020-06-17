@@ -1,7 +1,7 @@
 module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads#,TensorOperations
 
-    export InfPEPS,FinPEPS
+    export InfPEPS,FinPEPS,WinPEPS
     export nonsym_nn_ising_ham,nonsym_nn_xxz_ham
 
     export North,East,South,West
@@ -19,6 +19,7 @@ module PEPSKit
 
     include("states/infinite_peps.jl")
     include("states/finite_peps.jl")
+    include("states/window_peps.jl")
 
     include("operators/nearest_neighbour.jl")
 
