@@ -1,5 +1,5 @@
 module PEPSKit
-    using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads
+    using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads#,TensorOperations
 
     export InfPEPS,FinPEPS
     export nonsym_nn_ising_ham,nonsym_nn_xxz_ham
@@ -10,7 +10,7 @@ module PEPSKit
     export boundary
     export expectation_value
     export GradStep
-    
+
     abstract type Cache end
 
     include("utility/typedef.jl")

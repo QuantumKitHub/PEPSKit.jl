@@ -73,8 +73,15 @@ end
 
 
 function downproject2(pos::Int,below,middle,above,pars)
-    @tensor toret[-1 -2 -3; -4 -5 -6]:=leftenv(pars,pos,below)[-1,1,2,3]*above.AC[pos][3,4,5,6]*above.AR[pos+1][6,7,8,9]*rightenv(pars,pos+1,below)[9,10,11,-6]*
-    middle[pos][1,-2,12,4,13]*conj(middle[pos][2,-3,14,5,13])*middle[pos+1][12,-4,10,7,15]*conj(middle[pos+1][14,-5,11,8,15])
+    @tensor toret[-1 -2 -3; -4 -5 -6]:=
+    leftenv(pars,pos,below)[-1,4,2,1]*
+    above.AC[pos][1,5,3,13]*
+    conj(middle[pos][2,-3,14,3,6])*
+    middle[pos][4,-2,15,5,6]*
+    above.AR[pos+1][13,11,9,7]*
+    rightenv(pars,pos+1,below)[7,10,8,-6]*
+    conj(middle[pos+1][14,-5,8,9,12])*
+    middle[pos+1][15,-4,10,11,12]
 end
 
 function downproject(pos::Int,below,middle,above,pars)
