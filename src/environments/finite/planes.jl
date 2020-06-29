@@ -12,11 +12,11 @@ end
 We update planes in-place, and also return the boundary environments
 This will then be re-used in corners.jl
 =#
-function recalc_planes!(peps::FinPEPS,planes,algorithm)
+function recalc_planes!(peps::FinPEPS,pars)
     tasks = map(Dirs) do dir
         ctask = @Threads.spawn begin
             tpeps = rotate_north(peps,dir);
-            recalc_north_planes!(tpeps,planes[dir],algorithm)
+            recalc_north_planes!(tpeps,pars.boundaries[dir],pars.algorithm)
         end
     end
 

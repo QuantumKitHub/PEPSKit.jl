@@ -4,7 +4,7 @@
     the way things are stored is not very nice to actually work with in algorithms
     hence some helpers to facilitate everything
 =#
-struct Transformed_Propview{E,T<:Union{InfEnvManager,FinEnvManager}} <: AbstractArray{E,3}
+struct Transformed_Propview{E,T<:Union{InfEnvManager,FinEnvManager,WinEnvManager}} <: AbstractArray{E,3}
     envm::T
     fun::Function
 end
@@ -17,7 +17,7 @@ end
 Base.setindex!(d::Transformed_Propview,args...) = throw(ArgumentError("not supported"))
 Base.size(d::Transformed_Propview) = (length(Dirs),size(d.envm.peps,1),size(d.envm.peps,2))
 
-function Base.getproperty(man::Union{InfEnvManager,FinEnvManager},prop::Symbol)
+function Base.getproperty(man::Union{InfEnvManager,FinEnvManager,WinEnvManager},prop::Symbol)
     if prop == :AL ||
         prop == :AC ||
         prop == :AR ||
@@ -38,7 +38,7 @@ function Base.getproperty(man::Union{InfEnvManager,FinEnvManager},prop::Symbol)
     end
 end
 
-function AL(man::FinEnvManager,dir,row,col)
+function AL(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].AL[tc]
 end
@@ -47,7 +47,7 @@ function AL(man::InfEnvManager,dir,row,col)
     return man.boundaries[dir].AL[tr,tc]
 end
 
-function AR(man::FinEnvManager,dir,row,col)
+function AR(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].AR[tc]
 end
@@ -56,7 +56,7 @@ function AR(man::InfEnvManager,dir,row,col)
     return man.boundaries[dir].AR[tr,tc]
 end
 
-function AC(man::FinEnvManager,dir,row,col)
+function AC(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].AC[tc]
 end
@@ -65,7 +65,7 @@ function AC(man::InfEnvManager,dir,row,col)
     return man.boundaries[dir].AC[tr,tc]
 end
 
-function CR(man::FinEnvManager,dir,row,col)
+function CR(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].CR[tc]
 end
@@ -90,7 +90,7 @@ function fp1LR(man,dir,row,col)
     return man.fp1[dir][tr,tc]
 end
 
-function fp0RL(man::FinEnvManager,dir,row,col)
+function fp0RL(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     @tensor tor[-1;-2]:=man.boundaries[left(dir)][tc].CR[end-tr+1][-1,1]*
     man.fp0[dir][tr,tc][1,2]*
@@ -104,7 +104,7 @@ function fp0RL(man::InfEnvManager,dir,row,col)
     man.boundaries[right(dir)].CR[end-tc+2,tr-1][2,-2]
 end
 
-function fp1RL(man::FinEnvManager,dir,row,col)
+function fp1RL(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
 
     @tensor tor[-1 -2 -3;-4]:=man.boundaries[left(dir)][tc].CR[end-tr+1][-1,1]*

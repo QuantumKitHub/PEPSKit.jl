@@ -6,12 +6,17 @@ mutable struct WinPEPS{T<:PEPSType}
     outside :: InfPEPS{T}
 end
 
-function WinPEPS(outside::InfPEPS{T},width::Int,height::Int) where T
-    inside = FinPEPS{T}(outside[1:width,1:height]);
+function WinPEPS(outside::InfPEPS{T},numrows::Int,numcols::Int) where T
+    mod(numrows,size(outside,1)) == 0 && mod(numcols,size(outside,2)) == 0 || throw(ArgumentError("not (yet) supported"))
+    inside = FinPEPS{T}(outside[1:numrows,1:numcols]);
     WinPEPS{T}(inside,outside);
 end
 
 Base.copy(f::WinPEPS) = WinPEPS(copy(f.inside),copy(f.outside));
+
+Base.getindex(st::WinPEPS,row::Int,col::Colon) = st.inside[row,col];
+Base.getindex(st::WinPEPS,row::Colon,col::Int) = st.inside[row,col];
+Base.getindex(st::WinPEPS,row::Colon,col::Colon) = st.inside[row,col];
 
 function Base.getindex(st::WinPEPS,row,col)
     if row > 0 && col > 0 && row <= size(st.inside,1) && col <=size(st.inside,2)

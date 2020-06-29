@@ -1,5 +1,4 @@
-#similar to the finite planes case, oldcorners[1,:] and [:,1] are boundary conditions
-function recalc_northwest_corners!(peps::FinPEPS,oldcorners,nplanes,npars,wplanes,wpars)
+function recalc_northwest_corners!(peps::WinPEPS,oldcorners,nplanes,npars,wplanes,wpars)
 
     for (i,j) in Iterators.product(1:size(peps,1),1:size(peps,2))
         n_above = nplanes[i];
@@ -17,7 +16,7 @@ function recalc_northwest_corners!(peps::FinPEPS,oldcorners,nplanes,npars,wplane
     end
 end
 
-function recalc_corners!(peps::FinPEPS,pars,plane_pars)
+function recalc_corners!(peps::WinPEPS,pars,plane_pars)
     for dir in Dirs
         tpeps = rotate_north(peps,dir);
         recalc_northwest_corners!(tpeps,pars.corners[dir],pars.boundaries[dir],plane_pars[dir],pars.boundaries[left(dir)],plane_pars[left(dir)])

@@ -38,6 +38,10 @@ module PEPSKit
     include("environments/finite/corners.jl")
     include("environments/finite/fixpoints.jl")
 
+    include("environments/window/envmanager.jl")
+    include("environments/window/planes.jl")
+    include("environments/window/corners.jl")
+
     #hamiltonian dependent environments
     include("environments/nn/inf_nnhamchannel.jl")
     include("environments/nn/fin_nnhamchannel.jl")
