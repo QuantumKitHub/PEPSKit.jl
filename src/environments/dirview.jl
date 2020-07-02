@@ -38,7 +38,15 @@ function Base.getproperty(man::Union{InfEnvManager,FinEnvManager,WinEnvManager},
     end
 end
 
-function AL(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
+function AL(man::WinEnvManager,dir,row,col)
+    (tr,tc)=rotate_north((row,col),size(man.peps),dir);
+    if isin(man.peps,tc,tc)
+        return man.boundaries[dir][tr].AL[tc]
+    else
+        return man.infenvm.boundaries[dir].AL[tr,tc]
+    end
+end
+function AL(man::FinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].AL[tc]
 end
@@ -47,7 +55,15 @@ function AL(man::InfEnvManager,dir,row,col)
     return man.boundaries[dir].AL[tr,tc]
 end
 
-function AR(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
+function AR(man::WinEnvManager,dir,row,col)
+    (tr,tc)=rotate_north((row,col),size(man.peps),dir);
+    if isin(man.peps,tr,tc)
+        return man.boundaries[dir][tr].AR[tc]
+    else
+        return man.infenvm.boundaries[dir].AR[tr,tc]
+    end
+end
+function AR(man::FinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].AR[tc]
 end
@@ -56,7 +72,15 @@ function AR(man::InfEnvManager,dir,row,col)
     return man.boundaries[dir].AR[tr,tc]
 end
 
-function AC(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
+function AC(man::WinEnvManager,dir,row,col)
+    (tr,tc)=rotate_north((row,col),size(man.peps),dir);
+    if isin(man.peps,tr,tc)
+        return man.boundaries[dir][tr].AC[tc]
+    else
+        return man.infenvm.boundaries[dir].AC[tr,tc]
+    end
+end
+function AC(man::FinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].AC[tc]
 end
@@ -65,7 +89,16 @@ function AC(man::InfEnvManager,dir,row,col)
     return man.boundaries[dir].AC[tr,tc]
 end
 
-function CR(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
+function CR(man::WinEnvManager,dir,row,col)
+    (tr,tc)=rotate_north((row,col),size(man.peps),dir);
+
+    if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr].CR)
+        return man.boundaries[dir][tr].CR[tc]
+    else
+        return man.infenvm.boundaries[dir].CR[tr,tc]
+    end
+end
+function CR(man::FinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.boundaries[dir][tr].CR[tc]
 end
@@ -85,7 +118,16 @@ function fp0LR(man,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.fp0[dir][tr,tc]
 end
-function fp1LR(man,dir,row,col)
+function fp1LR(man::WinEnvManager,dir,row,col)
+    (tr,tc)=rotate_north((row,col),size(man.peps),dir);
+    if isin(man.peps,tr,tc)
+        return man.fp1[dir][tr,tc]
+    else
+        return man.infenvm.fp1[dir][tr,tc]
+    end
+end
+
+function fp1LR(man::Union{FinEnvManager,InfEnvManager},dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
     return man.fp1[dir][tr,tc]
 end
@@ -104,7 +146,21 @@ function fp0RL(man::InfEnvManager,dir,row,col)
     man.boundaries[right(dir)].CR[end-tc+2,tr-1][2,-2]
 end
 
-function fp1RL(man::Union{FinEnvManager,WinEnvManager},dir,row,col)
+function fp1RL(man::WinEnvManager,dir,row,col)
+    (tr,tc)=rotate_north((row,col),size(man.peps),dir);
+    if isin(man.peps,tr,tc)
+        @tensor tor[-1 -2 -3;-4]:=man.boundaries[left(dir)][tc].CR[end-tr+1][-1,1]*
+        man.fp1[dir][tr,tc][1,-2,-3,2]*
+        man.boundaries[right(dir)][end-tc].CR[tr-1][2,-4]
+        return tor
+    else
+        @tensor tor[-1 -2 -3;-4]:=man.boundaries[left(dir)].CR[tc,end-tr+1][-1,1]*
+        man.infenvm.fp1[dir][tr,tc][1,-2,-3,2]*
+        man.boundaries[right(dir)].CR[end-tc+1,tr-1][2,-4]
+        return tor
+    end
+end
+function fp1RL(man::FinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
 
     @tensor tor[-1 -2 -3;-4]:=man.boundaries[left(dir)][tc].CR[end-tr+1][-1,1]*

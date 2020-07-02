@@ -50,3 +50,5 @@ Base.map(f,x::WinPEPS) = map(f,x.inside);
 
 Base.lastindex(t::WinPEPS, i::Int64) = size(t,i)
 Base.similar(t::WinPEPS) = WinPEPS(similar(t.inside),copy(t.outside))
+
+isin(peps::WinPEPS,i,j) = !(i<1 || i>size(peps,1) || j<1 || j>size(peps,2))

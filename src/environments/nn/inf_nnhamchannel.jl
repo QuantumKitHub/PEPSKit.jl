@@ -9,10 +9,12 @@ end
 #generate bogus data
 function MPSKit.params(peps::InfPEPS,opperator::NN;kwargs ...)
     #this should rather by a 4periodic array of arrays...
-    lines = PeriodicArray{Any}(undef,4);
-    ts = PeriodicArray{Any}(undef,4);
+    envm = params(peps;kwargs...);
 
-    pars = InfNNHamChannels(opperator,params(peps;kwargs...),lines,ts);
+    lines = similar(envm.fp1);
+    ts = similar(envm.fp1);
+
+    pars = InfNNHamChannels(opperator,envm,lines,ts);
 
     return MPSKit.recalculate!(pars,peps;kwargs...)
 end

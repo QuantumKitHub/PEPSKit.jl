@@ -1,4 +1,4 @@
-mutable struct FinNNHamChannels{E<:FinEnvManager,B,O<:NN} <: Cache
+mutable struct WinNNHamChannels{E<:WinEnvManager,B,O<:NN} <: Cache
     opperator :: O
     envm::E
 
@@ -7,24 +7,26 @@ mutable struct FinNNHamChannels{E<:FinEnvManager,B,O<:NN} <: Cache
 end
 
 #generate bogus data
-function MPSKit.params(peps::FinPEPS,opperator::NN,alg::MPSKit.Algorithm)
-    pepspars = params(peps,alg);
+function MPSKit.params(peps::WinPEPS,opperator::NN,inf_peps_args::InfNNHamChannels,alg::MPSKit.Algorithm)
+    envm = params(peps,inf_peps_args.envm,alg);
 
-    lines = similar(pepspars.fp1);
-    ts = similar(pepspars.fp1);
+    lines = similar(envm.fp1);
+    ts = similar(envm.fp1);
 
     for dir in Dirs
-        lines[dir] = zero.(pepspars.fp1[dir])
-        ts[dir] = zero.(pepspars.fp1[dir])
+        (tnr,tnc) = rotate_north(size(peps),dir)
+
+        lines[dir] = inf_peps_args.lines[dir][1:tnr+1,1:tnc];
+        ts[dir] = inf_peps_args.ts[dir][1:tnr+1,1:tnc]
     end
 
-    pars = FinNNHamChannels(opperator,pepspars,lines,ts);
+    pars = WinNNHamChannels(opperator,envm,lines,ts);
 
     return MPSKit.recalculate!(pars,peps)
 end
 
 #recalculate everything
-function MPSKit.recalculate!(prevenv::FinNNHamChannels,peps::FinPEPS)
+function MPSKit.recalculate!(prevenv::WinNNHamChannels,peps::WinPEPS)
     MPSKit.recalculate!(prevenv.envm,peps);
 
     recalc_lines!(prevenv)
@@ -32,12 +34,12 @@ function MPSKit.recalculate!(prevenv::FinNNHamChannels,peps::FinPEPS)
     prevenv
 end
 
-function recalc_lines!(env::FinNNHamChannels)
+function recalc_lines!(env::WinNNHamChannels)
     for dir in Dirs
         tman = rotate_north(env.envm,dir);
         tpeps = tman.peps;
 
-        for i = 2:size(tpeps,1)
+        for i = 1:size(tpeps,1)
             for j = 1:size(tpeps,2)
                 #notice just how similar this is to the infinite peps case
                 #I don't subtract any fps yet, maybe later?
@@ -48,7 +50,7 @@ function recalc_lines!(env::FinNNHamChannels)
     end
 end
 
-function recalc_ts!(env::FinNNHamChannels)
+function recalc_ts!(env::WinNNHamChannels)
     #lines are already updated here :)
     for dir in Dirs
         man = rotate_north(env.envm,dir);

@@ -45,6 +45,7 @@ module PEPSKit
     #hamiltonian dependent environments
     include("environments/nn/inf_nnhamchannel.jl")
     include("environments/nn/fin_nnhamchannel.jl")
+    include("environments/nn/win_nnhamchannel.jl")
 
     #makes working with environments slightly more bearable
     include("environments/dirview.jl")
