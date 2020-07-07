@@ -88,7 +88,7 @@ function recalc_ts!(env::WinNNHamChannels)
                     conj(man.peps[i,j][6,-3,11,7,8])
 
                 # "vertical ham contribution"
-                if i > 1
+                #if i > 1
                     @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
                         fp1RL(man,North,i-1,j)[8,3,5,1]*
                         AL(man,West,i-1,j)[20,6,7,8]*
@@ -100,10 +100,10 @@ function recalc_ts!(env::WinNNHamChannels)
                         man.peps[i,j][18,-2,12,13,14]*
                         conj(man.peps[i,j][19,-3,15,16,17])*
                         nn[9,10,14,17]
-                end
+                #end
 
                 # "horleft contribution"
-                if j > 1
+                #if j > 1
                     @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
                         fp1LR(man,North,i,j)[14,15,17,19]*
                         AC(man,East,i,j)[19,20,21,-4]*
@@ -117,10 +117,10 @@ function recalc_ts!(env::WinNNHamChannels)
                         man.peps[i,j][12,-2,20,15,13]*
                         conj(man.peps[i,j][16,-3,21,17,18])*
                         nn[10,11,13,18]
-                end
+                #end
 
                 # "horright contribution"
-                if j < size(tpeps,2)
+                #if j < size(tpeps,2)
 
                     @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
                         AC(man,West,i,j)[-1,20,21,22]*
@@ -135,7 +135,7 @@ function recalc_ts!(env::WinNNHamChannels)
                         man.peps[i,j+1][13,9,4,5,11]*
                         conj(man.peps[i,j+1][17,10,6,7,12])*
                                         nn[14,19,11,12]
-                end
+                #end
             end
         end
 

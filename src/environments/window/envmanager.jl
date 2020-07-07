@@ -75,83 +75,28 @@ function MPSKit.recalculate!(pars::WinEnvManager,peps::WinPEPS)
     recalc_fp0!(peps,pars);
     recalc_fp1!(peps,pars);
 
-    fixphases!(pars);
+    fixphases!(pars,verbose=true);
 end
 
 function fixphases!(man::WinEnvManager;verbose=false)
-# todo : clean this up
-    for (i,j) in Iterators.product(2:size(man.peps,1),2:size(man.peps,2))
-        nw = corner(man,NorthWest,i,j);
-        ne = corner(man,NorthEast,i,j-1);
-        se = corner(man,SouthEast,i-1,j-1);
-        sw = corner(man,SouthWest,i-1,j);
-
-        n0 = fp0LR(man,North,i,j);
-        e0 = fp0LR(man,East,i,j-1);
-        s0 = fp0LR(man,South,i-1,j-1);
-        w0 = fp0LR(man,West,i-1,j);
-
-        n = CR(man,North,i,j-1);
-        e = CR(man,East,i-1,j-1);
-        s = CR(man,South,i-1,j);
-        w = CR(man,West,i,j);
-
-        a = dot(n,nw*n0*ne)/(norm(n)*norm(n));
-        b = dot(e,ne*e0*se)/(norm(e)*norm(e));
-        c = dot(s,se*s0*sw)/(norm(s)*norm(s));
-        d = dot(w,sw*w0*nw)/(norm(w)*norm(w));
-
-        #a/=abs(a);b/=abs(b);c/=abs(c);d/=abs(d);
-        #an approximate solution for the problem is given by:
-        rmul!(ne,1/a);
-        rmul!(se,d/c)
-        rmul!(sw,1/d)
-
-        #these are all the consistency equations we impose in this step : ...
-        verbose && println("fp0 - nw inconsistency $(norm(nw*n0*ne-n))")
-        verbose && println("fp0 - ne inconsistency $(norm(ne*e0*se-e))")
-        verbose && println("fp0 - se inconsistency $(norm(se*s0*sw-s))")
-        verbose && println("fp0 - sw inconsistency $(norm(sw*w0*nw-w))")
-    end
-
     for dir in Dirs
         tman = rotate_north(man,dir);
 
-        i = 1;
-        for j in 1:size(tman.peps,2)
-            nw = corner(tman,NorthWest,i,j);
-            ne = corner(tman,NorthEast,i,j-1);
-            se = corner(tman,SouthEast,i-1,j-1);
-            sw = corner(tman,SouthWest,i-1,j);
+        for i in 1:size(man.peps,1)
+            for j in 1:size(man.peps,2)+1
+                fp1 = fp1LR(tman,West,i,j);
+                fp0 = fp0LR(tman,West,i,j);
 
-            n0 = fp0LR(tman,North,i,j);
-            e0 = fp0LR(tman,East,i,j-1);
-            s0 = fp0LR(tman,South,i-1,j-1);
-            w0 = fp0LR(tman,West,i-1,j);
+                nw_n = corner(tman,NorthWest,i+1,j);
+                nw_o = corner(tman,NorthWest,i,j);
 
-            n = CR(tman,North,i,j-1);
-            e = CR(tman,East,i-1,j-1);
-            s = CR(tman,South,i-1,j);
-            w = CR(tman,West,i,j);
+                @tensor pred[-1 -2 -3;-4]:=fp0[-1,1]*nw_n[1,2]*AR(tman,West,i,j)[2,-2,-3,-4]
+                @tensor old[-1 -2 -3;-4]:=fp1[-1,-2,-3,1]*nw_o[1,-4];
 
-            a = dot(n,nw*n0*ne)/(norm(n)*norm(n));
-            b = dot(e,ne*e0*se)/(norm(e)*norm(e));
-            c = dot(s,se*s0*sw)/(norm(s)*norm(s));
-            d = dot(w,sw*w0*nw)/(norm(w)*norm(w));
-
-
-            if j == 1
-                rmul!(se,1/b);
-            else
-                rmul!(se,1/b);
-                rmul!(sw,1/d);
+                rmul!(nw_n,dot(pred,old)/(norm(pred)*norm(pred)))
             end
-
-            verbose && println("fp0 - nw inconsistency $(norm(nw*n0*ne-n))")
-            verbose && println("fp0 - ne inconsistency $(norm(ne*e0*se-e))")
-            verbose && println("fp0 - se inconsistency $(norm(se*s0*sw-s))")
-            verbose && println("fp0 - sw inconsistency $(norm(sw*w0*nw-w))")
         end
+
     end
 end
 

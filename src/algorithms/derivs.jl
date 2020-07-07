@@ -1,4 +1,4 @@
-function effectivehn(channels::InfNNHamChannels,i,j)
+function effectivehn(channels::Union{WinNNHamChannels,InfNNHamChannels},i,j)
     man = channels.envm;
 
     #I guess we make neff first, and init heff on zero(neff)
@@ -44,12 +44,13 @@ function effectivehn(channels::InfNNHamChannels,i,j)
             nn[13,14,-10,-5]
 
         #this made sense for some reason?
+        #=
         @tensor cheff[-1 -2 -3 -4 -5;-6 -7 -8 -9 -10]+=tman.fp1RL[North,ti,tj][1,-9,-4,4]*
             tman.AR[East,ti,tj][4,-8,-3,5]*
             tman.fp1LR[South,ti,tj][5,-7,-2,6]*
             tman.AL[West,ti,tj][6,-6,-1,1]*
             utleg[-5,-10]
-
+        =#
 
         heff +=inv_rotate_north(cheff,dir);
     end

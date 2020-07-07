@@ -40,7 +40,7 @@ end
 
 function AL(man::WinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
-    if isin(man.peps,tc,tc)
+    if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].AL[tc]
     else
         return man.infenvm.boundaries[dir].AL[tr,tc]
@@ -57,7 +57,7 @@ end
 
 function AR(man::WinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
-    if isin(man.peps,tr,tc)
+    if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].AR[tc]
     else
         return man.infenvm.boundaries[dir].AR[tr,tc]
@@ -74,7 +74,8 @@ end
 
 function AC(man::WinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
-    if isin(man.peps,tr,tc)
+
+    if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].AC[tc]
     else
         return man.infenvm.boundaries[dir].AC[tr,tc]
@@ -92,7 +93,7 @@ end
 function CR(man::WinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
 
-    if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr].CR)
+    if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=0 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].CR[tc]
     else
         return man.infenvm.boundaries[dir].CR[tr,tc]
@@ -120,7 +121,7 @@ function fp0LR(man,dir,row,col)
 end
 function fp1LR(man::WinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
-    if isin(man.peps,tr,tc)
+    if tr >= 1 && tr <= size(man.fp1[dir],1) && tc >=1 && tc <= size(man.fp1[dir],2)
         return man.fp1[dir][tr,tc]
     else
         return man.infenvm.fp1[dir][tr,tc]
@@ -148,15 +149,17 @@ end
 
 function fp1RL(man::WinEnvManager,dir,row,col)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
-    if isin(man.peps,tr,tc)
+    if isin(man.peps,row,col)
         @tensor tor[-1 -2 -3;-4]:=man.boundaries[left(dir)][tc].CR[end-tr+1][-1,1]*
         man.fp1[dir][tr,tc][1,-2,-3,2]*
         man.boundaries[right(dir)][end-tc].CR[tr-1][2,-4]
         return tor
     else
-        @tensor tor[-1 -2 -3;-4]:=man.boundaries[left(dir)].CR[tc,end-tr+1][-1,1]*
+        tman = rotate_north(man,dir);
+
+        @tensor tor[-1 -2 -3;-4]:=CR(tman,West,tr,tc)[-1,1]*
         man.infenvm.fp1[dir][tr,tc][1,-2,-3,2]*
-        man.boundaries[right(dir)].CR[end-tc+1,tr-1][2,-4]
+        CR(tman,East,tr-1,tc)[2,-4]
         return tor
     end
 end

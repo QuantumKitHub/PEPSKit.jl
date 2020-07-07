@@ -83,7 +83,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
 end
 
 
-function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgorithm,pars::B) where {A<:FinPEPS,B<:FinNNHamChannels}
+function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgorithm,pars::B) where {A<:Union{WinPEPS,FinPEPS},B<:Union{WinNNHamChannels,FinNNHamChannels}}
     #to call optimkit we will pack (peps,prevpars) together in a tuple
     #the gradient type will simply be a 2d array of tensors
     function objfun(x::Tuple{A,B,Matrix{Float64}})
@@ -93,10 +93,16 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
             (heff,neff) = effectivehn(cpr,i,j);
             v = permute(cpe[i,j],(1,2,3,4,5));
             n = dot(v,neff*v)
+            @show n
+            @show dot(v,heff*v)/dot(v,neff*v)
+
+
             permute(heff*v - (dot(v,heff*v)/n)*neff*v,(1,2,3,4),(5,))/n
         end
 
         en = real(expectation_value(cpe,ham,cpr))/(size(cpe,1)*size(cpe,2))
+        @show en
+        println("---")
         en,cg
     end
 

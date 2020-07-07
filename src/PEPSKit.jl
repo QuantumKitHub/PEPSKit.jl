@@ -54,7 +54,7 @@ module PEPSKit
     include("algorithms/derivs.jl")
     include("algorithms/approximating/vomps.jl")
     include("algorithms/groundstate/optimhook.jl")
-    include("algorithms/timestep/gradstep.jl")
+    include("algorithms/timestep/tdvp.jl")
 
     include("models/ising.jl")
     include("models/xxz.jl")
