@@ -4,17 +4,19 @@
         - corner tensors (channel approximation)
         - precomputed fixpoints
 =#
-mutable struct InfEnvManager{T,A,B,C,D} <: Cache
+mutable struct InfEnvManager{T,A,B,F,C,D} <: Cache
     peps::T
     boundaries::A
     corners::B
+
+    alg::F
 
     fp0::C
     fp1::D
     #fp2::E
 end
 
-function MPSKit.params(peps::InfPEPS;kwargs...)
+function MPSKit.params(peps::InfPEPS;alg=Vumps(),kwargs...)
     #=
         All we do here is create a trivial environment
         and then pass it to recalculate, which takes an old environment and calculates the new one
@@ -72,15 +74,15 @@ function MPSKit.params(peps::InfPEPS;kwargs...)
         end)
     end)
     =#
-    return MPSKit.recalculate!(InfEnvManager(peps,boundaries,corners,fp0,fp1#=,fp2=#),peps;kwargs...)
+    return MPSKit.recalculate!(InfEnvManager(peps,boundaries,corners,alg,fp0,fp1#=,fp2=#),peps;kwargs...)
 end
 
-function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;verbose = false,tol = 1e-10,bound_finalize = (iter,state,ham,pars)->(state,pars),maxiter=1000)
+function MPSKit.recalculate!(prevenv::InfEnvManager,peps::InfPEPS;alg=prevenv.alg,verbose=false)
     prevenv.peps = peps;
 
     #pars == the boundary mps parameters
     boundpars = map(Dirs) do dir
-        @Threads.spawn north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],verbose=verbose,tol=tol,bound_finalize=bound_finalize,maxiter=maxiter);
+        @Threads.spawn north_boundary_mps(rotate_north(peps,dir),prevenv.boundaries[dir],alg);
     end
 
     pars = map(Dirs) do dir
@@ -209,12 +211,14 @@ end
 Base.rotl90(envm::InfEnvManager) = InfEnvManager(   rotl90(envm.peps),
                                                     circshift(envm.boundaries,1),
                                                     circshift(envm.corners,1),
+                                                    envm.alg,
                                                     circshift(envm.fp0,1),
                                                     circshift(envm.fp1,1),
                                                     #=circshift(envm.fp2,1)=#)
 Base.rotr90(envm::InfEnvManager) = InfEnvManager(   rotr90(envm.peps),
                                                     circshift(envm.boundaries,-1),
                                                     circshift(envm.corners,-1),
+                                                    envm.alg,
                                                     circshift(envm.fp0,-1),
                                                     circshift(envm.fp1,-1),
                                                     #=circshift(envm.fp2,-1)=#)

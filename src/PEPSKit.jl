@@ -7,10 +7,12 @@ module PEPSKit
     export North,East,South,West
     export NorthEast,SouthEast,SouthWest,NorthWest
 
-    export boundary
+    export channels
     export expectation_value
     export GradStep
 
+    export AC,AR,AL,fp1LR,fp1RL,fp0LR,fp0RL,corner
+    
     abstract type Cache end
 
     include("utility/typedef.jl")

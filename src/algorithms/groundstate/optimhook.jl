@@ -1,9 +1,4 @@
-function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.OptimizationAlgorithm;pars=params(peps,ham),bound_finalize =(iter,state,ham,pars)->(state,pars))
-    #=
-        - I need to clean this up
-        - transition map was needed to define transport (and therefore used lbfgs,cg)
-    =#
-
+function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.OptimizationAlgorithm,pars::InfNNHamChannels)
     #to call optimkit we will pack (peps,prevpars) together in a tuple
     #the gradient type will simply be a 2d array of tensors
     function objfun(x)
@@ -15,7 +10,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
             permute(heff*v - dot(v,heff*v)*neff*v,(1,2,3,4),(5,))
         end
 
-        real(expectation_value(cpe,ham,cpr))/(size(cpe,1)*size(cpe,2)),cg
+        real(expectation_value(cpr.envm,ham))/(size(cpe,1)*size(cpe,2)),cg
     end
 
     function retract(x, cgr, α)
@@ -32,7 +27,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
         end
 
         prevnorms = map(norm,npe);
-        MPSKit.recalculate!(npr,npe,bound_finalize=bound_finalize)
+        MPSKit.recalculate!(npr,npe)
         newnorms = map(norm,npe);
 
         new_tm = copy(old_tm);
@@ -41,7 +36,6 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
             new_tm[i,j] = newnorms[i,j]/prevnorms[i,j];
             newgrad[i,j]*=new_tm[i,j];
         end
-
 
         #should also calculate "local gradient along that path"
         return (npe,npr,new_tm),newgrad

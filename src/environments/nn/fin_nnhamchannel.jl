@@ -7,20 +7,18 @@ mutable struct FinNNHamChannels{E<:FinEnvManager,B,O<:NN} <: Cache
 end
 
 #generate bogus data
-function MPSKit.params(peps::FinPEPS,opperator::NN,alg::MPSKit.Algorithm)
-    pepspars = params(peps,alg);
-
-    lines = similar(pepspars.fp1);
-    ts = similar(pepspars.fp1);
+function channels(envm::FinEnvManager,opperator::NN)
+    lines = similar(envm.fp1);
+    ts = similar(envm.fp1);
 
     for dir in Dirs
-        lines[dir] = zero.(pepspars.fp1[dir])
-        ts[dir] = zero.(pepspars.fp1[dir])
+        lines[dir] = zero.(envm.fp1[dir])
+        ts[dir] = zero.(envm.fp1[dir])
     end
 
-    pars = FinNNHamChannels(opperator,pepspars,lines,ts);
+    pars = FinNNHamChannels(opperator,envm,lines,ts);
 
-    return MPSKit.recalculate!(pars,peps)
+    return MPSKit.recalculate!(pars,envm.peps)
 end
 
 #recalculate everything
