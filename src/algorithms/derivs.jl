@@ -43,7 +43,6 @@ function effectivehn(channels::Union{WinNNHamChannels,InfNNHamChannels},i,j)
             AL(tman,West,ti-1,tj)[12,7,8,9]*
             conj(tman.peps[ti-1,tj][8,-4,3,4,11])*
             nn[11,10,-5,-10]
-
         heff +=inv_rotate_north(cheff,dir);
     end
 
@@ -96,14 +95,6 @@ function effectivehn(channels::FinNNHamChannels,i,j)
                 conj(tman.peps[ti-1,tj][8,-4,3,4,11])*
                 nn[10,11,-10,-5]
         end
-
-
-        #this made sense for some reason?
-        @tensor cheff[-1 -2 -3 -4 -5;-6 -7 -8 -9 -10]+=fp1RL(tman,North,ti,tj)[4,-9,-4,1]*
-            AR(tman,East,ti,tj)[1,-8,-3,3]*
-            fp1LR(tman,South,ti,tj)[3,-7,-2,2]*
-            AL(tman,West,ti,tj)[2,-6,-1,4]*
-            utleg[-5,-10]
 
         heff +=inv_rotate_north(cheff,dir);
 

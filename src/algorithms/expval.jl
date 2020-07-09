@@ -1,6 +1,17 @@
 MPSKit.expectation_value(man::Union{InfNNHamChannels,FinNNHamChannels,WinNNHamChannels},nn::NN) = expectation_value(man.envm,nn);
 MPSKit.expectation_value(man::Union{InfNNHamChannels,FinNNHamChannels,WinNNHamChannels},opp::MPSKit.MPSBondTensor) = expectation_value(man.envm,opp);
 
+function MPSKit.expectation_value(man::Union{InfEnvManager,WinEnvManager,FinEnvManager},opp::MPSKit.MPSBondTensor)
+    expval = map(Iterators.product(1:size(man.peps,1),1:size(man.peps,2))) do (i,j)
+        e = @tensor fp1LR(man,North,i,j)[1,2,3,4]*AC(man,East,i,j)[4,5,6,7]*fp1LR(man,South,i,j)[7,8,9,10]*AC(man,West,i,j)[10,11,12,1]*
+        man.peps[i,j][11,8,5,2,13]*conj(man.peps[i,j][12,9,6,3,14])*opp[14,13]
+        n = @tensor fp1LR(man,North,i,j)[1,2,3,4]*AC(man,East,i,j)[4,5,6,7]*fp1LR(man,South,i,j)[7,8,9,10]*AC(man,West,i,j)[10,11,12,1]*
+        man.peps[i,j][11,8,5,2,13]*conj(man.peps[i,j][12,9,6,3,13])
+
+        e/n
+    end
+end
+
 function MPSKit.expectation_value(man::InfEnvManager,nn::NN)
     tot = 0.0+0im
 
@@ -34,11 +45,10 @@ function MPSKit.expectation_value(man::InfEnvManager,nn::NN)
     tot
 end
 
-function MPSKit.expectation_value(state::FinPEPS,nn::NN,pars::FinNNHamChannels = params(state,nn))
+function MPSKit.expectation_value(man::FinEnvManager,nn::NN)
     #=
     contrast it with the infpeps code. We only had to add bound checks and normalization (ipeps is normalized in place)
     =#
-    man  = pars.envm;
 
     tot = 0.0+0im
     normalization = 0.0+0im;
@@ -55,7 +65,7 @@ function MPSKit.expectation_value(state::FinPEPS,nn::NN,pars::FinNNHamChannels =
                 conj(man.peps[i,j][18,21,6,3,22])*
                 man.peps[i+1,j][14,11,8,19,23]*
                 conj(man.peps[i+1,j][15,12,9,21,24])*
-                nn[20,22,23,24]
+                nn[22,20,24,23]
 
             normalcount +=1;
             normalization += @tensor fp1RL(man,North,i,j)[1,2,3,4]*
@@ -81,7 +91,7 @@ function MPSKit.expectation_value(state::FinPEPS,nn::NN,pars::FinNNHamChannels =
                 conj(man.peps[i,j][3,18,21,6,22])*
                 man.peps[i,j+1][19,14,11,8,23]*
                 conj(man.peps[i,j+1][21,15,12,9,24])*
-                nn[20,22,23,24]
+                nn[22,20,24,23]
 
             normalcount +=1;
             normalization += @tensor fp1RL(man,West,i,j)[1,2,3,4]*
@@ -100,22 +110,11 @@ function MPSKit.expectation_value(state::FinPEPS,nn::NN,pars::FinNNHamChannels =
     normalcount*tot/normalization
 end
 
-function MPSKit.expectation_value(man::Union{InfEnvManager,WinEnvManager,FinEnvManager},opp::MPSKit.MPSBondTensor)
-    expval = map(Iterators.product(1:size(man.peps,1),1:size(man.peps,2))) do (i,j)
-        e = @tensor fp1LR(man,North,i,j)[1,2,3,4]*AC(man,East,i,j)[4,5,6,7]*fp1LR(man,South,i,j)[7,8,9,10]*AC(man,West,i,j)[10,11,12,1]*
-            man.peps[i,j][11,8,5,2,13]*conj(man.peps[i,j][12,9,6,3,14])*opp[14,13]
-        n = @tensor fp1LR(man,North,i,j)[1,2,3,4]*AC(man,East,i,j)[4,5,6,7]*fp1LR(man,South,i,j)[7,8,9,10]*AC(man,West,i,j)[10,11,12,1]*
-            man.peps[i,j][11,8,5,2,13]*conj(man.peps[i,j][12,9,6,3,13])
-
-        e/n
-    end
-end
 
 #=
 This is a bit poorly defined
 =#
-function MPSKit.expectation_value(state::WinPEPS,nn::NN,pars::WinNNHamChannels = params(state,nn))
-    man  = pars.envm;
+function MPSKit.expectation_value(man::WinEnvManager,nn::NN)
 
     tot = 0.0+0im
     normalization = 0.0+0im;
@@ -132,7 +131,7 @@ function MPSKit.expectation_value(state::WinPEPS,nn::NN,pars::WinNNHamChannels =
                 conj(man.peps[i,j][18,21,6,3,22])*
                 man.peps[i+1,j][14,11,8,19,23]*
                 conj(man.peps[i+1,j][15,12,9,21,24])*
-                nn[20,22,23,24]
+                nn[22,20,24,23]
 
             normalcount +=1;
             normalization += @tensor fp1RL(man,North,i,j)[1,2,3,4]*
@@ -158,7 +157,7 @@ function MPSKit.expectation_value(state::WinPEPS,nn::NN,pars::WinNNHamChannels =
                 conj(man.peps[i,j][3,18,21,6,22])*
                 man.peps[i,j+1][19,14,11,8,23]*
                 conj(man.peps[i,j+1][21,15,12,9,24])*
-                nn[20,22,23,24]
+                nn[22,20,24,23]
 
             normalcount +=1;
             normalization += @tensor fp1RL(man,West,i,j)[1,2,3,4]*

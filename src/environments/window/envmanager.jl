@@ -12,7 +12,6 @@ mutable struct WinEnvManager{P<:WinPEPS,A<:InfEnvManager,B,S<:MPSComoving,O<:MPS
     fp1 :: PeriodicArray{Matrix{M},1}
 end
 
-MPSKit.params(peps::WinPEPS,alg::MPSKit.Algorithm;kwargs...) = params(peps,params(peps.outside;kwargs...),alg);
 function MPSKit.params(peps::WinPEPS,inf_peps_args::InfEnvManager,alg::MPSKit.Algorithm)
     utilleg = oneunit(space(peps,1,1))
 
@@ -75,10 +74,11 @@ function MPSKit.recalculate!(pars::WinEnvManager,peps::WinPEPS)
     recalc_fp0!(peps,pars);
     recalc_fp1!(peps,pars);
 
-    fixphases!(pars,verbose=true);
+    fixphases!(pars);
 end
 
 function fixphases!(man::WinEnvManager;verbose=false)
+    incon = 0;
     for dir in Dirs
         tman = rotate_north(man,dir);
 
@@ -94,10 +94,14 @@ function fixphases!(man::WinEnvManager;verbose=false)
                 @tensor old[-1 -2 -3;-4]:=fp1[-1,-2,-3,1]*nw_o[1,-4];
 
                 rmul!(nw_n,dot(pred,old)/(norm(pred)*norm(pred)))
+
+                @tensor pred[-1 -2 -3;-4]:=fp0[-1,1]*nw_n[1,2]*AR(tman,West,i,j)[2,-2,-3,-4]
+                incon = max(incon,norm(old-pred)/norm(old))
             end
         end
 
     end
+    #=verbose && =#println("total inconsistency $(incon)")
 end
 
 

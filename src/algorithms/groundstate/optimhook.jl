@@ -87,16 +87,10 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
             (heff,neff) = effectivehn(cpr,i,j);
             v = permute(cpe[i,j],(1,2,3,4,5));
             n = dot(v,neff*v)
-            @show n
-            @show dot(v,heff*v)/dot(v,neff*v)
-
-
             permute(heff*v - (dot(v,heff*v)/n)*neff*v,(1,2,3,4),(5,))/n
         end
 
-        en = real(expectation_value(cpe,ham,cpr))/(size(cpe,1)*size(cpe,2))
-        @show en
-        println("---")
+        en = real(expectation_value(cpr,ham))/(size(cpe,1)*size(cpe,2))
         en,cg
     end
 

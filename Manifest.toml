@@ -117,15 +117,15 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[LoopVectorization]]
 deps = ["DocStringExtensions", "LinearAlgebra", "OffsetArrays", "SIMDPirates", "SLEEFPirates", "UnPack", "VectorizationBase"]
-git-tree-sha1 = "9c5b05887df1ea538576a7a29854095dd217609b"
+git-tree-sha1 = "6f639e9cb9273c500f18779e4805646e6ac57d21"
 uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
-version = "0.8.13"
+version = "0.8.14"
 
 [[MPSKit]]
 deps = ["KrylovKit", "LinearAlgebra", "OptimKit", "Parameters", "TensorKit", "TensorKitManifolds", "Test"]
-git-tree-sha1 = "11ce42726a34fc11546048138f4c00113cda9ba2"
+git-tree-sha1 = "1c849eedd5e79cf4c8a9260e634c092fdcc030e1"
 uuid = "bb1c41ca-d63c-52ed-829e-0820dda26502"
-version = "0.1.0"
+version = "0.1.1"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
@@ -156,9 +156,7 @@ version = "1.1.1"
 
 [[OptimKit]]
 deps = ["LinearAlgebra", "Printf"]
-git-tree-sha1 = "fa094a8d27cfc2407e653f47e4b87b710cb0c2f3"
-repo-rev = "master"
-repo-url = "https://github.com/Jutho/OptimKit.jl.git"
+git-tree-sha1 = "c423cb40450d37d8a3f6cc62474540ddc82b3458"
 uuid = "77e91f04-9b3b-57a6-a776-40b61faaebe0"
 version = "0.1.0"
 
@@ -288,9 +286,9 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[VectorizationBase]]
 deps = ["CpuId", "LLVM", "Libdl", "LinearAlgebra"]
-git-tree-sha1 = "8695a98d54ef9de740ec885db14eedcb9557478f"
+git-tree-sha1 = "1c1f748f1b206a51fd91a8a0e54d121370d50be7"
 uuid = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
-version = "0.12.19"
+version = "0.12.20"
 
 [[WignerSymbols]]
 deps = ["HalfIntegers", "Primes"]

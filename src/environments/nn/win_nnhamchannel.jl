@@ -13,14 +13,16 @@ function channels(envm::WinEnvManager,operator::NN)
     lines = similar(envm.fp1);
     ts = similar(envm.fp1);
 
+    infchan = channels(envm.infenvm,operator);
+
     for dir in Dirs
         (tnr,tnc) = rotate_north(size(peps),dir)
 
-        lines[dir] = inf_peps_args.lines[dir][1:tnr+1,1:tnc];
-        ts[dir] = inf_peps_args.ts[dir][1:tnr+1,1:tnc]
+        lines[dir] = zero.(infchan.lines[dir][1:tnr+1,1:tnc]);
+        ts[dir] = zero.(infchan.ts[dir][1:tnr+1,1:tnc]);
     end
 
-    pars = WinNNHamChannels(opperator,envm,lines,ts);
+    pars = WinNNHamChannels(operator,envm,lines,ts);
 
     return MPSKit.recalculate!(pars,peps)
 end
@@ -67,6 +69,7 @@ function recalc_ts!(env::WinNNHamChannels)
                 cwcontr = env.lines[left(dir)][wi,wj];
                 cecontr = env.lines[right(dir)][ei,ej];
 
+                #=
                 # "add west contribution"
                 @tensor env.ts[dir][i+1,j][-1 -2 -3;-4] +=
                     corner(man,SouthWest,i,j)[-1,2]*
@@ -86,8 +89,9 @@ function recalc_ts!(env::WinNNHamChannels)
                     corner(man,SouthEast,i,j)[2,-4]*
                     man.peps[i,j][4,-2,10,5,8]*
                     conj(man.peps[i,j][6,-3,11,7,8])
-
+                =#
                 # "vertical ham contribution"
+                if i >1
                 @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
                     fp1RL(man,North,i-1,j)[8,3,5,1]*
                     AL(man,West,i-1,j)[20,6,7,8]*
@@ -98,8 +102,9 @@ function recalc_ts!(env::WinNNHamChannels)
                     conj(man.peps[i-1,j][7,16,4,5,10])*
                     man.peps[i,j][18,-2,12,13,14]*
                     conj(man.peps[i,j][19,-3,15,16,17])*
-                    nn[9,10,14,17]
-
+                    nn[10,9,17,14]
+                end
+                #=
                 # "horleft contribution"
                 @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
                     fp1LR(man,North,i,j)[14,15,17,19]*
@@ -113,7 +118,7 @@ function recalc_ts!(env::WinNNHamChannels)
                     conj(man.peps[i,j-1][5,8,16,6,11])*
                     man.peps[i,j][12,-2,20,15,13]*
                     conj(man.peps[i,j][16,-3,21,17,18])*
-                    nn[10,11,13,18]
+                    nn[11,10,18,13]
 
                 # "horright contribution"
                 @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
@@ -128,7 +133,8 @@ function recalc_ts!(env::WinNNHamChannels)
                     conj(man.peps[i,j][21,-3,17,18,19])*
                     man.peps[i,j+1][13,9,4,5,11]*
                     conj(man.peps[i,j+1][17,10,6,7,12])*
-                                    nn[14,19,11,12]
+                    nn[19,14,12,11]
+                =#
             end
         end
 

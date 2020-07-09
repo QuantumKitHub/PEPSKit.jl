@@ -95,7 +95,7 @@ function recalc_ts!(env::FinNNHamChannels)
                         conj(man.peps[i-1,j][7,16,4,5,10])*
                         man.peps[i,j][18,-2,12,13,14]*
                         conj(man.peps[i,j][19,-3,15,16,17])*
-                        nn[9,10,14,17]
+                        nn[10,9,17,14]
                 end
 
                 # "horleft contribution"
@@ -112,7 +112,7 @@ function recalc_ts!(env::FinNNHamChannels)
                         conj(man.peps[i,j-1][5,8,16,6,11])*
                         man.peps[i,j][12,-2,20,15,13]*
                         conj(man.peps[i,j][16,-3,21,17,18])*
-                        nn[10,11,13,18]
+                        nn[11,10,18,13]
                 end
 
                 # "horright contribution"
@@ -130,7 +130,7 @@ function recalc_ts!(env::FinNNHamChannels)
                         conj(man.peps[i,j][21,-3,17,18,19])*
                         man.peps[i,j+1][13,9,4,5,11]*
                         conj(man.peps[i,j+1][17,10,6,7,12])*
-                                        nn[14,19,11,12]
+                        nn[19,14,12,11]
                 end
             end
         end
