@@ -2,8 +2,8 @@ function recalc_north_planes!(peps::FinPEPS,oldplanes,algorithm)
     #notice how oldplanes[1] is a boundary condition that cannot be changed!
 
     bpars = map(1:size(peps,1)) do i
-        (oldplanes[i+1],fpars) = approximate(oldplanes[i+1],peps[i,:],oldplanes[i],algorithm)
-        fpars
+        (oldplanes[i+1],fpars) = approximate(oldplanes[i+1],(peps[i,:],oldplanes[i]),algorithm)
+        fpars[1]
     end
     return bpars
 end

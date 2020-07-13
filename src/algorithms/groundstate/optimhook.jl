@@ -77,11 +77,12 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.Optimizatio
 end
 
 
-function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgorithm,pars::B) where {A<:Union{WinPEPS,FinPEPS},B<:Union{WinNNHamChannels,FinNNHamChannels}}
+function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgorithm,pars::B) where {A<:Union{WinPEPS,FinPEPS},B<:Union{FinNNHamCors,WinNNHamChannels,FinNNHamChannels}}
     #to call optimkit we will pack (peps,prevpars) together in a tuple
     #the gradient type will simply be a 2d array of tensors
     function objfun(x::Tuple{A,B,Matrix{Float64}})
         (cpe,cpr,old_tm) = x;
+        MPSKit.recalculate!(cpr,cpe)
 
         cg = map(Iterators.product(1:size(cpe,1),1:size(cpe,2))) do (i,j)
             (heff,neff) = effectivehn(cpr,i,j);
@@ -90,7 +91,7 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
             permute(heff*v - (dot(v,heff*v)/n)*neff*v,(1,2,3,4),(5,))/n
         end
 
-        en = real(expectation_value(cpr,ham))/(size(cpe,1)*size(cpe,2))
+        en = real(expectation_value(cpr,ham))*(size(cpe,1)*size(cpe,2))
         en,cg
     end
 
@@ -102,7 +103,6 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
 
         #we on't want retract to overwrite the old state!
         npe::A = deepcopy(cpe)
-        npr::B = deepcopy(cpr);
         new_tm = ones(Float64,size(cpe,1),size(cpe,2))
 
         for (i,j) in Iterators.product(1:size(cpe,1),1:size(cpe,2))
@@ -114,15 +114,13 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
             new_tm[i,j] /=newn
         end
 
-        MPSKit.recalculate!(npr,npe)
-
         newgrad = copy(cgr);
         for (i,j) in Iterators.product(1:size(cpe,1),1:size(cpe,2))
             newgrad[i,j]*=new_tm[i,j];
         end
 
         #should also calculate "local gradient along that path"
-        return (npe,npr,new_tm),newgrad
+        return (npe,cpr,new_tm),newgrad
     end
 
     function inner(x::Tuple{A,B,Matrix{Float64}}, v1, v2)
@@ -145,6 +143,7 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
     end
     scale!(v, α) = v.*α
     add!(vdst, vsrc, α) = vdst+α.*vsrc
+    #return optimtest(objfun, (peps,pars,ones(Float64,size(peps,1),size(peps,2))), objfun((peps,pars,ones(Float64,size(peps,1),size(peps,2))))[2]; alpha= 0:0.01:0.02,retract = retract, inner = inner)
 
     (x,fx,gx,normgradhistory)=optimize(objfun,(peps,pars,ones(Float64,size(peps,1),size(peps,2))),alg;
         retract = retract,
@@ -155,5 +154,5 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
         isometrictransport = false)
 
     return (x[1],x[2],normgradhistory[end])
-    #return optimtest(objfun, (peps,pars,ones(Float64,size(peps,1),size(peps,2))), objfun((peps,pars,ones(Float64,size(peps,1),size(peps,2))))[2]; alpha= 0:0.01:0.1,retract = retract, inner = inner)
+
 end

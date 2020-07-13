@@ -7,12 +7,12 @@ module PEPSKit
     export North,East,South,West
     export NorthEast,SouthEast,SouthWest,NorthWest
 
-    export channels
+    export channels,correlator
     export expectation_value
     export GradStep
 
     export AC,AR,AL,fp1LR,fp1RL,fp0LR,fp0RL,corner
-    
+
     abstract type Cache end
 
     include("utility/typedef.jl")
@@ -28,6 +28,7 @@ module PEPSKit
     #1d Environments
     include("mpskit_glue/inf_boundary_pars.jl")
     include("mpskit_glue/fin_boundary_pars.jl")
+    include("mpskit_glue/fin_correl_pars.jl")
 
     #general environments
     include("environments/infinite/planes.jl")
@@ -48,6 +49,7 @@ module PEPSKit
     include("environments/nn/inf_nnhamchannel.jl")
     include("environments/nn/fin_nnhamchannel.jl")
     include("environments/nn/win_nnhamchannel.jl")
+    include("environments/nn/fin_nnhamcor.jl")
 
     #makes working with environments slightly more bearable
     include("environments/dirview.jl")

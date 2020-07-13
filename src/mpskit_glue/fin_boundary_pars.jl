@@ -13,7 +13,7 @@ struct LineEnv{S,P<:PEPSType, C<:MPSKit.GenericMPSTensor} <: Cache
     rightenvs::Vector{C}
 end
 
-function MPSKit.params(below::S,middle::Vector{P},above::S,leftstart::C,rightstart::C) where S <: Union{<:FiniteMPS,<:MPSComoving} where {C <: MPSKit.GenericMPSTensor,P<:PEPSType}
+function MPSKit.params(below::S,middle::Vector{P},above::S,leftstart::C,rightstart::C) where {C <: MPSKit.GenericMPSTensor,P<:PEPSType,S <: Union{<:FiniteMPS,<:MPSComoving}}
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
@@ -25,12 +25,14 @@ function MPSKit.params(below::S,middle::Vector{P},above::S,leftstart::C,rightsta
     return LineEnv{S,P,C}(above,middle,similar.(below.AL[1:end]),similar.(below.AR[1:end]),leftenvs,reverse(rightenvs))
 end
 
-function MPSKit.params(below::S,middle::Vector{P},above::S) where {S <: FiniteMPS,P<:PEPSType}
-    #this is wrong
+function MPSKit.params(below::S,squash::Tuple{Vector{P},S}) where {S <: FiniteMPS,P<:PEPSType}
+    (middle,above) = squash;
+
     left_tracer = isomorphism(space(middle[1],1)',space(middle[1],1)')
     right_tracer = isomorphism(space(middle[end],3)',space(middle[end],3)')
     @tensor leftstart[-1 -2 -3; -4]:=l_LL(above)[-1,-4]*left_tracer[-2,-3]
     @tensor rightstart[-1 -2 -3; -4]:=r_RR(above)[-1;-4]*right_tracer[-2,-3]
+
     params(below,middle,above,leftstart,rightstart);
 end
 
@@ -72,7 +74,9 @@ function MPSKit.leftenv(ca::LineEnv,ind,state)
 end
 
 
-function downproject2(pos::Int,below,middle,above,pars)
+function downproject2(pos::Int,below::S,sq::Tuple{Vector{P},S},pars) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving}}
+    (middle,above) = sq;
+
     @tensor toret[-1 -2 -3; -4 -5 -6]:=
     leftenv(pars,pos,below)[-1,4,2,1]*
     above.AC[pos][1,5,3,13]*
@@ -84,6 +88,7 @@ function downproject2(pos::Int,below,middle,above,pars)
     middle[pos+1][15,-4,10,11,12]
 end
 
-function downproject(pos::Int,below,middle,above,pars)
+function downproject(pos::Int,below::S,sq::Tuple{Vector{P},S},pars) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving}}
+    (middle,above) = sq;
     @tensor toret[-1 -2 -3; -4]:=leftenv(pars,pos,below)[-1,7,8,9]*above.AC[pos][9,3,5,1]*rightenv(pars,pos,below)[1,2,4,-4]*middle[pos][7,-2,2,3,6]*conj(middle[pos][8,-3,4,5,6])
 end

@@ -1,15 +1,20 @@
 #I don't know if we should move this to mpskit somehow, or leave it here
 
-function approximate(init,pepsline,state,alg::Dmrg2,pars=params(init,pepsline,state))
+approximate(init::Union{MPSComoving,FiniteMPS},sq::Tuple,alg,pars=params(init,sq)) = approximate(init,[sq],alg,[pars]);
+
+function approximate(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmrg2,pars=[params(init,sq) for sq in squash])
+
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol
 
     while iter < maxiter && delta > tol
         delta=0.0
 
-        for pos=[1:(length(state)-1);length(state)-2:-1:1]
+        for pos=[1:(length(init)-1);length(init)-2:-1:1]
 
-            newA2center = downproject2(pos,init,pepsline,state,pars)
+            newA2center = sum(map(zip(squash,pars)) do (sq,pr)
+                downproject2(pos,init,sq,pr)
+            end)
 
             (al,c,ar) = tsvd(newA2center,trunc=alg.trscheme)
 
@@ -32,7 +37,8 @@ function approximate(init,pepsline,state,alg::Dmrg2,pars=params(init,pepsline,st
     return init,pars,delta
 end
 
-function approximate(init, pepsline,state,alg::Dmrg,pars = params(init,pepsline,state))
+function approximate(init::Union{MPSComoving,FiniteMPS}, squash::Vector,alg::Dmrg,pars = [params(init,sq) for sq in squash])
+
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol
 
@@ -40,10 +46,12 @@ function approximate(init, pepsline,state,alg::Dmrg,pars = params(init,pepsline,
         delta=0.0
 
         #finalize
-        (init,pars) = alg.finalize(iter,init,(pepsline,state),pars);
+        (init,pars) = alg.finalize(iter,init,squash,pars);
 
-        for pos = [1:(length(state)-1);length(state):-1:2]
-            newac = downproject(pos,init,pepsline,state,pars)
+        for pos = [1:(length(init)-1);length(init):-1:2]
+            newac = sum(map(zip(squash,pars)) do (sq,pr)
+                downproject(pos,init,sq,pr)
+            end)
 
             delta = max(delta,norm(newac-init.AC[pos])/norm(newac))
 

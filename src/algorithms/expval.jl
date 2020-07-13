@@ -1,5 +1,5 @@
-MPSKit.expectation_value(man::Union{InfNNHamChannels,FinNNHamChannels,WinNNHamChannels},nn::NN) = expectation_value(man.envm,nn);
-MPSKit.expectation_value(man::Union{InfNNHamChannels,FinNNHamChannels,WinNNHamChannels},opp::MPSKit.MPSBondTensor) = expectation_value(man.envm,opp);
+MPSKit.expectation_value(man::Union{InfNNHamChannels,FinNNHamChannels,WinNNHamChannels,FinNNHamCors},nn::NN) = expectation_value(man.envm,nn);
+MPSKit.expectation_value(man::Union{InfNNHamChannels,FinNNHamChannels,WinNNHamChannels,FinNNHamCors},opp::MPSKit.MPSBondTensor) = expectation_value(man.envm,opp);
 
 function MPSKit.expectation_value(man::Union{InfEnvManager,WinEnvManager,FinEnvManager},opp::MPSKit.MPSBondTensor)
     expval = map(Iterators.product(1:size(man.peps,1),1:size(man.peps,2))) do (i,j)
