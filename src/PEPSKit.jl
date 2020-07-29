@@ -2,7 +2,7 @@ module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads#,TensorOperations
 
     export InfPEPS,FinPEPS,WinPEPS
-    export nonsym_nn_ising_ham,nonsym_nn_xxz_ham
+    export nonsym_nn_ising_ham,nonsym_nn_xxz_ham,u1_nn_xxz_ham,su2_nn_xxz_ham
 
     export North,East,South,West
     export NorthEast,SouthEast,SouthWest,NorthWest
