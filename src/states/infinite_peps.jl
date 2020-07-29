@@ -28,3 +28,6 @@ Base.map(f,x::InfPEPS) = map(f,x.data);
 
 Base.lastindex(t::InfPEPS, i::Int64) = size(t,i)
 Base.similar(t::InfPEPS) = InfPEPS(similar(t.data))
+
+Base.copy(st::InfPEPS) = InfPEPS(copy(st.data));
+Base.deepcopy(st::InfPEPS) = InfPEPS(deepcopy(st.data));

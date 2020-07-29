@@ -13,6 +13,7 @@ function WinPEPS(outside::InfPEPS{T},numrows::Int,numcols::Int) where T
 end
 
 Base.copy(f::WinPEPS) = WinPEPS(copy(f.inside),copy(f.outside));
+Base.deepcopy(f::WinPEPS) = WinPEPS(deepcopy(f.inside),deepcopy(f.outside));
 
 Base.getindex(st::WinPEPS,row::Int,col::Colon) = st.inside[row,col];
 Base.getindex(st::WinPEPS,row::Colon,col::Int) = st.inside[row,col];

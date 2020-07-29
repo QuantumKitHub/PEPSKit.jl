@@ -6,6 +6,7 @@ FinPEPS{T}(initializer,width,height) where T<:PEPSType = FinPEPS{T}(Array{T}(ini
 FinPEPS(data::AbstractArray{T,2}) where T<:PEPSType = FinPEPS{T}(Array(data))
 
 Base.copy(f::FinPEPS) = FinPEPS(copy(f.data))
+Base.deepcopy(f::FinPEPS) = FinPEPS(copy.(f.data))
 
 Base.getindex(st::FinPEPS,row,col) = st.data[row,col]
 function Base.setindex!(st::FinPEPS,v,row,col)

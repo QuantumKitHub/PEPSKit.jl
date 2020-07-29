@@ -6,7 +6,8 @@ module PEPSKit
 
     export North,East,South,West
     export NorthEast,SouthEast,SouthWest,NorthWest
-
+    export Dirs,rotate_north
+    
     export channels,correlator
     export expectation_value
     export GradStep
