@@ -101,7 +101,7 @@ function fixphases!(man::WinEnvManager;verbose=false)
         end
 
     end
-    #=verbose && =#println("total inconsistency $(incon)")
+    verbose && println("total inconsistency $(incon)")
 end
 
 

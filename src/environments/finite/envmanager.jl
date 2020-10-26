@@ -1,13 +1,6 @@
 #=
 We just calculate the planes, corners and fixpoints
 We assume global updates will be done (no sweeping) so we will have to recalculate everything anyway
-
-    - provide nice get setters
-    - extend dirview to new situation
-    - write corner code
-    - write fp1
-    - write fin_nnhamchannel.jl
-    - do lbfgs
 =#
 
 mutable struct FinEnvManager{P<:FinPEPS,S<:FiniteMPS,O<:MPSKit.MPSBondTensor,M<:MPSKit.GenericMPSTensor} <: Cache

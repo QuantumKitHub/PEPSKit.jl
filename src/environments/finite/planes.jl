@@ -3,7 +3,7 @@ function recalc_north_planes!(peps::FinPEPS,oldplanes,algorithm)
 
     bpars = map(1:size(peps,1)) do i
         (oldplanes[i+1],fpars) = approximate(oldplanes[i+1],(peps[i,:],oldplanes[i]),algorithm)
-        fpars[1]
+        fpars
     end
     return bpars
 end

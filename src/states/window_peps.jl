@@ -8,7 +8,7 @@ end
 
 function WinPEPS(outside::InfPEPS{T},numrows::Int,numcols::Int) where T
     mod(numrows,size(outside,1)) == 0 && mod(numcols,size(outside,2)) == 0 || throw(ArgumentError("not (yet) supported"))
-    inside = FinPEPS{T}(outside[1:numrows,1:numcols]);
+    inside = FinPEPS{T}(copy.(outside[1:numrows,1:numcols]));
     WinPEPS{T}(inside,outside);
 end
 

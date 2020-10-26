@@ -1,6 +1,8 @@
-mutable struct WinNNHamChannels{E<:WinEnvManager,B,O<:NN} <: Cache
+mutable struct WinNNHamChannels{E<:WinEnvManager,B,O<:NN,C} <: Cache
     opperator :: O
     envm::E
+
+    infchan::C
 
     lines::B
     ts::B
@@ -10,19 +12,12 @@ end
 function channels(envm::WinEnvManager,operator::NN)
     peps = envm.peps;
 
-    lines = similar(envm.fp1);
-    ts = similar(envm.fp1);
+    lines = similar.(envm.fp1);
+    ts = similar.(envm.fp1);
 
     infchan = channels(envm.infenvm,operator);
 
-    for dir in Dirs
-        (tnr,tnc) = rotate_north(size(peps),dir)
-
-        lines[dir] = zero.(infchan.lines[dir][1:tnr+1,1:tnc]);
-        ts[dir] = zero.(infchan.ts[dir][1:tnr+1,1:tnc]);
-    end
-
-    pars = WinNNHamChannels(operator,envm,lines,ts);
+    pars = WinNNHamChannels(operator,envm,infchan,lines,ts);
 
     return MPSKit.recalculate!(pars,peps)
 end
@@ -41,8 +36,9 @@ function recalc_lines!(env::WinNNHamChannels)
         tman = rotate_north(env.envm,dir);
         tpeps = tman.peps;
 
-        for i = 1:size(tpeps,1)
-            for j = 1:size(tpeps,2)
+        for j = 1:size(tpeps,2)
+            env.lines[dir][1,j] = env.infchan.lines[dir][1,j]
+            for i = 1:size(tpeps,1)
                 #notice just how similar this is to the infinite peps case
                 #I don't subtract any fps yet, maybe later?
                 env.lines[dir][i+1,j] = crosstransfer(env.lines[dir][i,j],tpeps[i,j],AL(tman,East,i,j),AR(tman,West,i,j));
@@ -53,12 +49,34 @@ function recalc_lines!(env::WinNNHamChannels)
 end
 
 function recalc_ts!(env::WinNNHamChannels)
+    #fix the initial ts
+    for dir in Dirs
+        peps = env.envm.peps;
+        (tnr,tnc) = rotate_north(size(peps),dir)
+        envm = env.envm;
+        for j = 1:tnc
+            env.ts[dir][1,j] = env.infchan.ts[dir][1,j]
+
+            #correct C
+            (ti,tj) = inv_rotate_north((1,j),size(peps),dir);
+
+            C1_e = envm.infenvm.boundaries[left(dir)].CR[j,end-1+1]
+            C1_i = envm.boundaries[left(dir)][j].CR[end-1+1]
+            C2_e = envm.infenvm.boundaries[right(dir)].CR[end-j+1,1-1]
+            C2_i = envm.boundaries[right(dir)][end-j].CR[1-1]
+
+            @tensor env.ts[dir][1,j][-1 -2 -3;-4] := env.ts[dir][1,j][1 -2 -3;2]*inv(C1_e)[3,1]*C1_i[-1,3]*inv(C2_e)[2,4]*C2_i[4,-4]
+        end
+
+    end
+
     #lines are already updated here :)
     for dir in Dirs
         man = rotate_north(env.envm,dir);
         tpeps = man.peps;
         nn = env.opperator
         for i in 1:size(tpeps,1)
+
             for j = 1:size(tpeps,2)
                 env.ts[dir][i+1,j] = crosstransfer(env.ts[dir][i,j],tpeps[i,j],AR(man,East,i,j),AL(man,West,i,j));
 
@@ -69,7 +87,6 @@ function recalc_ts!(env::WinNNHamChannels)
                 cwcontr = env.lines[left(dir)][wi,wj];
                 cecontr = env.lines[right(dir)][ei,ej];
 
-                #=
                 # "add west contribution"
                 @tensor env.ts[dir][i+1,j][-1 -2 -3;-4] +=
                     corner(man,SouthWest,i,j)[-1,2]*
@@ -89,22 +106,20 @@ function recalc_ts!(env::WinNNHamChannels)
                     corner(man,SouthEast,i,j)[2,-4]*
                     man.peps[i,j][4,-2,10,5,8]*
                     conj(man.peps[i,j][6,-3,11,7,8])
-                =#
+
                 # "vertical ham contribution"
-                if i >1
                 @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
-                    fp1RL(man,North,i-1,j)[8,3,5,1]*
-                    AL(man,West,i-1,j)[20,6,7,8]*
-                    AR(man,East,i-1,j)[1,2,4,11]*
-                    AL(man,West,i,j)[-1,18,19,20]*
-                    AR(man,East,i,j)[11,12,15,-4]*
+                    fp1LR(man,North,i-1,j)[8,3,5,1]*
+                    AR(man,West,i-1,j)[20,6,7,8]*
+                    AL(man,East,i-1,j)[1,2,4,11]*
+                    AC(man,West,i,j)[-1,18,19,20]*
+                    AC(man,East,i,j)[11,12,15,-4]*
                     man.peps[i-1,j][6,13,2,3,9]*
                     conj(man.peps[i-1,j][7,16,4,5,10])*
                     man.peps[i,j][18,-2,12,13,14]*
                     conj(man.peps[i,j][19,-3,15,16,17])*
                     nn[10,9,17,14]
-                end
-                #=
+
                 # "horleft contribution"
                 @tensor env.ts[dir][i+1,j][-1 -2 -3;-4]+=
                     fp1LR(man,North,i,j)[14,15,17,19]*
@@ -134,7 +149,7 @@ function recalc_ts!(env::WinNNHamChannels)
                     man.peps[i,j+1][13,9,4,5,11]*
                     conj(man.peps[i,j+1][17,10,6,7,12])*
                     nn[19,14,12,11]
-                =#
+
             end
         end
 

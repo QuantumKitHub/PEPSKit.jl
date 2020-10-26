@@ -17,6 +17,7 @@ function AL(man::WinEnvManager,dir::Dir,row::Int,col::Int)
     if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].AL[tc]
     else
+        tc<1 || throw(ArgumentError("out of bounds"))
         return man.infenvm.boundaries[dir].AL[tr,tc]
     end
 end
@@ -31,10 +32,11 @@ end
 
 function AR(man::WinEnvManager,dir::Dir,row::Int,col::Int)
     (tr,tc)=rotate_north((row,col),size(man.peps),dir);
-    
+
     if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].AR[tc]
     else
+        tc>=1 || throw(ArgumentError("out of bounds"))
         return man.infenvm.boundaries[dir].AR[tr,tc]
     end
 end
@@ -53,6 +55,7 @@ function AC(man::WinEnvManager,dir::Dir,row::Int,col::Int)
     if tr >= 1 && tr <= length(man.boundaries[dir]) && tc >=1 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].AC[tc]
     else
+        throw(ArgumentError("out of bounds"))
         return man.infenvm.boundaries[dir].AC[tr,tc]
     end
 end
@@ -71,6 +74,7 @@ function CR(man::WinEnvManager,dir::Dir,row::Int,col::Int)
     if tr >= 0 && tr <= length(man.boundaries[dir]) && tc >=0 && tc <= length(man.boundaries[dir][tr])
         return man.boundaries[dir][tr].CR[tc]
     else
+        throw(ArgumentError("out of bounds"))
         return man.infenvm.boundaries[dir].CR[tr,tc]
     end
 end
@@ -99,6 +103,8 @@ function fp1LR(man::WinEnvManager,dir::Dir,row::Int,col::Int)
     if tr >= 1 && tr <= size(man.fp1[dir],1) && tc >=1 && tc <= size(man.fp1[dir],2)
         return man.fp1[dir][tr,tc]
     else
+        tr < 1 || throw(ArgumentError("out of bounds"))
+
         return man.infenvm.fp1[dir][tr,tc]
     end
 end
@@ -130,6 +136,7 @@ function fp1RL(man::WinEnvManager,dir::Dir,row::Int,col::Int)
         man.boundaries[right(dir)][end-tc].CR[tr-1][2,-4]
         return tor
     else
+        throw(ArgumentError("out of bounds")) # does exist, but is space dependent
         tman = rotate_north(man,dir);
 
         @tensor tor[-1 -2 -3;-4]:=CR(tman,West,tr,tc)[-1,1]*

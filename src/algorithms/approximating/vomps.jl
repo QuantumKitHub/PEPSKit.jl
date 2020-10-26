@@ -1,6 +1,9 @@
 #I don't know if we should move this to mpskit somehow, or leave it here
 
-approximate(init::Union{MPSComoving,FiniteMPS},sq::Tuple,alg,pars=params(init,sq)) = approximate(init,[sq],alg,[pars]);
+function approximate(init::Union{MPSComoving,FiniteMPS},sq::Tuple,alg,pars=params(init,sq))
+    tor =  approximate(init,[sq],alg,[pars]);
+    return (tor[1],tor[2][1],tor[3])
+end
 
 function approximate(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmrg2,pars=[params(init,sq) for sq in squash])
 

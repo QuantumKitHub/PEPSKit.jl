@@ -84,14 +84,16 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
         (cpe,cpr,old_tm) = x;
         MPSKit.recalculate!(cpr,cpe)
 
+        en = 0.0;
         cg = map(Iterators.product(1:size(cpe,1),1:size(cpe,2))) do (i,j)
             (heff,neff) = effectivehn(cpr,i,j);
             v = permute(cpe[i,j],(1,2,3,4,5));
             n = dot(v,neff*v)
-            permute(heff*v - (dot(v,heff*v)/n)*neff*v,(1,2,3,4),(5,))/n
+            h = dot(v,heff*v)
+            #@show h/n
+            en += real(h/n)
+            permute(heff*v - (h/n)*neff*v,(1,2,3,4),(5,))/n
         end
-
-        en = real(expectation_value(cpr,ham))*(size(cpe,1)*size(cpe,2))
         en,cg
     end
 
@@ -101,7 +103,7 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
         @info "trying stepsize $α"
         flush(stdout)
 
-        #we on't want retract to overwrite the old state!
+        #we don't want retract to overwrite the old state!
         npe::A = deepcopy(cpe)
         new_tm = ones(Float64,size(cpe,1),size(cpe,2))
 
@@ -143,7 +145,7 @@ function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgor
     end
     scale!(v, α) = v.*α
     add!(vdst, vsrc, α) = vdst+α.*vsrc
-    #return optimtest(objfun, (peps,pars,ones(Float64,size(peps,1),size(peps,2))), objfun((peps,pars,ones(Float64,size(peps,1),size(peps,2))))[2]; alpha= 0:0.01:0.02,retract = retract, inner = inner)
+    #return optimtest(objfun, (peps,pars,ones(Float64,size(peps,1),size(peps,2))), objfun((peps,pars,ones(Float64,size(peps,1),size(peps,2))))[2]; alpha= 0:0.1:0.2,retract = retract, inner = inner)
 
     (x,fx,gx,normgradhistory)=optimize(objfun,(peps,pars,ones(Float64,size(peps,1),size(peps,2))),alg;
         retract = retract,

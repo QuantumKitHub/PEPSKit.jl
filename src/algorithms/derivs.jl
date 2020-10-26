@@ -33,16 +33,18 @@ function effectivehn(channels::Union{WinNNHamChannels,InfNNHamChannels},i,j)
             utleg[-5,-10]
 
         #do them ham on coords - contractions
+
         @tensor cheff[-1 -2 -3 -4 -5;-6 -7 -8 -9 -10]+=
-            fp1RL(tman,North,ti-1,tj)[9,6,4,2]*
-            AR(tman,East,ti-1,tj)[2,5,3,13]*
-            AR(tman,East,ti,tj)[13,-8,-3,1]*
+            fp1LR(tman,North,ti-1,tj)[9,6,4,2]*
+            AL(tman,East,ti-1,tj)[2,5,3,13]*
+            AC(tman,East,ti,tj)[13,-8,-3,1]*
             fp1LR(tman,South,ti,tj)[1,-7,-2,14]*
-            AL(tman,West,ti,tj)[14,-6,-1,12]*
+            AC(tman,West,ti,tj)[14,-6,-1,12]*
             tman.peps[ti-1,tj][7,-9,5,6,10]*
-            AL(tman,West,ti-1,tj)[12,7,8,9]*
+            AR(tman,West,ti-1,tj)[12,7,8,9]*
             conj(tman.peps[ti-1,tj][8,-4,3,4,11])*
             nn[11,10,-5,-10]
+
         heff +=inv_rotate_north(cheff,dir);
     end
 
@@ -125,7 +127,7 @@ function effectivehn(cors::FinNNHamCors,i,j)
     utleg[-5,-10]
 
     neff/=2;
-    
+
     heff = zero(neff)
     for dir in Dirs
         tman = rotate_north(man,dir)

@@ -8,27 +8,34 @@ end
 
 #generate bogus data
 function channels(envm::InfEnvManager,opperator::NN)
-    lines = similar(envm.fp1);
-    ts = similar(envm.fp1);
+    peps = envm.peps
 
-    pars = InfNNHamChannels(opperator,envm,lines,ts);
+    lines = PeriodicArray(fetch.(map(Dirs) do dir
+        @Threads.spawn north_nncontr_impl(rotate_north(envm,dir),rotate_north(opperator,dir))
+    end))
 
-    return MPSKit.recalculate!(pars,envm.peps)
+    ts = PeriodicArray(fetch.(map(Dirs) do dir
+        @Threads.spawn north_nntchannel_impl(  rotate_north(envm,dir),
+                                circshift(lines,4-dir),
+                                rotate_north(opperator,dir));
+    end))
+
+    return InfNNHamChannels(opperator,envm,lines,ts);
 end
 
 #recalculate everything
 function MPSKit.recalculate!(prevenv::InfNNHamChannels,peps::InfPEPS)
     MPSKit.recalculate!(prevenv.envm,peps);
 
-    prevenv.lines = PeriodicArray(fetch.(map(Dirs) do dir
-        @Threads.spawn north_nncontr_impl(rotate_north(prevenv.envm,dir),rotate_north(prevenv.opperator,dir))
-    end))
+    @sync for dir in Dirs
+        @Threads.spawn prevenv.lines[dir] = north_nncontr_impl(rotate_north(prevenv.envm,dir),rotate_north(prevenv.opperator,dir))
+    end
 
-    prevenv.ts = PeriodicArray(fetch.(map(Dirs) do dir
-        @Threads.spawn north_nntchannel_impl(  rotate_north(prevenv.envm,dir),
-                                circshift(prevenv.lines,4-dir),
-                                rotate_north(prevenv.opperator,dir));
-    end))
+    @sync for dir in Dirs
+        @Threads.spawn prevenv.ts[dir] = north_nntchannel_impl(rotate_north(prevenv.envm,dir),
+            circshift(prevenv.lines,4-dir),
+            rotate_north(prevenv.opperator,dir));
+    end
 
     prevenv
 end
