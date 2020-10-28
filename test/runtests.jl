@@ -1,9 +1,9 @@
-using PEPSKit,MPSKit,TensorKit,Test
+using PEPSKit,MPSKit,TensorKit,Test,TestExtras
 
 println("------------------------------------")
 println("|     States                       |")
 println("------------------------------------")
-@testset "($T,$D,$d,$elt)" for (T,D,d,elt) in [
+@timedtestset "($T,$D,$d,$elt)" for (T,D,d,elt) in [
         (InfPEPS,ComplexSpace(10),ComplexSpace(2),ComplexF64),
         (InfPEPS,ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32),
         (FinPEPS,ComplexSpace(10),ComplexSpace(2),ComplexF64),
@@ -46,7 +46,7 @@ println("------------------------------------")
     end
 end
 
-@testset "window peps ($D,$d,$elt)" for (D,d,elt) in [
+@timedtestset "window peps ($D,$d,$elt)" for (D,d,elt) in [
         (ComplexSpace(10),ComplexSpace(2),ComplexF64),
         (ℂ[SU₂](1=>1,0=>3),ℂ[SU₂](0=>1),ComplexF32)
         ]
