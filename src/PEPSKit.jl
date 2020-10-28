@@ -1,5 +1,6 @@
 module PEPSKit
-    using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads#,TensorOperations
+    using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators
+    using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,_permute_front,_permute_tail;
 
     export InfPEPS,FinPEPS,WinPEPS
     export nonsym_nn_ising_ham,nonsym_nn_xxz_ham,u1_nn_xxz_ham,su2_nn_xxz_ham
@@ -7,7 +8,7 @@ module PEPSKit
     export North,East,South,West
     export NorthEast,SouthEast,SouthWest,NorthWest
     export Dirs,rotate_north
-    
+
     export channels,correlator
     export expectation_value
     export GradStep

@@ -18,16 +18,22 @@ function channels(envm::FinEnvManager,opperator::NN)
 
     pars = FinNNHamChannels(opperator,envm,lines,ts);
 
-    return MPSKit.recalculate!(pars,envm.peps)
+    return recalculate!(pars,envm)
 end
 
-#recalculate everything
-function MPSKit.recalculate!(prevenv::FinNNHamChannels,peps::FinPEPS)
-    MPSKit.recalculate!(prevenv.envm,peps);
+#recalculate the channels given new environments
+function MPSKit.recalculate!(chan::FinNNHamChannels,env::FinEnvManager)
+    chan.envm = env;
 
-    recalc_lines!(prevenv)
-    recalc_ts!(prevenv)
-    prevenv
+    recalc_lines!(chan);
+    recalc_ts!(chan);
+    chan
+end
+
+#recalculate the channels given a new peps - necessarily recalculating chan.envm
+function MPSKit.recalculate!(chan::FinNNHamChannels,peps::FinPEPS)
+    recalculate!(chan.envm,peps);
+    recalculate!(chan,chan.envm);
 end
 
 function recalc_lines!(env::FinNNHamChannels)

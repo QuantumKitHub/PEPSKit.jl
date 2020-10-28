@@ -10,34 +10,34 @@ end
 function channels(envm::InfEnvManager,opperator::NN)
     peps = envm.peps
 
-    lines = PeriodicArray(fetch.(map(Dirs) do dir
-        @Threads.spawn north_nncontr_impl(rotate_north(envm,dir),rotate_north(opperator,dir))
-    end))
+    lines = PeriodicArray(similar.(envm.fp1));
+    ts = PeriodicArray(similar.(envm.fp1));
 
-    ts = PeriodicArray(fetch.(map(Dirs) do dir
-        @Threads.spawn north_nntchannel_impl(  rotate_north(envm,dir),
-                                circshift(lines,4-dir),
-                                rotate_north(opperator,dir));
-    end))
+    chan = InfNNHamChannels(opperator,envm,lines,ts);
+    recalculate!(chan,envm);
+end
 
-    return InfNNHamChannels(opperator,envm,lines,ts);
+#recalculate channel bits given the env
+function MPSKit.recalculate!(chan::InfNNHamChannels,env::InfEnvManager)
+    chan.envm = env;
+
+    @sync for dir in Dirs
+        @Threads.spawn north_nncontr_impl!(chan.lines[dir],rotate_north(chan.envm,dir),rotate_north(chan.opperator,dir))
+    end
+
+    @sync for dir in Dirs
+        @Threads.spawn north_nntchannel_impl!(chan.ts[dir],rotate_north(chan.envm,dir),
+            circshift(chan.lines,4-dir),
+            rotate_north(chan.opperator,dir));
+    end
+
+    chan
 end
 
 #recalculate everything
-function MPSKit.recalculate!(prevenv::InfNNHamChannels,peps::InfPEPS)
-    MPSKit.recalculate!(prevenv.envm,peps);
-
-    @sync for dir in Dirs
-        @Threads.spawn prevenv.lines[dir] = north_nncontr_impl(rotate_north(prevenv.envm,dir),rotate_north(prevenv.opperator,dir))
-    end
-
-    @sync for dir in Dirs
-        @Threads.spawn prevenv.ts[dir] = north_nntchannel_impl(rotate_north(prevenv.envm,dir),
-            circshift(prevenv.lines,4-dir),
-            rotate_north(prevenv.opperator,dir));
-    end
-
-    prevenv
+function MPSKit.recalculate!(chan::InfNNHamChannels,peps::InfPEPS)
+    recalculate!(chan.envm,peps);
+    recalculate!(chan,chan.envm);
 end
 
 # j == the collumn
@@ -47,12 +47,12 @@ function north_inf_sum_RL(v,man,j)
     @tensor v[-1 -2 -3; -4]-=downfp[4,2,3,1]*v[1,2,3,4]*upfp[-1,-2,-3,-4]
 
     (v,chist) = linsolve(v,v,GMRES()) do x
-        y=crosstransfer(x,man.peps[:,j],AR(man,East,:,j),AL(man,West,:,j))
+        y = crosstransfer(x,man.peps[:,j],AR(man,East,:,j),AL(man,West,:,j))
         @tensor y[-1 -2 -3; -4]-=downfp[4,2,3,1]*y[1,2,3,4]*upfp[-1,-2,-3,-4]
 
-        y=x-y
+        x-y
     end
-    chist.converged == 0 && @info "failed to converge _ RL $(chist.normres)"
+    chist.converged == 0 && @warn "failed to converge _ RL $(chist.normres)"
 
     return v
 end
@@ -63,12 +63,12 @@ function north_inf_sum_LR(v,man,j)
     @tensor v[-1 -2 -3; -4]-=downfp[4,2,3,1]*v[1,2,3,4]*upfp[-1,-2,-3,-4]
 
     (v,chist) = linsolve(v,v,GMRES()) do x
-        y=crosstransfer(x,man.peps[:,j],AL(man,East,:,j),AR(man,West,:,j))
+        y = crosstransfer(x,man.peps[:,j],AL(man,East,:,j),AR(man,West,:,j))
         @tensor y[-1 -2 -3; -4]-=downfp[4,2,3,1]*y[1,2,3,4]*(upfp)[-1,-2,-3,-4]
 
-        y=x-y
+        x-y
     end
-    chist.converged == 0 && @info "failed to converge _ LR $(chist.normres)"
+    chist.converged == 0 && @warn "failed to converge _ LR $(chist.normres)"
 
     return v
 end
@@ -89,7 +89,7 @@ function north_linecontr_local(cnt,man::InfEnvManager,nn::NN,i,j)
     return cnt
 end
 #sum of all contributions north of (i,j)
-function north_nncontr_impl(man::InfEnvManager,nn::NN)
+function north_nncontr_impl!(dst,man::InfEnvManager,nn::NN)
     (nr,nc) = size(man.peps)
 
     # sums[i] = all contributions above row 1; collumn i
@@ -108,17 +108,13 @@ function north_nncontr_impl(man::InfEnvManager,nn::NN)
     end
 
     # of course, we also want to know the sum of contributions above other unit cells ...
-    lines = PeriodicArray{eltype(sums),2}(undef,nr,nc);
-    for (i,j) in Iterators.product(1:nr,1:nc)
+    for i = 1:nr, j = 1:nc
         if i == 1
-            lines[i,j] = sums[j]
+            dst[i,j] = sums[j]
         else
-            lines[i,j] = north_linecontr_local(lines[i-1,j],man,nn,i-1,j)
+            dst[i,j] = north_linecontr_local(dst[i-1,j],man,nn,i-1,j)
         end
     end
-
-
-    return lines
 end
 
 #the T - contribution above (i,j)
@@ -198,7 +194,7 @@ function north_nntchannel_loctransfer(cnt,man::InfEnvManager,lines,nn::NN,i,j)
     return cnt
 end
 
-function north_nntchannel_impl(man::InfEnvManager,lines,nn::NN)
+function north_nntchannel_impl!(dst,man::InfEnvManager,lines,nn::NN)
     (nr,nc) = size(man.peps);
 
     # sums[i] = all contributions above row 1; collumn i
@@ -213,14 +209,11 @@ function north_nntchannel_impl(man::InfEnvManager,lines,nn::NN)
     end
 
     # of course, we also want to know the sum of contributions above other unit cells ...
-    ts = PeriodicArray{eltype(sums),2}(undef,nr,nc);
-    for (i,j) in Iterators.product(1:nr,1:nc)
+    for i = 1:nr, j = 1:nc
         if i == 1
-            ts[i,j] = sums[j]
+            dst[i,j] = sums[j]
         else
-            ts[i,j] = north_nntchannel_loctransfer(ts[i-1,j],man,lines,nn,i-1,j)
+            dst[i,j] = north_nntchannel_loctransfer(dst[i-1,j],man,lines,nn,i-1,j)
         end
     end
-
-    return ts
 end

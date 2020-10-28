@@ -1,17 +1,19 @@
 #I don't know if we should move this to mpskit somehow, or leave it here
 
-function approximate(init::Union{MPSComoving,FiniteMPS},sq::Tuple,alg,pars=params(init,sq))
-    tor =  approximate(init,[sq],alg,[pars]);
+function approximate!(init::Union{MPSComoving,FiniteMPS},sq::Tuple,alg,pars=params(init,sq))
+    tor =  approximate!(init,[sq],alg,[pars]);
     return (tor[1],tor[2][1],tor[3])
 end
 
-function approximate(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmrg2,pars=[params(init,sq) for sq in squash])
+function approximate!(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmrg2,pars=[params(init,sq) for sq in squash])
 
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol
 
     while iter < maxiter && delta > tol
-        delta=0.0
+        delta = 0.0
+
+        (init,pars) = alg.finalize!(iter,init,squash,pars);
 
         for pos=[1:(length(init)-1);length(init)-2:-1:1]
 
@@ -22,25 +24,26 @@ function approximate(init::Union{MPSComoving,FiniteMPS},squash::Vector,alg::Dmrg
             (al,c,ar) = tsvd(newA2center,trunc=alg.trscheme)
 
             #yeah, we need a different convergence criterium
-            olda2c = MPSKit._permute_front(init.AL[pos])*init.CR[pos]*MPSKit._permute_tail(init.AR[pos+1])
+            olda2c = _permute_front(init.AL[pos])*init.CR[pos]*_permute_tail(init.AR[pos+1])
 
             init.AC[pos] = (al,complex(c))
-            init.AC[pos+1] = (complex(c),MPSKit._permute_front(ar));
+            init.AC[pos+1] = (complex(c),_permute_front(ar));
 
-            newa2c = MPSKit._permute_front(init.AL[pos])*init.CR[pos]*MPSKit._permute_tail(init.AR[pos+1])
-            delta = max(delta,norm(olda2c-newa2c)/(1e-14+norm(newa2c)));
+            newa2c = _permute_front(init.AL[pos])*init.CR[pos]*_permute_tail(init.AR[pos+1])
+            delta = max(delta,norm(olda2c-newa2c)/(eps(delta)+norm(newa2c)));
         end
 
-        alg.verbose && @show (iter,delta)
-        flush(stdout)
+        alg.verbose && @info "2site dmrg iter $(iter) error $(delta)"
+
         #finalize
         iter += 1
     end
 
+    delta > tol && @warn "2site dmrg failed to converge $(delta)>$(tol)"
     return init,pars,delta
 end
 
-function approximate(init::Union{MPSComoving,FiniteMPS}, squash::Vector,alg::Dmrg,pars = [params(init,sq) for sq in squash])
+function approximate!(init::Union{MPSComoving,FiniteMPS}, squash::Vector,alg::Dmrg,pars = [params(init,sq) for sq in squash])
 
     tol=alg.tol;maxiter=alg.maxiter
     iter = 0; delta = 2*tol
@@ -49,7 +52,7 @@ function approximate(init::Union{MPSComoving,FiniteMPS}, squash::Vector,alg::Dmr
         delta=0.0
 
         #finalize
-        (init,pars) = alg.finalize(iter,init,squash,pars);
+        (init,pars) = alg.finalize!(iter,init,squash,pars);
 
         for pos = [1:(length(init)-1);length(init):-1:2]
             newac = sum(map(zip(squash,pars)) do (sq,pr)
@@ -61,11 +64,11 @@ function approximate(init::Union{MPSComoving,FiniteMPS}, squash::Vector,alg::Dmr
             init.AC[pos] = newac
         end
 
-        alg.verbose && @show (iter,delta)
-        flush(stdout)
+        alg.verbose && @info "dmrg iter $(iter) error $(delta)"
 
         iter += 1
     end
 
+    delta > tol && @warn "dmrg failed to converge $(delta)>$(tol)"
     return init,pars,delta
 end

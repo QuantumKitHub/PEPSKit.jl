@@ -15,7 +15,7 @@ mutable struct Bpars{M,P,T} <: MPSKit.AbstractInfEnv
 	lock::ReentrantLock
 end
 
-function MPSKit.params(bmps,peps::InfPEPS;tol=1e-10,maxiter=400)
+function MPSKit.environments(bmps,peps::InfPEPS;tol=1e-10,maxiter=400)
     @assert length(bmps) == size(peps,1)
 
 	#generate some bogus left fps

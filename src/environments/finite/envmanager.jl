@@ -3,23 +3,23 @@ We just calculate the planes, corners and fixpoints
 We assume global updates will be done (no sweeping) so we will have to recalculate everything anyway
 =#
 
-mutable struct FinEnvManager{P<:FinPEPS,S<:FiniteMPS,O<:MPSKit.MPSBondTensor,M<:MPSKit.GenericMPSTensor} <: Cache
-    peps :: P
+mutable struct FinEnvManager{P<:PEPSType,O<:MPSBondTensor,M<:GenericMPSTensor} <: Cache
+    peps :: FinPEPS{P}
 
     algorithm :: MPSKit.Algorithm
 
-    boundaries :: PeriodicArray{Vector{S},1}
+    boundaries :: PeriodicArray{Vector{FiniteMPS{M,O}},1}
     corners :: PeriodicArray{Matrix{O},1}
 
     fp0 :: PeriodicArray{Matrix{O},1}
     fp1 :: PeriodicArray{Matrix{M},1}
 end
 
-function MPSKit.params(peps::FinPEPS,alg::MPSKit.Algorithm)
+function MPSKit.environments(peps::FinPEPS,alg::MPSKit.Algorithm)
     utilleg = oneunit(space(peps,1,1))
 
     # generate bogus data - maybe split this off into (planes/corners/...).jl?
-    boundaries = PeriodicArray(map(Dirs) do dir
+    boundaries = dirmap() do dir
         tpeps = rotate_north(peps,dir)
 
         #this boundary vector is correct
@@ -32,16 +32,16 @@ function MPSKit.params(peps::FinPEPS,alg::MPSKit.Algorithm)
         end
 
         dat
-    end)
+    end
 
-    corners = PeriodicArray(map(Dirs) do dir
+    corners = dirmap() do dir
         (tnr,tnc) = rotate_north(size(peps),dir)
 
         map(Iterators.product(1:tnr+1,1:tnc+1)) do (i,j)
             TensorMap(ones,ComplexF64,  virtualspace(boundaries[dir][i],j-1),
                                         virtualspace(boundaries[left(dir)][j],tnr-i+1))
         end
-    end)
+    end
 
     #we have to fix corners ...
     for dir in Dirs
@@ -62,16 +62,16 @@ function MPSKit.params(peps::FinPEPS,alg::MPSKit.Algorithm)
         end
     end
 
-    fp0 = PeriodicArray(map(Dirs) do dir
+    fp0 = dirmap() do dir
         (tnr,tnc) = rotate_north(size(peps),dir)
 
         map(Iterators.product(1:tnr+1,1:tnc+1)) do (i,j)
             TensorMap(ones,ComplexF64,  virtualspace(boundaries[left(dir)][j],tnr-i+1),
                                         virtualspace(boundaries[right(dir)][end-j+1],i-1))
         end
-    end)
+    end
 
-    fp1 = PeriodicArray(map(Dirs) do dir
+    fp1 = dirmap() do dir
         tpeps = rotate_north(peps,dir);
         (tnr,tnc) = size(tpeps)
 
@@ -80,11 +80,11 @@ function MPSKit.params(peps::FinPEPS,alg::MPSKit.Algorithm)
             permute(isomorphism(Matrix{ComplexF64},  virtualspace(boundaries[left(dir)][j],tnr-i+1)*psp,psp*
                                         virtualspace(boundaries[right(dir)][end-j],i-1)),(1,2,3),(4,))
         end
-    end)
+    end
 
     pars = FinEnvManager(peps,alg,boundaries,corners,fp0,fp1)
 
-    MPSKit.recalculate!(pars,peps)
+    recalculate!(pars,peps)
     pars
 end
 

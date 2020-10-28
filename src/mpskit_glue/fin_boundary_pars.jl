@@ -13,7 +13,7 @@ struct LineEnv{S,P<:PEPSType, C<:MPSKit.GenericMPSTensor} <: Cache
     rightenvs::Vector{C}
 end
 
-function MPSKit.params(below::S,middle::Vector{P},above::S,leftstart::C,rightstart::C) where {C <: MPSKit.GenericMPSTensor,P<:PEPSType,S <: Union{<:FiniteMPS,<:MPSComoving}}
+function MPSKit.environments(below::S,middle::Vector{P},above::S,leftstart::C,rightstart::C) where {C <: MPSKit.GenericMPSTensor,P<:PEPSType,S <: Union{<:FiniteMPS,<:MPSComoving}}
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
@@ -25,7 +25,7 @@ function MPSKit.params(below::S,middle::Vector{P},above::S,leftstart::C,rightsta
     return LineEnv{S,P,C}(above,middle,similar.(below.AL[1:end]),similar.(below.AR[1:end]),leftenvs,reverse(rightenvs))
 end
 
-function MPSKit.params(below::S,squash::Tuple{Vector{P},S}) where {S <: FiniteMPS,P<:PEPSType}
+function MPSKit.environments(below::S,squash::Tuple{Vector{P},S}) where {S <: FiniteMPS,P<:PEPSType}
     (middle,above) = squash;
 
     left_tracer = isomorphism(space(middle[1],1)',space(middle[1],1)')

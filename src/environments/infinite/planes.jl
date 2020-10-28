@@ -1,6 +1,6 @@
 #leverage mpskit to find the leading boundary
-function north_boundary_mps(peps,init,alg)
-	(init,pars,err) = leading_boundary(init,peps,alg)
+function north_boundary_mps!(peps,init,alg)
+	(init,pars,err) = leading_boundary!(init,peps,alg)
 
 	#=
 		we have the leading bounary mps in the sense that it's (approximate) eigenvalue after transferring over the entire unit cell is maximal

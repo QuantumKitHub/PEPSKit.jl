@@ -12,11 +12,11 @@ mutable struct WinEnvManager{P<:WinPEPS,A<:InfEnvManager,B,S<:MPSComoving,O<:MPS
     fp1 :: PeriodicArray{Matrix{M},1}
 end
 
-function MPSKit.params(peps::WinPEPS,inf_peps_args::InfEnvManager,alg::MPSKit.Algorithm)
+function MPSKit.environments(peps::WinPEPS,inf_peps_args::InfEnvManager,alg::MPSKit.Algorithm)
     utilleg = oneunit(space(peps,1,1))
 
     # generate bogus data - maybe split this off into (planes/corners/...).jl?
-    boundaries = PeriodicArray(map(Dirs) do dir
+    boundaries = dirmap() do dir
         tpeps = rotate_north(peps,dir)
 
         #this boundary vector is correct
@@ -31,37 +31,37 @@ function MPSKit.params(peps::WinPEPS,inf_peps_args::InfEnvManager,alg::MPSKit.Al
         end
 
         dat
-    end)
+    end
 
-    inf_bpars = PeriodicArray(map(Dirs) do dir
+    inf_bpars = dirmap() do dir
         (tnr,tnc) = rotate_north(size(peps),dir)
         par = params(inf_peps_args.boundaries[dir],rotate_north(peps.outside,dir))
 
         PeriodicArray(map(1:tnr) do i
             (leftenv(par,i,1,inf_peps_args.boundaries[dir]),rightenv(par,i,tnc,inf_peps_args.boundaries[dir]))
         end)
-    end)
+    end
 
-    corners = PeriodicArray(map(Dirs) do dir
+    corners = dirmap() do dir
         (tnr,tnc) = rotate_north(size(peps),dir)
         copy.(inf_peps_args.corners[dir][1:tnr+1,1:tnc+1])
-    end)
+    end
 
-    fp0 = PeriodicArray(map(Dirs) do dir
+    fp0 = dirmap() do dir
         (tnr,tnc) = rotate_north(size(peps),dir)
 
         copy.(inf_peps_args.fp0[dir][1:tnr+1,1:tnc+1])
-    end)
+    end
 
-    fp1 = PeriodicArray(map(Dirs) do dir
+    fp1 = dirmap() do dir
         (tnr,tnc) = rotate_north(size(peps),dir)
 
         copy.(inf_peps_args.fp1[dir][1:tnr+1,1:tnc])
-    end)
+    end
 
     pars = WinEnvManager(peps,inf_peps_args,inf_bpars,alg,boundaries,corners,fp0,fp1)
 
-    MPSKit.recalculate!(pars,peps)
+    recalculate!(pars,peps)
     pars
 end
 

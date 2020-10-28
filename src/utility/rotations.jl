@@ -14,6 +14,8 @@ const SouthWest = West;
 
 const Dirs = [West,South,East,North];
 
+dirmap(fun) = PeriodicArray(map(fun,Dirs));
+
 Base.rotl90(dir::Dir) = Dir(mod1(dir+1,4))
 Base.rotr90(dir::Dir) = Dir(mod1(dir-1,4))
 

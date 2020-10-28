@@ -4,9 +4,9 @@ function recalc_north_planes!(peps::WinPEPS,oldplanes,env_bpars,algorithm)
     bpars = map(1:size(peps,1)) do i
         #first we create the relevant parameters
         (L,R) = env_bpars[i]
-        fpars = params(oldplanes[i+1],peps[i,:],oldplanes[i],L,R)
+        fpars = environments(oldplanes[i+1],peps[i,:],oldplanes[i],L,R)
 
-        (oldplanes[i+1],fpars) = approximate(oldplanes[i+1],(peps[i,:],oldplanes[i]),algorithm,fpars)
+        (oldplanes[i+1],fpars) = approximate!(oldplanes[i+1],(peps[i,:],oldplanes[i]),algorithm,fpars)
         fpars
     end
     return bpars

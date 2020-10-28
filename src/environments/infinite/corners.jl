@@ -6,7 +6,7 @@
 
     I then kinda take the average of the two, and use that
 =#
-function northwest_corner_tensors(init,nbound,npars,wbound,wpars,peps;verbose=true)
+function northwest_corner_tensors!(init,nbound,npars,wbound,wpars,peps;verbose=true)
     #cornerprime
     (nrows,ncols) = size(peps)
 
@@ -44,16 +44,16 @@ function northwest_corner_tensors(init,nbound,npars,wbound,wpars,peps;verbose=tr
         end
     end
 
-    toret = PeriodicArray(map(zip(lfps,rfps)) do (l,r)
-        rmul!(r,dot(r,l));
+    for i in 1:size(init,1), j in 1:size(init,2)
+        rmul!(rfps[i,j],dot(rfps[i,j],lfps[i,j]));
 
-        normalize!(l)
-        normalize!(r)
+        normalize!(rfps[i,j]);
+        normalize(lfps[i,j]);
 
-        verbose && println("corner inconsistency $(norm(l-r))")
+        verbose && @info "corner inconsistency $(norm(l-r))"
 
-        0.5*(l+r)
-    end)
+        init[i,j] = 0.5*(lfps[i,j]+rfps[i,j])
+    end
 
-    return toret
+    return init
 end

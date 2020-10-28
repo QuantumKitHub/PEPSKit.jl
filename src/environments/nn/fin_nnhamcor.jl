@@ -18,16 +18,21 @@ function correlator(envm::FinEnvManager,o::NN)
 
     tor = FinNNHamCors(o,envm,cors,lines);
 
-    MPSKit.recalculate!(tor,envm.peps);
+    recalculate!(tor,envm);
 end
 
-function MPSKit.recalculate!(corenvs::FinNNHamCors,peps::FinPEPS)
-    MPSKit.recalculate!(corenvs.envm,peps);
+function MPSKit.recalculate!(cor::FinNNHamCors,envm::FinEnvManager)
+    cor.envm = envm;
 
-    recalc_lines!(corenvs);
-    recalc_cors!(corenvs);
+    recalc_lines!(cor);
+    recalc_cors!(cor);
 
-    corenvs
+    cor
+end
+
+function MPSKit.recalculate!(cor::FinNNHamCors,peps::FinPEPS)
+    recalculate!(cor.envm,peps);
+    recalculate!(cor,cor.envm);
 end
 
 function recalc_cors!(corenvs::FinNNHamCors)
@@ -35,7 +40,7 @@ function recalc_cors!(corenvs::FinNNHamCors)
         @Threads.spawn begin
             tpeps = rotate_north(corenvs.envm.peps,dir);
             for i in 1:size(tpeps,1)
-                (corenvs.cors[dir][i+1],_) = approximate(corenvs.cors[dir][i+1],
+                (corenvs.cors[dir][i+1],_) = approximate!(corenvs.cors[dir][i+1],
                                             [(tpeps[i,:],corenvs.opperator,corenvs.envm.boundaries[dir][i]),
                                             (tpeps[i,:],corenvs.cors[dir][i])],
                                             corenvs.envm.algorithm);

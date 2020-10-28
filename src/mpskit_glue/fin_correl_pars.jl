@@ -18,7 +18,7 @@ struct HamLineEnv{S,P<:PEPSType, N<:NN,C<:MPSKit.GenericMPSTensor} <: Cache
     right_ham_envs::Vector{C}
 end
 
-function MPSKit.params(below::S,middle::Vector{P},o::N,above::S,leftstart::C,rightstart::C) where {N<:NN,S <: Union{<:FiniteMPS,<:MPSComoving},C <: MPSKit.GenericMPSTensor,P<:PEPSType}
+function MPSKit.environments(below::S,middle::Vector{P},o::N,above::S,leftstart::C,rightstart::C) where {N<:NN,S <: Union{<:FiniteMPS,<:MPSComoving},C <: MPSKit.GenericMPSTensor,P<:PEPSType}
     leftenvs = [leftstart]
     rightenvs = [rightstart]
 
@@ -36,7 +36,7 @@ function MPSKit.params(below::S,middle::Vector{P},o::N,above::S,leftstart::C,rig
     return HamLineEnv{S,P,N,C}(above,o,middle,similar.(below.AL[1:end]),similar.(below.AR[1:end]),leftenvs,reverse(rightenvs),hamleftenvs,reverse(hamrightenvs))
 end
 
-function MPSKit.params(below::S,squash::Tuple{Vector{P},O,S}) where {S <: FiniteMPS,O<:NN,P<:PEPSType}
+function MPSKit.environments(below::S,squash::Tuple{Vector{P},O,S}) where {S <: FiniteMPS,O<:NN,P<:PEPSType}
     (middle,opp,above) = squash;
 
     left_tracer = isomorphism(space(middle[1],1)',space(middle[1],1)')

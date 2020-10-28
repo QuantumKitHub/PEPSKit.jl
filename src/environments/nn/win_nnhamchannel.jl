@@ -19,16 +19,19 @@ function channels(envm::WinEnvManager,operator::NN)
 
     pars = WinNNHamChannels(operator,envm,infchan,lines,ts);
 
-    return MPSKit.recalculate!(pars,peps)
+    return recalculate!(pars,pars.envm)
 end
 
+function MPSKit.recalculate!(chan::WinNNHamChannels,envm::WinEnvManager)
+    chan.envm = envm;
+    recalc_lines!(chan)
+    recalc_ts!(chan)
+    chan
+end
 #recalculate everything
-function MPSKit.recalculate!(prevenv::WinNNHamChannels,peps::WinPEPS)
-    MPSKit.recalculate!(prevenv.envm,peps);
-
-    recalc_lines!(prevenv)
-    recalc_ts!(prevenv)
-    prevenv
+function MPSKit.recalculate!(chan::WinNNHamChannels,peps::WinPEPS)
+    recalculate!(chan.envm,peps);
+    recalculate!(chan,chan.envm);
 end
 
 function recalc_lines!(env::WinNNHamChannels)

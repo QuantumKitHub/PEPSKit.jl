@@ -1,6 +1,6 @@
 function MPSKit.timestep(state::Union{WinPEPS,FinPEPS}, H::NN, timestep::Number,alg::Tdvp,pars::Union{WinNNHamChannels,FinNNHamChannels})
     newpeps = copy(state);
-    for (i,j) in Iterators.product(1:size(state,1),1:size(state,2))
+    for i in 1:size(state,1), j in 1:size(state,2)
         (h_eff,n_eff) = effectivehn(pars,i,j)
         v = permute(state[i,j],(1,2,3,4,5))
 
@@ -12,8 +12,7 @@ function MPSKit.timestep(state::Union{WinPEPS,FinPEPS}, H::NN, timestep::Number,
     end
 
     newpars = deepcopy(pars);
-
-    MPSKit.recalculate!(newpars,newpeps)
+    recalculate!(newpars,newpeps)
 
     return newpeps,newpars
 end

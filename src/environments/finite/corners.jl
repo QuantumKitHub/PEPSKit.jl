@@ -1,7 +1,7 @@
 #similar to the finite planes case, oldcorners[1,:] and [:,1] are boundary conditions
 function recalc_northwest_corners!(peps::FinPEPS,oldcorners,nplanes,npars,wplanes,wpars)
 
-    for (i,j) in Iterators.product(1:size(peps,1),1:size(peps,2))
+    for i in 1:size(peps,1), j in 1:size(peps,2)
         n_above = nplanes[i];
         n_below = nplanes[i+1];
 
