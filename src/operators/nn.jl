@@ -1,5 +1,6 @@
-#next step - make this j1;j2
-const NN{S} = AbstractTensorMap{S,2,2} where S
+struct NN{T<:AbstractTensorMap} <: Operator
+    o::T
+end
 
 Base.rotl90(st::NN) = st
 Base.rotr90(st::NN) = st
@@ -13,11 +14,11 @@ Base.rotr90(st::NN) = st
 hamtransfer(m1,m2,m3,m4,cbt,t1,t2,nn::NN;bt1=t1,bt2=t2) =
 @tensor toret[-1 -2 -3;-4]:=m1[-1,18,19,20]*m2[20,4,2,1]*cbt[1,5,3,6]*m3[6,7,8,11]*m4[11,12,15,-4]*
 t1[4,13,7,5,9]*t2[18,-2,12,13,14]*conj(bt1[2,16,8,3,10])*conj(bt2[19,-3,15,16,17])*
-nn[10,9,17,14]
+nn.o[10,9,17,14]
 hamtransfer(m1,m2,cbt,t1,t2,nn::NN;bt1=t1,bt2=t2) =
 @tensor toret[-1 -2 -3 -4 -5;-6]:=m1[-1,14,15,16]*cbt[16,12,9,3,5,1]*m2[1,2,4,-6]*
 t1[14,-2,11,12,13]*conj(bt1[15,-3,8,9,10])*t2[11,-4,2,3,6]*conj(bt2[8,-5,4,5,7])*
-nn[10,13,7,6]
+nn.p[10,13,7,6]
 
 
 #plaq thing

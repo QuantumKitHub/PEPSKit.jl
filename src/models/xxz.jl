@@ -1,7 +1,7 @@
 function nonsym_nn_xxz_ham(;spin=1//2)
     (sx,sy,sz,id) = nonsym_spintensors(spin);
     @tensor nn[-1 -2;-3 -4]:=sx[-1,-2]*sx[-3,-4]+sy[-1,-2]*sy[-3,-4]+sz[-1,-2]*sz[-3,-4]
-    return nn
+    return NN(nn)
 end
 
 function su2_nn_xxz_ham(;spin = 1//2)
@@ -11,6 +11,7 @@ function su2_nn_xxz_ham(;spin = 1//2)
     a = TensorMap(ones, ComplexF64, ph , ℂ[SU₂](1=>1)*ph)
     b = TensorMap(ones, ComplexF64, ℂ[SU₂](1=>1)*ph , ph)
     @tensor ham[-1 -2;-3 -4]:=a[-1,1,-2]*b[1,-3,-4]
+    NN(ham)
 end
 
 function u1_nn_xxz_ham(;spin = 1//2)
@@ -28,5 +29,5 @@ function u1_nn_xxz_ham(;spin = 1//2)
         end
     end
 
-    return permute(symham,(1,3),(2,4))
+    NN(permute(symham,(1,3),(2,4)))
 end

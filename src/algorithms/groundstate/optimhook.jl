@@ -1,4 +1,4 @@
-function MPSKit.find_groundstate(peps::InfPEPS,ham::NN,alg::OptimKit.OptimizationAlgorithm,pars::InfNNHamChannels)
+function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.OptimizationAlgorithm,pars::Union{InfNNNHamChannels,InfNNHamChannels})
     function objfun(x)
         (cpe,cpr,old_tm) = x;
 

@@ -1,6 +1,6 @@
 module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators
-    using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,_permute_front,_permute_tail;
+    using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,_permute_front,_permute_tail,Operator;
 
     export InfPEPS,FinPEPS,WinPEPS
     export nonsym_nn_ising_ham,nonsym_nn_xxz_ham,u1_nn_xxz_ham,su2_nn_xxz_ham
@@ -25,7 +25,8 @@ module PEPSKit
     include("states/finite_peps.jl")
     include("states/window_peps.jl")
 
-    include("operators/nearest_neighbour.jl")
+    include("operators/nn.jl")
+    include("operators/nnn.jl")
 
     #1d Environments
     include("mpskit_glue/inf_boundary_pars.jl")
@@ -52,6 +53,8 @@ module PEPSKit
     include("environments/nn/fin_nnhamchannel.jl")
     include("environments/nn/win_nnhamchannel.jl")
     include("environments/nn/fin_nnhamcor.jl")
+
+    include("environments/nnn/inf_nnnhamchannel.jl")
 
     #makes working with environments slightly more bearable
     include("environments/dirview.jl")
