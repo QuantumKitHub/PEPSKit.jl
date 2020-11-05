@@ -79,44 +79,44 @@ function north_LU_local(v,envm,opp::NNN,row,col)
     peps = envm.peps;
     v = crosstransfer(v,peps[row,col],AR(envm,East,row,col),AR(envm,West,row,col));
 
-    @tensor v[-1 -2 -3;-4] += fp1LR(envm,North,row-1,col)[1,2,3,4]*
-        corner(envm,NorthEast,row-1,col)[4,5]*
-        AR(envm,North,row-1,col+1)[5,6,7,8]*
-        fp1LR(envm,East,row-1,col+1)[8,9,10,11]*
-        AL(envm,South,row-1,col+1)[11,12,13,14]*
-        corner(envm,SouthEast,row-1,col)[14,15]*
-        AR(envm,East,row,col)[15,16,17,-4]*
-        AR(envm,West,row,col)[-1,18,19,20]*
-        AR(envm,West,row-1,col)[20,22,23,1]*
-        peps[row,col][18,-2,16,24,26]*
-        conj(peps[row,col][19,-3,17,25,27])*
-        peps[row-1,col][22,24,28,2,30]*
-        conj(peps[row-1,col][23,25,29,3,30])*
-        peps[row-1,col+1][28,12,9,6,31]*
-        conj(peps[row-1,col+1][29,13,10,7,32])*
-        opp.o[32,31,27,26]
+    @tensor v[-1 -2 -3;-4] += fp1LR(envm,North,row-1,col)[2,6,4,1]*
+        corner(envm,NorthEast,row-1,col)[1,21]*
+        AR(envm,North,row-1,col+1)[21,16,12,13]*
+        fp1LR(envm,East,row-1,col+1)[13,15,11,9]*
+        AL(envm,South,row-1,col+1)[9,14,10,8]*
+        corner(envm,SouthEast,row-1,col)[8,24]*
+        AR(envm,East,row,col)[24,25,26,-4]*
+        AR(envm,West,row,col)[-1,29,30,31]*
+        AR(envm,West,row-1,col)[31,5,3,2]*
+        peps[row,col][29,-2,25,22,23]*
+        conj(peps[row,col][30,-3,26,27,28])*
+        peps[row-1,col][5,22,19,6,7]*
+        conj(peps[row-1,col][3,27,20,4,7])*
+        peps[row-1,col+1][19,14,15,16,18]*
+        conj(peps[row-1,col+1][20,10,11,12,17])*
+        opp.o[17,18,28,23]
 end
 
 function north_RU_local(v,envm,opp::NNN,row,col)
     peps = envm.peps;
     v = crosstransfer(v,peps[row,col],AL(envm,East,row,col),AL(envm,West,row,col));
 
-    @tensor v[-1 -2 -3;-4] += AL(envm,West,row,col)[-1,1,2,3]*
-        corner(envm,SouthWest,row-1,col)[3,4]*
-        AR(envm,South,row-1,col-1)[4,5,6,7]*
-        fp1LR(envm,West,row-1,col-1)[7,8,9,10]*
-        AL(envm,North,row-1,col-1)[10,11,12,13]*
-        corner(envm,NorthWest,row-1,col)[13,14]*
-        fp1LR(envm,North,row-1,col)[14,15,16,17]*
-        AL(envm,East,row-1,col)[17,18,19,20]*
-        AL(envm,East,row,col)[20,21,22,-4]*
-        peps[row,col][1,-2,21,23,25]*
-        conj(peps[row,col][2,-3,22,24,26])*
-        peps[row-1,col][27,23,18,15,29]*
-        conj(peps[row-1,col][28,24,19,16,29])*
-        peps[row-1,col-1][8,5,27,11,30]*
-        conj(peps[row-1,col-1][9,6,28,12,31])*
-        opp.o[31,30,26,25]
+    @tensor v[-1 -2 -3;-4] += AL(envm,West,row,col)[-1,30,31,1]*
+        corner(envm,SouthWest,row-1,col)[1,29]*
+        AR(envm,South,row-1,col-1)[29,15,11,9]*
+        fp1LR(envm,West,row-1,col-1)[9,14,10,12]*
+        AL(envm,North,row-1,col-1)[12,16,13,21]*
+        corner(envm,NorthWest,row-1,col)[21,2]*
+        fp1LR(envm,North,row-1,col)[2,7,5,3]*
+        AL(envm,East,row-1,col)[3,6,4,24]*
+        AL(envm,East,row,col)[24,25,26,-4]*
+        peps[row,col][30,-2,25,22,23]*
+        conj(peps[row,col][31,-3,26,27,28])*
+        peps[row-1,col][19,22,6,7,8]*
+        conj(peps[row-1,col][20,27,4,5,8])*
+        peps[row-1,col-1][14,15,19,16,18]*
+        conj(peps[row-1,col-1][10,11,20,13,17])*
+        opp.o[17,18,28,23]
 end
 
 function north_LU!(dst,envm::InfEnvManager,opp::NNN)
@@ -171,93 +171,95 @@ function north_nnntchannel_local(v,envm,LU,RU,opp,row,col)
 
     #add LU contribution (RR gauged)
     @tensor v[-1 -2 -3;-4] += corner(envm,SouthWest,row,col)[-1,1]*
-        LU[1,2,3,4]*
-        AR(envm,North,row,col)[4,5,6,7]*
-        fp1LR(envm,East,row,col)[7,8,9,10]*
-        corner(envm,SouthEast,row,col)[10,-4]*
-        peps[row,col][2,-2,8,5,11]*
-        conj(peps[row,col][3,-3,9,6,11])
+        LU[1,3,5,2]*
+        AR(envm,North,row,col)[2,4,6,8]*
+        fp1LR(envm,East,row,col)[8,9,10,11]*
+        corner(envm,SouthEast,row,col)[11,-4]*
+        peps[row,col][3,-2,9,4,7]*
+        conj(peps[row,col][5,-3,10,6,7])
 
     #add RU contribution (LL gauged)
     @tensor v[-1 -2 -3;-4] += corner(envm,SouthWest,row,col)[-1,1]*
-        fp1LR(envm,West,row,col)[1,2,3,4]*
-        AL(envm,North,row,col)[4,5,6,7]*
-        RU[7,8,9,10]*
-        corner(envm,SouthEast,row,col)[10,-4]*
-        peps[row,col][2,-2,8,5,11]*
-        conj(peps[row,col][3,-3,9,6,11])
+        fp1LR(envm,West,row,col)[1,3,5,2]*
+        AL(envm,North,row,col)[2,4,6,8]*
+        RU[8,9,10,11]*
+        corner(envm,SouthEast,row,col)[11,-4]*
+        peps[row,col][3,-2,9,4,7]*
+        conj(peps[row,col][5,-3,10,6,7])
 
     #add /.
-    @tensor v[-1 -2 -3;-4] += corner(envm,SouthWest,row,col)[-1,1]*
-        AR(envm,South,row,col-1)[1,2,3,4]*
-        fp1LR(envm,West,row,col-1)[4,5,6,7]*
-        AL(envm,North,row,col-1)[7,8,9,10]*
-        corner(envm,NorthWest,row,col)[10,11]*
-        AR(envm,West,row-1,col)[11,12,13,14]*
-        fp1LR(envm,North,row-1,col)[14,15,16,17]*
-        AL(envm,East,row-1,col)[17,18,19,20]*
-        AC(envm,East,row,col)[20,21,22,-4]*
-        peps[row,col][23,-2,21,25,27]*
-        conj(peps[row,col][24,-3,22,26,27])*
-        peps[row,col-1][5,2,23,8,28]*
-        conj(peps[row,col-1][6,3,24,9,29])*
-        peps[row-1,col][12,25,18,15,30]*
-        conj(peps[row-1,col][13,26,19,16,31])*
-        opp.o[29,28,31,30]
+    @tensor v[-1 -2 -3;-4] += corner(envm,SouthWest,row,col)[-1,10]*
+        AR(envm,South,row,col-1)[10,17,13,11]*
+        fp1LR(envm,West,row,col-1)[11,16,12,14]*
+        AL(envm,North,row,col-1)[14,18,15,9]*
+        corner(envm,NorthWest,row,col)[9,22]*
+        AR(envm,West,row-1,col)[22,6,4,5]*
+        fp1LR(envm,North,row-1,col)[5,8,3,1]*
+        AL(envm,East,row-1,col)[1,7,2,29]*
+        AC(envm,East,row,col)[29,30,31,-4]*
+        peps[row,col][24,-2,30,25,28]*
+        conj(peps[row,col][26,-3,31,27,28])*
+        peps[row,col-1][16,17,24,18,20]*
+        conj(peps[row,col-1][12,13,26,15,19])*
+        peps[row-1,col][6,25,7,8,21]*
+        conj(peps[row-1,col][4,27,2,3,23])*
+        opp.o[19,20,23,21]
 
     #add .\
-    @tensor v[-1 -2 -3;-4] += AC(envm,West,row,col)[-1,1,2,3]*
-        AR(envm,West,row-1,col)[3,4,5,6]*
-        fp1LR(envm,North,row-1,col)[6,7,8,9]*
-        AL(envm,East,row-1,col)[9,10,11,12]*
-        corner(envm,NorthEast,row,col)[12,13]*
-        AR(envm,North,row,col+1)[13,14,15,16]*
-        fp1LR(envm,East,row,col+1)[16,17,18,19]*
-        AL(envm,South,row,col+1)[19,20,21,22]*
-        corner(envm,SouthEast,row,col)[22,-4]*
-        peps[row,col][1,-2,23,25,27]*
-        conj(peps[row,col][2,-3,24,26,27])*
-        peps[row-1,col][4,25,10,7,28]*
-        conj(peps[row-1,col][5,26,11,8,29])*
-        peps[row,col+1][23,20,17,14,30]*
-        conj(peps[row,col+1][24,21,18,15,31])*
-        opp.o[29,28,31,30]
+    @tensor v[-1 -2 -3;-4] += AC(envm,West,row,col)[-1,28,29,30]*
+        AR(envm,West,row-1,col)[30,15,13,14]*
+        fp1LR(envm,North,row-1,col)[14,17,12,10]*
+        AL(envm,East,row-1,col)[10,16,11,9]*
+        corner(envm,NorthEast,row,col)[9,21]*
+        AR(envm,North,row,col+1)[21,8,4,5]*
+        fp1LR(envm,East,row,col+1)[5,7,3,1]*
+        AL(envm,South,row,col+1)[1,6,2,31]*
+        corner(envm,SouthEast,row,col)[31,-4]*
+        peps[row,col][28,-2,23,24,27]*
+        conj(peps[row,col][29,-3,25,26,27])*
+        peps[row-1,col][15,24,16,17,19]*
+        conj(peps[row-1,col][13,26,11,12,18])*
+        peps[row,col+1][23,6,7,8,20]*
+        conj(peps[row,col+1][25,2,3,4,22])*
+        opp.o[18,19,22,20]
 
     #add \ (copy-pasted, so should be designed differently)
-    @tensor v[-1 -2 -3;-4] += fp1LR(envm,North,row-1,col)[1,2,3,4]*
-        corner(envm,NorthEast,row-1,col)[4,5]*
-        AR(envm,North,row-1,col+1)[5,6,7,8]*
-        fp1LR(envm,East,row-1,col+1)[8,9,10,11]*
-        AL(envm,South,row-1,col+1)[11,12,13,14]*
-        corner(envm,SouthEast,row-1,col)[14,15]*
-        AR(envm,East,row,col)[15,16,17,-4]*
-        AC(envm,West,row,col)[-1,18,19,20]*
-        AR(envm,West,row-1,col)[20,22,23,1]*
-        peps[row,col][18,-2,16,24,26]*
-        conj(peps[row,col][19,-3,17,25,27])*
-        peps[row-1,col][22,24,28,2,30]*
-        conj(peps[row-1,col][23,25,29,3,30])*
-        peps[row-1,col+1][28,12,9,6,31]*
-        conj(peps[row-1,col+1][29,13,10,7,32])*
-        opp.o[32,31,27,26]
+    @tensor v[-1 -2 -3;-4] += fp1LR(envm,North,row-1,col)[2,6,4,1]*
+        corner(envm,NorthEast,row-1,col)[1,21]*
+        AR(envm,North,row-1,col+1)[21,16,12,13]*
+        fp1LR(envm,East,row-1,col+1)[13,15,11,9]*
+        AL(envm,South,row-1,col+1)[9,14,10,8]*
+        corner(envm,SouthEast,row-1,col)[8,24]*
+        AR(envm,East,row,col)[24,25,26,-4]*
+        AR(envm,West,row,col)[-1,29,30,31]*
+        AR(envm,West,row-1,col)[31,5,3,2]*
+        peps[row,col][29,-2,25,22,23]*
+        conj(peps[row,col][30,-3,26,27,28])*
+        peps[row-1,col][5,22,19,6,7]*
+        conj(peps[row-1,col][3,27,20,4,7])*
+        peps[row-1,col+1][19,14,15,16,18]*
+        conj(peps[row-1,col+1][20,10,11,12,17])*
+        opp.o[17,18,28,23]
+
 
     #add / (also copy pasted)
-    @tensor v[-1 -2 -3;-4] += AL(envm,West,row,col)[-1,1,2,3]*
-        corner(envm,SouthWest,row-1,col)[3,4]*
-        AR(envm,South,row-1,col-1)[4,5,6,7]*
-        fp1LR(envm,West,row-1,col-1)[7,8,9,10]*
-        AL(envm,North,row-1,col-1)[10,11,12,13]*
-        corner(envm,NorthWest,row-1,col)[13,14]*
-        fp1LR(envm,North,row-1,col)[14,15,16,17]*
-        AL(envm,East,row-1,col)[17,18,19,20]*
-        AC(envm,East,row,col)[20,21,22,-4]*
-        peps[row,col][1,-2,21,23,25]*
-        conj(peps[row,col][2,-3,22,24,26])*
-        peps[row-1,col][27,23,18,15,29]*
-        conj(peps[row-1,col][28,24,19,16,29])*
-        peps[row-1,col-1][8,5,27,11,30]*
-        conj(peps[row-1,col-1][9,6,28,12,31])*
-        opp.o[31,30,26,25]
+    @tensor v[-1 -2 -3;-4] += AL(envm,West,row,col)[-1,30,31,1]*
+        corner(envm,SouthWest,row-1,col)[1,29]*
+        AR(envm,South,row-1,col-1)[29,15,11,9]*
+        fp1LR(envm,West,row-1,col-1)[9,14,10,12]*
+        AL(envm,North,row-1,col-1)[12,16,13,21]*
+        corner(envm,NorthWest,row-1,col)[21,2]*
+        fp1LR(envm,North,row-1,col)[2,7,5,3]*
+        AL(envm,East,row-1,col)[3,6,4,24]*
+        AL(envm,East,row,col)[24,25,26,-4]*
+        peps[row,col][30,-2,25,22,23]*
+        conj(peps[row,col][31,-3,26,27,28])*
+        peps[row-1,col][19,22,6,7,8]*
+        conj(peps[row-1,col][20,27,4,5,8])*
+        peps[row-1,col-1][14,15,19,16,18]*
+        conj(peps[row-1,col-1][10,11,20,13,17])*
+        opp.o[17,18,28,23]
+
 end
 
 function north_nnntchannel!(dst,envm::InfEnvManager,LU,RU,opp::NNN)
