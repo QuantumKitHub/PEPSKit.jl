@@ -247,3 +247,9 @@ function effectivehn(channels::InfNNNHamChannels,i,j)
 
     return (heff,neff)
 end
+
+
+function effectivehn(e::OpSumEnv,i,j)
+    res = map(t->effectivehn(t,i,j),e.envs) # should do this in parallel
+    sum(first.(res)),sum(last.(res))/length(e.envs)
+end

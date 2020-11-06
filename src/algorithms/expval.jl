@@ -12,6 +12,10 @@ function MPSKit.expectation_value(man::Union{InfEnvManager,WinEnvManager,FinEnvM
     end
 end
 
+function MPSKit.expectation_value(man,opp::OpSum)
+    sum(map(o->expectation_value(man,o),opp.ops))
+end
+
 function MPSKit.expectation_value(man::InfEnvManager,nn::NN)
     tot = 0.0+0im
 

@@ -1,4 +1,4 @@
-function MPSKit.timestep(state::Union{WinPEPS,FinPEPS}, H::NN, timestep::Number,alg::Tdvp,pars::Union{WinNNHamChannels,FinNNHamChannels})
+function MPSKit.timestep(state::Union{WinPEPS,FinPEPS}, H, timestep::Number,alg::Tdvp,pars)
     newpeps = copy(state);
     for i in 1:size(state,1), j in 1:size(state,2)
         (h_eff,n_eff) = effectivehn(pars,i,j)

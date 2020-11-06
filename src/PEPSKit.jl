@@ -3,7 +3,7 @@ module PEPSKit
     using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,_permute_front,_permute_tail,Operator;
 
     export InfPEPS,FinPEPS,WinPEPS
-    export nonsym_nn_ising_ham,nonsym_nn_xxz_ham,u1_nn_xxz_ham,su2_nn_xxz_ham
+    export nonsym_nn_ising_ham,nonsym_nn_xxz_ham,u1_nn_xxz_ham,su2_nn_xxz_ham,nonsym_j1j2
 
     export North,East,South,West
     export NorthEast,SouthEast,SouthWest,NorthWest
@@ -27,6 +27,7 @@ module PEPSKit
 
     include("operators/nn.jl")
     include("operators/nnn.jl")
+    include("operators/opsum.jl")
 
     #1d Environments
     include("mpskit_glue/inf_boundary_pars.jl")
@@ -56,6 +57,8 @@ module PEPSKit
 
     include("environments/nnn/inf_nnnhamchannel.jl")
 
+    include("environments/opsum/opsumenv.jl")
+
     #makes working with environments slightly more bearable
     include("environments/dirview.jl")
 
@@ -67,4 +70,5 @@ module PEPSKit
 
     include("models/ising.jl")
     include("models/xxz.jl")
+    include("models/j1j2.jl")
 end # module

@@ -1,4 +1,4 @@
-function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.OptimizationAlgorithm,pars::Union{InfNNNHamChannels,InfNNHamChannels})
+function MPSKit.find_groundstate(peps::InfPEPS,ham,alg::OptimKit.OptimizationAlgorithm,pars)
     function objfun(x)
         (cpe,cpr,old_tm) = x;
 
@@ -56,7 +56,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.
     scale!(v, α) = v.*α
     add!(vdst, vsrc, α) = vdst+α.*vsrc
 
-    
+
     (x,fx,gx,normgradhistory)=optimize(objfun,(peps,pars,ones(size(peps,1),size(peps,2))),alg;
         retract = retract,
         inner = inner,
@@ -71,7 +71,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.
 end
 
 
-function MPSKit.find_groundstate(peps::A,ham::NN,alg::OptimKit.OptimizationAlgorithm,envs::B) where {A<:Union{WinPEPS,FinPEPS},B<:Union{FinNNHamCors,WinNNHamChannels,FinNNHamChannels}}
+function MPSKit.find_groundstate(peps::A,ham,alg::OptimKit.OptimizationAlgorithm,envs::B) where {A<:Union{WinPEPS,FinPEPS},B}
     #=
     we will rescale the peps tensors to make them uniformly gauged
     this will change the gradients, so we need to keep track of those rescale operations
