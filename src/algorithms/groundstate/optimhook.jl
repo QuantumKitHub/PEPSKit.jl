@@ -8,7 +8,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.
             permute(heff*v - dot(v,heff*v)*neff*v,(1,2,3,4),(5,))
         end
 
-        real(expectation_value(cpr.envm,ham))/(size(cpe,1)*size(cpe,2)),cg
+        real(expectation_value(cpr.envm,ham))*prod(size(peps)),cg
     end
 
     function retract(x, cgr, α)
@@ -41,11 +41,9 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.
 
     function inner(x, v1, v2)
         tot = 0.0;
-
         for (p1,p2) in zip(v1,v2)
             tot += 2*real(dot(v1,v2))
         end
-
         return tot
     end
     function transport!(v, xold, d, α, xnew)
@@ -58,7 +56,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.
     scale!(v, α) = v.*α
     add!(vdst, vsrc, α) = vdst+α.*vsrc
 
-
+    
     (x,fx,gx,normgradhistory)=optimize(objfun,(peps,pars,ones(size(peps,1),size(peps,2))),alg;
         retract = retract,
         inner = inner,
@@ -69,7 +67,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham::Union{NN,NNN},alg::OptimKit.
 
     return (x[1],x[2],normgradhistory[end])
 
-    #return optimtest(objfun, (peps,pars), objfun((peps,pars))[2]; alpha= 0:0.01:0.1,retract = retract, inner = inner)
+    #return optimtest(objfun, (peps,pars,ones(size(peps,1),size(peps,2))), objfun((peps,pars,ones(size(peps,1),size(peps,2))))[2]; alpha= 0:0.01:0.02,retract = retract, inner = inner)
 end
 
 

@@ -231,7 +231,7 @@ function north_nnntchannel_local(v,envm,LU,RU,opp,row,col)
         AL(envm,South,row-1,col+1)[9,14,10,8]*
         corner(envm,SouthEast,row-1,col)[8,24]*
         AR(envm,East,row,col)[24,25,26,-4]*
-        AR(envm,West,row,col)[-1,29,30,31]*
+        AC(envm,West,row,col)[-1,29,30,31]*
         AR(envm,West,row-1,col)[31,5,3,2]*
         peps[row,col][29,-2,25,22,23]*
         conj(peps[row,col][30,-3,26,27,28])*
@@ -240,7 +240,6 @@ function north_nnntchannel_local(v,envm,LU,RU,opp,row,col)
         peps[row-1,col+1][19,14,15,16,18]*
         conj(peps[row-1,col+1][20,10,11,12,17])*
         opp.o[17,18,28,23]
-
 
     #add / (also copy pasted)
     @tensor v[-1 -2 -3;-4] += AL(envm,West,row,col)[-1,30,31,1]*
@@ -251,7 +250,7 @@ function north_nnntchannel_local(v,envm,LU,RU,opp,row,col)
         corner(envm,NorthWest,row-1,col)[21,2]*
         fp1LR(envm,North,row-1,col)[2,7,5,3]*
         AL(envm,East,row-1,col)[3,6,4,24]*
-        AL(envm,East,row,col)[24,25,26,-4]*
+        AC(envm,East,row,col)[24,25,26,-4]*
         peps[row,col][30,-2,25,22,23]*
         conj(peps[row,col][31,-3,26,27,28])*
         peps[row-1,col][19,22,6,7,8]*

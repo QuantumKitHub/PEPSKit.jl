@@ -207,38 +207,38 @@ function effectivehn(channels::InfNNNHamChannels,i,j)
             utleg[-5,-10]
 
         #do them ham on coords - contractions
-        @tensor cheff[-1 -2 -3 -4 -5;-6 -7 -8 -9 -10] += fp1LR(tman,West,i,j)[2,-6,-1,3]*
-            AL(tman,North,i,j)[3,-9,-4,22]*
-            AC(tman,North,i,j+1)[22,9,7,5]*
-            fp1LR(tman,East,i,j+1)[5,8,6,4]*
-            corner(tman,SouthEast,i,j+1)[4,21]*
-            AR(tman,East,i+1,j+1)[21,13,18,11]*
-            fp1LR(tman,South,i+1,j+1)[11,12,17,14]*
-            AL(tman,West,i+1,j+1)[14,15,16,23]*
-            corner(tman,SouthWest,i,j+1)[23,1]*
-            AR(tman,South,i,j)[1,-7,-2,2]*
-            tman.peps[i,j+1][-8,19,8,9,10]*
-            conj(tman.peps[i,j+1][-3,20,6,7,10])*
-            tman.peps[i+1,j+1][15,12,13,19,25]*
-            conj(tman.peps[i+1,j+1][16,17,18,20,24])*
+        @tensor cheff[-1 -2 -3 -4 -5;-6 -7 -8 -9 -10] += fp1LR(tman,West,ti,tj)[2,-6,-1,3]*
+            AL(tman,North,ti,tj)[3,-9,-4,22]*
+            AC(tman,North,ti,tj+1)[22,9,7,5]*
+            fp1LR(tman,East,ti,tj+1)[5,8,6,4]*
+            corner(tman,SouthEast,ti,tj+1)[4,21]*
+            AR(tman,East,ti+1,tj+1)[21,13,18,11]*
+            fp1LR(tman,South,ti+1,tj+1)[11,12,17,14]*
+            AL(tman,West,ti+1,tj+1)[14,15,16,23]*
+            corner(tman,SouthWest,ti,tj+1)[23,1]*
+            AR(tman,South,ti,tj)[1,-7,-2,2]*
+            tman.peps[ti,tj+1][-8,19,8,9,10]*
+            conj(tman.peps[ti,tj+1][-3,20,6,7,10])*
+            tman.peps[ti+1,tj+1][15,12,13,19,25]*
+            conj(tman.peps[ti+1,tj+1][16,17,18,20,24])*
             nn.o[-5,-10,24,25]
 
 
         @tensor cheff[-1 -2 -3 -4 -5;-6 -7 -8 -9 -10] +=
-            fp1LR(tman,West,i,j-1)[12,17,13,15]*
-            AL(tman,North,i,j-1)[15,19,16,25]*
-            AC(tman,North,i,j)[25,-9,-4,2]*
-            fp1LR(tman,East,i,j)[2,-8,-3,1]*
-            corner(tman,SouthEast,i,j)[1,26]*
-            AR(tman,East,i+1,j)[26,5,10,3]*
-            fp1LR(tman,South,i+1,j)[3,4,9,6]*
-            AL(tman,West,i+1,j)[6,7,8,23]*
-            corner(tman,SouthWest,i,j)[23,11]*
-            AR(tman,South,i,j-1)[11,18,14,12]*
-            tman.peps[i,j-1][17,18,-6,19,21]*
-            conj(tman.peps[i,j-1][13,14,-1,16,20])*
-            tman.peps[i+1,j][7,4,5,-7,24]*
-            conj(tman.peps[i+1,j][8,9,10,-2,22])*
+            fp1LR(tman,West,ti,tj-1)[12,17,13,15]*
+            AL(tman,North,ti,tj-1)[15,19,16,25]*
+            AC(tman,North,ti,tj)[25,-9,-4,2]*
+            fp1LR(tman,East,ti,tj)[2,-8,-3,1]*
+            corner(tman,SouthEast,ti,tj)[1,26]*
+            AR(tman,East,ti+1,tj)[26,5,10,3]*
+            fp1LR(tman,South,ti+1,tj)[3,4,9,6]*
+            AL(tman,West,ti+1,tj)[6,7,8,23]*
+            corner(tman,SouthWest,ti,tj)[23,11]*
+            AR(tman,South,ti,tj-1)[11,18,14,12]*
+            tman.peps[ti,tj-1][17,18,-6,19,21]*
+            conj(tman.peps[ti,tj-1][13,14,-1,16,20])*
+            tman.peps[ti+1,tj][7,4,5,-7,24]*
+            conj(tman.peps[ti+1,tj][8,9,10,-2,22])*
             nn.o[20,21,22,24]*
             utleg[-5 -10]
 
