@@ -54,3 +54,17 @@ end
 function MPSKit.transfer_right(v::M,o::T,a::M, b::M,bo::T=o) where T <: PEPSType where M <: GenericMPSTensor
     @tensor v[-1 -2 -3;-4]:=v[1,2,3,4]*a[-1,5,6,1]*o[-2,7,2,5,8]*conj(bo[-3,9,3,6,8])*conj(b[-4,7,9,4])
 end
+
+function MPSKit.transfer_left(v,O::AbstractArray,A::AbstractArray,Ab::AbstractArray,Ob::AbstractArray)
+    for (o,a,b,ob) in zip(O,A,Ab,Ob)
+        v = transfer_left(v,o,a,b,ob)
+    end
+    v
+end
+
+function MPSKit.transfer_right(v,O::AbstractArray,A::AbstractArray,Ab::AbstractArray,Ob::AbstractArray)
+    for (o,a,b,ob) in reverse(collect(zip(O,A,Ab,Ob)))
+        v = transfer_right(v,o,a,b,ob)
+    end
+    v
+end

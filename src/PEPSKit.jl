@@ -1,5 +1,6 @@
 module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators
+    import LinearAlgebra
     using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,_permute_front,_permute_tail,Operator;
 
     export InfPEPS,FinPEPS,WinPEPS
@@ -64,8 +65,10 @@ module PEPSKit
 
     include("algorithms/expval.jl")
     include("algorithms/derivs.jl")
+    include("algorithms/util.jl")
     include("algorithms/approximating/vomps.jl")
     include("algorithms/groundstate/optimhook.jl")
+
     include("algorithms/timestep/tdvp.jl")
 
     include("models/ising.jl")

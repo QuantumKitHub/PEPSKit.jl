@@ -3,7 +3,8 @@ This file defines the necessary functions/structures so that we can simply call 
 =#
 
 mutable struct Bpars{M,P,T} <: MPSKit.AbstractInfEnv
-	peps :: P
+	above :: P
+	below :: P
 
 	dependency :: M
 	tol :: Float64
@@ -15,19 +16,23 @@ mutable struct Bpars{M,P,T} <: MPSKit.AbstractInfEnv
 	lock::ReentrantLock
 end
 
-function MPSKit.environments(bmps,peps::InfPEPS;tol=1e-10,maxiter=400)
-    @assert length(bmps) == size(peps,1)
+MPSKit.environments(bmps,above::InfPEPS;kwargs...) = environments(bmps,(above,above);kwargs...)
+function MPSKit.environments(bmps,sandwich::Tuple{P,P};tol=1e-10,maxiter=400) where P<: InfPEPS
+	(above,below) = sandwich
+
+	@assert length(bmps) == size(above,1)
+	@assert size(above) == size(below)
 
 	#generate some bogus left fps
 	leftfps = PeriodicArray(map(Iterators.product(1:size(bmps,1),1:size(bmps,2))) do (i,j)
-		TensorMap(rand,ComplexF64,space(bmps.AL[i+1,j],1)*space(peps[i,j],1)'*space(peps[i,j],1),space(bmps.AL[i,j],1))
+		TensorMap(rand,ComplexF64,_firstspace(bmps.AL[i+1,j])*space(above[i,j],West)'*space(below[i,j],West),_firstspace(bmps.AL[i,j]))
 	end)
 
 	rightfps = PeriodicArray(map(Iterators.product(1:size(bmps,1),1:size(bmps,2))) do (i,j)
-    	TensorMap(rand,ComplexF64,space(bmps.AR[i,j],4)'*space(peps[i,j],3)'*space(peps[i,j],3),space(bmps.AR[i+1,j],4)')
+    	TensorMap(rand,ComplexF64,_lastspace(bmps.AR[i,j])'*space(above[i,j],East)'*space(below[i,j],East),_lastspace(bmps.AR[i+1,j])')
 	end)
 
-    pars = Bpars(peps,bmps,tol,maxiter,leftfps,rightfps,ReentrantLock())
+    pars = Bpars(above,below,bmps,tol,maxiter,leftfps,rightfps,ReentrantLock())
 
 	#call recalculate
 	MPSKit.recalculate!(pars,bmps;tol=tol,maxiter=maxiter)
@@ -38,23 +43,24 @@ end
 	we assume that the peps itself doesn't change
 =#
 function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
-	peps = pars.peps;
+	above = pars.above;
+	below = pars.below;
 
 	phases = Vector{ComplexF64}(undef,size(bmps,1))
 
 	#recalculate pars.lw[i,1]/pars.rw[i,end]
 	jobs = map(1:size(bmps,1)) do i
 		#if the bond dimension changed, then we cannot reuse the old solution as initial guess
-		if space(pars.lw[i,1],1) != space(bmps.AL[i+1,1],1) || space(pars.lw[i,1],4) != space(bmps.AL[i,1],1)'
-			pars.lw[i,1] = TensorMap(rand,ComplexF64,space(bmps.AL[i+1,1],1)*space(peps[i,1],1)'*space(peps[i,1],1),space(bmps.AL[i,1],1))
+		if _firstspace(pars.lw[i,1]) != _firstspace(bmps.AL[i+1,1]) || _lastspace(pars.lw[i,1]) != _firstspace(bmps.AL[i,1])'
+			pars.lw[i,1] = TensorMap(rand,ComplexF64,_firstspace(bmps.AL[i+1,1])*space(above[i,1],West)'*space(below[i,1],West),_firstspace(bmps.AL[i,1]))
 		end
 
-        lj = @Threads.spawn eigsolve(x->transfer_left(x,peps[i,:],bmps.AL[i,:],bmps.AL[i+1,:]),pars.lw[i,1],1,:LM,Arnoldi());
+        lj = @Threads.spawn eigsolve(x->transfer_left(x,above[i,:],bmps.AL[i,:],bmps.AL[i+1,:],below[i,:]),pars.lw[i,1],1,:LM,Arnoldi());
 
-		if space(pars.rw[i,end],1) != space(bmps.AR[i,end],4)' || space(pars.rw[i,end],4)' != space(bmps.AR[i+1,end],4)'
-            pars.rw[i,end] = TensorMap(rand,ComplexF64,space(bmps.AR[i,end],4)'*space(peps[i,end],3)'*space(peps[i,end],3),space(bmps.AR[i+1,end],4)')
+		if _firstspace(pars.rw[i,end]) != _lastspace(bmps.AR[i,end])' || _lastspace(pars.rw[i,end]) != _lastspace(bmps.AR[i+1,end])
+            pars.rw[i,end] = TensorMap(rand,ComplexF64,_lastspace(bmps.AR[i,end])'*space(above[i,end],East)'*space(below[i,end],East),_lastspace(bmps.AR[i+1,end])')
         end
-        rj = @Threads.spawn eigsolve(x->transfer_right(x,peps[i,:],bmps.AR[i,:],bmps.AR[i+1,:]),pars.rw[i,end],1,:LM,Arnoldi());
+        rj = @Threads.spawn eigsolve(x->transfer_right(x,above[i,:],bmps.AR[i,:],bmps.AR[i+1,:],below[i,:]),pars.rw[i,end],1,:LM,Arnoldi());
 
 		(lj,rj)
 	end
@@ -92,9 +98,9 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
         pars.rw[i,end]/=sqrt(val)
 
         #fill in at other unit sites
-        for s in 2:size(peps,2)
-            pars.lw[i,s] = transfer_left(		pars.lw[i,s-1],		peps[i,s-1],	bmps.AL[i,s-1],		bmps.AL[i+1,s-1]);
-            pars.rw[i,end-s+1] = transfer_right(pars.rw[i,end-s+2],	peps[i,end-s+2],bmps.AR[i,end-s+2],	bmps.AR[i+1,end-s+2]);
+        for s in 2:size(above,2)
+            pars.lw[i,s] = transfer_left(		pars.lw[i,s-1],		above[i,s-1],	bmps.AL[i,s-1],		bmps.AL[i+1,s-1], below[i,s-1]);
+            pars.rw[i,end-s+1] = transfer_right(pars.rw[i,end-s+2],	above[i,end-s+2],bmps.AR[i,end-s+2],	bmps.AR[i+1,end-s+2], below[i,end-s+2]);
         end
     end
 
@@ -104,8 +110,10 @@ function MPSKit.recalculate!(pars,bmps;maxiter = pars.maxiter,tol=pars.tol)
 end
 
 
-MPSKit.ac_prime(x,row,col,mps,pars::Bpars) =  @tensor toret[-1 -2 -3;-4]:=MPSKit.leftenv(pars,row,col,mps)[-1,7,8,9]*x[9,3,5,1]*pars.peps[row,col][7,-2,2,3,6]*conj(pars.peps[row,col][8,-3,4,5,6])*MPSKit.rightenv(pars,row,col,mps)[1,2,4,-4]
+MPSKit.ac_prime(x,row,col,mps,pars::Bpars) =  @tensor toret[-1 -2 -3;-4]:=MPSKit.leftenv(pars,row,col,mps)[-1,7,8,9]*x[9,3,5,1]*pars.above[row,col][7,-2,2,3,6]*conj(pars.below[row,col][8,-3,4,5,6])*MPSKit.rightenv(pars,row,col,mps)[1,2,4,-4]
 function MPSKit.ac2_prime(x,row,col,mps,pars::Bpars)
-	@tensor toret[-1 -2 -3;-4 -5 -6] := MPSKit.leftenv(pars,row,col,mps)[-1,1,2,3]*x[3,4,5,6,7,8]*pars.peps[row,col][1,-2,9,4,10]*conj(pars.peps[row,col][2,-3,11,5,10])*pars.peps[row,col+1][9,-4,12,6,13]*conj(pars.peps[row,col+1][11,-5,14,7,13])*MPSKit.rightenv(pars,row,col+1,mps)[8,12,14,-6]
+	@tensor toret[-1 -2 -3;-4 -5 -6] := MPSKit.leftenv(pars,row,col,mps)[-1,1,2,3]*x[3,4,5,6,7,8]*pars.above[row,col][1,-2,9,4,10]*conj(pars.below[row,col][2,-3,11,5,10])*pars.above[row,col+1][9,-4,12,6,13]*conj(pars.below[row,col+1][11,-5,14,7,13])*MPSKit.rightenv(pars,row,col+1,mps)[8,12,14,-6]
 end
 MPSKit.c_prime(x,row,col,mps,pars::Bpars) = @tensor toret[-1;-2] := MPSKit.leftenv(pars,row,col+1,mps)[-1,2,3,4]*x[4,1]*MPSKit.rightenv(pars,row,col,mps)[1,2,3,-2]
+
+MPSKit.calc_galerkin(state::MPSMultiline, envs::Bpars) = maximum([norm(leftnull(state.AC[row+1,col])'*ac_prime(state.AC[row,col], row,col, state, envs)) for (row,col) in product(1:size(state,1),1:size(state,2))][:])
