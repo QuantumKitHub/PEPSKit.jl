@@ -74,8 +74,9 @@ function MPSKit.leftenv(ca::LineEnv,ind,state)
 end
 
 
-function downproject2(pos::Int,below::S,sq::Tuple{Vector{P},S},pars) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving}}
-    (middle,above) = sq;
+function MPSKit.ac2_proj(pos::Int,below::S,pars) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving}}
+    above = pars.above;
+    middle = pars.middle;
 
     @tensor toret[-1 -2 -3; -4 -5 -6]:=
     leftenv(pars,pos,below)[-1,4,2,1]*
@@ -88,7 +89,9 @@ function downproject2(pos::Int,below::S,sq::Tuple{Vector{P},S},pars) where {P<:P
     middle[pos+1][15,-4,10,11,12]
 end
 
-function downproject(pos::Int,below::S,sq::Tuple{Vector{P},S},pars) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving}}
-    (middle,above) = sq;
+function MPSKit.ac_proj(pos::Int,below::S,pars) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving}}
+    above = pars.above;
+    middle = pars.middle;
+    
     @tensor toret[-1 -2 -3; -4]:=leftenv(pars,pos,below)[-1,7,8,9]*above.AC[pos][9,3,5,1]*rightenv(pars,pos,below)[1,2,4,-4]*middle[pos][7,-2,2,3,6]*conj(middle[pos][8,-3,4,5,6])
 end

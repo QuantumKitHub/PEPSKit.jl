@@ -101,7 +101,7 @@ function MPSKit.leftenv(ca::HamLineEnv,ind,state)
 end
 
 
-function downproject2(pos::Int,below::S,sq::Tuple{Vector{P},O,S},pars::HamLineEnv) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving},O<:NN}
+function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving},O<:NN}
     (middle,opp,above) = sq;
 
     (le,hle) = leftenv(pars,pos,below)
@@ -181,7 +181,7 @@ function downproject2(pos::Int,below::S,sq::Tuple{Vector{P},O,S},pars::HamLineEn
     toret
 end
 
-function downproject(pos::Int,below::S,sq::Tuple{Vector{P},O,S},pars::HamLineEnv) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving},O<:NN}
+function MPSKit.ac_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving},O<:NN}
     #not yet optimal contraction order (or tested for that matter)
     (middle,opp,above) = sq;
 

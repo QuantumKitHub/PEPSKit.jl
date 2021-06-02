@@ -20,7 +20,6 @@ MPSKit.environments(bmps,above::InfPEPS;kwargs...) = environments(bmps,(above,ab
 function MPSKit.environments(bmps,sandwich::Tuple{P,P};tol=1e-10,maxiter=400) where P<: InfPEPS
 	(above,below) = sandwich
 
-	@assert length(bmps) == size(above,1)
 	@assert size(above) == size(below)
 
 	#generate some bogus left fps

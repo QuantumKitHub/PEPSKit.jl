@@ -2,6 +2,7 @@ module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators
     import LinearAlgebra
     using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,_permute_front,_permute_tail,Operator;
+    using MPSKitModels:nonsym_spintensors,spinmatrices;
 
     export InfPEPS,FinPEPS,WinPEPS
     export nonsym_nn_ising_ham,nonsym_nn_xxz_ham,u1_nn_xxz_ham,su2_nn_xxz_ham,nonsym_j1j2
@@ -66,7 +67,6 @@ module PEPSKit
     include("algorithms/expval.jl")
     include("algorithms/derivs.jl")
     include("algorithms/util.jl")
-    include("algorithms/approximating/vomps.jl")
     include("algorithms/groundstate/optimhook.jl")
 
     include("algorithms/timestep/tdvp.jl")
