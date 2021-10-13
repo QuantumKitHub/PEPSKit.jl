@@ -1,4 +1,4 @@
-mutable struct FinPEPS{T<:PEPSType}
+struct FinPEPS{T<:PEPSType}
     data::Matrix{T}
 end
 

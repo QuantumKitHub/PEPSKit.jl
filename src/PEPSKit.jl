@@ -1,7 +1,7 @@
 module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators
     import LinearAlgebra
-    using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,_permute_front,_permute_tail,Operator;
+    using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,Operator;
     using MPSKitModels:nonsym_spintensors,spinmatrices;
 
     export InfPEPS,FinPEPS,WinPEPS

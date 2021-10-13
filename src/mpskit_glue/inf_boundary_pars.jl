@@ -111,7 +111,7 @@ end
 
 MPSKit.ac_prime(x,row,col,mps,pars::Bpars) =  @tensor toret[-1 -2 -3;-4]:=MPSKit.leftenv(pars,row,col,mps)[-1,7,8,9]*x[9,3,5,1]*pars.above[row,col][7,-2,2,3,6]*conj(pars.below[row,col][8,-3,4,5,6])*MPSKit.rightenv(pars,row,col,mps)[1,2,4,-4]
 function MPSKit.ac2_prime(x,row,col,mps,pars::Bpars)
-	@tensor toret[-1 -2 -3;-4 -5 -6] := MPSKit.leftenv(pars,row,col,mps)[-1,1,2,3]*x[3,4,5,6,7,8]*pars.above[row,col][1,-2,9,4,10]*conj(pars.below[row,col][2,-3,11,5,10])*pars.above[row,col+1][9,-4,12,6,13]*conj(pars.below[row,col+1][11,-5,14,7,13])*MPSKit.rightenv(pars,row,col+1,mps)[8,12,14,-6]
+	@tensor toret[-1 -2 -3;-6 -5 -4] := MPSKit.leftenv(pars,row,col,mps)[-1,1,2,3]*x[3,4,5,6,7,8]*pars.above[row,col][1,-2,9,4,10]*conj(pars.below[row,col][2,-3,11,5,10])*pars.above[row,col+1][9,-4,12,6,13]*conj(pars.below[row,col+1][11,-5,14,7,13])*MPSKit.rightenv(pars,row,col+1,mps)[8,12,14,-6]
 end
 MPSKit.c_prime(x,row,col,mps,pars::Bpars) = @tensor toret[-1;-2] := MPSKit.leftenv(pars,row,col+1,mps)[-1,2,3,4]*x[4,1]*MPSKit.rightenv(pars,row,col,mps)[1,2,3,-2]
 

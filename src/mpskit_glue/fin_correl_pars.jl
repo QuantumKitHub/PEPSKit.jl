@@ -108,7 +108,7 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,
     (re,hre) = rightenv(pars,pos+1,below)
 
 
-    @tensor toret[-1 -2 -3; -4 -5 -6]:=
+    @tensor toret[-1 -2 -3; -6 -5 -4]:=
     hle[-1,4,2,1]*
     above.AC[pos][1,5,3,13]*
     conj(middle[pos][2,-3,14,3,6])*
@@ -118,7 +118,7 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,
     conj(middle[pos+1][14,-5,8,9,12])*
     middle[pos+1][15,-4,10,11,12]
 
-    @tensor toret[-1 -2 -3; -4 -5 -6]+=
+    @tensor toret[-1 -2 -3; -6 -5 -4]+=
     le[-1,4,2,1]*
     above.AC[pos][1,5,3,13]*
     conj(middle[pos][2,-3,14,3,6])*
@@ -128,7 +128,7 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,
     conj(middle[pos+1][14,-5,8,9,12])*
     middle[pos+1][15,-4,10,11,12]
 
-    @tensor toret[-1 -2 -3; -4 -5 -6]+=
+    @tensor toret[-1 -2 -3; -6 -5 -4]+=
     le[-1,15,16,17]*
     above.AC[pos][17,13,10,1]*
     conj(middle[pos][16,-3,9,10,11])*
@@ -141,7 +141,7 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,
 
     if pos > 1
         (le,_) = leftenv(pars,pos-1,below);
-        @tensor toret[-1 -2 -3;-4 -5 -6]+=
+        @tensor toret[-1 -2 -3; -6 -5 -4]+=
         le[24,11,9,8]*
         above.AL[pos-1][8,12,10,7]*
         above.AC[pos][7,19,16,21]*
@@ -162,7 +162,7 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,
         (le,_) = leftenv(pars,pos,below)
         (re,_) = rightenv(pars,pos+2,below);
 
-        @tensor toret[-1 -2 -3;-4 -5 -6]+=
+        @tensor toret[-1 -2 -3; -6 -5 -4]+=
         le[-1,2,1,4]*
         above.AC[pos][4,5,6,21]*
         above.AR[pos+1][21,19,12,7]*
@@ -177,8 +177,6 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,
         conj(middle[pos+2][11,25,9,10,14])*
         opp.o[13,20,14,17]
     end
-
-    toret
 end
 
 function MPSKit.ac_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving},O<:NN}

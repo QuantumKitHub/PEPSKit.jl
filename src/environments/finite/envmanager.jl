@@ -23,7 +23,7 @@ function MPSKit.environments(peps::FinPEPS,alg::MPSKit.Algorithm)
         tpeps = rotate_north(peps,dir)
 
         #this boundary vector is correct
-        init = FiniteMPS([MPSKit._permute_front(isomorphism(Matrix{ComplexF64},utilleg*space(tpeps[1,j],North)',space(tpeps[1,j],North)'*utilleg)) for j in 1:size(tpeps,2)])
+        init = FiniteMPS([permute(isomorphism(Matrix{ComplexF64},utilleg*space(tpeps[1,j],North)',space(tpeps[1,j],North)'*utilleg),(1,2,3),(4,)) for j in 1:size(tpeps,2)])
         dat = [init]
 
         #these onese are simply random
@@ -85,6 +85,7 @@ function MPSKit.environments(peps::FinPEPS,alg::MPSKit.Algorithm)
     pars = FinEnvManager(peps,alg,boundaries,corners,fp0,fp1)
 
     recalculate!(pars,peps)
+
     pars
 end
 

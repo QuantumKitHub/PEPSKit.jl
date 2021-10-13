@@ -78,7 +78,7 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars) where {P<:PEPSType,S<:Union{Fin
     above = pars.above;
     middle = pars.middle;
 
-    @tensor toret[-1 -2 -3; -4 -5 -6]:=
+    @tensor toret[-1 -2 -3; -6 -5 -4]:=
     leftenv(pars,pos,below)[-1,4,2,1]*
     above.AC[pos][1,5,3,13]*
     conj(middle[pos][2,-3,14,3,6])*
@@ -87,11 +87,12 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars) where {P<:PEPSType,S<:Union{Fin
     rightenv(pars,pos+1,below)[7,10,8,-6]*
     conj(middle[pos+1][14,-5,8,9,12])*
     middle[pos+1][15,-4,10,11,12]
+
 end
 
 function MPSKit.ac_proj(pos::Int,below::S,pars) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving}}
     above = pars.above;
     middle = pars.middle;
-    
+
     @tensor toret[-1 -2 -3; -4]:=leftenv(pars,pos,below)[-1,7,8,9]*above.AC[pos][9,3,5,1]*rightenv(pars,pos,below)[1,2,4,-4]*middle[pos][7,-2,2,3,6]*conj(middle[pos][8,-3,4,5,6])
 end
