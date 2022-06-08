@@ -1,5 +1,5 @@
 #it's also square
-mutable struct InfPEPS{T<:PEPSType}
+struct InfPEPS{T<:PEPSType}
     data::PeriodicArray{T,2}
 end
 

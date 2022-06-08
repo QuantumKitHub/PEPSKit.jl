@@ -1,4 +1,4 @@
-function MPSKit.timestep(state::Union{WinPEPS,FinPEPS}, H, timestep::Number,alg::Tdvp,pars)
+function MPSKit.timestep(state::Union{WinPEPS,FinPEPS}, H, timestep::Number,alg::TDVP,pars)
     newpeps = copy(state);
     for i in 1:size(state,1), j in 1:size(state,2)
         (h_eff,n_eff) = effectivehn(pars,i,j)
@@ -25,7 +25,7 @@ function reginv(m, delta=real(zero(eltype(m))))
     return minv
 end
 
-function MPSKit.timestep(state::InfPEPS, H, timestep::Number,alg::Tdvp,pars)
+function MPSKit.timestep(state::InfPEPS, H, timestep::Number,alg::TDVP,pars)
     newpeps = copy(state);
     for i in 1:size(state,1), j in 1:size(state,2)
         (h_eff,n_eff) = effectivehn(pars,i,j)

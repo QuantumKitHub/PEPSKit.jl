@@ -1,7 +1,7 @@
 #=
 A mutable window of tensors embedded in an infinite peps ...
 =#
-mutable struct WinPEPS{T<:PEPSType}
+struct WinPEPS{T<:PEPSType}
     inside :: FinPEPS{T}
     outside :: InfPEPS{T}
 end

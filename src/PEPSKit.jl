@@ -1,7 +1,7 @@
 module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators
     import LinearAlgebra
-    using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace,Operator;
+    using MPSKit:GenericMPSTensor,MPSBondTensor,_firstspace,_lastspace;
     using MPSKitModels:nonsym_spintensors,spinmatrices;
 
     export InfPEPS,FinPEPS,WinPEPS
@@ -18,7 +18,7 @@ module PEPSKit
     export AC,AR,AL,fp1LR,fp1RL,fp0LR,fp0RL,corner
 
     abstract type Cache end
-
+    abstract type Operator end
     include("utility/typedef.jl")
     include("utility/rotations.jl")
     include("utility/transfers.jl")

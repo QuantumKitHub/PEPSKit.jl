@@ -14,7 +14,7 @@ function MPSKit.find_groundstate(peps::InfPEPS,ham,alg::OptimKit.OptimizationAlg
     function retract(x, cgr, α)
         (cpe,cpr,old_tm) = x;
 
-        @info "trying stepsize $α"
+        #@info "trying stepsize $α"
         flush(stdout)
 
         #we don't want retract to overwrite the old state!
@@ -99,7 +99,7 @@ function MPSKit.find_groundstate(peps::A,ham,alg::OptimKit.OptimizationAlgorithm
     function retract(x::Tuple{A,Matrix{Float64}}, cgr, α)
         (peps,old_tm) = x;
 
-        @info "trying stepsize $α"
+        #@info "trying stepsize $α"
         flush(stdout)
 
         #we don't want retract to overwrite the old state!

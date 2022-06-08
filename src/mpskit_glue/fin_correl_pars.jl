@@ -102,7 +102,9 @@ end
 
 
 function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving},O<:NN}
-    (middle,opp,above) = sq;
+    middle = pars.middle;
+    opp = pars.opperator;
+    above = pars.above;
 
     (le,hle) = leftenv(pars,pos,below)
     (re,hre) = rightenv(pars,pos+1,below)
@@ -177,11 +179,15 @@ function MPSKit.ac2_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,
         conj(middle[pos+2][11,25,9,10,14])*
         opp.o[13,20,14,17]
     end
+
+    toret
 end
 
 function MPSKit.ac_proj(pos::Int,below::S,pars::HamLineEnv) where {P<:PEPSType,S<:Union{FiniteMPS,MPSComoving},O<:NN}
     #not yet optimal contraction order (or tested for that matter)
-    (middle,opp,above) = sq;
+    middle = pars.middle;
+    opp = pars.opperator;
+    above = pars.above;
 
     (le,hle) = leftenv(pars,pos,below)
     (re,hre) = rightenv(pars,pos,below)
