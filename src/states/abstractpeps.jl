@@ -33,4 +33,4 @@ Abstract supertype for a 2D projected entangled pairs state.
 abstract type AbstractPEPS end
 
 
-Base.rotl90(t::PEPSTensor) = permute(t,(1,),(2,3,4,1));
+Base.rotl90(t::PEPSTensor) = permute(t,(1,),(3,4,5,2));

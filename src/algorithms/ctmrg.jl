@@ -6,14 +6,14 @@ end
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps))
     spectra = copy(envs.corners); # use the corners as some kind of convergence criterium
 
-    for iter in 1:1
+    for iter in 1:10
         for dir in 1:4
             envs = rotate_north(envs,dir);
             peps = envs.peps;
 
             envs = left_move(peps,alg,envs);
 
-            nspec = map(x->x[2],tsvd.(envs.corners[dir]));
+            #nspec = map(x->x[2],tsvd.(envs.corners[dir]));
             # check for equality
         end
     end
@@ -22,7 +22,7 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
 end
 
 # the actual left_move is dependent on the type of ctmrg, so this seems natural
-function left_move(peps::InfinitePEPS{PType},alg::CTMRG,ens::CTMRGEnv) where PType
+function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PType
     above_projector_type = tensormaptype(spacetype(PType),1,3,storagetype(PType));
     below_projector_type = tensormaptype(spacetype(PType),3,1,storagetype(PType));
 
@@ -36,9 +36,9 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,ens::CTMRGEnv) where PTy
             peps_nw = peps[row,col];
             peps_sw = rotate_north(peps[row+1,col],WEST);
 
+
             Q1 = northwest_corner(envs.planes[SOUTH,row+1,col],envs.corners[SOUTHWEST,row+1,col],envs.planes[WEST,row+1,col],peps_sw);
             Q2 = northwest_corner(envs.planes[WEST,row,col],envs.corners[NORTHWEST,row,col],envs.planes[NORTH,row,col],peps_nw);
-
             (U,S,V) = tsvd(Q1*Q2,alg=SVD(),trunc = alg.trscheme);
 
             isqS = sdiag_inv_sqrt(S);
@@ -57,7 +57,7 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,ens::CTMRGEnv) where PTy
 
             @tensor envs.corners[NORTHWEST,row,col+1][-1;-2] := envs.corners[NORTHWEST,row,col][1,2] * envs.planes[NORTH,row,col][2,3,4,-2]*Q[-1;1 3 4]
             @tensor envs.corners[SOUTHWEST,row+1,col+1][-1;-2] := envs.corners[SOUTHWEST,row+1,col][1,4] * envs.planes[SOUTH,row+1,col][-1,2,3,1]*P[4 2 3;-2]
-            @tensor envs.planes[WEST,row,col+1][-1 -2 -3;-4] := envs.planes[WEST,row,col][1 2 3;4]*peps[row,col][5 -2 7 2;9]*conj(peps[row,col][6 -3 8 3;9])*P[4 5 6;-4]*Q[-1;1 7 8]
+            @tensor envs.planes[WEST,row,col+1][-1 -2 -3;-4] := envs.planes[WEST,row,col][1 2 3;4]*peps[row,col][9;5 -2 7 2]*conj(peps[row,col][9;6 -3 8 3])*P[4 5 6;-4]*Q[-1;1 7 8]
 
         end
 
@@ -70,4 +70,4 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,ens::CTMRGEnv) where PTy
 end
 
 northwest_corner(E4,C1,E1,peps) =
-    @tensor corner[-1 -2 -3;-4 -5 -6] := E4[-1 1 2;3]*C1[3;4]*E1[4 5 6;-4]*peps[5 -5 -2 1;7]*conj(peps[6 -6 -3 2;7])
+    @tensor corner[-1 -2 -3;-4 -5 -6] := E4[-1 1 2;3]*C1[3;4]*E1[4 5 6;-4]*peps[7;5 -5 -2 1]*conj(peps[7;6 -6 -3 2])

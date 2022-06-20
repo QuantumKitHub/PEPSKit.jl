@@ -13,6 +13,7 @@ module PEPSKit
     include("algorithms/ctmrg.jl")
 
     include("utility/rotations.jl")
-    
+    include("utility/util.jl")
+
     export InfinitePEPS
 end # module
