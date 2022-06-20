@@ -5,9 +5,9 @@ Represents an infinite projected entangled pairs state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
     A::PeriodicArray{T,2}
-    
+
     function InfinitePEPS(A::PeriodicArray{T, 2}) where T <: PEPSTensor
-        
+
         Ivertical = CartesianIndex(-1,0)
         Ihorizontal = CartesianIndex(0,1)
         for I in CartesianIndices(A)
@@ -33,7 +33,7 @@ end
 
 """
     InfinitePEPS(physical_spaces, north_spaces, east_spaces)
-    
+
 Allow users to pass in arrays of spaces.
 """
 function InfinitePEPS(
@@ -43,20 +43,20 @@ function InfinitePEPS(
 ) where S <: EuclideanSpace
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
-        
+
     Sspaces = adjoint.(circshift(Nspaces, (1, 0)))
     Wspaces = adjoint.(circshift(Espaces, (0, -1)))
-    
+
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
         return TensorMap(rand, ComplexF64, P ← N * E * S * W)
     end
-    
+
     return InfinitePEPS(A)
 end
 
 """
     InfinitePEPS(Pspace, Nspace, Espace)
-    
+
 Allow users to pass in single space.
 """
 function InfinitePEPS(Pspace::S, Nspace::S, Espace::S = Nspace) where S <: EuclideanSpace
@@ -89,3 +89,9 @@ Base.length(T::InfinitePEPS) = length(T.A)
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
 Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
+
+Base.getindex(T::InfinitePEPS,args...) = getindex(T.A,args...);
+TensorKit.space(t::InfinitePEPS,i,j) = space(t[i,j],1)
+
+
+Base.rotl90(t::InfinitePEPS) = rotl90(rotl90.(t.A));
