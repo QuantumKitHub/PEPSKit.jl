@@ -1,22 +1,29 @@
-struct CTMRG{T,F}
-    trscheme::T
-    tol::F
+@with_kw struct CTMRG{T,F} <:Algorithm
+    trscheme::TruncationScheme = TensorKit.notrunc()
+    tol::Float64 = Defaults.tol
+    maxiter::Int = Defaults.maxiter
 end
 
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps))
-    spectra = copy(envs.corners); # use the corners as some kind of convergence criterium
+    err = Inf
+    iter = 0
 
-    for iter in 1:10
+    while err > alg.tol || iter > alg.maxiter
+        old_norm = abs(contract_ctrmg(peps,envs)) #first iter not normed
+        @show old_norm
         for dir in 1:4
             envs = rotate_north(envs,dir);
             peps = envs.peps;
 
             envs = left_move(peps,alg,envs);
-
-            #nspec = map(x->x[2],tsvd.(envs.corners[dir]));
-            # check for equality
         end
+        new_norm = abs(contract_ctrmg(peps,envs))
+
+        #use contracted boundary as convergence
+        err = abs(old_norm-new_norm)
     end
+
+    iter > alg.maxiter && @warn "maxiter reached: convergence was $(err)"
 
     envs
 end
@@ -34,7 +41,7 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         # find all projectors
         for row in 1:size(peps,1)
             peps_nw = peps[row,col];
-            peps_sw = rotate_north(peps[row+1,col],WEST);
+            peps_sw = rotate_north(peps[row+1,col],WEST); #only for 2x2 unit cells?
 
 
             Q1 = northwest_corner(envs.planes[SOUTH,row+1,col],envs.corners[SOUTHWEST,row+1,col],envs.planes[WEST,row+1,col],peps_sw);
@@ -67,6 +74,12 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
     end
 
     envs
+end
+
+function contract_ctrmg(peps::InfinitePEPS{PType},envs::CTMRGEnv) where PType
+    peps_nw = peps[1,1];
+    Q2 = northwest_corner(envs.planes[WEST,1,1],envs.corners[NORTHWEST,1,1],envs.planes[NORTH,1,1],peps_nw);
+    contracted = @tensor Q2[1 2 3;6 4 5]*envs.corners[SOUTHWEST,1,1][7;1]*envs.planes[SOUTH,1,1][8,2,3;7]*envs.corners[SOUTHEAST,1,1][9;8]*envs.planes[EAST,1,1][10,4,5;9]*envs.corners[NORTHEAST,1,1][6;10]
 end
 
 northwest_corner(E4,C1,E1,peps) =
