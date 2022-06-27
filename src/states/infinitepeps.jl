@@ -79,6 +79,11 @@ function InfinitePEPS(d::Integer, D::Integer)
     return InfinitePEPS(PeriodicArray(reshape(T, (1, 1))))
 end
 
+function InfinitePEPS(d::Integer, D::Integer, L::Integer)
+    T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
+    return InfinitePEPS(PeriodicArray(repeat(T, L,L)))
+end
+
 
 ## Shape and size
 Base.size(T::InfinitePEPS) = size(T.A)
