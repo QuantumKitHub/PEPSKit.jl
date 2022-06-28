@@ -1,16 +1,16 @@
-@with_kw struct CTMRG{T,F} <:Algorithm
+@with_kw struct CTMRG #<: Algorithm
     trscheme::TruncationScheme = TensorKit.notrunc()
     tol::Float64 = Defaults.tol
-    maxiter::Int = Defaults.maxiter
+    maxiter::Integer = Defaults.maxiter
+    verbose::Integer = 0
 end
 
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps))
     err = Inf
     iter = 0
 
-    while err > alg.tol || iter > alg.maxiter
+    while err > alg.tol && iter <= alg.maxiter
         old_norm = abs(contract_ctrmg(peps,envs)) #first iter not normed
-        @show old_norm
         for dir in 1:4
             envs = rotate_north(envs,dir);
             peps = envs.peps;
@@ -18,12 +18,14 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
             envs = left_move(peps,alg,envs);
         end
         new_norm = abs(contract_ctrmg(peps,envs))
-
         #use contracted boundary as convergence
         err = abs(old_norm-new_norm)
+        if alg.verbose > 0
+            @info "iter $(iter): error = $(err)"
+        end
+        iter += 1
     end
-
-    iter > alg.maxiter && @warn "maxiter reached: convergence was $(err)"
+    iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
     envs
 end
