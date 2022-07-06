@@ -15,7 +15,7 @@ const PEPSTensor{S} = AbstractTensorMap{S, 1, 4} where {S<:EuclideanSpace}
 
 """
     const PEPOTensor{S}
-    
+
 Default type for PEPO tensors with a single incoming and outgoing physical index, and 4
     virtual indices, conventionally ordered as: O : P ⊗ P' ← N ⊗ E ⊗ S ⊗ W.
 """
@@ -31,3 +31,6 @@ const PEPOTensor{S} = AbstractTensorMap{S, 2, 4} where {S<:EuclideanSpace}
 Abstract supertype for a 2D projected entangled pairs state.
 """
 abstract type AbstractPEPS end
+
+
+Base.rotl90(t::PEPSTensor) = permute(t,(1,),(3,4,5,2));
