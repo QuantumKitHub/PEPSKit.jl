@@ -9,10 +9,12 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
     err = Inf
     iter = 0
 
+    #for convergence criterium we use the on site contracted boundary
+    #this convergences nicely, though the value depends on the bond dimension χ
+    old_norm = abs(contract_ctrmg(peps,envs))
+
     while err > alg.tol && iter <= alg.maxiter
-        #for convergence criterium we use the on site contracted boundary
-        #this convergences nicely, though the value depends on the bond dimension χ
-        old_norm = abs(contract_ctrmg(peps,envs)) #note: first iter not normed
+
         for dir in 1:4
             envs = rotate_north(envs,dir);
             peps = envs.peps;
@@ -25,6 +27,8 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
         if alg.verbose > 0
             @info "iter $(iter): error = $(err)"
         end
+
+        old_norm = new_norm
         iter += 1
     end
     iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
