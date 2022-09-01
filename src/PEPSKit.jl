@@ -1,19 +1,23 @@
 module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators, Parameters
+    using ChainRulesCore;
     import LinearAlgebra
 
     export CTMRG
     export leading_boundary
 
+    include("utility/util.jl")
+    
     include("states/abstractpeps.jl")
     include("states/infinitepeps.jl")
 
     include("environments/ctmrgenv.jl")
 
     include("algorithms/ctmrg.jl")
+    include("algorithms/expval.jl")
 
     include("utility/rotations.jl")
-    include("utility/util.jl")
+    
 
     #default settings
     module Defaults
