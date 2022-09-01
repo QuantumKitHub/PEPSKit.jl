@@ -16,14 +16,14 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
     while err > alg.tol && iter <= alg.maxiter
 
         for dir in 1:4
-            envs = rotate_north(envs,dir);
+            envs = rotate_north(envs,EAST);
             peps = envs.peps;
 
             envs = left_move(peps,alg,envs);
         end
         new_norm = abs(contract_ctrmg(peps,envs))
 
-        err = abs(old_norm-new_norm)
+        #err = abs(old_norm-new_norm)
         #alg.verbose > 0 && @info "iter $(iter): error = $(err)"
         
 
@@ -59,7 +59,6 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
             (U,S,V) = tsvd(Q1*Q2,alg=SVD(),trunc = alg.trscheme);
 
             isqS = sdiag_inv_sqrt(S);
-
             Q = isqS*U'*Q1;
             P = Q2*V'*isqS;
 
@@ -72,7 +71,8 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
             Q = above_projs[row];
             P = below_projs[mod1(row+1,end)];
 
-            @diffset @tensor corners[NORTHWEST,row,col+1][-1;-2] := corners[NORTHWEST,row,col][1,2] * edges[NORTH,row,col][2,3,4,-2]*Q[-1;1 3 4]
+        
+            @diffset @tensor corners[NORTHWEST,row,col+1][-1;-2] := corners[NORTHWEST,row,col][1,2] * edges[NORTH,row,col][2,3,4,-2]*Q[-1;1 3 4]    
             @diffset @tensor corners[SOUTHWEST,row+1,col+1][-1;-2] := corners[SOUTHWEST,row+1,col][1,4] * edges[SOUTH,row+1,col][-1,2,3,1]*P[4 2 3;-2]
             @diffset @tensor edges[WEST,row,col+1][-1 -2 -3;-4] := edges[WEST,row,col][1 2 3;4]*peps[row,col][9;5 -2 7 2]*conj(peps[row,col][9;6 -3 8 3])*P[4 5 6;-4]*Q[-1;1 7 8]
 
@@ -82,7 +82,7 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         @diffset corners[SOUTHWEST,:,col+1]./=norm.(corners[SOUTHWEST,:,col+1]);
         @diffset edges[WEST,:,col+1]./=norm.(edges[WEST,:,col+1]);
     end
-
+    
     CTMRGEnv(peps,corners,edges);
 end
 

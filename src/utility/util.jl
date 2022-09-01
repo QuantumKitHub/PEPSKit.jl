@@ -77,11 +77,9 @@ function parse_ex(ex::Expr)
 
         vname = lhs.args[1];
         args = lhs.args[2:end];
-        toret = quote
+        quote
             $vname = _setindex($vname,$rhs,$(args...))
         end
-
-        return toret
     elseif ex.head in oppheads &&  length(ex.args)==2 && is_indexing(ex.args[1])
         hit = findfirst(x->x==ex.head,oppheads);
         rep = opprep[hit];
@@ -92,13 +90,11 @@ function parse_ex(ex::Expr)
         vname = lhs.args[1];
         args = lhs.args[2:end];
         
-        toret = quote
+        quote
             $vname = _setindex($vname,$(rep)($lhs,$rhs),$(args...))
         end
-
-        return toret
     else
-        return Expr(ex.head,parse_ex.(ex.args));
+        return Expr(ex.head,parse_ex.(ex.args)...);
     end
 end
 
