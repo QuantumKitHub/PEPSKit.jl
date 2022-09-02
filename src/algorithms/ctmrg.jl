@@ -23,14 +23,14 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
         end
         new_norm = abs(contract_ctrmg(peps,envs))
 
-        #err = abs(old_norm-new_norm)
-        #alg.verbose > 0 && @info "iter $(iter): error = $(err)"
+        err = abs(old_norm-new_norm)
+        @ignore_derivatives alg.verbose > 0 && @info "iter $(iter): error = $(err)"
         
 
         old_norm = new_norm
         iter += 1
     end
-    #iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
+    @ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
     envs
 end

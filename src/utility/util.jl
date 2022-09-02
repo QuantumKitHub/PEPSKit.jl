@@ -25,23 +25,15 @@ end
 Base.rotl90(a::PeriodicArray) = PeriodicArray(rotl90(a.data));
 Base.rotr90(a::PeriodicArray) = PeriodicArray(rotr90(a.data));
 function ChainRulesCore.rrule(::typeof(rotl90),a::AbstractMatrix)
-    pr_a = ProjectTo(a);
     function pb(x)
         if !iszero(x)
-            x = rotr90(pr_a(x));
+            x = x isa Tangent ? ChainRulesCore.construct(typeof(a),ChainRulesCore.backing(x)) : x;
+            x = rotr90(x);
         end
 
         (ZeroTangent(),x)
     end
     rotl90(a), pb
-end
-ChainRulesCore.ProjectTo(xs::T) where T<:PeriodicArray = ProjectTo{T}(;axes = axes(xs));
-function (project::ChainRulesCore.ProjectTo{PeriodicArray{T,N}})(m::Array{<:Any}) where {T,N}
-    PeriodicArray(reshape(m,project.axes)) # m can contain both T, but also ZeroTangent, or NoTangent.... => it cannot be a PeriodicArray{T,N}
-end
-
-function (project::ChainRulesCore.ProjectTo{PeriodicArray{T,N}})(m::ChainRulesCore.Tangent{Any,D}) where {T,N,D}
-    PeriodicArray(reshape(m.data,project.axes))
 end
 
 structure(t) = codomain(t)←domain(t);
@@ -51,13 +43,21 @@ function _setindex(a::AbstractArray,v,args...)
     b[args...] = v
     b
 end
+
 function ChainRulesCore.rrule(::typeof(_setindex),a::AbstractArray,tv,args...) 
     t = _setindex(a,tv,args...);
-    pr_a = ProjectTo(a);
+    
     function toret(v)
-        lol = copy(pr_a(v));
-        lol[args...] = zero.(lol[args...]);
-        (NoTangent(),lol,pr_a(v)[args...],fill(ZeroTangent(),length(args))...)
+        if iszero(v)
+            backwards_tv = ZeroTangent();
+            backwards_a = ZeroTangent();
+        else
+            v = convert(typeof(a),v);
+            backwards_tv = v[args...];
+            backwards_a = copy(v);
+            backwards_a[args...] = zero.(v[args...])
+        end
+        (NoTangent(),backwards_a,backwards_tv,fill(ZeroTangent(),length(args))...)
     end
     t,toret
 end
