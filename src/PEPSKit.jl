@@ -10,8 +10,12 @@ module PEPSKit
     
     include("states/abstractpeps.jl")
     include("states/infinitepeps.jl")
+    
+    include("operators/transferpeps.jl")
+    include("operators/derivatives.jl")
 
     include("environments/ctmrgenv.jl")
+    include("environments/transferpeps_environments.jl")
 
     include("algorithms/ctmrg.jl")
     include("algorithms/expval.jl")
@@ -25,5 +29,6 @@ module PEPSKit
         const tol = 1e-12
     end
 
-    export InfinitePEPS
+    export InfinitePEPS, InfiniteTransferPEPS
+    export initializeMPS
 end # module

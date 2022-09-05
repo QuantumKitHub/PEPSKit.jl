@@ -6,15 +6,16 @@ Represents an infinite projected entangled pairs state on a 2D square lattice.
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
     A::PeriodicArray{T,2}
 
-    function InfinitePEPS(A::PeriodicArray{T, 2}) where T <: PEPSTensor
-
-        Ivertical = CartesianIndex(-1,0)
-        Ihorizontal = CartesianIndex(0,1)
+    function InfinitePEPS(A::PeriodicArray{T,2}) where {T<:PEPSTensor}
+        Ivertical = CartesianIndex(-1, 0)
+        Ihorizontal = CartesianIndex(0, 1)
         for I in CartesianIndices(A)
-            space(A[I], 2) == space(A[I + Ivertical], 4)' ||
-                throw(SpaceMismatch("North virtual space at site $(Tuple(I)) does not match."))
-            space(A[I], 3) == space(A[I + Ihorizontal], 5)' ||
-                throw(SpaceMismatch("East virtual space at site $(Tuple(I)) does not match."))
+            space(A[I], 2) == space(A[I+Ivertical], 4)' || throw(SpaceMismatch(
+                "North virtual space at site $(Tuple(I)) does not match."
+            ))
+            space(A[I], 3) == space(A[I+Ihorizontal], 5)' || throw(SpaceMismatch(
+                "East virtual space at site $(Tuple(I)) does not match."
+            ))
         end
         return new{T}(A)
     end
@@ -27,20 +28,20 @@ end
 
 Allow users to pass in an array of tensors.
 """
-function InfinitePEPS(A::AbstractArray{T,2}) where T <: PEPSTensor
+function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
     return InfinitePEPS(PeriodicArray(deepcopy(A)))
 end
 
 """
-    InfinitePEPS(physical_spaces, north_spaces, east_spaces)
+    InfinitePEPS(Pspaces, Nspaces, Espaces)
 
 Allow users to pass in arrays of spaces.
 """
 function InfinitePEPS(
-    Pspaces::AbstractArray{S, 2},
-    Nspaces::AbstractArray{S, 2},
-    Espaces::AbstractArray{S, 2} = Nspaces
-) where S <: EuclideanSpace
+    Pspaces::AbstractArray{S,2},
+    Nspaces::AbstractArray{S,2},
+    Espaces::AbstractArray{S,2}=Nspaces
+) where {S<:EuclideanSpace}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -59,13 +60,13 @@ end
 
 Allow users to pass in single space.
 """
-function InfinitePEPS(Pspace::S, Nspace::S, Espace::S = Nspace) where S <: EuclideanSpace
-    Pspaces = Array{S, 2}(undef, (1, 1))
-    Pspaces[1,1] = Pspace
-    Nspaces = Array{S, 2}(undef, (1, 1))
-    Nspaces[1,1] = Nspace
-    Espaces = Array{S, 2}(undef, (1, 1))
-    Espaces[1,1] = Espace
+function InfinitePEPS(Pspace::S, Nspace::S, Espace::S=Nspace) where {S<:EuclideanSpace}
+    Pspaces = Array{S,2}(undef, (1, 1))
+    Pspaces[1, 1] = Pspace
+    Nspaces = Array{S,2}(undef, (1, 1))
+    Nspaces[1, 1] = Nspace
+    Espaces = Array{S,2}(undef, (1, 1))
+    Espaces[1, 1] = Espace
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
 end
 
@@ -95,8 +96,8 @@ Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
 Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
-Base.getindex(T::InfinitePEPS,args...) = getindex(T.A,args...);
-TensorKit.space(t::InfinitePEPS,i,j) = space(t[i,j],1)
+Base.getindex(T::InfinitePEPS, args...) = getindex(T.A, args...);
+TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
 
 Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));
