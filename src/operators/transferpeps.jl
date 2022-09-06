@@ -25,7 +25,7 @@ function initializeMPS(O::InfiniteTransferPEPS, virtualspaces::AbstractArray{S,1
             TensorMap(
                 rand,
                 MPSKit.Defaults.eltype,
-                virtualspaces[mod1(i-1, length(virtualspace))] * space(O.top[i], 2) * space(O.bot[i], 2)',
+                virtualspaces[mod1(i-1, end)] * space(O.top[i], 2)' * space(O.bot[i], 2),
                 virtualspaces[i]
             ) for i in 1:length(O)
         ]

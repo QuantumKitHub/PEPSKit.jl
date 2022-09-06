@@ -1,6 +1,7 @@
 module PEPSKit
     using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators, Parameters
     using ChainRulesCore;
+
     import LinearAlgebra
 
     export CTMRG
@@ -15,7 +16,8 @@ module PEPSKit
     include("operators/derivatives.jl")
 
     include("environments/ctmrgenv.jl")
-    include("environments/transferpeps_environments.jl")
+    
+    include("mpskit_glue/transferpeps_environments.jl")
 
     include("algorithms/ctmrg.jl")
     include("algorithms/expval.jl")
