@@ -84,17 +84,17 @@ end
 PeriodicPEPO(d::Integer, D::Integer, Ls::Tuple{Integer}) = repeat(PeriodicPEPO(d,D),Ls...)
 
 ## Shape and size
-Base.size(T::InfinitePEPO) = size(T.A)
-Base.size(T::InfinitePEPO, i) = size(T.A, i)
-Base.length(T::InfinitePEPO) = length(T.A)
+Base.size(T::PeriodicPEPO) = size(T.A)
+Base.size(T::PeriodicPEPO, i) = size(T.A, i)
+Base.length(T::PeriodicPEPO) = length(T.A)
 
 ## Copy
-Base.copy(T::InfinitePEPO) = PeriodicPEPO(copy(T.A))
-Base.similar(T::InfinitePEPO) = PeriodicPEPO(similar(T.A))
-Base.repeat(T::InfinitePEPO, counts...) = PeriodicPEPO(repeat(T.A, counts...))
+Base.copy(T::PeriodicPEPO) = PeriodicPEPO(copy(T.A))
+Base.similar(T::PeriodicPEPO) = PeriodicPEPO(similar(T.A))
+Base.repeat(T::PeriodicPEPO, counts...) = PeriodicPEPO(repeat(T.A, counts...))
 
-Base.getindex(T::InfinitePEPO, args...) = getindex(T.A, args...);
-TensorKit.space(t::InfinitePEPO, i, j) = space(t[i, j], 1)
+Base.getindex(T::PeriodicPEPO, args...) = getindex(T.A, args...);
+TensorKit.space(t::PeriodicPEPO, i, j) = space(t[i, j], 1)
 
 
-Base.rotl90(t::InfinitePEPSO) = PeriodicPEPO(rotl90(rotl90.(t.A)));
+Base.rotl90(t::PeriodicPEPO) = PeriodicPEPO(rotl90(rotl90.(t.A)));
