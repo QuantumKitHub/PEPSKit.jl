@@ -14,6 +14,7 @@ module PEPSKit
     
     include("operators/transferpeps.jl")
     include("operators/derivatives.jl")
+    include("operators/periodicpepo.jl")
 
     include("environments/ctmrgenv.jl")
     
@@ -32,5 +33,6 @@ module PEPSKit
     end
 
     export InfinitePEPS, InfiniteTransferPEPS
+    export PeriodicPEPO
     export initializeMPS
 end # module
