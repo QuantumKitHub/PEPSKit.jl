@@ -36,3 +36,5 @@ function Base.rotl90(envs::CTMRGEnv{P,C,T}) where {P,C,T}
 
     CTMRGEnv(n_peps,n_corners,n_edges)
 end
+
+Base.eltype(envs::CTMRGEnv) = eltype(envs.peps)
