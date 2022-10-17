@@ -52,10 +52,16 @@ function ChainRulesCore.rrule(::typeof(_setindex),a::AbstractArray,tv,args...)
             backwards_tv = ZeroTangent();
             backwards_a = ZeroTangent();
         else
-            v = convert(typeof(a),v);
+            v = v isa Tangent ? ChainRulesCore.construct(typeof(a),ChainRulesCore.backing(v)) : v;
+            v = typeof(v) != typeof(a) ? convert(typeof(a),v) : v
+            #v = convert(typeof(a),v);
             backwards_tv = v[args...];
             backwards_a = copy(v);
-            backwards_a[args...] = zero.(v[args...])
+            if typeof(backwards_tv) == eltype(a)
+                backwards_a[args...] = zero(v[args...])
+            else
+                backwards_a[args...] = zero.(v[args...])
+            end
         end
         (NoTangent(),backwards_a,backwards_tv,fill(ZeroTangent(),length(args))...)
     end
