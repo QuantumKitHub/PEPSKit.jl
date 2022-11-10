@@ -4,7 +4,7 @@ module PEPSKit
 
     import LinearAlgebra
 
-    export CTMRG
+    export CTMRG,CTMRG2
     export leading_boundary
 
     include("utility/util.jl")

@@ -4,6 +4,11 @@ struct CTMRGEnv{P,C,T}
     edges::PeriodicArray{T,3}
 end
 
+struct CTMRGEnv2{P,C,T}
+    As::PeriodicArray{P,2}
+    corners::PeriodicArray{C,3}
+    edges::PeriodicArray{T,3}
+end
 
 # initialize ctmrg environments with some random tensors
 function CTMRGEnv(peps::InfinitePEPS{P}) where P
