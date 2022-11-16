@@ -1,11 +1,5 @@
-struct CTMRGEnv{P,C,T}
-    peps::InfinitePEPS{P}
-    corners::PeriodicArray{C,3}
-    edges::PeriodicArray{T,3}
-end
-
-struct CTMRGEnv2{P,C,T}
-    As::PeriodicArray{P,2}
+struct CTMRGEnv{C,T}
+    #peps::InfinitePEPS{P}
     corners::PeriodicArray{C,3}
     edges::PeriodicArray{T,3}
 end
@@ -26,20 +20,23 @@ function CTMRGEnv(peps::InfinitePEPS{P}) where P
         @diffset edges[dir,i,j] = TensorMap(randn,eltype(P),ou*space(peps[i,j],dir+1)'*space(peps[i,j],dir+1),ou)
     end
 
-    CTMRGEnv(peps,corners,edges)
+    @diffset corners[:,:,:]./=norm.(corners[:,:,:]);
+    @diffset edges[:,:,:]./=norm.(edges[:,:,:]);
+
+    CTMRGEnv(corners,edges)
 end
 
-function Base.rotl90(envs::CTMRGEnv{P,C,T}) where {P,C,T}
-    n_peps = rotl90(envs.peps);
-    n_corners = PeriodicArray{C,3}(undef,4,size(n_peps)...);
-    n_edges = PeriodicArray{T,3}(undef,4,size(n_peps)...);
+function Base.rotl90(envs::CTMRGEnv{C,T}) where {C,T}
+    #n_peps = rotl90(envs.peps);
+    n_corners = PeriodicArray{C,3}(undef,size(envs.corners)...);
+    n_edges = PeriodicArray{T,3}(undef,size(envs.edges)...);
 
     for dir in 1:4
         @diffset n_corners[dir-1,:,:] .= rotl90(envs.corners[dir,:,:]);
         @diffset n_edges[dir-1,:,:] .= rotl90(envs.edges[dir,:,:]);
     end
 
-    CTMRGEnv(n_peps,n_corners,n_edges)
+    CTMRGEnv(n_corners,n_edges)
 end
 
-Base.eltype(envs::CTMRGEnv) = eltype(envs.peps)
+Base.eltype(envs::CTMRGEnv) = eltype(envs.corners[1])

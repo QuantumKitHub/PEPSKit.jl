@@ -2,6 +2,7 @@
     trscheme::TruncationScheme = TensorKit.notrunc()
     tol::Float64 = Defaults.tol
     maxiter::Integer = Defaults.maxiter
+    miniter::Integer = 0
     verbose::Integer = 0
 end
 
@@ -12,34 +13,42 @@ end
     verbose::Integer = 0
 end
 
+
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps))
     err = Inf
-    iter = 0
+    iter = 1
 
     #for convergence criterium we use the on site contracted boundary
     #this convergences, though the value depends on the bond dimension χ
     old_norm = abs(contract_ctrmg(peps,envs,1,1))
-
-    while err > alg.tol && iter <= alg.maxiter
-
-        for dir in 1:4
+    new_norm = old_norm
+    #ϵ₁ = 0.0
+    while (err>alg.tol&&iter<=alg.maxiter) || iter<=alg.miniter
+        #ϵ = 0.0
+        for i in 1:4
             envs = left_move(peps,alg,envs);
-
+            #ϵ = max(ϵ,ϵ₀)
             envs = rotate_north(envs,EAST);
-            peps = envs.peps;
+            #peps = envs.peps;
+            peps = rotl90(peps);
+            n1 = abs(contract_ctrmg(peps,envs,1,1))
+            #@ignore_derivatives @show iter,i,n1
         end
         new_norm = abs(contract_ctrmg(peps,envs,1,1))
 
         err = abs(old_norm-new_norm)
-        @ignore_derivatives alg.verbose > 0 && @info "iter $(iter): error = $(err)"
-        
+        #dϵ = abs((ϵ₁-ϵ)/ϵ)
+        @ignore_derivatives mod(iter,alg.verbose) == 0 && @printf("%4d   %.2e   %.10e\n", iter,err,new_norm)
 
         old_norm = new_norm
+        #ϵ₁ = ϵ
         iter += 1
     end
-    @ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
-    envs
+    @ignore_derivatives @show iter, new_norm
+    #@ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
+
+    return envs
 end
 
 # the actual left_move is dependent on the type of ctmrg, so this seems natural
@@ -49,7 +58,7 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
 
     above_projector_type = tensormaptype(spacetype(PType),1,3,storagetype(PType));
     below_projector_type = tensormaptype(spacetype(PType),3,1,storagetype(PType));
-
+    #ϵ = 0.0
     for col in 1:size(peps,2)
 
         above_projs = Vector{above_projector_type}(undef,size(peps,1));
@@ -63,8 +72,10 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
 
             Q1 = northwest_corner(envs.edges[SOUTH,row+1,col],envs.corners[SOUTHWEST,row+1,col],envs.edges[WEST,row+1,col],peps_sw);
             Q2 = northwest_corner(envs.edges[WEST,row,col],envs.corners[NORTHWEST,row,col],envs.edges[NORTH,row,col],peps_nw);
-            (U,S,V) = tsvd(Q1*Q2,alg=SVD(),trunc = alg.trscheme);
+            Q12 = Q1*Q2
+            #@show norm(Q1), norm(Q2), norm(Q12)
 
+            (U,S,V) = tsvd(Q1*Q2,trunc = alg.trscheme);
             isqS = sdiag_inv_sqrt(S);
             Q = isqS*U'*Q1;
             P = Q2*V'*isqS;
@@ -76,60 +87,29 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         #use the projectors to grow the corners/edges
         for row in 1:size(peps,1)
             Q = above_projs[row];
-            P = below_projs[mod1(row+1,end)];
+            P = below_projs[mod1(row-1,end)];
 
-        
             @diffset @tensor corners[NORTHWEST,row+1,col+1][-1;-2] := envs.corners[NORTHWEST,row+1,col][1,2] * envs.edges[NORTH,row+1,col][2,3,4,-2]*Q[-1;1 3 4]
-            @diffset @tensor corners[SOUTHWEST,row+1,col+1][-1;-2] := envs.corners[SOUTHWEST,row+1,col][1,4] * envs.edges[SOUTH,row+1,col][-1,2,3,1]*P[4 2 3;-2]
-            @diffset @tensor edges[WEST,row,col+1][-1 -2 -3;-4] := envs.edges[WEST,row,col][1 2 3;4]*peps[row,col][9;5 -2 7 2]*conj(peps[row,col][9;6 -3 8 3])*P[4 5 6;-4]*Q[-1;1 7 8]
-
+            @diffset @tensor corners[SOUTHWEST,row-1,col+1][-1;-2] := envs.corners[SOUTHWEST,row-1,col][1,4] * envs.edges[SOUTH,row-1,col][-1,2,3,1]*P[4 2 3;-2]
+            @diffset @tensor edges[WEST,row,col+1][-1 -2 -3;-4] := envs.edges[WEST,row,col][1 2 3;4]*
+            peps[row,col][9;5 -2 7 2]*
+            conj(peps[row,col][9;6 -3 8 3])*
+            P[4 5 6;-4]*
+            Q[-1;1 7 8]
         end
 
         @diffset corners[NORTHWEST,:,col+1]./=norm.(corners[NORTHWEST,:,col+1]);
-        @diffset corners[SOUTHWEST,:,col+1]./=norm.(corners[SOUTHWEST,:,col+1]);
         @diffset edges[WEST,:,col+1]./=norm.(edges[WEST,:,col+1]);
+        @diffset corners[SOUTHWEST,:,col+1]./=norm.(corners[SOUTHWEST,:,col+1]);
     end
     
-    CTMRGEnv(peps,corners,edges);
-end
-
-
-function MPSKit.leading_boundary(As::PeriodicArray{TensorMap,2},alg::CTMRG2,envs = CTMRGEnv(peps))
-    err = Inf
-    iter = 0
-
-    #for convergence criterium we use the on site contracted boundary
-    #this convergences, though the value depends on the bond dimension χ
-    old_norm = abs(contract_ctrmg(peps,envs,1,1))
-
-    while err > alg.tol && iter <= alg.maxiter
-
-        for dir in 1:4
-            envs = left_move(peps,alg,envs);
-
-            envs = rotate_north(envs,EAST);
-            peps = envs.peps;
-        end
-        new_norm = abs(contract_ctrmg(peps,envs,1,1))
-        #@show new_norm
-        err = abs(old_norm-new_norm)
-        @ignore_derivatives alg.verbose > 0 && mod(iter,alg.verbose+1)==0 &&  @info "$(iter) $(err) $(new_norm)"
-        
-
-        old_norm = new_norm
-        iter += 1
-    end
-    @ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
-
-    envs
+    return CTMRGEnv(corners,edges)
 end
 
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG2,envs = CTMRGEnv(peps))
     err = Inf
-    iter = 0
+    iter = 1
 
-    #for convergence criterium we use the on site contracted boundary
-    #this convergences, though the value depends on the bond dimension χ
     old_norm = abs(contract_ctrmg(peps,envs,1,1))
 
     while err > alg.tol && iter <= alg.maxiter
@@ -149,7 +129,7 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG2,envs = CTMRGEnv(
         old_norm = new_norm
         iter += 1
     end
-    @ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
+    #@ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
     envs
 end
@@ -179,7 +159,8 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG2,envs::CTMRGEnv) where P
             Qnorth = Q1*Q2
             Qsouth = Q3*Q4
             (U,S,V) = tsvd(Qsouth*Qnorth, alg=SVD(), trunc = alg.trscheme);
-
+            #@ignore_derivatives @show ϵ = real(norm(Qsouth*Qnorth)^2-norm(U*S*V)^2) 
+            #@ignore_derivatives @info ϵ
             isqS = sdiag_inv_sqrt(S);
             Q = isqS*U'*Qsouth;
             P = Qnorth*V'*isqS;
@@ -191,13 +172,15 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG2,envs::CTMRGEnv) where P
         #use the projectors to grow the corners/edges
         for row in 1:size(peps,1)
             Q = above_projs[row];
-            P = below_projs[mod1(row+1,end)];
+            P = below_projs[mod1(row-1,end)];
 
-        
             @diffset @tensor corners[NORTHWEST,row+1,col+1][-1;-2] := envs.corners[NORTHWEST,row+1,col][1,2] * envs.edges[NORTH,row+1,col][2,3,4,-2]*Q[-1;1 3 4]
-            @diffset @tensor corners[SOUTHWEST,row+1,col+1][-1;-2] := envs.corners[SOUTHWEST,row+1,col][1,4] * envs.edges[SOUTH,row+1,col][-1,2,3,1]*P[4 2 3;-2]
-            @diffset @tensor edges[WEST,row,col+1][-1 -2 -3;-4] := envs.edges[WEST,row,col][1 2 3;4]*peps[row,col][9;5 -2 7 2]*conj(peps[row,col][9;6 -3 8 3])*P[4 5 6;-4]*Q[-1;1 7 8]
-
+            @diffset @tensor corners[SOUTHWEST,row-1,col+1][-1;-2] := envs.corners[SOUTHWEST,row-1,col][1,4] * envs.edges[SOUTH,row-1,col][-1,2,3,1]*P[4 2 3;-2]
+            @diffset @tensor edges[WEST,row,col+1][-1 -2 -3;-4] := envs.edges[WEST,row,col][1 2 3;4]*
+            peps[row,col][9;5 -2 7 2]*
+            conj(peps[row,col][9;6 -3 8 3])*
+            P[4 5 6;-4]*
+            Q[-1;1 7 8]
         end
 
         @diffset corners[NORTHWEST,:,col+1]./=norm.(corners[NORTHWEST,:,col+1]);
