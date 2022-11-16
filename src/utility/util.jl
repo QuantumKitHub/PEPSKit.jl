@@ -22,8 +22,8 @@ function _elementwise_mult(a::AbstractTensorMap,b::AbstractTensorMap)
 end
 
 #rotl90 appeared to lose PeriodicArray'ness, which in turn caused zygote problems
-Base.rotl90(a::PeriodicArray) = PeriodicArray(rotl90(a.data));
-Base.rotr90(a::PeriodicArray) = PeriodicArray(rotr90(a.data));
+#Base.rotl90(a::Array) = Array(rotl90(a));
+#Base.rotr90(a::Array) = Array(rotr90(a));
 function ChainRulesCore.rrule(::typeof(rotl90),a::AbstractMatrix)
     function pb(x)
         if !iszero(x)

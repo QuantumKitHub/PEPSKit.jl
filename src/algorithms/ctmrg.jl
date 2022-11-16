@@ -60,6 +60,8 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
     below_projector_type = tensormaptype(spacetype(PType),3,1,storagetype(PType));
     #ϵ = 0.0
     for col in 1:size(peps,2)
+        cop = mod1(col+1,size(peps,2))
+        com = mod1(col-1,size(peps,2))
 
         above_projs = Vector{above_projector_type}(undef,size(peps,1));
         below_projs = Vector{below_projector_type}(undef,size(peps,1));
@@ -70,15 +72,17 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
             peps_sw = rotate_north(peps[row+1,col],WEST);
 
 
-            Q1 = northwest_corner(envs.edges[SOUTH,row+1,col],envs.corners[SOUTHWEST,row+1,col],envs.edges[WEST,row+1,col],peps_sw);
+            Q1 = northwest_corner(envs.edges[SOUTH,mod1(row+1,end),col],envs.corners[SOUTHWEST,mod1(row+1,end),col],envs.edges[WEST,mod1(row+1,end),col],peps_sw);
             Q2 = northwest_corner(envs.edges[WEST,row,col],envs.corners[NORTHWEST,row,col],envs.edges[NORTH,row,col],peps_nw);
             Q12 = Q1*Q2
             #@show norm(Q1), norm(Q2), norm(Q12)
 
             (U,S,V) = tsvd(Q1*Q2,trunc = alg.trscheme);
             isqS = sdiag_inv_sqrt(S);
-            Q = isqS*U'*Q1;
-            P = Q2*V'*isqS;
+            #Q = isqS*U'*Q1;
+            #P = Q2*V'*isqS;
+            @tensor Q[-1;-2 -3 -4] := isqS[-1;1] * conj(U[2 3 4;1]) * Q1[2 3 4;-2 -3 -4]
+            @tensor P[-1 -2 -3;-4] := Q2[-1 -2 -3;1 2 3] * conj(V[4;1 2 3]) * isqS[4;-4]
 
             @diffset above_projs[row] = Q;
             @diffset below_projs[row] = P;
@@ -88,19 +92,21 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         for row in 1:size(peps,1)
             Q = above_projs[row];
             P = below_projs[mod1(row-1,end)];
-
-            @diffset @tensor corners[NORTHWEST,row+1,col+1][-1;-2] := envs.corners[NORTHWEST,row+1,col][1,2] * envs.edges[NORTH,row+1,col][2,3,4,-2]*Q[-1;1 3 4]
-            @diffset @tensor corners[SOUTHWEST,row-1,col+1][-1;-2] := envs.corners[SOUTHWEST,row-1,col][1,4] * envs.edges[SOUTH,row-1,col][-1,2,3,1]*P[4 2 3;-2]
-            @diffset @tensor edges[WEST,row,col+1][-1 -2 -3;-4] := envs.edges[WEST,row,col][1 2 3;4]*
+            rop = mod1(row+1,size(peps,1))
+            rom = mod1(row-1,size(peps,1))            
+            
+            @diffset @tensor corners[NORTHWEST,rop,cop][-1;-2] := envs.corners[NORTHWEST,rop,col][1,2] * envs.edges[NORTH,rop,col][2,3,4,-2]*Q[-1;1 3 4]
+            @diffset @tensor corners[SOUTHWEST,rom,cop][-1;-2] := envs.corners[SOUTHWEST,rom,col][1,4] * envs.edges[SOUTH,rom,col][-1,2,3,1]*P[4 2 3;-2]
+            @diffset @tensor edges[WEST,row,cop][-1 -2 -3;-4] := envs.edges[WEST,row,col][1 2 3;4]*
             peps[row,col][9;5 -2 7 2]*
             conj(peps[row,col][9;6 -3 8 3])*
             P[4 5 6;-4]*
             Q[-1;1 7 8]
         end
 
-        @diffset corners[NORTHWEST,:,col+1]./=norm.(corners[NORTHWEST,:,col+1]);
-        @diffset edges[WEST,:,col+1]./=norm.(edges[WEST,:,col+1]);
-        @diffset corners[SOUTHWEST,:,col+1]./=norm.(corners[SOUTHWEST,:,col+1]);
+        @diffset corners[NORTHWEST,:,cop]./=norm.(corners[NORTHWEST,:,cop]);
+        @diffset edges[WEST,:,cop]./=norm.(edges[WEST,:,cop]);
+        @diffset corners[SOUTHWEST,:,cop]./=norm.(corners[SOUTHWEST,:,cop]);
     end
     
     return CTMRGEnv(corners,edges)
