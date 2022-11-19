@@ -4,19 +4,9 @@
 Represents an infinite projected entangled pairs state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
-    A::PeriodicArray{T,2}
+    A::Array{T,2}
 
-    function InfinitePEPS(A::PeriodicArray{T,2}) where {T<:PEPSTensor}
-        Ivertical = CartesianIndex(-1, 0)
-        Ihorizontal = CartesianIndex(0, 1)
-        for I in CartesianIndices(A)
-            space(A[I], 2) == space(A[I+Ivertical], 4)' || throw(SpaceMismatch(
-                "North virtual space at site $(Tuple(I)) does not match."
-            ))
-            space(A[I], 3) == space(A[I+Ihorizontal], 5)' || throw(SpaceMismatch(
-                "East virtual space at site $(Tuple(I)) does not match."
-            ))
-        end
+    function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
         return new{T}(A)
     end
 end
@@ -29,7 +19,7 @@ end
 Allow users to pass in an array of tensors.
 """
 function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
-    return InfinitePEPS(PeriodicArray(deepcopy(A)))
+    return InfinitePEPS(Array(deepcopy(A)))
 end
 
 """
@@ -77,17 +67,17 @@ Allow users to pass in integers.
 """
 function InfinitePEPS(d::Integer, D::Integer)
     T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(PeriodicArray(reshape(T, (1, 1))))
+    return InfinitePEPS(Array(reshape(T, (1, 1))))
 end
 
 function InfinitePEPS(d::Integer, D::Integer, L::Integer)
     T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(PeriodicArray(repeat(T, L,L)))
+    return InfinitePEPS(Array(repeat(T, L,L)))
 end
 
 function InfinitePEPS(d::Integer, D::Integer, Ls::Tuple{Integer,Integer})
     T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(PeriodicArray(repeat(T, Ls...)))
+    return InfinitePEPS(Array(repeat(T, Ls...)))
 end
 
 

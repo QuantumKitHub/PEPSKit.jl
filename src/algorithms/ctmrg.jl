@@ -2,7 +2,7 @@
     trscheme::TruncationScheme = TensorKit.notrunc()
     tol::Float64 = Defaults.tol
     maxiter::Integer = Defaults.maxiter
-    miniter::Integer = 0
+    miniter::Integer = 4
     verbose::Integer = 0
 end
 
@@ -45,7 +45,7 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
         iter += 1
     end
 
-    @ignore_derivatives @show iter, new_norm
+    #@ignore_derivatives @show iter, new_norm, err
     #@ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
     return envs
@@ -68,8 +68,10 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
 
         # find all projectors
         for row in 1:size(peps,1)
+            rop = mod1(row+1, size(peps,1))
             peps_nw = peps[row,col];
-            peps_sw = rotate_north(peps[row+1,col],WEST);
+            peps_sw = rotate_north(peps[rop,col],WEST);
+            #peps_sw = permute(peps[rop,col], (1,), (5,2,3,4,))
 
 
             Q1 = northwest_corner(envs.edges[SOUTH,mod1(row+1,end),col],envs.corners[SOUTHWEST,mod1(row+1,end),col],envs.edges[WEST,mod1(row+1,end),col],peps_sw);
@@ -116,9 +118,9 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG2,envs = CTMRGEnv(
     err = Inf
     iter = 1
 
-    old_norm = abs(contract_ctrmg(peps,envs,1,1))
+    old_norm = 1.0
 
-    while err > alg.tol && iter <= alg.maxiter
+    while (err > alg.tol && iter <= alg.maxiter) || iter<4
 
         for dir in 1:4
             envs = left_move(peps,alg,envs);
