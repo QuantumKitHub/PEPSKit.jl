@@ -1,6 +1,7 @@
-include("opts.jl")
-using PEPSKit: @diffset, _setindex
-using JLD2,ChainRulesCore,Revise
+using Revise, PEPSKit, TensorKit, TensorKitAD, Zygote, MPSKit
+using MPSKitModels, LinearAlgebra, OptimKit
+using PEPSKit: NORTH,SOUTH,WEST,EAST,NORTHWEST,NORTHEAST,SOUTHEAST,SOUTHWEST,@diffset
+using JLD2,ChainRulesCore
 
 
 function two_site_rho(r::Int, c::Int, ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv)
@@ -121,6 +122,14 @@ function init_psi(d::Int, D::Int, Lx::Int, Ly::Int)
     return InfinitePEPS(A)
 end
 
+
+alg_ctm = CTMRG(
+            verbose=10000,
+            tol=1e-10,
+            trscheme=truncdim(10),
+            miniter=4,
+            maxiter=200
+        )
 
 function main(;d=2,D=2,Lx=1,Ly=1)
     ψ = init_psi(d,D,Lx,Ly)   
