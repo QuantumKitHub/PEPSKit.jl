@@ -4,12 +4,14 @@
     maxiter::Integer = Defaults.maxiter
     miniter::Integer = 4
     verbose::Integer = 0
+    fixedspace::Bool = false
 end
 
 @with_kw struct CTMRG2 #<: Algorithm
     trscheme::TruncationScheme = TensorKit.notrunc()
     tol::Float64 = Defaults.tol
     maxiter::Integer = Defaults.maxiter
+    miniter::Integer = 4
     verbose::Integer = 0
 end
 
@@ -20,33 +22,32 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
 
     #for convergence criterium we use the on site contracted boundary
     #this convergences, though the value depends on the bond dimension χ
-    old_norm = abs(contract_ctrmg(peps,envs,1,1))
+    old_norm = 1.0
     new_norm = old_norm
-    #ϵ₁ = 0.0
+    ϵ₁ = 1.0
     while (err>alg.tol&&iter<=alg.maxiter) || iter<=alg.miniter
-        #ϵ = 0.0
+        ϵ = 0.0
         for i in 1:4
-            envs = left_move(peps,alg,envs);
-            #ϵ = max(ϵ,ϵ₀)
+            envs,ϵ₀ = left_move(peps,alg,envs);
+            ϵ = max(ϵ,ϵ₀)
             envs = rotate_north(envs,EAST);
-            #peps = envs.peps;
             peps = rotl90(peps);
             n1 = abs(contract_ctrmg(peps,envs,1,1))
-            #@ignore_derivatives @show iter,i,n1
         end
         new_norm = abs(contract_ctrmg(peps,envs,1,1))
 
         err = abs(old_norm-new_norm)
-        #dϵ = abs((ϵ₁-ϵ)/ϵ)
-        @ignore_derivatives mod(iter,alg.verbose) == 0 && @printf("%4d   %.2e   %.10e\n", iter,err,new_norm)
+        dϵ = abs((ϵ₁-ϵ)/ϵ₁)
+        @ignore_derivatives mod(iter,alg.verbose) == 0 && @printf("%4d   %.2e   %.10e   %.2e    %.2e\n",
+         iter,err,new_norm,ϵ,dϵ)
 
         old_norm = new_norm
-        #ϵ₁ = ϵ
+        ϵ₁ = ϵ
         iter += 1
     end
 
     #@ignore_derivatives @show iter, new_norm, err
-    #@ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
+    @ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
     return envs
 end
@@ -58,7 +59,9 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
 
     above_projector_type = tensormaptype(spacetype(PType),1,3,storagetype(PType));
     below_projector_type = tensormaptype(spacetype(PType),3,1,storagetype(PType));
-    #ϵ = 0.0
+    ϵ = 0.0
+    n0 = 1.0
+    n1 = 1.0
     for col in 1:size(peps,2)
         cop = mod1(col+1,size(peps,2))
         com = mod1(col-1,size(peps,2))
@@ -79,7 +82,16 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
             Q12 = Q1*Q2
             #@show norm(Q1), norm(Q2), norm(Q12)
 
-            (U,S,V) = tsvd(Q1*Q2,trunc = alg.trscheme);
+            trscheme = alg.trscheme
+            if alg.fixedspace == true
+                trscheme = truncspace(space(envs.edges[WEST,row,cop],1))
+            end
+            (U,S,V) = tsvd(Q1*Q2,trunc = trscheme)
+            
+            @ignore_derivatives n0 = norm(Q1*Q2)^2
+            @ignore_derivatives n1 = norm(U*S*V)^2
+            @ignore_derivatives ϵ = max(ϵ, (n0-n1)/n0)
+
             isqS = sdiag_inv_sqrt(S);
             #Q = isqS*U'*Q1;
             #P = Q2*V'*isqS;
@@ -111,7 +123,7 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         @diffset corners[SOUTHWEST,:,cop]./=norm.(corners[SOUTHWEST,:,cop]);
     end
     
-    return CTMRGEnv(corners,edges)
+    return CTMRGEnv(corners,edges), ϵ
 end
 
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG2,envs = CTMRGEnv(peps))
@@ -131,13 +143,13 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG2,envs = CTMRGEnv(
         new_norm = abs(contract_ctrmg(peps,envs,1,1))
         #@show new_norm
         err = abs(old_norm-new_norm)
-        @ignore_derivatives alg.verbose > 0 && mod(iter,alg.verbose+1)==0 &&  @info "$(iter) $(err) $(new_norm)"
+        @ignore_derivatives mod(alg.verbose,alg.miniter)==0 && mod(iter,alg.verbose+1)==0 &&  @info "$(iter) $(err) $(new_norm)"
         
 
         old_norm = new_norm
         iter += 1
     end
-    #@ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
+    @ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
     envs
 end
@@ -151,22 +163,23 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG2,envs::CTMRGEnv) where P
     below_projector_type = tensormaptype(spacetype(PType),3,1,storagetype(PType));
 
     for col in 1:size(peps,2)
-
+        cop = mod1(col+1, size(peps,2))
         above_projs = Vector{above_projector_type}(undef,size(peps,1));
         below_projs = Vector{below_projector_type}(undef,size(peps,1));
 
         # find all projectors
         for row in 1:size(peps,1)
+            rop = mod1(row+1, size(peps,1))
             peps_nw = peps[row,col];
-            peps_sw = rotate_north(peps[row+1,col],WEST);
+            peps_sw = rotate_north(peps[rop,col],WEST);
 
             Q1 = northwest_corner(envs.edges[WEST,row,col],envs.corners[NORTHWEST,row,col],  envs.edges[NORTH,row,col],peps_nw);
-            Q2 = northeast_corner(envs.edges[NORTH,row,col+1],envs.corners[NORTHEAST,row,col+1],envs.edges[EAST,row,col+1],peps[row,col+1])
-            Q3 = southeast_corner(envs.edges[EAST,row+1,col+1],envs.corners[SOUTHEAST,row+1,col+1],envs.edges[SOUTH,row+1,col+1],peps[row+1,col+1])
-            Q4 = northwest_corner(envs.edges[SOUTH,row+1,col],envs.corners[SOUTHWEST,row+1,col],envs.edges[WEST,row+1,col],peps_sw);
+            Q2 = northeast_corner(envs.edges[NORTH,row,cop],envs.corners[NORTHEAST,row,cop],envs.edges[EAST,row,cop],peps[row,cop])
+            Q3 = southeast_corner(envs.edges[EAST,rop,cop],envs.corners[SOUTHEAST,rop,cop],envs.edges[SOUTH,rop,cop],peps[rop,cop])
+            Q4 = northwest_corner(envs.edges[SOUTH,rop,col],envs.corners[SOUTHWEST,rop,col],envs.edges[WEST,rop,col],peps_sw);
             Qnorth = Q1*Q2
             Qsouth = Q3*Q4
-            (U,S,V) = tsvd(Qsouth*Qnorth, alg=SVD(), trunc = alg.trscheme);
+            (U,S,V) = tsvd(Qsouth*Qnorth, trunc = alg.trscheme);
             #@ignore_derivatives @show ϵ = real(norm(Qsouth*Qnorth)^2-norm(U*S*V)^2) 
             #@ignore_derivatives @info ϵ
             isqS = sdiag_inv_sqrt(S);
