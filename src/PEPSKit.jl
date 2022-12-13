@@ -1,10 +1,10 @@
 module PEPSKit
-    using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators, Parameters
+    using TensorKit, KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators, Parameters,Printf
     using ChainRulesCore;
 
     import LinearAlgebra
 
-    export CTMRG
+    export CTMRG,CTMRG2
     export leading_boundary
 
     include("utility/util.jl")
