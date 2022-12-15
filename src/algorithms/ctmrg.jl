@@ -15,8 +15,9 @@ end
     verbose::Integer = 0
 end
 
+MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps)) = MPSKit.leading_boundary(peps,peps,alg,envs);
 
-function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps))
+function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps))
     err = Inf
     iter = 1
 
@@ -28,13 +29,13 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
     while (err>alg.tol&&iter<=alg.maxiter) || iter<=alg.miniter
         ϵ = 0.0
         for i in 1:4
-            envs,ϵ₀ = left_move(peps,alg,envs);
+            envs,ϵ₀ = left_move(peps_above, peps_below,alg,envs);
             ϵ = max(ϵ,ϵ₀)
             envs = rotate_north(envs,EAST);
-            peps = rotl90(peps);
-            n1 = abs(contract_ctrmg(peps,envs,1,1))
+            peps_above = envs.peps_above;
+            peps_below = envs.peps_below;
         end
-        new_norm = abs(contract_ctrmg(peps,envs,1,1))
+        new_norm = abs(contract_ctrmg(envs,1,1))
 
         err = abs(old_norm-new_norm)
         dϵ = abs((ϵ₁-ϵ)/ϵ₁)
@@ -52,8 +53,7 @@ function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(p
     return envs
 end
 
-# the actual left_move is dependent on the type of ctmrg, so this seems natural
-function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PType
+function left_move(peps_above::InfinitePEPS{PType},peps_below::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PType
     corners::typeof(envs.corners) = copy(envs.corners);
     edges::typeof(envs.edges) = copy(envs.edges);
 
@@ -62,30 +62,27 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
     ϵ = 0.0
     n0 = 1.0
     n1 = 1.0
-    for col in 1:size(peps,2)
-        cop = mod1(col+1,size(peps,2))
-        com = mod1(col-1,size(peps,2))
+    for col in 1:size(peps_above,2)
+        cop = mod1(col+1,size(peps_above,2))
+        com = mod1(col-1,size(peps_above,2))
 
-        above_projs = Vector{above_projector_type}(undef,size(peps,1));
-        below_projs = Vector{below_projector_type}(undef,size(peps,1));
+        above_projs = Vector{above_projector_type}(undef,size(peps_above,1));
+        below_projs = Vector{below_projector_type}(undef,size(peps_above,1));
 
         # find all projectors
-        for row in 1:size(peps,1)
-            rop = mod1(row+1, size(peps,1))
-            peps_nw = peps[row,col];
-            peps_sw = rotate_north(peps[rop,col],WEST);
-            #peps_sw = permute(peps[rop,col], (1,), (5,2,3,4,))
+        for row in 1:size(peps_above,1)
+            rop = mod1(row+1, size(peps_above,1))
+            peps_above_nw = peps_above[row,col];
+            peps_above_sw = rotate_north(peps_above[rop,col],WEST);
+            peps_below_nw = peps_below[row,col];
+            peps_below_sw = rotate_north(peps_below[rop,col],WEST);
+
+            Q1 = northwest_corner(envs.edges[SOUTH,mod1(row+1,end),col],envs.corners[SOUTHWEST,mod1(row+1,end),col],envs.edges[WEST,mod1(row+1,end),col],peps_above_sw,peps_below_sw);
+            Q2 = northwest_corner(envs.edges[WEST,row,col],envs.corners[NORTHWEST,row,col],envs.edges[NORTH,row,col],peps_above_nw,peps_below_nw);
 
 
-            Q1 = northwest_corner(envs.edges[SOUTH,mod1(row+1,end),col],envs.corners[SOUTHWEST,mod1(row+1,end),col],envs.edges[WEST,mod1(row+1,end),col],peps_sw);
-            Q2 = northwest_corner(envs.edges[WEST,row,col],envs.corners[NORTHWEST,row,col],envs.edges[NORTH,row,col],peps_nw);
-            Q12 = Q1*Q2
-            #@show norm(Q1), norm(Q2), norm(Q12)
-
-            trscheme = alg.trscheme
-            if alg.fixedspace == true
-                trscheme = truncspace(space(envs.edges[WEST,row,cop],1))
-            end
+            trscheme = alg.fixedspace == true ? truncspace(space(envs.edges[WEST,row,cop],1)) : alg.trscheme
+            
             (U,S,V) = tsvd(Q1*Q2,trunc = trscheme)
             
             @ignore_derivatives n0 = norm(Q1*Q2)^2
@@ -103,17 +100,17 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         end
 
         #use the projectors to grow the corners/edges
-        for row in 1:size(peps,1)
+        for row in 1:size(peps_above,1)
             Q = above_projs[row];
             P = below_projs[mod1(row-1,end)];
-            rop = mod1(row+1,size(peps,1))
-            rom = mod1(row-1,size(peps,1))            
+            rop = mod1(row+1,size(peps_above,1))
+            rom = mod1(row-1,size(peps_above,1))            
             
             @diffset @tensor corners[NORTHWEST,rop,cop][-1;-2] := envs.corners[NORTHWEST,rop,col][1,2] * envs.edges[NORTH,rop,col][2,3,4,-2]*Q[-1;1 3 4]
             @diffset @tensor corners[SOUTHWEST,rom,cop][-1;-2] := envs.corners[SOUTHWEST,rom,col][1,4] * envs.edges[SOUTH,rom,col][-1,2,3,1]*P[4 2 3;-2]
             @diffset @tensor edges[WEST,row,cop][-1 -2 -3;-4] := envs.edges[WEST,row,col][1 2 3;4]*
-            peps[row,col][9;5 -2 7 2]*
-            conj(peps[row,col][9;6 -3 8 3])*
+            peps_above[row,col][9;5 -2 7 2]*
+            conj(peps_below[row,col][9;6 -3 8 3])*
             P[4 5 6;-4]*
             Q[-1;1 7 8]
         end
@@ -123,8 +120,14 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         @diffset corners[SOUTHWEST,:,cop]./=norm.(corners[SOUTHWEST,:,cop]);
     end
     
-    return CTMRGEnv(peps,corners,edges), ϵ
+    return CTMRGEnv(peps_above,peps_below,corners,edges), ϵ
 end
+
+northwest_corner(E4,C1,E1,peps_above,peps_below=peps_above) = @tensor corner[-1 -2 -3;-4 -5 -6] := E4[-1 1 2;3]*C1[3;4]*E1[4 5 6;-4]*peps_above[7;5 -5 -2 1]*conj(peps_below[7;6 -6 -3 2])
+northeast_corner(E1,C2,E2,peps_above,peps_below=peps_above) = @tensor corner[-1 -2 -3;-4 -5 -6] := E1[-1 1 2;3]*C2[3;4]*E2[4 5 6;-4]*peps_above[7;1 5 -5 -2]*conj(peps_below[7;2 6 -6 -3])
+southeast_corner(E2,C3,E3,peps_above,peps_below=peps_above) = @tensor corner[-1 -2 -3;-4 -5 -6] := E2[-1 1 2;3]*C3[3;4]*E3[4 5 6;-4]*peps_above[7;-2 1 5 -5]*conj(peps_below[7;-3 2 6 -6])
+
+#=
 
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG2,envs = CTMRGEnv(peps))
     err = Inf
@@ -211,13 +214,12 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG2,envs::CTMRGEnv) where P
     
     CTMRGEnv(peps,corners,edges);
 end
+=#
 
-function contract_ctrmg(peps::InfinitePEPS{PType},envs::CTMRGEnv,i::Integer,j::Integer) where PType
-    peps_nw = peps[i,j];
-    Q2 = northwest_corner(envs.edges[WEST,i,j],envs.corners[NORTHWEST,i,j],envs.edges[NORTH,i,j],peps_nw);
-    contracted = @tensor Q2[1 2 3;6 4 5]*envs.corners[SOUTHWEST,i,j][7;1]*envs.edges[SOUTH,i,j][8,2,3;7]*envs.corners[SOUTHEAST,i,j][9;8]*envs.edges[EAST,i,j][10,4,5;9]*envs.corners[NORTHEAST,i,j][6;10]
+function contract_ctrmg(envs::CTMRGEnv,i::Integer,j::Integer)
+    peps_above = envs.peps_above;
+    peps_below = envs.peps_below;
+    Q2 = northwest_corner(envs.edges[WEST,i,j],envs.corners[NORTHWEST,i,j],envs.edges[NORTH,i,j],peps_above[i,j],peps_below[i,j]);
+    @tensor Q2[1 2 3;6 4 5]*envs.corners[SOUTHWEST,i,j][7;1]*envs.edges[SOUTH,i,j][8,2,3;7]*envs.corners[SOUTHEAST,i,j][9;8]*envs.edges[EAST,i,j][10,4,5;9]*envs.corners[NORTHEAST,i,j][6;10]
 end
 
-northwest_corner(E4,C1,E1,peps) = @tensor corner[-1 -2 -3;-4 -5 -6] := E4[-1 1 2;3]*C1[3;4]*E1[4 5 6;-4]*peps[7;5 -5 -2 1]*conj(peps[7;6 -6 -3 2])
-northeast_corner(E1,C2,E2,peps) = @tensor corner[-1 -2 -3;-4 -5 -6] := E1[-1 1 2;3]*C2[3;4]*E2[4 5 6;-4]*peps[7;1 5 -5 -2]*conj(peps[7;2 6 -6 -3])
-southeast_corner(E2,C3,E3,peps) = @tensor corner[-1 -2 -3;-4 -5 -6] := E2[-1 1 2;3]*C3[3;4]*E3[4 5 6;-4]*peps[7;-2 1 5 -5]*conj(peps[7;-3 2 6 -6])

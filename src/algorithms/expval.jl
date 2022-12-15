@@ -1,5 +1,6 @@
 function MPSKit.expectation_value(envs::CTMRGEnv,ham::AbstractTensorMap{S,1,1}) where S
-    peps = envs.peps;
+    @assert envs.peps_above == envs.peps_below
+    peps = envs.peps_above;
     result = Matrix{eltype(ham)}(undef,size(peps,1),size(peps,2));
 
     for r in 1:size(peps,1), c in 1:size(peps,2)
