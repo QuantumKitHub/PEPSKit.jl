@@ -123,7 +123,7 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG,envs::CTMRGEnv) where PT
         @diffset corners[SOUTHWEST,:,cop]./=norm.(corners[SOUTHWEST,:,cop]);
     end
     
-    return CTMRGEnv(corners,edges), ϵ
+    return CTMRGEnv(peps,corners,edges), ϵ
 end
 
 function MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG2,envs = CTMRGEnv(peps))

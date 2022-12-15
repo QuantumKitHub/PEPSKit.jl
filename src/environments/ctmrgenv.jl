@@ -1,5 +1,5 @@
-struct CTMRGEnv{C,T}
-    #peps::InfinitePEPS{P}
+struct CTMRGEnv{P,C,T}
+    peps::InfinitePEPS{P}
     corners::Array{C,3}
     edges::Array{T,3}
 end
@@ -23,11 +23,11 @@ function CTMRGEnv(peps::InfinitePEPS{P}) where P
     @diffset corners[:,:,:]./=norm.(corners[:,:,:]);
     @diffset edges[:,:,:]./=norm.(edges[:,:,:]);
 
-    CTMRGEnv(corners,edges)
+    CTMRGEnv(peps,corners,edges)
 end
 
-function Base.rotl90(envs::CTMRGEnv{C,T}) where {C,T}
-    #n_peps = rotl90(envs.peps);
+function Base.rotl90(envs::CTMRGEnv{P,C,T}) where {P,C,T}
+    n_peps = rotl90(envs.peps);
     n_corners = Array{C,3}(undef,size(envs.corners)...);
     n_edges = Array{T,3}(undef,size(envs.edges)...);
 
@@ -37,7 +37,7 @@ function Base.rotl90(envs::CTMRGEnv{C,T}) where {C,T}
         @diffset n_edges[dirm,:,:] .= rotl90(envs.edges[dir,:,:]);
     end
 
-    CTMRGEnv(n_corners,n_edges)
+    CTMRGEnv(n_peps,n_corners,n_edges)
 end
 
 Base.eltype(envs::CTMRGEnv) = eltype(envs.corners[1])

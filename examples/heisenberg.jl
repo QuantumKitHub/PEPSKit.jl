@@ -145,3 +145,5 @@ function main(;d=2,D=2,Lx=1,Ly=1)
     )
     return ψ
 end
+
+main()
