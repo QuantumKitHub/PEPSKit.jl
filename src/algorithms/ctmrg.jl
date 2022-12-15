@@ -17,7 +17,7 @@ end
 
 MPSKit.leading_boundary(peps::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps)) = MPSKit.leading_boundary(peps,peps,alg,envs);
 
-function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps))
+function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePEPS,alg::CTMRG,envs = CTMRGEnv(peps_above,peps_below))
     err = Inf
     iter = 1
 
@@ -39,7 +39,7 @@ function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePE
 
         err = abs(old_norm-new_norm)
         dϵ = abs((ϵ₁-ϵ)/ϵ₁)
-        @ignore_derivatives mod(iter,alg.verbose) == 0 && @printf("%4d   %.2e   %.10e   %.2e    %.2e\n",
+        @ignore_derivatives alg.verbose > 0 && @printf("%4d   %.2e   %.10e   %.2e    %.2e\n",
          iter,err,new_norm,ϵ,dϵ)
 
         old_norm = new_norm
@@ -220,6 +220,7 @@ function contract_ctrmg(envs::CTMRGEnv,i::Integer,j::Integer)
     peps_above = envs.peps_above;
     peps_below = envs.peps_below;
     Q2 = northwest_corner(envs.edges[WEST,i,j],envs.corners[NORTHWEST,i,j],envs.edges[NORTH,i,j],peps_above[i,j],peps_below[i,j]);
-    @tensor Q2[1 2 3;6 4 5]*envs.corners[SOUTHWEST,i,j][7;1]*envs.edges[SOUTH,i,j][8,2,3;7]*envs.corners[SOUTHEAST,i,j][9;8]*envs.edges[EAST,i,j][10,4,5;9]*envs.corners[NORTHEAST,i,j][6;10]
+    N = @tensor Q2[1 2 3;6 4 5]*envs.corners[SOUTHWEST,i,j][7;1]*envs.edges[SOUTH,i,j][8,2,3;7]*envs.corners[SOUTHEAST,i,j][9;8]*envs.edges[EAST,i,j][10,4,5;9]*envs.corners[NORTHEAST,i,j][6;10]
+    N/tr(envs.corners[NORTHWEST,i,j]*envs.corners[NORTHEAST,i,mod1(j-1,end)]*envs.corners[SOUTHEAST,mod1(i-1,end),mod1(j-1,end)]*envs.corners[SOUTHWEST,mod1(i-1,end),j])
 end
 
