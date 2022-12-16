@@ -35,7 +35,8 @@ function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePE
             peps_above = envs.peps_above;
             peps_below = envs.peps_below;
         end
-        new_norm = abs(contract_ctrmg(envs,1,1))
+        
+        new_norm = contract_ctrmg(envs)
 
         err = abs(old_norm-new_norm)
         dϵ = abs((ϵ₁-ϵ)/ϵ₁)
@@ -216,11 +217,41 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG2,envs::CTMRGEnv) where P
 end
 =#
 
-function contract_ctrmg(envs::CTMRGEnv,i::Integer,j::Integer)
+function contract_ctrmg(envs::CTMRGEnv)
     peps_above = envs.peps_above;
     peps_below = envs.peps_below;
-    Q2 = northwest_corner(envs.edges[WEST,i,j],envs.corners[NORTHWEST,i,j],envs.edges[NORTH,i,j],peps_above[i,j],peps_below[i,j]);
-    N = @tensor Q2[1 2 3;6 4 5]*envs.corners[SOUTHWEST,i,j][7;1]*envs.edges[SOUTH,i,j][8,2,3;7]*envs.corners[SOUTHEAST,i,j][9;8]*envs.edges[EAST,i,j][10,4,5;9]*envs.corners[NORTHEAST,i,j][6;10]
-    N/tr(envs.corners[NORTHWEST,i,j]*envs.corners[NORTHEAST,i,mod1(j-1,end)]*envs.corners[SOUTHEAST,mod1(i-1,end),mod1(j-1,end)]*envs.corners[SOUTHWEST,mod1(i-1,end),j])
+
+    total = 1.0+0im;
+
+    for r in 1:size(peps_above,1), c in 1:size(peps_above,2) 
+        total*=@tensor envs.edges[WEST,r,c][1 2 3;4]*
+            envs.corners[NORTHWEST,r,c][4;5]*
+            envs.edges[NORTH,r,c][5 6 7;8]*
+            envs.corners[NORTHEAST,r,c][8;9]*
+            envs.edges[EAST,r,c][9 10 11;12]*
+            envs.corners[SOUTHEAST,r,c][12;13]*
+            envs.edges[SOUTH,r,c][13 14 15;16]*
+            envs.corners[SOUTHWEST,r,c][16;1]*
+            peps_above[r,c][17;6 10 14 2]*
+            conj(peps_below[r,c][17;7 11 15 3])
+        total *= tr(envs.corners[NORTHWEST,r,c]*envs.corners[NORTHEAST,r,mod1(c-1,end)]*envs.corners[SOUTHEAST,mod1(r-1,end),mod1(c-1,end)]*envs.corners[SOUTHWEST,mod1(r-1,end),c])
+        
+        total /= @tensor envs.edges[WEST,r,c][1 10 11;4]*
+            envs.corners[NORTHWEST,r,c][4;5]*
+            envs.corners[NORTHEAST,r,mod1(c-1,end)][5;6]*
+            envs.edges[EAST,r,mod1(c-1,end)][6 10 11;7]*
+            envs.corners[SOUTHEAST,r,mod1(c-1,end)][7;8]*
+            envs.corners[SOUTHWEST,r,c][8;1]
+
+        total /= @tensor envs.corners[NORTHWEST,r,c][1;2]*
+            envs.edges[NORTH,r,c][2 10 11;3]*
+            envs.corners[NORTHEAST,r,c][3;4]*
+            envs.corners[SOUTHEAST,mod1(r-1,end),c][4;5]*
+            envs.edges[SOUTH,mod1(r-1,end),c][5 10 11;6]*
+            envs.corners[SOUTHWEST,mod1(r-1,end),c][6;1]
+
+    end
+    
+    total
 end
 
