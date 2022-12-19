@@ -40,8 +40,8 @@ function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePE
 
         err = abs(old_norm-new_norm)
         dϵ = abs((ϵ₁-ϵ)/ϵ₁)
-        @ignore_derivatives alg.verbose > 0 && @printf("%4d   %.2e   %.10e   %.2e    %.2e\n",
-         iter,err,new_norm,ϵ,dϵ)
+        @ignore_derivatives alg.verbose > 1 && @printf("%4d   %.2e   %.10e   %.2e    %.2e\n",
+         iter,err,abs(new_norm),ϵ,dϵ)
 
         old_norm = new_norm
         ϵ₁ = ϵ
@@ -49,7 +49,7 @@ function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePE
     end
 
     #@ignore_derivatives @show iter, new_norm, err
-    @ignore_derivatives iter > alg.maxiter && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
+    @ignore_derivatives iter > alg.maxiter && alg.verbose > 0 && @warn "maxiter $(alg.maxiter) reached: error was $(err)"
 
     return envs
 end
