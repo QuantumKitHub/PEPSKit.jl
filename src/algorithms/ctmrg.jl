@@ -83,8 +83,9 @@ function left_move(peps_above::InfinitePEPS{PType},peps_below::InfinitePEPS{PTyp
 
 
             trscheme = alg.fixedspace == true ? truncspace(space(envs.edges[WEST,row,cop],1)) : alg.trscheme
+            #@ignore_derivatives @show norm(Q1*Q2)
             
-            (U,S,V) = tsvd(Q1*Q2,trunc = trscheme)
+            (U,S,V) = tsvd(Q1*Q2,trunc = trscheme,alg = SVD())
             
             @ignore_derivatives n0 = norm(Q1*Q2)^2
             @ignore_derivatives n1 = norm(U*S*V)^2
@@ -99,7 +100,8 @@ function left_move(peps_above::InfinitePEPS{PType},peps_below::InfinitePEPS{PTyp
             @diffset above_projs[row] = Q;
             @diffset below_projs[row] = P;
         end
-
+        
+        
         #use the projectors to grow the corners/edges
         for row in 1:size(peps_above,1)
             Q = above_projs[row];
@@ -116,10 +118,12 @@ function left_move(peps_above::InfinitePEPS{PType},peps_below::InfinitePEPS{PTyp
             Q[-1;1 7 8]
         end
 
+
         @diffset corners[NORTHWEST,:,cop]./=norm.(corners[NORTHWEST,:,cop]);
         @diffset edges[WEST,:,cop]./=norm.(edges[WEST,:,cop]);
         @diffset corners[SOUTHWEST,:,cop]./=norm.(corners[SOUTHWEST,:,cop]);
     end
+    
     
     return CTMRGEnv(peps_above,peps_below,corners,edges), ϵ
 end
@@ -217,10 +221,7 @@ function left_move(peps::InfinitePEPS{PType},alg::CTMRG2,envs::CTMRGEnv) where P
 end
 =#
 
-function contract_ctrmg(envs::CTMRGEnv)
-    peps_above = envs.peps_above;
-    peps_below = envs.peps_below;
-
+function contract_ctrmg(envs::CTMRGEnv,peps_above = envs.peps_above, peps_below = envs.peps_below)
     total = 1.0+0im;
 
     for r in 1:size(peps_above,1), c in 1:size(peps_above,2) 

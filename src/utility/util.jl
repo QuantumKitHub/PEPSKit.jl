@@ -1,5 +1,6 @@
 function sdiag_inv_sqrt(S::AbstractTensorMap)
     toret = similar(S);
+    
     if sectortype(S) == Trivial
         copyto!(toret.data,LinearAlgebra.diagm(LinearAlgebra.diag(S.data).^(-1/2)));
     else
@@ -7,6 +8,8 @@ function sdiag_inv_sqrt(S::AbstractTensorMap)
             copyto!(blocks(toret)[k],LinearAlgebra.diagm(LinearAlgebra.diag(b).^(-1/2)));
         end
     end
+
+    
     toret
 end
 function ChainRulesCore.rrule(::typeof(sdiag_inv_sqrt),S::AbstractTensorMap)
