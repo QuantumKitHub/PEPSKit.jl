@@ -1,4 +1,4 @@
-using Revise, PEPSKit, TensorKit, TensorKitAD, Zygote, MPSKit
+using Revise, PEPSKit, TensorKit, Zygote, MPSKit
 
 p = InfinitePEPS(fill(ℂ^2,1,1),fill(ℂ^2,1,1));
 

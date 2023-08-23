@@ -31,7 +31,7 @@ function InfinitePEPS(
     Pspaces::AbstractArray{S,2},
     Nspaces::AbstractArray{S,2},
     Espaces::AbstractArray{S,2}=Nspaces
-) where {S<:EuclideanSpace}
+) where {S<:ElementarySpace}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -50,7 +50,7 @@ end
 
 Allow users to pass in single space.
 """
-function InfinitePEPS(Pspace::S, Nspace::S, Espace::S=Nspace) where {S<:EuclideanSpace}
+function InfinitePEPS(Pspace::S, Nspace::S, Espace::S=Nspace) where {S<:ElementarySpace}
     Pspaces = Array{S,2}(undef, (1, 1))
     Pspaces[1, 1] = Pspace
     Nspaces = Array{S,2}(undef, (1, 1))

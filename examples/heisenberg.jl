@@ -1,4 +1,4 @@
-using Revise, PEPSKit, TensorKit, TensorKitAD, Zygote, MPSKit
+using Revise, PEPSKit, TensorKit, Zygote, MPSKit
 using MPSKitModels, LinearAlgebra, OptimKit
 using PEPSKit: NORTH,SOUTH,WEST,EAST,NORTHWEST,NORTHEAST,SOUTHEAST,SOUTHWEST,@diffset
 using JLD2,ChainRulesCore
