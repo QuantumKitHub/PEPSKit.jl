@@ -62,3 +62,20 @@ function MPSKit.transfer_right(GR::GenericMPSTensor{S,3}, O::NTuple{2, PEPSTenso
     return @tensor GR′[-1 -2 -3; -4] := GR[7 4 2; 1] * conj(Ā[-4 6 3; 1]) *
         O[1][5; 9 4 6 -2] * conj(O[2][5; 8 2 3 -3]) * A[-1 9 8 7]
 end
+
+function MPSKit.expectation_value(st::MPSMultiline, O::TransferPEPSMultiline)
+
+end
+
+function MPSKit.expectation_value(st::MPSMultiline, ca::MPSKit.PerMPOInfEnv{H,V,S,A}) where {H<:TransferPEPSMultiline,V,S,A}
+    opp = ca.opp
+    retval = PeriodicArray{eltype(st.AC[1, 1]),2}(undef, size(st, 1), size(st, 2))
+    for (i, j) in product(1:size(st, 1), 1:size(st, 2))
+        retval[i, j] = @plansor leftenv(ca, i, j, st)[1 2; 3] *
+                                opp[i, j][2 4; 6 5] *
+                                st.AC[i, j][3 6; 7] *
+                                rightenv(ca, i, j, st)[7 5; 8] *
+                                conj(st.AC[i+1, j][1 4; 8])
+    end
+    return retval
+end

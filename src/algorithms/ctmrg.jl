@@ -29,7 +29,7 @@ function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePE
     while (err>alg.tol&&iter<=alg.maxiter) || iter<=alg.miniter
         ϵ = 0.0
         for i in 1:4
-            envs,ϵ₀ = left_move(peps_above, peps_below,alg,envs);
+            envs,ϵ₀ = left_move(peps_above, peps_below, alg, envs);
             ϵ = max(ϵ,ϵ₀)
             envs = rotate_north(envs,EAST);
             peps_above = envs.peps_above;
@@ -40,7 +40,7 @@ function MPSKit.leading_boundary(peps_above::InfinitePEPS,peps_below::InfinitePE
 
         err = abs(old_norm-new_norm)
         dϵ = abs((ϵ₁-ϵ)/ϵ₁)
-        @ignore_derivatives alg.verbose > 1 && @printf("%4d   %.2e   %.10e   %.2e    %.2e\n",
+        @ignore_derivatives alg.verbose > 1 && @printf("CTMRG: \titeration: %4d\t\terror: %.2e\t\tnorm: %.10e\t\tϵ: %.2e\t\tdϵ: %.2e\n",
          iter,err,abs(new_norm),ϵ,dϵ)
 
         old_norm = new_norm
@@ -58,8 +58,8 @@ function left_move(peps_above::InfinitePEPS{PType},peps_below::InfinitePEPS{PTyp
     corners::typeof(envs.corners) = copy(envs.corners);
     edges::typeof(envs.edges) = copy(envs.edges);
 
-    above_projector_type = tensormaptype(spacetype(PType),1,3,storagetype(PType));
-    below_projector_type = tensormaptype(spacetype(PType),3,1,storagetype(PType));
+    above_projector_type = tensormaptype(spacetype(PType),1,3,storagetype(PType))
+    below_projector_type = tensormaptype(spacetype(PType),3,1,storagetype(PType))
     ϵ = 0.0
     n0 = 1.0
     n1 = 1.0
@@ -67,8 +67,8 @@ function left_move(peps_above::InfinitePEPS{PType},peps_below::InfinitePEPS{PTyp
         cop = mod1(col+1,size(peps_above,2))
         com = mod1(col-1,size(peps_above,2))
 
-        above_projs = Vector{above_projector_type}(undef,size(peps_above,1));
-        below_projs = Vector{below_projector_type}(undef,size(peps_above,1));
+        above_projs = Vector{above_projector_type}(undef,size(peps_above,1))
+        below_projs = Vector{below_projector_type}(undef,size(peps_above,1))
 
         # find all projectors
         for row in 1:size(peps_above,1)

@@ -29,10 +29,10 @@ function iCtmGsEh(ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv, H::AbstractTensorMap{
     E = 0.0
     for r in 1:size(ψ,1), c in 1:size(ψ,2)
         ρ = two_site_rho(r, c, ψ, env)
-        nn = @tensor ρ[1,2;1,2]
-        Eh = @tensor H[1,2;3,4]*ρ[1,2;3,4]
+        @tensor nn = ρ[1 2; 1 2]
+        @tensor Eh = H[1 2; 3 4] * ρ[1 2; 3 4]
         Eh = Eh / nn
-        E = E + Eh 
+        E = E + Eh
         #@diffset Es[r,c] = Eh;
     end
     return real(E)
@@ -40,13 +40,12 @@ end
 
 function H_expectation_value(ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv, H::AbstractTensorMap{S,2,2}) where S
     Eh = iCtmGsEh(ψ, env, H)
-
     ψ1 = rotl90(ψ)
-    env1 = PEPSKit.rotate_north(env,EAST);
+    env1 = PEPSKit.rotate_north(env, EAST)
     Ev = iCtmGsEh(ψ1, env1, H)
     E = real(Eh + Ev)
     return E
-end
+end 
 
 function SqLatHeisenberg()
     Sx,Sy,Sz,_ = spinmatrices(1//2)
@@ -72,13 +71,12 @@ function cfun(x)
 
     function fun(peps)
         env = leading_boundary(peps, alg_ctm, env)
-        x = H_expectation_value(peps, env, H)   
+        x = H_expectation_value(peps, env, H)
         return x
     end
-
-    ∂E = fun'(ψ)
     env = leading_boundary(ψ, alg_ctm, env)
     E = H_expectation_value(ψ, env, H)
+    ∂E = fun'(ψ)
 
     @assert !isnan(norm(∂E))
     return E,∂E
@@ -124,7 +122,7 @@ end
 
 
 alg_ctm = CTMRG(
-            verbose=10000,
+            verbose=1,
             tol=1e-10,
             trscheme=truncdim(10),
             miniter=4,
@@ -137,7 +135,7 @@ function main(;d=2,D=2,Lx=1,Ly=1)
     optimize(
         cfun, 
         (ψ,env),
-        ConjugateGradient(verbosity=3); 
+        ConjugateGradient(verbosity=2); 
         inner=my_inner,
         retract=my_retract,
         scale! = my_scale!,

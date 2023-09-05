@@ -47,7 +47,7 @@ function _setindex(a::AbstractArray,v,args...)
     b
 end
 
-function ChainRulesCore.rrule(::typeof(_setindex),a::AbstractArray,tv,args...) 
+function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...) 
     t = _setindex(a,tv,args...);
     
     function toret(v)
