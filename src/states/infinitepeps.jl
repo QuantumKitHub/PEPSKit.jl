@@ -11,7 +11,6 @@ struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
     end
 end
 
-
 ## Constructors
 """
     InfinitePEPS(A::AbstractArray{T, 2})
@@ -30,7 +29,7 @@ Allow users to pass in arrays of spaces.
 function InfinitePEPS(
     Pspaces::AbstractArray{S,2},
     Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces
+    Espaces::AbstractArray{S,2}=Nspaces,
 ) where {S<:ElementarySpace}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
@@ -72,14 +71,13 @@ end
 
 function InfinitePEPS(d::Integer, D::Integer, L::Integer)
     T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(Array(repeat(T, L,L)))
+    return InfinitePEPS(Array(repeat(T, L, L)))
 end
 
 function InfinitePEPS(d::Integer, D::Integer, Ls::Tuple{Integer,Integer})
     T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
     return InfinitePEPS(Array(repeat(T, Ls...)))
 end
-
 
 ## Shape and size
 Base.size(T::InfinitePEPS) = size(T.A)
@@ -94,6 +92,5 @@ Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPS, args...) = getindex(T.A, args...);
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
-
 
 Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));

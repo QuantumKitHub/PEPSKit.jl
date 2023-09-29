@@ -10,17 +10,16 @@ struct PeriodicPEPO{T<:PEPOTensor} <: AbstractPEPO
         Ivertical = CartesianIndex(-1, 0)
         Ihorizontal = CartesianIndex(0, 1)
         for I in CartesianIndices(A)
-            space(A[I], 3) == space(A[I+Ivertical], 5)' || throw(SpaceMismatch(
-                "North virtual space at site $(Tuple(I)) does not match."
-            ))
-            space(A[I], 4) == space(A[I+Ihorizontal], 6)' || throw(SpaceMismatch(
-                "East virtual space at site $(Tuple(I)) does not match."
-            ))
+            space(A[I], 3) == space(A[I + Ivertical], 5)' || throw(
+                SpaceMismatch("North virtual space at site $(Tuple(I)) does not match.")
+            )
+            space(A[I], 4) == space(A[I + Ihorizontal], 6)' || throw(
+                SpaceMismatch("East virtual space at site $(Tuple(I)) does not match.")
+            )
         end
         return new{T}(A)
     end
 end
-
 
 ## Constructors
 """
@@ -40,7 +39,7 @@ Allow users to pass in arrays of spaces.
 function PeriodicPEPO(
     Pspaces::AbstractArray{S,2},
     Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces
+    Espaces::AbstractArray{S,2}=Nspaces,
 ) where {S<:ElementarySpace}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
@@ -81,7 +80,7 @@ function PeriodicPEPO(d::Integer, D::Integer)
     return PeriodicPEPO(PeriodicArray(reshape(T, (1, 1))))
 end
 
-PeriodicPEPO(d::Integer, D::Integer, Ls::Tuple{Integer}) = repeat(PeriodicPEPO(d,D),Ls...)
+PeriodicPEPO(d::Integer, D::Integer, Ls::Tuple{Integer}) = repeat(PeriodicPEPO(d, D), Ls...)
 
 ## Shape and size
 Base.size(T::PeriodicPEPO) = size(T.A)
@@ -95,6 +94,5 @@ Base.repeat(T::PeriodicPEPO, counts...) = PeriodicPEPO(repeat(T.A, counts...))
 
 Base.getindex(T::PeriodicPEPO, args...) = getindex(T.A, args...);
 TensorKit.space(t::PeriodicPEPO, i, j) = space(t[i, j], 1)
-
 
 Base.rotl90(t::PeriodicPEPO) = PeriodicPEPO(rotl90(rotl90.(t.A)));
