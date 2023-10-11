@@ -1,12 +1,23 @@
+# not everything is a PeriodicArray anymore
+_next(i, total) = mod1(i + 1, total)
+_prev(i, total) = mod1(i - 1, total)
+
 """
     struct InfinitePEPS{T<:PEPSTensor}
 
-Represents an infinite projected entangled pairs state on a 2D square lattice.
+Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
-    A::Array{T,2}
+    A::Array{T,2} # TODO: switch back to PeriodicArray?
 
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
+        for (d, w) in Tuple.(CartesianIndices(A))
+            space(A[d, w], 2) == space(A[_prev(d, end), w], 4)' || throw(
+                SpaceMismatch("North virtual space at site $((d, w)) does not match.")
+            )
+            space(A[d, w], 3) == space(A[d, _next(w, end)], 5)' ||
+                throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
+        end
         return new{T}(A)
     end
 end
@@ -45,6 +56,17 @@ function InfinitePEPS(
 end
 
 """
+    InfinitePEPS(A)
+
+Allow users to pass in single tensor.
+"""
+function InfinitePEPS(A::T) where {T<:PEPSTensor}
+    As = Array{T,2}(undef, (1, 1))
+    As[1, 1] = A
+    return InfinitePEPS(As)
+end
+
+"""
     InfinitePEPS(Pspace, Nspace, Espace)
 
 Allow users to pass in single space.
@@ -65,16 +87,20 @@ end
 Allow users to pass in integers.
 """
 function InfinitePEPS(d::Integer, D::Integer)
-    T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(Array(reshape(T, (1, 1))))
+    T = TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')
+    return InfinitePEPS(T)
 end
 
+"""
+    InfinitePEPS(d, D, L)
+    InfinitePEPS(d, D, (Lx, Ly)))
+
+Allow users to pass in integers and specify unit cell.
+"""
 function InfinitePEPS(d::Integer, D::Integer, L::Integer)
-    T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(Array(repeat(T, L, L)))
+    return InfinitePEPS(d, D, (L, L))
 end
-
-function InfinitePEPS(d::Integer, D::Integer, Ls::Tuple{Integer,Integer})
+function InfinitePEPS(d::Integer, D::Integer, Ls::NTuple{2,Integer})
     T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
     return InfinitePEPS(Array(repeat(T, Ls...)))
 end
@@ -83,14 +109,17 @@ end
 Base.size(T::InfinitePEPS) = size(T.A)
 Base.size(T::InfinitePEPS, i) = size(T.A, i)
 Base.length(T::InfinitePEPS) = length(T.A)
-Base.eltype(T::InfinitePEPS) = eltype(eltype(T.A))
+Base.eltype(T::InfinitePEPS) = eltype(T.A)
+VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
 Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
-Base.getindex(T::InfinitePEPS, args...) = getindex(T.A, args...);
+Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
+Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
+Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
 Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));
