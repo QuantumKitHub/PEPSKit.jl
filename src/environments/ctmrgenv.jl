@@ -19,10 +19,10 @@ function CTMRGEnv(peps_above::InfinitePEPS{P}, peps_below::InfinitePEPS{P}) wher
     edges = Array{T_type}(undef, 4, size(peps_above)...)
 
     for dir in 1:4, i in 1:size(peps_above, 1), j in 1:size(peps_above, 2)
-        @diffset corners[dir, i, j] = TensorMap(randn, eltype(P), ou, ou)
+        @diffset corners[dir, i, j] = TensorMap(randn, scalartype(P), ou, ou)
         @diffset edges[dir, i, j] = TensorMap(
             randn,
-            eltype(P),
+            scalartype(P),
             ou * space(peps_above[i, j], dir + 1)' * space(peps_below[i, j], dir + 1),
             ou,
         )
