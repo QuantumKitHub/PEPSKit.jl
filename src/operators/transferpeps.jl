@@ -119,7 +119,5 @@ function MPSKit.expectation_value(
     return retval
 end
 
-
 # PEPS derivatives
 # ----------------
-

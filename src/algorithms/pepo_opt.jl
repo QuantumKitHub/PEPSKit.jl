@@ -54,7 +54,6 @@ end
 isverbose(alg::VUMPS) = alg.verbose
 isverbose(alg::GradientGrassmann) = alg.method.verbosity >= 0
 
-
 ## Characterize environments for PEPO optimization
 
 mutable struct PEPOOptEnv{T,O,F} <: Cache
@@ -93,7 +92,6 @@ function MPSKit.recalculate!(
 
     return envs
 end
-
 
 ## PEPO fixed point optimization algorithm
 
@@ -167,8 +165,7 @@ struct PEPOOptimize{A}
 end
 
 # default PEPO optimization cost function for given PEPO and optimization algorithm
-function pepo_opt_costfun(
-    op::InfinitePEPO, alg::PEPOOptimize)
+function pepo_opt_costfun(op::InfinitePEPO, alg::PEPOOptimize)
     D, W, H = size(op)
     nrm = D * W * H
     function pepo_opt_fg(x::PEPOOptPoint)
@@ -179,13 +176,7 @@ function pepo_opt_costfun(
 
         # recompute environment with scaled tolerance
         boundary_tol = min(max(alg.tol_min, ng * alg.tol_factor), alg.tol_max)
-        recalculate!(
-            envs,
-            peps,
-            op;
-            tol=boundary_tol,
-            hermitian=alg.hermitian,
-        )
+        recalculate!(envs, peps, op; tol=boundary_tol, hermitian=alg.hermitian)
 
         # compute cost function
         lambdas_peps = expectation_value(peps, envs.peps_boundary)
@@ -195,7 +186,7 @@ function pepo_opt_costfun(
         # compute gradient
         ∂p_peps = ∂∂peps(peps, envs.peps_boundary)
         ∂p_pepo = ∂∂peps(peps, op, envs.pepo_boundary)
-        grad = - (2 / nrm) .* ∂p_pepo ./ lambdas_pepo .+ (2 / nrm) .* ∂p_peps ./ lambdas_peps
+        grad = -(2 / nrm) .* ∂p_pepo ./ lambdas_pepo .+ (2 / nrm) .* ∂p_peps ./ lambdas_peps
         grad = symmetrize(grad, alg.symm)
         # TODO: test if gradient is actually correct
 
@@ -247,7 +238,6 @@ function pepo_opt_costfun(
     end
     return pepo_opt_fg
 end
-
 
 ## The actual leading boundary routine
 
