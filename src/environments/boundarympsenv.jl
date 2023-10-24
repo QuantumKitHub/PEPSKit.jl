@@ -1,17 +1,15 @@
 # Some form of boundary MPS environments for infinite PEPS and PEPO routines
 
-
 ## Utility
 
 algtol(alg::VUMPS) = alg.tol_galerkin
 algtol(alg::GradientGrassmann) = alg.method.gradtol
-update_tol(alg::VUMPS, tol) = @set alg.tol_galerkin=tol
+update_tol(alg::VUMPS, tol) = @set alg.tol_galerkin = tol
 function update_tol(alg::GradientGrassmann, tol) # annoying disparity between typedef and actual constructor...
     m = alg.method
-    m = @set m.gradtol=tol
+    m = @set m.gradtol = tol
     return GradientGrassmann(; method=m, (finalize!)=alg.finalize!)
 end
-
 
 ## Boundary MPS environment manager
 
@@ -20,7 +18,6 @@ mutable struct BoundaryMPSEnv{A,E,F} <: Cache
     envs::E
     alg::F
 end
-
 
 ## PEPS boundary MPS
 
@@ -36,7 +33,11 @@ function MPSKit.environments(
 end
 
 function MPSKit.recalculate!(
-    envs::BoundaryMPSEnv, peps::InfinitePEPS; tol=algtol(envs.alg), hermitian=false, kwargs...
+    envs::BoundaryMPSEnv,
+    peps::InfinitePEPS;
+    tol=algtol(envs.alg),
+    hermitian=false,
+    kwargs...,
 )
     tr = TransferPEPSMultiline(peps, 1)
     return recalculate!(envs, tr; tol, hermitian, kwargs...)
@@ -86,7 +87,6 @@ function ∂∂peps(peps::InfinitePEPS{T}, ca::BoundaryMPSEnv) where {T<:PEPSTen
     end
     return retval
 end
-
 
 ## PEPO boundary MPS
 
@@ -159,7 +159,6 @@ function ∂∂peps(
     return retval
 end
 
-
 ## The actual routines
 
 # because below starts counting from below
@@ -229,7 +228,7 @@ function MPSKit.recalculate!(
     end
 
     envs.alg = alg
-    
+
     return envs
 end
 

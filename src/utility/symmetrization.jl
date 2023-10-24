@@ -76,7 +76,6 @@ function rot_inv(x)
     )
 end
 
-
 ## PEPS unit cell symmetrization
 
 PEPSLike = Union{InfinitePEPS,AbstractArray{<:PEPSTensor,2}}
@@ -130,8 +129,7 @@ function symmetrize(p::PEPSLike, ::Full)
     end
 
     depth, width = size(p)
-    depth == width ||
-        error("This only works for square unit cells.")
+    depth == width || error("This only works for square unit cells.")
 
     odd = mod(depth, 2)
     if odd == 1

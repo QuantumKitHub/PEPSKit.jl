@@ -70,11 +70,11 @@ end
 Create an InfinitePEPS by specifying its spaces and unit cell. Spaces can be specified
 either via `Int` or via `ElementarySpace`.
 """
-function InfinitePEPS(Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1,1)) where {S<:Union{ElementarySpace,Int}}
+function InfinitePEPS(
+    Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
+) where {S<:Union{ElementarySpace,Int}}
     return InfinitePEPS(
-        fill(Pspace, unitcell),
-        fill(Nspace, unitcell),
-        fill(Espace, unitcell),
+        fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
     )
 end
 
