@@ -101,7 +101,7 @@ pos = (1, 1) # pick a site
 if height == 1 # no crazy contractions for now...
     row, col = pos
     fliprow = size(peps, 1) - row + 1 # below starts counting from below
-    m = @tensor lw[row, col][13 8 10 18; 1] *
+    mag = @tensor lw[row, col][13 8 10 18; 1] *
         above.AC[row, col][1 9 11 15; 12] *
         peps[row, col][5; 9 3 4 8] *
         m[14 5; 11 6 7 10] *
@@ -112,12 +112,12 @@ if height == 1 # no crazy contractions for now...
     λ = @tensor lw[row, col][13 8 10 18; 1] *
         above.AC[row, col][1 9 11 15; 12] *
         peps[row, col][5; 9 3 4 8] *
-        t[14 5; 11 6 7 10] *
+        o[14 5; 11 6 7 10] *
         rw[row, col][12 3 6 16; 2] *
         conj(below.AC[fliprow, col][13 4 7 17; 2]) *
         conj(peps[row, col][14; 15 16 17 18])
     
-    println("m = $(m / λ)") # should be ~0.945 @ beta = 1/3 and D = 3
+    println("m = $(mag / λ)") # should be ~0.945 @ beta = 1/3 and D = 3
 end
 
 nothing
