@@ -29,7 +29,7 @@ end
 Allow users to pass in an array of tensors.
 """
 function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
-    return InfinitePEPS(Array(deepcopy(A)))
+    return InfinitePEPS(Array(deepcopy(A))) # TODO: find better way to copy
 end
 
 """
@@ -49,60 +49,33 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, -1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return TensorMap(rand, ComplexF64, P ← N * E * S * W)
+        return PEPSTensor(randn, ComplexF64, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
 end
 
 """
-    InfinitePEPS(A)
+    InfinitePEPS(A; unitcell=(1, 1))
 
-Allow users to pass in single tensor.
+Create an `InfinitePEPS` by specifying a tensor and unit cell.
 """
-function InfinitePEPS(A::T) where {T<:PEPSTensor}
-    As = Array{T,2}(undef, (1, 1))
-    As[1, 1] = A
-    return InfinitePEPS(As)
+function InfinitePEPS(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PEPSTensor}
+    return InfinitePEPS(fill(A, unitcell))
 end
 
 """
-    InfinitePEPS(Pspace, Nspace, Espace)
+    InfinitePEPS(Pspace, Nspace, [Espace]; unitcell=(1,1))
 
-Allow users to pass in single space.
+Create an InfinitePEPS by specifying its spaces and unit cell. Spaces can be specified
+either via `Int` or via `ElementarySpace`.
 """
-function InfinitePEPS(Pspace::S, Nspace::S, Espace::S=Nspace) where {S<:ElementarySpace}
-    Pspaces = Array{S,2}(undef, (1, 1))
-    Pspaces[1, 1] = Pspace
-    Nspaces = Array{S,2}(undef, (1, 1))
-    Nspaces[1, 1] = Nspace
-    Espaces = Array{S,2}(undef, (1, 1))
-    Espaces[1, 1] = Espace
-    return InfinitePEPS(Pspaces, Nspaces, Espaces)
-end
-
-"""
-    InfinitePEPS(d, D)
-
-Allow users to pass in integers.
-"""
-function InfinitePEPS(d::Integer, D::Integer)
-    T = TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')
-    return InfinitePEPS(T)
-end
-
-"""
-    InfinitePEPS(d, D, L)
-    InfinitePEPS(d, D, (Lx, Ly)))
-
-Allow users to pass in integers and specify unit cell.
-"""
-function InfinitePEPS(d::Integer, D::Integer, L::Integer)
-    return InfinitePEPS(d, D, (L, L))
-end
-function InfinitePEPS(d::Integer, D::Integer, Ls::NTuple{2,Integer})
-    T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(Array(repeat(T, Ls...)))
+function InfinitePEPS(Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1,1)) where {S<:Union{ElementarySpace,Int}}
+    return InfinitePEPS(
+        fill(Pspace, unitcell),
+        fill(Nspace, unitcell),
+        fill(Espace, unitcell),
+    )
 end
 
 ## Shape and size

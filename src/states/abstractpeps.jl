@@ -12,6 +12,29 @@ conventionally ordered as: T : P ← N ⊗ E ⊗ S ⊗ W.
 """
 const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
 
+function PEPSTensor(
+    f,
+    ::Type{T},
+    Pspace::S,
+    Nspace::S,
+    Espace::S=Nspace,
+    Sspace::S=Nspace',
+    Wspace::S=Espace',
+) where {T,S<:ElementarySpace}
+    return TensorMap(f, T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
+end
+function PEPSTensor(
+    f,
+    ::Type{T},
+    Pspace::Int,
+    Nspace::Int,
+    Espace::Int=Nspace,
+    Sspace::Int=Nspace,
+    Wspace::Int=Espace,
+) where {T}
+    return TensorMap(f, T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
+end
+
 """
     const PEPOTensor{S}
 
