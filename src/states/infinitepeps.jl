@@ -1,16 +1,26 @@
+# not everything is a PeriodicArray anymore
+_next(i, total) = mod1(i + 1, total)
+_prev(i, total) = mod1(i - 1, total)
+
 """
     struct InfinitePEPS{T<:PEPSTensor}
 
-Represents an infinite projected entangled pairs state on a 2D square lattice.
+Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
-    A::Array{T,2}
+    A::Array{T,2} # TODO: switch back to PeriodicArray?
 
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
+        for (d, w) in Tuple.(CartesianIndices(A))
+            space(A[d, w], 2) == space(A[_prev(d, end), w], 4)' || throw(
+                SpaceMismatch("North virtual space at site $((d, w)) does not match.")
+            )
+            space(A[d, w], 3) == space(A[d, _next(w, end)], 5)' ||
+                throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
+        end
         return new{T}(A)
     end
 end
-
 
 ## Constructors
 """
@@ -19,7 +29,7 @@ end
 Allow users to pass in an array of tensors.
 """
 function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
-    return InfinitePEPS(Array(deepcopy(A)))
+    return InfinitePEPS(Array(deepcopy(A))) # TODO: find better way to copy
 end
 
 """
@@ -30,8 +40,8 @@ Allow users to pass in arrays of spaces.
 function InfinitePEPS(
     Pspaces::AbstractArray{S,2},
     Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces
-) where {S<:EuclideanSpace}
+    Espaces::AbstractArray{S,2}=Nspaces,
+) where {S<:ElementarySpace}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -39,61 +49,50 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, -1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return TensorMap(rand, ComplexF64, P ← N * E * S * W)
+        return PEPSTensor(randn, ComplexF64, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
 end
 
 """
-    InfinitePEPS(Pspace, Nspace, Espace)
+    InfinitePEPS(A; unitcell=(1, 1))
 
-Allow users to pass in single space.
+Create an `InfinitePEPS` by specifying a tensor and unit cell.
 """
-function InfinitePEPS(Pspace::S, Nspace::S, Espace::S=Nspace) where {S<:EuclideanSpace}
-    Pspaces = Array{S,2}(undef, (1, 1))
-    Pspaces[1, 1] = Pspace
-    Nspaces = Array{S,2}(undef, (1, 1))
-    Nspaces[1, 1] = Nspace
-    Espaces = Array{S,2}(undef, (1, 1))
-    Espaces[1, 1] = Espace
-    return InfinitePEPS(Pspaces, Nspaces, Espaces)
+function InfinitePEPS(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PEPSTensor}
+    return InfinitePEPS(fill(A, unitcell))
 end
 
 """
-    InfinitePEPS(d, D)
+    InfinitePEPS(Pspace, Nspace, [Espace]; unitcell=(1,1))
 
-Allow users to pass in integers.
+Create an InfinitePEPS by specifying its spaces and unit cell. Spaces can be specified
+either via `Int` or via `ElementarySpace`.
 """
-function InfinitePEPS(d::Integer, D::Integer)
-    T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(Array(reshape(T, (1, 1))))
+function InfinitePEPS(
+    Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
+) where {S<:Union{ElementarySpace,Int}}
+    return InfinitePEPS(
+        fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
+    )
 end
-
-function InfinitePEPS(d::Integer, D::Integer, L::Integer)
-    T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(Array(repeat(T, L,L)))
-end
-
-function InfinitePEPS(d::Integer, D::Integer, Ls::Tuple{Integer,Integer})
-    T = [TensorMap(rand, ComplexF64, ℂ^d ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPS(Array(repeat(T, Ls...)))
-end
-
 
 ## Shape and size
 Base.size(T::InfinitePEPS) = size(T.A)
 Base.size(T::InfinitePEPS, i) = size(T.A, i)
 Base.length(T::InfinitePEPS) = length(T.A)
-Base.eltype(T::InfinitePEPS) = eltype(eltype(T.A))
+Base.eltype(T::InfinitePEPS) = eltype(T.A)
+VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
 Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
-Base.getindex(T::InfinitePEPS, args...) = getindex(T.A, args...);
+Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
+Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
+Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
-
 
 Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));

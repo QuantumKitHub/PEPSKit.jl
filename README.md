@@ -1,24 +1,20 @@
-# pepskit
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/quantumghent/PEPSKit.jl/blob/master/docs/src/assets/logo-dark.svg">
+    <img alt="PEPSKit.jl logo" src="https://github.com/quantumghent/PEPSKit.jl/blob/master/docs/src/assets/logo.svg" width="150">
+</picture>
 
-This is some semi-public code (I use it - it doesn't work - there is no documentation - it's still public)
+# PepsKit.jl
 
-In this package we
+[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url]
 
-    - define states
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://quantumghent.github.io/PEPSKit.jl/dev/
 
-    - define operators
+[codecov-img]: https://codecov.io/gh/quantumghent/PEPSKit.jl/branch/master/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/quantumghent/PEPSKit.jl
 
-    - define environments
+[ci-url]: https://github.com/quantumghent/PEPSKit.jl/workflows/CI/badge.svg
 
-        - some are independent of the operator (boundary mpses,channels,...)
+**Tools for working with projected entangled-pair states**
 
-        - some are dependent on the operator (hamiltonian channels)
-
-    - define algorithms
-
-
-To minimize the amount of complexity/code we typically
-
-    - define operations acting on the north (finding the north boundary, finding the north hamiltonian channels)
-
-    - define how to rotate the peps such that other directions now become north
+It contracts, it optimizes, it may be broken at any point.
