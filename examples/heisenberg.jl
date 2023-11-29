@@ -4,53 +4,27 @@ using PEPSKit:
     NORTH, SOUTH, WEST, EAST, NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST, @diffset
 using JLD2, ChainRulesCore
 
-function two_site_rho(r::Int, c::Int, ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv)
-    cp = mod1(c + 1, size(ψ, 2))
-    @tensor ρ[-11, -20; -12, -18] :=
-        env.corners[NORTHWEST, r, c][1, 3] *
-        env.edges[WEST, r, c][2, 7, 9, 1] *
-        env.corners[SOUTHWEST, r, c][4, 2] *
-        env.edges[NORTH, r, c][3, 5, 8, 13] *
-        env.edges[SOUTH, r, c][14, 6, 10, 4] *
-        ψ[r, c][-12, 5, 15, 6, 7] *
-        conj(ψ[r, c][-11, 8, 19, 10, 9]) *
-        env.edges[NORTH, r, cp][13, 16, 22, 23] *
-        env.edges[SOUTH, r, cp][28, 17, 21, 14] *
-        ψ[r, cp][-18, 16, 25, 17, 15] *
-        conj(ψ[r, cp][-20, 22, 26, 21, 19]) *
-        env.corners[NORTHEAST, r, cp][23, 24] *
-        env.edges[EAST, r, cp][24, 25, 26, 27] *
-        env.corners[SOUTHEAST, r, cp][27, 28]
-    return ρ
-end
-
-function iCtmGsEh(
-    ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv, H::AbstractTensorMap{S,2,2}
-) where {S}
-    #Es = Matrix{eltype(H)}(undef,size(ψ,1),size(ψ,2))
-    E = 0.0
-    for r in 1:size(ψ, 1), c in 1:size(ψ, 2)
-        ρ = two_site_rho(r, c, ψ, env)
-        @tensor nn = ρ[1 2; 1 2]
-        @tensor Eh = H[1 2; 3 4] * ρ[1 2; 3 4]
-        Eh = Eh / nn
-        E = E + Eh
-        #@diffset Es[r,c] = Eh;
-    end
-    return real(E)
-end
-
+#function that evaluates the expectation value of the Hamiltonian
 function H_expectation_value(
     ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv, H::AbstractTensorMap{S,2,2}
 ) where {S}
-    Eh = iCtmGsEh(ψ, env, H)
-    ψ1 = rotl90(ψ)
-    env1 = PEPSKit.rotate_north(env, EAST)
-    Ev = iCtmGsEh(ψ1, env1, H)
-    E = real(Eh + Ev)
+    E = 0.
+    for r in 1:size(ψ, 1), c in 1:size(ψ, 2)
+        ρ_hor = two_site_rho(r, c, ψ, env)
+
+        @tensor n_hor = ρ_hor[1 2; 1 2]
+        @tensor E_hor = H[3 4; 1 2] * ρ_hor[1 2; 3 4]
+
+        ρ_ver = two_site_rho(r, c, rotl90(ψ), PEPSKit.rotate_north(env, EAST))
+        @tensor n_ver = ρ_ver[1 2; 1 2]
+        @tensor E_ver = H[3 4; 1 2] * ρ_ver[1 2; 3 4]
+        
+        E = E + E_hor / n_hor + E_ver/n_ver
+    end
     return E
 end
 
+#function that builds the relevant two site operators
 function SqLatHeisenberg()
     Sx, Sy, Sz, _ = spinmatrices(1//2)
 
@@ -64,7 +38,6 @@ function SqLatHeisenberg()
 
     return H
 end
-
 H = SqLatHeisenberg()
 
 function cfun(x)
@@ -125,6 +98,24 @@ alg_ctm = CTMRG(; verbose=1, tol=1e-4, trscheme=truncdim(10), miniter=4, maxiter
 function main(; d=2, D=2, Lx=1, Ly=1)
     ψ = init_psi(d, D, Lx, Ly)
     env = leading_boundary(ψ, alg_ctm)
+
+    @info "Starting optimization"
+    @info "Initial energy: $(H_expectation_value(ψ, env, H))"
+    E = H_expectation_value(ψ, env, H)
+
+    for counter in 1:1000
+        @info "Iteration $(counter)"
+        ψ_trial = init_psi(d, D, Lx, Ly)
+        env_trial = leading_boundary(ψ_trial, alg_ctm)
+        E_trial = H_expectation_value(ψ_trial, env_trial, H)
+        if real(E_trial) < real(E)
+            ψ = ψ_trial
+            env = env_trial
+            E = E_trial
+            @info "New energy: $(E)"
+        end
+    end
+    #=
     optimize(
         cfun,
         (ψ, env),
@@ -134,6 +125,7 @@ function main(; d=2, D=2, Lx=1, Ly=1)
         (scale!)=my_scale!,
         (add!)=my_add!,
     )
+    =#
     return ψ
 end
 
