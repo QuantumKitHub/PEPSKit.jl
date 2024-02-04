@@ -222,7 +222,7 @@ function contract_ctrmg(
 end
 
 #calculate the two site density matrix for some state : ρ = ψ ψ†
-function two_site_rho(r::Int, c::Int, ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv)
+function ρ₂_horizontal(r::Int, c::Int, ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv)
     cp = mod1(c + 1, size(ψ, 2))
 
     @planar opt=true ρ[P5 P10;P1 P6] :=
