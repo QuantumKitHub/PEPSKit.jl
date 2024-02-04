@@ -246,4 +246,3 @@ function ρ₂_horizontal(r::Int, c::Int, ψ::InfinitePEPS, env::PEPSKit.CTMRGEn
         τ[s9 e4;e3 s8]*τ[s8 E3; E2 s7]*τ[h5 s7;s6 h6]*τ[P7 L5;L4 P6]
     return ρ
 end
-
