@@ -3,7 +3,7 @@
     tol::Float64 = Defaults.tol
     maxiter::Integer = Defaults.maxiter
     miniter::Integer = 4
-    verbose::Integer = 0
+    verbose::Integer = 2
     fixedspace::Bool = false
 end
 
@@ -123,9 +123,10 @@ function left_move(
             @ignore_derivatives ϵ = max(ϵ, (n0 - n1) / n0)
 
             isqS = sdiag_inv_sqrt(S)
-
-            @planar Q[-1; -2 -3 -4] := isqS[-1; 1] * conj(U[2 3 4; 1]) * Q1[2 3 4; -2 -3 -4]
-            @planar P[-1 -2 -3; -4] := Q2[-1 -2 -3; 1 2 3] * conj(V[4; 1 2 3]) * isqS[4; -4]
+            #Q = isqS*U'*Q1;
+            #P = Q2*V'*isqS;
+            @planar opt=true Q[-1; -2 -3 -4] := isqS[-1; 1] * conj(U[2 3 4; 1]) * Q1[2 3 4; -2 -3 -4]
+            @planar opt=true P[-1 -2 -3; -4] := Q2[-1 -2 -3; 1 2 3] * conj(V[4; 1 2 3]) * isqS[4; -4]
 
             @diffset above_projs[row] = Q
             @diffset below_projs[row] = P
@@ -154,7 +155,6 @@ function left_move(
                 Q[L1;L2 S3 s3]*
                 τ[w3 W3;W4 w4]*τ[n3 N1;N2 n4]*τ[n2 W2;W3 n3]*τ[n1 w2;w3 n2]*τ[e2 S2;S3 e1]*
                 τ[e3 s2;s3 e2]*τ[e4 E1;E2 e3]*τ[S1 s1;s2 S2]*τ[P2 W1;W2 P1]*τ[P3 w1;w2 P2]
-
         end
 
         @diffset corners[NORTHWEST, :, cop] ./= norm.(corners[NORTHWEST, :, cop])
@@ -176,7 +176,6 @@ function northwest_corner(E4, C1, E1, peps_above, peps_below=peps_above)
         τ[n2 N2;N3 n3]*τ[e3 E1;E2 e4]*τ[e2 N1;N2 e3]*τ[e1 n1;n2 e2]*τ[w2 s2;s1 w1]*τ[W2 s3;s2 W1]*τ[S2 s4;s3 S1]
 end
 
-#a usefull error measure for the convergence of the CTMRG algorithm
 function contract_ctrmg(
     envs::CTMRGEnv, peps_above=envs.peps_above, peps_below=envs.peps_below
 )
@@ -220,6 +219,7 @@ function contract_ctrmg(
     end
     return total
 end
+
 
 #calculate the two site density matrix for some state : ρ = ψ ψ†
 function ρ₂_horizontal(r::Int, c::Int, ψ::InfinitePEPS, env::PEPSKit.CTMRGEnv)
