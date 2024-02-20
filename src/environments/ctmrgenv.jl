@@ -1,52 +1,44 @@
-struct CTMRGEnv{P,C,T}
-    peps_above::InfinitePEPS{P}
-    peps_below::InfinitePEPS{P}
+struct CTMRGEnv{C,T}
     corners::Array{C,3}
     edges::Array{T,3}
 end
 
 # initialize ctmrg environments with some random tensors
-CTMRGEnv(peps::InfinitePEPS) = CTMRGEnv(peps, peps);
-
-function CTMRGEnv(peps_above::InfinitePEPS{P}, peps_below::InfinitePEPS{P}) where {P}
-    ou = oneunit(space(peps_above, 1, 1)) # the bogus space
-
+function CTMRGEnv(peps::InfinitePEPS{P}; χenv=1) where {P}
+    envspace = field(space(peps, 1, 1))^χenv  # Environment space 
     C_type = tensormaptype(spacetype(P), 1, 1, storagetype(P))
-    T_type = tensormaptype(spacetype(P), 3, 1, storagetype(P)) # debatable how we should do the legs?
+    T_type = tensormaptype(spacetype(P), 3, 1, storagetype(P))
 
-    #first index is de
-    corners = Array{C_type}(undef, 4, size(peps_above)...)
-    edges = Array{T_type}(undef, 4, size(peps_above)...)
+    # First index is direction
+    corners = Array{C_type}(undef, 4, size(peps)...)
+    edges = Array{T_type}(undef, 4, size(peps)...)
 
-    for dir in 1:4, i in 1:size(peps_above, 1), j in 1:size(peps_above, 2)
-        @diffset corners[dir, i, j] = TensorMap(randn, scalartype(P), ou, ou)
+    for dir in 1:4, i in 1:size(peps, 1), j in 1:size(peps, 2)
+        @diffset corners[dir, i, j] = TensorMap(randn, scalartype(P), envspace, envspace)
         @diffset edges[dir, i, j] = TensorMap(
             randn,
             scalartype(P),
-            ou * space(peps_above[i, j], dir + 1)' * space(peps_below[i, j], dir + 1),
-            ou,
+            envspace * space(peps[i, j], dir + 1)' * space(peps[i, j], dir + 1),
+            envspace,
         )
     end
 
     @diffset corners[:, :, :] ./= norm.(corners[:, :, :])
     @diffset edges[:, :, :] ./= norm.(edges[:, :, :])
 
-    return CTMRGEnv(peps_above, peps_below, corners, edges)
+    return CTMRGEnv(corners, edges)
 end
 
-function Base.rotl90(envs::CTMRGEnv{P,C,T}) where {P,C,T}
-    n_peps_above = rotl90(envs.peps_above)
-    n_peps_below = rotl90(envs.peps_below)
-    n_corners = Array{C,3}(undef, size(envs.corners)...)
-    n_edges = Array{T,3}(undef, size(envs.edges)...)
+function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
+    corners′ = similar(env.corners)
+    edges′ = similar(env.edges)
 
     for dir in 1:4
-        dirm = mod1(dir - 1, 4)
-        @diffset n_corners[dirm, :, :] .= rotl90(envs.corners[dir, :, :])
-        @diffset n_edges[dirm, :, :] .= rotl90(envs.edges[dir, :, :])
+        @diffset corners′[_prev(dir, 4), :, :] .= rotl90(env.corners[dir, :, :])
+        @diffset edges′[_prev(dir, 4), :, :] .= rotl90(env.edges[dir, :, :])
     end
 
-    return CTMRGEnv(n_peps_above, n_peps_below, n_corners, n_edges)
+    return CTMRGEnv(corners′, edges′)
 end
 
-Base.eltype(envs::CTMRGEnv) = eltype(envs.corners[1])
+Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])

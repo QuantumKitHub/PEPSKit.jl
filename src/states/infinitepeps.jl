@@ -1,14 +1,10 @@
-# not everything is a PeriodicArray anymore
-_next(i, total) = mod1(i + 1, total)
-_prev(i, total) = mod1(i - 1, total)
-
 """
     struct InfinitePEPS{T<:PEPSTensor}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
-    A::Array{T,2} # TODO: switch back to PeriodicArray?
+    A::Array{T,2}
 
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
@@ -40,7 +36,9 @@ Allow users to pass in arrays of spaces.
 function InfinitePEPS(
     Pspaces::AbstractArray{S,2},
     Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces,
+    Espaces::AbstractArray{S,2}=Nspaces;
+    finit=rand,
+    dtype=ComplexF64,
 ) where {S<:ElementarySpace}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
@@ -49,7 +47,7 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, -1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(randn, ComplexF64, P, N, E, S, W)
+        return PEPSTensor(finit, dtype, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
@@ -87,7 +85,7 @@ VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))
+Base.similar(T::InfinitePEPS, args...) = InfinitePEPS(similar(T.A, args...))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
@@ -95,4 +93,4 @@ Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
 Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
-Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));
+Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
