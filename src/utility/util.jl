@@ -47,6 +47,14 @@ function is_degenerate_spectrum(
     return false
 end
 
+# Create empty projectors for given state without recomputing transpose
+function empty_projectors(T::DataType, size)
+    Pleft = Array{T,length(size)}(undef, size)
+    Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
+    Pright = Array{Prtype,length(size)}(undef, size)
+    return Pleft, Pright
+end
+
 # rotl90 is set to non_differentiable in ChainRules
 function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
     function pb(x)

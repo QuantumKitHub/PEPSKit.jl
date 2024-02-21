@@ -1,6 +1,6 @@
 module PEPSKit
 
-using LinearAlgebra, Base.Threads, Base.Iterators, Printf
+using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Accessors
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit

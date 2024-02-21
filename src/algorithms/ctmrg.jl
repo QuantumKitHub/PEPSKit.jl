@@ -13,10 +13,11 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     CSold = tsvd(envinit.corners[NORTHWEST]; alg=TensorKit.SVD())[2]
     TSold = tsvd(envinit.edges[NORTH]; alg=TensorKit.SVD())[2]
     ϵold = 1.0
-
     env = deepcopy(envinit)
+    Pleft, Pright = empty_projectors(eltype(env.edges), (4, size(state)...))
+
     for i in 1:(alg.maxiter)
-        env, _, _, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+        env, Pleft, Pright, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
 
         # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
         Δϵ = abs((ϵold - ϵ) / ϵold)
@@ -54,36 +55,115 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
         ϵold = ϵ
     end
 
-    return env
+    env′, = ctmrg_iter(state, env, alg)
+    envfix, Pleftfix, Prightfix = gauge_fix(env, env′, Pleft, Pright)
+    @ignore_derivatives check_elementwise_conv(env, envfix)
+    return envfix, Pleftfix, Prightfix
+end
+
+# Fix gauge of corner end edge tensors from last and second last CTMRG iteration
+function gauge_fix(
+    envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}, Pleft=nothing, Pright=nothing
+) where {C,T}
+    # Compute gauge tensors by comparing signs
+    signs = map(zip(envprev.edges, envfinal.edges)) do (Tprev, Tfinal)
+        σ = sign.(convert(Array, Tprev)[1, 1, 1, :] ./ convert(Array, Tfinal)[1, 1, 1, :])
+        Tensor(diagm(σ), space(Tfinal, 1) * space(Tfinal, 1)')
+    end
+
+    # Correct relative phases
+    cornersfix = map(Iterators.product(axes(envfinal.corners)...)) do (dir, r, c)
+        @tensor Cfix[-1; -2] :=
+            conj(signs[_prev(dir, 4), r, c][1 -1]) *
+            envfinal.corners[dir, r, c][1; 2] *
+            signs[dir, r, c][2, -2]
+    end
+    edgesfix = map(zip(signs, envfinal.edges)) do (σ, edge)
+        @tensor Tfix[-1 -2 -3; -4] := conj(σ[1 -1]) * edge[1 -2 -3; 2] * σ[2, -4]
+    end
+
+    # Fix global phase
+    cornersgfix = map(zip(envprev.corners, cornersfix)) do (Cprev, Cfix)
+        φ = tr(Cprev) / tr(Cfix)  # Extract phase via trace to make it differentiable
+        return φ * Cfix
+    end
+    envfix = CTMRGEnv(cornersgfix, edgesfix)
+
+    # Gauge projectors for correct backpropagation
+    if !isnothing(Pleft) && !isnothing(Pright)
+        Pleftfix = map(zip(signs, Pleft)) do (σ, P)
+            @tensor Plfix[-1 -2 -3; -4] := P[-1 -2 -3; 1] * σ[1; -4]
+        end
+        Prightfix = map(zip(signs, Pright)) do (σ, P)
+            @tensor Prfix[-1; -2 -3 -4] := σ[-1; 1] * P[1; -2 -3 -4]
+        end
+        return envfix, Pleftfix, Prightfix
+    else
+        return envfix
+    end
+end
+
+# Explicitly check if element-wise difference of fixed and final environment tensors are below some tolerance
+function check_elementwise_conv(
+    envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6, print_conv=true
+)
+    ΔC = map(zip(envfinal.corners, envfix.corners)) do (Cfin, Cfix)
+        return abs.(convert(Array, Cfix - Cfin))
+    end
+    ΔCmax = maximum(maximum, ΔC)
+    ΔCmean = maximum(mean, ΔC)
+    Cerr = map(δ -> all(x -> x < atol, δ), ΔC)
+
+    ΔT = map(zip(envfinal.edges, envfix.edges)) do (Tfin, Tfix)
+        return abs.(convert(Array, Tfix - Tfin))
+    end
+    ΔTmax = maximum(maximum, ΔT)
+    ΔTmean = maximum(mean, ΔT)
+    Terr = map(δ -> all(x -> x < atol, δ), ΔT)
+
+    if print_conv
+        if all(Cerr) && all(Terr)
+            println("{Cᵢ,Tᵢ} converged elementwise up to ϵ < $atol")
+        else
+            @warn "no elementwise convergence up to ϵ < $atol:"
+            for i in 1:4
+                println("$i: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ", Cerr[i])
+                println("$i: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ", Terr[i])
+            end
+        end
+        println("maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax")
+        println("mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean")
+        println("maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax")
+        println("mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean")
+    end
+
+    return Cerr, Terr
 end
 
 # One CTMRG iteration x′ = f(A, x)
 function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
-    Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
-    Pleft = Vector{Matrix{T}}(undef, 4)
-    Pright = Vector{Matrix{Prtype}}(undef, 4)
+    Pleft, Pright = empty_projectors(T, (4, size(state)...))
 
     for i in 1:4
         env, Pl, Pr, ϵ₀ = left_move(state, env, alg)
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
         ϵ = max(ϵ, ϵ₀)
-        @diffset Pleft[i] = Pl
-        @diffset Pright[i] = Pr
+        @diffset Pleft[i, :, :] .= Pl
+        @diffset Pright[i, :, :] .= Pr
     end
 
     return env, Pleft, Pright, ϵ
 end
 
-#  row environment, compute projectors and renormalize
-function left_move(state, env::CTMRGEnv, alg::CTMRG)
+# Grow environment, compute projectors and renormalize
+function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
     ϵ = 0.0
+    Pleft, Pright = empty_projectors(T, size(state))
 
-    Pleft = similar(state.A, typeof(env.edges[1]))
-    Pright = similar(state.A, typeof(transpose(env.edges[1])))
     for col in 1:size(state, 2)
         cnext = _next(col, size(state, 2))
 
@@ -198,20 +278,6 @@ end
 
 # Apply projectors to entire left half-environment to grow SW & NW corners, and W edge
 function grow_env_left(peps, Pl, Pr, C_sw, C_nw, T_s, T_w, T_n)
-    # @diffset @tensor corners[NORTHWEST, rop, cop][-1; -2] :=
-    #     envs.corners[NORTHWEST, rop, col][1, 2] *
-    #     envs.edges[NORTH, rop, col][2, 3, 4, -2] *
-    #     Q[-1; 1 3 4]
-    # @diffset @tensor corners[SOUTHWEST, rom, cop][-1; -2] :=
-    #     envs.corners[SOUTHWEST, rom, col][1, 4] *
-    #     envs.edges[SOUTH, rom, col][-1, 2, 3, 1] *
-    #     P[4 2 3; -2]
-    # @diffset @tensor edges[WEST, row, cop][-1 -2 -3; -4] :=
-    #     envs.edges[WEST, row, col][1 2 3; 4] *
-    #     peps_above[row, col][9; 5 -2 7 2] *
-    #     conj(peps_below[row, col][9; 6 -3 8 3]) *
-    #     P[4 5 6; -4] *
-    #     Q[-1; 1 7 8]
     @tensor C_sw′[-1; -2] := C_sw[1; 4] * T_s[-1 2 3; 1] * Pl[4 2 3; -2]
     @tensor C_nw′[-1; -2] := C_nw[1; 2] * T_n[2 3 4; -2] * Pr[-1; 1 3 4]
     @tensor T_w′[-1 -2 -3; -4] :=

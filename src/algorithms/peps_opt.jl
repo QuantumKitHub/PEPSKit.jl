@@ -47,14 +47,14 @@ end
 # Energy cost function with proper backwards rule depending only on final CTMRG fixed-point
 # Mutates environment to reuse previous environments in optimization
 function costfun!(peps, env, H, ctmalg::CTMRG, optalg::PEPSOptimize)
-    env′ = leading_boundary(peps, ctmalg, env)
+    env′, = leading_boundary(peps, ctmalg, env)
     @diffset env = env′
     return optalg.energyfun(peps, env′, H)
 end
 
 # Non-mutating version, recomputing environment from random initial guess in every optimization step
 function costfun(peps, env, H, ctmalg::CTMRG, optalg::PEPSOptimize)
-    env′ = deepcopy(env)  # Create copy to make non-mutating
+    env′, = deepcopy(env)  # Create copy to make non-mutating
     return costfun!(peps, env′, H, ctmalg, optalg)
 end
 
@@ -80,7 +80,7 @@ end
 
 # Contraction of CTMRGEnv and PEPS tensors with open physical bonds
 function one_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
-    ρunitcell = map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
+    return map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         @tensor ρ[-1; -2] :=
             env.corners[NORTHWEST, r, c][1; 2] *
             env.edges[NORTH, r, c][2 3 4; 5] *
@@ -92,14 +92,12 @@ function one_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
             env.edges[WEST, r, c][14 15 16; 1] *
             peps[r, c][-1; 3 7 11 15] *
             conj(peps[r, c][-2; 4 8 12 16])
-        return ρ
     end
-    return ρunitcell
 end
 
 # Horizontally extended contraction of CTMRGEnv and PEPS tensors with open physical bonds
 function two_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
-    ρunitcell = map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
+    return map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         cnext = _next(c, size(peps, 2))
         @tensor ρ[-11 -20; -12 -18] :=
             env.corners[NORTHWEST, r, c][1; 3] *
@@ -116,9 +114,7 @@ function two_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
             conj(peps[r, c][-11; 8 19 10 9]) *
             peps[r, cnext][-18; 16 25 17 15] *
             conj(peps[r, cnext][-20; 22 26 21 19])
-        return ρ
     end
-    return ρunitcell
 end
 
 # 1-site operator expectation values on unit cell
