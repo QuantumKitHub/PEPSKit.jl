@@ -3,7 +3,7 @@
     tol::Float64 = Defaults.ctmrg_tol
     maxiter::Int = Defaults.ctmrg_maxiter
     miniter::Int = Defaults.ctmrg_miniter
-    verbose::Int = 0
+    verbosity::Int = 0
     fixedspace::Bool = false
 end
 
@@ -16,11 +16,11 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
 
     env = deepcopy(envinit)
     for i in 1:(alg.maxiter)
-        env, iterinfo = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+        env, _, _, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
 
         # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
-        Δϵ = abs((ϵold - iterinfo.ϵ) / ϵold)
-        normnew = contract_ctmrg(state, env)
+        Δϵ = abs((ϵold - ϵ) / ϵold)
+        normnew = norm(state, env)
         Δnorm = abs(normold - normnew)
         CSnew = tsvd(env.corners[NORTHWEST]; alg=TensorKit.SVD())[2]
         ΔCS = norm(CSnew - CSold)
@@ -30,17 +30,17 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
 
         # Print verbose info
         ignore_derivatives() do
-            alg.verbose > 1 && @printf(
+            alg.verbosity > 1 && @printf(
                 "CTMRG iter: %3d   norm: %.2e   Δnorm: %.2e   ΔCS: %.2e   ΔTS: %.2e   ϵ: %.2e   Δϵ: %.2e\n",
                 i,
                 abs(normnew),
                 Δnorm,
                 ΔCS,
                 ΔTS,
-                iterinfo.ϵ,
+                ϵ,
                 Δϵ
             )
-            alg.verbose > 0 &&
+            alg.verbosity > 0 &&
                 i == alg.maxiter &&
                 @warn(
                     "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
@@ -51,32 +51,32 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
         normold = normnew
         CSold = CSnew
         TSold = TSnew
-        ϵold = iterinfo.ϵ
+        ϵold = ϵ
     end
 
     return env
 end
 
 # One CTMRG iteration x′ = f(A, x)
-function ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG)
+function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
-    Pleft = Vector{Matrix{typeof(env.edges[1])}}(undef, 4)
-    Pright = Vector{Matrix{typeof(transpose(env.edges[1]))}}(undef, 4)
+    Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
+    Pleft = Vector{Matrix{T}}(undef, 4)
+    Pright = Vector{Matrix{Prtype}}(undef, 4)
 
     for i in 1:4
-        env, info = left_move(state, env, alg)
+        env, Pl, Pr, ϵ₀ = left_move(state, env, alg)
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
-        ϵ = max(ϵ, info.ϵ)
-        @diffset Pleft[i] = info.Pleft
-        @diffset Pright[i] = info.Pright
+        ϵ = max(ϵ, ϵ₀)
+        @diffset Pleft[i] = Pl
+        @diffset Pright[i] = Pr
     end
 
-    iterinfo = (; ϵ, Pleft=copy(Pleft), Pright=copy(Pright))
-    return env, iterinfo
+    return env, Pleft, Pright, ϵ
 end
 
-# Grow environment, compute projectors and renormalize
+#  row environment, compute projectors and renormalize
 function left_move(state, env::CTMRGEnv, alg::CTMRG)
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
@@ -117,9 +117,8 @@ function left_move(state, env::CTMRGEnv, alg::CTMRG)
 
             # Compute SVD truncation error and check for degenerate singular values
             ignore_derivatives() do
-                if unique(x -> round(x; digits=14), diag(S.data)) != diag(S.data) &&
-                    alg.verbose > 0
-                    println("degenerate singular values detected", diag(S.data))
+                if alg.verbosity > 0 && is_degenerate_spectrum(S)
+                    @warn("degenerate singular values detected: ", diag(S.data))
                 end
                 n0 = norm(Q_sw * Q_nw)^2
                 n1 = norm(U * S * V)^2
@@ -156,35 +155,35 @@ function left_move(state, env::CTMRGEnv, alg::CTMRG)
         @diffset edges[WEST, :, cnext] ./= norm.(edges[WEST, :, cnext])
     end
 
-    return CTMRGEnv(corners, edges), (; ϵ, Pleft, Pright)
+    return CTMRGEnv(corners, edges), Pleft, Pright, ϵ
 end
 
 # Compute enlarged NW corner
-function northwest_corner(E4, C1, E1, peps)
+function northwest_corner(E4, C1, E1, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E4[-1 1 2; 3] *
         C1[3; 4] *
         E1[4 5 6; -4] *
-        peps[7; 5 -5 -2 1] *
-        conj(peps[7; 6 -6 -3 2])
+        peps_above[7; 5 -5 -2 1] *
+        conj(peps_below[7; 6 -6 -3 2])
 end
 
-function northeast_corner(E1, C2, E2, peps)
+function northeast_corner(E1, C2, E2, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E1[-1 1 2; 3] *
         C2[3; 4] *
         E2[4 5 6; -4] *
-        peps[7; 1 5 -5 -2] *
-        conj(peps[7; 2 6 -6 -3])
+        peps_above[7; 1 5 -5 -2] *
+        conj(peps_below[7; 2 6 -6 -3])
 end
 
-function southeast_corner(E2, C3, E3, peps)
+function southeast_corner(E2, C3, E3, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E2[-1 1 2; 3] *
         C3[3; 4] *
         E3[4 5 6; -4] *
-        peps[7; -2 1 5 -5] *
-        conj(peps[7; -3 2 6 -6])
+        peps_above[7; -2 1 5 -5] *
+        conj(peps_below[7; -3 2 6 -6])
 end
 
 # Build projectors from SVD and enlarged SW & NW corners
@@ -225,8 +224,8 @@ function grow_env_left(peps, Pl, Pr, C_sw, C_nw, T_s, T_w, T_n)
 end
 
 # Compute norm of the entire CMTRG enviroment
-function contract_ctmrg(peps, env::CTMRGEnv)
-    total = 1.0 + 0im
+function LinearAlgebra.norm(peps, env::CTMRGEnv)
+    total = one(scalartype(peps))
 
     for r in 1:size(peps, 1), c in 1:size(peps, 2)
         total *= @tensor env.edges[WEST, r, c][1 2 3; 4] *

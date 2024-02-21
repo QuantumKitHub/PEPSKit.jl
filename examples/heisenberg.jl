@@ -21,27 +21,27 @@ function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
 end
 
 # Initialize InfinitePEPS with random & complex entries by default
-function init_peps(d, D, Lx, Ly; finit=randn, dtype=ComplexF64)
+function init_peps(d, D, Lx, Ly, finit=randn, dtype=ComplexF64)
     Pspaces = fill(ℂ^d, Lx, Ly)
     Nspaces = fill(ℂ^D, Lx, Ly)
     Espaces = fill(ℂ^D, Lx, Ly)
-    return InfinitePEPS(Pspaces, Nspaces, Espaces; finit, dtype)
+    return InfinitePEPS(Pspaces, Nspaces, Espaces, finit, dtype)
 end
 
 # Parameters
 H = square_lattice_heisenberg()
 χbond = 2
 χenv = 20
-ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbose=2)
+ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
 optalg = PEPSOptimize{NaiveAD}(;
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
     fpgrad_tol=1e-6,
     fpgrad_maxiter=100,
-    verbose=2,
+    verbosity=2,
 )
 
 # Ground state search
 ψinit = init_peps(2, χbond, 1, 1)
-envinit = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; χenv))
+envinit = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; Venv=ℂ^χenv))
 result = groundsearch(H, ctmalg, optalg, ψinit, envinit)
 @show result.E₀

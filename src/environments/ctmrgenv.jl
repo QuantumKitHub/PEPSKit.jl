@@ -4,8 +4,7 @@ struct CTMRGEnv{C,T}
 end
 
 # initialize ctmrg environments with some random tensors
-function CTMRGEnv(peps::InfinitePEPS{P}; χenv=1) where {P}
-    envspace = field(space(peps, 1, 1))^χenv  # Environment space 
+function CTMRGEnv(peps::InfinitePEPS{P}; Venv=oneunit(spacetype(P))) where {P}
     C_type = tensormaptype(spacetype(P), 1, 1, storagetype(P))
     T_type = tensormaptype(spacetype(P), 3, 1, storagetype(P))
 
@@ -14,12 +13,12 @@ function CTMRGEnv(peps::InfinitePEPS{P}; χenv=1) where {P}
     edges = Array{T_type}(undef, 4, size(peps)...)
 
     for dir in 1:4, i in 1:size(peps, 1), j in 1:size(peps, 2)
-        @diffset corners[dir, i, j] = TensorMap(randn, scalartype(P), envspace, envspace)
+        @diffset corners[dir, i, j] = TensorMap(randn, scalartype(P), Venv, Venv)
         @diffset edges[dir, i, j] = TensorMap(
             randn,
             scalartype(P),
-            envspace * space(peps[i, j], dir + 1)' * space(peps[i, j], dir + 1),
-            envspace,
+            Venv * space(peps[i, j], dir + 1)' * space(peps[i, j], dir + 1),
+            Venv,
         )
     end
 

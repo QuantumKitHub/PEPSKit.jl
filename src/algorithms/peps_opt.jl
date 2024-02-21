@@ -15,7 +15,7 @@ struct LinSolve <: GradMode end
     reuse_env::Bool = true  # Reuse environment of previous optimization as initial guess for next
     fpgrad_tol::Float64 = Defaults.grad_tol  # Convergence tolerance for gradient FP iteration
     fpgrad_maxiter::Int = Defaults.grad_maxiter  # Maximal number  of FP iterations
-    verbose::Int = 0
+    verbosity::Int = 0
 end
 
 # Find ground-state PEPS, environment and energy
@@ -80,9 +80,7 @@ end
 
 # Contraction of CTMRGEnv and PEPS tensors with open physical bonds
 function one_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
-    ρunitcell = similar(peps.A, tensormaptype(spacetype(C), 1, 1, storagetype(C)))
-
-    for r in size(env.corners, 2), c in size(env.corners, 3)
+    ρunitcell = map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         @tensor ρ[-1; -2] :=
             env.corners[NORTHWEST, r, c][1; 2] *
             env.edges[NORTH, r, c][2 3 4; 5] *
@@ -94,17 +92,14 @@ function one_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
             env.edges[WEST, r, c][14 15 16; 1] *
             peps[r, c][-1; 3 7 11 15] *
             conj(peps[r, c][-2; 4 8 12 16])
-        @diffset ρunitcell[r, c] = ρ
+        return ρ
     end
-
     return ρunitcell
 end
 
 # Horizontally extended contraction of CTMRGEnv and PEPS tensors with open physical bonds
 function two_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
-    ρunitcell = similar(peps.A, tensormaptype(spacetype(C), 2, 2, storagetype(C)))
-
-    for r in size(env.corners, 2), c in size(env.corners, 3)
+    ρunitcell = map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         cnext = _next(c, size(peps, 2))
         @tensor ρ[-11 -20; -12 -18] :=
             env.corners[NORTHWEST, r, c][1; 3] *
@@ -121,9 +116,8 @@ function two_site_rho(peps::InfinitePEPS, env::CTMRGEnv{C,T}) where {C,T}
             conj(peps[r, c][-11; 8 19 10 9]) *
             peps[r, cnext][-18; 16 25 17 15] *
             conj(peps[r, cnext][-20; 22 26 21 19])
-        @diffset ρunitcell[r, c] = ρ
+        return ρ
     end
-
     return ρunitcell
 end
 
@@ -178,7 +172,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::PEPSOptimize{GeomSum})
         Σₙ = ∂f∂A(g)
         dx += Σₙ
         err = norm(Σₙ)  # TODO: normalize this error?
-        alg.verbose && @show err
+        alg.verbosity > 1 && @show err
         err < alg.tol && break
 
         if i == alg.maxiter
@@ -196,7 +190,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{ManualIter
         y′ = ∂F∂x + ∂f∂x(y)
         norma = norm(y.corners[NORTHWEST])
         err = norm(y′.corners[NORTHWEST] - y.corners[NORTHWEST]) / norma  # Normalize error to get comparable convergence tolerance
-        alg.verbose && @show err
+        alg.verbosity > 1 && @show err
         updateenv!(y, y′)
         err < alg.tol && break
 
@@ -208,7 +202,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{ManualIter
 end
 
 # Use proper iterative solver to solve gradient problem
-function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize)
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{LinSolve})
     # spaces = [space.(getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
     # sizes = [map(x -> size(x.data), getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
     # op = LinearMap(vecdim(∂F∂x)) do v
@@ -245,15 +239,3 @@ function my_scale!(η, β)
     rmul!(η.A, β)
     return η
 end
-
-# my_retract is not an in place function which should not change x
-# function my_retract(x, dx, α::Number)
-#     (ϕ, env0) = x
-#     ψ = deepcopy(ϕ)
-#     env = deepcopy(env0)
-#     ψ.A .+= dx.A .* α
-#     #env = leading_boundary(ψ, alg_ctm,env)
-#     return (ψ, env), dx
-# end
-
-# my_inner(x, dx1, dx2) = real(dot(dx1, dx2))

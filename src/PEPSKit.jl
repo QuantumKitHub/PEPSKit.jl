@@ -35,7 +35,7 @@ module Defaults
     const ctmrg_miniter = 4
     const ctmrg_tol = 1e-12
     const grad_maxiter = 100
-    const grad_tol = 4
+    const grad_tol = 1e-6
 end
 
 export CTMRG, CTMRGEnv
