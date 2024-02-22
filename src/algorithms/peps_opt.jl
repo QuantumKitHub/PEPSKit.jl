@@ -110,8 +110,9 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{ManualIter
         norma = norm(y.corners[NORTHWEST])
         ϵnew = norm(y′.corners[NORTHWEST] - y.corners[NORTHWEST]) / norma  # Normalize error to get comparable convergence tolerance
         Δϵ = ϵ - ϵnew
-        alg.verbosity > 1 &&
-            @printf("Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖: %.2e\n", i, ϵnew, Δϵ)
+        alg.verbosity > 1 && @printf(
+            "Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖: %.2e\n", i, ϵnew, Δϵ
+        )
         y = y′
         ϵ = ϵnew
 
@@ -123,20 +124,16 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{ManualIter
     return ∂f∂A(y), ϵ
 end
 
-# Use proper iterative solver to solve gradient problem
+# Use KrylovKit.linsolve to solve gradient linear problem
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{LinSolve})
-    # spaces = [space.(getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
-    # sizes = [map(x -> size(x.data), getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
-    # op = LinearMap(vecdim(∂F∂x)) do v
-    #     env = unvec(v, spaces..., sizes...)
-    #     x = env - ∂f∂x(env)
-    #     vec(x)
-    # end
-    # envvec = vec(y₀)
-    # info = gmres!(envvec, op, vec(∂F∂x); reltol=alg.grad_convtol, maxiter=alg.grad_maxiter)
-    # y = unvec(envvec, spaces..., sizes...)
+    grad_op(env) = env - ∂f∂x(env)
+    y, info = linsolve(grad_op, ∂F∂x, y₀; rtol=alg.fpgrad_tol, maxiter=alg.fpgrad_maxiter)
 
-    # ∂f∂A(y), info
+    if alg.verbosity > 0 && info.converged != 1
+        @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
+    end
+
+    return ∂f∂A(y), info
 end
 
 # Contraction of CTMRGEnv and PEPS tensors with open physical bonds

@@ -86,7 +86,7 @@ VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-Base.similar(T::InfinitePEPS, args...) = InfinitePEPS(similar(T.A, args...))
+# Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))  # TODO: This is incompatible with inner constructor
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
@@ -99,17 +99,18 @@ Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
 ## Math
 Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
 Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
-LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
+Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
 LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
+LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
 
-# For _scale! during optimization
-function LinearAlgebra.rmul!(ψ::InfinitePEPS, β::Number)
-    rmul!(ψ.A, β)
+# Used in _scale during OptimKit.optimize
+function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
+    rmul!(ψ.A, α)
     return ψ
 end
 
-# For _add! during optimization
-function LinearAlgebra.axpy!(β::Number, ψ::InfinitePEPS, η::InfinitePEPS)
-    ψ.A .+= η.A .* β
-    return ψ
+# Used in _add during OptimKit.optimize
+function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
+    ψ₂.A .+= α * ψ₁.A
+    return ψ₂
 end

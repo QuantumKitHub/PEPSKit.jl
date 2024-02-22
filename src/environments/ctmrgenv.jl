@@ -3,7 +3,7 @@ struct CTMRGEnv{C,T}
     edges::Array{T,3}
 end
 
-# initialize ctmrg environments with some random tensors
+# Initialize ctmrg environments with some random tensors
 function CTMRGEnv(peps::InfinitePEPS{P}; Venv=oneunit(spacetype(P))) where {P}
     C_type = tensormaptype(spacetype(P), 1, 1, storagetype(P))
     T_type = tensormaptype(spacetype(P), 3, 1, storagetype(P))
@@ -28,13 +28,13 @@ function CTMRGEnv(peps::InfinitePEPS{P}; Venv=oneunit(spacetype(P))) where {P}
     return CTMRGEnv(corners, edges)
 end
 
-# TODO: Is this needed or not?
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
     ctmrgenv_pullback(ē) = NoTangent(), ē.corners, ē.edges
     return CTMRGEnv(corners, edges), ctmrgenv_pullback
 end
 
+# Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     corners′ = similar(env.corners)
     edges′ = similar(env.edges)
@@ -49,6 +49,7 @@ end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
 
+# Functions used for FP differentiation and by KrylovKit.linsolve
 function Base.:+(e₁::CTMRGEnv, e₂::CTMRGEnv)
     return CTMRGEnv(e₁.corners + e₂.corners, e₁.edges + e₂.edges)
 end
@@ -56,3 +57,36 @@ end
 function Base.:-(e₁::CTMRGEnv, e₂::CTMRGEnv)
     return CTMRGEnv(e₁.corners - e₂.corners, e₁.edges - e₂.edges)
 end
+
+Base.:*(α::Number, e::CTMRGEnv) = CTMRGEnv(α * e.corners, α * e.edges)
+Base.similar(e::CTMRGEnv) = CTMRGEnv(similar(e.corners), similar(e.edges))
+
+function LinearAlgebra.mul!(edst::CTMRGEnv, esrc::CTMRGEnv, α::Number)
+    edst.corners .= α * esrc.corners
+    edst.edges .= α * esrc.edges
+    return edst
+end
+
+function LinearAlgebra.rmul!(e::CTMRGEnv, α::Number)
+    rmul!(e.corners, α)
+    rmul!(e.edges, α)
+    return e
+end
+
+function LinearAlgebra.axpy!(α::Number, e₁::CTMRGEnv, e₂::CTMRGEnv)
+    e₂.corners .+= α * e₁.corners
+    e₂.edges .+= α * e₁.edges
+    return e₂
+end
+
+function LinearAlgebra.axpby!(α::Number, e₁::CTMRGEnv, β::Number, e₂::CTMRGEnv)
+    e₂.corners .= α * e₁.corners + β * e₂.corners
+    e₂.edges .+= α * e₁.edges + β * e₂.edges
+    return e₂
+end
+
+function LinearAlgebra.dot(e₁::CTMRGEnv, e₂::CTMRGEnv)
+    dot(e₁.corners, e₂.corners) + dot(e₁.edges, e₂.edges)
+end
+
+LinearAlgebra.norm(e::CTMRGEnv) = norm(e.corners) + norm(e.edges)
