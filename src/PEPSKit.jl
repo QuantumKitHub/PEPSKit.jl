@@ -40,7 +40,7 @@ end
 
 export CTMRG, CTMRGEnv
 export leading_boundary, expectation_value
-export PEPSOptimize, NaiveAD, ManualIter, LinSolve
+export PEPSOptimize, NaiveAD, GeomSum, ManualIter, LinSolve
 export groundsearch
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO

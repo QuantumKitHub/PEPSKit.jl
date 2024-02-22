@@ -28,8 +28,6 @@ function groundsearch(
         optalg.optimizer;
         inner=my_inner,
         retract=my_retract,
-        (add!)=my_add!,
-        (scale!)=my_scale!,
     )
     return (; peps₀, env₀, E₀, ∂E, info)
 end
@@ -54,7 +52,7 @@ end
 
 # Non-mutating version, recomputing environment from random initial guess in every optimization step
 function costfun(peps, env, H, ctmalg::CTMRG, optalg::PEPSOptimize)
-    env′, = deepcopy(env)  # Create copy to make non-mutating
+    env′ = deepcopy(env)  # Create copy to make non-mutating
     return costfun!(peps, env′, H, ctmalg, optalg)
 end
 
@@ -62,20 +60,83 @@ end
 function ChainRulesCore.rrule(
     ::typeof(costfun!), peps, env, H, ctmalg::CTMRG, optalg::PEPSOptimize{G}
 ) where {G<:Union{GeomSum,ManualIter,LinSolve}}
-    env = leading_boundary(peps, env, ctmalg)
+    env, = leading_boundary(peps, ctmalg, env)
     E, Egrad = withgradient(optalg.energyfun, peps, env, H)
+    ∂F∂A = InfinitePEPS(Egrad[1]...)
     ∂F∂x = CTMRGEnv(Egrad[2]...)
-    _, xvjp = pullback(ctmrg_gauged_iter, peps, env, ctmalg)
-    ∂f∂A(v) = xvjp(v)[1]
-    ∂f∂x(v) = CTMRGEnv(xvjp(v)[2]...)  # Function wrapper to compute v*∂f∂A vJP as CTMRGEnv
+    _, envvjp = pullback((A, x) -> gauge_fix(x, ctmrg_iter(A, x, ctmalg)[1]), peps, env)
+    ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
+    ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
 
     function costfun!_pullback(_)
-        y₀ = CTMRGEnv(peps, dim(space(env.edges[1])[1]))
+        y₀ = CTMRGEnv(peps; Venv=space(env.edges[1])[1])
         dx, = fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, optalg)
-        return NoTangent(), Egrad[1] + dx, NoTangent(), NoTangent(), NoTangent()
+        return NoTangent(), ∂F∂A + dx, NoTangent(), NoTangent(), NoTangent(), NoTangent()
     end
 
     return E, costfun!_pullback
+end
+
+# Compute energy and energy gradient, by explicitly evaluating geometric series
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::PEPSOptimize{GeomSum})
+    g = ∂F∂x
+    dx = ∂f∂A(g)  # n=0 term: ∂F∂x ∂f∂A
+    ϵ = 1.0
+    for i in 1:(alg.fpgrad_maxiter)
+        g = ∂f∂x(g)
+        Σₙ = ∂f∂A(g)
+        dx += Σₙ
+        ϵnew = norm(Σₙ)  # TODO: normalize this error?
+        Δϵ = ϵ - ϵnew
+        alg.verbosity > 1 &&
+            @printf("Gradient iter: %3d   ‖Σₙ‖: %.2e   Δ‖Σₙ‖: %.2e\n", i, ϵnew, Δϵ)
+        ϵ = ϵnew
+
+        ϵ < alg.fpgrad_tol && break
+        if alg.verbosity > 0 && i == alg.fpgrad_maxiter
+            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Σₙ‖ = $ϵ"
+        end
+    end
+    return dx, ϵ
+end
+
+# Manual iteration to solve gradient linear problem
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{ManualIter})
+    y = deepcopy(y₀)  # Do not mutate y₀
+    ϵ = 1.0
+    for i in 1:(alg.fpgrad_maxiter)
+        y′ = ∂F∂x + ∂f∂x(y)
+
+        norma = norm(y.corners[NORTHWEST])
+        ϵnew = norm(y′.corners[NORTHWEST] - y.corners[NORTHWEST]) / norma  # Normalize error to get comparable convergence tolerance
+        Δϵ = ϵ - ϵnew
+        alg.verbosity > 1 &&
+            @printf("Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖: %.2e\n", i, ϵnew, Δϵ)
+        y = y′
+        ϵ = ϵnew
+
+        ϵ < alg.fpgrad_tol && break
+        if alg.verbosity > 0 && i == alg.fpgrad_maxiter
+            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Cᵢ₊₁-Cᵢ‖ = $ϵ"
+        end
+    end
+    return ∂f∂A(y), ϵ
+end
+
+# Use proper iterative solver to solve gradient problem
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{LinSolve})
+    # spaces = [space.(getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
+    # sizes = [map(x -> size(x.data), getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
+    # op = LinearMap(vecdim(∂F∂x)) do v
+    #     env = unvec(v, spaces..., sizes...)
+    #     x = env - ∂f∂x(env)
+    #     vec(x)
+    # end
+    # envvec = vec(y₀)
+    # info = gmres!(envvec, op, vec(∂F∂x); reltol=alg.grad_convtol, maxiter=alg.grad_maxiter)
+    # y = unvec(envvec, spaces..., sizes...)
+
+    # ∂f∂A(y), info
 end
 
 # Contraction of CTMRGEnv and PEPS tensors with open physical bonds
@@ -158,80 +219,14 @@ function next_neighbor_energy(
     return real(Eh + Ev)
 end
 
-# Compute energy and energy gradient, by explicitly evaluating geometric series
-function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::PEPSOptimize{GeomSum})
-    g = ∂F∂x
-    dx = ∂f∂A(g)  # n=0 term: ∂F∂x ∂f∂A
-    err = 0.0
-    for i in 1:(alg.maxiter)
-        updateenv!(g, ∂f∂x(g))
-        Σₙ = ∂f∂A(g)
-        dx += Σₙ
-        err = norm(Σₙ)  # TODO: normalize this error?
-        alg.verbosity > 1 && @show err
-        err < alg.tol && break
-
-        if i == alg.maxiter
-            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Σₙ‖ = $(norm(Σₙ))"
-        end
-    end
-    return dx, err
-end
-
-# Manual iteration to solve gradient linear problem
-function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{ManualIter})
-    y = deepcopy(y₀)  # Do not mutate y₀
-    err = 0.0
-    for i in 1:(alg.maxiter)
-        y′ = ∂F∂x + ∂f∂x(y)
-        norma = norm(y.corners[NORTHWEST])
-        err = norm(y′.corners[NORTHWEST] - y.corners[NORTHWEST]) / norma  # Normalize error to get comparable convergence tolerance
-        alg.verbosity > 1 && @show err
-        updateenv!(y, y′)
-        err < alg.tol && break
-
-        if i == alg.maxiter
-            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Cᵢ₊₁ - Cᵢ‖ = $err"
-        end
-    end
-    return ∂f∂A(y), err
-end
-
-# Use proper iterative solver to solve gradient problem
-function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{LinSolve})
-    # spaces = [space.(getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
-    # sizes = [map(x -> size(x.data), getfield(∂F∂x, f)) for f in fieldnames(CTMRGEnv)]
-    # op = LinearMap(vecdim(∂F∂x)) do v
-    #     env = unvec(v, spaces..., sizes...)
-    #     x = env - ∂f∂x(env)
-    #     vec(x)
-    # end
-    # envvec = vec(y₀)
-    # info = gmres!(envvec, op, vec(∂F∂x); reltol=alg.grad_convtol, maxiter=alg.grad_maxiter)
-    # y = unvec(envvec, spaces..., sizes...)
-
-    # ∂f∂A(y), info
-end
-
 # Update PEPS unit cell in non-mutating way
-function my_retract(x, dx, α)
+# Note: Both x (Y, X) and η are InfinitePEPS during optimization
+function my_retract(x, η, α)
     peps = deepcopy(x[1])
-    peps.A .+= dx.A .* α
+    peps.A .+= η.A .* α
     env = deepcopy(x[2])
-    return (peps, env), dx
+    return (peps, env), η
 end
 
-# Take real valued part of standard dot product
+# Take real valued part of dot product
 my_inner(_, η₁, η₂) = real(dot(η₁, η₂))
-
-# Add unit cell elements element-wise
-function my_add!(Y, X, a)
-    Y.A .+= X.A .* a
-    return Y
-end
-
-# Scale all unit cell elements
-function my_scale!(η, β)
-    rmul!(η.A, β)
-    return η
-end

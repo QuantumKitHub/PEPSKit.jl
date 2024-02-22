@@ -28,6 +28,13 @@ function CTMRGEnv(peps::InfinitePEPS{P}; Venv=oneunit(spacetype(P))) where {P}
     return CTMRGEnv(corners, edges)
 end
 
+# TODO: Is this needed or not?
+# Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
+function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
+    ctmrgenv_pullback(ē) = NoTangent(), ē.corners, ē.edges
+    return CTMRGEnv(corners, edges), ctmrgenv_pullback
+end
+
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     corners′ = similar(env.corners)
     edges′ = similar(env.edges)
@@ -41,3 +48,11 @@ function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
 end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
+
+function Base.:+(e₁::CTMRGEnv, e₂::CTMRGEnv)
+    return CTMRGEnv(e₁.corners + e₂.corners, e₁.edges + e₂.edges)
+end
+
+function Base.:-(e₁::CTMRGEnv, e₂::CTMRGEnv)
+    return CTMRGEnv(e₁.corners - e₂.corners, e₁.edges - e₂.edges)
+end

@@ -1,4 +1,5 @@
-@kwdef struct CTMRG #<: Algorithm
+# TODO: add abstract Algorithm type?
+@kwdef struct CTMRG
     trscheme::TruncationScheme = TensorKit.notrunc()
     tol::Float64 = Defaults.ctmrg_tol
     maxiter::Int = Defaults.ctmrg_maxiter
@@ -14,7 +15,7 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     TSold = tsvd(envinit.edges[NORTH]; alg=TensorKit.SVD())[2]
     ϵold = 1.0
     env = deepcopy(envinit)
-    Pleft, Pright = empty_projectors(eltype(env.edges), (4, size(state)...))
+    Pleft, Pright = projector_type(eltype(env.edges), (4, size(state)...))
 
     for i in 1:(alg.maxiter)
         env, Pleft, Pright, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
@@ -143,7 +144,7 @@ end
 # One CTMRG iteration x′ = f(A, x)
 function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
-    Pleft, Pright = empty_projectors(T, (4, size(state)...))
+    Pleft, Pright = projector_type(T, (4, size(state)...))
 
     for i in 1:4
         env, Pl, Pr, ϵ₀ = left_move(state, env, alg)
@@ -162,7 +163,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
     ϵ = 0.0
-    Pleft, Pright = empty_projectors(T, size(state))
+    Pleft, Pright = projector_type(T, size(state))
 
     for col in 1:size(state, 2)
         cnext = _next(col, size(state, 2))

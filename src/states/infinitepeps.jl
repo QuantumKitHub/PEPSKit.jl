@@ -29,17 +29,18 @@ function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
 end
 
 """
-    InfinitePEPS(Pspaces, Nspaces, Espaces)
+    InfinitePEPS(f=randn, T=ComplexF64, Pspaces, Nspaces, Espaces)
 
 Allow users to pass in arrays of spaces.
 """
 function InfinitePEPS(
-    Pspaces::AbstractArray{S,2},
-    Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces,
-    finit=randn,
-    dtype=ComplexF64,
-) where {S<:ElementarySpace}
+    Pspaces::A, Nspaces::A, Espaces::A
+) where {A<:AbstractArray{<:ElementarySpace,2}}
+    return InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfinitePEPS(
+    f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
+) where {M<:AbstractArray{<:ElementarySpace,2}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -47,7 +48,7 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, -1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(finit, dtype, P, N, E, S, W)
+        return PEPSTensor(f, T, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
@@ -94,3 +95,21 @@ Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
 Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
+
+## Math
+Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
+Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
+LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
+LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
+
+# For _scale! during optimization
+function LinearAlgebra.rmul!(ψ::InfinitePEPS, β::Number)
+    rmul!(ψ.A, β)
+    return ψ
+end
+
+# For _add! during optimization
+function LinearAlgebra.axpy!(β::Number, ψ::InfinitePEPS, η::InfinitePEPS)
+    ψ.A .+= η.A .* β
+    return ψ
+end

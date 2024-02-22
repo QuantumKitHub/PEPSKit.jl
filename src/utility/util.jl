@@ -48,7 +48,7 @@ function is_degenerate_spectrum(
 end
 
 # Create empty projectors for given state without recomputing transpose
-function empty_projectors(T::DataType, size)
+function projector_type(T::DataType, size)
     Pleft = Array{T,length(size)}(undef, size)
     Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
     Pright = Array{Prtype,length(size)}(undef, size)

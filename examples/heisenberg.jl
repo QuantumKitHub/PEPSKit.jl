@@ -6,7 +6,6 @@ using PEPSKit
 # Sublattice-rotate to get (1, 1, 1) → (-1, 1, -1), transformed to GS with single-site unit cell
 function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
     Sx, Sy, Sz, _ = spinmatrices(1//2)
-
     Vphys = ℂ^2
     σx = TensorMap(Sx, Vphys, Vphys)
     σy = TensorMap(Sy, Vphys, Vphys)
@@ -25,7 +24,7 @@ function init_peps(d, D, Lx, Ly, finit=randn, dtype=ComplexF64)
     Pspaces = fill(ℂ^d, Lx, Ly)
     Nspaces = fill(ℂ^D, Lx, Ly)
     Espaces = fill(ℂ^D, Lx, Ly)
-    return InfinitePEPS(Pspaces, Nspaces, Espaces, finit, dtype)
+    return InfinitePEPS(finit, dtype, Pspaces, Nspaces, Espaces)
 end
 
 # Parameters
@@ -33,7 +32,7 @@ H = square_lattice_heisenberg()
 χbond = 2
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
-optalg = PEPSOptimize{NaiveAD}(;
+optalg = PEPSOptimize{ManualIter}(;
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
     fpgrad_tol=1e-6,
     fpgrad_maxiter=100,
