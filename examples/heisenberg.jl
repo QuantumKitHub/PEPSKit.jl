@@ -31,8 +31,8 @@ end
 H = square_lattice_heisenberg()
 χbond = 2
 χenv = 20
-ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
-optalg = PEPSOptimize{ManualIter}(;
+ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-12, miniter=4, maxiter=100, verbosity=2)
+optalg = PEPSOptimize{LinSolve}(;
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
     fpgrad_tol=1e-6,
     fpgrad_maxiter=100,
@@ -41,6 +41,6 @@ optalg = PEPSOptimize{ManualIter}(;
 
 # Ground state search
 ψinit = init_peps(2, χbond, 1, 1)
-envinit, = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; Venv=ℂ^χenv));
+envinit, = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; Venv=ℂ^χenv))
 result = groundsearch(H, ctmalg, optalg, ψinit, envinit)
 @show result.E₀

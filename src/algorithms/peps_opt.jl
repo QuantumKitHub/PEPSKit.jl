@@ -69,8 +69,9 @@ function ChainRulesCore.rrule(
     ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
 
     function costfun!_pullback(_)
-        y₀ = CTMRGEnv(peps; Venv=space(env.edges[1])[1])
-        dx, = fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, optalg)
+        # TODO: Add interface to choose y₀ and possibly kwargs that are passed to fpgrad?
+        # y₀ = CTMRGEnv(peps; Venv=space(env.edges[1])[1])  # This leads to slow convergence in LinSolve and gauge warnings
+        dx, = fpgrad(∂F∂x, ∂f∂x, ∂f∂A, ∂F∂x, optalg)
         return NoTangent(), ∂F∂A + dx, NoTangent(), NoTangent(), NoTangent(), NoTangent()
     end
 
@@ -111,7 +112,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{ManualIter
         ϵnew = norm(y′.corners[NORTHWEST] - y.corners[NORTHWEST]) / norma  # Normalize error to get comparable convergence tolerance
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 && @printf(
-            "Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖: %.2e\n", i, ϵnew, Δϵ
+            "Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖/N: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖/N: %.2e\n", i, ϵnew, Δϵ
         )
         y = y′
         ϵ = ϵnew
@@ -127,7 +128,9 @@ end
 # Use KrylovKit.linsolve to solve gradient linear problem
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::PEPSOptimize{LinSolve})
     grad_op(env) = env - ∂f∂x(env)
-    y, info = linsolve(grad_op, ∂F∂x, y₀; rtol=alg.fpgrad_tol, maxiter=alg.fpgrad_maxiter)
+    y, info = linsolve(
+        grad_op, ∂F∂x, y₀; rtol=alg.fpgrad_tol, maxiter=alg.fpgrad_maxiter, krylovdim=20
+    )
 
     if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)

@@ -58,7 +58,9 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
 
     env′, = ctmrg_iter(state, env, alg)
     envfix, Pleftfix, Prightfix = gauge_fix(env, env′, Pleft, Pright)
-    @ignore_derivatives check_elementwise_conv(env, envfix)
+    @ignore_derivatives check_elementwise_conv(
+        env, envfix; print_conv=alg.verbosity > 1 ? true : false
+    )
     return envfix, Pleftfix, Prightfix
 end
 
