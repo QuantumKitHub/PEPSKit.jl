@@ -3,8 +3,7 @@ using TensorKit, MPSKitModels, OptimKit
 using PEPSKit
 
 # Square lattice Heisenberg Hamiltonian
-# Sublattice-rotate to get (1, 1, 1) → (-1, 1, -1), transformed to GS with single-site unit cell
-function square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
+function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
     Sx, Sy, Sz, _ = spinmatrices(1//2)
     Vphys = ℂ^2
     σx = TensorMap(Sx, Vphys, Vphys)
@@ -27,20 +26,18 @@ function init_peps(d, D, Lx, Ly, finit=randn, dtype=ComplexF64)
     return InfinitePEPS(finit, dtype, Pspaces, Nspaces, Espaces)
 end
 
-# Parameters
-H = square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
+# Initialize PEPS and environment
+H = square_lattice_heisenberg()
 χbond = 2
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
-optalg = PEPSOptimize{LinSolve}(;
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
-    fpgrad_tol=1e-6,
-    fpgrad_maxiter=100,
-    verbosity=2,
-)
+ψ = init_peps(2, χbond, 1, 1)
+env, = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 
-# Ground state search
-ψinit = init_peps(2, χbond, 1, 1)
-envinit, = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; Venv=ℂ^χenv))
-result = groundsearch(H, ctmalg, optalg, ψinit, envinit)
-@show result.E₀
+println("\nBefore gauge-fixing:")
+env′, = PEPSKit.ctmrg_iter(ψ, env, ctmalg)
+PEPSKit.check_elementwise_conv(env, env′)
+
+println("\nAfter gauge-fixing:")
+envfix = PEPSKit.gauge_fix(env, env′)
+PEPSKit.check_elementwise_conv(env, envfix)

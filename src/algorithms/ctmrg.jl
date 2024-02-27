@@ -11,8 +11,8 @@ end
 # Compute CTMRG environment for a given state
 function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     normold = 1.0
-    CSold = tsvd(envinit.corners[NORTHWEST]; alg=TensorKit.SVD())[2]
-    TSold = tsvd(envinit.edges[NORTH]; alg=TensorKit.SVD())[2]
+    CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
+    TSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
     ϵold = 1.0
     env = deepcopy(envinit)
     Pleft, Pright = projector_type(eltype(env.edges), (4, size(state)...))
@@ -24,10 +24,10 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
         Δϵ = abs((ϵold - ϵ) / ϵold)
         normnew = norm(state, env)
         Δnorm = abs(normold - normnew)
-        CSnew = tsvd(env.corners[NORTHWEST]; alg=TensorKit.SVD())[2]
-        ΔCS = norm(CSnew - CSold)
-        TSnew = tsvd(env.edges[NORTH]; alg=TensorKit.SVD())[2]
-        ΔTS = norm(TSnew - TSold)
+        CSnew = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env.corners)
+        ΔCS = maximum(norm.(CSnew - CSold))
+        TSnew = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env.edges)
+        ΔTS = maximum(norm.(TSnew - TSold))
         (max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter) && break  # Converge if maximal Δ falls below tolerance
 
         # Print verbose info
@@ -75,22 +75,30 @@ function gauge_fix(
     end
 
     # Correct relative phases
+    # TODO: assign corners/edges to correct columns
+    # TODO: respect difference between left/right projector rows
     cornersfix = map(Iterators.product(axes(envfinal.corners)...)) do (dir, r, c)
         @tensor Cfix[-1; -2] :=
             conj(signs[_prev(dir, 4), r, c][1 -1]) *
             envfinal.corners[dir, r, c][1; 2] *
             signs[dir, r, c][2, -2]
     end
-    edgesfix = map(zip(signs, envfinal.edges)) do (σ, edge)
-        @tensor Tfix[-1 -2 -3; -4] := conj(σ[1 -1]) * edge[1 -2 -3; 2] * σ[2, -4]
+    # edgesfix = similar(envfinal.edges)
+    # for (dir, r, c) in Iterators.product(axes(envfinal.edges)...)
+    #     @tensor Tfix[-1 -2 -3; -4] :=
+    #         conj(signs[dir, r, c][1 -1]) *
+    #         envfinal.edges[dir, r, c][1 -2 -3; 2] *
+    #         signs[dir, _prev(r, end), c][2, -4]
+    #     @diffset edgesfix[dir, r, _next(c, size(edgesfix, 2))] = Tfix
+    # end
+    edgesfix = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
+        @tensor Tfix[-1 -2 -3; -4] :=
+            conj(signs[dir, r, c][1 -1]) *
+            envfinal.edges[dir, r, c][1 -2 -3; 2] *
+            signs[dir, _prev(r, end), c][2, -4]
     end
-
-    # Fix global phase
-    cornersgfix = map(zip(envprev.corners, cornersfix)) do (Cprev, Cfix)
-        φ = tr(Cprev) / tr(Cfix)  # Extract phase via trace to make it differentiable
-        return φ * Cfix
-    end
-    envfix = CTMRGEnv(cornersgfix, edgesfix)
+    edgesfix = circshift(edgesfix, (0, 1))
+    envfix = CTMRGEnv(cornersfix, edgesfix)
 
     # Gauge projectors for correct backpropagation
     if !isnothing(Pleft) && !isnothing(Pright)
@@ -146,18 +154,18 @@ end
 # One CTMRG iteration x′ = f(A, x)
 function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
-    Pleft, Pright = projector_type(T, (4, size(state)...))
+    Pleft, Pright = Zygote.Buffer.(projector_type(T, (4, size(state)...)))
 
     for i in 1:4
         env, Pl, Pr, ϵ₀ = left_move(state, env, alg)
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
         ϵ = max(ϵ, ϵ₀)
-        @diffset Pleft[i, :, :] .= Pl
-        @diffset Pright[i, :, :] .= Pr
+        Pleft[i, :, :] = Pl
+        Pright[i, :, :] = Pr
     end
 
-    return env, Pleft, Pright, ϵ
+    return env, copy(Pleft), copy(Pright), ϵ
 end
 
 # Grow environment, compute projectors and renormalize
@@ -165,7 +173,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
     ϵ = 0.0
-    Pleft, Pright = projector_type(T, size(state))
+    Pleft, Pright = Zygote.Buffer.(projector_type(T, size(state)))  # Use Zygote.Buffer instead of @diffset to avoid ZeroTangent errors in _setindex
 
     for col in 1:size(state, 2)
         cnext = _next(col, size(state, 2))
@@ -210,8 +218,8 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
 
             # Compute projectors
             Pl, Pr = build_projectors(U, S, V, Q_sw, Q_nw)
-            @diffset Pleft[row, col] = Pl
-            @diffset Pright[row, col] = Pr
+            Pleft[row, col] = Pl
+            Pright[row, col] = Pr
         end
 
         # Use projectors to grow the corners & edges
@@ -233,12 +241,19 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             @diffset edges[WEST, row, cnext] = T_w
         end
 
-        @diffset corners[SOUTHWEST, :, cnext] ./= norm.(corners[SOUTHWEST, :, cnext])
-        @diffset corners[NORTHWEST, :, cnext] ./= norm.(corners[NORTHWEST, :, cnext])
-        @diffset edges[WEST, :, cnext] ./= norm.(edges[WEST, :, cnext])
+        # Normalize with signed norm to avoid fixing global phase in gauge-fixing
+        @diffset corners[SOUTHWEST, :, cnext] .= map(corners[SOUTHWEST, :, cnext]) do C
+            C / (sign(tr(C)) * norm(C))
+        end
+        @diffset corners[NORTHWEST, :, cnext] .= map(corners[NORTHWEST, :, cnext]) do C
+            C / (sign(tr(C)) * norm(C))
+        end
+        @diffset edges[WEST, :, cnext] .= map(edges[WEST, :, cnext]) do E
+            E / (sign(@tensor E[1 2 2; 1]) * norm(E))
+        end
     end
 
-    return CTMRGEnv(corners, edges), Pleft, Pright, ϵ
+    return CTMRGEnv(corners, edges), copy(Pleft), copy(Pright), ϵ
 end
 
 # Compute enlarged NW corner

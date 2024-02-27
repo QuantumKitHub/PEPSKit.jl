@@ -38,6 +38,9 @@ function ctmrg_gradient(x, H, ctmalg::CTMRG, optalg::PEPSOptimize)
     cfun = optalg.reuse_env ? costfun! : costfun
     E = cfun(peps, env, H, ctmalg, optalg)
     ∂E∂A = gradient(cfun, peps, env, H, ctmalg, optalg)[1]
+    if !(typeof(∂E∂A) <: InfinitePEPS)  # NaiveAD returns NamedTuple as gradient instead of InfinitePEPS
+        ∂E∂A = InfinitePEPS(∂E∂A.A)
+    end
     @assert !isnan(norm(∂E∂A))
     return E, ∂E∂A
 end

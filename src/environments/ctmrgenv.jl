@@ -36,8 +36,9 @@ end
 
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
-    corners′ = similar(env.corners)
-    edges′ = similar(env.edges)
+    # Initialize rotated corners & edges with rotated sizes
+    corners′ = Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
+    edges′ = Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2))
 
     for dir in 1:4
         @diffset corners′[_prev(dir, 4), :, :] .= rotl90(env.corners[dir, :, :])

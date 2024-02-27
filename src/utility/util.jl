@@ -92,6 +92,7 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
             else
                 v
             end
+            # TODO: Fix this for ZeroTangents
             v = typeof(v) != typeof(a) ? convert(typeof(a), v) : v
             #v = convert(typeof(a),v);
             backwards_tv = v[args...]
