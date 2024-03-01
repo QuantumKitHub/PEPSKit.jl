@@ -31,8 +31,8 @@ H = square_lattice_heisenberg()
 χbond = 2
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
-ψ = init_peps(2, χbond, 1, 1)
-env, = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
+ψ = init_peps(2, χbond, 2, 2)
+env = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 
 println("\nBefore gauge-fixing:")
 env′, = PEPSKit.ctmrg_iter(ψ, env, ctmalg)

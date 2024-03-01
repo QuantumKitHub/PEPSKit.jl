@@ -41,6 +41,6 @@ optalg = PEPSOptimize{LinSolve}(;
 
 # Ground state search
 ψinit = init_peps(2, χbond, 1, 1)
-envinit, = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; Venv=ℂ^χenv))
+envinit = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; Venv=ℂ^χenv))
 result = groundsearch(H, ctmalg, optalg, ψinit, envinit)
 @show result.E₀

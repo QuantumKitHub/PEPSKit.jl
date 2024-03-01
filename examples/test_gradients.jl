@@ -32,7 +32,7 @@ H = square_lattice_heisenberg()
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-12, miniter=4, maxiter=100, verbosity=2)
 ψ = init_peps(2, χbond, 1, 1)
-env, = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
+env = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 
 # Compute CTM gradient in four different ways (set reuse_env=false to not mutate environment)
 println("\nFP gradient using naive AD:")

@@ -15,10 +15,9 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     TSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
     ϵold = 1.0
     env = deepcopy(envinit)
-    Pleft, Pright = projector_type(eltype(env.edges), (4, size(state)...))
 
     for i in 1:(alg.maxiter)
-        env, Pleft, Pright, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+        env, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
 
         # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
         Δϵ = abs((ϵold - ϵ) / ϵold)
@@ -57,61 +56,73 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     end
 
     env′, = ctmrg_iter(state, env, alg)
-    envfix, Pleftfix, Prightfix = gauge_fix(env, env′, Pleft, Pright)
+    envfix = gauge_fix(env, env′)
     @ignore_derivatives check_elementwise_conv(
         env, envfix; print_conv=alg.verbosity > 1 ? true : false
     )
-    return envfix, Pleftfix, Prightfix
+    return envfix
 end
 
 # Fix gauge of corner end edge tensors from last and second last CTMRG iteration
-function gauge_fix(
-    envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}, Pleft=nothing, Pright=nothing
-) where {C,T}
+function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     # Compute gauge tensors by comparing signs
-    signs = map(zip(envprev.edges, envfinal.edges)) do (Tprev, Tfinal)
-        σ = sign.(convert(Array, Tprev)[1, 1, 1, :] ./ convert(Array, Tfinal)[1, 1, 1, :])
-        Tensor(diagm(σ), space(Tfinal, 1) * space(Tfinal, 1)')
+    # First fix physical indices to (1, 1)
+    Tfixprev = map(x -> convert(Array, x)[:, 1, 1, :], envprev.edges)
+    Tfixfinal = map(x -> convert(Array, x)[:, 1, 1, :], envfinal.edges)
+    signs = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
+        if isodd(dir)
+            seqprev = prod(circshift(Tfixprev[dir, r, :], 1 - c))
+            seqfinal = prod(circshift(Tfixfinal[dir, r, :], 1 - c))
+        else
+            seqprev = prod(circshift(Tfixprev[dir, :, c], 1 - r))
+            seqfinal = prod(circshift(Tfixfinal[dir, :, c], 1 - r))
+        end
+
+        φ = sum(diag(seqfinal) ./ diag(seqprev)) / size(seqprev, 1)  # Global sequence phase
+        σ = sign.(seqfinal[1, :] ./ seqprev[1, :]) * φ'
+        Tensor(diagm(σ), space(envprev.edges[1], 1) * space(envprev.edges[1], 1)')
     end
 
     # Correct relative phases
-    # TODO: assign corners/edges to correct columns
-    # TODO: respect difference between left/right projector rows
-    cornersfix = map(Iterators.product(axes(envfinal.corners)...)) do (dir, r, c)
-        @tensor Cfix[-1; -2] :=
-            conj(signs[_prev(dir, 4), r, c][1 -1]) *
-            envfinal.corners[dir, r, c][1; 2] *
-            signs[dir, r, c][2, -2]
-    end
-    # edgesfix = similar(envfinal.edges)
-    # for (dir, r, c) in Iterators.product(axes(envfinal.edges)...)
-    #     @tensor Tfix[-1 -2 -3; -4] :=
-    #         conj(signs[dir, r, c][1 -1]) *
-    #         envfinal.edges[dir, r, c][1 -2 -3; 2] *
-    #         signs[dir, _prev(r, end), c][2, -4]
-    #     @diffset edgesfix[dir, r, _next(c, size(edgesfix, 2))] = Tfix
-    # end
-    edgesfix = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
-        @tensor Tfix[-1 -2 -3; -4] :=
-            conj(signs[dir, r, c][1 -1]) *
-            envfinal.edges[dir, r, c][1 -2 -3; 2] *
-            signs[dir, _prev(r, end), c][2, -4]
-    end
-    edgesfix = circshift(edgesfix, (0, 1))
-    envfix = CTMRGEnv(cornersfix, edgesfix)
+    cornersfix = deepcopy(envfinal.corners)
+    edgesfix = deepcopy(envfinal.edges)
+    for _ in 1:4
+        corners = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
+            @tensor Cfix[-1; -2] :=
+                signs[WEST, _prev(r, end), c][-1 1] *
+                envfinal.corners[NORTHWEST, r, c][1; 2] *
+                conj(signs[NORTH, r, c][-2 2])
+        end
+        @diffset cornersfix[NORTHWEST, :, :] .= corners
+        edges = map(Iterators.product(axes(envfinal.edges)[2:3]...)) do (r, c)
+            @tensor Tfix[-1 -2 -3; -4] :=
+                signs[NORTH, r, c][-1 1] *
+                envfinal.edges[NORTH, r, c][1 -2 -3; 2] *
+                conj(signs[NORTH, r, _next(c, end)][-4 2])
+        end
+        @diffset edgesfix[NORTH, :, :] .= edges
 
-    # Gauge projectors for correct backpropagation
-    if !isnothing(Pleft) && !isnothing(Pright)
-        Pleftfix = map(zip(signs, Pleft)) do (σ, P)
-            @tensor Plfix[-1 -2 -3; -4] := P[-1 -2 -3; 1] * σ[1; -4]
-        end
-        Prightfix = map(zip(signs, Pright)) do (σ, P)
-            @tensor Prfix[-1; -2 -3 -4] := σ[-1; 1] * P[1; -2 -3 -4]
-        end
-        return envfix, Pleftfix, Prightfix
-    else
-        return envfix
+        # Rotate east-wards
+        envfinal = rotate_north(envfinal, EAST)
+        cornersfix = rotate_north(cornersfix, EAST)
+        edgesfix = rotate_north(edgesfix, EAST)
+        signs = rotate_north(signs, EAST)
     end
+
+    # Fix global phase
+    cornersgfix = map(zip(envprev.corners, cornersfix)) do (Cprev, Cfix)
+        # φ = sign(sum(Cprev.data) / sum(Cfix.data))  # TODO: make sum(A.data) differentiable
+        φ = sign(tr(Cprev) / tr(Cfix))
+        φ * Cfix
+    end
+    edgesgfix = map(zip(envprev.edges, edgesfix)) do (Tprev, Tfix)
+        # φ = sign(sum(Tprev.data) / sum(Tfix.data))
+        φ = sign((@tensor Tprev[1 2 2; 1]) / (@tensor Tfix[1 2 2; 1]))
+        φ * Tfix
+    end
+    envfix = CTMRGEnv(cornersgfix, edgesgfix)
+
+    return envfix
 end
 
 # Explicitly check if element-wise difference of fixed and final environment tensors are below some tolerance
@@ -137,9 +148,13 @@ function check_elementwise_conv(
             println("{Cᵢ,Tᵢ} converged elementwise up to ϵ < $atol")
         else
             @warn "no elementwise convergence up to ϵ < $atol:"
-            for i in 1:4
-                println("$i: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ", Cerr[i])
-                println("$i: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ", Terr[i])
+            for dir in 1:4
+                println(
+                    "dir=$dir: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ", Cerr[dir],# maximum.(ΔC[dir, :, :])
+                )
+                println(
+                    "dir=$dir: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ", Terr[dir],# maximum.(ΔT[dir, :, :])
+                )
             end
         end
         println("maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax")
@@ -154,18 +169,15 @@ end
 # One CTMRG iteration x′ = f(A, x)
 function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
-    Pleft, Pright = Zygote.Buffer.(projector_type(T, (4, size(state)...)))
 
-    for i in 1:4
-        env, Pl, Pr, ϵ₀ = left_move(state, env, alg)
+    for _ in 1:4
+        env, _, _, ϵ₀ = left_move(state, env, alg)
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
         ϵ = max(ϵ, ϵ₀)
-        Pleft[i, :, :] = Pl
-        Pright[i, :, :] = Pr
     end
 
-    return env, copy(Pleft), copy(Pright), ϵ
+    return env, ϵ
 end
 
 # Grow environment, compute projectors and renormalize
@@ -241,16 +253,9 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             @diffset edges[WEST, row, cnext] = T_w
         end
 
-        # Normalize with signed norm to avoid fixing global phase in gauge-fixing
-        @diffset corners[SOUTHWEST, :, cnext] .= map(corners[SOUTHWEST, :, cnext]) do C
-            C / (sign(tr(C)) * norm(C))
-        end
-        @diffset corners[NORTHWEST, :, cnext] .= map(corners[NORTHWEST, :, cnext]) do C
-            C / (sign(tr(C)) * norm(C))
-        end
-        @diffset edges[WEST, :, cnext] .= map(edges[WEST, :, cnext]) do E
-            E / (sign(@tensor E[1 2 2; 1]) * norm(E))
-        end
+        @diffset corners[SOUTHWEST, :, cnext] ./= norm.(corners[SOUTHWEST, :, cnext])
+        @diffset corners[NORTHWEST, :, cnext] ./= norm.(corners[NORTHWEST, :, cnext])
+        @diffset edges[WEST, :, cnext] ./= norm.(edges[WEST, :, cnext])
     end
 
     return CTMRGEnv(corners, edges), copy(Pleft), copy(Pright), ϵ

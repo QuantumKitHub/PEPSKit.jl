@@ -48,7 +48,7 @@ end
 # Energy cost function with proper backwards rule depending only on final CTMRG fixed-point
 # Mutates environment to reuse previous environments in optimization
 function costfun!(peps, env, H, ctmalg::CTMRG, optalg::PEPSOptimize)
-    env′, = leading_boundary(peps, ctmalg, env)
+    env′ = leading_boundary(peps, ctmalg, env)
     @diffset env = env′
     return optalg.energyfun(peps, env′, H)
 end
@@ -63,7 +63,7 @@ end
 function ChainRulesCore.rrule(
     ::typeof(costfun!), peps, env, H, ctmalg::CTMRG, optalg::PEPSOptimize{G}
 ) where {G<:Union{GeomSum,ManualIter,LinSolve}}
-    env, = leading_boundary(peps, ctmalg, env)
+    env = leading_boundary(peps, ctmalg, env)
     E, Egrad = withgradient(optalg.energyfun, peps, env, H)
     ∂F∂A = InfinitePEPS(Egrad[1]...)
     ∂F∂x = CTMRGEnv(Egrad[2]...)
