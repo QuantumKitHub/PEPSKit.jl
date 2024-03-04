@@ -6,12 +6,13 @@ using TensorKit,
     KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators, Parameters, Printf
 using ChainRulesCore
 
-using LinearAlgebra: LinearAlgebra
+using LinearAlgebra
 
 export CTMRG, CTMRG2
 export leading_boundary
 
 include("utility/util.jl")
+include("utility/svd.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
@@ -46,5 +47,6 @@ export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export PEPOOptimize, pepo_opt_environments
 export symmetrize, None, Depth, Full
+export itersvd
 
 end # module
