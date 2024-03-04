@@ -37,15 +37,15 @@ end
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
-    edges′ = Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2))
+    corners′ = Zygote.Buffer(Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2)))
+    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
 
     for dir in 1:4
-        @diffset corners′[_prev(dir, 4), :, :] .= rotl90(env.corners[dir, :, :])
-        @diffset edges′[_prev(dir, 4), :, :] .= rotl90(env.edges[dir, :, :])
+        corners′[_prev(dir, 4), :, :] = rotl90(env.corners[dir, :, :])
+        edges′[_prev(dir, 4), :, :] = rotl90(env.edges[dir, :, :])
     end
 
-    return CTMRGEnv(corners′, edges′)
+    return CTMRGEnv(copy(corners′), copy(edges′))
 end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])

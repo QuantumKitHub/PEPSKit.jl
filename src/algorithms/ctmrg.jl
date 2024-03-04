@@ -83,7 +83,79 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
         Tensor(diagm(σ), space(envprev.edges[1], 1) * space(envprev.edges[1], 1)')
     end
 
-    # Correct relative phases
+    cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
+
+    # Fix global phase
+    cornersgfix = map(zip(envprev.corners, cornersfix)) do (Cprev, Cfix)
+        # φ = sign(sum(Cprev.data) / sum(Cfix.data))  # TODO: make sum(A.data) differentiable
+        φ = sign(tr(Cprev) / tr(Cfix))
+        φ * Cfix
+    end
+    edgesgfix = map(zip(envprev.edges, edgesfix)) do (Tprev, Tfix)
+        # φ = sign(sum(Tprev.data) / sum(Tfix.data))
+        φ = sign((@tensor Tprev[1 2 2; 1]) / (@tensor Tfix[1 2 2; 1]))
+        φ * Tfix
+    end
+    envfix = CTMRGEnv(cornersgfix, edgesgfix)
+
+    return envfix
+end
+
+# Explicit version
+# function fix_relative_phases(e::CTMRGEnv, signs)
+#     cornersfix = map(Iterators.product(axes(e.corners)...)) do (dir, r, c)
+#         if dir == 1
+#             return @tensor Cfix[-1; -2] :=
+#                 signs[WEST, _prev(r, end), c][-1 1] *
+#                 e.corners[NORTHWEST, r, c][1; 2] *
+#                 conj(signs[NORTH, r, c][-2 2])
+#         elseif dir == 2
+#             return @tensor Cfix[-1; -2] :=
+#                 signs[NORTH, _prev(r, end), _prev(c, end)][-1 1] *
+#                 e.corners[NORTHEAST, r, c][1; 2] *
+#                 conj(signs[EAST, r, c][-2 2])
+#         elseif dir == 3
+#             return @tensor Cfix[-1; -2] :=
+#                 signs[EAST, _prev(r, end), c][-1 1] *
+#                 e.corners[SOUTHEAST, r, c][1; 2] *
+#                 conj(signs[SOUTH, r, c][-2 2])
+#         elseif dir == 4
+#             return @tensor Cfix[-1; -2] :=
+#                 signs[SOUTH, _prev(r, end), c][-1 1] *
+#                 e.corners[SOUTHWEST, r, c][1; 2] *
+#                 conj(signs[WEST, r, c][-2 2])
+#         end
+#     end
+
+#     edgesfix = map(Iterators.product(axes(e.edges)...)) do (dir, r, c)
+#         if dir == 1
+#             return @tensor Tfix[-1 -2 -3; -4] :=
+#                 signs[NORTH, r, c][-1 1] *
+#                 e.edges[NORTH, r, c][1 -2 -3; 2] *
+#                 conj(signs[NORTH, r, _next(c, end)][-4 2])
+#         elseif dir == 2
+#             return @tensor Tfix[-1 -2 -3; -4] :=
+#                 signs[EAST, r, c][-1 1] *
+#                 e.edges[EAST, r, c][1 -2 -3; 2] *
+#                 conj(signs[EAST, _next(r, end), c][-4 2])
+#         elseif dir == 3
+#             return @tensor Tfix[-1 -2 -3; -4] :=
+#                 signs[SOUTH, r, c][-1 1] *
+#                 e.edges[SOUTH, r, c][1 -2 -3; 2] *
+#                 conj(signs[SOUTH, _next(r, end), _next(c, end)][-4 2])
+#         elseif dir == 4
+#             return @tensor Tfix[-1 -2 -3; -4] :=
+#                 signs[WEST, r, c][-1 1] *
+#                 e.edges[WEST, r, c][1 -2 -3; 2] *
+#                 conj(signs[WEST, _prev(r, end), c][-4 2])
+#         end
+#     end
+
+#     return cornersfix, edgesfix
+# end
+
+# Semi-working version analogous to left_move with rotations
+function fix_relative_phases(envfinal::CTMRGEnv, signs)
     cornersfix = deepcopy(envfinal.corners)
     edgesfix = deepcopy(envfinal.edges)
     for _ in 1:4
@@ -106,24 +178,11 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
         envfinal = rotate_north(envfinal, EAST)
         cornersfix = rotate_north(cornersfix, EAST)
         edgesfix = rotate_north(edgesfix, EAST)
-        signs = rotate_north(signs, EAST)
+        signs = rotate_north(signs, EAST)  # TODO: Fix AD problem here
     end
-
-    # Fix global phase
-    cornersgfix = map(zip(envprev.corners, cornersfix)) do (Cprev, Cfix)
-        # φ = sign(sum(Cprev.data) / sum(Cfix.data))  # TODO: make sum(A.data) differentiable
-        φ = sign(tr(Cprev) / tr(Cfix))
-        φ * Cfix
-    end
-    edgesgfix = map(zip(envprev.edges, edgesfix)) do (Tprev, Tfix)
-        # φ = sign(sum(Tprev.data) / sum(Tfix.data))
-        φ = sign((@tensor Tprev[1 2 2; 1]) / (@tensor Tfix[1 2 2; 1]))
-        φ * Tfix
-    end
-    envfix = CTMRGEnv(cornersgfix, edgesgfix)
-
-    return envfix
+    return cornersfix, edgesfix
 end
+
 
 # Explicitly check if element-wise difference of fixed and final environment tensors are below some tolerance
 function check_elementwise_conv(
@@ -150,10 +209,12 @@ function check_elementwise_conv(
             @warn "no elementwise convergence up to ϵ < $atol:"
             for dir in 1:4
                 println(
-                    "dir=$dir: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ", Cerr[dir],# maximum.(ΔC[dir, :, :])
+                    "dir=$dir: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ",
+                    Cerr[dir],# maximum.(ΔC[dir, :, :])
                 )
                 println(
-                    "dir=$dir: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ", Terr[dir],# maximum.(ΔT[dir, :, :])
+                    "dir=$dir: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ",
+                    Terr[dir],# maximum.(ΔT[dir, :, :])
                 )
             end
         end

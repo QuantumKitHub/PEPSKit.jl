@@ -57,7 +57,7 @@ end
 
 # rotl90 is set to non_differentiable in ChainRules
 function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
-    function pb(x)
+    function rotl90_pullback(x)
         if !iszero(x)
             x = if x isa Tangent
                 ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(x))
@@ -67,9 +67,9 @@ function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
             x = rotr90(x)
         end
 
-        return (ZeroTangent(), x)
+        return NoTangent(), x
     end
-    return rotl90(a), pb
+    return rotl90(a), rotl90_pullback
 end
 
 # Differentiable setindex! alternative
