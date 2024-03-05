@@ -117,6 +117,7 @@ function itersvd_rev(
 
     # Truncation contribution from dU₂ and dV₂
     function svdlinprob(v)  # Left-preconditioned linear problem
+        # TODO: make v a Tuple instead of concatening two vectors
         γ1 = reshape(@view(v[1:dimγ]), (k, m))
         γ2 = reshape(@view(v[(dimγ + 1):end]), (k, n))
         Γ1 = γ1 - S⁻¹ * γ2 * Vproj * Ad
