@@ -96,3 +96,4 @@ Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
 Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));
+Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)));

@@ -120,17 +120,19 @@ function left_move(
             end
             #@ignore_derivatives @show norm(Q1*Q2)
 
-            (U, S, V) = tsvd(Q1 * Q2; trunc=trscheme, alg=SVD())
+            #(U, S, V) = tsvd(Q1 * Q2; trunc=trscheme, alg=SVD())
+            @tensor QQ[-1 -2 -3;-4 -5 -6] := Q1[-1 -2 -3;1 2 3] * Q2[1 2 3;-4 -5 -6]
+            (U, S, V) = tsvd(QQ; trunc=trscheme, alg=SVD())
 
-            @ignore_derivatives n0 = norm(Q1 * Q2)^2
+            @ignore_derivatives n0 = norm(QQ)^2
             @ignore_derivatives n1 = norm(U * S * V)^2
             @ignore_derivatives ϵ = max(ϵ, (n0 - n1) / n0)
 
             isqS = sdiag_inv_sqrt(S)
-            #Q = isqS*U'*Q1;
-            #P = Q2*V'*isqS;
-            @tensor Q[-1; -2 -3 -4] := isqS[-1; 1] * conj(U[2 3 4; 1]) * Q1[2 3 4; -2 -3 -4]
-            @tensor P[-1 -2 -3; -4] := Q2[-1 -2 -3; 1 2 3] * conj(V[4; 1 2 3]) * isqS[4; -4]
+            Q = isqS*U'*Q1;
+            P = Q2*V'*isqS;
+            #@tensor Q[-1; -2 -3 -4] := isqS[-1; 1] * conj(U[2 3 4; 1]) * Q1[2 3 4; -2 -3 -4]
+            #@tensor P[-1 -2 -3; -4] := Q2[-1 -2 -3; 1 2 3] * conj(V[4; 1 2 3]) * isqS[4; -4]
 
             @diffset above_projs[row] = Q
             @diffset below_projs[row] = P
@@ -296,12 +298,11 @@ function contract_ctrmg(
             envs.corners[SOUTHWEST, r, c][16; 1] *
             peps_above[r, c][17; 6 10 14 2] *
             conj(peps_below[r, c][17; 7 11 15 3])
-        total *= tr(
-            envs.corners[NORTHWEST, r, c] *
-            envs.corners[NORTHEAST, r, mod1(c - 1, end)] *
-            envs.corners[SOUTHEAST, mod1(r - 1, end), mod1(c - 1, end)] *
-            envs.corners[SOUTHWEST, mod1(r - 1, end), c],
-        )
+
+        total *=  @tensor envs.corners[NORTHWEST, r, c][1; 2] *
+            envs.corners[NORTHEAST, r, mod1(c - 1, end)][2; 3] *
+            envs.corners[SOUTHEAST, mod1(r - 1, end), mod1(c - 1, end)][3; 4] *
+            envs.corners[SOUTHWEST, mod1(r - 1, end), c][4; 1]
 
         total /= @tensor envs.edges[WEST, r, c][1 10 11; 4] *
             envs.corners[NORTHWEST, r, c][4; 5] *

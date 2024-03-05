@@ -44,6 +44,21 @@ function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
     end
     return rotl90(a), pb
 end
+function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
+    function pb(x)
+        if !iszero(x)
+            x = if x isa Tangent
+                ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(x))
+            else
+                x
+            end
+            x = rotl90(x)
+        end
+
+        return (ZeroTangent(), x)
+    end
+    return rotr90(a), pb
+end
 
 structure(t) = codomain(t) ← domain(t);
 
