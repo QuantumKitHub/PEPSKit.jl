@@ -1,6 +1,6 @@
 using LinearAlgebra
 using TensorKit
-using ChainRulesCore, Zygote
+using ChainRulesCore, ChainRulesTestUtils, Zygote
 using PEPSKit
 
 # Non-proper truncated SVD with outdated adjoint
@@ -45,9 +45,6 @@ function oldsvd_rev(
     atol::Real=0,
     rtol::Real=atol > 0 ? 0 : eps(scalartype(S))^(3 / 4),
 )
-    S = diagm(S)
-    V = copy(V')
-
     tol = atol > 0 ? atol : rtol * S[1, 1]
     F = PEPSKit.invert_S²(S, tol; εbroad)  # Includes Lorentzian broadening
     S⁻¹ = pinv(S; atol=tol)
@@ -74,26 +71,33 @@ function oldsvd_rev(
     VdV = V' * V
     Uproj = one(UUd) - UUd
     Vproj = one(VdV) - VdV
-    ΔA += Uproj * ΔU * S⁻¹ * V + U * S⁻¹ * ΔV * Vproj  # Old wrong stuff
+    ΔA += Uproj * ΔU * S⁻¹ * V + U * S⁻¹ * ΔV * Vproj  # Wrong truncation contribution
 
     return ΔA
 end
 
-# Loss function taking the nfirst first singular vectors into account
-function nfirst_loss(A, svdfunc; nfirst=1)
+# Gauge-invariant loss function
+function lossfun(A, svdfunc)
     U, _, V = svdfunc(A)
-    U = convert(Array, U)
-    V = convert(Array, V)
-    return real(sum([U[i, i] * V[i, i] for i in 1:nfirst]))
+    # return real(sum((U * V).data)) # TODO: code up sum for AbstractTensorMap with rrule
+    return real(tr(U * V))  # trace only allows for m=n
 end
 
-m, n = 30, 20
+m, n = 30, 30
 dtype = ComplexF64
-χ = 15
+χ = 20
 r = TensorMap(randn, dtype, ℂ^m ← ℂ^n)
 
-ltensorkit, gtensorkit = withgradient(A -> nfirst_loss(A, x -> oldsvd(x, χ); nfirst=3), r)
-litersvd, gitersvd = withgradient(A -> nfirst_loss(A, x -> itersvd(x, χ); nfirst=3), r)
-
+println("Non-truncated SVD")
+ltensorkit, gtensorkit = withgradient(A -> lossfun(A, x -> oldsvd(x, min(m, n))), r)
+litersvd, gitersvd = withgradient(A -> lossfun(A, x -> itersvd(x, min(m, n))), r)
 @show ltensorkit ≈ litersvd
-@show gtensorkit ≈ gitersvd
+@show norm(gtensorkit[1] - gitersvd[1])
+
+println("\nTruncated SVD to χ=$χ:")
+ltensorkit, gtensorkit = withgradient(A -> lossfun(A, x -> oldsvd(x, χ)), r)
+litersvd, gitersvd = withgradient(A -> lossfun(A, x -> itersvd(x, χ)), r)
+@show ltensorkit ≈ litersvd
+@show norm(gtensorkit[1] - gitersvd[1])
+
+# TODO: Finite-difference check via test_rrule

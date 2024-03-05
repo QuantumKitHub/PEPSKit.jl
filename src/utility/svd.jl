@@ -116,28 +116,24 @@ function itersvd_rev(
     dimγ = k * m  # Vectorized dimension of γ-matrix
 
     # Truncation contribution from dU₂ and dV₂
-    # TODO: Use KrylovKit instead of IterativeSolvers
-    Sop = LinearMap(k * m + k * n) do v  # Left-preconditioned linear problem
-        γ = reshape(@view(v[1:dimγ]), (k, m))
-        γd = reshape(@view(v[(dimγ + 1):end]), (k, n))
-        Γ1 = γ - S⁻¹ * γd * Vproj * Ad
-        Γ2 = γd - S⁻¹ * γ * Uproj * A
-        vcat(reshape(Γ1, :), reshape(Γ2, :))
+    function svdlinprob(v)  # Left-preconditioned linear problem
+        γ1 = reshape(@view(v[1:dimγ]), (k, m))
+        γ2 = reshape(@view(v[(dimγ + 1):end]), (k, n))
+        Γ1 = γ1 - S⁻¹ * γ2 * Vproj * Ad
+        Γ2 = γ2 - S⁻¹ * γ1 * Uproj * A
+        return vcat(reshape(Γ1, :), reshape(Γ2, :))
     end
     if ΔU isa ZeroTangent && ΔV isa ZeroTangent
-        γ = gmres(Sop, zeros(eltype(A), k * m + k * n))
+        γ = linsolve(Sop, zeros(eltype(A), k * m + k * n))
     else
         # Explicit left-preconditioning
         # Set relative tolerance to machine precision to converge SVD gradient error properly
-        γ = gmres(
-            Sop,
-            vcat(reshape(S⁻¹ * ΔU' * Uproj, :), reshape(S⁻¹ * ΔV * Vproj, :));
-            reltol=eps(real(eltype(A))),
-        )
+        y = vcat(reshape(S⁻¹ * ΔU' * Uproj, :), reshape(S⁻¹ * ΔV * Vproj, :))
+        γ, = linsolve(svdlinprob, y; rtol=eps(real(eltype(A))))
     end
-    γA = reshape(@view(γ[1:dimγ]), k, m)
-    γAd = reshape(@view(γ[(dimγ + 1):end]), k, n)
-    ΔA += Uproj * γA' * V + U * γAd * Vproj
+    γA1 = reshape(@view(γ[1:dimγ]), k, m)
+    γA2 = reshape(@view(γ[(dimγ + 1):end]), k, n)
+    ΔA += Uproj * γA1' * V + U * γA2 * Vproj
 
     return ΔA
 end
