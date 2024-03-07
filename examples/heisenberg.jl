@@ -16,7 +16,7 @@ function square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
         Jy * σy[-1, -2] * σy[-3, -4] +
         Jz * σz[-1, -2] * σz[-3, -4]
 
-    return H
+    return NLocalOperator{NearestNeighbor}(H)
 end
 
 # Initialize InfinitePEPS with random & complex entries by default
@@ -32,15 +32,17 @@ H = square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
 χbond = 2
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
-optalg = PEPSOptimize{LinSolve}(;
+alg = PEPSOptimize{LinSolve}(;
+    boundary_alg=ctmalg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
     fpgrad_tol=1e-6,
     fpgrad_maxiter=100,
+    reuse_env=true,
     verbosity=2,
 )
 
 # Ground state search
-ψinit = init_peps(2, χbond, 1, 1)
-envinit = leading_boundary(ψinit, ctmalg, CTMRGEnv(ψinit; Venv=ℂ^χenv))
-result = groundsearch(H, ctmalg, optalg, ψinit, envinit)
-@show result.E₀
+ψ₀ = init_peps(2, χbond, 1, 1)
+env₀ = leading_boundary(ψ₀, ctmalg, CTMRGEnv(ψ₀; Venv=ℂ^χenv))
+result = fixedpoint(ψ₀, H, alg, env₀)
+@show result.E

@@ -15,7 +15,7 @@ function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
         Jy * σy[-1, -2] * σy[-3, -4] +
         Jz * σz[-1, -2] * σz[-3, -4]
 
-    return H
+    return NLocalOperator{NearestNeighbor}(H)
 end
 
 # Initialize InfinitePEPS with random & complex entries by default
@@ -36,27 +36,26 @@ env = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 
 # Compute CTM gradient in four different ways (set reuse_env=false to not mutate environment)
 println("\nFP gradient using naive AD:")
-alg_naive = PEPSOptimize{NaiveAD}(; verbosity=2, reuse_env=false)
-@time _, g_naive = PEPSKit.ctmrg_gradient((ψ, env), H, ctmalg, alg_naive)
-g_naive = InfinitePEPS(g_naive...)  # Convert NamedTuple to InfinitePEPS
+alg_naive = PEPSOptimize{NaiveAD}(; boundary_alg=ctmalg, verbosity=2, reuse_env=false)
+@time _, g_naive = PEPSKit.ctmrg_gradient((ψ, env), H, alg_naive)
 
 println("\nFP gradient using explicit evaluation of the geometric sum:")
 alg_geomsum = PEPSOptimize{GeomSum}(;
-    fpgrad_tol=1e-6, fpgrad_maxiter=100, verbosity=2, reuse_env=false
+    boundary_alg=ctmalg, fpgrad_tol=1e-6, fpgrad_maxiter=100, verbosity=2, reuse_env=false
 )
-@time _, g_geomsum = PEPSKit.ctmrg_gradient((ψ, env), H, ctmalg, alg_geomsum)
+@time _, g_geomsum = PEPSKit.ctmrg_gradient((ψ, env), H, alg_geomsum)
 
 println("\nFP gradient using manual iteration of the linear problem:")
 alg_maniter = PEPSOptimize{ManualIter}(;
-    fpgrad_tol=1e-6, fpgrad_maxiter=100, verbosity=2, reuse_env=false
+    boundary_alg=ctmalg, fpgrad_tol=1e-6, fpgrad_maxiter=100, verbosity=2, reuse_env=false
 )
-@time _, g_maniter = PEPSKit.ctmrg_gradient((ψ, env), H, ctmalg, alg_maniter)
+@time _, g_maniter = PEPSKit.ctmrg_gradient((ψ, env), H, alg_maniter)
 
 println("\nFP gradient using GMRES to solve the linear problem:")
 alg_linsolve = PEPSOptimize{LinSolve}(;
-    fpgrad_tol=1e-6, fpgrad_maxiter=100, verbosity=2, reuse_env=false
+    boundary_alg=ctmalg, fpgrad_tol=1e-6, fpgrad_maxiter=100, verbosity=2, reuse_env=false
 )
-@time _, g_linsolve = PEPSKit.ctmrg_gradient((ψ, env), H, ctmalg, alg_linsolve)
+@time _, g_linsolve = PEPSKit.ctmrg_gradient((ψ, env), H, alg_linsolve)
 
 @show norm(g_geomsum - g_naive) / norm(g_naive)
 @show norm(g_maniter - g_naive) / norm(g_naive)

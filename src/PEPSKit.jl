@@ -22,6 +22,7 @@ include("mpskit_glue/transferpepo_environments.jl")
 
 include("environments/ctmrgenv.jl")
 include("environments/boundarympsenv.jl")
+include("operators/localoperator.jl")
 
 include("algorithms/ctmrg.jl")
 include("algorithms/peps_opt.jl")
@@ -34,14 +35,16 @@ module Defaults
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
     const ctmrg_tol = 1e-12
-    const grad_maxiter = 100
-    const grad_tol = 1e-6
+    const fpgrad_maxiter = 100
+    const fpgrad_tol = 1e-6
 end
 
 export CTMRG, CTMRGEnv
-export leading_boundary, expectation_value
+export NLocalOperator, OnSite, NearestNeighbor
+export expectation_value, costfun
+export leading_boundary
 export PEPSOptimize, NaiveAD, GeomSum, ManualIter, LinSolve
-export groundsearch
+export fixedpoint
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS

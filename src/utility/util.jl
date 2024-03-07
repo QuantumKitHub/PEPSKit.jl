@@ -55,7 +55,7 @@ function projector_type(T::DataType, size)
     return Pleft, Pright
 end
 
-# rotl90 is set to non_differentiable in ChainRules
+# There are no rrules for rotl90 and rotr90 in ChainRules.jl
 function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
     function rotl90_pullback(x)
         if !iszero(x)
@@ -70,6 +70,22 @@ function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
         return NoTangent(), x
     end
     return rotl90(a), rotl90_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
+    function rotr90_pullback(x)
+        if !iszero(x)
+            x = if x isa Tangent
+                ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(x))
+            else
+                x
+            end
+            x = rotl90(x)
+        end
+
+        return NoTangent(), x
+    end
+    return rotr90(a), rotr90_pullback
 end
 
 # Differentiable setindex! alternative

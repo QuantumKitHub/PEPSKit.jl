@@ -9,6 +9,7 @@
 end
 
 # Compute CTMRG environment for a given state
+# function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
 function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     normold = 1.0
     CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
@@ -22,7 +23,7 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
         # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
         Δϵ = abs((ϵold - ϵ) / ϵold)
         normnew = norm(state, env)
-        Δnorm = abs(normold - normnew)
+        Δnorm = abs(normold - normnew) / abs(normold)
         CSnew = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env.corners)
         ΔCS = maximum(norm.(CSnew - CSold))
         TSnew = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env.edges)
@@ -87,102 +88,118 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
 
     # Fix global phase
     cornersgfix = map(zip(envprev.corners, cornersfix)) do (Cprev, Cfix)
-        # φ = sign(sum(Cprev.data) / sum(Cfix.data))  # TODO: make sum(A.data) differentiable
-        φ = sign(tr(Cprev) / tr(Cfix))
-        φ * Cfix
+        φ = dot(Cprev, Cfix)
+        φ' * Cfix
     end
     edgesgfix = map(zip(envprev.edges, edgesfix)) do (Tprev, Tfix)
-        # φ = sign(sum(Tprev.data) / sum(Tfix.data))
-        φ = sign((@tensor Tprev[1 2 2; 1]) / (@tensor Tfix[1 2 2; 1]))
-        φ * Tfix
+        φ = dot(Tprev, Tfix)
+        φ' * Tfix
     end
     envfix = CTMRGEnv(cornersgfix, edgesgfix)
 
     return envfix
 end
 
-# Explicit version
-# function fix_relative_phases(e::CTMRGEnv, signs)
-#     cornersfix = map(Iterators.product(axes(e.corners)...)) do (dir, r, c)
-#         if dir == 1
-#             return @tensor Cfix[-1; -2] :=
-#                 signs[WEST, _prev(r, end), c][-1 1] *
-#                 e.corners[NORTHWEST, r, c][1; 2] *
-#                 conj(signs[NORTH, r, c][-2 2])
-#         elseif dir == 2
-#             return @tensor Cfix[-1; -2] :=
-#                 signs[NORTH, _prev(r, end), _prev(c, end)][-1 1] *
-#                 e.corners[NORTHEAST, r, c][1; 2] *
-#                 conj(signs[EAST, r, c][-2 2])
-#         elseif dir == 3
-#             return @tensor Cfix[-1; -2] :=
-#                 signs[EAST, _prev(r, end), c][-1 1] *
-#                 e.corners[SOUTHEAST, r, c][1; 2] *
-#                 conj(signs[SOUTH, r, c][-2 2])
-#         elseif dir == 4
-#             return @tensor Cfix[-1; -2] :=
-#                 signs[SOUTH, _prev(r, end), c][-1 1] *
-#                 e.corners[SOUTHWEST, r, c][1; 2] *
-#                 conj(signs[WEST, r, c][-2 2])
-#         end
-#     end
-
-#     edgesfix = map(Iterators.product(axes(e.edges)...)) do (dir, r, c)
-#         if dir == 1
-#             return @tensor Tfix[-1 -2 -3; -4] :=
-#                 signs[NORTH, r, c][-1 1] *
-#                 e.edges[NORTH, r, c][1 -2 -3; 2] *
-#                 conj(signs[NORTH, r, _next(c, end)][-4 2])
-#         elseif dir == 2
-#             return @tensor Tfix[-1 -2 -3; -4] :=
-#                 signs[EAST, r, c][-1 1] *
-#                 e.edges[EAST, r, c][1 -2 -3; 2] *
-#                 conj(signs[EAST, _next(r, end), c][-4 2])
-#         elseif dir == 3
-#             return @tensor Tfix[-1 -2 -3; -4] :=
-#                 signs[SOUTH, r, c][-1 1] *
-#                 e.edges[SOUTH, r, c][1 -2 -3; 2] *
-#                 conj(signs[SOUTH, _next(r, end), _next(c, end)][-4 2])
-#         elseif dir == 4
-#             return @tensor Tfix[-1 -2 -3; -4] :=
-#                 signs[WEST, r, c][-1 1] *
-#                 e.edges[WEST, r, c][1 -2 -3; 2] *
-#                 conj(signs[WEST, _prev(r, end), c][-4 2])
-#         end
-#     end
-
-#     return cornersfix, edgesfix
-# end
-
-# Semi-working version analogous to left_move with rotations
+# Explicit unrolling of for loop from previous version to fix AD
+# TODO: Does not yet properly work for Lx,Ly > 2
 function fix_relative_phases(envfinal::CTMRGEnv, signs)
-    cornersfix = deepcopy(envfinal.corners)
-    edgesfix = deepcopy(envfinal.edges)
-    for _ in 1:4
-        corners = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
-            @tensor Cfix[-1; -2] :=
-                signs[WEST, _prev(r, end), c][-1 1] *
-                envfinal.corners[NORTHWEST, r, c][1; 2] *
-                conj(signs[NORTH, r, c][-2 2])
-        end
-        @diffset cornersfix[NORTHWEST, :, :] .= corners
-        edges = map(Iterators.product(axes(envfinal.edges)[2:3]...)) do (r, c)
-            @tensor Tfix[-1 -2 -3; -4] :=
-                signs[NORTH, r, c][-1 1] *
-                envfinal.edges[NORTH, r, c][1 -2 -3; 2] *
-                conj(signs[NORTH, r, _next(c, end)][-4 2])
-        end
-        @diffset edgesfix[NORTH, :, :] .= edges
-
-        # Rotate east-wards
-        envfinal = rotate_north(envfinal, EAST)
-        cornersfix = rotate_north(cornersfix, EAST)
-        edgesfix = rotate_north(edgesfix, EAST)
-        signs = rotate_north(signs, EAST)  # TODO: Fix AD problem here
+    e1 = envfinal
+    σ1 = signs
+    C1 = map(Iterators.product(axes(e1.corners)[2:3]...)) do (r, c)
+        @tensor Cfix[-1; -2] :=
+            σ1[WEST, _prev(r, end), c][-1 1] *
+            e1.corners[NORTHWEST, r, c][1; 2] *
+            conj(σ1[NORTH, r, c][-2 2])
     end
-    return cornersfix, edgesfix
+    T1 = map(Iterators.product(axes(e1.edges)[2:3]...)) do (r, c)
+        @tensor Tfix[-1 -2 -3; -4] :=
+            σ1[NORTH, r, c][-1 1] *
+            e1.edges[NORTH, r, c][1 -2 -3; 2] *
+            conj(σ1[NORTH, r, _next(c, end)][-4 2])
+    end
+
+    e2 = rotate_north(envfinal, EAST)
+    σ2 = rotate_north(signs, EAST)
+    C2 = map(Iterators.product(axes(e2.corners)[2:3]...)) do (r, c)
+        @tensor Cfix[-1; -2] :=
+            σ2[WEST, _prev(r, end), c][-1 1] *
+            e2.corners[NORTHWEST, r, c][1; 2] *
+            conj(σ2[NORTH, r, c][-2 2])
+    end
+    C2 = rotate_north(C2, WEST)
+    T2 = map(Iterators.product(axes(e2.edges)[2:3]...)) do (r, c)
+        @tensor Tfix[-1 -2 -3; -4] :=
+            σ2[NORTH, r, c][-1 1] *
+            e2.edges[NORTH, r, c][1 -2 -3; 2] *
+            conj(σ2[NORTH, r, _next(c, end)][-4 2])
+    end
+    T2 = rotate_north(T2, WEST)
+
+    e3 = rotate_north(envfinal, SOUTH)
+    σ3 = rotate_north(signs, SOUTH)
+    C3 = map(Iterators.product(axes(e3.corners)[2:3]...)) do (r, c)
+        @tensor Cfix[-1; -2] :=
+            σ3[WEST, _prev(r, end), c][-1 1] *
+            e3.corners[NORTHWEST, r, c][1; 2] *
+            conj(σ3[NORTH, r, c][-2 2])
+    end
+    C3 = rotate_north(C3, SOUTH)
+    T3 = map(Iterators.product(axes(e3.edges)[2:3]...)) do (r, c)
+        @tensor Tfix[-1 -2 -3; -4] :=
+            σ3[NORTH, r, c][-1 1] *
+            e3.edges[NORTH, r, c][1 -2 -3; 2] *
+            conj(σ3[NORTH, r, _next(c, end)][-4 2])
+    end
+    T3 = rotate_north(T3, SOUTH)
+
+    e4 = rotate_north(envfinal, WEST)
+    σ4 = rotate_north(signs, WEST)
+    C4 = map(Iterators.product(axes(e4.corners)[2:3]...)) do (r, c)
+        @tensor Cfix[-1; -2] :=
+            σ4[WEST, _prev(r, end), c][-1 1] *
+            e4.corners[NORTHWEST, r, c][1; 2] *
+            conj(σ4[NORTH, r, c][-2 2])
+    end
+    C4 = rotate_north(C4, EAST)
+    T4 = map(Iterators.product(axes(e4.edges)[2:3]...)) do (r, c)
+        @tensor Tfix[-1 -2 -3; -4] :=
+            σ4[NORTH, r, c][-1 1] *
+            e4.edges[NORTH, r, c][1 -2 -3; 2] *
+            conj(σ4[NORTH, r, _next(c, end)][-4 2])
+    end
+    T4 = rotate_north(T4, EAST)
+
+    return stack([C1, C2, C3, C4]; dims=1), stack([T1, T2, T3, T4]; dims=1)
 end
 
+# Semi-working version analogous to left_move with rotations
+# function fix_relative_phases(envfinal::CTMRGEnv, signs)
+#     cornersfix = deepcopy(envfinal.corners)
+#     edgesfix = deepcopy(envfinal.edges)
+#     for _ in 1:4
+#         corners = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
+#             @tensor Cfix[-1; -2] :=
+#                 signs[WEST, _prev(r, end), c][-1 1] *
+#                 envfinal.corners[NORTHWEST, r, c][1; 2] *
+#                 conj(signs[NORTH, r, c][-2 2])
+#         end
+#         @diffset cornersfix[NORTHWEST, :, :] .= corners
+#         edges = map(Iterators.product(axes(envfinal.edges)[2:3]...)) do (r, c)
+#             @tensor Tfix[-1 -2 -3; -4] :=
+#                 signs[NORTH, r, c][-1 1] *
+#                 envfinal.edges[NORTH, r, c][1 -2 -3; 2] *
+#                 conj(signs[NORTH, r, _next(c, end)][-4 2])
+#         end
+#         @diffset edgesfix[NORTH, :, :] .= edges
+
+#         # Rotate east-wards
+#         envfinal = rotate_north(envfinal, EAST)
+#         cornersfix = rotate_north(cornersfix, EAST)
+#         edgesfix = rotate_north(edgesfix, EAST)
+#         signs = rotate_north(signs, EAST)  # TODO: Fix AD problem here
+#     end
+#     return cornersfix, edgesfix
+# end
 
 # Explicitly check if element-wise difference of fixed and final environment tensors are below some tolerance
 function check_elementwise_conv(
@@ -208,14 +225,8 @@ function check_elementwise_conv(
         else
             @warn "no elementwise convergence up to ϵ < $atol:"
             for dir in 1:4
-                println(
-                    "dir=$dir: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ",
-                    Cerr[dir],# maximum.(ΔC[dir, :, :])
-                )
-                println(
-                    "dir=$dir: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ",
-                    Terr[dir],# maximum.(ΔT[dir, :, :])
-                )
+                println("dir=$dir: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ", Cerr[dir])
+                println("dir=$dir: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ", Terr[dir])
             end
         end
         println("maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax")
@@ -374,7 +385,7 @@ function grow_env_left(peps, Pl, Pr, C_sw, C_nw, T_s, T_w, T_n)
 end
 
 # Compute norm of the entire CMTRG enviroment
-function LinearAlgebra.norm(peps, env::CTMRGEnv)
+function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     total = one(scalartype(peps))
 
     for r in 1:size(peps, 1), c in 1:size(peps, 2)
