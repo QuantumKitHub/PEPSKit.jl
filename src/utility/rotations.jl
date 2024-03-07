@@ -17,8 +17,12 @@ function rotate_north(A::AbstractArray{T,3}, dir) where {T}
         # Initialize copy with rotated sizes
         A′ = Zygote.Buffer(Array{T,3}(undef, size(A, 1), size(A, 3), size(A, 2)))
         for dir in 1:size(A, 1)
-            # TODO: throws setindex! error for non-symmetric unit cells?
-            A′[_prev(dir, size(A, 1)), :, :] = rotl90(A[dir, :, :])
+            # A′[_prev(dir, size(A, 1)), :, :] = rotl90(A[dir, :, :])
+            # throws setindex! error for non-symmetric unit cells
+            rA = rotl90(A[dir, :, :])
+            for r in 1:size(A, 3), c in 1:size(A, 2)
+                A′[_prev(dir, size(A, 1)), r, c] = rA[r, c]
+            end
         end
         A = A′
     end
