@@ -46,10 +46,8 @@ my_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 # Function returning energy and CTMRG gradient for each optimization step
 function ctmrg_gradient(x, H, alg::PEPSOptimize)
     peps, env = x
-    env′ = leading_boundary(peps, alg.boundary_alg, env)
-    alg.reuse_env && @diffset env = env′
-    E = costfun(peps, env′, H)
-    ∂E∂A = gradient(ψ -> _ctmrgcostfun(ψ, env′, H, alg), peps)[1]
+    E, g = withgradient(ψ -> _ctmrgcostfun!(ψ, env, H, alg), peps)
+    ∂E∂A = g[1]  # Extract PEPS derivative from gradient tuple
     if !(typeof(∂E∂A) <: InfinitePEPS)  # NaiveAD returns NamedTuple as gradient instead of InfinitePEPS
         ∂E∂A = InfinitePEPS(∂E∂A.A)
     end
@@ -58,13 +56,15 @@ function ctmrg_gradient(x, H, alg::PEPSOptimize)
 end
 
 # Helper function wrapping CTMRG run and cost function with custom adjoint
-function _ctmrgcostfun(peps, env::CTMRGEnv, H, alg::PEPSOptimize)
-    costfun(peps, leading_boundary(peps, alg.boundary_alg, env), H)
+function _ctmrgcostfun!(peps, env::CTMRGEnv, H, alg::PEPSOptimize)
+    env′ = leading_boundary(peps, alg.boundary_alg, env)
+    alg.reuse_env && @diffset env = env′
+    return costfun(peps, env′, H)
 end
 
 # Energy gradient backwards rule (does not apply to NaiveAD gradient mode)
 function ChainRulesCore.rrule(
-    ::typeof(_ctmrgcostfun), peps, env::CTMRGEnv, H, alg::PEPSOptimize{G}
+    ::typeof(_ctmrgcostfun!), peps, env::CTMRGEnv, H, alg::PEPSOptimize{G}
 ) where {G<:Union{GeomSum,ManualIter,LinSolve}}
     env = leading_boundary(peps, alg.boundary_alg, env)
     E, Egrad = withgradient(costfun, peps, env, H)
