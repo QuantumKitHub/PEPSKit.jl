@@ -58,9 +58,8 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
 
     env′, = ctmrg_iter(state, env, alg)
     envfix = gauge_fix(env, env′)
-    @ignore_derivatives check_elementwise_conv(
-        env, envfix; print_conv=alg.verbosity > 1 ? true : false
-    )
+    check_elementwise_convergence(env, envfix) ||
+        @warn "CTMRG did not converge elementwise."
     return envfix
 end
 
@@ -201,42 +200,29 @@ end
 #     return cornersfix, edgesfix
 # end
 
-# Explicitly check if element-wise difference of fixed and final environment tensors are below some tolerance
-function check_elementwise_conv(
-    envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6, print_conv=true
-)
-    ΔC = map(zip(envfinal.corners, envfix.corners)) do (Cfin, Cfix)
-        return abs.(convert(Array, Cfix - Cfin))
-    end
-    ΔCmax = maximum(maximum, ΔC)
-    ΔCmean = maximum(mean, ΔC)
-    Cerr = map(δ -> all(x -> x < atol, δ), ΔC)
+"""
+    check_elementwise_convergence(envfinal, envfix; atol=1e-6)
 
-    ΔT = map(zip(envfinal.edges, envfix.edges)) do (Tfin, Tfix)
-        return abs.(convert(Array, Tfix - Tfin))
-    end
-    ΔTmax = maximum(maximum, ΔT)
-    ΔTmean = maximum(mean, ΔT)
-    Terr = map(δ -> all(x -> x < atol, δ), ΔT)
-
-    if print_conv
-        if all(Cerr) && all(Terr)
-            println("{Cᵢ,Tᵢ} converged elementwise up to ϵ < $atol")
-        else
-            @warn "no elementwise convergence up to ϵ < $atol:"
-            for dir in 1:4
-                println("dir=$dir: all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ", Cerr[dir])
-                println("dir=$dir: all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ", Terr[dir])
-            end
-        end
-        println("maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax")
-        println("mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean")
-        println("maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax")
-        println("mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean")
-    end
-
-    return Cerr, Terr
+Check if the element-wise difference of the corner and edge tensors of the final and fixed
+CTMRG environments are below some tolerance.
+"""
+function check_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6)
+    # TODO: do we need both max and mean?
+    ΔC = envfinal.corners .- envfix.corners
+    ΔCmax = norm(ΔC, Inf)
+    ΔCmean = norm(ΔC)
+    @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"
+    
+    ΔT = envfinal.edges .- envfix.edges
+    ΔTmax = norm(ΔT, Inf)
+    ΔTmean = norm(ΔT)
+    @debug "maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean"
+    
+    return isapprox(ΔCmax, 0; atol) && isapprox(ΔTmax, 0; atol)
 end
+
+@non_differentiable check_elementwise_convergence(args...)
+
 
 # One CTMRG iteration x′ = f(A, x)
 function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
