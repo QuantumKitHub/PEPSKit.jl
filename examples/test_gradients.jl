@@ -18,20 +18,12 @@ function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
     return NLocalOperator{NearestNeighbor}(H)
 end
 
-# Initialize InfinitePEPS with random & complex entries by default
-function init_peps(d, D, Lx, Ly, finit=randn, dtype=ComplexF64)
-    Pspaces = fill(ℂ^d, Lx, Ly)
-    Nspaces = fill(ℂ^D, Lx, Ly)
-    Espaces = fill(ℂ^D, Lx, Ly)
-    return InfinitePEPS(finit, dtype, Pspaces, Nspaces, Espaces)
-end
-
 # Initialize PEPS and environment
 H = square_lattice_heisenberg()
 χbond = 2
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-12, miniter=4, maxiter=100, verbosity=2)
-ψ = init_peps(2, χbond, 1, 1)
+ψ = InfinitePEPS(2, χbond)
 env = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 
 # Compute CTM gradient in four different ways (set reuse_env=false to not mutate environment)

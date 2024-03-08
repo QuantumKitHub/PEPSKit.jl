@@ -35,12 +35,12 @@ Allow users to pass in arrays of spaces.
 """
 function InfinitePEPS(
     Pspaces::A, Nspaces::A, Espaces::A
-) where {A<:AbstractArray{<:ElementarySpace,2}}
+) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     return InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
 end
 function InfinitePEPS(
     f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
-) where {M<:AbstractArray{<:ElementarySpace,2}}
+) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
