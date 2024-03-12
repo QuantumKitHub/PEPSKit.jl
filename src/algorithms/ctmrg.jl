@@ -206,23 +206,24 @@ end
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
 CTMRG environments are below some tolerance.
 """
-function check_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6)
+function check_elementwise_convergence(
+    envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6
+)
     # TODO: do we need both max and mean?
     ΔC = envfinal.corners .- envfix.corners
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
     @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"
-    
+
     ΔT = envfinal.edges .- envfix.edges
     ΔTmax = norm(ΔT, Inf)
     ΔTmean = norm(ΔT)
     @debug "maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean"
-    
+
     return isapprox(ΔCmax, 0; atol) && isapprox(ΔTmax, 0; atol)
 end
 
 @non_differentiable check_elementwise_convergence(args...)
-
 
 # One CTMRG iteration x′ = f(A, x)
 function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}

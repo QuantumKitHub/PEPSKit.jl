@@ -22,7 +22,9 @@ end
 H = square_lattice_heisenberg()
 χbond = 2
 χenv = 16
-boundary_alg = CTMRG(; trscheme=truncdim(χenv), tol=1e-12, miniter=4, maxiter=100, verbosity=2)
+boundary_alg = CTMRG(;
+    trscheme=truncdim(χenv), tol=1e-12, miniter=4, maxiter=100, verbosity=2
+)
 ψ = InfinitePEPS(2, χbond)
 env = leading_boundary(ψ, boundary_alg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 

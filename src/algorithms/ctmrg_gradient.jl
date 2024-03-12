@@ -1,71 +1,3 @@
-abstract type GradMode end
-
-"""
-    NaiveAD <: GradMode
-
-Gradient mode for CTMRG using AD.
-"""
-struct NaiveAD <: GradMode end
-
-"""
-    GeomSum <: GradMode
-
-Gradient mode for CTMRG using explicit evaluation of the geometric sum.
-"""
-@kwdef struct GeomSum <: GradMode
-    maxiter::Int = Defaults.fpgrad_maxiter
-    tol::Real = Defaults.fpgrad_tol
-    verbosity::Int = 0
-end
-
-"""
-    ManualIter <: GradMode
-
-Gradient mode for CTMRG using manual iteration to solve the linear problem.
-"""
-@kwdef struct ManualIter <: GradMode
-    maxiter::Int = Defaults.fpgrad_maxiter
-    tol::Real = Defaults.fpgrad_tol
-    verbosity::Int = 0
-end
-
-# Algorithm struct containing parameters for PEPS optimization
-@kwdef struct PEPSOptimize{G}
-    boundary_alg::CTMRG = CTMRG()  # Algorithm to find boundary environment
-    optimizer::OptimKit.OptimizationAlgorithm = LBFGS(
-        4; maxiter=100, gradtol=1e-4, verbosity=2
-    )
-    reuse_env::Bool = true  # Reuse environment of previous optimization as initial guess for next
-    gradient_alg::G = GeomSum()  # Algorithm to solve gradient linear problem
-    verbosity::Int = 0
-end
-
-# Find ground-state PEPS and energy
-function fixedpoint(
-    ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)
-) where {T}
-    (peps, env), E, ∂E, info = optimize(
-        x -> ctmrg_gradient(x, H, alg),
-        (ψ₀, env₀),
-        alg.optimizer;
-        retract=my_retract,
-        inner=my_inner,
-    )
-    return (; peps, env, E, ∂E, info)
-end
-
-# Update PEPS unit cell in non-mutating way
-# Note: Both x and η are InfinitePEPS during optimization
-function my_retract(x, η, α)
-    peps = deepcopy(x[1])
-    peps.A .+= η.A .* α
-    env = deepcopy(x[2])
-    return (peps, env), η
-end
-
-# Take real valued part of dot product
-my_inner(_, η₁, η₂) = real(dot(η₁, η₂))
-
 #=
 Evaluating the gradient of the cost function for CTMRG:
 - The gradient of the cost function for CTMRG can be computed using automatic differentiation (AD) or explicit evaluation of the geometric sum.
@@ -75,7 +7,7 @@ Evaluating the gradient of the cost function for CTMRG:
 
 function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
     E, g = withgradient(peps) do ψ
-        envs = leading_boundary(ψ, alg.boundary_alg, envs)
+        envs = leading_boundary(ψ, envs.boundary_alg, envs)
         alg.reuse_env && (envs = env′)
         return costfun(ψ, envs, H)
     end
@@ -90,9 +22,7 @@ function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
     return E, ∂E∂A
 end
 
-function ctmrg_gradient(
-    (peps, envs), H, alg::PEPSOptimize{T}
-) where {T<:Union{GeomSum,ManualIter,KrylovKit.LinearSolver}}
+function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{GeomSum})
     # find partial gradients of costfun
     env = leading_boundary(peps, alg.boundary_alg, envs)
     E, Egrad = withgradient(costfun, peps, env, H)
@@ -127,6 +57,26 @@ is the partial gradient of the CTMRG iteration with respect to the environment t
 """
 fpgrad
 
+abstract type GradMode end
+
+"""
+    NaiveAD <: GradMode
+
+Gradient mode for CTMRG using AD.
+"""
+struct NaiveAD <: GradMode end
+
+"""
+    GeomSum <: GradMode
+
+Gradient mode for CTMRG using explicit evaluation of the geometric sum.
+"""
+@kwdef struct GeomSum <: GradMode
+    maxiter::Int = Defaults.fpgrad_maxiter
+    tol::Real = Defaults.fpgrad_tol
+    verbosity::Int = 0
+end
+
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
     g = ∂F∂x
     dx = ∂f∂A(g) # n = 0 term: ∂F∂x ∂f∂A
@@ -146,7 +96,18 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
             @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Σₙ‖ = $ϵ"
         end
     end
-    return dx
+    return dx, ϵ
+end
+
+"""
+    ManualIter <: GradMode
+
+Gradient mode for CTMRG using manual iteration to solve the linear problem.
+"""
+@kwdef struct ManualIter <: GradMode
+    maxiter::Int = Defaults.fpgrad_maxiter
+    tol::Real = Defaults.fpgrad_tol
+    verbosity::Int = 0
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
@@ -169,7 +130,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
             @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Cᵢ₊₁-Cᵢ‖ = $ϵ"
         end
     end
-    return ∂f∂A(y)
+    return ∂f∂A(y), ϵ
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
@@ -178,5 +139,5 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 
-    return ∂f∂A(y)
+    return ∂f∂A(y), info
 end

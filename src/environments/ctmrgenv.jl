@@ -37,7 +37,9 @@ end
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2)))
+    corners′ = Zygote.Buffer(
+        Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
+    )
     edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
 
     for dir in 1:4
@@ -87,7 +89,7 @@ function LinearAlgebra.axpby!(α::Number, e₁::CTMRGEnv, β::Number, e₂::CTMR
 end
 
 function LinearAlgebra.dot(e₁::CTMRGEnv, e₂::CTMRGEnv)
-    dot(e₁.corners, e₂.corners) + dot(e₁.edges, e₂.edges)
+    return dot(e₁.corners, e₂.corners) + dot(e₁.edges, e₂.edges)
 end
 
 LinearAlgebra.norm(e::CTMRGEnv) = norm(e.corners) + norm(e.edges)
