@@ -90,7 +90,9 @@ function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
     return E, ∂E∂A
 end
 
-function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{T}) where {T<:Union{GeomSum, ManualIter, KrylovKit.LinearSolver}}
+function ctmrg_gradient(
+    (peps, envs), H, alg::PEPSOptimize{T}
+) where {T<:Union{GeomSum,ManualIter,KrylovKit.LinearSolver}}
     # find partial gradients of costfun
     env = leading_boundary(peps, alg.boundary_alg, envs)
     E, Egrad = withgradient(costfun, peps, env, H)
@@ -146,7 +148,6 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
     end
     return dx
 end
-
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
     y = deepcopy(y₀)  # Do not mutate y₀
