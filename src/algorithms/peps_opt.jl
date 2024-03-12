@@ -75,9 +75,9 @@ Evaluating the gradient of the cost function for CTMRG:
 
 function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
     E, g = withgradient(peps) do ψ
-        envs = leading_boundary(ψ, alg.boundary_alg, envs)
-        alg.reuse_env && (envs = env′)
-        return costfun(ψ, envs, H)
+        envs′ = leading_boundary(ψ, alg.boundary_alg, envs)
+        alg.reuse_env && (envs = envs′)
+        return costfun(ψ, envs′, H)
     end
 
     # AD returns namedtuple as gradient instead of InfinitePEPS
@@ -94,13 +94,14 @@ function ctmrg_gradient(
     (peps, envs), H, alg::PEPSOptimize{T}
 ) where {T<:Union{GeomSum,ManualIter,KrylovKit.LinearSolver}}
     # find partial gradients of costfun
-    env = leading_boundary(peps, alg.boundary_alg, envs)
-    E, Egrad = withgradient(costfun, peps, env, H)
+    envs′ = leading_boundary(peps, alg.boundary_alg, envs)
+    alg.reuse_env && (envs = envs′)
+    E, Egrad = withgradient(costfun, peps, envs′, H)
     ∂F∂A = InfinitePEPS(Egrad[1]...)
     ∂F∂x = CTMRGEnv(Egrad[2]...)
 
     # find partial gradients of single ctmrg iteration
-    _, envvjp = pullback(peps, envs) do A, x
+    _, envvjp = pullback(peps, envs′) do A, x
         return gauge_fix(x, ctmrg_iter(A, x, alg.boundary_alg)[1])
     end
     ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
@@ -173,7 +174,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
-    y, info = linsolve(∂f∂x, ∂F∂x, y₀, alg, 1, -1)
+    y, info = linsolve(e -> e - ∂f∂x(e), ∂F∂x, y₀, alg)
     if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end

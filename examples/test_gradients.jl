@@ -39,7 +39,7 @@ end
 g_naive = compute_grad(NaiveAD())
 g_geomsum = compute_grad(GeomSum())
 g_maniter = compute_grad(ManualIter())
-g_linsolve = compute_grad(KrylovKit.GMRES())
+g_linsolve = compute_grad(KrylovKit.GMRES(; tol=1e-6))
 
 @show norm(g_geomsum - g_naive) / norm(g_naive)
 @show norm(g_maniter - g_naive) / norm(g_naive)

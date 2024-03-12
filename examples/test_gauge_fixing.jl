@@ -11,8 +11,8 @@ env = leading_boundary(ψ, ctmalg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 
 println("\nBefore gauge-fixing:")
 env′, = PEPSKit.ctmrg_iter(ψ, env, ctmalg)
-PEPSKit.check_elementwise_convergence(env, env′)
+@show PEPSKit.check_elementwise_convergence(env, env′)
 
 println("\nAfter gauge-fixing:")
-envfix = PEPSKit.gauge_fix(env, env′);
-PEPSKit.check_elementwise_convergence(env, envfix)
+envfix = PEPSKit.gauge_fix(env, env′)
+@show PEPSKit.check_elementwise_convergence(env, envfix)
