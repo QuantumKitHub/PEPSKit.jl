@@ -1,6 +1,6 @@
 using LinearAlgebra
 using TensorKit, MPSKitModels, OptimKit
-using PEPSKit
+using PEPSKit, KrylovKit
 
 # Square lattice Heisenberg Hamiltonian
 # Sublattice-rotate to get (1, 1, 1) → (-1, 1, -1), transformed to GS with single-site unit cell
@@ -24,11 +24,10 @@ H = square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
 χbond = 2
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
-alg = PEPSOptimize{LinSolve}(;
+alg = PEPSOptimize(;
     boundary_alg=ctmalg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
-    fpgrad_tol=1e-6,
-    fpgrad_maxiter=100,
+    gradient_alg=GMRES(;tol=1e-6, maxiter=100),
     reuse_env=true,
     verbosity=2,
 )
