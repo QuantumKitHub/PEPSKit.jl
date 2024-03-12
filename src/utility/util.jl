@@ -40,9 +40,11 @@ end
 function is_degenerate_spectrum(
     S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
 )
-    s = diag(S.data)
-    for i in 1:(length(s) - 1)
-        isapprox(s[i], s[i + 1]; atol, rtol) && return true
+    for (_, b) in blocks(S)
+        s = real(diag(b))
+        for i in 1:(length(s) - 1)
+            isapprox(s[i], s[i + 1]; atol, rtol) && return true
+        end
     end
     return false
 end
