@@ -15,5 +15,5 @@ end
 
     mps = initializeMPS(tpeps, 4)
 
-    env = leading_boundary(peps, CTMRG(; tol=1e-10))
+    env = leading_boundary(peps, CTMRG(; tol=1e-10, trscheme=truncdim(20)))
 end

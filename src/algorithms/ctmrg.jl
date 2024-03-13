@@ -25,9 +25,21 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
         normnew = norm(state, env)
         Δnorm = abs(normold - normnew) / abs(normold)
         CSnew = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env.corners)
-        ΔCS = maximum(norm.(CSnew - CSold))
+        ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
+            # only compute the difference on the smallest part of the spaces
+            smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
+            e_old = isometry(MPSKit._firstspace(c_old), smallest)
+            e_new = isometry(MPSKit._firstspace(c_new), smallest)
+            return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
+        end
         TSnew = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env.edges)
-        ΔTS = maximum(norm.(TSnew - TSold))
+
+        ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
+            MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
+                return scalartype(t_old)(Inf)
+            # TODO: implement when spaces aren't the same
+            return norm(t_new - t_old)
+        end
         (max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter) && break  # Converge if maximal Δ falls below tolerance
 
         # Print verbose info
