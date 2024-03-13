@@ -1,17 +1,15 @@
 module PEPSKit
 
+using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
+using Base: @kwdef
+using Compat
 using Accessors
 using VectorInterface
-using TensorKit,
-    KrylovKit, MPSKit, OptimKit, Base.Threads, Base.Iterators, Parameters, Printf
-using ChainRulesCore
-
-using LinearAlgebra: LinearAlgebra
-
-export CTMRG, CTMRG2
-export leading_boundary
+using TensorKit, KrylovKit, MPSKit, OptimKit
+using ChainRulesCore, Zygote
 
 include("utility/util.jl")
+include("utility/rotations.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
@@ -26,21 +24,29 @@ include("mpskit_glue/transferpepo_environments.jl")
 
 include("environments/ctmrgenv.jl")
 include("environments/boundarympsenv.jl")
+include("operators/localoperator.jl")
 
 include("algorithms/ctmrg.jl")
-include("algorithms/expval.jl")
+include("algorithms/peps_opt.jl")
 
 include("utility/symmetrization.jl")
 include("algorithms/pepo_opt.jl")
 
-include("utility/rotations.jl")
-
-#default settings
+# Default settings
 module Defaults
-    const maxiter = 100
-    const tol = 1e-12
+    const ctmrg_maxiter = 100
+    const ctmrg_miniter = 4
+    const ctmrg_tol = 1e-12
+    const fpgrad_maxiter = 100
+    const fpgrad_tol = 1e-6
 end
 
+export CTMRG, CTMRGEnv
+export NLocalOperator, OnSite, NearestNeighbor
+export expectation_value, costfun
+export leading_boundary
+export PEPSOptimize, NaiveAD, GeomSum, ManualIter, LinSolve
+export fixedpoint
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS

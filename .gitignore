@@ -1,3 +1,4 @@
 docs/build
 Manifest.toml
 examples/.ipynb_checkpoints
+.vscode/

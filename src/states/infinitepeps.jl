@@ -1,14 +1,10 @@
-# not everything is a PeriodicArray anymore
-_next(i, total) = mod1(i + 1, total)
-_prev(i, total) = mod1(i - 1, total)
-
 """
     struct InfinitePEPS{T<:PEPSTensor}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
-    A::Array{T,2} # TODO: switch back to PeriodicArray?
+    A::Matrix{T}
 
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
@@ -33,15 +29,18 @@ function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
 end
 
 """
-    InfinitePEPS(Pspaces, Nspaces, Espaces)
+    InfinitePEPS(f=randn, T=ComplexF64, Pspaces, Nspaces, Espaces)
 
 Allow users to pass in arrays of spaces.
 """
 function InfinitePEPS(
-    Pspaces::AbstractArray{S,2},
-    Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces,
-) where {S<:ElementarySpace}
+    Pspaces::A, Nspaces::A, Espaces::A
+) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    return InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfinitePEPS(
+    f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
+) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -49,7 +48,7 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, -1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(randn, ComplexF64, P, N, E, S, W)
+        return PEPSTensor(f, T, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
@@ -87,7 +86,7 @@ VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))
+# Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))  # TODO: This is incompatible with inner constructor
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
@@ -95,4 +94,23 @@ Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
 Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
-Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));
+Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
+
+## Math
+Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
+Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
+Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
+LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
+LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
+
+# Used in _scale during OptimKit.optimize
+function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
+    rmul!(ψ.A, α)
+    return ψ
+end
+
+# Used in _add during OptimKit.optimize
+function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
+    ψ₂.A .+= α * ψ₁.A
+    return ψ₂
+end

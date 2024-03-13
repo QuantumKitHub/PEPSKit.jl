@@ -1,23 +1,8 @@
-function sdiag_inv_sqrt(S::AbstractTensorMap)
-    toret = similar(S)
+# Get next and previous directional CTM enviroment index, respecting periodicity
+_next(i, total) = mod1(i + 1, total)
+_prev(i, total) = mod1(i - 1, total)
 
-    if sectortype(S) == Trivial
-        copyto!(toret.data, LinearAlgebra.diagm(LinearAlgebra.diag(S.data) .^ (-1 / 2)))
-    else
-        for (k, b) in blocks(S)
-            copyto!(
-                blocks(toret)[k], LinearAlgebra.diagm(LinearAlgebra.diag(b) .^ (-1 / 2))
-            )
-        end
-    end
-
-    return toret
-end
-function ChainRulesCore.rrule(::typeof(sdiag_inv_sqrt), S::AbstractTensorMap)
-    toret = sdiag_inv_sqrt(S)
-    return toret,
-    c̄ -> (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, toret'^3))
-end
+# Element-wise multiplication of TensorMaps respecting block structure
 function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     dst = similar(a)
     for (k, block) in blocks(dst)
@@ -26,11 +11,55 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
-#rotl90 appeared to lose PeriodicArray'ness, which in turn caused zygote problems
-#Base.rotl90(a::Array) = Array(rotl90(a));
-#Base.rotr90(a::Array) = Array(rotr90(a));
+# Compute √S⁻¹ for diagonal TensorMaps
+function sdiag_inv_sqrt(S::AbstractTensorMap)
+    invsq = similar(S)
+
+    if sectortype(S) == Trivial
+        copyto!(invsq.data, LinearAlgebra.diagm(LinearAlgebra.diag(S.data) .^ (-1 / 2)))
+    else
+        for (k, b) in blocks(S)
+            copyto!(
+                blocks(invsq)[k], LinearAlgebra.diagm(LinearAlgebra.diag(b) .^ (-1 / 2))
+            )
+        end
+    end
+
+    return invsq
+end
+
+function ChainRulesCore.rrule(::typeof(sdiag_inv_sqrt), S::AbstractTensorMap)
+    invsq = sdiag_inv_sqrt(S)
+    function sdiag_inv_sqrt_pullback(c̄)
+        return (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, invsq'^3))
+    end
+    return invsq, sdiag_inv_sqrt_pullback
+end
+
+# Check whether diagonals contain degenerate values up to absolute or relative tolerance
+function is_degenerate_spectrum(
+    S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
+)
+    for (_, b) in blocks(S)
+        s = real(diag(b))
+        for i in 1:(length(s) - 1)
+            isapprox(s[i], s[i + 1]; atol, rtol) && return true
+        end
+    end
+    return false
+end
+
+# Create empty projectors for given state without recomputing transpose
+function projector_type(T::DataType, size)
+    Pleft = Array{T,length(size)}(undef, size)
+    Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
+    Pright = Array{Prtype,length(size)}(undef, size)
+    return Pleft, Pright
+end
+
+# There are no rrules for rotl90 and rotr90 in ChainRules.jl
 function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
-    function pb(x)
+    function rotl90_pullback(x)
         if !iszero(x)
             x = if x isa Tangent
                 ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(x))
@@ -40,13 +69,28 @@ function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
             x = rotr90(x)
         end
 
-        return (ZeroTangent(), x)
+        return NoTangent(), x
     end
-    return rotl90(a), pb
+    return rotl90(a), rotl90_pullback
 end
 
-structure(t) = codomain(t) ← domain(t);
+function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
+    function rotr90_pullback(x)
+        if !iszero(x)
+            x = if x isa Tangent
+                ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(x))
+            else
+                x
+            end
+            x = rotl90(x)
+        end
 
+        return NoTangent(), x
+    end
+    return rotr90(a), rotr90_pullback
+end
+
+# Differentiable setindex! alternative
 function _setindex(a::AbstractArray, v, args...)
     b::typeof(a) = copy(a)
     b[args...] = v
@@ -56,7 +100,7 @@ end
 function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...)
     t = _setindex(a, tv, args...)
 
-    function toret(v)
+    function _setindex_pullback(v)
         if iszero(v)
             backwards_tv = ZeroTangent()
             backwards_a = ZeroTangent()
@@ -66,6 +110,7 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
             else
                 v
             end
+            # TODO: Fix this for ZeroTangents
             v = typeof(v) != typeof(a) ? convert(typeof(a), v) : v
             #v = convert(typeof(a),v);
             backwards_tv = v[args...]
@@ -80,9 +125,11 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
             NoTangent(), backwards_a, backwards_tv, fill(ZeroTangent(), length(args))...
         )
     end
-    return t, toret
+    return t, _setindex_pullback
 end
 
+# Allows in-place operations during AD that copies when differentiating
+# Especially needed to set tensors in unit cell of environments
 macro diffset(ex)
     return esc(parse_ex(ex))
 end

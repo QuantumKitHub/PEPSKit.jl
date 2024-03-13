@@ -1,9 +1,3 @@
-# abstractpeps.jl
-
-###########################
-## Abstract tensor types ##
-###########################
-
 """
     const PEPSTensor{S}
 
@@ -23,6 +17,7 @@ function PEPSTensor(
 ) where {T,S<:ElementarySpace}
     return TensorMap(f, T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
 end
+
 function PEPSTensor(
     f,
     ::Type{T},
@@ -39,13 +34,9 @@ end
     const PEPOTensor{S}
 
 Default type for PEPO tensors with a single incoming and outgoing physical index, and 4
-    virtual indices, conventionally ordered as: O : P ⊗ P' ← N ⊗ E ⊗ S ⊗ W.
+virtual indices, conventionally ordered as: O : P ⊗ P' ← N ⊗ E ⊗ S ⊗ W.
 """
 const PEPOTensor{S} = AbstractTensorMap{S,2,4} where {S<:ElementarySpace}
-
-##########################
-## Abstract state types ##
-##########################
 
 """
     abstract type AbstractPEPS end
@@ -62,4 +53,4 @@ Abstract supertype for a 2D projected entangled pairs operator.
 abstract type AbstractPEPO end
 
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
-Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)));
+Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))
