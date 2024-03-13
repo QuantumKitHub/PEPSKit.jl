@@ -1,3 +1,8 @@
+# compatibility with earlier versions of Julia
+@static if VERSION < v"1.9"
+    stack(f, itr) = mapreduce(f, hcat, itr)
+end
+
 # Get next and previous directional CTM enviroment index, respecting periodicity
 _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
