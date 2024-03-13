@@ -2,6 +2,7 @@ module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Base: @kwdef
+using Compat
 using Accessors
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit
