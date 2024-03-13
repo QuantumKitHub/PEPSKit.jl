@@ -1,6 +1,6 @@
 name = "PEPSKit"
 uuid = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
-authors = ["maarten <maarten.vandamme@ugent.be>"]
+authors = ["Maarten Vandamme", "Paul Brehmer", "Lander Burgelman", "Rui-Zhen Huang", "Daan Maertens", "Lukas Devos <lukas.devos@ugent.be"]
 version = "0.1.0"
 
 [deps]
@@ -19,7 +19,20 @@ VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
+Accessors = "0.1"
+ChainRulesCore = "1.0"
+LinearAlgebra = "1"
 MPSKit = "0.10"
+OptimKit = "0.3"
+Printf = "1"
+Statistics = "1"
 TensorKit = "0.12"
 VectorInterface = "0.4"
+Zygote = "0.6"
 julia = "1.6"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
