@@ -70,29 +70,51 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
 
     env′, = ctmrg_iter(state, env, alg)
     envfix = gauge_fix(env, env′)
-    check_elementwise_convergence(env, envfix) ||
+    check_elementwise_convergence(env, envfix; atol=alg.tol) ||
         @warn "CTMRG did not converge elementwise."
     return envfix
 end
 
 # Fix gauge of corner end edge tensors from last and second last CTMRG iteration
 function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
-    # Compute gauge tensors by comparing signs
-    # First fix physical indices to (1, 1)
-    Tfixprev = map(x -> convert(Array, x)[:, 1, 1, :], envprev.edges)
-    Tfixfinal = map(x -> convert(Array, x)[:, 1, 1, :], envfinal.edges)
+    # Check if spaces in envprev and envfinal are the same
+    same_spaces = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
+        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
+            space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
+    end
+    @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
+
+    # Try the "general" algorithm from https://arxiv.org/abs/2311.11894
     signs = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
+        # Gather edge tensors and pretend they're InfinitMPSs
         if isodd(dir)
-            seqprev = prod(circshift(Tfixprev[dir, r, :], 1 - c))
-            seqfinal = prod(circshift(Tfixfinal[dir, r, :], 1 - c))
+            Tsprev = circshift(envprev.edges[dir, r, :], 1 - c)
+            Tsfinal = circshift(envfinal.edges[dir, r, :], 1 - c)
         else
-            seqprev = prod(circshift(Tfixprev[dir, :, c], 1 - r))
-            seqfinal = prod(circshift(Tfixfinal[dir, :, c], 1 - r))
+            Tsprev = circshift(envprev.edges[dir, :, c], 1 - r)
+            Tsfinal = circshift(envfinal.edges[dir, :, c], 1 - r)
         end
 
-        φ = sum(diag(seqfinal) ./ diag(seqprev)) / size(seqprev, 1)  # Global sequence phase
-        σ = sign.(seqfinal[1, :] ./ seqprev[1, :]) * φ'
-        Tensor(diagm(σ), space(envprev.edges[1], 1) * space(envprev.edges[1], 1)')
+        # Random MPS of same bond dimension
+        M = map(Tsfinal) do t
+            TensorMap(randn, scalartype(t), codomain(t) ← domain(t))
+        end
+
+        # Find right fixed points of mixed transfer matrices
+        rhoinit = TensorMap(
+            randn,
+            scalartype(T),
+            MPSKit._lastspace(Tsfinal[end])' ← MPSKit._lastspace(M[end])',
+        )
+        rhoprev = eigsolve(TransferMatrix(Tsprev, M), rhoinit, 1, :LM)[2][1]
+        rhofinal = eigsolve(TransferMatrix(Tsfinal, M), rhoinit, 1, :LM)[2][1]
+
+        # Decompose and multiply
+        Qprev, = leftorth(rhoprev, ((1,), (2,)))
+        Qfinal, = leftorth(rhofinal, ((1,), (2,)))
+        σ = Qprev * Qfinal'
+
+        return σ
     end
 
     cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
