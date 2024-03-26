@@ -112,29 +112,21 @@ function itersvd_rev(
     VdV = V' * V
     Uproj = one(UUd) - UUd
     Vproj = one(VdV) - VdV
-    m, k, n = size(U, 1), size(U, 2), size(V, 2)
-    dimγ = k * m  # Vectorized dimension of γ-matrix
 
     # Truncation contribution from dU₂ and dV₂
     function svdlinprob(v)  # Left-preconditioned linear problem
-        # TODO: make v a Tuple instead of concatening two vectors
-        γ1 = reshape(@view(v[1:dimγ]), (k, m))
-        γ2 = reshape(@view(v[(dimγ + 1):end]), (k, n))
-        Γ1 = γ1 - S⁻¹ * γ2 * Vproj * Ad
-        Γ2 = γ2 - S⁻¹ * γ1 * Uproj * A
-        return vcat(reshape(Γ1, :), reshape(Γ2, :))
+        Γ1 = v[1] - S⁻¹ * v[2] * Vproj * Ad
+        Γ2 = v[2] - S⁻¹ * v[1] * Uproj * A
+        return (Γ1, Γ2)
     end
     if ΔU isa ZeroTangent && ΔV isa ZeroTangent
-        γ = linsolve(Sop, zeros(eltype(A), k * m + k * n))
+        m, k, n = size(U, 1), size(U, 2), size(V, 2)
+        γ = linsolve(Sop, (zeros(eltype(A), k * m), zeros(eltype(A), k * n)))
     else
-        # Explicit left-preconditioning
-        # Set relative tolerance to machine precision to converge SVD gradient error properly
-        y = vcat(reshape(S⁻¹ * ΔU' * Uproj, :), reshape(S⁻¹ * ΔV * Vproj, :))
+        y = (S⁻¹ * ΔU' * Uproj, S⁻¹ * ΔV * Vproj)
         γ, = linsolve(svdlinprob, y; rtol=eps(real(eltype(A))))
     end
-    γA1 = reshape(@view(γ[1:dimγ]), k, m)
-    γA2 = reshape(@view(γ[(dimγ + 1):end]), k, n)
-    ΔA += Uproj * γA1' * V + U * γA2 * Vproj
+    ΔA += Uproj * γ[1]' * V + U * γ[2] * Vproj
 
     return ΔA
 end
