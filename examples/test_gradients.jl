@@ -2,6 +2,12 @@ using LinearAlgebra
 using TensorKit, MPSKitModels, OptimKit
 using PEPSKit, KrylovKit
 
+
+using Zygote
+
+
+    
+
 # Square lattice Heisenberg Hamiltonian
 function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
     Sx, Sy, Sz, _ = spinmatrices(1//2)
@@ -36,11 +42,11 @@ function compute_grad(gradient_alg)
     return g
 end
 
-g_naive = compute_grad(NaiveAD())
-g_geomsum = compute_grad(GeomSum())
-g_maniter = compute_grad(ManualIter())
-g_linsolve = compute_grad(KrylovKit.GMRES(; tol=1e-6))
+g_naive = compute_grad(NaiveAD());
+g_geomsum = compute_grad(GeomSum());
+g_maniter = compute_grad(ManualIter());
+# g_linsolve = compute_grad(KrylovKit.GMRES(; tol=1e-6));
 
 @show norm(g_geomsum - g_naive) / norm(g_naive)
 @show norm(g_maniter - g_naive) / norm(g_naive)
-@show norm(g_linsolve - g_naive) / norm(g_naive)
+# @show norm(g_linsolve - g_naive) / norm(g_naive)

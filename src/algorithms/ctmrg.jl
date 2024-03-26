@@ -75,6 +75,17 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     return envfix
 end
 
+macro checkgrad(expr)
+    x = gensym(:x)
+    return esc(:(
+        Zygote.hook($expr) do $x
+            if !isfinite(norm($x))
+                @error $x
+            end
+        end
+    ))
+end
+
 # Fix gauge of corner end edge tensors from last and second last CTMRG iteration
 function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     # Check if spaces in envprev and envfinal are the same
@@ -108,11 +119,11 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
         )
         rhoprev = eigsolve(TransferMatrix(Tsprev, M), rhoinit, 1, :LM)[2][1]
         rhofinal = eigsolve(TransferMatrix(Tsfinal, M), rhoinit, 1, :LM)[2][1]
-
+        # rhoprev = @showgrad rhoprev
         # Decompose and multiply
         Qprev, = leftorth(rhoprev, ((1,), (2,)))
         Qfinal, = leftorth(rhofinal, ((1,), (2,)))
-        σ = Qprev * Qfinal'
+        σ = @checkgrad Qprev * Qfinal'
 
         return σ
     end

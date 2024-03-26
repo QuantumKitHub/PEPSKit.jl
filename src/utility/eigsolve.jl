@@ -144,10 +144,10 @@ function ChainRulesCore.rrule(
     config::RuleConfig{>:HasReverseMode}, ::typeof(eigsolve), f, x₀, howmany, which, alg
 )
     (vals, vecs, info) = eigsolve(f, x₀, howmany, which, alg)
-
+    resize!(vecs, howmany)
+    resize!(vals, howmany)
     T = typeof(dot(vecs[1], vecs[1]))
     f_pullbacks = map(x -> rrule_via_ad(config, f, x)[2], vecs)
-
     function eigsolve_pullback(ΔX)
         _Δvals = unthunk(ΔX[1])
         _Δvecs = unthunk(ΔX[2])
@@ -175,7 +175,6 @@ function ChainRulesCore.rrule(
 
         # filter ZeroTangents, added compared to Jutho/KrylovKit.jl/pull/56
         Δvecs = filter(x -> !(x isa AbstractZero), Δvecs)
-
         @assert length(Δvals) == length(Δvecs)
 
         # Determine algorithm to solve linear problem
@@ -200,7 +199,7 @@ function ChainRulesCore.rrule(
 
             # First threat special cases
             if isa(Δv, AbstractZero) && isa(Δλ, AbstractZero) # no contribution
-                ws[i] = Δv # some kind of zero
+                ws[i] = 0 * v # some kind of zero
                 continue
             end
             if isa(Δv, AbstractZero) && isa(alg, Lanczos) # simple contribution
@@ -238,11 +237,10 @@ function ChainRulesCore.rrule(
                 end
             end
             if info.converged >= i && reverse_info.converged == 0
-                @warn "The cotangent linear problem ($i) did not converge, whereas the primal eigenvalue problem did."
+                @warn "The cotangent linear problem ($i) did not converge, whereas the primal eigenvalue problem did." reverse_info b
             end
             ws[i] = w[1]
         end
-
         ∂f = f_pullbacks[1](ws[1])[1]
         for i in 2:length(ws)
             ∂f = VectorInterface.add!!(∂f, f_pullbacks[i](ws[i])[1])
