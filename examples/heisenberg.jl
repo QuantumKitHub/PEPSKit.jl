@@ -27,8 +27,7 @@ ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, ve
 alg = PEPSOptimize(;
     boundary_alg=ctmalg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
-    # gradient_alg=GMRES(; tol=1e-6, maxiter=100),
-    gradient_alg=ManualIter(; tol=1e-6, maxiter=100),
+    gradient_alg=GMRES(; tol=1e-6, maxiter=100),
     reuse_env=true,
     verbosity=2,
 )

@@ -84,7 +84,7 @@ end
 
 function LinearAlgebra.axpby!(α::Number, e₁::CTMRGEnv, β::Number, e₂::CTMRGEnv)
     e₂.corners .= α * e₁.corners + β * e₂.corners
-    e₂.edges .+= α * e₁.edges + β * e₂.edges
+    e₂.edges .= α * e₁.edges + β * e₂.edges
     return e₂
 end
 
@@ -93,3 +93,66 @@ function LinearAlgebra.dot(e₁::CTMRGEnv, e₂::CTMRGEnv)
 end
 
 LinearAlgebra.norm(e::CTMRGEnv) = norm(e.corners) + norm(e.edges)
+
+# VectorInterface (TODO: implement !! methods)
+VectorInterface.scalartype(e::CTMRGEnv) = eltype(e.corners[1])
+
+# VectorInterface.zerovector(e::CTMRGEnv) = zerovector(e, scalartype(e))  # Why does uncommenting this error?
+function VectorInterface.zerovector(e::CTMRGEnv, ::Type{S}) where S<:Number
+    return CTMRGEnv(
+        map(c -> TensorMap(zeros, S, space(c)), e.corners),
+        map(t -> TensorMap(zeros, S, space(t)), e.edges),
+    )
+end
+function VectorInterface.zerovector!(e::CTMRGEnv)
+    e.corners .= map(c -> TensorMap(zeros, S, space(c)), e.corners)
+    e.edges .= map(t -> TensorMap(zeros, S, space(t)), e.edges)
+    return e
+end
+# function VectorInterface.zerovector!!(e::CTMRGEnv, S::Number)
+#     return CTMRGEnv(
+#         map(c -> TensorMap(zeros, S, space(c)), e.corners),
+#         map(t -> TensorMap(zeros, S, space(t)), e.edges),
+#     )
+# end
+# VectorInterface.zerovector!!(e::CTMRGEnv) = zerovector!!(e, scalartype(e))
+
+VectorInterface.scale(e::CTMRGEnv, α::Number) = CTMRGEnv(α * e.corners, α * e.edges)
+function VectorInterface.scale!(e::CTMRGEnv, α::Number)
+    e.corners .*= α
+    e.edges .*= α
+    return e
+end
+function VectorInterface.scale!(e1::CTMRGEnv, e2::CTMRGEnv, α)
+    e1.corners .= α * e2.corners
+    e1.edges .= α * e2.edges
+    return e1
+end
+# VectorInterface.scale!!(e::CTMRGEnv, α::Number) = CTMRGEnv(α * e.corners, α * e.edges)
+# function VectorInterface.scale!!(e1::CTMRGEnv, e2::CTMRGEnv, α::Number)
+#     e1.corners .= α * e2.corners
+#     e1.edges .= α * e2.edges
+#     return e1
+# end
+
+function VectorInterface.add(e1, e2, α=1, β=1)
+    corners = α * e1.corners + β * e2.corners
+    edges = α * e1.edges + β * e2.edges
+    return CTMRGEnv(corners, edges)
+end
+function VectorInterface.add!(e1, e2, α=1, β=1)
+    e1.corners .= α * e1.corners + β * e2.corners
+    e1.edges .= α * e1.edges + β * e2.edges
+    return e1
+end
+# function VectorInterface.add!!(e1, e2, α=1, β=1)
+#     corners = α * e1.corners + β * e2.corners
+#     edges = α * e1.edges + β * e2.edges
+#     return CTMRGEnv(corners, edges)
+# end
+
+function VectorInterface.inner(e1::CTMRGEnv, e2::CTMRGEnv)
+    return dot(e1.corners, e2.corners) + dot(e1.edges, e2.edges)
+end
+
+VectorInterface.norm(e::CTMRGEnv) = norm(e.corners) + norm(e.edges)
