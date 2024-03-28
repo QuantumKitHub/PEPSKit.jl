@@ -34,6 +34,7 @@ E = ℂ^χenv # environment virtual space
 
 test_gauge_fixing(P, V, E; χenv, unitcell=(1, 1))
 test_gauge_fixing(P, V, E; χenv, unitcell=(2, 2))
+test_gauge_fixing(P, V, E; χenv, unitcell=(3, 4)) # check gauge-fixing for unit cells > (2, 2)
 
 # Z2
 
