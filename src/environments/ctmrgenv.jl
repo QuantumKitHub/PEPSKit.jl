@@ -135,12 +135,12 @@ end
 #     return e1
 # end
 
-function VectorInterface.add(e1, e2, α=1, β=1)
+function VectorInterface.add(e1::CTMRGEnv, e2::CTMRGEnv, α=1, β=1)
     corners = α * e1.corners + β * e2.corners
     edges = α * e1.edges + β * e2.edges
     return CTMRGEnv(corners, edges)
 end
-function VectorInterface.add!(e1, e2, α=1, β=1)
+function VectorInterface.add!(e1::CTMRGEnv, e2::CTMRGEnv, α=1, β=1)
     e1.corners .= α * e1.corners + β * e2.corners
     e1.edges .= α * e1.edges + β * e2.edges
     return e1
