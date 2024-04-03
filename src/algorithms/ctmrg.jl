@@ -118,21 +118,23 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
         end
 
         # Find right fixed points of mixed transfer matrices
-        rhoinit = TensorMap(
+        ρinit = TensorMap(
             randn,
             scalartype(T),
             MPSKit._lastspace(Tsfinal[end])' ← MPSKit._lastspace(M[end])',
         )
-
-        rhoprev = eigsolve(TransferMatrix(Tsprev, M), rhoinit, 1, :LM)[2][1]
-        rhofinal = eigsolve(TransferMatrix(Tsfinal, M), rhoinit, 1, :LM)[2][1]
-        # rhoprev = @showgrad rhoprev
+        ρprev = eigsolve(TransferMatrix(Tsprev, M), ρinit, 1, :LM)[2][1]
+        ρfinal = eigsolve(TransferMatrix(Tsfinal, M), ρinit, 1, :LM)[2][1]
 
         # Decompose and multiply
-        Qprev, = leftorth(rhoprev, ((1,), (2,)))
-        Qfinal, = leftorth(rhofinal, ((1,), (2,)))
-        σ = @checkgrad Qprev * Qfinal'
-        # σ = Qprev * Qfinal'
+        # Qprev, = leftorth(ρprev, ((1,), (2,)))  # QR decomposition leads to diverging gradients?
+        # Qfinal, = leftorth(ρfinal, ((1,), (2,)))
+        # σ = @checkgrad Qprev * Qfinal'
+        Up, _, Vp = tsvd(ρprev)
+        Uf, _, Vf = tsvd(ρfinal)
+        Qprev = Up * Vp
+        Qfinal = Uf * Vf
+        σ = Qprev * Qfinal'
 
         return σ
     end
