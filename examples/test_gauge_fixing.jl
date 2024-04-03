@@ -36,7 +36,7 @@ test_gauge_fixing(randn, ComplexF64, P, V, E; χenv, unitcell=(1, 1))
 test_gauge_fixing(randn, ComplexF64, P, V, E; χenv, unitcell=(2, 2))
 test_gauge_fixing(randn, ComplexF64, P, V, E; χenv, unitcell=(3, 4)) # check gauge-fixing for unit cells > (2, 2)
 
-# Convergence of real CTMRG seems to be more sensitive to initial guesse
+# Convergence of real CTMRG seems to be more sensitive to initial guess
 test_gauge_fixing(randn, Float64, P, V, E; χenv, unitcell=(1, 1))
 test_gauge_fixing(randn, Float64, P, V, E; χenv, unitcell=(2, 2))
 test_gauge_fixing(randn, Float64, P, V, E; χenv, unitcell=(3, 4))
