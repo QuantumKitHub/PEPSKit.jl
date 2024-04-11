@@ -121,7 +121,8 @@ function itersvd_rev(
     end
     if ΔU isa ZeroTangent && ΔV isa ZeroTangent
         m, k, n = size(U, 1), size(U, 2), size(V, 2)
-        γ = linsolve(Sop, (zeros(eltype(A), k * m), zeros(eltype(A), k * n)))
+        y = (zeros(eltype(A), k * m), zeros(eltype(A), k * n))
+        γ, = linsolve(svdlinprob, y; rtol=eps(real(eltype(A))))
     else
         y = (S⁻¹ * ΔU' * Uproj, S⁻¹ * ΔV * Vproj)
         γ, = linsolve(svdlinprob, y; rtol=eps(real(eltype(A))))
