@@ -73,7 +73,11 @@ function InfinitePEPS(
     Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:Union{ElementarySpace,Int}}
     return InfinitePEPS(
-        randn, ComplexF64, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
+        randn,
+        ComplexF64,
+        fill(Pspace, unitcell),
+        fill(Nspace, unitcell),
+        fill(Espace, unitcell),
     )
 end
 function InfinitePEPS(

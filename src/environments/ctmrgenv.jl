@@ -98,7 +98,7 @@ LinearAlgebra.norm(e::CTMRGEnv) = norm(e.corners) + norm(e.edges)
 VectorInterface.scalartype(e::CTMRGEnv) = eltype(e.corners[1])
 
 # VectorInterface.zerovector(e::CTMRGEnv) = zerovector(e, scalartype(e))  # Why does uncommenting this error?
-function VectorInterface.zerovector(e::CTMRGEnv, ::Type{S}) where S<:Number
+function VectorInterface.zerovector(e::CTMRGEnv, ::Type{S}) where {S<:Number}
     return CTMRGEnv(
         map(c -> TensorMap(zeros, S, space(c)), e.corners),
         map(t -> TensorMap(zeros, S, space(t)), e.edges),
