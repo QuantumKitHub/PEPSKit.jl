@@ -11,12 +11,21 @@ function test_gauge_fixing(
     ctmalg = CTMRG(;
         trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=2
     )
+    ctmalg_fixed = CTMRG(;
+        trscheme=truncdim(χenv),
+        tol=1e-10,
+        miniter=4,
+        maxiter=100,
+        verbosity=2,
+        fixedspace=true,
+    )
+
     env = leading_boundary(ψ, ctmalg, env)
 
     println("Testing gauge fixing for $(sectortype(P)) symmetry and $unitcell unit cell.")
 
     println("\nBefore gauge-fixing:")
-    env′, = PEPSKit.ctmrg_iter(ψ, env, ctmalg)
+    env′, = PEPSKit.ctmrg_iter(ψ, env, ctmalg_fixed)
     @show PEPSKit.check_elementwise_convergence(env, env′)
 
     println("\nAfter gauge-fixing:")
