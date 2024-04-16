@@ -64,7 +64,7 @@ function InfinitePEPS(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PEPSTenso
 end
 
 """
-    InfinitePEPS(Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPS(f=randn, T=ComplexF64, Pspace, Nspace, [Espace]; unitcell=(1,1))
 
 Create an InfinitePEPS by specifying its spaces and unit cell. Spaces can be specified
 either via `Int` or via `ElementarySpace`.
@@ -73,7 +73,18 @@ function InfinitePEPS(
     Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:Union{ElementarySpace,Int}}
     return InfinitePEPS(
-        fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
+        randn,
+        ComplexF64,
+        fill(Pspace, unitcell),
+        fill(Nspace, unitcell),
+        fill(Espace, unitcell),
+    )
+end
+function InfinitePEPS(
+    f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
+) where {S<:Union{ElementarySpace,Int}}
+    return InfinitePEPS(
+        f, T, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
     )
 end
 

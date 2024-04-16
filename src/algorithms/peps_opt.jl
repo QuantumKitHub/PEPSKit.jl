@@ -72,6 +72,7 @@ Evaluating the gradient of the cost function for CTMRG:
 - With AD, the gradient is computed by differentiating the cost function with respect to the PEPS tensors, including computing the environment tensors.
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
+using Zygote: @showgrad
 
 function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
     E, g = withgradient(peps) do ψ

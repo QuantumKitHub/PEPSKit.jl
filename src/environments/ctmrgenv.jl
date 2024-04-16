@@ -84,7 +84,7 @@ end
 
 function LinearAlgebra.axpby!(α::Number, e₁::CTMRGEnv, β::Number, e₂::CTMRGEnv)
     e₂.corners .= α * e₁.corners + β * e₂.corners
-    e₂.edges .+= α * e₁.edges + β * e₂.edges
+    e₂.edges .= α * e₁.edges + β * e₂.edges
     return e₂
 end
 
@@ -92,4 +92,67 @@ function LinearAlgebra.dot(e₁::CTMRGEnv, e₂::CTMRGEnv)
     return dot(e₁.corners, e₂.corners) + dot(e₁.edges, e₂.edges)
 end
 
-LinearAlgebra.norm(e::CTMRGEnv) = norm(e.corners) + norm(e.edges)
+# VectorInterface
+# ---------------
+
+# Note: the following methods consider the environment tensors as separate components of one
+# big vector. In other words, the associated vector space is not the natural one associated
+# to the original (physical) system, and addition, scaling, etc. are performed element-wise.
+
+import VectorInterface as VI
+
+function VI.scalartype(::Type{CTMRGEnv{C,T}}) where {C,T}
+    S₁ = scalartype(C)
+    S₂ = scalartype(T)
+    return promote_type(S₁, S₂)
+end
+
+function VI.zerovector(env::CTMRGEnv, ::Type{S}) where {S<:Number}
+    _zerovector = Base.Fix2(zerovector, S)
+    return CTMRGEnv(map(_zerovector, env.corners), map(_zerovector, env.edges))
+end
+function VI.zerovector!(env::CTMRGEnv)
+    foreach(zerovector!, env.corners)
+    foreach(zerovector!, env.edges)
+    return env
+end
+VI.zerovector!!(env::CTMRGEnv) = zerovector!(env)
+
+function VI.scale(env::CTMRGEnv, α::Number)
+    _scale = Base.Fix2(scale, α)
+    return CTMRGEnv(map(_scale, env.corners), map(_scale, env.edges))
+end
+function VI.scale!(env::CTMRGEnv, α::Number)
+    _scale! = Base.Fix2(scale!, α)
+    foreach(_scale!, env.corners)
+    foreach(_scale!, env.edges)
+    return env
+end
+function VI.scale!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number)
+    _scale!(x, y) = scale!(x, y, α)
+    foreach(_scale!, env₁.corners, env₂.corners)
+    foreach(_scale!, env₁.edges, env₂.edges)
+    return env₁
+end
+VI.scale!!(env::CTMRGEnv, α::Number) = scale!(env, α)
+VI.scale!!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number) = scale!(env₁, env₂, α)
+
+function VI.add(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
+    _add(x, y) = add(x, y, α, β)
+    return CTMRGEnv(
+        map(_add, env₁.corners, env₂.corners), map(_add, env₁.corners, env₂.corners)
+    )
+end
+function VI.add!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
+    _add!(x, y) = add!(x, y, α, β)
+    foreach(_add!, env₁.corners, env₂.corners)
+    foreach(_add!, env₁.edges, env₂.edges)
+    return env₁
+end
+VI.add!!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number) = add!(env₁, env₂, α, β)
+
+# exploiting the fact that vectorinterface works for tuples:
+function VI.inner(env₁::CTMRGEnv, env₂::CTMRGEnv)
+    return inner((env₁.corners, env₁.edges), (env₂.corners, env₂.edges))
+end
+VI.norm(env::CTMRGEnv) = norm((env.corners, env.edges))

@@ -9,6 +9,7 @@ using TensorKit, KrylovKit, MPSKit, OptimKit
 using ChainRulesCore, Zygote
 
 include("utility/util.jl")
+include("utility/eigsolve.jl")
 include("utility/rotations.jl")
 
 include("states/abstractpeps.jl")

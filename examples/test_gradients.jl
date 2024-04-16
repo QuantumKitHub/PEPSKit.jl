@@ -2,6 +2,8 @@ using LinearAlgebra
 using TensorKit, MPSKitModels, OptimKit
 using PEPSKit, KrylovKit
 
+using Zygote
+
 # Square lattice Heisenberg Hamiltonian
 function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
     Sx, Sy, Sz, _ = spinmatrices(1//2)
