@@ -186,39 +186,42 @@ end
 # CTMRG leading boundary rrule
 # ----------------------------
 
-# this totally breaks NaiveAD for now...
-function ChainRulesCore.rrule(
-    ::typeof(leading_boundary), state, alg::CTMRG, envinit; grad_mode
-)
-    env = leading_boundary(state, alg, envinit; grad_mode)
+# # this totally breaks NaiveAD for now...
+# function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode},
+#     ::typeof(MPSKit.leading_boundary), state, alg::CTMRG, envinit; grad_mode=NaiveAD()
+# )
+#     @show grad_mode
+#     grad_mode isa NaiveAD &&
+#         return rrule_via_ad(config, leading_boundary, state, alg, envinit; grad_mode)
+    
+    
+#     env = leading_boundary(state, alg, envinit; grad_mode)
+#     function ctmrg_pullback(Δenv)
+#         ∂self = NoTangent()
+#         ∂alg = NoTangent()
+#         ∂envinit = ZeroTangent()
 
-    function ctmrg_pullback(Δenv)
-        ∂self = NoTangent()
-        ∂alg = NoTangent()
-        ∂envinit = ZeroTangent()
+#         if Δenv isa AbstractZero
+#             ∂state = ZeroTangent()
+#             return ∂self, ∂state, ∂alg, ∂envinit
+#         end
 
-        if Δenv isa AbstractZero
-            ∂state = ZeroTangent()
-            return ∂self, ∂state, ∂alg, ∂envinit
-        end
+#         # Δcorners = unthunk(Δenv.corners)
+#         # Δedges = unthunk(Δenv.edges)
+#         # TODO: something about AbstractZeros?
+#         Δenv = unthunk(Δenv)
+#         # find partial gradients of single ctmrg iteration
+#         _, envvjp = pullback(state, env) do A, x
+#             return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
+#         end
+#         ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
+#         ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
 
-        Δcorners = unthunk(Δenv.corners)
-        Δedges = unthunk(Δenv.edges)
-        # TODO: something about AbstractZeros?
-        Δenv = CTMRGEnv(Δcorners, Δedges)
+#         # evaluate the geometric sum
+#         ∂state = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, grad_mode)
 
-        # find partial gradients of single ctmrg iteration
-        _, envvjp = pullback(state, env) do A, x
-            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
-        end
-        ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
-        ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
+#         return ∂self, ∂state, ∂alg, ∂envinit
+#     end
 
-        # evaluate the geometric sum
-        ∂state = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, grad_mode)
-
-        return ∂self, ∂state, ∂alg, ∂envinit
-    end
-
-    return env, ctmrg_pullback
-end
+#     return env, ctmrg_pullback
+# end
