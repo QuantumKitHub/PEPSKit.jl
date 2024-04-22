@@ -168,3 +168,13 @@ end
 
 is_indexing(ex) = false
 is_indexing(ex::Expr) = ex.head == :ref
+
+
+macro showtypeofgrad(x)
+    return :(
+        Zygote.hook($(esc(x))) do x̄
+            println($"∂($x) = ", repr(typeof(x̄)))
+            x̄
+        end
+    )
+end

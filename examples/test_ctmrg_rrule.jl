@@ -116,18 +116,6 @@ function ChainRulesCore.rrule(
     return envs, leading_boundary_pullback
 end
 
-
-using Zygote: @showgrad
-
-macro showtypeofgrad(x)
-    return :(
-        Zygote.hook($(esc(x))) do x̄
-            println($"∂($x) = ", repr(typeof(x̄)))
-            x̄
-        end
-    )
-end
-
 x, f, normgrad = optimize(
     (deepcopy(ψ₀), deepcopy(env_init)),
     LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2); # ConjugateGradient(; gradtol=1e-6, verbosity=4, maxiter=100),

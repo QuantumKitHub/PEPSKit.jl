@@ -53,5 +53,6 @@ export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export PEPOOptimize, pepo_opt_environments
 export symmetrize, None, Depth, Full
+export showtypeofgrad
 
 end # module
