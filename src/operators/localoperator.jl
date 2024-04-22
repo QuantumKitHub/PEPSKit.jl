@@ -48,32 +48,22 @@ end
 
 # 1-site operator expectation values on unit cell
 function MPSKit.expectation_value(peps::InfinitePEPS, env, O::NLocalOperator{OnSite})
-    result = similar(peps.A, eltype(O.op))
-    ρ = operator_env(peps, env, OnSite())
-
-    for r in 1:size(peps, 1), c in 1:size(peps, 2)
-        o = @tensor ρ[r, c][1; 2] * O.op[1; 2]
-        n = @tensor ρ[r, c][1; 1]
-        @diffset result[r, c] = o / n
+    return map(operator_env(peps, env, OnSite())) do ρ
+        o = @tensor ρ[-1; -2] * O.op[-1; -2]
+        n = @tensor ρ[-1; -1]
+        o / n
     end
-
-    return result
 end
 
 # 2-site operator expectation values on unit cell
 function MPSKit.expectation_value(
     peps::InfinitePEPS, env, O::NLocalOperator{NearestNeighbor}
 )
-    result = similar(peps.A, eltype(O.op))
-    ρ = operator_env(peps, env, NearestNeighbor())
-
-    for r in 1:size(peps, 1), c in 1:size(peps, 2)
-        o = @tensor ρ[r, c][1 2; 3 4] * O.op[1 2; 3 4]
-        n = @tensor ρ[r, c][1 2; 1 2]
-        @diffset result[r, c] = o / n
+    return map(operator_env(peps, env, NearestNeighbor())) do ρ
+        o = @tensor ρ[1 2; 3 4] * O.op[1 2; 3 4]
+        n = @tensor ρ[1 2; 1 2]
+        o / n
     end
-
-    return result
 end
 
 # ⟨O⟩ from vertical and horizontal nearest-neighbor contributions
