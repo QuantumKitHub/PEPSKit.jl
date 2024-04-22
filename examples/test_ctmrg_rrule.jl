@@ -124,14 +124,13 @@ x, f, normgrad = optimize(
 ) do (ψ, envs)
     E, g = withgradient(ψ) do ψ
         envs′ = myleadingboundary(ManualIter(), ψ, ctmalg, envs)
-        reuse_env && (envs = envs′)
-        return costfun(@showtypeofgrad(ψ), envs′, H)
+        return costfun(ψ, envs′, H)
     end
 
-    ∂E∂A = getindex(@showtypeofgrad(g), 1)
+    ∂E∂A = getindex(g, 1)
     if !(∂E∂A isa InfinitePEPS)
         
-        ∂E∂A′ = @showtypeofgrad InfinitePEPS(∂E∂A.A)
+        ∂E∂A′ = InfinitePEPS(∂E∂A.A)
     else
         ∂E∂A′ = ∂E∂A
     end
