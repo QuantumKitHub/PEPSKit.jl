@@ -10,7 +10,9 @@ end
 
 # Compute CTMRG environment for a given state
 # function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
-function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
+function MPSKit.leading_boundary(
+    state, alg::CTMRG, envinit=CTMRGEnv(state); grad_mode=KrylovKit.GMRES(; tol=alg.tol)
+)
     normold = 1.0
     CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
     TSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
