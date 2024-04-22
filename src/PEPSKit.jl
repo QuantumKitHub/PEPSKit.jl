@@ -66,5 +66,6 @@ export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export symmetrize, None, Depth, Full
+export showtypeofgrad
 
 end # module
