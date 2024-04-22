@@ -208,3 +208,43 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
 
     return ∂f∂A(y)
 end
+
+# CTMRG leading boundary rrule
+# ----------------------------
+
+# this totally breaks NaiveAD for now...
+function ChainRulesCore.rrule(
+    ::typeof(leading_boundary), state, alg::CTMRG, envinit; grad_mode
+)
+    env = leading_boundary(state, alg, envinit; grad_mode)
+
+    function ctmrg_pullback(Δenv)
+        ∂self = NoTangent()
+        ∂alg = NoTangent()
+        ∂envinit = ZeroTangent()
+
+        if Δenv isa AbstractZero
+            ∂state = ZeroTangent()
+            return ∂self, ∂state, ∂alg, ∂envinit
+        end
+
+        Δcorners = unthunk(Δenv.corners)
+        Δedges = unthunk(Δenv.edges)
+        # TODO: something about AbstractZeros?
+        Δenv = CTMRGEnv(Δcorners, Δedges)
+
+        # find partial gradients of single ctmrg iteration
+        _, envvjp = pullback(state, env) do A, x
+            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
+        end
+        ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
+        ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
+
+        # evaluate the geometric sum
+        ∂state = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, grad_mode)
+
+        return ∂self, ∂state, ∂alg, ∂envinit
+    end
+
+    return env, ctmrg_pullback
+end

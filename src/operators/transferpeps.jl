@@ -56,7 +56,10 @@ function initializeMPS(O::MPSKit.Multiline, virtualspaces::AbstractArray{S,2}) w
     return MPSKit.Multiline(mpss)
 end
 function initializeMPS(O::MPSKit.Multiline, virtualspaces::AbstractArray{S,1}) where {S}
-    return initializeMPS(O, repeat(virtualspaces', length(O), 1))
+    return initializeMPS(O, repeat(virtualspaces, length(O), 1))
+end
+function initializeMPS(O::MPSKit.Multiline, V::ElementarySpace)
+    return initializeMPS(O, repeat([V], length(O), length(O[1])))
 end
 function initializeMPS(O::MPSKit.Multiline, χ::Int)
     return initializeMPS(O, repeat([ℂ^χ], length(O), length(O[1])))
