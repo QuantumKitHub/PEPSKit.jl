@@ -1,5 +1,4 @@
-# an initial attempt at some basic symmetrization routines for PEPS
-# it looks horrible, but it works, maybe
+# some basic symmetrization routines for PEPS
 
 abstract type SymmetrizationStyle end
 

@@ -24,14 +24,12 @@ include("mpskit_glue/transferpeps_environments.jl")
 include("mpskit_glue/transferpepo_environments.jl")
 
 include("environments/ctmrgenv.jl")
-include("environments/boundarympsenv.jl")
 include("operators/localoperator.jl")
 
 include("algorithms/ctmrg.jl")
 include("algorithms/peps_opt.jl")
 
 include("utility/symmetrization.jl")
-include("algorithms/pepo_opt.jl")
 
 # Default settings
 module Defaults
