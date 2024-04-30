@@ -124,29 +124,6 @@ function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize)
     return E, ∂E∂A
 end
 
-# function ctmrg_gradient(
-#     (peps, envs), H, alg::PEPSOptimize{T}
-# ) where {T<:Union{GeomSum,ManualIter,KrylovKit.LinearSolver}}
-#     # find partial gradients of costfun
-#     envs′ = leading_boundary(peps, alg.boundary_alg, envs)
-#     alg.reuse_env && (envs = envs′)
-#     E, Egrad = withgradient(costfun, peps, envs′, H)
-#     ∂F∂A = InfinitePEPS(Egrad[1]...)
-#     ∂F∂x = CTMRGEnv(Egrad[2]...)
-
-#     # find partial gradients of single ctmrg iteration
-#     _, envvjp = pullback(peps, envs′) do A, x
-#         return gauge_fix(x, ctmrg_iter(A, x, alg.boundary_alg)[1])
-#     end
-#     ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
-#     ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
-
-#     # evaluate the geometric sum
-#     ∂F∂envs = fpgrad(∂F∂x, ∂f∂x, ∂f∂A, ∂F∂x, alg.gradient_alg)
-
-#     return E, ∂F∂A + ∂F∂envs
-# end
-
 @doc """
     fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y0, alg)
 
