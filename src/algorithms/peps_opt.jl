@@ -84,7 +84,7 @@ function _rrule(
     envs = leading_boundary(state, alg, envinit)
 
     function leading_boundary_pullback(Δenvs′)
-        Δenvs = unthunk(Δenvs′)
+        Δenvs = CTMRGEnv(unthunk(Δenvs′).corners, unthunk(Δenvs′).edges)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
         # TODO: make this rrule_via_ad so it's zygote-agnostic
