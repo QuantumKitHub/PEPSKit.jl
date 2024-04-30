@@ -92,7 +92,7 @@ Evaluating the gradient of the cost function for CTMRG:
 =#
 
 function _rrule(
-    gradmode::GradMode,
+    gradmode::Union{GradMode,KrylovKit.LinearSolver},
     ::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
     state,
