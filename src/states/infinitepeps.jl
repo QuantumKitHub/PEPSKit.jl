@@ -106,6 +106,7 @@ Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
 Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
+Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
 
 ## Math
 Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
@@ -124,4 +125,37 @@ end
 function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
     ψ₂.A .+= α * ψ₁.A
     return ψ₂
+end
+
+# VectorInterface
+VectorInterface.zerovector(x::InfinitePEPS) = InfinitePEPS(zerovector(x.A))
+
+# Chainrules
+function ChainRulesCore.rrule(
+    ::typeof(Base.getindex), state::InfinitePEPS, row::Int, col::Int
+)
+    pepstensor = state[row, col]
+
+    function getindex_pullback(Δpepstensor)
+        Δstate = zerovector(state)
+        Δstate[row, col] = Δpepstensor
+        return NoTangent(), Δstate, NoTangent(), NoTangent()
+    end
+    return pepstensor, getindex_pullback
+end
+
+function ChainRulesCore.rrule(::Type{<:InfinitePEPS}, A::Matrix{T}) where {T<:PEPSTensor}
+    peps = InfinitePEPS(A)
+    function InfinitePEPS_pullback(Δpeps)
+        return NoTangent(), Δpeps.A
+    end
+    return peps, InfinitePEPS_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(rotl90), peps::InfinitePEPS)
+    peps′ = rotl90(peps)
+    function rotl90_pullback(Δpeps)
+        return NoTangent(), rotr90(Δpeps)
+    end
+    return peps′, rotl90_pullback
 end
