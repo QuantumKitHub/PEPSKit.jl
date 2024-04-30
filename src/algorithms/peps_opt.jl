@@ -72,15 +72,48 @@ Evaluating the gradient of the cost function for CTMRG:
 - With AD, the gradient is computed by differentiating the cost function with respect to the PEPS tensors, including computing the environment tensors.
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
-using Zygote: @showgrad
 
-function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
-    E, g = withgradient(peps) do ψ
-        envs′ = leading_boundary(ψ, alg.boundary_alg, envs)
-        alg.reuse_env && (envs = envs′)
-        return costfun(ψ, envs′, H)
+function _rrule(
+    gradmode::GradMode,
+    ::RuleConfig,
+    ::typeof(MPSKit.leading_boundary),
+    state,
+    alg::CTMRG,
+    envinit,
+)
+    envs = leading_boundary(state, alg, envinit)
+
+    function leading_boundary_pullback(Δenvs′)
+        Δenvs = unthunk(Δenvs′)
+
+        # find partial gradients of gauge_fixed single CTMRG iteration
+        # TODO: make this rrule_via_ad so it's zygote-agnostic
+        _, env_vjp = pullback(state, envs) do A, x
+            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
+        end
+
+        ∂f∂A(x)::InfinitePEPS = InfinitePEPS(env_vjp(x)[1]...)
+        ∂f∂x(x)::CTMRGEnv = CTMRGEnv(env_vjp(x)[2]...)
+
+        # evaluate the geometric sum
+        ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
+        
+        # TODO: fix weird tangent
+        weird_tangent = ChainRulesCore.Tangent{typeof(∂F∂envs)}(; A=∂F∂envs.A)
+        return NoTangent(), weird_tangent, NoTangent(), ZeroTangent()
     end
 
+    return envs, leading_boundary_pullback
+end
+
+function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize)
+    alg_rrule = alg.gradient_alg
+    E, g = withgradient(peps) do ψ
+        envs = hook_pullback(leading_boundary, ψ, alg.boundary_alg, envs; alg_rrule)
+        return costfun(ψ, envs, H)
+    end
+
+    # TODO: remove second half of this function
     # AD returns namedtuple as gradient instead of InfinitePEPS
     ∂E∂A = g[1]
     if !(∂E∂A isa InfinitePEPS)
@@ -91,28 +124,28 @@ function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
     return E, ∂E∂A
 end
 
-function ctmrg_gradient(
-    (peps, envs), H, alg::PEPSOptimize{T}
-) where {T<:Union{GeomSum,ManualIter,KrylovKit.LinearSolver}}
-    # find partial gradients of costfun
-    envs′ = leading_boundary(peps, alg.boundary_alg, envs)
-    alg.reuse_env && (envs = envs′)
-    E, Egrad = withgradient(costfun, peps, envs′, H)
-    ∂F∂A = InfinitePEPS(Egrad[1]...)
-    ∂F∂x = CTMRGEnv(Egrad[2]...)
+# function ctmrg_gradient(
+#     (peps, envs), H, alg::PEPSOptimize{T}
+# ) where {T<:Union{GeomSum,ManualIter,KrylovKit.LinearSolver}}
+#     # find partial gradients of costfun
+#     envs′ = leading_boundary(peps, alg.boundary_alg, envs)
+#     alg.reuse_env && (envs = envs′)
+#     E, Egrad = withgradient(costfun, peps, envs′, H)
+#     ∂F∂A = InfinitePEPS(Egrad[1]...)
+#     ∂F∂x = CTMRGEnv(Egrad[2]...)
 
-    # find partial gradients of single ctmrg iteration
-    _, envvjp = pullback(peps, envs′) do A, x
-        return gauge_fix(x, ctmrg_iter(A, x, alg.boundary_alg)[1])
-    end
-    ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
-    ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
+#     # find partial gradients of single ctmrg iteration
+#     _, envvjp = pullback(peps, envs′) do A, x
+#         return gauge_fix(x, ctmrg_iter(A, x, alg.boundary_alg)[1])
+#     end
+#     ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
+#     ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
 
-    # evaluate the geometric sum
-    ∂F∂envs = fpgrad(∂F∂x, ∂f∂x, ∂f∂A, ∂F∂x, alg.gradient_alg)
+#     # evaluate the geometric sum
+#     ∂F∂envs = fpgrad(∂F∂x, ∂f∂x, ∂f∂A, ∂F∂x, alg.gradient_alg)
 
-    return E, ∂F∂A + ∂F∂envs
-end
+#     return E, ∂F∂A + ∂F∂envs
+# end
 
 @doc """
     fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y0, alg)
@@ -182,46 +215,3 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
 
     return ∂f∂A(y)
 end
-
-# CTMRG leading boundary rrule
-# ----------------------------
-
-# # this totally breaks NaiveAD for now...
-# function ChainRulesCore.rrule(config::RuleConfig{>:HasReverseMode},
-#     ::typeof(MPSKit.leading_boundary), state, alg::CTMRG, envinit; grad_mode=NaiveAD()
-# )
-#     @show grad_mode
-#     grad_mode isa NaiveAD &&
-#         return rrule_via_ad(config, leading_boundary, state, alg, envinit; grad_mode)
-    
-    
-#     env = leading_boundary(state, alg, envinit; grad_mode)
-#     function ctmrg_pullback(Δenv)
-#         ∂self = NoTangent()
-#         ∂alg = NoTangent()
-#         ∂envinit = ZeroTangent()
-
-#         if Δenv isa AbstractZero
-#             ∂state = ZeroTangent()
-#             return ∂self, ∂state, ∂alg, ∂envinit
-#         end
-
-#         # Δcorners = unthunk(Δenv.corners)
-#         # Δedges = unthunk(Δenv.edges)
-#         # TODO: something about AbstractZeros?
-#         Δenv = unthunk(Δenv)
-#         # find partial gradients of single ctmrg iteration
-#         _, envvjp = pullback(state, env) do A, x
-#             return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
-#         end
-#         ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
-#         ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
-
-#         # evaluate the geometric sum
-#         ∂state = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, grad_mode)
-
-#         return ∂self, ∂state, ∂alg, ∂envinit
-#     end
-
-#     return env, ctmrg_pullback
-# end
