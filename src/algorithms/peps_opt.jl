@@ -56,7 +56,7 @@ function fixedpoint(
                 alg_rrule=alg.gradient_alg,
             )
             ignore_derivatives() do
-                alg.reuse_env && (envs.edges .= envs´.edges; envs.corners .= envs´.corners)
+                alg.reuse_env && update!(envs, envs´)
             end
             return costfun(ψ, envs´, H)
         end
