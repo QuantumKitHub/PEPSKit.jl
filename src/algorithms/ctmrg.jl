@@ -1,4 +1,18 @@
 # TODO: add abstract Algorithm type?
+"""
+    struct CTMRG(; trscheme = TensorKit.notrunc(), tol = Defaults.ctmrg_tol,
+                 maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
+                 verbosity = 0, fixedspace = false)
+
+Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
+The projector bond dimensions are set via `trscheme` which controls the truncation
+properties inside of `TensorKit.tsvd`. Each CTMRG run is converged up to `tol`
+where the singular value convergence of the corners as well as the norm is checked.
+The maximal and minimal number of CTMRG iterations is set with `maxiter` and `miniter`.
+Different levels of output information are printed depending on `verbosity` (0, 1 or 2).
+Regardless of the truncation scheme, the space can be kept fixed with `fixedspace`.
+
+"""
 @kwdef struct CTMRG
     trscheme::TruncationScheme = TensorKit.notrunc()
     tol::Float64 = Defaults.ctmrg_tol
@@ -8,8 +22,12 @@
     fixedspace::Bool = false
 end
 
-# Compute CTMRG environment for a given state
-# function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
+"""
+    MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
+
+Contract `state` using CTMRG and return the CTM environment.
+Per default, a random initial environment is used.
+"""
 function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     normold = 1.0
     CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
@@ -68,7 +86,7 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
         ϵold = ϵ
     end
 
-    # do one final iteration that does not change the spaces
+    # Do one final iteration that does not change the spaces
     alg_fixed = CTMRG(;
         alg.trscheme, alg.tol, alg.maxiter, alg.miniter, alg.verbosity, fixedspace=true
     )
@@ -79,7 +97,14 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
     return envfix
 end
 
-# Fix gauge of corner end edge tensors from last and second last CTMRG iteration
+"""
+    gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
+
+Fix the gauge of `envfinal` based on the previous environment `envprev`.
+This assumes that the `envfinal` is the result of one CTMRG iteration on `envprev`.
+Given that the CTMRG run is converged, the returned environment will be
+element-wise converged to `envprev`.
+"""
 function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
@@ -238,7 +263,14 @@ end
 
 @non_differentiable check_elementwise_convergence(args...)
 
-# One CTMRG iteration x′ = f(A, x)
+"""
+    ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
+    
+Perform one iteration of CTMRG that maps the `state` and `env` to a new environment,
+and also return the truncation error.
+One CTMRG iteration consists of four `left_move` calls and 90 degree rotations,
+such that the environment is grown and renormalized in all four directions.
+"""
 function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
 
@@ -252,7 +284,12 @@ function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     return env, ϵ
 end
 
-# Grow environment, compute projectors and renormalize
+"""
+    left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
+
+Grow, project and renormalize the environment `env` in west direction.
+Return the updated environment as well as the projectors and truncation error.
+"""
 function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
@@ -343,6 +380,7 @@ function northwest_corner(E4, C1, E1, peps_above, peps_below=peps_above)
         conj(peps_below[7; 6 -6 -3 2])
 end
 
+# Compute enlarged NE corner
 function northeast_corner(E1, C2, E2, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E1[-1 1 2; 3] *
@@ -352,6 +390,7 @@ function northeast_corner(E1, C2, E2, peps_above, peps_below=peps_above)
         conj(peps_below[7; 2 6 -6 -3])
 end
 
+# Compute enlarged SE corner
 function southeast_corner(E2, C3, E3, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E2[-1 1 2; 3] *
@@ -384,7 +423,11 @@ function grow_env_left(peps, Pl, Pr, C_sw, C_nw, T_s, T_w, T_n)
     return C_sw′, C_nw′, T_w′
 end
 
-# Compute norm of the entire CMTRG enviroment
+"""
+    LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
+
+Compute the norm of a PEPS contracted with a CTM environment.
+"""
 function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     total = one(scalartype(peps))
 

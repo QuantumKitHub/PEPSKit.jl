@@ -31,7 +31,25 @@ include("algorithms/peps_opt.jl")
 
 include("utility/symmetrization.jl")
 
-# Default settings
+"""
+    module Defaults
+        const ctmrg_maxiter = 100
+        const ctmrg_miniter = 4
+        const ctmrg_tol = 1e-12
+        const fpgrad_maxiter = 100
+        const fpgrad_tol = 1e-6
+    end
+
+Module containing default values that represent typical algorithm parameters.
+
+- `ctmrg_maxiter = 100`: Maximal number of CTMRG iterations per run
+- `ctmrg_miniter = 4`: Minimal number of CTMRG carried out
+- `ctmrg_tol = 1e-12`: Tolerance checking singular value and norm convergence
+- `fpgrad_maxiter = 100`: Maximal number of iterations for computing the CTMRG
+fixed-point gradient
+- `fpgrad_tol = 1e-6`: Convergence tolerance for the fixed-point gradient iteration
+
+"""
 module Defaults
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
@@ -49,7 +67,6 @@ export fixedpoint
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
-export PEPOOptimize, pepo_opt_environments
 export symmetrize, None, Depth, Full
 
 end # module

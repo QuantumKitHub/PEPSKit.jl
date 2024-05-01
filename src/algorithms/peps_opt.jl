@@ -1,14 +1,14 @@
 abstract type GradMode end
 
 """
-    NaiveAD <: GradMode
+    struct NaiveAD <: GradMode
 
 Gradient mode for CTMRG using AD.
 """
 struct NaiveAD <: GradMode end
 
 """
-    GeomSum <: GradMode
+    struct GeomSum <: GradMode
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 """
@@ -19,7 +19,7 @@ Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 end
 
 """
-    ManualIter <: GradMode
+    struct ManualIter <: GradMode
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 """
@@ -29,7 +29,19 @@ Gradient mode for CTMRG using manual iteration to solve the linear problem.
     verbosity::Int = 0
 end
 
-# Algorithm struct containing parameters for PEPS optimization
+"""
+    struct PEPSOptimize{G}(; boundary_alg = CTMRG(), optimizer::OptimKit.OptimizationAlgorithm = LBFGS()
+                           reuse_env::Bool = true, gradient_alg::G, verbosity::Int = 0)
+
+Algorithm struct that represent PEPS ground-state optimization using AD.
+Set the algorithm to contract the infinite PEPS in `boundary_alg`;
+currently only `CTMRG` is supported. The `optimizer` computes the gradient directions
+based on the CTMRG gradient and updates the PEPS parameters. In this optimization,
+the CTMRG runs can be started on the converged environments of the previous optimizer
+step by setting `reuse_env` to true. Otherwise a random environment is used at each
+step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
+Different levels of output verbosity can be activated using `verbosity` (0, 1 or 2).
+"""
 @kwdef struct PEPSOptimize{G}
     boundary_alg::CTMRG = CTMRG()  # Algorithm to find boundary environment
     optimizer::OptimKit.OptimizationAlgorithm = LBFGS(
@@ -40,7 +52,13 @@ end
     verbosity::Int = 0
 end
 
-# Find ground-state PEPS and energy
+"""
+    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize,
+               env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)) where {T}
+    
+Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
+in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
+"""
 function fixedpoint(
     ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)
 ) where {T}
@@ -73,6 +91,14 @@ Evaluating the gradient of the cost function for CTMRG:
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
 using Zygote: @showgrad
+
+@doc """
+    ctmrg_gradient((peps, envs), H, alg::PEPSOptimize)
+
+Compute the energy and its gradient for the Hamiltonian `H``.
+Here, `alg` determines the algorithm that is used for the CTMRG gradient computation.
+"""
+ctmrg_gradient
 
 function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
     E, g = withgradient(peps) do ψ

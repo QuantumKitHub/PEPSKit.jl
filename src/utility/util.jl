@@ -49,7 +49,13 @@ function is_degenerate_spectrum(
     return false
 end
 
-# Create empty projectors for given state without recomputing transpose
+"""
+    projector_type(T::DataType, size)
+
+Create two arrays of specified `size` that contain undefined tensors representing
+left and right acting projectors, respectively. The projector types are inferred
+from the TensorMap type `T` which avoids having to recompute tranpose tensors.
+"""
 function projector_type(T::DataType, size)
     Pleft = Array{T,length(size)}(undef, size)
     Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))

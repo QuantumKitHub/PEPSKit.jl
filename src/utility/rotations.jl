@@ -8,5 +8,9 @@ const NORTHEAST = 2
 const SOUTHEAST = 3
 const SOUTHWEST = 4
 
-# Rotate tensor to any direction by successive application of Base.rotl90
+"""
+    rotate_north(t, dir)
+
+Rotate north direction of `t` to `dir` by successive applications of `rotl90`.
+"""
 rotate_north(t, dir) = mod1(dir, 4) == NORTH ? t : rotate_north(rotl90(t), dir - 1)

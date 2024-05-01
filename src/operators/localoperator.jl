@@ -1,13 +1,38 @@
 abstract type AbstractInteraction end
 
+"""
+    struct OnSite <: AbstractInteraction
+
+Trivial interaction representing terms that act on one isolated site.
+"""
 struct OnSite <: AbstractInteraction end
+
+"""
+    struct NearestNeighbor <: AbstractInteraction
+
+Interaction representing nearest neighbor terms that act on two adjacent sites.
+"""
 struct NearestNeighbor <: AbstractInteraction end
 
+"""
+    struct NLocalOperator{I<:AbstractInteraction}
+    
+Operator in form of a `AbstractTensorMap` which is parametrized by an interaction type.
+Mostly, this is used to define Hamiltonian terms and observables.
+"""
 struct NLocalOperator{I<:AbstractInteraction}
     op::AbstractTensorMap
 end
 
-# Contraction of CTMRGEnv and PEPS tensors with open physical bonds
+@doc """
+    operator_env(peps::InfinitePEPS, env::CTMRGEnv, ::AbstractInteraction)
+
+Contract a PEPS and a CTMRG environment to form an operator environment.
+The open bonds correspond to the indices of an operator with the specified
+`AbstractInteraction` type.
+"""
+operator_env
+
 function operator_env(peps::InfinitePEPS, env::CTMRGEnv, ::OnSite)
     return map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         @tensor ρ[-1; -2] :=
@@ -24,7 +49,6 @@ function operator_env(peps::InfinitePEPS, env::CTMRGEnv, ::OnSite)
     end
 end
 
-# Horizontally extended contraction of CTMRGEnv and PEPS tensors with open physical bonds
 function operator_env(peps::InfinitePEPS, env::CTMRGEnv, ::NearestNeighbor)
     return map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         cnext = _next(c, size(peps, 2))
@@ -46,6 +70,14 @@ function operator_env(peps::InfinitePEPS, env::CTMRGEnv, ::NearestNeighbor)
     end
 end
 
+@doc """
+    MPSKit.expectation_value(peps::InfinitePEPS, env, O::NLocalOperator)
+
+Evaluate the expectation value of any `NLocalOperator` on each unit-cell entry
+of `peps` and `env`.
+"""
+MPSKit.expectation_value
+
 # 1-site operator expectation values on unit cell
 function MPSKit.expectation_value(peps::InfinitePEPS, env, O::NLocalOperator{OnSite})
     result = similar(peps.A, eltype(O.op))
@@ -60,7 +92,6 @@ function MPSKit.expectation_value(peps::InfinitePEPS, env, O::NLocalOperator{OnS
     return result
 end
 
-# 2-site operator expectation values on unit cell
 function MPSKit.expectation_value(
     peps::InfinitePEPS, env, O::NLocalOperator{NearestNeighbor}
 )
@@ -76,7 +107,12 @@ function MPSKit.expectation_value(
     return result
 end
 
-# ⟨O⟩ from vertical and horizontal nearest-neighbor contributions
+"""
+    costfun(peps::InfinitePEPS, env, op::NLocalOperator{NearestNeighbor})
+    
+Compute the expectation value of a nearest-neighbor operator.
+This is used to evaluate and differentiate the energy in ground-state PEPS optimizations.
+"""
 function costfun(peps::InfinitePEPS, env, op::NLocalOperator{NearestNeighbor})
     oh = sum(expectation_value(peps, env, op))
     ov = sum(expectation_value(rotl90(peps), rotl90(env), op))
