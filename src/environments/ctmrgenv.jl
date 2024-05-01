@@ -38,10 +38,14 @@ end
 function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     result = getproperty(e, name)
     if name === :corners
-        corner_pullback(Δcorners) = NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
+        function corner_pullback(Δcorners)
+            return NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
+        end
         return result, corner_pullback
     elseif name === :edges
-        edge_pullback(Δedges) = NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
+        function edge_pullback(Δedges)
+            return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
+        end
         return result, edge_pullback
     else
         # this should never happen because already errored in forwards pass

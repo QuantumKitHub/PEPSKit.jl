@@ -44,5 +44,5 @@ the default `alg_rrule=nothing` results in the default AD pullback.
 !!! warning
     No tangent is expected for the `alg_rrule` argument
 """
- _rrule(::Nothing, config::RuleConfig, f, args...; kwargs...) =
+_rrule(::Nothing, config::RuleConfig, f, args...; kwargs...) =
     rrule_via_ad(config, f, args...; kwargs...)

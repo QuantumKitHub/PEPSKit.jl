@@ -45,10 +45,7 @@ function fixedpoint(
     ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)
 ) where {T}
     (peps, env), E, ∂E, info = optimize(
-        (ψ₀, env₀),
-        alg.optimizer;
-        retract=my_retract,
-        inner=my_inner,
+        (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner
     ) do (peps, envs)
         E, g = withgradient(peps) do ψ
             envs = hook_pullback(
