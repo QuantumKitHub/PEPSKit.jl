@@ -81,6 +81,13 @@ end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
 
+# In-place update of environment
+function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
+    env.corners .= env´.corners
+    env.edges .= env´.edges
+    return env
+end
+
 # Functions used for FP differentiation and by KrylovKit.linsolve
 function Base.:+(e₁::CTMRGEnv, e₂::CTMRGEnv)
     return CTMRGEnv(e₁.corners + e₂.corners, e₁.edges + e₂.edges)
