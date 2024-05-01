@@ -48,7 +48,7 @@ Different levels of output verbosity can be activated using `verbosity` (0, 1 or
         4; maxiter=100, gradtol=1e-4, verbosity=2
     )
     reuse_env::Bool = true  # Reuse environment of previous optimization as initial guess for next
-    gradient_alg::G = GeomSum()  # Algorithm to solve gradient linear problem
+    gradient_alg::G = GeomSum() # Algorithm to solve gradient linear problem
     verbosity::Int = 0
 end
 
@@ -63,12 +63,24 @@ function fixedpoint(
     ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)
 ) where {T}
     (peps, env), E, ∂E, info = optimize(
-        x -> ctmrg_gradient(x, H, alg),
         (ψ₀, env₀),
         alg.optimizer;
         retract=my_retract,
         inner=my_inner,
-    )
+    ) do (peps, envs)
+        E, g = withgradient(peps) do ψ
+            envs = hook_pullback(
+                leading_boundary,
+                ψ,
+                alg.boundary_alg,
+                envs;
+                alg_rrule=alg.gradient_alg,
+            )
+            return costfun(ψ, envs, H)
+        end
+        # withgradient returns tuple of gradients `g`
+        return E, only(g)
+    end
     return (; peps, env, E, ∂E, info)
 end
 
@@ -102,7 +114,7 @@ function _rrule(
     envs = leading_boundary(state, alg, envinit)
 
     function leading_boundary_pullback(Δenvs′)
-        Δenvs = CTMRGEnv(unthunk(Δenvs′).corners, unthunk(Δenvs′).edges)
+        Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
         # TODO: make this rrule_via_ad so it's zygote-agnostic
@@ -110,36 +122,15 @@ function _rrule(
             return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
         end
 
-        ∂f∂A(x)::InfinitePEPS = InfinitePEPS(env_vjp(x)[1]...)
-        ∂f∂x(x)::CTMRGEnv = CTMRGEnv(env_vjp(x)[2]...)
-
         # evaluate the geometric sum
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
         ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
-        
-        # TODO: fix weird tangent
-        weird_tangent = ChainRulesCore.Tangent{typeof(∂F∂envs)}(; A=∂F∂envs.A)
-        return NoTangent(), weird_tangent, NoTangent(), ZeroTangent()
+
+        return NoTangent(), ∂F∂envs, NoTangent(), ZeroTangent()
     end
 
     return envs, leading_boundary_pullback
-end
-
-function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize)
-    alg_rrule = alg.gradient_alg
-    E, g = withgradient(peps) do ψ
-        envs = hook_pullback(leading_boundary, ψ, alg.boundary_alg, envs; alg_rrule)
-        return costfun(ψ, envs, H)
-    end
-
-    # TODO: remove second half of this function
-    # AD returns namedtuple as gradient instead of InfinitePEPS
-    ∂E∂A = g[1]
-    if !(∂E∂A isa InfinitePEPS)
-        # TODO: check if `reconstruct` works
-        ∂E∂A = InfinitePEPS(∂E∂A.A)
-    end
-    @assert !isnan(norm(∂E∂A))
-    return E, ∂E∂A
 end
 
 @doc """
@@ -157,6 +148,8 @@ is the partial gradient of the CTMRG iteration with respect to the environment t
 """
 fpgrad
 
+# TODO: can we construct an implementation that does not need to evaluate the vjp
+# twice if both ∂f∂A and ∂f∂x are needed?
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
     g = ∂F∂x
     dx = ∂f∂A(g) # n = 0 term: ∂F∂x ∂f∂A

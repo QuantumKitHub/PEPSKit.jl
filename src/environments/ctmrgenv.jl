@@ -44,6 +44,21 @@ function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
     return CTMRGEnv(corners, edges), ctmrgenv_pullback
 end
 
+# Custom adjoint for CTMRGEnv getproperty, to avoid creating named tuples in backward pass
+function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
+    result = getproperty(e, name)
+    if name === :corners
+        corner_pullback(Δcorners) = NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
+        return result, corner_pullback
+    elseif name === :edges
+        edge_pullback(Δedges) = NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
+        return result, edge_pullback
+    else
+        # this should never happen because already errored in forwards pass
+        throw(ArgumentError("No rrule for getproperty of $name"))
+    end
+end
+
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
