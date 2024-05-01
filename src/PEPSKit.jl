@@ -45,8 +45,7 @@ Module containing default values that represent typical algorithm parameters.
 - `ctmrg_maxiter = 100`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter = 4`: Minimal number of CTMRG carried out
 - `ctmrg_tol = 1e-12`: Tolerance checking singular value and norm convergence
-- `fpgrad_maxiter = 100`: Maximal number of iterations for computing the CTMRG
-fixed-point gradient
+- `fpgrad_maxiter = 100`: Maximal number of iterations for computing the CTMRG fixed-point gradient
 - `fpgrad_tol = 1e-6`: Convergence tolerance for the fixed-point gradient iteration
 
 """
