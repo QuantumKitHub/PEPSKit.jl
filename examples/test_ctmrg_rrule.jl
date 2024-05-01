@@ -31,7 +31,6 @@ env_init = CTMRGEnv(ψ₀; Venv=ℂ^χenv)
 
 # env₀ = leading_boundary(ψ₀, ctmalg, deepcopy(env_init))
 
-
 # direct copy of PEPSKit optimization code: check to see did not break anything
 optalg = PEPSOptimize(;
     boundary_alg=ctmalg,
@@ -41,7 +40,6 @@ optalg = PEPSOptimize(;
     verbosity=2,
 )
 fixedpoint(deepcopy(ψ₀), H, optalg, deepcopy(env_init))
-
 
 # dummy function to hook into
 using PEPSKit: GradMode
@@ -69,8 +67,10 @@ end
 x, f, normgrad = optimize(
     (deepcopy(ψ₀), deepcopy(env_init)),
     LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2); # ConjugateGradient(; gradtol=1e-6, verbosity=4, maxiter=100),
-    inner=PEPSKit.my_inner, retract=PEPSKit.my_retract,
-    (scale!)=VectorInterface.scale!, (add!)=VectorInterface.add!,
+    inner=PEPSKit.my_inner,
+    retract=PEPSKit.my_retract,
+    (scale!)=VectorInterface.scale!,
+    (add!)=VectorInterface.add!,
 ) do (ψ, envs)
     E, g = withgradient(ψ) do ψ
         envs′ = myleadingboundary(NaiveAD(), ψ, ctmalg, envs)
@@ -109,7 +109,7 @@ function ChainRulesCore.rrule(
         ∂F∂envs = PEPSKit.fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
         # somehow the costfun seems to be generating a very weird tangent type,
         # so we need to manually construct something that works with it?
-        weird_tangent = ChainRulesCore.Tangent{typeof(∂F∂envs)}(; A = ∂F∂envs.A)
+        weird_tangent = ChainRulesCore.Tangent{typeof(∂F∂envs)}(; A=∂F∂envs.A)
         return NoTangent(), NoTangent(), weird_tangent, NoTangent(), ZeroTangent()
     end
 
@@ -119,8 +119,10 @@ end
 x, f, normgrad = optimize(
     (deepcopy(ψ₀), deepcopy(env_init)),
     LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2); # ConjugateGradient(; gradtol=1e-6, verbosity=4, maxiter=100),
-    inner=PEPSKit.my_inner,    retract=PEPSKit.my_retract,
-    (scale!)=VectorInterface.scale!, (add!)=VectorInterface.add!,
+    inner=PEPSKit.my_inner,
+    retract=PEPSKit.my_retract,
+    (scale!)=VectorInterface.scale!,
+    (add!)=VectorInterface.add!,
 ) do (ψ, envs)
     E, g = withgradient(ψ) do ψ
         envs′ = myleadingboundary(ManualIter(), ψ, ctmalg, envs)
@@ -129,7 +131,6 @@ x, f, normgrad = optimize(
 
     ∂E∂A = getindex(g, 1)
     if !(∂E∂A isa InfinitePEPS)
-        
         ∂E∂A′ = InfinitePEPS(∂E∂A.A)
     else
         ∂E∂A′ = ∂E∂A
