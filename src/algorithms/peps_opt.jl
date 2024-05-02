@@ -174,17 +174,19 @@ end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
     y = deepcopy(y₀)  # Do not mutate y₀
+    dx = ∂f∂A(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
         y′ = ∂F∂x + ∂f∂x(y)
 
-        norma = norm(y.corners[NORTHWEST])
-        ϵnew = norm(y′.corners[NORTHWEST] - y.corners[NORTHWEST]) / norma  # Normalize error to get comparable convergence tolerance
+        dxnew = ∂f∂A(y′)
+        ϵnew = norm(dxnew - dx)
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 && @printf(
             "Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖/N: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖/N: %.2e\n", i, ϵnew, Δϵ
         )
         y = y′
+        dx = dxnew
         ϵ = ϵnew
 
         ϵ < alg.tol && break
@@ -192,7 +194,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
             @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Cᵢ₊₁-Cᵢ‖ = $ϵ"
         end
     end
-    return ∂f∂A(y)
+    return dx
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
