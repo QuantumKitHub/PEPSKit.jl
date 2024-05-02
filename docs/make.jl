@@ -25,4 +25,4 @@ makedocs(;
     ],
 )
 
-# deploydocs(; repo="https://github.com/quantumghent/PEPSKit.jl.git")
+deploydocs(; repo="https://github.com/quantumghent/PEPSKit.jl.git")
