@@ -11,7 +11,6 @@ where the singular value convergence of the corners as well as the norm is check
 The maximal and minimal number of CTMRG iterations is set with `maxiter` and `miniter`.
 Different levels of output information are printed depending on `verbosity` (0, 1 or 2).
 Regardless of the truncation scheme, the space can be kept fixed with `fixedspace`.
-
 """
 @kwdef struct CTMRG
     trscheme::TruncationScheme = TensorKit.notrunc()
