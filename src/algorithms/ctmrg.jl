@@ -422,11 +422,12 @@ function grow_env_left(peps, Pl, Pr, C_sw, C_nw, T_s, T_w, T_n)
     return C_sw′, C_nw′, T_w′
 end
 
-"""
+@doc """
     LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
 
 Compute the norm of a PEPS contracted with a CTM environment.
 """
+
 function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     total = one(scalartype(peps))
 
