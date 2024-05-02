@@ -61,7 +61,7 @@ export CTMRG, CTMRGEnv
 export NLocalOperator, OnSite, NearestNeighbor
 export expectation_value, costfun
 export leading_boundary
-export PEPSOptimize, NaiveAD, GeomSum, ManualIter, LinSolve
+export PEPSOptimize, GeomSum, ManualIter, LinSolve
 export fixedpoint
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
