@@ -113,8 +113,8 @@ function InfinitePEPO(d::Integer, D::Integer)
 end
 
 """
-InfinitePEPO(d, D, L)
-InfinitePEPO(d, D, (Lx, Ly, Lz)))
+    InfinitePEPO(d, D, L)
+    InfinitePEPO(d, D, (Lx, Ly, Lz)))
 
 Allow users to pass in integers and specify unit cell.
 """

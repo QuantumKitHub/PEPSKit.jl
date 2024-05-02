@@ -6,6 +6,16 @@ conventionally ordered as: T : P ← N ⊗ E ⊗ S ⊗ W.
 """
 const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
 
+"""
+    PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
+               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:ElementarySpace}
+    PEPSTensor(f, ::Type{T}, Pspace::Int, Nspace::Int,
+               [Espace::Int], [Sspace::Int], [Wspace::Int]) where {T}
+                
+Construct a PEPS tensor based on the physical, north, east, west and south spaces.
+Alternatively, only the space dimensions can be provided and ℂ is assumed as the field.
+The tensor elements are generated based on `f` and the element type is specified in `T`.
+"""
 function PEPSTensor(
     f,
     ::Type{T},
@@ -17,7 +27,6 @@ function PEPSTensor(
 ) where {T,S<:ElementarySpace}
     return TensorMap(f, T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
 end
-
 function PEPSTensor(
     f,
     ::Type{T},
@@ -41,14 +50,14 @@ const PEPOTensor{S} = AbstractTensorMap{S,2,4} where {S<:ElementarySpace}
 """
     abstract type AbstractPEPS end
 
-Abstract supertype for a 2D projected entangled pairs state.
+Abstract supertype for a 2D projected entangled-pair state.
 """
 abstract type AbstractPEPS end
 
 """
     abstract type AbstractPEPO end
 
-Abstract supertype for a 2D projected entangled pairs operator.
+Abstract supertype for a 2D projected entangled-pair operator.
 """
 abstract type AbstractPEPO end
 

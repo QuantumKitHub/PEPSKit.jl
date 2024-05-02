@@ -1,9 +1,19 @@
+"""
+    struct CTMRGEnv{C,T}
+
+Corner transfer-matrix environment containing unit-cell arrays of corner and edge tensors.
+"""
 struct CTMRGEnv{C,T}
     corners::Array{C,3}
     edges::Array{T,3}
 end
 
-# Initialize ctmrg environments with some random tensors
+"""
+    CTMRGEnv(peps::InfinitePEPS{P}; Venv=oneunit(spacetype(P)))
+
+Create a random CTMRG environment from a PEPS tensor. The environment bond dimension
+defaults to one and can be specified using the `Venv` space.
+"""
 function CTMRGEnv(peps::InfinitePEPS{P}; Venv=oneunit(spacetype(P))) where {P}
     C_type = tensormaptype(spacetype(P), 1, 1, storagetype(P))
     T_type = tensormaptype(spacetype(P), 3, 1, storagetype(P))
@@ -151,7 +161,7 @@ function VI.add!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
 end
 VI.add!!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number) = add!(env₁, env₂, α, β)
 
-# exploiting the fact that vectorinterface works for tuples:
+# Exploiting the fact that VectorInterface works for tuples:
 function VI.inner(env₁::CTMRGEnv, env₂::CTMRGEnv)
     return inner((env₁.corners, env₁.edges), (env₂.corners, env₂.edges))
 end
