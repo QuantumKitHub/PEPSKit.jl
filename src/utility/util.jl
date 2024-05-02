@@ -54,7 +54,7 @@ end
 
 Create two arrays of specified `size` that contain undefined tensors representing
 left and right acting projectors, respectively. The projector types are inferred
-from the TensorMap type `T` which avoids having to recompute tranpose tensors.
+from the TensorMap type `T` which avoids having to recompute transpose tensors.
 """
 function projector_type(T::DataType, size)
     Pleft = Array{T,length(size)}(undef, size)
@@ -134,8 +134,15 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
     return t, _setindex_pullback
 end
 
-# Allows in-place operations during AD that copies when differentiating
-# Especially needed to set tensors in unit cell of environments
+"""
+    @diffset assign
+
+Helper macro which allows in-place operations in the forward-pass of Zygote, but
+resorts to non-mutating operations in the backwards-pass. The expression `assign`
+should assign an object to an pre-existing `AbstractArray` and the use of updating
+operators is also possible. This is especially needed when in-place assigning
+tensors to unit-cell arrays of environments.
+"""
 macro diffset(ex)
     return esc(parse_ex(ex))
 end

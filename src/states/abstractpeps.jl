@@ -7,10 +7,10 @@ conventionally ordered as: T : P ← N ⊗ E ⊗ S ⊗ W.
 const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
 
 """
-    PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S, Espace::S=Nspace,
-               Sspace::S=Nspace', Wspace::S=Espace') where {T,S<:ElementarySpace}
-    PEPSTensor(f, ::Type{T}, Pspace::Int, Nspace::Int, Espace::Int=Nspace,
-               Sspace::Int=Nspace, Wspace::Int=Espace) where {T}
+    PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
+               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:ElementarySpace}
+    PEPSTensor(f, ::Type{T}, Pspace::Int, Nspace::Int,
+               [Espace::Int], [Sspace::Int], [Wspace::Int]) where {T}
                 
 Construct a PEPS tensor based on the physical, north, east, west and south spaces.
 Alternatively, only the space dimensions can be provided and ℂ is assumed as the field.

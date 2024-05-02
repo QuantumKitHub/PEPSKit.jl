@@ -23,7 +23,7 @@ Regardless of the truncation scheme, the space can be kept fixed with `fixedspac
 end
 
 """
-    MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
+    MPSKit.leading_boundary(state, alg::CTMRG, [envinit])
 
 Contract `state` using CTMRG and return the CTM environment.
 Per default, a random initial environment is used.

@@ -30,8 +30,8 @@ Gradient mode for CTMRG using manual iteration to solve the linear problem.
 end
 
 """
-    struct PEPSOptimize{G}(; boundary_alg = CTMRG(), optimizer::OptimKit.OptimizationAlgorithm = LBFGS()
-                           reuse_env::Bool = true, gradient_alg::G, verbosity::Int = 0)
+    PEPSOptimize{G}(; boundary_alg = CTMRG(), optimizer::OptimKit.OptimizationAlgorithm = LBFGS()
+                    reuse_env::Bool = true, gradient_alg::G, verbosity::Int = 0)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
@@ -53,11 +53,11 @@ Different levels of output verbosity can be activated using `verbosity` (0, 1 or
 end
 
 """
-    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize,
-               env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)) where {T}
+    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv]) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
+By default, a random initial environment is used.
 """
 function fixedpoint(
     ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)
