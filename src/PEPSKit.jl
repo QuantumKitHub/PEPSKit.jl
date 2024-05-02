@@ -47,7 +47,6 @@ Module containing default values that represent typical algorithm parameters.
 - `ctmrg_tol = 1e-12`: Tolerance checking singular value and norm convergence
 - `fpgrad_maxiter = 100`: Maximal number of iterations for computing the CTMRG fixed-point gradient
 - `fpgrad_tol = 1e-6`: Convergence tolerance for the fixed-point gradient iteration
-
 """
 module Defaults
     const ctmrg_maxiter = 100
