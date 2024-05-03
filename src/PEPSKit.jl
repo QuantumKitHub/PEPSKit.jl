@@ -11,6 +11,7 @@ using ChainRulesCore, Zygote
 include("utility/util.jl")
 include("utility/eigsolve.jl")
 include("utility/rotations.jl")
+include("utility/hook_pullback.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
@@ -60,11 +61,12 @@ export CTMRG, CTMRGEnv
 export NLocalOperator, OnSite, NearestNeighbor
 export expectation_value, costfun
 export leading_boundary
-export PEPSOptimize, NaiveAD, GeomSum, ManualIter, LinSolve
+export PEPSOptimize, GeomSum, ManualIter, LinSolve
 export fixedpoint
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export symmetrize, None, Depth, Full
+export showtypeofgrad
 
 end # module

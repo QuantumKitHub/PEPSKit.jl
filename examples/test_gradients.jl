@@ -33,15 +33,20 @@ env = leading_boundary(ψ, boundary_alg, CTMRGEnv(ψ; Venv=ℂ^χenv))
 # Compute CTM gradient in four different ways (set reuse_env=false to not mutate environment)
 function compute_grad(gradient_alg)
     @info "FP gradient using $(gradient_alg):"
-    alg = PEPSOptimize(; boundary_alg, gradient_alg, reuse_env=false)
-    @time _, g = PEPSKit.ctmrg_gradient((ψ, env), H, alg)
-    return g
+    @time g = gradient(ψ) do peps
+        env′ = PEPSKit.hook_pullback(
+            leading_boundary, peps, boundary_alg, env; alg_rrule=gradient_alg
+        )
+        return costfun(ψ, env′, H)
+    end
+    return only(g)
 end
 
-g_naive = compute_grad(NaiveAD())
-g_geomsum = compute_grad(GeomSum())
-g_maniter = compute_grad(ManualIter())
-g_linsolve = compute_grad(KrylovKit.GMRES(; tol=1e-6))
+gradtol = 1e-6
+g_naive = compute_grad(nothing)
+g_geomsum = compute_grad(GeomSum(; tol=gradtol))
+g_maniter = compute_grad(ManualIter(; tol=gradtol))
+g_linsolve = compute_grad(KrylovKit.GMRES(; tol=gradtol))
 
 @show norm(g_geomsum - g_naive) / norm(g_naive)
 @show norm(g_maniter - g_naive) / norm(g_naive)

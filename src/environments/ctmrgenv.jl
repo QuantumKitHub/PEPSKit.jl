@@ -44,6 +44,25 @@ function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
     return CTMRGEnv(corners, edges), ctmrgenv_pullback
 end
 
+# Custom adjoint for CTMRGEnv getproperty, to avoid creating named tuples in backward pass
+function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
+    result = getproperty(e, name)
+    if name === :corners
+        function corner_pullback(Δcorners)
+            return NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
+        end
+        return result, corner_pullback
+    elseif name === :edges
+        function edge_pullback(Δedges)
+            return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
+        end
+        return result, edge_pullback
+    else
+        # this should never happen because already errored in forwards pass
+        throw(ArgumentError("No rrule for getproperty of $name"))
+    end
+end
+
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
@@ -61,6 +80,13 @@ function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
 end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
+
+# In-place update of environment
+function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
+    env.corners .= env´.corners
+    env.edges .= env´.edges
+    return env
+end
 
 # Functions used for FP differentiation and by KrylovKit.linsolve
 function Base.:+(e₁::CTMRGEnv, e₂::CTMRGEnv)

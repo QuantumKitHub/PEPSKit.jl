@@ -181,3 +181,19 @@ end
 
 is_indexing(ex) = false
 is_indexing(ex::Expr) = ex.head == :ref
+
+"""
+    @showtypeofgrad(x)
+
+Macro utility to show to type of the gradient that is about to accumulate for `x`.
+
+See also [`Zygote.@showgrad`](@ref).
+"""
+macro showtypeofgrad(x)
+    return :(
+        Zygote.hook($(esc(x))) do x̄
+            println($"∂($x) = ", repr(typeof(x̄)))
+            x̄
+        end
+    )
+end

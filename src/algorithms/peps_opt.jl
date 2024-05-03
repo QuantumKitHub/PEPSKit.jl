@@ -48,7 +48,7 @@ Different levels of output verbosity can be activated using `verbosity` (0, 1 or
         4; maxiter=100, gradtol=1e-4, verbosity=2
     )
     reuse_env::Bool = true  # Reuse environment of previous optimization as initial guess for next
-    gradient_alg::G = GeomSum()  # Algorithm to solve gradient linear problem
+    gradient_alg::G = GeomSum() # Algorithm to solve gradient linear problem
     verbosity::Int = 0
 end
 
@@ -63,12 +63,24 @@ function fixedpoint(
     ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)
 ) where {T}
     (peps, env), E, ∂E, info = optimize(
-        x -> ctmrg_gradient(x, H, alg),
-        (ψ₀, env₀),
-        alg.optimizer;
-        retract=my_retract,
-        inner=my_inner,
-    )
+        (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner
+    ) do (peps, envs)
+        E, g = withgradient(peps) do ψ
+            envs´ = hook_pullback(
+                leading_boundary,
+                ψ,
+                alg.boundary_alg,
+                envs;
+                alg_rrule=alg.gradient_alg,
+            )
+            ignore_derivatives() do
+                alg.reuse_env && update!(envs, envs´)
+            end
+            return costfun(ψ, envs´, H)
+        end
+        # withgradient returns tuple of gradients `g`
+        return E, only(g)
+    end
     return (; peps, env, E, ∂E, info)
 end
 
@@ -90,54 +102,35 @@ Evaluating the gradient of the cost function for CTMRG:
 - With AD, the gradient is computed by differentiating the cost function with respect to the PEPS tensors, including computing the environment tensors.
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
-using Zygote: @showgrad
 
-@doc """
-    ctmrg_gradient((peps, envs), H, alg::PEPSOptimize)
+function _rrule(
+    gradmode::Union{GradMode,KrylovKit.LinearSolver},
+    ::RuleConfig,
+    ::typeof(MPSKit.leading_boundary),
+    state,
+    alg::CTMRG,
+    envinit,
+)
+    envs = leading_boundary(state, alg, envinit)
 
-Compute the energy and its gradient for the Hamiltonian `H``.
-Here, `alg` determines the algorithm that is used for the CTMRG gradient computation.
-"""
-ctmrg_gradient
+    function leading_boundary_pullback(Δenvs′)
+        Δenvs = unthunk(Δenvs′)
 
-function ctmrg_gradient((peps, envs), H, alg::PEPSOptimize{NaiveAD})
-    E, g = withgradient(peps) do ψ
-        envs′ = leading_boundary(ψ, alg.boundary_alg, envs)
-        alg.reuse_env && (envs = envs′)
-        return costfun(ψ, envs′, H)
+        # find partial gradients of gauge_fixed single CTMRG iteration
+        # TODO: make this rrule_via_ad so it's zygote-agnostic
+        _, env_vjp = pullback(state, envs) do A, x
+            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
+        end
+
+        # evaluate the geometric sum
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
+        ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
+
+        return NoTangent(), ∂F∂envs, NoTangent(), ZeroTangent()
     end
 
-    # AD returns namedtuple as gradient instead of InfinitePEPS
-    ∂E∂A = g[1]
-    if !(∂E∂A isa InfinitePEPS)
-        # TODO: check if `reconstruct` works
-        ∂E∂A = InfinitePEPS(∂E∂A.A)
-    end
-    @assert !isnan(norm(∂E∂A))
-    return E, ∂E∂A
-end
-
-function ctmrg_gradient(
-    (peps, envs), H, alg::PEPSOptimize{T}
-) where {T<:Union{GeomSum,ManualIter,KrylovKit.LinearSolver}}
-    # find partial gradients of costfun
-    envs′ = leading_boundary(peps, alg.boundary_alg, envs)
-    alg.reuse_env && (envs = envs′)
-    E, Egrad = withgradient(costfun, peps, envs′, H)
-    ∂F∂A = InfinitePEPS(Egrad[1]...)
-    ∂F∂x = CTMRGEnv(Egrad[2]...)
-
-    # find partial gradients of single ctmrg iteration
-    _, envvjp = pullback(peps, envs′) do A, x
-        return gauge_fix(x, ctmrg_iter(A, x, alg.boundary_alg)[1])
-    end
-    ∂f∂A(x) = InfinitePEPS(envvjp(x)[1]...)
-    ∂f∂x(x) = CTMRGEnv(envvjp(x)[2]...)
-
-    # evaluate the geometric sum
-    ∂F∂envs = fpgrad(∂F∂x, ∂f∂x, ∂f∂A, ∂F∂x, alg.gradient_alg)
-
-    return E, ∂F∂A + ∂F∂envs
+    return envs, leading_boundary_pullback
 end
 
 @doc """
@@ -155,6 +148,8 @@ is the partial gradient of the CTMRG iteration with respect to the environment t
 """
 fpgrad
 
+# TODO: can we construct an implementation that does not need to evaluate the vjp
+# twice if both ∂f∂A and ∂f∂x are needed?
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
     g = ∂F∂x
     dx = ∂f∂A(g) # n = 0 term: ∂F∂x ∂f∂A
@@ -179,17 +174,19 @@ end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
     y = deepcopy(y₀)  # Do not mutate y₀
+    dx = ∂f∂A(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
         y′ = ∂F∂x + ∂f∂x(y)
 
-        norma = norm(y.corners[NORTHWEST])
-        ϵnew = norm(y′.corners[NORTHWEST] - y.corners[NORTHWEST]) / norma  # Normalize error to get comparable convergence tolerance
+        dxnew = ∂f∂A(y′)
+        ϵnew = norm(dxnew - dx)
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 && @printf(
             "Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖/N: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖/N: %.2e\n", i, ϵnew, Δϵ
         )
         y = y′
+        dx = dxnew
         ϵ = ϵnew
 
         ϵ < alg.tol && break
@@ -197,11 +194,11 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
             @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Cᵢ₊₁-Cᵢ‖ = $ϵ"
         end
     end
-    return ∂f∂A(y)
+    return dx
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
-    y, info = linsolve(e -> e - ∂f∂x(e), ∂F∂x, y₀, alg)
+    y, info = linsolve(∂f∂x, ∂F∂x, y₀, alg, 1, -1)
     if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
