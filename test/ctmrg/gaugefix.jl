@@ -7,12 +7,22 @@ using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 4)]
 
+function _make_symmetric(psi)
+    if ==(size(psi)...)
+        return PEPSKit.symmetrize(psi, PEPSKit.Full())
+    else
+        return PEPSKit.symmetrize(PEPSKit.symmetrize(psi, PEPSKit.Depth()), PEPSKit.Width())
+    end
+end
+
+
 @testset "Trivial symmetry ($T) - ($unitcell)" for (T, unitcell) in Iterators.product(scalartypes, unitcells)
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
     ctm_space = ComplexSpace(16)
 
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
+    psi = _make_symmetric(psi)
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     alg = CTMRG(; trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
@@ -30,6 +40,7 @@ end
     ctm_space = Z2Space(0 => 8, 1 => 8)
 
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
+    psi = _make_symmetric(psi)
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     alg = CTMRG(; trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=100, verbosity=2)
