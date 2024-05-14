@@ -24,7 +24,7 @@ end
 H = square_lattice_heisenberg()
 χbond = 2
 χenv = 16
-verbosity = 2
+verbosity = 1
 ctm_alg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity)
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
