@@ -1,24 +1,21 @@
 using Test
+using Random
 using PEPSKit
 using TensorKit
 using PEPSKit
 using Zygote
 using OptimKit
 using KrylovKit
+
 # Square lattice Heisenberg Hamiltonian
-function square_lattice_heisenberg(; Jx=-1.0, Jy=1.0, Jz=-1.0)
+function square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
+    physical_space = ComplexSpace(2)
     T = ComplexF64
-    Vphys = ℂ^2
-    σx = TensorMap(T[0 1; 1 0], Vphys, Vphys)
-    σy = TensorMap(T[0 im; -im 0], Vphys, Vphys)
-    σz = TensorMap(T[1 0; 0 -1], Vphys, Vphys)
-
-    @tensor H[-1 -3; -2 -4] :=
-        Jx * σx[-1, -2] * σx[-3, -4] +
-        Jy * σy[-1, -2] * σy[-3, -4] +
-        Jz * σz[-1, -2] * σz[-3, -4]
-
-    return NLocalOperator{NearestNeighbor}(H)
+    σx = TensorMap(T[0 1; 1 0], physical_space, physical_space)
+    σy = TensorMap(T[0 im; -im 0], physical_space, physical_space)
+    σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
+    H = (Jx * σx ⊗ σx) + (Jy * σy ⊗ σy) + (Jz * σz ⊗ σz)
+    return NLocalOperator{NearestNeighbor}(H / 4)
 end
 
 h = TensorMap(randn, Float64, ComplexSpace(2)^2, ComplexSpace(2)^2)
@@ -38,6 +35,7 @@ gradmodes = [nothing, GeomSum(; tol), ManualIter(; tol), KrylovKit.GMRES(; tol)]
 
 @testset "$alg_rrule" for alg_rrule in gradmodes
     # random point, random direction
+    Random.seed!(42039482038)
     dir = InfinitePEPS(2, χbond)
     psi = InfinitePEPS(2, χbond)
     env = leading_boundary(psi, boundary_alg, CTMRGEnv(psi; Venv=ℂ^χenv))

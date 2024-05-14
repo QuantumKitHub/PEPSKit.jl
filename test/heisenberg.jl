@@ -1,4 +1,5 @@
 using Test
+using Random
 using PEPSKit
 using TensorKit
 using KrylovKit
@@ -34,6 +35,7 @@ opt_alg = PEPSOptimize(;
 )
 
 # initialize states
+Random.seed!(91283219347)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(psi_init, ctm_alg, CTMRGEnv(psi_init; Venv=ComplexSpace(χenv)))
 

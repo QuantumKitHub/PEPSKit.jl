@@ -1,5 +1,5 @@
 using LinearAlgebra
-using TensorKit, MPSKitModels, OptimKit
+using TensorKit, OptimKit
 using PEPSKit, KrylovKit
 
 # Square lattice Heisenberg Hamiltonian
@@ -7,18 +7,13 @@ using PEPSKit, KrylovKit
 # the ground state in a single-site unit cell. This can be seen from
 # sublattice rotating H from parameters (1, 1, 1) to (-1, 1, -1).
 function square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
-    Sx, Sy, Sz, _ = spinmatrices(1//2)
-    Vphys = ℂ^2
-    σx = TensorMap(Sx, Vphys, Vphys)
-    σy = TensorMap(Sy, Vphys, Vphys)
-    σz = TensorMap(Sz, Vphys, Vphys)
-
-    @tensor H[-1 -3; -2 -4] :=
-        Jx * σx[-1, -2] * σx[-3, -4] +
-        Jy * σy[-1, -2] * σy[-3, -4] +
-        Jz * σz[-1, -2] * σz[-3, -4]
-
-    return NLocalOperator{NearestNeighbor}(H)
+    physical_space = ComplexSpace(2)
+    T = ComplexF64
+    σx = TensorMap(T[0 1; 1 0], physical_space, physical_space)
+    σy = TensorMap(T[0 im; -im 0], physical_space, physical_space)
+    σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
+    H = (Jx * σx ⊗ σx) + (Jy * σy ⊗ σy) + (Jz * σz ⊗ σz)
+    return NLocalOperator{NearestNeighbor}(H / 4)
 end
 
 # Parameters
