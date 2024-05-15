@@ -251,11 +251,11 @@ function check_elementwise_convergence(
     for (dir, r, c) in Iterators.product(axes(envfinal.edges)...)
         @debug(
             "$((dir, r, c)): all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ",
-            all(x -> abs(x) < atol, ΔC[dir, r, c].data),
+            all(x -> abs(x) < atol, convert(Array, ΔC[dir, r, c])),
         )
         @debug(
             "$((dir, r, c)): all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ",
-            all(x -> abs(x) < atol, ΔT[dir, r, c].data),
+            all(x -> abs(x) < atol, convert(Array, ΔT[dir, r, c])),
         )
     end
 

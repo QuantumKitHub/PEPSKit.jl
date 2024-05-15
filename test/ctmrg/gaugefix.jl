@@ -18,10 +18,10 @@ end
 
 @testset "Trivial symmetry ($T) - ($unitcell)" for (T, unitcell) in
                                                    Iterators.product(scalartypes, unitcells)
-    Random.seed!(12345678)
+    Random.seed!(1234567)
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
-    ctm_space = ComplexSpace(16)
+    ctm_space = ComplexSpace(20)
 
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
     psi = _make_symmetric(psi)
@@ -41,10 +41,10 @@ end
 
 @testset "Z2 symmetry ($T) - ($unitcell)" for (T, unitcell) in
                                               Iterators.product(scalartypes, unitcells)
-    Random.seed!(12345678)
+    Random.seed!(1234567)
     physical_space = Z2Space(0 => 1, 1 => 1)
     peps_space = Z2Space(0 => 2, 1 => 2)
-    ctm_space = Z2Space(0 => 8, 1 => 8)
+    ctm_space = Z2Space(0 => 10, 1 => 10)
 
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
     psi = _make_symmetric(psi)
