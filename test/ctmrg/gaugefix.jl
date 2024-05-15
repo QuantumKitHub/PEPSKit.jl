@@ -7,6 +7,7 @@ using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 4)]
+χ = 8
 
 function _make_symmetric(psi)
     if ==(size(psi)...)
@@ -21,7 +22,7 @@ end
     Random.seed!(1234567)
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
-    ctm_space = ComplexSpace(20)
+    ctm_space = ComplexSpace(χ)
 
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
     psi = _make_symmetric(psi)
@@ -43,8 +44,8 @@ end
                                               Iterators.product(scalartypes, unitcells)
     Random.seed!(1234567)
     physical_space = Z2Space(0 => 1, 1 => 1)
-    peps_space = Z2Space(0 => 2, 1 => 2)
-    ctm_space = Z2Space(0 => 10, 1 => 10)
+    peps_space = Z2Space(0 => 1, 1 => 1)
+    ctm_space = Z2Space(0 => χ ÷ 2, 1 => χ ÷ 2)
 
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
     psi = _make_symmetric(psi)
@@ -52,9 +53,9 @@ end
 
     verbosity = 1
     alg = CTMRG(;
-        trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=200, verbosity
+        trscheme=truncspace(ctm_space), tol=1e-10, miniter=4, maxiter=200, verbosity
     )
-    alg_fixed = CTMRG(; trscheme=truncdim(dim(ctm_space)), verbosity, fixedspace=true)
+    alg_fixed = CTMRG(; trscheme=truncspace(ctm_space), verbosity, fixedspace=true)
 
     ctm = leading_boundary(psi, alg, ctm)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
