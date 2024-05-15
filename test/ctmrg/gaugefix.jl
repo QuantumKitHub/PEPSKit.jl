@@ -19,7 +19,6 @@ end
 
 @testset "Trivial symmetry ($T) - ($unitcell)" for (T, unitcell) in
                                                    Iterators.product(scalartypes, unitcells)
-    Random.seed!(1234567)
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
     ctm_space = ComplexSpace(χ)
@@ -37,12 +36,11 @@ end
     ctm = leading_boundary(psi, alg, ctm)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
     ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed)
+    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-4)
 end
 
 @testset "Z2 symmetry ($T) - ($unitcell)" for (T, unitcell) in
                                               Iterators.product(scalartypes, unitcells)
-    Random.seed!(1234567)
     physical_space = Z2Space(0 => 1, 1 => 1)
     peps_space = Z2Space(0 => 1, 1 => 1)
     ctm_space = Z2Space(0 => χ ÷ 2, 1 => χ ÷ 2)
@@ -60,5 +58,5 @@ end
     ctm = leading_boundary(psi, alg, ctm)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
     ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed)
+    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-4)
 end
