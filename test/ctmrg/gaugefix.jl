@@ -7,7 +7,7 @@ using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 4)]
-χ = 8
+χ = 4
 
 function _make_symmetric(psi)
     if ==(size(psi)...)
@@ -17,19 +17,34 @@ function _make_symmetric(psi)
     end
 end
 
+# If I can't make the rng seed behave, I'll just randomly define a peps somehow
+function semi_random_peps!(psi::InfinitePEPS)
+    i = 0
+    A′ = map(psi.A) do a
+        for (_, b) in blocks(a)
+            l = length(b)
+            b .= reshape(collect( (1:l) .+ i), size(b))
+            i += l
+        end
+        return a
+    end
+    return InfinitePEPS(A′)
+end
+
 @testset "Trivial symmetry ($T) - ($unitcell)" for (T, unitcell) in
                                                    Iterators.product(scalartypes, unitcells)
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
     ctm_space = ComplexSpace(χ)
 
-    psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
+    psi = InfinitePEPS(undef, T, physical_space, peps_space; unitcell)
+    semi_random_peps!(psi)
     psi = _make_symmetric(psi)
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     verbosity = 1
     alg = CTMRG(;
-        trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=200, verbosity
+        trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=400, verbosity
     )
     alg_fixed = CTMRG(; trscheme=truncdim(dim(ctm_space)), verbosity, fixedspace=true)
 
@@ -45,13 +60,14 @@ end
     peps_space = Z2Space(0 => 1, 1 => 1)
     ctm_space = Z2Space(0 => χ ÷ 2, 1 => χ ÷ 2)
 
-    psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
+    psi = InfinitePEPS(undef, T, physical_space, peps_space; unitcell)
+    semi_random_peps!(psi)
     psi = _make_symmetric(psi)
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     verbosity = 1
     alg = CTMRG(;
-        trscheme=truncspace(ctm_space), tol=1e-10, miniter=4, maxiter=200, verbosity
+        trscheme=truncspace(ctm_space), tol=1e-10, miniter=4, maxiter=400, verbosity
     )
     alg_fixed = CTMRG(; trscheme=truncspace(ctm_space), verbosity, fixedspace=true)
 
