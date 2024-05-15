@@ -23,7 +23,7 @@ function semi_random_peps!(psi::InfinitePEPS)
     A′ = map(psi.A) do a
         for (_, b) in blocks(a)
             l = length(b)
-            b .= reshape(collect( (1:l) .+ i), size(b))
+            b .= reshape(collect((1:l) .+ i), size(b))
             i += l
         end
         return a
