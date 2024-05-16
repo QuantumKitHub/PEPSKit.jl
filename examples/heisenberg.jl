@@ -36,6 +36,6 @@ alg = PEPSOptimize(;
 # E/N = −0.6694421, which is a QMC estimate from https://arxiv.org/abs/1101.3281.
 # Of course there is a noticable bias for small χbond and χenv.
 ψ₀ = InfinitePEPS(2, χbond)
-env₀ = leading_boundary(ψ₀, ctmalg, CTMRGEnv(ψ₀; Venv=ℂ^χenv))
+env₀ = leading_boundary(CTMRGEnv(ψ₀; Venv=ℂ^χenv), ψ₀, ctmalg)
 result = fixedpoint(ψ₀, H, alg, env₀)
 @show result.E

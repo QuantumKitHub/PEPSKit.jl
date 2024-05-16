@@ -68,9 +68,9 @@ function fixedpoint(
         E, g = withgradient(peps) do ψ
             envs´ = hook_pullback(
                 leading_boundary,
+                envs,
                 ψ,
-                alg.boundary_alg,
-                envs;
+                alg.boundary_alg;
                 alg_rrule=alg.gradient_alg,
             )
             ignore_derivatives() do
@@ -107,11 +107,11 @@ function _rrule(
     gradmode::Union{GradMode,KrylovKit.LinearSolver},
     ::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
+    envinit,
     state,
     alg::CTMRG,
-    envinit,
 )
-    envs = leading_boundary(state, alg, envinit)
+    envs = leading_boundary(envinit, state, alg)
 
     function leading_boundary_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
@@ -127,7 +127,7 @@ function _rrule(
         ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
         ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
 
-        return NoTangent(), ∂F∂envs, NoTangent(), ZeroTangent()
+        return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
     return envs, leading_boundary_pullback

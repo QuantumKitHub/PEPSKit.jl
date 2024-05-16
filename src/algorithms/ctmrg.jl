@@ -22,12 +22,15 @@ Regardless of the truncation scheme, the space can be kept fixed with `fixedspac
 end
 
 """
-    MPSKit.leading_boundary(state, alg::CTMRG, [envinit])
+    MPSKit.leading_boundary([envinit], state, alg::CTMRG)
 
 Contract `state` using CTMRG and return the CTM environment.
 Per default, a random initial environment is used.
 """
-function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
+function MPSKit.leading_boundary(state, alg::CTMRG)
+    return MPSKit.leading_boundary(CTMRGEnv(state), state, alg)
+end
+function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     normold = 1.0
     CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
     TSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
