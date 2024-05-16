@@ -40,7 +40,7 @@ end
     psi = InfinitePEPS(undef, T, physical_space, peps_space; unitcell)
     semi_random_peps!(psi)
     psi = _make_symmetric(psi)
-    
+
     Random.seed!(123456789)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
