@@ -57,26 +57,28 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
             # TODO: implement when spaces aren't the same
             return norm(t_new - t_old)
         end
-        (max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter) && break  # Converge if maximal Δ falls below tolerance
 
-        # Print verbose info
-        ignore_derivatives() do
-            alg.verbosity > 1 && @printf(
-                "CTMRG iter: %3d   norm: %.2e   Δnorm: %.2e   ΔCS: %.2e   ΔTS: %.2e   ϵ: %.2e   Δϵ: %.2e\n",
-                i,
-                abs(normnew),
-                Δnorm,
-                ΔCS,
-                ΔTS,
-                ϵ,
-                Δϵ
-            )
+        conv_condition = max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter
+        ignore_derivatives() do # Print verbose info
+            if alg.verbosity > 1 || (alg.verbosity == 1 && (i == 1 || conv_condition))
+                @printf(
+                    "CTMRG iter: %3d   norm: %.2e   Δnorm: %.2e   ΔCS: %.2e   ΔTS: %.2e   ϵ: %.2e   Δϵ: %.2e\n",
+                    i,
+                    abs(normnew),
+                    Δnorm,
+                    ΔCS,
+                    ΔTS,
+                    ϵ,
+                    Δϵ
+                )
+            end
             alg.verbosity > 0 &&
                 i == alg.maxiter &&
                 @warn(
                     "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
                 )
         end
+        conv_condition && break  # Converge if maximal Δ falls below tolerance
 
         # Update convergence criteria
         normold = normnew
@@ -249,11 +251,11 @@ function check_elementwise_convergence(
     for (dir, r, c) in Iterators.product(axes(envfinal.edges)...)
         @debug(
             "$((dir, r, c)): all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ",
-            all(x -> abs(x) < atol, ΔC[dir, r, c].data),
+            all(x -> abs(x) < atol, convert(Array, ΔC[dir, r, c])),
         )
         @debug(
             "$((dir, r, c)): all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ",
-            all(x -> abs(x) < atol, ΔT[dir, r, c].data),
+            all(x -> abs(x) < atol, convert(Array, ΔT[dir, r, c])),
         )
     end
 
