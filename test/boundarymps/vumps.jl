@@ -24,7 +24,6 @@ N´ = abs(norm(psi, ctm))
 
 @test N ≈ N´ atol = 1e-3
 
-
 # (2, 2) unit cell
 
 psi2 = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
@@ -40,7 +39,6 @@ ctm2 = leading_boundary(
 N2´ = abs(norm(psi2, ctm2))
 
 @test N ≈ N´ rtol = 1e-3
-
 
 # PEPO contraction run through
 
