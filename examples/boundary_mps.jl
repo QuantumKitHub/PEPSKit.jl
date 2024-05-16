@@ -9,7 +9,6 @@ include("ising_pepo.jl")
 # This example demonstrates some boundary-MPS methods for working with 2D projected
 # entangled-pair states and operators.
 
-
 ## Computing a PEPS norm
 
 # We start by initializing a random initial infinite PEPS
@@ -40,7 +39,6 @@ N´ = abs(norm(peps, ctm))
 
 @show abs(N - N´) / N
 
-
 ## Working with unit cells
 
 # For PEPS with non-trivial unit cells, the principle is exactly the same.
@@ -66,7 +64,6 @@ N2´ = abs(norm(peps2, ctm2))
 
 # Note that for larger unit cells and non-Hermitian PEPS the VUMPS algorithm may become
 # unstable, in which case the CTMRG algorithm is recommended.
-
 
 ## Contracting PEPO overlaps
 
