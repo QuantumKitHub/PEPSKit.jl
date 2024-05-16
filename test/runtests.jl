@@ -1,19 +1,24 @@
-using Test, PEPSKit, MPSKit, TensorKit
+using SafeTestsets
 
-@testset "Boundary MPS" begin
-    peps = InfinitePEPS(2, 3)
-    tpeps = InfiniteTransferPEPS(peps, 1, 1)
+const GROUP = get(ENV, "GROUP", "All")
 
-    mps = initializeMPS(tpeps, 4)
-
-    mps, _, _ = leading_boundary(mps, tpeps, VUMPS())
-end
-
-@testset "CTMRG" begin
-    peps = InfinitePEPS(2, 3)
-    tpeps = InfiniteTransferPEPS(peps, 1, 1)
-
-    mps = initializeMPS(tpeps, 4)
-
-    env = leading_boundary(peps, CTMRG(; tol=1e-10, trscheme=truncdim(20)))
+@time begin
+    if GROUP == "All" || GROUP == "CTMRG"
+        @time @safetestset "Gauge Fixing" begin
+            include("ctmrg/gaugefix.jl")
+        end
+        @time @safetestset "Gradients" begin
+            include("ctmrg/gradients.jl")
+        end
+    end
+    if GROUP == "All" || GROUP == "MPS"
+        @time @safetestset "VUMPS" begin
+            include("boundarymps/vumps.jl")
+        end
+    end
+    if GROUP == "All" || GROUP == "EXAMPLES"
+        @time @safetestset "Heisenberg model" begin
+            include("heisenberg.jl")
+        end
+    end
 end
