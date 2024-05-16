@@ -1,7 +1,7 @@
 """
     struct InfinitePEPO{T<:PEPOTensor}
 
-Represents an infinte projected entangled-pair operator (PEPO) on a 3D cubic lattice.
+Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
 """
 struct InfinitePEPO{T<:PEPOTensor} <: AbstractPEPO
     A::Array{T,3}
@@ -24,7 +24,7 @@ end
 
 ## Constructors
 """
-    InfinitePEPO(A::AbstractArray{T, 2})
+    InfinitePEPO(A::AbstractArray{T, 3})
 
 Allow users to pass in an array of tensors.
 """
@@ -33,15 +33,18 @@ function InfinitePEPO(A::AbstractArray{T,3}) where {T<:PEPOTensor}
 end
 
 """
-    InfinitePEPO(Pspaces, Nspaces, Espaces)
+    InfinitePEPO(f=randn, T=ComplexF64, Pspaces, Nspaces, Espaces)
 
 Allow users to pass in arrays of spaces.
 """
 function InfinitePEPO(
-    Pspaces::AbstractArray{S,3},
-    Nspaces::AbstractArray{S,3},
-    Espaces::AbstractArray{S,3}=Nspaces,
-) where {S<:ElementarySpace}
+    Pspaces::A, Nspaces::A, Espaces::A=Nspaces
+) where {A<:AbstractArray{<:ElementarySpace,3}}
+    return InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfinitePEPO(
+    f, T, Pspaces::A, Nspaces::A, Espaces::A=Nspaces
+) where {A<:AbstractArray{<:ElementarySpace,3}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -49,23 +52,16 @@ function InfinitePEPO(
     Wspaces = adjoint.(circshift(Espaces, (0, -1, 0)))
     Ppspaces = adjoint.(circshift(Pspaces, (0, 0, -1)))
 
-    A = map(Pspaces, Ppspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, Pp, N, E, S, W
-        return TensorMap(rand, ComplexF64, P * Pp ← N * E * S * W)
+    P = map(Pspaces, Ppspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, Pp, N, E, S, W
+        return TensorMap(f, T, P * Pp ← N * E * S * W)
     end
 
-    return InfinitePEPO(A)
+    return InfinitePEPO(P)
 end
 
-"""
-    InfinitePEPO(Pspaces, Nspaces, Espaces)
-
-Allow users to pass in arrays of spaces, single layer special case.
-"""
 function InfinitePEPO(
-    Pspaces::AbstractArray{S,2},
-    Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces,
-) where {S<:ElementarySpace}
+    Pspaces::A, Nspaces::A, Espaces::A=Nspaces
+) where {A<:AbstractArray{<:ElementarySpace,2}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -77,53 +73,36 @@ function InfinitePEPO(
 end
 
 """
-    InfinitePEPO(A)
+    InfinitePEPO(A; unitcell=(1, 1, 1))
 
-Allow users to pass in single tensor.
+Create an InfinitePEPO by specifying a tensor and unit cell.
 """
-function InfinitePEPO(A::T) where {T<:PEPOTensor}
-    As = Array{T,3}(undef, (1, 1, 1))
-    As[1, 1, 1] = A
-    return InfinitePEPO(As)
+function InfinitePEPO(A::T; unitcell::Tuple{Int,Int,Int}=(1, 1, 1)) where {T<:PEPOTensor}
+    return InfinitePEPO(fill(A, unitcell))
 end
 
 """
-    InfinitePEPO(Pspace, Nspace, Espace)
+    InfinitePEPO(f=randn, T=ComplexF64, Pspace, Nspace, [Espace]; unitcell=(1,1,1))
 
-Allow users to pass in single space.
+Create an InfinitePEPO by specifying its spaces and unit cell.
 """
-function InfinitePEPO(Pspace::S, Nspace::S, Espace::S=Nspace) where {S<:ElementarySpace}
-    Pspaces = Array{S,3}(undef, (1, 1, 1))
-    Pspaces[1, 1] = Pspace
-    Nspaces = Array{S,3}(undef, (1, 1, 1))
-    Nspaces[1, 1] = Nspace
-    Espaces = Array{S,3}(undef, (1, 1, 1))
-    Espaces[1, 1] = Espace
-    return InfinitePEPO(Pspaces, Nspaces, Espaces)
+function InfinitePEPO(
+    Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int,Int}=(1, 1, 1)
+) where {S<:ElementarySpace}
+    return InfinitePEPO(
+        randn,
+        ComplexF64,
+        fill(Pspace, unitcell),
+        fill(Nspace, unitcell),
+        fill(Espace, unitcell),
+    )
 end
-
-"""
-    InfinitePEPO(d, D)
-
-Allow users to pass in integers.
-"""
-function InfinitePEPO(d::Integer, D::Integer)
-    T = TensorMap(rand, ComplexF64, ℂ^d ⊗ (ℂ^d)' ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')
-    return InfinitePEPO(T)
-end
-
-"""
-    InfinitePEPO(d, D, L)
-    InfinitePEPO(d, D, (Lx, Ly, Lz)))
-
-Allow users to pass in integers and specify unit cell.
-"""
-function InfinitePEPO(d::Integer, D::Integer, L::Integer)
-    return InfinitePEPO(d, D, (L, L, L))
-end
-function InfinitePEPO(d::Integer, D::Integer, Ls::NTuple{3,Integer})
-    T = [TensorMap(rand, ComplexF64, ℂ^d ⊗ (ℂ^d)' ← ℂ^D ⊗ ℂ^D ⊗ (ℂ^D)' ⊗ (ℂ^D)')]
-    return InfinitePEPO(Array(repeat(T, Ls...)))
+function InfinitePEPO(
+    f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int,Int}=(1, 1, 1)
+) where {S<:ElementarySpace}
+    return InfinitePEPO(
+        f, T, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
+    )
 end
 
 ## Shape and size
