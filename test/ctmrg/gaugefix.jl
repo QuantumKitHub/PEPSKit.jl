@@ -6,8 +6,8 @@ using TensorKit
 using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
-unitcells = [(1, 1), (2, 2), (3, 4)]
-χ = 4
+unitcells = [(1, 1), (2, 2), (3, 2)]
+χ = 6
 
 function _make_symmetric(psi)
     if ==(size(psi)...)
