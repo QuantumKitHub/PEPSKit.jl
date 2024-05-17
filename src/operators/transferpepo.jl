@@ -1,3 +1,10 @@
+"""
+    InfiniteTransferPEPO{T,O}
+
+Represents an infinite transfer operator corresponding to a single row of a partition
+function which corresponds to the expectation value of an `InfinitePEPO` between 'ket' and
+'bra' `InfinitePEPS` states.
+"""
 struct InfiniteTransferPEPO{T,O}
     top::PeriodicArray{T,1}
     mid::PeriodicArray{O,2}
@@ -6,6 +13,14 @@ end
 
 InfiniteTransferPEPO(top, mid) = InfiniteTransferPEPO(top, mid, top)
 
+"""
+    InfiniteTransferPEPO(T::InfinitePEPS, O::InfinitePEPO, dir, row)
+
+Constructs a transfer operator corresponding to a single row of a partition function
+representing the expectation value of `O` for the state `T`. The partition function is first
+rotated such that the direction `dir` faces north, after which its `row`th row from the
+north is selected.
+"""
 function InfiniteTransferPEPO(T::InfinitePEPS, O::InfinitePEPO, dir, row)
     T = rotate_north(T, dir)
     O = rotate_north(O, dir)
@@ -51,12 +66,25 @@ function initializeMPS(O::InfiniteTransferPEPO, χ::Int)
     ])
 end
 
+"""
+    const TransferPEPOMultiline = MPSKit.Multiline{<:InfiniteTransferPEPO}
+
+Type that represents a multi-line transfer operator, where each line each corresponds to a
+row of a partition function encoding the overlap of an `InfinitePEPO` between 'ket' and
+'bra' `InfinitePEPS` states.
+"""
 const TransferPEPOMultiline = MPSKit.Multiline{<:InfiniteTransferPEPO}
 Base.convert(::Type{TransferPEPOMultiline}, O::InfiniteTransferPEPO) = MPSKit.Multiline([O])
 Base.getindex(t::TransferPEPOMultiline, i::Colon, j::Int) = Base.getindex.(t.data[i], j)
 Base.getindex(t::TransferPEPOMultiline, i::Int, j) = Base.getindex(t.data[i], j)
 
-# multiline patch
+"""
+    TransferPEPOMultiline(T::InfinitePEPS, O::InfinitePEPO, dir)
+
+Construct a multi-row transfer operator corresponding to the partition function representing
+the expectation value of `O` for the state `T`. The partition function is first rotated such
+that the direction `dir` faces north.
+"""
 function TransferPEPOMultiline(T::InfinitePEPS, O::InfinitePEPO, dir)
     return MPSKit.Multiline(map(cr -> InfiniteTransferPEPO(T, O, dir, cr), 1:size(T, 1)))
 end
