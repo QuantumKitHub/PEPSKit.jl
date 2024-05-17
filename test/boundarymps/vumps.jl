@@ -17,7 +17,7 @@ Random.seed!(29384293742893)
     N = abs(sum(expectation_value(mps, T)))
 
     ctm = leading_boundary(
-        psi, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(psi; Venv=ComplexSpace(20))
+        CTMRGEnv(psi; Venv=ComplexSpace(20)), psi, CTMRG(; verbosity=1, fixedspace=true)
     )
     N´ = abs(norm(psi, ctm))
 
@@ -33,7 +33,7 @@ end
     N = abs(prod(expectation_value(mps, T)))
 
     ctm = leading_boundary(
-        psi, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(psi; Venv=ComplexSpace(20))
+        CTMRGEnv(psi; Venv=ComplexSpace(20)), psi, CTMRG(; verbosity=1, fixedspace=true)
     )
     N´ = abs(norm(psi, ctm))
 

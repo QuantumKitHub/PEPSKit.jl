@@ -38,13 +38,13 @@ gradmodes = [nothing, GeomSum(; tol), ManualIter(; tol), KrylovKit.GMRES(; tol)]
     Random.seed!(42039482038)
     dir = InfinitePEPS(2, χbond)
     psi = InfinitePEPS(2, χbond)
-    env = leading_boundary(psi, boundary_alg, CTMRGEnv(psi; Venv=ℂ^χenv))
+    env = leading_boundary(CTMRGEnv(psi; Venv=ℂ^χenv), psi, boundary_alg)
 
     alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
         (psi, env), dir; alpha=steps, retract=PEPSKit.my_retract, inner=PEPSKit.my_inner
     ) do (peps, envs)
         E, g = Zygote.withgradient(peps) do psi
-            envs2 = PEPSKit.hook_pullback(leading_boundary, psi, boundary_alg, envs; alg_rrule)
+            envs2 = PEPSKit.hook_pullback(leading_boundary, envs, psi, boundary_alg; alg_rrule)
             return costfun(psi, envs2, H)
         end
         return E, only(g)
