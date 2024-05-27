@@ -334,7 +334,8 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             # Compute SVD truncation error and check for degenerate singular values
             ignore_derivatives() do
                 if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                    @warn("degenerate singular values detected: ", diag(S.data))
+                    svals = SectorDict{sectortype(S)}(c => diag(b) for (c, b) in blocks(S))
+                    @warn("degenerate singular values detected: ", svals)
                 end
                 n0 = norm(Q_sw * Q_nw)^2
                 n1 = norm(U * S * V)^2
