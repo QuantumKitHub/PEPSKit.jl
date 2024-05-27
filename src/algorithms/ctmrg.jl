@@ -329,16 +329,16 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             else
                 alg.trscheme
             end
-            (U, S, V) = tsvd(Q_sw * Q_nw; trunc=trscheme, alg=TensorKit.SVD())  # TODO: Add field in CTMRG to choose SVD function
+            U, S, V, ϵ_local = tsvd!(Q_sw * Q_nw; trunc=trscheme, alg=TensorKit.SVD())  # TODO: Add field in CTMRG to choose SVD function
+            ϵ = max(ϵ, ϵ_local / norm(S))
+            # TODO: check if we can just normalize enlarged corners s.t. trunc behaves a bit better
 
             # Compute SVD truncation error and check for degenerate singular values
             ignore_derivatives() do
                 if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                    @warn("degenerate singular values detected: ", diag(S.data))
+                    svals = SectorDict{sectortype(S)}(c => diag(b) for (c, b) in blocks(S))
+                    @warn("degenerate singular values detected: ", svals)
                 end
-                n0 = norm(Q_sw * Q_nw)^2
-                n1 = norm(U * S * V)^2
-                ϵ = max(ϵ, (n0 - n1) / n0)
             end
 
             # Compute projectors
