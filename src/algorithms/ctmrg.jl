@@ -336,9 +336,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             # Compute SVD truncation error and check for degenerate singular values
             ignore_derivatives() do
                 if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                    svals = TensorKit.SectorDict{sectortype(S)}(
-                        (c => diag(b) for (c, b) in blocks(S))...
-                    )
+                    svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
                     @warn("degenerate singular values detected: ", svals)
                 end
             end
