@@ -22,12 +22,15 @@ Regardless of the truncation scheme, the space can be kept fixed with `fixedspac
 end
 
 """
-    MPSKit.leading_boundary(state, alg::CTMRG, [envinit])
+    MPSKit.leading_boundary([envinit], state, alg::CTMRG)
 
 Contract `state` using CTMRG and return the CTM environment.
 Per default, a random initial environment is used.
 """
-function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
+function MPSKit.leading_boundary(state, alg::CTMRG)
+    return MPSKit.leading_boundary(CTMRGEnv(state), state, alg)
+end
+function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     normold = 1.0
     CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
     TSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
@@ -57,26 +60,28 @@ function MPSKit.leading_boundary(state, alg::CTMRG, envinit=CTMRGEnv(state))
             # TODO: implement when spaces aren't the same
             return norm(t_new - t_old)
         end
-        (max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter) && break  # Converge if maximal Δ falls below tolerance
 
-        # Print verbose info
-        ignore_derivatives() do
-            alg.verbosity > 1 && @printf(
-                "CTMRG iter: %3d   norm: %.2e   Δnorm: %.2e   ΔCS: %.2e   ΔTS: %.2e   ϵ: %.2e   Δϵ: %.2e\n",
-                i,
-                abs(normnew),
-                Δnorm,
-                ΔCS,
-                ΔTS,
-                ϵ,
-                Δϵ
-            )
+        conv_condition = max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter
+        ignore_derivatives() do # Print verbose info
+            if alg.verbosity > 1 || (alg.verbosity == 1 && (i == 1 || conv_condition))
+                @printf(
+                    "CTMRG iter: %3d   norm: %.2e   Δnorm: %.2e   ΔCS: %.2e   ΔTS: %.2e   ϵ: %.2e   Δϵ: %.2e\n",
+                    i,
+                    abs(normnew),
+                    Δnorm,
+                    ΔCS,
+                    ΔTS,
+                    ϵ,
+                    Δϵ
+                )
+            end
             alg.verbosity > 0 &&
                 i == alg.maxiter &&
                 @warn(
                     "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
                 )
         end
+        conv_condition && break  # Converge if maximal Δ falls below tolerance
 
         # Update convergence criteria
         normold = normnew
@@ -249,11 +254,11 @@ function check_elementwise_convergence(
     for (dir, r, c) in Iterators.product(axes(envfinal.edges)...)
         @debug(
             "$((dir, r, c)): all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ",
-            all(x -> abs(x) < atol, ΔC[dir, r, c].data),
+            all(x -> abs(x) < atol, convert(Array, ΔC[dir, r, c])),
         )
         @debug(
             "$((dir, r, c)): all |Tⁿ⁺¹ - Tⁿ|ᵢⱼ < ϵ: ",
-            all(x -> abs(x) < atol, ΔT[dir, r, c].data),
+            all(x -> abs(x) < atol, convert(Array, ΔT[dir, r, c])),
         )
     end
 
@@ -325,17 +330,17 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
                 alg.trscheme
             end
             @tensor QQ[-1 -2 -3;-4 -5 -6] := Q_sw[-1 -2 -3;1 2 3] * Q_nw[1 2 3;-4 -5 -6]
-            (U, S, V) = tsvd(QQ; trunc=trscheme, alg=TensorKit.SVD())
-            #(U, S, V) = tsvd(Q_sw * Q_nw; trunc=trscheme, alg=TensorKit.SVD())  # TODO: Add field in CTMRG to choose SVD function
+            U, S, V, ϵ_local = tsvd!(QQ; trunc=trscheme, alg=TensorKit.SVD())
+            #U, S, V, ϵ_local = tsvd!(Q_sw * Q_nw; trunc=trscheme, alg=TensorKit.SVD())  # TODO: Add field in CTMRG to choose SVD function
+            ϵ = max(ϵ, ϵ_local / norm(S))
+            # TODO: check if we can just normalize enlarged corners s.t. trunc behaves a bit better
 
             # Compute SVD truncation error and check for degenerate singular values
             ignore_derivatives() do
                 if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                    @warn("degenerate singular values detected: ", diag(S.data))
+                    svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+                    @warn("degenerate singular values detected: ", svals)
                 end
-                n0 = norm(QQ)^2
-                n1 = norm(U * S * V)^2
-                ϵ = max(ϵ, (n0 - n1) / n0)
             end
 
             # Compute projectors

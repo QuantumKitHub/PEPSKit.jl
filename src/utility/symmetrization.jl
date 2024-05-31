@@ -17,7 +17,6 @@ function herm_depth(x::PEPOTensor)
 end
 
 function herm_width(x::PEPSTensor)
-    x = Permute(Conj(x), [1, 4, 3, 2, 5:(x.legs)])
     return permute(x', ((5,), (1, 4, 3, 2)))
 end
 function herm_width(x::PEPOTensor)
@@ -25,7 +24,6 @@ function herm_width(x::PEPOTensor)
 end
 
 function herm_height(x::PEPOTensor)
-    x = Permute(Conj(x), [1:4, 6, 5])
     return permute(x', ((6, 5), (1, 2, 3, 4)))
 end
 

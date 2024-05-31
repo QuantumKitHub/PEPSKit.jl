@@ -13,6 +13,7 @@ struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
             )
             space(A[d, w], 3) == space(A[d, _next(w, end)], 5)' ||
                 throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
+            dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
         end
         return new{T}(A)
     end

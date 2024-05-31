@@ -87,8 +87,7 @@ end
 
 Evaluate the expectation value of any `NLocalOperator` on each unit-cell entry
 of `peps` and `env`.
-"""
-MPSKit.expectation_value
+""" MPSKit.expectation_value(::InfinitePEPS, ::Any, ::NLocalOperator)
 
 # 1-site operator expectation values on unit cell
 function MPSKit.expectation_value(peps::InfinitePEPS, env, O::NLocalOperator{OnSite})
