@@ -119,7 +119,7 @@ function _rrule(
         # find partial gradients of gauge_fixed single CTMRG iteration
         # TODO: make this rrule_via_ad so it's zygote-agnostic
         _, env_vjp = pullback(state, envs) do A, x
-            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
+            return ctmrg_iter(A, x, alg)[1]
         end
 
         # evaluate the geometric sum

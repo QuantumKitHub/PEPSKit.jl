@@ -63,7 +63,7 @@ end
 
 # rotation invariance
 
-Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
+#Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
 Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))
 
 function rot_inv(x)

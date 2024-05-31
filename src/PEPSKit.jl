@@ -58,7 +58,7 @@ module Defaults
 end
 
 export CTMRG, CTMRGEnv
-export NLocalOperator, OnSite, NearestNeighbor
+export NLocalOperator, AnisotropicNNOperator, OnSite, NearestNeighbor
 export expectation_value, costfun
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolve
