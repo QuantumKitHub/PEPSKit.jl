@@ -3,7 +3,7 @@
     <img alt="PEPSKit.jl logo" src="https://github.com/quantumghent/PEPSKit.jl/blob/master/docs/src/assets/logo.svg" width="150">
 </picture>
 
-# PepsKit.jl
+# PEPSKit.jl
 
 [![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url]
 

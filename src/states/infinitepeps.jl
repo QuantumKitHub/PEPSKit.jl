@@ -1,14 +1,10 @@
-# not everything is a PeriodicArray anymore
-_next(i, total) = mod1(i + 1, total)
-_prev(i, total) = mod1(i - 1, total)
-
 """
     struct InfinitePEPS{T<:PEPSTensor}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
-    A::Array{T,2} # TODO: switch back to PeriodicArray?
+    A::Matrix{T}
 
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
@@ -33,15 +29,18 @@ function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
 end
 
 """
-    InfinitePEPS(Pspaces, Nspaces, Espaces)
+    InfinitePEPS(f=randn, T=ComplexF64, Pspaces, Nspaces, Espaces)
 
 Allow users to pass in arrays of spaces.
 """
 function InfinitePEPS(
-    Pspaces::AbstractArray{S,2},
-    Nspaces::AbstractArray{S,2},
-    Espaces::AbstractArray{S,2}=Nspaces,
-) where {S<:ElementarySpace}
+    Pspaces::A, Nspaces::A, Espaces::A
+) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    return InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfinitePEPS(
+    f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
+) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -49,7 +48,7 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, -1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(randn, ComplexF64, P, N, E, S, W)
+        return PEPSTensor(f, T, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
@@ -65,7 +64,7 @@ function InfinitePEPS(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PEPSTenso
 end
 
 """
-    InfinitePEPS(Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPS(f=randn, T=ComplexF64, Pspace, Nspace, [Espace]; unitcell=(1,1))
 
 Create an InfinitePEPS by specifying its spaces and unit cell. Spaces can be specified
 either via `Int` or via `ElementarySpace`.
@@ -74,7 +73,18 @@ function InfinitePEPS(
     Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:Union{ElementarySpace,Int}}
     return InfinitePEPS(
-        fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
+        randn,
+        ComplexF64,
+        fill(Pspace, unitcell),
+        fill(Nspace, unitcell),
+        fill(Espace, unitcell),
+    )
+end
+function InfinitePEPS(
+    f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
+) where {S<:Union{ElementarySpace,Int}}
+    return InfinitePEPS(
+        f, T, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
     )
 end
 
@@ -87,7 +97,7 @@ VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))
+# Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))  # TODO: This is incompatible with inner constructor
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
@@ -95,5 +105,65 @@ Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
 Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
-Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)));
-Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)));
+Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
+Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
+
+## Math
+Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
+Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
+Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
+LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
+LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
+
+# Used in _scale during OptimKit.optimize
+function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
+    rmul!(ψ.A, α)
+    return ψ
+end
+
+# Used in _add during OptimKit.optimize
+function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
+    ψ₂.A .+= α * ψ₁.A
+    return ψ₂
+end
+
+# VectorInterface
+VectorInterface.zerovector(x::InfinitePEPS) = InfinitePEPS(zerovector(x.A))
+
+# Chainrules
+function ChainRulesCore.rrule(
+    ::typeof(Base.getindex), state::InfinitePEPS, row::Int, col::Int
+)
+    pepstensor = state[row, col]
+
+    function getindex_pullback(Δpepstensor)
+        Δstate = zerovector(state)
+        Δstate[row, col] = Δpepstensor
+        return NoTangent(), Δstate, NoTangent(), NoTangent()
+    end
+    return pepstensor, getindex_pullback
+end
+
+function ChainRulesCore.rrule(::Type{<:InfinitePEPS}, A::Matrix{T}) where {T<:PEPSTensor}
+    peps = InfinitePEPS(A)
+    function InfinitePEPS_pullback(Δpeps)
+        return NoTangent(), Δpeps.A
+    end
+    return peps, InfinitePEPS_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(rotl90), peps::InfinitePEPS)
+    peps′ = rotl90(peps)
+    function rotl90_pullback(Δpeps)
+        return NoTangent(), rotr90(Δpeps)
+    end
+    return peps′, rotl90_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(rotr90), peps::InfinitePEPS)
+    peps′ = rotr90(peps)
+    function rotr90_pullback(Δpeps)
+        return NoTangent(), rotl90(Δpeps)
+    end
+    return peps′, rotr90_pullback
+end

@@ -1,7 +1,7 @@
 struct InfiniteTransferPEPO{T,O}
     top::PeriodicArray{T,1}
     mid::PeriodicArray{O,2}
-    bot::PeriodicArray{T,1} # this is assumed to be conjed by default, but do we want this?
+    bot::PeriodicArray{T,1}
 end
 
 InfiniteTransferPEPO(top, mid) = InfiniteTransferPEPO(top, mid, top)
@@ -15,7 +15,7 @@ end
 Base.size(transfer::InfiniteTransferPEPO) = size(transfer.top)
 Base.size(transfer::InfiniteTransferPEPO, args...) = size(transfer.top, args...)
 Base.length(transfer::InfiniteTransferPEPO) = size(transfer, 1)
-height(transfer::InfiniteTransferPEPO) = size(transfer.mid, 2) # will I ever need this?
+height(transfer::InfiniteTransferPEPO) = size(transfer.mid, 2)
 Base.getindex(O::InfiniteTransferPEPO, i) = (O.top[i], O.bot[i], Tuple(O.mid[i, :])) # TODO: not too sure about this
 
 Base.iterate(O::InfiniteTransferPEPO, i=1) = i > length(O) ? nothing : (O[i], i + 1)
@@ -77,7 +77,7 @@ function MPSKit.transfer_left(
         A[1 9 6 3; -5]
 end
 
-# it actually works, somehow
+# general case
 function MPSKit.transfer_left(
     GL::GenericMPSTensor{S,N},
     O::Tuple{T,T,Tuple{Vararg{P,H}}},
@@ -134,6 +134,7 @@ function MPSKit.transfer_right(
         A[-1 11 12 13; 10]
 end
 
+# general case
 function MPSKit.transfer_right(
     GR::GenericMPSTensor{S,N},
     O::Tuple{T,T,Tuple{Vararg{P,H}}},
@@ -194,7 +195,7 @@ function MPSKit.expectation_value(
     for (i, j) in product(1:size(st, 1), 1:size(st, 2))
         O_ij = opp[i, j]
         N = height(opp[1]) + 4
-        # just reuse left environment contraction?
+        # just reuse left environment contraction
         GL´ = transfer_left(leftenv(ca, i, j, st), O_ij, st.AC[i, j], st.AC[i + 1, j])
         retval[i, j] = TensorKit.TensorOperations.tensorscalar(
             ncon([GL´, rightenv(ca, i, j, st)], [[N, (2:(N - 1))..., 1], [(1:N)...]])

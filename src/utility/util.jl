@@ -1,23 +1,8 @@
-function sdiag_inv_sqrt(S::AbstractTensorMap)
-    toret = similar(S)
+# Get next and previous directional CTM enviroment index, respecting periodicity
+_next(i, total) = mod1(i + 1, total)
+_prev(i, total) = mod1(i - 1, total)
 
-    if sectortype(S) == Trivial
-        copyto!(toret.data, LinearAlgebra.diagm(LinearAlgebra.diag(S.data) .^ (-1 / 2)))
-    else
-        for (k, b) in blocks(S)
-            copyto!(
-                blocks(toret)[k], LinearAlgebra.diagm(LinearAlgebra.diag(b) .^ (-1 / 2))
-            )
-        end
-    end
-
-    return toret
-end
-function ChainRulesCore.rrule(::typeof(sdiag_inv_sqrt), S::AbstractTensorMap)
-    toret = sdiag_inv_sqrt(S)
-    return toret,
-    c̄ -> (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, toret'^3))
-end
+# Element-wise multiplication of TensorMaps respecting block structure
 function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     dst = similar(a)
     for (k, block) in blocks(dst)
@@ -26,11 +11,61 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
-#rotl90 appeared to lose PeriodicArray'ness, which in turn caused zygote problems
-#Base.rotl90(a::Array) = Array(rotl90(a));
-#Base.rotr90(a::Array) = Array(rotr90(a));
+# Compute √S⁻¹ for diagonal TensorMaps
+function sdiag_inv_sqrt(S::AbstractTensorMap)
+    invsq = similar(S)
+
+    if sectortype(S) == Trivial
+        copyto!(invsq.data, LinearAlgebra.diagm(LinearAlgebra.diag(S.data) .^ (-1 / 2)))
+    else
+        for (k, b) in blocks(S)
+            copyto!(
+                blocks(invsq)[k], LinearAlgebra.diagm(LinearAlgebra.diag(b) .^ (-1 / 2))
+            )
+        end
+    end
+
+    return invsq
+end
+
+function ChainRulesCore.rrule(::typeof(sdiag_inv_sqrt), S::AbstractTensorMap)
+    invsq = sdiag_inv_sqrt(S)
+    function sdiag_inv_sqrt_pullback(c̄)
+        return (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, invsq'^3))
+    end
+    return invsq, sdiag_inv_sqrt_pullback
+end
+
+# Check whether diagonals contain degenerate values up to absolute or relative tolerance
+function is_degenerate_spectrum(
+    S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
+)
+    for (_, b) in blocks(S)
+        s = real(diag(b))
+        for i in 1:(length(s) - 1)
+            isapprox(s[i], s[i + 1]; atol, rtol) && return true
+        end
+    end
+    return false
+end
+
+"""
+    projector_type(T::DataType, size)
+
+Create two arrays of specified `size` that contain undefined tensors representing
+left and right acting projectors, respectively. The projector types are inferred
+from the TensorMap type `T` which avoids having to recompute transpose tensors.
+"""
+function projector_type(T::DataType, size)
+    Pleft = Array{T,length(size)}(undef, size)
+    Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
+    Pright = Array{Prtype,length(size)}(undef, size)
+    return Pleft, Pright
+end
+
+# There are no rrules for rotl90 and rotr90 in ChainRules.jl
 function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
-    function pb(x)
+    function rotl90_pullback(x)
         if !iszero(x)
             x = if x isa Tangent
                 ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(x))
@@ -40,9 +75,9 @@ function ChainRulesCore.rrule(::typeof(rotl90), a::AbstractMatrix)
             x = rotr90(x)
         end
 
-        return (ZeroTangent(), x)
+        return NoTangent(), x
     end
-    return rotl90(a), pb
+    return rotl90(a), rotl90_pullback
 end
 function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
     function pb(x)
@@ -60,8 +95,23 @@ function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
     return rotr90(a), pb
 end
 
-structure(t) = codomain(t) ← domain(t);
+function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
+    function rotr90_pullback(x)
+        if !iszero(x)
+            x = if x isa Tangent
+                ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(x))
+            else
+                x
+            end
+            x = rotl90(x)
+        end
 
+        return NoTangent(), x
+    end
+    return rotr90(a), rotr90_pullback
+end
+
+# Differentiable setindex! alternative
 function _setindex(a::AbstractArray, v, args...)
     b::typeof(a) = copy(a)
     b[args...] = v
@@ -71,7 +121,7 @@ end
 function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...)
     t = _setindex(a, tv, args...)
 
-    function toret(v)
+    function _setindex_pullback(v)
         if iszero(v)
             backwards_tv = ZeroTangent()
             backwards_a = ZeroTangent()
@@ -81,6 +131,7 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
             else
                 v
             end
+            # TODO: Fix this for ZeroTangents
             v = typeof(v) != typeof(a) ? convert(typeof(a), v) : v
             #v = convert(typeof(a),v);
             backwards_tv = v[args...]
@@ -95,9 +146,18 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
             NoTangent(), backwards_a, backwards_tv, fill(ZeroTangent(), length(args))...
         )
     end
-    return t, toret
+    return t, _setindex_pullback
 end
 
+"""
+    @diffset assign
+
+Helper macro which allows in-place operations in the forward-pass of Zygote, but
+resorts to non-mutating operations in the backwards-pass. The expression `assign`
+should assign an object to an pre-existing `AbstractArray` and the use of updating
+operators is also possible. This is especially needed when in-place assigning
+tensors to unit-cell arrays of environments.
+"""
 macro diffset(ex)
     return esc(parse_ex(ex))
 end
@@ -136,3 +196,19 @@ end
 
 is_indexing(ex) = false
 is_indexing(ex::Expr) = ex.head == :ref
+
+"""
+    @showtypeofgrad(x)
+
+Macro utility to show to type of the gradient that is about to accumulate for `x`.
+
+See also [`Zygote.@showgrad`](@ref).
+"""
+macro showtypeofgrad(x)
+    return :(
+        Zygote.hook($(esc(x))) do x̄
+            println($"∂($x) = ", repr(typeof(x̄)))
+            x̄
+        end
+    )
+end
