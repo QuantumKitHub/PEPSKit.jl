@@ -176,7 +176,7 @@ VI.scale!!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number) = scale!(env₁, env�
 function VI.add(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
     _add(x, y) = add(x, y, α, β)
     return CTMRGEnv(
-        map(_add, env₁.corners, env₂.corners), map(_add, env₁.corners, env₂.corners)
+        map(_add, env₁.corners, env₂.corners), map(_add, env₁.edges, env₂.edges)
     )
 end
 function VI.add!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
