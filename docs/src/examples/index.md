@@ -1,1 +1,1 @@
-For now, refer to the [examples folder](https://github.com/quantumghent/PEPSKit.jl/tree/master/examples) on GitHub.
+For now, refer to the [examples folder](https://github.com/QuantumKitHub/PEPSKit.jl/tree/master/examples) on GitHub.
