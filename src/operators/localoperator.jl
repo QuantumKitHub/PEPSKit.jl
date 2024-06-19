@@ -77,12 +77,18 @@ Evaluate the expectation value of any `NLocalOperator` on each unit-cell entry
 of `peps` and `env`.
 """ MPSKit.expectation_value(::InfinitePEPS, ::Any, ::NLocalOperator)
 
+# Optimal contraction order is obtained by manually trying out some space sizes and using costcheck = warn
+# in principle, we would like to use opt = true, but this does not give optimal results without also supplying costs
+# However, due to a bug in tensoroperations this is currently not possible with integer labels.
+# Thus, this is a workaround until the bug is fixed. (otherwise we'd need to rewrite all the labels to symbols...)
+
 # 1-site operator expectation values on unit cell
 function MPSKit.expectation_value(
     peps::InfinitePEPS, env::CTMRGEnv, O::NLocalOperator{OnSite}
 )
     return map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
-        o = @tensor opt = true env.corners[NORTHWEST, r, c][1; 2] *
+        o = @tensor order = (6, 2, 5, 10, 14, 13, 11, 15, 7, 9, 1, 3, 4, 8, 12, 16, 18, 17) begin
+            env.corners[NORTHWEST, r, c][1; 2] *
             env.edges[NORTH, r, c][2 3 4; 5] *
             env.corners[NORTHEAST, r, c][5; 6] *
             env.edges[EAST, r, c][6 7 8; 9] *
@@ -93,8 +99,9 @@ function MPSKit.expectation_value(
             peps[r, c][17; 3 7 11 15] *
             conj(peps[r, c][18; 4 8 12 16]) *
             O.op[18; 17]
-
-        n = @tensor opt = true env.corners[NORTHWEST, r, c][1; 2] *
+        end
+        n = @tensor order = (9, 13, 10, 5, 1, 2, 4, 16, 6, 8, 14, 12, 17, 3, 7, 11, 15) begin
+            env.corners[NORTHWEST, r, c][1; 2] *
             env.edges[NORTH, r, c][2 3 4; 5] *
             env.corners[NORTHEAST, r, c][5; 6] *
             env.edges[EAST, r, c][6 7 8; 9] *
@@ -104,7 +111,7 @@ function MPSKit.expectation_value(
             env.edges[WEST, r, c][14 15 16; 1] *
             peps[r, c][17; 3 7 11 15] *
             conj(peps[r, c][17; 4 8 12 16])
-
+        end
         o / n
     end
 end
@@ -114,7 +121,37 @@ function MPSKit.expectation_value(
 )
     return map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         cnext = _next(c, size(peps, 2))
-        o = @tensor opt = true env.corners[NORTHWEST, r, c][1; 3] *
+        o = @tensor order = (
+            28,
+            24,
+            23,
+            16,
+            25,
+            22,
+            26,
+            27,
+            17,
+            21,
+            4,
+            1,
+            3,
+            5,
+            7,
+            8,
+            9,
+            2,
+            6,
+            10,
+            14,
+            19,
+            15,
+            13,
+            31,
+            32,
+            29,
+            30,
+        ) begin # physical spaces
+            env.corners[NORTHWEST, r, c][1; 3] *
             env.edges[NORTH, r, c][3 5 8; 13] *
             env.edges[NORTH, r, cnext][13 16 22; 23] *
             env.corners[NORTHEAST, r, cnext][23; 24] *
@@ -129,8 +166,37 @@ function MPSKit.expectation_value(
             peps[r, cnext][30; 16 25 17 15] *
             conj(peps[r, cnext][32; 22 26 21 19]) *
             O.op[31 32; 29 30]
+        end
 
-        n = @tensor opt = true env.corners[NORTHWEST, r, c][1; 3] *
+        n = @tensor order = (
+            2,
+            3,
+            1,
+            5,
+            7,
+            28,
+            24,
+            23,
+            16,
+            25,
+            30,
+            22,
+            26,
+            27,
+            17,
+            21,
+            14,
+            15,
+            6,
+            4,
+            13,
+            29,
+            8,
+            19,
+            10,
+            9,
+        ) begin
+            env.corners[NORTHWEST, r, c][1; 3] *
             env.edges[NORTH, r, c][3 5 8; 13] *
             env.edges[NORTH, r, cnext][13 16 22; 23] *
             env.corners[NORTHEAST, r, cnext][23; 24] *
@@ -144,6 +210,7 @@ function MPSKit.expectation_value(
             conj(peps[r, c][29; 8 19 10 9]) *
             peps[r, cnext][30; 16 25 17 15] *
             conj(peps[r, cnext][30; 22 26 21 19])
+        end
         o / n
     end
 end
