@@ -116,40 +116,15 @@ function MPSKit.expectation_value(
     end
 end
 
+#! format: off
 function MPSKit.expectation_value(
     peps::InfinitePEPS, env, O::NLocalOperator{NearestNeighbor}
 )
     return map(Iterators.product(axes(env.corners, 2), axes(env.corners, 3))) do (r, c)
         cnext = _next(c, size(peps, 2))
         o = @tensor order = (
-            28,
-            24,
-            23,
-            16,
-            25,
-            22,
-            26,
-            27,
-            17,
-            21,
-            4,
-            1,
-            3,
-            5,
-            7,
-            8,
-            9,
-            2,
-            6,
-            10,
-            14,
-            19,
-            15,
-            13,
-            31,
-            32,
-            29,
-            30,
+            28, 24, 23, 16, 25, 22, 26, 27, 17, 21, 4, 1, 3, 5, 7, 8, 9, 2, 6, 10, 14, 19,
+            15, 13, 31, 32, 29, 30,
         ) begin # physical spaces
             env.corners[NORTHWEST, r, c][1; 3] *
             env.edges[NORTH, r, c][3 5 8; 13] *
@@ -169,32 +144,8 @@ function MPSKit.expectation_value(
         end
 
         n = @tensor order = (
-            2,
-            3,
-            1,
-            5,
-            7,
-            28,
-            24,
-            23,
-            16,
-            25,
-            30,
-            22,
-            26,
-            27,
-            17,
-            21,
-            14,
-            15,
-            6,
-            4,
-            13,
-            29,
-            8,
-            19,
-            10,
-            9,
+            2, 3, 1, 5, 7, 28, 24, 23, 16, 25, 30, 22, 26, 27, 17, 21, 14, 15, 6, 4, 13, 29,
+            8, 19, 10, 9,
         ) begin
             env.corners[NORTHWEST, r, c][1; 3] *
             env.edges[NORTH, r, c][3 5 8; 13] *
@@ -214,6 +165,7 @@ function MPSKit.expectation_value(
         o / n
     end
 end
+#! format: on
 
 """
     costfun(peps::InfinitePEPS, env, op::NLocalOperator{NearestNeighbor})
