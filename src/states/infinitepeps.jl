@@ -5,7 +5,7 @@ Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
     A::Matrix{T}
-
+    InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
             space(A[d, w], 2) == space(A[_prev(d, end), w], 4)' || throw(

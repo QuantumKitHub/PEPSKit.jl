@@ -112,14 +112,15 @@ function _rrule(
     alg::CTMRG,
 )
     envs = leading_boundary(envinit, state, alg)
-
+    #TODO: fixed space for unit cells
+    
     function leading_boundary_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
         # TODO: make this rrule_via_ad so it's zygote-agnostic
         _, env_vjp = pullback(state, envs) do A, x
-            return ctmrg_iter(A, x, alg)[1]
+            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
         end
 
         # evaluate the geometric sum

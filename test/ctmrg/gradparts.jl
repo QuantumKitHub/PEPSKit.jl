@@ -2,11 +2,10 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
+using PEPSKit: NORTH, SOUTH, WEST, EAST, NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST, rotate_north, left_move, ctmrg_iter
 using Zygote
-using OptimKit
 using ChainRulesCore
 using ChainRulesTestUtils
-using KrylovKit
 using FiniteDifferences
 
 ## Test utility
@@ -86,72 +85,63 @@ function FiniteDifferences.to_vec(t::AbstractTensorMap)
 end
 FiniteDifferences.to_vec(t::TensorKit.AdjointTensorMap) = to_vec(copy(t))
 
-## Model Hamiltonians
-# -------------------
-function square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
-    physical_space = ComplexSpace(2)
-    T = ComplexF64
-    σx = TensorMap(T[0 1; 1 0], physical_space, physical_space)
-    σy = TensorMap(T[0 im; -im 0], physical_space, physical_space)
-    σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
-    H = (Jx * σx ⊗ σx) + (Jy * σy ⊗ σy) + (Jz * σz ⊗ σz)
-    return NLocalOperator{NearestNeighbor}(H / 4)
-end
-function square_lattice_pwave(; t=1, μ=2, Δ=1)
-    V = Vect[FermionParity](0=>1, 1=>1)
-    # on-site
-    h0 = TensorMap(zeros, ComplexF64, V ← V)
-    block(h0, FermionParity(1)) .= -μ
-    H0 = NLocalOperator{OnSite}(permute(h0, ((2,),(1,))))
-    # two-site (x-direction)
-    hx = TensorMap(zeros, ComplexF64, V ⊗ V ← V ⊗ V)
-    block(hx, FermionParity(0)) .= [0 -Δ; -Δ 0]
-    block(hx, FermionParity(1)) .= [0 -t; -t 0]
-    Hx = NLocalOperator{NearestNeighbor}(hx)
-    # two-site (y-direction)
-    hy = TensorMap(zeros, ComplexF64, V ⊗ V ← V ⊗ V)
-    block(hy, FermionParity(0)) .= [0 Δ*im; -Δ*im 0]
-    block(hy, FermionParity(1)) .= [0 -t; -t 0]
-    Hy = NLocalOperator{NearestNeighbor}(hy)
-    return AnisotropicNNOperator(H0, Hx, Hy)
-end
-
-## Test models, gradmodes and CTMRG algorithm
-# -------------------------------------------
+## Test spaces, tested functions and CTMRG algorithm
+# --------------------------------------------------
 χbond = 2
 χenv = 4
 Pspaces = [ComplexSpace(2),Vect[FermionParity](0=>1, 1=>1)]
 Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0=>χbond/2, 1=>χbond/2)]
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0=>χenv/2, 1=>χenv/2)]
-models = [square_lattice_heisenberg(), square_lattice_pwave()]
-names = ["Heisenberg", "p-wave superconductor"]
+functions = [left_move, ctmrg_iter, leading_boundary]
 Random.seed!(42039482030)
 tol = 1e-8
 boundary_alg = CTMRG(; trscheme=truncdim(χenv), tol=tol, miniter=4, maxiter=100, fixedspace=true, verbosity=0)
-gradmodes = [nothing, GeomSum(; tol), ManualIter(; tol), KrylovKit.GMRES(; tol=tol, maxiter=10)]
-steps = -0.01:0.005:0.01
+
+
+## Gauge invariant function of the environment
+# --------------------------------------------
+function rho(env)
+    #
+    @tensor ρ[-1 -2 -3 -4 -5 -6 -7 -8] := 
+        env.edges[WEST, 1, 1][1 -1 -2; 4] *
+        env.corners[NORTHWEST, 1, 1][4; 5] *
+        env.edges[NORTH, 1, 1][5 -3 -4; 8] *
+        env.corners[NORTHEAST, 1, 1][8; 9] *
+        env.edges[EAST, 1, 1][9 -5 -6; 12] *
+        env.corners[SOUTHEAST, 1, 1][12; 13] *
+        env.edges[SOUTH, 1, 1][13 -7 -8; 16] *
+        env.corners[SOUTHWEST, 1, 1][16; 1]
+    return ρ    
+end
 
 ## Tests
 # ------
-@testset "AD CTMRG  energy gradients for $(names[i]) model" for i in eachindex(models)
-    Pspace = Pspaces[i]
-    Vspace = Pspaces[i]
-    Espace =  Espaces[i]
-    psi_init = InfinitePEPS(Pspace, Vspace, Vspace)    
-    @testset "$alg_rrule" for alg_rrule in gradmodes
-        dir = InfinitePEPS(Pspace, Vspace, Vspace)
-        psi = InfinitePEPS(Pspace, Vspace, Vspace)
-        env = leading_boundary(CTMRGEnv(psi; Venv=Espace), psi, boundary_alg)
-        alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
-            (psi, env), dir; alpha=steps, retract=PEPSKit.my_retract, inner=PEPSKit.my_inner
-        ) do (peps, envs)
-            E, g = Zygote.withgradient(peps) do psi
-                envs2 = PEPSKit.hook_pullback(leading_boundary, envs, psi, boundary_alg,; alg_rrule)
-                return costfun(psi, envs2, models[i])
+@testset "Reverse rules for composite parts of the CTMRG fixed point with spacetype $(Vspaces[i])" for i in eachindex(Pspaces)
+    psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
+    env = CTMRGEnv(psi; Venv=Espaces[i])
+    @testset "$func" for func in functions
+        function f(state, env)
+            if func != leading_boundary
+                return rho(func(state, env, boundary_alg)[1])
+            else
+                return rho(func(env, state, boundary_alg))
             end
-
-            return E, only(g)
         end
-        @test dfs1 ≈ dfs2 atol = 1e-2
+        function ChainRulesCore.rrule(::typeof(f), state::InfinitePEPS{T}, envs::CTMRGEnv) where {T}
+            y, env_vjp = pullback(state, envs) do A, x
+                #return rho(func(A, x, boundary_alg)[1])
+                if func != leading_boundary
+                    return rho(func(A, x, boundary_alg)[1])
+                else
+                    return rho(func(x, A, boundary_alg))
+                end
+            end
+            return y, x -> (NoTangent(), env_vjp(x)...)
+        end
+        if func != leading_boundary
+            test_rrule(f, psi, env; check_inferred=false, atol=tol)
+        else
+            test_rrule(f, psi, env; check_inferred=false, atol=sqrt(tol))
+        end
     end
 end

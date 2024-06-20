@@ -24,14 +24,13 @@ end
 H = square_lattice_heisenberg()
 χbond = 2
 χenv = 16
-verbosity = 1
-ctm_alg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity)
+ctm_alg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=1)
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity),
-    gradient_alg=GMRES(; tol=1e-6, maxiter=100),
+    optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
+    gradient_alg= GMRES(; tol=1e-6, maxiter=100),
     reuse_env=true,
-    verbosity,
+    verbosity=2,
 )
 
 # initialize states

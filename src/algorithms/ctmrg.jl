@@ -39,30 +39,30 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
 
     for i in 1:(alg.maxiter)
         env, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+        conv_condition, normold, CSold, TSold, ϵ = ignore_derivatives() do
+            # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
+            Δϵ = abs((ϵold - ϵ) / ϵold)
+            normnew = norm(state, env)
+            Δnorm = abs(normold - normnew) / abs(normold)
+            CSnew = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env.corners)
+            ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
+                # only compute the difference on the smallest part of the spaces
+                smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
+                e_old = isometry(MPSKit._firstspace(c_old), smallest)
+                e_new = isometry(MPSKit._firstspace(c_new), smallest)
+                return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
+            end
+            TSnew = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env.edges)
 
-        # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
-        Δϵ = abs((ϵold - ϵ) / ϵold)
-        normnew = norm(state, env)
-        Δnorm = abs(normold - normnew) / abs(normold)
-        CSnew = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env.corners)
-        ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
-            # only compute the difference on the smallest part of the spaces
-            smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
-            e_old = isometry(MPSKit._firstspace(c_old), smallest)
-            e_new = isometry(MPSKit._firstspace(c_new), smallest)
-            return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
-        end
-        TSnew = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env.edges)
+            ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
+                MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
+                    return scalartype(t_old)(Inf)
+                # TODO: implement when spaces aren't the same
+                return norm(t_new - t_old)
+            end
 
-        ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
-            MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
-                return scalartype(t_old)(Inf)
-            # TODO: implement when spaces aren't the same
-            return norm(t_new - t_old)
-        end
+            conv_condition = max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter
 
-        conv_condition = max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter
-        ignore_derivatives() do # Print verbose info
             if alg.verbosity > 1 || (alg.verbosity == 1 && (i == 1 || conv_condition))
                 @printf(
                     "CTMRG iter: %3d   norm: %.2e   Δnorm: %.2e   ΔCS: %.2e   ΔTS: %.2e   ϵ: %.2e   Δϵ: %.2e\n",
@@ -80,14 +80,9 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
                 @warn(
                     "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
                 )
+            return conv_condition, normnew, CSnew, TSnew, ϵ
         end
         conv_condition && break  # Converge if maximal Δ falls below tolerance
-
-        # Update convergence criteria
-        normold = normnew
-        CSold = CSnew
-        TSold = TSnew
-        ϵold = ϵ
     end
 
     # Do one final iteration that does not change the spaces
@@ -99,6 +94,16 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     check_elementwise_convergence(env, envfix; atol=alg.tol^(1 / 2)) ||
         @warn "CTMRG did not converge elementwise."
     return envfix
+end
+
+#very ugly fix to avoid Zygoting @plansor during fermionic gauge fix
+@generated function MPSKit.transfer_right(v::AbstractTensorMap{S,1,N₁}, A::GenericMPSTensor{S,N₂},
+    Ā::GenericMPSTensor{S,N₂}) where {S,N₁,N₂}
+        t_out = MPSKit.tensorexpr(:v, -1, -(2:(N₁ + 1)))
+        t_top = MPSKit.tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
+        t_bot = MPSKit.tensorexpr(:Ā, (-(N₁ + 1), reverse(3:(N₂ + 1))...), 2)
+        t_in = MPSKit.tensorexpr(:v, 1, (-(2:N₁)..., 2))
+        return :(return @tensor $t_out := $t_top * conj($t_bot) * $t_in)
 end
 
 """
@@ -145,6 +150,7 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
             scalartype(T),
             MPSKit._lastspace(Tsfinal[end])' ← MPSKit._lastspace(M[end])',
         )
+
         ρprev = eigsolve(TransferMatrix(Tsprev, M), ρinit, 1, :LM)[2][1]
         ρfinal = eigsolve(TransferMatrix(Tsfinal, M), ρinit, 1, :LM)[2][1]
 
@@ -329,7 +335,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             else
                 alg.trscheme
             end
-            @tensor QQ[-1 -2 -3;-4 -5 -6] := Q_sw[-1 -2 -3;1 2 3] * Q_nw[1 2 3;-4 -5 -6]
+            @tensor QQ[-1 -2 -3; -4 -5 -6] := Q_sw[-1 -2 -3; 1 2 3] * Q_nw[1 2 3; -4 -5 -6]
             U, S, V, ϵ_local = tsvd!(QQ; trunc=trscheme, alg=TensorKit.SVD())
             #U, S, V, ϵ_local = tsvd!(Q_sw * Q_nw; trunc=trscheme, alg=TensorKit.SVD())  # TODO: Add field in CTMRG to choose SVD function
             ϵ = max(ϵ, ϵ_local / norm(S))
@@ -411,8 +417,8 @@ function build_projectors(
     U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q_sw, Q_nw
 ) where {E<:ElementarySpace}
     isqS = sdiag_inv_sqrt(S)
-    Pl = Q_nw*V'*isqS
-    Pr = isqS*U'*Q_sw
+    Pl = Q_nw * V' * isqS
+    Pr = isqS * U' * Q_sw
     #@tensor Pl[-1 -2 -3; -4] := Q_nw[-1 -2 -3; 1 2 3] * conj(V[4; 1 2 3]) * isqS[4; -4]
     #@tensor Pr[-1; -2 -3 -4] := isqS[-1; 1] * conj(U[2 3 4; 1]) * Q_sw[2 3 4; -2 -3 -4]
     return Pl, Pr
@@ -452,7 +458,7 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
             peps[r, c][17; 6 10 14 2] *
             conj(peps[r, c][17; 7 11 15 3])
 
-        total *=  @tensor env.corners[NORTHWEST, r, c][1; 2] *
+        total *= @tensor env.corners[NORTHWEST, r, c][1; 2] *
             env.corners[NORTHEAST, r, mod1(c - 1, end)][2; 3] *
             env.corners[SOUTHEAST, mod1(r - 1, end), mod1(c - 1, end)][3; 4] *
             env.corners[SOUTHWEST, mod1(r - 1, end), c][4; 1]
