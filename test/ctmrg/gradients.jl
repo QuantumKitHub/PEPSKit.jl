@@ -102,7 +102,7 @@ function square_lattice_pwave(; t=1, μ=2, Δ=1)
     # on-site
     h0 = TensorMap(zeros, ComplexF64, V ← V)
     block(h0, FermionParity(1)) .= -μ
-    H0 = NLocalOperator{OnSite}(permute(h0, ((2,),(1,))))
+    H0 = NLocalOperator{OnSite}(h0)
     # two-site (x-direction)
     hx = TensorMap(zeros, ComplexF64, V ⊗ V ← V ⊗ V)
     block(hx, FermionParity(0)) .= [0 -Δ; -Δ 0]
@@ -133,7 +133,7 @@ steps = -0.01:0.005:0.01
 
 ## Tests
 # ------
-@testset "AD CTMRG  energy gradients for $(names[i]) model" for i in eachindex(models)
+@testset "AD CTMRG energy gradients for $(names[i]) model" for i in eachindex(models)
     Pspace = Pspaces[i]
     Vspace = Pspaces[i]
     Espace =  Espaces[i]
