@@ -42,6 +42,7 @@ module Defaults
     const tol = 1e-12
 end
 
+export FullSVD, IterSVD, OldSVD, svdwrap
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
