@@ -96,17 +96,6 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     return envfix
 end
 
-#very ugly fix to avoid Zygoting @plansor during fermionic gauge fix
-@generated function MPSKit.transfer_right(
-    v::AbstractTensorMap{S,1,N₁}, A::GenericMPSTensor{S,N₂}, Ā::GenericMPSTensor{S,N₂}
-) where {S,N₁,N₂}
-    t_out = MPSKit.tensorexpr(:v, -1, -(2:(N₁ + 1)))
-    t_top = MPSKit.tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
-    t_bot = MPSKit.tensorexpr(:Ā, (-(N₁ + 1), reverse(3:(N₂ + 1))...), 2)
-    t_in = MPSKit.tensorexpr(:v, 1, (-(2:N₁)..., 2))
-    return :(return @tensor $t_out := $t_top * conj($t_bot) * $t_in)
-end
-
 """
     gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
 
@@ -152,12 +141,32 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
             MPSKit._lastspace(Tsfinal[end])' ← MPSKit._lastspace(M[end])',
         )
 
-        ρprev = eigsolve(TransferMatrix(Tsprev, M), ρinit, 1, :LM)[2][1]
-        ρfinal = eigsolve(TransferMatrix(Tsfinal, M), ρinit, 1, :LM)[2][1]
+        # this is a bit of a hack to get the fixed point of the mixed transfer matrix
+        # because MPSKit is not compatible with AD
+        ρ_prev = let Tsprev = Tsprev, M = M
+            _, prev_vecs, prev_info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
+                return foldr(zip(Tsprev, M); init=ρ) do (top, bot), ρ
+                    return @tensor ρ′[-1; -2] :=
+                        top[-1 4 3; 1] * conj(bot[-2 4 3; 2]) * ρ[1; 2]
+                end
+            end
+            prev_info.converged > 0 || @warn "eigsolve did not converge"
+            first(prev_vecs)
+        end
+        ρ_final = let Tsfinal = Tsfinal, M = M
+            _, final_vecs, final_info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
+                return foldr(zip(Tsfinal, M); init=ρ) do (top, bot), ρ
+                    return @tensor ρ′[-1; -2] :=
+                        top[-1 4 3; 1] * conj(bot[-2 4 3; 2]) * ρ[1; 2]
+                end
+            end
+            final_info.converged > 0 || @warn "eigsolve did not converge"
+            first(final_vecs)
+        end
 
         # Decompose and multiply
-        Up, _, Vp = tsvd(ρprev)
-        Uf, _, Vf = tsvd(ρfinal)
+        Up, _, Vp = tsvd!(ρ_prev)
+        Uf, _, Vf = tsvd!(ρ_final)
         Qprev = Up * Vp
         Qfinal = Uf * Vf
         σ = Qprev * Qfinal'
