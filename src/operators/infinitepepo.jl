@@ -121,8 +121,6 @@ Base.getindex(T::InfinitePEPO, args...) = Base.getindex(T.A, args...)
 Base.axes(T::InfinitePEPO, args...) = axes(T.A, args...)
 TensorKit.space(T::InfinitePEPO, i, j) = space(T[i, j, end], 1)
 
-Base.rotl90(T::InfinitePEPO) = InfinitePEPO(rotl90(rotl90.(T.A)));
-
 function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
