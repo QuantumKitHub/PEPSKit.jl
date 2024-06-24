@@ -198,7 +198,7 @@ Compute the expectation value of an on-site and an anisotropic nearest-neighbor 
 This is used to evaluate and differentiate the energy in ground-state PEPS optimizations.
 """
 function costfun(peps::InfinitePEPS, env, op::AnisotropicNNOperator)
-    oos = expectation_value(peps, env, op.h0)[1]
+    oos = sum(expectation_value(peps, env, op.h0))
     oh = sum(expectation_value(peps, env, op.hx))
     ov = sum(expectation_value(rotr90(peps), rotate_north(env, WEST), op.hy))
     #ov = sum(expectation_value(rotl90(peps), rotl90(env), op.hy))
