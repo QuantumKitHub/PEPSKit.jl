@@ -141,28 +141,8 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
             MPSKit._lastspace(Tsfinal[end])' ← MPSKit._lastspace(M[end])',
         )
 
-        # this is a bit of a hack to get the fixed point of the mixed transfer matrix
-        # because MPSKit is not compatible with AD
-        ρ_prev = let Tsprev = Tsprev, M = M
-            _, prev_vecs, prev_info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
-                return foldr(zip(Tsprev, M); init=ρ) do (top, bot), ρ
-                    return @tensor ρ′[-1; -2] :=
-                        top[-1 4 3; 1] * conj(bot[-2 4 3; 2]) * ρ[1; 2]
-                end
-            end
-            prev_info.converged > 0 || @warn "eigsolve did not converge"
-            first(prev_vecs)
-        end
-        ρ_final = let Tsfinal = Tsfinal, M = M
-            _, final_vecs, final_info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
-                return foldr(zip(Tsfinal, M); init=ρ) do (top, bot), ρ
-                    return @tensor ρ′[-1; -2] :=
-                        top[-1 4 3; 1] * conj(bot[-2 4 3; 2]) * ρ[1; 2]
-                end
-            end
-            final_info.converged > 0 || @warn "eigsolve did not converge"
-            first(final_vecs)
-        end
+        ρ_prev = transfermatrix_fixedpoint(Tsprev, M, ρinit)
+        ρ_final = transfermatrix_fixedpoint(Tsfinal, M, ρinit)
 
         # Decompose and multiply
         Up, _, Vp = tsvd!(ρ_prev)
@@ -177,17 +157,25 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
 
     # Fix global phase
-    cornersgfix = map(zip(envprev.corners, cornersfix)) do (Cprev, Cfix)
-        φ = dot(Cprev, Cfix)
-        φ' * Cfix
+    cornersgfix = map(envprev.corners, cornersfix) do Cprev, Cfix
+        return dot(Cfix, Cprev) * Cfix
     end
-    edgesgfix = map(zip(envprev.edges, edgesfix)) do (Tprev, Tfix)
-        φ = dot(Tprev, Tfix)
-        φ' * Tfix
+    edgesgfix = map(envprev.edges, edgesfix) do Tprev, Tfix
+        return dot(Tfix, Tprev) * Tfix
     end
-    envfix = CTMRGEnv(cornersgfix, edgesgfix)
+    return CTMRGEnv(cornersgfix, edgesgfix)
+end
 
-    return envfix
+# this is a bit of a hack to get the fixed point of the mixed transfer matrix
+# because MPSKit is not compatible with AD
+function transfermatrix_fixedpoint(tops, bottoms, ρinit)
+    _, vecs, info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
+        return foldr(zip(tops, bottoms); init=ρ₀) do (top, bottom), ρ
+            return @tensor ρ′[-1; -2] := top[-1 4 3; 1] * conj(bottom[-2 4 3; 2]) * ρ[1; 2]
+        end
+    end
+    info.converged > 0 || @warn "eigsolve did not converge"
+    return first(vecs)
 end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
