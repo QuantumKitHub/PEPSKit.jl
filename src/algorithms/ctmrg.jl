@@ -170,7 +170,7 @@ end
 # because MPSKit is not compatible with AD
 function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     _, vecs, info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
-        return foldr(zip(tops, bottoms); init=ρ₀) do (top, bottom), ρ
+        return foldr(zip(tops, bottoms); init=ρ) do (top, bottom), ρ
             return @tensor ρ′[-1; -2] := top[-1 4 3; 1] * conj(bottom[-2 4 3; 2]) * ρ[1; 2]
         end
     end
