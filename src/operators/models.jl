@@ -30,19 +30,16 @@ function square_lattice_pwave(
     # on-site
     h0 = TensorMap(zeros, T, physical_space ← physical_space)
     block(h0, FermionParity(1)) .= -μ
-    H0 = NLocalOperator{OnSite}(h0)
 
     # two-site (x-direction)
     hx = TensorMap(zeros, T, physical_space^2 ← physical_space^2)
     block(hx, FermionParity(0)) .= [0 -Δ; -Δ 0]
     block(hx, FermionParity(1)) .= [0 -t; -t 0]
-    Hx = NLocalOperator{NearestNeighbor}(hx)
 
     # two-site (y-direction)
     hy = TensorMap(zeros, T, physical_space^2 ← physical_space^2)
     block(hy, FermionParity(0)) .= [0 Δ*im; -Δ*im 0]
     block(hy, FermionParity(1)) .= [0 -t; -t 0]
-    Hy = NLocalOperator{NearestNeighbor}(hy)
 
-    return AnisotropicNNOperator(H0, Hx, Hy)
+    return AnisotropicNNOperator(h0, hx, hy)
 end
