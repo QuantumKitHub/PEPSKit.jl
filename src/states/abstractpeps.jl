@@ -60,6 +60,3 @@ abstract type AbstractPEPS end
 Abstract supertype for a 2D projected entangled-pair operator.
 """
 abstract type AbstractPEPO end
-
-Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
-Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))

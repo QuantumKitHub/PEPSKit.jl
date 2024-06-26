@@ -5,7 +5,7 @@ Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
     A::Matrix{T}
-
+    InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
             space(A[d, w], 2) == space(A[_prev(d, end), w], 4)' || throw(
@@ -106,9 +106,6 @@ Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
 Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
-Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
-Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
-
 ## Math
 Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
 Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
@@ -159,4 +156,12 @@ function ChainRulesCore.rrule(::typeof(rotl90), peps::InfinitePEPS)
         return NoTangent(), rotr90(Δpeps)
     end
     return peps′, rotl90_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(rotr90), peps::InfinitePEPS)
+    peps′ = rotr90(peps)
+    function rotr90_pullback(Δpeps)
+        return NoTangent(), rotl90(Δpeps)
+    end
+    return peps′, rotr90_pullback
 end

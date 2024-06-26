@@ -6,18 +6,9 @@ using PEPSKit, KrylovKit
 # We use the parameters (J₁, J₂, J₃) = (-1, 1, -1) by default to capture
 # the ground state in a single-site unit cell. This can be seen from
 # sublattice rotating H from parameters (1, 1, 1) to (-1, 1, -1).
-function square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
-    physical_space = ComplexSpace(2)
-    T = ComplexF64
-    σx = TensorMap(T[0 1; 1 0], physical_space, physical_space)
-    σy = TensorMap(T[0 im; -im 0], physical_space, physical_space)
-    σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
-    H = (Jx * σx ⊗ σx) + (Jy * σy ⊗ σy) + (Jz * σz ⊗ σz)
-    return NLocalOperator{NearestNeighbor}(H / 4)
-end
+H = square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
 
 # Parameters
-H = square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
 χbond = 2
 χenv = 20
 ctmalg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=1)

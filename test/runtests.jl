@@ -20,5 +20,8 @@ const GROUP = get(ENV, "GROUP", "All")
         @time @safetestset "Heisenberg model" begin
             include("heisenberg.jl")
         end
+        @time @safetestset "P-wave superconductor" begin
+            include("pwave.jl")
+        end
     end
 end

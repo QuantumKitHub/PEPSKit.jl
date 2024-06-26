@@ -112,6 +112,7 @@ function _rrule(
     alg::CTMRG,
 )
     envs = leading_boundary(envinit, state, alg)
+    #TODO: fixed space for unit cells
 
     function leading_boundary_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)

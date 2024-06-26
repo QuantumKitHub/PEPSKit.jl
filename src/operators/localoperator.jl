@@ -1,3 +1,5 @@
+# TODO: change this implementation to a type-stable one
+
 abstract type AbstractInteraction end
 
 """
@@ -23,6 +25,29 @@ Mostly, this is used to define Hamiltonian terms and observables.
 struct NLocalOperator{I<:AbstractInteraction}
     op::AbstractTensorMap
 end
+
+"""
+    struct AnisotropicNNOperator{I<:AbstractInteraction}
+    
+Operator which includes an on-site term and two nearest-neighbor terms, vertical and horizontal.
+"""
+struct AnisotropicNNOperator
+    h0::NLocalOperator{OnSite}
+    hx::NLocalOperator{NearestNeighbor}
+    hy::NLocalOperator{NearestNeighbor}
+end
+function AnisotropicNNOperator(
+    h0::AbstractTensorMap{S,1,1},
+    hx::AbstractTensorMap{S,2,2},
+    hy::AbstractTensorMap{S,2,2}=hx,
+) where {S}
+    return AnisotropicNNOperator(
+        NLocalOperator{OnSite}(h0),
+        NLocalOperator{NearestNeighbor}(hx),
+        NLocalOperator{NearestNeighbor}(hy),
+    )
+end
+# TODO: include the on-site term in the two-site terms, to reduce number of contractions.
 
 @doc """
     operator_env(peps::InfinitePEPS, env::CTMRGEnv, ::AbstractInteraction)
@@ -177,4 +202,18 @@ function costfun(peps::InfinitePEPS, env, op::NLocalOperator{NearestNeighbor})
     oh = sum(expectation_value(peps, env, op))
     ov = sum(expectation_value(rotl90(peps), rotl90(env), op))
     return real(oh + ov)
+end
+
+"""
+    costfun(peps::InfinitePEPS, env, op::AnisotropicNNOperator)
+    
+Compute the expectation value of an on-site and an anisotropic nearest-neighbor operator.
+This is used to evaluate and differentiate the energy in ground-state PEPS optimizations.
+"""
+function costfun(peps::InfinitePEPS, env, op::AnisotropicNNOperator)
+    oos = sum(expectation_value(peps, env, op.h0))
+    oh = sum(expectation_value(peps, env, op.hx))
+    ov = sum(expectation_value(rotr90(peps), rotate_north(env, WEST), op.hy))
+    #ov = sum(expectation_value(rotl90(peps), rotl90(env), op.hy))
+    return real(oos + oh + ov)
 end
