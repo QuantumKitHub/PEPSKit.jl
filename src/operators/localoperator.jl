@@ -1,3 +1,5 @@
+# TODO: change this implementation to a type-stable one
+
 abstract type AbstractInteraction end
 
 """
@@ -25,16 +27,27 @@ struct NLocalOperator{I<:AbstractInteraction}
 end
 
 """
-    struct NLocalOperator{I<:AbstractInteraction}
+    struct AnisotropicNNOperator{I<:AbstractInteraction}
     
-Operator in form of a `AbstractTensorMap` which is parametrized by an interaction type.
-Mostly, this is used to define Hamiltonian terms and observables.
+Operator which includes an on-site term and two nearest-neighbor terms, vertical and horizontal.
 """
 struct AnisotropicNNOperator
     h0::NLocalOperator{OnSite}
     hx::NLocalOperator{NearestNeighbor}
     hy::NLocalOperator{NearestNeighbor}
 end
+function AnisotropicNNOperator(
+    h0::AbstractTensorMap{S,1,1},
+    hx::AbstractTensorMap{S,2,2},
+    hy::AbstractTensorMap{S,2,2}=hx,
+) where {S}
+    return AnisotropicNNOperator(
+        NLocalOperator{OnSite}(h0),
+        NLocalOperator{NearestNeighbor}(hx),
+        NLocalOperator{NearestNeighbor}(hy),
+    )
+end
+# TODO: include the on-site term in the two-site terms, to reduce number of contractions.
 
 @doc """
     operator_env(peps::InfinitePEPS, env::CTMRGEnv, ::AbstractInteraction)
