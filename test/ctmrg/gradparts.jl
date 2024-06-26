@@ -37,7 +37,6 @@ boundary_alg = CTMRG(;
 ## Gauge invariant function of the environment
 # --------------------------------------------
 function rho(env)
-    #
     @tensor ρ[-1 -2 -3 -4 -5 -6 -7 -8] :=
         env.edges[WEST, 1, 1][1 -1 -2; 4] *
         env.corners[NORTHWEST, 1, 1][4; 5] *
@@ -58,31 +57,28 @@ end
 )
     psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
     env = CTMRGEnv(psi; Venv=Espaces[i])
-    @testset "$func" for func in functions
-        function f(state, env)
-            if func != leading_boundary
-                return rho(func(state, env, boundary_alg)[1])
-            else
-                return rho(func(env, state, boundary_alg))
+
+    @testset "$f" for f in functions
+        atol = f == leading_boundary ? sqrt(tol) : tol
+        g = if f == leading_boundary
+            function (state, env)
+                return rho(f(env, state, boundary_alg))
             end
-        end
-        function ChainRulesCore.rrule(
-            ::typeof(f), state::InfinitePEPS{T}, envs::CTMRGEnv
-        ) where {T}
-            y, env_vjp = pullback(state, envs) do A, x
-                #return rho(func(A, x, boundary_alg)[1])
-                if func != leading_boundary
-                    return rho(func(A, x, boundary_alg)[1])
-                else
-                    return rho(func(x, A, boundary_alg))
-                end
-            end
-            return y, x -> (NoTangent(), env_vjp(x)...)
-        end
-        if func != leading_boundary
-            test_rrule(f, psi, env; check_inferred=false, atol=tol)
         else
-            test_rrule(f, psi, env; check_inferred=false, atol=sqrt(tol))
+            function (state, env)
+                return rho(f(state, env, boundary_alg)[1])
+            end
         end
+
+        # use rrule testing functionality but compute rrule via Zygote
+        test_rrule(
+            Zygote.ZygoteRuleConfig(),
+            g,
+            psi,
+            env;
+            check_inferred=false,
+            atol,
+            rrule_f=rrule_via_ad,
+        )
     end
 end
