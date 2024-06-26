@@ -5,7 +5,6 @@ using TensorKit
 using KrylovKit
 using OptimKit
 
-
 # Initialize parameters
 H = square_lattice_heisenberg()
 χbond = 2

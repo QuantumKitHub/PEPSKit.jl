@@ -335,7 +335,6 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             end
             @tensor QQ[-1 -2 -3; -4 -5 -6] := Q_sw[-1 -2 -3; 1 2 3] * Q_nw[1 2 3; -4 -5 -6]
             U, S, V, ϵ_local = tsvd!(QQ; trunc=trscheme, alg=TensorKit.SVD())
-            #U, S, V, ϵ_local = tsvd!(Q_sw * Q_nw; trunc=trscheme, alg=TensorKit.SVD())  # TODO: Add field in CTMRG to choose SVD function
             ϵ = max(ϵ, ϵ_local / norm(S))
             # TODO: check if we can just normalize enlarged corners s.t. trunc behaves a bit better
 
@@ -417,8 +416,6 @@ function build_projectors(
     isqS = sdiag_inv_sqrt(S)
     Pl = Q_nw * V' * isqS
     Pr = isqS * U' * Q_sw
-    #@tensor Pl[-1 -2 -3; -4] := Q_nw[-1 -2 -3; 1 2 3] * conj(V[4; 1 2 3]) * isqS[4; -4]
-    #@tensor Pr[-1; -2 -3 -4] := isqS[-1; 1] * conj(U[2 3 4; 1]) * Q_sw[2 3 4; -2 -3 -4]
     return Pl, Pr
 end
 
