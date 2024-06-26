@@ -5,20 +5,6 @@ using TensorKit
 using KrylovKit
 using OptimKit
 
-"""
-    square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
-
-Square lattice Heisenberg model. By default, this implements a single site unit cell via a sublattice rotation.
-"""
-function square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
-    physical_space = ComplexSpace(2)
-    T = ComplexF64
-    σx = TensorMap(T[0 1; 1 0], physical_space, physical_space)
-    σy = TensorMap(T[0 im; -im 0], physical_space, physical_space)
-    σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
-    H = (Jx * σx ⊗ σx) + (Jy * σy ⊗ σy) + (Jz * σz ⊗ σz)
-    return NLocalOperator{NearestNeighbor}(H / 4)
-end
 
 # Initialize parameters
 H = square_lattice_heisenberg()

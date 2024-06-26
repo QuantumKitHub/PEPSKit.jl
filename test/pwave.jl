@@ -5,30 +5,6 @@ using TensorKit
 using KrylovKit
 using OptimKit
 
-"""
-    square_lattice_pwave(; t=1, μ=2, Δ=1)
-
-    Square lattice p-wave superconductor model.
-"""
-function square_lattice_pwave(; t=1, μ=2, Δ=1)
-    V = Vect[FermionParity](0 => 1, 1 => 1)
-    # on-site
-    h0 = TensorMap(zeros, ComplexF64, V ← V)
-    block(h0, FermionParity(1)) .= -μ
-    H0 = NLocalOperator{OnSite}(h0)
-    # two-site (x-direction)
-    hx = TensorMap(zeros, ComplexF64, V ⊗ V ← V ⊗ V)
-    block(hx, FermionParity(0)) .= [0 -Δ; -Δ 0]
-    block(hx, FermionParity(1)) .= [0 -t; -t 0]
-    Hx = NLocalOperator{NearestNeighbor}(hx)
-    # two-site (y-direction)
-    hy = TensorMap(zeros, ComplexF64, V ⊗ V ← V ⊗ V)
-    block(hy, FermionParity(0)) .= [0 Δ*im; -Δ*im 0]
-    block(hy, FermionParity(1)) .= [0 -t; -t 0]
-    Hy = NLocalOperator{NearestNeighbor}(hy)
-    return AnisotropicNNOperator(H0, Hx, Hy)
-end
-
 # Initialize parameters
 H = square_lattice_pwave()
 χbond = 2

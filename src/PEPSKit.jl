@@ -26,6 +26,7 @@ include("mpskit_glue/transferpepo_environments.jl")
 
 include("environments/ctmrgenv.jl")
 include("operators/localoperator.jl")
+include("operators/models.jl")
 
 include("algorithms/ctmrg.jl")
 include("algorithms/peps_opt.jl")
@@ -68,5 +69,6 @@ export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export symmetrize, None, Depth, Full
 export showtypeofgrad
+export square_lattice_heisenberg, square_lattice_pwave
 
 end # module
