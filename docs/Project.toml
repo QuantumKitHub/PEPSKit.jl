@@ -1,5 +1,6 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+PEPSKit = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
 
 [compat]
 Documenter = "0.27"
