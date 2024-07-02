@@ -134,7 +134,9 @@ const PEPS_ENVBONDDIM = :(χ^2)
         )
     end
 
-    operator = tensorexpr(:O, (:O_out_1, :O_out_2), (:O_in_1, :O_in_2))
+    operator = tensorexpr(
+        :O, ntuple(i -> Symbol(:O_out_, i), N), ntuple(i -> Symbol(:O_in_, i), N)
+    )
 
     bra = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
         inds_id = findfirst(==(CartesianIndex(xmin + i - 1, ymin + j - 1)), cartesian_inds)
