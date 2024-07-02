@@ -5,7 +5,7 @@ using Base: @kwdef
 using Compat
 using Accessors
 using VectorInterface
-using TensorKit, KrylovKit, MPSKit, OptimKit
+using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 
 include("utility/util.jl")

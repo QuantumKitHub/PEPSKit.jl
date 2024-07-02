@@ -33,9 +33,13 @@ function contract_localoperator(
     return contract_localoperator(CartesianIndex.(inds), O, ket, bra, env)
 end
 
+# settings for determining contraction orders
+const PEPS_PHYSICALDIM = 2
+const PEPS_BONDDIM = :χ
+const PEPS_ENVBONDDIM = :(χ^2)
+
 # This implements the contraction of an operator acting on sites `inds`. 
 # The generated function ensures that we can use @tensor to write dynamic contractions (and maximize performance).
-# TODO: add cost model
 @generated function _contract_localoperator(
     inds::NTuple{N,Val},
     O::AbstractTensorMap{S,N,N},
@@ -195,7 +199,6 @@ end
     multiplication_ex = Expr(
         :call,
         :*,
-        operator,
         corner_NW,
         corner_NE,
         corner_SE,
@@ -206,9 +209,23 @@ end
         edges_W...,
         ket...,
         map(x -> Expr(:call, :conj, x), bra)...,
+        operator,
     )
+
+    opt_ex = Expr(:tuple)
+    allinds = TensorOperations.getallindices(multiplication_ex)
+    for label in allinds
+        if startswith(String(label), "physical") || startswith(String(label), "O")
+            push!(opt_ex.args, :($label => $PEPS_PHYSICALDIM))
+        elseif startswith(String(label), "ket") || startswith(String(label), "bra")
+            push!(opt_ex.args, :($label => $PEPS_BONDDIM))
+        else
+            push!(opt_ex.args, :($label => $PEPS_ENVBONDDIM))
+        end
+    end
+
     return quote
-        @tensor opt = true $multiplication_ex
+        @tensor opt = $opt_ex $multiplication_ex
     end
 end
 
@@ -386,8 +403,21 @@ end
         ket...,
         map(x -> Expr(:call, :conj, x), bra)...,
     )
+
+    opt_ex = Expr(:tuple)
+    allinds = TensorOperations.getallindices(multiplication_ex)
+    for label in allinds
+        if startswith(String(label), "physical")
+            push!(opt_ex.args, :($label => $PEPS_PHYSICALDIM))
+        elseif startswith(String(label), "ket") || startswith(String(label), "bra")
+            push!(opt_ex.args, :($label => $PEPS_BONDDIM))
+        else
+            push!(opt_ex.args, :($label => $PEPS_ENVBONDDIM))
+        end
+    end
+
     return quote
-        @tensor opt = true $multiplication_ex
+        @tensor opt = $opt_ex $multiplication_ex
     end
 end
 
