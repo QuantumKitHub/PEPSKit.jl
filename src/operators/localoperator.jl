@@ -421,6 +421,21 @@ function nearest_neighbour_hamiltonian(
     end
     return PEPSHamiltonian(lattice, terms...)
 end
+
+function MPSKit.expectation_value(peps::InfinitePEPS, H::PEPSHamiltonian, envs::CTMRGEnv)
+    return sum(H.terms) do (inds, operator)
+        contract_localoperator(inds, operator, peps, peps, envs) /
+        contract_localnorm(inds, peps, peps, envs)
+    end
+end
+
+function costfun(peps::InfinitePEPS, envs::CTMRGEnv, H::PEPSHamiltonian)
+    E = MPSKit.expectation_value(peps, H, envs)
+    isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
+        @warn "Expectation value is not real: $E."
+    return real(E)
+end
+
 # TODO: change this implementation to a type-stable one
 
 abstract type AbstractInteraction end
