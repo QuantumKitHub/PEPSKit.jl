@@ -45,8 +45,8 @@ function InfinitePEPS(
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
-    Sspaces = adjoint.(circshift(Nspaces, (1, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, -1)))
+    Sspaces = adjoint.(circshift(Nspaces, (-1, 0)))
+    Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
         return PEPSTensor(f, T, P, N, E, S, W)
