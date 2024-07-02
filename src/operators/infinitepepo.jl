@@ -1,4 +1,12 @@
 """
+    const PEPOTensor{S}
+
+Default type for PEPO tensors with a single incoming and outgoing physical index, and 4
+virtual indices, conventionally ordered as: O : P ⊗ P' ← N ⊗ E ⊗ S ⊗ W.
+"""
+const PEPOTensor{S} = AbstractTensorMap{S,2,4} where {S<:ElementarySpace}
+
+"""
     struct InfinitePEPO{T<:PEPOTensor}
 
 Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
@@ -132,3 +140,12 @@ function initializePEPS(
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
 end
+
+# Rotations
+Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))
+Base.rotr90(t::PEPOTensor) = permute(t, ((1, 2), (6, 3, 4, 5)))
+Base.rot180(t::PEPOTensor) = permute(t, ((1, 2), (5, 6, 3, 4)))
+
+Base.rotl90(T::InfinitePEPO) = InfinitePEPO(stack(rotl90, eachslice(T.A; dims=3)))
+Base.rotr90(T::InfinitePEPO) = InfinitePEPO(stack(rotr90, eachslice(T.A; dims=3)))
+Base.rot180(T::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(T.A; dims=3)))

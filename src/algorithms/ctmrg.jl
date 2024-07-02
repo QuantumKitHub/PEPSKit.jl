@@ -379,7 +379,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     return CTMRGEnv(corners, edges), copy(Pleft), copy(Pright), ϵ
 end
 
-# Compute enlarged NW corner
+# Compute enlarged corners
 function northwest_corner(E4, C1, E1, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E4[-1 1 2; 3] *
@@ -388,8 +388,6 @@ function northwest_corner(E4, C1, E1, peps_above, peps_below=peps_above)
         peps_above[7; 5 -5 -2 1] *
         conj(peps_below[7; 6 -6 -3 2])
 end
-
-# Compute enlarged NE corner
 function northeast_corner(E1, C2, E2, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E1[-1 1 2; 3] *
@@ -398,8 +396,6 @@ function northeast_corner(E1, C2, E2, peps_above, peps_below=peps_above)
         peps_above[7; 1 5 -5 -2] *
         conj(peps_below[7; 2 6 -6 -3])
 end
-
-# Compute enlarged SE corner
 function southeast_corner(E2, C3, E3, peps_above, peps_below=peps_above)
     @tensor corner[-1 -2 -3; -4 -5 -6] :=
         E2[-1 1 2; 3] *
@@ -407,6 +403,14 @@ function southeast_corner(E2, C3, E3, peps_above, peps_below=peps_above)
         E3[4 5 6; -4] *
         peps_above[7; -2 1 5 -5] *
         conj(peps_below[7; -3 2 6 -6])
+end
+function southwest_corner(E3, C4, E4, peps_above, peps_below=peps_above)
+    @tensor corner[-1 -2 -3; -4 -5 -6] :=
+        E3[-1 1 2; 3] *
+        C4[3; 4] *
+        E4[4 5 6; -4] *
+        peps_above[7; -5 -2 1 5] *
+        conj(peps_below[7; -6 -3 2 6])
 end
 
 # Build projectors from SVD and enlarged SW & NW corners
@@ -442,35 +446,38 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     total = one(scalartype(peps))
 
     for r in 1:size(peps, 1), c in 1:size(peps, 2)
-        total *= @tensor env.edges[WEST, r, c][1 2 3; 4] *
-            env.corners[NORTHWEST, r, c][4; 5] *
-            env.edges[NORTH, r, c][5 6 7; 8] *
-            env.corners[NORTHEAST, r, c][8; 9] *
-            env.edges[EAST, r, c][9 10 11; 12] *
-            env.corners[SOUTHEAST, r, c][12; 13] *
-            env.edges[SOUTH, r, c][13 14 15; 16] *
-            env.corners[SOUTHWEST, r, c][16; 1] *
+        rprev = _prev(r, size(peps, 1))
+        rnext = _next(r, size(peps, 1))
+        cprev = _prev(c, size(peps, 2))
+        cnext = _next(c, size(peps, 2))
+        total *= @tensor env.edges[WEST, r, cprev][1 2 3; 4] *
+            env.corners[NORTHWEST, rprev, cprev][4; 5] *
+            env.edges[NORTH, rprev, c][5 6 7; 8] *
+            env.corners[NORTHEAST, rprev, cnext][8; 9] *
+            env.edges[EAST, r, cnext][9 10 11; 12] *
+            env.corners[SOUTHEAST, rnext, cnext][12; 13] *
+            env.edges[SOUTH, rnext, c][13 14 15; 16] *
+            env.corners[SOUTHWEST, rnext, cprev][16; 1] *
             peps[r, c][17; 6 10 14 2] *
             conj(peps[r, c][17; 7 11 15 3])
-
-        total *= @tensor env.corners[NORTHWEST, r, c][1; 2] *
-            env.corners[NORTHEAST, r, mod1(c - 1, end)][2; 3] *
-            env.corners[SOUTHEAST, mod1(r - 1, end), mod1(c - 1, end)][3; 4] *
-            env.corners[SOUTHWEST, mod1(r - 1, end), c][4; 1]
-
-        total /= @tensor env.edges[WEST, r, c][1 10 11; 4] *
-            env.corners[NORTHWEST, r, c][4; 5] *
-            env.corners[NORTHEAST, r, mod1(c - 1, end)][5; 6] *
-            env.edges[EAST, r, mod1(c - 1, end)][6 10 11; 7] *
-            env.corners[SOUTHEAST, r, mod1(c - 1, end)][7; 8] *
-            env.corners[SOUTHWEST, r, c][8; 1]
-
-        total /= @tensor env.corners[NORTHWEST, r, c][1; 2] *
-            env.edges[NORTH, r, c][2 10 11; 3] *
-            env.corners[NORTHEAST, r, c][3; 4] *
-            env.corners[SOUTHEAST, mod1(r - 1, end), c][4; 5] *
-            env.edges[SOUTH, mod1(r - 1, end), c][5 10 11; 6] *
-            env.corners[SOUTHWEST, mod1(r - 1, end), c][6; 1]
+        total *= tr(
+            env.corners[NORTHWEST, rprev, cprev] *
+            env.corners[NORTHEAST, rprev, c] *
+            env.corners[SOUTHEAST, r, c] *
+            env.corners[SOUTHWEST, r, cprev],
+        )
+        total /= @tensor env.edges[WEST, r, cprev][1 10 11; 4] *
+            env.corners[NORTHWEST, rprev, cprev][4; 5] *
+            env.corners[NORTHEAST, rprev, c][5; 6] *
+            env.edges[EAST, r, c][6 10 11; 7] *
+            env.corners[SOUTHEAST, rnext, c][7; 8] *
+            env.corners[SOUTHWEST, rnext, cprev][8; 1]
+        total /= @tensor env.corners[NORTHWEST, rprev, cprev][1; 2] *
+            env.edges[NORTH, rprev, c][2 10 11; 3] *
+            env.corners[NORTHEAST, rprev, cnext][3; 4] *
+            env.corners[SOUTHEAST, r, cnext][4; 5] *
+            env.edges[SOUTH, r, c][5 10 11; 6] *
+            env.corners[SOUTHWEST, r, cprev][6; 1]
     end
 
     return total
