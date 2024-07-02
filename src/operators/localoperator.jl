@@ -390,6 +390,25 @@ end
         @tensor opt = true $multiplication_ex
     end
 end
+
+# Hamiltonian consisting of local terms
+# -------------------------------------
+struct PEPSHamiltonian{T<:Tuple,S}
+    lattice::Matrix{S}
+    terms::T
+end
+function PEPSHamiltonian(lattice::Matrix{S}, terms::Pair...) where {S}
+    lattice′ = PeriodicArray(lattice)
+    for (inds, operator) in terms
+        @assert operator isa AbstractTensorMap
+        @assert numout(operator) == numin(operator) == length(inds)
+        for i in 1:length(inds)
+            @assert space(operator, i) == lattice′[i]
+        end
+    end
+    return PEPSHamiltonian{typeof(terms),S}(lattice, terms)
+end
+
 # TODO: change this implementation to a type-stable one
 
 abstract type AbstractInteraction end

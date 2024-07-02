@@ -59,6 +59,7 @@ module Defaults
 end
 
 export CTMRG, CTMRGEnv
+export PEPSHamiltonian
 export NLocalOperator, AnisotropicNNOperator, OnSite, NearestNeighbor
 export expectation_value, costfun
 export leading_boundary
