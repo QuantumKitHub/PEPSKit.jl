@@ -212,6 +212,184 @@ end
     end
 end
 
+"""
+    contract_localnorm(inds, peps, env)
+
+Contract a local norm of the PEPS `peps` around indices `inds`.
+"""
+function contract_localnorm(
+    inds::NTuple{N,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+) where {N}
+    static_inds = Val.(inds)
+    return _contract_localnorm(static_inds, ket, bra, env)
+end
+function contract_localnorm(
+    inds::NTuple{N,Tuple{Int,Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+) where {N}
+    return contract_localnorm(CartesianIndex.(inds), ket, bra, env)
+end
+@generated function _contract_localnorm(
+    inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+) where {N}
+    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
+    if !allunique(cartesian_inds)
+        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
+    end
+
+    xmin, xmax = extrema(getindex.(cartesian_inds, 1))
+    ymin, ymax = extrema(getindex.(cartesian_inds, 2))
+
+    gridsize = (xmax - xmin + 1, ymax - ymin + 1)
+
+    corner_NW = tensorexpr(
+        :(env.corners[NORTHWEST, mod1($(xmin), size(ket, 1)), mod1($(ymin), size(ket, 2))]),
+        (:C_NW_1,),
+        (:C_NW_2,),
+    )
+    corner_NE = tensorexpr(
+        :(env.corners[NORTHEAST, mod1($(xmin), size(ket, 1)), mod1($(ymax), size(ket, 2))]),
+        (:C_NE_1,),
+        (:C_NE_2,),
+    )
+    corner_SE = tensorexpr(
+        :(env.corners[SOUTHEAST, mod1($(xmax), size(ket, 1)), mod1($(ymax), size(ket, 2))]),
+        (:C_SE_1,),
+        (:C_SE_2,),
+    )
+    corner_SW = tensorexpr(
+        :(env.corners[SOUTHWEST, mod1($(xmax), size(ket, 1)), mod1($(ymin), size(ket, 2))]),
+        (:C_SW_1,),
+        (:C_SW_2,),
+    )
+
+    edges_N = map(1:gridsize[2]) do i
+        return tensorexpr(
+            :(env.edges[
+                NORTH, mod1($(xmin), size(ket, 1)), mod1($(ymin + i - 1), size(ket, 2))
+            ]),
+            (
+                (i == 1 ? :C_NW_2 : Symbol(:E_N_virtual, i - 1)),
+                Symbol(:E_N_top, i),
+                Symbol(:E_N_bot, i),
+            ),
+            ((i == gridsize[2] ? :C_NE_1 : Symbol(:E_N_virtual, i)),),
+        )
+    end
+
+    edges_E = map(1:gridsize[1]) do i
+        return tensorexpr(
+            :(env.edges[
+                EAST, mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymax), size(ket, 2))
+            ]),
+            (
+                (i == 1 ? :C_NE_2 : Symbol(:E_E_virtual, i - 1)),
+                Symbol(:E_E_top, i),
+                Symbol(:E_E_bot, i),
+            ),
+            ((i == gridsize[1] ? :C_SE_1 : Symbol(:E_E_virtual, i)),),
+        )
+    end
+
+    edges_S = map(1:gridsize[2]) do i
+        return tensorexpr(
+            :(env.edges[
+                SOUTH, mod1($(xmax), size(ket, 1)), mod1($(ymin + i - 1), size(ket, 2))
+            ]),
+            (
+                (i == gridsize[2] ? :C_SE_2 : Symbol(:E_S_virtual, i)),
+                Symbol(:E_S_top, i),
+                Symbol(:E_S_bot, i),
+            ),
+            ((i == 1 ? :C_SW_1 : Symbol(:E_S_virtual, i - 1)),),
+        )
+    end
+
+    edges_W = map(1:gridsize[1]) do i
+        return tensorexpr(
+            :(env.edges[
+                WEST, mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin), size(ket, 2))
+            ]),
+            (
+                (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
+                Symbol(:E_W_top, i),
+                Symbol(:E_W_bot, i),
+            ),
+            ((i == 1 ? :C_NW_1 : Symbol(:E_W_virtual, i - 1)),),
+        )
+    end
+
+    bra = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
+        return tensorexpr(
+            :(bra[
+                mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin + j - 1), size(ket, 2))
+            ]),
+            (Symbol(:physical, i, "_", j),),
+            (
+                (i == 1 ? Symbol(:E_N_bot, j) : Symbol(:bra_vertical, i - 1, "_", j)),
+                (
+                    if j == gridsize[2]
+                        Symbol(:E_E_bot, i)
+                    else
+                        Symbol(:bra_horizontal, i, "_", j)
+                    end
+                ),
+                (
+                    if i == gridsize[1]
+                        Symbol(:E_S_bot, j)
+                    else
+                        Symbol(:bra_vertical, i, "_", j)
+                    end
+                ),
+                (j == 1 ? Symbol(:E_W_bot, i) : Symbol(:bra_horizontal, i, "_", j - 1)),
+            ),
+        )
+    end
+
+    ket = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
+        return tensorexpr(
+            :(ket[
+                mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin + j - 1), size(ket, 2))
+            ]),
+            (Symbol(:physical, i, "_", j),),
+            (
+                (i == 1 ? Symbol(:E_N_top, j) : Symbol(:ket_vertical, i - 1, "_", j)),
+                (
+                    if j == gridsize[2]
+                        Symbol(:E_E_top, i)
+                    else
+                        Symbol(:ket_horizontal, i, "_", j)
+                    end
+                ),
+                (
+                    if i == gridsize[1]
+                        Symbol(:E_S_top, j)
+                    else
+                        Symbol(:ket_vertical, i, "_", j)
+                    end
+                ),
+                (j == 1 ? Symbol(:E_W_top, i) : Symbol(:ket_horizontal, i, "_", j - 1)),
+            ),
+        )
+    end
+
+    multiplication_ex = Expr(
+        :call,
+        :*,
+        corner_NW,
+        corner_NE,
+        corner_SE,
+        corner_SW,
+        edges_N...,
+        edges_E...,
+        edges_S...,
+        edges_W...,
+        ket...,
+        map(x -> Expr(:call, :conj, x), bra)...,
+    )
+    return quote
+        @tensor opt = true $multiplication_ex
+    end
+end
 # TODO: change this implementation to a type-stable one
 
 abstract type AbstractInteraction end
