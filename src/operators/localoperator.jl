@@ -409,6 +409,18 @@ function PEPSHamiltonian(lattice::Matrix{S}, terms::Pair...) where {S}
     return PEPSHamiltonian{typeof(terms),S}(lattice, terms)
 end
 
+function nearest_neighbour_hamiltonian(
+    lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
+) where {S}
+    terms = []
+    for I in eachindex(IndexCartesian(), lattice)
+        J1 = I + CartesianIndex(1, 0)
+        J2 = I + CartesianIndex(0, 1)
+        push!(terms, (I, J1) => h)
+        push!(terms, (I, J2) => h)
+    end
+    return PEPSHamiltonian(lattice, terms...)
+end
 # TODO: change this implementation to a type-stable one
 
 abstract type AbstractInteraction end
