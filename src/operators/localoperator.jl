@@ -431,8 +431,10 @@ end
 
 function costfun(peps::InfinitePEPS, envs::CTMRGEnv, H::PEPSHamiltonian)
     E = MPSKit.expectation_value(peps, H, envs)
-    isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
-        @warn "Expectation value is not real: $E."
+    ignore_derivatives() do
+        isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
+            @warn "Expectation value is not real: $E."
+    end
     return real(E)
 end
 
