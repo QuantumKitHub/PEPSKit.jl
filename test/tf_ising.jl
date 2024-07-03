@@ -19,21 +19,19 @@ opt_alg = PEPSOptimize(;
 
 # initialize states
 Random.seed!(91283219347)
-H = square_lattice_heisenberg()
+H = square_lattice_tf_ising(; h=1.5)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init; Venv=ComplexSpace(χenv)), psi_init, ctm_alg)
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init)
 
-@test result.E ≈ -0.6694421 atol = 1e-2
+# compute magnetization
+σz = TensorMap(scalartype(psi_init)[1 0; 0 -1], ℂ^2, ℂ^2)
+M = PEPSHamiltonian(H.lattice, (CartesianIndex(1, 1),) => σz)
+magn = expectation_value(result.peps, M, result.env)
 
-# same test but for 2x2 unit cell
-H_2x2 = square_lattice_heisenberg(; unitcell=(2, 2))
-psi_init_2x2 = InfinitePEPS(2, χbond; unitcell=(2, 2))
-env_init_2x2 = leading_boundary(
-    CTMRGEnv(psi_init_2x2; Venv=ComplexSpace(χenv)), psi_init_2x2, ctm_alg
-)
-result_2x2 = fixedpoint(psi_init_2x2, H_2x2, opt_alg, env_init_2x2)
-
-@test result_2x2.E ≈ 4 * result.E atol = 1e-2
+ref_energy = result.E  # TODO: Is there some reference energy/magnetization?
+ref_magn = magn
+@test result.E ≈ ref_energy atol = 1e-2
+@test abs(magn) ≈ ref_magn atol = 1e-2

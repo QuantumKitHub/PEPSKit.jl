@@ -2,7 +2,26 @@
 # -------------------
 
 """
-    square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1)
+    square_lattice_tf_ising(::Type{T}=ComplexF64; J=1, h=1, unitcell=(1, 1))
+
+Square lattice transverse field Ising model.
+"""
+function square_lattice_tf_ising(
+    ::Type{T}=ComplexF64; J=1, h=1, unitcell::Tuple{Int,Int}=(1, 1)
+) where {T<:Number}
+    physical_space = ComplexSpace(2)
+    lattice = fill(physical_space, 1, 1)
+    σx = TensorMap(T[0 1; 1 0], physical_space, physical_space)
+    σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
+    hzz = nearest_neighbour_hamiltonian(lattice, -J / 4 * σz ⊗ σz)
+    return repeat(
+        PEPSHamiltonian(lattice, hzz.terms..., (CartesianIndex(1, 1),) => -J * h / 2 * σx),
+        unitcell...,
+    )
+end
+
+"""
+    square_lattice_heisenberg(::Type{T}=ComplexF64; Jx=-1, Jy=1, Jz=-1, unitcell=(1, 1))
 
 Square lattice Heisenberg model.
 By default, this implements a single site unit cell via a sublattice rotation.
@@ -20,7 +39,7 @@ function square_lattice_heisenberg(
 end
 
 """
-    square_lattice_pwave(; t=1, μ=2, Δ=1)
+    square_lattice_pwave(::Type{T}=ComplexF64; t=1, μ=2, Δ=1, unitcell=(1, 1))
 
 Square lattice p-wave superconductor model.
 """
