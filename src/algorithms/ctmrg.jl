@@ -348,16 +348,15 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
         # Use projectors to grow the corners & edges
         for row in 1:size(state, 1)
             rprev = _prev(row, size(state, 1))
-            rnext = _next(row, size(state, 1))
             C_sw, C_nw, T_w = grow_env_left(
                 state[row, col],
                 Pleft[rprev, col],
                 Pright[row, col],
-                env.corners[SOUTHWEST, _prev(rprev, end), cprev],
-                env.corners[NORTHWEST, _next(rnext, end), cprev],
-                env.edges[SOUTH, _prev(rprev, end), col],
+                env.corners[SOUTHWEST, row, cprev],
+                env.corners[NORTHWEST, row, cprev],
+                env.edges[SOUTH, row, col],
                 env.edges[WEST, row, cprev],
-                env.edges[NORTH, _next(rnext, end), col],
+                env.edges[NORTH, row, col],
             )
             @diffset corners[SOUTHWEST, row, col] = C_sw / norm(C_sw)
             @diffset corners[NORTHWEST, row, col] = C_nw / norm(C_nw)
