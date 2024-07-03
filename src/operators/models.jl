@@ -16,7 +16,7 @@ function square_lattice_heisenberg(
     σy = TensorMap(T[0 im; -im 0], physical_space, physical_space)
     σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
     H = (Jx * σx ⊗ σx) + (Jy * σy ⊗ σy) + (Jz * σz ⊗ σz)
-    return nearest_neighbour_hamiltonian(lattice, H)
+    return nearest_neighbour_hamiltonian(lattice, H / 4)
 end
 
 """
