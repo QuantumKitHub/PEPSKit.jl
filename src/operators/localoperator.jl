@@ -52,28 +52,28 @@ const PEPS_ENVBONDDIM = :(χ^2)
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
     end
 
-    xmin, xmax = extrema(getindex.(cartesian_inds, 1))
-    ymin, ymax = extrema(getindex.(cartesian_inds, 2))
+    rmin, rmax = extrema(getindex.(cartesian_inds, 1))
+    cmin, cmax = extrema(getindex.(cartesian_inds, 2))
 
-    gridsize = (xmax - xmin + 1, ymax - ymin + 1)
+    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
     corner_NW = tensorexpr(
-        :(env.corners[NORTHWEST, mod1($(xmin), size(ket, 1)), mod1($(ymin), size(ket, 2))]),
+        :(env.corners[NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
         (:C_NW_1,),
         (:C_NW_2,),
     )
     corner_NE = tensorexpr(
-        :(env.corners[NORTHEAST, mod1($(xmin), size(ket, 1)), mod1($(ymax), size(ket, 2))]),
+        :(env.corners[NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
         (:C_NE_1,),
         (:C_NE_2,),
     )
     corner_SE = tensorexpr(
-        :(env.corners[SOUTHEAST, mod1($(xmax), size(ket, 1)), mod1($(ymax), size(ket, 2))]),
+        :(env.corners[SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
         (:C_SE_1,),
         (:C_SE_2,),
     )
     corner_SW = tensorexpr(
-        :(env.corners[SOUTHWEST, mod1($(xmax), size(ket, 1)), mod1($(ymin), size(ket, 2))]),
+        :(env.corners[SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
         (:C_SW_1,),
         (:C_SW_2,),
     )
@@ -81,7 +81,7 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_N = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                NORTH, mod1($(xmin), size(ket, 1)), mod1($(ymin + i - 1), size(ket, 2))
+                NORTH, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
             ]),
             (
                 (i == 1 ? :C_NW_2 : Symbol(:E_N_virtual, i - 1)),
@@ -95,7 +95,7 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_E = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                EAST, mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymax), size(ket, 2))
+                EAST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
             ]),
             (
                 (i == 1 ? :C_NE_2 : Symbol(:E_E_virtual, i - 1)),
@@ -109,7 +109,7 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_S = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                SOUTH, mod1($(xmax), size(ket, 1)), mod1($(ymin + i - 1), size(ket, 2))
+                SOUTH, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
             ]),
             (
                 (i == gridsize[2] ? :C_SE_2 : Symbol(:E_S_virtual, i)),
@@ -123,7 +123,7 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_W = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                WEST, mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin), size(ket, 2))
+                WEST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
             ]),
             (
                 (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
@@ -139,12 +139,12 @@ const PEPS_ENVBONDDIM = :(χ^2)
     )
 
     bra = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
-        inds_id = findfirst(==(CartesianIndex(xmin + i - 1, ymin + j - 1)), cartesian_inds)
+        inds_id = findfirst(==(CartesianIndex(rmin + i - 1, cmin + j - 1)), cartesian_inds)
         physical_label =
             isnothing(inds_id) ? Symbol(:physical, i, "_", j) : Symbol(:O_out_, inds_id)
         return tensorexpr(
             :(bra[
-                mod1($(xmin + i - 1), size(bra, 1)), mod1($(ymin + j - 1), size(bra, 2))
+                mod1($(rmin + i - 1), size(bra, 1)), mod1($(cmin + j - 1), size(bra, 2))
             ]),
             (physical_label,),
             (
@@ -169,12 +169,12 @@ const PEPS_ENVBONDDIM = :(χ^2)
     end
 
     ket = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
-        inds_id = findfirst(==(CartesianIndex(xmin + i - 1, ymin + j - 1)), cartesian_inds)
+        inds_id = findfirst(==(CartesianIndex(rmin + i - 1, cmin + j - 1)), cartesian_inds)
         physical_label =
             isnothing(inds_id) ? Symbol(:physical, i, "_", j) : Symbol(:O_in_, inds_id)
         return tensorexpr(
             :(ket[
-                mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin + j - 1), size(ket, 2))
+                mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin + j - 1), size(ket, 2))
             ]),
             (physical_label,),
             (
@@ -255,28 +255,28 @@ end
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
     end
 
-    xmin, xmax = extrema(getindex.(cartesian_inds, 1))
-    ymin, ymax = extrema(getindex.(cartesian_inds, 2))
+    rmin, rmax = extrema(getindex.(cartesian_inds, 1))
+    cmin, cmax = extrema(getindex.(cartesian_inds, 2))
 
-    gridsize = (xmax - xmin + 1, ymax - ymin + 1)
+    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
     corner_NW = tensorexpr(
-        :(env.corners[NORTHWEST, mod1($(xmin), size(ket, 1)), mod1($(ymin), size(ket, 2))]),
+        :(env.corners[NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
         (:C_NW_1,),
         (:C_NW_2,),
     )
     corner_NE = tensorexpr(
-        :(env.corners[NORTHEAST, mod1($(xmin), size(ket, 1)), mod1($(ymax), size(ket, 2))]),
+        :(env.corners[NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
         (:C_NE_1,),
         (:C_NE_2,),
     )
     corner_SE = tensorexpr(
-        :(env.corners[SOUTHEAST, mod1($(xmax), size(ket, 1)), mod1($(ymax), size(ket, 2))]),
+        :(env.corners[SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
         (:C_SE_1,),
         (:C_SE_2,),
     )
     corner_SW = tensorexpr(
-        :(env.corners[SOUTHWEST, mod1($(xmax), size(ket, 1)), mod1($(ymin), size(ket, 2))]),
+        :(env.corners[SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
         (:C_SW_1,),
         (:C_SW_2,),
     )
@@ -284,7 +284,7 @@ end
     edges_N = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                NORTH, mod1($(xmin), size(ket, 1)), mod1($(ymin + i - 1), size(ket, 2))
+                NORTH, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
             ]),
             (
                 (i == 1 ? :C_NW_2 : Symbol(:E_N_virtual, i - 1)),
@@ -298,7 +298,7 @@ end
     edges_E = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                EAST, mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymax), size(ket, 2))
+                EAST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
             ]),
             (
                 (i == 1 ? :C_NE_2 : Symbol(:E_E_virtual, i - 1)),
@@ -312,7 +312,7 @@ end
     edges_S = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                SOUTH, mod1($(xmax), size(ket, 1)), mod1($(ymin + i - 1), size(ket, 2))
+                SOUTH, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
             ]),
             (
                 (i == gridsize[2] ? :C_SE_2 : Symbol(:E_S_virtual, i)),
@@ -326,7 +326,7 @@ end
     edges_W = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                WEST, mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin), size(ket, 2))
+                WEST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
             ]),
             (
                 (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
@@ -340,7 +340,7 @@ end
     bra = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
         return tensorexpr(
             :(bra[
-                mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin + j - 1), size(ket, 2))
+                mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin + j - 1), size(ket, 2))
             ]),
             (Symbol(:physical, i, "_", j),),
             (
@@ -367,7 +367,7 @@ end
     ket = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
         return tensorexpr(
             :(ket[
-                mod1($(xmin + i - 1), size(ket, 1)), mod1($(ymin + j - 1), size(ket, 2))
+                mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin + j - 1), size(ket, 2))
             ]),
             (Symbol(:physical, i, "_", j),),
             (
