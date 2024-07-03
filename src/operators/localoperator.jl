@@ -435,7 +435,7 @@ function PEPSHamiltonian(lattice::Matrix{S}, terms::Pair...) where {S}
         @assert operator isa AbstractTensorMap
         @assert numout(operator) == numin(operator) == length(inds)
         for i in 1:length(inds)
-            @assert space(operator, i) == lattice′[i]
+            @assert space(operator, i) == lattice′[inds[i]]
         end
     end
     return PEPSHamiltonian{typeof(terms),S}(lattice, terms)
