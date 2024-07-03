@@ -441,6 +441,24 @@ function PEPSHamiltonian(lattice::Matrix{S}, terms::Pair...) where {S}
     return PEPSHamiltonian{typeof(terms),S}(lattice, terms)
 end
 
+"""
+    checklattice(Bool, args...)
+    checklattice(args...)
+
+Helper function for checking lattice compatibility. The first version returns a boolean,
+while the second version throws an error if the lattices do not match.
+"""
+function checklattice(args...)
+    return checklattice(Bool, args...) || throw(ArgumentError("Lattice mismatch."))
+end
+function checklattice(::Type{Bool}, peps::InfinitePEPS, H::PEPSHamiltonian)
+    return size(peps) == size(H.lattice)
+end
+function checklattice(::Type{Bool}, H::PEPSHamiltonian, peps::InfinitePEPS)
+    return checklattice(Bool, peps, H)
+end
+@non_differentiable checklattice(args...)
+
 function nearest_neighbour_hamiltonian(
     lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
 ) where {S}
@@ -465,6 +483,7 @@ function Base.repeat(H::PEPSHamiltonian, m::Int, n::Int)
 end
 
 function MPSKit.expectation_value(peps::InfinitePEPS, H::PEPSHamiltonian, envs::CTMRGEnv)
+    checklattice(peps, H)
     return sum(H.terms) do (inds, operator)
         contract_localoperator(inds, operator, peps, peps, envs) /
         contract_localnorm(inds, peps, peps, envs)
