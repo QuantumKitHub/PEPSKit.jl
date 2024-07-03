@@ -477,7 +477,7 @@ function Base.repeat(H::PEPSHamiltonian, m::Int, n::Int)
     terms = []
     for (inds, operator) in H.terms, i in 1:m, j in 1:n
         offset = CartesianIndex((i - 1) * size(H.lattice, 1), (j - 1) * size(H.lattice, 2))
-        push!(terms, (inds + offset) => operator)
+        push!(terms, (inds .+ Ref(offset)) => operator)
     end
     return PEPSHamiltonian(lattice, terms...)
 end
