@@ -58,22 +58,30 @@ const PEPS_ENVBONDDIM = :(χ^2)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
     corner_NW = tensorexpr(
-        :(env.corners[NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
+        :(env.corners[
+            NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
+        ]),
         (:C_NW_1,),
         (:C_NW_2,),
     )
     corner_NE = tensorexpr(
-        :(env.corners[NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
+        :(env.corners[
+            NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
+        ]),
         (:C_NE_1,),
         (:C_NE_2,),
     )
     corner_SE = tensorexpr(
-        :(env.corners[SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
+        :(env.corners[
+            SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
+        ]),
         (:C_SE_1,),
         (:C_SE_2,),
     )
     corner_SW = tensorexpr(
-        :(env.corners[SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
+        :(env.corners[
+            SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
+        ]),
         (:C_SW_1,),
         (:C_SW_2,),
     )
@@ -81,7 +89,9 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_N = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                NORTH, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
+                NORTH,
+                mod1($(rmin - 1), size(ket, 1)),
+                mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
                 (i == 1 ? :C_NW_2 : Symbol(:E_N_virtual, i - 1)),
@@ -95,7 +105,9 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_E = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                EAST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
+                EAST,
+                mod1($(rmin + i - 1), size(ket, 1)),
+                mod1($(cmax + 1), size(ket, 2)),
             ]),
             (
                 (i == 1 ? :C_NE_2 : Symbol(:E_E_virtual, i - 1)),
@@ -109,7 +121,9 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_S = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                SOUTH, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
+                SOUTH,
+                mod1($(rmax + 1), size(ket, 1)),
+                mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
                 (i == gridsize[2] ? :C_SE_2 : Symbol(:E_S_virtual, i)),
@@ -123,7 +137,9 @@ const PEPS_ENVBONDDIM = :(χ^2)
     edges_W = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                WEST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
+                WEST,
+                mod1($(rmin + i - 1), size(ket, 1)),
+                mod1($(cmin - 1), size(ket, 2)),
             ]),
             (
                 (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
@@ -261,22 +277,30 @@ end
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
     corner_NW = tensorexpr(
-        :(env.corners[NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
+        :(env.corners[
+            NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
+        ]),
         (:C_NW_1,),
         (:C_NW_2,),
     )
     corner_NE = tensorexpr(
-        :(env.corners[NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
+        :(env.corners[
+            NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
+        ]),
         (:C_NE_1,),
         (:C_NE_2,),
     )
     corner_SE = tensorexpr(
-        :(env.corners[SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))]),
+        :(env.corners[
+            SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
+        ]),
         (:C_SE_1,),
         (:C_SE_2,),
     )
     corner_SW = tensorexpr(
-        :(env.corners[SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))]),
+        :(env.corners[
+            SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
+        ]),
         (:C_SW_1,),
         (:C_SW_2,),
     )
@@ -284,7 +308,9 @@ end
     edges_N = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                NORTH, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
+                NORTH,
+                mod1($(rmin - 1), size(ket, 1)),
+                mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
                 (i == 1 ? :C_NW_2 : Symbol(:E_N_virtual, i - 1)),
@@ -298,7 +324,9 @@ end
     edges_E = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                EAST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
+                EAST,
+                mod1($(rmin + i - 1), size(ket, 1)),
+                mod1($(cmax + 1), size(ket, 2)),
             ]),
             (
                 (i == 1 ? :C_NE_2 : Symbol(:E_E_virtual, i - 1)),
@@ -312,7 +340,9 @@ end
     edges_S = map(1:gridsize[2]) do i
         return tensorexpr(
             :(env.edges[
-                SOUTH, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin + i - 1), size(ket, 2))
+                SOUTH,
+                mod1($(rmax + 1), size(ket, 1)),
+                mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
                 (i == gridsize[2] ? :C_SE_2 : Symbol(:E_S_virtual, i)),
@@ -326,7 +356,9 @@ end
     edges_W = map(1:gridsize[1]) do i
         return tensorexpr(
             :(env.edges[
-                WEST, mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
+                WEST,
+                mod1($(rmin + i - 1), size(ket, 1)),
+                mod1($(cmin - 1), size(ket, 2)),
             ]),
             (
                 (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
