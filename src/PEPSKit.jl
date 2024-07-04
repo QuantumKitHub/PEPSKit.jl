@@ -10,7 +10,6 @@ using ChainRulesCore, Zygote
 
 include("utility/util.jl")
 include("utility/svd.jl")
-include("utility/eigsolve.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 
@@ -59,7 +58,7 @@ module Defaults
     const fpgrad_tol = 1e-6
 end
 
-export FullSVD, IterSVD, OldSVD, svdwrap, itersvd
+export FullSVD, IterSVD, OldSVD
 export CTMRG, CTMRGEnv
 export NLocalOperator, AnisotropicNNOperator, OnSite, NearestNeighbor
 export expectation_value, costfun

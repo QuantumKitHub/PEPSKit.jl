@@ -10,6 +10,9 @@ const GROUP = get(ENV, "GROUP", "All")
         @time @safetestset "Gradients" begin
             include("ctmrg/gradients.jl")
         end
+        @time @safetestset "Gradients" begin
+            include("ctmrg/svd_wrapper.jl")
+        end
     end
     if GROUP == "All" || GROUP == "MPS"
         @time @safetestset "VUMPS" begin
