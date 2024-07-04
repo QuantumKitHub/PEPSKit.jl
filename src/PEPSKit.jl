@@ -12,6 +12,7 @@ include("utility/util.jl")
 include("utility/eigsolve.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
+include("utility/autoopt.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
