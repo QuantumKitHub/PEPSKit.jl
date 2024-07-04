@@ -33,11 +33,6 @@ function contract_localoperator(
     return contract_localoperator(CartesianIndex.(inds), O, ket, bra, env)
 end
 
-# settings for determining contraction orders
-const PEPS_PHYSICALDIM = 2
-const PEPS_BONDDIM = :χ
-const PEPS_ENVBONDDIM = :(χ^2)
-
 # This implements the contraction of an operator acting on sites `inds`. 
 # The generated function ensures that we can use @tensor to write dynamic contractions (and maximize performance).
 @generated function _contract_localoperator(
