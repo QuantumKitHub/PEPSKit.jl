@@ -59,7 +59,7 @@ module Defaults
 end
 
 export CTMRG, CTMRGEnv
-export PEPSHamiltonian
+export LocalOperator
 export expectation_value, costfun
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolve

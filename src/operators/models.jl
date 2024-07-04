@@ -15,7 +15,7 @@ function square_lattice_tf_ising(
     σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
     hzz = nearest_neighbour_hamiltonian(lattice, -J / 4 * σz ⊗ σz)
     return repeat(
-        PEPSHamiltonian(lattice, hzz.terms..., (CartesianIndex(1, 1),) => -J * h / 2 * σx),
+        LocalOperator(lattice, hzz.terms..., (CartesianIndex(1, 1),) => -J * h / 2 * σx),
         unitcell...,
     )
 end
@@ -68,7 +68,7 @@ function square_lattice_pwave(
     block(hy, FermionParity(1)) .= [0 -t; -t 0]
 
     return repeat(
-        PEPSHamiltonian(
+        LocalOperator(
             lattice,
             (CartesianIndex(1, 1),) => h0,
             (CartesianIndex(1, 1), CartesianIndex(1, 2)) => hx,

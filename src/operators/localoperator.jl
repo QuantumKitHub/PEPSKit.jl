@@ -457,11 +457,11 @@ end
 
 # Hamiltonian consisting of local terms
 # -------------------------------------
-struct PEPSHamiltonian{T<:Tuple,S}
+struct LocalOperator{T<:Tuple,S}
     lattice::Matrix{S}
     terms::T
 end
-function PEPSHamiltonian(lattice::Matrix{S}, terms::Pair...) where {S}
+function LocalOperator(lattice::Matrix{S}, terms::Pair...) where {S}
     lattice′ = PeriodicArray(lattice)
     for (inds, operator) in terms
         @assert operator isa AbstractTensorMap
@@ -470,7 +470,7 @@ function PEPSHamiltonian(lattice::Matrix{S}, terms::Pair...) where {S}
             @assert space(operator, i) == lattice′[inds[i]]
         end
     end
-    return PEPSHamiltonian{typeof(terms),S}(lattice, terms)
+    return LocalOperator{typeof(terms),S}(lattice, terms)
 end
 
 """
@@ -483,10 +483,10 @@ while the second version throws an error if the lattices do not match.
 function checklattice(args...)
     return checklattice(Bool, args...) || throw(ArgumentError("Lattice mismatch."))
 end
-function checklattice(::Type{Bool}, peps::InfinitePEPS, H::PEPSHamiltonian)
+function checklattice(::Type{Bool}, peps::InfinitePEPS, H::LocalOperator)
     return size(peps) == size(H.lattice)
 end
-function checklattice(::Type{Bool}, H::PEPSHamiltonian, peps::InfinitePEPS)
+function checklattice(::Type{Bool}, H::LocalOperator, peps::InfinitePEPS)
     return checklattice(Bool, peps, H)
 end
 @non_differentiable checklattice(args...)
@@ -501,20 +501,20 @@ function nearest_neighbour_hamiltonian(
         push!(terms, (I, J1) => h)
         push!(terms, (I, J2) => h)
     end
-    return PEPSHamiltonian(lattice, terms...)
+    return LocalOperator(lattice, terms...)
 end
 
-function Base.repeat(H::PEPSHamiltonian, m::Int, n::Int)
+function Base.repeat(H::LocalOperator, m::Int, n::Int)
     lattice = repeat(H.lattice, m, n)
     terms = []
     for (inds, operator) in H.terms, i in 1:m, j in 1:n
         offset = CartesianIndex((i - 1) * size(H.lattice, 1), (j - 1) * size(H.lattice, 2))
         push!(terms, (inds .+ Ref(offset)) => operator)
     end
-    return PEPSHamiltonian(lattice, terms...)
+    return LocalOperator(lattice, terms...)
 end
 
-function MPSKit.expectation_value(peps::InfinitePEPS, H::PEPSHamiltonian, envs::CTMRGEnv)
+function MPSKit.expectation_value(peps::InfinitePEPS, H::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, H)
     return sum(H.terms) do (inds, operator)
         contract_localoperator(inds, operator, peps, peps, envs) /
@@ -522,7 +522,7 @@ function MPSKit.expectation_value(peps::InfinitePEPS, H::PEPSHamiltonian, envs::
     end
 end
 
-function costfun(peps::InfinitePEPS, envs::CTMRGEnv, H::PEPSHamiltonian)
+function costfun(peps::InfinitePEPS, envs::CTMRGEnv, H::LocalOperator)
     E = MPSKit.expectation_value(peps, H, envs)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||

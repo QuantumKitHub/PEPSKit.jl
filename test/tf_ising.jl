@@ -28,7 +28,7 @@ result = fixedpoint(psi_init, H, opt_alg, env_init)
 
 # compute magnetization
 σz = TensorMap(scalartype(psi_init)[1 0; 0 -1], ℂ^2, ℂ^2)
-M = PEPSHamiltonian(H.lattice, (CartesianIndex(1, 1),) => σz)
+M = LocalOperator(H.lattice, (CartesianIndex(1, 1),) => σz)
 magn = expectation_value(result.peps, M, result.env)
 
 ref_energy = result.E  # TODO: Is there some reference energy/magnetization?
