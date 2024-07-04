@@ -483,8 +483,8 @@ while the second version throws an error if the lattices do not match.
 function checklattice(args...)
     return checklattice(Bool, args...) || throw(ArgumentError("Lattice mismatch."))
 end
-function checklattice(::Type{Bool}, peps::InfinitePEPS, H::LocalOperator)
-    return size(peps) == size(H.lattice)
+function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
+    return size(peps) == size(O.lattice)
 end
 function checklattice(::Type{Bool}, H::LocalOperator, peps::InfinitePEPS)
     return checklattice(Bool, peps, H)
@@ -504,26 +504,26 @@ function nearest_neighbour_hamiltonian(
     return LocalOperator(lattice, terms...)
 end
 
-function Base.repeat(H::LocalOperator, m::Int, n::Int)
-    lattice = repeat(H.lattice, m, n)
+function Base.repeat(O::LocalOperator, m::Int, n::Int)
+    lattice = repeat(O.lattice, m, n)
     terms = []
-    for (inds, operator) in H.terms, i in 1:m, j in 1:n
-        offset = CartesianIndex((i - 1) * size(H.lattice, 1), (j - 1) * size(H.lattice, 2))
+    for (inds, operator) in O.terms, i in 1:m, j in 1:n
+        offset = CartesianIndex((i - 1) * size(O.lattice, 1), (j - 1) * size(O.lattice, 2))
         push!(terms, (inds .+ Ref(offset)) => operator)
     end
     return LocalOperator(lattice, terms...)
 end
 
-function MPSKit.expectation_value(peps::InfinitePEPS, H::LocalOperator, envs::CTMRGEnv)
-    checklattice(peps, H)
-    return sum(H.terms) do (inds, operator)
+function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
+    checklattice(peps, O)
+    return sum(O.terms) do (inds, operator)
         contract_localoperator(inds, operator, peps, peps, envs) /
         contract_localnorm(inds, peps, peps, envs)
     end
 end
 
-function costfun(peps::InfinitePEPS, envs::CTMRGEnv, H::LocalOperator)
-    E = MPSKit.expectation_value(peps, H, envs)
+function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
+    E = MPSKit.expectation_value(peps, O, envs)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
             @warn "Expectation value is not real: $E."
