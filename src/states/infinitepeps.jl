@@ -128,6 +128,11 @@ end
 # VectorInterface
 VectorInterface.zerovector(x::InfinitePEPS) = InfinitePEPS(zerovector(x.A))
 
+# Rotations
+Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
+Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
+Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
+
 # Chainrules
 function ChainRulesCore.rrule(
     ::typeof(Base.getindex), state::InfinitePEPS, row::Int, col::Int
