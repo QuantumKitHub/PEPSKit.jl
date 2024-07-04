@@ -176,10 +176,10 @@ end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
 function _contract_gauge_corner(corner, σ_in, σ_out)
-    @tensor corner_fix[χ_in; χ_out] := σ_in[χ_in; χ1] * corner[χ1; χ2] * conj(σ_out[χ_out; χ2])
+    @autoopt @tensor corner_fix[χ_in; χ_out] := σ_in[χ_in; χ1] * corner[χ1; χ2] * conj(σ_out[χ_out; χ2])
 end
 function _contract_gauge_edge(edge, σ_in, σ_out)
-    @tensor edge_fix[χ_in D_above D_below; χ_out] :=
+    @autoopt @tensor edge_fix[χ_in D_above D_below; χ_out] :=
         σ_in[χ_in; χ1] * edge[χ1 D_above D_below; χ2] * conj(σ_out[χ_out; χ2])
 end
 function fix_relative_phases(envfinal::CTMRGEnv, signs)
@@ -336,7 +336,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             else
                 alg.trscheme
             end
-            @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
+            @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
                 Q_sw[χ_EB D_EBabove D_EBbelow; χ D1 D2] *
                 Q_nw[χ D1 D2; χ_ET D_ETabove D_ETbelow]
             U, S, V, ϵ_local = tsvd!(QQ; trunc=trscheme, alg=TensorKit.SVD())
@@ -381,7 +381,7 @@ end
 
 # Compute enlarged corners
 function northwest_corner(edge_W, corner_NW, edge_N, peps_above, peps_below=peps_above)
-    @tensor corner[χ_S D_Sabove D_Sbelow; χ_E D_Eabove D_Ebelow] :=
+    @autoopt @tensor corner[χ_S D_Sabove D_Sbelow; χ_E D_Eabove D_Ebelow] :=
         edge_W[χ_S D1 D2; χ1] *
         corner_NW[χ1; χ2] *
         edge_N[χ2 D3 D4; χ_E] *
@@ -389,7 +389,7 @@ function northwest_corner(edge_W, corner_NW, edge_N, peps_above, peps_below=peps
         conj(peps_below[d; D4 D_Ebelow D_Sbelow D2])
 end
 function northeast_corner(edge_N, corner_NE, edge_E, peps_above, peps_below=peps_above)
-    @tensor corner[χ_W D_Wabove D_Wbelow; χ_S D_Sabove D_Sbelow] :=
+    @autoopt @tensor corner[χ_W D_Wabove D_Wbelow; χ_S D_Sabove D_Sbelow] :=
         edge_N[χ_W D1 D2; χ1] *
         corner_NE[χ1; χ2] *
         edge_E[χ2 D3 D4; χ_S] *
@@ -397,7 +397,7 @@ function northeast_corner(edge_N, corner_NE, edge_E, peps_above, peps_below=peps
         conj(peps_below[d; D2 D4 D_Sbelow D_Wbelow])
 end
 function southeast_corner(edge_E, corner_SE, edge_S, peps_above, peps_below=peps_above)
-    @tensor corner[χ_N D_Nabove D_Nbelow; χ_W D_Wabove D_Wbelow] :=
+    @autoopt @tensor corner[χ_N D_Nabove D_Nbelow; χ_W D_Wabove D_Wbelow] :=
         edge_E[χ_N D1 D2; χ1] *
         corner_SE[χ1; χ2] *
         edge_S[χ2 D3 D4; χ_W] *
@@ -405,7 +405,7 @@ function southeast_corner(edge_E, corner_SE, edge_S, peps_above, peps_below=peps
         conj(peps_below[d; D_Nbelow D2 D4 D_Wbelow])
 end
 function southwest_corner(edge_S, corner_SW, edge_W, peps_above, peps_below=peps_above)
-    @tensor corner[χ_E D_Eabove D_Ebelow; χ_N D_Nabove D_Nbelow] :=
+    @autoopt @tensor corner[χ_E D_Eabove D_Ebelow; χ_N D_Nabove D_Nbelow] :=
         edge_S[χ_E D1 D2; χ1] *
         corner_SW[χ1; χ2] *
         edge_W[χ2 D3 D4; χ_N] *
@@ -427,11 +427,11 @@ end
 function grow_env_left(
     peps, P_bottom, P_top, corners_SW, corners_NW, edge_S, edge_W, edge_N
 )
-    @tensor corner_SW′[χ_E; χ_N] :=
+    @autoopt @tensor corner_SW′[χ_E; χ_N] :=
         corners_SW[χ1; χ2] * edge_S[χ_E D1 D2; χ1] * P_bottom[χ2 D1 D2; χ_N]
-    @tensor corner_NW′[χ_S; χ_E] :=
+    @autoopt @tensor corner_NW′[χ_S; χ_E] :=
         corners_NW[χ1; χ2] * edge_N[χ2 D1 D2; χ_E] * P_top[χ_S; χ1 D1 D2]
-    @tensor edge_W′[χ_S D_Eabove D_Ebelow; χ_N] :=
+    @autoopt @tensor edge_W′[χ_S D_Eabove D_Ebelow; χ_N] :=
         edge_W[χ1 D1 D2; χ2] *
         peps[d; D3 D_Eabove D5 D1] *
         conj(peps[d; D4 D_Ebelow D6 D2]) *
@@ -454,7 +454,7 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
         rnext = _next(r, size(peps, 1))
         cprev = _prev(c, size(peps, 2))
         cnext = _next(c, size(peps, 2))
-        total *= @tensor env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
+        total *= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
             env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
             env.edges[NORTH, rprev, c][χ3 D3 D4; χ4] *
             env.corners[NORTHEAST, rprev, cnext][χ4; χ5] *
@@ -470,13 +470,13 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
             env.corners[SOUTHEAST, r, c] *
             env.corners[SOUTHWEST, r, cprev],
         )
-        total /= @tensor env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
+        total /= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
             env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
             env.corners[NORTHEAST, rprev, c][χ3; χ4] *
             env.edges[EAST, r, c][χ4 D1 D2; χ5] *
             env.corners[SOUTHEAST, rnext, c][χ5; χ6] *
             env.corners[SOUTHWEST, rnext, cprev][χ6; χ1]
-        total /= @tensor env.corners[NORTHWEST, rprev, cprev][χ1; χ2] *
+        total /= @autoopt @tensor env.corners[NORTHWEST, rprev, cprev][χ1; χ2] *
             env.edges[NORTH, rprev, c][χ2 D1 D2; χ3] *
             env.corners[NORTHEAST, rprev, cnext][χ3; χ4] *
             env.corners[SOUTHEAST, r, cnext][χ4; χ5] *
