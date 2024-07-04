@@ -55,7 +55,7 @@ macro autoopt(ex)
     else
         ex.args[opt_id + 2] = :(opt = $optexpr)
     end
-    return ex
+    return esc(ex)
 end
 
 # TODO: this definition should be in TensorOperations
