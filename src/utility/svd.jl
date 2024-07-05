@@ -8,53 +8,106 @@ using TensorKit: SectorDict
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
-function TensorKit._tsvd!(t, alg::IterSVD, trunc::TruncationScheme, p::Real=2)
-    # TODO
+function _tsvd!(
+    t,
+    alg::IterSVD,
+    trunc::Union{TensorKit.NoTruncation,TensorKit.TruncationSpace},
+    p::Real=2,
+)
+    # early return
+    if isempty(blocksectors(t))
+        truncerr = zero(real(scalartype(t)))
+        return _empty_svdtensors(t)..., truncerr
+    end
+
+    Udata, Σdata, Vdata, dims = _compute_svddata!(t, alg, trunc)
+    U, S, V = _create_svdtensors(t, Udata, Σdata, Vdata, spacetype(t)(dims))
+    truncerr = trunc isa NoTruncation ? abs(zero(scalartype(t))) : norm(U * S * V - t, p)
+
+    return U, S, V, truncerr
+end
+function TensorKit._compute_svddata!(
+    t::TensorMap,
+    alg::IterSVD,
+    trunc::Union{TensorKit.NoTruncation,TensorKit.TruncationSpace},
+)
+    InnerProductStyle(t) === EuclideanProduct() || throw_invalid_innerproduct(:tsvd!)
+    I = sectortype(t)
+    A = storagetype(t)
+    Udata = SectorDict{I,A}()
+    Vdata = SectorDict{I,A}()
+    dims = SectorDict{I,Int}()
+    local Σdata
+    for (c, b) in blocks(t)
+        x₀ = randn(eltype(b), size(b, 1))
+        howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
+        Σ, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
+        if info.converged < howmany  # Fall back to dense SVD if not properly converged
+            U, Σ, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
+            Udata[c] = U
+            Vdata[c] = V
+        else
+            Udata[c] = stack(lvecs)
+            Vdata[c] = stack(rvecs)'
+        end
+        if @isdefined Σdata # cannot easily infer the type of Σ, so use this construction
+            Σdata[c] = Σ
+        else
+            Σdata = SectorDict(c => Σ)
+        end
+        dims[c] = length(Σ)
+    end
+    return Udata, Σdata, Vdata, dims
 end
 
-# function TensorKit._compute_svddata!(t::TensorMap, alg::IterSVD)
-#     InnerProductStyle(t) === EuclideanProduct() || throw_invalid_innerproduct(:tsvd!)
-#     I = sectortype(t)
-#     A = storagetype(t)
-#     Udata = SectorDict{I,A}()
-#     Vdata = SectorDict{I,A}()
-#     dims = SectorDict{I,Int}()
-#     local Σdata
-#     for (c, b) in blocks(t)
-#         x₀ = randn(eltype(b), size(b, 1))
-#         Σ, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, alg.howmany, :LR, alg.alg)
-#         if info.converged < alg.howmany  # Fall back to dense SVD if not properly converged
-#             U, Σ, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
-#             Udata[c] = U
-#             Vdata[c] = V
-#         else
-#             Udata[c] = stack(lvecs)
-#             Vdata[c] = stack(rvecs)'
-#         end
-#         if @isdefined Σdata # cannot easily infer the type of Σ, so use this construction
-#             Σdata[c] = Σ
-#         else
-#             Σdata = SectorDict(c => Σ)
-#         end
-#         dims[c] = length(Σ)
-#     end
-#     return Udata, Σdata, Vdata, dims
-# end
-
+# IterSVD adjoint for tsvd! using KrylovKit.svdsolve adjoint machinery for each block
 function ChainRulesCore.rrule(
-    ::typeof(TensorKit.tsvd),
+    ::typeof(TensorKit.tsvd!),
     t::AbstractTensorMap;
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
     alg::IterSVD=IterSVD(),
 )
-    # TODO: IterSVD adjoint utilizing KryloVKit svdsolve adjoint
+    U, S, V, ϵ = tsvd(t; trunc, p, alg)
+
+    function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+        Δt = similar(t)
+        for (c, b) in blocks(Δt)
+            Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
+            ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
+            Sdc = view(Sc, diagind(Sc))
+            ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
+
+            lvecs = eachcol(Uc)
+            rvecs = eachrow(Vc)
+            minimal_info = KrylovKit.ConvergenceInfo(length(Sdc), nothing, nothing, -1, -1)  # Just supply converged to SVD pullback
+            xs, ys = compute_svdsolve_pullback_data(
+                ΔSdc,
+                eachcol(ΔUc),
+                eachrow(ΔVc),
+                Sdc,
+                lvecs,
+                rvecs,
+                minimal_info,
+                b,
+                :LR,
+                alg.alg,
+                alg.alg_rrule,
+            )
+            copyto!(b, construct∂f_svd(config, b, lvecs, rvecs, xs, ys))
+        end
+        return NoTangent(), Δt
+    end
+    function tsvd!_itersvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+        return NoTangent(), ZeroTangent()
+    end
+
+    return (U, S, V, ϵ), tsvd!_itersvd_pullback
 end
 
-
 # Full SVD with old adjoint that doesn't account for truncation properly
-@kwdef struct OldSVD{A<:Union{FullSVD,IterSVD}}
-    alg::A = FullSVD()
+@kwdef struct OldSVD{A<:Union{TensorKit.SDD,TensorKit.SVD,IterSVD}}
+    alg::A = TensorKit.SVD()
     lorentz_broad::Float64 = 0.0
 end
 
@@ -65,7 +118,7 @@ end
 
 # Use outdated adjoint in reverse pass (not taking truncated part into account for testing purposes)
 function ChainRulesCore.rrule(
-    ::typeof(TensorKit.tsvd),
+    ::typeof(TensorKit.tsvd!),
     t::AbstractTensorMap;
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
@@ -73,7 +126,7 @@ function ChainRulesCore.rrule(
 )
     U, S, V, ϵ = tsvd(t; trunc, p, alg)
 
-    function tsvd_oldsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd!_oldsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         ∂t = similar(t)
         for (c, b) in blocks(∂t)
             copyto!(
@@ -92,7 +145,7 @@ function ChainRulesCore.rrule(
         return NoTangent(), ∂t, NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd_oldsvd_pullback
+    return (U, S, V, ϵ), tsvd!_oldsvd_pullback
 end
 
 function oldsvd_rev(
