@@ -1,4 +1,19 @@
-using TensorKit: SectorDict
+using TensorKit:
+    SectorDict,
+    _tsvd!,
+    _empty_svdtensors,
+    _compute_svddata!,
+    _create_svdtensors,
+    NoTruncation,
+    TruncationSpace
+CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
+
+# SVD wrapper for TensorKit.tsvd that dispatches on the alg type
+function PEPSKit.tsvd(
+    t::AbstractTensorMap, alg; trunc::TruncationScheme=notrunc(), p::Real=2
+)
+    return TensorKit.tsvd(t; alg, trunc, p)
+end
 
 # Wrapper around Krylov Kit's GKL iterative SVD solver
 @kwdef struct IterSVD
@@ -8,11 +23,8 @@ using TensorKit: SectorDict
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
-function _tsvd!(
-    t,
-    alg::IterSVD,
-    trunc::Union{TensorKit.NoTruncation,TensorKit.TruncationSpace},
-    p::Real=2,
+function TensorKit._tsvd!(
+    t, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}, p::Real=2
 )
     # early return
     if isempty(blocksectors(t))
@@ -27,9 +39,7 @@ function _tsvd!(
     return U, S, V, truncerr
 end
 function TensorKit._compute_svddata!(
-    t::TensorMap,
-    alg::IterSVD,
-    trunc::Union{TensorKit.NoTruncation,TensorKit.TruncationSpace},
+    t::TensorMap, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}
 )
     InnerProductStyle(t) === EuclideanProduct() || throw_invalid_innerproduct(:tsvd!)
     I = sectortype(t)
@@ -37,72 +47,83 @@ function TensorKit._compute_svddata!(
     Udata = SectorDict{I,A}()
     Vdata = SectorDict{I,A}()
     dims = SectorDict{I,Int}()
-    local Σdata
+    local Sdata
     for (c, b) in blocks(t)
         x₀ = randn(eltype(b), size(b, 1))
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
-        Σ, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
+        S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
         if info.converged < howmany  # Fall back to dense SVD if not properly converged
-            U, Σ, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
+            U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
             Udata[c] = U
             Vdata[c] = V
-        else
-            Udata[c] = stack(lvecs)
-            Vdata[c] = stack(rvecs)'
+        else  # Slice in case more values were converged than requested
+            Udata[c] = stack(lvecs[1:howmany])
+            Vdata[c] = stack(rvecs[1:howmany])'
+            S = S[1:howmany]
         end
-        if @isdefined Σdata # cannot easily infer the type of Σ, so use this construction
-            Σdata[c] = Σ
+        if @isdefined Sdata # cannot easily infer the type of Σ, so use this construction
+            Sdata[c] = S
         else
-            Σdata = SectorDict(c => Σ)
+            Sdata = SectorDict(c => S)
         end
-        dims[c] = length(Σ)
+        dims[c] = length(S)
     end
-    return Udata, Σdata, Vdata, dims
+    return Udata, Sdata, Vdata, dims
 end
 
 # IterSVD adjoint for tsvd! using KrylovKit.svdsolve adjoint machinery for each block
 function ChainRulesCore.rrule(
-    ::typeof(TensorKit.tsvd!),
-    t::AbstractTensorMap;
+    ::typeof(PEPSKit.tsvd),
+    t::AbstractTensorMap,
+    alg::IterSVD;
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-    alg::IterSVD=IterSVD(),
 )
-    U, S, V, ϵ = tsvd(t; trunc, p, alg)
+    U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
-    function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         Δt = similar(t)
         for (c, b) in blocks(Δt)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
             Sdc = view(Sc, diagind(Sc))
-            ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
+            ΔSdc = ΔSc isa AbstractZero ? ΔSc : view(ΔSc, diagind(ΔSc))
 
-            lvecs = eachcol(Uc)
-            rvecs = eachrow(Vc)
+            n_vals = length(Sdc)
+            lvecs = Vector{Vector{scalartype(t)}}(eachcol(Uc))
+            rvecs = Vector{Vector{scalartype(t)}}(eachcol(Vc'))
             minimal_info = KrylovKit.ConvergenceInfo(length(Sdc), nothing, nothing, -1, -1)  # Just supply converged to SVD pullback
-            xs, ys = compute_svdsolve_pullback_data(
-                ΔSdc,
-                eachcol(ΔUc),
-                eachrow(ΔVc),
+
+            if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
+                Δlvecs = fill(ZeroTangent(), n_vals)
+                Δrvecs = fill(ZeroTangent(), n_vals)
+            else
+                Δlvecs = Vector{Vector{scalartype(t)}}(eachcol(ΔUc))
+                Δrvecs = Vector{Vector{scalartype(t)}}(eachcol(ΔVc'))
+            end
+
+            xs, ys = CRCExt.compute_svdsolve_pullback_data(
+                ΔSc isa AbstractZero ? fill(zero(Sc[1]), n_vals) : ΔSdc,
+                Δlvecs,
+                Δrvecs,
                 Sdc,
                 lvecs,
                 rvecs,
                 minimal_info,
-                b,
+                block(t, c),
                 :LR,
                 alg.alg,
                 alg.alg_rrule,
             )
-            copyto!(b, construct∂f_svd(config, b, lvecs, rvecs, xs, ys))
+            copyto!(b, CRCExt.construct∂f_svd(HasReverseMode(), block(t, c), lvecs, rvecs, xs, ys))
         end
-        return NoTangent(), Δt
+        return NoTangent(), Δt, NoTangent()
     end
-    function tsvd!_itersvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
-        return NoTangent(), ZeroTangent()
+    function tsvd_itersvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd!_itersvd_pullback
+    return (U, S, V, ϵ), tsvd_itersvd_pullback
 end
 
 # Full SVD with old adjoint that doesn't account for truncation properly
@@ -113,39 +134,35 @@ end
 
 # Perform TensorKit.SVD in forward pass 
 function TensorKit._tsvd!(t, ::OldSVD, trunc::TruncationScheme, p::Real=2)
-    return TensorKit._tsvd(t, TensorKit.SVD(), trunc, p)
+    return _tsvd!(t, TensorKit.SVD(), trunc, p)
 end
 
 # Use outdated adjoint in reverse pass (not taking truncated part into account for testing purposes)
 function ChainRulesCore.rrule(
-    ::typeof(TensorKit.tsvd!),
-    t::AbstractTensorMap;
+    ::typeof(PEPSKit.tsvd),
+    t::AbstractTensorMap,
+    alg::OldSVD;
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-    alg::OldSVD=OldSVD(),
 )
-    U, S, V, ϵ = tsvd(t; trunc, p, alg)
+    U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
-    function tsvd!_oldsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
-        ∂t = similar(t)
-        for (c, b) in blocks(∂t)
+    function tsvd_oldsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+        Δt = similar(t)
+        for (c, b) in blocks(Δt)
+            Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
+            ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
             copyto!(
-                b,
-                oldsvd_rev(
-                    block(U, c),
-                    block(S, c),
-                    block(V, c),
-                    block(ΔU, c),
-                    block(ΔS, c),
-                    block(ΔV, c);
-                    lorentz_broad=alg.lorentz_broad,
-                ),
+                b, oldsvd_rev(Uc, Sc, Vc, ΔUc, ΔSc, ΔVc; lorentz_broad=alg.lorentz_broad)
             )
         end
-        return NoTangent(), ∂t, NoTangent()
+        return NoTangent(), Δt, NoTangent()
+    end
+    function tsvd_oldsvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd!_oldsvd_pullback
+    return (U, S, V, ϵ), tsvd_oldsvd_pullback
 end
 
 function oldsvd_rev(

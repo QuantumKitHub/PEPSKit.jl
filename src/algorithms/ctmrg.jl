@@ -336,7 +336,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
                 alg.trscheme
             end
             @tensor QQ[-1 -2 -3; -4 -5 -6] := Q_sw[-1 -2 -3; 1 2 3] * Q_nw[1 2 3; -4 -5 -6]
-            U, S, V, ϵ_local = tsvd(QQ; trunc=trscheme, alg=alg.svdalg)
+            U, S, V, ϵ_local = PEPSKit.tsvd(QQ, alg.svdalg; trunc=trscheme)
             ϵ = max(ϵ, ϵ_local / norm(S))
             # TODO: check if we can just normalize enlarged corners s.t. trunc behaves a bit better
 
