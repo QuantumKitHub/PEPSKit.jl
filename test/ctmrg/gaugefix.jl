@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 
-using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
+using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence, fix_space
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
@@ -45,10 +45,9 @@ end
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     verbosity = 1
-    alg = CTMRG(;
-        trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=400, verbosity
-    )
-    alg_fixed = CTMRG(; trscheme=truncdim(dim(ctm_space)), verbosity, fixedspace=true)
+    projector_alg = ProjectorAlg(; trscheme=truncdim(dim(ctm_space)))
+    alg = CTMRG(; tol=1e-10, miniter=4, maxiter=400, verbosity, projector_alg)
+    alg_fixed = CTMRG(; verbosity, projector_alg=fix_spaces(projector_alg))
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
@@ -70,10 +69,9 @@ end
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     verbosity = 1
-    alg = CTMRG(;
-        trscheme=truncspace(ctm_space), tol=1e-10, miniter=4, maxiter=400, verbosity
-    )
-    alg_fixed = CTMRG(; trscheme=truncspace(ctm_space), verbosity, fixedspace=true)
+    projector_alg = ProjectorAlg(; trscheme=truncdim(dim(ctm_space)))
+    alg = CTMRG(; tol=1e-10, miniter=4, maxiter=400, verbosity, projector_alg)
+    alg_fixed = CTMRG(; verbosity, projector_alg=fix_spaces(projector_alg))
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)

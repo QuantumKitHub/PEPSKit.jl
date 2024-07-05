@@ -26,7 +26,7 @@ R = TensorMap(randn, space(r))
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, TensorKit.SVD(), R), r)
     l_oldsvd, g_oldsvd = withgradient(A -> lossfun(A, OldSVD(), R), r)
     l_itersvd, g_itersvd = withgradient(
-        A -> lossfun(A, IterSVD(; alg_rrule=GMRES(; tol=adjoint_tol)), R, truncspace(ℂ^min(m, n))), r
+        A -> lossfun(A, IterSVD(; alg_rrule=GMRES(; tol=adjoint_tol)), R), r
     )
 
     @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd

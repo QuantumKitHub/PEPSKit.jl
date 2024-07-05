@@ -8,7 +8,14 @@ using TensorKit:
     TruncationSpace
 CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
-# SVD wrapper for TensorKit.tsvd that dispatches on the alg type
+"""
+    PEPSKit.tsvd(t::AbstractTensorMap, alg; trunc=notrunc(), p=2)
+
+Wrapper around `TensorKit.tsvd` which dispatches on the `alg` argument.
+This is needed since a custom adjoint for `PEPSKit.tsvd` may be defined,
+depending on the algorithm. E.g., for `IterSVD` the adjoint for a truncated
+SVD from `KrylovKit.svdsolve` is used.
+"""
 function PEPSKit.tsvd(
     t::AbstractTensorMap, alg; trunc::TruncationScheme=notrunc(), p::Real=2
 )
@@ -115,7 +122,10 @@ function ChainRulesCore.rrule(
                 alg.alg,
                 alg.alg_rrule,
             )
-            copyto!(b, CRCExt.construct∂f_svd(HasReverseMode(), block(t, c), lvecs, rvecs, xs, ys))
+            copyto!(
+                b,
+                CRCExt.construct∂f_svd(HasReverseMode(), block(t, c), lvecs, rvecs, xs, ys),
+            )
         end
         return NoTangent(), Δt, NoTangent()
     end
