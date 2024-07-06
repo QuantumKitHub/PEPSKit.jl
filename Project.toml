@@ -24,7 +24,7 @@ ChainRulesCore = "1.0"
 Compat = "3.46, 4.2"
 KrylovKit = "0.6, 0.7, 0.8"
 LinearAlgebra = "1"
-MPSKit = "0.10"
+MPSKit = "0.10, 0.11"
 OptimKit = "0.3"
 Printf = "1"
 Statistics = "1"
@@ -34,10 +34,10 @@ Zygote = "0.6"
 julia = "1.6"
 
 [extras]
-SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test", "SafeTestsets", "ChainRulesTestUtils", "FiniteDifferences"]
