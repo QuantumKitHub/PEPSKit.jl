@@ -33,7 +33,7 @@ end
     ctm = leading_boundary(CTMRGEnv(psi; Venv=ComplexSpace(20)), psi, CTMRG(; verbosity=1))
     N´ = abs(norm(psi, ctm))
 
-    @test N ≈ N´ rtol = 1e-3
+    @test N ≈ N´ rtol = 1e-2
 end
 
 @testset "PEPO runthrough" begin

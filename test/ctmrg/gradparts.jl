@@ -49,10 +49,8 @@ end
 
 ## Tests
 # ------
-@testset "Reverse rules for composite parts of the CTMRG fixed point with spacetype $(Vspaces[i])" for i in
-                                                                                                       eachindex(
-    Pspaces
-)
+title = "Reverse rules for composite parts of the CTMRG fixed point with spacetype"
+@testset title * "$(Vspaces[i])" for i in eachindex(Pspaces)
     psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
     env = CTMRGEnv(psi; Venv=Espaces[i])
 

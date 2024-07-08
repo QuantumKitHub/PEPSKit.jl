@@ -9,11 +9,11 @@ using OptimKit
 H = square_lattice_pwave()
 χbond = 2
 χenv = 16
-ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=50, verbosity=1)
+ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=1)
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=10, gradtol=1e-3, verbosity=2),
-    gradient_alg=GMRES(; tol=1e-3, maxiter=2, krylovdim=50, verbosity=2),
+    gradient_alg=GMRES(; tol=1e-3, maxiter=2, krylovdim=50),
     reuse_env=true,
     verbosity=2,
 )

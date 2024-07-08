@@ -2,6 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
+using Accessors
 
 using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 

@@ -10,7 +10,7 @@ const GROUP = get(ENV, "GROUP", "All")
         @time @safetestset "Gradients" begin
             include("ctmrg/gradients.jl")
         end
-        @time @safetestset "Gradients" begin
+        @time @safetestset "SVD wrapper" begin
             include("ctmrg/svd_wrapper.jl")
         end
     end
