@@ -16,10 +16,11 @@ This is needed since a custom adjoint for `PEPSKit.tsvd` may be defined,
 depending on the algorithm. E.g., for `IterSVD` the adjoint for a truncated
 SVD from `KrylovKit.svdsolve` is used.
 """
-function PEPSKit.tsvd(
+PEPSKit.tsvd(t::AbstractTensorMap, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
+function PEPSKit.tsvd!(
     t::AbstractTensorMap, alg; trunc::TruncationScheme=notrunc(), p::Real=2
 )
-    return TensorKit.tsvd(t; alg, trunc, p)
+    return TensorKit.tsvd!(t; alg, trunc, p)
 end
 
 # Wrapper around Krylov Kit's GKL iterative SVD solver
@@ -64,9 +65,9 @@ function TensorKit._compute_svddata!(
             Udata[c] = U
             Vdata[c] = V
         else  # Slice in case more values were converged than requested
-            Udata[c] = stack(lvecs[1:howmany])
-            Vdata[c] = stack(rvecs[1:howmany])'
-            S = S[1:howmany]
+            Udata[c] = stack(view(lvecs, 1:howmany))
+            Vdata[c] = stack(view(rvecs, 1:howmany))'
+            S = @view S[1:howmany]
         end
         if @isdefined Sdata # cannot easily infer the type of Σ, so use this construction
             Sdata[c] = S
@@ -80,7 +81,7 @@ end
 
 # IterSVD adjoint for tsvd! using KrylovKit.svdsolve adjoint machinery for each block
 function ChainRulesCore.rrule(
-    ::typeof(PEPSKit.tsvd),
+    ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
     alg::IterSVD;
     trunc::TruncationScheme=notrunc(),

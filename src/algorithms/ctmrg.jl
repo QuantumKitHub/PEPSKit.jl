@@ -1,3 +1,12 @@
+"""
+    FixedSpaceTruncation <: TensorKit.TruncationScheme
+
+CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which the SVD
+is performed fixed. Since different environment directions and unit cell entries might
+have different spaces, this truncation style is different from `TruncationSpace`.
+"""
+struct FixedSpaceTruncation <: TensorKit.TruncationScheme end 
+
 # TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
 """
     struct ProjectorAlg{S}(; svd_alg = TensorKit.SVD(), trscheme = TensorKit.notrunc(),
@@ -361,7 +370,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
                 alg.trscheme
             end
             @tensor QQ[-1 -2 -3; -4 -5 -6] := Q_sw[-1 -2 -3; 1 2 3] * Q_nw[1 2 3; -4 -5 -6]
-            U, S, V, ϵ_local = PEPSKit.tsvd(QQ, alg.svd_alg; trunc=trscheme)
+            U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, alg.svd_alg; trunc=trscheme)
             ϵ = max(ϵ, ϵ_local / norm(S))
             # TODO: check if we can just normalize enlarged corners s.t. trunc behaves a bit better
 
