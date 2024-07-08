@@ -59,7 +59,7 @@ module Defaults
 end
 
 export FullSVD, IterSVD, OldSVD
-export ProjectorAlg, CTMRG, CTMRGEnv
+export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv
 export NLocalOperator, AnisotropicNNOperator, OnSite, NearestNeighbor
 export expectation_value, costfun
 export leading_boundary

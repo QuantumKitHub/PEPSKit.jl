@@ -5,7 +5,7 @@ CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which 
 is performed fixed. Since different environment directions and unit cell entries might
 have different spaces, this truncation style is different from `TruncationSpace`.
 """
-struct FixedSpaceTruncation <: TensorKit.TruncationScheme end 
+struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
 # TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
 """
@@ -18,38 +18,43 @@ kind of truncation scheme can be used. If `fixedspace` is true, the truncation s
 `truncspace(V)` where `V` is the environment bond space, adjusted to the corresponding
 environment direction/unit cell entry.
 """
-@kwdef struct ProjectorAlg{S}
+@kwdef struct ProjectorAlg{S,T}
     svd_alg::S = TensorKit.SVD()
-    trscheme::TruncationScheme = TensorKit.notrunc()
-    fixedspace::Bool = false
+    trscheme::T = FixedSpaceTruncation()
     verbosity::Int = 0
-end
-
-function fix_spaces(alg::ProjectorAlg)
-    return ProjectorAlg(;
-        svd_alg=alg.svd_alg, trscheme=alg.trscheme, fixedspace=true, verbosity=alg.verbosity
-    )
 end
 
 # TODO: add abstract Algorithm type?
 """
-    struct CTMRG(; tol = Defaults.ctmrg_tol, maxiter = Defaults.ctmrg_maxiter,
-                 miniter = Defaults.ctmrg_miniter, verbosity = 0,
-                 projector_alg = ProjectorAlg())
+    CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
+          miniter=Defaults.ctmrg_miniter, verbosity=0,
+          svd_alg=TensorKit.SVD(), trscheme=FixedSpaceTruncation())
 
 Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
 Each CTMRG run is converged up to `tol` where the singular value convergence of the
 corners as well as the norm is checked. The maximal and minimal number of CTMRG iterations
 is set with `maxiter` and `miniter`. Different levels of output information are printed
-depending on `verbosity` (0, 1 or 2). All projector related properties are set using the
-`ProjectorAlg` struct.
+depending on `verbosity` (0, 1 or 2). The projectors are computed from `svd_alg` SVDs
+where the truncation scheme is set via `trscheme`.
 """
-@kwdef struct CTMRG
-    tol::Float64 = Defaults.ctmrg_tol
-    maxiter::Int = Defaults.ctmrg_maxiter
-    miniter::Int = Defaults.ctmrg_miniter
-    verbosity::Int = 0
-    projector_alg::ProjectorAlg = ProjectorAlg()
+struct CTMRG
+    tol::Float64
+    maxiter::Int
+    miniter::Int
+    verbosity::Int
+    projector_alg::ProjectorAlg
+end
+function CTMRG(;
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=0,
+    svd_alg=TensorKit.SVD(),
+    trscheme=FixedSpaceTruncation(),
+)
+    return CTMRG(
+        tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
+    )
 end
 
 """
@@ -118,13 +123,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     end
 
     # Do one final iteration that does not change the spaces
-    alg_fixed = CTMRG(;
-        tol=alg.tol,
-        maxiter=alg.maxiter,
-        miniter=alg.miniter,
-        verbosity=alg.verbosity,
-        projector_alg=fix_spaces(alg.projector_alg),
-    )
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
     env′, = ctmrg_iter(state, env, alg_fixed)
     envfix = gauge_fix(env, env′)
     check_elementwise_convergence(env, envfix; atol=alg.tol^(1 / 2)) ||
@@ -364,7 +363,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
             )
 
             # SVD half-infinite environment
-            trscheme = if alg.fixedspace == true
+            trscheme = if alg.trscheme isa FixedSpaceTruncation
                 truncspace(space(env.edges[WEST, row, cnext], 1))
             else
                 alg.trscheme

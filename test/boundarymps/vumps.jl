@@ -16,11 +16,7 @@ Random.seed!(29384293742893)
     mps, envs, ϵ = leading_boundary(mps, T, VUMPS())
     N = abs(sum(expectation_value(mps, T)))
 
-    ctm = leading_boundary(
-        CTMRGEnv(psi; Venv=ComplexSpace(20)),
-        psi,
-        CTMRG(; verbosity=1, projector_alg=ProjectorAlg(; fixedspace=true)),
-    )
+    ctm = leading_boundary(CTMRGEnv(psi; Venv=ComplexSpace(20)), psi, CTMRG(; verbosity=1))
     N´ = abs(norm(psi, ctm))
 
     @test N ≈ N´ atol = 1e-3
@@ -34,11 +30,7 @@ end
     mps, envs, ϵ = leading_boundary(mps, T, VUMPS())
     N = abs(prod(expectation_value(mps, T)))
 
-    ctm = leading_boundary(
-        CTMRGEnv(psi; Venv=ComplexSpace(20)),
-        psi,
-        CTMRG(; verbosity=1, projector_alg=ProjectorAlg(; fixedspace=true)),
-    )
+    ctm = leading_boundary(CTMRGEnv(psi; Venv=ComplexSpace(20)), psi, CTMRG(; verbosity=1))
     N´ = abs(norm(psi, ctm))
 
     @test N ≈ N´ rtol = 1e-3

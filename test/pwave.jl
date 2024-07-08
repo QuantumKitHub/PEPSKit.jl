@@ -9,8 +9,7 @@ using OptimKit
 H = square_lattice_pwave()
 χbond = 2
 χenv = 16
-projector_alg = ProjectorAlg(; trscheme=truncdim(χenv), fixedspace=true)
-ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=50, verbosity=1, projector_alg)
+ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=50, verbosity=1)
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=10, gradtol=1e-3, verbosity=2),

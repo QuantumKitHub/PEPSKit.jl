@@ -66,7 +66,7 @@ function TensorKit._compute_svddata!(
             Vdata[c] = V
         else  # Slice in case more values were converged than requested
             Udata[c] = stack(view(lvecs, 1:howmany))
-            Vdata[c] = stack(view(rvecs, 1:howmany))'
+            Vdata[c] = stack(conj, view(rvecs, 1:howmany); dims=1)
             S = @view S[1:howmany]
         end
         if @isdefined Sdata # cannot easily infer the type of Σ, so use this construction

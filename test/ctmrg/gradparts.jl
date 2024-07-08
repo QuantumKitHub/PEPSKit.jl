@@ -30,8 +30,7 @@ Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbon
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
 functions = [left_move, ctmrg_iter, leading_boundary]
 tol = 1e-8
-projector_alg = ProjectorAlg(; trscheme=truncdim(χenv), fixedspace=true)
-boundary_alg = CTMRG(; tol=tol, miniter=4, maxiter=100, verbosity=0, projector_alg)
+boundary_alg = CTMRG(; tol=tol, miniter=4, maxiter=100, verbosity=0)
 
 ## Gauge invariant function of the environment
 # --------------------------------------------
