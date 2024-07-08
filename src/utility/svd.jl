@@ -26,13 +26,14 @@ end
 # Wrapper around Krylov Kit's GKL iterative SVD solver
 @kwdef struct IterSVD
     alg::KrylovKit.GKL = KrylovKit.GKL(; tol=1e-14, krylovdim=25)
+    fallback_threshold::Float64 = Inf
     lorentz_broad::Float64 = 0.0
     alg_rrule::Union{GMRES,BiCGStab,Arnoldi} = GMRES(; tol=1e-14)
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
 function TensorKit._tsvd!(
-    t, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}, p::Real=2
+    t, alg::Union{IterSVD}, trunc::Union{NoTruncation,TruncationSpace}, p::Real=2
 )
     # early return
     if isempty(blocksectors(t))
@@ -59,16 +60,24 @@ function TensorKit._compute_svddata!(
     for (c, b) in blocks(t)
         x₀ = randn(eltype(b), size(b, 1))
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
-        S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
-        if info.converged < howmany  # Fall back to dense SVD if not properly converged
+
+        if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
             U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
-            Udata[c] = U
-            Vdata[c] = V
-        else  # Slice in case more values were converged than requested
-            Udata[c] = stack(view(lvecs, 1:howmany))
-            Vdata[c] = stack(conj, view(rvecs, 1:howmany); dims=1)
-            S = @view S[1:howmany]
+            Udata[c] = @view U[:, 1:howmany]
+            Vdata[c] = @view V[1:howmany, :]
+        else
+            S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
+            if info.converged < howmany  # Fall back to dense SVD if not properly converged
+                U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
+                Udata[c] = @view U[:, 1:howmany]
+                Vdata[c] = @view V[1:howmany, :]
+            else  # Slice in case more values were converged than requested
+                Udata[c] = stack(view(lvecs, 1:howmany))
+                Vdata[c] = stack(conj, view(rvecs, 1:howmany); dims=1)
+            end
         end
+
+        S = @view S[1:howmany]
         if @isdefined Sdata # cannot easily infer the type of Σ, so use this construction
             Sdata[c] = S
         else
