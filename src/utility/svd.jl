@@ -9,6 +9,16 @@ using TensorKit:
 CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
+    struct SVDrrule(; svd_alg = TensorKit.SVD(), rrule_alg = CompleteSVDAdjoint())
+
+Wrapper for a SVD algorithm `svd_alg` with a defined reverse rule `rrule_alg`.
+"""
+@kwdef struct SVDrrule{S,R}
+    svd_alg::S = TensorKit.SVD()
+    rrule_alg::R = CompleteSVDAdjoint()  # TODO: should contain Lorentzian broadening eventually
+end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
+
+"""
     PEPSKit.tsvd(t::AbstractTensorMap, alg; trunc=notrunc(), p=2)
 
 Wrapper around `TensorKit.tsvd` which dispatches on the `alg` argument.
@@ -18,22 +28,28 @@ SVD from `KrylovKit.svdsolve` is used.
 """
 PEPSKit.tsvd(t::AbstractTensorMap, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
 function PEPSKit.tsvd!(
-    t::AbstractTensorMap, alg; trunc::TruncationScheme=notrunc(), p::Real=2
+    t::AbstractTensorMap, alg::SVDrrule; trunc::TruncationScheme=notrunc(), p::Real=2
 )
-    return TensorKit.tsvd!(t; alg, trunc, p)
+    return TensorKit.tsvd!(t; alg=alg.svd_alg, trunc, p)
 end
 
-# Wrapper around Krylov Kit's GKL iterative SVD solver
+"""
+    struct IterSVD(; alg = KrylovKit.GKL(), fallback_threshold = Inf)
+
+Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmmetric) tensors.
+The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
+In particular, this make it possible to specify the targeted singular values block-wise.
+In case the symmetry block is too small as compared to the number of singular values, or
+the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
+"""
 @kwdef struct IterSVD
     alg::KrylovKit.GKL = KrylovKit.GKL(; tol=1e-14, krylovdim=25)
     fallback_threshold::Float64 = Inf
-    lorentz_broad::Float64 = 0.0
-    alg_rrule::Union{GMRES,BiCGStab,Arnoldi} = GMRES(; tol=1e-14)
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
 function TensorKit._tsvd!(
-    t, alg::Union{IterSVD}, trunc::Union{NoTruncation,TruncationSpace}, p::Real=2
+    t, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}, p::Real=2
 )
     # early return
     if isempty(blocksectors(t))
@@ -63,14 +79,14 @@ function TensorKit._compute_svddata!(
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
             U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
-            Udata[c] = @view U[:, 1:howmany]
-            Vdata[c] = @view V[1:howmany, :]
+            Udata[c] = U[:, 1:howmany]
+            Vdata[c] = V[1:howmany, :]
         else
             S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
-                Udata[c] = @view U[:, 1:howmany]
-                Vdata[c] = @view V[1:howmany, :]
+                Udata[c] = U[:, 1:howmany]
+                Vdata[c] = V[1:howmany, :]
             else  # Slice in case more values were converged than requested
                 Udata[c] = stack(view(lvecs, 1:howmany))
                 Vdata[c] = stack(conj, view(rvecs, 1:howmany); dims=1)
@@ -88,17 +104,45 @@ function TensorKit._compute_svddata!(
     return Udata, Sdata, Vdata, dims
 end
 
-# IterSVD adjoint for tsvd! using KrylovKit.svdsolve adjoint machinery for each block
+"""
+    struct CompleteSVDAdjoint(; lorentz_broadening = 0.0)
+
+Wrapper around the complete `TensorKit.tsvd!` rrule which requires computing the full SVD.
+"""
+@kwdef struct CompleteSVDAdjoint
+    lorentz_broadening::Float64 = 0.0
+end
+
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::IterSVD;
+    alg::SVDrrule{A,CompleteSVDAdjoint};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-)
+) where {A}
+    return rrule(TensorKit.tsvd!; trunc, p, alg=alg.svd_alg)
+end
+
+"""
+    struct SparseSVDAdjoint(; lorentz_broadening = 0.0)
+
+Wrapper around the `KrylovKit.svdsolve` rrule where only the truncated decomposition is required.
+"""
+@kwdef struct SparseSVDAdjoint
+    alg::Union{GMRES,BiCGStab,Arnoldi} = GMRES()
+    lorentz_broadening::Float64 = 0.0
+end
+
+function ChainRulesCore.rrule(
+    ::typeof(PEPSKit.tsvd!),
+    t::AbstractTensorMap,
+    alg::SVDrrule{A,SparseSVDAdjoint};
+    trunc::TruncationScheme=notrunc(),
+    p::Real=2,
+) where {A}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
-    function tsvd_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd_sparsesvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         Δt = similar(t)
         for (c, b) in blocks(Δt)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
@@ -129,8 +173,8 @@ function ChainRulesCore.rrule(
                 minimal_info,
                 block(t, c),
                 :LR,
-                alg.alg,
-                alg.alg_rrule,
+                alg.svd_alg.alg,
+                alg.rrule_alg.alg,
             )
             copyto!(
                 b,
@@ -139,50 +183,57 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd_itersvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd_sparsesvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd_itersvd_pullback
+    return (U, S, V, ϵ), tsvd_sparsesvd_pullback
 end
 
-# Full SVD with old adjoint that doesn't account for truncation properly
-@kwdef struct OldSVD{A<:Union{TensorKit.SDD,TensorKit.SVD,IterSVD}}
-    alg::A = TensorKit.SVD()
-    lorentz_broad::Float64 = 0.0
-end
+"""
+    struct NonTruncAdjoint(; lorentz_broadening = 0.0)
 
-# Perform TensorKit.SVD in forward pass 
-function TensorKit._tsvd!(t, ::OldSVD, trunc::TruncationScheme, p::Real=2)
-    return _tsvd!(t, TensorKit.SVD(), trunc, p)
+Old SVD adjoint that does not account for the truncated part of truncated SVDs.
+"""
+@kwdef struct NonTruncSVDAdjoint
+    lorentz_broadening::Float64 = 0.0
 end
 
 # Use outdated adjoint in reverse pass (not taking truncated part into account for testing purposes)
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd),
     t::AbstractTensorMap,
-    alg::OldSVD;
+    alg::SVDrrule{A,NonTruncSVDAdjoint};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-)
+) where {A}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
-    function tsvd_oldsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd_nontruncsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         Δt = similar(t)
         for (c, b) in blocks(Δt)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
             copyto!(
-                b, oldsvd_rev(Uc, Sc, Vc, ΔUc, ΔSc, ΔVc; lorentz_broad=alg.lorentz_broad)
+                b,
+                oldsvd_rev(
+                    Uc,
+                    Sc,
+                    Vc,
+                    ΔUc,
+                    ΔSc,
+                    ΔVc;
+                    lorentz_broadening=alg.rrule_alg.lorentz_broadening,
+                ),
             )
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd_oldsvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd_nontruncsvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd_oldsvd_pullback
+    return (U, S, V, ϵ), tsvd_nontruncsvd_pullback
 end
 
 function oldsvd_rev(
@@ -192,12 +243,12 @@ function oldsvd_rev(
     ΔU,
     ΔS,
     ΔV;
-    lorentz_broad=0,
+    lorentz_broadening=0,
     atol::Real=0,
     rtol::Real=atol > 0 ? 0 : eps(scalartype(S))^(3 / 4),
 )
     tol = atol > 0 ? atol : rtol * S[1, 1]
-    F = _invert_S²(S, tol, lorentz_broad)  # Includes Lorentzian broadening
+    F = _invert_S²(S, tol, lorentz_broadening)  # Includes Lorentzian broadening
     S⁻¹ = pinv(S; atol=tol)
 
     # dS contribution
