@@ -176,7 +176,8 @@ end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
 function _contract_gauge_corner(corner, σ_in, σ_out)
-    @autoopt @tensor corner_fix[χ_in; χ_out] := σ_in[χ_in; χ1] * corner[χ1; χ2] * conj(σ_out[χ_out; χ2])
+    @autoopt @tensor corner_fix[χ_in; χ_out] :=
+        σ_in[χ_in; χ1] * corner[χ1; χ2] * conj(σ_out[χ_out; χ2])
 end
 function _contract_gauge_edge(edge, σ_in, σ_out)
     @autoopt @tensor edge_fix[χ_in D_above D_below; χ_out] :=
