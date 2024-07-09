@@ -37,7 +37,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     η = one(real(scalartype(state)))
     N = norm(state, envinit)
     env = deepcopy(envinit)
-    log = MPSKit.IterLog("CTMRG")
+    log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
         ctmrg_loginit!(log, η, N)
