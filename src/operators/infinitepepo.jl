@@ -132,3 +132,8 @@ function initializePEPS(
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
 end
+
+# Rotations
+Base.rotl90(T::InfinitePEPO) = InfinitePEPO(stack(rotl90, eachslice(T.A; dims=3)))
+Base.rotr90(T::InfinitePEPO) = InfinitePEPO(stack(rotr90, eachslice(T.A; dims=3)))
+Base.rot180(T::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(T.A; dims=3)))

@@ -45,8 +45,8 @@ function InfinitePEPS(
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
-    Sspaces = adjoint.(circshift(Nspaces, (1, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, -1)))
+    Sspaces = adjoint.(circshift(Nspaces, (-1, 0)))
+    Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
         return PEPSTensor(f, T, P, N, E, S, W)
@@ -59,6 +59,21 @@ end
     InfinitePEPS(A; unitcell=(1, 1))
 
 Create an `InfinitePEPS` by specifying a tensor and unit cell.
+
+The unit cell is labeled as a matrix which means that any tensor in the unit cell,
+regardless if PEPS tensor or environment tensor, is obtained by shifting the row
+and column index `[r, c]` by one, respectively:
+```
+   |            |          |
+---C[r-1,c-1]---T[r-1,c]---T[r-1,c+1]---
+   |            ||         ||
+---T[r,c-1]=====AA[r,c]====AA[r,c+1]====
+   |            ||         ||
+---T[r+1,c-1]===AA[r+1,c]==AA[r+1,c+1]==
+   |            ||         ||
+```
+The unit cell has periodic boundary conditions, so `[r, c]` is indexed modulo the
+size of the unit cell.
 """
 function InfinitePEPS(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PEPSTensor}
     return InfinitePEPS(fill(A, unitcell))
@@ -127,6 +142,11 @@ end
 
 # VectorInterface
 VectorInterface.zerovector(x::InfinitePEPS) = InfinitePEPS(zerovector(x.A))
+
+# Rotations
+Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
+Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
+Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
 
 # Chainrules
 function ChainRulesCore.rrule(

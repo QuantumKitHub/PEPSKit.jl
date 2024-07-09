@@ -25,7 +25,10 @@ steps = -0.01:0.005:0.01
 
 ## Tests
 # ------
-@testset "AD CTMRG energy gradients for $(names[i]) model" for i in eachindex(models)
+@testset "AD CTMRG energy gradients for $(names[i]) model" verbose = true for i in
+                                                                              eachindex(
+    models
+)
     Pspace = Pspaces[i]
     Vspace = Pspaces[i]
     Espace = Espaces[i]

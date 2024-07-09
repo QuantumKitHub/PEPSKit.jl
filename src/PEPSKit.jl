@@ -5,13 +5,14 @@ using Base: @kwdef
 using Compat
 using Accessors
 using VectorInterface
-using TensorKit, KrylovKit, MPSKit, OptimKit
+using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 
 include("utility/util.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
+include("utility/autoopt.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
@@ -60,7 +61,7 @@ end
 
 export SVDrrule, IterSVD, OldSVD, CompleteSVDAdjoint, SparseSVDAdjoint, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv
-export NLocalOperator, AnisotropicNNOperator, OnSite, NearestNeighbor
+export LocalOperator
 export expectation_value, costfun
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolve
@@ -71,6 +72,6 @@ export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export symmetrize, None, Depth, Full
 export showtypeofgrad
-export square_lattice_heisenberg, square_lattice_pwave
+export square_lattice_tf_ising, square_lattice_heisenberg, square_lattice_pwave
 
 end # module

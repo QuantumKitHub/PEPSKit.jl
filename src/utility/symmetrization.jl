@@ -60,21 +60,6 @@ function herm_height_inv(x::Union{PEPSTensor,PEPOTensor})
 end
 
 # rotation invariance
-Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
-Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
-Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))
-
-Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))
-Base.rotr90(t::PEPOTensor) = permute(t, ((1, 2), (6, 3, 4, 5)))
-Base.rot180(t::PEPOTensor) = permute(t, ((1, 2), (5, 6, 3, 4)))
-
-Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
-Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
-Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
-
-Base.rotl90(T::InfinitePEPO) = InfinitePEPO(stack(rotl90, eachslice(T.A; dims=3)))
-Base.rotr90(T::InfinitePEPO) = InfinitePEPO(stack(rotr90, eachslice(T.A; dims=3)))
-Base.rot180(T::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(T.A; dims=3)))
 
 function rot_inv(x)
     return 0.25 * (
