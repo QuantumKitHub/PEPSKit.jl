@@ -154,16 +154,15 @@ end
 function MPSKit.expectation_value(
     st::MPSMultiline, opp::TransferPEPSMultiline, ca::MPSKit.PerMPOInfEnv
 )
-    retval = prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
+    return prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
         O_ij = opp[i, j]
-        retval[i, j] = @tensor leftenv(ca, i, j, st)[1 2 4; 7] *
+        return @tensor leftenv(ca, i, j, st)[1 2 4; 7] *
             conj(st.AC[i + 1, j][1 3 6; 13]) *
             O_ij[1][5; 8 11 3 2] *
             conj(O_ij[2][5; 9 12 6 4]) *
             st.AC[i, j][7 8 9; 10] *
             rightenv(ca, i, j, st)[10 11 12; 13]
     end
-    return retval
 end
 
 @doc """

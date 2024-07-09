@@ -219,14 +219,13 @@ end
 function MPSKit.expectation_value(
     st::MPSMultiline, opp::TransferPEPOMultiline, ca::MPSKit.PerMPOInfEnv
 )
-    retval = prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
+    return prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
         O_ij = opp[i, j]
         N = height(opp[1]) + 4
         # just reuse left environment contraction
         GL´ = transfer_left(leftenv(ca, i, j, st), O_ij, st.AC[i, j], st.AC[i + 1, j])
-        retval[i, j] = TensorOperations.tensorscalar(
+        return TensorOperations.tensorscalar(
             ncon([GL´, rightenv(ca, i, j, st)], [[N, (2:(N - 1))..., 1], [(1:N)...]])
         )
     end
-    return retval
 end
