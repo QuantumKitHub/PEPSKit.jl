@@ -11,7 +11,6 @@ In particular, all labels that start with `d`, `D`, or `χ` are automatically in
 costs.
 """
 macro autoopt(ex)
-    dump(ex)
     @assert Meta.isexpr(ex, :macrocall) && ex.args[1] === Symbol("@tensor") "@autoopt expects a @tensor expression:\n$ex"
 
     # extract expression and kwargs
@@ -25,9 +24,9 @@ macro autoopt(ex)
     if !isnothing(opt_id)
         _, val = kwargs[opt_id]
         if val isa Expr
-            @show optdict = TensorOperations.optdata(val, tensorexpr)
+            optdict = TensorOperations.optdata(val, tensorexpr)
         elseif val isa Bool && val
-            @show optdict = TensorOperations.optdata(tensorexpr)
+            optdict = TensorOperations.optdata(tensorexpr)
         else
             throw(ArgumentError("Invalid use of `opt`"))
         end
