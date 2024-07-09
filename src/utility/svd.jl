@@ -15,13 +15,18 @@ else
 end
 
 """
-    struct SVDrrule(; svd_alg = TensorKit.SVD(), rrule_alg = DenseSVDAdjoint())
+    struct SVDAdjoint(; fwd_alg = TensorKit.SVD(), rrule_alg = nothing,
+                      broadening = nothing)
 
-Wrapper for a SVD algorithm `svd_alg` with a defined reverse rule `rrule_alg`.
+Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
+If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
+In case of degenerate singular values, one might need a `broadening` scheme which
+removes the divergences from the adjoint.
 """
-@kwdef struct SVDrrule{S,R}
-    svd_alg::S = TensorKit.SVD()
-    rrule_alg::R = DenseSVDAdjoint()  # TODO: should contain Lorentzian broadening eventually
+@kwdef struct SVDAdjoint{F,R,B}
+    fwd_alg::F = TensorKit.SVD()
+    rrule_alg::R = nothing
+    broadening::B = nothing
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 """
@@ -34,9 +39,9 @@ SVD from `KrylovKit.svdsolve` is used.
 """
 PEPSKit.tsvd(t::AbstractTensorMap, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
 function PEPSKit.tsvd!(
-    t::AbstractTensorMap, alg::SVDrrule; trunc::TruncationScheme=notrunc(), p::Real=2
+    t::AbstractTensorMap, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2
 )
-    return TensorKit.tsvd!(t; alg=alg.svd_alg, trunc, p)
+    return TensorKit.tsvd!(t; alg=alg.fwd_alg, trunc, p)
 end
 
 """
@@ -110,47 +115,16 @@ function TensorKit._compute_svddata!(
     return Udata, Sdata, Vdata, dims
 end
 
-"""
-    struct DenseSVDAdjoint(; lorentz_broadening = 0.0)
-
-Wrapper around the complete `TensorKit.tsvd!` rrule which requires computing the full SVD.
-"""
-@kwdef struct DenseSVDAdjoint
-    lorentz_broadening::Float64 = 0.0
-end
-
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::SVDrrule{A,DenseSVDAdjoint};
+    alg::SVDAdjoint{IterSVD,R,B};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-) where {A}
-    fwd, tsvd!_pullback = rrule(TensorKit.tsvd!, t; trunc, p, alg=alg.svd_alg)
-    tsvd!_completesvd_pullback(Δsvd) = tsvd!_pullback(Δsvd)..., NoTangent()
-    return fwd, tsvd!_completesvd_pullback
-end
-
-"""
-    struct SparseSVDAdjoint(; lorentz_broadening = 0.0)
-
-Wrapper around the `KrylovKit.svdsolve` rrule where only the truncated decomposition is required.
-"""
-@kwdef struct SparseSVDAdjoint{A}
-    alg::A = GMRES()
-    lorentz_broadening::Float64 = 0.0
-end
-
-function ChainRulesCore.rrule(
-    ::typeof(PEPSKit.tsvd!),
-    t::AbstractTensorMap,
-    alg::SVDrrule{A,<:SparseSVDAdjoint};
-    trunc::TruncationScheme=notrunc(),
-    p::Real=2,
-) where {A}
+) where {R,B}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
-    function tsvd!_sparsesvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         Δt = similar(t)
         for (c, b) in blocks(Δt)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
@@ -181,8 +155,8 @@ function ChainRulesCore.rrule(
                 minimal_info,
                 block(t, c),
                 :LR,
-                alg.svd_alg.alg,
-                alg.rrule_alg.alg,
+                alg.fwd_alg.alg,
+                alg.rrule_alg,
             )
             copyto!(
                 b,
@@ -191,11 +165,11 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd!_sparsesvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd!_itersvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd!_sparsesvd_pullback
+    return (U, S, V, ϵ), tsvd!_itersvd_pullback
 end
 
 """
@@ -203,18 +177,16 @@ end
 
 Old SVD adjoint that does not account for the truncated part of truncated SVDs.
 """
-@kwdef struct NonTruncSVDAdjoint
-    lorentz_broadening::Float64 = 0.0
-end
+struct NonTruncSVDAdjoint end
 
 # Use outdated adjoint in reverse pass (not taking truncated part into account for testing purposes)
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::SVDrrule{A,NonTruncSVDAdjoint};
+    alg::SVDAdjoint{F,NonTruncSVDAdjoint,B};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-) where {A}
+) where {F,B}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
     function tsvd!_nontruncsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
@@ -223,16 +195,7 @@ function ChainRulesCore.rrule(
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
             copyto!(
-                b,
-                oldsvd_rev(
-                    Uc,
-                    Sc,
-                    Vc,
-                    ΔUc,
-                    ΔSc,
-                    ΔVc;
-                    lorentz_broadening=alg.rrule_alg.lorentz_broadening,
-                ),
+                b, oldsvd_rev(Uc, Sc, Vc, ΔUc, ΔSc, ΔVc; lorentz_broadening=alg.broadening)
             )
         end
         return NoTangent(), Δt, NoTangent()

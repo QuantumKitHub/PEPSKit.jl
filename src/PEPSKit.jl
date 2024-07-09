@@ -59,7 +59,7 @@ module Defaults
     const fpgrad_tol = 1e-6
 end
 
-export SVDrrule, IterSVD, OldSVD, DenseSVDAdjoint, SparseSVDAdjoint, NonTruncSVDAdjoint
+export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv
 export LocalOperator
 export expectation_value, costfun

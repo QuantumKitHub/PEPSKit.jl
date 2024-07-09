@@ -22,12 +22,11 @@ rtol = 1e-9
 r = TensorMap(randn, dtype, ℂ^m, ℂ^n)
 R = TensorMap(randn, space(r))
 
-full_alg = SVDrrule(; svd_alg=TensorKit.SVD(), rrule_alg=DenseSVDAdjoint())
-old_alg = SVDrrule(; svd_alg=TensorKit.SVD(), rrule_alg=NonTruncSVDAdjoint())
-iter_alg = SVDrrule(;  # Don't make adjoint tolerance too small, g_itersvd will be weird
-    svd_alg=IterSVD(; alg=GKL(; krylovdim=50)),
-    rrule_alg=SparseSVDAdjoint(; alg=GMRES(; tol=1e-13)),
+full_alg = SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=nothing)
+old_alg = SVDAdjoint(;
+    fwd_alg=TensorKit.SVD(), rrule_alg=NonTruncSVDAdjoint(), broadening=0.0
 )
+iter_alg = SVDAdjoint(; fwd_alg=IterSVD(), rrule_alg=GMRES(; tol=1e-13))  # Don't make adjoint tolerance too small, g_itersvd will be weird
 
 @testset "Non-truncacted SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
@@ -85,7 +84,7 @@ symm_R = TensorMap(randn, dtype, space(symm_r))
     @test l_itersvd_tr ≈ l_fullsvd_tr
     @test g_fullsvd_tr[1] ≈ g_itersvd_tr[1] rtol = rtol
 
-    iter_alg_fallback = @set iter_alg.svd_alg.fallback_threshold = 0.4  # Do dense SVD in one block, sparse SVD in the other
+    iter_alg_fallback = @set iter_alg.fwd_alg.fallback_threshold = 0.4  # Do dense SVD in one block, sparse SVD in the other
     l_itersvd_fb, g_itersvd_fb = withgradient(
         A -> lossfun(A, iter_alg_fallback, symm_R, symm_trspace), symm_r
     )

@@ -18,8 +18,8 @@ kind of truncation scheme can be used. If `fixedspace` is true, the truncation s
 `truncspace(V)` where `V` is the environment bond space, adjusted to the corresponding
 environment direction/unit cell entry.
 """
-@kwdef struct ProjectorAlg{S<:SVDrrule,T}
-    svd_alg::S = SVDrrule()
+@kwdef struct ProjectorAlg{S<:SVDAdjoint,T}
+    svd_alg::S = SVDAdjoint()
     trscheme::T = FixedSpaceTruncation()
     verbosity::Int = 0
 end
@@ -49,7 +49,7 @@ function CTMRG(;
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,
     verbosity=0,
-    svd_alg=SVDrrule(),
+    svd_alg=SVDAdjoint(),
     trscheme=FixedSpaceTruncation(),
 )
     return CTMRG(
