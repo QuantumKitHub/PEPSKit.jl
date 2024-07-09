@@ -9,13 +9,13 @@ using TensorKit:
 CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDrrule(; svd_alg = TensorKit.SVD(), rrule_alg = CompleteSVDAdjoint())
+    struct SVDrrule(; svd_alg = TensorKit.SVD(), rrule_alg = DenseSVDAdjoint())
 
 Wrapper for a SVD algorithm `svd_alg` with a defined reverse rule `rrule_alg`.
 """
 @kwdef struct SVDrrule{S,R}
     svd_alg::S = TensorKit.SVD()
-    rrule_alg::R = CompleteSVDAdjoint()  # TODO: should contain Lorentzian broadening eventually
+    rrule_alg::R = DenseSVDAdjoint()  # TODO: should contain Lorentzian broadening eventually
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 """
@@ -105,18 +105,18 @@ function TensorKit._compute_svddata!(
 end
 
 """
-    struct CompleteSVDAdjoint(; lorentz_broadening = 0.0)
+    struct DenseSVDAdjoint(; lorentz_broadening = 0.0)
 
 Wrapper around the complete `TensorKit.tsvd!` rrule which requires computing the full SVD.
 """
-@kwdef struct CompleteSVDAdjoint
+@kwdef struct DenseSVDAdjoint
     lorentz_broadening::Float64 = 0.0
 end
 
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::SVDrrule{A,CompleteSVDAdjoint};
+    alg::SVDrrule{A,DenseSVDAdjoint};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
 ) where {A}
@@ -130,15 +130,15 @@ end
 
 Wrapper around the `KrylovKit.svdsolve` rrule where only the truncated decomposition is required.
 """
-@kwdef struct SparseSVDAdjoint
-    alg::Union{GMRES,BiCGStab,Arnoldi} = GMRES()
+@kwdef struct SparseSVDAdjoint{A}
+    alg::A = GMRES()
     lorentz_broadening::Float64 = 0.0
 end
 
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::SVDrrule{A,SparseSVDAdjoint};
+    alg::SVDrrule{A,<:SparseSVDAdjoint};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
 ) where {A}

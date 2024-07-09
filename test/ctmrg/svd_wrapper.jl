@@ -22,7 +22,7 @@ rtol = 1e-9
 r = TensorMap(randn, dtype, ℂ^m, ℂ^n)
 R = TensorMap(randn, space(r))
 
-full_alg = SVDrrule(; svd_alg=TensorKit.SVD(), rrule_alg=CompleteSVDAdjoint())
+full_alg = SVDrrule(; svd_alg=TensorKit.SVD(), rrule_alg=DenseSVDAdjoint())
 old_alg = SVDrrule(; svd_alg=TensorKit.SVD(), rrule_alg=NonTruncSVDAdjoint())
 iter_alg = SVDrrule(;  # Don't make adjoint tolerance too small, g_itersvd will be weird
     svd_alg=IterSVD(; alg=GKL(; krylovdim=50)),
@@ -35,8 +35,8 @@ iter_alg = SVDrrule(;  # Don't make adjoint tolerance too small, g_itersvd will 
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R), r)
 
     @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd
-    @test norm(g_fullsvd[1] - g_oldsvd[1]) / norm(g_fullsvd[1]) < rtol
-    @test norm(g_fullsvd[1] - g_itersvd[1]) / norm(g_fullsvd[1]) < rtol
+    @test g_fullsvd[1] ≈ g_oldsvd[1] rtol = rtol
+    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end
 
 @testset "Truncated SVD with χ=$χ" begin
@@ -45,8 +45,8 @@ end
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R, trunc), r)
 
     @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd
-    @test norm(g_fullsvd[1] - g_oldsvd[1]) / norm(g_fullsvd[1]) > rtol
-    @test norm(g_fullsvd[1] - g_itersvd[1]) / norm(g_fullsvd[1]) < rtol
+    @test !isapprox(g_fullsvd[1], g_oldsvd[1]; rtol)
+    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end
 
 # TODO: Add when Lorentzian broadening is implemented
@@ -74,7 +74,7 @@ symm_R = TensorMap(randn, dtype, space(symm_r))
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, symm_R), symm_r)
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, symm_R), symm_r)
     @test l_itersvd ≈ l_fullsvd
-    @test norm(g_fullsvd[1] - g_itersvd[1]) / norm(g_fullsvd[1]) < rtol
+    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 
     l_fullsvd_tr, g_fullsvd_tr = withgradient(
         A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r
@@ -83,12 +83,12 @@ symm_R = TensorMap(randn, dtype, space(symm_r))
         A -> lossfun(A, iter_alg, symm_R, symm_trspace), symm_r
     )
     @test l_itersvd_tr ≈ l_fullsvd_tr
-    @test norm(g_fullsvd_tr[1] - g_itersvd_tr[1]) / norm(g_fullsvd_tr[1]) < rtol
+    @test g_fullsvd_tr[1] ≈ g_itersvd_tr[1] rtol = rtol
 
     iter_alg_fallback = @set iter_alg.svd_alg.fallback_threshold = 0.4  # Do dense SVD in one block, sparse SVD in the other
     l_itersvd_fb, g_itersvd_fb = withgradient(
         A -> lossfun(A, iter_alg_fallback, symm_R, symm_trspace), symm_r
     )
     @test l_itersvd_fb ≈ l_fullsvd_tr
-    @test norm(g_fullsvd_tr[1] - g_itersvd_fb[1]) / norm(g_fullsvd_tr[1]) < rtol
+    @test g_fullsvd_tr[1] ≈ g_itersvd_fb[1] rtol = rtol
 end
