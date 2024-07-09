@@ -40,14 +40,14 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     log = MPSKit.IterLog("CTMRG")
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 2 loginit!(log, η, N)
+        ctmrg_loginit!(log, η, N)
         local iter
         for outer iter in 1:(alg.maxiter)
             env, = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
             N = norm(state, env)
 
-            @infov 3 logiter!(log, iter, η, N)
+            ctmrg_logiter!(log, iter, η, N)
 
             (iter > alg.miniter && η <= alg.tol) && break
         end
@@ -63,13 +63,23 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
         N = norm(state, envfix)
 
         if η < alg.tol^(1 / 2)
-            @infov 2 logfinish!(log, iter, η, N)
+            ctmrg_logfinish!(log, iter, η, N)
         else
-            @warnv 1 logcancel!(log, iter, η, N)
+            ctmrg_logcancel!(log, iter, η, N)
         end
         return envfix
     end
 end
+
+ctmrg_loginit!(log, η, N) = @infov 2 loginit!(log, η, N)
+ctmrg_logiter!(log, iter, η, N) = @infov 3 logiter!(log, iter, η, N)
+ctmrg_logfinish!(log, iter, η, N) = @infov 2 logfinish!(log, iter, η, N)
+ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
+
+@non_differentiable ctmrg_loginit!(args...)
+@non_differentiable ctmrg_logiter!(args...)
+@non_differentiable ctmrg_logfinish!(args...)
+@non_differentiable ctmrg_logcancel!(args...)
 
 """
     gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
