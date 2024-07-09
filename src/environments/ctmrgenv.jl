@@ -22,21 +22,30 @@ function CTMRGEnv(peps::InfinitePEPS{P}; Venv=oneunit(spacetype(P))) where {P}
     corners = Array{C_type}(undef, 4, size(peps)...)
     edges = Array{T_type}(undef, 4, size(peps)...)
 
-    for dir in 1:4, i in 1:size(peps, 1), j in 1:size(peps, 2)
-        @diffset corners[dir, i, j] = TensorMap(randn, scalartype(P), Venv, Venv)
-        @diffset edges[dir, i, j] = TensorMap(
-            randn,
-            scalartype(P),
-            Venv * space(peps[i, j], dir + 1)' * space(peps[i, j], dir + 1),
-            Venv,
+    for (r, c) in Iterators.product(axes(peps)...)
+        for dir in 1:4
+            corners[dir, r, c] = TensorMap(randn, scalartype(P), Venv, Venv)
+        end
+        edges[NORTH, _prev(r, end), c] = TensorMap(
+            randn, scalartype(P), Venv * space(peps[r, c], 2)' * space(peps[r, c], 2), Venv
+        )
+        edges[EAST, r, _next(c, end)] = TensorMap(
+            randn, scalartype(P), Venv * space(peps[r, c], 3)' * space(peps[r, c], 3), Venv
+        )
+        edges[SOUTH, _next(r, end), c] = TensorMap(
+            randn, scalartype(P), Venv * space(peps[r, c], 4)' * space(peps[r, c], 4), Venv
+        )
+        edges[WEST, r, _prev(c, end)] = TensorMap(
+            randn, scalartype(P), Venv * space(peps[r, c], 5)' * space(peps[r, c], 5), Venv
         )
     end
 
-    @diffset corners[:, :, :] ./= norm.(corners[:, :, :])
-    @diffset edges[:, :, :] ./= norm.(edges[:, :, :])
+    corners[:, :, :] ./= norm.(corners[:, :, :])
+    edges[:, :, :] ./= norm.(edges[:, :, :])
 
     return CTMRGEnv(corners, edges)
 end
+@non_differentiable CTMRGEnv(peps::InfinitePEPS)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
