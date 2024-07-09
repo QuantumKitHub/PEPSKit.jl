@@ -6,7 +6,13 @@ using TensorKit:
     _create_svdtensors,
     NoTruncation,
     TruncationSpace
-CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
+
+# Enables backwards compatibility without package extensions
+CRCExt = @static if isdefined(Base, :get_extension)
+    Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
+else
+    KrylovKit.KrylovKitChainRulesCoreExt
+end
 
 """
     struct SVDrrule(; svd_alg = TensorKit.SVD(), rrule_alg = DenseSVDAdjoint())
