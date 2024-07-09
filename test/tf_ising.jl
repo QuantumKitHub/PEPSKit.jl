@@ -5,6 +5,17 @@ using TensorKit
 using KrylovKit
 using OptimKit
 
+# References
+# ----------
+# Classical Simulation of Infinite-Size Quantum Lattice Systems in Two Spatial Dimensions
+# J. Jordan, R. Orús, G. Vidal, F. Verstraete, and J. I. Cirac
+# Phys. Rev. Lett. 101, 250602 – Published 18 December 2008
+# (values estimated from plots)
+# (factor of 2 in the energy and magnetisation due to convention differences)
+h = 0.5
+e = -1.05
+mᶻ = 0.98
+
 # initialize parameters
 χbond = 2
 χenv = 16
@@ -18,8 +29,7 @@ opt_alg = PEPSOptimize(;
 )
 
 # initialize states
-Random.seed!(91283219347)
-H = square_lattice_tf_ising(; h=1.5)
+H = square_lattice_tf_ising(; h)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init; Venv=ComplexSpace(χenv)), psi_init, ctm_alg)
 
@@ -31,7 +41,6 @@ result = fixedpoint(psi_init, H, opt_alg, env_init)
 M = LocalOperator(H.lattice, (CartesianIndex(1, 1),) => σz)
 magn = expectation_value(result.peps, M, result.env)
 
-ref_energy = result.E  # TODO: Is there some reference energy/magnetization?
-ref_magn = magn
-@test result.E ≈ ref_energy atol = 1e-2
-@test abs(magn) ≈ ref_magn atol = 1e-2
+@test result.E ≈ e atol = 5e-2
+@test imag(magn) ≈ 0 atol = 1e-6
+@test real(magn) ≈ mᶻ atol = 5e-2
