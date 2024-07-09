@@ -29,7 +29,9 @@ include("environments/ctmrgenv.jl")
 include("operators/localoperator.jl")
 include("operators/models.jl")
 
+include("algorithms/ctmrg_gauge_fix.jl")
 include("algorithms/ctmrg.jl")
+include("algorithms/ctmrg_all_sides.jl")
 include("algorithms/peps_opt.jl")
 
 include("utility/symmetrization.jl")
@@ -60,7 +62,7 @@ module Defaults
 end
 
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
-export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv
+export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
 export LocalOperator
 export expectation_value, costfun
 export leading_boundary
