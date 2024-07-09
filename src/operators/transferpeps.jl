@@ -154,8 +154,7 @@ end
 function MPSKit.expectation_value(
     st::MPSMultiline, opp::TransferPEPSMultiline, ca::MPSKit.PerMPOInfEnv
 )
-    retval = PeriodicArray{scalartype(st.AC[1, 1]),2}(undef, size(st, 1), size(st, 2))
-    for (i, j) in product(1:size(st, 1), 1:size(st, 2))
+    retval = prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
         O_ij = opp[i, j]
         retval[i, j] = @tensor leftenv(ca, i, j, st)[1 2 4; 7] *
             conj(st.AC[i + 1, j][1 3 6; 13]) *
