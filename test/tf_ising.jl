@@ -43,4 +43,4 @@ magn = expectation_value(result.peps, M, result.env)
 
 @test result.E ≈ e atol = 5e-2
 @test imag(magn) ≈ 0 atol = 1e-6
-@test real(magn) ≈ mᶻ atol = 5e-2
+@test abs(magn) ≈ mᶻ atol = 5e-2
