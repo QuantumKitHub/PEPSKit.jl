@@ -31,69 +31,44 @@ function MPSKit.leading_boundary(state, alg::CTMRG)
     return MPSKit.leading_boundary(CTMRGEnv(state), state, alg)
 end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
-    normold = 1.0
-    CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
-    TSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
-    ϵold = 1.0
+    CS = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envinit.corners)
+    TS = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envinit.edges)
+
+    η = one(real(scalartype(state)))
+    N = norm(state, envinit)
     env = deepcopy(envinit)
+    log = MPSKit.IterLog("CTMRG")
 
-    for i in 1:(alg.maxiter)
-        env, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
-        conv_condition, normold, CSold, TSold, ϵ = ignore_derivatives() do
-            # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
-            Δϵ = abs((ϵold - ϵ) / ϵold)
-            normnew = norm(state, env)
-            Δnorm = abs(normold - normnew) / abs(normold)
-            CSnew = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env.corners)
-            ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
-                # only compute the difference on the smallest part of the spaces
-                smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
-                e_old = isometry(MPSKit._firstspace(c_old), smallest)
-                e_new = isometry(MPSKit._firstspace(c_new), smallest)
-                return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
-            end
-            TSnew = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env.edges)
+    return LoggingExtras.withlevel(; alg.verbosity) do
+        @infov 2 loginit!(log, η, N)
+        local iter
+        for outer iter in 1:(alg.maxiter)
+            env, = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+            η, CS, TS = calc_convergence(env, CS, TS)
+            N = norm(state, env)
 
-            ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
-                MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
-                    return scalartype(t_old)(Inf)
-                # TODO: implement when spaces aren't the same
-                return norm(t_new - t_old)
-            end
+            @infov 3 logiter!(log, iter, η, N)
 
-            conv_condition = max(Δnorm, ΔCS, ΔTS) < alg.tol && i > alg.miniter
-
-            if alg.verbosity > 1 || (alg.verbosity == 1 && (i == 1 || conv_condition))
-                @printf(
-                    "CTMRG iter: %3d   norm: %.2e   Δnorm: %.2e   ΔCS: %.2e   ΔTS: %.2e   ϵ: %.2e   Δϵ: %.2e\n",
-                    i,
-                    abs(normnew),
-                    Δnorm,
-                    ΔCS,
-                    ΔTS,
-                    ϵ,
-                    Δϵ
-                )
-            end
-            alg.verbosity > 0 &&
-                i == alg.maxiter &&
-                @warn(
-                    "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
-                )
-            return conv_condition, normnew, CSnew, TSnew, ϵ
+            (iter > alg.miniter && η <= alg.tol) && break
         end
-        conv_condition && break  # Converge if maximal Δ falls below tolerance
-    end
 
-    # Do one final iteration that does not change the spaces
-    alg_fixed = CTMRG(;
-        alg.trscheme, alg.tol, alg.maxiter, alg.miniter, alg.verbosity, fixedspace=true
-    )
-    env′, = ctmrg_iter(state, env, alg_fixed)
-    envfix = gauge_fix(env, env′)
-    check_elementwise_convergence(env, envfix; atol=alg.tol^(1 / 2)) ||
-        @warn "CTMRG did not converge elementwise."
-    return envfix
+        # Do one final iteration that does not change the spaces
+        alg_fixed = CTMRG(;
+            alg.trscheme, alg.tol, alg.maxiter, alg.miniter, alg.verbosity, fixedspace=true
+        )
+        env′, = ctmrg_iter(state, env, alg_fixed)
+        envfix = gauge_fix(env, env′)
+
+        η = calc_elementwise_convergence(envfix, env; atol=alg.tol^(1 / 2))
+        N = norm(state, envfix)
+
+        if η < alg.tol^(1 / 2)
+            @infov 2 logfinish!(log, iter, η, N)
+        else
+            @warnv 1 logcancel!(log, iter, η, N)
+        end
+        return envfix
+    end
 end
 
 """
@@ -240,15 +215,37 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
     return stack([C1, C2, C3, C4]; dims=1), stack([T1, T2, T3, T4]; dims=1)
 end
 
+function calc_convergence(envs, CSold, TSold)
+    CSnew = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envs.corners)
+    ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
+        # only compute the difference on the smallest part of the spaces
+        smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
+        e_old = isometry(MPSKit._firstspace(c_old), smallest)
+        e_new = isometry(MPSKit._firstspace(c_new), smallest)
+        return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
+    end
+
+    TSnew = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envs.edges)
+    ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
+        MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
+            return scalartype(t_old)(Inf)
+        return norm(t_new - t_old)
+    end
+
+    @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
+
+    return max(ΔCS, ΔTS), CSnew, TSnew
+end
+
+@non_differentiable calc_convergence(args...)
+
 """
-    check_elementwise_convergence(envfinal, envfix; atol=1e-6)
+    calc_elementwise_convergence(envfinal, envfix; atol=1e-6)
 
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
 CTMRG environments are below some tolerance.
 """
-function check_elementwise_convergence(
-    envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6
-)
+function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6)
     ΔC = envfinal.corners .- envfix.corners
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
@@ -271,10 +268,10 @@ function check_elementwise_convergence(
         )
     end
 
-    return isapprox(ΔCmax, 0; atol) && isapprox(ΔTmax, 0; atol)
+    return max(ΔCmax, ΔTmax)
 end
 
-@non_differentiable check_elementwise_convergence(args...)
+@non_differentiable calc_elementwise_convergence(args...)
 
 """
     ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
