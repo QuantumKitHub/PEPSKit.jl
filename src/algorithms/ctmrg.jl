@@ -28,7 +28,8 @@ end
 """
     CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
           miniter=Defaults.ctmrg_miniter, verbosity=0,
-          svd_alg=TensorKit.SVD(), trscheme=FixedSpaceTruncation())
+          svd_alg=TensorKit.SVD(), trscheme=FixedSpaceTruncation(),
+          ctmrgscheme=:AllSides)
 
 Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
 Each CTMRG run is converged up to `tol` where the singular value convergence of the
@@ -37,7 +38,7 @@ is set with `maxiter` and `miniter`. Different levels of output information are 
 depending on `verbosity` (0, 1 or 2). The projectors are computed from `svd_alg` SVDs
 where the truncation scheme is set via `trscheme`.
 """
-struct CTMRG
+struct CTMRG{S}
     tol::Float64
     maxiter::Int
     miniter::Int
@@ -51,8 +52,9 @@ function CTMRG(;
     verbosity=0,
     svd_alg=SVDAdjoint(),
     trscheme=FixedSpaceTruncation(),
+    ctmrgscheme=:AllSides
 )
-    return CTMRG(
+    return CTMRG{ctmrgscheme}(
         tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
     )
 end
@@ -74,11 +76,11 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     env = deepcopy(envinit)
 
     for i in 1:(alg.maxiter)
-        env, ϵ = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+        env, info = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
 
         conv_condition, normold, CSold, TSold, ϵ = ignore_derivatives() do
             # Compute convergence criteria and take max (TODO: How should we handle logging all of this?)
-            Δϵ = abs((ϵold - ϵ) / ϵold)
+            Δϵ = abs((ϵold - info.ϵ) / ϵold)
             normnew = norm(state, env)
             Δnorm = abs(normold - normnew) / abs(normold)
             CSnew = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env.corners)
@@ -108,7 +110,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
                     Δnorm,
                     ΔCS,
                     ΔTS,
-                    ϵ,
+                    info.ϵ,
                     Δϵ
                 )
             end
@@ -117,7 +119,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
                 @warn(
                     "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
                 )
-            return conv_condition, normnew, CSnew, TSnew, ϵ
+            return conv_condition, normnew, CSnew, TSnew, info.ϵ
         end
         conv_condition && break  # Converge if maximal Δ falls below tolerance
     end
@@ -150,7 +152,7 @@ function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
         ϵ = max(ϵ, ϵ₀)
     end
 
-    return env, ϵ
+    return env, (; ϵ)
 end
 
 """
@@ -235,7 +237,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
         end
     end
 
-    return CTMRGEnv(corners, edges), copy(Pleft), copy(Pright), ϵ
+    return CTMRGEnv(corners, edges), (; Pleft=copy(Pleft), Pright=copy(Pright), ϵ)
 end
 
 # Compute enlarged corners
