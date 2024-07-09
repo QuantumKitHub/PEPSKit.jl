@@ -127,7 +127,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     # Do one final iteration that does not change the spaces
     alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
     env′, = ctmrg_iter(state, env, alg_fixed)
-    envfix = gauge_fix(env, env′)
+    envfix, = gauge_fix(env, env′)
     check_elementwise_convergence(env, envfix; atol=alg.tol^(1 / 2)) ||
         @warn "CTMRG did not converge elementwise."
     return envfix

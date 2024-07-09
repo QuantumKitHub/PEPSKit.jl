@@ -14,7 +14,7 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     end
     @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
 
-    # Try the "general" algorithm from https://arxiv.org/abs/2311.11894
+    # "general" algorithm from https://arxiv.org/abs/2311.11894
     signs = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
@@ -53,15 +53,7 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     end
 
     cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
-
-    # Fix global phase
-    cornersgfix = map(envprev.corners, cornersfix) do Cprev, Cfix
-        return dot(Cfix, Cprev) * Cfix
-    end
-    edgesgfix = map(envprev.edges, edgesfix) do Tprev, Tfix
-        return dot(Tfix, Tprev) * Tfix
-    end
-    return CTMRGEnv(cornersgfix, edgesgfix)
+    return fix_global_phases(envfinal, CTMRGEnv(cornersfix, edgesfix)), signs
 end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
@@ -141,6 +133,50 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
 
     return stack([C1, C2, C3, C4]; dims=1), stack([T1, T2, T3, T4]; dims=1)
 end
+function fix_relative_phases(
+    U::Array{<:AbstractTensorMap,3}, V::Array{<:AbstractTensorMap,3}, signs
+)
+    U1 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
+        return U[NORTH, r, c] * signs[NORTH, r, _next(c, end)]
+    end
+    V1 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
+        return signs[NORTH, r, _next(c, end)]' * V[NORTH, r, c]
+    end
+    U2 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
+        return U[EAST, r, c] * signs[EAST, _next(r, end), c]
+    end
+    V2 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
+        return signs[EAST, _next(r, end), c]' * V[EAST, r, c]
+    end
+    U3 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
+        return U[SOUTH, r, c] * signs[SOUTH, r, _prev(c, end)]
+    end
+    V3 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
+        return signs[SOUTH, r, _prev(c, end)]' * V[SOUTH, r, c]
+    end
+    U4 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
+        return U[WEST, r, c] * signs[WEST, _prev(r, end), c]
+    end
+    V4 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
+        return signs[WEST, _prev(r, end), c]' * V[WEST, r, c]
+    end
+
+    return stack([U1, U2, U3, U4]; dims=1), stack([V1, V2, V3, V4]; dims=1)
+end
+
+# Fix global phases of corners and edges via dot product (to ensure compatibility with symm. tensors)
+function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
+    cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
+        φ = dot(Cprev, Cfix)
+        φ' * Cfix
+    end
+    edgesgfix = map(zip(envprev.edges, envfix.edges)) do (Tprev, Tfix)
+        φ = dot(Tprev, Tfix)
+        φ' * Tfix
+    end
+    return CTMRGEnv(cornersgfix, edgesgfix)
+end
+
 
 """
     check_elementwise_convergence(envfinal, envfix; atol=1e-6)
