@@ -22,7 +22,6 @@ opt_alg = PEPSOptimize(;
 )
 
 # initialize states
-Random.seed!(96678827397)
 Pspace = Vect[FermionParity](0 => 1, 1 => 1)
 Vspace = Vect[FermionParity](0 => χbond ÷ 2, 1 => χbond ÷ 2)
 Envspace = Vect[FermionParity](0 => χenv ÷ 2, 1 => χenv ÷ 2)
