@@ -13,7 +13,7 @@ using OptimKit
 # (values estimated from plots)
 # (factor of 2 in the energy and magnetisation due to convention differences)
 h = 0.5
-e = -1.05
+e = -0.525
 mᶻ = 0.98
 
 # initialize parameters
