@@ -31,8 +31,8 @@ function MPSKit.leading_boundary(state, alg::CTMRG)
     return MPSKit.leading_boundary(CTMRGEnv(state), state, alg)
 end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
-    CS = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envinit.corners)
-    TS = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envinit.edges)
+    CS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
+    TS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
 
     η = one(real(scalartype(state)))
     N = norm(state, envinit)
@@ -216,7 +216,7 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
 end
 
 function calc_convergence(envs, CSold, TSold)
-    CSnew = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envs.corners)
+    CSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.corners)
     ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
         # only compute the difference on the smallest part of the spaces
         smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
@@ -225,7 +225,7 @@ function calc_convergence(envs, CSold, TSold)
         return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
     end
 
-    TSnew = map(x -> tsvd!(x; alg=TensorKit.SVD())[2], envs.edges)
+    TSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.edges)
     ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
         MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
             return scalartype(t_old)(Inf)
