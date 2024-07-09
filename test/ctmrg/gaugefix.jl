@@ -46,7 +46,9 @@ end
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     verbosity = 1
-    alg = CTMRG(; tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space)))
+    alg = CTMRG(;
+        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
+    )
     alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
@@ -69,7 +71,9 @@ end
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     verbosity = 1
-    alg = CTMRG(; tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space)))
+    alg = CTMRG(;
+        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
+    )
     alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
