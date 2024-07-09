@@ -120,7 +120,9 @@ function ChainRulesCore.rrule(
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
 ) where {A}
-    return rrule(TensorKit.tsvd!; trunc, p, alg=alg.svd_alg)
+    fwd, tsvd!_pullback = rrule(TensorKit.tsvd!, t; trunc, p, alg=alg.svd_alg)
+    tsvd!_completesvd_pullback(Δsvd) = tsvd!_pullback(Δsvd)..., NoTangent()
+    return fwd, tsvd!_completesvd_pullback
 end
 
 """
@@ -142,7 +144,7 @@ function ChainRulesCore.rrule(
 ) where {A}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
-    function tsvd_sparsesvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd!_sparsesvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         Δt = similar(t)
         for (c, b) in blocks(Δt)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
@@ -183,11 +185,11 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd_sparsesvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd!_sparsesvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd_sparsesvd_pullback
+    return (U, S, V, ϵ), tsvd!_sparsesvd_pullback
 end
 
 """
@@ -201,7 +203,7 @@ end
 
 # Use outdated adjoint in reverse pass (not taking truncated part into account for testing purposes)
 function ChainRulesCore.rrule(
-    ::typeof(PEPSKit.tsvd),
+    ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
     alg::SVDrrule{A,NonTruncSVDAdjoint};
     trunc::TruncationScheme=notrunc(),
@@ -209,7 +211,7 @@ function ChainRulesCore.rrule(
 ) where {A}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
-    function tsvd_nontruncsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd!_nontruncsvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         Δt = similar(t)
         for (c, b) in blocks(Δt)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
@@ -229,11 +231,11 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd_nontruncsvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd!_nontruncsvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd_nontruncsvd_pullback
+    return (U, S, V, ϵ), tsvd!_nontruncsvd_pullback
 end
 
 function oldsvd_rev(
