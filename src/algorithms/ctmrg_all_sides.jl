@@ -1,15 +1,10 @@
-
-struct IndexSelector{N} <: TensorKit.TruncationScheme
-    index::NTuple{N,Int}
-end
-
 # One CTMRG iteration with both-sided application of projectors
 function ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG{:AllSides})
     # Compute enlarged corners
     Q = enlarge_corners_edges(state, env)
 
     # Compute projectors if none are supplied
-    P_left, P_right, info = build_projectors(Q, env, alg)
+    P_left, P_right, info = build_projectors(Q, env, alg.projector_alg)
 
     # Apply projectors and normalize
     corners, edges = renormalize_corners_edges(state, env, Q, P_left, P_right)
@@ -65,7 +60,7 @@ function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T} 
     rsize, csize = size(env.corners)[2:3]
     for dir in 1:4, r in 1:rsize, c in 1:csize
         # Row-column index of next enlarged corner
-        next_rc in if dir == 1
+        next_rc = if dir == 1
             (r, _next(c, csize))
         elseif dir == 2
             (_next(r, rsize), c)
@@ -92,24 +87,26 @@ function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T} 
         @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
             Q[dir, r, c][χ_EB D_EBabove D_EBbelow; χ D1 D2] *
             Q[_next(dir, 4), next_rc...][χ D1 D2; χ_ET D_ETabove D_ETbelow]
-        U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
-        ϵ = max(ϵ, ϵ_local / norm(S))
+        U_local, S_local, V_local, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
+        U[dir, r, c] = U_local
+        S[dir, r, c] = S_local
+        V[dir, r, c] = V_local
+        ϵ = max(ϵ, ϵ_local / norm(S_local))
 
         # Compute SVD truncation error and check for degenerate singular values
         ignore_derivatives() do
-            if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+            if alg.verbosity > 0 && is_degenerate_spectrum(S_local)
+                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S_local))
                 @warn("degenerate singular values detected: ", svals)
             end
         end
 
         # Compute projectors
-        Pl, Pr = build_projectors(U, S, V, Q_sw, Q_nw)
+        Pl, Pr = build_projectors(
+            U_local, S_local, V_local, Q[dir, r, c], Q[_next(dir, 4), next_rc...]
+        )
         P_left[dir, r, c] = Pl
         P_right[dir, r, c] = Pr
-        U[dir, r, c] = info.U
-        S[dir, r, c] = info.S
-        V[dir, r, c] = info.V
     end
 
     return copy(P_left), copy(P_right), (; ϵ, U=copy(U), S=copy(S), V=copy(V))

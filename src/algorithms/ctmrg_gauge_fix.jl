@@ -53,7 +53,7 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     end
 
     cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
-    return fix_global_phases(envfinal, CTMRGEnv(cornersfix, edgesfix)), signs
+    return fix_global_phases(envprev, CTMRGEnv(cornersfix, edgesfix)), signs
 end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix

@@ -182,7 +182,7 @@ struct FixedSVD{Ut,St,Vt}
 end
 
 # Return pre-computed SVD
-function TensorKit._tsvd!(_, alg::FixedSVD, ::NoTruncation, ::Real=2)
+function TensorKit._tsvd!(t, alg::FixedSVD, ::NoTruncation, ::Real=2)
     return alg.U, alg.S, alg.V, 0
 end
 

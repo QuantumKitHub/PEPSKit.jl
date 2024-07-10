@@ -53,7 +53,7 @@ end
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
-    ctm_fixed = gauge_fix(ctm, ctm2)
+    ctm_fixed, = gauge_fix(ctm, ctm2)
     @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-4)
 end
 
@@ -78,6 +78,6 @@ end
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
-    ctm_fixed = gauge_fix(ctm, ctm2)
+    ctm_fixed, = gauge_fix(ctm, ctm2)
     @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-4)
 end

@@ -49,7 +49,7 @@ function CTMRG(;
     tol=Defaults.ctmrg_tol,
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,
-    verbosity=0,
+    verbosity=1,
     svd_alg=SVDAdjoint(),
     trscheme=FixedSpaceTruncation(),
     ctmrgscheme=:AllSides,
@@ -68,7 +68,7 @@ Per default, a random initial environment is used.
 function MPSKit.leading_boundary(state, alg::CTMRG)
     return MPSKit.leading_boundary(CTMRGEnv(state), state, alg)
 end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
+function MPSKit.leading_boundary(envinit, state, alg::CTMRG{S}) where {S}
     normold = 1.0
     CSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
     TSold = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
@@ -119,13 +119,20 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
                 @warn(
                     "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
                 )
+            flush(stdout)  # Flush output to enable live printing on HPC
+            flush(stderr)  # Same for @info, @warn, ...
             return conv_condition, normnew, CSnew, TSnew, info.ϵ
         end
         conv_condition && break  # Converge if maximal Δ falls below tolerance
     end
 
     # Do one final iteration that does not change the spaces
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
+    alg_fixed = CTMRG(;
+        verbosity=alg.verbosity,
+        svd_alg=alg.projector_alg.svd_alg,
+        trscheme=FixedSpaceTruncation(),
+        ctmrgscheme=S,
+    )
     env′, = ctmrg_iter(state, env, alg_fixed)
     envfix, = gauge_fix(env, env′)
     check_elementwise_convergence(env, envfix; atol=alg.tol^(1 / 2)) ||
@@ -145,10 +152,10 @@ function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
 
     for _ in 1:4
-        env, _, _, ϵ₀ = left_move(state, env, alg.projector_alg)
+        env, info = left_move(state, env, alg.projector_alg)
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
-        ϵ = max(ϵ, ϵ₀)
+        ϵ = max(ϵ, info.ϵ)
     end
 
     return env, (; ϵ)
@@ -164,11 +171,10 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
     ϵ = 0.0
-    P_top, P_bottom = Zygote.Buffer.(projector_type(T, size(state)))  # Use Zygote.Buffer instead of @diffset to avoid ZeroTangent errors in _setindex
+    P_bottom, P_top = Zygote.Buffer.(projector_type(T, size(state)))  # Use Zygote.Buffer instead of @diffset to avoid ZeroTangent errors in _setindex
 
     for col in 1:size(state, 2)
         cprev = _prev(col, size(state, 2))
-        cnext = _next(col, size(state, 2))
 
         # Compute projectors
         for row in 1:size(state, 1)
@@ -211,9 +217,9 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
             end
 
             # Compute projectors
-            Pt, Pb = build_projectors(U, S, V, Q_sw, Q_nw)
-            P_top[row, col] = Pt
+            Pb, Pt = build_projectors(U, S, V, Q_sw, Q_nw)
             P_bottom[row, col] = Pb
+            P_top[row, col] = Pt
         end
 
         # Use projectors to grow the corners & edges
@@ -221,8 +227,8 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
             rprev = _prev(row, size(state, 1))
             C_sw, C_nw, T_w = grow_env_left(
                 state[row, col],
-                P_left[rprev, col],
-                P_right[row, col],
+                P_bottom[rprev, col],
+                P_top[row, col],
                 env.corners[SOUTHWEST, row, cprev],
                 env.corners[NORTHWEST, row, cprev],
                 env.edges[SOUTH, row, col],

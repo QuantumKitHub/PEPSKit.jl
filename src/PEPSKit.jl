@@ -56,8 +56,8 @@ Module containing default values that represent typical algorithm parameters.
 module Defaults
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
-    const ctmrg_tol = 1e-12
-    const fpgrad_maxiter = 100
+    const ctmrg_tol = 1e-10
+    const fpgrad_maxiter = 20
     const fpgrad_tol = 1e-6
 end
 
