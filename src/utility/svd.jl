@@ -24,16 +24,6 @@ removes the divergences from the adjoint.
     broadening::B = nothing
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
-# function ChainRulesCore.rrule(
-#     ::Type{SVDAdjoint{F,R,B}},
-#     fwd_alg::F=TensorKit.SVD(),
-#     rrule_alg::R=nothing,
-#     broadening::B=nothing,
-# ) where {F,R,B}
-#     svdadjoint_pullback(_) = NoTangent()
-#     return SVDAdjoint(; fwd_alg, rrule_alg, broadening), svdadjoint_pullback
-# end
-
 """
     PEPSKit.tsvd(t::AbstractTensorMap, alg; trunc=notrunc(), p=2)
 
@@ -159,7 +149,9 @@ function ChainRulesCore.rrule(
             n_vals = length(Sdc)
             lvecs = Vector{Vector{scalartype(t)}}(eachcol(Uc))
             rvecs = Vector{Vector{scalartype(t)}}(eachcol(Vc'))
-            minimal_info = KrylovKit.ConvergenceInfo(length(Sdc), nothing, nothing, -1, -1)  # Just supply converged to SVD pullback
+            minimal_info = KrylovKit.ConvergenceInfo(length(Sdc), nothing, nothing, -1, -1)  # Only num. converged is used
+            minimal_alg = GKL(; tol=1e-6)  # Only tolerance is used for gauge sensitivity
+            # TODO: How do we not hard-code this tolerance?
 
             if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
@@ -179,7 +171,7 @@ function ChainRulesCore.rrule(
                 minimal_info,
                 block(t, c),
                 :LR,
-                alg.fwd_alg.alg,
+                minimal_alg,
                 alg.rrule_alg,
             )
             copyto!(

@@ -55,7 +55,10 @@ end
 function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}
     P_left, P_right = Zygote.Buffer.(projector_type(env.edges))
     U, V = Zygote.Buffer.(projector_type(env.edges))
-    S = Zygote.Buffer(env.corners)
+    Stype = tensormaptype(  # Corner type but with real numbers
+        spacetype(env.corners[1]), 1, 1, Matrix{real(scalartype(env.corners[1]))}
+    )
+    S = Zygote.Buffer(Array{Stype,3}(undef, size(env.corners)))
     ϵ = 0.0
     rsize, csize = size(env.corners)[2:3]
     for dir in 1:4, r in 1:rsize, c in 1:csize
@@ -78,12 +81,9 @@ function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}
         end
         svd_alg = if A <: SVDAdjoint{<:FixedSVD}
             idx = (dir, r, c)
-            # svd_alg = alg.svd_alg
             fwd_alg = alg.svd_alg.fwd_alg
             fix_svd = FixedSVD(fwd_alg.U[idx...], fwd_alg.S[idx...], fwd_alg.V[idx...])
-            # return @set svd_alg.fwd_alg = fix_svd
-            # return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
-            # return SVDAdjoint()
+            SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
         else
             alg.svd_alg
         end
