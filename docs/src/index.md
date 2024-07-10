@@ -44,7 +44,7 @@ opt_alg = PEPSOptimize(;
 
 # ground state search
 state = InfinitePEPS(2, D)
-ctm = leading_boundary(CTMRGEnv(state; Venv=ComplexSpace(chi)), state, ctm_alg)
+ctm = leading_boundary(CTMRGEnv(state, ComplexSpace(chi)), state, ctm_alg)
 result = fixedpoint(state, Heisenberg_hamiltonian, opt_alg, ctm)
 
 @show result.E # -0.6625...

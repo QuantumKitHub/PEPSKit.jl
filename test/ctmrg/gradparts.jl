@@ -56,7 +56,7 @@ end
     Pspaces
 )
     psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
-    env = CTMRGEnv(psi; Venv=Espaces[i])
+    env = CTMRGEnv(psi, Espaces[i])
 
     @testset "$f" for f in functions
         atol = f == leading_boundary ? sqrt(tol) : tol

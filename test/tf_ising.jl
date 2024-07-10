@@ -31,7 +31,7 @@ opt_alg = PEPSOptimize(;
 # initialize states
 H = square_lattice_tf_ising(; h)
 psi_init = InfinitePEPS(2, χbond)
-env_init = leading_boundary(CTMRGEnv(psi_init; Venv=ComplexSpace(χenv)), psi_init, ctm_alg)
+env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init)

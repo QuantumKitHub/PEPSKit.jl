@@ -33,7 +33,7 @@ N = abs(prod(expectation_value(mps, T)))
 
 # This can be compared to the result obtained using the CTMRG algorithm
 ctm = leading_boundary(
-    peps, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(peps; Venv=ComplexSpace(20))
+    peps, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(peps, ComplexSpace(20))
 )
 N´ = abs(norm(peps, ctm))
 
@@ -56,7 +56,7 @@ mps2, envs2, ϵ = leading_boundary(mps2, T2, VUMPS())
 N2 = abs(prod(expectation_value(mps2, T2)))
 
 ctm2 = leading_boundary(
-    peps2, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(peps2; Venv=ComplexSpace(20))
+    peps2, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(peps2, ComplexSpace(20))
 )
 N2´ = abs(norm(peps2, ctm2))
 

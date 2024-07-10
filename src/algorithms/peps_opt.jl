@@ -60,7 +60,7 @@ in `alg`. The initial environment `env₀` serves as an initial guess for the fi
 By default, a random initial environment is used.
 """
 function fixedpoint(
-    ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀; Venv=field(T)^20)
+    ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20)
 ) where {T}
     (peps, env), E, ∂E, info = optimize(
         (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner
