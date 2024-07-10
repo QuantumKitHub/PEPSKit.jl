@@ -373,7 +373,6 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
             else
                 alg.trscheme
             end
-            @tensor QQ[-1 -2 -3; -4 -5 -6] := Q_sw[-1 -2 -3; 1 2 3] * Q_nw[1 2 3; -4 -5 -6]
             @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
                 Q_sw[χ_EB D_EBabove D_EBbelow; χ D1 D2] *
                 Q_nw[χ D1 D2; χ_ET D_ETabove D_ETbelow]
