@@ -17,9 +17,7 @@ models = [square_lattice_heisenberg(), square_lattice_pwave()]
 names = ["Heisenberg", "p-wave superconductor"]
 Random.seed!(42039482030)
 tol = 1e-8
-boundary_alg = CTMRG(;
-    trscheme=truncdim(χenv), tol=tol, miniter=4, maxiter=100, fixedspace=true, verbosity=0
-)
+boundary_alg = CTMRG(; tol=tol, miniter=4, maxiter=100, verbosity=0)
 gradmodes = [
     nothing, GeomSum(; tol), ManualIter(; tol), KrylovKit.GMRES(; tol=tol, maxiter=10)
 ]

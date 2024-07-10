@@ -9,7 +9,7 @@ using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 
 include("utility/util.jl")
-include("utility/eigsolve.jl")
+include("utility/svd.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
@@ -59,12 +59,14 @@ module Defaults
     const fpgrad_tol = 1e-6
 end
 
-export CTMRG, CTMRGEnv
+export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
+export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv
 export LocalOperator
 export expectation_value, costfun
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolve
 export fixedpoint
+
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
