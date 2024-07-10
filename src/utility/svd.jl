@@ -7,12 +7,7 @@ using TensorKit:
     NoTruncation,
     TruncationSpace
 
-# Enables backwards compatibility without package extensions
-CRCExt = @static if isdefined(Base, :get_extension)
-    Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
-else
-    KrylovKit.KrylovKitChainRulesCoreExt
-end
+const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
     struct SVDAdjoint(; fwd_alg = TensorKit.SVD(), rrule_alg = nothing,
