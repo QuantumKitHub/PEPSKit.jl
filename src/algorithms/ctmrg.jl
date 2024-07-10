@@ -100,7 +100,6 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG{S}) where {S}
                 return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
             end
             TSnew = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env.edges)
-
             ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
                 MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
                     return scalartype(t_old)(Inf)

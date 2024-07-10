@@ -134,8 +134,8 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
     return stack([C1, C2, C3, C4]; dims=1), stack([T1, T2, T3, T4]; dims=1)
 end
 function fix_relative_phases(
-    U::Array{<:AbstractTensorMap,3}, V::Array{<:AbstractTensorMap,3}, signs
-)
+    U::Array{Ut,3}, V::Array{Vt,3}, signs
+) where {Ut<:AbstractTensorMap,Vt<:AbstractTensorMap}
     U1 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
         return U[NORTH, r, c] * signs[NORTH, r, _next(c, end)]
     end
@@ -176,7 +176,6 @@ function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
     end
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
-
 
 """
     check_elementwise_convergence(envfinal, envfix; atol=1e-6)

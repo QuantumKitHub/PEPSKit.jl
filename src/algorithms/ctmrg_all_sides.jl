@@ -52,7 +52,7 @@ function enlarge_corners_edges(state, env::CTMRGEnv)
 end
 
 # Build projectors from SVD and enlarged corners
-function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}  # TODO: Add projector type annotations
+function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}
     P_left, P_right = Zygote.Buffer.(projector_type(env.edges))
     U, V = Zygote.Buffer.(projector_type(env.edges))
     S = Zygote.Buffer(env.corners)
@@ -78,9 +78,12 @@ function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T} 
         end
         svd_alg = if A <: SVDAdjoint{<:FixedSVD}
             idx = (dir, r, c)
+            # svd_alg = alg.svd_alg
             fwd_alg = alg.svd_alg.fwd_alg
             fix_svd = FixedSVD(fwd_alg.U[idx...], fwd_alg.S[idx...], fwd_alg.V[idx...])
-            return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=nothing, broadening=nothing)
+            # return @set svd_alg.fwd_alg = fix_svd
+            # return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
+            # return SVDAdjoint()
         else
             alg.svd_alg
         end

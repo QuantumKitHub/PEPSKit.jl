@@ -24,6 +24,16 @@ removes the divergences from the adjoint.
     broadening::B = nothing
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
+# function ChainRulesCore.rrule(
+#     ::Type{SVDAdjoint{F,R,B}},
+#     fwd_alg::F=TensorKit.SVD(),
+#     rrule_alg::R=nothing,
+#     broadening::B=nothing,
+# ) where {F,R,B}
+#     svdadjoint_pullback(_) = NoTangent()
+#     return SVDAdjoint(; fwd_alg, rrule_alg, broadening), svdadjoint_pullback
+# end
+
 """
     PEPSKit.tsvd(t::AbstractTensorMap, alg; trunc=notrunc(), p=2)
 
@@ -37,6 +47,24 @@ function PEPSKit.tsvd!(
     t::AbstractTensorMap, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2
 )
     return TensorKit.tsvd!(t; alg=alg.fwd_alg, trunc, p)
+end
+
+"""
+    struct FixedSVD
+
+SVD struct containing a pre-computed decomposition or even multiple ones.
+The call to `tsvd` just returns the pre-computed U, S and V. In the reverse
+pass, the SVD adjoint is computed with these exact U, S, and V.
+"""
+struct FixedSVD{Ut,St,Vt}
+    U::Ut
+    S::St
+    V::Vt
+end
+
+# Return pre-computed SVD
+function TensorKit._tsvd!(t, alg::FixedSVD, ::NoTruncation, ::Real=2)
+    return alg.U, alg.S, alg.V, 0
 end
 
 """
@@ -114,10 +142,10 @@ end
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::SVDAdjoint{IterSVD,R,B};
+    alg::SVDAdjoint{F,R,B};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-) where {R,B}
+) where {F<:Union{IterSVD,FixedSVD},R,B}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
     function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
@@ -166,24 +194,6 @@ function ChainRulesCore.rrule(
     end
 
     return (U, S, V, ϵ), tsvd!_itersvd_pullback
-end
-
-"""
-    struct FixedSVD
-
-SVD struct containing a pre-computed decomposition or even multiple ones.
-The call to `tsvd` just returns the pre-computed U, S and V. In the reverse
-pass, the SVD adjoint is computed with these exact U, S, and V.
-"""
-struct FixedSVD{Ut,St,Vt}
-    U::Ut
-    S::St
-    V::Vt
-end
-
-# Return pre-computed SVD
-function TensorKit._tsvd!(t, alg::FixedSVD, ::NoTruncation, ::Real=2)
-    return alg.U, alg.S, alg.V, 0
 end
 
 """

@@ -12,7 +12,7 @@ ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=1, trscheme=trunc
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
-    gradient_alg=GMRES(; tol=1e-6, maxiter=100),
+    gradient_alg=LinSolver(solver=GMRES(; tol=1e-6, maxiter=100)),
     reuse_env=true,
     verbosity=2,
 )

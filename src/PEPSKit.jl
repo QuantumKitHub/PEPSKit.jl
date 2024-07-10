@@ -61,12 +61,12 @@ module Defaults
     const fpgrad_tol = 1e-6
 end
 
-export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
+export SVDAdjoint, IterSVD, FixedSVD, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
 export LocalOperator
 export expectation_value, costfun
 export leading_boundary
-export PEPSOptimize, GeomSum, ManualIter, LinSolve
+export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
 export InfinitePEPS, InfiniteTransferPEPS

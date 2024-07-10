@@ -130,15 +130,6 @@ Evaluating the gradient of the cost function for CTMRG:
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
 
-# function _rrule(
-#     gradmode::Union{GradMode,KrylovKit.LinearSolver},
-#     ::RuleConfig,
-#     ::typeof(MPSKit.leading_boundary),
-#     envinit,
-#     state,
-#     alg::CTMRG,
-# )
-
 function _rrule(
     gradmode::GradMode{:DiffGauge},
     ::RuleConfig,
@@ -176,19 +167,25 @@ function _rrule(
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
-    alg::CTMRG,
-)
-    @assert alg.ctmrgscheme isa AllSides
+    alg::CTMRG{C},
+) where {C}
+    @assert C == :AllSides
     envs = leading_boundary(envinit, state, alg)
     envsconv, info = ctmrg_iter(state, envs, alg)
     envsfix, signs = gauge_fix(envs, envsconv)
-    svd_alg_fix = fix_svd(alg, info.U, info.S, info.V, signs)
+
+    # Fix SVD
+    Ufix, Vfix = fix_relative_phases(info.U, info.V, signs)
+    svd_alg_fixed = SVDAdjoint(;
+        fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
+    )
+    alg_fixed = CTMRG(; svd_alg=svd_alg_fixed, trscheme=notrunc(), ctmrgscheme=:AllSides)
 
     function leading_boundary_fixediter_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
 
         _, env_vjp = pullback(state, envsfix) do A, x
-            e, = ctmrg_iter(A, x, svd_alg_fix)
+            e, = ctmrg_iter(A, x, alg_fixed)
             return fix_global_phases(x, e)
         end
 
@@ -267,9 +264,9 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
     return dx
 end
 
-function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
-    y, info = linsolve(∂f∂x, ∂F∂x, y₀, alg, 1, -1)
-    if alg.verbosity > 0 && info.converged != 1
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::LinSolver)
+    y, info = linsolve(∂f∂x, ∂F∂x, y₀, alg.solver, 1, -1)
+    if alg.solver.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 
