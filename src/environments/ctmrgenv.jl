@@ -16,13 +16,8 @@ _to_space(χ::ElementarySpace) = χ
 
 function _corner_tensor(
     f, ::Type{T}, left_vspace::S, right_vspace::S=left_vspace
-) where {T,S<:ElementarySpace}
-    return TensorMap(f, T, left_vspace ← right_vspace)
-end
-function _corner_tensor(
-    f, ::Type{T}, left_vspace::Int, right_vspace::Int=left_vspace
-) where {T}
-    return _corner_tensor(f, T, _to_space(left_vspace), _to_space(right_vspace))
+) where {T,S<:Union{Int,ElementarySpace}}
+    return TensorMap(f, T, _to_space(left_vspace) ← _to_space(right_vspace))
 end
 
 function _edge_tensor(
@@ -32,23 +27,11 @@ function _edge_tensor(
     top_pspace::S,
     bot_pspace::S=top_pspace,
     right_vspace::S=left_vspace,
-) where {T,S<:ElementarySpace}
-    return TensorMap(f, T, left_vspace ⊗ top_pspace ⊗ dual(bot_pspace) ← right_vspace)
-end
-function _edge_tensor(
-    f,
-    ::Type{T},
-    left_vspace::Int,
-    top_pspace::Int,
-    bot_pspace::Int,
-    right_vspace::Int=left_vspace,
-) where {T}
-    return _edge_tensor(
+) where {T,S<:Union{Int,ElementarySpace}}
+    return TensorMap(
         f,
         T,
-        _to_space(left_vspace),
-        _to_space(top_pspace),
-        _to_space(bot_pspace),
+        _to_space(left_vspace) ⊗ _to_space(top_pspace) ⊗ dual(_to_space(bot_pspace)) ←
         _to_space(right_vspace),
     )
 end
