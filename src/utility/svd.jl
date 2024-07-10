@@ -169,6 +169,24 @@ function ChainRulesCore.rrule(
 end
 
 """
+    struct FixedSVD
+
+SVD struct containing a pre-computed decomposition or even multiple ones.
+The call to `tsvd` just returns the pre-computed U, S and V. In the reverse
+pass, the SVD adjoint is computed with these exact U, S, and V.
+"""
+struct FixedSVD{Ut,St,Vt}
+    U::Ut
+    S::St
+    V::Vt
+end
+
+# Return pre-computed SVD
+function TensorKit._tsvd!(_, alg::FixedSVD, ::NoTruncation, ::Real=2)
+    return alg.U, alg.S, alg.V, 0
+end
+
+"""
     struct NonTruncAdjoint(; lorentz_broadening = 0.0)
 
 Old SVD adjoint that does not account for the truncated part of truncated SVDs.

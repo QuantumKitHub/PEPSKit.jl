@@ -51,16 +51,24 @@ end
 
 """
     projector_type(T::DataType, size)
+    projector_type(edges::Array{<:AbstractTensorMap})
 
 Create two arrays of specified `size` that contain undefined tensors representing
 left and right acting projectors, respectively. The projector types are inferred
 from the TensorMap type `T` which avoids having to recompute transpose tensors.
+Alternatively, supply an array of edge tensors from which left and right projectors
+are intialized explicitly with zeros.
 """
 function projector_type(T::DataType, size)
-    Pleft = Array{T,length(size)}(undef, size)
+    P_left = Array{T,length(size)}(undef, size)
     Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
-    Pright = Array{Prtype,length(size)}(undef, size)
-    return Pleft, Pright
+    P_right = Array{Prtype,length(size)}(undef, size)
+    return P_left, P_right
+end
+function projector_type(edges::Array{<:AbstractTensorMap})
+    P_left = map(e -> TensorMap(zeros, scalartype(e), space(e)), edges)
+    P_right = map(e -> TensorMap(zeros, scalartype(e), domain(e), codomain(e)), edges)
+    return P_left, P_right
 end
 
 # There are no rrules for rotl90 and rotr90 in ChainRules.jl

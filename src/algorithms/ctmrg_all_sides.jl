@@ -1,15 +1,20 @@
+
+struct IndexSelector{N} <: TensorKit.TruncationScheme
+    index::NTuple{N,Int}
+end
+
 # One CTMRG iteration with both-sided application of projectors
 function ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG{:AllSides})
     # Compute enlarged corners
     Q = enlarge_corners_edges(state, env)
 
     # Compute projectors if none are supplied
-    Pleft, Pright, info = build_projectors(Q, env, alg)
+    P_left, P_right, info = build_projectors(Q, env, alg)
 
     # Apply projectors and normalize
-    corners, edges = renormalize_corners_edges(state, env, Q, Pleft, Pright)
+    corners, edges = renormalize_corners_edges(state, env, Q, P_left, P_right)
 
-    return CTMRGEnv(corners, edges), (; Pleft, Pright, info...)
+    return CTMRGEnv(corners, edges), (; P_left, P_right, info...)
 end
 
 # Compute enlarged corners and edges for all directions and unit cell entries
@@ -52,90 +57,66 @@ function enlarge_corners_edges(state, env::CTMRGEnv)
 end
 
 # Build projectors from SVD and enlarged corners
-function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg)  # TODO: Add projector type annotations
-    Pleft, Pright = Zygote.Buffer.(projector_type(env.edges))
+function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}  # TODO: Add projector type annotations
+    P_left, P_right = Zygote.Buffer.(projector_type(env.edges))
     U, V = Zygote.Buffer.(projector_type(env.edges))
     S = Zygote.Buffer(env.corners)
-    ϵ1, ϵ2, ϵ3, ϵ4 = 0, 0, 0, 0
-    for c in 1:size(env.corners, 3), r in 1:size(env.corners, 2)
-        Pl1, Pr1, info1 = build_projectors(
-            Q[1, r, c],
-            Q[2, r, _next(c, end)],
-            alg;
-            trunc=truncspace(space(env.edges[1, r, c], 1)),
-            envindex=(1, r, c),
-        )
-        Pl2, Pr2, info2 = build_projectors(
-            Q[2, r, c],
-            Q[3, _next(r, end), c],
-            alg;
-            trunc=truncspace(space(env.edges[2, r, c], 1)),
-            envindex=(2, r, c),
-        )
-        Pl3, Pr3, info3 = build_projectors(
-            Q[3, r, c],
-            Q[4, r, _prev(c, end)],
-            alg;
-            trunc=truncspace(space(env.edges[3, r, c], 1)),
-            envindex=(3, r, c),
-        )
-        Pl4, Pr4, info4 = build_projectors(
-            Q[4, r, c],
-            Q[1, _prev(r, end), c],
-            alg;
-            trunc=truncspace(space(env.edges[4, r, c], 1)),
-            envindex=(4, r, c),
-        )
-
-        Pleft[NORTH, r, c] = Pl1
-        Pright[NORTH, r, c] = Pr1
-        U[NORTH, r, c] = info1.U
-        S[NORTH, r, c] = info1.S
-        V[NORTH, r, c] = info1.V
-
-        Pleft[EAST, r, c] = Pl2
-        Pright[EAST, r, c] = Pr2
-        U[EAST, r, c] = info2.U
-        S[EAST, r, c] = info2.S
-        V[EAST, r, c] = info2.V
-
-        Pleft[SOUTH, r, c] = Pl3
-        Pright[SOUTH, r, c] = Pr3
-        U[SOUTH, r, c] = info3.U
-        S[SOUTH, r, c] = info3.S
-        V[SOUTH, r, c] = info3.V
-
-        Pleft[WEST, r, c] = Pl4
-        Pright[WEST, r, c] = Pr4
-        U[WEST, r, c] = info4.U
-        S[WEST, r, c] = info4.S
-        V[WEST, r, c] = info4.V
-    end
-    return copy(Pleft), copy(Pright), (; ϵ=max(ϵ1, ϵ2, ϵ3, ϵ4), U=copy(U), S=copy(S), V=copy(V))
-end
-function build_projectors(Qleft, Qright, alg::ProjectorAlg; kwargs...)
-    # SVD half-infinite environment
-    U, S, V, ϵ = PEPSKit.tsvd!(Qleft * Qright, alg.svd_alg; kwargs...)
-    ϵ /= norm(S)
-
-    # Compute SVD truncation error and check for degenerate singular values
-    ignore_derivatives() do
-        if alg.verbosity > 1 && is_degenerate_spectrum(S)
-            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-            @warn("degenerate singular values detected: ", svals)
+    ϵ = 0.0
+    rsize, csize = size(env.corners)[2:3]
+    for dir in 1:4, r in 1:rsize, c in 1:csize
+        # Row-column index of next enlarged corner
+        next_rc in if dir == 1
+            (r, _next(c, csize))
+        elseif dir == 2
+            (_next(r, rsize), c)
+        elseif dir == 3
+            (r, _prev(c, csize))
+        elseif dir == 4
+            (_prev(r, rsize), c)
         end
+
+        # SVD half-infinite environment
+        trscheme = if T <: FixedSpaceTruncation
+            truncspace(space(env.edges[dir, r, c], 1))
+        else
+            alg.trscheme
+        end
+        svd_alg = if A <: SVDAdjoint{<:FixedSVD}
+            idx = (dir, r, c)
+            fwd_alg = alg.svd_alg.fwd_alg
+            fix_svd = FixedSVD(fwd_alg.U[idx...], fwd_alg.S[idx...], fwd_alg.V[idx...])
+            return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=nothing, broadening=nothing)
+        else
+            alg.svd_alg
+        end
+        @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
+            Q[dir, r, c][χ_EB D_EBabove D_EBbelow; χ D1 D2] *
+            Q[_next(dir, 4), next_rc...][χ D1 D2; χ_ET D_ETabove D_ETbelow]
+        U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
+        ϵ = max(ϵ, ϵ_local / norm(S))
+
+        # Compute SVD truncation error and check for degenerate singular values
+        ignore_derivatives() do
+            if alg.verbosity > 0 && is_degenerate_spectrum(S)
+                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+                @warn("degenerate singular values detected: ", svals)
+            end
+        end
+
+        # Compute projectors
+        Pl, Pr = build_projectors(U, S, V, Q_sw, Q_nw)
+        P_left[dir, r, c] = Pl
+        P_right[dir, r, c] = Pr
+        U[dir, r, c] = info.U
+        S[dir, r, c] = info.S
+        V[dir, r, c] = info.V
     end
 
-    # Compute projectors
-    isqS = sdiag_inv_sqrt(S)
-    @tensor Pl[-1 -2 -3; -4] := Qright[-1 -2 -3; 1 2 3] * conj(V[4; 1 2 3]) * isqS[4; -4]
-    @tensor Pr[-1; -2 -3 -4] := isqS[-1; 1] * conj(U[2 3 4; 1]) * Qleft[2 3 4; -2 -3 -4]
-
-    return Pl, Pr, (; ϵ, U, S, V)
+    return copy(P_left), copy(P_right), (; ϵ, U=copy(U), S=copy(S), V=copy(V))
 end
 
 # Apply projectors to renormalize corners and edges
-function renormalize_corners_edges(state, env::CTMRGEnv, Q, Pleft, Pright)
+function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
     for c in 1:size(state, 2), r in 1:size(state, 1)
@@ -144,46 +125,46 @@ function renormalize_corners_edges(state, env::CTMRGEnv, Q, Pleft, Pright)
         cprev = _prev(c, size(state, 2))
         cnext = _next(c, size(state, 2))
         @diffset @tensor corners[NORTHWEST, r, c][-1; -2] :=
-            Pright[WEST, rnext, c][-1; 1 2 3] *
+            P_right[WEST, rnext, c][-1; 1 2 3] *
             Q[NORTHWEST, r, c][1 2 3; 4 5 6] *
-            Pleft[NORTH, r, c][4 5 6; -2]
+            P_left[NORTH, r, c][4 5 6; -2]
         @diffset @tensor corners[NORTHEAST, r, c][-1; -2] :=
-            Pright[NORTH, r, cprev][-1; 1 2 3] *
+            P_right[NORTH, r, cprev][-1; 1 2 3] *
             Q[NORTHEAST, r, c][1 2 3; 4 5 6] *
-            Pleft[EAST, r, c][4 5 6; -2]
+            P_left[EAST, r, c][4 5 6; -2]
         @diffset @tensor corners[SOUTHEAST, r, c][-1; -2] :=
-            Pright[EAST, rprev, c][-1; 1 2 3] *
+            P_right[EAST, rprev, c][-1; 1 2 3] *
             Q[SOUTHEAST, r, c][1 2 3; 4 5 6] *
-            Pleft[SOUTH, r, c][4 5 6; -2]
+            P_left[SOUTH, r, c][4 5 6; -2]
         @diffset @tensor corners[SOUTHWEST, r, c][-1; -2] :=
-            Pright[SOUTH, r, cnext][-1; 1 2 3] *
+            P_right[SOUTH, r, cnext][-1; 1 2 3] *
             Q[SOUTHWEST, r, c][1 2 3; 4 5 6] *
-            Pleft[WEST, r, c][4 5 6; -2]
+            P_left[WEST, r, c][4 5 6; -2]
 
         @diffset @tensor edges[NORTH, r, c][-1 -2 -3; -4] :=
             env.edges[NORTH, rprev, c][1 2 3; 4] *
             state[r, c][9; 2 5 -2 7] *
             conj(state[r, c][9; 3 6 -3 8]) *
-            Pleft[NORTH, r, c][4 5 6; -4] *
-            Pright[NORTH, r, cprev][-1; 1 7 8]
+            P_left[NORTH, r, c][4 5 6; -4] *
+            P_right[NORTH, r, cprev][-1; 1 7 8]
         @diffset @tensor edges[EAST, r, c][-1 -2 -3; -4] :=
             env.edges[EAST, r, _next(c, end)][1 2 3; 4] *
             state[r, c][9; 7 2 5 -2] *
             conj(state[r, c][9; 8 3 6 -3]) *
-            Pleft[EAST, r, c][4 5 6; -4] *
-            Pright[EAST, rprev, c][-1; 1 7 8]
+            P_left[EAST, r, c][4 5 6; -4] *
+            P_right[EAST, rprev, c][-1; 1 7 8]
         @diffset @tensor edges[SOUTH, r, c][-1 -2 -3; -4] :=
             env.edges[SOUTH, _next(r, end), c][1 2 3; 4] *
             state[r, c][9; -2 7 2 5] *
             conj(state[r, c][9; -3 8 3 6]) *
-            Pleft[SOUTH, r, c][4 5 6; -4] *
-            Pright[SOUTH, r, cnext][-1; 1 7 8]
+            P_left[SOUTH, r, c][4 5 6; -4] *
+            P_right[SOUTH, r, cnext][-1; 1 7 8]
         @diffset @tensor edges[WEST, r, c][-1 -2 -3; -4] :=
             env.edges[WEST, r, _prev(c, end)][1 2 3; 4] *
             state[r, c][9; 5 -2 7 2] *
             conj(state[r, c][9; 6 -3 8 3]) *
-            Pleft[WEST, r, c][4 5 6; -4] *
-            Pright[WEST, rnext, c][-1; 1 7 8]
+            P_left[WEST, r, c][4 5 6; -4] *
+            P_right[WEST, rnext, c][-1; 1 7 8]
     end
 
     @diffset corners[:, :, :] ./= norm.(corners[:, :, :])

@@ -52,7 +52,7 @@ function CTMRG(;
     verbosity=0,
     svd_alg=SVDAdjoint(),
     trscheme=FixedSpaceTruncation(),
-    ctmrgscheme=:AllSides
+    ctmrgscheme=:AllSides,
 )
     return CTMRG{ctmrgscheme}(
         tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
@@ -133,7 +133,6 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     return envfix
 end
 
-
 """
     ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     
@@ -165,7 +164,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
     ϵ = 0.0
-    Pleft, Pright = Zygote.Buffer.(projector_type(T, size(state)))  # Use Zygote.Buffer instead of @diffset to avoid ZeroTangent errors in _setindex
+    P_top, P_bottom = Zygote.Buffer.(projector_type(T, size(state)))  # Use Zygote.Buffer instead of @diffset to avoid ZeroTangent errors in _setindex
 
     for col in 1:size(state, 2)
         cprev = _prev(col, size(state, 2))
@@ -192,11 +191,10 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
 
             # SVD half-infinite environment
             trscheme = if alg.trscheme isa FixedSpaceTruncation
-                truncspace(space(env.edges[WEST, row, cnext], 1))
+                truncspace(space(env.edges[WEST, row, col], 1))
             else
                 alg.trscheme
             end
-            @tensor QQ[-1 -2 -3; -4 -5 -6] := Q_sw[-1 -2 -3; 1 2 3] * Q_nw[1 2 3; -4 -5 -6]
             @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
                 Q_sw[χ_EB D_EBabove D_EBbelow; χ D1 D2] *
                 Q_nw[χ D1 D2; χ_ET D_ETabove D_ETbelow]
@@ -213,9 +211,9 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
             end
 
             # Compute projectors
-            Pl, Pr = build_projectors(U, S, V, Q_sw, Q_nw)
-            Pleft[row, col] = Pl
-            Pright[row, col] = Pr
+            Pt, Pb = build_projectors(U, S, V, Q_sw, Q_nw)
+            P_top[row, col] = Pt
+            P_bottom[row, col] = Pb
         end
 
         # Use projectors to grow the corners & edges
@@ -223,8 +221,8 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
             rprev = _prev(row, size(state, 1))
             C_sw, C_nw, T_w = grow_env_left(
                 state[row, col],
-                Pleft[rprev, col],
-                Pright[row, col],
+                P_left[rprev, col],
+                P_right[row, col],
                 env.corners[SOUTHWEST, row, cprev],
                 env.corners[NORTHWEST, row, cprev],
                 env.edges[SOUTH, row, col],
@@ -237,7 +235,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
         end
     end
 
-    return CTMRGEnv(corners, edges), (; Pleft=copy(Pleft), Pright=copy(Pright), ϵ)
+    return CTMRGEnv(corners, edges), (; P_left=copy(P_top), P_right=copy(P_bottom), ϵ)
 end
 
 # Compute enlarged corners
@@ -276,12 +274,12 @@ end
 
 # Build projectors from SVD and enlarged SW & NW corners
 function build_projectors(
-    U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q_SW, Q_NW
+    U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q, Q_next
 ) where {E<:ElementarySpace}
     isqS = sdiag_inv_sqrt(S)
-    P_bottom = Q_NW * V' * isqS
-    P_top = isqS * U' * Q_SW
-    return P_bottom, P_top
+    P_left = Q_next * V' * isqS
+    P_right = isqS * U' * Q
+    return P_left, P_right
 end
 
 # Apply projectors to entire left half-environment to grow SW & NW corners, and W edge
