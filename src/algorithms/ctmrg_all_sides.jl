@@ -56,7 +56,10 @@ function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}
     P_left, P_right = Zygote.Buffer.(projector_type(env.edges))
     U, V = Zygote.Buffer.(projector_type(env.edges))
     Stype = tensormaptype(  # Corner type but with real numbers
-        spacetype(env.corners[1]), 1, 1, Matrix{real(scalartype(env.corners[1]))}
+        spacetype(env.corners[1]),
+        1,
+        1,
+        Matrix{real(scalartype(env.corners[1]))},
     )
     S = Zygote.Buffer(Array{Stype,3}(undef, size(env.corners)))
     ϵ = 0.0
@@ -87,9 +90,9 @@ function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}
         else
             alg.svd_alg
         end
-        @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
-            Q[dir, r, c][χ_EB D_EBabove D_EBbelow; χ D1 D2] *
-            Q[_next(dir, 4), next_rc...][χ D1 D2; χ_ET D_ETabove D_ETbelow]
+        @autoopt @tensor QQ[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+            Q[dir, r, c][χ_in D_inabove D_inbelow; χ D1 D2] *
+            Q[_next(dir, 4), next_rc...][χ D1 D2; χ_out D_outabove D_outbelow]
         U_local, S_local, V_local, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
         U[dir, r, c] = U_local
         S[dir, r, c] = S_local
@@ -124,47 +127,47 @@ function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
         rnext = _next(r, size(state, 1))
         cprev = _prev(c, size(state, 2))
         cnext = _next(c, size(state, 2))
-        @diffset @tensor corners[NORTHWEST, r, c][-1; -2] :=
-            P_right[WEST, rnext, c][-1; 1 2 3] *
-            Q[NORTHWEST, r, c][1 2 3; 4 5 6] *
-            P_left[NORTH, r, c][4 5 6; -2]
-        @diffset @tensor corners[NORTHEAST, r, c][-1; -2] :=
-            P_right[NORTH, r, cprev][-1; 1 2 3] *
-            Q[NORTHEAST, r, c][1 2 3; 4 5 6] *
-            P_left[EAST, r, c][4 5 6; -2]
-        @diffset @tensor corners[SOUTHEAST, r, c][-1; -2] :=
-            P_right[EAST, rprev, c][-1; 1 2 3] *
-            Q[SOUTHEAST, r, c][1 2 3; 4 5 6] *
-            P_left[SOUTH, r, c][4 5 6; -2]
-        @diffset @tensor corners[SOUTHWEST, r, c][-1; -2] :=
-            P_right[SOUTH, r, cnext][-1; 1 2 3] *
-            Q[SOUTHWEST, r, c][1 2 3; 4 5 6] *
-            P_left[WEST, r, c][4 5 6; -2]
+        @diffset @autoopt @tensor corners[NORTHWEST, r, c][χ_S; χ_E] :=
+            P_right[WEST, rnext, c][χ_S; χ1 D1 D2] *
+            Q[NORTHWEST, r, c][χ1 D1 D2; χ2 D3 D4] *
+            P_left[NORTH, r, c][χ2 D3 D4; χ_E]
+        @diffset @autoopt @tensor corners[NORTHEAST, r, c][χ_W; χ_S] :=
+            P_right[NORTH, r, cprev][χ_W; χ1 D1 D2] *
+            Q[NORTHEAST, r, c][χ1 D1 D2; χ2 D3 D4] *
+            P_left[EAST, r, c][χ2 D3 D4; χ_S]
+        @diffset @autoopt @tensor corners[SOUTHEAST, r, c][χ_N; χ_W] :=
+            P_right[EAST, rprev, c][χ_N; χ1 D1 D2] *
+            Q[SOUTHEAST, r, c][χ1 D1 D2; χ2 D3 D4] *
+            P_left[SOUTH, r, c][χ2 D3 D4; χ_W]
+        @diffset @autoopt @tensor corners[SOUTHWEST, r, c][χ_E; χ_N] :=
+            P_right[SOUTH, r, cnext][χ_E; χ1 D1 D2] *
+            Q[SOUTHWEST, r, c][χ1 D1 D2; χ2 D3 D4] *
+            P_left[WEST, r, c][χ2 D3 D4; χ_N]
 
-        @diffset @tensor edges[NORTH, r, c][-1 -2 -3; -4] :=
-            env.edges[NORTH, rprev, c][1 2 3; 4] *
-            state[r, c][9; 2 5 -2 7] *
-            conj(state[r, c][9; 3 6 -3 8]) *
-            P_left[NORTH, r, c][4 5 6; -4] *
-            P_right[NORTH, r, cprev][-1; 1 7 8]
-        @diffset @tensor edges[EAST, r, c][-1 -2 -3; -4] :=
-            env.edges[EAST, r, _next(c, end)][1 2 3; 4] *
-            state[r, c][9; 7 2 5 -2] *
-            conj(state[r, c][9; 8 3 6 -3]) *
-            P_left[EAST, r, c][4 5 6; -4] *
-            P_right[EAST, rprev, c][-1; 1 7 8]
-        @diffset @tensor edges[SOUTH, r, c][-1 -2 -3; -4] :=
-            env.edges[SOUTH, _next(r, end), c][1 2 3; 4] *
-            state[r, c][9; -2 7 2 5] *
-            conj(state[r, c][9; -3 8 3 6]) *
-            P_left[SOUTH, r, c][4 5 6; -4] *
-            P_right[SOUTH, r, cnext][-1; 1 7 8]
-        @diffset @tensor edges[WEST, r, c][-1 -2 -3; -4] :=
-            env.edges[WEST, r, _prev(c, end)][1 2 3; 4] *
-            state[r, c][9; 5 -2 7 2] *
-            conj(state[r, c][9; 6 -3 8 3]) *
-            P_left[WEST, r, c][4 5 6; -4] *
-            P_right[WEST, rnext, c][-1; 1 7 8]
+        @diffset @autoopt @tensor edges[NORTH, r, c][χ_W D_Sab D_Sbe; χ_E] :=
+            env.edges[NORTH, rprev, c][χ1 D1 D2; χ2] *
+            state[r, c][d; D1 D3 D_Sab D5] *
+            conj(state[r, c][d; D2 D4 D_Sbe D6]) *
+            P_left[NORTH, r, c][χ2 D3 D4; χ_E] *
+            P_right[NORTH, r, cprev][χ_W; χ1 D5 D6]
+        @diffset @autoopt @tensor edges[EAST, r, c][χ_N D_Wab D_Wbe; χ_S] :=
+            env.edges[EAST, r, _next(c, end)][χ1 D1 D2; χ2] *
+            state[r, c][d; D5 D1 D3 D_Wab] *
+            conj(state[r, c][d; D6 D2 D4 D_Wbe]) *
+            P_left[EAST, r, c][χ2 D3 D4; χ_S] *
+            P_right[EAST, rprev, c][χ_N; χ1 D5 D6]
+        @diffset @autoopt @tensor edges[SOUTH, r, c][χ_E D_Nab D_Nbe; χ_W] :=
+            env.edges[SOUTH, _next(r, end), c][χ1 D1 D2; χ2] *
+            state[r, c][d; D_Nab D5 D1 D3] *
+            conj(state[r, c][d; D_Nbe D6 D2 D4]) *
+            P_left[SOUTH, r, c][χ2 D3 D4; χ_W] *
+            P_right[SOUTH, r, cnext][χ_E; χ1 D5 D6]
+        @diffset @autoopt @tensor edges[WEST, r, c][χ_S D_Eab D_Ebe; χ_N] :=
+            env.edges[WEST, r, _prev(c, end)][χ1 D1 D2; χ2] *
+            state[r, c][d; D3 D_Eab D5 D1] *
+            conj(state[r, c][d; D4 D_Ebe D6 D2]) *
+            P_left[WEST, r, c][χ2 D3 D4; χ_N] *
+            P_right[WEST, rnext, c][χ_S; χ1 D5 D6]
     end
 
     @diffset corners[:, :, :] ./= norm.(corners[:, :, :])

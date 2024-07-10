@@ -371,16 +371,16 @@ function correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
     ξ = Array{Float64,3}(undef, (2, size(peps)...))  # First index picks horizontal or vertical direction
     λ = Array{ComplexF64,4}(undef, (2, howmany, size(peps)...))
     for r in 1:size(peps, 1), c in 1:size(peps, 2)
-        @tensor transferh[-1 -2 -3 -4; -5 -6 -7 -8] :=
-            env.edges[NORTH, _prev(r, end), c][-1 1 2; -5] *
-            peps[r, c][5; 1 -6 3 -2] *
-            conj(peps[r, c][5; 2 -7 4 -3]) *
-            env.edges[SOUTH, _next(r, end), c][-8 3 4; -4]
-        @tensor transferv[-1 -2 -3 -4; -5 -6 -7 -8] :=
-            env.edges[EAST, r, _next(c, end)][-5 1 2; -1] *
-            peps[r, c][5; -6 1 -2 3] *
-            conj(peps[r, c][5; -7 2 -3 4]) *
-            env.edges[WEST, r, _prev(c, end)][-4 3 4; -8]
+        @autoopt @tensor transferh[χ_LT D_Lab D_Lbe χ_LB; χ_RT D_Rab D_Rbe χ_RB] :=
+            env.edges[NORTH, _prev(r, end), c][χ_LT D1 D2; χ_RT] *
+            peps[r, c][d; D1 D_Rab D3 D_Lab] *
+            conj(peps[r, c][d; D2 D_Rbe D4 D_Lbe]) *
+            env.edges[SOUTH, _next(r, end), c][χ_RB D3 D4; χ_LB]
+        @autoopt @tensor transferv[χ_TL D_Tab D_Tbe χ_TL; χ_BL D_Bab D_Bbe χ_BR] :=
+            env.edges[EAST, r, _next(c, end)][χ_TR D1 D2; χ_BR] *
+            peps[r, c][d; D_Tab D1 D_Bab D3] *
+            conj(peps[r, c][d; D_Tbe D2 D_Bbe D4]) *
+            env.edges[WEST, r, _prev(c, end)][χ_BL D3 D4; χ_TL]
 
         function lintransfer(v, t)
             @tensor v′[-1 -2 -3 -4] := t[-1 -2 -3 -4; 1 2 3 4] * v[1 2 3 4]
