@@ -35,8 +35,16 @@ Algorithm struct that represents the CTMRG algorithm for contracting infinite PE
 Each CTMRG run is converged up to `tol` where the singular value convergence of the
 corners as well as the norm is checked. The maximal and minimal number of CTMRG iterations
 is set with `maxiter` and `miniter`. Different levels of output information are printed
-depending on `verbosity` (0, 1 or 2). The projectors are computed from `svd_alg` SVDs
-where the truncation scheme is set via `trscheme`.
+depending on `verbosity` (0, 1 or 2).
+
+The projectors are computed from `svd_alg` SVDs where the truncation scheme is set via
+`trscheme`.
+
+In general, two different schemes can be selected with `ctmrgscheme` which determine how
+CTMRG is implemented. It can either be `:LeftMoves`, where the projectors are succesively
+computed on the western side, and then applied and rotated. Or with `AllSides`, all projectors
+are computed and applied simultaneously on all sides, where in particular the corners get
+contracted with two projectors at the same time.
 """
 struct CTMRG{S}
     tol::Float64

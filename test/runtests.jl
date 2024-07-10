@@ -20,6 +20,12 @@ end
         @time @safetestset "SVD wrapper" begin
             include("ctmrg/svd_wrapper.jl")
         end
+        @time @safetestset "SVD wrapper" begin
+            include("ctmrg/unitcell.jl")
+        end
+        @time @safetestset "SVD wrapper" begin
+            include("ctmrg/leftmoves_allsides.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "MPS"
         @time @safetestset "VUMPS" begin

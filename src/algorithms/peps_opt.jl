@@ -1,32 +1,59 @@
-abstract type GradMode end
+abstract type GradMode{F} end
 
 """
-    struct NaiveAD <: GradMode
-
-Gradient mode for CTMRG using AD.
-"""
-struct NaiveAD <: GradMode end
-
-"""
-    struct GeomSum <: GradMode
+    struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
+                   verbosity=0, iterscheme=:FixedIter) <: GradMode
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 """
-@kwdef struct GeomSum <: GradMode
-    maxiter::Int = Defaults.fpgrad_maxiter
-    tol::Real = Defaults.fpgrad_tol
-    verbosity::Int = 0
+struct GeomSum{F} <: GradMode{F}
+    maxiter::Int
+    tol::Real
+    verbosity::Int
+end
+function GeomSum(;
+    maxiter=Defaults.fpgrad_maxiter,
+    tol=Defaults.fpgrad_tol,
+    verbosity=0,
+    iterscheme=:FixedIter,
+)
+    return GeomSum{iterscheme}(maxiter, tol, verbosity)
 end
 
 """
-    struct ManualIter <: GradMode
+    struct ManualIter(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
+                      verbosity=0, iterscheme=:FixedIter) <: GradMode
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 """
-@kwdef struct ManualIter <: GradMode
-    maxiter::Int = Defaults.fpgrad_maxiter
-    tol::Real = Defaults.fpgrad_tol
-    verbosity::Int = 0
+struct ManualIter{F} <: GradMode{F}
+    maxiter::Int
+    tol::Real
+    verbosity::Int
+end
+function ManualIter(;
+    maxiter=Defaults.fpgrad_maxiter,
+    tol=Defaults.fpgrad_tol,
+    verbosity=0,
+    iterscheme=:FixedIter,
+)
+    return ManualIter{iterscheme}(maxiter, tol, verbosity)
+end
+
+"""
+    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=:FixedIter) <: GradMode
+
+Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
+problem using iterative solvers.
+"""
+struct LinSolver{F} <: GradMode{F}
+    solver::KrylovKit.LinearSolver
+end
+function LinSolver(;
+    solver=KrylovKit.GMRES(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
+    iterscheme=:FixedIter,
+)
+    return LinSolver{iterscheme}(solver)
 end
 
 """
@@ -103,24 +130,32 @@ Evaluating the gradient of the cost function for CTMRG:
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
 
+# function _rrule(
+#     gradmode::Union{GradMode,KrylovKit.LinearSolver},
+#     ::RuleConfig,
+#     ::typeof(MPSKit.leading_boundary),
+#     envinit,
+#     state,
+#     alg::CTMRG,
+# )
+
 function _rrule(
-    gradmode::Union{GradMode,KrylovKit.LinearSolver},
+    gradmode::GradMode{:DiffGauge},
     ::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
     alg::CTMRG,
 )
-    envs = leading_boundary(envinit, state, alg)
-    #TODO: fixed space for unit cells
+    envs = leading_boundary(envinit, state, alg)  #TODO: fixed space for unit cells
 
-    function leading_boundary_pullback(Δenvs′)
+    function leading_boundary_diffgauge_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
         # TODO: make this rrule_via_ad so it's zygote-agnostic
         _, env_vjp = pullback(state, envs) do A, x
-            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
+            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])[1]
         end
 
         # evaluate the geometric sum
@@ -131,7 +166,41 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envs, leading_boundary_pullback
+    return envs, leading_boundary_diffgauge_pullback
+end
+
+# Here f is differentiated from an pre-computed SVD with fixed U, S and V
+function _rrule(
+    gradmode::GradMode{:FixedIter},
+    ::RuleConfig,
+    ::typeof(MPSKit.leading_boundary),
+    envinit,
+    state,
+    alg::CTMRG,
+)
+    @assert alg.ctmrgscheme isa AllSides
+    envs = leading_boundary(envinit, state, alg)
+    envsconv, info = ctmrg_iter(state, envs, alg)
+    envsfix, signs = gauge_fix(envs, envsconv)
+    svd_alg_fix = fix_svd(alg, info.U, info.S, info.V, signs)
+
+    function leading_boundary_fixediter_pullback(Δenvs′)
+        Δenvs = unthunk(Δenvs′)
+
+        _, env_vjp = pullback(state, envsfix) do A, x
+            e, = ctmrg_iter(A, x, svd_alg_fix)
+            return fix_global_phases(x, e)
+        end
+
+        # evaluate the geometric sum
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
+        ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
+
+        return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
+    end
+
+    return envsfix, leading_boundary_fixediter_pullback
 end
 
 @doc """
