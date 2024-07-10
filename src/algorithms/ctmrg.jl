@@ -175,6 +175,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
 
     for col in 1:size(state, 2)
         cprev = _prev(col, size(state, 2))
+        cnext = _next(col, size(state, 2))
 
         # Compute projectors
         for row in 1:size(state, 1)

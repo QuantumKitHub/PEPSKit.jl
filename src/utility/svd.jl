@@ -7,8 +7,7 @@ using TensorKit:
     NoTruncation,
     TruncationSpace
 
-# Enables backwards compatibility without package extensions
-CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
+const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
     struct SVDAdjoint(; fwd_alg = TensorKit.SVD(), rrule_alg = nothing,
@@ -81,7 +80,6 @@ function TensorKit._compute_svddata!(
     dims = SectorDict{I,Int}()
     local Sdata
     for (c, b) in blocks(t)
-        x₀ = randn(eltype(b), size(b, 1))
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
@@ -89,8 +87,10 @@ function TensorKit._compute_svddata!(
             Udata[c] = U[:, 1:howmany]
             Vdata[c] = V[1:howmany, :]
         else
+            x₀ = randn(eltype(b), size(b, 1))
             S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
+                @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
                 U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
                 Udata[c] = U[:, 1:howmany]
                 Vdata[c] = V[1:howmany, :]
@@ -100,8 +100,8 @@ function TensorKit._compute_svddata!(
             end
         end
 
-        S = @view S[1:howmany]
-        if @isdefined Sdata # cannot easily infer the type of Σ, so use this construction
+        resize!(S, howmany)
+        if @isdefined Sdata
             Sdata[c] = S
         else
             Sdata = SectorDict(c => S)
