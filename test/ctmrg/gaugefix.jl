@@ -2,6 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
+using Accessors
 
 using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 
@@ -46,9 +47,9 @@ end
 
     verbosity = 1
     alg = CTMRG(;
-        trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=400, verbosity
+        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
     )
-    alg_fixed = CTMRG(; trscheme=truncdim(dim(ctm_space)), verbosity, fixedspace=true)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
@@ -71,9 +72,9 @@ end
 
     verbosity = 1
     alg = CTMRG(;
-        trscheme=truncspace(ctm_space), tol=1e-10, miniter=4, maxiter=400, verbosity
+        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
     )
-    alg_fixed = CTMRG(; trscheme=truncspace(ctm_space), verbosity, fixedspace=true)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)

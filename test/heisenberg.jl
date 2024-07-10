@@ -8,7 +8,7 @@ using OptimKit
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=1)
+ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=1, trscheme=truncdim(χenv))
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
