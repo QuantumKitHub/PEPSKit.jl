@@ -2,9 +2,15 @@ abstract type GradMode{F} end
 
 """
     struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                   verbosity=0, iterscheme=:FixedIter) <: GradMode
+                   verbosity=0, iterscheme=:FixedIter) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:FixedIter`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:DiffGauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
 struct GeomSum{F} <: GradMode{F}
     maxiter::Int
@@ -22,9 +28,15 @@ end
 
 """
     struct ManualIter(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                      verbosity=0, iterscheme=:FixedIter) <: GradMode
+                      verbosity=0, iterscheme=:FixedIter) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:FixedIter`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:DiffGauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
 struct ManualIter{F} <: GradMode{F}
     maxiter::Int
@@ -41,10 +53,16 @@ function ManualIter(;
 end
 
 """
-    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=:FixedIter) <: GradMode
+    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=:FixedIter) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:FixedIter`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:DiffGauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
 struct LinSolver{F} <: GradMode{F}
     solver::KrylovKit.LinearSolver
@@ -57,8 +75,8 @@ function LinSolver(;
 end
 
 """
-    PEPSOptimize{G}(; boundary_alg = CTMRG(), optimizer::OptimKit.OptimizationAlgorithm = LBFGS()
-                    reuse_env::Bool = true, gradient_alg::G, verbosity::Int = 0)
+    PEPSOptimize{G}(; boundary_alg=CTMRG(), optimizer::OptimKit.OptimizationAlgorithm=LBFGS()
+                    reuse_env::Bool=true, gradient_alg::G=LinSolver(), verbosity::Int=0)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
@@ -69,14 +87,36 @@ step by setting `reuse_env` to true. Otherwise a random environment is used at e
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 Different levels of output verbosity can be activated using `verbosity` (0, 1 or 2).
 """
-@kwdef struct PEPSOptimize{G}
-    boundary_alg::CTMRG = CTMRG()  # Algorithm to find boundary environment
-    optimizer::OptimKit.OptimizationAlgorithm = LBFGS(
-        4; maxiter=100, gradtol=1e-4, verbosity=2
-    )
-    reuse_env::Bool = true  # Reuse environment of previous optimization as initial guess for next
-    gradient_alg::G = GeomSum() # Algorithm to solve gradient linear problem
-    verbosity::Int = 0
+struct PEPSOptimize{G}
+    boundary_alg::CTMRG
+    optimizer::OptimKit.OptimizationAlgorithm
+    reuse_env::Bool
+    gradient_alg::G
+    verbosity::Int
+
+    function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
+        boundary_alg::CTMRG{S},
+        optimizer,
+        reuse_env,
+        gradient_alg::G,
+        verbosity,
+    ) where {S,G}
+        if gradient_alg isa GradMode
+            if S == :LeftMoves && G.parameters[1] == :FixedIter
+                throw(ArgumentError(":LeftMoves and :FixedIter are not compatible"))
+            end
+        end
+        return new{G}(boundary_alg, optimizer, reuse_env, gradient_alg, verbosity)
+    end
+end
+function PEPSOptimize(;
+    boundary_alg=CTMRG(),
+    optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
+    reuse_env=true,
+    gradient_alg=LinSolver(),
+    verbosity=0,
+)
+    return PEPSOptimize(boundary_alg, optimizer, reuse_env, gradient_alg, verbosity)
 end
 
 """

@@ -14,12 +14,13 @@ ctm_alg = CTMRG(;
     maxiter=100,
     verbosity=1,
     trscheme=truncdim(χenv),
-    svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-12)),
+    svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
+    ctmrgscheme=:AllSides
 )
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
-    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6, maxiter=100)),
+    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6, maxiter=100), iterscheme=:FixedIter),
     reuse_env=true,
     verbosity=2,
 )
