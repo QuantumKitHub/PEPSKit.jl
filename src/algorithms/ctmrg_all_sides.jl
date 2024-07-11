@@ -13,35 +13,38 @@ function ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG{:AllSides})
 end
 
 # Compute enlarged corners and edges for all directions and unit cell entries
-function enlarge_corners_edges(state, env::CTMRGEnv)
-    map(Iterators.product(axes(env.corners)...)) do (dir, r, c)
+function enlarge_corners_edges(state, env::CTMRGEnv{C,T}) where {C,T}
+    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
+    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(env.corners)))
+    drc_combinations = collect(Iterators.product(axes(env.corners)...))
+    @fwdthreads for (dir, r, c) in drc_combinations
         rprev = _prev(r, size(state, 1))
         rnext = _next(r, size(state, 1))
         cprev = _prev(c, size(state, 2))
         cnext = _next(c, size(state, 2))
-        if dir == NORTHWEST
-            return northwest_corner(
+        Q[dir, r, c] = if dir == NORTHWEST
+            northwest_corner(
                 env.edges[WEST, r, cprev],
                 env.corners[NORTHWEST, rprev, cprev],
                 env.edges[NORTH, rprev, c],
                 state[r, c],
             )
         elseif dir == NORTHEAST
-            return northeast_corner(
+            northeast_corner(
                 env.edges[NORTH, rprev, c],
                 env.corners[NORTHEAST, rprev, cnext],
                 env.edges[EAST, r, cnext],
                 state[r, c],
             )
         elseif dir == SOUTHEAST
-            return southeast_corner(
+            southeast_corner(
                 env.edges[EAST, r, cnext],
                 env.corners[SOUTHEAST, rnext, cnext],
                 env.edges[SOUTH, rnext, c],
                 state[r, c],
             )
         elseif dir == SOUTHWEST
-            return southwest_corner(
+            southwest_corner(
                 env.edges[SOUTH, rnext, c],
                 env.corners[SOUTHWEST, rnext, cprev],
                 env.edges[WEST, r, cprev],
@@ -49,31 +52,28 @@ function enlarge_corners_edges(state, env::CTMRGEnv)
             )
         end
     end
+
+    return copy(Q)
 end
 
 # Build projectors from SVD and enlarged corners
-function build_projectors(Q, env::CTMRGEnv, alg::ProjectorAlg{A,T}) where {A,T}
+function build_projectors(Q, env::CTMRGEnv{C,E}, alg::ProjectorAlg{A,T}) where {C,E,A,T}
     P_left, P_right = Zygote.Buffer.(projector_type(env.edges))
     U, V = Zygote.Buffer.(projector_type(env.edges))
-    Stype = tensormaptype(  # Corner type but with real numbers
-        spacetype(env.corners[1]),
-        1,
-        1,
-        Matrix{real(scalartype(env.corners[1]))},
-    )
+    Stype = tensormaptype(spacetype(C), 1, 1, Matrix{real(scalartype(E))})  # Corner type but with real numbers
     S = Zygote.Buffer(Array{Stype,3}(undef, size(env.corners)))
     ϵ = 0.0
-    rsize, csize = size(env.corners)[2:3]
-    for dir in 1:4, r in 1:rsize, c in 1:csize
+    drc_combinations = collect(Iterators.product(axes(env.corners)...))
+    @fwdthreads for (dir, r, c) in drc_combinations
         # Row-column index of next enlarged corner
         next_rc = if dir == 1
-            (r, _next(c, csize))
+            (r, _next(c, size(env.corners, 3)))
         elseif dir == 2
-            (_next(r, rsize), c)
+            (_next(r, size(env.corners, 2)), c)
         elseif dir == 3
-            (r, _prev(c, csize))
+            (r, _prev(c, size(env.corners, 3)))
         elseif dir == 4
-            (_prev(r, rsize), c)
+            (_prev(r, size(env.corners, 2)), c)
         end
 
         # SVD half-infinite environment
@@ -122,7 +122,8 @@ end
 function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
-    for c in 1:size(state, 2), r in 1:size(state, 1)
+    rc_combinations = collect(Iterators.product(axes(state)...))
+    @fwdthreads for (r, c) in rc_combinations
         rprev = _prev(r, size(state, 1))
         rnext = _next(r, size(state, 1))
         cprev = _prev(c, size(state, 2))

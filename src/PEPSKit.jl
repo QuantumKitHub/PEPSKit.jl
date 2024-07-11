@@ -11,6 +11,7 @@ using ChainRulesCore, Zygote
 include("utility/util.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
+include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 
