@@ -135,7 +135,7 @@ function ChainRulesCore.rrule(
     alg::SVDAdjoint{F,R,B};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-) where {F<:Union{IterSVD,FixedSVD},R,B}
+) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
     function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))

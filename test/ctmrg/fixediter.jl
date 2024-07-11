@@ -44,6 +44,7 @@ unitcells = [(1, 1), (3, 4)]
     @test check_elementwise_convergence(env_conv1, env_fixedsvd)
 end
 
+# TODO: Why doesn't FixedIter work with IterSVD?
 ##
 # ctm_alg = CTMRG(;
 #     tol=1e-12,

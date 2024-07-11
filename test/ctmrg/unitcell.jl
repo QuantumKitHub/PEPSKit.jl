@@ -39,7 +39,7 @@ end
 env = CTMRGEnv(corners, edges)
 
 # apply one CTMRG iteration with fixeds
-ctm_alg = CTMRG(; fixedspace=true)
+ctm_alg = CTMRG(; trscheme=FixedSpaceTruncation())
 env′, = ctmrg_iter(peps, env, ctm_alg)
 
 # compute random expecation value to test matching bonds

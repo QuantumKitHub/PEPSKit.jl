@@ -8,6 +8,8 @@ using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
+# scalartypes = [ComplexF64]
+# unitcells = [(2, 2)]
 χ = 6
 
 function _make_symmetric(psi)
@@ -43,16 +45,16 @@ end
     psi = _make_symmetric(psi)
 
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
+    # psi = InfinitePEPS(physical_space, peps_space; unitcell)
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
     verbosity = 1
     alg = CTMRG(;
-        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
+        tol=1e-10, miniter=4, maxiter=5000, verbosity, trscheme=FixedSpaceTruncation()
     )
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
+    ctm2, = ctmrg_iter(psi, ctm, alg)
     ctm_fixed, = gauge_fix(ctm, ctm2)
     @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-4)
 end
@@ -74,7 +76,9 @@ end
     alg = CTMRG(;
         tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
     )
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
+    alg_fixed = CTMRG(;
+        verbosity, svd_alg=alg.projector_alg.svd_alg, trscheme=FixedSpaceTruncation()
+    )
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)

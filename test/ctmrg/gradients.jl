@@ -17,15 +17,22 @@ models = [square_lattice_heisenberg(), square_lattice_pwave()]
 names = ["Heisenberg", "p-wave superconductor"]
 Random.seed!(42039482030)
 tol = 1e-8
-boundary_alg = CTMRG(; tol=tol, miniter=4, maxiter=100, verbosity=0, ctmrgscheme=:AllSides)
+boundary_alg = CTMRG(;
+    tol=tol,
+    miniter=4,
+    maxiter=100,
+    verbosity=0,
+    ctmrgscheme=:AllSides,
+    svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
+)
 gradmodes = [
     nothing,
     GeomSum(; tol, iterscheme=:FixedIter),
     GeomSum(; tol, iterscheme=:DiffGauge),
     ManualIter(; tol, iterscheme=:FixedIter),
     ManualIter(; tol, iterscheme=:DiffGauge),
-    LinSolve(; alg=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:FixedIter),
-    LinSolve(; alg=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:DiffGauge),
+    LinSolver(; solver=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:FixedIter),
+    LinSolver(; solver=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:DiffGauge),
 ]
 steps = -0.01:0.005:0.01
 
