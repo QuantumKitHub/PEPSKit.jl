@@ -21,7 +21,7 @@ end
             include("ctmrg/svd_wrapper.jl")
         end
         @time @safetestset "SVD wrapper" begin
-            include("ctmrg/fixedsvd.jl")
+            include("ctmrg/fixediter.jl")
         end
         @time @safetestset "SVD wrapper" begin
             include("ctmrg/unitcell.jl")
