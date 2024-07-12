@@ -361,7 +361,7 @@ Compute the PEPS correlation length based on the horizontal and vertical
 transfer matrices. Additionally the (normalized) eigenvalue spectrum is
 returned. Specify the number of computed eigenvalues with `howmany`.
 """
-function correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
+function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
     ξ = Array{Float64,3}(undef, (2, size(peps)...))  # First index picks horizontal or vertical direction
     λ = Array{ComplexF64,4}(undef, (2, howmany, size(peps)...))
     for r in 1:size(peps, 1), c in 1:size(peps, 2)

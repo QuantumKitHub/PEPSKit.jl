@@ -100,50 +100,47 @@ function _contract_new_corner(P_right, Q, P_left)
         P_right[χ_in; χ1 D1 D2] * Q[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
 end
 function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
-    corners::typeof(env.corners) = copy(env.corners)
-    edges::typeof(env.edges) = copy(env.edges)
+    corners = Zygote.Buffer(copy(env.corners))
+    edges = Zygote.Buffer(copy(env.edges))
     rc_combinations = collect(Iterators.product(axes(state)...))
     @fwdthreads for (r, c) in rc_combinations
         rprev = _prev(r, size(state, 1))
         rnext = _next(r, size(state, 1))
         cprev = _prev(c, size(state, 2))
         cnext = _next(c, size(state, 2))
-        C_NW = _contract_new_corner(
+
+        corners[NORTHWEST, r, c] = _contract_new_corner(
             P_right[WEST, rnext, c], Q[NORTHWEST, r, c], P_left[NORTH, r, c]
         )
-        C_NE = _contract_new_corner(
+        corners[NORTHEAST, r, c] = _contract_new_corner(
             P_right[NORTH, r, cprev], Q[NORTHEAST, r, c], P_left[EAST, r, c]
         )
-        C_SE = _contract_new_corner(
+        corners[SOUTHEAST, r, c] = _contract_new_corner(
             P_right[EAST, rprev, c], Q[SOUTHEAST, r, c], P_left[SOUTH, r, c]
         )
-        C_SW = _contract_new_corner(
+        corners[SOUTHWEST, r, c] = _contract_new_corner(
             P_right[SOUTH, r, cnext], Q[SOUTHWEST, r, c], P_left[WEST, r, c]
         )
-        @diffset corners[NORTHWEST, r, c] = C_NW  # For some reason @diffset can't directly assign to corners[...]
-        @diffset corners[NORTHEAST, r, c] = C_NE
-        @diffset corners[SOUTHEAST, r, c] = C_SE
-        @diffset corners[SOUTHWEST, r, c] = C_SW
 
-        @diffset @autoopt @tensor edges[NORTH, r, c][χ_W D_Sab D_Sbe; χ_E] :=
+        @autoopt @tensor edges[NORTH, r, c][χ_W D_Sab D_Sbe; χ_E] :=
             env.edges[NORTH, rprev, c][χ1 D1 D2; χ2] *
             state[r, c][d; D1 D3 D_Sab D5] *
             conj(state[r, c][d; D2 D4 D_Sbe D6]) *
             P_left[NORTH, r, c][χ2 D3 D4; χ_E] *
             P_right[NORTH, r, cprev][χ_W; χ1 D5 D6]
-        @diffset @autoopt @tensor edges[EAST, r, c][χ_N D_Wab D_Wbe; χ_S] :=
+        @autoopt @tensor edges[EAST, r, c][χ_N D_Wab D_Wbe; χ_S] :=
             env.edges[EAST, r, cnext][χ1 D1 D2; χ2] *
             state[r, c][d; D5 D1 D3 D_Wab] *
             conj(state[r, c][d; D6 D2 D4 D_Wbe]) *
             P_left[EAST, r, c][χ2 D3 D4; χ_S] *
             P_right[EAST, rprev, c][χ_N; χ1 D5 D6]
-        @diffset @autoopt @tensor edges[SOUTH, r, c][χ_E D_Nab D_Nbe; χ_W] :=
+        @autoopt @tensor edges[SOUTH, r, c][χ_E D_Nab D_Nbe; χ_W] :=
             env.edges[SOUTH, rnext, c][χ1 D1 D2; χ2] *
             state[r, c][d; D_Nab D5 D1 D3] *
             conj(state[r, c][d; D_Nbe D6 D2 D4]) *
             P_left[SOUTH, r, c][χ2 D3 D4; χ_W] *
             P_right[SOUTH, r, cnext][χ_E; χ1 D5 D6]
-        @diffset @autoopt @tensor edges[WEST, r, c][χ_S D_Eab D_Ebe; χ_N] :=
+        @autoopt @tensor edges[WEST, r, c][χ_S D_Eab D_Ebe; χ_N] :=
             env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
             state[r, c][d; D3 D_Eab D5 D1] *
             conj(state[r, c][d; D4 D_Ebe D6 D2]) *
@@ -151,7 +148,9 @@ function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
             P_right[WEST, rnext, c][χ_S; χ1 D5 D6]
     end
 
-    @diffset corners[:, :, :] ./= norm.(corners[:, :, :])
-    @diffset edges[:, :, :] ./= norm.(edges[:, :, :])
+    corners = copy(corners)
+    edges = copy(edges)
+    corners[:, :, :] ./= norm.(corners[:, :, :])
+    edges[:, :, :] ./= norm.(edges[:, :, :])
     return corners, edges
 end
