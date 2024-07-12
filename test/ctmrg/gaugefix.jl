@@ -21,7 +21,7 @@ schemes = [:simultaneous, :sequential]
 
     Random.seed!(29358293852)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
-    ctm = CTMRGEnv(psi; Venv=ctm_space)
+    ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
         tol=1e-10, maxiter=100, verbosity=1, trscheme=FixedSpaceTruncation(), ctmrgscheme
@@ -43,7 +43,7 @@ end
 
     Random.seed!(2938293852938)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(physical_space, peps_space; unitcell)
-    ctm = CTMRGEnv(psi; Venv=ctm_space)
+    ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
         tol=1e-10, maxiter=400, verbosity=1, trscheme=FixedSpaceTruncation(), ctmrgscheme

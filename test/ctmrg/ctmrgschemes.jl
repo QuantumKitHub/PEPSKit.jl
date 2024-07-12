@@ -16,10 +16,10 @@ unitcells = [(1, 1), (3, 4)]
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)
     env_sequential = leading_boundary(
-        CTMRGEnv(psi; Venv=ComplexSpace(χenv)), psi, ctm_alg_sequential
+        CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_sequential
     )
     env_simultaneous = leading_boundary(
-        CTMRGEnv(psi; Venv=ComplexSpace(χenv)), psi, ctm_alg_simultaneous
+        CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_simultaneous
     )
 
     # compare norms

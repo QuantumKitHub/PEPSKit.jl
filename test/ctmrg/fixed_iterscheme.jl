@@ -26,7 +26,7 @@ unitcells = [(1, 1), (3, 4)]
     # initialize states
     Random.seed!(2394823842)
     psi = InfinitePEPS(2, χbond; unitcell)
-    env_conv1 = leading_boundary(CTMRGEnv(psi; Venv=ComplexSpace(χenv)), psi, ctm_alg)
+    env_conv1 = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
 
     # do extra iteration to get SVD
     env_conv2, info = ctmrg_iter(psi, env_conv1, ctm_alg)
@@ -58,7 +58,7 @@ end
 # # initialize states
 # Random.seed!(91283219347)
 # psi = InfinitePEPS(2, χbond)
-# env_conv1 = leading_boundary(CTMRGEnv(psi; Venv=ComplexSpace(χenv)), psi, ctm_alg);
+# env_conv1 = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg);
 
 # # do extra iteration to get SVD
 # env_conv2, info = ctmrg_iter(psi, env_conv1, ctm_alg);
