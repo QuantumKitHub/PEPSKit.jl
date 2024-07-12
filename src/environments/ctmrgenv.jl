@@ -8,7 +8,7 @@ directions are labeled in clockwise direction, starting from the north-west corn
 edge respectively.
 
 Given arrays of corners `c` and edges `t`, they connect to the PEPS tensors at site `(r, c)`
-isn the unit cell as:
+in the unit cell as:
 ```
    c[1,r-1,c-1]---t[1,r-1,c]----c[2,r-1,c+1]
    |              ||            |
