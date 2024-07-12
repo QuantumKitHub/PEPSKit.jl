@@ -15,7 +15,7 @@ ctm_alg = CTMRG(;
     verbosity=1,
     trscheme=truncdim(χenv),
     svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
-    ctmrgscheme=:simultaneous
+    ctmrgscheme=:simultaneous,
 )
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,

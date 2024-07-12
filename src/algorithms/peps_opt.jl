@@ -18,10 +18,7 @@ struct GeomSum{F} <: GradMode{F}
     verbosity::Int
 end
 function GeomSum(;
-    maxiter=Defaults.fpgrad_maxiter,
-    tol=Defaults.fpgrad_tol,
-    verbosity=0,
-    iterscheme=:fixed,
+    maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol, verbosity=0, iterscheme=:fixed
 )
     return GeomSum{iterscheme}(maxiter, tol, verbosity)
 end
@@ -44,10 +41,7 @@ struct ManualIter{F} <: GradMode{F}
     verbosity::Int
 end
 function ManualIter(;
-    maxiter=Defaults.fpgrad_maxiter,
-    tol=Defaults.fpgrad_tol,
-    verbosity=0,
-    iterscheme=:fixed,
+    maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol, verbosity=0, iterscheme=:fixed
 )
     return ManualIter{iterscheme}(maxiter, tol, verbosity)
 end
@@ -219,7 +213,9 @@ function _rrule(
     svd_alg_fixed = SVDAdjoint(;
         fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
     )
-    alg_fixed = CTMRG(; svd_alg=svd_alg_fixed, trscheme=notrunc(), ctmrgscheme=:simultaneous)
+    alg_fixed = CTMRG(;
+        svd_alg=svd_alg_fixed, trscheme=notrunc(), ctmrgscheme=:simultaneous
+    )
 
     function leading_boundary_fixed_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)

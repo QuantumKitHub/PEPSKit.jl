@@ -48,5 +48,5 @@ unitcells = [(1, 1), (3, 4)]
     H = square_lattice_heisenberg(; unitcell)
     E_sequential = costfun(psi, env_sequential, H)
     E_simultaneous = costfun(psi, env_simultaneous, H)
-    @test E_sequential ≈ E_simultaneous rtol=1e-4
+    @test E_sequential ≈ E_simultaneous rtol = 1e-4
 end

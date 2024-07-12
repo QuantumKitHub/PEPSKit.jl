@@ -36,7 +36,9 @@ unitcells = [(1, 1), (3, 4)]
     # fix gauge of SVD
     U_fix, V_fix = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fix = SVDAdjoint(; fwd_alg=FixedSVD(U_fix, info.S, V_fix))
-    ctm_alg_fix = CTMRG(; svd_alg=svd_alg_fix, trscheme=notrunc(), ctmrgscheme=:simultaneous)
+    ctm_alg_fix = CTMRG(;
+        svd_alg=svd_alg_fix, trscheme=notrunc(), ctmrgscheme=:simultaneous
+    )
 
     # do iteration with FixedSVD
     env_fixedsvd, = ctmrg_iter(psi, env_conv1, ctm_alg_fix)
