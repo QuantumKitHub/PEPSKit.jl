@@ -52,7 +52,7 @@ end
 title = "Reverse rules for composite parts of the CTMRG fixed point with spacetype"
 @testset title * "$(Vspaces[i])" for i in eachindex(Pspaces)
     psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
-    env = CTMRGEnv(psi; Venv=Espaces[i])
+    env = CTMRGEnv(psi, Espaces[i])
 
     @testset "$f" for f in functions
         atol = f == leading_boundary ? sqrt(tol) : tol

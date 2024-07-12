@@ -43,7 +43,7 @@ end
     psi = _make_symmetric(psi)
 
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
-    ctm = CTMRGEnv(psi; Venv=ctm_space)
+    ctm = CTMRGEnv(psi, ctm_space)
 
     verbosity = 1
     alg = CTMRG(;
@@ -68,7 +68,7 @@ end
     psi = _make_symmetric(psi)
 
     Random.seed!(123456789)  # Seed RNG to make random environment consistent
-    ctm = CTMRGEnv(psi; Venv=ctm_space)
+    ctm = CTMRGEnv(psi, ctm_space)
 
     verbosity = 1
     alg = CTMRG(;

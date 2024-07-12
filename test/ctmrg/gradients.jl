@@ -36,7 +36,7 @@ steps = -0.01:0.005:0.01
     @testset "$alg_rrule" for alg_rrule in gradmodes
         dir = InfinitePEPS(Pspace, Vspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace, Vspace)
-        env = leading_boundary(CTMRGEnv(psi; Venv=Espace), psi, boundary_alg)
+        env = leading_boundary(CTMRGEnv(psi, Espace), psi, boundary_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
             dir;
