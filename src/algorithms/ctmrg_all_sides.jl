@@ -108,22 +108,22 @@ function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
         rnext = _next(r, size(state, 1))
         cprev = _prev(c, size(state, 2))
         cnext = _next(c, size(state, 2))
-        @diffset C_NW = _contract_new_corner(
+        C_NW = _contract_new_corner(
             P_right[WEST, rnext, c], Q[NORTHWEST, r, c], P_left[NORTH, r, c]
         )
-        @diffset C_NE = _contract_new_corner(
+        C_NE = _contract_new_corner(
             P_right[NORTH, r, cprev], Q[NORTHEAST, r, c], P_left[EAST, r, c]
         )
-        @diffset C_SE = _contract_new_corner(
+        C_SE = _contract_new_corner(
             P_right[EAST, rprev, c], Q[SOUTHEAST, r, c], P_left[SOUTH, r, c]
         )
-        @diffset C_SW = _contract_new_corner(
+        C_SW = _contract_new_corner(
             P_right[SOUTH, r, cnext], Q[SOUTHWEST, r, c], P_left[WEST, r, c]
         )
-        corners[NORTHWEST, r, c] = C_NW  # For some reason @diffset can't directly asign to corners[...]
-        corners[NORTHEAST, r, c] = C_NE
-        corners[SOUTHEAST, r, c] = C_SE
-        corners[SOUTHWEST, r, c] = C_SW
+        @diffset corners[NORTHWEST, r, c] = C_NW  # For some reason @diffset can't directly assign to corners[...]
+        @diffset corners[NORTHEAST, r, c] = C_NE
+        @diffset corners[SOUTHEAST, r, c] = C_SE
+        @diffset corners[SOUTHWEST, r, c] = C_SW
 
         @diffset @autoopt @tensor edges[NORTH, r, c][χ_W D_Sab D_Sbe; χ_E] :=
             env.edges[NORTH, rprev, c][χ1 D1 D2; χ2] *
