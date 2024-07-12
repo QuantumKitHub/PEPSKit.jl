@@ -2,6 +2,24 @@
     struct CTMRGEnv{C,T}
 
 Corner transfer-matrix environment containing unit-cell arrays of corner and edge tensors.
+The last two indices of the arrays correspond to the row and column indices of the unit
+cell, whereas the first index corresponds to the direction of the corner or edge tensor. The
+directions are labeled in clockwise direction, starting from the north-west corner and north
+edge respectively.
+
+Given arrays of corners `c` and edges `t`, they connect to the PEPS tensors at site `(r, c)`
+isn the unit cell as:
+```
+   c[1,r-1,c-1]---t[1,r-1,c]----c[2,r-1,c+1]
+   |              ||            |
+   t[4,r,c-1]=====AA[r,c]=======t[2,r,c+1]
+   |              ||            |
+   c[4,r+1,c-1]---t[3,r+1,c]----c[3,r+1,c+1]
+```
+
+# Fields
+- `corners::Array{C,3}`: Array of corner tensors.
+- `edges::Array{T,3}`: Array of edge tensors.
 """
 struct CTMRGEnv{C,T}
     corners::Array{C,3}
@@ -38,20 +56,42 @@ end
 
 """
     CTMRGEnv(
-        [f=randn, ComplexF64], Ds_east::A, chis_north::A, chis_east::A, chis_south::A, chis_west::A
+        [f=randn, ComplexF64], Ds_north, Ds_east::A, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
     ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
 
-TODO: docstring.
+Construct a CTMRG environment by specifying matrices of north and east virtual spaces of the
+corresponding [`InfinitePEPS`](@ref) and the north, east, south and west virtual spaces of
+the environment. Each respective matrix entry corresponds to a site in the unit cell. By
+default, the virtual environment spaces for all directions are taken to be the same.
+
+The environment virtual spaces for each site correspond to the north or east virtual space
+of the corresponding edge tensor for each direction. Specifically, for a given site
+`(r, c)`, `chis_north[r, c]` corresponds to the east space of the north edge tensor,
+`chis_east[r, c]` corresponds to the north space of the east edge tensor,
+`chis_south[r, c]` corresponds to the east space of the south edge tensor, and
+`chis_west[r, c]` corresponds to the north space of the west edge tensor.
 """
 function CTMRGEnv(
-    Ds_north::A, Ds_east::A, chis_north::A, chis_east::A, chis_south::A, chis_west::A
+    Ds_north::A,
+    Ds_east::A,
+    chis_north::A,
+    chis_east::A=chis_north,
+    chis_south::A=chis_north,
+    chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     return CTMRGEnv(
         randn, ComplexF64, Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west
     )
 end
 function CTMRGEnv(
-    f, T, Ds_north::A, Ds_east::A, chis_north::A, chis_east::A, chis_south::A, chis_west::A
+    f,
+    T,
+    Ds_north::A,
+    Ds_east::A,
+    chis_north::A,
+    chis_east::A=chis_north,
+    chis_south::A=chis_north,
+    chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     Ds_south = adjoint.(circshift(Ds_north, (-1, 0)))
     Ds_west = adjoint.(circshift(Ds_east, (0, 1)))
@@ -119,18 +159,24 @@ end
 
 """
     CTMRGEnv(
-        [f=randn, ComplexF64], D_north::S, D_south::S, chi_north::S, chi_east::S, chi_south::S, chi_west::S; unitcell::Tuple{Int,Int}=(1, 1),
+        [f=randn, ComplexF64], D_north::S, D_south::S, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S]; unitcell::Tuple{Int,Int}=(1, 1),
     ) where {S<:Union{Int,ElementarySpace}}
 
-TODO: docstring.
+Construct a CTMRG environment by specifying the north and east virtual spaces of the
+corresponding [`InfinitePEPS`](@ref) and the north, east, south and west virtual spaces of
+the environment. The PEPS unit cell can be specified by the `unitcell` keyword argument. By
+default, the virtual environment spaces for all directions are taken to be the same.
+
+The environment virtual spaces for each site correspond to virtual space of the
+corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
     D_north::S,
     D_south::S,
     chi_north::S,
-    chi_east::S,
-    chi_south::S,
-    chi_west::S;
+    chi_east::S=chi_north,
+    chi_south::S=chi_north,
+    chi_west::S=chi_north;
     unitcell::Tuple{Int,Int}=(1, 1),
 ) where {S<:Union{Int,ElementarySpace}}
     return CTMRGEnv(
@@ -150,9 +196,9 @@ function CTMRGEnv(
     D_north::S,
     D_south::S,
     chi_north::S,
-    chi_east::S,
-    chi_south::S,
-    chi_west::S;
+    chi_east::S=chi_north,
+    chi_south::S=chi_north,
+    chi_west::S=chi_north;
     unitcell::Tuple{Int,Int}=(1, 1),
 ) where {S<:Union{Int,ElementarySpace}}
     return CTMRGEnv(
@@ -168,14 +214,28 @@ function CTMRGEnv(
 end
 
 """
-    function CTMRGEnv(
-        [f=randn, T=ComplexF64], peps::InfinitePEPS, chis_north::A, chis_east::A, chis_south::A, chis_west::A
+    CTMRGEnv(
+        [f=randn, T=ComplexF64], peps::InfinitePEPS, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
     ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
 
-TODO: docstring.
+Construct a CTMRG environment by specifying a corresponding [`InfinitePEPS`](@ref), and the
+north, east, south and west virtual spaces of the environment as matrices. Each respective
+matrix entry corresponds to a site in the unit cell. By default, the virtual spaces for all
+directions are taken to be the same.
+
+The environment virtual spaces for each site correspond to the north or east virtual space
+of the corresponding edge tensor for each direction. Specifically, for a given site
+`(r, c)`, `chis_north[r, c]` corresponds to the east space of the north edge tensor,
+`chis_east[r, c]` corresponds to the north space of the east edge tensor,
+`chis_south[r, c]` corresponds to the east space of the south edge tensor, and
+`chis_west[r, c]` corresponds to the north space of the west edge tensor.
 """
 function CTMRGEnv(
-    peps::InfinitePEPS, chis_north::A, chis_east::A, chis_south::A, chis_west::A
+    peps::InfinitePEPS,
+    chis_north::A,
+    chis_east::A=chis_north,
+    chis_south::A=chis_north,
+    chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     Ds_north = map(peps.A) do t
         return adjoint(space(t, 2))
@@ -195,7 +255,13 @@ function CTMRGEnv(
     )
 end
 function CTMRGEnv(
-    f, T, peps::InfinitePEPS, chis_north::A, chis_east::A, chis_south::A, chis_west::A
+    f,
+    T,
+    peps::InfinitePEPS,
+    chis_north::A,
+    chis_east::A=chis_north,
+    chis_south::A=chis_north,
+    chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     Ds_north = map(peps.A) do t
         return adjoint(space(t, 2))
@@ -216,11 +282,16 @@ function CTMRGEnv(
 end
 
 """
-function CTMRGEnv(
-    peps::InfinitePEPS, chi_north::S, chi_east::S=chi_north, chi_south::S=chi_north, chi_west::S=chi_north,
-) where {S<:Union{Int,ElementarySpace}}
+    CTMRGEnv(
+        peps::InfinitePEPS, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
+    ) where {S<:Union{Int,ElementarySpace}}
 
-TODO: docstring.
+Construct a CTMRG environment by specifying a corresponding [`InfinitePEPS`](@ref), and the
+north, east, south and west virtual spaces of the environment. By default, the virtual
+spaces for all directions are taken to be the same.
+
+The environment virtual spaces for each site correspond to virtual space of the
+corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
     peps::InfinitePEPS,
