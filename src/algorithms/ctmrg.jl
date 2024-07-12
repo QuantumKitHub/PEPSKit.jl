@@ -126,8 +126,6 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG{S}) where {S}
                 @warn(
                     "CTMRG reached maximal number of iterations at (Δnorm=$Δnorm, ΔCS=$ΔCS, ΔTS=$ΔTS)"
                 )
-            flush(stdout)  # Flush output to enable live printing on HPC
-            flush(stderr)  # Same for @info, @warn, ...
             return conv_condition, normnew, CSnew, TSnew, info.ϵ
         end
         conv_condition && break  # Converge if maximal Δ falls below tolerance
@@ -185,22 +183,9 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
 
         # Compute projectors
         for row in 1:size(state, 1)
-            rprev = _prev(row, size(state, 1))
-            rnext = _next(row, size(state, 1))
-
             # Enlarged corners
-            Q_sw = southwest_corner(
-                env.edges[SOUTH, _next(rnext, end), col],
-                env.corners[SOUTHWEST, _next(rnext, end), cprev],
-                env.edges[WEST, rnext, cprev],
-                state[rnext, col],
-            )
-            Q_nw = northwest_corner(
-                env.edges[WEST, row, cprev],
-                env.corners[NORTHWEST, rprev, cprev],
-                env.edges[NORTH, rprev, col],
-                state[row, col],
-            )
+            Q_sw = southwest_corner((_next(row, size(state, 1)), col), state, env)
+            Q_nw = northwest_corner((row, col), state, env)
 
             # SVD half-infinite environment
             trscheme = if alg.trscheme isa FixedSpaceTruncation
@@ -251,38 +236,48 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
     return CTMRGEnv(corners, edges), (; P_left=copy(P_top), P_right=copy(P_bottom), ϵ)
 end
 
-# Compute enlarged corners
-function northwest_corner(edge_W, corner_NW, edge_N, peps_above, peps_below=peps_above)
-    @autoopt @tensor corner[χ_S D_Sabove D_Sbelow; χ_E D_Eabove D_Ebelow] :=
-        edge_W[χ_S D1 D2; χ1] *
-        corner_NW[χ1; χ2] *
-        edge_N[χ2 D3 D4; χ_E] *
-        peps_above[d; D3 D_Eabove D_Sabove D1] *
-        conj(peps_below[d; D4 D_Ebelow D_Sbelow D2])
+# Generic enlarged corner contraction
+function enlarged_corner(edge_in, corner, edge_out, peps_above, peps_below=peps_above)
+    return @autoopt @tensor Q[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+        edge_in[χ_in D1 D2; χ1] *
+        corner[χ1; χ2] *
+        edge_out[χ2 D3 D4; χ_out] *
+        peps_above[d; D3 D_outabove D_inabove D1] *
+        conj(peps_below[d; D4 D_outbelow D_inbelow D2])
 end
-function northeast_corner(edge_N, corner_NE, edge_E, peps_above, peps_below=peps_above)
-    @autoopt @tensor corner[χ_W D_Wabove D_Wbelow; χ_S D_Sabove D_Sbelow] :=
-        edge_N[χ_W D1 D2; χ1] *
-        corner_NE[χ1; χ2] *
-        edge_E[χ2 D3 D4; χ_S] *
-        peps_above[d; D1 D3 D_Sabove D_Wabove] *
-        conj(peps_below[d; D2 D4 D_Sbelow D_Wbelow])
+
+# Direction specific methods
+function northwest_corner((row, col), state, env)
+    return enlarged_corner(
+        env.edges[WEST, row, _prev(col, end)],
+        env.corners[NORTHWEST, _prev(row, end), _prev(col, end)],
+        env.edges[NORTH, _prev(row, end), col],
+        state[row, col],
+    )
 end
-function southeast_corner(edge_E, corner_SE, edge_S, peps_above, peps_below=peps_above)
-    @autoopt @tensor corner[χ_N D_Nabove D_Nbelow; χ_W D_Wabove D_Wbelow] :=
-        edge_E[χ_N D1 D2; χ1] *
-        corner_SE[χ1; χ2] *
-        edge_S[χ2 D3 D4; χ_W] *
-        peps_above[d; D_Nabove D1 D3 D_Wabove] *
-        conj(peps_below[d; D_Nbelow D2 D4 D_Wbelow])
+function northeast_corner((row, col), state, env)
+    return enlarged_corner(
+        env.edges[NORTH, _prev(row, end), col],
+        env.corners[NORTHEAST, _prev(row, end), _next(col, end)],
+        env.edges[EAST, row, _next(col, end)],
+        rotate_north(state[row, col], EAST),
+    )
 end
-function southwest_corner(edge_S, corner_SW, edge_W, peps_above, peps_below=peps_above)
-    @autoopt @tensor corner[χ_E D_Eabove D_Ebelow; χ_N D_Nabove D_Nbelow] :=
-        edge_S[χ_E D1 D2; χ1] *
-        corner_SW[χ1; χ2] *
-        edge_W[χ2 D3 D4; χ_N] *
-        peps_above[d; D_Nabove D_Eabove D1 D3] *
-        conj(peps_below[d; D_Nbelow D_Ebelow D2 D4])
+function southeast_corner((row, col), state, env)
+    return enlarged_corner(
+        env.edges[EAST, row, _next(col, end)],
+        env.corners[SOUTHEAST, _next(row, end), _next(col, end)],
+        env.edges[SOUTH, _next(row, end), col],
+        rotate_north(state[row, col], SOUTH),
+    )
+end
+function southwest_corner((row, col), state, env)
+    return enlarged_corner(
+        env.edges[SOUTH, _next(row, end), col],
+        env.corners[SOUTHWEST, _next(row, end), _prev(col, end)],
+        env.edges[WEST, row, _prev(col, end)],
+        rotate_north(state[row, col], WEST),
+    )
 end
 
 # Build projectors from SVD and enlarged SW & NW corners

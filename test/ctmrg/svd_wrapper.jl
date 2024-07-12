@@ -19,6 +19,7 @@ dtype = ComplexF64
 trunc = truncspace(ℂ^χ)
 # lorentz_broadening = 1e-12
 rtol = 1e-9
+Random.seed!(123456789)
 r = TensorMap(randn, dtype, ℂ^m, ℂ^n)
 R = TensorMap(randn, space(r))
 

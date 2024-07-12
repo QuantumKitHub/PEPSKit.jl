@@ -16,6 +16,7 @@ unitcells = [(1, 1), (2, 2), (3, 2)]
     ctm_space = ComplexSpace(χ[unitcell])
 
     Random.seed!(2938293852938)  # Seed RNG to make random environment consistent
+    # Random.seed!(928329384)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 

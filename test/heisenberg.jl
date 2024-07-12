@@ -41,7 +41,7 @@ H_2x2 = square_lattice_heisenberg(; unitcell=(2, 2))
 psi_init_2x2 = InfinitePEPS(2, χbond; unitcell=(2, 2))
 env_init_2x2 = leading_boundary(
     CTMRGEnv(psi_init_2x2; Venv=ComplexSpace(χenv)), psi_init_2x2, ctm_alg
-)
+);
 result_2x2 = fixedpoint(psi_init_2x2, H_2x2, opt_alg, env_init_2x2)
 
 @test result_2x2.E ≈ 4 * result.E atol = 1e-2

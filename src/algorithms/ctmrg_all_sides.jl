@@ -18,38 +18,14 @@ function enlarge_corners_edges(state, env::CTMRGEnv{C,T}) where {C,T}
     Q = Zygote.Buffer(Array{Qtype,3}(undef, size(env.corners)))
     drc_combinations = collect(Iterators.product(axes(env.corners)...))
     @fwdthreads for (dir, r, c) in drc_combinations
-        rprev = _prev(r, size(state, 1))
-        rnext = _next(r, size(state, 1))
-        cprev = _prev(c, size(state, 2))
-        cnext = _next(c, size(state, 2))
         Q[dir, r, c] = if dir == NORTHWEST
-            northwest_corner(
-                env.edges[WEST, r, cprev],
-                env.corners[NORTHWEST, rprev, cprev],
-                env.edges[NORTH, rprev, c],
-                state[r, c],
-            )
+            northwest_corner((r, c), state, env)
         elseif dir == NORTHEAST
-            northeast_corner(
-                env.edges[NORTH, rprev, c],
-                env.corners[NORTHEAST, rprev, cnext],
-                env.edges[EAST, r, cnext],
-                state[r, c],
-            )
+            northeast_corner((r, c), state, env)
         elseif dir == SOUTHEAST
-            southeast_corner(
-                env.edges[EAST, r, cnext],
-                env.corners[SOUTHEAST, rnext, cnext],
-                env.edges[SOUTH, rnext, c],
-                state[r, c],
-            )
+            southeast_corner((r, c), state, env)
         elseif dir == SOUTHWEST
-            southwest_corner(
-                env.edges[SOUTH, rnext, c],
-                env.corners[SOUTHWEST, rnext, cprev],
-                env.edges[WEST, r, cprev],
-                state[r, c],
-            )
+            southwest_corner((r, c), state, env)
         end
     end
 
@@ -119,6 +95,10 @@ function build_projectors(Q, env::CTMRGEnv{C,E}, alg::ProjectorAlg{A,T}) where {
 end
 
 # Apply projectors to renormalize corners and edges
+function _contract_new_corner(P_right, Q, P_left)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] * Q[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
+end
 function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
@@ -128,22 +108,22 @@ function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
         rnext = _next(r, size(state, 1))
         cprev = _prev(c, size(state, 2))
         cnext = _next(c, size(state, 2))
-        @diffset @autoopt @tensor corners[NORTHWEST, r, c][χ_S; χ_E] :=
-            P_right[WEST, rnext, c][χ_S; χ1 D1 D2] *
-            Q[NORTHWEST, r, c][χ1 D1 D2; χ2 D3 D4] *
-            P_left[NORTH, r, c][χ2 D3 D4; χ_E]
-        @diffset @autoopt @tensor corners[NORTHEAST, r, c][χ_W; χ_S] :=
-            P_right[NORTH, r, cprev][χ_W; χ1 D1 D2] *
-            Q[NORTHEAST, r, c][χ1 D1 D2; χ2 D3 D4] *
-            P_left[EAST, r, c][χ2 D3 D4; χ_S]
-        @diffset @autoopt @tensor corners[SOUTHEAST, r, c][χ_N; χ_W] :=
-            P_right[EAST, rprev, c][χ_N; χ1 D1 D2] *
-            Q[SOUTHEAST, r, c][χ1 D1 D2; χ2 D3 D4] *
-            P_left[SOUTH, r, c][χ2 D3 D4; χ_W]
-        @diffset @autoopt @tensor corners[SOUTHWEST, r, c][χ_E; χ_N] :=
-            P_right[SOUTH, r, cnext][χ_E; χ1 D1 D2] *
-            Q[SOUTHWEST, r, c][χ1 D1 D2; χ2 D3 D4] *
-            P_left[WEST, r, c][χ2 D3 D4; χ_N]
+        @diffset C_NW = _contract_new_corner(
+            P_right[WEST, rnext, c], Q[NORTHWEST, r, c], P_left[NORTH, r, c]
+        )
+        @diffset C_NE = _contract_new_corner(
+            P_right[NORTH, r, cprev], Q[NORTHEAST, r, c], P_left[EAST, r, c]
+        )
+        @diffset C_SE = _contract_new_corner(
+            P_right[EAST, rprev, c], Q[SOUTHEAST, r, c], P_left[SOUTH, r, c]
+        )
+        @diffset C_SW = _contract_new_corner(
+            P_right[SOUTH, r, cnext], Q[SOUTHWEST, r, c], P_left[WEST, r, c]
+        )
+        corners[NORTHWEST, r, c] = C_NW  # For some reason @diffset can't directly asign to corners[...]
+        corners[NORTHEAST, r, c] = C_NE
+        corners[SOUTHEAST, r, c] = C_SE
+        corners[SOUTHWEST, r, c] = C_SW
 
         @diffset @autoopt @tensor edges[NORTH, r, c][χ_W D_Sab D_Sbe; χ_E] :=
             env.edges[NORTH, rprev, c][χ1 D1 D2; χ2] *
