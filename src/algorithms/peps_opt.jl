@@ -2,13 +2,13 @@ abstract type GradMode{F} end
 
 """
     struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                   verbosity=0, iterscheme=:FixedIter) <: GradMode{iterscheme}
+                   verbosity=0, iterscheme=:fixed) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
 With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
-If set to `:FixedIter`, the differentiated CTMRG iteration is assumed to have a pre-computed
-SVD of the environments with a fixed set of gauges. Alternatively, if set to `:DiffGauge`,
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
 the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
 such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
@@ -21,20 +21,20 @@ function GeomSum(;
     maxiter=Defaults.fpgrad_maxiter,
     tol=Defaults.fpgrad_tol,
     verbosity=0,
-    iterscheme=:FixedIter,
+    iterscheme=:fixed,
 )
     return GeomSum{iterscheme}(maxiter, tol, verbosity)
 end
 
 """
     struct ManualIter(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                      verbosity=0, iterscheme=:FixedIter) <: GradMode{iterscheme}
+                      verbosity=0, iterscheme=:fixed) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
 With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
-If set to `:FixedIter`, the differentiated CTMRG iteration is assumed to have a pre-computed
-SVD of the environments with a fixed set of gauges. Alternatively, if set to `:DiffGauge`,
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
 the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
 such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
@@ -47,20 +47,20 @@ function ManualIter(;
     maxiter=Defaults.fpgrad_maxiter,
     tol=Defaults.fpgrad_tol,
     verbosity=0,
-    iterscheme=:FixedIter,
+    iterscheme=:fixed,
 )
     return ManualIter{iterscheme}(maxiter, tol, verbosity)
 end
 
 """
-    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=:FixedIter) <: GradMode{iterscheme}
+    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=:fixed) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
 
 With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
-If set to `:FixedIter`, the differentiated CTMRG iteration is assumed to have a pre-computed
-SVD of the environments with a fixed set of gauges. Alternatively, if set to `:DiffGauge`,
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
 the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
 such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
@@ -69,7 +69,7 @@ struct LinSolver{F} <: GradMode{F}
 end
 function LinSolver(;
     solver=KrylovKit.GMRES(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
-    iterscheme=:FixedIter,
+    iterscheme=:fixed,
 )
     return LinSolver{iterscheme}(solver)
 end
@@ -102,8 +102,8 @@ struct PEPSOptimize{G}
         verbosity,
     ) where {S,G}
         if gradient_alg isa GradMode
-            if S == :LeftMoves && G.parameters[1] == :FixedIter
-                throw(ArgumentError(":LeftMoves and :FixedIter are not compatible"))
+            if S == :sequential && G.parameters[1] == :fixed
+                throw(ArgumentError(":sequential and :fixed are not compatible"))
             end
         end
         return new{G}(boundary_alg, optimizer, reuse_env, gradient_alg, verbosity)
@@ -171,7 +171,7 @@ Evaluating the gradient of the cost function for CTMRG:
 =#
 
 function _rrule(
-    gradmode::GradMode{:DiffGauge},
+    gradmode::GradMode{:diffgauge},
     ::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
     envinit,
@@ -202,14 +202,14 @@ end
 
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V
 function _rrule(
-    gradmode::GradMode{:FixedIter},
+    gradmode::GradMode{:fixed},
     ::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
     alg::CTMRG{C},
 ) where {C}
-    @assert C == :AllSides
+    @assert C == :simultaneous
     envs = leading_boundary(envinit, state, alg)
     envsconv, info = ctmrg_iter(state, envs, alg)
     envsfix, signs = gauge_fix(envs, envsconv)
@@ -219,9 +219,9 @@ function _rrule(
     svd_alg_fixed = SVDAdjoint(;
         fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
     )
-    alg_fixed = CTMRG(; svd_alg=svd_alg_fixed, trscheme=notrunc(), ctmrgscheme=:AllSides)
+    alg_fixed = CTMRG(; svd_alg=svd_alg_fixed, trscheme=notrunc(), ctmrgscheme=:simultaneous)
 
-    function leading_boundary_fixediter_pullback(Δenvs′)
+    function leading_boundary_fixed_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
 
         _, env_vjp = pullback(state, envsfix) do A, x
@@ -237,7 +237,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envsfix, leading_boundary_fixediter_pullback
+    return envsfix, leading_boundary_fixed_pullback
 end
 
 @doc """

@@ -7,7 +7,7 @@ using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
-schemes = [:AllSides, :LeftMoves]
+schemes = [:simultaneous, :sequential]
 χ = Dict([(1, 1) => 8, (2, 2) => 26, (3, 2) => 26])  # Increase χ to converge non-symmetric environments
 
 @testset "Trivial symmetry ($T) - ($unitcell) - ($ctmrgscheme)" for (

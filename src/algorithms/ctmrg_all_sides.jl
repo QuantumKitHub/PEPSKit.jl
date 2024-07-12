@@ -1,5 +1,5 @@
 # One CTMRG iteration with both-sided application of projectors
-function ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG{:AllSides})
+function ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG{:simultaneous})
     # Compute enlarged corners
     Q = enlarge_corners_edges(state, env)
 
@@ -150,7 +150,7 @@ function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
 
     corners = copy(corners)
     edges = copy(edges)
-    corners[:, :, :] ./= norm.(corners[:, :, :])
-    edges[:, :, :] ./= norm.(edges[:, :, :])
+    @diffset corners[:, :, :] ./= norm.(corners[:, :, :])
+    @diffset edges[:, :, :] ./= norm.(edges[:, :, :])
     return corners, edges
 end

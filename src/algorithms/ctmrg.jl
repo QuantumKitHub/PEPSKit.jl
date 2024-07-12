@@ -29,7 +29,7 @@ end
     CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
           miniter=Defaults.ctmrg_miniter, verbosity=0,
           svd_alg=TensorKit.SVD(), trscheme=FixedSpaceTruncation(),
-          ctmrgscheme=:AllSides)
+          ctmrgscheme=:simultaneous)
 
 Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
 Each CTMRG run is converged up to `tol` where the singular value convergence of the
@@ -41,8 +41,8 @@ The projectors are computed from `svd_alg` SVDs where the truncation scheme is s
 `trscheme`.
 
 In general, two different schemes can be selected with `ctmrgscheme` which determine how
-CTMRG is implemented. It can either be `:LeftMoves`, where the projectors are succesively
-computed on the western side, and then applied and rotated. Or with `AllSides`, all projectors
+CTMRG is implemented. It can either be `:sequential`, where the projectors are succesively
+computed on the western side, and then applied and rotated. Or with `simultaneous` all projectors
 are computed and applied simultaneously on all sides, where in particular the corners get
 contracted with two projectors at the same time.
 """
@@ -60,7 +60,7 @@ function CTMRG(;
     verbosity=1,
     svd_alg=SVDAdjoint(),
     trscheme=FixedSpaceTruncation(),
-    ctmrgscheme=:AllSides,
+    ctmrgscheme=:simultaneous,
 )
     return CTMRG{ctmrgscheme}(
         tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
@@ -361,6 +361,7 @@ Compute the PEPS correlation length based on the horizontal and vertical
 transfer matrices. Additionally the (normalized) eigenvalue spectrum is
 returned. Specify the number of computed eigenvalues with `howmany`.
 """
+# TODO: Rewrite this similar to gauge_fix using transfermatrix_fixedpoint
 function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
     ξ = Array{Float64,3}(undef, (2, size(peps)...))  # First index picks horizontal or vertical direction
     λ = Array{ComplexF64,4}(undef, (2, howmany, size(peps)...))

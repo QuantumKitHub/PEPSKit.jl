@@ -20,14 +20,14 @@ end
         @time @safetestset "SVD wrapper" begin
             include("ctmrg/svd_wrapper.jl")
         end
-        @time @safetestset "SVD wrapper" begin
-            include("ctmrg/fixediter.jl")
+        @time @safetestset ":fixed CTMRG iteration scheme" begin
+            include("ctmrg/fixed_iterscheme.jl")
         end
-        @time @safetestset "SVD wrapper" begin
+        @time @safetestset "Unit cells" begin
             include("ctmrg/unitcell.jl")
         end
-        @time @safetestset "SVD wrapper" begin
-            include("ctmrg/leftmoves_allsides.jl")
+        @time @safetestset "CTMRG schemes" begin
+            include("ctmrg/ctmrgschemes.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "MPS"

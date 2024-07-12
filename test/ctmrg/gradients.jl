@@ -22,17 +22,17 @@ boundary_alg = CTMRG(;
     miniter=4,
     maxiter=100,
     verbosity=0,
-    ctmrgscheme=:AllSides,
+    ctmrgscheme=:simultaneous,
     svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
 )
 gradmodes = [
     nothing,
-    GeomSum(; tol, iterscheme=:FixedIter),
-    GeomSum(; tol, iterscheme=:DiffGauge),
-    ManualIter(; tol, iterscheme=:FixedIter),
-    ManualIter(; tol, iterscheme=:DiffGauge),
-    LinSolver(; solver=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:FixedIter),
-    LinSolver(; solver=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:DiffGauge),
+    GeomSum(; tol, iterscheme=:fixed),
+    GeomSum(; tol, iterscheme=:diffgauge),
+    ManualIter(; tol, iterscheme=:fixed),
+    ManualIter(; tol, iterscheme=:diffgauge),
+    LinSolver(; solver=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:fixed),
+    LinSolver(; solver=KrylovKit.GMRES(; tol=tol, maxiter=10), iterscheme=:diffgauge),
 ]
 steps = -0.01:0.005:0.01
 
