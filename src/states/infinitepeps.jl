@@ -21,18 +21,23 @@ end
 
 ## Constructors
 """
-    InfinitePEPS(A::AbstractArray{T, 2})
+    InfinitePEPS(A::AbstractMatrix{T})
 
-Allow users to pass in an array of tensors.
+Create an `InfinitePEPS` by specifying a matrix containing the PEPS tensors at each site in
+the unit cell.
 """
-function InfinitePEPS(A::AbstractArray{T,2}) where {T<:PEPSTensor}
+function InfinitePEPS(A::AbstractMatrix{T}) where {T<:PEPSTensor}
     return InfinitePEPS(Array(deepcopy(A))) # TODO: find better way to copy
 end
 
 """
-    InfinitePEPS(f=randn, T=ComplexF64, Pspaces, Nspaces, Espaces)
+    InfinitePEPS(
+        f=randn, T=ComplexF64, Pspaces::A, Nspaces::A, [Espaces::A]
+    ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
 
-Allow users to pass in arrays of spaces.
+Create an `InfinitePEPS` by specifying the physical, north virtual and east virtual spaces
+of the PEPS tensor at each site in the unit cell as a matrix. Each individual space can be
+specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePEPS(
     Pspaces::A, Nspaces::A, Espaces::A
@@ -82,8 +87,8 @@ end
 """
     InfinitePEPS(f=randn, T=ComplexF64, Pspace, Nspace, [Espace]; unitcell=(1,1))
 
-Create an InfinitePEPS by specifying its spaces and unit cell. Spaces can be specified
-either via `Int` or via `ElementarySpace`.
+Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
+Spaces can be specified either via `Int` or via `ElementarySpace`.
 """
 function InfinitePEPS(
     Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)

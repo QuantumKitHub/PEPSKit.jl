@@ -2,7 +2,8 @@
     const PEPSTensor{S}
 
 Default type for PEPS tensors with a single physical index, and 4 virtual indices,
-conventionally ordered as: T : P ← N ⊗ E ⊗ S ⊗ W.
+conventionally ordered as: ``T : P ← N ⊗ E ⊗ S ⊗ W``. Here, ``P``, ``N``, ``E``, ``S`` and
+``W`` denote the physics, north, east, south and west spaces, respectively.
 """
 const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
 
