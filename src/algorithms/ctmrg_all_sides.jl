@@ -152,19 +152,19 @@ function renormalize_corners_edges(state, env::CTMRGEnv, Q, P_left, P_right)
             P_left[NORTH, r, c][χ2 D3 D4; χ_E] *
             P_right[NORTH, r, cprev][χ_W; χ1 D5 D6]
         @diffset @autoopt @tensor edges[EAST, r, c][χ_N D_Wab D_Wbe; χ_S] :=
-            env.edges[EAST, r, _next(c, end)][χ1 D1 D2; χ2] *
+            env.edges[EAST, r, cnext][χ1 D1 D2; χ2] *
             state[r, c][d; D5 D1 D3 D_Wab] *
             conj(state[r, c][d; D6 D2 D4 D_Wbe]) *
             P_left[EAST, r, c][χ2 D3 D4; χ_S] *
             P_right[EAST, rprev, c][χ_N; χ1 D5 D6]
         @diffset @autoopt @tensor edges[SOUTH, r, c][χ_E D_Nab D_Nbe; χ_W] :=
-            env.edges[SOUTH, _next(r, end), c][χ1 D1 D2; χ2] *
+            env.edges[SOUTH, rnext, c][χ1 D1 D2; χ2] *
             state[r, c][d; D_Nab D5 D1 D3] *
             conj(state[r, c][d; D_Nbe D6 D2 D4]) *
             P_left[SOUTH, r, c][χ2 D3 D4; χ_W] *
             P_right[SOUTH, r, cnext][χ_E; χ1 D5 D6]
         @diffset @autoopt @tensor edges[WEST, r, c][χ_S D_Eab D_Ebe; χ_N] :=
-            env.edges[WEST, r, _prev(c, end)][χ1 D1 D2; χ2] *
+            env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
             state[r, c][d; D3 D_Eab D5 D1] *
             conj(state[r, c][d; D4 D_Ebe D6 D2]) *
             P_left[WEST, r, c][χ2 D3 D4; χ_N] *

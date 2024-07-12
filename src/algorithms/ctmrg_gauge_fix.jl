@@ -6,7 +6,7 @@ This assumes that the `envfinal` is the result of one CTMRG iteration on `envpre
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
-function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
+function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C′,T′}) where {C,C′,T,T′}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -189,14 +189,12 @@ function check_elementwise_convergence(
     ΔC = envfinal.corners .- envfix.corners
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
-    # @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"
-    println("maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean")
+    @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"
 
     ΔT = envfinal.edges .- envfix.edges
     ΔTmax = norm(ΔT, Inf)
     ΔTmean = norm(ΔT)
-    # @debug "maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean"
-    println("maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean")
+    @debug "maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean"
 
     # Check differences for all tensors in unit cell to debug properly
     for (dir, r, c) in Iterators.product(axes(envfinal.edges)...)
