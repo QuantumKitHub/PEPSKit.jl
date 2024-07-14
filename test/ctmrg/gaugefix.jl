@@ -2,6 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
+using Accessors
 
 using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
 
@@ -43,12 +44,12 @@ end
     psi = _make_symmetric(psi)
 
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
-    ctm = CTMRGEnv(psi; Venv=ctm_space)
+    ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
-        trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=400, verbosity
+        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
     )
-    alg_fixed = CTMRG(; trscheme=truncdim(dim(ctm_space)), verbosity, fixedspace=true)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
@@ -67,12 +68,12 @@ end
     psi = _make_symmetric(psi)
 
     Random.seed!(123456789)  # Seed RNG to make random environment consistent
-    ctm = CTMRGEnv(psi; Venv=ctm_space)
+    ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
-        trscheme=truncspace(ctm_space), tol=1e-10, miniter=4, maxiter=400, verbosity
+        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
     )
-    alg_fixed = CTMRG(; trscheme=truncspace(ctm_space), verbosity, fixedspace=true)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)

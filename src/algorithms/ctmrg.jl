@@ -1,26 +1,62 @@
+"""
+    FixedSpaceTruncation <: TensorKit.TruncationScheme
+
+CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which the SVD
+is performed fixed. Since different environment directions and unit cell entries might
+have different spaces, this truncation style is different from `TruncationSpace`.
+"""
+struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
+
+# TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
+"""
+    struct ProjectorAlg{S}(; svd_alg = TensorKit.SVD(), trscheme = TensorKit.notrunc(),
+                           fixedspace = false, verbosity = 0)
+
+Algorithm struct collecting all projector related parameters. The truncation scheme has to be
+a `TensorKit.TruncationScheme`, and some SVD algorithms might have further restrictions on what
+kind of truncation scheme can be used. If `fixedspace` is true, the truncation scheme is set to
+`truncspace(V)` where `V` is the environment bond space, adjusted to the corresponding
+environment direction/unit cell entry.
+"""
+@kwdef struct ProjectorAlg{S<:SVDAdjoint,T}
+    svd_alg::S = SVDAdjoint()
+    trscheme::T = FixedSpaceTruncation()
+    verbosity::Int = 0
+end
+
 # TODO: add abstract Algorithm type?
 """
-    struct CTMRG(; trscheme = TensorKit.notrunc(), tol = Defaults.ctmrg_tol,
-                 maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
-                 verbosity = 0, fixedspace = false)
+    CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
+          miniter=Defaults.ctmrg_miniter, verbosity=0,
+          svd_alg=TensorKit.SVD(), trscheme=FixedSpaceTruncation())
 
 Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
-The projector bond dimensions are set via `trscheme` which controls the truncation
-properties inside of `TensorKit.tsvd`. Each CTMRG run is converged up to `tol`
-where the singular value convergence of the corners as well as the norm is checked.
-The maximal and minimal number of CTMRG iterations is set with `maxiter` and `miniter`.
-Different levels of output information are printed depending on `verbosity`, where
-`0` is silent, `1` only prints warnings, `2` prints start and end of the run, and `3`
-displays information each iteration.
-Regardless of the truncation scheme, the space can be kept fixed with `fixedspace`.
+Each CTMRG run is converged up to `tol` where the singular value convergence of the
+corners as well as the norm is checked. The maximal and minimal number of CTMRG iterations
+is set with `maxiter` and `miniter`. Different levels of output information are printed
+depending on `verbosity`, where `0` suppresses all output, `1` only prints warnings, `2`
+gives information at the start and end, and `3` prints information every iteration.
+The projectors are computed from `svd_alg` SVDs where the truncation scheme is set via 
+`trscheme`.
 """
-@kwdef struct CTMRG
-    trscheme::TruncationScheme = TensorKit.notrunc()
-    tol::Float64 = Defaults.ctmrg_tol
-    maxiter::Int = Defaults.ctmrg_maxiter
-    miniter::Int = Defaults.ctmrg_miniter
-    verbosity::Int = 1
-    fixedspace::Bool = false
+struct CTMRG
+    tol::Float64
+    maxiter::Int
+    miniter::Int
+    verbosity::Int
+    projector_alg::ProjectorAlg
+end
+function CTMRG(;
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=0,
+    svd_alg=SVDAdjoint(),
+    trscheme=FixedSpaceTruncation(),
+)
+    return CTMRG(
+        tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
+    )
 end
 
 """
@@ -30,7 +66,7 @@ Contract `state` using CTMRG and return the CTM environment.
 Per default, a random initial environment is used.
 """
 function MPSKit.leading_boundary(state, alg::CTMRG)
-    return MPSKit.leading_boundary(CTMRGEnv(state), state, alg)
+    return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
 end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     CS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
@@ -48,16 +84,13 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
             env, = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
             N = norm(state, env)
-
             ctmrg_logiter!(log, iter, η, N)
 
             (iter > alg.miniter && η <= alg.tol) && break
         end
 
         # Do one final iteration that does not change the spaces
-        alg_fixed = CTMRG(;
-            alg.trscheme, alg.tol, alg.maxiter, alg.miniter, alg.verbosity, fixedspace=true
-        )
+        alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
         env′, = ctmrg_iter(state, env, alg_fixed)
         envfix = gauge_fix(env, env′)
 
@@ -297,7 +330,7 @@ function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
     ϵ = 0.0
 
     for _ in 1:4
-        env, _, _, ϵ₀ = left_move(state, env, alg)
+        env, _, _, ϵ₀ = left_move(state, env, alg.projector_alg)
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
         ϵ = max(ϵ, ϵ₀)
@@ -312,7 +345,7 @@ end
 Grow, project and renormalize the environment `env` in west direction.
 Return the updated environment as well as the projectors and truncation error.
 """
-function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
+function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
     corners::typeof(env.corners) = copy(env.corners)
     edges::typeof(env.edges) = copy(env.edges)
     ϵ = 0.0
@@ -320,6 +353,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
 
     for col in 1:size(state, 2)
         cprev = _prev(col, size(state, 2))
+        cnext = _next(col, size(state, 2))
 
         # Compute projectors
         for row in 1:size(state, 1)
@@ -341,15 +375,15 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
             )
 
             # SVD half-infinite environment
-            trscheme = if alg.fixedspace == true
-                truncspace(space(env.edges[WEST, row, col], 1))
+            trscheme = if alg.trscheme isa FixedSpaceTruncation
+                truncspace(space(env.edges[WEST, row, cnext], 1))
             else
                 alg.trscheme
             end
             @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
                 Q_sw[χ_EB D_EBabove D_EBbelow; χ D1 D2] *
                 Q_nw[χ D1 D2; χ_ET D_ETabove D_ETbelow]
-            U, S, V, ϵ_local = tsvd!(QQ; trunc=trscheme, alg=TensorKit.SVD())
+            U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, alg.svd_alg; trunc=trscheme)
             ϵ = max(ϵ, ϵ_local / norm(S))
             # TODO: check if we can just normalize enlarged corners s.t. trunc behaves a bit better
 

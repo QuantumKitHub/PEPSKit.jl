@@ -32,9 +32,7 @@ mps, envs, ϵ = leading_boundary(mps, T, VUMPS())
 N = abs(prod(expectation_value(mps, T)))
 
 # This can be compared to the result obtained using the CTMRG algorithm
-ctm = leading_boundary(
-    peps, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(peps; Venv=ComplexSpace(20))
-)
+ctm = leading_boundary(peps, CTMRG(; verbosity=1), CTMRGEnv(peps, ComplexSpace(20)))
 N´ = abs(norm(peps, ctm))
 
 @show abs(N - N´) / N
@@ -55,9 +53,7 @@ mps2 = PEPSKit.initializeMPS(T2, fill(ComplexSpace(20), 2, 2))
 mps2, envs2, ϵ = leading_boundary(mps2, T2, VUMPS())
 N2 = abs(prod(expectation_value(mps2, T2)))
 
-ctm2 = leading_boundary(
-    peps2, CTMRG(; verbosity=1, fixedspace=true), CTMRGEnv(peps2; Venv=ComplexSpace(20))
-)
+ctm2 = leading_boundary(peps2, CTMRG(; verbosity=1), CTMRGEnv(peps2, ComplexSpace(20)))
 N2´ = abs(norm(peps2, ctm2))
 
 @show abs(N2 - N2´) / N2

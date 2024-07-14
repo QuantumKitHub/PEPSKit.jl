@@ -17,9 +17,7 @@ models = [square_lattice_heisenberg(), square_lattice_pwave()]
 names = ["Heisenberg", "p-wave superconductor"]
 Random.seed!(42039482030)
 tol = 1e-8
-boundary_alg = CTMRG(;
-    trscheme=truncdim(χenv), tol=tol, miniter=4, maxiter=100, fixedspace=true, verbosity=0
-)
+boundary_alg = CTMRG(; tol=tol, miniter=4, maxiter=100, verbosity=0)
 gradmodes = [
     nothing, GeomSum(; tol), ManualIter(; tol), KrylovKit.GMRES(; tol=tol, maxiter=10)
 ]
@@ -38,7 +36,7 @@ steps = -0.01:0.005:0.01
     @testset "$alg_rrule" for alg_rrule in gradmodes
         dir = InfinitePEPS(Pspace, Vspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace, Vspace)
-        env = leading_boundary(CTMRGEnv(psi; Venv=Espace), psi, boundary_alg)
+        env = leading_boundary(CTMRGEnv(psi, Espace), psi, boundary_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
             dir;

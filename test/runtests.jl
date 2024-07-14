@@ -17,6 +17,12 @@ end
         @time @safetestset "Gradients" begin
             include("ctmrg/gradients.jl")
         end
+        @time @safetestset "Unit cell" begin
+            include("ctmrg/unitcell.jl")
+        end
+        @time @safetestset "SVD wrapper" begin
+            include("ctmrg/svd_wrapper.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "MPS"
         @time @safetestset "VUMPS" begin

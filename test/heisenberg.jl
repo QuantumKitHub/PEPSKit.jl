@@ -8,7 +8,7 @@ using OptimKit
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg = CTMRG(; trscheme=truncdim(χenv), tol=1e-10, miniter=4, maxiter=100, verbosity=1)
+ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=1, trscheme=truncdim(χenv))
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
@@ -21,7 +21,7 @@ opt_alg = PEPSOptimize(;
 Random.seed!(91283219347)
 H = square_lattice_heisenberg()
 psi_init = InfinitePEPS(2, χbond)
-env_init = leading_boundary(CTMRGEnv(psi_init; Venv=ComplexSpace(χenv)), psi_init, ctm_alg)
+env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init)
@@ -32,7 +32,7 @@ result = fixedpoint(psi_init, H, opt_alg, env_init)
 H_2x2 = square_lattice_heisenberg(; unitcell=(2, 2))
 psi_init_2x2 = InfinitePEPS(2, χbond; unitcell=(2, 2))
 env_init_2x2 = leading_boundary(
-    CTMRGEnv(psi_init_2x2; Venv=ComplexSpace(χenv)), psi_init_2x2, ctm_alg
+    CTMRGEnv(psi_init_2x2, ComplexSpace(χenv)), psi_init_2x2, ctm_alg
 )
 result_2x2 = fixedpoint(psi_init_2x2, H_2x2, opt_alg, env_init_2x2)
 

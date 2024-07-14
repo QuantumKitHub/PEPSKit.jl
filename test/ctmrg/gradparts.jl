@@ -30,9 +30,7 @@ Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbon
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
 functions = [left_move, ctmrg_iter, leading_boundary]
 tol = 1e-8
-boundary_alg = CTMRG(;
-    trscheme=truncdim(χenv), tol=tol, miniter=4, maxiter=100, fixedspace=true, verbosity=0
-)
+boundary_alg = CTMRG(; tol=tol, miniter=4, maxiter=100, verbosity=0)
 
 ## Gauge invariant function of the environment
 # --------------------------------------------
@@ -51,12 +49,10 @@ end
 
 ## Tests
 # ------
-@testset "Reverse rules for composite parts of the CTMRG fixed point with spacetype $(Vspaces[i])" for i in
-                                                                                                       eachindex(
-    Pspaces
-)
+title = "Reverse rules for composite parts of the CTMRG fixed point with spacetype"
+@testset title * "$(Vspaces[i])" for i in eachindex(Pspaces)
     psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
-    env = CTMRGEnv(psi; Venv=Espaces[i])
+    env = CTMRGEnv(psi, Espaces[i])
 
     @testset "$f" for f in functions
         atol = f == leading_boundary ? sqrt(tol) : tol
