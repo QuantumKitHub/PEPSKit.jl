@@ -8,6 +8,7 @@ using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 χ = 6
+verbosity = 3
 
 function _make_symmetric(psi)
     if ==(size(psi)...)
@@ -44,7 +45,6 @@ end
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
-    verbosity = 1
     alg = CTMRG(;
         trscheme=truncdim(dim(ctm_space)), tol=1e-10, miniter=4, maxiter=400, verbosity
     )
@@ -69,7 +69,6 @@ end
     Random.seed!(123456789)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi; Venv=ctm_space)
 
-    verbosity = 1
     alg = CTMRG(;
         trscheme=truncspace(ctm_space), tol=1e-10, miniter=4, maxiter=400, verbosity
     )
