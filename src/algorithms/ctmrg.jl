@@ -9,7 +9,9 @@ The projector bond dimensions are set via `trscheme` which controls the truncati
 properties inside of `TensorKit.tsvd`. Each CTMRG run is converged up to `tol`
 where the singular value convergence of the corners as well as the norm is checked.
 The maximal and minimal number of CTMRG iterations is set with `maxiter` and `miniter`.
-Different levels of output information are printed depending on `verbosity` (0, 1 or 2).
+Different levels of output information are printed depending on `verbosity`, where
+`0` is silent, `1` only prints warnings, `2` prints start and end of the run, and `3`
+displays information each iteration.
 Regardless of the truncation scheme, the space can be kept fixed with `fixedspace`.
 """
 @kwdef struct CTMRG
@@ -17,7 +19,7 @@ Regardless of the truncation scheme, the space can be kept fixed with `fixedspac
     tol::Float64 = Defaults.ctmrg_tol
     maxiter::Int = Defaults.ctmrg_maxiter
     miniter::Int = Defaults.ctmrg_miniter
-    verbosity::Int = 0
+    verbosity::Int = 1
     fixedspace::Bool = false
 end
 
