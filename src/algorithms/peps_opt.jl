@@ -2,7 +2,7 @@ abstract type GradMode{F} end
 
 """
     struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                   verbosity=0, iterscheme=:fixed) <: GradMode{iterscheme}
+                   verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
@@ -18,14 +18,17 @@ struct GeomSum{F} <: GradMode{F}
     verbosity::Int
 end
 function GeomSum(;
-    maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol, verbosity=0, iterscheme=:fixed
+    maxiter=Defaults.fpgrad_maxiter,
+    tol=Defaults.fpgrad_tol,
+    verbosity=0,
+    iterscheme=Defaults.iterscheme,
 )
     return GeomSum{iterscheme}(maxiter, tol, verbosity)
 end
 
 """
     struct ManualIter(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                      verbosity=0, iterscheme=:fixed) <: GradMode{iterscheme}
+                      verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
@@ -41,13 +44,16 @@ struct ManualIter{F} <: GradMode{F}
     verbosity::Int
 end
 function ManualIter(;
-    maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol, verbosity=0, iterscheme=:fixed
+    maxiter=Defaults.fpgrad_maxiter,
+    tol=Defaults.fpgrad_tol,
+    verbosity=0,
+    iterscheme=Defaults.iterscheme,
 )
     return ManualIter{iterscheme}(maxiter, tol, verbosity)
 end
 
 """
-    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=:fixed) <: GradMode{iterscheme}
+    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
@@ -63,7 +69,7 @@ struct LinSolver{F} <: GradMode{F}
 end
 function LinSolver(;
     solver=KrylovKit.GMRES(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
-    iterscheme=:fixed,
+    iterscheme=Defaults.iterscheme,
 )
     return LinSolver{iterscheme}(solver)
 end
@@ -105,7 +111,7 @@ struct PEPSOptimize{G}
 end
 function PEPSOptimize(;
     boundary_alg=CTMRG(),
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
+    optimizer=Defaults.optimizer,
     reuse_env=true,
     gradient_alg=LinSolver(),
     verbosity=0,
@@ -204,6 +210,7 @@ function _rrule(
     alg::CTMRG{C},
 ) where {C}
     @assert C == :simultaneous
+    @assert alg.projector_alg.svd_alg.rrule_alg isa Union{KrylovKit.LinearSolver,Arnoldi}
     envs = leading_boundary(envinit, state, alg)
     envsconv, info = ctmrg_iter(state, envs, alg)
     envsfix, signs = gauge_fix(envs, envsconv)

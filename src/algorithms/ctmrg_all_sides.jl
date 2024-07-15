@@ -19,13 +19,13 @@ function enlarge_corners_edges(state, env::CTMRGEnv{C,T}) where {C,T}
     drc_combinations = collect(Iterators.product(axes(env.corners)...))
     @fwdthreads for (dir, r, c) in drc_combinations
         Q[dir, r, c] = if dir == NORTHWEST
-            northwest_corner((r, c), state, env)
+            northwest_corner((r, c), env, state)
         elseif dir == NORTHEAST
-            northeast_corner((r, c), state, env)
-        elseif dir == SOUTHEAST
-            southeast_corner((r, c), state, env)
-        elseif dir == SOUTHWEST
-            southwest_corner((r, c), state, env)
+            northeast_corner((r, c), env, state)
+        elseif dir == SOUTHEAST         
+            southeast_corner((r, c), env, state)
+        elseif dir == SOUTHWEST         
+            southwest_corner((r, c), env, state)
         end
     end
 

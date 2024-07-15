@@ -28,8 +28,8 @@ end
 """
     CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
           miniter=Defaults.ctmrg_miniter, verbosity=0,
-          svd_alg=TensorKit.SVD(), trscheme=FixedSpaceTruncation(),
-          ctmrgscheme=:simultaneous)
+          svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation(),
+          ctmrgscheme=Defaults.ctmrgscheme)
 
 Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
 Each CTMRG run is converged up to `tol` where the singular value convergence of the
@@ -60,7 +60,7 @@ function CTMRG(;
     verbosity=1,
     svd_alg=SVDAdjoint(),
     trscheme=FixedSpaceTruncation(),
-    ctmrgscheme=:simultaneous,
+    ctmrgscheme=Defaults.ctmrgscheme,
 )
     return CTMRG{ctmrgscheme}(
         tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
@@ -184,8 +184,8 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
         # Compute projectors
         for row in 1:size(state, 1)
             # Enlarged corners
-            Q_sw = southwest_corner((_next(row, size(state, 1)), col), state, env)
-            Q_nw = northwest_corner((row, col), state, env)
+            Q_sw = southwest_corner((_next(row, size(state, 1)), col), env, state)
+            Q_nw = northwest_corner((row, col), env, state)
 
             # SVD half-infinite environment
             trscheme = if alg.trscheme isa FixedSpaceTruncation
@@ -236,48 +236,38 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
     return CTMRGEnv(corners, edges), (; P_left=copy(P_top), P_right=copy(P_bottom), ϵ)
 end
 
-# Generic enlarged corner contraction
-function enlarged_corner(edge_in, corner, edge_out, peps_above, peps_below=peps_above)
-    return @autoopt @tensor Q[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
-        edge_in[χ_in D1 D2; χ1] *
-        corner[χ1; χ2] *
-        edge_out[χ2 D3 D4; χ_out] *
-        peps_above[d; D3 D_outabove D_inabove D1] *
-        conj(peps_below[d; D4 D_outbelow D_inbelow D2])
+# Enlarged corner contractions (need direction specific methods to avoid PEPS rotations)
+function northwest_corner((row, col), env, peps_above, peps_below=peps_above)
+    return @autoopt @tensor corner[χ_S D_Sabove D_Sbelow; χ_E D_Eabove D_Ebelow] :=
+        env.edges[WEST, row, _prev(col, end)][χ_S D1 D2; χ1] *
+        env.corners[NORTHWEST, _prev(row, end), _prev(col, end)][χ1; χ2] *
+        env.edges[NORTH, _prev(row, end), col][χ2 D3 D4; χ_E] *
+        peps_above[row, col][d; D3 D_Eabove D_Sabove D1] *
+        conj(peps_below[row, col][d; D4 D_Ebelow D_Sbelow D2])
 end
-
-# Direction specific methods
-function northwest_corner((row, col), state, env)
-    return enlarged_corner(
-        env.edges[WEST, row, _prev(col, end)],
-        env.corners[NORTHWEST, _prev(row, end), _prev(col, end)],
-        env.edges[NORTH, _prev(row, end), col],
-        state[row, col],
-    )
+function northeast_corner((row, col), env, peps_above, peps_below=peps_above)
+    return @autoopt @tensor corner[χ_W D_Wabove D_Wbelow; χ_S D_Sabove D_Sbelow] :=
+        env.edges[NORTH, _prev(row, end), col][χ_W D1 D2; χ1] *
+        env.corners[NORTHEAST, _prev(row, end), _next(col, end)][χ1; χ2] *
+        env.edges[EAST, row, _next(col, end)][χ2 D3 D4; χ_S] *
+        peps_above[row, col][d; D1 D3 D_Sabove D_Wabove] *
+        conj(peps_below[row, col][d; D2 D4 D_Sbelow D_Wbelow])
 end
-function northeast_corner((row, col), state, env)
-    return enlarged_corner(
-        env.edges[NORTH, _prev(row, end), col],
-        env.corners[NORTHEAST, _prev(row, end), _next(col, end)],
-        env.edges[EAST, row, _next(col, end)],
-        rotate_north(state[row, col], EAST),
-    )
+function southeast_corner((row, col), env, peps_above, peps_below=peps_above)
+    return @autoopt @tensor corner[χ_N D_Nabove D_Nbelow; χ_W D_Wabove D_Wbelow] :=
+        env.edges[EAST, row, _next(col, end)][χ_N D1 D2; χ1] *
+        env.corners[SOUTHEAST, _next(row, end), _next(col, end)][χ1; χ2] *
+        env.edges[SOUTH, _next(row, end), col][χ2 D3 D4; χ_W] *
+        peps_above[row, col][d; D_Nabove D1 D3 D_Wabove] *
+        conj(peps_below[row, col][d; D_Nbelow D2 D4 D_Wbelow])
 end
-function southeast_corner((row, col), state, env)
-    return enlarged_corner(
-        env.edges[EAST, row, _next(col, end)],
-        env.corners[SOUTHEAST, _next(row, end), _next(col, end)],
-        env.edges[SOUTH, _next(row, end), col],
-        rotate_north(state[row, col], SOUTH),
-    )
-end
-function southwest_corner((row, col), state, env)
-    return enlarged_corner(
-        env.edges[SOUTH, _next(row, end), col],
-        env.corners[SOUTHWEST, _next(row, end), _prev(col, end)],
-        env.edges[WEST, row, _prev(col, end)],
-        rotate_north(state[row, col], WEST),
-    )
+function southwest_corner((row, col), env, peps_above, peps_below=peps_above)
+    return @autoopt @tensor corner[χ_E D_Eabove D_Ebelow; χ_N D_Nabove D_Nbelow] :=
+        env.edges[SOUTH, _next(row, end), col][χ_E D1 D2; χ1] *
+        env.corners[SOUTHWEST, _next(row, end), _prev(col, end)][χ1; χ2] *
+        env.edges[WEST, row, _prev(col, end)][χ2 D3 D4; χ_N] *
+        peps_above[row, col][d; D_Nabove D_Eabove D1 D3] *
+        conj(peps_below[row, col][d; D_Nbelow D_Ebelow D2 D4])
 end
 
 # Build projectors from SVD and enlarged SW & NW corners

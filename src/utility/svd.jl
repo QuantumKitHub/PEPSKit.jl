@@ -10,7 +10,7 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg = TensorKit.SVD(), rrule_alg = nothing,
+    struct SVDAdjoint(; fwd_alg = Defaults.fwd_alg, rrule_alg = Defaults.rrule_alg,
                       broadening = nothing)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
@@ -19,8 +19,8 @@ In case of degenerate singular values, one might need a `broadening` scheme whic
 removes the divergences from the adjoint.
 """
 @kwdef struct SVDAdjoint{F,R,B}
-    fwd_alg::F = TensorKit.SVD()
-    rrule_alg::R = nothing
+    fwd_alg::F = Defaults.fwd_alg
+    rrule_alg::R = Defaults.rrule_alg
     broadening::B = nothing
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
@@ -149,9 +149,10 @@ function ChainRulesCore.rrule(
             n_vals = length(Sdc)
             lvecs = Vector{Vector{scalartype(t)}}(eachcol(Uc))
             rvecs = Vector{Vector{scalartype(t)}}(eachcol(Vc'))
-            minimal_info = KrylovKit.ConvergenceInfo(length(Sdc), nothing, nothing, -1, -1)  # Only num. converged is used
-            minimal_alg = GKL(; tol=1e-6)  # Only tolerance is used for gauge sensitivity
-            # TODO: How do we not hard-code this tolerance?
+
+            # Dummy objects only used for warnings
+            minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
+            minimal_alg = GKL(; tol=1e-6)  # Only tolerance is used for gauge sensitivity (# TODO: How do we not hard-code this tolerance?)
 
             if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
