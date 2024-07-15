@@ -75,7 +75,7 @@ function LinSolver(;
 end
 
 """
-    PEPSOptimize{G}(; boundary_alg=CTMRG(), optimizer::OptimKit.OptimizationAlgorithm=LBFGS()
+    PEPSOptimize{G}(; boundary_alg=CTMRG(), optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
                     reuse_env::Bool=true, gradient_alg::G=LinSolver(), verbosity::Int=0)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.

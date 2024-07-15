@@ -10,8 +10,8 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg = Defaults.fwd_alg, rrule_alg = Defaults.rrule_alg,
-                      broadening = nothing)
+    struct SVDAdjoint(; fwd_alg=Defaults.fwd_alg, rrule_alg=Defaults.rrule_alg,
+                      broadening=nothing)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
@@ -58,7 +58,7 @@ function TensorKit._tsvd!(t, alg::FixedSVD, ::NoTruncation, ::Real=2)
 end
 
 """
-    struct IterSVD(; alg = KrylovKit.GKL(), fallback_threshold = Inf)
+    struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmmetric) tensors.
 The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
@@ -190,7 +190,7 @@ function ChainRulesCore.rrule(
 end
 
 """
-    struct NonTruncAdjoint(; lorentz_broadening = 0.0)
+    struct NonTruncAdjoint
 
 Old SVD adjoint that does not account for the truncated part of truncated SVDs.
 """

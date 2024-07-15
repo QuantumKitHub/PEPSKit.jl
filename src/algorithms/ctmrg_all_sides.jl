@@ -22,9 +22,9 @@ function enlarge_corners_edges(state, env::CTMRGEnv{C,T}) where {C,T}
             northwest_corner((r, c), env, state)
         elseif dir == NORTHEAST
             northeast_corner((r, c), env, state)
-        elseif dir == SOUTHEAST         
+        elseif dir == SOUTHEAST
             southeast_corner((r, c), env, state)
-        elseif dir == SOUTHWEST         
+        elseif dir == SOUTHWEST
             southwest_corner((r, c), env, state)
         end
     end

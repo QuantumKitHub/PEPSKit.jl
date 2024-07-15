@@ -9,8 +9,8 @@ struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
 # TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
 """
-    struct ProjectorAlg{S}(; svd_alg = TensorKit.SVD(), trscheme = TensorKit.notrunc(),
-                           fixedspace = false, verbosity = 0)
+    struct ProjectorAlg{S}(; svd_alg=TensorKit.SVD(), trscheme=TensorKit.notrunc(),
+                           fixedspace=false, verbosity=0)
 
 Algorithm struct collecting all projector related parameters. The truncation scheme has to be
 a `TensorKit.TruncationScheme`, and some SVD algorithms might have further restrictions on what
