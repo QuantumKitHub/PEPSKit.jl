@@ -85,28 +85,25 @@ based on the CTMRG gradient and updates the PEPS parameters. In this optimizatio
 the CTMRG runs can be started on the converged environments of the previous optimizer
 step by setting `reuse_env` to true. Otherwise a random environment is used at each
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
-Different levels of output verbosity can be activated using `verbosity` (0, 1 or 2).
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRG
     optimizer::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
     gradient_alg::G
-    verbosity::Int
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
         boundary_alg::CTMRG{S},
         optimizer,
         reuse_env,
         gradient_alg::G,
-        verbosity,
     ) where {S,G}
         if gradient_alg isa GradMode
             if S == :sequential && G.parameters[1] == :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             end
         end
-        return new{G}(boundary_alg, optimizer, reuse_env, gradient_alg, verbosity)
+        return new{G}(boundary_alg, optimizer, reuse_env, gradient_alg)
     end
 end
 function PEPSOptimize(;
@@ -114,9 +111,8 @@ function PEPSOptimize(;
     optimizer=Defaults.optimizer,
     reuse_env=true,
     gradient_alg=LinSolver(),
-    verbosity=0,
 )
-    return PEPSOptimize(boundary_alg, optimizer, reuse_env, gradient_alg, verbosity)
+    return PEPSOptimize(boundary_alg, optimizer, reuse_env, gradient_alg)
 end
 
 """

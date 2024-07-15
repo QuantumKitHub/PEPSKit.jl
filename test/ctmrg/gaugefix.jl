@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 
-using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
+using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]

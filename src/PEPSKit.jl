@@ -7,6 +7,8 @@ using Accessors
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
+using LoggingExtras
+using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 
 include("utility/util.jl")
 include("utility/svd.jl")
