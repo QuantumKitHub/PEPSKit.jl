@@ -177,7 +177,6 @@ function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
 
-
 function calc_convergence(envs, CSold, TSold)
     CSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.corners)
     ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)

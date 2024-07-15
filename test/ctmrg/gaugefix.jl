@@ -30,7 +30,7 @@ schemes = [:simultaneous, :sequential]
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)
     ctm_fixed, = gauge_fix(ctm, ctm2)
-    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol=1e-6
+    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-6
 end
 
 @testset "Z2 symmetry ($T) - ($unitcell) - ($ctmrgscheme)" for (T, unitcell, ctmrgscheme) in
@@ -52,5 +52,5 @@ end
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)
     ctm_fixed, = gauge_fix(ctm, ctm2)
-    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol=1e-6
+    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-6
 end
