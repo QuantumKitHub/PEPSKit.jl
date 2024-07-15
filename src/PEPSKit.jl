@@ -63,7 +63,7 @@ module Defaults
 end
 
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
-export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
+export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv
 export LocalOperator
 export expectation_value, costfun
 export leading_boundary
