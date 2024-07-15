@@ -40,7 +40,6 @@ based on the CTMRG gradient and updates the PEPS parameters. In this optimizatio
 the CTMRG runs can be started on the converged environments of the previous optimizer
 step by setting `reuse_env` to true. Otherwise a random environment is used at each
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
-Different levels of output verbosity can be activated using `verbosity` (0, 1 or 2).
 """
 @kwdef struct PEPSOptimize{G}
     boundary_alg::CTMRG = CTMRG()  # Algorithm to find boundary environment
@@ -49,7 +48,6 @@ Different levels of output verbosity can be activated using `verbosity` (0, 1 or
     )
     reuse_env::Bool = true  # Reuse environment of previous optimization as initial guess for next
     gradient_alg::G = GeomSum() # Algorithm to solve gradient linear problem
-    verbosity::Int = 0
 end
 
 """

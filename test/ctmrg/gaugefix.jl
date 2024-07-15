@@ -4,11 +4,12 @@ using PEPSKit
 using TensorKit
 using Accessors
 
-using PEPSKit: ctmrg_iter, gauge_fix, check_elementwise_convergence
+using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 χ = 6
+verbosity = 3
 
 function _make_symmetric(psi)
     if ==(size(psi)...)
@@ -45,7 +46,6 @@ end
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi, ctm_space)
 
-    verbosity = 1
     alg = CTMRG(;
         tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
     )
@@ -54,7 +54,7 @@ end
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
     ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-4)
+    @test PEPSKit.calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-4
 end
 
 @testset "Z2 symmetry ($T) - ($unitcell)" for (T, unitcell) in
@@ -70,7 +70,6 @@ end
     Random.seed!(123456789)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi, ctm_space)
 
-    verbosity = 1
     alg = CTMRG(;
         tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
     )
@@ -79,5 +78,5 @@ end
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
     ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-4)
+    @test PEPSKit.calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-4
 end

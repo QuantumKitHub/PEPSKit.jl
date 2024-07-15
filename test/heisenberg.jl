@@ -14,7 +14,6 @@ opt_alg = PEPSOptimize(;
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
     gradient_alg=GMRES(; tol=1e-6, maxiter=100),
     reuse_env=true,
-    verbosity=2,
 )
 
 # initialize states
