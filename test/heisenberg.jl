@@ -12,7 +12,7 @@ ctm_alg = CTMRG(;
     tol=1e-10,
     miniter=4,
     maxiter=100,
-    verbosity=1,
+    verbosity=2,
     svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
     ctmrgscheme=:simultaneous,
 )
@@ -27,7 +27,7 @@ opt_alg = PEPSOptimize(;
 Random.seed!(91283219347)
 H = square_lattice_heisenberg()
 psi_init = InfinitePEPS(2, χbond)
-env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init)

@@ -76,7 +76,7 @@ end
 
 """
     PEPSOptimize{G}(; boundary_alg=CTMRG(), optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
-                    reuse_env::Bool=true, gradient_alg::G=LinSolver(), verbosity::Int=0)
+                    reuse_env::Bool=true, gradient_alg::G=LinSolver())
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;

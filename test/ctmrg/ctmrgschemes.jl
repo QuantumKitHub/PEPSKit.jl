@@ -7,8 +7,8 @@ using PEPSKit
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg_sequential = CTMRG(; tol=1e-10, verbosity=1, ctmrgscheme=:sequential)
-ctm_alg_simultaneous = CTMRG(; tol=1e-10, verbosity=1, ctmrgscheme=:simultaneous)
+ctm_alg_sequential = CTMRG(; tol=1e-10, verbosity=2, ctmrgscheme=:sequential)
+ctm_alg_simultaneous = CTMRG(; tol=1e-10, verbosity=2, ctmrgscheme=:simultaneous)
 unitcells = [(1, 1), (3, 4)]
 
 @testset "$(unitcell) unit cell" for unitcell in unitcells

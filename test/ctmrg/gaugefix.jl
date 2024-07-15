@@ -24,13 +24,13 @@ schemes = [:simultaneous, :sequential]
     ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
-        tol=1e-10, maxiter=100, verbosity=1, trscheme=FixedSpaceTruncation(), ctmrgscheme
+        tol=1e-10, maxiter=100, verbosity=2, trscheme=FixedSpaceTruncation(), ctmrgscheme
     )
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)
     ctm_fixed, = gauge_fix(ctm, ctm2)
-    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-6)
+    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol=1e-6
 end
 
 @testset "Z2 symmetry ($T) - ($unitcell) - ($ctmrgscheme)" for (T, unitcell, ctmrgscheme) in
@@ -46,11 +46,11 @@ end
     ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
-        tol=1e-10, maxiter=400, verbosity=1, trscheme=FixedSpaceTruncation(), ctmrgscheme
+        tol=1e-10, maxiter=400, verbosity=2, trscheme=FixedSpaceTruncation(), ctmrgscheme
     )
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)
     ctm_fixed, = gauge_fix(ctm, ctm2)
-    @test PEPSKit.check_elementwise_convergence(ctm, ctm_fixed; atol=1e-6)
+    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol=1e-6
 end

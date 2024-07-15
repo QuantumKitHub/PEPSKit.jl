@@ -8,7 +8,7 @@ using PEPSKit:
     gauge_fix,
     fix_relative_phases,
     fix_global_phases,
-    check_elementwise_convergence
+    calc_elementwise_convergence
 
 # initialize parameters
 χbond = 2
@@ -21,7 +21,7 @@ unitcells = [(1, 1), (3, 4)]
                                                                    Iterators.product(
     unitcells, svd_algs
 )
-    ctm_alg = CTMRG(; tol=1e-12, verbosity=1, ctmrgscheme=:simultaneous, svd_alg)
+    ctm_alg = CTMRG(; tol=1e-12, verbosity=2, ctmrgscheme=:simultaneous, svd_alg)
 
     # initialize states
     Random.seed!(2394823842)
@@ -31,7 +31,7 @@ unitcells = [(1, 1), (3, 4)]
     # do extra iteration to get SVD
     env_conv2, info = ctmrg_iter(psi, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv1, env_conv2)
-    @test check_elementwise_convergence(env_conv1, env_fix; atol=1e-6)
+    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol=1e-6
 
     # fix gauge of SVD
     U_fix, V_fix = fix_relative_phases(info.U, info.V, signs)
@@ -43,7 +43,7 @@ unitcells = [(1, 1), (3, 4)]
     # do iteration with FixedSVD
     env_fixedsvd, = ctmrg_iter(psi, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
-    @test check_elementwise_convergence(env_conv1, env_fixedsvd; atol=1e-6)
+    @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol=1e-6
 end
 
 # TODO: Why doesn't fixed work with IterSVD?
@@ -65,7 +65,7 @@ end
 # # do extra iteration to get SVD
 # env_conv2, info = ctmrg_iter(psi, env_conv1, ctm_alg);
 # env_fix, signs = gauge_fix(env_conv1, env_conv2);
-# @test check_elementwise_convergence(env_conv1, env_fix)
+# @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol=1e-6
 
 # # fix gauge of SVD
 # U_fix, V_fix = fix_relative_phases(info.U, info.V, signs);
@@ -75,4 +75,4 @@ end
 # # do iteration with FixedSVD
 # env_fixedsvd, = ctmrg_iter(psi, env_conv1, ctm_alg_fix);
 # env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd);
-# @test check_elementwise_convergence(env_conv1, env_fixedsvd)
+# @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol=1e-6

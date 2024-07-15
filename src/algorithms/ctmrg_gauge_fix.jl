@@ -6,7 +6,7 @@ This assumes that the `envfinal` is the result of one CTMRG iteration on `envpre
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
-function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C′,T′}) where {C,C′,T,T′}
+function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -14,7 +14,7 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C′,T′}) where 
     end
     @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
 
-    # "general" algorithm from https://arxiv.org/abs/2311.11894
+    # Try the "general" algorithm from https://arxiv.org/abs/2311.11894
     signs = map(Iterators.product(axes(envfinal.edges)...)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
@@ -46,8 +46,8 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C′,T′}) where 
         ρfinal = transfermatrix_fixedpoint(Tsfinal, M, ρinit)
 
         # Decompose and multiply
-        Qprev, = leftorth!(ρprev)
-        Qfinal, = leftorth!(ρfinal)
+        Qprev, = leftorth(ρprev)
+        Qfinal, = leftorth(ρfinal)
 
         return Qprev * Qfinal'
     end
@@ -177,15 +177,38 @@ function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
 
+
+function calc_convergence(envs, CSold, TSold)
+    CSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.corners)
+    ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
+        # only compute the difference on the smallest part of the spaces
+        smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
+        e_old = isometry(MPSKit._firstspace(c_old), smallest)
+        e_new = isometry(MPSKit._firstspace(c_new), smallest)
+        return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
+    end
+
+    TSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.edges)
+    ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
+        MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
+            return scalartype(t_old)(Inf)
+        return norm(t_new - t_old)
+    end
+
+    @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
+
+    return max(ΔCS, ΔTS), CSnew, TSnew
+end
+
+@non_differentiable calc_convergence(args...)
+
 """
-    check_elementwise_convergence(envfinal, envfix; atol=1e-6)
+    calc_elementwise_convergence(envfinal, envfix; atol=1e-6)
 
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
 CTMRG environments are below some tolerance.
 """
-function check_elementwise_convergence(
-    envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6
-)
+function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6)
     ΔC = envfinal.corners .- envfix.corners
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
@@ -208,7 +231,7 @@ function check_elementwise_convergence(
         )
     end
 
-    return isapprox(ΔCmax, 0; atol) && isapprox(ΔTmax, 0; atol)
+    return max(ΔCmax, ΔTmax)
 end
 
-@non_differentiable check_elementwise_convergence(args...)
+@non_differentiable calc_elementwise_convergence(args...)
