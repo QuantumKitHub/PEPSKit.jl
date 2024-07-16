@@ -13,9 +13,9 @@ function square_lattice_tf_ising(
     lattice = fill(physical_space, 1, 1)
     σx = TensorMap(T[0 1; 1 0], physical_space, physical_space)
     σz = TensorMap(T[1 0; 0 -1], physical_space, physical_space)
-    hzz = nearest_neighbour_hamiltonian(lattice, -J / 4 * σz ⊗ σz)
+    hzz = nearest_neighbour_hamiltonian(lattice, -J * σz ⊗ σz)
     return repeat(
-        LocalOperator(lattice, hzz.terms..., (CartesianIndex(1, 1),) => -J * h / 2 * σx),
+        LocalOperator(lattice, hzz.terms..., (CartesianIndex(1, 1),) => -J * h * σx),
         unitcell...,
     )
 end

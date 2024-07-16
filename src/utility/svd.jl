@@ -10,8 +10,8 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg = TensorKit.SVD(), rrule_alg = nothing,
-                      broadening = nothing)
+    struct SVDAdjoint(; fwd_alg=Defaults.fwd_alg, rrule_alg=Defaults.rrule_alg,
+                      broadening=nothing)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
@@ -19,8 +19,8 @@ In case of degenerate singular values, one might need a `broadening` scheme whic
 removes the divergences from the adjoint.
 """
 @kwdef struct SVDAdjoint{F,R,B}
-    fwd_alg::F = TensorKit.SVD()
-    rrule_alg::R = nothing
+    fwd_alg::F = Defaults.fwd_alg
+    rrule_alg::R = Defaults.rrule_alg
     broadening::B = nothing
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
@@ -40,7 +40,25 @@ function PEPSKit.tsvd!(
 end
 
 """
-    struct IterSVD(; alg = KrylovKit.GKL(), fallback_threshold = Inf)
+    struct FixedSVD
+
+SVD struct containing a pre-computed decomposition or even multiple ones.
+The call to `tsvd` just returns the pre-computed U, S and V. In the reverse
+pass, the SVD adjoint is computed with these exact U, S, and V.
+"""
+struct FixedSVD{Ut,St,Vt}
+    U::Ut
+    S::St
+    V::Vt
+end
+
+# Return pre-computed SVD
+function TensorKit._tsvd!(t, alg::FixedSVD, ::NoTruncation, ::Real=2)
+    return alg.U, alg.S, alg.V, 0
+end
+
+"""
+    struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmmetric) tensors.
 The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
@@ -114,10 +132,10 @@ end
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::SVDAdjoint{IterSVD,R,B};
+    alg::SVDAdjoint{F,R,B};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-) where {R,B}
+) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
     U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
 
     function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
@@ -131,7 +149,10 @@ function ChainRulesCore.rrule(
             n_vals = length(Sdc)
             lvecs = Vector{Vector{scalartype(t)}}(eachcol(Uc))
             rvecs = Vector{Vector{scalartype(t)}}(eachcol(Vc'))
-            minimal_info = KrylovKit.ConvergenceInfo(length(Sdc), nothing, nothing, -1, -1)  # Just supply converged to SVD pullback
+
+            # Dummy objects only used for warnings
+            minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
+            minimal_alg = GKL(; tol=1e-6)  # Only tolerance is used for gauge sensitivity (# TODO: How do we not hard-code this tolerance?)
 
             if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
@@ -151,7 +172,7 @@ function ChainRulesCore.rrule(
                 minimal_info,
                 block(t, c),
                 :LR,
-                alg.fwd_alg.alg,
+                minimal_alg,
                 alg.rrule_alg,
             )
             copyto!(
@@ -169,7 +190,7 @@ function ChainRulesCore.rrule(
 end
 
 """
-    struct NonTruncAdjoint(; lorentz_broadening = 0.0)
+    struct NonTruncAdjoint
 
 Old SVD adjoint that does not account for the truncated part of truncated SVDs.
 """

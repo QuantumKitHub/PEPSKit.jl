@@ -8,11 +8,18 @@ using OptimKit
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=1, trscheme=truncdim(χenv))
+ctm_alg = CTMRG(;
+    tol=1e-10,
+    miniter=4,
+    maxiter=100,
+    verbosity=2,
+    svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
+    ctmrgscheme=:simultaneous,
+)
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
-    gradient_alg=GMRES(; tol=1e-6, maxiter=100),
+    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6), iterscheme=:fixed),
     reuse_env=true,
 )
 

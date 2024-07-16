@@ -2,14 +2,15 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using Accessors
 
 using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
+schemes = [:simultaneous, :sequential]
 χ = 6
-verbosity = 3
+atol = 1e-4
+verbosity = 2
 
 function _make_symmetric(psi)
     if ==(size(psi)...)
@@ -33,8 +34,11 @@ function semi_random_peps!(psi::InfinitePEPS)
     return InfinitePEPS(A′)
 end
 
-@testset "Trivial symmetry ($T) - ($unitcell)" for (T, unitcell) in
-                                                   Iterators.product(scalartypes, unitcells)
+@testset "Trivial symmetry ($T) - ($unitcell) - ($ctmrgscheme)" for (
+    T, unitcell, ctmrgscheme
+) in Iterators.product(
+    scalartypes, unitcells, schemes
+)
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
     ctm_space = ComplexSpace(χ)
@@ -47,18 +51,19 @@ end
     ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
-        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
+        tol=1e-10, maxiter=200, verbosity, trscheme=FixedSpaceTruncation(), ctmrgscheme
     )
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
-    ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-4
+    ctm2, = ctmrg_iter(psi, ctm, alg)
+    ctm_fixed, = gauge_fix(ctm, ctm2)
+    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = atol
 end
 
-@testset "Z2 symmetry ($T) - ($unitcell)" for (T, unitcell) in
-                                              Iterators.product(scalartypes, unitcells)
+@testset "Z2 symmetry ($T) - ($unitcell) - ($ctmrgscheme)" for (T, unitcell, ctmrgscheme) in
+                                                               Iterators.product(
+    scalartypes, unitcells, schemes
+)
     physical_space = Z2Space(0 => 1, 1 => 1)
     peps_space = Z2Space(0 => 1, 1 => 1)
     ctm_space = Z2Space(0 => χ ÷ 2, 1 => χ ÷ 2)
@@ -67,16 +72,16 @@ end
     semi_random_peps!(psi)
     psi = _make_symmetric(psi)
 
-    Random.seed!(123456789)  # Seed RNG to make random environment consistent
+    Random.seed!(987654321)  # Seed RNG to make random environment consistent
+    psi = InfinitePEPS(physical_space, peps_space; unitcell)
     ctm = CTMRGEnv(psi, ctm_space)
 
     alg = CTMRG(;
-        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
+        tol=1e-10, maxiter=200, verbosity, trscheme=FixedSpaceTruncation(), ctmrgscheme
     )
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
 
     ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
-    ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-4
+    ctm2, = ctmrg_iter(psi, ctm, alg)
+    ctm_fixed, = gauge_fix(ctm, ctm2)
+    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = atol
 end
