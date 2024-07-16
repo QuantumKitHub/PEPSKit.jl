@@ -20,6 +20,7 @@ function MPSKit.mixed_fixpoints(
     below::MPSMultiline,
     init=gen_init_fps(above, O, below);
     solver=MPSKit.Defaults.eigsolver,
+    howmany=1
 )
     T = eltype(above)
 
@@ -30,6 +31,8 @@ function MPSKit.mixed_fixpoints(
     envtype = eltype(init[1])
     lefties = PeriodicArray{envtype,2}(undef, numrows, numcols)
     righties = PeriodicArray{envtype,2}(undef, numrows, numcols)
+    lvals = Vector{Vector{scalartype(envtype)}}(undef, numrows)
+    rvals = Vector{Vector{scalartype(envtype)}}(undef, numrows)
 
     @threads for cr in 1:numrows
         c_above = above[cr]
@@ -40,18 +43,20 @@ function MPSKit.mixed_fixpoints(
         @sync begin
             Threads.@spawn begin
                 E_LL = TransferMatrix($c_above.AL, $O[cr], $c_below.AL)
-                (_, Ls, convhist) = eigsolve(flip(E_LL), $L0, 1, :LM, $solver)
-                convhist.converged < 1 &&
+                (Lvals, Ls, convhist) = eigsolve(flip(E_LL), $L0, howmany, :LM, $solver)
+                convhist.converged < howmany &&
                     @info "left eigenvalue failed to converge $(convhist.normres)"
                 L0 = first(Ls)
+                lvals[cr] = Lvals[1:howmany]
             end
 
             Threads.@spawn begin
                 E_RR = TransferMatrix($c_above.AR, $O[cr], $c_below.AR)
-                (_, Rs, convhist) = eigsolve(E_RR, $R0, 1, :LM, $solver)
-                convhist.converged < 1 &&
+                (Rvals, Rs, convhist) = eigsolve(E_RR, $R0, howmany, :LM, $solver)
+                convhist.converged < howmany &&
                     @info "right eigenvalue failed to converge $(convhist.normres)"
                 R0 = first(Rs)
+                rvals[cr] = Rvals[1:howmany]
             end
         end
 
@@ -81,7 +86,7 @@ function MPSKit.mixed_fixpoints(
         end
     end
 
-    return (lefties, righties)
+    return (lefties, righties), (lvals, rvals)
 end
 
 function gen_init_fps(above::MPSMultiline, O::TransferPEPSMultiline, below::MPSMultiline)

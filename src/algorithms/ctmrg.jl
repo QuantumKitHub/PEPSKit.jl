@@ -328,3 +328,35 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
 
     return total
 end
+
+"""
+    correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
+
+Compute the PEPS correlation length based on the horizontal and vertical
+transfer matrices. Additionally the (normalized) eigenvalue spectrum is
+returned. Specify the number of computed eigenvalues with `howmany`.
+"""
+function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
+    ξ_h = Vector{Float64}(undef, size(peps, 1))
+    ξ_v = Vector{Float64}(undef, size(peps, 2))
+    λ_h = Matrix{ComplexF64}(undef, size(peps, 1), howmany)
+    λ_v = Matrix{ComplexF64}(undef, size(peps, 2), howmany)
+
+    # Horizontal
+    above_h = MPSMultiline(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
+    below_h = MPSMultiline(map(r -> InfiniteMPS(env.edges[3, r, :]), 1:size(peps, 1)))
+    transfer_peps_h = TransferPEPSMultiline(peps, NORTH)
+    _, (_, vals_h) = MPSKit.mixed_fixpoints(above_h, transfer_peps_h, below_h; howmany)
+    λ_h = map(λ_row -> λ_row / abs(λ_row[1]), vals_h)  # Normalize largest eigenvalue
+    ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
+
+    # Vertical
+    above_v = MPSMultiline(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
+    below_v = MPSMultiline(map(c -> InfiniteMPS(env.edges[4, :, c]), 1:size(peps, 2)))
+    transfer_peps_v = TransferPEPSMultiline(peps, EAST)
+    _, (_, vals_v) = MPSKit.mixed_fixpoints(above_v, transfer_peps_v, below_v; howmany)
+    λ_v = map(λ_row -> λ_row / abs(λ_row[1]), vals_v)  # Normalize largest eigenvalue
+    ξ_v = map(λ_row -> -1 / log(abs(λ_row[2])), λ_v)
+
+    return ξ_h, ξ_v, λ_h, λ_v
+end
