@@ -19,7 +19,7 @@ ctm_alg = CTMRG(;
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
-    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6, maxiter=100), iterscheme=:fixed),
+    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6), iterscheme=:fixed),
     reuse_env=true,
 )
 
@@ -27,7 +27,7 @@ opt_alg = PEPSOptimize(;
 Random.seed!(91283219347)
 H = square_lattice_heisenberg()
 psi_init = InfinitePEPS(2, χbond)
-env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
+env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init)

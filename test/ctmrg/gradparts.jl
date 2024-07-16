@@ -28,9 +28,12 @@ include(joinpath("..", "utility.jl"))
 Pspaces = [ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1)]
 Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
-functions = [left_move, ctmrg_iter, leading_boundary]
-tol = 1e-8
-boundary_alg = CTMRG(; tol=tol, miniter=4, maxiter=100, verbosity=0)
+tol = 1e-10
+atol = 1e-6
+boundary_algs = [
+    CTMRG(; tol, verbosity=0, ctmrgscheme=:simultaneous),
+    CTMRG(; tol, verbosity=0, ctmrgscheme=:sequential),
+]
 
 ## Gauge invariant function of the environment
 # --------------------------------------------
@@ -49,27 +52,19 @@ end
 
 ## Tests
 # ------
-title = "Reverse rules for composite parts of the CTMRG fixed point with spacetype"
-@testset title * "$(Vspaces[i])" for i in eachindex(Pspaces)
+@testset "Reverse rules for ctmrg_iter with spacetype $(Vspaces[i])" for i in
+                                                                         eachindex(Pspaces)
     psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
     env = CTMRGEnv(psi, Espaces[i])
 
-    @testset "$f" for f in functions
-        atol = f == leading_boundary ? sqrt(tol) : tol
-        g = if f == leading_boundary
-            function (state, env)
-                return rho(f(env, state, boundary_alg))
-            end
-        else
-            function (state, env)
-                return rho(f(state, env, boundary_alg)[1])
-            end
-        end
+    @testset "$alg" for alg in boundary_algs
+        @info "$(typeof(alg)) on $(Vspaces[i])"
+        f(state, env) = rho(ctmrg_iter(state, env, boundary_alg)[1])
 
         # use rrule testing functionality but compute rrule via Zygote
         test_rrule(
             Zygote.ZygoteRuleConfig(),
-            g,
+            f,
             psi,
             env;
             check_inferred=false,

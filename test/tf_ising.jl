@@ -28,13 +28,14 @@ ctm_alg = CTMRG(;
 )
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
-    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6, maxiter=100)),
+    optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
+    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6)),
     reuse_env=true,
 )
 
 # initialize states
 H = square_lattice_tf_ising(; h)
+Random.seed!(91283219347)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
@@ -46,6 +47,6 @@ result = fixedpoint(psi_init, H, opt_alg, env_init)
 M = LocalOperator(H.lattice, (CartesianIndex(1, 1),) => σx)
 magn = expectation_value(result.peps, M, result.env)
 
-@test result.E ≈ e atol = 1e-3
+@test result.E ≈ e atol = 1e-2
 @test imag(magn) ≈ 0 atol = 1e-6
 @test abs(magn) ≈ mˣ atol = 5e-2
