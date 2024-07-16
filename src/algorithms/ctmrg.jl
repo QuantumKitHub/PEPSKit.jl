@@ -145,10 +145,10 @@ function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
         env, info = left_move(state, env, alg.projector_alg)
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
-        ϵ = max(ϵ, info.ϵ)
+        ϵ = max(ϵ, info.err)
     end
 
-    return env, (; ϵ)
+    return env, (; err=ϵ)
 end
 
 """
@@ -218,7 +218,7 @@ function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
         end
     end
 
-    return CTMRGEnv(corners, edges), (; P_left=copy(P_top), P_right=copy(P_bottom), ϵ)
+    return CTMRGEnv(corners, edges), (; err=ϵ, P_left=copy(P_top), P_right=copy(P_bottom))
 end
 
 # Enlarged corner contractions (need direction specific methods to avoid PEPS rotations)

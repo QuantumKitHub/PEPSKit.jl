@@ -1,5 +1,7 @@
 abstract type GradMode{F} end
 
+iterscheme(::GradMode{F}) where {F} = F
+
 """
     struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
                    verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
@@ -99,10 +101,10 @@ struct PEPSOptimize{G}
         gradient_alg::G,
     ) where {S,G}
         if gradient_alg isa GradMode
-            if S == :sequential && G.parameters[1] == :fixed
+            if S == :sequential && iterscheme(gradient_alg) == :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             elseif boundary_alg.projector_alg.svd_alg.fwd_alg isa IterSVD &&
-                G.parameters[1] == :fixed
+                iterscheme(gradient_alg) == :fixed
                 throw(ArgumentError("IterSVD and :fixed are currently not compatible"))
             end
         end
@@ -208,7 +210,7 @@ function _rrule(
     state,
     alg::CTMRG{C},
 ) where {C}
-    @assert C == :simultaneous
+    @assert C === :simultaneous
     @assert alg.projector_alg.svd_alg.rrule_alg isa Union{KrylovKit.LinearSolver,Arnoldi}
     envs = leading_boundary(envinit, state, alg)
     envsconv, info = ctmrg_iter(state, envs, alg)

@@ -91,7 +91,7 @@ function build_projectors(Q, env::CTMRGEnv{C,E}, alg::ProjectorAlg{A,T}) where {
         P_right[dir, r, c] = Pr
     end
 
-    return copy(P_left), copy(P_right), (; ϵ, U=copy(U), S=copy(S), V=copy(V))
+    return copy(P_left), copy(P_right), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
 end
 
 # Apply projectors to renormalize corners and edges
