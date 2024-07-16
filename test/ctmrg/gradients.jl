@@ -10,27 +10,38 @@ using KrylovKit
 # -------------------------------------------
 χbond = 2
 χenv = 4
-Pspaces = [ComplexSpace(2)] #, Vect[FermionParity](0 => 1, 1 => 1)]
-Vspaces = [ComplexSpace(χbond)] #, Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
-Espaces = [ComplexSpace(χenv)] #, Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
-models = [square_lattice_heisenberg()] #, square_lattice_pwave()]
-names = ["Heisenberg"] #, "p-wave superconductor"]
-Random.seed!(42039482030)
+Pspaces = [ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1)]
+Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
+Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
+models = [square_lattice_heisenberg(), square_lattice_pwave()]
+names = ["Heisenberg", "p-wave superconductor"]
+
 gradtol = 1e-4
-boundary_alg = CTMRG(;
-    tol=1e-10,
-    verbosity=0,
-    ctmrgscheme=:simultaneous,
-    svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
-)
+boundary_algs = [
+    CTMRG(;
+        tol=1e-10,
+        verbosity=0,
+        ctmrgscheme=:simultaneous,
+        svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
+    ),
+    CTMRG(; tol=1e-10, verbosity=0, ctmrgscheme=:sequential),
+]
 gradmodes = [
-    nothing,
-    GeomSum(; tol=gradtol, iterscheme=:fixed),
-    GeomSum(; tol=gradtol, iterscheme=:diffgauge),
-    ManualIter(; tol=gradtol, iterscheme=:fixed),
-    ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-    LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol, maxiter=10), iterscheme=:fixed),
-    LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol, maxiter=10), iterscheme=:diffgauge),
+    [
+        nothing,
+        GeomSum(; tol=gradtol, iterscheme=:fixed),
+        GeomSum(; tol=gradtol, iterscheme=:diffgauge),
+        ManualIter(; tol=gradtol, iterscheme=:fixed),
+        ManualIter(; tol=gradtol, iterscheme=:diffgauge),
+        LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:fixed),
+        LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:diffgauge),
+    ],
+    [
+        nothing,
+        GeomSum(; tol=gradtol, iterscheme=:diffgauge),
+        ManualIter(; tol=gradtol, iterscheme=:diffgauge),
+        LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:diffgauge),
+    ],
 ]
 steps = -0.01:0.005:0.01
 
@@ -43,9 +54,12 @@ steps = -0.01:0.005:0.01
     Pspace = Pspaces[i]
     Vspace = Pspaces[i]
     Espace = Espaces[i]
+    gms = gradmodes[i]
+    boundary_alg = boundary_algs[i]
     psi_init = InfinitePEPS(Pspace, Vspace, Vspace)
-    @testset "$alg_rrule" for alg_rrule in gradmodes
+    @testset "$alg_rrule" for alg_rrule in gms
         @info "optimtest of $alg_rrule on $(names[i])"
+        Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace, Vspace)
         env = leading_boundary(CTMRGEnv(psi, Espace), psi, boundary_alg)
@@ -58,7 +72,7 @@ steps = -0.01:0.005:0.01
         ) do (peps, envs)
             E, g = Zygote.withgradient(peps) do psi
                 envs2 = PEPSKit.hook_pullback(
-                    leading_boundary, envs, psi, boundary_alg, ; alg_rrule
+                    leading_boundary, envs, psi, boundary_alg; alg_rrule
                 )
                 return costfun(psi, envs2, models[i])
             end
