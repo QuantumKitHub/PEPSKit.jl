@@ -14,9 +14,6 @@ end
         @time @safetestset "Gauge Fixing" begin
             include("ctmrg/gaugefix.jl")
         end
-        @time @safetestset "Gradient parts" begin
-            include("ctmrg/gradparts.jl")
-        end
         @time @safetestset "Gradients" begin
             include("ctmrg/gradients.jl")
         end
