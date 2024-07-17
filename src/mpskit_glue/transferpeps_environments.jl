@@ -32,7 +32,7 @@ function MPSKit.mixed_fixpoints(
     righties = PeriodicArray{envtype,2}(undef, numrows, numcols)
 
     @threads for cr in 1:numrows
-        c_above = above[cr]
+        c_above = above[cr]  # TODO: Update index convention to above[cr - 1]
         c_below = below[cr + 1]
 
         (L0, R0) = init[cr]
@@ -94,7 +94,7 @@ function gen_init_fps(above::MPSMultiline, O::TransferPEPSMultiline, below::MPSM
             left_virtualspace(below, cr + 1, 0) *
             space(O[cr].top[1], 5)' *
             space(O[cr].bot[1], 5),
-            left_virtualspace(above, cr, 0),
+            left_virtualspace(above, cr, 0),  # TODO: Update index convention to above[cr - 1]
         )
         R0::T = TensorMap(
             rand,
@@ -106,4 +106,32 @@ function gen_init_fps(above::MPSMultiline, O::TransferPEPSMultiline, below::MPSM
         )
         (L0, R0)
     end
+end
+
+function MPSKit.transfer_spectrum(
+    above::MPSMultiline,
+    O::TransferPEPSMultiline,
+    below::MPSMultiline,
+    init=gen_init_fps(above, O, below);
+    num_vals=2,
+    solver=MPSKit.Defaults.eigsolver,
+)
+    @assert size(above) == size(O)
+    @assert size(below) == size(O)
+
+    numrows = size(above, 2)
+    envtype = eltype(init[1])
+    eigenvals = Vector{Vector{scalartype(envtype)}}(undef, numrows)
+
+    @threads for cr in 1:numrows
+        L0, = init[cr]
+
+        E_LL = TransferMatrix(above[cr - 1].AL, O[cr], below[cr + 1].AL)  # Note that this index convention is different from above!
+        λ, _, convhist = eigsolve(flip(E_LL), L0, num_vals, :LM, solver)
+        convhist.converged < num_vals &&
+            @warn "correlation length failed to converge: normres = $(convhist.normres)"
+        eigenvals[cr] = λ
+    end
+
+    return eigenvals
 end

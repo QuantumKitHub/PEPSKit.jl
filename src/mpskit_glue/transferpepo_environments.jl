@@ -30,7 +30,7 @@ function MPSKit.mixed_fixpoints(
     righties = PeriodicArray{envtype,2}(undef, numrows, numcols)
 
     @threads for cr in 1:numrows
-        c_above = above[cr]
+        c_above = above[cr]  # TODO: Update index convention to above[cr - 1]
         c_below = below[cr + 1]
 
         (L0, R0) = init[cr]
@@ -90,7 +90,7 @@ function gen_init_fps(above::MPSMultiline, O::TransferPEPOMultiline, below::MPSM
             rand,
             scalartype(T),
             left_virtualspace(below, cr + 1, 0) * prod(adjoint.(west_spaces(O[cr], 1))),
-            left_virtualspace(above, cr, 0),
+            left_virtualspace(above, cr, 0),  # TODO: Update index convention to above[cr - 1]
         )
         R0::T = TensorMap(
             rand,
