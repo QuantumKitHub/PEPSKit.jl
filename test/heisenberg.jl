@@ -31,8 +31,10 @@ env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, c
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init)
+λ_h, λ_v, = correlation_length(result.peps, result.env)
 
 @test result.E ≈ -0.6694421 atol = 1e-2
+@test all(@. λ_h > 0 && λ_v > 0)
 
 # same test but for 2x2 unit cell
 H_2x2 = square_lattice_heisenberg(; unitcell=(2, 2))
@@ -41,5 +43,7 @@ env_init_2x2 = leading_boundary(
     CTMRGEnv(psi_init_2x2, ComplexSpace(χenv)), psi_init_2x2, ctm_alg
 )
 result_2x2 = fixedpoint(psi_init_2x2, H_2x2, opt_alg, env_init_2x2)
+λ_h_2x2, λ_v_2x2, = correlation_length(result_2x2.peps, result_2x2.env)
 
 @test result_2x2.E ≈ 4 * result.E atol = 1e-2
+@test all(@. λ_h_2x2 > 0 && λ_v_2x2 > 0)
