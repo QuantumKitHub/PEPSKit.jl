@@ -30,14 +30,15 @@ function MPSKit.mixed_fixpoints(
     righties = PeriodicArray{envtype,2}(undef, numrows, numcols)
 
     @threads for cr in 1:numrows
-        c_above = above[cr]
+        c_above = above[cr - 1]
+        O_middle = O[cr]
         c_below = below[cr + 1]
 
         (L0, R0) = init[cr]
 
         @sync begin
             Threads.@spawn begin
-                E_LL = TransferMatrix($c_above.AL, $O[cr], $c_below.AL)
+                E_LL = TransferMatrix($c_above.AL, $O_middle, $c_below.AL)
                 (_, Ls, convhist) = eigsolve(flip(E_LL), $L0, 1, :LM, $solver)
                 convhist.converged < 1 &&
                     @info "left eigenvalue failed to converge $(convhist.normres)"
@@ -45,7 +46,7 @@ function MPSKit.mixed_fixpoints(
             end
 
             Threads.@spawn begin
-                E_RR = TransferMatrix($c_above.AR, $O[cr], $c_below.AR)
+                E_RR = TransferMatrix($c_above.AR, $O_middle, $c_below.AR)
                 (_, Rs, convhist) = eigsolve(E_RR, $R0, 1, :LM, $solver)
                 convhist.converged < 1 &&
                     @info "right eigenvalue failed to converge $(convhist.normres)"
@@ -57,7 +58,7 @@ function MPSKit.mixed_fixpoints(
         for loc in 2:numcols
             lefties[cr, loc] =
                 lefties[cr, loc - 1] *
-                TransferMatrix(c_above.AL[loc - 1], O[cr, loc - 1], c_below.AL[loc - 1])
+                TransferMatrix(c_above.AL[loc - 1], O_middle[loc - 1], c_below.AL[loc - 1])
         end
 
         renormfact::scalartype(T) = dot(c_below.CR[0], PEPO_∂∂C(L0, R0) * c_above.CR[0])
@@ -67,8 +68,9 @@ function MPSKit.mixed_fixpoints(
 
         for loc in (numcols - 1):-1:1
             righties[cr, loc] =
-                TransferMatrix(c_above.AR[loc + 1], O[cr, loc + 1], c_below.AR[loc + 1]) *
-                righties[cr, loc + 1]
+                TransferMatrix(
+                    c_above.AR[loc + 1], O_middle[loc + 1], c_below.AR[loc + 1]
+                ) * righties[cr, loc + 1]
 
             renormfact = dot(
                 c_below.CR[loc],
@@ -90,12 +92,12 @@ function gen_init_fps(above::MPSMultiline, O::TransferPEPOMultiline, below::MPSM
             rand,
             scalartype(T),
             left_virtualspace(below, cr + 1, 0) * prod(adjoint.(west_spaces(O[cr], 1))),
-            left_virtualspace(above, cr, 0),
+            left_virtualspace(above, cr - 1, 0),
         )
         R0::T = TensorMap(
             rand,
             scalartype(T),
-            right_virtualspace(above, cr, 0) * prod(adjoint.(east_spaces(O[cr], 1))),
+            right_virtualspace(above, cr - 1, 0) * prod(adjoint.(east_spaces(O[cr], 1))),
             right_virtualspace(below, cr + 1, 0),
         )
         (L0, R0)
