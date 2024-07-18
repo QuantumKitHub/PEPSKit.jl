@@ -228,7 +228,7 @@ function _rrule(
     alg::CTMRG{C},
 ) where {C}
     @assert C === :simultaneous
-    @assert alg.projector_alg.svd_alg.rrule_alg isa Union{KrylovKit.LinearSolver,Arnoldi}
+    @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs = leading_boundary(envinit, state, alg)
     envsconv, info = ctmrg_iter(state, envs, alg)
     envsfix, signs = gauge_fix(envs, envsconv)
