@@ -24,17 +24,17 @@ include("operators/transferpeps.jl")
 include("operators/infinitepepo.jl")
 include("operators/transferpepo.jl")
 include("operators/derivatives.jl")
-
-include("mpskit_glue/transferpeps_environments.jl")
-include("mpskit_glue/transferpepo_environments.jl")
-
-include("environments/ctmrgenv.jl")
 include("operators/localoperator.jl")
 include("operators/models.jl")
 
-include("algorithms/ctmrg_gauge_fix.jl")
-include("algorithms/ctmrg.jl")
-include("algorithms/ctmrg_all_sides.jl")
+include("environments/ctmrg environments.jl")
+include("environments/transferpeps_environments.jl")
+include("environments/transferpepo_environments.jl")
+
+include("algorithms/ctmrg/ctmrg.jl")
+include("algorithms/ctmrg/gaugefix.jl")
+include("algorithms/ctmrg/ctmrg_all_sides.jl")
+
 include("algorithms/peps_opt.jl")
 
 include("utility/symmetrization.jl")
