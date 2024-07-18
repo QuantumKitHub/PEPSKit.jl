@@ -68,6 +68,8 @@ function CTMRG(;
     )
 end
 
+ctmrgscheme(::CTMRG{S}) where {S} = S
+
 """
     MPSKit.leading_boundary([envinit], state, alg::CTMRG)
 
