@@ -7,7 +7,6 @@ have different spaces, this truncation style is different from `TruncationSpace`
 """
 struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
-# TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
 """
     struct ProjectorAlg{S}(; svd_alg=TensorKit.SVD(), trscheme=TensorKit.notrunc(),
                            fixedspace=false, verbosity=0)
@@ -23,8 +22,26 @@ environment direction/unit cell entry.
     trscheme::T = FixedSpaceTruncation()
     verbosity::Int = 0
 end
+# TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
 
-# TODO: add abstract Algorithm type?
+function truncation_scheme(alg::ProjectorAlg, edge)
+    if alg.trscheme isa FixedSpaceTruncation
+        return truncspace(space(edge, 1))
+    else
+        return alg.trscheme
+    end
+end
+
+function svd_algorithm(alg::ProjectorAlg, (dir, r, c))
+    if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
+        fwd_alg = alg.svd_alg.fwd_alg
+        fix_svd = FixedSVD(fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c])
+        return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
+    else
+        return alg.svd_alg
+    end
+end
+
 """
     CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
           miniter=Defaults.ctmrg_miniter, verbosity=0,
@@ -61,7 +78,7 @@ function CTMRG(;
     verbosity=2,
     svd_alg=SVDAdjoint(),
     trscheme=FixedSpaceTruncation(),
-    ctmrgscheme=Defaults.ctmrgscheme,
+    ctmrgscheme::Symbol=Defaults.ctmrgscheme,
 )
     return CTMRG{ctmrgscheme}(
         tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
@@ -69,6 +86,11 @@ function CTMRG(;
 end
 
 ctmrgscheme(::CTMRG{S}) where {S} = S
+
+# aliases for the different CTMRG schemes
+const SequentialCTMRG = CTMRG{:sequential}
+const SimultaneousCTMRG = CTMRG{:simultaneous}
+
 
 """
     MPSKit.leading_boundary([envinit], state, alg::CTMRG)
@@ -79,7 +101,7 @@ Per default, a random initial environment is used.
 function MPSKit.leading_boundary(state, alg::CTMRG)
     return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
 end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRG{S}) where {S}
+function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     CS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
     TS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
 
@@ -105,7 +127,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG{S}) where {S}
             verbosity=alg.verbosity,
             svd_alg=alg.projector_alg.svd_alg,
             trscheme=FixedSpaceTruncation(),
-            ctmrgscheme=S,
+            ctmrgscheme=ctmrgscheme(alg),
         )
         env′, = ctmrg_iter(state, env, alg_fixed)
         envfix, = gauge_fix(env, env′)
@@ -122,6 +144,37 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG{S}) where {S}
     end
 end
 
+"""
+    ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG{:sequential})
+    
+Perform one iteration of CTMRG that maps the `state` and `env` to a new environment,
+and also return the truncation error.
+One CTMRG iteration consists of four `left_move` calls and 90 degree rotations,
+such that the environment is grown and renormalized in all four directions.
+"""
+function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
+    ϵ = 0.0
+    for _ in 1:4
+        # left move
+        enlarged_envs = ctmrg_expand(state, envs, alg)
+        projectors, info = ctmrg_projectors(enlarged_envs, envs, alg)
+        envs = ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg)
+
+        # rotate
+        state = rotate_north(state, EAST)
+        envs = rotate_north(envs, EAST)
+        ϵ = max(ϵ, info.err)
+    end
+
+    return envs, (; err=ϵ)
+end
+function ctmrg_iter(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
+    enlarged_envs = ctmrg_expand(state, envs, alg)
+    projectors, info = ctmrg_projectors(enlarged_envs, envs, alg)
+    envs′ = ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg)
+    return envs′, info
+end
+
 ctmrg_loginit!(log, η, N) = @infov 2 loginit!(log, η, N)
 ctmrg_logiter!(log, iter, η, N) = @infov 3 logiter!(log, iter, η, N)
 ctmrg_logfinish!(log, iter, η, N) = @infov 2 logfinish!(log, iter, η, N)
@@ -132,95 +185,291 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-"""
-    ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
-    
-Perform one iteration of CTMRG that maps the `state` and `env` to a new environment,
-and also return the truncation error.
-One CTMRG iteration consists of four `left_move` calls and 90 degree rotations,
-such that the environment is grown and renormalized in all four directions.
-"""
-function ctmrg_iter(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
-    ϵ = 0.0
+# ======================================================================================== #
+# Expansion step
+# ======================================================================================== #
 
-    for _ in 1:4
-        env, info = left_move(state, env, alg.projector_alg)
-        state = rotate_north(state, EAST)
-        env = rotate_north(env, EAST)
-        ϵ = max(ϵ, info.err)
+"""
+    ctmrg_expand(state, envs, alg::CTMRG{M})
+
+Expand the environment by absorbing a new PEPS tensor.
+There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
+The first mode expands the environment in one direction at a time, for convenience towards
+the left. The second mode expands the environment in all four directions simultaneously.
+"""
+function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
+    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
+    Q_nw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
+    Q_sw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
+
+    directions = collect(Iterators.product(axes(state)...))
+    @fwdthreads for (r, c) in directions
+        r′ = _next(r, size(state, 1))
+        Q_nw[r, c] = northwest_corner((r, c), envs, state)
+        Q_sw[r, c] = southwest_corner((r′, c), envs, state)
     end
 
-    return env, (; err=ϵ)
+    return copy(Q_nw), copy(Q_sw)
+end
+function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
+    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
+    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
+    drc_combinations = collect(Iterators.product(axes(envs.corners)...))
+    @fwdthreads for (dir, r, c) in drc_combinations
+        Q[dir, r, c] = if dir == NORTHWEST
+            northwest_corner((r, c), envs, state)
+        elseif dir == NORTHEAST
+            northeast_corner((r, c), envs, state)
+        elseif dir == SOUTHEAST
+            southeast_corner((r, c), envs, state)
+        elseif dir == SOUTHWEST
+            southwest_corner((r, c), envs, state)
+        end
+    end
+
+    return copy(Q)
 end
 
-"""
-    left_move(state, env::CTMRGEnv{C,T}, alg::CTMRG) where {C,T}
+# ======================================================================================== #
+# Projector step
+# ======================================================================================== #
 
-Grow, project and renormalize the environment `env` in west direction.
-Return the updated environment as well as the projectors and truncation error.
 """
-function left_move(state, env::CTMRGEnv{C,T}, alg::ProjectorAlg) where {C,T}
-    corners::typeof(env.corners) = copy(env.corners)
-    edges::typeof(env.edges) = copy(env.edges)
+    ctmrg_projectors(Q, env, alg::CTMRG{M})
+"""
+function ctmrg_projectors(
+    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
+) where {C,E}
+    projector_alg = alg.projector_alg 
+    # pre-allocation
+    P_bottom, P_top = Zygote.Buffer.(projector_type(envs.edges))
     ϵ = 0.0
-    P_bottom, P_top = Zygote.Buffer.(projector_type(T, size(state)))  # Use Zygote.Buffer instead of @diffset to avoid ZeroTangent errors in _setindex
-
-    for col in 1:size(state, 2)
-        cprev = _prev(col, size(state, 2))
-
+    
+    directions = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
+    @fwdthreads for (r, c) in directions
+        # SVD half-infinite environment
+        @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
+            enlarged_envs[2][r, c][χ_EB D_EBabove D_EBbelow; χ D1 D2] *
+            enlarged_envs[1][r, c][χ D1 D2; χ_ET D_ETabove D_ETbelow]
+        
+        trscheme = truncation_scheme(projector_alg, envs.edges[dir, r, c])
+        svd_alg = svd_algorithm(projector_alg, (dir, r, c))
+        U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
+        ϵ = max(ϵ, ϵ_local / norm(S))
+        
+        # Compute SVD truncation error and check for degenerate singular values
+        ignore_derivatives() do
+            if alg.verbosity > 0 && is_degenerate_spectrum(S)
+                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+                @warn("degenerate singular values detected: ", svals)
+            end
+        end
+        
         # Compute projectors
-        for row in 1:size(state, 1)
-            # Enlarged corners
-            Q_sw = southwest_corner((_next(row, size(state, 1)), col), env, state)
-            Q_nw = northwest_corner((row, col), env, state)
+        P_bottom[r, c], P_top[r, c] = build_projectors(
+            U,
+            S,
+            V,
+            enlarged_envs[2][r, c],
+            enlarged_envs[1][r, c],
+        )
+    end
+    
+    return (copy(P_bottom), copy(P_top)), (; err=ϵ)
+end
+function ctmrg_projectors(
+    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SimultaneousCTMRG
+) where {C,E}
+    projector_alg = alg.projector_alg
+    # pre-allocation
+    P_left, P_right = Zygote.Buffer.(projector_type(envs.edges))
+    U, V = Zygote.Buffer.(projector_type(envs.edges))
+    # Corner type but with real numbers
+    S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
 
-            # SVD half-infinite environment
-            trscheme = if alg.trscheme isa FixedSpaceTruncation
-                truncspace(space(env.edges[WEST, row, col], 1))
-            else
-                alg.trscheme
-            end
-            @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
-                Q_sw[χ_EB D_EBabove D_EBbelow; χ D1 D2] *
-                Q_nw[χ D1 D2; χ_ET D_ETabove D_ETbelow]
-            U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, alg.svd_alg; trunc=trscheme)
-            ϵ = max(ϵ, ϵ_local / norm(S))
-            # TODO: check if we can just normalize enlarged corners s.t. trunc behaves a bit better
-
-            # Compute SVD truncation error and check for degenerate singular values
-            ignore_derivatives() do
-                if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                    svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-                    @warn("degenerate singular values detected: ", svals)
-                end
-            end
-
-            # Compute projectors
-            Pb, Pt = build_projectors(U, S, V, Q_sw, Q_nw)
-            P_bottom[row, col] = Pb
-            P_top[row, col] = Pt
+    ϵ = 0.0
+    drc_combinations = collect(Iterators.product(axes(envs.corners)...))
+    @fwdthreads for (dir, r, c) in drc_combinations
+        # Row-column index of next enlarged corner
+        next_rc = if dir == 1
+            (r, _next(c, size(envs.corners, 3)))
+        elseif dir == 2
+            (_next(r, size(envs.corners, 2)), c)
+        elseif dir == 3
+            (r, _prev(c, size(envs.corners, 3)))
+        elseif dir == 4
+            (_prev(r, size(envs.corners, 2)), c)
         end
 
-        # Use projectors to grow the corners & edges
-        for row in 1:size(state, 1)
-            rprev = _prev(row, size(state, 1))
-            C_sw, C_nw, T_w = grow_env_left(
-                state[row, col],
-                P_bottom[rprev, col],
-                P_top[row, col],
-                env.corners[SOUTHWEST, row, cprev],
-                env.corners[NORTHWEST, row, cprev],
-                env.edges[SOUTH, row, col],
-                env.edges[WEST, row, cprev],
-                env.edges[NORTH, row, col],
-            )
-            @diffset corners[SOUTHWEST, row, col] = C_sw / norm(C_sw)
-            @diffset corners[NORTHWEST, row, col] = C_nw / norm(C_nw)
-            @diffset edges[WEST, row, col] = T_w / norm(T_w)
+        # SVD half-infinite environment
+        @autoopt @tensor QQ[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+            enlarged_envs[dir, r, c][χ_in D_inabove D_inbelow; χ D1 D2] *
+            enlarged_envs[_next(dir, 4), next_rc...][χ D1 D2; χ_out D_outabove D_outbelow]
+
+        trscheme = truncation_scheme(projector_alg, envs.edges[dir, r, c])
+        svd_alg = svd_algorithm(projector_alg, (dir, r, c))
+        U_local, S_local, V_local, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
+        U[dir, r, c] = U_local
+        S[dir, r, c] = S_local
+        V[dir, r, c] = V_local
+        ϵ = max(ϵ, ϵ_local / norm(S_local))
+
+        # Compute SVD truncation error and check for degenerate singular values
+        ignore_derivatives() do
+            if alg.verbosity > 0 && is_degenerate_spectrum(S_local)
+                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S_local))
+                @warn("degenerate singular values detected: ", svals)
+            end
+        end
+
+        # Compute projectors
+        P_left[dir, r, c], P_right[dir, r, c] = build_projectors(
+            U_local,
+            S_local,
+            V_local,
+            enlarged_envs[dir, r, c],
+            enlarged_envs[_next(dir, 4), next_rc...],
+        )
+    end
+
+    return (copy(P_left), copy(P_right)), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
+end
+
+# ======================================================================================== #
+# Renormalization step
+# ======================================================================================== #
+
+"""
+    ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::CTMRG{M})
+
+Apply projectors to renormalize corners and edges.
+"""
+function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::SequentialCTMRG)
+    corners = Zygote.Buffer(envs.corners)
+    edges = Zygote.Buffer(envs.edges)
+    
+    # copy environments that do not participate
+    for dir in (NORTHEAST, SOUTHEAST)
+        for r in axes(envs.corners, 2), c in axes(envs.corners, 3)
+            corners[dir, r, c] = envs.corners[dir, r, c]
+        end
+    end
+    for r in axes(envs.corners, 2), c in axes(envs.corners, 3)
+        edges[EAST, r, c] = envs.edges[EAST, r, c]
+    end
+    
+    # Apply projectors to renormalize corners and edges
+    coordinates = collect(Iterators.product(axes(state)...))
+    @fwdthreads for (r, c) in coordinates
+        r′ = _prev(r, size(state, 1))
+        c′ = _prev(col, size(state, 2))
+        C_sw, C_nw, T_w = grow_env_left(
+            state[r, c],
+            projectors[1][r′, c],
+            projectors[2][r, c],
+            envs.corners[SOUTHWEST, r, c′],
+            envs.corners[NORTHWEST, r, c′],
+            envs.edges[SOUTH, r, c],
+            envs.edges[WEST, r, c′],
+            envs.edges[NORTH, r, c],
+        )
+        corners[SOUTHWEST, r, c] = C_sw / norm(C_sw)
+        corners[NORTHWEST, r, c] = C_nw / norm(C_nw)
+        edges[WEST, r, c] = T_w / norm(T_w)
+    end
+    
+    return CTMRGEnv(copy(corners), copy(edges))
+end
+function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::SimultaneousCTMRG)
+    corners = Zygote.Buffer(envs.corners)
+    edges = Zygote.Buffer(envs.edges)
+    P_left, P_right = projectors
+    
+    coordinates = collect(Iterators.product(axes(state)...))
+    @fwdthreads for (r, c) in coordinates
+        rprev = _prev(r, size(state, 1))
+        rnext = _next(r, size(state, 1))
+        cprev = _prev(c, size(state, 2))
+        cnext = _next(c, size(state, 2))
+
+        C_northwest = _contract_new_corner(
+            P_right[WEST, rnext, c], enlarged_envs[NORTHWEST, r, c], P_left[NORTH, r, c]
+        )
+        corners[NORTHWEST, r, c] = C_northwest / norm(C_northwest)
+        
+        C_northeast = _contract_new_corner(
+            P_right[NORTH, r, cprev], enlarged_envs[NORTHEAST, r, c], P_left[EAST, r, c]
+        )
+        corners[NORTHEAST, r, c] = C_northeast / norm(C_northeast)
+        
+        C_southeast = _contract_new_corner(
+            P_right[EAST, rprev, c], enlarged_envs[SOUTHEAST, r, c], P_left[SOUTH, r, c]
+        )
+        corners[SOUTHEAST, r, c] = C_southeast / norm(C_southeast)
+        
+        C_southwest = _contract_new_corner(
+            P_right[SOUTH, r, cnext], enlarged_envs[SOUTHWEST, r, c], P_left[WEST, r, c]
+        )
+        corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
+
+        @autoopt @tensor E_north[χ_W D_Sab D_Sbe; χ_E] :=
+            envs.edges[NORTH, rprev, c][χ1 D1 D2; χ2] *
+            state[r, c][d; D1 D3 D_Sab D5] *
+            conj(state[r, c][d; D2 D4 D_Sbe D6]) *
+            P_left[NORTH, r, c][χ2 D3 D4; χ_E] *
+            P_right[NORTH, r, cprev][χ_W; χ1 D5 D6]
+        edges[NORTH, r, c] = E_north / norm(E_north)
+        
+        @autoopt @tensor E_east[χ_N D_Wab D_Wbe; χ_S] :=
+            envs.edges[EAST, r, cnext][χ1 D1 D2; χ2] *
+            state[r, c][d; D5 D1 D3 D_Wab] *
+            conj(state[r, c][d; D6 D2 D4 D_Wbe]) *
+            P_left[EAST, r, c][χ2 D3 D4; χ_S] *
+            P_right[EAST, rprev, c][χ_N; χ1 D5 D6]
+        edges[EAST, r, c] = E_east / norm(E_east)
+        
+        @autoopt @tensor E_south[χ_E D_Nab D_Nbe; χ_W] :=
+            envs.edges[SOUTH, rnext, c][χ1 D1 D2; χ2] *
+            state[r, c][d; D_Nab D5 D1 D3] *
+            conj(state[r, c][d; D_Nbe D6 D2 D4]) *
+            P_left[SOUTH, r, c][χ2 D3 D4; χ_W] *
+            P_right[SOUTH, r, cnext][χ_E; χ1 D5 D6]
+        edges[SOUTH, r, c] = E_south / norm(E_south)
+        
+        @autoopt @tensor E_west[χ_S D_Eab D_Ebe; χ_N] :=
+            envs.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
+            state[r, c][d; D3 D_Eab D5 D1] *
+            conj(state[r, c][d; D4 D_Ebe D6 D2]) *
+            P_left[WEST, r, c][χ2 D3 D4; χ_N] *
+            P_right[WEST, rnext, c][χ_S; χ1 D5 D6]
+        edges[WEST, r, c] = E_west / norm(E_west)
+    end
+    
+    return CTMRGEnv(copy(corners), copy(edges))
+end
+
+# ======================================================================================== #
+# Auxiliary routines
+# ======================================================================================== #
+
+# Compute enlarged corners and edges for all directions and unit cell entries
+function enlarge_corners_edges(state, env::CTMRGEnv{C,T}) where {C,T}
+    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
+    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(env.corners)))
+    drc_combinations = collect(Iterators.product(axes(env.corners)...))
+    @fwdthreads for (dir, r, c) in drc_combinations
+        Q[dir, r, c] = if dir == NORTHWEST
+            northwest_corner((r, c), env, state)
+        elseif dir == NORTHEAST
+            northeast_corner((r, c), env, state)
+        elseif dir == SOUTHEAST
+            southeast_corner((r, c), env, state)
+        elseif dir == SOUTHWEST
+            southwest_corner((r, c), env, state)
         end
     end
 
-    return CTMRGEnv(corners, edges), (; err=ϵ, P_left=copy(P_top), P_right=copy(P_bottom))
+    return copy(Q)
 end
 
 # Enlarged corner contractions (need direction specific methods to avoid PEPS rotations)
@@ -257,6 +506,11 @@ function southwest_corner((row, col), env, peps_above, peps_below=peps_above)
         conj(peps_below[row, col][d; D_Nbelow D_Ebelow D2 D4])
 end
 
+function _contract_new_corner(P_right, Q, P_left)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] * Q[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
+end
+
 # Build projectors from SVD and enlarged SW & NW corners
 function build_projectors(
     U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q, Q_next
@@ -282,90 +536,4 @@ function grow_env_left(
         P_bottom[χ2 D3 D4; χ_N] *
         P_top[χ_S; χ1 D5 D6]
     return corner_SW′, corner_NW′, edge_W′
-end
-
-@doc """
-    LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
-
-Compute the norm of a PEPS contracted with a CTM environment.
-"""
-
-function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
-    total = one(scalartype(peps))
-
-    for r in 1:size(peps, 1), c in 1:size(peps, 2)
-        rprev = _prev(r, size(peps, 1))
-        rnext = _next(r, size(peps, 1))
-        cprev = _prev(c, size(peps, 2))
-        cnext = _next(c, size(peps, 2))
-        total *= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
-            env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
-            env.edges[NORTH, rprev, c][χ3 D3 D4; χ4] *
-            env.corners[NORTHEAST, rprev, cnext][χ4; χ5] *
-            env.edges[EAST, r, cnext][χ5 D5 D6; χ6] *
-            env.corners[SOUTHEAST, rnext, cnext][χ6; χ7] *
-            env.edges[SOUTH, rnext, c][χ7 D7 D8; χ8] *
-            env.corners[SOUTHWEST, rnext, cprev][χ8; χ1] *
-            peps[r, c][d; D3 D5 D7 D1] *
-            conj(peps[r, c][d; D4 D6 D8 D2])
-        total *= tr(
-            env.corners[NORTHWEST, rprev, cprev] *
-            env.corners[NORTHEAST, rprev, c] *
-            env.corners[SOUTHEAST, r, c] *
-            env.corners[SOUTHWEST, r, cprev],
-        )
-        total /= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
-            env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
-            env.corners[NORTHEAST, rprev, c][χ3; χ4] *
-            env.edges[EAST, r, c][χ4 D1 D2; χ5] *
-            env.corners[SOUTHEAST, rnext, c][χ5; χ6] *
-            env.corners[SOUTHWEST, rnext, cprev][χ6; χ1]
-        total /= @autoopt @tensor env.corners[NORTHWEST, rprev, cprev][χ1; χ2] *
-            env.edges[NORTH, rprev, c][χ2 D1 D2; χ3] *
-            env.corners[NORTHEAST, rprev, cnext][χ3; χ4] *
-            env.corners[SOUTHEAST, r, cnext][χ4; χ5] *
-            env.edges[SOUTH, r, c][χ5 D1 D2; χ6] *
-            env.corners[SOUTHWEST, r, cprev][χ6; χ1]
-    end
-
-    return total
-end
-
-"""
-    correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
-
-Compute the PEPS correlation length based on the horizontal and vertical
-transfer matrices. Additionally the (normalized) eigenvalue spectrum is
-returned. Specify the number of computed eigenvalues with `howmany`.
-"""
-function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
-    T = scalartype(peps)
-    ξ_h = Vector{real(T)}(undef, size(peps, 1))
-    ξ_v = Vector{real(T)}(undef, size(peps, 2))
-    λ_h = Vector{Vector{T}}(undef, size(peps, 1))
-    λ_v = Vector{Vector{T}}(undef, size(peps, 2))
-
-    # Horizontal
-    above_h = MPSMultiline(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
-    respaced_edges_h = map(zip(space.(env.edges)[1, :, :], env.edges[3, :, :])) do (V1, T3)
-        return TensorMap(T3.data, V1)
-    end
-    below_h = MPSMultiline(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
-    transfer_peps_h = TransferPEPSMultiline(peps, NORTH)
-    vals_h = MPSKit.transfer_spectrum(above_h, transfer_peps_h, below_h; num_vals)
-    λ_h = map(λ_row -> λ_row / abs(λ_row[1]), vals_h)  # Normalize largest eigenvalue
-    ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
-
-    # Vertical
-    above_v = MPSMultiline(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
-    respaced_edges_v = map(zip(space.(env.edges)[2, :, :], env.edges[4, :, :])) do (V2, T4)
-        return TensorMap(T4.data, V2)
-    end
-    below_v = MPSMultiline(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
-    transfer_peps_v = TransferPEPSMultiline(peps, EAST)
-    vals_v = MPSKit.transfer_spectrum(above_v, transfer_peps_v, below_v; num_vals)
-    λ_v = map(λ_row -> λ_row / abs(λ_row[1]), vals_v)  # Normalize largest eigenvalue
-    ξ_v = map(λ_row -> -1 / log(abs(λ_row[2])), λ_v)
-
-    return ξ_h, ξ_v, λ_h, λ_v
 end
