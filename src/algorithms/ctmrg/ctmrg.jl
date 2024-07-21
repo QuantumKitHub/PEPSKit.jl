@@ -91,7 +91,6 @@ ctmrgscheme(::CTMRG{S}) where {S} = S
 const SequentialCTMRG = CTMRG{:sequential}
 const SimultaneousCTMRG = CTMRG{:simultaneous}
 
-
 """
     MPSKit.leading_boundary([envinit], state, alg::CTMRG)
 
@@ -240,23 +239,25 @@ end
 function ctmrg_projectors(
     enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
 ) where {C,E}
-    projector_alg = alg.projector_alg 
+    projector_alg = alg.projector_alg
     # pre-allocation
-    P_bottom, P_top = Zygote.Buffer.(projector_type(envs.edges))
+    Prtype = tensormaptype(spacetype(E), numin(E), numout(E), storagetype(E))
+    P_bottom = Zygote.Buffer(envs.edges, axes(envs.corners, 2), axes(envs.corners, 3))
+    P_top = Zygote.Buffer(envs.edges, Prtype, axes(envs.corners, 2), axes(envs.corners, 3))
     ϵ = 0.0
-    
+
     directions = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
     @fwdthreads for (r, c) in directions
         # SVD half-infinite environment
         @autoopt @tensor QQ[χ_EB D_EBabove D_EBbelow; χ_ET D_ETabove D_ETbelow] :=
             enlarged_envs[2][r, c][χ_EB D_EBabove D_EBbelow; χ D1 D2] *
             enlarged_envs[1][r, c][χ D1 D2; χ_ET D_ETabove D_ETbelow]
-        
-        trscheme = truncation_scheme(projector_alg, envs.edges[dir, r, c])
-        svd_alg = svd_algorithm(projector_alg, (dir, r, c))
+
+        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r, c])
+        svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
         U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
         ϵ = max(ϵ, ϵ_local / norm(S))
-        
+
         # Compute SVD truncation error and check for degenerate singular values
         ignore_derivatives() do
             if alg.verbosity > 0 && is_degenerate_spectrum(S)
@@ -264,17 +265,13 @@ function ctmrg_projectors(
                 @warn("degenerate singular values detected: ", svals)
             end
         end
-        
+
         # Compute projectors
         P_bottom[r, c], P_top[r, c] = build_projectors(
-            U,
-            S,
-            V,
-            enlarged_envs[2][r, c],
-            enlarged_envs[1][r, c],
+            U, S, V, enlarged_envs[2][r, c], enlarged_envs[1][r, c]
         )
     end
-    
+
     return (copy(P_bottom), copy(P_top)), (; err=ϵ)
 end
 function ctmrg_projectors(
@@ -347,22 +344,24 @@ Apply projectors to renormalize corners and edges.
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::SequentialCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
-    
+
     # copy environments that do not participate
     for dir in (NORTHEAST, SOUTHEAST)
         for r in axes(envs.corners, 2), c in axes(envs.corners, 3)
             corners[dir, r, c] = envs.corners[dir, r, c]
         end
     end
-    for r in axes(envs.corners, 2), c in axes(envs.corners, 3)
-        edges[EAST, r, c] = envs.edges[EAST, r, c]
+    for dir in (NORTH, EAST, SOUTH)
+        for r in axes(envs.corners, 2), c in axes(envs.corners, 3)
+            edges[dir, r, c] = envs.edges[dir, r, c]
+        end
     end
-    
+
     # Apply projectors to renormalize corners and edges
     coordinates = collect(Iterators.product(axes(state)...))
     @fwdthreads for (r, c) in coordinates
         r′ = _prev(r, size(state, 1))
-        c′ = _prev(col, size(state, 2))
+        c′ = _prev(c, size(state, 2))
         C_sw, C_nw, T_w = grow_env_left(
             state[r, c],
             projectors[1][r′, c],
@@ -377,14 +376,14 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::Sequenti
         corners[NORTHWEST, r, c] = C_nw / norm(C_nw)
         edges[WEST, r, c] = T_w / norm(T_w)
     end
-    
+
     return CTMRGEnv(copy(corners), copy(edges))
 end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::SimultaneousCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
     P_left, P_right = projectors
-    
+
     coordinates = collect(Iterators.product(axes(state)...))
     @fwdthreads for (r, c) in coordinates
         rprev = _prev(r, size(state, 1))
@@ -396,17 +395,17 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::Simultan
             P_right[WEST, rnext, c], enlarged_envs[NORTHWEST, r, c], P_left[NORTH, r, c]
         )
         corners[NORTHWEST, r, c] = C_northwest / norm(C_northwest)
-        
+
         C_northeast = _contract_new_corner(
             P_right[NORTH, r, cprev], enlarged_envs[NORTHEAST, r, c], P_left[EAST, r, c]
         )
         corners[NORTHEAST, r, c] = C_northeast / norm(C_northeast)
-        
+
         C_southeast = _contract_new_corner(
             P_right[EAST, rprev, c], enlarged_envs[SOUTHEAST, r, c], P_left[SOUTH, r, c]
         )
         corners[SOUTHEAST, r, c] = C_southeast / norm(C_southeast)
-        
+
         C_southwest = _contract_new_corner(
             P_right[SOUTH, r, cnext], enlarged_envs[SOUTHWEST, r, c], P_left[WEST, r, c]
         )
@@ -419,7 +418,7 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::Simultan
             P_left[NORTH, r, c][χ2 D3 D4; χ_E] *
             P_right[NORTH, r, cprev][χ_W; χ1 D5 D6]
         edges[NORTH, r, c] = E_north / norm(E_north)
-        
+
         @autoopt @tensor E_east[χ_N D_Wab D_Wbe; χ_S] :=
             envs.edges[EAST, r, cnext][χ1 D1 D2; χ2] *
             state[r, c][d; D5 D1 D3 D_Wab] *
@@ -427,7 +426,7 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::Simultan
             P_left[EAST, r, c][χ2 D3 D4; χ_S] *
             P_right[EAST, rprev, c][χ_N; χ1 D5 D6]
         edges[EAST, r, c] = E_east / norm(E_east)
-        
+
         @autoopt @tensor E_south[χ_E D_Nab D_Nbe; χ_W] :=
             envs.edges[SOUTH, rnext, c][χ1 D1 D2; χ2] *
             state[r, c][d; D_Nab D5 D1 D3] *
@@ -435,7 +434,7 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::Simultan
             P_left[SOUTH, r, c][χ2 D3 D4; χ_W] *
             P_right[SOUTH, r, cnext][χ_E; χ1 D5 D6]
         edges[SOUTH, r, c] = E_south / norm(E_south)
-        
+
         @autoopt @tensor E_west[χ_S D_Eab D_Ebe; χ_N] :=
             envs.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
             state[r, c][d; D3 D_Eab D5 D1] *
@@ -444,7 +443,7 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::Simultan
             P_right[WEST, rnext, c][χ_S; χ1 D5 D6]
         edges[WEST, r, c] = E_west / norm(E_west)
     end
-    
+
     return CTMRGEnv(copy(corners), copy(edges))
 end
 
