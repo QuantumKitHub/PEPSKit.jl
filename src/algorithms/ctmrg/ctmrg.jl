@@ -356,22 +356,22 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SequentialC
     # Apply projectors to renormalize corners and edges
     coordinates = collect(Iterators.product(axes(state)...))
     @fwdthreads for (r, c) in coordinates
-        r′ = _prev(r, size(state, 1))
         c′ = _prev(c, size(state, 2))
-        # TODO: switch this to use contractions
-        C_sw, C_nw, T_w = grow_env_left(
-            state[r, c],
-            projectors[1][r′, c],
-            projectors[2][r, c],
-            envs.corners[SOUTHWEST, r, c′],
-            envs.corners[NORTHWEST, r, c′],
-            envs.edges[SOUTH, r, c],
-            envs.edges[WEST, r, c′],
-            envs.edges[NORTH, r, c],
+
+        C_southwest = rightrenormalize_corner(
+            envs.corners[SOUTHWEST, r, c′], envs.edges[SOUTH, r, c], projectors[2][r, c]
         )
-        corners[SOUTHWEST, r, c] = C_sw / norm(C_sw)
-        corners[NORTHWEST, r, c] = C_nw / norm(C_nw)
-        edges[WEST, r, c] = T_w / norm(T_w)
+        corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
+
+        C_northwest = leftrenormalize_corner(
+            envs.corners[NORTHWEST, r, c′], envs.edges[NORTH, r, c], projectors[1][r, c]
+        )
+        corners[NORTHWEST, r, c] = C_northwest / norm(C_northwest)
+
+        E_west = renormalize_west_edge(
+            (r, c), envs, projectors[1], projectors[2], state, state
+        )
+        edges[WEST, r, c] = E_west / norm(E_west)
     end
 
     return CTMRGEnv(copy(corners), copy(edges))
@@ -388,61 +388,38 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::Simultaneou
         cprev = _prev(c, size(state, 2))
         cnext = _next(c, size(state, 2))
 
-        # TODO: switch this to use contractions
-        C_northwest = _contract_new_corner(
-            P_right[WEST, rnext, c], enlarged_envs[NORTHWEST, r, c], P_left[NORTH, r, c]
+        C_northwest = renormalize_corner(
+            enlarged_envs[NORTHWEST, r, c], P_left[NORTH, r, c], P_right[WEST, rnext, c]
         )
         corners[NORTHWEST, r, c] = C_northwest / norm(C_northwest)
 
-        C_northeast = _contract_new_corner(
-            P_right[NORTH, r, cprev], enlarged_envs[NORTHEAST, r, c], P_left[EAST, r, c]
+        C_northeast = renormalize_corner(
+            enlarged_envs[NORTHEAST, r, c], P_left[EAST, r, c], P_right[NORTH, r, cprev]
         )
         corners[NORTHEAST, r, c] = C_northeast / norm(C_northeast)
 
-        C_southeast = _contract_new_corner(
-            P_right[EAST, rprev, c], enlarged_envs[SOUTHEAST, r, c], P_left[SOUTH, r, c]
+        C_southeast = renormalize_corner(
+            enlarged_envs[SOUTHEAST, r, c], P_left[SOUTH, r, c], P_right[EAST, rprev, c]
         )
         corners[SOUTHEAST, r, c] = C_southeast / norm(C_southeast)
 
-        C_southwest = _contract_new_corner(
-            P_right[SOUTH, r, cnext], enlarged_envs[SOUTHWEST, r, c], P_left[WEST, r, c]
+        C_southwest = renormalize_corner(
+            enlarged_envs[SOUTHWEST, r, c], P_left[WEST, r, c], P_right[SOUTH, r, cnext]
         )
         corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
 
-        @autoopt @tensor E_north[χ_W D_Sab D_Sbe; χ_E] :=
-            envs.edges[NORTH, rprev, c][χ1 D1 D2; χ2] *
-            state[r, c][d; D1 D3 D_Sab D5] *
-            conj(state[r, c][d; D2 D4 D_Sbe D6]) *
-            P_left[NORTH, r, c][χ2 D3 D4; χ_E] *
-            P_right[NORTH, r, cprev][χ_W; χ1 D5 D6]
+        E_north = renormalize_north_edge((r, c), envs, P_left, P_right, state, state)
         edges[NORTH, r, c] = E_north / norm(E_north)
 
-        @autoopt @tensor E_east[χ_N D_Wab D_Wbe; χ_S] :=
-            envs.edges[EAST, r, cnext][χ1 D1 D2; χ2] *
-            state[r, c][d; D5 D1 D3 D_Wab] *
-            conj(state[r, c][d; D6 D2 D4 D_Wbe]) *
-            P_left[EAST, r, c][χ2 D3 D4; χ_S] *
-            P_right[EAST, rprev, c][χ_N; χ1 D5 D6]
+        E_east = renormalize_east_edge((r, c), envs, P_left, P_right, state, state)
         edges[EAST, r, c] = E_east / norm(E_east)
 
-        @autoopt @tensor E_south[χ_E D_Nab D_Nbe; χ_W] :=
-            envs.edges[SOUTH, rnext, c][χ1 D1 D2; χ2] *
-            state[r, c][d; D_Nab D5 D1 D3] *
-            conj(state[r, c][d; D_Nbe D6 D2 D4]) *
-            P_left[SOUTH, r, c][χ2 D3 D4; χ_W] *
-            P_right[SOUTH, r, cnext][χ_E; χ1 D5 D6]
+        E_south = renormalize_south_edge((r, c), envs, P_left, P_right, state, state)
         edges[SOUTH, r, c] = E_south / norm(E_south)
 
-        @autoopt @tensor E_west[χ_S D_Eab D_Ebe; χ_N] :=
-            envs.edges[WEST, r, cprev][χ1 D1 D2; χ2] *
-            state[r, c][d; D3 D_Eab D5 D1] *
-            conj(state[r, c][d; D4 D_Ebe D6 D2]) *
-            P_left[WEST, r, c][χ2 D3 D4; χ_N] *
-            P_right[WEST, rnext, c][χ_S; χ1 D5 D6]
+        E_west = renormalize_west_edge((r, c), envs, P_left, P_right, state, state)
         edges[WEST, r, c] = E_west / norm(E_west)
     end
-    
-    # TODO: here we do not normalize, is this on purpose?
 
     return CTMRGEnv(copy(corners), copy(edges))
 end
@@ -471,11 +448,6 @@ function enlarge_corners_edges(state, env::CTMRGEnv{C,T}) where {C,T}
     return copy(Q)
 end
 
-function _contract_new_corner(P_right, Q, P_left)
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1 D2] * Q[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
-end
-
 # Build projectors from SVD and enlarged SW & NW corners
 function build_projectors(
     U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q, Q_next
@@ -484,22 +456,4 @@ function build_projectors(
     P_left = Q_next * V' * isqS
     P_right = isqS * U' * Q
     return P_left, P_right
-end
-
-# Apply projectors to entire left half-environment to grow SW & NW corners, and W edge
-function grow_env_left(
-    peps, P_bottom, P_top, corners_SW, corners_NW, edge_S, edge_W, edge_N
-)
-    # TODO: switch to use contractions: renormalize_west_edge, leftrenornalize...
-    @autoopt @tensor corner_SW′[χ_E; χ_N] :=
-        corners_SW[χ1; χ2] * edge_S[χ_E D1 D2; χ1] * P_bottom[χ2 D1 D2; χ_N]
-    @autoopt @tensor corner_NW′[χ_S; χ_E] :=
-        corners_NW[χ1; χ2] * edge_N[χ2 D1 D2; χ_E] * P_top[χ_S; χ1 D1 D2]
-    @autoopt @tensor edge_W′[χ_S D_Eabove D_Ebelow; χ_N] :=
-        edge_W[χ1 D1 D2; χ2] *
-        peps[d; D3 D_Eabove D5 D1] *
-        conj(peps[d; D4 D_Ebelow D6 D2]) *
-        P_bottom[χ2 D3 D4; χ_N] *
-        P_top[χ_S; χ1 D5 D6]
-    return corner_SW′, corner_NW′, edge_W′
 end
