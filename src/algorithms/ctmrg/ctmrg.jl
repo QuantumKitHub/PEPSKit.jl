@@ -144,15 +144,13 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
 end
 
 """
-    ctmrg_iter(state, env::CTMRGEnv, alg::CTMRG{:sequential})
-    
-Perform one iteration of CTMRG that maps the `state` and `env` to a new environment,
-and also return the truncation error.
-One CTMRG iteration consists of four `left_move` calls and 90 degree rotations,
-such that the environment is grown and renormalized in all four directions.
+    ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
+
+Perform one iteration of CTMRG that maps the `state` and `envs` to a new environment,
+and also returns the truncation error.
 """
 function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
-    ϵ = 0.0
+    ϵ = zero(real(scalartype(state)))
     for _ in 1:4
         # left move
         enlarged_envs = ctmrg_expand(state, envs, alg)
@@ -244,7 +242,7 @@ function ctmrg_projectors(
     Prtype = tensormaptype(spacetype(E), numin(E), numout(E), storagetype(E))
     P_bottom = Zygote.Buffer(envs.edges, axes(envs.corners, 2), axes(envs.corners, 3))
     P_top = Zygote.Buffer(envs.edges, Prtype, axes(envs.corners, 2), axes(envs.corners, 3))
-    ϵ = 0.0
+    ϵ = zero(real(scalartype(envs)))
 
     directions = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
     @fwdthreads for (r, c) in directions
@@ -284,7 +282,7 @@ function ctmrg_projectors(
     # Corner type but with real numbers
     S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
 
-    ϵ = 0.0
+    ϵ = zero(real(scalartype(envs)))
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
     @fwdthreads for (dir, r, c) in drc_combinations
         # Row-column index of next enlarged corner
@@ -341,7 +339,7 @@ end
 
 Apply projectors to renormalize corners and edges.
 """
-function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::SequentialCTMRG)
+function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SequentialCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
 
@@ -379,7 +377,7 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::Sequenti
 
     return CTMRGEnv(copy(corners), copy(edges))
 end
-function ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::SimultaneousCTMRG)
+function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
     P_left, P_right = projectors
