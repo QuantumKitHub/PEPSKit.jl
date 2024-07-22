@@ -32,6 +32,7 @@ include("environments/transferpeps_environments.jl")
 include("environments/transferpepo_environments.jl")
 
 include("algorithms/contractions/localoperator.jl")
+include("algorithms/contractions/ctmrg_contractions.jl")
 
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/gaugefix.jl")
