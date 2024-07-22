@@ -101,10 +101,10 @@ struct PEPSOptimize{G}
         gradient_alg::G,
     ) where {S,G}
         if gradient_alg isa GradMode
-            if S == :sequential && iterscheme(gradient_alg) == :fixed
+            if S === :sequential && iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             elseif boundary_alg.projector_alg.svd_alg.fwd_alg isa IterSVD &&
-                iterscheme(gradient_alg) == :fixed
+                iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError("IterSVD and :fixed are currently not compatible"))
             end
         end
