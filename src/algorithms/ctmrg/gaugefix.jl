@@ -99,33 +99,6 @@ end
 function fix_relative_phases(
     U::Array{Ut,3}, V::Array{Vt,3}, signs
 ) where {Ut<:AbstractTensorMap,Vt<:AbstractTensorMap}
-    U1 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[NORTH, r, c] * signs[NORTH, r, _next(c, end)]
-    end
-    V1 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[NORTH, r, _next(c, end)]' * V[NORTH, r, c]
-    end
-    U2 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[EAST, r, c] * signs[EAST, _next(r, end), c]
-    end
-    V2 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[EAST, _next(r, end), c]' * V[EAST, r, c]
-    end
-    U3 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[SOUTH, r, c] * signs[SOUTH, r, _prev(c, end)]
-    end
-    V3 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[SOUTH, r, _prev(c, end)]' * V[SOUTH, r, c]
-    end
-    U4 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[WEST, r, c] * signs[WEST, _prev(r, end), c]
-    end
-    V4 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[WEST, _prev(r, end), c]' * V[WEST, r, c]
-    end
-
-    return stack([U1, U2, U3, U4]; dims=1), stack([V1, V2, V3, V4]; dims=1)
-
     U_fixed = map(Iterators.product(axes(U)...)) do (dir, r, c)
         if dir == NORTHWEST
             fix_gauge_north_left_vecs((r, c), U, signs)

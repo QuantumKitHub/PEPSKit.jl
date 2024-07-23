@@ -381,44 +381,23 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::Simultaneou
     edges = Zygote.Buffer(envs.edges)
     P_left, P_right = projectors
 
-    coordinates = collect(Iterators.product(axes(state)...))
-    @fwdthreads for (r, c) in coordinates
-        rprev = _prev(r, size(state, 1))
-        rnext = _next(r, size(state, 1))
-        cprev = _prev(c, size(state, 2))
-        cnext = _next(c, size(state, 2))
-
-        C_northwest = renormalize_corner(
-            enlarged_envs[NORTHWEST, r, c], P_left[NORTH, r, c], P_right[WEST, rnext, c]
-        )
-        corners[NORTHWEST, r, c] = C_northwest / norm(C_northwest)
-
-        C_northeast = renormalize_corner(
-            enlarged_envs[NORTHEAST, r, c], P_left[EAST, r, c], P_right[NORTH, r, cprev]
-        )
-        corners[NORTHEAST, r, c] = C_northeast / norm(C_northeast)
-
-        C_southeast = renormalize_corner(
-            enlarged_envs[SOUTHEAST, r, c], P_left[SOUTH, r, c], P_right[EAST, rprev, c]
-        )
-        corners[SOUTHEAST, r, c] = C_southeast / norm(C_southeast)
-
-        C_southwest = renormalize_corner(
-            enlarged_envs[SOUTHWEST, r, c], P_left[WEST, r, c], P_right[SOUTH, r, cnext]
-        )
-        corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
-
-        E_north = renormalize_north_edge((r, c), envs, P_left, P_right, state, state)
-        edges[NORTH, r, c] = E_north / norm(E_north)
-
-        E_east = renormalize_east_edge((r, c), envs, P_left, P_right, state, state)
-        edges[EAST, r, c] = E_east / norm(E_east)
-
-        E_south = renormalize_south_edge((r, c), envs, P_left, P_right, state, state)
-        edges[SOUTH, r, c] = E_south / norm(E_south)
-
-        E_west = renormalize_west_edge((r, c), envs, P_left, P_right, state, state)
-        edges[WEST, r, c] = E_west / norm(E_west)
+    drc_combinations = collect(Iterators.product(axes(envs.corners)...))
+    @fwdthreads for (dir, r, c) in drc_combinations
+        if dir == NORTH        
+            corner = renormalize_northwest_corner((r, c), envs, P_left, P_right)
+            edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)
+        elseif dir == EAST
+            corner = renormalize_northeast_corner((r, c), envs, P_left, P_right)
+            edge = renormalize_east_edge((r, c), envs, P_left, P_right, state)
+        elseif dir == SOUTH
+            corner = renormalize_southeast_corner((r, c), envs, P_left, P_right)
+            edge = renormalize_south_edge((r, c), envs, P_left, P_right, state)
+        elseif dir == WEST
+            corner = renormalize_west_corner((r, c), envs, P_left, P_right)
+            edge = renormalize_west_edge((r, c), envs, P_left, P_right, state)
+        end
+        corners[dir, r, c] = corner / norm(corner)
+        edges[dir, r, c] = edge / norm(edge)
     end
 
     return CTMRGEnv(copy(corners), copy(edges))

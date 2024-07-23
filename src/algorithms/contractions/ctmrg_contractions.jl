@@ -186,6 +186,8 @@ end
 # Renormalization contractions
 # ----------------------------
 
+# corners
+
 """
     renormalize_corner(quadrant, P_left, P_right)
 
@@ -203,6 +205,58 @@ Apply projectors to each side of a quadrant.
 function renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1 D2] * quadrant[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
+end
+
+"""
+    renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+
+Apply `renormalize_corner` to the enlarged northwest corner.
+"""
+function renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    return renormalize_corner(
+        enlarged_envs[NORTHWEST, row, col],
+        P_left[NORTH, row, col],
+        P_right[WEST, _next(r, end), col],
+    )
+end
+
+"""
+    renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+
+Apply `renormalize_corner` to the enlarged northeast corner.
+"""
+function renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    return renormalize_corner(
+        enlarged_envs[NORTHEAST, row, col],
+        P_left[EAST, row, col],
+        P_right[NORTH, row, _prev(c, end)],
+    )
+end
+
+"""
+    renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+
+Apply `renormalize_corner` to the enlarged southeast corner.
+"""
+function renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    return renormalize_corner(
+        enlarged_envs[SOUTHEAST, row, col],
+        P_left[SOUTH, row, col],
+        P_right[EAST, _prev(r, end), col],
+    )
+end
+
+"""
+    renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+
+Apply `renormalize_corner` to the enlarged southwest corner.
+"""
+function renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    return renormalize_corner(
+        enlarged_envs[SOUTHWEST, row, col],
+        P_left[WEST, row, col],
+        P_right[SOUTH, row, _next(col, end)],
+    )
 end
 
 """
@@ -238,6 +292,8 @@ function leftrenormalize_corner(C::CTMRGCornerTensor, E::CTMRGEdgeTensor, P)
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P[χ_in D1 D2; χ1] * C[χ1; χ2] * E[χ2 D1 D2; χ_out]
 end
+
+# edges
 
 """
     renormalize_north_edge((row, col), envs, P_left, P_right, ket, bra)
@@ -388,10 +444,12 @@ end
 # Gauge fixing contractions
 # -------------------------
 
+# corners 
+
 """
     fix_gauge_corner(corner, σ_in, σ_out)
 
-Multiplication of the corner tensor with incoming and outgoing gauge signs.
+Multiply corner tensor with incoming and outgoing gauge signs.
 
 ```
     corner -- σ_out --
@@ -410,7 +468,7 @@ end
 """
     fix_gauge_northwest_corner((row, col), envs, signs)
 
-Application of `fix_gauge_corner` to the northwest corner with appropriate row and column indices.
+Apply `fix_gauge_corner` to the northwest corner with appropriate row and column indices.
 """
 function fix_gauge_northwest_corner((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_corner(
@@ -423,7 +481,7 @@ end
 """
     fix_gauge_northeast_corner((row, col), envs, signs)
 
-Application of `fix_gauge_corner` to the northeast corner with appropriate row and column indices.
+Apply `fix_gauge_corner` to the northeast corner with appropriate row and column indices.
 """
 function fix_gauge_northeast_corner((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_corner(
@@ -436,7 +494,7 @@ end
 """
     fix_gauge_southeast_corner((row, col), envs, signs)
 
-Application of `fix_gauge_corner` to the southeast corner with appropriate row and column indices.
+Apply `fix_gauge_corner` to the southeast corner with appropriate row and column indices.
 """
 function fix_gauge_southeast_corner((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_corner(
@@ -449,7 +507,7 @@ end
 """
     fix_gauge_southwest_corner((row, col), envs, signs)
 
-Application of `fix_gauge_corner` to the southwest corner with appropriate row and column indices.
+Apply `fix_gauge_corner` to the southwest corner with appropriate row and column indices.
 """
 function fix_gauge_southwest_corner((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_corner(
@@ -459,10 +517,12 @@ function fix_gauge_southwest_corner((row, col), envs::CTMRGEnv, signs)
     )
 end
 
+# edges
+
 """
     fix_gauge_edge(edge, σ_in, σ_out)
 
-Multiplication of the edge tensor with incoming and outgoing gauge signs.
+Multiply edge tensor with incoming and outgoing gauge signs.
 
 ```
     -- σ_in -- edge -- σ_out --
@@ -478,7 +538,7 @@ end
 """
     fix_gauge_north_edge((row, col), envs, signs)
 
-Application of `fix_gauge_edge` to the north edge with appropriate row and column indices.
+Apply `fix_gauge_edge` to the north edge with appropriate row and column indices.
 """
 function fix_gauge_north_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
@@ -491,7 +551,7 @@ end
 """
     fix_gauge_east_edge((row, col), envs, signs)
 
-Application of `fix_gauge_edge` to the east edge with appropriate row and column indices.
+Apply `fix_gauge_edge` to the east edge with appropriate row and column indices.
 """
 function fix_gauge_east_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
@@ -502,7 +562,7 @@ end
 """
     fix_gauge_south_edge((row, col), envs, signs)
 
-Application of `fix_gauge_edge` to the south edge with appropriate row and column indices.
+Apply `fix_gauge_edge` to the south edge with appropriate row and column indices.
 """
 function fix_gauge_south_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
@@ -515,13 +575,15 @@ end
 """
     fix_gauge_south_edge((row, col), envs, signs)
 
-Application of `fix_gauge_edge` to the west edge with appropriate row and column indices.
+Apply `fix_gauge_edge` to the west edge with appropriate row and column indices.
 """
 function fix_gauge_west_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
         envs.edges[WEST, row, col], signs[WEST, row, col], signs[WEST, _prev(row, end), col]
     )
 end
+
+# left singular vectors
 
 """
     fix_gauge_north_left_vecs((row, col), U, signs)
@@ -558,6 +620,8 @@ Multiply west left singular vectors with gauge signs from the right.
 function fix_gauge_west_left_vecs((row, col), U, signs)
     return U[WEST, row, col] * signs[WEST, _prev(row, end), col]
 end
+
+# right singular vectors
 
 """
     fix_gauge_north_right_vecs((row, col), V, signs)
