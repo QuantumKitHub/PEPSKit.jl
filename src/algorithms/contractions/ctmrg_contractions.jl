@@ -427,7 +427,9 @@ Application of `fix_gauge_corner` to the northeast corner with appropriate row a
 """
 function fix_gauge_northeast_corner((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_corner(
-        envs.corners[NORTHEAST, r, c], signs[NORTH, r, c], signs[EAST, _next(r, end), c]
+        envs.corners[NORTHEAST, row, col],
+        signs[NORTH, row, col],
+        signs[EAST, _next(row, end), col],
     )
 end
 
@@ -438,7 +440,9 @@ Application of `fix_gauge_corner` to the southeast corner with appropriate row a
 """
 function fix_gauge_southeast_corner((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_corner(
-        envs.corners[SOUTHEAST, r, c], signs[EAST, r, c], signs[SOUTH, r, _prev(c, end)]
+        envs.corners[SOUTHEAST, row, col],
+        signs[EAST, row, col],
+        signs[SOUTH, row, _prev(col, end)],
     )
 end
 
@@ -449,7 +453,9 @@ Application of `fix_gauge_corner` to the southwest corner with appropriate row a
 """
 function fix_gauge_southwest_corner((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_corner(
-        envs.corners[SOUTHWEST, r, c], signs[SOUTH, r, c], signs[WEST, _prev(r, end), c]
+        envs.corners[SOUTHWEST, row, col],
+        signs[SOUTH, row, col],
+        signs[WEST, _prev(row, end), col],
     )
 end
 
@@ -462,7 +468,9 @@ Multiplication of the edge tensor with incoming and outgoing gauge signs.
     -- σ_in -- edge -- σ_out --
 ```
 """
-function fix_gauge_edge(edge::CTMRGEdgeTensor, σ_in::CTMRGCornerTensor, σ_out::CTMRGCornerTensor)
+function fix_gauge_edge(
+    edge::CTMRGEdgeTensor, σ_in::CTMRGCornerTensor, σ_out::CTMRGCornerTensor
+)
     @autoopt @tensor edge_fix[χ_in D_above D_below; χ_out] :=
         σ_in[χ_in; χ1] * edge[χ1 D_above D_below; χ2] * conj(σ_out[χ_out; χ2])
 end
@@ -474,7 +482,9 @@ Application of `fix_gauge_edge` to the north edge with appropriate row and colum
 """
 function fix_gauge_north_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[NORTH, r, c], signs[NORTH, r, c], signs[NORTH, r, _next(c, end)]
+        envs.edges[NORTH, row, col],
+        signs[NORTH, row, col],
+        signs[NORTH, row, _next(col, end)],
     )
 end
 
@@ -485,7 +495,7 @@ Application of `fix_gauge_edge` to the east edge with appropriate row and column
 """
 function fix_gauge_east_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[EAST, r, c], signs[EAST, r, c], signs[EAST, _next(r, end), c]
+        envs.edges[EAST, row, col], signs[EAST, row, col], signs[EAST, _next(row, end), col]
     )
 end
 
@@ -496,7 +506,9 @@ Application of `fix_gauge_edge` to the south edge with appropriate row and colum
 """
 function fix_gauge_south_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[SOUTH, r, c], signs[SOUTH, r, c], signs[SOUTH, r, _prev(c, end)]
+        envs.edges[SOUTH, row, col],
+        signs[SOUTH, row, col],
+        signs[SOUTH, row, _prev(col, end)],
     )
 end
 
@@ -507,6 +519,78 @@ Application of `fix_gauge_edge` to the west edge with appropriate row and column
 """
 function fix_gauge_west_edge((row, col), envs::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[WEST, r, c], signs[WEST, r, c], signs[WEST, _prev(r, end), c]
+        envs.edges[WEST, row, col], signs[WEST, row, col], signs[WEST, _prev(row, end), col]
     )
+end
+
+"""
+    fix_gauge_north_left_vecs((row, col), U, signs)
+
+Multiply north left singular vectors with gauge signs from the right.
+"""
+function fix_gauge_north_left_vecs((row, col), U, signs)
+    return U[NORTH, row, col] * signs[NORTH, row, _next(col, end)]
+end
+
+"""
+    fix_gauge_east_left_vecs((row, col), U, signs)
+
+Multiply east left singular vectors with gauge signs from the right.
+"""
+function fix_gauge_east_left_vecs((row, col), U, signs)
+    return U[EAST, row, col] * signs[EAST, _next(row, end), col]
+end
+
+"""
+    fix_gauge_south_left_vecs((row, col), U, signs)
+
+Multiply south left singular vectors with gauge signs from the right.
+"""
+function fix_gauge_south_left_vecs((row, col), U, signs)
+    return U[SOUTH, row, col] * signs[SOUTH, row, _prev(col, end)]
+end
+
+"""
+    fix_gauge_west_left_vecs((row, col), U, signs)
+
+Multiply west left singular vectors with gauge signs from the right.
+"""
+function fix_gauge_west_left_vecs((row, col), U, signs)
+    return U[WEST, row, col] * signs[WEST, _prev(row, end), col]
+end
+
+"""
+    fix_gauge_north_right_vecs((row, col), V, signs)
+
+Multiply north right singular vectors with gauge signs from the left.
+"""
+function fix_gauge_north_right_vecs((row, col), V, signs)
+    return signs[NORTH, row, _next(col, end)]' * V[NORTH, row, col]
+end
+
+"""
+    fix_gauge_east_right_vecs((row, col), V, signs)
+
+Multiply east right singular vectors with gauge signs from the left.
+"""
+function fix_gauge_east_right_vecs((row, col), V, signs)
+    return signs[EAST, _next(row, end), col]' * V[EAST, row, col]
+end
+
+"""
+    fix_gauge_south_right_vecs((row, col), V, signs)
+
+Multiply south right singular vectors with gauge signs from the left.
+"""
+function fix_gauge_south_right_vecs((row, col), V, signs)
+    return signs[SOUTH, row, _prev(col, end)]' * V[SOUTH, row, col]
+end
+
+"""
+    fix_gauge_west((row, col), V, signs)
+
+Multiply west right singular vectors with gauge signs from the left.
+"""
+function fix_gauge_west_right_vecs((row, col), V, signs)
+    return signs[WEST, _prev(row, end), col]' * V[WEST, row, col]
 end

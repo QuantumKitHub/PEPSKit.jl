@@ -70,7 +70,7 @@ end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
 function fix_relative_phases(envfinal::CTMRGEnv, signs)
-    corners_fixed = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
+    corners_fixed = map(Iterators.product(axes(envfinal.corners)...)) do (dir, r, c)
         if dir == NORTHWEST
             fix_gauge_northwest_corner((r, c), envfinal, signs)
         elseif dir == NORTHEAST
@@ -82,7 +82,7 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
         end
     end
 
-    edges_fixed = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
+    edges_fixed = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (dir, r, c)
         if dir == NORTHWEST
             fix_gauge_north_edge((r, c), envfinal, signs)
         elseif dir == NORTHEAST
@@ -125,6 +125,32 @@ function fix_relative_phases(
     end
 
     return stack([U1, U2, U3, U4]; dims=1), stack([V1, V2, V3, V4]; dims=1)
+
+    U_fixed = map(Iterators.product(axes(U)...)) do (dir, r, c)
+        if dir == NORTHWEST
+            fix_gauge_north_left_vecs((r, c), U, signs)
+        elseif dir == NORTHEAST
+            fix_gauge_east_left_vecs((r, c), U, signs)
+        elseif dir == SOUTHEAST
+            fix_gauge_south_left_vecs((r, c), U, signs)
+        elseif dir == SOUTHWEST
+            fix_gauge_west_left_vecs((r, c), U, signs)
+        end
+    end
+
+    V_fixed = map(Iterators.product(axes(V)...)) do (dir, r, c)
+        if dir == NORTHWEST
+            fix_gauge_north_right_vecs((r, c), V, signs)
+        elseif dir == NORTHEAST
+            fix_gauge_east_right_vecs((r, c), V, signs)
+        elseif dir == SOUTHEAST
+            fix_gauge_south_right_vecs((r, c), V, signs)
+        elseif dir == SOUTHWEST
+            fix_gauge_west_right_vecs((r, c), V, signs)
+        end
+    end
+
+    return U_fixed, V_fixed
 end
 
 # Fix global phases of corners and edges via dot product (to ensure compatibility with symm. tensors)
