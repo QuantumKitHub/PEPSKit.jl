@@ -60,7 +60,7 @@ The projectors are computed from `svd_alg` SVDs where the truncation scheme is s
 
 In general, two different schemes can be selected with `ctmrgscheme` which determine how
 CTMRG is implemented. It can either be `:sequential`, where the projectors are succesively
-computed on the western side, and then applied and rotated. Or with `simultaneous` all projectors
+computed on the western side, and then applied and rotated. Or with `:simultaneous` all projectors
 are computed and applied simultaneously on all sides, where in particular the corners get
 contracted with two projectors at the same time.
 """
@@ -203,7 +203,7 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
     @fwdthreads for (r, c) in directions
         r′ = _next(r, size(state, 1))
         Q_nw[r, c] = enlarge_northwest_corner((r, c), envs, state)
-        Q_sw[r, c] = southwest_corner((r′, c), envs, state)
+        Q_sw[r, c] = enlarge_southwest_corner((r′, c), envs, state)
     end
 
     return copy(Q_nw), copy(Q_sw)
@@ -218,9 +218,9 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,
         elseif dir == NORTHEAST
             enlarge_northeast_corner((r, c), envs, state)
         elseif dir == SOUTHEAST
-            southeast_corner((r, c), envs, state)
+            enlarge_southeast_corner((r, c), envs, state)
         elseif dir == SOUTHWEST
-            southwest_corner((r, c), envs, state)
+            enlarge_southwest_corner((r, c), envs, state)
         end
     end
 
