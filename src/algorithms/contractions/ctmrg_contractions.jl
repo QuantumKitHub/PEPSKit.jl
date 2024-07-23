@@ -99,9 +99,9 @@ coordinates, environments and state, or by directly providing the tensors.
 function enlarge_southeast_corner(
     (row, col), envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
-    E_east = env.edges[EAST, row, _next(col, end)]
-    C_southeast = env.corners[SOUTHEAST, _next(row, end), _next(col, end)]
-    E_south = env.edges[SOUTH, _next(row, end), col]
+    E_east = envs.edges[EAST, row, _next(col, end)]
+    C_southeast = envs.corners[SOUTHEAST, _next(row, end), _next(col, end)]
+    E_south = envs.edges[SOUTH, _next(row, end), col]
     return enlarge_southeast_corner(
         E_east, C_southeast, E_south, ket[row, col], bra[row, col]
     )
@@ -138,9 +138,9 @@ coordinates, environments and state, or by directly providing the tensors.
 function enlarge_southwest_corner(
     (row, col), envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
-    E_south = env.edges[SOUTH, _next(row, end), col]
-    C_southwest = env.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
-    E_west = env.edges[WEST, row, _prev(col, end)]
+    E_south = envs.edges[SOUTH, _next(row, end), col]
+    C_southwest = envs.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
+    E_west = envs.edges[WEST, row, _prev(col, end)]
     return enlarge_southwest_corner(
         E_south, C_southwest, E_west, ket[row, col], bra[row, col]
     )
@@ -177,7 +177,7 @@ Contract two quadrants (enlarged corners) to form a half-infinite environment.
 """
 function halfinfinite_environment(
     quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3}
-)
+) where {S}
     return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         quadrant1[χ_in D_inabove D_inbelow; χ D1 D2] *
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
@@ -212,11 +212,11 @@ end
 
 Apply `renormalize_corner` to the enlarged northwest corner.
 """
-function renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_corner(
         enlarged_envs[NORTHWEST, row, col],
         P_left[NORTH, row, col],
-        P_right[WEST, _next(r, end), col],
+        P_right[WEST, _next(row, end), col],
     )
 end
 
@@ -225,11 +225,11 @@ end
 
 Apply `renormalize_corner` to the enlarged northeast corner.
 """
-function renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+function renormalize_northeast_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_corner(
         enlarged_envs[NORTHEAST, row, col],
         P_left[EAST, row, col],
-        P_right[NORTH, row, _prev(c, end)],
+        P_right[NORTH, row, _prev(col, end)],
     )
 end
 
@@ -238,11 +238,11 @@ end
 
 Apply `renormalize_corner` to the enlarged southeast corner.
 """
-function renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+function renormalize_southeast_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_corner(
         enlarged_envs[SOUTHEAST, row, col],
         P_left[SOUTH, row, col],
-        P_right[EAST, _prev(r, end), col],
+        P_right[EAST, _prev(row, end), col],
     )
 end
 
@@ -251,7 +251,7 @@ end
 
 Apply `renormalize_corner` to the enlarged southwest corner.
 """
-function renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_corner(
         enlarged_envs[SOUTHWEST, row, col],
         P_left[WEST, row, col],
@@ -260,37 +260,41 @@ function renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_lef
 end
 
 """
-    rightrenormalize_corner(C, E, P)
+    renormalize_bottom_corner((r, c), envs, projectors)
 
-Apply outgoing projector to a corner and edge.
+Apply bottom projector to southwest corner and south edge.
 ```
-      out
-       | 
-    [~~P~~]
-    |    ||
-    C -- E -- in
+        | 
+    [P_bottom]
+     |     ||
+     C --  E -- in
 ```
 """
-function rightrenormalize_corner(C::CTMRGCornerTensor, E::CTMRGEdgeTensor, P)
+function renormalize_bottom_corner((row, col), envs::CTMRGEnv, projectors)
+    C_southwest = envs.corners[SOUTHWEST, row, _prev(col, end)]
+    E_south = envs.edges[SOUTH, row, col]
+    P_bottom = projectors[1][_prev(row, end), col]
     return @autoopt @tensor corner[χ_in; χ_out] :=
-        E[χ_in D1 D2; χ1] * C[χ1; χ2] * P[χ2 D1 D2; χ_out]
+        E_south[χ_in D1 D2; χ1] * C_southwest[χ1; χ2] * P_bottom[χ2 D1 D2; χ_out]
 end
 
 """
-    leftrenormalize_corner(C, E, P)
+    renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
 
-Apply ingoing projector to a corner and edge.
+Apply top projector to northwest corner and north edge.
 ```
-    C -- E -- out
-    |    ||
-    [~~P~~]
-       | 
-       in
+     C -- E -- 
+     |    ||
+    [~P_top~]
+        | 
 ```
 """
-function leftrenormalize_corner(C::CTMRGCornerTensor, E::CTMRGEdgeTensor, P)
+function renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
+    C_northwest = envs.corners[NORTHWEST, row, _prev(col, end)]
+    E_north = envs.edges[NORTH, row, col]
+    P_top = projectors[2][row, col]
     return @autoopt @tensor corner[χ_in; χ_out] :=
-        P[χ_in D1 D2; χ1] * C[χ1; χ2] * E[χ2 D1 D2; χ_out]
+        P_top[χ_in; χ1 D1 D2] * C_northwest[χ1; χ2] * E_north[χ2 D1 D2; χ_out]
 end
 
 # edges
@@ -302,9 +306,9 @@ end
 Absorb a bra-ket pair into the north edge using the given projectors and environment tensors.
 
 ```
-       |~~~~~~~| -- E_north -- |~~~~~~~| 
-    -- |P_right|      ||       |P_right| --
-       |~~~~~~~| == ket-bra == |~~~~~~~| 
+       |~~~~~~| -- E_north -- |~~~~~~~| 
+    -- |P_left|      ||       |P_right| --
+       |~~~~~~| == ket-bra == |~~~~~~~| 
 
 ```
 """
@@ -320,14 +324,14 @@ function renormalize_north_edge(
     )
 end
 function renormalize_north_edge(
-    E_north::CTMRGEdgeTensor, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    E_north::CTMRGEdgeTensor, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
-    return @autoopt @tensor edge[χ_W D_Eab D_Ebe; χ_E] :=
+    return @autoopt @tensor edge[χ_W D_Sab D_Sbe; χ_E] :=
         E_north[χ1 D1 D2; χ2] *
-        ket[d; D3 D_Eab D5 D1] *
-        conj(bra[d; D4 D_Ebe D6 D2]) *
-        P_right[χ2 D3 D4; χ_E] *
-        P_left[χ_W; χ1 D5 D6]
+        ket[d; D1 D3 D_Sab D5] *
+        conj(bra[d; D2 D4 D_Sbe D6]) *
+        P_left[χ2 D3 D4; χ_E] *
+        P_right[χ_W; χ1 D5 D6]
 end
 
 """
@@ -358,7 +362,7 @@ function renormalize_east_edge(
     )
 end
 function renormalize_east_edge(
-    E_east::CTMRGEdgeTensor, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    E_east::CTMRGEdgeTensor, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket
 )
     return @autoopt @tensor edge[χ_N D_Wab D_Wbe; χ_S] :=
         E_east[χ1 D1 D2; χ2] *
@@ -384,16 +388,16 @@ Absorb a bra-ket pair into the south edge using the given projectors and environ
 function renormalize_south_edge(
     (row, col), envs::CTMRGEnv, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
-    return renormalize_north_edge(
+    return renormalize_south_edge(
         envs.edges[SOUTH, _next(row, end), col],
-        P_left[NORTH, row, col],
+        P_left[SOUTH, row, col],
         P_right[SOUTH, row, _next(col, end)],
         ket[row, col],
         bra[row, col],
     )
 end
 function renormalize_south_edge(
-    E_south::CTMRGEdgeTensor, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    E_south::CTMRGEdgeTensor, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
     return @autoopt @tensor edge[χ_E D_Nab D_Nbe; χ_W] :=
         E_south[χ1 D1 D2; χ2] *
@@ -419,9 +423,14 @@ Absorb a bra-ket pair into the west edge using the given projectors and environm
             |
 ```
 """
-function renormalize_west_edge(
-    (row, col), envs::CTMRGEnv, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket
-)
+function renormalize_west_edge(  # For simultaneous CTMRG scheme
+    (row, col),
+    envs::CTMRGEnv,
+    P_top::Array{Pt,3},
+    P_bottom::Array{Pb,3},
+    ket::InfinitePEPS,
+    bra::InfinitePEPS=ket,
+) where {Pt,Pb}
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
         P_top[WEST, row, col],
@@ -430,15 +439,30 @@ function renormalize_west_edge(
         bra[row, col],
     )
 end
+function renormalize_west_edge(  # For sequential CTMRG scheme
+    (row, col),
+    envs::CTMRGEnv,
+    projectors,
+    ket::InfinitePEPS,
+    bra::InfinitePEPS=ket,
+)
+    return renormalize_west_edge(
+        envs.edges[WEST, row, _prev(col, end)],
+        projectors[1][row, col],
+        projectors[2][_next(row, end), col],
+        ket[row, col],
+        bra[row, col],
+    )
+end
 function renormalize_west_edge(
-    E_west::CTMRGEdgeTensor, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    E_west::CTMRGEdgeTensor, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket
 )
     return @autoopt @tensor edge[χ_S D_Eab D_Ebe; χ_N] :=
         E_west[χ1 D1 D2; χ2] *
         ket[d; D3 D_Eab D5 D1] *
         conj(bra[d; D4 D_Ebe D6 D2]) *
-        P_bottom[χ2 D3 D4; χ_N] *
-        P_top[χ_S; χ1 D5 D6]
+        P_top[χ2 D3 D4; χ_N] *
+        P_bottom[χ_S; χ1 D5 D6]
 end
 
 # Gauge fixing contractions

@@ -155,7 +155,7 @@ function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
         # left move
         enlarged_envs = ctmrg_expand(state, envs, alg)
         projectors, info = ctmrg_projectors(enlarged_envs, envs, alg)
-        envs = ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg)
+        envs = ctmrg_renormalize(projectors, state, envs, alg)
 
         # rotate
         state = rotate_north(state, EAST)
@@ -337,7 +337,7 @@ end
 
 Apply projectors to renormalize corners and edges.
 """
-function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SequentialCTMRG)
+function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
 
@@ -355,22 +355,15 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SequentialC
 
     # Apply projectors to renormalize corners and edges
     coordinates = collect(Iterators.product(axes(state)...))
-    @fwdthreads for (r, c) in coordinates
-        c′ = _prev(c, size(state, 2))
-
-        C_southwest = rightrenormalize_corner(
-            envs.corners[SOUTHWEST, r, c′], envs.edges[SOUTH, r, c], projectors[2][r, c]
-        )
+    # @fwdthreads for (r, c) in coordinates
+    for (r, c) in coordinates
+        C_southwest = renormalize_bottom_corner((r, c), envs, projectors)
         corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
 
-        C_northwest = leftrenormalize_corner(
-            envs.corners[NORTHWEST, r, c′], envs.edges[NORTH, r, c], projectors[1][r, c]
-        )
+        C_northwest = renormalize_top_corner((r, c), envs, projectors)
         corners[NORTHWEST, r, c] = C_northwest / norm(C_northwest)
 
-        E_west = renormalize_west_edge(
-            (r, c), envs, projectors[1], projectors[2], state, state
-        )
+        E_west = renormalize_west_edge((r, c), envs, projectors, state)
         edges[WEST, r, c] = E_west / norm(E_west)
     end
 
@@ -383,17 +376,17 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::Simultaneou
 
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
     @fwdthreads for (dir, r, c) in drc_combinations
-        if dir == NORTH        
-            corner = renormalize_northwest_corner((r, c), envs, P_left, P_right)
+        if dir == NORTH
+            corner = renormalize_northwest_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)
         elseif dir == EAST
-            corner = renormalize_northeast_corner((r, c), envs, P_left, P_right)
+            corner = renormalize_northeast_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_east_edge((r, c), envs, P_left, P_right, state)
         elseif dir == SOUTH
-            corner = renormalize_southeast_corner((r, c), envs, P_left, P_right)
+            corner = renormalize_southeast_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_south_edge((r, c), envs, P_left, P_right, state)
         elseif dir == WEST
-            corner = renormalize_west_corner((r, c), envs, P_left, P_right)
+            corner = renormalize_southwest_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_west_edge((r, c), envs, P_left, P_right, state)
         end
         corners[dir, r, c] = corner / norm(corner)

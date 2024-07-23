@@ -82,7 +82,7 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
         end
     end
 
-    edges_fixed = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (dir, r, c)
+    edges_fixed = map(Iterators.product(axes(envfinal.corners)...)) do (dir, r, c)
         if dir == NORTHWEST
             fix_gauge_north_edge((r, c), envfinal, signs)
         elseif dir == NORTHEAST
