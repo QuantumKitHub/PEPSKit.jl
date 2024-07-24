@@ -196,17 +196,17 @@ the left. The second mode expands the environment in all four directions simulta
 """
 function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q_nw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
     Q_sw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
+    Q_nw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
 
     directions = collect(Iterators.product(axes(state)...))
-    @fwdthreads for (r, c) in directions
-        r′ = _next(r, size(state, 1))
+    # @fwdthreads for (r, c) in directions
+    for (r, c) in directions
+        Q_sw[r, c] = enlarge_southwest_corner((r, c), envs, state)
         Q_nw[r, c] = enlarge_northwest_corner((r, c), envs, state)
-        Q_sw[r, c] = enlarge_southwest_corner((r′, c), envs, state)
     end
 
-    return copy(Q_nw), copy(Q_sw)
+    return copy(Q_sw), copy(Q_nw)
 end
 function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
@@ -245,9 +245,11 @@ function ctmrg_projectors(
     ϵ = zero(real(scalartype(envs)))
 
     directions = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
-    @fwdthreads for (r, c) in directions
+    # @fwdthreads for (r, c) in directions
+    for (r, c) in directions
         # SVD half-infinite environment
-        QQ = halfinfinite_environment(enlarged_envs[2][r, c], enlarged_envs[1][r, c])
+        r′ = _next(r, size(envs.corners, 2))
+        QQ = halfinfinite_environment(enlarged_envs[1][r′, c], enlarged_envs[2][r, c])
 
         trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
@@ -264,7 +266,7 @@ function ctmrg_projectors(
 
         # Compute projectors
         P_bottom[r, c], P_top[r, c] = build_projectors(
-            U, S, V, enlarged_envs[2][r, c], enlarged_envs[1][r, c]
+            U, S, V, enlarged_envs[1][r′, c], enlarged_envs[2][r, c]
         )
     end
 
@@ -369,6 +371,22 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
 
     return CTMRGEnv(copy(corners), copy(edges))
 end
+# Apply projectors to entire left half-environment to grow SW & NW corners, and W edge
+function grow_env_left(
+    peps, P_bottom, P_top, corners_SW, corners_NW, edge_S, edge_W, edge_N
+)
+    @autoopt @tensor corner_SW′[χ_E; χ_N] :=
+        corners_SW[χ1; χ2] * edge_S[χ_E D1 D2; χ1] * P_bottom[χ2 D1 D2; χ_N]
+    @autoopt @tensor corner_NW′[χ_S; χ_E] :=
+        corners_NW[χ1; χ2] * edge_N[χ2 D1 D2; χ_E] * P_top[χ_S; χ1 D1 D2]
+    @autoopt @tensor edge_W′[χ_S D_Eabove D_Ebelow; χ_N] :=
+        edge_W[χ1 D1 D2; χ2] *
+        peps[d; D3 D_Eabove D5 D1] *
+        conj(peps[d; D4 D_Ebelow D6 D2]) *
+        P_bottom[χ2 D3 D4; χ_N] *
+        P_top[χ_S; χ1 D5 D6]
+    return corner_SW′, corner_NW′, edge_W′
+end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
@@ -399,26 +417,6 @@ end
 # ======================================================================================== #
 # Auxiliary routines
 # ======================================================================================== #
-
-# Compute enlarged corners and edges for all directions and unit cell entries
-function enlarge_corners_edges(state, env::CTMRGEnv{C,T}) where {C,T}
-    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(env.corners)))
-    drc_combinations = collect(Iterators.product(axes(env.corners)...))
-    @fwdthreads for (dir, r, c) in drc_combinations
-        Q[dir, r, c] = if dir == NORTHWEST
-            northwest_corner((r, c), env, state)
-        elseif dir == NORTHEAST
-            northeast_corner((r, c), env, state)
-        elseif dir == SOUTHEAST
-            southeast_corner((r, c), env, state)
-        elseif dir == SOUTHWEST
-            southwest_corner((r, c), env, state)
-        end
-    end
-
-    return copy(Q)
-end
 
 # Build projectors from SVD and enlarged SW & NW corners
 function build_projectors(

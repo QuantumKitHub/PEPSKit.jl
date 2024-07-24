@@ -351,25 +351,25 @@ Absorb a bra-ket pair into the east edge using the given projectors and environm
 ```
 """
 function renormalize_east_edge(
-    (row, col), envs::CTMRGEnv, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), envs::CTMRGEnv, P_bottom, P_top, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
     return renormalize_east_edge(
         envs.edges[EAST, row, _next(col, end)],
-        P_top[EAST, row, col],
-        P_bottom[EAST, _prev(row, end), col, end],
+        P_bottom[EAST, row, col, end],
+        P_top[EAST, _prev(row, end), col],
         ket[row, col],
         bra[row, col],
     )
 end
 function renormalize_east_edge(
-    E_east::CTMRGEdgeTensor, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket
+    E_east::CTMRGEdgeTensor, P_bottom, P_top, ket::PEPSTensor, bra::PEPSTensor=ket
 )
     return @autoopt @tensor edge[χ_N D_Wab D_Wbe; χ_S] :=
         E_east[χ1 D1 D2; χ2] *
         ket[d; D5 D1 D3 D_Wab] *
         conj(bra[d; D6 D2 D4 D_Wbe]) *
-        P_top[χ2 D3 D4; χ_S] *
-        P_bottom[χ_N; χ1 D5 D6]
+        P_bottom[χ2 D3 D4; χ_S] *
+        P_top[χ_N; χ1 D5 D6]
 end
 
 """
@@ -426,15 +426,15 @@ Absorb a bra-ket pair into the west edge using the given projectors and environm
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
     (row, col),
     envs::CTMRGEnv,
-    P_top::Array{Pt,3},
     P_bottom::Array{Pb,3},
+    P_top::Array{Pt,3},
     ket::InfinitePEPS,
     bra::InfinitePEPS=ket,
 ) where {Pt,Pb}
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
-        P_top[WEST, row, col],
-        P_bottom[WEST, _next(row, end), col],
+        P_bottom[WEST, row, col],
+        P_top[WEST, _next(row, end), col],
         ket[row, col],
         bra[row, col],
     )
@@ -448,21 +448,21 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
 )
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
-        projectors[1][row, col],
-        projectors[2][_next(row, end), col],
+        projectors[1][_prev(row, end), col],
+        projectors[2][row, col],
         ket[row, col],
         bra[row, col],
     )
 end
 function renormalize_west_edge(
-    E_west::CTMRGEdgeTensor, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket
+    E_west::CTMRGEdgeTensor, P_bottom, P_top, ket::PEPSTensor, bra::PEPSTensor=ket
 )
     return @autoopt @tensor edge[χ_S D_Eab D_Ebe; χ_N] :=
         E_west[χ1 D1 D2; χ2] *
         ket[d; D3 D_Eab D5 D1] *
         conj(bra[d; D4 D_Ebe D6 D2]) *
-        P_top[χ2 D3 D4; χ_N] *
-        P_bottom[χ_S; χ1 D5 D6]
+        P_bottom[χ2 D3 D4; χ_N] *
+        P_top[χ_S; χ1 D5 D6]
 end
 
 # Gauge fixing contractions

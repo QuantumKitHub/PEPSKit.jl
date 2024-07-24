@@ -14,12 +14,12 @@ ctm_alg = CTMRG(;
     maxiter=100,
     verbosity=2,
     svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
-    ctmrgscheme=:sequential,
+    ctmrgscheme=:simultaneous,
 )
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
-    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6), iterscheme=:diffgauge),
+    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6), iterscheme=:fixed),
     reuse_env=true,
 )
 
@@ -37,8 +37,8 @@ result = fixedpoint(psi_init, H, opt_alg, env_init)
 @test all(@. λ_h > 0 && λ_v > 0)
 
 # same test but for 2x2 unit cell
-H_2x2 = square_lattice_heisenberg(; unitcell=(2, 2))
-psi_init_2x2 = InfinitePEPS(2, χbond; unitcell=(2, 2))
+H_2x2 = square_lattice_heisenberg(; unitcell=(3, 2))
+psi_init_2x2 = InfinitePEPS(2, χbond; unitcell=(3, 2))
 env_init_2x2 = leading_boundary(
     CTMRGEnv(psi_init_2x2, ComplexSpace(χenv)), psi_init_2x2, ctm_alg
 )
