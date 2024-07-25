@@ -41,8 +41,6 @@ include("algorithms/toolbox.jl")
 
 include("algorithms/peps_opt.jl")
 
-# include("algorithms/ctmrg/ctmrg_all_sides.jl")
-
 include("utility/symmetrization.jl")
 
 """
