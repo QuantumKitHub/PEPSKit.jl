@@ -14,7 +14,7 @@ parse_ex(ex) = ex
 function parse_ex(ex::Expr)
     oppheads = (:(./=), :(.*=), :(.+=), :(.-=))
     opprep = (:(./), :(.*), :(.+), :(.-))
-    if ex.head == :macrocall
+    if ex.head === :macrocall
         parse_ex(macroexpand(PEPSKit, ex))
     elseif ex.head in (:(.=), :(=)) && length(ex.args) == 2 && is_indexing(ex.args[1])
         lhs = ex.args[1]
@@ -44,4 +44,4 @@ function parse_ex(ex::Expr)
 end
 
 is_indexing(ex) = false
-is_indexing(ex::Expr) = ex.head == :ref
+is_indexing(ex::Expr) = ex.head === :ref

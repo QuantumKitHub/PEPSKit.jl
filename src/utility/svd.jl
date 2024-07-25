@@ -60,7 +60,7 @@ end
 """
     struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf)
 
-Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmmetric) tensors.
+Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmetric) tensors.
 The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
 In particular, this make it possible to specify the targeted singular values block-wise.
 In case the symmetry block is too small as compared to the number of singular values, or

@@ -119,7 +119,7 @@ function MPSKit.transfer_spectrum(
     @assert size(above) == size(O)
     @assert size(below) == size(O)
 
-    numrows = size(above, 2)
+    numrows = size(above, 1)
     envtype = eltype(init[1])
     eigenvals = Vector{Vector{scalartype(envtype)}}(undef, numrows)
 

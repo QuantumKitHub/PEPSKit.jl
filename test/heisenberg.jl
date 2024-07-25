@@ -36,14 +36,14 @@ result = fixedpoint(psi_init, H, opt_alg, env_init)
 @test result.E ≈ -0.6694421 atol = 1e-2
 @test all(@. λ_h > 0 && λ_v > 0)
 
-# same test but for 2x2 unit cell
-H_2x2 = square_lattice_heisenberg(; unitcell=(2, 2))
-psi_init_2x2 = InfinitePEPS(2, χbond; unitcell=(2, 2))
-env_init_2x2 = leading_boundary(
-    CTMRGEnv(psi_init_2x2, ComplexSpace(χenv)), psi_init_2x2, ctm_alg
+# same test but for 1x2 unit cell
+H_1x2 = square_lattice_heisenberg(; unitcell=(1, 2))
+psi_init_1x2 = InfinitePEPS(2, χbond; unitcell=(1, 2))
+env_init_1x2 = leading_boundary(
+    CTMRGEnv(psi_init_1x2, ComplexSpace(χenv)), psi_init_1x2, ctm_alg
 )
-result_2x2 = fixedpoint(psi_init_2x2, H_2x2, opt_alg, env_init_2x2)
-λ_h_2x2, λ_v_2x2, = correlation_length(result_2x2.peps, result_2x2.env)
+result_1x2 = fixedpoint(psi_init_1x2, H_1x2, opt_alg, env_init_1x2)
+λ_h_1x2, λ_v_1x2, = correlation_length(result_1x2.peps, result_1x2.env)
 
-@test result_2x2.E ≈ 4 * result.E atol = 1e-2
-@test all(@. λ_h_2x2 > 0 && λ_v_2x2 > 0)
+@test result_1x2.E ≈ 2 * result.E atol = 1e-2
+@test all(@. λ_h_1x2 > 0 && λ_v_1x2 > 0)

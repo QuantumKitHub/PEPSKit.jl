@@ -69,99 +69,61 @@ function transfermatrix_fixedpoint(tops, bottoms, ρinit)
 end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
-function _contract_gauge_corner(corner, σ_in, σ_out)
-    @autoopt @tensor corner_fix[χ_in; χ_out] :=
-        σ_in[χ_in; χ1] * corner[χ1; χ2] * conj(σ_out[χ_out; χ2])
-end
-function _contract_gauge_edge(edge, σ_in, σ_out)
-    @autoopt @tensor edge_fix[χ_in D_above D_below; χ_out] :=
-        σ_in[χ_in; χ1] * edge[χ1 D_above D_below; χ2] * conj(σ_out[χ_out; χ2])
-end
 function fix_relative_phases(envfinal::CTMRGEnv, signs)
-    C1 = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
-        _contract_gauge_corner(
-            envfinal.corners[NORTHWEST, r, c],
-            signs[WEST, r, c],
-            signs[NORTH, r, _next(c, end)],
-        )
-    end
-    T1 = map(Iterators.product(axes(envfinal.edges)[2:3]...)) do (r, c)
-        _contract_gauge_edge(
-            envfinal.edges[NORTH, r, c],
-            signs[NORTH, r, c],
-            signs[NORTH, r, _next(c, end)],
-        )
-    end
-    C2 = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
-        _contract_gauge_corner(
-            envfinal.corners[NORTHEAST, r, c],
-            signs[NORTH, r, c],
-            signs[EAST, _next(r, end), c],
-        )
-    end
-    T2 = map(Iterators.product(axes(envfinal.edges)[2:3]...)) do (r, c)
-        _contract_gauge_edge(
-            envfinal.edges[EAST, r, c], signs[EAST, r, c], signs[EAST, _next(r, end), c]
-        )
-    end
-    C3 = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
-        _contract_gauge_corner(
-            envfinal.corners[SOUTHEAST, r, c],
-            signs[EAST, r, c],
-            signs[SOUTH, r, _prev(c, end)],
-        )
-    end
-    T3 = map(Iterators.product(axes(envfinal.edges)[2:3]...)) do (r, c)
-        _contract_gauge_edge(
-            envfinal.edges[SOUTH, r, c],
-            signs[SOUTH, r, c],
-            signs[SOUTH, r, _prev(c, end)],
-        )
-    end
-    C4 = map(Iterators.product(axes(envfinal.corners)[2:3]...)) do (r, c)
-        _contract_gauge_corner(
-            envfinal.corners[SOUTHWEST, r, c],
-            signs[SOUTH, r, c],
-            signs[WEST, _prev(r, end), c],
-        )
-    end
-    T4 = map(Iterators.product(axes(envfinal.edges)[2:3]...)) do (r, c)
-        _contract_gauge_edge(
-            envfinal.edges[WEST, r, c], signs[WEST, r, c], signs[WEST, _prev(r, end), c]
-        )
+    corners_fixed = map(Iterators.product(axes(envfinal.corners)...)) do (dir, r, c)
+        if dir == NORTHWEST
+            fix_gauge_northwest_corner((r, c), envfinal, signs)
+        elseif dir == NORTHEAST
+            fix_gauge_northeast_corner((r, c), envfinal, signs)
+        elseif dir == SOUTHEAST
+            fix_gauge_southeast_corner((r, c), envfinal, signs)
+        elseif dir == SOUTHWEST
+            fix_gauge_southwest_corner((r, c), envfinal, signs)
+        end
     end
 
-    return stack([C1, C2, C3, C4]; dims=1), stack([T1, T2, T3, T4]; dims=1)
+    edges_fixed = map(Iterators.product(axes(envfinal.corners)...)) do (dir, r, c)
+        if dir == NORTHWEST
+            fix_gauge_north_edge((r, c), envfinal, signs)
+        elseif dir == NORTHEAST
+            fix_gauge_east_edge((r, c), envfinal, signs)
+        elseif dir == SOUTHEAST
+            fix_gauge_south_edge((r, c), envfinal, signs)
+        elseif dir == SOUTHWEST
+            fix_gauge_west_edge((r, c), envfinal, signs)
+        end
+    end
+
+    return corners_fixed, edges_fixed
 end
 function fix_relative_phases(
     U::Array{Ut,3}, V::Array{Vt,3}, signs
 ) where {Ut<:AbstractTensorMap,Vt<:AbstractTensorMap}
-    U1 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[NORTH, r, c] * signs[NORTH, r, _next(c, end)]
-    end
-    V1 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[NORTH, r, _next(c, end)]' * V[NORTH, r, c]
-    end
-    U2 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[EAST, r, c] * signs[EAST, _next(r, end), c]
-    end
-    V2 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[EAST, _next(r, end), c]' * V[EAST, r, c]
-    end
-    U3 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[SOUTH, r, c] * signs[SOUTH, r, _prev(c, end)]
-    end
-    V3 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[SOUTH, r, _prev(c, end)]' * V[SOUTH, r, c]
-    end
-    U4 = map(Iterators.product(axes(U)[2:3]...)) do (r, c)
-        return U[WEST, r, c] * signs[WEST, _prev(r, end), c]
-    end
-    V4 = map(Iterators.product(axes(V)[2:3]...)) do (r, c)
-        return signs[WEST, _prev(r, end), c]' * V[WEST, r, c]
+    U_fixed = map(Iterators.product(axes(U)...)) do (dir, r, c)
+        if dir == NORTHWEST
+            fix_gauge_north_left_vecs((r, c), U, signs)
+        elseif dir == NORTHEAST
+            fix_gauge_east_left_vecs((r, c), U, signs)
+        elseif dir == SOUTHEAST
+            fix_gauge_south_left_vecs((r, c), U, signs)
+        elseif dir == SOUTHWEST
+            fix_gauge_west_left_vecs((r, c), U, signs)
+        end
     end
 
-    return stack([U1, U2, U3, U4]; dims=1), stack([V1, V2, V3, V4]; dims=1)
+    V_fixed = map(Iterators.product(axes(V)...)) do (dir, r, c)
+        if dir == NORTHWEST
+            fix_gauge_north_right_vecs((r, c), V, signs)
+        elseif dir == NORTHEAST
+            fix_gauge_east_right_vecs((r, c), V, signs)
+        elseif dir == SOUTHEAST
+            fix_gauge_south_right_vecs((r, c), V, signs)
+        elseif dir == SOUTHWEST
+            fix_gauge_west_right_vecs((r, c), V, signs)
+        end
+    end
+
+    return U_fixed, V_fixed
 end
 
 # Fix global phases of corners and edges via dot product (to ensure compatibility with symm. tensors)

@@ -101,10 +101,10 @@ struct PEPSOptimize{G}
         gradient_alg::G,
     ) where {S,G}
         if gradient_alg isa GradMode
-            if S == :sequential && iterscheme(gradient_alg) == :fixed
+            if S === :sequential && iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             elseif boundary_alg.projector_alg.svd_alg.fwd_alg isa IterSVD &&
-                iterscheme(gradient_alg) == :fixed
+                iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError("IterSVD and :fixed are currently not compatible"))
             end
         end
@@ -126,11 +126,20 @@ end
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
 By default, a random initial environment is used.
+
+The function returns a `NamedTuple` which contains the following entries:
+- `peps`: final `InfinitePEPS`
+- `env`: `CTMRGEnv` corresponding to the final PEPS
+- `E`: final energy
+- `E_history`: convergence history of the energy function
+- `grad`: final energy gradient
+- `gradnorm_history`: convergence history of the energy gradient norms
+- `numfg`: total number of calls to the energy function
 """
 function fixedpoint(
     ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20)
 ) where {T}
-    (peps, env), E, ∂E, info = optimize(
+    (peps, env), E, ∂E, numfg, convhistory = optimize(
         (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner
     ) do (peps, envs)
         E, g = withgradient(peps) do ψ
@@ -149,7 +158,15 @@ function fixedpoint(
         # withgradient returns tuple of gradients `g`
         return E, only(g)
     end
-    return (; peps, env, E, ∂E, info)
+    return (;
+        peps,
+        env,
+        E,
+        E_history=convhistory[:, 1],
+        grad=∂E,
+        gradnorm_history=convhistory[:, 2],
+        numfg,
+    )
 end
 
 # Update PEPS unit cell in non-mutating way
@@ -211,7 +228,7 @@ function _rrule(
     alg::CTMRG{C},
 ) where {C}
     @assert C === :simultaneous
-    @assert alg.projector_alg.svd_alg.rrule_alg isa Union{KrylovKit.LinearSolver,Arnoldi}
+    @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs = leading_boundary(envinit, state, alg)
     envsconv, info = ctmrg_iter(state, envs, alg)
     envsfix, signs = gauge_fix(envs, envsconv)
