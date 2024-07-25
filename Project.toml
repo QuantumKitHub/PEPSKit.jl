@@ -1,7 +1,7 @@
 name = "PEPSKit"
 uuid = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
 authors = ["Maarten Vandamme", "Paul Brehmer", "Lander Burgelman", "Rui-Zhen Huang", "Daan Maertens", "Lukas Devos <lukas.devos@ugent.be"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
