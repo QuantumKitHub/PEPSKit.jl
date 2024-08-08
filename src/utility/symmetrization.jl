@@ -1,8 +1,5 @@
-# some basic symmetrization routines for PEPS
-
 abstract type SymmetrizationStyle end
 
-struct None <: SymmetrizationStyle end
 struct Depth <: SymmetrizationStyle end
 struct Width <: SymmetrizationStyle end
 struct Rot <: SymmetrizationStyle end
@@ -32,7 +29,7 @@ end
 # make two TensorMap's have the same spaces, by force if necessary
 # this is definitely not what you would want to do, but it circumvents having to think
 # about what hermiticity means at the level of transfer operators, which is something
-function _make_it_fit(
+function _fit_spaces(
     y::AbstractTensorMap{S,N₁,N₂}, x::AbstractTensorMap{S,N₁,N₂}
 ) where {S<:IndexSpace,N₁,N₂}
     for i in 1:(N₁ + N₂)
@@ -48,15 +45,15 @@ function _make_it_fit(
 end
 
 function herm_depth_inv(x::Union{PEPSTensor,PEPOTensor})
-    return 0.5 * (x + _make_it_fit(herm_depth(x), x))
+    return 0.5 * (x + _fit_spaces(herm_depth(x), x))
 end
 
 function herm_width_inv(x::Union{PEPSTensor,PEPOTensor})
-    return 0.5 * (x + _make_it_fit(herm_width(x), x))
+    return 0.5 * (x + _fit_spaces(herm_width(x), x))
 end
 
-function herm_height_inv(x::Union{PEPSTensor,PEPOTensor})
-    return 0.5 * (x + _make_it_fit(herm_height(x), x))
+function herm_height_inv(x::PEPOTensor)
+    return 0.5 * (x + _fit_spaces(herm_height(x), x))
 end
 
 # rotation invariance
@@ -64,19 +61,19 @@ end
 function rot_inv(x)
     return 0.25 * (
         x +
-        _make_it_fit(rotl90(x), x) +
-        _make_it_fit(rot180(x), x) +
-        _make_it_fit(rotr90(x), x)
+        _fit_spaces(rotl90(x), x) +
+        _fit_spaces(rot180(x), x) +
+        _fit_spaces(rotr90(x), x)
     )
 end
 
 ## PEPS unit cell symmetrization
 
-PEPSLike = Union{InfinitePEPS,AbstractArray{<:PEPSTensor,2}}
+const PEPSLike = Union{InfinitePEPS,AbstractArray{<:PEPSTensor,2}}
 
-symmetrize(p::PEPSLike, ::None) = p
+symmetrize!(p::PEPSLike, ::Nothing) = p
 
-function symmetrize(p::PEPSLike, ::Depth)
+function symmetrize!(p::PEPSLike, ::Depth)
     depth, width = size(p)
     if mod(depth, 2) == 1
         for w in 1:width
@@ -85,13 +82,13 @@ function symmetrize(p::PEPSLike, ::Depth)
     end
     for d in 1:floor(Int, depth / 2)
         for w in 1:width
-            p[depth - d + 1, w] = _make_it_fit(herm_depth(p[d, w]), p[depth - d + 1, w])
+            p[depth - d + 1, w] = _fit_spaces(herm_depth(p[d, w]), p[depth - d + 1, w])
         end
     end
     return p
 end
 
-function symmetrize(p::PEPSLike, ::Width)
+function symmetrize!(p::PEPSLike, ::Width)
     depth, width = size(p)
     if mod(width, 2) == 1
         for d in 1:depth
@@ -100,26 +97,26 @@ function symmetrize(p::PEPSLike, ::Width)
     end
     for w in 1:floor(Int, width / 2)
         for d in 1:depth
-            p[d, width - w + 1] = _make_it_fit(herm_width(p[d, w]), p[d, width - w + 1])
+            p[d, width - w + 1] = _fit_spaces(herm_width(p[d, w]), p[d, width - w + 1])
         end
     end
     return p
 end
 
-function symmetrize(p::PEPSLike, ::Rot)
+function symmetrize!(p::PEPSLike, ::Rot)
     return error("TODO")
 end
 
-function symmetrize(p::PEPSLike, ::Full)
+function symmetrize!(p::PEPSLike, ::Full)
     # TODO: clean up this mess...
 
     # some auxiliary transformations
     function symmetrize_corner(x::PEPSTensor)
-        return 0.5 * (x + _make_it_fit(permute(x', ((5,), (4, 3, 2, 1))), x))
+        return 0.5 * (x + _fit_spaces(permute(x', ((5,), (4, 3, 2, 1))), x))
     end
     symmetrize_center(x::PEPSTensor) = herm_depth_inv(rot_inv(x))
     function symmetrize_mid_depth(x::PEPSTensor)
-        return x + _make_it_fit(permute(x', ((5,), (3, 2, 1, 4))), x)
+        return x + _fit_spaces(permute(x', ((5,), (3, 2, 1, 4))), x)
     end
 
     depth, width = size(p)
@@ -135,34 +132,34 @@ function symmetrize(p::PEPSLike, ::Full)
         for w in 1:floor(Int, width / 2)
             if d == w
                 p[d, w] = symmetrize_corner(p[d, w])
-                p[d, width - w + 1] = _make_it_fit(rotr90(p[d, w]), p[d, width - w + 1])
-                p[depth - d + 1, w] = _make_it_fit(herm_depth(p[d, w]), p[depth - d + 1, w])
-                p[depth - d + 1, width - w + 1] = _make_it_fit(
+                p[d, width - w + 1] = _fit_spaces(rotr90(p[d, w]), p[d, width - w + 1])
+                p[depth - d + 1, w] = _fit_spaces(herm_depth(p[d, w]), p[depth - d + 1, w])
+                p[depth - d + 1, width - w + 1] = _fit_spaces(
                     herm_depth(rotr90(p[d, w])), p[depth - d + 1, width - w + 1]
                 )
 
             elseif odd == 1 && d == ceil(Int, depth / 2)
                 p[d, w] = symmetrize_mid_depth(p[d, w])
-                p[w, d] = _make_it_fit(rotr90(p[d, w]), p[w, d])
-                p[d, width - w + 1] = _make_it_fit(rot180(p[d, w]), p[d, width - w + 1])
-                p[width - w + 1, d] = _make_it_fit(
+                p[w, d] = _fit_spaces(rotr90(p[d, w]), p[w, d])
+                p[d, width - w + 1] = _fit_spaces(rot180(p[d, w]), p[d, width - w + 1])
+                p[width - w + 1, d] = _fit_spaces(
                     herm_depth(rotr90(p[d, w])), p[width - w + 1, d]
                 )
 
             else
-                p[depth - d + 1, w] = _make_it_fit(herm_depth(p[d, w]), p[depth - d + 1, w])
-                p[w, depth - d + 1] = _make_it_fit(rotr90(p[d, w]), p[w, depth - d + 1])
-                p[width - w + 1, depth - d + 1] = _make_it_fit(
+                p[depth - d + 1, w] = _fit_spaces(herm_depth(p[d, w]), p[depth - d + 1, w])
+                p[w, depth - d + 1] = _fit_spaces(rotr90(p[d, w]), p[w, depth - d + 1])
+                p[width - w + 1, depth - d + 1] = _fit_spaces(
                     herm_depth(rotr90(p[d, w])), [width - w + 1, depth - d + 1]
                 )
-                p[w, d] = _make_it_fit(rotr90(herm_depth(p[d, w])), p[w, d])
-                p[width - w + 1, d] = _make_it_fit(
+                p[w, d] = _fit_spaces(rotr90(herm_depth(p[d, w])), p[w, d])
+                p[width - w + 1, d] = _fit_spaces(
                     herm_depth(rotr90(herm_depth(p[d, w]))), p[width - w + 1, d]
                 )
-                p[d, width - w + 1] = _make_it_fit(
+                p[d, width - w + 1] = _fit_spaces(
                     rotr90(rotr90(herm_depth(p[d, w]))), p[d, width - w + 1]
                 )
-                p[depth - d + 1, width - w + 1] = _make_it_fit(
+                p[depth - d + 1, width - w + 1] = _fit_spaces(
                     herm_depth(rotr90(rotr90(herm_depth(p[d, w])))),
                     p[depth - d + 1, width - w + 1],
                 )
