@@ -12,16 +12,16 @@ schemes = [:simultaneous, :sequential]
 atol = 1e-4
 verbosity = 2
 
-function _make_symmetric(psi)
+function _make_symmetric!(psi)
     if ==(size(psi)...)
-        return PEPSKit.symmetrize(psi, PEPSKit.Full())
+        return symmetrize!(psi, RotateReflect())
     else
-        return PEPSKit.symmetrize(PEPSKit.symmetrize(psi, PEPSKit.Depth()), PEPSKit.Width())
+        return symmetrize!(symmetrize!(psi, ReflectDepth()), ReflectWidth())
     end
 end
 
 # If I can't make the rng seed behave, I'll just randomly define a peps somehow
-function semi_random_peps!(psi::InfinitePEPS)
+function _semi_random_peps!(psi::InfinitePEPS)
     i = 0
     A′ = map(psi.A) do a
         for (_, b) in blocks(a)
@@ -44,8 +44,8 @@ end
     ctm_space = ComplexSpace(χ)
 
     psi = InfinitePEPS(undef, T, physical_space, peps_space; unitcell)
-    semi_random_peps!(psi)
-    psi = _make_symmetric(psi)
+    _semi_random_peps!(psi)
+    _make_symmetric!(psi)
 
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi, ctm_space)
@@ -69,8 +69,8 @@ end
     ctm_space = Z2Space(0 => χ ÷ 2, 1 => χ ÷ 2)
 
     psi = InfinitePEPS(undef, T, physical_space, peps_space; unitcell)
-    semi_random_peps!(psi)
-    psi = _make_symmetric(psi)
+    _semi_random_peps!(psi)
+    _make_symmetric!(psi)
 
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(physical_space, peps_space; unitcell)

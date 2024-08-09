@@ -121,11 +121,15 @@ function PEPSOptimize(;
 end
 
 """
-    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv]; callback=identity) where {T}
+    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
+               callback=(args...) -> identity(args)) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
 By default, a random initial environment is used.
+
+The `callback` kwarg can be used to insert a function call after each optimization step
+which maps `peps, envs, E, grad = callback(peps, envs, E, grad)`.
 
 The function returns a `NamedTuple` which contains the following entries:
 - `peps`: final `InfinitePEPS`

@@ -1,9 +1,9 @@
 abstract type SymmetrizationStyle end
 
-struct Depth <: SymmetrizationStyle end
-struct Width <: SymmetrizationStyle end
-struct Rot <: SymmetrizationStyle end
-struct Full <: SymmetrizationStyle end
+struct ReflectDepth <: SymmetrizationStyle end
+struct ReflectWidth <: SymmetrizationStyle end
+struct Rotate <: SymmetrizationStyle end
+struct RotateReflect <: SymmetrizationStyle end
 
 # some rather shady definitions for 'hermitian conjugate' at the level of a single tensor
 function herm_depth(x::PEPSTensor)
@@ -73,7 +73,7 @@ const PEPSLike = Union{InfinitePEPS,AbstractArray{<:PEPSTensor,2}}
 
 symmetrize!(p::PEPSLike, ::Nothing) = p
 
-function symmetrize!(p::PEPSLike, ::Depth)
+function symmetrize!(p::PEPSLike, ::ReflectDepth)
     depth, width = size(p)
     if mod(depth, 2) == 1
         for w in 1:width
@@ -88,11 +88,11 @@ function symmetrize!(p::PEPSLike, ::Depth)
     return p
 end
 
-function symmetrize!(p::PEPSLike, ::Width)
+function symmetrize!(p::PEPSLike, ::ReflectWidth)
     depth, width = size(p)
     if mod(width, 2) == 1
         for d in 1:depth
-            p[d, ceil(Int, width / 2)] = herm_width_inv(p[d, ceil(Int, width / 2), h])
+            p[d, ceil(Int, width / 2)] = herm_width_inv(p[d, ceil(Int, width / 2)])
         end
     end
     for w in 1:floor(Int, width / 2)
@@ -103,11 +103,11 @@ function symmetrize!(p::PEPSLike, ::Width)
     return p
 end
 
-function symmetrize!(p::PEPSLike, ::Rot)
+function symmetrize!(p::PEPSLike, ::Rotate)
     return error("TODO")
 end
 
-function symmetrize!(p::PEPSLike, ::Full)
+function symmetrize!(p::PEPSLike, ::RotateReflect)
     # TODO: clean up this mess...
 
     # some auxiliary transformations
@@ -167,4 +167,10 @@ function symmetrize!(p::PEPSLike, ::Full)
         end
     end
     return p
+end
+
+function symmetrize_callback(peps, envs, E, grad, symm::SymmetrizationStyle)
+    peps_symm = symmetrize!(deepcopy(peps), symm)
+    grad_symm = symmetrize!(deepcopy(grad), symm)
+    return peps_symm, envs, E, grad_symm
 end

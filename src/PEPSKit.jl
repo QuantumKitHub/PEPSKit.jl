@@ -85,7 +85,7 @@ export fixedpoint
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
-export symmetrize, None, Depth, Full
+export symmetrize!, ReflectDepth, ReflectWidth, RotateReflect, symmetrize_callback
 export showtypeofgrad
 export square_lattice_tf_ising, square_lattice_heisenberg, square_lattice_j1j2
 export square_lattice_pwave
