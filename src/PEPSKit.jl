@@ -87,6 +87,7 @@ export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export symmetrize, None, Depth, Full
 export showtypeofgrad
-export square_lattice_tf_ising, square_lattice_heisenberg, square_lattice_pwave
+export square_lattice_tf_ising, square_lattice_heisenberg, square_lattice_j1j2
+export square_lattice_pwave
 
 end # module

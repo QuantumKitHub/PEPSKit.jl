@@ -7,7 +7,7 @@ using OptimKit
 
 # initialize parameters
 χbond = 2
-χenv = 16
+χenv = 32
 ctm_alg = CTMRG(;
     tol=1e-10,
     miniter=4,
@@ -25,7 +25,7 @@ opt_alg = PEPSOptimize(;
 
 # initialize states
 Random.seed!(91283219347)
-H = square_lattice_heisenberg()
+H = square_lattice_j1j2(; J2=0.25)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
@@ -33,17 +33,5 @@ env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, c
 result = fixedpoint(psi_init, H, opt_alg, env_init)
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
-@test result.E ≈ -0.6694421 atol = 1e-2
+@test result.E ≈ -0.5618837021945925 atol = 1e-3
 @test all(@. ξ_h > 0 && ξ_v > 0)
-
-# same test but for 1x2 unit cell
-H_1x2 = square_lattice_heisenberg(; unitcell=(1, 2))
-psi_init_1x2 = InfinitePEPS(2, χbond; unitcell=(1, 2))
-env_init_1x2 = leading_boundary(
-    CTMRGEnv(psi_init_1x2, ComplexSpace(χenv)), psi_init_1x2, ctm_alg
-)
-result_1x2 = fixedpoint(psi_init_1x2, H_1x2, opt_alg, env_init_1x2)
-ξ_h_1x2, ξ_v_1x2, = correlation_length(result_1x2.peps, result_1x2.env)
-
-@test result_1x2.E ≈ 2 * result.E atol = 1e-2
-@test all(@. ξ_h_1x2 > 0 && ξ_v_1x2 > 0)

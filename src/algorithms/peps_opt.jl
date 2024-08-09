@@ -121,7 +121,7 @@ function PEPSOptimize(;
 end
 
 """
-    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv]) where {T}
+    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv]; callback=identity) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
@@ -137,7 +137,11 @@ The function returns a `NamedTuple` which contains the following entries:
 - `numfg`: total number of calls to the energy function
 """
 function fixedpoint(
-    ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20)
+    ψ₀::InfinitePEPS{T},
+    H,
+    alg::PEPSOptimize,
+    env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20);
+    callback=(args...) -> identity(args),
 ) where {T}
     (peps, env), E, ∂E, numfg, convhistory = optimize(
         (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner
@@ -155,8 +159,9 @@ function fixedpoint(
             end
             return costfun(ψ, envs´, H)
         end
-        # withgradient returns tuple of gradients `g`
-        return E, only(g)
+        g = only(g)  # withgradient returns tuple of gradients `g`
+        peps, envs, E, g = callback(peps, envs, E, g)
+        return E, g
     end
     return (;
         peps,
