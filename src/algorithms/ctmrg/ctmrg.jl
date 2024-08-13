@@ -360,22 +360,6 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
 
     return CTMRGEnv(copy(corners), copy(edges))
 end
-# Apply projectors to entire left half-environment to grow SW & NW corners, and W edge
-function grow_env_left(
-    peps, P_bottom, P_top, corners_SW, corners_NW, edge_S, edge_W, edge_N
-)
-    @autoopt @tensor corner_SW′[χ_E; χ_N] :=
-        corners_SW[χ1; χ2] * edge_S[χ_E D1 D2; χ1] * P_bottom[χ2 D1 D2; χ_N]
-    @autoopt @tensor corner_NW′[χ_S; χ_E] :=
-        corners_NW[χ1; χ2] * edge_N[χ2 D1 D2; χ_E] * P_top[χ_S; χ1 D1 D2]
-    @autoopt @tensor edge_W′[χ_S D_Eabove D_Ebelow; χ_N] :=
-        edge_W[χ1 D1 D2; χ2] *
-        peps[d; D3 D_Eabove D5 D1] *
-        conj(peps[d; D4 D_Ebelow D6 D2]) *
-        P_bottom[χ2 D3 D4; χ_N] *
-        P_top[χ_S; χ1 D5 D6]
-    return corner_SW′, corner_NW′, edge_W′
-end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
