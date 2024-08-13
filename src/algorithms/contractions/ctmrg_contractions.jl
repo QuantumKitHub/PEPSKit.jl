@@ -448,8 +448,8 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
 )
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
-        projectors[1][_prev(row, end), col],
-        projectors[2][row, col],
+        projectors[1][row, col],
+        projectors[2][_next(row, end), col],
         ket[row, col],
         bra[row, col],
     )

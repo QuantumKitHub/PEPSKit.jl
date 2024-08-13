@@ -237,10 +237,10 @@ function ctmrg_projectors(
     # @fwdthreads for (r, c) in directions
     for (r, c) in directions
         # SVD half-infinite environment
-        r′ = _next(r, size(envs.corners, 2))
-        QQ = halfinfinite_environment(enlarged_envs[1][r′, c], enlarged_envs[2][r, c])
+        r′ = _prev(r, size(envs.corners, 2))
+        QQ = halfinfinite_environment(enlarged_envs[1][r, c], enlarged_envs[2][r′, c])
 
-        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, _prev(r, end), c])
+        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
         U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
         ϵ = max(ϵ, ϵ_local / norm(S))
@@ -255,7 +255,7 @@ function ctmrg_projectors(
 
         # Compute projectors
         P_bottom[r, c], P_top[r, c] = build_projectors(
-            U, S, V, enlarged_envs[1][r′, c], enlarged_envs[2][r, c]
+            U, S, V, enlarged_envs[1][r, c], enlarged_envs[2][r′, c]
         )
     end
 
