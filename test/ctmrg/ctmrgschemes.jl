@@ -53,7 +53,9 @@ end
 
 # test fixedspace actually fixes space
 @testset "Fixedspace truncation ($scheme)" for scheme in [:sequential, :simultaneous]
-    ctm_alg = CTMRG(; tol=1e-6, maxiter=1, verbosity=0, ctmrgscheme=scheme)
+    ctm_alg = CTMRG(;
+        tol=1e-6, maxiter=1, verbosity=0, ctmrgscheme=scheme, trscheme=FixedSpace()
+    )
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]
     psi = InfinitePEPS(Ds, Ds, Ds)
@@ -61,8 +63,6 @@ end
     env2 = leading_boundary(env, psi, ctm_alg)
 
     # check that the space is fixed
-    display(dim.(space.(env.corners[NORTH, :, :], 1)))
-    display(dim.(space.(env2.corners[NORTH, :, :], 1)))
     @test all(space.(env.corners) .== space.(env2.corners))
     @test all(space.(env.edges) .== space.(env2.edges))
 end
