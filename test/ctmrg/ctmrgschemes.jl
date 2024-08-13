@@ -54,7 +54,11 @@ end
 # test fixedspace actually fixes space
 @testset "Fixedspace truncation ($scheme)" for scheme in [:sequential, :simultaneous]
     ctm_alg = CTMRG(;
-        tol=1e-6, maxiter=1, verbosity=0, ctmrgscheme=scheme, trscheme=FixedSpace()
+        tol=1e-6,
+        maxiter=1,
+        verbosity=0,
+        ctmrgscheme=scheme,
+        trscheme=FixedSpaceTruncation(),
     )
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]
