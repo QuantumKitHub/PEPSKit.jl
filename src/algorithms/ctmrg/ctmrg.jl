@@ -251,7 +251,7 @@ function ctmrg_projectors(
         r′ = _next(r, size(envs.corners, 2))
         QQ = halfinfinite_environment(enlarged_envs[1][r′, c], enlarged_envs[2][r, c])
 
-        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r, c])
+        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, _prev(r, end), c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
         U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
         ϵ = max(ϵ, ϵ_local / norm(S))
@@ -301,7 +301,7 @@ function ctmrg_projectors(
             enlarged_envs[dir, r, c], enlarged_envs[_next(dir, 4), next_rc...]
         )
 
-        trscheme = truncation_scheme(projector_alg, envs.edges[dir, r, c])
+        trscheme = truncation_scheme(projector_alg, envs.edges[dir, next_rc...])
         svd_alg = svd_algorithm(projector_alg, (dir, r, c))
         U_local, S_local, V_local, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
         U[dir, r, c] = U_local
