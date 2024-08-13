@@ -111,35 +111,24 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
         ctmrg_loginit!(log, η, N)
-        local iter
-        for outer iter in 1:(alg.maxiter)
+        for iter in 1:(alg.maxiter)
             env, = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+
             η, CS, TS = calc_convergence(env, CS, TS)
             N = norm(state, env)
             ctmrg_logiter!(log, iter, η, N)
 
-            (iter > alg.miniter && η <= alg.tol) && break
+            if η ≤ alg.tol
+                ctmrg_logfinish!(log, iter, η, N)
+                break
+            end
+            if iter == alg.maxiter
+                ctmrg_logcancel!(log, iter, η, N)
+            else
+                ctmrg_logiter!(log, iter, η, N)
+            end
         end
-
-        # Do one final iteration that does not change the spaces
-        alg_fixed = CTMRG(;
-            verbosity=alg.verbosity,
-            svd_alg=alg.projector_alg.svd_alg,
-            trscheme=FixedSpaceTruncation(),
-            ctmrgscheme=ctmrgscheme(alg),
-        )
-        env′, = ctmrg_iter(state, env, alg_fixed)
-        envfix, = gauge_fix(env, env′)
-
-        η = calc_elementwise_convergence(envfix, env; atol=alg.tol^(1 / 2))
-        N = norm(state, envfix)
-
-        if η < alg.tol^(1 / 2)
-            ctmrg_logfinish!(log, iter, η, N)
-        else
-            ctmrg_logcancel!(log, iter, η, N)
-        end
-        return envfix
+        return env
     end
 end
 
