@@ -111,35 +111,24 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
         ctmrg_loginit!(log, η, N)
-        local iter
-        for outer iter in 1:(alg.maxiter)
+        for iter in 1:(alg.maxiter)
             env, = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
+
             η, CS, TS = calc_convergence(env, CS, TS)
             N = norm(state, env)
             ctmrg_logiter!(log, iter, η, N)
 
-            (iter > alg.miniter && η <= alg.tol) && break
+            if η ≤ alg.tol
+                ctmrg_logfinish!(log, iter, η, N)
+                break
+            end
+            if iter == alg.maxiter
+                ctmrg_logcancel!(log, iter, η, N)
+            else
+                ctmrg_logiter!(log, iter, η, N)
+            end
         end
-
-        # Do one final iteration that does not change the spaces
-        alg_fixed = CTMRG(;
-            verbosity=alg.verbosity,
-            svd_alg=alg.projector_alg.svd_alg,
-            trscheme=FixedSpaceTruncation(),
-            ctmrgscheme=ctmrgscheme(alg),
-        )
-        env′, = ctmrg_iter(state, env, alg_fixed)
-        envfix, = gauge_fix(env, env′)
-
-        η = calc_elementwise_convergence(envfix, env; atol=alg.tol^(1 / 2))
-        N = norm(state, envfix)
-
-        if η < alg.tol^(1 / 2)
-            ctmrg_logfinish!(log, iter, η, N)
-        else
-            ctmrg_logcancel!(log, iter, η, N)
-        end
-        return envfix
+        return env
     end
 end
 
@@ -248,10 +237,10 @@ function ctmrg_projectors(
     # @fwdthreads for (r, c) in directions
     for (r, c) in directions
         # SVD half-infinite environment
-        r′ = _next(r, size(envs.corners, 2))
-        QQ = halfinfinite_environment(enlarged_envs[1][r′, c], enlarged_envs[2][r, c])
+        r′ = _prev(r, size(envs.corners, 2))
+        QQ = halfinfinite_environment(enlarged_envs[1][r, c], enlarged_envs[2][r′, c])
 
-        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r, c])
+        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
         U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
         ϵ = max(ϵ, ϵ_local / norm(S))
@@ -266,7 +255,7 @@ function ctmrg_projectors(
 
         # Compute projectors
         P_bottom[r, c], P_top[r, c] = build_projectors(
-            U, S, V, enlarged_envs[1][r′, c], enlarged_envs[2][r, c]
+            U, S, V, enlarged_envs[1][r, c], enlarged_envs[2][r′, c]
         )
     end
 
@@ -301,7 +290,7 @@ function ctmrg_projectors(
             enlarged_envs[dir, r, c], enlarged_envs[_next(dir, 4), next_rc...]
         )
 
-        trscheme = truncation_scheme(projector_alg, envs.edges[dir, r, c])
+        trscheme = truncation_scheme(projector_alg, envs.edges[dir, next_rc...])
         svd_alg = svd_algorithm(projector_alg, (dir, r, c))
         U_local, S_local, V_local, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
         U[dir, r, c] = U_local
@@ -370,22 +359,6 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
     end
 
     return CTMRGEnv(copy(corners), copy(edges))
-end
-# Apply projectors to entire left half-environment to grow SW & NW corners, and W edge
-function grow_env_left(
-    peps, P_bottom, P_top, corners_SW, corners_NW, edge_S, edge_W, edge_N
-)
-    @autoopt @tensor corner_SW′[χ_E; χ_N] :=
-        corners_SW[χ1; χ2] * edge_S[χ_E D1 D2; χ1] * P_bottom[χ2 D1 D2; χ_N]
-    @autoopt @tensor corner_NW′[χ_S; χ_E] :=
-        corners_NW[χ1; χ2] * edge_N[χ2 D1 D2; χ_E] * P_top[χ_S; χ1 D1 D2]
-    @autoopt @tensor edge_W′[χ_S D_Eabove D_Ebelow; χ_N] :=
-        edge_W[χ1 D1 D2; χ2] *
-        peps[d; D3 D_Eabove D5 D1] *
-        conj(peps[d; D4 D_Ebelow D6 D2]) *
-        P_bottom[χ2 D3 D4; χ_N] *
-        P_top[χ_S; χ1 D5 D6]
-    return corner_SW′, corner_NW′, edge_W′
 end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     corners = Zygote.Buffer(envs.corners)
