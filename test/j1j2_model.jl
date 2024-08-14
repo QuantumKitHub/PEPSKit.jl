@@ -27,16 +27,13 @@ opt_alg = PEPSOptimize(;
 Random.seed!(91283219347)
 H = square_lattice_j1j2(; J2=0.25)
 psi_init = InfinitePEPS(2, χbond)
-psi_init = PEPSKit.symmetrize!(psi_init, PEPSKit.Full())
-env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+psi_init = PEPSKit.symmetrize!(psi_init, PEPSKit.RotateReflect())
+env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
-cb = (args...) -> PEPSKit.symmetrize_callback(args..., RotateReflect())
-result = fixedpoint(psi_init, H, opt_alg, env_init)#; callback=cb)
+callback = (args...) -> PEPSKit.symmetrize_callback(args..., RotateReflect())
+result = fixedpoint(psi_init, H, opt_alg, env_init; callback)
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
-
-p = symmetrize!(deepcopy(result.peps), RotateReflect())
-ξ_h, ξ_v, = correlation_length(p, leading_boundary(result.env, p, ctm_alg))
 
 # compare against Juraj Hasik's data:
 # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.25/state_1s_A1_j20.25_D2_chi_opt48.dat
