@@ -31,8 +31,8 @@ psi_init = PEPSKit.symmetrize!(psi_init, PEPSKit.RotateReflect())
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
-callback = (args...) -> PEPSKit.symmetrize_callback(args..., RotateReflect())
-result = fixedpoint(psi_init, H, opt_alg, env_init; callback)
+finalize = (args...) -> PEPSKit.symmetrize_finalize(args..., RotateReflect())
+result = fixedpoint(psi_init, H, opt_alg, env_init; finalize)
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
 # compare against Juraj Hasik's data:
