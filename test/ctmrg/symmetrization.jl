@@ -12,7 +12,7 @@ end
 @testset "RotateReflect" for unitcell in [(1, 1), (2, 2), (3, 3)]
     peps = InfinitePEPS(2, 2; unitcell)
 
-    peps_rotatereflect = symmetrize!(deepcopy(peps), RotateReflect())
+    peps_full = symmetrize!(deepcopy(peps), RotateReflect())
     _test_elementwise_equal(peps_full, rotl90(peps_full))
     _test_elementwise_equal(peps_full, rot180(peps_full))
     _test_elementwise_equal(peps_full, rotr90(peps_full))
