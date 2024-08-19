@@ -169,7 +169,6 @@ function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
                 peps[depth - d + 1, width - w + 1] = _fit_spaces(
                     herm_depth(rotr90(peps[d, w])), peps[depth - d + 1, width - w + 1]
                 )
-
             elseif odd == 1 && d == ceil(Int, depth / 2)
                 peps[d, w] = symmetrize_mid_depth(peps[d, w])
                 peps[w, d] = _fit_spaces(rotr90(peps[d, w]), peps[w, d])
@@ -179,7 +178,6 @@ function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
                 peps[width - w + 1, d] = _fit_spaces(
                     herm_depth(rotr90(peps[d, w])), peps[width - w + 1, d]
                 )
-
             else
                 peps[depth - d + 1, w] = _fit_spaces(
                     herm_depth(peps[d, w]), peps[depth - d + 1, w]

@@ -32,6 +32,9 @@ end
         @time @safetestset "CTMRG schemes" begin
             include("ctmrg/ctmrgschemes.jl")
         end
+        @time @safetestset "CTMRG schemes" begin
+            include("ctmrg/symmetrization.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "MPS"
         @time @safetestset "VUMPS" begin
