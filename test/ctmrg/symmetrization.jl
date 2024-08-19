@@ -1,5 +1,6 @@
 using Test
 using PEPSKit
+using PEPSKit: herm_depth, herm_width
 using TensorKit
 
 function _test_elementwise_equal(peps1::InfinitePEPS, peps2::InfinitePEPS)
@@ -16,12 +17,10 @@ end
     _test_elementwise_equal(peps_full, rot180(peps_full))
     _test_elementwise_equal(peps_full, rotr90(peps_full))
     _test_elementwise_equal(
-        peps_full,
-        InfinitePEPS(reverse(map(copy ∘ PEPSKit.herm_depth, peps_full.A); dims=1)),
+        peps_full, InfinitePEPS(reverse(map(copy ∘ herm_depth, peps_full.A); dims=1))
     )
     _test_elementwise_equal(
-        peps_full,
-        InfinitePEPS(reverse(map(copy ∘ PEPSKit.herm_width, peps_full.A); dims=2)),
+        peps_full, InfinitePEPS(reverse(map(copy ∘ herm_width, peps_full.A); dims=2))
     )
 end
 
@@ -30,8 +29,7 @@ end
 
     peps_reflectdepth = symmetrize!(deepcopy(peps), ReflectDepth())
     _test_elementwise_equal(
-        peps_full,
-        InfinitePEPS(reverse(map(copy ∘ PEPSKit.herm_depth, peps_full.A); dims=1)),
+        peps_full, InfinitePEPS(reverse(map(copy ∘ herm_depth, peps_full.A); dims=1))
     )
 end
 
@@ -40,7 +38,6 @@ end
 
     peps_reflectdepth = symmetrize!(deepcopy(peps), ReflectDepth())
     _test_elementwise_equal(
-        peps_full,
-        InfinitePEPS(reverse(map(copy ∘ PEPSKit.herm_width, peps_full.A); dims=2)),
+        peps_full, InfinitePEPS(reverse(map(copy ∘ herm_width, peps_full.A); dims=2))
     )
 end
