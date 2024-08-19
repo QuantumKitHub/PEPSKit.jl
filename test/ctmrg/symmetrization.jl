@@ -27,17 +27,17 @@ end
 @testset "ReflectDepth" for unitcell in [(1, 1), (2, 2), (3, 3)]
     peps = InfinitePEPS(2, 2; unitcell)
 
-    peps_reflectdepth = symmetrize!(deepcopy(peps), ReflectDepth())
+    peps_depth = symmetrize!(deepcopy(peps), ReflectDepth())
     _test_elementwise_equal(
-        peps_full, InfinitePEPS(reverse(map(copy ∘ herm_depth, peps_full.A); dims=1))
+        peps_depth, InfinitePEPS(reverse(map(copy ∘ herm_depth, peps_depth.A); dims=1))
     )
 end
 
 @testset "ReflectWidth" for unitcell in [(1, 1), (2, 2), (3, 3)]
     peps = InfinitePEPS(2, 2; unitcell)
 
-    peps_reflectdepth = symmetrize!(deepcopy(peps), ReflectDepth())
+    peps_width = symmetrize!(deepcopy(peps), ReflectWidth())
     _test_elementwise_equal(
-        peps_full, InfinitePEPS(reverse(map(copy ∘ herm_width, peps_full.A); dims=2))
+        peps_width, InfinitePEPS(reverse(map(copy ∘ herm_width, peps_width.A); dims=2))
     )
 end
