@@ -57,3 +57,17 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
     end
     return LocalOperator(lattice, terms...)
 end
+
+function Base.:+(O1::LocalOperator, O2::LocalOperator)
+    if O1.lattice != O2.lattice
+        throw("lattices should match")
+    end
+    terms = []
+    for (inds, operator) in O1.terms
+        push!(terms, inds => operator)
+    end
+    for (inds, operator) in O2.terms
+        push!(terms, inds => operator)
+    end
+    return LocalOperator(O1.lattice, terms...)
+end
