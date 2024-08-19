@@ -27,12 +27,12 @@ opt_alg = PEPSOptimize(;
 Random.seed!(91283219347)
 H = square_lattice_j1j2(; J2=0.25)
 psi_init = InfinitePEPS(2, χbond)
-psi_init = PEPSKit.symmetrize!(psi_init, PEPSKit.RotateReflect())
+psi_init = symmetrize!(psi_init, RotateReflect())
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
-finalize = (args...) -> PEPSKit.symmetrize_finalize(args..., RotateReflect())
-result = fixedpoint(psi_init, H, opt_alg, env_init; finalize)
+finalize! = symmetrize_finalize!(RotateReflect())
+result = fixedpoint(psi_init, H, opt_alg, env_init; finalize!)
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
 # compare against Juraj Hasik's data:

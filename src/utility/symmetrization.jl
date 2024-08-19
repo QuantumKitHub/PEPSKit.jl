@@ -208,12 +208,15 @@ function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
 end
 
 """
-    symmetrize_finalize(peps, envs, E, grad, symm::SymmetrizationStyle)
+    symmetrize_finalize!(symm::SymmetrizationStyle)
 
-Callback function symmetrizing both the `peps` and `grad` tensors.
+Return `finalize!` function for symmetrizing the `peps` and `grad` tensors in-place,
+which maps `(peps_symm, envs), E, grad_symm = symmetrize_finalize!((peps, envs), E, grad, numiter)`.
 """
-function symmetrize_finalize(peps, envs, E, grad, symm::SymmetrizationStyle)
-    peps_symm = symmetrize!(deepcopy(peps), symm)
-    grad_symm = symmetrize!(deepcopy(grad), symm)
-    return peps_symm, envs, E, grad_symm
+function symmetrize_finalize!(symm::SymmetrizationStyle)
+    function symmetrize_finalize!((peps, envs), E, grad, _)
+        peps_symm = symmetrize!(peps, symm)
+        grad_symm = symmetrize!(grad, symm)
+        return (peps_symm, envs), E, grad_symm
+    end
 end
