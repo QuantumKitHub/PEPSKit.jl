@@ -27,6 +27,9 @@ while the second version throws an error if the lattices do not match.
 function checklattice(args...)
     return checklattice(Bool, args...) || throw(ArgumentError("Lattice mismatch."))
 end
+function checklattice(::Type{Bool}, H1::LocalOperator, H2::LocalOperator)
+    return H1.lattice == H2.lattice
+end
 function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
     return size(peps) == size(O.lattice)
 end
@@ -58,16 +61,24 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
     return LocalOperator(lattice, terms...)
 end
 
+function Base.:*(α::Number, O2::LocalOperator)
+    return LocalOperator(O2.lattice, map(t -> (t[1] => α * t[2]), O2.terms)...)
+end
+
 function Base.:+(O1::LocalOperator, O2::LocalOperator)
-    if O1.lattice != O2.lattice
-        throw("lattices should match")
-    end
-    terms = []
-    for (inds, operator) in O1.terms
-        push!(terms, inds => operator)
-    end
+    checklattice(O1, O2) 
+    terms = [O1.terms...]
     for (inds, operator) in O2.terms
-        push!(terms, inds => operator)
+        i = findfirst(existing_inds -> existing_inds == inds, map(first, terms))
+        if !isnothing(i)
+            terms[i] = (inds => terms[i][2] + operator)
+        else
+            push!(terms, inds => operator)
+        end
     end
     return LocalOperator(O1.lattice, terms...)
+end
+
+function Base.:-(O1::LocalOperator, O2::LocalOperator)
+    return O1 + (-1) * O2
 end
