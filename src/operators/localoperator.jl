@@ -5,16 +5,31 @@ struct LocalOperator{T<:Tuple,S}
     lattice::Matrix{S}
     terms::T
 end
-function LocalOperator(lattice::Matrix{S}, terms::Pair...) where {S}
+function LocalOperator(lattice::Matrix{S}, terms::Pair... ; min_norm_operators = eps()^(3/4)) where {S}
     lattice′ = PeriodicArray(lattice)
+    relevant_terms = []
     for (inds, operator) in terms
+        # Check if the indices of the operator are valid with themselves and the lattice
         @assert operator isa AbstractTensorMap
         @assert numout(operator) == numin(operator) == length(inds)
         for i in 1:length(inds)
             @assert space(operator, i) == lattice′[inds[i]]
+        end        
+        # Check if we already have an operator acting on the coordinates
+        i = findfirst(existing_inds -> existing_inds == inds, map(first, relevant_terms))
+        if !isnothing(i) # We are adding to an existing operator
+            new_operator = relevant_terms[i][2] + operator
+            if norm(new_operator) > min_norm_operators
+                relevant_terms[i] = (inds => new_operator)
+            else
+                deleteat!(relevant_terms, i)
+            end
+        else # It's a new operator, add it if its norm is large enough
+            norm(operator) > min_norm_operators && push!(relevant_terms, inds => operator)
         end
     end
-    return LocalOperator{typeof(terms),S}(lattice, terms)
+    relevant_terms = Tuple(relevant_terms)
+    return LocalOperator{typeof(relevant_terms), S}(lattice, relevant_terms)
 end
 
 """
@@ -67,16 +82,7 @@ end
 
 function Base.:+(O1::LocalOperator, O2::LocalOperator)
     checklattice(O1, O2) 
-    terms = [O1.terms...]
-    for (inds, operator) in O2.terms
-        i = findfirst(existing_inds -> existing_inds == inds, map(first, terms))
-        if !isnothing(i)
-            terms[i] = (inds => terms[i][2] + operator)
-        else
-            push!(terms, inds => operator)
-        end
-    end
-    return LocalOperator(O1.lattice, terms...)
+    return LocalOperator(O1.lattice, O1.terms..., O2.terms...)
 end
 
 function Base.:-(O1::LocalOperator, O2::LocalOperator)
