@@ -27,32 +27,35 @@ O1 = LocalOperator(lattice, ((1, 1),) => σx, ((1, 1), (1, 2)) => σx ⊗ σx, (
 struct LocalOperator{T<:Tuple,S}
     lattice::Matrix{S}
     terms::T
-end
-function LocalOperator(lattice::Matrix{S}, terms::Pair... ; min_norm_operators = eps()^(3/4)) where {S}
-    lattice′ = PeriodicArray(lattice)
-    relevant_terms = []
-    for (inds, operator) in terms
+    function LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S}
+        plattice = PeriodicArray(lattice)
         # Check if the indices of the operator are valid with themselves and the lattice
-        @assert operator isa AbstractTensorMap
-        @assert numout(operator) == numin(operator) == length(inds)
-        for i in 1:length(inds)
-            @assert space(operator, i) == lattice′[inds[i]]
-        end        
-        # Check if we already have an operator acting on the coordinates
-        i = findfirst(existing_inds -> existing_inds == inds, map(first, relevant_terms))
-        if !isnothing(i) # We are adding to an existing operator
-            new_operator = relevant_terms[i][2] + operator
-            if norm(new_operator) > min_norm_operators
-                relevant_terms[i] = (inds => new_operator)
-            else
-                deleteat!(relevant_terms, i)
+        for (inds, operator) in terms
+            @assert operator isa AbstractTensorMap
+            @assert numout(operator) == numin(operator) == length(inds)
+            @assert spacetype(operator) == S
+
+            for i in 1:length(inds)
+                @assert space(operator, i) == plattice[inds[i]]
             end
-        else # It's a new operator, add it if its norm is large enough
-            norm(operator) > min_norm_operators && push!(relevant_terms, inds => operator)
         end
+        return new{T,S}(lattice, terms)
     end
-    relevant_terms = Tuple(relevant_terms)
-    return LocalOperator{typeof(relevant_terms), S}(lattice, relevant_terms)
+end
+function LocalOperator(
+    lattice::Matrix, terms::Pair...; atol=maximum(x -> eps(scalartype(x[2]))^(3 / 4), terms)
+)
+    allinds = getindex.(terms, 1)
+    alloperators = getindex.(terms, 2)
+
+    relevant_terms = []
+    for inds in unique(allinds)
+        operator = sum(alloperators[findall(==(inds), allinds)])
+        norm(operator) > atol && push!(relevant_terms, inds => operator)
+    end
+
+    terms_tuple = Tuple(relevant_terms)
+    return LocalOperator{typeof(terms_tuple),eltype(lattice)}(lattice, terms_tuple)
 end
 
 """
