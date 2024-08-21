@@ -151,7 +151,7 @@ function fixedpoint(
     (peps, env), E, ∂E, numfg, convhistory = optimize(
         (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner, finalize!
     ) do (peps, envs)
-        E, g = withgradient(peps) do ψ
+        E, gs = withgradient(peps) do ψ
             envs´ = hook_pullback(
                 leading_boundary,
                 envs,
@@ -164,7 +164,7 @@ function fixedpoint(
             end
             return costfun(ψ, envs´, H)
         end
-        g = only(g)  # withgradient returns tuple of gradients `g`
+        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
         return E, g
     end
     return (;
