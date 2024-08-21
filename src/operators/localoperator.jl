@@ -42,7 +42,9 @@ struct LocalOperator{T<:Tuple,S}
     end
 end
 function LocalOperator(
-    lattice::Matrix, terms::Pair...; atol=maximum(x -> eps(scalartype(x[2]))^(3 / 4), terms)
+    lattice::Matrix,
+    terms::Pair...;
+    atol=maximum(x -> eps(real(scalartype(x[2])))^(3 / 4), terms),
 )
     allinds = getindex.(terms, 1)
     alloperators = getindex.(terms, 2)
