@@ -1,4 +1,3 @@
-
 # Hamiltonian consisting of local terms
 # -------------------------------------
 """
@@ -107,7 +106,7 @@ function Base.:*(α::Number, O2::LocalOperator)
 end
 
 function Base.:+(O1::LocalOperator, O2::LocalOperator)
-    checklattice(O1, O2) 
+    checklattice(O1, O2)
     return LocalOperator(O1.lattice, O1.terms..., O2.terms...)
 end
 
