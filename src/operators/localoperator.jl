@@ -101,15 +101,21 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
     return LocalOperator(lattice, terms...)
 end
 
-function Base.:*(α::Number, O2::LocalOperator)
-    return LocalOperator(O2.lattice, map(t -> (t[1] => α * t[2]), O2.terms)...)
+# Linear Algebra
+# --------------
+function Base.:*(α::Number, O::LocalOperator)
+    scaled_terms = map(((inds, operator),) -> (inds => α * operator), O.terms)
+    return LocalOperator{typeof(scaled_terms),eltype(O.lattice)}(O.lattice, scaled_terms)
 end
+Base.:*(O::LocalOperator, α::Number) = α * O
+
+Base.:/(O::LocalOperator, α::Number) = O * inv(α)
+Base.:\(α::Number, O::LocalOperator) = inv(α) * O
 
 function Base.:+(O1::LocalOperator, O2::LocalOperator)
     checklattice(O1, O2)
     return LocalOperator(O1.lattice, O1.terms..., O2.terms...)
 end
 
-function Base.:-(O1::LocalOperator, O2::LocalOperator)
-    return O1 + (-1) * O2
-end
+Base.:-(O::LocalOperator) = -1 * O
+Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
