@@ -3,13 +3,6 @@ using PEPSKit
 using PEPSKit: herm_depth, herm_width, _fit_spaces
 using TensorKit
 
-function PEPSKit._fit_spaces(data_peps::InfinitePEPS, space_peps::InfinitePEPS)
-    fitted_tensors = map(zip(data_peps.A, space_peps.A)) do (pd, ps)
-        PEPSKit._fit_spaces(pd, ps)
-    end
-    return InfinitePEPS(fitted_tensors)
-end
-
 @testset "RotateReflect" for unitcell in [(1, 1), (2, 2), (3, 3)]
     peps = InfinitePEPS(2, 2; unitcell)
 
