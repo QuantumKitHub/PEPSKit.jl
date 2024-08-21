@@ -133,6 +133,18 @@ Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
 LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
 LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
 
+## (Approximate) equality
+function Base.:(==)(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
+    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
+        return p₁ == p₂
+    end
+end
+function Base.isapprox(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS; kwargs...)
+    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
+        return isapprox(p₁, p₂; kwargs...)
+    end
+end
+
 # Used in _scale during OptimKit.optimize
 function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
     rmul!(ψ.A, α)

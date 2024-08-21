@@ -121,11 +121,16 @@ function PEPSOptimize(;
 end
 
 """
-    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv]) where {T}
+    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
+               finalize!=OptimKit._finalize!) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
 By default, a random initial environment is used.
+
+The `finalize!` kwarg can be used to insert a function call after each optimization step
+by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
+The function maps `(peps, envs), f, g = finalize!((peps, envs), f, g, numiter)`.
 
 The function returns a `NamedTuple` which contains the following entries:
 - `peps`: final `InfinitePEPS`
@@ -137,12 +142,16 @@ The function returns a `NamedTuple` which contains the following entries:
 - `numfg`: total number of calls to the energy function
 """
 function fixedpoint(
-    ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20)
+    ψ₀::InfinitePEPS{T},
+    H,
+    alg::PEPSOptimize,
+    env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20);
+    (finalize!)=OptimKit._finalize!,
 ) where {T}
     (peps, env), E, ∂E, numfg, convhistory = optimize(
-        (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner
+        (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner, finalize!
     ) do (peps, envs)
-        E, g = withgradient(peps) do ψ
+        E, gs = withgradient(peps) do ψ
             envs´ = hook_pullback(
                 leading_boundary,
                 envs,
@@ -155,8 +164,8 @@ function fixedpoint(
             end
             return costfun(ψ, envs´, H)
         end
-        # withgradient returns tuple of gradients `g`
-        return E, only(g)
+        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        return E, g
     end
     return (;
         peps,

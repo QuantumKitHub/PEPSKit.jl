@@ -32,6 +32,9 @@ end
         @time @safetestset "CTMRG schemes" begin
             include("ctmrg/ctmrgschemes.jl")
         end
+        @time @safetestset "CTMRG schemes" begin
+            include("ctmrg/symmetrization.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "MPS"
         @time @safetestset "VUMPS" begin
@@ -44,6 +47,9 @@ end
         end
         @time @safetestset "Heisenberg model" begin
             include("heisenberg.jl")
+        end
+        @time @safetestset "Heisenberg model" begin
+            include("j1j2_model.jl")
         end
         @time @safetestset "P-wave superconductor" begin
             include("pwave.jl")
