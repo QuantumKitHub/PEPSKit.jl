@@ -146,22 +146,25 @@ Instead, we project both tensors into the smaller space and then compare the dif
 
 TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
 =#
+function _singular_value_distance((S₁, S₂))
+    V₁ = space(S₁, 1)
+    V₂ = space(S₂, 1)
+    if V₁ == V₂
+        return norm(S₁ - S₂)
+    else
+        V = infimum(V₁, V₂)
+        e1 = isometry(V₁, V)
+        e2 = isometry(V₂, V)
+        return norm(e1' * S₁ * e1 - e2' * S₂ * e2)
+    end
+end
+
 function calc_convergence(envs, CSold, TSold)
     CSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.corners)
-    ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
-        smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
-        e_old = isometry(MPSKit._firstspace(c_old), smallest)
-        e_new = isometry(MPSKit._firstspace(c_new), smallest)
-        return norm(e_new' * c_new * e_new - e_old' * c_old * e_old)
-    end
+    ΔCS = maximum(_singular_value_distance, zip(CSold, CSnew))
 
     TSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.edges)
-    ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
-        smallest_left = infimum(MPSKit._firstspace(t_old), MPSKit._firstspace(t_new))
-        e_old = isometry(MPSKit._firstspace(t_old), smallest_left)
-        e_new = isometry(MPSKit._firstspace(t_new), smallest_left)
-        return norm(e_new' * t_new * e_new - e_old' * t_old * e_old)
-    end
+    ΔTS = maximum(_singular_value_distance, zip(TSold, TSnew))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
 
