@@ -139,10 +139,16 @@ function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
 
+#=
+In order to compute an error measure, we compare the singular values of the current iteration with the previous one.
+However, when the virtual spaces change, this comparison is not directly possible.
+Instead, we project both tensors into the smaller space and then compare the difference.
+
+TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
+=#
 function calc_convergence(envs, CSold, TSold)
     CSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.corners)
     ΔCS = maximum(zip(CSold, CSnew)) do (c_old, c_new)
-        # only compute the difference on the smallest part of the spaces
         smallest = infimum(MPSKit._firstspace(c_old), MPSKit._firstspace(c_new))
         e_old = isometry(MPSKit._firstspace(c_old), smallest)
         e_new = isometry(MPSKit._firstspace(c_new), smallest)
@@ -151,9 +157,10 @@ function calc_convergence(envs, CSold, TSold)
 
     TSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.edges)
     ΔTS = maximum(zip(TSold, TSnew)) do (t_old, t_new)
-        MPSKit._firstspace(t_old) == MPSKit._firstspace(t_new) ||
-            return scalartype(t_old)(Inf)
-        return norm(t_new - t_old)
+        smallest_left = infimum(MPSKit._firstspace(t_old), MPSKit._firstspace(t_new))
+        e_old = isometry(MPSKit._firstspace(t_old), smallest_left)
+        e_new = isometry(MPSKit._firstspace(t_new), smallest_left)
+        return norm(e_new' * t_new * e_new - e_old' * t_old * e_old)
     end
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
