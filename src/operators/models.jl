@@ -10,11 +10,11 @@ Square lattice transverse field Ising model.
 """
 function square_lattice_tf_ising(
     elt::Type{T}=ComplexF64,
-    symm::Type{<:Sector}=Trivial;
+    symm::Type{S}=Trivial;
     J=1,
     h=1,
     unitcell::Tuple{Int,Int}=(1, 1),
-) where {T<:Number}
+) where {T<:Number,S<:Sector}
     term_zz = rmul!(σᶻᶻ(elt, symm), -J)
     term_x = rmul!(σˣ(elt, symm), -J * h)
     lattice = fill(domain(term_x)[1], 1, 1)
@@ -32,12 +32,12 @@ By default, this implements a single site unit cell via a sublattice rotation.
 """
 function square_lattice_heisenberg(
     elt::Type{T}=ComplexF64,
-    symm::Type{<:Sector}=Trivial;
+    symm::Type{S}=Trivial;
     Jx=-1,
     Jy=1,
     Jz=-1,
     unitcell::Tuple{Int,Int}=(1, 1),
-) where {T<:Number}
+) where {T<:Number,S<:Sector}
     term =
         rmul!(S_xx(elt, symm), Jx) + rmul!(S_yy(elt, symm), Jy) + rmul!(S_zz(elt, symm), Jz)
     lattice = fill(domain(term)[1], 1, 1)
@@ -53,12 +53,12 @@ sublattice rotation.
 """
 function square_lattice_j1j2(
     elt::Type{T}=ComplexF64,
-    symm::Type{<:Sector}=Trivial;
+    symm::Type{S}=Trivial;
     J1=1,
     J2=1,
     unitcell::Tuple{Int,Int}=(1, 1),
     sublattice=true,
-) where {T<:Number}
+) where {T<:Number,S<:Sector}
     term_AA = S_xx(elt, symm) + S_yy(elt, symm) + S_zz(elt, symm)
     term_AB = sublattice ? -S_xx(elt, symm) + S_yy(elt, symm) - S_zz(elt, symm) : term_AA  # Apply sublattice rotation
     lattice = fill(domain(term_AA)[1], 1, 1)
