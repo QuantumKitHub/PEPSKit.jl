@@ -1,6 +1,6 @@
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, O)
-    return sum(O.terms) do (inds, operator)
+    return sum(O.terms) do (inds, operator)  # TODO: parallelize this map, especially for the backwards pass
         contract_localoperator(inds, operator, peps, peps, envs) /
         contract_localnorm(inds, peps, peps, envs)
     end

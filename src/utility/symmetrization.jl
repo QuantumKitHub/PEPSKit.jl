@@ -149,7 +149,7 @@ function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
     end
 
     depth, width = size(peps)
-    depth == width || ArgumentError("$symm can only be applied to square unit cells")
+    depth == width || throw(ArgumentError("$symm can only be applied to square unit cells"))
 
     odd = mod(depth, 2)
     if odd == 1
