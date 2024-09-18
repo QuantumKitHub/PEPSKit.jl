@@ -132,8 +132,15 @@ function symmetrize!(peps::InfinitePEPS, ::ReflectWidth)
     return peps
 end
 
-function symmetrize!(peps::InfinitePEPS, ::Rotate)
-    return error("TODO")
+function symmetrize!(peps::InfinitePEPS, symm::Rotate)
+    if !isequal(size(peps)...)
+        throw(ArgumentError("$symm can only be applied to square unit cells"))
+    end
+    peps_l90 = PEPSKit._fit_spaces(rotl90(peps), peps)
+    peps_180 = PEPSKit._fit_spaces(rot180(peps), peps)
+    peps_r90 = PEPSKit._fit_spaces(rotr90(peps), peps)
+    peps.A .= 0.25 * (peps.A + peps_l90.A + peps_180.A + peps_r90.A)
+    return peps
 end
 
 function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
