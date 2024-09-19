@@ -4,7 +4,7 @@ using MPSKitModels
 # -------------------
 
 """
-    square_lattice_tf_ising(::Type{T}=ComplexF64; J=1, h=1, unitcell=(1, 1))
+    square_lattice_tf_ising(elt::Type{T}=ComplexF64, symm::Type{S}=Trivial; J=1, h=1, unitcell=(1, 1))
 
 Square lattice transverse field Ising model.
 """
@@ -25,7 +25,7 @@ function square_lattice_tf_ising(
 end
 
 """
-    square_lattice_heisenberg(::Type{T}=ComplexF64; Jx=-1, Jy=1, Jz=-1, unitcell=(1, 1))
+    square_lattice_heisenberg(elt::Type{T}=ComplexF64, symm::Type{S}=Trivial; Jx=-1, Jy=1, Jz=-1, unitcell=(1, 1))
 
 Square lattice Heisenberg model.
 By default, this implements a single site unit cell via a sublattice rotation.
@@ -45,7 +45,7 @@ function square_lattice_heisenberg(
 end
 
 """
-    square_lattice_j1j2(::Type{T}=ComplexF64; J1=1, J2=1, unitcell=(1, 1), sublattice=true)
+    square_lattice_j1j2(elt::Type{T}=ComplexF64, symm::Type{S}=Trivial; J1=1, J2=1, unitcell=(1, 1), sublattice=true)
 
 
 Square lattice J₁-J₂ model. The `sublattice` kwarg enables a single site unit cell via a
