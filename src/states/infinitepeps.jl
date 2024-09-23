@@ -203,3 +203,13 @@ function ChainRulesCore.rrule(::typeof(rotr90), peps::InfinitePEPS)
     end
     return peps′, rotr90_pullback
 end
+
+# FiniteDifferences
+# Makes use of tensors already having a to_vec method
+function FiniteDifferences.to_vec(state::InfinitePEPS)
+    vec, back = FiniteDifferences.to_vec(state.A)
+    function state_from_vec(vec)
+        return InfinitePEPS(back(vec))
+    end
+    return vec, state_from_vec
+end
