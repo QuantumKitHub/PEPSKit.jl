@@ -70,7 +70,7 @@ struct LinSolver{F} <: GradMode{F}
     solver::KrylovKit.LinearSolver
 end
 function LinSolver(;
-    solver=KrylovKit.GMRES(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
+    solver=KrylovKit.BiCGStab(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
     iterscheme=Defaults.iterscheme,
 )
     return LinSolver{iterscheme}(solver)
