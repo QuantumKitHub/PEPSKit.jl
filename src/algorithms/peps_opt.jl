@@ -122,7 +122,7 @@ end
 
 """
     fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
-               finalize!=OptimKit._finalize!) where {T}
+               retract=peps_retract, inner=real_inner, finalize!=OptimKit._finalize!) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
@@ -146,10 +146,12 @@ function fixedpoint(
     H,
     alg::PEPSOptimize,
     env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20);
+    retract=peps_retract,
+    inner=real_inner,
     (finalize!)=OptimKit._finalize!,
 ) where {T}
     (peps, env), E, ∂E, numfg, convhistory = optimize(
-        (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner, finalize!
+        (ψ₀, env₀), alg.optimizer; retract, inner, finalize!
     ) do (peps, envs)
         E, gs = withgradient(peps) do ψ
             envs´ = hook_pullback(
@@ -180,7 +182,7 @@ end
 
 # Update PEPS unit cell in non-mutating way
 # Note: Both x and η are InfinitePEPS during optimization
-function my_retract(x, η, α)
+function peps_retract(x, η, α)
     peps = deepcopy(x[1])
     peps.A .+= η.A .* α
     env = deepcopy(x[2])
@@ -188,7 +190,7 @@ function my_retract(x, η, α)
 end
 
 # Take real valued part of dot product
-my_inner(_, η₁, η₂) = real(dot(η₁, η₂))
+real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 
 #=
 Evaluating the gradient of the cost function for CTMRG:

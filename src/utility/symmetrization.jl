@@ -214,15 +214,21 @@ function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
 end
 
 """
-    symmetrize_finalize!(symm::SymmetrizationStyle)
+    symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
 
-Return `finalize!` function for symmetrizing the `peps` and `grad` tensors in-place,
-which maps `(peps_symm, envs), E, grad_symm = symmetrize_finalize!((peps, envs), E, grad, numiter)`.
+Return the `retract` and `finalize!` function for symmetrizing the `peps` and `grad` tensors.
 """
-function symmetrize_finalize!(symm::SymmetrizationStyle)
-    function symmetrize_finalize!((peps, envs), E, grad, _)
-        peps_symm = symmetrize!(peps, symm)
+function symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
+    finf = function symmetrize_finalize!((peps, envs), E, grad, _)
         grad_symm = symmetrize!(grad, symm)
-        return (peps_symm, envs), E, grad_symm
+        return (peps, envs), E, grad_symm
     end
+    retf = function symmetrize_retract((peps, envs), η, α)
+        peps_symm = deepcopy(peps)
+        peps_symm.A .+= η.A .* α
+        e = deepcopy(envs)
+        symmetrize!(peps_symm, symm)
+        return (peps_symm, e), η
+    end
+    return retf, finf
 end
