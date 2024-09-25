@@ -67,8 +67,8 @@ steps = -0.01:0.005:0.01
             (psi, env),
             dir;
             alpha=steps,
-            retract=PEPSKit.my_retract,
-            inner=PEPSKit.my_inner,
+            retract=PEPSKit.peps_retract,
+            inner=PEPSKit.real_inner,
         ) do (peps, envs)
             E, g = Zygote.withgradient(peps) do psi
                 envs2 = PEPSKit.hook_pullback(

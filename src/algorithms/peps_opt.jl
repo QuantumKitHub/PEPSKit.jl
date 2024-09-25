@@ -150,25 +150,24 @@ function fixedpoint(
     inner=real_inner,
     (finalize!)=OptimKit._finalize!,
 ) where {T}
-    (peps, env), E, ∂E, numfg, convhistory = optimize(
-        (ψ₀, env₀), alg.optimizer; retract, inner, finalize!
-    ) do (peps, envs)
-        E, gs = withgradient(peps) do ψ
-            envs´ = hook_pullback(
-                leading_boundary,
-                envs,
-                ψ,
-                alg.boundary_alg;
-                alg_rrule=alg.gradient_alg,
-            )
-            ignore_derivatives() do
-                alg.reuse_env && update!(envs, envs´)
+    (peps, env), E, ∂E, numfg, convhistory =
+        optimize((ψ₀, env₀), alg.optimizer; retract, inner, finalize!) do (peps, envs)
+            E, gs = withgradient(peps) do ψ
+                envs´ = hook_pullback(
+                    leading_boundary,
+                    envs,
+                    ψ,
+                    alg.boundary_alg;
+                    alg_rrule=alg.gradient_alg,
+                )
+                ignore_derivatives() do
+                    alg.reuse_env && update!(envs, envs´)
+                end
+                return costfun(ψ, envs´, H)
             end
-            return costfun(ψ, envs´, H)
+            g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+            return E, g
         end
-        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-        return E, g
-    end
     return (;
         peps,
         env,
