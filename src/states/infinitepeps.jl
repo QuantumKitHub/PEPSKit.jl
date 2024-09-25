@@ -118,7 +118,7 @@ VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-# Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))  # TODO: This is incompatible with inner constructor
+Base.similar(T::InfinitePEPS, args...) = InfinitePEPS(similar.(T.A, args...))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
