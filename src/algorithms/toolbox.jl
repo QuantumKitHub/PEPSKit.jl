@@ -94,3 +94,23 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
 
     return ξ_h, ξ_v, λ_h, λ_v
 end
+
+"""
+    product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2)
+
+Initialize a normalized random product PEPS with noise. The given arguments are passed on to
+the `InfinitePEPS` constructor. The noise intensity can be tuned with `noise_amp`.
+"""
+function product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2)
+    noise_peps = InfinitePEPS(peps_args...; unitcell)
+    typeof(spacetype(noise_peps[1])) <: GradedSpace &&
+        error("symmetric tensors not generically supported")
+    prod_tensors = map(noise_peps.A) do t
+        pt = zero(t)
+        pt[rand(1:dim(space(t, 1))), 1, 1, 1, 1] = randn(scalartype(noise_peps))
+        return pt
+    end
+    prod_peps = InfinitePEPS(prod_tensors)
+    ψ = prod_peps + noise_amp * noise_peps
+    return ψ / norm(ψ)
+end

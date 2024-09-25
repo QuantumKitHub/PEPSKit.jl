@@ -130,6 +130,7 @@ TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
 Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
 Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
+Base.:/(ψ::InfinitePEPS, α::Number) = InfinitePEPS(ψ.A / α)
 LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
 LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
 
