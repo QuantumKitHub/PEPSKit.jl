@@ -112,8 +112,8 @@ function pwave_superconductor(
     block(hy, FermionParity(0)) .= [0 Δ*im; -Δ*im 0]
     block(hy, FermionParity(1)) .= [0 -t; -t 0]
 
-    x_neighbors = filter(n -> n[2].I[2] > n[1].I[2], nearest_neighbours(lattice)) 
-    y_neighbors = filter(n -> n[2].I[1] > n[1].I[1], nearest_neighbours(lattice)) 
+    x_neighbors = filter(n -> n[2].I[2] > n[1].I[2], nearest_neighbours(lattice))
+    y_neighbors = filter(n -> n[2].I[1] > n[1].I[1], nearest_neighbours(lattice))
     return LocalOperator(
         spaces,
         ((idx,) => h0 for idx in vertices(lattice))...,

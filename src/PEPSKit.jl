@@ -11,7 +11,6 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 
-
 include("utility/util.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
