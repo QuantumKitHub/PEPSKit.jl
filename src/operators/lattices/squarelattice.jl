@@ -3,9 +3,9 @@
 
 Infinite square lattice with a unit cell of size `(Nrows, Ncols)`.
 """
-struct InfiniteSquare <: AbstractLattice
+struct InfiniteSquare <: AbstractLattice{2}
     Nrows::Int
-    Ncols::int
+    Ncols::Int
     function InfiniteSquare(Nrows::Integer=1, Ncols::Integer=1)
         Nrows > 0 && Ncols > 0 || error("unit cell size needs to be positive")
         return new(Nrows, Ncols)
