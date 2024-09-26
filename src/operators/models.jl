@@ -24,6 +24,19 @@ function square_lattice_tf_ising(
     )
 end
 
+function MPSKitModels.transverse_field_ising(
+    T::Type{<:Number}=ComplexF64,
+    S::Union{Type{Trivial},Type{Z2Irrep}}=Trivial,
+    lattice::SquareLattice=SquareLattice(1, 1);
+    J=1.0,
+    g=1.0,
+)
+    ZZ = rmul!(σᶻᶻ(T, S), -J)
+    X = rmul!(σˣ(T, S), g * -J)
+    # TODO
+    # LocalOperator(spaces, (i, j) => O for (i, j) in nearest_neighbors(lattice))
+end
+
 """
     square_lattice_heisenberg(elt::Type{T}=ComplexF64, symm::Type{S}=Trivial; Jx=-1, Jy=1, Jz=-1, unitcell=(1, 1))
 

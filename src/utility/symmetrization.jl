@@ -14,7 +14,11 @@ Reflection symmmetrization along the vertical axis, such that east and west are 
 """
 struct ReflectWidth <: SymmetrizationStyle end
 
-# TODO
+"""
+    struct Rotate <: SymmetrizationStyle
+
+Rotation symmmetrization leaving the object invariant under π/2 rotations.
+"""
 struct Rotate <: SymmetrizationStyle end
 
 """
