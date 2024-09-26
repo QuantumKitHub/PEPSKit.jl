@@ -45,7 +45,7 @@ unitcells = [(1, 1), (3, 4)]
     @test ΔTS < 1e-2
 
     # compare Heisenberg energies
-    H = heisenberg_XYZ(; unitcell)
+    H = heisenberg_XYZ(InfiniteSquare(unitcell...))
     E_sequential = costfun(psi, env_sequential, H)
     E_simultaneous = costfun(psi, env_simultaneous, H)
     @test E_sequential ≈ E_simultaneous rtol = 1e-4
