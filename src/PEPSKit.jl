@@ -7,6 +7,7 @@ using Accessors
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
+using OhMyThreads
 using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 

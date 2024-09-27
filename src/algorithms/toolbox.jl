@@ -1,9 +1,10 @@
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, O)
-    return sum(O.terms) do (inds, operator)
+    expval = tmapreduce(+, [O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         contract_localoperator(inds, operator, peps, peps, envs) /
         contract_localnorm(inds, peps, peps, envs)
     end
+    return expval
 end
 
 function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
