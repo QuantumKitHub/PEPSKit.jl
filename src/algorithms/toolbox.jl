@@ -96,23 +96,24 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
 end
 
 """
-    product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2, basis_fun=ran, element_fun=randn)
+    product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2, single_vector_fun=randn)
 
 Initialize a normalized random product PEPS with noise. The given arguments are passed on to
 the `InfinitePEPS` constructor.
 
-The noise intensity can be tuned with `noise_amp` and `basis_fun` selects the physical index to
-which the element generated from `element_fun` is assigned.
+The noise intensity can be tuned with `noise_amp` and `single_site_fun(::Type{<:Number}, ::Int)`
+returns a vector with the product state coefficients.
 """
 function product_peps(
-    peps_args...; unitcell=(1, 1), noise_amp=1e-2, basis_fun=rand, element_fun=randn
+    peps_args...; unitcell=(1, 1), noise_amp=1e-2, single_vector_fun=randn
 )
     noise_peps = InfinitePEPS(peps_args...; unitcell)
     typeof(spacetype(noise_peps[1])) <: GradedSpace &&
         error("symmetric tensors not generically supported")
     prod_tensors = map(noise_peps.A) do t
         pt = zero(t)
-        pt[basis_fun(1:dim(space(t, 1))), 1, 1, 1, 1] = element_fun(scalartype(noise_peps))
+        ptdata = block(pt, Trivial())
+        ptdata[:, 1, 1, 1, 1] .= single_vector_fun(scalartype(noise_peps), dim(space(t, 1)))
         return pt
     end
     prod_peps = InfinitePEPS(prod_tensors)
