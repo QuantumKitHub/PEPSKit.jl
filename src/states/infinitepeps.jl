@@ -118,7 +118,7 @@ VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-# Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))  # TODO: This is incompatible with inner constructor
+Base.similar(T::InfinitePEPS, args...) = InfinitePEPS(similar.(T.A, args...))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
@@ -130,6 +130,7 @@ TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
 Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
 Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
+Base.:/(ψ::InfinitePEPS, α::Number) = InfinitePEPS(ψ.A / α)
 LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
 LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
 

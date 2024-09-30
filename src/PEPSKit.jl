@@ -87,7 +87,7 @@ end
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
 export LocalOperator
-export expectation_value, costfun
+export expectation_value, costfun, product_peps
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
