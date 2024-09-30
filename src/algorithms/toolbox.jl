@@ -120,8 +120,7 @@ function product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2, state_vecto
     end
     prod_tensors = map(zip(noise_peps.A, state_vector)) do (t, v)
         pt = zero(t)
-        ptdata = block(pt, Trivial())
-        ptdata[:, 1, 1, 1, 1] .= v
+        pt[][:, 1, 1, 1, 1] .= v
         return pt
     end
     prod_peps = InfinitePEPS(prod_tensors)
