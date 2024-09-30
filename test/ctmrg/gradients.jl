@@ -13,7 +13,7 @@ using KrylovKit
 Pspaces = [ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1)]
 Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
-models = [square_lattice_heisenberg(), square_lattice_pwave()]
+models = [heisenberg_XYZ(InfiniteSquare()), pwave_superconductor(InfiniteSquare())]
 names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1e-4
@@ -67,8 +67,8 @@ steps = -0.01:0.005:0.01
             (psi, env),
             dir;
             alpha=steps,
-            retract=PEPSKit.my_retract,
-            inner=PEPSKit.my_inner,
+            retract=PEPSKit.peps_retract,
+            inner=PEPSKit.real_inner,
         ) do (peps, envs)
             E, g = Zygote.withgradient(peps) do psi
                 envs2 = PEPSKit.hook_pullback(
