@@ -18,8 +18,8 @@ kind of truncation scheme can be used. If `fixedspace` is true, the truncation s
 environment direction/unit cell entry.
 """
 @kwdef struct ProjectorAlg{S<:SVDAdjoint,T}
-    svd_alg::S = SVDAdjoint()
-    trscheme::T = FixedSpaceTruncation()
+    svd_alg::S = Defaults.svd_alg
+    trscheme::T = Defaults.trscheme
     verbosity::Int = 0
 end
 # TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
@@ -76,8 +76,8 @@ function CTMRG(;
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,
     verbosity=2,
-    svd_alg=SVDAdjoint(),
-    trscheme=FixedSpaceTruncation(),
+    svd_alg=Defaults.svd_alg,
+    trscheme=Defaults.trscheme,
     ctmrgscheme::Symbol=Defaults.ctmrgscheme,
 )
     return CTMRG{ctmrgscheme}(
