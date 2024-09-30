@@ -25,14 +25,13 @@ opt_alg = PEPSOptimize(;
 
 # initialize states
 Random.seed!(91283219347)
-H = square_lattice_j1j2(; J2=0.25)
+H = j1_j2(InfiniteSquare(); J2=0.25)
 psi_init = InfinitePEPS(2, χbond)
 psi_init = symmetrize!(psi_init, RotateReflect())
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
-finalize! = symmetrize_finalize!(RotateReflect())
-result = fixedpoint(psi_init, H, opt_alg, env_init; finalize!)
+result = fixedpoint(psi_init, H, opt_alg, env_init; symmetrization=RotateReflect())
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
 # compare against Juraj Hasik's data:
@@ -40,3 +39,4 @@ result = fixedpoint(psi_init, H, opt_alg, env_init; finalize!)
 ξ_ref = -1 / log(0.2723596743547324)
 @test result.E ≈ -0.5618837021945925 atol = 1e-3
 @test all(@. isapprox(ξ_h, ξ_ref; atol=1e-1) && isapprox(ξ_v, ξ_ref; atol=1e-1))
+@test ξ_h ≈ ξ_v atol = 1e-6  # Test symmetrization of optimized PEPS and environment

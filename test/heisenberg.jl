@@ -25,7 +25,7 @@ opt_alg = PEPSOptimize(;
 
 # initialize states
 Random.seed!(91283219347)
-H = square_lattice_heisenberg()
+H = heisenberg_XYZ(InfiniteSquare())
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
@@ -37,8 +37,9 @@ result = fixedpoint(psi_init, H, opt_alg, env_init)
 @test all(@. ξ_h > 0 && ξ_v > 0)
 
 # same test but for 1x2 unit cell
-H_1x2 = square_lattice_heisenberg(; unitcell=(1, 2))
-psi_init_1x2 = InfinitePEPS(2, χbond; unitcell=(1, 2))
+unitcell = (1, 2)
+H_1x2 = heisenberg_XYZ(InfiniteSquare(unitcell...))
+psi_init_1x2 = InfinitePEPS(2, χbond; unitcell)
 env_init_1x2 = leading_boundary(
     CTMRGEnv(psi_init_1x2, ComplexSpace(χenv)), psi_init_1x2, ctm_alg
 )

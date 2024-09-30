@@ -9,6 +9,7 @@ using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
+using MPSKitModels
 
 include("utility/util.jl")
 include("utility/svd.jl")
@@ -25,6 +26,7 @@ include("operators/infinitepepo.jl")
 include("operators/transferpepo.jl")
 include("operators/derivatives.jl")
 include("operators/localoperator.jl")
+include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
@@ -93,9 +95,10 @@ export fixedpoint
 export InfinitePEPS, InfiniteTransferPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
-export ReflectDepth, ReflectWidth, RotateReflect, symmetrize!, symmetrize_finalize!
+export ReflectDepth, ReflectWidth, Rotate, RotateReflect
+export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
-export square_lattice_tf_ising, square_lattice_heisenberg, square_lattice_j1j2
-export square_lattice_pwave
+export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
+export transverse_field_ising, heisenberg_XYZ, j1_j2, pwave_superconductor
 
 end # module

@@ -7,7 +7,7 @@ using OptimKit
 
 # Initialize parameters
 unitcell = (2, 2)
-H = square_lattice_pwave(; unitcell)
+H = pwave_superconductor(InfiniteSquare(unitcell...))
 χbond = 2
 χenv = 16
 ctm_alg = CTMRG(; tol=1e-8, maxiter=150, verbosity=2, ctmrgscheme=:sequential)
