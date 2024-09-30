@@ -25,7 +25,7 @@ opt_alg = PEPSOptimize(;
 
 # initialize states
 Random.seed!(91283219347)
-H = j1_j2(; J2=0.25)
+H = j1_j2(InfiniteSquare(); J2=0.25)
 psi_init = InfinitePEPS(2, χbond)
 psi_init = symmetrize!(psi_init, RotateReflect())
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);

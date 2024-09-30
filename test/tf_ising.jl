@@ -34,7 +34,7 @@ opt_alg = PEPSOptimize(;
 )
 
 # initialize states
-H = transverse_field_ising(; g)
+H = transverse_field_ising(InfiniteSquare(); g)
 Random.seed!(91283219347)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
@@ -53,7 +53,7 @@ magn = expectation_value(result.peps, M, result.env)
 @test abs(magn) ≈ mˣ atol = 5e-2
 
 # find fixedpoint in polarized phase and compute correlations lengths
-H_polar = transverse_field_ising(; g=4.5)
+H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
 result_polar = fixedpoint(psi_init, H_polar, opt_alg, env_init)
 ξ_h_polar, ξ_v_polar, = correlation_length(result_polar.peps, result_polar.env)
 @test ξ_h_polar < ξ_h

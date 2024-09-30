@@ -13,7 +13,7 @@ using KrylovKit
 Pspaces = [ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1)]
 Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
-models = [heisenberg_XYZ(), pwave_superconductor()]
+models = [heisenberg_XYZ(InfiniteSquare()), pwave_superconductor(InfiniteSquare())]
 names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1e-4

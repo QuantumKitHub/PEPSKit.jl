@@ -16,7 +16,7 @@ end
 function MPSKitModels.transverse_field_ising(
     T::Type{<:Number},
     S::Union{Type{Trivial},Type{Z2Irrep}},
-    lattice::InfiniteSquare=InfiniteSquare(1, 1);
+    lattice::InfiniteSquare;
     J=1.0,
     g=1.0,
 )
@@ -30,9 +30,7 @@ function MPSKitModels.transverse_field_ising(
     )
 end
 
-function MPSKitModels.heisenberg_XYZ(
-    lattice::InfiniteSquare=InfiniteSquare(1, 1); kwargs...
-)
+function MPSKitModels.heisenberg_XYZ(lattice::InfiniteSquare; kwargs...)
     return heisenberg_XYZ(ComplexF64, Trivial, lattice; kwargs...)
 end
 function MPSKitModels.heisenberg_XYZ(
@@ -61,10 +59,13 @@ end
 Square lattice J₁-J₂ model. The `sublattice` kwarg enables a single site unit cell via a
 sublattice rotation.
 """
+function j1_j2(lattice::InfiniteSquare; kwargs...)
+    return j1_j2(ComplexF64, Trivial, lattice; kwargs...)
+end
 function j1_j2(
-    T::Type{<:Number}=ComplexF64,
-    S::Type{<:Sector}=Trivial,
-    lattice::InfiniteSquare=InfiniteSquare(1, 1);
+    T::Type{<:Number},
+    S::Type{<:Sector},
+    lattice::InfiniteSquare;
     J1=1.0,
     J2=1.0,
     spin=1//2,
@@ -89,7 +90,7 @@ end
 
 Square lattice p-wave superconductor model.
 """
-function pwave_superconductor(lattice::InfiniteSquare=InfiniteSquare(1, 1); kwargs...)
+function pwave_superconductor(lattice::InfiniteSquare; kwargs...)
     return pwave_superconductor(ComplexF64, lattice; kwargs...)
 end
 function pwave_superconductor(
