@@ -189,7 +189,7 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
     Q_nw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
 
     coordinates = collect(Iterators.product(axes(state)...))
-    tforeach(coordinates) do (r, c)    
+    dtforeach(coordinates) do (r, c)    
         Q_sw[r, c] = enlarge_southwest_corner((r, c), envs, state)
         Q_nw[r, c] = enlarge_northwest_corner((r, c), envs, state)
     end
@@ -197,7 +197,7 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
     return copy(Q_sw), copy(Q_nw)
 end
 function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
-    Q = tmap(collect(Iterators.product(axes(envs.corners)...))) do (dir, r, c)
+    Q = dtmap(collect(Iterators.product(axes(envs.corners)...))) do (dir, r, c)
         if dir == NORTHWEST
             enlarge_northwest_corner((r, c), envs, state)
         elseif dir == NORTHEAST
@@ -229,7 +229,7 @@ function ctmrg_projectors(
     ϵ = zero(real(scalartype(envs)))
 
     coordinates = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
-    tforeach(coordinates) do (r, c)
+    dtforeach(coordinates) do (r, c)
         # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
         QQ = halfinfinite_environment(enlarged_envs[1][r, c], enlarged_envs[2][r′, c])
@@ -267,7 +267,7 @@ function ctmrg_projectors(
 
     ϵ = zero(real(scalartype(envs)))
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    tforeach(drc_combinations) do (dir, r, c)
+    dtforeach(drc_combinations) do (dir, r, c)
         # Row-column index of next enlarged corner
         next_rc = if dir == 1
             (r, _next(c, size(envs.corners, 3)))
@@ -340,7 +340,7 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
 
     # Apply projectors to renormalize corners and edges
     coordinates = collect(Iterators.product(axes(state)...))
-    tforeach(coordinates) do (r, c)
+    dtforeach(coordinates) do (r, c)
         C_southwest = renormalize_bottom_corner((r, c), envs, projectors)
         corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
 
@@ -359,7 +359,7 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::Simultaneou
     P_left, P_right = projectors
 
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    tforeach(drc_combinations) do (dir, r, c)
+    dtforeach(drc_combinations) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)
