@@ -12,7 +12,7 @@ using OptimKit
 # Phys. Rev. Lett. 101, 250602 – Published 18 December 2008
 # (values estimated from plots)
 # (factor of 2 in the energy due to convention differences)
-h = 3.1
+g = 3.1
 e = -1.6417 * 2
 mˣ = 0.91
 
@@ -34,7 +34,7 @@ opt_alg = PEPSOptimize(;
 )
 
 # initialize states
-H = square_lattice_tf_ising(; h)
+H = transverse_field_ising(InfiniteSquare(); g)
 Random.seed!(91283219347)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
@@ -53,7 +53,7 @@ magn = expectation_value(result.peps, M, result.env)
 @test abs(magn) ≈ mˣ atol = 5e-2
 
 # find fixedpoint in polarized phase and compute correlations lengths
-H_polar = square_lattice_tf_ising(; h=4.5)
+H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
 result_polar = fixedpoint(psi_init, H_polar, opt_alg, env_init)
 ξ_h_polar, ξ_v_polar, = correlation_length(result_polar.peps, result_polar.env)
 @test ξ_h_polar < ξ_h

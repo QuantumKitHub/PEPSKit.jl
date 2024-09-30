@@ -70,7 +70,7 @@ struct LinSolver{F} <: GradMode{F}
     solver::KrylovKit.LinearSolver
 end
 function LinSolver(;
-    solver=KrylovKit.GMRES(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
+    solver=KrylovKit.BiCGStab(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
     iterscheme=Defaults.iterscheme,
 )
     return LinSolver{iterscheme}(solver)
@@ -114,15 +114,15 @@ end
 function PEPSOptimize(;
     boundary_alg=CTMRG(),
     optimizer=Defaults.optimizer,
-    reuse_env=true,
-    gradient_alg=LinSolver(),
+    reuse_env=Defaults.reuse_env,
+    gradient_alg=Defaults.gradient_alg,
 )
     return PEPSOptimize(boundary_alg, optimizer, reuse_env, gradient_alg)
 end
 
 """
     fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
-               finalize!=OptimKit._finalize!) where {T}
+               finalize!=OptimKit._finalize!, symmetrization=nothing) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
@@ -131,6 +131,9 @@ By default, a random initial environment is used.
 The `finalize!` kwarg can be used to insert a function call after each optimization step
 by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
 The function maps `(peps, envs), f, g = finalize!((peps, envs), f, g, numiter)`.
+The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
+PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
+requires a symmmetric `ψ₀` and `env₀` to converge properly.
 
 The function returns a `NamedTuple` which contains the following entries:
 - `peps`: final `InfinitePEPS`
@@ -147,9 +150,18 @@ function fixedpoint(
     alg::PEPSOptimize,
     env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20);
     (finalize!)=OptimKit._finalize!,
+    symmetrization=nothing,
 ) where {T}
+    if isnothing(symmetrization)
+        retract = peps_retract
+    else
+        retract, symm_finalize! = symmetrize_retract_and_finalize!(symmetrization)
+        fin! = finalize!  # Previous finalize!
+        finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
+    end
+
     (peps, env), E, ∂E, numfg, convhistory = optimize(
-        (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner, finalize!
+        (ψ₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
     ) do (peps, envs)
         E, gs = withgradient(peps) do ψ
             envs´ = hook_pullback(
@@ -167,6 +179,7 @@ function fixedpoint(
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
         return E, g
     end
+
     return (;
         peps,
         env,
@@ -180,7 +193,7 @@ end
 
 # Update PEPS unit cell in non-mutating way
 # Note: Both x and η are InfinitePEPS during optimization
-function my_retract(x, η, α)
+function peps_retract(x, η, α)
     peps = deepcopy(x[1])
     peps.A .+= η.A .* α
     env = deepcopy(x[2])
@@ -188,7 +201,7 @@ function my_retract(x, η, α)
 end
 
 # Take real valued part of dot product
-my_inner(_, η₁, η₂) = real(dot(η₁, η₂))
+real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 
 #=
 Evaluating the gradient of the cost function for CTMRG:

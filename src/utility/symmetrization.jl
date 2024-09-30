@@ -14,7 +14,11 @@ Reflection symmmetrization along the vertical axis, such that east and west are 
 """
 struct ReflectWidth <: SymmetrizationStyle end
 
-# TODO
+"""
+    struct Rotate <: SymmetrizationStyle
+
+Rotation symmmetrization leaving the object invariant under π/2 rotations.
+"""
 struct Rotate <: SymmetrizationStyle end
 
 """
@@ -132,8 +136,15 @@ function symmetrize!(peps::InfinitePEPS, ::ReflectWidth)
     return peps
 end
 
-function symmetrize!(peps::InfinitePEPS, ::Rotate)
-    return error("TODO")
+function symmetrize!(peps::InfinitePEPS, symm::Rotate)
+    if !isequal(size(peps)...)
+        throw(ArgumentError("$symm can only be applied to square unit cells"))
+    end
+    peps_l90 = PEPSKit._fit_spaces(rotl90(peps), peps)
+    peps_180 = PEPSKit._fit_spaces(rot180(peps), peps)
+    peps_r90 = PEPSKit._fit_spaces(rotr90(peps), peps)
+    peps.A .= 0.25 * (peps.A + peps_l90.A + peps_180.A + peps_r90.A)
+    return peps
 end
 
 function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
@@ -149,7 +160,7 @@ function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
     end
 
     depth, width = size(peps)
-    depth == width || ArgumentError("$symm can only be applied to square unit cells")
+    depth == width || throw(ArgumentError("$symm can only be applied to square unit cells"))
 
     odd = mod(depth, 2)
     if odd == 1
@@ -207,15 +218,21 @@ function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
 end
 
 """
-    symmetrize_finalize!(symm::SymmetrizationStyle)
+    symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
 
-Return `finalize!` function for symmetrizing the `peps` and `grad` tensors in-place,
-which maps `(peps_symm, envs), E, grad_symm = symmetrize_finalize!((peps, envs), E, grad, numiter)`.
+Return the `retract` and `finalize!` function for symmetrizing the `peps` and `grad` tensors.
 """
-function symmetrize_finalize!(symm::SymmetrizationStyle)
-    function symmetrize_finalize!((peps, envs), E, grad, _)
-        peps_symm = symmetrize!(peps, symm)
+function symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
+    finf = function symmetrize_finalize!((peps, envs), E, grad, _)
         grad_symm = symmetrize!(grad, symm)
-        return (peps_symm, envs), E, grad_symm
+        return (peps, envs), E, grad_symm
     end
+    retf = function symmetrize_retract((peps, envs), η, α)
+        peps_symm = deepcopy(peps)
+        peps_symm.A .+= η.A .* α
+        e = deepcopy(envs)
+        symmetrize!(peps_symm, symm)
+        return (peps_symm, e), η
+    end
+    return retf, finf
 end
