@@ -20,9 +20,6 @@ end
         @time @safetestset "Unit cell" begin
             include("ctmrg/unitcell.jl")
         end
-        @time @safetestset "SVD wrapper" begin
-            include("ctmrg/svd_wrapper.jl")
-        end
         @time @safetestset ":fixed CTMRG iteration scheme" begin
             include("ctmrg/fixed_iterscheme.jl")
         end
@@ -32,13 +29,21 @@ end
         @time @safetestset "CTMRG schemes" begin
             include("ctmrg/ctmrgschemes.jl")
         end
-        @time @safetestset "CTMRG schemes" begin
-            include("ctmrg/symmetrization.jl")
-        end
     end
     if GROUP == "ALL" || GROUP == "MPS"
         @time @safetestset "VUMPS" begin
             include("boundarymps/vumps.jl")
+        end
+    end
+    if GROUP == "ALL" || GROUP == "UTILITY"
+        @time @safetestset "SVD wrapper" begin
+            include("utility/svd_wrapper.jl")
+        end
+        @time @safetestset "Symmetrization" begin
+            include("utility/symmetrization.jl")
+        end
+        @time @safetestset "Differentiable tmap and tforeach" begin
+            include("utility/diff_maps.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"
