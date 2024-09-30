@@ -96,24 +96,32 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
 end
 
 """
-    product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2, single_vector_fun=randn)
+    product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2, state_vector=nothing)
 
 Initialize a normalized random product PEPS with noise. The given arguments are passed on to
 the `InfinitePEPS` constructor.
 
-The noise intensity can be tuned with `noise_amp` and `single_site_fun(::Type{<:Number}, ::Int)`
-returns a vector with the product state coefficients.
+The noise intensity can be tuned with `noise_amp`. The product state coefficients can be
+specified using the `state_vector` kwarg in the form of a matrix of size `unitcell`
+containing vectors that match the PEPS physical dimensions. If `nothing` is provided,
+random Gaussian coefficients are used.
 """
-function product_peps(
-    peps_args...; unitcell=(1, 1), noise_amp=1e-2, single_vector_fun=randn
-)
+function product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2, state_vector=nothing)
     noise_peps = InfinitePEPS(peps_args...; unitcell)
     typeof(spacetype(noise_peps[1])) <: GradedSpace &&
         error("symmetric tensors not generically supported")
-    prod_tensors = map(noise_peps.A) do t
+    if isnothing(state_vector)
+        state_vector = map(noise_peps.A) do t
+            randn(scalartype(t), dim(space(t, 1)))
+        end
+    else
+        all(dim.(space.(noise_peps.A, 1)) .== length.(state_vector)) ||
+            throw(ArgumentError("state vectors must match the physical dimension"))
+    end
+    prod_tensors = map(zip(noise_peps.A, state_vector)) do (t, v)
         pt = zero(t)
         ptdata = block(pt, Trivial())
-        ptdata[:, 1, 1, 1, 1] .= single_vector_fun(scalartype(noise_peps), dim(space(t, 1)))
+        ptdata[:, 1, 1, 1, 1] .= v
         return pt
     end
     prod_peps = InfinitePEPS(prod_tensors)
