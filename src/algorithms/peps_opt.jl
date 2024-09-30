@@ -146,28 +146,37 @@ function fixedpoint(
     H,
     alg::PEPSOptimize,
     env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20);
-    retract=peps_retract,
-    inner=real_inner,
     (finalize!)=OptimKit._finalize!,
+    symmetrization=nothing,
 ) where {T}
-    (peps, env), E, ∂E, numfg, convhistory =
-        optimize((ψ₀, env₀), alg.optimizer; retract, inner, finalize!) do (peps, envs)
-            E, gs = withgradient(peps) do ψ
-                envs´ = hook_pullback(
-                    leading_boundary,
-                    envs,
-                    ψ,
-                    alg.boundary_alg;
-                    alg_rrule=alg.gradient_alg,
-                )
-                ignore_derivatives() do
-                    alg.reuse_env && update!(envs, envs´)
-                end
-                return costfun(ψ, envs´, H)
+    if isnothing(symmetrization)
+        retract = peps_retract
+    else
+        retract, symm_finalize! = symmetrize_retract_and_finalize!(symmetrization)
+        fin! = finalize!  # Previous finalize!
+        finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
+    end
+
+    (peps, env), E, ∂E, numfg, convhistory = optimize(
+        (ψ₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
+    ) do (peps, envs)
+        E, gs = withgradient(peps) do ψ
+            envs´ = hook_pullback(
+                leading_boundary,
+                envs,
+                ψ,
+                alg.boundary_alg;
+                alg_rrule=alg.gradient_alg,
+            )
+            ignore_derivatives() do
+                alg.reuse_env && update!(envs, envs´)
             end
-            g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-            return E, g
+            return costfun(ψ, envs´, H)
         end
+        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        return E, g
+    end
+
     return (;
         peps,
         env,
