@@ -122,7 +122,7 @@ end
 
 """
     fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
-               retract=peps_retract, inner=real_inner, finalize!=OptimKit._finalize!) where {T}
+               finalize!=OptimKit._finalize!, symmetrization=nothing) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
@@ -131,6 +131,9 @@ By default, a random initial environment is used.
 The `finalize!` kwarg can be used to insert a function call after each optimization step
 by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
 The function maps `(peps, envs), f, g = finalize!((peps, envs), f, g, numiter)`.
+The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
+PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
+requires a symmmetric `ψ₀` and `env₀` to converge properly.
 
 The function returns a `NamedTuple` which contains the following entries:
 - `peps`: final `InfinitePEPS`
