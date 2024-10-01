@@ -42,7 +42,7 @@ end
         @time @safetestset "Symmetrization" begin
             include("utility/symmetrization.jl")
         end
-        @time @safetestset "Differentiable tmap and tforeach" begin
+        @time @safetestset "Differentiable tmap" begin
             include("utility/diff_maps.jl")
         end
     end

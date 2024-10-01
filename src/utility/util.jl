@@ -1,4 +1,4 @@
-using OhMyThreads: tmap, tforeach
+using OhMyThreads: tmap
 
 # Get next and previous directional CTM enviroment index, respecting periodicity
 _next(i, total) = mod1(i + 1, total)
@@ -160,9 +160,8 @@ macro showtypeofgrad(x)
     )
 end
 
-# Differentiable wrappers around OhMyThreads functions to avoid type piracy in rrule definition
+# Differentiable wrapper around OhMyThreads' `tmap` to avoid type piracy in rrule definition
 dtmap(args...; kwargs...) = tmap(args...; kwargs...)
-dtforeach(args...; kwargs...) = tforeach(args...; kwargs...)
 
 # Follows the `map` rrule from ChainRules.jl but specified for the case of one AbstractArray that is being mapped
 # https://github.com/JuliaDiff/ChainRules.jl/blob/e245d50a1ae56ce46fc8c1f0fe9b925964f1146e/src/rulesets/Base/base.jl#L243
@@ -185,27 +184,6 @@ function ChainRulesCore.rrule(
         return (NoTangent(), df, dA)
     end
     return y, dtmap_pullback
-end
-
-# TODO: fix this
-function ChainRulesCore.rrule(
-    config::RuleConfig{>:HasReverseMode}, ::typeof(dtforeach), f, A::AbstractArray; kwargs...
-)
-    el_rrules = tmap(A; kwargs...) do a
-        rrule_via_ad(config, f, a)
-    end
-    function dtforeach_pullback(dy_raw)
-        dy = unthunk(dy_raw)
-        backevals = tmap(CartesianIndices(A); kwargs...) do idx
-            last(el_rrules[idx])(dy[idx])
-        end
-        df = ProjectTo(f)(sum(first, backevals))
-        dA = tmap(CartesianIndices(A); kwargs...) do idx
-            ProjectTo(A[idx])(last(backevals[idx]))
-        end
-        return (NoTangent(), df, dA)
-    end
-    return nothing, dtforeach_pullback
 end
 
 """
