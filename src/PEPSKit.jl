@@ -12,6 +12,7 @@ using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 
 include("utility/util.jl")
+include("utility/diffable_threads.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
 include("utility/diffset.jl")
@@ -64,6 +65,7 @@ Module containing default values that represent typical algorithm parameters.
 """
 module Defaults
     using TensorKit, KrylovKit, OptimKit
+    using ScopedValues
     using PEPSKit: LinSolver, FixedSpaceTruncation, SVDAdjoint
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
@@ -82,8 +84,12 @@ module Defaults
         maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
     )
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+    const threading_kwargs = ScopedValue(
+        Dict(:scheduler => :dynamic, :ntasks => Threads.nthreads(), :chunking => true)
+    )
 end
 
+export set_threading_kwargs!
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
 export LocalOperator
