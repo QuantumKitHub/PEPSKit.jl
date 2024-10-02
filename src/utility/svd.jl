@@ -105,7 +105,11 @@ function TensorKit._compute_svddata!(
             Udata[c] = U[:, 1:howmany]
             Vdata[c] = V[1:howmany, :]
         else
-            x₀ = randn(eltype(b), size(b, 1))
+            # x₀ = randn(eltype(b), size(b, 1))  # Leads to erroneous gauge fixing of U, S, V and thus failing element-wise conv.
+            # u, = TensorKit.MatrixAlgebra.svd!(deepcopy(b), TensorKit.SVD())
+            # x₀ = sum(u[:, i] for i in 1:howmany)  # Element-wise convergence works fine
+            # x₀ = dropdims(sum(b[:, 1:3]; dims=2); dims=2)  # Summing too many columns also makes gauge fixing fail
+            x₀ = b[:, 1]  # Leads so slower convergence of SVD than randn, but correct element-wise convergence
             S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
