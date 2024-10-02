@@ -105,6 +105,7 @@ function TensorKit._compute_svddata!(
             Udata[c] = U[:, 1:howmany]
             Vdata[c] = V[1:howmany, :]
         else
+            # TODO: find better initial guess that leads to element-wise convergence
             # x₀ = randn(eltype(b), size(b, 1))  # Leads to erroneous gauge fixing of U, S, V and thus failing element-wise conv.
             # u, = TensorKit.MatrixAlgebra.svd!(deepcopy(b), TensorKit.SVD())
             # x₀ = sum(u[:, i] for i in 1:howmany)  # Element-wise convergence works fine
