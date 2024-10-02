@@ -37,6 +37,7 @@ include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
 
 include("algorithms/ctmrg/ctmrg.jl")
+include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/toolbox.jl")

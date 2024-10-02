@@ -13,7 +13,7 @@ using PEPSKit:
 # initialize parameters
 χbond = 2
 χenv = 16
-svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SVD())]  #, SVDAdjoint(; fwd_alg=IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SVD()), SVDAdjoint(; fwd_alg=IterSVD())]
 unitcells = [(1, 1), (3, 4)]
 
 # test for element-wise convergence after application of fixed step

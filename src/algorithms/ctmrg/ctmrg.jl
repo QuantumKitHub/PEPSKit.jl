@@ -195,7 +195,7 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
         Q_nw[r, c] = enlarge_northwest_corner((r, c), envs, state)
     end
 
-    return copy(Q_sw), copy(Q_nw)
+    return stack((copy(Q_sw), copy(Q_nw)); dims=1)
 end
 function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
@@ -238,7 +238,7 @@ function ctmrg_projectors(
     for (r, c) in directions
         # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
-        QQ = halfinfinite_environment(enlarged_envs[1][r, c], enlarged_envs[2][r′, c])
+        QQ = halfinfinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
 
         trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
@@ -255,7 +255,7 @@ function ctmrg_projectors(
 
         # Compute projectors
         P_bottom[r, c], P_top[r, c] = build_projectors(
-            U, S, V, enlarged_envs[1][r, c], enlarged_envs[2][r′, c]
+            U, S, V, enlarged_envs[1, r, c], enlarged_envs[2, r′, c]
         )
     end
 
@@ -391,9 +391,13 @@ end
 # Auxiliary routines
 # ======================================================================================== #
 
-# Build projectors from SVD and enlarged SW & NW corners
+# Build projectors from SVD and dense enlarged corners
 function build_projectors(
-    U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q, Q_next
+    U::AbstractTensorMap{E,3,1},
+    S::AbstractTensorMap{E,1,1},
+    V::AbstractTensorMap{E,1,3},
+    Q::AbstractTensorMap{E,3,3},
+    Q_next::AbstractTensorMap{E,3,3},
 ) where {E<:ElementarySpace}
     isqS = sdiag_inv_sqrt(S)
     P_left = Q_next * V' * isqS

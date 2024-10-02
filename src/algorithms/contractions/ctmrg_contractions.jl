@@ -165,6 +165,7 @@ end
 
 """
     halfinfinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
+    halfinfinite_environment(quadrant1::EnlargedCorner{A,C,E}, quadrant2::EnlargedCorner{A,C,E})
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -181,6 +182,11 @@ function halfinfinite_environment(
     return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         quadrant1[χ_in D_inabove D_inbelow; χ D1 D2] *
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
+end
+function halfinfinite_environment(
+    quadrant1::EnlargedCorner{A,C,E}, quadrant2::EnlargedCorner{A,C,E}
+) where {A,C,E}
+    return HalfInfiniteEnv(quadrant1, quadrant2)()
 end
 
 # Renormalization contractions
