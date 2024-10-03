@@ -2,13 +2,6 @@
     struct HalfInfiniteEnv{A,C,E}
 
 Half-infinite CTMRG environment tensor storage.
-
-```
-    C_2 --  E_2      --  E_3      -- C_3
-     |       ||          ||           | 
-    E_1 == ket_bra_1 == ket_bra_2 == E_4
-     |       ||          ||           |
-```
 """
 struct HalfInfiniteEnv{A,A′,C,E}
     ket_1::A
@@ -37,8 +30,41 @@ function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
     )
 end
 
-# Contract half-infinite environment
-function (env::HalfInfiniteEnv)() end
+"""
+    (env::HalfInfiniteEnv)() 
+    (env::HalfInfiniteEnv)(x) 
+
+Contract half-infinite environment without or with a vector `x`.
+"""
+function (env::HalfInfiniteEnv)()
+    return halfinfinite_environment(
+        env.E_1,
+        env.C_1,
+        env.E_2,
+        env.E_3,
+        env.C_2,
+        env.E_4,
+        env.ket_1,
+        env.ket_2,
+        env.bra_1,
+        env.bra_2,
+    )
+end
+function (env::HalfInfiniteEnv)(x)
+    return halfinfinite_environment(
+        env.E_1,
+        env.C_1,
+        env.E_2,
+        env.E_3,
+        env.C_2,
+        env.E_4,
+        x,
+        env.ket_1,
+        env.ket_2,
+        env.bra_1,
+        env.bra_2,
+    )
+end
 
 """
     struct EnlargedCorner{A,C,E}

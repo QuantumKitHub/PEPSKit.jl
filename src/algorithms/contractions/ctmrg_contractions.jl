@@ -177,9 +177,9 @@ Contract the CTMRG left projector with the higher-dimensional subspace facing to
 """
 function left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
     return @autoopt @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
-        E_1[χ_in D1 D2; χ1] * 
-        C[χ1; χ2] * 
-        E_2[χ2 D3 D4; χ3] * 
+        E_1[χ_in D1 D2; χ1] *
+        C[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
         ket[d; D3 D5 D_inabove D1] *
         conj(bra[d; D4 D6 D_inbelow D2]) *
         conj(V[χ4; χ3 D5 D6]) *
@@ -204,15 +204,14 @@ function right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=
         conj(U[χ1; χ2 D1 D2]) *
         ket[d; D1 D5 D_outabove D1] *
         conj(bra[d; D2 D6 D_outbelow D2]) *
-        E_2[χ2 D3 D4; χ3] * 
-        C[χ3; χ4] * 
+        E_2[χ2 D3 D4; χ3] *
+        C[χ3; χ4] *
         E_1[χ4 D5 D6; χ_out]
 end
 
-
 """
     halfinfinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
-    halfinfinite_environment(quadrant1::EnlargedCorner{A,C,E}, quadrant2::EnlargedCorner{A,C,E})
+    
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -221,6 +220,26 @@ Contract two quadrants (enlarged corners) to form a half-infinite environment.
     |quadrant1|    |quadrant2|
     |~~~~~~~~~| == |~~~~~~~~~|
       |    ||        ||    |
+```
+
+The environment can also be contracted directly from all its constituent tensors.
+
+```
+    C_1 --  E_2      --  E_3      -- C_2
+     |       ||          ||           | 
+    E_1 == ket_bra_1 == ket_bra_2 == E_4
+     |       ||          ||           |
+```
+
+Alternatively, contract environment with a vector `x` acting on it, e.g. as needed for iterative solvers.
+
+```
+    C_1 --  E_2      --  E_3      -- C_2
+     |       ||          ||           | 
+    E_1 == ket_bra_1 == ket_bra_2 == E_4
+     |       ||          ||           |
+                         [~~~~~~x~~~~~~]
+                         ||           |
 ```
 """
 function halfinfinite_environment(
@@ -231,9 +250,35 @@ function halfinfinite_environment(
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
 end
 function halfinfinite_environment(
-    quadrant1::EnlargedCorner{A,C,E}, quadrant2::EnlargedCorner{A,C,E}
-) where {A,C,E}
-    return HalfInfiniteEnv(quadrant1, quadrant2)()
+    E_1, C_1, E_2, E_3, C_2, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
+) where {P<:PEPSTensor}
+    return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+        E_1[χ_in D1 D2; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket_1[d1; D3 D9 D_inabove D1] *
+        conj(bra_1[d1; D4 D10 D_inbelow D2]) *
+        ket_2[d2; D5 D7 D_outabove D9] *
+        conj(bra_2[d2; D6 D8 D_outbelow D10]) *
+        E_3[χ3 D5 D6; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7 D8; χ_out]
+end
+function halfinfinite_environment(
+    E_1, C_1, E_2, E_3, C_2, E_4, x, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
+) where {P<:PEPSTensor}
+    return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+        E_1[χ_in D1 D2; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket_1[d1; D3 D9 D_inabove D1] *
+        conj(bra_1[d1; D4 D10 D_inbelow D2]) *
+        ket_2[d2; D5 D7 D11 D9] *
+        conj(bra_2[d2; D6 D8 D12 D10]) *
+        E_3[χ3 D5 D6; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7 D8; χ6] *
+        x[χ6 D11 D12; χ_out D_outabove D_outbelow]
 end
 
 # Renormalization contractions
