@@ -202,6 +202,7 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,
     Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
     @fwdthreads for (dir, r, c) in drc_combinations
+        # TODO: generalize the corner computation to make it compatible with EnlargedCorners
         Q[dir, r, c] = if dir == NORTHWEST
             enlarge_northwest_corner((r, c), envs, state)
         elseif dir == NORTHEAST
@@ -214,6 +215,9 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,
     end
 
     return copy(Q)
+end
+
+function enlarge_corner((dir, r, c), envs, state, alg::CTMRG)  # TODO: find a way to dispatch on CTMRG struct to switch on function handles
 end
 
 # ======================================================================================== #

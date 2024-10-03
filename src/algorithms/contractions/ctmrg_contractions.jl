@@ -211,7 +211,10 @@ end
 
 """
     halfinfinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
-    
+    function halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
+                                      ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    function halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                                      ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -250,7 +253,7 @@ function halfinfinite_environment(
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
 end
 function halfinfinite_environment(
-    E_1, C_1, E_2, E_3, C_2, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
+    C_1, C_2, E_1, E_2, E_3, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
 ) where {P<:PEPSTensor}
     return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         E_1[χ_in D1 D2; χ1] *
@@ -265,7 +268,7 @@ function halfinfinite_environment(
         E_4[χ5 D7 D8; χ_out]
 end
 function halfinfinite_environment(
-    E_1, C_1, E_2, E_3, C_2, E_4, x, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
+    C_1, C_2, E_1, E_2, E_3, E_4, x, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
 ) where {P<:PEPSTensor}
     return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         E_1[χ_in D1 D2; χ1] *

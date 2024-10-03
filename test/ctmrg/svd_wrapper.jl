@@ -6,6 +6,7 @@ using KrylovKit
 using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
+using PEPSKit: HalfInfiniteEnv
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R=TensorMap(randn, space(A)), trunc=notrunc())
@@ -91,4 +92,34 @@ symm_R = TensorMap(randn, dtype, space(symm_r))
     )
     @test l_itersvd_fb ≈ l_fullsvd_tr
     @test g_fullsvd_tr[1] ≈ g_itersvd_fb[1] rtol = rtol
+end
+
+χbond = 2
+χenv = 6
+ctm_alg = CTMRG(; tol=1e-10, verbosity=2, svd_alg=SVDAdjoint())
+Random.seed!(91283219347)
+H = heisenberg_XYZ(InfiniteSquare())
+psi = InfinitePEPS(2, χbond)
+env = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
+hienv = HalfInfiniteEnv(
+    env.corners[1],
+    env.corners[2],
+    env.edges[4],
+    env.edges[1],
+    env.edges[1],
+    env.edges[2],
+    psi[1],
+    psi[1],
+    psi[1],
+    psi[1],
+)
+hienv_dense = hienv()
+env_R = TensorMap(randn, space(hienv_dense))
+PEPSKit.tsvd!(hienv, iter_alg)
+
+@testset "IterSVD with HalfInfiniteEnv function handle" begin
+    l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, env_R), hienv_dense)
+    l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, env_R), hienv)
+    @test l_itersvd ≈ l_fullsvd
+    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end

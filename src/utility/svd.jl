@@ -25,18 +25,19 @@ removes the divergences from the adjoint.
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 """
-    PEPSKit.tsvd(t::AbstractTensorMap, alg; trunc=notrunc(), p=2)
+    PEPSKit.tsvd(t, alg; trunc=notrunc(), p=2)
 
 Wrapper around `TensorKit.tsvd` which dispatches on the `alg` argument.
 This is needed since a custom adjoint for `PEPSKit.tsvd` may be defined,
 depending on the algorithm. E.g., for `IterSVD` the adjoint for a truncated
 SVD from `KrylovKit.svdsolve` is used.
 """
-PEPSKit.tsvd(t::AbstractTensorMap, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
-function PEPSKit.tsvd!(
-    t::AbstractTensorMap, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2
-)
+PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
+function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2)
     return TensorKit.tsvd!(t; alg=alg.fwd_alg, trunc, p)
+end
+function TensorKit.tsvd!(f::HalfInfiniteEnv; trunc=NoTruncation(), p::Real=2, alg=IterSVD())
+    return _tsvd!(f, alg, trunc, p)
 end
 
 """
@@ -69,35 +70,45 @@ the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
 @kwdef struct IterSVD
     alg::KrylovKit.GKL = KrylovKit.GKL(; tol=1e-14, krylovdim=25)
     fallback_threshold::Float64 = Inf
+    start_vector = random_start_vector
+end
+
+# TODO: find better initial guess that leads to element-wise convergence and is compatible with function handles
+function random_start_vector(f)
+    return randn(eltype(f), size(f, 1))  # Leads to erroneous gauge fixing of U, S, V and thus failing element-wise conv.
+    # u, = TensorKit.MatrixAlgebra.svd!(deepcopy(t), TensorKit.SVD())
+    # return sum(u[:, i] for i in 1:howmany)  # Element-wise convergence works fine
+    # return dropdims(sum(t[:, 1:3]; dims=2); dims=2)  # Summing too many columns also makes gauge fixing fail
+    # return t[:, 1]  # Leads so slower convergence of SVD than randn, but correct element-wise convergence
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
 function TensorKit._tsvd!(
-    t, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}, p::Real=2
+    f, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}, p::Real=2
 )
     # early return
-    if isempty(blocksectors(t))
-        truncerr = zero(real(scalartype(t)))
-        return _empty_svdtensors(t)..., truncerr
+    if isempty(blocksectors(f))
+        truncerr = zero(real(scalartype(f)))
+        return _empty_svdtensors(f)..., truncerr
     end
 
-    Udata, Σdata, Vdata, dims = _compute_svddata!(t, alg, trunc)
-    U, S, V = _create_svdtensors(t, Udata, Σdata, Vdata, spacetype(t)(dims))
-    truncerr = trunc isa NoTruncation ? abs(zero(scalartype(t))) : norm(U * S * V - t, p)
+    Udata, Σdata, Vdata, dims = _compute_svddata!(f, alg, trunc)
+    U, S, V = _create_svdtensors(f, Udata, Σdata, Vdata, spacetype(f)(dims))
+    truncerr = trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
 
     return U, S, V, truncerr
 end
 function TensorKit._compute_svddata!(
-    t::TensorMap, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}
+    f, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}
 )
-    InnerProductStyle(t) === EuclideanProduct() || throw_invalid_innerproduct(:tsvd!)
-    I = sectortype(t)
-    A = storagetype(t)
+    InnerProductStyle(f) === EuclideanProduct() || throw_invalid_innerproduct(:tsvd!)
+    I = sectortype(f)
+    A = storagetype(f)
     Udata = SectorDict{I,A}()
     Vdata = SectorDict{I,A}()
     dims = SectorDict{I,Int}()
     local Sdata
-    for (c, b) in blocks(t)
+    for (c, b) in blocks(f)
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
@@ -105,12 +116,7 @@ function TensorKit._compute_svddata!(
             Udata[c] = U[:, 1:howmany]
             Vdata[c] = V[1:howmany, :]
         else
-            # TODO: find better initial guess that leads to element-wise convergence
-            # x₀ = randn(eltype(b), size(b, 1))  # Leads to erroneous gauge fixing of U, S, V and thus failing element-wise conv.
-            # u, = TensorKit.MatrixAlgebra.svd!(deepcopy(b), TensorKit.SVD())
-            # x₀ = sum(u[:, i] for i in 1:howmany)  # Element-wise convergence works fine
-            # x₀ = dropdims(sum(b[:, 1:3]; dims=2); dims=2)  # Summing too many columns also makes gauge fixing fail
-            x₀ = b[:, 1]  # Leads so slower convergence of SVD than randn, but correct element-wise convergence
+            x₀ = alg.start_vector(b)
             S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
@@ -134,6 +140,7 @@ function TensorKit._compute_svddata!(
     return Udata, Sdata, Vdata, dims
 end
 
+# Rrule with custom pullback to make KrylovKit rrule compatible with TensorMap symmetry blocks
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
@@ -192,6 +199,19 @@ function ChainRulesCore.rrule(
     end
 
     return (U, S, V, ϵ), tsvd!_itersvd_pullback
+end
+
+# Separate rule for SVD with function handle that uses KrylovKit.make_svdsolve_pullback
+# but in turn cannot handle symmetric blocks
+function ChainRulesCore.rrule(
+    ::typeof(PEPSKit.tsvd!),
+    f,
+    alg::SVDAdjoint{F,R,B};
+    trunc::TruncationScheme=notrunc(),
+    p::Real=2,
+) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
+    return U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
+    # TODO: implement function handle adjoint wrapper with KrylovKit.make_svdsolve_pullback
 end
 
 """
