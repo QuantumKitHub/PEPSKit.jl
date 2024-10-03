@@ -1,5 +1,5 @@
 """
-    struct HalfInfiniteEnv{A,C,E}
+    struct HalfInfiniteEnv{A,A′,C,E}
 
 Half-infinite CTMRG environment tensor storage.
 """
@@ -67,16 +67,9 @@ function (env::HalfInfiniteEnv)(x)
 end
 
 """
-    struct EnlargedCorner{A,C,E}
+    struct EnlargedCorner{A,A′,Ct,E}
 
 Enlarged CTMRG corner tensor storage.
-
-```
-     C  --  E_2    --
-     |       ||      
-    E_1 == ket-bra ==
-     |       ||      
-```
 """
 struct EnlargedCorner{A,A′,Ct,E}
     ket::A
@@ -86,10 +79,16 @@ struct EnlargedCorner{A,A′,Ct,E}
     E_2::E
 end
 
-# Contract enlarged corner (use NW corner as convention for connecting environment to PEPS tensor)
-function (Q::EnlargedCorner)()
-    return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
-end
+"""
+    (Q::EnlargedCorner)(::Val{<:Int})
+
+Contract enlarged corner where `Val(1)` dispatches the north-west, `Val(2)` the north-east
+`Val(3)` the south-east and `Val(4)` the south-west contraction.
+"""
+(Q::EnlargedCorner)(::Val{1}) = enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+(Q::EnlargedCorner)(::Val{2}) = enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+(Q::EnlargedCorner)(::Val{3}) = enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+(Q::EnlargedCorner)(::Val{4}) = enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
 
 # Compute left & right projectors from enlarged corner struct
 function build_projectors(
