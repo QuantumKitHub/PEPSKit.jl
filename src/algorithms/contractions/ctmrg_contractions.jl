@@ -164,6 +164,53 @@ end
 # ----------------------
 
 """
+    left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+
+Contract the CTMRG left projector with the higher-dimensional subspace facing to the left.
+
+```
+     C  --  E_2    -- |~~|
+     |       ||       |V'| -- isqS --
+    E_1 == ket-bra == |~~|
+     |       ||
+```
+"""
+function left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+    return @autoopt @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
+        E_1[χ_in D1 D2; χ1] * 
+        C[χ1; χ2] * 
+        E_2[χ2 D3 D4; χ3] * 
+        ket[d; D3 D5 D_inabove D1] *
+        conj(bra[d; D4 D6 D_inbelow D2]) *
+        conj(V[χ4; χ3 D5 D6]) *
+        isqS[χ4; χ_out]
+end
+
+"""
+    right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+
+Contract the CTMRG right projector with the higher-dimensional subspace facing to the right.
+
+```
+               |~~| --   E_2   --  C
+    -- isqS -- |U'|      ||        |
+               |~~| == ket-bra == E_1
+                         ||        |
+```
+"""
+function right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+    return @autoopt @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
+        isqS[χ_in; χ1] *
+        conj(U[χ1; χ2 D1 D2]) *
+        ket[d; D1 D5 D_outabove D1] *
+        conj(bra[d; D2 D6 D_outbelow D2]) *
+        E_2[χ2 D3 D4; χ3] * 
+        C[χ3; χ4] * 
+        E_1[χ4 D5 D6; χ_out]
+end
+
+
+"""
     halfinfinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
     halfinfinite_environment(quadrant1::EnlargedCorner{A,C,E}, quadrant2::EnlargedCorner{A,C,E})
 

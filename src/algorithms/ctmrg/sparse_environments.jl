@@ -60,7 +60,7 @@ struct EnlargedCorner{A,A′,Ct,E}
     E_2::E
 end
 
-# Contract enlarged corner
+# Contract enlarged corner (use NW corner as convention for connecting environment to PEPS tensor)
 function (Q::EnlargedCorner)()
     return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
 end
@@ -74,6 +74,9 @@ function build_projectors(
     Q_next::EnlargedCorner,
 ) where {E<:ElementarySpace}
     isqS = sdiag_inv_sqrt(S)
-    # TODO
+    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
+    P_right = right_projector(
+        Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
+    )
     return P_left, P_right
 end
