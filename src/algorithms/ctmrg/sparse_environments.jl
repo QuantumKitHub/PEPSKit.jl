@@ -198,9 +198,9 @@ function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
     )
 end
 
-# -------------------------------------------------------------
-# TensorKit methods to make environment compatible with IterSVD
-# -------------------------------------------------------------
+# ------------------------------------------------------------------------
+# Methods to make environment compatible with IterSVD and its reverse-rule
+# ------------------------------------------------------------------------
 
 TensorKit.InnerProductStyle(::HalfInfiniteEnv) = EuclideanProduct()
 TensorKit.sectortype(::HalfInfiniteEnv) = Trivial
@@ -221,6 +221,9 @@ function TensorKit.blocks(env::HalfInfiniteEnv)
 end
 function TensorKit.blocksectors(::HalfInfiniteEnv)
     return TensorKit.OneOrNoneIterator{Trivial}(true, Trivial())
+end
+function TensorKit.block(env::HalfInfiniteEnv, c::Sector)
+    return env
 end
 function TensorKit.tsvd!(f::HalfInfiniteEnv; trunc=NoTruncation(), p::Real=2, alg=IterSVD())
     return _tsvd!(f, alg, trunc, p)
@@ -244,4 +247,19 @@ VectorInterface.scalartype(env::HalfInfiniteEnv) = scalartype(env.ket_1)
 
 function random_start_vector(env::HalfInfiniteEnv)
     return Tensor(randn, domain(env))
+end
+
+function Base.similar(env::HalfInfiniteEnv)
+    return HalfInfiniteEnv(
+        (similar(getfield(env, field)) for field in fieldnames(HalfInfiniteEnv))...
+    )
+end
+
+function Base.copyto!(dest::HalfInfiniteEnv, src::HalfInfiniteEnv)
+    for field in fieldnames(HalfInfiniteEnv)
+        for (bd, bs) in zip(blocks(getfield(dest, field)), blocks(getfield(src, field)))
+            copyto!(bd[2], bs[2])
+        end
+    end
+    return dest
 end

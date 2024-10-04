@@ -137,27 +137,27 @@ function TensorKit._compute_svddata!(
     return Udata, Sdata, Vdata, dims
 end
 
-# Rrule with custom pullback to make KrylovKit rrule compatible with TensorMap symmetry blocks
+# Rrule with custom pullback to make KrylovKit rrule compatible with TensorMaps & function handles
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
-    t::AbstractTensorMap,
+    f,
     alg::SVDAdjoint{F,R,B};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
 ) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
-    U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
+    U, S, V, ϵ = PEPSKit.tsvd(f, alg; trunc, p)
 
     function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
-        Δt = similar(t)
-        for (c, b) in blocks(Δt)
+        Δf = similar(f)
+        for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
             Sdc = view(Sc, diagind(Sc))
             ΔSdc = ΔSc isa AbstractZero ? ΔSc : view(ΔSc, diagind(ΔSc))
 
             n_vals = length(Sdc)
-            lvecs = Vector{Vector{scalartype(t)}}(eachcol(Uc))
-            rvecs = Vector{Vector{scalartype(t)}}(eachcol(Vc'))
+            lvecs = Vector{Vector{scalartype(f)}}(eachcol(Uc))
+            rvecs = Vector{Vector{scalartype(f)}}(eachcol(Vc'))
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
@@ -167,8 +167,8 @@ function ChainRulesCore.rrule(
                 Δlvecs = fill(ZeroTangent(), n_vals)
                 Δrvecs = fill(ZeroTangent(), n_vals)
             else
-                Δlvecs = Vector{Vector{scalartype(t)}}(eachcol(ΔUc))
-                Δrvecs = Vector{Vector{scalartype(t)}}(eachcol(ΔVc'))
+                Δlvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔUc))
+                Δrvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔVc'))
             end
 
             xs, ys = CRCExt.compute_svdsolve_pullback_data(
@@ -179,36 +179,23 @@ function ChainRulesCore.rrule(
                 lvecs,
                 rvecs,
                 minimal_info,
-                block(t, c),
+                block(f, c),
                 :LR,
                 minimal_alg,
                 alg.rrule_alg,
             )
             copyto!(
                 b,
-                CRCExt.construct∂f_svd(HasReverseMode(), block(t, c), lvecs, rvecs, xs, ys),
+                CRCExt.construct∂f_svd(HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys),
             )
         end
-        return NoTangent(), Δt, NoTangent()
+        return NoTangent(), Δf, NoTangent()
     end
     function tsvd!_itersvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
     return (U, S, V, ϵ), tsvd!_itersvd_pullback
-end
-
-# Separate rule for SVD with function handle that uses KrylovKit.make_svdsolve_pullback
-# but in turn cannot handle symmetric blocks
-function ChainRulesCore.rrule(
-    ::typeof(PEPSKit.tsvd!),
-    f,
-    alg::SVDAdjoint{F,R,B};
-    trunc::TruncationScheme=notrunc(),
-    p::Real=2,
-) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
-    return U, S, V, ϵ = PEPSKit.tsvd(t, alg; trunc, p)
-    # TODO: implement function handle adjoint wrapper with KrylovKit.make_svdsolve_pullback
 end
 
 """
