@@ -1,5 +1,9 @@
 const SparseCTMRG = CTMRG{M,true} where {M}  # TODO: Is this really a good way to dispatch on the sparse CTMRG methods?
 
+# --------------------------------------------------------
+# Sparse enlarged corner as building block for environment
+# --------------------------------------------------------
+
 """
     struct EnlargedCorner{Ct,E,A,A′}
 
@@ -23,6 +27,10 @@ Contract enlarged corner where `Val(1)` dispatches the north-west, `Val(2)` the 
 (Q::EnlargedCorner)(::Val{2}) = enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
 (Q::EnlargedCorner)(::Val{3}) = enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
 (Q::EnlargedCorner)(::Val{4}) = enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+
+# -------------------------
+# CTMRG compatibility layer
+# -------------------------
 
 """
     enlarge_corner(::Val{<:Int}, (r, c), envs, state, alg::SparseCTMRG)
@@ -66,7 +74,6 @@ function enlarge_corner(::Val{4}, (r, c), envs, state, alg::SparseCTMRG)
     )
 end
 
-# Compute left & right projectors from enlarged corner struct
 function build_projectors(
     U::AbstractTensorMap{E,3,1},
     S::AbstractTensorMap{E,1,1},
@@ -85,6 +92,10 @@ end
 function renormalize_corner(ec::EnlargedCorner, P_left, P_right)
     return renormalize_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra)
 end
+
+# ------------------
+# Sparse environment
+# ------------------
 
 """
     struct HalfInfiniteEnv{C,E,A,A′}
@@ -120,11 +131,13 @@ end
 
 """
     (env::HalfInfiniteEnv)() 
-    (env::HalfInfiniteEnv)(x) 
+    (env::HalfInfiniteEnv)(x, ::Val{false}) 
+    (env::HalfInfiniteEnv)(x, ::Val{true}) 
 
-Contract half-infinite environment without or with a vector `x`.
+Contract half-infinite environment. If a vector `x` is provided, the environment acts as a
+linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed, respectively.
 """
-function (env::HalfInfiniteEnv)()
+function (env::HalfInfiniteEnv)()  # Dense operator
     return halfinfinite_environment(
         env.C_1,
         env.C_2,
@@ -138,7 +151,7 @@ function (env::HalfInfiniteEnv)()
         env.bra_2,
     )
 end
-function (env::HalfInfiniteEnv)(x)
+function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
     return halfinfinite_environment(
         env.C_1,
         env.C_2,
@@ -153,38 +166,21 @@ function (env::HalfInfiniteEnv)(x)
         env.bra_2,
     )
 end
-
-# TensorKit methods to make struct compatible with sparse SVD
-TensorKit.InnerProductStyle(::HalfInfiniteEnv) = EuclideanProduct()
-TensorKit.sectortype(::HalfInfiniteEnv) = Trivial
-TensorKit.storagetype(env::HalfInfiniteEnv) = storagetype(env.ket_1)
-TensorKit.spacetype(env::HalfInfiniteEnv) = spacetype(env.ket_1)
-
-function TensorKit.blocks(env::HalfInfiniteEnv)
-    return TensorKit.SingletonDict(Trivial() => env)
+function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
+    return halfinfinite_environment(
+        x,
+        env.C_1,
+        env.C_2,
+        env.E_1,
+        env.E_2,
+        env.E_3,
+        env.E_4,
+        env.ket_1,
+        env.ket_2,
+        env.bra_1,
+        env.bra_2,
+    )
 end
-function TensorKit.blocksectors(::HalfInfiniteEnv)
-    return TensorKit.OneOrNoneIterator{Trivial}(true, Trivial())
-end
-
-function TensorKit.MatrixAlgebra.svd!(env::HalfInfiniteEnv, args...)
-    return TensorKit.MatrixAlgebra.svd!(env(), args...)
-end
-
-Base.eltype(env::HalfInfiniteEnv) = eltype(env.ket_1)
-function Base.size(env::HalfInfiniteEnv)  # Treat environment as matrix
-    χ_in = dim(space(env.E_1, 1))
-    D_inabove = dim(space(env.ket_1, 2))
-    D_inbelow = dim(space(env.bra_1, 2))
-    χ_out = dim(space(env.E_4, 1))
-    D_outabove = dim(space(env.ket_2, 2))
-    D_outbelow = dim(space(env.bra_2, 2))
-    return (χ_in * D_inabove * D_inbelow, χ_out * D_outabove * D_outbelow)
-end
-Base.size(env::HalfInfiniteEnv, i::Int) = size(env)[i]
-
-# TODO: implement VectorInterface
-VectorInterface.scalartype(env::HalfInfiniteEnv) = scalartype(env.ket_1)
 
 # Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
 function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
@@ -200,4 +196,52 @@ function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
         ec_1.bra,
         ec_2.bra,
     )
+end
+
+# -------------------------------------------------------------
+# TensorKit methods to make environment compatible with IterSVD
+# -------------------------------------------------------------
+
+TensorKit.InnerProductStyle(::HalfInfiniteEnv) = EuclideanProduct()
+TensorKit.sectortype(::HalfInfiniteEnv) = Trivial
+TensorKit.storagetype(env::HalfInfiniteEnv) = storagetype(env.ket_1)
+TensorKit.spacetype(env::HalfInfiniteEnv) = spacetype(env.ket_1)
+
+function TensorKit.domain(env::HalfInfiniteEnv)
+    return domain(env.E_4) * domain(env.ket_2)[3] * domain(env.bra_2)[3]'
+end
+function TensorKit.codomain(env::HalfInfiniteEnv)
+    return codomain(env.E_1)[1] * domain(env.ket_1)[3]' * domain(env.bra_1)[3]
+end
+function TensorKit.space(env::HalfInfiniteEnv)
+    return codomain(env) ← domain(env)
+end
+function TensorKit.blocks(env::HalfInfiniteEnv)
+    return TensorKit.SingletonDict(Trivial() => env)
+end
+function TensorKit.blocksectors(::HalfInfiniteEnv)
+    return TensorKit.OneOrNoneIterator{Trivial}(true, Trivial())
+end
+function TensorKit.tsvd!(f::HalfInfiniteEnv; trunc=NoTruncation(), p::Real=2, alg=IterSVD())
+    return _tsvd!(f, alg, trunc, p)
+end
+function TensorKit.MatrixAlgebra.svd!(env::HalfInfiniteEnv, args...)
+    return TensorKit.MatrixAlgebra.svd!(env(), args...)  # Construct environment densely as fallback
+end
+
+Base.eltype(env::HalfInfiniteEnv) = eltype(env.ket_1)
+function Base.size(env::HalfInfiniteEnv)  # Treat environment as matrix
+    χ_in = dim(space(env.E_1, 1))
+    D_inabove = dim(space(env.ket_1, 2))
+    D_inbelow = dim(space(env.bra_1, 2))
+    χ_out = dim(space(env.E_4, 1))
+    D_outabove = dim(space(env.ket_2, 2))
+    D_outbelow = dim(space(env.bra_2, 2))
+    return (χ_in * D_inabove * D_inbelow, χ_out * D_outabove * D_outbelow)
+end
+Base.size(env::HalfInfiniteEnv, i::Int) = size(env)[i]
+VectorInterface.scalartype(env::HalfInfiniteEnv) = scalartype(env.ket_1)
+
+function random_start_vector(env::HalfInfiniteEnv)
+    return Tensor(randn, domain(env))
 end

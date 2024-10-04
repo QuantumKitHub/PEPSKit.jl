@@ -36,9 +36,6 @@ PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
 function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2)
     return TensorKit.tsvd!(t; alg=alg.fwd_alg, trunc, p)
 end
-function TensorKit.tsvd!(f::HalfInfiniteEnv; trunc=NoTruncation(), p::Real=2, alg=IterSVD())
-    return _tsvd!(f, alg, trunc, p)
-end
 
 """
     struct FixedSVD
@@ -74,8 +71,8 @@ the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
 end
 
 # TODO: find better initial guess that leads to element-wise convergence and is compatible with function handles
-function random_start_vector(f)
-    return randn(eltype(f), size(f, 1))  # Leads to erroneous gauge fixing of U, S, V and thus failing element-wise conv.
+function random_start_vector(t::Matrix)
+    return randn(eltype(t), size(t, 1))  # Leads to erroneous gauge fixing of U, S, V and thus failing element-wise conv.
     # u, = TensorKit.MatrixAlgebra.svd!(deepcopy(t), TensorKit.SVD())
     # return sum(u[:, i] for i in 1:howmany)  # Element-wise convergence works fine
     # return dropdims(sum(t[:, 1:3]; dims=2); dims=2)  # Summing too many columns also makes gauge fixing fail

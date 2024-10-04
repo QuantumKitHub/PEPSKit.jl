@@ -100,7 +100,7 @@ ctm_alg = CTMRG(; tol=1e-10, verbosity=2, svd_alg=SVDAdjoint())
 Random.seed!(91283219347)
 H = heisenberg_XYZ(InfiniteSquare())
 psi = InfinitePEPS(2, χbond)
-env = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
+env = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg);
 hienv = HalfInfiniteEnv(
     env.corners[1],
     env.corners[2],
@@ -114,12 +114,27 @@ hienv = HalfInfiniteEnv(
     psi[1],
 )
 hienv_dense = hienv()
-env_R = TensorMap(randn, space(hienv_dense))
-PEPSKit.tsvd!(hienv, iter_alg)
+env_R = TensorMap(randn, space(hienv))
+
+PEPSKit.tsvd!(hienv, iter_alg)  # TODO: make the space mismatches work
 
 @testset "IterSVD with HalfInfiniteEnv function handle" begin
-    l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, env_R), hienv_dense)
-    l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, env_R), hienv)
-    @test l_itersvd ≈ l_fullsvd
-    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
+    # Equivalence of dense and sparse contractions
+    x₀ = PEPSKit.random_start_vector(hienv)
+    x′ = hienv(x₀, Val(false))
+    x″ = hienv(x′, Val(true))
+    x‴ = hienv(x″, Val(false))
+
+    a = hienv_dense * x₀
+    b = hienv_dense' * a
+    c = hienv_dense * b
+    @test a ≈ x′
+    @test b ≈ x″
+    @test c ≈ x‴
+
+    # TODO: code up pullback
+    # l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, env_R), hienv_dense)
+    # l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, env_R), hienv)
+    # @test l_itersvd ≈ l_fullsvd
+    # @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end

@@ -248,14 +248,14 @@ Alternatively, contract environment with a vector `x` acting on it, e.g. as need
 function halfinfinite_environment(
     quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3}
 ) where {S}
-    return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         quadrant1[χ_in D_inabove D_inbelow; χ D1 D2] *
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
 end
 function halfinfinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
 ) where {P<:PEPSTensor}
-    return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         E_1[χ_in D1 D2; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3 D4; χ3] *
@@ -268,9 +268,19 @@ function halfinfinite_environment(
         E_4[χ5 D7 D8; χ_out]
 end
 function halfinfinite_environment(
-    C_1, C_2, E_1, E_2, E_3, E_4, x, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
-) where {P<:PEPSTensor}
-    return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+    C_1,
+    C_2,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    x::AbstractTensor{S,3},
+    ket_1::P,
+    ket_2::P,
+    bra_1::P=ket_1,
+    bra_2::P=ket_2,
+) where {S,P<:PEPSTensor}
+    return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
         E_1[χ_in D1 D2; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3 D4; χ3] *
@@ -281,7 +291,33 @@ function halfinfinite_environment(
         E_3[χ3 D5 D6; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7 D8; χ6] *
-        x[χ6 D11 D12; χ_out D_outabove D_outbelow]
+        x[χ6 D11 D12]
+end
+function halfinfinite_environment(
+    x::AbstractTensor{S,3},
+    C_1,
+    C_2,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    ket_1::P,
+    ket_2::P,
+    bra_1::P=ket_1,
+    bra_2::P=ket_2,
+) where {S,P<:PEPSTensor}
+    return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
+        x[χ1 D1 D2] *
+        conj(E_1[χ1 D3 D4; χ2]) *
+        conj(C_1[χ2; χ3]) *
+        conj(E_2[χ3 D5 D6; χ4]) *
+        conj(ket_1[d1; D5 D11 D1 D3]) *
+        bra_1[d1; D6 D12 D2 D4] *
+        conj(ket_2[d2; D7 D9 D_inabove D11]) *
+        bra_2[d2; D8 D10 D_inbelow D12] *
+        conj(E_3[χ4 D7 D8; χ5]) *
+        conj(C_2[χ5; χ6]) *
+        conj(E_4[χ6 D9 D10; χ_in])
 end
 
 # Renormalization contractions

@@ -73,7 +73,7 @@ struct CTMRG{M,S}
     maxiter::Int
     miniter::Int
     verbosity::Int
-    projector_alg::P
+    projector_alg::ProjectorAlg
 end
 function CTMRG(;
     tol=Defaults.ctmrg_tol,
@@ -189,13 +189,13 @@ There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
 The first mode expands the environment in one direction at a time, for convenience towards
 the left. The second mode expands the environment in all four directions simultaneously.
 """
-function ctmrg_expand(state, envs::CTMRGEnv, ::SequentialCTMRG)
+function ctmrg_expand(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     drc_combinations = collect(Iterators.product([4, 1], axes(state)...))
     return map(drc_combinations) do (dir, r, c)
         enlarge_corner(Val(dir), (r, c), envs, state, alg)
     end
 end
-function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
+function ctmrg_expand(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
     drc_combinations = collect(Iterators.product(1:4, axes(state)...))
     return map(drc_combinations) do (dir, r, c)
         enlarge_corner(Val(dir), (r, c), envs, state, alg)
