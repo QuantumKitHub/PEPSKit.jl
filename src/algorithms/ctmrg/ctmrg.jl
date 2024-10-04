@@ -175,6 +175,27 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 # Expansion step
 # ======================================================================================== #
 
+# TODO: find a way to dispatch on CTMRG struct to switch on function handles
+"""
+    enlarge_corner(::Val{<:Int}, (r, c), envs, state, alg::CTMRG)
+    
+Enlarge a CTMRG corner into the one of four directions `Val(1)` (NW), `Val(2)` (NE),
+`Val(3)` (SE) or `Val(4)` (SW). This serves as a wrapper that can dispatch on the
+directional index and different `CTMRG` algorithms.
+"""
+function enlarge_corner(::Val{1}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_northwest_corner((r, c), envs, state)
+end
+function enlarge_corner(::Val{2}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_northeast_corner((r, c), envs, state)
+end
+function enlarge_corner(::Val{3}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_southeast_corner((r, c), envs, state)
+end
+function enlarge_corner(::Val{4}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_southwest_corner((r, c), envs, state)
+end
+
 """
     ctmrg_expand(state, envs, alg::CTMRG{M})
 
@@ -183,41 +204,13 @@ There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
 The first mode expands the environment in one direction at a time, for convenience towards
 the left. The second mode expands the environment in all four directions simultaneously.
 """
-function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
-    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q_sw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
-    Q_nw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
-
-    directions = collect(Iterators.product(axes(state)...))
-    # @fwdthreads for (r, c) in directions
-    for (r, c) in directions
-        Q_sw[r, c] = enlarge_southwest_corner((r, c), envs, state)
-        Q_nw[r, c] = enlarge_northwest_corner((r, c), envs, state)
-    end
-
-    return stack((copy(Q_sw), copy(Q_nw)); dims=1)
+function ctmrg_expand(state, envs::CTMRGEnv, ::SequentialCTMRG)
+    drc_combinations = collect(Iterators.product([4, 1], axes(state)...))
+    return map(idx -> enlarge_corner(idx, envs, state, alg), drc_combinations)
 end
-function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
-    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
-    drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    @fwdthreads for (dir, r, c) in drc_combinations
-        # TODO: generalize the corner computation to make it compatible with EnlargedCorners
-        Q[dir, r, c] = if dir == NORTHWEST
-            enlarge_northwest_corner((r, c), envs, state)
-        elseif dir == NORTHEAST
-            enlarge_northeast_corner((r, c), envs, state)
-        elseif dir == SOUTHEAST
-            enlarge_southeast_corner((r, c), envs, state)
-        elseif dir == SOUTHWEST
-            enlarge_southwest_corner((r, c), envs, state)
-        end
-    end
-
-    return copy(Q)
-end
-
-function enlarge_corner((dir, r, c), envs, state, alg::CTMRG)  # TODO: find a way to dispatch on CTMRG struct to switch on function handles
+function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
+    drc_combinations = collect(Iterators.product(1:4, axes(state)...))
+    return map(idx -> enlarge_corner(idx, envs, state, alg), drc_combinations)
 end
 
 # ======================================================================================== #

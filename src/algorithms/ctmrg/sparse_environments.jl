@@ -23,6 +23,48 @@ Contract enlarged corner where `Val(1)` dispatches the north-west, `Val(2)` the 
 (Q::EnlargedCorner)(::Val{3}) = enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
 (Q::EnlargedCorner)(::Val{4}) = enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
 
+"""
+    enlarge_corner(::Val{<:Int}, (r, c), envs, state, alg::SparseCTMRG)
+
+Enlarge corner but return as a `EnlargedCorner` struct used in sparse CTMRG.
+"""
+function enlarge_corner(::Val{1}, (r, c), envs, state, alg::SparseCTMRG)
+    return EnlargedCorner(
+        envs.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+        envs.edges[WEST, r, _prev(c, end)],
+        envs.edges[NORTH, _prev(r, end), c],
+        state[r, c],
+        state[r, c],
+    )
+end
+function enlarge_corner(::Val{2}, (r, c), envs, state, alg::SparseCTMRG)
+    return EnlargedCorner(
+        envs.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+        envs.edges[NORTH, _prev(r, end), c],
+        envs.edges[EAST, r, _next(c, end)],
+        state[r, c],
+        state[r, c],
+    )
+end
+function enlarge_corner(::Val{3}, (r, c), envs, state, alg::SparseCTMRG)
+    return EnlargedCorner(
+        envs.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+        envs.edges[EAST, r, _next(c, end)],
+        envs.edges[SOUTH, _next(r, end), c],
+        state[r, c],
+        state[r, c],
+    )
+end
+function enlarge_corner(::Val{4}, (r, c), envs, state, alg::SparseCTMRG)
+    return EnlargedCorner(
+        envs.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+        envs.edges[SOUTH, _next(r, end), c],
+        envs.edges[WEST, r, _prev(c, end)],
+        state[r, c],
+        state[r, c],
+    )
+end
+
 # Compute left & right projectors from enlarged corner struct
 function build_projectors(
     U::AbstractTensorMap{E,3,1},
@@ -37,6 +79,10 @@ function build_projectors(
         Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
     )
     return P_left, P_right
+end
+
+function renormalize_corner(ec::EnlargedCorner, P_left, P_right)
+    return renormalize_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra)
 end
 
 """

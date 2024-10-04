@@ -290,7 +290,8 @@ end
 # corners
 
 """
-    renormalize_corner(quadrant, P_left, P_right)
+    renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right)
+    renormalize_corner(E_1, C, E_2, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply projectors to each side of a quadrant.
 
@@ -302,10 +303,33 @@ Apply projectors to each side of a quadrant.
     [P_right]
         |
 ```
+
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+     C  --   E_2   -- |~~~~~~|
+     |        |       |P_left| --
+    E_1 == ket-bra == |~~~~~~|
+     |        ||
+    [~~P_right~~]
+         |
+```
 """
 function renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1 D2] * quadrant[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
+end
+function renormalize_corner(
+    E_1, C, E_2, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_1[χ1 D3 D4; χ2] *
+        C[χ2; χ3] *
+        E_2[χ3 D5 D6; χ4] *
+        ket[d; D5 D7 D1 D3] *
+        conj(bra[d; D6 D8 D2 D4]) *
+        P_left[χ4 D7 D8; χ_out]
 end
 
 """
