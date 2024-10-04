@@ -72,6 +72,7 @@ module Defaults
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
     const ctmrgscheme = :simultaneous
+    const sparse_env = false
     const reuse_env = true
     const trscheme = FixedSpaceTruncation()
     const iterscheme = :fixed

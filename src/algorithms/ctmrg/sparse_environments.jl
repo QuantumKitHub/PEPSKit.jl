@@ -1,3 +1,4 @@
+const SparseCTMRG = CTMRG{M,true} where {M}  # TODO: Is this really a good way to dispatch on the sparse CTMRG methods?
 
 """
     struct EnlargedCorner{Ct,E,A,A′}

@@ -46,7 +46,7 @@ end
     CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
           miniter=Defaults.ctmrg_miniter, verbosity=0,
           svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation(),
-          ctmrgscheme=Defaults.ctmrgscheme)
+          ctmrgscheme=Defaults.ctmrgscheme, sparse_env=Defaults.sparse_env)
 
 Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
 Each CTMRG run is converged up to `tol` where the singular value convergence of the
@@ -63,13 +63,17 @@ CTMRG is implemented. It can either be `:sequential`, where the projectors are s
 computed on the western side, and then applied and rotated. Or with `:simultaneous` all projectors
 are computed and applied simultaneously on all sides, where in particular the corners get
 contracted with two projectors at the same time.
+
+The contraction and SVD of the CTMRG environments can be performed densely, or sparsely
+if `sparse_env` is `true`. If sparsity is enabled, then the SVD will use only function handles
+and the full enlarged corners and environments are never explicitly constructed.
 """
-struct CTMRG{S}
+struct CTMRG{M,S}
     tol::Float64
     maxiter::Int
     miniter::Int
     verbosity::Int
-    projector_alg::ProjectorAlg
+    projector_alg::P
 end
 function CTMRG(;
     tol=Defaults.ctmrg_tol,
@@ -79,13 +83,15 @@ function CTMRG(;
     svd_alg=Defaults.svd_alg,
     trscheme=Defaults.trscheme,
     ctmrgscheme::Symbol=Defaults.ctmrgscheme,
+    sparse_env::Bool=Defaults.sparse_env,
 )
-    return CTMRG{ctmrgscheme}(
+    return CTMRG{ctmrgscheme,sparse_env}(
         tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
     )
 end
 
-ctmrgscheme(::CTMRG{S}) where {S} = S
+ctmrgscheme(::CTMRG{M,S}) where {M,S} = M
+sparse_env(::CTMRG{M,S}) where {M,S} = S
 
 # aliases for the different CTMRG schemes
 const SequentialCTMRG = CTMRG{:sequential}
@@ -175,27 +181,6 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 # Expansion step
 # ======================================================================================== #
 
-# TODO: find a way to dispatch on CTMRG struct to switch on function handles
-"""
-    enlarge_corner(::Val{<:Int}, (r, c), envs, state, alg::CTMRG)
-    
-Enlarge a CTMRG corner into the one of four directions `Val(1)` (NW), `Val(2)` (NE),
-`Val(3)` (SE) or `Val(4)` (SW). This serves as a wrapper that can dispatch on the
-directional index and different `CTMRG` algorithms.
-"""
-function enlarge_corner(::Val{1}, (r, c), envs, state, alg::CTMRG)
-    return enlarge_northwest_corner((r, c), envs, state)
-end
-function enlarge_corner(::Val{2}, (r, c), envs, state, alg::CTMRG)
-    return enlarge_northeast_corner((r, c), envs, state)
-end
-function enlarge_corner(::Val{3}, (r, c), envs, state, alg::CTMRG)
-    return enlarge_southeast_corner((r, c), envs, state)
-end
-function enlarge_corner(::Val{4}, (r, c), envs, state, alg::CTMRG)
-    return enlarge_southwest_corner((r, c), envs, state)
-end
-
 """
     ctmrg_expand(state, envs, alg::CTMRG{M})
 
@@ -206,11 +191,15 @@ the left. The second mode expands the environment in all four directions simulta
 """
 function ctmrg_expand(state, envs::CTMRGEnv, ::SequentialCTMRG)
     drc_combinations = collect(Iterators.product([4, 1], axes(state)...))
-    return map(idx -> enlarge_corner(idx, envs, state, alg), drc_combinations)
+    return map(drc_combinations) do (dir, r, c)
+        enlarge_corner(Val(dir), (r, c), envs, state, alg)
+    end
 end
 function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
     drc_combinations = collect(Iterators.product(1:4, axes(state)...))
-    return map(idx -> enlarge_corner(idx, envs, state, alg), drc_combinations)
+    return map(drc_combinations) do (dir, r, c)
+        enlarge_corner(Val(dir), (r, c), envs, state, alg)
+    end
 end
 
 # ======================================================================================== #
@@ -218,7 +207,10 @@ end
 # ======================================================================================== #
 
 """
-    ctmrg_projectors(Q, env, alg::CTMRG{M})
+    ctmrg_projectors(enlarged_envs, env, alg::CTMRG{M})
+
+Compute the CTMRG projectors based from enlarged environments.
+In the `:simultaneous` mode, the environment SVD is run in parallel.
 """
 function ctmrg_projectors(
     enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
@@ -387,6 +379,26 @@ end
 # ======================================================================================== #
 # Auxiliary routines
 # ======================================================================================== #
+
+"""
+    enlarge_corner(::Val{<:Int}, (r, c), envs, state, alg::CTMRG)
+    
+Enlarge a CTMRG corner into the one of four directions `Val(1)` (NW), `Val(2)` (NE),
+`Val(3)` (SE) or `Val(4)` (SW). This serves as a wrapper that can dispatch on the
+directional index and different `CTMRG` algorithms.
+"""
+function enlarge_corner(::Val{1}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_northwest_corner((r, c), envs, state)
+end
+function enlarge_corner(::Val{2}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_northeast_corner((r, c), envs, state)
+end
+function enlarge_corner(::Val{3}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_southeast_corner((r, c), envs, state)
+end
+function enlarge_corner(::Val{4}, (r, c), envs, state, alg::CTMRG)
+    return enlarge_southwest_corner((r, c), envs, state)
+end
 
 # Build projectors from SVD and dense enlarged corners
 function build_projectors(
