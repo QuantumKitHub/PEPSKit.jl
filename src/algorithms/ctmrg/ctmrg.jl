@@ -188,19 +188,27 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 
 """
     ctmrg_expand(state, envs, alg::CTMRG{M})
+    ctmrg_expand(dirs, state, envs::CTMRGEnv, alg::CTMRG)
 
 Expand the environment by absorbing a new PEPS tensor.
 There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
 The first mode expands the environment in one direction at a time, for convenience towards
 the left. The second mode expands the environment in all four directions simultaneously.
+Alternatively, one can provide directly the `dirs` in which the environment is grown.
 """
-function ctmrg_expand(state, envs::CTMRGEnv, ::SequentialCTMRG)
-    drc_combinations = collect(Iterators.product([4, 1], axes(state)...))
-    return map(idx -> enlarge_corner(idx, envs, state), drc_combinations)
+function ctmrg_expand(state, envs::CTMRGEnv, alg::SequentialCTMRG)
+    return ctmrg_expand([4, 1], state, envs, alg)
 end
-function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
-    drc_combinations = collect(Iterators.product(1:4, axes(state)...))
-    return map(idx -> enlarge_corner(idx, envs, state), drc_combinations)
+function ctmrg_expand(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
+    return ctmrg_expand(1:4, state, envs, alg)
+end
+function ctmrg_expand(dirs, state, envs::CTMRGEnv, alg::CTMRG)
+    drc_combinations = collect(Iterators.product(dirs, axes(state)...))
+    if alg.projector_alg.sparse
+        return map(idx -> enlarge_corner(idx, envs, state), drc_combinations)
+    else  # Construct quadrant densely if alg is not sparse
+        return map(idx -> enlarge_corner(idx, envs, state)(idx[1]), drc_combinations)
+    end
 end
 
 """
@@ -264,11 +272,6 @@ function ctmrg_projectors(
     P_top = Zygote.Buffer(envs.edges, Prtype, axes(envs.corners, 2), axes(envs.corners, 3))
     ϵ = zero(real(scalartype(envs)))
 
-    # If CTMRG is not sparse, construct all enlarged corners densely
-    sparse || enlarged_envs = map(Iterators.product(axes(enlarged_envs)...)) do (dir, r, c)
-        return enlarged_envs[dir, r, c](dir)
-    end
-
     directions = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
     # @fwdthreads for (r, c) in directions
     for (r, c) in directions
@@ -306,11 +309,6 @@ function ctmrg_projectors(
     U, V = Zygote.Buffer.(projector_type(envs.edges))
     # Corner type but with real numbers
     S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
-
-    # If CTMRG is not sparse, construct all enlarged corners densely
-    sparse || enlarged_envs = map(Iterators.product(axes(enlarged_envs)...)) do (dir, r, c)
-        return enlarged_envs[dir, r, c](dir)
-    end
 
     ϵ = zero(real(scalartype(envs)))
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
@@ -363,7 +361,6 @@ end
 """
     build_projectors(U::AbstractTensorMap{E,3,1}, S::AbstractTensorMap{E,1,1}, V::AbstractTensorMap{E,1,3},
         Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}) where {E<:ElementarySpace}
-
     build_projectors(U::AbstractTensorMap{E,3,1}, S::AbstractTensorMap{E,1,1}, V::AbstractTensorMap{E,1,3},
         Q::EnlargedCorner, Q_next::EnlargedCorner) where {E<:ElementarySpace}
 

@@ -24,16 +24,45 @@ i.e. the way the environment and PEPS tensors connect.
 function (Q::EnlargedCorner)(dir::Int)
     if dir == NORTHWEST
         return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
-    elseif dir == NORTHWEST
-        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
-    elseif dir == NORTHWEST
-        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
-    elseif dir == NORTHWEST
-        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    elseif dir == NORTHEAST
+        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    elseif dir == SOUTHEAST
+        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    elseif dir == SOUTHWEST
+        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
     end
 end
-function renormalize_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra)
+function construct_corner(Q::EnlargedCorner, dir::Int)
+    if dir == NORTHWEST
+        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    elseif dir == NORTHEAST
+        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    elseif dir == SOUTHEAST
+        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    elseif dir == SOUTHWEST
+        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    end
+end
+
+function renormalize_northwest_corner(ec::EnlargedCorner, P_left, P_right)
+    return renormalize_northwest_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra
+    )
+end
+function renormalize_northeast_corner(ec::EnlargedCorner, P_left, P_right)
+    return renormalize_northeast_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra
+    )
+end
+function renormalize_southeast_corner(ec::EnlargedCorner, P_left, P_right)
+    return renormalize_southeast_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra
+    )
+end
+function renormalize_southwest_corner(ec::EnlargedCorner, P_left, P_right)
+    return renormalize_southwest_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra
+    )
 end
 
 # ------------------

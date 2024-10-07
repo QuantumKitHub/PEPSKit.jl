@@ -331,7 +331,6 @@ end
 
 """
     renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right)
-    renormalize_corner(E_1, C, E_2, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply projectors to each side of a quadrant.
 
@@ -343,78 +342,154 @@ Apply projectors to each side of a quadrant.
     [P_right]
         |
 ```
-
-Alternatively, provide the constituent tensors and perform the complete contraction.
-
-```
-     C  --   E_2   -- |~~~~~~|
-     |        |       |P_left| --
-    E_1 == ket-bra == |~~~~~~|
-     |        ||
-    [~~P_right~~]
-         |
-```
 """
 function renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1 D2] * quadrant[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
 end
-function renormalize_corner(
-    E_1, C, E_2, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+
+"""
+    renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
+
+Apply `renormalize_corner` to the enlarged northwest corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+    C_northwest -- E_north -- |~~~~~~|
+         |           ||       |P_left| --
+      E_west=   == ket-bra == |~~~~~~|
+         |           ||
+      [~~~~~P_right~~~~~]
+               |
+```
+"""
+function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right)
+    return renormalize_northwest_corner(
+        enlarged_envs[NORTHWEST, row, col],
+        P_left[NORTH, row, col],
+        P_right[WEST, _next(row, end), col],
+    )
+end
+function renormalize_northwest_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_corner(quadrant, P_left, P_right)
+end
+function renormalize_northwest_corner(
+    E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1 D2] *
-        E_1[χ1 D3 D4; χ2] *
-        C[χ2; χ3] *
-        E_2[χ3 D5 D6; χ4] *
+        E_west[χ1 D3 D4; χ2] *
+        C_northwest[χ2; χ3] *
+        E_north[χ3 D5 D6; χ4] *
         ket[d; D5 D7 D1 D3] *
         conj(bra[d; D6 D8 D2 D4]) *
         P_left[χ4 D7 D8; χ_out]
 end
 
 """
-    renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
-
-Apply `renormalize_corner` to the enlarged northwest corner.
-"""
-function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right)
-    return renormalize_corner(
-        enlarged_envs[NORTHWEST, row, col],
-        P_left[NORTH, row, col],
-        P_right[WEST, _next(row, end), col],
-    )
-end
-
-"""
     renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply `renormalize_corner` to the enlarged northeast corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+       |~~~~~~~| --  E_north --  C_northeast
+    -- |P_right|       ||             |  
+       |~~~~~~~| ==  ket-bra ==     E_east
+                       ||             |
+                     [~~~~~~P_left~~~~~~]
+                              |
+```
 """
 function renormalize_northeast_corner((row, col), enlarged_envs, P_left, P_right)
-    return renormalize_corner(
+    return renormalize_northeast_corner(
         enlarged_envs[NORTHEAST, row, col],
         P_left[EAST, row, col],
         P_right[NORTH, row, _prev(col, end)],
     )
 end
+function renormalize_northeast_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_corner(quadrant, P_left, P_right)
+end
+function renormalize_northeast_corner(
+    E_north, C_northeast, E_east, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_north[χ1 D3 D4; χ2] *
+        C_northeast[χ2; χ3] *
+        E_east[χ3 D5 D6; χ4] *
+        ket[d; D3 D5 D7 D1] *
+        conj(bra[d; D4 D6 D8 D2]) *
+        P_left[χ4 D7 D8; χ_out]
+end
 
 """
     renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_southeast_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply `renormalize_corner` to the enlarged southeast corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+                            |
+                   [~~~~~P_right~~~~~]
+                      ||           |
+       |~~~~~~| == ket-bra ==    E_east
+    -- |P_left|       ||           |
+       |~~~~~~| -- E_south -- C_southeast
+```
 """
 function renormalize_southeast_corner((row, col), enlarged_envs, P_left, P_right)
-    return renormalize_corner(
+    return renormalize_southeast_corner(
         enlarged_envs[SOUTHEAST, row, col],
         P_left[SOUTH, row, col],
         P_right[EAST, _prev(row, end), col],
     )
 end
+function renormalize_southeast_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_corner(quadrant, P_left, P_right)
+end
+function renormalize_southeast_corner(
+    E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_east[χ1 D3 D4; χ2] *
+        C_southeast[χ2; χ3] *
+        E_south[χ3 D5 D6; χ4] *
+        ket[d; D1 D3 D5 D7] *
+        conj(bra[d; D2 D4 D6 D8]) *
+        P_left[χ4 D7 D8; χ_out]
+end
 
 """
     renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_southwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply `renormalize_corner` to the enlarged southwest corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+               |
+      [~~~~~P_right~~~~~]
+        ||            |
+       E_west   == ket-bra == |~~~~~~|
+         |           ||       |P_left| --
+    C_southwest -- E_south -- |~~~~~~|
+```
 """
 function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_corner(
@@ -422,6 +497,23 @@ function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right
         P_left[WEST, row, col],
         P_right[SOUTH, row, _next(col, end)],
     )
+end
+function renormalize_southwest_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_southwest_corner(quadrant, P_left, P_right)
+end
+function renormalize_southwest_corner(
+    E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_south[χ1 D3 D4; χ2] *
+        C_southwest[χ2; χ3] *
+        E_west[χ3 D5 D6; χ4] *
+        ket[d; D7 D1 D3 D5] *
+        conj(bra[d; D8 D2 D4 D6]) *
+        P_left[χ4 D7 D8; χ_out]
 end
 
 """
