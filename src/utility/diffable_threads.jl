@@ -23,7 +23,7 @@ function ChainRulesCore.rrule(
             last(el_rrules[idx])(dy[idx])
         end
         df = ProjectTo(f)(sum(first, backevals))
-        dA = tmap(CartesianIndices(A); kwargs...) do idx
+        dA = map(CartesianIndices(A); kwargs...) do idx
             ProjectTo(A[idx])(last(backevals[idx]))
         end
         return (NoTangent(), df, dA)
