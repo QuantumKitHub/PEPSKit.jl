@@ -198,7 +198,7 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
 end
 function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    Q = dtmap(drc_combinations; Defaults.threading_kwargs[]...) do (dir, r, c)
+    Q = dtmap(drc_combinations; THREADING_KWARGS...) do (dir, r, c)
         if dir == NORTHWEST
             enlarge_northwest_corner((r, c), envs, state)
         elseif dir == NORTHEAST
@@ -269,7 +269,7 @@ function ctmrg_projectors(
 
     ϵ = zero(real(scalartype(envs)))
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    projectors = dtmap(drc_combinations; Defaults.threading_kwargs[]...) do (dir, r, c)
+    projectors = dtmap(drc_combinations; THREADING_KWARGS...) do (dir, r, c)
         # Row-column index of next enlarged corner
         next_rc = if dir == 1
             (r, _next(c, size(envs.corners, 3)))
@@ -360,7 +360,7 @@ end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     P_left, P_right = projectors
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    corners_edges = dtmap(drc_combinations; Defaults.threading_kwargs[]...) do (dir, r, c)
+    corners_edges = dtmap(drc_combinations; THREADING_KWARGS...) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)

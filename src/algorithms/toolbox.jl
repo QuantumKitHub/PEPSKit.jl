@@ -1,6 +1,6 @@
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, O)
-    term_vals = dtmap([O.terms...]; Defaults.threading_kwargs[]...) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+    term_vals = dtmap([O.terms...]; THREADING_KWARGS...) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         contract_localoperator(inds, operator, peps, peps, envs) /
         contract_localnorm(inds, peps, peps, envs)
     end

@@ -50,22 +50,47 @@ include("utility/symmetrization.jl")
     module Defaults
         const ctmrg_maxiter = 100
         const ctmrg_miniter = 4
-        const ctmrg_tol = 1e-12
-        const fpgrad_maxiter = 100
+        const ctmrg_tol = 1e-8
+        const fpgrad_maxiter = 30
         const fpgrad_tol = 1e-6
+        const ctmrgscheme = :simultaneous
+        const reuse_env = true
+        const trscheme = FixedSpaceTruncation()
+        const fwd_alg = TensorKit.SVD()
+        const rrule_alg = GMRES(; tol=1e1ctmrg_tol)
+        const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
+        const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
+        const gradient_linsolver = KrylovKit.BiCGStab(;
+            maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
+        )
+        const iterscheme = :fixed
+        const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+        const threading_kwargs = Dict(
+            :scheduler => :dynamic, :ntasks => Threads.nthreads(), :chunking => true
+        )
     end
 
 Module containing default values that represent typical algorithm parameters.
 
-- `ctmrg_maxiter = 100`: Maximal number of CTMRG iterations per run
-- `ctmrg_miniter = 4`: Minimal number of CTMRG carried out
-- `ctmrg_tol = 1e-12`: Tolerance checking singular value and norm convergence
-- `fpgrad_maxiter = 100`: Maximal number of iterations for computing the CTMRG fixed-point gradient
-- `fpgrad_tol = 1e-6`: Convergence tolerance for the fixed-point gradient iteration
+- `ctmrg_maxiter`: Maximal number of CTMRG iterations per run
+- `ctmrg_miniter`: Minimal number of CTMRG carried out
+- `ctmrg_tol`: Tolerance checking singular value and norm convergence
+- `fpgrad_maxiter`: Maximal number of iterations for computing the CTMRG fixed-point gradient
+- `fpgrad_tol`: Convergence tolerance for the fixed-point gradient iteration
+- `ctmrgscheme`: Scheme for growing, projecting and renormalizing CTMRG environments
+- `reuse_env`: If `true`, the current optimization step is initialized on the previous environment
+- `trscheme`: Truncation scheme for SVDs and other decompositions
+- `fwd_alg`: SVD algorithm that is used in the forward pass
+- `rrule_alg`: Reverse-rule for differentiating that SVD
+- `svd_alg`: Combination of `fwd_alg` and `rrule_alg`
+- `optimizer`: Optimization algorithm for PEPS ground-state optimization
+- `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
+- `iterscheme`: Scheme for differentiating one CTMRG iteration
+- `gradient_alg`: Algorithm to compute the gradient fixed-point
+- `threading_kwargs`: Multi-threading keyword arguments that are passed to `OhMyThreads` functions
 """
 module Defaults
     using TensorKit, KrylovKit, OptimKit
-    using ScopedValues
     using PEPSKit: LinSolver, FixedSpaceTruncation, SVDAdjoint
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
@@ -75,7 +100,6 @@ module Defaults
     const ctmrgscheme = :simultaneous
     const reuse_env = true
     const trscheme = FixedSpaceTruncation()
-    const iterscheme = :fixed
     const fwd_alg = TensorKit.SVD()
     const rrule_alg = GMRES(; tol=1e1ctmrg_tol)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
@@ -83,11 +107,15 @@ module Defaults
     const gradient_linsolver = KrylovKit.BiCGStab(;
         maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
     )
+    const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
-    const threading_kwargs = ScopedValue(
-        Dict(:scheduler => :dynamic, :ntasks => Threads.nthreads(), :chunking => true)
+    const threading_kwargs = Dict(
+        :scheduler => :dynamic, :ntasks => Threads.nthreads(), :chunking => true
     )
 end
+
+# Global OhMyThreads multi-threading settings
+const THREADING_KWARGS = deepcopy(Defaults.threading_kwargs)
 
 export set_threading_kwargs!
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint

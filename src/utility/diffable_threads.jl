@@ -36,7 +36,6 @@ end
 
 Modify multi-threading keyword arguments that are supplied to every call of `dtmap`,
 i.e. the differentiable version of `OhMyThreads.tmap`.
-The kwarg `Dict` is stored as a `ScopedValue` in `Default.threading_kwargs`.
 
 To see all available keyword arguments, check the
 [`Scheduler` page](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#OhMyThreads.Schedulers.Scheduler)
@@ -44,7 +43,7 @@ from the `OhMyThreads` docs.
 """
 function set_threading_kwargs!(; kwargs...)
     length(kwargs) > 0 || throw(ArgumentError("need at least one keyword argument"))
-    return merge!(Defaults.threading_kwargs[], Dict(kwargs...))
+    return merge!(threading_kwargs, Dict(kwargs...))
 end
 
 """
