@@ -188,9 +188,8 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
     Q_sw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
     Q_nw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
 
-    directions = collect(Iterators.product(axes(state)...))
-    # @fwdthreads for (r, c) in directions
-    for (r, c) in directions
+    coordinates = collect(Iterators.product(axes(state)...))
+    for (r, c) in coordinates
         Q_sw[r, c] = enlarge_southwest_corner((r, c), envs, state)
         Q_nw[r, c] = enlarge_northwest_corner((r, c), envs, state)
     end
@@ -198,11 +197,9 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
     return copy(Q_sw), copy(Q_nw)
 end
 function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
-    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    @fwdthreads for (dir, r, c) in drc_combinations
-        Q[dir, r, c] = if dir == NORTHWEST
+    Q = dtmap(drc_combinations; THREADING_KWARGS...) do (dir, r, c)
+        if dir == NORTHWEST
             enlarge_northwest_corner((r, c), envs, state)
         elseif dir == NORTHEAST
             enlarge_northeast_corner((r, c), envs, state)
@@ -212,8 +209,7 @@ function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,
             enlarge_southwest_corner((r, c), envs, state)
         end
     end
-
-    return copy(Q)
+    return Q
 end
 
 # ======================================================================================== #
@@ -221,7 +217,9 @@ end
 # ======================================================================================== #
 
 """
-    ctmrg_projectors(Q, env, alg::CTMRG{M})
+    ctmrg_projectors(enlarged_envs, envs, alg::CTMRG{M})
+
+Compute projectors from enlarged environments.
 """
 function ctmrg_projectors(
     enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
@@ -233,9 +231,8 @@ function ctmrg_projectors(
     P_top = Zygote.Buffer(envs.edges, Prtype, axes(envs.corners, 2), axes(envs.corners, 3))
     ϵ = zero(real(scalartype(envs)))
 
-    directions = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
-    # @fwdthreads for (r, c) in directions
-    for (r, c) in directions
+    coordinates = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
+    for (r, c) in coordinates
         # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
         QQ = halfinfinite_environment(enlarged_envs[1][r, c], enlarged_envs[2][r′, c])
@@ -266,14 +263,13 @@ function ctmrg_projectors(
 ) where {C,E}
     projector_alg = alg.projector_alg
     # pre-allocation
-    P_left, P_right = Zygote.Buffer.(projector_type(envs.edges))
     U, V = Zygote.Buffer.(projector_type(envs.edges))
     # Corner type but with real numbers
     S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
 
     ϵ = zero(real(scalartype(envs)))
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    @fwdthreads for (dir, r, c) in drc_combinations
+    projectors = dtmap(drc_combinations; THREADING_KWARGS...) do (dir, r, c)
         # Row-column index of next enlarged corner
         next_rc = if dir == 1
             (r, _next(c, size(envs.corners, 3)))
@@ -307,7 +303,7 @@ function ctmrg_projectors(
         end
 
         # Compute projectors
-        P_left[dir, r, c], P_right[dir, r, c] = build_projectors(
+        return build_projectors(
             U_local,
             S_local,
             V_local,
@@ -316,7 +312,9 @@ function ctmrg_projectors(
         )
     end
 
-    return (copy(P_left), copy(P_right)), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
+    P_left = map(first, projectors)
+    P_right = map(last, projectors)
+    return (P_left, P_right), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
 end
 
 # ======================================================================================== #
@@ -346,7 +344,6 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
 
     # Apply projectors to renormalize corners and edges
     coordinates = collect(Iterators.product(axes(state)...))
-    # @fwdthreads for (r, c) in coordinates
     for (r, c) in coordinates
         C_southwest = renormalize_bottom_corner((r, c), envs, projectors)
         corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
@@ -361,12 +358,9 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
     return CTMRGEnv(copy(corners), copy(edges))
 end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
-    corners = Zygote.Buffer(envs.corners)
-    edges = Zygote.Buffer(envs.edges)
     P_left, P_right = projectors
-
     drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    @fwdthreads for (dir, r, c) in drc_combinations
+    corners_edges = dtmap(drc_combinations; THREADING_KWARGS...) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)
@@ -380,11 +374,10 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::Simultaneou
             corner = renormalize_southwest_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_west_edge((r, c), envs, P_left, P_right, state)
         end
-        corners[dir, r, c] = corner / norm(corner)
-        edges[dir, r, c] = edge / norm(edge)
+        return corner / norm(corner), edge / norm(edge)
     end
 
-    return CTMRGEnv(copy(corners), copy(edges))
+    return CTMRGEnv(map(first, corners_edges), map(last, corners_edges))
 end
 
 # ======================================================================================== #
