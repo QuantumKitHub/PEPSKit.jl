@@ -211,10 +211,12 @@ end
 
 """
     halfinfinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
-    function halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
-                                      ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
-    function halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                                      ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
+                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    halfinfinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -234,7 +236,7 @@ The environment can also be contracted directly from all its constituent tensors
      |       ||          ||           |
 ```
 
-Alternatively, contract environment with a vector `x` acting on it, e.g. as needed for iterative solvers.
+Alternatively, contract environment with a vector `x` acting on it
 
 ```
     C_1 --  E_2      --  E_3      -- C_2
@@ -244,6 +246,8 @@ Alternatively, contract environment with a vector `x` acting on it, e.g. as need
                          [~~~~~~x~~~~~~]
                          ||           |
 ```
+
+or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
 """
 function halfinfinite_environment(
     quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3}
