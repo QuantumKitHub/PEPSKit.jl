@@ -118,7 +118,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
             N = norm(state, env)
             ctmrg_logiter!(log, iter, η, N)
 
-            if η ≤ alg.tol
+            if η ≤ alg.tol && iter ≥ alg.miniter
                 ctmrg_logfinish!(log, iter, η, N)
                 break
             end
