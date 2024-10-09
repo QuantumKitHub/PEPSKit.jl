@@ -91,6 +91,9 @@ ctmrgscheme(::CTMRG{S}) where {S} = S
 const SequentialCTMRG = CTMRG{:sequential}
 const SimultaneousCTMRG = CTMRG{:simultaneous}
 
+# supply correct constructor for Accessors.@set
+Accessors.constructorof(::Type{CTMRG{S}}) where {S} = CTMRG{S}
+
 """
     MPSKit.leading_boundary([envinit], state, alg::CTMRG)
 
