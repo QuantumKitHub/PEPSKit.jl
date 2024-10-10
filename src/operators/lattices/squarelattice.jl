@@ -16,6 +16,19 @@ function vertices(lattice::InfiniteSquare)
     return CartesianIndices((1:(lattice.Nrows), 1:(lattice.Ncols)))
 end
 
+"""
+    nearest_neighbours(lattice::InfiniteSquare)
+
+Return the nearest neighbors of the lattice `lattice`.
+
+````
+    +---*---+
+    |   
+    *
+    |
+    +
+````
+"""
 function nearest_neighbours(lattice::InfiniteSquare)
     neighbors = Tuple{CartesianIndex,CartesianIndex}[]
     for idx in vertices(lattice)
@@ -25,6 +38,19 @@ function nearest_neighbours(lattice::InfiniteSquare)
     return neighbors
 end
 
+"""
+    next_nearest_neighbours(lattice::InfiniteSquare)
+
+Return the next nearest neighbors of the lattice `lattice`.
+
+````
+    +------+
+    | \\ ╱ | 
+    |   *  |
+    | ╱  \\|
+    +------+
+````
+"""
 function next_nearest_neighbours(lattice::InfiniteSquare)
     neighbors = Tuple{CartesianIndex,CartesianIndex}[]
     for idx in vertices(lattice)

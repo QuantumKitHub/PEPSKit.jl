@@ -11,6 +11,21 @@ end
 
 InfiniteTransferPEPS(top) = InfiniteTransferPEPS(top, top)
 
+function ChainRulesCore.rrule(::typeof(InfiniteTransferPEPS), top::PeriodicArray, bot::PeriodicArray)
+    function pullback(Δ)
+        @show typeof(Δ)
+        return NoTangent(), Δ.top, Δ.bot
+    end
+    @show typeof(top) typeof(bot) 
+    return InfiniteTransferPEPS(top, bot), pullback
+end
+
+# function ChainRulesCore.rrule(::typeof(MPSKit.Multiline), data::AbstractVector)
+#     @show typeof(data)
+#     return MPSKit.Multiline(data), Δ -> (NoTangent(), Δ.data)
+# end
+
+
 """
     InfiniteTransferPEPS(T::InfinitePEPS, dir, row)
 
@@ -19,7 +34,9 @@ representing the norm of the state `T`. The partition function is first rotated 
 the direction `dir` faces north, after which its `row`th row from the north is selected.
 """
 function InfiniteTransferPEPS(T::InfinitePEPS, dir, row)
+    # @show 1111111111 typeof(T)
     T = rotate_north(T, dir)
+    # @show 2222222222 typeof(T)
     return InfiniteTransferPEPS(PeriodicArray(T[row, :]))
 end
 
@@ -66,7 +83,14 @@ end
         virtualspaces::AbstractArray{<:ElementarySpace,2}
     )
 
-Inialize a boundary MPS for the transfer operator `O` by specifying an array of virtual
+````
+
+    l ←------- r
+        / \
+       /   \
+      t     d
+````
+Initalize a boundary MPS for the transfer operator `O` by specifying an array of virtual
 spaces consistent with the unit cell.
 """
 function initializeMPS(O::InfiniteTransferPEPS, virtualspaces::AbstractArray{S,1}) where {S}

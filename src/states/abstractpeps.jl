@@ -1,6 +1,14 @@
 """
     const PEPSTensor{S}
 
+````
+    N
+    ↓
+W ← + ← E
+    ↓ ⬊
+    S   P
+
+````
 Default type for PEPS tensors with a single physical index, and 4 virtual indices,
 conventionally ordered as: ``T : P ← N ⊗ E ⊗ S ⊗ W``. Here, ``P``, ``N``, ``E``, ``S`` and
 ``W`` denote the physics, north, east, south and west spaces, respectively.
