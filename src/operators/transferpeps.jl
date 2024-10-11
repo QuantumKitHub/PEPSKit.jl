@@ -11,20 +11,12 @@ end
 
 InfiniteTransferPEPS(top) = InfiniteTransferPEPS(top, top)
 
-function ChainRulesCore.rrule(::typeof(InfiniteTransferPEPS), top::PeriodicArray, bot::PeriodicArray)
+function ChainRulesCore.rrule(::Type{InfiniteTransferPEPS}, top::PeriodicArray{T,1}, bot::PeriodicArray{T,1}) where {T}
     function pullback(Δ)
-        @show typeof(Δ)
         return NoTangent(), Δ.top, Δ.bot
     end
-    @show typeof(top) typeof(bot) 
     return InfiniteTransferPEPS(top, bot), pullback
 end
-
-# function ChainRulesCore.rrule(::typeof(MPSKit.Multiline), data::AbstractVector)
-#     @show typeof(data)
-#     return MPSKit.Multiline(data), Δ -> (NoTangent(), Δ.data)
-# end
-
 
 """
     InfiniteTransferPEPS(T::InfinitePEPS, dir, row)
@@ -34,9 +26,7 @@ representing the norm of the state `T`. The partition function is first rotated 
 the direction `dir` faces north, after which its `row`th row from the north is selected.
 """
 function InfiniteTransferPEPS(T::InfinitePEPS, dir, row)
-    # @show 1111111111 typeof(T)
     T = rotate_north(T, dir)
-    # @show 2222222222 typeof(T)
     return InfiniteTransferPEPS(PeriodicArray(T[row, :]))
 end
 

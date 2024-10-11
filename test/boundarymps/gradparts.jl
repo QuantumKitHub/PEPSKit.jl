@@ -2,11 +2,10 @@ using Test
 using Random
 using PEPSKit
 using MPSKit
-using MPSKit: ∂∂AC, MPSMultiline, Multiline,fixedpoint,updatetol
+using MPSKit: ∂∂AC, MPSMultiline, Multiline, fixedpoint,updatetol
 using KrylovKit
 using Zygote
 using TensorKit
-using ChainRulesTestUtils
 using ChainRulesCore
 const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=true))
 
@@ -21,7 +20,7 @@ end
 
 @testset "InfinitePEPS" begin
     Random.seed!(42)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
+    psi = InfinitePEPS(ℂ^2, ℂ^2)
     function f(β)
         psir = β * psi
         norm(psir)
@@ -32,60 +31,46 @@ end
 
 @testset "InfiniteTransferPEPS" begin
     Random.seed!(42)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
+    psi = InfinitePEPS(ℂ^2, ℂ^2)
     function f(β)
         psir = β * psi
-        # @show 123 typeof(psir)
         T = PEPSKit.InfiniteTransferPEPS(psir, 1, 1)
-        # @show 213123 typeof(T)
         real(dot(T.top, T.bot))
     end
-    @show f(1)
-    @show Zygote.gradient(f, 1.0)[1]
-    # @show num_grad(f, 1.0)
+
+    @test Zygote.gradient(f, 1.0)[1] ≈ num_grad(f, 1.0)
 end
 
 @testset "dominant eigensolve" begin
     Random.seed!(42)
     alg_eigsolve = updatetol(vumps_alg.alg_eigsolve, 1, 1)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
+    psi = InfinitePEPS(ℂ^2, ℂ^2)
     psi = symmetrize!(psi, RotateReflect())
 
     T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-    mps = PEPSKit.initializeMPS(T, [ComplexSpace(3)])
+    mps = PEPSKit.initializeMPS(T, [ℂ^3])
     envs=environments(mps, T)
 
     mps, T = convert(MPSMultiline, mps), Multiline([T])
 
-    # envs=environments(mps, T)
-    # H_AC = ∂∂AC(1, mps, T, envs)
     ac = RecursiveVec(mps.AC[:, 1])
 
-    # _, ac′ = MPSKit.fixedpoint(H_AC, ac, :LM, alg_eigsolve)
-    # @show typeof(H_AC)
+    S = TensorMap(randn, ComplexF64, ℂ^3*ℂ^2*(ℂ^2)'*(ℂ^3)'← ℂ^3*ℂ^2*(ℂ^2)'*(ℂ^3)')
+
     function f(β)
-        # InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
         psi = β * psi
-        # @show @which PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-        # T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-        # mps, T = convert(MPSMultiline, mps), Multiline([T])
+        T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1) 
+        T = MPSKit.Multiline([T])
 
-        # @show typeof(mps)  typeof(T) 
-        # H_AC = MPSKit.∂∂AC(1, mps, T, envs)
+        H_AC = MPSKit.∂∂AC(1, mps, T, envs)
         
-        # _, ac′ = MPSKit.fixedpoint(H_AC, ac, :LM, alg_eigsolve)
+        _, ac′ = MPSKit.fixedpoint(H_AC, ac, :LM, alg_eigsolve)
 
-        # AC = ac′.vecs[1]
-        # real(dot(AC, AC))
-        @show typeof(T.bot)
-        
-        real(dot(T.bot,T.bot))
+        AC = ac′.vecs[1]
+        @tensor d = conj(AC[1 2 3 4]) * S[1 2 3 4; 5 6 7 8] * AC[5 6 7 8]
+        norm(d)
     end
-    # # # # # Zygote.gradient(f, 1.0)
-    @show f(1.0)
-    @show Zygote.gradient(f, 1.0)
-    # end
-    
 
+    @test Zygote.gradient(f, 1.0)[1] ≈ num_grad(f, 1.0) atol = 1e-3
 end
 
