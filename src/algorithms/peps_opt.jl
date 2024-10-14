@@ -218,6 +218,8 @@ function _rrule(
     state,
     alg::CTMRG,
 )
+
+    @show 22222222222
     envs = leading_boundary(envinit, state, alg)  #TODO: fixed space for unit cells
 
     function leading_boundary_diffgauge_pullback(Δenvs′)
@@ -249,6 +251,8 @@ function _rrule(
     state,
     alg::CTMRG{C},
 ) where {C}
+
+    @show 11111111111111111111
     @assert C === :simultaneous
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs = leading_boundary(envinit, state, alg)
