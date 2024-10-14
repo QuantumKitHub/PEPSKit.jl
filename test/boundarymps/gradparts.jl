@@ -2,12 +2,12 @@ using Test
 using Random
 using PEPSKit
 using MPSKit
-using MPSKit: ∂∂AC, ∂∂C, MPSMultiline, Multiline, fixedpoint,updatetol
+using MPSKit: ∂∂AC, ∂∂C, MPSMultiline, Multiline, fixedpoint,updatetol, vumps_iter
 using KrylovKit
 using Zygote
 using TensorKit
 using ChainRulesCore
-const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=true))
+const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false))
 
 function num_grad(f, K::Number; δ::Real=1e-5)
     if eltype(K) == ComplexF64
@@ -103,30 +103,8 @@ end
     # @test Zygote.gradient(foo2, 1.0)[1] ≈ num_grad(foo2, 1.0) atol = 1e-4
 end
 
-@testset "(1, 1) PEPS" begin
+@testset "(1, 1) ctm PEPS" begin
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
-    # @show size(psi[1])
-    # T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-    # mps = PEPSKit.initializeMPS(T, [ComplexSpace(20)])
-
-    # mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
-    # AC_0 = mps.AL[1]
-    # mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
-    # AC_1 = mps.AL[1]
-    # @show norm(AC_0 - AC_1)
-
-    # function f(x)
-    #     psi = x * psi
-    #     T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-    #     mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
-    #     return abs(prod(expectation_value(mps, T)))
-    # end
-    # @show f(2)
-    # N = abs(sum(expectation_value(mps, T)))
-    # @show N
-
-    # ctm = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi, CTMRG(; verbosity=1))
-    # N´ = abs(norm(psi, ctm))
     ctm = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi, CTMRG(; verbosity=1))
 
     boundary_algs = [
@@ -178,7 +156,33 @@ end
         abs(norm(psi, ctm))
     end
     # @show foo2(1.0)
-    @show norm(Zygote.gradient(foo2, psi)[1] - Zygote.gradient(foo3, psi)[1])
+    # @show norm(Zygote.gradient(foo2, psi)[1] - Zygote.gradient(foo3, psi)[1])
+    # @show num_grad(foo2, 1.0)
+    # @test N ≈ N´ atol = 1e-3
+end
+
+@testset "(1, 1) vumps PEPS " begin
+    Random.seed!(42)
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
+    T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
+    mps = PEPSKit.initializeMPS(T, [ComplexSpace(20)])
+
+    mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
+    AC_0 = mps.AC[1]
+    mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
+    AC_1 = mps.AC[1]
+    # @show norm(AC_0 - AC_1)
+
+    function foo1(psi)
+        T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
+        mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
+        return abs(prod(expectation_value(mps, T)))
+    end
+    @show foo1(psi)
+
+    @show Zygote.gradient(foo1, psi)[1]
+    # @show foo2(1.0)
+    # @show norm(Zygote.gradient(foo1, psi)[1] - Zygote.gradient(foo3, psi)[1])
     # @show num_grad(foo2, 1.0)
     # @test N ≈ N´ atol = 1e-3
 end

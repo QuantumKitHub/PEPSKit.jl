@@ -219,8 +219,38 @@ function _rrule(
     alg::CTMRG,
 )
 
-    @show 22222222222
     envs = leading_boundary(envinit, state, alg)  #TODO: fixed space for unit cells
+
+    function leading_boundary_diffgauge_pullback(Δenvs′)
+        Δenvs = unthunk(Δenvs′)
+
+        # find partial gradients of gauge_fixed single CTMRG iteration
+        # TODO: make this rrule_via_ad so it's zygote-agnostic
+        _, env_vjp = pullback(state, envs) do A, x
+            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])[1]
+        end
+
+        # evaluate the geometric sum
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
+        ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
+
+        return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
+    end
+
+    return envs, leading_boundary_diffgauge_pullback
+end
+
+function _rrule(
+    gradmode::GradMode{:diffgauge},
+    ::RuleConfig,
+    ::typeof(MPSKit.leading_boundary),
+    envinit,
+    state,
+    alg::VUMPS,
+)
+
+    envs = leading_boundary(envinit, state, alg) 
 
     function leading_boundary_diffgauge_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
@@ -252,7 +282,6 @@ function _rrule(
     alg::CTMRG{C},
 ) where {C}
 
-    @show 11111111111111111111
     @assert C === :simultaneous
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs = leading_boundary(envinit, state, alg)
