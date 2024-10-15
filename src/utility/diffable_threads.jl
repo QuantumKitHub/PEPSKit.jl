@@ -17,17 +17,19 @@ function ChainRulesCore.rrule(
         rrule_via_ad(config, f, a)
     end
     y = map(first, el_rrules)
+    f_projector = ProjectTo(f)
+    A_projectors = map(ProjectTo, A)
+    
     function dtmap_pullback(dy_raw)
-        dy = unthunk(dy_raw)
-        backevals = tmap(CartesianIndices(A); kwargs...) do idx
-            last(el_rrules[idx])(dy[idx])
+        dys = unthunk(dy_raw)
+        backevals = tmap(el_rrules, dys; kwargs...) do el_rrule, dy
+            last(el_rrule)(dy)
         end
-        df = ProjectTo(f)(sum(first, backevals))
-        dA = map(CartesianIndices(A); kwargs...) do idx
-            ProjectTo(A[idx])(last(backevals[idx]))
-        end
-        return (NoTangent(), df, dA)
+        df = f_projector(sum(first, backevals))
+        dA = map((Pa, backeval) -> Pa(last(backeval)), A_projectors, backevals)
+        return NoTangent(), df, dA
     end
+
     return y, dtmap_pullback
 end
 
