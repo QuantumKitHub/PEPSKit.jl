@@ -5,7 +5,7 @@
 
 # PEPSKit.jl
 
-[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url]
+[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url] [![DOI][doi-img]](doi-url)
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://QuantumKitHub.github.io/PEPSKit.jl/dev/
@@ -14,6 +14,9 @@
 [codecov-url]: https://codecov.io/gh/QuantumKitHub/PEPSKit.jl
 
 [ci-url]: https://github.com/QuantumKitHub/PEPSKit.jl/workflows/CI/badge.svg
+
+[doi-url]: https://doi.org/10.5281/zenodo.13938736
+[doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.13938737.svg
 
 **Tools for working with projected entangled-pair states**
 
