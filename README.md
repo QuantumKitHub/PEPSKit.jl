@@ -5,7 +5,7 @@
 
 # PEPSKit.jl
 
-[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url] [![DOI][doi-img]](doi-url)
+[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url] [![DOI][doi-img]][doi-url]
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://QuantumKitHub.github.io/PEPSKit.jl/dev/
