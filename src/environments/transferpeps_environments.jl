@@ -1,4 +1,3 @@
-
 function MPSKit.environments(state::InfiniteMPS, O::InfiniteTransferPEPS; kwargs...)
     return environments(
         convert(MPSMultiline, state), convert(TransferPEPSMultiline, O); kwargs...
@@ -28,32 +27,31 @@ function MPSKit.mixed_fixpoints(
     @assert size(below) == size(O)
 
     envtype = eltype(init[1])
+    # @show envtype
     lefties = PeriodicArray{envtype,2}(undef, numrows, numcols)
     righties = PeriodicArray{envtype,2}(undef, numrows, numcols)
 
-    @threads for cr in 1:numrows
+    # lefties = Zygote.Buffer(envtype, numrows, numcols)
+    # righties = Zygote.Buffer(envtype, numrows, numcols)
+    lefties = Zygote.Buffer(lefties)
+    righties = Zygote.Buffer(righties)
+    for cr in 1:numrows
         c_above = above[cr]  # TODO: Update index convention to above[cr - 1]
         c_below = below[cr + 1]
 
         (L0, R0) = init[cr]
 
-        @sync begin
-            Threads.@spawn begin
-                E_LL = TransferMatrix($c_above.AL, $O[cr], $c_below.AL)
-                (_, Ls, convhist) = eigsolve(flip(E_LL), $L0, 1, :LM, $solver)
-                convhist.converged < 1 &&
-                    @info "left eigenvalue failed to converge $(convhist.normres)"
-                L0 = first(Ls)
-            end
+        E_LL = TransferMatrix(c_above.AL, O[cr], c_below.AL)
+        (_, Ls, convhist) = eigsolve(flip(E_LL), L0, 1, :LM, solver)
+        convhist.converged < 1 &&
+            @info "left eigenvalue failed to converge $(convhist.normres)"
+        L0 = first(Ls)
 
-            Threads.@spawn begin
-                E_RR = TransferMatrix($c_above.AR, $O[cr], $c_below.AR)
-                (_, Rs, convhist) = eigsolve(E_RR, $R0, 1, :LM, $solver)
-                convhist.converged < 1 &&
-                    @info "right eigenvalue failed to converge $(convhist.normres)"
-                R0 = first(Rs)
-            end
-        end
+        E_RR = TransferMatrix(c_above.AR, O[cr], c_below.AR)
+        (_, Rs, convhist) = eigsolve(E_RR, R0, 1, :LM, solver)
+        convhist.converged < 1 &&
+            @info "right eigenvalue failed to converge $(convhist.normres)"
+        R0 = first(Rs)
 
         lefties[cr, 1] = L0
         for loc in 2:numcols
@@ -81,7 +79,7 @@ function MPSKit.mixed_fixpoints(
         end
     end
 
-    return (lefties, righties)
+    return (copy(lefties), copy(righties))
 end
 
 function gen_init_fps(above::MPSMultiline, O::TransferPEPSMultiline, below::MPSMultiline)

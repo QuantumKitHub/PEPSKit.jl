@@ -39,6 +39,8 @@ include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
+include("algorithms/vumps/vumps_iter.jl")
+
 # include("algorithms/vumps/vumps.jl")
 
 include("algorithms/toolbox.jl")

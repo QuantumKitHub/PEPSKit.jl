@@ -2,12 +2,13 @@ using Test
 using Random
 using PEPSKit
 using MPSKit
-using MPSKit: ∂∂AC, ∂∂C, MPSMultiline, Multiline, fixedpoint,updatetol, vumps_iter
+using MPSKit: ∂∂AC, ∂∂C, MPSMultiline, Multiline, fixedpoint, updatetol
+using PEPSKit: vumps_iter, TransferPEPSMultiline
 using KrylovKit
 using Zygote
 using TensorKit
 using ChainRulesCore
-const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false))
+const vumps_alg = VUMPS(; maxiter=20, alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false))
 
 function num_grad(f, K::Number; δ::Real=1e-5)
     if eltype(K) == ComplexF64
@@ -168,15 +169,20 @@ end
     mps = PEPSKit.initializeMPS(T, [ComplexSpace(20)])
 
     mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
-    AC_0 = mps.AC[1]
-    mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
-    AC_1 = mps.AC[1]
+    # AC_0 = mps.AC[1]
+    # mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
+    # AC_1 = mps.AC[1]
     # @show norm(AC_0 - AC_1)
+    @show abs(prod(expectation_value(mps, T)))
 
+    # @show propertynames(envs) envs.dependency envs.lock
     function foo1(psi)
         T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-        mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
-        return abs(prod(expectation_value(mps, T)))
+        # mps, envs, ϵ = vumps_iter(mps, T, vumps_alg, envs, ϵ)
+        mps = convert(MPSMultiline, mps)
+        T = convert(TransferPEPSMultiline, T)
+        ca = environments(mps, T)
+        return abs(prod(expectation_value(mps, T, ca)))
     end
     @show foo1(psi)
 
