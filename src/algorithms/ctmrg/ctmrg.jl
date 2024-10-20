@@ -43,8 +43,8 @@ function svd_algorithm(alg::ProjectorAlg, (dir, r, c))
 end
 
 """
-    CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
-          miniter=Defaults.ctmrg_miniter, verbosity=0,
+    CTMRG(; tol=Defaults.contr_tol, maxiter=Defaults.contr_maxiter,
+          miniter=Defaults.contr_miniter, verbosity=0,
           svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation(),
           ctmrgscheme=Defaults.ctmrgscheme)
 
@@ -64,7 +64,7 @@ computed on the western side, and then applied and rotated. Or with `:simultaneo
 are computed and applied simultaneously on all sides, where in particular the corners get
 contracted with two projectors at the same time.
 """
-struct CTMRG{S}
+struct CTMRG{S} <: Algorithm
     tol::Float64
     maxiter::Int
     miniter::Int
@@ -72,9 +72,9 @@ struct CTMRG{S}
     projector_alg::ProjectorAlg
 end
 function CTMRG(;
-    tol=Defaults.ctmrg_tol,
-    maxiter=Defaults.ctmrg_maxiter,
-    miniter=Defaults.ctmrg_miniter,
+    tol=Defaults.contr_tol,
+    maxiter=Defaults.contr_maxiter,
+    miniter=Defaults.contr_miniter,
     verbosity=2,
     svd_alg=Defaults.svd_alg,
     trscheme=Defaults.trscheme,
@@ -110,22 +110,22 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, N)
+        contr_loginit!(log, η, N)
         for iter in 1:(alg.maxiter)
             env, = ctmrg_iter(state, env, alg)  # Grow and renormalize in all 4 directions
 
             η, CS, TS = calc_convergence(env, CS, TS)
             N = norm(state, env)
-            ctmrg_logiter!(log, iter, η, N)
+            contr_logiter!(log, iter, η, N)
 
             if η ≤ alg.tol
-                ctmrg_logfinish!(log, iter, η, N)
+                contr_logfinish!(log, iter, η, N)
                 break
             end
             if iter == alg.maxiter
-                ctmrg_logcancel!(log, iter, η, N)
+                contr_logcancel!(log, iter, η, N)
             else
-                ctmrg_logiter!(log, iter, η, N)
+                contr_logiter!(log, iter, η, N)
             end
         end
         return env
@@ -160,16 +160,6 @@ function ctmrg_iter(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
     envs′ = ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg)
     return envs′, info
 end
-
-ctmrg_loginit!(log, η, N) = @infov 2 loginit!(log, η, N)
-ctmrg_logiter!(log, iter, η, N) = @infov 3 logiter!(log, iter, η, N)
-ctmrg_logfinish!(log, iter, η, N) = @infov 2 logfinish!(log, iter, η, N)
-ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
-
-@non_differentiable ctmrg_loginit!(args...)
-@non_differentiable ctmrg_logiter!(args...)
-@non_differentiable ctmrg_logfinish!(args...)
-@non_differentiable ctmrg_logcancel!(args...)
 
 # ======================================================================================== #
 # Expansion step
