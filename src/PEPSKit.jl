@@ -11,7 +11,7 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 
-include("utility/defaults.jl")
+
 include("utility/util.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
@@ -24,16 +24,17 @@ include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
 
 include("operators/transferpeps.jl")
-include("operators/infinitepepo.jl")
-include("operators/transferpepo.jl")
-include("operators/derivatives.jl")
+# include("operators/infinitepepo.jl")
+# include("operators/transferpepo.jl")
+# include("operators/derivatives.jl")
 include("operators/localoperator.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
-include("environments/transferpeps_environments.jl")
-include("environments/transferpepo_environments.jl")
+# include("environments/transferpeps_environments.jl")
+# include("environments/transferpepo_environments.jl")
+include("environments/vumps_environments.jl")
 
 abstract type Algorithm end
 include("algorithms/contractions/localoperator.jl")
@@ -50,6 +51,8 @@ include("algorithms/peps_opt.jl")
 
 include("utility/symmetrization.jl")
 
+include("utility/defaults.jl")
+
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
 export LocalOperator
@@ -59,7 +62,6 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
 export InfinitePEPS, InfiniteTransferPEPS
-export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!

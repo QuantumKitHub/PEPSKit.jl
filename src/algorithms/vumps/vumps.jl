@@ -5,7 +5,7 @@
     verbosity::Int = Defaults.verbosity
 end
 
-function leading_boundary(O::Matrix{<:AbstractTensorMap{S, 2, 2}}, alg::VUMPS)
+function leading_boundary(O::Matrix, alg::VUMPS)
     # initialize
     rt = VUMPSRuntime(O, nothing, nothing, nothing, nothing, nothing)
     return rt

@@ -30,6 +30,7 @@ module Defaults
 
     using TensorKit, KrylovKit, OptimKit
     using PEPSKit: LinSolver, FixedSpaceTruncation, SVDAdjoint
+    const eltype = ComplexF64
     const contr_maxiter = 100
     const contr_miniter = 4
     const contr_tol = 1e-8
