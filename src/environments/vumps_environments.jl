@@ -108,6 +108,78 @@ function initial_C(A::Matrix{<:AbstractTensorMap})
     return C
 end
 
+# KrylovKit patch
+TensorKit.inner(x::Matrix{TensorMap}, y::Matrix{TensorMap}) = sum(map(TensorKit.inner, x, y))
+TensorKit.add!!(x::Matrix{<:AbstractTensorMap}, y::Matrix{<:AbstractTensorMap}, a::Number, b::Number) = map((x, y) -> TensorKit.add!!(x, y, a, b), x, y)
+TensorKit.scale!!(x::Matrix{<:AbstractTensorMap}, a::Number) = map(x -> TensorKit.scale!!(x, a), x)
+
+"""
+    λs[1], Fs[1] = selectpos(λs, Fs)
+
+Select the max positive one of λs and corresponding Fs.
+"""
+function selectpos(λs, Fs, N)
+    if length(λs) > 1 && norm(abs(λs[1]) - abs(λs[2])) < 1e-12
+        # @show "selectpos: λs are degeneracy"
+        N = min(N, length(λs))
+        p = argmax(real(λs[1:N]))  
+        # @show λs p abs.(λs)
+        return λs[1:N][p], Fs[1:N][p]
+    else
+        return λs[1], Fs[1]
+    end
+end
+
+"""
+    getL!(A,L; kwargs...)
+
+````
+     ┌─ Aᵢⱼ ─ Aᵢⱼ₊₁─     ┌─      L ─
+     ρᵢⱼ │      │     =  ρᵢⱼ  =  │
+     └─ Aᵢⱼ─  Aᵢⱼ₊₁─     └─      L'─
+````
+
+ρ=L'*L, return L, where `L`is guaranteed to have positive diagonal elements.
+
+"""
+function getL!(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap}; verbosity = Defaults.verbosity, kwargs...)
+    Ni, Nj = size(A)
+    λs, ρs, info = eigsolve(ρ -> Cmap(ρ, A), L, 1, :LM; ishermitian = false, maxiter = 1, kwargs...)
+    verbosity >= 1 && info.converged == 0 && @warn "getL not converged"
+    _, ρs1 = selectpos(λs, ρs, Nj)
+    @inbounds for j = 1:Nj, i = 1:Ni
+        ρ = ρs1[i,j] + ρs1[i,j]'
+        ρ /= tr(ρ)
+        _, S, Vt = tsvd!(ρ)
+        # Lo = lmul!(Diagonal(sqrt.(F.S)), F.Vt)
+        Lo = sqrt(S) * Vt
+        _, R = leftorth!(Lo)
+        L[i,j] = R
+    end
+    return L
+end
+
+"""
+    getAL(A,L)
+
+Given an MPS tensor `A` and `L` ，return a left-canonical MPS tensor `AL`, a gauge transform `R` and
+a scalar factor `λ` such that ``λ AR R = L A``
+"""
+function getAL(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap})
+    Ni, Nj = size(A)
+    AL = similar(A)
+    Le = similar(L)
+    λ = zeros(Ni, Nj)
+    @inbounds for j = 1:Nj, i = 1:Ni
+        Q, R = leftorth!(reshape(L[:,:,i,j]*reshape(A[:,:,:,i,j], χ, D*χ), D*χ, χ)) # To do: correct the reshape to transpose
+        AL[:,:,:,i,j] = reshape(Q, χ, D, χ)
+        λ[i,j] = norm(R)
+        Le[:,:,i,j] = rmul!(R, 1/λ[i,j])
+    end
+    return AL, Le, λ
+end
+
+
 function VUMPSRuntime(ψ₀, χ::Int)
     
 end

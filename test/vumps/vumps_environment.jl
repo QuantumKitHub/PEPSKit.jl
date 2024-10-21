@@ -19,7 +19,6 @@ end
     @show sqrt(C) norm(A)
 end
 
-
 @testset "InfiniteTransferPEPS for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
@@ -55,6 +54,8 @@ end
 
     # @show inner(C, C)
     getL!(A, C)
+    # λs, Cs, info = getL!(A, C)
+    # @test λs[1] * Cs[1] ≈ Cmap(Cs[1], A) rtol = 1e-12
 end
 
 

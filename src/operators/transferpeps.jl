@@ -37,49 +37,16 @@ Base.size(transfer::InfiniteTransferPEPS) = size(transfer.top)
     └─ Aᵢⱼ─    └─
 ````
 """
-function Cmap(C::Matrix{<:AbstractTensorMap}, A::Matrix{<:AbstractTensorMap})
-    Ni, Nj = size(C)
-    C = copy(C)
-    for j in 1:Nj, i in 1:Ni
+function Cmap(ρ::Matrix{<:AbstractTensorMap}, A::Matrix{<:AbstractTensorMap})
+    Ni, Nj = size(ρ)
+    ρ = deepcopy(ρ)
+    @inbounds for j in 1:Nj, i in 1:Ni
         jr = mod1(j + 1, Nj)
-        @tensor C[i,jr][-1; -2] = C[i,j][4; 1] * A[i,j][1 2 3; -2] * conj(A[i,j][4 2 3; -1]) 
+        @tensor ρ[i,jr][-1; -2] = ρ[i,j][4; 1] * A[i,j][1 2 3; -2] * conj(A[i,j][4 2 3; -1]) 
     end
-    return C
+    return ρ
 end
 
-TensorKit.inner(x::Matrix{TensorMap}, y::Matrix{TensorMap}) = sum(map(TensorKit.inner, x, y))
-TensorKit.add!!(x::Matrix{<:AbstractTensorMap}, y::Matrix{<:AbstractTensorMap}, a::Number, b::Number) = (x .= map((x, y) -> TensorKit.add!!(x, y, a, b), x, y); x)
-TensorKit.scale!!(x::Matrix{<:AbstractTensorMap}, a::Number) = (x .= map(x -> TensorKit.scale!!(x, a), x); x)
-
-"""
-    getL!(A,L; kwargs...)
-
-````
-     ┌─ Aᵢⱼ ─ Aᵢⱼ₊₁─     ┌─      L ─
-     ρᵢⱼ │      │     =  ρᵢⱼ  =  │
-     └─ Aᵢⱼ─  Aᵢⱼ₊₁─     └─      L'─
-````
-
-ρ=L'*L, return L, where `L`is guaranteed to have positive diagonal elements.
-
-"""
-function getL!(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap}; kwargs...)
-    Ni, Nj = size(A)
-    λs, Cs, info = eigsolve(C -> Cmap(C, A), L, 1, :LM; ishermitian = false, maxiter = 1, kwargs...)
-
-    # @debug "getL eigsolve" λs info sort(abs.(λs))
-    # info.converged == 0 && @warn "getL not converged"
-    # _, ρs1 = selectpos(λs, ρs, Nj)
-    # @inbounds @views for j = 1:Nj, i = 1:Ni
-    #     ρ = ρs1[:,:,i,j] + ρs1[:,:,i,j]'
-    #     ρ ./= tr(ρ)
-    #     F = svd!(ρ)
-    #     Lo = lmul!(Diagonal(sqrt.(F.S)), F.Vt)
-    #     _, R = qrpos!(Lo)
-    #     L[:,:,i,j] = R
-    # end
-    # return L
-end
 # function MPSKit.transfer_left(
 #     GL::GenericMPSTensor{S,3},
 #     O::NTuple{2,PEPSTensor},
