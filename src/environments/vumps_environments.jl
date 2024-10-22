@@ -131,7 +131,7 @@ function selectpos(λs, Fs, N)
 end
 
 """
-    getL!(A,L; kwargs...)
+    L = getL!(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap}; verbosity = Defaults.verbosity, kwargs...)
 
 ````
      ┌─ Aᵢⱼ ─ Aᵢⱼ₊₁─     ┌─      L ─
@@ -144,7 +144,7 @@ end
 """
 function getL!(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap}; verbosity = Defaults.verbosity, kwargs...)
     Ni, Nj = size(A)
-    λs, ρs, info = eigsolve(ρ -> Cmap(ρ, A), L, 1, :LM; ishermitian = false, maxiter = 1, kwargs...)
+    λs, ρs, info = eigsolve(ρ -> ρmap(ρ, A), L, 1, :LM; ishermitian = false, maxiter = 1, kwargs...)
     verbosity >= 1 && info.converged == 0 && @warn "getL not converged"
     _, ρs1 = selectpos(λs, ρs, Nj)
     @inbounds for j = 1:Nj, i = 1:Ni
@@ -160,10 +160,10 @@ function getL!(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap}; v
 end
 
 """
-    getAL(A,L)
+    AL, Le, λ = getAL(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap})
 
 Given an MPS tensor `A` and `L` ，return a left-canonical MPS tensor `AL`, a gauge transform `R` and
-a scalar factor `λ` such that ``λ AR R = L A``
+a scalar factor `λ` such that ``λ * AL * Le = L * A``
 """
 function getAL(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap})
     Ni, Nj = size(A)
@@ -171,14 +171,90 @@ function getAL(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap})
     Le = similar(L)
     λ = zeros(Ni, Nj)
     @inbounds for j = 1:Nj, i = 1:Ni
-        Q, R = leftorth!(reshape(L[:,:,i,j]*reshape(A[:,:,:,i,j], χ, D*χ), D*χ, χ)) # To do: correct the reshape to transpose
-        AL[:,:,:,i,j] = reshape(Q, χ, D, χ)
+        Q, R = leftorth!(transpose(L[i,j]*transpose(A[i,j], ((1,),(4,3,2))), ((1,4,3),(2,))))
+        AL[i,j] = Q
         λ[i,j] = norm(R)
-        Le[:,:,i,j] = rmul!(R, 1/λ[i,j])
+        Le[i,j] = rmul!(R, 1/λ[i,j])
     end
     return AL, Le, λ
 end
 
+function getLsped(Le::Matrix{<:AbstractTensorMap}, A::Matrix{<:AbstractTensorMap}, AL::Matrix{<:AbstractTensorMap}; verbosity = Defaults.verbosity, kwargs...)
+    Ni, Nj = size(A)
+    L = similar(Le)
+    @inbounds for j = 1:Nj, i = 1:Ni
+        λs, Ls, info = eigsolve(L -> (@tensor Ln[-1; -2] := L[4; 1] * A[i,j][1 2 3; -2] * conj(AL[i,j][4 2 3; -1])), Le[i,j], 1, :LM; ishermitian = false, kwargs...)
+        verbosity >= 1 && info.converged == 0 && @warn "getLsped not converged"
+        _, Ls1 = selectpos(λs, Ls, Nj)
+        _, R = leftorth!(Ls1)
+        L[i,j] = R
+    end
+    return L
+end
+
+"""
+    AL, L, λ = left_canonical(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap} = initial_C(A); kwargs...)
+
+Given an MPS tensor `A`, return a left-canonical MPS tensor `AL`, a gauge transform `L` and
+a scalar factor `λ` such that ``λ*AL*L = L*A``, where an initial guess for `L` can be
+provided.
+"""
+function left_canonical(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap} = initial_C(A); tol = 1e-12, maxiter = 100, kwargs...)
+    L = getL!(A, L; kwargs...)
+    AL, Le, λ = getAL(A, L;kwargs...)
+    numiter = 1
+    while norm(L.-Le) > tol && numiter < maxiter
+        L = getLsped(Le, A, AL; kwargs...)
+        AL, Le, λ = getAL(A, L; kwargs...)
+        numiter += 1
+    end
+    L = Le
+    return AL, L, λ
+end
+
+"""
+    R, AR, λ = right_canonical(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap} = initial_C(A); tol = 1e-12, maxiter = 100, kwargs...)
+
+Given an MPS tensor `A`, return a gauge transform R, a right-canonical MPS tensor `AR`, and
+a scalar factor `λ` such that ``λ * R * AR = A * R``, where an initial guess for `R` can be
+provided.
+"""
+function right_canonical(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTensorMap} = initial_C(A); tol = 1e-12, maxiter = 100, kwargs...)
+    Ar = [permute(A, ((4,2,3), (1,))) for A in A]
+    Lr = [permute(L, ((2,   ), (1,))) for L in L]
+    
+    AL, L, λ = left_canonical(Ar, Lr; tol, maxiter, kwargs...)
+
+     R = [permute( L, ((2,), (1,   ))) for  L in  L]
+    AR = [permute(AL, ((4,), (2,3,1))) for AL in AL]
+    return R, AR, λ
+end
+
+function initial_FL(AL::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS)
+    T = eltype(O)
+    Ni, Nj = size(O)
+    FL = Matrix{TensorMap}(undef, Ni, Nj)
+    for j in 1:Nj, i in 1:Ni
+        D = space(O.top[i, j], 5)
+        χ = space(AL[i, j], 1)
+        FL[i, j] = TensorMap(rand, T, χ' * D * D', χ)
+    end
+    
+    return FL
+end
+
+function initial_FR(AR::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS)
+    T = eltype(O)
+    Ni, Nj = size(O)
+    FR = Matrix{TensorMap}(undef, Ni, Nj)
+    for j in 1:Nj, i in 1:Ni
+        D = space(O.top[i, j], 3)
+        χ = space(AR[i, j], 1)
+        FR[i, j] = TensorMap(rand, T, χ * D * D', χ')
+    end
+    
+    return FR
+end
 
 function VUMPSRuntime(ψ₀, χ::Int)
     

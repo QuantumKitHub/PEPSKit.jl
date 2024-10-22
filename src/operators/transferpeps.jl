@@ -30,23 +30,6 @@ Base.size(transfer::InfiniteTransferPEPS) = size(transfer.top)
 
 # Base.iterate(O::InfiniteTransferPEPS, i=1) = i > length(O) ? nothing : (O[i], i + 1)
 
-"""
-````
-    ┌─ Aᵢⱼ─    ┌─ 
-    ρᵢⱼ │   =  ρⱼ₊₁ 
-    └─ Aᵢⱼ─    └─
-````
-"""
-function Cmap(ρ::Matrix{<:AbstractTensorMap}, A::Matrix{<:AbstractTensorMap})
-    Ni, Nj = size(ρ)
-    ρ = deepcopy(ρ)
-    @inbounds for j in 1:Nj, i in 1:Ni
-        jr = mod1(j + 1, Nj)
-        @tensor ρ[i,jr][-1; -2] = ρ[i,j][4; 1] * A[i,j][1 2 3; -2] * conj(A[i,j][4 2 3; -1]) 
-    end
-    return ρ
-end
-
 # function MPSKit.transfer_left(
 #     GL::GenericMPSTensor{S,3},
 #     O::NTuple{2,PEPSTensor},
