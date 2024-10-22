@@ -91,7 +91,7 @@ function initial_A(O::InfiniteTransferPEPS, χ::VectorSpace)
     Ni, Nj = size(O)
     A = Matrix{TensorMap}(undef, Ni, Nj)
     for j in 1:Nj, i in 1:Ni
-        D = space(O.top[i, j], 4)
+        D = space(O.top[i, j], 2)'
         A[i, j] = TensorMap(rand, T, χ * D * D', χ)
     end
     return A
@@ -109,9 +109,9 @@ function initial_C(A::Matrix{<:AbstractTensorMap})
 end
 
 # KrylovKit patch
-TensorKit.inner(x::Matrix{TensorMap}, y::Matrix{TensorMap}) = sum(map(TensorKit.inner, x, y))
-TensorKit.add!!(x::Matrix{<:AbstractTensorMap}, y::Matrix{<:AbstractTensorMap}, a::Number, b::Number) = map((x, y) -> TensorKit.add!!(x, y, a, b), x, y)
-TensorKit.scale!!(x::Matrix{<:AbstractTensorMap}, a::Number) = map(x -> TensorKit.scale!!(x, a), x)
+TensorKit.inner(x::AbstractArray{<:AbstractTensorMap}, y::AbstractArray{<:AbstractTensorMap}) = sum(map(TensorKit.inner, x, y))
+TensorKit.add!!(x::AbstractArray{<:AbstractTensorMap}, y::AbstractArray{<:AbstractTensorMap}, a::Number, b::Number) = map((x, y) -> TensorKit.add!!(x, y, a, b), x, y)
+TensorKit.scale!!(x::AbstractArray{<:AbstractTensorMap}, a::Number) = map(x -> TensorKit.scale!!(x, a), x)
 
 """
     λs[1], Fs[1] = selectpos(λs, Fs)
@@ -235,9 +235,9 @@ function initial_FL(AL::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS)
     Ni, Nj = size(O)
     FL = Matrix{TensorMap}(undef, Ni, Nj)
     for j in 1:Nj, i in 1:Ni
-        D = space(O.top[i, j], 5)
-        χ = space(AL[i, j], 1)
-        FL[i, j] = TensorMap(rand, T, χ' * D * D', χ)
+        D = space(O.top[i, j], 5)'
+        χ = space(AL[i, j], 4)'
+        FL[i, j] = TensorMap(rand, T, χ * D * D', χ)
     end
     
     return FL
@@ -248,14 +248,36 @@ function initial_FR(AR::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS)
     Ni, Nj = size(O)
     FR = Matrix{TensorMap}(undef, Ni, Nj)
     for j in 1:Nj, i in 1:Ni
-        D = space(O.top[i, j], 3)
-        χ = space(AR[i, j], 1)
-        FR[i, j] = TensorMap(rand, T, χ * D * D', χ')
+        D = space(O.top[i, j], 3)'
+        χ = space(AR[i, j], 4)'
+        FR[i, j] = TensorMap(rand, T, χ * D * D', χ)
     end
     
     return FR
 end
 
-function VUMPSRuntime(ψ₀, χ::Int)
-    
+"""
+    λL, FL = leftenv(ALu, ALd, O, FL = initial_FL(ALu,O); kwargs...)
+
+Compute the left environment tensor for MPS A and MPO O, by finding the left fixed point
+of ALu - O - ALd contracted along the physical dimension.
+```
+ ┌──  ALuᵢⱼ  ──          ┌── 
+ │     │                 │   
+FLᵢⱼ ─ Oᵢⱼ   ──   = λLᵢⱼ FLᵢⱼ₊₁   
+ │     │                 │   
+ └──  ALdᵢᵣⱼ  ─          └── 
+```
+"""
+leftenv(ALu::Matrix{<:AbstractTensorMap}, ALd::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS, FL::Matrix{<:AbstractTensorMap} = initial_FL(ALu,O); kwargs...) = leftenv!(ALu, ALd, O, deepcopy(FL); kwargs...) 
+function leftenv!(ALu::Matrix{<:AbstractTensorMap}, ALd::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS, FL::Matrix{<:AbstractTensorMap}; ifobs=false, kwargs...)
+    Ni, Nj = size(O)
+    λL = zeros(eltype(O), Ni)
+    for i in 1:Ni
+        ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
+        λLs, FL1s, info = eigsolve(FLi -> FLmap(FLi, ALu[i,:], ALd[ir,:], O.top[i,:], O.bot[i,:]), FL[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+        info.converged == 0 && @warn "leftenv not converged"
+        λL[i], FL[i,:] = selectpos(λLs, FL1s, Nj)
+    end
+    return λL, FL
 end

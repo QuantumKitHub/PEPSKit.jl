@@ -3,6 +3,7 @@ using Random
 using PEPSKit
 using PEPSKit: initial_A, initial_C, initial_FL, initial_FR
 using PEPSKit: ρmap, getL!, getAL, getLsped, left_canonical, right_canonical
+using PEPSKit: leftenv, FLmap
 using TensorKit
 using LinearAlgebra
 
@@ -12,11 +13,12 @@ begin "test utility"
     χs = [ℂ^4]
 end
 @testset begin
-    A = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^3, ℂ^4 * ℂ^5)
-    @show storagetype(typeof(A))
-    # @tensor C = conj(A[1 2;3]) * A[1 2;3]
-    @show space(A, 1) space(A, 2) space(A, 3)  space(A, 4) 
-    # @tensor C = A'[3; 1 2] * A[1 2;3]
+    A = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^3, ℂ^4)
+    # @show storagetype(typeof(A))
+    # # @tensor C = conj(A[1 2;3]) * A[1 2;3]
+    @show space(A, 1) space(A, 2) space(A, 3) 
+    @show space(A', 1) space(A', 2) space(A', 3) 
+    @tensor C = A'[3; 1 2] * A[1 2;3]
     # @show sqrt(C) norm(A)
 end
 
@@ -86,7 +88,7 @@ end
     @test all(map((A, R, AR, λ) -> transpose(λ * R * AR, ((1,2,3),(4,))) ≈ A * R, A, R, AR, λ))
 end
 
-@testset "initialize A C for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
+@testset "initialize FL FR for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
@@ -96,14 +98,29 @@ end
     R, AR, λ = right_canonical(A)
 
     FL = initial_FL(AL, itp)
-    @test all(i -> space(i) == (χ' * D * D' ← χ), FL)
+    @test all(i -> space(i) == (χ * D' * D ← χ), FL)
 
     FR = initial_FR(AR, itp)
-    @test all(i -> space(i) == (χ * D' * D ← χ'), FR)
+    @test all(i -> space(i) == (χ * D * D' ← χ), FR)
 end
 
 
+@testset "leftenv and rightenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
+    Random.seed!(42)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
+    itp = InfiniteTransferPEPS(ipeps)
+    A = initial_A(itp, χ)
+    AL, L, λ = left_canonical(A)
+    R, AR, λ = right_canonical(A)
+
+    λL, FL = leftenv(AL, adjoint.(AL), itp; ifobs)
+    @test all(i -> space(i) == (χ * D' * D ← χ), FL)
+    for i in 1:Ni
+        ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
+        @test λL[i] * FL[i,:] ≈ FLmap(FL[i,:], AL[i,:], adjoint.(AL)[ir,:], itp.top[i,:], itp.bot[i,:]) rtol = 1e-12
+    end
+end
 
 
 
@@ -122,35 +139,4 @@ end
 #     N´ = abs(norm(psi, ctm))
 
 #     @test N ≈ N´ rtol = 1e-2
-# end
-
-# @testset "PEPO runthrough" begin
-#     function ising_pepo(beta; unitcell=(1, 1, 1))
-#         t = ComplexF64[exp(beta) exp(-beta); exp(-beta) exp(beta)]
-#         q = sqrt(t)
-
-#         O = zeros(2, 2, 2, 2, 2, 2)
-#         O[1, 1, 1, 1, 1, 1] = 1
-#         O[2, 2, 2, 2, 2, 2] = 1
-#         @tensor o[-1 -2; -3 -4 -5 -6] :=
-#             O[1 2; 3 4 5 6] *
-#             q[-1; 1] *
-#             q[-2; 2] *
-#             q[-3; 3] *
-#             q[-4; 4] *
-#             q[-5; 5] *
-#             q[-6; 6]
-
-#         O = TensorMap(o, ℂ^2 ⊗ (ℂ^2)' ← ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')
-
-#         return InfinitePEPO(O; unitcell)
-#     end
-
-#     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
-#     O = ising_pepo(1)
-#     T = InfiniteTransferPEPO(psi, O, 1, 1)
-
-#     mps = PEPSKit.initializeMPS(T, [ComplexSpace(10)])
-#     mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
-#     f = abs(prod(expectation_value(mps, T)))
-# end
+# endn    

@@ -49,7 +49,8 @@ function FLmap(FLi::Vector{<:AbstractTensorMap},
                ALdir::Vector{<:AbstractTensorMap}, 
                Ati::Vector{<:AbstractTensorMap}, 
                Abi::Vector{<:AbstractTensorMap})
-    FLm = [@tensoropt FL[-1 -2 -3; -4] := FL[6 5 4; 1] * ALu[1 2 3; -4] * At[9; 2 -2 8 5] * Ab[3 -3 7 4; 9] * ALd[6 8 7; -1] for (FL, ALu, ALd, At, Ab) in zip(FLi, ALui, ALdir, Ati, Abi)]
+    FLm = [@tensoropt FL[-1 -2 -3; -4] := FL[6 5 4; 1] * ALu[1 2 3; -4] * At[9; 2 -2 8 5] * 
+    Ab[3 -3 7 4; 9] * ALd[-1; 6 8 7] for (FL, ALu, ALd, At, Ab) in zip(FLi, ALui, ALdir, Ati, Abi)]
 
     return circshift(FLm, 1)
 end
@@ -74,7 +75,8 @@ function FRmap(FRi::Vector{<:AbstractTensorMap},
                ARdir::Vector{<:AbstractTensorMap}, 
                Ati::Vector{<:AbstractTensorMap}, 
                Abi::Vector{<:AbstractTensorMap})
-    FRm = [@tensoropt FR[-1 -2 -3; -4] := ARu[-1;1 2 3] * FR[3 4 5; 8] * At[9; 1 4 7 -2] * Ab[2 5 6 -3; 9] * ARd[-4; 7 6 8] for (FR, ARu, ARd, At, Ab) in zip(FRi, ARui, ARdir, Ati, Abi)]
+    FRm = [@tensoropt FR[-1 -2 -3; -4] := ARu[-1;1 2 3] * FR[3 4 5; 8] * At[9; 1 4 7 -2] * 
+    Ab[2 5 6 -3; 9] * ARd[-4; 7 6 8] for (FR, ARu, ARd, At, Ab) in zip(FRi, ARui, ARdir, Ati, Abi)]
 
     return circshift(FRm, -1)
 end
