@@ -56,6 +56,24 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     return total
 end
 
+function LinearAlgebra.norm(ipeps::InfinitePEPS, env::VUMPSRuntime)
+    @unpack AL, C, AR, FL, FR = env
+    Ni, Nj = size(ipeps)
+    # AC = Zygote.@ignore ALCtoAC(AL, C)
+    # total = 1
+    # for j in 1:Nj, i in 1:Ni
+    #     ir = mod1(i + 1, Ni)
+    #     @tensoropt Z = FL[i,j][6 5 4; 1] * AC[i,j][1 2 3; -4] * ipeps[i,j][9; 2 -2 8 5] * 
+    #     ipeps[i,j]'[3 -3 7 4; 9] * AC[ir,j]'[-1; 6 8 7] * FR[i,j][-4 -2 -3; -1]
+    #     @tensor n = FL[i,j][1 2 3; 4] * C[i,j][4; 5] * FR[i,j][5 2 3; 6] * C[i,j]'[6; 1]
+    #     total *= Z / n
+    # end
+
+    itp = InfiniteTransferPEPS(ipeps)
+    λL, FL = leftenv(AL, adjoint.(AL), itp; ifobs=true)
+    
+    return prod(λL)^(1/Ni)
+end
 """
     correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
 
