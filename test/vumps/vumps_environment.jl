@@ -2,8 +2,9 @@ using Test
 using Random
 using PEPSKit
 using PEPSKit: initial_A, initial_C, initial_FL, initial_FR
-using PEPSKit: ρmap, getL!, getAL, getLsped, left_canonical, right_canonical
-using PEPSKit: leftenv, FLmap
+using PEPSKit: ρmap, getL!, getAL, getLsped, _to_tail, _to_front, left_canonical, right_canonical
+using PEPSKit: leftenv, FLmap, rightenv, FRmap, ACenv, ACmap, Cenv, Cmap
+using PEPSKit: LRtoC, ALCtoAC, ACCtoALAR
 using TensorKit
 using LinearAlgebra
 
@@ -12,6 +13,7 @@ begin "test utility"
     Ds = [ℂ^3]
     χs = [ℂ^4]
 end
+
 @testset begin
     A = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^3, ℂ^4)
     # @show storagetype(typeof(A))
@@ -19,6 +21,7 @@ end
     @show space(A, 1) space(A, 2) space(A, 3) 
     @show space(A', 1) space(A', 2) space(A', 3) 
     @tensor C = A'[3; 1 2] * A[1 2;3]
+    @show eltype(A)
     # @show sqrt(C) norm(A)
 end
 
@@ -79,13 +82,13 @@ end
     @test all(i -> space(i) == (χ * D * D' ← χ), AL)
     @test all(i -> space(i) == (χ ← χ), L)
     @test all(AL -> (AL' * AL ≈ isomorphism(χ, χ)), AL)
-    @test all(map((A, AL, L, λ) -> λ * AL * L ≈ transpose(L*transpose(A, ((1,),(4,3,2))), ((1,4,3),(2,))), A, AL, L, λ))
+    @test all(map((A, AL, L, λ) -> λ * AL * L ≈ _to_front(L * _to_tail(A)), A, AL, L, λ))
 
     R, AR, λ = right_canonical(A)
-    @test all(i -> space(i) == (χ ← D' * D * χ), AR)
+    @test all(i -> space(i) == (χ * D * D' ← χ), AR)
     @test all(i -> space(i) == (χ ← χ), R)
-    @test all(AR -> (AR * AR' ≈ isomorphism(χ, χ)), AR)
-    @test all(map((A, R, AR, λ) -> transpose(λ * R * AR, ((1,2,3),(4,))) ≈ A * R, A, R, AR, λ))
+    @test all(AR -> (_to_tail(AR) * _to_tail(AR)' ≈ isomorphism(χ, χ)), AR)
+    @test all(map((A, R, AR, λ) -> _to_front(λ * R * _to_tail(AR)) ≈ A * R, A, R, AR, λ))
 end
 
 @testset "initialize FL FR for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
@@ -104,7 +107,6 @@ end
     @test all(i -> space(i) == (χ * D * D' ← χ), FR)
 end
 
-
 @testset "leftenv and rightenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
@@ -115,28 +117,68 @@ end
     R, AR, λ = right_canonical(A)
 
     λL, FL = leftenv(AL, adjoint.(AL), itp; ifobs)
+    λR, FR = rightenv(AR, adjoint.(AR), itp; ifobs)
+
     @test all(i -> space(i) == (χ * D' * D ← χ), FL)
+    @test all(i -> space(i) == (χ * D * D' ← χ), FR)
+
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
         @test λL[i] * FL[i,:] ≈ FLmap(FL[i,:], AL[i,:], adjoint.(AL)[ir,:], itp.top[i,:], itp.bot[i,:]) rtol = 1e-12
+        @test λR[i] * FR[i,:] ≈ FRmap(FR[i,:], AR[i,:], adjoint.(AR)[ir,:], itp.top[i,:], itp.bot[i,:]) rtol = 1e-12
     end
 end
 
+@testset "ACenv and Cenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs)
+    Random.seed!(42)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
+    itp = InfiniteTransferPEPS(ipeps)
+    A = initial_A(itp, χ)
+    AL, L, λ = left_canonical(A)
+    R, AR, λ = right_canonical(A)
 
+    λL, FL = leftenv(AL, adjoint.(AL), itp)
+    λR, FR = rightenv(AR, adjoint.(AR), itp)
 
+     C = LRtoC(L, R)
+    AC = ALCtoAC(AL, C)
 
+    λAC, AC = ACenv(AC, FL, FR, itp)
+     λC,  C =  Cenv( C, FL, FR) 
+    @test all(i -> space(i) == (χ * D * D' ← χ), AC)
+    @test all(i -> space(i) == (χ ← χ),  C)
 
-# @testset "(2, 2) PEPS" begin
-#     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
-#     T = PEPSKit.TransferPEPSMultiline(psi, 1)
+    for j in 1:Nj
+        jr = mod1(j + 1, Nj)
+        @test λAC[j] * AC[:,j] ≈ ACmap(AC[:,j], FL[:,j], FR[:,j], itp.top[:,j], itp.bot[:,j]) rtol = 1e-12
+        @test  λC[j] *  C[:,j] ≈  Cmap( C[:,j], FL[:,jr], FR[:,j]) rtol = 1e-12
+    end
+end
 
-#     mps = PEPSKit.initializeMPS(T, fill(ComplexSpace(20), 2, 2))
-#     mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
-#     N = abs(prod(expectation_value(mps, T)))
+@testset "ACenv and Cenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs)
+    Random.seed!(42)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-#     ctm = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi, CTMRG(; verbosity=1))
-#     N´ = abs(norm(psi, ctm))
+    itp = InfiniteTransferPEPS(ipeps)
+    A = initial_A(itp, χ)
+    AL, L, λ = left_canonical(A)
+    R, AR, λ = right_canonical(A)
 
-#     @test N ≈ N´ rtol = 1e-2
-# endn    
+    λL, FL = leftenv(AL, adjoint.(AL), itp)
+    λR, FR = rightenv(AR, adjoint.(AR), itp)
+
+     C = LRtoC(L, R)
+    AC = ALCtoAC(AL, C)
+
+    λAC, AC = ACenv(AC, FL, FR, itp)
+     λC,  C =  Cenv( C, FL, FR) 
+
+    AL, AR, errL, errR = ACCtoALAR(AC, C)
+    @test all(i -> space(i) == (χ * D * D' ← χ), AL)
+    @test all(i -> space(i) == (χ * D * D' ← χ), AR)
+    @test all(AL -> (AL' * AL ≈ isomorphism(χ, χ)), AL)
+    @test all(AR -> (_to_tail(AR) * _to_tail(AR)' ≈ isomorphism(χ, χ)), AR)
+    @test errL isa Real
+    @test errR isa Real
+end

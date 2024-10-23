@@ -2,6 +2,7 @@ module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Base: @kwdef
+using Parameters
 using Compat
 using Accessors
 using VectorInterface
@@ -23,17 +24,11 @@ include("utility/loginfo.jl")
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
 
-include("operators/transferpeps.jl")
-# include("operators/infinitepepo.jl")
-# include("operators/transferpepo.jl")
-# include("operators/derivatives.jl")
 include("operators/localoperator.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
-# include("environments/transferpeps_environments.jl")
-# include("environments/transferpepo_environments.jl")
 include("environments/vumps_environments.jl")
 
 abstract type Algorithm end
@@ -55,7 +50,7 @@ include("utility/symmetrization.jl")
 include("utility/defaults.jl")
 
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
-export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
+export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, VUMPS, VUMPSRuntime, VUMPSEnv, correlation_length
 export LocalOperator
 export expectation_value, costfun, product_peps
 export leading_boundary
