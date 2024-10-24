@@ -62,6 +62,7 @@ Module containing default values that represent typical algorithm parameters.
 - `ctmrg_tol = 1e-12`: Tolerance checking singular value and norm convergence
 - `fpgrad_maxiter = 100`: Maximal number of iterations for computing the CTMRG fixed-point gradient
 - `fpgrad_tol = 1e-6`: Convergence tolerance for the fixed-point gradient iteration
+- `rrule_alg = Arnoldi(; tol=1e1ctmrg_tol, krylovdim=48, verbosity=-1)`: Default cotangent linear problem algorithm
 """
 module Defaults
     using TensorKit, KrylovKit, OptimKit
@@ -76,7 +77,7 @@ module Defaults
     const trscheme = FixedSpaceTruncation()
     const iterscheme = :fixed
     const fwd_alg = TensorKit.SVD()
-    const rrule_alg = GMRES(; tol=1e1ctmrg_tol)
+    const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
     const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
     const gradient_linsolver = KrylovKit.BiCGStab(;
