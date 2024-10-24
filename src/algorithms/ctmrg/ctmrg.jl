@@ -200,28 +200,22 @@ end
 # end
 function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
+    # Qtype = EnlargedCorner{C,T,eltype(state),eltype(state)}
     Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
     @fwdthreads for (dir, r, c) in drc_combinations
-        Q[dir, r, c] = if dir == NORTHWEST
-            enlarge_northwest_corner((r, c), envs, state)
-        elseif dir == NORTHEAST
-            enlarge_northeast_corner((r, c), envs, state)
-        elseif dir == SOUTHEAST
-            enlarge_southeast_corner((r, c), envs, state)
-        elseif dir == SOUTHWEST
-            enlarge_southwest_corner((r, c), envs, state)
-        end
+        ec = enlarge_corner((dir, r, c), state, envs)
+        Q[dir, r, c] = ec(dir)  # Explicitly construct EnlargedCorner for now
     end
     return copy(Q)
 end
 
 """
-    enlarge_corner((dir, r, c), envs, state)
+    enlarge_corner((dir, r, c), state, envs)
 
 Enlarge corner by constructing the corresponding `EnlargedCorner` struct.
 """
-function enlarge_corner((dir, r, c), envs, state)
+function enlarge_corner((dir, r, c), state, envs)
     if dir == NORTHWEST
         return EnlargedCorner(
             envs.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
