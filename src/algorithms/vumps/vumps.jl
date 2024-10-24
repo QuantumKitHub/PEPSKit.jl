@@ -1,4 +1,5 @@
 @kwdef mutable struct VUMPS{F} <: Algorithm
+    ifupdown::Bool = true
     tol::Float64 = Defaults.contr_tol
     maxiter::Int = Defaults.contr_maxiter
     finalize::F = Defaults._finalize
@@ -24,21 +25,25 @@ For a `Ni` x `Nj` unitcell, each is a Matrix, containing
 """
 struct VUMPSEnv{T<:Number, S<:IndexSpace,
                 ET<:AbstractTensorMap{S, 3, 1}}
-    AC::Matrix{ET}
-    AR::Matrix{ET}
+    ACu::Matrix{ET}
+    ARu::Matrix{ET}
+    ACd::Matrix{ET}
+    ARd::Matrix{ET}
     FLu::Matrix{ET}
     FRu::Matrix{ET}
     FLo::Matrix{ET}
     FRo::Matrix{ET}
-    function VUMPSEnv(AC::Matrix{ET},
-                      AR::Matrix{ET},
+    function VUMPSEnv(ACu::Matrix{ET},
+                      ARu::Matrix{ET},
+                      ACd::Matrix{ET},
+                      ARd::Matrix{ET},
                       FLu::Matrix{ET},
                       FRu::Matrix{ET},
                       FLo::Matrix{ET},
                       FRo::Matrix{ET}) where {ET}
-        T = eltype(AC[1])
-        S = spacetype(AC[1])
-        new{T, S, ET}(AC, AR, FLu, FRu, FLo, FRo)
+        T = eltype(ACu[1])
+        S = spacetype(ACu[1])
+        new{T, S, ET}(ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo)
     end
 end
 
@@ -78,7 +83,7 @@ struct VUMPSRuntime{T<:Number, S<:IndexSpace,
     end
 end
 
-function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
+function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace)
     A = initial_A(O, χ)
     AL, L, _ = left_canonical(A)
     R, AR, _ = right_canonical(AL)
@@ -86,14 +91,39 @@ function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
     _, FL = leftenv(AL, adjoint.(AL), O)
     _, FR = rightenv(AR, adjoint.(AR), O)
     C = LRtoC(L, R)
-    Ni, Nj = size(O)
-    alg.verbosity >= 2 && println("===== vumps random initial $(Ni)×$(Nj) vumps χ = $(χ) environment  =====")
     return VUMPSRuntime(AL, AR, C, FL, FR)
 end
 
-function leading_boundary(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
+function down_itp(O)
+    Ni, Nj = size(O)
+    ipepsd = Zygote.Buffer(O.top)
+    for j in 1:Nj, i in 1:Ni
+        ir = Ni + 1 - i 
+        ipepsd[i, j] = permute(ipeps[ir,j], ((1,), (4,3,2,5)))
+    end
+    return InfiniteTransferPEPS(copy(ipepsd))
+end
+
+function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
+    Ni, Nj = size(O)
+
+    rtup = VUMPSRuntime(O, χ)
+    alg.verbosity >= 2 && println("===== vumps random initial $(Ni)×$(Nj) vumps χ = $(χ) up ↑ environment  =====")
+
+    if alg.ifupdown
+        Od = down_itp(O)
+        rtdown = VUMPSRuntime(Od, χ)
+        alg.verbosity >= 2 && println("===== vumps random initial $(Ni)×$(Nj) vumps χ = $(χ) down ↓ environment  =====")
+
+        return rtup, rtdown
+    else
+        return rtup
+    end
+end
+
+function vumps_itr(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
     for i in 1:alg.maxiter
-        rt, err = vumps_itr(O, rt, alg)
+        rt, err = vumps_step(O, rt, alg)
         alg.verbosity >= 3 && println(@sprintf("vumps@step: i = %4d\terr = %.3e\t", i, err))
         if err < alg.tol
             alg.verbosity >= 2 && println(@sprintf("===== vumps@step: i = %4d\terr = %.3e\t coveraged =====", i, err))
@@ -106,7 +136,44 @@ function leading_boundary(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
     return rt
 end
 
-function vumps_itr(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
+function leading_boundary(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
+    rt = vumps_itr(O, rt, alg)
+    return VUMPSEnv(rt)
+end
+
+function leading_boundary(O::InfiniteTransferPEPS, rt::Tuple{VUMPSRuntime}, alg::VUMPS)
+    rtup, rtdown = rt
+
+    rtup = vumps_itr(O, rtup, alg)
+
+    Od = down_itp(O)
+    rtdown = vumps_itr(Od, rtdown, alg)
+
+    return VUMPSEnv(rtup, rtdown)
+end
+
+function VUMPSEnv(rt::VUMPSRuntime)
+    @unpack AL, AR, C, FL, FR = rt
+    AC = ALCtoAC(AL, C)
+    return VUMPSEnv(AC, AR, AC, AR, FL, FR, FL, FR)
+end
+
+function VUMPSEnv(rt::Tuple{VUMPSRuntime})
+    rtup, rtdown = rt
+
+    ALu, ARu, Cu, FLu, FRu = rtup.AL, rtup.AR, rtup.C, rtup.FL, rtup.FR
+    ACu = ALCtoAC(ALu, Cu)
+
+    ALd, ARd, Cd = rtdown.AL, rtdown.AR, rtdown.C
+    ACd = ALCtoAC(ALd, Cd)
+
+    _, FLo = leftenv(ALu, adjoint.(ALd), O, FLup; ifobs = true)
+    _, FRo = rightenv(ARu, adjoint.(ARd), O, FRup; ifobs = true)
+
+    return VUMPSEnv(ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo)
+end
+
+function vumps_step(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
     @unpack AL, C, AR, FL, FR = rt
     AC = Zygote.@ignore ALCtoAC(AL,C)
     _, ACp = ACenv(AC, FL, FR, O)
