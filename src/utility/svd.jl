@@ -70,13 +70,8 @@ the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
     start_vector = random_start_vector
 end
 
-# TODO: find better initial guess that leads to element-wise convergence and is compatible with function handles
 function random_start_vector(t::Matrix)
-    return randn(eltype(t), size(t, 1))  # Leads to erroneous gauge fixing of U, S, V and thus failing element-wise conv.
-    # u, = TensorKit.MatrixAlgebra.svd!(deepcopy(t), TensorKit.SVD())
-    # return sum(u[:, i] for i in 1:howmany)  # Element-wise convergence works fine
-    # return dropdims(sum(t[:, 1:3]; dims=2); dims=2)  # Summing too many columns also makes gauge fixing fail
-    # return t[:, 1]  # Leads so slower convergence of SVD than randn, but correct element-wise convergence
+    return randn(eltype(t), size(t, 1))
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm

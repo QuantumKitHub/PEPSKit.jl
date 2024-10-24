@@ -872,7 +872,7 @@ end
 Multiply north left singular vectors with gauge signs from the right.
 """
 function fix_gauge_north_left_vecs((row, col), U, signs)
-    return U[NORTH, row, col] * signs[NORTH, row, _next(col, end)]
+    return U[NORTH, row, col] * signs[NORTH, row, _next(col, end)]'
 end
 
 """
@@ -881,7 +881,7 @@ end
 Multiply east left singular vectors with gauge signs from the right.
 """
 function fix_gauge_east_left_vecs((row, col), U, signs)
-    return U[EAST, row, col] * signs[EAST, _next(row, end), col]
+    return U[EAST, row, col] * signs[EAST, _next(row, end), col]'
 end
 
 """
@@ -890,7 +890,7 @@ end
 Multiply south left singular vectors with gauge signs from the right.
 """
 function fix_gauge_south_left_vecs((row, col), U, signs)
-    return U[SOUTH, row, col] * signs[SOUTH, row, _prev(col, end)]
+    return U[SOUTH, row, col] * signs[SOUTH, row, _prev(col, end)]'
 end
 
 """
@@ -899,7 +899,7 @@ end
 Multiply west left singular vectors with gauge signs from the right.
 """
 function fix_gauge_west_left_vecs((row, col), U, signs)
-    return U[WEST, row, col] * signs[WEST, _prev(row, end), col]
+    return U[WEST, row, col] * signs[WEST, _prev(row, end), col]'
 end
 
 # right singular vectors
@@ -910,7 +910,7 @@ end
 Multiply north right singular vectors with gauge signs from the left.
 """
 function fix_gauge_north_right_vecs((row, col), V, signs)
-    return signs[NORTH, row, _next(col, end)]' * V[NORTH, row, col]
+    return signs[NORTH, row, _next(col, end)] * V[NORTH, row, col]
 end
 
 """
@@ -919,7 +919,7 @@ end
 Multiply east right singular vectors with gauge signs from the left.
 """
 function fix_gauge_east_right_vecs((row, col), V, signs)
-    return signs[EAST, _next(row, end), col]' * V[EAST, row, col]
+    return signs[EAST, _next(row, end), col] * V[EAST, row, col]
 end
 
 """
@@ -928,7 +928,7 @@ end
 Multiply south right singular vectors with gauge signs from the left.
 """
 function fix_gauge_south_right_vecs((row, col), V, signs)
-    return signs[SOUTH, row, _prev(col, end)]' * V[SOUTH, row, col]
+    return signs[SOUTH, row, _prev(col, end)] * V[SOUTH, row, col]
 end
 
 """
@@ -937,5 +937,5 @@ end
 Multiply west right singular vectors with gauge signs from the left.
 """
 function fix_gauge_west_right_vecs((row, col), V, signs)
-    return signs[WEST, _prev(row, end), col]' * V[WEST, row, col]
+    return signs[WEST, _prev(row, end), col] * V[WEST, row, col]
 end

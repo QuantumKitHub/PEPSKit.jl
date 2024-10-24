@@ -1,5 +1,6 @@
 using Test
 using Random
+using LinearAlgebra
 using TensorKit, KrylovKit
 using PEPSKit
 using PEPSKit:
@@ -66,7 +67,6 @@ end
     psi = InfinitePEPS(2, χbond)
     env_init = CTMRGEnv(psi, ComplexSpace(χenv))
     env_conv1 = leading_boundary(env_init, psi, ctm_alg_iter)
-    # env_conv1 = leading_boundary(env_init, psi, ctm_alg_full);
 
     # do extra iteration to get SVD
     env_conv2_iter, info_iter = ctmrg_iter(psi, env_conv1, ctm_alg_iter)
@@ -94,12 +94,10 @@ end
     env_fixedsvd_iter, = ctmrg_iter(psi, env_conv1, ctm_alg_fix_iter)
     env_fixedsvd_iter = fix_global_phases(env_conv1, env_fixedsvd_iter)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = 1e-6  # This doesn't work for x₀ = rand(size(b, 1))?
-    # @show calc_elementwise_convergence(env_conv1, env_fixedsvd_iter)
 
     env_fixedsvd_full, = ctmrg_iter(psi, env_conv1, ctm_alg_fix_full)
     env_fixedsvd_full = fix_global_phases(env_conv1, env_fixedsvd_full)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_full) ≈ 0 atol = 1e-6
-    # @show calc_elementwise_convergence(env_conv1, env_fixedsvd_full)
 
     # check matching decompositions
     atol = 1e-12
