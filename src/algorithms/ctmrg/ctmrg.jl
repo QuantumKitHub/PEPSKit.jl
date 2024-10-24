@@ -8,14 +8,13 @@ have different spaces, this truncation style is different from `TruncationSpace`
 struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
 """
-    struct ProjectorAlg{S}(; svd_alg=TensorKit.SVD(), trscheme=TensorKit.notrunc(),
-                           fixedspace=false, verbosity=0)
+    struct ProjectorAlg{S}(; svd_alg=Defaults.svd_alg, trscheme=Defaults.trscheme, verbosity=0)
 
-Algorithm struct collecting all projector related parameters. The truncation scheme has to be
-a `TensorKit.TruncationScheme`, and some SVD algorithms might have further restrictions on what
-kind of truncation scheme can be used. If `fixedspace` is true, the truncation scheme is set to
-`truncspace(V)` where `V` is the environment bond space, adjusted to the corresponding
-environment direction/unit cell entry.
+Algorithm struct collecting all projector related parameters.
+
+The `svd_alg` sets the SVD algorithm for decomposing the CTM environment. The truncation scheme
+has to be a `TensorKit.TruncationScheme`, and some SVD algorithms might have further restrictions
+on what kind of truncation scheme can be used.
 """
 @kwdef struct ProjectorAlg{S<:SVDAdjoint,T}
     svd_alg::S = Defaults.svd_alg
@@ -180,43 +179,75 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 
 """
     ctmrg_expand(state, envs, alg::CTMRG{M})
+    ctmrg_expand(dirs, state, envs::CTMRGEnv)
 
 Expand the environment by absorbing a new PEPS tensor.
 There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
 The first mode expands the environment in one direction at a time, for convenience towards
 the left. The second mode expands the environment in all four directions simultaneously.
+Alternatively, one can provide directly the `dirs` in which the environment is grown.
 """
-function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SequentialCTMRG) where {C,T}
-    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q_sw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
-    Q_nw = Zygote.Buffer(envs.corners, Qtype, axes(state)...)
-
-    directions = collect(Iterators.product(axes(state)...))
-    # @fwdthreads for (r, c) in directions
-    for (r, c) in directions
-        Q_sw[r, c] = enlarge_southwest_corner((r, c), envs, state)
-        Q_nw[r, c] = enlarge_northwest_corner((r, c), envs, state)
-    end
-
-    return copy(Q_sw), copy(Q_nw)
+function ctmrg_expand(state, envs::CTMRGEnv, ::SequentialCTMRG)
+    return ctmrg_expand([4, 1], state, envs)
 end
-function ctmrg_expand(state, envs::CTMRGEnv{C,T}, ::SimultaneousCTMRG) where {C,T}
+function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
+    return ctmrg_expand(1:4, state, envs)
+end
+# function ctmrg_expand(dirs, state, envs::CTMRGEnv)  # TODO: This doesn't AD due to length(::Nothing)...
+#     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
+#     return map(idx -> enlarge_corner(idx, envs, state)(idx[1]), drc_combinations)
+# end
+function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
-    drc_combinations = collect(Iterators.product(axes(envs.corners)...))
-    @fwdthreads for (dir, r, c) in drc_combinations
-        Q[dir, r, c] = if dir == NORTHWEST
-            enlarge_northwest_corner((r, c), envs, state)
-        elseif dir == NORTHEAST
-            enlarge_northeast_corner((r, c), envs, state)
-        elseif dir == SOUTHEAST
-            enlarge_southeast_corner((r, c), envs, state)
-        elseif dir == SOUTHWEST
-            enlarge_southwest_corner((r, c), envs, state)
-        end
+    Q = Zygote.Buffer(Array{Qtype,3}(undef, length(dirs), size(state)...))
+    dirs_enum = [(i, dir) for (i, dir) in enumerate(dirs)]
+    drc_combinations = collect(Iterators.product(dirs_enum, axes(state)...))
+    @fwdthreads for (d, r, c) in drc_combinations
+        ec = enlarge_corner((d[2], r, c), state, envs)
+        Q[d[1], r, c] = ec(d[2])  # Explicitly construct EnlargedCorner for now
     end
-
     return copy(Q)
+end
+
+"""
+    enlarge_corner((dir, r, c), state, envs)
+
+Enlarge corner by constructing the corresponding `EnlargedCorner` struct.
+"""
+function enlarge_corner((dir, r, c), state, envs)
+    if dir == NORTHWEST
+        return EnlargedCorner(
+            envs.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+            envs.edges[WEST, r, _prev(c, end)],
+            envs.edges[NORTH, _prev(r, end), c],
+            state[r, c],
+            state[r, c],
+        )
+    elseif dir == NORTHEAST
+        return EnlargedCorner(
+            envs.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+            envs.edges[NORTH, _prev(r, end), c],
+            envs.edges[EAST, r, _next(c, end)],
+            state[r, c],
+            state[r, c],
+        )
+    elseif dir == SOUTHEAST
+        return EnlargedCorner(
+            envs.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+            envs.edges[EAST, r, _next(c, end)],
+            envs.edges[SOUTH, _next(r, end), c],
+            state[r, c],
+            state[r, c],
+        )
+    elseif dir == SOUTHWEST
+        return EnlargedCorner(
+            envs.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+            envs.edges[SOUTH, _next(r, end), c],
+            envs.edges[WEST, r, _prev(c, end)],
+            state[r, c],
+            state[r, c],
+        )
+    end
 end
 
 # ======================================================================================== #
@@ -224,7 +255,10 @@ end
 # ======================================================================================== #
 
 """
-    ctmrg_projectors(Q, env, alg::CTMRG{M})
+    ctmrg_projectors(enlarged_envs, env, alg::CTMRG{M})
+
+Compute the CTMRG projectors based from enlarged environments.
+In the `:simultaneous` mode, the environment SVD is run in parallel.
 """
 function ctmrg_projectors(
     enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
@@ -241,7 +275,7 @@ function ctmrg_projectors(
     for (r, c) in directions
         # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
-        QQ = halfinfinite_environment(enlarged_envs[1][r, c], enlarged_envs[2][r′, c])
+        QQ = halfinfinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
 
         trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
@@ -258,7 +292,7 @@ function ctmrg_projectors(
 
         # Compute projectors
         P_bottom[r, c], P_top[r, c] = build_projectors(
-            U, S, V, enlarged_envs[1][r, c], enlarged_envs[2][r′, c]
+            U, S, V, enlarged_envs[1, r, c], enlarged_envs[2, r′, c]
         )
     end
 
@@ -320,6 +354,41 @@ function ctmrg_projectors(
     end
 
     return (copy(P_left), copy(P_right)), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
+end
+
+"""
+    build_projectors(U::AbstractTensorMap{E,3,1}, S::AbstractTensorMap{E,1,1}, V::AbstractTensorMap{E,1,3},
+        Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}) where {E<:ElementarySpace}
+    build_projectors(U::AbstractTensorMap{E,3,1}, S::AbstractTensorMap{E,1,1}, V::AbstractTensorMap{E,1,3},
+        Q::EnlargedCorner, Q_next::EnlargedCorner) where {E<:ElementarySpace}
+
+Construct left and right projectors where the higher-dimensional is facing left and right, respectively.
+"""
+function build_projectors(
+    U::AbstractTensorMap{E,3,1},
+    S::AbstractTensorMap{E,1,1},
+    V::AbstractTensorMap{E,1,3},
+    Q::AbstractTensorMap{E,3,3},
+    Q_next::AbstractTensorMap{E,3,3},
+) where {E<:ElementarySpace}
+    isqS = sdiag_inv_sqrt(S)
+    P_left = Q_next * V' * isqS
+    P_right = isqS * U' * Q
+    return P_left, P_right
+end
+function build_projectors(
+    U::AbstractTensorMap{E,3,1},
+    S::AbstractTensorMap{E,1,1},
+    V::AbstractTensorMap{E,1,3},
+    Q::EnlargedCorner,
+    Q_next::EnlargedCorner,
+) where {E<:ElementarySpace}
+    isqS = sdiag_inv_sqrt(S)
+    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
+    P_right = right_projector(
+        Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
+    )
+    return P_left, P_right
 end
 
 # ======================================================================================== #
@@ -388,18 +457,4 @@ function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::Simultaneou
     end
 
     return CTMRGEnv(copy(corners), copy(edges))
-end
-
-# ======================================================================================== #
-# Auxiliary routines
-# ======================================================================================== #
-
-# Build projectors from SVD and enlarged SW & NW corners
-function build_projectors(
-    U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q, Q_next
-) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S)
-    P_left = Q_next * V' * isqS
-    P_right = isqS * U' * Q
-    return P_left, P_right
 end

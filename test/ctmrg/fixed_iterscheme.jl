@@ -1,6 +1,7 @@
 using Test
 using Random
-using TensorKit
+using LinearAlgebra
+using TensorKit, KrylovKit
 using PEPSKit
 using PEPSKit:
     FixedSVD,
@@ -13,7 +14,7 @@ using PEPSKit:
 # initialize parameters
 χbond = 2
 χenv = 16
-svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SVD())]  #, SVDAdjoint(; fwd_alg=IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SVD()), SVDAdjoint(; fwd_alg=IterSVD())]
 unitcells = [(1, 1), (3, 4)]
 
 # test for element-wise convergence after application of fixed step
@@ -46,13 +47,13 @@ unitcells = [(1, 1), (3, 4)]
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = 1e-6
 end
 
-# TODO: Why doesn't FixedSVD work with previous U, S and V from IterSVD?
 @testset "Element-wise consistency of TensorKit.SVD and IterSVD" begin
     ctm_alg_iter = CTMRG(;
         tol=1e-12,
+        maxiter=200,
         verbosity=2,
         ctmrgscheme=:simultaneous,
-        svd_alg=SVDAdjoint(; fwd_alg=IterSVD()),
+        svd_alg=SVDAdjoint(; fwd_alg=IterSVD(; alg=GKL(; tol=1e-14, krylovdim=χenv + 10))),
     )
     ctm_alg_full = CTMRG(;
         tol=1e-12,
@@ -65,7 +66,7 @@ end
     Random.seed!(91283219347)
     psi = InfinitePEPS(2, χbond)
     env_init = CTMRGEnv(psi, ComplexSpace(χenv))
-    env_conv1 = leading_boundary(env_init, psi, ctm_alg_full)
+    env_conv1 = leading_boundary(env_init, psi, ctm_alg_iter)
 
     # do extra iteration to get SVD
     env_conv2_iter, info_iter = ctmrg_iter(psi, env_conv1, ctm_alg_iter)
@@ -92,7 +93,7 @@ end
     # do iteration with FixedSVD
     env_fixedsvd_iter, = ctmrg_iter(psi, env_conv1, ctm_alg_fix_iter)
     env_fixedsvd_iter = fix_global_phases(env_conv1, env_fixedsvd_iter)
-    # @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = 1e-6  # This should work, but doesn't!
+    @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = 1e-6  # This doesn't work for x₀ = rand(size(b, 1))?
 
     env_fixedsvd_full, = ctmrg_iter(psi, env_conv1, ctm_alg_fix_full)
     env_fixedsvd_full = fix_global_phases(env_conv1, env_fixedsvd_full)

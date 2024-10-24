@@ -164,7 +164,59 @@ end
 # ----------------------
 
 """
+    left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+
+Contract the CTMRG left projector with the higher-dimensional subspace facing to the left.
+
+```
+     C  --  E_2    -- |~~|
+     |       ||       |V'| -- isqS --
+    E_1 == ket-bra == |~~|
+     |       ||
+```
+"""
+function left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+    return @autoopt @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
+        E_1[χ_in D1 D2; χ1] *
+        C[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket[d; D3 D5 D_inabove D1] *
+        conj(bra[d; D4 D6 D_inbelow D2]) *
+        conj(V[χ4; χ3 D5 D6]) *
+        isqS[χ4; χ_out]
+end
+
+"""
+    right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+
+Contract the CTMRG right projector with the higher-dimensional subspace facing to the right.
+
+```
+               |~~| --   E_2   --  C
+    -- isqS -- |U'|      ||        |
+               |~~| == ket-bra == E_1
+                         ||        |
+```
+"""
+function right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
+    return @autoopt @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
+        isqS[χ_in; χ1] *
+        conj(U[χ1; χ2 D1 D2]) *
+        ket[d; D1 D5 D_outabove D1] *
+        conj(bra[d; D2 D6 D_outbelow D2]) *
+        E_2[χ2 D3 D4; χ3] *
+        C[χ3; χ4] *
+        E_1[χ4 D5 D6; χ_out]
+end
+
+"""
     halfinfinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
+    halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
+                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    halfinfinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -174,13 +226,102 @@ Contract two quadrants (enlarged corners) to form a half-infinite environment.
     |~~~~~~~~~| == |~~~~~~~~~|
       |    ||        ||    |
 ```
+
+The environment can also be contracted directly from all its constituent tensors.
+
+```
+    C_1 --  E_2      --  E_3      -- C_2
+     |       ||          ||           | 
+    E_1 == ket_bra_1 == ket_bra_2 == E_4
+     |       ||          ||           |
+```
+
+Alternatively, contract environment with a vector `x` acting on it
+
+```
+    C_1 --  E_2      --  E_3      -- C_2
+     |       ||          ||           | 
+    E_1 == ket_bra_1 == ket_bra_2 == E_4
+     |       ||          ||           |
+                         [~~~~~~x~~~~~~]
+                         ||           |
+```
+
+or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
 """
 function halfinfinite_environment(
     quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3}
 ) where {S}
-    return @autoopt @tensor half[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         quadrant1[χ_in D_inabove D_inbelow; χ D1 D2] *
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
+end
+function halfinfinite_environment(
+    C_1, C_2, E_1, E_2, E_3, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
+) where {P<:PEPSTensor}
+    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+        E_1[χ_in D1 D2; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket_1[d1; D3 D9 D_inabove D1] *
+        conj(bra_1[d1; D4 D10 D_inbelow D2]) *
+        ket_2[d2; D5 D7 D_outabove D9] *
+        conj(bra_2[d2; D6 D8 D_outbelow D10]) *
+        E_3[χ3 D5 D6; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7 D8; χ_out]
+end
+function halfinfinite_environment(
+    C_1,
+    C_2,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    x::AbstractTensor{S,3},
+    ket_1::P,
+    ket_2::P,
+    bra_1::P=ket_1,
+    bra_2::P=ket_2,
+) where {S,P<:PEPSTensor}
+    return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
+        E_1[χ_in D1 D2; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket_1[d1; D3 D9 D_inabove D1] *
+        conj(bra_1[d1; D4 D10 D_inbelow D2]) *
+        ket_2[d2; D5 D7 D11 D9] *
+        conj(bra_2[d2; D6 D8 D12 D10]) *
+        E_3[χ3 D5 D6; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7 D8; χ6] *
+        x[χ6 D11 D12]
+end
+function halfinfinite_environment(
+    x::AbstractTensor{S,3},
+    C_1,
+    C_2,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    ket_1::P,
+    ket_2::P,
+    bra_1::P=ket_1,
+    bra_2::P=ket_2,
+) where {S,P<:PEPSTensor}
+    return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
+        x[χ1 D1 D2] *
+        conj(E_1[χ1 D3 D4; χ2]) *
+        conj(C_1[χ2; χ3]) *
+        conj(E_2[χ3 D5 D6; χ4]) *
+        conj(ket_1[d1; D5 D11 D1 D3]) *
+        bra_1[d1; D6 D12 D2 D4] *
+        conj(ket_2[d2; D7 D9 D_inabove D11]) *
+        bra_2[d2; D8 D10 D_inbelow D12] *
+        conj(E_3[χ4 D7 D8; χ5]) *
+        conj(C_2[χ5; χ6]) *
+        conj(E_4[χ6 D9 D10; χ_in])
 end
 
 # Renormalization contractions
@@ -189,7 +330,7 @@ end
 # corners
 
 """
-    renormalize_corner(quadrant, P_left, P_right)
+    renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right)
 
 Apply projectors to each side of a quadrant.
 
@@ -209,47 +350,146 @@ end
 
 """
     renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply `renormalize_corner` to the enlarged northwest corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+    C_northwest -- E_north -- |~~~~~~|
+         |           ||       |P_left| --
+      E_west=   == ket-bra == |~~~~~~|
+         |           ||
+      [~~~~~P_right~~~~~]
+               |
+```
 """
 function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right)
-    return renormalize_corner(
+    return renormalize_northwest_corner(
         enlarged_envs[NORTHWEST, row, col],
         P_left[NORTH, row, col],
         P_right[WEST, _next(row, end), col],
     )
 end
+function renormalize_northwest_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_corner(quadrant, P_left, P_right)
+end
+function renormalize_northwest_corner(
+    E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_west[χ1 D3 D4; χ2] *
+        C_northwest[χ2; χ3] *
+        E_north[χ3 D5 D6; χ4] *
+        ket[d; D5 D7 D1 D3] *
+        conj(bra[d; D6 D8 D2 D4]) *
+        P_left[χ4 D7 D8; χ_out]
+end
 
 """
     renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply `renormalize_corner` to the enlarged northeast corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+       |~~~~~~~| --  E_north --  C_northeast
+    -- |P_right|       ||             |  
+       |~~~~~~~| ==  ket-bra ==     E_east
+                       ||             |
+                     [~~~~~~P_left~~~~~~]
+                              |
+```
 """
 function renormalize_northeast_corner((row, col), enlarged_envs, P_left, P_right)
-    return renormalize_corner(
+    return renormalize_northeast_corner(
         enlarged_envs[NORTHEAST, row, col],
         P_left[EAST, row, col],
         P_right[NORTH, row, _prev(col, end)],
     )
 end
+function renormalize_northeast_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_corner(quadrant, P_left, P_right)
+end
+function renormalize_northeast_corner(
+    E_north, C_northeast, E_east, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_north[χ1 D3 D4; χ2] *
+        C_northeast[χ2; χ3] *
+        E_east[χ3 D5 D6; χ4] *
+        ket[d; D3 D5 D7 D1] *
+        conj(bra[d; D4 D6 D8 D2]) *
+        P_left[χ4 D7 D8; χ_out]
+end
 
 """
     renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_southeast_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply `renormalize_corner` to the enlarged southeast corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+                            |
+                   [~~~~~P_right~~~~~]
+                      ||           |
+       |~~~~~~| == ket-bra ==    E_east
+    -- |P_left|       ||           |
+       |~~~~~~| -- E_south -- C_southeast
+```
 """
 function renormalize_southeast_corner((row, col), enlarged_envs, P_left, P_right)
-    return renormalize_corner(
+    return renormalize_southeast_corner(
         enlarged_envs[SOUTHEAST, row, col],
         P_left[SOUTH, row, col],
         P_right[EAST, _prev(row, end), col],
     )
 end
+function renormalize_southeast_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_corner(quadrant, P_left, P_right)
+end
+function renormalize_southeast_corner(
+    E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_east[χ1 D3 D4; χ2] *
+        C_southeast[χ2; χ3] *
+        E_south[χ3 D5 D6; χ4] *
+        ket[d; D1 D3 D5 D7] *
+        conj(bra[d; D2 D4 D6 D8]) *
+        P_left[χ4 D7 D8; χ_out]
+end
 
 """
     renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_southwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Apply `renormalize_corner` to the enlarged southwest corner.
+Alternatively, provide the constituent tensors and perform the complete contraction.
+
+```
+               |
+      [~~~~~P_right~~~~~]
+        ||            |
+       E_west   == ket-bra == |~~~~~~|
+         |           ||       |P_left| --
+    C_southwest -- E_south -- |~~~~~~|
+```
 """
 function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_corner(
@@ -257,6 +497,23 @@ function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right
         P_left[WEST, row, col],
         P_right[SOUTH, row, _next(col, end)],
     )
+end
+function renormalize_southwest_corner(
+    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+) where {S}
+    return renormalize_southwest_corner(quadrant, P_left, P_right)
+end
+function renormalize_southwest_corner(
+    E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
+)
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] *
+        E_south[χ1 D3 D4; χ2] *
+        C_southwest[χ2; χ3] *
+        E_west[χ3 D5 D6; χ4] *
+        ket[d; D7 D1 D3 D5] *
+        conj(bra[d; D8 D2 D4 D6]) *
+        P_left[χ4 D7 D8; χ_out]
 end
 
 """
@@ -615,7 +872,7 @@ end
 Multiply north left singular vectors with gauge signs from the right.
 """
 function fix_gauge_north_left_vecs((row, col), U, signs)
-    return U[NORTH, row, col] * signs[NORTH, row, _next(col, end)]
+    return U[NORTH, row, col] * signs[NORTH, row, _next(col, end)]'
 end
 
 """
@@ -624,7 +881,7 @@ end
 Multiply east left singular vectors with gauge signs from the right.
 """
 function fix_gauge_east_left_vecs((row, col), U, signs)
-    return U[EAST, row, col] * signs[EAST, _next(row, end), col]
+    return U[EAST, row, col] * signs[EAST, _next(row, end), col]'
 end
 
 """
@@ -633,7 +890,7 @@ end
 Multiply south left singular vectors with gauge signs from the right.
 """
 function fix_gauge_south_left_vecs((row, col), U, signs)
-    return U[SOUTH, row, col] * signs[SOUTH, row, _prev(col, end)]
+    return U[SOUTH, row, col] * signs[SOUTH, row, _prev(col, end)]'
 end
 
 """
@@ -642,7 +899,7 @@ end
 Multiply west left singular vectors with gauge signs from the right.
 """
 function fix_gauge_west_left_vecs((row, col), U, signs)
-    return U[WEST, row, col] * signs[WEST, _prev(row, end), col]
+    return U[WEST, row, col] * signs[WEST, _prev(row, end), col]'
 end
 
 # right singular vectors
@@ -653,7 +910,7 @@ end
 Multiply north right singular vectors with gauge signs from the left.
 """
 function fix_gauge_north_right_vecs((row, col), V, signs)
-    return signs[NORTH, row, _next(col, end)]' * V[NORTH, row, col]
+    return signs[NORTH, row, _next(col, end)] * V[NORTH, row, col]
 end
 
 """
@@ -662,7 +919,7 @@ end
 Multiply east right singular vectors with gauge signs from the left.
 """
 function fix_gauge_east_right_vecs((row, col), V, signs)
-    return signs[EAST, _next(row, end), col]' * V[EAST, row, col]
+    return signs[EAST, _next(row, end), col] * V[EAST, row, col]
 end
 
 """
@@ -671,7 +928,7 @@ end
 Multiply south right singular vectors with gauge signs from the left.
 """
 function fix_gauge_south_right_vecs((row, col), V, signs)
-    return signs[SOUTH, row, _prev(col, end)]' * V[SOUTH, row, col]
+    return signs[SOUTH, row, _prev(col, end)] * V[SOUTH, row, col]
 end
 
 """
@@ -680,5 +937,5 @@ end
 Multiply west right singular vectors with gauge signs from the left.
 """
 function fix_gauge_west_right_vecs((row, col), V, signs)
-    return signs[WEST, _prev(row, end), col]' * V[WEST, row, col]
+    return signs[WEST, _prev(row, end), col] * V[WEST, row, col]
 end
