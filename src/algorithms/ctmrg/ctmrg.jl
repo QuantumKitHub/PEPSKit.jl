@@ -8,20 +8,17 @@ have different spaces, this truncation style is different from `TruncationSpace`
 struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
 """
-    struct ProjectorAlg{S}(; svd_alg=Defaults.svd_alg, trscheme=Defaults.trscheme,
-                           sparse=Defaults.sparse, verbosity=0)
+    struct ProjectorAlg{S}(; svd_alg=Defaults.svd_alg, trscheme=Defaults.trscheme, verbosity=0)
 
 Algorithm struct collecting all projector related parameters.
 
 The `svd_alg` sets the SVD algorithm for decomposing the CTM environment. The truncation scheme
 has to be a `TensorKit.TruncationScheme`, and some SVD algorithms might have further restrictions
-on what kind of truncation scheme can be used. If `sparse` is `true`, then the enlarged corners and
-CTM environment are never computed densely and function handles are using for the SVD.
+on what kind of truncation scheme can be used.
 """
 @kwdef struct ProjectorAlg{S<:SVDAdjoint,T}
     svd_alg::S = Defaults.svd_alg
     trscheme::T = Defaults.trscheme
-    sparse::Bool = Defaults.sparse
     verbosity::Int = 0
 end
 # TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
@@ -48,7 +45,7 @@ end
     CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
           miniter=Defaults.ctmrg_miniter, verbosity=0,
           svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation(),
-          ctmrgscheme=Defaults.ctmrgscheme, sparse=Defaults.sparse)
+          ctmrgscheme=Defaults.ctmrgscheme)
 
 Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
 Each CTMRG run is converged up to `tol` where the singular value convergence of the
@@ -65,10 +62,6 @@ CTMRG is implemented. It can either be `:sequential`, where the projectors are s
 computed on the western side, and then applied and rotated. Or with `:simultaneous` all projectors
 are computed and applied simultaneously on all sides, where in particular the corners get
 contracted with two projectors at the same time.
-
-The contraction and SVD of the CTMRG environments can be performed densely, or sparsely
-if `sparse` is `true`. If sparsity is enabled, then the SVD will use only function handles
-and the full enlarged corners and environments are never explicitly constructed.
 """
 struct CTMRG{S}
     tol::Float64
@@ -85,14 +78,13 @@ function CTMRG(;
     svd_alg=Defaults.svd_alg,
     trscheme=Defaults.trscheme,
     ctmrgscheme::Symbol=Defaults.ctmrgscheme,
-    sparse::Bool=Defaults.sparse,
 )
     return CTMRG{ctmrgscheme}(
         tol,
         maxiter,
         miniter,
         verbosity,
-        ProjectorAlg(; svd_alg, trscheme, sparse, verbosity),
+        ProjectorAlg(; svd_alg, trscheme, verbosity),
     )
 end
 
@@ -188,7 +180,7 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 
 """
     ctmrg_expand(state, envs, alg::CTMRG{M})
-    ctmrg_expand(dirs, state, envs::CTMRGEnv, alg::CTMRG)
+    ctmrg_expand(dirs, state, envs::CTMRGEnv)
 
 Expand the environment by absorbing a new PEPS tensor.
 There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
@@ -196,19 +188,32 @@ The first mode expands the environment in one direction at a time, for convenien
 the left. The second mode expands the environment in all four directions simultaneously.
 Alternatively, one can provide directly the `dirs` in which the environment is grown.
 """
-function ctmrg_expand(state, envs::CTMRGEnv, alg::SequentialCTMRG)
-    return ctmrg_expand([4, 1], state, envs, alg)
+function ctmrg_expand(state, envs::CTMRGEnv, ::SequentialCTMRG)
+    return ctmrg_expand([4, 1], state, envs)
 end
-function ctmrg_expand(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
-    return ctmrg_expand(1:4, state, envs, alg)
+function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
+    return ctmrg_expand(1:4, state, envs)
 end
-function ctmrg_expand(dirs, state, envs::CTMRGEnv, alg::CTMRG)
+# function ctmrg_expand(dirs, state, envs::CTMRGEnv)  # TODO: This doesn't AD due to length(::Nothing)...
+#     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
+#     return map(idx -> enlarge_corner(idx, envs, state)(idx[1]), drc_combinations)
+# end
+function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
+    Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
+    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
-    if alg.projector_alg.sparse
-        return map(idx -> enlarge_corner(idx, envs, state), drc_combinations)
-    else  # Construct quadrant densely if alg is not sparse
-        return map(idx -> enlarge_corner(idx, envs, state)(idx[1]), drc_combinations)
+    @fwdthreads for (dir, r, c) in drc_combinations
+        Q[dir, r, c] = if dir == NORTHWEST
+            enlarge_northwest_corner((r, c), envs, state)
+        elseif dir == NORTHEAST
+            enlarge_northeast_corner((r, c), envs, state)
+        elseif dir == SOUTHEAST
+            enlarge_southeast_corner((r, c), envs, state)
+        elseif dir == SOUTHWEST
+            enlarge_southwest_corner((r, c), envs, state)
+        end
     end
+    return copy(Q)
 end
 
 """
