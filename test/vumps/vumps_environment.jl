@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using PEPSKit: initial_A, initial_C, initial_FL, initial_FR
 using PEPSKit: ρmap, getL!, getAL, getLsped, _to_tail, _to_front, left_canonical, right_canonical
-using PEPSKit: leftenv, FLmap, rightenv, FRmap, ACenv, ACmap, Cenv, Cmap
+using PEPSKit: leftenv, FLmap, rightenv, FRmap, ACenv, ACmap, Cenv, Cmap, rightCenv, Rmap
 using PEPSKit: LRtoC, ALCtoAC, ACCtoALAR
 using TensorKit
 using LinearAlgebra
@@ -181,4 +181,21 @@ end
     @test all(AR -> (_to_tail(AR) * _to_tail(AR)' ≈ isomorphism(χ, χ)), AR)
     @test errL isa Real
     @test errR isa Real
+end
+
+@testset "ACenv and Cenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
+    Random.seed!(42)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
+
+    itp = InfiniteTransferPEPS(ipeps)
+    A = initial_A(itp, χ)
+    R, AR, λ = right_canonical(A)
+
+    λR, R = rightCenv(AR, adjoint.(AR); ifobs) 
+    @test all(i -> space(i) == (χ ← χ), R)
+
+    for i in 1:Ni
+        ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
+        @test λR[i] * R[i,:] ≈ Rmap(R[i,:], AR[i,:], adjoint.(AR)[ir,:]) rtol = 1e-12
+    end
 end

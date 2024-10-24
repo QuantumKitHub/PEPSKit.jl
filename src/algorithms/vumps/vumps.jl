@@ -99,9 +99,9 @@ function down_itp(O)
     ipepsd = Zygote.Buffer(O.top)
     for j in 1:Nj, i in 1:Ni
         ir = Ni + 1 - i 
-        ipepsd[i, j] = permute(ipeps[ir,j], ((1,), (4,3,2,5)))
+        ipepsd[i, j] = permute(O.top[ir,j], ((1,), (4,3,2,5)))
     end
-    return InfiniteTransferPEPS(copy(ipepsd))
+    return InfiniteTransferPEPS(InfinitePEPS(copy(ipepsd)))
 end
 
 function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
@@ -138,10 +138,13 @@ end
 
 function leading_boundary(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
     rt = vumps_itr(O, rt, alg)
-    return VUMPSEnv(rt)
+
+    @unpack AL, AR, C, FL, FR = rt
+    AC = ALCtoAC(AL, C)
+    return VUMPSEnv(AC, AR, AC, AR, FL, FR, FL, FR)
 end
 
-function leading_boundary(O::InfiniteTransferPEPS, rt::Tuple{VUMPSRuntime}, alg::VUMPS)
+function leading_boundary(O::InfiniteTransferPEPS, rt::Tuple, alg::VUMPS)
     rtup, rtdown = rt
 
     rtup = vumps_itr(O, rtup, alg)
@@ -149,26 +152,15 @@ function leading_boundary(O::InfiniteTransferPEPS, rt::Tuple{VUMPSRuntime}, alg:
     Od = down_itp(O)
     rtdown = vumps_itr(Od, rtdown, alg)
 
-    return VUMPSEnv(rtup, rtdown)
-end
-
-function VUMPSEnv(rt::VUMPSRuntime)
-    @unpack AL, AR, C, FL, FR = rt
-    AC = ALCtoAC(AL, C)
-    return VUMPSEnv(AC, AR, AC, AR, FL, FR, FL, FR)
-end
-
-function VUMPSEnv(rt::Tuple{VUMPSRuntime})
-    rtup, rtdown = rt
-
     ALu, ARu, Cu, FLu, FRu = rtup.AL, rtup.AR, rtup.C, rtup.FL, rtup.FR
     ACu = ALCtoAC(ALu, Cu)
 
     ALd, ARd, Cd = rtdown.AL, rtdown.AR, rtdown.C
     ACd = ALCtoAC(ALd, Cd)
 
-    _, FLo = leftenv(ALu, adjoint.(ALd), O, FLup; ifobs = true)
-    _, FRo = rightenv(ARu, adjoint.(ARd), O, FRup; ifobs = true)
+    # to do fix the follow index
+    _, FLo =  leftenv(ALu, adjoint.(ALd), O, FLu; ifobs = true)
+    _, FRo = rightenv(ARu, adjoint.(ARd), O, FRu; ifobs = true)
 
     return VUMPSEnv(ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo)
 end

@@ -94,6 +94,26 @@ function FRmap(FRi::Vector{<:AbstractTensorMap},
 end
 
 """
+    Rm = Rmap(FRi::Vector{<:AbstractTensorMap}, 
+                ARui::Vector{<:AbstractTensorMap}, 
+                ARdir::Vector{<:AbstractTensorMap}, 
+                )
+
+```
+    ── ARuᵢⱼ  ──┐          ──┐    
+        │       Rᵢⱼ  =    ── Rᵢⱼ₋₁  
+    ── ARdᵢᵣⱼ ──┘          ──┘     
+```
+"""
+function Rmap(Ri::Vector{<:AbstractTensorMap}, 
+               ARui::Vector{<:AbstractTensorMap}, 
+               ARdir::Vector{<:AbstractTensorMap}, )
+    Rm = [@tensoropt R[-1; -5] := ARu[-1 2 3; 4] * R[4; 6] * ARd[6; -5 2 3] for (R, ARu, ARd) in zip(Ri, ARui, ARdir)]
+
+    return circshift(Rm, -1)
+end
+
+"""
     ACm = ACmap(ACj::Vector{<:AbstractTensorMap}, 
                 FLj::Vector{<:AbstractTensorMap}, 
                 FRj::Vector{<:AbstractTensorMap},

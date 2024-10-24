@@ -278,6 +278,42 @@ function rightenv!(ARu::Matrix{<:AbstractTensorMap},
 end
 
 """
+    λR, FR = rightCenv(ARu::Matrix{<:AbstractTensorMap}, 
+                       ARd::Matrix{<:AbstractTensorMap}, 
+                       R::Matrix{<:AbstractTensorMap} = initial_C(ARu); 
+                       kwargs...) 
+
+Compute the right environment tensor for MPS A and MPO M, by finding the left fixed point
+of AR - M - conj(AR) contracted along the physical dimension.
+```
+    ── ARuᵢⱼ  ──┐          ──┐   
+        |       Rᵢⱼ  = λRᵢⱼ  Rᵢⱼ₋₁
+    ── ARdᵢᵣⱼ ──┘          ──┘  
+```
+"""
+rightCenv(ARu::Matrix{<:AbstractTensorMap}, 
+          ARd::Matrix{<:AbstractTensorMap}, 
+          R::Matrix{<:AbstractTensorMap} = initial_C(ARu); 
+          kwargs...) = rightCenv!(ARu, ARd, deepcopy(R); kwargs...) 
+
+function rightCenv!(ARu::Matrix{<:AbstractTensorMap},
+                    ARd::Matrix{<:AbstractTensorMap}, 
+                    R::Matrix{<:AbstractTensorMap}; 
+                    ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
+
+    Ni, Nj = size(ARu)
+    λR = zeros(eltype(ARu[1]), Ni)
+    for i in 1:Ni
+        ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
+        λRs, R1s, info = eigsolve(R -> Rmap(R, ARu[i,:], ARd[ir,:]), 
+                                   R[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+        verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"
+        λR[i], R[i,:] = selectpos(λRs, R1s, Nj)
+    end
+    return λR, R
+end
+
+"""
     ACenv(AC, FL, M, FR;kwargs...)
 
 Compute the up environment tensor for MPS `FL`,`FR` and MPO `M`, by finding the up fixed point

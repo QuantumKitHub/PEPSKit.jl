@@ -71,9 +71,10 @@ function LinearAlgebra.norm(ipeps::InfinitePEPS, env::VUMPSEnv)
     itp = InfiniteTransferPEPS(ipeps)
     λFL, _ = rightenv(ARu, adjoint.(ARd), itp; ifobs=true)
     # to do:
-    # λC, _ = rightCenv(ARu, adjoint.(ARd); ifobs=true)
+    λC, _ = rightCenv(ARu, adjoint.(ARd); ifobs=true)
+    @show λC
     
-    return prod(λFL)^(1/Ni)
+    return prod(λFL ./ λC)^(1/Ni)
 end
 """
     correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
