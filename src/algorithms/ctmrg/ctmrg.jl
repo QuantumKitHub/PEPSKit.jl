@@ -196,11 +196,12 @@ end
 # end
 function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
-    drc_combinations = collect(Iterators.product(dirs, axes(state)...))
-    @fwdthreads for (dir, r, c) in drc_combinations
-        ec = enlarge_corner((dir, r, c), state, envs)
-        Q[dir, r, c] = ec(dir)  # Explicitly construct EnlargedCorner for now
+    Q = Zygote.Buffer(Array{Qtype,3}(undef, length(dirs), size(state)...))
+    dirs_enum = [(i, dir) for (i, dir) in enumerate(dirs)]
+    drc_combinations = collect(Iterators.product(dirs_enum, axes(state)...))
+    @fwdthreads for (d, r, c) in drc_combinations
+        ec = enlarge_corner((d[2], r, c), state, envs)
+        Q[d[1], r, c] = ec(d[2])  # Explicitly construct EnlargedCorner for now
     end
     return copy(Q)
 end
