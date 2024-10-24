@@ -63,7 +63,7 @@ end
 
 Half-infinite CTMRG environment tensor storage.
 """
-struct HalfInfiniteEnv{C,E,A,A′}
+struct HalfInfiniteEnv{C,E,A,A′}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
     C_1::C
     C_2::C
     E_1::E
@@ -159,68 +159,18 @@ function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
     )
 end
 
-# ------------------------------------------------------------------------
-# Methods to make environment compatible with IterSVD and its reverse-rule
-# ------------------------------------------------------------------------
-
-TensorKit.InnerProductStyle(::HalfInfiniteEnv) = EuclideanProduct()
-TensorKit.sectortype(::HalfInfiniteEnv) = Trivial
-TensorKit.storagetype(env::HalfInfiniteEnv) = storagetype(env.ket_1)
-TensorKit.spacetype(env::HalfInfiniteEnv) = spacetype(env.ket_1)
+# -----------------------------------------------------
+# AbstractTensorMap subtyping and IterSVD compatibility
+# -----------------------------------------------------
 
 function TensorKit.domain(env::HalfInfiniteEnv)
     return domain(env.E_4) * domain(env.ket_2)[3] * domain(env.bra_2)[3]'
 end
+
 function TensorKit.codomain(env::HalfInfiniteEnv)
     return codomain(env.E_1)[1] * domain(env.ket_1)[3]' * domain(env.bra_1)[3]
 end
-function TensorKit.space(env::HalfInfiniteEnv)
-    return codomain(env) ← domain(env)
-end
-function TensorKit.blocks(env::HalfInfiniteEnv)
-    return TensorKit.SingletonDict(Trivial() => env)
-end
-function TensorKit.blocksectors(::HalfInfiniteEnv)
-    return TensorKit.OneOrNoneIterator{Trivial}(true, Trivial())
-end
-function TensorKit.block(env::HalfInfiniteEnv, c::Sector)
-    return env
-end
-function TensorKit.tsvd!(f::HalfInfiniteEnv; trunc=NoTruncation(), p::Real=2, alg=IterSVD())
-    return _tsvd!(f, alg, trunc, p)
-end
-function TensorKit.MatrixAlgebra.svd!(env::HalfInfiniteEnv, args...)
-    return TensorKit.MatrixAlgebra.svd!(env(), args...)  # Construct environment densely as fallback
-end
-
-Base.eltype(env::HalfInfiniteEnv) = eltype(env.ket_1)
-function Base.size(env::HalfInfiniteEnv)  # Treat environment as matrix
-    χ_in = dim(space(env.E_1, 1))
-    D_inabove = dim(space(env.ket_1, 2))
-    D_inbelow = dim(space(env.bra_1, 2))
-    χ_out = dim(space(env.E_4, 1))
-    D_outabove = dim(space(env.ket_2, 2))
-    D_outbelow = dim(space(env.bra_2, 2))
-    return (χ_in * D_inabove * D_inbelow, χ_out * D_outabove * D_outbelow)
-end
-Base.size(env::HalfInfiniteEnv, i::Int) = size(env)[i]
-VectorInterface.scalartype(env::HalfInfiniteEnv) = scalartype(env.ket_1)
 
 function random_start_vector(env::HalfInfiniteEnv)
     return Tensor(randn, domain(env))
-end
-
-function Base.similar(env::HalfInfiniteEnv)
-    return HalfInfiniteEnv(
-        (similar(getfield(env, field)) for field in fieldnames(HalfInfiniteEnv))...
-    )
-end
-
-function Base.copyto!(dest::HalfInfiniteEnv, src::HalfInfiniteEnv)
-    for field in fieldnames(HalfInfiniteEnv)
-        for (bd, bs) in zip(blocks(getfield(dest, field)), blocks(getfield(src, field)))
-            copyto!(bd[2], bs[2])
-        end
-    end
-    return dest
 end

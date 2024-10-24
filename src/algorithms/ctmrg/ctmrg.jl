@@ -80,11 +80,7 @@ function CTMRG(;
     ctmrgscheme::Symbol=Defaults.ctmrgscheme,
 )
     return CTMRG{ctmrgscheme}(
-        tol,
-        maxiter,
-        miniter,
-        verbosity,
-        ProjectorAlg(; svd_alg, trscheme, verbosity),
+        tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
     )
 end
 
@@ -200,7 +196,6 @@ end
 # end
 function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
-    # Qtype = EnlargedCorner{C,T,eltype(state),eltype(state)}
     Q = Zygote.Buffer(Array{Qtype,3}(undef, size(envs.corners)))
     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
     @fwdthreads for (dir, r, c) in drc_combinations
