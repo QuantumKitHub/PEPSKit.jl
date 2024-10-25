@@ -22,20 +22,37 @@ end
 end
 
 @testset "vumps one side runtime for unitcell $Ni x $Nj" for Ni in 1:1, Nj in 1:1, (d, D, χ) in zip(ds, Ds, χs)
-    Random.seed!(42)
+    Random.seed!(100)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
-    alg = PEPSKit.VUMPS(maxiter=10, verbosity=2, ifupdown=true)
+    ipeps = symmetrize!(ipeps, RotateReflect())
+
+    alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=false)
 
     itp = InfiniteTransferPEPS(ipeps)
     env = leading_boundary(itp, VUMPSRuntime(itp, χ, alg), alg)
-    # @test env isa VUMPSEnv
+    @test env isa VUMPSEnv
 
     Z = abs(norm(ipeps, env))
-    @show Z
 
     ctm = MPSKit.leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
     Z′ = abs(norm(ipeps, ctm))^(1/Ni/Nj)
-    @show Z′
 
-    # @test Z ≈ Z′ rtol = 1e-2
+    @test Z ≈ Z′ rtol = 1e-12
+end
+
+@testset "vumps two side runtime for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs)
+    Random.seed!(42)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
+    alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=true)
+
+    itp = InfiniteTransferPEPS(ipeps)
+    env = leading_boundary(itp, VUMPSRuntime(itp, χ, alg), alg)
+    @test env isa VUMPSEnv
+
+    Z = abs(norm(ipeps, env))
+
+    ctm = MPSKit.leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
+    Z′ = abs(norm(ipeps, ctm))^(1/Ni/Nj)
+
+    @test Z ≈ Z′ rtol = 1e-8
 end

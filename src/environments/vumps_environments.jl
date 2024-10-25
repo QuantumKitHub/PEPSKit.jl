@@ -11,7 +11,13 @@ end
 
 function InfiniteTransferPEPS(ipeps::InfinitePEPS)
     top = ipeps.A
-    bot = [A' for A in ipeps.A]
+    bot = adjoint.(ipeps.A)
+    return InfiniteTransferPEPS(top, bot)
+end
+
+function InfiniteTransferPEPS(A::Matrix{<:AbstractTensorMap})
+    top = A
+    bot = adjoint.(A)
     return InfiniteTransferPEPS(top, bot)
 end
 
@@ -263,12 +269,13 @@ function rightenv!(ARu::Matrix{<:AbstractTensorMap},
                    ARd::Matrix{<:AbstractTensorMap}, 
                    O::InfiniteTransferPEPS, 
                    FR::Matrix{<:AbstractTensorMap}; 
-                   ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
+                   ifobs=false, ifinline=false,verbosity = Defaults.verbosity, kwargs...) 
 
     Ni, Nj = size(O)
     λR = zeros(eltype(O), Ni)
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
+        ifinline && (ir = i) 
         λRs, FR1s, info = eigsolve(FR -> FRmap(FR, ARu[i,:], ARd[ir,:], O.top[i,:], O.bot[i,:]), 
                                    FR[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"
@@ -304,7 +311,7 @@ function rightCenv!(ARu::Matrix{<:AbstractTensorMap},
     Ni, Nj = size(ARu)
     λR = zeros(eltype(ARu[1]), Ni)
     for i in 1:Ni
-        ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
+        ir = ifobs ? mod1(Ni - i + 2, Ni) : i
         λRs, R1s, info = eigsolve(R -> Rmap(R, ARu[i,:], ARd[ir,:]), 
                                    R[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"

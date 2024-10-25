@@ -99,21 +99,23 @@ function down_itp(O)
     ipepsd = Zygote.Buffer(O.top)
     for j in 1:Nj, i in 1:Ni
         ir = Ni + 1 - i 
-        ipepsd[i, j] = permute(O.top[ir,j], ((1,), (4,3,2,5)))
+        Ad = permute(O.top[ir,j]', ((5,), (3,2,1,4)))
+        ipepsd[i, j] = _fit_spaces(Ad, O.top[ir,j])
     end
-    return InfiniteTransferPEPS(InfinitePEPS(copy(ipepsd)))
+    
+    return InfiniteTransferPEPS(copy(ipepsd))
 end
 
 function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
     Ni, Nj = size(O)
 
     rtup = VUMPSRuntime(O, χ)
-    alg.verbosity >= 2 && println("===== vumps random initial $(Ni)×$(Nj) vumps χ = $(χ) up ↑ environment  =====")
+    alg.verbosity >= 2 && @info "VUMPS init: cell=($(Ni)×$(Nj)) χ = $(χ) up(↑) environment"
 
     if alg.ifupdown
         Od = down_itp(O)
         rtdown = VUMPSRuntime(Od, χ)
-        alg.verbosity >= 2 && println("===== vumps random initial $(Ni)×$(Nj) vumps χ = $(χ) down ↓ environment  =====")
+        alg.verbosity >= 2 && @info "VUMPS init: cell=($(Ni)×$(Nj)) χ = $(χ) down(↓) environment"
 
         return rtup, rtdown
     else
@@ -122,15 +124,16 @@ function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
 end
 
 function vumps_itr(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
+    t = time()
     for i in 1:alg.maxiter
         rt, err = vumps_step(O, rt, alg)
-        alg.verbosity >= 3 && println(@sprintf("vumps@step: i = %4d\terr = %.3e\t", i, err))
+        alg.verbosity >= 3 && @info @sprintf("VUMPS@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
         if err < alg.tol
-            alg.verbosity >= 2 && println(@sprintf("===== vumps@step: i = %4d\terr = %.3e\t coveraged =====", i, err))
+            alg.verbosity >= 2 && @info @sprintf("VUMPS conv@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
             break
         end
         if i == alg.maxiter
-            alg.verbosity >= 2 && println(@sprintf("===== vumps@step: i = %4d\terr = %.3e\t not coveraged =====", i, err))
+            alg.verbosity >= 2 && @warn @sprintf("VUMPS cancel@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
         end
     end
     return rt

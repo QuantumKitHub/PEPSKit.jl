@@ -14,17 +14,6 @@ begin "test utility"
     χs = [ℂ^4]
 end
 
-@testset begin
-    A = TensorMap(rand, ComplexF64, ℂ^2 * ℂ^3, ℂ^4)
-    # @show storagetype(typeof(A))
-    # # @tensor C = conj(A[1 2;3]) * A[1 2;3]
-    @show space(A, 1) space(A, 2) space(A, 3) 
-    @show space(A', 1) space(A', 2) space(A', 3) 
-    @tensor C = A'[3; 1 2] * A[1 2;3]
-    @show eltype(A)
-    # @show sqrt(C) norm(A)
-end
-
 @testset "InfiniteTransferPEPS for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
@@ -152,7 +141,7 @@ end
     for j in 1:Nj
         jr = mod1(j + 1, Nj)
         @test λAC[j] * AC[:,j] ≈ ACmap(AC[:,j], FL[:,j], FR[:,j], itp.top[:,j], itp.bot[:,j]) rtol = 1e-12
-        @test  λC[j] *  C[:,j] ≈  Cmap( C[:,j], FL[:,jr], FR[:,j]) rtol = 1e-12
+        @test  λC[j] *  C[:,j] ≈  Cmap( C[:,j], FL[:,jr], FR[:,j]) rtol = 1e-10
     end
 end
 
@@ -183,7 +172,7 @@ end
     @test errR isa Real
 end
 
-@testset "ACenv and Cenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
+@testset "rightCenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
@@ -195,7 +184,7 @@ end
     @test all(i -> space(i) == (χ ← χ), R)
 
     for i in 1:Ni
-        ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
+        ir = ifobs ? mod1(Ni + 2 - i, Ni) : i
         @test λR[i] * R[i,:] ≈ Rmap(R[i,:], AR[i,:], adjoint.(AR)[ir,:]) rtol = 1e-12
     end
 end

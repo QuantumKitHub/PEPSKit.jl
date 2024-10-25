@@ -58,24 +58,15 @@ end
 
 function LinearAlgebra.norm(ipeps::InfinitePEPS, env::VUMPSEnv)
     @unpack ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo = env
-    Ni, Nj = size(ipeps)
-    # total = 1
-    # for j in 1:Nj, i in 1:Ni
-    #     ir = mod1(i + 1, Ni)
-    #     @tensoropt Z = FLo[i,j][6 5 4; 1] * ACu[i,j][1 2 3; -4] * ipeps[i,j][9; 2 -2 8 5] * 
-    #     ipeps[i,j]'[3 -3 7 4; 9] * AC[ir,j]'[-1; 6 8 7] * FR[i,j][-4 -2 -3; -1]
-    #     @tensor n = FL[i,j][1 2 3; 4] * C[i,j][4; 5] * FR[i,j][5 2 3; 6] * C[i,j]'[6; 1]
-    #     total *= Z / n
-    # end
+    Ni = size(ipeps, 1)
 
     itp = InfiniteTransferPEPS(ipeps)
-    λFL, _ = rightenv(ARu, adjoint.(ARd), itp; ifobs=true)
-    # to do:
+    λFLo, _ = rightenv(ARu, adjoint.(ARd), itp; ifobs=true)
     λC, _ = rightCenv(ARu, adjoint.(ARd); ifobs=true)
-    @show λC
-    
-    return prod(λFL ./ λC)^(1/Ni)
+
+    return prod(λFLo./λC)^(1/Ni)
 end
+
 """
     correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
 
