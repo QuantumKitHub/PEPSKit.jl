@@ -1,107 +1,82 @@
 using Test
 using Random
 using PEPSKit
-using MPSKit
-using MPSKit: ∂∂AC, ∂∂C, MPSMultiline, Multiline, fixedpoint, updatetol
-using PEPSKit: vumps_iter, TransferPEPSMultiline
-using KrylovKit
-using Zygote
+using PEPSKit: initial_A, left_canonical, right_canonical, leftenv, rightenv
 using TensorKit
-using ChainRulesCore
-const vumps_alg = VUMPS(; maxiter=20, alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false))
+using Zygote
+using LinearAlgebra
 
-function num_grad(f, K::Number; δ::Real=1e-5)
-    if eltype(K) == ComplexF64
-        (f(K + δ / 2) - f(K - δ / 2)) / δ + 
-            (f(K + δ / 2 * 1.0im) - f(K - δ / 2 * 1.0im)) / δ * 1.0im
-    else
-        (f(K + δ / 2) - f(K - δ / 2)) / δ
+begin "test utility"
+    ds = [ℂ^2]
+    Ds = [ℂ^2]
+    χs = [ℂ^4]
+
+    function num_grad(f, K::Number; δ::Real=1e-5)
+        if eltype(K) == ComplexF64
+            (f(K + δ / 2) - f(K - δ / 2)) / δ + 
+                (f(K + δ / 2 * 1.0im) - f(K - δ / 2 * 1.0im)) / δ * 1.0im
+        else
+            (f(K + δ / 2) - f(K - δ / 2)) / δ
+        end
     end
 end
 
-function num_grad(f, a; δ::Real=1e-5)
-    b = copy(a)
-    df = map(CartesianIndices(size())) do i
-        foo = x -> (ac = copy(b); ac[i] = x; f(ac))
-        num_grad(foo, b[i], δ=δ)
-    end
-    return df
-end
-
-@testset "InfinitePEPS" begin
+@testset "InfinitePEPS for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     Random.seed!(42)
-    psi = InfinitePEPS(ℂ^2, ℂ^2)
+    ipepes = InfinitePEPS(d, D; unitcell=(Ni, Nj))
     function f(β)
-        psir = β * psi
-        norm(psir)
+        norm(β * ipepes)
     end
-    # @show typeof(psi.A) psi.A
     @test Zygote.gradient(f, 1.0)[1] ≈ num_grad(f, 1.0)
 end
 
-@testset "InfiniteTransferPEPS" begin
+@testset "InfiniteTransferPEPS for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     Random.seed!(42)
-    psi = InfinitePEPS(ℂ^2, ℂ^2)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
     function f(β)
-        psir = β * psi
-        T = PEPSKit.InfiniteTransferPEPS(psir, 1, 1)
-        real(dot(T.top, T.bot))
+        T = PEPSKit.InfiniteTransferPEPS(β * ipeps)
+        norm(T.bot .* T.top)
     end
 
     @test Zygote.gradient(f, 1.0)[1] ≈ num_grad(f, 1.0)
 end
 
-@testset "dominant eigensolve" begin
-    Random.seed!(42)
-    alg_eigsolve = updatetol(vumps_alg.alg_eigsolve, 1, 1)
-    psi = InfinitePEPS(ℂ^2, ℂ^2)
-    psi = symmetrize!(psi, RotateReflect())
+@testset "leftenv and rightenv for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
+    Random.seed!(50)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-    mps = PEPSKit.initializeMPS(T, [ℂ^3])
-    envs=environments(mps, T)
+    itp = InfiniteTransferPEPS(ipeps)
+    A = initial_A(itp, χ)
+    AL, L, λ = left_canonical(A)
+    R, AR, λ = right_canonical(A)
 
-    mps, T = convert(MPSMultiline, mps), Multiline([T])
+    λL, FL = leftenv(AL, adjoint.(AL), itp; ifobs)
+    λR, FR = rightenv(AR, adjoint.(AR), itp; ifobs)
 
-    ac = RecursiveVec(mps.AC[:, 1])
-    c = RecursiveVec(mps.CR[:, 1])
-
-    S1 = TensorMap(randn, ComplexF64, ℂ^3*ℂ^2*(ℂ^2)'*(ℂ^3)'← ℂ^3*ℂ^2*(ℂ^2)'*(ℂ^3)')
-    S2 = TensorMap(randn, ComplexF64, ℂ^3*(ℂ^3)'← ℂ^3*(ℂ^3)')
+    S1 = TensorMap(rand, ComplexF64, χ*D'*D*χ' ← χ*D'*D*χ')
+    S2 = TensorMap(rand, ComplexF64, χ*D*D'*χ' ← χ*D*D'*χ')
 
     function foo1(β)
-        psi = β * psi
-        T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1) 
-        T = MPSKit.Multiline([T])
+        ipeps = β * ipeps
+        itp = InfiniteTransferPEPS(ipeps)
 
-        H_AC = MPSKit.∂∂AC(1, mps, T, envs)
-        
-        _, ac′ = MPSKit.fixedpoint(H_AC, ac, :LM, alg_eigsolve)
+        _, FL = leftenv(AL, adjoint.(AL), itp; ifobs)
 
-        AC = ac′.vecs[1]
-        @tensor d = conj(AC[1 2 3 4]) * S1[1 2 3 4; 5 6 7 8] * AC[5 6 7 8]
-        norm(d)
+        tol = [@tensor d = conj(FL[1 2 3 4]) * S1[1 2 3 4; 5 6 7 8] * FL[5 6 7 8] for FL in FL]
+        return norm(tol)
     end
+    @test Zygote.gradient(foo1, 1.0)[1] ≈ num_grad(foo1, 1.0) atol = 1e-8
 
-    @test Zygote.gradient(foo1, 1.0)[1] ≈ num_grad(foo1, 1.0) atol = 1e-4
+    function foo2(β)
+        ipeps = β * ipeps
+        itp = InfiniteTransferPEPS(ipeps)
 
-    # function foo2(β)
-    #     psi = β * psi
-    #     T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1) 
-    #     T = MPSKit.Multiline([T])
+        _, FR = rightenv(AR, adjoint.(AR), itp; ifobs)
 
-    #     H_C = ∂∂C(1, mps, T, envs)
-        
-    #     _, c′ = MPSKit.fixedpoint(H_C, c, :LM, alg_eigsolve)
-    #     C = c′.vecs[1]
-    #     # @show space(C)
-    #     # norm(C)
-    #     @tensor d = conj(C[1 2]) * S2[1 2; 3 4] * C[3 4]
-    #     norm(d)
-    # end
-
-    # @show foo2(1.0) num_grad(foo2, 1.0)
-    # @test Zygote.gradient(foo2, 1.0)[1] ≈ num_grad(foo2, 1.0) atol = 1e-4
+        tol = [@tensor d = conj(FR[1 2 3 4]) * S2[1 2 3 4; 5 6 7 8] * FR[5 6 7 8] for FR in FR]
+        return norm(tol)
+    end
+    @test Zygote.gradient(foo2, 1.0)[1] ≈ num_grad(foo2, 1.0) atol = 1e-8
 end
 
 @testset "(1, 1) ctm PEPS" begin

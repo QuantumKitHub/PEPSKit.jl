@@ -222,28 +222,23 @@ FLᵢⱼ ─ Oᵢⱼ   ──   = λLᵢⱼ FLᵢⱼ₊₁
  └──  ALdᵢᵣⱼ  ─          └── 
 ```
 """
-leftenv(ALu::Matrix{<:AbstractTensorMap}, 
+function leftenv(ALu::Matrix{<:AbstractTensorMap}, 
         ALd::Matrix{<:AbstractTensorMap}, 
         O::InfiniteTransferPEPS, 
         FL::Matrix{<:AbstractTensorMap} = initial_FL(ALu,O); 
-        kwargs...) = leftenv!(ALu, ALd, O, deepcopy(FL); kwargs...) 
-
-function leftenv!(ALu::Matrix{<:AbstractTensorMap}, 
-                  ALd::Matrix{<:AbstractTensorMap}, 
-                  O::InfiniteTransferPEPS, 
-                  FL::Matrix{<:AbstractTensorMap}; 
-                  ifobs=false, verbosity = Defaults.verbosity, kwargs...)
+        ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
 
     Ni, Nj = size(O)
-    λL = zeros(eltype(O), Ni)
+    λL = Zygote.Buffer(zeros(eltype(O), Ni))
+    FL′ = Zygote.Buffer(FL)
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
         λLs, FL1s, info = eigsolve(FLi -> FLmap(FLi, ALu[i,:], ALd[ir,:], O.top[i,:], O.bot[i,:]), 
                                    FL[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "leftenv not converged"
-        λL[i], FL[i,:] = selectpos(λLs, FL1s, Nj)
+        λL[i], FL′[i,:] = selectpos(λLs, FL1s, Nj)
     end
-    return λL, FL
+    return copy(λL), copy(FL′)
 end
 
 """
@@ -259,29 +254,24 @@ of AR - M - conj(AR) contracted along the physical dimension.
     ── ARdᵢᵣⱼ ──┘          ──┘  
 ```
 """
-rightenv(ARu::Matrix{<:AbstractTensorMap}, 
+function rightenv(ARu::Matrix{<:AbstractTensorMap}, 
          ARd::Matrix{<:AbstractTensorMap}, 
          O::InfiniteTransferPEPS, 
          FR::Matrix{<:AbstractTensorMap} = initial_FR(ARu,O); 
-         kwargs...) = rightenv!(ARu, ARd, O, deepcopy(FR); kwargs...) 
-
-function rightenv!(ARu::Matrix{<:AbstractTensorMap},
-                   ARd::Matrix{<:AbstractTensorMap}, 
-                   O::InfiniteTransferPEPS, 
-                   FR::Matrix{<:AbstractTensorMap}; 
-                   ifobs=false, ifinline=false,verbosity = Defaults.verbosity, kwargs...) 
+         ifobs=false, ifinline=false,verbosity = Defaults.verbosity, kwargs...) 
 
     Ni, Nj = size(O)
-    λR = zeros(eltype(O), Ni)
+    λR = Zygote.Buffer(zeros(eltype(O), Ni))
+    FR′ = Zygote.Buffer(FR)
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
         ifinline && (ir = i) 
         λRs, FR1s, info = eigsolve(FR -> FRmap(FR, ARu[i,:], ARd[ir,:], O.top[i,:], O.bot[i,:]), 
                                    FR[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"
-        λR[i], FR[i,:] = selectpos(λRs, FR1s, Nj)
+        λR[i], FR′[i,:] = selectpos(λRs, FR1s, Nj)
     end
-    return λR, FR
+    return copy(λR), copy(FR′)
 end
 
 """
