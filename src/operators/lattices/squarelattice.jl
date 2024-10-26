@@ -12,6 +12,8 @@ struct InfiniteSquare <: AbstractLattice{2}
     end
 end
 
+Base.size(lattice::InfiniteSquare) = (lattice.Nrows, lattice.Ncols)
+
 function vertices(lattice::InfiniteSquare)
     return CartesianIndices((1:(lattice.Nrows), 1:(lattice.Ncols)))
 end
