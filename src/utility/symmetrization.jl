@@ -68,7 +68,17 @@ function _fit_spaces(
     end
     return y
 end
+
+function ChainRulesCore.rrule(::typeof(_fit_spaces), y::AbstractTensorMap, x::AbstractTensorMap)
+    function pullback(Δ)
+        return _fit_spaces(Δ, y)
+    end
+    return _fit_spaces(y, x),  pullback
+end
+
 _fit_spaces(y::InfinitePEPS, x::InfinitePEPS) = InfinitePEPS(map(_fit_spaces, y.A, x.A))
+
+
 
 function herm_depth_inv(x::Union{PEPSTensor,PEPOTensor})
     return 0.5 * (x + _fit_spaces(herm_depth(x), x))

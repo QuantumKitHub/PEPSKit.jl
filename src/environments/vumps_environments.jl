@@ -288,26 +288,22 @@ of AR - M - conj(AR) contracted along the physical dimension.
     ── ARdᵢᵣⱼ ──┘          ──┘  
 ```
 """
-rightCenv(ARu::Matrix{<:AbstractTensorMap}, 
-          ARd::Matrix{<:AbstractTensorMap}, 
-          R::Matrix{<:AbstractTensorMap} = initial_C(ARu); 
-          kwargs...) = rightCenv!(ARu, ARd, deepcopy(R); kwargs...) 
-
-function rightCenv!(ARu::Matrix{<:AbstractTensorMap},
-                    ARd::Matrix{<:AbstractTensorMap}, 
-                    R::Matrix{<:AbstractTensorMap}; 
-                    ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
+function rightCenv(ARu::Matrix{<:AbstractTensorMap}, 
+                   ARd::Matrix{<:AbstractTensorMap}, 
+                   R::Matrix{<:AbstractTensorMap} = initial_C(ARu); 
+                   ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
 
     Ni, Nj = size(ARu)
-    λR = zeros(eltype(ARu[1]), Ni)
+    λR = Zygote.Buffer(zeros(eltype(ARu[1]), Ni))
+    R′ = Zygote.Buffer(R)
     for i in 1:Ni
         ir = ifobs ? mod1(Ni - i + 2, Ni) : i
         λRs, R1s, info = eigsolve(R -> Rmap(R, ARu[i,:], ARd[ir,:]), 
                                    R[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"
-        λR[i], R[i,:] = selectpos(λRs, R1s, Nj)
+        λR[i], R′[i,:] = selectpos(λRs, R1s, Nj)
     end
-    return λR, R
+    return copy(λR), copy(R′)
 end
 
 """
@@ -322,27 +318,22 @@ FLᵢⱼ ─── Oᵢⱼ ───── FRᵢⱼ               │      │  
 │        │         │   
 ```
 """
-ACenv(AC::Matrix{<:AbstractTensorMap}, 
-      FL::Matrix{<:AbstractTensorMap}, 
-      FR::Matrix{<:AbstractTensorMap},
-      O::InfiniteTransferPEPS; 
-      kwargs...) = ACenv!(deepcopy(AC), FL, FR, O; kwargs...)
-
-function ACenv!(AC::Matrix{<:AbstractTensorMap}, 
-                FL::Matrix{<:AbstractTensorMap}, 
-                FR::Matrix{<:AbstractTensorMap},
-                O::InfiniteTransferPEPS;
-                verbosity = Defaults.verbosity, kwargs...)
+function ACenv(AC::Matrix{<:AbstractTensorMap}, 
+               FL::Matrix{<:AbstractTensorMap}, 
+               FR::Matrix{<:AbstractTensorMap},
+               O::InfiniteTransferPEPS; 
+               verbosity = Defaults.verbosity, kwargs...)
 
     Ni, Nj = size(O)
-    λAC = zeros(eltype(O),Nj)
+    λAC = Zygote.Buffer(zeros(eltype(O),Nj))
+    AC′ = Zygote.Buffer(AC)
     for j in 1:Nj
         λACs, ACs, info = eigsolve(AC -> ACmap(AC, FL[:,j], FR[:,j], O.top[:,j], O.bot[:,j]), 
                                    AC[:,j], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "ACenv Not converged"
-        λAC[j], AC[:,j] = selectpos(λACs, ACs, Ni)
+        λAC[j], AC′[:,j] = selectpos(λACs, ACs, Ni)
     end
-    return λAC, AC
+    return copy(λAC), copy(AC′)
 end
 
 """
@@ -360,26 +351,22 @@ FLᵢⱼ₊₁ ──── FRᵢⱼ            │       │
 │           │   
 ```
 """
-Cenv(C::Matrix{<:AbstractTensorMap}, 
-     FL::Matrix{<:AbstractTensorMap}, 
-     FR::Matrix{<:AbstractTensorMap}; 
-     kwargs...) = Cenv!(copy(C), FL, FR; kwargs...)
-
-function Cenv!(C::Matrix{<:AbstractTensorMap}, 
-               FL::Matrix{<:AbstractTensorMap}, 
-               FR::Matrix{<:AbstractTensorMap}; 
-               verbosity = Defaults.verbosity, kwargs...)
+function Cenv(C::Matrix{<:AbstractTensorMap}, 
+              FL::Matrix{<:AbstractTensorMap}, 
+              FR::Matrix{<:AbstractTensorMap}; 
+              verbosity = Defaults.verbosity, kwargs...)
 
     Ni, Nj = size(C)
-    λC = zeros(eltype(C[1]), Nj)
+    λC = Zygote.Buffer(zeros(eltype(C[1]), Nj))
+    C′ = Zygote.Buffer(C)
     for j in 1:Nj
         jr = mod1(j + 1, Nj)
         λCs, Cs, info = eigsolve(C -> Cmap(C, FL[:,jr], FR[:,j]), 
                                  C[:,j], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "Cenv Not converged"
-        λC[j], C[:,j] = selectpos(λCs, Cs, Ni)
+        λC[j], C′[:,j] = selectpos(λCs, Cs, Ni)
     end
-    return λC, C
+    return copy(λC), copy(C′)
 end
 
 function env_norm(F::Matrix{<:AbstractTensorMap})

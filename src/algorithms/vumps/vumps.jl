@@ -83,6 +83,7 @@ struct VUMPSRuntime{T<:Number, S<:IndexSpace,
     end
 end
 
+@non_differentiable VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace)
 function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace)
     A = initial_A(O, χ)
     AL, L, _ = left_canonical(A)
@@ -106,16 +107,17 @@ function down_itp(O)
     return InfiniteTransferPEPS(copy(ipepsd))
 end
 
+@non_differentiable VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
 function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
     Ni, Nj = size(O)
 
     rtup = VUMPSRuntime(O, χ)
-    alg.verbosity >= 2 && @info "VUMPS init: cell=($(Ni)×$(Nj)) χ = $(χ) up(↑) environment"
+    alg.verbosity >= 2 && Zygote.@ignore @info "VUMPS init: cell=($(Ni)×$(Nj)) χ = $(χ) up(↑) environment"
 
     if alg.ifupdown
         Od = down_itp(O)
         rtdown = VUMPSRuntime(Od, χ)
-        alg.verbosity >= 2 && @info "VUMPS init: cell=($(Ni)×$(Nj)) χ = $(χ) down(↓) environment"
+        alg.verbosity >= 2 && Zygote.@ignore @info "VUMPS init: cell=($(Ni)×$(Nj)) χ = $(χ) down(↓) environment"
 
         return rtup, rtdown
     else
@@ -124,16 +126,16 @@ function VUMPSRuntime(O::InfiniteTransferPEPS, χ::VectorSpace, alg::VUMPS)
 end
 
 function vumps_itr(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
-    t = time()
+    t = Zygote.@ignore time()
     for i in 1:alg.maxiter
         rt, err = vumps_step(O, rt, alg)
-        alg.verbosity >= 3 && @info @sprintf("VUMPS@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
+        alg.verbosity >= 3 && Zygote.@ignore @info @sprintf("VUMPS@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
         if err < alg.tol
-            alg.verbosity >= 2 && @info @sprintf("VUMPS conv@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
+            alg.verbosity >= 2 && Zygote.@ignore @info @sprintf("VUMPS conv@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
             break
         end
         if i == alg.maxiter
-            alg.verbosity >= 2 && @warn @sprintf("VUMPS cancel@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
+            alg.verbosity >= 2 && Zygote.@ignore @warn @sprintf("VUMPS cancel@step: %4d\terr = %.3e\ttime = %.3f sec", i, err, time()-t)
         end
     end
     return rt
@@ -169,15 +171,16 @@ function leading_boundary(O::InfiniteTransferPEPS, rt::Tuple, alg::VUMPS)
 end
 
 function vumps_step(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
+    verbosity = alg.verbosity
     @unpack AL, C, AR, FL, FR = rt
     AC = Zygote.@ignore ALCtoAC(AL,C)
-    _, ACp = ACenv(AC, FL, FR, O)
-    _,  Cp =  Cenv( C, FL, FR)
+    _, ACp = ACenv(AC, FL, FR, O; verbosity)
+    _,  Cp =  Cenv( C, FL, FR; verbosity)
     ALp, ARp, _, _ = ACCtoALAR(ACp, Cp)
-    _, FL =  leftenv(AL, adjoint.(ALp), O, FL)
-    _, FR = rightenv(AR, adjoint.(ARp), O, FR)
-    _, ACp = ACenv(ACp, FL, FR, O)
-    _,  Cp =  Cenv( Cp, FL, FR)
+    _, FL =  leftenv(AL, adjoint.(ALp), O, FL; verbosity)
+    _, FR = rightenv(AR, adjoint.(ARp), O, FR; verbosity)
+    _, ACp = ACenv(ACp, FL, FR, O; verbosity)
+    _,  Cp =  Cenv( Cp, FL, FR; verbosity)
     ALp, ARp, errL, errR = ACCtoALAR(ACp, Cp)
     err = errL + errR
     alg.verbosity >= 4 && err > 1e-8 && println("errL=$errL, errR=$errR")
