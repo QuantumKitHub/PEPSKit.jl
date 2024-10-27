@@ -141,21 +141,31 @@ function vumps_itr(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
     return rt
 end
 
+function vumps(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
+    return vumps_itr(O, rt, alg)
+end
+
 function leading_boundary(O::InfiniteTransferPEPS, rt::VUMPSRuntime, alg::VUMPS)
-    rt = vumps_itr(O, rt, alg)
+    rt = vumps(O, rt, alg)
 
     @unpack AL, AR, C, FL, FR = rt
     AC = ALCtoAC(AL, C)
     return VUMPSEnv(AC, AR, AC, AR, FL, FR, FL, FR)
 end
 
-function leading_boundary(O::InfiniteTransferPEPS, rt::Tuple, alg::VUMPS)
+function vumps(O::InfiniteTransferPEPS, rt::Tuple, alg::VUMPS)
     rtup, rtdown = rt
 
     rtup = vumps_itr(O, rtup, alg)
 
     Od = down_itp(O)
     rtdown = vumps_itr(Od, rtdown, alg)
+
+    return rtup, rtdown
+end
+
+function leading_boundary(O::InfiniteTransferPEPS, rt::Tuple, alg::VUMPS)
+    rtup, rtdown = vumps(O, rt, alg)
 
     ALu, ARu, Cu, FLu, FRu = rtup.AL, rtup.AR, rtup.C, rtup.FL, rtup.FR
     ACu = ALCtoAC(ALu, Cu)

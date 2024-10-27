@@ -71,9 +71,9 @@ end
 
 function ChainRulesCore.rrule(::typeof(_fit_spaces), y::AbstractTensorMap, x::AbstractTensorMap)
     function pullback(Δ)
-        return _fit_spaces(Δ, y)
+        return NoTangent(), _fit_spaces(Δ, y), NoTangent()
     end
-    return _fit_spaces(y, x),  pullback
+    return _fit_spaces(y, x), pullback
 end
 
 _fit_spaces(y::InfinitePEPS, x::InfinitePEPS) = InfinitePEPS(map(_fit_spaces, y.A, x.A))

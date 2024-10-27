@@ -149,14 +149,17 @@ end
 end
 
 @testset "ad vumps iPEPS one side for unitcell $Ni x $Nj" for Ni in 1:1, Nj in 1:1, (d, D, χ) in zip(ds, Ds, χs)
+    Random.seed!(50)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
     ipeps = symmetrize!(ipeps, RotateReflect())
 
     alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=false)
+    itp = InfiniteTransferPEPS(ipeps)
+    rt = PEPSKit.vumps(itp, VUMPSRuntime(itp, χ, alg), alg)
 
     function foo1(ipeps)
         itp = InfiniteTransferPEPS(ipeps)
-        env = PEPSKit.leading_boundary(itp, VUMPSRuntime(itp, χ, alg), alg)
+        env = PEPSKit.leading_boundary(itp, rt, alg)
         Z = abs(norm(ipeps, env))
         return Z
     end
@@ -170,14 +173,31 @@ end
     @test norm(Zygote.gradient(foo1, ipeps)[1].A - Zygote.gradient(foo2, ipeps)[1].A) < 1e-8 
 end
 
-@testset "ad vumps iPEPS two side for unitcell $Ni x $Nj" for Ni in 1:1, Nj in 1:1, (d, D, χ) in zip(ds, Ds, χs)
-    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
+@testset "_fit_spaces" for (d, D, χ) in zip(ds, Ds, χs)
+    Random.seed!(42)
+    A = TensorMap(randn, ComplexF64, d ← D*D*D'*D')
+    B = TensorMap(randn, ComplexF64, d ← D*D*D'*D)
 
+    function f(β)
+        C = PEPSKit._fit_spaces(β * B, A)
+        return norm(C)
+    end
+
+    @test Zygote.gradient(f, 1.0)[1] ≈ num_grad(f, 1.0)
+end
+
+@testset "ad vumps iPEPS two side for unitcell $Ni x $Nj" for Ni in 1:1, Nj in 1:1, (d, D, χ) in zip(ds, Ds, χs)
+    Random.seed!(50)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
+    ipeps = symmetrize!(ipeps, RotateReflect())
+    itp = InfiniteTransferPEPS(ipeps)
+    
     alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=true)
+    rt = PEPSKit.vumps(itp, VUMPSRuntime(itp, χ, alg), alg)
 
     function foo1(ipeps)
         itp = InfiniteTransferPEPS(ipeps)
-        env = PEPSKit.leading_boundary(itp, VUMPSRuntime(itp, χ, alg), alg)
+        env = PEPSKit.leading_boundary(itp, rt, alg)
         Z = abs(norm(ipeps, env))
         return Z
     end
@@ -187,6 +207,8 @@ end
         Z = abs(norm(ipeps, ctm))^(1/Ni/Nj)
         return Z
     end
-    @show Zygote.gradient(foo1, ipeps)[1]
+    @show foo1(ipeps) - foo2(ipeps)
+    # @show Zygote.gradient(foo1, ipeps)[1].A  Zygote.gradient(foo2, ipeps)[1].A
+    @show Zygote.gradient(foo1, ipeps)[1].A - Zygote.gradient(foo2, ipeps)[1].A
     # @test norm(Zygote.gradient(foo1, ipeps)[1].A - Zygote.gradient(foo2, ipeps)[1].A) < 1e-8 
 end
