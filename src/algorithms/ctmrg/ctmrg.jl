@@ -192,7 +192,7 @@ function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
 end
 # function ctmrg_expand(dirs, state, envs::CTMRGEnv)  # TODO: This doesn't AD due to length(::Nothing)...
 #     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
-#     return map(idx -> EnlargedCorner(state, envs, idx)(idx[1]), drc_combinations)
+#     return map(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), drc_combinations)
 # end
 function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
@@ -201,7 +201,7 @@ function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     drc_combinations = collect(Iterators.product(dirs_enum, axes(state)...))
     @fwdthreads for (d, r, c) in drc_combinations
         ec = EnlargedCorner(state, envs, (d[2], r, c))
-        Q[d[1], r, c] = ec(d[2])  # Explicitly construct EnlargedCorner for now
+        Q[d[1], r, c] = TensorMap(ec, d[2])  # Explicitly construct EnlargedCorner for now
     end
     return copy(Q)
 end

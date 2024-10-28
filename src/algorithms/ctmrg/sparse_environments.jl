@@ -59,12 +59,12 @@ function EnlargedCorner(state, envs, coordinates)
 end
 
 """
-    (Q::EnlargedCorner)(dir::Int)
+    TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
 
-Contract enlarged corner where `dir` selects the correct contraction direction,
-i.e. the way the environment and PEPS tensors connect.
+Instantiate enlarged corner as `TensorMap` where `dir` selects the correct contraction
+direction, i.e. the way the environment and PEPS tensors connect.
 """
-function (Q::EnlargedCorner)(dir::Int)
+function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
     if dir == NORTHWEST
         return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
     elseif dir == NORTHEAST
@@ -134,14 +134,11 @@ function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
 end
 
 """
-    (env::HalfInfiniteEnv)() 
-    (env::HalfInfiniteEnv)(x, ::Val{false}) 
-    (env::HalfInfiniteEnv)(x, ::Val{true}) 
+    TensorKit.TensorMap(env::HalfInfiniteEnv)
 
-Contract half-infinite environment. If a vector `x` is provided, the environment acts as a
-linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed, respectively.
+Instantiate half-infinite environment as `TensorMap` explicitly.
 """
-function (env::HalfInfiniteEnv)()  # Dense operator
+function TensorKit.TensorMap(env::HalfInfiniteEnv)  # Dense operator
     return halfinfinite_environment(
         env.C_1,
         env.C_2,
@@ -155,6 +152,14 @@ function (env::HalfInfiniteEnv)()  # Dense operator
         env.bra_2,
     )
 end
+
+"""
+    (env::HalfInfiniteEnv)(x, ::Val{false}) 
+    (env::HalfInfiniteEnv)(x, ::Val{true}) 
+
+Contract half-infinite environment with a vector `x`, such that the environment acts as a
+linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed, respectively.
+"""
 function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
     return halfinfinite_environment(
         env.C_1,
