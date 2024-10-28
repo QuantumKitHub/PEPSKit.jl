@@ -192,7 +192,7 @@ function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
 end
 # function ctmrg_expand(dirs, state, envs::CTMRGEnv)  # TODO: This doesn't AD due to length(::Nothing)...
 #     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
-#     return map(idx -> enlarge_corner(idx, envs, state)(idx[1]), drc_combinations)
+#     return map(idx -> EnlargedCorner(state, envs, idx)(idx[1]), drc_combinations)
 # end
 function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     Qtype = tensormaptype(spacetype(C), 3, 3, storagetype(C))
@@ -200,51 +200,10 @@ function ctmrg_expand(dirs, state, envs::CTMRGEnv{C,T}) where {C,T}
     dirs_enum = [(i, dir) for (i, dir) in enumerate(dirs)]
     drc_combinations = collect(Iterators.product(dirs_enum, axes(state)...))
     @fwdthreads for (d, r, c) in drc_combinations
-        ec = enlarge_corner((d[2], r, c), state, envs)
+        ec = EnlargedCorner(state, envs, (d[2], r, c))
         Q[d[1], r, c] = ec(d[2])  # Explicitly construct EnlargedCorner for now
     end
     return copy(Q)
-end
-
-"""
-    enlarge_corner((dir, r, c), state, envs)
-
-Enlarge corner by constructing the corresponding `EnlargedCorner` struct.
-"""
-function enlarge_corner((dir, r, c), state, envs)
-    if dir == NORTHWEST
-        return EnlargedCorner(
-            envs.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-            envs.edges[WEST, r, _prev(c, end)],
-            envs.edges[NORTH, _prev(r, end), c],
-            state[r, c],
-            state[r, c],
-        )
-    elseif dir == NORTHEAST
-        return EnlargedCorner(
-            envs.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-            envs.edges[NORTH, _prev(r, end), c],
-            envs.edges[EAST, r, _next(c, end)],
-            state[r, c],
-            state[r, c],
-        )
-    elseif dir == SOUTHEAST
-        return EnlargedCorner(
-            envs.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-            envs.edges[EAST, r, _next(c, end)],
-            envs.edges[SOUTH, _next(r, end), c],
-            state[r, c],
-            state[r, c],
-        )
-    elseif dir == SOUTHWEST
-        return EnlargedCorner(
-            envs.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-            envs.edges[SOUTH, _next(r, end), c],
-            envs.edges[WEST, r, _prev(c, end)],
-            state[r, c],
-            state[r, c],
-        )
-    end
 end
 
 # ======================================================================================== #

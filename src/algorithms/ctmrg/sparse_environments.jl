@@ -16,6 +16,49 @@ struct EnlargedCorner{Ct,E,A,A′}
 end
 
 """
+    EnlargedCorner(state, envs, coordinates)
+
+Construct an enlarged corner with the correct row and column indices based on the given
+`coordinates` which are of the form `(dir, row, col)`.
+"""
+function EnlargedCorner(state, envs, coordinates)
+    dir, r, c = coordinates
+    if dir == NORTHWEST
+        return EnlargedCorner(
+            envs.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+            envs.edges[WEST, r, _prev(c, end)],
+            envs.edges[NORTH, _prev(r, end), c],
+            state[r, c],
+            state[r, c],
+        )
+    elseif dir == NORTHEAST
+        return EnlargedCorner(
+            envs.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+            envs.edges[NORTH, _prev(r, end), c],
+            envs.edges[EAST, r, _next(c, end)],
+            state[r, c],
+            state[r, c],
+        )
+    elseif dir == SOUTHEAST
+        return EnlargedCorner(
+            envs.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+            envs.edges[EAST, r, _next(c, end)],
+            envs.edges[SOUTH, _next(r, end), c],
+            state[r, c],
+            state[r, c],
+        )
+    elseif dir == SOUTHWEST
+        return EnlargedCorner(
+            envs.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+            envs.edges[SOUTH, _next(r, end), c],
+            envs.edges[WEST, r, _prev(c, end)],
+            state[r, c],
+            state[r, c],
+        )
+    end
+end
+
+"""
     (Q::EnlargedCorner)(dir::Int)
 
 Contract enlarged corner where `dir` selects the correct contraction direction,
