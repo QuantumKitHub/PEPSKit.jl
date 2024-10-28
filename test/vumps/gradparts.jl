@@ -153,7 +153,7 @@ end
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
     ipeps = symmetrize!(ipeps, RotateReflect())
 
-    alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=false)
+    alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=true)
     itp = InfiniteTransferPEPS(ipeps)
     rt = PEPSKit.vumps(itp, VUMPSRuntime(itp, χ, alg), alg)
 
@@ -169,6 +169,8 @@ end
         Z = abs(norm(ipeps, ctm))^(1/Ni/Nj)
         return Z
     end
+
+    # @show foo1(ipeps) - foo2(ipeps)
 
     @test norm(Zygote.gradient(foo1, ipeps)[1].A - Zygote.gradient(foo2, ipeps)[1].A) < 1e-8 
 end
@@ -209,6 +211,6 @@ end
     end
     @show foo1(ipeps) - foo2(ipeps)
     # @show Zygote.gradient(foo1, ipeps)[1].A  Zygote.gradient(foo2, ipeps)[1].A
-    @show Zygote.gradient(foo1, ipeps)[1].A - Zygote.gradient(foo2, ipeps)[1].A
+    # @show Zygote.gradient(foo1, ipeps)[1].A - Zygote.gradient(foo2, ipeps)[1].A
     # @test norm(Zygote.gradient(foo1, ipeps)[1].A - Zygote.gradient(foo2, ipeps)[1].A) < 1e-8 
 end

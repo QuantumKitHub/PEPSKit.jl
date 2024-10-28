@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using PEPSKit: initial_A, initial_C, initial_FL, initial_FR
 using PEPSKit: ρmap, getL!, getAL, getLsped, _to_tail, _to_front, left_canonical, right_canonical
-using PEPSKit: leftenv, FLmap, rightenv, FRmap, ACenv, ACmap, Cenv, Cmap, rightCenv, Rmap
+using PEPSKit: leftenv, FLmap, rightenv, FRmap, ACenv, ACmap, Cenv, Cmap, leftCenv, Lmap, rightCenv, Rmap 
 using PEPSKit: LRtoC, ALCtoAC, ACCtoALAR
 using TensorKit
 using LinearAlgebra
@@ -172,19 +172,23 @@ end
     @test errR isa Real
 end
 
-@testset "rightCenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
+@testset "leftCenv and rightCenv for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
     itp = InfiniteTransferPEPS(ipeps)
     A = initial_A(itp, χ)
+    AL, L, λ = left_canonical(A)
     R, AR, λ = right_canonical(A)
 
+    λL, L =  leftCenv(AL, adjoint.(AL); ifobs)
     λR, R = rightCenv(AR, adjoint.(AR); ifobs) 
     @test all(i -> space(i) == (χ ← χ), R)
+    @test all(i -> space(i) == (χ ← χ), L)
 
     for i in 1:Ni
         ir = ifobs ? mod1(Ni + 2 - i, Ni) : i
+        @test λL[i] * L[i,:] ≈ Lmap(L[i,:], AL[i,:], adjoint.(AL)[ir,:]) rtol = 1e-12
         @test λR[i] * R[i,:] ≈ Rmap(R[i,:], AR[i,:], adjoint.(AR)[ir,:]) rtol = 1e-12
     end
 end

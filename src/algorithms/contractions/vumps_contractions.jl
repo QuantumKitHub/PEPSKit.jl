@@ -68,6 +68,21 @@ function FLmap(FLi::Vector{<:AbstractTensorMap},
 end
 
 """
+    ```
+    ┌── ALuᵢⱼ  ──      ┌──  
+    Lᵢⱼ   |        =   Lᵢⱼ₊₁
+    └── ALdᵢᵣⱼ ──      └──  
+    ```
+"""
+function Lmap(Li::Vector{<:AbstractTensorMap}, 
+              ALui::Vector{<:AbstractTensorMap}, 
+              ALdir::Vector{<:AbstractTensorMap})
+    Lm = [@tensoropt L[-6; -4] := ALu[1 2 3; -4] * L[5; 1] * ALd[-6; 5 2 3] for (L, ALu, ALd) in zip(Li, ALui, ALdir)]
+
+    return circshift(Lm, 1)
+end
+
+"""
     FRm = FRmap(FRi::Vector{<:AbstractTensorMap}, 
                 ARui::Vector{<:AbstractTensorMap}, 
                 ARdir::Vector{<:AbstractTensorMap}, 
@@ -101,7 +116,7 @@ end
 
 ```
     ── ARuᵢⱼ  ──┐          ──┐    
-        │       Rᵢⱼ  =    ── Rᵢⱼ₋₁  
+        │       Rᵢⱼ  =       Rᵢⱼ₋₁  
     ── ARdᵢᵣⱼ ──┘          ──┘     
 ```
 """

@@ -242,6 +242,38 @@ function leftenv(ALu::Matrix{<:AbstractTensorMap},
 end
 
 """
+    leftCenv(ALu::Matrix{<:AbstractTensorMap}, 
+                    ALd::Matrix{<:AbstractTensorMap}, 
+                    L::Matrix{<:AbstractTensorMap} = initial_C(ALu); 
+                    ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
+
+Compute the left environment tensor for MPS A, by finding the left fixed point
+of ALu - ALd contracted along the physical dimension.
+```
+   ┌── ALuᵢⱼ  ──          ┌──  
+   Lᵢⱼ   |        = λLᵢⱼ  Lᵢⱼ₊₁
+   └── ALdᵢᵣⱼ ──          └──  
+```
+"""
+function leftCenv(ALu::Matrix{<:AbstractTensorMap}, 
+                  ALd::Matrix{<:AbstractTensorMap}, 
+                  L::Matrix{<:AbstractTensorMap} = initial_C(ALu); 
+                  ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
+
+    Ni, Nj = size(ALu)
+    λL = Zygote.Buffer(zeros(eltype(ALu[1]), Ni))
+    L′ = Zygote.Buffer(L)
+    for i in 1:Ni
+        ir = ifobs ? mod1(Ni - i + 2, Ni) : i
+        λLs, L1s, info = eigsolve(L -> Lmap(L, ALu[i,:], ALd[ir,:]), 
+                                   L[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+        verbosity >= 1 && info.converged == 0 && @warn "leftenv not converged"
+        λL[i], L′[i,:] = selectpos(λLs, L1s, Nj)
+    end
+    return copy(λL), copy(L′)
+end
+
+"""
     λR, FR = rightenv(ARu, ARd, M, FR = FRint(ARu,M); kwargs...)
 
 Compute the right environment tensor for MPS A and MPO M, by finding the left fixed point
@@ -280,8 +312,8 @@ end
                        R::Matrix{<:AbstractTensorMap} = initial_C(ARu); 
                        kwargs...) 
 
-Compute the right environment tensor for MPS A and MPO M, by finding the left fixed point
-of AR - M - conj(AR) contracted along the physical dimension.
+Compute the right environment tensor for MPS A by finding the left fixed point
+of AR - conj(AR) contracted along the physical dimension.
 ```
     ── ARuᵢⱼ  ──┐          ──┐   
         |       Rᵢⱼ  = λRᵢⱼ  Rᵢⱼ₋₁
@@ -414,7 +446,7 @@ function ACCtoAR(AC::Matrix{<:AbstractTensorMap}, C::Matrix{<:AbstractTensorMap}
     errR = 0.0
     AR = Zygote.Buffer(AC)
     @inbounds for j in 1:Nj, i in 1:Ni
-        jr = j - 1 + (j==1)*Nj
+        jr = mod1(j - 1, Nj)
         LAC, QAC = rightorth(_to_tail(AC[i,j]))
          LC, QC  = rightorth(C[i,jr])
         errR += norm(LAC - LC)

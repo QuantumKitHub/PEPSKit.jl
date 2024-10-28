@@ -58,13 +58,34 @@ end
 
 function LinearAlgebra.norm(ipeps::InfinitePEPS, env::VUMPSEnv)
     @unpack ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo = env
-    Ni = size(ipeps, 1)
+    Ni, Nj = size(ipeps)
 
     itp = InfiniteTransferPEPS(ipeps)
     λFLo, _ = rightenv(ARu, adjoint.(ARd), itp; ifobs=true)
     λC, _ = rightCenv(ARu, adjoint.(ARd); ifobs=true)
 
     return prod(λFLo./λC)^(1/Ni)
+
+    # test for 1x1 unitcell
+    # _, FLo =  leftenv(ARu, adjoint.(ARd), itp; ifobs=true)
+    # _, FRo = rightenv(ARu, adjoint.(ARd), itp; ifobs=true)
+    # _, Lo =  leftCenv(ARu, adjoint.(ARd); ifobs=true)
+    # _, Ro = rightCenv(ARu, adjoint.(ARd); ifobs=true)
+
+    # λFLo = Zygote.Buffer(zeros(ComplexF64, Ni, Nj))
+    # λCo = Zygote.Buffer(zeros(ComplexF64, Ni, Nj))
+    # for i in 1:Ni, j in 1:Nj
+    #     ir  = Ni + 1 - i
+    #     irr = mod1(Ni + 2 - i, Ni) 
+    #     @tensoropt FLm[-1 -2 -3; -4] := FLo[i,j][6 5 4; 1] * ARu[i,j][1 2 3; -4] * itp.top[i,j][9; 2 -2 8 5] * 
+    #                          itp.bot[i,j][3 -3 7 4; 9] * adjoint(ARd[ir,j])[-1; 6 8 7]
+    #     @tensoropt Lm[-6; -4] := ARu[i,j][1 2 3; -4] * Lo[i,j][5; 1] * adjoint(ARd[irr,j])[-6; 5 2 3]
+    #     λFLo[i, j] = (@tensor FLm[1 2 3; 4] * FRo[i, j][4 2 3; 1]) /
+    #                  (@tensor FLo[i, j][1 2 3; 4] * FRo[i, j][4 2 3; 1])
+    #     λCo[i, j] = (@tensor Lm[1; 2] * Ro[i, j][2; 1]) /
+    #                 (@tensor Lo[i, j][1; 2] * Ro[i, j][2; 1]) 
+    # end
+    # return prod(copy(λFLo)./copy(λCo))^(1/Ni/Nj)
 end
 
 """
