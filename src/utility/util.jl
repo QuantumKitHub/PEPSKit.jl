@@ -14,16 +14,17 @@ end
 # Compute √S⁻¹ for diagonal TensorMaps
 _safe_inv(a, tol) = abs(a) < tol ? zero(a) : inv(a)
 function sdiag_inv_sqrt(S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4))
-    tol *= S[1]
     invsq = similar(S)
 
     if sectortype(S) == Trivial
+        tol *= S[1]
         copyto!(
             invsq.data,
             LinearAlgebra.diagm(_safe_inv.(LinearAlgebra.diag(S.data), tol) .^ (1 / 2)),
         )
     else
         for (k, b) in blocks(S)
+            tol *= b[1]
             copyto!(
                 blocks(invsq)[k],
                 LinearAlgebra.diagm(_safe_inv.(LinearAlgebra.diag(b), tol) .^ (1 / 2)),
