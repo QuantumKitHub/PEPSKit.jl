@@ -13,7 +13,8 @@ end
 
 # Compute √S⁻¹ for diagonal TensorMaps
 _safe_inv(a, tol) = abs(a) < tol ? zero(a) : inv(a)
-function sdiag_inv_sqrt(S::AbstractTensorMap; tol=Defaults.inv_sqrt_tol)
+function sdiag_inv_sqrt(S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4))
+    tol *= S[1]
     invsq = similar(S)
 
     if sectortype(S) == Trivial
@@ -34,8 +35,9 @@ function sdiag_inv_sqrt(S::AbstractTensorMap; tol=Defaults.inv_sqrt_tol)
 end
 
 function ChainRulesCore.rrule(
-    ::typeof(sdiag_inv_sqrt), S::AbstractTensorMap; tol=Defaults.inv_sqrt_tol
+    ::typeof(sdiag_inv_sqrt), S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4)
 )
+    tol *= S[1]
     invsq = sdiag_inv_sqrt(S; tol)
     function sdiag_inv_sqrt_pullback(c̄)
         return (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, invsq'^3))

@@ -62,7 +62,6 @@ Module containing default values that represent typical algorithm parameters.
 - `ctmrg_tol = 1e-12`: Tolerance checking singular value and norm convergence
 - `fpgrad_maxiter = 100`: Maximal number of iterations for computing the CTMRG fixed-point gradient
 - `fpgrad_tol = 1e-6`: Convergence tolerance for the fixed-point gradient iteration
-- `inv_sqrt_tol = 1e-2ctmrg_tol`: Tolerance for cutting small values before sqrt-inverting
 """
 module Defaults
     using TensorKit, KrylovKit, OptimKit
@@ -84,7 +83,6 @@ module Defaults
         maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
     )
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
-    const inv_sqrt_tol = 1e-2ctmrg_tol
 end
 
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint

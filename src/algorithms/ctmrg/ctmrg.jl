@@ -20,7 +20,6 @@ environment direction/unit cell entry.
 @kwdef struct ProjectorAlg{S<:SVDAdjoint,T}
     svd_alg::S = Defaults.svd_alg
     trscheme::T = Defaults.trscheme
-    inv_sqrt_tol::Float64 = Defaults.inv_sqrt_tol
     verbosity::Int = 0
 end
 # TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
@@ -259,7 +258,7 @@ function ctmrg_projectors(
 
         # Compute projectors
         P_bottom[r, c], P_top[r, c] = build_projectors(
-            U, S, V, enlarged_envs[1][r, c], enlarged_envs[2][r′, c], projector_alg
+            U, S, V, enlarged_envs[1][r, c], enlarged_envs[2][r′, c]
         )
     end
 
@@ -317,7 +316,6 @@ function ctmrg_projectors(
             V_local,
             enlarged_envs[dir, r, c],
             enlarged_envs[_next(dir, 4), next_rc...],
-            projector_alg,
         )
     end
 
@@ -398,14 +396,9 @@ end
 
 # Build projectors from SVD and enlarged SW & NW corners
 function build_projectors(
-    U::AbstractTensorMap{E,3,1},
-    S,
-    V::AbstractTensorMap{E,1,3},
-    Q,
-    Q_next,
-    alg::ProjectorAlg,
+    U::AbstractTensorMap{E,3,1}, S, V::AbstractTensorMap{E,1,3}, Q, Q_next
 ) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S; tol=alg.inv_sqrt_tol)
+    isqS = sdiag_inv_sqrt(S)
     P_left = Q_next * V' * isqS
     P_right = isqS * U' * Q
     return P_left, P_right
