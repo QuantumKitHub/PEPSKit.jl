@@ -32,7 +32,7 @@ gradmodes = [
         LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:diffgauge),
     ],
     [  # Only use :diffgauge due to high gauge-sensitivity (perhaps due to small χenv?)
-        # nothing,
+        nothing,
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
         LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:diffgauge),
