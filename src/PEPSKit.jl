@@ -10,6 +10,7 @@ using ChainRulesCore, Zygote
 using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
+using FiniteDifferences
 
 include("utility/util.jl")
 include("utility/diffable_threads.jl")
@@ -37,6 +38,7 @@ include("environments/transferpepo_environments.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
 
+include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
@@ -98,10 +100,11 @@ module Defaults
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
     const ctmrgscheme = :simultaneous
+    const sparse = false
     const reuse_env = true
     const trscheme = FixedSpaceTruncation()
     const fwd_alg = TensorKit.SVD()
-    const rrule_alg = GMRES(; tol=1e1ctmrg_tol)
+    const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
     const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
     const gradient_linsolver = KrylovKit.BiCGStab(;
