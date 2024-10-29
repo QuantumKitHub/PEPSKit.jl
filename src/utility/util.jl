@@ -4,6 +4,17 @@ using OhMyThreads: tmap
 _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
 
+# iterator over each coordinates
+"""
+    eachcoordinate(x, dirs=1:4)
+
+Enumerate all (dir, row, col) pairs.
+"""
+function eachcoordinate end
+
+@non_differentiable eachcoordinate(args...)
+
+
 # Element-wise multiplication of TensorMaps respecting block structure
 function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     dst = similar(a)

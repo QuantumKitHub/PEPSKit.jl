@@ -371,6 +371,8 @@ function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
 end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
+Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
+eachcoordinate(x::CTMRGEnv, dirs=1:4) = collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
 
 # In-place update of environment
 function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}

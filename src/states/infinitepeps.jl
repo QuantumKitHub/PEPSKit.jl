@@ -124,6 +124,7 @@ Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
 Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
 Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
+eachcoordinate(x::InfinitePEPS, dirs=1:4) = collect(Iterators.product(dirs, axes(x, 1), axes(x, 2)))
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
 ## Math

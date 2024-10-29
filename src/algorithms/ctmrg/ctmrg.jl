@@ -192,8 +192,8 @@ end
 function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
     return ctmrg_expand(1:4, state, envs)
 end
-function ctmrg_expand(dirs, state, envs::CTMRGEnv)  # TODO: This doesn't AD due to length(::Nothing)...
-    coordinates = collect(Iterators.product(dirs, axes(state)...))
+function ctmrg_expand(dirs, state, envs::CTMRGEnv)
+    coordinates = eachcoordinate(state, dirs)
     return dtmap(
         idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]),
         coordinates;
@@ -252,7 +252,7 @@ function ctmrg_projectors(
     S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
 
     ϵ = zero(real(scalartype(envs)))
-    coordinates = collect(Iterators.product(axes(envs.corners)...))
+    coordinates = eachcoordinate(envs)
     projectors = dtmap(coordinates; THREADING_KWARGS...) do (dir, r, c)
         # Row-column index of next enlarged corner
         next_rc = if dir == 1
@@ -378,7 +378,7 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
 end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     P_left, P_right = projectors
-    coordinates = collect(Iterators.product(axes(envs.corners)...))
+    coordinates = eachcoordinate(envs)
     corners_edges = dtmap(coordinates; THREADING_KWARGS...) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_envs, P_left, P_right)
