@@ -194,7 +194,9 @@ function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
 end
 function ctmrg_expand(dirs, state, envs::CTMRGEnv)  # TODO: This doesn't AD due to length(::Nothing)...
     drc_combinations = collect(Iterators.product(dirs, axes(state)...))
-    return tmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), drc_combinations)
+    return tmap(
+        idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), drc_combinations
+    )
 end
 
 # ======================================================================================== #
