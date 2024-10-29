@@ -10,7 +10,13 @@ unitcell = (2, 2)
 H = pwave_superconductor(InfiniteSquare(unitcell...))
 χbond = 2
 χenv = 16
-ctm_alg = CTMRG(; tol=1e-8, maxiter=150, verbosity=2, ctmrgscheme=:sequential)
+ctm_alg = CTMRG(;
+    tol=1e-8,
+    maxiter=150,
+    verbosity=2,
+    ctmrgscheme=:simultaneous,
+    svd_alg=SVDAdjoint(; rrule_alg=Arnoldi(; tol=1e-9, krylovdim=χenv+30)),
+)
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=10, gradtol=1e-3, verbosity=2),
