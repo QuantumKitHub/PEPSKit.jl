@@ -15,7 +15,7 @@ ctm_alg = CTMRG(;
     maxiter=150,
     verbosity=2,
     ctmrgscheme=:simultaneous,
-    svd_alg=SVDAdjoint(; rrule_alg=Arnoldi(; tol=1e-9, krylovdim=χenv+30)),
+    svd_alg=SVDAdjoint(; rrule_alg=Arnoldi(; tol=1e-9, krylovdim=χenv + 30)),
 )
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
