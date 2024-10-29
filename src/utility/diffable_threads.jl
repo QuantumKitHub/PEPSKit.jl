@@ -19,7 +19,7 @@ function ChainRulesCore.rrule(
     y = map(first, el_rrules)
     f_projector = ProjectTo(f)
     A_projectors = map(ProjectTo, A)
-    
+
     function dtmap_pullback(dy_raw)
         dys = unthunk(dy_raw)
         backevals = tmap(el_rrules, dys; kwargs...) do el_rrule, dy

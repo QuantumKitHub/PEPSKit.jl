@@ -105,7 +105,8 @@ function CTMRGEnv(
     corners = Array{C_type}(undef, 4, size(Ds_north)...)
     edges = Array{T_type}(undef, 4, size(Ds_north)...)
 
-    for (r, c) in Iterators.product(axes(Ds_north)...)
+    for I in CartesianIndices(Ds_north)
+        r, c = I.I
         edges[NORTH, r, c] = _edge_tensor(
             f,
             T,
@@ -372,7 +373,12 @@ end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
 Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
-eachcoordinate(x::CTMRGEnv, dirs=1:4) = collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
+function eachcoordinate(x::CTMRGEnv)
+    return collect(Iterators.product(axes(x, 2), axes(x, 3)))
+end
+function eachcoordinate(x::CTMRGEnv, dirs)
+    return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
+end
 
 # In-place update of environment
 function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}

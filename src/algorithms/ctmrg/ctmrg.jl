@@ -217,7 +217,7 @@ function ctmrg_projectors(
     projector_alg = alg.projector_alg
     ϵ = zero(real(scalartype(envs)))
 
-    coordinates = collect(Iterators.product(axes(envs.corners, 2), axes(envs.corners, 3)))
+    coordinates = eachcoordinate(envs)
     projectors = dtmap(coordinates; THREADING_KWARGS...) do (r, c)
         # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
@@ -252,7 +252,7 @@ function ctmrg_projectors(
     S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
 
     ϵ = zero(real(scalartype(envs)))
-    coordinates = eachcoordinate(envs)
+    coordinates = eachcoordinate(envs, 1:4)
     projectors = dtmap(coordinates; THREADING_KWARGS...) do (dir, r, c)
         # Row-column index of next enlarged corner
         next_rc = if dir == 1
@@ -362,8 +362,7 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
     end
 
     # Apply projectors to renormalize corners and edges
-    coordinates = collect(Iterators.product(axes(state)...))
-    for (r, c) in coordinates
+    for (r, c) in eachcoordinate(state)
         C_southwest = renormalize_bottom_corner((r, c), envs, projectors)
         corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
 
@@ -378,7 +377,7 @@ function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
 end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     P_left, P_right = projectors
-    coordinates = eachcoordinate(envs)
+    coordinates = eachcoordinate(envs, 1:4)
     corners_edges = dtmap(coordinates; THREADING_KWARGS...) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_envs, P_left, P_right)

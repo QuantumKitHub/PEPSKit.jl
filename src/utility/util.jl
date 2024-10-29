@@ -14,7 +14,6 @@ function eachcoordinate end
 
 @non_differentiable eachcoordinate(args...)
 
-
 # Element-wise multiplication of TensorMaps respecting block structure
 function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     dst = similar(a)
