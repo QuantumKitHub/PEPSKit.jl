@@ -37,6 +37,7 @@ include("environments/transferpepo_environments.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
 
+include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
@@ -73,6 +74,7 @@ module Defaults
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
     const ctmrgscheme = :simultaneous
+    const sparse = false
     const reuse_env = true
     const trscheme = FixedSpaceTruncation()
     const iterscheme = :fixed
