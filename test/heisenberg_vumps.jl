@@ -29,6 +29,6 @@ psi_init = InfinitePEPS(2, χbond; unitcell=(1, 1))
 env_init = VUMPSRuntime(psi_init, χenv)
 
 # find fixedpoint
-result = fixedpoint(psi_init, H, opt_alg, env_init;
-symmetrization=RotateReflect());
+result = fixedpoint(psi_init, H, opt_alg, env_init; 
+                    symmetrization=RotateReflect());
 @test result.E ≈ -0.66023 atol = 1e-4
