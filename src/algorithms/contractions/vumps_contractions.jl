@@ -172,3 +172,29 @@ function Cmap(Cj::Vector{<:AbstractTensorMap},
 
     return circshift(Cm, 1)
 end
+
+function nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, rt::VUMPSRuntime)
+    @unpack AL, C, AR, FL, FR = rt
+
+    AC = ALCtoAC(AL, C)
+    Ni, Nj = size(ipeps)
+    (Ni, Nj) == (1, 1) || throw(ArgumentError("Only 1x1 unitcell is supported for one side VUMPSRuntime")) 
+
+    At = ipeps.A[1]
+    Ab = adjoint(ipeps.A[1])
+    @tensoropt oph[-1 -2; -3 -4] := FL[1][18 12 15; 5] * AC[1][5 6 7; 8] * At[-1; 6 13 19 12] * Ab[7 16 20 15; -3] * 
+                                   conj(AC[1][18 19 20; 21]) * AR[1][8 9 10; 11] * At[-2; 9 14 22 13] * Ab[10 17 23 16; -4] *
+                                   conj(AR[1][21 22 23; 24]) * FR[1][11 14 17; 24]
+
+    @tensor eh = oph[1 2; 3 4] * Hh[3 4; 1 2]
+    @tensor nh = oph[1 2; 1 2]
+    
+    @tensoropt opv[-1 -2; -3 -4] := FL[1][21 19 20; 18] * AC[1][18 12 15 5] * At[-1; 12 6 13 19] * Ab[15 7 16 20; -3] * 
+                                    FR[1][5 6 7; 8] * FL[1][24 22 23; 21] * At[-2; 13 9 14 22] * Ab[16 10 17 23; -4] * 
+                                    FR[1][8 9 10; 11] * conj(AC[1][24 14 17; 11])
+
+    @tensor ev = opv[1 2; 3 4] * Hv[3 4; 1 2]
+    @tensor nv = opv[1 2; 1 2]
+
+    return eh / nh + ev / nv
+end

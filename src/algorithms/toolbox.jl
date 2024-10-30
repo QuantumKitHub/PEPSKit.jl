@@ -1,4 +1,4 @@
-function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
+function expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, O)
     return sum(O.terms) do (inds, operator)  # TODO: parallelize this map, especially for the backwards pass
         contract_localoperator(inds, operator, peps, peps, envs) /
@@ -6,8 +6,15 @@ function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CT
     end
 end
 
-function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
-    E = MPSKit.expectation_value(peps, O, envs)
+function expectation_value(peps::InfinitePEPS, O::LocalOperator, rt::VUMPSRuntime)
+    checklattice(peps, O)
+    Hh = O.terms[1].second
+    Hv = O.terms[2].second
+    return nearest_neighbour_energy(peps, Hh, Hv, rt)
+end
+
+function costfun(peps::InfinitePEPS, envs::Union{CTMRGEnv, VUMPSRuntime}, O::LocalOperator)
+    E = expectation_value(peps, O, envs)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
             @warn "Expectation value is not real: $E."
@@ -60,8 +67,7 @@ function LinearAlgebra.norm(ipeps::InfinitePEPS, env::VUMPSEnv)
     @unpack ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo = env
     Ni, Nj = size(ipeps)
 
-    itp = InfiniteTransferPEPS(ipeps)
-    λFLo, _ = rightenv(ARu, adjoint.(ARd), itp; ifobs=true)
+    λFLo, _ = rightenv(ARu, adjoint.(ARd), ipeps; ifobs=true)
     λC, _ = rightCenv(ARu, adjoint.(ARd); ifobs=true)
 
     return prod(λFLo./λC)^(1/Ni)

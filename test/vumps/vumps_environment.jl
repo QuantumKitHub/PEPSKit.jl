@@ -14,23 +14,11 @@ begin "test utility"
     χs = [ℂ^4]
 end
 
-@testset "InfiniteTransferPEPS for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
-    Random.seed!(42)
-    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
-
-    itp = InfiniteTransferPEPS(ipeps)
-    @test itp.top == ipeps.A
-    @test itp.bot == [A' for A in ipeps.A]
-    @test all(i -> space(i) == (d ← D * D * D' * D'), itp.top)
-    @test all(i -> space(i) == (D * D * D' * D' ← d), itp.bot)
-end
-
 @testset "initialize A C for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
     C = initial_C(A)
     @test size(A) == (Ni, Nj)
     @test size(C) == (Ni, Nj)
@@ -40,8 +28,7 @@ end
 
 @testset "getL!, getAL and getLsped for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
     C = initial_C(A)
     C = ρmap(C, A)
 
@@ -64,8 +51,7 @@ end
 
 @testset "canonical form for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
 
     AL, L, λ = left_canonical(A)
     @test all(i -> space(i) == (χ * D * D' ← χ), AL)
@@ -84,15 +70,14 @@ end
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
     AL, L, λ = left_canonical(A)
     R, AR, λ = right_canonical(A)
 
-    FL = initial_FL(AL, itp)
+    FL = initial_FL(AL, ipeps)
     @test all(i -> space(i) == (χ * D' * D ← χ), FL)
 
-    FR = initial_FR(AR, itp)
+    FR = initial_FR(AR, ipeps)
     @test all(i -> space(i) == (χ * D * D' ← χ), FR)
 end
 
@@ -100,21 +85,20 @@ end
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
     AL, L, λ = left_canonical(A)
     R, AR, λ = right_canonical(A)
 
-    λL, FL = leftenv(AL, adjoint.(AL), itp; ifobs)
-    λR, FR = rightenv(AR, adjoint.(AR), itp; ifobs)
+    λL, FL = leftenv(AL, adjoint.(AL), ipeps; ifobs)
+    λR, FR = rightenv(AR, adjoint.(AR), ipeps; ifobs)
 
     @test all(i -> space(i) == (χ * D' * D ← χ), FL)
     @test all(i -> space(i) == (χ * D * D' ← χ), FR)
 
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
-        @test λL[i] * FL[i,:] ≈ FLmap(FL[i,:], AL[i,:], adjoint.(AL)[ir,:], itp.top[i,:], itp.bot[i,:]) rtol = 1e-12
-        @test λR[i] * FR[i,:] ≈ FRmap(FR[i,:], AR[i,:], adjoint.(AR)[ir,:], itp.top[i,:], itp.bot[i,:]) rtol = 1e-12
+        @test λL[i] * FL[i,:] ≈ FLmap(FL[i,:], AL[i,:], adjoint.(AL)[ir,:], ipeps[i,:], adjoint.(ipeps[i,:])) rtol = 1e-12
+        @test λR[i] * FR[i,:] ≈ FRmap(FR[i,:], AR[i,:], adjoint.(AR)[ir,:], ipeps[i,:], adjoint.(ipeps[i,:])) rtol = 1e-12
     end
 end
 
@@ -122,25 +106,24 @@ end
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
     AL, L, λ = left_canonical(A)
     R, AR, λ = right_canonical(A)
 
-    λL, FL = leftenv(AL, adjoint.(AL), itp)
-    λR, FR = rightenv(AR, adjoint.(AR), itp)
+    λL, FL = leftenv(AL, adjoint.(AL), ipeps)
+    λR, FR = rightenv(AR, adjoint.(AR), ipeps)
 
      C = LRtoC(L, R)
     AC = ALCtoAC(AL, C)
 
-    λAC, AC = ACenv(AC, FL, FR, itp)
+    λAC, AC = ACenv(AC, FL, FR, ipeps)
      λC,  C =  Cenv( C, FL, FR) 
     @test all(i -> space(i) == (χ * D * D' ← χ), AC)
     @test all(i -> space(i) == (χ ← χ),  C)
 
     for j in 1:Nj
         jr = mod1(j + 1, Nj)
-        @test λAC[j] * AC[:,j] ≈ ACmap(AC[:,j], FL[:,j], FR[:,j], itp.top[:,j], itp.bot[:,j]) rtol = 1e-12
+        @test λAC[j] * AC[:,j] ≈ ACmap(AC[:,j], FL[:,j], FR[:,j], ipeps[:,j], adjoint.(ipeps[:,j])) rtol = 1e-12
         @test  λC[j] *  C[:,j] ≈  Cmap( C[:,j], FL[:,jr], FR[:,j]) rtol = 1e-10
     end
 end
@@ -149,18 +132,17 @@ end
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
     AL, L, λ = left_canonical(A)
     R, AR, λ = right_canonical(A)
 
-    λL, FL = leftenv(AL, adjoint.(AL), itp)
-    λR, FR = rightenv(AR, adjoint.(AR), itp)
+    λL, FL = leftenv(AL, adjoint.(AL), ipeps)
+    λR, FR = rightenv(AR, adjoint.(AR), ipeps)
 
      C = LRtoC(L, R)
     AC = ALCtoAC(AL, C)
 
-    λAC, AC = ACenv(AC, FL, FR, itp)
+    λAC, AC = ACenv(AC, FL, FR, ipeps)
      λC,  C =  Cenv( C, FL, FR) 
 
     AL, AR, errL, errR = ACCtoALAR(AC, C)
@@ -176,8 +158,7 @@ end
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    itp = InfiniteTransferPEPS(ipeps)
-    A = initial_A(itp, χ)
+    A = initial_A(ipeps, χ)
     AL, L, λ = left_canonical(A)
     R, AR, λ = right_canonical(A)
 

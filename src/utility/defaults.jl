@@ -44,7 +44,7 @@ module Defaults
     const fwd_alg = TensorKit.SVD()
     const rrule_alg = GMRES(; tol=1e1contr_tol)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
-    const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
+    const optimizer = LBFGS(32; maxiter=100, gradtol=1e-8, verbosity=2)
     const gradient_linsolver = KrylovKit.BiCGStab(;
         maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
     )

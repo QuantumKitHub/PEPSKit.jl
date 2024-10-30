@@ -18,7 +18,7 @@ ctm_alg = CTMRG(;
 )
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
+    optimizer=LBFGS(4; maxiter=0, gradtol=1e-3, verbosity=2),
     gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6), iterscheme=:fixed),
     reuse_env=true,
 )
@@ -30,7 +30,7 @@ psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
 # find fixedpoint
-result = fixedpoint(psi_init, H, opt_alg, env_init)
+result = fixedpoint(psi_init, H, opt_alg, env_init);
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
 @test result.E ≈ -0.6694421 atol = 1e-2

@@ -1,8 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using MPSKit
-using PEPSKit: leading_boundary
+using PEPSKit: nearest_neighbour_energy
 using TensorKit
 using LinearAlgebra
 
@@ -16,8 +15,7 @@ end
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
-    itp = InfiniteTransferPEPS(ipeps)
-    rt = VUMPSRuntime(itp, χ)
+    rt = VUMPSRuntime(ipeps, χ)
     @test rt isa VUMPSRuntime
 end
 
@@ -26,18 +24,39 @@ end
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
     ipeps = symmetrize!(ipeps, RotateReflect())
 
-    alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=false)
+    alg = VUMPS(maxiter=100, verbosity=2, ifupdown=false)
 
-    itp = InfiniteTransferPEPS(ipeps)
-    env = leading_boundary(itp, VUMPSRuntime(itp, χ, alg), alg)
+    rt = leading_boundary(VUMPSRuntime(ipeps, χ, alg), ipeps, alg)
+    env = VUMPSEnv(rt)
     @test env isa VUMPSEnv
 
     Z = abs(norm(ipeps, env))
 
-    ctm = MPSKit.leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
+    ctm = leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
     Z′ = abs(norm(ipeps, ctm))^(1/Ni/Nj)
 
     @test Z ≈ Z′ rtol = 1e-12
+end
+
+@testset "vumps one side runtime energy for unitcell $Ni x $Nj" for Ni in 1:1, Nj in 1:1, (d, D, χ) in zip(ds, Ds, χs)
+    Random.seed!(100)
+    ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
+    ipeps = symmetrize!(ipeps, RotateReflect())
+
+    alg = VUMPS(maxiter=100, verbosity=2, ifupdown=false)
+
+    rt = leading_boundary(VUMPSRuntime(ipeps, χ, alg), ipeps, alg)
+    H = heisenberg_XYZ(InfiniteSquare())
+    H = H.terms[1].second
+    # Hh, Hv = H.terms[1]
+    
+    @show nearest_neighbour_energy(ipeps, H, H, rt)
+    # Z = abs(norm(ipeps, env))
+
+    # ctm = leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
+    # Z′ = abs(norm(ipeps, ctm))^(1/Ni/Nj)
+
+    # @test Z ≈ Z′ rtol = 1e-12
 end
 
 @testset "vumps two side runtime for unitcell $Ni x $Nj" for Ni in 1:3, Nj in 1:3, (d, D, χ) in zip(ds, Ds, χs)
@@ -45,13 +64,13 @@ end
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
     alg = PEPSKit.VUMPS(maxiter=100, verbosity=2, ifupdown=true)
 
-    itp = InfiniteTransferPEPS(ipeps)
-    env = leading_boundary(itp, VUMPSRuntime(itp, χ, alg), alg)
+    rt = leading_boundary(VUMPSRuntime(ipeps, χ, alg), ipeps, alg)
+    env = VUMPSEnv(rt, ipeps)
     @test env isa VUMPSEnv
 
     Z = abs(norm(ipeps, env))
 
-    ctm = MPSKit.leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
+    ctm = leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
     Z′ = abs(norm(ipeps, ctm))^(1/Ni/Nj)
 
     @test Z ≈ Z′ rtol = 1e-8

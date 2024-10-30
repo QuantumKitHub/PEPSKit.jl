@@ -31,7 +31,6 @@ include("operators/models.jl")
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 
-abstract type Algorithm end
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/vumps_contractions.jl")

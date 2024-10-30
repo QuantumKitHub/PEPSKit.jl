@@ -1,36 +1,89 @@
 """
-    InfiniteTransferPEPS{T}
+    VUMPSEnv{T<:Number, S<:IndexSpace,
+             OT<:AbstractTensorMap{S, 2, 2},
+             ET<:AbstractTensorMap{S, 2, 1},
+             CT<:AbstractTensorMap{S, 1, 1}}
 
-Represents an infinite transfer operator corresponding to a single row of a partition
-function which corresponds to the overlap between 'ket' and 'bra' `InfinitePEPS` states.
+A struct that contains the environment of the VUMPS algorithm for calculate observables.
+    
+For a `Ni` x `Nj` unitcell, each is a Matrix, containing
+
+- `AC`: The mixed canonical environment tensor.
+- `AR`: The right canonical environment tensor.
+- `Lu`: The left upper environment tensor.
+- `Ru`: The right upper environment tensor.
+- `Lo`: The left mixed environment tensor.
+- `Ro`: The right mixed environment tensor.
 """
-struct InfiniteTransferPEPS{TT, BT}
-    top::Matrix{TT}
-    bot::Matrix{BT}
-end
-
-function InfiniteTransferPEPS(ipeps::InfinitePEPS)
-    top = ipeps.A
-    bot = adjoint.(ipeps.A)
-    return InfiniteTransferPEPS(top, bot)
-end
-
-function InfiniteTransferPEPS(A::Matrix{<:AbstractTensorMap})
-    top = A
-    bot = adjoint.(A)
-    return InfiniteTransferPEPS(top, bot)
-end
-
-function ChainRulesCore.rrule(::Type{InfiniteTransferPEPS}, top::Matrix, bot::Matrix)
-    function pullback(Δ)
-        return NoTangent(), Δ.top, Δ.bot
+struct VUMPSEnv{T<:Number, S<:IndexSpace,
+                ET<:AbstractTensorMap{S, 3, 1}}
+    ACu::Matrix{ET}
+    ARu::Matrix{ET}
+    ACd::Matrix{ET}
+    ARd::Matrix{ET}
+    FLu::Matrix{ET}
+    FRu::Matrix{ET}
+    FLo::Matrix{ET}
+    FRo::Matrix{ET}
+    function VUMPSEnv(ACu::Matrix{ET},
+                      ARu::Matrix{ET},
+                      ACd::Matrix{ET},
+                      ARd::Matrix{ET},
+                      FLu::Matrix{ET},
+                      FRu::Matrix{ET},
+                      FLo::Matrix{ET},
+                      FRo::Matrix{ET}) where {ET}
+        T = eltype(ACu[1])
+        S = spacetype(ACu[1])
+        new{T, S, ET}(ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo)
     end
-    return InfiniteTransferPEPS(top, bot), pullback
 end
 
-Base.eltype(transfer::InfiniteTransferPEPS) = eltype(transfer.top[1])
-Base.size(transfer::InfiniteTransferPEPS) = size(transfer.top)
+"""
+    VUMPSRuntime{T<:Number, S<:IndexSpace,
+                 OT<:AbstractTensorMap{S, 2, 2},
+                 ET<:AbstractTensorMap{S, 2, 1},
+                 CT<:AbstractTensorMap{S, 1, 1}}
 
+A struct that contains the environment of the VUMPS algorithm for runtime calculations.
+    
+For a `Ni` x `Nj` unitcell, each is a Matrix, containing
+
+- `O`: The center transfer matrix PEPO tensor.
+- `AL`: The left canonical environment tensor.
+- `AR`: The right canonical environment tensor.
+- `C`: The canonical environment tensor.
+- `L`: The left environment tensor.
+- `R`: The right environment tensor.
+"""
+struct VUMPSRuntime{T<:Number, S<:IndexSpace,
+                    ET<:AbstractTensorMap{S, 3, 1},
+                    CT<:AbstractTensorMap{S, 1, 1}}
+    AL::Matrix{ET}
+    AR::Matrix{ET}
+    C::Matrix{CT}
+    FL::Matrix{ET}
+    FR::Matrix{ET}
+    function VUMPSRuntime(AL::Matrix{ET},
+                          AR::Matrix{ET},
+                          C::Matrix{CT},
+                          FL::Matrix{ET},
+                          FR::Matrix{ET}) where {ET, CT}
+        T = eltype(AL[1])
+        S = spacetype(AL[1])
+        new{T, S, ET, CT}(AL, AR, C, FL, FR)
+    end
+end
+
+# In-place update of environment
+function update!(env::VUMPSRuntime, env´::VUMPSRuntime) 
+    env.AL .= env´.AL
+    env.AR .= env´.AR
+    env.C .= env´.C
+    env.FL .= env´.FL
+    env.FR .= env´.FR
+    return env
+end
 """
 
 ````
@@ -43,10 +96,10 @@ Base.size(transfer::InfiniteTransferPEPS) = size(transfer.top)
 Initalize a boundary MPS for the transfer operator `O` by specifying an array of virtual
 spaces consistent with the unit cell.
 """
-function initial_A(O::InfiniteTransferPEPS, χ::VectorSpace)
-    T = eltype(O)
-    Ni, Nj = size(O)
-    A = [(D = space(O.top[i, j], 2)';
+function initial_A(ipeps::InfinitePEPS, χ::VectorSpace)
+    T = eltype(ipeps[1])
+    Ni, Nj = size(ipeps)
+    A = [(D = space(ipeps[i, j], 2)';
          TensorMap(rand, T, χ * D * D', χ)) for i in 1:Ni, j in 1:Nj]
     return A
 end
@@ -193,19 +246,19 @@ function right_canonical(A::Matrix{<:AbstractTensorMap}, L::Matrix{<:AbstractTen
     return R, AR, λ
 end
 
-function initial_FL(AL::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS)
-    T = eltype(O)
-    FL = [(D = space(top, 5)';
+function initial_FL(AL::Matrix{<:AbstractTensorMap}, ipeps::InfinitePEPS)
+    T = eltype(ipeps[1])
+    FL = [(D = space(ipeps, 5)';
           χ = space(AL, 4)';
-          TensorMap(rand, T, χ * D * D', χ)) for (top, AL) in zip(O.top, AL)]
+          TensorMap(rand, T, χ * D * D', χ)) for (ipeps, AL) in zip(ipeps.A, AL)]
     return FL
 end
 
-function initial_FR(AR::Matrix{<:AbstractTensorMap}, O::InfiniteTransferPEPS)
-    T = eltype(O)
-    FR = [(D = space(top, 3)';
+function initial_FR(AR::Matrix{<:AbstractTensorMap}, ipeps::InfinitePEPS)
+    T = eltype(ipeps[1])
+    FR = [(D = space(ipeps, 3)';
            χ = space(AR, 4)';
-           TensorMap(rand, T, χ * D * D', χ)) for (top, AR) in zip(O.top, AR)]
+           TensorMap(rand, T, χ * D * D', χ)) for (ipeps, AR) in zip(ipeps.A, AR)]
     return FR
 end
 
@@ -224,16 +277,16 @@ FLᵢⱼ ─ Oᵢⱼ   ──   = λLᵢⱼ FLᵢⱼ₊₁
 """
 function leftenv(ALu::Matrix{<:AbstractTensorMap}, 
         ALd::Matrix{<:AbstractTensorMap}, 
-        O::InfiniteTransferPEPS, 
-        FL::Matrix{<:AbstractTensorMap} = initial_FL(ALu,O); 
+        ipeps::InfinitePEPS, 
+        FL::Matrix{<:AbstractTensorMap} = initial_FL(ALu,ipeps); 
         ifobs=false, verbosity = Defaults.verbosity, kwargs...) 
 
-    Ni, Nj = size(O)
-    λL = Zygote.Buffer(zeros(eltype(O), Ni))
+    Ni, Nj = size(ipeps)
+    λL = Zygote.Buffer(zeros(eltype(ipeps[1]), Ni))
     FL′ = Zygote.Buffer(FL)
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
-        λLs, FL1s, info = eigsolve(FLi -> FLmap(FLi, ALu[i,:], ALd[ir,:], O.top[i,:], O.bot[i,:]), 
+        λLs, FL1s, info = eigsolve(FLi -> FLmap(FLi, ALu[i,:], ALd[ir,:], ipeps[i,:], adjoint.(ipeps[i,:])), 
                                    FL[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "leftenv not converged"
         λL[i], FL′[i,:] = selectpos(λLs, FL1s, Nj)
@@ -288,17 +341,17 @@ of AR - M - conj(AR) contracted along the physical dimension.
 """
 function rightenv(ARu::Matrix{<:AbstractTensorMap}, 
          ARd::Matrix{<:AbstractTensorMap}, 
-         O::InfiniteTransferPEPS, 
-         FR::Matrix{<:AbstractTensorMap} = initial_FR(ARu,O); 
+         ipeps::InfinitePEPS, 
+         FR::Matrix{<:AbstractTensorMap} = initial_FR(ARu,ipeps); 
          ifobs=false, ifinline=false,verbosity = Defaults.verbosity, kwargs...) 
 
-    Ni, Nj = size(O)
-    λR = Zygote.Buffer(zeros(eltype(O), Ni))
+    Ni, Nj = size(ipeps)
+    λR = Zygote.Buffer(zeros(eltype(ipeps[1]), Ni))
     FR′ = Zygote.Buffer(FR)
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
         ifinline && (ir = i) 
-        λRs, FR1s, info = eigsolve(FR -> FRmap(FR, ARu[i,:], ARd[ir,:], O.top[i,:], O.bot[i,:]), 
+        λRs, FR1s, info = eigsolve(FR -> FRmap(FR, ARu[i,:], ARd[ir,:], ipeps[i,:], adjoint.(ipeps[i,:])), 
                                    FR[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"
         λR[i], FR′[i,:] = selectpos(λRs, FR1s, Nj)
@@ -353,14 +406,14 @@ FLᵢⱼ ─── Oᵢⱼ ───── FRᵢⱼ               │      │  
 function ACenv(AC::Matrix{<:AbstractTensorMap}, 
                FL::Matrix{<:AbstractTensorMap}, 
                FR::Matrix{<:AbstractTensorMap},
-               O::InfiniteTransferPEPS; 
+               ipeps::InfinitePEPS; 
                verbosity = Defaults.verbosity, kwargs...)
 
-    Ni, Nj = size(O)
-    λAC = Zygote.Buffer(zeros(eltype(O),Nj))
+    Ni, Nj = size(ipeps)
+    λAC = Zygote.Buffer(zeros(eltype(ipeps[1]),Nj))
     AC′ = Zygote.Buffer(AC)
     for j in 1:Nj
-        λACs, ACs, info = eigsolve(AC -> ACmap(AC, FL[:,j], FR[:,j], O.top[:,j], O.bot[:,j]), 
+        λACs, ACs, info = eigsolve(AC -> ACmap(AC, FL[:,j], FR[:,j], ipeps[:,j], adjoint.(ipeps[:,j])), 
                                    AC[:,j], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "ACenv Not converged"
         λAC[j], AC′[:,j] = selectpos(λACs, ACs, Ni)

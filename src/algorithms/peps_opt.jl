@@ -89,13 +89,13 @@ step by setting `reuse_env` to true. Otherwise a random environment is used at e
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 """
 struct PEPSOptimize{G}
-    boundary_alg::CTMRG
+    boundary_alg::Union{CTMRG, VUMPS}
     optimizer::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
     gradient_alg::G
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
-        boundary_alg::CTMRG{S},
+        boundary_alg::Union{CTMRG{S}, VUMPS},
         optimizer,
         reuse_env,
         gradient_alg::G,
@@ -106,6 +106,8 @@ struct PEPSOptimize{G}
             elseif boundary_alg.projector_alg.svd_alg.fwd_alg isa IterSVD &&
                 iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError("IterSVD and :fixed are currently not compatible"))
+            elseif boundary_alg isa VUMPS && iterscheme(gradient_alg) === :fixed
+                throw(ArgumentError("VUMPS and :fixed are currently not compatible"))
             end
         end
         return new{G}(boundary_alg, optimizer, reuse_env, gradient_alg)
@@ -148,7 +150,7 @@ function fixedpoint(
     ψ₀::InfinitePEPS{T},
     H,
     alg::PEPSOptimize,
-    env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20);
+    env₀::Union{CTMRGEnv, VUMPSRuntime}=CTMRGEnv(ψ₀, field(T)^20);
     (finalize!)=OptimKit._finalize!,
     symmetrization=nothing,
 ) where {T}
@@ -177,6 +179,7 @@ function fixedpoint(
             return costfun(ψ, envs´, H)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        envs isa VUMPSRuntime && (g = InfinitePEPS(g.A)) # KrylovKit patch 
         return E, g
     end
 
@@ -213,7 +216,7 @@ Evaluating the gradient of the cost function for CTMRG:
 function _rrule(
     gradmode::GradMode{:diffgauge},
     ::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
+    ::typeof(leading_boundary),
     envinit,
     state,
     alg::CTMRG,
@@ -244,7 +247,7 @@ end
 function _rrule(
     gradmode::GradMode{:diffgauge},
     ::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
+    ::typeof(leading_boundary),
     envinit,
     state,
     alg::VUMPS,
@@ -276,7 +279,7 @@ end
 function _rrule(
     gradmode::GradMode{:fixed},
     ::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
+    ::typeof(leading_boundary),
     envinit,
     state,
     alg::CTMRG{C},

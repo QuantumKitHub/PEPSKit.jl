@@ -64,7 +64,7 @@ computed on the western side, and then applied and rotated. Or with `:simultaneo
 are computed and applied simultaneously on all sides, where in particular the corners get
 contracted with two projectors at the same time.
 """
-struct CTMRG{S} <: Algorithm
+struct CTMRG{S}
     tol::Float64
     maxiter::Int
     miniter::Int
@@ -92,15 +92,15 @@ const SequentialCTMRG = CTMRG{:sequential}
 const SimultaneousCTMRG = CTMRG{:simultaneous}
 
 """
-    MPSKit.leading_boundary([envinit], state, alg::CTMRG)
+    leading_boundary([envinit], state, alg::CTMRG)
 
 Contract `state` using CTMRG and return the CTM environment.
 Per default, a random initial environment is used.
 """
-function MPSKit.leading_boundary(state, alg::CTMRG)
-    return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
+function leading_boundary(state, alg::CTMRG)
+    return leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
 end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
+function leading_boundary(envinit, state, alg::CTMRG)
     CS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
     TS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
 
