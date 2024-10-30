@@ -112,9 +112,7 @@ module Defaults
     )
     const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
-    const threading_kwargs = Dict(
-        :scheduler => :dynamic, :ntasks => 4, :chunking => true
-    )
+    const threading_kwargs = Dict(:scheduler => :dynamic, :ntasks => 4, :chunking => true)
 end
 
 # Global OhMyThreads multi-threading settings
