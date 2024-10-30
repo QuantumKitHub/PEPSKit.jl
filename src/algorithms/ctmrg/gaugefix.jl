@@ -113,7 +113,7 @@ function fix_relative_phases(
     end
 
     V_fixed = map(CartesianIndices(V)) do I
-         dir, r, c = I.I
+        dir, r, c = I.I
         if dir == NORTHWEST
             fix_gauge_north_right_vecs((r, c), V, signs)
         elseif dir == NORTHEAST
