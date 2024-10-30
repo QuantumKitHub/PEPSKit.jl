@@ -134,6 +134,10 @@ Base.:/(ψ::InfinitePEPS, α::Number) = InfinitePEPS(ψ.A / α)
 LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
 LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
 
+## not a nice solution, but it works
+Base.:+(ipeps::InfinitePEPS, x::NamedTuple) = InfinitePEPS(ipeps.A .+ x.A)
+Base.:+(x::NamedTuple, ipeps::InfinitePEPS) = InfinitePEPS(ipeps.A .+ x.A)
+
 ## (Approximate) equality
 function Base.:(==)(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
     return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)

@@ -150,7 +150,7 @@ function fixedpoint(
     ψ₀::InfinitePEPS{T},
     H,
     alg::PEPSOptimize,
-    env₀::Union{CTMRGEnv, VUMPSRuntime}=CTMRGEnv(ψ₀, field(T)^20);
+    env₀=CTMRGEnv(ψ₀, field(T)^20);
     (finalize!)=OptimKit._finalize!,
     symmetrization=nothing,
 ) where {T}
@@ -179,7 +179,7 @@ function fixedpoint(
             return costfun(ψ, envs´, H)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-        envs isa VUMPSRuntime && (g = InfinitePEPS(g.A)) # KrylovKit patch 
+        envs isa Union{VUMPSRuntime, Tuple{VUMPSRuntime, VUMPSRuntime}} && (g = InfinitePEPS(g.A)) # KrylovKit patch 
         return E, g
     end
 

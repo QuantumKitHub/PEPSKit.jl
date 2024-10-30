@@ -6,14 +6,15 @@ function expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     end
 end
 
-function expectation_value(peps::InfinitePEPS, O::LocalOperator, rt::VUMPSRuntime)
+function expectation_value(peps::InfinitePEPS, O::LocalOperator, rt::Union{VUMPSRuntime, Tuple{VUMPSRuntime, VUMPSRuntime}})
     checklattice(peps, O)
+    env = VUMPSEnv(rt, peps)
     Hh = O.terms[1].second
     Hv = O.terms[2].second
-    return nearest_neighbour_energy(peps, Hh, Hv, rt)
+    return nearest_neighbour_energy(peps, Hh, Hv, env)
 end
 
-function costfun(peps::InfinitePEPS, envs::Union{CTMRGEnv, VUMPSRuntime}, O::LocalOperator)
+function costfun(peps::InfinitePEPS, envs, O::LocalOperator)
     E = expectation_value(peps, O, envs)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||

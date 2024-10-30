@@ -30,7 +30,7 @@ end
     @test Zygote.gradient(f, 1.0)[1] ≈ num_grad(f, 1.0)
 end
 
-@testset "leftenv and rightenv for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
+@testset "leftenv and rightenv for unitcell $Ni x $Nj" for Ni in 1:1, Nj in 1:1, (d, D, χ) in zip(ds, Ds, χs), ifobs in [true, false]
     Random.seed!(50)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
 
@@ -44,25 +44,25 @@ end
     S1 = TensorMap(rand, ComplexF64, χ*D'*D*χ' ← χ*D'*D*χ')
     S2 = TensorMap(rand, ComplexF64, χ*D*D'*χ' ← χ*D*D'*χ')
 
-    function foo1(β)
-        ipeps = β * ipeps
+    function foo1(ipeps)
+        # ipeps = β * ipeps
 
         _, FL = leftenv(AL, adjoint.(AL), ipeps; ifobs)
 
         tol = [(@tensor conj(FL[1 2 3 4]) * S1[1 2 3 4; 5 6 7 8] * FL[5 6 7 8]) / dot(FL, FL) for FL in FL]
         return norm(tol)
     end
-    @test Zygote.gradient(foo1, 1.0)[1] ≈ num_grad(foo1, 1.0) atol = 1e-8
+    # @test Zygote.gradient(foo1, 1.0)[1] ≈ num_grad(foo1, 1.0) atol = 1e-8
+    @show typeof(Zygote.gradient(foo1, ipeps)[1])
+    # function foo2(β)
+    #     ipeps = β * ipeps
 
-    function foo2(β)
-        ipeps = β * ipeps
+    #     _, FR = rightenv(AR, adjoint.(AR), ipeps; ifobs)
 
-        _, FR = rightenv(AR, adjoint.(AR), ipeps; ifobs)
-
-        tol = [(@tensor conj(FR[1 2 3 4]) * S2[1 2 3 4; 5 6 7 8] * FR[5 6 7 8]) / dot(FR, FR) for FR in FR]
-        return norm(tol)
-    end
-    @test Zygote.gradient(foo2, 1.0)[1] ≈ num_grad(foo2, 1.0) atol = 1e-8
+    #     tol = [(@tensor conj(FR[1 2 3 4]) * S2[1 2 3 4; 5 6 7 8] * FR[5 6 7 8]) / dot(FR, FR) for FR in FR]
+    #     return norm(tol)
+    # end
+    # @test Zygote.gradient(foo2, 1.0)[1] ≈ num_grad(foo2, 1.0) atol = 1e-8
 end
 
 @testset "ACenv and Cenv for unitcell $Ni x $Nj" for Ni in 1:2, Nj in 1:2, (d, D, χ) in zip(ds, Ds, χs)

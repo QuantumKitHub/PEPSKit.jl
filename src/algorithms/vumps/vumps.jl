@@ -1,13 +1,11 @@
-@kwdef mutable struct VUMPS{F}
+@kwdef mutable struct VUMPS
     ifupdown::Bool = true
     tol::Float64 = Defaults.contr_tol
     maxiter::Int = Defaults.contr_maxiter
     miniter::Int = Defaults.contr_miniter
-    finalize::F = Defaults._finalize
     verbosity::Int = Defaults.verbosity
 end
 
-VUMPSRuntime(ipeps::InfinitePEPS, χ::Int) = VUMPSRuntime(ipeps, ℂ^χ)
 function VUMPSRuntime(ipeps::InfinitePEPS, χ::VectorSpace)
     A = initial_A(ipeps, χ)
     AL, L, _ = left_canonical(A)
@@ -32,7 +30,7 @@ function _down_ipeps(ipeps::InfinitePEPS)
     return InfinitePEPS(copy(ipepsd))
 end
 
-@non_differentiable VUMPSRuntime(ipeps::InfinitePEPS, χ::VectorSpace, alg::VUMPS)
+VUMPSRuntime(ipeps::InfinitePEPS, χ::Int, alg::VUMPS) = VUMPSRuntime(ipeps, ℂ^χ, alg)
 function VUMPSRuntime(ipeps::InfinitePEPS, χ::VectorSpace, alg::VUMPS)
     Ni, Nj = size(ipeps)
 
@@ -49,6 +47,7 @@ function VUMPSRuntime(ipeps::InfinitePEPS, χ::VectorSpace, alg::VUMPS)
         return rtup
     end
 end
+@non_differentiable VUMPSRuntime(ipeps::InfinitePEPS, χ::VectorSpace, alg::VUMPS)
 
 function vumps_itr(rt::VUMPSRuntime, ipeps::InfinitePEPS, alg::VUMPS)
     t = Zygote.@ignore time()
@@ -70,7 +69,7 @@ function leading_boundary(rt::VUMPSRuntime, ipeps::InfinitePEPS, alg::VUMPS)
     return vumps_itr(rt, ipeps, alg)
 end
 
-function VUMPSEnv(rt::VUMPSRuntime)
+function VUMPSEnv(rt::VUMPSRuntime, ::InfinitePEPS)
     @unpack AL, AR, C, FL, FR = rt
     AC = ALCtoAC(AL, C)
     return VUMPSEnv(AC, AR, AC, AR, FL, FR, FL, FR)
@@ -96,7 +95,6 @@ function VUMPSEnv(rt::Tuple{VUMPSRuntime, VUMPSRuntime}, ipeps::InfinitePEPS)
     ALd, ARd, Cd = rtdown.AL, rtdown.AR, rtdown.C
     ACd = ALCtoAC(ALd, Cd)
 
-    # to do fix the follow index
     _, FLo =  leftenv(ALu, adjoint.(ALd), ipeps, FLu; ifobs = true)
     _, FRo = rightenv(ARu, adjoint.(ARd), ipeps, FRu; ifobs = true)
 

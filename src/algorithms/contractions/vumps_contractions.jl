@@ -173,28 +173,40 @@ function Cmap(Cj::Vector{<:AbstractTensorMap},
     return circshift(Cm, 1)
 end
 
-function nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, rt::VUMPSRuntime)
-    @unpack AL, C, AR, FL, FR = rt
-
-    AC = ALCtoAC(AL, C)
+function nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, env::VUMPSEnv)
+    @unpack ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo = env
     Ni, Nj = size(ipeps)
-    (Ni, Nj) == (1, 1) || throw(ArgumentError("Only 1x1 unitcell is supported for one side VUMPSRuntime")) 
 
-    At = ipeps.A[1]
-    Ab = adjoint(ipeps.A[1])
-    @tensoropt oph[-1 -2; -3 -4] := FL[1][18 12 15; 5] * AC[1][5 6 7; 8] * At[-1; 6 13 19 12] * Ab[7 16 20 15; -3] * 
-                                   conj(AC[1][18 19 20; 21]) * AR[1][8 9 10; 11] * At[-2; 9 14 22 13] * Ab[10 17 23 16; -4] *
-                                   conj(AR[1][21 22 23; 24]) * FR[1][11 14 17; 24]
+    energy_tol = 0
+    for j in 1:Nj, i in 1:Ni
+        # horizontal contraction
+        id = Ni + 1 - i
+        jr = mod1(j + 1, Nj)
+        @tensoropt oph[-1 -2; -3 -4] := FLo[i,j][18 12 15; 5] * ACu[i,j][5 6 7; 8] * ipeps.A[i,j][-1; 6 13 19 12] * 
+                                        conj(ipeps.A[i,j][-3; 7 16 20 15]) * conj(ACd[id,j][18 19 20; 21]) * 
+                                        ARu[i,jr][8 9 10; 11] * ipeps.A[i,jr][-2; 9 14 22 13] * 
+                                        conj(ipeps.A[i,jr][-4; 10 17 23 16]) * conj(ARd[id,jr][21 22 23; 24]) * FRo[i,jr][11 14 17; 24]
 
-    @tensor eh = oph[1 2; 3 4] * Hh[3 4; 1 2]
-    @tensor nh = oph[1 2; 1 2]
-    
-    @tensoropt opv[-1 -2; -3 -4] := FL[1][21 19 20; 18] * AC[1][18 12 15 5] * At[-1; 12 6 13 19] * Ab[15 7 16 20; -3] * 
-                                    FR[1][5 6 7; 8] * FL[1][24 22 23; 21] * At[-2; 13 9 14 22] * Ab[16 10 17 23; -4] * 
-                                    FR[1][8 9 10; 11] * conj(AC[1][24 14 17; 11])
+        @tensor eh = oph[1 2; 3 4] * Hh[3 4; 1 2]
+        @tensor nh = oph[1 2; 1 2]
+        energy_tol += eh / nh
+        @show eh / nh
 
-    @tensor ev = opv[1 2; 3 4] * Hv[3 4; 1 2]
-    @tensor nv = opv[1 2; 1 2]
+        # vertical contraction
+        ir = mod1(i + 1, Ni)
+        @tensoropt opv[-1 -2; -3 -4] := FLu[i,j][21 19 20; 18] * ACu[i,j][18 12 15 5] * ipeps.A[i,j][-1; 12 6 13 19] * 
+                                    conj(ipeps.A[i,j][-3; 15 7 16 20]) * FRu[i,j][5 6 7; 8] * FLo[ir,j][24 22 23; 21] * 
+                                    ipeps.A[ir,j][-2; 13 9 14 22] * conj(ipeps.A[ir,j][-4; 16 10 17 23]) * 
+                                    FRo[ir,j][8 9 10; 11] * conj(ACd[id,j][24 14 17; 11])
 
-    return eh / nh + ev / nv
+        @tensor ev = opv[1 2; 3 4] * Hv[3 4; 1 2]
+        @tensor nv = opv[1 2; 1 2]
+        energy_tol += ev / nv 
+        @show ev / nv
+
+        # penalty term 
+        energy_tol += 0.1 * abs(eh / nh - eh / nh)
+    end
+
+    return energy_tol
 end
