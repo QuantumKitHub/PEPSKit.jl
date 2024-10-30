@@ -92,7 +92,7 @@ Module containing default values that represent typical algorithm parameters.
 - `threading_kwargs`: Multi-threading keyword arguments that are passed to `OhMyThreads` functions
 """
 module Defaults
-    using TensorKit, KrylovKit, OptimKit
+    using TensorKit, KrylovKit, OptimKit, OhMyThreads
     using PEPSKit: LinSolver, FixedSpaceTruncation, SVDAdjoint
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
@@ -112,11 +112,22 @@ module Defaults
     )
     const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
-    const threading_kwargs = Dict(:scheduler => :dynamic, :ntasks => 4, :chunking => true)
+    
+    # OhMyThreads scheduler defaults
+    const scheduler = Ref{Scheduler}()
+    function set_scheduler!()
+        scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
+        return nothing
+    end
+    function set_scheduler!(scheduler...; kwargs...)
+        scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(scheduler...; kwargs...)
+        return nothing
+    end
+    
+    function __init__()
+        set_scheduler!()
+    end
 end
-
-# Global OhMyThreads multi-threading settings
-const THREADING_KWARGS = deepcopy(Defaults.threading_kwargs)
 
 export set_threading_kwargs!
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint

@@ -6,7 +6,7 @@ Differentiable wrapper around `OhMyThreads.tmap`.
 All calls of `dtmap` inside of PEPSKit use the threading keyword arguments stored
 inside `Default.threading_kwargs` which can be modified using `set_threading_kwargs!`.
 """
-dtmap(args...; kwargs...) = tmap(args...; kwargs...)
+dtmap(args...; scheduler=Defaults.scheduler[]) = tmap(args...; scheduler)
 
 # Follows the `map` rrule from ChainRules.jl but specified for the case of one AbstractArray that is being mapped
 # https://github.com/JuliaDiff/ChainRules.jl/blob/e245d50a1ae56ce46fc8c1f0fe9b925964f1146e/src/rulesets/Base/base.jl#L243

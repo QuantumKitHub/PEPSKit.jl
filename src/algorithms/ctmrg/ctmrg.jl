@@ -196,8 +196,7 @@ function ctmrg_expand(dirs, state, envs::CTMRGEnv)
     coordinates = eachcoordinate(state, dirs)
     return dtmap(
         idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]),
-        coordinates;
-        THREADING_KWARGS...,
+        coordinates
     )
 end
 
@@ -218,7 +217,7 @@ function ctmrg_projectors(
     ϵ = zero(real(scalartype(envs)))
 
     coordinates = eachcoordinate(envs)
-    projectors = dtmap(coordinates; THREADING_KWARGS...) do (r, c)
+    projectors = dtmap(coordinates) do (r, c)
         # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
         QQ = halfinfinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
@@ -253,7 +252,7 @@ function ctmrg_projectors(
 
     ϵ = zero(real(scalartype(envs)))
     coordinates = eachcoordinate(envs, 1:4)
-    projectors = dtmap(coordinates; THREADING_KWARGS...) do (dir, r, c)
+    projectors = dtmap(coordinates) do (dir, r, c)
         # Row-column index of next enlarged corner
         next_rc = if dir == 1
             (r, _next(c, size(envs.corners, 3)))
@@ -378,7 +377,7 @@ end
 function ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::SimultaneousCTMRG)
     P_left, P_right = projectors
     coordinates = eachcoordinate(envs, 1:4)
-    corners_edges = dtmap(coordinates; THREADING_KWARGS...) do (dir, r, c)
+    corners_edges = dtmap(coordinates) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_envs, P_left, P_right)
             edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)
