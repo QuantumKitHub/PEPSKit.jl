@@ -45,7 +45,7 @@ from the `OhMyThreads` docs.
 """
 function set_threading_kwargs!(; kwargs...)
     length(kwargs) > 0 || throw(ArgumentError("need at least one keyword argument"))
-    return merge!(threading_kwargs, Dict(kwargs...))
+    return merge!(THREADING_KWARGS, Dict(kwargs...))
 end
 
 """

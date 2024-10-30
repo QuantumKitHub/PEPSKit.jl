@@ -113,7 +113,7 @@ module Defaults
     const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
     const threading_kwargs = Dict(
-        :scheduler => :dynamic, :ntasks => Threads.nthreads(), :chunking => true
+        :scheduler => :dynamic, :ntasks => 4, :chunking => true
     )
 end
 
