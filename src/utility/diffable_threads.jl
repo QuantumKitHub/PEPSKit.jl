@@ -3,8 +3,8 @@
 
 Differentiable wrapper around `OhMyThreads.tmap`.
 
-All calls of `dtmap` inside of PEPSKit use the threading keyword arguments stored
-inside `Default.threading_kwargs` which can be modified using `set_threading_kwargs!`.
+All calls of `dtmap` inside of PEPSKit use the threading scheduler stored inside
+`Defaults.scheduler` which can be modified using `set_scheduler!`.
 """
 dtmap(args...; scheduler=Defaults.scheduler[]) = tmap(args...; scheduler)
 
@@ -34,19 +34,30 @@ function ChainRulesCore.rrule(
 end
 
 """
-    set_threading_kwargs!(; kwargs...)
+    set_scheduler!(scheduler; kwargs...)
+    set_scheduler!()
 
-Modify multi-threading keyword arguments that are supplied to every call of `dtmap`,
-i.e. the differentiable version of `OhMyThreads.tmap`.
+Set `OhMyThreads` multi-threading scheduler parameters.
 
-To see all available keyword arguments, check the
-[`Scheduler` page](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#OhMyThreads.Schedulers.Scheduler)
-from the `OhMyThreads` docs.
+The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or
+as a symbol where the corresponding parameters are specificed as keyword arguments.
+For instance, a static scheduler that uses four tasks with chunking enabled
+can be set via
+```
+set_scheduler!(StaticScheduler(; ntasks=4, chunking=true))
+```
+or equivalently with 
+```
+set_scheduler!(:static; ntasks=4, chunking=true)
+```
+For a detailed description of all schedulers and their keyword arguments consult the
+[`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
+
+To reset the scheduler to its default value, one calls `set_scheduler!` without passing
+arguments which then uses the default `DynamicScheduler()`. If the number of used threads is
+just one it falls back to `StaticScheduler()`.
 """
-function set_threading_kwargs!(; kwargs...)
-    length(kwargs) > 0 || throw(ArgumentError("need at least one keyword argument"))
-    return merge!(THREADING_KWARGS, Dict(kwargs...))
-end
+set_scheduler!(scheduler; kwargs...) = Defaults.set_scheduler!(scheduler; kwargs...)
 
 """
     @fwdthreads(ex)

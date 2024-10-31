@@ -67,9 +67,7 @@ include("utility/symmetrization.jl")
         )
         const iterscheme = :fixed
         const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
-        const threading_kwargs = Dict(
-            :scheduler => :dynamic, :ntasks => 4, :chunking => true
-        )
+        const scheduler = Ref{Scheduler}(Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler())
     end
 
 Module containing default values that represent typical algorithm parameters.
@@ -89,7 +87,7 @@ Module containing default values that represent typical algorithm parameters.
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 - `iterscheme`: Scheme for differentiating one CTMRG iteration
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
-- `threading_kwargs`: Multi-threading keyword arguments that are passed to `OhMyThreads` functions
+- `scheduler`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
     using TensorKit, KrylovKit, OptimKit, OhMyThreads
@@ -112,24 +110,24 @@ module Defaults
     )
     const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
-    
+
     # OhMyThreads scheduler defaults
     const scheduler = Ref{Scheduler}()
     function set_scheduler!()
         scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
         return nothing
     end
-    function set_scheduler!(scheduler...; kwargs...)
-        scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(scheduler...; kwargs...)
+    function set_scheduler!(sc; kwargs...)
+        scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(sc; kwargs...)
         return nothing
     end
-    
+
     function __init__()
-        set_scheduler!()
+        return set_scheduler!()
     end
 end
 
-export set_threading_kwargs!
+export set_scheduler!
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
 export LocalOperator
