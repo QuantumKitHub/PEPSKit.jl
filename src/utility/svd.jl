@@ -104,7 +104,7 @@ function TensorKit._compute_svddata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
-            U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
+            U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
             Udata[c] = U[:, 1:howmany]
             Vdata[c] = V[1:howmany, :]
         else
@@ -112,7 +112,7 @@ function TensorKit._compute_svddata!(
             S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
-                U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SVD())
+                U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
                 Udata[c] = U[:, 1:howmany]
                 Vdata[c] = V[1:howmany, :]
             else  # Slice in case more values were converged than requested

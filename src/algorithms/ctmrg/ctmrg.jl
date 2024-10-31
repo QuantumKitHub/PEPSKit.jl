@@ -103,8 +103,8 @@ function MPSKit.leading_boundary(state, alg::CTMRG)
     return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
 end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
-    CS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.corners)
-    TS = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envinit.edges)
+    CS = map(x -> tsvd(x)[2], envinit.corners)
+    TS = map(x -> tsvd(x)[2], envinit.edges)
 
     η = one(real(scalartype(state)))
     N = norm(state, envinit)
