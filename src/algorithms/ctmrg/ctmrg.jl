@@ -194,10 +194,7 @@ function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
 end
 function ctmrg_expand(dirs, state, envs::CTMRGEnv)
     coordinates = eachcoordinate(state, dirs)
-    return dtmap(
-        idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]),
-        coordinates
-    )
+    return dtmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), coordinates)
 end
 
 # ======================================================================================== #
