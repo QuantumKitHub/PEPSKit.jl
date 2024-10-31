@@ -14,7 +14,7 @@ using PEPSKit:
 # initialize parameters
 χbond = 2
 χenv = 16
-svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SVD()), SVDAdjoint(; fwd_alg=IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SDD()), SVDAdjoint(; fwd_alg=IterSVD())]
 unitcells = [(1, 1), (3, 4)]
 
 # test for element-wise convergence after application of fixed step
@@ -47,7 +47,7 @@ unitcells = [(1, 1), (3, 4)]
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = 1e-6
 end
 
-@testset "Element-wise consistency of TensorKit.SVD and IterSVD" begin
+@testset "Element-wise consistency of TensorKit.SDD and IterSVD" begin
     ctm_alg_iter = CTMRG(;
         tol=1e-12,
         maxiter=200,
@@ -59,7 +59,7 @@ end
         tol=1e-12,
         verbosity=2,
         ctmrgscheme=:simultaneous,
-        svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD()),
+        svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()),
     )
 
     # initialize states

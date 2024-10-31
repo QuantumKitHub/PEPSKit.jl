@@ -26,8 +26,8 @@ unitcells = [(1, 1), (3, 4)]
     @test abs(norm(psi, env_sequential)) ≈ abs(norm(psi, env_simultaneous)) rtol = 1e-6
 
     # compare singular values
-    CS_sequential = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env_sequential.corners)
-    CS_simultaneous = map(c -> tsvd(c; alg=TensorKit.SVD())[2], env_simultaneous.corners)
+    CS_sequential = map(c -> tsvd(c)[2], env_sequential.corners)
+    CS_simultaneous = map(c -> tsvd(c)[2], env_simultaneous.corners)
     ΔCS = maximum(zip(CS_sequential, CS_simultaneous)) do (c_lm, c_as)
         smallest = infimum(MPSKit._firstspace(c_lm), MPSKit._firstspace(c_as))
         e_old = isometry(MPSKit._firstspace(c_lm), smallest)
@@ -36,8 +36,8 @@ unitcells = [(1, 1), (3, 4)]
     end
     @test ΔCS < 1e-2
 
-    TS_sequential = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env_sequential.edges)
-    TS_simultaneous = map(t -> tsvd(t; alg=TensorKit.SVD())[2], env_simultaneous.edges)
+    TS_sequential = map(t -> tsvd(t)[2], env_sequential.edges)
+    TS_simultaneous = map(t -> tsvd(t)[2], env_simultaneous.edges)
     ΔTS = maximum(zip(TS_sequential, TS_simultaneous)) do (t_lm, t_as)
         MPSKit._firstspace(t_lm) == MPSKit._firstspace(t_as) || return scalartype(t_lm)(Inf)
         return norm(t_as - t_lm)

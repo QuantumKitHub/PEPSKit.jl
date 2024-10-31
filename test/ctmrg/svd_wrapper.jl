@@ -24,10 +24,8 @@ Random.seed!(123456789)
 r = TensorMap(randn, dtype, ℂ^m, ℂ^n)
 R = TensorMap(randn, space(r))
 
-full_alg = SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=nothing)
-old_alg = SVDAdjoint(;
-    fwd_alg=TensorKit.SVD(), rrule_alg=NonTruncSVDAdjoint(), broadening=0.0
-)
+full_alg = SVDAdjoint(; rrule_alg=nothing)
+old_alg = SVDAdjoint(; rrule_alg=NonTruncSVDAdjoint(), broadening=0.0)
 iter_alg = SVDAdjoint(; fwd_alg=IterSVD(), rrule_alg=GMRES(; tol=1e-13))  # Don't make adjoint tolerance too small, g_itersvd will be weird
 
 @testset "Non-truncacted SVD" begin

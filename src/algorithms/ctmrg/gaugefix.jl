@@ -160,10 +160,10 @@ function _singular_value_distance((S₁, S₂))
 end
 
 function calc_convergence(envs, CSold, TSold)
-    CSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.corners)
+    CSnew = map(x -> tsvd(x)[2], envs.corners)
     ΔCS = maximum(_singular_value_distance, zip(CSold, CSnew))
 
-    TSnew = map(x -> tsvd(x; alg=TensorKit.SVD())[2], envs.edges)
+    TSnew = map(x -> tsvd(x)[2], envs.edges)
     ΔTS = maximum(_singular_value_distance, zip(TSold, TSnew))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"

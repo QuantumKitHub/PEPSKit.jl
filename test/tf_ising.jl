@@ -24,7 +24,6 @@ ctm_alg = CTMRG(;
     miniter=4,
     maxiter=100,
     verbosity=2,
-    svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
 )
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
