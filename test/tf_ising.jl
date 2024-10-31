@@ -19,17 +19,9 @@ mˣ = 0.91
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg = CTMRG(;
-    tol=1e-10,
-    miniter=4,
-    maxiter=100,
-    verbosity=2,
-)
+ctm_alg = CTMRG()
 opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
-    gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6)),
-    reuse_env=true,
+    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=2)
 )
 
 # initialize states

@@ -26,7 +26,7 @@ R = TensorMap(randn, space(r))
 
 full_alg = SVDAdjoint(; rrule_alg=nothing)
 old_alg = SVDAdjoint(; rrule_alg=NonTruncSVDAdjoint(), broadening=0.0)
-iter_alg = SVDAdjoint(; fwd_alg=IterSVD(), rrule_alg=GMRES(; tol=1e-13))  # Don't make adjoint tolerance too small, g_itersvd will be weird
+iter_alg = SVDAdjoint(; fwd_alg=IterSVD())
 
 @testset "Non-truncacted SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)

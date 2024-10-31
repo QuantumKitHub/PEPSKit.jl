@@ -22,7 +22,7 @@ unitcells = [(1, 1), (3, 4)]
                                                                    Iterators.product(
     unitcells, svd_algs
 )
-    ctm_alg = CTMRG(; tol=1e-12, verbosity=2, ctmrgscheme=:simultaneous, svd_alg)
+    ctm_alg = CTMRG(; svd_alg)
 
     # initialize states
     Random.seed!(2394823842)
@@ -37,9 +37,7 @@ unitcells = [(1, 1), (3, 4)]
     # fix gauge of SVD
     U_fix, V_fix = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fix = SVDAdjoint(; fwd_alg=FixedSVD(U_fix, info.S, V_fix))
-    ctm_alg_fix = CTMRG(;
-        svd_alg=svd_alg_fix, trscheme=notrunc(), ctmrgscheme=:simultaneous
-    )
+    ctm_alg_fix = CTMRG(; svd_alg=svd_alg_fix, trscheme=notrunc())
 
     # do iteration with FixedSVD
     env_fixedsvd, = ctmrg_iter(psi, env_conv1, ctm_alg_fix)
@@ -49,18 +47,10 @@ end
 
 @testset "Element-wise consistency of TensorKit.SDD and IterSVD" begin
     ctm_alg_iter = CTMRG(;
-        tol=1e-12,
         maxiter=200,
-        verbosity=2,
-        ctmrgscheme=:simultaneous,
         svd_alg=SVDAdjoint(; fwd_alg=IterSVD(; alg=GKL(; tol=1e-14, krylovdim=χenv + 10))),
     )
-    ctm_alg_full = CTMRG(;
-        tol=1e-12,
-        verbosity=2,
-        ctmrgscheme=:simultaneous,
-        svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()),
-    )
+    ctm_alg_full = CTMRG(; svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()))
 
     # initialize states
     Random.seed!(91283219347)
@@ -80,15 +70,11 @@ end
     # fix gauge of SVD
     U_fix_iter, V_fix_iter = fix_relative_phases(info_iter.U, info_iter.V, signs_iter)
     svd_alg_fix_iter = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_iter, info_iter.S, V_fix_iter))
-    ctm_alg_fix_iter = CTMRG(;
-        svd_alg=svd_alg_fix_iter, trscheme=notrunc(), ctmrgscheme=:simultaneous
-    )
+    ctm_alg_fix_iter = CTMRG(; svd_alg=svd_alg_fix_iter, trscheme=notrunc())
 
     U_fix_full, V_fix_full = fix_relative_phases(info_full.U, info_full.V, signs_full)
     svd_alg_fix_full = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_full, info_full.S, V_fix_full))
-    ctm_alg_fix_full = CTMRG(;
-        svd_alg=svd_alg_fix_full, trscheme=notrunc(), ctmrgscheme=:simultaneous
-    )
+    ctm_alg_fix_full = CTMRG(; svd_alg=svd_alg_fix_full, trscheme=notrunc())
 
     # do iteration with FixedSVD
     env_fixedsvd_iter, = ctmrg_iter(psi, env_conv1, ctm_alg_fix_iter)
