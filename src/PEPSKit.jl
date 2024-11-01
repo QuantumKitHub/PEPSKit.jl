@@ -114,20 +114,50 @@ module Defaults
 
     # OhMyThreads scheduler defaults
     const scheduler = Ref{Scheduler}()
-    function set_scheduler!()
-        scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
-        return nothing
-    end
+    """
+        set_scheduler!([scheduler]; kwargs...)
+
+    Set `OhMyThreads` multi-threading scheduler parameters.
+
+    The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or
+    as a symbol where the corresponding parameters are specificed as keyword arguments.
+    For instance, a static scheduler that uses four tasks with chunking enabled
+    can be set via
+    ```
+    set_scheduler!(StaticScheduler(; ntasks=4, chunking=true))
+    ```
+    or equivalently with 
+    ```
+    set_scheduler!(:static; ntasks=4, chunking=true)
+    ```
+    For a detailed description of all schedulers and their keyword arguments consult the
+    [`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
+
+    If no `scheduler` is passed and only kwargs are provided, the `DynamicScheduler`
+    constructor is used with the provided kwargs.
+
+    To reset the scheduler to its default value, one calls `set_scheduler!` without passing
+    arguments which then uses the default `DynamicScheduler()`. If the number of used threads is
+    just one it falls back to `SerialScheduler()`.
+    """
     function set_scheduler!(sc=OhMyThreads.Implementation.NotGiven(); kwargs...)
-        scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(sc; kwargs...)
+        if isempty(kwargs) && sc isa OhMyThreads.Implementation.NotGiven
+            scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
+        else
+            scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(
+                sc; kwargs...
+            )
+        end
         return nothing
     end
+    export set_scheduler!
 
     function __init__()
         return set_scheduler!()
     end
 end
 
+using .Defaults: set_scheduler!
 export set_scheduler!
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
 export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length

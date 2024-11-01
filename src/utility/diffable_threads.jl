@@ -34,35 +34,6 @@ function ChainRulesCore.rrule(
 end
 
 """
-    set_scheduler!([scheduler]; kwargs...)
-    set_scheduler!()
-
-Set `OhMyThreads` multi-threading scheduler parameters.
-
-The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or
-as a symbol where the corresponding parameters are specificed as keyword arguments.
-For instance, a static scheduler that uses four tasks with chunking enabled
-can be set via
-```
-set_scheduler!(StaticScheduler(; ntasks=4, chunking=true))
-```
-or equivalently with 
-```
-set_scheduler!(:static; ntasks=4, chunking=true)
-```
-If no `scheduler` is passed and only kwargs are provided, the `DynamicScheduler`
-constructor is used with the provided kwargs.
-For a detailed description of all schedulers and their keyword arguments consult the
-[`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
-
-To reset the scheduler to its default value, one calls `set_scheduler!` without passing
-arguments which then uses the default `DynamicScheduler()`. If the number of used threads is
-just one it falls back to `StaticScheduler()`.
-"""
-set_scheduler!(scheduler=OhMyThreads.Implementation.NotGiven(); kwargs...) =
-    Defaults.set_scheduler!(scheduler; kwargs...)
-
-"""
     @fwdthreads(ex)
 
 Apply `Threads.@threads` only in the forward pass of the program.
