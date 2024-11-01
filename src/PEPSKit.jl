@@ -11,6 +11,7 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
+using OhMyThreads
 
 include("utility/util.jl")
 include("utility/diffable_threads.jl")
@@ -117,7 +118,7 @@ module Defaults
         scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
         return nothing
     end
-    function set_scheduler!(sc; kwargs...)
+    function set_scheduler!(sc=OhMyThreads.Implementation.NotGiven(); kwargs...)
         scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(sc; kwargs...)
         return nothing
     end

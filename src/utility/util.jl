@@ -1,5 +1,3 @@
-using OhMyThreads: tmap
-
 # Get next and previous directional CTM enviroment index, respecting periodicity
 _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
