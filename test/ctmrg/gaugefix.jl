@@ -7,10 +7,10 @@ using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
+maxiter = 200
 schemes = [:simultaneous, :sequential]
 χ = 6
 atol = 1e-4
-verbosity = 2
 
 function _make_symmetric!(psi)
     if ==(size(psi)...)
@@ -50,9 +50,7 @@ end
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi, ctm_space)
 
-    alg = CTMRG(;
-        tol=1e-10, maxiter=200, verbosity, trscheme=FixedSpaceTruncation(), ctmrgscheme
-    )
+    alg = CTMRG(; maxiter, ctmrgscheme)
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)
@@ -76,9 +74,7 @@ end
     psi = InfinitePEPS(physical_space, peps_space; unitcell)
     ctm = CTMRGEnv(psi, ctm_space)
 
-    alg = CTMRG(;
-        tol=1e-10, maxiter=200, verbosity, trscheme=FixedSpaceTruncation(), ctmrgscheme
-    )
+    alg = CTMRG(; maxiter, ctmrgscheme)
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)

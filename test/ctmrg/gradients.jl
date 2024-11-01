@@ -18,13 +18,8 @@ names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1e-4
 boundary_algs = [
-    CTMRG(;
-        tol=1e-10,
-        verbosity=0,
-        ctmrgscheme=:simultaneous,
-        svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SVD(), rrule_alg=GMRES(; tol=1e-10)),
-    ),
-    CTMRG(; tol=1e-10, verbosity=0, ctmrgscheme=:sequential),
+    CTMRG(; verbosity=0, ctmrgscheme=:simultaneous),
+    CTMRG(; verbosity=0, ctmrgscheme=:sequential),
 ]
 gradmodes = [
     [
@@ -33,14 +28,14 @@ gradmodes = [
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:fixed),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:fixed),
-        LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:diffgauge),
+        LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:fixed),
+        LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
     ],
-    [
+    [  # Only use :diffgauge due to high gauge-sensitivity (perhaps due to small χenv?)
         nothing,
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver=KrylovKit.GMRES(; tol=gradtol), iterscheme=:diffgauge),
+        LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
     ],
 ]
 steps = -0.01:0.005:0.01
