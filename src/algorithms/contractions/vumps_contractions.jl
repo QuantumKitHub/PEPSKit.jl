@@ -138,7 +138,7 @@ end
 ```
                                 ┌─────── ACᵢⱼ ─────┐       
 ┌───── ACᵢ₊₁ⱼ ─────┐            │        │         │      
-│        │         │      =     FLᵢⱼ ─── Mᵢⱼ ───── FRᵢⱼ   
+│        │         │      =     FLᵢⱼ ─── Oᵢⱼ ───── FRᵢⱼ   
                                 │        │         │      
                                                                 
 ```
@@ -173,6 +173,27 @@ function Cmap(Cj::Vector{<:AbstractTensorMap},
     return circshift(Cm, 1)
 end
 
+"""
+    nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, env::VUMPSEnv)
+
+    Compute the energy of the nearest neighbour Hamiltonian for an infinite PEPS.
+
+```
+        ┌────── ACuᵢⱼ ────ARuᵢᵣ ──────┐   
+        │       │          │          │   
+        FLoᵢⱼ ── Oᵢⱼ ────── Oᵢᵣ ──── FRoᵢᵣ     ir = Ni + 1 - i
+        │       │          │          │        jr = j + 1    
+        └───── ACdᵢᵣⱼ ─────ARdᵢᵣᵣ─────┘           
+
+        ┌─────── ACuᵢⱼ ─────┐    
+        │         │         │    
+        FLuᵢⱼ ─── Oᵢⱼ ───── FRuᵢⱼ               ir = i + 1
+        │         │         │                  irr = Ni - i
+        FLoᵢᵣⱼ ── Oᵢᵣⱼ ───  FRoᵢᵣⱼ    
+        │         │         │    
+        └──────  ACdᵢᵣᵣⱼ ───┘
+```
+"""
 function nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, env::VUMPSEnv)
     @unpack ACu, ARu, ACd, ARd, FLu, FRu, FLo, FRo = env
     Ni, Nj = size(ipeps)
@@ -180,33 +201,34 @@ function nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, env::VUMPSEnv)
     energy_tol = 0
     for j in 1:Nj, i in 1:Ni
         # horizontal contraction
-        id = Ni + 1 - i
+        ir = Ni + 1 - i
         jr = mod1(j + 1, Nj)
         @tensoropt oph[-1 -2; -3 -4] := FLo[i,j][18 12 15; 5] * ACu[i,j][5 6 7; 8] * ipeps.A[i,j][-1; 6 13 19 12] * 
-                                        conj(ipeps.A[i,j][-3; 7 16 20 15]) * conj(ACd[id,j][18 19 20; 21]) * 
+                                        conj(ipeps.A[i,j][-3; 7 16 20 15]) * conj(ACd[ir,j][18 19 20; 21]) * 
                                         ARu[i,jr][8 9 10; 11] * ipeps.A[i,jr][-2; 9 14 22 13] * 
-                                        conj(ipeps.A[i,jr][-4; 10 17 23 16]) * conj(ARd[id,jr][21 22 23; 24]) * FRo[i,jr][11 14 17; 24]
+                                        conj(ipeps.A[i,jr][-4; 10 17 23 16]) * conj(ARd[ir,jr][21 22 23; 24]) * FRo[i,jr][11 14 17; 24]
 
         @tensor eh = oph[1 2; 3 4] * Hh[3 4; 1 2]
         @tensor nh = oph[1 2; 1 2]
         energy_tol += eh / nh
-        @show eh / nh
-
+        @show eh / nh eh nh
+        
         # vertical contraction
         ir = mod1(i + 1, Ni)
+        irr = mod1(Ni - i, Ni)
         @tensoropt opv[-1 -2; -3 -4] := FLu[i,j][21 19 20; 18] * ACu[i,j][18 12 15 5] * ipeps.A[i,j][-1; 12 6 13 19] * 
                                     conj(ipeps.A[i,j][-3; 15 7 16 20]) * FRu[i,j][5 6 7; 8] * FLo[ir,j][24 22 23; 21] * 
                                     ipeps.A[ir,j][-2; 13 9 14 22] * conj(ipeps.A[ir,j][-4; 16 10 17 23]) * 
-                                    FRo[ir,j][8 9 10; 11] * conj(ACd[id,j][24 14 17; 11])
+                                    FRo[ir,j][8 9 10; 11] * conj(ACd[irr,j][24 14 17; 11])
 
         @tensor ev = opv[1 2; 3 4] * Hv[3 4; 1 2]
         @tensor nv = opv[1 2; 1 2]
         energy_tol += ev / nv 
-        @show ev / nv
+        @show ev / nv ev nv
 
         # penalty term 
-        energy_tol += 0.1 * abs(eh / nh - eh / nh)
+        # energy_tol += 0.1 * abs(eh / nh - eh / nh)
     end
 
-    return energy_tol
+    return energy_tol/Ni/Nj
 end

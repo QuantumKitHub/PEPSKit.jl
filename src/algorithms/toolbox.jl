@@ -7,7 +7,7 @@ function expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
 end
 
 function expectation_value(peps::InfinitePEPS, O::LocalOperator, rt::Union{VUMPSRuntime, Tuple{VUMPSRuntime, VUMPSRuntime}})
-    checklattice(peps, O)
+    # checklattice(peps, O)
     env = VUMPSEnv(rt, peps)
     Hh = O.terms[1].second
     Hv = O.terms[2].second
