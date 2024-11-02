@@ -2,3 +2,4 @@ docs/build
 Manifest.toml
 examples/.ipynb_checkpoints
 .vscode/
+.DS_Store

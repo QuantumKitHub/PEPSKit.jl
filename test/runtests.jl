@@ -36,7 +36,7 @@ end
             include("ctmrg/symmetrization.jl")
         end
     end
-    if GROUP == "ALL" || GROUP == "MPS"
+    if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
         @time @safetestset "VUMPS" begin
             include("boundarymps/vumps.jl")
         end
