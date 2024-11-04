@@ -38,4 +38,5 @@ jobs:
       group: "${{ matrix.group }}"
       julia-version: "${{ matrix.version }}"
       os: "${{ matrix.os }}"
-    secrets: "inherit"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
