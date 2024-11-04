@@ -24,7 +24,7 @@ jobs:
       matrix:
         version:
           - 'lts'
-          - '1' # automatically expands to the latest stable 1.x release of Julia
+          - '1'
         group:
           - ctmrg
           - boundarymps
@@ -33,10 +33,9 @@ jobs:
           - ubuntu-latest
           - macOS-latest
           - windows-latest
-    uses: "SciML/.github/.github/workflows/tests.yml@v1"
+    uses: "QuantumKitHub/.github/.github/workflows/tests.yml@main"
     with:
       group: "${{ matrix.group }}"
       julia-version: "${{ matrix.version }}"
       os: "${{ matrix.os }}"
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    secrets: inherit
