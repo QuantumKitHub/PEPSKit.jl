@@ -29,6 +29,7 @@ jobs:
           - ctmrg
           - boundarymps
           - examples
+          - utility
         os:
           - ubuntu-latest
           - macOS-latest
