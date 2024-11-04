@@ -125,7 +125,8 @@ function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
     Pspaces = Array{S,2}(undef, size(T, 1), size(T, 2))
-    for (i, j) in product(1:size(T, 1), 1:size(T, 2))
+    for i in axes(T, 1)
+        j in axes(T, 2)
         Pspaces[i, j] = space(T, i, j)
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
