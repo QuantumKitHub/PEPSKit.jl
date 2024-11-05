@@ -137,7 +137,7 @@ end
     ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
 
 Perform one iteration of CTMRG that maps the `state` and `envs` to a new environment,
-and also returns the truncation error.
+and also returns the `info` `NamedTuple`.
 """
 function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
@@ -178,12 +178,9 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 # ======================================================================================== #
 
 """
-    ctmrg_expand(state, envs, alg::CTMRG{M})
+    ctmrg_expand(coordinates, state, envs)
 
-Expand the environment by absorbing a new PEPS tensor.
-There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
-The first mode expands the environment in one direction at a time, for convenience towards
-the left. The second mode expands the environment in all four directions simultaneously.
+Expand the environment by absorbing a new PEPS tensor on the given coordinates.
 """
 function ctmrg_expand(coordinates, state, envs::CTMRGEnv)
     return dtmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), coordinates)
@@ -194,10 +191,12 @@ end
 # ======================================================================================== #
 
 """
-    ctmrg_projectors(enlarged_envs, env, alg::CTMRG{M})
+    ctmrg_projectors(col::Int, enlarged_envs, env, alg::CTMRG{:sequential})
+    ctmrg_projectors(enlarged_envs, env, alg::CTMRG{:simultaneous})
 
-Compute the CTMRG projectors based from enlarged environments.
-In the `:simultaneous` mode, the environment SVD is run in parallel.
+Compute the CTMRG projectors based on enlarged environments.
+In the `:sequential` mode the projectors are computed for the column `col`, whereas
+in the `:simultaneous` mode, all projectors (and corresponding SVDs) are computed in parallel.
 """
 function ctmrg_projectors(
     col::Int, enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
@@ -327,9 +326,12 @@ end
 # ======================================================================================== #
 
 """
-    ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::CTMRG{M})
+    ctmrg_renormalize(col::Int, projectors, state, envs, ::CTMRG{:sequential})
+    ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::CTMRG{:simultaneous})
 
 Apply projectors to renormalize corners and edges.
+The `:sequential` mode renormalizes the environment on the column `col`, where as the
+`:simultaneous` mode renormalizes all environment tensors simultaneously.
 """
 function ctmrg_renormalize(col::Int, projectors, state, envs, ::SequentialCTMRG)
     corners = Zygote.Buffer(envs.corners)
