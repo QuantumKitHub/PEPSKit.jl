@@ -291,3 +291,16 @@ function _lorentz_broaden(x::Real, ε=1e-12)
     x′ = 1 / x
     return x′ / (x′^2 + ε)
 end
+
+
+"""
+Given `tsvd` result `u`, `s` and `vh`, 
+absorb singular values `s` into `u` and `vh` by
+```
+    u -> u * sqrt(s), vh -> sqrt(s) * vh
+```
+"""
+function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+    sqrt_s = sdiag_pow(s, 0.5)
+    return u * sqrt_s, sqrt_s * vh
+end
