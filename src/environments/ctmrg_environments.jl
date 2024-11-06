@@ -371,6 +371,44 @@ function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     return CTMRGEnv(copy(corners′), copy(edges′))
 end
 
+# in-place rotations (incompatible with autodiff)
+"""
+Rotate the CTMRGEnv `envs` left 90 degrees (anti-clockwise) in place
+"""
+function rotl90!(envs::CTMRGEnv)
+    envs2 = deepcopy(envs)
+    for dir in 1:4
+        dir2 = _prev(dir, 4)
+        envs.corners[dir2, :, :] = rotl90(envs2.corners[dir, :, :])
+        envs.edges[dir2, :, :] = rotl90(envs2.edges[dir, :, :])
+    end
+    return nothing
+end
+"""
+Rotate the CTMRGEnv `envs` right 90 degrees (clockwise) in place
+"""
+function rotr90!(envs::CTMRGEnv)
+    envs2 = deepcopy(envs)
+    for dir in 1:4
+        dir2 = _next(dir, 4)
+        envs.corners[dir2, :, :] = rotr90(envs2.corners[dir, :, :])
+        envs.edges[dir2, :, :] = rotr90(envs2.edges[dir, :, :])
+    end
+    return nothing
+end
+"""
+Rotate the CTMRGEnv `envs` 180 degrees in place
+"""
+function rot180!(envs::CTMRGEnv)
+    envs2 = deepcopy(envs)
+    for dir in 1:4
+        dir2 = _next(_next(dir, 4), 4)
+        envs.corners[dir2, :, :] = rot180(envs2.corners[dir, :, :])
+        envs.edges[dir2, :, :] = rot180(envs2.edges[dir, :, :])
+    end
+    return nothing
+end
+
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
 Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
 function eachcoordinate(x::CTMRGEnv)

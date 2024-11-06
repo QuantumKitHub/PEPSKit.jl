@@ -64,7 +64,7 @@ include("utility/symmetrization.jl")
         const ctmrgscheme = :simultaneous
         const reuse_env = true
         const trscheme = FixedSpaceTruncation()
-        const fwd_alg = TensorKit.SVD()
+        const fwd_alg = TensorKit.SDD()
         const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
         const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
         const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
@@ -173,6 +173,7 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
 export simpleupdate!, absorb_wt
+export fullupdate!
 
 export SUWeight
 export InfinitePEPS, InfiniteTransferPEPS

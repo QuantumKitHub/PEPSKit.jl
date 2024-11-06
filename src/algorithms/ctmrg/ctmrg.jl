@@ -134,6 +134,28 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
 end
 
 """
+Perform CTMRG left move on the `col`-th column
+"""
+function ctmrg_leftmove(
+    col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG
+)
+    """
+        ----> left move
+        C1 ← T1 ←   r-1
+        ↓    ‖
+        T4 = M ==   r
+        ↓    ‖
+        C4 → T3 →   r+1
+        c-1  c 
+    """
+    enlarged_envs = ctmrg_expand(
+        eachcoordinate(envs, [4, 1])[:, :, col], state, envs
+    )
+    projectors, info = ctmrg_projectors(col, enlarged_envs, envs, alg)
+    envs = ctmrg_renormalize(col, projectors, state, envs, alg)
+    return envs, info
+end
+"""
     ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
 
 Perform one iteration of CTMRG that maps the `state` and `envs` to a new environment,
@@ -143,17 +165,12 @@ function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            enlarged_envs = ctmrg_expand(
-                eachcoordinate(envs, [4, 1])[:, :, col], state, envs
-            )
-            projectors, info = ctmrg_projectors(col, enlarged_envs, envs, alg)
-            envs = ctmrg_renormalize(col, projectors, state, envs, alg)
+            envs, info = ctmrg_leftmove(col, state, envs, alg)
             ϵ = max(ϵ, info.err)
         end
         state = rotate_north(state, EAST)
         envs = rotate_north(envs, EAST)
     end
-
     return envs, (; err=ϵ)
 end
 function ctmrg_iter(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
