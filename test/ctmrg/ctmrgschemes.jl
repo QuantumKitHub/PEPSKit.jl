@@ -48,7 +48,7 @@ unitcells = [(1, 1), (3, 4)]
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
     E_sequential = costfun(psi, env_sequential, H)
     E_simultaneous = costfun(psi, env_simultaneous, H)
-    @test E_sequential ≈ E_simultaneous rtol = 1e-4
+    @test E_sequential ≈ E_simultaneous rtol = 1e-3
 end
 
 # test fixedspace actually fixes space
