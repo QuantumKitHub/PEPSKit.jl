@@ -121,21 +121,18 @@ function update_column!(
                 ↑           ↑
             -1← aR -← 3 -← bL → -4
         =#
-        tmp = ncon((gate, aR0, bL0), ([-2, -3, 1, 2], [-1, 1, 3], [3, 2, -4]))
-        # initialize truncated tensors using simple SVD truncation
-        # TODO: return truncated and untruncated SVD result at once, without repeated calculation
-        aR2, s, bL2, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncerr(1e-15))
-        aR, s_cut, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncscheme)
-        aR2, bL2 = absorb_s(aR2, s, bL2)
+        aR2bL2 = ncon((gate, aR0, bL0), ([-2, -3, 1, 2], [-1, 1, 3], [3, 2, -4]))
+        # initialize truncated tensors using SVD truncation
+        aR, s_cut, bL, ϵ = tsvd(aR2bL2, ((1, 2), (3, 4)); trunc=truncscheme)
         aR, bL = absorb_s(aR, s_cut, bL)
         # optimize aR, bL
         aR, bL, cost = fu_optimize(
-            aR, bL, aR2, bL2, env; maxiter=maxiter, maxdiff=maxdiff, verbose=false
+            aR, bL, aR2bL2, env; maxiter=maxiter, maxdiff=maxdiff, verbose=false
         )
         costs[row] = cost
         aR /= maxabs(aR)
         bL /= maxabs(bL)
-        localfid += local_fidelity(aR, bL, aR0, bL0)
+        localfid += local_fidelity(aR, bL, _combine_aRbL(aR0, bL0))
         #= update and normalize peps, ms
 
                 -2        -1               -1     -2
