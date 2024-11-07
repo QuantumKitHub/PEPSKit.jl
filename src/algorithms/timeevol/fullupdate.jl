@@ -123,6 +123,7 @@ function update_column!(
         =#
         tmp = ncon((gate, aR0, bL0), ([-2, -3, 1, 2], [-1, 1, 3], [3, 2, -4]))
         # initialize truncated tensors using simple SVD truncation
+        # TODO: return truncated and untruncated SVD result at once, without repeated calculation
         aR2, s, bL2, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncerr(1e-15))
         aR, s_cut, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncscheme)
         aR2, bL2 = absorb_s(aR2, s, bL2)
