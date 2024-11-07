@@ -10,10 +10,10 @@ using Printf
     Random.seed!(100)
     # initialize parameters
     χbond = 2
-    χenv = 16
+    χenv = 10
 
     # initialize states
-    H = heisenberg_XYZ(InfiniteSquare(); Jx=1.0, Jy=1.0, Jz=1.0)
+    H = heisenberg_XYZ(InfiniteSquare())
     psi_init = InfinitePEPS(2, χbond; unitcell=(1, 1))
 
     # find fixedpoint one-site ctmrg
@@ -49,7 +49,7 @@ end
     Random.seed!(100)
     # initialize parameters
     χbond = 2
-    χenv = 16
+    χenv = 10
 
     # initialize states
     H = heisenberg_XYZ(InfiniteSquare())
@@ -59,7 +59,7 @@ end
     boundary_alg = VUMPS(
         ifupdown=true,
         tol=1e-10,
-        miniter=3,
+        miniter=1,
         maxiter=10,
         verbosity=1
     )
@@ -90,15 +90,15 @@ end
     χenv = 16
 
     # initialize states
-    H = heisenberg_XYZ(InfiniteSquare(); Jx=1.0, Jy=1.0, Jz=1.0)
-    psi_init = InfinitePEPS(2, χbond; unitcell=(2, 2))
+    H = heisenberg_XYZ(InfiniteSquare())
+    psi_init = InfinitePEPS(2, χbond; unitcell=(2, 1))
 
     # find fixedpoint one-site ctmrg
     boundary_alg = VUMPS(
         ifupdown=true,
         tol=1e-10,
-        miniter=3,
-        maxiter=10,
+        miniter=10,
+        maxiter=1,
         verbosity=2
     )
     opt_alg = PEPSOptimize(;

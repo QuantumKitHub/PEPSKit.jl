@@ -27,7 +27,7 @@ end
     alg = VUMPS(maxiter=100, verbosity=2, ifupdown=false)
 
     rt = leading_boundary(VUMPSRuntime(ipeps, χ, alg), ipeps, alg)
-    env = VUMPSEnv(rt)
+    env = VUMPSEnv(rt, ipeps)
     @test env isa VUMPSEnv
 
     Z = abs(norm(ipeps, env))
@@ -46,11 +46,12 @@ end
     alg = VUMPS(maxiter=100, verbosity=2, ifupdown=false)
 
     rt = leading_boundary(VUMPSRuntime(ipeps, χ, alg), ipeps, alg)
+    env = VUMPSEnv(rt, ipeps)
     H = heisenberg_XYZ(InfiniteSquare())
     H = H.terms[1].second
     # Hh, Hv = H.terms[1]
     
-    @show nearest_neighbour_energy(ipeps, H, H, rt)
+    @show nearest_neighbour_energy(ipeps, H, H, env)
     # Z = abs(norm(ipeps, env))
 
     # ctm = leading_boundary(CTMRGEnv(ipeps, χ), ipeps, CTMRG(; verbosity=2))
