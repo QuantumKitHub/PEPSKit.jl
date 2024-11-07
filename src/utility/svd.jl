@@ -292,7 +292,6 @@ function _lorentz_broaden(x::Real, ε=1e-12)
     return x′ / (x′^2 + ε)
 end
 
-
 """
 Given `tsvd` result `u`, `s` and `vh`, 
 absorb singular values `s` into `u` and `vh` by

@@ -175,14 +175,16 @@ Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
 # In-place rotations
 function rotl90!(peps::InfinitePEPS)
     peps.A[:] = rotl90(rotl90.(peps.A))
+    return nothing
 end
 function rotr90!(peps::InfinitePEPS)
     peps.A[:] = rotr90(rotr90.(peps.A))
+    return nothing
 end
 function rot180!(peps::InfinitePEPS)
     peps.A[:] = rot180(rot180.(peps.A))
+    return nothing
 end
-
 
 # Chainrules
 function ChainRulesCore.rrule(

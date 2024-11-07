@@ -41,7 +41,7 @@ Compute S^(pow) for diagonal matrices `S`
 function sdiag_pow(S::AbstractTensorMap, pow::Real)
     S2 = similar(S)
     for (k, b) in blocks(S)
-        copyto!(blocks(S2)[k], diagm(diag(b).^pow))
+        copyto!(blocks(S2)[k], diagm(diag(b) .^ pow))
     end
     return S2
 end

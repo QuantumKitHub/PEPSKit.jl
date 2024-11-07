@@ -14,13 +14,11 @@ CTMRG left-move to update CTMRGEnv in the c-th column
 ```
 """
 function ctmrg_leftmove!(
-    col::Int, peps::InfinitePEPS, envs::CTMRGEnv,
-    chi::Int, svderr::Float64=1e-9
+    col::Int, peps::InfinitePEPS, envs::CTMRGEnv, chi::Int, svderr::Float64=1e-9
 )
     trscheme = truncerr(svderr) & truncdim(chi)
-    alg = CTMRG(
-        verbosity=0, miniter=1, maxiter=10, 
-        trscheme=trscheme, ctmrgscheme=:sequential
+    alg = CTMRG(;
+        verbosity=0, miniter=1, maxiter=10, trscheme=trscheme, ctmrgscheme=:sequential
     )
     envs2, info = ctmrg_leftmove(col, peps, envs, alg)
     envs.corners[:, :, col] = envs2.corners[:, :, col]
@@ -41,8 +39,7 @@ CTMRG right-move to update CTMRGEnv in the c-th column
 ```
 """
 function ctmrg_rightmove!(
-    col::Int, peps::InfinitePEPS, envs::CTMRGEnv,
-    chi::Int, svderr::Float64=1e-9
+    col::Int, peps::InfinitePEPS, envs::CTMRGEnv, chi::Int, svderr::Float64=1e-9
 )
     Nr, Nc = size(peps)
     @assert 1 <= col <= Nc
@@ -58,11 +55,16 @@ Update all horizontal bonds in the c-th column
 To update rows, rotate the network clockwise by 90 degrees.
 """
 function update_column!(
-    col::Int, gate::AbstractTensorMap,
-    peps::InfinitePEPS, envs::CTMRGEnv,
-    Dcut::Int, chi::Int;
-    svderr::Float64=1e-9, maxiter::Int=50,
-    maxdiff::Float64=1e-15, gaugefix::Bool=true,
+    col::Int,
+    gate::AbstractTensorMap,
+    peps::InfinitePEPS,
+    envs::CTMRGEnv,
+    Dcut::Int,
+    chi::Int;
+    svderr::Float64=1e-9,
+    maxiter::Int=50,
+    maxdiff::Float64=1e-15,
+    gaugefix::Bool=true,
 )
     Nr, Nc = size(peps)
     @assert 1 <= col <= Nc
@@ -110,7 +112,7 @@ function update_column!(
         end
         env = sgn * Zdg' * Zdg
         #= apply gate
-        
+
                 -2          -3
                 ↑           ↑
                 |----gate---|
@@ -134,7 +136,7 @@ function update_column!(
         bL /= maxabs(bL)
         localfid += local_fidelity(aR, bL, aR0, bL0)
         #= update and normalize peps, ms
-        
+
                 -2        -1               -1     -2
                 |        ↗                ↗       |
             -5- X ← 1 ← aR ← -3     -5 ← bL → 1 → Y - -3
@@ -167,24 +169,24 @@ Otherwise, use full-infinite environment instead.
 Reference: Physical Review B 92, 035142 (2015)
 """
 function fullupdate!(
-    gate::AbstractTensorMap, peps::InfinitePEPS, envs::CTMRGEnv,
-    Dcut::Int, chi::Int, svderr::Float64=1e-9
+    gate::AbstractTensorMap,
+    peps::InfinitePEPS,
+    envs::CTMRGEnv,
+    Dcut::Int,
+    chi::Int,
+    svderr::Float64=1e-9,
 )
     Nr, Nc = size(peps)
     fid, maxcost = 0.0, 0.0
     for col in 1:Nc
-        tmpfid, costs = update_column!(
-            col, gate, peps, envs, Dcut, chi; svderr=svderr
-        )
+        tmpfid, costs = update_column!(col, gate, peps, envs, Dcut, chi; svderr=svderr)
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end
     rotr90!(peps)
     rotr90!(envs)
     for row in 1:Nr
-        tmpfid, costs = update_column!(
-            row, gate, peps, envs, Dcut, chi; svderr=svderr
-        )
+        tmpfid, costs = update_column!(row, gate, peps, envs, Dcut, chi; svderr=svderr)
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end

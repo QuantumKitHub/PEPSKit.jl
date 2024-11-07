@@ -6,7 +6,7 @@ struct SUWeight{T<:AbstractTensorMap}
     y::Matrix{T}
 
     function SUWeight(wxs::Matrix{T}, wys::Matrix{T}) where {T}
-        new{T}(wxs, wys)
+        return new{T}(wxs, wys)
     end
 end
 
@@ -30,9 +30,9 @@ end
 function Base.iterate(wts::SUWeight, state=1)
     nx = prod(size(wts.x))
     if 1 <= state <= nx
-        return wts.x[state], state+1
-    elseif nx+1 <= state <= 2*nx
-        return wts.y[state-nx], state+1
+        return wts.x[state], state + 1
+    elseif nx + 1 <= state <= 2 * nx
+        return wts.y[state - nx], state + 1
     else
         return nothing
     end
