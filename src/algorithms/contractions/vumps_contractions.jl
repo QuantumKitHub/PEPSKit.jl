@@ -211,7 +211,7 @@ function nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, env::VUMPSEnv)
         @tensor eh = oph[1 2; 3 4] * Hh[3 4; 1 2]
         @tensor nh = oph[1 2; 1 2]
         energy_tol += eh / nh
-        @show eh / nh eh nh
+        # @show eh / nh eh nh
         
         # vertical contraction
         ir = mod1(i + 1, Ni)
@@ -224,7 +224,7 @@ function nearest_neighbour_energy(ipeps::InfinitePEPS, Hh, Hv, env::VUMPSEnv)
         @tensor ev = opv[1 2; 3 4] * Hv[3 4; 1 2]
         @tensor nv = opv[1 2; 1 2]
         energy_tol += ev / nv 
-        @show ev / nv ev nv
+        # @show ev / nv ev nv
 
         # penalty term 
         # energy_tol += 0.1 * abs(eh / nh - eh / nh)

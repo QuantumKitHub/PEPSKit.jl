@@ -165,14 +165,13 @@ end
     @test Zygote.gradient(f, 1.0)[1] ≈ num_grad(f, 1.0)
 end
 
-@testset "ad vumps iPEPS two side for unitcell $Ni x $Nj" for Ni in 2:2, Nj in 1:1, (d, D, χ) in zip(ds, Ds, [10])
+@testset "ad vumps iPEPS two side for unitcell $Ni x $Nj" for Ni in 2:2, Nj in 2:2, (d, D, χ) in zip(ds, Ds, [10])
     Random.seed!(42)
     ipeps = InfinitePEPS(d, D; unitcell=(Ni, Nj))
     
     alg = VUMPS(maxiter=100, verbosity=3, ifupdown=true)
     rt = leading_boundary(VUMPSRuntime(ipeps, χ, alg), ipeps, alg)
     
-
     function foo1(ipeps)
         alg = VUMPS(maxiter=2, verbosity=3, ifupdown=true)
         rt = leading_boundary(rt, ipeps, alg)

@@ -91,14 +91,14 @@ end
 
     # initialize states
     H = heisenberg_XYZ(InfiniteSquare())
-    psi_init = InfinitePEPS(2, χbond; unitcell=(2, 1))
+    psi_init = InfinitePEPS(2, χbond; unitcell=(2, 2))
 
     # find fixedpoint one-site ctmrg
     boundary_alg = VUMPS(
         ifupdown=true,
         tol=1e-10,
-        miniter=10,
-        maxiter=1,
+        miniter=1,
+        maxiter=10,
         verbosity=2
     )
     opt_alg = PEPSOptimize(;

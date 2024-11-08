@@ -294,7 +294,7 @@ function leftenv(ALu::Matrix{<:AbstractTensorMap},
     for i in 1:Ni
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
         λLs, FL1s, info = eigsolve(FLi -> FLmap(FLi, ALu[i,:], ALd[ir,:], ipeps.A[i,:], adjoint.(ipeps.A[i,:])), 
-                                   FL[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+                                   FL[i,:], 1, :LM; alg_rrule=KrylovKit.GMRES(), maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "leftenv not converged"
         λL[i], FL′[i,:] = selectpos(λLs, FL1s, Nj)
     end
@@ -326,7 +326,7 @@ function leftCenv(ALu::Matrix{<:AbstractTensorMap},
     for i in 1:Ni
         ir = ifobs ? mod1(Ni - i + 2, Ni) : i
         λLs, L1s, info = eigsolve(L -> Lmap(L, ALu[i,:], ALd[ir,:]), 
-                                   L[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+                                   L[i,:], 1, :LM; alg_rrule=KrylovKit.GMRES(), maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "leftenv not converged"
         λL[i], L′[i,:] = selectpos(λLs, L1s, Nj)
     end
@@ -359,7 +359,7 @@ function rightenv(ARu::Matrix{<:AbstractTensorMap},
         ir = ifobs ? Ni + 1 - i : mod1(i + 1, Ni)
         ifinline && (ir = i) 
         λRs, FR1s, info = eigsolve(FR -> FRmap(FR, ARu[i,:], ARd[ir,:], ipeps.A[i,:], adjoint.(ipeps.A[i,:])), 
-                                   FR[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+                                   FR[i,:], 1, :LM; alg_rrule=KrylovKit.GMRES(), maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"
         λR[i], FR′[i,:] = selectpos(λRs, FR1s, Nj)
     end
@@ -391,7 +391,7 @@ function rightCenv(ARu::Matrix{<:AbstractTensorMap},
     for i in 1:Ni
         ir = ifobs ? mod1(Ni - i + 2, Ni) : i
         λRs, R1s, info = eigsolve(R -> Rmap(R, ARu[i,:], ARd[ir,:]), 
-                                   R[i,:], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+                                   R[i,:], 1, :LM; alg_rrule=KrylovKit.GMRES(), maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "rightenv not converged"
         λR[i], R′[i,:] = selectpos(λRs, R1s, Nj)
     end
@@ -421,7 +421,7 @@ function ACenv(AC::Matrix{<:AbstractTensorMap},
     AC′ = Zygote.Buffer(AC)
     for j in 1:Nj
         λACs, ACs, info = eigsolve(AC -> ACmap(AC, FL[:,j], FR[:,j], ipeps.A[:,j], adjoint.(ipeps.A[:,j])), 
-                                   AC[:,j], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+                                   AC[:,j], 1, :LM; alg_rrule=KrylovKit.GMRES(), maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "ACenv Not converged"
         λAC[j], AC′[:,j] = selectpos(λACs, ACs, Ni)
     end
@@ -454,7 +454,7 @@ function Cenv(C::Matrix{<:AbstractTensorMap},
     for j in 1:Nj
         jr = mod1(j + 1, Nj)
         λCs, Cs, info = eigsolve(C -> Cmap(C, FL[:,jr], FR[:,j]), 
-                                 C[:,j], 1, :LM; maxiter=100, ishermitian = false, kwargs...)
+                                 C[:,j], 1, :LM; alg_rrule=KrylovKit.GMRES(), maxiter=100, ishermitian = false, kwargs...)
         verbosity >= 1 && info.converged == 0 && @warn "Cenv Not converged"
         λC[j], C′[:,j] = selectpos(λCs, Cs, Ni)
     end
