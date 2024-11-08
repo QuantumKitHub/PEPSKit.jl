@@ -223,7 +223,7 @@ function ctmrg_projectors(
         ϵ = max(ϵ, ϵ_local / norm(S))
 
         # Compute SVD truncation error and check for degenerate singular values
-        ignore_derivatives() do
+        Zygote.isderiving() && ignore_derivatives() do
             if alg.verbosity > 0 && is_degenerate_spectrum(S)
                 svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
                 @warn("degenerate singular values detected: ", svals)
@@ -273,7 +273,7 @@ function ctmrg_projectors(
         ϵ = max(ϵ, ϵ_local / norm(S_local))
 
         # Compute SVD truncation error and check for degenerate singular values
-        ignore_derivatives() do
+        Zygote.isderiving() && ignore_derivatives() do
             if alg.verbosity > 0 && is_degenerate_spectrum(S_local)
                 svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S_local))
                 @warn("degenerate singular values detected: ", svals)
