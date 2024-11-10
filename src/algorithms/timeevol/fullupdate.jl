@@ -1,6 +1,9 @@
 include("fu_gaugefix.jl")
 include("fu_optimize.jl")
 
+# TODO: add option to use full-infinite environment 
+# for CTMRG moves when it is implemented in PEPSKit
+
 """
 CTMRG left-move to update CTMRGEnv in the c-th column 
 ```
@@ -14,7 +17,12 @@ CTMRG left-move to update CTMRGEnv in the c-th column
 ```
 """
 function ctmrg_leftmove!(
-    col::Int, peps::InfinitePEPS, envs::CTMRGEnv, chi::Int, svderr::Float64=1e-9
+    col::Int,
+    peps::InfinitePEPS,
+    envs::CTMRGEnv,
+    chi::Int,
+    svderr::Float64=1e-9;
+    cheap::Bool=true,
 )
     trscheme = truncerr(svderr) & truncdim(chi)
     alg = CTMRG(;
@@ -39,7 +47,12 @@ CTMRG right-move to update CTMRGEnv in the c-th column
 ```
 """
 function ctmrg_rightmove!(
-    col::Int, peps::InfinitePEPS, envs::CTMRGEnv, chi::Int, svderr::Float64=1e-9
+    col::Int,
+    peps::InfinitePEPS,
+    envs::CTMRGEnv,
+    chi::Int,
+    svderr::Float64=1e-9;
+    cheap::Bool=true,
 )
     Nr, Nc = size(peps)
     @assert 1 <= col <= Nc
@@ -64,6 +77,7 @@ function update_column!(
     svderr::Float64=1e-9,
     maxiter::Int=50,
     maxdiff::Float64=1e-15,
+    cheap=true,
     gaugefix::Bool=true,
 )
     Nr, Nc = size(peps)
@@ -153,8 +167,8 @@ function update_column!(
         end
     end
     # update CTMRGEnv
-    ctmrg_leftmove!(col, peps, envs, chi, svderr)
-    ctmrg_rightmove!(_next(col, Nc), peps, envs, chi, svderr)
+    ctmrg_leftmove!(col, peps, envs, chi, svderr; cheap=cheap)
+    ctmrg_rightmove!(_next(col, Nc), peps, envs, chi, svderr; cheap=cheap)
     return localfid, costs
 end
 
@@ -172,19 +186,24 @@ function fullupdate!(
     envs::CTMRGEnv,
     Dcut::Int,
     chi::Int,
-    svderr::Float64=1e-9,
+    svderr::Float64=1e-9;
+    cheap=false,
 )
     Nr, Nc = size(peps)
     fid, maxcost = 0.0, 0.0
     for col in 1:Nc
-        tmpfid, costs = update_column!(col, gate, peps, envs, Dcut, chi; svderr=svderr)
+        tmpfid, costs = update_column!(
+            col, gate, peps, envs, Dcut, chi; svderr=svderr, cheap=cheap
+        )
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end
     rotr90!(peps)
     rotr90!(envs)
     for row in 1:Nr
-        tmpfid, costs = update_column!(row, gate, peps, envs, Dcut, chi; svderr=svderr)
+        tmpfid, costs = update_column!(
+            row, gate, peps, envs, Dcut, chi; svderr=svderr, cheap=cheap
+        )
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end
