@@ -38,6 +38,11 @@ function Base.iterate(wts::SUWeight, state=1)
     end
 end
 
+function Base.length(wts::SUWeight)
+    @assert size(wts.x) == size(wts.y)
+    return 2 * prod(size(wts.x))
+end
+
 function Base.isapprox(wts1::SUWeight, wts2::SUWeight; atol=0.0, rtol=1e-5)
     return (
         isapprox(wts1.x, wts2.x; atol=atol, rtol=rtol) &&
