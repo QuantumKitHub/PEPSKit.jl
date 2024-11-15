@@ -27,6 +27,17 @@ function Base.:(-)(wts1::SUWeight, wts2::SUWeight)
     return SUWeight(wts1.x - wts2.x, wts1.y - wts2.y)
 end
 
+function Base.show(io::IO, wts::SUWeight)
+    N1, N2 = size(wts)
+    for (direction, r, c) in Iterators.product("xy", 1:N1, 1:N2)
+        println(io, "$direction[$r,$c]: ")
+        wt = (direction == 'x' ? wts.x[r,c] : wts.y[r,c])
+        for (k, b) in blocks(wt)
+            println(io, k, " = ", diag(b))
+        end
+    end
+end
+
 function Base.iterate(wts::SUWeight, state=1)
     nx = prod(size(wts.x))
     if 1 <= state <= nx
