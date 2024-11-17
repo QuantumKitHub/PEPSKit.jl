@@ -48,11 +48,9 @@ end
 (H::PEPS_∂∂C)(x) = MPSKit.∂C(x, H.GL, H.GR)
 (H::PEPS_∂∂AC)(x) = MPSKit.∂AC(x, (H.top, H.bot), H.GL, H.GR)
 
-function MPSKit.∂AC(x::RecursiveVec, O::Tuple, GL, GR)
-    return RecursiveVec(
-        circshift(
-            map((v, O1, O2, l, r) -> ∂AC(v, (O1, O2), l, r), x.vecs, O[1], O[2], GL, GR), 1
-        ),
+function MPSKit.∂AC(x::Vector, O::Tuple, GL, GR)
+    return circshift(
+        map((v, O1, O2, l, r) -> ∂AC(v, (O1, O2), l, r), x, O[1], O[2], GL, GR), 1
     )
 end
 
@@ -203,20 +201,12 @@ end
 (H::PEPO_∂∂C)(x) = MPSKit.∂C(x, H.GL, H.GR)
 (H::PEPO_∂∂AC)(x) = MPSKit.∂AC(x, (H.top, H.bot, H.mid), H.GL, H.GR)
 
-function MPSKit.∂AC(x::RecursiveVec, O::Tuple{T,T,P}, GL, GR) where {T,P}
-    return RecursiveVec(
-        circshift(
-            map(
-                (v, O1, O2, O3, l, r) -> ∂AC(v, (O1, O2, O3), l, r),
-                x.vecs,
-                O[1],
-                O[2],
-                O[3],
-                GL,
-                GR,
-            ),
-            1,
+function MPSKit.∂AC(x::Vector, O::Tuple{T,T,P}, GL, GR) where {T,P}
+    return circshift(
+        map(
+            (v, O1, O2, O3, l, r) -> ∂AC(v, (O1, O2, O3), l, r), x, O[1], O[2], O[3], GL, GR
         ),
+        1,
     )
 end
 
