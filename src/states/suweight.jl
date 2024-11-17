@@ -31,7 +31,7 @@ function Base.show(io::IO, wts::SUWeight)
     N1, N2 = size(wts)
     for (direction, r, c) in Iterators.product("xy", 1:N1, 1:N2)
         println(io, "$direction[$r,$c]: ")
-        wt = (direction == 'x' ? wts.x[r,c] : wts.y[r,c])
+        wt = (direction == 'x' ? wts.x[r, c] : wts.y[r, c])
         for (k, b) in blocks(wt)
             println(io, k, " = ", diag(b))
         end
