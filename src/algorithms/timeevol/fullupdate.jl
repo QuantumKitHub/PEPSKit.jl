@@ -234,7 +234,6 @@ function fullupdate!(
 )
     time_start = time()
     N1, N2 = size(peps)
-    @assert endswith(folder, "/")
     # CTMRG algorithm to reconverge environment
     ctm_alg = CTMRG(;
         tol=rgtol,
@@ -255,7 +254,6 @@ function fullupdate!(
         "speed",
         "meas(s)"
     )
-    flush(stdout)
     gate = exp(-dt * ham)
     esite0, peps0, envs0 = Inf, deepcopy(peps), deepcopy(envs)
     diff_energy = 0.0
@@ -301,7 +299,6 @@ function fullupdate!(
     # reconverge the environment tensors
     for io in (stdout, stderr)
         @printf(io, "Reconverging final envs ... \n")
-        flush(io)
     end
     envs2 = leading_boundary(
         envs,

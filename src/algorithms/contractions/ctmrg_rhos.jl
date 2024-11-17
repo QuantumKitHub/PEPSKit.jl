@@ -155,6 +155,47 @@ function calrho_bondy(
     return rho2
 end
 
+# TODO: add rhos on next nearest neighbor bonds
+
+"""
+Calculate 2-site rho on 2nd nearest neighbor sites `(r,c)(r-1,c+1)`
+```
+    C1 -χ10 - T1 -χ11 - T1 -χ12 - C2    r-2
+    |         ‖         ‖         |
+    χ8       DN1       DN2        χ9
+    |         ‖         ‖         |
+    T4 =DW2= k/b =DH2= k/b =DE2== T2    r-1
+    |         ‖         ‖         |
+    χ6       DV1       DV2        χ7
+    |         ‖         ‖         |
+    T4 =DW1= k/b =DH1= k/b =DE1== T2    r
+    |         ‖         ‖         |
+    χ4       DS1       DS2        χ5
+    |         ‖         ‖         |
+    C4 - χ1 - T3 - χ2 - T3 - χ3 - C4    r+1
+    c-1       c        c+1       c+2
+```
+Indices d0, d1 are physical indices of ket, bra
+"""
+function calrho_bondd1(
+    row::Int, col::Int, envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
+)
+    N1, N2 = size(ket)
+    @assert 1 <= row <= N1 && 1 <= col <= N2
+    throw("not implemented")
+end
+
+"""
+Calculate 2-site rho on 2nd nearest neighbor sites `(r,c+1)(r-1,c)`
+"""
+function calrho_bondd2(
+    row::Int, col::Int, envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
+)
+    N1, N2 = size(ket)
+    @assert 1 <= row <= N1 && 1 <= col <= N2
+    throw("not implemented")
+end
+
 """
 Calculate rho for all sites
 """
