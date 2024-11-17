@@ -40,6 +40,8 @@ include("environments/transferpepo_environments.jl")
 
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
+include("algorithms/contractions/ctmrg_rhos.jl")
+include("algorithms/contractions/measure_rhos.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -172,8 +174,11 @@ export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
-export simpleupdate!, absorb_wt
-export fullupdate!
+export absorb_wt, absorb_wt!
+export su_iter!, simpleupdate!
+export fu_iter!, fullupdate!
+export meas_site, meas_bond
+export calrho_site, calrho_bondx, calrho_bondy, calrho_all
 
 export SUWeight
 export InfinitePEPS, InfiniteTransferPEPS

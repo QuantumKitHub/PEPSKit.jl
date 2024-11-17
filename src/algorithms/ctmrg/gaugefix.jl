@@ -173,6 +173,19 @@ function calc_convergence(envs, CSold, TSold)
     return max(ΔCS, ΔTS), CSnew, TSnew
 end
 
+"""
+Calculate convergence of CTMRG by comparing the singular values of CTM tensors
+"""
+function calc_convergence(envsNew::CTMRGEnv, envsOld::CTMRGEnv)
+    CSNew = map(x -> tsvd(x)[2], envsNew.corners)
+    TSNew = map(x -> tsvd(x)[2], envsNew.edges)
+    CSOld = map(x -> tsvd(x)[2], envsOld.corners)
+    TSOld = map(x -> tsvd(x)[2], envsOld.edges)
+    ΔCS = maximum(_singular_value_distance, zip(CSOld, CSNew))
+    ΔTS = maximum(_singular_value_distance, zip(TSOld, TSNew))
+    return max(ΔCS, ΔTS)
+end
+
 @non_differentiable calc_convergence(args...)
 
 """

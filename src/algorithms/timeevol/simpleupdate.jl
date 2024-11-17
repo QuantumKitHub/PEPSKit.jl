@@ -61,6 +61,19 @@ function absorb_wt(
 end
 
 """
+Absorb bond weights into iPEPS site tensors
+"""
+function absorb_wt!(peps::InfinitePEPS, wts::SUWeight)
+    N1, N2 = size(peps)
+    for (r, c) in Iterators.product(1:N1, 1:N2)
+        for ax in 2:5
+            peps.A[r, c] = absorb_wt(peps.A[r, c], r, c, ax, wts; sqrtwt=true)
+        end
+    end
+    return nothing
+end
+
+"""
 Simple update of bond `wts.x[r,c]`
 ```
                 y[r,c]              y[r,c+1]
@@ -153,7 +166,7 @@ and SUWeight `wts` with the nearest neighbor gate `gate`
 When `bipartite === true` (for square lattice), the unit cell size should be 2 x 2, 
 and the tensor and x/y weight at `(row, col)` is the same as `(row+1, col+1)`
 """
-function simpleupdate!(
+function su_iter!(
     gate::AbstractTensorMap,
     peps::InfinitePEPS,
     wts::SUWeight,
@@ -197,4 +210,56 @@ function simpleupdate!(
         end
     end
     return nothing
+end
+
+function compare_weights(wts1::SUWeight, wts2::SUWeight)
+    wtdiff = sum(_singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1, wts2))
+    wtdiff /= 2 * prod(size(wts1))
+    return wtdiff
+end
+
+"""
+Perform simple update (maximum `evolstep` iterations)
+with nearest neighbor Hamiltonian `ham` and time step `dt` 
+until the change of bond weights is smaller than `wtdiff_tol` 
+"""
+function simpleupdate!(
+    peps::InfinitePEPS,
+    wts::SUWeight,
+    ham::AbstractTensorMap,
+    dt::Float64,
+    Dcut::Int;
+    evolstep::Int=400000,
+    svderr::Float64=1e-10,
+    wtdiff_tol::Float64=1e-10,
+    bipartite::Bool=false,
+    check_int::Int=500,
+)
+    time_start = time()
+    N1, N2 = size(peps)
+    if bipartite
+        @assert N1 == N2 == 2
+    end
+    @printf("%-9s%6s%12s  %s\n", "Step", "dt", "wt_diff", "speed/s")
+    # exponentiating the 2-site Hamiltonian gate
+    gate = exp(-dt * ham)
+    wtdiff = 1e+3
+    wts0 = deepcopy(wts)
+    for count in 1:evolstep
+        time0 = time()
+        su_iter!(gate, peps, wts, Dcut, svderr; bipartite=bipartite)
+        wtdiff = compare_weights(wts, wts0)
+        stop = (wtdiff < wtdiff_tol) || (count == evolstep)
+        wts0 = deepcopy(wts)
+        time1 = time()
+        if ((count == 1) || (count % check_int == 0) || stop)
+            @printf("%-9d%6.0e%12.3e  %.3f\n", count, dt, wtdiff, time1 - time0)
+        end
+        if stop
+            break
+        end
+    end
+    time_end = time()
+    @printf("Evolution time: %.2f s\n\n", time_end - time_start)
+    return wtdiff
 end

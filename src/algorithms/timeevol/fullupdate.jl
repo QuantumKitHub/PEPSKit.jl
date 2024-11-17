@@ -180,7 +180,7 @@ Otherwise, use full-infinite environment instead.
 
 Reference: Physical Review B 92, 035142 (2015)
 """
-function fullupdate!(
+function fu_iter!(
     gate::AbstractTensorMap,
     peps::InfinitePEPS,
     envs::CTMRGEnv,
@@ -211,4 +211,114 @@ function fullupdate!(
     rotl90!(envs)
     fid /= (2 * Nr * Nc)
     return fid, maxcost
+end
+
+# TODO: pass Hamiltonian gate as `LocalOperator` 
+"""
+Perform full update
+"""
+function fullupdate!(
+    peps::InfinitePEPS,
+    envs::CTMRGEnv,
+    ham::AbstractTensorMap,
+    dt::Float64,
+    Dcut::Int,
+    chi::Int;
+    evolstep::Int=5000,
+    svderr::Float64=1e-9,
+    rgint::Int=10,
+    rgtol::Float64=1e-6,
+    rgmaxiter::Int=10,
+    ctmrgscheme=:sequential,
+    cheap=false,
+)
+    time_start = time()
+    N1, N2 = size(peps)
+    @assert endswith(folder, "/")
+    # CTMRG algorithm to reconverge environment
+    ctm_alg = CTMRG(;
+        tol=rgtol,
+        maxiter=rgmaxiter,
+        miniter=1,
+        verbosity=2,
+        trscheme=truncerr(svderr) & truncdim(chi),
+        svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()),
+        ctmrgscheme=ctmrgscheme,
+    )
+    @printf(
+        "%-4s %7s%10s%12s%11s  %s/%s\n",
+        "step",
+        "dt",
+        "energy",
+        "Δe",
+        "svd_diff",
+        "speed",
+        "meas(s)"
+    )
+    flush(stdout)
+    gate = exp(-dt * ham)
+    esite0, peps0, envs0 = Inf, deepcopy(peps), deepcopy(envs)
+    diff_energy = 0.0
+    for count in 1:evolstep
+        time0 = time()
+        fid, cost = fu_iter!(gate, peps, envs, Dcut, chi, svderr; cheap=cheap)
+        time1 = time()
+        if count == 1 || count % rgint == 0
+            meast0 = time()
+            # reconverge `env` (in place)
+            println(stderr, "---- FU step $count: reconverging envs ----")
+            envs2 = leading_boundary(envs, peps, ctm_alg)
+            envs.edges[:], envs.corners[:] = envs2.edges, envs2.corners
+            # TODO: monitor energy with costfun
+            # esite = costfun(peps, envs, ham)
+            rho2sss = calrho_allnbs(envs, peps)
+            ebonds = [collect(meas_bond(ham, rho2) for rho2 in rho2sss[n]) for n in 1:2]
+            esite = sum(sum(ebonds)) / (N1 * N2)
+            meast1 = time()
+            # monitor change of CTMRGEnv by its singular values
+            diff_energy = esite - esite0
+            diff_ctm = calc_convergence(envs, envs0)
+            @printf(
+                "%-4d %7.0e%10.5f%12.3e%11.3e  %.3f/%.3f\n",
+                count,
+                dt,
+                esite,
+                diff_energy,
+                diff_ctm,
+                time1 - time0,
+                meast1 - meast0
+            )
+            if diff_energy > 0
+                @printf("Energy starts to increase. Abort evolution.\n")
+                # restore peps and envs at last checking
+                peps.A[:] = peps0.A
+                envs.corners[:], envs.edges[:] = envs0.corners, envs0.edges
+                break
+            end
+            esite0, peps0, envs0 = esite, deepcopy(peps), deepcopy(envs)
+        end
+    end
+    # reconverge the environment tensors
+    for io in (stdout, stderr)
+        @printf(io, "Reconverging final envs ... \n")
+        flush(io)
+    end
+    envs2 = leading_boundary(
+        envs,
+        peps,
+        CTMRG(;
+            tol=1e-10,
+            maxiter=50,
+            miniter=1,
+            verbosity=2,
+            trscheme=truncerr(svderr) & truncdim(chi),
+            svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()),
+            ctmrgscheme=ctmrgscheme,
+        ),
+    )
+    envs.edges[:], envs.corners[:] = envs2.edges, envs2.corners
+    time_end = time()
+    @printf("Evolution time: %.3f s\n\n", time_end - time_start)
+    print(stderr, "\n----------\n\n")
+    return esite0, diff_energy
 end
