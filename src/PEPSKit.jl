@@ -24,7 +24,7 @@ include("utility/autoopt.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
-include("states/suweight.jl")
+include("states/infiniteweightpeps.jl")
 
 include("operators/transferpeps.jl")
 include("operators/infinitepepo.jl")
@@ -173,13 +173,13 @@ export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
-export absorb_wt, absorb_wt!
+export absorb_wt
 export su_iter!, simpleupdate!
 export meas_site, meas_bond
 export calrho_site, calrho_bondx, calrho_bondy, calrho_all
 
-export SUWeight
 export InfinitePEPS, InfiniteTransferPEPS
+export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect

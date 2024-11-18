@@ -1,21 +1,4 @@
 """
-Mirror the unit cell of an iPEPS by its anti-diagonal line
-"""
-function mirror_antidiag!(peps::InfinitePEPS)
-    peps.A[:] = mirror_antidiag(peps.A)
-    for (i, t) in enumerate(peps.A)
-        peps.A[i] = permute(t, (1,), (3, 2, 5, 4))
-    end
-end
-
-"""
-Mirror the unit cell of an iPEPS with weights by its anti-diagonal line
-"""
-function mirror_antidiag!(wts::SUWeight)
-    return wts.x[:], wts.y[:] = mirror_antidiag(wts.y), mirror_antidiag(wts.x)
-end
-
-"""
 Absorb environment weight on axis `ax` into tensor `t` at position `(row,col)`
 
 Weights around the tensor at `(row, col)` are
@@ -34,22 +17,22 @@ function absorb_wt(
     row::Int,
     col::Int,
     ax::Int,
-    wts::SUWeight;
+    weights::SUWeight;
     sqrtwt::Bool=false,
     invwt::Bool=false,
 )
-    Nr, Nc = size(wts)
+    Nr, Nc = size(weights)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     @assert 2 <= ax <= 5
     pow = (sqrtwt ? 1 / 2 : 1) * (invwt ? -1 : 1)
     if ax == 2 # north
-        wt = wts.y[row, col]
+        wt = weights.y[row, col]
     elseif ax == 3 # east
-        wt = wts.x[row, col]
+        wt = weights.x[row, col]
     elseif ax == 4 # south
-        wt = wts.y[_next(row, Nr), col]
+        wt = weights.y[_next(row, Nr), col]
     else # west
-        wt = wts.x[row, _prev(col, Nc)]
+        wt = weights.x[row, _prev(col, Nc)]
     end
     wt2 = sdiag_pow(wt, pow)
     indices_t = collect(-1:-1:-5)
@@ -61,20 +44,7 @@ function absorb_wt(
 end
 
 """
-Absorb bond weights into iPEPS site tensors
-"""
-function absorb_wt!(peps::InfinitePEPS, wts::SUWeight)
-    N1, N2 = size(peps)
-    for (r, c) in Iterators.product(1:N1, 1:N2)
-        for ax in 2:5
-            peps.A[r, c] = absorb_wt(peps.A[r, c], r, c, ax, wts; sqrtwt=true)
-        end
-    end
-    return nothing
-end
-
-"""
-Simple update of bond `wts.x[r,c]`
+Simple update of bond `peps.weights.x[r,c]`
 ```
                 y[r,c]              y[r,c+1]
                 ↓                   ↓
@@ -87,25 +57,24 @@ function _su_bondx!(
     row::Int,
     col::Int,
     gate::AbstractTensorMap,
-    peps::InfinitePEPS,
-    wts::SUWeight,
+    peps::InfiniteWeightPEPS,
     Dcut::Int,
     svderr::Float64=1e-10,
 )
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     row2, col2 = row, _next(col, Nc)
-    T1, T2 = peps[row, col], peps[row2, col2]
+    T1, T2 = peps.vertices[row, col], peps.vertices[row2, col2]
     # absorb environment weights
     for ax in (2, 4, 5)
-        T1 = absorb_wt(T1, row, col, ax, wts)
+        T1 = absorb_wt(T1, row, col, ax, peps.weights)
     end
     for ax in (2, 3, 4)
-        T2 = absorb_wt(T2, row2, col2, ax, wts)
+        T2 = absorb_wt(T2, row2, col2, ax, peps.weights)
     end
     # absorb bond weight
-    T1 = absorb_wt(T1, row, col, 3, wts; sqrtwt=true)
-    T2 = absorb_wt(T2, row2, col2, 5, wts; sqrtwt=true)
+    T1 = absorb_wt(T1, row, col, 3, peps.weights; sqrtwt=true)
+    T2 = absorb_wt(T2, row2, col2, 5, peps.weights; sqrtwt=true)
     #= QR and LQ decomposition
 
         2   1               1             2
@@ -147,29 +116,28 @@ function _su_bondx!(
     T2 = ncon((bL, Y), ([-5, -1, 1], [1, -2, -3, -4]))
     # remove environment weights
     for ax in (2, 4, 5)
-        T1 = absorb_wt(T1, row, col, ax, wts; invwt=true)
+        T1 = absorb_wt(T1, row, col, ax, peps.weights; invwt=true)
     end
     for ax in (2, 3, 4)
-        T2 = absorb_wt(T2, row2, col2, ax, wts; invwt=true)
+        T2 = absorb_wt(T2, row2, col2, ax, peps.weights; invwt=true)
     end
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
-    peps.A[row, col], peps.A[row2, col2] = T1, T2
-    wts.x[row, col] = s / norm(s, Inf)
+    peps.vertices[row, col], peps.vertices[row2, col2] = T1, T2
+    peps.weights.x[row, col] = s / norm(s, Inf)
     return ϵ
 end
 
 """
-One round of simple update on the input InfinitePEPS `peps` 
-and SUWeight `wts` with the nearest neighbor gate `gate`
+One round of simple update on the input 
+InfiniteWeightPEPS `peps` with the nearest neighbor gate `gate`
 
 When `bipartite === true` (for square lattice), the unit cell size should be 2 x 2, 
 and the tensor and x/y weight at `(row, col)` is the same as `(row+1, col+1)`
 """
 function su_iter!(
     gate::AbstractTensorMap,
-    peps::InfinitePEPS,
-    wts::SUWeight,
+    peps::InfiniteWeightPEPS,
     Dcut::Int,
     svderr::Float64=1e-10;
     bipartite::Bool=false,
@@ -180,33 +148,31 @@ function su_iter!(
     end
     # TODO: make algorithm independent on the choice of dual in the network
     for (r, c) in Iterators.product(1:Nr, 1:Nc)
-        @assert [isdual(space(peps.A[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
-        @assert [isdual(space(wts.x[r, c], ax)) for ax in 1:2] == [0, 1]
-        @assert [isdual(space(wts.y[r, c], ax)) for ax in 1:2] == [0, 1]
+        @assert [isdual(space(peps.vertices[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
+        @assert [isdual(space(peps.weights.x[r, c], ax)) for ax in 1:2] == [0, 1]
+        @assert [isdual(space(peps.weights.y[r, c], ax)) for ax in 1:2] == [0, 1]
     end
     for direction in 1:2
         # mirror the y-weights to x-direction 
         # to update them using code for x-weights
         if direction == 2
             mirror_antidiag!(peps)
-            mirror_antidiag!(wts)
         end
         if bipartite
-            ϵ = _su_bondx!(1, 1, gate, peps, wts, Dcut, svderr)
-            (peps.A[2, 2], peps.A[2, 1], wts.x[2, 2]) =
-                deepcopy.((peps.A[1, 1], peps.A[1, 2], wts.x[1, 1]))
-            ϵ = _su_bondx!(2, 1, gate, peps, wts, Dcut, svderr)
-            (peps.A[1, 2], peps.A[1, 1], wts.x[1, 2]) =
-                deepcopy.((peps.A[2, 1], peps.A[2, 2], wts.x[2, 1]))
+            ϵ = _su_bondx!(1, 1, gate, peps, Dcut, svderr)
+            (peps.vertices[2, 2], peps.vertices[2, 1], peps.weights.x[2, 2]) =
+                deepcopy.((peps.vertices[1, 1], peps.vertices[1, 2], peps.weights.x[1, 1]))
+            ϵ = _su_bondx!(2, 1, gate, peps, Dcut, svderr)
+            (peps.vertices[1, 2], peps.vertices[1, 1], peps.weights.x[1, 2]) =
+                deepcopy.((peps.vertices[2, 1], peps.vertices[2, 2], peps.weights.x[2, 1]))
         else
-            for site in CartesianIndices(peps.A)
+            for site in CartesianIndices(peps.vertices)
                 row, col = Tuple(site)
-                ϵ = _su_bondx!(row, col, gate, peps, wts, Dcut)
+                ϵ = _su_bondx!(row, col, gate, peps, Dcut)
             end
         end
         if direction == 2
             mirror_antidiag!(peps)
-            mirror_antidiag!(wts)
         end
     end
     return nothing
@@ -214,8 +180,7 @@ end
 
 function compare_weights(wts1::SUWeight, wts2::SUWeight)
     wtdiff = sum(_singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1, wts2))
-    wtdiff /= 2 * prod(size(wts1))
-    return wtdiff
+    return wtdiff / (2 * prod(size(wts1)))
 end
 
 """
@@ -224,8 +189,7 @@ with nearest neighbor Hamiltonian `ham` and time step `dt`
 until the change of bond weights is smaller than `wtdiff_tol` 
 """
 function simpleupdate!(
-    peps::InfinitePEPS,
-    wts::SUWeight,
+    peps::InfiniteWeightPEPS,
     ham::AbstractTensorMap,
     dt::Float64,
     Dcut::Int;
@@ -244,13 +208,13 @@ function simpleupdate!(
     # exponentiating the 2-site Hamiltonian gate
     gate = exp(-dt * ham)
     wtdiff = 1e+3
-    wts0 = deepcopy(wts)
+    wts0 = deepcopy(peps.weights)
     for count in 1:evolstep
         time0 = time()
-        su_iter!(gate, peps, wts, Dcut, svderr; bipartite=bipartite)
-        wtdiff = compare_weights(wts, wts0)
+        su_iter!(gate, peps, Dcut, svderr; bipartite=bipartite)
+        wtdiff = compare_weights(peps.weights, wts0)
         stop = (wtdiff < wtdiff_tol) || (count == evolstep)
-        wts0 = deepcopy(wts)
+        wts0 = deepcopy(peps.weights)
         time1 = time()
         if ((count == 1) || (count % check_int == 0) || stop)
             @printf("%-9d%6.0e%12.3e  %.3f\n", count, dt, wtdiff, time1 - time0)

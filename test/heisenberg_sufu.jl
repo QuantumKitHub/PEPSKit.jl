@@ -10,19 +10,14 @@ import .RhoMeasureHeis: measrho_all
 
 # benchmark data is from Phys. Rev. B 94, 035133 (2016)
 
-# random initialization of 2x2 iPEPS and CTMRGEnv (using real numbers)
+# random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
 Dcut, χenv = 4, 16
 N1, N2 = 2, 2
-Pspace, Vspace = ℂ^2, ℂ^Dcut
 Random.seed!(0)
-peps = InfinitePEPS(rand, Float64, 2, Dcut; unitcell=(N1, N2))
-wts = SUWeight(
-    collect(id(Vspace) for (row, col) in Iterators.product(1:N1, 1:N2)),
-    collect(id(Vspace) for (row, col) in Iterators.product(1:N1, 1:N2)),
-)
-# normalize peps
-for ind in CartesianIndices(peps.A)
-    peps.A[ind] /= norm(peps.A[ind], Inf)
+peps = InfiniteWeightPEPS(rand, Float64, ℂ^2, ℂ^Dcut; unitcell=(N1, N2))
+# normalize vertex tensors
+for ind in CartesianIndices(peps.vertices)
+    peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
 end
 # Heisenberg model Hamiltonian
 ham = gen_gate()
@@ -32,10 +27,10 @@ dts = [1e-2, 1e-3, 4e-4, 1e-4]
 tols = [1e-6, 1e-7, 1e-8, 1e-9]
 for (n, (dt, tol)) in enumerate(zip(dts, tols))
     Dcut2 = (n == 1 ? Dcut + 1 : Dcut)
-    simpleupdate!(peps, wts, ham, dt, Dcut2; bipartite=true, evolstep=30000, wtdiff_tol=tol)
+    simpleupdate!(peps, ham, dt, Dcut2; bipartite=true, evolstep=30000, wtdiff_tol=tol)
 end
 # absort weight into site tensors
-absorb_wt!(peps, wts)
+peps = InfinitePEPS(peps)
 # CTMRG
 envs = CTMRGEnv(rand, Float64, peps, ℂ^χenv)
 trscheme = truncerr(1e-9) & truncdim(χenv)
