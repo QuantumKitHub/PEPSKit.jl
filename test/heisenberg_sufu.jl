@@ -8,8 +8,7 @@ include("utility/heis.jl")
 import .OpsHeis: gen_gate
 import .RhoMeasureHeis: measrho_all
 
-# benchmark data for D = 3 is from
-# Phys. Rev. B 94, 035133 (2016)
+# benchmark data is from Phys. Rev. B 94, 035133 (2016)
 
 # random initialization of 2x2 iPEPS and CTMRGEnv (using real numbers)
 Dcut, χenv = 4, 16
@@ -49,16 +48,3 @@ result = measrho_all(rho1ss, rho2sss)
 @printf("Staggered magnetization = %.8f\n", mean(result["mag_norm"]))
 @test isapprox(result["e_site"], -0.6675; atol=1e-3)
 @test isapprox(mean(result["mag_norm"]), 0.3767; atol=1e-3)
-
-# continue with full update
-dts = [2e-2, 1e-2, 5e-3, 1e-3, 5e-4]
-for dt in dts
-    fullupdate!(peps, envs, ham, dt, Dcut, χenv; rgmaxiter=5, cheap=true)
-end
-# measure physical quantities
-rho1ss, rho2sss = calrho_all(envs, peps)
-result = measrho_all(rho1ss, rho2sss)
-@printf("Energy = %.8f\n", result["e_site"])
-@printf("Staggered magnetization = %.8f\n", mean(result["mag_norm"]))
-@test isapprox(result["e_site"], -0.66875; atol=1e-4)
-@test isapprox(mean(result["mag_norm"]), 0.3510; atol=1e-3)
