@@ -155,7 +155,7 @@ function _su_bondx!(
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
     peps.A[row, col], peps.A[row2, col2] = T1, T2
-    wts.x[row, col] = s / maxabs(s)
+    wts.x[row, col] = s / norm(s, Inf)
     return ϵ
 end
 

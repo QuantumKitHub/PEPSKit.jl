@@ -23,7 +23,7 @@ wts = SUWeight(
 )
 # normalize peps
 for ind in CartesianIndices(peps.A)
-    peps.A[ind] /= PEPSKit.maxabs(peps.A[ind])
+    peps.A[ind] /= norm(peps.A[ind], Inf)
 end
 # Heisenberg model Hamiltonian
 ham = gen_gate()

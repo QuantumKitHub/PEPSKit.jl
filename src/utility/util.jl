@@ -22,20 +22,6 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
 end
 
 """
-Return the maximum absolute value of tensor elements
-"""
-function maxabs(t::AbstractTensorMap)
-    maxel = 0.0
-    for (k, b) in blocks(t)
-        maxelb = maximum(abs.(b))
-        if maxelb > maxel
-            maxel = maxelb
-        end
-    end
-    return maxel
-end
-
-"""
 Compute S^(pow) for diagonal matrices `S`
 """
 function sdiag_pow(S::AbstractTensorMap, pow::Real)

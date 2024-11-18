@@ -144,8 +144,8 @@ function update_column!(
             aR, bL, aR2bL2, env; maxiter=maxiter, maxdiff=maxdiff, verbose=false
         )
         costs[row] = cost
-        aR /= maxabs(aR)
-        bL /= maxabs(bL)
+        aR /= norm(aR, Inf)
+        bL /= norm(bL, Inf)
         localfid += local_fidelity(aR, bL, _combine_aRbL(aR0, bL0))
         #= update and normalize peps, ms
 
@@ -163,7 +163,7 @@ function update_column!(
         )
         # normalize
         for c_ in [col, cp1]
-            peps.A[row, c_] /= maxabs(peps.A[row, c_])
+            peps.A[row, c_] /= norm(peps.A[row, c_], Inf)
         end
     end
     # update CTMRGEnv
@@ -187,7 +187,7 @@ function fu_iter!(
     Dcut::Int,
     chi::Int,
     svderr::Float64=1e-9;
-    cheap=false,
+    cheap=true,
 )
     Nr, Nc = size(peps)
     fid, maxcost = 0.0, 0.0
@@ -230,7 +230,7 @@ function fullupdate!(
     rgtol::Float64=1e-6,
     rgmaxiter::Int=10,
     ctmrgscheme=:sequential,
-    cheap=false,
+    cheap=true,
 )
     time_start = time()
     N1, N2 = size(peps)
