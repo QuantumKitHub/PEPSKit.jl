@@ -1,43 +1,42 @@
-module OpsHeis
+module RhoMeasureHeis
 
-export gen_gate
-using TensorKit, MPSKitModels
+export gen_gate, measrho_all, cal_Esite
+
+using TensorKit, PEPSKit, MPSKitModels
+using Statistics: mean
 
 """
 Create nearest neighbor gate for Heisenberg model
 """
 function gen_gate(J::Float64=1.0; dens_shift::Bool=false)
-    Pspace = ℂ^2
-    heis = J*S_exchange()
+    heis = J * S_exchange()
     if dens_shift
+        Pspace = ℂ^2
         heis = heis - (J / 4) * id(Pspace) ⊗ id(Pspace)
     end
     return heis
 end
 
-end
-
-module RhoMeasureHeis
-
-export measrho_all, cal_Esite
-
-using TensorKit
-using PEPSKit
-using Statistics: mean
-using ..OpsHeis
-
+"""
+Measure magnetization on each site
+"""
 function cal_mags(rho1ss::Matrix{<:AbstractTensorMap})
-    Pspace = codomain(rho1ss[1, 1])[1]'
-    Sas = [S_x(), im*S_y(), S_z()]
+    Sas = [S_x(), im * S_y(), S_z()]
     return [collect(meas_site(Sa, rho1) for rho1 in rho1ss) for Sa in Sas]
 end
 
+"""
+Measure spin correlation on each nearest neighbor bond
+"""
 function cal_spincor(rho2ss::Matrix{<:AbstractTensorMap})
-    SpSm2 = S_plus() ⊗ S_min()
-    SzSz2 = S_z() ⊗ S_z()
+    SpSm = S_plus() ⊗ S_min()
+    SzSz = S_z() ⊗ S_z()
     return collect(meas_bond(SpSm, rho2) + meas_bond(SzSz, rho2) for rho2 in rho2ss)
 end
 
+"""
+Measure energy on each nearest neighbor bond
+"""
 function cal_Esite(rho2sss::Vector{<:Matrix{<:AbstractTensorMap}})
     N1, N2 = size(rho2sss[1])
     gate1 = gen_gate(; dens_shift=false)
@@ -47,6 +46,9 @@ function cal_Esite(rho2sss::Vector{<:Matrix{<:AbstractTensorMap}})
     return esite, ebond1s
 end
 
+"""
+Measure physical quantities for Heisenberg model
+"""
 function measrho_all(
     rho1ss::Matrix{<:AbstractTensorMap}, rho2sss::Vector{<:Matrix{<:AbstractTensorMap}}
 )

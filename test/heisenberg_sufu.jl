@@ -5,8 +5,7 @@ using PEPSKit
 using TensorKit
 import Statistics: mean
 include("utility/heis.jl")
-import .OpsHeis: gen_gate
-import .RhoMeasureHeis: measrho_all
+import .RhoMeasureHeis: gen_gate, measrho_all
 
 # benchmark data is from Phys. Rev. B 94, 035133 (2016)
 
