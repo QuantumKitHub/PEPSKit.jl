@@ -9,7 +9,7 @@ using Statistics: mean
 Create nearest neighbor gate for Heisenberg model
 """
 function gen_gate(J::Float64=1.0; dens_shift::Bool=false)
-    heis = J * S_exchange()
+    heis = J * real(S_exchange())
     if dens_shift
         Pspace = ℂ^2
         heis = heis - (J / 4) * id(Pspace) ⊗ id(Pspace)
@@ -21,7 +21,7 @@ end
 Measure magnetization on each site
 """
 function cal_mags(rho1ss::Matrix{<:AbstractTensorMap})
-    Sas = [S_x(), im * S_y(), S_z()]
+    Sas = real.([S_x(), im * S_y(), S_z()])
     return [collect(meas_site(Sa, rho1) for rho1 in rho1ss) for Sa in Sas]
 end
 
@@ -29,8 +29,8 @@ end
 Measure spin correlation on each nearest neighbor bond
 """
 function cal_spincor(rho2ss::Matrix{<:AbstractTensorMap})
-    SpSm = S_plus() ⊗ S_min()
-    SzSz = S_z() ⊗ S_z()
+    SpSm = real(S_plus() ⊗ S_min())
+    SzSz = real(S_z() ⊗ S_z())
     return collect(meas_bond(SpSm, rho2) + meas_bond(SzSz, rho2) for rho2 in rho2ss)
 end
 

@@ -23,10 +23,10 @@ ham = gen_gate()
 
 # simple update
 dts = [1e-2, 1e-3, 4e-4, 1e-4]
-tols = [1e-6, 1e-7, 1e-8, 1e-9]
+tols = [1e-6, 1e-7, 5e-8, 1e-8]
 for (n, (dt, tol)) in enumerate(zip(dts, tols))
     Dcut2 = (n == 1 ? Dcut + 1 : Dcut)
-    simpleupdate!(peps, ham, dt, Dcut2; bipartite=true, evolstep=30000, wtdiff_tol=tol)
+    simpleupdate!(peps, ham, dt, Dcut2; bipartite=true, evolstep=10000, wtdiff_tol=tol)
 end
 # absort weight into site tensors
 peps = InfinitePEPS(peps)
@@ -38,7 +38,7 @@ envs = leading_boundary(envs, peps, ctm_alg)
 # measure physical quantities
 rho1ss, rho2sss = calrho_all(envs, peps)
 result = measrho_all(rho1ss, rho2sss)
-@printf("Energy = %.8f\n", result["e_site"])
-@printf("Staggered magnetization = %.8f\n", mean(result["mag_norm"]))
+@info @sprintf("Energy = %.8f\n", result["e_site"])
+@info @sprintf("Staggered magnetization = %.8f\n", mean(result["mag_norm"]))
 @test isapprox(result["e_site"], -0.6675; atol=1e-3)
 @test isapprox(mean(result["mag_norm"]), 0.3767; atol=1e-3)

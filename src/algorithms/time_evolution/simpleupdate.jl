@@ -13,14 +13,14 @@ Weights around the tensor at `(row, col)` are
 ```
 """
 function absorb_wt(
-    t::AbstractTensorMap,
+    t::T,
     row::Int,
     col::Int,
     ax::Int,
     weights::SUWeight;
     sqrtwt::Bool=false,
     invwt::Bool=false,
-)
+) where {T<:PEPSTensor}
     Nr, Nc = size(weights)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     @assert 2 <= ax <= 5
@@ -112,8 +112,8 @@ function _su_bondx!(
             |                                 |
             -4                               -4
     =#
-    T1 = ncon((X, aR), ([-2, -4, -5, 1], [1, -1, -3]))
-    T2 = ncon((bL, Y), ([-5, -1, 1], [1, -2, -3, -4]))
+    @tensor T1[-1; -2 -3 -4 -5] := X[-2, -4, -5, 1] * aR[1, -1, -3]
+    @tensor T2[-1; -2 -3 -4 -5] := bL[-5, -1, 1] * Y[1, -2, -3, -4]
     # remove environment weights
     for ax in (2, 4, 5)
         T1 = absorb_wt(T1, row, col, ax, peps.weights; invwt=true)
@@ -178,11 +178,6 @@ function su_iter!(
     return nothing
 end
 
-function compare_weights(wts1::SUWeight, wts2::SUWeight)
-    wtdiff = sum(_singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1, wts2))
-    return wtdiff / (2 * prod(size(wts1)))
-end
-
 """
 Perform simple update (maximum `evolstep` iterations)
 with nearest neighbor Hamiltonian `ham` and time step `dt` 
@@ -204,7 +199,6 @@ function simpleupdate!(
     if bipartite
         @assert N1 == N2 == 2
     end
-    @printf("%-9s%6s%12s  %s\n", "Step", "dt", "wt_diff", "speed/s")
     # exponentiating the 2-site Hamiltonian gate
     gate = exp(-dt * ham)
     wtdiff = 1e+3
@@ -213,17 +207,31 @@ function simpleupdate!(
         time0 = time()
         su_iter!(gate, peps, Dcut, svderr; bipartite=bipartite)
         wtdiff = compare_weights(peps.weights, wts0)
-        stop = (wtdiff < wtdiff_tol) || (count == evolstep)
+        converge = wtdiff < wtdiff_tol
+        cancel = count == evolstep
         wts0 = deepcopy(peps.weights)
         time1 = time()
-        if ((count == 1) || (count % check_int == 0) || stop)
-            @printf("%-9d%6.0e%12.3e  %.3f\n", count, dt, wtdiff, time1 - time0)
+        if ((count == 1) || (count % check_int == 0) || converge || cancel)
+            label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
+            message = @sprintf(
+                "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
+                label,
+                count,
+                dt,
+                wtdiff,
+                time1 - ((converge || cancel) ? time_start : time0)
+            )
+            if cancel
+                @warn message
+            elseif converge || (count == 1)
+                @info message
+            else
+                @debug message
+            end
         end
-        if stop
+        if converge || cancel
             break
         end
     end
-    time_end = time()
-    @printf("Evolution time: %.2f s\n\n", time_end - time_start)
     return wtdiff
 end

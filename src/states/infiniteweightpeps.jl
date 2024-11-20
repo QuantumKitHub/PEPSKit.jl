@@ -72,6 +72,11 @@ function Base.isapprox(wts1::SUWeight, wts2::SUWeight; atol=0.0, rtol=1e-5)
     )
 end
 
+function compare_weights(wts1::SUWeight, wts2::SUWeight)
+    wtdiff = sum(_singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1, wts2))
+    return wtdiff / (2 * prod(size(wts1)))
+end
+
 """
 Represents an infinite projected entangled-pair state on a 2D square lattice
 consisting of vertex tensors and bond weights
