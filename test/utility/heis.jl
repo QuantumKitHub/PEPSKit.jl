@@ -1,57 +1,16 @@
 module OpsHeis
 
-export gen_gate, gen_siteop, gen_bondop
-using TensorKit
-
-"""
-Create 1-site operators for Heisenberg model
-"""
-function gen_siteop(name::String)
-    Pspace = ℂ^2
-    if name == "Id"
-        return id(Pspace)
-    end
-    op = TensorMap(zeros, Pspace, Pspace)
-    if name == "Nud"
-        block(op, Trivial())[:] = [1.0 0.0; 0.0 1.0]
-    elseif name == "Sp"
-        block(op, Trivial())[:] = [0.0 1.0; 0.0 0.0]
-    elseif name == "Sm"
-        block(op, Trivial())[:] = [0.0 0.0; 1.0 0.0]
-    elseif name == "Sz"
-        block(op, Trivial())[:] = [1.0 0.0; 0.0 -1.0] / 2
-    elseif name == "Sx"
-        block(op, Trivial())[:] = [0.0 1.0; 1.0 0.0] / 2
-    elseif name == "iSy"
-        block(op, Trivial())[:] = [0.0 1.0; -1.0 0.0] / 2
-    else
-        throw(ArgumentError("Invalid 1-site spin operator"))
-    end
-    return op
-end
-
-"""
-Create 2-site operators for Heisenberg model
-"""
-function gen_bondop(name1::String, name2::String)
-    op1 = gen_siteop(name1)
-    op2 = gen_siteop(name2)
-    op = op1 ⊗ op2
-    return op
-end
+export gen_gate
+using TensorKit, MPSKitModels
 
 """
 Create nearest neighbor gate for Heisenberg model
 """
 function gen_gate(J::Float64=1.0; dens_shift::Bool=false)
-    heis =
-        J * (
-            (1 / 2) * gen_bondop("Sp", "Sm") +
-            (1 / 2) * gen_bondop("Sm", "Sp") +
-            gen_bondop("Sz", "Sz")
-        )
+    Pspace = ℂ^2
+    heis = J*S_exchange()
     if dens_shift
-        heis = heis - (J / 4) * gen_bondop("Nud", "Nud")
+        heis = heis - (J / 4) * id(Pspace) ⊗ id(Pspace)
     end
     return heis
 end
@@ -69,13 +28,13 @@ using ..OpsHeis
 
 function cal_mags(rho1ss::Matrix{<:AbstractTensorMap})
     Pspace = codomain(rho1ss[1, 1])[1]'
-    Sas = [gen_siteop(name) for name in ("Sx", "iSy", "Sz")]
+    Sas = [S_x(), im*S_y(), S_z()]
     return [collect(meas_site(Sa, rho1) for rho1 in rho1ss) for Sa in Sas]
 end
 
 function cal_spincor(rho2ss::Matrix{<:AbstractTensorMap})
-    SpSm = gen_bondop("Sp", "Sm")
-    SzSz = gen_bondop("Sz", "Sz")
+    SpSm2 = S_plus() ⊗ S_min()
+    SzSz2 = S_z() ⊗ S_z()
     return collect(meas_bond(SpSm, rho2) + meas_bond(SzSz, rho2) for rho2 in rho2ss)
 end
 
