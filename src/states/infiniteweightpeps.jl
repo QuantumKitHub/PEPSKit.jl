@@ -130,6 +130,50 @@ function InfiniteWeightPEPS(
 end
 
 """
+Absorb environment weight on axis `ax` into tensor `t` at position `(row,col)`
+
+Weights around the tensor at `(row, col)` are
+```
+                ↓
+                y[r,c]
+                ↓
+    ←x[r,c-1] ← T[r,c] ← x[r,c] ←
+                ↓
+                y[r+1,c]
+                ↓
+```
+"""
+function absorb_wt(
+    t::T,
+    row::Int,
+    col::Int,
+    ax::Int,
+    weights::SUWeight;
+    sqrtwt::Bool=false,
+    invwt::Bool=false,
+) where {T<:PEPSTensor}
+    Nr, Nc = size(weights)
+    @assert 1 <= row <= Nr && 1 <= col <= Nc
+    @assert 2 <= ax <= 5
+    pow = (sqrtwt ? 1 / 2 : 1) * (invwt ? -1 : 1)
+    if ax == 2 # north
+        wt = weights.y[row, col]
+    elseif ax == 3 # east
+        wt = weights.x[row, col]
+    elseif ax == 4 # south
+        wt = weights.y[_next(row, Nr), col]
+    else # west
+        wt = weights.x[row, _prev(col, Nc)]
+    end
+    wt2 = sdiag_pow(wt, pow)
+    indices_t = collect(-1:-1:-5)
+    indices_t[ax] = 1
+    indices_wt = (ax in (2, 3) ? [1, -ax] : [-ax, 1])
+    t2 = permute(ncon((t, wt2), (indices_t, indices_wt)), ((1,), Tuple(2:5)))
+    return t2
+end
+
+"""
 Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into vertex tensors
 """
 function InfinitePEPS(peps::InfiniteWeightPEPS)
