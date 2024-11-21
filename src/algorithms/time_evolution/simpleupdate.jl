@@ -38,8 +38,7 @@ function absorb_wt(
     indices_t = collect(-1:-1:-5)
     indices_t[ax] = 1
     indices_wt = (ax in (2, 3) ? [1, -ax] : [-ax, 1])
-    t2 = ncon((t, wt2), (indices_t, indices_wt))
-    t2 = permute(t2, (1,), Tuple(2:5))
+    t2 = permute(ncon((t, wt2), (indices_t, indices_wt)), ((1,), Tuple(2:5)))
     return t2
 end
 
@@ -101,7 +100,7 @@ function _su_bondx!(
             ↑           ↑
         -1← aR -← 3 -← bL ← -4
     =#
-    tmp = ncon((gate, aR, bL), ([-2, -3, 1, 2], [-1, 1, 3], [3, 2, -4]))
+    @tensor tmp[:] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
     # SVD
     truncscheme = truncerr(svderr) & truncdim(Dcut)
     aR, s, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncscheme)
