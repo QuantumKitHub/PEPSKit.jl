@@ -160,7 +160,7 @@ end
 
 """
     CTMRGEnv(
-        [f=randn, ComplexF64], D_north::S, D_south::S, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S]; unitcell::Tuple{Int,Int}=(1, 1),
+        [f=randn, ComplexF64], D_north::S, D_east::S, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S]; unitcell::Tuple{Int,Int}=(1, 1),
     ) where {S<:Union{Int,ElementarySpace}}
 
 Construct a CTMRG environment by specifying the north and east virtual spaces of the
@@ -173,7 +173,7 @@ corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
     D_north::S,
-    D_south::S,
+    D_east::S,
     chi_north::S,
     chi_east::S=chi_north,
     chi_south::S=chi_north,
@@ -184,7 +184,7 @@ function CTMRGEnv(
         randn,
         ComplexF64,
         fill(D_north, unitcell),
-        fill(D_south, unitcell),
+        fill(D_east, unitcell),
         fill(chi_north, unitcell),
         fill(chi_east, unitcell),
         fill(chi_south, unitcell),
@@ -195,7 +195,7 @@ function CTMRGEnv(
     f,
     T,
     D_north::S,
-    D_south::S,
+    D_east::S,
     chi_north::S,
     chi_east::S=chi_north,
     chi_south::S=chi_north,
@@ -206,7 +206,7 @@ function CTMRGEnv(
         f,
         T,
         fill(D_north, unitcell),
-        fill(D_south, unitcell),
+        fill(D_east, unitcell),
         fill(chi_north, unitcell),
         fill(chi_east, unitcell),
         fill(chi_south, unitcell),
@@ -362,51 +362,42 @@ function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
         Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
     )
     edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
-
     for dir in 1:4
-        corners′[_prev(dir, 4), :, :] = rotl90(env.corners[dir, :, :])
-        edges′[_prev(dir, 4), :, :] = rotl90(env.edges[dir, :, :])
+        dir2 = _prev(dir, 4)
+        corners′[dir2, :, :] = rotl90(env.corners[dir, :, :])
+        edges′[dir2, :, :] = rotl90(env.edges[dir, :, :])
     end
-
     return CTMRGEnv(copy(corners′), copy(edges′))
 end
 
-# in-place rotations (incompatible with autodiff)
-"""
-Rotate the CTMRGEnv `envs` left 90 degrees (anti-clockwise) in place
-"""
-function rotl90!(envs::CTMRGEnv)
-    envs2 = deepcopy(envs)
-    for dir in 1:4
-        dir2 = _prev(dir, 4)
-        envs.corners[dir2, :, :] = rotl90(envs2.corners[dir, :, :])
-        envs.edges[dir2, :, :] = rotl90(envs2.edges[dir, :, :])
-    end
-    return nothing
-end
-"""
-Rotate the CTMRGEnv `envs` right 90 degrees (clockwise) in place
-"""
-function rotr90!(envs::CTMRGEnv)
-    envs2 = deepcopy(envs)
+# Rotate corners & edges clockwise
+function Base.rotr90(env::CTMRGEnv{C,T}) where {C,T}
+    # Initialize rotated corners & edges with rotated sizes
+    corners′ = Zygote.Buffer(
+        Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
+    )
+    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
     for dir in 1:4
         dir2 = _next(dir, 4)
-        envs.corners[dir2, :, :] = rotr90(envs2.corners[dir, :, :])
-        envs.edges[dir2, :, :] = rotr90(envs2.edges[dir, :, :])
+        corners′[dir2, :, :] = rotr90(env.corners[dir, :, :])
+        edges′[dir2, :, :] = rotr90(env.edges[dir, :, :])
     end
-    return nothing
+    return CTMRGEnv(copy(corners′), copy(edges′))
 end
-"""
-Rotate the CTMRGEnv `envs` 180 degrees in place
-"""
-function rot180!(envs::CTMRGEnv)
-    envs2 = deepcopy(envs)
+
+# Rotate corners & edges by 180 degrees
+function Base.rot180(env::CTMRGEnv{C,T}) where {C,T}
+    # Initialize rotated corners & edges with rotated sizes
+    corners′ = Zygote.Buffer(
+        Array{C,3}(undef, 4, size(env.corners, 2), size(env.corners, 3))
+    )
+    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 2), size(env.edges, 3)))
     for dir in 1:4
         dir2 = _next(_next(dir, 4), 4)
-        envs.corners[dir2, :, :] = rot180(envs2.corners[dir, :, :])
-        envs.edges[dir2, :, :] = rot180(envs2.edges[dir, :, :])
+        corners′[dir2, :, :] = rot180(env.corners[dir, :, :])
+        edges′[dir2, :, :] = rot180(env.edges[dir, :, :])
     end
-    return nothing
+    return CTMRGEnv(copy(corners′), copy(edges′))
 end
 
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])

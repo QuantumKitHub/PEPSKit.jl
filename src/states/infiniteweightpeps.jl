@@ -113,8 +113,7 @@ x-weights and y-weights
 function InfiniteWeightPEPS(
     vertices::Matrix{T}, wts_x::Matrix{E}, wts_y::Matrix{E}
 ) where {T<:PEPSTensor,E<:PEPSWeight}
-    weights = SUWeight(wts_x, wts_y)
-    return InfiniteWeightPEPS(vertices, weights)
+    return InfiniteWeightPEPS(vertices, SUWeight(wts_x, wts_y))
 end
 
 """
@@ -131,7 +130,7 @@ function InfiniteWeightPEPS(
 end
 
 """
-Absorb bond weights into vertex tensors
+Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into vertex tensors
 """
 function InfinitePEPS(peps::InfiniteWeightPEPS)
     vertices = deepcopy(peps.vertices)
@@ -157,12 +156,12 @@ end
 """
 Mirror the unit cell of an iPEPS with weights by its anti-diagonal line
 """
-function mirror_antidiag!(peps::InfiniteWeightPEPS)
-    peps.vertices[:] = mirror_antidiag(peps.vertices)
-    for (i, t) in enumerate(peps.vertices)
-        peps.vertices[i] = permute(t, (1,), (3, 2, 5, 4))
+function mirror_antidiag(peps::InfiniteWeightPEPS)
+    vertices2 = mirror_antidiag(peps.vertices)
+    for (i, t) in enumerate(vertices2)
+        vertices2[i] = permute(t, ((1,), (3, 2, 5, 4)))
     end
-    peps.weights.x[:], peps.weights.y[:] = mirror_antidiag(peps.weights.y),
-    mirror_antidiag(peps.weights.x)
-    return nothing
+    weights2_x = mirror_antidiag(peps.weights.y)
+    weights2_y = mirror_antidiag(peps.weights.x)
+    return InfiniteWeightPEPS(vertices2, weights2_x, weights2_y)
 end

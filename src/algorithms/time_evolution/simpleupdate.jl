@@ -134,7 +134,7 @@ InfiniteWeightPEPS `peps` with the nearest neighbor gate `gate`
 When `bipartite === true` (for square lattice), the unit cell size should be 2 x 2, 
 and the tensor and x/y weight at `(row, col)` is the same as `(row+1, col+1)`
 """
-function su_iter!(
+function su_iter(
     gate::AbstractTensorMap,
     peps::InfiniteWeightPEPS,
     Dcut::Int,
@@ -151,30 +151,35 @@ function su_iter!(
         @assert [isdual(space(peps.weights.x[r, c], ax)) for ax in 1:2] == [0, 1]
         @assert [isdual(space(peps.weights.y[r, c], ax)) for ax in 1:2] == [0, 1]
     end
+    peps2 = deepcopy(peps)
     for direction in 1:2
         # mirror the y-weights to x-direction 
         # to update them using code for x-weights
         if direction == 2
-            mirror_antidiag!(peps)
+            peps2 = mirror_antidiag(peps2)
         end
         if bipartite
-            ϵ = _su_bondx!(1, 1, gate, peps, Dcut, svderr)
-            (peps.vertices[2, 2], peps.vertices[2, 1], peps.weights.x[2, 2]) =
-                deepcopy.((peps.vertices[1, 1], peps.vertices[1, 2], peps.weights.x[1, 1]))
-            ϵ = _su_bondx!(2, 1, gate, peps, Dcut, svderr)
-            (peps.vertices[1, 2], peps.vertices[1, 1], peps.weights.x[1, 2]) =
-                deepcopy.((peps.vertices[2, 1], peps.vertices[2, 2], peps.weights.x[2, 1]))
+            ϵ = _su_bondx!(1, 1, gate, peps2, Dcut, svderr)
+            (peps2.vertices[2, 2], peps2.vertices[2, 1], peps2.weights.x[2, 2]) =
+                deepcopy.((
+                    peps2.vertices[1, 1], peps2.vertices[1, 2], peps2.weights.x[1, 1]
+                ))
+            ϵ = _su_bondx!(2, 1, gate, peps2, Dcut, svderr)
+            (peps2.vertices[1, 2], peps2.vertices[1, 1], peps2.weights.x[1, 2]) =
+                deepcopy.((
+                    peps2.vertices[2, 1], peps2.vertices[2, 2], peps2.weights.x[2, 1]
+                ))
         else
-            for site in CartesianIndices(peps.vertices)
+            for site in CartesianIndices(peps2.vertices)
                 row, col = Tuple(site)
-                ϵ = _su_bondx!(row, col, gate, peps, Dcut)
+                ϵ = _su_bondx!(row, col, gate, peps2, Dcut)
             end
         end
         if direction == 2
-            mirror_antidiag!(peps)
+            peps2 = mirror_antidiag(peps2)
         end
     end
-    return nothing
+    return peps2
 end
 
 """
@@ -182,7 +187,7 @@ Perform simple update (maximum `evolstep` iterations)
 with nearest neighbor Hamiltonian `ham` and time step `dt` 
 until the change of bond weights is smaller than `wtdiff_tol` 
 """
-function simpleupdate!(
+function simpleupdate(
     peps::InfiniteWeightPEPS,
     ham::AbstractTensorMap,
     dt::Float64,
@@ -204,7 +209,7 @@ function simpleupdate!(
     wts0 = deepcopy(peps.weights)
     for count in 1:evolstep
         time0 = time()
-        su_iter!(gate, peps, Dcut, svderr; bipartite=bipartite)
+        peps = su_iter(gate, peps, Dcut, svderr; bipartite=bipartite)
         wtdiff = compare_weights(peps.weights, wts0)
         converge = wtdiff < wtdiff_tol
         cancel = count == evolstep
@@ -232,5 +237,5 @@ function simpleupdate!(
             break
         end
     end
-    return wtdiff
+    return peps, wtdiff
 end

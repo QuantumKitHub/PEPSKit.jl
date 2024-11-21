@@ -26,7 +26,10 @@ dts = [1e-2, 1e-3, 4e-4, 1e-4]
 tols = [1e-6, 1e-7, 5e-8, 1e-8]
 for (n, (dt, tol)) in enumerate(zip(dts, tols))
     Dcut2 = (n == 1 ? Dcut + 1 : Dcut)
-    simpleupdate!(peps, ham, dt, Dcut2; bipartite=true, evolstep=10000, wtdiff_tol=tol)
+    result = simpleupdate(
+        peps, ham, dt, Dcut2; bipartite=true, evolstep=10000, wtdiff_tol=tol
+    )
+    global peps = result[1]
 end
 # absort weight into site tensors
 peps = InfinitePEPS(peps)
