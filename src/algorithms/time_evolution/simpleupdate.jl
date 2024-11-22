@@ -181,13 +181,7 @@ function simpleupdate(
                 wtdiff,
                 time1 - ((converge || cancel) ? time_start : time0)
             )
-            if cancel
-                @warn message
-            elseif converge || (count == 1)
-                @info message
-            else
-                @debug message
-            end
+            cancel ? (@warn message) : (@info message)
         end
         if converge || cancel
             break
