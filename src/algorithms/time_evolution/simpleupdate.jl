@@ -11,11 +11,11 @@ Simple update of bond `peps.weights.x[r,c]`
 function _su_bondx!(
     row::Int,
     col::Int,
-    gate::AbstractTensorMap,
+    gate::AbstractTensorMap{S,2,2},
     peps::InfiniteWeightPEPS,
     Dcut::Int,
     svderr::Float64=1e-10,
-)
+) where {S}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     row2, col2 = row, _next(col, Nc)
@@ -91,12 +91,13 @@ When `bipartite === true` (for square lattice), the unit cell size should be 2 x
 and the tensor and x/y weight at `(row, col)` is the same as `(row+1, col+1)`
 """
 function su_iter(
-    gate::AbstractTensorMap,
+    gate::LocalOperator,
     peps::InfiniteWeightPEPS,
     Dcut::Int,
     svderr::Float64=1e-10;
     bipartite::Bool=false,
 )
+    @assert size(gate.lattice) == size(peps)
     Nr, Nc = size(peps)
     if bipartite
         @assert Nr == Nc == 2
@@ -115,20 +116,41 @@ function su_iter(
             peps2 = mirror_antidiag(peps2)
         end
         if bipartite
-            ϵ = _su_bondx!(1, 1, gate, peps2, Dcut, svderr)
-            (peps2.vertices[2, 2], peps2.vertices[2, 1], peps2.weights.x[2, 2]) =
-                deepcopy.((
-                    peps2.vertices[1, 1], peps2.vertices[1, 2], peps2.weights.x[1, 1]
-                ))
-            ϵ = _su_bondx!(2, 1, gate, peps2, Dcut, svderr)
-            (peps2.vertices[1, 2], peps2.vertices[1, 1], peps2.weights.x[1, 2]) =
-                deepcopy.((
-                    peps2.vertices[2, 1], peps2.vertices[2, 2], peps2.weights.x[2, 1]
-                ))
+            for r in 1:2
+                rp1 = _next(r, 2)
+                term = get_gateterm(
+                    gate,
+                    if direction == 1
+                        (CartesianIndex(r, 1), CartesianIndex(r, 2))
+                    else
+                        #= the bond currently at [r, 1] [r, 2]
+                        was originally at [2, 3-r] [1, 3-r] before mirroring =#
+                        (CartesianIndex(2, 3 - r), CartesianIndex(1, 3 - r))
+                    end,
+                )
+                ϵ = _su_bondx!(r, 1, term, peps2, Dcut, svderr)
+                peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
+                peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
+                peps2.weights.x[rp1, 2] = deepcopy(peps2.weights.x[r, 1])
+            end
         else
             for site in CartesianIndices(peps2.vertices)
-                row, col = Tuple(site)
-                ϵ = _su_bondx!(row, col, gate, peps2, Dcut)
+                r, c = Tuple(site)
+                term = get_gateterm(
+                    gate,
+                    if direction == 1
+                        (CartesianIndex(r, c), CartesianIndex(r, c + 1))
+                    else
+                        #= the bond currently at [r, c] [r, c+1]
+                        was originally at [Nr-c+1, Nc-r+1] [Nr-c, Nc-r+1]
+                        before mirroring =#
+                        (
+                            CartesianIndex((c == Nr ? Nr + 1 : Nr - c + 1), Nc - r + 1),
+                            CartesianIndex((c == Nr ? Nr : Nr - c), Nc - r + 1),
+                        )
+                    end,
+                )
+                ϵ = _su_bondx!(r, c, term, peps2, Dcut)
             end
         end
         if direction == 2
@@ -145,7 +167,7 @@ until the change of bond weights is smaller than `wtdiff_tol`
 """
 function simpleupdate(
     peps::InfiniteWeightPEPS,
-    ham::AbstractTensorMap,
+    ham::LocalOperator,
     dt::Float64,
     Dcut::Int;
     evolstep::Int=400000,
@@ -160,7 +182,7 @@ function simpleupdate(
         @assert N1 == N2 == 2
     end
     # exponentiating the 2-site Hamiltonian gate
-    gate = exp(-dt * ham)
+    gate = get_gate(dt, ham)
     wtdiff = 1e+3
     wts0 = deepcopy(peps.weights)
     for count in 1:evolstep

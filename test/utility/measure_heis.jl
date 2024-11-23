@@ -1,6 +1,6 @@
 module MeasureHeis
 
-export gen_gate, measure_heis
+export measure_heis
 
 using TensorKit
 import MPSKitModels: S_x, S_y, S_z, S_exchange
@@ -36,18 +36,6 @@ function measure_heis(peps::InfinitePEPS, H::LocalOperator, envs::CTMRGEnv)
         (r, c) in Iterators.product(1:Nr, 1:Nc)
     )
     return results
-end
-
-"""
-Create nearest neighbor gate for Heisenberg model
-"""
-function gen_gate(J::Float64=1.0; dens_shift::Bool=false)
-    heis = J * real(S_exchange())
-    if dens_shift
-        Pspace = ℂ^2
-        heis = heis - (J / 4) * id(Pspace) ⊗ id(Pspace)
-    end
-    return heis
 end
 
 end

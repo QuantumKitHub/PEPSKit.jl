@@ -45,6 +45,7 @@ include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
+include("algorithms/time_evolution/gatetools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")
