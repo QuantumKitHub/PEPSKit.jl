@@ -40,8 +40,6 @@ include("environments/transferpepo_environments.jl")
 
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
-include("algorithms/contractions/ctmrg_rhos.jl")
-include("algorithms/contractions/measure_rhos.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -175,8 +173,6 @@ export fixedpoint
 
 export absorb_wt
 export su_iter, simpleupdate
-export meas_site, meas_bond
-export calrho_site, calrho_bondx, calrho_bondy, calrho_all
 
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS

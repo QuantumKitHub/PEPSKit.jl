@@ -4,8 +4,8 @@ using Random
 using PEPSKit
 using TensorKit
 import Statistics: mean
-include("utility/heis.jl")
-import .RhoMeasureHeis: gen_gate, measrho_all
+include("utility/measure_heis.jl")
+import .MeasureHeis: gen_gate, measure_heis
 
 # benchmark data is from Phys. Rev. B 94, 035133 (2016)
 
@@ -19,6 +19,7 @@ for ind in CartesianIndices(peps.vertices)
     peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
 end
 # Heisenberg model Hamiltonian
+H = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0)
 ham = gen_gate()
 
 # simple update
@@ -39,8 +40,8 @@ trscheme = truncerr(1e-9) & truncdim(χenv)
 ctm_alg = CTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme, ctmrgscheme=:sequential)
 envs = leading_boundary(envs, peps, ctm_alg)
 # measure physical quantities
-rho1ss, rho2sss = calrho_all(envs, peps)
-meas = measrho_all(rho1ss, rho2sss)
+meas = measure_heis(peps, H, envs)
+display(meas)
 @info @sprintf("Energy = %.8f\n", meas["e_site"])
 @info @sprintf("Staggered magnetization = %.8f\n", mean(meas["mag_norm"]))
 @test isapprox(meas["e_site"], -0.6675; atol=1e-3)
