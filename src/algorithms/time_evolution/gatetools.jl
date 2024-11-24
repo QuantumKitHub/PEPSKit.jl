@@ -2,7 +2,9 @@
 Convert Hamiltonian `H` with nearest neighbor terms to `exp(-dt * H)`
 """
 function get_gate(dt::Float64, H::LocalOperator)
-    return LocalOperator(H.lattice, Tuple(ind => exp(-dt * op) for (ind, op) in H.terms)...)
+    return LocalOperator(
+        H.lattice, Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...
+    )
 end
 
 """
@@ -20,4 +22,80 @@ function get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
         @assert length(label) == 1
         return gate.terms[label[1]].second
     end
+end
+
+"""
+Get the position of `site` after reflection about the anti-diagonal line
+"""
+function _mirror_antidiag_site(
+    site::S, (Nrow, Ncol)::NTuple{2,Int}
+) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+    r, c = site[1], site[2]
+    return CartesianIndex(1 - c + Ncol, 1 - r + Nrow)
+end
+
+"""
+Get the position of `site` after clockwise (right) rotation by 90 degrees
+"""
+function _rotr90_site(
+    site::S, (Nrow, Ncol)::NTuple{2,Int}
+) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+    r, c = site[1], site[2]
+    return CartesianIndex(c, 1 + Nrow - r)
+end
+
+"""
+Get the position of `site` after counter-clockwise (left) rotation by 90 degrees
+"""
+function _rotl90_site(
+    site::S, (Nrow, Ncol)::NTuple{2,Int}
+) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+    r, c = site[1], site[2]
+    return CartesianIndex(1 + Ncol - c, r)
+end
+
+"""
+Get the position of `site` after rotation by 180 degrees
+"""
+function _rot180_site(
+    site::S, (Nrow, Ncol)::NTuple{2,Int}
+) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+    r, c = site[1], site[2]
+    return CartesianIndex(1 + Nrow - r, 1 + Ncol - c)
+end
+
+function mirror_antidiag(H::LocalOperator)
+    lattice2 = mirror_antidiag(H.lattice)
+    terms2 = (
+        (Tuple(_mirror_antidiag_site(site, size(H.lattice)) for site in sites) => op) for
+        (sites, op) in H.terms
+    )
+    return LocalOperator(lattice2, terms2...)
+end
+
+function Base.rotr90(H::LocalOperator)
+    lattice2 = rotr90(H.lattice)
+    terms2 = (
+        (Tuple(_rotr90_site(site, size(H.lattice)) for site in sites) => op) for
+        (sites, op) in H.terms
+    )
+    return LocalOperator(lattice2, terms2...)
+end
+
+function Base.rotl90(H::LocalOperator)
+    lattice2 = rotl90(H.lattice)
+    terms2 = (
+        (Tuple(_rotl90_site(site, size(H.lattice)) for site in sites) => op) for
+        (sites, op) in H.terms
+    )
+    return LocalOperator(lattice2, terms2...)
+end
+
+function Base.rot180(H::LocalOperator)
+    lattice2 = rot180(H.lattice)
+    terms2 = (
+        (Tuple(_rot180_site(site, size(H.lattice)) for site in sites) => op) for
+        (sites, op) in H.terms
+    )
+    return LocalOperator(lattice2, terms2...)
 end
