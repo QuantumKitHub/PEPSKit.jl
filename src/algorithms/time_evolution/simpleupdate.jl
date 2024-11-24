@@ -109,6 +109,7 @@ function su_iter(
         @assert [isdual(space(peps.weights.y[r, c], ax)) for ax in 1:2] == [0, 1]
     end
     peps2 = deepcopy(peps)
+    gate_mirrored = mirror_antidiag(gate)
     for direction in 1:2
         # mirror the y-weights to x-direction 
         # to update them using code for x-weights
@@ -119,14 +120,8 @@ function su_iter(
             for r in 1:2
                 rp1 = _next(r, 2)
                 term = get_gateterm(
-                    gate,
-                    if direction == 1
-                        (CartesianIndex(r, 1), CartesianIndex(r, 2))
-                    else
-                        #= the bond currently at [r, 1] [r, 2]
-                        was originally at [2, 3-r] [1, 3-r] before mirroring =#
-                        (CartesianIndex(2, 3 - r), CartesianIndex(1, 3 - r))
-                    end,
+                    direction == 1 ? gate : gate_mirrored,
+                    (CartesianIndex(r, 1), CartesianIndex(r, 2))
                 )
                 ϵ = _su_bondx!(r, 1, term, peps2, Dcut, svderr)
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
@@ -137,18 +132,8 @@ function su_iter(
             for site in CartesianIndices(peps2.vertices)
                 r, c = Tuple(site)
                 term = get_gateterm(
-                    gate,
-                    if direction == 1
-                        (CartesianIndex(r, c), CartesianIndex(r, c + 1))
-                    else
-                        #= the bond currently at [r, c] [r, c+1]
-                        was originally at [Nr-c+1, Nc-r+1] [Nr-c, Nc-r+1]
-                        before mirroring =#
-                        (
-                            CartesianIndex((c == Nr ? Nr + 1 : Nr - c + 1), Nc - r + 1),
-                            CartesianIndex((c == Nr ? Nr : Nr - c), Nc - r + 1),
-                        )
-                    end,
+                    direction == 1 ? gate : gate_mirrored,
+                    (CartesianIndex(r, c), CartesianIndex(r, c + 1))
                 )
                 ϵ = _su_bondx!(r, c, term, peps2, Dcut)
             end
