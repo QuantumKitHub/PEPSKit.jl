@@ -121,7 +121,7 @@ function su_iter(
                 rp1 = _next(r, 2)
                 term = get_gateterm(
                     direction == 1 ? gate : gate_mirrored,
-                    (CartesianIndex(r, 1), CartesianIndex(r, 2))
+                    (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
                 ϵ = _su_bondx!(r, 1, term, peps2, Dcut, svderr)
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
@@ -133,7 +133,7 @@ function su_iter(
                 r, c = Tuple(site)
                 term = get_gateterm(
                     direction == 1 ? gate : gate_mirrored,
-                    (CartesianIndex(r, c), CartesianIndex(r, c + 1))
+                    (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
                 ϵ = _su_bondx!(r, c, term, peps2, Dcut)
             end
