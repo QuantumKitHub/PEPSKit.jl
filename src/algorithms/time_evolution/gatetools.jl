@@ -19,7 +19,7 @@ function is_equivalent(
     r2 = bond2[1] - bond2[2]
     shift_row = bond1[1][1] - bond2[1][1]
     shift_col = bond1[1][2] - bond2[1][2]
-    return r1 == r2 && mod(shift_row, Nrow) == 0 && mod(shift_col, Ncol) == 0 
+    return r1 == r2 && mod(shift_row, Nrow) == 0 && mod(shift_col, Ncol) == 0
 end
 
 """
