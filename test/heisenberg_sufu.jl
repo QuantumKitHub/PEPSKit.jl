@@ -32,7 +32,7 @@ for (n, (dt, tol)) in enumerate(zip(dts, tols))
     Dcut2 = (n == 1 ? Dcut + 1 : Dcut)
     trscheme = truncerr(1e-10) & truncdim(Dcut2)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-    result = PEPSKit._simpleupdate(peps, ham, alg; bipartite=false)
+    result = simpleupdate(peps, ham, alg; bipartite=false)
     global peps = result[1]
 end
 # absort weight into site tensors

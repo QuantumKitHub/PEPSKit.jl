@@ -8,7 +8,6 @@ struct SimpleUpdate
     maxiter::Int
     trscheme::TensorKit.TruncationScheme
 end
-const SU = SimpleUpdate
 
 """
 Simple update of bond `peps.weights.x[r,c]`
@@ -154,12 +153,8 @@ end
 """
 Perform simple update with nearest neighbor Hamiltonian `ham`.
 Evolution information is printed every `check_int` steps. 
-
-This function is deliberately not exported, 
-since time evolution algorithms is sensitive to both initialization 
-and the choice of evolution parameters. 
 """
-function _simpleupdate(
+function simpleupdate(
     peps::InfiniteWeightPEPS,
     ham::LocalOperator,
     alg::SimpleUpdate;
