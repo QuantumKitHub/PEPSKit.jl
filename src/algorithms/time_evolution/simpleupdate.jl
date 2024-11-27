@@ -1,4 +1,16 @@
 """
+Algorithm struct for simple update (SU) of infinite PEPS with bond weights/
+Each SU run is converged when the singular value difference becomes smaller than `tol`.
+"""
+struct SimpleUpdate
+    dt::Float64
+    tol::Float64
+    maxiter::Int
+    trscheme::TensorKit.TruncationScheme
+end
+const SU = SimpleUpdate
+
+"""
 Simple update of bond `peps.weights.x[r,c]`
 ```
                 y[r,c]              y[r,c+1]
@@ -13,8 +25,7 @@ function _su_bondx!(
     col::Int,
     gate::AbstractTensorMap{S,2,2},
     peps::InfiniteWeightPEPS,
-    Dcut::Int,
-    svderr::Float64=1e-10,
+    alg::SimpleUpdate,
 ) where {S}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -58,8 +69,7 @@ function _su_bondx!(
     =#
     @tensor tmp[:] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
     # SVD
-    truncscheme = truncerr(svderr) & truncdim(Dcut)
-    aR, s, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncscheme)
+    aR, s, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=alg.trscheme)
     #=
             -2         -1              -1    -2
             |         ↗               ↗       |
@@ -91,11 +101,7 @@ When `bipartite === true` (for square lattice), the unit cell size should be 2 x
 and the tensor and x/y weight at `(row, col)` is the same as `(row+1, col+1)`
 """
 function su_iter(
-    gate::LocalOperator,
-    peps::InfiniteWeightPEPS,
-    Dcut::Int,
-    svderr::Float64=1e-10;
-    bipartite::Bool=false,
+    gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool=false
 )
     @assert size(gate.lattice) == size(peps)
     Nr, Nc = size(peps)
@@ -123,7 +129,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
-                ϵ = _su_bondx!(r, 1, term, peps2, Dcut, svderr)
+                ϵ = _su_bondx!(r, 1, term, peps2, alg)
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
                 peps2.weights.x[rp1, 2] = deepcopy(peps2.weights.x[r, 1])
@@ -135,7 +141,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
-                ϵ = _su_bondx!(r, c, term, peps2, Dcut)
+                ϵ = _su_bondx!(r, c, term, peps2, alg)
             end
         end
         if direction == 2
@@ -146,18 +152,17 @@ function su_iter(
 end
 
 """
-Perform simple update (maximum `evolstep` iterations)
-with nearest neighbor Hamiltonian `ham` and time step `dt` 
-until the change of bond weights is smaller than `wtdiff_tol` 
+Perform simple update with nearest neighbor Hamiltonian `ham`.
+Evolution information is printed every `check_int` steps. 
+
+This function is deliberately not exported, 
+since time evolution algorithms is sensitive to both initialization 
+and the choice of evolution parameters. 
 """
-function simpleupdate(
+function _simpleupdate(
     peps::InfiniteWeightPEPS,
     ham::LocalOperator,
-    dt::Float64,
-    Dcut::Int;
-    evolstep::Int=400000,
-    svderr::Float64=1e-10,
-    wtdiff_tol::Float64=1e-10,
+    alg::SimpleUpdate;
     bipartite::Bool=false,
     check_int::Int=500,
 )
@@ -167,15 +172,15 @@ function simpleupdate(
         @assert N1 == N2 == 2
     end
     # exponentiating the 2-site Hamiltonian gate
-    gate = get_gate(dt, ham)
-    wtdiff = 1e+3
+    gate = get_gate(alg.dt, ham)
+    wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
-    for count in 1:evolstep
+    for count in 1:(alg.maxiter)
         time0 = time()
-        peps = su_iter(gate, peps, Dcut, svderr; bipartite=bipartite)
+        peps = su_iter(gate, peps, alg; bipartite=bipartite)
         wtdiff = compare_weights(peps.weights, wts0)
-        converge = wtdiff < wtdiff_tol
-        cancel = count == evolstep
+        converge = (wtdiff < alg.tol)
+        cancel = (count == alg.maxiter)
         wts0 = deepcopy(peps.weights)
         time1 = time()
         if ((count == 1) || (count % check_int == 0) || converge || cancel)
@@ -184,7 +189,7 @@ function simpleupdate(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
                 label,
                 count,
-                dt,
+                alg.dt,
                 wtdiff,
                 time1 - ((converge || cancel) ? time_start : time0)
             )

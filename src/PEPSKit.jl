@@ -173,7 +173,7 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
 export absorb_wt
-export su_iter, simpleupdate
+export su_iter, SimpleUpdate
 
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS

@@ -27,11 +27,12 @@ ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.term
 # simple update
 dts = [1e-2, 1e-3, 4e-4, 1e-4]
 tols = [1e-6, 1e-8, 1e-8, 1e-8]
+maxiter = 10000
 for (n, (dt, tol)) in enumerate(zip(dts, tols))
     Dcut2 = (n == 1 ? Dcut + 1 : Dcut)
-    result = simpleupdate(
-        peps, ham, dt, Dcut2; bipartite=false, evolstep=10000, wtdiff_tol=tol
-    )
+    trscheme = truncerr(1e-10) & truncdim(Dcut2)
+    alg = SimpleUpdate(dt, tol, maxiter, trscheme)
+    result = PEPSKit._simpleupdate(peps, ham, alg; bipartite=false)
     global peps = result[1]
 end
 # absort weight into site tensors
