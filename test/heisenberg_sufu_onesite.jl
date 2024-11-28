@@ -30,9 +30,17 @@ ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.term
 
 # Include the onsite operators in two ways
 ham_SU = LocalOperator(
-        ham.lattice, Tuple(sites => op + (S_z() ⊗ onsite)/2 for (sites, op) in ham.terms if length(sites) == 2)...
-    )
-ham_CTMRG = LocalOperator(ham.lattice, Tuple(ind => op for (ind, op) in ham.terms)..., ((idx,) => S_z() for idx in vertices(lattice))...)
+    ham.lattice,
+    Tuple(
+        sites => op + (S_z() ⊗ onsite) / 2 for
+        (sites, op) in ham.terms if length(sites) == 2
+    )...,
+)
+ham_CTMRG = LocalOperator(
+    ham.lattice,
+    Tuple(ind => op for (ind, op) in ham.terms)...,
+    ((idx,) => S_z() for idx in vertices(lattice))...,
+)
 
 # simple update with ham_SU
 dts = [1e-2, 1e-3, 4e-4, 1e-4]
@@ -56,7 +64,7 @@ envs = leading_boundary(envs, peps, ctm_alg)
 meas = measure_heis(peps, ham_SU, envs)
 
 # CTMRG with ham_CTMRG
-psi_init = InfinitePEPS(2, Dcut; unitcell = (N1, N2))
+psi_init = InfinitePEPS(2, Dcut; unitcell=(N1, N2))
 env0 = CTMRGEnv(psi_init, ComplexSpace(χenv));
 env_init = leading_boundary(env0, psi_init, ctm_alg);
 
@@ -68,4 +76,4 @@ opt_alg = PEPSOptimize(;
 )
 result = fixedpoint(psi_init, ham_CTMRG, opt_alg, env_init)
 
-@test isapprox(result.E/(N1*N2), meas["e_site"], atol=1e-2)
+@test isapprox(result.E / (N1 * N2), meas["e_site"], atol=1e-2)
