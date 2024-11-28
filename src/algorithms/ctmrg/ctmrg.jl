@@ -8,37 +8,46 @@ have different spaces, this truncation style is different from `TruncationSpace`
 struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
 """
-    struct ProjectorAlg{S}(; svd_alg=TensorKit.SVD(), trscheme=TensorKit.notrunc(),
-                           fixedspace=false, verbosity=0)
+    struct HalfInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
+                                      trscheme=Defaults.trscheme, verbosity=0)
 
-Algorithm struct collecting all projector related parameters. The truncation scheme has to be
-a `TensorKit.TruncationScheme`, and some SVD algorithms might have further restrictions on what
-kind of truncation scheme can be used. If `fixedspace` is true, the truncation scheme is set to
-`truncspace(V)` where `V` is the environment bond space, adjusted to the corresponding
-environment direction/unit cell entry.
+Projector algorithm implementing projectors from SVDing the half-infinite CTMRG environment.
 """
-@kwdef struct ProjectorAlg{S<:SVDAdjoint,T}
+@kwdef struct HalfInfiniteProjector{S<:SVDAdjoint,T}
     svd_alg::S = Defaults.svd_alg
     trscheme::T = Defaults.trscheme
     verbosity::Int = 0
 end
-# TODO: add option for different projector styles (half-infinite, full-infinite, etc.)
 
-function truncation_scheme(alg::ProjectorAlg, edge)
-    if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(space(edge, 1))
-    else
-        return alg.trscheme
-    end
+"""
+    struct FullInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
+                                      trscheme=Defaults.trscheme, verbosity=0)
+
+Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG environment.
+"""
+@kwdef struct FullInfiniteProjector{S<:SVDAdjoint,T}
+    svd_alg::S = Defaults.svd_alg
+    trscheme::T = Defaults.trscheme
+    verbosity::Int = 0
 end
 
-function svd_algorithm(alg::ProjectorAlg, (dir, r, c))
+const ProjectorAlgs = Union{HalfInfiniteProjector,FullInfiniteProjector}
+
+function svd_algorithm(alg::ProjectorAlgs, (dir, r, c))
     if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
         fwd_alg = alg.svd_alg.fwd_alg
         fix_svd = FixedSVD(fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c])
         return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
     else
         return alg.svd_alg
+    end
+end
+
+function truncation_scheme(alg::ProjectorAlgs, edge)
+    if alg.trscheme isa FixedSpaceTruncation
+        return truncspace(space(edge, 1))
+    else
+        return alg.trscheme
     end
 end
 
@@ -64,12 +73,12 @@ computed on the western side, and then applied and rotated. Or with `:simultaneo
 are computed and applied simultaneously on all sides, where in particular the corners get
 contracted with two projectors at the same time.
 """
-struct CTMRG{S}
+struct CTMRG{S,P<:ProjectorAlgs}
     tol::Float64
     maxiter::Int
     miniter::Int
     verbosity::Int
-    projector_alg::ProjectorAlg
+    projector_alg::P
 end
 function CTMRG(;
     tol=Defaults.ctmrg_tol,
@@ -81,15 +90,19 @@ function CTMRG(;
     ctmrgscheme::Symbol=Defaults.ctmrgscheme,
 )
     return CTMRG{ctmrgscheme}(
-        tol, maxiter, miniter, verbosity, ProjectorAlg(; svd_alg, trscheme, verbosity)
+        tol,
+        maxiter,
+        miniter,
+        verbosity,
+        Defaults.projector_alg(; svd_alg, trscheme, verbosity),
     )
 end
 
 ctmrgscheme(::CTMRG{S}) where {S} = S
 
 # aliases for the different CTMRG schemes
-const SequentialCTMRG = CTMRG{:sequential}
-const SimultaneousCTMRG = CTMRG{:simultaneous}
+const SequentialCTMRG{P} = CTMRG{:sequential,P}
+const SimultaneousCTMRG{P} = CTMRG{:simultaneous,P}
 
 # supply correct constructor for Accessors.@set
 Accessors.constructorof(::Type{CTMRG{S}}) where {S} = CTMRG{S}
@@ -139,7 +152,7 @@ end
 Perform one iteration of CTMRG that maps the `state` and `envs` to a new environment,
 and also returns the truncation error.
 """
-function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
+function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG{})
     ϵ = zero(real(scalartype(state)))
     for _ in 1:4
         # left move
@@ -155,7 +168,7 @@ function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
 
     return envs, (; err=ϵ)
 end
-function ctmrg_iter(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
+function ctmrg_iter(state, envs::CTMRGEnv, alg::SimultaneousCTMRG{})
     enlarged_envs = ctmrg_expand(state, envs, alg)
     projectors, info = ctmrg_projectors(enlarged_envs, envs, alg)
     envs′ = ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg)
@@ -206,7 +219,7 @@ Compute the CTMRG projectors based from enlarged environments.
 In the `:simultaneous` mode, the environment SVD is run in parallel.
 """
 function ctmrg_projectors(
-    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
+    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG{<:HalfInfiniteProjector}
 ) where {C,E}
     projector_alg = alg.projector_alg
     ϵ = zero(real(scalartype(envs)))
@@ -237,7 +250,44 @@ function ctmrg_projectors(
     return (map(first, projectors), map(last, projectors)), (; err=ϵ)
 end
 function ctmrg_projectors(
-    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SimultaneousCTMRG
+    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG{<:FullInfiniteProjector}
+) where {C,E}
+    projector_alg = alg.projector_alg
+    ϵ = zero(real(scalartype(envs)))
+
+    coordinates = eachcoordinate(envs)
+    projectors = dtmap(coordinates) do (r, c)
+        # SVD half-infinite environment
+        r′ = _prev(r, size(envs.corners, 2))
+        c′ = _next(c, size(envs.corners, 3))
+        QQ = fullinfinite_environment(
+            enlarged_envs[1, r, c],
+            enlarged_envs[2, r′, c],
+            enlarged_envs[3, r′, c′],
+            enlarged_envs[4, r, c′], # TODO: break up the CTMRG expand/project/renormalize scheme!
+        )
+
+        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
+        svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
+        U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
+        ϵ = max(ϵ, ϵ_local / norm(S))
+
+        # Compute SVD truncation error and check for degenerate singular values
+        Zygote.isderiving() && ignore_derivatives() do
+            if alg.verbosity > 0 && is_degenerate_spectrum(S)
+                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+                @warn("degenerate singular values detected: ", svals)
+            end
+        end
+
+        # Compute projectors
+        return build_projectors(U, S, V, enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
+    end
+
+    return (map(first, projectors), map(last, projectors)), (; err=ϵ)
+end
+function ctmrg_projectors(
+    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SimultaneousCTMRG{<:HalfInfiniteProjector}
 ) where {C,E}
     projector_alg = alg.projector_alg
     # pre-allocation
