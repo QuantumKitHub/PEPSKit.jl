@@ -9,6 +9,14 @@ struct SimpleUpdate
     trscheme::TensorKit.TruncationScheme
 end
 
+function truncation_scheme(alg::SimpleUpdate, v::ElementarySpace)
+    if alg.trscheme isa FixedSpaceTruncation
+        return truncspace(v)
+    else
+        return alg.trscheme
+    end
+end
+
 """
 Simple update of bond `peps.weights.x[r,c]`
 ```
@@ -68,7 +76,7 @@ function _su_bondx!(
     =#
     @tensor tmp[:] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
     # SVD
-    aR, s, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=alg.trscheme)
+    aR, s, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncation_scheme(alg, space(T1, 3)))
     #=
             -2         -1              -1    -2
             |         ↗               ↗       |
