@@ -187,6 +187,7 @@ function simpleupdate(
         wts0 = deepcopy(peps.weights)
         time1 = time()
         if ((count == 1) || (count % check_int == 0) || converge || cancel)
+            @info "Space of x-weight at [1, 1] = $(space(peps.weights.x[1, 1], 1))" 
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
