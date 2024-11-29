@@ -62,18 +62,17 @@ ctm_alg = CTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme, ctmrgscheme=:simult
 envs = leading_boundary(envs, peps, ctm_alg)
 # measure physical quantities
 meas = measure_heis(peps, ham_SU, envs)
+display(meas)
 
-# CTMRG with ham_CTMRG
-psi_init = InfinitePEPS(2, Dcut; unitcell=(N1, N2))
-env0 = CTMRGEnv(psi_init, ComplexSpace(χenv));
-env_init = leading_boundary(env0, psi_init, ctm_alg);
-
+# continue with auto-diff optimization
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-3, verbosity=2),
     gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6), iterscheme=:fixed),
     reuse_env=true,
 )
-result = fixedpoint(psi_init, ham_CTMRG, opt_alg, env_init)
+result = fixedpoint(peps, ham_CTMRG, opt_alg, envs)
+meas2 = measure_heis(result.peps, ham_CTMRG, result.env)
+display(meas2)
 
 @test isapprox(result.E / (N1 * N2), meas["e_site"], atol=1e-2)
