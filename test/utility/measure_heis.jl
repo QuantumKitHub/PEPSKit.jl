@@ -14,7 +14,7 @@ function cal_mags(peps::InfinitePEPS, envs::CTMRGEnv)
     Nr, Nc = size(peps)
     lattice = collect(space(t, 1) for t in peps.A)
     # detect symmetry on physical axis
-    symm = sectortype(space(peps.A[1,1]))
+    symm = sectortype(space(peps.A[1, 1]))
     if symm == Trivial
         Sas = real.([S_x(symm), im * S_y(symm), S_z(symm)])
     elseif symm == U1Irrep
