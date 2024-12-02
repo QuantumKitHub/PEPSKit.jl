@@ -2,6 +2,7 @@
 Convert Hamiltonian `H` with nearest neighbor terms to `exp(-dt * H)`
 """
 function get_gate(dt::Float64, H::LocalOperator)
+    @assert all([length(op.dom) for (_, op) in H.terms] .== 2) "Only two-body terms allowed"
     return LocalOperator(
         H.lattice, Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...
     )
