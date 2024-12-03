@@ -212,11 +212,11 @@ end
 """
     half_infinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
-                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
     half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
-                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -325,9 +325,19 @@ function half_infinite_environment(
 end
 
 """
+    full_infinite_environment(
+        quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
+    ) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                              ket_1::P, ket_2::P, ket_3::P, ket_4::P,
+                              bra_1::P=ket_1, bra_2::P=ket_2, bra_3::P=ket_3, bra_4::P=ket_4) where {P<:PEPSTensor}
+    full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                              ket_1::P, ket_2::P, ket_3::P, ket_4::P,
+                              bra_1::P=ket_1, bra_2::P=ket_2, bra_3::P=ket_3, bra_4::P=ket_4) where {P<:PEPSTensor}
 
-Contract four quadrants (enlarged corners) to form a full-infinite environment where the
-open bonds can be on any side (diagrams show open bonds in the west).
+Contract four quadrants (enlarged corners) to form a full-infinite environment.
 
 ```
     |~~~~~~~~~| -- |~~~~~~~~~|
