@@ -345,7 +345,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::LinSolver)
-    y, info = linsolve(∂f∂x, ∂F∂x, y₀, alg.solver, 1, -1)
+    y, info = reallinsolve(∂f∂x, ∂F∂x, y₀, alg.solver, 1, -1)
     if alg.solver.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
