@@ -143,10 +143,7 @@ function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            enlarged_envs = ctmrg_expand(
-                eachcoordinate(envs, [4, 1])[:, :, col], state, envs
-            )
-            projectors, info = ctmrg_projectors(col, enlarged_envs, envs, alg)
+            projectors, info = ctmrg_projectors(col, state, envs, alg)
             envs = ctmrg_renormalize(col, projectors, state, envs, alg)
             ϵ = max(ϵ, info.err)
         end
@@ -182,9 +179,9 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 
 Expand the environment by absorbing a new PEPS tensor on the given coordinates.
 """
-function ctmrg_expand(coordinates, state, envs::CTMRGEnv)
-    return dtmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), coordinates)
-end
+# function ctmrg_expand(coordinates, state, envs::CTMRGEnv)
+#     return dtmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), coordinates)
+# end
 
 # ======================================================================================== #
 # Projector step
@@ -199,7 +196,7 @@ In the `:sequential` mode the projectors are computed for the column `col`, wher
 in the `:simultaneous` mode, all projectors (and corresponding SVDs) are computed in parallel.
 """
 function ctmrg_projectors(
-    col::Int, enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
+    col::Int, state::InfinitePEPS, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
 ) where {C,E}
     projector_alg = alg.projector_alg
     ϵ = zero(real(scalartype(envs)))
@@ -208,7 +205,9 @@ function ctmrg_projectors(
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
         r′ = _prev(r, size(envs.corners, 2))
-        QQ = halfinfinite_environment(enlarged_envs[1, r], enlarged_envs[2, r′])
+        Q1 = TensorMap(EnlargedCorner(state, envs, (SOUTHWEST, r, c)), SOUTHWEST)
+        Q2 = TensorMap(EnlargedCorner(state, envs, (NORTHWEST, r′, c)), NORTHWEST)
+        QQ = halfinfinite_environment(Q1, Q2)
         trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
         U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
@@ -223,7 +222,7 @@ function ctmrg_projectors(
         end
 
         # Compute projectors
-        return build_projectors(U, S, V, enlarged_envs[1, r], enlarged_envs[2, r′])
+        return build_projectors(U, S, V, Q1, Q2)
     end
     return (map(first, projectors), map(last, projectors)), (; err=ϵ)
 end
