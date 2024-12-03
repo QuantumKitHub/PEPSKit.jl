@@ -142,19 +142,26 @@ The function returns a `NamedTuple` which contains the following entries:
 - `numfg`: total number of calls to the energy function
 """
 function fixedpoint(
-    ψ₀::InfinitePEPS{T},
+    ψ₀::InfinitePEPS{F},
     H,
     alg::PEPSOptimize,
-    env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20);
+    env₀::CTMRGEnv{C,T}=CTMRGEnv(ψ₀, field(F)^20);
     (finalize!)=OptimKit._finalize!,
     symmetrization=nothing,
-) where {T}
+) where {F,C,T}
     if isnothing(symmetrization)
         retract = peps_retract
     else
         retract, symm_finalize! = symmetrize_retract_and_finalize!(symmetrization)
         fin! = finalize!  # Previous finalize!
         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
+    end
+
+    if scalartype(C) <: Real || scalartype(T) <: Real
+        env₀ = CTMRGEnv(complex.(env₀.corners), complex.(env₀.edges))
+        @warn "the provided real environment was converted to a complex environment since\
+        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work\
+        with purely real environments"
     end
 
     (peps, env), E, ∂E, numfg, convhistory = optimize(
