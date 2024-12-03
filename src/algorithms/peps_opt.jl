@@ -145,10 +145,10 @@ function fixedpoint(
     ψ₀::InfinitePEPS{F},
     H,
     alg::PEPSOptimize,
-    env₀::CTMRGEnv{C,T}=CTMRGEnv(ψ₀, field(F)^20);
+    env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(F)^20);
     (finalize!)=OptimKit._finalize!,
     symmetrization=nothing,
-) where {F,C,T}
+) where {F}
     if isnothing(symmetrization)
         retract = peps_retract
     else
@@ -157,8 +157,8 @@ function fixedpoint(
         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
     end
 
-    if scalartype(C) <: Real || scalartype(T) <: Real
-        env₀ = CTMRGEnv(complex.(env₀.corners), complex.(env₀.edges))
+    if scalartype(env₀) <: Real
+        env₀ = complex(env₀)
         @warn "the provided real environment was converted to a complex environment since\
         :fixed mode generally produces complex gauges; use :diffgauge mode instead to work\
         with purely real environments"
