@@ -375,11 +375,8 @@ Alternatively, contract the environment with a vector `x` acting on it
 or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
 """
 function full_infinite_environment(
-    quadrant1::AbstractTensorMap{S,3,3},
-    quadrant2::AbstractTensorMap{S,3,3},
-    quadrant3::AbstractTensorMap{S,3,3},
-    quadrant4::AbstractTensorMap{S,3,3},
-) where {S} end
+    quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
+) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}} end
 function full_infinite_environment(
     C_1,
     C_2,
