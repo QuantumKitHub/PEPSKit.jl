@@ -179,9 +179,9 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 
 Expand the environment by absorbing a new PEPS tensor on the given coordinates.
 """
-# function ctmrg_expand(coordinates, state, envs::CTMRGEnv)
-#     return dtmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), coordinates)
-# end
+function ctmrg_expand(coordinates, state, envs::CTMRGEnv)
+    return dtmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), coordinates)
+end
 
 # ======================================================================================== #
 # Projector step
