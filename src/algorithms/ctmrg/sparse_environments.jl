@@ -139,7 +139,7 @@ end
 Instantiate half-infinite environment as `TensorMap` explicitly.
 """
 function TensorKit.TensorMap(env::HalfInfiniteEnv)  # Dense operator
-    return halfinfinite_environment(
+    return half_infinite_environment(
         env.C_1,
         env.C_2,
         env.E_1,
@@ -161,7 +161,7 @@ Contract half-infinite environment with a vector `x`, such that the environment 
 linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed, respectively.
 """
 function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
-    return halfinfinite_environment(
+    return half_infinite_environment(
         env.C_1,
         env.C_2,
         env.E_1,
@@ -176,7 +176,7 @@ function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
     )
 end
 function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
-    return halfinfinite_environment(
+    return half_infinite_environment(
         x,
         env.C_1,
         env.C_2,
@@ -191,8 +191,8 @@ function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
     )
 end
 
-# Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
-function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
+# Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
+function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
     return HalfInfiniteEnv(
         ec_1.C,
         ec_2.C,

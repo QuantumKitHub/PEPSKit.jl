@@ -31,6 +31,7 @@ Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG envir
     verbosity::Int = 0
 end
 
+# TODO: do AbstractProjectorAlg type instead? -> would make it easier for users to implement custom projector alg
 const ProjectorAlgs = Union{HalfInfiniteProjector,FullInfiniteProjector}
 
 function svd_algorithm(alg::ProjectorAlgs, (dir, r, c))
@@ -228,7 +229,7 @@ function ctmrg_projectors(
     projectors = dtmap(coordinates) do (r, c)
         # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
-        QQ = halfinfinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
+        QQ = half_infinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
 
         trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
@@ -310,7 +311,7 @@ function ctmrg_projectors(
         end
 
         # SVD half-infinite environment
-        QQ = halfinfinite_environment(
+        QQ = half_infinite_environment(
             enlarged_envs[dir, r, c], enlarged_envs[_next(dir, 4), next_rc...]
         )
 
