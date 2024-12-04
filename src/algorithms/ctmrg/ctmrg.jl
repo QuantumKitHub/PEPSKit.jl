@@ -44,9 +44,9 @@ function svd_algorithm(alg::ProjectorAlgs, (dir, r, c))
     end
 end
 
-function truncation_scheme(alg::ProjectorAlgs, edge)
+function truncation_scheme(alg::ProjectorAlgs, Espace)
     if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(space(edge, 1))
+        return truncspace(Espace)
     else
         return alg.trscheme
     end
@@ -213,138 +213,146 @@ end
 # Projector step
 # ======================================================================================== #
 
-"""
-    ctmrg_projectors(enlarged_envs, env, alg::CTMRG{M})
+# TODO: embed this into new functions after refactor
+function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjector)
+    # SVD half-infinite environment
+    halfinf = half_infinite_environment(enlarged_corners...)
+    trscheme = truncation_scheme(projector_alg, space(enlarged_corners[2], 1))
+    svd_alg = svd_algorithm(projector_alg, coordinate)
+    U, S, V, err = PEPSKit.tsvd!(halfinf, svd_alg; trunc=trscheme)
 
-Compute the CTMRG projectors based from enlarged environments.
-In the `:simultaneous` mode, the environment SVD is run in parallel.
-"""
-function ctmrg_projectors(
-    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG{<:HalfInfiniteProjector}
-) where {C,E}
-    projector_alg = alg.projector_alg
-    ϵ = zero(real(scalartype(envs)))
-
-    coordinates = eachcoordinate(envs)
-    projectors = dtmap(coordinates) do (r, c)
-        # SVD half-infinite environment
-        r′ = _prev(r, size(envs.corners, 2))
-        QQ = half_infinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
-
-        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
-        svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
-        U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
-        ϵ = max(ϵ, ϵ_local / norm(S))
-
-        # Compute SVD truncation error and check for degenerate singular values
-        Zygote.isderiving() && ignore_derivatives() do
-            if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-                @warn("degenerate singular values detected: ", svals)
-            end
+    # Compute SVD truncation error and check for degenerate singular values
+    Zygote.isderiving() && ignore_derivatives() do
+        if alg.verbosity > 0 && is_degenerate_spectrum(S)
+            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+            @warn("degenerate singular values detected: ", svals)
         end
-
-        # Compute projectors
-        return build_projectors(U, S, V, enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
     end
 
-    return (map(first, projectors), map(last, projectors)), (; err=ϵ)
+    P_left, P_right = build_projectors(U, S, V, enlarged_corners...)
+    return (P_left, P_right), (; err, U, S, V)
 end
-function ctmrg_projectors(
-    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG{<:FullInfiniteProjector}
-) where {C,E}
-    projector_alg = alg.projector_alg
-    ϵ = zero(real(scalartype(envs)))
 
-    coordinates = eachcoordinate(envs)
-    projectors = dtmap(coordinates) do (r, c)
-        # SVD half-infinite environment
-        r′ = _prev(r, size(envs.corners, 2))
-        c′ = _next(c, size(envs.corners, 3))
-        QQ = fullinfinite_environment(
-            enlarged_envs[1, r, c],
-            enlarged_envs[2, r′, c],
-            enlarged_envs[3, r′, c′],
-            enlarged_envs[4, r, c′], # TODO: break up the CTMRG expand/project/renormalize scheme!
-        )
+function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
+    # QR top and bottom half-infinite environments
+    halfinf_top = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
+    halfinf_bot = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
+    _, R_top = leftorth!(halfinf_top)
+    _, R_bot = leftorth!(halfinf_bot)
+    R_fullinf = R_top * R_bot
 
-        trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
-        svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
-        U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
-        ϵ = max(ϵ, ϵ_local / norm(S))
+    # SVD product of R's
+    trscheme = truncation_scheme(projector_alg, space(enlarged_corners[4], 1))
+    svd_alg = svd_algorithm(projector_alg, coordinate)
+    U, S, V, err = PEPSKit.tsvd!(R_fullinf, svd_alg; trunc=trscheme)
 
-        # Compute SVD truncation error and check for degenerate singular values
-        Zygote.isderiving() && ignore_derivatives() do
-            if alg.verbosity > 0 && is_degenerate_spectrum(S)
-                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-                @warn("degenerate singular values detected: ", svals)
-            end
+    # Compute SVD truncation error and check for degenerate singular values
+    Zygote.isderiving() && ignore_derivatives() do
+        if alg.verbosity > 0 && is_degenerate_spectrum(S)
+            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+            @warn("degenerate singular values detected: ", svals)
         end
-
-        # Compute projectors
-        return build_projectors(U, S, V, enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
     end
 
-    return (map(first, projectors), map(last, projectors)), (; err=ϵ)
+    P_left, P_right = build_projectors(U, S, V, R_top, R_bot)
+    return (P_left, P_right), (; err, U, S, V)
 end
-function ctmrg_projectors(
-    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SimultaneousCTMRG{<:HalfInfiniteProjector}
-) where {C,E}
-    projector_alg = alg.projector_alg
-    # pre-allocation
-    U, V = Zygote.Buffer.(projector_type(envs.edges))
-    # Corner type but with real numbers
-    S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
 
-    ϵ = zero(real(scalartype(envs)))
-    coordinates = eachcoordinate(envs, 1:4)
-    projectors = dtmap(coordinates) do (dir, r, c)
-        # Row-column index of next enlarged corner
-        next_rc = if dir == 1
-            (r, _next(c, size(envs.corners, 3)))
-        elseif dir == 2
-            (_next(r, size(envs.corners, 2)), c)
-        elseif dir == 3
-            (r, _prev(c, size(envs.corners, 3)))
-        elseif dir == 4
-            (_prev(r, size(envs.corners, 2)), c)
-        end
+# """
+#     ctmrg_projectors(enlarged_envs, env, alg::CTMRG{M})
 
-        # SVD half-infinite environment
-        QQ = half_infinite_environment(
-            enlarged_envs[dir, r, c], enlarged_envs[_next(dir, 4), next_rc...]
-        )
+# Compute the CTMRG projectors based from enlarged environments.
+# In the `:simultaneous` mode, the environment SVD is run in parallel.
+# """
+# function ctmrg_projectors(
+#     enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG{<:HalfInfiniteProjector}
+# ) where {C,E}
+#     projector_alg = alg.projector_alg
+#     ϵ = zero(real(scalartype(envs)))
 
-        trscheme = truncation_scheme(projector_alg, envs.edges[dir, next_rc...])
-        svd_alg = svd_algorithm(projector_alg, (dir, r, c))
-        U_local, S_local, V_local, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
-        U[dir, r, c] = U_local
-        S[dir, r, c] = S_local
-        V[dir, r, c] = V_local
-        ϵ = max(ϵ, ϵ_local / norm(S_local))
+#     coordinates = eachcoordinate(envs)
+#     projectors = dtmap(coordinates) do (r, c)
+#         # SVD half-infinite environment
+#         r′ = _prev(r, size(envs.corners, 2))
+#         QQ = half_infinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
 
-        # Compute SVD truncation error and check for degenerate singular values
-        Zygote.isderiving() && ignore_derivatives() do
-            if alg.verbosity > 0 && is_degenerate_spectrum(S_local)
-                svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S_local))
-                @warn("degenerate singular values detected: ", svals)
-            end
-        end
+#         trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
+#         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
+#         U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
+#         ϵ = max(ϵ, ϵ_local / norm(S))
 
-        # Compute projectors
-        return build_projectors(
-            U_local,
-            S_local,
-            V_local,
-            enlarged_envs[dir, r, c],
-            enlarged_envs[_next(dir, 4), next_rc...],
-        )
-    end
+#         # Compute SVD truncation error and check for degenerate singular values
+#         Zygote.isderiving() && ignore_derivatives() do
+#             if alg.verbosity > 0 && is_degenerate_spectrum(S)
+#                 svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+#                 @warn("degenerate singular values detected: ", svals)
+#             end
+#         end
 
-    P_left = map(first, projectors)
-    P_right = map(last, projectors)
-    return (P_left, P_right), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
-end
+#         # Compute projectors
+#         return build_projectors(U, S, V, enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
+#     end
+
+#     return (map(first, projectors), map(last, projectors)), (; err=ϵ)
+# end
+# function ctmrg_projectors(
+#     enlarged_envs, envs::CTMRGEnv{C,E}, alg::SimultaneousCTMRG{<:HalfInfiniteProjector}
+# ) where {C,E}
+#     projector_alg = alg.projector_alg
+#     # pre-allocation
+#     U, V = Zygote.Buffer.(projector_type(envs.edges))
+#     # Corner type but with real numbers
+#     S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))
+
+#     ϵ = zero(real(scalartype(envs)))
+#     coordinates = eachcoordinate(envs, 1:4)
+#     projectors = dtmap(coordinates) do (dir, r, c)
+#         # Row-column index of next enlarged corner
+#         next_rc = if dir == 1
+#             (r, _next(c, size(envs.corners, 3)))
+#         elseif dir == 2
+#             (_next(r, size(envs.corners, 2)), c)
+#         elseif dir == 3
+#             (r, _prev(c, size(envs.corners, 3)))
+#         elseif dir == 4
+#             (_prev(r, size(envs.corners, 2)), c)
+#         end
+
+#         # SVD half-infinite environment
+#         QQ = half_infinite_environment(
+#             enlarged_envs[dir, r, c], enlarged_envs[_next(dir, 4), next_rc...]
+#         )
+
+#         trscheme = truncation_scheme(projector_alg, envs.edges[dir, next_rc...])
+#         svd_alg = svd_algorithm(projector_alg, (dir, r, c))
+#         U_local, S_local, V_local, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
+#         U[dir, r, c] = U_local
+#         S[dir, r, c] = S_local
+#         V[dir, r, c] = V_local
+#         ϵ = max(ϵ, ϵ_local / norm(S_local))
+
+#         # Compute SVD truncation error and check for degenerate singular values
+#         Zygote.isderiving() && ignore_derivatives() do
+#             if alg.verbosity > 0 && is_degenerate_spectrum(S_local)
+#                 svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S_local))
+#                 @warn("degenerate singular values detected: ", svals)
+#             end
+#         end
+
+#         # Compute projectors
+#         return build_projectors(
+#             U_local,
+#             S_local,
+#             V_local,
+#             enlarged_envs[dir, r, c],
+#             enlarged_envs[_next(dir, 4), next_rc...],
+#         )
+#     end
+
+#     P_left = map(first, projectors)
+#     P_right = map(last, projectors)
+#     return (P_left, P_right), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
+# end
 
 """
     build_projectors(U::AbstractTensorMap{E,3,1}, S::AbstractTensorMap{E,1,1}, V::AbstractTensorMap{E,1,3},
