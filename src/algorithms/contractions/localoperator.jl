@@ -237,9 +237,10 @@ end
         end
     end
 
-    return quote
+    returnex = quote
         @tensor opt = $opt_ex $multiplication_ex
     end
+    return macroexpand(@__MODULE__, returnex)
 end
 
 """
@@ -445,7 +446,8 @@ end
         end
     end
 
-    return quote
+    returnex = quote
         @tensor opt = $opt_ex $multiplication_ex
     end
+    return macroexpand(@__MODULE__, returnex)
 end
