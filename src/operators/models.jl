@@ -122,3 +122,27 @@ function pwave_superconductor(
         (neighbor => hy for neighbor in y_neighbors)...,
     )
 end
+
+function MPSKitModels.hubbard_model(
+    T::Type{<:Number},
+    particle_symmetry::Type{<:Sector},
+    spin_symmetry::Type{<:Sector},
+    lattice::InfiniteSquare;
+    t=1.0,
+    U=1.0,
+    mu=0.0,
+    n::Integer=0,
+)
+    @assert n == 0 "Currently no support for imposing a fixed particle number"
+    hopping =
+        MPSKitModels.e⁺e⁻(T, particle_symmetry, spin_symmetry) +
+        MPSKitModels.e⁻e⁺(T, particle_symmetry, spin_symmetry)
+    interaction_term = MPSKitModels.nꜛnꜜ(T, particle_symmetry, spin_symmetry)
+    N = MPSKitModels.e_number(T, particle_symmetry, spin_symmetry)
+
+    return LocalOperator(
+        fill(domain(hopping)[1], size(lattice)),
+        (neighbor => -t * hopping for neighbor in nearest_neighbours(lattice))...,
+        ((idx,) => U * interaction_term - mu * N for idx in vertices(lattice))...,
+    )
+end
