@@ -21,6 +21,17 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
+"""
+Compute S^(pow) for diagonal matrices `S`
+"""
+function sdiag_pow(S::AbstractTensorMap, pow::Real)
+    S2 = similar(S)
+    for (k, b) in blocks(S)
+        copyto!(block(S2, k), diagm(diag(b) .^ pow))
+    end
+    return S2
+end
+
 # Compute √S⁻¹ for diagonal TensorMaps
 _safe_inv(a, tol) = abs(a) < tol ? zero(a) : inv(a)
 function sdiag_inv_sqrt(S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4))
