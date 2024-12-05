@@ -137,26 +137,24 @@ end
     ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
 
 Perform one iteration of CTMRG that maps the `state` and `envs` to a new environment,
-and also returns the truncation error.
+and also returns the `info` `NamedTuple`.
 """
 function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
-    for _ in 1:4
-        # left move
-        enlarged_envs = ctmrg_expand(state, envs, alg)
-        projectors, info = ctmrg_projectors(enlarged_envs, envs, alg)
-        envs = ctmrg_renormalize(projectors, state, envs, alg)
-
-        # rotate
+    for _ in 1:4 # rotate
+        for col in 1:size(state, 2) # left move column-wise
+            projectors, info = ctmrg_projectors(col, state, envs, alg)
+            envs = ctmrg_renormalize(col, projectors, state, envs, alg)
+            ϵ = max(ϵ, info.err)
+        end
         state = rotate_north(state, EAST)
         envs = rotate_north(envs, EAST)
-        ϵ = max(ϵ, info.err)
     end
 
     return envs, (; err=ϵ)
 end
 function ctmrg_iter(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
-    enlarged_envs = ctmrg_expand(state, envs, alg)
+    enlarged_envs = ctmrg_expand(eachcoordinate(state, 1:4), state, envs)
     projectors, info = ctmrg_projectors(enlarged_envs, envs, alg)
     envs′ = ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg)
     return envs′, info
@@ -177,21 +175,11 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 # ======================================================================================== #
 
 """
-    ctmrg_expand(state, envs, alg::CTMRG{M})
+    ctmrg_expand(coordinates, state, envs)
 
-Expand the environment by absorbing a new PEPS tensor.
-There are two modes of expansion: `M = :sequential` and `M = :simultaneous`.
-The first mode expands the environment in one direction at a time, for convenience towards
-the left. The second mode expands the environment in all four directions simultaneously.
+Expand the environment by absorbing a new PEPS tensor on the given coordinates.
 """
-function ctmrg_expand(state, envs::CTMRGEnv, ::SequentialCTMRG)
-    return ctmrg_expand([4, 1], state, envs)
-end
-function ctmrg_expand(state, envs::CTMRGEnv, ::SimultaneousCTMRG)
-    return ctmrg_expand(1:4, state, envs)
-end
-function ctmrg_expand(dirs, state, envs::CTMRGEnv)
-    coordinates = eachcoordinate(state, dirs)
+function ctmrg_expand(coordinates, state, envs::CTMRGEnv)
     return dtmap(idx -> TensorMap(EnlargedCorner(state, envs, idx), idx[1]), coordinates)
 end
 
@@ -200,23 +188,26 @@ end
 # ======================================================================================== #
 
 """
-    ctmrg_projectors(enlarged_envs, env, alg::CTMRG{M})
+    ctmrg_projectors(col::Int, enlarged_envs, env, alg::CTMRG{:sequential})
+    ctmrg_projectors(enlarged_envs, env, alg::CTMRG{:simultaneous})
 
-Compute the CTMRG projectors based from enlarged environments.
-In the `:simultaneous` mode, the environment SVD is run in parallel.
+Compute the CTMRG projectors based on enlarged environments.
+In the `:sequential` mode the projectors are computed for the column `col`, whereas
+in the `:simultaneous` mode, all projectors (and corresponding SVDs) are computed in parallel.
 """
 function ctmrg_projectors(
-    enlarged_envs, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
+    col::Int, state::InfinitePEPS, envs::CTMRGEnv{C,E}, alg::SequentialCTMRG
 ) where {C,E}
     projector_alg = alg.projector_alg
     ϵ = zero(real(scalartype(envs)))
 
-    coordinates = eachcoordinate(envs)
+    # SVD half-infinite environment
+    coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
-        # SVD half-infinite environment
         r′ = _prev(r, size(envs.corners, 2))
-        QQ = halfinfinite_environment(enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
-
+        Q1 = TensorMap(EnlargedCorner(state, envs, (SOUTHWEST, r, c)), SOUTHWEST)
+        Q2 = TensorMap(EnlargedCorner(state, envs, (NORTHWEST, r′, c)), NORTHWEST)
+        QQ = halfinfinite_environment(Q1, Q2)
         trscheme = truncation_scheme(projector_alg, envs.edges[WEST, r′, c])
         svd_alg = svd_algorithm(projector_alg, (WEST, r, c))
         U, S, V, ϵ_local = PEPSKit.tsvd!(QQ, svd_alg; trunc=trscheme)
@@ -231,9 +222,8 @@ function ctmrg_projectors(
         end
 
         # Compute projectors
-        return build_projectors(U, S, V, enlarged_envs[1, r, c], enlarged_envs[2, r′, c])
+        return build_projectors(U, S, V, Q1, Q2)
     end
-
     return (map(first, projectors), map(last, projectors)), (; err=ϵ)
 end
 function ctmrg_projectors(
@@ -335,36 +325,36 @@ end
 # ======================================================================================== #
 
 """
-    ctmrg_renormalize(enlarged_envs, projectors, state, envs, alg::CTMRG{M})
+    ctmrg_renormalize(col::Int, projectors, state, envs, ::CTMRG{:sequential})
+    ctmrg_renormalize(enlarged_envs, projectors, state, envs, ::CTMRG{:simultaneous})
 
 Apply projectors to renormalize corners and edges.
+The `:sequential` mode renormalizes the environment on the column `col`, where as the
+`:simultaneous` mode renormalizes all environment tensors simultaneously.
 """
-function ctmrg_renormalize(projectors, state, envs, ::SequentialCTMRG)
+function ctmrg_renormalize(col::Int, projectors, state, envs, ::SequentialCTMRG)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
 
-    # copy environments that do not participate
-    for dir in (NORTHEAST, SOUTHEAST)
-        for r in axes(envs.corners, 2), c in axes(envs.corners, 3)
-            corners[dir, r, c] = envs.corners[dir, r, c]
-        end
+    for (dir, r, c) in eachcoordinate(state, 1:4)
+        (c == col && dir in [SOUTHWEST, NORTHWEST]) && continue
+        corners[dir, r, c] = envs.corners[dir, r, c]
     end
-    for dir in (NORTH, EAST, SOUTH)
-        for r in axes(envs.corners, 2), c in axes(envs.corners, 3)
-            edges[dir, r, c] = envs.edges[dir, r, c]
-        end
+    for (dir, r, c) in eachcoordinate(state, 1:4)
+        (c == col && dir == WEST) && continue
+        edges[dir, r, c] = envs.edges[dir, r, c]
     end
 
-    # Apply projectors to renormalize corners and edges
-    for (r, c) in eachcoordinate(state)
-        C_southwest = renormalize_bottom_corner((r, c), envs, projectors)
-        corners[SOUTHWEST, r, c] = C_southwest / norm(C_southwest)
+    # Apply projectors to renormalize corners and edge
+    for row in axes(envs.corners, 2)
+        C_southwest = renormalize_bottom_corner((row, col), envs, projectors)
+        corners[SOUTHWEST, row, col] = C_southwest / norm(C_southwest)
 
-        C_northwest = renormalize_top_corner((r, c), envs, projectors)
-        corners[NORTHWEST, r, c] = C_northwest / norm(C_northwest)
+        C_northwest = renormalize_top_corner((row, col), envs, projectors)
+        corners[NORTHWEST, row, col] = C_northwest / norm(C_northwest)
 
-        E_west = renormalize_west_edge((r, c), envs, projectors, state)
-        edges[WEST, r, c] = E_west / norm(E_west)
+        E_west = renormalize_west_edge((row, col), envs, projectors, state)
+        edges[WEST, row, col] = E_west / norm(E_west)
     end
 
     return CTMRGEnv(copy(corners), copy(edges))
