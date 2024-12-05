@@ -183,6 +183,6 @@ export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
 export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
-export transverse_field_ising, heisenberg_XYZ, j1_j2, pwave_superconductor
+export transverse_field_ising, heisenberg_XYZ, j1_j2, pwave_superconductor, hubbard_model
 
 end # module
