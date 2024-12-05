@@ -8,7 +8,7 @@ using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 maxiter = 200
-schemes = [:simultaneous, :sequential]
+ctmrg_flavors = [:simultaneous, :sequential]
 χ = 6
 atol = 1e-4
 
@@ -34,10 +34,9 @@ function _semi_random_peps!(psi::InfinitePEPS)
     return InfinitePEPS(A′)
 end
 
-@testset "Trivial symmetry ($T) - ($unitcell) - ($ctmrgscheme)" for (
-    T, unitcell, ctmrgscheme
-) in Iterators.product(
-    scalartypes, unitcells, schemes
+@testset "Trivial symmetry ($T) - ($unitcell) - ($flavor)" for (T, unitcell, flavor) in
+                                                               Iterators.product(
+    scalartypes, unitcells, ctmrg_flavors
 )
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
@@ -50,7 +49,7 @@ end
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
     ctm = CTMRGEnv(psi, ctm_space)
 
-    alg = CTMRG(; maxiter, ctmrgscheme)
+    alg = CTMRG(; maxiter, flavor)
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)
@@ -58,9 +57,9 @@ end
     @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = atol
 end
 
-@testset "Z2 symmetry ($T) - ($unitcell) - ($ctmrgscheme)" for (T, unitcell, ctmrgscheme) in
-                                                               Iterators.product(
-    scalartypes, unitcells, schemes
+@testset "Z2 symmetry ($T) - ($unitcell) - ($flavor)" for (T, unitcell, flavor) in
+                                                          Iterators.product(
+    scalartypes, unitcells, ctrmg_flavors
 )
     physical_space = Z2Space(0 => 1, 1 => 1)
     peps_space = Z2Space(0 => 1, 1 => 1)
@@ -74,7 +73,7 @@ end
     psi = InfinitePEPS(physical_space, peps_space; unitcell)
     ctm = CTMRGEnv(psi, ctm_space)
 
-    alg = CTMRG(; maxiter, ctmrgscheme)
+    alg = CTMRG(; maxiter, flavor)
 
     ctm = leading_boundary(ctm, psi, alg)
     ctm2, = ctmrg_iter(psi, ctm, alg)

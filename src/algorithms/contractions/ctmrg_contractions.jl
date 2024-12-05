@@ -164,6 +164,31 @@ end
 # ----------------------
 
 """
+    left_and_right_projector(U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
+    left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
+
+Compute left and right projectors based on a SVD and quadrant tensors, specified either as
+`AbstractTensorMap`s or sparsely as `EnlargedCorner`s such that the quadrants are never
+constructed explicitly.
+"""
+function left_and_right_projector(
+    U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
+) where {E<:ElementarySpace}
+    isqS = sdiag_inv_sqrt(S)
+    P_left = Q_next * V' * isqS
+    P_right = isqS * U' * Q
+    return P_left, P_right
+end
+function left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
+    isqS = sdiag_inv_sqrt(S)
+    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
+    P_right = right_projector(
+        Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
+    )
+    return P_left, P_right
+end
+
+"""
     left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Contract the CTMRG left projector with the higher-dimensional subspace facing to the left.

@@ -54,9 +54,9 @@ include("utility/symmetrization.jl")
         const ctmrg_maxiter = 100
         const ctmrg_miniter = 4
         const ctmrg_tol = 1e-8
+        const ctmrg_flavor = :simultaneous
         const fpgrad_maxiter = 30
         const fpgrad_tol = 1e-6
-        const ctmrgscheme = :simultaneous
         const reuse_env = true
         const trscheme = FixedSpaceTruncation()
         const fwd_alg = TensorKit.SDD()
@@ -77,9 +77,9 @@ Module containing default values that represent typical algorithm parameters.
 - `ctmrg_maxiter`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter`: Minimal number of CTMRG carried out
 - `ctmrg_tol`: Tolerance checking singular value and norm convergence
+- `ctmrg_flavor`: Scheme for growing, projecting and renormalizing CTMRG environments
 - `fpgrad_maxiter`: Maximal number of iterations for computing the CTMRG fixed-point gradient
 - `fpgrad_tol`: Convergence tolerance for the fixed-point gradient iteration
-- `ctmrgscheme`: Scheme for growing, projecting and renormalizing CTMRG environments
 - `reuse_env`: If `true`, the current optimization step is initialized on the previous environment
 - `trscheme`: Truncation scheme for SVDs and other decompositions
 - `fwd_alg`: SVD algorithm that is used in the forward pass
@@ -98,9 +98,9 @@ module Defaults
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
     const ctmrg_tol = 1e-8
+    const ctmrg_flavor = :simultaneous
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
-    const ctmrgscheme = :simultaneous
     const sparse = false
     const reuse_env = true
     const trscheme = FixedSpaceTruncation()

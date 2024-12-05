@@ -265,7 +265,7 @@ function _rrule(
         fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
     )
     alg_fixed = CTMRG(;
-        svd_alg=svd_alg_fixed, trscheme=notrunc(), ctmrgscheme=:simultaneous
+        svd_alg=svd_alg_fixed, trscheme=notrunc(), flavor=:simultaneous
     )
 
     function leading_boundary_fixed_pullback(Δenvs′)

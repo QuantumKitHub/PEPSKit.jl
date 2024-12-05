@@ -30,9 +30,10 @@ Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbon
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
 tol = 1e-10
 atol = 1e-6
+verbosity = 0
 boundary_algs = [
-    CTMRG(; tol, verbosity=0, ctmrgscheme=:simultaneous),
-    CTMRG(; tol, verbosity=0, ctmrgscheme=:sequential),
+    CTMRG(; tol, verbosity, flavor=:simultaneous),
+    CTMRG(; tol, verbosity, flavor=:sequential),
 ]
 
 ## Gauge invariant function of the environment

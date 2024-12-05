@@ -27,7 +27,7 @@ end
             include("ctmrg/unitcell.jl")
         end
         @time @safetestset "CTMRG schemes" begin
-            include("ctmrg/ctmrgschemes.jl")
+            include("ctmrg/flavors.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
