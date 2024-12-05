@@ -409,6 +409,9 @@ function eachcoordinate(x::CTMRGEnv, dirs)
     return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
 end
 
+Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
+Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
+
 # In-place update of environment
 function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
     env.corners .= env´.corners
