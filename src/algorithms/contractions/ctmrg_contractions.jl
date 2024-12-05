@@ -529,7 +529,7 @@ Apply bottom projector to southwest corner and south edge.
 function renormalize_bottom_corner((row, col), envs::CTMRGEnv, projectors)
     C_southwest = envs.corners[SOUTHWEST, row, _prev(col, end)]
     E_south = envs.edges[SOUTH, row, col]
-    P_bottom = projectors[1][row, col]
+    P_bottom = projectors[1][row]
     return @autoopt @tensor corner[χ_in; χ_out] :=
         E_south[χ_in D1 D2; χ1] * C_southwest[χ1; χ2] * P_bottom[χ2 D1 D2; χ_out]
 end
@@ -548,7 +548,7 @@ Apply top projector to northwest corner and north edge.
 function renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
     C_northwest = envs.corners[NORTHWEST, row, _prev(col, end)]
     E_north = envs.edges[NORTH, row, col]
-    P_top = projectors[2][_next(row, end), col]
+    P_top = projectors[2][_next(row, end)]
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_top[χ_in; χ1 D1 D2] * C_northwest[χ1; χ2] * E_north[χ2 D1 D2; χ_out]
 end
@@ -704,8 +704,8 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
 )
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
-        projectors[1][row, col],
-        projectors[2][_next(row, end), col],
+        projectors[1][row],
+        projectors[2][_next(row, end)],
         ket[row, col],
         bra[row, col],
     )
