@@ -103,6 +103,11 @@ function CTMRG(;
     )
 end
 
+"""
+    ctmrg_iteration(state, env, alg::CTMRG)
+
+Perform a single CTMRG iteration in which all directions are being grown and renormalized.
+"""
 function ctmrg_iteration(state, env, alg::CTMRG)
     if alg.flavor == :simultaneous
         return simultaneous_ctmrg_iter(state, env, alg)
@@ -186,9 +191,9 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     return (P_left, P_right), (; err, U, S, V)
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
-    # QR left and right half-infinite environments (cut placement is consistent with half-infinite proj!)
-    halfinf_left = half_infinite_environment(enlarged_corners[4], enlarged_corners[1])
-    halfinf_right = half_infinite_environment(enlarged_corners[2], enlarged_corners[3])
+    # QR left and right half-infinite environments
+    halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
+    halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
     _, R_left = leftorth!(halfinf_left)
     L_right, _ = rightorth!(halfinf_right)
 

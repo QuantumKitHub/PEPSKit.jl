@@ -21,7 +21,7 @@ end
 
 """
     sequential_projectors(col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs)
-    sequential_projectors(coordinate, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs)
+    sequential_projectors(coordinate::NTuple{3,Int}, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs)
 
 Compute CTMRG projectors in the `:sequential` scheme either for an entire column `col` or
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
@@ -42,7 +42,10 @@ function sequential_projectors(
     return (map(first, projectors), map(last, projectors)), (; err=ϵ)
 end
 function sequential_projectors(
-    coordinate, state::InfinitePEPS, envs::CTMRGEnv, alg::HalfInfiniteProjector
+    coordinate::NTuple{3,Int},
+    state::InfinitePEPS,
+    envs::CTMRGEnv,
+    alg::HalfInfiniteProjector,
 )
     _, r, c = coordinate
     r′ = _prev(r, size(envs, 2))
@@ -51,16 +54,25 @@ function sequential_projectors(
     return compute_projector((Q1, Q2), coordinate, alg)
 end
 function sequential_projectors(
-    coordinate, state::InfinitePEPS, envs::CTMRGEnv, alg::FullInfiniteProjector
+    coordinate::NTuple{3,Int},
+    state::InfinitePEPS,
+    envs::CTMRGEnv,
+    alg::FullInfiniteProjector,
 )
-    _, r, c = coordinate
-    r′ = _next(r, size(envs, 2))
-    c′ = _next(c, size(envs, 3))
-    Q1 = TensorMap(EnlargedCorner(state, envs, (NORTHWEST, r, c)), NORTHWEST)
-    Q2 = TensorMap(EnlargedCorner(state, envs, (NORTHEAST, r, c′)), NORTHEAST)
-    Q3 = TensorMap(EnlargedCorner(state, envs, (SOUTHEAST, r′, c′)), SOUTHEAST)
-    Q4 = TensorMap(EnlargedCorner(state, envs, (SOUTHWEST, r′, c)), SOUTHWEST)
-    return compute_projector((Q1, Q2, Q3, Q4), coordinate, alg)
+    # _, r, c = coordinate
+    # r′ = _next(r, size(envs, 2))
+    # c′ = _next(c, size(envs, 3))
+    rowsize, colsize = size(envs)[2:3]
+    coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
+    coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
+    coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
+    ec = (
+        TensorMap(EnlargedCorner(state, envs, coordinate_se), SOUTHEAST),
+        TensorMap(EnlargedCorner(state, envs, coordinate), SOUTHWEST),
+        TensorMap(EnlargedCorner(state, envs, coordinate_nw), NORTHWEST),
+        TensorMap(EnlargedCorner(state, envs, coordinate_ne), NORTHEAST),
+    )
+    return compute_projector(ec, coordinate, alg)
 end
 
 """

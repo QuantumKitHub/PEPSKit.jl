@@ -10,8 +10,12 @@ using PEPSKit
 ctm_alg_sequential = CTMRG(; flavor=:sequential)
 ctm_alg_simultaneous = CTMRG(; flavor=:simultaneous)
 unitcells = [(1, 1), (3, 4)]
+projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
-@testset "$(unitcell) unit cell" for unitcell in unitcells
+@testset "$(unitcell) unit cell with $projector_alg" for (unitcell, projector_alg) in
+                                                         Iterators.product(
+    unitcells, projector_algs
+)
     # compute environments
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)

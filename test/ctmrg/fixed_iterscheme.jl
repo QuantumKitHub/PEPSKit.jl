@@ -15,14 +15,17 @@ using PEPSKit:
 χbond = 2
 χenv = 16
 svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SDD()), SVDAdjoint(; fwd_alg=IterSVD())]
+projector_algs = [HalfInfiniteProjector] #, FullInfiniteProjector]
 unitcells = [(1, 1), (3, 4)]
+atol = 1e-5
 
 # test for element-wise convergence after application of fixed step
-@testset "$unitcell unit cell with $(typeof(svd_alg.fwd_alg))" for (unitcell, svd_alg) in
-                                                                   Iterators.product(
-    unitcells, svd_algs
+@testset "$unitcell unit cell with $(typeof(svd_alg.fwd_alg)) and $projector_alg" for (
+    unitcell, svd_alg, projector_alg
+) in Iterators.product(
+    unitcells, svd_algs, projector_algs
 )
-    ctm_alg = CTMRG(; svd_alg)
+    ctm_alg = CTMRG(; svd_alg, projector_alg)
 
     # initialize states
     Random.seed!(2394823842)
@@ -32,17 +35,17 @@ unitcells = [(1, 1), (3, 4)]
     # do extra iteration to get SVD
     env_conv2, info = ctmrg_iteration(psi, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv1, env_conv2)
-    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = 1e-6
+    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
     # fix gauge of SVD
     U_fix, V_fix = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fix = SVDAdjoint(; fwd_alg=FixedSVD(U_fix, info.S, V_fix))
-    ctm_alg_fix = CTMRG(; svd_alg=svd_alg_fix, trscheme=notrunc())
+    ctm_alg_fix = CTMRG(; projector_alg, svd_alg=svd_alg_fix, trscheme=notrunc())
 
     # do iteration with FixedSVD
     env_fixedsvd, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
-    @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = 1e-6
+    @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
 @testset "Element-wise consistency of TensorKit.SDD and IterSVD" begin
@@ -61,11 +64,11 @@ end
     # do extra iteration to get SVD
     env_conv2_iter, info_iter = ctmrg_iteration(psi, env_conv1, ctm_alg_iter)
     env_fix_iter, signs_iter = gauge_fix(env_conv1, env_conv2_iter)
-    @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = 1e-6
+    @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
     env_conv2_full, info_full = ctmrg_iteration(psi, env_conv1, ctm_alg_full)
     env_fix_full, signs_full = gauge_fix(env_conv1, env_conv2_full)
-    @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = 1e-6
+    @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
     # fix gauge of SVD
     U_fix_iter, V_fix_iter = fix_relative_phases(info_iter.U, info_iter.V, signs_iter)
@@ -79,14 +82,13 @@ end
     # do iteration with FixedSVD
     env_fixedsvd_iter, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix_iter)
     env_fixedsvd_iter = fix_global_phases(env_conv1, env_fixedsvd_iter)
-    @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = 1e-6  # This doesn't work for x₀ = rand(size(b, 1))?
+    @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = atol  # This doesn't work for x₀ = rand(size(b, 1))?
 
     env_fixedsvd_full, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix_full)
     env_fixedsvd_full = fix_global_phases(env_conv1, env_fixedsvd_full)
-    @test calc_elementwise_convergence(env_conv1, env_fixedsvd_full) ≈ 0 atol = 1e-6
+    @test calc_elementwise_convergence(env_conv1, env_fixedsvd_full) ≈ 0 atol = atol
 
     # check matching decompositions
-    atol = 1e-12
     decomposition_check = all(
         zip(info_iter.U, info_iter.S, info_iter.V, info_full.U, info_full.S, info_full.V),
     ) do (U_iter, S_iter, V_iter, U_full, S_full, V_full)

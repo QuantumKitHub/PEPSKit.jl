@@ -23,7 +23,7 @@ function _prealloc_svd(edges::Array{E,N}, ::HalfInfiniteProjector) where {E,N}
 end
 function _prealloc_svd(edges::Array{E,N}, ::FullInfiniteProjector) where {E,N}
     Sc = scalartype(E)
-    Rspace(x) = spacetype(E)(dim(codomain(x)))
+    Rspace(x) = fuse(codomain(x))
     U = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, Rspace(e), domain(e)), edges))
     V = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, domain(e), Rspace(e)), edges))
     S = Zygote.Buffer(U.data, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
@@ -44,7 +44,7 @@ function simultaneous_projectors(
     ϵ = zero(real(scalartype(envs)))
 
     projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
-        proj, info = simultaneous_projectors(enlarged_corners, coordinate, alg)
+        proj, info = simultaneous_projectors(coordinate, enlarged_corners, alg)
         U[coordinate...] = info.U
         S[coordinate...] = info.S
         V[coordinate...] = info.V
@@ -57,24 +57,24 @@ function simultaneous_projectors(
     return (P_left, P_right), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
 end
 function simultaneous_projectors(
-    enlarged_corners::Array{E,3}, coordinate, alg::HalfInfiniteProjector
+    coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector
 ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(enlarged_corners)[2:3]...)
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     return compute_projector(ec, coordinate, alg)
 end
 function simultaneous_projectors(
-    enlarged_corners::Array{E,3}, coordinate, alg::FullInfiniteProjector
+    coordinate, enlarged_corners::Array{E,3}, alg::FullInfiniteProjector
 ) where {E}
     rowsize, colsize = size(enlarged_corners)[2:3]
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
     coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
     ec = (
+        enlarged_corners[coordinate4...],
         enlarged_corners[coordinate...],
         enlarged_corners[coordinate2...],
         enlarged_corners[coordinate3...],
-        enlarged_corners[coordinate4...],
     )
     return compute_projector(ec, coordinate, alg)
 end

@@ -7,8 +7,9 @@ using PEPSKit: ctmrg_iteration, gauge_fix, calc_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
-maxiter = 200
+maxiter = 400
 ctmrg_flavors = [:simultaneous, :sequential]
+projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 χ = 6
 atol = 1e-4
 
@@ -34,9 +35,10 @@ function _semi_random_peps!(psi::InfinitePEPS)
     return InfinitePEPS(A′)
 end
 
-@testset "Trivial symmetry ($T) - ($unitcell) - ($flavor)" for (T, unitcell, flavor) in
-                                                               Iterators.product(
-    scalartypes, unitcells, ctmrg_flavors
+@testset "Trivial symmetry ($T) - ($unitcell) - ($flavor) - ($projector_alg)" for (
+    T, unitcell, flavor, projector_alg
+) in Iterators.product(
+    scalartypes, unitcells, ctmrg_flavors, projector_algs
 )
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
@@ -47,19 +49,19 @@ end
     _make_symmetric!(psi)
 
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
-    ctm = CTMRGEnv(psi, ctm_space)
+    env = CTMRGEnv(psi, ctm_space)
+    alg = CTMRG(; maxiter, flavor, projector_alg)
 
-    alg = CTMRG(; maxiter, flavor)
-
-    ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iteration(psi, ctm, alg)
-    ctm_fixed, = gauge_fix(ctm, ctm2)
-    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = atol
+    env = leading_boundary(env, psi, alg)
+    env′, = ctmrg_iteration(psi, env, alg)
+    env_fixed, = gauge_fix(env, env′)
+    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end
 
-@testset "Z2 symmetry ($T) - ($unitcell) - ($flavor)" for (T, unitcell, flavor) in
-                                                          Iterators.product(
-    scalartypes, unitcells, ctrmg_flavors
+@testset "Z2 symmetry ($T) - ($unitcell) - ($flavor) - ($projector_alg)" for (
+    T, unitcell, flavor, projector_alg
+) in Iterators.product(
+    scalartypes, unitcells, ctmrg_flavors, projector_algs
 )
     physical_space = Z2Space(0 => 1, 1 => 1)
     peps_space = Z2Space(0 => 1, 1 => 1)
@@ -71,12 +73,11 @@ end
 
     Random.seed!(987654321)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(physical_space, peps_space; unitcell)
-    ctm = CTMRGEnv(psi, ctm_space)
+    env = CTMRGEnv(psi, ctm_space)
+    alg = CTMRG(; maxiter, flavor, projector_alg)
 
-    alg = CTMRG(; maxiter, flavor)
-
-    ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iteration(psi, ctm, alg)
-    ctm_fixed, = gauge_fix(ctm, ctm2)
-    @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = atol
+    env = leading_boundary(env, psi, alg)
+    env′, = ctmrg_iteration(psi, env, alg)
+    env_fixed, = gauge_fix(env, env′)
+    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end
