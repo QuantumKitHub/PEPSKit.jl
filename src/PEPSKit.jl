@@ -41,6 +41,8 @@ include("algorithms/contractions/ctmrg_contractions.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
+include("algorithms/ctmrg/simultaneous.jl")
+include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/toolbox.jl")
@@ -54,14 +56,15 @@ include("utility/symmetrization.jl")
         const ctmrg_maxiter = 100
         const ctmrg_miniter = 4
         const ctmrg_tol = 1e-8
+        const ctmrg_flavor = :simultaneous
         const fpgrad_maxiter = 30
         const fpgrad_tol = 1e-6
-        const ctmrgscheme = :simultaneous
         const reuse_env = true
         const trscheme = FixedSpaceTruncation()
-        const fwd_alg = TensorKit.SVD()
+        const fwd_alg = TensorKit.SDD()
         const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
         const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
+        const projector_alg = HalfInfiniteProjector
         const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
         const gradient_linsolver = KrylovKit.BiCGStab(;
             maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
@@ -76,14 +79,15 @@ Module containing default values that represent typical algorithm parameters.
 - `ctmrg_maxiter`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter`: Minimal number of CTMRG carried out
 - `ctmrg_tol`: Tolerance checking singular value and norm convergence
+- `ctmrg_flavor`: Scheme for growing, projecting and renormalizing CTMRG environments
 - `fpgrad_maxiter`: Maximal number of iterations for computing the CTMRG fixed-point gradient
 - `fpgrad_tol`: Convergence tolerance for the fixed-point gradient iteration
-- `ctmrgscheme`: Scheme for growing, projecting and renormalizing CTMRG environments
 - `reuse_env`: If `true`, the current optimization step is initialized on the previous environment
 - `trscheme`: Truncation scheme for SVDs and other decompositions
 - `fwd_alg`: SVD algorithm that is used in the forward pass
 - `rrule_alg`: Reverse-rule for differentiating that SVD
 - `svd_alg`: Combination of `fwd_alg` and `rrule_alg`
+- `projector_alg`: Algorithm to compute CTMRG projectors
 - `optimizer`: Optimization algorithm for PEPS ground-state optimization
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 - `iterscheme`: Scheme for differentiating one CTMRG iteration
@@ -92,19 +96,20 @@ Module containing default values that represent typical algorithm parameters.
 """
 module Defaults
     using TensorKit, KrylovKit, OptimKit, OhMyThreads
-    using PEPSKit: LinSolver, FixedSpaceTruncation, SVDAdjoint
+    using PEPSKit: LinSolver, FixedSpaceTruncation, SVDAdjoint, HalfInfiniteProjector
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
     const ctmrg_tol = 1e-8
+    const ctmrg_flavor = :simultaneous
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
-    const ctmrgscheme = :simultaneous
     const sparse = false
     const reuse_env = true
     const trscheme = FixedSpaceTruncation()
     const fwd_alg = TensorKit.SDD()
     const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
+    const projector_alg = HalfInfiniteProjector
     const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
     const gradient_linsolver = KrylovKit.BiCGStab(;
         maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
@@ -160,9 +165,9 @@ end
 using .Defaults: set_scheduler!
 export set_scheduler!
 export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
-export FixedSpaceTruncation, ProjectorAlg, CTMRG, CTMRGEnv, correlation_length
+export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector, CTMRG, CTMRGEnv
 export LocalOperator
-export expectation_value, costfun, product_peps
+export expectation_value, costfun, product_peps, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
