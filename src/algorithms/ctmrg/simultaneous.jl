@@ -13,12 +13,25 @@ function simultaneous_ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG)
     return envs′, info
 end
 
-function simultaneous_projectors(
-    enlarged_corners, envs::CTMRGEnv{C,E}, alg::ProjectorAlgs
-) where {C,E}
-    # pre-allocation
-    U, V = Zygote.Buffer.(projector_type(envs.edges))
-    S = Zygote.Buffer(U.data, tensormaptype(spacetype(C), 1, 1, real(scalartype(E))))  # Corner type but with real numbers
+# Pre-allocate U, S, and V tensor as Zygote buffers to make it differentiable
+function _prealloc_svd(edges::Array{E,N}, ::HalfInfiniteProjector) where {E,N}
+    Sc = scalartype(E)
+    U = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, space(e)), edges))
+    V = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, domain(e), codomain(e)), edges))
+    S = Zygote.Buffer(U.data, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
+    return U, S, V
+end
+function _prealloc_svd(edges::Array{E,N}, ::FullInfiniteProjector) where {E,N}
+    Sc = scalartype(E)
+    Rspace(x) = spacetype(E)(dim(codomain(x)))
+    U = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, Rspace(e), domain(e)), edges))
+    V = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, domain(e), Rspace(e)), edges))
+    S = Zygote.Buffer(U.data, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
+    return U, S, V
+end
+
+function simultaneous_projectors(enlarged_corners, envs::CTMRGEnv, alg::ProjectorAlgs)
+    U, S, V = _prealloc_svd(envs.edges, alg)
     ϵ = zero(real(scalartype(envs)))
 
     projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate

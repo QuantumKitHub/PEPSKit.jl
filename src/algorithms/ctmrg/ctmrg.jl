@@ -89,6 +89,7 @@ function CTMRG(;
     miniter=Defaults.ctmrg_miniter,
     flavor=Defaults.ctmrg_flavor,
     verbosity=2,
+    projector_alg=Defaults.projector_alg,
     svd_alg=Defaults.svd_alg,
     trscheme=Defaults.trscheme,
 )
@@ -98,7 +99,7 @@ function CTMRG(;
         miniter,
         flavor,
         verbosity,
-        Defaults.projector_alg(; svd_alg, trscheme, verbosity),
+        projector_alg(; svd_alg, trscheme, verbosity),
     )
 end
 
@@ -185,17 +186,17 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     return (P_left, P_right), (; err, U, S, V)
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
-    # QR top and bottom half-infinite environments
-    halfinf_top = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
-    halfinf_bot = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
-    _, R_top = leftorth!(halfinf_top)
-    _, R_bot = leftorth!(halfinf_bot)
-    R_fullinf = R_top * R_bot
+    # QR left and right half-infinite environments (cut placement is consistent with half-infinite proj!)
+    halfinf_left = half_infinite_environment(enlarged_corners[4], enlarged_corners[1])
+    halfinf_right = half_infinite_environment(enlarged_corners[2], enlarged_corners[3])
+    _, R_left = leftorth!(halfinf_left)
+    L_right, _ = rightorth!(halfinf_right)
 
-    # SVD product of R's
-    trscheme = truncation_scheme(projector_alg, space(enlarged_corners[4], 1))
-    svd_alg = svd_algorithm(projector_alg, coordinate)
-    U, S, V, err = PEPSKit.tsvd!(R_fullinf, svd_alg; trunc=trscheme)
+    # SVD product of QRs
+    fullinf = R_left * L_right
+    trscheme = truncation_scheme(alg, space(enlarged_corners[4], 1))
+    svd_alg = svd_algorithm(alg, coordinate)
+    U, S, V, err = PEPSKit.tsvd!(fullinf, svd_alg; trunc=trscheme)
 
     # Compute SVD truncation error and check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -205,6 +206,6 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
         end
     end
 
-    P_left, P_right = left_and_right_projector(U, S, V, R_top, R_bot)
+    P_left, P_right = left_and_right_projector(U, S, V, R_left, L_right)
     return (P_left, P_right), (; err, U, S, V)
 end

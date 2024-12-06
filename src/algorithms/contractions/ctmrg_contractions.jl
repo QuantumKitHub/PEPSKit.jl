@@ -217,9 +217,9 @@ square root `isqS` of the singular values is computed.
 
 Left projector:
 ```
-    -- |~~~~~~~~| -- |~~|
-       | Q_next |    |V'| -- isqS --
-    == |~~~~~~~~| == |~~|
+    -- |~~~~~~| -- |~~|
+       |Q_next|    |V'| -- isqS --
+    == |~~~~~~| == |~~|
 ```
 
 Right projector:
@@ -235,8 +235,18 @@ function left_and_right_projector(
     isqS = sdiag_inv_sqrt(S)
     @autoopt @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
         Q_next[χ_in D_inabove D_inbelow; χ1 D1 D2] * conj(V[χ2; χ1 D1 D2]) * isqS[χ2; χ_out]
-    @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
+    @autoopt @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
         isqS[χ_in; χ1] * conj(U[χ2 D1 D2; χ1]) * Q[χ2 D1 D2; χ_out D_outabove D_outbelow]
+    return P_left, P_right
+end
+function left_and_right_projector(
+    U, S, V, R_left::AbstractTensorMap{E,1,3}, L_right::AbstractTensorMap{E,3,1}
+) where {E<:ElementarySpace}
+    isqS = sdiag_inv_sqrt(S)
+    @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
+        L_right[χ_in D_inabove D_inbelow; full] * conj(V[χ2; full]) * isqS[χ2; χ_out]
+    @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
+        isqS[χ_in; χ1] * conj(U[full; χ1]) * R_left[full; χ_out D_outabove D_outbelow]
     return P_left, P_right
 end
 
