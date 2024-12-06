@@ -30,12 +30,21 @@ function _prealloc_svd(edges::Array{E,N}, ::FullInfiniteProjector) where {E,N}
     return U, S, V
 end
 
-function simultaneous_projectors(enlarged_corners, envs::CTMRGEnv, alg::ProjectorAlgs)
+"""
+    simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgs)
+    simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgs)
+
+Compute CTMRG projectors in the `:simultaneous` scheme either for all provided
+enlarged corners or on a specific `coordinate`.
+"""
+function simultaneous_projectors(
+    enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgs
+) where {E}
     U, S, V = _prealloc_svd(envs.edges, alg)
     ϵ = zero(real(scalartype(envs)))
 
     projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
-        proj, info = simultaneous_projector(enlarged_corners, coordinate, alg)
+        proj, info = simultaneous_projectors(enlarged_corners, coordinate, alg)
         U[coordinate...] = info.U
         S[coordinate...] = info.S
         V[coordinate...] = info.V
@@ -47,14 +56,14 @@ function simultaneous_projectors(enlarged_corners, envs::CTMRGEnv, alg::Projecto
     P_right = map(last, projectors)
     return (P_left, P_right), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
 end
-function simultaneous_projector(
+function simultaneous_projectors(
     enlarged_corners::Array{E,3}, coordinate, alg::HalfInfiniteProjector
 ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(enlarged_corners)[2:3]...)
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     return compute_projector(ec, coordinate, alg)
 end
-function simultaneous_projector(
+function simultaneous_projectors(
     enlarged_corners::Array{E,3}, coordinate, alg::FullInfiniteProjector
 ) where {E}
     rowsize, colsize = size(enlarged_corners)[2:3]
@@ -70,6 +79,11 @@ function simultaneous_projector(
     return compute_projector(ec, coordinate, alg)
 end
 
+"""
+    renormalize_simultaneously(enlarged_corners, projectors, state, envs)
+
+Renormalize all enlarged corners and edges simultaneously.
+"""
 function renormalize_simultaneously(enlarged_corners, projectors, state, envs)
     P_left, P_right = projectors
     coordinates = eachcoordinate(envs, 1:4)

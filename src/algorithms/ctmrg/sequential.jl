@@ -19,23 +19,30 @@ function sequential_ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG)
     return envs, (; err=ϵ)
 end
 
+"""
+    sequential_projectors(col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs)
+    sequential_projectors(coordinate, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs)
+
+Compute CTMRG projectors in the `:sequential` scheme either for an entire column `col` or
+for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
+"""
 function sequential_projectors(
-    col::Int, state::InfinitePEPS, envs::CTMRGEnv{C,E}, alg::ProjectorAlgs
-) where {C,E}
+    col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs
+)
     ϵ = zero(real(scalartype(envs)))
 
     # SVD half-infinite environment column-wise
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
-        proj, info = sequential_projector(state, envs, (WEST, r, c), alg)
+        proj, info = sequential_projectors((WEST, r, c), state, envs, alg)
         ϵ = max(ϵ, info.err / norm(info.S))
         return proj
     end
 
     return (map(first, projectors), map(last, projectors)), (; err=ϵ)
 end
-function sequential_projector(
-    state::InfinitePEPS, envs::CTMRGEnv, coordinate, alg::HalfInfiniteProjector
+function sequential_projectors(
+    coordinate, state::InfinitePEPS, envs::CTMRGEnv, alg::HalfInfiniteProjector
 )
     _, r, c = coordinate
     r′ = _prev(r, size(envs, 2))
@@ -43,8 +50,8 @@ function sequential_projector(
     Q2 = TensorMap(EnlargedCorner(state, envs, (NORTHWEST, r′, c)), NORTHWEST)
     return compute_projector((Q1, Q2), coordinate, alg)
 end
-function sequential_projector(
-    state::InfinitePEPS, envs::CTMRGEnv, coordinate, alg::FullInfiniteProjector
+function sequential_projectors(
+    coordinate, state::InfinitePEPS, envs::CTMRGEnv, alg::FullInfiniteProjector
 )
     _, r, c = coordinate
     r′ = _next(r, size(envs, 2))
@@ -56,6 +63,11 @@ function sequential_projector(
     return compute_projector((Q1, Q2, Q3, Q4), coordinate, alg)
 end
 
+"""
+    renormalize_sequentially(col::Int, projectors, state, envs)
+
+Renormalize one column of the CTMRG environment.
+"""
 function renormalize_sequentially(col::Int, projectors, state, envs)
     corners = Zygote.Buffer(envs.corners)
     edges = Zygote.Buffer(envs.edges)
