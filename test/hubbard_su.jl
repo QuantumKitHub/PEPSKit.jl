@@ -3,19 +3,15 @@ using Printf
 using Random
 using PEPSKit
 using TensorKit
-import Statistics: mean
-import LinearAlgebra: I
-include("utility/measure_heis.jl")
-import .MeasureHeis: measure_heis
+# using AppleAccelerate # for Apple Silicon machines
 
 # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
-Dcut, χenv, symm = 8, 20, Trivial
+Dcut, symm = 8, Trivial
 N1, N2 = 2, 2
-Random.seed!(0)
+Random.seed!(10)
 if symm == Trivial
-    Pspace = Vect[fℤ₂]((0) => 2, (1) => 2)
-    Vspace = Vect[fℤ₂]((0) => Dcut / 2, (1) => Dcut / 2)
-    Espace = Vect[fℤ₂]((0) => χenv / 2, (1) => χenv / 2)
+    Pspace = Vect[fℤ₂](0 => 2, 1 => 2)
+    Vspace = Vect[fℤ₂](0 => Dcut / 2, 1 => Dcut / 2)
 else
     error("Not implemented")
 end
@@ -25,21 +21,18 @@ peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
 for ind in CartesianIndices(peps.vertices)
     peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
 end
-# Hubbard model Hamiltonian
+# Hubbard model Hamiltonian at half-filling
 t = 1.0
 U = 6.0
 ham = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(N1, N2); t=t, U=U, mu=U / 2)
-# convert to real tensors
-ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
-
-unit = TensorMap(Matrix{ComplexF64}(I, 4, 4), Pspace, Pspace)
-one_site = [op for (ind, op) in ham.terms if length(ind) == 1][1]
 
 # Convert to a Hamiltonian that only includes nearest-neighbour interactions
+unit = TensorKit.id(Pspace)
+one_site = [op for (ind, op) in ham.terms if length(ind) == 1][1]
 ham = LocalOperator(
     ham.lattice,
     Tuple(
-        sites => op + (one_site ⊗ unit) / 2 for
+        sites => op + (one_site ⊗ unit + unit ⊗ one_site) / 4 for
         (sites, op) in ham.terms if length(sites) == 2
     )...,
 )
@@ -58,18 +51,23 @@ end
 # absort weight into site tensors
 peps = InfinitePEPS(peps)
 # CTMRG
-envs = CTMRGEnv(rand, ComplexF64, peps, Espace)
-trscheme = truncerr(1e-9) & truncdim(χenv)
-ctm_alg = CTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme, ctmrgscheme=:sequential)
-envs = leading_boundary(envs, peps, ctm_alg)
+χenv0, χenv = 6, 20
+Espace = Vect[fℤ₂](0 => χenv0 / 2, 1 => χenv0 / 2)
+envs = CTMRGEnv(rand, Float64, peps, Espace)
+for χ in [χenv0, χenv]
+    trscheme = truncerr(1e-9) & truncdim(χ)
+    ctm_alg = CTMRG(; tol=1e-10, verbosity=3, trscheme=trscheme, ctmrgscheme=:sequential)
+    global envs = leading_boundary(envs, peps, ctm_alg)
+end
+
+"""
+Benchmark values of the ground state energy from
+Qin, M., Shi, H., & Zhang, S. (2016). Benchmark study of the two-dimensional Hubbard model with auxiliary-field quantum Monte Carlo method. Physical Review B, 94(8), 085103.
+"""
 # measure physical quantities
-E = expectation_value(peps, ham, envs)
-@info @sprintf("Energy = %.8f\n", real(E / (N1 * N2)))
-
-"""
-Benchmark values of the ground state energy, based on https://www.osti.gov/servlets/purl/1565498 (A benchmark study of the two-dimensional Hubbard model
-with auxiliary-field quantum Monte Carlo method)
-"""
-E_exact = Dict(0 => -1.62, 2 => -0.176, 4 => 0.8603, 6 => -0.6567, 8 => -0.5243)
-
-@test isapprox(real(E / (N1 * N2)), E_exact[U] - U / 2; atol=1e-2)
+E = costfun(peps, envs, ham) / (N1 * N2)
+Es_exact = Dict(0 => -1.62, 2 => -0.176, 4 => 0.8603, 6 => -0.6567, 8 => -0.5243)
+E_exact = Es_exact[U] - U / 2
+@info @sprintf("Energy           = %.8f\n", E)
+@info @sprintf("Benchmark energy = %.8f\n", E_exact)
+@test isapprox(E, E_exact; atol=1e-2)
