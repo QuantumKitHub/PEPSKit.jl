@@ -102,6 +102,14 @@ function CTMRG(;
     )
 end
 
+function ctmrg_iteration(state, env, alg::CTMRG)
+    if alg.flavor == :simultaneous
+        return simultaneous_ctmrg_iter(state, env, alg)
+    elseif alg.flavor == :sequential
+        return sequential_ctmrg_iter(state, env, alg)
+    end
+end
+
 """
     MPSKit.leading_boundary([envinit], state, alg::CTMRG)
 
@@ -120,15 +128,10 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
     env = deepcopy(envinit)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
-    f = if alg.flavor == :sequential
-        sequential_ctmrg_iter
-    elseif alg.flavor == :simultaneous
-        simultaneous_ctmrg_iter
-    end
     return LoggingExtras.withlevel(; alg.verbosity) do
         ctmrg_loginit!(log, η, N)
         for iter in 1:(alg.maxiter)
-            env, = f(state, env, alg)  # Grow and renormalize in all 4 directions
+            env, = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
             N = norm(state, env)
 
@@ -166,8 +169,8 @@ and the given coordinate using the specified `alg`.
 function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjector)
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
-    trscheme = truncation_scheme(projector_alg, space(enlarged_corners[2], 1))
-    svd_alg = svd_algorithm(projector_alg, coordinate)
+    trscheme = truncation_scheme(alg, space(enlarged_corners[2], 1))
+    svd_alg = svd_algorithm(alg, coordinate)
     U, S, V, err = PEPSKit.tsvd!(halfinf, svd_alg; trunc=trscheme)
 
     # Compute SVD truncation error and check for degenerate singular values

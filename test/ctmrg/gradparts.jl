@@ -13,7 +13,7 @@ using PEPSKit:
     SOUTHWEST,
     rotate_north,
     left_move,
-    ctmrg_iter
+    ctmrg_iteration
 
 using Zygote
 using ChainRulesCore
@@ -53,15 +53,17 @@ end
 
 ## Tests
 # ------
-@testset "Reverse rules for ctmrg_iter with spacetype $(Vspaces[i])" for i in
-                                                                         eachindex(Pspaces)
+@testset "Reverse rules for ctmrg_iteration with spacetype $(Vspaces[i])" for i in
+                                                                              eachindex(
+    Pspaces
+)
     Random.seed!(42039482030)
     psi = InfinitePEPS(Pspaces[i], Vspaces[i], Vspaces[i])
     env = CTMRGEnv(psi, Espaces[i])
 
     @testset "$alg" for alg in boundary_algs
         @info "$(typeof(alg)) on $(Vspaces[i])"
-        f(state, env) = rho(ctmrg_iter(state, env, alg)[1])
+        f(state, env) = rho(ctmrg_iteration(state, env, alg)[1])
 
         # use rrule testing functionality but compute rrule via Zygote
         test_rrule(

@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 
-using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
+using PEPSKit: ctmrg_iteration, gauge_fix, calc_elementwise_convergence
 
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
@@ -52,7 +52,7 @@ end
     alg = CTMRG(; maxiter, flavor)
 
     ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iter(psi, ctm, alg)
+    ctm2, = ctmrg_iteration(psi, ctm, alg)
     ctm_fixed, = gauge_fix(ctm, ctm2)
     @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = atol
 end
@@ -76,7 +76,7 @@ end
     alg = CTMRG(; maxiter, flavor)
 
     ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iter(psi, ctm, alg)
+    ctm2, = ctmrg_iteration(psi, ctm, alg)
     ctm_fixed, = gauge_fix(ctm, ctm2)
     @test calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = atol
 end

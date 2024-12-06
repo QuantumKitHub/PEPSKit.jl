@@ -354,7 +354,7 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
         throw(ArgumentError("No rrule for getproperty of $name"))
     end
 end
-Base.size(env::CTMRG, args...) = size(env.corners, args...)
+Base.size(env::CTMRGEnv, args...) = size(env.corners, args...)
 Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
 Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
 function eachcoordinate(x::CTMRGEnv)

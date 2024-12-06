@@ -5,7 +5,7 @@ using TensorKit, KrylovKit
 using PEPSKit
 using PEPSKit:
     FixedSVD,
-    ctmrg_iter,
+    ctmrg_iteration,
     gauge_fix,
     fix_relative_phases,
     fix_global_phases,
@@ -30,7 +30,7 @@ unitcells = [(1, 1), (3, 4)]
     env_conv1 = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
 
     # do extra iteration to get SVD
-    env_conv2, info = ctmrg_iter(psi, env_conv1, ctm_alg)
+    env_conv2, info = ctmrg_iteration(psi, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv1, env_conv2)
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = 1e-6
 
@@ -40,7 +40,7 @@ unitcells = [(1, 1), (3, 4)]
     ctm_alg_fix = CTMRG(; svd_alg=svd_alg_fix, trscheme=notrunc())
 
     # do iteration with FixedSVD
-    env_fixedsvd, = ctmrg_iter(psi, env_conv1, ctm_alg_fix)
+    env_fixedsvd, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = 1e-6
 end
@@ -59,11 +59,11 @@ end
     env_conv1 = leading_boundary(env_init, psi, ctm_alg_iter)
 
     # do extra iteration to get SVD
-    env_conv2_iter, info_iter = ctmrg_iter(psi, env_conv1, ctm_alg_iter)
+    env_conv2_iter, info_iter = ctmrg_iteration(psi, env_conv1, ctm_alg_iter)
     env_fix_iter, signs_iter = gauge_fix(env_conv1, env_conv2_iter)
     @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = 1e-6
 
-    env_conv2_full, info_full = ctmrg_iter(psi, env_conv1, ctm_alg_full)
+    env_conv2_full, info_full = ctmrg_iteration(psi, env_conv1, ctm_alg_full)
     env_fix_full, signs_full = gauge_fix(env_conv1, env_conv2_full)
     @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = 1e-6
 
@@ -77,11 +77,11 @@ end
     ctm_alg_fix_full = CTMRG(; svd_alg=svd_alg_fix_full, trscheme=notrunc())
 
     # do iteration with FixedSVD
-    env_fixedsvd_iter, = ctmrg_iter(psi, env_conv1, ctm_alg_fix_iter)
+    env_fixedsvd_iter, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix_iter)
     env_fixedsvd_iter = fix_global_phases(env_conv1, env_fixedsvd_iter)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = 1e-6  # This doesn't work for x₀ = rand(size(b, 1))?
 
-    env_fixedsvd_full, = ctmrg_iter(psi, env_conv1, ctm_alg_fix_full)
+    env_fixedsvd_full, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix_full)
     env_fixedsvd_full = fix_global_phases(env_conv1, env_fixedsvd_full)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_full) ≈ 0 atol = 1e-6
 

@@ -22,10 +22,10 @@ function simultaneous_projectors(
     ϵ = zero(real(scalartype(envs)))
 
     projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
-        proj, info = compute_projector(enlarged_corners, coordinate, alg)
-        U[dir, r, c] = info.U
-        S[dir, r, c] = info.S
-        V[dir, r, c] = info.V
+        proj, info = simultaneous_projector(enlarged_corners, coordinate, alg)
+        U[coordinate...] = info.U
+        S[coordinate...] = info.S
+        V[coordinate...] = info.V
         ϵ = max(ϵ, info.err / norm(info.S))
         return proj
     end
@@ -37,7 +37,7 @@ end
 function simultaneous_projector(
     enlarged_corners::Array{E,3}, coordinate, alg::HalfInfiniteProjector
 ) where {E}
-    coordinate′ = _next_projector_coordinate(coordinate, size(enlarged_corners)[2:3]...)
+    coordinate′ = _next_coordinate(coordinate, size(enlarged_corners)[2:3]...)
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     return compute_projector(ec, coordinate, alg)
 end
@@ -45,9 +45,9 @@ function simultaneous_projector(
     enlarged_corners::Array{E,3}, coordinate, alg::FullInfiniteProjector
 ) where {E}
     rowsize, colsize = size(enlarged_corners)[2:3]
-    coordinate2 = _next_projector_coordinate(coordinate, rowsize, colsize)
-    coordinate3 = _next_projector_coordinate(coordinate2, rowsize, colsize)
-    coordinate4 = _next_projector_coordinate(coordinate3, rowsize, colsize)
+    coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
+    coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
+    coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
     ec = (
         enlarged_corners[coordinate...],
         enlarged_corners[coordinate2...],

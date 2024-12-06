@@ -27,7 +27,7 @@ function sequential_projectors(
     # SVD half-infinite environment column-wise
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
-        proj, info = simultaneous_projector(state, envs, (WEST, r, c), alg)
+        proj, info = sequential_projector(state, envs, (WEST, r, c), alg)
         ϵ = max(ϵ, info.err / norm(info.S))
         return proj
     end

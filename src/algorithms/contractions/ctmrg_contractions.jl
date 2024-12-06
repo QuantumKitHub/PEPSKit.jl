@@ -164,31 +164,6 @@ end
 # ----------------------
 
 """
-    left_and_right_projector(U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
-    left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
-
-Compute left and right projectors based on a SVD and quadrant tensors, specified either as
-`AbstractTensorMap`s or sparsely as `EnlargedCorner`s such that the quadrants are never
-constructed explicitly.
-"""
-function left_and_right_projector(
-    U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
-) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S)
-    P_left = Q_next * V' * isqS
-    P_right = isqS * U' * Q
-    return P_left, P_right
-end
-function left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
-    isqS = sdiag_inv_sqrt(S)
-    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
-    P_right = right_projector(
-        Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
-    )
-    return P_left, P_right
-end
-
-"""
     left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=ket)
 
 Contract the CTMRG left projector with the higher-dimensional subspace facing to the left.
@@ -232,6 +207,37 @@ function right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=
         E_2[χ2 D3 D4; χ3] *
         C[χ3; χ4] *
         E_1[χ4 D5 D6; χ_out]
+end
+
+"""
+    left_and_right_projector(U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
+
+Compute left and right projectors based on a SVD and quadrant tensors, where the inverse
+square root `isqS` of the singular values is computed.
+
+Left projector:
+```
+    -- |~~~~~~~~| -- |~~|
+       | Q_next |    |V'| -- isqS --
+    == |~~~~~~~~| == |~~|
+```
+
+Right projector:
+```
+               |~~| -- |~~~| --
+    -- isqS -- |U'|    | Q |
+               |~~| == |~~~| ==
+```
+"""
+function left_and_right_projector(
+    U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
+) where {E<:ElementarySpace}
+    isqS = sdiag_inv_sqrt(S)
+    @autoopt @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
+        Q_next[χ_in D_inabove D_inbelow; χ1 D1 D2] * conj(V[χ2; χ1 D1 D2]) * isqS[χ2; χ_out]
+    @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
+        isqS[χ_in; χ1] * conj(U[χ2 D1 D2; χ1]) * Q[χ2 D1 D2; χ_out D_outabove D_outbelow]
+    return P_left, P_right
 end
 
 """
