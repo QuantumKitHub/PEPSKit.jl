@@ -22,20 +22,8 @@ for ind in CartesianIndices(peps.vertices)
     peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
 end
 # Hubbard model Hamiltonian at half-filling
-t = 1.0
-U = 6.0
+t, U = 1.0, 6.0
 ham = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(N1, N2); t=t, U=U, mu=U / 2)
-
-# Convert to a Hamiltonian that only includes nearest-neighbour interactions
-unit = TensorKit.id(Pspace)
-one_site = [op for (ind, op) in ham.terms if length(ind) == 1][1]
-ham = LocalOperator(
-    ham.lattice,
-    Tuple(
-        sites => op + (one_site ⊗ unit + unit ⊗ one_site) / 4 for
-        (sites, op) in ham.terms if length(sites) == 2
-    )...,
-)
 
 # simple update
 dts = [1e-2, 1e-3, 4e-4, 1e-4]
@@ -53,10 +41,12 @@ peps = InfinitePEPS(peps)
 # CTMRG
 χenv0, χenv = 6, 20
 Espace = Vect[fℤ₂](0 => χenv0 / 2, 1 => χenv0 / 2)
-envs = CTMRGEnv(rand, Float64, peps, Espace)
+envs = CTMRGEnv(randn, Float64, peps, Espace)
 for χ in [χenv0, χenv]
     trscheme = truncerr(1e-9) & truncdim(χ)
-    ctm_alg = CTMRG(; tol=1e-10, verbosity=3, trscheme=trscheme, ctmrgscheme=:sequential)
+    ctm_alg = CTMRG(;
+        maxiter=40, tol=1e-10, verbosity=3, trscheme=trscheme, ctmrgscheme=:sequential
+    )
     global envs = leading_boundary(envs, peps, ctm_alg)
 end
 
