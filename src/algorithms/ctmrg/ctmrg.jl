@@ -137,7 +137,7 @@ end
 Perform CTMRG left move on the `col`-th column
 """
 function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
-    """
+    #=
         ----> left move
         C1 ← T1 ←   r-1
         ↓    ‖
@@ -145,7 +145,7 @@ function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
         ↓    ‖
         C4 → T3 →   r+1
         c-1  c 
-    """
+    =#
     projectors, info = ctmrg_projectors(col, state, envs, alg)
     envs = ctmrg_renormalize(col, projectors, state, envs, alg)
     return envs, info

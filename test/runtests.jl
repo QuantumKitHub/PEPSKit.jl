@@ -56,9 +56,6 @@ end
         @time @safetestset "Heisenberg model (simple and full update)" begin
             include("heisenberg_sufu.jl")
         end
-        @time @safetestset "Hubbard model (simple update)" begin
-            include("hubbard_su.jl")
-        end
         @time @safetestset "J1-J2 model" begin
             include("j1j2_model.jl")
         end

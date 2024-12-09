@@ -41,11 +41,12 @@ function ChainRulesCore.rrule(
     ::typeof(sdiag_pow), S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4)
 )
     tol *= norm(S, Inf)
-    spow = sdiag_pow(S, pow - 1; tol)
+    spow = sdiag_pow(S, pow; tol)
+    spow2 = sdiag_pow(S, pow - 1; tol)
     function sdiag_pow_pullback(c̄)
-        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow))
+        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow2))
     end
-    return invsq, sdiag_pow_pullback
+    return spow, sdiag_pow_pullback
 end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance

@@ -187,4 +187,3 @@ function Base.rot180(H::LocalOperator)
     )
     return LocalOperator(lattice2, terms2...)
 end
-
