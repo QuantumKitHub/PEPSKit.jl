@@ -315,7 +315,7 @@ function build_projectors(
     Q::AbstractTensorMap{E,3,3},
     Q_next::AbstractTensorMap{E,3,3},
 ) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S)
+    isqS = sdiag_pow(S, -0.5)
     P_left = Q_next * V' * isqS
     P_right = isqS * U' * Q
     return P_left, P_right
@@ -327,7 +327,7 @@ function build_projectors(
     Q::EnlargedCorner,
     Q_next::EnlargedCorner,
 ) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S)
+    isqS = sdiag_pow(S, -0.5)
     P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
     P_right = right_projector(
         Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
