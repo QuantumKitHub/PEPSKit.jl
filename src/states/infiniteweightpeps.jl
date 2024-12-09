@@ -14,15 +14,24 @@ Schmidt bond weight used in simple/cluster update
 struct SUWeight{E<:PEPSWeight}
     x::Matrix{E}
     y::Matrix{E}
+
+    function SUWeight(x::Matrix{E}, y::Matrix{E}) where {E<:PEPSWeight}
+        if size(x) != size(y)
+            throw(
+                ArgumentError(
+                    "Matrices for x-weights and y-weights must have the same size, but got size(x) = $(size(x)) and size(y) = $(size(y)).",
+                ),
+            )
+        end
+        return new{E}(x, y)
+    end
 end
 
 function Base.size(wts::SUWeight)
-    @assert size(wts.x) == size(wts.y)
     return size(wts.x)
 end
 
 function Base.eltype(wts::SUWeight)
-    @assert eltype(wts.x) == eltype(wts.y)
     return eltype(wts.x)
 end
 
@@ -50,12 +59,7 @@ function Base.show(io::IO, wts::SUWeight)
 end
 
 function Base.iterate(wts::SUWeight, state...)
-    return iterate(Iterators.flatten((wts.x, wts.y), state...))
-end
-
-function Base.length(wts::SUWeight)
-    @assert size(wts.x) == size(wts.y)
-    return 2 * prod(size(wts.x))
+    return iterate(Iterators.flatten((wts.x, wts.y)), state...)
 end
 
 function Base.isapprox(wts1::SUWeight, wts2::SUWeight; atol=0.0, rtol=1e-5)
@@ -174,7 +178,9 @@ function InfinitePEPS(peps::InfiniteWeightPEPS)
     N1, N2 = size(vertices)
     for (r, c) in Iterators.product(1:N1, 1:N2)
         for ax in 2:5
-            vertices[r, c] = absorb_weight(vertices[r, c], r, c, ax, peps.weights; sqrtwt=true)
+            vertices[r, c] = absorb_weight(
+                vertices[r, c], r, c, ax, peps.weights; sqrtwt=true
+            )
         end
     end
     return InfinitePEPS(vertices)
