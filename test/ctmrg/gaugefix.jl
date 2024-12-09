@@ -10,7 +10,7 @@ unitcells = [(1, 1), (2, 2), (3, 2)]
 maxiter = 400
 ctmrg_algs = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
-χ = 6
+χ = 8
 atol = 1e-4
 
 @testset "Trivial symmetry ($T) - ($unitcell) - ($ctmrg_alg) - ($projector_alg)" for (
@@ -45,7 +45,7 @@ end
 
     psi = InfinitePEPS(randn, T, physical_space, peps_space; unitcell)
 
-    Random.seed!(987654321)  # Seed RNG to make random environment consistent
+    Random.seed!(29385293852)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(physical_space, peps_space; unitcell)
     env = CTMRGEnv(psi, ctm_space)
     alg = ctmrg_alg(; maxiter, projector_alg)

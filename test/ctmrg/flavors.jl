@@ -62,11 +62,7 @@ end
     [SequentialCTMRG, SimultaneousCTMRG], projector_algs
 )
     ctm_alg = ctmrg_alg(;
-        tol=1e-6,
-        maxiter=1,
-        verbosity=0,
-        trscheme=FixedSpaceTruncation(),
-        projector_alg,
+        tol=1e-6, maxiter=1, verbosity=0, trscheme=FixedSpaceTruncation(), projector_alg
     )
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]

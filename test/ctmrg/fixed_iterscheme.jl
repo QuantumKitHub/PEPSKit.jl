@@ -40,7 +40,9 @@ atol = 1e-5
     # fix gauge of SVD
     U_fix, V_fix = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fix = SVDAdjoint(; fwd_alg=FixedSVD(U_fix, info.S, V_fix))
-    ctm_alg_fix = SimultaneousCTMRG(; projector_alg, svd_alg=svd_alg_fix, trscheme=notrunc())
+    ctm_alg_fix = SimultaneousCTMRG(;
+        projector_alg, svd_alg=svd_alg_fix, trscheme=notrunc()
+    )
 
     # do iteration with FixedSVD
     env_fixedsvd, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix)
