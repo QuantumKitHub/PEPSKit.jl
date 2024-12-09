@@ -146,8 +146,7 @@ function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
         C4 → T3 →   r+1
         c-1  c 
     """
-    enlarged_envs = ctmrg_expand(eachcoordinate(envs, [4, 1])[:, :, col], state, envs)
-    projectors, info = ctmrg_projectors(col, enlarged_envs, envs, alg)
+    projectors, info = ctmrg_projectors(col, state, envs, alg)
     envs = ctmrg_renormalize(col, projectors, state, envs, alg)
     return envs, info
 end
@@ -161,8 +160,7 @@ function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            projectors, info = ctmrg_projectors(col, state, envs, alg)
-            envs = ctmrg_renormalize(col, projectors, state, envs, alg)
+            envs, info = ctmrg_leftmove(col, state, envs, alg)
             ϵ = max(ϵ, info.err)
         end
         state = rotate_north(state, EAST)
