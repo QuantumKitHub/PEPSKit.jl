@@ -24,9 +24,9 @@ function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     end
 end
 
-function truncation_scheme(alg::ProjectorAlgorithm, Espace)
+function truncation_scheme(alg::ProjectorAlgorithm, edge)
     if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(Espace)
+        return truncspace(space(edge, 1))
     else
         return alg.trscheme
     end
@@ -65,9 +65,8 @@ and the given coordinate using the specified `alg`.
 function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjector)
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
-    trscheme = truncation_scheme(alg, space(enlarged_corners[2], 1))
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, err = PEPSKit.tsvd!(halfinf, svd_alg; trunc=trscheme)
+    U, S, V, err = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
 
     # Compute SVD truncation error and check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -89,9 +88,8 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
 
     # SVD product of QRs
     fullinf = R_left * L_right
-    trscheme = truncation_scheme(alg, space(enlarged_corners[4], 1))
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, err = PEPSKit.tsvd!(fullinf, svd_alg; trunc=trscheme)
+    U, S, V, err = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
 
     # Compute SVD truncation error and check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do

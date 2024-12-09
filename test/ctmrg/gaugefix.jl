@@ -8,7 +8,7 @@ using PEPSKit: ctmrg_iteration, gauge_fix, calc_elementwise_convergence
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 maxiter = 400
-ctmrg_flavors = [SequentialCTMRG, SimultaneousCTMRG]
+ctmrg_algs = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 χ = 6
 atol = 1e-4
@@ -16,7 +16,7 @@ atol = 1e-4
 @testset "Trivial symmetry ($T) - ($unitcell) - ($ctmrg_alg) - ($projector_alg)" for (
     T, unitcell, ctmrg_alg, projector_alg
 ) in Iterators.product(
-    scalartypes, unitcells, ctmrg_flavors, projector_algs
+    scalartypes, unitcells, ctmrg_algs, projector_algs
 )
     physical_space = ComplexSpace(2)
     peps_space = ComplexSpace(2)
@@ -37,7 +37,7 @@ end
 @testset "Z2 symmetry ($T) - ($unitcell) - ($ctmrg_alg) - ($projector_alg)" for (
     T, unitcell, ctmrg_alg, projector_alg
 ) in Iterators.product(
-    scalartypes, unitcells, ctmrg_s, projector_algs
+    scalartypes, unitcells, ctmrg_algs, projector_algs
 )
     physical_space = Z2Space(0 => 1, 1 => 1)
     peps_space = Z2Space(0 => 1, 1 => 1)

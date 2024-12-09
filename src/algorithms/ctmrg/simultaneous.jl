@@ -70,7 +70,11 @@ function simultaneous_projectors(
     ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs)))
 
     projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
-        proj, info = simultaneous_projectors(coordinate, enlarged_corners, alg)
+        coordinate′ = _next_coordinate(coordinate, size(envs)[2:3]...)
+        trscheme = truncation_scheme(alg, envs.edges[coordinate[1], coordinate′[2:3]...])
+        proj, info = simultaneous_projectors(
+            coordinate, enlarged_corners, @set(alg.trscheme = trscheme)
+        )
         U[coordinate...] = info.U
         S[coordinate...] = info.S
         V[coordinate...] = info.V

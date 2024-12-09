@@ -59,8 +59,11 @@ function sequential_projectors(
     ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs, 2)))
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
-        proj, info = sequential_projectors((WEST, r, c), state, envs, alg)
-        ϵ[c] = max(ϵ, info.err / norm(info.S))
+        trscheme = truncation_scheme(alg, envs.edges[WEST, _prev(r, size(envs, 2)), c])
+        proj, info = sequential_projectors(
+            (WEST, r, c), state, envs, @set(alg.trscheme = trscheme)
+        )
+        ϵ[r] = info.err / norm(info.S)
         return proj
     end
 
@@ -84,9 +87,6 @@ function sequential_projectors(
     envs::CTMRGEnv,
     alg::FullInfiniteProjector,
 )
-    # _, r, c = coordinate
-    # r′ = _next(r, size(envs, 2))
-    # c′ = _next(c, size(envs, 3))
     rowsize, colsize = size(envs)[2:3]
     coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)

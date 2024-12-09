@@ -26,7 +26,7 @@ end
         @time @safetestset "Unit cells" begin
             include("ctmrg/unitcell.jl")
         end
-        @time @safetestset "CTMRG schemes" begin
+        @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end
     end
