@@ -7,8 +7,8 @@ using PEPSKit
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg_sequential = CTMRG(; flavor=:sequential)
-ctm_alg_simultaneous = CTMRG(; flavor=:simultaneous)
+ctm_alg_sequential = SequentialCTMRG()
+ctm_alg_simultaneous = SimultaneousCTMRG()
 unitcells = [(1, 1), (3, 4)]
 projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
@@ -56,10 +56,9 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 end
 
 # test fixedspace actually fixes space
-@testset "Fixedspace truncation ($flavor)" for flavor in [:sequential, :simultaneous]
-    ctm_alg = CTMRG(;
-        tol=1e-6, maxiter=1, verbosity=0, flavor, trscheme=FixedSpaceTruncation()
-    )
+@testset "Fixedspace truncation ($ctmrg_alg)" for ctmrg_alg in
+                                               [SequentialCTMRG, SimultanenousCTMRG]
+    ctm_alg = ctmrg_alg(; tol=1e-6, maxiter=1, verbosity=0, trscheme=FixedSpaceTruncation())
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]
     psi = InfinitePEPS(Ds, Ds, Ds)

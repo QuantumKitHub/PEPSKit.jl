@@ -1,131 +1,37 @@
-"""
-    FixedSpaceTruncation <: TensorKit.TruncationScheme
-
-CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which the SVD
-is performed fixed. Since different environment directions and unit cell entries might
-have different spaces, this truncation style is different from `TruncationSpace`.
-"""
-struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
 """
-    struct HalfInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
-                                      trscheme=Defaults.trscheme, verbosity=0)
+    CTMRGAlgorithm
 
-Projector algorithm implementing projectors from SVDing the half-infinite CTMRG environment.
+Abstract super type for the corner transfer matrix renormalization group (CTMRG) algorithm
+for contracting infinite PEPS.
 """
-@kwdef struct HalfInfiniteProjector{S<:SVDAdjoint,T}
-    svd_alg::S = Defaults.svd_alg
-    trscheme::T = Defaults.trscheme
-    verbosity::Int = 0
-end
+abstract type CTMRGAlgorithm end
 
 """
-    struct FullInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
-                                      trscheme=Defaults.trscheme, verbosity=0)
-
-Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG environment.
-"""
-@kwdef struct FullInfiniteProjector{S<:SVDAdjoint,T}
-    svd_alg::S = Defaults.svd_alg
-    trscheme::T = Defaults.trscheme
-    verbosity::Int = 0
-end
-
-# TODO: do AbstractProjectorAlg type instead? -> would make it easier for users to implement custom projector alg
-const ProjectorAlgs = Union{HalfInfiniteProjector,FullInfiniteProjector}
-
-function svd_algorithm(alg::ProjectorAlgs, (dir, r, c))
-    if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
-        fwd_alg = alg.svd_alg.fwd_alg
-        fix_svd = FixedSVD(fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c])
-        return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
-    else
-        return alg.svd_alg
-    end
-end
-
-function truncation_scheme(alg::ProjectorAlgs, Espace)
-    if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(Espace)
-    else
-        return alg.trscheme
-    end
-end
-
-"""
-    CTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
-          miniter=Defaults.ctmrg_miniter, flavor=Defaults.ctmrg_flavor, verbosity=0,
-          svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation())
-
-Algorithm struct that represents the CTMRG algorithm for contracting infinite PEPS.
-Each CTMRG run is converged up to `tol` where the singular value convergence of the
-corners as well as the norm is checked. The maximal and minimal number of CTMRG iterations
-is set with `maxiter` and `miniter`.
-
-In general, two different flavors of CTMRG can be selected with `flavor` which determine how
-CTMRG is implemented. It can either be `:sequential`, where the projectors are succesively
-computed on the west side, and then applied and rotated. Or with `:simultaneous` all projectors
-are computed and applied simultaneously on all sides, where the corners get contracted with
-two projectors at the same time.
-
-Different levels of output information are printed depending on `verbosity`, where `0`
-suppresses all output, `1` only prints warnings, `2` gives information at the start and
-end, and `3` prints information every iteration.
-
-The projectors are computed from `svd_alg` SVDs where the truncation scheme is set via 
-`trscheme`.
-"""
-struct CTMRG
-    tol::Float64
-    maxiter::Int
-    miniter::Int
-    flavor::Symbol
-    verbosity::Int
-    projector_alg::ProjectorAlgs
-end
-function CTMRG(;
-    tol=Defaults.ctmrg_tol,
-    maxiter=Defaults.ctmrg_maxiter,
-    miniter=Defaults.ctmrg_miniter,
-    flavor=Defaults.ctmrg_flavor,
-    verbosity=2,
-    projector_alg=Defaults.projector_alg,
-    svd_alg=Defaults.svd_alg,
-    trscheme=Defaults.trscheme,
-)
-    return CTMRG(
-        tol,
-        maxiter,
-        miniter,
-        flavor,
-        verbosity,
-        projector_alg(; svd_alg, trscheme, verbosity),
-    )
-end
-
-"""
-    ctmrg_iteration(state, env, alg::CTMRG)
+    ctmrg_iteration(state, env, alg::CTMRG) -> env′, info
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(state, env, alg::CTMRG)
-    if alg.flavor == :simultaneous
-        return simultaneous_ctmrg_iter(state, env, alg)
-    elseif alg.flavor == :sequential
-        return sequential_ctmrg_iter(state, env, alg)
-    end
-end
+function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
 
 """
-    MPSKit.leading_boundary([envinit], state, alg::CTMRG)
+    MPSKit.leading_boundary([envinit], state, alg::CTMRGAlgorithm)
 
-Contract `state` using CTMRG and return the CTM environment.
-Per default, a random initial environment is used.
+Contract `state` using CTMRG and return the CTM environment. Per default, a random
+initial environment is used.
+
+Each CTMRG run is converged up to `alg.tol` where the singular value convergence
+of the corners and edges is checked. The maximal and minimal number of CTMRG
+iterations is set with `alg.maxiter` and `alg.miniter`.
+
+Different levels of output information are printed depending on `alg.verbosity`, where `0`
+suppresses all output, `1` only prints warnings, `2` gives information at the start and
+end, and `3` prints information every iteration.
 """
-function MPSKit.leading_boundary(state, alg::CTMRG)
+function MPSKit.leading_boundary(state, alg::CTMRGAlgorithm)
     return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
 end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
+function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
     CS = map(x -> tsvd(x)[2], envinit.corners)
     TS = map(x -> tsvd(x)[2], envinit.edges)
 
@@ -166,51 +72,42 @@ ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-"""
-    compute_projector(enlarged_corners, coordinate, alg::ProjectorAlgs)
+#=
+In order to compute an error measure, we compare the singular values of the current iteration with the previous one.
+However, when the virtual spaces change, this comparison is not directly possible.
+Instead, we project both tensors into the smaller space and then compare the difference.
 
-Determine left and right projectors at the bond given determined by the enlarged corners
-and the given coordinate using the specified `alg`.
-"""
-function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjector)
-    # SVD half-infinite environment
-    halfinf = half_infinite_environment(enlarged_corners...)
-    trscheme = truncation_scheme(alg, space(enlarged_corners[2], 1))
-    svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, err = PEPSKit.tsvd!(halfinf, svd_alg; trunc=trscheme)
-
-    # Compute SVD truncation error and check for degenerate singular values
-    Zygote.isderiving() && ignore_derivatives() do
-        if alg.verbosity > 0 && is_degenerate_spectrum(S)
-            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-            @warn("degenerate singular values detected: ", svals)
-        end
+TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
+=#
+function _singular_value_distance((S₁, S₂))
+    V₁ = space(S₁, 1)
+    V₂ = space(S₂, 1)
+    if V₁ == V₂
+        return norm(S₁ - S₂)
+    else
+        V = infimum(V₁, V₂)
+        e1 = isometry(V₁, V)
+        e2 = isometry(V₂, V)
+        return norm(e1' * S₁ * e1 - e2' * S₂ * e2)
     end
-
-    P_left, P_right = left_and_right_projector(U, S, V, enlarged_corners...)
-    return (P_left, P_right), (; err, U, S, V)
 end
-function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
-    # QR left and right half-infinite environments
-    halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
-    halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
-    _, R_left = leftorth!(halfinf_left)
-    L_right, _ = rightorth!(halfinf_right)
 
-    # SVD product of QRs
-    fullinf = R_left * L_right
-    trscheme = truncation_scheme(alg, space(enlarged_corners[4], 1))
-    svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, err = PEPSKit.tsvd!(fullinf, svd_alg; trunc=trscheme)
+"""
+    calc_convergence(envs, CSold, TSold)
 
-    # Compute SVD truncation error and check for degenerate singular values
-    Zygote.isderiving() && ignore_derivatives() do
-        if alg.verbosity > 0 && is_degenerate_spectrum(S)
-            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-            @warn("degenerate singular values detected: ", svals)
-        end
-    end
+Given a new environment `envs` and the singular values of previous corners and edges
+`CSold` and `TSold`, compute the maximal singular value distance.
+"""
+function calc_convergence(envs, CSold, TSold)
+    CSnew = map(x -> tsvd(x)[2], envs.corners)
+    ΔCS = maximum(_singular_value_distance, zip(CSold, CSnew))
 
-    P_left, P_right = left_and_right_projector(U, S, V, R_left, L_right)
-    return (P_left, P_right), (; err, U, S, V)
+    TSnew = map(x -> tsvd(x)[2], envs.edges)
+    ΔTS = maximum(_singular_value_distance, zip(TSold, TSnew))
+
+    @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
+
+    return max(ΔCS, ΔTS), CSnew, TSnew
 end
+
+@non_differentiable calc_convergence(args...)

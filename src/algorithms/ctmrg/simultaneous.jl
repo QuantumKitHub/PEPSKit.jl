@@ -1,10 +1,36 @@
 """
-    simultaneous_ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
+    SimultaneousCTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
+                      miniter=Defaults.ctmrg_miniter, verbosity=0,
+                      projector_alg=Defaults.projector_alg,
+                      svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation())
 
-Perform one simultaneous iteration of CTMRG, in which the environment is expanded and
-renormalized in all directions at the same time.
+CTMRG algorithm where all sides are grown and renormalized at the same time. In particular,
+the projectors are applied to the corners from two sides simultaneously. The projectors are
+computed using `projector_alg` from `svd_alg` SVDs where the truncation scheme is set via 
+`trscheme`.
 """
-function simultaneous_ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG)
+struct SimultaneousCTMRG <: CTMRGAlgorithm
+    tol::Float64
+    maxiter::Int
+    miniter::Int
+    verbosity::Int
+    projector_alg::ProjectorAlgorithm
+end
+function SimultaneousCTMRG(;
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=2,
+    projector_alg=Defaults.projector_alg_type,
+    svd_alg=Defaults.svd_alg,
+    trscheme=Defaults.trscheme,
+)
+    return SimultaneousCTMRG(
+        tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
+    )
+end
+
+function ctmrg_iteration(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners = dtmap(eachcoordinate(state, 1:4)) do idx
         return TensorMap(EnlargedCorner(state, envs, idx), idx[1])
     end  # expand environment
@@ -31,30 +57,30 @@ function _prealloc_svd(edges::Array{E,N}, ::FullInfiniteProjector) where {E,N}
 end
 
 """
-    simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgs)
-    simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgs)
+    simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm)
+    simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgorithm)
 
 Compute CTMRG projectors in the `:simultaneous` scheme either for all provided
 enlarged corners or on a specific `coordinate`.
 """
 function simultaneous_projectors(
-    enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgs
+    enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm
 ) where {E}
     U, S, V = _prealloc_svd(envs.edges, alg)
-    ϵ = zero(real(scalartype(envs)))
+    ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs)))
 
     projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
         proj, info = simultaneous_projectors(coordinate, enlarged_corners, alg)
         U[coordinate...] = info.U
         S[coordinate...] = info.S
         V[coordinate...] = info.V
-        ϵ = max(ϵ, info.err / norm(info.S))
+        ϵ[coordinate...] = info.err / norm(info.S)
         return proj
     end
 
     P_left = map(first, projectors)
     P_right = map(last, projectors)
-    return (P_left, P_right), (; err=ϵ, U=copy(U), S=copy(S), V=copy(V))
+    return (P_left, P_right), (; err=maximum(copy(ϵ)), U=copy(U), S=copy(S), V=copy(V))
 end
 function simultaneous_projectors(
     coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector

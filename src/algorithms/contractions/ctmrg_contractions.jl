@@ -210,10 +210,10 @@ function right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=
 end
 
 """
-    left_and_right_projector(U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
+    contract_projectors(U, S, V, Q, Q_next)
 
-Compute left and right projectors based on a SVD and quadrant tensors, where the inverse
-square root `isqS` of the singular values is computed.
+Compute projectors based on a SVD of `Q * Q_next`, where the inverse square root
+`isqS` of the singular values is computed.
 
 Left projector:
 ```
@@ -229,24 +229,10 @@ Right projector:
                |~~| == |~~~| ==
 ```
 """
-function left_and_right_projector(
-    U, S, V, Q::AbstractTensorMap{E,3,3}, Q_next::AbstractTensorMap{E,3,3}
-) where {E<:ElementarySpace}
+function contract_projectors(U, S, V, Q, Q_next)
     isqS = sdiag_inv_sqrt(S)
-    @autoopt @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
-        Q_next[χ_in D_inabove D_inbelow; χ1 D1 D2] * conj(V[χ2; χ1 D1 D2]) * isqS[χ2; χ_out]
-    @autoopt @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
-        isqS[χ_in; χ1] * conj(U[χ2 D1 D2; χ1]) * Q[χ2 D1 D2; χ_out D_outabove D_outbelow]
-    return P_left, P_right
-end
-function left_and_right_projector(
-    U, S, V, R_left::AbstractTensorMap{E,1,3}, L_right::AbstractTensorMap{E,3,1}
-) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S)
-    @tensor P_left[χ_in D_inabove D_inbelow; χ_out] :=
-        L_right[χ_in D_inabove D_inbelow; full] * conj(V[χ2; full]) * isqS[χ2; χ_out]
-    @tensor P_right[χ_in; χ_out D_outabove D_outbelow] :=
-        isqS[χ_in; χ1] * conj(U[full; χ1]) * R_left[full; χ_out D_outabove D_outbelow]
+    P_left = Q_next * V' * isqS  # use * to respect fermionic case
+    P_right = isqS * U' * Q
     return P_left, P_right
 end
 

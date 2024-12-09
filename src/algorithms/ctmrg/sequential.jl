@@ -1,10 +1,36 @@
 """
-    sequential_ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
+    SequentialCTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
+                      miniter=Defaults.ctmrg_miniter, verbosity=0,
+                      projector_alg=typeof(Defaults.projector_alg),
+                      svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation())
 
-Perform one sequential iteration of CTMRG, where one iteration consists of four expansion,
-renormalization and rotation steps that are performed sequentially.
+CTMRG algorithm where the expansions and renormalization is performed sequentially
+column-wise. This is implemented as a growing and projecting step to the left, followed by
+a clockwise rotation (performed four times). The projectors are computed using
+`projector_alg` from `svd_alg` SVDs where the truncation scheme is set via `trscheme`.
 """
-function sequential_ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG)
+struct SequentialCTMRG <: CTMRGAlgorithm
+    tol::Float64
+    maxiter::Int
+    miniter::Int
+    verbosity::Int
+    projector_alg::ProjectorAlgorithm
+end
+function SequentialCTMRG(;
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=2,
+    projector_alg=Defaults.projector_alg_type,
+    svd_alg=Defaults.svd_alg,
+    trscheme=Defaults.trscheme,
+)
+    return SequentialCTMRG(
+        tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
+    )
+end
+
+function ctmrg_iteration(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
@@ -20,26 +46,25 @@ function sequential_ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG)
 end
 
 """
-    sequential_projectors(col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs)
-    sequential_projectors(coordinate::NTuple{3,Int}, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs)
+    sequential_projectors(col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgorithm)
+    sequential_projectors(coordinate::NTuple{3,Int}, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgorithm)
 
 Compute CTMRG projectors in the `:sequential` scheme either for an entire column `col` or
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
 """
 function sequential_projectors(
-    col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgs
+    col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgorithm
 )
-    ϵ = zero(real(scalartype(envs)))
-
     # SVD half-infinite environment column-wise
+    ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs, 2)))
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
         proj, info = sequential_projectors((WEST, r, c), state, envs, alg)
-        ϵ = max(ϵ, info.err / norm(info.S))
+        ϵ[c] = max(ϵ, info.err / norm(info.S))
         return proj
     end
 
-    return (map(first, projectors), map(last, projectors)), (; err=ϵ)
+    return (map(first, projectors), map(last, projectors)), (; err=maximum(copy(ϵ)))
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},

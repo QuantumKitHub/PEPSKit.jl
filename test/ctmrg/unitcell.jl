@@ -7,7 +7,7 @@ using TensorKit
 # settings
 Random.seed!(91283219347)
 stype = ComplexF64
-ctm_alg = CTMRG()
+ctm_alg = SimultaneousCTMRG()
 
 function test_unitcell(
     unitcell, Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west

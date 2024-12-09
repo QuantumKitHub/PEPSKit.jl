@@ -25,7 +25,7 @@ atol = 1e-5
 ) in Iterators.product(
     unitcells, svd_algs, projector_algs
 )
-    ctm_alg = CTMRG(; svd_alg, projector_alg)
+    ctm_alg = SimultaneousCTMRG(; svd_alg, projector_alg)
 
     # initialize states
     Random.seed!(2394823842)
@@ -40,7 +40,7 @@ atol = 1e-5
     # fix gauge of SVD
     U_fix, V_fix = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fix = SVDAdjoint(; fwd_alg=FixedSVD(U_fix, info.S, V_fix))
-    ctm_alg_fix = CTMRG(; projector_alg, svd_alg=svd_alg_fix, trscheme=notrunc())
+    ctm_alg_fix = SimultaneousCTMRG(; projector_alg, svd_alg=svd_alg_fix, trscheme=notrunc())
 
     # do iteration with FixedSVD
     env_fixedsvd, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix)
@@ -49,11 +49,11 @@ atol = 1e-5
 end
 
 @testset "Element-wise consistency of TensorKit.SDD and IterSVD" begin
-    ctm_alg_iter = CTMRG(;
+    ctm_alg_iter = SimultaneousCTMRG(;
         maxiter=200,
         svd_alg=SVDAdjoint(; fwd_alg=IterSVD(; alg=GKL(; tol=1e-14, krylovdim=χenv + 10))),
     )
-    ctm_alg_full = CTMRG(; svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()))
+    ctm_alg_full = SimultaneousCTMRG(; svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()))
 
     # initialize states
     Random.seed!(91283219347)
@@ -73,11 +73,11 @@ end
     # fix gauge of SVD
     U_fix_iter, V_fix_iter = fix_relative_phases(info_iter.U, info_iter.V, signs_iter)
     svd_alg_fix_iter = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_iter, info_iter.S, V_fix_iter))
-    ctm_alg_fix_iter = CTMRG(; svd_alg=svd_alg_fix_iter, trscheme=notrunc())
+    ctm_alg_fix_iter = SimultaneousCTMRG(; svd_alg=svd_alg_fix_iter, trscheme=notrunc())
 
     U_fix_full, V_fix_full = fix_relative_phases(info_full.U, info_full.V, signs_full)
     svd_alg_fix_full = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_full, info_full.S, V_fix_full))
-    ctm_alg_fix_full = CTMRG(; svd_alg=svd_alg_fix_full, trscheme=notrunc())
+    ctm_alg_fix_full = SimultaneousCTMRG(; svd_alg=svd_alg_fix_full, trscheme=notrunc())
 
     # do iteration with FixedSVD
     env_fixedsvd_iter, = ctmrg_iteration(psi, env_conv1, ctm_alg_fix_iter)

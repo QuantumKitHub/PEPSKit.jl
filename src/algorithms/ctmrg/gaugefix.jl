@@ -141,40 +141,6 @@ function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
 
-#=
-In order to compute an error measure, we compare the singular values of the current iteration with the previous one.
-However, when the virtual spaces change, this comparison is not directly possible.
-Instead, we project both tensors into the smaller space and then compare the difference.
-
-TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
-=#
-function _singular_value_distance((S₁, S₂))
-    V₁ = space(S₁, 1)
-    V₂ = space(S₂, 1)
-    if V₁ == V₂
-        return norm(S₁ - S₂)
-    else
-        V = infimum(V₁, V₂)
-        e1 = isometry(V₁, V)
-        e2 = isometry(V₂, V)
-        return norm(e1' * S₁ * e1 - e2' * S₂ * e2)
-    end
-end
-
-function calc_convergence(envs, CSold, TSold)
-    CSnew = map(x -> tsvd(x)[2], envs.corners)
-    ΔCS = maximum(_singular_value_distance, zip(CSold, CSnew))
-
-    TSnew = map(x -> tsvd(x)[2], envs.edges)
-    ΔTS = maximum(_singular_value_distance, zip(TSold, TSnew))
-
-    @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
-
-    return max(ΔCS, ΔTS), CSnew, TSnew
-end
-
-@non_differentiable calc_convergence(args...)
-
 """
     calc_elementwise_convergence(envfinal, envfix; atol=1e-6)
 

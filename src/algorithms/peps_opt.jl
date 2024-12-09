@@ -77,8 +77,8 @@ function LinSolver(;
 end
 
 """
-    PEPSOptimize{G}(; boundary_alg=CTMRG(), optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
-                    reuse_env::Bool=true, gradient_alg::G=LinSolver())
+    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
+                    reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
@@ -89,19 +89,19 @@ step by setting `reuse_env` to true. Otherwise a random environment is used at e
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 """
 struct PEPSOptimize{G}
-    boundary_alg::CTMRG
+    boundary_alg::CTMRGAlgorithm
     optimizer::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
     gradient_alg::G
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
-        boundary_alg::CTMRG,
+        boundary_alg::CTMRGAlgorithm,
         optimizer,
         reuse_env,
         gradient_alg::G,
     ) where {G}
         if gradient_alg isa GradMode
-            if boundary_alg.flavor === :sequential && iterscheme(gradient_alg) === :fixed
+            if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             end
         end
@@ -109,7 +109,7 @@ struct PEPSOptimize{G}
     end
 end
 function PEPSOptimize(;
-    boundary_alg=CTMRG(),
+    boundary_alg=Defaults.ctmrg_alg,
     optimizer=Defaults.optimizer,
     reuse_env=Defaults.reuse_env,
     gradient_alg=Defaults.gradient_alg,
@@ -220,7 +220,7 @@ function _rrule(
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
-    alg::CTMRG,
+    alg::CTMRGAlgorithm,
 )
     envs = leading_boundary(envinit, state, alg)
 
@@ -249,9 +249,8 @@ function _rrule(
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
-    alg::CTMRG,
+    alg::SimultaneousCTMRG,
 )
-    @assert alg.flavor === :simultaneous
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs = leading_boundary(envinit, state, alg)
     envsconv, info = ctmrg_iteration(state, envs, alg)
@@ -262,7 +261,7 @@ function _rrule(
     svd_alg_fixed = SVDAdjoint(;
         fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
     )
-    alg_fixed = CTMRG(; svd_alg=svd_alg_fixed, trscheme=notrunc(), flavor=:simultaneous)
+    alg_fixed = SimultaneousCTMRG(; svd_alg=svd_alg_fixed, trscheme=notrunc())
 
     function leading_boundary_fixed_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)

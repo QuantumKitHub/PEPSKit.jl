@@ -18,10 +18,10 @@ names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1e-4
 boundary_algs = [
-    # CTMRG(; verbosity=0, flavor=:simultaneous, projector_alg=HalfInfiniteProjector),
-    CTMRG(; verbosity=0, flavor=:simultaneous, projector_alg=FullInfiniteProjector),
-    # CTMRG(; verbosity=0, flavor=:sequential, projector_alg=HalfInfiniteProjector),
-    CTMRG(; verbosity=0, flavor=:sequential, projector_alg=FullInfiniteProjector),
+    SequentialCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector),
+    SequentialCTMRG(; verbosity=0, projector_alg=FullInfiniteProjector),
+    SimultaneousCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector),
+    SimultaneousCTMRG(; verbosity=0, projector_alg=FullInfiniteProjector),
 ]
 gradmodes = [
     [
