@@ -74,9 +74,9 @@ function _su_bondx!(
             ↑           ↑
         -1← aR -← 3 -← bL ← -4
     =#
-    @tensor tmp[:] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
+    @tensor tmp[-1 -2; -4 -3] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
     # SVD
-    aR, s, bL, ϵ = tsvd(tmp, ((1, 2), (3, 4)); trunc=truncation_scheme(alg, space(T1, 3)))
+    aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
     #=
             -2         -1              -1    -2
             |         ↗               ↗       |

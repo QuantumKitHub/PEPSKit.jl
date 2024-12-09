@@ -49,15 +49,8 @@ function Base.show(io::IO, wts::SUWeight)
     end
 end
 
-function Base.iterate(wts::SUWeight, state=1)
-    nx = prod(size(wts.x))
-    if 1 <= state <= nx
-        return wts.x[state], state + 1
-    elseif nx + 1 <= state <= 2 * nx
-        return wts.y[state - nx], state + 1
-    else
-        return nothing
-    end
+function Base.iterate(wts::SUWeight, state...)
+    return iterate(Iterators.flatten((wts.x, wts.y), state...)
 end
 
 function Base.length(wts::SUWeight)
