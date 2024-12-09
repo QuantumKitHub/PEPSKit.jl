@@ -40,14 +40,14 @@ function _su_bondx!(
     T1, T2 = peps.vertices[row, col], peps.vertices[row2, col2]
     # absorb environment weights
     for ax in (2, 4, 5)
-        T1 = absorb_wt(T1, row, col, ax, peps.weights)
+        T1 = absorb_weight(T1, row, col, ax, peps.weights)
     end
     for ax in (2, 3, 4)
-        T2 = absorb_wt(T2, row2, col2, ax, peps.weights)
+        T2 = absorb_weight(T2, row2, col2, ax, peps.weights)
     end
     # absorb bond weight
-    T1 = absorb_wt(T1, row, col, 3, peps.weights; sqrtwt=true)
-    T2 = absorb_wt(T2, row2, col2, 5, peps.weights; sqrtwt=true)
+    T1 = absorb_weight(T1, row, col, 3, peps.weights; sqrtwt=true)
+    T2 = absorb_weight(T2, row2, col2, 5, peps.weights; sqrtwt=true)
     #= QR and LQ decomposition
 
         2   1               1             2
@@ -88,10 +88,10 @@ function _su_bondx!(
     @tensor T2[-1; -2 -3 -4 -5] := bL[-5, -1, 1] * Y[1, -2, -3, -4]
     # remove environment weights
     for ax in (2, 4, 5)
-        T1 = absorb_wt(T1, row, col, ax, peps.weights; invwt=true)
+        T1 = absorb_weight(T1, row, col, ax, peps.weights; invwt=true)
     end
     for ax in (2, 3, 4)
-        T2 = absorb_wt(T2, row2, col2, ax, peps.weights; invwt=true)
+        T2 = absorb_weight(T2, row2, col2, ax, peps.weights; invwt=true)
     end
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)

@@ -50,7 +50,7 @@ function Base.show(io::IO, wts::SUWeight)
 end
 
 function Base.iterate(wts::SUWeight, state...)
-    return iterate(Iterators.flatten((wts.x, wts.y), state...)
+    return iterate(Iterators.flatten((wts.x, wts.y), state...))
 end
 
 function Base.length(wts::SUWeight)
@@ -136,7 +136,7 @@ Weights around the tensor at `(row, col)` are
                 ↓
 ```
 """
-function absorb_wt(
+function absorb_weight(
     t::T,
     row::Int,
     col::Int,
@@ -174,7 +174,7 @@ function InfinitePEPS(peps::InfiniteWeightPEPS)
     N1, N2 = size(vertices)
     for (r, c) in Iterators.product(1:N1, 1:N2)
         for ax in 2:5
-            vertices[r, c] = absorb_wt(vertices[r, c], r, c, ax, peps.weights; sqrtwt=true)
+            vertices[r, c] = absorb_weight(vertices[r, c], r, c, ax, peps.weights; sqrtwt=true)
         end
     end
     return InfinitePEPS(vertices)
