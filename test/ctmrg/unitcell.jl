@@ -53,7 +53,7 @@ function random_dualize!(M::AbstractMatrix{<:ElementarySpace})
     return M
 end
 
-@testset "Integer space specifiers with $ctm_alg" begin
+@testset "Integer space specifiers with $ctm_alg" for ctm_alg in ctm_algs
     unitcell = (3, 3)
 
     Pspaces = rand(2:3, unitcell...)
