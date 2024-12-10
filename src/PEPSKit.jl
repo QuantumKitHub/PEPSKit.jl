@@ -17,12 +17,14 @@ include("utility/util.jl")
 include("utility/diffable_threads.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
+include("utility/mirror.jl")
 include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
+include("states/infiniteweightpeps.jl")
 
 include("operators/transferpeps.jl")
 include("operators/infinitepepo.jl")
@@ -43,6 +45,9 @@ include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
+include("algorithms/time_evolution/gatetools.jl")
+include("algorithms/time_evolution/simpleupdate.jl")
+
 include("algorithms/toolbox.jl")
 
 include("algorithms/peps_opt.jl")
@@ -59,7 +64,7 @@ include("utility/symmetrization.jl")
         const ctmrgscheme = :simultaneous
         const reuse_env = true
         const trscheme = FixedSpaceTruncation()
-        const fwd_alg = TensorKit.SVD()
+        const fwd_alg = TensorKit.SDD()
         const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
         const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
         const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
@@ -167,13 +172,18 @@ export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
+export absorb_weight
+export su_iter, simpleupdate, SimpleUpdate
+
 export InfinitePEPS, InfiniteTransferPEPS
+export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
 export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
-export transverse_field_ising, heisenberg_XYZ, j1_j2, pwave_superconductor
+export transverse_field_ising, heisenberg_XYZ, j1_j2
+export pwave_superconductor, hubbard_model, tj_model
 
 end # module

@@ -122,3 +122,57 @@ function pwave_superconductor(
         (neighbor => hy for neighbor in y_neighbors)...,
     )
 end
+
+function MPSKitModels.hubbard_model(
+    T::Type{<:Number},
+    particle_symmetry::Type{<:Sector},
+    spin_symmetry::Type{<:Sector},
+    lattice::InfiniteSquare;
+    t=1.0,
+    U=1.0,
+    mu=0.0,
+    n::Integer=0,
+)
+    @assert n == 0 "Currently no support for imposing a fixed particle number"
+    N = MPSKitModels.e_number(T, particle_symmetry, spin_symmetry)
+    pspace = space(N, 1)
+    unit = TensorKit.id(pspace)
+    hopping =
+        MPSKitModels.e⁺e⁻(T, particle_symmetry, spin_symmetry) +
+        MPSKitModels.e⁻e⁺(T, particle_symmetry, spin_symmetry)
+    interaction_term = MPSKitModels.nꜛnꜜ(T, particle_symmetry, spin_symmetry)
+    site_term = U * interaction_term - mu * N
+    h = (-t) * hopping + (1 / 4) * (site_term ⊗ unit + unit ⊗ site_term)
+    return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
+end
+
+"""
+Reload MPSKitModels.tj_model
+
+# Arguments
+"""
+function MPSKitModels.tj_model(
+    T::Type{<:Number},
+    particle_symmetry::Type{<:Sector},
+    spin_symmetry::Type{<:Sector},
+    lattice::InfiniteSquare;
+    t=2.5,
+    J=1.0,
+    mu=0.0,
+    slave_fermion::Bool=false,
+)
+    hopping =
+        TJOperators.e_plusmin(particle_symmetry, spin_symmetry; slave_fermion) +
+        TJOperators.e_minplus(particle_symmetry, spin_symmetry; slave_fermion)
+    num = TJOperators.e_number(particle_symmetry, spin_symmetry; slave_fermion)
+    heis =
+        TJOperators.S_exchange(particle_symmetry, spin_symmetry; slave_fermion) -
+        (1 / 4) * (num ⊗ num)
+    pspace = space(num, 1)
+    unit = TensorKit.id(pspace)
+    h = (-t) * hopping + J * heis - (mu / 4) * (num ⊗ unit + unit ⊗ num)
+    if T <: Real
+        h = real(h)
+    end
+    return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
+end

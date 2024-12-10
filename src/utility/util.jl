@@ -21,38 +21,32 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
-# Compute √S⁻¹ for diagonal TensorMaps
-_safe_inv(a, tol) = abs(a) < tol ? zero(a) : inv(a)
-function sdiag_inv_sqrt(S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4))
+_safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a .^ pow
+"""
+Compute `S^pow` for diagonal matrices `S`
+"""
+function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4))
     tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
-    invsq = similar(S)
-
-    if sectortype(S) == Trivial
+    Spow = similar(S)
+    for (k, b) in blocks(S)
         copyto!(
-            invsq.data,
-            LinearAlgebra.diagm(_safe_inv.(LinearAlgebra.diag(S.data), tol) .^ (1 / 2)),
+            blocks(Spow)[k],
+            LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol)),
         )
-    else
-        for (k, b) in blocks(S)
-            copyto!(
-                blocks(invsq)[k],
-                LinearAlgebra.diagm(_safe_inv.(LinearAlgebra.diag(b), tol) .^ (1 / 2)),
-            )
-        end
     end
-
-    return invsq
+    return Spow
 end
 
 function ChainRulesCore.rrule(
-    ::typeof(sdiag_inv_sqrt), S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4)
+    ::typeof(sdiag_pow), S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4)
 )
     tol *= norm(S, Inf)
-    invsq = sdiag_inv_sqrt(S; tol)
-    function sdiag_inv_sqrt_pullback(c̄)
-        return (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, invsq'^3))
+    spow = sdiag_pow(S, pow; tol)
+    spow2 = sdiag_pow(S, pow - 1; tol)
+    function sdiag_pow_pullback(c̄)
+        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow2))
     end
-    return invsq, sdiag_inv_sqrt_pullback
+    return spow, sdiag_pow_pullback
 end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
