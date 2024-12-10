@@ -58,11 +58,11 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
 end
 
 """
-    correlation_length(peps::InfinitePEPS, env::CTMRGEnv; howmany=2)
+    correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
 
 Compute the PEPS correlation length based on the horizontal and vertical
 transfer matrices. Additionally the (normalized) eigenvalue spectrum is
-returned. Specify the number of computed eigenvalues with `howmany`.
+returned. Specify the number of computed eigenvalues with `num_vals`.
 """
 function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
     T = scalartype(peps)

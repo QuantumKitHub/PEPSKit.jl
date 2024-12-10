@@ -52,6 +52,6 @@ trscheme = truncerr(1e-9) & truncdim(χenv)
 ctm_alg = CTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme, ctmrgscheme=:sequential)
 envs = leading_boundary(envs, peps, ctm_alg)
 # measure physical quantities
-e_site = costfun(peps, envs, ham)
+e_site = costfun(peps, envs, ham) / (N1 * N2)
 @info @sprintf("Energy = %.8f\n", e_site)
 @test isapprox(e_site, -0.6675; atol=1e-3)
