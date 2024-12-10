@@ -18,13 +18,13 @@ function truncation_scheme(alg::SimpleUpdate, v::ElementarySpace)
 end
 
 """
-Simple update of bond `peps.weights.x[r,c]`
+Simple update of the x-bond `peps.weights[1,r,c]`
 ```
-                y[r,c]              y[r,c+1]
+                [2,r,c]             [2,r,c+1]
                 ↓                   ↓
-    x[r,c-1] ←- T[r,c] ←- x[r,c] ←- T[r,c+1] ← x[r,c+1]
+    [1,r,c-1] ← T[r,c] ← [1,r,c] ←- T[r,c+1] ← [1,r,c+1]
                 ↓                   ↓
-                y[r+1,c]            y[r+1,c+1]
+                [2,r+1,c]           [2,r+1,c+1]
 ```
 """
 function _su_bondx!(
@@ -96,7 +96,7 @@ function _su_bondx!(
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
     peps.vertices[row, col], peps.vertices[row2, col2] = T1, T2
-    peps.weights.x[row, col] = s / norm(s, Inf)
+    peps.weights[1, row, col] = s / norm(s, Inf)
     return ϵ
 end
 
@@ -118,8 +118,8 @@ function su_iter(
     # TODO: make algorithm independent on the choice of dual in the network
     for (r, c) in Iterators.product(1:Nr, 1:Nc)
         @assert [isdual(space(peps.vertices[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
-        @assert [isdual(space(peps.weights.x[r, c], ax)) for ax in 1:2] == [0, 1]
-        @assert [isdual(space(peps.weights.y[r, c], ax)) for ax in 1:2] == [0, 1]
+        @assert [isdual(space(peps.weights[1, r, c], ax)) for ax in 1:2] == [0, 1]
+        @assert [isdual(space(peps.weights[2, r, c], ax)) for ax in 1:2] == [0, 1]
     end
     peps2 = deepcopy(peps)
     gate_mirrored = mirror_antidiag(gate)
@@ -139,7 +139,7 @@ function su_iter(
                 ϵ = _su_bondx!(r, 1, term, peps2, alg)
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
-                peps2.weights.x[rp1, 2] = deepcopy(peps2.weights.x[r, 1])
+                peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
             end
         else
             for site in CartesianIndices(peps2.vertices)
@@ -187,7 +187,7 @@ function simpleupdate(
         wts0 = deepcopy(peps.weights)
         time1 = time()
         if ((count == 1) || (count % check_int == 0) || converge || cancel)
-            @info "Space of x-weight at [1, 1] = $(space(peps.weights.x[1, 1], 1))"
+            @info "Space of x-weight at [1, 1] = $(space(peps.weights[1, 1, 1], 1))"
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
