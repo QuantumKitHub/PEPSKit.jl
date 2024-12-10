@@ -262,7 +262,7 @@ function _rrule(
         fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
     )
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
-    alg_fixed = @set alg.projector_alg.trscheme = notrunc()
+    alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
     function leading_boundary_fixed_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)

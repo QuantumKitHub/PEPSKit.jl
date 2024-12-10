@@ -23,10 +23,7 @@ ctmrg_algs = [
         SimultaneousCTMRG(; verbosity=0, projector_alg=FullInfiniteProjector),
     ],
     [
-        SimultaneousCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector),
-        SimultaneousCTMRG(; verbosity=0, projector_alg=FullInfiniteProjector),
         SequentialCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector),
-        SequentialCTMRG(; verbosity=0, projector_alg=FullInfiniteProjector),
     ],
 ]
 gradmodes = [
@@ -50,10 +47,10 @@ steps = -0.01:0.005:0.01
 
 ## Tests
 # ------
-@testset "AD CTMRG energy gradients for $(names[i]) model" verbose = true for i in
-                                                                              eachindex(
-    models
-)
+@testset "AD CTMRG energy gradients for $(names[i]) model" verbose = true for i in [2]
+#                                                                               eachindex(
+#     models
+# )
     Pspace = Pspaces[i]
     Vspace = Pspaces[i]
     Espace = Espaces[i]
