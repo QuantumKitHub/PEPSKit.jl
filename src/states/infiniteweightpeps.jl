@@ -62,6 +62,10 @@ function Base.iterate(wts::SUWeight, state...)
     return iterate(Iterators.flatten((wts.x, wts.y)), state...)
 end
 
+function Base.length(wts::SUWeight)
+    return 2 * prod(size(wts.x))
+end
+
 function Base.isapprox(wts1::SUWeight, wts2::SUWeight; atol=0.0, rtol=1e-5)
     return (
         isapprox(wts1.x, wts2.x; atol=atol, rtol=rtol) &&
