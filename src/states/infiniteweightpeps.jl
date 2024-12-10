@@ -127,8 +127,10 @@ function InfiniteWeightPEPS(
 end
 
 """
-Absorb environment weight on axis `ax` into tensor `t` at position `(row,col)`
+    absorb_weight(t::T, row::Int, col::Int, ax::Int, weights::SUWeight; sqrtwt::Bool=false, invwt::Bool=false) where {T<:PEPSTensor}
 
+Absorb or remove environment weight on axis `ax` of PEPS tensor `t` 
+known to be located at position (`row`, `col`) in the unit cell. 
 Weights around the tensor at `(row, col)` are
 ```
                 ↓
@@ -138,6 +140,32 @@ Weights around the tensor at `(row, col)` are
                 ↓
                 y[r+1,c]
                 ↓
+```
+
+# Arguments
+- `t::T`: The tensor of type `T` (a subtype of `PEPSTensor`) to which the weight will be absorbed.
+- `row::Int`: The row index specifying the position in the tensor network.
+- `col::Int`: The column index specifying the position in the tensor network.
+- `ax::Int`: The axis along which the weight is absorbed.
+- `weights::SUWeight`: The weight object to absorb into the tensor.
+- `sqrtwt::Bool=false` (optional): If `true`, the square root of the weight is used during absorption.
+- `invwt::Bool=false` (optional): If `true`, the inverse of the weight is used during absorption.
+
+# Details
+The optional keywords `sqrtwt` and `invwt` allow for additional transformations on the weight before absorption. 
+If both `sqrtwt` and `invwt` are `true`, the square root of the inverse weight will be used.
+The first axis of `t` should be the physical axis. 
+
+# Examples
+```julia
+# Absorb the weight into the 2nd axis of tensor at position (2, 3)
+absorb_weight(t, 2, 3, 2, weights)
+
+# Absorb the square root of the weight into the tensor
+absorb_weight(t, 2, 3, 2, weights; sqrtwt=true)
+
+# Absorb the inverse of (i.e. remove) the weight into the tensor
+absorb_weight(t, 2, 3, 2, weights; invwt=true)
 ```
 """
 function absorb_weight(
