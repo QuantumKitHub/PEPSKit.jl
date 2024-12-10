@@ -113,7 +113,11 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # ----------------------
 
 """
-Get the position of `site` after reflection about the anti-diagonal line
+    _mirror_antidiag_site(
+        site::S, (Nrow, Ncol)::NTuple{2,Int}
+    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+
+Get the position of `site` after reflection about the anti-diagonal line.
 """
 function _mirror_antidiag_site(
     site::S, (Nrow, Ncol)::NTuple{2,Int}
@@ -123,7 +127,11 @@ function _mirror_antidiag_site(
 end
 
 """
-Get the position of `site` after clockwise (right) rotation by 90 degrees
+    _rotr90_site(
+        site::S, (Nrow, Ncol)::NTuple{2,Int}
+    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+
+Get the position of `site` after clockwise (right) rotation by 90 degrees.
 """
 function _rotr90_site(
     site::S, (Nrow, Ncol)::NTuple{2,Int}
@@ -133,7 +141,11 @@ function _rotr90_site(
 end
 
 """
-Get the position of `site` after counter-clockwise (left) rotation by 90 degrees
+    _rotl90_site(
+        site::S, (Nrow, Ncol)::NTuple{2,Int}
+    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+
+Get the position of `site` after counter-clockwise (left) rotation by 90 degrees.
 """
 function _rotl90_site(
     site::S, (Nrow, Ncol)::NTuple{2,Int}
@@ -143,7 +155,11 @@ function _rotl90_site(
 end
 
 """
-Get the position of `site` after rotation by 180 degrees
+    _rot180_site(
+        site::S, (Nrow, Ncol)::NTuple{2,Int}
+    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+
+Get the position of `site` after rotation by 180 degrees.
 """
 function _rot180_site(
     site::S, (Nrow, Ncol)::NTuple{2,Int}
@@ -152,6 +168,11 @@ function _rot180_site(
     return CartesianIndex(1 + Nrow - r, 1 + Ncol - c)
 end
 
+"""
+    mirror_antidiag(H::LocalOperator)
+
+Mirror a `LocalOperator` across the anti-diagonal axis of its lattice.
+"""
 function mirror_antidiag(H::LocalOperator)
     lattice2 = mirror_antidiag(H.lattice)
     terms2 = (

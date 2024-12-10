@@ -1,5 +1,7 @@
 """
-Convert Hamiltonian `H` with nearest neighbor terms to `exp(-dt * H)`
+    get_gate(dt::Float64, H::LocalOperator)
+
+Compute `exp(-dt * H)` from the nearest neighbor Hamiltonian `H`.
 """
 function get_gate(dt::Float64, H::LocalOperator)
     @assert all([
@@ -12,7 +14,9 @@ function get_gate(dt::Float64, H::LocalOperator)
 end
 
 """
-Check if two 2-site bonds are related by a (periodic) lattice translation
+    is_equivalent(bond1::NTuple{2,CartesianIndex{2}}, bond2::NTuple{2,CartesianIndex{2}}, (Nrow, Ncol)::NTuple{2,Int})
+
+Check if two 2-site bonds are related by a (periodic) lattice translation.
 """
 function is_equivalent(
     bond1::NTuple{2,CartesianIndex{2}},
@@ -27,6 +31,8 @@ function is_equivalent(
 end
 
 """
+    get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
+
 Get the term of a 2-site gate acting on a certain bond.
 Input `gate` should only include one term for each nearest neighbor bond.
 """

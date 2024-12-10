@@ -21,9 +21,12 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
-_safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
+_safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a .^ pow
+
 """
-Compute `S^pow` for diagonal matrices `S`
+    sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4))
+
+Compute `S^pow` for diagonal matrices `S`.
 """
 function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4))
     tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
@@ -35,6 +38,19 @@ function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 
         )
     end
     return Spow
+end
+
+"""
+    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+
+Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
+```
+    u -> u * sqrt(s), vh -> sqrt(s) * vh
+```
+"""
+function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+    sqrt_s = sdiag_pow(s, 0.5)
+    return u * sqrt_s, sqrt_s * vh
 end
 
 function ChainRulesCore.rrule(

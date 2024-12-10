@@ -9,7 +9,9 @@ Here, `ES`, `WN` denote the east/south, west/north spaces, respectively.
 const PEPSWeight{S} = AbstractTensorMap{S,1,1} where {S<:ElementarySpace}
 
 """
-Schmidt bond weight used in simple/cluster update
+    const SUWeight{E}
+
+Schmidt bond weight used in simple/cluster update.
 """
 const SUWeight{E} = Array{E,3} where {E<:PEPSWeight}
 
@@ -20,8 +22,10 @@ function compare_weights(wts1::SUWeight, wts2::SUWeight)
 end
 
 """
+    struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
+
 Represents an infinite projected entangled-pair state on a 2D square lattice
-consisting of vertex tensors and bond weights
+consisting of vertex tensors and bond weights.
 """
 struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
     vertices::Matrix{T}
@@ -49,6 +53,10 @@ struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
 end
 
 """
+    InfiniteWeightPEPS(
+        vertices::Matrix{T}, weight_mats::Matrix{E}...
+    ) where {T<:PEPSTensor,E<:PEPSWeight}
+
 Create an InfiniteWeightPEPS from matrices of vertex tensors,
 and separate matrices of weights on each type of bond.
 """
@@ -65,6 +73,10 @@ function InfiniteWeightPEPS(
 end
 
 """
+    InfiniteWeightPEPS(
+        f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
+    ) where {S<:ElementarySpace}
+
 Create an InfiniteWeightPEPS by specifying its physical, north and east spaces and unit cell.
 Spaces can be specified either via `Int` or via `ElementarySpace`.
 Bond weights are initialized as identity matrices. 
@@ -81,7 +93,8 @@ function InfiniteWeightPEPS(
 end
 
 """
-    absorb_weight(t::T, row::Int, col::Int, ax::Int, weights::SUWeight; sqrtwt::Bool=false, invwt::Bool=false) where {T<:PEPSTensor}
+    absorb_weight(t::T, row::Int, col::Int, ax::Int, weights::SUWeight;
+                  sqrtwt::Bool=false, invwt::Bool=false) where {T<:PEPSTensor}
 
 Absorb or remove environment weight on axis `ax` of PEPS tensor `t` 
 known to be located at position (`row`, `col`) in the unit cell. 
@@ -153,7 +166,9 @@ function absorb_weight(
 end
 
 """
-Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into vertex tensors
+    InfinitePEPS(peps::InfiniteWeightPEPS)
+
+Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into vertex tensors.
 """
 function InfinitePEPS(peps::InfiniteWeightPEPS)
     vertices = deepcopy(peps.vertices)
@@ -179,7 +194,9 @@ function Base.eltype(peps::InfiniteWeightPEPS)
 end
 
 """
-Mirror the unit cell of an iPEPS with weights by its anti-diagonal line
+    mirror_antidiag(peps::InfiniteWeightPEPS)
+
+Mirror the unit cell of an iPEPS with weights by its anti-diagonal line.
 """
 function mirror_antidiag(peps::InfiniteWeightPEPS)
     Nr, Nc = size(peps)

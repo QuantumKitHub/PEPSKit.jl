@@ -1,5 +1,13 @@
 ## Model Hamiltonians
 # -------------------
+"""
+    nearest_neighbour_hamiltonian(
+        lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
+    ) where {S}
+
+Create a nearest neighbor `LocalOperator` by specifying the 2-site interaction term `h`
+which acts both in horizontal and vertical direction.
+"""
 function nearest_neighbour_hamiltonian(
     lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
 ) where {S}
@@ -54,7 +62,7 @@ end
 
 """
     j1_j2([elt::Type{T}], [symm::Type{S}], [lattice::InfiniteSquare];
-                        J1=1.0, J2=1.0, spin=1//2, sublattice=true)
+          J1=1.0, J2=1.0, spin=1//2, sublattice=true)
 
 Square lattice J₁-J₂ model. The `sublattice` kwarg enables a single site unit cell via a
 sublattice rotation.
@@ -146,11 +154,6 @@ function MPSKitModels.hubbard_model(
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
 end
 
-"""
-Reload MPSKitModels.tj_model
-
-# Arguments
-"""
 function MPSKitModels.tj_model(
     T::Type{<:Number},
     particle_symmetry::Type{<:Sector},

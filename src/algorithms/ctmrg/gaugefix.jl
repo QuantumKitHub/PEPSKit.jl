@@ -174,7 +174,9 @@ function calc_convergence(envs, CSold, TSold)
 end
 
 """
-Calculate convergence of CTMRG by comparing the singular values of CTM tensors
+    calc_convergence(envsNew::CTMRGEnv, envsOld::CTMRGEnv)
+
+Calculate convergence of CTMRG by comparing the singular values of CTM tensors.
 """
 function calc_convergence(envsNew::CTMRGEnv, envsOld::CTMRGEnv)
     CSOld = map(x -> tsvd(x)[2], envsOld.corners)

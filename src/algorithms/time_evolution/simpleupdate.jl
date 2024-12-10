@@ -1,5 +1,7 @@
 """
-Algorithm struct for simple update (SU) of infinite PEPS with bond weights/
+    struct SimpleUpdate
+
+Algorithm struct for simple update (SU) of infinite PEPS with bond weights.
 Each SU run is converged when the singular value difference becomes smaller than `tol`.
 """
 struct SimpleUpdate
@@ -18,7 +20,11 @@ function truncation_scheme(alg::SimpleUpdate, v::ElementarySpace)
 end
 
 """
-Simple update of the x-bond `peps.weights[1,r,c]`
+_su_bondx!(row::Int, col::Int, gate::AbstractTensorMap{S,2,2},
+           peps::InfiniteWeightPEPS, alg::SimpleUpdate) where {S<:ElementarySpace}
+
+Simple update of the x-bond `peps.weights[1,r,c]`.
+
 ```
                 [2,r,c]             [2,r,c+1]
                 ↓                   ↓
@@ -33,7 +39,7 @@ function _su_bondx!(
     gate::AbstractTensorMap{S,2,2},
     peps::InfiniteWeightPEPS,
     alg::SimpleUpdate,
-) where {S}
+) where {S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     row2, col2 = row, _next(col, Nc)
@@ -101,11 +107,9 @@ function _su_bondx!(
 end
 
 """
-One round of simple update on the input 
-InfiniteWeightPEPS `peps` with the nearest neighbor gate `gate`
+    su_iter(gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool=false)
 
-When `bipartite === true` (for square lattice), the unit cell size should be 2 x 2, 
-and the tensor and x/y weight at `(row, col)` is the same as `(row+1, col+1)`
+One round of simple update on `peps` applying the nearest neighbor `gate`.
 """
 function su_iter(
     gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool=false
@@ -159,8 +163,15 @@ function su_iter(
 end
 
 """
-Perform simple update with nearest neighbor Hamiltonian `ham`.
-Evolution information is printed every `check_int` steps. 
+    simpleupdate(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
+                 bipartite::Bool=false, check_int::Int=500)
+
+Perform simple update with nearest neighbor Hamiltonian `ham`, where the evolution
+information is printed every `check_int` steps. 
+
+If `bipartite == true` (for square lattice), a unit cell size of `(2, 2)` is assumed, 
+as well as tensors and x/y weights which are the same across the diagonals, i.e. at
+`(row, col)` and `(row+1, col+1)`.
 """
 function simpleupdate(
     peps::InfiniteWeightPEPS,

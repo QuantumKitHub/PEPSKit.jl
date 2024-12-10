@@ -134,7 +134,9 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
 end
 
 """
-Perform CTMRG left move on the `col`-th column
+    ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
+
+Perform CTMRG left move on the `col`-th column.
 """
 function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
     #=
@@ -150,6 +152,7 @@ function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
     envs = ctmrg_renormalize(col, projectors, state, envs, alg)
     return envs, info
 end
+
 """
     ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
 
