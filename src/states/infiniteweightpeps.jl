@@ -75,8 +75,7 @@ function InfiniteWeightPEPS(
     vertices = InfinitePEPS(f, T, Pspace, Nspace, Espace; unitcell=unitcell).A
     Nr, Nc = unitcell
     weights = collect(
-        id(d == 1 ? Espace : Nspace) for
-        (d, r, c) in Iterators.product(1:2, 1:Nr, 1:Nc)
+        id(d == 1 ? Espace : Nspace) for (d, r, c) in Iterators.product(1:2, 1:Nr, 1:Nc)
     )
     return InfiniteWeightPEPS(vertices, weights)
 end
