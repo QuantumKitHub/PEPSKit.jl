@@ -159,8 +159,8 @@ function fixedpoint(
 
     if scalartype(env₀) <: Real
         env₀ = complex(env₀)
-        @warn "the provided real environment was converted to a complex environment since\
-        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work\
+        @warn "the provided real environment was converted to a complex environment since \
+        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work \
         with purely real environments"
     end
 
