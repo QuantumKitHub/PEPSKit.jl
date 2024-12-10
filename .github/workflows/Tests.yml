@@ -37,7 +37,6 @@ jobs:
     uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/Tests.yml@main"
     with:
       group: "${{ matrix.group }}"
-      nthreads: 4
       julia-version: "${{ matrix.version }}"
       os: "${{ matrix.os }}"
     secrets:
