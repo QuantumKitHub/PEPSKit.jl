@@ -134,6 +134,26 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRG)
 end
 
 """
+    ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
+
+Perform CTMRG left move on the `col`-th column.
+"""
+function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
+    #=
+        ----> left move
+        C1 ← T1 ←   r-1
+        ↓    ‖
+        T4 = M ==   r
+        ↓    ‖
+        C4 → T3 →   r+1
+        c-1  c 
+    =#
+    projectors, info = ctmrg_projectors(col, state, envs, alg)
+    envs = ctmrg_renormalize(col, projectors, state, envs, alg)
+    return envs, info
+end
+
+"""
     ctmrg_iter(state, envs::CTMRGEnv, alg::CTMRG) -> envs′, info
 
 Perform one iteration of CTMRG that maps the `state` and `envs` to a new environment,
@@ -143,14 +163,12 @@ function ctmrg_iter(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            projectors, info = ctmrg_projectors(col, state, envs, alg)
-            envs = ctmrg_renormalize(col, projectors, state, envs, alg)
+            envs, info = ctmrg_leftmove(col, state, envs, alg)
             ϵ = max(ϵ, info.err)
         end
         state = rotate_north(state, EAST)
         envs = rotate_north(envs, EAST)
     end
-
     return envs, (; err=ϵ)
 end
 function ctmrg_iter(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
@@ -300,7 +318,7 @@ function build_projectors(
     Q::AbstractTensorMap{E,3,3},
     Q_next::AbstractTensorMap{E,3,3},
 ) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S)
+    isqS = sdiag_pow(S, -0.5)
     P_left = Q_next * V' * isqS
     P_right = isqS * U' * Q
     return P_left, P_right
@@ -312,7 +330,7 @@ function build_projectors(
     Q::EnlargedCorner,
     Q_next::EnlargedCorner,
 ) where {E<:ElementarySpace}
-    isqS = sdiag_inv_sqrt(S)
+    isqS = sdiag_pow(S, -0.5)
     P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
     P_right = right_projector(
         Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra

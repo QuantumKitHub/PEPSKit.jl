@@ -1,4 +1,4 @@
-name: CI
+name: Tests
 on:
   push:
     branches:
@@ -23,8 +23,8 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 'lts'
-          - '1'
+          - 'lts' # minimal supported version
+          - '1' # latest released Julia version
         group:
           - ctmrg
           - boundarymps
@@ -34,9 +34,11 @@ jobs:
           - ubuntu-latest
           - macOS-latest
           - windows-latest
-    uses: "QuantumKitHub/.github/.github/workflows/tests.yml@main"
+    uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/Tests.yml@main"
     with:
       group: "${{ matrix.group }}"
       julia-version: "${{ matrix.version }}"
       os: "${{ matrix.os }}"
-    secrets: inherit
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
