@@ -109,7 +109,7 @@ end
 Base.size(T::InfinitePEPO) = size(T.A)
 Base.size(T::InfinitePEPO, i) = size(T.A, i)
 Base.length(T::InfinitePEPO) = length(T.A)
-Base.eltype(T::InfinitePEPO) = eltype(T.A)
+Base.eltype(T::InfinitePEPO) = eltype(T.A[1])
 VectorInterface.scalartype(T::InfinitePEPO) = scalartype(T.A)
 
 ## Copy

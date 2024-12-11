@@ -23,11 +23,11 @@ end
 _safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a .^ pow
 
 """
-    sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4))
+    sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
 
 Compute `S^pow` for diagonal matrices `S`.
 """
-function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4))
+function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
     tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
     Spow = similar(S)
     for (k, b) in blocks(S)
@@ -53,13 +53,16 @@ function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensor
 end
 
 function ChainRulesCore.rrule(
-    ::typeof(sdiag_pow), S::AbstractTensorMap, pow::Real; tol::Real=eps(eltype(S))^(3 / 4)
+    ::typeof(sdiag_pow),
+    S::AbstractTensorMap,
+    pow::Real;
+    tol::Real=eps(scalartype(S))^(3 / 4),
 )
     tol *= norm(S, Inf)
     spow = sdiag_pow(S, pow; tol)
-    spow2 = sdiag_pow(S, pow - 1; tol)
+    spow_minus1 = sdiag_pow(S, pow - 1; tol)
     function sdiag_pow_pullback(c̄)
-        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow2))
+        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow_minus1'))
     end
     return spow, sdiag_pow_pullback
 end

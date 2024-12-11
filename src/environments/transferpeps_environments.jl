@@ -120,8 +120,7 @@ function MPSKit.transfer_spectrum(
     @assert size(below) == size(O)
 
     numrows = size(above, 1)
-    envtype = eltype(init[1])
-    eigenvals = Vector{Vector{scalartype(envtype)}}(undef, numrows)
+    eigenvals = Vector{Vector{scalartype(init[1])}}(undef, numrows)
 
     @threads for cr in 1:numrows
         L0, = init[cr]

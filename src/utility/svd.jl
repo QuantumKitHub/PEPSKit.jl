@@ -71,7 +71,7 @@ the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
 end
 
 function random_start_vector(t::Matrix)
-    return randn(eltype(t), size(t, 1))
+    return randn(scalartype(t), size(t, 1))
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
