@@ -400,7 +400,6 @@ function Base.rot180(env::CTMRGEnv{C,T}) where {C,T}
     return CTMRGEnv(copy(corners′), copy(edges′))
 end
 
-Base.eltype(env::CTMRGEnv) = eltype(env.corners[1])
 Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
 function eachcoordinate(x::CTMRGEnv)
     return collect(Iterators.product(axes(x, 2), axes(x, 3)))

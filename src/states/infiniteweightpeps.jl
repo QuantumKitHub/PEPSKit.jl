@@ -214,7 +214,6 @@ end
 Mirror the unit cell of an iPEPS with weights by its anti-diagonal line.
 """
 function mirror_antidiag(peps::InfiniteWeightPEPS)
-    Nr, Nc = size(peps)
     vertices2 = mirror_antidiag(peps.vertices)
     for (i, t) in enumerate(vertices2)
         vertices2[i] = permute(t, ((1,), (3, 2, 5, 4)))
