@@ -1,6 +1,6 @@
 using Test
 using Random
-using Printf
+using Accessors
 using PEPSKit
 using TensorKit
 using KrylovKit
@@ -88,15 +88,17 @@ end
 
     # measure physical quantities
     e_site = costfun(peps, envs, ham) / (N1 * N2)
-    @info @sprintf("Simple update energy = %.8f\n", e_site)
+    @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol=1e-3)
 
     # continue with auto differentiation
-    result = fixedpoint(peps, ham, opt_alg, envs)
+    svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-8))
+    opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
+    result = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(result.peps, result.env)
     e_site2 = result.E / (N1 * N2)
-    @info @sprintf("Auto diff energy = %.8f\n", e_site)
+    @info "Auto diff energy = $e_site2"
     @test e_site2 ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
