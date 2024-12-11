@@ -22,7 +22,7 @@ struct SUWeight{E<:PEPSWeight}
     end
 end
 
-function SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight} 
+function SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
     n_mat = length(wts_mats)
     Nr, Nc = size(wts_mats[1])
     @assert all((Nr, Nc) == size(wts_mat) for wts_mat in wts_mats)
@@ -44,7 +44,9 @@ Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 
 function compare_weights(wts1::SUWeight, wts2::SUWeight)
     @assert size(wts1) == size(wts2)
-    wtdiff = sum(_singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1.data, wts2.data))
+    wtdiff = sum(
+        _singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1.data, wts2.data)
+    )
     return wtdiff / length(wts1)
 end
 
@@ -117,7 +119,7 @@ end
     absorb_weight(t::T, row::Int, col::Int, ax::Int, weights::SUWeight;
                   sqrtwt::Bool=false, invwt::Bool=false) where {T<:PEPSTensor}
 
-Absorb or remove environment weight on axis `ax` of PEPS tensor `t` 
+Absorb or remove environment weight on axis `ax` of vertex tensor `t` 
 known to be located at position (`row`, `col`) in the unit cell. 
 Weights around the tensor at `(row, col)` are
 ```
@@ -131,7 +133,7 @@ Weights around the tensor at `(row, col)` are
 ```
 
 # Arguments
-- `t::T`: The tensor of type `T` (a subtype of `PEPSTensor`) to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
+- `t::T`: The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
 - `row::Int`: The row index specifying the position in the tensor network.
 - `col::Int`: The column index specifying the position in the tensor network.
 - `ax::Int`: The axis along which the weight is absorbed.
