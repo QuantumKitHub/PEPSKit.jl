@@ -60,9 +60,9 @@ function ChainRulesCore.rrule(
 )
     tol *= norm(S, Inf)
     spow = sdiag_pow(S, pow; tol)
-    spow_minus1 = sdiag_pow(S, pow - 1; tol)
+    spow_minus1_conj = sdiag_pow(S', pow - 1; tol)
     function sdiag_pow_pullback(c̄)
-        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow_minus1'))
+        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow_minus1_conj))
     end
     return spow, sdiag_pow_pullback
 end
