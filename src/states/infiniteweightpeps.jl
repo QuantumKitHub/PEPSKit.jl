@@ -8,15 +8,43 @@ Default type for PEPS bond weights with 2 virtual indices, conventionally ordere
 const PEPSWeight{S} = AbstractTensorMap{S,1,1} where {S<:ElementarySpace}
 
 """
-    const SUWeight{E}
+    struct SUWeight{E<:PEPSWeight}
 
-Array of Schmidt bond weights used in simple/cluster update.
+Schmidt bond weights used in simple/cluster update.
+Weight elements are always real.
 """
-const SUWeight{E} = Array{E,3} where {E<:PEPSWeight}
+struct SUWeight{E<:PEPSWeight}
+    data::Array{E,3}
+
+    function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
+        @assert eltype(data[1]) <: Real
+        return new{E}(data)
+    end
+end
+
+function SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight} 
+    n_mat = length(wts_mats)
+    Nr, Nc = size(wts_mats[1])
+    @assert all((Nr, Nc) == size(wts_mat) for wts_mat in wts_mats)
+    weights = collect(
+        wts_mats[d][r, c] for (d, r, c) in Iterators.product(1:n_mat, 1:Nr, 1:Nc)
+    )
+    return SUWeight(weights)
+end
+
+## Shape and size
+Base.size(W::SUWeight) = size(W.data)
+Base.size(W::SUWeight, i) = size(W.data, i)
+Base.length(W::SUWeight) = length(W.data)
+Base.eltype(W::SUWeight) = eltype(W.data[1])
+
+Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
+Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
+Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 
 function compare_weights(wts1::SUWeight, wts2::SUWeight)
     @assert size(wts1) == size(wts2)
-    wtdiff = sum(_singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1, wts2))
+    wtdiff = sum(_singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1.data, wts2.data))
     return wtdiff / length(wts1)
 end
 
@@ -62,13 +90,7 @@ and separate matrices of weights on each type of bond at all locations in the un
 function InfiniteWeightPEPS(
     vertices::Matrix{T}, weight_mats::Matrix{E}...
 ) where {T<:PEPSTensor,E<:PEPSWeight}
-    n_mat = length(weight_mats)
-    Nr, Nc = size(weight_mats[1])
-    @assert all((Nr, Nc) == size(weight_mat) for weight_mat in weight_mats)
-    weights = collect(
-        weight_mats[d][r, c] for (d, r, c) in Iterators.product(1:n_mat, 1:Nr, 1:Nc)
-    )
-    return InfiniteWeightPEPS(vertices, weights)
+    return InfiniteWeightPEPS(vertices, SUWeight(weight_mats...))
 end
 
 """
@@ -77,7 +99,8 @@ end
     ) where {S<:ElementarySpace}
 
 Create an InfiniteWeightPEPS by specifying its physical, north and east spaces (as `ElementarySpace`s) and unit cell size.
-Bond weights are initialized as identity matrices. 
+Use `T` to specify the element type of the vertex tensors. 
+Bond weights are initialized as identity matrices of element type `Float64`. 
 """
 function InfiniteWeightPEPS(
     f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
@@ -87,7 +110,7 @@ function InfiniteWeightPEPS(
     weights = collect(
         id(d == 1 ? Espace : Nspace) for (d, r, c) in Iterators.product(1:2, 1:Nr, 1:Nc)
     )
-    return InfiniteWeightPEPS(vertices, weights)
+    return InfiniteWeightPEPS(vertices, SUWeight(weights))
 end
 
 """
@@ -180,13 +203,11 @@ function InfinitePEPS(peps::InfiniteWeightPEPS)
 end
 
 function Base.size(peps::InfiniteWeightPEPS)
-    @assert size(peps.weights)[2:end] == size(peps.vertices)
     return size(peps.vertices)
 end
 
 function Base.eltype(peps::InfiniteWeightPEPS)
-    @assert eltype(peps.weights) == eltype(peps.vertices)
-    return eltype(peps.vertices)
+    return (eltype(peps.vertices[1]), eltype(peps.weights[1]))
 end
 
 """
@@ -200,8 +221,7 @@ function mirror_antidiag(peps::InfiniteWeightPEPS)
     for (i, t) in enumerate(vertices2)
         vertices2[i] = permute(t, ((1,), (3, 2, 5, 4)))
     end
-    weights2 = similar(peps.weights, (2, Nc, Nr))
-    weights2[1, :, :] = mirror_antidiag(peps.weights[2, :, :])
-    weights2[2, :, :] = mirror_antidiag(peps.weights[1, :, :])
-    return InfiniteWeightPEPS(vertices2, weights2)
+    weights2_x = mirror_antidiag(peps.weights[2, :, :])
+    weights2_y = mirror_antidiag(peps.weights[1, :, :])
+    return InfiniteWeightPEPS(vertices2, weights2_x, weights2_y)
 end
