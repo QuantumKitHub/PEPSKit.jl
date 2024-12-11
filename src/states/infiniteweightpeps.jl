@@ -208,10 +208,6 @@ function Base.size(peps::InfiniteWeightPEPS)
     return size(peps.vertices)
 end
 
-function Base.eltype(peps::InfiniteWeightPEPS)
-    return (eltype(peps.vertices[1]), eltype(peps.weights[1]))
-end
-
 """
     mirror_antidiag(peps::InfiniteWeightPEPS)
 
