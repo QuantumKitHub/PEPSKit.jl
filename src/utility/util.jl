@@ -20,7 +20,7 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
-_safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a .^ pow
+_safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
     sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
@@ -60,9 +60,9 @@ function ChainRulesCore.rrule(
 )
     tol *= norm(S, Inf)
     spow = sdiag_pow(S, pow; tol)
-    spow_minus1_conj = sdiag_pow(S', pow - 1; tol)
+    spow_minus1_conj = scale!(sdiag_pow(S', pow - 1; tol), pow)
     function sdiag_pow_pullback(c̄)
-        return (ChainRulesCore.NoTangent(), pow * _elementwise_mult(c̄, spow_minus1_conj))
+        return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
     end
     return spow, sdiag_pow_pullback
 end

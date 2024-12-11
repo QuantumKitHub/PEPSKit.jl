@@ -109,12 +109,13 @@ end
 Base.size(T::InfinitePEPO) = size(T.A)
 Base.size(T::InfinitePEPO, i) = size(T.A, i)
 Base.length(T::InfinitePEPO) = length(T.A)
-Base.eltype(T::InfinitePEPO) = eltype(T.A[1])
-VectorInterface.scalartype(T::InfinitePEPO) = scalartype(T.A)
+Base.eltype(T::InfinitePEPO) = eltype(typeof(T))
+Base.eltype(::Type{<:InfinitePEPO{T}}) where {T} = T
+VectorInterface.scalartype(::Type{T}) where {T<:InfinitePEPO} = scalartype(eltype(T))
 
 ## Copy
 Base.copy(T::InfinitePEPO) = InfinitePEPO(copy(T.A))
-Base.similar(T::InfinitePEPO, args...) = InfinitePEPO(similar.(T.A, args...))
+Base.similar(T::InfinitePEPO, args...) = InfinitePEPO(similar(T.A, args...))
 Base.repeat(T::InfinitePEPO, counts...) = InfinitePEPO(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPO, args...) = Base.getindex(T.A, args...)

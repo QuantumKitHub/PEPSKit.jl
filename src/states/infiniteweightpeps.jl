@@ -36,7 +36,9 @@ end
 Base.size(W::SUWeight) = size(W.data)
 Base.size(W::SUWeight, i) = size(W.data, i)
 Base.length(W::SUWeight) = length(W.data)
-Base.eltype(W::SUWeight) = eltype(W.data[1])
+Base.eltype(W::SUWeight) = eltype(typeof(W))
+Base.eltype(::Type{SUWeight{E}}) where {E} = E
+VectorInterface.scalartype(::Type{T}) where {T<:SUWeight} = scalartype(eltype(T))
 
 Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
 Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
@@ -44,10 +46,7 @@ Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 
 function compare_weights(wts1::SUWeight, wts2::SUWeight)
     @assert size(wts1) == size(wts2)
-    wtdiff = sum(
-        _singular_value_distance((wt1, wt2)) for (wt1, wt2) in zip(wts1.data, wts2.data)
-    )
-    return wtdiff / length(wts1)
+    return sum(_singular_value_distance, zip(wts1.data, wts2.data)) / length(wts1)
 end
 
 """
