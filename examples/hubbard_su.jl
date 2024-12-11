@@ -3,7 +3,6 @@ using Printf
 using Random
 using PEPSKit
 using TensorKit
-# using AppleAccelerate # for Apple Silicon machines
 
 # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
 Dcut, symm = 8, Trivial

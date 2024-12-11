@@ -2,16 +2,15 @@
 """
     const PEPSWeight{S}
 
-Default type for PEPS bond weights with 2 virtual indices,
-conventionally ordered as: ``wt : ES ← WN``. 
-Here, `ES`, `WN` denote the east/south, west/north spaces, respectively.
+Default type for PEPS bond weights with 2 virtual indices, conventionally ordered as: ``wt : WS ← EN``. 
+`WS`, `EN` denote the west/south, east/north spaces for x/y-weights on the square lattice, respectively.
 """
 const PEPSWeight{S} = AbstractTensorMap{S,1,1} where {S<:ElementarySpace}
 
 """
     const SUWeight{E}
 
-Schmidt bond weight used in simple/cluster update.
+Array of Schmidt bond weights used in simple/cluster update.
 """
 const SUWeight{E} = Array{E,3} where {E<:PEPSWeight}
 
@@ -46,7 +45,7 @@ struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
             space(weights[1, r, c], 1)' == space(vertices[r, c], 3) ||
                 throw(SpaceMismatch("West space of bond weight x$((r, c)) does not match."))
             space(weights[1, r, c], 2)' == space(vertices[r, _next(c, Nc)], 5) ||
-                throw(SpaceMismatch("West space of bond weight x$((r, c)) does not match."))
+                throw(SpaceMismatch("East space of bond weight x$((r, c)) does not match."))
         end
         return new{T,E}(vertices, weights)
     end
@@ -58,7 +57,7 @@ end
     ) where {T<:PEPSTensor,E<:PEPSWeight}
 
 Create an InfiniteWeightPEPS from matrices of vertex tensors,
-and separate matrices of weights on each type of bond.
+and separate matrices of weights on each type of bond at all locations in the unit cell.
 """
 function InfiniteWeightPEPS(
     vertices::Matrix{T}, weight_mats::Matrix{E}...
@@ -77,8 +76,7 @@ end
         f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
     ) where {S<:ElementarySpace}
 
-Create an InfiniteWeightPEPS by specifying its physical, north and east spaces and unit cell.
-Spaces can be specified either via `Int` or via `ElementarySpace`.
+Create an InfiniteWeightPEPS by specifying its physical, north and east spaces (as `ElementarySpace`s) and unit cell size.
 Bond weights are initialized as identity matrices. 
 """
 function InfiniteWeightPEPS(
@@ -100,28 +98,26 @@ Absorb or remove environment weight on axis `ax` of PEPS tensor `t`
 known to be located at position (`row`, `col`) in the unit cell. 
 Weights around the tensor at `(row, col)` are
 ```
-                ↓
-                y[r,c]
-                ↓
-    ←x[r,c-1] ← T[r,c] ← x[r,c] ←
-                ↓
-                y[r+1,c]
-                ↓
+                    ↓
+                [2,r,c]
+                    ↓
+    ← [1,r,c-1] ← T[r,c] ← [1,r,c] ←
+                    ↓
+                [1,r+1,c]
+                    ↓
 ```
 
 # Arguments
-- `t::T`: The tensor of type `T` (a subtype of `PEPSTensor`) to which the weight will be absorbed.
+- `t::T`: The tensor of type `T` (a subtype of `PEPSTensor`) to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
 - `row::Int`: The row index specifying the position in the tensor network.
 - `col::Int`: The column index specifying the position in the tensor network.
 - `ax::Int`: The axis along which the weight is absorbed.
 - `weights::SUWeight`: The weight object to absorb into the tensor.
-- `sqrtwt::Bool=false` (optional): If `true`, the square root of the weight is used during absorption.
-- `invwt::Bool=false` (optional): If `true`, the inverse of the weight is used during absorption.
+- `sqrtwt::Bool=false` (optional): If `true`, the square root of the weight is absorbed.
+- `invwt::Bool=false` (optional): If `true`, the inverse of the weight is absorbed.
 
 # Details
-The optional keywords `sqrtwt` and `invwt` allow for additional transformations on the weight before absorption. 
-If both `sqrtwt` and `invwt` are `true`, the square root of the inverse weight will be used.
-The first axis of `t` should be the physical axis. 
+The optional kwargs `sqrtwt` and `invwt` allow taking the square root or the inverse of the weight before absorption. 
 
 # Examples
 ```julia
