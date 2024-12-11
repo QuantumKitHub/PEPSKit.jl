@@ -114,7 +114,7 @@ VectorInterface.scalartype(T::InfinitePEPO) = scalartype(T.A)
 
 ## Copy
 Base.copy(T::InfinitePEPO) = InfinitePEPO(copy(T.A))
-Base.similar(T::InfinitePEPO) = InfinitePEPO(similar(T.A))
+Base.similar(T::InfinitePEPO) = InfinitePEPO(similar.(T.A))
 Base.repeat(T::InfinitePEPO, counts...) = InfinitePEPO(repeat(T.A, counts...))
 
 Base.getindex(T::InfinitePEPO, args...) = Base.getindex(T.A, args...)
