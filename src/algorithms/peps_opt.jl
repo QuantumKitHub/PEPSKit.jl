@@ -253,13 +253,14 @@ function _rrule(
 )
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs = leading_boundary(envinit, state, alg)
-    envsconv, info = ctmrg_iteration(state, envs, alg)
-    envs_fixed, signs = gauge_fix(envs, envsconv)
+    envs_conv, info = ctmrg_iteration(state, envs, alg)
+    envs_fixed, signs = gauge_fix(envs, envs_conv)
 
     # Fix SVD
-    Ufix, Vfix = fix_relative_phases(info.U, info.V, signs)
+    U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fixed = SVDAdjoint(;
-        fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
+        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed),
+        rrule_alg=alg.projector_alg.svd_alg.rrule_alg,
     )
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
     alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
