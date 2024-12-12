@@ -26,8 +26,8 @@ end
         @time @safetestset "Unit cells" begin
             include("ctmrg/unitcell.jl")
         end
-        @time @safetestset "CTMRG schemes" begin
-            include("ctmrg/ctmrgschemes.jl")
+        @time @safetestset "Flavors" begin
+            include("ctmrg/flavors.jl")
         end
         @time @safetestset "CTMRG schemes" begin
             include("ctmrg/jacobian_real_linear.jl")
@@ -56,7 +56,7 @@ end
         @time @safetestset "Heisenberg model" begin
             include("heisenberg.jl")
         end
-        @time @safetestset "Heisenberg model" begin
+        @time @safetestset "J1-J2 model" begin
             include("j1j2_model.jl")
         end
         @time @safetestset "P-wave superconductor" begin

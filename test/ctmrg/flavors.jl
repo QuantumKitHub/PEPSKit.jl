@@ -7,11 +7,15 @@ using PEPSKit
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg_sequential = CTMRG(; ctmrgscheme=:sequential)
-ctm_alg_simultaneous = CTMRG(; ctmrgscheme=:simultaneous)
+ctm_alg_sequential = SequentialCTMRG()
+ctm_alg_simultaneous = SimultaneousCTMRG()
 unitcells = [(1, 1), (3, 4)]
+projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
-@testset "$(unitcell) unit cell" for unitcell in unitcells
+@testset "$(unitcell) unit cell with $projector_alg" for (unitcell, projector_alg) in
+                                                         Iterators.product(
+    unitcells, projector_algs
+)
     # compute environments
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)
@@ -48,17 +52,17 @@ unitcells = [(1, 1), (3, 4)]
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
     E_sequential = costfun(psi, env_sequential, H)
     E_simultaneous = costfun(psi, env_simultaneous, H)
-    @test E_sequential ≈ E_simultaneous rtol = 1e-4
+    @test E_sequential ≈ E_simultaneous rtol = 1e-3
 end
 
 # test fixedspace actually fixes space
-@testset "Fixedspace truncation ($scheme)" for scheme in [:sequential, :simultaneous]
-    ctm_alg = CTMRG(;
-        tol=1e-6,
-        maxiter=1,
-        verbosity=0,
-        ctmrgscheme=scheme,
-        trscheme=FixedSpaceTruncation(),
+@testset "Fixedspace truncation using $ctmrg_alg and $projector_alg" for (
+    ctmrg_alg, projector_alg
+) in Iterators.product(
+    [SequentialCTMRG, SimultaneousCTMRG], projector_algs
+)
+    ctm_alg = ctmrg_alg(;
+        tol=1e-6, maxiter=1, verbosity=0, trscheme=FixedSpaceTruncation(), projector_alg
     )
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]

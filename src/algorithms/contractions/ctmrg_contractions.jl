@@ -210,13 +210,40 @@ function right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=
 end
 
 """
-    halfinfinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
-    halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
-                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
-    halfinfinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
-    halfinfinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
-                             ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    contract_projectors(U, S, V, Q, Q_next)
+
+Compute projectors based on a SVD of `Q * Q_next`, where the inverse square root
+`isqS` of the singular values is computed.
+
+Left projector:
+```
+    -- |~~~~~~| -- |~~|
+       |Q_next|    |V'| -- isqS --
+    == |~~~~~~| == |~~|
+```
+
+Right projector:
+```
+               |~~| -- |~~~| --
+    -- isqS -- |U'|    | Q |
+               |~~| == |~~~| ==
+```
+"""
+function contract_projectors(U, S, V, Q, Q_next)
+    isqS = sdiag_pow(S, -0.5)
+    P_left = Q_next * V' * isqS  # use * to respect fermionic case
+    P_right = isqS * U' * Q
+    return P_left, P_right
+end
+
+"""
+    half_infinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
+    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -236,7 +263,7 @@ The environment can also be contracted directly from all its constituent tensors
      |       ||          ||           |
 ```
 
-Alternatively, contract environment with a vector `x` acting on it
+Alternatively, contract the environment with a vector `x` acting on it
 
 ```
     C_1 --  E_2      --  E_3      -- C_2
@@ -244,19 +271,18 @@ Alternatively, contract environment with a vector `x` acting on it
     E_1 == ket_bra_1 == ket_bra_2 == E_4
      |       ||          ||           |
                          [~~~~~~x~~~~~~]
-                         ||           |
 ```
 
 or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
 """
-function halfinfinite_environment(
+function half_infinite_environment(
     quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3}
 ) where {S}
     return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         quadrant1[χ_in D_inabove D_inbelow; χ D1 D2] *
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
 end
-function halfinfinite_environment(
+function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
 ) where {P<:PEPSTensor}
     return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
@@ -271,7 +297,7 @@ function halfinfinite_environment(
         C_2[χ4; χ5] *
         E_4[χ5 D7 D8; χ_out]
 end
-function halfinfinite_environment(
+function half_infinite_environment(
     C_1,
     C_2,
     E_1,
@@ -297,7 +323,7 @@ function halfinfinite_environment(
         E_4[χ5 D7 D8; χ6] *
         x[χ6 D11 D12]
 end
-function halfinfinite_environment(
+function half_infinite_environment(
     x::AbstractTensor{S,3},
     C_1,
     C_2,
@@ -310,7 +336,7 @@ function halfinfinite_environment(
     bra_1::P=ket_1,
     bra_2::P=ket_2,
 ) where {S,P<:PEPSTensor}
-    return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
+    return @autoopt @tensor x_env[χ_in D_inabove D_inbelow] :=
         x[χ1 D1 D2] *
         conj(E_1[χ1 D3 D4; χ2]) *
         conj(C_1[χ2; χ3]) *
@@ -530,7 +556,7 @@ Apply bottom projector to southwest corner and south edge.
 function renormalize_bottom_corner((row, col), envs::CTMRGEnv, projectors)
     C_southwest = envs.corners[SOUTHWEST, row, _prev(col, end)]
     E_south = envs.edges[SOUTH, row, col]
-    P_bottom = projectors[1][row, col]
+    P_bottom = projectors[1][row]
     return @autoopt @tensor corner[χ_in; χ_out] :=
         E_south[χ_in D1 D2; χ1] * C_southwest[χ1; χ2] * P_bottom[χ2 D1 D2; χ_out]
 end
@@ -549,7 +575,7 @@ Apply top projector to northwest corner and north edge.
 function renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
     C_northwest = envs.corners[NORTHWEST, row, _prev(col, end)]
     E_north = envs.edges[NORTH, row, col]
-    P_top = projectors[2][_next(row, end), col]
+    P_top = projectors[2][_next(row, end)]
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_top[χ_in; χ1 D1 D2] * C_northwest[χ1; χ2] * E_north[χ2 D1 D2; χ_out]
 end
@@ -705,8 +731,8 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
 )
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
-        projectors[1][row, col],
-        projectors[2][_next(row, end), col],
+        projectors[1][row],
+        projectors[2][_next(row, end)],
         ket[row, col],
         bra[row, col],
     )

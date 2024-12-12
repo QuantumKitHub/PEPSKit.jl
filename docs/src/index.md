@@ -26,7 +26,7 @@ H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1) # sublattice rotation t
 # configuring the parameters
 D = 2
 chi = 20
-ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=1, trscheme=truncdim(chi))
+ctm_alg = SimultaneousCTMRG(; tol=1e-10, trscheme=truncdim(chi))
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),

@@ -17,9 +17,12 @@ models = [heisenberg_XYZ(InfiniteSquare()), pwave_superconductor(InfiniteSquare(
 names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1e-4
-boundary_algs = [
-    CTMRG(; verbosity=0, ctmrgscheme=:simultaneous),
-    CTMRG(; verbosity=0, ctmrgscheme=:sequential),
+ctmrg_algs = [
+    [
+        SimultaneousCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector),
+        SimultaneousCTMRG(; verbosity=0, projector_alg=FullInfiniteProjector),
+    ],
+    [SequentialCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector)],
 ]
 gradmodes = [
     [
@@ -50,14 +53,15 @@ steps = -0.01:0.005:0.01
     Vspace = Pspaces[i]
     Espace = Espaces[i]
     gms = gradmodes[i]
-    boundary_alg = boundary_algs[i]
+    calgs = ctmrg_algs[i]
     psi_init = InfinitePEPS(Pspace, Vspace, Vspace)
-    @testset "$alg_rrule" for alg_rrule in gms
-        @info "optimtest of $alg_rrule on $(names[i])"
+    @testset "$ctmrg_alg and $alg_rrule" for (ctmrg_alg, alg_rrule) in
+                                             Iterators.product(calgs, gms)
+        @info "optimtest of $ctmrg_alg and $alg_rrule on $(names[i])"
         Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace, Vspace)
-        env = leading_boundary(CTMRGEnv(psi, Espace), psi, boundary_alg)
+        env = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
             dir;
@@ -66,9 +70,7 @@ steps = -0.01:0.005:0.01
             inner=PEPSKit.real_inner,
         ) do (peps, envs)
             E, g = Zygote.withgradient(peps) do psi
-                envs2 = PEPSKit.hook_pullback(
-                    leading_boundary, envs, psi, boundary_alg; alg_rrule
-                )
+                envs2 = PEPSKit.hook_pullback(leading_boundary, envs, psi, ctmrg_alg; alg_rrule)
                 return costfun(psi, envs2, models[i])
             end
 
