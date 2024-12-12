@@ -47,6 +47,7 @@ include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/time_evolution/gatetools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
+include("algorithms/time_evolution/fullupdate.jl")
 
 include("algorithms/toolbox.jl")
 
@@ -174,8 +175,10 @@ export fixedpoint
 
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
+export fu_iter, fullupdate, FullUpdate
 
 export InfinitePEPS, InfiniteTransferPEPS
+export SUWeight, InfiniteWeightPEPS
 export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
