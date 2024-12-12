@@ -418,7 +418,6 @@ function Base.rot180(env::CTMRGEnv{C,T}) where {C,T}
     return CTMRGEnv(copy(corners′), copy(edges′))
 end
 
-
 # Functions used for FP differentiation and by KrylovKit.linsolve
 function Base.:+(e₁::CTMRGEnv, e₂::CTMRGEnv)
     return CTMRGEnv(e₁.corners + e₂.corners, e₁.edges + e₂.edges)
