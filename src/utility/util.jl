@@ -1,7 +1,32 @@
-# Get next and previous directional CTM enviroment index, respecting periodicity
+# Get next and previous directional CTMRG environment index, respecting periodicity
 _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
 
+# Get next and previous coordinate (direction, row, column), given a direction and going around the environment clockwise
+function _next_coordinate((dir, row, col), rowsize, colsize)
+    if dir == 1
+        return (_next(dir, 4), row, _next(col, colsize))
+    elseif dir == 2
+        return (_next(dir, 4), _next(row, rowsize), col)
+    elseif dir == 3
+        return (_next(dir, 4), row, _prev(col, colsize))
+    elseif dir == 4
+        return (_next(dir, 4), _prev(row, rowsize), col)
+    end
+end
+function _prev_coordinate((dir, row, col), rowsize, colsize)
+    if dir == 1
+        return (_prev(dir, 4), _next(row, rowsize), col)
+    elseif dir == 2
+        return (_prev(dir, 4), row, _prev(col, colsize))
+    elseif dir == 3
+        return (_prev(dir, 4), _prev(row, rowsize), col)
+    elseif dir == 4
+        return (_prev(dir, 4), row, _next(col, colsize))
+    end
+end
+
+# iterator over each coordinates
 """
     eachcoordinate(x, dirs=1:4)
 
@@ -78,28 +103,6 @@ function is_degenerate_spectrum(
         end
     end
     return false
-end
-
-"""
-    projector_type(T::DataType, size)
-    projector_type(edges::Array{<:AbstractTensorMap})
-
-Create two arrays of specified `size` that contain undefined tensors representing
-left and right acting projectors, respectively. The projector types are inferred
-from the TensorMap type `T` which avoids having to recompute transpose tensors.
-Alternatively, supply an array of edge tensors from which left and right projectors
-are intialized explicitly with zeros.
-"""
-function projector_type(T::DataType, size)
-    P_left = Array{T,length(size)}(undef, size)
-    Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
-    P_right = Array{Prtype,length(size)}(undef, size)
-    return P_left, P_right
-end
-function projector_type(edges::Array{<:AbstractTensorMap})
-    P_left = map(e -> TensorMap(zeros, scalartype(e), space(e)), edges)
-    P_right = map(e -> TensorMap(zeros, scalartype(e), domain(e), codomain(e)), edges)
-    return P_left, P_right
 end
 
 # There are no rrules for rotl90 and rotr90 in ChainRules.jl
