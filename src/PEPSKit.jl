@@ -17,12 +17,14 @@ include("utility/util.jl")
 include("utility/diffable_threads.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
+include("utility/mirror.jl")
 include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 
 include("states/abstractpeps.jl")
 include("states/infinitepeps.jl")
+include("states/infiniteweightpeps.jl")
 
 include("operators/transferpeps.jl")
 include("operators/infinitepepo.jl")
@@ -45,6 +47,9 @@ include("algorithms/ctmrg/projectors.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
+
+include("algorithms/time_evolution/gatetools.jl")
+include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")
 
@@ -186,13 +191,18 @@ export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
+export absorb_weight
+export su_iter, simpleupdate, SimpleUpdate
+
 export InfinitePEPS, InfiniteTransferPEPS
+export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initializeMPS, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
 export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
-export transverse_field_ising, heisenberg_XYZ, j1_j2, pwave_superconductor
+export transverse_field_ising, heisenberg_XYZ, j1_j2
+export pwave_superconductor, hubbard_model, tj_model
 
 end # module

@@ -82,7 +82,7 @@ end
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
-currently only `CTMRG` is supported. The `optimizer` computes the gradient directions
+currently only `CTMRGAlgorithm`s are supported. The `optimizer` computes the gradient directions
 based on the CTMRG gradient and updates the PEPS parameters. In this optimization,
 the CTMRG runs can be started on the converged environments of the previous optimizer
 step by setting `reuse_env` to true. Otherwise a random environment is used at each
@@ -159,8 +159,8 @@ function fixedpoint(
 
     if scalartype(env₀) <: Real
         env₀ = complex(env₀)
-        @warn "the provided real environment was converted to a complex environment since\
-        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work\
+        @warn "the provided real environment was converted to a complex environment since \
+        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work \
         with purely real environments"
     end
 

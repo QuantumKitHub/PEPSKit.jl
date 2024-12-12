@@ -53,7 +53,7 @@ end
         @time @safetestset "Heisenberg model" begin
             include("heisenberg.jl")
         end
-        @time @safetestset "Heisenberg model" begin
+        @time @safetestset "J1-J2 model" begin
             include("j1j2_model.jl")
         end
         @time @safetestset "P-wave superconductor" begin

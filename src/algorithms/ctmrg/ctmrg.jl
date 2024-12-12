@@ -8,7 +8,7 @@ for contracting infinite PEPS.
 abstract type CTMRGAlgorithm end
 
 """
-    ctmrg_iteration(state, env, alg::CTMRG) -> env′, info
+    ctmrg_iteration(state, env, alg::CTMRGAlgorithm) -> env′, info
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
