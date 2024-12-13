@@ -77,31 +77,31 @@ function LinSolver(;
 end
 
 """
-    PEPSOptimize{G}(; boundary_alg=CTMRG(), optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
-                    reuse_env::Bool=true, gradient_alg::G=LinSolver())
+    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
+                    reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
-currently only `CTMRG` is supported. The `optimizer` computes the gradient directions
+currently only `CTMRGAlgorithm`s are supported. The `optimizer` computes the gradient directions
 based on the CTMRG gradient and updates the PEPS parameters. In this optimization,
 the CTMRG runs can be started on the converged environments of the previous optimizer
 step by setting `reuse_env` to true. Otherwise a random environment is used at each
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 """
 struct PEPSOptimize{G}
-    boundary_alg::CTMRG
+    boundary_alg::CTMRGAlgorithm
     optimizer::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
     gradient_alg::G
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
-        boundary_alg::CTMRG{S},
+        boundary_alg::CTMRGAlgorithm,
         optimizer,
         reuse_env,
         gradient_alg::G,
-    ) where {S,G}
+    ) where {G}
         if gradient_alg isa GradMode
-            if S === :sequential && iterscheme(gradient_alg) === :fixed
+            if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             end
         end
@@ -109,7 +109,7 @@ struct PEPSOptimize{G}
     end
 end
 function PEPSOptimize(;
-    boundary_alg=CTMRG(),
+    boundary_alg=Defaults.ctmrg_alg,
     optimizer=Defaults.optimizer,
     reuse_env=Defaults.reuse_env,
     gradient_alg=Defaults.gradient_alg,
@@ -216,26 +216,24 @@ Evaluating the gradient of the cost function for CTMRG:
 
 function _rrule(
     gradmode::GradMode{:diffgauge},
-    ::RuleConfig,
+    config::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
-    alg::CTMRG,
+    alg::CTMRGAlgorithm,
 )
-    envs = leading_boundary(envinit, state, alg)  #TODO: fixed space for unit cells
+    envs = leading_boundary(envinit, state, alg)
 
     function leading_boundary_diffgauge_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
-        # TODO: make this rrule_via_ad so it's zygote-agnostic
-        _, env_vjp = pullback(state, envs) do A, x
-            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])[1]
-        end
+        f(A, x) = gauge_fix(x, ctmrg_iteration(A, x, alg)[1])[1]
+        _, env_vjp = rrule_via_ad(config, f, state, envs)
 
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
-        ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[3]
         ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
@@ -247,44 +245,40 @@ end
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V
 function _rrule(
     gradmode::GradMode{:fixed},
-    ::RuleConfig,
+    config::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
-    alg::CTMRG{C},
-) where {C}
-    @assert C === :simultaneous
+    alg::SimultaneousCTMRG,
+)
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs = leading_boundary(envinit, state, alg)
-    envsconv, info = ctmrg_iter(state, envs, alg)
-    envsfix, signs = gauge_fix(envs, envsconv)
+    envsconv, info = ctmrg_iteration(state, envs, alg)
+    envs_fixed, signs = gauge_fix(envs, envsconv)
 
     # Fix SVD
     Ufix, Vfix = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fixed = SVDAdjoint(;
         fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
     )
-    alg_fixed = CTMRG(;
-        svd_alg=svd_alg_fixed, trscheme=notrunc(), ctmrgscheme=:simultaneous
-    )
+    alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
+    alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
     function leading_boundary_fixed_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
 
-        _, env_vjp = pullback(state, envsfix) do A, x
-            e, = ctmrg_iter(A, x, alg_fixed)
-            return fix_global_phases(x, e)
-        end
+        f(A, x) = fix_global_phases(x, ctmrg_iteration(A, x, alg_fixed)[1])
+        _, env_vjp = rrule_via_ad(config, f, state, envs_fixed)
 
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
-        ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[3]
         ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envsfix, leading_boundary_fixed_pullback
+    return envs_fixed, leading_boundary_fixed_pullback
 end
 
 @doc """

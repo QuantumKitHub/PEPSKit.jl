@@ -9,7 +9,7 @@ using OptimKit
 # initialize parameters
 Dbond = 2
 χenv = 16
-ctm_alg = CTMRG()
+ctm_alg = SimultaneousCTMRG()
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=2)
 )
@@ -82,9 +82,8 @@ end
 
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(peps)
-    envs = CTMRGEnv(rand, Float64, peps, Espace)
-    trscheme = truncerr(1e-9) & truncdim(χenv)
-    envs = leading_boundary(envs, peps, CTMRG(; trscheme, ctmrgscheme=:sequential))
+    envs₀ = CTMRGEnv(rand, Float64, peps, Espace)
+    envs = leading_boundary(envs₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
     e_site = costfun(peps, envs, ham) / (N1 * N2)

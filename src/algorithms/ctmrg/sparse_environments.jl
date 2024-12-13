@@ -97,9 +97,24 @@ function renormalize_southwest_corner(ec::EnlargedCorner, P_left, P_right)
     )
 end
 
-# ------------------
-# Sparse environment
-# ------------------
+# Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
+function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
+    return HalfInfiniteEnv(ec_1, ec_2)
+end
+
+# Compute left and right projectors sparsely without constructing enlarged corners explicitly 
+function left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
+    isqS = sdiag_pow(S, -0.5)
+    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
+    P_right = right_projector(
+        Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
+    )
+    return P_left, P_right
+end
+
+# --------------------------------
+# Sparse half-infinite environment
+# --------------------------------
 
 """
     struct HalfInfiniteEnv{C,E,A,A′}
@@ -114,8 +129,8 @@ struct HalfInfiniteEnv{C,E,A,A′}  # TODO: subtype as AbstractTensorMap once Te
     E_3::E
     E_4::E
     ket_1::A
-    bra_1::A′
     ket_2::A
+    bra_1::A′
     bra_2::A′
 end
 
@@ -128,8 +143,10 @@ function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
         quadrant1.E_2,
         quadrant2.E_1,
         quadrant2.E_2,
-        quadrant1.ket_bra,
-        quadrant2.ket_bra,
+        quadrant1.ket,
+        quadrant2.ket,
+        quadrant1.bra,
+        quadrant2.bra,
     )
 end
 
@@ -139,7 +156,7 @@ end
 Instantiate half-infinite environment as `TensorMap` explicitly.
 """
 function TensorKit.TensorMap(env::HalfInfiniteEnv)  # Dense operator
-    return halfinfinite_environment(
+    return half_infinite_environment(
         env.C_1,
         env.C_2,
         env.E_1,
@@ -161,7 +178,7 @@ Contract half-infinite environment with a vector `x`, such that the environment 
 linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed, respectively.
 """
 function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
-    return halfinfinite_environment(
+    return half_infinite_environment(
         env.C_1,
         env.C_2,
         env.E_1,
@@ -176,7 +193,7 @@ function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
     )
 end
 function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
-    return halfinfinite_environment(
+    return half_infinite_environment(
         x,
         env.C_1,
         env.C_2,
@@ -191,26 +208,7 @@ function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
     )
 end
 
-# Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
-function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
-    return HalfInfiniteEnv(
-        ec_1.C,
-        ec_2.C,
-        ec_1.E_1,
-        ec_1.E_2,
-        ec_2.E_1,
-        ec_2.E_2,
-        ec_1.ket,
-        ec_2.ket,
-        ec_1.bra,
-        ec_2.bra,
-    )
-end
-
-# -----------------------------------------------------
 # AbstractTensorMap subtyping and IterSVD compatibility
-# -----------------------------------------------------
-
 function TensorKit.domain(env::HalfInfiniteEnv)
     return domain(env.E_4) * domain(env.ket_2)[3] * domain(env.bra_2)[3]'
 end

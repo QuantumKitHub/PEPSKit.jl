@@ -355,6 +355,24 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     end
 end
 
+Base.size(env::CTMRGEnv, args...) = size(env.corners, args...)
+Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
+function eachcoordinate(x::CTMRGEnv)
+    return collect(Iterators.product(axes(x, 2), axes(x, 3)))
+end
+function eachcoordinate(x::CTMRGEnv, dirs)
+    return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
+end
+Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
+Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
+
+# In-place update of environment
+function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
+    env.corners .= env´.corners
+    env.edges .= env´.edges
+    return env
+end
+
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
@@ -398,24 +416,6 @@ function Base.rot180(env::CTMRGEnv{C,T}) where {C,T}
         edges′[dir2, :, :] = rot180(env.edges[dir, :, :])
     end
     return CTMRGEnv(copy(corners′), copy(edges′))
-end
-
-Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
-function eachcoordinate(x::CTMRGEnv)
-    return collect(Iterators.product(axes(x, 2), axes(x, 3)))
-end
-function eachcoordinate(x::CTMRGEnv, dirs)
-    return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
-end
-
-Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
-Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
-
-# In-place update of environment
-function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
-    env.corners .= env´.corners
-    env.edges .= env´.edges
-    return env
 end
 
 # Functions used for FP differentiation and by KrylovKit.linsolve
