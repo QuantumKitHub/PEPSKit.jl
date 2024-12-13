@@ -5,7 +5,7 @@ using Base: @kwdef
 using Compat
 using Accessors: @set
 using VectorInterface
-using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
+using TensorKit, KrylovKit, MPSKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
@@ -59,27 +59,44 @@ include("utility/symmetrization.jl")
 
 """
     module Defaults
+        # CTMRG
+        const ctmrg_tol = 1e-8
         const ctmrg_maxiter = 100
         const ctmrg_miniter = 4
-        const ctmrg_tol = 1e-8
-        const fpgrad_maxiter = 30
-        const fpgrad_tol = 1e-6
-        const reuse_env = true
+        const sparse = false
         const trscheme = FixedSpaceTruncation()
         const fwd_alg = TensorKit.SDD()
-        const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
+        const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
         const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
         const projector_alg_type = HalfInfiniteProjector
         const projector_alg = projector_alg_type(svd_alg, trscheme, 2)
         const ctmrg_alg = SimultaneousCTMRG(
             ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
         )
-        const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
-        const gradient_linsolver = KrylovKit.BiCGStab(;
-            maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
+
+        # Optimization
+        const optim_alg = quasi_Newton
+        const record_group = [
+            RecordCost(),
+            RecordGradientNorm(),
+            RecordConditionNumber(),
+            RecordCostUnitCell(),
+            RecordTime(),
+        ]
+        const optim_kwargs = (;
+            memory_size=32,
+            stopping_criterion=StopAfterIteration(100) | StopWhenGradientNormLess(1e-4),
+            record=record_group,
+            return_state=true,
         )
+        const fpgrad_maxiter = 30
+        const fpgrad_tol = 1e-6
+        const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
         const iterscheme = :fixed
+        const reuse_env = true
         const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+
+        # OhMyThreads scheduler defaults
         const scheduler = Ref{Scheduler}(Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler())
     end
 
@@ -88,9 +105,6 @@ Module containing default values that represent typical algorithm parameters.
 - `ctmrg_maxiter`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter`: Minimal number of CTMRG carried out
 - `ctmrg_tol`: Tolerance checking singular value and norm convergence
-- `fpgrad_maxiter`: Maximal number of iterations for computing the CTMRG fixed-point gradient
-- `fpgrad_tol`: Convergence tolerance for the fixed-point gradient iteration
-- `reuse_env`: If `true`, the current optimization step is initialized on the previous environment
 - `trscheme`: Truncation scheme for SVDs and other decompositions
 - `fwd_alg`: SVD algorithm that is used in the forward pass
 - `rrule_alg`: Reverse-rule for differentiating that SVD
@@ -98,41 +112,60 @@ Module containing default values that represent typical algorithm parameters.
 - `projector_alg_type`: Default type of projector algorithm
 - `projector_alg`: Algorithm to compute CTMRG projectors
 - `ctmrg_alg`: Algorithm for performing CTMRG runs
-- `optimizer`: Optimization algorithm for PEPS ground-state optimization
+- `fpgrad_maxiter`: Maximal number of iterations for computing the CTMRG fixed-point gradient
+- `fpgrad_tol`: Convergence tolerance for the fixed-point gradient iteration
+- `reuse_env`: If `true`, the current optimization step is initialized on the previous environment
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 - `iterscheme`: Scheme for differentiating one CTMRG iteration
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
+# TODO
 - `scheduler`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
     using TensorKit, KrylovKit, OptimKit, OhMyThreads
+    using Manopt
     using PEPSKit:
         LinSolver,
         FixedSpaceTruncation,
         SVDAdjoint,
         HalfInfiniteProjector,
         SimultaneousCTMRG
+
+    # CTMRG
     const ctmrg_tol = 1e-8
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
-    const fpgrad_maxiter = 30
-    const fpgrad_tol = 1e-6
     const sparse = false
-    const reuse_env = true
     const trscheme = FixedSpaceTruncation()
     const fwd_alg = TensorKit.SDD()
-    const rrule_alg = Arnoldi(; tol=1e-2fpgrad_tol, krylovdim=48, verbosity=-1)
+    const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(svd_alg, trscheme, 2)
     const ctmrg_alg = SimultaneousCTMRG(
         ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
     )
-    const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=2)
-    const gradient_linsolver = KrylovKit.BiCGStab(;
-        maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol
+
+    # Optimization
+    const optim_alg = quasi_Newton
+    const record_group = [
+        RecordCost(),
+        RecordGradientNorm(),
+        RecordConditionNumber(), # TODO: implement PEPS record actions
+        RecordCostUnitCell(),
+        RecordTime(),
+    ]
+    const optim_kwargs = (;
+        memory_size=32,
+        stopping_criterion=StopAfterIteration(100) | StopWhenGradientNormLess(1e-4),
+        record=record_group,
+        return_state=true,
     )
+    const fpgrad_maxiter = 30
+    const fpgrad_tol = 1e-6
+    const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
     const iterscheme = :fixed
+    const reuse_env = true
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
 
     # OhMyThreads scheduler defaults
