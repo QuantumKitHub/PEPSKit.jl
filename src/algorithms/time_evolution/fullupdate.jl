@@ -13,12 +13,12 @@ Each FU run stops when the energy starts to increase.
     trscheme::TensorKit.TruncationScheme
     # alternating least square optimization
     opt_alg::FUALSOptimize = FUALSOptimize()
-    # CTMRG for left-right move
-    lrmove_alg::SequentialCTMRG
+    # SequentialCTMRG column move after updating a column of bonds
+    colmove_alg::SequentialCTMRG
     # interval to reconverge environments
     reconv_int::Int = 10
     # CTMRG for reconverging environment
-    reconv_alg::CTMRG
+    reconv_alg::CTMRGAlgorithm
 end
 
 function truncation_scheme(alg::FullUpdate, v::ElementarySpace)
@@ -143,8 +143,8 @@ function update_column!(
         end
     end
     # update CTMRGEnv
-    envs2, info = ctmrg_leftmove(col, peps, envs, alg.lrmove_alg)
-    envs2, info = ctmrg_rightmove(_next(col, Nc), peps, envs2, alg.lrmove_alg)
+    envs2, info = ctmrg_leftmove(col, peps, envs, alg.colmove_alg)
+    envs2, info = ctmrg_rightmove(_next(col, Nc), peps, envs2, alg.colmove_alg)
     for c in [col, _next(col, Nc)]
         envs.corners[:, :, c] = envs2.corners[:, :, c]
         envs.edges[:, :, c] = envs2.edges[:, :, c]
@@ -180,13 +180,14 @@ end
 
 """
 Perform full update with nearest neighbor Hamiltonian `ham`.
+After FU stops, the final environment is calculated with CTMRG algorithm `ctm_alg`.
 """
 function fullupdate(
     peps::InfinitePEPS,
     envs::CTMRGEnv,
     ham::LocalOperator,
     fu_alg::FullUpdate,
-    ctm_alg::SequentialCTMRG,
+    ctm_alg::CTMRGAlgorithm,
 )
     time_start = time()
     N1, N2 = size(peps)
