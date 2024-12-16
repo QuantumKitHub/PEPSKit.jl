@@ -319,7 +319,7 @@ function fu_optimize(
         aR0, bL0 = deepcopy(aR), deepcopy(bL)
         cost0, fid0 = cost, fid
         if count == alg.maxiter
-            @warn "Warning: max iter $maxiter reached for ALS optimization\n"
+            @warn "Warning: max iter $(alg.maxiter) reached for ALS optimization\n"
         end
     end
     return aR, bL, cost0
