@@ -6,6 +6,7 @@ using Compat
 using Accessors: @set
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, TensorOperations
+using TensorKit: ℂ, ℝ  # To avoid conflict with Manifolds
 using ChainRulesCore, Zygote
 using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
@@ -53,9 +54,9 @@ include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")
 
-include("algorithms/peps_opt.jl")
-
 include("utility/symmetrization.jl")
+
+include("algorithms/peps_opt.jl")
 
 """
     module Defaults
@@ -83,6 +84,7 @@ include("utility/symmetrization.jl")
             RecordCostUnitCell(),
             RecordTime(),
         ]
+        
         const optim_kwargs = (;
             memory_size=32,
             stopping_criterion=StopAfterIteration(100) | StopWhenGradientNormLess(1e-4),
@@ -129,7 +131,9 @@ module Defaults
         FixedSpaceTruncation,
         SVDAdjoint,
         HalfInfiniteProjector,
-        SimultaneousCTMRG
+        SimultaneousCTMRG,
+        RecordConditionNumber,
+        RecordUnitCellGradientNorm
 
     # CTMRG
     const ctmrg_tol = 1e-8
@@ -149,12 +153,13 @@ module Defaults
     # Optimization
     const optim_alg = quasi_Newton
     const record_group = [
-        RecordCost(),
-        RecordGradientNorm(),
-        RecordConditionNumber(), # TODO: implement PEPS record actions
-        RecordCostUnitCell(),
-        RecordTime(),
+        RecordCost() => :cost,
+        RecordGradientNorm() => :gradient_norm,
+        RecordConditionNumber() => :condition, # TODO: implement PEPS record actions
+        RecordUnitCellGradientNorm() => :unitcell_gradient_norm,
+        RecordTime() => :time,
     ]
+    const stopping_criterion = StopAfterIteration(100) | StopWhenGradientNormLess(1e-4)
     const optim_kwargs = (;
         memory_size=32,
         stopping_criterion=StopAfterIteration(100) | StopWhenGradientNormLess(1e-4),

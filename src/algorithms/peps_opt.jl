@@ -78,6 +78,40 @@ function LinSolver(;
     return LinSolver{iterscheme}(solver)
 end
 
+mutable struct RecordTruncationError
+    recorded_values::Vector{Float64}
+    RecordTruncationError() = new(Vector{Float64}())
+end
+function (r::RecordTruncationError)(
+    p::AbstractManoptProblem, ::AbstractManoptSolverState, i::Int
+)
+    pec = Manopt.get_cost_function(get_objective(p))
+    return Manopt.record_or_reset!(r, pec.env_info.truncation_error, i)
+end
+
+mutable struct RecordConditionNumber
+    recorded_values::Vector{Float64}
+    RecordConditionNumber() = new(Vector{Float64}())
+end
+function (r::RecordConditionNumber)(
+    p::AbstractManoptProblem, ::AbstractManoptSolverState, i::Int
+)
+    pec = Manopt.get_cost_function(get_objective(p))
+    return Manopt.record_or_reset!(r, pec.env_info.condition_number, i)
+end
+
+mutable struct RecordUnitCellGradientNorm
+    recorded_values::Matrix{Float64}
+    RecordUnitCellGradientNorm() = new(Vector{Float64}())
+end
+function (r::RecordUnitCellGradientNorm)(
+    p::AbstractManoptProblem, s::AbstractManoptSolverState, i::Int
+)
+    pec = Manopt.get_cost_function(get_objective(p))
+    grad = pec.from_vec(get_gradient(s))
+    return Manopt.record_or_reset!(r, norm.(grad.A), i)
+end
+
 """
     PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
                     reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
@@ -93,8 +127,11 @@ step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
     optim_alg
-    reuse_env::Bool
+    optim_kwargs
     gradient_alg::G
+    reuse_env::Bool
+    # reuse_env_tol::Float64  # TODO: add option for reuse tolerance
+    symmetrization::SymmetrizationStyle
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
         boundary_alg::CTMRGAlgorithm,
@@ -119,29 +156,29 @@ function PEPSOptimize(;
     return PEPSOptimize(boundary_alg, optim_alg, reuse_env, gradient_alg)
 end
 
-struct PEPSEnergyCost
+mutable struct PEPSEnergyCost
     env::CTMRGEnv
     hamiltonian::LocalOperator
     alg::PEPSOptimize
     from_vec::Function
+    env_info::NamedTuple
 end
 
 function (pec::PEPSEnergyCost)(peps_vec::Vector)
     peps = pec.from_vec(peps_vec)
+    env₀ = reuse_env ? pec.env : CTMRGEnv(randn, scalartype(pec.env), env)
     E, gs = withgradient(peps) do ψ
-        env′ = hook_pullback(
+        env′, info = hook_pullback(
             leading_boundary,
-            pec.env,
+            env₀,
             ψ,
             pec.alg.boundary_alg;
             alg_rrule=pec.alg.gradient_alg,
         )
-        ignore_derivatives() do
-            pec.alg.reuse_env && update!(pec.env, env′)
-        end
-
+        pec.env_info = info
         E = expectation_value(peps, pec.hamiltonian, env′)
         ignore_derivatives() do
+            update!(pec.env, env′)  # Update environment in-place
             isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
                 @warn "Expectation value is not real: $E."
         end
@@ -159,9 +196,8 @@ function fixedpoint(
     H,
     alg::PEPSOptimize,
     env₀::CTMRGEnv=CTMRGEnv(peps₀, field(T)^20);
-    # (finalize!)=OptimKit._finalize!,
-    # symmetrization=nothing,
-    optim_kwargs=Defaults.optim_kwargs
+    stopping_criterion::StoppingCriterion=Defaults.stopping_criterion,
+    record=Defaults.record_group,
 ) where {T}
     # TODO: reimplement symmetrization using Manopt
     # if isnothing(symmetrization)
@@ -179,95 +215,29 @@ function fixedpoint(
         with purely real environments"
     end
 
+    # construct cost function struct
     peps₀_vec, from_vec = to_vec(peps₀)
-    pec = PEPSEnergyCost(env₀, H, alg, from_vec)
-
+    pec = PEPSEnergyCost(env₀, H, alg, from_vec, (;))
     fld = scalartype(peps₀) <: Real ? Manifolds.ℝ : Manifolds.ℂ
     cost_and_grad = ManifoldCostGradientObjective(pec)
-    result = alg.optimizer(Euclidean(; field=fld), cost_and_grad, peps₀_vec; optim_kwargs...)
 
-    # TODO: extract quantities from result
+    # optimize
+    result = alg.optimizer(
+        Euclidean(; field=fld),
+        cost_and_grad,
+        peps₀_vec;
+        stopping_criterion,
+        record,
+        return_state=true,
+        alg.optim_kwargs...,
+    )
 
-    return peps, env, E, info
+    # extract final result
+    peps_final = from_vec(get_solver_result(result))
+    env_final = leading_boundary(pec.env, peps_final, alg.boundary_alg)
+    E_final = expectation_value(peps_final, H, env_final)
+    return peps_final, env_final, E_final, result
 end
-
-# """
-#     fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
-#                finalize!=OptimKit._finalize!, symmetrization=nothing) where {T}
-
-# Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
-# in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
-# By default, a random initial environment is used.
-
-# The `finalize!` kwarg can be used to insert a function call after each optimization step
-# by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
-# The function maps `(peps, envs), f, g = finalize!((peps, envs), f, g, numiter)`.
-# The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
-# PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
-# requires a symmmetric `ψ₀` and `env₀` to converge properly.
-
-# The function returns a `NamedTuple` which contains the following entries:
-# - `peps`: final `InfinitePEPS`
-# - `env`: `CTMRGEnv` corresponding to the final PEPS
-# - `E`: final energy
-# - `E_history`: convergence history of the energy function
-# - `grad`: final energy gradient
-# - `gradnorm_history`: convergence history of the energy gradient norms
-# - `numfg`: total number of calls to the energy function
-# """
-# function fixedpoint(
-#     ψ₀::InfinitePEPS{F},
-#     H,
-#     alg::PEPSOptimize,
-#     env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(F)^20);
-#     (finalize!)=OptimKit._finalize!,
-#     symmetrization=nothing,
-# ) where {F}
-#     if isnothing(symmetrization)
-#         retract = peps_retract
-#     else
-#         retract, symm_finalize! = symmetrize_retract_and_finalize!(symmetrization)
-#         fin! = finalize!  # Previous finalize!
-#         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
-#     end
-
-#     if scalartype(env₀) <: Real
-#         env₀ = complex(env₀)
-#         @warn "the provided real environment was converted to a complex environment since \
-#         :fixed mode generally produces complex gauges; use :diffgauge mode instead to work \
-#         with purely real environments"
-#     end
-
-#     (peps, env), E, ∂E, numfg, convhistory = optimize(
-#         (ψ₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
-#     ) do (peps, envs)
-#         E, gs = withgradient(peps) do ψ
-#             envs´ = hook_pullback(
-#                 leading_boundary,
-#                 envs,
-#                 ψ,
-#                 alg.boundary_alg;
-#                 alg_rrule=alg.gradient_alg,
-#             )
-#             ignore_derivatives() do
-#                 alg.reuse_env && update!(envs, envs´)
-#             end
-#             return costfun(ψ, envs´, H)
-#         end
-#         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-#         return E, g
-#     end
-
-#     return (;
-#         peps,
-#         env,
-#         E,
-#         E_history=convhistory[:, 1],
-#         grad=∂E,
-#         gradnorm_history=convhistory[:, 2],
-#         numfg,
-#     )
-# end
 
 # Update PEPS unit cell in non-mutating way
 # Note: Both x and η are InfinitePEPS during optimization
