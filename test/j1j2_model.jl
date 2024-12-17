@@ -1,9 +1,8 @@
 using Test
 using Random
-using PEPSKit
 using TensorKit
 using KrylovKit
-using OptimKit
+using PEPSKit
 
 # initialize parameters
 χbond = 2

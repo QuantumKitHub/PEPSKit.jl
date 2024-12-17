@@ -124,7 +124,7 @@ Module containing default values that represent typical algorithm parameters.
 - `scheduler`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
-    using TensorKit, KrylovKit, OptimKit, OhMyThreads
+    using TensorKit, KrylovKit, OhMyThreads
     using Manopt
     using PEPSKit:
         LinSolver,
@@ -160,9 +160,12 @@ module Defaults
         RecordTime() => :time,
     ]
     const stopping_criterion = StopAfterIteration(100) | StopWhenGradientNormLess(1e-4)
+    const optim_maxiter = 100
+    const optim_tol = 1e-4
     const optim_kwargs = (;
         memory_size=32,
-        stopping_criterion=StopAfterIteration(100) | StopWhenGradientNormLess(1e-4),
+        stopping_criterion=StopAfterIteration(optim_maxiter) |
+                           StopWhenGradientNormLess(optim_tol),
         record=record_group,
         return_state=true,
     )

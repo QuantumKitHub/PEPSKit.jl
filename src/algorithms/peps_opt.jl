@@ -113,8 +113,7 @@ function (r::RecordUnitCellGradientNorm)(
 end
 
 """
-    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
-                    reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
+TODO
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
@@ -126,34 +125,45 @@ step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
-    optim_alg
-    optim_kwargs
+    optim_alg::Function
+    optim_kwargs::NamedTuple
     gradient_alg::G
     reuse_env::Bool
     # reuse_env_tol::Float64  # TODO: add option for reuse tolerance
-    symmetrization::SymmetrizationStyle
+    symmetrization::Union{Nothing,SymmetrizationStyle}
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
         boundary_alg::CTMRGAlgorithm,
         optim_alg,
-        reuse_env,
+        optim_kwargs,
         gradient_alg::G,
+        reuse_env,
+        symmetrization,
     ) where {G}
         if gradient_alg isa GradMode
             if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             end
         end
-        return new{G}(boundary_alg, optim_alg, reuse_env, gradient_alg)
+        return new{G}(
+            boundary_alg, optim_alg, optim_kwargs, gradient_alg, reuse_env, symmetrization
+        )
     end
 end
 function PEPSOptimize(;
     boundary_alg=Defaults.ctmrg_alg,
     optim_alg=Defaults.optim_alg,
-    reuse_env=Defaults.reuse_env,
+    maxiter=Defaults.optim_maxiter,
+    tol=Defaults.optim_tol,
     gradient_alg=Defaults.gradient_alg,
+    reuse_env=Defaults.reuse_env,
+    symmetrization=nothing,
 )
-    return PEPSOptimize(boundary_alg, optim_alg, reuse_env, gradient_alg)
+    stopping_criterion = StopAfterIteration(maxiter) | StopWhenGradientNormLess(tol)
+    optim_kwargs = (; stopping_criterion, record=Defaults.record_group)
+    return PEPSOptimize(
+        boundary_alg, optim_alg, optim_kwargs, gradient_alg, reuse_env, symmetrization
+    )
 end
 
 mutable struct PEPSEnergyCost
@@ -164,6 +174,7 @@ mutable struct PEPSEnergyCost
     env_info::NamedTuple
 end
 
+# TODO: split this up into f and grad_f
 function (pec::PEPSEnergyCost)(peps_vec::Vector)
     peps = pec.from_vec(peps_vec)
     env₀ = reuse_env ? pec.env : CTMRGEnv(randn, scalartype(pec.env), env)
@@ -219,8 +230,6 @@ function fixedpoint(
     H,
     alg::PEPSOptimize,
     env₀::CTMRGEnv=CTMRGEnv(peps₀, field(T)^20);
-    stopping_criterion::StoppingCriterion=Defaults.stopping_criterion,
-    record=Defaults.record_group,
 ) where {T}
     if scalartype(env₀) <: Real
         env₀ = complex(env₀)
@@ -233,7 +242,8 @@ function fixedpoint(
     peps₀_vec, from_vec = to_vec(peps₀)
     pec = PEPSEnergyCost(env₀, H, alg, from_vec, (;))
     fld = scalartype(peps₀) <: Real ? Manifolds.ℝ : Manifolds.ℂ
-    cost_and_grad = ManifoldCostGradientObjective(pec)
+    cost = # TODO #ManifoldCostGradientObjective(pec)
+    grad = # TODO
 
     # optimize
     M = Euclidean(; field=fld)
@@ -242,15 +252,14 @@ function fixedpoint(
     else
         SymmetrizeExponentialRetraction(alg.symmetrization, from_vec)
     end
-    result = alg.optimizer(
+    result = alg.optim_alg(
         M,
-        cost_and_grad,
+        cost,
+        grad,
         peps₀_vec;
-        stopping_criterion,
-        record,
+        alg.optim_kwargs...,
         return_state=true,
         retraction_method,
-        alg.optim_kwargs...,
     )
 
     # extract final result

@@ -153,13 +153,11 @@ function Base.isapprox(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS; kwargs...)
     end
 end
 
-# Used in _scale during OptimKit.optimize
 function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
     rmul!(ψ.A, α)
     return ψ
 end
 
-# Used in _add during OptimKit.optimize
 function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
     ψ₂.A .+= α * ψ₁.A
     return ψ₂

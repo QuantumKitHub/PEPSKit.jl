@@ -1,6 +1,6 @@
 using LinearAlgebra
-using TensorKit, OptimKit
-using PEPSKit, KrylovKit
+using TensorKit, KrylovKit, PEPSKit
+using Manopt
 
 # Square lattice Heisenberg Hamiltonian
 # We use the parameters (J₁, J₂, J₃) = (-1, 1, -1) by default to capture
