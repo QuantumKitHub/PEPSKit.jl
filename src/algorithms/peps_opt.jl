@@ -101,8 +101,8 @@ function (r::RecordConditionNumber)(
 end
 
 mutable struct RecordUnitCellGradientNorm
-    recorded_values::Matrix{Float64}
-    RecordUnitCellGradientNorm() = new(Vector{Float64}())
+    recorded_values::Vector{Matrix{Float64}}
+    RecordUnitCellGradientNorm() = new(Vector{Matrix{Float64}}())
 end
 function (r::RecordUnitCellGradientNorm)(
     p::AbstractManoptProblem, s::AbstractManoptSolverState, i::Int
@@ -167,6 +167,8 @@ end
 function (pec::PEPSEnergyCost)(peps_vec::Vector)
     peps = pec.from_vec(peps_vec)
     env₀ = reuse_env ? pec.env : CTMRGEnv(randn, scalartype(pec.env), env)
+
+    # compute cost and gradient
     E, gs = withgradient(peps) do ψ
         env′, info = hook_pullback(
             leading_boundary,
@@ -185,7 +187,28 @@ function (pec::PEPSEnergyCost)(peps_vec::Vector)
         return real(E)
     end
     g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+
+    # symmetrize gradient
+    if !isnothing(pec.alg.symmetrization)
+        g = symmetrize!(g, pec.alg.symmetrization)
+    end
+
     return E, to_vec(g)[1]
+end
+
+# First retract and then symmetrize the resulting PEPS
+# (ExponentialRetraction is the default retraction for Euclidean manifolds)
+struct SymmetrizeExponentialRetraction <: AbstractRetractionMethod
+    symmetrization::SymmetrizationStyle
+    from_vec::Function
+end
+
+function Manifolds.retract(
+    M::AbstractManifold, p, X, t::Number, sr::SymmetrizeExponentialRetraction
+)
+    q = retract(M, p, X, t, ExponentialRetraction())
+    q_symm_peps = symmetrize!(sr.from_vec(q), sr.symmetrization)
+    return to_vec(q_symm_peps)
 end
 
 """
@@ -199,15 +222,6 @@ function fixedpoint(
     stopping_criterion::StoppingCriterion=Defaults.stopping_criterion,
     record=Defaults.record_group,
 ) where {T}
-    # TODO: reimplement symmetrization using Manopt
-    # if isnothing(symmetrization)
-    #     retract = peps_retract
-    # else
-    #     retract, symm_finalize! = symmetrize_retract_and_finalize!(symmetrization)
-    #     fin! = finalize!  # Previous finalize!
-    #     finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
-    # end
-
     if scalartype(env₀) <: Real
         env₀ = complex(env₀)
         @warn "the provided real environment was converted to a complex environment since \
@@ -222,13 +236,20 @@ function fixedpoint(
     cost_and_grad = ManifoldCostGradientObjective(pec)
 
     # optimize
+    M = Euclidean(; field=fld)
+    retraction_method = if isnothing(alg.symmetrization)
+        default_retraction_method(M)
+    else
+        SymmetrizeExponentialRetraction(alg.symmetrization, from_vec)
+    end
     result = alg.optimizer(
-        Euclidean(; field=fld),
+        M,
         cost_and_grad,
         peps₀_vec;
         stopping_criterion,
         record,
         return_state=true,
+        retraction_method,
         alg.optim_kwargs...,
     )
 
@@ -238,18 +259,6 @@ function fixedpoint(
     E_final = expectation_value(peps_final, H, env_final)
     return peps_final, env_final, E_final, result
 end
-
-# Update PEPS unit cell in non-mutating way
-# Note: Both x and η are InfinitePEPS during optimization
-function peps_retract(x, η, α)
-    peps = deepcopy(x[1])
-    peps.A .+= η.A .* α
-    env = deepcopy(x[2])
-    return (peps, env), η
-end
-
-# Take real valued part of dot product
-real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 
 #=
 Evaluating the gradient of the cost function for CTMRG:
