@@ -159,7 +159,16 @@ module Defaults
         RecordUnitCellGradientNorm() => :unitcell_gradient_norm,
         RecordTime() => :time,
     ]
-    const debug_group = [:Iteration, :Cost, :GradientNorm, :Time, :Stop]
+    const debug_group = [
+        (:Iteration, "Optim %-5d"),
+        (:Cost, "f(x) = %.8f"),
+        (:GradientNorm, "   ‖∂f‖ = %.8f   "),
+        (:Stepsize, "   step size = %.8f   "),
+        DebugTime(; prefix="time =", mode=:iterative),
+        DebugWarnIfCostIncreases(:Always; tol=1e-12),
+        :Stop,
+        "\n",
+    ]
     const stopping_criterion = StopAfterIteration(100) | StopWhenGradientNormLess(1e-4)
     const optim_maxiter = 100
     const optim_tol = 1e-4
