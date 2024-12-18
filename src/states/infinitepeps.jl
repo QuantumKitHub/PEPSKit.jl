@@ -122,6 +122,7 @@ Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
 Base.similar(T::InfinitePEPS, args...) = InfinitePEPS(similar(T.A, args...))
 Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
 
+## Indexing
 Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
 Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
 Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
@@ -131,7 +132,10 @@ end
 function eachcoordinate(x::InfinitePEPS, dirs)
     return collect(Iterators.product(dirs, axes(x, 1), axes(x, 2)))
 end
+
+## Tensor properties
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
+TensorKit.dim(t::InfinitePEPS) = sum(dim.(t.A))
 
 ## Math
 Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)

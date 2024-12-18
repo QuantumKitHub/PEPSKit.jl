@@ -78,37 +78,37 @@ function LinSolver(;
     return LinSolver{iterscheme}(solver)
 end
 
-mutable struct RecordTruncationError
+mutable struct RecordTruncationError <: RecordAction
     recorded_values::Vector{Float64}
     RecordTruncationError() = new(Vector{Float64}())
 end
 function (r::RecordTruncationError)(
     p::AbstractManoptProblem, ::AbstractManoptSolverState, i::Int
 )
-    pec = Manopt.get_cost_function(get_objective(p))
-    return Manopt.record_or_reset!(r, pec.env_info.truncation_error, i)
+    cache = Manopt.get_cost_function(get_objective(p))
+    return Manopt.record_or_reset!(r, cache.env_info.truncation_error, i)
 end
 
-mutable struct RecordConditionNumber
+mutable struct RecordConditionNumber <: RecordAction
     recorded_values::Vector{Float64}
     RecordConditionNumber() = new(Vector{Float64}())
 end
 function (r::RecordConditionNumber)(
     p::AbstractManoptProblem, ::AbstractManoptSolverState, i::Int
 )
-    pec = Manopt.get_cost_function(get_objective(p))
-    return Manopt.record_or_reset!(r, pec.env_info.condition_number, i)
+    cache = Manopt.get_cost_function(get_objective(p))
+    return Manopt.record_or_reset!(r, cache.env_info.condition_number, i)
 end
 
-mutable struct RecordUnitCellGradientNorm
+mutable struct RecordUnitCellGradientNorm <: RecordAction
     recorded_values::Vector{Matrix{Float64}}
     RecordUnitCellGradientNorm() = new(Vector{Matrix{Float64}}())
 end
 function (r::RecordUnitCellGradientNorm)(
     p::AbstractManoptProblem, s::AbstractManoptSolverState, i::Int
 )
-    pec = Manopt.get_cost_function(get_objective(p))
-    grad = pec.from_vec(get_gradient(s))
+    cache = Manopt.get_cost_function(get_objective(p))
+    grad = cache.from_vec(get_gradient(s))
     return Manopt.record_or_reset!(r, norm.(grad.A), i)
 end
 
@@ -176,7 +176,6 @@ mutable struct PEPSCostFunctionCache{T}
     cost::Float64
     env_info::NamedTuple
 end
-
 function PEPSCostFunctionCache(
     operator::LocalOperator, alg::PEPSOptimize, peps_vec::Vector, from_vec, env::CTMRGEnv
 )
@@ -207,7 +206,7 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
             cache.alg.boundary_alg;
             alg_rrule=cache.alg.gradient_alg,
         )
-        cache.env_info = info
+        cache.env_info = info  # update environment information (truncation error, ...)
         cost = expectation_value(peps, cache.operator, env)
         ignore_derivatives() do
             update!(cache.env, env)  # update environment in-place
@@ -223,24 +222,22 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
         grad = symmetrize!(grad, cache.alg.symmetrization)
     end
 
-    # update cache
-    cache.cost = cost
-    cache.grad_vec .= to_vec(grad)[1]
+    cache.cost = cost  # update cost function value
+    cache.grad_vec .= to_vec(grad)[1]  # update vectorized gradient
     return cache.cost, cache.grad_vec
 end
 
-function cost_function(cache::PEPSCostFunctionCache{T})
-    return function cost_function(::Euclidean, peps_vec::Vector{T})
-        if !(peps_vec == cache.peps_vec) # update cache
-            cost_and_grad!(cache, peps_vec)
-        end
-        return cache.cost
+# Functor returns only the cost such that we can access the cache
+# using get_objective(::AbstractManoptProblem) in RecordActions
+function (cache::PEPSCostFunctionCache{T})(::Euclidean, peps_vec::Vector{T}) where {T}
+    if !(peps_vec == cache.peps_vec) # update cache if at new point
+        cost_and_grad!(cache, peps_vec)
     end
+    return cache.cost
 end
-
-function grad_function(cache::PEPSCostFunctionCache)
-    return function grad_function(::Euclidean, peps_vec::Vector{T})
-        if !(peps_vec == cache.peps_vec) # update cache
+function gradient_function(cache::PEPSCostFunctionCache{T}) where {T}
+    return function gradient_function(::Euclidean, peps_vec::Vector{T})
+        if !(peps_vec == cache.peps_vec) # update cache if at new point
             cost_and_grad!(cache, peps_vec)
         end
         return cache.grad_vec
@@ -280,13 +277,13 @@ function fixedpoint(
 
     # construct cost and grad functions
     peps₀_vec, from_vec = to_vec(peps₀)
-    cache = PEPSCostFunctionCache(operator, alg, peps_vec, from_vec, env₀)
-    cost = cost_function(cache)
-    grad = grad_function(cache)
+    cache = PEPSCostFunctionCache(operator, alg, peps₀_vec, from_vec, env₀)
+    cost = cache
+    grad = gradient_function(cache)
 
     # optimize
-    fld = scalartype(peps₀) <: Real ? Manifolds.ℝ : Manifolds.ℂ
-    M = Euclidean(; field=fld)
+    # fld = scalartype(peps₀) <: Real ? Manifolds.ℝ : Manifolds.ℂ  # Manopt can't optimize over ℂ?
+    M = Euclidean(length(peps₀_vec))
     retraction_method = if isnothing(alg.symmetrization)
         default_retraction_method(M)
     else
