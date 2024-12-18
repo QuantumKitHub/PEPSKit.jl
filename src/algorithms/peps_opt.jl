@@ -166,45 +166,85 @@ function PEPSOptimize(;
     )
 end
 
-mutable struct PEPSEnergyCost
-    env::CTMRGEnv
-    hamiltonian::LocalOperator
+mutable struct PEPSCostFunctionCache{T}
+    operator::LocalOperator
     alg::PEPSOptimize
-    from_vec::Function
+    env::CTMRGEnv
+    from_vec
+    peps_vec::Vector{T}
+    grad_vec::Vector{T}
+    cost::Float64
     env_info::NamedTuple
 end
 
-# TODO: split this up into f and grad_f
-function (pec::PEPSEnergyCost)(peps_vec::Vector)
-    peps = pec.from_vec(peps_vec)
-    env₀ = reuse_env ? pec.env : CTMRGEnv(randn, scalartype(pec.env), env)
+function PEPSCostFunctionCache(
+    operator::LocalOperator, alg::PEPSOptimize, peps_vec::Vector, from_vec, env::CTMRGEnv
+)
+    return PEPSCostFunctionCache(
+        operator,
+        alg,
+        env,
+        from_vec,
+        peps_vec,
+        similar(peps_vec),
+        0.0,
+        (; truncation_error=0.0, condition_number=1.0),
+    )
+end
+
+function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) where {T}
+    cache.peps_vec .= peps_vec  # update point in manifold
+    peps = cache.from_vec(peps_vec)  # convert back to InfinitePEPS
+    env₀ =
+        cache.alg.reuse_env ? cache.env : CTMRGEnv(randn, scalartype(cache.env), cache.env)
 
     # compute cost and gradient
-    E, gs = withgradient(peps) do ψ
-        env′, info = hook_pullback(
+    cost, grads = withgradient(peps) do ψ
+        env, info = hook_pullback(
             leading_boundary,
             env₀,
             ψ,
-            pec.alg.boundary_alg;
-            alg_rrule=pec.alg.gradient_alg,
+            cache.alg.boundary_alg;
+            alg_rrule=cache.alg.gradient_alg,
         )
-        pec.env_info = info
-        E = expectation_value(peps, pec.hamiltonian, env′)
+        cache.env_info = info
+        cost = expectation_value(peps, cache.operator, env)
         ignore_derivatives() do
-            update!(pec.env, env′)  # Update environment in-place
-            isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
-                @warn "Expectation value is not real: $E."
+            update!(cache.env, env)  # update environment in-place
+            isapprox(imag(cost), 0; atol=sqrt(eps(real(cost)))) ||
+                @warn "Expectation value is not real: $cost."
         end
-        return real(E)
+        return real(cost)
     end
-    g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+    grad = only(grads)  # `withgradient` returns tuple of gradients `grads`
 
     # symmetrize gradient
-    if !isnothing(pec.alg.symmetrization)
-        g = symmetrize!(g, pec.alg.symmetrization)
+    if !isnothing(cache.alg.symmetrization)
+        grad = symmetrize!(grad, cache.alg.symmetrization)
     end
 
-    return E, to_vec(g)[1]
+    # update cache
+    cache.cost = cost
+    cache.grad_vec .= to_vec(grad)[1]
+    return cache.cost, cache.grad_vec
+end
+
+function cost_function(cache::PEPSCostFunctionCache{T})
+    return function cost_function(::Euclidean, peps_vec::Vector{T})
+        if !(peps_vec == cache.peps_vec) # update cache
+            cost_and_grad!(cache, peps_vec)
+        end
+        return cache.cost
+    end
+end
+
+function grad_function(cache::PEPSCostFunctionCache)
+    return function grad_function(::Euclidean, peps_vec::Vector{T})
+        if !(peps_vec == cache.peps_vec) # update cache
+            cost_and_grad!(cache, peps_vec)
+        end
+        return cache.grad_vec
+    end
 end
 
 # First retract and then symmetrize the resulting PEPS
@@ -227,7 +267,7 @@ TODO
 """
 function fixedpoint(
     peps₀::InfinitePEPS{T},
-    H,
+    operator::LocalOperator,
     alg::PEPSOptimize,
     env₀::CTMRGEnv=CTMRGEnv(peps₀, field(T)^20);
 ) where {T}
@@ -238,14 +278,14 @@ function fixedpoint(
         with purely real environments"
     end
 
-    # construct cost function struct
+    # construct cost and grad functions
     peps₀_vec, from_vec = to_vec(peps₀)
-    pec = PEPSEnergyCost(env₀, H, alg, from_vec, (;))
-    fld = scalartype(peps₀) <: Real ? Manifolds.ℝ : Manifolds.ℂ
-    cost = # TODO #ManifoldCostGradientObjective(pec)
-    grad = # TODO
+    cache = PEPSCostFunctionCache(operator, alg, peps_vec, from_vec, env₀)
+    cost = cost_function(cache)
+    grad = grad_function(cache)
 
     # optimize
+    fld = scalartype(peps₀) <: Real ? Manifolds.ℝ : Manifolds.ℂ
     M = Euclidean(; field=fld)
     retraction_method = if isnothing(alg.symmetrization)
         default_retraction_method(M)
@@ -253,20 +293,12 @@ function fixedpoint(
         SymmetrizeExponentialRetraction(alg.symmetrization, from_vec)
     end
     result = alg.optim_alg(
-        M,
-        cost,
-        grad,
-        peps₀_vec;
-        alg.optim_kwargs...,
-        return_state=true,
-        retraction_method,
+        M, cost, grad, peps₀_vec; alg.optim_kwargs..., return_state=true, retraction_method
     )
 
     # extract final result
     peps_final = from_vec(get_solver_result(result))
-    env_final = leading_boundary(pec.env, peps_final, alg.boundary_alg)
-    E_final = expectation_value(peps_final, H, env_final)
-    return peps_final, env_final, E_final, result
+    return peps_final, cost.env, cache.cost, result
 end
 
 #=

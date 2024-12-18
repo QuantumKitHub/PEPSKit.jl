@@ -1,18 +1,16 @@
 using Test
 using Random
 using Accessors
-using PEPSKit
 using TensorKit
 using KrylovKit
-using OptimKit
+using PEPSKit
+using Manopt
 
 # initialize parameters
 Dbond = 2
 χenv = 16
 ctm_alg = SimultaneousCTMRG()
-opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=2)
-)
+opt_alg = PEPSOptimize(; boundary_alg=ctm_alg, tol=1e-3)
 # compare against Juraj Hasik's data:
 # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat
 E_ref = -0.6602310934799577
