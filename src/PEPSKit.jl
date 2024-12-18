@@ -159,15 +159,15 @@ module Defaults
         RecordUnitCellGradientNorm() => :unitcell_gradient_norm,
         RecordTime() => :time,
     ]
+    const debug_group = [:Iteration, :Cost, :GradientNorm, :Time, :Stop]
     const stopping_criterion = StopAfterIteration(100) | StopWhenGradientNormLess(1e-4)
     const optim_maxiter = 100
     const optim_tol = 1e-4
     const optim_kwargs = (;
-        memory_size=32,
         stopping_criterion=StopAfterIteration(optim_maxiter) |
                            StopWhenGradientNormLess(optim_tol),
         record=record_group,
-        return_state=true,
+        debug=debug_group,
     )
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6

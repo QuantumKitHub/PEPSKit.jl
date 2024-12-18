@@ -1,4 +1,11 @@
-using Manifolds, Manopt
+using Manifolds: Manifolds
+using Manifolds:
+    AbstractManifold,
+    AbstractRetractionMethod,
+    Euclidean,
+    default_retraction_method,
+    retract
+using Manopt
 
 abstract type GradMode{F} end
 
@@ -158,9 +165,10 @@ function PEPSOptimize(;
     gradient_alg=Defaults.gradient_alg,
     reuse_env=Defaults.reuse_env,
     symmetrization=nothing,
+    kwargs...,
 )
     stopping_criterion = StopAfterIteration(maxiter) | StopWhenGradientNormLess(tol)
-    optim_kwargs = (; stopping_criterion, record=Defaults.record_group)
+    optim_kwargs = merge(Defaults.optim_kwargs, (; stopping_criterion, kwargs...))
     return PEPSOptimize(
         boundary_alg, optim_alg, optim_kwargs, gradient_alg, reuse_env, symmetrization
     )
@@ -184,7 +192,7 @@ function PEPSCostFunctionCache(
         alg,
         env,
         from_vec,
-        peps_vec,
+        similar(peps_vec),
         similar(peps_vec),
         0.0,
         (; truncation_error=0.0, condition_number=1.0),
@@ -206,10 +214,10 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
             cache.alg.boundary_alg;
             alg_rrule=cache.alg.gradient_alg,
         )
-        cache.env_info = info  # update environment information (truncation error, ...)
         cost = expectation_value(peps, cache.operator, env)
         ignore_derivatives() do
             update!(cache.env, env)  # update environment in-place
+            cache.env_info = info  # update environment information (truncation error, ...)
             isapprox(imag(cost), 0; atol=sqrt(eps(real(cost)))) ||
                 @warn "Expectation value is not real: $cost."
         end
@@ -315,7 +323,7 @@ function _rrule(
 )
     envs = leading_boundary(envinit, state, alg)
 
-    function leading_boundary_diffgauge_pullback(Δenvs′)
+    function leading_boundary_diffgauge_pullback((Δenvs′, Δinfo))
         Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
@@ -343,9 +351,9 @@ function _rrule(
     alg::SimultaneousCTMRG,
 )
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
-    envs = leading_boundary(envinit, state, alg)
-    envsconv, info = ctmrg_iteration(state, envs, alg)
-    envs_fixed, signs = gauge_fix(envs, envsconv)
+    envs, = leading_boundary(envinit, state, alg)
+    envs_conv, info = ctmrg_iteration(state, envs, alg)
+    envs_fixed, signs = gauge_fix(envs, envs_conv)
 
     # Fix SVD
     Ufix, Vfix = fix_relative_phases(info.U, info.V, signs)
@@ -355,7 +363,7 @@ function _rrule(
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
     alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
-    function leading_boundary_fixed_pullback(Δenvs′)
+    function leading_boundary_fixed_pullback((Δenvs′, Δinfo))
         Δenvs = unthunk(Δenvs′)
 
         f(A, x) = fix_global_phases(x, ctmrg_iteration(A, x, alg_fixed)[1])
@@ -369,7 +377,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envs_fixed, leading_boundary_fixed_pullback
+    return (envs_fixed, info), leading_boundary_fixed_pullback
 end
 
 @doc """
