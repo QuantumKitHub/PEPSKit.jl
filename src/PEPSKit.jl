@@ -60,93 +60,87 @@ include("algorithms/peps_opt.jl")
 
 """
     module Defaults
-        # CTMRG
-        const ctmrg_tol = 1e-8
-        const ctmrg_maxiter = 100
-        const ctmrg_miniter = 4
-        const sparse = false
-        const trscheme = FixedSpaceTruncation()
-        const fwd_alg = TensorKit.SDD()
-        const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
-        const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
-        const projector_alg_type = HalfInfiniteProjector
-        const projector_alg = projector_alg_type(svd_alg, trscheme, 2)
-        const ctmrg_alg = SimultaneousCTMRG(
-            ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
-        )
 
-        # Optimization
-        const optim_alg = quasi_Newton
-        const optim_maxiter = 100
-        const optim_tol = 1e-4
-        const stopping_criterion = StopAfterIteration(optim_maxiter) | StopWhenGradientNormLess(optim_tol)
-        const record_group = [
-            RecordCost() => :Cost,
-            RecordGradientNorm() => :GradientNorm,
-            RecordTruncationError() => :TruncationError,
-            RecordConditionNumber() => :ConditionNumber,
-            RecordUnitCellGradientNorm() => :UnitcellGradientNorm,
-            RecordTime(; mode=:iterative) => :Time,
-        ]
-        const debug_group = [
-            (:Iteration, "Optim %-4d  "),
-            (:Cost, "f(x) = %.8f  "),
-            (:GradientNorm, "‖∂f‖ = %.8f  "),
-            (:Stepsize, "step size = %.4f  "),
-            DebugTime(; prefix="time =", mode=:iterative),
-            "\n",
-            DebugWarnIfCostIncreases(:Always; tol=1e-10),
-            "\n",
-            :Stop,
-        ]
-        const optim_kwargs = (;
-            stopping_criterion=StopAfterIteration(optim_maxiter) |
-                            StopWhenGradientNormLess(optim_tol),
-            record=record_group,
-            debug=debug_group,
-        )
-        const fpgrad_maxiter = 30
-        const fpgrad_tol = 1e-6
-        const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
-        const iterscheme = :fixed
-        const reuse_env = true
-        const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
-
-        # OhMyThreads scheduler defaults
-        const scheduler = Ref{Scheduler}(Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler())
-    end
-
-Module containing default values that represent typical algorithm parameters.
+Module containing default algorithm parameter values and arguments.
 
 # CTMRG
-- `ctmrg_maxiter`: Maximal number of CTMRG iterations per run
-- `ctmrg_miniter`: Minimal number of CTMRG carried out
-- `ctmrg_tol`: Tolerance checking singular value and norm convergence
-- `trscheme`: Truncation scheme for SVDs and other decompositions
-- `fwd_alg`: SVD algorithm that is used in the forward pass
+- `ctmrg_tol=1e-8`: Tolerance checking singular value and norm convergence
+- `ctmrg_maxiter=100`: Maximal number of CTMRG iterations per run
+- `ctmrg_miniter=4`: Minimal number of CTMRG carried out
+- `trscheme=FixedSpaceTruncation()`: Truncation scheme for SVDs and other decompositions
+- `fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
 - `rrule_alg`: Reverse-rule for differentiating that SVD
-- `svd_alg`: Combination of `fwd_alg` and `rrule_alg`
-- `projector_alg_type`: Default type of projector algorithm
+
+    ```
+    rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
+    ```
+
+- `svd_alg=SVDAdjoint(; fwd_alg, rrule_alg)`: Combination of `fwd_alg` and `rrule_alg`
+- `projector_alg_type=HalfInfiniteProjector`: Default type of projector algorithm
 - `projector_alg`: Algorithm to compute CTMRG projectors
+
+    ```
+    projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
+    ```
+
 - `ctmrg_alg`: Algorithm for performing CTMRG runs
 
+    ```
+    ctmrg_alg = SimultaneousCTMRG(
+        ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
+    )
+    ```
+
 # Optimization
-- `optim_alg`: Manopt optimizer function
-- `optim_maxiter`: Maximal number of optimization iterations
-- `optim_tol`: Gradient norm convergence tolerance
+- `optim_alg=quasi_Newton`: Manopt optimizer function
+- `optim_maxiter=100`: Maximal number of optimization iterations
+- `optim_tol=1e-4`: Gradient norm convergence tolerance
 - `stopping_criterion`: Manopt stopping criterion
-- `record_group`: Values that recorded during Manopt optimization
-- `debug_group`: Values that are printed during Manopt optimization
+
+    ```
+    stopping_criterion = StopAfterIteration(optim_maxiter) | StopWhenGradientNormLess(optim_tol)
+    ```
+
+- `record_group`: Values (`RecordAction`s) that are recorded during Manopt optimization
+
+    ```
+    record_group = [
+        RecordCost() => :Cost,
+        RecordGradientNorm() => :GradientNorm,
+        RecordTruncationError() => :TruncationError,
+        RecordConditionNumber() => :ConditionNumber,
+        RecordUnitCellGradientNorm() => :UnitcellGradientNorm,
+        RecordTime(; mode=:iterative) => :Time,
+    ]
+    ```
+
+- `debug_group=[...]`: Values (`DebugAction`s) that are printed during Manopt optimization
+
 - `optim_kwargs`: All keyword arguments that are passed onto a Manopt optimization call
-- `fpgrad_maxiter`: Maximal number of iterations for computing the CTMRG fixed-point gradient
-- `fpgrad_tol`: Convergence tolerance for the fixed-point gradient iteration
-- `reuse_env`: If `true`, the current optimization step is initialized on the previous environment
+
+    ```
+    optim_kwargs = (; stopping_criterion, record=record_group, debug=debug_group)
+    ```
+
+- `fpgrad_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
+- `fpgrad_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
+- `iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
-- `iterscheme`: Scheme for differentiating one CTMRG iteration
+
+    ```
+    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
+    ```
+
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
 
+    ```
+    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+    ```
+
+- `reuse_env=true`: If `true`, the current optimization step is initialized on the previous environment
+
 # OhMyThreads scheduler
-- `scheduler`: Multi-threading scheduler which can be accessed via `set_scheduler!`
+- `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
     using TensorKit, KrylovKit, OhMyThreads
@@ -170,7 +164,7 @@ module Defaults
     const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
-    const projector_alg = projector_alg_type(svd_alg, trscheme, 2)
+    const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
     const ctmrg_alg = SimultaneousCTMRG(
         ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
     )
@@ -200,18 +194,13 @@ module Defaults
         "\n",
         :Stop,
     ]
-    const optim_kwargs = (;
-        stopping_criterion=StopAfterIteration(optim_maxiter) |
-                           StopWhenGradientNormLess(optim_tol),
-        record=record_group,
-        debug=debug_group,
-    )
+    const optim_kwargs = (; stopping_criterion, record=record_group, debug=debug_group)
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
     const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
     const iterscheme = :fixed
-    const reuse_env = true
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+    const reuse_env = true
 
     # OhMyThreads scheduler defaults
     const scheduler = Ref{Scheduler}()
