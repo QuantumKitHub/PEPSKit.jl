@@ -11,7 +11,7 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
-using OhMyThreads
+using OhMyThreads: tmap
 
 include("utility/util.jl")
 include("utility/diffable_threads.jl")
