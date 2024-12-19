@@ -350,6 +350,16 @@ function half_infinite_environment(
         conj(E_4[χ6 D9 D10; χ_in])
 end
 
+function full_infinite_environment(
+    quadrant1::Q, quadrant2::Q, quadrant3::Q, quadrant4::Q
+) where {Q<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+        quadrant1[χ_in D_inabove D_inbelow; χ1 D1 D2] *
+        quadrant2[χ1 D1 D2; χ2 D3 D4] *
+        quadrant3[χ2 D3 D4; χ3 D5 D6] *
+        quadrant4[χ3 D5 D6; χ_out D_outabove D_outbelow]
+end
+
 # Renormalization contractions
 # ----------------------------
 

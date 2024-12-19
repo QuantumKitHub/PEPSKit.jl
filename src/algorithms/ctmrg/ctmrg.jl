@@ -93,33 +93,27 @@ function _singular_value_distance((S₁, S₂))
 end
 
 """
-    calc_convergence(envs, CSold, TSold)
+    calc_convergence(envs, CS_old, TS_old)
+    calc_convergence(envs_new::CTMRGEnv, envs_old::CTMRGEnv)
 
-Given a new environment `envs` and the singular values of previous corners and edges
-`CSold` and `TSold`, compute the maximal singular value distance.
+Given a new environment `envs`, compute the maximal singular value distance.
+This determined either from the previous corner and edge singular values
+`CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
-function calc_convergence(envs, CSold, TSold)
-    CSnew = map(x -> tsvd(x)[2], envs.corners)
-    ΔCS = maximum(_singular_value_distance, zip(CSold, CSnew))
+function calc_convergence(envs, CS_old, TS_old)
+    CS_new = map(x -> tsvd(x)[2], envs.corners)
+    ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
 
-    TSnew = map(x -> tsvd(x)[2], envs.edges)
-    ΔTS = maximum(_singular_value_distance, zip(TSold, TSnew))
+    TS_new = map(x -> tsvd(x)[2], envs.edges)
+    ΔTS = maximum(_singular_value_distance, zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
 
-    return max(ΔCS, ΔTS), CSnew, TSnew
+    return max(ΔCS, ΔTS), CS_new, TS_new
 end
-
-"""
-    calc_convergence(envsNew::CTMRGEnv, envsOld::CTMRGEnv)
-
-Calculate convergence of CTMRG by computing 
-the maximal singular value distance of new and old CTM tensors.
-"""
-function calc_convergence(envsNew::CTMRGEnv, envsOld::CTMRGEnv)
-    CSOld = map(x -> tsvd(x)[2], envsOld.corners)
-    TSOld = map(x -> tsvd(x)[2], envsOld.edges)
-    return calc_convergence(envsNew, CSOld, TSOld)
+function calc_convergence(envs_new::CTMRGEnv, envs_old::CTMRGEnv)
+    CS_old = map(x -> tsvd(x)[2], envs_old.corners)
+    TS_old = map(x -> tsvd(x)[2], envs_old.edges)
+    return calc_convergence(envs_new, CS_old, TS_old)
 end
-
 @non_differentiable calc_convergence(args...)
