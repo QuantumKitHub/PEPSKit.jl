@@ -77,19 +77,33 @@ include("algorithms/peps_opt.jl")
 
         # Optimization
         const optim_alg = quasi_Newton
+        const optim_maxiter = 100
+        const optim_tol = 1e-4
+        const stopping_criterion = StopAfterIteration(optim_maxiter) | StopWhenGradientNormLess(optim_tol)
         const record_group = [
-            RecordCost(),
-            RecordGradientNorm(),
-            RecordConditionNumber(),
-            RecordCostUnitCell(),
-            RecordTime(),
+            RecordCost() => :Cost,
+            RecordGradientNorm() => :GradientNorm,
+            RecordTruncationError() => :TruncationError,
+            RecordConditionNumber() => :ConditionNumber,
+            RecordUnitCellGradientNorm() => :UnitcellGradientNorm,
+            RecordTime(; mode=:iterative) => :Time,
         ]
-        
+        const debug_group = [
+            (:Iteration, "Optim %-4d  "),
+            (:Cost, "f(x) = %.8f  "),
+            (:GradientNorm, "‖∂f‖ = %.8f  "),
+            (:Stepsize, "step size = %.4f  "),
+            DebugTime(; prefix="time =", mode=:iterative),
+            "\n",
+            DebugWarnIfCostIncreases(:Always; tol=1e-10),
+            "\n",
+            :Stop,
+        ]
         const optim_kwargs = (;
-            memory_size=32,
-            stopping_criterion=StopAfterIteration(100) | StopWhenGradientNormLess(1e-4),
+            stopping_criterion=StopAfterIteration(optim_maxiter) |
+                            StopWhenGradientNormLess(optim_tol),
             record=record_group,
-            return_state=true,
+            debug=debug_group,
         )
         const fpgrad_maxiter = 30
         const fpgrad_tol = 1e-6
@@ -104,6 +118,7 @@ include("algorithms/peps_opt.jl")
 
 Module containing default values that represent typical algorithm parameters.
 
+# CTMRG
 - `ctmrg_maxiter`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter`: Minimal number of CTMRG carried out
 - `ctmrg_tol`: Tolerance checking singular value and norm convergence
@@ -114,13 +129,23 @@ Module containing default values that represent typical algorithm parameters.
 - `projector_alg_type`: Default type of projector algorithm
 - `projector_alg`: Algorithm to compute CTMRG projectors
 - `ctmrg_alg`: Algorithm for performing CTMRG runs
+
+# Optimization
+- `optim_alg`: Manopt optimizer function
+- `optim_maxiter`: Maximal number of optimization iterations
+- `optim_tol`: Gradient norm convergence tolerance
+- `stopping_criterion`: Manopt stopping criterion
+- `record_group`: Values that recorded during Manopt optimization
+- `debug_group`: Values that are printed during Manopt optimization
+- `optim_kwargs`: All keyword arguments that are passed onto a Manopt optimization call
 - `fpgrad_maxiter`: Maximal number of iterations for computing the CTMRG fixed-point gradient
 - `fpgrad_tol`: Convergence tolerance for the fixed-point gradient iteration
 - `reuse_env`: If `true`, the current optimization step is initialized on the previous environment
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 - `iterscheme`: Scheme for differentiating one CTMRG iteration
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
-# TODO
+
+# OhMyThreads scheduler
 - `scheduler`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
@@ -152,26 +177,29 @@ module Defaults
 
     # Optimization
     const optim_alg = quasi_Newton
-    const record_group = [
-        RecordCost() => :cost,
-        RecordGradientNorm() => :gradient_norm,
-        RecordConditionNumber() => :condition, # TODO: implement PEPS record actions
-        RecordUnitCellGradientNorm() => :unitcell_gradient_norm,
-        RecordTime() => :time,
-    ]
-    const debug_group = [
-        (:Iteration, "Optim %-5d"),
-        (:Cost, "f(x) = %.8f"),
-        (:GradientNorm, "   ‖∂f‖ = %.8f   "),
-        (:Stepsize, "   step size = %.8f   "),
-        DebugTime(; prefix="time =", mode=:iterative),
-        DebugWarnIfCostIncreases(:Always; tol=1e-12),
-        :Stop,
-        "\n",
-    ]
-    const stopping_criterion = StopAfterIteration(100) | StopWhenGradientNormLess(1e-4)
     const optim_maxiter = 100
     const optim_tol = 1e-4
+    const stopping_criterion =
+        StopAfterIteration(optim_maxiter) | StopWhenGradientNormLess(optim_tol)
+    const record_group = [
+        RecordCost() => :Cost,
+        RecordGradientNorm() => :GradientNorm,
+        RecordTruncationError() => :TruncationError,
+        RecordConditionNumber() => :ConditionNumber,
+        RecordUnitCellGradientNorm() => :UnitcellGradientNorm,
+        RecordTime(; mode=:iterative) => :Time,
+    ]
+    const debug_group = [
+        (:Iteration, "Optim %-4d  "),
+        (:Cost, "f(x) = %.8f  "),
+        (:GradientNorm, "‖∂f‖ = %.8f  "),
+        (:Stepsize, "step size = %.4f  "),
+        DebugTime(; prefix="time =", mode=:iterative),
+        "\n",
+        DebugWarnIfCostIncreases(:Always; tol=1e-10),
+        "\n",
+        :Stop,
+    ]
     const optim_kwargs = (;
         stopping_criterion=StopAfterIteration(optim_maxiter) |
                            StopWhenGradientNormLess(optim_tol),
@@ -239,6 +267,7 @@ export LocalOperator
 export expectation_value, costfun, product_peps, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
+export RecordTruncationError, RecordConditionNumber, RecordUnitCellGradientNorm
 export fixedpoint
 
 export absorb_weight

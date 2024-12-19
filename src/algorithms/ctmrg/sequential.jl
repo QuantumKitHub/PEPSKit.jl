@@ -73,8 +73,9 @@ function sequential_projectors(
         return proj
     end
 
+    truncation_error = maximum(copy(ϵ))
     condition_number = maximum(_condition_number, copy(S))
-    info = (; truncation_error=maximum(copy(ϵ)), condition_number)
+    info = (; truncation_error, condition_number)
     return (map(first, projectors), map(last, projectors)), info
 end
 function sequential_projectors(

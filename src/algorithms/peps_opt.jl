@@ -85,6 +85,12 @@ function LinSolver(;
     return LinSolver{iterscheme}(solver)
 end
 
+"""
+    mutable struct RecordTruncationError <: RecordAction
+
+Record the maximal truncation error of all `boundary_alg` runs of the corresponding
+optimization iteration.
+"""
 mutable struct RecordTruncationError <: RecordAction
     recorded_values::Vector{Float64}
     RecordTruncationError() = new(Vector{Float64}())
@@ -96,6 +102,12 @@ function (r::RecordTruncationError)(
     return Manopt.record_or_reset!(r, cache.env_info.truncation_error, i)
 end
 
+"""
+    mutable struct RecordConditionNumber <: RecordAction
+
+Record the maximal condition number of all `boundary_alg` runs of the corresponding
+optimization iteration.
+"""
 mutable struct RecordConditionNumber <: RecordAction
     recorded_values::Vector{Float64}
     RecordConditionNumber() = new(Vector{Float64}())
@@ -107,6 +119,12 @@ function (r::RecordConditionNumber)(
     return Manopt.record_or_reset!(r, cache.env_info.condition_number, i)
 end
 
+"""
+    mutable struct RecordUnitCellGradientNorm <: RecordAction
+        
+Record the PEPS gradient norms unit cell entry-wise, i.e. an array 
+of norms `norm.(peps.A)`.
+"""
 mutable struct RecordUnitCellGradientNorm <: RecordAction
     recorded_values::Vector{Matrix{Float64}}
     RecordUnitCellGradientNorm() = new(Vector{Matrix{Float64}}())
@@ -120,15 +138,19 @@ function (r::RecordUnitCellGradientNorm)(
 end
 
 """
-TODO
+    struct PEPSOptimize{G}
 
-Algorithm struct that represent PEPS ground-state optimization using AD.
-Set the algorithm to contract the infinite PEPS in `boundary_alg`;
-currently only `CTMRGAlgorithm`s are supported. The `optimizer` computes the gradient directions
-based on the CTMRG gradient and updates the PEPS parameters. In this optimization,
-the CTMRG runs can be started on the converged environments of the previous optimizer
-step by setting `reuse_env` to true. Otherwise a random environment is used at each
-step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
+Algorithm struct for PEPS optimization using automatic differentiation.
+
+# Fields
+- `boundary_alg::CTMRGAlgorithm`: algorithm for determining the PEPS environment
+- `optim_alg::Function`: Manopt optimization algorithm
+- `optim_kwargs::NamedTuple`: Keyword arguments provided to the Manopt `optim_alg` call
+- `gradient_alg::G`: Algorithm computing the cost function gradient in reverse-mode
+- `reuse_env::Bool`: If `true` the previous environment is used to initialize the next
+    `leading_boundary` call
+- `symmetrization::Union{Nothing,SymmetrizationStyle}`: Symmetrize the PEPS and PEPS
+    gradient after each optimization iteration (does nothing if `nothing` is provided)
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
@@ -157,6 +179,25 @@ struct PEPSOptimize{G}
         )
     end
 end
+
+"""
+    PEPSOptimize(;
+        boundary_alg=Defaults.ctmrg_alg,
+        optim_alg=Defaults.optim_alg,
+        maxiter=Defaults.optim_maxiter,
+        tol=Defaults.optim_tol,
+        gradient_alg=Defaults.gradient_alg,
+        reuse_env=Defaults.reuse_env,
+        symmetrization=nothing,
+        kwargs...,
+    )
+
+Convenience keyword argument constructor for `PEPSOptimize` algorithms.
+Here, `maxiter` and `tol` are passed onto `StopAfterIteration` and `StopWhenGradientNormLess`
+stopping criteria, respectively. Additionally, any keyword arguments can be provided which 
+are then stored inside `optim_kwargs` and passed to the Manopt optimization call, such that
+that all arguments of the respective `optim_alg` can be used.
+"""
 function PEPSOptimize(;
     boundary_alg=Defaults.ctmrg_alg,
     optim_alg=Defaults.optim_alg,
@@ -174,6 +215,22 @@ function PEPSOptimize(;
     )
 end
 
+"""
+    mutable struct PEPSCostFunctionCache{T}
+
+Stores objects used for computing PEPS cost functions during optimization that are
+needed apart from the PEPS that is being optimized.
+
+# Fields
+- `operator::LocalOperator`: cost function operator
+- `alg::PEPSOptimize`: optimization parameters
+- `env::CTMRGEnv`: environment of the current PEPS
+- `from_vec`: map which returns vectorized PEPS as an `InfinitePEPS`
+- `peps_vec::Vector{T}`: current vectorized PEPS
+- `grad_vec::Vector{T}`: current vectorized gradient
+- `cost::Float64`: current cost function value
+- `env_info::NamedTuple`: return info of `leading_boundary` used by `RecordAction`s
+"""
 mutable struct PEPSCostFunctionCache{T}
     operator::LocalOperator
     alg::PEPSOptimize
@@ -184,6 +241,15 @@ mutable struct PEPSCostFunctionCache{T}
     cost::Float64
     env_info::NamedTuple
 end
+
+"""
+    PEPSCostFunctionCache(
+        operator::LocalOperator, alg::PEPSOptimize, peps_vec::Vector, from_vec, env::CTMRGEnv
+    )
+
+Initialize a `PEPSCostFunctionCache` using `peps_vec` from which the vector dimension
+and scalartype are derived.
+"""
 function PEPSCostFunctionCache(
     operator::LocalOperator, alg::PEPSOptimize, peps_vec::Vector, from_vec, env::CTMRGEnv
 )
@@ -199,6 +265,12 @@ function PEPSCostFunctionCache(
     )
 end
 
+"""
+    cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) where {T}
+
+Update the cost and gradient of the `PEPSCostFunctionCache` with respect to the new point
+`peps_vec`.
+"""
 function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) where {T}
     cache.peps_vec .= peps_vec  # update point in manifold
     peps = cache.from_vec(peps_vec)  # convert back to InfinitePEPS
@@ -235,14 +307,27 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
     return cache.cost, cache.grad_vec
 end
 
-# Functor returns only the cost such that we can access the cache
-# using get_objective(::AbstractManoptProblem) in RecordActions
+"""
+    (cache::PEPSCostFunctionCache{T})(::Euclidean, peps_vec::Vector{T}) where {T}
+    
+Return the cost of `cache` and recompute if `peps_vec` is a new point.
+"""
 function (cache::PEPSCostFunctionCache{T})(::Euclidean, peps_vec::Vector{T}) where {T}
+    # Note that it is necessary to implement the cost function as a functor so that the
+    # `PEPSCostFunctionCache` is available through `get_objective(::AbstractManoptProblem)`
+    # to the `RecordAction`s during optimization
     if !(peps_vec == cache.peps_vec) # update cache if at new point
         cost_and_grad!(cache, peps_vec)
     end
     return cache.cost
 end
+
+"""
+    gradient_function(cache::PEPSCostFunctionCache{T}) where {T}
+
+Get the gradient function of `cache` which returns the gradient vector
+and recomputes it if the provided point is new.
+"""
 function gradient_function(cache::PEPSCostFunctionCache{T}) where {T}
     return function gradient_function(::Euclidean, peps_vec::Vector{T})
         if !(peps_vec == cache.peps_vec) # update cache if at new point
@@ -252,8 +337,11 @@ function gradient_function(cache::PEPSCostFunctionCache{T}) where {T}
     end
 end
 
-# First retract and then symmetrize the resulting PEPS
-# (ExponentialRetraction is the default retraction for Euclidean manifolds)
+"""
+    SymmetrizeExponentialRetraction <: AbstractRetractionMethod
+    
+Exponential retraction followed by a symmetrization step.
+"""
 struct SymmetrizeExponentialRetraction <: AbstractRetractionMethod
     symmetrization::SymmetrizationStyle
     from_vec::Function
@@ -268,7 +356,15 @@ function Manifolds.retract(
 end
 
 """
-TODO
+    fixedpoint(
+        peps₀::InfinitePEPS{T},
+        operator::LocalOperator,
+        alg::PEPSOptimize,
+        env₀::CTMRGEnv=CTMRGEnv(peps₀, field(T)^20);
+    ) where {T}
+
+Optimize a PEPS starting from `peps₀` and `env₀` by minimizing the cost function given
+by expectation value of `operator`. All optimization parameters are provided through `alg`.
 """
 function fixedpoint(
     peps₀::InfinitePEPS{T},
