@@ -350,6 +350,234 @@ function half_infinite_environment(
         conj(E_4[χ6 D9 D10; χ_in])
 end
 
+"""
+    full_infinite_environment(
+        quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
+    ) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    function full_infinite_environment(
+        half1::T, half2::T
+    ) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
+                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+    full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                              ket_1::P, ket_2::P, ket_3::P, ket_4::P,
+                              bra_1::P=ket_1, bra_2::P=ket_2, bra_3::P=ket_3, bra_4::P=ket_4) where {P<:PEPSTensor}
+    full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                              ket_1::P, ket_2::P, ket_3::P, ket_4::P,
+                              bra_1::P=ket_1, bra_2::P=ket_2, bra_3::P=ket_3, bra_4::P=ket_4) where {P<:PEPSTensor}
+
+Contract four quadrants (enlarged corners) to form a full-infinite environment.
+
+```
+    |~~~~~~~~~| -- |~~~~~~~~~|
+    |quadrant1|    |quadrant2|
+    |~~~~~~~~~| == |~~~~~~~~~|
+      |    ||        ||    |
+                     ||    |
+      |    ||        ||    |
+    |~~~~~~~~~| -- |~~~~~~~~~|
+    |quadrant4|    |quadrant3|
+    |~~~~~~~~~| == |~~~~~~~~~|
+```
+
+In the same manner two halfs can be used to contract the full-infinite environment.
+
+```
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+    |         half1          |
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+      |    ||        ||    |
+                     ||    |
+      |    ||        ||    |
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+    |         half2          |
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+```
+
+The environment can also be contracted directly from all its constituent tensors.
+
+```
+    C_1 --  E_2      --  E_3      -- C_2
+     |       ||          ||           | 
+    E_1 == ket_bra_1 == ket_bra_2 == E_4
+     |       ||          ||           |
+                         ||           |
+     |       ||          ||           |
+    E_8 == ket_bra_4 == ket_bra_3 == E_5
+     |       ||          ||           |
+    C_4 --  E_7      --  E_6      -- C_3
+```
+
+Alternatively, contract the environment with a vector `x` acting on it
+
+```
+    C_1 --  E_2      --  E_3      -- C_2
+     |       ||          ||           | 
+    E_1 == ket_bra_1 == ket_bra_2 == E_4
+     |       ||          ||           |
+                         ||           |
+                         ||           |
+    [~~~~x~~~~~]         ||           |
+     |       ||          ||           |
+    E_8 == ket_bra_4 == ket_bra_3 == E_5
+     |       ||          ||           |
+    C_4 --  E_7      --  E_6      -- C_3
+
+```
+
+or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
+"""
+function full_infinite_environment(
+    quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
+) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+        quadrant1[χ_in D_inabove D_inbelow; χ1 D1 D2] *
+        quadrant2[χ1 D1 D2; χ2 D3 D4] *
+        quadrant3[χ2 D3 D4; χ3 D5 D6] *
+        quadrant4[χ3 D5 D6; χ_out D_outabove D_outbelow]
+end
+function full_infinite_environment(
+    half1::T, half2::T
+) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    return half_infinite_environment(half1, half2)
+end
+function full_infinite_environment(
+    C_1,
+    C_2,
+    C_3,
+    C_4,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    E_5,
+    E_6,
+    E_7,
+    E_8,
+    ket_1::P,
+    ket_2::P,
+    ket_3::P,
+    ket_4::P,
+    bra_1::P=ket_1,
+    bra_2::P=ket_2,
+    bra_3::P=ket_3,
+    bra_4::P=ket_4,
+) where {P<:PEPSTensor}
+    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
+        E_1[χ_in D1 D2; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket_1[d1; D3 D11 D_inabove D1] *
+        conj(bra_1[d1; D4 D12 D_inbelow D2]) *
+        ket_2[d2; D5 D7 D9 D11] *
+        conj(bra_2[d2; D6 D8 D10 D12]) *
+        E_3[χ3 D5 D6; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7 D8; χ6] *
+        E_5[χ6 D13 D14; χ7] *
+        C_3[χ7; χ8] *
+        E_6[χ8 D15 D16; χ9] *
+        ket_3[d3; D9 D13 D15 D17] *
+        conj(bra_3[d3; D10 D14 D16 D18]) *
+        ket_4[d4; D_outabove D17 D19 D21] *
+        conj(bra_4[d4; D_outbelow D18 D20 D22]) *
+        E_7[χ9 D19 D20; χ10] *
+        C_4[χ10; χ11] *
+        E_8[χ11 D21 D22; χ_out]
+end
+function full_infinite_environment(
+    C_1,
+    C_2,
+    C_3,
+    C_4,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    E_5,
+    E_6,
+    E_7,
+    E_8,
+    x::AbstractTensor{S,3},
+    ket_1::P,
+    ket_2::P,
+    ket_3::P,
+    ket_4::P,
+    bra_1::P=ket_1,
+    bra_2::P=ket_2,
+    bra_3::P=ket_3,
+    bra_4::P=ket_4,
+) where {S,P<:PEPSTensor}
+    return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
+        E_1[χ_in D1 D2; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket_1[d1; D3 D11 D_inabove D1] *
+        conj(bra_1[d1; D4 D12 D_inbelow D2]) *
+        ket_2[d2; D5 D7 D9 D11] *
+        conj(bra_2[d2; D6 D8 D10 D12]) *
+        E_3[χ3 D5 D6; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7 D8; χ6] *
+        E_5[χ6 D13 D14; χ7] *
+        C_3[χ7; χ8] *
+        E_6[χ8 D15 D16; χ9] *
+        ket_3[d3; D9 D13 D15 D17] *
+        conj(bra_3[d3; D10 D14 D16 D18]) *
+        ket_4[d4; D_xabove D17 D19 D21] *
+        conj(bra_4[d4; D_xbelow D18 D20 D22]) *
+        E_7[χ9 D19 D20; χ10] *
+        C_4[χ10; χ11] *
+        E_8[χ11 D21 D22; χ_x] *
+        x[χ_x D_xabove D_xbelow]
+end
+function full_infinite_environment(
+    x::AbstractTensor{S,3},
+    C_1,
+    C_2,
+    C_3,
+    C_4,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    E_5,
+    E_6,
+    E_7,
+    E_8,
+    ket_1::P,
+    ket_2::P,
+    ket_3::P,
+    ket_4::P,
+    bra_1::P=ket_1,
+    bra_2::P=ket_2,
+    bra_3::P=ket_3,
+    bra_4::P=ket_4,
+) where {S,P<:PEPSTensor}
+    return @autoopt @tensor x_env[χ_in D_inabove D_inbelow] :=
+        x[χ_x D_xabove D_xbelow] *
+        E_1[χ_x D1 D2; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3 D4; χ3] *
+        ket_1[d1; D3 D11 D_xabove D1] *
+        conj(bra_1[d1; D4 D12 D_xbelow D2]) *
+        ket_2[d2; D5 D7 D9 D11] *
+        conj(bra_2[d2; D6 D8 D10 D12]) *
+        E_3[χ3 D5 D6; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7 D8; χ6] *
+        E_5[χ6 D13 D14; χ7] *
+        C_3[χ7; χ8] *
+        E_6[χ8 D15 D16; χ9] *
+        ket_3[d3; D9 D13 D15 D17] *
+        conj(bra_3[d3; D10 D14 D16 D18]) *
+        ket_4[d4; D_inabove D17 D19 D21] *
+        conj(bra_4[d4; D_inbelow D18 D20 D22]) *
+        E_7[χ9 D19 D20; χ10] *
+        C_4[χ10; χ11] *
+        E_8[χ11 D21 D22; χ_in]
+end
+
 # Renormalization contractions
 # ----------------------------
 
