@@ -36,7 +36,7 @@ end
     unitcell = (1, 2)
     H_1x2 = heisenberg_XYZ(InfiniteSquare(unitcell...))
     psi_init_1x2 = InfinitePEPS(2, Dbond; unitcell)
-    env_init_1x2 = leading_boundary(
+    env_init_1x2, = leading_boundary(
         CTMRGEnv(psi_init_1x2, ComplexSpace(χenv)), psi_init_1x2, ctm_alg
     )
 
@@ -81,7 +81,7 @@ end
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(peps)
     envs₀ = CTMRGEnv(rand, Float64, peps, Espace)
-    envs = leading_boundary(envs₀, peps, SimultaneousCTMRG())
+    envs, = leading_boundary(envs₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
     e_site = costfun(peps, envs, ham) / (N1 * N2)

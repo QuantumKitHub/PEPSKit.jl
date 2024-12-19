@@ -417,7 +417,7 @@ function _rrule(
     state,
     alg::CTMRGAlgorithm,
 )
-    envs = leading_boundary(envinit, state, alg)
+    envs, info = leading_boundary(envinit, state, alg)
 
     function leading_boundary_diffgauge_pullback((Δenvs′, Δinfo))
         Δenvs = unthunk(Δenvs′)
@@ -434,7 +434,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envs, leading_boundary_diffgauge_pullback
+    return (envs, info), leading_boundary_diffgauge_pullback
 end
 
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V

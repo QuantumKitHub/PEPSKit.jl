@@ -60,7 +60,7 @@ steps = -0.01:0.005:0.01
         Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace, Vspace)
-        env = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
+        env, = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
         # TODO: redo this test using Manopt
         # alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
         #     (psi, env),

@@ -20,7 +20,7 @@ Vspace = Vect[FermionParity](0 => χbond ÷ 2, 1 => χbond ÷ 2)
 Envspace = Vect[FermionParity](0 => χenv ÷ 2, 1 => χenv ÷ 2)
 Random.seed!(91283219347)
 psi_init = InfinitePEPS(Pspace, Vspace, Vspace; unitcell)
-env_init = leading_boundary(CTMRGEnv(psi_init, Envspace), psi_init, ctm_alg);
+env_init, = leading_boundary(CTMRGEnv(psi_init, Envspace), psi_init, ctm_alg);
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init)
