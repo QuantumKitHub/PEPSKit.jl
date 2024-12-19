@@ -7,15 +7,6 @@ function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CT
     return sum(term_vals)
 end
 
-function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
-    E = MPSKit.expectation_value(peps, O, envs)
-    ignore_derivatives() do
-        isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
-            @warn "Expectation value is not real: $E."
-    end
-    return real(E)
-end
-
 function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     total = one(scalartype(peps))
 

@@ -1,18 +1,16 @@
 using Test
 using Random
 using Accessors
-using PEPSKit
 using TensorKit
 using KrylovKit
-using OptimKit
+using PEPSKit
+using Manopt
 
 # initialize parameters
 Dbond = 2
 χenv = 16
 ctm_alg = SimultaneousCTMRG()
-opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=2)
-)
+opt_alg = PEPSOptimize(; boundary_alg=ctm_alg, tol=1e-3)
 # compare against Juraj Hasik's data:
 # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat
 E_ref = -0.6602310934799577
@@ -22,7 +20,7 @@ E_ref = -0.6602310934799577
     Random.seed!(123)
     H = heisenberg_XYZ(InfiniteSquare())
     psi_init = InfinitePEPS(2, Dbond)
-    env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+    env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
     # optimize energy and compute correlation lengths
     result = fixedpoint(psi_init, H, opt_alg, env_init)
@@ -38,7 +36,7 @@ end
     unitcell = (1, 2)
     H_1x2 = heisenberg_XYZ(InfiniteSquare(unitcell...))
     psi_init_1x2 = InfinitePEPS(2, Dbond; unitcell)
-    env_init_1x2 = leading_boundary(
+    env_init_1x2, = leading_boundary(
         CTMRGEnv(psi_init_1x2, ComplexSpace(χenv)), psi_init_1x2, ctm_alg
     )
 
@@ -83,7 +81,7 @@ end
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(peps)
     envs₀ = CTMRGEnv(rand, Float64, peps, Espace)
-    envs = leading_boundary(envs₀, peps, SimultaneousCTMRG())
+    envs, = leading_boundary(envs₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
     e_site = costfun(peps, envs, ham) / (N1 * N2)

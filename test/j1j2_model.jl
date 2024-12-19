@@ -1,9 +1,8 @@
 using Test
 using Random
-using PEPSKit
 using TensorKit
 using KrylovKit
-using OptimKit
+using PEPSKit
 
 # initialize parameters
 χbond = 2
@@ -20,7 +19,7 @@ Random.seed!(91283219347)
 H = j1_j2(InfiniteSquare(); J2=0.25)
 psi_init = product_peps(2, χbond; noise_amp=1e-1)
 psi_init = symmetrize!(psi_init, RotateReflect())
-env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
+env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init; symmetrization=RotateReflect())
