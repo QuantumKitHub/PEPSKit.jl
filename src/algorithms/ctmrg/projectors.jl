@@ -67,7 +67,6 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = svd_algorithm(alg, coordinate)
     U, S, V, err = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
-
     # Compute SVD truncation error and check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
         if alg.verbosity > 0 && is_degenerate_spectrum(S)
@@ -75,22 +74,17 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
             @warn("degenerate singular values detected: ", svals)
         end
     end
-
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
     return (P_left, P_right), (; err, U, S, V)
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
-    # QR left and right half-infinite environments
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
     halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
-    _, R_left = leftorth!(halfinf_left)
-    L_right, _ = rightorth!(halfinf_right)
 
-    # SVD product of QRs
-    fullinf = R_left * L_right
+    # SVD full-infinite environment
+    fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = svd_algorithm(alg, coordinate)
     U, S, V, err = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
-
     # Compute SVD truncation error and check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
         if alg.verbosity > 0 && is_degenerate_spectrum(S)
@@ -98,7 +92,6 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
             @warn("degenerate singular values detected: ", svals)
         end
     end
-
-    P_left, P_right = contract_projectors(U, S, V, R_left, L_right)
+    P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
     return (P_left, P_right), (; err, U, S, V)
 end
