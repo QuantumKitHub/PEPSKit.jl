@@ -82,7 +82,13 @@ function _su_bondx!(
     =#
     @tensor tmp[-1 -2; -3 -4] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
     # SVD
-    aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
+    s, ϵ = nothing, nothing
+    try
+        aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
+    catch e_lapack
+        # use SVD() to try again
+        aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)), alg=TensorKit.SVD())
+    end
     #=
             -2         -1              -1    -2
             |         ↗               ↗       |
