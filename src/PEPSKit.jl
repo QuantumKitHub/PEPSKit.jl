@@ -10,7 +10,7 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
-import Accessors: @set
+using Accessors: @set
 using OhMyThreads: tmap
 
 include("utility/util.jl")

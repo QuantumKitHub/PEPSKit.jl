@@ -78,23 +78,11 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     return (P_left, P_right), (; err, U, S, V)
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
-    # find half-infinite environments
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
     halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
-    #= Combine two halves to form the full-infinite projector
 
-        |---|- χL   χR -|---|
-        |   |= DL   DR =|   |
-        | L |           | R |
-        |   |=====D=====|   |
-        |---|-----χ-----|---|
-
-        D_0/D_1 comes from the ket (above) / bra (below) state
-    =#
-    @autoopt @tensor fullinf[χL DL0 DL1; χR DR0 DR1] := (
-        halfinf_left[χL DL0 DL1; χ D0 D1] * halfinf_right[χ D0 D1; χR DR0 DR1]
-    )
     # SVD full-infinite environment
+    fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = svd_algorithm(alg, coordinate)
     U, S, V, err = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
     # Compute SVD truncation error and check for degenerate singular values

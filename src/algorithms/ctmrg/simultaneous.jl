@@ -40,7 +40,7 @@ function ctmrg_iteration(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
 end
 
 # Pre-allocate U, S, and V tensor as Zygote buffers to make it differentiable
-function _prealloc_svd(edges::Array{E,N}, ::ProjectorAlgorithm) where {E,N}
+function _prealloc_svd(edges::Array{E,N}) where {E,N}
     Sc = scalartype(E)
     U = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, space(e)), edges))
     V = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, domain(e), codomain(e)), edges))
@@ -58,7 +58,7 @@ enlarged corners or on a specific `coordinate`.
 function simultaneous_projectors(
     enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm
 ) where {E}
-    U, S, V = _prealloc_svd(envs.edges, alg)
+    U, S, V = _prealloc_svd(envs.edges)
     ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs)))
 
     projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
