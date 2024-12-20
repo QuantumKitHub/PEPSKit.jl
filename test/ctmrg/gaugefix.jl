@@ -10,6 +10,7 @@ scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 ctmrg_algs = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
+tol = 1e-6  # large tol due to χ=6
 χ = 6
 atol = 1e-4
 
@@ -19,7 +20,7 @@ function _pre_converge_env(
     Random.seed!(seed)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(rand, T, physical_space, peps_space; unitcell)
     env₀ = CTMRGEnv(psi, ctm_space)
-    env_conv, = leading_boundary(env₀, psi, SequentialCTMRG())
+    env_conv, = leading_boundary(env₀, psi, SequentialCTMRG(; tol))
     return env_conv, psi
 end
 
@@ -41,7 +42,7 @@ end
 ) in Iterators.product(
     spacetypes, scalartypes, unitcells, ctmrg_algs, projector_algs
 )
-    alg = ctmrg_alg(; projector_alg)
+    alg = ctmrg_alg(; tol, projector_alg)
     env_pre, psi = preconv[(S, T, unitcell)]
     env_pre
     env, = leading_boundary(env_pre, psi, alg)
