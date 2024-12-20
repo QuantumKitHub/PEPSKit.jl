@@ -43,7 +43,7 @@ Espace = Vect[fℤ₂](0 => χenv0 / 2, 1 => χenv0 / 2)
 envs = CTMRGEnv(randn, Float64, peps, Espace)
 for χ in [χenv0, χenv]
     ctm_alg = SequentialCTMRG(; maxiter=300, tol=1e-7)
-    envs = leading_boundary(envs, peps, ctm_alg)
+    envs, = leading_boundary(envs, peps, ctm_alg)
 end
 
 # Benchmark values of the ground state energy from

@@ -56,10 +56,7 @@ function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))
     tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
     Spow = similar(S)
     for (k, b) in blocks(S)
-        copyto!(
-            blocks(Spow)[k],
-            LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol)),
-        )
+        copyto!(blocks(Spow)[k], diagm(_safe_pow.(diag(b), pow, tol)))
     end
     return Spow
 end

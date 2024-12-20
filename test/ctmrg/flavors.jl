@@ -19,10 +19,10 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     # compute environments
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)
-    env_sequential = leading_boundary(
+    env_sequential, = leading_boundary(
         CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_sequential
     )
-    env_simultaneous = leading_boundary(
+    env_simultaneous, = leading_boundary(
         CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_simultaneous
     )
 
@@ -68,7 +68,7 @@ end
     χs = [16 17 18; 15 20 21; 14 19 22]
     psi = InfinitePEPS(Ds, Ds, Ds)
     env = CTMRGEnv(psi, rand(10:20, 3, 3), rand(10:20, 3, 3))
-    env2 = leading_boundary(env, psi, ctm_alg)
+    env2, = leading_boundary(env, psi, ctm_alg)
 
     # check that the space is fixed
     @test all(space.(env.corners) .== space.(env2.corners))
