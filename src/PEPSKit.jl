@@ -151,6 +151,7 @@ module Defaults
         SVDAdjoint,
         HalfInfiniteProjector,
         SimultaneousCTMRG,
+        RecordTruncationError,
         RecordConditionNumber,
         RecordUnitCellGradientNorm
 
@@ -184,13 +185,10 @@ module Defaults
         RecordTime(; mode=:iterative) => :Time,
     ]
     const debug_group = [
-        (:Iteration, "Optim %-4d  "),
-        (:Cost, "f(x) = %.8f  "),
-        (:GradientNorm, "‖∂f‖ = %.8f  "),
-        (:Stepsize, "step size = %.4f  "),
-        DebugTime(; prefix="time =", mode=:iterative),
-        "\n",
-        DebugWarnIfCostIncreases(:Always; tol=1e-10),
+        (:Iteration, "Optim %-4d   "),
+        (:Cost, "f(x) = %.8f   "),
+        (:GradientNorm, "‖∂f‖ = %.8f   "),
+        (:Time, "time = %s"),
         "\n",
         :Stop,
     ]

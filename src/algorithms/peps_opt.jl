@@ -381,7 +381,7 @@ function fixedpoint(
 
     # construct cost and grad functions
     peps₀_vec, from_vec = to_vec(peps₀)
-    cache = PEPSCostFunctionCache(operator, alg, peps₀_vec, from_vec, env₀)
+    cache = PEPSCostFunctionCache(operator, alg, peps₀_vec, from_vec, deepcopy(env₀))
     cost = cache
     grad = gradient_function(cache)
 
@@ -394,7 +394,7 @@ function fixedpoint(
         SymmetrizeExponentialRetraction(alg.symmetrization, from_vec)
     end
     result = alg.optim_alg(
-        M, cost, grad, peps₀_vec; alg.optim_kwargs..., return_state=true, retraction_method
+        M, cost, grad, peps₀_vec; alg.optim_kwargs..., retraction_method, return_state=true
     )
 
     # extract final result

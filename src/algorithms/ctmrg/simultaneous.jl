@@ -92,7 +92,7 @@ function simultaneous_projectors(
     P_left = map(first, projectors)
     P_right = map(last, projectors)
     S = copy(S)
-    truncation_error=maximum(copy(ϵ))
+    truncation_error = maximum(copy(ϵ))  # TODO: This makes Zygote error on first execution?
     condition_number = maximum(_condition_number, S)
     info = (; truncation_error, condition_number, U=copy(U), S, V=copy(V))
     return (P_left, P_right), info
