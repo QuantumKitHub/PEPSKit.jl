@@ -1,3 +1,4 @@
+using Printf
 using Manifolds: Manifolds
 using Manifolds:
     AbstractManifold,
@@ -135,6 +136,43 @@ function (r::RecordUnitCellGradientNorm)(
     cache = Manopt.get_cost_function(get_objective(p))
     grad = cache.from_vec(get_gradient(s))
     return Manopt.record_or_reset!(r, norm.(grad.A), i)
+end
+
+"""
+    mutable struct DebugPEPSOptimize <: DebugAction
+    
+Custom `DebugAction` printing for PEPS optimization runs.
+
+The debug info is output using `@info` and by default prints the optimization iteration,
+the cost function value, the gradient norm, the last step size and the time elapsed during
+the current iteration.
+"""
+mutable struct DebugPEPSOptimize <: DebugAction
+    last_time::UInt64
+    DebugPEPSOptimize() = new(time_ns())
+end
+function (d::DebugPEPSOptimize)(
+    p::AbstractManoptProblem, s::AbstractManoptSolverState, k::Int
+)
+    time_new = time_ns()
+    cost = get_cost(p, get_iterate(s))
+    if k == 0
+        @info @sprintf("Initial f(x) = %.8f", cost)
+    elseif k > 0
+        gradient_norm = norm(get_manifold(p), get_iterate(s), get_gradient(s))
+        stepsize = get_last_stepsize(p, s, k)
+        time = (time_new - d.last_time) * 1e-9
+        @info @sprintf(
+            "Optimization %d: f(x) = %.8f   ‖∂f‖ = %.8f   step = %.4f   time = %.2f sec",
+            k,
+            cost,
+            gradient_norm,
+            stepsize,
+            time
+        )
+    end
+    d.last_time = time_new  # update time stamp
+    return nothing
 end
 
 """
@@ -386,7 +424,6 @@ function fixedpoint(
     grad = gradient_function(cache)
 
     # optimize
-    # fld = scalartype(peps₀) <: Real ? Manifolds.ℝ : Manifolds.ℂ  # Manopt can't optimize over ℂ?
     M = Euclidean(length(peps₀_vec))
     retraction_method = if isnothing(alg.symmetrization)
         default_retraction_method(M)

@@ -114,12 +114,15 @@ Module containing default algorithm parameter values and arguments.
     ]
     ```
 
-- `debug_group=[...]`: Values (`DebugAction`s) that are printed during Manopt optimization
+- `debug_group = [DebugPEPSOptimize(), :Stop]`: Optimization iteration info printing
+- `stepsize = AdaptiveWNGradient()`:
 
 - `optim_kwargs`: All keyword arguments that are passed onto a Manopt optimization call
 
     ```
-    optim_kwargs = (; stopping_criterion, record=record_group, debug=debug_group)
+    optim_kwargs = (;
+        stopping_criterion, record=record_group, debug=debug_group, stepsize
+    )
     ```
 
 - `fpgrad_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
@@ -153,7 +156,8 @@ module Defaults
         SimultaneousCTMRG,
         RecordTruncationError,
         RecordConditionNumber,
-        RecordUnitCellGradientNorm
+        RecordUnitCellGradientNorm,
+        DebugPEPSOptimize
 
     # CTMRG
     const ctmrg_tol = 1e-8
@@ -184,15 +188,11 @@ module Defaults
         RecordUnitCellGradientNorm() => :UnitcellGradientNorm,
         RecordTime(; mode=:iterative) => :Time,
     ]
-    const debug_group = [
-        (:Iteration, "Optim %-4d   "),
-        (:Cost, "f(x) = %.8f   "),
-        (:GradientNorm, "‖∂f‖ = %.8f   "),
-        (:Time, "time = %s"),
-        "\n",
-        :Stop,
-    ]
-    const optim_kwargs = (; stopping_criterion, record=record_group, debug=debug_group)
+    const debug_group = [DebugPEPSOptimize(), :Stop]
+    const stepsize = AdaptiveWNGradient()
+    const optim_kwargs = (;
+        stopping_criterion, record=record_group, debug=debug_group, stepsize
+    )
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
     const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
@@ -255,6 +255,7 @@ export expectation_value, costfun, product_peps, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export RecordTruncationError, RecordConditionNumber, RecordUnitCellGradientNorm
+export DebugPEPSOptimize
 export fixedpoint
 
 export absorb_weight
