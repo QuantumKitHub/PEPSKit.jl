@@ -176,6 +176,24 @@ function (d::DebugPEPSOptimize)(
 end
 
 """
+    SymmetrizeExponentialRetraction <: AbstractRetractionMethod
+    
+Exponential retraction followed by a symmetrization step.
+"""
+struct SymmetrizeExponentialRetraction <: AbstractRetractionMethod
+    symmetrization::SymmetrizationStyle
+    from_vec::Function
+end
+
+function Manifolds.retract!(
+    M::Euclidean, p, q, X, t::Number, sr::SymmetrizeExponentialRetraction
+)
+    v = Manifolds.retract!(M, p, q, X, t)
+    v_symm_peps = symmetrize!(sr.from_vec(v), sr.symmetrization)
+    return to_vec(v_symm_peps)
+end
+
+"""
     struct PEPSOptimize{G}
 
 Algorithm struct for PEPS optimization using automatic differentiation.
@@ -373,24 +391,6 @@ function gradient_function(cache::PEPSCostFunctionCache{T}) where {T}
         end
         return cache.grad_vec
     end
-end
-
-"""
-    SymmetrizeExponentialRetraction <: AbstractRetractionMethod
-    
-Exponential retraction followed by a symmetrization step.
-"""
-struct SymmetrizeExponentialRetraction <: AbstractRetractionMethod
-    symmetrization::SymmetrizationStyle
-    from_vec::Function
-end
-
-function Manifolds.retract(
-    M::AbstractManifold, p, X, t::Number, sr::SymmetrizeExponentialRetraction
-)
-    q = retract(M, p, X, t, ExponentialRetraction())
-    q_symm_peps = symmetrize!(sr.from_vec(q), sr.symmetrization)
-    return to_vec(q_symm_peps)
 end
 
 """

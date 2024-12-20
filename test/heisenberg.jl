@@ -4,7 +4,6 @@ using Accessors
 using TensorKit
 using KrylovKit
 using PEPSKit
-using Manopt
 
 # initialize parameters
 Dbond = 2
@@ -23,10 +22,10 @@ E_ref = -0.6602310934799577
     env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
     # optimize energy and compute correlation lengths
-    result = fixedpoint(psi_init, H, opt_alg, env_init)
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
+    peps, env, E, = fixedpoint(psi_init, H, opt_alg, env_init)
+    ξ_h, ξ_v, = correlation_length(peps, env)
 
-    @test result.E ≈ E_ref atol = 1e-2
+    @test E ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
@@ -34,18 +33,18 @@ end
     # initialize states
     Random.seed!(456)
     unitcell = (1, 2)
-    H_1x2 = heisenberg_XYZ(InfiniteSquare(unitcell...))
-    psi_init_1x2 = InfinitePEPS(2, Dbond; unitcell)
-    env_init_1x2, = leading_boundary(
-        CTMRGEnv(psi_init_1x2, ComplexSpace(χenv)), psi_init_1x2, ctm_alg
+    H = heisenberg_XYZ(InfiniteSquare(unitcell...))
+    psi_init = InfinitePEPS(2, Dbond; unitcell)
+    env_init, = leading_boundary(
+        CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg
     )
 
     # optimize energy and compute correlation lengths
-    result_1x2 = fixedpoint(psi_init_1x2, H_1x2, opt_alg, env_init_1x2)
-    ξ_h_1x2, ξ_v_1x2, = correlation_length(result_1x2.peps, result_1x2.env)
+    peps, env, E, = fixedpoint(psi_init, H, opt_alg, env_init)
+    ξ_h, ξ_v, = correlation_length(peps, env)
 
-    @test result_1x2.E ≈ 2 * E_ref atol = 1e-2
-    @test all(@. ξ_h_1x2 > 0 && ξ_v_1x2 > 0)
+    @test E ≈ 2 * E_ref atol = 1e-2
+    @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
 @testset "Simple update into AD optimization" begin

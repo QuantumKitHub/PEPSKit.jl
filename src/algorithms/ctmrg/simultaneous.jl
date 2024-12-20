@@ -50,8 +50,11 @@ end
 
 # Compute condition number σ_max / σ_min for diagonal singular value TensorMap
 function _condition_number(S::AbstractTensorMap)
-    S_diag = diag(S.data)
-    return maximum(S_diag) / minimum(S_diag)
+    # Take maximal condition number over all blocks
+    return maximum(blocks(S)) do (_, b)
+        b_diag = diag(b)
+        return maximum(b_diag) / minimum(b_diag)
+    end
 end
 @non_differentiable _condition_number(S::AbstractTensorMap)
 

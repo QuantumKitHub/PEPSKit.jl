@@ -3,7 +3,8 @@ using Random
 using TensorKit
 using KrylovKit
 using PEPSKit
-using Zygote
+using PEPSKit: to_vec, PEPSCostFunctionCache, gradient_function
+using Manopt, Manifolds
 
 ## Test models, gradmodes and CTMRG algorithm
 # -------------------------------------------
@@ -40,7 +41,6 @@ gradmodes = [
         LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
     ],
 ]
-steps = -0.01:0.005:0.01
 
 ## Tests
 # ------
@@ -54,28 +54,19 @@ steps = -0.01:0.005:0.01
     gms = gradmodes[i]
     calgs = ctmrg_algs[i]
     psi_init = InfinitePEPS(Pspace, Vspace, Vspace)
-    @testset "$ctmrg_alg and $alg_rrule" for (ctmrg_alg, alg_rrule) in
-                                             Iterators.product(calgs, gms)
-        # @info "optimtest of $ctmrg_alg and $alg_rrule on $(names[i])"
+    @testset "$ctmrg_alg and $gradient_alg" for (ctmrg_alg, gradient_alg) in
+                                                Iterators.product(calgs, gms)
+        @info "gradient check of $ctmrg_alg and $alg_rrule on $(names[i])"
         Random.seed!(42039482030)
-        dir = InfinitePEPS(Pspace, Vspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace, Vspace)
         env, = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
-        # TODO: redo this test using Manopt
-        # alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
-        #     (psi, env),
-        #     dir;
-        #     alpha=steps,
-        #     retract=PEPSKit.peps_retract,
-        #     inner=PEPSKit.real_inner,
-        # ) do (peps, envs)
-        #     E, g = Zygote.withgradient(peps) do psi
-        #         envs2 = PEPSKit.hook_pullback(leading_boundary, envs, psi, ctmrg_alg; alg_rrule)
-        #         return costfun(psi, envs2, models[i])
-        #     end
 
-        #     return E, only(g)
-        # end
-        # @test dfs1 ≈ dfs2 atol = 1e-2
+        psi_vec, from_vec = to_vec(psi)
+        opt_alg = PEPSOptimize(; boundary_alg=ctmrg_alg, gradient_alg)
+        cache = PEPSCostFunctionCache(models[i], opt_alg, psi_vec, from_vec, deepcopy(env))
+        cost = cache
+        grad = gradient_function(cache)
+        M = Euclidean(length(psi_vec))
+        @test check_gradient(M, cost, grad; N=5, exactness_tol=1e-4, io=stdout)
     end
 end
