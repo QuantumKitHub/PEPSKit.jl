@@ -11,6 +11,6 @@ const SOUTHWEST = 4
 """
     rotate_north(t, dir)
 
-Rotate north direction of `t` to `dir` by successive applications of `rotl90`.
+Rotate the `dir` direction of `t` to face north by successive applications of `rotl90`.
 """
 rotate_north(t, dir) = mod1(dir, 4) == NORTH ? t : rotate_north(rotl90(t), dir - 1)
