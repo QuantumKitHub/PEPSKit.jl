@@ -739,7 +739,7 @@ Alternatively, provide the constituent tensors and perform the complete contract
 ```
                |
       [~~~~~P_right~~~~~]
-        ||            |
+        ||           ||
        E_west   == ket-bra == |~~~~~~|
          |           ||       |P_left| --
     C_southwest -- E_south -- |~~~~~~|
@@ -820,7 +820,7 @@ Absorb a bra-ket pair into the north edge using the given projectors and environ
        |~~~~~~| -- E_north -- |~~~~~~~| 
     -- |P_left|      ||       |P_right| --
        |~~~~~~| == ket-bra == |~~~~~~~| 
-
+                     ||
 ```
 """
 function renormalize_north_edge(
@@ -890,10 +890,10 @@ end
 Absorb a bra-ket pair into the south edge using the given projectors and environment tensors.
 
 ```
+                      ||
        |~~~~~~~| == ket-bra == |~~~~~~| 
     -- |P_right|      ||       |P_left| --
        |~~~~~~~| -- E_south -- |~~~~~~| 
-
 ```
 """
 function renormalize_south_edge(
@@ -912,8 +912,8 @@ function renormalize_south_edge(
 )
     return @autoopt @tensor edge[χ_E D_Nab D_Nbe; χ_W] :=
         E_south[χ1 D1 D2; χ2] *
-        ket[d; D_Nbe D6 D2 D4] *
-        conj(bra[d; D_Nab D5 D1 D3]) *
+        ket[d; D_Nab D5 D1 D3] *
+        conj(bra[d; D_Nbe D6 D2 D4]) *
         P_left[χ2 D3 D4; χ_W] *
         P_right[χ_E; χ1 D5 D6]
 end
