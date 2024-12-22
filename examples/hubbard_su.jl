@@ -4,12 +4,12 @@ using PEPSKit
 using TensorKit
 
 # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
-Dcut, symm = 8, Trivial
+Dbond, symm = 8, Trivial
 N1, N2 = 2, 2
 Random.seed!(10)
 if symm == Trivial
     Pspace = Vect[fℤ₂](0 => 2, 1 => 2)
-    Vspace = Vect[fℤ₂](0 => Dcut / 2, 1 => Dcut / 2)
+    Vspace = Vect[fℤ₂](0 => Dbond / 2, 1 => Dbond / 2)
 else
     error("Not implemented")
 end
@@ -29,7 +29,7 @@ dts = [1e-2, 1e-3, 4e-4, 1e-4]
 tols = [1e-6, 1e-8, 1e-8, 1e-8]
 maxiter = 10000
 for (n, (dt, tol)) in enumerate(zip(dts, tols))
-    trscheme = truncerr(1e-10) & truncdim(Dcut)
+    trscheme = truncerr(1e-10) & truncdim(Dbond)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
     peps, = simpleupdate(peps, ham, alg; bipartite=false)
 end
