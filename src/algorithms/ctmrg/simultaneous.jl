@@ -44,9 +44,19 @@ function _prealloc_svd(edges::Array{E,N}) where {E,N}
     Sc = scalartype(E)
     U = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, space(e)), edges))
     V = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, domain(e), codomain(e)), edges))
-    S = Zygote.Buffer(U.data, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
+    S = Zygote.Buffer(edges, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
     return U, S, V
 end
+
+# Compute condition number σ_max / σ_min for diagonal singular value TensorMap
+function _condition_number(S::AbstractTensorMap)
+    # Take maximal condition number over all blocks
+    return maximum(blocks(S)) do (_, b)
+        b_diag = diag(b)
+        return maximum(b_diag) / minimum(b_diag)
+    end
+end
+@non_differentiable _condition_number(S::AbstractTensorMap)
 
 """
     simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm)
@@ -76,7 +86,11 @@ function simultaneous_projectors(
 
     P_left = map(first, projectors)
     P_right = map(last, projectors)
-    return (P_left, P_right), (; err=maximum(copy(ϵ)), U=copy(U), S=copy(S), V=copy(V))
+    S = copy(S)
+    truncation_error = maximum(copy(ϵ))  # TODO: This makes Zygote error on first execution?
+    condition_number = maximum(_condition_number, S)
+    info = (; truncation_error, condition_number, U=copy(U), S, V=copy(V))
+    return (P_left, P_right), info
 end
 function simultaneous_projectors(
     coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector

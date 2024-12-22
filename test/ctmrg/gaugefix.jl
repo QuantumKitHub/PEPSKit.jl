@@ -20,7 +20,7 @@ function _pre_converge_env(
     Random.seed!(seed)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(rand, T, physical_space, peps_space; unitcell)
     env₀ = CTMRGEnv(psi, ctm_space)
-    env_conv = leading_boundary(env₀, psi, SequentialCTMRG(; tol))
+    env_conv, = leading_boundary(env₀, psi, SequentialCTMRG(; tol))
     return env_conv, psi
 end
 
@@ -45,7 +45,7 @@ end
     alg = ctmrg_alg(; tol, projector_alg)
     env_pre, psi = preconv[(S, T, unitcell)]
     env_pre
-    env = leading_boundary(env_pre, psi, alg)
+    env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(psi, env, alg)
     env_fixed, = gauge_fix(env, env′)
     @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
