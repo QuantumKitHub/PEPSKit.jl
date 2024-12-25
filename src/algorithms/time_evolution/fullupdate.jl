@@ -190,7 +190,7 @@ function fullupdate(
     ctm_alg::CTMRGAlgorithm,
 )
     time_start = time()
-    N1, N2 = size(peps)
+    Nr, Nc = size(peps)
     @printf(
         "%-4s %7s%10s%12s%11s  %s/%s\n",
         "step",
@@ -213,7 +213,7 @@ function fullupdate(
             # reconverge `env` (in place)
             println(stderr, "---- FU step $count: reconverging envs ----")
             envs = leading_boundary(envs, peps, fu_alg.reconv_alg)
-            esite = costfun(peps, envs, ham) / (N1 * N2)
+            esite = costfun(peps, envs, ham) / (Nr * Nc)
             meast1 = time()
             # monitor change of CTMRGEnv by its singular values
             diff_energy = esite - esite0

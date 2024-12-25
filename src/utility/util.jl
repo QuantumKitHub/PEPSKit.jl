@@ -92,6 +92,30 @@ function ChainRulesCore.rrule(
     return spow, sdiag_pow_pullback
 end
 
+# Compute √S⁻¹ for diagonal TensorMaps
+_safe_inv(a, tol) = abs(a) < tol ? zero(a) : inv(a)
+function sdiag_inv_sqrt(S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4))
+    tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    invsq = similar(S)
+    for (k, b) in blocks(S)
+        copyto!(
+            blocks(invsq)[k],
+            LinearAlgebra.diagm(_safe_inv.(LinearAlgebra.diag(b), tol) .^ (1 / 2)),
+        )
+    end
+    return invsq
+end
+function ChainRulesCore.rrule(
+    ::typeof(sdiag_inv_sqrt), S::AbstractTensorMap; tol::Real=eps(eltype(S))^(3 / 4)
+)
+    tol *= norm(S, Inf)
+    invsq = sdiag_inv_sqrt(S; tol)
+    function sdiag_inv_sqrt_pullback(c̄)
+        return (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, invsq'^3))
+    end
+    return invsq, sdiag_inv_sqrt_pullback
+end
+
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
 function is_degenerate_spectrum(
     S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
