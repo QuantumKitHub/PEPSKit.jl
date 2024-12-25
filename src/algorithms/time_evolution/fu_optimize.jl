@@ -179,21 +179,19 @@ end
 """
 Calculate the cost function
 ```
-    f(a,b)  = | |Psi(a,b)> - |Psi(a2,b2)> |^2
-    = <Psi(a,b)|Psi(a,b)> + <Psi(a2,b2)|Psi(a2,b2)>
-        - 2 Re<Psi(a,b)|Psi(a2,b2)>
+    f(a,b)  = | |Psi(a1,b1)> - |Psi(a2,b2)> |^2
+    = <Psi(a1,b1)|Psi(a1,b1)> + <Psi(a2,b2)|Psi(a2,b2)>
+        - 2 Re<Psi(a1,b1)|Psi(a2,b2)>
 ```
 """
 function cost_func(
     env::AbstractTensorMap,
-    aR::AbstractTensorMap,
-    bL::AbstractTensorMap,
+    aR1bL1::AbstractTensorMap,
     aR2bL2::AbstractTensorMap,
 )
-    aRbL = _combine_aRbL(aR, bL)
-    t1 = inner_prod(env, aRbL, aRbL)
+    t1 = inner_prod(env, aR1bL1, aR1bL1)
     t2 = inner_prod(env, aR2bL2, aR2bL2)
-    t3 = inner_prod(env, aRbL, aR2bL2)
+    t3 = inner_prod(env, aR1bL1, aR2bL2)
     return real(t1) + real(t2) - 2 * real(t3)
 end
 
@@ -223,9 +221,8 @@ between two evolution steps
 ```
 """
 function local_fidelity(
-    aR1::AbstractTensorMap, bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
+    aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
 )
-    aR1bL1 = _combine_aRbL(aR1, bL1)
     b12 = inner_prod_local(aR1bL1, aR2bL2)
     b11 = inner_prod_local(aR1bL1, aR1bL1)
     b22 = inner_prod_local(aR2bL2, aR2bL2)
@@ -279,8 +276,9 @@ function fu_optimize(
     @debug @sprintf("%-6s%12s%12s%12s %10s\n", "Step", "Cost", "ϵ_d", "ϵ_ab", "Time/s")
     aR, bL = deepcopy(aR0), deepcopy(bL0)
     time0 = time()
-    cost00 = cost_func(env, aR, bL, aR2bL2)
-    fid00 = local_fidelity(aR, bL, aR2bL2)
+    aRbL = _combine_aRbL(aR, bL)
+    cost00 = cost_func(env, aRbL, aR2bL2)
+    fid00 = local_fidelity(aRbL, aR2bL2)
     cost0, fid0 = cost00, fid00
     # no need to further optimize
     if abs(cost0) < 5e-15
@@ -298,8 +296,9 @@ function fu_optimize(
         Rb = tensor_Rb(env, aR)
         Sb = tensor_Sb(env, aR, aR2bL2)
         bL, info_b = solve_ab(Rb, Sb, bL)
-        cost = cost_func(env, aR, bL, aR2bL2)
-        fid = local_fidelity(aR, bL, aR2bL2)
+        aRbL = _combine_aRbL(aR, bL)
+        cost = cost_func(env, aRbL, aR2bL2)
+        fid = local_fidelity(aRbL, aR2bL2)
         diff_d = abs(cost - cost0) / cost00
         diff_ab = abs(fid - fid0) / fid00
         time1 = time()

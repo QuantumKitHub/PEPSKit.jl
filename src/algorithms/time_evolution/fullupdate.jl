@@ -122,7 +122,7 @@ function update_column!(
         costs[row] = cost
         aR /= norm(aR, Inf)
         bL /= norm(bL, Inf)
-        localfid += local_fidelity(aR, bL, _combine_aRbL(aR0, bL0))
+        localfid += local_fidelity(_combine_aRbL(aR, bL), _combine_aRbL(aR0, bL0))
         #= update and normalize peps, ms
 
                 -2        -1               -1     -2
