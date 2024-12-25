@@ -189,9 +189,9 @@ function simpleupdate(
     check_int::Int=500,
 )
     time_start = time()
-    N1, N2 = size(peps)
+    Nr, Nc = size(peps)
     if bipartite
-        @assert N1 == N2 == 2
+        @assert Nr == Nc == 2
     end
     # exponentiating the 2-site Hamiltonian gate
     gate = get_gate(alg.dt, ham)

@@ -53,18 +53,18 @@ end
 @testset "Simple update into AD optimization" begin
     # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
     Random.seed!(789)
-    N1, N2 = 2, 2
+    Nr, Nc = 2, 2
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
-    peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+    peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
 
     # normalize vertex tensors
     for ind in CartesianIndices(peps.vertices)
         peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
     end
     # Heisenberg model Hamiltonian (already only includes nearest neighbor terms)
-    ham = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0)
+    ham = heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx=1.0, Jy=1.0, Jz=1.0)
     # convert to real tensors
     ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
 
@@ -86,7 +86,7 @@ end
     envs = leading_boundary(envs₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
-    e_site = costfun(peps, envs, ham) / (N1 * N2)
+    e_site = costfun(peps, envs, ham) / (Nr * Nc)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol=1e-3)
@@ -96,7 +96,7 @@ end
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
     result = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(result.peps, result.env)
-    e_site2 = result.E / (N1 * N2)
+    e_site2 = result.E / (Nr * Nc)
     @info "Auto diff energy = $e_site2"
     @test e_site2 ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)

@@ -5,7 +5,7 @@ using TensorKit
 
 # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
 Dbond, symm = 8, Trivial
-N1, N2 = 2, 2
+Nr, Nc = 2, 2
 Random.seed!(10)
 if symm == Trivial
     Pspace = Vect[fℤ₂](0 => 2, 1 => 2)
@@ -13,7 +13,7 @@ if symm == Trivial
 else
     error("Not implemented")
 end
-peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
 
 # normalize vertex tensors
 for ind in CartesianIndices(peps.vertices)
@@ -22,7 +22,7 @@ end
 
 # Hubbard model Hamiltonian at half-filling
 t, U = 1, 6
-ham = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(N1, N2); t, U, mu=U / 2)
+ham = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu=U / 2)
 
 # simple update
 dts = [1e-2, 1e-3, 4e-4, 1e-4]
@@ -53,7 +53,7 @@ Es_exact = Dict(0 => -1.62, 2 => -0.176, 4 => 0.8603, 6 => -0.6567, 8 => -0.5243
 E_exact = Es_exact[U] - U / 2
 
 # measure energy
-E = costfun(peps, envs, ham) / (N1 * N2)
+E = costfun(peps, envs, ham) / (Nr * Nc)
 @info "Energy           = $E"
 @info "Benchmark energy = $E_exact"
 @test isapprox(E, E_exact; atol=5e-2)

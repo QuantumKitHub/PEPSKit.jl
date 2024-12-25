@@ -192,8 +192,8 @@ Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into v
 """
 function InfinitePEPS(peps::InfiniteWeightPEPS)
     vertices = deepcopy(peps.vertices)
-    N1, N2 = size(vertices)
-    for (r, c) in Iterators.product(1:N1, 1:N2)
+    Nr, Nc = size(vertices)
+    for (r, c) in Iterators.product(1:Nr, 1:Nc)
         for ax in 2:5
             vertices[r, c] = absorb_weight(
                 vertices[r, c], r, c, ax, peps.weights; sqrtwt=true
