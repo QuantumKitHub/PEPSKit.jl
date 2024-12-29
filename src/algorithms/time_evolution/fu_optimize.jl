@@ -185,9 +185,7 @@ Calculate the cost function
 ```
 """
 function cost_func(
-    env::AbstractTensorMap,
-    aR1bL1::AbstractTensorMap,
-    aR2bL2::AbstractTensorMap,
+    env::AbstractTensorMap, aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
 )
     t1 = inner_prod(env, aR1bL1, aR1bL1)
     t2 = inner_prod(env, aR2bL2, aR2bL2)
@@ -220,9 +218,7 @@ between two evolution steps
     sqrt(<aR1 bL1 | aR1 bL1> <aR2 bL2 | aR2 bL2>)
 ```
 """
-function local_fidelity(
-    aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
-)
+function local_fidelity(aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap)
     b12 = inner_prod_local(aR1bL1, aR2bL2)
     b11 = inner_prod_local(aR1bL1, aR1bL1)
     b22 = inner_prod_local(aR2bL2, aR2bL2)
