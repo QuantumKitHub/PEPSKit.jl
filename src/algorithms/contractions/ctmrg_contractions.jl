@@ -230,7 +230,7 @@ Right projector:
 ```
 """
 function contract_projectors(U, S, V, Q, Q_next)
-    isqS = sdiag_pow(S, -0.5)
+    isqS = sdiag_inv_sqrt(S)
     P_left = Q_next * V' * isqS  # use * to respect fermionic case
     P_right = isqS * U' * Q
     return P_left, P_right
