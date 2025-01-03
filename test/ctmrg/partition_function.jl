@@ -118,7 +118,7 @@ Z = InfinitePartitionFunction(O)
 χenv = ℂ^12
 env0 = CTMRGEnv(Z, χenv)
 
-ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=2, ctmrgscheme=:simultaneous)
+ctm_alg = SimultaneousCTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=2)
 
 env = leading_boundary(env0, Z, ctm_alg)
 
