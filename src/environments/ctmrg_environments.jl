@@ -7,15 +7,18 @@ cell, whereas the first index corresponds to the direction of the corner or edge
 directions are labeled in clockwise direction, starting from the north-west corner and north
 edge respectively.
 
-Given arrays of corners `c` and edges `t`, they connect to the PEPS tensors at site `(r, c)`
-in the unit cell as:
+Given arrays of corners `c` and edges `t`, they connect to the partition function tensors
+`P` at site `(r, c)` in the unit cell as:
 ```
    c[1,r-1,c-1]---t[1,r-1,c]----c[2,r-1,c+1]
-   |              ||            |
-   t[4,r,c-1]=====AA[r,c]=======t[2,r,c+1]
-   |              ||            |
+   |              |             |
+   t[4,r,c-1]-----P[r,c]--------t[2,r,c+1]
+   |              |             |
    c[4,r+1,c-1]---t[3,r+1,c]----c[3,r+1,c+1]
 ```
+Here `P` represents an effective local constituent tensor. This can either be a single
+rank-4 tensor, a pair of PEPS tensors, or a stack of PEPS-PEPO-PEPS tensors depending on the
+partition function being contracted.
 
 # Fields
 - `corners::Array{C,3}`: Array of corner tensors.
@@ -26,15 +29,21 @@ struct CTMRGEnv{C,T}
     edges::Array{T,3}
 end
 
+const ElementarySpaceLike = Union{Int,ElementarySpace}
+const ProductSpaceLike{N} = Union{NTuple{N,Int},NTuple{N,<:ElementarySpace}}
+const SpaceLike = Union{ElementarySpaceLike,ProductSpaceLike}
+
 _spacetype(::Int) = ComplexSpace
 _spacetype(::S) where {S<:ElementarySpace} = S
+_spacetype(s::ProductSpaceLike) = _spacetype(first(s))
 
 _to_space(χ::Int) = ℂ^χ
 _to_space(χ::ElementarySpace) = χ
+_to_space(χ::ProductSpaceLike) = _to_space.(χ)
 
 function _corner_tensor(
     f, ::Type{T}, left_vspace::S, right_vspace::S=left_vspace
-) where {T,S<:Union{Int,ElementarySpace}}
+) where {T,S<:ElementarySpaceLike}
     return TensorMap(f, T, _to_space(left_vspace) ← _to_space(right_vspace))
 end
 
@@ -42,26 +51,25 @@ function _edge_tensor(
     f,
     ::Type{T},
     left_vspace::S,
-    top_pspace::S,
-    bot_pspace::S=top_pspace,
+    pspaces::P,
     right_vspace::S=left_vspace,
-) where {T,S<:Union{Int,ElementarySpace}}
+) where {T,S<:ElementarySpaceLike,P<:ProductSpaceLike}
     return TensorMap(
         f,
         T,
-        _to_space(left_vspace) ⊗ _to_space(top_pspace) ⊗ dual(_to_space(bot_pspace)) ←
+        prod([_to_space(left_vspace), _to_space.(pspaces)...]),
         _to_space(right_vspace),
     )
 end
 
 """
     CTMRGEnv(
-        [f=randn, ComplexF64], Ds_north, Ds_east::A, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
-    ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+        [f=randn, ComplexF64], Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
+    ) where {A<:AbstractMatrix{<:SpaceLike}, B<:AbstractMatrix{<:ElementarySpaceLike}}
 
 Construct a CTMRG environment by specifying matrices of north and east virtual spaces of the
-corresponding [`InfinitePEPS`](@ref) and the north, east, south and west virtual spaces of
-the environment. Each respective matrix entry corresponds to a site in the unit cell. By
+corresponding partition function and the north, east, south and west virtual spaces of the
+environment. Each respective matrix entry corresponds to a site in the unit cell. By
 default, the virtual environment spaces for all directions are taken to be the same.
 
 The environment virtual spaces for each site correspond to the north or east virtual space
@@ -70,17 +78,24 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 `chis_east[r, c]` corresponds to the north space of the east edge tensor,
 `chis_south[r, c]` corresponds to the east space of the south edge tensor, and
 `chis_west[r, c]` corresponds to the north space of the west edge tensor.
+
+Each entry of the `Ds_north` and `Ds_east` matrices corresponds to an effective local space
+of the partition function, represented as a tuple of elementary spaces encoding a product
+space. This can either contain a single elementary space for the case of a partition
+function defined in terms of local rank-4 tensors, or a tuple of elementary spaces
+representing a product space for the case of a partition function representing overlaps of
+PEPSs and PEPOs.
 """
 function CTMRGEnv(
     Ds_north::A,
     Ds_east::A,
-    chis_north::A,
-    chis_east::A=chis_north,
-    chis_south::A=chis_north,
-    chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    chis_north::B,
+    chis_east::B=chis_north,
+    chis_south::B=chis_north,
+    chis_west::B=chis_north,
+) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
     return CTMRGEnv(
-        randn, ComplexF64, Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west
+        randn, ComplexF64, N, Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west
     )
 end
 function CTMRGEnv(
@@ -88,18 +103,20 @@ function CTMRGEnv(
     T,
     Ds_north::A,
     Ds_east::A,
-    chis_north::A,
-    chis_east::A=chis_north,
-    chis_south::A=chis_north,
-    chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
-    Ds_south = adjoint.(circshift(Ds_north, (-1, 0)))
-    Ds_west = adjoint.(circshift(Ds_east, (0, 1)))
+    chis_north::B,
+    chis_east::B=chis_north,
+    chis_south::B=chis_north,
+    chis_west::B=chis_north
+) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
+    # no recursive broadcasting?
+    Ds_south = (x -> adjoint.(x)).(circshift(Ds_north, (-1, 0)))
+    Ds_west = (x -> adjoint.(x)).(circshift(Ds_east, (0, 1)))
 
     # do the whole thing
+    N = length(first(Ds_north))
     st = _spacetype(first(Ds_north))
     C_type = tensormaptype(st, 1, 1, T)
-    T_type = tensormaptype(st, 3, 1, T)
+    T_type = tensormaptype(st, N + 1, 1, T)
 
     # First index is direction
     corners = Array{C_type}(undef, 4, size(Ds_north)...)
@@ -112,14 +129,12 @@ function CTMRGEnv(
             T,
             chis_north[r, _prev(c, end)],
             Ds_north[_next(r, end), c],
-            Ds_north[_next(r, end), c],
             chis_north[r, c],
         )
         edges[EAST, r, c] = _edge_tensor(
             f,
             T,
             chis_east[r, c],
-            Ds_east[r, _prev(c, end)],
             Ds_east[r, _prev(c, end)],
             chis_east[_next(r, end), c],
         )
@@ -128,14 +143,12 @@ function CTMRGEnv(
             T,
             chis_south[r, c],
             Ds_south[_prev(r, end), c],
-            Ds_south[_prev(r, end), c],
             chis_south[r, _prev(c, end)],
         )
         edges[WEST, r, c] = _edge_tensor(
             f,
             T,
             chis_west[_next(r, end), c],
-            Ds_west[r, _next(c, end)],
             Ds_west[r, _next(c, end)],
             chis_west[r, c],
         )
@@ -154,14 +167,13 @@ function CTMRGEnv(
 
     corners[:, :, :] ./= norm.(corners[:, :, :])
     edges[:, :, :] ./= norm.(edges[:, :, :])
-
     return CTMRGEnv(corners, edges)
 end
 
 """
     CTMRGEnv(
-        [f=randn, ComplexF64], D_north::S, D_east::S, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S]; unitcell::Tuple{Int,Int}=(1, 1),
-    ) where {S<:Union{Int,ElementarySpace}}
+        [f=randn, ComplexF64], D_north::P, D_east::P, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S]; unitcell::Tuple{Int,Int}=(1, 1),
+    ) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
 
 Construct a CTMRG environment by specifying the north and east virtual spaces of the
 corresponding [`InfinitePEPS`](@ref) and the north, east, south and west virtual spaces of
@@ -172,14 +184,14 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-    D_north::S,
-    D_east::S,
+    D_north::P,
+    D_east::P,
     chi_north::S,
     chi_east::S=chi_north,
     chi_south::S=chi_north,
     chi_west::S=chi_north;
-    unitcell::Tuple{Int,Int}=(1, 1),
-) where {S<:Union{Int,ElementarySpace}}
+    unitcell::Tuple{Int,Int}=(1, 1)
+) where {P<:ProductSpaceLike,S<:Union{Int,ElementarySpace}}
     return CTMRGEnv(
         randn,
         ComplexF64,
@@ -194,23 +206,24 @@ end
 function CTMRGEnv(
     f,
     T,
-    D_north::S,
-    D_east::S,
+    D_north::P,
+    D_east::P,
     chi_north::S,
     chi_east::S=chi_north,
     chi_south::S=chi_north,
     chi_west::S=chi_north;
     unitcell::Tuple{Int,Int}=(1, 1),
-) where {S<:Union{Int,ElementarySpace}}
+    ) where {P<:ProductSpaceLike,S<:Union{Int,ElementarySpace}}
     return CTMRGEnv(
         f,
         T,
+        N,
         fill(D_north, unitcell),
         fill(D_east, unitcell),
         fill(chi_north, unitcell),
         fill(chi_east, unitcell),
         fill(chi_south, unitcell),
-        fill(chi_west, unitcell),
+        fill(chi_west, unitcell)
     )
 end
 
@@ -237,12 +250,12 @@ function CTMRGEnv(
     chis_east::A=chis_north,
     chis_south::A=chis_north,
     chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = map(peps.A) do t
-        return adjoint(space(t, 2))
+        return (adjoint(space(t, 2)), space(t, 2))
     end
     Ds_east = map(peps.A) do t
-        return adjoint(space(t, 3))
+        return (adjoint(space(t, 3)), space(t, 3))
     end
     return CTMRGEnv(
         randn,
@@ -262,17 +275,86 @@ function CTMRGEnv(
     chis_north::A,
     chis_east::A=chis_north,
     chis_south::A=chis_north,
-    chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    chis_west::A=chis_north
+) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = map(peps.A) do t
-        return adjoint(space(t, 2))
+        return (adjoint(space(t, 2)), space(t, 2))
     end
     Ds_east = map(peps.A) do t
-        return adjoint(space(t, 3))
+        return (adjoint(space(t, 3)), space(t, 3))
     end
     return CTMRGEnv(
         f,
         T,
+        Ds_north,
+        Ds_east,
+        _to_space.(chis_north),
+        _to_space.(chis_east),
+        _to_space.(chis_south),
+        _to_space.(chis_west),
+    )
+end
+
+"""
+    CTMRGEnv(
+        [f=randn, T=ComplexF64], partfunc::InfinitePartitionFunction, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
+    ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+
+Construct a CTMRG environment by specifying a corresponding
+[`InfinitePartitionFunction`](@ref), and the north, east, south and west virtual spaces of
+the environment as matrices. Each respective matrix entry corresponds to a site in the unit
+cell. By default, the virtual spaces for all directions are taken to be the same.
+
+The environment virtual spaces for each site correspond to the north or east virtual space
+of the corresponding edge tensor for each direction. Specifically, for a given site
+`(r, c)`, `chis_north[r, c]` corresponds to the east space of the north edge tensor,
+`chis_east[r, c]` corresponds to the north space of the east edge tensor,
+`chis_south[r, c]` corresponds to the east space of the south edge tensor, and
+`chis_west[r, c]` corresponds to the north space of the west edge tensor.
+"""
+function CTMRGEnv(
+    partfunc::InfinitePartitionFunction,
+    chis_north::A,
+    chis_east::A=chis_north,
+    chis_south::A=chis_north,
+    chis_west::A=chis_north,
+) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
+    Ds_north = map(partfunc.A) do t
+        return (adjoint(space(t, 1)),)
+    end
+    Ds_east = map(partfunc.A) do t
+        return (adjoint(space(t, 2)),)
+    end
+    return CTMRGEnv(
+        randn,
+        ComplexF64,
+        Ds_north,
+        Ds_east,
+        _to_space.(chis_north),
+        _to_space.(chis_east),
+        _to_space.(chis_south),
+        _to_space.(chis_west),
+    )
+end
+function CTMRGEnv(
+    f,
+    T,
+    partfunc::InfinitePartitionFunction,
+    chis_north::A,
+    chis_east::A=chis_north,
+    chis_south::A=chis_north,
+    chis_west::A=chis_north
+) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
+    Ds_north = map(partfunc.A) do t
+        return (adjoint(space(t, 1)),)
+    end
+    Ds_east = map(partfunc.A) do t
+        return (adjoint(space(t, 2)),)
+    end
+    return CTMRGEnv(
+        f,
+        T,
+        N,
         Ds_north,
         Ds_east,
         _to_space.(chis_north),
@@ -300,7 +382,7 @@ function CTMRGEnv(
     chi_east::S=chi_north,
     chi_south::S=chi_north,
     chi_west::S=chi_north,
-) where {S<:Union{Int,ElementarySpace}}
+) where {S<:ElementarySpaceLike}
     return CTMRGEnv(
         peps,
         fill(chi_north, size(peps)),
@@ -317,7 +399,7 @@ function CTMRGEnv(
     chi_east::S=chi_north,
     chi_south::S=chi_north,
     chi_west::S=chi_north,
-) where {S<:Union{Int,ElementarySpace}}
+) where {S<:ElementarySpaceLike}
     return CTMRGEnv(
         f,
         T,
@@ -328,7 +410,56 @@ function CTMRGEnv(
         fill(chi_west, size(peps)),
     )
 end
+
+"""
+    CTMRGEnv(
+        peps::InfinitePartitionFunction, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
+    ) where {S<:ElementarySpaceLike
+
+Construct a CTMRG environment by specifying a corresponding
+[`InfinitePartitionFunction`](@ref), and the north, east, south and west virtual spaces of
+the environment. By default, the virtual spaces for all directions are taken to be the same.
+
+The environment virtual spaces for each site correspond to virtual space of the
+corresponding edge tensor for each direction.
+"""
+function CTMRGEnv(
+    partfunc::InfinitePartitionFunction,
+    chi_north::S,
+    chi_east::S=chi_north,
+    chi_south::S=chi_north,
+    chi_west::S=chi_north,
+) where {S<:ElementarySpaceLike}
+    return CTMRGEnv(
+        partfunc,
+        fill(chi_north, size(partfunc)),
+        fill(chi_east, size(partfunc)),
+        fill(chi_south, size(partfunc)),
+        fill(chi_west, size(partfunc)),
+    )
+end
+function CTMRGEnv(
+    f,
+    T,
+    partfunc::InfinitePartitionFunction,
+    chi_north::S,
+    chi_east::S=chi_north,
+    chi_south::S=chi_north,
+    chi_west::S=chi_north,
+) where {S<:ElementarySpaceLike}
+    return CTMRGEnv(
+        f,
+        T,
+        partfunc,
+        fill(chi_north, size(partfunc)),
+        fill(chi_east, size(partfunc)),
+        fill(chi_south, size(partfunc)),
+        fill(chi_west, size(partfunc)),
+    )
+end
+
 @non_differentiable CTMRGEnv(peps::InfinitePEPS, args...)
+@non_differentiable CTMRGEnv(peps::InfinitePartitionFunction, args...)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)

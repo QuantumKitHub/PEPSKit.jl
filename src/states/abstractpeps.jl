@@ -6,6 +6,7 @@ conventionally ordered as: ``T : P ← N ⊗ E ⊗ S ⊗ W``. Here, ``P``, ``N``
 ``W`` denote the physics, north, east, south and west spaces, respectively.
 """
 const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
+const PartitionFunction{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
 
 """
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
@@ -49,6 +50,13 @@ virtual indices, conventionally ordered as: O : P ⊗ P' ← N ⊗ E ⊗ S ⊗ W
 const PEPOTensor{S} = AbstractTensorMap{S,2,4} where {S<:ElementarySpace}
 
 """
+    abstract type AbstractPartitionFunction end
+
+Abstract supertype for a 2D projected entangled-pair state.
+"""
+abstract type AbstractPartitionFunction end
+
+"""
     abstract type AbstractPEPS end
 
 Abstract supertype for a 2D projected entangled-pair state.
@@ -63,6 +71,10 @@ Abstract supertype for a 2D projected entangled-pair operator.
 abstract type AbstractPEPO end
 
 # Rotations
+Base.rotl90(t::PartitionFunction) = permute(t, ((2, 3), (1, 2)))
+Base.rotr90(t::PartitionFunction) = permute(t, ((4, 1), (2, 3)))
+Base.rot180(t::PartitionFunction) = permute(t, ((3, 4), (1, 2)))
+
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
 Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
 Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))

@@ -15,13 +15,20 @@ struct EnlargedCorner{Ct,E,A,A′}
     bra::A′
 end
 
+struct EnlargedPartitionFunctionCorner{Ct,E,A}
+    C::Ct
+    E_1::E
+    E_2::E
+    partfunc::A
+end
+
 """
     EnlargedCorner(state, envs, coordinates)
 
 Construct an enlarged corner with the correct row and column indices based on the given
 `coordinates` which are of the form `(dir, row, col)`.
 """
-function EnlargedCorner(state, envs, coordinates)
+function EnlargedCorner(state::InfinitePEPS, envs, coordinates)
     dir, r, c = coordinates
     if dir == NORTHWEST
         return EnlargedCorner(
@@ -58,6 +65,39 @@ function EnlargedCorner(state, envs, coordinates)
     end
 end
 
+function EnlargedCorner(state::InfinitePartitionFunction, envs, coordinates)
+    dir, r, c = coordinates
+    if dir == NORTHWEST
+        return EnlargedPartitionFunctionCorner(
+            envs.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+            envs.edges[WEST, r, _prev(c, end)],
+            envs.edges[NORTH, _prev(r, end), c],
+            state[r, c],
+        )
+    elseif dir == NORTHEAST
+        return EnlargedPartitionFunctionCorner(
+            envs.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+            envs.edges[NORTH, _prev(r, end), c],
+            envs.edges[EAST, r, _next(c, end)],
+            state[r, c],
+        )
+    elseif dir == SOUTHEAST
+        return EnlargedPartitionFunctionCorner(
+            envs.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+            envs.edges[EAST, r, _next(c, end)],
+            envs.edges[SOUTH, _next(r, end), c],
+            state[r, c],
+        )
+    elseif dir == SOUTHWEST
+        return EnlargedPartitionFunctionCorner(
+            envs.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+            envs.edges[SOUTH, _next(r, end), c],
+            envs.edges[WEST, r, _prev(c, end)],
+            state[r, c],
+        )
+    end
+end
+
 """
     TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
 
@@ -73,6 +113,18 @@ function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
         return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
     elseif dir == SOUTHWEST
         return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.ket, Q.bra)
+    end
+end
+
+function TensorKit.TensorMap(Q::EnlargedPartitionFunctionCorner, dir::Int)
+    if dir == NORTHWEST
+        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.partfunc)
+    elseif dir == NORTHEAST
+        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.partfunc)
+    elseif dir == SOUTHEAST
+        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.partfunc)
+    elseif dir == SOUTHWEST
+        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.partfunc)
     end
 end
 
@@ -94,6 +146,26 @@ end
 function renormalize_southwest_corner(ec::EnlargedCorner, P_left, P_right)
     return renormalize_southwest_corner(
         ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.ket, ec.bra
+    )
+end
+function renormalize_northwest_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
+    return renormalize_northwest_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
+    )
+end
+function renormalize_northeast_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
+    return renormalize_northeast_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
+    )
+end
+function renormalize_southeast_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
+    return renormalize_southeast_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
+    )
+end
+function renormalize_southwest_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
+    return renormalize_southwest_corner(
+        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
     )
 end
 
@@ -150,6 +222,31 @@ function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
     )
 end
 
+struct HalfInfinitePartitionFunctionEnv{C,E,A,A′}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
+    C_1::C
+    C_2::C
+    E_1::E
+    E_2::E
+    E_3::E
+    E_4::E
+    partfunc_1::A
+    partfunc_2::A
+end
+
+# Construct environment from two enlarged corners
+function HalfInfinitePartitionFunctionEnv(quadrant1::EnlargedPartitionFunctionCorner, quadrant2::EnlargedPartitionFunctionCorner)
+    return HalfInfinitePartitionFunctionEnv(
+        quadrant1.C,
+        quadrant2.C,
+        quadrant1.E_1,
+        quadrant1.E_2,
+        quadrant2.E_1,
+        quadrant2.E_2,
+        quadrant1.partfunc,
+        quadrant2.partfunc,
+    )
+end
+
 """
     TensorKit.TensorMap(env::HalfInfiniteEnv)
 
@@ -167,6 +264,19 @@ function TensorKit.TensorMap(env::HalfInfiniteEnv)  # Dense operator
         env.ket_2,
         env.bra_1,
         env.bra_2,
+    )
+end
+
+function TensorKit.TensorMap(env::HalfInfinitePartitionFunctionEnv)  # Dense operator
+    return halfinfinite_environment(
+        env.C_1,
+        env.C_2,
+        env.E_1,
+        env.E_2,
+        env.E_3,
+        env.E_4,
+        env.partfunc_1,
+        env.partfunc_2,
     )
 end
 
@@ -208,6 +318,64 @@ function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
     )
 end
 
+# Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
+function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
+    return HalfInfiniteEnv(
+        ec_1.C,
+        ec_2.C,
+        ec_1.E_1,
+        ec_1.E_2,
+        ec_2.E_1,
+        ec_2.E_2,
+        ec_1.ket,
+        ec_2.ket,
+        ec_1.bra,
+        ec_2.bra,
+    )
+end
+
+function (env::HalfInfinitePartitionFunctionEnv)(x, ::Val{false})  # Linear map: env() * x
+    return halfinfinite_partitionfunction_environment(
+        env.C_1,
+        env.C_2,
+        env.E_1,
+        env.E_2,
+        env.E_3,
+        env.E_4,
+        x,
+        env.partfunc_1,
+        env.partfunc_2,
+    )
+end
+function (env::HalfInfinitePartitionFunctionEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
+    return halfinfinite_partitionfunction_environment(
+        x,
+        env.C_1,
+        env.C_2,
+        env.E_1,
+        env.E_2,
+        env.E_3,
+        env.E_4,
+        env.partfunc_1,
+        env.partfunc_2,
+    )
+end
+
+# Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
+function halfinfinite_partitionfunction_environment(ec_1::EnlargedPartitionFunctionCorner, ec_2::EnlargedPartitionFunctionCorner)
+    return HalfInfiniteEnv(
+        ec_1.C,
+        ec_2.C,
+        ec_1.E_1,
+        ec_1.E_2,
+        ec_2.E_1,
+        ec_2.E_2,
+        ec_1.partfunc,
+        ec_2.partfunc,
+    )
+end
+
+# -----------------------------------------------------
 # AbstractTensorMap subtyping and IterSVD compatibility
 function TensorKit.domain(env::HalfInfiniteEnv)
     return domain(env.E_4) * domain(env.ket_2)[3] * domain(env.bra_2)[3]'
@@ -218,6 +386,18 @@ function TensorKit.codomain(env::HalfInfiniteEnv)
 end
 
 function random_start_vector(env::HalfInfiniteEnv)
+    return Tensor(randn, domain(env))
+end
+
+function TensorKit.domain(env::HalfInfinitePartitionFunctionEnv)
+    return domain(env.E_4) * domain(env.ket_2)[3] * domain(env.bra_2)[3]'
+end
+
+function TensorKit.codomain(env::HalfInfinitePartitionFunctionEnv)
+    return codomain(env.E_1)[1] * domain(env.ket_1)[3]' * domain(env.bra_1)[3]
+end
+
+function random_start_vector(env::HalfInfinitePartitionFunctionEnv)
     return Tensor(randn, domain(env))
 end
 
