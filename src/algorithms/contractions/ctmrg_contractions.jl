@@ -380,7 +380,7 @@ function half_infinite_environment(
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
 end
 
-function halfinfinite_environment(
+function half_infinite_environment(
     quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2}
 ) where {S}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
