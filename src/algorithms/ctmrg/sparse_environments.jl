@@ -149,24 +149,16 @@ function renormalize_southwest_corner(ec::EnlargedCorner, P_left, P_right)
     )
 end
 function renormalize_northwest_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
-    return renormalize_northwest_corner(
-        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
-    )
+    return renormalize_northwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc)
 end
 function renormalize_northeast_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
-    return renormalize_northeast_corner(
-        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
-    )
+    return renormalize_northeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc)
 end
 function renormalize_southeast_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
-    return renormalize_southeast_corner(
-        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
-    )
+    return renormalize_southeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc)
 end
 function renormalize_southwest_corner(ec::EnlargedPartitionFunctionCorner, P_left, P_right)
-    return renormalize_southwest_corner(
-        ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc
-    )
+    return renormalize_southwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.partfunc)
 end
 
 # Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
@@ -234,7 +226,9 @@ struct HalfInfinitePartitionFunctionEnv{C,E,A,A′}  # TODO: subtype as Abstract
 end
 
 # Construct environment from two enlarged corners
-function HalfInfinitePartitionFunctionEnv(quadrant1::EnlargedPartitionFunctionCorner, quadrant2::EnlargedPartitionFunctionCorner)
+function HalfInfinitePartitionFunctionEnv(
+    quadrant1::EnlargedPartitionFunctionCorner, quadrant2::EnlargedPartitionFunctionCorner
+)
     return HalfInfinitePartitionFunctionEnv(
         quadrant1.C,
         quadrant2.C,
@@ -269,14 +263,7 @@ end
 
 function TensorKit.TensorMap(env::HalfInfinitePartitionFunctionEnv)  # Dense operator
     return halfinfinite_environment(
-        env.C_1,
-        env.C_2,
-        env.E_1,
-        env.E_2,
-        env.E_3,
-        env.E_4,
-        env.partfunc_1,
-        env.partfunc_2,
+        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.partfunc_1, env.partfunc_2
     )
 end
 
@@ -362,16 +349,11 @@ function (env::HalfInfinitePartitionFunctionEnv)(x, ::Val{true})  # Adjoint line
 end
 
 # Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
-function halfinfinite_partitionfunction_environment(ec_1::EnlargedPartitionFunctionCorner, ec_2::EnlargedPartitionFunctionCorner)
+function halfinfinite_partitionfunction_environment(
+    ec_1::EnlargedPartitionFunctionCorner, ec_2::EnlargedPartitionFunctionCorner
+)
     return HalfInfiniteEnv(
-        ec_1.C,
-        ec_2.C,
-        ec_1.E_1,
-        ec_1.E_2,
-        ec_2.E_1,
-        ec_2.E_2,
-        ec_1.partfunc,
-        ec_2.partfunc,
+        ec_1.C, ec_2.C, ec_1.E_1, ec_1.E_2, ec_2.E_1, ec_2.E_2, ec_1.partfunc, ec_2.partfunc
     )
 end
 

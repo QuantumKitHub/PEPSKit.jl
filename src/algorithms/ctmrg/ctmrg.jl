@@ -113,9 +113,7 @@ function build_projectors(
 ) where {E<:ElementarySpace}
     isqS = sdiag_pow(S, -0.5)
     P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.partfunc)
-    P_right = right_projector(
-        Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.partfunc
-    )
+    P_right = right_projector(Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.partfunc)
     return P_left, P_right
 end
 

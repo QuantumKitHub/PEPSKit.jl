@@ -80,7 +80,9 @@ and column index `[r, c]` by one, respectively:
 The unit cell has periodic boundary conditions, so `[r, c]` is indexed modulo the
 size of the unit cell.
 """
-function InfinitePartitionFunction(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PartitionFunction}
+function InfinitePartitionFunction(
+    A::T; unitcell::Tuple{Int,Int}=(1, 1)
+) where {T<:PartitionFunction}
     return InfinitePartitionFunction(fill(A, unitcell))
 end
 
@@ -94,18 +96,13 @@ function InfinitePartitionFunction(
     Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:Union{ElementarySpace,Int}}
     return InfinitePartitionFunction(
-        randn,
-        ComplexF64,
-        fill(Nspace, unitcell),
-        fill(Espace, unitcell),
+        randn, ComplexF64, fill(Nspace, unitcell), fill(Espace, unitcell)
     )
 end
 function InfinitePartitionFunction(
     f, T, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:Union{ElementarySpace,Int}}
-    return InfinitePartitionFunction(
-        f, T, fill(Nspace, unitcell), fill(Espace, unitcell)
-    )
+    return InfinitePartitionFunction(f, T, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
 ## Shape and size
@@ -114,12 +111,18 @@ Base.size(T::InfinitePartitionFunction, i) = size(T.A, i)
 Base.length(T::InfinitePartitionFunction) = length(T.A)
 Base.eltype(T::InfinitePartitionFunction) = eltype(typeof(T))
 Base.eltype(::Type{<:InfinitePartitionFunction{T}}) where {T} = T
-VectorInterface.scalartype(::Type{T}) where {T<:InfinitePartitionFunction} = scalartype(eltype(T))
+function VectorInterface.scalartype(::Type{T}) where {T<:InfinitePartitionFunction}
+    return scalartype(eltype(T))
+end
 
 ## Copy
 Base.copy(T::InfinitePartitionFunction) = InfinitePartitionFunction(copy(T.A))
-Base.similar(T::InfinitePartitionFunction, args...) = InfinitePartitionFunction(similar(T.A, args...))
-Base.repeat(T::InfinitePartitionFunction, counts...) = InfinitePartitionFunction(repeat(T.A, counts...))
+function Base.similar(T::InfinitePartitionFunction, args...)
+    return InfinitePartitionFunction(similar(T.A, args...))
+end
+function Base.repeat(T::InfinitePartitionFunction, counts...)
+    return InfinitePartitionFunction(repeat(T.A, counts...))
+end
 
 Base.getindex(T::InfinitePartitionFunction, args...) = Base.getindex(T.A, args...)
 Base.setindex!(T::InfinitePartitionFunction, args...) = (Base.setindex!(T.A, args...); T)
@@ -133,11 +136,17 @@ end
 TensorKit.space(t::InfinitePartitionFunction, i, j) = space(t[i, j], 1)
 
 ## Math
-Base.:+(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction) = InfinitePartitionFunction(ψ₁.A + ψ₂.A)
-Base.:-(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction) = InfinitePartitionFunction(ψ₁.A - ψ₂.A)
+function Base.:+(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
+    return InfinitePartitionFunction(ψ₁.A + ψ₂.A)
+end
+function Base.:-(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
+    return InfinitePartitionFunction(ψ₁.A - ψ₂.A)
+end
 Base.:*(α::Number, ψ::InfinitePartitionFunction) = InfinitePartitionFunction(α * ψ.A)
 Base.:/(ψ::InfinitePartitionFunction, α::Number) = InfinitePartitionFunction(ψ.A / α)
-LinearAlgebra.dot(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction) = dot(ψ₁.A, ψ₂.A)
+function LinearAlgebra.dot(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
+    return dot(ψ₁.A, ψ₂.A)
+end
 LinearAlgebra.norm(ψ::InfinitePartitionFunction) = norm(ψ.A)
 
 ## (Approximate) equality
@@ -146,7 +155,9 @@ function Base.:(==)(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFu
         return p₁ == p₂
     end
 end
-function Base.isapprox(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction; kwargs...)
+function Base.isapprox(
+    ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction; kwargs...
+)
     return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
         return isapprox(p₁, p₂; kwargs...)
     end
@@ -159,13 +170,17 @@ function LinearAlgebra.rmul!(ψ::InfinitePartitionFunction, α::Number)
 end
 
 # Used in _add during OptimKit.optimize
-function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
+function LinearAlgebra.axpy!(
+    α::Number, ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction
+)
     ψ₂.A .+= α * ψ₁.A
     return ψ₂
 end
 
 # VectorInterface
-VectorInterface.zerovector(x::InfinitePartitionFunction) = InfinitePartitionFunction(zerovector(x.A))
+function VectorInterface.zerovector(x::InfinitePartitionFunction)
+    return InfinitePartitionFunction(zerovector(x.A))
+end
 
 # Rotations
 Base.rotl90(t::InfinitePartitionFunction) = InfinitePartitionFunction(rotl90(rotl90.(t.A)))
@@ -186,7 +201,9 @@ function ChainRulesCore.rrule(
     return PartitionFunction, getindex_pullback
 end
 
-function ChainRulesCore.rrule(::Type{<:InfinitePartitionFunction}, A::Matrix{T}) where {T<:PartitionFunction}
+function ChainRulesCore.rrule(
+    ::Type{<:InfinitePartitionFunction}, A::Matrix{T}
+) where {T<:PartitionFunction}
     peps = InfinitePartitionFunction(A)
     function InfinitePartitionFunction_pullback(Δpeps)
         return NoTangent(), Δpeps.A

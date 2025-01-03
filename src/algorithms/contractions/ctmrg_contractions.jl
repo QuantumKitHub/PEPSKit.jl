@@ -49,15 +49,13 @@ function enlarge_northwest_corner(
     E_west = envs.edges[WEST, row, _prev(col, end)]
     C_northwest = envs.corners[NORTHWEST, _prev(row, end), _prev(col, end)]
     E_north = envs.edges[NORTH, _prev(row, end), col]
-    return enlarge_northwest_corner(
-        E_west, C_northwest, E_north, partfunc[row, col]
-    )
+    return enlarge_northwest_corner(E_west, C_northwest, E_north, partfunc[row, col])
 end
 function enlarge_northwest_corner(
     E_west::CTMRGEdgeTensor{S,2},
     C_northwest::CTMRGCornerTensor,
     E_north::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction
+    partfunc::PartitionFunction,
 ) where {S}
     return @autoopt @tensor corner[χ_S D_S; χ_E D_E] :=
         E_west[χ_S D1; χ1] *
@@ -111,15 +109,13 @@ function enlarge_northeast_corner(
     E_north = envs.edges[NORTH, _prev(row, end), col]
     C_northeast = envs.corners[NORTHEAST, _prev(row, end), _next(col, end)]
     E_east = envs.edges[EAST, row, _next(col, end)]
-    return enlarge_northeast_corner(
-        E_north, C_northeast, E_east, partfunc[row, col]
-    )
+    return enlarge_northeast_corner(E_north, C_northeast, E_east, partfunc[row, col])
 end
 function enlarge_northeast_corner(
     E_north::CTMRGEdgeTensor{S,2},
     C_northeast::CTMRGCornerTensor,
     E_east::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction
+    partfunc::PartitionFunction,
 ) where {S}
     return @autoopt @tensor corner[χ_W D_W; χ_S D_S] :=
         E_north[χ_W D1; χ1] *
@@ -173,15 +169,13 @@ function enlarge_southeast_corner(
     E_east = envs.edges[EAST, row, _next(col, end)]
     C_southeast = envs.corners[SOUTHEAST, _next(row, end), _next(col, end)]
     E_south = envs.edges[SOUTH, _next(row, end), col]
-    return enlarge_southeast_corner(
-        E_east, C_southeast, E_south, partfunc[row, col]
-    )
+    return enlarge_southeast_corner(E_east, C_southeast, E_south, partfunc[row, col])
 end
 function enlarge_southeast_corner(
     E_east::CTMRGEdgeTensor{S,2},
     C_southeast::CTMRGCornerTensor,
     E_south::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction
+    partfunc::PartitionFunction,
 ) where {S}
     return @autoopt @tensor corner[χ_N D_N; χ_W D_W] :=
         E_east[χ_N D1; χ1] *
@@ -235,15 +229,13 @@ function enlarge_southwest_corner(
     E_south = envs.edges[SOUTH, _next(row, end), col]
     C_southwest = envs.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
     E_west = envs.edges[WEST, row, _prev(col, end)]
-    return enlarge_southwest_corner(
-        E_south, C_southwest, E_west, partfunc[row, col]
-    )
+    return enlarge_southwest_corner(E_south, C_southwest, E_west, partfunc[row, col])
 end
 function enlarge_southwest_corner(
     E_south::CTMRGEdgeTensor{S,2},
     C_southwest::CTMRGCornerTensor,
     E_west::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction
+    partfunc::PartitionFunction,
 ) where {S}
     return @autoopt @tensor corner[χ_E D_E; χ_N D_N] :=
         E_south[χ_E D1; χ1] *
@@ -280,12 +272,9 @@ end
 
 function left_projector(E_1, C, E_2, V, isqS, partfunc::PartitionFunction)
     return @autoopt @tensor P_left[χ_in D_in; χ_out] :=
-        E_1[χ_in D1; χ1] *
-        C[χ1; χ2] *
-        E_2[χ2 D2; χ3] *
-        partfunc[D2 D3; D_in D1]
-        conj(V[χ4; χ3 D3])
-        isqS[χ4; χ_out]
+        E_1[χ_in D1; χ1] * C[χ1; χ2] * E_2[χ2 D2; χ3] * partfunc[D2 D3; D_in D1]
+    conj(V[χ4; χ3 D3])
+    return isqS[χ4; χ_out]
 end
 
 """
@@ -313,12 +302,8 @@ end
 
 function right_projector(E_1, C, E_2, U, isqS, partfunc::PartitionFunction)
     return @autoopt @tensor P_right[χ_in; χ_out D_out] :=
-        isqS[χ_in; χ1] *
-        conj(U[χ1; χ2 D1]) *
-        partfunc[D2 D3; D_out D1]
-        E_2[χ2 D2; χ3] *
-        C[χ3; χ4] *
-        E_1[χ4 D3; χ_out]
+        isqS[χ_in; χ1] * conj(U[χ1; χ2 D1]) * partfunc[D2 D3; D_out D1]
+    return E_2[χ2 D2; χ3] * C[χ3; χ4] * E_1[χ4 D3; χ_out]
 end
 
 """
@@ -399,8 +384,7 @@ function halfinfinite_environment(
     quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2}
 ) where {S}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
-        quadrant1[χ_in D_in; χ D1] *
-        quadrant2[χ D1; χ_out D_out]
+        quadrant1[χ_in D_in; χ D1] * quadrant2[χ D1; χ_out D_out]
 end
 
 function halfinfinite_environment(
@@ -461,15 +445,7 @@ function halfinfinite_environment(
 end
 
 function halfinfinite_environment(
-    C_1,
-    C_2,
-    E_1,
-    E_2,
-    E_3,
-    E_4,
-    x::AbstractTensor{S,2},
-    partfunc_1::P,
-    partfunc_2::P,
+    C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{S,2}, partfunc_1::P, partfunc_2::P
 ) where {S,P<:PartitionFunction}
     return @autoopt @tensor env_x[χ_in D_in] :=
         E_1[χ_in D1; χ1] *
@@ -739,15 +715,7 @@ function full_infinite_environment(
 end
 
 function halfinfinite_environment(
-    x::AbstractTensor{S,2},
-    C_1,
-    C_2,
-    E_1,
-    E_2,
-    E_3,
-    E_4,
-    partfunc_1::P,
-    partfunc_2::P,
+    x::AbstractTensor{S,2}, C_1, C_2, E_1, E_2, E_3, E_4, partfunc_1::P, partfunc_2::P
 ) where {S,P<:PartitionFunction}
     return @autoopt @tensor env_x[χ_in D_in] :=
         x[χ1 D1 D2] *
@@ -1049,14 +1017,18 @@ Apply bottom projector to southwest corner and south edge.
      C --  E -- in
 ```
 """
-function renormalize_bottom_corner((row, col), envs::CTMRGEnv{C,<:CTMRGEdgeTensor{S,3}}, projectors) where {C,S}
+function renormalize_bottom_corner(
+    (row, col), envs::CTMRGEnv{C,<:CTMRGEdgeTensor{S,3}}, projectors
+) where {C,S}
     C_southwest = envs.corners[SOUTHWEST, row, _prev(col, end)]
     E_south = envs.edges[SOUTH, row, col]
     P_bottom = projectors[1][row]
     return @autoopt @tensor corner[χ_in; χ_out] :=
         E_south[χ_in D1 D2; χ1] * C_southwest[χ1; χ2] * P_bottom[χ2 D1 D2; χ_out]
 end
-function renormalize_bottom_corner((row, col), envs::CTMRGEnv{C,<:CTMRGEdgeTensor{S,2}}, projectors) where {C,S}
+function renormalize_bottom_corner(
+    (row, col), envs::CTMRGEnv{C,<:CTMRGEdgeTensor{S,2}}, projectors
+) where {C,S}
     C_southwest = envs.corners[SOUTHWEST, row, _prev(col, end)]
     E_south = envs.edges[SOUTH, row, col]
     P_bottom = projectors[1][row]
@@ -1081,15 +1053,11 @@ function renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
     P_top = projectors[2][_next(row, end)]
     return renormalize_top_corner(C_northwest, E_north, P_top)
 end
-function renormalize_top_corner(
-    C_northwest, E_north::CTMRGEdgeTensor{S,3}, P_top,
-) where {S}
+function renormalize_top_corner(C_northwest, E_north::CTMRGEdgeTensor{S,3}, P_top) where {S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_top[χ_in; χ1 D1 D2] * C_northwest[χ1; χ2] * E_north[χ2 D1 D2; χ_out]
 end
-function renormalize_top_corner(
-    C_northwest, E_north::CTMRGEdgeTensor{S,2}, P_top,
-) where {S}
+function renormalize_top_corner(C_northwest, E_north::CTMRGEdgeTensor{S,2}, P_top) where {S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_top[χ_in; χ1 D1] * C_northwest[χ1; χ2] * E_north[χ2 D1; χ_out]
 end
@@ -1199,7 +1167,7 @@ function renormalize_east_edge(
         envs.edges[EAST, row, _next(col, end)],
         P_bottom[EAST, row, col, end],
         P_top[EAST, _prev(row, end), col],
-        partfunc[row, col]
+        partfunc[row, col],
     )
 end
 
@@ -1256,7 +1224,7 @@ function renormalize_south_edge(
         envs.edges[SOUTH, _next(row, end), col],
         P_left[SOUTH, row, col],
         P_right[SOUTH, row, _next(col, end)],
-        partfunc[row, col]
+        partfunc[row, col],
     )
 end
 
@@ -1269,7 +1237,6 @@ function renormalize_south_edge(
         P_left[χ2 D3; χ_W] *
         P_right[χ_E; χ1 D5]
 end
-
 
 """
     renormalize_west_edge((row, col), envs, P_top, P_bottom, ket, bra)
@@ -1329,32 +1296,31 @@ function renormalize_west_edge(
         P_top[χ_S; χ1 D5 D6]
 end
 
-
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
     (row, col),
     envs::CTMRGEnv,
     P_bottom::Array{Pb,3},
     P_top::Array{Pt,3},
-    partfunc::InfinitePartitionFunction
+    partfunc::InfinitePartitionFunction,
 ) where {Pt,Pb}
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
         P_bottom[WEST, row, col],
         P_top[WEST, _next(row, end), col],
-        partfunc[row, col]
+        partfunc[row, col],
     )
 end
 function renormalize_west_edge(  # For sequential CTMRG scheme
     (row, col),
     envs::CTMRGEnv,
     projectors,
-    partfunc::InfinitePartitionFunction
+    partfunc::InfinitePartitionFunction,
 )
     return renormalize_west_edge(
         envs.edges[WEST, row, _prev(col, end)],
         projectors[1][row],
         projectors[2][_next(row, end)],
-        partfunc[row, col]
+        partfunc[row, col],
     )
 end
 function renormalize_west_edge(

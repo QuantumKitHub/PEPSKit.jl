@@ -31,7 +31,7 @@ end
         end
         @time @safetestset "Partition function" begin
             include("ctmrg/partition_function.jl")
-        end    
+        end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
         @time @safetestset "VUMPS" begin

@@ -48,11 +48,7 @@ function _corner_tensor(
 end
 
 function _edge_tensor(
-    f,
-    ::Type{T},
-    left_vspace::S,
-    pspaces::P,
-    right_vspace::S=left_vspace,
+    f, ::Type{T}, left_vspace::S, pspaces::P, right_vspace::S=left_vspace
 ) where {T,S<:ElementarySpaceLike,P<:ProductSpaceLike}
     return TensorMap(
         f,
@@ -95,7 +91,15 @@ function CTMRGEnv(
     chis_west::B=chis_north,
 ) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
     return CTMRGEnv(
-        randn, ComplexF64, N, Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west
+        randn,
+        ComplexF64,
+        N,
+        Ds_north,
+        Ds_east,
+        chis_north,
+        chis_east,
+        chis_south,
+        chis_west,
     )
 end
 function CTMRGEnv(
@@ -106,7 +110,7 @@ function CTMRGEnv(
     chis_north::B,
     chis_east::B=chis_north,
     chis_south::B=chis_north,
-    chis_west::B=chis_north
+    chis_west::B=chis_north,
 ) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
     # no recursive broadcasting?
     Ds_south = (x -> adjoint.(x)).(circshift(Ds_north, (-1, 0)))
@@ -125,32 +129,16 @@ function CTMRGEnv(
     for I in CartesianIndices(Ds_north)
         r, c = I.I
         edges[NORTH, r, c] = _edge_tensor(
-            f,
-            T,
-            chis_north[r, _prev(c, end)],
-            Ds_north[_next(r, end), c],
-            chis_north[r, c],
+            f, T, chis_north[r, _prev(c, end)], Ds_north[_next(r, end), c], chis_north[r, c]
         )
         edges[EAST, r, c] = _edge_tensor(
-            f,
-            T,
-            chis_east[r, c],
-            Ds_east[r, _prev(c, end)],
-            chis_east[_next(r, end), c],
+            f, T, chis_east[r, c], Ds_east[r, _prev(c, end)], chis_east[_next(r, end), c]
         )
         edges[SOUTH, r, c] = _edge_tensor(
-            f,
-            T,
-            chis_south[r, c],
-            Ds_south[_prev(r, end), c],
-            chis_south[r, _prev(c, end)],
+            f, T, chis_south[r, c], Ds_south[_prev(r, end), c], chis_south[r, _prev(c, end)]
         )
         edges[WEST, r, c] = _edge_tensor(
-            f,
-            T,
-            chis_west[_next(r, end), c],
-            Ds_west[r, _next(c, end)],
-            chis_west[r, c],
+            f, T, chis_west[_next(r, end), c], Ds_west[r, _next(c, end)], chis_west[r, c]
         )
 
         corners[NORTHWEST, r, c] = _corner_tensor(
@@ -190,7 +178,7 @@ function CTMRGEnv(
     chi_east::S=chi_north,
     chi_south::S=chi_north,
     chi_west::S=chi_north;
-    unitcell::Tuple{Int,Int}=(1, 1)
+    unitcell::Tuple{Int,Int}=(1, 1),
 ) where {P<:ProductSpaceLike,S<:Union{Int,ElementarySpace}}
     return CTMRGEnv(
         randn,
@@ -213,7 +201,7 @@ function CTMRGEnv(
     chi_south::S=chi_north,
     chi_west::S=chi_north;
     unitcell::Tuple{Int,Int}=(1, 1),
-    ) where {P<:ProductSpaceLike,S<:Union{Int,ElementarySpace}}
+) where {P<:ProductSpaceLike,S<:Union{Int,ElementarySpace}}
     return CTMRGEnv(
         f,
         T,
@@ -223,7 +211,7 @@ function CTMRGEnv(
         fill(chi_north, unitcell),
         fill(chi_east, unitcell),
         fill(chi_south, unitcell),
-        fill(chi_west, unitcell)
+        fill(chi_west, unitcell),
     )
 end
 
@@ -275,7 +263,7 @@ function CTMRGEnv(
     chis_north::A,
     chis_east::A=chis_north,
     chis_south::A=chis_north,
-    chis_west::A=chis_north
+    chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = map(peps.A) do t
         return (adjoint(space(t, 2)), space(t, 2))
@@ -343,7 +331,7 @@ function CTMRGEnv(
     chis_north::A,
     chis_east::A=chis_north,
     chis_south::A=chis_north,
-    chis_west::A=chis_north
+    chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = map(partfunc.A) do t
         return (adjoint(space(t, 1)),)

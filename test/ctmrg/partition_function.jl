@@ -5,7 +5,17 @@ using LinearAlgebra
 using QuadGK
 using MPSKit
 
-using PEPSKit: @autoopt, CTMRGEdgeTensor, NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST, WEST, EAST, NORTH, SOUTH
+using PEPSKit:
+    @autoopt,
+    CTMRGEdgeTensor,
+    NORTHWEST,
+    NORTHEAST,
+    SOUTHEAST,
+    SOUTHWEST,
+    WEST,
+    EAST,
+    NORTH,
+    SOUTH
 
 ## Setup
 
@@ -23,12 +33,14 @@ function classical_ising_exact(; beta=log(1 + sqrt(2)) / 2, J=1.0)
     K = beta * J
 
     k = 1 / sinh(2 * K)^2
-    F = quadgk(theta -> log(cosh(2 * K)^2 + 1 / k * sqrt(1 + k^2 - 2 * k * cos(2 * theta))), 0, pi)[1]
+    F = quadgk(
+        theta -> log(cosh(2 * K)^2 + 1 / k * sqrt(1 + k^2 - 2 * k * cos(2 * theta))), 0, pi
+    )[1]
     f = -1 / beta * (log(2) / 2 + 1 / (2 * pi) * F)
 
-    m = 1 - (sinh(2 * K))^(-4) > 0 ? (1 - (sinh(2 * K))^(-4))^(1/8) : 0
+    m = 1 - (sinh(2 * K))^(-4) > 0 ? (1 - (sinh(2 * K))^(-4))^(1 / 8) : 0
 
-    E = quadgk(theta -> 1 / sqrt(1 - (4 * k) * (1 + k)^(-2) * sin(theta)^2), 0, pi/2)[1]
+    E = quadgk(theta -> 1 / sqrt(1 - (4 * k) * (1 + k)^(-2) * sin(theta)^2), 0, pi / 2)[1]
     e = -J * cosh(2 * K) / sinh(2 * K) * (1 + 2 / pi * (2 * tanh(2 * K)^2 - 1) * E)
 
     return f, m, e
@@ -63,8 +75,10 @@ function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
 
     # bond interaction tensor and energy-per-site tensor
     e = ComplexF64[-J J; J -J] .* nt
-    @tensor e_hor[-1 -2; -3 -4] := O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * e[-4; 4]
-    @tensor e_vert[-1 -2; -3 -4] := O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * e[-3; 3] * nt[-4; 4]
+    @tensor e_hor[-1 -2; -3 -4] :=
+        O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * e[-4; 4]
+    @tensor e_vert[-1 -2; -3 -4] :=
+        O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * e[-3; 3] * nt[-4; 4]
     e = e_hor + e_vert
 
     # fixed tensor map space for all three
@@ -77,19 +91,18 @@ end
 Contract a local rank-4 tensor with a given partition function environment.
 """
 function local_contraction(
-    O::AbstractTensorMap{S,2,2},
-    env::CTMRGEnv{C,<:CTMRGEdgeTensor{S,2}},
+    O::AbstractTensorMap{S,2,2}, env::CTMRGEnv{C,<:CTMRGEdgeTensor{S,2}}
 ) where {S,C}
     return @autoopt @tensor env.corners[NORTHWEST, 1, 1][C_WNW; C_NNW] *
-                            env.edges[NORTH, 1, 1][C_NNW D_N; C_NNE] *
-                            env.corners[NORTHEAST, 1, 1][C_NNE; C_ENE] *
-                            env.edges[EAST, 1, 1][C_ENE D_E; C_ESE] *
-                            env.corners[SOUTHEAST, 1, 1][C_ESE; C_SSE] *
-                            env.edges[SOUTH, 1, 1][C_SSE D_S; C_SSW] *
-                            env.corners[SOUTHWEST, 1, 1][C_SSW; C_WSW] *
-                            env.edges[WEST, 1, 1][C_WSW D_W; C_WNW] *
-                            O[D_N D_E; D_S D_W]
-                            # O[D_W D_S; D_N D_E] # TODO: switch to this convention
+        env.edges[NORTH, 1, 1][C_NNW D_N; C_NNE] *
+        env.corners[NORTHEAST, 1, 1][C_NNE; C_ENE] *
+        env.edges[EAST, 1, 1][C_ENE D_E; C_ESE] *
+        env.corners[SOUTHEAST, 1, 1][C_ESE; C_SSE] *
+        env.edges[SOUTH, 1, 1][C_SSE D_S; C_SSW] *
+        env.corners[SOUTHWEST, 1, 1][C_SSW; C_WSW] *
+        env.edges[WEST, 1, 1][C_WSW D_W; C_WNW] *
+        O[D_N D_E; D_S D_W]
+    # O[D_W D_S; D_N D_E] # TODO: switch to this convention
 end
 
 ## Test
@@ -105,13 +118,7 @@ Z = InfinitePartitionFunction(O)
 χenv = ℂ^12
 env0 = CTMRGEnv(Z, χenv)
 
-ctm_alg = CTMRG(;
-    tol=1e-10,
-    miniter=4,
-    maxiter=100,
-    verbosity=2,
-    ctmrgscheme=:simultaneous,
-)
+ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=2, ctmrgscheme=:simultaneous)
 
 env = leading_boundary(env0, Z, ctm_alg)
 
