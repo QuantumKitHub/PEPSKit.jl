@@ -57,6 +57,46 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     return total
 end
 
+function LinearAlgebra.norm(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
+    total = one(scalartype(partfunc))
+
+    for r in 1:size(partfunc, 1), c in 1:size(partfunc, 2)
+        rprev = _prev(r, size(partfunc, 1))
+        rnext = _next(r, size(partfunc, 1))
+        cprev = _prev(c, size(partfunc, 2))
+        cnext = _next(c, size(partfunc, 2))
+        total *= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1; χ2] *
+            env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
+            env.edges[NORTH, rprev, c][χ3 D3; χ4] *
+            env.corners[NORTHEAST, rprev, cnext][χ4; χ5] *
+            env.edges[EAST, r, cnext][χ5 D5; χ6] *
+            env.corners[SOUTHEAST, rnext, cnext][χ6; χ7] *
+            env.edges[SOUTH, rnext, c][χ7 D7; χ8] *
+            env.corners[SOUTHWEST, rnext, cprev][χ8; χ1] *
+            partfunc[r, c][D3 D5; D7 D1]
+        total *= tr(
+            env.corners[NORTHWEST, rprev, cprev] *
+            env.corners[NORTHEAST, rprev, c] *
+            env.corners[SOUTHEAST, r, c] *
+            env.corners[SOUTHWEST, r, cprev],
+        )
+        total /= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1; χ2] *
+            env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
+            env.corners[NORTHEAST, rprev, c][χ3; χ4] *
+            env.edges[EAST, r, c][χ4 D1; χ5] *
+            env.corners[SOUTHEAST, rnext, c][χ5; χ6] *
+            env.corners[SOUTHWEST, rnext, cprev][χ6; χ1]
+        total /= @autoopt @tensor env.corners[NORTHWEST, rprev, cprev][χ1; χ2] *
+            env.edges[NORTH, rprev, c][χ2 D1; χ3] *
+            env.corners[NORTHEAST, rprev, cnext][χ3; χ4] *
+            env.corners[SOUTHEAST, r, cnext][χ4; χ5] *
+            env.edges[SOUTH, r, c][χ5 D1; χ6] *
+            env.corners[SOUTHWEST, r, cprev][χ6; χ1]
+    end
+
+    return total
+end
+
 """
     correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
 
