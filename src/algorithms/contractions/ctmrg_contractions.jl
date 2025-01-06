@@ -345,9 +345,12 @@ Contract the CTMRG left projector with the higher-dimensional subspace facing to
 
 function left_projector(E_1, C, E_2, V, isqS, partfunc::PartitionFunctionTensor)
     return @autoopt @tensor P_left[χ_in D_in; χ_out] :=
-        E_1[χ_in D1; χ1] * C[χ1; χ2] * E_2[χ2 D2; χ3] * partfunc[D1 D_in; D2 D3]
-    conj(V[χ4; χ3 D3])
-    return isqS[χ4; χ_out]
+        E_1[χ_in D1; χ1] *
+        C[χ1; χ2] *
+        E_2[χ2 D2; χ3] *
+        partfunc[D1 D_in; D2 D3] *
+        conj(V[χ4; χ3 D3]) *
+        isqS[χ4; χ_out]
 end
 
 """
@@ -388,8 +391,12 @@ Contract the CTMRG right projector with the higher-dimensional subspace facing t
 
 function right_projector(E_1, C, E_2, U, isqS, partfunc::PartitionFunctionTensor)
     return @autoopt @tensor P_right[χ_in; χ_out D_out] :=
-        isqS[χ_in; χ1] * conj(U[χ1; χ2 D1]) * partfunc[D1 D_out; D2 D3]
-    return E_2[χ2 D2; χ3] * C[χ3; χ4] * E_1[χ4 D3; χ_out]
+        isqS[χ_in; χ1] *
+        conj(U[χ1; χ2 D1]) *
+        partfunc[D1 D_out; D2 D3] *
+        E_2[χ2 D2; χ3] *
+        C[χ3; χ4] *
+        E_1[χ4 D3; χ_out]
 end
 
 """
