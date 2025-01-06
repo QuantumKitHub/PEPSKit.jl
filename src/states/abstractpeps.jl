@@ -79,9 +79,9 @@ Abstract supertype for a 2D projected entangled-pair operator.
 abstract type AbstractPEPO end
 
 # Rotations
-Base.rotl90(t::PartitionFunctionTensor) = permute(t, ((2, 3), (1, 2)))
-Base.rotr90(t::PartitionFunctionTensor) = permute(t, ((4, 1), (2, 3)))
-Base.rot180(t::PartitionFunctionTensor) = permute(t, ((3, 4), (1, 2)))
+Base.rotl90(t::PartitionFunctionTensor) = permute(t, ((3, 1), (4, 2)))
+Base.rotr90(t::PartitionFunctionTensor) = permute(t, ((2, 4), (1, 3)))
+Base.rot180(t::PartitionFunctionTensor) = permute(t, ((4, 3), (2, 1)))
 
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
 Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))

@@ -76,7 +76,7 @@ function enlarge_northwest_corner(
         E_west[χ_S D1; χ1] *
         C_northwest[χ1; χ2] *
         E_north[χ2 D2; χ_E] *
-        partfunc[D2 D_E; D_S D1]
+        partfunc[D1 D_S; D2 D_E]
 end
 
 """
@@ -151,7 +151,7 @@ function enlarge_northeast_corner(
         E_north[χ_W D1; χ1] *
         C_northeast[χ1; χ2] *
         E_east[χ2 D2; χ_S] *
-        partfunc[D1 D2; D_S D_W]
+        partfunc[D_W D_S; D1 D2]
 end
 
 """
@@ -226,7 +226,7 @@ function enlarge_southeast_corner(
         E_east[χ_N D1; χ1] *
         C_southeast[χ1; χ2] *
         E_south[χ2 D2; χ_W] *
-        partfunc[D_N D1; D2 D_W]
+        partfunc[D_W D2; D_N D1]
 end
 
 """
@@ -301,7 +301,7 @@ function enlarge_southwest_corner(
         E_south[χ_E D1; χ1] *
         C_southwest[χ1; χ2] *
         E_west[χ2 D2; χ_N] *
-        partfunc[D_N D_E; D1 D2]
+        partfunc[D2 D1; D_N D_E]
 end
 
 # Projector contractions
@@ -345,7 +345,7 @@ Contract the CTMRG left projector with the higher-dimensional subspace facing to
 
 function left_projector(E_1, C, E_2, V, isqS, partfunc::PartitionFunctionTensor)
     return @autoopt @tensor P_left[χ_in D_in; χ_out] :=
-        E_1[χ_in D1; χ1] * C[χ1; χ2] * E_2[χ2 D2; χ3] * partfunc[D2 D3; D_in D1]
+        E_1[χ_in D1; χ1] * C[χ1; χ2] * E_2[χ2 D2; χ3] * partfunc[D1 D_in; D2 D3]
     conj(V[χ4; χ3 D3])
     return isqS[χ4; χ_out]
 end
@@ -388,7 +388,7 @@ Contract the CTMRG right projector with the higher-dimensional subspace facing t
 
 function right_projector(E_1, C, E_2, U, isqS, partfunc::PartitionFunctionTensor)
     return @autoopt @tensor P_right[χ_in; χ_out D_out] :=
-        isqS[χ_in; χ1] * conj(U[χ1; χ2 D1]) * partfunc[D2 D3; D_out D1]
+        isqS[χ_in; χ1] * conj(U[χ1; χ2 D1]) * partfunc[D1 D_out; D2 D3]
     return E_2[χ2 D2; χ3] * C[χ3; χ4] * E_1[χ4 D3; χ_out]
 end
 
@@ -566,7 +566,7 @@ Contract two quadrants (enlarged corners) to form a half-infinite environment.
 ```
     |~~~~~~~~~| -- |~~~~~~~~~|
     |quadrant1|    |quadrant2|
-    |~~~~~~~~~| == |~~~~~~~~~|
+    |~~~~~~~~~| -- |~~~~~~~~~|
       |    |         |     |
 ```
 
@@ -606,8 +606,8 @@ function halfinfinite_environment(
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3; χ3] *
-        partfunc_1[D3 D9; D_in D1] *
-        partfunc_2[D5 D7; D_out D9] *
+        partfunc_1[D1 D_in; D3 D9] *
+        partfunc_2[D9 D_out; D5 D7] *
         E_3[χ3 D5; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ_out]
@@ -620,8 +620,8 @@ function halfinfinite_environment(
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3; χ3] *
-        partfunc_1[D3 D9; D_in D1] *
-        partfunc_2[D5 D7; D11 D9] *
+        partfunc_1[D1 D_in; D3 D9] *
+        partfunc_2[D9 D11; D5 D7] *
         E_3[χ3 D5; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ6] *
@@ -636,8 +636,8 @@ function halfinfinite_environment(
         conj(E_1[χ1 D3; χ2]) *
         conj(C_1[χ2; χ3]) *
         conj(E_2[χ3 D5; χ4]) *
-        conj(partfunc_1[D5 D11; D1 D3]) *
-        conj(partfunc_2[D7 D9; D_in D11]) *
+        conj(partfunc_1[D3 D1; D5 D11]) *
+        conj(partfunc_2[D11 D_in; D7 D9]) *
         conj(E_3[χ4 D7; χ5]) *
         conj(C_2[χ5; χ6]) *
         conj(E_4[χ6 D9; χ_in])
@@ -990,7 +990,7 @@ function renormalize_northwest_corner(
         E_west[χ1 D3; χ2] *
         C_northwest[χ2; χ3] *
         E_north[χ3 D5; χ4] *
-        partfunc[D5 D7; D1 D3] *
+        partfunc[D3 D1; D5 D7] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -1069,7 +1069,7 @@ function renormalize_northeast_corner(
         E_north[χ1 D3; χ2] *
         C_northeast[χ2; χ3] *
         E_east[χ3 D5; χ4] *
-        partfunc[D3 D5; D7 D1] *
+        partfunc[D1 D7; D3 D5] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -1148,7 +1148,7 @@ function renormalize_southeast_corner(
         E_east[χ1 D3; χ2] *
         C_southeast[χ2; χ3] *
         E_south[χ3 D5; χ4] *
-        partfunc[D1 D3; D5 D7] *
+        partfunc[D7 D5; D1 D3] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -1227,7 +1227,7 @@ function renormalize_southwest_corner(
         E_south[χ1 D3; χ2] *
         C_southwest[χ2; χ3] *
         E_west[χ3 D5; χ4] *
-        partfunc[D7 D1; D3 D5] *
+        partfunc[D5 D3; D7 D1] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -1371,7 +1371,7 @@ function renormalize_north_edge(
 ) where {S}
     return @autoopt @tensor edge[χ_W D_S; χ_E] :=
         E_north[χ1 D1; χ2] *
-        partfunc[D1 D3; D_S D5] *
+        partfunc[D5 D_S; D1 D3] *
         P_left[χ2 D3; χ_E] *
         P_right[χ_W; χ1 D5]
 end
@@ -1448,7 +1448,7 @@ function renormalize_east_edge(
 ) where {S}
     return @autoopt @tensor edge[χ_N D_W; χ_S] :=
         E_east[χ1 D1; χ2] *
-        partfunc[D5 D1; D3 D_W] *
+        partfunc[D_W D3; D5 D1] *
         P_bottom[χ2 D3; χ_S] *
         P_top[χ_N; χ1 D5]
 end
@@ -1520,7 +1520,7 @@ function renormalize_south_edge(
 ) where {S}
     return @autoopt @tensor edge[χ_E D_N; χ_W] :=
         E_south[χ1 D1; χ2] *
-        partfunc[D_N D5; D1 D3] *
+        partfunc[D3 D1; D_N D5] *
         P_left[χ2 D3; χ_W] *
         P_right[χ_E; χ1 D5]
 end
@@ -1632,7 +1632,7 @@ function renormalize_west_edge(
 ) where {S}
     return @autoopt @tensor edge[χ_S D_E; χ_N] :=
         E_west[χ1 D1; χ2] *
-        partfunc[D3 D_E; D5 D1] *
+        partfunc[D1 D5; D3 D_E] *
         P_bottom[χ2 D3; χ_N] *
         P_top[χ_S; χ1 D5]
 end

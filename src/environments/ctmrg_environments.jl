@@ -308,10 +308,10 @@ function CTMRGEnv(
     chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = map(partfunc.A) do t
-        return (adjoint(space(t, 1)),)
+        return (adjoint(space(t, 3)),)
     end
     Ds_east = map(partfunc.A) do t
-        return (adjoint(space(t, 2)),)
+        return (adjoint(space(t, 4)),)
     end
     return CTMRGEnv(
         randn,
@@ -334,10 +334,10 @@ function CTMRGEnv(
     chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = map(partfunc.A) do t
-        return (adjoint(space(t, 1)),)
+        return (adjoint(space(t, 3)),)
     end
     Ds_east = map(partfunc.A) do t
-        return (adjoint(space(t, 2)),)
+        return (adjoint(space(t, 4)),)
     end
     return CTMRGEnv(
         f,

@@ -66,7 +66,7 @@ function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
     O = zeros(2, 2, 2, 2)
     O[1, 1, 1, 1] = 1
     O[2, 2, 2, 2] = 1
-    @tensor o[-1 -2; -3 -4] := O[1 2; 3 4] * nt[-1; 1] * nt[-2; 2] * nt[-3; 3] * nt[-4; 4]
+    @tensor o[-1 -2; -3 -4] := O[3 4; 2 1] * nt[-3; 3] * nt[-4; 4] * nt[-2; 2] * nt[-1; 1]
 
     # magnetization tensor
     M = copy(O)
@@ -101,8 +101,7 @@ function local_contraction(
         env.edges[SOUTH, 1, 1][C_SSE D_S; C_SSW] *
         env.corners[SOUTHWEST, 1, 1][C_SSW; C_WSW] *
         env.edges[WEST, 1, 1][C_WSW D_W; C_WNW] *
-        O[D_N D_E; D_S D_W]
-    # O[D_W D_S; D_N D_E] # TODO: switch to this convention
+        O[D_W D_S; D_N D_E]
 end
 
 ## Test

@@ -73,7 +73,7 @@ function LinearAlgebra.norm(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
             env.corners[SOUTHEAST, rnext, cnext][χ6; χ7] *
             env.edges[SOUTH, rnext, c][χ7 D7; χ8] *
             env.corners[SOUTHWEST, rnext, cprev][χ8; χ1] *
-            partfunc[r, c][D3 D5; D7 D1]
+            partfunc[r, c][D1 D7; D3 D5]
         total *= tr(
             env.corners[NORTHWEST, rprev, cprev] *
             env.corners[NORTHEAST, rprev, c] *
