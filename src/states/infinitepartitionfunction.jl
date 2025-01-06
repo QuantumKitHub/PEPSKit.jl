@@ -5,7 +5,9 @@ Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
 struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: AbstractPartitionFunction
     A::Matrix{T}
-    InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunctionTensor} = new{T}(A)
+    function InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunctionTensor}
+        return new{T}(A)
+    end
     function InfinitePartitionFunction(A::Array{T,2}) where {T<:PartitionFunctionTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
             space(A[d, w], 1) == space(A[_prev(d, end), w], 3)' || throw(
