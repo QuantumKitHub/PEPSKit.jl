@@ -55,7 +55,7 @@ function enlarge_northwest_corner(
     E_west::CTMRGEdgeTensor{S,2},
     C_northwest::CTMRGCornerTensor,
     E_north::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction,
+    partfunc::PartitionFunctionTensor,
 ) where {S}
     return @autoopt @tensor corner[χ_S D_S; χ_E D_E] :=
         E_west[χ_S D1; χ1] *
@@ -115,7 +115,7 @@ function enlarge_northeast_corner(
     E_north::CTMRGEdgeTensor{S,2},
     C_northeast::CTMRGCornerTensor,
     E_east::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction,
+    partfunc::PartitionFunctionTensor,
 ) where {S}
     return @autoopt @tensor corner[χ_W D_W; χ_S D_S] :=
         E_north[χ_W D1; χ1] *
@@ -175,7 +175,7 @@ function enlarge_southeast_corner(
     E_east::CTMRGEdgeTensor{S,2},
     C_southeast::CTMRGCornerTensor,
     E_south::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction,
+    partfunc::PartitionFunctionTensor,
 ) where {S}
     return @autoopt @tensor corner[χ_N D_N; χ_W D_W] :=
         E_east[χ_N D1; χ1] *
@@ -235,7 +235,7 @@ function enlarge_southwest_corner(
     E_south::CTMRGEdgeTensor{S,2},
     C_southwest::CTMRGCornerTensor,
     E_west::CTMRGEdgeTensor{S,2},
-    partfunc::PartitionFunction,
+    partfunc::PartitionFunctionTensor,
 ) where {S}
     return @autoopt @tensor corner[χ_E D_E; χ_N D_N] :=
         E_south[χ_E D1; χ1] *
@@ -270,7 +270,7 @@ function left_projector(E_1, C, E_2, V, isqS, ket::PEPSTensor, bra::PEPSTensor=k
         isqS[χ4; χ_out]
 end
 
-function left_projector(E_1, C, E_2, V, isqS, partfunc::PartitionFunction)
+function left_projector(E_1, C, E_2, V, isqS, partfunc::PartitionFunctionTensor)
     return @autoopt @tensor P_left[χ_in D_in; χ_out] :=
         E_1[χ_in D1; χ1] * C[χ1; χ2] * E_2[χ2 D2; χ3] * partfunc[D2 D3; D_in D1]
     conj(V[χ4; χ3 D3])
@@ -300,7 +300,7 @@ function right_projector(E_1, C, E_2, U, isqS, ket::PEPSTensor, bra::PEPSTensor=
         E_1[χ4 D5 D6; χ_out]
 end
 
-function right_projector(E_1, C, E_2, U, isqS, partfunc::PartitionFunction)
+function right_projector(E_1, C, E_2, U, isqS, partfunc::PartitionFunctionTensor)
     return @autoopt @tensor P_right[χ_in; χ_out D_out] :=
         isqS[χ_in; χ1] * conj(U[χ1; χ2 D1]) * partfunc[D2 D3; D_out D1]
     return E_2[χ2 D2; χ3] * C[χ3; χ4] * E_1[χ4 D3; χ_out]
@@ -405,7 +405,7 @@ end
 
 function halfinfinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, partfunc_1::P, partfunc_2::P
-) where {P<:PartitionFunction}
+) where {P<:PartitionFunctionTensor}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
@@ -446,7 +446,7 @@ end
 
 function halfinfinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{S,2}, partfunc_1::P, partfunc_2::P
-) where {S,P<:PartitionFunction}
+) where {S,P<:PartitionFunctionTensor}
     return @autoopt @tensor env_x[χ_in D_in] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
@@ -716,7 +716,7 @@ end
 
 function halfinfinite_environment(
     x::AbstractTensor{S,2}, C_1, C_2, E_1, E_2, E_3, E_4, partfunc_1::P, partfunc_2::P
-) where {S,P<:PartitionFunction}
+) where {S,P<:PartitionFunctionTensor}
     return @autoopt @tensor env_x[χ_in D_in] :=
         x[χ1 D1 D2] *
         conj(E_1[χ1 D3; χ2]) *
@@ -809,7 +809,7 @@ function renormalize_northwest_corner(
 end
 
 function renormalize_northwest_corner(
-    E_west, C_northwest, E_north, P_left, P_right, partfunc::PartitionFunction
+    E_west, C_northwest, E_north, P_left, P_right, partfunc::PartitionFunctionTensor
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
@@ -871,7 +871,7 @@ function renormalize_northeast_corner(
 end
 
 function renormalize_northeast_corner(
-    E_north, C_northeast, E_east, P_left, P_right, partfunc::PartitionFunction
+    E_north, C_northeast, E_east, P_left, P_right, partfunc::PartitionFunctionTensor
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
@@ -933,7 +933,7 @@ function renormalize_southeast_corner(
 end
 
 function renormalize_southeast_corner(
-    E_east, C_southeast, E_south, P_left, P_right, partfunc::PartitionFunction
+    E_east, C_southeast, E_south, P_left, P_right, partfunc::PartitionFunctionTensor
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
@@ -995,7 +995,7 @@ function renormalize_southwest_corner(
 end
 
 function renormalize_southwest_corner(
-    E_south, C_southwest, E_west, P_left, P_right, partfunc::PartitionFunction
+    E_south, C_southwest, E_west, P_left, P_right, partfunc::PartitionFunctionTensor
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
@@ -1112,7 +1112,7 @@ function renormalize_north_edge(
 end
 
 function renormalize_north_edge(
-    E_north::CTMRGEdgeTensor{S,2}, P_left, P_right, partfunc::PartitionFunction
+    E_north::CTMRGEdgeTensor{S,2}, P_left, P_right, partfunc::PartitionFunctionTensor
 ) where {S}
     return @autoopt @tensor edge[χ_W D_S; χ_E] :=
         E_north[χ1 D1; χ2] *
@@ -1172,7 +1172,7 @@ function renormalize_east_edge(
 end
 
 function renormalize_east_edge(
-    E_east::CTMRGEdgeTensor{S,2}, P_bottom, P_top, partfunc::PartitionFunction
+    E_east::CTMRGEdgeTensor{S,2}, P_bottom, P_top, partfunc::PartitionFunctionTensor
 ) where {S}
     return @autoopt @tensor edge[χ_N D_W; χ_S] :=
         E_east[χ1 D1; χ2] *
@@ -1229,7 +1229,7 @@ function renormalize_south_edge(
 end
 
 function renormalize_south_edge(
-    E_south::CTMRGEdgeTensor{S,2}, P_left, P_right, partfunc::PartitionFunction
+    E_south::CTMRGEdgeTensor{S,2}, P_left, P_right, partfunc::PartitionFunctionTensor
 ) where {S}
     return @autoopt @tensor edge[χ_E D_N; χ_W] :=
         E_south[χ1 D1; χ2] *
@@ -1324,7 +1324,7 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
     )
 end
 function renormalize_west_edge(
-    E_west::CTMRGEdgeTensor{S,2}, P_bottom, P_top, partfunc::PartitionFunction
+    E_west::CTMRGEdgeTensor{S,2}, P_bottom, P_top, partfunc::PartitionFunctionTensor
 ) where {S}
     return @autoopt @tensor edge[χ_S D_E; χ_N] :=
         E_west[χ1 D1; χ2] *

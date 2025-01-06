@@ -1,12 +1,12 @@
 """
-    struct InfinitePartitionFunction{T<:PartitionFunction}
+    struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePartitionFunction{T<:PartitionFunction} <: AbstractPartitionFunction
+struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: AbstractPartitionFunction
     A::Matrix{T}
-    InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunction} = new{T}(A)
-    function InfinitePartitionFunction(A::Array{T,2}) where {T<:PartitionFunction}
+    InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunctionTensor} = new{T}(A)
+    function InfinitePartitionFunction(A::Array{T,2}) where {T<:PartitionFunctionTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
             space(A[d, w], 1) == space(A[_prev(d, end), w], 3)' || throw(
                 SpaceMismatch("North virtual space at site $((d, w)) does not match.")
@@ -26,7 +26,7 @@ end
 Create an `InfinitePartitionFunction` by specifying a matrix containing the PEPS tensors at each site in
 the unit cell.
 """
-function InfinitePartitionFunction(A::AbstractMatrix{T}) where {T<:PartitionFunction}
+function InfinitePartitionFunction(A::AbstractMatrix{T}) where {T<:PartitionFunctionTensor}
     return InfinitePartitionFunction(Array(deepcopy(A))) # TODO: find better way to copy
 end
 
@@ -54,7 +54,7 @@ function InfinitePartitionFunction(
     Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
     A = map(Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PartitionFunction(f, T, N, E, S, W)
+        return PartitionFunctionTensor(f, T, N, E, S, W)
     end
 
     return InfinitePartitionFunction(A)
@@ -82,7 +82,7 @@ size of the unit cell.
 """
 function InfinitePartitionFunction(
     A::T; unitcell::Tuple{Int,Int}=(1, 1)
-) where {T<:PartitionFunction}
+) where {T<:PartitionFunctionTensor}
     return InfinitePartitionFunction(fill(A, unitcell))
 end
 
@@ -191,19 +191,19 @@ Base.rot180(t::InfinitePartitionFunction) = InfinitePartitionFunction(rot180(rot
 function ChainRulesCore.rrule(
     ::typeof(Base.getindex), state::InfinitePartitionFunction, row::Int, col::Int
 )
-    PartitionFunction = state[row, col]
+    PartitionFunctionTensor = state[row, col]
 
     function getindex_pullback(ΔPartitionFunction)
         Δstate = zerovector(state)
         Δstate[row, col] = ΔPartitionFunction
         return NoTangent(), Δstate, NoTangent(), NoTangent()
     end
-    return PartitionFunction, getindex_pullback
+    return PartitionFunctionTensor, getindex_pullback
 end
 
 function ChainRulesCore.rrule(
     ::Type{<:InfinitePartitionFunction}, A::Matrix{T}
-) where {T<:PartitionFunction}
+) where {T<:PartitionFunctionTensor}
     peps = InfinitePartitionFunction(A)
     function InfinitePartitionFunction_pullback(Δpeps)
         return NoTangent(), Δpeps.A
