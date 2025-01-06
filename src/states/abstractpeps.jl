@@ -6,6 +6,14 @@ conventionally ordered as: ``T : P ← N ⊗ E ⊗ S ⊗ W``. Here, ``P``, ``N``
 ``W`` denote the physics, north, east, south and west spaces, respectively.
 """
 const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
+
+"""
+    const PartitionFunctionTensor{S}
+
+Default type for partition function tensors with 4 virtual indices,
+conventionally ordered as: ``T : W ⊗ S ← N ⊗ E``. Here, ``N``, ``E``, ``S`` and
+``W`` denote the north, east, south and west spaces, respectively.
+"""
 const PartitionFunctionTensor{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
 
 """
