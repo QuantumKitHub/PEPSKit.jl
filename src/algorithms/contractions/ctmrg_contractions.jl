@@ -878,6 +878,208 @@ function full_infinite_environment(
         E_8[χ11 D21 D22; χ_in]
 end
 
+"""
+    full_infinite_environment(
+        quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
+    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    function full_infinite_environment(
+        half1::T, half2::T
+    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
+                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
+    full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                              partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
+    full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                              partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
+
+Contract four quadrants (enlarged corners) to form a full-infinite environment.
+
+```
+    |~~~~~~~~~| -- |~~~~~~~~~|
+    |quadrant1|    |quadrant2|
+    |~~~~~~~~~| -- |~~~~~~~~~|
+      |    |         |     |
+                     |     |
+      |    |         |     |
+    |~~~~~~~~~| -- |~~~~~~~~~|
+    |quadrant4|    |quadrant3|
+    |~~~~~~~~~| -- |~~~~~~~~~|
+```
+
+In the same manner two halfs can be used to contract the full-infinite environment.
+
+```
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+    |         half1          |
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+      |    |         |     |
+                     |     |
+      |    |         |     |
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+    |         half2          |
+    |~~~~~~~~~~~~~~~~~~~~~~~~|
+```
+
+The environment can also be contracted directly from all its constituent tensors.
+
+```
+    C_1 --  E_2       --  E_3       -- C_2
+     |       |             |            | 
+    E_1 -- partfunc_1 -- partfunc_2 -- E_4
+     |       |             |            |
+                           |            |
+     |       |             |            |
+    E_8 -- partfunc_4 -- partfunc_3 -- E_5
+     |       |             |            |
+    C_4 --  E_7       --  E_6       -- C_3
+```
+
+Alternatively, contract the environment with a vector `x` acting on it
+
+```
+    C_1 --    E_2     --    E_3      --  C_2
+     |         |             |            | 
+    E_1 -- partfunc_1 -- partfunc_2  --  E_4
+     |         |             |            |
+                             |            |
+                             |            |
+    [~~~~~x~~~~~~]           |            |
+     |         |             |            |
+    E_8 -- partfunc_4 -- partfunc_3  --  E_5
+     |         |             |            |
+    C_4 --    E_7     --    E_6      --  C_3
+
+```
+
+or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
+"""
+function full_infinite_environment(
+    quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
+) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    return @autoopt @tensor env[χ_in D_inabove; χ_out D_outabove] :=
+        quadrant1[χ_in D_inabove; χ1 D1] *
+        quadrant2[χ1 D1; χ2 D2] *
+        quadrant3[χ2 D2; χ3 D3] *
+        quadrant4[χ3 D3; χ_out D_outabove]
+end
+function full_infinite_environment(
+    half1::T, half2::T
+) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    return half_infinite_environment(half1, half2)
+end
+function full_infinite_environment(
+    C_1,
+    C_2,
+    C_3,
+    C_4,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    E_5,
+    E_6,
+    E_7,
+    E_8,
+    partfunc_1::P,
+    partfunc_2::P,
+    partfunc_3::P,
+    partfunc_4::P,
+) where {P<:PartitionFunctionTensor}
+    return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
+        E_1[χ_in D1; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3; χ3] *
+        partfunc_1[D1 D_in; D3 D11] *
+        partfunc_2[D11 D9; D5 D7] *
+        E_3[χ3 D5; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7; χ6] *
+        E_5[χ6 D13; χ7] *
+        C_3[χ7; χ8] *
+        E_6[χ8 D15; χ9] *
+        partfunc_3[D17 D15; D9 D13] *
+        partfunc_4[D21 D19; D_out D17] *
+        E_7[χ9 D19; χ10] *
+        C_4[χ10; χ11] *
+        E_8[χ11 D21; χ_out]
+end
+function full_infinite_environment(
+    C_1,
+    C_2,
+    C_3,
+    C_4,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    E_5,
+    E_6,
+    E_7,
+    E_8,
+    x::AbstractTensor{S,2},
+    partfunc_1::P,
+    partfunc_2::P,
+    partfunc_3::P,
+    partfunc_4::P,
+) where {S,P<:PartitionFunctionTensor}
+    return @autoopt @tensor env_x[χ_in D_in] :=
+        E_1[χ_in D1; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3; χ3] *
+        partfunc_1[D1 D_in; D3 D11] *
+        partfunc_2[D11 D9; D5 D7] *
+        E_3[χ3 D5; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7; χ6] *
+        E_5[χ6 D13; χ7] *
+        C_3[χ7; χ8] *
+        E_6[χ8 D15; χ9] *
+        partfunc_3[D17 D15; D9 D13] *
+        partfunc_4[D21 D19; D_x D17] *
+        E_7[χ9 D19; χ10] *
+        C_4[χ10; χ11] *
+        E_8[χ11 D21; χ_x] *
+        x[χ_x D_x]
+end
+function full_infinite_environment(
+    x::AbstractTensor{S,2},
+    C_1,
+    C_2,
+    C_3,
+    C_4,
+    E_1,
+    E_2,
+    E_3,
+    E_4,
+    E_5,
+    E_6,
+    E_7,
+    E_8,
+    partfunc_1::P,
+    partfunc_2::P,
+    partfunc_3::P,
+    partfunc_4::P,
+) where {S,P<:PEPSTensor}
+    return @autoopt @tensor x_env[χ_in D_in] :=
+        x[χ_x D_x] *
+        E_1[χ_x D1; χ1] *
+        C_1[χ1; χ2] *
+        E_2[χ2 D3; χ3] *
+        partfunc_1[D1 D_x; D3 D11] *
+        partfunc_2[D11 D9; D5 D7] *
+        E_3[χ3 D5; χ4] *
+        C_2[χ4; χ5] *
+        E_4[χ5 D7; χ6] *
+        E_5[χ6 D13; χ7] *
+        C_3[χ7; χ8] *
+        E_6[χ8 D15; χ9] *
+        partfunc_3[D17 D15; D9 D13] *
+        partfunc_4[D21 D19; D_in D17] *
+        E_7[χ9 D19; χ10] *
+        C_4[χ10; χ11] *
+        E_8[χ11 D21; χ_in]
+end
+
 # Renormalization contractions
 # ----------------------------
 
