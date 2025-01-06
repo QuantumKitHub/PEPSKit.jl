@@ -10,10 +10,10 @@ struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: AbstractPartitio
     end
     function InfinitePartitionFunction(A::Array{T,2}) where {T<:PartitionFunctionTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
-            space(A[d, w], 1) == space(A[_prev(d, end), w], 3)' || throw(
+            space(A[d, w], 1) == space(A[_prev(d, end), w], 4)' || throw(
                 SpaceMismatch("North virtual space at site $((d, w)) does not match.")
             )
-            space(A[d, w], 2) == space(A[d, _next(w, end)], 4)' ||
+            space(A[d, w], 2) == space(A[d, _next(w, end)], 3)' ||
                 throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
             dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
         end
