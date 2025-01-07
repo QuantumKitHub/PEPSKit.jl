@@ -409,7 +409,7 @@ function half_infinite_environment(
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
 end
 
-function halfinfinite_environment(
+function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
 ) where {P<:PEPSTensor}
     return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
@@ -425,7 +425,7 @@ function halfinfinite_environment(
         E_4[χ5 D7 D8; χ_out]
 end
 
-function halfinfinite_environment(
+function half_infinite_environment(
     C_1,
     C_2,
     E_1,
@@ -452,7 +452,7 @@ function halfinfinite_environment(
         x[χ6 D11 D12]
 end
 
-function halfinfinite_environment(
+function half_infinite_environment(
     x::AbstractTensor{S,3},
     C_1,
     C_2,
@@ -540,7 +540,7 @@ function half_infinite_environment(
         E_4[χ5 D7; χ_out]
 end
 
-function halfinfinite_environment(
+function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{S,2}, partfunc_1::P, partfunc_2::P
 ) where {S,P<:PartitionFunctionTensor}
     return @autoopt @tensor env_x[χ_in D_in] :=
@@ -555,7 +555,7 @@ function halfinfinite_environment(
         x[χ6 D11]
 end
 
-function halfinfinite_environment(
+function half_infinite_environment(
     x::AbstractTensor{S,2}, C_1, C_2, E_1, E_2, E_3, E_4, partfunc_1::P, partfunc_2::P
 ) where {S,P<:PartitionFunctionTensor}
     return @autoopt @tensor env_x[χ_in D_in] :=

@@ -262,7 +262,7 @@ function TensorKit.TensorMap(env::HalfInfiniteEnv)  # Dense operator
 end
 
 function TensorKit.TensorMap(env::HalfInfinitePartitionFunctionEnv)  # Dense operator
-    return halfinfinite_environment(
+    return half_infinite_environment(
         env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.partfunc_1, env.partfunc_2
     )
 end
@@ -305,8 +305,8 @@ function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
     )
 end
 
-# Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
-function halfinfinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
+# Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
+function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
     return HalfInfiniteEnv(
         ec_1.C,
         ec_2.C,
@@ -348,7 +348,7 @@ function (env::HalfInfinitePartitionFunctionEnv)(x, ::Val{true})  # Adjoint line
     )
 end
 
-# Wrapper around halfinfinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
+# Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
 function halfinfinite_partitionfunction_environment(
     ec_1::EnlargedPartitionFunctionCorner, ec_2::EnlargedPartitionFunctionCorner
 )
