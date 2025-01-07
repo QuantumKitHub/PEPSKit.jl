@@ -179,9 +179,7 @@ function enlarge_southeast_corner(
         ket[d; D_Nabove D1 D3 D_Wabove] *
         conj(bra[d; D_Nbelow D2 D4 D_Wbelow])
 end
-function enlarge_southeast_corner(
-    (row, col), envs::CTMRGEnv, partfunc::InfinitePF
-)
+function enlarge_southeast_corner((row, col), envs::CTMRGEnv, partfunc::InfinitePF)
     E_east = envs.edges[EAST, row, _next(col, end)]
     C_southeast = envs.corners[SOUTHEAST, _next(row, end), _next(col, end)]
     E_south = envs.edges[SOUTH, _next(row, end), col]
@@ -245,9 +243,7 @@ function enlarge_southwest_corner(
         ket[d; D_Nabove D_Eabove D1 D3] *
         conj(bra[d; D_Nbelow D_Ebelow D2 D4])
 end
-function enlarge_southwest_corner(
-    (row, col), envs::CTMRGEnv, partfunc::InfinitePF
-)
+function enlarge_southwest_corner((row, col), envs::CTMRGEnv, partfunc::InfinitePF)
     E_south = envs.edges[SOUTH, _next(row, end), col]
     C_southwest = envs.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
     E_west = envs.edges[WEST, row, _prev(col, end)]
