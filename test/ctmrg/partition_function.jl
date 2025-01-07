@@ -1,4 +1,5 @@
 using Test
+using Random
 using PEPSKit
 using TensorKit
 using LinearAlgebra
@@ -111,6 +112,8 @@ end
 beta = 0.5
 O, M, E = classical_ising(; beta)
 Z = InfinitePartitionFunction(O)
+
+Random.seed!(81812781143)
 
 # contract
 

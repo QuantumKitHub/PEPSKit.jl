@@ -305,22 +305,6 @@ function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
     )
 end
 
-# Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
-function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
-    return HalfInfiniteEnv(
-        ec_1.C,
-        ec_2.C,
-        ec_1.E_1,
-        ec_1.E_2,
-        ec_2.E_1,
-        ec_2.E_2,
-        ec_1.ket,
-        ec_2.ket,
-        ec_1.bra,
-        ec_2.bra,
-    )
-end
-
 function (env::HalfInfinitePartitionFunctionEnv)(x, ::Val{false})  # Linear map: env() * x
     return halfinfinite_partitionfunction_environment(
         env.C_1,
