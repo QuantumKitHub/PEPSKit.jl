@@ -1,4 +1,6 @@
 const CTMRGEdgeTensor{S,N} = AbstractTensorMap{S,N,1}
+const CTMRG_PEPS_EdgeTensor{S} = CTMRGEdgeTensor{S,3}
+const CTMRG_PF_EdgeTensor{S} = CTMRGEdgeTensor{S,2}
 const CTMRGCornerTensor{S} = AbstractTensorMap{S,1,1}
 
 # Enlarged corner contractions
