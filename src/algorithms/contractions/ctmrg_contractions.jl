@@ -371,35 +371,47 @@ end
     half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
                               ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
 
+    half_infinite_environment(quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2})
+    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
+                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
+    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
+    half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
+
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
 ```
     |~~~~~~~~~| -- |~~~~~~~~~|
     |quadrant1|    |quadrant2|
-    |~~~~~~~~~| == |~~~~~~~~~|
-      |    ||        ||    |
+    |~~~~~~~~~| -- |~~~~~~~~~|
+      |     |        |     |
 ```
 
 The environment can also be contracted directly from all its constituent tensors.
 
 ```
-    C_1 --  E_2      --  E_3      -- C_2
-     |       ||          ||           | 
-    E_1 == ket_bra_1 == ket_bra_2 == E_4
-     |       ||          ||           |
+    C_1 -- E_2 -- E_3 -- C_2
+     |      |      |      | 
+    E_1 -- A_1 -- A_2 -- E_4
+     |      |      |      |
 ```
 
 Alternatively, contract the environment with a vector `x` acting on it
 
 ```
-    C_1 --  E_2      --  E_3      -- C_2
-     |       ||          ||           | 
-    E_1 == ket_bra_1 == ket_bra_2 == E_4
-     |       ||          ||           |
-                         [~~~~~~x~~~~~~]
+    C_1 -- E_2 -- E_3 -- C_2
+     |      |      |      | 
+    E_1 -- A_1 -- A_2 -- E_4
+     |      |      |      |
+                  [~~~x~~~~]
 ```
 
 or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
+
+Here `A` systematically denotes either:
+- a local pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function half_infinite_environment(
     quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3}
@@ -424,7 +436,6 @@ function half_infinite_environment(
         C_2[χ4; χ5] *
         E_4[χ5 D7 D8; χ_out]
 end
-
 function half_infinite_environment(
     C_1,
     C_2,
@@ -451,7 +462,6 @@ function half_infinite_environment(
         E_4[χ5 D7 D8; χ6] *
         x[χ6 D11 D12]
 end
-
 function half_infinite_environment(
     x::AbstractTensor{S,3},
     C_1,
@@ -478,57 +488,15 @@ function half_infinite_environment(
         conj(C_2[χ5; χ6]) *
         conj(E_4[χ6 D9 D10; χ_in])
 end
-
-"""
-    half_infinite_environment(quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2})
-    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
-                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
-    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
-    half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
-                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
-
-Contract two quadrants (enlarged corners) to form a half-infinite environment.
-
-```
-    |~~~~~~~~~| -- |~~~~~~~~~|
-    |quadrant1|    |quadrant2|
-    |~~~~~~~~~| -- |~~~~~~~~~|
-      |    |         |     |
-```
-
-The environment can also be contracted directly from all its constituent tensors.
-
-```
-    C_1 --  E_2      --  E_3      -- C_2
-     |       |            |           | 
-    E_1 -- ket_bra_1 -- ket_bra_2 -- E_4
-     |       |            |           |
-```
-
-Alternatively, contract the environment with a vector `x` acting on it
-
-```
-    C_1 --  E_2      --  E_3      -- C_2
-     |       |            |           | 
-    E_1 -- ket_bra_1 -- ket_bra_2 -- E_4
-     |       |            |           |
-                         [~~~~~~x~~~~~~]
-```
-
-or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
-"""
-
 function half_infinite_environment(
     quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2}
 ) where {S}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
         quadrant1[χ_in D_in; χ D1] * quadrant2[χ D1; χ_out D_out]
 end
-
 function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, partfunc_1::P, partfunc_2::P
-) where {P<:PartitionFunctionTensor}
+) where {P<:PFunctionTensor}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
@@ -539,10 +507,9 @@ function half_infinite_environment(
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ_out]
 end
-
 function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{S,2}, partfunc_1::P, partfunc_2::P
-) where {S,P<:PartitionFunctionTensor}
+) where {S,P<:PFunctionTensor}
     return @autoopt @tensor env_x[χ_in D_in] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
@@ -554,10 +521,9 @@ function half_infinite_environment(
         E_4[χ5 D7; χ6] *
         x[χ6 D11]
 end
-
 function half_infinite_environment(
     x::AbstractTensor{S,2}, C_1, C_2, E_1, E_2, E_3, E_4, partfunc_1::P, partfunc_2::P
-) where {S,P<:PartitionFunctionTensor}
+) where {S,P<:PFunctionTensor}
     return @autoopt @tensor env_x[χ_in D_in] :=
         x[χ1 D1 D2] *
         conj(E_1[χ1 D3; χ2]) *
@@ -586,18 +552,31 @@ end
                               ket_1::P, ket_2::P, ket_3::P, ket_4::P,
                               bra_1::P=ket_1, bra_2::P=ket_2, bra_3::P=ket_3, bra_4::P=ket_4) where {P<:PEPSTensor}
 
+    full_infinite_environment(
+        quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
+    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    function full_infinite_environment(
+        half1::T, half2::T
+    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
+                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
+    full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
+                              partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
+    full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
+                              partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
+
 Contract four quadrants (enlarged corners) to form a full-infinite environment.
 
 ```
     |~~~~~~~~~| -- |~~~~~~~~~|
     |quadrant1|    |quadrant2|
     |~~~~~~~~~| == |~~~~~~~~~|
-      |    ||        ||    |
-                     ||    |
-      |    ||        ||    |
+      |     |        |     |
+                     |     |
+      |     |        |     |
     |~~~~~~~~~| -- |~~~~~~~~~|
     |quadrant4|    |quadrant3|
-    |~~~~~~~~~| == |~~~~~~~~~|
+    |~~~~~~~~~| -- |~~~~~~~~~|
 ```
 
 In the same manner two halfs can be used to contract the full-infinite environment.
@@ -606,9 +585,9 @@ In the same manner two halfs can be used to contract the full-infinite environme
     |~~~~~~~~~~~~~~~~~~~~~~~~|
     |         half1          |
     |~~~~~~~~~~~~~~~~~~~~~~~~|
-      |    ||        ||    |
-                     ||    |
-      |    ||        ||    |
+      |     |        |     |
+                     |     |
+      |     |        |     |
     |~~~~~~~~~~~~~~~~~~~~~~~~|
     |         half2          |
     |~~~~~~~~~~~~~~~~~~~~~~~~|
@@ -617,35 +596,39 @@ In the same manner two halfs can be used to contract the full-infinite environme
 The environment can also be contracted directly from all its constituent tensors.
 
 ```
-    C_1 --  E_2      --  E_3      -- C_2
-     |       ||          ||           | 
-    E_1 == ket_bra_1 == ket_bra_2 == E_4
-     |       ||          ||           |
-                         ||           |
-     |       ||          ||           |
-    E_8 == ket_bra_4 == ket_bra_3 == E_5
-     |       ||          ||           |
-    C_4 --  E_7      --  E_6      -- C_3
+    C_1 -- E_2 -- E_3 -- C_2
+     |      |      |      | 
+    E_1 -- A_1 -- A_2 -- E_4
+     |      |      |      |
+                   |      |
+     |      |      |      |
+    E_8 -- A_4 -- A_3 -- E_5
+     |      |      |      |
+    C_4 -- E_7 -- E_6 -- C_3
 ```
 
 Alternatively, contract the environment with a vector `x` acting on it
 
 ```
-    C_1 --  E_2      --  E_3      -- C_2
-     |       ||          ||           | 
-    E_1 == ket_bra_1 == ket_bra_2 == E_4
-     |       ||          ||           |
-                         ||           |
-                         ||           |
-    [~~~~x~~~~~]         ||           |
-     |       ||          ||           |
-    E_8 == ket_bra_4 == ket_bra_3 == E_5
-     |       ||          ||           |
-    C_4 --  E_7      --  E_6      -- C_3
+    C_1 -- E_2 -- E_3 -- C_2
+     |      |      |      | 
+    E_1 -- A_1 -- A_2 -- E_4
+     |      |      |      |
+                   |      |
+                   |      |
+    [~~~~x~~~]     |      |
+     |      |      |      |
+    E_8 -- A_4 -- A_3 -- E_5
+     |      |      |      |
+    C_4 -- E_7 -- E_6 -- C_3
 
 ```
 
 or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
+
+Here `A` systematically denotes either:
+- a local pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function full_infinite_environment(
     quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
@@ -797,82 +780,6 @@ function full_infinite_environment(
         C_4[χ10; χ11] *
         E_8[χ11 D21 D22; χ_in]
 end
-
-"""
-    full_infinite_environment(
-        quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
-    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
-    function full_infinite_environment(
-        half1::T, half2::T
-    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
-    full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
-                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
-    full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                              partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
-    full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
-                              partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
-
-Contract four quadrants (enlarged corners) to form a full-infinite environment.
-
-```
-    |~~~~~~~~~| -- |~~~~~~~~~|
-    |quadrant1|    |quadrant2|
-    |~~~~~~~~~| -- |~~~~~~~~~|
-      |    |         |     |
-                     |     |
-      |    |         |     |
-    |~~~~~~~~~| -- |~~~~~~~~~|
-    |quadrant4|    |quadrant3|
-    |~~~~~~~~~| -- |~~~~~~~~~|
-```
-
-In the same manner two halfs can be used to contract the full-infinite environment.
-
-```
-    |~~~~~~~~~~~~~~~~~~~~~~~~|
-    |         half1          |
-    |~~~~~~~~~~~~~~~~~~~~~~~~|
-      |    |         |     |
-                     |     |
-      |    |         |     |
-    |~~~~~~~~~~~~~~~~~~~~~~~~|
-    |         half2          |
-    |~~~~~~~~~~~~~~~~~~~~~~~~|
-```
-
-The environment can also be contracted directly from all its constituent tensors.
-
-```
-    C_1 --  E_2       --  E_3       -- C_2
-     |       |             |            | 
-    E_1 -- partfunc_1 -- partfunc_2 -- E_4
-     |       |             |            |
-                           |            |
-     |       |             |            |
-    E_8 -- partfunc_4 -- partfunc_3 -- E_5
-     |       |             |            |
-    C_4 --  E_7       --  E_6       -- C_3
-```
-
-Alternatively, contract the environment with a vector `x` acting on it
-
-```
-    C_1 --    E_2     --    E_3      --  C_2
-     |         |             |            | 
-    E_1 -- partfunc_1 -- partfunc_2  --  E_4
-     |         |             |            |
-                             |            |
-                             |            |
-    [~~~~~x~~~~~~]           |            |
-     |         |             |            |
-    E_8 -- partfunc_4 -- partfunc_3  --  E_5
-     |         |             |            |
-    C_4 --    E_7     --    E_6      --  C_3
-
-```
-
-or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
-"""
 function full_infinite_environment(
     quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
 ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
@@ -1007,24 +914,6 @@ end
 
 """
     renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right)
-
-Apply projectors to each side of a quadrant.
-
-```
-    |~~~~~~~~| -- |~~~~~~|
-    |quadrant|    |P_left| --
-    |~~~~~~~~| == |~~~~~~|
-     |    ||
-    [P_right]
-        |
-```
-"""
-function renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1 D2] * quadrant[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
-end
-
-"""
     renormalize_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right)
 
 Apply projectors to each side of a quadrant.
@@ -1033,12 +922,15 @@ Apply projectors to each side of a quadrant.
     |~~~~~~~~| -- |~~~~~~|
     |quadrant|    |P_left| --
     |~~~~~~~~| -- |~~~~~~|
-     |    |
+     |     |
     [P_right]
         |
 ```
 """
-
+function renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    return @autoopt @tensor corner[χ_in; χ_out] :=
+        P_right[χ_in; χ1 D1 D2] * quadrant[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
+end
 function renormalize_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] * quadrant[χ1 D1; χ2 D3] * P_left[χ2 D3; χ_out]
@@ -1048,18 +940,24 @@ end
     renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
     renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
     renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged northwest corner.
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
     C_northwest -- E_north -- |~~~~~~|
-         |           ||       |P_left| --
-      E_west    == ket-bra == |~~~~~~|
-         |           ||
-      [~~~~~P_right~~~~~]
+         |           |        |P_left| --
+      E_west    --   A     -- |~~~~~~|
+         |           |
+      [~~~~~P_right~~~~]
                |
 ```
+
+Here `A` denotes either:
+- a local pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_northwest_corner(
@@ -1068,13 +966,11 @@ function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right
         P_right[WEST, _next(row, end), col],
     )
 end
-
 function renormalize_northwest_corner(
     quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
 ) where {S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
-
 function renormalize_northwest_corner(
     E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
@@ -1087,30 +983,11 @@ function renormalize_northwest_corner(
         conj(bra[d; D6 D8 D2 D4]) *
         P_left[χ4 D7 D8; χ_out]
 end
-
-"""
-    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
-    renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, partfunc::PartitionFunctionTensor)
-
-Apply `renormalize_corner` to the enlarged northwest corner.
-Alternatively, provide the constituent tensors and perform the complete contraction.
-
-```
-    C_northwest -- E_north -- |~~~~~~|
-         |           |        |P_left| --
-      E_west    -- ket-bra -- |~~~~~~|
-         |           |
-      [~~~~~P_right~~~~~]
-               |
-```
-"""
-
 function renormalize_northwest_corner(
     quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
 ) where {S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
-
 function renormalize_northwest_corner(
     E_west, C_northwest, E_north, P_left, P_right, partfunc::PartitionFunctionTensor
 )
@@ -1127,18 +1004,24 @@ end
     renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
     renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
     renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged northeast corner.
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
-       |~~~~~~~| --  E_north --  C_northeast
-    -- |P_right|       ||             |  
-       |~~~~~~~| ==  ket-bra ==     E_east
-                       ||             |
-                     [~~~~~~P_left~~~~~~]
+       |~~~~~~~| -- E_north -- C_northeast
+    -- |P_right|       |            |  
+       |~~~~~~~| --    A    --    E_east
+                       |            |
+                     [~~~~~P_left~~~~~]
                               |
 ```
+
+Here `A` denotes either:
+- a local pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_northeast_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_northeast_corner(
@@ -1166,30 +1049,11 @@ function renormalize_northeast_corner(
         conj(bra[d; D4 D6 D8 D2]) *
         P_left[χ4 D7 D8; χ_out]
 end
-
-"""
-    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
-    renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, partfunc::PartitionFunctionTensor)
-
-Apply `renormalize_corner` to the enlarged northeast corner.
-Alternatively, provide the constituent tensors and perform the complete contraction.
-
-```
-       |~~~~~~~| --  E_north --  C_northeast
-    -- |P_right|        |             |  
-       |~~~~~~~| --  ket-bra --     E_east
-                        |             |
-                     [~~~~~~P_left~~~~~~]
-                              |
-```
-"""
-
 function renormalize_northeast_corner(
     quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
 ) where {S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
-
 function renormalize_northeast_corner(
     E_north, C_northeast, E_east, P_left, P_right, partfunc::PartitionFunctionTensor
 )
@@ -1206,18 +1070,24 @@ end
     renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
     renormalize_southeast_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
     renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_southeast_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged southeast corner.
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
                             |
-                   [~~~~~P_right~~~~~]
-                      ||           |
-       |~~~~~~| == ket-bra ==    E_east
-    -- |P_left|       ||           |
+                    [~~~~P_right~~~~]
+                      |           |
+       |~~~~~~| --    A    --   E_east
+    -- |P_left|       |           |
        |~~~~~~| -- E_south -- C_southeast
 ```
+
+Here `A` denotes either:
+- a local pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_southeast_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_southeast_corner(
@@ -1226,13 +1096,11 @@ function renormalize_southeast_corner((row, col), enlarged_envs, P_left, P_right
         P_right[EAST, _prev(row, end), col],
     )
 end
-
 function renormalize_southeast_corner(
     quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
 ) where {S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
-
 function renormalize_southeast_corner(
     E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
@@ -1245,24 +1113,6 @@ function renormalize_southeast_corner(
         conj(bra[d; D2 D4 D6 D8]) *
         P_left[χ4 D7 D8; χ_out]
 end
-
-"""
-    renormalize_southeast_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
-    renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, partfunc::PartitionFunctionTensor)
-
-Apply `renormalize_corner` to the enlarged southeast corner.
-Alternatively, provide the constituent tensors and perform the complete contraction.
-
-```
-                            |
-                   [~~~~~P_right~~~~~]
-                      |            |
-       |~~~~~~| -- ket-bra --    E_east
-    -- |P_left|       |            |
-       |~~~~~~| -- E_south -- C_southeast
-```
-"""
-
 function renormalize_southeast_corner(
     quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
 ) where {S}
@@ -1285,18 +1135,24 @@ end
     renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
     renormalize_southwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
     renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_southwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged southwest corner.
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
                |
-      [~~~~~P_right~~~~~]
-         |           ||
-       E_west   == ket-bra == |~~~~~~|
-         |           ||       |P_left| --
+       [~~~~P_right~~~~~]
+         |            |
+       E_west   --    A    -- |~~~~~~|
+         |            |       |P_left| --
     C_southwest -- E_south -- |~~~~~~|
 ```
+
+Here `A` denotes either:
+- a pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right)
     return renormalize_corner(
@@ -1305,13 +1161,11 @@ function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right
         P_right[SOUTH, row, _next(col, end)],
     )
 end
-
 function renormalize_southwest_corner(
     quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
 ) where {S}
     return renormalize_southwest_corner(quadrant, P_left, P_right)
 end
-
 function renormalize_southwest_corner(
     E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
@@ -1324,30 +1178,11 @@ function renormalize_southwest_corner(
         conj(bra[d; D8 D2 D4 D6]) *
         P_left[χ4 D7 D8; χ_out]
 end
-
-"""
-    renormalize_southwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
-    renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, partfunc::PartitionFunctionTensor)
-
-Apply `renormalize_corner` to the enlarged southwest corner.
-Alternatively, provide the constituent tensors and perform the complete contraction.
-
-```
-               |
-      [~~~~~P_right~~~~~]
-         |           |
-       E_west   -- ket-bra -- |~~~~~~|
-         |           |        |P_left| --
-    C_southwest -- E_south -- |~~~~~~|
-```
-"""
-
 function renormalize_southwest_corner(
     quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
 ) where {S}
     return renormalize_southwest_corner(quadrant, P_left, P_right)
 end
-
 function renormalize_southwest_corner(
     E_south, C_southwest, E_west, P_left, P_right, partfunc::PartitionFunctionTensor
 )
@@ -1364,14 +1199,6 @@ end
     renormalize_bottom_corner((r, c), envs, projectors)
 
 Apply bottom projector to southwest corner and south edge.
-For the case of a PEPSTensor:
-```
-        | 
-    [P_bottom]
-     |     ||
-     C --  E -- in
-```
-For the case of a PartitionFunctionTensor:
 ```
         | 
     [P_bottom]
@@ -1402,14 +1229,6 @@ end
     renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
 
 Apply top projector to northwest corner and north edge.
-For the case of a PEPSTensor:
-```
-     C -- E -- 
-     |    ||
-    [~P_top~]
-        | 
-```
-For the case of a PartitionFunctionTensor:
 ```
      C -- E -- 
      |    |
@@ -1435,17 +1254,24 @@ end
 # edges
 
 """
-    renormalize_north_edge((row, col), envs, P_left, P_right, ket, bra)
-    renormalize_north_edge(E_north, P_left, P_right, ket, bra)
+    renormalize_north_edge((row, col), envs, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_north_edge(E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_north_edge((row, col), envs, P_left, P_right, partfunc::InfinitePartitionFunction)
+    renormalize_north_edge(E_north, P_left, P_right, partfunc::PartitionFunctionTensor)
 
-Absorb a bra-ket pair into the north edge using the given projectors and environment tensors.
+Absorb a local effective tensor `A` into the north edge using the given projectors and
+environment tensors.
 
 ```
        |~~~~~~| -- E_north -- |~~~~~~~| 
-    -- |P_left|      ||       |P_right| --
-       |~~~~~~| == ket-bra == |~~~~~~~| 
-                     ||
+    -- |P_left|       |       |P_right| --
+       |~~~~~~| --    A    -- |~~~~~~~| 
+                      |
 ```
+
+Here `A` denotes either:
+- a pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_north_edge(
     (row, col), envs::CTMRGEnv, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
@@ -1458,7 +1284,6 @@ function renormalize_north_edge(
         bra[row, col],
     )
 end
-
 function renormalize_north_edge(
     E_north::CTMRG_PEPS_EdgeTensor, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
@@ -1469,21 +1294,6 @@ function renormalize_north_edge(
         P_left[χ2 D3 D4; χ_E] *
         P_right[χ_W; χ1 D5 D6]
 end
-
-"""
-    renormalize_north_edge((row, col), envs, P_left, P_right, partfunc)
-    renormalize_north_edge(E_north, P_left, P_right, partfunc)
-
-Absorb a bra-ket pair into the north edge using the given projectors and environment tensors.
-
-```
-       |~~~~~~| -- E_north -- |~~~~~~~| 
-    -- |P_left|      |        |P_right| --
-       |~~~~~~| -- ket-bra -- |~~~~~~~| 
-                     |
-```
-"""
-
 function renormalize_north_edge(
     (row, col), envs::CTMRGEnv, P_left, P_right, partfunc::InfinitePartitionFunction
 )
@@ -1494,7 +1304,6 @@ function renormalize_north_edge(
         partfunc[row, col],
     )
 end
-
 function renormalize_north_edge(
     E_north::CTMRG_PF_EdgeTensor, P_left, P_right, partfunc::PartitionFunctionTensor
 )
@@ -1506,20 +1315,27 @@ function renormalize_north_edge(
 end
 
 """
-    renormalize_east_edge((row, col), envs, P_top, P_bottom, ket, bra)
-    renormalize_east_edge(E_east, P_top, P_bottom, ket, bra)
+    renormalize_east_edge((row, col), envs, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_east_edge(E_east, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_east_edge((row, col), envs, P_top, P_bottom, partfunc::InfinitePartitionFunction)
+    renormalize_east_edge(E_east, P_top, P_bottom, partfunc::PartitionFunctionTensor)
 
-Absorb a bra-ket pair into the east edge using the given projectors and environment tensors.
+Absorb a blocal effective tensor into the east edge using the given projectors and
+environment tensors.
 
 ```
-            |
-     [~~P_bottom~~]
-      |         ||
-    E_east == ket-bra == 
-      |         ||
-     [~~~~P_top~~~]
-            |
+           |
+     [~P_bottom~]
+      |        |
+    E_east --  A -- 
+      |        |
+     [~~P_top~~~]
+           |
 ```
+
+Here `A` denotes either:
+- a pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_east_edge(
     (row, col), envs::CTMRGEnv, P_bottom, P_top, ket::InfinitePEPS, bra::InfinitePEPS=ket
@@ -1532,7 +1348,6 @@ function renormalize_east_edge(
         bra[row, col],
     )
 end
-
 function renormalize_east_edge(
     E_east::CTMRG_PEPS_EdgeTensor, P_bottom, P_top, ket::PEPSTensor, bra::PEPSTensor=ket
 )
@@ -1543,24 +1358,6 @@ function renormalize_east_edge(
         P_bottom[χ2 D3 D4; χ_S] *
         P_top[χ_N; χ1 D5 D6]
 end
-
-"""
-    renormalize_east_edge((row, col), envs, P_top, P_bottom, partfunc)
-    renormalize_east_edge(E_east, P_top, P_bottom, partfunc)
-
-Absorb a bra-ket pair into the east edge using the given projectors and environment tensors.
-
-```
-            |
-     [~~P_bottom~~]
-      |         |
-    E_east -- ket-bra --
-      |         |
-     [~~~~P_top~~~]
-            |
-```
-"""
-
 function renormalize_east_edge(
     (row, col), envs::CTMRGEnv, P_bottom, P_top, partfunc::InfinitePartitionFunction
 )
@@ -1571,7 +1368,6 @@ function renormalize_east_edge(
         partfunc[row, col],
     )
 end
-
 function renormalize_east_edge(
     E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, partfunc::PartitionFunctionTensor
 )
@@ -1583,18 +1379,25 @@ function renormalize_east_edge(
 end
 
 """
-    renormalize_south_edge((row, col), envs, P_left, P_right, ket, bra)
-    renormalize_south_edge(E_south, P_left, P_right, ket, bra)
+    renormalize_south_edge((row, col), envs, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_south_edge(E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_south_edge((row, col), envs, P_left, P_right, partfunc::InfinitePartitionFunction)
+    renormalize_south_edge(E_south, P_left, P_right, partfunc::PartitionFunctionTensor)
 
-Absorb a bra-ket pair into the south edge using the given projectors and environment tensors.
+Absorb a local effective tensor into the south edge using the given projectors and
+environment tensors.
 
 ```
-                      ||
-       |~~~~~~~| == ket-bra == |~~~~~~| 
-    -- |P_right|      ||       |P_left| --
+                       |
+       |~~~~~~~| --    A    -- |~~~~~~| 
+    -- |P_right|       |       |P_left| --
        |~~~~~~~| -- E_south -- |~~~~~~| 
-                      ||
+                       |
 ```
+
+Here `A` denotes either:
+- a pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_south_edge(
     (row, col), envs::CTMRGEnv, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
@@ -1607,7 +1410,6 @@ function renormalize_south_edge(
         bra[row, col],
     )
 end
-
 function renormalize_south_edge(
     E_south::CTMRG_PEPS_EdgeTensor, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket
 )
@@ -1618,21 +1420,6 @@ function renormalize_south_edge(
         P_left[χ2 D3 D4; χ_W] *
         P_right[χ_E; χ1 D5 D6]
 end
-
-"""
-    renormalize_south_edge((row, col), envs, P_left, P_right, partfunc)
-    renormalize_south_edge(E_south, P_left, P_right, partfunc)
-
-Absorb a bra-ket pair into the south edge using the given projectors and environment tensors.
-
-```
-                      |
-       |~~~~~~~| -- ket-bra -- |~~~~~~| 
-    -- |P_right|      |        |P_left| --
-       |~~~~~~~| -- E_south -- |~~~~~~| 
-```                   |
-"""
-
 function renormalize_south_edge(
     (row, col), envs::CTMRGEnv, P_left, P_right, partfunc::InfinitePartitionFunction
 )
@@ -1643,7 +1430,6 @@ function renormalize_south_edge(
         partfunc[row, col],
     )
 end
-
 function renormalize_south_edge(
     E_south::CTMRG_PF_EdgeTensor, P_left, P_right, partfunc::PartitionFunctionTensor
 )
@@ -1655,20 +1441,27 @@ function renormalize_south_edge(
 end
 
 """
-    renormalize_west_edge((row, col), envs, P_top, P_bottom, ket, bra)
-    renormalize_west_edge(E_west, P_top, P_bottom, ket, bra)
+    renormalize_west_edge((row, col), envs, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_west_edge(E_west, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket)
+    renormalize_west_edge((row, col), envs, P_top, P_bottom, partfunc::InfinitePartitionFunction)
+    renormalize_west_edge(E_west, P_top, P_bottom, partfunc::PartitionFunctionTensor)
 
-Absorb a bra-ket pair into the west edge using the given projectors and environment tensors.
+Absorb a local effective tensor into the west edge using the given projectors and
+environment tensors.
 
 ```
-            |
-     [~~P_bottom~~]
-      |         ||
-    E_west == ket-bra ==
-      |         ||
-     [~~~~P_top~~~]
-            |
+           |
+     [~P_bottom~]
+      |        |
+   -- A  --  E_west
+      |        |
+     [~~P_top~~~]
+           |
 ```
+
+Here `A` denotes either:
+- a pair of 'ket' and 'bra' `PEPSTensor`s
+- a `PartitionFunctionTensor`.
 """
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
     (row, col),
@@ -1711,24 +1504,6 @@ function renormalize_west_edge(
         P_bottom[χ2 D3 D4; χ_N] *
         P_top[χ_S; χ1 D5 D6]
 end
-
-"""
-    renormalize_west_edge((row, col), envs, P_top, P_bottom, partfunc)
-    renormalize_west_edge(E_west, P_top, P_bottom, partfunc)
-
-Absorb a bra-ket pair into the west edge using the given projectors and environment tensors.
-
-```
-            |
-     [~~P_bottom~~]
-      |         |
-    E_west -- ket-bra --
-      |         |
-     [~~~~P_top~~~]
-            |
-```
-"""
-
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
     (row, col),
     envs::CTMRGEnv,
