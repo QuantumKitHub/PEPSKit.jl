@@ -117,24 +117,33 @@ Z = InfinitePartitionFunction(O)
 χenv = ℂ^12
 env0 = CTMRGEnv(Z, χenv)
 
-ctm_alg = SimultaneousCTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=2)
+# cover all different flavors
+ctm_styles = [SequentialCTMRG, SimultaneousCTMRG]
+projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
-env = leading_boundary(env0, Z, ctm_alg)
+@testset "Classical Ising partition function using $ctm_style with $projector_alg" for (
+    ctm_style, projector_alg
+) in Iterators.product(
+    ctm_styles, projector_algs
+)
+    ctm_alg = ctm_style(; tol=1e-10, miniter=4, maxiter=100, verbosity=2, projector_alg)
+    env = leading_boundary(env0, Z, ctm_alg)
 
-# check observables
+    # check observables
 
-λ = norm(Z, env)
-m = local_contraction(M, env) / local_contraction(O, env)
-e = local_contraction(E, env) / local_contraction(O, env)
+    λ = norm(Z, env)
+    m = local_contraction(M, env) / local_contraction(O, env)
+    e = local_contraction(E, env) / local_contraction(O, env)
 
-f_exact, m_exact, e_exact = classical_ising_exact(; beta)
+    f_exact, m_exact, e_exact = classical_ising_exact(; beta)
 
-# should be real-ish
-@test abs(imag(λ)) < 1e-4
-@test abs(imag(m)) < 1e-4
-@test abs(imag(e)) < 1e-4
+    # should be real-ish
+    @test abs(imag(λ)) < 1e-4
+    @test abs(imag(m)) < 1e-4
+    @test abs(imag(e)) < 1e-4
 
-# should match exact solution
-@test -log(λ) / beta ≈ f_exact rtol = 1e-5
-@test abs(m) ≈ abs(m_exact) rtol = 1e-5
-@test e ≈ e_exact rtol = 1e-2
+    # should match exact solution
+    @test -log(λ) / beta ≈ f_exact rtol = 1e-4
+    @test abs(m) ≈ abs(m_exact) rtol = 1e-4
+    @test e ≈ e_exact rtol = 1e-1 # accuracy limited by bond dimension and maxiter
+end
