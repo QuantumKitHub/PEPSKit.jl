@@ -177,7 +177,7 @@ end
 function LinearAlgebra.axpy!(
     α::Number, ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction
 )
-    ψ₂.A .+= α * ψ₁.A
+    axpy!.(α, ψ₁.A, ψ₂.A)
     return ψ₂
 end
 
