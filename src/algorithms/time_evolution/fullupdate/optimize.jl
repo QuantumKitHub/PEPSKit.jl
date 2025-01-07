@@ -1,4 +1,6 @@
 """
+    bondenv_fu(row::Int, col::Int, X::AbstractTensorMap, Y::AbstractTensorMap, envs::CTMRGEnv)
+
 Construct the environment (norm) tensor
 ```
     left half                       right half
@@ -22,7 +24,7 @@ which can be more simply denoted as
 ```
 The axes 1, 2 (or 3, 4) come from X†, Y† (or X, Y)
 """
-function tensor_env(
+function bondenv_fu(
     row::Int, col::Int, X::AbstractTensorMap, Y::AbstractTensorMap, envs::CTMRGEnv
 )
     Nr, Nc = size(envs.corners)[[2, 3]]
@@ -248,6 +250,8 @@ Algorithm struct for the alternating least square optimization step in full upda
 end
 
 """
+    fu_optimize(aR0::AbstractTensorMap, bL0::AbstractTensorMap, aR2bL2::AbstractTensorMap, env::AbstractTensorMap, alg::FUALSOptimize; check_int::Int=1)
+
 Minimize the cost function
 ```
     fix bL:

@@ -1,8 +1,8 @@
-include("fu_gaugefix.jl")
-include("fu_optimize.jl")
+include("fullupdate/gaugefix.jl")
+include("fullupdate/optimize.jl")
 
 """
-Algorithm struct for full update (FU) of infinite PEPS with bond weights/
+Algorithm struct for full update (FU) of infinite PEPS.
 Each FU run stops when the energy starts to increase.
 """
 @kwdef struct FullUpdate
@@ -30,6 +30,8 @@ function truncation_scheme(alg::FullUpdate, v::ElementarySpace)
 end
 
 """
+    ctmrg_rightmove(col::Int, peps::InfinitePEPS, envs::CTMRGEnv, alg::SequentialCTMRG)
+
 CTMRG right-move to update CTMRGEnv in the c-th column
 ```
     absorb <---
@@ -49,6 +51,8 @@ function ctmrg_rightmove(col::Int, peps::InfinitePEPS, envs::CTMRGEnv, alg::Sequ
 end
 
 """
+    update_column!(col::Int, gate::LocalOperator, peps::InfinitePEPS, envs::CTMRGEnv, alg::FullUpdate)
+
 Update all horizontal bonds in the c-th column
 (i.e. `(r,c) (r,c+1)` for all `r = 1, ..., Nr`).
 To update rows, rotate the network clockwise by 90 degrees.
@@ -92,7 +96,7 @@ function update_column!(
         =#
         Y, bL0 = leftorth(B, ((2, 3, 4), (1, 5)); alg=QRpos())
         bL0 = permute(bL0, (3, 2, 1))
-        env = tensor_env(row, col, X, Y, envs)
+        env = bondenv_fu(row, col, X, Y, envs)
         # positive/negative-definite approximant: env = ± Z Z†
         sgn, Zdg = positive_approx(env)
         # fix gauge

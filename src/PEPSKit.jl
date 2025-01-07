@@ -51,6 +51,7 @@ include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/time_evolution/gatetools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/fullupdate.jl")
+include("algorithms/time_evolution/neighborupdate.jl")
 
 include("algorithms/toolbox.jl")
 
