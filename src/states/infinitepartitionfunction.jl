@@ -169,7 +169,7 @@ end
 
 # Used in _scale during OptimKit.optimize
 function LinearAlgebra.rmul!(ψ::InfinitePartitionFunction, α::Number)
-    rmul!(ψ.A, α)
+    rmul!.(ψ.A, α)
     return ψ
 end
 
