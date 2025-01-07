@@ -7,7 +7,7 @@ using MPSKit
 
 using PEPSKit:
     @autoopt,
-    CTMRGEdgeTensor,
+    CTMRG_PF_EdgeTensor,
     NORTHWEST,
     NORTHEAST,
     SOUTHEAST,
@@ -91,7 +91,7 @@ end
 Contract a local rank-4 tensor with a given partition function environment.
 """
 function local_contraction(
-    O::AbstractTensorMap{S,2,2}, env::CTMRGEnv{C,<:CTMRGEdgeTensor{S,2}}
+    O::AbstractTensorMap{S,2,2}, env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}
 ) where {S,C}
     return @autoopt @tensor env.corners[NORTHWEST, 1, 1][C_WNW; C_NNW] *
         env.edges[NORTH, 1, 1][C_NNW D_N; C_NNE] *

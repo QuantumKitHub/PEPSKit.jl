@@ -15,6 +15,7 @@ conventionally ordered as: ``T : W ⊗ S ← N ⊗ E``. Here, ``N``, ``E``, ``S`
 ``W`` denote the north, east, south and west spaces, respectively.
 """
 const PartitionFunctionTensor{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
+const PFTensor{S} = PartitionFunctionTensor{S}
 
 """
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,

@@ -21,6 +21,8 @@ struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: AbstractPartitio
     end
 end
 
+const InfinitePF{T} = InfinitePartitionFunction{T}
+
 ## Constructors
 """
     InfinitePartitionFunction(A::AbstractMatrix{T})
