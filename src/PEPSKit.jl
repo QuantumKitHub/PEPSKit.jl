@@ -22,10 +22,12 @@ include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 
-include("states/abstractpeps.jl")
-include("states/infinitepartitionfunction.jl")
+include("networks/tensors.jl")
+include("networks/abstract_networks.jl")
+
 include("states/infinitepeps.jl")
 include("states/infiniteweightpeps.jl")
+include("states/infinitepartitionfunction.jl")
 
 include("operators/transferpeps.jl")
 include("operators/infinitepepo.jl")
