@@ -109,7 +109,7 @@ end
 
 # initialize
 
-beta = 0.5
+beta = 0.6
 O, M, E = classical_ising(; beta)
 Z = InfinitePartitionFunction(O)
 

@@ -1,7 +1,7 @@
 """
     abstract type AbstractPartitionFunction end
 
-Abstract supertype for a 2D partitionFunction.
+Abstract supertype for a 2D partition function.
 """
 abstract type AbstractPartitionFunction end
 
