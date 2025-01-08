@@ -71,7 +71,7 @@ function sequential_projectors(
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
-    state::Union{InfiniteSquareNetwork},
+    state::InfiniteSquareNetwork,
     envs::CTMRGEnv,
     alg::HalfInfiniteProjector,
 )
