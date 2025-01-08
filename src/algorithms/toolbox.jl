@@ -57,7 +57,13 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     return total
 end
 
-function LinearAlgebra.norm(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
+"""
+    partition_function(peps::InfinitePartitionFunction, env::CTMRGEnv)
+
+Return the value (per site) of a given parition function contracted using a given CTMRG
+environment.
+"""
+function value(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
     total = one(scalartype(partfunc))
 
     for r in 1:size(partfunc, 1), c in 1:size(partfunc, 2)

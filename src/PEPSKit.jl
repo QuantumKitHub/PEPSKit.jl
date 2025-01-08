@@ -197,7 +197,7 @@ export fixedpoint
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
 
-export InfinitePartitionFunction
+export InfinitePartitionFunction, value
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO

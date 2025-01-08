@@ -134,7 +134,7 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
     # check observables
 
-    λ = norm(Z, env)
+    λ = value(Z, env)
     m = local_contraction(M, env) / local_contraction(O, env)
     e = local_contraction(E, env) / local_contraction(O, env)
 
