@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: AbstractPartitionFunction
+struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
     A::Matrix{T}
     function InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunctionTensor}
         return new{T}(A)

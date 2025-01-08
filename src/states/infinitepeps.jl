@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
+struct InfinitePEPS{T<:PEPSTensor}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}

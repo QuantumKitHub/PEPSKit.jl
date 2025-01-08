@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
 """
-struct InfinitePEPO{T<:PEPOTensor} <: AbstractPEPO
+struct InfinitePEPO{T<:PEPOTensor}
     A::Array{T,3}
 
     function InfinitePEPO(A::Array{T,3}) where {T<:PEPOTensor}

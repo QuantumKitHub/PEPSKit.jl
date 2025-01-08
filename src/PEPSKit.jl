@@ -23,7 +23,6 @@ include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 
 include("networks/tensors.jl")
-include("networks/abstract_networks.jl")
 
 include("states/infinitepeps.jl")
 include("states/infiniteweightpeps.jl")
