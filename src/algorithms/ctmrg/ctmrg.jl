@@ -1,5 +1,3 @@
-const InfiniteSquareNetwork = Union{InfinitePEPS,InfinitePartitionFunction}
-
 """
     CTMRGAlgorithm
 

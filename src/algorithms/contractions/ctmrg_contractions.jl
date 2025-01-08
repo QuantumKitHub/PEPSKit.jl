@@ -1,3 +1,5 @@
+const InfiniteSquareNetwork = Union{InfinitePEPS,InfinitePartitionFunction}
+
 const CTMRGEdgeTensor{S,N} = AbstractTensorMap{S,N,1}
 const CTMRG_PEPS_EdgeTensor{S} = CTMRGEdgeTensor{S,3}
 const CTMRG_PF_EdgeTensor{S} = CTMRGEdgeTensor{S,2}
@@ -361,11 +363,11 @@ end
 """
     half_infinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
-                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+                              ket_1::P, bra_1::P, ket_2::P, bra_2::P) where {P<:PEPSTensor}
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+                              ket_1::P bra_1::P, ket_2::P,, bra_2::P) where {P<:PEPSTensor}
     half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
-                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+                              ket_1::P, bra_1::P, ket_2::P, bra_2::P) where {P<:PEPSTensor}
 
     half_infinite_environment(quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2})
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
@@ -418,7 +420,7 @@ function half_infinite_environment(
 end
 
 function half_infinite_environment(
-    C_1, C_2, E_1, E_2, E_3, E_4, ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2
+    C_1, C_2, E_1, E_2, E_3, E_4, ket_1::P, bra_1::P, ket_2::P, bra_2::P
 ) where {P<:PEPSTensor}
     return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         E_1[χ_in D1 D2; χ1] *
@@ -441,9 +443,9 @@ function half_infinite_environment(
     E_4,
     x::AbstractTensor{S,3},
     ket_1::P,
+    bra_1::P,
     ket_2::P,
-    bra_1::P=ket_1,
-    bra_2::P=ket_2,
+    bra_2::P,
 ) where {S,P<:PEPSTensor}
     return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
         E_1[χ_in D1 D2; χ1] *
@@ -467,9 +469,9 @@ function half_infinite_environment(
     E_3,
     E_4,
     ket_1::P,
+    bra_1::P,
     ket_2::P,
-    bra_1::P=ket_1,
-    bra_2::P=ket_2,
+    bra_2::P,
 ) where {S,P<:PEPSTensor}
     return @autoopt @tensor x_env[χ_in D_inabove D_inbelow] :=
         x[χ1 D1 D2] *
@@ -540,13 +542,14 @@ end
         half1::T, half2::T
     ) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
     full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
-                              ket_1::P, ket_2::P, bra_1::P=ket_1, bra_2::P=ket_2) where {P<:PEPSTensor}
+                              ket_1::P, bra_1::P, ket_2::P, bra_2::P,
+                              ket_3::P, bra_3::P, ket_4::P, bra_4::P) where {P<:PEPSTensor}
     full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                              ket_1::P, ket_2::P, ket_3::P, ket_4::P,
-                              bra_1::P=ket_1, bra_2::P=ket_2, bra_3::P=ket_3, bra_4::P=ket_4) where {P<:PEPSTensor}
+                              ket_1::P, bra_1::P, ket_2::P, bra_2::P,
+                              ket_3::P, bra_3::P, ket_4::P, bra_4::P) where {P<:PEPSTensor}
     full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
-                              ket_1::P, ket_2::P, ket_3::P, ket_4::P,
-                              bra_1::P=ket_1, bra_2::P=ket_2, bra_3::P=ket_3, bra_4::P=ket_4) where {P<:PEPSTensor}
+                              ket_1::P, bra_1::P, ket_2::P, bra_2::P,
+                              ket_3::P, bra_3::P, ket_4::P, bra_4::P) where {P<:PEPSTensor}
 
     full_infinite_environment(
         quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
@@ -654,13 +657,13 @@ function full_infinite_environment(
     E_7,
     E_8,
     ket_1::P,
+    bra_1::P,
     ket_2::P,
+    bra_2::P,
     ket_3::P,
+    bra_3::P,
     ket_4::P,
-    bra_1::P=ket_1,
-    bra_2::P=ket_2,
-    bra_3::P=ket_3,
-    bra_4::P=ket_4,
+    bra_4::P,
 ) where {P<:PEPSTensor}
     return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         E_1[χ_in D1 D2; χ1] *
@@ -699,13 +702,13 @@ function full_infinite_environment(
     E_8,
     x::AbstractTensor{S,3},
     ket_1::P,
+    bra_1::P,
     ket_2::P,
+    bra_2::P,
     ket_3::P,
+    bra_3::P,
     ket_4::P,
-    bra_1::P=ket_1,
-    bra_2::P=ket_2,
-    bra_3::P=ket_3,
-    bra_4::P=ket_4,
+    bra_4::P,
 ) where {S,P<:PEPSTensor}
     return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
         E_1[χ_in D1 D2; χ1] *
@@ -745,13 +748,13 @@ function full_infinite_environment(
     E_7,
     E_8,
     ket_1::P,
+    bra_1::P,
     ket_2::P,
+    bra_2::P,
     ket_3::P,
+    bra_3::P,
     ket_4::P,
-    bra_1::P=ket_1,
-    bra_2::P=ket_2,
-    bra_3::P=ket_3,
-    bra_4::P=ket_4,
+    bra_4::P,
 ) where {S,P<:PEPSTensor}
     return @autoopt @tensor x_env[χ_in D_inabove D_inbelow] :=
         x[χ_x D_xabove D_xbelow] *
