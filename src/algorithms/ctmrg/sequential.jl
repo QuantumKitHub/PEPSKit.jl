@@ -54,7 +54,7 @@ for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequen
 """
 function sequential_projectors(
     col::Int,
-    state::Union{InfinitePEPS,InfinitePartitionFunction},
+    state::InfiniteSquareNetwork,
     envs::CTMRGEnv,
     alg::ProjectorAlgorithm,
 )
@@ -74,7 +74,7 @@ function sequential_projectors(
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
-    state::Union{InfinitePEPS,InfinitePartitionFunction},
+    state::Union{InfiniteSquareNetwork},
     envs::CTMRGEnv,
     alg::HalfInfiniteProjector,
 )
@@ -86,7 +86,7 @@ function sequential_projectors(
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
-    state::Union{InfinitePEPS,InfinitePartitionFunction},
+    state::InfiniteSquareNetwork,
     envs::CTMRGEnv,
     alg::FullInfiniteProjector,
 )
