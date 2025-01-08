@@ -51,7 +51,7 @@ include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/time_evolution/gatetools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/fullupdate.jl")
-include("algorithms/time_evolution/neighborupdate.jl")
+include("algorithms/time_evolution/ntupdate.jl")
 
 include("algorithms/toolbox.jl")
 
@@ -196,6 +196,7 @@ export fixedpoint
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
 export fu_iter, fullupdate, FullUpdate, FUALSOptimize
+export ntu_iter, NTUpdate
 
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS
