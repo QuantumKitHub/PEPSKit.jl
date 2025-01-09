@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePEPS{T<:PEPSTensor}
+struct InfinitePEPS{T<:PEPSTensor} <: InfiniteSquareNetwork{T,2}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
@@ -109,69 +109,8 @@ function InfinitePEPS(
     )
 end
 
-## Shape and size
-Base.size(T::InfinitePEPS) = size(T.A)
-Base.size(T::InfinitePEPS, i) = size(T.A, i)
-Base.length(T::InfinitePEPS) = length(T.A)
-Base.eltype(T::InfinitePEPS) = eltype(typeof(T))
-Base.eltype(::Type{<:InfinitePEPS{T}}) where {T} = T
-VectorInterface.scalartype(::Type{T}) where {T<:InfinitePEPS} = scalartype(eltype(T))
-
-## Copy
-Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-Base.similar(T::InfinitePEPS, args...) = InfinitePEPS(similar(T.A, args...))
-Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
-
-Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
-Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
-Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
-function eachcoordinate(x::InfinitePEPS)
-    return collect(Iterators.product(axes(x)...))
-end
-function eachcoordinate(x::InfinitePEPS, dirs)
-    return collect(Iterators.product(dirs, axes(x, 1), axes(x, 2)))
-end
+unitcell(t::InfinitePEPS) = t.A
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
-
-## Math
-Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
-Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
-Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
-Base.:/(ψ::InfinitePEPS, α::Number) = InfinitePEPS(ψ.A / α)
-LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
-LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
-
-## (Approximate) equality
-function Base.:(==)(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
-    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
-        return p₁ == p₂
-    end
-end
-function Base.isapprox(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS; kwargs...)
-    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
-        return isapprox(p₁, p₂; kwargs...)
-    end
-end
-
-# Used in _scale during OptimKit.optimize
-function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
-    rmul!.(ψ.A, α)
-    return ψ
-end
-
-# Used in _add during OptimKit.optimize
-function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
-    axpy!.(α, ψ₁.A, ψ₂.A)
-    return ψ₂
-end
-
-# VectorInterface
-VectorInterface.zerovector(x::InfinitePEPS) = InfinitePEPS(zerovector(x.A))
-
-# Rotations
-Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
-Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
-Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
 
 # Chainrules
 function ChainRulesCore.rrule(
@@ -209,14 +148,4 @@ function ChainRulesCore.rrule(::typeof(rotr90), peps::InfinitePEPS)
         return NoTangent(), rotl90(Δpeps)
     end
     return peps′, rotr90_pullback
-end
-
-# FiniteDifferences
-# Makes use of tensors already having a to_vec method
-function FiniteDifferences.to_vec(state::InfinitePEPS)
-    vec, back = FiniteDifferences.to_vec(state.A)
-    function state_from_vec(vec)
-        return InfinitePEPS(back(vec))
-    end
-    return vec, state_from_vec
 end

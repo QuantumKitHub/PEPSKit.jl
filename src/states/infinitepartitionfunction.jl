@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
+struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: InfiniteSquareNetwork{T,2}
     A::Matrix{T}
     function InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunctionTensor}
         return new{T}(A)
@@ -109,87 +109,8 @@ function InfinitePartitionFunction(
     return InfinitePartitionFunction(f, T, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
-## Shape and size
-Base.size(T::InfinitePartitionFunction) = size(T.A)
-Base.size(T::InfinitePartitionFunction, i) = size(T.A, i)
-Base.length(T::InfinitePartitionFunction) = length(T.A)
-Base.eltype(T::InfinitePartitionFunction) = eltype(typeof(T))
-Base.eltype(::Type{<:InfinitePartitionFunction{T}}) where {T} = T
-function VectorInterface.scalartype(::Type{T}) where {T<:InfinitePartitionFunction}
-    return scalartype(eltype(T))
-end
-
-## Copy
-Base.copy(T::InfinitePartitionFunction) = InfinitePartitionFunction(copy(T.A))
-function Base.similar(T::InfinitePartitionFunction, args...)
-    return InfinitePartitionFunction(similar(T.A, args...))
-end
-function Base.repeat(T::InfinitePartitionFunction, counts...)
-    return InfinitePartitionFunction(repeat(T.A, counts...))
-end
-
-Base.getindex(T::InfinitePartitionFunction, args...) = Base.getindex(T.A, args...)
-Base.setindex!(T::InfinitePartitionFunction, args...) = (Base.setindex!(T.A, args...); T)
-Base.axes(T::InfinitePartitionFunction, args...) = axes(T.A, args...)
-function eachcoordinate(x::InfinitePartitionFunction)
-    return collect(Iterators.product(axes(x)...))
-end
-function eachcoordinate(x::InfinitePartitionFunction, dirs)
-    return collect(Iterators.product(dirs, axes(x, 1), axes(x, 2)))
-end
+unitcell(t::InfinitePartitionFunction) = t.A
 TensorKit.space(t::InfinitePartitionFunction, i, j) = space(t[i, j], 1)
-
-## Math
-function Base.:+(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
-    return InfinitePartitionFunction(ψ₁.A + ψ₂.A)
-end
-function Base.:-(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
-    return InfinitePartitionFunction(ψ₁.A - ψ₂.A)
-end
-Base.:*(α::Number, ψ::InfinitePartitionFunction) = InfinitePartitionFunction(α * ψ.A)
-Base.:/(ψ::InfinitePartitionFunction, α::Number) = InfinitePartitionFunction(ψ.A / α)
-function LinearAlgebra.dot(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
-    return dot(ψ₁.A, ψ₂.A)
-end
-LinearAlgebra.norm(ψ::InfinitePartitionFunction) = norm(ψ.A)
-
-## (Approximate) equality
-function Base.:(==)(ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction)
-    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
-        return p₁ == p₂
-    end
-end
-function Base.isapprox(
-    ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction; kwargs...
-)
-    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
-        return isapprox(p₁, p₂; kwargs...)
-    end
-end
-
-# Used in _scale during OptimKit.optimize
-function LinearAlgebra.rmul!(ψ::InfinitePartitionFunction, α::Number)
-    rmul!.(ψ.A, α)
-    return ψ
-end
-
-# Used in _add during OptimKit.optimize
-function LinearAlgebra.axpy!(
-    α::Number, ψ₁::InfinitePartitionFunction, ψ₂::InfinitePartitionFunction
-)
-    axpy!.(α, ψ₁.A, ψ₂.A)
-    return ψ₂
-end
-
-# VectorInterface
-function VectorInterface.zerovector(x::InfinitePartitionFunction)
-    return InfinitePartitionFunction(zerovector(x.A))
-end
-
-# Rotations
-Base.rotl90(t::InfinitePartitionFunction) = InfinitePartitionFunction(rotl90(rotl90.(t.A)))
-Base.rotr90(t::InfinitePartitionFunction) = InfinitePartitionFunction(rotr90(rotr90.(t.A)))
-Base.rot180(t::InfinitePartitionFunction) = InfinitePartitionFunction(rot180(rot180.(t.A)))
 
 # Chainrules
 function ChainRulesCore.rrule(
@@ -229,14 +150,4 @@ function ChainRulesCore.rrule(::typeof(rotr90), peps::InfinitePartitionFunction)
         return NoTangent(), rotl90(Δpeps)
     end
     return peps′, rotr90_pullback
-end
-
-# FiniteDifferences
-# Makes use of tensors already having a to_vec method
-function FiniteDifferences.to_vec(state::InfinitePartitionFunction)
-    vec, back = FiniteDifferences.to_vec(state.A)
-    function state_from_vec(vec)
-        return InfinitePartitionFunction(back(vec))
-    end
-    return vec, state_from_vec
 end

@@ -1,5 +1,3 @@
-const InfiniteSquareNetwork = Union{InfinitePEPS,InfinitePartitionFunction}
-
 const CTMRGEdgeTensor{S,N} = AbstractTensorMap{S,N,1}
 const CTMRG_PEPS_EdgeTensor{S} = CTMRGEdgeTensor{S,3}
 const CTMRG_PF_EdgeTensor{S} = CTMRGEdgeTensor{S,2}

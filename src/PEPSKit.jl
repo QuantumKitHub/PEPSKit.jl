@@ -24,6 +24,7 @@ include("utility/autoopt.jl")
 
 include("networks/tensors.jl")
 
+include("states/infinitesquarenetwork.jl")
 include("states/infinitepeps.jl")
 include("states/infiniteweightpeps.jl")
 include("states/infinitepartitionfunction.jl")
