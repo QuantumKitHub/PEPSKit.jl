@@ -558,7 +558,7 @@ end
         half1::T, half2::T
     ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
     full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
-                              partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
+                              partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
     full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
                               partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
     full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
@@ -569,7 +569,7 @@ Contract four quadrants (enlarged corners) to form a full-infinite environment.
 ```
     |~~~~~~~~~| -- |~~~~~~~~~|
     |quadrant1|    |quadrant2|
-    |~~~~~~~~~| == |~~~~~~~~~|
+    |~~~~~~~~~| -- |~~~~~~~~~|
       |     |        |     |
                      |     |
       |     |        |     |
@@ -613,7 +613,6 @@ Alternatively, contract the environment with a vector `x` acting on it
      |      |      |      | 
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
-                   |      |
                    |      |
     [~~~~x~~~]     |      |
      |      |      |      |
