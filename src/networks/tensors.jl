@@ -10,15 +10,13 @@ as: ``T : W ⊗ S ← N ⊗ E``. Here, ``N``, ``E``, ``S`` and ``W`` denote the 
 and west spaces, respectively.
 
 ```
-            N
-           /
-          v
-         /
-  W--<-- --<--E
-       /
-      v
-     /
-    S
+          N
+         ╱
+        ╱
+  W---- ----E
+      ╱
+     ╱
+    S 
 ```
 """
 const PartitionFunctionTensor{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
@@ -41,15 +39,13 @@ and ``N``, ``E``, ``S`` and ``W`` denote the north, east, south and west virtual
 respectively.
 
 ```
-            N
-           /
-          v
-         /
-  W-->-- --<--E
-       /|
-      ^ v
-     /  |
-    S   P
+           N
+          ╱
+         ╱
+   W---- ----E
+       ╱|
+      ╱ |
+     S  P
 ```
 """
 const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
@@ -106,15 +102,13 @@ mapping from ``P´'`` to ``P`` where ``P´'`` corresponds to a physical PEPS ind
 
 
 ```
-        P´  N
-        |  /
-        ^ v
-        |/
-  W-->-- --<--E
-       /|
-      ^ v
-     /  |
-    S   P
+        P´ N
+        | ╱
+        |╱
+   W---- ----E
+       ╱|
+      ╱ |
+     S  P
 ```
 """
 const PEPOTensor{S} = AbstractTensorMap{S,2,4} where {S<:ElementarySpace}
