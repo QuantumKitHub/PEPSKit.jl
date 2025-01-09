@@ -58,7 +58,7 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
 end
 
 """
-    partition_function(peps::InfinitePartitionFunction, env::CTMRGEnv)
+    value(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
 
 Return the value (per site) of a given parition function contracted using a given CTMRG
 environment.
