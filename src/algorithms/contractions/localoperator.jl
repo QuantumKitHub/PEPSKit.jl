@@ -455,7 +455,7 @@ end
 # Partition function contractions
 
 """
-    contract_local_tensor(inds, O, pf::InfinitePartitionFunction, env)
+    contract_local_tensor(inds, O, env)
 
 Contract a local tensor `O` inserted into a partition function `pf` at position `inds`,
 using the environment `env`.
