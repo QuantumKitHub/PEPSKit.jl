@@ -57,6 +57,27 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     return total
 end
 
+function MPSKit.expectation_value(
+    inds::CartesianIndex{2},
+    O::AbstractTensorMap{S,2,2},
+    pf::InfinitePartitionFunction,
+    envs::CTMRGEnv,
+) where {S}
+    return contract_local_tensor(inds, O, envs) /
+           contract_local_tensor(inds, pf[inds], envs)
+end
+function MPSKit.expectation_value(
+    inds::Tuple{Int,Int},
+    O::AbstractTensorMap{S,2,2},
+    pf::InfinitePartitionFunction,
+    envs::CTMRGEnv,
+) where {S}
+    return expectation_value(CartesianIndex(inds), O, pf, envs)
+end
+function MPSKit.expectation_value(op::Pair, pf::InfinitePartitionFunction, envs::CTMRGEnv)
+    return expectation_value(op..., pf, envs)
+end
+
 """
     value(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
 

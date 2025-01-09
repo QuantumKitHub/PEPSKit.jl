@@ -451,3 +451,41 @@ end
     end
     return macroexpand(@__MODULE__, returnex)
 end
+
+# Partition function contractions
+
+"""
+    contract_local_tensor(inds, O, pf::InfinitePartitionFunction, env)
+
+Contract a local tensor `O` inserted into a partition function `pf` at position `inds`,
+using the environment `env`.
+"""
+function contract_local_tensor(
+    inds::Tuple{Int,Int},
+    O::AbstractTensorMap{S,2,2},
+    env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
+) where {S,C}
+    r, c = inds
+    return @autoopt @tensor env.corners[NORTHWEST, _prev(r, end), _prev(c, end)][
+            χ_WNW
+            χ_NNW
+        ] *
+        env.edges[NORTH, _prev(r, end), c][χ_NNW D_N; χ_NNE] *
+        env.corners[NORTHEAST, _prev(r, end), _next(c, end)][χ_NNE; χ_ENE] *
+        env.edges[EAST, r, _next(c, end)][χ_ENE D_E; χ_ESE] *
+        env.corners[SOUTHEAST, _next(r, end), _next(c, end)][χ_ESE; χ_SSE] *
+        env.edges[SOUTH, _next(r, end), c][χ_SSE D_S; χ_SSW] *
+        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)][χ_SSW; χ_WSW] *
+        env.edges[WEST, r, _prev(c, end)][χ_WSW D_W; χ_WNW] *
+        O[D_W D_S; D_N D_E]
+end
+function contract_local_tensor(
+    inds::CartesianIndex{2},
+    O::AbstractTensorMap{S,2,2},
+    env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
+) where {S,C}
+    return contract_local_tensor(Tuple(inds), O, env)
+end
+function contract_local_tensor(op::Pair, env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}) where {C}
+    return contract_local_tensor(op..., env)
+end
