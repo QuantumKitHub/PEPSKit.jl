@@ -35,24 +35,26 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
     TS = map(x -> tsvd(x)[2], envinit.edges)
 
     η = one(real(scalartype(state)))
-    N = ctmrg_objective(state, envinit)
     env = deepcopy(envinit)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
+    function get_objective(state, env, verbosity)
+        return alg.verbosity >= verbosity ? ctmrg_objective(state, env) : nothing
+    end
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, N)
+        ctmrg_loginit!(log, η, get_objective(state, envinit, 2))
         for iter in 1:(alg.maxiter)
             env, = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
-                ctmrg_logfinish!(log, iter, η, ctmrg_objective(state, env))
+                ctmrg_logfinish!(log, iter, η, get_objective(state, envinit, 2))
                 break
             end
             if iter == alg.maxiter
-                ctmrg_logcancel!(log, iter, η, ctmrg_objective(state, env))
+                ctmrg_logcancel!(log, iter, η, get_objective(state, envinit, 1))
             else
-                ctmrg_logiter!(log, iter, η, ctmrg_objective(state, env))
+                ctmrg_logiter!(log, iter, η, get_objective(state, envinit, 3))
             end
         end
         return env
