@@ -48,13 +48,13 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
-                ctmrg_logfinish!(log, iter, η, get_objective(state, envinit, 2))
+                ctmrg_logfinish!(log, iter, η, get_objective(state, env, 2))
                 break
             end
             if iter == alg.maxiter
-                ctmrg_logcancel!(log, iter, η, get_objective(state, envinit, 1))
+                ctmrg_logcancel!(log, iter, η, get_objective(state, env, 1))
             else
-                ctmrg_logiter!(log, iter, η, get_objective(state, envinit, 3))
+                ctmrg_logiter!(log, iter, η, get_objective(state, env, 3))
             end
         end
         return env
