@@ -1,4 +1,5 @@
 const Hair{S} = AbstractTensorMap{S,1,1} where {S<:ElementarySpace}
+const BondEnv{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
 
 """
 Extract tensors in an infinite PEPS at positions specified in `neighbors` relative to `(row, col)`
@@ -65,8 +66,6 @@ Contract the physical axes and the virtual axes of a PEPSTensor `ket` with `bra`
 function cal_envboundary(free_axs::Vector{Int}, ket::PEPSTensor, bra::PEPSTensor)
     @assert all(2 <= ax <= 5 for ax in free_axs)
     @assert issorted(free_axs)
-    @assert [isdual(space(ket, ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
-    @assert [isdual(space(bra, ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
     codomain_axes = Tuple(ax for ax in 1:5 if !(ax in free_axs))
     domain_axes = Tuple(free_axs)
     perm = (codomain_axes, domain_axes)
@@ -102,11 +101,11 @@ end
                 |               |               |
                 4               4               4
 
-                2                               2
-                |                               |
-    H_l - 3     E_l - 3                   5 - E_r   5 - H_r
-                |                               |
-                4                               4
+                2               2  1            2
+                |               | /             |
+    H_l - 3     E_l - 3    5 - ket - 3    5 - E_r   5 - H_r
+                |               |               |
+                4               4               4
 
                 2               2               2
                 |               |               |

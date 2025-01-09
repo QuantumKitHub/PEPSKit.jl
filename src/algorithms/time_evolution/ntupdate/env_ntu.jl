@@ -1,6 +1,3 @@
-include("envtools.jl")
-include("optimize.jl")
-
 """
     bondenv_NN(peps::InfinitePEPS, row::Int, col::Int, Q0::PEPSTensor, Q1::PEPSTensor)
 
@@ -38,8 +35,10 @@ function bondenv_NN(peps::InfinitePEPS, row::Int, col::Int, Q0::PEPSTensor, Q1::
         cbr[Dbr1 Db1 Dbr0 Db0] * cbl[Dbl1 Db1 Dbl0 Db0] * env_l[Dtl1 Dl1 Dbl1 Dtl0 Dl0 Dbl0]
     @autoopt @tensor env_r[Dtl1 Dr1 Dbr1 Dtl0 Dr0 Dbr0] :=
         ctl[Dt1 Dtl1 Dt0 Dtl0] * ctr[Dtr1 Dt1 Dtr0 Dt0] * env_r[Dtr1 Dbr1 Dr1 Dtr0 Dbr0 Dr0]
-    return @autoopt @tensor env[Dl1 Dr1; Dl0 Dr0] :=
+    @autoopt @tensor env[Dl1 Dr1; Dl0 Dr0] :=
         env_l[Dbr1 Dl1 Dtl1 Dbr0 Dl0 Dtl0] * env_r[Dtl1 Dr1 Dbr1 Dtl0 Dr0 Dbr0]
+    # normalize `env`
+    return env / (norm(env, Inf) / 5.0)
 end
 
 """
