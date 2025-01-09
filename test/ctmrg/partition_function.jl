@@ -6,18 +6,6 @@ using LinearAlgebra
 using QuadGK
 using MPSKit
 
-using PEPSKit:
-    @autoopt,
-    CTMRG_PF_EdgeTensor,
-    NORTHWEST,
-    NORTHEAST,
-    SOUTHEAST,
-    SOUTHWEST,
-    WEST,
-    EAST,
-    NORTH,
-    SOUTH
-
 ## Setup
 
 """
@@ -88,23 +76,6 @@ function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
     return TensorMap(o, TMS), TensorMap(m, TMS), TensorMap(e, TMS)
 end
 
-"""
-Contract a local rank-4 tensor with a given partition function environment.
-"""
-function local_contraction(
-    O::AbstractTensorMap{S,2,2}, env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}
-) where {S,C}
-    return @autoopt @tensor env.corners[NORTHWEST, 1, 1][C_WNW; C_NNW] *
-        env.edges[NORTH, 1, 1][C_NNW D_N; C_NNE] *
-        env.corners[NORTHEAST, 1, 1][C_NNE; C_ENE] *
-        env.edges[EAST, 1, 1][C_ENE D_E; C_ESE] *
-        env.corners[SOUTHEAST, 1, 1][C_ESE; C_SSE] *
-        env.edges[SOUTH, 1, 1][C_SSE D_S; C_SSW] *
-        env.corners[SOUTHWEST, 1, 1][C_SSW; C_WSW] *
-        env.edges[WEST, 1, 1][C_WSW D_W; C_WNW] *
-        O[D_W D_S; D_N D_E]
-end
-
 ## Test
 
 # initialize
@@ -135,8 +106,8 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     # check observables
 
     λ = value(Z, env)
-    m = local_contraction(M, env) / local_contraction(O, env)
-    e = local_contraction(E, env) / local_contraction(O, env)
+    m = expectation_value((1, 1) => M, Z, env)
+    e = expectation_value((1, 1) => E, Z, env)
 
     f_exact, m_exact, e_exact = classical_ising_exact(; beta)
 
