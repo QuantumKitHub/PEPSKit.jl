@@ -1,72 +1,4 @@
 """
-Construct the environment (norm) tensor
-```
-    left half                       right half
-    C1 -χ4 - T1 ------- χ6 ------- T1 - χ8 - C2     r-1
-    |        ‖                      ‖        |
-    χ2      DNX                    DNY      χ10
-    |        ‖                      ‖        |
-    T4 =DWX= XX = DX =       = DY = YY =DEY= T2     r
-    |        ‖                      ‖        |
-    χ1      DSX                    DSY       χ9
-    |        ‖                      ‖        |
-    C4 -χ3 - T3 ------- χ5 ------- T3 - χ7 - C3     r+1
-    c-1      c                      c+1     c+2
-```
-which can be more simply denoted as
-```
-    |------------|
-    |→ DX1  DY1 ←|   axis order
-    |← DX0  DX1 →|   (DX1, DY1, DX0, DY0)
-    |------------|
-```
-The axes 1, 2 (or 3, 4) come from X†, Y† (or X, Y)
-"""
-function tensor_env(
-    row::Int, col::Int, X::AbstractTensorMap, Y::AbstractTensorMap, envs::CTMRGEnv
-)
-    Nr, Nc = size(envs.corners)[[2, 3]]
-    cm1 = _prev(col, Nc)
-    cp1 = _next(col, Nc)
-    cp2 = _next(cp1, Nc)
-    rm1 = _prev(row, Nr)
-    rp1 = _next(row, Nr)
-    c1 = envs.corners[1, rm1, cm1]
-    c2 = envs.corners[2, rm1, cp2]
-    c3 = envs.corners[3, rp1, cp2]
-    c4 = envs.corners[4, rp1, cm1]
-    t1X, t1Y = envs.edges[1, rm1, col], envs.edges[1, rm1, cp1]
-    t2 = envs.edges[2, row, cp2]
-    t3X, t3Y = envs.edges[3, rp1, col], envs.edges[3, rp1, cp1]
-    t4 = envs.edges[4, row, cm1]
-    # left half
-    @autoopt @tensor lhalf[DX1, DX0, χ5, χ6] := (
-        c4[χ3, χ1] *
-        t4[χ1, DWX0, DWX1, χ2] *
-        c1[χ2, χ4] *
-        t3X[χ5, DSX0, DSX1, χ3] *
-        X[DNX0, DX0, DSX0, DWX0] *
-        conj(X[DNX1, DX1, DSX1, DWX1]) *
-        t1X[χ4, DNX0, DNX1, χ6]
-    )
-    # right half
-    @autoopt @tensor rhalf[DY1, DY0, χ5, χ6] := (
-        c3[χ9, χ7] *
-        t2[χ10, DEY0, DEY1, χ9] *
-        c2[χ8, χ10] *
-        t3Y[χ7, DSY0, DSY1, χ5] *
-        Y[DNY0, DEY0, DSY0, DY0] *
-        conj(Y[DNY1, DEY1, DSY1, DY1]) *
-        t1Y[χ6, DNY0, DNY1, χ8]
-    )
-    # combine
-    @autoopt @tensor env[DX1, DY1; DX0, DY0] := (
-        lhalf[DX1, DX0, χ5, χ6] * rhalf[DY1, DY0, χ5, χ6]
-    )
-    return env
-end
-
-"""
 Construct the tensor
 ```
     |------------env------------|
@@ -78,7 +10,7 @@ Construct the tensor
     |---------------------------|
 ```
 """
-function tensor_Ra(env::AbstractTensorMap, bL::AbstractTensorMap)
+function tensor_Ra(env::BondEnv, bL::AbstractTensorMap)
     @autoopt @tensor Ra[DX1, Db1, DX0, Db0] := (
         env[DX1, DY1, DX0, DY0] * bL[Db0, db, DY0] * conj(bL[Db1, db, DY1])
     )
@@ -97,7 +29,7 @@ Construct the tensor
     |-------------------------|
 ```
 """
-function tensor_Sa(env::AbstractTensorMap, bL::AbstractTensorMap, aR2bL2::AbstractTensorMap)
+function tensor_Sa(env::BondEnv, bL::AbstractTensorMap, aR2bL2::AbstractTensorMap)
     @autoopt @tensor Sa[DX1, Db1, da] := (
         env[DX1, DY1, DX0, DY0] * conj(bL[Db1, db, DY1]) * aR2bL2[DX0, da, db, DY0]
     )
@@ -116,7 +48,7 @@ Construct the tensor
     |---------------------------|
 ```
 """
-function tensor_Rb(env::AbstractTensorMap, aR::AbstractTensorMap)
+function tensor_Rb(env::BondEnv, aR::AbstractTensorMap)
     @autoopt @tensor Rb[Da1, DY1, Da0, DY0] := (
         env[DX1, DY1, DX0, DY0] * aR[DX0, da, Da0] * conj(aR[DX1, da, Da1])
     )
@@ -135,7 +67,7 @@ Construct the tensor
     |-------------------------|
 ```
 """
-function tensor_Sb(env::AbstractTensorMap, aR::AbstractTensorMap, aR2bL2::AbstractTensorMap)
+function tensor_Sb(env::BondEnv, aR::AbstractTensorMap, aR2bL2::AbstractTensorMap)
     @autoopt @tensor Sb[Da1, DY1, db] := (
         env[DX1, DY1, DX0, DY0] * conj(aR[DX1, da, Da1]) * aR2bL2[DX0, da, db, DY0]
     )
@@ -155,7 +87,7 @@ Calculate the norm <Psi(a1,b1)|Psi(a2,b2)>
 ```
 """
 function inner_prod(
-    env::AbstractTensorMap, aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
+    env::BondEnv, aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
 )
     @autoopt @tensor t[:] := (
         env[DX1, DY1, DX0, DY0] * conj(aR1bL1[DX1, da, db, DY1]) * aR2bL2[DX0, da, db, DY0]
@@ -185,7 +117,7 @@ Calculate the cost function
 ```
 """
 function cost_func(
-    env::AbstractTensorMap, aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
+    env::BondEnv, aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
 )
     t1 = inner_prod(env, aR1bL1, aR1bL1)
     t2 = inner_prod(env, aR2bL2, aR2bL2)
@@ -264,7 +196,7 @@ function fu_optimize(
     aR0::AbstractTensorMap,
     bL0::AbstractTensorMap,
     aR2bL2::AbstractTensorMap,
-    env::AbstractTensorMap,
+    env::BondEnv,
     alg::ALSOptimize;
     check_int::Int=1,
 )
