@@ -79,15 +79,12 @@ end
 ## Test
 
 # initialize
-
 beta = 0.6
 O, M, E = classical_ising(; beta)
 Z = InfinitePartitionFunction(O)
-
 Random.seed!(81812781143)
 
 # contract
-
 χenv = ℂ^12
 env0 = CTMRGEnv(Z, χenv)
 
@@ -100,15 +97,13 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 ) in Iterators.product(
     ctm_styles, projector_algs
 )
-    ctm_alg = ctm_style(; tol=1e-10, miniter=4, maxiter=100, verbosity=2, projector_alg)
+    ctm_alg = ctm_style(; maxiter=150, projector_alg)
     env = leading_boundary(env0, Z, ctm_alg)
 
     # check observables
-
     λ = value(Z, env)
-    m = expectation_value(((1, 1) => M), Z, env)
-    e = expectation_value(((1, 1) => E), Z, env)
-
+    m = expectation_value(((1, 1),) => M, Z, env)
+    e = expectation_value(((1, 1),) => E, Z, env)
     f_exact, m_exact, e_exact = classical_ising_exact(; beta)
 
     # should be real-ish

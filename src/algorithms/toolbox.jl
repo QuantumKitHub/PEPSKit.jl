@@ -22,10 +22,8 @@ function MPSKit.expectation_value(
 ) where {N,S,M}
     return expectation_value(CartesianIndex.(inds), O, pf, envs)
 end
-function MPSKit.expectation_value(
-    op::NTuple{N,<:Pair}, pf::InfinitePartitionFunction, envs::CTMRGEnv
-) where {N}
-    return expectation_value(op..., pf, envs)
+function MPSKit.expectation_value(op::Pair, pf::InfinitePartitionFunction, envs::CTMRGEnv)
+    return expectation_value(first.(op), last.(op), pf, envs)
 end
 
 function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
