@@ -106,8 +106,8 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     # check observables
 
     λ = value(Z, env)
-    m = expectation_value((1, 1) => M, Z, env)
-    e = expectation_value((1, 1) => E, Z, env)
+    m = expectation_value(((1, 1) => M), Z, env)
+    e = expectation_value(((1, 1) => E), Z, env)
 
     f_exact, m_exact, e_exact = classical_ising_exact(; beta)
 

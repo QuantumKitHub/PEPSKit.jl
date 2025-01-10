@@ -204,6 +204,7 @@ end
 
 # -----------------------------------------------------
 # AbstractTensorMap subtyping and IterSVD compatibility
+# -----------------------------------------------------
 
 function _domain_space(A::NTuple{2,<:PEPSTensor}, n::Int)
     return domain(A[1])[n] * domain(A[2])[n]'

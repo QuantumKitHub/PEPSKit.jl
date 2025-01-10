@@ -9,11 +9,11 @@ function MPSKit.tensorexpr(ex::Expr, indout, indin)
 end
 
 """
-    contract_localoperator(inds, O, peps, env)
+    contract_local_operator(inds, O, peps, env)
 
 Contract a local operator `O` on the PEPS `peps` at the indices `inds` using the environment `env`.
 """
-function contract_localoperator(
+function contract_local_operator(
     inds::NTuple{N,CartesianIndex{2}},
     O::AbstractTensorMap{S,N,N},
     ket::InfinitePEPS,
@@ -21,21 +21,21 @@ function contract_localoperator(
     env::CTMRGEnv,
 ) where {S,N}
     static_inds = Val.(inds)
-    return _contract_localoperator(static_inds, O, ket, bra, env)
+    return _contract_local_operator(static_inds, O, ket, bra, env)
 end
-function contract_localoperator(
+function contract_local_operator(
     inds::NTuple{N,Tuple{Int,Int}},
     O::AbstractTensorMap{S,N,N},
     ket::InfinitePEPS,
     bra::InfinitePEPS,
     env::CTMRGEnv,
 ) where {S,N}
-    return contract_localoperator(CartesianIndex.(inds), O, ket, bra, env)
+    return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
 end
 
 # This implements the contraction of an operator acting on sites `inds`. 
 # The generated function ensures that we can use @tensor to write dynamic contractions (and maximize performance).
-@generated function _contract_localoperator(
+@generated function _contract_local_operator(
     inds::NTuple{N,Val},
     O::AbstractTensorMap{S,N,N},
     ket::InfinitePEPS,
@@ -244,22 +244,22 @@ end
 end
 
 """
-    contract_localnorm(inds, peps, env)
+    contract_local_norm(inds, peps, env)
 
 Contract a local norm of the PEPS `peps` around indices `inds`.
 """
-function contract_localnorm(
+function contract_local_norm(
     inds::NTuple{N,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
     static_inds = Val.(inds)
-    return _contract_localnorm(static_inds, ket, bra, env)
+    return _contract_local_norm(static_inds, ket, bra, env)
 end
-function contract_localnorm(
+function contract_local_norm(
     inds::NTuple{N,Tuple{Int,Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
-    return contract_localnorm(CartesianIndex.(inds), ket, bra, env)
+    return contract_local_norm(CartesianIndex.(inds), ket, bra, env)
 end
-@generated function _contract_localnorm(
+@generated function _contract_local_norm(
     inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
@@ -358,7 +358,7 @@ end
             ]),
             (
                 (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
-                Symbol(:E_W_top, i),
+                Symbol(:E_W_top, i),  # Is this index labeling correct?
                 Symbol(:E_W_bot, i),
             ),
             ((i == 1 ? :C_NW_1 : Symbol(:E_W_virtual, i - 1)),),
@@ -461,31 +461,181 @@ Contract a local tensor `O` inserted into a partition function `pf` at position 
 using the environment `env`.
 """
 function contract_local_tensor(
-    inds::Tuple{Int,Int},
-    O::AbstractTensorMap{S,2,2},
+    inds::NTuple{N,CartesianIndex{2}},
+    O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
     env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
-) where {S,C}
-    r, c = inds
-    return @autoopt @tensor env.corners[NORTHWEST, _prev(r, end), _prev(c, end)][
-            χ_WNW
-            χ_NNW
-        ] *
-        env.edges[NORTH, _prev(r, end), c][χ_NNW D_N; χ_NNE] *
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)][χ_NNE; χ_ENE] *
-        env.edges[EAST, r, _next(c, end)][χ_ENE D_E; χ_ESE] *
-        env.corners[SOUTHEAST, _next(r, end), _next(c, end)][χ_ESE; χ_SSE] *
-        env.edges[SOUTH, _next(r, end), c][χ_SSE D_S; χ_SSW] *
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)][χ_SSW; χ_WSW] *
-        env.edges[WEST, r, _prev(c, end)][χ_WSW D_W; χ_WNW] *
-        O[D_W D_S; D_N D_E]
+) where {N,S,M,C}
+    static_inds = Val.(inds)
+    return _contract_local_tensor(static_inds, O, env)
 end
 function contract_local_tensor(
-    inds::CartesianIndex{2},
-    O::AbstractTensorMap{S,2,2},
+    inds::NTuple{N,Tuple{Int,Int}},
+    O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
     env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
-) where {S,C}
-    return contract_local_tensor(Tuple(inds), O, env)
+) where {N,S,M,C}
+    return contract_local_tensor(CartesianIndex.(inds), O, env)
 end
-function contract_local_tensor(op::Pair, env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}) where {C}
-    return contract_local_tensor(op..., env)
+@generated function _contract_local_tensor(
+    inds::NTuple{N,Val},
+    O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
+    env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
+) where {N,S,M,C}
+    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
+    if !allunique(cartesian_inds)
+        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
+    end
+
+    rmin, rmax = extrema(getindex.(cartesian_inds, 1))
+    cmin, cmax = extrema(getindex.(cartesian_inds, 2))
+
+    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
+
+    corner_NW = tensorexpr(
+        :(env.corners[
+            NORTHWEST, mod1($(rmin - 1), size(env, 2)), mod1($(cmin - 1), size(env, 3))
+        ]),
+        (:χ_C_NW_1,),
+        (:χ_C_NW_2,),
+    )
+    corner_NE = tensorexpr(
+        :(env.corners[
+            NORTHEAST, mod1($(rmin - 1), size(env, 2)), mod1($(cmax + 1), size(env, 3))
+        ]),
+        (:χ_C_NE_1,),
+        (:χ_C_NE_2,),
+    )
+    corner_SE = tensorexpr(
+        :(env.corners[
+            SOUTHEAST, mod1($(rmax + 1), size(env, 2)), mod1($(cmax + 1), size(env, 3))
+        ]),
+        (:χ_C_SE_1,),
+        (:χ_C_SE_2,),
+    )
+    corner_SW = tensorexpr(
+        :(env.corners[
+            SOUTHWEST, mod1($(rmax + 1), size(env, 2)), mod1($(cmin - 1), size(env, 3))
+        ]),
+        (:χ_C_SW_1,),
+        (:χ_C_SW_2,),
+    )
+
+    edges_N = map(1:gridsize[2]) do i
+        return tensorexpr(
+            :(env.edges[
+                NORTH,
+                mod1($(rmin - 1), size(env, 2)),
+                mod1($(cmin + i - 1), size(env, 3)),
+            ]),
+            ((i == 1 ? :χ_C_NW_2 : Symbol(:χ_E_N, i - 1)), Symbol(:D_E_N, i)),
+            ((i == gridsize[2] ? :χ_C_NE_1 : Symbol(:χ_E_N, i)),),
+        )
+    end
+    edges_E = map(1:gridsize[1]) do i
+        return tensorexpr(
+            :(env.edges[
+                EAST,
+                mod1($(rmin + i - 1), size(env, 2)),
+                mod1($(cmax + 1), size(env, 3)),
+            ]),
+            ((i == 1 ? :χ_C_NE_2 : Symbol(:χ_E_E, i - 1)), Symbol(:D_E_E, i)),
+            ((i == gridsize[1] ? :χ_C_SE_1 : Symbol(:χ_E_E, i)),),
+        )
+    end
+    edges_S = map(1:gridsize[2]) do i
+        return tensorexpr(
+            :(env.edges[
+                SOUTH,
+                mod1($(rmax + 1), size(env, 2)),
+                mod1($(cmin + i - 1), size(env, 3)),
+            ]),
+            ((i == gridsize[2] ? :χ_C_SE_2 : Symbol(:χ_E_S, i)), Symbol(:D_E_S, i)),
+            ((i == 1 ? :χ_C_SW_1 : Symbol(:χ_E_S, i - 1)),),
+        )
+    end
+    edges_W = map(1:gridsize[1]) do i
+        return tensorexpr(
+            :(env.edges[
+                WEST,
+                mod1($(rmin + i - 1), size(env, 2)),
+                mod1($(cmin - 1), size(env, 3)),
+            ]),
+            ((i == gridsize[1] ? :χ_C_SW_2 : Symbol(:χ_E_W, i)), Symbol(:D_E_W, i)),
+            ((i == 1 ? :χ_C_NW_1 : Symbol(:χ_E_W, i - 1)),),
+        )
+    end
+
+    tensor = if O <: Matrix
+        map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
+            tensorexpr(
+                :(O[
+                    mod1($(rmin + i - 1), size(env, 2)),
+                    mod1($(cmin + j - 1), size(env, 3)),
+                ]),
+                (
+                    (
+                        if i == gridsize[1]
+                            Symbol(:D_E_S, j)
+                        else
+                            Symbol(:D_op_vertical, i, "_", j)
+                        end
+                    ),
+                    (
+                        if j == 1
+                            Symbol(:D_E_W, i)
+                        else
+                            Symbol(:D_op_horizontal, i, "_", j - 1)
+                        end
+                    ),
+                ),
+                (
+                    (
+                        if i == 1
+                            Symbol(:D_E_N, j)
+                        else
+                            Symbol(:D_op_vertical, i - 1, "_", j)
+                        end
+                    ),
+                    (
+                        if j == gridsize[2]
+                            Symbol(:D_E_E, i)
+                        else
+                            Symbol(:D_op_horizontal, i, "_", j)
+                        end
+                    ),
+                ),
+            )
+        end
+    else
+        expr = tensorexpr(
+            :O,
+            (
+                ntuple(i -> Symbol(:D_E_S, i), gridsize[2])...,
+                ntuple(i -> Symbol(:D_E_W, i), gridsize[1])...,
+            ),
+            (
+                ntuple(i -> Symbol(:D_E_N, i), gridsize[2])...,
+                ntuple(i -> Symbol(:D_E_E, i), gridsize[1])...,
+            ),
+        )
+        [expr]
+    end
+
+    multiplication_ex = Expr(
+        :call,
+        :*,
+        corner_NW,
+        corner_NE,
+        corner_SE,
+        corner_SW,
+        edges_N...,
+        edges_E...,
+        edges_S...,
+        edges_W...,
+        tensor...,
+    )
+
+    returnex = quote
+        @autoopt @tensor opt = $multiplication_ex
+    end
+    return macroexpand(@__MODULE__, returnex)
 end

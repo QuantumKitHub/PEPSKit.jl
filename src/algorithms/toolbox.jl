@@ -1,29 +1,30 @@
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, O)
     term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        contract_localoperator(inds, operator, peps, peps, envs) /
-        contract_localnorm(inds, peps, peps, envs)
+        contract_local_operator(inds, operator, peps, peps, envs) /
+        contract_local_norm(inds, peps, peps, envs)
     end
     return sum(term_vals)
 end
 function MPSKit.expectation_value(
-    inds::CartesianIndex{2},
-    O::AbstractTensorMap{S,2,2},
+    inds::NTuple{N,CartesianIndex{2}},
+    O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
     pf::InfinitePartitionFunction,
     envs::CTMRGEnv,
-) where {S}
-    return contract_local_tensor(inds, O, envs) /
-           contract_local_tensor(inds, pf[inds], envs)
+) where {N,S,M}
+    return contract_local_tensor(inds, O, envs) / contract_local_tensor(inds, pf.A, envs)
 end
 function MPSKit.expectation_value(
-    inds::Tuple{Int,Int},
-    O::AbstractTensorMap{S,2,2},
+    inds::NTuple{N,Tuple{Int,Int}},
+    O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
     pf::InfinitePartitionFunction,
     envs::CTMRGEnv,
-) where {S}
-    return expectation_value(CartesianIndex(inds), O, pf, envs)
+) where {N,S,M}
+    return expectation_value(CartesianIndex.(inds), O, pf, envs)
 end
-function MPSKit.expectation_value(op::Pair, pf::InfinitePartitionFunction, envs::CTMRGEnv)
+function MPSKit.expectation_value(
+    op::NTuple{N,<:Pair}, pf::InfinitePartitionFunction, envs::CTMRGEnv
+) where {N}
     return expectation_value(op..., pf, envs)
 end
 
