@@ -1,20 +1,29 @@
 """
-    bondenv_NN(peps::InfinitePEPS, row::Int, col::Int, Q0::PEPSTensor, Q1::PEPSTensor)
+Neighborhood tensor update (NTU) algorithms to construct bond environment.
+"""
+abstract type NTUEnvAlgorithm <: BondEnvAlgorithm end
 
-Calculate the bond environment within "NTU-NN" approximation.
+"""
+Construct the "NTU-NN" bond environment. 
 ```
             (-1 +0)══(-1 +1)
                 ║        ║
-    (+0 -1)════Q0══   ══Q1═══(+0 +2)
+    (+0 -1)═════X══   ═══Y═══(+0 +2)
                 ║        ║
             (+1 +0)══(+1 +1)
 ```
 """
-function bondenv_NN(peps::InfinitePEPS, row::Int, col::Int, Q0::PEPSTensor, Q1::PEPSTensor)
+struct NTUEnvNN <: NTUEnvAlgorithm end
+"""
+Calculate the bond environment within "NTU-NN" approximation.
+"""
+function bondenv_ntu(
+    row::Int, col::Int, X::PEPSTensor, Y::PEPSTensor, peps::InfinitePEPS, ::NTUEnvNN
+)
     neighbors = [(-1, 0), (0, -1), (1, 0), (1, 1), (0, 2), (-1, 1)]
     m = collect_neighbors(peps, row, col, neighbors)
-    env_l = edge_l(Q0, hair_l(m[0, -1]))
-    env_r = edge_r(Q1, hair_r(m[0, 2]))
+    env_l = edge_l(X, hair_l(m[0, -1]))
+    env_r = edge_r(Y, hair_r(m[0, 2]))
     ctl = cor_tl(m[-1, 0])
     ctr = cor_tr(m[-1, 1])
     cbr = cor_br(m[1, 1])
@@ -23,11 +32,11 @@ function bondenv_NN(peps::InfinitePEPS, row::Int, col::Int, Q0::PEPSTensor, Q1::
 
         ctl ═════ Dt ═════ ctr
         ║                   ║
-        Dtl                 Dtr
-        ║                   ║
-        env_l ═ Dl  Dr ══ env_r
-        ║                   ║
-        Dbl                 Dbr
+    ....Dtl........         Dtr
+        ║          :        ║
+        env_l ═ Dl :Dr ══ env_r
+        ║          :        ║
+        Dbl        :........Dbr....
         ║                   ║
         cbl ═════ Db ═════ cbr
     =#
@@ -42,38 +51,45 @@ function bondenv_NN(peps::InfinitePEPS, row::Int, col::Int, Q0::PEPSTensor, Q1::
 end
 
 """
-    bondenv_NNN(peps::InfinitePEPS, row::Int, col::Int)
-
-Calculates the bond environment within "NTU-NNN" approximation.
-
+Construct the "NTU-NNN" bond environment. 
 ```
     (-1 -1)=(-1 +0)══(-1 +1)=(-1 +2)
         ║       ║        ║       ║
-    (+0 -1)════Q0══   ══Q1═══(+0 +2)
+    (+0 -1)═════X══   ═══Y═══(+0 +2)
         ║       ║        ║       ║
     (+1 -1)=(+1 +0)══(+1 +1)=(+1 +2)
 ```
 """
-function bondenv_NNN(peps::InfinitePEPS, row::Int, col::Int)
+struct NTUEnvNNN <: NTUEnvAlgorithm end
+"""
+Calculates the bond environment within "NTU-NNN" approximation.
+"""
+function bondenv_ntu(
+    row::Int, col::Int, X::PEPSTensor, Y::PEPSTensor, peps::InfinitePEPS, ::NTUEnvNNN
+)
     return error("Not implemented")
 end
 
 """
-    bondenv_NNNp(peps::InfinitePEPS, row::Int, col::Int)
-
-Calculates the bond environment within "NTU-NNN+" approximation.
+Construct the "NTU-NNN+" bond environment. 
 ```
             (-2 -1) (-2 +0)  (-2 +1) (-2 +2)
                 ║       ║        ║       ║
     (-1 -2)=(-1 -1)=(-1 +0)══(-1 +1)=(-1 +2)═(-1 +3)
                 ║       ║        ║       ║
-    (+0 -2)=(+0 -1)════Q0══   ══Q1═══(+0 +2)═(+0 +3)
+    (+0 -2)=(+0 -1)═════X══   ═══Y═══(+0 +2)═(+0 +3)
                 ║       ║        ║       ║
     (+1 -2)=(+1 -1)=(+1 +0)══(+1 +1)═(+1 +2)═(+1 +3)
                 ║       ║        ║       ║
             (+2 -1) (+2 +0)  (+2 +1) (+2 +2)
 ```
 """
-function bondenv_NNNp(peps::InfinitePEPS, row::Int, col::Int)
+struct NTUEnvNNNp <: NTUEnvAlgorithm end
+"""
+Calculates the bond environment within "NTU-NNN+" approximation.
+"""
+function bondenv_ntu(
+    row::Int, col::Int, X::PEPSTensor, Y::PEPSTensor, peps::InfinitePEPS, ::NTUEnvNNNp
+)
     return error("Not implemented")
 end

@@ -1,71 +1,14 @@
 """
-    bondenv_fu(row::Int, col::Int, X::AbstractTensorMap, Y::AbstractTensorMap, envs::CTMRGEnv)
-
-Construct the environment (norm) tensor
-```
-    left half                       right half
-    C1 -χ4 - T1 ------- χ6 ------- T1 - χ8 - C2     r-1
-    |        ‖                      ‖        |
-    χ2      DNX                    DNY      χ10
-    |        ‖                      ‖        |
-    T4 =DWX= XX = DX =       = DY = YY =DEY= T2     r
-    |        ‖                      ‖        |
-    χ1      DSX                    DSY       χ9
-    |        ‖                      ‖        |
-    C4 -χ3 - T3 ------- χ5 ------- T3 - χ7 - C3     r+1
-    c-1      c                      c+1     c+2
-```
-which can be more simply denoted as
-```
-    |------------|
-    |→ DX1  DY1 ←|   axis order
-    |← DX0  DX1 →|   (DX1, DY1, DX0, DY0)
-    |------------|
-```
-The axes 1, 2 (or 3, 4) come from X†, Y† (or X, Y)
+Algorithm struct for the alternating least square optimization step in PEPS bond update 
+(e.g. neighborhood tensor update and full update). 
+`tol` is the maximum `|fid_{n+1} - fid_{n}| / fid_0` 
+(normalized local fidelity change between two optimization steps)
 """
-function bondenv_fu(
-    row::Int, col::Int, X::AbstractTensorMap, Y::AbstractTensorMap, envs::CTMRGEnv
-)
-    Nr, Nc = size(envs.corners)[[2, 3]]
-    cm1 = _prev(col, Nc)
-    cp1 = _next(col, Nc)
-    cp2 = _next(cp1, Nc)
-    rm1 = _prev(row, Nr)
-    rp1 = _next(row, Nr)
-    c1 = envs.corners[1, rm1, cm1]
-    c2 = envs.corners[2, rm1, cp2]
-    c3 = envs.corners[3, rp1, cp2]
-    c4 = envs.corners[4, rp1, cm1]
-    t1X, t1Y = envs.edges[1, rm1, col], envs.edges[1, rm1, cp1]
-    t2 = envs.edges[2, row, cp2]
-    t3X, t3Y = envs.edges[3, rp1, col], envs.edges[3, rp1, cp1]
-    t4 = envs.edges[4, row, cm1]
-    # left half
-    @autoopt @tensor lhalf[DX1, DX0, χ5, χ6] := (
-        c4[χ3, χ1] *
-        t4[χ1, DWX0, DWX1, χ2] *
-        c1[χ2, χ4] *
-        t3X[χ5, DSX0, DSX1, χ3] *
-        X[DNX0, DX0, DSX0, DWX0] *
-        conj(X[DNX1, DX1, DSX1, DWX1]) *
-        t1X[χ4, DNX0, DNX1, χ6]
-    )
-    # right half
-    @autoopt @tensor rhalf[DY1, DY0, χ5, χ6] := (
-        c3[χ9, χ7] *
-        t2[χ10, DEY0, DEY1, χ9] *
-        c2[χ8, χ10] *
-        t3Y[χ7, DSY0, DSY1, χ5] *
-        Y[DNY0, DEY0, DSY0, DY0] *
-        conj(Y[DNY1, DEY1, DSY1, DY1]) *
-        t1Y[χ6, DNY0, DNY1, χ8]
-    )
-    # combine
-    @autoopt @tensor env[DX1, DY1; DX0, DY0] := (
-        lhalf[DX1, DX0, χ5, χ6] * rhalf[DY1, DY0, χ5, χ6]
-    )
-    return env
+@kwdef struct ALSOptimize
+    maxiter::Int = 50
+    tol::Float64 = 1e-15
+    verbose::Bool = false
+    check_int::Int = 1
 end
 
 """
@@ -174,7 +117,7 @@ function _combine_aRbL(aR::AbstractTensorMap, bL::AbstractTensorMap)
             ↑       ↑
     ← DX ← aR ← D ← bL → DY →
     =#
-    @tensor aRbL[DX, da, db, DY] := aR[DX, da, D] * bL[D, db, DY]
+    @tensor aRbL[DX da; db DY] := aR[DX, da, D] * bL[D, db, DY]
     return aRbL
 end
 
@@ -240,17 +183,7 @@ function solve_ab(R::AbstractTensorMap, S::AbstractTensorMap, ab0::AbstractTenso
 end
 
 """
-Algorithm struct for the alternating least square optimization step in full update. 
-`tol` is the maximum `|fid_{n+1} - fid_{n}| / fid_0` 
-(normalized local fidelity change between two optimization steps)
-"""
-@kwdef struct FUALSOptimize
-    maxiter::Int = 50
-    tol::Float64 = 1e-15
-end
-
-"""
-    fu_optimize(aR0::AbstractTensorMap, bL0::AbstractTensorMap, aR2bL2::AbstractTensorMap, env::AbstractTensorMap, alg::FUALSOptimize; check_int::Int=1)
+    als_optimize(aR0::AbstractTensorMap, bL0::AbstractTensorMap, aR2bL2::AbstractTensorMap, env::AbstractTensorMap, alg::ALSOptimize; check_int::Int=1)
 
 Minimize the cost function
 ```
@@ -264,13 +197,12 @@ Minimize the cost function
 ```
 `aR0`, `bL0` are initial values of `aR`, `bL`
 """
-function fu_optimize(
+function als_optimize(
     aR0::AbstractTensorMap,
     bL0::AbstractTensorMap,
     aR2bL2::AbstractTensorMap,
-    env::AbstractTensorMap,
-    alg::FUALSOptimize;
-    check_int::Int=1,
+    env::BondEnv,
+    alg::ALSOptimize,
 )
     @debug "---- Iterative optimization ----\n"
     @debug @sprintf("%-6s%12s%12s%12s %10s\n", "Step", "Cost", "ϵ_d", "ϵ_ab", "Time/s")
@@ -302,7 +234,7 @@ function fu_optimize(
         diff_d = abs(cost - cost0) / cost00
         diff_ab = abs(fid - fid0) / fid00
         time1 = time()
-        if (count == 1 || count % check_int == 0)
+        if (count == 1 || count % alg.check_int == 0)
             @debug @sprintf(
                 "%-6d%12.3e%12.3e%12.3e %10.3f\n",
                 count,
