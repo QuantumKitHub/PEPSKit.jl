@@ -12,7 +12,7 @@ Each FU run stops when the energy starts to increase.
     # truncation scheme after applying gate
     trscheme::TensorKit.TruncationScheme
     # alternating least square optimization
-    opt_alg::FUALSOptimize = FUALSOptimize()
+    opt_alg::ALSOptimize = ALSOptimize()
     # SequentialCTMRG column move after updating a column of bonds
     colmove_alg::SequentialCTMRG
     # interval to reconverge environments

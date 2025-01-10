@@ -194,7 +194,7 @@ export fixedpoint
 
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
-export fu_iter, fullupdate, FullUpdate, FUALSOptimize
+export fu_iter, fullupdate, FullUpdate, ALSOptimize
 
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS

@@ -242,7 +242,7 @@ Algorithm struct for the alternating least square optimization step in full upda
 `tol` is the maximum `|fid_{n+1} - fid_{n}| / fid_0` 
 (normalized local fidelity change between two optimization steps)
 """
-@kwdef struct FUALSOptimize
+@kwdef struct ALSOptimize
     maxiter::Int = 50
     tol::Float64 = 1e-15
 end
@@ -265,7 +265,7 @@ function fu_optimize(
     bL0::AbstractTensorMap,
     aR2bL2::AbstractTensorMap,
     env::AbstractTensorMap,
-    alg::FUALSOptimize;
+    alg::ALSOptimize;
     check_int::Int=1,
 )
     @debug "---- Iterative optimization ----\n"
