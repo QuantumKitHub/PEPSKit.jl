@@ -122,6 +122,42 @@ function _contract_edge_expr(rowrange, colrange)
     return edges_N, edges_E, edges_S, edges_W
 end
 
+function _contract_pf_edge_expr(rowrange, colrange)
+    rmin, rmax = extrema(rowrange)
+    cmin, cmax = extrema(colrange)
+    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
+
+    edges_N = map(1:gridsize[2]) do i
+        E_N = :(env.edges[NORTH, mod1($(rmin - 1), end), mod1($(cmin + i - 1), end)])
+        return tensorexpr(
+            E_N, (envlabel(NORTH, i - 1), virtuallabel(NORTH, i)), envlabel(NORTH, i)
+        )
+    end
+
+    edges_E = map(1:gridsize[1]) do i
+        E_E = :(env.edges[EAST, mod1($(rmin + i - 1), end), mod1($(cmax + 1), end)])
+        return tensorexpr(
+            E_E, (envlabel(EAST, i - 1), virtuallabel(EAST, i)), envlabel(EAST, i)
+        )
+    end
+
+    edges_S = map(1:gridsize[2]) do i
+        E_S = :(env.edges[SOUTH, mod1($(rmax + 1), end), mod1($(cmin + i - 1), end)])
+        return tensorexpr(
+            E_S, (envlabel(SOUTH, i), virtuallabel(SOUTH, i)), envlabel(SOUTH, i - 1)
+        )
+    end
+
+    edges_W = map(1:gridsize[1]) do i
+        E_W = :(env.edges[WEST, mod1($(rmin + i - 1), end), mod1($(cmin - 1), end)])
+        return tensorexpr(
+            E_W, (envlabel(WEST, i), virtuallabel(WEST, i)), envlabel(WEST, i - 1)
+        )
+    end
+
+    return edges_N, edges_E, edges_S, edges_W
+end
+
 function _contract_state_expr(rowrange, colrange, cartesian_inds=nothing)
     rmin, rmax = extrema(rowrange)
     cmin, cmax = extrema(colrange)
@@ -166,6 +202,64 @@ function _contract_state_expr(rowrange, colrange, cartesian_inds=nothing)
                 ),
             )
         end
+    end
+end
+
+function _contract_tensor_expr(O, rowrange, colrange)
+    rmin, rmax = extrema(rowrange)
+    cmin, cmax = extrema(colrange)
+    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
+    if O <: Matrix
+        return map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
+            tensorexpr(
+                :(O[mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)]),
+                (
+                    (
+                        if i == gridsize[1]
+                            virtuallabel(SOUTH, j)
+                        else
+                            virtuallabel(:vertical, i, j)
+                        end
+                    ),
+                    (
+                        if j == 1
+                            virtuallabel(WEST, i)
+                        else
+                            virtuallabel(:horizontal, i, j - 1)
+                        end
+                    ),
+                ),
+                (
+                    (
+                        if i == 1
+                            virtuallabel(NORTH, j)
+                        else
+                            virtuallabel(:vertical, i - 1, j)
+                        end
+                    ),
+                    (
+                        if j == gridsize[2]
+                            virtuallabel(EAST, i)
+                        else
+                            virtuallabel(:horizontal, i, j)
+                        end
+                    ),
+                ),
+            )
+        end
+    else
+        expr = tensorexpr(
+            :O,
+            (
+                ntuple(i -> virtuallabel(SOUTH, i), gridsize[2])...,
+                ntuple(i -> virtuallabel(WEST, i), gridsize[1])...,
+            ),
+            (
+                ntuple(i -> virtuallabel(NORTH, i), gridsize[2])...,
+                ntuple(i -> virtuallabel(EAST, i), gridsize[1])...,
+            ),
+        )
+        return [expr]
     end
 end
 
@@ -292,144 +386,14 @@ end
     env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
 ) where {N,S,M,C}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
-    if !allunique(cartesian_inds)
+    allunique(cartesian_inds) ||
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
-    end
+    rowrange = getindex.(cartesian_inds, 1)
+    colrange = getindex.(cartesian_inds, 2)
 
-    rmin, rmax = extrema(getindex.(cartesian_inds, 1))
-    cmin, cmax = extrema(getindex.(cartesian_inds, 2))
-
-    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
-
-    corner_NW = tensorexpr(
-        :(env.corners[
-            NORTHWEST, mod1($(rmin - 1), size(env, 2)), mod1($(cmin - 1), size(env, 3))
-        ]),
-        (:χ_C_NW_1,),
-        (:χ_C_NW_2,),
-    )
-    corner_NE = tensorexpr(
-        :(env.corners[
-            NORTHEAST, mod1($(rmin - 1), size(env, 2)), mod1($(cmax + 1), size(env, 3))
-        ]),
-        (:χ_C_NE_1,),
-        (:χ_C_NE_2,),
-    )
-    corner_SE = tensorexpr(
-        :(env.corners[
-            SOUTHEAST, mod1($(rmax + 1), size(env, 2)), mod1($(cmax + 1), size(env, 3))
-        ]),
-        (:χ_C_SE_1,),
-        (:χ_C_SE_2,),
-    )
-    corner_SW = tensorexpr(
-        :(env.corners[
-            SOUTHWEST, mod1($(rmax + 1), size(env, 2)), mod1($(cmin - 1), size(env, 3))
-        ]),
-        (:χ_C_SW_1,),
-        (:χ_C_SW_2,),
-    )
-
-    edges_N = map(1:gridsize[2]) do i
-        return tensorexpr(
-            :(env.edges[
-                NORTH,
-                mod1($(rmin - 1), size(env, 2)),
-                mod1($(cmin + i - 1), size(env, 3)),
-            ]),
-            ((i == 1 ? :χ_C_NW_2 : Symbol(:χ_E_N, i - 1)), Symbol(:D_E_N, i)),
-            ((i == gridsize[2] ? :χ_C_NE_1 : Symbol(:χ_E_N, i)),),
-        )
-    end
-    edges_E = map(1:gridsize[1]) do i
-        return tensorexpr(
-            :(env.edges[
-                EAST,
-                mod1($(rmin + i - 1), size(env, 2)),
-                mod1($(cmax + 1), size(env, 3)),
-            ]),
-            ((i == 1 ? :χ_C_NE_2 : Symbol(:χ_E_E, i - 1)), Symbol(:D_E_E, i)),
-            ((i == gridsize[1] ? :χ_C_SE_1 : Symbol(:χ_E_E, i)),),
-        )
-    end
-    edges_S = map(1:gridsize[2]) do i
-        return tensorexpr(
-            :(env.edges[
-                SOUTH,
-                mod1($(rmax + 1), size(env, 2)),
-                mod1($(cmin + i - 1), size(env, 3)),
-            ]),
-            ((i == gridsize[2] ? :χ_C_SE_2 : Symbol(:χ_E_S, i)), Symbol(:D_E_S, i)),
-            ((i == 1 ? :χ_C_SW_1 : Symbol(:χ_E_S, i - 1)),),
-        )
-    end
-    edges_W = map(1:gridsize[1]) do i
-        return tensorexpr(
-            :(env.edges[
-                WEST,
-                mod1($(rmin + i - 1), size(env, 2)),
-                mod1($(cmin - 1), size(env, 3)),
-            ]),
-            ((i == gridsize[1] ? :χ_C_SW_2 : Symbol(:χ_E_W, i)), Symbol(:D_E_W, i)),
-            ((i == 1 ? :χ_C_NW_1 : Symbol(:χ_E_W, i - 1)),),
-        )
-    end
-
-    tensor = if O <: Matrix
-        map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
-            tensorexpr(
-                :(O[
-                    mod1($(rmin + i - 1), size(env, 2)),
-                    mod1($(cmin + j - 1), size(env, 3)),
-                ]),
-                (
-                    (
-                        if i == gridsize[1]
-                            Symbol(:D_E_S, j)
-                        else
-                            Symbol(:D_op_vertical, i, "_", j)
-                        end
-                    ),
-                    (
-                        if j == 1
-                            Symbol(:D_E_W, i)
-                        else
-                            Symbol(:D_op_horizontal, i, "_", j - 1)
-                        end
-                    ),
-                ),
-                (
-                    (
-                        if i == 1
-                            Symbol(:D_E_N, j)
-                        else
-                            Symbol(:D_op_vertical, i - 1, "_", j)
-                        end
-                    ),
-                    (
-                        if j == gridsize[2]
-                            Symbol(:D_E_E, i)
-                        else
-                            Symbol(:D_op_horizontal, i, "_", j)
-                        end
-                    ),
-                ),
-            )
-        end
-    else
-        expr = tensorexpr(
-            :O,
-            (
-                ntuple(i -> Symbol(:D_E_S, i), gridsize[2])...,
-                ntuple(i -> Symbol(:D_E_W, i), gridsize[1])...,
-            ),
-            (
-                ntuple(i -> Symbol(:D_E_N, i), gridsize[2])...,
-                ntuple(i -> Symbol(:D_E_E, i), gridsize[1])...,
-            ),
-        )
-        [expr]
-    end
+    corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
+    edges_N, edges_E, edges_S, edges_W = _contract_pf_edge_expr(rowrange, colrange)
+    tensor = _contract_tensor_expr(O, rowrange, colrange)
 
     multiplication_ex = Expr(
         :call,
