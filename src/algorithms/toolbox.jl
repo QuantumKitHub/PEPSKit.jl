@@ -12,6 +12,10 @@ function MPSKit.expectation_value(
     pf::InfinitePartitionFunction,
     envs::CTMRGEnv,
 ) where {N,S,M}
+    if O isa Matrix
+        (length(inds) != length(O)) &&
+            throw(ArgumentError("Indices and tensor matrix must match"))
+    end
     return contract_local_tensor(inds, O, envs) / contract_local_tensor(inds, pf.A, envs)
 end
 function MPSKit.expectation_value(
