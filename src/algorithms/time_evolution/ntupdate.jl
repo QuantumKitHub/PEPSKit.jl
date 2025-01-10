@@ -1,9 +1,3 @@
-include("bondenv/envtools.jl")
-include("bondenv/env_ntu.jl")
-include("bondenv/env_ctm.jl")
-include("bondenv/eat.jl")
-include("bondenv/optimize.jl")
-
 """
 Algorithm struct for neighborhood tensor update (NTU) of infinite PEPS.
 Each NTU run stops when energy starts to increase.

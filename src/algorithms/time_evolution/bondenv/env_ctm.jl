@@ -1,6 +1,4 @@
 """
-    bondenv_fu(row::Int, col::Int, X::AbstractTensorMap, Y::AbstractTensorMap, envs::CTMRGEnv)
-
 Construct the environment (norm) tensor
 ```
     left half                       right half
@@ -17,11 +15,10 @@ Construct the environment (norm) tensor
 ```
 which can be more simply denoted as
 ```
-    |→ DX1  DY1 ←|
-    |            |
-    |-----env----|   axis order
-    |            |   (DX1, DY1, DX0, DY0)
-    |← DX0  DX1 →|   
+    |------------|
+    |→ DX1  DY1 ←|   axis order
+    |← DX0  DX1 →|   (DX1, DY1, DX0, DY0)
+    |------------|
 ```
 The axes 1, 2 (or 3, 4) come from X†, Y† (or X, Y)
 """
@@ -68,15 +65,15 @@ function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, envs::CTMRGEnv
 end
 
 """
-Replace CTMRG `env` by its positive/negative approximant `± Z Z†`
+Replace `env` by its positive/negative approximant `± Z Z†`
 (returns the sign and Z†)
 ```
                         |-→ 1   2 ←-|
                         |           |
-    |→ 1     2 ←|       |←--- Z ---→|
-    |----env----|   =         ↑
+    |----env----|       |←--- Z ---→|
+    |→ 1     2 ←|   =         ↑
     |← 3     4 →|       |---→ Z† ←--|
-                        |           |
+    |-----------|       |           |
                         |←- 3   4 -→|
 ```
 """
@@ -106,11 +103,7 @@ end
 Fix local gauge of the env tensor around a bond
 """
 function fu_fixgauge(
-    Zdg::AbstractTensorMap{S,1,2},
-    X::PEPSOrth,
-    Y::PEPSOrth,
-    aR::AbstractTensorMap,
-    bL::AbstractTensorMap,
+    Zdg::AbstractTensorMap{S,1,2}, X::PEPSOrth, Y::PEPSOrth, aR::BondPhys, bL::BondPhys
 ) where {S<:ElementarySpace}
     #= 
             1               1
@@ -148,7 +141,7 @@ function fu_fixgauge(
     bL = ncon([bL, R], [[-1, -2, 1], [-3, 1]])
     Zdg = permute(ncon([Zdg, Linv, Rinv], [[-1, 1, 2], [1, -2], [2, -3]]), (1,), (2, 3))
     #= fix gauge of X, Y
-
+    
             -1                                      -1
              |                                      |
         -4 - X ← 1 ← Linv ← -2      -4 → Rinv → 1 → Y - -2

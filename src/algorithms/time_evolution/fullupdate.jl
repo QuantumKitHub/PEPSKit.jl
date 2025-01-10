@@ -48,9 +48,9 @@ function ctmrg_rightmove(col::Int, peps::InfinitePEPS, envs::CTMRGEnv, alg::Sequ
 end
 
 """
-Full update of the x-bond between sites `[r,c]` and `[r,c+1]`
+Update the bond between `[row, col]` and `[row, col+1]`.
 """
-function _update_bondx!(
+function update_bondx!(
     row::Int,
     col::Int,
     gate::AbstractTensorMap{S,2,2},
@@ -73,6 +73,7 @@ function _update_bondx!(
     =#
     X, aR0 = leftorth(A, ((2, 4, 5), (1, 3)); alg=QRpos())
     X = permute(X, (1, 4, 2, 3))
+    aR0 = permute(aR0, (1, 2, 3))
     #=
         2   1                 2         2
         | ↗                 ↗           |
@@ -101,18 +102,18 @@ function _update_bondx!(
             ↑           ↑
         -1← aR -← 3 -← bL → -4
     =#
-    # @tensor aR2bL2[-1 -2; -3 -4] := gate[-2, -3, 1, 2] * aR0[-1, 1, 3] * bL0[3, 2, -4]
     aR2bL2 = ncon((gate, aR0, bL0), ([-2, -3, 1, 2], [-1, 1, 3], [3, 2, -4]))
     # initialize truncated tensors using SVD truncation
     aR, s_cut, bL, ϵ = tsvd(
         aR2bL2, ((1, 2), (3, 4)); trunc=truncation_scheme(alg, space(aR0, 3))
     )
     aR, bL = absorb_s(aR, s_cut, bL)
+    aR, bL = permute(aR, (1, 2, 3)), permute(bL, (1, 2, 3))
     # optimize aR, bL
     aR, bL, cost = als_optimize(aR, bL, aR2bL2, env, alg.opt_alg)
     aR /= norm(aR, Inf)
     bL /= norm(bL, Inf)
-    localfid = local_fidelity(_combine_aRbL(aR, bL), aR2bL2)
+    fid = local_fidelity(_combine_aRbL(aR, bL), _combine_aRbL(aR0, bL0))
     #= update and normalize peps, ms
 
             -2        -1               -1     -2
@@ -123,15 +124,12 @@ function _update_bondx!(
     =#
     @tensor A[-1; -2 -3 -4 -5] := X[-2, 1, -4, -5] * aR[1, -1, -3]
     @tensor B[-1; -2 -3 -4 -5] := bL[-5, -1, 1] * Y[-2, -3, -4, 1]
-    # update peps with normalized A, B
     peps.A[row, col] = A / norm(A, Inf)
     peps.A[row, cp1] = B / norm(B, Inf)
-    return cost, localfid
+    return cost, fid
 end
 
 """
-    update_column!(col::Int, gate::LocalOperator, peps::InfinitePEPS, envs::CTMRGEnv, alg::FullUpdate)
-
 Update all horizontal bonds in the c-th column
 (i.e. `(r,c) (r,c+1)` for all `r = 1, ..., Nr`).
 To update rows, rotate the network clockwise by 90 degrees.
@@ -143,11 +141,19 @@ function update_column!(
     @assert 1 <= col <= Nc
     localfid = 0.0
     costs = zeros(Nr)
+    #= Axis order of X, aR, Y, bL
+
+            1             2            2         1
+            |            ↗           ↗           |
+        4 - X ← 2   1 ← aR ← 3  1 ← bL → 3   4 → Y - 2
+            |                                    |
+            3                                    3
+    =#
     for row in 1:Nr
         term = get_gateterm(gate, (CartesianIndex(row, col), CartesianIndex(row, col + 1)))
-        cost, lfid = _update_bondx!(row, col, term, peps, envs, alg)
+        cost, fid = update_bondx!(row, col, term, peps, envs, alg)
         costs[row] = cost
-        localfid += lfid
+        localfid += fid
     end
     # update CTMRGEnv
     envs2, info = ctmrg_leftmove(col, peps, envs, alg.colmove_alg)

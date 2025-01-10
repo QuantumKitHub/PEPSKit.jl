@@ -1,6 +1,5 @@
 """
-Algorithm struct for the alternating least square optimization step in PEPS bond update 
-(e.g. neighborhood tensor update and full update). 
+Algorithm struct for the alternating least square optimization step in full update. 
 `tol` is the maximum `|fid_{n+1} - fid_{n}| / fid_0` 
 (normalized local fidelity change between two optimization steps)
 """
@@ -23,7 +22,7 @@ Construct the tensor
     |---------------------------|
 ```
 """
-function tensor_Ra(env::AbstractTensorMap, bL::AbstractTensorMap)
+function tensor_Ra(env::BondEnv, bL::BondPhys)
     @autoopt @tensor Ra[DX1, Db1, DX0, Db0] := (
         env[DX1, DY1, DX0, DY0] * bL[Db0, db, DY0] * conj(bL[Db1, db, DY1])
     )
@@ -42,7 +41,7 @@ Construct the tensor
     |-------------------------|
 ```
 """
-function tensor_Sa(env::AbstractTensorMap, bL::AbstractTensorMap, aR2bL2::AbstractTensorMap)
+function tensor_Sa(env::BondEnv, bL::BondPhys, aR2bL2::BondPhys2)
     @autoopt @tensor Sa[DX1, Db1, da] := (
         env[DX1, DY1, DX0, DY0] * conj(bL[Db1, db, DY1]) * aR2bL2[DX0, da, db, DY0]
     )
@@ -61,7 +60,7 @@ Construct the tensor
     |---------------------------|
 ```
 """
-function tensor_Rb(env::AbstractTensorMap, aR::AbstractTensorMap)
+function tensor_Rb(env::BondEnv, aR::BondPhys)
     @autoopt @tensor Rb[Da1, DY1, Da0, DY0] := (
         env[DX1, DY1, DX0, DY0] * aR[DX0, da, Da0] * conj(aR[DX1, da, Da1])
     )
@@ -80,7 +79,7 @@ Construct the tensor
     |-------------------------|
 ```
 """
-function tensor_Sb(env::AbstractTensorMap, aR::AbstractTensorMap, aR2bL2::AbstractTensorMap)
+function tensor_Sb(env::BondEnv, aR::BondPhys, aR2bL2::BondPhys2)
     @autoopt @tensor Sb[Da1, DY1, db] := (
         env[DX1, DY1, DX0, DY0] * conj(aR[DX1, da, Da1]) * aR2bL2[DX0, da, db, DY0]
     )
@@ -99,9 +98,7 @@ Calculate the norm <Psi(a1,b1)|Psi(a2,b2)>
     |-----------------------|
 ```
 """
-function inner_prod(
-    env::AbstractTensorMap, aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
-)
+function inner_prod(env::BondEnv, aR1bL1::BondPhys2, aR2bL2::BondPhys2)
     @autoopt @tensor t[:] := (
         env[DX1, DY1, DX0, DY0] * conj(aR1bL1[DX1, da, db, DY1]) * aR2bL2[DX0, da, db, DY0]
     )
@@ -111,13 +108,13 @@ end
 """
 Contract the axis between `aR` and `bL` tensors
 """
-function _combine_aRbL(aR::AbstractTensorMap, bL::AbstractTensorMap)
+function _combine_aRbL(aR::BondPhys, bL::BondPhys)
     #= 
             da      db
             ↑       ↑
     ← DX ← aR ← D ← bL → DY →
     =#
-    @tensor aRbL[DX da; db DY] := aR[DX, da, D] * bL[D, db, DY]
+    @tensor aRbL[DX, da, db, DY] := aR[DX, da, D] * bL[D, db, DY]
     return aRbL
 end
 
@@ -129,9 +126,7 @@ Calculate the cost function
         - 2 Re<Psi(a1,b1)|Psi(a2,b2)>
 ```
 """
-function cost_func(
-    env::AbstractTensorMap, aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap
-)
+function cost_func(env::BondEnv, aR1bL1::BondPhys2, aR2bL2::BondPhys2)
     t1 = inner_prod(env, aR1bL1, aR1bL1)
     t2 = inner_prod(env, aR2bL2, aR2bL2)
     t3 = inner_prod(env, aR1bL1, aR2bL2)
@@ -149,7 +144,7 @@ Calculate the approximate local inner product
     |← aR2 bL2 →|
 ```
 """
-function inner_prod_local(aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap)
+function inner_prod_local(aR1bL1::BondPhys2, aR2bL2::BondPhys2)
     @autoopt @tensor t[:] := (conj(aR1bL1[DW, da, db, DE]) * aR2bL2[DW, da, db, DE])
     return first(blocks(t))[2][1]
 end
@@ -163,7 +158,7 @@ between two evolution steps
     sqrt(<aR1 bL1 | aR1 bL1> <aR2 bL2 | aR2 bL2>)
 ```
 """
-function local_fidelity(aR1bL1::AbstractTensorMap, aR2bL2::AbstractTensorMap)
+function local_fidelity(aR1bL1::BondPhys2, aR2bL2::BondPhys2)
     b12 = inner_prod_local(aR1bL1, aR2bL2)
     b11 = inner_prod_local(aR1bL1, aR1bL1)
     b22 = inner_prod_local(aR2bL2, aR2bL2)
@@ -176,15 +171,15 @@ Solving the equations
     Ra aR = Sa, Rb bL = Sb
 ```
 """
-function solve_ab(R::AbstractTensorMap, S::AbstractTensorMap, ab0::AbstractTensorMap)
+function solve_ab(
+    R::AbstractTensor{V,4}, S::AbstractTensorMap{V,3}, ab0::BondPhys{V}
+) where {V<:ElementarySpace}
     f(x) = ncon((R, x), ([-1, -2, 1, 2], [1, 2, -3]))
     ab, info = linsolve(f, S, permute(ab0, (1, 3, 2)), 0, 1)
     return permute(ab, (1, 3, 2)), info
 end
 
 """
-    als_optimize(aR0::AbstractTensorMap, bL0::AbstractTensorMap, aR2bL2::AbstractTensorMap, env::AbstractTensorMap, alg::ALSOptimize; check_int::Int=1)
-
 Minimize the cost function
 ```
     fix bL:
