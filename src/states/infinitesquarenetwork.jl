@@ -53,7 +53,9 @@ end
 function Base.:*(α::Number, A::NWType) where {NWType<:InfiniteSquareNetwork}
     return NWType(α * unitcell(A))
 end
-Base.:/(A::NWType, α::Number) where {NWType<:InfiniteSquareNetwork} = NWType(A / α)
+function Base.:/(A::NWType, α::Number) where {NWType<:InfiniteSquareNetwork}
+    return NWType(unitcell(A) / α)
+end
 function LinearAlgebra.dot(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
     return dot(unitcell(A₁), unitcell(A₂))
 end
