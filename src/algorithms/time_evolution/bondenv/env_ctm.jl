@@ -22,9 +22,7 @@ which can be more simply denoted as
 ```
 The axes 1, 2 (or 3, 4) come from X†, Y† (or X, Y)
 """
-function bondenv_fu(
-    row::Int, col::Int, X::AbstractTensorMap, Y::AbstractTensorMap, envs::CTMRGEnv
-)
+function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, envs::CTMRGEnv)
     Nr, Nc = size(envs.corners)[[2, 3]]
     cm1 = _prev(col, Nc)
     cp1 = _next(col, Nc)
@@ -105,12 +103,8 @@ end
 Fix local gauge of the env tensor around a bond
 """
 function fu_fixgauge(
-    Zdg::AbstractTensorMap,
-    X::AbstractTensorMap,
-    Y::AbstractTensorMap,
-    aR::AbstractTensorMap,
-    bL::AbstractTensorMap,
-)
+    Zdg::AbstractTensorMap{S,1,2}, X::PEPSOrth, Y::PEPSOrth, aR::BondPhys, bL::BondPhys
+) where {S<:ElementarySpace}
     #= 
             1               1
             ↑               ↑

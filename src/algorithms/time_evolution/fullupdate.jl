@@ -71,6 +71,7 @@ function update_bondx!(
     =#
     X, aR0 = leftorth(A, ((2, 4, 5), (1, 3)); alg=QRpos())
     X = permute(X, (1, 4, 2, 3))
+    aR0 = permute(aR0, (1, 2, 3))
     #=
         2   1                 2         2
         | ↗                 ↗           |
@@ -79,6 +80,7 @@ function update_bondx!(
         4                               4
     =#
     Y, bL0 = leftorth(B, ((2, 3, 4), (1, 5)); alg=QRpos())
+    Y = permute(Y, (1, 2, 3, 4))
     bL0 = permute(bL0, (3, 2, 1))
     env = bondenv_fu(row, col, X, Y, envs)
     # positive/negative-definite approximant: env = ± Z Z†
@@ -104,6 +106,7 @@ function update_bondx!(
         aR2bL2, ((1, 2), (3, 4)); trunc=truncation_scheme(alg, space(aR0, 3))
     )
     aR, bL = absorb_s(aR, s_cut, bL)
+    aR, bL = permute(aR, (1, 2, 3)), permute(bL, (1, 2, 3))
     # optimize aR, bL
     aR, bL, cost = fu_optimize(aR, bL, aR2bL2, env, alg.opt_alg)
     aR /= norm(aR, Inf)
@@ -117,16 +120,10 @@ function update_bondx!(
             |                                 |
             -4                                -4
     =#
-    peps.A[row, col] = permute(
-        ncon([X, aR], [[-2, 1, -4, -5], [1, -1, -3]]), (1,), Tuple(2:5)
-    )
-    peps.A[row, cp1] = permute(
-        ncon([bL, Y], [[-5, -1, 1], [-2, -3, -4, 1]]), (1,), Tuple(2:5)
-    )
-    # normalize
-    for c_ in [col, cp1]
-        peps.A[row, c_] /= norm(peps.A[row, c_], Inf)
-    end
+    @tensor A[-1; -2 -3 -4 -5] := X[-2, 1, -4, -5] * aR[1, -1, -3]
+    @tensor B[-1; -2 -3 -4 -5] := bL[-5, -1, 1] * Y[-2, -3, -4, 1]
+    peps.A[row, col] = A / norm(A, Inf)
+    peps.A[row, cp1] = B / norm(B, Inf)
     return cost, fid
 end
 
