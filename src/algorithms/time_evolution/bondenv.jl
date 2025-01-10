@@ -8,8 +8,8 @@ abstract type BondEnvAlgorithm end
 const Hair{S} = AbstractTensorMap{S,1,1} where {S<:ElementarySpace}
 const BondEnv{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
 const PEPSOrth{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
-const BondPhys{S} = AbstractTensor{S,3} where {S<: ElementarySpace}
-const BondPhys2{S} = AbstractTensor{S,4} where {S<: ElementarySpace}
+const BondPhys{S} = AbstractTensor{S,3} where {S<:ElementarySpace}
+const BondPhys2{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
 
 include("bondenv/env_ctm.jl")
 include("bondenv/optimize.jl")
