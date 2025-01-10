@@ -56,29 +56,29 @@ end
         :(env.corners[
             NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
         ]),
-        (:C_NW_1,),
-        (:C_NW_2,),
+        (:χ_C_NW_1,),
+        (:χ_C_NW_2,),
     )
     corner_NE = tensorexpr(
         :(env.corners[
             NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
         ]),
-        (:C_NE_1,),
-        (:C_NE_2,),
+        (:χ_C_NE_1,),
+        (:χ_C_NE_2,),
     )
     corner_SE = tensorexpr(
         :(env.corners[
             SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
         ]),
-        (:C_SE_1,),
-        (:C_SE_2,),
+        (:χ_C_SE_1,),
+        (:χ_C_SE_2,),
     )
     corner_SW = tensorexpr(
         :(env.corners[
             SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
         ]),
-        (:C_SW_1,),
-        (:C_SW_2,),
+        (:χ_C_SW_1,),
+        (:χ_C_SW_2,),
     )
 
     edges_N = map(1:gridsize[2]) do i
@@ -89,11 +89,11 @@ end
                 mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
-                (i == 1 ? :C_NW_2 : Symbol(:E_N_virtual, i - 1)),
-                Symbol(:E_N_top, i),
-                Symbol(:E_N_bot, i),
+                (i == 1 ? :χ_C_NW_2 : Symbol(:χ_E_N, i - 1)),
+                Symbol(:D_E_N_top, i),
+                Symbol(:D_E_N_bot, i),
             ),
-            ((i == gridsize[2] ? :C_NE_1 : Symbol(:E_N_virtual, i)),),
+            ((i == gridsize[2] ? :χ_C_NE_1 : Symbol(:χ_E_N, i)),),
         )
     end
 
@@ -105,11 +105,11 @@ end
                 mod1($(cmax + 1), size(ket, 2)),
             ]),
             (
-                (i == 1 ? :C_NE_2 : Symbol(:E_E_virtual, i - 1)),
-                Symbol(:E_E_top, i),
-                Symbol(:E_E_bot, i),
+                (i == 1 ? :χ_C_NE_2 : Symbol(:χ_E_E, i - 1)),
+                Symbol(:D_E_E_top, i),
+                Symbol(:D_E_E_bot, i),
             ),
-            ((i == gridsize[1] ? :C_SE_1 : Symbol(:E_E_virtual, i)),),
+            ((i == gridsize[1] ? :χ_C_SE_1 : Symbol(:χ_E_E, i)),),
         )
     end
 
@@ -121,11 +121,11 @@ end
                 mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
-                (i == gridsize[2] ? :C_SE_2 : Symbol(:E_S_virtual, i)),
-                Symbol(:E_S_top, i),
-                Symbol(:E_S_bot, i),
+                (i == gridsize[2] ? :χ_C_SE_2 : Symbol(:χ_E_S, i)),
+                Symbol(:D_E_S_top, i),
+                Symbol(:D_E_S_bot, i),
             ),
-            ((i == 1 ? :C_SW_1 : Symbol(:E_S_virtual, i - 1)),),
+            ((i == 1 ? :χ_C_SW_1 : Symbol(:χ_E_S, i - 1)),),
         )
     end
 
@@ -137,44 +137,56 @@ end
                 mod1($(cmin - 1), size(ket, 2)),
             ]),
             (
-                (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
-                Symbol(:E_W_top, i),
-                Symbol(:E_W_bot, i),
+                (i == gridsize[1] ? :χ_C_SW_2 : Symbol(:χ_E_W, i)),
+                Symbol(:D_E_W_top, i),
+                Symbol(:D_E_W_bot, i),
             ),
-            ((i == 1 ? :C_NW_1 : Symbol(:E_W_virtual, i - 1)),),
+            ((i == 1 ? :χ_C_NW_1 : Symbol(:χ_E_W, i - 1)),),
         )
     end
 
     operator = tensorexpr(
-        :O, ntuple(i -> Symbol(:O_out_, i), N), ntuple(i -> Symbol(:O_in_, i), N)
+        :O, ntuple(i -> Symbol(:d_O_out_, i), N), ntuple(i -> Symbol(:d_O_in_, i), N)
     )
 
     bra = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
         inds_id = findfirst(==(CartesianIndex(rmin + i - 1, cmin + j - 1)), cartesian_inds)
         physical_label =
-            isnothing(inds_id) ? Symbol(:physical, i, "_", j) : Symbol(:O_out_, inds_id)
+            isnothing(inds_id) ? Symbol(:d, i, "_", j) : Symbol(:d_O_out_, inds_id)
         return tensorexpr(
             :(bra[
                 mod1($(rmin + i - 1), size(bra, 1)), mod1($(cmin + j - 1), size(bra, 2))
             ]),
             (physical_label,),
             (
-                (i == 1 ? Symbol(:E_N_bot, j) : Symbol(:bra_vertical, i - 1, "_", j)),
+                (
+                    if i == 1
+                        Symbol(:D_E_N_bot, j)
+                    else
+                        Symbol(:D_bra_vertical, i - 1, "_", j)
+                    end
+                ),
                 (
                     if j == gridsize[2]
-                        Symbol(:E_E_bot, i)
+                        Symbol(:D_E_E_bot, i)
                     else
-                        Symbol(:bra_horizontal, i, "_", j)
+                        Symbol(:D_bra_horizontal, i, "_", j)
                     end
                 ),
                 (
                     if i == gridsize[1]
-                        Symbol(:E_S_bot, j)
+                        Symbol(:D_E_S_bot, j)
                     else
-                        Symbol(:bra_vertical, i, "_", j)
+                        Symbol(:D_bra_vertical, i, "_", j)
                     end
                 ),
-                (j == 1 ? Symbol(:E_W_bot, i) : Symbol(:bra_horizontal, i, "_", j - 1)),
+                (
+                    if j == 1
+                        Symbol(:D_E_W_bot, i)
+                    else
+                        Symbol(:D_bra_horizontal, i, "_", j - 1)
+                    end
+                ),
             ),
         )
     end
@@ -182,29 +194,41 @@ end
     ket = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
         inds_id = findfirst(==(CartesianIndex(rmin + i - 1, cmin + j - 1)), cartesian_inds)
         physical_label =
-            isnothing(inds_id) ? Symbol(:physical, i, "_", j) : Symbol(:O_in_, inds_id)
+            isnothing(inds_id) ? Symbol(:d, i, "_", j) : Symbol(:d_O_in_, inds_id)
         return tensorexpr(
             :(ket[
                 mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin + j - 1), size(ket, 2))
             ]),
             (physical_label,),
             (
-                (i == 1 ? Symbol(:E_N_top, j) : Symbol(:ket_vertical, i - 1, "_", j)),
+                (
+                    if i == 1
+                        Symbol(:D_E_N_top, j)
+                    else
+                        Symbol(:D_ket_vertical, i - 1, "_", j)
+                    end
+                ),
                 (
                     if j == gridsize[2]
-                        Symbol(:E_E_top, i)
+                        Symbol(:D_E_E_top, i)
                     else
-                        Symbol(:ket_horizontal, i, "_", j)
+                        Symbol(:D_ket_horizontal, i, "_", j)
                     end
                 ),
                 (
                     if i == gridsize[1]
-                        Symbol(:E_S_top, j)
+                        Symbol(:D_E_S_top, j)
                     else
-                        Symbol(:ket_vertical, i, "_", j)
+                        Symbol(:D_ket_vertical, i, "_", j)
                     end
                 ),
-                (j == 1 ? Symbol(:E_W_top, i) : Symbol(:ket_horizontal, i, "_", j - 1)),
+                (
+                    if j == 1
+                        Symbol(:D_E_W_top, i)
+                    else
+                        Symbol(:D_ket_horizontal, i, "_", j - 1)
+                    end
+                ),
             ),
         )
     end
@@ -225,20 +249,8 @@ end
         operator,
     )
 
-    opt_ex = Expr(:tuple)
-    allinds = TensorOperations.getallindices(multiplication_ex)
-    for label in allinds
-        if startswith(String(label), "physical") || startswith(String(label), "O")
-            push!(opt_ex.args, :($label => $PEPS_PHYSICALDIM))
-        elseif startswith(String(label), "ket") || startswith(String(label), "bra")
-            push!(opt_ex.args, :($label => $PEPS_BONDDIM))
-        else
-            push!(opt_ex.args, :($label => $PEPS_ENVBONDDIM))
-        end
-    end
-
     returnex = quote
-        @tensor opt = $opt_ex $multiplication_ex
+        @autoopt @tensor opt = $multiplication_ex
     end
     return macroexpand(@__MODULE__, returnex)
 end
@@ -276,29 +288,29 @@ end
         :(env.corners[
             NORTHWEST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
         ]),
-        (:C_NW_1,),
-        (:C_NW_2,),
+        (:χ_C_NW_1,),
+        (:χ_C_NW_2,),
     )
     corner_NE = tensorexpr(
         :(env.corners[
             NORTHEAST, mod1($(rmin - 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
         ]),
-        (:C_NE_1,),
-        (:C_NE_2,),
+        (:χ_C_NE_1,),
+        (:χ_C_NE_2,),
     )
     corner_SE = tensorexpr(
         :(env.corners[
             SOUTHEAST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmax + 1), size(ket, 2))
         ]),
-        (:C_SE_1,),
-        (:C_SE_2,),
+        (:χ_C_SE_1,),
+        (:χ_C_SE_2,),
     )
     corner_SW = tensorexpr(
         :(env.corners[
             SOUTHWEST, mod1($(rmax + 1), size(ket, 1)), mod1($(cmin - 1), size(ket, 2))
         ]),
-        (:C_SW_1,),
-        (:C_SW_2,),
+        (:χ_C_SW_1,),
+        (:χ_C_SW_2,),
     )
 
     edges_N = map(1:gridsize[2]) do i
@@ -309,11 +321,11 @@ end
                 mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
-                (i == 1 ? :C_NW_2 : Symbol(:E_N_virtual, i - 1)),
-                Symbol(:E_N_top, i),
-                Symbol(:E_N_bot, i),
+                (i == 1 ? :χ_C_NW_2 : Symbol(:χ_E_N, i - 1)),
+                Symbol(:D_E_N_top, i),
+                Symbol(:D_E_N_bot, i),
             ),
-            ((i == gridsize[2] ? :C_NE_1 : Symbol(:E_N_virtual, i)),),
+            ((i == gridsize[2] ? :χ_C_NE_1 : Symbol(:χ_E_N, i)),),
         )
     end
 
@@ -325,11 +337,11 @@ end
                 mod1($(cmax + 1), size(ket, 2)),
             ]),
             (
-                (i == 1 ? :C_NE_2 : Symbol(:E_E_virtual, i - 1)),
-                Symbol(:E_E_top, i),
-                Symbol(:E_E_bot, i),
+                (i == 1 ? :χ_C_NE_2 : Symbol(:χ_E_E, i - 1)),
+                Symbol(:D_E_E_top, i),
+                Symbol(:D_E_E_bot, i),
             ),
-            ((i == gridsize[1] ? :C_SE_1 : Symbol(:E_E_virtual, i)),),
+            ((i == gridsize[1] ? :χ_C_SE_1 : Symbol(:χ_E_E, i)),),
         )
     end
 
@@ -341,11 +353,11 @@ end
                 mod1($(cmin + i - 1), size(ket, 2)),
             ]),
             (
-                (i == gridsize[2] ? :C_SE_2 : Symbol(:E_S_virtual, i)),
-                Symbol(:E_S_top, i),
-                Symbol(:E_S_bot, i),
+                (i == gridsize[2] ? :χ_C_SE_2 : Symbol(:χ_E_S, i)),
+                Symbol(:D_E_S_top, i),
+                Symbol(:D_E_S_bot, i),
             ),
-            ((i == 1 ? :C_SW_1 : Symbol(:E_S_virtual, i - 1)),),
+            ((i == 1 ? :χ_C_SW_1 : Symbol(:χ_E_S, i - 1)),),
         )
     end
 
@@ -357,11 +369,11 @@ end
                 mod1($(cmin - 1), size(ket, 2)),
             ]),
             (
-                (i == gridsize[1] ? :C_SW_2 : Symbol(:E_W_virtual, i)),
-                Symbol(:E_W_top, i),
-                Symbol(:E_W_bot, i),
+                (i == gridsize[1] ? :χ_C_SW_2 : Symbol(:χ_E_W, i)),
+                Symbol(:D_E_W_top, i),
+                Symbol(:D_E_W_bot, i),
             ),
-            ((i == 1 ? :C_NW_1 : Symbol(:E_W_virtual, i - 1)),),
+            ((i == 1 ? :χ_C_NW_1 : Symbol(:χ_E_W, i - 1)),),
         )
     end
 
@@ -370,24 +382,36 @@ end
             :(bra[
                 mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin + j - 1), size(ket, 2))
             ]),
-            (Symbol(:physical, i, "_", j),),
+            (Symbol(:d, i, "_", j),),
             (
-                (i == 1 ? Symbol(:E_N_bot, j) : Symbol(:bra_vertical, i - 1, "_", j)),
+                (
+                    if i == 1
+                        Symbol(:D_E_N_bot, j)
+                    else
+                        Symbol(:D_bra_vertical, i - 1, "_", j)
+                    end
+                ),
                 (
                     if j == gridsize[2]
-                        Symbol(:E_E_bot, i)
+                        Symbol(:D_E_E_bot, i)
                     else
-                        Symbol(:bra_horizontal, i, "_", j)
+                        Symbol(:D_bra_horizontal, i, "_", j)
                     end
                 ),
                 (
                     if i == gridsize[1]
-                        Symbol(:E_S_bot, j)
+                        Symbol(:D_E_S_bot, j)
                     else
-                        Symbol(:bra_vertical, i, "_", j)
+                        Symbol(:D_bra_vertical, i, "_", j)
                     end
                 ),
-                (j == 1 ? Symbol(:E_W_bot, i) : Symbol(:bra_horizontal, i, "_", j - 1)),
+                (
+                    if j == 1
+                        Symbol(:D_E_W_bot, i)
+                    else
+                        Symbol(:D_bra_horizontal, i, "_", j - 1)
+                    end
+                ),
             ),
         )
     end
@@ -397,24 +421,36 @@ end
             :(ket[
                 mod1($(rmin + i - 1), size(ket, 1)), mod1($(cmin + j - 1), size(ket, 2))
             ]),
-            (Symbol(:physical, i, "_", j),),
+            (Symbol(:d, i, "_", j),),
             (
-                (i == 1 ? Symbol(:E_N_top, j) : Symbol(:ket_vertical, i - 1, "_", j)),
+                (
+                    if i == 1
+                        Symbol(:D_E_N_top, j)
+                    else
+                        Symbol(:D_ket_vertical, i - 1, "_", j)
+                    end
+                ),
                 (
                     if j == gridsize[2]
-                        Symbol(:E_E_top, i)
+                        Symbol(:D_E_E_top, i)
                     else
-                        Symbol(:ket_horizontal, i, "_", j)
+                        Symbol(:D_ket_horizontal, i, "_", j)
                     end
                 ),
                 (
                     if i == gridsize[1]
-                        Symbol(:E_S_top, j)
+                        Symbol(:D_E_S_top, j)
                     else
-                        Symbol(:ket_vertical, i, "_", j)
+                        Symbol(:D_ket_vertical, i, "_", j)
                     end
                 ),
-                (j == 1 ? Symbol(:E_W_top, i) : Symbol(:ket_horizontal, i, "_", j - 1)),
+                (
+                    if j == 1
+                        Symbol(:D_E_W_top, i)
+                    else
+                        Symbol(:D_ket_horizontal, i, "_", j - 1)
+                    end
+                ),
             ),
         )
     end
@@ -434,20 +470,8 @@ end
         map(x -> Expr(:call, :conj, x), bra)...,
     )
 
-    opt_ex = Expr(:tuple)
-    allinds = TensorOperations.getallindices(multiplication_ex)
-    for label in allinds
-        if startswith(String(label), "physical")
-            push!(opt_ex.args, :($label => $PEPS_PHYSICALDIM))
-        elseif startswith(String(label), "ket") || startswith(String(label), "bra")
-            push!(opt_ex.args, :($label => $PEPS_BONDDIM))
-        else
-            push!(opt_ex.args, :($label => $PEPS_ENVBONDDIM))
-        end
-    end
-
     returnex = quote
-        @tensor opt = $opt_ex $multiplication_ex
+        @autoopt @tensor opt = $multiplication_ex
     end
     return macroexpand(@__MODULE__, returnex)
 end
