@@ -48,9 +48,9 @@ function ctmrg_rightmove(col::Int, peps::InfinitePEPS, envs::CTMRGEnv, alg::Sequ
 end
 
 """
-Update the bond between `[row, col]` and `[row, col+1]`.
+Full update for the bond between `[row, col]` and `[row, col+1]`.
 """
-function update_bondx!(
+function _fu_bondx!(
     row::Int,
     col::Int,
     gate::AbstractTensorMap{S,2,2},
@@ -134,7 +134,7 @@ Update all horizontal bonds in the c-th column
 (i.e. `(r,c) (r,c+1)` for all `r = 1, ..., Nr`).
 To update rows, rotate the network clockwise by 90 degrees.
 """
-function update_column!(
+function _update_column!(
     col::Int, gate::LocalOperator, peps::InfinitePEPS, envs::CTMRGEnv, alg::FullUpdate
 )
     Nr, Nc = size(peps)
@@ -151,7 +151,7 @@ function update_column!(
     =#
     for row in 1:Nr
         term = get_gateterm(gate, (CartesianIndex(row, col), CartesianIndex(row, col + 1)))
-        cost, fid = update_bondx!(row, col, term, peps, envs, alg)
+        cost, fid = _fu_bondx!(row, col, term, peps, envs, alg)
         costs[row] = cost
         localfid += fid
     end
@@ -175,14 +175,14 @@ function fu_iter(gate::LocalOperator, peps::InfinitePEPS, envs::CTMRGEnv, alg::F
     fid, maxcost = 0.0, 0.0
     peps2, envs2 = deepcopy(peps), deepcopy(envs)
     for col in 1:Nc
-        tmpfid, costs = update_column!(col, gate, peps2, envs2, alg)
+        tmpfid, costs = _update_column!(col, gate, peps2, envs2, alg)
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end
     peps2, envs2 = rotr90(peps2), rotr90(envs2)
     gate_rotated = rotr90(gate)
     for row in 1:Nr
-        tmpfid, costs = update_column!(row, gate_rotated, peps2, envs2, alg)
+        tmpfid, costs = _update_column!(row, gate_rotated, peps2, envs2, alg)
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end
@@ -215,8 +215,8 @@ function fullupdate(
         "meas(s)"
     )
     gate = get_gate(fu_alg.dt, ham)
-    esite0, peps0, envs0 = Inf, deepcopy(peps), deepcopy(envs)
-    diff_energy = 0.0
+    peps0, envs0 = deepcopy(peps), deepcopy(envs)
+    esite0, diff_energy = Inf, 0.0
     for count in 1:(fu_alg.maxiter)
         time0 = time()
         peps, envs, (fid, cost) = fu_iter(gate, peps, envs, fu_alg)

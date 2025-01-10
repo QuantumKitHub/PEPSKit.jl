@@ -196,7 +196,8 @@ export fixedpoint
 
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
-export bondupdate_iter, PEPSUpdate, ALSOptimize
+export NTUEnvNN, NTUEnvNNN, NTUEnvNNNp
+export ntu_iter, ntupdate, NTUpdate, ALSOptimize
 export fu_iter, fullupdate, FullUpdate
 
 export InfinitePEPS, InfiniteTransferPEPS

@@ -199,8 +199,10 @@ function als_optimize(
     env::BondEnv,
     alg::ALSOptimize,
 )
-    @debug "---- Iterative optimization ----\n"
-    @debug @sprintf("%-6s%12s%12s%12s %10s\n", "Step", "Cost", "ϵ_d", "ϵ_ab", "Time/s")
+    if alg.verbose
+        @info "---- Alternating least square optimization ----\n"
+        @info @sprintf("%-6s%12s%12s%12s %10s\n", "Step", "Cost", "ϵ_d", "ϵ_ab", "Time/s")
+    end
     aR, bL = deepcopy(aR0), deepcopy(bL0)
     time0 = time()
     aRbL = _combine_aRbL(aR, bL)
@@ -210,9 +212,11 @@ function als_optimize(
     # no need to further optimize
     if abs(cost0) < 5e-15
         time1 = time()
-        @debug @sprintf(
-            "%-6d%12.3e%12.3e%12.3e %10.3f\n", 0, cost0, NaN, NaN, time1 - time0
-        )
+        if alg.verbose
+            @info @sprintf(
+                "%-6d%12.3e%12.3e%12.3e %10.3f\n", 0, cost0, NaN, NaN, time1 - time0
+            )
+        end
         return aR, bL, cost0
     end
     for count in 1:(alg.maxiter)
@@ -226,11 +230,13 @@ function als_optimize(
         aRbL = _combine_aRbL(aR, bL)
         cost = cost_func(env, aRbL, aR2bL2)
         fid = local_fidelity(aRbL, aR2bL2)
+        # normalized change in cost function between two optimization steps
         diff_d = abs(cost - cost0) / cost00
+        # normalized change in local fidelity between two optimization steps
         diff_ab = abs(fid - fid0) / fid00
         time1 = time()
-        if (count == 1 || count % alg.check_int == 0)
-            @debug @sprintf(
+        if (count == 1 || count % alg.check_int == 0) && alg.verbose
+            @info @sprintf(
                 "%-6d%12.3e%12.3e%12.3e %10.3f\n",
                 count,
                 cost,

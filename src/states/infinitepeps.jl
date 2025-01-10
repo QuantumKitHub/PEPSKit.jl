@@ -173,6 +173,20 @@ Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
 Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
 Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
 
+"""
+    mirror_antidiag(peps::InfinitePEPS)
+
+Mirror the unit cell of an iPEPS by its anti-diagonal line.
+"""
+function mirror_antidiag(peps::InfinitePEPS)
+    A2 = mirror_antidiag(peps.A)
+    for (i, t) in enumerate(A2)
+        A2[i] = permute(t, ((1,), (3, 2, 5, 4)))
+    end
+    return InfinitePEPS(A2)
+end
+
+
 # Chainrules
 function ChainRulesCore.rrule(
     ::typeof(Base.getindex), state::InfinitePEPS, row::Int, col::Int

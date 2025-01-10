@@ -11,7 +11,7 @@ const PEPSOrth{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
 const BondPhys{S} = AbstractTensor{S,3} where {S<:ElementarySpace}
 const BondPhys2{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
 
-include("bondenv/envtools.jl")
+include("bondenv/ntutools.jl")
 include("bondenv/env_ntu.jl")
 include("bondenv/env_ctm.jl")
 include("bondenv/eat.jl")

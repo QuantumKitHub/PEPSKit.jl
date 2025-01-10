@@ -18,7 +18,7 @@ struct NTUEnvNN <: NTUEnvAlgorithm end
 Calculate the bond environment within "NTU-NN" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::PEPSTensor, Y::PEPSTensor, peps::InfinitePEPS, ::NTUEnvNN
+    row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, peps::InfinitePEPS, ::NTUEnvNN
 )
     neighbors = [(-1, 0), (0, -1), (1, 0), (1, 1), (0, 2), (-1, 1)]
     m = collect_neighbors(peps, row, col, neighbors)
@@ -65,7 +65,7 @@ struct NTUEnvNNN <: NTUEnvAlgorithm end
 Calculates the bond environment within "NTU-NNN" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::PEPSTensor, Y::PEPSTensor, peps::InfinitePEPS, ::NTUEnvNNN
+    row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, peps::InfinitePEPS, ::NTUEnvNNN
 )
     return error("Not implemented")
 end
@@ -89,7 +89,7 @@ struct NTUEnvNNNp <: NTUEnvAlgorithm end
 Calculates the bond environment within "NTU-NNN+" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::PEPSTensor, Y::PEPSTensor, peps::InfinitePEPS, ::NTUEnvNNNp
+    row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, peps::InfinitePEPS, ::NTUEnvNNNp
 )
     return error("Not implemented")
 end

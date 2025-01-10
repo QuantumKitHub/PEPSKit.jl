@@ -141,7 +141,7 @@ function fu_fixgauge(
     bL = ncon([bL, R], [[-1, -2, 1], [-3, 1]])
     Zdg = permute(ncon([Zdg, Linv, Rinv], [[-1, 1, 2], [1, -2], [2, -3]]), (1,), (2, 3))
     #= fix gauge of X, Y
-    
+
             -1                                      -1
              |                                      |
         -4 - X ← 1 ← Linv ← -2      -4 → Rinv → 1 → Y - -2
