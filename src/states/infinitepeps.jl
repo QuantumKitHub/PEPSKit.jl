@@ -186,7 +186,6 @@ function mirror_antidiag(peps::InfinitePEPS)
     return InfinitePEPS(A2)
 end
 
-
 # Chainrules
 function ChainRulesCore.rrule(
     ::typeof(Base.getindex), state::InfinitePEPS, row::Int, col::Int
