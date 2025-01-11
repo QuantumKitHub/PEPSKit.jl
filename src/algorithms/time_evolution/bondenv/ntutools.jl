@@ -29,12 +29,13 @@ Contract the physical axes (for PEPSTensor) and the virtual axes of `ket` with `
         |╱
 ```
 
-- Upper-left corner tensor (`free_ax = [3, 4]`)
+- Upper-left corner tensor (`free_ax = [3, 4]`, `axts = [op, nothing]`)
 ```
              ╱|
     |-----bra----- 1
-    |    ╱ |  |
+    |    ╱ |  op
     |   3  |  |
+    |      |  |
     |      | ╱
     |-----ket----- 2
          ╱
@@ -119,7 +120,7 @@ end
                                 |
                                 H_b
 =#
-const free_ax_hair = Dict(:t => 4, :r => 5, :b => 2, :l => 3)
+const free_ax_hair = Dict(:t => [4], :r => [5], :b => [2], :l => [3])
 const free_ax_cor = Dict(:tl => [3, 4], :tr => [4, 5], :br => [2, 5], :bl => [2, 3])
 const free_ax_edge = Dict(
     :t => [3, 4, 5], :r => [2, 4, 5], :b => [2, 3, 5], :l => [2, 3, 4]
@@ -129,8 +130,12 @@ const free_ax_edge = Dict(
 for (dir, free_ax) in free_ax_hair
     fname = Symbol("hair_", dir)
     @eval begin
-        $(fname)(ket::PEPSTensor) = cal_envboundary([$free_ax], ket, ket)
-        $(fname)(ket::PEPSOrth) = cal_envboundary([$free_ax - 1], ket, ket)
+        $(fname)(ket::PEPSTensor) = cal_envboundary($free_ax, ket, ket)
+        $(fname)(ket::PEPSOrth) = cal_envboundary($(free_ax .- 1), ket, ket)
+        $(fname)(ket::PEPSTensor, h1, h2, h3) =
+            cal_envboundary($free_ax, ket, ket, [h1, h2, h3])
+        $(fname)(ket::PEPSOrth, h1, h2, h3) =
+            cal_envboundary($(free_ax .- 1), ket, ket, [h1, h2, h3])
     end
 end
 
@@ -140,6 +145,9 @@ for (dir, free_ax) in free_ax_cor
     @eval begin
         $(fname)(ket::PEPSTensor) = cal_envboundary($free_ax, ket, ket)
         $(fname)(ket::PEPSOrth) = cal_envboundary($(free_ax .- 1), ket, ket)
+        $(fname)(ket::PEPSTensor, h1, h2) = cal_envboundary($free_ax, ket, ket, [h1, h2])
+        $(fname)(ket::PEPSOrth, h1, h2) =
+            cal_envboundary($(free_ax .- 1), ket, ket, [h1, h2])
     end
 end
 
