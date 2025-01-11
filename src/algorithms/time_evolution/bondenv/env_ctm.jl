@@ -61,7 +61,7 @@ function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, envs::CTMRGEnv
     @autoopt @tensor env[DX1, DY1; DX0, DY0] := (
         lhalf[DX1, DX0, χ5, χ6] * rhalf[DY1, DY0, χ5, χ6]
     )
-    return env
+    return env / norm(env, Inf)
 end
 
 """
