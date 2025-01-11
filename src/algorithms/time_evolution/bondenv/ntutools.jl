@@ -119,44 +119,40 @@ end
                                 |
                                 H_b
 =#
+const free_ax_hair = Dict(:t => 4, :r => 5, :b => 2, :l => 3)
+const free_ax_cor = Dict(:tl => [3, 4], :tr => [4, 5], :br => [2, 5], :bl => [2, 3])
+const free_ax_edge = Dict(
+    :t => [3, 4, 5], :r => [2, 4, 5], :b => [2, 3, 5], :l => [2, 3, 4]
+)
 
-hair_t(ket::PEPSTensor) = cal_envboundary([4], ket, ket)
-hair_r(ket::PEPSTensor) = cal_envboundary([5], ket, ket)
-hair_b(ket::PEPSTensor) = cal_envboundary([2], ket, ket)
-hair_l(ket::PEPSTensor) = cal_envboundary([3], ket, ket)
+# construction of hairs
+for (dir, free_ax) in free_ax_hair
+    fname = Symbol("hair_", dir)
+    @eval begin
+        $(fname)(ket::PEPSTensor) = cal_envboundary([$free_ax], ket, ket)
+        $(fname)(ket::PEPSOrth) = cal_envboundary([$free_ax - 1], ket, ket)
+    end
+end
 
-hair_t(ket::PEPSOrth) = cal_envboundary([3], ket, ket)
-hair_r(ket::PEPSOrth) = cal_envboundary([4], ket, ket)
-hair_b(ket::PEPSOrth) = cal_envboundary([1], ket, ket)
-hair_l(ket::PEPSOrth) = cal_envboundary([2], ket, ket)
+# construction of corners
+for (dir, free_ax) in free_ax_cor
+    fname = Symbol("cor_", dir)
+    @eval begin
+        $(fname)(ket::PEPSTensor) = cal_envboundary($free_ax, ket, ket)
+        $(fname)(ket::PEPSOrth) = cal_envboundary($(free_ax .- 1), ket, ket)
+    end
+end
 
-cor_tl(ket::PEPSTensor) = cal_envboundary([3, 4], ket, ket)
-cor_tr(ket::PEPSTensor) = cal_envboundary([4, 5], ket, ket)
-cor_br(ket::PEPSTensor) = cal_envboundary([2, 5], ket, ket)
-cor_bl(ket::PEPSTensor) = cal_envboundary([2, 3], ket, ket)
-
-cor_tl(ket::PEPSOrth) = cal_envboundary([2, 3], ket, ket)
-cor_tr(ket::PEPSOrth) = cal_envboundary([3, 4], ket, ket)
-cor_br(ket::PEPSOrth) = cal_envboundary([1, 4], ket, ket)
-cor_bl(ket::PEPSOrth) = cal_envboundary([1, 2], ket, ket)
-
-edge_t(ket::PEPSTensor) = cal_envboundary([3, 4, 5], ket, ket)
-edge_t(ket::PEPSTensor, ht) = cal_envboundary([3, 4, 5], ket, ket, [ht])
-edge_r(ket::PEPSTensor) = cal_envboundary([2, 4, 5], ket, ket)
-edge_r(ket::PEPSTensor, hr) = cal_envboundary([2, 4, 5], ket, ket, [hr])
-edge_b(ket::PEPSTensor) = cal_envboundary([2, 3, 5], ket, ket)
-edge_b(ket::PEPSTensor, hb) = cal_envboundary([2, 3, 5], ket, ket, [hb])
-edge_l(ket::PEPSTensor) = cal_envboundary([2, 3, 4], ket, ket)
-edge_l(ket::PEPSTensor, hl) = cal_envboundary([2, 3, 4], ket, ket, [hl])
-
-edge_t(ket::PEPSOrth) = cal_envboundary([2, 3, 4], ket, ket)
-edge_t(ket::PEPSOrth, ht) = cal_envboundary([2, 3, 4], ket, ket, [ht])
-edge_r(ket::PEPSOrth) = cal_envboundary([1, 3, 4], ket, ket)
-edge_r(ket::PEPSOrth, hr) = cal_envboundary([1, 3, 4], ket, ket, [hr])
-edge_b(ket::PEPSOrth) = cal_envboundary([1, 2, 4], ket, ket)
-edge_b(ket::PEPSOrth, hb) = cal_envboundary([1, 2, 4], ket, ket, [hb])
-edge_l(ket::PEPSOrth) = cal_envboundary([1, 2, 3], ket, ket)
-edge_l(ket::PEPSOrth, hl) = cal_envboundary([1, 2, 3], ket, ket, [hl])
+# construction of edges
+for (dir, free_ax) in free_ax_edge
+    fname = Symbol("edge_", dir)
+    @eval begin
+        $(fname)(ket::PEPSTensor) = cal_envboundary($free_ax, ket, ket)
+        $(fname)(ket::PEPSOrth) = cal_envboundary($(free_ax .- 1), ket, ket)
+        $(fname)(ket::PEPSTensor, h) = cal_envboundary($free_ax, ket, ket, [h])
+        $(fname)(ket::PEPSOrth, h) = cal_envboundary($(free_ax .- 1), ket, ket, [h])
+    end
+end
 
 """
 Construct the top-left corner
