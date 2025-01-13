@@ -77,7 +77,7 @@ function _fu_bondx!(
     #=
         2   1                 2         2
         | ↗                 ↗           |
-    5 → B - 3   ====>  1 ← bL → 3   1 → Y - 3
+    5 ← B - 3   ====>  1 ← bL → 3   1 → Y - 3
         |                               |
         4                               4
     =#
@@ -92,6 +92,7 @@ function _fu_bondx!(
         Zdg, X, Y, aR0, bL0 = fu_fixgauge(Zdg, X, Y, aR0, bL0)
     end
     env = sgn * Zdg' * Zdg
+    @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     #= apply gate
 
             -2          -3

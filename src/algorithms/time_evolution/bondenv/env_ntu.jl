@@ -18,36 +18,36 @@ struct NTUEnvNN <: NTUEnvAlgorithm end
 Calculate the bond environment within "NTU-NN" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, peps::InfinitePEPS, ::NTUEnvNN
-)
+    row::Int, col::Int, X::T, Y::T, peps::InfinitePEPS, ::NTUEnvNN
+) where {T<:Union{PEPSTensor,PEPSOrth}}
     neighbors = [(-1, 0), (0, -1), (1, 0), (1, 1), (0, 2), (-1, 1)]
     m = collect_neighbors(peps, row, col, neighbors)
-    env_l = edge_l(X, hair_l(m[0, -1]))
-    env_r = edge_r(Y, hair_r(m[0, 2]))
-    ctl = cor_tl(m[-1, 0])
-    ctr = cor_tr(m[-1, 1])
-    cbr = cor_br(m[1, 1])
-    cbl = cor_bl(m[1, 0])
     #= contraction indices
 
-        ctl ═════ Dt ═════ ctr
-        ║                   ║
-    ....Dtl........         Dtr
-        ║          :        ║
-        env_l ═ Dl :Dr ══ env_r
-        ║          :        ║
-        Dbl        :........Dbr....
-        ║                   ║
-        cbl ═════ Db ═════ cbr
+                (-1 +0) ══ Dt ══ (-1 +1)
+                    ║               ║
+            ........Dtl......       Dtr
+                    ║       :       ║
+        (+0 -1) ═══ X ══ Dl : Dr ══ Y ═══ (+0 +2)
+                    ║       :       ║
+                    Dbl     :.......Dbr........
+                    ║               ║
+                (+1 +0) ══ Db ══ (+1 +1)    
     =#
-    @autoopt @tensor env_l[Dbr1 Dbr0 Dl1 Dl0 Dtl1 Dtl0] :=
-        cbr[Dbr1 Dbr0 Db1 Db0] * cbl[Dbl1 Dbl0 Db1 Db0] * env_l[Dtl1 Dtl0 Dl1 Dl0 Dbl1 Dbl0]
-    env_l /= norm(env_l, Inf)
-    @autoopt @tensor env_r[Dtl1 Dtl0 Dr1 Dr0 Dbr1 Dbr0] :=
-        ctl[Dt1 Dt0 Dtl1 Dtl0] * ctr[Dtr1 Dtr0 Dt1 Dt0] * env_r[Dtr1 Dtr0 Dbr1 Dbr0 Dr1 Dr0]
-    env_r /= norm(env_r, Inf)
+    # bottom-left half
+    @autoopt @tensor env_bl[Dbr1 Dbr0 Dl1 Dl0 Dtl1 Dtl0] :=
+        cor_br(m[1, 1])[Dbr1 Dbr0 Db1 Db0] *
+        cor_bl(m[1, 0])[Dbl1 Dbl0 Db1 Db0] *
+        edge_l(X, hair_l(m[0, -1]))[Dtl1 Dtl0 Dl1 Dl0 Dbl1 Dbl0]
+    env_bl /= norm(env_bl, Inf)
+    # top-right half
+    @autoopt @tensor env_tr[Dtl1 Dtl0 Dr1 Dr0 Dbr1 Dbr0] :=
+        cor_tl(m[-1, 0])[Dt1 Dt0 Dtl1 Dtl0] *
+        cor_tr(m[-1, 1])[Dtr1 Dtr0 Dt1 Dt0] *
+        edge_r(Y, hair_r(m[0, 2]))[Dtr1 Dtr0 Dbr1 Dbr0 Dr1 Dr0]
+    env_tr /= norm(env_tr, Inf)
     @tensor env[Dl1 Dr1; Dl0 Dr0] :=
-        env_l[Dbr1 Dbr0 Dl1 Dl0 Dtl1 Dtl0] * env_r[Dtl1 Dtl0 Dr1 Dr0 Dbr1 Dbr0]
+        env_bl[Dbr1 Dbr0 Dl1 Dl0 Dtl1 Dtl0] * env_tr[Dtl1 Dtl0 Dr1 Dr0 Dbr1 Dbr0]
     return env / norm(env, Inf)
 end
 
@@ -66,8 +66,8 @@ struct NTUEnvNNN <: NTUEnvAlgorithm end
 Calculates the bond environment within "NTU-NNN" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, peps::InfinitePEPS, ::NTUEnvNNN
-)
+    row::Int, col::Int, X::T, Y::T, peps::InfinitePEPS, ::NTUEnvNNN
+) where {T<:Union{PEPSTensor,PEPSOrth}}
     neighbors = [
         (-1, -1),
         (0, -1),
@@ -137,8 +137,8 @@ struct NTUEnvNNNp <: NTUEnvAlgorithm end
 Calculates the bond environment within "NTU-NNN+" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, peps::InfinitePEPS, ::NTUEnvNNNp
-)
+    row::Int, col::Int, X::T, Y::T, peps::InfinitePEPS, ::NTUEnvNNNp
+) where {T<:Union{PEPSTensor,PEPSOrth}}
     neighbors = [
         (-2, -1),
         (-2, 0),

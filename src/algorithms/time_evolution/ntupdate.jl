@@ -49,7 +49,7 @@ function _ntu_bondx!(
     #=
         2   1                 2         2
         | ↗                 ↗           |
-    5 → B - 3   ====>  1 ← bL → 3   1 → Y - 3
+    5 ← B - 3   ====>  1 ← bL → 3   1 → Y - 3
         |                               |
         4                               4
     =#
@@ -57,6 +57,7 @@ function _ntu_bondx!(
     Y = permute(Y, (1, 2, 3, 4))
     bL0 = permute(bL0, (3, 2, 1))
     env = bondenv_ntu(row, col, X, Y, peps, alg.bondenv_alg)
+    @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     #= apply gate
 
             -2          -3
