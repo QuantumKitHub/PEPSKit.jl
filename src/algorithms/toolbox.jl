@@ -13,58 +13,28 @@ function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CT
     return sum(term_vals)
 end
 """
-    expectation_value(inds, O, pf::InfinitePartitionFunction, envs::CTMRGEnv)
-    expectation_value(inds => O, pf::InfinitePartitionFunction, envs::CTMRGEnv)
+    expectation_value(pf::InfinitePartitionFunction, inds => O, envs::CTMRGEnv)
 
-Compute the expectation value corresponding to inserting a (set of) local tensor(s) `O` at
+Compute the expectation value corresponding to inserting a local tensor(s) `O` at
 position `inds` in the partition function `pf` and contracting the chole using a given CTMRG
 environment `envs`.
 
-Here `inds` can be a single index or a tuple of indices, each specified as a
-`Tuple{Int,Int}` or a `CartesianIndex{2}`. `O` can be either a single tensor or a matrix of
-tensors respectively, each specified as an `AbstractTensorMap{S,2,2}` conforming to the
-[`PartitionFunctionTensor`](@ref) indexing convention.
-
-Alternatively, `O` can be a single higher-rank tensor map, in which case it is inserted
-inside a rectangular region defined by the indices in `inds`, where in addition to the
-[`PartitionFunctionTensor`](@ref) indexing convention its spaces within each direction are
-ordered according to the axis directions of the usual unit cell convention.
+Here `inds` can be specified as either a `Tuple{Int,Int}` or a `CartesianIndex{2}`, and `O`
+should be a rank-4 tensor conforming to the [`PartitionFunctionTensor`](@ref) indexing
+convention.
 """
 function MPSKit.expectation_value(
-    inds::NTuple{N,CartesianIndex{2}},
-    O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
     pf::InfinitePartitionFunction,
-    envs::CTMRGEnv,
-) where {N,S,M}
-    if O isa Matrix
-        (length(inds) != length(O)) &&
-            throw(ArgumentError("Indices and tensor matrix must match"))
-    else
-        rmin, rmax = minimum(x -> x.I[1], inds), maximum(x -> x.I[1], inds)
-        cmin, cmax = minimum(x -> x.I[2], inds), maximum(x -> x.I[2], inds)
-        (M != rmax - rmin + cmax - cmin + 2) &&
-            throw(ArgumentError("Indices don't match rectangular patch size"))
-    end
-    return contract_local_tensor(inds, O, envs) / contract_local_tensor(inds, pf.A, envs)
-end
-function MPSKit.expectation_value(
-    inds::NTuple{N,Tuple{Int,Int}},
-    O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
-    pf::InfinitePartitionFunction,
-    envs::CTMRGEnv,
-) where {N,S,M}
-    return expectation_value(CartesianIndex.(inds), O, pf, envs)
-end
-function MPSKit.expectation_value(
-    inds::Union{Tuple{Int,Int},CartesianIndex{2}},
-    O::AbstractTensorMap{S,2,2},
-    pf::InfinitePartitionFunction,
+    op::Pair{CartesianIndex{2},<:AbstractTensorMap{S,2,2}},
     envs::CTMRGEnv,
 ) where {S}
-    return expectation_value((inds,), [O;;], pf, envs)
+    return contract_local_tensor(op[1], op[2], envs) /
+           contract_local_tensor(op[1], pf[op[1]], envs)
 end
-function MPSKit.expectation_value(op::Pair, pf::InfinitePartitionFunction, envs::CTMRGEnv)
-    return expectation_value(first.(op), last.(op), pf, envs)
+function MPSKit.expectation_value(
+    pf::InfinitePartitionFunction, op::Pair{Tuple{Int,Int}}, envs::CTMRGEnv
+)
+    return expectation_value(pf, CartesianIndex(op[1]) => op[2], envs)
 end
 
 function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
