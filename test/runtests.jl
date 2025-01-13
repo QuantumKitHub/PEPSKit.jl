@@ -29,6 +29,9 @@ end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end
+        @time @safetestset "CTMRG schemes" begin
+            include("ctmrg/jacobian_real_linear.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
         @time @safetestset "VUMPS" begin
