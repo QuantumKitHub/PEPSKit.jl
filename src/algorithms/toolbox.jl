@@ -1,3 +1,9 @@
+"""
+    expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
+
+Compute the expectation value ⟨peps|O|peps⟩ / ⟨peps|peps⟩ of a [`LocalOperator`](@ref) `O`
+for a PEPS `peps` using a given CTMRG environment `envs`.
+"""
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, O)
     term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
@@ -6,6 +12,24 @@ function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CT
     end
     return sum(term_vals)
 end
+"""
+    expectation_value(inds, O, pf::InfinitePartitionFunction, envs::CTMRGEnv)
+    expectation_value(inds => O, pf::InfinitePartitionFunction, envs::CTMRGEnv)
+
+Compute the expectation value corresponding to inserting a (set of) local tensor(s) `O` at
+position `inds` in the partition function `pf` and contracting the chole using a given CTMRG
+environment `envs`.
+
+Here `inds` can be a single index or a tuple of indices, each specified as a
+`Tuple{Int,Int}` or a `CartesianIndex{2}`. `O` can be either a single tensor or a matrix of
+tensors respectively, each specified as an `AbstractTensorMap{S,2,2}` conforming to the
+[`PartitionFunctionTensor`](@ref) indexing convention.
+
+Alternatively, `O` can be a single higher-rank tensor map, in which case it is inserted
+inside a rectangular region defined by the indices in `inds`, where in addition to the
+[`PartitionFunctionTensor`](@ref) indexing convention its spaces within each direction are
+ordered according to the axis directions of the usual unit cell convention.
+"""
 function MPSKit.expectation_value(
     inds::NTuple{N,CartesianIndex{2}},
     O::Union{AbstractTensorMap{S,M,M},Matrix{<:AbstractTensorMap{S,2,2}}},
