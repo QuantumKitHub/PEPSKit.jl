@@ -115,4 +115,28 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     @test -log(λ) / beta ≈ f_exact rtol = 1e-4
     @test abs(m) ≈ abs(m_exact) rtol = 1e-4
     @test e ≈ e_exact rtol = 1e-1 # accuracy limited by bond dimension and maxiter
+
+    # should also work as enlarged matrix or blocked operator
+    inds = ((1, 1), (2, 1), (1, 2), (2, 2))
+    M_mat = [Z[1] M; Z[1] Z[1]]
+    E_mat = [Z[1] Z[1]; E Z[1]]
+    m_mat = expectation_value(inds => M_mat, Z, env)
+    e_mat = expectation_value(inds => E_mat, Z, env)
+    @test m_mat ≈ m rtol = 1e-6
+    @test e_mat ≈ e rtol = 1e-6
+
+    @tensor M_block[D_W1 D_W2 D_S1 D_S2; D_N1 D_N2 D_E1 D_E2] :=
+        Z[1][D_W1 D1; D_N1 D2] *
+        M[D2 D3; D_N2 D_E1] *
+        Z[1][D4 D_S2; D3 D_E2] *
+        Z[1][D_W2 D_S1; D1 D4]
+    @tensor E_block[D_W1 D_W2 D_S1 D_S2; D_N1 D_N2 D_E1 D_E2] :=
+        Z[1][D_W1 D1; D_N1 D2] *
+        Z[1][D2 D3; D_N2 D_E1] *
+        Z[1][D4 D_S2; D3 D_E2] *
+        E[D_W2 D_S1; D1 D4]
+    m_block = expectation_value(inds => M_block, Z, env)
+    e_block = expectation_value(inds => E_block, Z, env)
+    @test m_block ≈ m rtol = 1e-6
+    @test e_block ≈ e rtol = 1e-6
 end

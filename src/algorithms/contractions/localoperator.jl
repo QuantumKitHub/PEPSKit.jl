@@ -215,17 +215,17 @@ function _contract_tensor_expr(O, rowrange, colrange)
                 :(O[mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)]),
                 (
                     (
-                        if i == gridsize[1]
-                            virtuallabel(SOUTH, j)
-                        else
-                            virtuallabel(:vertical, i, j)
-                        end
-                    ),
-                    (
                         if j == 1
                             virtuallabel(WEST, i)
                         else
                             virtuallabel(:horizontal, i, j - 1)
+                        end
+                    ),
+                    (
+                        if i == gridsize[1]
+                            virtuallabel(SOUTH, j)
+                        else
+                            virtuallabel(:vertical, i, j)
                         end
                     ),
                 ),
@@ -251,8 +251,8 @@ function _contract_tensor_expr(O, rowrange, colrange)
         expr = tensorexpr(
             :O,
             (
-                ntuple(i -> virtuallabel(SOUTH, i), gridsize[2])...,
                 ntuple(i -> virtuallabel(WEST, i), gridsize[1])...,
+                ntuple(i -> virtuallabel(SOUTH, i), gridsize[2])...,
             ),
             (
                 ntuple(i -> virtuallabel(NORTH, i), gridsize[2])...,
