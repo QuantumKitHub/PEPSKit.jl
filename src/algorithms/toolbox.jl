@@ -26,6 +26,14 @@ function MPSKit.expectation_value(
 ) where {N,S,M}
     return expectation_value(CartesianIndex.(inds), O, pf, envs)
 end
+function MPSKit.expectation_value(
+    inds::Union{Tuple{Int,Int},CartesianIndex{2}},
+    O::AbstractTensorMap{S,2,2},
+    pf::InfinitePartitionFunction,
+    envs::CTMRGEnv,
+) where {S}
+    return expectation_value((inds,), [O;;], pf, envs)
+end
 function MPSKit.expectation_value(op::Pair, pf::InfinitePartitionFunction, envs::CTMRGEnv)
     return expectation_value(first.(op), last.(op), pf, envs)
 end
