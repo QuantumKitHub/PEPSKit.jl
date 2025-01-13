@@ -39,6 +39,11 @@ function MPSKit.expectation_value(
     if O isa Matrix
         (length(inds) != length(O)) &&
             throw(ArgumentError("Indices and tensor matrix must match"))
+    else
+        rmin, rmax = minimum(x -> x.I[1], inds), maximum(x -> x.I[1], inds)
+        cmin, cmax = minimum(x -> x.I[2], inds), maximum(x -> x.I[2], inds)
+        (M != rmax - rmin + cmax - cmin + 2) &&
+            throw(ArgumentError("Indices don't match rectangular patch size"))
     end
     return contract_local_tensor(inds, O, envs) / contract_local_tensor(inds, pf.A, envs)
 end
