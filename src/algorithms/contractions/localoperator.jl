@@ -19,11 +19,11 @@ virtuallabel(args...) = tensorlabel(:D, args...)
 physicallabel(args...) = tensorlabel(:d, args...)
 
 """
-    contract_localoperator(inds, O, peps, env)
+    contract_local_operator(inds, O, peps, env)
 
 Contract a local operator `O` on the PEPS `peps` at the indices `inds` using the environment `env`.
 """
-function contract_localoperator(
+function contract_local_operator(
     inds::NTuple{N,CartesianIndex{2}},
     O::AbstractTensorMap{S,N,N},
     ket::InfinitePEPS,
@@ -31,16 +31,16 @@ function contract_localoperator(
     env::CTMRGEnv,
 ) where {S,N}
     static_inds = Val.(inds)
-    return _contract_localoperator(static_inds, O, ket, bra, env)
+    return _contract_local_operator(static_inds, O, ket, bra, env)
 end
-function contract_localoperator(
+function contract_local_operator(
     inds::NTuple{N,Tuple{Int,Int}},
     O::AbstractTensorMap{S,N,N},
     ket::InfinitePEPS,
     bra::InfinitePEPS,
     env::CTMRGEnv,
 ) where {S,N}
-    return contract_localoperator(CartesianIndex.(inds), O, ket, bra, env)
+    return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
 end
 
 # This implements the contraction of an operator acting on sites `inds`. 
@@ -169,7 +169,7 @@ function _contract_state_expr(rowrange, colrange, cartesian_inds=nothing)
     end
 end
 
-@generated function _contract_localoperator(
+@generated function _contract_local_operator(
     inds::NTuple{N,Val},
     O::AbstractTensorMap{S,N,N},
     ket::InfinitePEPS,
@@ -214,22 +214,22 @@ end
 end
 
 """
-    contract_localnorm(inds, peps, env)
+    contract_local_norm(inds, peps, env)
 
 Contract a local norm of the PEPS `peps` around indices `inds`.
 """
-function contract_localnorm(
+function contract_local_norm(
     inds::NTuple{N,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
     static_inds = Val.(inds)
-    return _contract_localnorm(static_inds, ket, bra, env)
+    return _contract_local_norm(static_inds, ket, bra, env)
 end
-function contract_localnorm(
+function contract_local_norm(
     inds::NTuple{N,Tuple{Int,Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
-    return contract_localnorm(CartesianIndex.(inds), ket, bra, env)
+    return contract_local_norm(CartesianIndex.(inds), ket, bra, env)
 end
-@generated function _contract_localnorm(
+@generated function _contract_local_norm(
     inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
@@ -261,4 +261,39 @@ end
         @autoopt @tensor opt = $multiplication_ex
     end
     return macroexpand(@__MODULE__, returnex)
+end
+
+# Partition function contractions
+
+"""
+    contract_local_tensor(inds, O, env)
+
+Contract a local tensor `O` inserted into a partition function `pf` at position `inds`,
+using the environment `env`.
+"""
+function contract_local_tensor(
+    inds::Tuple{Int,Int},
+    O::AbstractTensorMap{S,2,2},
+    env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
+) where {S,C}
+    r, c = inds
+    return @autoopt @tensor env.corners[NORTHWEST, _prev(r, end), _prev(c, end)][
+            χ_WNW
+            χ_NNW
+        ] *
+        env.edges[NORTH, _prev(r, end), c][χ_NNW D_N; χ_NNE] *
+        env.corners[NORTHEAST, _prev(r, end), _next(c, end)][χ_NNE; χ_ENE] *
+        env.edges[EAST, r, _next(c, end)][χ_ENE D_E; χ_ESE] *
+        env.corners[SOUTHEAST, _next(r, end), _next(c, end)][χ_ESE; χ_SSE] *
+        env.edges[SOUTH, _next(r, end), c][χ_SSE D_S; χ_SSW] *
+        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)][χ_SSW; χ_WSW] *
+        env.edges[WEST, r, _prev(c, end)][χ_WSW D_W; χ_WNW] *
+        O[D_W D_S; D_N D_E]
+end
+function contract_local_tensor(
+    inds::CartesianIndex{2},
+    O::AbstractTensorMap{S,2,2},
+    env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
+) where {S,C}
+    return contract_local_tensor(Tuple(inds), O, env)
 end
