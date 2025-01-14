@@ -30,18 +30,36 @@ function SequentialCTMRG(;
     )
 end
 
+"""
+    ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
+
+Perform sequential CTMRG left move on the `col`-th column.
+"""
+function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
+    #=
+        ----> left move
+        C1 ← T1 ←   r-1
+        ↓    ‖
+        T4 = M ==   r
+        ↓    ‖
+        C4 → T3 →   r+1
+        c-1  c 
+    =#
+    projectors, info = sequential_projectors(col, state, envs, alg.projector_alg)
+    envs = renormalize_sequentially(col, projectors, state, envs)
+    return envs, info
+end
+
 function ctmrg_iteration(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     ϵ = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            projectors, info = sequential_projectors(col, state, envs, alg.projector_alg)
-            envs = renormalize_sequentially(col, projectors, state, envs)
+            envs, info = ctmrg_leftmove(col, state, envs, alg)
             ϵ = max(ϵ, info.err)
         end
         state = rotate_north(state, EAST)
         envs = rotate_north(envs, EAST)
     end
-
     return envs, (; err=ϵ)
 end
 

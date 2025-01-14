@@ -3,7 +3,6 @@ module PEPSKit
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Base: @kwdef
 using Compat
-using Accessors: @set
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
@@ -11,6 +10,7 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
+using Accessors: @set
 using OhMyThreads: tmap
 
 include("utility/util.jl")
@@ -52,7 +52,9 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/time_evolution/gatetools.jl")
+include("algorithms/time_evolution/bondenv.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
+include("algorithms/time_evolution/fullupdate.jl")
 
 include("algorithms/toolbox.jl")
 
@@ -196,6 +198,7 @@ export fixedpoint
 
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
+export fu_iter, fullupdate, FullUpdate, ALSOptimize
 
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
