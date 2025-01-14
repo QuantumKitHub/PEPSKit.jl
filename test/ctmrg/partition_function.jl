@@ -102,8 +102,8 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
     # check observables
     λ = PEPSKit.value(Z, env)
-    m = expectation_value(Z, (1, 1) => M, env)
-    e = expectation_value(Z, (1, 1) => E, env)
+    m = expectation_value(Z, ((1, 1) => M,), env)
+    e = expectation_value(Z, ((1, 1) => E,), env)
     f_exact, m_exact, e_exact = classical_ising_exact(; beta)
 
     # should be real-ish
@@ -115,4 +115,44 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     @test -log(λ) / beta ≈ f_exact rtol = 1e-4
     @test abs(m) ≈ abs(m_exact) rtol = 1e-4
     @test e ≈ e_exact rtol = 1e-1 # accuracy limited by bond dimension and maxiter
+end
+
+@testset "Classical Ising correlation functions" begin
+    ctm_alg = SimultaneousCTMRG(; maxiter=300)
+    β = [0.1, log(1 + sqrt(2)) / 2 + 0.05, 2.0]
+
+    # contract at high, critical and low temperature
+    O_high, M_high, = classical_ising(; beta=β[1])
+    Z_high = InfinitePartitionFunction(O_high)
+    env0_high = CTMRGEnv(Z_high, χenv)
+    env_high = leading_boundary(env0_high, Z_high, ctm_alg)
+
+    O_crit, M_crit, = classical_ising(; beta=β[2])
+    Z_crit = InfinitePartitionFunction(O_crit)
+    env0_crit = CTMRGEnv(Z_crit, χenv)
+    env_crit = leading_boundary(env0_crit, Z_crit, ctm_alg)
+
+    O_low, M_low, = classical_ising(; beta=β[3])
+    Z_low = InfinitePartitionFunction(O_low)
+    env0_low = CTMRGEnv(Z_low, χenv)
+    env_low = leading_boundary(env0_low, Z_low, ctm_alg)
+
+    # compute correlators
+    corr_zz_high = expectation_value(Z_high, ((1, 1) => M_high, (2, 1) => M_high), env_high)
+    corr_zz_crit = expectation_value(Z_crit, ((1, 1) => M_crit, (2, 1) => M_crit), env_crit)
+    corr_zz_low = expectation_value(Z_low, ((1, 1) => M_low, (2, 1) => M_low), env_low)
+    @test abs(corr_zz_high) < abs(corr_zz_crit) < abs(corr_zz_low)
+    @test abs(corr_zz_low) ≈ 1.0 rtol = 1e-6
+
+    corr_zzz_high = expectation_value(
+        Z_high, ((1, 1) => M_high, (2, 1) => M_high, (1, 2) => M_high), env_high
+    )
+    corr_zzz_crit = expectation_value(
+        Z_crit, ((1, 1) => M_crit, (2, 1) => M_crit, (1, 2) => M_crit), env_crit
+    )
+    corr_zzz_low = expectation_value(
+        Z_low, ((1, 1) => M_low, (2, 1) => M_low, (1, 2) => M_low), env_low
+    )
+    @test abs(corr_zzz_high) ≈ 0.0 atol = 1e-6
+    @test abs(corr_zzz_low) ≈ 1.0 rtol = 1e-6
 end
