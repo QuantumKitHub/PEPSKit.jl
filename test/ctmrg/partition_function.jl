@@ -102,8 +102,8 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
     # check observables
     λ = PEPSKit.value(Z, env)
-    m = expectation_value(Z, (1, 1) => M, env)
-    e = expectation_value(Z, (1, 1) => E, env)
+    m = expectation_value(Z, ((1, 1) => M,), env)
+    e = expectation_value(Z, ((1, 1) => E,), env)
     f_exact, m_exact, e_exact = classical_ising_exact(; beta)
 
     # should be real-ish
