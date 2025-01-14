@@ -116,3 +116,34 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     @test abs(m) ≈ abs(m_exact) rtol = 1e-4
     @test e ≈ e_exact rtol = 1e-1 # accuracy limited by bond dimension and maxiter
 end
+
+@testset "Classical Ising correlation functions" begin
+    ctm_alg = SimultaneousCTMRG()
+    β = [0.1, log(1 + sqrt(2)) / 2, 2.0]
+
+    # contract at high, critical and low temperature
+    Z_high = InfinitePartitionFunction(classical_ising(; beta=β[1])[1])
+    env0_high = CTMRGEnv(Z_high, χenv)
+    env_high = leading_boundary(env0_high, Z_high, ctm_alg)
+
+    Z_crit = InfinitePartitionFunction(classical_ising(; beta=β[2])[1])
+    env0_crit = CTMRGEnv(Z_crit, χenv)
+    env_crit = leading_boundary(env0_crit, Z_crit, ctm_alg)
+
+    Z_low = InfinitePartitionFunction(classical_ising(; beta=β[3])[1])
+    env0_low = CTMRGEnv(Z_low, χenv)
+    env_low = leading_boundary(env0_low, Z_low, ctm_alg)
+
+    # compute correlators
+    corr_zz_high = expectation_value(Z, ((1, 1) => M, (2, 1) => M), env_high)
+    corr_zz_crit = expectation_value(Z, ((1, 1) => M, (2, 1) => M), env_crit)
+    corr_zz_low = expectation_value(Z, ((1, 1) => M, (2, 1) => M), env_low)
+    @test abs(corr_zz_high) < abs(corr_zz_crit) < abs(corr_zz_low)
+    @test abs(corr_zz_low) ≈ 1.0 rtol = 1e-6
+
+    corr_zzz_high = expectation_value(Z, ((1, 1) => M, (2, 1) => M, (1, 2) => M), env_high)
+    corr_zzz_crit = expectation_value(Z, ((1, 1) => M, (2, 1) => M, (1, 2) => M), env_crit)
+    corr_zzz_low = expectation_value(Z, ((1, 1) => M, (2, 1) => M, (1, 2) => M), env_low)
+    @test abs(corr_zzz_high) ≈ 0.0 atol = 1e-6
+    @test abs(corr_zzz_low) ≈ 1.0 rtol = 1e-6
+end
