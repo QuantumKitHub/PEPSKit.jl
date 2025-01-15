@@ -65,7 +65,7 @@ function cal_envboundary(
     end
     @assert issorted(free_axs)
     axs = 1:(T <: PEPSTensor ? 5 : 4)
-    codomain_axes = Tuple(ax for ax in axs if !(ax in free_axs))
+    codomain_axes = Tuple(ax for ax in axs if ax ∉ free_axs)
     domain_axes = Tuple(free_axs)
     perm = (codomain_axes, domain_axes)
     t = adjoint(permute(bra, perm)) * permute(ket, perm)
@@ -78,7 +78,7 @@ function cal_envboundary(
     @assert length(axts) == 4 - length(free_axs)
     ket2 = deepcopy(ket)
     axs = (T <: PEPSTensor) ? (2:5) : (1:4)
-    for (axt, ax) in zip(axts, Tuple(ax for ax in axs if !(ax in free_axs)))
+    for (axt, ax) in zip(axts, Tuple(ax for ax in axs if ax ∉ free_axs))
         if axt === nothing
             continue
         end
