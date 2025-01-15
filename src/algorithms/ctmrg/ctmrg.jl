@@ -1,4 +1,3 @@
-
 """
     CTMRGAlgorithm
 
@@ -36,36 +35,44 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
     TS = map(x -> tsvd(x)[2], envinit.edges)
 
     η = one(real(scalartype(state)))
-    N = norm(state, envinit)
     env = deepcopy(envinit)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, N)
+        ctmrg_loginit!(log, η, state, envinit)
         for iter in 1:(alg.maxiter)
             env, = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
-            N = norm(state, env)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
-                ctmrg_logfinish!(log, iter, η, N)
+                ctmrg_logfinish!(log, iter, η, state, env)
                 break
             end
             if iter == alg.maxiter
-                ctmrg_logcancel!(log, iter, η, N)
+                ctmrg_logcancel!(log, iter, η, state, env)
             else
-                ctmrg_logiter!(log, iter, η, N)
+                ctmrg_logiter!(log, iter, η, state, env)
             end
         end
         return env
     end
 end
 
+# network-specific objective functions
+ctmrg_objective(state::InfinitePEPS, env::CTMRGEnv) = norm(state, env)
+ctmrg_objective(state::InfinitePartitionFunction, env::CTMRGEnv) = value(state, env)
+
 # custom CTMRG logging
-ctmrg_loginit!(log, η, N) = @infov 2 loginit!(log, η, N)
-ctmrg_logiter!(log, iter, η, N) = @infov 3 logiter!(log, iter, η, N)
-ctmrg_logfinish!(log, iter, η, N) = @infov 2 logfinish!(log, iter, η, N)
-ctmrg_logcancel!(log, iter, η, N) = @warnv 1 logcancel!(log, iter, η, N)
+ctmrg_loginit!(log, η, state, env) = @infov 2 loginit!(log, η, ctmrg_objective(state, env))
+function ctmrg_logiter!(log, iter, η, state, env)
+    @infov 3 logiter!(log, iter, η, ctmrg_objective(state, env))
+end
+function ctmrg_logfinish!(log, iter, η, state, env)
+    @infov 2 logfinish!(log, iter, η, ctmrg_objective(state, env))
+end
+function ctmrg_logcancel!(log, iter, η, state, env)
+    @warnv 1 logcancel!(log, iter, η, ctmrg_objective(state, env))
+end
 
 @non_differentiable ctmrg_loginit!(args...)
 @non_differentiable ctmrg_logiter!(args...)

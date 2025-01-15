@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
+struct InfinitePEPS{T<:PEPSTensor} <: InfiniteSquareNetwork{T,2}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
@@ -109,28 +109,7 @@ function InfinitePEPS(
     )
 end
 
-## Shape and size
-Base.size(T::InfinitePEPS) = size(T.A)
-Base.size(T::InfinitePEPS, i) = size(T.A, i)
-Base.length(T::InfinitePEPS) = length(T.A)
-Base.eltype(T::InfinitePEPS) = eltype(typeof(T))
-Base.eltype(::Type{<:InfinitePEPS{T}}) where {T} = T
-VectorInterface.scalartype(::Type{T}) where {T<:InfinitePEPS} = scalartype(eltype(T))
-
-## Copy
-Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-Base.similar(T::InfinitePEPS, args...) = InfinitePEPS(similar(T.A, args...))
-Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
-
-Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
-Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
-Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
-function eachcoordinate(x::InfinitePEPS)
-    return collect(Iterators.product(axes(x)...))
-end
-function eachcoordinate(x::InfinitePEPS, dirs)
-    return collect(Iterators.product(dirs, axes(x, 1), axes(x, 2)))
-end
+unitcell(t::InfinitePEPS) = t.A
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
 ## Math
@@ -222,14 +201,4 @@ function ChainRulesCore.rrule(::typeof(rotr90), peps::InfinitePEPS)
         return NoTangent(), rotl90(Δpeps)
     end
     return peps′, rotr90_pullback
-end
-
-# FiniteDifferences
-# Makes use of tensors already having a to_vec method
-function FiniteDifferences.to_vec(state::InfinitePEPS)
-    vec, back = FiniteDifferences.to_vec(state.A)
-    function state_from_vec(vec)
-        return InfinitePEPS(back(vec))
-    end
-    return vec, state_from_vec
 end

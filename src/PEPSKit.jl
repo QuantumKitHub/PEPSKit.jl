@@ -22,9 +22,12 @@ include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 
-include("states/abstractpeps.jl")
+include("networks/tensors.jl")
+include("networks/infinitesquarenetwork.jl")
+
 include("states/infinitepeps.jl")
 include("states/infiniteweightpeps.jl")
+include("states/infinitepartitionfunction.jl")
 
 include("operators/transferpeps.jl")
 include("operators/infinitepepo.jl")
@@ -38,8 +41,8 @@ include("environments/ctmrg_environments.jl")
 include("environments/transferpeps_environments.jl")
 include("environments/transferpepo_environments.jl")
 
-include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
+include("algorithms/contractions/localoperator.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -200,6 +203,7 @@ export NTUEnvNN, NTUEnvNNN, NTUEnvNNNp
 export ntu_iter, ntupdate, NTUpdate, ALSOptimize
 export fu_iter, fullupdate, FullUpdate
 
+export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO

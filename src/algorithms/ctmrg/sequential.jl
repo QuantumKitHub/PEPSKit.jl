@@ -71,7 +71,7 @@ Compute CTMRG projectors in the `:sequential` scheme either for an entire column
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
 """
 function sequential_projectors(
-    col::Int, state::InfinitePEPS, envs::CTMRGEnv, alg::ProjectorAlgorithm
+    col::Int, state::InfiniteSquareNetwork, envs::CTMRGEnv, alg::ProjectorAlgorithm
 )
     # SVD half-infinite environment column-wise
     ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs, 2)))
@@ -89,7 +89,7 @@ function sequential_projectors(
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
-    state::InfinitePEPS,
+    state::InfiniteSquareNetwork,
     envs::CTMRGEnv,
     alg::HalfInfiniteProjector,
 )
@@ -101,7 +101,7 @@ function sequential_projectors(
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
-    state::InfinitePEPS,
+    state::InfiniteSquareNetwork,
     envs::CTMRGEnv,
     alg::FullInfiniteProjector,
 )
