@@ -52,7 +52,7 @@ for (n, dt) in enumerate(dts)
         dt,
         maxiter,
         trscheme,
-        bondenv_alg=NTUEnvNNNp(),
+        bondenv_alg=NTUEnvNN(),
         ctm_alg=SequentialCTMRG(; tol=1e-7, verbosity=2, maxiter=15, trscheme=trscheme),
     )
     result = ntupdate(peps, envs, ham, alg, ctm_alg)

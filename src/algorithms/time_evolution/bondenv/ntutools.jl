@@ -29,11 +29,12 @@ Contract the physical axes (for PEPSTensor) and the virtual axes of `ket` with `
         |╱
 ```
 
-- Upper-left corner tensor (`free_ax = [3, 4]`, `axts = [op, nothing]`)
+- Upper-left corner tensor (`free_ax = [3, 4]`, `axts = [t, nothing]`)
+(fermion signs should not be cancelled when contracting `t`)
 ```
              ╱|
     |-----bra----- 1
-    |    ╱ |  op
+    |    ╱ |  t
     |   3  |  |
     |      |  |
     |      | ╱
@@ -80,7 +81,12 @@ function cal_envboundary(
     axs = (T <: PEPSTensor) ? (2:5) : (1:4)
     for (axt, ax) in zip(axts, Tuple(ax for ax in axs if ax ∉ free_axs))
         if axt === nothing
-            continue
+            if isdual(space(ket, ax))
+                # cancel unwanted fermion signs
+                axt = id(space(ket, ax))
+            else
+                continue
+            end
         end
         @assert space(axt, 1) == space(axt, 2)'
         ket_indices = collect(-1:-1:((T <: PEPSTensor) ? -5 : -4))
@@ -88,10 +94,14 @@ function cal_envboundary(
         # apply `axt` to virtual indices of `ket` to be contracted
         ket2 = ncon([axt, ket2], [[-ax, 1], ket_indices])
     end
-    if T <: PEPSTensor
-        ket2 = permute(ket2, ((1,), Tuple(2:5)))
+    nax = (T <: PEPSTensor) ? 5 : 4
+    indexlist = [-collect(1:2:(2 * nax)), -collect(2:2:(2 * nax))]
+    for ax in 1:nax
+        if ax ∉ free_axs
+            indexlist[1][ax] = indexlist[2][ax] = ax
+        end
     end
-    return cal_envboundary(free_axs, ket2, bra)
+    return ncon([bra, ket2], indexlist, [true, false])
 end
 
 #= Free axes of different boundary tensors

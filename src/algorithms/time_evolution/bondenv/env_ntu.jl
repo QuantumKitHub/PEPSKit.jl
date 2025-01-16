@@ -48,6 +48,7 @@ function bondenv_ntu(
     env_tr /= norm(env_tr, Inf)
     @tensor env[Dl1 Dr1; Dl0 Dr0] :=
         env_bl[Dbr1 Dbr0 Dl1 Dl0 Dtl1 Dtl0] * env_tr[Dtl1 Dtl0 Dr1 Dr0 Dbr1 Dbr0]
+    @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     return env / norm(env, Inf)
 end
 
@@ -84,10 +85,9 @@ function bondenv_ntu(
     #= left half
         (-1 -1)══════(-1 +0)═ -1/-2
             ║           ║
-            ║           ║
         (+0 -1)════════ X ═══ -3/-4
             ║           ║
-            D1          D2
+        ....D1..........D2.........
             ║           ║
         (+1 -1)═ D3 ═(+1 +0)═ -5/-6
     =#
@@ -100,10 +100,9 @@ function bondenv_ntu(
     #= right half
         -1/-2 ══ (-1 +1)═ D1 ═(-1 +2)
                     ║           ║
-                    D2          D3
+        ............D2..........D3...
                     ║           ║
         -3/-4 ═════ Y ═══════(+0 +2)
-                    ║           ║
                     ║           ║     
         -5/-6 ══ (+1 +1)═════(+1 +2)
     =#
@@ -115,6 +114,7 @@ function bondenv_ntu(
     vecr /= norm(vecr, Inf)
     # combine left and right part
     @tensor env[-1 -2; -3 -4] := vecl[1 2 -1 -3 3 4] * vecr[1 2 -2 -4 3 4]
+    @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     return env / norm(env, Inf)
 end
 
@@ -173,7 +173,7 @@ function bondenv_ntu(
                     ║           ║
         (+0 -2)=(+0 -1)════════ X ═══ -3/-4
                     ║           ║
-                    D1          D2
+        ............D1..........D2.........
                     ║           ║
         (+1 -2)=(+1 -1)= D3 =(+1 +0)═ -5/-6
                     ║           ║
@@ -195,7 +195,7 @@ function bondenv_ntu(
                     ║           ║
         -1/-2 ══(-1 +1)═ D1 ═(-1 +2)═(-1 +3)
                     ║           ║
-                    D2          D3
+        ............D2..........D3..........
                     ║           ║
         -3/-4 ═════ Y ═══════(+0 +2)═(+0 +3)
                     ║           ║
@@ -216,5 +216,6 @@ function bondenv_ntu(
     vecr /= norm(vecr, Inf)
     # combine left and right part
     @tensor env[-1 -2; -3 -4] := vecl[1 2 -1 -3 3 4] * vecr[1 2 -2 -4 3 4]
+    @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     return env / norm(env, Inf)
 end
