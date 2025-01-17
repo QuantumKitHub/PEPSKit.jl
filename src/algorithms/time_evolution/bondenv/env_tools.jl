@@ -225,3 +225,39 @@ function enlarge_corner_br(
         conj(bra[-1 D11 D21 -5]) *
         ket[-2 D10 D20 -6]
 end
+
+"""
+Replace `env` by its positive approximant `Z† Z`
+(returns `Z`)
+```
+                        |-→ 1   2 ←-|
+                        |           |
+    |----env----|       |←--- Z† --→|
+    |→ 1     2 ←|   =         ↑
+    |← 3     4 →|       |---→ Z ←---|
+    |-----------|       |           |
+                        |←- 3   4 -→|
+```
+"""
+function positive_approx(env::BondEnv)
+    @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
+    # hermitize env, and perform eigen-decomposition
+    # env = U D U'
+    D, U = eigh((env + env') / 2)
+    # determine if `env` is (mostly) positive or negative
+    # if negative, (-1) will be multiplied to `env` through `D`
+    sgn = sign(mean(vcat((diag(b) for (k, b) in blocks(D))...)))
+    if sgn == -1
+        D *= -1
+    end
+    # set negative eigenvalues to 0
+    for (k, b) in blocks(D)
+        for i in diagind(b)
+            if b[i] < 0
+                b[i] = 0.0
+            end
+        end
+    end
+    Z = sdiag_pow(D, 0.5) * U'
+    return Z
+end

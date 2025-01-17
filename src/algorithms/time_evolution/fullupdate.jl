@@ -86,12 +86,12 @@ function _fu_bondx!(
     bL0 = permute(bL0, (3, 2, 1))
     env = bondenv_fu(row, col, X, Y, envs)
     # positive/negative-definite approximant: env = ± Z Z†
-    sgn, Zdg = positive_approx(env)
+    Z = positive_approx(env)
     # fix gauge
     if alg.fixgauge
-        Zdg, X, Y, aR0, bL0 = fu_fixgauge(Zdg, X, Y, aR0, bL0)
+        Z, X, Y, aR0, bL0 = fu_fixgauge(Z, X, Y, aR0, bL0)
     end
-    env = sgn * Zdg' * Zdg
+    env = Z' * Z
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     #= apply gate
 
