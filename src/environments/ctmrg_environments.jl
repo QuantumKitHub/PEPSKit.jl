@@ -449,6 +449,25 @@ end
 @non_differentiable CTMRGEnv(peps::InfinitePEPS, args...)
 @non_differentiable CTMRGEnv(peps::InfinitePartitionFunction, args...)
 
+"""
+    CTMRGEnv([f=randn, T=scalartype(env)], env::CTMRGEnv)
+
+Copy constructor for easily initializing a similar environment, optionally providing a
+function `f` for element generation with type `T`.
+"""
+function CTMRGEnv(env::CTMRGEnv)
+    return CTMRTEnv(randn, scalartype(env), env)
+end
+function CTMRGEnv(f, T, env::CTMRGEnv)
+    corners = map(env.corners) do corner
+        return TensorMap(f, T, space(corner))
+    end
+    edges = map(env.edges) do edge
+        return TensorMap(f, T, space(edge))
+    end
+    return CTMRGEnv(corners, edges)
+end
+
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
     ctmrgenv_pullback(ē) = NoTangent(), ē.corners, ē.edges

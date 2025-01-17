@@ -1,9 +1,8 @@
 using Test
 using Random
-using PEPSKit
 using TensorKit
 using KrylovKit
-using OptimKit
+using PEPSKit
 
 # initialize parameters
 χbond = 2
@@ -11,8 +10,9 @@ using OptimKit
 ctm_alg = SimultaneousCTMRG()
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; gradtol=1e-3, verbosity=2),
+    tol=1e-3,
     gradient_alg=LinSolver(; iterscheme=:diffgauge),
+    symmetrization=RotateReflect(),
 )
 
 # initialize states
@@ -20,10 +20,10 @@ Random.seed!(91283219347)
 H = j1_j2(InfiniteSquare(); J2=0.25)
 psi_init = product_peps(2, χbond; noise_amp=1e-1)
 psi_init = symmetrize!(psi_init, RotateReflect())
-env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
+env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
-result = fixedpoint(psi_init, H, opt_alg, env_init; symmetrization=RotateReflect())
+result = fixedpoint(psi_init, H, opt_alg, env_init)
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
 # compare against Juraj Hasik's data:

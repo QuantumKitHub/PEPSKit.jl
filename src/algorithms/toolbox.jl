@@ -37,15 +37,6 @@ function MPSKit.expectation_value(
     return expectation_value(pf, CartesianIndex(op[1]) => op[2], envs)
 end
 
-function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
-    E = MPSKit.expectation_value(peps, O, envs)
-    ignore_derivatives() do
-        isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
-            @warn "Expectation value is not real: $E."
-    end
-    return real(E)
-end
-
 function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     total = one(scalartype(peps))
 
