@@ -14,9 +14,9 @@ Dbond = 2
 ctm_alg = SimultaneousCTMRG()
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
-    maxiter=20,
+    maxiter=10,
     gradient_alg=LinSolver(; iterscheme=:diffgauge),
-    stepsize=WolfePowellLinesearch(),
+    stepsize=ConstantLength(1.5),
     memory_size=4,
 )
 

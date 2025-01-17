@@ -19,9 +19,7 @@ mˣ = 0.91
 χbond = 2
 χenv = 16
 ctm_alg = SimultaneousCTMRG()
-opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg, tol=1e-3, stepsize=WolfePowellBinaryLinesearch()
-)
+opt_alg = PEPSOptimize(; boundary_alg=ctm_alg, tol=1e-3)
 
 # initialize states
 H = transverse_field_ising(InfiniteSquare(); g)
