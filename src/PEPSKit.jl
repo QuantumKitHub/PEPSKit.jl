@@ -56,7 +56,9 @@ include("algorithms/toolbox.jl")
 
 include("utility/symmetrization.jl")
 
-include("algorithms/peps_opt.jl")
+include("algorithms/optimization/fixed_point_differentiation.jl")
+include("algorithms/optimization/manopt.jl")
+include("algorithms/optimization/peps_optimization.jl")
 
 """
     module Defaults
