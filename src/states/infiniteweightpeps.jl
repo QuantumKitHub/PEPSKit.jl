@@ -50,12 +50,12 @@ function compare_weights(wts1::SUWeight, wts2::SUWeight)
 end
 
 """
-    struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
+    struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice
 consisting of vertex tensors and bond weights.
 """
-struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
+struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
     vertices::Matrix{T}
     weights::SUWeight{E}
 

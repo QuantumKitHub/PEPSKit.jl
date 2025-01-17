@@ -29,6 +29,9 @@ end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end
+        @time @safetestset "Partition function" begin
+            include("ctmrg/partition_function.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
         @time @safetestset "VUMPS" begin
