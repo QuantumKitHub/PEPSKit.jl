@@ -1,4 +1,38 @@
 """
+    BondEnvAlgorithm
+
+Abstract super type for all algorithms to construct the environment of a bond in the InfinitePEPS.
+"""
+abstract type BondEnvAlgorithm end
+
+const Hair{S} = AbstractTensor{S,2} where {S<:ElementarySpace}
+const BondEnv{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
+const PEPSOrth{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
+const BondPhys{S} = AbstractTensor{S,3} where {S<:ElementarySpace}
+const BondPhys2{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
+
+include("bondenv/env_tools.jl")
+include("bondenv/env_ntu.jl")
+include("bondenv/env_ctm.jl")
+include("bondenv/env_trunc.jl")
+include("bondenv/optimize.jl")
+
+"""
+    TimeEvolAlgorithm
+
+Abstract super type for all iPEPS time evolution algorithms.
+"""
+abstract type TimeEvolAlgorithm end
+
+function truncation_scheme(alg::A, v::ElementarySpace) where {A<:TimeEvolAlgorithm}
+    if alg.trscheme isa FixedSpaceTruncation
+        return truncspace(v)
+    else
+        return alg.trscheme
+    end
+end
+
+"""
     get_gate(dt::Float64, H::LocalOperator)
 
 Compute `exp(-dt * H)` from the nearest neighbor Hamiltonian `H`.

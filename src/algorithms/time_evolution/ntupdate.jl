@@ -2,7 +2,7 @@
 Algorithm struct for neighborhood tensor update (NTU) of infinite PEPS.
 Each NTU run stops when energy starts to increase.
 """
-@kwdef struct NTUpdate
+@kwdef struct NTUpdate <: TimeEvolAlgorithm
     dt::Float64
     maxiter::Int
     trscheme::TensorKit.TruncationScheme
@@ -14,14 +14,6 @@ Each NTU run stops when energy starts to increase.
     ctm_int::Int = 10
     # CTMRG algorithm to monitor energy
     ctm_alg::CTMRGAlgorithm
-end
-
-function truncation_scheme(alg::NTUpdate, v::ElementarySpace)
-    if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(v)
-    else
-        return alg.trscheme
-    end
 end
 
 """

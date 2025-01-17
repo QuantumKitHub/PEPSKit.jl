@@ -2,7 +2,7 @@
 Algorithm struct for full update (FU) of infinite PEPS.
 Each FU run stops when the energy starts to increase.
 """
-@kwdef struct FullUpdate
+@kwdef struct FullUpdate <: TimeEvolAlgorithm
     dt::Float64
     maxiter::Int
     fixgauge::Bool = true
@@ -16,14 +16,6 @@ Each FU run stops when the energy starts to increase.
     reconv_int::Int = 10
     # CTMRG for reconverging environment
     reconv_alg::CTMRGAlgorithm
-end
-
-function truncation_scheme(alg::FullUpdate, v::ElementarySpace)
-    if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(v)
-    else
-        return alg.trscheme
-    end
 end
 
 """
