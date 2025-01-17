@@ -76,7 +76,6 @@ function LinSolver(;
     return LinSolver{iterscheme}(solver)
 end
 
-
 #=
 Evaluating the gradient of the cost function for CTMRG:
 - The gradient of the cost function for CTMRG can be computed using automatic differentiation (AD) or explicit evaluation of the geometric sum.

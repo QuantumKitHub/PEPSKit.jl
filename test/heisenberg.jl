@@ -35,9 +35,7 @@ end
     unitcell = (1, 2)
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
     psi_init = InfinitePEPS(2, Dbond; unitcell)
-    env_init, = leading_boundary(
-        CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg
-    )
+    env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(psi_init, H, opt_alg, env_init)
