@@ -49,16 +49,15 @@ gradmodes = [
     models
 )
     Pspace = Pspaces[i]
-    Vspace = Pspaces[i]
+    Vspace = Vspaces[i]
     Espace = Espaces[i]
     gms = gradmodes[i]
     calgs = ctmrg_algs[i]
-    psi_init = InfinitePEPS(Pspace, Vspace, Vspace)
     @testset "$ctmrg_alg and $gradient_alg" for (ctmrg_alg, gradient_alg) in
                                                 Iterators.product(calgs, gms)
         @info "gradient check of $ctmrg_alg and $alg_rrule on $(names[i])"
         Random.seed!(42039482030)
-        psi = InfinitePEPS(Pspace, Vspace, Vspace)
+        psi = InfinitePEPS(Pspace, Vspace)
         env, = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
 
         psi_vec, from_vec = to_vec(psi)
@@ -66,7 +65,10 @@ gradmodes = [
         cache = PEPSCostFunctionCache(models[i], opt_alg, psi_vec, from_vec, deepcopy(env))
         cost = cache
         grad = gradient_function(cache)
+
         M = Euclidean(length(psi_vec))
-        @test check_gradient(M, cost, grad; N=5, exactness_tol=1e-4, io=stdout)
+        @test check_gradient(
+            M, cost, grad; N=10, exactness_tol=gradtol, limits=(-8, -3), io=stdout
+        )
     end
 end
