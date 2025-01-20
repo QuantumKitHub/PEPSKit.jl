@@ -33,13 +33,15 @@ atol = 1e-5
     env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
 
     # do extra iteration to get SVD
-    env_conv2, info = ctmrg_iteration(psi, env_conv1, ctm_alg)
+    env_conv2, truncation_error, condition_number, U, S, V = ctmrg_iteration(
+        psi, env_conv1, ctm_alg
+    )
     env_fix, signs = gauge_fix(env_conv1, env_conv2)
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
     # fix gauge of SVD
-    U_fix, V_fix = fix_relative_phases(info.U, info.V, signs)
-    svd_alg_fix = SVDAdjoint(; fwd_alg=FixedSVD(U_fix, info.S, V_fix))
+    U_fix, V_fix = fix_relative_phases(U, V, signs)
+    svd_alg_fix = SVDAdjoint(; fwd_alg=FixedSVD(U_fix, S, V_fix))
     ctm_alg_fix = SimultaneousCTMRG(;
         projector_alg, svd_alg=svd_alg_fix, trscheme=notrunc()
     )

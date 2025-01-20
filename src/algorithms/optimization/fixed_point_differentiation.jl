@@ -91,9 +91,9 @@ function _rrule(
     state,
     alg::CTMRGAlgorithm,
 )
-    envs, info = leading_boundary(envinit, state, alg)
+    envs, truncation_error, condition_number = leading_boundary(envinit, state, alg)
 
-    function leading_boundary_diffgauge_pullback((Δenvs′, Δinfo))
+    function leading_boundary_diffgauge_pullback((Δenvs′, Δtrunc_error, Δcond_number))
         Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
@@ -108,7 +108,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return (envs, info), leading_boundary_diffgauge_pullback
+    return (envs, truncation_error, condition_number), leading_boundary_diffgauge_pullback
 end
 
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V
@@ -122,18 +122,20 @@ function _rrule(
 )
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     envs, = leading_boundary(envinit, state, alg)
-    envs_conv, info = ctmrg_iteration(state, envs, alg)
+    envs_conv, truncation_error, condition_number, U, S, V = ctmrg_iteration(
+        state, envs, alg
+    )
     envs_fixed, signs = gauge_fix(envs, envs_conv)
 
     # Fix SVD
-    Ufix, Vfix = fix_relative_phases(info.U, info.V, signs)
+    Ufix, Vfix = fix_relative_phases(U, V, signs)
     svd_alg_fixed = SVDAdjoint(;
-        fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
+        fwd_alg=FixedSVD(Ufix, S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
     )
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
     alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
-    function leading_boundary_fixed_pullback((Δenvs′, Δinfo))
+    function leading_boundary_fixed_pullback((Δenvs′, Δtrunc_error, Δcond_number))
         Δenvs = unthunk(Δenvs′)
 
         f(A, x) = fix_global_phases(x, ctmrg_iteration(A, x, alg_fixed)[1])
@@ -147,7 +149,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return (envs_fixed, info), leading_boundary_fixed_pullback
+    return (envs_fixed, truncation_error, condition_number), leading_boundary_fixed_pullback
 end
 
 @doc """

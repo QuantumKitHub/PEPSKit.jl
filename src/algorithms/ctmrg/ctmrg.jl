@@ -40,12 +40,13 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
 
     truncation_error = 0.0
     condition_number = 1.0
+    U, S, V = _prealloc_svd(envinit.edges)
     return LoggingExtras.withlevel(; alg.verbosity) do
         ctmrg_loginit!(log, η, state, envinit)
         for iter in 1:(alg.maxiter)
-            env, info = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
-            truncation_error = info.truncation_error
-            condition_number = info.condition_number
+            env, truncation_error, condition_number, U, S, V = ctmrg_iteration(
+                state, env, alg
+            )  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
@@ -58,7 +59,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
                 ctmrg_logiter!(log, iter, η, state, env)
             end
         end
-        return env, (; truncation_error, condition_number)
+        return env, truncation_error, condition_number, copy(U), copy(S), copy(V)
     end
 end
 

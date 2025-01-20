@@ -75,7 +75,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
         end
     end
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
-    return (P_left, P_right), (; err, U, S, V)
+    return (P_left, P_right), err, U, S, V
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
@@ -93,5 +93,5 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
         end
     end
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
-    return (P_left, P_right), (; err, U, S, V)
+    return (P_left, P_right), err, U, S, V
 end

@@ -22,7 +22,7 @@ function (r::RecordTruncationError)(
     p::AbstractManoptProblem, ::AbstractManoptSolverState, i::Int
 )
     cache = Manopt.get_cost_function(get_objective(p))
-    return Manopt.record_or_reset!(r, cache.env_info.truncation_error, i)
+    return Manopt.record_or_reset!(r, cache.truncation_error, i)
 end
 
 """
@@ -39,7 +39,7 @@ function (r::RecordConditionNumber)(
     p::AbstractManoptProblem, ::AbstractManoptSolverState, i::Int
 )
     cache = Manopt.get_cost_function(get_objective(p))
-    return Manopt.record_or_reset!(r, cache.env_info.condition_number, i)
+    return Manopt.record_or_reset!(r, cache.condition_number, i)
 end
 
 """

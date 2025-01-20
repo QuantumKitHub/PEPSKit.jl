@@ -33,18 +33,26 @@ end
 function ctmrg_iteration(state, envs::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(state)))
     condition_number = zero(real(scalartype(state)))
-    for _ in 1:4 # rotate
+    U, S, V = _prealloc_svd(envs.edges)
+    for dir in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            projectors, info = sequential_projectors(col, state, envs, alg.projector_alg)
+            projectors, err, cond, U′, S′, V′ = sequential_projectors(
+                col, state, envs, alg.projector_alg
+            )
             envs = renormalize_sequentially(col, projectors, state, envs)
-            truncation_error = max(truncation_error, info.truncation_error)
-            condition_number = max(condition_number, info.condition_number)
+            truncation_error = max(truncation_error, err)
+            condition_number = max(condition_number, cond)
+            for row in 1:size(state, 1)
+                U[dir, row, col] = U′[row]
+                S[dir, row, col] = S′[row]
+                V[dir, row, col] = V′[row]
+            end
         end
         state = rotate_north(state, EAST)
         envs = rotate_north(envs, EAST)
     end
 
-    return envs, (; truncation_error, condition_number)
+    return envs, truncation_error, condition_number, U, S, V
 end
 
 """
@@ -62,21 +70,26 @@ function sequential_projectors(
     S = Zygote.Buffer(
         zeros(size(envs, 2)), tensormaptype(spacetype(T), 1, 1, real(scalartype(T)))
     )
+    U, S, V = _prealloc_svd(@view(envs.edges[4, :, col]))
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
         trscheme = truncation_scheme(alg, envs.edges[WEST, _prev(r, size(envs, 2)), c])
-        proj, info = sequential_projectors(
+        proj, err, U′, S′, V′ = sequential_projectors(
             (WEST, r, c), state, envs, @set(alg.trscheme = trscheme)
         )
-        ϵ[r] = info.err / norm(info.S)
-        S[r] = info.S
+        U[r] = U′
+        S[r] = S′
+        V[r] = V′
+        ϵ[r] = err / norm(S′)
         return proj
     end
 
+    P_left = map(first, projectors)
+    P_right = map(last, projectors)
+    S = copy(S)
     truncation_error = maximum(copy(ϵ))
-    condition_number = maximum(_condition_number, copy(S))
-    info = (; truncation_error, condition_number)
-    return (map(first, projectors), map(last, projectors)), info
+    condition_number = maximum(_condition_number, S)
+    return (P_left, P_right), truncation_error, condition_number, copy(U), S, copy(V)
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},

@@ -100,7 +100,8 @@ mutable struct PEPSCostFunctionCache{T}
     peps_vec::Vector{T}
     grad_vec::Vector{T}
     cost::Float64
-    env_info::NamedTuple
+    truncation_error::Float64
+    condition_number::Float64
 end
 
 """
@@ -115,14 +116,7 @@ function PEPSCostFunctionCache(
     operator::LocalOperator, alg::PEPSOptimize, peps_vec::Vector, from_vec, env::CTMRGEnv
 )
     return PEPSCostFunctionCache(
-        operator,
-        alg,
-        env,
-        from_vec,
-        similar(peps_vec),
-        similar(peps_vec),
-        0.0,
-        (; truncation_error=0.0, condition_number=1.0),
+        operator, alg, env, from_vec, similar(peps_vec), similar(peps_vec), 0.0, 0.0, 1.0
     )
 end
 
@@ -140,7 +134,7 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
 
     # compute cost and gradient
     cost, grads = withgradient(peps) do ψ
-        env, info = hook_pullback(
+        env, truncation_error, condition_number = hook_pullback(
             leading_boundary,
             env₀,
             ψ,
@@ -150,7 +144,8 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
         cost = expectation_value(ψ, cache.operator, env)
         ignore_derivatives() do
             update!(cache.env, env)  # update environment in-place
-            cache.env_info = info  # update environment information (truncation error, ...)
+            cache.truncation_error = truncation_error  # update environment information
+            cache.condition_number = condition_number
             isapprox(imag(cost), 0; atol=sqrt(eps(real(cost)))) ||
                 @warn "Expectation value is not real: $cost."
         end
