@@ -81,12 +81,8 @@ function cal_envboundary(
     axs = (T <: PEPSTensor) ? (2:5) : (1:4)
     for (axt, ax) in zip(axts, Tuple(ax for ax in axs if ax ∉ free_axs))
         if axt === nothing
-            if isdual(space(ket, ax))
-                # cancel unwanted fermion signs
-                axt = id(space(ket, ax))
-            else
-                continue
-            end
+            twist!(ket2, ax)
+            continue
         end
         @assert space(axt, 1) == space(axt, 2)'
         ket_indices = collect(-1:-1:((T <: PEPSTensor) ? -5 : -4))
