@@ -43,9 +43,10 @@ function ctmrg_iteration(state, envs::CTMRGEnv, alg::SequentialCTMRG)
             truncation_error = max(truncation_error, err)
             condition_number = max(condition_number, cond)
             for row in 1:size(state, 1)
-                U[dir, row, col] = U′[row]
-                S[dir, row, col] = S′[row]
-                V[dir, row, col] = V′[row]
+                rc_idx = isodd(dir) ? (row, col) : (col, row)  # relevant for rectangular unit cells
+                U[dir, rc_idx...] = U′[row]
+                S[dir, rc_idx...] = S′[row]
+                V[dir, rc_idx...] = V′[row]
             end
         end
         state = rotate_north(state, EAST)

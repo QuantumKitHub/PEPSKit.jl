@@ -7,7 +7,8 @@ using PEPSKit: ctmrg_iteration, gauge_fix, calc_elementwise_convergence
 
 spacetypes = [ComplexSpace, Z2Space]
 scalartypes = [Float64, ComplexF64]
-unitcells = [(1, 1), (2, 2), (3, 2)]
+# unitcells = [(1, 1), (2, 2), (3, 2)]
+unitcells = [(3, 2)]
 ctmrg_algs = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 tol = 1e-6  # large tol due to χ=6

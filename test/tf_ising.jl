@@ -34,7 +34,7 @@ peps, env, E, = fixedpoint(psi_init, H, opt_alg, env_init)
 # compute magnetization
 σx = TensorMap(scalartype(psi_init)[0 1; 1 0], ℂ^2, ℂ^2)
 M = LocalOperator(H.lattice, (CartesianIndex(1, 1),) => σx)
-magn = expectation_value(result.peps, M, result.env)
+magn = expectation_value(peps, M, env)
 
 @test E ≈ e atol = 1e-2
 @test imag(magn) ≈ 0 atol = 1e-6
@@ -43,6 +43,6 @@ magn = expectation_value(result.peps, M, result.env)
 # find fixedpoint in polarized phase and compute correlations lengths
 H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
 peps_polar, env_polar, E_polar, = fixedpoint(psi_init, H_polar, opt_alg, env_init)
-ξ_h_polar, ξ_v_polar, = correlation_length(result_polar.peps, result_polar.env)
+ξ_h_polar, ξ_v_polar, = correlation_length(peps_polar, env_polar)
 @test ξ_h_polar < ξ_h
 @test ξ_v_polar < ξ_v
