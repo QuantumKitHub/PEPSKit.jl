@@ -21,6 +21,7 @@ include("utility/mirror.jl")
 include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
+include("utility/fullenv_truncation.jl")
 
 include("networks/tensors.jl")
 include("networks/infinitesquarenetwork.jl")
@@ -198,6 +199,7 @@ export fixedpoint
 
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
+export FullEnvTruncation, fullenv_truncate
 export NTUEnvNN, NTUEnvNNN, NTUEnvNNNp
 export ntu_iter, ntupdate, NTUpdate, ALSOptimize
 export fu_iter, fullupdate, FullUpdate

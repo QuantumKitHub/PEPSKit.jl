@@ -45,6 +45,36 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
+"""
+    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+
+Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
+```
+    u -> u * sqrt(s), vh -> sqrt(s) * vh
+```
+"""
+function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+    @assert domain(s) == codomain(s)
+    @assert isdual(space(s, 1)) === false
+    sqrt_s = sdiag_pow(s, 0.5)
+    return u * sqrt_s, sqrt_s * vh
+end
+
+"""
+    flip_svd(u, s, vh, ϵ) -> u, s, vh, ϵ
+
+Given `tsvd` result `u`, `s`, `vh`, `ϵ`, flip the dual (arrow direction) between `s` and `vh`:
+```
+    u ← s ← vh  ==>  u ← s → vh
+```
+"""
+function flip_svd(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap, ϵ)
+    flipper = isomorphism(flip(space(vh, 1)), space(vh, 1))
+    s = s * flipper'
+    vh = twist(flipper * vh, 1)
+    return u, s, vh, ϵ
+end
+
 _safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
@@ -62,19 +92,6 @@ function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))
         )
     end
     return Spow
-end
-
-"""
-    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
-
-Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
-```
-    u -> u * sqrt(s), vh -> sqrt(s) * vh
-```
-"""
-function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
-    sqrt_s = sdiag_pow(s, 0.5)
-    return u * sqrt_s, sqrt_s * vh
 end
 
 function ChainRulesCore.rrule(

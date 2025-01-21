@@ -5,11 +5,11 @@ Each NTU run stops when energy starts to increase.
 @kwdef struct NTUpdate <: TimeEvolAlgorithm
     dt::Float64
     maxiter::Int
-    trscheme::TensorKit.TruncationScheme
     # algorithm to construct bond environment (metric)
     bondenv_alg::BondEnvAlgorithm
     # alternating least square optimization
-    opt_alg::ALSOptimize = ALSOptimize()
+    # opt_alg::ALSOptimize = ALSOptimize()
+    opt_alg::FullEnvTruncation
     # monitor energy every `ctm_int` steps
     ctm_int::Int = 10
     # CTMRG algorithm to monitor energy
@@ -61,17 +61,21 @@ function _ntu_bondx!(
         -1← aR -← 3 -← bL → -4
     =#
     aR2bL2 = ncon((gate, aR0, bL0), ([-2, -3, 1, 2], [-1, 1, 3], [3, 2, -4]))
-    # initialize truncated tensors using SVD truncation
+    # initialize aR, bL using un-truncated SVD
     aR, s_cut, bL, ϵ = tsvd(
-        aR2bL2, ((1, 2), (3, 4)); trunc=truncation_scheme(alg, space(aR0, 3))
+        aR2bL2,
+        ((1, 2), (3, 4));
+        trunc=truncerr(1e-15),
+        # trunc=truncation_scheme(alg, space(aR0, 3))
     )
     aR, bL = absorb_s(aR, s_cut, bL)
     aR, bL = permute(aR, (1, 2, 3)), permute(bL, (1, 2, 3))
     # optimize aR, bL
-    aR, bL, cost = als_optimize(aR, bL, aR2bL2, env, alg.opt_alg)
+    # aR, bL, cost = als_optimize(aR, bL, aR2bL2, env, alg.opt_alg)
+    aR, bL, (cost, fid) = bond_optimize(env, aR, bL, alg.opt_alg)
     aR /= norm(aR, Inf)
     bL /= norm(bL, Inf)
-    fid = local_fidelity(_combine_aRbL(aR, bL), _combine_aRbL(aR0, bL0))
+    # fid = local_fidelity(_combine_aRbL(aR, bL), _combine_aRbL(aR0, bL0))
     #= update and normalize peps, ms
 
             -2        -1               -1     -2

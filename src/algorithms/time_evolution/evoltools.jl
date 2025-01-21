@@ -14,7 +14,7 @@ const BondPhys2{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
 include("bondenv/env_tools.jl")
 include("bondenv/env_ntu.jl")
 include("bondenv/env_ctm.jl")
-include("bondenv/env_trunc.jl")
+include("bondenv/optimize2.jl")
 include("bondenv/optimize.jl")
 
 """
