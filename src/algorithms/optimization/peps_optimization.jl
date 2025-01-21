@@ -141,7 +141,7 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
             cache.alg.boundary_alg;
             alg_rrule=cache.alg.gradient_alg,
         )
-        cost = cost_function(ψ, cache.operator, env)
+        cost = cost_function(ψ, env, cache.operator)
         ignore_derivatives() do # update cache
             update!(cache.env, env)
             cache.truncation_error = truncation_error
