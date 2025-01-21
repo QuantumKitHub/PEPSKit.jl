@@ -232,13 +232,17 @@ function fullenv_truncate(
             break
         end
     end
+    @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
     if !flip_s
         # change `← u ← s → v† →` back to `← u ← s ← v† →`
         Vtrunc = space(s, 1)
         flipper = isomorphism(flip(Vtrunc), Vtrunc)
         # ← u ←(← s → f ←) ← (← f† → v† →)→
         @tensor s[-1; -2] := s[-1 1] * flipper[1 -2]
+        # TODO: figure out the reason behind
+        twist!(s, 2)
         @tensor vh[-1; -2] := flipper'[-1 1] * vh[1 -2]
+        @assert tmp ≈ u * s * vh
     end
     return u, s, vh, (diff, fid)
 end
