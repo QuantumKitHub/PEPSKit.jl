@@ -89,9 +89,9 @@ end
     # continue with auto differentiation
     svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-8))
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
-    result = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
-    e_site2 = result.E / (N1 * N2)
+    peps_final, env_final, E_final, = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
+    ξ_h, ξ_v, = correlation_length(peps_final, env_final)
+    e_site2 = E_final / (N1 * N2)
     @info "Auto diff energy = $e_site2"
     @test e_site2 ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)

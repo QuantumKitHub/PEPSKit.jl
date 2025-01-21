@@ -27,5 +27,5 @@ opt_alg = PEPSOptimize(;
 # Of course there is a noticable bias for small χbond and χenv.
 ψ₀ = InfinitePEPS(2, χbond)
 env₀, = leading_boundary(CTMRGEnv(ψ₀, ℂ^χenv), ψ₀, ctm_alg)
-result = fixedpoint(ψ₀, H, opt_alg, env₀)
-@show result.E
+peps, env, E, = fixedpoint(ψ₀, H, opt_alg, env₀)
+@show E
