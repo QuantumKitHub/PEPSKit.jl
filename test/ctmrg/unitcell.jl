@@ -1,22 +1,35 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iter
+using PEPSKit: _prev, _next, ctmrg_iteration
 using TensorKit
 
 # settings
 Random.seed!(91283219347)
 stype = ComplexF64
-ctm_alg = CTMRG()
+ctm_algs = [
+    SequentialCTMRG(; projector_alg=HalfInfiniteProjector),
+    SequentialCTMRG(; projector_alg=FullInfiniteProjector),
+    SimultaneousCTMRG(; projector_alg=HalfInfiniteProjector),
+    SimultaneousCTMRG(; projector_alg=FullInfiniteProjector),
+]
 
 function test_unitcell(
-    unitcell, Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west
+    ctm_alg,
+    unitcell,
+    Pspaces,
+    Nspaces,
+    Espaces,
+    chis_north,
+    chis_east,
+    chis_south,
+    chis_west,
 )
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
     # apply one CTMRG iteration with fixeds
-    env′, = ctmrg_iter(peps, env, ctm_alg)
+    env′, = ctmrg_iteration(peps, env, ctm_alg)
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(
@@ -40,7 +53,7 @@ function random_dualize!(M::AbstractMatrix{<:ElementarySpace})
     return M
 end
 
-@testset "Integer space specifiers" begin
+@testset "Integer space specifiers with $ctm_alg" for ctm_alg in ctm_algs
     unitcell = (3, 3)
 
     Pspaces = rand(2:3, unitcell...)
@@ -52,11 +65,19 @@ end
     chis_west = rand(5:10, unitcell...)
 
     test_unitcell(
-        unitcell, Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west
+        ctm_alg,
+        unitcell,
+        Pspaces,
+        Nspaces,
+        Espaces,
+        chis_north,
+        chis_east,
+        chis_south,
+        chis_west,
     )
 end
 
-@testset "Random Cartesian spaces" begin
+@testset "Random Cartesian spaces with $ctm_alg" for ctm_alg in ctm_algs
     unitcell = (3, 3)
 
     Pspaces = random_dualize!(ComplexSpace.(rand(2:3, unitcell...)))
@@ -68,11 +89,19 @@ end
     chis_west = random_dualize!(ComplexSpace.(rand(5:10, unitcell...)))
 
     test_unitcell(
-        unitcell, Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west
+        ctm_alg,
+        unitcell,
+        Pspaces,
+        Nspaces,
+        Espaces,
+        chis_north,
+        chis_east,
+        chis_south,
+        chis_west,
     )
 end
 
-@testset "Specific U1 spaces" begin
+@testset "Specific U1 spaces with $ctm_alg" for ctm_alg in ctm_algs
     unitcell = (2, 2)
 
     PA = U1Space(-1 => 1, 0 => 1)
@@ -84,5 +113,5 @@ end
     Nspaces = [Vpeps Vpeps'; Vpeps' Vpeps]
     chis = [Venv Venv; Venv Venv]
 
-    test_unitcell(unitcell, Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
+    test_unitcell(ctm_alg, unitcell, Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
 end

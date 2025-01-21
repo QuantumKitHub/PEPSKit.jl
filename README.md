@@ -5,7 +5,7 @@
 
 # PEPSKit.jl
 
-[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url]
+[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url] [![DOI][doi-img]][doi-url]
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://QuantumKitHub.github.io/PEPSKit.jl/dev/
@@ -14,6 +14,9 @@
 [codecov-url]: https://codecov.io/gh/QuantumKitHub/PEPSKit.jl
 
 [ci-url]: https://github.com/QuantumKitHub/PEPSKit.jl/workflows/CI/badge.svg
+
+[doi-url]: https://doi.org/10.5281/zenodo.13938736
+[doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.13938737.svg
 
 **Tools for working with projected entangled-pair states**
 
@@ -36,18 +39,17 @@ For example, in order to obtain the groundstate of the 2D Heisenberg model, we c
 using TensorKit, PEPSKit, KrylovKit, OptimKit
 
 # constructing the Hamiltonian:
-H = square_lattice_heisenberg(; Jx=-1, Jy=1, Jz=-1) # sublattice rotation to obtain single-site unit cell
+H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1) # sublattice rotation to obtain single-site unit cell
 
 # configuring the parameters
 D = 2
 chi = 20
-ctm_alg = CTMRG(; tol=1e-10, miniter=4, maxiter=100, verbosity=1, trscheme=truncdim(chi))
+ctm_alg = SimultaneousCTMRG(; tol=1e-10, trscheme=truncdim(chi))
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
     optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
-    gradient_alg=GMRES(; tol=1e-6, maxiter=100),
+    gradient_alg=LinSolver(),
     reuse_env=true,
-    verbosity=2,
 )
 
 # ground state search

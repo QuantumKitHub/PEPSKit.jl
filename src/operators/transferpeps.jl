@@ -52,7 +52,8 @@ the norm of the state `T`. The partition function is first rotated such
 that the direction `dir` faces north.
 """
 function TransferPEPSMultiline(T::InfinitePEPS, dir)
-    return MPSKit.Multiline(map(cr -> InfiniteTransferPEPS(T, dir, cr), 1:size(T, 1)))
+    rowsize = size(T, mod1(dir, 2))  # depends on dir
+    return MPSKit.Multiline(map(cr -> InfiniteTransferPEPS(T, dir, cr), 1:rowsize))
 end
 
 """

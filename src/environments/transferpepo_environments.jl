@@ -1,14 +1,12 @@
 
-function MPSKit.environments(state::InfiniteMPS, O::InfiniteTransferPEPS; kwargs...)
+function MPSKit.environments(state::InfiniteMPS, O::InfiniteTransferPEPO; kwargs...)
     return environments(
-        convert(MPSMultiline, state), convert(TransferPEPSMultiline, O); kwargs...
+        convert(MPSMultiline, state), convert(TransferPEPOMultiline, O); kwargs...
     )
 end
 
-import MPSKit.MPSMultiline
-
 function MPSKit.environments(
-    state::MPSMultiline, O::TransferPEPSMultiline; solver=MPSKit.Defaults.eigsolver
+    state::MPSMultiline, O::TransferPEPOMultiline; solver=MPSKit.Defaults.eigsolver
 )
     (lw, rw) = MPSKit.mixed_fixpoints(state, O, state; solver)
     return MPSKit.PerMPOInfEnv(nothing, O, state, solver, lw, rw, ReentrantLock())
@@ -16,7 +14,7 @@ end
 
 function MPSKit.mixed_fixpoints(
     above::MPSMultiline,
-    O::TransferPEPSMultiline,
+    O::TransferPEPOMultiline,
     below::MPSMultiline,
     init=gen_init_fps(above, O, below);
     solver=MPSKit.Defaults.eigsolver,
@@ -32,7 +30,7 @@ function MPSKit.mixed_fixpoints(
     righties = PeriodicArray{envtype,2}(undef, numrows, numcols)
 
     @threads for cr in 1:numrows
-        c_above = above[cr]
+        c_above = above[cr]  # TODO: Update index convention to above[cr - 1]
         c_below = below[cr + 1]
 
         (L0, R0) = init[cr]
@@ -62,7 +60,7 @@ function MPSKit.mixed_fixpoints(
                 TransferMatrix(c_above.AL[loc - 1], O[cr, loc - 1], c_below.AL[loc - 1])
         end
 
-        renormfact::scalartype(T) = dot(c_below.CR[0], PEPS_∂∂C(L0, R0) * c_above.CR[0])
+        renormfact::scalartype(T) = dot(c_below.CR[0], PEPO_∂∂C(L0, R0) * c_above.CR[0])
 
         righties[cr, end] = R0 / sqrt(renormfact)
         lefties[cr, 1] /= sqrt(renormfact)
@@ -74,7 +72,7 @@ function MPSKit.mixed_fixpoints(
 
             renormfact = dot(
                 c_below.CR[loc],
-                PEPS_∂∂C(lefties[cr, loc + 1], righties[cr, loc]) * c_above.CR[loc],
+                PEPO_∂∂C(lefties[cr, loc + 1], righties[cr, loc]) * c_above.CR[loc],
             )
             righties[cr, loc] /= sqrt(renormfact)
             lefties[cr, loc + 1] /= sqrt(renormfact)
@@ -84,24 +82,20 @@ function MPSKit.mixed_fixpoints(
     return (lefties, righties)
 end
 
-function gen_init_fps(above::MPSMultiline, O::TransferPEPSMultiline, below::MPSMultiline)
+function gen_init_fps(above::MPSMultiline, O::TransferPEPOMultiline, below::MPSMultiline)
     T = eltype(above)
 
     map(1:size(O, 1)) do cr
         L0::T = TensorMap(
             rand,
             scalartype(T),
-            left_virtualspace(below, cr + 1, 0) *
-            space(O[cr].top[1], 5)' *
-            space(O[cr].bot[1], 5),
-            left_virtualspace(above, cr, 0),
+            left_virtualspace(below, cr + 1, 0) * prod(adjoint.(west_spaces(O[cr], 1))),
+            left_virtualspace(above, cr, 0),  # TODO: Update index convention to above[cr - 1]
         )
         R0::T = TensorMap(
             rand,
             scalartype(T),
-            right_virtualspace(above, cr, 0) *
-            space(O[cr].top[1], 3)' *
-            space(O[cr].bot[1], 3),
+            right_virtualspace(above, cr, 0) * prod(adjoint.(east_spaces(O[cr], 1))),
             right_virtualspace(below, cr + 1, 0),
         )
         (L0, R0)

@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePEPS{T<:PEPSTensor} <: AbstractPEPS
+struct InfinitePEPS{T<:PEPSTensor} <: InfiniteSquareNetwork{T,2}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
@@ -109,49 +109,8 @@ function InfinitePEPS(
     )
 end
 
-## Shape and size
-Base.size(T::InfinitePEPS) = size(T.A)
-Base.size(T::InfinitePEPS, i) = size(T.A, i)
-Base.length(T::InfinitePEPS) = length(T.A)
-Base.eltype(T::InfinitePEPS) = eltype(T.A)
-VectorInterface.scalartype(T::InfinitePEPS) = scalartype(T.A)
-
-## Copy
-Base.copy(T::InfinitePEPS) = InfinitePEPS(copy(T.A))
-# Base.similar(T::InfinitePEPS) = InfinitePEPS(similar(T.A))  # TODO: This is incompatible with inner constructor
-Base.repeat(T::InfinitePEPS, counts...) = InfinitePEPS(repeat(T.A, counts...))
-
-Base.getindex(T::InfinitePEPS, args...) = Base.getindex(T.A, args...)
-Base.setindex!(T::InfinitePEPS, args...) = (Base.setindex!(T.A, args...); T)
-Base.axes(T::InfinitePEPS, args...) = axes(T.A, args...)
+unitcell(t::InfinitePEPS) = t.A
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
-
-## Math
-Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
-Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
-Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
-LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
-LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
-
-# Used in _scale during OptimKit.optimize
-function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
-    rmul!(ψ.A, α)
-    return ψ
-end
-
-# Used in _add during OptimKit.optimize
-function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
-    ψ₂.A .+= α * ψ₁.A
-    return ψ₂
-end
-
-# VectorInterface
-VectorInterface.zerovector(x::InfinitePEPS) = InfinitePEPS(zerovector(x.A))
-
-# Rotations
-Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
-Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
-Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
 
 # Chainrules
 function ChainRulesCore.rrule(

@@ -2,81 +2,51 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using Accessors
 
-using PEPSKit: ctmrg_iter, gauge_fix, calc_elementwise_convergence
+using PEPSKit: ctmrg_iteration, gauge_fix, calc_elementwise_convergence
 
+spacetypes = [ComplexSpace, Z2Space]
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
+ctmrg_algs = [SequentialCTMRG, SimultaneousCTMRG]
+projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
+tol = 1e-6  # large tol due to χ=6
 χ = 6
-verbosity = 3
+atol = 1e-4
 
-function _make_symmetric(psi)
-    if ==(size(psi)...)
-        return PEPSKit.symmetrize(psi, PEPSKit.Full())
-    else
-        return PEPSKit.symmetrize(PEPSKit.symmetrize(psi, PEPSKit.Depth()), PEPSKit.Width())
+function _pre_converge_env(
+    ::Type{T}, physical_space, peps_space, ctm_space, unitcell; seed=12345
+) where {T}
+    Random.seed!(seed)  # Seed RNG to make random environment consistent
+    psi = InfinitePEPS(rand, T, physical_space, peps_space; unitcell)
+    env₀ = CTMRGEnv(psi, ctm_space)
+    env_conv = leading_boundary(env₀, psi, SequentialCTMRG(; tol))
+    return env_conv, psi
+end
+
+# pre-converge CTMRG environments with given spacetype, scalartype and unit cell
+preconv = Dict()
+for (S, T, unitcell) in Iterators.product(spacetypes, scalartypes, unitcells)
+    if S == ComplexSpace
+        result = _pre_converge_env(T, S(2), S(2), S(χ), unitcell)
+    elseif S == Z2Space
+        result = _pre_converge_env(
+            T, S(0 => 1, 1 => 1), S(0 => 1, 1 => 1), S(0 => χ ÷ 2, 1 => χ ÷ 2), unitcell
+        )
     end
+    push!(preconv, (S, T, unitcell) => result)
 end
 
-# If I can't make the rng seed behave, I'll just randomly define a peps somehow
-function semi_random_peps!(psi::InfinitePEPS)
-    i = 0
-    A′ = map(psi.A) do a
-        for (_, b) in blocks(a)
-            l = length(b)
-            b .= reshape(collect((1:l) .+ i), size(b))
-            i += l
-        end
-        return a
-    end
-    return InfinitePEPS(A′)
-end
-
-@testset "Trivial symmetry ($T) - ($unitcell)" for (T, unitcell) in
-                                                   Iterators.product(scalartypes, unitcells)
-    physical_space = ComplexSpace(2)
-    peps_space = ComplexSpace(2)
-    ctm_space = ComplexSpace(χ)
-
-    psi = InfinitePEPS(undef, T, physical_space, peps_space; unitcell)
-    semi_random_peps!(psi)
-    psi = _make_symmetric(psi)
-
-    Random.seed!(987654321)  # Seed RNG to make random environment consistent
-    ctm = CTMRGEnv(psi, ctm_space)
-
-    alg = CTMRG(;
-        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
-    )
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
-
-    ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
-    ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-4
-end
-
-@testset "Z2 symmetry ($T) - ($unitcell)" for (T, unitcell) in
-                                              Iterators.product(scalartypes, unitcells)
-    physical_space = Z2Space(0 => 1, 1 => 1)
-    peps_space = Z2Space(0 => 1, 1 => 1)
-    ctm_space = Z2Space(0 => χ ÷ 2, 1 => χ ÷ 2)
-
-    psi = InfinitePEPS(undef, T, physical_space, peps_space; unitcell)
-    semi_random_peps!(psi)
-    psi = _make_symmetric(psi)
-
-    Random.seed!(123456789)  # Seed RNG to make random environment consistent
-    ctm = CTMRGEnv(psi, ctm_space)
-
-    alg = CTMRG(;
-        tol=1e-10, miniter=4, maxiter=400, verbosity, trscheme=truncdim(dim(ctm_space))
-    )
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation()
-
-    ctm = leading_boundary(ctm, psi, alg)
-    ctm2, = ctmrg_iter(psi, ctm, alg_fixed)
-    ctm_fixed = gauge_fix(ctm, ctm2)
-    @test PEPSKit.calc_elementwise_convergence(ctm, ctm_fixed) ≈ 0 atol = 1e-4
+@testset "($S) - ($T) - ($unitcell) - ($ctmrg_alg) - ($projector_alg)" for (
+    S, T, unitcell, ctmrg_alg, projector_alg
+) in Iterators.product(
+    spacetypes, scalartypes, unitcells, ctmrg_algs, projector_algs
+)
+    alg = ctmrg_alg(; tol, projector_alg)
+    env_pre, psi = preconv[(S, T, unitcell)]
+    env_pre
+    env = leading_boundary(env_pre, psi, alg)
+    env′, = ctmrg_iteration(psi, env, alg)
+    env_fixed, = gauge_fix(env, env′)
+    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end

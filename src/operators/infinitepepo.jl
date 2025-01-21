@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
 """
-struct InfinitePEPO{T<:PEPOTensor} <: AbstractPEPO
+struct InfinitePEPO{T<:PEPOTensor} <: InfiniteSquareNetwork{T,3}
     A::Array{T,3}
 
     function InfinitePEPO(A::Array{T,3}) where {T<:PEPOTensor}
@@ -105,35 +105,18 @@ function InfinitePEPO(
     )
 end
 
-## Shape and size
-Base.size(T::InfinitePEPO) = size(T.A)
-Base.size(T::InfinitePEPO, i) = size(T.A, i)
-Base.length(T::InfinitePEPO) = length(T.A)
-Base.eltype(T::InfinitePEPO) = eltype(T.A)
-VectorInterface.scalartype(T::InfinitePEPO) = scalartype(T.A)
-
-## Copy
-Base.copy(T::InfinitePEPO) = InfinitePEPO(copy(T.A))
-Base.similar(T::InfinitePEPO) = InfinitePEPO(similar(T.A))
-Base.repeat(T::InfinitePEPO, counts...) = InfinitePEPO(repeat(T.A, counts...))
-
-Base.getindex(T::InfinitePEPO, args...) = Base.getindex(T.A, args...)
-Base.axes(T::InfinitePEPO, args...) = axes(T.A, args...)
+unitcell(T::InfinitePEPO) = T.A
 TensorKit.space(T::InfinitePEPO, i, j) = space(T[i, j, end], 1)
 
 function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
     Pspaces = Array{S,2}(undef, size(T, 1), size(T, 2))
-    for (i, j) in product(1:size(T, 1), 1:size(T, 2))
+    for i in axes(T, 1)
+        j in axes(T, 2)
         Pspaces[i, j] = space(T, i, j)
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
 end
-
-# Rotations
-Base.rotl90(T::InfinitePEPO) = InfinitePEPO(stack(rotl90, eachslice(T.A; dims=3)))
-Base.rotr90(T::InfinitePEPO) = InfinitePEPO(stack(rotr90, eachslice(T.A; dims=3)))
-Base.rot180(T::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(T.A; dims=3)))

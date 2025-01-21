@@ -1,69 +1,173 @@
-abstract type GradMode end
+abstract type GradMode{F} end
+
+iterscheme(::GradMode{F}) where {F} = F
 
 """
-    struct NaiveAD <: GradMode
-
-Gradient mode for CTMRG using AD.
-"""
-struct NaiveAD <: GradMode end
-
-"""
-    struct GeomSum <: GradMode
+    struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
+                   verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
-@kwdef struct GeomSum <: GradMode
-    maxiter::Int = Defaults.fpgrad_maxiter
-    tol::Real = Defaults.fpgrad_tol
-    verbosity::Int = 0
+struct GeomSum{F} <: GradMode{F}
+    maxiter::Int
+    tol::Real
+    verbosity::Int
+end
+function GeomSum(;
+    maxiter=Defaults.fpgrad_maxiter,
+    tol=Defaults.fpgrad_tol,
+    verbosity=0,
+    iterscheme=Defaults.iterscheme,
+)
+    return GeomSum{iterscheme}(maxiter, tol, verbosity)
 end
 
 """
-    struct ManualIter <: GradMode
+    struct ManualIter(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
+                      verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
-@kwdef struct ManualIter <: GradMode
-    maxiter::Int = Defaults.fpgrad_maxiter
-    tol::Real = Defaults.fpgrad_tol
-    verbosity::Int = 0
+struct ManualIter{F} <: GradMode{F}
+    maxiter::Int
+    tol::Real
+    verbosity::Int
+end
+function ManualIter(;
+    maxiter=Defaults.fpgrad_maxiter,
+    tol=Defaults.fpgrad_tol,
+    verbosity=0,
+    iterscheme=Defaults.iterscheme,
+)
+    return ManualIter{iterscheme}(maxiter, tol, verbosity)
 end
 
 """
-    PEPSOptimize{G}(; boundary_alg = CTMRG(), optimizer::OptimKit.OptimizationAlgorithm = LBFGS()
-                    reuse_env::Bool = true, gradient_alg::G, verbosity::Int = 0)
+    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+
+Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
+problem using iterative solvers.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
+"""
+struct LinSolver{F} <: GradMode{F}
+    solver::KrylovKit.LinearSolver
+end
+function LinSolver(;
+    solver=KrylovKit.BiCGStab(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
+    iterscheme=Defaults.iterscheme,
+)
+    return LinSolver{iterscheme}(solver)
+end
+
+"""
+    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
+                    reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
-currently only `CTMRG` is supported. The `optimizer` computes the gradient directions
+currently only `CTMRGAlgorithm`s are supported. The `optimizer` computes the gradient directions
 based on the CTMRG gradient and updates the PEPS parameters. In this optimization,
 the CTMRG runs can be started on the converged environments of the previous optimizer
 step by setting `reuse_env` to true. Otherwise a random environment is used at each
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 """
-@kwdef struct PEPSOptimize{G}
-    boundary_alg::CTMRG = CTMRG()  # Algorithm to find boundary environment
-    optimizer::OptimKit.OptimizationAlgorithm = LBFGS(
-        4; maxiter=100, gradtol=1e-4, verbosity=2
-    )
-    reuse_env::Bool = true  # Reuse environment of previous optimization as initial guess for next
-    gradient_alg::G = GeomSum() # Algorithm to solve gradient linear problem
+struct PEPSOptimize{G}
+    boundary_alg::CTMRGAlgorithm
+    optimizer::OptimKit.OptimizationAlgorithm
+    reuse_env::Bool
+    gradient_alg::G
+
+    function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
+        boundary_alg::CTMRGAlgorithm,
+        optimizer,
+        reuse_env,
+        gradient_alg::G,
+    ) where {G}
+        if gradient_alg isa GradMode
+            if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
+                throw(ArgumentError(":sequential and :fixed are not compatible"))
+            end
+        end
+        return new{G}(boundary_alg, optimizer, reuse_env, gradient_alg)
+    end
+end
+function PEPSOptimize(;
+    boundary_alg=Defaults.ctmrg_alg,
+    optimizer=Defaults.optimizer,
+    reuse_env=Defaults.reuse_env,
+    gradient_alg=Defaults.gradient_alg,
+)
+    return PEPSOptimize(boundary_alg, optimizer, reuse_env, gradient_alg)
 end
 
 """
-    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv]) where {T}
+    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
+               finalize!=OptimKit._finalize!, symmetrization=nothing) where {T}
     
 Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
 By default, a random initial environment is used.
+
+The `finalize!` kwarg can be used to insert a function call after each optimization step
+by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
+The function maps `(peps, envs), f, g = finalize!((peps, envs), f, g, numiter)`.
+The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
+PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
+requires a symmmetric `ψ₀` and `env₀` to converge properly.
+
+The function returns a `NamedTuple` which contains the following entries:
+- `peps`: final `InfinitePEPS`
+- `env`: `CTMRGEnv` corresponding to the final PEPS
+- `E`: final energy
+- `E_history`: convergence history of the energy function
+- `grad`: final energy gradient
+- `gradnorm_history`: convergence history of the energy gradient norms
+- `numfg`: total number of calls to the energy function
 """
 function fixedpoint(
-    ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(T)^20)
-) where {T}
-    (peps, env), E, ∂E, info = optimize(
-        (ψ₀, env₀), alg.optimizer; retract=my_retract, inner=my_inner
+    ψ₀::InfinitePEPS{F},
+    H,
+    alg::PEPSOptimize,
+    env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(F)^20);
+    (finalize!)=OptimKit._finalize!,
+    symmetrization=nothing,
+) where {F}
+    if isnothing(symmetrization)
+        retract = peps_retract
+    else
+        retract, symm_finalize! = symmetrize_retract_and_finalize!(symmetrization)
+        fin! = finalize!  # Previous finalize!
+        finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
+    end
+
+    if scalartype(env₀) <: Real
+        env₀ = complex(env₀)
+        @warn "the provided real environment was converted to a complex environment since \
+        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work \
+        with purely real environments"
+    end
+
+    (peps, env), E, ∂E, numfg, convhistory = optimize(
+        (ψ₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
     ) do (peps, envs)
-        E, g = withgradient(peps) do ψ
+        E, gs = withgradient(peps) do ψ
             envs´ = hook_pullback(
                 leading_boundary,
                 envs,
@@ -76,15 +180,24 @@ function fixedpoint(
             end
             return costfun(ψ, envs´, H)
         end
-        # withgradient returns tuple of gradients `g`
-        return E, only(g)
+        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        return E, g
     end
-    return (; peps, env, E, ∂E, info)
+
+    return (;
+        peps,
+        env,
+        E,
+        E_history=convhistory[:, 1],
+        grad=∂E,
+        gradnorm_history=convhistory[:, 2],
+        numfg,
+    )
 end
 
 # Update PEPS unit cell in non-mutating way
 # Note: Both x and η are InfinitePEPS during optimization
-function my_retract(x, η, α)
+function peps_retract(x, η, α)
     peps = deepcopy(x[1])
     peps.A .+= η.A .* α
     env = deepcopy(x[2])
@@ -92,7 +205,7 @@ function my_retract(x, η, α)
 end
 
 # Take real valued part of dot product
-my_inner(_, η₁, η₂) = real(dot(η₁, η₂))
+real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 
 #=
 Evaluating the gradient of the cost function for CTMRG:
@@ -102,34 +215,70 @@ Evaluating the gradient of the cost function for CTMRG:
 =#
 
 function _rrule(
-    gradmode::Union{GradMode,KrylovKit.LinearSolver},
-    ::RuleConfig,
+    gradmode::GradMode{:diffgauge},
+    config::RuleConfig,
     ::typeof(MPSKit.leading_boundary),
     envinit,
     state,
-    alg::CTMRG,
+    alg::CTMRGAlgorithm,
 )
     envs = leading_boundary(envinit, state, alg)
-    #TODO: fixed space for unit cells
 
-    function leading_boundary_pullback(Δenvs′)
+    function leading_boundary_diffgauge_pullback(Δenvs′)
         Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
-        # TODO: make this rrule_via_ad so it's zygote-agnostic
-        _, env_vjp = pullback(state, envs) do A, x
-            return gauge_fix(x, ctmrg_iter(A, x, alg)[1])
-        end
+        f(A, x) = gauge_fix(x, ctmrg_iteration(A, x, alg)[1])[1]
+        _, env_vjp = rrule_via_ad(config, f, state, envs)
 
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
-        ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[3]
         ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envs, leading_boundary_pullback
+    return envs, leading_boundary_diffgauge_pullback
+end
+
+# Here f is differentiated from an pre-computed SVD with fixed U, S and V
+function _rrule(
+    gradmode::GradMode{:fixed},
+    config::RuleConfig,
+    ::typeof(MPSKit.leading_boundary),
+    envinit,
+    state,
+    alg::SimultaneousCTMRG,
+)
+    @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
+    envs = leading_boundary(envinit, state, alg)
+    envsconv, info = ctmrg_iteration(state, envs, alg)
+    envs_fixed, signs = gauge_fix(envs, envsconv)
+
+    # Fix SVD
+    Ufix, Vfix = fix_relative_phases(info.U, info.V, signs)
+    svd_alg_fixed = SVDAdjoint(;
+        fwd_alg=FixedSVD(Ufix, info.S, Vfix), rrule_alg=alg.projector_alg.svd_alg.rrule_alg
+    )
+    alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
+    alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
+
+    function leading_boundary_fixed_pullback(Δenvs′)
+        Δenvs = unthunk(Δenvs′)
+
+        f(A, x) = fix_global_phases(x, ctmrg_iteration(A, x, alg_fixed)[1])
+        _, env_vjp = rrule_via_ad(config, f, state, envs_fixed)
+
+        # evaluate the geometric sum
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+        ∂f∂x(x)::typeof(envs) = env_vjp(x)[3]
+        ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
+
+        return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
+    end
+
+    return envs_fixed, leading_boundary_fixed_pullback
 end
 
 @doc """
@@ -196,9 +345,9 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
     return dx
 end
 
-function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
-    y, info = linsolve(∂f∂x, ∂F∂x, y₀, alg, 1, -1)
-    if alg.verbosity > 0 && info.converged != 1
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::LinSolver)
+    y, info = linsolve(∂f∂x, ∂F∂x, y₀, alg.solver, 1, -1)
+    if alg.solver.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 

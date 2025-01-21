@@ -86,7 +86,8 @@ the expectation value of `O` for the state `T`. The partition function is first 
 that the direction `dir` faces north.
 """
 function TransferPEPOMultiline(T::InfinitePEPS, O::InfinitePEPO, dir)
-    return MPSKit.Multiline(map(cr -> InfiniteTransferPEPO(T, O, dir, cr), 1:size(T, 1)))
+    rowsize = size(T, mod1(dir, 2))  # depends on dir
+    return MPSKit.Multiline(map(cr -> InfiniteTransferPEPO(T, O, dir, cr), 1:rowsize))
 end
 
 # specialize simple case

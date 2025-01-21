@@ -1,6 +1,40 @@
-# Get next and previous directional CTM enviroment index, respecting periodicity
+# Get next and previous directional CTMRG environment index, respecting periodicity
 _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
+
+# Get next and previous coordinate (direction, row, column), given a direction and going around the environment clockwise
+function _next_coordinate((dir, row, col), rowsize, colsize)
+    if dir == 1
+        return (_next(dir, 4), row, _next(col, colsize))
+    elseif dir == 2
+        return (_next(dir, 4), _next(row, rowsize), col)
+    elseif dir == 3
+        return (_next(dir, 4), row, _prev(col, colsize))
+    elseif dir == 4
+        return (_next(dir, 4), _prev(row, rowsize), col)
+    end
+end
+function _prev_coordinate((dir, row, col), rowsize, colsize)
+    if dir == 1
+        return (_prev(dir, 4), _next(row, rowsize), col)
+    elseif dir == 2
+        return (_prev(dir, 4), row, _prev(col, colsize))
+    elseif dir == 3
+        return (_prev(dir, 4), _prev(row, rowsize), col)
+    elseif dir == 4
+        return (_prev(dir, 4), row, _next(col, colsize))
+    end
+end
+
+# iterator over each coordinates
+"""
+    eachcoordinate(x, dirs=1:4)
+
+Enumerate all (dir, row, col) pairs.
+"""
+function eachcoordinate end
+
+@non_differentiable eachcoordinate(args...)
 
 # Element-wise multiplication of TensorMaps respecting block structure
 function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
@@ -11,29 +45,51 @@ function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
     return dst
 end
 
-# Compute √S⁻¹ for diagonal TensorMaps
-function sdiag_inv_sqrt(S::AbstractTensorMap)
-    invsq = similar(S)
+_safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
-    if sectortype(S) == Trivial
-        copyto!(invsq.data, LinearAlgebra.diagm(LinearAlgebra.diag(S.data) .^ (-1 / 2)))
-    else
-        for (k, b) in blocks(S)
-            copyto!(
-                blocks(invsq)[k], LinearAlgebra.diagm(LinearAlgebra.diag(b) .^ (-1 / 2))
-            )
-        end
+"""
+    sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
+
+Compute `S^pow` for diagonal matrices `S`.
+"""
+function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
+    tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    Spow = similar(S)
+    for (k, b) in blocks(S)
+        copyto!(
+            blocks(Spow)[k],
+            LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol)),
+        )
     end
-
-    return invsq
+    return Spow
 end
 
-function ChainRulesCore.rrule(::typeof(sdiag_inv_sqrt), S::AbstractTensorMap)
-    invsq = sdiag_inv_sqrt(S)
-    function sdiag_inv_sqrt_pullback(c̄)
-        return (ChainRulesCore.NoTangent(), -1 / 2 * _elementwise_mult(c̄, invsq'^3))
+"""
+    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+
+Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
+```
+    u -> u * sqrt(s), vh -> sqrt(s) * vh
+```
+"""
+function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+    sqrt_s = sdiag_pow(s, 0.5)
+    return u * sqrt_s, sqrt_s * vh
+end
+
+function ChainRulesCore.rrule(
+    ::typeof(sdiag_pow),
+    S::AbstractTensorMap,
+    pow::Real;
+    tol::Real=eps(scalartype(S))^(3 / 4),
+)
+    tol *= norm(S, Inf)
+    spow = sdiag_pow(S, pow; tol)
+    spow_minus1_conj = scale!(sdiag_pow(S', pow - 1; tol), pow)
+    function sdiag_pow_pullback(c̄)
+        return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
     end
-    return invsq, sdiag_inv_sqrt_pullback
+    return spow, sdiag_pow_pullback
 end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
@@ -47,20 +103,6 @@ function is_degenerate_spectrum(
         end
     end
     return false
-end
-
-"""
-    projector_type(T::DataType, size)
-
-Create two arrays of specified `size` that contain undefined tensors representing
-left and right acting projectors, respectively. The projector types are inferred
-from the TensorMap type `T` which avoids having to recompute transpose tensors.
-"""
-function projector_type(T::DataType, size)
-    Pleft = Array{T,length(size)}(undef, size)
-    Prtype = tensormaptype(spacetype(T), numin(T), numout(T), storagetype(T))
-    Pright = Array{Prtype,length(size)}(undef, size)
-    return Pleft, Pright
 end
 
 # There are no rrules for rotl90 and rotr90 in ChainRules.jl
@@ -133,54 +175,6 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
     end
     return t, _setindex_pullback
 end
-
-"""
-    @diffset assign
-
-Helper macro which allows in-place operations in the forward-pass of Zygote, but
-resorts to non-mutating operations in the backwards-pass. The expression `assign`
-should assign an object to an pre-existing `AbstractArray` and the use of updating
-operators is also possible. This is especially needed when in-place assigning
-tensors to unit-cell arrays of environments.
-"""
-macro diffset(ex)
-    return esc(parse_ex(ex))
-end
-parse_ex(ex) = ex
-function parse_ex(ex::Expr)
-    oppheads = (:(./=), :(.*=), :(.+=), :(.-=))
-    opprep = (:(./), :(.*), :(.+), :(.-))
-    if ex.head == :macrocall
-        parse_ex(macroexpand(PEPSKit, ex))
-    elseif ex.head in (:(.=), :(=)) && length(ex.args) == 2 && is_indexing(ex.args[1])
-        lhs = ex.args[1]
-        rhs = ex.args[2]
-
-        vname = lhs.args[1]
-        args = lhs.args[2:end]
-        quote
-            $vname = _setindex($vname, $rhs, $(args...))
-        end
-    elseif ex.head in oppheads && length(ex.args) == 2 && is_indexing(ex.args[1])
-        hit = findfirst(x -> x == ex.head, oppheads)
-        rep = opprep[hit]
-
-        lhs = ex.args[1]
-        rhs = ex.args[2]
-
-        vname = lhs.args[1]
-        args = lhs.args[2:end]
-
-        quote
-            $vname = _setindex($vname, $(rep)($lhs, $rhs), $(args...))
-        end
-    else
-        return Expr(ex.head, parse_ex.(ex.args)...)
-    end
-end
-
-is_indexing(ex) = false
-is_indexing(ex::Expr) = ex.head == :ref
 
 """
     @showtypeofgrad(x)
