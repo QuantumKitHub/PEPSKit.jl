@@ -98,7 +98,7 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     ctm_styles, projector_algs
 )
     ctm_alg = ctm_style(; maxiter=150, projector_alg)
-    env = leading_boundary(env0, Z, ctm_alg)
+    env, = leading_boundary(env0, Z, ctm_alg)
 
     # check observables
     λ = PEPSKit.value(Z, env)
