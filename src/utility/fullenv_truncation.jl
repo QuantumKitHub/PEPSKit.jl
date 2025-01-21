@@ -6,7 +6,7 @@ Algorithm struct for the full environment truncation (FET).
 @kwdef struct FullEnvTruncation
     tol::Float64 = 1e-10
     maxiter::Int = 100
-    trscheme::TruncationScheme
+    trscheme::TensorKit.TruncationScheme
     verbose::Bool = false
     check_int::Int = 10
 end
@@ -183,7 +183,7 @@ function fullenv_truncate(
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
     # initilize `u, s, v†` using (almost) un-truncated bond matrix
-    u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)); trunc=truncerr(1e-14))...)
+    u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)); trunc=truncerr(1e-15))...)
     s0 = deepcopy(s)
     diff, fid = NaN, 0.0
     if alg.verbose
@@ -210,21 +210,27 @@ function fullenv_truncate(
         # determine convergence
         diff = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
         fid = fidelity(env, b0, permute(b1, (1, 2)))
+        s0 = deepcopy(s)
         time1 = time()
+        message = @sprintf(
+            "Iter %4d,  diff = %12.6e,  fidelity = %8.6f,  time = %.3f s\n",
+            iter,
+            diff,
+            fid,
+            time1 - time0
+        )
+        if iter == alg.maxiter
+            @warn "Maximal iteration $(alg.maxiter) reached"
+            @warn message
+            @warn "Bond space = $(space(s, 1))\n"
+        end
         if alg.verbose && (iter == 1 || iter % alg.check_int == 0 || diff < alg.tol)
-            @info @sprintf(
-                "Iter %4d,  diff = %12.6e,  fidelity = %8.6f,  time = %.3f s\n",
-                iter,
-                diff,
-                fid,
-                time1 - time0
-            )
+            @info message
             @info "Bond space = $(space(s, 1))\n"
         end
         if diff < alg.tol
             break
         end
-        s0 = deepcopy(s)
     end
     if !flip_s
         # change `← u ← s → v† →` back to `← u ← s ← v† →`

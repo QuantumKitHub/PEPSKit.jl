@@ -2,14 +2,12 @@
 Algorithm struct for full update (FU) of infinite PEPS.
 Each FU run stops when the energy starts to increase.
 """
-@kwdef struct FullUpdate <: TimeEvolAlgorithm
+@kwdef struct FullUpdate
     dt::Float64
     maxiter::Int
     fixgauge::Bool = true
-    # truncation scheme after applying gate
-    trscheme::TensorKit.TruncationScheme
-    # alternating least square optimization
-    opt_alg::ALSOptimize = ALSOptimize()
+    # bond truncation after applying time evolution gate
+    opt_alg::FullEnvTruncation
     # SequentialCTMRG column move after updating a column of bonds
     colmove_alg::SequentialCTMRG
     # interval to reconverge environments
@@ -96,17 +94,14 @@ function _fu_bondx!(
         -1← aR -← 3 -← bL → -4
     =#
     aR2bL2 = ncon((gate, aR0, bL0), ([-2, -3, 1, 2], [-1, 1, 3], [3, 2, -4]))
-    # initialize truncated tensors using SVD truncation
-    aR, s_cut, bL, ϵ = tsvd(
-        aR2bL2, ((1, 2), (3, 4)); trunc=truncation_scheme(alg, space(aR0, 3))
-    )
+    # initialize un-truncated tensors using SVD
+    aR, s_cut, bL, ϵ = tsvd(aR2bL2, ((1, 2), (3, 4)); trunc=truncerr(1e-15))
     aR, bL = absorb_s(aR, s_cut, bL)
     aR, bL = permute(aR, (1, 2, 3)), permute(bL, (1, 2, 3))
     # optimize aR, bL
-    aR, bL, cost = als_optimize(aR, bL, aR2bL2, env, alg.opt_alg)
+    aR, bL, (cost, fid) = bond_optimize(env, aR, bL, alg.opt_alg)
     aR /= norm(aR, Inf)
     bL /= norm(bL, Inf)
-    fid = local_fidelity(_combine_aRbL(aR, bL), _combine_aRbL(aR0, bL0))
     #= update and normalize peps, ms
 
             -2        -1               -1     -2

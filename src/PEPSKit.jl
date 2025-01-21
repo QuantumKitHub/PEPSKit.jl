@@ -201,7 +201,7 @@ export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
 export FullEnvTruncation, fullenv_truncate
 export NTUEnvNN, NTUEnvNNN, NTUEnvNNNp
-export ntu_iter, ntupdate, NTUpdate, ALSOptimize
+export ntu_iter, ntupdate, NTUpdate
 export fu_iter, fullupdate, FullUpdate
 
 export InfinitePartitionFunction

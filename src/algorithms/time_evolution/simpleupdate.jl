@@ -4,11 +4,19 @@
 Algorithm struct for simple update (SU) of infinite PEPS with bond weights.
 Each SU run is converged when the singular value difference becomes smaller than `tol`.
 """
-struct SimpleUpdate <: TimeEvolAlgorithm
+struct SimpleUpdate
     dt::Float64
     tol::Float64
     maxiter::Int
     trscheme::TensorKit.TruncationScheme
+end
+
+function truncation_scheme(alg::SimpleUpdate, v::ElementarySpace)
+    if alg.trscheme isa FixedSpaceTruncation
+        return truncspace(v)
+    else
+        return alg.trscheme
+    end
 end
 
 """
