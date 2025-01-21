@@ -66,21 +66,25 @@ end
     env_conv1, = leading_boundary(env_init, psi, ctm_alg_iter)
 
     # do extra iteration to get SVD
-    env_conv2_iter, info_iter = ctmrg_iteration(psi, env_conv1, ctm_alg_iter)
+    env_conv2_iter, _, _, U_iter, S_iter, V_iter = ctmrg_iteration(
+        psi, env_conv1, ctm_alg_iter
+    )
     env_fix_iter, signs_iter = gauge_fix(env_conv1, env_conv2_iter)
     @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
-    env_conv2_full, info_full = ctmrg_iteration(psi, env_conv1, ctm_alg_full)
+    env_conv2_full, _, _, U_full, S_full, V_full = ctmrg_iteration(
+        psi, env_conv1, ctm_alg_full
+    )
     env_fix_full, signs_full = gauge_fix(env_conv1, env_conv2_full)
     @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
     # fix gauge of SVD
-    U_fix_iter, V_fix_iter = fix_relative_phases(info_iter.U, info_iter.V, signs_iter)
-    svd_alg_fix_iter = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_iter, info_iter.S, V_fix_iter))
+    U_fix_iter, V_fix_iter = fix_relative_phases(U_iter, V_iter, signs_iter)
+    svd_alg_fix_iter = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_iter, S_iter, V_fix_iter))
     ctm_alg_fix_iter = SimultaneousCTMRG(; svd_alg=svd_alg_fix_iter, trscheme=notrunc())
 
-    U_fix_full, V_fix_full = fix_relative_phases(info_full.U, info_full.V, signs_full)
-    svd_alg_fix_full = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_full, info_full.S, V_fix_full))
+    U_fix_full, V_fix_full = fix_relative_phases(U_full, V_full, signs_full)
+    svd_alg_fix_full = SVDAdjoint(; fwd_alg=FixedSVD(U_fix_full, S_full, V_fix_full))
     ctm_alg_fix_full = SimultaneousCTMRG(; svd_alg=svd_alg_fix_full, trscheme=notrunc())
 
     # do iteration with FixedSVD
@@ -93,24 +97,23 @@ end
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_full) ≈ 0 atol = atol
 
     # check matching decompositions
-    decomposition_check = all(
-        zip(info_iter.U, info_iter.S, info_iter.V, info_full.U, info_full.S, info_full.V),
-    ) do (U_iter, S_iter, V_iter, U_full, S_full, V_full)
-        diff = U_iter * S_iter * V_iter - U_full * S_full * V_full
-        all(x -> isapprox(abs(x), 0; atol), diff.data)
-    end
+    decomposition_check =
+        all(zip(U_iter, S_iter, V_iter, U_full, S_full, V_full)) do (Ui, Si, Vi, Uf, Sf, Vf)
+            diff = Ui * Si * Vi - Uf * Sf * Vf
+            all(x -> isapprox(abs(x), 0; atol), diff.data)
+        end
     @test decomposition_check
 
     # check matching singular values
-    svalues_check = all(zip(info_iter.S, info_full.S)) do (S_iter, S_full)
-        diff = S_iter - S_full
+    svalues_check = all(zip(S_iter, S_full)) do (Si, Sf)
+        diff = Si - Sf
         all(x -> isapprox(abs(x), 0; atol), diff.data)
     end
     @test svalues_check
 
     # check normalization of U's and V's
-    Us = [info_iter.U, U_fix_iter, info_full.U, U_fix_full]
-    Vs = [info_iter.V, V_fix_iter, info_full.V, V_fix_full]
+    Us = [U_iter, U_fix_iter, U_full, U_fix_full]
+    Vs = [V_iter, V_fix_iter, V_full, V_fix_full]
     for (U, V) in zip(Us, Vs)
         U_check = all(U) do u
             uu = u' * u
