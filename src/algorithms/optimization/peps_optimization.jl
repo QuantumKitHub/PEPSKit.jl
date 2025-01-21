@@ -141,15 +141,13 @@ function cost_and_grad!(cache::PEPSCostFunctionCache{T}, peps_vec::Vector{T}) wh
             cache.alg.boundary_alg;
             alg_rrule=cache.alg.gradient_alg,
         )
-        cost = expectation_value(ψ, cache.operator, env)
-        ignore_derivatives() do
-            update!(cache.env, env)  # update environment in-place
-            cache.truncation_error = truncation_error  # update environment information
+        cost = cost_function(ψ, cache.operator, env)
+        ignore_derivatives() do # update cache
+            update!(cache.env, env)
+            cache.truncation_error = truncation_error
             cache.condition_number = condition_number
-            isapprox(imag(cost), 0; atol=sqrt(eps(real(cost)))) ||
-                @warn "Expectation value is not real: $cost."
         end
-        return real(cost)
+        return cost
     end
     grad = only(grads)  # `withgradient` returns tuple of gradients `grads`
 

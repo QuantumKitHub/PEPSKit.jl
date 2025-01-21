@@ -81,7 +81,7 @@ end
     envs, = leading_boundary(envs₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
-    e_site = costfun(peps, envs, ham) / (N1 * N2)
+    e_site = cost_function(peps, envs, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol=1e-3)
