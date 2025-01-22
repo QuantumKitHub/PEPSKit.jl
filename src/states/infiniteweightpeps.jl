@@ -221,3 +221,14 @@ function mirror_antidiag(peps::InfiniteWeightPEPS)
     weights2_y = mirror_antidiag(peps.weights[1, :, :])
     return InfiniteWeightPEPS(vertices2, weights2_x, weights2_y)
 end
+
+function display_weights(io::IO, wts::SUWeight)
+    Nd, N1, N2 = size(wts)
+    for r in 1:N1, c in 1:N2, direction in 1:Nd
+        println(io, "[$direction,$r,$c]: ")
+        for (k, b) in blocks(wts[direction, r, c])
+            println(io, k, " = ", diag(b))
+        end
+    end
+end
+display_weights(wts::SUWeight) = display_weights(stdout, wts)

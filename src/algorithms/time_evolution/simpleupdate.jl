@@ -42,18 +42,11 @@ function _su_bondx!(
 ) where {S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    row2, col2 = row, _next(col, Nc)
-    T1, T2 = peps.vertices[row, col], peps.vertices[row2, col2]
+    cp1 = _next(col, Nc)
     # absorb environment weights
-    for ax in (2, 4, 5)
-        T1 = absorb_weight(T1, row, col, ax, peps.weights)
-    end
-    for ax in (2, 3, 4)
-        T2 = absorb_weight(T2, row2, col2, ax, peps.weights)
-    end
-    # absorb bond weight
-    T1 = absorb_weight(T1, row, col, 3, peps.weights; sqrtwt=true)
-    T2 = absorb_weight(T2, row2, col2, 5, peps.weights; sqrtwt=true)
+    T1, T2 = peps.vertices[row, col], peps.vertices[row, cp1]
+    T1 = _absorb_weight(T1, row, col, "tbl", peps.weights)
+    T2 = _absorb_weight(T2, row, cp1, "trb", peps.weights)
     #= QR and LQ decomposition
 
         2   1               1             2
@@ -72,7 +65,7 @@ function _su_bondx!(
     bL, Y = rightorth(T2, ((5, 1), (2, 3, 4)); alg=LQpos())
     #= apply gate
 
-            -2          -3
+            -2         -3
             ↑           ↑
             |----gate---|
             ↑           ↑
@@ -80,7 +73,7 @@ function _su_bondx!(
             ↑           ↑
         -1← aR -← 3 -← bL ← -4
     =#
-    @tensor tmp[-1 -2; -3 -4] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
+    @tensor tmp[-1 -2; -3 -4] := gate[-2 -3; 1 2] * aR[-1 1 3] * bL[3 2 -4]
     # SVD
     s, ϵ = nothing, nothing
     try
@@ -105,11 +98,11 @@ function _su_bondx!(
         T1 = absorb_weight(T1, row, col, ax, peps.weights; invwt=true)
     end
     for ax in (2, 3, 4)
-        T2 = absorb_weight(T2, row2, col2, ax, peps.weights; invwt=true)
+        T2 = absorb_weight(T2, row, cp1, ax, peps.weights; invwt=true)
     end
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
-    peps.vertices[row, col], peps.vertices[row2, col2] = T1, T2
+    peps.vertices[row, col], peps.vertices[row, cp1] = T1, T2
     peps.weights[1, row, col] = s / norm(s, Inf)
     return ϵ
 end

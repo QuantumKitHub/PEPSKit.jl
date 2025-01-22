@@ -1,5 +1,6 @@
 """
-Extract tensors in an infinite PEPS at positions specified in `neighbors` relative to `(row, col)`
+Extract tensors in an infinite PEPS at positions 
+specified in `neighbors` relative to `(row, col)`
 """
 function collect_neighbors(
     peps::InfinitePEPS, row::Int, col::Int, neighbors::Vector{Tuple{Int,Int}}
@@ -7,6 +8,22 @@ function collect_neighbors(
     Nr, Nc = size(peps)
     return Dict(
         nb => peps.A[mod1(row + nb[1], Nr), mod1(col + nb[2], Nc)] for nb in neighbors
+    )
+end
+
+"""
+Extract tensors in an infinite PEPS with weight at positions 
+specified in `neighbors` relative to `(row, col)`
+"""
+function collect_neighbors(
+    peps::InfiniteWeightPEPS, row::Int, col::Int, neighbors::Vector{Tuple{Int,Int,String}}
+)
+    Nr, Nc = size(peps)
+    return Dict(
+        (x, y) => begin
+            r, c = mod1(row + x, Nr), mod1(col + y, Nc)
+            _absorb_weight(peps.vertices[r, c], r, c, open_axs, peps.weights)
+        end for (x, y, open_axs) in neighbors
     )
 end
 

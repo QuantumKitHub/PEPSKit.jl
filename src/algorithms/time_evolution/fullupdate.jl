@@ -99,7 +99,8 @@ function _fu_bondx!(
     aR, bL = absorb_s(aR, s_cut, bL)
     aR, bL = permute(aR, (1, 2, 3)), permute(bL, (1, 2, 3))
     # optimize aR, bL
-    aR, bL, (cost, fid) = bond_optimize(env, aR, bL, alg.opt_alg)
+    aR, s, bL, (cost, fid) = bond_optimize(env, aR, bL, alg.opt_alg)
+    aR, bL = absorb_s(aR, s, bL)
     aR /= norm(aR, Inf)
     bL /= norm(bL, Inf)
     #= update and normalize peps, ms
@@ -110,8 +111,8 @@ function _fu_bondx!(
             |                                 |
             -4                                -4
     =#
-    @tensor A[-1; -2 -3 -4 -5] := X[-2, 1, -4, -5] * aR[1, -1, -3]
-    @tensor B[-1; -2 -3 -4 -5] := bL[-5, -1, 1] * Y[-2, -3, -4, 1]
+    @tensor A[-1; -2 -3 -4 -5] := X[-2 1 -4 -5] * aR[1 -1 -3]
+    @tensor B[-1; -2 -3 -4 -5] := bL[-5 -1 1] * Y[-2 -3 -4 1]
     peps.A[row, col] = A / norm(A, Inf)
     peps.A[row, cp1] = B / norm(B, Inf)
     return cost, fid

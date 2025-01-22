@@ -4,7 +4,7 @@
 Algorithm struct for the full environment truncation (FET).
 """
 @kwdef struct FullEnvTruncation
-    tol::Float64 = 1e-10
+    tol::Float64 = 1e-8
     maxiter::Int = 100
     trscheme::TensorKit.TruncationScheme
     verbose::Bool = false
@@ -72,7 +72,8 @@ that maximizes the fidelity (not normalized by `⟨b0|b0⟩`)
 ```
 - The bond environment `env` is positive definite 
     (Hermitian with positive (at least non-negative) eigenvalues). 
-- The singular value spectrum of `s` is truncated to desired bond dimension.
+- The singular value spectrum `s` is truncated to desired dimension, 
+    and normalized such that the maximum is 1.
 
 The algorithm iteratively optimizes the vectors `l`, `r`
 ```
@@ -167,6 +168,8 @@ Then the bond matrix `u s v†` is updated by SVD:
 
 ## Returns
 
+The SVD result of the new bond matrix `u`, `s`, `vh`.
+
 - When `flip_s` is `false`, return `← u ← s ← v† →`
 - When `flip_s` is `true`, return `← u ← s → v† →`
 
@@ -184,11 +187,10 @@ function fullenv_truncate(
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
     # initilize `u, s, v†` using (almost) un-truncated bond matrix
     u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)); trunc=truncerr(1e-15))...)
+    # normalize `s` (bond matrices can always be normalized)
+    s /= norm(s, Inf)
     s0 = deepcopy(s)
-    diff, fid = NaN, 0.0
-    if alg.verbose
-        @info "Initial bond space = $(space(s, 1))\n"
-    end
+    diff_wt, fid, fid0 = NaN, 0.0, 0.0
     for iter in 1:(alg.maxiter)
         time0 = time()
         # update `r`
@@ -199,6 +201,7 @@ function fullenv_truncate(
         r, info_r = linsolve(x -> B * x, p, r, 0, 1)
         @tensor b1[-1; -2] := u[-1 1] * r[1 -2]
         u, s, vh = flip_svd(tsvd(b1; trunc=alg.trscheme)...)
+        s /= norm(s, Inf)
         # update `l`
         @tensor l[-1 -2] := u[-1 1] * s[1 -2]
         @tensor p[-1 -2] := conj(vh[-2 2]) * env[-1 2; 3 4] * b0[3 4]
@@ -207,42 +210,47 @@ function fullenv_truncate(
         l, info_l = linsolve(x -> B * x, p, l, 0, 1)
         @tensor b1[-1; -2] := l[-1 1] * vh[1 -2]
         u, s, vh = flip_svd(tsvd(b1; trunc=alg.trscheme)...)
+        s /= norm(s, Inf)
         # determine convergence
-        diff = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
         fid = fidelity(env, b0, permute(b1, (1, 2)))
-        s0 = deepcopy(s)
+        diff_wt = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
+        diff_fid = fid - fid0
+        # @assert diff_fid >= -1e-14 "Fidelity is decreasing by $diff_fid."
         time1 = time()
         message = @sprintf(
-            "Iter %4d,  diff = %12.6e,  fidelity = %8.6f,  time = %.3f s\n",
+            "Iter %4d,  |Δwt| = %10.4e,  fid = %8.6f,  Δfid = %10.4e,  time = %.3f s\n",
             iter,
-            diff,
+            diff_wt,
             fid,
+            diff_fid,
             time1 - time0
         )
+        s0 = deepcopy(s)
+        fid0 = fid
         if iter == alg.maxiter
             @warn "Maximal iteration $(alg.maxiter) reached"
             @warn message
-            @warn "Bond space = $(space(s, 1))\n"
         end
-        if alg.verbose && (iter == 1 || iter % alg.check_int == 0 || diff < alg.tol)
+        if alg.verbose && (iter == 1 || iter % alg.check_int == 0 || diff_wt < alg.tol)
             @info message
-            @info "Bond space = $(space(s, 1))\n"
         end
-        if diff < alg.tol
+        if diff_wt < alg.tol
             break
         end
     end
-    @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
+    # change `← u ← s → v† →` back to `← u ← s ← v† →`
     if !flip_s
-        # change `← u ← s → v† →` back to `← u ← s ← v† →`
+        @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
         Vtrunc = space(s, 1)
+        @assert isdual(Vtrunc) === false
         flipper = isomorphism(flip(Vtrunc), Vtrunc)
         # ← u ←(← s → f ←) ← (← f† → v† →)→
         @tensor s[-1; -2] := s[-1 1] * flipper[1 -2]
-        # TODO: figure out the reason behind
+        # TODO: figure out the reason behind the twist
         twist!(s, 2)
         @tensor vh[-1; -2] := flipper'[-1 1] * vh[1 -2]
         @assert tmp ≈ u * s * vh
     end
-    return u, s, vh, (diff, fid)
+    @assert norm(s, Inf) ≈ 1.0 "Value of s = $s\n"
+    return u, s, vh, (diff_wt, fid)
 end

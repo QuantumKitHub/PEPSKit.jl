@@ -41,9 +41,9 @@ function bond_optimize(
     )
     # optimize bond matrix
     u, s, vh, (cost, fid) = fullenv_truncate(env2, b0, alg; flip_s=false)
+    s /= norm(s, Inf)
     # truncate a, b tensors with u, s, vh
-    Ra, Lb = absorb_s(u, s, vh)
-    @tensor a[-1 -2 -3] := Qa[-1 -2 3] * Ra[3 -3]
-    @tensor b[-1 -2 -3] := Lb[-1 1] * Qb[1 -2 -3]
-    return a, b, (cost, fid)
+    @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
+    @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
+    return a, s, b, (cost, fid)
 end
