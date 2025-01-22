@@ -18,9 +18,16 @@ struct NTUEnvNN <: NTUEnvAlgorithm end
 Calculate the bond environment within "NTU-NN" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::T, Y::T, peps::InfinitePEPS, ::NTUEnvNN
+    row::Int, col::Int, X::T, Y::T, peps::InfiniteWeightPEPS, ::NTUEnvNN
 ) where {T<:Union{PEPSTensor,PEPSOrth}}
-    neighbors = [(-1, 0), (0, -1), (1, 0), (1, 1), (0, 2), (-1, 1)]
+    neighbors = [
+        (-1, 0, "tl"),
+        (0, -1, "tbl"),
+        (1, 0, "bl"),
+        (1, 1, "rb"),
+        (0, 2, "trb"),
+        (-1, 1, "tr"),
+    ]
     m = collect_neighbors(peps, row, col, neighbors)
     #= contraction indices
 
@@ -67,19 +74,19 @@ struct NTUEnvNNN <: NTUEnvAlgorithm end
 Calculates the bond environment within "NTU-NNN" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::T, Y::T, peps::InfinitePEPS, ::NTUEnvNNN
+    row::Int, col::Int, X::T, Y::T, peps::InfiniteWeightPEPS, ::NTUEnvNNN
 ) where {T<:Union{PEPSTensor,PEPSOrth}}
     neighbors = [
-        (-1, -1),
-        (0, -1),
-        (1, -1),
-        (1, 0),
-        (1, 1),
-        (1, 2),
-        (0, 2),
-        (-1, 2),
-        (-1, 1),
-        (-1, 0),
+        (-1, -1, "tl"),
+        (0, -1, "l"),
+        (1, -1, "bl"),
+        (1, 0, "b"),
+        (1, 1, "b"),
+        (1, 2, "rb"),
+        (0, 2, "r"),
+        (-1, 2, "tr"),
+        (-1, 1, "t"),
+        (-1, 0, "t"),
     ]
     m = collect_neighbors(peps, row, col, neighbors)
     #= left half
@@ -137,33 +144,33 @@ struct NTUEnvNNNp <: NTUEnvAlgorithm end
 Calculates the bond environment within "NTU-NNN+" approximation.
 """
 function bondenv_ntu(
-    row::Int, col::Int, X::T, Y::T, peps::InfinitePEPS, ::NTUEnvNNNp
+    row::Int, col::Int, X::T, Y::T, peps::InfiniteWeightPEPS, ::NTUEnvNNNp
 ) where {T<:Union{PEPSTensor,PEPSOrth}}
     neighbors = [
-        (-2, -1),
-        (-2, 0),
-        (-2, 1),
-        (-2, 2),
-        (-1, -2),
-        (-1, -1),
-        (-1, 0),
-        (-1, 1),
-        (-1, 2),
-        (-1, 3),
-        (0, -2),
-        (0, -1),
-        (0, 2),
-        (0, 3),
-        (1, -2),
-        (1, -1),
-        (1, 0),
-        (1, 1),
-        (1, 2),
-        (1, 3),
-        (2, -1),
-        (2, 0),
-        (2, 1),
-        (2, 2),
+        (-2, -1, "trl"),
+        (-2, 0, "trl"),
+        (-2, 1, "trl"),
+        (-2, 2, "trl"),
+        (-1, -2, "tbl"),
+        (-1, -1, ""),
+        (-1, 0, ""),
+        (-1, 1, ""),
+        (-1, 2, ""),
+        (-1, 3, "trb"),
+        (0, -2, "tbl"),
+        (0, -1, ""),
+        (0, 2, ""),
+        (0, 3, "trb"),
+        (1, -2, "tbl"),
+        (1, -1, ""),
+        (1, 0, ""),
+        (1, 1, ""),
+        (1, 2, ""),
+        (1, 3, "trb"),
+        (2, -1, "rbl"),
+        (2, 0, "rbl"),
+        (2, 1, "rbl"),
+        (2, 2, "rbl"),
     ]
     m = collect_neighbors(peps, row, col, neighbors)
     #= left half

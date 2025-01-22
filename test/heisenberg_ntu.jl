@@ -26,10 +26,10 @@ else
     error("Not implemented")
 end
 
-peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
 # normalize vertex tensors
-for ind in CartesianIndices(peps.A)
-    peps.A[ind] /= norm(peps.A[ind], Inf)
+for ind in CartesianIndices(peps.vertices)
+    peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
 end
 # Heisenberg model Hamiltonian
 # (already only includes nearest neighbor terms)
@@ -38,30 +38,35 @@ ham = heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, J
 ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
 
 # initialize CTMRG environment
-envs = CTMRGEnv(rand, Float64, peps, Espace)
+peps_ = InfinitePEPS(peps)
+envs = CTMRGEnv(rand, Float64, peps_, Espace)
 trscheme = truncerr(1e-10) & truncdim(χenv)
 ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme)
-envs = leading_boundary(envs, peps, ctm_alg)
+envs = leading_boundary(envs, peps_, ctm_alg)
 
 # NTU
 dts = [1e-2]
-maxiter = 2000
+maxiter = 480
 trscheme = truncerr(1e-10) & truncdim(Dbond)
 for (n, dt) in enumerate(dts)
     alg = NTUpdate(;
         dt,
         maxiter,
-        trscheme,
+        tol=1e-8,
         bondenv_alg=NTUEnvNN(),
-        ctm_alg=SequentialCTMRG(; tol=1e-7, verbosity=2, maxiter=15, trscheme=trscheme),
+        opt_alg=FullEnvTruncation(; trscheme, tol=1e-8, verbose=false, check_int=10, maxiter=50),
+        ctm_alg=SequentialCTMRG(; tol=1e-7, verbosity=2, maxiter=30, trscheme=trscheme),
     )
     result = ntupdate(peps, envs, ham, alg, ctm_alg)
     global peps = result[1]
     global envs = result[2]
 end
 
+PEPSKit.display_weights(peps.weights)
+
 # measure physical quantities
-meas = measure_heis(peps, ham, envs)
+peps_ = InfinitePEPS(peps)
+meas = measure_heis(peps_, ham, envs)
 display(meas)
 @info @sprintf("Energy = %.8f\n", meas["e_site"])
 @info @sprintf("Staggered magnetization = %.8f\n", mean(meas["mag_norm"]))
