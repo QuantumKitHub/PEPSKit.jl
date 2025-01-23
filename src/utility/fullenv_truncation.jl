@@ -218,7 +218,7 @@ function fullenv_truncate(
         # @assert diff_fid >= -1e-14 "Fidelity is decreasing by $diff_fid."
         time1 = time()
         message = @sprintf(
-            "Iter %4d,  |Δwt| = %10.4e,  fid = %8.6f,  Δfid = %10.4e,  time = %.3f s\n",
+            "%4d:  |Δwt| = %10.4e,  fid = %8.6f,  Δfid = %10.4e,  time = %.3f s\n",
             iter,
             diff_wt,
             fid,
@@ -228,11 +228,10 @@ function fullenv_truncate(
         s0 = deepcopy(s)
         fid0 = fid
         if iter == alg.maxiter
-            @warn "Maximal iteration $(alg.maxiter) reached"
-            @warn message
+            @warn "FET cancel" * message
         end
         if alg.verbose && (iter == 1 || iter % alg.check_int == 0 || diff_wt < alg.tol)
-            @info message
+            @info ((diff_wt < alg.tol) ? "FET conv  " : "FET iter  ") * message
         end
         if diff_wt < alg.tol
             break
