@@ -82,7 +82,15 @@ function _su_bondx!(
     =#
     @tensor tmp[-1 -2; -3 -4] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
     # SVD
-    aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
+    s, ϵ = nothing, nothing
+    try
+        aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
+    catch e_lapack
+        # use SVD() to try again
+        aR, s, bL, ϵ = tsvd!(
+            tmp; trunc=truncation_scheme(alg, space(T1, 3)), alg=TensorKit.SVD()
+        )
+    end
     #=
             -2         -1              -1    -2
             |         ↗               ↗       |
@@ -181,9 +189,9 @@ function simpleupdate(
     check_int::Int=500,
 )
     time_start = time()
-    N1, N2 = size(peps)
+    Nr, Nc = size(peps)
     if bipartite
-        @assert N1 == N2 == 2
+        @assert Nr == Nc == 2
     end
     # exponentiating the 2-site Hamiltonian gate
     gate = get_gate(alg.dt, ham)
