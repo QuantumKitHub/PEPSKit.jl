@@ -70,7 +70,7 @@ the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
     start_vector = random_start_vector
 end
 
-function random_start_vector(t::Matrix)
+function random_start_vector(t::AbstractMatrix)
     return randn(scalartype(t), size(t, 1))
 end
 
@@ -84,8 +84,8 @@ function TensorKit._tsvd!(
         return _empty_svdtensors(f)..., truncerr
     end
 
-    Udata, Σdata, Vdata, dims = _compute_svddata!(f, alg, trunc)
-    U, S, V = _create_svdtensors(f, Udata, Σdata, Vdata, spacetype(f)(dims))
+    SVDdata, dims = _compute_svddata!(f, alg, trunc)
+    U, S, V = _create_svdtensors(f, SVDdata, dims)
     truncerr = trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
 
     return U, S, V, truncerr
@@ -95,41 +95,36 @@ function TensorKit._compute_svddata!(
 )
     InnerProductStyle(f) === EuclideanProduct() || throw_invalid_innerproduct(:tsvd!)
     I = sectortype(f)
-    A = storagetype(f)
-    Udata = SectorDict{I,A}()
-    Vdata = SectorDict{I,A}()
     dims = SectorDict{I,Int}()
-    local Sdata
-    for (c, b) in blocks(f)
+
+    generator = Base.Iterators.map(blocks(f)) do (c, b)
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
             U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
-            Udata[c] = U[:, 1:howmany]
-            Vdata[c] = V[1:howmany, :]
+            U = U[:, 1:howmany]
+            V = V[1:howmany, :]
         else
             x₀ = alg.start_vector(b)
             S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
                 U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
-                Udata[c] = U[:, 1:howmany]
-                Vdata[c] = V[1:howmany, :]
+                U = U[:, 1:howmany]
+                V = V[1:howmany, :]
             else  # Slice in case more values were converged than requested
-                Udata[c] = stack(view(lvecs, 1:howmany))
-                Vdata[c] = stack(conj, view(rvecs, 1:howmany); dims=1)
+                U = stack(view(lvecs, 1:howmany))
+                V = stack(conj, view(rvecs, 1:howmany); dims=1)
             end
         end
 
         resize!(S, howmany)
-        if @isdefined Sdata
-            Sdata[c] = S
-        else
-            Sdata = SectorDict(c => S)
-        end
         dims[c] = length(S)
+        return c => (U, S, V)
     end
-    return Udata, Sdata, Vdata, dims
+
+    SVDdata = SectorDict(generator)
+    return SVDdata, dims
 end
 
 # Rrule with custom pullback to make KrylovKit rrule compatible with TensorMaps & function handles
