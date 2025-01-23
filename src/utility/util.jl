@@ -37,10 +37,10 @@ function eachcoordinate end
 @non_differentiable eachcoordinate(args...)
 
 # Element-wise multiplication of TensorMaps respecting block structure
-function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
-    dst = similar(a)
-    for (k, block) in blocks(dst)
-        copyto!(block, blocks(a)[k] .* blocks(b)[k])
+function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
+    dst = similar(a₁)
+    for (k, b) in blocks(dst)
+        copyto!(b, block(a₁, k) .* block(a₂, k))
     end
     return dst
 end
@@ -57,8 +57,7 @@ function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))
     Spow = similar(S)
     for (k, b) in blocks(S)
         copyto!(
-            blocks(Spow)[k],
-            LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol)),
+            block(Spow, k), LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol))
         )
     end
     return Spow

@@ -125,7 +125,7 @@ function MPSKit.transfer_spectrum(
     @threads for cr in 1:numrows
         L0, = init[cr]
 
-        E_LL = TransferMatrix(above[cr - 1].AL, O[cr], below[cr + 1].AL)  # Note that this index convention is different from above!
+        E_LL = MPSKit.TransferMatrix(above[cr - 1].AL, O[cr], below[cr + 1].AL)  # Note that this index convention is different from above!
         λ, _, convhist = eigsolve(flip(E_LL), L0, num_vals, :LM, solver)
         convhist.converged < num_vals &&
             @warn "correlation length failed to converge: normres = $(convhist.normres)"

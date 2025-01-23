@@ -153,7 +153,9 @@ end
 #     return expectation_value(st, ca.opp, ca)
 # end
 function MPSKit.expectation_value(
-    st::MultilineMPS, opp::TransferPEPSMultiline, ca  # TODO: adapt to new MPSKit types
+    st::MultilineMPS,
+    opp::TransferPEPSMultiline,
+    ca,  # TODO: adapt to new MPSKit types
 )
     return prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
         O_ij = opp[i, j]
