@@ -2,15 +2,15 @@
 # -------------------
 """
     nearest_neighbour_hamiltonian(
-        lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
-    ) where {S}
+        lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}
+    ) where {S,T}
 
 Create a nearest neighbor `LocalOperator` by specifying the 2-site interaction term `h`
 which acts both in horizontal and vertical direction.
 """
 function nearest_neighbour_hamiltonian(
-    lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
-) where {S}
+    lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}
+) where {S,T}
     terms = []
     for I in eachindex(IndexCartesian(), lattice)
         J1 = I + CartesianIndex(1, 0)

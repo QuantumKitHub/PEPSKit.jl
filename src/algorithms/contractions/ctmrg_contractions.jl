@@ -1,7 +1,7 @@
-const CTMRGEdgeTensor{S,N} = AbstractTensorMap{S,N,1}
-const CTMRG_PEPS_EdgeTensor{S} = CTMRGEdgeTensor{S,3}
-const CTMRG_PF_EdgeTensor{S} = CTMRGEdgeTensor{S,2}
-const CTMRGCornerTensor{S} = AbstractTensorMap{S,1,1}
+const CTMRGEdgeTensor{T,S,N} = AbstractTensorMap{T,S,N,1}
+const CTMRG_PEPS_EdgeTensor{T,S} = CTMRGEdgeTensor{T,S,3}
+const CTMRG_PF_EdgeTensor{T,S} = CTMRGEdgeTensor{T,S,2}
+const CTMRGCornerTensor{T,S} = AbstractTensorMap{T,S,1,1}
 
 # Enlarged corner contractions
 # ----------------------------
@@ -359,7 +359,7 @@ function contract_projectors(U, S, V, Q, Q_next)
 end
 
 """
-    half_infinite_environment(quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3})
+    half_infinite_environment(quadrant1::AbstractTensorMap{T,S,3,3}, quadrant2::AbstractTensorMap{T,S,3,3})
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
                               ket_1::P, bra_1::P, ket_2::P, bra_2::P) where {P<:PEPSTensor}
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
@@ -367,7 +367,7 @@ end
     half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
                               ket_1::P, bra_1::P, ket_2::P, bra_2::P) where {P<:PEPSTensor}
 
-    half_infinite_environment(quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2})
+    half_infinite_environment(quadrant1::AbstractTensorMap{T,S,2,2}, quadrant2::AbstractTensorMap{T,S,2,2})
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,
                               partfunc_1::P, partfunc_2::P) where {P<:PartitionFunctionTensor}
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
@@ -410,8 +410,8 @@ Here `A` systematically denotes either:
 - a `PartitionFunctionTensor`.
 """
 function half_infinite_environment(
-    quadrant1::AbstractTensorMap{S,3,3}, quadrant2::AbstractTensorMap{S,3,3}
-) where {S}
+    quadrant1::AbstractTensorMap{T,S,3,3}, quadrant2::AbstractTensorMap{T,S,3,3}
+) where {T,S}
     return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         quadrant1[χ_in D_inabove D_inbelow; χ D1 D2] *
         quadrant2[χ D1 D2; χ_out D_outabove D_outbelow]
@@ -485,8 +485,8 @@ function half_infinite_environment(
         conj(E_4[χ6 D9 D10; χ_in])
 end
 function half_infinite_environment(
-    quadrant1::AbstractTensorMap{S,2,2}, quadrant2::AbstractTensorMap{S,2,2}
-) where {S}
+    quadrant1::AbstractTensorMap{T,S,2,2}, quadrant2::AbstractTensorMap{T,S,2,2}
+) where {T,S}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
         quadrant1[χ_in D_in; χ D1] * quadrant2[χ D1; χ_out D_out]
 end
@@ -535,10 +535,10 @@ end
 """
     full_infinite_environment(
         quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
-    ) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    ) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,3,3}}
     function full_infinite_environment(
         half1::T, half2::T
-    ) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+    ) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,3,3}}
     full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
                               ket_1::P, bra_1::P, ket_2::P, bra_2::P,
                               ket_3::P, bra_3::P, ket_4::P, bra_4::P) where {P<:PEPSTensor}
@@ -551,10 +551,10 @@ end
 
     full_infinite_environment(
         quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
-    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    ) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,2,2}}
     function full_infinite_environment(
         half1::T, half2::T
-    ) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+    ) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,2,2}}
     full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
                               partfunc_1::P, partfunc_2::P, partfunc_3::P, partfunc_4::P) where {P<:PartitionFunctionTensor}
     full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
@@ -628,7 +628,7 @@ Here `A` systematically denotes either:
 """
 function full_infinite_environment(
     quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
-) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,3,3}}
     return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
         quadrant1[χ_in D_inabove D_inbelow; χ1 D1 D2] *
         quadrant2[χ1 D1 D2; χ2 D3 D4] *
@@ -637,7 +637,7 @@ function full_infinite_environment(
 end
 function full_infinite_environment(
     half1::T, half2::T
-) where {T<:AbstractTensorMap{<:ElementarySpace,3,3}}
+) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,3,3}}
     return half_infinite_environment(half1, half2)
 end
 function full_infinite_environment(
@@ -778,7 +778,7 @@ function full_infinite_environment(
 end
 function full_infinite_environment(
     quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
-) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,2,2}}
     return @autoopt @tensor env[χ_in D_inabove; χ_out D_outabove] :=
         quadrant1[χ_in D_inabove; χ1 D1] *
         quadrant2[χ1 D1; χ2 D2] *
@@ -787,7 +787,7 @@ function full_infinite_environment(
 end
 function full_infinite_environment(
     half1::T, half2::T
-) where {T<:AbstractTensorMap{<:ElementarySpace,2,2}}
+) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,2,2}}
     return half_infinite_environment(half1, half2)
 end
 function full_infinite_environment(
@@ -909,8 +909,8 @@ end
 # corners
 
 """
-    renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right)
-    renormalize_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right)
+    renormalize_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right)
+    renormalize_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right)
 
 Apply projectors to each side of a quadrant.
 
@@ -923,20 +923,24 @@ Apply projectors to each side of a quadrant.
         |
 ```
 """
-function renormalize_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+function renormalize_corner(
+    quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right
+) where {T,S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1 D2] * quadrant[χ1 D1 D2; χ2 D3 D4] * P_left[χ2 D3 D4; χ_out]
 end
-function renormalize_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+function renormalize_corner(
+    quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right
+) where {T,S}
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] * quadrant[χ1 D1; χ2 D3] * P_left[χ2 D3; χ_out]
 end
 
 """
     renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
-    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
     renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged northwest corner.
@@ -963,8 +967,8 @@ function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right
     )
 end
 function renormalize_northwest_corner(
-    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
-) where {S}
+    quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right
+) where {T,S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
 function renormalize_northwest_corner(
@@ -980,8 +984,8 @@ function renormalize_northwest_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_northwest_corner(
-    quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
-) where {S}
+    quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right
+) where {T,S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
 function renormalize_northwest_corner(
@@ -998,9 +1002,9 @@ end
 
 """
     renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
-    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_northwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
     renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged northeast corner.
@@ -1028,8 +1032,8 @@ function renormalize_northeast_corner((row, col), enlarged_envs, P_left, P_right
 end
 
 function renormalize_northeast_corner(
-    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
-) where {S}
+    quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right
+) where {T,S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
 
@@ -1046,8 +1050,8 @@ function renormalize_northeast_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_northeast_corner(
-    quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
-) where {S}
+    quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right
+) where {T,S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
 function renormalize_northeast_corner(
@@ -1064,9 +1068,9 @@ end
 
 """
     renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
-    renormalize_southeast_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_southeast_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_southeast_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_southeast_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
     renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged southeast corner.
@@ -1093,7 +1097,7 @@ function renormalize_southeast_corner((row, col), enlarged_envs, P_left, P_right
     )
 end
 function renormalize_southeast_corner(
-    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
+    quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right
 ) where {S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
@@ -1110,7 +1114,7 @@ function renormalize_southeast_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_southeast_corner(
-    quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
+    quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right
 ) where {S}
     return renormalize_corner(quadrant, P_left, P_right)
 end
@@ -1129,9 +1133,9 @@ end
 
 """
     renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
-    renormalize_southwest_corner(quadrant::AbstractTensorMap{S,3,3}, P_left, P_right) where {S}
+    renormalize_southwest_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_southwest_corner(quadrant::AbstractTensorMap{S,2,2}, P_left, P_right) where {S}
+    renormalize_southwest_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
     renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Apply `renormalize_corner` to the enlarged southwest corner.
@@ -1158,8 +1162,8 @@ function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right
     )
 end
 function renormalize_southwest_corner(
-    quadrant::AbstractTensorMap{S,3,3}, P_left, P_right
-) where {S}
+    quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right
+) where {T,S}
     return renormalize_southwest_corner(quadrant, P_left, P_right)
 end
 function renormalize_southwest_corner(
@@ -1175,8 +1179,8 @@ function renormalize_southwest_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_southwest_corner(
-    quadrant::AbstractTensorMap{S,2,2}, P_left, P_right
-) where {S}
+    quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right
+) where {T,S}
     return renormalize_southwest_corner(quadrant, P_left, P_right)
 end
 function renormalize_southwest_corner(

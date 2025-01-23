@@ -25,9 +25,9 @@ convention.
 """
 function MPSKit.expectation_value(
     pf::InfinitePartitionFunction,
-    op::Pair{CartesianIndex{2},<:AbstractTensorMap{S,2,2}},
+    op::Pair{CartesianIndex{2},<:AbstractTensorMap{T,S,2,2}},
     envs::CTMRGEnv,
-) where {S}
+) where {T,S}
     return contract_local_tensor(op[1], op[2], envs) /
            contract_local_tensor(op[1], pf[op[1]], envs)
 end
