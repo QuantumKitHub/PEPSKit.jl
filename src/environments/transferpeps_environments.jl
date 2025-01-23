@@ -1,23 +1,23 @@
 
 function MPSKit.environments(state::InfiniteMPS, O::InfiniteTransferPEPS; kwargs...)
     return environments(
-        convert(MPSMultiline, state), convert(TransferPEPSMultiline, O); kwargs...
+        convert(MultilineMPS, state), convert(TransferPEPSMultiline, O); kwargs...
     )
 end
 
-import MPSKit.MPSMultiline
+import MPSKit.MultilineMPS
 
 function MPSKit.environments(
-    state::MPSMultiline, O::TransferPEPSMultiline; solver=MPSKit.Defaults.eigsolver
+    state::MultilineMPS, O::TransferPEPSMultiline; solver=MPSKit.Defaults.eigsolver
 )
-    (lw, rw) = MPSKit.mixed_fixpoints(state, O, state; solver)
-    return MPSKit.PerMPOInfEnv(nothing, O, state, solver, lw, rw, ReentrantLock())
+    # (lw, rw) = MPSKit.mixed_fixpoints(state, O, state; solver)
+    # return MPSKit.PerMPOInfEnv(nothing, O, state, solver, lw, rw, ReentrantLock()) # TODO
 end
 
-function MPSKit.mixed_fixpoints(
-    above::MPSMultiline,
+function mixed_fixpoints(  # TODO
+    above::MultilineMPS,
     O::TransferPEPSMultiline,
-    below::MPSMultiline,
+    below::MultilineMPS,
     init=gen_init_fps(above, O, below);
     solver=MPSKit.Defaults.eigsolver,
 )
@@ -84,7 +84,7 @@ function MPSKit.mixed_fixpoints(
     return (lefties, righties)
 end
 
-function gen_init_fps(above::MPSMultiline, O::TransferPEPSMultiline, below::MPSMultiline)
+function gen_init_fps(above::MultilineMPS, O::TransferPEPSMultiline, below::MultilineMPS)
     T = eltype(above)
 
     map(1:size(O, 1)) do cr
@@ -109,9 +109,9 @@ function gen_init_fps(above::MPSMultiline, O::TransferPEPSMultiline, below::MPSM
 end
 
 function MPSKit.transfer_spectrum(
-    above::MPSMultiline,
+    above::MultilineMPS,
     O::TransferPEPSMultiline,
-    below::MPSMultiline,
+    below::MultilineMPS,
     init=gen_init_fps(above, O, below);
     num_vals=2,
     solver=MPSKit.Defaults.eigsolver,

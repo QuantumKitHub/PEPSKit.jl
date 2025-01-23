@@ -206,19 +206,19 @@ end
 
 function MPSKit.expectation_value(st::InfiniteMPS, transfer::InfiniteTransferPEPO)
     return expectation_value(
-        convert(MPSMultiline, st), convert(TransferPEPOMultiline, transfer)
+        convert(MultilineMPS, st), convert(TransferPEPOMultiline, transfer)
     )
 end
-function MPSKit.expectation_value(st::MPSMultiline, mpo::TransferPEPOMultiline)
+function MPSKit.expectation_value(st::MultilineMPS, mpo::TransferPEPOMultiline)
     return expectation_value(st, environments(st, mpo))
 end
+# function MPSKit.expectation_value( # TODO: adapt to new MPSKit types
+#     st::MultilineMPS, ca
+# )
+#     return expectation_value(st, ca.opp, ca)
+# end
 function MPSKit.expectation_value(
-    st::MPSMultiline, ca::MPSKit.PerMPOInfEnv{H,V,S,A}
-) where {H<:TransferPEPOMultiline,V,S,A}
-    return expectation_value(st, ca.opp, ca)
-end
-function MPSKit.expectation_value(
-    st::MPSMultiline, opp::TransferPEPOMultiline, ca::MPSKit.PerMPOInfEnv
+    st::MultilineMPS, opp::TransferPEPOMultiline, ca  # TODO: adapt to new MPSKit types
 )
     return prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
         O_ij = opp[i, j]

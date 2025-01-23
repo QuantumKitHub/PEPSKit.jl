@@ -148,22 +148,22 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
     λ_v = Vector{Vector{T}}(undef, size(peps, 2))
 
     # Horizontal
-    above_h = MPSMultiline(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
+    above_h = MultilineMPS(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
     respaced_edges_h = map(zip(space.(env.edges)[1, :, :], env.edges[3, :, :])) do (V1, T3)
         return TensorMap(T3.data, V1)
     end
-    below_h = MPSMultiline(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
+    below_h = MultilineMPS(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
     transfer_peps_h = TransferPEPSMultiline(peps, NORTH)
     vals_h = MPSKit.transfer_spectrum(above_h, transfer_peps_h, below_h; num_vals)
     λ_h = map(λ_row -> λ_row / abs(λ_row[1]), vals_h)  # Normalize largest eigenvalue
     ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
 
     # Vertical
-    above_v = MPSMultiline(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
+    above_v = MultilineMPS(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
     respaced_edges_v = map(zip(space.(env.edges)[2, :, :], env.edges[4, :, :])) do (V2, T4)
         return TensorMap(T4.data, V2)
     end
-    below_v = MPSMultiline(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
+    below_v = MultilineMPS(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
     transfer_peps_v = TransferPEPSMultiline(peps, EAST)
     vals_v = MPSKit.transfer_spectrum(above_v, transfer_peps_v, below_v; num_vals)
     λ_v = map(λ_row -> λ_row / abs(λ_row[1]), vals_v)  # Normalize largest eigenvalue

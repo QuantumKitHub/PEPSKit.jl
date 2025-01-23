@@ -133,7 +133,7 @@ end
 
 @doc """
     MPSKit.expectation_value(st::InfiniteMPS, op::Union{InfiniteTransferPEPS,InfiniteTransferPEPO})
-    MPSKit.expectation_value(st::MPSMultiline, op::Union{TransferPEPSMultiline,TransferPEPOMultiline})
+    MPSKit.expectation_value(st::MultilineMPS, op::Union{TransferPEPSMultiline,TransferPEPOMultiline})
 
 Compute expectation value of the transfer operator `op` for the state `st` for each site in
 the unit cell.
@@ -141,19 +141,19 @@ the unit cell.
 
 function MPSKit.expectation_value(st::InfiniteMPS, transfer::InfiniteTransferPEPS)
     return expectation_value(
-        convert(MPSMultiline, st), convert(TransferPEPSMultiline, transfer)
+        convert(MultilineMPS, st), convert(TransferPEPSMultiline, transfer)
     )
 end
-function MPSKit.expectation_value(st::MPSMultiline, mpo::TransferPEPSMultiline)
+function MPSKit.expectation_value(st::MultilineMPS, mpo::TransferPEPSMultiline)
     return expectation_value(st, environments(st, mpo))
 end
+# function MPSKit.expectation_value( # TODO: adapt to new MPSKit types
+#     st::MultilineMPS, ca 
+# )
+#     return expectation_value(st, ca.opp, ca)
+# end
 function MPSKit.expectation_value(
-    st::MPSMultiline, ca::MPSKit.PerMPOInfEnv{H,V,S,A}
-) where {H<:TransferPEPSMultiline,V,S,A}
-    return expectation_value(st, ca.opp, ca)
-end
-function MPSKit.expectation_value(
-    st::MPSMultiline, opp::TransferPEPSMultiline, ca::MPSKit.PerMPOInfEnv
+    st::MultilineMPS, opp::TransferPEPSMultiline, ca  # TODO: adapt to new MPSKit types
 )
     return prod(product(1:size(st, 1), 1:size(st, 2))) do (i, j)
         O_ij = opp[i, j]
