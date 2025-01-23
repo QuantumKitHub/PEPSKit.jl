@@ -92,7 +92,7 @@ function _ntu_bondx!(
     end
     peps.vertices[row, col] = A / norm(A, Inf)
     peps.vertices[row, cp1] = B / norm(B, Inf)
-    peps.weights[1, row, col] = s / norm(s)
+    peps.weights[1, row, col] = s / norm(s, Inf)
     return cost, fid
 end
 
@@ -129,6 +129,9 @@ function ntu_iter(gate::LocalOperator, peps::InfiniteWeightPEPS, alg::NTUpdate)
         if direction == 2
             peps2 = mirror_antidiag(peps2)
         end
+    end
+    for s in peps2.weights.data
+        @assert norm(s, Inf) ≈ 1.0
     end
     return peps2
 end
