@@ -4,9 +4,9 @@ end
 using Test
 using Printf
 using Random
-using PEPSKit
-using TensorKit
 import Statistics: mean
+using TensorKit
+using PEPSKit
 
 module MeasureHeis
 
@@ -15,7 +15,6 @@ export measure_heis
 using TensorKit
 import MPSKitModels: S_x, S_y, S_z, S_exchange
 using PEPSKit
-using Statistics: mean
 
 """
 Measure magnetization on each site

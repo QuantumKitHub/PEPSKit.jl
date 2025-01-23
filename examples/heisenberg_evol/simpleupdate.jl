@@ -32,52 +32,21 @@ end
 dts = [1e-2, 1e-3, 4e-4]
 tols = [1e-6, 1e-8, 1e-8]
 maxiter = 10000
-for (n, (dt, tol)) in enumerate(zip(dts, tols))
+for (dt, tol) in zip(dts, tols)
     trscheme = truncerr(1e-10) & truncdim(Dbond)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
     result = simpleupdate(peps, ham, alg; bipartite=true)
     global peps = result[1]
 end
-# absort weight into site tensors
+# measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
-# CTMRG
 envs = CTMRGEnv(rand, Float64, peps_, Espace)
 trscheme = truncerr(1e-10) & truncdim(χenv)
 ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme)
 envs = leading_boundary(envs, peps_, ctm_alg)
-# measure physical quantities
 meas = measure_heis(peps_, ham, envs)
 display(meas)
 @info @sprintf("Energy = %.8f\n", meas["e_site"])
 @info @sprintf("Staggered magnetization = %.8f\n", mean(meas["mag_norm"]))
 @test isapprox(meas["e_site"], -0.6675; atol=1e-3)
 @test isapprox(mean(meas["mag_norm"]), 0.3767; atol=1e-3)
-
-# continue with NTU
-dts = [1e-2, 5e-3, 1e-3]
-maxiter = 2000
-trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
-for (n, dt) in enumerate(dts)
-    alg = NTUpdate(;
-        dt,
-        maxiter,
-        tol=1e-8,
-        bondenv_alg=NTUEnvNNN(),
-        opt_alg=FullEnvTruncation(;
-            verbose=false, check_int=10, maxiter=50, trscheme=trscheme_peps
-        ),
-        ctm_alg=SequentialCTMRG(; tol=1e-7, verbosity=2, maxiter=30, trscheme=trscheme),
-    )
-    result = ntupdate(peps, envs, ham, alg, ctm_alg)
-    global peps = result[1]
-    global envs = result[2]
-end
-
-# measure physical quantities
-peps_ = InfinitePEPS(peps)
-meas = measure_heis(peps_, ham, envs)
-display(meas)
-@info @sprintf("Energy = %.8f\n", meas["e_site"])
-@info @sprintf("Staggered magnetization = %.8f\n", mean(meas["mag_norm"]))
-@test isapprox(meas["e_site"], -0.6687; atol=1e-3)
-@test isapprox(mean(meas["mag_norm"]), 0.35; atol=1e-3)
