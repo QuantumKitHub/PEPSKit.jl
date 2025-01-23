@@ -1,3 +1,13 @@
+@static if Sys.isapple()
+    using AppleAccelerate
+end
+using Test
+using Printf
+using Random
+using PEPSKit
+using TensorKit
+import Statistics: mean
+
 module MeasureHeis
 
 export measure_heis
@@ -48,3 +58,5 @@ function measure_heis(peps::InfinitePEPS, H::LocalOperator, envs::CTMRGEnv)
 end
 
 end
+
+import .MeasureHeis: measure_heis

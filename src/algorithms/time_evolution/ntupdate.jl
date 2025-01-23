@@ -97,13 +97,17 @@ function _ntu_bondx!(
 end
 
 """
-One round of update of all nearest neighbor bonds in InfiniteWeightPEPS
+    ntu_iter(gate::LocalOperator, peps::InfiniteWeightPEPS, alg::NTUpdate; bipartite::Bool=false)
+
+One round of neighborhood tensor update on `peps` applying the nearest neighbor `gate`.
 
 Reference: 
 - Physical Review B 104, 094411 (2021)
 - Physical Review B 106, 195105 (2022)
 """
-function ntu_iter(gate::LocalOperator, peps::InfiniteWeightPEPS, alg::NTUpdate)
+function ntu_iter(
+    gate::LocalOperator, peps::InfiniteWeightPEPS, alg::NTUpdate; bipartite::Bool=false
+)
     @assert size(gate.lattice) == size(peps)
     Nr, Nc = size(peps)
     # TODO: make algorithm independent on the choice of dual in the network
@@ -138,36 +142,46 @@ end
 
 """
 Perform NTU on InfiniteWeightPEPS with nearest neighbor Hamiltonian `ham`. 
+
+If `bipartite == true` (for square lattice), a unit cell size of `(2, 2)` is assumed, 
+as well as tensors and x/y weights which are the same across the diagonals, i.e. at
+`(row, col)` and `(row+1, col+1)`.
 """
 function ntupdate(
     peps::InfiniteWeightPEPS,
     envs::CTMRGEnv,
     ham::LocalOperator,
     alg::NTUpdate,
-    ctm_alg::CTMRGAlgorithm,
+    ctm_alg::CTMRGAlgorithm;
+    bipartite::Bool=false,
 )
     time_start = time()
     Nr, Nc = size(peps)
-    @printf(
+    if bipartite
+        error("Not implemented")
+    end
+    @info @sprintf(
         "%-4s %7s%10s%12s%11s  %s/%s\n",
         "step",
         "dt",
         "energy",
         "Δe",
-        "svd_diff",
+        "|Δλ|",
         "speed",
         "meas(s)"
     )
     gate = get_gate(alg.dt, ham)
-    wts0, envs0 = deepcopy(peps.weights), deepcopy(envs)
-    esite0, diff_energy = Inf, 0.0
+    wts0, peps0, envs0 = deepcopy(peps.weights), deepcopy(envs), deepcopy(envs)
+    esite0, ediff, wtdiff = Inf, 0.0, 1.0
     for count in 1:(alg.maxiter)
         time0 = time()
         peps = ntu_iter(gate, peps, alg)
-        # compare weight
         wtdiff = compare_weights(peps.weights, wts0)
+        converge = (wtdiff < alg.tol)
+        cancel = (count == alg.maxiter)
+        wts0 = deepcopy(peps.weights)
         time1 = time()
-        if count == 1 || count % alg.ctm_int == 0
+        if count == 1 || count % alg.ctm_int == 0 || converge || cancel
             # monitor energy
             meast0 = time()
             peps_ = InfinitePEPS(peps)
@@ -175,18 +189,26 @@ function ntupdate(
             esite = costfun(peps_, envs, ham) / (Nr * Nc)
             meast1 = time()
             # monitor change of energy
-            diff_energy = esite - esite0
-            @printf(
+            ediff = esite - esite0
+            message = @sprintf(
                 "%-4d %7.0e%10.5f%12.3e%11.3e  %.3f/%.3f\n",
                 count,
                 alg.dt,
                 esite,
-                diff_energy,
+                ediff,
                 wtdiff,
                 time1 - time0,
                 meast1 - meast0
             )
-            esite0, wts0, envs0 = esite, deepcopy(peps.weights), deepcopy(envs)
+            cancel ? (@warn message) : (@info message)
+            if ediff > 0
+                @info "Energy starts to increase. Abort evolution.\n"
+                # restore peps and envs at last checking
+                peps, envs = peps0, envs0
+                break
+            end
+            esite0, peps0, envs0 = esite, deepcopy(peps), deepcopy(envs)
+            converge && break
         end
     end
     # reconverge the environment tensors
@@ -198,5 +220,5 @@ function ntupdate(
     time_end = time()
     @printf("Evolution time: %.3f s\n\n", time_end - time_start)
     print(stderr, "\n----------\n\n")
-    return peps, envs, (esite0, diff_energy)
+    return peps, envs, (esite0, ediff)
 end

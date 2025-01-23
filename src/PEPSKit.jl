@@ -198,8 +198,8 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
 export absorb_weight
-export su_iter, simpleupdate, SimpleUpdate
 export FullEnvTruncation, fullenv_truncate
+export su_iter, simpleupdate, SimpleUpdate
 export NTUEnvNN, NTUEnvNNN, NTUEnvNNNp
 export ntu_iter, ntupdate, NTUpdate
 export fu_iter, fullupdate, FullUpdate

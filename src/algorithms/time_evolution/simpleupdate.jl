@@ -211,9 +211,7 @@ function simpleupdate(
             )
             cancel ? (@warn message) : (@info message)
         end
-        if converge || cancel
-            break
-        end
+        converge && break
     end
     return peps, wtdiff
 end
