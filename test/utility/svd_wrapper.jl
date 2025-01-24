@@ -25,26 +25,21 @@ r = TensorMap(randn, dtype, ℂ^m, ℂ^n)
 R = TensorMap(randn, space(r))
 
 full_alg = SVDAdjoint(; rrule_alg=nothing)
-old_alg = SVDAdjoint(; rrule_alg=NonTruncSVDAdjoint(), broadening=0.0)
 iter_alg = SVDAdjoint(; fwd_alg=IterSVD())
 
 @testset "Non-truncacted SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
-    l_oldsvd, g_oldsvd = withgradient(A -> lossfun(A, old_alg, R), r)
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R), r)
 
-    @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd
-    @test g_fullsvd[1] ≈ g_oldsvd[1] rtol = rtol
+    @test l_itersvd ≈ l_fullsvd
     @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end
 
 @testset "Truncated SVD with χ=$χ" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R, trunc), r)
-    l_oldsvd, g_oldsvd = withgradient(A -> lossfun(A, old_alg, R, trunc), r)
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R, trunc), r)
 
-    @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd
-    @test !isapprox(g_fullsvd[1], g_oldsvd[1]; rtol)
+    @test l_itersvd ≈ l_fullsvd
     @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end
 

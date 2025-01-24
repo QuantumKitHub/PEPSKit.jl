@@ -185,7 +185,7 @@ end
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
+export SVDAdjoint, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator
