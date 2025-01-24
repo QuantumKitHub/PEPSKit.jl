@@ -215,7 +215,7 @@ function ntupdate(
             if ediff > 0
                 @info "Energy starts to increase. Abort evolution.\n"
                 # restore peps and envs at last checking
-                peps, envs = peps0, envs0
+                peps, envs = deepcopy(peps0), deepcopy(envs0)
                 break
             end
             esite0, peps0, envs0 = esite, deepcopy(peps), deepcopy(envs)
@@ -231,5 +231,5 @@ function ntupdate(
     time_end = time()
     @printf("Evolution time: %.3f s\n\n", time_end - time_start)
     print(stderr, "\n----------\n\n")
-    return peps, envs, (esite0, ediff)
+    return peps, envs, (esite0, ediff, wtdiff)
 end

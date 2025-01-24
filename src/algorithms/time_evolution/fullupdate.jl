@@ -233,7 +233,7 @@ function fullupdate(
             if diff_energy > 0
                 @printf("Energy starts to increase. Abort evolution.\n")
                 # restore peps and envs at last checking
-                peps, envs = peps0, envs0
+                peps, envs = deepcopy(peps0), deepcopy(envs0)
                 break
             end
             esite0, peps0, envs0 = esite, deepcopy(peps), deepcopy(envs)
