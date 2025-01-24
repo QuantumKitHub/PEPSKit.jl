@@ -182,7 +182,7 @@ function fullenv_truncate(
     flip_s::Bool=false,
 ) where {S<:ElementarySpace}
     # sanity check
-    @assert space(b0, 1) == space(b0, 2)
+    @assert space(b0, 1) == space(b0, 2) "Bond matrix space mismatch: $(space(b0, 1)) ≠ $(space(b0, 2))\n"
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
     # initilize `u, s, v†` using (almost) un-truncated bond matrix
