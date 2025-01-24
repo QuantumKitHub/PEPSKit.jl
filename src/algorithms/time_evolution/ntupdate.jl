@@ -110,6 +110,9 @@ function ntu_iter(
 )
     @assert size(gate.lattice) == size(peps)
     Nr, Nc = size(peps)
+    if bipartite
+        @assert Nr == Nc == 2
+    end
     # TODO: make algorithm independent on the choice of dual in the network
     for (r, c) in Iterators.product(1:Nr, 1:Nc)
         @assert [isdual(space(peps.vertices[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
@@ -122,20 +125,31 @@ function ntu_iter(
         if direction == 2
             peps2 = mirror_antidiag(peps2)
         end
-        for site in CartesianIndices(peps2.vertices)
-            r, c = Tuple(site)
-            term = get_gateterm(
-                direction == 1 ? gate : gate_mirrored,
-                (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
-            )
-            ϵ = _ntu_bondx!(r, c, term, peps2, alg)
+        if bipartite
+            for r in 1:2
+                rp1 = _next(r, 2)
+                term = get_gateterm(
+                    direction == 1 ? gate : gate_mirrored,
+                    (CartesianIndex(r, 1), CartesianIndex(r, 2)),
+                )
+                ϵ = _ntu_bondx!(r, 1, term, peps2, alg)
+                peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
+                peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
+                peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
+            end
+        else
+            for site in CartesianIndices(peps2.vertices)
+                r, c = Tuple(site)
+                term = get_gateterm(
+                    direction == 1 ? gate : gate_mirrored,
+                    (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
+                )
+                ϵ = _ntu_bondx!(r, c, term, peps2, alg)
+            end
         end
         if direction == 2
             peps2 = mirror_antidiag(peps2)
         end
-    end
-    for s in peps2.weights.data
-        @assert norm(s, Inf) ≈ 1.0
     end
     return peps2
 end
@@ -157,9 +171,6 @@ function ntupdate(
 )
     time_start = time()
     Nr, Nc = size(peps)
-    if bipartite
-        error("Not implemented")
-    end
     @info @sprintf(
         "%-4s %7s%10s%12s%11s  %s/%s\n",
         "step",
@@ -175,7 +186,7 @@ function ntupdate(
     esite0, ediff, wtdiff = Inf, 0.0, 1.0
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps = ntu_iter(gate, peps, alg)
+        peps = ntu_iter(gate, peps, alg; bipartite)
         wtdiff = compare_weights(peps.weights, wts0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)

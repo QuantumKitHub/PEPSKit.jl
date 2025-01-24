@@ -13,7 +13,7 @@ for dt in dts
         opt_alg=FullEnvTruncation(; trscheme=trscheme_peps),
         ctm_alg=SequentialCTMRG(; tol=1e-7, verbosity=2, maxiter=30, trscheme=trscheme),
     )
-    result = ntupdate(peps, envs, ham, alg, ctm_alg)
+    result = ntupdate(peps, envs, ham, alg, ctm_alg; bipartite=true)
     global peps = result[1]
     global envs = result[2]
 end

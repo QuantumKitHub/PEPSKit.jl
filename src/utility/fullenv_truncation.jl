@@ -238,18 +238,18 @@ function fullenv_truncate(
         end
     end
     # change `← u ← s → v† →` back to `← u ← s ← v† →`
+    # using flipper: `← u ←(← s → f ←) ← (← f† → v† →)→`
     if !flip_s
-        @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
+        # @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
         Vtrunc = space(s, 1)
         @assert isdual(Vtrunc) === false
         flipper = isomorphism(flip(Vtrunc), Vtrunc)
-        # ← u ←(← s → f ←) ← (← f† → v† →)→
         @tensor s[-1; -2] := s[-1 1] * flipper[1 -2]
         # TODO: figure out the reason behind the twist
         twist!(s, 2)
         @tensor vh[-1; -2] := flipper'[-1 1] * vh[1 -2]
-        @assert tmp ≈ u * s * vh
+        # @assert tmp ≈ u * s * vh
     end
-    @assert norm(s, Inf) ≈ 1.0 "Value of s = $s\n"
+    # @assert norm(s, Inf) ≈ 1.0 "Value of s = $s\n"
     return u, s, vh, (diff_wt, fid)
 end

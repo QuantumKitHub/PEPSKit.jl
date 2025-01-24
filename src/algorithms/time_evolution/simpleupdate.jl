@@ -192,7 +192,7 @@ function simpleupdate(
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps = su_iter(gate, peps, alg; bipartite=bipartite)
+        peps = su_iter(gate, peps, alg; bipartite)
         wtdiff = compare_weights(peps.weights, wts0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
