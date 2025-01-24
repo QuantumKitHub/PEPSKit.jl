@@ -181,8 +181,7 @@ function fullenv_truncate(
     alg::FullEnvTruncation;
     flip_s::Bool=false,
 ) where {S<:ElementarySpace}
-    # sanity check
-    @assert space(b0, 1) == space(b0, 2) "Bond matrix space mismatch: $(space(b0, 1)) ≠ $(space(b0, 2))\n"
+    # ensure fermion sign will not appear
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
     # initilize `u, s, v†` using (almost) un-truncated bond matrix
