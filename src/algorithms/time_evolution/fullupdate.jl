@@ -7,7 +7,7 @@ Each FU run stops when the energy starts to increase.
     maxiter::Int
     fixgauge::Bool = true
     # bond truncation after applying time evolution gate
-    opt_alg::FullEnvTruncation
+    opt_alg::Union{ALSTruncation,FullEnvTruncation}
     # SequentialCTMRG column move after updating a column of bonds
     colmove_alg::SequentialCTMRG
     # interval to reconverge environments

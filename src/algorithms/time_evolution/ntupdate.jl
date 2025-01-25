@@ -10,7 +10,7 @@ Each NTU run stops when energy starts to increase.
     # algorithm to construct bond environment (metric)
     bondenv_alg::BondEnvAlgorithm
     # bond truncation after applying time evolution gate
-    opt_alg::FullEnvTruncation
+    opt_alg::Union{ALSTruncation,FullEnvTruncation}
     # monitor energy every `ctm_int` steps
     ctm_int::Int = 10
     # CTMRG algorithm to monitor energy
