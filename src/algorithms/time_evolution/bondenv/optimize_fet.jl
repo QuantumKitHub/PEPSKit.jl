@@ -40,10 +40,10 @@ function bond_optimize(
         env[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
     )
     # optimize bond matrix
-    u, s, vh, (cost, fid) = fullenv_truncate(env2, b0, alg; flip_s=false)
+    u, s, vh, info = fullenv_truncate(env2, b0, alg; flip_s=false)
     s /= norm(s, Inf)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
     @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
-    return a, s, b, (cost, fid)
+    return a, s, b, info
 end

@@ -4,11 +4,11 @@
 Algorithm struct for the full environment truncation (FET).
 """
 @kwdef struct FullEnvTruncation
-    tol::Float64 = 1e-8
-    maxiter::Int = 50
     trscheme::TensorKit.TruncationScheme
+    maxiter::Int = 50
+    tol::Float64 = 1e-8
     verbose::Bool = false
-    check_int::Int = 10
+    check_int::Int = 1
 end
 
 """
@@ -184,12 +184,12 @@ function fullenv_truncate(
     # ensure fermion sign will not appear
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
-    # initilize `u, s, v†` using (almost) un-truncated bond matrix
-    u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)); trunc=truncerr(1e-15))...)
+    # initilize `u, s, v†` using un-truncated bond matrix
+    u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)))...)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
     s0 = deepcopy(s)
-    diff_wt, fid, fid0 = NaN, 0.0, 0.0
+    diff_fid, diff_wt, fid, fid0 = NaN, NaN, 0.0, 0.0
     for iter in 1:(alg.maxiter)
         time0 = time()
         # update `r`
@@ -217,11 +217,11 @@ function fullenv_truncate(
         # @assert diff_fid >= -1e-14 "Fidelity is decreasing by $diff_fid."
         time1 = time()
         message = @sprintf(
-            "%4d:  |Δwt| = %10.4e,  fid = %8.6f,  Δfid = %10.4e,  time = %.3f s\n",
+            "%4d:  fid = %10.5e,  Δfid = %10.4e,  |Δwt| = %10.4e,  time = %.3e s\n",
             iter,
-            diff_wt,
             fid,
             diff_fid,
+            diff_wt,
             time1 - time0
         )
         s0 = deepcopy(s)
@@ -250,5 +250,5 @@ function fullenv_truncate(
         # @assert tmp ≈ u * s * vh
     end
     # @assert norm(s, Inf) ≈ 1.0 "Value of s = $s\n"
-    return u, s, vh, (diff_wt, fid)
+    return u, s, vh, (; fid, diff_fid, diff_wt)
 end

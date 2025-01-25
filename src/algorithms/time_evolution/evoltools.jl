@@ -14,7 +14,8 @@ const BondPhys2{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
 include("bondenv/env_tools.jl")
 include("bondenv/env_ntu.jl")
 include("bondenv/env_ctm.jl")
-include("bondenv/optimize.jl")
+include("bondenv/optimize_fet.jl")
+include("bondenv/optimize_als.jl")
 
 """
     get_gate(dt::Float64, H::LocalOperator)
