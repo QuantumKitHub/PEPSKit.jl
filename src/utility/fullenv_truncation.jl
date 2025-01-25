@@ -184,8 +184,8 @@ function fullenv_truncate(
     # ensure fermion sign will not appear
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
-    # initilize `u, s, v†` using un-truncated bond matrix
-    u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)))...)
+    # initialize truncated `u, s, v†`
+    u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)); trunc=alg.trscheme)...)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
     s0 = deepcopy(s)

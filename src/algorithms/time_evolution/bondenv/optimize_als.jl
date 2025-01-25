@@ -190,16 +190,18 @@ function bond_optimize(
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(a, ax)) for ax in 1:2] == [0, 0]
     @assert [isdual(space(b, ax)) for ax in 2:3] == [0, 0]
-    @info "---- Iterative optimization ----\n"
-    @info @sprintf(
-        "%-6s%12s%12s%12s%12s %10s\n",
-        "Step",
-        "Cost",
-        "Fidelity",
-        "ϵ_cost",
-        "ϵ_fid",
-        "Time/s"
-    )
+    if alg.verbose
+        @info "Alternating least square optimization --------"
+        @info @sprintf(
+            "%-6s%12s%12s%12s%12s %10s\n",
+            "Step",
+            "Cost",
+            "Fidelity",
+            "ϵ_cost",
+            "ϵ_fid",
+            "Time/s"
+        )
+    end
     time0 = time()
     aR2bL2 = _combine_aRbL(a, b)
     # initialize truncated aR, bL
@@ -216,9 +218,11 @@ function bond_optimize(
     # no need to further optimize
     if abs(cost0) < 5e-15
         time1 = time()
-        @info @sprintf(
-            "%-6d%12.3e%12.3e%12.3e%12.3e %10.3e\n", 0, cost0, fid0, NaN, NaN, time1 - time0
-        )
+        if alg.verbose
+            @info @sprintf(
+                "%-6d%12.3e%12.3e%12.3e%12.3e %10.3e\n", 0, cost0, fid0, NaN, NaN, time1 - time0
+            )
+        end
     else
         for count in 1:(alg.maxiter)
             time0 = time()
@@ -234,7 +238,7 @@ function bond_optimize(
             diff_cost = abs(cost - cost0) / cost00
             diff_fid = abs(fid - fid0)
             time1 = time()
-            if (count == 1 || count % alg.check_int == 0)
+            if alg.verbose && (count == 1 || count % alg.check_int == 0)
                 @info @sprintf(
                     "%-6d%12.3e%12.3e%12.3e%12.3e %10.3e\n",
                     count,
