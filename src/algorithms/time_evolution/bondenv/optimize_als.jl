@@ -193,7 +193,7 @@ function bond_optimize(
     if alg.verbose
         @info "Alternating least square optimization --------"
         @info @sprintf(
-            "%-6s%12s%12s%12s%12s %10s\n",
+            "%-4s%12s%12s%12s%12s %10s\n",
             "Step",
             "Cost",
             "Fidelity",
@@ -220,7 +220,13 @@ function bond_optimize(
         time1 = time()
         if alg.verbose
             @info @sprintf(
-                "%-6d%12.3e%12.3e%12.3e%12.3e %10.3e\n", 0, cost0, fid0, NaN, NaN, time1 - time0
+                "%-4d%12.3e%12.3e%12.3e%12.3e %10.3e\n",
+                0,
+                cost0,
+                fid0,
+                NaN,
+                NaN,
+                time1 - time0
             )
         end
     else
@@ -240,7 +246,7 @@ function bond_optimize(
             time1 = time()
             if alg.verbose && (count == 1 || count % alg.check_int == 0)
                 @info @sprintf(
-                    "%-6d%12.3e%12.3e%12.3e%12.3e %10.3e\n",
+                    "%-4d%12.3e%12.3e%12.3e%12.3e %10.3e\n",
                     count,
                     cost,
                     fid,
