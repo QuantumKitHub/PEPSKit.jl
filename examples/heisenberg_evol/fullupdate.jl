@@ -19,7 +19,7 @@ for dt in dts
     fu_alg = FullUpdate(;
         dt,
         maxiter,
-        opt_alg=FullEnvTruncation(; trscheme=trscheme_peps),
+        opt_alg=ALSTruncation(; trscheme=trscheme_peps),
         colmove_alg=colmove_alg,
         reconv_alg=reconv_alg,
     )
@@ -33,4 +33,4 @@ display(meas)
 @info @sprintf("Energy = %.8f\n", meas["e_site"])
 @info @sprintf("Staggered magnetization = %.8f\n", mean(meas["mag_norm"]))
 @test isapprox(meas["e_site"], -0.66875; atol=1e-4)
-@test isapprox(mean(meas["mag_norm"]), 0.3510; atol=1e-3)
+@test isapprox(mean(meas["mag_norm"]), 0.3510; atol=2e-3)
