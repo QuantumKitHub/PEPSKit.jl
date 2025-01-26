@@ -217,7 +217,7 @@ function fullenv_truncate(
         # @assert diff_fid >= -1e-14 "Fidelity is decreasing by $diff_fid."
         time1 = time()
         message = @sprintf(
-            "%4d:  fid = %10.5e,  Δfid = %10.4e,  |Δwt| = %10.4e,  time = %.3e s\n",
+            "%4d:  fid = %10.5e,  Δfid = %10.4e,  |Δs| = %10.4e,  time = %.3e s\n",
             iter,
             fid,
             diff_fid,
