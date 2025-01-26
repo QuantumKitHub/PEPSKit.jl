@@ -115,7 +115,7 @@ function _fu_bondx!(
     @tensor B[-1; -2 -3 -4 -5] := bL[-5 -1 1] * Y[-2 -3 -4 1]
     peps.A[row, col] = A / norm(A, Inf)
     peps.A[row, cp1] = B / norm(B, Inf)
-    return cost, fid
+    return s, cost, fid
 end
 
 """
@@ -130,6 +130,7 @@ function _update_column!(
     @assert 1 <= col <= Nc
     localfid = 0.0
     costs = zeros(Nr)
+    wts_col = Vector{PEPSWeight}(undef, Nr)
     #= Axis order of X, aR, Y, bL
 
             1             2            2         1
@@ -140,7 +141,7 @@ function _update_column!(
     =#
     for row in 1:Nr
         term = get_gateterm(gate, (CartesianIndex(row, col), CartesianIndex(row, col + 1)))
-        cost, fid = _fu_bondx!(row, col, term, peps, envs, alg)
+        wts_col[row], cost, fid = _fu_bondx!(row, col, term, peps, envs, alg)
         costs[row] = cost
         localfid += fid
     end
@@ -151,7 +152,7 @@ function _update_column!(
         envs.corners[:, :, c] = envs2.corners[:, :, c]
         envs.edges[:, :, c] = envs2.edges[:, :, c]
     end
-    return localfid, costs
+    return wts_col, localfid, costs
 end
 
 """
@@ -163,21 +164,25 @@ function fu_iter(gate::LocalOperator, peps::InfinitePEPS, envs::CTMRGEnv, alg::F
     Nr, Nc = size(peps)
     fid, maxcost = 0.0, 0.0
     peps2, envs2 = deepcopy(peps), deepcopy(envs)
+    wts = Array{PEPSWeight}(undef, 2, Nr, Nc)
     for col in 1:Nc
-        tmpfid, costs = _update_column!(col, gate, peps2, envs2, alg)
+        wts[1, :, col], tmpfid, costs = _update_column!(col, gate, peps2, envs2, alg)
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end
     peps2, envs2 = rotr90(peps2), rotr90(envs2)
     gate_rotated = rotr90(gate)
     for row in 1:Nr
-        tmpfid, costs = _update_column!(row, gate_rotated, peps2, envs2, alg)
+        # the row-th column after rotr90 was (Nr+1-row)-th row
+        wts[2, Nr + 1 - row, :], tmpfid, costs = _update_column!(
+            row, gate_rotated, peps2, envs2, alg
+        )
         fid += tmpfid
         maxcost = max(maxcost, maximum(costs))
     end
     peps2, envs2 = rotl90(peps2), rotl90(envs2)
     fid /= (2 * Nr * Nc)
-    return peps2, envs2, (fid, maxcost)
+    return peps2, envs2, wts, (fid, maxcost)
 end
 
 """
@@ -199,16 +204,18 @@ function fullupdate(
         "dt",
         "energy",
         "Δe",
-        "svd_diff",
+        "|Δλ|",
         "speed",
         "meas(s)"
     )
     gate = get_gate(fu_alg.dt, ham)
-    peps0, envs0 = deepcopy(peps), deepcopy(envs)
+    peps0, envs0, wts0, wts = deepcopy(peps), deepcopy(envs), nothing, nothing
     esite0, diff_energy = Inf, 0.0
     for count in 1:(fu_alg.maxiter)
         time0 = time()
-        peps, envs, (fid, cost) = fu_iter(gate, peps, envs, fu_alg)
+        peps, envs, wts, (fid, cost) = fu_iter(gate, peps, envs, fu_alg)
+        diff_wts = (count == 1) ? NaN : compare_weights(SUWeight(wts), SUWeight(wts0))
+        wts0 = deepcopy(wts)
         time1 = time()
         if count == 1 || count % fu_alg.reconv_int == 0
             meast0 = time()
@@ -219,14 +226,13 @@ function fullupdate(
             meast1 = time()
             # monitor change of CTMRGEnv by its singular values
             diff_energy = esite - esite0
-            diff_ctm = calc_convergence(envs, envs0)[1]
             @printf(
                 "%-4d %7.0e%10.5f%12.3e%11.3e  %.3f/%.3f\n",
                 count,
                 fu_alg.dt,
                 esite,
                 diff_energy,
-                diff_ctm,
+                diff_wts,
                 time1 - time0,
                 meast1 - meast0
             )
