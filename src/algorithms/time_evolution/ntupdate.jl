@@ -183,7 +183,7 @@ function ntupdate(
     )
     gate = get_gate(alg.dt, ham)
     wts0, peps0, envs0 = deepcopy(peps.weights), deepcopy(envs), deepcopy(envs)
-    esite0, ediff, wtdiff = Inf, 0.0, 1.0
+    energy0, energy, ediff, wtdiff = Inf, 0.0, 0.0, 1.0
     for count in 1:(alg.maxiter)
         time0 = time()
         peps = ntu_iter(gate, peps, alg; bipartite)
@@ -193,19 +193,18 @@ function ntupdate(
         wts0 = deepcopy(peps.weights)
         time1 = time()
         if count == 1 || count % alg.ctm_int == 0 || converge || cancel
-            # monitor energy
+            # monitor change of energy
             meast0 = time()
             peps_ = InfinitePEPS(peps)
             envs = leading_boundary(envs, peps_, alg.ctm_alg)
-            esite = costfun(peps_, envs, ham) / (Nr * Nc)
+            energy = costfun(peps_, envs, ham) / (Nr * Nc)
+            ediff = energy - energy0
             meast1 = time()
-            # monitor change of energy
-            ediff = esite - esite0
             message = @sprintf(
                 "%-4d %7.0e%10.5f%12.3e%11.3e  %.3f/%.3f\n",
                 count,
                 alg.dt,
-                esite,
+                energy,
                 ediff,
                 wtdiff,
                 time1 - time0,
@@ -214,11 +213,11 @@ function ntupdate(
             cancel ? (@warn message) : (@info message)
             if ediff > 0
                 @info "Energy starts to increase. Abort evolution.\n"
-                # restore peps and envs at last checking
-                peps, envs = deepcopy(peps0), deepcopy(envs0)
+                # restore last checkpoint
+                energy, peps, envs = energy0, deepcopy(peps0), deepcopy(envs0)
                 break
             end
-            esite0, peps0, envs0 = esite, deepcopy(peps), deepcopy(envs)
+            energy0, peps0, envs0 = energy, deepcopy(peps), deepcopy(envs)
             converge && break
         end
     end
@@ -228,8 +227,9 @@ function ntupdate(
     end
     peps_ = InfinitePEPS(peps)
     envs = leading_boundary(envs, peps_, ctm_alg)
+    energy = costfun(peps_, envs, ham) / (Nr * Nc)
     time_end = time()
     @printf("Evolution time: %.3f s\n\n", time_end - time_start)
     print(stderr, "\n----------\n\n")
-    return peps, envs, (esite0, ediff, wtdiff)
+    return peps, envs, (; energy, ediff, wtdiff)
 end
