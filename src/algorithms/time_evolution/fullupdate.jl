@@ -182,7 +182,7 @@ function fu_iter(gate::LocalOperator, peps::InfinitePEPS, envs::CTMRGEnv, alg::F
     end
     peps2, envs2 = rotl90(peps2), rotl90(envs2)
     fid /= (2 * Nr * Nc)
-    return peps2, envs2, wts, (fid, maxcost)
+    return peps2, envs2, SUWeight(wts), (fid, maxcost)
 end
 
 """
@@ -214,7 +214,7 @@ function fullupdate(
     for count in 1:(fu_alg.maxiter)
         time0 = time()
         peps, envs, wts, (fid, cost) = fu_iter(gate, peps, envs, fu_alg)
-        diff_wts = (count == 1) ? NaN : compare_weights(SUWeight(wts), SUWeight(wts0))
+        diff_wts = (count == 1) ? NaN : compare_weights(wts, wts0)
         wts0 = deepcopy(wts)
         time1 = time()
         if count == 1 || count % fu_alg.reconv_int == 0
