@@ -69,8 +69,8 @@ end
     ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
 
     # simple update
-    dts = [1e-2, 1e-3, 4e-4, 1e-4]
-    tols = [1e-7, 1e-8, 1e-8, 1e-8]
+    dts = [1e-2, 1e-3, 4e-4]
+    tols = [1e-7, 1e-8, 1e-8]
     maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 1) ? Dbond + 2 : Dbond

@@ -214,7 +214,7 @@ function bond_optimize(
     aRbL = _combine_aRbL(aR, bL)
     cost00 = cost_func(env, aRbL, aR2bL2)
     fid00 = fidelity(env, aRbL, aR2bL2)
-    cost0, fid0, diff_fid = cost00, fid00, 0.0
+    cost0, fid0, fid, diff_fid = cost00, fid00, 0.0, 0.0
     # no need to further optimize
     if abs(cost0) < 5e-15
         time1 = time()
@@ -269,5 +269,5 @@ function bond_optimize(
     aR, s, bL = tsvd(aRbL, ((1, 2), (3, 4)); trunc=truncspace(Vtrunc))
     # normalize singular value spectrum
     s /= norm(s, Inf)
-    return aR, s, bL, (; fid0, diff_fid)
+    return aR, s, bL, (; fid, diff_fid)
 end
