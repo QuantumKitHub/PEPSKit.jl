@@ -23,7 +23,7 @@ function MPSKit.issamespace(
     return true
 end
 
-function allocate_GL(
+function MPSKit.allocate_GL(
     bra::InfiniteMPS, mpo::InfiniteTransferMatrix, ket::InfiniteMPS, i::Int
 )
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
@@ -34,7 +34,7 @@ function allocate_GL(
     return TT(undef, V)
 end
 
-function allocate_GR(
+function MPSKit.allocate_GR(
     bra::InfiniteMPS, mpo::InfiniteTransferMatrix, ket::InfiniteMPS, i::Int
 )
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
