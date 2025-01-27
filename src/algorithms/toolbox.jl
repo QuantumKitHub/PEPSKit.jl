@@ -153,7 +153,7 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
         return TensorMap(T3.data, V1)
     end
     below_h = MultilineMPS(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
-    transfer_peps_h = TransferPEPSMultiline(peps, NORTH)
+    transfer_peps_h = MultilineTransferPEPS(peps, NORTH)
     vals_h = MPSKit.transfer_spectrum(above_h, transfer_peps_h, below_h; num_vals)
     λ_h = map(λ_row -> λ_row / abs(λ_row[1]), vals_h)  # Normalize largest eigenvalue
     ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
@@ -164,7 +164,7 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
         return TensorMap(T4.data, V2)
     end
     below_v = MultilineMPS(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
-    transfer_peps_v = TransferPEPSMultiline(peps, EAST)
+    transfer_peps_v = MultilineTransferPEPS(peps, EAST)
     vals_v = MPSKit.transfer_spectrum(above_v, transfer_peps_v, below_v; num_vals)
     λ_v = map(λ_row -> λ_row / abs(λ_row[1]), vals_v)  # Normalize largest eigenvalue
     ξ_v = map(λ_row -> -1 / log(abs(λ_row[2])), λ_v)

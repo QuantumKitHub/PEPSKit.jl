@@ -33,7 +33,7 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
 
         # Random MPS of same bond dimension
         M = map(Tsfinal) do t
-            TensorMap(randn, scalartype(t), codomain(t) ← domain(t))
+            randn(scalartype(t), codomain(t) ← domain(t))
         end
 
         # Find right fixed points of mixed transfer matrices
