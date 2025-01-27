@@ -128,10 +128,10 @@ function MPSKit.initialize_environments(
 )
     L = MPSKit.check_length(above, operator, below)
     GLs = PeriodicVector([
-        MPSKit.randomize!(allocate_GL(below, operator, above, i)) for i in 1:L
+        MPSKit.randomize!(MPSKit.allocate_GL(below, operator, above, i)) for i in 1:L
     ])
     GRs = PeriodicVector([
-        MPSKit.randomize!(allocate_GR(below, operator, above, i)) for i in 1:L
+        MPSKit.randomize!(MPSKit.allocate_GR(below, operator, above, i)) for i in 1:L
     ])
     return GLs, GRs
 end
