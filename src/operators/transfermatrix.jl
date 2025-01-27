@@ -197,7 +197,7 @@ function initializeMPS(
     O::MultilineTransferMatrix, virtualspaces::AbstractArray{S,2}
 ) where {S}
     mpss = map(1:size(O, 1)) do r
-        return initializeMPS(O[cr], virtualspaces[cr, :])
+        return initializeMPS(O[r], virtualspaces[r, :])
     end
     return MPSKit.Multiline(mpss)
 end

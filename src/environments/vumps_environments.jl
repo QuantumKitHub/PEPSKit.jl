@@ -30,7 +30,6 @@ function allocate_GL(
     V =
         left_virtualspace(bra, i) ⊗ _elementwise_dual(left_virtualspace(mpo, i)) ←
         left_virtualspace(ket, i)
-    println(V)
     TT = TensorMap{T}
     return TT(undef, V)
 end
@@ -40,7 +39,6 @@ function allocate_GR(
 )
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
     V = right_virtualspace(ket, i) ⊗ right_virtualspace(mpo, i) ← right_virtualspace(bra, i)
-    println(V)
     TT = TensorMap{T}
     return TT(undef, V)
 end
