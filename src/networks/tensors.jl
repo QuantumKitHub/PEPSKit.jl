@@ -19,8 +19,7 @@ and west spaces, respectively.
     S 
 ```
 """
-const PartitionFunctionTensor{T,S} =
-    AbstractTensorMap{T,S,2,2} where {T<:Number,S<:ElementarySpace}
+const PartitionFunctionTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,2,2}
 const PFTensor = PartitionFunctionTensor
 
 Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))
