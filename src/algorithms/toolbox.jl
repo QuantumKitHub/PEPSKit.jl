@@ -1,10 +1,40 @@
+"""
+    expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
+
+Compute the expectation value ⟨peps|O|peps⟩ / ⟨peps|peps⟩ of a [`LocalOperator`](@ref) `O`
+for a PEPS `peps` using a given CTMRG environment `envs`.
+"""
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
     checklattice(peps, O)
     term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        contract_localoperator(inds, operator, peps, peps, envs) /
-        contract_localnorm(inds, peps, peps, envs)
+        contract_local_operator(inds, operator, peps, peps, envs) /
+        contract_local_norm(inds, peps, peps, envs)
     end
     return sum(term_vals)
+end
+"""
+    expectation_value(pf::InfinitePartitionFunction, inds => O, envs::CTMRGEnv)
+
+Compute the expectation value corresponding to inserting a local tensor(s) `O` at
+position `inds` in the partition function `pf` and contracting the chole using a given CTMRG
+environment `envs`.
+
+Here `inds` can be specified as either a `Tuple{Int,Int}` or a `CartesianIndex{2}`, and `O`
+should be a rank-4 tensor conforming to the [`PartitionFunctionTensor`](@ref) indexing
+convention.
+"""
+function MPSKit.expectation_value(
+    pf::InfinitePartitionFunction,
+    op::Pair{CartesianIndex{2},<:AbstractTensorMap{T,S,2,2}},
+    envs::CTMRGEnv,
+) where {T,S}
+    return contract_local_tensor(op[1], op[2], envs) /
+           contract_local_tensor(op[1], pf[op[1]], envs)
+end
+function MPSKit.expectation_value(
+    pf::InfinitePartitionFunction, op::Pair{Tuple{Int,Int}}, envs::CTMRGEnv
+)
+    return expectation_value(pf, CartesianIndex(op[1]) => op[2], envs)
 end
 
 function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
@@ -58,6 +88,78 @@ function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
 end
 
 """
+    value(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
+
+Return the value (per site) of a given partition function contracted using a given CTMRG
+environment.
+"""
+function value(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
+    total = one(scalartype(partfunc))
+
+    for r in 1:size(partfunc, 1), c in 1:size(partfunc, 2)
+        rprev = _prev(r, size(partfunc, 1))
+        rnext = _next(r, size(partfunc, 1))
+        cprev = _prev(c, size(partfunc, 2))
+        cnext = _next(c, size(partfunc, 2))
+        total *= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1; χ2] *
+            env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
+            env.edges[NORTH, rprev, c][χ3 D3; χ4] *
+            env.corners[NORTHEAST, rprev, cnext][χ4; χ5] *
+            env.edges[EAST, r, cnext][χ5 D5; χ6] *
+            env.corners[SOUTHEAST, rnext, cnext][χ6; χ7] *
+            env.edges[SOUTH, rnext, c][χ7 D7; χ8] *
+            env.corners[SOUTHWEST, rnext, cprev][χ8; χ1] *
+            partfunc[r, c][D1 D7; D3 D5]
+        total *= tr(
+            env.corners[NORTHWEST, rprev, cprev] *
+            env.corners[NORTHEAST, rprev, c] *
+            env.corners[SOUTHEAST, r, c] *
+            env.corners[SOUTHWEST, r, cprev],
+        )
+        total /= @autoopt @tensor env.edges[WEST, r, cprev][χ1 D1; χ2] *
+            env.corners[NORTHWEST, rprev, cprev][χ2; χ3] *
+            env.corners[NORTHEAST, rprev, c][χ3; χ4] *
+            env.edges[EAST, r, c][χ4 D1; χ5] *
+            env.corners[SOUTHEAST, rnext, c][χ5; χ6] *
+            env.corners[SOUTHWEST, rnext, cprev][χ6; χ1]
+        total /= @autoopt @tensor env.corners[NORTHWEST, rprev, cprev][χ1; χ2] *
+            env.edges[NORTH, rprev, c][χ2 D1; χ3] *
+            env.corners[NORTHEAST, rprev, cnext][χ3; χ4] *
+            env.corners[SOUTHEAST, r, cnext][χ4; χ5] *
+            env.edges[SOUTH, r, c][χ5 D1; χ6] *
+            env.corners[SOUTHWEST, r, cprev][χ6; χ1]
+    end
+
+    return total
+end
+
+function MPSKit.transfer_spectrum(
+    above::MultilineMPS,
+    O::MultilineTransferMatrix,
+    below::MultilineMPS;
+    num_vals=2,
+    solver=MPSKit.Defaults.eigsolver,
+)
+    @assert size(above) == size(O)
+    @assert size(below) == size(O)
+
+    numrows = size(above, 1)
+    eigenvals = Vector{Vector{scalartype(above)}}(undef, numrows)
+
+    @threads for cr in 1:numrows
+        L0 = MPSKit.randomize!(MPSKit.allocate_GL(above[cr - 1], O[cr], below[cr + 1], 1))
+
+        E_LL = MPSKit.TransferMatrix(above[cr - 1].AL, O[cr], below[cr + 1].AL)  # Note that this index convention is different from above!
+        λ, _, convhist = eigsolve(flip(E_LL), L0, num_vals, :LM, solver)
+        convhist.converged < num_vals &&
+            @warn "correlation length failed to converge: normres = $(convhist.normres)"
+        eigenvals[cr] = λ
+    end
+
+    return eigenvals
+end
+
+"""
     correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
 
 Compute the PEPS correlation length based on the horizontal and vertical
@@ -72,23 +174,23 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
     λ_v = Vector{Vector{T}}(undef, size(peps, 2))
 
     # Horizontal
-    above_h = MPSMultiline(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
+    above_h = MultilineMPS(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
     respaced_edges_h = map(zip(space.(env.edges)[1, :, :], env.edges[3, :, :])) do (V1, T3)
         return TensorMap(T3.data, V1)
     end
-    below_h = MPSMultiline(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
-    transfer_peps_h = TransferPEPSMultiline(peps, NORTH)
+    below_h = MultilineMPS(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
+    transfer_peps_h = MultilineTransferPEPS(peps, NORTH)
     vals_h = MPSKit.transfer_spectrum(above_h, transfer_peps_h, below_h; num_vals)
     λ_h = map(λ_row -> λ_row / abs(λ_row[1]), vals_h)  # Normalize largest eigenvalue
     ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
 
     # Vertical
-    above_v = MPSMultiline(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
+    above_v = MultilineMPS(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
     respaced_edges_v = map(zip(space.(env.edges)[2, :, :], env.edges[4, :, :])) do (V2, T4)
         return TensorMap(T4.data, V2)
     end
-    below_v = MPSMultiline(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
-    transfer_peps_v = TransferPEPSMultiline(peps, EAST)
+    below_v = MultilineMPS(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
+    transfer_peps_v = MultilineTransferPEPS(peps, EAST)
     vals_v = MPSKit.transfer_spectrum(above_v, transfer_peps_v, below_v; num_vals)
     λ_v = map(λ_row -> λ_row / abs(λ_row[1]), vals_v)  # Normalize largest eigenvalue
     ξ_v = map(λ_row -> -1 / log(abs(λ_row[2])), λ_v)

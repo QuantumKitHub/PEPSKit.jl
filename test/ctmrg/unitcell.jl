@@ -35,8 +35,7 @@ function test_unitcell(
     random_op = LocalOperator(
         PEPSKit._to_space.(Pspaces),
         [
-            (c,) => TensorMap(
-                randn,
+            (c,) => randn(
                 scalartype(peps),
                 PEPSKit._to_space(Pspaces[c]),
                 PEPSKit._to_space(Pspaces[c]),

@@ -5,7 +5,7 @@
 Default type for PEPS bond weights with 2 virtual indices, conventionally ordered as: ``wt : WS ← EN``. 
 `WS`, `EN` denote the west/south, east/north spaces for x/y-weights on the square lattice, respectively.
 """
-const PEPSWeight{S} = AbstractTensorMap{S,1,1} where {S<:ElementarySpace}
+const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1} where {T<:Number,S<:ElementarySpace}
 
 """
     struct SUWeight{E<:PEPSWeight}
@@ -50,12 +50,12 @@ function compare_weights(wts1::SUWeight, wts2::SUWeight)
 end
 
 """
-    struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
+    struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice
 consisting of vertex tensors and bond weights.
 """
-struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight} <: AbstractPEPS
+struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
     vertices::Matrix{T}
     weights::SUWeight{E}
 

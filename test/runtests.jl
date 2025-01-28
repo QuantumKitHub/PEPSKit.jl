@@ -29,8 +29,11 @@ end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end
-        @time @safetestset "CTMRG schemes" begin
+        @time @safetestset "Jacobian real linearity" begin
             include("ctmrg/jacobian_real_linear.jl")
+        end
+        @time @safetestset "Partition function" begin
+            include("ctmrg/partition_function.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"

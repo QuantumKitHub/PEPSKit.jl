@@ -2,15 +2,15 @@
 # -------------------
 """
     nearest_neighbour_hamiltonian(
-        lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
-    ) where {S}
+        lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}
+    ) where {S,T}
 
 Create a nearest neighbor `LocalOperator` by specifying the 2-site interaction term `h`
 which acts both in horizontal and vertical direction.
 """
 function nearest_neighbour_hamiltonian(
-    lattice::Matrix{S}, h::AbstractTensorMap{S,2,2}
-) where {S}
+    lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}
+) where {S,T}
     terms = []
     for I in eachindex(IndexCartesian(), lattice)
         J1 = I + CartesianIndex(1, 0)
@@ -108,16 +108,16 @@ function pwave_superconductor(
     spaces = fill(physical_space, (lattice.Nrows, lattice.Ncols))
 
     # on-site
-    h0 = TensorMap(zeros, T, physical_space ← physical_space)
+    h0 = zeros(T, physical_space ← physical_space)
     block(h0, FermionParity(1)) .= -μ
 
     # two-site (x-direction)
-    hx = TensorMap(zeros, T, physical_space^2 ← physical_space^2)
+    hx = zeros(T, physical_space^2 ← physical_space^2)
     block(hx, FermionParity(0)) .= [0 -Δ; -Δ 0]
     block(hx, FermionParity(1)) .= [0 -t; -t 0]
 
     # two-site (y-direction)
-    hy = TensorMap(zeros, T, physical_space^2 ← physical_space^2)
+    hy = zeros(T, physical_space^2 ← physical_space^2)
     block(hy, FermionParity(0)) .= [0 Δ*im; -Δ*im 0]
     block(hy, FermionParity(1)) .= [0 -t; -t 0]
 
