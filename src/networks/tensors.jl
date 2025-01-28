@@ -48,7 +48,7 @@ respectively.
      S  P
 ```
 """
-const PEPSTensor{T,S} = AbstractTensorMap{T,S,1,4} where {T<:Number,S<:ElementarySpace}
+const PEPSTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,1,4}
 
 """
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
@@ -111,7 +111,7 @@ mapping from ``P´'`` to ``P`` where ``P´'`` corresponds to a physical PEPS ind
      S  P
 ```
 """
-const PEPOTensor{T,S} = AbstractTensorMap{T,S,2,4} where {T<:Number,S<:ElementarySpace}
+const PEPOTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,2,4}
 
 Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))
 Base.rotr90(t::PEPOTensor) = permute(t, ((1, 2), (6, 3, 4, 5)))
