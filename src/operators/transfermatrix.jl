@@ -121,7 +121,7 @@ height(transfer::InfiniteTransferPEPO) = size(transfer.mid, 2)
 Base.getindex(O::InfiniteTransferPEPO, i) = (O.top[i], O.bot[i], Tuple(O.mid[i, :]))
 
 function Base.iterate(O::InfiniteTransferPEPO, args...)
-    return iterate(zip(O.top, O.bot, eachcol(O.mid)), args...)
+    return iterate(zip(O.top, O.bot, Iterators.map(Tuple, eachcol(O.mid))), args...)
 end
 
 VectorInterface.scalartype(::Type{InfiniteTransferPEPO{T,O}}) where {T,O} = scalartype(T)
