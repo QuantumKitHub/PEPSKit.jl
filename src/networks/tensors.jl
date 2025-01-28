@@ -19,7 +19,7 @@ and west spaces, respectively.
     S 
 ```
 """
-const PartitionFunctionTensor{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
+const PartitionFunctionTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,2,2}
 const PFTensor = PartitionFunctionTensor
 
 Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))
@@ -48,7 +48,7 @@ respectively.
      S  P
 ```
 """
-const PEPSTensor{S} = AbstractTensorMap{S,1,4} where {S<:ElementarySpace}
+const PEPSTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,1,4}
 
 """
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
@@ -111,7 +111,7 @@ mapping from ``P´'`` to ``P`` where ``P´'`` corresponds to a physical PEPS ind
      S  P
 ```
 """
-const PEPOTensor{S} = AbstractTensorMap{S,2,4} where {S<:ElementarySpace}
+const PEPOTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,2,4}
 
 Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))
 Base.rotr90(t::PEPOTensor) = permute(t, ((1, 2), (6, 3, 4, 5)))
