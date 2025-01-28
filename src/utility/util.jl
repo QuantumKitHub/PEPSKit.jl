@@ -86,6 +86,7 @@ function ChainRulesCore.rrule(
     spow = sdiag_pow(S, pow; tol)
     spow_minus1_conj = scale!(sdiag_pow(S', pow - 1; tol), pow)
     function sdiag_pow_pullback(c̄)
+        c̄ = unthunk(c̄)
         return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
     end
     return spow, sdiag_pow_pullback

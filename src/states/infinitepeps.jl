@@ -119,6 +119,7 @@ function ChainRulesCore.rrule(
     pepstensor = state[row, col]
 
     function getindex_pullback(Δpepstensor)
+        Δpepstensor = unthunk(Δpepstensor)
         Δstate = zerovector(state)
         Δstate[row, col] = Δpepstensor
         return NoTangent(), Δstate, NoTangent(), NoTangent()

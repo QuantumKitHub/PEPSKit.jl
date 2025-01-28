@@ -93,7 +93,7 @@ end
 function TensorKit._compute_svddata!(
     f, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}
 )
-    InnerProductStyle(f) === EuclideanProduct() || throw_invalid_innerproduct(:tsvd!)
+    InnerProductStyle(f) === EuclideanInnerProduct() || throw_invalid_innerproduct(:tsvd!)
     I = sectortype(f)
     dims = SectorDict{I,Int}()
 
@@ -139,6 +139,7 @@ function ChainRulesCore.rrule(
 
     function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
         Δf = similar(f)
+        ΔU, ΔS, ΔV = unthunk(ΔU), unthunk(ΔS), unthunk(ΔV)
         for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
