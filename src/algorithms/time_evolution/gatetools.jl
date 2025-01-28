@@ -5,8 +5,7 @@ Compute `exp(-dt * H)` from the nearest neighbor Hamiltonian `H`.
 """
 function get_gate(dt::Float64, H::LocalOperator)
     @assert all([
-        length(op.dom) == 2 && norm(Tuple(terms[2] - terms[1])) == 1.0 for
-        (terms, op) in H.terms
+        numin(op) == 2 && norm(Tuple(terms[2] - terms[1])) == 1.0 for (terms, op) in H.terms
     ]) "Only nearest-neighbour terms allowed"
     return LocalOperator(
         H.lattice, Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...

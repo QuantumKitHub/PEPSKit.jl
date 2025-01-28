@@ -8,7 +8,7 @@ using FiniteDifferences
 ## Test utility
 # -------------
 function ChainRulesTestUtils.rand_tangent(rng::AbstractRNG, x::AbstractTensorMap)
-    return TensorMap(randn, scalartype(x), space(x))
+    return randn(scalartype(x), space(x))
 end
 function ChainRulesTestUtils.rand_tangent(rng::AbstractRNG, x::CTMRGEnv)
     Ctans = x.corners
