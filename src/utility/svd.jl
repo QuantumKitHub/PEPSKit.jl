@@ -137,9 +137,10 @@ function ChainRulesCore.rrule(
 ) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
     U, S, V, ϵ = PEPSKit.tsvd(f, alg; trunc, p)
 
-    function tsvd!_itersvd_pullback((ΔU, ΔS, ΔV, Δϵ))
+    function tsvd!_itersvd_pullback(ΔUSVϵ)
         Δf = similar(f)
-        ΔU, ΔS, ΔV = unthunk(ΔU), unthunk(ΔS), unthunk(ΔV)
+        ΔU, ΔS, ΔV, = unthunk(ΔUSVϵ)
+
         for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
