@@ -172,7 +172,7 @@ end
 function MPSKit.contract_mpo_expval(
     AC::GenericMPSTensor{S,N},
     GL::GenericMPSTensor{S,N},
-    O,
+    O::Union{PEPSSandwich, PEPOSandwich},
     GR::GenericMPSTensor{S,N},
     ACbar::GenericMPSTensor{S,N}=AC,
 ) where {S,N}
