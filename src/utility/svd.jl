@@ -139,7 +139,7 @@ function ChainRulesCore.rrule(
 
     function tsvd!_itersvd_pullback(ΔUSVϵ)
         Δf = similar(f)
-        ΔU, ΔS, ΔV, = unthunk(ΔUSVϵ)
+        ΔU, ΔS, ΔV, = unthunk.(ΔUSVϵ)
 
         for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
