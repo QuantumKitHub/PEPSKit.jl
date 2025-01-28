@@ -44,7 +44,7 @@ Base.size(transfer::InfiniteTransferPEPS, args...) = size(transfer.top, args...)
 Base.length(transfer::InfiniteTransferPEPS) = size(transfer, 1)
 Base.getindex(O::InfiniteTransferPEPS, i) = (O.top[i], O.bot[i])
 
-Base.iterate(O::InfiniteTransferPEPS, i=1) = i > length(O) ? nothing : (O[i], i + 1)
+Base.iterate(O::InfiniteTransferPEPS, args...) = iterate(zip(O.top, O.bot), args...)
 
 VectorInterface.scalartype(::Type{InfiniteTransferPEPS{T}}) where {T} = scalartype(T)
 
@@ -120,7 +120,7 @@ Base.length(transfer::InfiniteTransferPEPO) = size(transfer, 1)
 height(transfer::InfiniteTransferPEPO) = size(transfer.mid, 2)
 Base.getindex(O::InfiniteTransferPEPO, i) = (O.top[i], O.bot[i], Tuple(O.mid[i, :]))
 
-Base.iterate(O::InfiniteTransferPEPO, i=1) = i > length(O) ? nothing : (O[i], i + 1)
+Base.iterate(O::InfiniteTransferPEPO, args...) = iterate(zip(O.top, O.bot, eachcol(O.mid)), args...)
 
 VectorInterface.scalartype(::Type{InfiniteTransferPEPO{T,O}}) where {T,O} = scalartype(T)
 
