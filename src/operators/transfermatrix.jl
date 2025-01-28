@@ -46,7 +46,7 @@ Base.getindex(O::InfiniteTransferPEPS, i) = (O.top[i], O.bot[i])
 
 Base.iterate(O::InfiniteTransferPEPS, i=1) = i > length(O) ? nothing : (O[i], i + 1)
 
-VectorInterface.scalartype(::InfiniteTransferPEPS{T}) where {T} = scalartype(T)
+VectorInterface.scalartype(::Type{InfiniteTransferPEPS{T}}) where {T} = scalartype(T)
 
 function virtual_space(O::InfiniteTransferPEPS, i, dir)
     return prod([space(O.top[i], dir + 1), space(O.bot[i], dir + 1)'])
@@ -122,7 +122,7 @@ Base.getindex(O::InfiniteTransferPEPO, i) = (O.top[i], O.bot[i], Tuple(O.mid[i, 
 
 Base.iterate(O::InfiniteTransferPEPO, i=1) = i > length(O) ? nothing : (O[i], i + 1)
 
-VectorInterface.scalartype(::Type{InfiniteTransferPEPO{T}}) where {T} = scalartype(T)
+VectorInterface.scalartype(::Type{InfiniteTransferPEPO{T,O}}) where {T,O} = scalartype(T)
 
 function virtual_space(O::InfiniteTransferPEPO, i, dir)
     return prod([
