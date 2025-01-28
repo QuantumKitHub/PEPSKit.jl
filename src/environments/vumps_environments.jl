@@ -187,6 +187,7 @@ function TensorKit.normalize!(
     return envs
 end
 
+# TODO: move these to MPSKit?
 function MPSKit.leftenv(envs::MultilineEnvironments, r::Int, c::Int, state)
     return leftenv(envs[r], c, parent(state))
 end
@@ -202,7 +203,7 @@ function MPSKit.expectation_value(
     return prod(product(1:size(ψ, 1), 1:size(ψ, 2))) do (i, j)
         GL = leftenv(envs, i, j, ψ)
         GR = rightenv(envs, i, j, ψ)
-        return contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])
+        return MPSKit.contract_mpo_expval(ψ.AC[i, j], GL, O[i, j], GR, ψ.AC[i + 1, j])
     end
 end
 function MPSKit.expectation_value(st::InfiniteMPS, transfer::InfiniteTransferMatrix)

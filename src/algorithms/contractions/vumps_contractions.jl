@@ -1,5 +1,15 @@
 using MPSKit: GenericMPSTensor, MPSBondTensor
 
+const PEPSSandwich{T<:PEPSTensor} = Tuple{T,T}
+ket(p::PEPSSandwich) = p[1]
+bra(p::PEPSSandwich) = p[2]
+
+const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Tuple{Vararg{P,N}}}
+ket(p::PEPOSandwich) = p[1]
+bra(p::PEPOSandwich) = p[2]
+pepo(p::PEPOSandwich) = p[3]
+pepo(p::PEPOSandwich, i::Int) = p[3][i]
+
 #
 # Environment transfer functions
 #
@@ -8,29 +18,29 @@ using MPSKit: GenericMPSTensor, MPSBondTensor
 
 function MPSKit.transfer_left(
     GL::GenericMPSTensor{S,3},
-    O::NTuple{2,PEPSTensor},
+    O::PEPSSandwich,
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
     return @tensor GL′[-1 -2 -3; -4] :=
         GL[1 2 4; 7] *
         conj(Ā[1 3 6; -1]) *
-        O[1][5; 8 -2 3 2] *
-        conj(O[2][5; 9 -3 6 4]) *
+        ket(O)[5; 8 -2 3 2] *
+        conj(bra(O)[5; 9 -3 6 4]) *
         A[7 8 9; -4]
 end
 
 function MPSKit.transfer_right(
     GR::GenericMPSTensor{S,3},
-    O::NTuple{2,PEPSTensor},
+    O::PEPSSandwich,
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
     return @tensor GR′[-1 -2 -3; -4] :=
         GR[7 6 2; 1] *
         conj(Ā[-4 4 3; 1]) *
-        O[1][5; 9 6 4 -2] *
-        conj(O[2][5; 8 2 3 -3]) *
+        ket(O)[5; 9 6 4 -2] *
+        conj(bra(O)[5; 8 2 3 -3]) *
         A[-1 9 8 7]
 end
 
@@ -39,31 +49,31 @@ end
 # specialize simple case
 function MPSKit.transfer_left(
     GL::GenericMPSTensor{S,4},
-    O::Tuple{T,T,Tuple{P}},
+    O::PEPOSandwich{1},
     A::GenericMPSTensor{S,4},
     Ā::GenericMPSTensor{S,4},
-) where {S,T<:PEPSTensor,P<:PEPOTensor}
+) where {S}
     @tensor GL′[-1 -2 -3 -4; -5] :=
         GL[10 7 4 2; 1] *
         conj(Ā[10 11 12 13; -1]) *
-        O[1][8; 9 -2 11 7] *
-        O[3][1][5 8; 6 -3 12 4] *
-        conj(O[2][5; 3 -4 13 2]) *
+        ket(O)[8; 9 -2 11 7] *
+        only(pepo(O))[5 8; 6 -3 12 4] *
+        conj(bra(O)[5; 3 -4 13 2]) *
         A[1 9 6 3; -5]
 end
 
 # general case
 function MPSKit.transfer_left(
     GL::GenericMPSTensor{S,N},
-    O::Tuple{T,T,Tuple{Vararg{P,H}}},
+    O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
     Ā::GenericMPSTensor{S,N},
-) where {S,T<:PEPSTensor,P<:PEPOTensor,N,H}
+) where {S,N,H}
     # sanity check
     @assert H == N - 3
 
     # collect tensors in convenient order: env, above, below, top, mid, bot
-    tensors = [GL, A, Ā, O[1], O[3]..., O[2]]
+    tensors = [GL, A, Ā, ket(O), pepo(O)..., bra(O)]
 
     # contraction order: GL, A, top, mid..., bot, Ā
 
@@ -96,31 +106,31 @@ end
 # specialize simple case
 function MPSKit.transfer_right(
     GR::GenericMPSTensor{S,4},
-    O::Tuple{T,T,Tuple{P}},
+    O::PEPOSandwich{1},
     A::GenericMPSTensor{S,4},
     Ā::GenericMPSTensor{S,4},
-) where {S,T<:PEPSTensor,P<:PEPOTensor}
+) where {S}
     return @tensor GR′[-1 -2 -3 -4; -5] :=
         GR[10 7 4 2; 1] *
         conj(Ā[-5 9 6 3; 1]) *
-        O[1][8; 11 7 9 -2] *
-        O[3][1][5 8; 12 4 6 -3] *
-        conj(O[2][5; 13 2 3 -4]) *
+        ket(O)[8; 11 7 9 -2] *
+        only(pepo(O))[5 8; 12 4 6 -3] *
+        conj(bra(O)[5; 13 2 3 -4]) *
         A[-1 11 12 13; 10]
 end
 
 # general case
 function MPSKit.transfer_right(
     GR::GenericMPSTensor{S,N},
-    O::Tuple{T,T,Tuple{Vararg{P,H}}},
+    O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
     Ā::GenericMPSTensor{S,N},
-) where {S,T<:PEPSTensor,P<:PEPOTensor,N,H}
+) where {S,N,H}
     # sanity check
     @assert H == N - 3
 
     # collect tensors in convenient order: env, above, below, top, mid, bot
-    tensors = [GR, A, Ā, O[1], O[3]..., O[2]]
+    tensors = [GR, A, Ā, ket(O), pepo(O)..., bra(O)]
 
     # contraction order: GR, A, top, mid..., bot, Ā
 
@@ -159,7 +169,7 @@ end
 end
 
 # TODO: properly implement in the most efficient way
-function contract_mpo_expval(
+function MPSKit.contract_mpo_expval(
     AC::GenericMPSTensor{S,N},
     GL::GenericMPSTensor{S,N},
     O,
@@ -184,26 +194,26 @@ end
 
 function MPSKit.∂AC(
     AC::GenericMPSTensor{S,3},
-    O::NTuple{2,T},
+    O::PEPSSandwich,
     GL::GenericMPSTensor{S,3},
     GR::GenericMPSTensor{S,3},
-) where {S,T<:PEPSTensor}
+) where {S}
     return @tensor AC′[-1 -2 -3; -4] :=
         GL[-1 8 9; 7] *
         AC[7 4 2; 1] *
         GR[1 6 3; -4] *
-        O[1][5; 4 6 -2 8] *
-        conj(O[2][5; 2 3 -3 9])
+        ket(O)[5; 4 6 -2 8] *
+        conj(bra(O)[5; 2 3 -3 9])
 end
 
 # PEPS derivative
 function ∂peps(
     AC::GenericMPSTensor{S,3},
     ĀC::GenericMPSTensor{S,3},
-    O::T,
+    O::PEPSTensor,
     GL::GenericMPSTensor{S,3},
     GR::GenericMPSTensor{S,3},
-) where {S,T<:PEPSTensor}
+) where {S}
     return @tensor ∂p[-1; -2 -3 -4 -5] :=
         GL[8 5 -5; 1] *
         AC[1 6 -2; 7] *
@@ -231,30 +241,30 @@ end
 # specialize simple case
 function MPSKit.∂AC(
     AC::GenericMPSTensor{S,4},
-    O::Tuple{T,T,Tuple{P}},
+    O::PEPOSandwich{1},
     GL::GenericMPSTensor{S,4},
     GR::GenericMPSTensor{S,4},
-) where {S,T<:PEPSTensor,P<:PEPOTensor}
+) where {S}
     return @tensor AC′[-1 -2 -3 -4; -5] :=
         GL[-1 2 4 7; 1] *
         AC[1 3 5 8; 10] *
         GR[10 11 12 13; -5] *
-        O[1][6; 3 11 -2 2] *
-        O[3][1][9 6; 5 12 -3 4] *
-        conj(O[2][9; 8 13 -4 7])
+        ket(O)[6; 3 11 -2 2] *
+        only(pepo(O))[9 6; 5 12 -3 4] *
+        conj(bra(O)[9; 8 13 -4 7])
 end
 
 function MPSKit.∂AC(
     AC::GenericMPSTensor{S,N},
-    O::Tuple{T,T,Tuple{Vararg{P,H}}},
+    O::PEPOSandwich{H},
     GL::GenericMPSTensor{S,N},
     GR::GenericMPSTensor{S,N},
-) where {S,T<:PEPSTensor,P<:PEPOTensor,N,H}
+) where {S,N,H}
     # sanity check
     @assert H == N - 3
 
     # collect tensors in convenient order: AC, GL, GR, top, mid, bot
-    tensors = [AC, GL, GR, O[1], O[3]..., O[2]]
+    tensors = [AC, GL, GR, ket(O), pepo(O)..., bra(O)]
 
     # contraction order: AC, GL, top, mid..., bot, GR
 
@@ -286,19 +296,25 @@ end
 
 # PEPS derivative
 
+# sandwich with the bottom dropped out...
+const ∂PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,Tuple{Vararg{P,N}}}
+ket(p::∂PEPOSandwich) = p[1]
+pepo(p::∂PEPOSandwich) = p[2]
+pepo(p::∂PEPOSandwich, i::Int) = p[2][i]
+
 # specialize simple case
 function ∂peps(
     AC::GenericMPSTensor{S,4},
     ĀC::GenericMPSTensor{S,4},
-    O::Tuple{T,Tuple{P}},
+    O::∂PEPOSandwich{1},
     GL::GenericMPSTensor{S,4},
     GR::GenericMPSTensor{S,4},
-) where {S,T<:PEPSTensor,P<:PEPOTensor}
+) where {S}
     return @tensor ∂p[-1; -2 -3 -4 -5] :=
         GL[13 8 10 -5; 1] *
         AC[1 9 11 -2; 12] *
-        O[1][5; 9 3 4 8] *
-        O[2][1][-1 5; 11 6 7 10] *
+        ket(O)[5; 9 3 4 8] *
+        only(pepo(O))[-1 5; 11 6 7 10] *
         GR[12 3 6 -3; 2] *
         conj(ĀC[13 4 7 -4; 2])
 end
@@ -306,15 +322,15 @@ end
 function ∂peps(
     AC::GenericMPSTensor{S,N},
     ĀC::GenericMPSTensor{S,N},
-    O::Tuple{T,Tuple{Vararg{P,H}}},
+    O::∂PEPOSandwich{H},
     GL::GenericMPSTensor{S,N},
     GR::GenericMPSTensor{S,N},
-) where {S,T,P,N,H}
+) where {S,N,H}
     # sanity check
     @assert H == N - 3
 
     # collect tensors in convenient order: AC, GL, top, mid, GR, ĀC
-    tensors = [AC, ĀC, GL, GR, O[1], O[2]...]
+    tensors = [AC, ĀC, GL, GR, ket(O), pepo(O)...]
 
     # contraction order: AC, GL, top, mid..., bot, GR
 
