@@ -16,6 +16,13 @@ function which corresponds to the overlap between 'ket' and 'bra' `InfinitePEPS`
 struct InfiniteTransferPEPS{T}
     top::PeriodicArray{T,1}
     bot::PeriodicArray{T,1}
+    function InfiniteTransferPEPS(
+        top::PeriodicArray{T,1}, bot::PeriodicArray{T,1}
+    ) where {T}
+        size(top) == size(bot) ||
+            throw(ArgumentError("Top and bottom PEPS rows should have equal sizes."))
+        return new{T}(top, bot)
+    end
 end
 
 InfiniteTransferPEPS(top) = InfiniteTransferPEPS(top, top)
@@ -82,6 +89,13 @@ struct InfiniteTransferPEPO{T,O}
     top::PeriodicArray{T,1}
     mid::PeriodicArray{O,2}
     bot::PeriodicArray{T,1}
+    function InfiniteTransferPEPO(
+        top::PeriodicArray{T,1}, mid::PeriodicArray{O,2}, bot::PeriodicArray{T,1}
+    ) where {T,O}
+        size(top, 1) == size(bot, 1) == size(mid, 1) ||
+            throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
+        return new{T,O}(top, mid, bot)
+    end
 end
 
 InfiniteTransferPEPO(top, mid) = InfiniteTransferPEPO(top, mid, top)
@@ -160,8 +174,10 @@ function MPSKit.right_virtualspace(O::InfiniteTransferMatrix, i)
     return _elementwise_dual(east_space(O, i))
 end # follow MPSKit convention: right vspace gets a dual by default
 
-Base.getindex(t::MultilineTransferMatrix, i::Colon, j::Int) = Base.getindex.(t.data[i], j)
-Base.getindex(t::MultilineTransferMatrix, i::Int, j) = Base.getindex(t.data[i], j)
+function Base.getindex(t::MultilineTransferMatrix, ::Colon, j::Int)
+    return Base.getindex.(parent(t), j)
+end
+Base.getindex(t::MultilineTransferMatrix, i::Int, j) = Base.getindex(t[i], j)
 
 """
     initializeMPS(
