@@ -210,7 +210,7 @@ end
 function ∂peps(
     AC::GenericMPSTensor{S,3},
     ĀC::GenericMPSTensor{S,3},
-    O::PEPSTensor,
+    O::PEPSTensor{S},
     GL::GenericMPSTensor{S,3},
     GR::GenericMPSTensor{S,3},
 ) where {S}
