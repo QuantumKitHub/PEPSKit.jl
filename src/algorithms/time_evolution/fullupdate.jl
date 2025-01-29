@@ -210,39 +210,38 @@ function fullupdate(
     )
     gate = get_gate(fu_alg.dt, ham)
     peps0, envs0, wts0, wts = deepcopy(peps), deepcopy(envs), nothing, nothing
-    esite0, diff_energy = Inf, 0.0
+    energy0, energy, ediff, wtdiff = Inf, 0.0, 0.0, NaN
     for count in 1:(fu_alg.maxiter)
         time0 = time()
         peps, envs, wts, (fid, cost) = fu_iter(gate, peps, envs, fu_alg)
-        diff_wts = (count == 1) ? NaN : compare_weights(wts, wts0)
+        wtdiff = (count == 1) ? NaN : compare_weights(wts, wts0)
         wts0 = deepcopy(wts)
         time1 = time()
         if count == 1 || count % fu_alg.reconv_int == 0
+            # reconverge environment
             meast0 = time()
-            # reconverge `env` (in place)
             println(stderr, "---- FU step $count: reconverging envs ----")
             envs = leading_boundary(envs, peps, fu_alg.reconv_alg)
-            esite = costfun(peps, envs, ham) / (Nr * Nc)
+            energy = costfun(peps, envs, ham) / (Nr * Nc)
             meast1 = time()
-            # monitor change of CTMRGEnv by its singular values
-            diff_energy = esite - esite0
+            ediff = energy - energy0
             @printf(
                 "%-4d %7.0e%10.5f%12.3e%11.3e  %.3f/%.3f\n",
                 count,
                 fu_alg.dt,
-                esite,
-                diff_energy,
-                diff_wts,
+                energy,
+                ediff,
+                wtdiff,
                 time1 - time0,
                 meast1 - meast0
             )
-            if diff_energy > 0
+            if ediff > 0
                 @printf("Energy starts to increase. Abort evolution.\n")
-                # restore peps and envs at last checking
-                peps, envs = deepcopy(peps0), deepcopy(envs0)
+                # restore last checkpoint
+                peps, envs, energy = deepcopy(peps0), deepcopy(envs0), energy0
                 break
             end
-            esite0, peps0, envs0 = esite, deepcopy(peps), deepcopy(envs)
+            peps0, envs0, energy0 = deepcopy(peps), deepcopy(envs), energy
         end
     end
     # reconverge the environment tensors
@@ -250,8 +249,9 @@ function fullupdate(
         @printf(io, "Reconverging final envs ... \n")
     end
     envs = leading_boundary(envs, peps, ctm_alg)
+    energy = costfun(peps, envs, ham) / (Nr * Nc)
     time_end = time()
     @printf("Evolution time: %.3f s\n\n", time_end - time_start)
     print(stderr, "\n----------\n\n")
-    return peps, envs, (esite0, diff_energy)
+    return peps, envs, (; energy, ediff, wtdiff)
 end

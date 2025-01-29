@@ -214,10 +214,10 @@ function ntupdate(
             if ediff > 0
                 @info "Energy starts to increase. Abort evolution.\n"
                 # restore last checkpoint
-                energy, peps, envs = energy0, deepcopy(peps0), deepcopy(envs0)
+                peps, envs, energy = deepcopy(peps0), deepcopy(envs0), energy0
                 break
             end
-            energy0, peps0, envs0 = energy, deepcopy(peps), deepcopy(envs)
+            peps0, envs0, energy0 = deepcopy(peps), deepcopy(envs), energy
             converge && break
         end
     end
