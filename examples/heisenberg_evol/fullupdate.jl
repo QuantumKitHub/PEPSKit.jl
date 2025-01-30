@@ -4,24 +4,22 @@ include("simpleupdate.jl")
 peps = peps_
 dts = [2e-2, 1e-2, 5e-3]
 maxiter = 2000
-trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
-trscheme_envs = truncerr(1e-10) & truncdim(χenv)
 colmove_alg = SequentialCTMRG(; verbosity=0, maxiter=1, trscheme=trscheme_envs)
 CTMRGAlg = SequentialCTMRG
-proj_alg = HalfInfiniteProjector
+projector_alg = HalfInfiniteProjector
 reconv_alg = CTMRGAlg(;
-    tol=1e-6, maxiter=10, verbosity=2, trscheme=trscheme_envs, projector_alg=proj_alg
+    tol=1e-6, maxiter=10, verbosity=2, trscheme=trscheme_envs, projector_alg
 )
 ctm_alg = CTMRGAlg(;
-    tol=1e-10, maxiter=50, verbosity=2, trscheme=trscheme_envs, projector_alg=proj_alg
+    tol=1e-10, maxiter=50, verbosity=2, trscheme=trscheme_envs, projector_alg
 )
 for dt in dts
     fu_alg = FullUpdate(;
         dt,
         maxiter,
         opt_alg=ALSTruncation(; trscheme=trscheme_peps),
-        colmove_alg=colmove_alg,
-        reconv_alg=reconv_alg,
+        colmove_alg,
+        reconv_alg,
     )
     result = fullupdate(peps, envs, ham, fu_alg, ctm_alg)
     global peps = result[1]

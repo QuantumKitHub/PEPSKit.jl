@@ -3,7 +3,6 @@ include("simpleupdate.jl")
 # continue SU with NTU
 dts = [1e-2, 5e-3]
 maxiter = 2000
-trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
 for dt in dts
     alg = NTUpdate(;
         dt,
@@ -11,7 +10,7 @@ for dt in dts
         tol=1e-8,
         bondenv_alg=NTUEnvNN(),
         opt_alg=FullEnvTruncation(; trscheme=trscheme_peps),
-        ctm_alg=SequentialCTMRG(; tol=1e-7, verbosity=2, maxiter=30, trscheme=trscheme),
+        ctm_alg=SequentialCTMRG(; tol=1e-7, verbosity=2, maxiter=30, trscheme=trscheme_envs),
     )
     result = ntupdate(peps, envs, ham, alg, ctm_alg; bipartite=true)
     global peps = result[1]
