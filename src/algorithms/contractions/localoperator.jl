@@ -25,21 +25,21 @@ Contract a local operator `O` on the PEPS `peps` at the indices `inds` using the
 """
 function contract_local_operator(
     inds::NTuple{N,CartesianIndex{2}},
-    O::AbstractTensorMap{S,N,N},
+    O::AbstractTensorMap{T,S,N,N},
     ket::InfinitePEPS,
     bra::InfinitePEPS,
     env::CTMRGEnv,
-) where {S,N}
+) where {T,S,N}
     static_inds = Val.(inds)
     return _contract_local_operator(static_inds, O, ket, bra, env)
 end
 function contract_local_operator(
     inds::NTuple{N,Tuple{Int,Int}},
-    O::AbstractTensorMap{S,N,N},
+    O::AbstractTensorMap{T,S,N,N},
     ket::InfinitePEPS,
     bra::InfinitePEPS,
     env::CTMRGEnv,
-) where {S,N}
+) where {T,S,N}
     return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
 end
 
@@ -171,11 +171,11 @@ end
 
 @generated function _contract_local_operator(
     inds::NTuple{N,Val},
-    O::AbstractTensorMap{S,N,N},
+    O::AbstractTensorMap{T,S,N,N},
     ket::InfinitePEPS,
     bra::InfinitePEPS,
     env::CTMRGEnv,
-) where {S,N}
+) where {T,S,N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
     allunique(cartesian_inds) ||
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
@@ -273,9 +273,9 @@ using the environment `env`.
 """
 function contract_local_tensor(
     inds::Tuple{Int,Int},
-    O::AbstractTensorMap{S,2,2},
+    O::AbstractTensorMap{T,S,2,2},
     env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
-) where {S,C}
+) where {T,S,C}
     r, c = inds
     return @autoopt @tensor env.corners[NORTHWEST, _prev(r, end), _prev(c, end)][
             χ_WNW
@@ -292,8 +292,8 @@ function contract_local_tensor(
 end
 function contract_local_tensor(
     inds::CartesianIndex{2},
-    O::AbstractTensorMap{S,2,2},
+    O::AbstractTensorMap{T,S,2,2},
     env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
-) where {S,C}
+) where {T,S,C}
     return contract_local_tensor(Tuple(inds), O, env)
 end

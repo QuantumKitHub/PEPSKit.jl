@@ -30,20 +30,19 @@ include("states/infinitepeps.jl")
 include("states/infiniteweightpeps.jl")
 include("states/infinitepartitionfunction.jl")
 
-include("operators/transferpeps.jl")
 include("operators/infinitepepo.jl")
-include("operators/transferpepo.jl")
+include("operators/transfermatrix.jl")
 include("operators/derivatives.jl")
 include("operators/localoperator.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
-include("environments/transferpeps_environments.jl")
-include("environments/transferpepo_environments.jl")
+include("environments/vumps_environments.jl")
 
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/localoperator.jl")
+include("algorithms/contractions/vumps_contractions.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -188,7 +187,7 @@ end
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export SVDAdjoint, IterSVD, NonTruncSVDAdjoint
+export SVDAdjoint, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator

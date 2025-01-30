@@ -9,7 +9,7 @@ using PEPSKit
 # using PEPSKit: HalfInfiniteEnv
 
 # Gauge-invariant loss function
-function lossfun(A, alg, R=TensorMap(randn, space(A)), trunc=notrunc())
+function lossfun(A, alg, R=randn(space(A)), trunc=notrunc())
     U, _, V, = PEPSKit.tsvd(A, alg; trunc)
     return real(dot(R, U * V))  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
 end
@@ -21,30 +21,25 @@ trunc = truncspace(ℂ^χ)
 # lorentz_broadening = 1e-12
 rtol = 1e-9
 Random.seed!(123456789)
-r = TensorMap(randn, dtype, ℂ^m, ℂ^n)
-R = TensorMap(randn, space(r))
+r = randn(dtype, ℂ^m, ℂ^n)
+R = randn(space(r))
 
 full_alg = SVDAdjoint(; rrule_alg=nothing)
-old_alg = SVDAdjoint(; rrule_alg=NonTruncSVDAdjoint(), broadening=0.0)
 iter_alg = SVDAdjoint(; fwd_alg=IterSVD())
 
 @testset "Non-truncacted SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
-    l_oldsvd, g_oldsvd = withgradient(A -> lossfun(A, old_alg, R), r)
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R), r)
 
-    @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd
-    @test g_fullsvd[1] ≈ g_oldsvd[1] rtol = rtol
+    @test l_itersvd ≈ l_fullsvd
     @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end
 
 @testset "Truncated SVD with χ=$χ" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R, trunc), r)
-    l_oldsvd, g_oldsvd = withgradient(A -> lossfun(A, old_alg, R, trunc), r)
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R, trunc), r)
 
-    @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd
-    @test !isapprox(g_fullsvd[1], g_oldsvd[1]; rtol)
+    @test l_itersvd ≈ l_fullsvd
     @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end
 
@@ -66,8 +61,8 @@ end
 symm_m, symm_n = 18, 24
 symm_space = Z2Space(0 => symm_m, 1 => symm_n)
 symm_trspace = truncspace(Z2Space(0 => symm_m ÷ 2, 1 => symm_n ÷ 3))
-symm_r = TensorMap(randn, dtype, symm_space, symm_space)
-symm_R = TensorMap(randn, dtype, space(symm_r))
+symm_r = randn(dtype, symm_space, symm_space)
+symm_R = randn(dtype, space(symm_r))
 
 @testset "IterSVD of symmetric tensors" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, symm_R), symm_r)
@@ -113,7 +108,7 @@ end
 #     psi[1],
 # )
 # hienv_dense = hienv()
-# env_R = TensorMap(randn, space(hienv))
+# env_R = randn(space(hienv))
 
 # PEPSKit.tsvd!(hienv, iter_alg)
 

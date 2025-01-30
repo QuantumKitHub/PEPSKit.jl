@@ -459,12 +459,14 @@ end
 function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     result = getproperty(e, name)
     if name === :corners
-        function corner_pullback(Δcorners)
+        function corner_pullback(Δcorners_)
+            Δcorners = unthunk(Δcorners_)
             return NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
         end
         return result, corner_pullback
     elseif name === :edges
-        function edge_pullback(Δedges)
+        function edge_pullback(Δedges_)
+            Δedges = unthunk(Δedges_)
             return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
         end
         return result, edge_pullback
