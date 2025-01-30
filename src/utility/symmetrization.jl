@@ -55,8 +55,8 @@ end
 # this is definitely not what you would want to do, but it circumvents having to think
 # about what hermiticity means at the level of transfer operators, which is something
 function _fit_spaces(
-    y::AbstractTensorMap{S,N₁,N₂}, x::AbstractTensorMap{S,N₁,N₂}
-) where {S<:IndexSpace,N₁,N₂}
+    y::AbstractTensorMap{T,S,N₁,N₂}, x::AbstractTensorMap{T,S,N₁,N₂}
+) where {T,S<:IndexSpace,N₁,N₂}
     for i in 1:(N₁ + N₂)
         if space(x, i) ≠ space(y, i)
             f = unitary(space(x, i) ← space(y, i))

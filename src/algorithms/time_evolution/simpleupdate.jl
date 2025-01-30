@@ -20,7 +20,7 @@ function truncation_scheme(alg::SimpleUpdate, v::ElementarySpace)
 end
 
 """
-_su_bondx!(row::Int, col::Int, gate::AbstractTensorMap{S,2,2},
+_su_bondx!(row::Int, col::Int, gate::AbstractTensorMap{T,S,2,2},
            peps::InfiniteWeightPEPS, alg::SimpleUpdate) where {S<:ElementarySpace}
 
 Simple update of the x-bond `peps.weights[1,r,c]`.
@@ -36,10 +36,10 @@ Simple update of the x-bond `peps.weights[1,r,c]`.
 function _su_bondx!(
     row::Int,
     col::Int,
-    gate::AbstractTensorMap{S,2,2},
+    gate::AbstractTensorMap{T,S,2,2},
     peps::InfiniteWeightPEPS,
     alg::SimpleUpdate,
-) where {S<:ElementarySpace}
+) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)

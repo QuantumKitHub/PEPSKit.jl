@@ -25,8 +25,8 @@ between two states specified by the bond matrices `b1`, `b2`
 ```
 """
 function inner_prod(
-    env::AbstractTensorMap{S,2,2}, b1::AbstractTensor{S,2}, b2::AbstractTensor{S,2}
-) where {S<:ElementarySpace}
+    env::AbstractTensorMap{T,S,2,2}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
+) where {T<:Number,S<:ElementarySpace}
     # dual check
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     val = @tensor conj(b1[1 2]) * env[1 2; 3 4] * b2[3 4]
@@ -41,8 +41,8 @@ between two states specified by the bond matrices `b1`, `b2`
 ```
 """
 function fidelity(
-    env::AbstractTensorMap{S,2,2}, b1::AbstractTensor{S,2}, b2::AbstractTensor{S,2}
-) where {S<:ElementarySpace}
+    env::AbstractTensorMap{T,S,2,2}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
+) where {T<:Number,S<:ElementarySpace}
     return abs2(inner_prod(env, b1, b2)) /
            real(inner_prod(env, b1, b1) * inner_prod(env, b2, b2))
 end
@@ -176,11 +176,11 @@ The SVD result of the new bond matrix `u`, `s`, `vh`.
 Reference: Physical Review B 98, 085155 (2018)
 """
 function fullenv_truncate(
-    env::AbstractTensorMap{S,2,2},
-    b0::AbstractTensor{S,2},
+    env::AbstractTensorMap{T,S,2,2},
+    b0::AbstractTensor{T,S,2},
     alg::FullEnvTruncation;
     flip_s::Bool=false,
-) where {S<:ElementarySpace}
+) where {T<:Number,S<:ElementarySpace}
     # ensure fermion sign will not appear
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]

@@ -2,6 +2,8 @@ include("heis_tools.jl")
 
 # benchmark data is from Phys. Rev. B 94, 035133 (2016)
 Dbond, χenv, symm = 4, 16, Trivial
+trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
+trscheme_envs = truncerr(1e-10) & truncdim(χenv)
 N1, N2 = 2, 2
 # Heisenberg model Hamiltonian
 # (already only includes nearest neighbor terms)
@@ -33,16 +35,14 @@ dts = [1e-2, 1e-3, 4e-4]
 tols = [1e-6, 1e-8, 1e-8]
 maxiter = 10000
 for (dt, tol) in zip(dts, tols)
-    trscheme = truncerr(1e-10) & truncdim(Dbond)
-    alg = SimpleUpdate(dt, tol, maxiter, trscheme)
+    alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
     result = simpleupdate(peps, ham, alg; bipartite=true)
     global peps = result[1]
 end
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
 envs = CTMRGEnv(rand, Float64, peps_, Espace)
-trscheme = truncerr(1e-10) & truncdim(χenv)
-ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme)
+ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme_envs)
 envs = leading_boundary(envs, peps_, ctm_alg)
 meas = measure_heis(peps_, ham, envs)
 display(meas)

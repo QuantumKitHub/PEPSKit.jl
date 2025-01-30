@@ -11,8 +11,11 @@ Full environment truncation (FET) of the bond between `a` and `b`.
 Reference: Physical Review B 98, 085155 (2018)
 """
 function bond_optimize(
-    env::BondEnv{S}, a::AbstractTensor{S,3}, b::AbstractTensor{S,3}, alg::FullEnvTruncation
-) where {S<:ElementarySpace}
+    env::BondEnv{T,S},
+    a::AbstractTensor{T,S,3},
+    b::AbstractTensor{T,S,3},
+    alg::FullEnvTruncation,
+) where {T<:Number,S<:ElementarySpace}
     # dual check
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(a, ax)) for ax in 1:2] == [0, 0]

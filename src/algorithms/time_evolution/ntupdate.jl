@@ -23,10 +23,10 @@ Neighborhood tensor update for the bond between sites `[row, col]` and `[row, co
 function _ntu_bondx!(
     row::Int,
     col::Int,
-    gate::AbstractTensorMap{S,2,2},
+    gate::AbstractTensorMap{T,S,2,2},
     peps::InfiniteWeightPEPS,
     alg::NTUpdate,
-) where {S<:ElementarySpace}
+) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
@@ -184,6 +184,7 @@ function ntupdate(
     gate = get_gate(alg.dt, ham)
     wts0, peps0, envs0 = deepcopy(peps.weights), deepcopy(envs), deepcopy(envs)
     energy0, energy, ediff, wtdiff = Inf, 0.0, 0.0, 1.0
+    energy0, energy, ediff, wtdiff = Inf, 0.0, 0.0, 1.0
     for count in 1:(alg.maxiter)
         time0 = time()
         peps = ntu_iter(gate, peps, alg; bipartite)
@@ -194,9 +195,12 @@ function ntupdate(
         time1 = time()
         if count == 1 || count % alg.ctm_int == 0 || converge || cancel
             # monitor change of energy
+            # monitor change of energy
             meast0 = time()
             peps_ = InfinitePEPS(peps)
             envs = leading_boundary(envs, peps_, alg.ctm_alg)
+            energy = costfun(peps_, envs, ham) / (Nr * Nc)
+            ediff = energy - energy0
             energy = costfun(peps_, envs, ham) / (Nr * Nc)
             ediff = energy - energy0
             meast1 = time()
@@ -204,6 +208,7 @@ function ntupdate(
                 "%-4d %7.0e%10.5f%12.3e%11.3e  %.3f/%.3f\n",
                 count,
                 alg.dt,
+                energy,
                 energy,
                 ediff,
                 wtdiff,
@@ -214,10 +219,10 @@ function ntupdate(
             if ediff > 0
                 @info "Energy starts to increase. Abort evolution.\n"
                 # restore last checkpoint
-                energy, peps, envs = energy0, deepcopy(peps0), deepcopy(envs0)
+                peps, envs, energy = deepcopy(peps0), deepcopy(envs0), energy0
                 break
             end
-            energy0, peps0, envs0 = energy, deepcopy(peps), deepcopy(envs)
+            peps0, envs0, energy0 = deepcopy(peps), deepcopy(envs), energy
             converge && break
         end
     end
@@ -228,8 +233,10 @@ function ntupdate(
     peps_ = InfinitePEPS(peps)
     envs = leading_boundary(envs, peps_, ctm_alg)
     energy = costfun(peps_, envs, ham) / (Nr * Nc)
+    energy = costfun(peps_, envs, ham) / (Nr * Nc)
     time_end = time()
     @printf("Evolution time: %.3f s\n\n", time_end - time_start)
     print(stderr, "\n----------\n\n")
+    return peps, envs, (; energy, ediff, wtdiff)
     return peps, envs, (; energy, ediff, wtdiff)
 end
