@@ -23,7 +23,9 @@ Construct the tensor
     |---------------------------|
 ```
 """
-function tensor_Ra(env::BondEnv{S}, bL::AbstractTensor{S,3}) where {S<:ElementarySpace}
+function tensor_Ra(
+    env::BondEnv{T,S}, bL::AbstractTensor{T,S,3}
+) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Ra[DX1, Db1, DX0, Db0] := (
         env[DX1, DY1, DX0, DY0] * bL[Db0, db, DY0] * conj(bL[Db1, db, DY1])
     )
@@ -42,8 +44,8 @@ Construct the tensor
 ```
 """
 function tensor_Sa(
-    env::BondEnv{S}, bL::AbstractTensor{S,3}, aR2bL2::AbstractTensor{S,4}
-) where {S<:ElementarySpace}
+    env::BondEnv{T,S}, bL::AbstractTensor{T,S,3}, aR2bL2::AbstractTensor{T,S,4}
+) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Sa[DX1, Db1, da] := (
         env[DX1, DY1, DX0, DY0] * conj(bL[Db1, db, DY1]) * aR2bL2[DX0, da, db, DY0]
     )
@@ -61,7 +63,9 @@ Construct the tensor
     |---------------------------|
 ```
 """
-function tensor_Rb(env::BondEnv{S}, aR::AbstractTensor{S,3}) where {S<:ElementarySpace}
+function tensor_Rb(
+    env::BondEnv{T,S}, aR::AbstractTensor{T,S,3}
+) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Rb[Da1, DY1, Da0, DY0] := (
         env[DX1, DY1, DX0, DY0] * aR[DX0, da, Da0] * conj(aR[DX1, da, Da1])
     )
@@ -80,8 +84,8 @@ Construct the tensor
 ```
 """
 function tensor_Sb(
-    env::BondEnv{S}, aR::AbstractTensor{S,3}, aR2bL2::AbstractTensor{S,4}
-) where {S<:ElementarySpace}
+    env::BondEnv{T,S}, aR::AbstractTensor{T,S,3}, aR2bL2::AbstractTensor{T,S,4}
+) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Sb[Da1, DY1, db] := (
         env[DX1, DY1, DX0, DY0] * conj(aR[DX1, da, Da1]) * aR2bL2[DX0, da, db, DY0]
     )
@@ -100,8 +104,8 @@ Calculate the inner product <a1,b1|a2,b2>
 ```
 """
 function inner_prod(
-    env::BondEnv{S}, aR1bL1::AbstractTensor{S,4}, aR2bL2::AbstractTensor{S,4}
-) where {S<:ElementarySpace}
+    env::BondEnv{T,S}, aR1bL1::AbstractTensor{T,S,4}, aR2bL2::AbstractTensor{T,S,4}
+) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor env[DX1, DY1, DX0, DY0] *
         conj(aR1bL1[DX1, da, db, DY1]) *
         aR2bL2[DX0, da, db, DY0]
@@ -117,8 +121,8 @@ between two evolution steps
 ```
 """
 function fidelity(
-    env::BondEnv{S}, aR1bL1::AbstractTensor{S,4}, aR2bL2::AbstractTensor{S,4}
-) where {S<:ElementarySpace}
+    env::BondEnv{T,S}, aR1bL1::AbstractTensor{T,S,4}, aR2bL2::AbstractTensor{T,S,4}
+) where {T<:Number,S<:ElementarySpace}
     b12 = inner_prod(env, aR1bL1, aR2bL2)
     b11 = inner_prod(env, aR1bL1, aR1bL1)
     b22 = inner_prod(env, aR2bL2, aR2bL2)
@@ -129,8 +133,8 @@ end
 Contract the axis between `aR` and `bL` tensors
 """
 function _combine_aRbL(
-    aR::AbstractTensor{S,3}, bL::AbstractTensor{S,3}
-) where {S<:ElementarySpace}
+    aR::AbstractTensor{T,S,3}, bL::AbstractTensor{T,S,3}
+) where {T<:Number,S<:ElementarySpace}
     #= 
             da      db
             ↑       ↑
@@ -148,8 +152,8 @@ Calculate the cost function
 ```
 """
 function cost_func(
-    env::BondEnv{S}, aR1bL1::AbstractTensor{S,4}, aR2bL2::AbstractTensor{S,4}
-) where {S<:ElementarySpace}
+    env::BondEnv{T,S}, aR1bL1::AbstractTensor{T,S,4}, aR2bL2::AbstractTensor{T,S,4}
+) where {T<:Number,S<:ElementarySpace}
     t1 = inner_prod(env, aR1bL1, aR1bL1)
     t2 = inner_prod(env, aR2bL2, aR2bL2)
     t3 = inner_prod(env, aR1bL1, aR2bL2)
@@ -163,8 +167,8 @@ Solving the equations
 ```
 """
 function solve_ab(
-    tR::AbstractTensor{S,4}, tS::AbstractTensorMap{S,3}, ab0::AbstractTensor{S,3}
-) where {S<:ElementarySpace}
+    tR::AbstractTensor{T,S,4}, tS::AbstractTensorMap{T,S,3}, ab0::AbstractTensor{T,S,3}
+) where {T<:Number,S<:ElementarySpace}
     f(x) = ncon((tR, x), ([-1, -2, 1, 2], [1, 2, -3]))
     ab, info = linsolve(f, tS, permute(ab0, (1, 3, 2)), 0, 1)
     return permute(ab, (1, 3, 2)), info
@@ -184,8 +188,11 @@ Minimize the cost function
 `aR0`, `bL0` are initial values of `aR`, `bL`
 """
 function bond_optimize(
-    env::BondEnv{S}, a::AbstractTensor{S,3}, b::AbstractTensor{S,3}, alg::ALSTruncation
-) where {S<:ElementarySpace}
+    env::BondEnv{T,S},
+    a::AbstractTensor{T,S,3},
+    b::AbstractTensor{T,S,3},
+    alg::ALSTruncation,
+) where {T<:Number,S<:ElementarySpace}
     # dual check
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(a, ax)) for ax in 1:2] == [0, 0]

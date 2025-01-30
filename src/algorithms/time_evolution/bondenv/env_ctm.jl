@@ -69,12 +69,12 @@ end
 Fix local gauge of the env tensor around a bond
 """
 function fu_fixgauge(
-    Z::AbstractTensorMap{S,1,2},
-    X::PEPSOrth{S},
-    Y::PEPSOrth{S},
-    aR::BondPhys{S},
-    bL::BondPhys{S},
-) where {S<:ElementarySpace}
+    Z::AbstractTensorMap{T,S,1,2},
+    X::PEPSOrth{T,S},
+    Y::PEPSOrth{T,S},
+    aR::AbstractTensor{T,S,3},
+    bL::AbstractTensor{T,S,3},
+) where {T<:Number,S<:ElementarySpace}
     #= 
             1               1
             ↑               ↑

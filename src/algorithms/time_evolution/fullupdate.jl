@@ -43,11 +43,11 @@ Full update for the bond between `[row, col]` and `[row, col+1]`.
 function _fu_bondx!(
     row::Int,
     col::Int,
-    gate::AbstractTensorMap{S,2,2},
+    gate::AbstractTensorMap{T,S,2,2},
     peps::InfinitePEPS,
     envs::CTMRGEnv,
     alg::FullUpdate,
-) where {S<:ElementarySpace}
+) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     cp1 = _next(col, Nc)
     A, B = peps[row, col], peps[row, cp1]

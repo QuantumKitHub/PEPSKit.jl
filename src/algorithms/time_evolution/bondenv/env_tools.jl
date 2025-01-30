@@ -198,12 +198,12 @@ Construct the top-left corner
 ```
 """
 function enlarge_corner_tl(
-    ctl::AbstractTensor{S,4},
-    et::AbstractTensor{S,6},
-    el::AbstractTensor{S,6},
-    ket::PEPSOrth{S},
-    bra::PEPSOrth{S}=ket,
-) where {S<:ElementarySpace}
+    ctl::AbstractTensor{T,S,4},
+    et::AbstractTensor{T,S,6},
+    el::AbstractTensor{T,S,6},
+    ket::PEPSOrth{T,S},
+    bra::PEPSOrth{T,S}=ket,
+) where {T<:Number,S<:ElementarySpace}
     return @tensor ctl2[:] :=
         ctl[D11 D10 D21 D20] *
         et[-5 -6 D31 D30 D11 D10] *
@@ -225,12 +225,12 @@ Construct the bottom-right corner
 ```
 """
 function enlarge_corner_br(
-    cbr::AbstractTensor{S,4},
-    eb::AbstractTensor{S,6},
-    er::AbstractTensor{S,6},
-    ket::PEPSOrth{S},
-    bra::PEPSOrth{S}=ket,
-) where {S<:ElementarySpace}
+    cbr::AbstractTensor{T,S,4},
+    eb::AbstractTensor{T,S,6},
+    er::AbstractTensor{T,S,6},
+    ket::PEPSOrth{T,S},
+    bra::PEPSOrth{T,S}=ket,
+) where {T<:Number,S<:ElementarySpace}
     return @tensor cbr2[:] :=
         cbr[D31 D30 D41 D40] *
         eb[D21 D20 D41 D40 -7 -8] *

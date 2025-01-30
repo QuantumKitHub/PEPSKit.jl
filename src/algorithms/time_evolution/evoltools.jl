@@ -5,11 +5,9 @@ Abstract super type for all algorithms to construct the environment of a bond in
 """
 abstract type BondEnvAlgorithm end
 
-const Hair{S} = AbstractTensor{S,2} where {S<:ElementarySpace}
-const BondEnv{S} = AbstractTensorMap{S,2,2} where {S<:ElementarySpace}
-const PEPSOrth{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
-const BondPhys{S} = AbstractTensor{S,3} where {S<:ElementarySpace}
-const BondPhys2{S} = AbstractTensor{S,4} where {S<:ElementarySpace}
+const Hair{T,S} = AbstractTensor{T,S,2} where {T<:Number,S<:ElementarySpace}
+const BondEnv{T,S} = AbstractTensorMap{T,S,2,2} where {T<:Number,S<:ElementarySpace}
+const PEPSOrth{T,S} = AbstractTensor{T,S,4} where {T<:Number,S<:ElementarySpace}
 
 include("bondenv/env_tools.jl")
 include("bondenv/env_ntu.jl")

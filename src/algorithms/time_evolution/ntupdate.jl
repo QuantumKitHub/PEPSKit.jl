@@ -23,10 +23,10 @@ Neighborhood tensor update for the bond between sites `[row, col]` and `[row, co
 function _ntu_bondx!(
     row::Int,
     col::Int,
-    gate::AbstractTensorMap{S,2,2},
+    gate::AbstractTensorMap{T,S,2,2},
     peps::InfiniteWeightPEPS,
     alg::NTUpdate,
-) where {S<:ElementarySpace}
+) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
