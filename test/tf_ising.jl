@@ -21,12 +21,12 @@ mˣ = 0.91
 χenv = 16
 ctm_alg = SimultaneousCTMRG()
 opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=2)
+    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=3)
 )
 
 # initialize states
 H = transverse_field_ising(InfiniteSquare(); g)
-Random.seed!(91283219347)
+Random.seed!(2928528935)
 psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
