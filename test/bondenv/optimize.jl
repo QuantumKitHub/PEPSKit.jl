@@ -7,8 +7,10 @@ using LinearAlgebra
 using KrylovKit
 
 function _postprocess(
-    aR::AbstractTensorMap{S,2,1}, s::AbstractTensorMap{S,1,1}, bL::AbstractTensorMap{S,1,2}
-) where {S<:ElementarySpace}
+    aR::AbstractTensorMap{T,S,2,1},
+    s::AbstractTensorMap{T,S,1,1},
+    bL::AbstractTensorMap{T,S,1,2},
+) where {T<:Number,S<:ElementarySpace}
     aR, bL = PEPSKit.absorb_s(aR, s, bL)
     return permute(aR, (1, 2, 3)), permute(bL, (1, 2, 3))
 end

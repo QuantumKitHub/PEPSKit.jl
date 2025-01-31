@@ -53,11 +53,11 @@ end
 @testset "Simple update into AD optimization" begin
     # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
     Random.seed!(234829)
-    N1, N2 = 2, 2
+    Nr, Nc = 2, 2
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
-    wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+    wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
 
     # normalize vertex tensors
     for ind in CartesianIndices(wpeps.vertices)
