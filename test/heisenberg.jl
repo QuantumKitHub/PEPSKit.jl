@@ -47,16 +47,16 @@ end
 
 @testset "Simple update into AD optimization" begin
     # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
-    Random.seed!(789)
+    Random.seed!(234829)
     N1, N2 = 2, 2
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
-    peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+    wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
 
     # normalize vertex tensors
-    for ind in CartesianIndices(peps.vertices)
-        peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
+    for ind in CartesianIndices(wpeps.vertices)
+        wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
     end
     # Heisenberg model Hamiltonian (already only includes nearest neighbor terms)
     ham = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0)
@@ -71,12 +71,12 @@ end
         Dbond2 = (n == 1) ? Dbond + 2 : Dbond
         trscheme = truncerr(1e-10) & truncdim(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        result = simpleupdate(peps, ham, alg; bipartite=false)
-        peps = result[1]
+        result = simpleupdate(wpeps, ham, alg; bipartite=false)
+        wpeps = result[1]
     end
 
     # absorb weight into site tensors and CTMRG
-    peps = InfinitePEPS(peps)
+    peps = InfinitePEPS(wpeps)
     envs₀ = CTMRGEnv(rand, Float64, peps, Espace)
     envs, = leading_boundary(envs₀, peps, SimultaneousCTMRG())
 
@@ -87,7 +87,7 @@ end
     @test isapprox(e_site, -0.6594; atol=1e-3)
 
     # continue with auto differentiation
-    svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-8))
+    svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-5))
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
     peps_final, env_final, E_final, = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)

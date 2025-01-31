@@ -44,9 +44,9 @@ end
 # Pre-allocate U, S, and V tensor as Zygote buffers to make it differentiable
 function _prealloc_svd(edges::AbstractArray{E,N}) where {E,N}
     Sc = scalartype(E)
-    U = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, space(e)), edges))
-    V = Zygote.Buffer(map(e -> TensorMap(zeros, Sc, domain(e), codomain(e)), edges))
-    S = Zygote.Buffer(edges, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
+    U = Zygote.Buffer(map(e -> zeros(Sc, space(e)), edges))
+    V = Zygote.Buffer(map(e -> zeros(Sc, domain(e), codomain(e)), edges))
+    S = Zygote.Buffer(U.data, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
     return U, S, V
 end
 

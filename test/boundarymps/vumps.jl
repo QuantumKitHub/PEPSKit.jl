@@ -27,7 +27,7 @@ end
 
 @testset "(2, 2) PEPS" begin
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
-    T = PEPSKit.TransferPEPSMultiline(psi, 1)
+    T = PEPSKit.MultilineTransferPEPS(psi, 1)
 
     mps = PEPSKit.initializeMPS(T, fill(ComplexSpace(20), 2, 2))
     mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)

@@ -29,6 +29,9 @@ end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end
+        @time @safetestset "Jacobian real linearity" begin
+            include("ctmrg/jacobian_real_linear.jl")
+        end
         @time @safetestset "Partition function" begin
             include("ctmrg/partition_function.jl")
         end

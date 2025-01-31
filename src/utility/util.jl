@@ -37,10 +37,10 @@ function eachcoordinate end
 @non_differentiable eachcoordinate(args...)
 
 # Element-wise multiplication of TensorMaps respecting block structure
-function _elementwise_mult(a::AbstractTensorMap, b::AbstractTensorMap)
-    dst = similar(a)
-    for (k, block) in blocks(dst)
-        copyto!(block, blocks(a)[k] .* blocks(b)[k])
+function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
+    dst = similar(a₁)
+    for (k, b) in blocks(dst)
+        copyto!(b, block(a₁, k) .* block(a₂, k))
     end
     return dst
 end
@@ -56,7 +56,9 @@ function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))
     tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
     Spow = similar(S)
     for (k, b) in blocks(S)
-        copyto!(blocks(Spow)[k], diagm(_safe_pow.(diag(b), pow, tol)))
+        copyto!(
+            block(Spow, k), LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol))
+        )
     end
     return Spow
 end
@@ -83,7 +85,8 @@ function ChainRulesCore.rrule(
     tol *= norm(S, Inf)
     spow = sdiag_pow(S, pow; tol)
     spow_minus1_conj = scale!(sdiag_pow(S', pow - 1; tol), pow)
-    function sdiag_pow_pullback(c̄)
+    function sdiag_pow_pullback(c̄_)
+        c̄ = unthunk(c̄_)
         return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
     end
     return spow, sdiag_pow_pullback

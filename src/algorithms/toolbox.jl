@@ -25,9 +25,9 @@ convention.
 """
 function MPSKit.expectation_value(
     pf::InfinitePartitionFunction,
-    op::Pair{CartesianIndex{2},<:AbstractTensorMap{S,2,2}},
+    op::Pair{CartesianIndex{2},<:AbstractTensorMap{T,S,2,2}},
     envs::CTMRGEnv,
-) where {S}
+) where {T,S}
     return contract_local_tensor(op[1], op[2], envs) /
            contract_local_tensor(op[1], pf[op[1]], envs)
 end
@@ -139,6 +139,32 @@ function value(partfunc::InfinitePartitionFunction, env::CTMRGEnv)
     return total
 end
 
+function MPSKit.transfer_spectrum(
+    above::MultilineMPS,
+    O::MultilineTransferMatrix,
+    below::MultilineMPS;
+    num_vals=2,
+    solver=MPSKit.Defaults.eigsolver,
+)
+    @assert size(above) == size(O)
+    @assert size(below) == size(O)
+
+    numrows = size(above, 1)
+    eigenvals = Vector{Vector{scalartype(above)}}(undef, numrows)
+
+    @threads for cr in 1:numrows
+        L0 = MPSKit.randomize!(MPSKit.allocate_GL(above[cr - 1], O[cr], below[cr + 1], 1))
+
+        E_LL = MPSKit.TransferMatrix(above[cr - 1].AL, O[cr], below[cr + 1].AL)  # Note that this index convention is different from above!
+        λ, _, convhist = eigsolve(flip(E_LL), L0, num_vals, :LM, solver)
+        convhist.converged < num_vals &&
+            @warn "correlation length failed to converge: normres = $(convhist.normres)"
+        eigenvals[cr] = λ
+    end
+
+    return eigenvals
+end
+
 """
     correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
 
@@ -154,23 +180,23 @@ function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2
     λ_v = Vector{Vector{T}}(undef, size(peps, 2))
 
     # Horizontal
-    above_h = MPSMultiline(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
+    above_h = MultilineMPS(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
     respaced_edges_h = map(zip(space.(env.edges)[1, :, :], env.edges[3, :, :])) do (V1, T3)
         return TensorMap(T3.data, V1)
     end
-    below_h = MPSMultiline(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
-    transfer_peps_h = TransferPEPSMultiline(peps, NORTH)
+    below_h = MultilineMPS(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
+    transfer_peps_h = MultilineTransferPEPS(peps, NORTH)
     vals_h = MPSKit.transfer_spectrum(above_h, transfer_peps_h, below_h; num_vals)
     λ_h = map(λ_row -> λ_row / abs(λ_row[1]), vals_h)  # Normalize largest eigenvalue
     ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
 
     # Vertical
-    above_v = MPSMultiline(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
+    above_v = MultilineMPS(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
     respaced_edges_v = map(zip(space.(env.edges)[2, :, :], env.edges[4, :, :])) do (V2, T4)
         return TensorMap(T4.data, V2)
     end
-    below_v = MPSMultiline(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
-    transfer_peps_v = TransferPEPSMultiline(peps, EAST)
+    below_v = MultilineMPS(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
+    transfer_peps_v = MultilineTransferPEPS(peps, EAST)
     vals_v = MPSKit.transfer_spectrum(above_v, transfer_peps_v, below_v; num_vals)
     λ_v = map(λ_row -> λ_row / abs(λ_row[1]), vals_v)  # Normalize largest eigenvalue
     ξ_v = map(λ_row -> -1 / log(abs(λ_row[2])), λ_v)
