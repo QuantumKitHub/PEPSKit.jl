@@ -190,7 +190,7 @@ export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator
 export expectation_value, costfun, product_peps, correlation_length
 export leading_boundary
-export PEPSOptimize, GeomSum, ManualIter, LinSolver
+export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
 
 export absorb_weight

@@ -77,6 +77,28 @@ function LinSolver(;
 end
 
 """
+    struct EigSolver(; solver=KrylovKit.Arnoldi(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+
+Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
+problem as an eigenvalue problem.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
+"""
+struct EigSolver{F} <: GradMode{F}
+    solver::KrylovKit.KrylovAlgorithm
+end
+function EigSolver(;
+    solver=KrylovKit.Arnoldi(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
+    iterscheme=Defaults.iterscheme,
+)
+    return EigSolver{iterscheme}(solver)
+end
+
+"""
     PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
                     reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
 
@@ -351,6 +373,24 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::LinSolver)
     if alg.solver.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
+
+    return ∂f∂A(y)
+end
+
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
+    function f(X)
+        y = ∂f∂x(X[1])
+        return (y + X[2] * ∂F∂x, X[2])
+    end
+    X₀ = (x₀, one(scalartype(x₀)))
+    vals, vecs, info = eigsolve(f, X₀, 1, :LM, alg.solver)
+    if alg.solver.verbosity > 0 && info.converged < 1
+        @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
+    end
+    if norm(vecs[1][2]) < 1e-8 # TODO: figure out what this actually means...
+        @warn "fpgrad using Arnoldi failed: λ = $(vecs[1][3])"
+    end    
+    y = scale(vecs[1][1], 1 / vecs[1][2])
 
     return ∂f∂A(y)
 end
