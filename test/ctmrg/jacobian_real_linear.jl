@@ -19,15 +19,15 @@ Dbond, χenv = 2, 16
 @testset "$iterscheme and $ctm_alg" for (iterscheme, ctm_alg) in algs
     Random.seed!(123521938519)
     state = InfinitePEPS(2, Dbond)
-    envs = leading_boundary(CTMRGEnv(state, ComplexSpace(χenv)), state, ctm_alg)
+    envs, = leading_boundary(CTMRGEnv(state, ComplexSpace(χenv)), state, ctm_alg)
 
     # follow code of _rrule
     if iterscheme == :fixed
-        envs_conv, info = ctmrg_iteration(state, envs, ctm_alg)
+        envs_conv, _, _, U, S, V = ctmrg_iteration(state, envs, ctm_alg)
         envs_fixed, signs = gauge_fix(envs, envs_conv)
-        U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
+        U_fixed, V_fixed = fix_relative_phases(U, V, signs)
         svd_alg_fixed = SVDAdjoint(;
-            fwd_alg=PEPSKit.FixedSVD(U_fixed, info.S, V_fixed),
+            fwd_alg=PEPSKit.FixedSVD(U_fixed, S, V_fixed),
             rrule_alg=ctm_alg.projector_alg.svd_alg.rrule_alg,
         )
         alg_fixed = @set ctm_alg.projector_alg.svd_alg = svd_alg_fixed
