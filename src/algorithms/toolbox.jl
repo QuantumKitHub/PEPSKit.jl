@@ -165,7 +165,7 @@ Intuitively, this conjugates a tensor and then reinterprets its 'direction' as a
 tensor.
 """
 function _dag(A::MPSKit.GenericMPSTensor{S,N}) where {S,N}
-    return permute(A', ((1, (3:N + 1)...), (2,)))
+    return permute(A', ((1, (3:(N + 1))...), (2,)))
 end
 
 """
