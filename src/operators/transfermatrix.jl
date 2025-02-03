@@ -39,11 +39,11 @@ bra(p::PEPOSandwich) = p[2]
 pepo(p::PEPOSandwich) = p[3]
 pepo(p::PEPOSandwich, i::Int) = p[3][i]
 
-function virtual_space(p::PEPOSandwich, i, dir)
+function virtual_space(p::PEPOSandwich, dir)
     return prod([
         space(ket(p), dir + 1),
         space.(pepo(p), Ref(dir + 2))...,
-        space(bra(parentindices), dir + 1)',
+        space(bra(p), dir + 1)',
     ])
 end
 
@@ -116,13 +116,13 @@ end
 #
 
 """
-    InfiniteTransferPEPO{T,O}
+    InfiniteTransferPEPO{H,T,O}
 
 Represents an infinite transfer operator corresponding to a single row of a partition
 function which corresponds to the expectation value of an `InfinitePEPO` between 'ket' and
 'bra' `InfinitePEPS` states.
 """
-const InfiniteTransferPEPO{T<:PEPSTensor,O<:PEPOTensor} = InfiniteMPO{PEPOSandwich{<:Any,T,O}}
+const InfiniteTransferPEPO{H,T<:PEPSTensor,O<:PEPOTensor} = InfiniteMPO{PEPOSandwich{H,T,O}}
 
 function InfiniteTransferPEPO(
     top::PeriodicArray{T,1}, mid::PeriodicArray{O,2}, bot::PeriodicArray{T,1}
