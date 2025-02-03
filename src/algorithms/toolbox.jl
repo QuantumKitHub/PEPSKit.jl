@@ -172,9 +172,10 @@ end
     correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
 
 Compute the correlation length associated to the environment of a given state based on the
-horizontal and vertical transfer matrices . Additionally the (normalized) eigenvalue
-spectrum is returned. Specify the number of computed eigenvalues with `num_vals`.
-
+horizontal and vertical transfer matrices. Additionally the (normalized) eigenvalue spectrum
+is returned. The number of computed eigenvalues can be specified using `num_vals`, and any
+remaining keyword arguments are passed through to `MPSKit.correlation_length` (e.g. allowing
+to target the correlation length in a specific symmetry sector).
 """
 function MPSKit.correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
     T = scalartype(env)
