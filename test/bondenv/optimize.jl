@@ -26,10 +26,10 @@ Vphy = ℂ[U1Irrep](0 => 1, 1 => 2)
 # Vphy = ℂ[FermionParity](0 => 1, 1 => 2)
 Vbond = Vint ⊗ Vint
 # random positive-definite environment
-Z = TensorMap(randn, Float64, Vext, Vbond)
+Z = randn(Float64, Vext ← Vbond)
 env = Z' * Z
 # untruncated bond tensor
-aR2bL2 = Tensor(randn, Float64, Vint * Vphy * Vphy * Vint)
+aR2bL2 = randn(Float64, Vint * Vphy * Vphy * Vint)
 aR2, s, bL2 = tsvd(aR2bL2, ((1, 2), (3, 4)))
 aR2, bL2 = _postprocess(aR2, s, bL2)
 # bond tensor (truncated SVD initialization)

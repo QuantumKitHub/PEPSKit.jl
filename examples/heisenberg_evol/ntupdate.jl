@@ -19,7 +19,6 @@ for dt in dts
     global peps = result[1]
     global envs = result[2]
 end
-
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
 meas = measure_heis(peps_, ham, envs)

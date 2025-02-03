@@ -169,22 +169,18 @@ Then the bond matrix `u s v†` is updated by SVD:
 ## Returns
 
 The SVD result of the new bond matrix `u`, `s`, `vh`.
-
-- When `flip_s` is `false`, return `← u ← s ← v† →`
-- When `flip_s` is `true`, return `← u ← s → v† →`
+The arrows among them are `← u ← s ← v† →`.
 
 Reference: Physical Review B 98, 085155 (2018)
 """
 function fullenv_truncate(
-    env::AbstractTensorMap{T,S,2,2},
-    b0::AbstractTensor{T,S,2},
-    alg::FullEnvTruncation;
-    flip_s::Bool=false,
+    env::AbstractTensorMap{T,S,2,2}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation
 ) where {T<:Number,S<:ElementarySpace}
     # ensure fermion sign will not appear
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
     # initialize truncated `u, s, v†`
+    # TODO: remove the flip_svd function in future
     u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)); trunc=alg.trscheme)...)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
@@ -238,17 +234,15 @@ function fullenv_truncate(
     end
     # change `← u ← s → v† →` back to `← u ← s ← v† →`
     # using flipper: `← u ←(← s → f ←) ← (← f† → v† →)→`
-    if !flip_s
-        # @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
-        Vtrunc = space(s, 1)
-        @assert isdual(Vtrunc) === false
-        flipper = isomorphism(flip(Vtrunc), Vtrunc)
-        @tensor s[-1; -2] := s[-1 1] * flipper[1 -2]
-        # TODO: figure out the reason behind the twist
-        twist!(s, 2)
-        @tensor vh[-1; -2] := flipper'[-1 1] * vh[1 -2]
-        # @assert tmp ≈ u * s * vh
-    end
+    # @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
+    Vtrunc = space(s, 1)
+    @assert isdual(Vtrunc) === false
+    flipper = isomorphism(flip(Vtrunc), Vtrunc)
+    @tensor s[-1; -2] := s[-1 1] * flipper[1 -2]
+    # TODO: figure out the reason behind the twist
+    twist!(s, 2)
+    @tensor vh[-1; -2] := flipper'[-1 1] * vh[1 -2]
+    # @assert tmp ≈ u * s * vh
     # @assert norm(s, Inf) ≈ 1.0 "Value of s = $s\n"
-    return u, s, vh, (; fid, diff_fid, diff_wt)
+    return u, DiagonalTensorMap(s), vh, (; fid, diff_fid, diff_wt)
 end

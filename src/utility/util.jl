@@ -53,7 +53,7 @@ Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `
     u -> u * sqrt(s), vh -> sqrt(s) * vh
 ```
 """
-function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
     @assert domain(s) == codomain(s)
     @assert isdual(space(s, 1)) === false
     sqrt_s = sdiag_pow(s, 0.5)
@@ -68,7 +68,8 @@ Given `tsvd` result `u`, `s`, `vh`, `ϵ`, flip the dual (arrow direction) betwee
     u ← s ← vh  ==>  u ← s → vh
 ```
 """
-function flip_svd(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap, ϵ)
+# TODO: this function is a temporary fix
+function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap, ϵ)
     flipper = isomorphism(flip(space(vh, 1)), space(vh, 1))
     s = s * flipper'
     vh = twist(flipper * vh, 1)
@@ -77,6 +78,7 @@ end
 
 _safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
+# TODO: change the type of `S` to DiagonalTensorMap
 """
     sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
 

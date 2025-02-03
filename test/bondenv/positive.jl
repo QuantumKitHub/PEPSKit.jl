@@ -26,8 +26,8 @@ for env_alg in (NTUEnvNN(), NTUEnvNNN(), NTUEnvNNNp())
     for row in 1:Nr, col in 1:Nc
         cp1 = PEPSKit._next(col, Nc)
         A, B = peps.vertices[row, col], peps.vertices[row, cp1]
-        X = Tensor(randn, ComplexF64, space(A, 2) ⊗ W1' ⊗ space(A, 4) ⊗ space(A, 5))
-        Y = Tensor(randn, ComplexF64, space(B, 2) ⊗ space(B, 3) ⊗ space(B, 4) ⊗ W2')
+        X = randn(ComplexF64, space(A, 2) ⊗ W1' ⊗ space(A, 4) ⊗ space(A, 5))
+        Y = randn(ComplexF64, space(B, 2) ⊗ space(B, 3) ⊗ space(B, 4) ⊗ W2')
         env = PEPSKit.bondenv_ntu(row, col, X, Y, peps, env_alg)
         # env should be Hermitian
         @test env' ≈ env
