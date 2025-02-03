@@ -168,16 +168,22 @@ function _dag(A::MPSKit.GenericMPSTensor{S,N}) where {S,N}
     return permute(A', ((1, (3:(N + 1))...), (2,)))
 end
 
+# TODO: decide on appropriate signature and returns for the more generic case
 """
-    correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
+    correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...)
 
-Compute the correlation length associated to the environment of a given state based on the
-horizontal and vertical transfer matrices. Additionally the (normalized) eigenvalue spectrum
-is returned. The number of computed eigenvalues can be specified using `num_vals`, and any
-remaining keyword arguments are passed through to `MPSKit.correlation_length` (e.g. allowing
-to target the correlation length in a specific symmetry sector).
+Compute the correlation length associated to `state` as contracted using the environment
+`env`, based on the spectrum of the horizontal and vertical transfer matrices associated to
+`env`. Additionally the (normalized) eigenvalue spectrum is returned. The number of computed
+eigenvalues can be specified using `num_vals`, and any remaining keyword arguments are
+passed through to `MPSKit.transfer_spectrum` (e.g. allowing to target the correlation length
+in a specific symmetry sector).
+
 """
-function MPSKit.correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
+MPSKit.correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...) =
+    _correlation_length(env; num_vals, kwargs...)
+
+function _correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
     T = scalartype(env)
     ξ_h = Vector{real(T)}(undef, size(env, 2))
     ξ_v = Vector{real(T)}(undef, size(env, 3))
