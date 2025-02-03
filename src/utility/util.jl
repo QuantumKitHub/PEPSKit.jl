@@ -48,19 +48,33 @@ end
 _safe_pow(a::Real, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
-    sdiag_pow(S::DiagonalTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
+    sdiag_pow(s, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
 
-Compute `S^pow` for DiagonalTensorMap `S`.
+Compute `s^pow` for a diagonal matrix `s`.
 """
 function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
-    tol *= norm(s, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    tol *= norm(s, Inf)
     spow = DiagonalTensorMap(_safe_pow.(s.data, pow, tol), space(s, 1))
+    return spow
+end
+function sdiag_pow(
+    s::AbstractTensorMap{T,S,1,1}, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4)
+) where {T,S}
+    # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    tol *= norm(s, Inf)
+    spow = similar(s)
+    for (k, b) in blocks(s)
+        copyto!(
+            block(spow, k), LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol))
+        )
+    end
     return spow
 end
 
 function ChainRulesCore.rrule(
     ::typeof(sdiag_pow),
-    s::DiagonalTensorMap,
+    s::AbstractTensorMap,
     pow::Real;
     tol::Real=eps(scalartype(s))^(3 / 4),
 )

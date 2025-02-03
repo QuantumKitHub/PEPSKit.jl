@@ -77,10 +77,10 @@ function _su_bondx!(
     # SVD
     s, ϵ = nothing, nothing
     try
-        aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
+        aR, s, bL, ϵ = tsvd(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
     catch e_lapack
         # use SVD() to try again
-        aR, s, bL, ϵ = tsvd!(
+        aR, s, bL, ϵ = tsvd(
             tmp; trunc=truncation_scheme(alg, space(T1, 3)), alg=TensorKit.SVD()
         )
     end

@@ -1,11 +1,11 @@
 
 """
-    const PEPSWeight{T,S}
+    const PEPSWeight
 
 Default type for PEPS bond weights with 2 virtual indices, conventionally ordered as: ``wt : WS ← EN``. 
 `WS`, `EN` denote the west/south, east/north spaces for x/y-weights on the square lattice, respectively.
 """
-const PEPSWeight{T,S} = DiagonalTensorMap{T,S} where {T<:Number,S<:ElementarySpace}
+const PEPSWeight = DiagonalTensorMap
 
 """
     struct SUWeight{E<:PEPSWeight}
@@ -108,12 +108,10 @@ function InfiniteWeightPEPS(
 ) where {S<:ElementarySpace}
     vertices = InfinitePEPS(f, T, Pspace, Nspace, Espace; unitcell=unitcell).A
     Nr, Nc = unitcell
-    weights = collect(
-        begin
-            V = (d == 1 ? Espace : Nspace)
-            DiagonalTensorMap(ones(reduceddim(V)), V)
-        end for (d, r, c) in Iterators.product(1:2, 1:Nr, 1:Nc)
-    )
+    weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+        V = (d == 1 ? Espace : Nspace)
+        DiagonalTensorMap(ones(reduceddim(V)), V)
+    end
     return InfiniteWeightPEPS(vertices, SUWeight(weights))
 end
 
