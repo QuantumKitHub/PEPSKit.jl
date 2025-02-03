@@ -26,7 +26,7 @@ E_ref = -0.6602310934799577
 
     # optimize energy and compute correlation lengths
     result = fixedpoint(psi_init, H, opt_alg, env_init)
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
+    ξ_h, ξ_v, = correlation_length(result.env)
 
     @test result.E ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
@@ -44,7 +44,7 @@ end
 
     # optimize energy and compute correlation lengths
     result_1x2 = fixedpoint(psi_init_1x2, H_1x2, opt_alg, env_init_1x2)
-    ξ_h_1x2, ξ_v_1x2, = correlation_length(result_1x2.peps, result_1x2.env)
+    ξ_h_1x2, ξ_v_1x2, = correlation_length(result_1x2.env)
 
     @test result_1x2.E ≈ 2 * E_ref atol = 1e-2
     @test all(@. ξ_h_1x2 > 0 && ξ_v_1x2 > 0)
@@ -95,7 +95,7 @@ end
     svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-5))
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
     result = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
+    ξ_h, ξ_v, = correlation_length(result.env)
     e_site2 = result.E / (N1 * N2)
     @info "Auto diff energy = $e_site2"
     @test e_site2 ≈ E_ref atol = 1e-2

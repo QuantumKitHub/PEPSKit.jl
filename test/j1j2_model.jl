@@ -24,7 +24,7 @@ env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, c
 
 # find fixedpoint
 result = fixedpoint(psi_init, H, opt_alg, env_init; symmetrization=RotateReflect())
-ξ_h, ξ_v, = correlation_length(result.peps, result.env)
+ξ_h, ξ_v, = correlation_length(result.env)
 
 # compare against Juraj Hasik's data:
 # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.25/state_1s_A1_j20.25_D2_chi_opt48.dat

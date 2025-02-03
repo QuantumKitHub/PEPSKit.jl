@@ -160,39 +160,45 @@ function MPSKit.transfer_spectrum(
 end
 
 """
-    correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
-
-Compute the PEPS correlation length based on the horizontal and vertical
-transfer matrices. Additionally the (normalized) eigenvalue spectrum is
-returned. Specify the number of computed eigenvalues with `num_vals`.
+Adjoint of an MPS tensor, but permutes the physical spaces back into the codomain.
+Intuitively, this conjugates a tensor and then reinterprets its 'direction' as an MPS
+tensor.
 """
-function MPSKit.correlation_length(peps::InfinitePEPS, env::CTMRGEnv; num_vals=2)
-    T = scalartype(peps)
-    ξ_h = Vector{real(T)}(undef, size(peps, 1))
-    ξ_v = Vector{real(T)}(undef, size(peps, 2))
-    λ_h = Vector{Vector{T}}(undef, size(peps, 1))
-    λ_v = Vector{Vector{T}}(undef, size(peps, 2))
+function _dag(A::MPSKit.GenericMPSTensor{S,N}) where {S,N}
+    return permute(A', ((1, (3:N + 1)...), (2,)))
+end
+
+"""
+    correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
+
+Compute the correlation length associated to the environment of a given state based on the
+horizontal and vertical transfer matrices . Additionally the (normalized) eigenvalue
+spectrum is returned. Specify the number of computed eigenvalues with `num_vals`.
+
+"""
+function MPSKit.correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
+    T = scalartype(env)
+    ξ_h = Vector{real(T)}(undef, size(env, 2))
+    ξ_v = Vector{real(T)}(undef, size(env, 3))
+    λ_h = Vector{Vector{T}}(undef, size(env, 2))
+    λ_v = Vector{Vector{T}}(undef, size(env, 3))
 
     # Horizontal
-    above_h = MultilineMPS(map(r -> InfiniteMPS(env.edges[1, r, :]), 1:size(peps, 1)))
-    respaced_edges_h = map(zip(space.(env.edges)[1, :, :], env.edges[3, :, :])) do (V1, T3)
-        return TensorMap(T3.data, V1)
+    λ_h = map(1:size(env, 2)) do r
+        above = InfiniteMPS(env.edges[NORTH, r, :])
+        below = InfiniteMPS(_dag.(env.edges[SOUTH, r, :]))
+        vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
+        return vals ./ abs(vals[1]) # normalize largest eigenvalue
     end
-    below_h = MultilineMPS(map(r -> InfiniteMPS(respaced_edges_h[r, :]), 1:size(peps, 1)))
-    transfer_peps_h = MultilineTransferPEPS(peps, NORTH)
-    vals_h = MPSKit.transfer_spectrum(above_h, transfer_peps_h, below_h; num_vals)
-    λ_h = map(λ_row -> λ_row / abs(λ_row[1]), vals_h)  # Normalize largest eigenvalue
     ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
 
     # Vertical
-    above_v = MultilineMPS(map(c -> InfiniteMPS(env.edges[2, :, c]), 1:size(peps, 2)))
-    respaced_edges_v = map(zip(space.(env.edges)[2, :, :], env.edges[4, :, :])) do (V2, T4)
-        return TensorMap(T4.data, V2)
+    λ_v = map(1:size(env, 3)) do c
+        above = InfiniteMPS(env.edges[EAST, :, c])
+        below = InfiniteMPS(_dag.(env.edges[WEST, :, c]))
+        vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
+        return vals ./ abs(vals[1]) # normalize largest eigenvalue
     end
-    below_v = MultilineMPS(map(c -> InfiniteMPS(respaced_edges_v[:, c]), 1:size(peps, 2)))
-    transfer_peps_v = MultilineTransferPEPS(peps, EAST)
-    vals_v = MPSKit.transfer_spectrum(above_v, transfer_peps_v, below_v; num_vals)
-    λ_v = map(λ_row -> λ_row / abs(λ_row[1]), vals_v)  # Normalize largest eigenvalue
     ξ_v = map(λ_row -> -1 / log(abs(λ_row[2])), λ_v)
 
     return ξ_h, ξ_v, λ_h, λ_v
