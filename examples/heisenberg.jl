@@ -14,7 +14,7 @@ H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1)
 ctm_alg = SimultaneousCTMRG(; tol=1e-10, verbosity=2)
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=2),
+    optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=3),
     gradient_alg=LinSolver(; solver=GMRES(; tol=1e-6, maxiter=100)),
     reuse_env=true,
 )
