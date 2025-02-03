@@ -6,7 +6,6 @@ import MPSKit: Multiline, MultilineEnvironments
 # Effective MPOTensor interface
 #
 
-
 ## Space utils
 
 _elementwise_dual(S::ElementarySpace) = S
@@ -16,7 +15,6 @@ north_space(O, args...) = virtual_space(O, NORTH, args...)
 east_space(O, args...) = virtual_space(O, EAST, args...)
 south_space(O, args...) = virtual_space(O, SOUTH, args...)
 west_space(O, args...) = virtual_space(O, WEST, args...)
-
 
 ## PEPS
 
@@ -29,7 +27,6 @@ function virtual_space(p::PEPSSandwich, dir)
     return space(ket(p), dir + 1) ⊗ space(bra(p), dir + 1)'
 end
 
-
 ## PEPO
 
 const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Tuple{Vararg{P,N}}}
@@ -41,12 +38,9 @@ pepo(p::PEPOSandwich, i::Int) = p[3][i]
 
 function virtual_space(p::PEPOSandwich, dir)
     return prod([
-        space(ket(p), dir + 1),
-        space.(pepo(p), Ref(dir + 2))...,
-        space(bra(p), dir + 1)',
+        space(ket(p), dir + 1), space.(pepo(p), Ref(dir + 2))..., space(bra(p), dir + 1)'
     ])
 end
-
 
 ## Common
 
@@ -54,7 +48,6 @@ MPSKit.left_virtualspace(p::Union{PEPSSandwich,PEPOSandwich}) = west_space(p)
 function MPSKit.right_virtualspace(p::Union{PEPSSandwich,PEPOSandwich})
     return _elementwise_dual(east_space(p))
 end # follow MPSKit convention: right vspace gets a dual by default
-
 
 #
 # PEPS
@@ -109,7 +102,6 @@ function MultilineTransferPEPS(T::InfinitePEPS, dir)
     rowsize = size(T, mod1(dir, 2))  # depends on dir
     return MPSKit.Multiline(map(cr -> InfiniteTransferPEPS(T, dir, cr), 1:rowsize))
 end
-
 
 #
 # PEPO
