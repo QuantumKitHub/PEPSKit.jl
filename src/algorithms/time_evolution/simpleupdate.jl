@@ -42,18 +42,11 @@ function _su_bondx!(
 ) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    row2, col2 = row, _next(col, Nc)
-    T1, T2 = peps.vertices[row, col], peps.vertices[row2, col2]
+    cp1 = _next(col, Nc)
     # absorb environment weights
-    for ax in (2, 4, 5)
-        T1 = absorb_weight(T1, row, col, ax, peps.weights)
-    end
-    for ax in (2, 3, 4)
-        T2 = absorb_weight(T2, row2, col2, ax, peps.weights)
-    end
-    # absorb bond weight
-    T1 = absorb_weight(T1, row, col, 3, peps.weights; sqrtwt=true)
-    T2 = absorb_weight(T2, row2, col2, 5, peps.weights; sqrtwt=true)
+    T1, T2 = peps.vertices[row, col], peps.vertices[row, cp1]
+    T1 = _absorb_weight(T1, row, col, "tbl", peps.weights)
+    T2 = _absorb_weight(T2, row, cp1, "trb", peps.weights)
     #= QR and LQ decomposition
 
         2   1               1             2
@@ -72,7 +65,7 @@ function _su_bondx!(
     bL, Y = rightorth(T2, ((5, 1), (2, 3, 4)); alg=LQpos())
     #= apply gate
 
-            -2          -3
+            -2         -3
             ↑           ↑
             |----gate---|
             ↑           ↑
@@ -80,9 +73,17 @@ function _su_bondx!(
             ↑           ↑
         -1← aR -← 3 -← bL ← -4
     =#
-    @tensor tmp[-1 -2; -3 -4] := gate[-2, -3, 1, 2] * aR[-1, 1, 3] * bL[3, 2, -4]
+    @tensor tmp[-1 -2; -3 -4] := gate[-2 -3; 1 2] * aR[-1 1 3] * bL[3 2 -4]
     # SVD
-    aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
+    s, ϵ = nothing, nothing
+    try
+        aR, s, bL, ϵ = tsvd!(tmp; trunc=truncation_scheme(alg, space(T1, 3)))
+    catch e_lapack
+        # use SVD() to try again
+        aR, s, bL, ϵ = tsvd!(
+            tmp; trunc=truncation_scheme(alg, space(T1, 3)), alg=TensorKit.SVD()
+        )
+    end
     #=
             -2         -1              -1    -2
             |         ↗               ↗       |
@@ -97,11 +98,11 @@ function _su_bondx!(
         T1 = absorb_weight(T1, row, col, ax, peps.weights; invwt=true)
     end
     for ax in (2, 3, 4)
-        T2 = absorb_weight(T2, row2, col2, ax, peps.weights; invwt=true)
+        T2 = absorb_weight(T2, row, cp1, ax, peps.weights; invwt=true)
     end
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
-    peps.vertices[row, col], peps.vertices[row2, col2] = T1, T2
+    peps.vertices[row, col], peps.vertices[row, cp1] = T1, T2
     peps.weights[1, row, col] = s / norm(s, Inf)
     return ϵ
 end
@@ -181,9 +182,9 @@ function simpleupdate(
     check_int::Int=500,
 )
     time_start = time()
-    N1, N2 = size(peps)
+    Nr, Nc = size(peps)
     if bipartite
-        @assert N1 == N2 == 2
+        @assert Nr == Nc == 2
     end
     # exponentiating the 2-site Hamiltonian gate
     gate = get_gate(alg.dt, ham)
@@ -191,7 +192,7 @@ function simpleupdate(
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps = su_iter(gate, peps, alg; bipartite=bipartite)
+        peps = su_iter(gate, peps, alg; bipartite)
         wtdiff = compare_weights(peps.weights, wts0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
@@ -210,9 +211,7 @@ function simpleupdate(
             )
             cancel ? (@warn message) : (@info message)
         end
-        if converge || cancel
-            break
-        end
+        converge && break
     end
     return peps, wtdiff
 end

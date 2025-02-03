@@ -45,51 +45,47 @@ function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
     return dst
 end
 
-_safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
+_safe_pow(a::Real, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
-    sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
+    sdiag_pow(S::DiagonalTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
 
-Compute `S^pow` for diagonal matrices `S`.
+Compute `S^pow` for DiagonalTensorMap `S`.
 """
-function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
-    tol *= norm(S, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
-    Spow = similar(S)
-    for (k, b) in blocks(S)
-        copyto!(
-            block(Spow, k), LinearAlgebra.diagm(_safe_pow.(LinearAlgebra.diag(b), pow, tol))
-        )
+function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
+    tol *= norm(s, Inf)  # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    spow = DiagonalTensorMap(_safe_pow.(s.data, pow, tol), space(s, 1))
+    return spow
+end
+
+function ChainRulesCore.rrule(
+    ::typeof(sdiag_pow),
+    s::DiagonalTensorMap,
+    pow::Real;
+    tol::Real=eps(scalartype(s))^(3 / 4),
+)
+    tol *= norm(s, Inf)
+    spow = sdiag_pow(s, pow; tol)
+    spow_minus1_conj = scale!(sdiag_pow(s', pow - 1; tol), pow)
+    function sdiag_pow_pullback(c̄_)
+        c̄ = unthunk(c̄_)
+        return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
     end
-    return Spow
+    return spow, sdiag_pow_pullback
 end
 
 """
-    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+    absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
 
 Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
 ```
     u -> u * sqrt(s), vh -> sqrt(s) * vh
 ```
 """
-function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+    @assert !isdual(space(s, 1))
     sqrt_s = sdiag_pow(s, 0.5)
     return u * sqrt_s, sqrt_s * vh
-end
-
-function ChainRulesCore.rrule(
-    ::typeof(sdiag_pow),
-    S::AbstractTensorMap,
-    pow::Real;
-    tol::Real=eps(scalartype(S))^(3 / 4),
-)
-    tol *= norm(S, Inf)
-    spow = sdiag_pow(S, pow; tol)
-    spow_minus1_conj = scale!(sdiag_pow(S', pow - 1; tol), pow)
-    function sdiag_pow_pullback(c̄_)
-        c̄ = unthunk(c̄_)
-        return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
-    end
-    return spow, sdiag_pow_pullback
 end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance

@@ -49,3 +49,20 @@ function get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
         return gate.terms[label[1]].second
     end
 end
+
+const _axlabels = Set("trbl")
+
+"""
+Absorb environment weights into tensor `t` in position `[row, col]` in an iPEPS with `weights`. 
+A full weight is absorbed into axes of `t` on the boundary (specified by `open_axs`).
+But on internal bonds, square root of weights are absorbed. 
+"""
+function _absorb_weight(
+    t::PEPSTensor, row::Int, col::Int, open_axs::String, weights::SUWeight
+)
+    @assert all(c -> c in _axlabels, open_axs)
+    for (ax, ch) in zip(2:5, "trbl")
+        t = absorb_weight(t, row, col, ax, weights; sqrtwt=!(ch in open_axs))
+    end
+    return t
+end
