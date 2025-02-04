@@ -12,31 +12,34 @@ step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
+    gradient_alg::G
     optimizer::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
-    gradient_alg::G
+    symmetrization::Union{Nothing,SymmetrizationStyle}
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
         boundary_alg::CTMRGAlgorithm,
+        gradient_alg::G,
         optimizer,
         reuse_env,
-        gradient_alg::G,
+        symmetrization,
     ) where {G}
         if gradient_alg isa GradMode
             if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             end
         end
-        return new{G}(boundary_alg, optimizer, reuse_env, gradient_alg)
+        return new{G}(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
     end
 end
 function PEPSOptimize(;
     boundary_alg=Defaults.ctmrg_alg,
+    gradient_alg=Defaults.gradient_alg,
     optimizer=Defaults.optimizer,
     reuse_env=Defaults.reuse_env,
-    gradient_alg=Defaults.gradient_alg,
+    symmetrization=nothing,
 )
-    return PEPSOptimize(boundary_alg, optimizer, reuse_env, gradient_alg)
+    return PEPSOptimize(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
 end
 
 """
@@ -69,12 +72,11 @@ function fixedpoint(
     alg::PEPSOptimize,
     env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(F)^20);
     (finalize!)=OptimKit._finalize!,
-    symmetrization=nothing,
 ) where {F}
-    if isnothing(symmetrization)
+    if isnothing(alg.symmetrization)
         retract = peps_retract
     else
-        retract, symm_finalize! = symmetrize_retract_and_finalize!(symmetrization)
+        retract, symm_finalize! = symmetrize_retract_and_finalize!(alg.symmetrization)
         fin! = finalize!  # Previous finalize!
         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
     end

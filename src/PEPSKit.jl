@@ -110,7 +110,7 @@ Module containing default algorithm parameter values and arguments.
     ```
 
 - `reuse_env=true`: If `true`, the current optimization step is initialized on the previous environment
-- `optimizer=LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)`: The default `OptimKit.OptimizerAlgorithm`
+- `optimizer=LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
 
 # OhMyThreads scheduler
 - `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
