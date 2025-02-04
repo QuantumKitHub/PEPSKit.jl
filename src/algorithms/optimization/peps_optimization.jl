@@ -81,7 +81,7 @@ function fixedpoint(
         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
     end
 
-    if scalartype(env₀) <: Real
+    if scalartype(env₀) <: Real && iterscheme(alg.gradient_alg) == :fixed
         env₀ = complex(env₀)
         @warn "the provided real environment was converted to a complex environment since \
         :fixed mode generally produces complex gauges; use :diffgauge mode instead to work \
