@@ -1,7 +1,7 @@
 include("heis_tools.jl")
 
 # benchmark data is from Phys. Rev. B 94, 035133 (2016)
-Dbond, χenv, symm = 4, 16, U1Irrep
+Dbond, χenv, symm = 4, 16, Trivial
 trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
 trscheme_envs = truncerr(1e-10) & truncdim(χenv)
 N1, N2 = 2, 2
