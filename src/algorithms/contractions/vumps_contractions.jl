@@ -1,15 +1,5 @@
 using MPSKit: GenericMPSTensor, MPSBondTensor
 
-const PEPSSandwich{T<:PEPSTensor} = Tuple{T,T}
-ket(p::PEPSSandwich) = p[1]
-bra(p::PEPSSandwich) = p[2]
-
-const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Tuple{Vararg{P,N}}}
-ket(p::PEPOSandwich) = p[1]
-bra(p::PEPOSandwich) = p[2]
-pepo(p::PEPOSandwich) = p[3]
-pepo(p::PEPOSandwich, i::Int) = p[3][i]
-
 #
 # Environment transfer functions
 #
