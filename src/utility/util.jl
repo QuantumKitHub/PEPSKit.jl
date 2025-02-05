@@ -47,6 +47,7 @@ end
 
 _safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
+# TODO: change the type of `S` to DiagonalTensorMap
 """
     sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))^(3 / 4))
 
@@ -63,19 +64,6 @@ function sdiag_pow(S::AbstractTensorMap, pow::Real; tol::Real=eps(scalartype(S))
     return Spow
 end
 
-"""
-    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
-
-Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
-```
-    u -> u * sqrt(s), vh -> sqrt(s) * vh
-```
-"""
-function absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
-    sqrt_s = sdiag_pow(s, 0.5)
-    return u * sqrt_s, sqrt_s * vh
-end
-
 function ChainRulesCore.rrule(
     ::typeof(sdiag_pow),
     S::AbstractTensorMap,
@@ -90,6 +78,21 @@ function ChainRulesCore.rrule(
         return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
     end
     return spow, sdiag_pow_pullback
+end
+
+"""
+    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+
+Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
+```
+    u -> u * sqrt(s), vh -> sqrt(s) * vh
+```
+"""
+function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+    @assert domain(s) == codomain(s)
+    @assert isdual(space(s, 1)) === false
+    sqrt_s = sdiag_pow(s, 0.5)
+    return u * sqrt_s, sqrt_s * vh
 end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance

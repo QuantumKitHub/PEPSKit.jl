@@ -112,6 +112,59 @@ end
 unitcell(t::InfinitePEPS) = t.A
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
 
+## Math
+Base.:+(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A + ψ₂.A)
+Base.:-(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = InfinitePEPS(ψ₁.A - ψ₂.A)
+Base.:*(α::Number, ψ::InfinitePEPS) = InfinitePEPS(α * ψ.A)
+Base.:/(ψ::InfinitePEPS, α::Number) = InfinitePEPS(ψ.A / α)
+LinearAlgebra.dot(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = dot(ψ₁.A, ψ₂.A)
+LinearAlgebra.norm(ψ::InfinitePEPS) = norm(ψ.A)
+
+## (Approximate) equality
+function Base.:(==)(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
+    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
+        return p₁ == p₂
+    end
+end
+function Base.isapprox(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS; kwargs...)
+    return all(zip(ψ₁.A, ψ₂.A)) do (p₁, p₂)
+        return isapprox(p₁, p₂; kwargs...)
+    end
+end
+
+# Used in _scale during OptimKit.optimize
+function LinearAlgebra.rmul!(ψ::InfinitePEPS, α::Number)
+    rmul!(ψ.A, α)
+    return ψ
+end
+
+# Used in _add during OptimKit.optimize
+function LinearAlgebra.axpy!(α::Number, ψ₁::InfinitePEPS, ψ₂::InfinitePEPS)
+    ψ₂.A .+= α * ψ₁.A
+    return ψ₂
+end
+
+# VectorInterface
+VectorInterface.zerovector(x::InfinitePEPS) = InfinitePEPS(zerovector(x.A))
+
+# Rotations
+Base.rotl90(t::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(t.A)))
+Base.rotr90(t::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(t.A)))
+Base.rot180(t::InfinitePEPS) = InfinitePEPS(rot180(rot180.(t.A)))
+
+"""
+    mirror_antidiag(peps::InfinitePEPS)
+
+Mirror the unit cell of an iPEPS by its anti-diagonal line.
+"""
+function mirror_antidiag(peps::InfinitePEPS)
+    A2 = mirror_antidiag(peps.A)
+    for (i, t) in enumerate(A2)
+        A2[i] = permute(t, ((1,), (3, 2, 5, 4)))
+    end
+    return InfinitePEPS(A2)
+end
+
 # Chainrules
 function ChainRulesCore.rrule(
     ::typeof(Base.getindex), state::InfinitePEPS, row::Int, col::Int

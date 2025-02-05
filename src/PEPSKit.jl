@@ -3,7 +3,6 @@ module PEPSKit
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Base: @kwdef
 using Compat
-using Accessors: @set
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
@@ -11,6 +10,7 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
+using Accessors: @set
 using OhMyThreads: tmap
 
 include("utility/util.jl")
@@ -21,6 +21,7 @@ include("utility/mirror.jl")
 include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
+include("utility/fullenv_truncation.jl")
 
 include("networks/tensors.jl")
 include("networks/infinitesquarenetwork.jl")
@@ -49,8 +50,9 @@ include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
-include("algorithms/time_evolution/gatetools.jl")
+include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
+include("algorithms/time_evolution/ntupdate.jl")
 
 include("algorithms/toolbox.jl")
 
@@ -193,7 +195,10 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver
 export fixedpoint
 
 export absorb_weight
+export ALSTruncation, FullEnvTruncation, fullenv_truncate
 export su_iter, simpleupdate, SimpleUpdate
+export NTUEnvNN, NTUEnvNNN, NTUEnvNNNp
+export ntu_iter, ntupdate, NTUpdate
 
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS

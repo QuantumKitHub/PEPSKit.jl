@@ -1,4 +1,21 @@
 """
+    BondEnvAlgorithm
+
+Abstract super type for all algorithms to construct the environment of a bond in the InfinitePEPS.
+"""
+abstract type BondEnvAlgorithm end
+
+const Hair{T,S} = AbstractTensor{T,S,2} where {T<:Number,S<:ElementarySpace}
+const BondEnv{T,S} = AbstractTensorMap{T,S,2,2} where {T<:Number,S<:ElementarySpace}
+const PEPSOrth{T,S} = AbstractTensor{T,S,4} where {T<:Number,S<:ElementarySpace}
+
+include("bondenv/env_tools.jl")
+include("bondenv/env_ntu.jl")
+include("bondenv/env_ctm.jl")
+include("bondenv/optimize_fet.jl")
+include("bondenv/optimize_als.jl")
+
+"""
     get_gate(dt::Float64, H::LocalOperator)
 
 Compute `exp(-dt * H)` from the nearest neighbor Hamiltonian `H`.
@@ -48,4 +65,21 @@ function get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
         @assert length(label) == 1
         return gate.terms[label[1]].second
     end
+end
+
+const _axlabels = Set("trbl")
+
+"""
+Absorb environment weights into tensor `t` in position `[row, col]` in an iPEPS with `weights`. 
+A full weight is absorbed into axes of `t` on the boundary (specified by `open_axs`).
+But on internal bonds, square root of weights are absorbed. 
+"""
+function _absorb_weight(
+    t::PEPSTensor, row::Int, col::Int, open_axs::String, weights::SUWeight
+)
+    @assert all(c -> c in _axlabels, open_axs)
+    for (ax, ch) in zip(2:5, "trbl")
+        t = absorb_weight(t, row, col, ax, weights; sqrtwt=!(ch in open_axs))
+    end
+    return t
 end

@@ -5,7 +5,7 @@
 Default type for PEPS bond weights with 2 virtual indices, conventionally ordered as: ``wt : WS ← EN``. 
 `WS`, `EN` denote the west/south, east/north spaces for x/y-weights on the square lattice, respectively.
 """
-const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1} where {T<:Number,S<:ElementarySpace}
+const PEPSWeight{T,S} = DiagonalTensorMap{T,S} where {T<:Number,S<:ElementarySpace}
 
 """
     struct SUWeight{E<:PEPSWeight}
@@ -109,7 +109,35 @@ function InfiniteWeightPEPS(
     vertices = InfinitePEPS(f, T, Pspace, Nspace, Espace; unitcell=unitcell).A
     Nr, Nc = unitcell
     weights = collect(
-        id(d == 1 ? Espace : Nspace) for (d, r, c) in Iterators.product(1:2, 1:Nr, 1:Nc)
+        DiagonalTensorMap(id(d == 1 ? Espace : Nspace)) for
+        (d, r, c) in Iterators.product(1:2, 1:Nr, 1:Nc)
+    )
+    return InfiniteWeightPEPS(vertices, SUWeight(weights))
+end
+
+"""
+    InfiniteWeightPEPS(
+        f=randn, T=ComplexF64, Pspaces::M, Nspaces::M, [Espaces::M]
+    ) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+
+Create an InfiniteWeightPEPS by specifying the physical, north virtual and east virtual spaces
+of the PEPS vertex tensor at each site in the unit cell as a matrix.
+Each individual space can be specified as either an `Int` or an `ElementarySpace`.
+Bond weights are initialized as identity matrices of element type `Float64`. 
+"""
+function InfiniteWeightPEPS(
+    Pspaces::M, Nspaces::M, Espaces::M
+) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    return InfiniteWeightPEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfiniteWeightPEPS(
+    f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
+) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    vertices = InfinitePEPS(f, T, Pspaces, Nspaces, Espaces).A
+    Nr, Nc = size(vertices)
+    weights = collect(
+        DiagonalTensorMap(id(d == 1 ? Espaces[r, c] : Nspaces[r, c])) for
+        (d, r, c) in Iterators.product(1:2, 1:Nr, 1:Nc)
     )
     return InfiniteWeightPEPS(vertices, SUWeight(weights))
 end
@@ -192,8 +220,8 @@ Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into v
 """
 function InfinitePEPS(peps::InfiniteWeightPEPS)
     vertices = deepcopy(peps.vertices)
-    N1, N2 = size(vertices)
-    for (r, c) in Iterators.product(1:N1, 1:N2)
+    Nr, Nc = size(vertices)
+    for (r, c) in Iterators.product(1:Nr, 1:Nc)
         for ax in 2:5
             vertices[r, c] = absorb_weight(
                 vertices[r, c], r, c, ax, peps.weights; sqrtwt=true
@@ -221,3 +249,14 @@ function mirror_antidiag(peps::InfiniteWeightPEPS)
     weights2_y = mirror_antidiag(peps.weights[1, :, :])
     return InfiniteWeightPEPS(vertices2, weights2_x, weights2_y)
 end
+
+function display_weights(io::IO, wts::SUWeight)
+    Nd, N1, N2 = size(wts)
+    for r in 1:N1, c in 1:N2, direction in 1:Nd
+        println(io, "[$direction,$r,$c]: ")
+        for (k, b) in blocks(wts[direction, r, c])
+            println(io, k, " = ", diag(b))
+        end
+    end
+end
+display_weights(wts::SUWeight) = display_weights(stdout, wts)
