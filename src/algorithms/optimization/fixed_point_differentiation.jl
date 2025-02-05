@@ -91,9 +91,9 @@ function _rrule(
     state,
     alg::CTMRGAlgorithm,
 )
-    envs = leading_boundary(envinit, state, alg)
+    envs, info = leading_boundary(envinit, state, alg)
 
-    function leading_boundary_diffgauge_pullback(Δenvs′)
+    function leading_boundary_diffgauge_pullback((Δenvs′, Δinfo))
         Δenvs = unthunk(Δenvs′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
@@ -108,7 +108,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envs, leading_boundary_diffgauge_pullback
+    return (envs, info), leading_boundary_diffgauge_pullback
 end
 
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V
@@ -134,7 +134,7 @@ function _rrule(
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
     alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
-    function leading_boundary_fixed_pullback(Δenvs′)
+    function leading_boundary_fixed_pullback((Δenvs′, Δinfo))
         Δenvs = unthunk(Δenvs′)
 
         f(A, x) = fix_global_phases(x, ctmrg_iteration(A, x, alg_fixed)[1])
@@ -148,7 +148,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
     end
 
-    return envs_fixed, leading_boundary_fixed_pullback
+    return (envs_fixed, info), leading_boundary_fixed_pullback
 end
 
 @doc """
