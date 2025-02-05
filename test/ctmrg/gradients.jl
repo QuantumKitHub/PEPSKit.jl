@@ -50,17 +50,16 @@ steps = -0.01:0.005:0.01
     models
 )
     Pspace = Pspaces[i]
-    Vspace = Pspaces[i]
+    Vspace = Vspaces[i]
     Espace = Espaces[i]
     gms = gradmodes[i]
     calgs = ctmrg_algs[i]
-    psi_init = InfinitePEPS(Pspace, Vspace, Vspace)
     @testset "$ctmrg_alg and $alg_rrule" for (ctmrg_alg, alg_rrule) in
                                              Iterators.product(calgs, gms)
         @info "optimtest of $ctmrg_alg and $alg_rrule on $(names[i])"
         Random.seed!(42039482030)
-        dir = InfinitePEPS(Pspace, Vspace, Vspace)
-        psi = InfinitePEPS(Pspace, Vspace, Vspace)
+        dir = InfinitePEPS(Pspace, Vspace)
+        psi = InfinitePEPS(Pspace, Vspace)
         env = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
