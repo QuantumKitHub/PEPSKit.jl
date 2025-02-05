@@ -48,6 +48,15 @@ function _prealloc_svd(edges::Array{E,N}) where {E,N}
     return U, S, V
 end
 
+# Compute condition number σ_max / σ_min for diagonal singular value TensorMap
+function _condition_number(S::AbstractTensorMap)
+    # Take maximal condition number over all blocks
+    return maximum(blocks(S)) do (_, b)
+        b_diag = diag(b)
+        return maximum(b_diag) / minimum(b_diag)
+    end
+end
+
 """
     simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm)
     simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgorithm)
@@ -74,9 +83,10 @@ function simultaneous_projectors(
         return proj
     end
 
-    P_left = map(first, projectors)
-    P_right = map(last, projectors)
-    return (P_left, P_right), (; err=maximum(copy(ϵ)), U=copy(U), S=copy(S), V=copy(V))
+    truncation_error = maximum(copy(ϵ))
+    condition_number = maximum(_condition_number, S)
+    info = (; truncation_error, condition_number, U=copy(U), S=copy(S), V=copy(V))
+    return (map(first, projectors), map(last, projectors)), info
 end
 function simultaneous_projectors(
     coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector

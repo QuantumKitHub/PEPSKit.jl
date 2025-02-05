@@ -31,12 +31,14 @@ function SequentialCTMRG(;
 end
 
 function ctmrg_iteration(state, envs::CTMRGEnv, alg::SequentialCTMRG)
-    ϵ = zero(real(scalartype(state)))
+    truncation_error = zero(real(scalartype(state)))
+    condition_number = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
             projectors, info = sequential_projectors(col, state, envs, alg.projector_alg)
             envs = renormalize_sequentially(col, projectors, state, envs)
-            ϵ = max(ϵ, info.err)
+            truncation_error = max(truncation_error, info.truncation_error)
+            condition_number = max(condition_number, info.condition_number)
         end
         state = rotate_north(state, EAST)
         envs = rotate_north(envs, EAST)
@@ -57,17 +59,24 @@ function sequential_projectors(
 )
     # SVD half-infinite environment column-wise
     ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs, 2)))
+    S = Zygote.Buffer(
+        zeros(size(envs, 2)), tensormaptype(spacetype(T), 1, 1, real(scalartype(T)))
+    )
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
         trscheme = truncation_scheme(alg, envs.edges[WEST, _prev(r, size(envs, 2)), c])
         proj, info = sequential_projectors(
             (WEST, r, c), state, envs, @set(alg.trscheme = trscheme)
         )
+        S[r] = info.S
         ϵ[r] = info.err / norm(info.S)
         return proj
     end
 
-    return (map(first, projectors), map(last, projectors)), (; err=maximum(copy(ϵ)))
+    truncation_error = maximum(copy(ϵ))
+    condition_number = maximum(_condition_number, S)
+    info = (; truncation_error, condition_number)
+    return (map(first, projectors), map(last, projectors)), info
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
