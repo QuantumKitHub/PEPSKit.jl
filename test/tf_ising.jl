@@ -28,7 +28,7 @@ opt_alg = PEPSOptimize(;
 H = transverse_field_ising(InfiniteSquare(); g)
 Random.seed!(2928528935)
 psi_init = InfinitePEPS(2, χbond)
-env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
 # find fixedpoint
 result = fixedpoint(H, psi_init, env_init, opt_alg)

@@ -22,7 +22,7 @@ E_ref = -0.6602310934799577
     Random.seed!(123)
     H = heisenberg_XYZ(InfiniteSquare())
     psi_init = InfinitePEPS(2, Dbond)
-    env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+    env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
     # optimize energy and compute correlation lengths
     result = fixedpoint(H, psi_init, env_init, opt_alg)
@@ -38,7 +38,7 @@ end
     unitcell = (1, 2)
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
     psi_init = InfinitePEPS(2, Dbond; unitcell)
-    env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+    env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
     # optimize energy and compute correlation lengths
     result = fixedpoint(H, psi_init, env_init, opt_alg)
@@ -81,7 +81,7 @@ end
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(wpeps)
     envs₀ = CTMRGEnv(rand, Float64, peps, Espace)
-    envs = leading_boundary(envs₀, peps, SimultaneousCTMRG())
+    envs, = leading_boundary(envs₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
     e_site = cost_function(peps, envs, ham) / (N1 * N2)

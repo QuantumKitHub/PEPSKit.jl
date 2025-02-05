@@ -60,7 +60,7 @@ steps = -0.01:0.005:0.01
         Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace)
-        env = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
+        env, = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
             dir;
@@ -69,7 +69,7 @@ steps = -0.01:0.005:0.01
             inner=PEPSKit.real_inner,
         ) do (peps, envs)
             E, g = Zygote.withgradient(peps) do psi
-                envs2 = PEPSKit.hook_pullback(leading_boundary, envs, psi, ctmrg_alg; alg_rrule)
+                envs2, = PEPSKit.hook_pullback(leading_boundary, envs, psi, ctmrg_alg; alg_rrule)
                 return cost_function(psi, envs2, models[i])
             end
 

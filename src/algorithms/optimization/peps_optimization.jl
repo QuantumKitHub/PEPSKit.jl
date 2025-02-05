@@ -100,7 +100,7 @@ function fixedpoint(
         (peps₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
     ) do (peps, envs)
         E, gs = withgradient(peps) do ψ
-            envs´ = hook_pullback(
+            envs´, = hook_pullback(
                 leading_boundary,
                 envs,
                 ψ,
