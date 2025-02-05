@@ -102,7 +102,7 @@ function fixedpoint(
             ignore_derivatives() do
                 alg.reuse_env && update!(envs, envs´)
             end
-            return costfun(ψ, envs´, H)
+            return cost_function(ψ, envs´, H)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
         return E, g

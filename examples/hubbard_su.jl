@@ -53,7 +53,7 @@ Es_exact = Dict(0 => -1.62, 2 => -0.176, 4 => 0.8603, 6 => -0.6567, 8 => -0.5243
 E_exact = Es_exact[U] - U / 2
 
 # measure energy
-E = costfun(peps, envs, ham) / (N1 * N2)
+E = cost_function(peps, envs, ham) / (N1 * N2)
 @info "Energy           = $E"
 @info "Benchmark energy = $E_exact"
 @test isapprox(E, E_exact; atol=5e-2)

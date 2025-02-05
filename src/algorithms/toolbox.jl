@@ -37,7 +37,13 @@ function MPSKit.expectation_value(
     return expectation_value(pf, CartesianIndex(op[1]) => op[2], envs)
 end
 
-function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
+"""
+    cost_function(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
+
+Real part of expectation value of `O`. Prints a warning if the expectation value
+yields a finite imaginary part (up to a tolerance).
+"""
+function cost_function(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
     E = MPSKit.expectation_value(peps, O, envs)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||

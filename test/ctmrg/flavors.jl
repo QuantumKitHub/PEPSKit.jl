@@ -50,8 +50,8 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
     # compare Heisenberg energies
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
-    E_sequential = costfun(psi, env_sequential, H)
-    E_simultaneous = costfun(psi, env_simultaneous, H)
+    E_sequential = cost_function(psi, env_sequential, H)
+    E_simultaneous = cost_function(psi, env_simultaneous, H)
     @test E_sequential ≈ E_simultaneous rtol = 1e-3
 end
 
