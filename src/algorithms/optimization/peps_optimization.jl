@@ -43,10 +43,12 @@ function PEPSOptimize(;
 end
 
 """
-    fixedpoint(ψ₀::InfinitePEPS{T}, H, alg::PEPSOptimize, [env₀::CTMRGEnv];
+
+    fixedpoint(operator, peps₀::InfinitePEPS{F}, [env₀::CTMRGEnv]; kwargs...)
+    fixedpoint(operator, peps₀::InfinitePEPS{T}, alg::PEPSOptimize, [env₀::CTMRGEnv];
                finalize!=OptimKit._finalize!, symmetrization=nothing) where {T}
     
-Optimize `ψ₀` with respect to the Hamiltonian `H` according to the parameters supplied
+Optimize `peps₀` with respect to the `operator` according to the parameters supplied
 in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
 By default, a random initial environment is used.
 
@@ -67,10 +69,16 @@ The function returns a `NamedTuple` which contains the following entries:
 - `numfg`: total number of calls to the energy function
 """
 function fixedpoint(
-    ψ₀::InfinitePEPS{F},
-    H,
-    alg::PEPSOptimize,
-    env₀::CTMRGEnv=CTMRGEnv(ψ₀, field(F)^20);
+    operator, peps₀::InfinitePEPS{F}, env₀::CTMRGEnv=CTMRGEnv(peps₀, field(F)^20); kwargs...
+)
+    alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
+    return fixedpoint(operator, peps₀, env₀, alg)
+end
+function fixedpoint(
+    operator,
+    peps₀::InfinitePEPS{F},
+    env₀::CTMRGEnv,
+    alg::PEPSOptimize;
     (finalize!)=OptimKit._finalize!,
 ) where {F}
     if isnothing(alg.symmetrization)
@@ -89,7 +97,7 @@ function fixedpoint(
     end
 
     (peps, env), E, ∂E, numfg, convhistory = optimize(
-        (ψ₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
+        (peps₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
     ) do (peps, envs)
         E, gs = withgradient(peps) do ψ
             envs´ = hook_pullback(
@@ -102,7 +110,7 @@ function fixedpoint(
             ignore_derivatives() do
                 alg.reuse_env && update!(envs, envs´)
             end
-            return cost_function(ψ, envs´, H)
+            return cost_function(ψ, envs´, operator)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
         return E, g

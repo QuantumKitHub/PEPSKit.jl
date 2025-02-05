@@ -24,7 +24,7 @@ psi_init = symmetrize!(psi_init, RotateReflect())
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg);
 
 # find fixedpoint
-result = fixedpoint(psi_init, H, opt_alg, env_init)
+result = fixedpoint(H, psi_init, env_init, opt_alg)
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
 # compare against Juraj Hasik's data:

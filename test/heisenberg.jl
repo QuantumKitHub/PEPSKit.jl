@@ -25,7 +25,7 @@ E_ref = -0.6602310934799577
     env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
     # optimize energy and compute correlation lengths
-    result = fixedpoint(psi_init, H, opt_alg, env_init)
+    result = fixedpoint(H, psi_init, env_init, opt_alg)
     ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
     @test result.E ≈ E_ref atol = 1e-2
@@ -41,7 +41,7 @@ end
     env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
     # optimize energy and compute correlation lengths
-    result = fixedpoint(psi_init, H, opt_alg, env_init)
+    result = fixedpoint(H, psi_init, env_init, opt_alg)
     ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
     @test result.E ≈ 2 * E_ref atol = 1e-2
@@ -92,7 +92,7 @@ end
     # continue with auto differentiation
     svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-5))
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
-    result_final = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
+    result_final = fixedpoint(ham, peps, envs, opt_alg_gmres)  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(result_final.peps, result_final.env)
     e_site2 = result_final.E / (N1 * N2)
     @info "Auto diff energy = $e_site2"

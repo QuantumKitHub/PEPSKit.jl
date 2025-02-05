@@ -24,7 +24,7 @@ psi_init = InfinitePEPS(Pspace, Vspace, Vspace; unitcell)
 env_init = leading_boundary(CTMRGEnv(psi_init, Envspace), psi_init, ctm_alg);
 
 # find fixedpoint
-result = fixedpoint(psi_init, H, opt_alg, env_init)
+result = fixedpoint(H, psi_init, env_init, opt_alg)
 
 # comparison with Gaussian PEPS minimum at D=2 on 1000x1000 square lattice with aPBC
 @test result.E / prod(size(psi_init)) ≈ -2.6241 atol = 5e-2

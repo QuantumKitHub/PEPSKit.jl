@@ -31,7 +31,7 @@ psi_init = InfinitePEPS(2, χbond)
 env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
 
 # find fixedpoint
-result = fixedpoint(psi_init, H, opt_alg, env_init)
+result = fixedpoint(H, psi_init, env_init, opt_alg)
 ξ_h, ξ_v, = correlation_length(result.peps, result.env)
 
 # compute magnetization
@@ -45,7 +45,7 @@ magn = expectation_value(result.peps, M, result.env)
 
 # find fixedpoint in polarized phase and compute correlations lengths
 H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
-result_polar = fixedpoint(psi_init, H_polar, opt_alg, env_init)
+result_polar = fixedpoint(H_polar, psi_init, env_init, opt_alg)
 ξ_h_polar, ξ_v_polar, = correlation_length(result_polar.peps, result_polar.env)
 @test ξ_h_polar < ξ_h
 @test ξ_v_polar < ξ_v
