@@ -56,7 +56,7 @@ that maximizes the fidelity (not normalized by `⟨b0|b0⟩`)
 
                 ┌──←──┐   ┌──←──┐   ┌──←──┐   ┌──←──┐
                 v     │   │     │   │     │   │     v†
-                ↓   ┌─┴───┴─┐   │   │   ┌─┴───┴─┐   ↑
+                ↑   ┌─┴───┴─┐   │   │   ┌─┴───┴─┐   ↓
                 s   │  env  │   b0  b0† │  env  │   s
                 ↑   └─┬───┬─┘   │   │   └─┬───┬─┘   ↓
                 u†    │   │     │   │     │   │     u
@@ -64,7 +64,7 @@ that maximizes the fidelity (not normalized by `⟨b0|b0⟩`)
             = ──────────────────────────────────────────
                         ┌──←──┐   ┌──←──┐
                         v     │   │     v†
-                        ↓   ┌─┴───┴─┐   ↑
+                        ↑   ┌─┴───┴─┐   ↓
                         s   │  env  │   s
                         ↑   └─┬───┬─┘   ↓
                         u†    │   │     u
@@ -78,9 +78,9 @@ that maximizes the fidelity (not normalized by `⟨b0|b0⟩`)
 The algorithm iteratively optimizes the vectors `l`, `r`
 ```
                       ┌─┐                     ┌─┐
-          ┌─┐         │ ↑         ┌─┐         │ ↑
-        ←─┘ │       ←─┘ s       ←─┘ │       ←─┘ v†
-            l   =       ↓   ,       r   =       ↑
+          ┌─┐         │ ↓         ┌─┐         │ ↑
+        →─┘ │       →─┘ s       ←─┘ │       ←─┘ v†
+            l   =       ↓   ,       r   =       ↓
         ←─┐ │       ←─┐ u       ←─┐ │       ←─┐ s 
           └─┘         │ ↓         └─┘         │ ↓
                       └─┘                     └─┘
@@ -129,7 +129,7 @@ We can verify that (using `B† = B`)
 ```
 Then the bond matrix `u s v†` is updated by truncated SVD:
 ```
-    ← u ← r →    ==>    ← u ← s → v† →
+    ← u ← r →    ==>    ← u ← s ← v† →
 ```
 
 ## Optimization of `l`
@@ -139,7 +139,7 @@ Define the vector `p` and the positive map `B` as
 ```
                 ┌───┐           ┌─←─┐   ┌───┐
                 │   │           │   │   │   v†
-                │   └─←         │  ┌┴───┴┐  └─←
+                │   └o→         │  ┌┴───┴┐  └o→
                 p†          =  b0† │ env │ 
                 │   ┌─←         │  └┬───┬┘  ┌─←
                 │   │           │   │   │   │
@@ -147,12 +147,14 @@ Define the vector `p` and the positive map `B` as
 
           ┌───┐   ┌───┐         ┌───┐   ┌───┐
           │   │   │   │         v   │   │   v†
-        ←─┘  ┌┴───┴┐  └─←     ←─┘  ┌┴───┴┐  └─←
+        →o┘  ┌┴───┴┐  └o→     →o┘  ┌┴───┴┐  └o→
              │  B  │        =      │ env │
         ←─┐  └┬───┬┘  ┌─←     ←─┐  └┬───┬┘  ┌─←
           │   │   │   │         │   │   │   │
           └───┘   └───┘         └───┘   └───┘
 ```
+Here `o` is the parity tensor needed for the fermion case,
+    which can be incorporated into `vh` by a `twist`. 
 Then (each index corresponds to a pair of fused indices)
 ```
     F(l,l†) = |p† l|² / (l† B l)
@@ -163,7 +165,7 @@ which is maximized when
 ```
 Then the bond matrix `u s v†` is updated by SVD:
 ```
-    ← l → v† →   ==>    ← u ← s → v† →
+    ← l ← v† →   ==>    ← u ← s ← v† →
 ```
 
 ## Returns
@@ -180,31 +182,29 @@ function fullenv_truncate(
     @assert [isdual(space(env, ax)) for ax in 1:4] == [0, 0, 1, 1]
     @assert [isdual(space(b0, ax)) for ax in 1:2] == [0, 0]
     # initialize truncated `u, s, v†`
-    # TODO: remove the flip_svd function in future
-    u, s, vh = flip_svd(tsvd(b0, ((1,), (2,)); trunc=alg.trscheme)...)
+    u, s, vh = tsvd(b0, ((1,), (2,)); trunc=alg.trscheme)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
     s0 = deepcopy(s)
     diff_fid, diff_wt, fid, fid0 = NaN, NaN, 0.0, 0.0
     for iter in 1:(alg.maxiter)
         time0 = time()
-        # update `r`
+        # update `← r →  =  ← s ← v† →`
         @tensor r[-1 -2] := s[-1 1] * vh[1 -2]
         @tensor p[-1 -2] := conj(u[1 -1]) * env[1 -2; 3 4] * b0[3 4]
         @tensor B[-1 -2; -3 -4] := conj(u[1 -1]) * env[1 -2; 3 -4] * u[3 -3]
-        @assert [isdual(space(B, ax)) for ax in 1:4] == [0, 0, 1, 1]
         r, info_r = linsolve(x -> B * x, p, r, 0, 1)
         @tensor b1[-1; -2] := u[-1 1] * r[1 -2]
-        u, s, vh = flip_svd(tsvd(b1; trunc=alg.trscheme)...)
+        u, s, vh = tsvd(b1; trunc=alg.trscheme)
         s /= norm(s, Inf)
-        # update `l`
+        # update `← l ←  =  ← u ← s ←`
+        vh2 = twist(vh, 1)
         @tensor l[-1 -2] := u[-1 1] * s[1 -2]
-        @tensor p[-1 -2] := conj(vh[-2 2]) * env[-1 2; 3 4] * b0[3 4]
-        @tensor B[-1 -2; -3 -4] := conj(vh[-2 2]) * env[-1 2; -3 4] * vh[-4 4]
-        @assert [isdual(space(B, ax)) for ax in 1:4] == [0, 0, 1, 1]
+        @tensor p[-1 -2] := conj(vh2[-2 2]) * env[-1 2; 3 4] * b0[3 4]
+        @tensor B[-1 -2; -3 -4] := conj(vh2[-2 2]) * env[-1 2; -3 4] * vh2[-4 4]
         l, info_l = linsolve(x -> B * x, p, l, 0, 1)
         @tensor b1[-1; -2] := l[-1 1] * vh[1 -2]
-        u, s, vh = flip_svd(tsvd(b1; trunc=alg.trscheme)...)
+        u, s, vh = tsvd(b1; trunc=alg.trscheme)
         s /= norm(s, Inf)
         # determine convergence
         fid = fidelity(env, b0, permute(b1, (1, 2)))
@@ -232,17 +232,5 @@ function fullenv_truncate(
             break
         end
     end
-    # change `← u ← s → v† →` back to `← u ← s ← v† →`
-    # using flipper: `← u ←(← s → f ←) ← (← f† → v† →)→`
-    # @tensor tmp[-1; -2] := u[-1 1] * s[1 2] * vh[2 -2]
-    Vtrunc = space(s, 1)
-    @assert isdual(Vtrunc) === false
-    flipper = isomorphism(flip(Vtrunc), Vtrunc)
-    @tensor s[-1; -2] := s[-1 1] * flipper[1 -2]
-    # TODO: figure out the reason behind the twist
-    twist!(s, 2)
-    @tensor vh[-1; -2] := flipper'[-1 1] * vh[1 -2]
-    # @assert tmp ≈ u * s * vh
-    # @assert norm(s, Inf) ≈ 1.0 "Value of s = $s\n"
-    return u, DiagonalTensorMap(s), vh, (; fid, diff_fid, diff_wt)
+    return u, s, vh, (; fid, diff_fid, diff_wt)
 end

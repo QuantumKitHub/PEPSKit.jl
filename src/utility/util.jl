@@ -45,37 +45,6 @@ function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
     return dst
 end
 
-"""
-    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
-
-Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
-```
-    u -> u * sqrt(s), vh -> sqrt(s) * vh
-```
-"""
-function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-    @assert domain(s) == codomain(s)
-    @assert isdual(space(s, 1)) === false
-    sqrt_s = sdiag_pow(s, 0.5)
-    return u * sqrt_s, sqrt_s * vh
-end
-
-"""
-    flip_svd(u, s, vh, ϵ) -> u, s, vh, ϵ
-
-Given `tsvd` result `u`, `s`, `vh`, `ϵ`, flip the dual (arrow direction) between `s` and `vh`:
-```
-    u ← s ← vh  ==>  u ← s → vh
-```
-"""
-# TODO: this function is a temporary fix
-function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap, ϵ)
-    flipper = isomorphism(flip(space(vh, 1)), space(vh, 1))
-    s = s * flipper'
-    vh = twist(flipper * vh, 1)
-    return u, s, vh, ϵ
-end
-
 _safe_pow(a, pow, tol) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 # TODO: change the type of `S` to DiagonalTensorMap
@@ -109,6 +78,21 @@ function ChainRulesCore.rrule(
         return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
     end
     return spow, sdiag_pow_pullback
+end
+
+"""
+    absorb_s(u::AbstractTensorMap, s::AbstractTensorMap, vh::AbstractTensorMap)
+
+Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
+```
+    u -> u * sqrt(s), vh -> sqrt(s) * vh
+```
+"""
+function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+    @assert domain(s) == codomain(s)
+    @assert isdual(space(s, 1)) === false
+    sqrt_s = sdiag_pow(s, 0.5)
+    return u * sqrt_s, sqrt_s * vh
 end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance

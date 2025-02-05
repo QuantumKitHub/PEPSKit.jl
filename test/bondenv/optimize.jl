@@ -18,12 +18,12 @@ end
 Random.seed!(10)
 trscheme = truncerr(1e-10) & truncdim(10)
 # Vext, Vint, Vphy = ℂ^200, ℂ^14, ℂ^3
-Vext = ℂ[U1Irrep](0 => 90, 1 => 50, -1 => 60)
-Vint = ℂ[U1Irrep](0 => 6, 1 => 2, -1 => 3)
-Vphy = ℂ[U1Irrep](0 => 1, 1 => 2)
-# Vext = ℂ[FermionParity](0 => 100, 1 => 100)
-# Vint = ℂ[FermionParity](0 => 7, 1 => 7)
-# Vphy = ℂ[FermionParity](0 => 1, 1 => 2)
+# Vext = ℂ[U1Irrep](0 => 90, 1 => 50, -1 => 60)
+# Vint = ℂ[U1Irrep](0 => 6, 1 => 2, -1 => 3)
+# Vphy = ℂ[U1Irrep](0 => 1, 1 => 2)
+Vext = ℂ[FermionParity](0 => 100, 1 => 100)
+Vint = ℂ[FermionParity](0 => 7, 1 => 7)
+Vphy = ℂ[FermionParity](0 => 1, 1 => 2)
 Vbond = Vint ⊗ Vint
 # random positive-definite environment
 Z = randn(Float64, Vext ← Vbond)
@@ -38,12 +38,14 @@ aR0, bL0 = _postprocess(aR0, s, bL0)
 fid0 = PEPSKit.fidelity(env, PEPSKit._combine_aRbL(aR0, bL0), aR2bL2)
 @info "SVD initial fidelity = $fid0."
 
+maxiter = 50
 for (label, alg) in (
-    ("ALS", ALSTruncation(; trscheme, maxiter=10, verbose=true, check_int=1)),
-    ("FET", FullEnvTruncation(; trscheme, maxiter=10, verbose=true, check_int=1)),
+    ("ALS", ALSTruncation(; trscheme, maxiter, verbose=true, check_int=1)),
+    ("FET", FullEnvTruncation(; trscheme, maxiter, verbose=true, check_int=1)),
 )
     local s
     aR1, s, bL1, info = PEPSKit.bond_optimize(env, aR2, bL2, alg)
+    display(s)
     @info "$label improved fidelity = $(info.fid)."
     @test info.fid > fid0
 end
