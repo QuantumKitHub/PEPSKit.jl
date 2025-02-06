@@ -110,7 +110,9 @@ function InfinitePEPS(
 end
 
 unitcell(t::InfinitePEPS) = t.A
+
 TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
+TensorKit.dim(t::InfinitePEPS) = sum(dim.(t.A))
 
 # Chainrules
 function ChainRulesCore.rrule(

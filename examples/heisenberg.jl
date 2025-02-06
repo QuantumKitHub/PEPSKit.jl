@@ -1,6 +1,6 @@
 using LinearAlgebra
-using TensorKit, OptimKit
-using PEPSKit, KrylovKit
+using TensorKit, KrylovKit, PEPSKit
+using Manopt
 
 # Square lattice Heisenberg Hamiltonian
 # We use the parameters (J₁, J₂, J₃) = (-1, 1, -1) by default to capture
@@ -26,6 +26,6 @@ opt_alg = PEPSOptimize(;
 # E/N = −0.6694421, which is a QMC estimate from https://arxiv.org/abs/1101.3281.
 # Of course there is a noticable bias for small χbond and χenv.
 ψ₀ = InfinitePEPS(2, χbond)
-env₀ = leading_boundary(CTMRGEnv(ψ₀, ℂ^χenv), ψ₀, ctm_alg)
-result = fixedpoint(ψ₀, H, opt_alg, env₀)
-@show result.E
+env₀, = leading_boundary(CTMRGEnv(ψ₀, ℂ^χenv), ψ₀, ctm_alg)
+peps, env, E, = fixedpoint(ψ₀, H, opt_alg, env₀)
+@show E

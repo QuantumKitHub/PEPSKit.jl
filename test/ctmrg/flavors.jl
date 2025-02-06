@@ -19,10 +19,10 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     # compute environments
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)
-    env_sequential = leading_boundary(
+    env_sequential, = leading_boundary(
         CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_sequential
     )
-    env_simultaneous = leading_boundary(
+    env_simultaneous, = leading_boundary(
         CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_simultaneous
     )
 
@@ -50,8 +50,8 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
     # compare Heisenberg energies
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
-    E_sequential = costfun(psi, env_sequential, H)
-    E_simultaneous = costfun(psi, env_simultaneous, H)
+    E_sequential = cost_function(psi, env_sequential, H)
+    E_simultaneous = cost_function(psi, env_simultaneous, H)
     @test E_sequential ≈ E_simultaneous rtol = 1e-3
 end
 
@@ -68,7 +68,7 @@ end
     χs = [16 17 18; 15 20 21; 14 19 22]
     psi = InfinitePEPS(Ds, Ds, Ds)
     env = CTMRGEnv(psi, rand(10:20, 3, 3), rand(10:20, 3, 3))
-    env2 = leading_boundary(env, psi, ctm_alg)
+    env2, = leading_boundary(env, psi, ctm_alg)
 
     # check that the space is fixed
     @test all(space.(env.corners) .== space.(env2.corners))

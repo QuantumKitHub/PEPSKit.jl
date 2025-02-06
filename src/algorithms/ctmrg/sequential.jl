@@ -31,18 +31,29 @@ function SequentialCTMRG(;
 end
 
 function ctmrg_iteration(state, envs::CTMRGEnv, alg::SequentialCTMRG)
-    ϵ = zero(real(scalartype(state)))
-    for _ in 1:4 # rotate
+    truncation_error = zero(real(scalartype(state)))
+    condition_number = zero(real(scalartype(state)))
+    U, S, V = _prealloc_svd(envs.edges)
+    for dir in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            projectors, info = sequential_projectors(col, state, envs, alg.projector_alg)
+            projectors, err, cond, U′, S′, V′ = sequential_projectors(
+                col, state, envs, alg.projector_alg
+            )
             envs = renormalize_sequentially(col, projectors, state, envs)
-            ϵ = max(ϵ, info.err)
+            truncation_error = max(truncation_error, err)
+            condition_number = max(condition_number, cond)
+            for row in 1:size(state, 1)
+                rc_idx = isodd(dir) ? (row, col) : (col, row)  # relevant for rectangular unit cells
+                U[dir, rc_idx...] = U′[row]
+                S[dir, rc_idx...] = S′[row]
+                V[dir, rc_idx...] = V′[row]
+            end
         end
         state = rotate_north(state, EAST)
         envs = rotate_north(envs, EAST)
     end
 
-    return envs, (; err=ϵ)
+    return envs, truncation_error, condition_number, U, S, V
 end
 
 """
@@ -53,21 +64,33 @@ Compute CTMRG projectors in the `:sequential` scheme either for an entire column
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
 """
 function sequential_projectors(
-    col::Int, state::InfiniteSquareNetwork, envs::CTMRGEnv, alg::ProjectorAlgorithm
-)
+    col::Int, state::InfiniteSquareNetwork{T}, envs::CTMRGEnv, alg::ProjectorAlgorithm
+) where {T}
     # SVD half-infinite environment column-wise
-    ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs, 2)))
+    ϵ = Zygote.Buffer(zeros(real(scalartype(T)), size(envs, 2)))
+    S = Zygote.Buffer(
+        zeros(size(envs, 2)), tensormaptype(spacetype(T), 1, 1, real(scalartype(T)))
+    )
+    U, S, V = _prealloc_svd(@view(envs.edges[4, :, col]))
     coordinates = eachcoordinate(envs)[:, col]
     projectors = dtmap(coordinates) do (r, c)
         trscheme = truncation_scheme(alg, envs.edges[WEST, _prev(r, size(envs, 2)), c])
-        proj, info = sequential_projectors(
+        proj, err, U′, S′, V′ = sequential_projectors(
             (WEST, r, c), state, envs, @set(alg.trscheme = trscheme)
         )
-        ϵ[r] = info.err / norm(info.S)
+        U[r] = U′
+        S[r] = S′
+        V[r] = V′
+        ϵ[r] = err / norm(S′)
         return proj
     end
 
-    return (map(first, projectors), map(last, projectors)), (; err=maximum(copy(ϵ)))
+    P_left = map(first, projectors)
+    P_right = map(last, projectors)
+    S = copy(S)
+    truncation_error = maximum(copy(ϵ))
+    condition_number = maximum(_condition_number, S)
+    return (P_left, P_right), truncation_error, condition_number, copy(U), S, copy(V)
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
