@@ -55,10 +55,10 @@ include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")
 
+include("utility/symmetrization.jl")
+
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
-
-include("utility/symmetrization.jl")
 
 """
     module Defaults
@@ -116,8 +116,7 @@ Module containing default algorithm parameter values and arguments.
 - `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
-    using TensorKit, KrylovKit, OhMyThreads
-    using Manopt
+    using TensorKit, KrylovKit, OptimKit, OhMyThreads
     using PEPSKit:
         LinSolver,
         FixedSpaceTruncation,

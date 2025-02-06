@@ -70,17 +70,17 @@ The function returns a `NamedTuple` which contains the following entries:
 """
 function fixedpoint(
     operator, peps₀::InfinitePEPS{F}, env₀::CTMRGEnv=CTMRGEnv(peps₀, field(F)^20); kwargs...
-)
+) where {F}
     alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
     return fixedpoint(operator, peps₀, env₀, alg)
 end
 function fixedpoint(
     operator,
-    peps₀::InfinitePEPS{F},
+    peps₀::InfinitePEPS,
     env₀::CTMRGEnv,
     alg::PEPSOptimize;
     (finalize!)=OptimKit._finalize!,
-) where {F}
+)
     if isnothing(alg.symmetrization)
         retract = peps_retract
     else

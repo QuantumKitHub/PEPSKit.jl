@@ -121,7 +121,7 @@ function _rrule(
     alg::SimultaneousCTMRG,
 )
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
-    envs = leading_boundary(envinit, state, alg)
+    envs, = leading_boundary(envinit, state, alg)
     envs_conv, info = ctmrg_iteration(state, envs, alg)
     envs_fixed, signs = gauge_fix(envs, envs_conv)
 

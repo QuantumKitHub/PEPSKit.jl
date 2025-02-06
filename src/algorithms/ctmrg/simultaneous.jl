@@ -56,6 +56,7 @@ function _condition_number(S::AbstractTensorMap)
         return maximum(b_diag) / minimum(b_diag)
     end
 end
+@non_differentiable _condition_number(S::AbstractTensorMap)
 
 """
     simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm)
