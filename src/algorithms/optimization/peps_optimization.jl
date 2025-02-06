@@ -43,13 +43,12 @@ function PEPSOptimize(;
 end
 
 """
-
     fixedpoint(operator, peps₀::InfinitePEPS{F}, [env₀::CTMRGEnv]; kwargs...)
     fixedpoint(operator, peps₀::InfinitePEPS{T}, alg::PEPSOptimize, [env₀::CTMRGEnv];
-               finalize!=OptimKit._finalize!, symmetrization=nothing) where {T}
+               finalize!=OptimKit._finalize!) where {T}
     
-Optimize `peps₀` with respect to the `operator` according to the parameters supplied
-in `alg`. The initial environment `env₀` serves as an initial guess for the first CTMRG run.
+Optimize `operator` starting from `peps₀` according to the parameters supplied in `alg`.
+The initial environment `env₀` serves as an initial guess for the first CTMRG run.
 By default, a random initial environment is used.
 
 The `finalize!` kwarg can be used to insert a function call after each optimization step
@@ -57,30 +56,33 @@ by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
 The function maps `(peps, envs), f, g = finalize!((peps, envs), f, g, numiter)`.
 The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
 PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
-requires a symmmetric `ψ₀` and `env₀` to converge properly.
+requires a symmmetric `peps₀` and `env₀` to converge properly.
 
-The function returns a `NamedTuple` which contains the following entries:
-- `peps`: final `InfinitePEPS`
-- `env`: `CTMRGEnv` corresponding to the final PEPS
-- `E`: final energy
-- `E_history`: convergence history of the energy function
-- `grad`: final energy gradient
-- `gradnorm_history`: convergence history of the energy gradient norms
-- `numfg`: total number of calls to the energy function
+The function returns the final PEPS, CTMRG environment and cost value, as well as an
+information `NamedTuple` which contains the following entries:
+- `last_gradient`: last gradient of the cost function
+- `fg_evaluations`: number of evaluations of the cost and gradient function
+- `costs`: history of cost values
+- `gradnorms`: history of gradient norms
+- `truncation_errors`: history of truncation errors of the boundary algorithm
+- `condition_numbers`: history of condition numbers of the CTMRG environments
+- `gradnorms_unitcell`: history of gradient norms for each respective unit cell entry
+- `times`: history of times each optimization step took
 """
 function fixedpoint(
-    operator, peps₀::InfinitePEPS{F}, env₀::CTMRGEnv=CTMRGEnv(peps₀, field(F)^20); kwargs...
-) where {F}
+    operator, peps₀::InfinitePEPS{T}, env₀::CTMRGEnv=CTMRGEnv(peps₀, field(T)^20); kwargs...
+) where {T}
     alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
     return fixedpoint(operator, peps₀, env₀, alg)
 end
 function fixedpoint(
     operator,
-    peps₀::InfinitePEPS,
+    peps₀::InfinitePEPS{T},
     env₀::CTMRGEnv,
     alg::PEPSOptimize;
     (finalize!)=OptimKit._finalize!,
-)
+) where {T}
+    # setup retract and finalize! for symmetrization
     if isnothing(alg.symmetrization)
         retract = peps_retract
     else
@@ -89,6 +91,7 @@ function fixedpoint(
         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
     end
 
+    # check realness compatibility
     if scalartype(env₀) <: Real && iterscheme(alg.gradient_alg) == :fixed
         env₀ = complex(env₀)
         @warn "the provided real environment was converted to a complex environment since \
@@ -96,35 +99,49 @@ function fixedpoint(
         with purely real environments"
     end
 
-    (peps, env), E, ∂E, numfg, convhistory = optimize(
+    # initialize info collection vectors
+    truncation_errors = Vector{real(scalartype(T))}()
+    condition_numbers = Vector{real(scalartype(T))}()
+    gradnorms_unitcell = Vector{Matrix{real(scalartype(T))}}()
+    times = Float64[]
+
+    # optimize operator cost function
+    (peps_final, env_final), cost, ∂cost, numfg, convergence_history = optimize(
         (peps₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
-    ) do (peps, envs)
+    ) do (peps, env)
+        start_time = time_ns()
         E, gs = withgradient(peps) do ψ
-            envs´, = hook_pullback(
+            env′, info = hook_pullback(
                 leading_boundary,
-                envs,
+                env,
                 ψ,
                 alg.boundary_alg;
                 alg_rrule=alg.gradient_alg,
             )
             ignore_derivatives() do
-                alg.reuse_env && update!(envs, envs´)
+                alg.reuse_env && update!(env, env′)
+                push!(truncation_errors, info.truncation_error)
+                push!(condition_numbers, info.condition_number)
             end
-            return cost_function(ψ, envs´, operator)
+            return cost_function(ψ, env′, operator)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        push!(gradnorms_unitcell, norm.(g.A))
+        push!(times, (time_ns() - start_time) * 1e-9)
         return E, g
     end
 
-    return (;
-        peps,
-        env,
-        E,
-        E_history=convhistory[:, 1],
-        grad=∂E,
-        gradnorm_history=convhistory[:, 2],
-        numfg,
+    info = (
+        last_gradient=∂cost,
+        fg_evaluations=numfg,
+        costs=convergence_history[:, 1],
+        gradnorms=convergence_history[:, 2],
+        truncation_errors,
+        condition_numbers,
+        gradnorms_unitcell,
+        times,
     )
+    return peps_final, env_final, cost, info
 end
 
 # Update PEPS unit cell in non-mutating way
@@ -138,3 +155,23 @@ end
 
 # Take real valued part of dot product
 real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
+
+"""
+    symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
+
+Return the `retract` and `finalize!` function for symmetrizing the `peps` and `grad` tensors.
+"""
+function symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
+    finf = function symmetrize_finalize!((peps, envs), E, grad, _)
+        grad_symm = symmetrize!(grad, symm)
+        return (peps, envs), E, grad_symm
+    end
+    retf = function symmetrize_retract((peps, envs), η, α)
+        peps_symm = deepcopy(peps)
+        peps_symm.A .+= η.A .* α
+        envs′ = deepcopy(envs)
+        symmetrize!(peps_symm, symm)
+        return (peps_symm, envs′), η
+    end
+    return retf, finf
+end
