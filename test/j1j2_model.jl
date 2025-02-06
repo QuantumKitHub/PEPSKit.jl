@@ -21,7 +21,7 @@ Random.seed!(91283219347)
 H = j1_j2(InfiniteSquare(); J2=0.25)
 peps₀ = product_peps(2, χbond; noise_amp=1e-1)
 peps₀ = symmetrize!(peps₀, RotateReflect())
-env_init, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg);
+env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg);
 
 # find fixedpoint
 peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)

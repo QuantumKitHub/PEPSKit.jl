@@ -44,7 +44,7 @@ end
 
 """
     fixedpoint(operator, peps₀::InfinitePEPS{F}, [env₀::CTMRGEnv]; kwargs...)
-    fixedpoint(operator, peps₀::InfinitePEPS{T}, alg::PEPSOptimize, [env₀::CTMRGEnv];
+    fixedpoint(operator, peps₀::InfinitePEPS{T}, env₀::CTMRGEnv, alg::PEPSOptimize;
                finalize!=OptimKit._finalize!) where {T}
     
 Optimize `operator` starting from `peps₀` according to the parameters supplied in `alg`.
@@ -72,6 +72,7 @@ information `NamedTuple` which contains the following entries:
 function fixedpoint(
     operator, peps₀::InfinitePEPS{T}, env₀::CTMRGEnv=CTMRGEnv(peps₀, field(T)^20); kwargs...
 ) where {T}
+    throw(error("method not yet implemented"))
     alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
     return fixedpoint(operator, peps₀, env₀, alg)
 end

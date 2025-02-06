@@ -60,8 +60,8 @@ end
     # initialize states
     Random.seed!(91283219347)
     psi = InfinitePEPS(2, χbond)
-    env_init = CTMRGEnv(psi, ComplexSpace(χenv))
-    env_conv1, = leading_boundary(env_init, psi, ctm_alg_iter)
+    env₀ = CTMRGEnv(psi, ComplexSpace(χenv))
+    env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
 
     # do extra iteration to get SVD
     env_conv2_iter, info_iter = ctmrg_iteration(psi, env_conv1, ctm_alg_iter)
