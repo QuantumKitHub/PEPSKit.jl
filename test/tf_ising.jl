@@ -39,7 +39,7 @@ peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
 M = LocalOperator(H.lattice, (CartesianIndex(1, 1),) => σx)
 magn = expectation_value(peps, M, env)
 
-@test result.E ≈ e atol = 1e-2
+@test E ≈ e atol = 1e-2
 @test imag(magn) ≈ 0 atol = 1e-6
 @test abs(magn) ≈ mˣ atol = 5e-2
 

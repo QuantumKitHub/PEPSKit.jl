@@ -44,7 +44,7 @@ function ctmrg_iteration(state, envs::CTMRGEnv, alg::SequentialCTMRG)
         envs = rotate_north(envs, EAST)
     end
 
-    return envs, (; err=ϵ)
+    return envs, (; truncation_error, condition_number)
 end
 
 """
