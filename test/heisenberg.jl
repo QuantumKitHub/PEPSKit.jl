@@ -21,14 +21,14 @@ E_ref = -0.6602310934799577
     # initialize states
     Random.seed!(123)
     H = heisenberg_XYZ(InfiniteSquare())
-    psi_init = InfinitePEPS(2, Dbond)
-    env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+    peps₀ = InfinitePEPS(2, Dbond)
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg)
 
     # optimize energy and compute correlation lengths
-    result = fixedpoint(H, psi_init, env_init, opt_alg)
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
+    peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
+    ξ_h, ξ_v, = correlation_length(peps, env)
 
-    @test result.E ≈ E_ref atol = 1e-2
+    @test E ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
@@ -37,14 +37,14 @@ end
     Random.seed!(456)
     unitcell = (1, 2)
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
-    psi_init = InfinitePEPS(2, Dbond; unitcell)
-    env_init, = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+    peps₀ = InfinitePEPS(2, Dbond; unitcell)
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg)
 
     # optimize energy and compute correlation lengths
-    result = fixedpoint(H, psi_init, env_init, opt_alg)
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
+    peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
+    ξ_h, ξ_v, = correlation_length(peps, env)
 
-    @test result.E ≈ 2 * E_ref atol = 1e-2
+    @test E ≈ 2 * E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
@@ -92,9 +92,9 @@ end
     # continue with auto differentiation
     svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-5))
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
-    result_final = fixedpoint(ham, peps, envs, opt_alg_gmres)  # sensitivity warnings and degeneracies due to SU(2)?
-    ξ_h, ξ_v, = correlation_length(result_final.peps, result_final.env)
-    e_site2 = result_final.E / (N1 * N2)
+    peps_final, env_final, E_final, = fixedpoint(ham, peps, envs, opt_alg_gmres)  # sensitivity warnings and degeneracies due to SU(2)?
+    ξ_h, ξ_v, = correlation_length(peps_final, env_final)
+    e_site2 = E_final / (N1 * N2)
     @info "Auto diff energy = $e_site2"
     @test e_site2 ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
