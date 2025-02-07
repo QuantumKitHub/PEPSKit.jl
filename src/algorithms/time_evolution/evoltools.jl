@@ -1,3 +1,8 @@
+const BondEnv{T,S} = AbstractTensorMap{T,S,2,2} where {T<:Number,S<:ElementarySpace}
+
+include("bondenv/optimize_fet.jl")
+include("bondenv/optimize_als.jl")
+
 """
     get_gate(dt::Float64, H::LocalOperator)
 
