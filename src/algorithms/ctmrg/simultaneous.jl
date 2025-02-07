@@ -48,6 +48,7 @@ function _prealloc_svd(edges::Array{E,N}) where {E,N}
     return U, S, V
 end
 
+# TODO: add `LinearAlgebra.cond` to TensorKit
 # Compute condition number σ_max / σ_min for diagonal singular value TensorMap
 function _condition_number(S::AbstractTensorMap)
     # Take maximal condition number over all blocks
