@@ -43,13 +43,13 @@ function PEPSOptimize(;
 end
 
 """
-    fixedpoint(operator, peps₀::InfinitePEPS{F}, [env₀::CTMRGEnv]; kwargs...)
-    fixedpoint(operator, peps₀::InfinitePEPS{T}, env₀::CTMRGEnv, alg::PEPSOptimize;
-               finalize!=OptimKit._finalize!) where {T}
+    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
+    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize;
+               finalize!=OptimKit._finalize!)
     
-Optimize `operator` starting from `peps₀` according to the parameters supplied in `alg`.
-The initial environment `env₀` serves as an initial guess for the first CTMRG run.
-By default, a random initial environment is used.
+Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
+to the optimization parameters supplied in `alg`. The initial environment `env₀` serves as
+an initial guess for the first CTMRG run. By default, a random initial environment is used.
 
 The `finalize!` kwarg can be used to insert a function call after each optimization step
 by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
@@ -70,19 +70,19 @@ information `NamedTuple` which contains the following entries:
 - `times`: history of times each optimization step took
 """
 function fixedpoint(
-    operator, peps₀::InfinitePEPS{T}, env₀::CTMRGEnv=CTMRGEnv(peps₀, field(T)^20); kwargs...
-) where {T}
+    operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...
+)
     throw(error("method not yet implemented"))
     alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
     return fixedpoint(operator, peps₀, env₀, alg)
 end
 function fixedpoint(
     operator,
-    peps₀::InfinitePEPS{T},
+    peps₀::InfinitePEPS,
     env₀::CTMRGEnv,
     alg::PEPSOptimize;
     (finalize!)=OptimKit._finalize!,
-) where {T}
+)
     # setup retract and finalize! for symmetrization
     if isnothing(alg.symmetrization)
         retract = peps_retract
@@ -101,10 +101,11 @@ function fixedpoint(
     end
 
     # initialize info collection vectors
-    truncation_errors = Vector{real(scalartype(T))}()
-    condition_numbers = Vector{real(scalartype(T))}()
-    gradnorms_unitcell = Vector{Matrix{real(scalartype(T))}}()
-    times = Float64[]
+    T = promote_type(real(scalartype(peps₀)), real(scalartype(env₀)))
+    truncation_errors = Vector{T}()
+    condition_numbers = Vector{T}()
+    gradnorms_unitcell = Vector{Matrix{T}}()
+    times = Vector{Float64}()
 
     # optimize operator cost function
     (peps_final, env_final), cost, ∂cost, numfg, convergence_history = optimize(
