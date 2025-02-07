@@ -56,7 +56,11 @@ function _condition_number(S::AbstractTensorMap)
         return maximum(b_diag) / minimum(b_diag)
     end
 end
-@non_differentiable _condition_number(S::AbstractTensorMap)
+function ChainRulesCore.rrule(::typeof(_condition_number), S::AbstractTensorMap)  # Backpropagte with ZeroTangent() as work-around
+    condition_number = _condition_number(S)
+    _condition_number_pullback(_) = (NoTangent(), ZeroTangent())
+    return condition_number, _condition_number_pullback
+end
 
 """
     simultaneous_projectors(enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm)
