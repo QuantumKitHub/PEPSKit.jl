@@ -48,20 +48,6 @@ function _prealloc_svd(edges::Array{E,N}) where {E,N}
     return U, S, V
 end
 
-# Compute condition number σ_max / σ_min for diagonal singular value TensorMap
-function _condition_number(S::AbstractTensorMap)
-    # Take maximal condition number over all blocks
-    return maximum(blocks(S)) do (_, b)
-        b_diag = diag(b)
-        return maximum(b_diag) / minimum(b_diag)
-    end
-end
-function ChainRulesCore.rrule(::typeof(_condition_number), S::AbstractTensorMap)  # Backpropagte with ZeroTangent() as work-around
-    condition_number = _condition_number(S)
-    _condition_number_pullback(_) = (NoTangent(), ZeroTangent())
-    return condition_number, _condition_number_pullback
-end
-
 """
     simultaneous_projectors(enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm)
     simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgorithm)
@@ -74,6 +60,7 @@ function simultaneous_projectors(
 ) where {E}
     U, S, V = _prealloc_svd(env.edges)
     ϵ = Zygote.Buffer(zeros(real(scalartype(env)), size(env)))
+    κ = Zygote.Buffer(zeros(real(scalartype(env)), size(env)))
 
     projectors = dtmap(eachcoordinate(env, 1:4)) do coordinate
         coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
@@ -84,12 +71,13 @@ function simultaneous_projectors(
         U[coordinate...] = info.U
         S[coordinate...] = info.S
         V[coordinate...] = info.V
-        ϵ[coordinate...] = info.err / norm(info.S)
+        ϵ[coordinate...] = info.truncation_error / norm(info.S)
+        κ[coordinate...] = info.condition_number
         return proj
     end
 
     truncation_error = maximum(copy(ϵ))
-    condition_number = maximum(_condition_number, S)
+    condition_number = maximum(copy(κ))
     info = (; truncation_error, condition_number, U=copy(U), S=copy(S), V=copy(V))
     return (map(first, projectors), map(last, projectors)), info
 end

@@ -60,6 +60,7 @@ function sequential_projectors(
     # SVD half-infinite environment column-wise
     T = promote_type(real(scalartype(state)), real(scalartype(env)))
     ϵ = Zygote.Buffer(zeros(T, size(env, 2)))
+    κ = Zygote.Buffer(zeros(T, size(env, 2)))
     S = Zygote.Buffer(zeros(size(env, 2)), tensormaptype(spacetype(eltype(state)), 1, 1, T))
     coordinates = eachcoordinate(env)[:, col]
     projectors = dtmap(coordinates) do (r, c)
@@ -68,13 +69,12 @@ function sequential_projectors(
             (WEST, r, c), state, env, @set(alg.trscheme = trscheme)
         )
         S[r] = info.S
-        ϵ[r] = info.err / norm(info.S)
+        ϵ[r] = info.truncation_error / norm(info.S)
+        κ[r] = info.condition_number
         return proj
     end
 
-    truncation_error = maximum(copy(ϵ))
-    condition_number = maximum(_condition_number, S)
-    info = (; truncation_error, condition_number)
+    info = (; truncation_error=maximum(copy(ϵ)), condition_number=maximum(copy(κ)))
     return (map(first, projectors), map(last, projectors)), info
 end
 function sequential_projectors(
