@@ -53,7 +53,7 @@ an initial guess for the first CTMRG run. By default, a random initial environme
 
 The `finalize!` kwarg can be used to insert a function call after each optimization step
 by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
-The function maps `(peps, envs), f, g = finalize!((peps, envs), f, g, numiter)`.
+The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
 The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
 PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
 requires a symmmetric `peps₀` and `env₀` to converge properly.
@@ -69,9 +69,7 @@ information `NamedTuple` which contains the following entries:
 - `gradnorms_unitcell`: history of gradient norms for each respective unit cell entry
 - `times`: history of times each optimization step took
 """
-function fixedpoint(
-    operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...
-)
+function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
     throw(error("method not yet implemented"))
     alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
     return fixedpoint(operator, peps₀, env₀, alg)
@@ -164,16 +162,16 @@ real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 Return the `retract` and `finalize!` function for symmetrizing the `peps` and `grad` tensors.
 """
 function symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
-    finf = function symmetrize_finalize!((peps, envs), E, grad, _)
+    finf = function symmetrize_finalize!((peps, env), E, grad, _)
         grad_symm = symmetrize!(grad, symm)
-        return (peps, envs), E, grad_symm
+        return (peps, env), E, grad_symm
     end
-    retf = function symmetrize_retract((peps, envs), η, α)
+    retf = function symmetrize_retract((peps, env), η, α)
         peps_symm = deepcopy(peps)
         peps_symm.A .+= η.A .* α
-        envs′ = deepcopy(envs)
+        env′ = deepcopy(env)
         symmetrize!(peps_symm, symm)
-        return (peps_symm, envs′), η
+        return (peps_symm, env′), η
     end
     return retf, finf
 end

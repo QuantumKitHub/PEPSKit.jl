@@ -67,12 +67,10 @@ steps = -0.01:0.005:0.01
             alpha=steps,
             retract=PEPSKit.peps_retract,
             inner=PEPSKit.real_inner,
-        ) do (peps, envs)
+        ) do (peps, env)
             E, g = Zygote.withgradient(peps) do psi
-                envs2, = PEPSKit.hook_pullback(
-                    leading_boundary, envs, psi, ctmrg_alg; alg_rrule
-                )
-                return cost_function(psi, envs2, models[i])
+                env2, = PEPSKit.hook_pullback(leading_boundary, env, psi, ctmrg_alg; alg_rrule)
+                return cost_function(psi, env2, models[i])
             end
 
             return E, only(g)

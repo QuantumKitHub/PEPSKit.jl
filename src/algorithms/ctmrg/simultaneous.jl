@@ -30,13 +30,13 @@ function SimultaneousCTMRG(;
     )
 end
 
-function ctmrg_iteration(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
+function ctmrg_iteration(state, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners = dtmap(eachcoordinate(state, 1:4)) do idx
-        return TensorMap(EnlargedCorner(state, envs, idx), idx[1])
+        return TensorMap(EnlargedCorner(state, env, idx), idx[1])
     end  # expand environment
-    projectors, info = simultaneous_projectors(enlarged_corners, envs, alg.projector_alg)  # compute projectors on all coordinates
-    envs′ = renormalize_simultaneously(enlarged_corners, projectors, state, envs)  # renormalize enlarged corners
-    return envs′, info
+    projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
+    env′ = renormalize_simultaneously(enlarged_corners, projectors, state, env)  # renormalize enlarged corners
+    return env′, info
 end
 
 # Pre-allocate U, S, and V tensor as Zygote buffers to make it differentiable
@@ -59,21 +59,21 @@ end
 @non_differentiable _condition_number(S::AbstractTensorMap)
 
 """
-    simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm)
+    simultaneous_projectors(enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm)
     simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgorithm)
 
 Compute CTMRG projectors in the `:simultaneous` scheme either for all provided
 enlarged corners or on a specific `coordinate`.
 """
 function simultaneous_projectors(
-    enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm
+    enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm
 ) where {E}
-    U, S, V = _prealloc_svd(envs.edges)
-    ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs)))
+    U, S, V = _prealloc_svd(env.edges)
+    ϵ = Zygote.Buffer(zeros(real(scalartype(env)), size(env)))
 
-    projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
-        coordinate′ = _next_coordinate(coordinate, size(envs)[2:3]...)
-        trscheme = truncation_scheme(alg, envs.edges[coordinate[1], coordinate′[2:3]...])
+    projectors = dtmap(eachcoordinate(env, 1:4)) do coordinate
+        coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
+        trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
         proj, info = simultaneous_projectors(
             coordinate, enlarged_corners, @set(alg.trscheme = trscheme)
         )
@@ -113,26 +113,26 @@ function simultaneous_projectors(
 end
 
 """
-    renormalize_simultaneously(enlarged_corners, projectors, state, envs)
+    renormalize_simultaneously(enlarged_corners, projectors, state, env)
 
 Renormalize all enlarged corners and edges simultaneously.
 """
-function renormalize_simultaneously(enlarged_corners, projectors, state, envs)
+function renormalize_simultaneously(enlarged_corners, projectors, state, env)
     P_left, P_right = projectors
-    coordinates = eachcoordinate(envs, 1:4)
+    coordinates = eachcoordinate(env, 1:4)
     corners_edges = dtmap(coordinates) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_north_edge((r, c), env, P_left, P_right, state)
         elseif dir == EAST
             corner = renormalize_northeast_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_east_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_east_edge((r, c), env, P_left, P_right, state)
         elseif dir == SOUTH
             corner = renormalize_southeast_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_south_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_south_edge((r, c), env, P_left, P_right, state)
         elseif dir == WEST
             corner = renormalize_southwest_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_west_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_west_edge((r, c), env, P_left, P_right, state)
         end
         return corner / norm(corner), edge / norm(edge)
     end

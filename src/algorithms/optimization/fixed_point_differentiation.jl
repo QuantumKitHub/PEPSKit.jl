@@ -91,24 +91,24 @@ function _rrule(
     state,
     alg::CTMRGAlgorithm,
 )
-    envs, info = leading_boundary(envinit, state, alg)
+    env, info = leading_boundary(envinit, state, alg)
 
-    function leading_boundary_diffgauge_pullback((Δenvs′, Δinfo))
-        Δenvs = unthunk(Δenvs′)
+    function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
+        Δenv = unthunk(Δenv′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
         f(A, x) = gauge_fix(x, ctmrg_iteration(A, x, alg)[1])[1]
-        _, env_vjp = rrule_via_ad(config, f, state, envs)
+        _, env_vjp = rrule_via_ad(config, f, state, env)
 
         # evaluate the geometric sum
         ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        ∂f∂x(x)::typeof(envs) = env_vjp(x)[3]
-        ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
+        ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
+        ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
 
-        return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
+        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
 
-    return (envs, info), leading_boundary_diffgauge_pullback
+    return (env, info), leading_boundary_diffgauge_pullback
 end
 
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V
@@ -121,9 +121,9 @@ function _rrule(
     alg::SimultaneousCTMRG,
 )
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
-    envs, = leading_boundary(envinit, state, alg)
-    envs_conv, info = ctmrg_iteration(state, envs, alg)
-    envs_fixed, signs = gauge_fix(envs, envs_conv)
+    env, = leading_boundary(envinit, state, alg)
+    env_conv, info = ctmrg_iteration(state, env, alg)
+    env_fixed, signs = gauge_fix(env, env_conv)
 
     # Fix SVD
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
@@ -134,21 +134,21 @@ function _rrule(
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
     alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
-    function leading_boundary_fixed_pullback((Δenvs′, Δinfo))
-        Δenvs = unthunk(Δenvs′)
+    function leading_boundary_fixed_pullback((Δenv′, Δinfo))
+        Δenv = unthunk(Δenv′)
 
         f(A, x) = fix_global_phases(x, ctmrg_iteration(A, x, alg_fixed)[1])
-        _, env_vjp = rrule_via_ad(config, f, state, envs_fixed)
+        _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
 
         # evaluate the geometric sum
         ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        ∂f∂x(x)::typeof(envs) = env_vjp(x)[3]
-        ∂F∂envs = fpgrad(Δenvs, ∂f∂x, ∂f∂A, Δenvs, gradmode)
+        ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
+        ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
 
-        return NoTangent(), ZeroTangent(), ∂F∂envs, NoTangent()
+        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
 
-    return (envs_fixed, info), leading_boundary_fixed_pullback
+    return (env_fixed, info), leading_boundary_fixed_pullback
 end
 
 @doc """

@@ -29,39 +29,39 @@ function EnlargedCorner(
 end
 
 """
-    EnlargedCorner(network::InfiniteSquareNetwork, envs, coordinates)
+    EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
 
 Construct an enlarged corner with the correct row and column indices based on the given
 `coordinates` which are of the form `(dir, row, col)`.
 """
-function EnlargedCorner(network::InfiniteSquareNetwork, envs, coordinates)
+function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
     dir, r, c = coordinates
     if dir == NORTHWEST
         return EnlargedCorner(
-            envs.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-            envs.edges[WEST, r, _prev(c, end)],
-            envs.edges[NORTH, _prev(r, end), c],
+            env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+            env.edges[WEST, r, _prev(c, end)],
+            env.edges[NORTH, _prev(r, end), c],
             network[r, c],
         )
     elseif dir == NORTHEAST
         return EnlargedCorner(
-            envs.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-            envs.edges[NORTH, _prev(r, end), c],
-            envs.edges[EAST, r, _next(c, end)],
+            env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+            env.edges[NORTH, _prev(r, end), c],
+            env.edges[EAST, r, _next(c, end)],
             network[r, c],
         )
     elseif dir == SOUTHEAST
         return EnlargedCorner(
-            envs.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-            envs.edges[EAST, r, _next(c, end)],
-            envs.edges[SOUTH, _next(r, end), c],
+            env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+            env.edges[EAST, r, _next(c, end)],
+            env.edges[SOUTH, _next(r, end), c],
             network[r, c],
         )
     elseif dir == SOUTHWEST
         return EnlargedCorner(
-            envs.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-            envs.edges[SOUTH, _next(r, end), c],
-            envs.edges[WEST, r, _prev(c, end)],
+            env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+            env.edges[SOUTH, _next(r, end), c],
+            env.edges[WEST, r, _prev(c, end)],
             network[r, c],
         )
     end

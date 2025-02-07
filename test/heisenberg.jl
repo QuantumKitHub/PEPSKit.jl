@@ -80,11 +80,11 @@ end
 
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(wpeps)
-    envs₀ = CTMRGEnv(rand, Float64, peps, Espace)
-    envs, = leading_boundary(envs₀, peps, SimultaneousCTMRG())
+    env₀ = CTMRGEnv(rand, Float64, peps, Espace)
+    env, = leading_boundary(env₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
-    e_site = cost_function(peps, envs, ham) / (N1 * N2)
+    e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol=1e-3)
@@ -92,7 +92,7 @@ end
     # continue with auto differentiation
     svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-5))
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
-    peps_final, env_final, E_final, = fixedpoint(ham, peps, envs, opt_alg_gmres)  # sensitivity warnings and degeneracies due to SU(2)?
+    peps_final, env_final, E_final, = fixedpoint(ham, peps, env, opt_alg_gmres)  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)
     @info "Auto diff energy = $e_site2"
