@@ -237,7 +237,8 @@ function bond_optimize(
         time1 = time()
         converge = (Δfid < alg.tol)
         cancel = (iter == alg.maxiter)
-        showinfo = verbose && (converge || cancel || iter == 1 || iter % alg.check_int == 0)
+        showinfo =
+            verbose && (converge || cancel || iter == 1 || iter % alg.check_int == 0)
         if showinfo
             message = _als_message(
                 iter,
