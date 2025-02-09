@@ -237,11 +237,7 @@ function fullenv_truncate(
         showinfo = (converge || cancel || iter == 1 || iter % alg.check_int == 0)
         if verbose && showinfo
             message = _fet_message(
-                iter,
-                fid,
-                Δfid,
-                Δs,
-                time1 - ((cancel || converge) ? time00 : time0),
+                iter, fid, Δfid, Δs, time1 - ((cancel || converge) ? time00 : time0)
             )
             if converge
                 @info "FET conv" * message
