@@ -48,6 +48,8 @@ for (label, alg) in (
     a1, ss[label], b1, info = PEPSKit.bond_optimize(env, a2, b2, alg)
     display(ss[label])
     @info "$label improved fidelity = $(info.fid)."
+    a1, b1 = _postprocess(a1, ss[label], b1)
+    @test info.fid ≈ PEPSKit.fidelity(env, PEPSKit._combine_ab(a1, b1), a2b2)
     @test info.fid > fid0
 end
 @test isapprox(ss["ALS"], ss["FET"], atol=1e-3)

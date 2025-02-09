@@ -6,7 +6,7 @@ Algorithm struct for the full environment truncation (FET).
 @kwdef struct FullEnvTruncation
     trscheme::TensorKit.TruncationScheme
     maxiter::Int = 50
-    tol::Float64 = 1e-13
+    tol::Float64 = 1e-14
     check_int::Int = 0
 end
 
@@ -55,6 +55,13 @@ function _linearmap_twist!(t::AbstractTensorMap)
         isdual(domain(t, ax)) && twist!(t, numout(t) + ax)
     end
     return nothing
+end
+
+function _fet_message(
+    iter::Int, fid::Float64, Δfid::Float64, Δwt::Float64, time_elapsed::Float64
+)
+    return @sprintf("%5d: fid = %.8e, Δfid = %.8e, ", iter, fid, Δfid) *
+           @sprintf("|Δs| = %.6e, time = %.2e s", Δwt, time_elapsed)
 end
 
 """
@@ -188,12 +195,13 @@ function fullenv_truncate(
     env::AbstractTensorMap{T,S,2,2}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation
 ) where {T<:Number,S<:ElementarySpace}
     verbose = (alg.check_int > 0)
+    time00 = time()
     # initialize u, s, vh with (almost) untruncated SVD
     u, s, vh = tsvd(b0, ((1,), (2,)); trunc=truncerr(1e-14))
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
     s0 = deepcopy(s)
-    diff_fid, diff_wt, fid, fid0 = NaN, NaN, 0.0, 0.0
+    Δfid, Δs, fid, fid0 = NaN, NaN, 0.0, 0.0
     for iter in 1:(alg.maxiter)
         time0 = time()
         # update `← r -  =  ← s ← v† -`
@@ -218,29 +226,32 @@ function fullenv_truncate(
         s /= norm(s, Inf)
         # determine convergence
         fid = fidelity(env, b0, permute(b1, (1, 2)))
-        diff_wt = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
-        diff_fid = fid - fid0
-        # @assert diff_fid >= -1e-14 "Fidelity is decreasing by $diff_fid."
-        time1 = time()
-        message = @sprintf(
-            "%4d:  fid = %10.5e,  Δfid = %10.4e,  |Δs| = %10.4e,  time = %.3e s\n",
-            iter,
-            fid,
-            diff_fid,
-            diff_wt,
-            time1 - time0
-        )
+        Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
+        Δfid = fid - fid0
         s0 = deepcopy(s)
         fid0 = fid
-        if iter == alg.maxiter
-            @warn "FET cancel" * message
+        # @assert diff_fid >= -1e-14 "Fidelity is decreasing by $diff_fid."
+        time1 = time()
+        converge = (Δfid < alg.tol)
+        cancel = (iter == alg.maxiter)
+        showinfo = (converge || cancel || iter == 1 || iter % alg.check_int == 0)
+        if verbose && showinfo
+            message = _fet_message(
+                iter,
+                fid,
+                Δfid,
+                Δs,
+                time1 - ((cancel || converge) ? time00 : time0),
+            )
+            if converge
+                @info "FET conv" * message
+            elseif cancel
+                @warn "FET cancel" * message
+            else
+                @info "FET iter" * message
+            end
         end
-        if verbose && (iter == 1 || iter % alg.check_int == 0 || diff_wt < alg.tol)
-            @info ((diff_wt < alg.tol) ? "FET conv  " : "FET iter  ") * message
-        end
-        if diff_wt < alg.tol
-            break
-        end
+        converge && break
     end
-    return u, s, vh, (; fid, diff_fid, diff_wt)
+    return u, s, vh, (; fid, Δfid, Δs)
 end

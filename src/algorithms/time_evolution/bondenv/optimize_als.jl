@@ -173,6 +173,19 @@ function solve_ab(
     return permute(ab, (1, 3, 2)), info
 end
 
+function _als_message(
+    iter::Int,
+    cost::Float64,
+    fid::Float64,
+    Δcost::Float64,
+    Δfid::Float64,
+    time_elapsed::Float64,
+)
+    return @sprintf(
+        "%5d, fid = %.8e, Δfid = %.8e, time = %.2e s\n", iter, fid, Δfid, time_elapsed
+    ) * @sprintf("      cost = %.3e,   Δcost/cost0 = %.3e", cost, Δcost)
+end
+
 function bond_optimize(
     env::BondEnv{T,S},
     a::AbstractTensor{T,S,3},
@@ -182,19 +195,8 @@ function bond_optimize(
     # dual check of physical index
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
+    time00 = time()
     verbose = (alg.check_int > 0)
-    if verbose
-        @info @sprintf(
-            "%-4s%12s%12s%12s%12s %10s\n",
-            "ALS iter",
-            "Cost",
-            "Fidelity",
-            "ϵ_cost",
-            "Δfid",
-            "Time/s"
-        )
-    end
-    time0 = time()
     a2b2 = _combine_ab(a, b)
     # initialize truncated aR, bL
     a, s, b = tsvd(a2b2, ((1, 2), (3, 4)); trunc=alg.trscheme)
@@ -203,72 +205,61 @@ function bond_optimize(
     a, b = absorb_s(a, s, b)
     a, b = permute(a, (1, 2, 3)), permute(b, (1, 2, 3))
     ab = _combine_ab(a, b)
-    # cost function is normalized by initial value
+    # cost function will be normalized by initial value
     cost00 = cost_func(env, ab, a2b2)
-    fid00 = fidelity(env, ab, a2b2)
-    cost0, fid0, fid, diff_fid = cost00, fid00, 0.0, 0.0
-    # no need to further optimize
-    if abs(cost0) < 5e-15
+    fid = fidelity(env, ab, a2b2)
+    cost0, fid0, Δfid = cost00, fid, 0.0
+    verbose && @info "ALS init" * _als_message(0, cost0, fid, NaN, NaN, 0.0)
+    # only optimize when fidelity differ from 1 by larger than 1e-12
+    (abs(fid0 - 1) > 1e-12) && for iter in 1:(alg.maxiter)
+        time0 = time()
+        #= 
+        Fixing `b`, the cost function can be expressed in the R, S tensors as
+        ```
+            f(a†,a) = a† Ra a - a† Sa - Sa† a + const
+        ```
+        `f` is minimized when
+            ∂f/∂ā = Ra a - Sa = 0
+        =#
+        Ra = tensor_Ra(env, b)
+        Sa = tensor_Sa(env, b, a2b2)
+        a, info_a = solve_ab(Ra, Sa, a)
+        # Fixing `a`, solve for `b` from `Rb b = Sb`
+        Rb = tensor_Rb(env, a)
+        Sb = tensor_Sb(env, a, a2b2)
+        b, info_b = solve_ab(Rb, Sb, b)
+        ab = _combine_ab(a, b)
+        cost = cost_func(env, ab, a2b2)
+        fid = fidelity(env, ab, a2b2)
+        Δcost = abs(cost - cost0) / cost00
+        Δfid = abs(fid - fid0)
+        cost0, fid0 = cost, fid
         time1 = time()
-        if verbose
-            @info @sprintf(
-                "%-4d%12.3e%12.3e%12.3e%12.3e %10.3e\n",
-                0,
-                cost0,
-                fid0,
-                NaN,
-                NaN,
-                time1 - time0
+        converge = (Δfid < alg.tol)
+        cancel = (iter == alg.maxiter)
+        showinfo = (converge || cancel || iter == 1 || iter % alg.check_int == 0)
+        if verbose && showinfo
+            message = _als_message(
+                iter,
+                cost,
+                fid,
+                Δcost,
+                Δfid,
+                time1 - ((cancel || converge) ? time00 : time0),
             )
-        end
-    else
-        for count in 1:(alg.maxiter)
-            time0 = time()
-            #= 
-            Fixing `b`, the cost function can be expressed in the R, S tensors as
-            ```
-                f(a†,a) = a† Ra a - a† Sa - Sa† a + const
-            ```
-            `f` is minimized when
-                ∂f/∂ā = Ra a - Sa = 0
-            =#
-            Ra = tensor_Ra(env, b)
-            Sa = tensor_Sa(env, b, a2b2)
-            a, info_a = solve_ab(Ra, Sa, a)
-            # Fixing `a`, solve for `b` from `Rb b = Sb`
-            Rb = tensor_Rb(env, a)
-            Sb = tensor_Sb(env, a, a2b2)
-            b, info_b = solve_ab(Rb, Sb, b)
-            ab = _combine_ab(a, b)
-            cost = cost_func(env, ab, a2b2)
-            fid = fidelity(env, ab, a2b2)
-            diff_cost = abs(cost - cost0) / cost00
-            diff_fid = abs(fid - fid0)
-            time1 = time()
-            if verbose && (count == 1 || count % alg.check_int == 0)
-                @info @sprintf(
-                    "%-4d%12.3e%12.3e%12.3e%12.3e %10.3e\n",
-                    count,
-                    cost,
-                    fid,
-                    diff_cost,
-                    diff_fid,
-                    time1 - time0
-                )
-            end
-            cost0, fid0 = cost, fid
-            if diff_fid < alg.tol
-                break
-            end
-            aR0, bL0 = deepcopy(a), deepcopy(b)
-            if count == alg.maxiter
-                @warn "Warning: max iter $(alg.maxiter) reached for ALS optimization\n"
+            if converge
+                @info "ALS conv" * message
+            elseif cancel
+                @warn "ALS cancel" * message
+            else
+                @info "ALS iter" * message
             end
         end
+        converge && break
     end
     ab = _combine_ab(a, b)
-    a, s, b = tsvd(ab, ((1, 2), (3, 4)); trunc=truncspace(Vtrunc))
+    a, s, b = tsvd(ab, ((1, 2), (3, 4)); trunc=truncspace(Vtrunc), alg=TensorKit.SVD())
     # normalize singular value spectrum
     s /= norm(s, Inf)
-    return a, s, b, (; fid, diff_fid)
+    return a, s, b, (; fid, Δfid)
 end
