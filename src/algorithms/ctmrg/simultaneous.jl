@@ -39,13 +39,18 @@ function ctmrg_iteration(state, env::CTMRGEnv, alg::SimultaneousCTMRG)
     return env′, info
 end
 
-# Pre-allocate U, S, and V tensor as Zygote buffers to make it differentiable
-function _prealloc_svd(edges::Array{E,N}) where {E,N}
-    Sc = scalartype(E)
-    U = Zygote.Buffer(map(e -> zeros(Sc, space(e)), edges))
-    V = Zygote.Buffer(map(e -> zeros(Sc, domain(e), codomain(e)), edges))
-    S = Zygote.Buffer(U.data, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
-    return U, S, V
+# Work-around to stop Zygote from choking on first execution (sometimes)
+# Split up map returning projectors and info into separate arrays
+function _split_proj_and_info(proj_and_info)
+    P_left = map(x -> x[1][1], proj_and_info)
+    P_right = map(x -> x[1][2], proj_and_info)
+    truncation_error = maximum(x -> x[2].truncation_error, proj_and_info)
+    condition_number = maximum(x -> x[2].condition_number, proj_and_info)
+    U = map(x -> x[2].U, proj_and_info)
+    S = map(x -> x[2].S, proj_and_info)
+    V = map(x -> x[2].V, proj_and_info)
+    info = (; truncation_error, condition_number, U, S, V)
+    return (P_left, P_right), info
 end
 
 """
@@ -58,28 +63,14 @@ enlarged corners or on a specific `coordinate`.
 function simultaneous_projectors(
     enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm
 ) where {E}
-    U, S, V = _prealloc_svd(env.edges)
-    ϵ = Zygote.Buffer(zeros(real(scalartype(env)), size(env)))
-    κ = Zygote.Buffer(zeros(real(scalartype(env)), size(env)))
-
-    projectors = dtmap(eachcoordinate(env, 1:4)) do coordinate
+    proj_and_info = dtmap(eachcoordinate(env, 1:4)) do coordinate
         coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
         trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-        proj, info = simultaneous_projectors(
+        return simultaneous_projectors(
             coordinate, enlarged_corners, @set(alg.trscheme = trscheme)
         )
-        U[coordinate...] = info.U
-        S[coordinate...] = info.S
-        V[coordinate...] = info.V
-        ϵ[coordinate...] = info.truncation_error / norm(info.S)
-        κ[coordinate...] = info.condition_number
-        return proj
     end
-
-    truncation_error = maximum(copy(ϵ))
-    condition_number = maximum(copy(κ))
-    info = (; truncation_error, condition_number, U=copy(U), S=copy(S), V=copy(V))
-    return (map(first, projectors), map(last, projectors)), info
+    return _split_proj_and_info(proj_and_info)
 end
 function simultaneous_projectors(
     coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector

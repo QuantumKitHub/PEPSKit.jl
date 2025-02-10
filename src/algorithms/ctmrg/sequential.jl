@@ -57,25 +57,15 @@ for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequen
 function sequential_projectors(
     col::Int, state::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm
 )
-    # SVD half-infinite environment column-wise
-    T = promote_type(real(scalartype(state)), real(scalartype(env)))
-    ϵ = Zygote.Buffer(zeros(T, size(env, 2)))
-    κ = Zygote.Buffer(zeros(T, size(env, 2)))
-    S = Zygote.Buffer(zeros(size(env, 2)), tensormaptype(spacetype(eltype(state)), 1, 1, T))
     coordinates = eachcoordinate(env)[:, col]
-    projectors = dtmap(coordinates) do (r, c)
+    proj_and_info = dtmap(coordinates) do (r, c)
         trscheme = truncation_scheme(alg, env.edges[WEST, _prev(r, size(env, 2)), c])
         proj, info = sequential_projectors(
             (WEST, r, c), state, env, @set(alg.trscheme = trscheme)
         )
-        S[r] = info.S
-        ϵ[r] = info.truncation_error / norm(info.S)
-        κ[r] = info.condition_number
-        return proj
+        return proj, info
     end
-
-    info = (; truncation_error=maximum(copy(ϵ)), condition_number=maximum(copy(κ)))
-    return (map(first, projectors), map(last, projectors)), info
+    return _split_proj_and_info(proj_and_info)
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},

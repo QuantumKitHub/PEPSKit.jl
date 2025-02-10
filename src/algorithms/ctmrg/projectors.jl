@@ -88,6 +88,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     end
 
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
+    truncation_error /= norm(S)
     condition_number = @ignore_derivatives(_condition_number(S))
     return (P_left, P_right), (; truncation_error, condition_number, U, S, V)
 end
