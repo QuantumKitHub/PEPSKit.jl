@@ -388,7 +388,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
     if norm(vecs[1][2]) < 1e-8 # TODO: figure out what this actually means...
-        @warn "fpgrad using Arnoldi failed: λ = $(vecs[1][3])"
+        @warn "fpgrad using Arnoldi failed: λ = $(vecs[1][2])"
     end
     y = scale(vecs[1][1], 1 / vecs[1][2])
 
