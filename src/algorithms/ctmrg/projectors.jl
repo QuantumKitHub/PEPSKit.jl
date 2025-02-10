@@ -57,13 +57,11 @@ Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG envir
 end
 
 # TODO: add `LinearAlgebra.cond` to TensorKit
-# Compute condition number σ_max / σ_min for diagonal singular value TensorMap
+# Compute condition number smax / smin for diagonal singular value TensorMap
 function _condition_number(S::AbstractTensorMap)
-    # Take maximal condition number over all blocks
-    return maximum(blocks(S)) do (_, b)
-        b_diag = diag(b)
-        return maximum(b_diag) / minimum(b_diag)
-    end
+    smax = maximum(first, last.(values(blocks(S))))
+    smin = minimum(last, last.(values(blocks(S))))
+    return smax / smin
 end
 @non_differentiable _condition_number(S::AbstractTensorMap)
 
