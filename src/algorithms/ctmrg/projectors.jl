@@ -59,8 +59,8 @@ end
 # TODO: add `LinearAlgebra.cond` to TensorKit
 # Compute condition number smax / smin for diagonal singular value TensorMap
 function _condition_number(S::AbstractTensorMap)
-    smax = maximum(first, last.(values(blocks(S))))
-    smin = minimum(last, last.(values(blocks(S))))
+    smax = maximum(b -> first(b[2]), blocks(S))
+    smin = maximum(b -> last(b[2]), blocks(S))
     return smax / smin
 end
 @non_differentiable _condition_number(S::AbstractTensorMap)
