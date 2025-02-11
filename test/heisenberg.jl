@@ -21,14 +21,14 @@ E_ref = -0.6602310934799577
     # initialize states
     Random.seed!(123)
     H = heisenberg_XYZ(InfiniteSquare())
-    psi_init = InfinitePEPS(2, Dbond)
-    env_init = leading_boundary(CTMRGEnv(psi_init, ComplexSpace(χenv)), psi_init, ctm_alg)
+    peps₀ = InfinitePEPS(2, Dbond)
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg)
 
     # optimize energy and compute correlation lengths
-    result = fixedpoint(psi_init, H, opt_alg, env_init)
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
+    peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
+    ξ_h, ξ_v, = correlation_length(peps, env)
 
-    @test result.E ≈ E_ref atol = 1e-2
+    @test E ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
@@ -36,18 +36,16 @@ end
     # initialize states
     Random.seed!(456)
     unitcell = (1, 2)
-    H_1x2 = heisenberg_XYZ(InfiniteSquare(unitcell...))
-    psi_init_1x2 = InfinitePEPS(2, Dbond; unitcell)
-    env_init_1x2 = leading_boundary(
-        CTMRGEnv(psi_init_1x2, ComplexSpace(χenv)), psi_init_1x2, ctm_alg
-    )
+    H = heisenberg_XYZ(InfiniteSquare(unitcell...))
+    peps₀ = InfinitePEPS(2, Dbond; unitcell)
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg)
 
     # optimize energy and compute correlation lengths
-    result_1x2 = fixedpoint(psi_init_1x2, H_1x2, opt_alg, env_init_1x2)
-    ξ_h_1x2, ξ_v_1x2, = correlation_length(result_1x2.peps, result_1x2.env)
+    peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
+    ξ_h, ξ_v, = correlation_length(peps, env)
 
-    @test result_1x2.E ≈ 2 * E_ref atol = 1e-2
-    @test all(@. ξ_h_1x2 > 0 && ξ_v_1x2 > 0)
+    @test E ≈ 2 * E_ref atol = 1e-2
+    @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
 @testset "Simple update into AD optimization" begin
@@ -82,11 +80,11 @@ end
 
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(wpeps)
-    envs₀ = CTMRGEnv(rand, Float64, peps, Espace)
-    envs = leading_boundary(envs₀, peps, SimultaneousCTMRG())
+    env₀ = CTMRGEnv(rand, Float64, peps, Espace)
+    env, = leading_boundary(env₀, peps, SimultaneousCTMRG())
 
     # measure physical quantities
-    e_site = costfun(peps, envs, ham) / (N1 * N2)
+    e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol=1e-3)
@@ -94,9 +92,9 @@ end
     # continue with auto differentiation
     svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-5))
     opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
-    result = fixedpoint(peps, ham, opt_alg_gmres, envs)  # sensitivity warnings and degeneracies due to SU(2)?
-    ξ_h, ξ_v, = correlation_length(result.peps, result.env)
-    e_site2 = result.E / (N1 * N2)
+    peps_final, env_final, E_final, = fixedpoint(ham, peps, env, opt_alg_gmres)  # sensitivity warnings and degeneracies due to SU(2)?
+    ξ_h, ξ_v, = correlation_length(peps_final, env_final)
+    e_site2 = E_final / (N1 * N2)
     @info "Auto diff energy = $e_site2"
     @test e_site2 ≈ E_ref atol = 1e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)

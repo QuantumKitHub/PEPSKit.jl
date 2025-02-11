@@ -40,8 +40,9 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
 
     return LoggingExtras.withlevel(; alg.verbosity) do
         ctmrg_loginit!(log, η, state, envinit)
+        local info
         for iter in 1:(alg.maxiter)
-            env, = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
+            env, info = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
@@ -54,7 +55,7 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
                 ctmrg_logiter!(log, iter, η, state, env)
             end
         end
-        return env
+        return env, info
     end
 end
 
@@ -100,27 +101,27 @@ function _singular_value_distance((S₁, S₂))
 end
 
 """
-    calc_convergence(envs, CS_old, TS_old)
-    calc_convergence(envs_new::CTMRGEnv, envs_old::CTMRGEnv)
+    calc_convergence(env, CS_old, TS_old)
+    calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
 
-Given a new environment `envs`, compute the maximal singular value distance.
+Given a new environment `env`, compute the maximal singular value distance.
 This determined either from the previous corner and edge singular values
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
-function calc_convergence(envs, CS_old, TS_old)
-    CS_new = map(x -> tsvd(x)[2], envs.corners)
+function calc_convergence(env, CS_old, TS_old)
+    CS_new = map(x -> tsvd(x)[2], env.corners)
     ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
 
-    TS_new = map(x -> tsvd(x)[2], envs.edges)
+    TS_new = map(x -> tsvd(x)[2], env.edges)
     ΔTS = maximum(_singular_value_distance, zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
 
     return max(ΔCS, ΔTS), CS_new, TS_new
 end
-function calc_convergence(envs_new::CTMRGEnv, envs_old::CTMRGEnv)
-    CS_old = map(x -> tsvd(x)[2], envs_old.corners)
-    TS_old = map(x -> tsvd(x)[2], envs_old.edges)
-    return calc_convergence(envs_new, CS_old, TS_old)
+function calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
+    CS_old = map(x -> tsvd(x)[2], env_old.corners)
+    TS_old = map(x -> tsvd(x)[2], env_old.edges)
+    return calc_convergence(env_new, CS_old, TS_old)
 end
 @non_differentiable calc_convergence(args...)

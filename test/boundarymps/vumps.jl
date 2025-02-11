@@ -14,10 +14,10 @@ const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitia
     T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
     mps = PEPSKit.initializeMPS(T, [ComplexSpace(20)])
 
-    mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
+    mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(sum(expectation_value(mps, T)))
 
-    ctm = leading_boundary(
+    ctm, = leading_boundary(
         CTMRGEnv(psi, ComplexSpace(20)), psi, SimultaneousCTMRG(; verbosity=1)
     )
     N´ = abs(norm(psi, ctm))
@@ -30,10 +30,10 @@ end
     T = PEPSKit.MultilineTransferPEPS(psi, 1)
 
     mps = PEPSKit.initializeMPS(T, fill(ComplexSpace(20), 2, 2))
-    mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
+    mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(prod(expectation_value(mps, T)))
 
-    ctm = leading_boundary(
+    ctm, = leading_boundary(
         CTMRGEnv(psi, ComplexSpace(20)), psi, SimultaneousCTMRG(; verbosity=1)
     )
     N´ = abs(norm(psi, ctm))
@@ -68,6 +68,6 @@ end
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
     mps = PEPSKit.initializeMPS(T, [ComplexSpace(10)])
-    mps, envs, ϵ = leading_boundary(mps, T, vumps_alg)
+    mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     f = abs(prod(expectation_value(mps, T)))
 end
