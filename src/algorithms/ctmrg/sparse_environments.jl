@@ -229,7 +229,7 @@ function TensorKit.codomain(env::HalfInfiniteEnv)
 end
 
 function random_start_vector(env::HalfInfiniteEnv)
-    return Tensor(randn, domain(env))
+    return randn(domain(env))
 end
 
 # --------------------------------
@@ -377,5 +377,5 @@ function TensorKit.codomain(env::FullInfiniteEnv)
 end
 
 function random_start_vector(env::FullInfiniteEnv)
-    return Tensor(randn, domain(env))
+    return randn(domain(env))
 end

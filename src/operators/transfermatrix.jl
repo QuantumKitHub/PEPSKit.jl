@@ -1,7 +1,53 @@
 import MPSKit: Multiline, MultilineEnvironments
 
-# TODO: rewrite in terms of InfiniteMPO{O} where O is an 'effective MPO type' once type
-# restrictions in MPSKit are relaxed
+# implementation of PEPS transfer matrices in terms of MPSKit.InfiniteMPO
+
+#
+# Effective MPOTensor interface
+#
+
+## Space utils
+
+_elementwise_dual(S::ElementarySpace) = S
+_elementwise_dual(P::ProductSpace) = prod(dual.(P))
+
+north_space(O, args...) = virtual_space(O, NORTH, args...)
+east_space(O, args...) = virtual_space(O, EAST, args...)
+south_space(O, args...) = virtual_space(O, SOUTH, args...)
+west_space(O, args...) = virtual_space(O, WEST, args...)
+
+## PEPS
+
+const PEPSSandwich{T<:PEPSTensor} = Tuple{T,T}
+
+ket(p::PEPSSandwich) = p[1]
+bra(p::PEPSSandwich) = p[2]
+
+function virtual_space(p::PEPSSandwich, dir)
+    return space(ket(p), dir + 1) ⊗ space(bra(p), dir + 1)'
+end
+
+## PEPO
+
+const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Tuple{Vararg{P,N}}}
+
+ket(p::PEPOSandwich) = p[1]
+bra(p::PEPOSandwich) = p[2]
+pepo(p::PEPOSandwich) = p[3]
+pepo(p::PEPOSandwich, i::Int) = p[3][i]
+
+function virtual_space(p::PEPOSandwich, dir)
+    return prod([
+        space(ket(p), dir + 1), space.(pepo(p), Ref(dir + 2))..., space(bra(p), dir + 1)'
+    ])
+end
+
+## Common
+
+MPSKit.left_virtualspace(p::Union{PEPSSandwich,PEPOSandwich}) = west_space(p)
+function MPSKit.right_virtualspace(p::Union{PEPSSandwich,PEPOSandwich})
+    return _elementwise_dual(east_space(p))
+end # follow MPSKit convention: right vspace gets a dual by default
 
 #
 # PEPS
@@ -13,16 +59,12 @@ import MPSKit: Multiline, MultilineEnvironments
 Represents an infinite transfer operator corresponding to a single row of a partition
 function which corresponds to the overlap between 'ket' and 'bra' `InfinitePEPS` states.
 """
-struct InfiniteTransferPEPS{T}
-    top::PeriodicArray{T,1}
-    bot::PeriodicArray{T,1}
-    function InfiniteTransferPEPS(
-        top::PeriodicArray{T,1}, bot::PeriodicArray{T,1}
-    ) where {T}
-        size(top) == size(bot) ||
-            throw(ArgumentError("Top and bottom PEPS rows should have equal sizes."))
-        return new{T}(top, bot)
-    end
+const InfiniteTransferPEPS{T<:PEPSTensor} = InfiniteMPO{PEPSSandwich{T}}
+
+function InfiniteTransferPEPS(
+    top::PeriodicArray{T,1}, bot::PeriodicArray{T,1}
+) where {T<:PEPSTensor}
+    return InfiniteMPO(map(Tuple, zip(top, bot)))
 end
 
 InfiniteTransferPEPS(top) = InfiniteTransferPEPS(top, top)
@@ -39,19 +81,6 @@ function InfiniteTransferPEPS(T::InfinitePEPS, dir, row)
     return InfiniteTransferPEPS(PeriodicArray(T[row, :]))
 end
 
-Base.size(transfer::InfiniteTransferPEPS) = size(transfer.top)
-Base.size(transfer::InfiniteTransferPEPS, args...) = size(transfer.top, args...)
-Base.length(transfer::InfiniteTransferPEPS) = size(transfer, 1)
-Base.getindex(O::InfiniteTransferPEPS, i) = (O.top[i], O.bot[i])
-
-Base.iterate(O::InfiniteTransferPEPS, args...) = iterate(zip(O.top, O.bot), args...)
-
-VectorInterface.scalartype(::Type{InfiniteTransferPEPS{T}}) where {T} = scalartype(T)
-
-function virtual_space(O::InfiniteTransferPEPS, i, dir)
-    return prod([space(O.top[i], dir + 1), space(O.bot[i], dir + 1)'])
-end
-
 """
     const MultilineTransferPEPS = MPSKit.Multiline{<:InfiniteTransferPEPS}
 
@@ -59,7 +88,7 @@ Type that represents a multi-line transfer operator, where each line each corres
 row of a partition function encoding the overlap between 'ket' and 'bra' `InfinitePEPS`
 states.
 """
-const MultilineTransferPEPS = MPSKit.Multiline{<:InfiniteTransferPEPS}
+const MultilineTransferPEPS = MPSKit.Multiline{<:InfiniteTransferPEPS} # TODO: do we actually need this?
 Base.convert(::Type{MultilineTransferPEPS}, O::InfiniteTransferPEPS) = MPSKit.Multiline([O])
 
 """
@@ -79,23 +108,20 @@ end
 #
 
 """
-    InfiniteTransferPEPO{T,O}
+    InfiniteTransferPEPO{H,T,O}
 
 Represents an infinite transfer operator corresponding to a single row of a partition
 function which corresponds to the expectation value of an `InfinitePEPO` between 'ket' and
 'bra' `InfinitePEPS` states.
 """
-struct InfiniteTransferPEPO{T,O}
-    top::PeriodicArray{T,1}
-    mid::PeriodicArray{O,2}
-    bot::PeriodicArray{T,1}
-    function InfiniteTransferPEPO(
-        top::PeriodicArray{T,1}, mid::PeriodicArray{O,2}, bot::PeriodicArray{T,1}
-    ) where {T,O}
-        size(top, 1) == size(bot, 1) == size(mid, 1) ||
-            throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
-        return new{T,O}(top, mid, bot)
-    end
+const InfiniteTransferPEPO{H,T<:PEPSTensor,O<:PEPOTensor} = InfiniteMPO{PEPOSandwich{H,T,O}}
+
+function InfiniteTransferPEPO(
+    top::PeriodicArray{T,1}, mid::PeriodicArray{O,2}, bot::PeriodicArray{T,1}
+) where {T,O}
+    size(top, 1) == size(bot, 1) == size(mid, 1) ||
+        throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
+    return InfiniteMPO(map(Tuple, zip(top, bot, Iterators.map(Tuple, eachcol(mid)))))
 end
 
 InfiniteTransferPEPO(top, mid) = InfiniteTransferPEPO(top, mid, top)
@@ -112,26 +138,6 @@ function InfiniteTransferPEPO(T::InfinitePEPS, O::InfinitePEPO, dir, row)
     T = rotate_north(T, dir)
     O = rotate_north(O, dir)
     return InfiniteTransferPEPO(PeriodicArray(T[row, :]), PeriodicArray(O[row, :, :]))
-end
-
-Base.size(transfer::InfiniteTransferPEPO) = size(transfer.top)
-Base.size(transfer::InfiniteTransferPEPO, args...) = size(transfer.top, args...)
-Base.length(transfer::InfiniteTransferPEPO) = size(transfer, 1)
-height(transfer::InfiniteTransferPEPO) = size(transfer.mid, 2)
-Base.getindex(O::InfiniteTransferPEPO, i) = (O.top[i], O.bot[i], Tuple(O.mid[i, :]))
-
-function Base.iterate(O::InfiniteTransferPEPO, args...)
-    return iterate(zip(O.top, O.bot, Iterators.map(Tuple, eachcol(O.mid))), args...)
-end
-
-VectorInterface.scalartype(::Type{InfiniteTransferPEPO{T,O}}) where {T,O} = scalartype(T)
-
-function virtual_space(O::InfiniteTransferPEPO, i, dir)
-    return prod([
-        space(O.top[i], dir + 1),
-        space.(O.mid[i, :], Ref(dir + 2))...,
-        space(O.bot[i], dir + 1)',
-    ])
 end
 
 """
@@ -163,23 +169,7 @@ end
 const InfiniteTransferMatrix = Union{InfiniteTransferPEPS,InfiniteTransferPEPO}
 const MultilineTransferMatrix = Union{MultilineTransferPEPS,MultilineTransferPEPO}
 
-_elementwise_dual(S::ElementarySpace) = S
-_elementwise_dual(P::ProductSpace) = prod(dual.(P))
-
-north_space(O::InfiniteTransferMatrix, i) = virtual_space(O, i, NORTH)
-east_space(O::InfiniteTransferMatrix, i) = virtual_space(O, i, EAST)
-south_space(O::InfiniteTransferMatrix, i) = virtual_space(O, i, SOUTH)
-west_space(O::InfiniteTransferMatrix, i) = virtual_space(O, i, WEST)
-
-MPSKit.left_virtualspace(O::InfiniteTransferMatrix, i) = west_space(O, i)
-function MPSKit.right_virtualspace(O::InfiniteTransferMatrix, i)
-    return _elementwise_dual(east_space(O, i))
-end # follow MPSKit convention: right vspace gets a dual by default
-
-function Base.getindex(t::MultilineTransferMatrix, ::Colon, j::Int)
-    return Base.getindex.(parent(t), j)
-end
-Base.getindex(t::MultilineTransferMatrix, i::Int, j) = Base.getindex(t[i], j)
+virtual_space(O::InfiniteTransferMatrix, i, dir) = virtual_space(O[i], dir)
 
 """
     initializeMPS(
