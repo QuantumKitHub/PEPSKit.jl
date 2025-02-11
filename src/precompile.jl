@@ -30,7 +30,7 @@ using Random
         LinSolver(; solver=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
         GeomSum(; tol=gradtol, iterscheme=:fixed),
         ManualIter(; tol=gradtol, iterscheme=:fixed),
-        # EigSolver(; solver=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
+        EigSolver(; solver=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
     ]
     ctmrg_alg_general = SimultaneousCTMRG(; verbosity=-1)
     opt_alg = PEPSOptimize(; boundary_alg=SimultaneousCTMRG(), optimizer=LBFGS(4; maxiter))
