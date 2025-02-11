@@ -231,10 +231,10 @@ the unit cell.
 
 @doc """
     MPSKit.leading_boundary(
-        st::InfiniteMPS, op::Union{InfiniteTransferPEPS,InfiniteTransferPEPO}, alg, [envs]
+        st::InfiniteMPS, op::Union{InfiniteTransferPEPS,InfiniteTransferPEPO}, alg, [env]
     )
     MPSKit.leading_boundary(
-        st::MPSMulitline, op::Union{MultilineTransferPEPS,MultilineTransferPEPO}, alg, [envs]
+        st::MPSMulitline, op::Union{MultilineTransferPEPS,MultilineTransferPEPO}, alg, [env]
     )
 
 Approximate the leading boundary MPS eigenvector for the transfer operator `op` using `st`

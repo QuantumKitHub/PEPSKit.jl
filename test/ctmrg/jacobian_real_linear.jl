@@ -19,12 +19,12 @@ Dbond, χenv = 2, 16
 @testset "$iterscheme and $ctm_alg" for (iterscheme, ctm_alg) in algs
     Random.seed!(123521938519)
     state = InfinitePEPS(2, Dbond)
-    envs = leading_boundary(CTMRGEnv(state, ComplexSpace(χenv)), state, ctm_alg)
+    env, = leading_boundary(CTMRGEnv(state, ComplexSpace(χenv)), state, ctm_alg)
 
     # follow code of _rrule
     if iterscheme == :fixed
-        envs_conv, info = ctmrg_iteration(state, envs, ctm_alg)
-        envs_fixed, signs = gauge_fix(envs, envs_conv)
+        env_conv, info = ctmrg_iteration(state, env, ctm_alg)
+        env_fixed, signs = gauge_fix(env, env_conv)
         U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
         svd_alg_fixed = SVDAdjoint(;
             fwd_alg=PEPSKit.FixedSVD(U_fixed, info.S, V_fixed),
@@ -33,19 +33,19 @@ Dbond, χenv = 2, 16
         alg_fixed = @set ctm_alg.projector_alg.svd_alg = svd_alg_fixed
         alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
-        _, env_vjp = pullback(state, envs_fixed) do A, x
+        _, env_vjp = pullback(state, env_fixed) do A, x
             e, = PEPSKit.ctmrg_iteration(A, x, alg_fixed)
             return PEPSKit.fix_global_phases(x, e)
         end
     elseif iterscheme == :diffgauge
-        _, env_vjp = pullback(state, envs) do A, x
+        _, env_vjp = pullback(state, env) do A, x
             return gauge_fix(x, ctmrg_iteration(A, x, ctm_alg)[1])[1]
         end
     end
 
     # get Jacobians of single iteration
     ∂f∂A(x)::typeof(state) = env_vjp(x)[1]
-    ∂f∂x(x)::typeof(envs) = env_vjp(x)[2]
+    ∂f∂x(x)::typeof(env) = env_vjp(x)[2]
 
     # compute real and complex errors
     env_in = CTMRGEnv(state, ComplexSpace(16))

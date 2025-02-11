@@ -4,18 +4,18 @@ using MPSKit: InfiniteEnvironments
 # ProductSpace instances
 
 function MPSKit.issamespace(
-    envs::InfiniteEnvironments,
+    env::InfiniteEnvironments,
     above::InfiniteMPS,
     operator::InfiniteTransferMatrix,
     below::InfiniteMPS,
 )
     L = MPSKit.check_length(above, operator, below)
     for i in 1:L
-        space(envs.GLs[i]) == (
+        space(env.GLs[i]) == (
             left_virtualspace(below, i) ⊗
             _elementwise_dual(left_virtualspace(operator, i)) ← left_virtualspace(above, i)
         ) || return false
-        space(envs.GRs[i]) == (
+        space(env.GRs[i]) == (
             right_virtualspace(above, i) ⊗ right_virtualspace(operator, i) ←
             right_virtualspace(below, i)
         ) || return false

@@ -30,53 +30,47 @@ function SimultaneousCTMRG(;
     )
 end
 
-function ctmrg_iteration(state, envs::CTMRGEnv, alg::SimultaneousCTMRG)
+function ctmrg_iteration(state, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners = dtmap(eachcoordinate(state, 1:4)) do idx
-        return TensorMap(EnlargedCorner(state, envs, idx), idx[1])
+        return TensorMap(EnlargedCorner(state, env, idx), idx[1])
     end  # expand environment
-    projectors, info = simultaneous_projectors(enlarged_corners, envs, alg.projector_alg)  # compute projectors on all coordinates
-    envs′ = renormalize_simultaneously(enlarged_corners, projectors, state, envs)  # renormalize enlarged corners
-    return envs′, info
+    projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
+    env′ = renormalize_simultaneously(enlarged_corners, projectors, state, env)  # renormalize enlarged corners
+    return env′, info
 end
 
-# Pre-allocate U, S, and V tensor as Zygote buffers to make it differentiable
-function _prealloc_svd(edges::Array{E,N}) where {E,N}
-    Sc = scalartype(E)
-    U = Zygote.Buffer(map(e -> zeros(Sc, space(e)), edges))
-    V = Zygote.Buffer(map(e -> zeros(Sc, domain(e), codomain(e)), edges))
-    S = Zygote.Buffer(U.data, tensormaptype(spacetype(E), 1, 1, real(Sc)))  # Corner type but with real numbers
-    return U, S, V
+# Work-around to stop Zygote from choking on first execution (sometimes)
+# Split up map returning projectors and info into separate arrays
+function _split_proj_and_info(proj_and_info)
+    P_left = map(x -> x[1][1], proj_and_info)
+    P_right = map(x -> x[1][2], proj_and_info)
+    truncation_error = maximum(x -> x[2].truncation_error, proj_and_info)
+    condition_number = maximum(x -> x[2].condition_number, proj_and_info)
+    U = map(x -> x[2].U, proj_and_info)
+    S = map(x -> x[2].S, proj_and_info)
+    V = map(x -> x[2].V, proj_and_info)
+    info = (; truncation_error, condition_number, U, S, V)
+    return (P_left, P_right), info
 end
 
 """
-    simultaneous_projectors(enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm)
+    simultaneous_projectors(enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm)
     simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgorithm)
 
 Compute CTMRG projectors in the `:simultaneous` scheme either for all provided
 enlarged corners or on a specific `coordinate`.
 """
 function simultaneous_projectors(
-    enlarged_corners::Array{E,3}, envs::CTMRGEnv, alg::ProjectorAlgorithm
+    enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm
 ) where {E}
-    U, S, V = _prealloc_svd(envs.edges)
-    ϵ = Zygote.Buffer(zeros(real(scalartype(envs)), size(envs)))
-
-    projectors = dtmap(eachcoordinate(envs, 1:4)) do coordinate
-        coordinate′ = _next_coordinate(coordinate, size(envs)[2:3]...)
-        trscheme = truncation_scheme(alg, envs.edges[coordinate[1], coordinate′[2:3]...])
-        proj, info = simultaneous_projectors(
+    proj_and_info = dtmap(eachcoordinate(env, 1:4)) do coordinate
+        coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
+        trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+        return simultaneous_projectors(
             coordinate, enlarged_corners, @set(alg.trscheme = trscheme)
         )
-        U[coordinate...] = info.U
-        S[coordinate...] = info.S
-        V[coordinate...] = info.V
-        ϵ[coordinate...] = info.err / norm(info.S)
-        return proj
     end
-
-    P_left = map(first, projectors)
-    P_right = map(last, projectors)
-    return (P_left, P_right), (; err=maximum(copy(ϵ)), U=copy(U), S=copy(S), V=copy(V))
+    return _split_proj_and_info(proj_and_info)
 end
 function simultaneous_projectors(
     coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector
@@ -102,26 +96,26 @@ function simultaneous_projectors(
 end
 
 """
-    renormalize_simultaneously(enlarged_corners, projectors, state, envs)
+    renormalize_simultaneously(enlarged_corners, projectors, state, env)
 
 Renormalize all enlarged corners and edges simultaneously.
 """
-function renormalize_simultaneously(enlarged_corners, projectors, state, envs)
+function renormalize_simultaneously(enlarged_corners, projectors, state, env)
     P_left, P_right = projectors
-    coordinates = eachcoordinate(envs, 1:4)
+    coordinates = eachcoordinate(env, 1:4)
     corners_edges = dtmap(coordinates) do (dir, r, c)
         if dir == NORTH
             corner = renormalize_northwest_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_north_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_north_edge((r, c), env, P_left, P_right, state)
         elseif dir == EAST
             corner = renormalize_northeast_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_east_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_east_edge((r, c), env, P_left, P_right, state)
         elseif dir == SOUTH
             corner = renormalize_southeast_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_south_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_south_edge((r, c), env, P_left, P_right, state)
         elseif dir == WEST
             corner = renormalize_southwest_corner((r, c), enlarged_corners, P_left, P_right)
-            edge = renormalize_west_edge((r, c), envs, P_left, P_right, state)
+            edge = renormalize_west_edge((r, c), env, P_left, P_right, state)
         end
         return corner / norm(corner), edge / norm(edge)
     end

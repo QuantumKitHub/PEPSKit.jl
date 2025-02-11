@@ -1,23 +1,23 @@
 """
-    expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
+    expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv)
 
 Compute the expectation value ⟨peps|O|peps⟩ / ⟨peps|peps⟩ of a [`LocalOperator`](@ref) `O`
-for a PEPS `peps` using a given CTMRG environment `envs`.
+for a PEPS `peps` using a given CTMRG environment `env`.
 """
-function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, envs::CTMRGEnv)
+function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv)
     checklattice(peps, O)
     term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        contract_local_operator(inds, operator, peps, peps, envs) /
-        contract_local_norm(inds, peps, peps, envs)
+        contract_local_operator(inds, operator, peps, peps, env) /
+        contract_local_norm(inds, peps, peps, env)
     end
     return sum(term_vals)
 end
 """
-    expectation_value(pf::InfinitePartitionFunction, inds => O, envs::CTMRGEnv)
+    expectation_value(pf::InfinitePartitionFunction, inds => O, env::CTMRGEnv)
 
 Compute the expectation value corresponding to inserting a local tensor(s) `O` at
 position `inds` in the partition function `pf` and contracting the chole using a given CTMRG
-environment `envs`.
+environment `env`.
 
 Here `inds` can be specified as either a `Tuple{Int,Int}` or a `CartesianIndex{2}`, and `O`
 should be a rank-4 tensor conforming to the [`PartitionFunctionTensor`](@ref) indexing
@@ -26,19 +26,25 @@ convention.
 function MPSKit.expectation_value(
     pf::InfinitePartitionFunction,
     op::Pair{CartesianIndex{2},<:AbstractTensorMap{T,S,2,2}},
-    envs::CTMRGEnv,
+    env::CTMRGEnv,
 ) where {T,S}
-    return contract_local_tensor(op[1], op[2], envs) /
-           contract_local_tensor(op[1], pf[op[1]], envs)
+    return contract_local_tensor(op[1], op[2], env) /
+           contract_local_tensor(op[1], pf[op[1]], env)
 end
 function MPSKit.expectation_value(
-    pf::InfinitePartitionFunction, op::Pair{Tuple{Int,Int}}, envs::CTMRGEnv
+    pf::InfinitePartitionFunction, op::Pair{Tuple{Int,Int}}, env::CTMRGEnv
 )
-    return expectation_value(pf, CartesianIndex(op[1]) => op[2], envs)
+    return expectation_value(pf, CartesianIndex(op[1]) => op[2], env)
 end
 
-function costfun(peps::InfinitePEPS, envs::CTMRGEnv, O::LocalOperator)
-    E = MPSKit.expectation_value(peps, O, envs)
+"""
+    cost_function(peps::InfinitePEPS, env::CTMRGEnv, O::LocalOperator)
+
+Real part of expectation value of `O`. Prints a warning if the expectation value
+yields a finite imaginary part (up to a tolerance).
+"""
+function cost_function(peps::InfinitePEPS, env::CTMRGEnv, O::LocalOperator)
+    E = MPSKit.expectation_value(peps, O, env)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
             @warn "Expectation value is not real: $E."
