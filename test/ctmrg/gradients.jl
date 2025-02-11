@@ -33,7 +33,7 @@ gradmodes = [
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
         LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:fixed),
         LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(; solver=KrylovKit.Arnoldi(; tol=gradtol), iterscheme=:fixed),
+        EigSolver(; solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
         EigSolver(;
             solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge
         ),

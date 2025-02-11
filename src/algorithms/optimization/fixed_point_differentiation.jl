@@ -91,10 +91,7 @@ such that `gauge_fix` will also be differentiated everytime a CTMRG derivative i
 struct EigSolver{F} <: GradMode{F}
     solver::KrylovKit.KrylovAlgorithm
 end
-function EigSolver(;
-    solver=KrylovKit.Arnoldi(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
-    iterscheme=Defaults.iterscheme,
-)
+function EigSolver(; solver=Defauls.gradient_eigsolver, iterscheme=Defaults.iterscheme)
     return EigSolver{iterscheme}(solver)
 end
 
