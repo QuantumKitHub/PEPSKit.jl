@@ -7,8 +7,8 @@ const CTMRGCornerTensor{T,S} = AbstractTensorMap{T,S,1,1}
 # ----------------------------
 
 """
-    enlarge_northwest_corner((row, col), envs, ket::InfinitePEPS, bra::InfinitePEPS=ket)
-    enlarge_northwest_corner((row, col), envs, partfunc::InfinitePartitionFunction)
+    enlarge_northwest_corner((row, col), env, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    enlarge_northwest_corner((row, col), env, partfunc::InfinitePartitionFunction)
     enlarge_northwest_corner(E_west, C_northwest, E_north, ket::PEPSTensor, bra::PEPSTensor=ket)
     enlarge_northwest_corner(E_west, C_northwest, E_north, partfunc::PartitionFunctionTensor)
 
@@ -28,11 +28,11 @@ The networks and tensors (denoted `A` below) can correspond to either:
 ```
 """
 function enlarge_northwest_corner(
-    (row, col), envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), env::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
-    E_west = envs.edges[WEST, row, _prev(col, end)]
-    C_northwest = envs.corners[NORTHWEST, _prev(row, end), _prev(col, end)]
-    E_north = envs.edges[NORTH, _prev(row, end), col]
+    E_west = env.edges[WEST, row, _prev(col, end)]
+    C_northwest = env.corners[NORTHWEST, _prev(row, end), _prev(col, end)]
+    E_north = env.edges[NORTH, _prev(row, end), col]
     return enlarge_northwest_corner(
         E_west, C_northwest, E_north, ket[row, col], bra[row, col]
     )
@@ -51,10 +51,10 @@ function enlarge_northwest_corner(
         ket[d; D3 D_Eabove D_Sabove D1] *
         conj(bra[d; D4 D_Ebelow D_Sbelow D2])
 end
-function enlarge_northwest_corner((row, col), envs::CTMRGEnv, partfunc::InfinitePF)
-    E_west = envs.edges[WEST, row, _prev(col, end)]
-    C_northwest = envs.corners[NORTHWEST, _prev(row, end), _prev(col, end)]
-    E_north = envs.edges[NORTH, _prev(row, end), col]
+function enlarge_northwest_corner((row, col), env::CTMRGEnv, partfunc::InfinitePF)
+    E_west = env.edges[WEST, row, _prev(col, end)]
+    C_northwest = env.corners[NORTHWEST, _prev(row, end), _prev(col, end)]
+    E_north = env.edges[NORTH, _prev(row, end), col]
     return enlarge_northwest_corner(E_west, C_northwest, E_north, partfunc[row, col])
 end
 function enlarge_northwest_corner(
@@ -71,8 +71,8 @@ function enlarge_northwest_corner(
 end
 
 """
-    enlarge_northeast_corner((row, col), envs, ket::InfinitePEPS, bra::InfinitePEPS=ket)
-    enlarge_northeast_corner((row, col), envs, partfunc::InfinitePartitionFunction)
+    enlarge_northeast_corner((row, col), env, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    enlarge_northeast_corner((row, col), env, partfunc::InfinitePartitionFunction)
     enlarge_northeast_corner(E_north, C_northeast, E_east, ket::PEPSTensor, bra::PEPSTensor=ket)
     enlarge_northeast_corner(E_north, C_northeast, E_east, partfunc::PartitionFunctionTensor)
 
@@ -92,11 +92,11 @@ The networks and tensors (denoted `A` below) can correspond to either:
 ```
 """
 function enlarge_northeast_corner(
-    (row, col), envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), env::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
-    E_north = envs.edges[NORTH, _prev(row, end), col]
-    C_northeast = envs.corners[NORTHEAST, _prev(row, end), _next(col, end)]
-    E_east = envs.edges[EAST, row, _next(col, end)]
+    E_north = env.edges[NORTH, _prev(row, end), col]
+    C_northeast = env.corners[NORTHEAST, _prev(row, end), _next(col, end)]
+    E_east = env.edges[EAST, row, _next(col, end)]
     return enlarge_northeast_corner(
         E_north, C_northeast, E_east, ket[row, col], bra[row, col]
     )
@@ -115,10 +115,10 @@ function enlarge_northeast_corner(
         ket[d; D1 D3 D_Sabove D_Wabove] *
         conj(bra[d; D2 D4 D_Sbelow D_Wbelow])
 end
-function enlarge_northeast_corner((row, col), envs::CTMRGEnv, partfunc::InfinitePF)
-    E_north = envs.edges[NORTH, _prev(row, end), col]
-    C_northeast = envs.corners[NORTHEAST, _prev(row, end), _next(col, end)]
-    E_east = envs.edges[EAST, row, _next(col, end)]
+function enlarge_northeast_corner((row, col), env::CTMRGEnv, partfunc::InfinitePF)
+    E_north = env.edges[NORTH, _prev(row, end), col]
+    C_northeast = env.corners[NORTHEAST, _prev(row, end), _next(col, end)]
+    E_east = env.edges[EAST, row, _next(col, end)]
     return enlarge_northeast_corner(E_north, C_northeast, E_east, partfunc[row, col])
 end
 function enlarge_northeast_corner(
@@ -135,8 +135,8 @@ function enlarge_northeast_corner(
 end
 
 """
-    enlarge_southeast_corner((row, col), envs, ket::InfinitePEPS, bra::InfinitePEPS=ket)
-    enlarge_southeast_corner((row, col), envs, partfunc::InfinitePartitionFunction)
+    enlarge_southeast_corner((row, col), env, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    enlarge_southeast_corner((row, col), env, partfunc::InfinitePartitionFunction)
     enlarge_southeast_corner(E_east, C_southeast, E_south, ket::PEPSTensor, bra::PEPSTensor=ket)
     enlarge_southeast_corner(E_east, C_southeast, E_south, partfunc::PartitionFunctionTensor)
 
@@ -156,11 +156,11 @@ The networks and tensors (denoted `A` below) can correspond to either:
 ```
 """
 function enlarge_southeast_corner(
-    (row, col), envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), env::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
-    E_east = envs.edges[EAST, row, _next(col, end)]
-    C_southeast = envs.corners[SOUTHEAST, _next(row, end), _next(col, end)]
-    E_south = envs.edges[SOUTH, _next(row, end), col]
+    E_east = env.edges[EAST, row, _next(col, end)]
+    C_southeast = env.corners[SOUTHEAST, _next(row, end), _next(col, end)]
+    E_south = env.edges[SOUTH, _next(row, end), col]
     return enlarge_southeast_corner(
         E_east, C_southeast, E_south, ket[row, col], bra[row, col]
     )
@@ -179,10 +179,10 @@ function enlarge_southeast_corner(
         ket[d; D_Nabove D1 D3 D_Wabove] *
         conj(bra[d; D_Nbelow D2 D4 D_Wbelow])
 end
-function enlarge_southeast_corner((row, col), envs::CTMRGEnv, partfunc::InfinitePF)
-    E_east = envs.edges[EAST, row, _next(col, end)]
-    C_southeast = envs.corners[SOUTHEAST, _next(row, end), _next(col, end)]
-    E_south = envs.edges[SOUTH, _next(row, end), col]
+function enlarge_southeast_corner((row, col), env::CTMRGEnv, partfunc::InfinitePF)
+    E_east = env.edges[EAST, row, _next(col, end)]
+    C_southeast = env.corners[SOUTHEAST, _next(row, end), _next(col, end)]
+    E_south = env.edges[SOUTH, _next(row, end), col]
     return enlarge_southeast_corner(E_east, C_southeast, E_south, partfunc[row, col])
 end
 function enlarge_southeast_corner(
@@ -199,8 +199,8 @@ function enlarge_southeast_corner(
 end
 
 """
-    enlarge_southwest_corner((row, col), envs, ket::InfinitePEPS, bra::InfinitePEPS=ket)
-    enlarge_southwest_corner((row, col), envs, partfunc::InfinitePartitionFunction)
+    enlarge_southwest_corner((row, col), env, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    enlarge_southwest_corner((row, col), env, partfunc::InfinitePartitionFunction)
     enlarge_southwest_corner(E_south, C_southwest, E_west, ket::PEPSTensor, bra::PEPSTensor=ket)
     enlarge_southwest_corner(E_south, C_southwest, E_west, partfunc::PartitionFunctionTensor)
 
@@ -220,11 +220,11 @@ The networks and tensors (denoted `A` below) can correspond to either:
 ```
 """
 function enlarge_southwest_corner(
-    (row, col), envs::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), env::CTMRGEnv, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
-    E_south = envs.edges[SOUTH, _next(row, end), col]
-    C_southwest = envs.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
-    E_west = envs.edges[WEST, row, _prev(col, end)]
+    E_south = env.edges[SOUTH, _next(row, end), col]
+    C_southwest = env.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
+    E_west = env.edges[WEST, row, _prev(col, end)]
     return enlarge_southwest_corner(
         E_south, C_southwest, E_west, ket[row, col], bra[row, col]
     )
@@ -243,10 +243,10 @@ function enlarge_southwest_corner(
         ket[d; D_Nabove D_Eabove D1 D3] *
         conj(bra[d; D_Nbelow D_Ebelow D2 D4])
 end
-function enlarge_southwest_corner((row, col), envs::CTMRGEnv, partfunc::InfinitePF)
-    E_south = envs.edges[SOUTH, _next(row, end), col]
-    C_southwest = envs.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
-    E_west = envs.edges[WEST, row, _prev(col, end)]
+function enlarge_southwest_corner((row, col), env::CTMRGEnv, partfunc::InfinitePF)
+    E_south = env.edges[SOUTH, _next(row, end), col]
+    C_southwest = env.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
+    E_west = env.edges[WEST, row, _prev(col, end)]
     return enlarge_southwest_corner(E_south, C_southwest, E_west, partfunc[row, col])
 end
 function enlarge_southwest_corner(
@@ -937,7 +937,7 @@ function renormalize_corner(
 end
 
 """
-    renormalize_northwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_northwest_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
     renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
     renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
@@ -959,9 +959,9 @@ Here `A` denotes either:
 - a local pair of 'ket' and 'bra' `PEPSTensor`s
 - a `PartitionFunctionTensor`.
 """
-function renormalize_northwest_corner((row, col), enlarged_envs, P_left, P_right)
+function renormalize_northwest_corner((row, col), enlarged_env, P_left, P_right)
     return renormalize_northwest_corner(
-        enlarged_envs[NORTHWEST, row, col],
+        enlarged_env[NORTHWEST, row, col],
         P_left[NORTH, row, col],
         P_right[WEST, _next(row, end), col],
     )
@@ -1001,7 +1001,7 @@ function renormalize_northwest_corner(
 end
 
 """
-    renormalize_northeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_northeast_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
     renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
     renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
@@ -1023,9 +1023,9 @@ Here `A` denotes either:
 - a local pair of 'ket' and 'bra' `PEPSTensor`s
 - a `PartitionFunctionTensor`.
 """
-function renormalize_northeast_corner((row, col), enlarged_envs, P_left, P_right)
+function renormalize_northeast_corner((row, col), enlarged_env, P_left, P_right)
     return renormalize_northeast_corner(
-        enlarged_envs[NORTHEAST, row, col],
+        enlarged_env[NORTHEAST, row, col],
         P_left[EAST, row, col],
         P_right[NORTH, row, _prev(col, end)],
     )
@@ -1067,7 +1067,7 @@ function renormalize_northeast_corner(
 end
 
 """
-    renormalize_southeast_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_southeast_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
     renormalize_southeast_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
     renormalize_southeast_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
@@ -1089,9 +1089,9 @@ Here `A` denotes either:
 - a local pair of 'ket' and 'bra' `PEPSTensor`s
 - a `PartitionFunctionTensor`.
 """
-function renormalize_southeast_corner((row, col), enlarged_envs, P_left, P_right)
+function renormalize_southeast_corner((row, col), enlarged_env, P_left, P_right)
     return renormalize_southeast_corner(
-        enlarged_envs[SOUTHEAST, row, col],
+        enlarged_env[SOUTHEAST, row, col],
         P_left[SOUTH, row, col],
         P_right[EAST, _prev(row, end), col],
     )
@@ -1132,7 +1132,7 @@ function renormalize_southeast_corner(
 end
 
 """
-    renormalize_southwest_corner((row, col), enlarged_envs::CTMRGEnv, P_left, P_right)
+    renormalize_southwest_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
     renormalize_southwest_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right) where {T,S}
     renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
     renormalize_southwest_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right) where {T,S}
@@ -1154,9 +1154,9 @@ Here `A` denotes either:
 - a pair of 'ket' and 'bra' `PEPSTensor`s
 - a `PartitionFunctionTensor`.
 """
-function renormalize_southwest_corner((row, col), enlarged_envs, P_left, P_right)
+function renormalize_southwest_corner((row, col), enlarged_env, P_left, P_right)
     return renormalize_corner(
-        enlarged_envs[SOUTHWEST, row, col],
+        enlarged_env[SOUTHWEST, row, col],
         P_left[WEST, row, col],
         P_right[SOUTH, row, _next(col, end)],
     )
@@ -1196,7 +1196,7 @@ function renormalize_southwest_corner(
 end
 
 """
-    renormalize_bottom_corner((r, c), envs, projectors)
+    renormalize_bottom_corner((r, c), env, projectors)
 
 Apply bottom projector to southwest corner and south edge.
 ```
@@ -1207,26 +1207,26 @@ Apply bottom projector to southwest corner and south edge.
 ```
 """
 function renormalize_bottom_corner(
-    (row, col), envs::CTMRGEnv{C,<:CTMRG_PEPS_EdgeTensor}, projectors
+    (row, col), env::CTMRGEnv{C,<:CTMRG_PEPS_EdgeTensor}, projectors
 ) where {C}
-    C_southwest = envs.corners[SOUTHWEST, row, _prev(col, end)]
-    E_south = envs.edges[SOUTH, row, col]
+    C_southwest = env.corners[SOUTHWEST, row, _prev(col, end)]
+    E_south = env.edges[SOUTH, row, col]
     P_bottom = projectors[1][row]
     return @autoopt @tensor corner[χ_in; χ_out] :=
         E_south[χ_in D1 D2; χ1] * C_southwest[χ1; χ2] * P_bottom[χ2 D1 D2; χ_out]
 end
 function renormalize_bottom_corner(
-    (row, col), envs::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}, projectors
+    (row, col), env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}, projectors
 ) where {C}
-    C_southwest = envs.corners[SOUTHWEST, row, _prev(col, end)]
-    E_south = envs.edges[SOUTH, row, col]
+    C_southwest = env.corners[SOUTHWEST, row, _prev(col, end)]
+    E_south = env.edges[SOUTH, row, col]
     P_bottom = projectors[1][row]
     return @autoopt @tensor corner[χ_in; χ_out] :=
         E_south[χ_in D1; χ1] * C_southwest[χ1; χ2] * P_bottom[χ2 D1; χ_out]
 end
 
 """
-    renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
+    renormalize_top_corner((row, col), env::CTMRGEnv, projectors)
 
 Apply top projector to northwest corner and north edge.
 ```
@@ -1236,9 +1236,9 @@ Apply top projector to northwest corner and north edge.
         | 
 ```
 """
-function renormalize_top_corner((row, col), envs::CTMRGEnv, projectors)
-    C_northwest = envs.corners[NORTHWEST, row, _prev(col, end)]
-    E_north = envs.edges[NORTH, row, col]
+function renormalize_top_corner((row, col), env::CTMRGEnv, projectors)
+    C_northwest = env.corners[NORTHWEST, row, _prev(col, end)]
+    E_north = env.edges[NORTH, row, col]
     P_top = projectors[2][_next(row, end)]
     return renormalize_top_corner(C_northwest, E_north, P_top)
 end
@@ -1254,9 +1254,9 @@ end
 # edges
 
 """
-    renormalize_north_edge((row, col), envs, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_north_edge((row, col), env, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket)
     renormalize_north_edge(E_north, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_north_edge((row, col), envs, P_left, P_right, partfunc::InfinitePartitionFunction)
+    renormalize_north_edge((row, col), env, P_left, P_right, partfunc::InfinitePartitionFunction)
     renormalize_north_edge(E_north, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Absorb a local effective tensor `A` into the north edge using the given projectors and
@@ -1274,10 +1274,10 @@ Here `A` denotes either:
 - a `PartitionFunctionTensor`.
 """
 function renormalize_north_edge(
-    (row, col), envs::CTMRGEnv, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), env::CTMRGEnv, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
     return renormalize_north_edge(
-        envs.edges[NORTH, _prev(row, end), col],
+        env.edges[NORTH, _prev(row, end), col],
         P_left[NORTH, row, col],
         P_right[NORTH, row, _prev(col, end)],
         ket[row, col],
@@ -1295,10 +1295,10 @@ function renormalize_north_edge(
         P_right[χ_W; χ1 D5 D6]
 end
 function renormalize_north_edge(
-    (row, col), envs::CTMRGEnv, P_left, P_right, partfunc::InfinitePF
+    (row, col), env::CTMRGEnv, P_left, P_right, partfunc::InfinitePF
 )
     return renormalize_north_edge(
-        envs.edges[NORTH, _prev(row, end), col],
+        env.edges[NORTH, _prev(row, end), col],
         P_left[NORTH, row, col],
         P_right[NORTH, row, _prev(col, end)],
         partfunc[row, col],
@@ -1315,9 +1315,9 @@ function renormalize_north_edge(
 end
 
 """
-    renormalize_east_edge((row, col), envs, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_east_edge((row, col), env, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket)
     renormalize_east_edge(E_east, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_east_edge((row, col), envs, P_top, P_bottom, partfunc::InfinitePartitionFunction)
+    renormalize_east_edge((row, col), env, P_top, P_bottom, partfunc::InfinitePartitionFunction)
     renormalize_east_edge(E_east, P_top, P_bottom, partfunc::PartitionFunctionTensor)
 
 Absorb a blocal effective tensor into the east edge using the given projectors and
@@ -1338,10 +1338,10 @@ Here `A` denotes either:
 - a `PartitionFunctionTensor`.
 """
 function renormalize_east_edge(
-    (row, col), envs::CTMRGEnv, P_bottom, P_top, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), env::CTMRGEnv, P_bottom, P_top, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
     return renormalize_east_edge(
-        envs.edges[EAST, row, _next(col, end)],
+        env.edges[EAST, row, _next(col, end)],
         P_bottom[EAST, row, col, end],
         P_top[EAST, _prev(row, end), col],
         ket[row, col],
@@ -1359,10 +1359,10 @@ function renormalize_east_edge(
         P_top[χ_N; χ1 D5 D6]
 end
 function renormalize_east_edge(
-    (row, col), envs::CTMRGEnv, P_bottom, P_top, partfunc::InfinitePF
+    (row, col), env::CTMRGEnv, P_bottom, P_top, partfunc::InfinitePF
 )
     return renormalize_east_edge(
-        envs.edges[EAST, row, _next(col, end)],
+        env.edges[EAST, row, _next(col, end)],
         P_bottom[EAST, row, col, end],
         P_top[EAST, _prev(row, end), col],
         partfunc[row, col],
@@ -1379,9 +1379,9 @@ function renormalize_east_edge(
 end
 
 """
-    renormalize_south_edge((row, col), envs, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_south_edge((row, col), env, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket)
     renormalize_south_edge(E_south, P_left, P_right, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_south_edge((row, col), envs, P_left, P_right, partfunc::InfinitePartitionFunction)
+    renormalize_south_edge((row, col), env, P_left, P_right, partfunc::InfinitePartitionFunction)
     renormalize_south_edge(E_south, P_left, P_right, partfunc::PartitionFunctionTensor)
 
 Absorb a local effective tensor into the south edge using the given projectors and
@@ -1400,10 +1400,10 @@ Here `A` denotes either:
 - a `PartitionFunctionTensor`.
 """
 function renormalize_south_edge(
-    (row, col), envs::CTMRGEnv, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
+    (row, col), env::CTMRGEnv, P_left, P_right, ket::InfinitePEPS, bra::InfinitePEPS=ket
 )
     return renormalize_south_edge(
-        envs.edges[SOUTH, _next(row, end), col],
+        env.edges[SOUTH, _next(row, end), col],
         P_left[SOUTH, row, col],
         P_right[SOUTH, row, _next(col, end)],
         ket[row, col],
@@ -1421,10 +1421,10 @@ function renormalize_south_edge(
         P_right[χ_E; χ1 D5 D6]
 end
 function renormalize_south_edge(
-    (row, col), envs::CTMRGEnv, P_left, P_right, partfunc::InfinitePF
+    (row, col), env::CTMRGEnv, P_left, P_right, partfunc::InfinitePF
 )
     return renormalize_south_edge(
-        envs.edges[SOUTH, _next(row, end), col],
+        env.edges[SOUTH, _next(row, end), col],
         P_left[SOUTH, row, col],
         P_right[SOUTH, row, _next(col, end)],
         partfunc[row, col],
@@ -1441,9 +1441,9 @@ function renormalize_south_edge(
 end
 
 """
-    renormalize_west_edge((row, col), envs, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket)
+    renormalize_west_edge((row, col), env, P_top, P_bottom, ket::InfinitePEPS, bra::InfinitePEPS=ket)
     renormalize_west_edge(E_west, P_top, P_bottom, ket::PEPSTensor, bra::PEPSTensor=ket)
-    renormalize_west_edge((row, col), envs, P_top, P_bottom, partfunc::InfinitePartitionFunction)
+    renormalize_west_edge((row, col), env, P_top, P_bottom, partfunc::InfinitePartitionFunction)
     renormalize_west_edge(E_west, P_top, P_bottom, partfunc::PartitionFunctionTensor)
 
 Absorb a local effective tensor into the west edge using the given projectors and
@@ -1465,14 +1465,14 @@ Here `A` denotes either:
 """
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
     (row, col),
-    envs::CTMRGEnv,
+    env::CTMRGEnv,
     P_bottom::Array{Pb,3},
     P_top::Array{Pt,3},
     ket::InfinitePEPS,
     bra::InfinitePEPS=ket,
 ) where {Pt,Pb}
     return renormalize_west_edge(
-        envs.edges[WEST, row, _prev(col, end)],
+        env.edges[WEST, row, _prev(col, end)],
         P_bottom[WEST, row, col],
         P_top[WEST, _next(row, end), col],
         ket[row, col],
@@ -1481,13 +1481,13 @@ function renormalize_west_edge(  # For simultaneous CTMRG scheme
 end
 function renormalize_west_edge(  # For sequential CTMRG scheme
     (row, col),
-    envs::CTMRGEnv,
+    env::CTMRGEnv,
     projectors,
     ket::InfinitePEPS,
     bra::InfinitePEPS=ket,
 )
     return renormalize_west_edge(
-        envs.edges[WEST, row, _prev(col, end)],
+        env.edges[WEST, row, _prev(col, end)],
         projectors[1][row],
         projectors[2][_next(row, end)],
         ket[row, col],
@@ -1506,13 +1506,13 @@ function renormalize_west_edge(
 end
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
     (row, col),
-    envs::CTMRGEnv,
+    env::CTMRGEnv,
     P_bottom::Array{Pb,3},
     P_top::Array{Pt,3},
     partfunc::InfinitePF,
 ) where {Pt,Pb}
     return renormalize_west_edge(
-        envs.edges[WEST, row, _prev(col, end)],
+        env.edges[WEST, row, _prev(col, end)],
         P_bottom[WEST, row, col],
         P_top[WEST, _next(row, end), col],
         partfunc[row, col],
@@ -1520,12 +1520,12 @@ function renormalize_west_edge(  # For simultaneous CTMRG scheme
 end
 function renormalize_west_edge(  # For sequential CTMRG scheme
     (row, col),
-    envs::CTMRGEnv,
+    env::CTMRGEnv,
     projectors,
     partfunc::InfinitePF,
 )
     return renormalize_west_edge(
-        envs.edges[WEST, row, _prev(col, end)],
+        env.edges[WEST, row, _prev(col, end)],
         projectors[1][row],
         projectors[2][_next(row, end)],
         partfunc[row, col],
@@ -1566,52 +1566,52 @@ function fix_gauge_corner(
 end
 
 """
-    fix_gauge_northwest_corner((row, col), envs, signs)
+    fix_gauge_northwest_corner((row, col), env, signs)
 
 Apply `fix_gauge_corner` to the northwest corner with appropriate row and column indices.
 """
-function fix_gauge_northwest_corner((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_northwest_corner((row, col), env::CTMRGEnv, signs)
     return fix_gauge_corner(
-        envs.corners[NORTHWEST, row, col],
+        env.corners[NORTHWEST, row, col],
         signs[WEST, row, col],
         signs[NORTH, row, _next(col, end)],
     )
 end
 
 """
-    fix_gauge_northeast_corner((row, col), envs, signs)
+    fix_gauge_northeast_corner((row, col), env, signs)
 
 Apply `fix_gauge_corner` to the northeast corner with appropriate row and column indices.
 """
-function fix_gauge_northeast_corner((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_northeast_corner((row, col), env::CTMRGEnv, signs)
     return fix_gauge_corner(
-        envs.corners[NORTHEAST, row, col],
+        env.corners[NORTHEAST, row, col],
         signs[NORTH, row, col],
         signs[EAST, _next(row, end), col],
     )
 end
 
 """
-    fix_gauge_southeast_corner((row, col), envs, signs)
+    fix_gauge_southeast_corner((row, col), env, signs)
 
 Apply `fix_gauge_corner` to the southeast corner with appropriate row and column indices.
 """
-function fix_gauge_southeast_corner((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_southeast_corner((row, col), env::CTMRGEnv, signs)
     return fix_gauge_corner(
-        envs.corners[SOUTHEAST, row, col],
+        env.corners[SOUTHEAST, row, col],
         signs[EAST, row, col],
         signs[SOUTH, row, _prev(col, end)],
     )
 end
 
 """
-    fix_gauge_southwest_corner((row, col), envs, signs)
+    fix_gauge_southwest_corner((row, col), env, signs)
 
 Apply `fix_gauge_corner` to the southwest corner with appropriate row and column indices.
 """
-function fix_gauge_southwest_corner((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_southwest_corner((row, col), env::CTMRGEnv, signs)
     return fix_gauge_corner(
-        envs.corners[SOUTHWEST, row, col],
+        env.corners[SOUTHWEST, row, col],
         signs[SOUTH, row, col],
         signs[WEST, _prev(row, end), col],
     )
@@ -1642,50 +1642,50 @@ function fix_gauge_edge(
 end
 
 """
-    fix_gauge_north_edge((row, col), envs, signs)
+    fix_gauge_north_edge((row, col), env, signs)
 
 Apply `fix_gauge_edge` to the north edge with appropriate row and column indices.
 """
-function fix_gauge_north_edge((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_north_edge((row, col), env::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[NORTH, row, col],
+        env.edges[NORTH, row, col],
         signs[NORTH, row, col],
         signs[NORTH, row, _next(col, end)],
     )
 end
 
 """
-    fix_gauge_east_edge((row, col), envs, signs)
+    fix_gauge_east_edge((row, col), env, signs)
 
 Apply `fix_gauge_edge` to the east edge with appropriate row and column indices.
 """
-function fix_gauge_east_edge((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_east_edge((row, col), env::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[EAST, row, col], signs[EAST, row, col], signs[EAST, _next(row, end), col]
+        env.edges[EAST, row, col], signs[EAST, row, col], signs[EAST, _next(row, end), col]
     )
 end
 
 """
-    fix_gauge_south_edge((row, col), envs, signs)
+    fix_gauge_south_edge((row, col), env, signs)
 
 Apply `fix_gauge_edge` to the south edge with appropriate row and column indices.
 """
-function fix_gauge_south_edge((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_south_edge((row, col), env::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[SOUTH, row, col],
+        env.edges[SOUTH, row, col],
         signs[SOUTH, row, col],
         signs[SOUTH, row, _prev(col, end)],
     )
 end
 
 """
-    fix_gauge_south_edge((row, col), envs, signs)
+    fix_gauge_south_edge((row, col), env, signs)
 
 Apply `fix_gauge_edge` to the west edge with appropriate row and column indices.
 """
-function fix_gauge_west_edge((row, col), envs::CTMRGEnv, signs)
+function fix_gauge_west_edge((row, col), env::CTMRGEnv, signs)
     return fix_gauge_edge(
-        envs.edges[WEST, row, col], signs[WEST, row, col], signs[WEST, _prev(row, end), col]
+        env.edges[WEST, row, col], signs[WEST, row, col], signs[WEST, _prev(row, end), col]
     )
 end
 
