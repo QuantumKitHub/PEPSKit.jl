@@ -218,4 +218,6 @@ export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
 export transverse_field_ising, heisenberg_XYZ, j1_j2
 export pwave_superconductor, hubbard_model, tj_model
 
+include("precompile.jl")
+
 end # module
