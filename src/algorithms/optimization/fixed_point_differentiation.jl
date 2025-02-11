@@ -249,12 +249,12 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         return (y + X[2] * ∂F∂x, X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    vals, vecs, info = eigsolve(f, X₀, 1, :LM, alg.solver)
+    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver)
     if alg.solver.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-    if norm(vecs[1][2]) < 1e-8 # TODO: figure out what this actually means...
-        @warn "fpgrad using Arnoldi failed: λ = $(vecs[1][2])"
+    if norm(vecs[1][2]) < 1e-2 * alg.solver.tol
+        @warn "Fixed-point gradient computation using Arnoldi failed: auxiliary component should be finite but was $(vecs[1][2]). Possibly the Jacobian does not have a unique eigenvalue 1."
     end
     y = scale(vecs[1][1], 1 / vecs[1][2])
 
