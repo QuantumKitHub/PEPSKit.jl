@@ -31,11 +31,11 @@ function SequentialCTMRG(;
 end
 
 """
-    ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
+    ctmrg_leftmove(col::Int, state, env::CTMRGEnv, alg::SequentialCTMRG)
 
 Perform sequential CTMRG left move on the `col`-th column.
 """
-function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
+function ctmrg_leftmove(col::Int, state, env::CTMRGEnv, alg::SequentialCTMRG)
     #=
         ----> left move
         C1 ← T1 ←   r-1
@@ -45,9 +45,9 @@ function ctmrg_leftmove(col::Int, state, envs::CTMRGEnv, alg::SequentialCTMRG)
         C4 → T3 →   r+1
         c-1  c 
     =#
-    projectors, info = sequential_projectors(col, state, envs, alg.projector_alg)
-    envs = renormalize_sequentially(col, projectors, state, envs)
-    return envs, info
+    projectors, info = sequential_projectors(col, state, env, alg.projector_alg)
+    env = renormalize_sequentially(col, projectors, state, env)
+    return env, info
 end
 
 function ctmrg_iteration(state, env::CTMRGEnv, alg::SequentialCTMRG)
@@ -55,14 +55,13 @@ function ctmrg_iteration(state, env::CTMRGEnv, alg::SequentialCTMRG)
     condition_number = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
         for col in 1:size(state, 2) # left move column-wise
-            env, info = ctmrg_leftmove(col, state, envs, alg)
+            env, info = ctmrg_leftmove(col, state, env, alg)
             truncation_error = max(truncation_error, info.truncation_error)
             condition_number = max(condition_number, info.condition_number)
         end
         state = rotate_north(state, EAST)
         env = rotate_north(env, EAST)
     end
-
     return env, (; truncation_error, condition_number)
 end
 
