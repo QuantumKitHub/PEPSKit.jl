@@ -102,6 +102,12 @@ Module containing default algorithm parameter values and arguments.
     gradient_linsolver=KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
     ```
 
+- `gradient_eigsolve`: Default eigsolver for the `EigSolver` gradient algorithm
+
+    ```
+    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=fpgrad_maxiter, tol=fpgrad_tol, eager=true)
+    ```
+
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
 
     ```
@@ -142,6 +148,9 @@ module Defaults
     const fpgrad_maxiter = 30
     const fpgrad_tol = 1e-6
     const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
+    const gradient_eigsolver = KrylovKit.Arnoldi(;
+        maxiter=fpgrad_maxiter, tol=fpgrad_tol, eager=true
+    )
     const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
     const reuse_env = true
@@ -200,7 +209,7 @@ export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator
 export expectation_value, cost_function, product_peps, correlation_length
 export leading_boundary
-export PEPSOptimize, GeomSum, ManualIter, LinSolver
+export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
 
 export absorb_weight
