@@ -34,14 +34,18 @@ gradmodes = [
         LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:fixed),
         LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
         EigSolver(; solver=KrylovKit.Arnoldi(; tol=gradtol), iterscheme=:fixed),
-        EigSolver(; solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
+        EigSolver(;
+            solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge
+        ),
     ],
     [  # Only use :diffgauge due to high gauge-sensitivity (perhaps due to small χenv?)
         nothing,
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
         LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(; solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
+        EigSolver(;
+            solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge
+        ),
     ],
 ]
 steps = -0.01:0.005:0.01
