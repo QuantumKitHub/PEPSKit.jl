@@ -10,21 +10,19 @@ using Random
     χenv = 4
     gradtol = 1e-3
     maxiter = 4
+    verbosity = -1
     H_spin = heisenberg_XYZ(InfiniteSquare())
     H_unitcell = heisenberg_XYZ(InfiniteSquare(2, 2))
-    H_fermion = pwave_superconductor(InfiniteSquare())
 
     # Algorithmic settings
     ctmrg_algs = [
-        SimultaneousCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity=-1),
-        SimultaneousCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity=-1),
-        SequentialCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity=-1),
-        SequentialCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity=-1),
+        SimultaneousCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity),
+        SimultaneousCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity),
+        SequentialCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity),
+        SequentialCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity),
     ]
     vumps_alg = VUMPS(;
-        maxiter,
-        alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false),
-        verbosity=-4,
+        maxiter, alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false), verbosity
     )
     gradient_algs = [
         LinSolver(; solver=BiCGStab(; tol=gradtol), iterscheme=:fixed),
@@ -33,24 +31,22 @@ using Random
         ManualIter(; tol=gradtol, iterscheme=:fixed),
         EigSolver(; solver=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
     ]
-    ctmrg_alg_general = SimultaneousCTMRG(; verbosity=-1)
-    opt_alg = PEPSOptimize(; boundary_alg=ctmrg_alg_general, optimizer=LBFGS(4; maxiter))
+    ctmrg_alg_general = SimultaneousCTMRG(; verbosity)
+    opt_alg = PEPSOptimize(;
+        boundary_alg=ctmrg_alg_general, optimizer=LBFGS(4; maxiter, verbosity)
+    )
 
     # Initialize OhMyThreads scheduler (precompilation occurs before __init__ call)
     set_scheduler!()
 
     @compile_workload begin
         # Initialize PEPS and environments with different unit cells, number types and symmetries
-        @info "Precompilation: initializing PEPSs and environments"
+        @info "Precompiling workload: initializing PEPSs and environments"
         peps_complex = InfinitePEPS(
             randn, ComplexF64, ComplexSpace(Dbond), ComplexSpace(Dbond)
         )
         peps_real_unitcell = InfinitePEPS(
             randn, Float64, ComplexSpace(Dbond), ComplexSpace(Dbond); unitcell=(2, 2)
-        )
-        peps_fermion = InfinitePEPS(
-            Vect[FermionParity](0 => 1, 1 => 1),
-            Vect[FermionParity](0 => Dbond / 2, 1 => Dbond / 2),
         )
 
         env_complex, = leading_boundary(
@@ -61,22 +57,16 @@ using Random
             peps_real_unitcell,
             ctmrg_alg_general,
         )
-        env_fermion, = leading_boundary(
-            CTMRGEnv(peps_fermion, Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)),
-            peps_fermion,
-            ctmrg_alg_general,
-        )
 
         # CTMRG
-        @info "Precompilation: CTMRG leading_boundary"
+        @info "Precompiling workload: CTMRG leading_boundary"
         for ctmrg_alg in ctmrg_algs
             leading_boundary(env_complex, peps_complex, ctmrg_alg)
             leading_boundary(env_real_unitcell, peps_real_unitcell, ctmrg_alg)
-            leading_boundary(env_fermion, peps_fermion, ctmrg_alg)
         end
 
         # Boundary MPS
-        @info "Precompilation: VUMPS leading_boundary"
+        @info "Precompiling workload: VUMPS leading_boundary"
         T_single = InfiniteTransferPEPS(peps_complex, 1, 1)
         mps_single = initializeMPS(T_single, [ComplexSpace(χenv)])
         leading_boundary(mps_single, T_single, vumps_alg)
@@ -86,7 +76,7 @@ using Random
         leading_boundary(mps_multi, T_multi, vumps_alg)
 
         # Differentiate CTMRG leading_boundary
-        @info "Precompilation: backpropagation of leading_boundary"
+        @info "Precompiling workload: backpropagation of leading_boundary"
         for alg_rrule in gradient_algs
             Zygote.withgradient(peps_complex) do ψ
                 env′, = hook_pullback(
@@ -107,26 +97,15 @@ using Random
             return cost_function(ψ, env′, H_unitcell)
         end
 
-        Zygote.withgradient(peps_fermion) do ψ
-            env′, = hook_pullback(
-                leading_boundary,
-                env_fermion,
-                ψ,
-                ctmrg_alg_general;
-                alg_rrule=gradient_algs[1],
-            )
-            return cost_function(ψ, env′, H_fermion)
-        end
-
         # Optimize via fixedpoint using LBFGS
-        @info "Precompilation: LBFGS fixedpoint optimization"
+        @info "Precompiling workload: LBFGS fixedpoint optimization"
         fixedpoint(H_spin, peps_complex, env_complex, opt_alg)
 
         # Compute correlation length
-        @info "Precompilation: correlation_length"
+        @info "Precompiling workload: correlation_length"
         correlation_length(peps_complex, env_complex)
     end
 
-    duration = (time_ns() - t₀) * 1e-9 / 60 # minutes
-    @info "Precompilation: finished after $duration min"
+    duration = round((time_ns() - t₀) * 1e-9 / 60; digits=2) # minutes
+    @info "Precompiling workload: finished after $duration min"
 end
