@@ -18,7 +18,7 @@ The index order of `a` or `b` is
 ```
 """
 function bond_optimize(
-    env::BondEnv{T,S},
+    benv::BondEnv{T,S},
     a::AbstractTensor{T,S,3},
     b::AbstractTensor{T,S,3},
     alg::FullEnvTruncation,
@@ -36,17 +36,17 @@ function bond_optimize(
     @tensor b0[-1 -2] := Ra[-1 1] * Lb[1 -2]
     #= initialize bond environment around `Ra Lb`
 
-        |-------env-------|
+        |------benv-------|
         |- Qa†-     - Qb†-|
         |  ↑          ↑   |
         |- Qa -     - Qb -|
         |-----------------|
     =#
-    @tensor env2[-1 -2; -3 -4] := (
-        env[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
+    @tensor benv2[-1 -2; -3 -4] := (
+        benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
     )
     # optimize bond matrix
-    u, s, vh, info = fullenv_truncate(env2, b0, alg)
+    u, s, vh, info = fullenv_truncate(benv2, b0, alg)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
     @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]

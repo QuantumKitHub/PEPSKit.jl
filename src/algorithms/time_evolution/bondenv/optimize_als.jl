@@ -15,7 +15,7 @@ end
 """
 Construct the tensor
 ```
-    |------------env-----------|
+    |-----------benv-----------|
     |- DX1     Db1 - b† - DY1 -|
     |                ↑         |
     |                db        |
@@ -25,17 +25,17 @@ Construct the tensor
 ```
 """
 function tensor_Ra(
-    env::BondEnv{T,S}, b::AbstractTensor{T,S,3}
+    benv::BondEnv{T,S}, b::AbstractTensor{T,S,3}
 ) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Ra[DX1, Db1; DX0, Db0] := (
-        env[DX1, DY1, DX0, DY0] * b[Db0, db, DY0] * conj(b[Db1, db, DY1])
+        benv[DX1, DY1, DX0, DY0] * b[Db0, db, DY0] * conj(b[Db1, db, DY1])
     )
 end
 
 """
 Construct the tensor
 ```
-    |-----------env-----------|
+    |----------benv-----------|
     |- DX1   Db1 -- b† - DY1 -|
     |               ↑         |
     |         da    db        |
@@ -45,17 +45,17 @@ Construct the tensor
 ```
 """
 function tensor_Sa(
-    env::BondEnv{T,S}, b::AbstractTensor{T,S,3}, a2b2::AbstractTensor{T,S,4}
+    benv::BondEnv{T,S}, b::AbstractTensor{T,S,3}, a2b2::AbstractTensor{T,S,4}
 ) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Sa[DX1, Db1, da] := (
-        env[DX1, DY1, DX0, DY0] * conj(b[Db1, db, DY1]) * a2b2[DX0, da, db, DY0]
+        benv[DX1, DY1, DX0, DY0] * conj(b[Db1, db, DY1]) * a2b2[DX0, da, db, DY0]
     )
 end
 
 """
 Construct the tensor
 ```
-    |------------env-----------|
+    |-----------benv-----------|
     |- DX1 - a† - Da1     DY1 -|
     |        ↑                 |
     |        da                |
@@ -65,17 +65,17 @@ Construct the tensor
 ```
 """
 function tensor_Rb(
-    env::BondEnv{T,S}, a::AbstractTensor{T,S,3}
+    benv::BondEnv{T,S}, a::AbstractTensor{T,S,3}
 ) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Rb[Da1, DY1; Da0, DY0] := (
-        env[DX1, DY1, DX0, DY0] * a[DX0, da, Da0] * conj(a[DX1, da, Da1])
+        benv[DX1, DY1, DX0, DY0] * a[DX0, da, Da0] * conj(a[DX1, da, Da1])
     )
 end
 
 """
 Construct the tensor
 ```
-    |-----------env-----------|
+    |----------benv-----------|
     |- DX1 -- a† - Da1   DY1 -|
     |         ↑               |
     |         da   db         |
@@ -85,17 +85,17 @@ Construct the tensor
 ```
 """
 function tensor_Sb(
-    env::BondEnv{T,S}, a::AbstractTensor{T,S,3}, a2b2::AbstractTensor{T,S,4}
+    benv::BondEnv{T,S}, a::AbstractTensor{T,S,3}, a2b2::AbstractTensor{T,S,4}
 ) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Sb[Da1, DY1, db] := (
-        env[DX1, DY1, DX0, DY0] * conj(a[DX1, da, Da1]) * a2b2[DX0, da, db, DY0]
+        benv[DX1, DY1, DX0, DY0] * conj(a[DX1, da, Da1]) * a2b2[DX0, da, db, DY0]
     )
 end
 
 """
 Calculate the inner product <a1,b1|a2,b2>
 ```
-    |----------env----------|
+    |---------benv----------|
     |- DX1 - (a1 b1)†- DY1 -|
     |        ↑    ↑         |
     |        da   db        |
@@ -105,9 +105,9 @@ Calculate the inner product <a1,b1|a2,b2>
 ```
 """
 function inner_prod(
-    env::BondEnv{T,S}, a1b1::AbstractTensor{T,S,4}, a2b2::AbstractTensor{T,S,4}
+    benv::BondEnv{T,S}, a1b1::AbstractTensor{T,S,4}, a2b2::AbstractTensor{T,S,4}
 ) where {T<:Number,S<:ElementarySpace}
-    return @autoopt @tensor env[DX1, DY1, DX0, DY0] *
+    return @autoopt @tensor benv[DX1, DY1, DX0, DY0] *
         conj(a1b1[DX1, da, db, DY1]) *
         a2b2[DX0, da, db, DY0]
 end
@@ -121,11 +121,11 @@ Calculate the fidelity between two evolution steps
 ```
 """
 function fidelity(
-    env::BondEnv{T,S}, a1b1::AbstractTensor{T,S,4}, a2b2::AbstractTensor{T,S,4}
+    benv::BondEnv{T,S}, a1b1::AbstractTensor{T,S,4}, a2b2::AbstractTensor{T,S,4}
 ) where {T<:Number,S<:ElementarySpace}
-    b12 = inner_prod(env, a1b1, a2b2)
-    b11 = inner_prod(env, a1b1, a1b1)
-    b22 = inner_prod(env, a2b2, a2b2)
+    b12 = inner_prod(benv, a1b1, a2b2)
+    b11 = inner_prod(benv, a1b1, a1b1)
+    b22 = inner_prod(benv, a2b2, a2b2)
     return abs2(b12) / abs(b11 * b22)
 end
 
@@ -150,12 +150,12 @@ Calculate the cost function
     = ⟨a1,b1|a1,b1⟩ - 2 Re⟨a1,b1|a2,b2⟩ + ⟨a2,b2|a2,b2⟩
 ```
 """
-function cost_func(
-    env::BondEnv{T,S}, aR1bL1::AbstractTensor{T,S,4}, aR2bL2::AbstractTensor{T,S,4}
+function cost_function_als(
+    benv::BondEnv{T,S}, aR1bL1::AbstractTensor{T,S,4}, aR2bL2::AbstractTensor{T,S,4}
 ) where {T<:Number,S<:ElementarySpace}
-    t1 = inner_prod(env, aR1bL1, aR1bL1)
-    t2 = inner_prod(env, aR2bL2, aR2bL2)
-    t3 = inner_prod(env, aR1bL1, aR2bL2)
+    t1 = inner_prod(benv, aR1bL1, aR1bL1)
+    t2 = inner_prod(benv, aR2bL2, aR2bL2)
+    t3 = inner_prod(benv, aR1bL1, aR2bL2)
     return real(t1) + real(t2) - 2 * real(t3)
 end
 
@@ -187,7 +187,7 @@ function _als_message(
 end
 
 function bond_optimize(
-    env::BondEnv{T,S},
+    benv::BondEnv{T,S},
     a::AbstractTensor{T,S,3},
     b::AbstractTensor{T,S,3},
     alg::ALSTruncation,
@@ -206,8 +206,8 @@ function bond_optimize(
     a, b = permute(a, (1, 2, 3)), permute(b, (1, 2, 3))
     ab = _combine_ab(a, b)
     # cost function will be normalized by initial value
-    cost00 = cost_func(env, ab, a2b2)
-    fid = fidelity(env, ab, a2b2)
+    cost00 = cost_function_als(benv, ab, a2b2)
+    fid = fidelity(benv, ab, a2b2)
     cost0, fid0, Δfid = cost00, fid, 0.0
     verbose && @info "ALS init" * _als_message(0, cost0, fid, NaN, NaN, 0.0)
     # only optimize when fidelity differ from 1 by larger than 1e-12
@@ -221,16 +221,16 @@ function bond_optimize(
         `f` is minimized when
             ∂f/∂ā = Ra a - Sa = 0
         =#
-        Ra = tensor_Ra(env, b)
-        Sa = tensor_Sa(env, b, a2b2)
+        Ra = tensor_Ra(benv, b)
+        Sa = tensor_Sa(benv, b, a2b2)
         a, info_a = solve_ab(Ra, Sa, a)
         # Fixing `a`, solve for `b` from `Rb b = Sb`
-        Rb = tensor_Rb(env, a)
-        Sb = tensor_Sb(env, a, a2b2)
+        Rb = tensor_Rb(benv, a)
+        Sb = tensor_Sb(benv, a, a2b2)
         b, info_b = solve_ab(Rb, Sb, b)
         ab = _combine_ab(a, b)
-        cost = cost_func(env, ab, a2b2)
-        fid = fidelity(env, ab, a2b2)
+        cost = cost_function_als(benv, ab, a2b2)
+        fid = fidelity(benv, ab, a2b2)
         Δcost = abs(cost - cost0) / cost00
         Δfid = abs(fid - fid0)
         cost0, fid0 = cost, fid
