@@ -35,6 +35,8 @@ function bond_optimize(
     =#
     Qa, Ra = leftorth(a, ((1, 2), (3,)))
     Qb, Rb = leftorth(b, ((2, 3), (1,)))
+    isdual(codomain(Ra, 1)) && twist!(Ra, 1)
+    isdual(codomain(Rb, 1)) && twist!(Rb, 1)
     @tensor b0[-1 -2] := Ra[-1 1] * Rb[-2 1]
     #= initialize bond environment around `Ra Lb`
 

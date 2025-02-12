@@ -52,4 +52,4 @@ for (label, alg) in (
     @test info.fid ≈ PEPSKit.fidelity(env, PEPSKit._combine_ab(a1, b1), a2b2)
     @test info.fid > fid0
 end
-# @test isapprox(ss["ALS"], ss["FET"], atol=1e-3)
+@test isapprox(ss["ALS"], ss["FET"], atol=1e-3)
