@@ -2,6 +2,7 @@ using PrecompileTools: @setup_workload, @compile_workload
 using Random
 
 @setup_workload begin
+    t₀ = time_ns()
     Random.seed!(20918352394)
 
     # Hyperparameters
@@ -125,4 +126,7 @@ using Random
         @info "Precompilation: correlation_length"
         correlation_length(peps_complex, env_complex)
     end
+
+    duration = (time_ns() - t₀) * 1e-9 / 60 # minutes
+    @info "Precompilation: finished after $duration min"
 end
