@@ -10,7 +10,7 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg=Defaults.fwd_alg, rrule_alg=Defaults.rrule_alg,
+    struct SVDAdjoint(; fwd_alg=Defaults.svd_fwd_alg, rrule_alg=Defaults.svd_rrule_alg,
                       broadening=nothing)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
@@ -19,8 +19,8 @@ In case of degenerate singular values, one might need a `broadening` scheme whic
 removes the divergences from the adjoint.
 """
 @kwdef struct SVDAdjoint{F,R,B}
-    fwd_alg::F = Defaults.fwd_alg
-    rrule_alg::R = Defaults.rrule_alg
+    fwd_alg::F = Defaults.svd_fwd_alg
+    rrule_alg::R = Defaults.svd_rrule_alg
     broadening::B = nothing
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 

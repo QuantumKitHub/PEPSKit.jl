@@ -69,14 +69,19 @@ Module containing default algorithm parameter values and arguments.
 - `ctmrg_maxiter=100`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter=4`: Minimal number of CTMRG carried out
 - `trscheme=FixedSpaceTruncation()`: Truncation scheme for SVDs and other decompositions
-- `fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
-- `rrule_alg`: Reverse-rule for differentiating that SVD
+- `svd_fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
+- `svd_rrule_alg`: Reverse-rule for differentiating that SVD
 
     ```
-    rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
+    svd_rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     ```
 
-- `svd_alg=SVDAdjoint(; fwd_alg, rrule_alg)`: Combination of `fwd_alg` and `rrule_alg`
+- `svd_alg`: Combination of forward and reverse SVD algorithms
+
+    ```
+    svd_alg=SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
+    ```
+
 - `projector_alg_type=HalfInfiniteProjector`: Default type of projector algorithm
 - `projector_alg`: Algorithm to compute CTMRG projectors
 
@@ -115,7 +120,11 @@ Module containing default algorithm parameter values and arguments.
     ```
 
 - `reuse_env=true`: If `true`, the current optimization step is initialized on the previous environment
-- `optimizer=LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
+- `optimizer`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
+
+    ```
+    optimizer=LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)
+    ```
 
 # OhMyThreads scheduler
 - `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
@@ -135,9 +144,9 @@ module Defaults
     const ctmrg_miniter = 4
     const sparse = false
     const trscheme = FixedSpaceTruncation()
-    const fwd_alg = TensorKit.SDD()
-    const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
-    const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
+    const svd_fwd_alg = TensorKit.SDD()
+    const svd_rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
+    const svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
     const ctmrg_alg = SimultaneousCTMRG(
