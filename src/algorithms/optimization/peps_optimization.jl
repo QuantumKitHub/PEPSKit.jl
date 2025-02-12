@@ -43,7 +43,7 @@ function PEPSOptimize(;
 end
 
 """
-    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
+    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...) # TODO
     fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize;
                finalize!=OptimKit._finalize!)
     
@@ -71,8 +71,8 @@ information `NamedTuple` which contains the following entries:
 """
 function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
     throw(error("method not yet implemented"))
-    alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
-    return fixedpoint(operator, peps₀, env₀, alg)
+    alg, finalize! = fixedpoint_selector(; kwargs...)
+    return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
     operator,
@@ -131,7 +131,7 @@ function fixedpoint(
         return E, g
     end
 
-    info = (
+    info = (;
         last_gradient=∂cost,
         fg_evaluations=numfg,
         costs=convergence_history[:, 1],
@@ -142,6 +142,117 @@ function fixedpoint(
         times,
     )
     return peps_final, env_final, cost, info
+end
+
+"""
+    fixedpoint_selector(;
+        boundary_tol=Defaults.ctmrg_tol,
+        boundary_miniter=Defaults.ctmrg_maxiter,
+        boundary_maxiter=Defaults.ctmrg_miniter,
+        boundary_alg_type=Defaults.ctmrg_alg_type,
+        trscheme=Defaults.trscheme,
+        svd_fwd_alg=Defaults.svd_fwd_alg,
+        svd_rrule_alg=Defaults.svd_rrule_alg,
+        projector_alg_type=Defaults.projector_alg_type,
+        iterscheme=Defaults.gradient_alg_iterscheme,
+        reuse_env=Defaults.reuse_env,
+        gradient_alg_tol=Defaults.gradient_alg_tol,
+        gradient_alg_maxiter=Defaults.gradient_alg_maxiter,
+        gradient_alg_type=typeof(Defaults.gradient_alg),
+        optimizer_tol=Defaults.optimizer_tol,
+        optimizer_maxiter=Defaults.optimizer_maxiter,
+        lbfgs_memory=Defaults.lbfgs_memory,
+        symmetrization=nothing,
+        verbosity=1,
+        (finalize!)=OptimKit._finalize!,
+    )
+
+Parse optimization keyword arguments onto the corresponding algorithm structs and return
+a final `PEPSOptimize` to be used in `fixedpoint`. For a description of the keyword
+arguments, see [`fixedpoint`](@ref).
+"""
+function fixedpoint_selector(;
+    boundary_tol=Defaults.ctmrg_tol,
+    boundary_miniter=Defaults.ctmrg_maxiter,
+    boundary_maxiter=Defaults.ctmrg_miniter,
+    boundary_alg_type=Defaults.ctmrg_alg_type,
+    trscheme=Defaults.trscheme,
+    svd_fwd_alg=Defaults.svd_fwd_alg,
+    svd_rrule_alg=Defaults.svd_rrule_alg,
+    projector_alg_type=Defaults.projector_alg_type,
+    iterscheme=Defaults.gradient_alg_iterscheme,
+    reuse_env=Defaults.reuse_env,
+    gradient_alg_tol=Defaults.gradient_alg_tol,
+    gradient_alg_maxiter=Defaults.gradient_alg_maxiter,
+    gradient_alg_type=typeof(Defaults.gradient_alg),
+    optimizer_tol=Defaults.optimizer_tol,
+    optimizer_maxiter=Defaults.optimizer_maxiter,
+    lbfgs_memory=Defaults.lbfgs_memory,
+    symmetrization=nothing,
+    verbosity=1,
+    (finalize!)=OptimKit._finalize!,
+)
+    if verbosity ≤ 0 # disable output
+        optimizer_verbosity = -1
+        boundary_verbosity = -1
+        projector_verbosity = -1
+        gradient_alg_verbosity = -1
+        svd_rrule_verbosity = -1
+    elseif verbosity == 1 # output only optimization steps and degeneracy warnings
+        optimizer_verbosity = 3
+        boundary_verbosity = -1
+        projector_verbosity = 1
+        gradient_alg_verbosity = -1
+        svd_rrule_verbosity = -1
+    elseif verbosity == 2 # output optimization and boundary information
+        optimizer_verbosity = 3
+        boundary_verbosity = 2
+        projector_verbosity = 1
+        gradient_alg_verbosity = -1
+        svd_rrule_verbosity = -1
+    elseif verbosity == 3 # verbose debug output
+        optimizer_verbosity = 3
+        boundary_verbosity = 3
+        projector_verbosity = 1
+        gradient_alg_verbosity = 3
+        svd_rrule_verbosity = 3
+    end
+
+    svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
+    projector_alg = projector_alg_type(svd_alg, trscheme, projector_verbosity)
+    boundary_alg = boundary_alg_type(
+        boundary_tol, boundary_maxiter, boundary_miniter, boundary_verbosity, projector_alg
+    )
+    gradient_alg = if gradient_alg_type <: Union{GeomSum,ManIter}
+        gradient_alg_type(;
+            tol=gradient_alg_tol,
+            maxiter=gradient_alg_maxiter,
+            verbosity=gradient_alg_verbosity,
+            iterscheme,
+        )
+    elseif gradient_alg_type <: LinSolver
+        solver = Defaults.gradient_linsolver.solver
+        @reset solver.maxiter = gradient_alg_maxiter
+        @reset solver.tol = gradient_alg_tol
+        @reset solver.verbosity = gradient_alg_verbosity
+        LinSolver(; solver, iterscheme)
+    elseif gradient_alg_type <: EigSolver
+        solver = Defaults.gradient_eigsolver.solver
+        @reset solver.maxiter = gradient_alg_maxiter
+        @reset solver.tol = gradient_alg_tol
+        @reset solver.verbosity = gradient_alg_verbosity
+        EigSolver(; solver, iterscheme)
+    end
+    optimizer = LBFGS(
+        lbfgs_memory;
+        gradtol=optimizer_tol,
+        maxiter=optimizer_maxiter,
+        verbosity=optimizer_verbosity,
+    )
+    optimization_alg = PEPSOptimize(;
+        boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization
+    )
+    return optimization_alg, finalize!
 end
 
 # Update PEPS unit cell in non-mutating way
