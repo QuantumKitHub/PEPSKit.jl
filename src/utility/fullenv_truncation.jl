@@ -6,7 +6,7 @@ Algorithm struct for the full environment truncation (FET).
 @kwdef struct FullEnvTruncation
     trscheme::TensorKit.TruncationScheme
     maxiter::Int = 50
-    tol::Float64 = 1e-14
+    tol::Float64 = 1e-15
     check_int::Int = 0
 end
 
