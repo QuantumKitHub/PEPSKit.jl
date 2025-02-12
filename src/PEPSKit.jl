@@ -68,6 +68,7 @@ Module containing default algorithm parameter values and arguments.
 - `ctmrg_tol=1e-8`: Tolerance checking singular value and norm convergence
 - `ctmrg_maxiter=100`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter=4`: Minimal number of CTMRG carried out
+- `ctmrg_alg_type=SimultaneousCTMRG`: Default CTMRG algorithm variant
 - `trscheme=FixedSpaceTruncation()`: Truncation scheme for SVDs and other decompositions
 - `svd_fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
 - `svd_rrule_alg`: Reverse-rule for differentiating that SVD
@@ -92,7 +93,7 @@ Module containing default algorithm parameter values and arguments.
 - `ctmrg_alg`: Algorithm for performing CTMRG runs
 
     ```
-    ctmrg_alg = SimultaneousCTMRG(
+    ctmrg_alg = ctmrg_alg_type(
         ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
     )
     ```
@@ -146,6 +147,7 @@ module Defaults
     const ctmrg_tol = 1e-8
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
+    const ctmrg_alg_type = SimultaneousCTMRG
     const sparse = false
     const trscheme = FixedSpaceTruncation()
     const svd_fwd_alg = TensorKit.SDD()
@@ -153,7 +155,7 @@ module Defaults
     const svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
-    const ctmrg_alg = SimultaneousCTMRG(
+    const ctmrg_alg = ctmrg_alg_type(
         ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
     )
 
