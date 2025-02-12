@@ -15,10 +15,10 @@ using Random
 
     # Algorithmic settings
     ctmrg_algs = [
-        SimultaneousCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity=-4),
-        SimultaneousCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity=-4),
-        SequentialCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity=-4),
-        SequentialCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity=-4),
+        SimultaneousCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity=-1),
+        SimultaneousCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity=-1),
+        SequentialCTMRG(; maxiter, projector_alg=HalfInfiniteProjector, verbosity=-1),
+        SequentialCTMRG(; maxiter, projector_alg=FullInfiniteProjector, verbosity=-1),
     ]
     vumps_alg = VUMPS(;
         maxiter,
@@ -33,7 +33,7 @@ using Random
         EigSolver(; solver=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
     ]
     ctmrg_alg_general = SimultaneousCTMRG(; verbosity=-1)
-    opt_alg = PEPSOptimize(; boundary_alg=SimultaneousCTMRG(), optimizer=LBFGS(4; maxiter))
+    opt_alg = PEPSOptimize(; boundary_alg=ctmrg_alg_general, optimizer=LBFGS(4; maxiter))
 
     # Initialize OhMyThreads scheduler (precompilation occurs before __init__ call)
     set_scheduler!()
