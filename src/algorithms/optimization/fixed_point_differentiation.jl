@@ -3,8 +3,8 @@ abstract type GradMode{F} end
 iterscheme(::GradMode{F}) where {F} = F
 
 """
-    struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                   verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct GeomSum(; tol=Defaults.gradient_alg_tol, maxiter=Defaults.gradient_alg_maxiter,
+                   verbosity=0, iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
@@ -15,22 +15,22 @@ the differentiated iteration consists of a CTMRG iteration and a subsequent gaug
 such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
 struct GeomSum{F} <: GradMode{F}
-    maxiter::Int
     tol::Real
+    maxiter::Int
     verbosity::Int
 end
 function GeomSum(;
-    maxiter=Defaults.fpgrad_maxiter,
-    tol=Defaults.fpgrad_tol,
+    tol=Defaults.gradient_alg_tol,
+    maxiter=Defaults.gradient_alg_maxiter,
     verbosity=0,
-    iterscheme=Defaults.iterscheme,
+    iterscheme=Defaults.gradient_alg_iterscheme,
 )
-    return GeomSum{iterscheme}(maxiter, tol, verbosity)
+    return GeomSum{iterscheme}(tol, maxiter, verbosity)
 end
 
 """
-    struct ManualIter(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                      verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct ManualIter(; tol=Defaults.gradient_alg_tol, maxiter=Defaults.gradient_alg_maxiter,
+                      verbosity=0, iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
@@ -41,21 +41,21 @@ the differentiated iteration consists of a CTMRG iteration and a subsequent gaug
 such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
 struct ManualIter{F} <: GradMode{F}
-    maxiter::Int
     tol::Real
+    maxiter::Int
     verbosity::Int
 end
 function ManualIter(;
-    maxiter=Defaults.fpgrad_maxiter,
-    tol=Defaults.fpgrad_tol,
+    tol=Defaults.gradient_alg_tol,
+    maxiter=Defaults.gradient_alg_maxiter,
     verbosity=0,
-    iterscheme=Defaults.iterscheme,
+    iterscheme=Defaults.gradient_alg_iterscheme,
 )
-    return ManualIter{iterscheme}(maxiter, tol, verbosity)
+    return ManualIter{iterscheme}(tol, maxiter, verbosity)
 end
 
 """
-    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
@@ -70,14 +70,14 @@ struct LinSolver{F} <: GradMode{F}
     solver::KrylovKit.LinearSolver
 end
 function LinSolver(;
-    solver=KrylovKit.BiCGStab(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
+    solver=Defaults.gradient_linsolver,
     iterscheme=Defaults.iterscheme,
 )
     return LinSolver{iterscheme}(solver)
 end
 
 """
-    struct EigSolver(; solver=KrylovKit.Arnoldi(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct EigSolver(; solver=Defaults.gradient_eigsolver, iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.
@@ -91,7 +91,7 @@ such that `gauge_fix` will also be differentiated everytime a CTMRG derivative i
 struct EigSolver{F} <: GradMode{F}
     solver::KrylovKit.KrylovAlgorithm
 end
-function EigSolver(; solver=Defauls.gradient_eigsolver, iterscheme=Defaults.iterscheme)
+function EigSolver(; solver=Defaults.gradient_eigsolver, iterscheme=Defaults.iterscheme)
     return EigSolver{iterscheme}(solver)
 end
 

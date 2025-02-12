@@ -99,25 +99,25 @@ Module containing default algorithm parameter values and arguments.
     ```
 
 # Optimization
-- `fpgrad_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
-- `fpgrad_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
-- `iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
+- `gradient_alg_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
+- `gradient_alg_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
+- `gradient_alg_iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 
     ```
-    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
+    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol)
     ```
 
 - `gradient_eigsolve`: Default eigsolver for the `EigSolver` gradient algorithm
 
     ```
-    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=fpgrad_maxiter, tol=fpgrad_tol, eager=true)
+    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true)
     ```
 
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
 
     ```
-    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme)
     ```
 
 - `reuse_env=true`: If `true`, the current optimization step is initialized on the previous environment
@@ -160,14 +160,16 @@ module Defaults
     )
 
     # Optimization
-    const fpgrad_maxiter = 30
-    const fpgrad_tol = 1e-6
-    const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
-    const gradient_eigsolver = KrylovKit.Arnoldi(;
-        maxiter=fpgrad_maxiter, tol=fpgrad_tol, eager=true
+    const gradient_alg_tol = 1e-6
+    const gradient_alg_maxiter = 30
+    const gradient_linsolver = BiCGStab(;
+        maxiter=gradient_alg_maxiter, tol=gradient_alg_tol
     )
-    const iterscheme = :fixed
-    const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+    const gradient_eigsolver = Arnoldi(;
+        maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true
+    )
+    const gradient_alg_iterscheme = :fixed
+    const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme)
     const reuse_env = true
     const optimizer_tol = 1e-4
     const optimizer_maxiter = 100
