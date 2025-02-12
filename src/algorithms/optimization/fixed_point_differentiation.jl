@@ -76,6 +76,25 @@ function LinSolver(;
     return LinSolver{iterscheme}(solver)
 end
 
+"""
+    struct EigSolver(; solver=KrylovKit.Arnoldi(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+
+Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
+problem as an eigenvalue problem.
+
+With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
+If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
+SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
+the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
+such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
+"""
+struct EigSolver{F} <: GradMode{F}
+    solver::KrylovKit.KrylovAlgorithm
+end
+function EigSolver(; solver=Defauls.gradient_eigsolver, iterscheme=Defaults.iterscheme)
+    return EigSolver{iterscheme}(solver)
+end
+
 #=
 Evaluating the gradient of the cost function for CTMRG:
 - The gradient of the cost function for CTMRG can be computed using automatic differentiation (AD) or explicit evaluation of the geometric sum.
@@ -220,6 +239,24 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::LinSolver)
     if alg.solver.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
+
+    return ∂f∂A(y)
+end
+
+function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
+    function f(X)
+        y = ∂f∂x(X[1])
+        return (y + X[2] * ∂F∂x, X[2])
+    end
+    X₀ = (x₀, one(scalartype(x₀)))
+    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver)
+    if alg.solver.verbosity > 0 && info.converged < 1
+        @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
+    end
+    if norm(vecs[1][2]) < 1e-2 * alg.solver.tol
+        @warn "Fixed-point gradient computation using Arnoldi failed: auxiliary component should be finite but was $(vecs[1][2]). Possibly the Jacobian does not have a unique eigenvalue 1."
+    end
+    y = scale(vecs[1][1], 1 / vecs[1][2])
 
     return ∂f∂A(y)
 end
