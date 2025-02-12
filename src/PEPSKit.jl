@@ -120,10 +120,14 @@ Module containing default algorithm parameter values and arguments.
     ```
 
 - `reuse_env=true`: If `true`, the current optimization step is initialized on the previous environment
+
+- `optimizer_tol`: Gradient norm tolerance of the optimizer
+- `optimizer_maxiter`: Maximal number of optimization steps
+- `lbfgs_memory`: Size of limited memory representation of BFGS Hessian matrix
 - `optimizer`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
 
     ```
-    optimizer=LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)
+    optimizer=LBFGS(lbfgs_memory; maxiter=optimizer_maxiter, gradtol=optimizer_tol, verbosity=3)
     ```
 
 # OhMyThreads scheduler
@@ -163,7 +167,12 @@ module Defaults
     const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
     const reuse_env = true
-    const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)
+    const optimizer_tol = 1e-4
+    const optimizer_maxiter = 100
+    const lbfgs_memory = 20
+    const optimizer = LBFGS(
+        lbfgs_memory; maxiter=optimizer_maxiter, gradtol=optimizer_tol, verbosity=3
+    )
 
     # OhMyThreads scheduler defaults
     const scheduler = Ref{Scheduler}()
