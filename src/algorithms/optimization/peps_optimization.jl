@@ -71,7 +71,10 @@ information `NamedTuple` which contains the following entries:
 """
 function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
     throw(error("method not yet implemented"))
-    alg, finalize! = fixedpoint_selector(; kwargs...)
+    χenv = maximum(env₀.corners) do corner # extract maximal environment dimension
+        return dim(space(corner, 1))
+    end
+    alg, finalize! = select_fixedpoint_algorithm(χenv; kwargs...)
     return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
@@ -145,114 +148,130 @@ function fixedpoint(
 end
 
 """
-    fixedpoint_selector(;
-        boundary_tol=Defaults.ctmrg_tol,
-        boundary_miniter=Defaults.ctmrg_maxiter,
-        boundary_maxiter=Defaults.ctmrg_miniter,
-        boundary_alg_type=Defaults.ctmrg_alg_type,
-        trscheme=Defaults.trscheme,
-        svd_fwd_alg=Defaults.svd_fwd_alg,
-        svd_rrule_alg=Defaults.svd_rrule_alg,
-        projector_alg_type=Defaults.projector_alg_type,
-        iterscheme=Defaults.gradient_alg_iterscheme,
-        reuse_env=Defaults.reuse_env,
-        gradient_alg_tol=Defaults.gradient_alg_tol,
-        gradient_alg_maxiter=Defaults.gradient_alg_maxiter,
-        gradient_alg_type=typeof(Defaults.gradient_alg),
-        optimizer_tol=Defaults.optimizer_tol,
-        optimizer_maxiter=Defaults.optimizer_maxiter,
-        lbfgs_memory=Defaults.lbfgs_memory,
-        symmetrization=nothing,
+    function select_fixedpoint_algorithm(
+        χenv::Int;
+        tol=Defaults.optimizer_tol,
         verbosity=1,
-        (finalize!)=OptimKit._finalize!,
+        boundary_alg,
+        gradient_alg,
+        optimization_alg,
     )
 
-Parse optimization keyword arguments onto the corresponding algorithm structs and return
+Parse optimization keyword arguments on to the corresponding algorithm structs and return
 a final `PEPSOptimize` to be used in `fixedpoint`. For a description of the keyword
 arguments, see [`fixedpoint`](@ref).
 """
-function fixedpoint_selector(;
-    boundary_tol=Defaults.ctmrg_tol,
-    boundary_miniter=Defaults.ctmrg_maxiter,
-    boundary_maxiter=Defaults.ctmrg_miniter,
-    boundary_alg_type=Defaults.ctmrg_alg_type,
-    trscheme=Defaults.trscheme,
-    svd_fwd_alg=Defaults.svd_fwd_alg,
-    svd_rrule_alg=Defaults.svd_rrule_alg,
-    projector_alg_type=Defaults.projector_alg_type,
-    iterscheme=Defaults.gradient_alg_iterscheme,
-    reuse_env=Defaults.reuse_env,
-    gradient_alg_tol=Defaults.gradient_alg_tol,
-    gradient_alg_maxiter=Defaults.gradient_alg_maxiter,
-    gradient_alg_type=typeof(Defaults.gradient_alg),
-    optimizer_tol=Defaults.optimizer_tol,
-    optimizer_maxiter=Defaults.optimizer_maxiter,
-    lbfgs_memory=Defaults.lbfgs_memory,
-    symmetrization=nothing,
-    verbosity=1,
-    (finalize!)=OptimKit._finalize!,
+function select_fixedpoint_algorithm(
+    χenv::Int;
+    tol=Defaults.optimizer_tol, # top-level tolerance
+    verbosity=1, # top-level verbosity
+    boundary_alg=nothing,
+    gradient_alg=nothing,
+    optimization_alg=nothing,
 )
+    # top-level verbosity
     if verbosity ≤ 0 # disable output
+        boundary_verbosity = -1
+        gradient_verbosity = -1
         optimizer_verbosity = -1
-        boundary_verbosity = -1
-        projector_verbosity = -1
-        gradient_alg_verbosity = -1
-        svd_rrule_verbosity = -1
     elseif verbosity == 1 # output only optimization steps and degeneracy warnings
-        optimizer_verbosity = 3
         boundary_verbosity = -1
-        projector_verbosity = 1
-        gradient_alg_verbosity = -1
-        svd_rrule_verbosity = -1
+        gradient_verbosity = -1
+        optimizer_verbosity = 3
     elseif verbosity == 2 # output optimization and boundary information
-        optimizer_verbosity = 3
         boundary_verbosity = 2
-        projector_verbosity = 1
-        gradient_alg_verbosity = -1
-        svd_rrule_verbosity = -1
-    elseif verbosity == 3 # verbose debug output
+        gradient_verbosity = -1
         optimizer_verbosity = 3
+    elseif verbosity == 3 # verbose debug output
         boundary_verbosity = 3
-        projector_verbosity = 1
-        gradient_alg_verbosity = 3
-        svd_rrule_verbosity = 3
+        gradient_verbosity = 3
+        optimizer_verbosity = 3
     end
 
-    svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
-    projector_alg = projector_alg_type(svd_alg, trscheme, projector_verbosity)
-    boundary_alg = boundary_alg_type(
-        boundary_tol, boundary_maxiter, boundary_miniter, boundary_verbosity, projector_alg
-    )
-    gradient_alg = if gradient_alg_type <: Union{GeomSum,ManIter}
-        gradient_alg_type(;
-            tol=gradient_alg_tol,
-            maxiter=gradient_alg_maxiter,
-            verbosity=gradient_alg_verbosity,
-            iterscheme,
+    # parse boundary algorithm
+    boundary_algorithm = if boundary_alg isa Union{SimultaneousCTMRG,SequentialCTMRG}
+        boundary_alg
+    elseif boundary_alg isa NamedTuple
+        boundary_kwargs = (;
+            alg=Defaults.ctmrg_alg_type,
+            tol=1e-4tol,
+            maxiter=Defaults.ctmrg_miniter,
+            miniter=Defaults.ctmrg_maxiter,
+            verbosity=boundary_verbosity,
+            trscheme=Defaults.trscheme,
+            svd_alg=Defaults.svd_fwd_alg,
+            svd_rrule_alg=typeof(Defaults.svd_rrule_alg),
+            projector_alg=Defaults.projector_alg_type,
+            boundary_alg..., # replaces all specified kwargs
         )
-    elseif gradient_alg_type <: LinSolver
-        solver = Defaults.gradient_linsolver.solver
-        @reset solver.maxiter = gradient_alg_maxiter
-        @reset solver.tol = gradient_alg_tol
-        @reset solver.verbosity = gradient_alg_verbosity
-        LinSolver(; solver, iterscheme)
-    elseif gradient_alg_type <: EigSolver
-        solver = Defaults.gradient_eigsolver.solver
-        @reset solver.maxiter = gradient_alg_maxiter
-        @reset solver.tol = gradient_alg_tol
-        @reset solver.verbosity = gradient_alg_verbosity
-        EigSolver(; solver, iterscheme)
+        select_leading_boundary_algorithm(χenv; boundary_kwargs...)
+    else
+        throw(ArgumentError("unknown boundary algorithm: $boundary_alg"))
     end
-    optimizer = LBFGS(
-        lbfgs_memory;
-        gradtol=optimizer_tol,
-        maxiter=optimizer_maxiter,
-        verbosity=optimizer_verbosity,
-    )
-    optimization_alg = PEPSOptimize(;
-        boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization
-    )
-    return optimization_alg, finalize!
+
+    # parse fixed-point gradient algorithm
+    gradient_algorithm = if gradient_alg isa GradMode
+        gradient_alg
+    elseif gradient_alg isa NamedTuple
+        gradient_kwargs = (;
+            tol=1e-2tol,
+            maxiter=Defaults.gradient_alg_maxiter,
+            alg=typeof(Defaults.gradient_alg),
+            verbosity=gradient_verbosity,
+            iterscheme=Defaults.gradient_alg_iterscheme,
+            gradient_alg..., # replaces all specified kwargs
+        )
+        if gradient_kwargs.alg <: Union{GeomSum,ManIter}
+            gradient_alg_type(;
+                tol=gradient_kwargs.tol,
+                maxiter=gradient_kwargs.maxiter,
+                verbosity=gradient_kwargs.verbosity,
+                iterscheme=gradient_kwargs.iterscheme,
+            )
+        elseif gradient_kwargs.alg <: LinSolver
+            solver = Defaults.gradient_linsolver.solver
+            @reset solver.maxiter = gradient_kwargs.maxiter
+            @reset solver.tol = gradient_kwargs.tol
+            @reset solver.verbosity = gradient_kwargs.verbosity
+            LinSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
+        elseif gradient_kwargs.alg <: EigSolver
+            solver = Defaults.gradient_eigsolver.solver
+            @reset solver.maxiter = gradient_kwargs.maxiter
+            @reset solver.tol = gradient_kwargs.tol
+            @reset solver.verbosity = gradient_kwargs.verbosity
+            EigSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
+        end
+    else
+        throw(ArgumentError("unknown gradient algorithm: $gradient_alg"))
+    end
+
+    # construct final PEPSOptimize optimization algorithm
+    optimization_algorithm = if optimizer_alg isa OptimKit.OptimizationAlgorithm
+        optimization_alg
+    elseif optimization_algorithm isa NamedTuple
+        optimization_kwargs = (;
+            tol=tol,
+            maxiter=Defaults.optimizer_maxiter,
+            lbfgs_memory=Defaults.lbfgs_memory,
+            reuse_env=Defaults.reuse_env,
+            symmetrization=nothing,
+            (finalize!)=OptimKit._finalize!,
+            optimization_alg..., # replaces all specified kwargs
+        )
+        optimizer = LBFGS(
+            lbfgs_memory;
+            gradtol=optimization_kwargs.tol,
+            maxiter=optimization_kwargs.maxiter,
+            verbosity=optimizer_verbosity,
+        )
+        PEPSOptimize(
+            boundary_algorithm, gradient_algorithm, optimizer, reuse_env, symmetrization
+        )
+    else
+        throw(ArgumentError("unknown optimization algorithm: $optimization_alg"))
+    end
+
+    return optimization_algorithm, finalize!
 end
 
 # Update PEPS unit cell in non-mutating way
