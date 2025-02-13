@@ -80,6 +80,47 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
+"""
+    select_leading_boundary_algorithm(
+        χenv::Int;
+        alg=SimultaneousCTMRG,
+        tol=Defaults.ctmrg_tol,
+        maxiter=Defaults.ctmrg_maxiter,
+        miniter=Defaults.ctmrg_miniter,
+        verbosity=2,
+        trscheme=Defaults.trscheme,
+        svd_alg=Defaults.svd_fwd_alg,
+        svd_rrule_alg=typeof(Defaults.svd_rrule_alg),
+        projector_alg=Defaults.projector_alg_type,
+    )
+
+Parse optimization keyword arguments on to the corresponding algorithm structs and return
+a final algorithm to be used in `fixedpoint`. For a description of the keyword arguments,
+see [`leading_boundary`](@ref).
+"""
+function select_leading_boundary_algorithm(
+    χenv::Int;
+    alg=SimultaneousCTMRG,
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=2,
+    trscheme=Defaults.trscheme,
+    svd_alg=Defaults.svd_fwd_alg,
+    svd_rrule_alg=typeof(Defaults.svd_rrule_alg),
+    projector_alg=Defaults.projector_alg_type,
+)
+    svd_rrule_tol = boundary_tol
+    svd_rrule_algorithm = if svd_rrule_alg <: Union{GMRES,Arnoldi}
+        svd_rrule_alg(; tol=svd_rrule_tol, krylovdim=χenv + 24, verbosity)
+    elseif svd_rrule_alg <: BiCGStab
+        svd_rrule_alg(; tol=svd_rrule_tol, verbosity)
+    end
+    svd_algorithm = SVDAdjoint(; fwd_alg=svd_alg, rrule_alg=svd_rrule_algorithm)
+    projector_algorithm = projector_alg(svd_algorithm, trscheme, verbosity)
+    return alg(tol, maxiter, miniter, verbosity, projector_algorithm)
+end
+
 #=
 In order to compute an error measure, we compare the singular values of the current iteration with the previous one.
 However, when the virtual spaces change, this comparison is not directly possible.
