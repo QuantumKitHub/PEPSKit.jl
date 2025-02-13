@@ -1,9 +1,8 @@
 module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
-using Base: @kwdef
 using Compat
-using Accessors: @set
+using Accessors: @set, @reset
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
@@ -151,7 +150,8 @@ module Defaults
     const sparse = false
     const trscheme = FixedSpaceTruncation()
     const svd_fwd_alg = TensorKit.SDD()
-    const svd_rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
+    const svd_rrule_type = Arnoldi
+    const svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)

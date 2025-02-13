@@ -14,7 +14,9 @@ Perform a single CTMRG iteration in which all directions are being grown and ren
 function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
 
 """
-    MPSKit.leading_boundary([envinit], state, alg::CTMRGAlgorithm)
+    MPSKit.leading_boundary([env₀], state; kwargs...)
+    # expert version:
+    MPSKit.leading_boundary([env₀], state, alg::CTMRGAlgorithm)
 
 Contract `state` using CTMRG and return the CTM environment. Per default, a random
 initial environment is used.
@@ -27,19 +29,31 @@ Different levels of output information are printed depending on `alg.verbosity`,
 suppresses all output, `1` only prints warnings, `2` gives information at the start and
 end, and `3` prints information every iteration.
 """
-function MPSKit.leading_boundary(state, alg::CTMRGAlgorithm)
+function MPSKit.leading_boundary(state::InfiniteSquareNetwork; kwargs...)
+    return MPSKit.leading_boundary(
+        CTMRGEnv(state, oneunit(spacetype(state))), state; kwargs...
+    )
+end
+function MPSKit.leading_boundary(env₀, state::InfiniteSquareNetwork; kwargs...)
+    χenv = maximum(env₀.corners) do corner # extract maximal environment dimension
+        return dim(space(corner, 1))
+    end
+    alg = select_leading_boundary_algorithm(χenv; kwargs...)
+    return MPSKit.leading_boundary(env₀, state, alg)
+end
+function MPSKit.leading_boundary(state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
     return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
 end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
-    CS = map(x -> tsvd(x)[2], envinit.corners)
-    TS = map(x -> tsvd(x)[2], envinit.edges)
+function MPSKit.leading_boundary(env₀, state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
+    CS = map(x -> tsvd(x)[2], env₀.corners)
+    TS = map(x -> tsvd(x)[2], env₀.edges)
 
     η = one(real(scalartype(state)))
-    env = deepcopy(envinit)
+    env = deepcopy(env₀)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, state, envinit)
+        ctmrg_loginit!(log, η, state, env₀)
         local info
         for iter in 1:(alg.maxiter)
             env, info = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
@@ -107,12 +121,12 @@ function select_leading_boundary_algorithm(
     verbosity=2,
     trscheme=Defaults.trscheme,
     svd_alg=Defaults.svd_fwd_alg,
-    svd_rrule_alg=typeof(Defaults.svd_rrule_alg),
+    svd_rrule_alg=Defaults.svd_rrule_type,
+    svd_rrule_tol=1e1tol,
     projector_alg=Defaults.projector_alg_type,
 )
-    svd_rrule_tol = boundary_tol
     svd_rrule_algorithm = if svd_rrule_alg <: Union{GMRES,Arnoldi}
-        svd_rrule_alg(; tol=svd_rrule_tol, krylovdim=χenv + 24, verbosity)
+        svd_rrule_alg(; tol=svd_rrule_tol, krylovdim=χenv + 24, verbosity=verbosity - 2)
     elseif svd_rrule_alg <: BiCGStab
         svd_rrule_alg(; tol=svd_rrule_tol, verbosity)
     end
