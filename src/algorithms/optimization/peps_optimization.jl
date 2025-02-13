@@ -1,6 +1,7 @@
 """
-    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
-                    reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
+    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, gradient_alg::G=Defaults.gradient_alg
+                    optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
+                    reuse_env::Bool=true, symmetrization::Union{Nothing,SymmetrizationStyle}=nothing)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
@@ -9,6 +10,9 @@ based on the CTMRG gradient and updates the PEPS parameters. In this optimizatio
 the CTMRG runs can be started on the converged environments of the previous optimizer
 step by setting `reuse_env` to true. Otherwise a random environment is used at each
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
+The `symmetrization` field accepts `nothing` or a `SymmetrizationStyle`, in which case the
+PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
+requires an initial symmmetric PEPS and environment to converge properly.
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
@@ -49,8 +53,8 @@ end
                finalize!=OptimKit._finalize!)
     
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
-to the optimization parameters supplied in `alg`. The initial environment `env₀` serves as
-an initial guess for the first CTMRG run. By default, a random initial environment is used.
+to the supplied optimization parameters. The initial environment `env₀` serves as an
+initial guess for the first CTMRG run. By default, a random initial environment is used.
 
 The `finalize!` kwarg can be used to insert a function call after each optimization step
 by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
@@ -58,6 +62,15 @@ The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
 The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
 PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
 requires a symmmetric `peps₀` and `env₀` to converge properly.
+
+The optimization parameters can be supplied via the keyword arguments or directly as an
+`PEPSOptimize` struct. The following keyword arguments are supported:
+- `tol=Defaults.optimizer_tol`: TODO
+- `verbosity=1`: TODO
+- `boundary_alg=(; ...)`: TODO
+- `gradient_alg=(; ...)`: TODO
+- `optimization_alg=(; ...)`: TODO
+- `(finalize!)=OptimKit._finalize!`: TODO
 
 The function returns the final PEPS, CTMRG environment and cost value, as well as an
 information `NamedTuple` which contains the following entries:
@@ -152,9 +165,10 @@ end
         χenv::Int;
         tol=Defaults.optimizer_tol,
         verbosity=1,
-        boundary_alg,
-        gradient_alg,
-        optimization_alg,
+        boundary_alg=(;),
+        gradient_alg=(;),
+        optimization_alg=(;),
+        (finalize!)=OptimKit._finalize!,
     )
 
 Parse optimization keyword arguments on to the corresponding algorithm structs and return

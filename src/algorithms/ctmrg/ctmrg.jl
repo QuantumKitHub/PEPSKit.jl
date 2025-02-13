@@ -21,13 +21,25 @@ function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
 Contract `state` using CTMRG and return the CTM environment. Per default, a random
 initial environment is used.
 
-Each CTMRG run is converged up to `alg.tol` where the singular value convergence
-of the corners and edges is checked. The maximal and minimal number of CTMRG
-iterations is set with `alg.maxiter` and `alg.miniter`.
-
-Different levels of output information are printed depending on `alg.verbosity`, where `0`
-suppresses all output, `1` only prints warnings, `2` gives information at the start and
-end, and `3` prints information every iteration.
+The algorithm can be supplied via the keyword arguments or directly as an `CTMRGAlgorithm`
+struct. The following keyword arguments are supported:
+- `alg=SimultaneousCTMRG`: Variant of the CTMRG algorithm; can be any `CTMRGAlgorithm` type
+- `tol=Defaults.ctmrg_tol`: Tolerance checking singular value and norm convergence
+- `maxiter=Defaults.ctmrg_maxiter`: Maximal number of CTMRG iterations per run
+- `miniter=Defaults.ctmrg_miniter`: Minimal number of CTMRG carried out
+- `verbosity=2`: Determines different levels of output information, where `0` suppresses
+  all output, `1` only prints warnings, `2` gives information at the start and end, and
+  `3` prints information every iteration
+- `trscheme=Defaults.trscheme`: SVD truncation scheme during projector computation; can be
+  any `TruncationScheme` supported by the provided SVD algorithm
+- `svd_alg=Defaults.svd_fwd_alg`: SVD algorithm used for computing projectors
+- `svd_rrule_alg=Defaults.svd_rrule_alg_type`: Algorithm for differentiating SVDs; currently
+  supported through KrylovKit where `GMRES`, `BiCGStab` and `Arnoldi` are supported (only
+  relevant if `leading_boundary` is differentiated)
+- `svd_rrule_tol=1e1tol`: Convergence tolerance for SVD reverse-rule algorithm (only
+  relevant if `leading_boundary` is differentiated)
+- `projector_alg=Defaults.projector_alg_type`: Projector algorithm type, where any
+  `ProjectorAlgorithm` can be used
 """
 function MPSKit.leading_boundary(state::InfiniteSquareNetwork; kwargs...)
     return MPSKit.leading_boundary(
@@ -104,7 +116,8 @@ end
         verbosity=2,
         trscheme=Defaults.trscheme,
         svd_alg=Defaults.svd_fwd_alg,
-        svd_rrule_alg=typeof(Defaults.svd_rrule_alg),
+        svd_rrule_alg=Defaults.svd_rrule_type,
+        svd_rrule_tol=1e1tol,
         projector_alg=Defaults.projector_alg_type,
     )
 

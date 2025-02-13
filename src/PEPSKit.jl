@@ -70,10 +70,11 @@ Module containing default algorithm parameter values and arguments.
 - `ctmrg_alg_type=SimultaneousCTMRG`: Default CTMRG algorithm variant
 - `trscheme=FixedSpaceTruncation()`: Truncation scheme for SVDs and other decompositions
 - `svd_fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
-- `svd_rrule_alg`: Reverse-rule for differentiating that SVD
+- `svd_rrule_type = Arnoldi`: Default solver type for SVD reverse-rule algorithm
+- `svd_rrule_alg`: Reverse-rule algorithm for differentiating a SVD
 
     ```
-    svd_rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
+    svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     ```
 
 - `svd_alg`: Combination of forward and reverse SVD algorithms
@@ -169,7 +170,9 @@ module Defaults
         maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true
     )
     const gradient_alg_iterscheme = :fixed
-    const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme)
+    const gradient_alg = LinSolver(;
+        solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme
+    )
     const reuse_env = true
     const optimizer_tol = 1e-4
     const optimizer_maxiter = 100
