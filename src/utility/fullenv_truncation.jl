@@ -7,24 +7,26 @@ Algorithm struct for the full environment truncation (FET).
     trscheme::TensorKit.TruncationScheme
     maxiter::Int = 50
     tol::Float64 = 1e-15
-    check_int::Int = 0
+    check_interval::Int = 0
 end
+
+const BondEnv{T,S} = AbstractTensorMap{T,S,2,2} where {T<:Number,S<:ElementarySpace}
 
 """
 Given the bond environment `benv`, calculate the inner product
 between two states specified by the bond matrices `b1`, `b2`
 ```
-                ┌─────┐   ┌─────┐
-                │     │   │     │
-                │   ┌─┴───┴─┐   │
-    ⟨b1|b2⟩ =   b1† │ benv  │   b2
-                │   └─┬───┬─┘   │
-                │     │   │     │
-                └─────┘   └─────┘
+            ┌--------------------┐
+            |   ┌----┐           |
+            └---|    |---- b1†---┘
+    ⟨b1|b2⟩ =   |benv|
+            ┌---|    |---- b2 ---┐
+            |   └----┘           |
+            └--------------------┘
 ```
 """
 function inner_prod(
-    benv::AbstractTensorMap{T,S,2,2}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
+    benv::BondEnv{T,S}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
 ) where {T<:Number,S<:ElementarySpace}
     val = @tensor conj(b1[1 2]) * benv[1 2; 3 4] * b2[3 4]
     return val
@@ -38,7 +40,7 @@ between two states specified by the bond matrices `b1`, `b2`
 ```
 """
 function fidelity(
-    benv::AbstractTensorMap{T,S,2,2}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
+    benv::BondEnv{T,S}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
 ) where {T<:Number,S<:ElementarySpace}
     return abs2(inner_prod(benv, b1, b2)) /
            real(inner_prod(benv, b1, b1) * inner_prod(benv, b2, b2))
@@ -65,10 +67,10 @@ function _fet_message(
 end
 
 """
-    fullenv_truncate(benv::AbstractTensorMap{T,S,2,2}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation) where {T<:Number,S<:ElementarySpace}
+    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation) where {T<:Number,S<:ElementarySpace}
 
-The full environment truncation algorithm
-(Physical Review B 98, 085155 (2018)). 
+The full environment truncation algorithm (Physical Review B 98, 085155 (2018)). 
+
 Given a fixed state `|b0⟩` with bond matrix `b0`
 and the corresponding positive-definite bond environment `benv`, 
 find the state `|b⟩` with truncated bond matrix `b = u s v†`
@@ -76,55 +78,51 @@ that maximizes the fidelity (not normalized by `⟨b0|b0⟩`)
 ```
     F(b) = ⟨b|b0⟩⟨b0|b⟩ / ⟨b|b⟩
 
-                ┌─────┐   ┌─────┐   ┌─────┐   ┌─────┐
-                v     │   │     │   │     │   │     v†
-                ↑   ┌─┴───┴─┐   │   │   ┌─┴───┴─┐   ↓
-                s   │ benv  │   b0  b0† │ benv  │   s
-                ↑   └─┬───┬─┘   │   │   └─┬───┬─┘   ↓
-                u†    │   │     │   │     │   │     u
-                └─────┘   └─────┘   └─────┘   └─────┘
-            = ──────────────────────────────────────────
-                        ┌─────┐   ┌─────┐
-                        v     │   │     v†
-                        ↑   ┌─┴───┴─┐   ↓
-                        s   │ benv  │   s
-                        ↑   └─┬───┬─┘   ↓
-                        u†    │   │     u
-                        └─────┘   └─────┘
+            ┌----------------------┐  ┌-----------------------┐
+            |   ┌----┐             |  |   ┌----┐              |
+            └---|    |-u† → s → v -┘  └---|    |------b0† ----┘
+                |benv|                    |benv|
+            ┌---|    |---- b0 -----┐  ┌---|    |- u ← s ← v† -┐
+            |   └----┘             |  |   └----┘              |
+            └----------------------┘  └-----------------------┘
+        = ───────────────────────────────────────────────────────
+                        ┌-----------------------┐
+                        |   ┌----┐              |
+                        └---|    |- u† → s → v -┘
+                            |benv|
+                        ┌---|    |- u ← s ← v† -┐
+                        |   └----┘              |
+                        └-----------------------┘
 ```
 The singular value spectrum `s` is truncated to desired dimension, 
 and normalized such that the maximum is 1.
+Note that `benv` is contracted to `b0` using `@tensor`, 
+instead of acting on `b0` as a linear map.
 
 The algorithm iteratively optimizes the vectors `l`, `r`
 ```
-                      ┌─┐                     ┌─┐
-          ┌─┐         │ ↓         ┌─┐         │ │
-        →─┘ │       ──┘ s       ──┘ │       ──┘ v†
-            l   =       ↓   ,       r   =       ↓
-        ──┐ │       ──┐ u       ←─┐ │       ←─┐ s 
-          └─┘         │ │         └─┘         │ ↓
-                      └─┘                     └─┘
+    --- l -←-  =  --- u ← s -←-  ,  -←- r ---  =  -←- s ← v† ---
 ```
 
 ## Optimization of `r`
 
 Define the vector `p` and the positive map `B` as
 ```
-                ┌───┐           ┌───┐   ┌───┐
-                │   │           │   │   │   │  
-                │   └──         │  ┌┴───┴┐  └──
-                p†          =  b0† │benv │ 
-                │   ┌─←         │  └┬───┬┘  ┌─←
-                │   │           │   │   │   u
-                └───┘           └───┘   └───┘
+        ┌---------------┐   ┌-----------------------┐
+        |   ┌---┐       |   |   ┌----┐              |
+        └---|   |-------┘   └---|    |------b0† ----┘
+            | p†|         =     |benv|
+        ┌---|   |-←   --┐   ┌---|    |- u ←      ---┐
+        |   └---┘       |   |   └----┘              |
+        └---------------┘   └-----------------------┘
 
-          ┌───┐   ┌───┐         ┌───┐   ┌───┐
-          │   │   │   │         │   │   │   │
-        ──┘  ┌┴───┴┐  └──     ──┘  ┌┴───┴┐  └──
-             │  B  │        =      │benv │
-        ←─┐  └┬───┬┘  ┌─←     ←─┐  └┬───┬┘  ┌─←
-          │   │   │   │         u†  │   │   u
-          └───┘   └───┘         └───┘   └───┘
+        ┌---------------┐   ┌-----------------------┐
+        |   ┌---┐       |   |   ┌----┐              |
+        └---|   |-→   --┘   └---|    |- u†→     ---┘
+            | B |         =     |benv|
+        ┌---|   |-←   --┐   ┌---|    |- u ←      ---┐
+        |   └---┘       |   |   └----┘              |
+        └---------------┘   └-----------------------┘
 ```
 Then (each index corresponds to a pair of fused indices)
 ```
@@ -149,7 +147,7 @@ We can verify that (using `B† = B`)
 ```
 Then the bond matrix `u s v†` is updated by truncated SVD:
 ```
-    ← u ← r →    ==>    ← u ← s ← v† →
+    - u ← r -    ==>    - u ← s ← v† -
 ```
 
 ## Optimization of `l`
@@ -157,21 +155,21 @@ Then the bond matrix `u s v†` is updated by truncated SVD:
 The process is entirely similar. 
 Define the vector `p` and the positive map `B` as
 ```
-                ┌───┐           ┌───┐   ┌───┐
-                │   │           │   │   │   v†
-                │   └o→         │  ┌┴───┴┐  └o→
-                p†          =  b0† │benv │ 
-                │   ┌─←         │  └┬───┬┘  ┌──
-                │   │           │   │   │   │
-                └───┘           └───┘   └───┘
+        ┌---------------┐   ┌-----------------------┐
+        |   ┌---┐       |   |   ┌----┐              |
+        └---|   |-------┘   └---|    |------b0† ----┘
+            | p†|         =     |benv|
+        ┌---|   |-  ←-o-┐   ┌---|    |--    ←-o- v†-┐
+        |   └---┘       |   |   └----┘              |
+        └---------------┘   └-----------------------┘
 
-          ┌───┐   ┌───┐         ┌───┐   ┌───┐
-          │   │   │   │         v   │   │   v†
-        →o┘  ┌┴───┴┐  └o→     →o┘  ┌┴───┴┐  └o→
-             │  B  │        =      │benv │
-        ──┐  └┬───┬┘  ┌──     ──┐  └┬───┬┘  ┌──
-          │   │   │   │         │   │   │   │
-          └───┘   └───┘         └───┘   └───┘
+        ┌---------------┐   ┌-----------------------┐
+        |   ┌---┐       |   |   ┌----┐              |
+        └---|   |-  →-o-┘   └---|    |--    →-o- v -┘
+            | B |         =     |benv|
+        ┌---|   |-  ←-o-┐   ┌---|    |--    ←-o- v†-┐
+        |   └---┘       |   |   └----┘              |
+        └---------------┘   └-----------------------┘
 ```
 Here `o` is the parity tensor (twist) necessary for fermions. 
 Then (each index corresponds to a pair of fused indices)
@@ -184,7 +182,7 @@ which is maximized when
 ```
 Then the bond matrix `u s v†` is updated by SVD:
 ```
-    ← l ← v† →   ==>    ← u ← s ← v† →
+    - l ← v† -   ==>    - u ← s ← v† -
 ```
 
 ## Returns
@@ -192,9 +190,11 @@ Then the bond matrix `u s v†` is updated by SVD:
 The SVD result of the new bond matrix `u`, `s`, `vh`.
 """
 function fullenv_truncate(
-    benv::AbstractTensorMap{T,S,2,2}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation
+    benv::BondEnv{T,S}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation
 ) where {T<:Number,S<:ElementarySpace}
-    verbose = (alg.check_int > 0)
+    verbose = (alg.check_interval > 0)
+    # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
+    @assert codomain(benv) == domain(benv)
     time00 = time()
     # initialize u, s, vh with (almost) untruncated SVD
     u, s, vh = tsvd(b0, ((1,), (2,)); trunc=truncerr(1e-14))
@@ -230,11 +230,11 @@ function fullenv_truncate(
         Δfid = fid - fid0
         s0 = deepcopy(s)
         fid0 = fid
-        # @assert diff_fid >= -1e-14 "Fidelity is decreasing by $diff_fid."
         time1 = time()
         converge = (Δfid < alg.tol)
         cancel = (iter == alg.maxiter)
-        showinfo = verbose && (converge || cancel || iter == 1 || iter % alg.check_int == 0)
+        showinfo =
+            verbose && (converge || cancel || iter == 1 || iter % alg.check_interval == 0)
         if showinfo
             message = _fet_message(
                 iter, fid, Δfid, Δs, time1 - ((cancel || converge) ? time00 : time0)

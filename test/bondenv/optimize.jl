@@ -25,9 +25,6 @@ Vbond = Vint' ⊗ Vint
 # random positive-definite environment
 Z = randn(Float64, Vext ← Vbond)
 env = Z' * Z
-@assert env ≈ env'
-D, U = eigh(env)
-@assert all(D.data .>= 0.0)
 
 # untruncated bond tensor
 a2b2 = randn(Float64, Vint' ⊗ Vphy ⊗ Vphy ⊗ Vint)
@@ -42,8 +39,8 @@ fid0 = PEPSKit.fidelity(env, PEPSKit._combine_ab(a0, b0), a2b2)
 maxiter = 200
 ss = Dict{String,DiagonalTensorMap}()
 for (label, alg) in (
-    ("ALS", ALSTruncation(; trscheme, maxiter, check_int=10)),
-    ("FET", FullEnvTruncation(; trscheme, maxiter, check_int=10)),
+    ("ALS", ALSTruncation(; trscheme, maxiter, check_interval=10)),
+    ("FET", FullEnvTruncation(; trscheme, maxiter, check_interval=10)),
 )
     a1, ss[label], b1, info = PEPSKit.bond_optimize(env, a2, b2, alg)
     @info "$label improved fidelity = $(info.fid)."

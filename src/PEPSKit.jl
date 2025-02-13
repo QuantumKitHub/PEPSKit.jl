@@ -42,6 +42,7 @@ include("environments/vumps_environments.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
+include("algorithms/contractions/bondenv_als.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -51,6 +52,8 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/time_evolution/evoltools.jl")
+include("algorithms/time_evolution/bondenv/optimize_fet.jl")
+include("algorithms/time_evolution/bondenv/optimize_als.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")

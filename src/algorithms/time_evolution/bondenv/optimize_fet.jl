@@ -28,6 +28,7 @@ function bond_optimize(
     # dual check of physical index
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
+    @assert codomain(benv) == domain(benv)
     #= initialize bond matrix using QR as `Ra Lb`
 
             ↑    ↑               ↑               ↑
