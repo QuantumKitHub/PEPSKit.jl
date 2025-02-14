@@ -12,12 +12,12 @@ function MPSKit.transfer_left(
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
-    return @tensor GL′[-1 -2 -3; -4] :=
-        GL[1 2 4; 7] *
-        conj(Ā[1 3 6; -1]) *
-        ket(O)[5; 8 -2 3 2] *
-        conj(bra(O)[5; 9 -3 6 4]) *
-        A[7 8 9; -4]
+    return @autoopt @tensor GL′[χ_SE D_E_above D_E_below; χ_NE] :=
+        GL[χ_SW D_W_above D_W_below; χ_NW] *
+        conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
+        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
+        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below]) *
+        A[χ_NW D_N_above D_N_below; χ_NE]
 end
 
 function MPSKit.transfer_right(
@@ -26,15 +26,87 @@ function MPSKit.transfer_right(
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
-    return @tensor GR′[-1 -2 -3; -4] :=
-        GR[7 6 2; 1] *
-        conj(Ā[-4 4 3; 1]) *
-        ket(O)[5; 9 6 4 -2] *
-        conj(bra(O)[5; 8 2 3 -3]) *
-        A[-1 9 8 7]
+    return @autoopt @tensor GR′[χ_NW D_W_above D_W_below; χ_SW] :=
+        GR[χ_NE D_E_above D_E_below; χ_SE] *
+        conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
+        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
+        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below]) *
+        A[χ_NW D_N_above D_N_below χ_NE]
 end
 
 ## PEPO
+
+# some plumbing for generic expressions...
+
+# side=:W for argument, side=:E for output, PEPO height H
+function _pepo_leftenv_expr(envname, side::Symbol, H::Int)
+    return tensorexpr(
+        envname,
+        (
+            envlabel(:S, side),
+            virtuallabel(side, :top),
+            ntuple(i -> virtuallabel(side, :mid, i), 1:H)...,
+            virtuallabel(side, :bot),
+        ),
+        envlabel(:N, side),
+    )
+end
+
+# side=:E for argument, side=:W for output, PEPO height H
+function _pepo_rightenv_expr(envname, side::Symbol, H::Int)
+    return tensorexpr(
+        envname,
+        (
+            envlabel(:N, side),
+            virtuallabel(side, :top),
+            ntuple(i -> virtuallabel(side, :mid, i), 1:H)...,
+            virtuallabel(side, :bot),
+        ),
+        envlabel(:S, side),
+    )
+end
+
+# side=:N for ket MPS, side=:S for bra MPS, PEPO height H
+function _pepo_mpstensor_expr(tensorname, side::Symbol, H::Int)
+    return tensorexpr(
+        tensorname,
+        (
+            envlabel(side, :W),
+            virtuallabel(side, :top),
+            ntuple(i -> virtuallabel(side, :mid, i), 1:H)...,
+            virtuallabel(side, :bot),
+        ),
+        envlabel(side, :E),
+    )
+end
+
+# layer=:top for ket PEPS, layer=:bot for bra PEPS, connects to PEPO slice H
+function _pepo_pepstensor_expr(tensorname, layer::Symbol, h::Int)
+    return tensorexpr(
+        tensorname,
+        physicallabel(h),
+        (
+            virtuallabel(:N, layer),
+            virtuallabel(:E, layer),
+            virtuallabel(:S, layer),
+            virtuallabel(:W, layer),
+        ),
+    )
+end
+
+# PEPO slice h
+function _pepo_pepotensor_expr(tensorname, h::Int)
+    return tensorexpr(
+        tensorname,
+        (physicallabel(h + 1), physicallabel(h)),
+        (
+            virtuallabel(:N, :mid, h),
+            virtuallabel(:E, :mid, h),
+            virtuallabel(:S, :mid, h),
+            virtuallabel(:W, :mid, h),
+        ),
+    )
+end
 
 # specialize simple case
 function MPSKit.transfer_left(
@@ -43,17 +115,17 @@ function MPSKit.transfer_left(
     A::GenericMPSTensor{S,4},
     Ā::GenericMPSTensor{S,4},
 ) where {S}
-    @tensor GL′[-1 -2 -3 -4; -5] :=
-        GL[10 7 4 2; 1] *
-        conj(Ā[10 11 12 13; -1]) *
-        ket(O)[8; 9 -2 11 7] *
-        only(pepo(O))[5 8; 6 -3 12 4] *
-        conj(bra(O)[5; 3 -4 13 2]) *
-        A[1 9 6 3; -5]
+    return @autoopt @tensor GL′[χ_SE D_E_above D_E_mid D_E_below; χ_NE] :=
+        GL[χ_SW D_W_above D_W_mid D_W_below; χ_NW] *
+        conj(Ā[χ_SW D_S_above D_S_mid D_S_below; χ_SE]) *
+        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
+        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
+        conj(bra(O)[d_out; D_N_below D_E_below D_S_below D_W_below]) *
+        A[χ_NW D_N_above D_N_mid D_N_below; χ_NE]
 end
 
 # general case
-function MPSKit.transfer_left(
+@generated function MPSKit.transfer_left(
     GL::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
@@ -62,35 +134,28 @@ function MPSKit.transfer_left(
     # sanity check
     @assert H == N - 3
 
-    # collect tensors in convenient order: env, above, below, top, mid, bot
-    tensors = [GL, A, Ā, ket(O), pepo(O)..., bra(O)]
-
-    # contraction order: GL, A, top, mid..., bot, Ā
-
-    # number of contracted legs for full top-mid-bot stack
-    nlegs_tmb = 5 + 3 * H
-
-    # assign and collect all contraction indices
-    indicesGL = [2 + nlegs_tmb, 2, ((1:3:((H + 1) * 3)) .+ 3)..., 1]
-    indicesA = [1, 3, ((1:3:((H + 1) * 3)) .+ 4)..., -(N + 1)]
-    indicesĀ = [((1:N) .+ (1 + nlegs_tmb))..., -1]
-    indicesTop = [6, 3, -2, 3 + nlegs_tmb, 2]
-    indicesBot = [1 + nlegs_tmb, nlegs_tmb, -N, 4 + H + nlegs_tmb, nlegs_tmb - 1]
-    indicesMid = Vector{Vector{Int}}(undef, H)
-    for h in 1:H
-        indicesMid[h] = [
-            3 + 3 * (h + 1), 3 + 3 * h, 2 + 3 * h, -(2 + h), 3 + h + nlegs_tmb, 1 + 3 * h
-        ]
+    GL´_e = _pepo_leftenv_expr(:GL´, :E, H)
+    GL_e = _pepo_leftenv_expr(:GL, :W, H)
+    A_e = _pepo_mpstensor_expr(:A, :N, H)
+    Ā_e = _pepo_mpstensor_expr(:Ā, :S, H)
+    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
+    bra_e = _pepo_pepstensor_expr(:(bra(O)), :bot, H + 1)
+    pepo_es = map(1:H) do h
+        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
     end
-    indices = [indicesGL, indicesA, indicesĀ, indicesTop, indicesMid..., indicesBot]
 
-    # record conjflags
-    conjlist = [false, false, true, false, repeat([false], H)..., true]
+    rhs = Expr(
+        :call,
+        :*,
+        GL_e,
+        A_e,
+        Expr(:call, :conj, Ā_e),
+        ket_e,
+        Expr(:call, :conj, bra_e),
+        pepo_es...,
+    )
 
-    # perform contraction, permute to restore partition
-    GL′ = permute(ncon(tensors, indices, conjlist), (Tuple(1:N), (N + 1,)))
-
-    return GL′
+    return macroexpand(@__MODULE__, :(@autoopt @tensor $GL´_e := $rhs))
 end
 
 # specialize simple case
@@ -100,13 +165,13 @@ function MPSKit.transfer_right(
     A::GenericMPSTensor{S,4},
     Ā::GenericMPSTensor{S,4},
 ) where {S}
-    return @tensor GR′[-1 -2 -3 -4; -5] :=
-        GR[10 7 4 2; 1] *
-        conj(Ā[-5 9 6 3; 1]) *
-        ket(O)[8; 11 7 9 -2] *
-        only(pepo(O))[5 8; 12 4 6 -3] *
-        conj(bra(O)[5; 13 2 3 -4]) *
-        A[-1 11 12 13; 10]
+    return @tensor GR′[χ_NW D_W_above D_W_mid D_W_below; χ_SW] :=
+        GR[χ_NE D_E_above D_E_mid D_E_below; χ_SE] *
+        conj(Ā[χ_SW D_S_above D_S_mid D_S_below; χ_SE]) *
+        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
+        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
+        conj(bra(O)[d_out; D_N_below D_E_below D_S_below D_W_below]) *
+        A[χ_NW D_N_above D_N_mid D_N_below; χ_NE]
 end
 
 # general case
@@ -119,35 +184,28 @@ function MPSKit.transfer_right(
     # sanity check
     @assert H == N - 3
 
-    # collect tensors in convenient order: env, above, below, top, mid, bot
-    tensors = [GR, A, Ā, ket(O), pepo(O)..., bra(O)]
-
-    # contraction order: GR, A, top, mid..., bot, Ā
-
-    # number of contracted legs for full top-mid-bot stack
-    nlegs_tmb = 5 + 3 * H
-
-    # assign and collect all contraction indices
-    indicesGR = [1, 2, ((1:3:((H + 1) * 3)) .+ 3)..., 2 + nlegs_tmb]
-    indicesA = [-1, 3, ((1:3:((H + 1) * 3)) .+ 4)..., 1]
-    indicesĀ = [-(N + 1), ((2:N) .+ (1 + nlegs_tmb))..., 2 + nlegs_tmb]
-    indicesTop = [6, 3, 2, 3 + nlegs_tmb, -2]
-    indicesBot = [1 + nlegs_tmb, nlegs_tmb, nlegs_tmb - 1, 4 + H + nlegs_tmb, -N]
-    indicesMid = Vector{Vector{Int}}(undef, H)
-    for h in 1:H
-        indicesMid[h] = [
-            3 + 3 * (h + 1), 3 + 3 * h, 2 + 3 * h, 1 + 3 * h, 3 + h + nlegs_tmb, -(2 + h)
-        ]
+    GR´_e = _pepo_rightenv_expr(:GR´, :W, H)
+    GR_e = _pepo_rightenv_expr(:GR, :E, H)
+    A_e = _pepo_mpstensor_expr(:A, :N, H)
+    Ā_e = _pepo_mpstensor_expr(:Ā, :S, H)
+    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
+    bra_e = _pepo_pepstensor_expr(:(bra(O)), :bot, H + 1)
+    pepo_es = map(1:H) do h
+        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
     end
-    indices = [indicesGR, indicesA, indicesĀ, indicesTop, indicesMid..., indicesBot]
 
-    # record conjflags
-    conjlist = [false, false, true, false, repeat([false], H)..., true]
+    rhs = Expr(
+        :call,
+        :*,
+        GR_e,
+        A_e,
+        Expr(:call, :conj, Ā_e),
+        ket_e,
+        Expr(:call, :conj, bra_e),
+        pepo_es...,
+    )
 
-    # perform contraction, permute to restore partition
-    GR′ = permute(ncon(tensors, indices, conjlist), (Tuple(1:N), (N + 1,)))
-
-    return GR′
+    return macroexpand(@__MODULE__, :(@autoopt @tensor $GR´_e := $rhs))
 end
 
 @generated function environment_overlap(
@@ -174,13 +232,17 @@ end
 # Derivative contractions
 #
 
-## PEPS
-
-function MPSKit.∂C(
-    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,3}, GR::GenericMPSTensor{S,3}
-) where {S}
-    return @tensor C′[-1; -2] := GL[-1 3 4; 1] * C[1; 2] * GR[2 3 4; -2]
+@generated function MPSKit.∂C(
+    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
+) where {S,N}
+    C´_e = tensorexpr(:C´, -1, -2)
+    C_e = tensorexpr(:C, 1, 2)
+    GL_e = tensorexpr(:GL, (-1, (3:(N + 1))...), 1)
+    GR_e = tensorexpr(:GR, 2:(N + 1), -2)
+    return macroexpand(@__MODULE__, :(return @tensor $C´_e := $GL_e * $C_e * $GR_e))
 end
+
+## PEPS
 
 function MPSKit.∂AC(
     AC::GenericMPSTensor{S,3},
@@ -188,12 +250,12 @@ function MPSKit.∂AC(
     GL::GenericMPSTensor{S,3},
     GR::GenericMPSTensor{S,3},
 ) where {S}
-    return @tensor AC′[-1 -2 -3; -4] :=
-        GL[-1 8 9; 7] *
-        AC[7 4 2; 1] *
-        GR[1 6 3; -4] *
-        ket(O)[5; 4 6 -2 8] *
-        conj(bra(O)[5; 2 3 -3 9])
+    return @autoopt @tensor AC′[χ_SW D_S_above D_S_below; χ_SE] :=
+        GL[χ_SW D_W_above D_W_below; χ_NW] *
+        AC[χ_NW D_N_above D_N_below; χ_NE] *
+        GR[χ_NE D_E_above D_E_below; χ_SE] *
+        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
+        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
 end
 
 # PEPS derivative
@@ -204,29 +266,15 @@ function ∂peps(
     GL::GenericMPSTensor{S,3},
     GR::GenericMPSTensor{S,3},
 ) where {S}
-    return @tensor ∂p[-1; -2 -3 -4 -5] :=
-        GL[8 5 -5; 1] *
-        AC[1 6 -2; 7] *
-        O[-1; 6 3 4 5] *
-        GR[7 3 -3; 2] *
-        conj(ĀC[8 4 -4; 2])
+    return @tensor ∂p[d; D_N_below D_E_below D_S_below D_W_below] :=
+        GL[χ_SW D_W_above D_W_below; χ_NW] *
+        AC[χ_NW D_N_above D_N_below; χ_NE] *
+        O[d; D_N_above D_E_above D_S_above D_W_above] *
+        GR[χ_NE D_E_above D_E_below; χ_SE] *
+        conj(ĀC[χ_SW D_S_above D_S_below; χ_SE])
 end
 
 ## PEPO
-
-# specialize simple case
-function MPSKit.∂C(
-    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,4}, GR::GenericMPSTensor{S,4}
-) where {S}
-    return @tensor C′[-1; -2] := GL[-1 3 4 5; 1] * C[1; 2] * GR[2 3 4 5; -2]
-end
-
-function MPSKit.∂C(
-    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
-) where {S,N}
-    C′ = ncon([GL, C, GR], [[-1, ((2:N) .+ 1)..., 1], [1, 2], [2, ((2:N) .+ 1)..., -2]])
-    return permute(C′, ((1,), (2,)))
-end
 
 # specialize simple case
 function MPSKit.∂AC(
@@ -235,13 +283,13 @@ function MPSKit.∂AC(
     GL::GenericMPSTensor{S,4},
     GR::GenericMPSTensor{S,4},
 ) where {S}
-    return @tensor AC′[-1 -2 -3 -4; -5] :=
-        GL[-1 2 4 7; 1] *
-        AC[1 3 5 8; 10] *
-        GR[10 11 12 13; -5] *
-        ket(O)[6; 3 11 -2 2] *
-        only(pepo(O))[9 6; 5 12 -3 4] *
-        conj(bra(O)[9; 8 13 -4 7])
+    return @tensor AC′[χ_SW D_S_above D_S_mid D_S_below; χ_SE] :=
+        GL[χ_SW D_W_above D_W_mid D_W_below; χ_NW] *
+        AC[χ_NW D_N_above D_N_mid D_N_below; χ_NE] *
+        GR[χ_NE D_E_above D_E_mid D_E_below; χ_SE] *
+        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
+        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
+        conj(bra(O)[d_out; D_N_below D_E_below D_S_below D_W_below])
 end
 
 function MPSKit.∂AC(
@@ -253,35 +301,28 @@ function MPSKit.∂AC(
     # sanity check
     @assert H == N - 3
 
-    # collect tensors in convenient order: AC, GL, GR, top, mid, bot
-    tensors = [AC, GL, GR, ket(O), pepo(O)..., bra(O)]
-
-    # contraction order: AC, GL, top, mid..., bot, GR
-
-    # number of contracted legs for full top-mid-bot stack
-    nlegs_tmb = 5 + 3 * H
-
-    # assign and collect all contraction indices
-    indicesAC = [1, 3, ((1:3:((H + 1) * 3)) .+ 4)..., 2 + nlegs_tmb]
-    indicesGL = [-1, 2, ((1:3:((H + 1) * 3)) .+ 3)..., 1]
-    indicesGR = [((1:N) .+ (1 + nlegs_tmb))..., -(N + 1)]
-    indicesTop = [6, 3, 3 + nlegs_tmb, -2, 2]
-    indicesBot = [1 + nlegs_tmb, nlegs_tmb, 4 + H + nlegs_tmb, -N, nlegs_tmb - 1]
-    indicesMid = Vector{Vector{Int}}(undef, H)
-    for h in 1:H
-        indicesMid[h] = [
-            3 + 3 * (h + 1), 3 + 3 * h, 2 + 3 * h, 3 + h + nlegs_tmb, -(2 + h), 1 + 3 * h
-        ]
+    AC´_e = _pepo_mpstensor_expr(:AC´, :S, H)
+    AC_e = _pepo_mpstensor_expr(:AC, :N, H)
+    GL_e = _pepo_mpstensor_expr(:GL, :W, H)
+    GR_e = _pepo_mpstensor_expr(:GR, :E, H)
+    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
+    bra_e = _pepo_pepstensor_expr(:(bra(O)), :bot, H + 1)
+    pepo_es = map(1:H) do h
+        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
     end
-    indices = [indicesAC, indicesGL, indicesGR, indicesTop, indicesMid..., indicesBot]
 
-    # record conjflags
-    conjlist = [false, false, false, false, repeat([false], H)..., true]
+    rhs = Expr(
+        :call,
+        :*,
+        AC_e,
+        GL_e,
+        GR_e,
+        ket_e,
+        Expr(:call, :conj, bra_e),
+        pepo_es...,
+    )
 
-    # perform contraction, permute to restore partition
-    AC′ = permute(ncon(tensors, indices, conjlist), (Tuple(1:N), (N + 1,)))
-
-    return AC′
+    return macroexpand(@__MODULE__, :(@autoopt @tensor $AC´_e := $rhs))
 end
 
 # PEPS derivative
@@ -300,13 +341,13 @@ function ∂peps(
     GL::GenericMPSTensor{S,4},
     GR::GenericMPSTensor{S,4},
 ) where {S}
-    return @tensor ∂p[-1; -2 -3 -4 -5] :=
-        GL[13 8 10 -5; 1] *
-        AC[1 9 11 -2; 12] *
-        ket(O)[5; 9 3 4 8] *
-        only(pepo(O))[-1 5; 11 6 7 10] *
-        GR[12 3 6 -3; 2] *
-        conj(ĀC[13 4 7 -4; 2])
+    return @tensor ∂p[d_out; D_N_below D_E_below D_S_below D_W_below] :=
+        GL[χ_SW D_W_above D_W_mid D_W_below; χ_NW] *
+        AC[χ_NW D_N_above D_N_mid D_N_below; χ_NE] *
+        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
+        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
+        GR[χ_NE D_E_above D_E_mid D_E_below; χ_SE] *
+        conj(ĀC[χ_SW D_S_above D_S_mid D_S_below; χ_SE])
 end
 
 function ∂peps(
@@ -319,39 +360,26 @@ function ∂peps(
     # sanity check
     @assert H == N - 3
 
-    # collect tensors in convenient order: AC, GL, top, mid, GR, ĀC
-    tensors = [AC, ĀC, GL, GR, ket(O), pepo(O)...]
-
-    # contraction order: AC, GL, top, mid..., bot, GR
-
-    # number of contracted legs for full top-mid stack with AC and GL
-    nlegs_tm = 2 + 3 * H
-
-    # assign and collect all contraction indices
-    indicesAC = [1, 3, ((1:3:((H) * 3)) .+ 4)..., -2, 2 + nlegs_tm]
-    indicesGL = [2 + nlegs_tm + (N - 1), 2, ((1:3:((H) * 3)) .+ 3)..., -5, 1]
-    indicesTop = [6, 3, 3 + nlegs_tm, 3 + nlegs_tm + (N - 1), 2]
-    indicesMid = Vector{Vector{Int}}(undef, H)
-    for h in 1:H
-        indicesMid[h] = [
-            3 + 3 * (h + 1),
-            3 + 3 * h,
-            2 + 3 * h,
-            3 + h + nlegs_tm,
-            3 + h + nlegs_tm + (N - 1),
-            1 + 3 * h,
-        ]
+    ∂p_e = _pepo_pepstensor_expr(:∂p, :bot, H + 1)
+    AC_e = _pepo_mpstensor_expr(:AC, :N, H)
+    ĀC_e = _pepo_mpstensor_expr(:ĀC, :S, H)
+    GL_e = _pepo_mpstensor_expr(:GL, :W, H)
+    GR_e = _pepo_mpstensor_expr(:GR, :E, H)
+    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
+    pepo_es = map(1:H) do h
+        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
     end
-    indicesMid[end][1] = -1 # bottom physical leg is open
-    indicesGR = [((1:(N - 1)) .+ (1 + nlegs_tm))..., -3, nlegs_tm + 2 * N]
-    indicesĀC = [((1:(N - 1)) .+ (nlegs_tm + N))..., -4, nlegs_tm + 2 * N]
-    indices = [indicesAC, indicesĀC, indicesGL, indicesGR, indicesTop, indicesMid...]
 
-    # record conjflags
-    conjlist = [false, true, false, false, false, repeat([false], H)...]
+    rhs = Expr(
+        :call,
+        :*,
+        AC_e,
+        Expr(:call, :conj, ĀC_e),
+        GL_e,
+        GR_e,
+        ket_e,
+        pepo_es...,
+    )
 
-    # perform contraction, permute to restore partition
-    ∂p = permute(ncon(tensors, indices, conjlist), ((1,), Tuple(2:5)))
-
-    return ∂p
+    return macroexpand(@__MODULE__, :(@autoopt @tensor $∂p_e := $rhs))
 end
