@@ -92,13 +92,12 @@ env0 = CTMRGEnv(Z, χenv)
 ctm_styles = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
-@testset "Classical Ising partition function using $ctm_style with $projector_alg" for (
-    ctm_style, projector_alg
+@testset "Classical Ising partition function using $alg with $projector_alg" for (
+    alg, projector_alg
 ) in Iterators.product(
     ctm_styles, projector_algs
 )
-    ctm_alg = ctm_style(; maxiter=150, projector_alg)
-    env, = leading_boundary(env0, Z, ctm_alg)
+    env, = leading_boundary(env0, Z; alg, maxiter=150, projector_alg)
 
     # check observables
     λ = PEPSKit.value(Z, env)

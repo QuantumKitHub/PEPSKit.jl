@@ -69,7 +69,9 @@ such that `gauge_fix` will also be differentiated everytime a CTMRG derivative i
 struct LinSolver{F} <: GradMode{F}
     solver::KrylovKit.LinearSolver
 end
-function LinSolver(; solver=Defaults.gradient_linsolver, iterscheme=Defaults.iterscheme)
+function LinSolver(;
+    solver=Defaults.gradient_linsolver, iterscheme=Defaults.gradient_alg_iterscheme
+)
     return LinSolver{iterscheme}(solver)
 end
 
@@ -88,7 +90,9 @@ such that `gauge_fix` will also be differentiated everytime a CTMRG derivative i
 struct EigSolver{F} <: GradMode{F}
     solver::KrylovKit.KrylovAlgorithm
 end
-function EigSolver(; solver=Defaults.gradient_eigsolver, iterscheme=Defaults.iterscheme)
+function EigSolver(;
+    solver=Defaults.gradient_eigsolver, iterscheme=Defaults.gradient_alg_iterscheme
+)
     return EigSolver{iterscheme}(solver)
 end
 
