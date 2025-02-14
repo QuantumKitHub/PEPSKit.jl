@@ -155,7 +155,7 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(@autoopt @tensor $GL´_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $GL´_e := $rhs))
 end
 
 # specialize simple case
@@ -175,7 +175,7 @@ function MPSKit.transfer_right(
 end
 
 # general case
-function MPSKit.transfer_right(
+@generated function MPSKit.transfer_right(
     GR::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
@@ -205,7 +205,7 @@ function MPSKit.transfer_right(
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(@autoopt @tensor $GR´_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $GR´_e := $rhs))
 end
 
 @generated function environment_overlap(
@@ -292,7 +292,7 @@ function MPSKit.∂AC(
         conj(bra(O)[d_out; D_N_below D_E_below D_S_below D_W_below])
 end
 
-function MPSKit.∂AC(
+@generated function MPSKit.∂AC(
     AC::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     GL::GenericMPSTensor{S,N},
@@ -303,8 +303,8 @@ function MPSKit.∂AC(
 
     AC´_e = _pepo_mpstensor_expr(:AC´, :S, H)
     AC_e = _pepo_mpstensor_expr(:AC, :N, H)
-    GL_e = _pepo_mpstensor_expr(:GL, :W, H)
-    GR_e = _pepo_mpstensor_expr(:GR, :E, H)
+    GL_e = _pepo_leftenv_expr(:GL, :W, H)
+    GR_e = _pepo_rightenv_expr(:GR, :E, H)
     ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
     bra_e = _pepo_pepstensor_expr(:(bra(O)), :bot, H + 1)
     pepo_es = map(1:H) do h
@@ -313,7 +313,7 @@ function MPSKit.∂AC(
 
     rhs = Expr(:call, :*, AC_e, GL_e, GR_e, ket_e, Expr(:call, :conj, bra_e), pepo_es...)
 
-    return macroexpand(@__MODULE__, :(@autoopt @tensor $AC´_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $AC´_e := $rhs))
 end
 
 # PEPS derivative
@@ -341,7 +341,7 @@ function ∂peps(
         conj(ĀC[χ_SW D_S_above D_S_mid D_S_below; χ_SE])
 end
 
-function ∂peps(
+@generated function ∂peps(
     AC::GenericMPSTensor{S,N},
     ĀC::GenericMPSTensor{S,N},
     O::∂PEPOSandwich{H},
@@ -354,8 +354,8 @@ function ∂peps(
     ∂p_e = _pepo_pepstensor_expr(:∂p, :bot, H + 1)
     AC_e = _pepo_mpstensor_expr(:AC, :N, H)
     ĀC_e = _pepo_mpstensor_expr(:ĀC, :S, H)
-    GL_e = _pepo_mpstensor_expr(:GL, :W, H)
-    GR_e = _pepo_mpstensor_expr(:GR, :E, H)
+    GL_e = _pepo_leftenv_expr(:GL, :W, H)
+    GR_e = _pepo_rightenv_expr(:GR, :E, H)
     ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
     pepo_es = map(1:H) do h
         return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
@@ -363,5 +363,5 @@ function ∂peps(
 
     rhs = Expr(:call, :*, AC_e, Expr(:call, :conj, ĀC_e), GL_e, GR_e, ket_e, pepo_es...)
 
-    return macroexpand(@__MODULE__, :(@autoopt @tensor $∂p_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $∂p_e := $rhs))
 end
