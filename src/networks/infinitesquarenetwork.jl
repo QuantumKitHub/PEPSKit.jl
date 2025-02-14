@@ -1,60 +1,77 @@
 """
-    InfiniteSquareNetwork{T,N}
+    InfiniteSquareNetwork{O}
 
-Abstract infinite tensor network consisting of a translationally invariant unit cell
-on a square lattice.
+Contractible square network. Wraps a matrix of 'rank-4-tensor-like' objects.
 """
-abstract type InfiniteSquareNetwork{T,N} end
+struct InfiniteSquareNetwork{O}
+    A::Matrix{O}
+    InfiniteSquareNetwork{O}(A::Matrix{O}) where {O} = new{O}(A)
+    function InfiniteSquareNetwork(A::Array{O,2}) where {O}
+        for (d, w) in Tuple.(CartesianIndices(A))
+            north_virtualspace(A[d, w]) ==
+            _elementwise_dual(south_virtualspace(A[_prev(d, end), w])) || throw(
+                SpaceMismatch("North virtual space at site $((d, w)) does not match.")
+            )
+            east_virtualspace(A[d, w]) ==
+            _elementwise_dual(west_virtualspace(A[d, _next(w, end)])) ||
+                throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
+        end
+        return new{O}(A)
+    end
+end
 
 ## Shape and size
-function unitcell(::InfiniteSquareNetwork) end  # Return array of constituent tensors
-Base.size(A::InfiniteSquareNetwork, args...) = size(unitcell(A), args...)
-Base.length(A::InfiniteSquareNetwork) = length(unitcell(A))
-Base.eltype(::Type{<:InfiniteSquareNetwork{T}}) where {T} = T
-Base.eltype(A::InfiniteSquareNetwork) = eltype(typeof(A))
+unitcell(n::InfiniteSquareNetwork) = n.A
+Base.size(n::InfiniteSquareNetwork, args...) = size(unitcell(n), args...)
+Base.length(n::InfiniteSquareNetwork) = length(unitcell(n))
+Base.eltype(n::InfiniteSquareNetwork) = eltype(typeof(n))
+Base.eltype(::Type{<:InfiniteSquareNetwork{O}}) where {O} = O
 
 ## Copy
-Base.copy(A::NWType) where {NWType<:InfiniteSquareNetwork} = NWType(copy(unitcell(A)))
-function Base.similar(A::NWType, args...) where {NWType<:InfiniteSquareNetwork}
-    return NWType(similar(unitcell(A), args...))
+Base.copy(n::InfiniteSquareNetwork) = InfiniteSquareNetwork(copy(unitcell(n)))
+function Base.similar(n::InfiniteSquareNetwork, args...)
+    return InfiniteSquareNetwork(similar(unitcell(n), args...))
 end
-function Base.repeat(A::NWType, counts...) where {NWType<:InfiniteSquareNetwork}
-    return NWType(repeat(unitcell(A), counts...))
+function Base.repeat(n::InfiniteSquareNetwork, counts...)
+    return InfiniteSquareNetwork(repeat(unitcell(n), counts...))
 end
 
 ## Indexing
-Base.getindex(A::InfiniteSquareNetwork, args...) = Base.getindex(unitcell(A), args...)
-function Base.setindex!(A::InfiniteSquareNetwork, args...)
-    return (Base.setindex!(unitcell(A), args...); A)
+function Base.getindex(n::InfiniteSquareNetwork, args...)
+    return Base.getindex(unitcell(n), args...)
 end
-Base.axes(A::InfiniteSquareNetwork, args...) = axes(unitcell(A), args...)
-function eachcoordinate(A::InfiniteSquareNetwork)
-    return collect(Iterators.product(axes(A)...))
+function Base.setindex!(n::InfiniteSquareNetwork, args...)
+    return (Base.setindex!(unitcell(n), args...); n)
 end
-function eachcoordinate(A::InfiniteSquareNetwork, dirs)
-    return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
+Base.axes(n::InfiniteSquareNetwork, args...) = axes(unitcell(n), args...)
+function eachcoordinate(n::InfiniteSquareNetwork)
+    return collect(Iterators.product(axes(n)...))
 end
+function eachcoordinate(n::InfiniteSquareNetwork, dirs)
+    return collect(Iterators.product(dirs, axes(n, 1), axes(n, 2)))
+end
+
+## Spaces
+virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## Vector interface
-function VectorInterface.scalartype(::Type{NWType}) where {NWType<:InfiniteSquareNetwork}
-    return scalartype(eltype(NWType))
-end
-function VectorInterface.zerovector(A::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(zerovector(unitcell(A)))
+VectorInterface.scalartype(::Type{<:InfiniteSquareNetwork{O}}) where {O} = scalartype(O)
+function VectorInterface.zerovector(A::InfiniteSquareNetwork)
+    return InfiniteSquareNetwork(zerovector(unitcell(A)))
 end
 
-## Math
+## Math (for Zygote accumulation)
 function Base.:+(A₁::NWType, A₂::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(unitcell(A₁) + unitcell(A₂))
+    return NWType(unitcell(A₁) .+ unitcell(A₂))
 end
 function Base.:-(A₁::NWType, A₂::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(unitcell(A₁) - unitcell(A₂))
+    return NWType(unitcell(A₁) .- unitcell(A₂))
 end
 function Base.:*(α::Number, A::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(α * unitcell(A))
+    return NWType(α .* unitcell(A))
 end
 function Base.:/(A::NWType, α::Number) where {NWType<:InfiniteSquareNetwork}
-    return NWType(unitcell(A) / α)
+    return NWType(unitcell(A) ./ α)
 end
 function LinearAlgebra.dot(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
     return dot(unitcell(A₁), unitcell(A₂))
@@ -74,42 +91,60 @@ function Base.isapprox(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork;
 end
 
 ## Rotations
-function Base.rotl90(A::NWType) where {NWType<:InfiniteSquareNetwork{<:Any,2}} # Rotations of matrix unit cells
-    return NWType(rotl90(rotl90.(unitcell(A))))
+function Base.rotl90(n::InfiniteSquareNetwork)
+    return InfiniteSquareNetwork(rotl90(rotl90.(unitcell(n))))
 end
-function Base.rotr90(A::NWType) where {NWType<:InfiniteSquareNetwork{<:Any,2}}
-    return NWType(rotr90(rotr90.(unitcell(A))))
+function Base.rotr90(n::InfiniteSquareNetwork)
+    return InfiniteSquareNetwork(rotr90(rotr90.(unitcell(n))))
 end
-function Base.rot180(A::NWType) where {NWType<:InfiniteSquareNetwork{<:Any,2}}
-    return NWType(rot180(rot180.(unitcell(A))))
-end
-function Base.rotl90(A::NWType) where {NWType<:InfiniteSquareNetwork{<:Any,3}} # Rotations of cubic unit cells along z-axis
-    return NWType(stack(rotl90, eachslice(unitcell(A); dims=3)))
-end
-function Base.rotr90(A::NWType) where {NWType<:InfiniteSquareNetwork{<:Any,3}}
-    return NWType(stack(rotr90, eachslice(unitcell(A); dims=3)))
-end
-function Base.rot180(A::NWType) where {NWType<:InfiniteSquareNetwork{<:Any,3}}
-    return NWType(stack(rot180, eachslice(unitcell(A); dims=3)))
+function Base.rot180(n::InfiniteSquareNetwork)
+    return InfiniteSquareNetwork(rot180(rot180.(unitcell(n))))
 end
 
-## OptimKit optimization compatibility
-function LinearAlgebra.rmul!(A::InfiniteSquareNetwork, α::Number) # Used in _scale during OptimKit.optimize
-    rmul!.(unitcell(A), α)
-    return A
-end
-function LinearAlgebra.axpy!(
-    α::Number, A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork
-) # Used in _add during OptimKit.optimize
-    axpy!.(α, unitcell(A₁), unitcell(A₂))
-    return A₂
-end
+## Chainrules
+function ChainRulesCore.rrule(
+    ::typeof(Base.getindex), network::InfiniteSquareNetwork, args...
+)
+    O = network[args...]
 
-## FiniteDifferences vectorization
-function FiniteDifferences.to_vec(A::NWType) where {NWType<:InfiniteSquareNetwork}
-    vec, back = FiniteDifferences.to_vec(unitcell(A))
-    function state_from_vec(vec)
-        return NWType(back(vec))
+    function getindex_pullback(ΔO_)
+        ΔO = unthunk(ΔO_)
+        if ΔO isa Tangent # TODO: figure out why this happens in the first place...
+            ΔO = ChainRulesCore.construct(typeof(O), ChainRulesCore.backing(ΔO))
+        end
+        Δnetwork = zerovector(network)
+        Δnetwork[args...] = ΔO
+        return NoTangent(), Δnetwork, NoTangent(), NoTangent()
     end
-    return vec, state_from_vec
+    return O, getindex_pullback
+end
+
+# TODO: not actually used?
+function ChainRulesCore.rrule(
+    ::Type{NWType}, A::Matrix
+) where {NWType<:InfiniteSquareNetwork}
+    network = NWType(A)
+    function InfiniteSquareNetwork_pullback(Δnetwork)
+        Δnetwork = unthunk(Δnetwork)
+        return NoTangent(), unnitcell(Δnetwork)
+    end
+    return network, InfiniteSquareNetwork_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(rotl90), network::InfiniteSquareNetwork)
+    network´ = rotl90(network)
+    function rotl90_pullback(Δnetwork)
+        Δnetwork = unthunk(Δnetwork)
+        return NoTangent(), rotr90(Δnetwork)
+    end
+    return network´, rotl90_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(rotr90), network::InfiniteSquareNetwork)
+    network´ = rotr90(network)
+    function rotr90_pullback(Δnetwork)
+        Δnetwork = unthunk(Δnetwork)
+        return NoTangent(), rotl90(Δnetwork)
+    end
+    return network´, rotr90_pullback
 end

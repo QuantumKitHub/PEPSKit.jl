@@ -30,7 +30,7 @@ function SequentialCTMRG(;
     )
 end
 
-function ctmrg_iteration(state, env::CTMRGEnv, alg::SequentialCTMRG)
+function ctmrg_iteration(state::InfiniteSquareNetwork, env::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(state)))
     condition_number = zero(real(scalartype(state)))
     for _ in 1:4 # rotate
@@ -48,8 +48,8 @@ function ctmrg_iteration(state, env::CTMRGEnv, alg::SequentialCTMRG)
 end
 
 """
-    sequential_projectors(col::Int, state::InfinitePEPS, env::CTMRGEnv, alg::ProjectorAlgorithm)
-    sequential_projectors(coordinate::NTuple{3,Int}, state::InfinitePEPS, env::CTMRGEnv, alg::ProjectorAlgorithm)
+    sequential_projectors(col::Int, state::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm)
+    sequential_projectors(coordinate::NTuple{3,Int}, state::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm)
 
 Compute CTMRG projectors in the `:sequential` scheme either for an entire column `col` or
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).

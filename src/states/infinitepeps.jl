@@ -3,15 +3,16 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePEPS{T<:PEPSTensor} <: InfiniteSquareNetwork{T,2}
+struct InfinitePEPS{T<:PEPSTensor} <: InfiniteGridNetwork{T,2}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
-            space(A[d, w], 2) == space(A[_prev(d, end), w], 4)' || throw(
-                SpaceMismatch("North virtual space at site $((d, w)) does not match.")
-            )
-            space(A[d, w], 3) == space(A[d, _next(w, end)], 5)' ||
+            north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
+                throw(
+                    SpaceMismatch("North virtual space at site $((d, w)) does not match.")
+                )
+            east_virtualspace(A[d, w]) == west_virtualspace(A[d, _next(w, end)])' ||
                 throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
             dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
         end
@@ -19,14 +20,21 @@ struct InfinitePEPS{T<:PEPSTensor} <: InfiniteSquareNetwork{T,2}
     end
 end
 
+## InfiniteGridNetwork interface
+
+unitcell(t::InfinitePEPS) = t.A
+
 ## Constructors
+
+const ElementarySpaceLike = Union{Int,ElementarySpace}
+
 """
     InfinitePEPS(A::AbstractMatrix{T})
 
 Create an `InfinitePEPS` by specifying a matrix containing the PEPS tensors at each site in
 the unit cell.
 """
-function InfinitePEPS(A::AbstractMatrix{T}) where {T<:PEPSTensor}
+function InfinitePEPS(A::AbstractMatrix{<:PEPSTensor})
     return InfinitePEPS(Array(deepcopy(A))) # TODO: find better way to copy
 end
 
@@ -41,12 +49,12 @@ specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePEPS(
     Pspaces::A, Nspaces::A, Espaces::A
-) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     return InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
 end
 function InfinitePEPS(
     f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
-) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+) where {M<:AbstractMatrix{<:ElementarySpaceLike}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -92,7 +100,7 @@ Spaces can be specified either via `Int` or via `ElementarySpace`.
 """
 function InfinitePEPS(
     Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-) where {S<:Union{ElementarySpace,Int}}
+) where {S<:ElementarySpaceLike}
     return InfinitePEPS(
         randn,
         ComplexF64,
@@ -103,50 +111,32 @@ function InfinitePEPS(
 end
 function InfinitePEPS(
     f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-) where {S<:Union{ElementarySpace,Int}}
+) where {S<:ElementarySpaceLike}
     return InfinitePEPS(
         f, T, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
     )
 end
 
-unitcell(t::InfinitePEPS) = t.A
-TensorKit.space(t::InfinitePEPS, i, j) = space(t[i, j], 1)
+## InfiniteSquareNetwork interface
 
-# Chainrules
+function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS)
+    size(top) == size(bot) ||
+        throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
+    return InfiniteSquareNetwork(map(Tuple, zip(unitcell(top), unitcell(bot))))
+end
+
+InfiniteSquareNetwork(top::InfinitePEPS) = InfiniteSquareNetwork(top, top)
+
 function ChainRulesCore.rrule(
-    ::typeof(Base.getindex), state::InfinitePEPS, row::Int, col::Int
+    ::Type{InfiniteSquareNetwork}, top::InfinitePEPS, bot::InfinitePEPS
 )
-    pepstensor = state[row, col]
+    network = InfiniteSquareNetwork(top, bot)
 
-    function getindex_pullback(Δpepstensor_)
-        Δpepstensor = unthunk(Δpepstensor_)
-        Δstate = zerovector(state)
-        Δstate[row, col] = Δpepstensor
-        return NoTangent(), Δstate, NoTangent(), NoTangent()
+    function InfiniteSquareNetwork_pullback(Δnetwork_)
+        Δnetwork = unthunk(Δnetwork_)
+        Δtop = InfinitePEPS(map(ket, unitcell(Δnetwork)))
+        Δbot = InfinitePEPS(map(bra, unitcell(Δnetwork)))
+        return NoTangent(), Δtop, Δbot
     end
-    return pepstensor, getindex_pullback
-end
-
-function ChainRulesCore.rrule(::Type{<:InfinitePEPS}, A::Matrix{T}) where {T<:PEPSTensor}
-    peps = InfinitePEPS(A)
-    function InfinitePEPS_pullback(Δpeps)
-        return NoTangent(), Δpeps.A
-    end
-    return peps, InfinitePEPS_pullback
-end
-
-function ChainRulesCore.rrule(::typeof(rotl90), peps::InfinitePEPS)
-    peps′ = rotl90(peps)
-    function rotl90_pullback(Δpeps)
-        return NoTangent(), rotr90(Δpeps)
-    end
-    return peps′, rotl90_pullback
-end
-
-function ChainRulesCore.rrule(::typeof(rotr90), peps::InfinitePEPS)
-    peps′ = rotr90(peps)
-    function rotr90_pullback(Δpeps)
-        return NoTangent(), rotl90(Δpeps)
-    end
-    return peps′, rotr90_pullback
+    return network, InfiniteSquareNetwork_pullback
 end

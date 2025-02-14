@@ -11,7 +11,9 @@ abstract type CTMRGAlgorithm end
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
+function ctmrg_iteration(state, env, alg::CTMRGAlgorithm)
+    return ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
+end
 
 """
     MPSKit.leading_boundary([envinit], state, alg::CTMRGAlgorithm)
@@ -31,6 +33,9 @@ function MPSKit.leading_boundary(state, alg::CTMRGAlgorithm)
     return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
 end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
+    return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
+end
+function MPSKit.leading_boundary(envinit, state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
     CS = map(x -> tsvd(x)[2], envinit.corners)
     TS = map(x -> tsvd(x)[2], envinit.edges)
 
@@ -59,20 +64,16 @@ function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
     end
 end
 
-# network-specific objective functions
-ctmrg_objective(state::InfinitePEPS, env::CTMRGEnv) = norm(state, env)
-ctmrg_objective(state::InfinitePartitionFunction, env::CTMRGEnv) = value(state, env)
-
 # custom CTMRG logging
-ctmrg_loginit!(log, η, state, env) = @infov 2 loginit!(log, η, ctmrg_objective(state, env))
+ctmrg_loginit!(log, η, state, env) = @infov 2 loginit!(log, η, value(state, env))
 function ctmrg_logiter!(log, iter, η, state, env)
-    @infov 3 logiter!(log, iter, η, ctmrg_objective(state, env))
+    @infov 3 logiter!(log, iter, η, value(state, env))
 end
 function ctmrg_logfinish!(log, iter, η, state, env)
-    @infov 2 logfinish!(log, iter, η, ctmrg_objective(state, env))
+    @infov 2 logfinish!(log, iter, η, value(state, env))
 end
 function ctmrg_logcancel!(log, iter, η, state, env)
-    @warnv 1 logcancel!(log, iter, η, ctmrg_objective(state, env))
+    @warnv 1 logcancel!(log, iter, η, value(state, env))
 end
 
 @non_differentiable ctmrg_loginit!(args...)

@@ -30,7 +30,9 @@ function SimultaneousCTMRG(;
     )
 end
 
-function ctmrg_iteration(state, env::CTMRGEnv, alg::SimultaneousCTMRG)
+function ctmrg_iteration(
+    state::InfiniteSquareNetwork, env::CTMRGEnv, alg::SimultaneousCTMRG
+)
     enlarged_corners = dtmap(eachcoordinate(state, 1:4)) do idx
         return TensorMap(EnlargedCorner(state, env, idx), idx[1])
     end  # expand environment

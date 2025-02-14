@@ -3,13 +3,14 @@
 
 Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
 """
-struct InfinitePEPO{T<:PEPOTensor} <: InfiniteSquareNetwork{T,3}
+struct InfinitePEPO{T<:PEPOTensor} <: InfiniteGridNetwork{T,3}
     A::Array{T,3}
 
     function InfinitePEPO(A::Array{T,3}) where {T<:PEPOTensor}
         # space checks
         for (d, w, h) in Tuple.(CartesianIndices(A))
-            space(A[d, w, h], 1) == space(A[d, w, _next(h, end)], 2)' ||
+            only(codomain(physicalspace(A[d, w, h]))) ==
+            only(domain(physicalspace(A[d, w, _next(h, end)]))) ||
                 throw(SpaceMismatch("Physical space at site $((d, w, h)) does not match."))
             space(A[d, w, h], 3) == space(A[_prev(d, end), w, h], 5)' || throw(
                 SpaceMismatch("North virtual space at site $((d, w, h)) does not match."),
@@ -22,7 +23,12 @@ struct InfinitePEPO{T<:PEPOTensor} <: InfiniteSquareNetwork{T,3}
     end
 end
 
+## InfiniteGridNetwork interface
+
+unitcell(T::InfinitePEPO) = T.A
+
 ## Constructors
+
 """
     InfinitePEPO(A::AbstractArray{T, 3})
 
@@ -105,18 +111,63 @@ function InfinitePEPO(
     )
 end
 
-unitcell(T::InfinitePEPO) = T.A
-TensorKit.space(T::InfinitePEPO, i, j) = space(T[i, j, end], 1)
-
 function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
     Pspaces = Array{S,2}(undef, size(T, 1), size(T, 2))
     for i in axes(T, 1)
         j in axes(T, 2)
-        Pspaces[i, j] = space(T, i, j)
+        Pspaces[i, j] = only(domain(physicalspace(T[i, j, 1])))
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
+end
+
+## InfiniteSquareNetwork interface
+
+function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::InfinitePEPS)
+    size(top) == size(bot) == size(mid)[1:2] || throw(
+        ArgumentError("Top PEPS, bottom PEPS and PEPO layers should have equal sizes")
+    )
+    return InfiniteSquareNetwork(
+        map(
+            Tuple,
+            zip(
+                unitcell(top),
+                unitcell(bot),
+                Iterators.map(Tuple, eachslice(unitcell(mid); dims=3)),
+            ),
+        ),
+    )
+end
+
+function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO)
+    return InfiniteSquareNetwork(top, mid, top)
+end
+
+function ChainRulesCore.rrule(
+    ::Type{InfiniteSquareNetwork},
+    top::InfinitePEPS,
+    mid::InfinitePEPO{P},
+    bot::InfinitePEPS,
+) where {P<:PEPOTensor}
+    network = InfiniteSquareNetwork(top, mid, bot)
+
+    function InfiniteSquareNetwork_pullback(Δnetwork_)
+        Δnetwork = unthunk(Δnetwork_)
+        Δtop = InfinitePEPS(map(ket, unitcell(Δnetwork)))
+        Δbot = InfinitePEPS(map(bra, unitcell(Δnetwork)))
+        Δmid = InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork))))
+        return NoTangent(), Δtop, Δmid, Δbot
+    end
+    return network, InfiniteSquareNetwork_pullback
+end
+
+function _stack_tuples(A::Matrix{NTuple{N,T}}) where {N,T}
+    out = Array{T}(undef, size(A)..., N)
+    for (r, c) in Iterators.product(axes(A)...)
+        out[r, c, :] .= A[r, c]
+    end
+    return out
 end
