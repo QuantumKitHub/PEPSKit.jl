@@ -120,11 +120,11 @@ Module containing default algorithm parameter values and arguments.
     gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme)
     ```
 
-- `reuse_env=true`: If `true`, the current optimization step is initialized on the previous environment
-
-- `optimizer_tol`: Gradient norm tolerance of the optimizer
-- `optimizer_maxiter`: Maximal number of optimization steps
-- `lbfgs_memory`: Size of limited memory representation of BFGS Hessian matrix
+- `reuse_env=true`: If `true`, the current optimization step is initialized on the previous
+  environment, otherwise a random environment is used
+- `optimizer_tol=1e-4`: Gradient norm tolerance of the optimizer
+- `optimizer_maxiter=100`: Maximal number of optimization steps
+- `lbfgs_memory=20`: Size of limited memory representation of BFGS Hessian matrix
 - `optimizer`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
 
     ```

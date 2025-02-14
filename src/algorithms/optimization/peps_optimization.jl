@@ -56,21 +56,42 @@ Find the fixed point of `operator` (i.e. the ground state) starting from `peps�
 to the supplied optimization parameters. The initial environment `env₀` serves as an
 initial guess for the first CTMRG run. By default, a random initial environment is used.
 
-The `finalize!` kwarg can be used to insert a function call after each optimization step
-by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
-The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
-The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
-PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
-requires a symmmetric `peps₀` and `env₀` to converge properly.
-
-The optimization parameters can be supplied via the keyword arguments or directly as an
+The optimization parameters can be supplied via the keyword arguments or directly as a
 `PEPSOptimize` struct. The following keyword arguments are supported:
-- `tol=Defaults.optimizer_tol`: TODO
-- `verbosity=1`: TODO
-- `boundary_alg=(; ...)`: TODO
-- `gradient_alg=(; ...)`: TODO
-- `optimization_alg=(; ...)`: TODO
-- `(finalize!)=OptimKit._finalize!`: TODO
+- `tol=Defaults.optimizer_tol`: Overall tolerance for gradient norm convergence of the
+  optimizer; sets related tolerance such as the boundary and boundary-gradient tolerances
+  to sensible defaults unless they are explictly specified
+- `verbosity=1`: Overall output information verbosity level, where `0` suppresses
+  all output, `1` only prints the optimizer output and warnings, `2` additionally prints
+  boundary information, and `3` prints all information including AD debug outputs
+- `boundary_alg`: Boundary algorithm either specified as a `NamedTuple` of keyword
+  arguments or directly as a `CTMRGAlgorithm`; see [`leading_boundary`](@ref) for a
+  description of all possible keyword arguments
+- `gradient_alg`: Algorithm for computing the boundary fixed-point gradient
+  specified either as a `NamedTuple` of keyword arguments or directly as a `GradMode`.
+  The supported keyword arguments are:
+  - `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration
+  - `maxiter=Defaults.gradient_alg_maxiter`: Maximal number of gradient problem iterations
+  - `alg=typeof(Defaults.gradient_alg)`: Gradient algorithm type, can be any `GradMode` type
+  - `verbosity=gradient_verbosity`: Gradient output verbosity, ≤0 by default to disable too
+    verbose printing; should only be enabled for debug purposes
+  - `iterscheme=Defaults.gradient_alg_iterscheme`: CTMRG iteration scheme determining mode
+    of differentiation; can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate
+    gauge-fixing routine)
+- `optimization_alg`: PEPS optimization algorithm, specified either as a `NamedTuple` of
+  keyword arguments or directly as a `PEPSOptimize`. By default, `OptimKit.LBFGS` is used
+  in combination with a `HagerZhangLineSearch`. Possible keyword arguments are:
+  - `tol=tol`: Gradient norm tolerance of the optimizer
+  - `maxiter=Defaults.optimizer_maxiter`: Maximal number of optimization steps
+  - `lbfgs_memory=Defaults.lbfgs_memory`: Size of limited memory representation of BFGS
+    Hessian matrix
+  - `reuse_env=Defaults.reuse_env`: If `true`, the current optimization step is initialized
+  on the previous environment, otherwise a random environment is used
+  - `symmetrization=nothing`: Accepts `nothing` or a `SymmetrizationStyle`, in which case
+  the PEPS and PEPS gradient are symmetrized after each optimization iteration
+- `(finalize!)=OptimKit._finalize!`: Inserts a `finalize!` function call after each
+  optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
+  The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
 
 The function returns the final PEPS, CTMRG environment and cost value, as well as an
 information `NamedTuple` which contains the following entries:
@@ -255,7 +276,7 @@ function select_fixedpoint_algorithm(
     end
 
     # construct final PEPSOptimize optimization algorithm
-    optimization_algorithm = if optimization_alg isa OptimKit.OptimizationAlgorithm
+    optimization_algorithm = if optimization_alg isa PEPSOptimize
         optimization_alg
     elseif optimization_alg isa NamedTuple
         optimization_kwargs = (;

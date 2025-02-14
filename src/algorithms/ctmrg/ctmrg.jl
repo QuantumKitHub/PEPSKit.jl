@@ -24,12 +24,13 @@ initial environment is used.
 The algorithm can be supplied via the keyword arguments or directly as an `CTMRGAlgorithm`
 struct. The following keyword arguments are supported:
 - `alg=SimultaneousCTMRG`: Variant of the CTMRG algorithm; can be any `CTMRGAlgorithm` type
-- `tol=Defaults.ctmrg_tol`: Tolerance checking singular value and norm convergence
+- `tol=Defaults.ctmrg_tol`: Tolerance checking singular value and norm convergence; also
+  sets related tolerances to sensible defaults unless they are explicitly specified
 - `maxiter=Defaults.ctmrg_maxiter`: Maximal number of CTMRG iterations per run
 - `miniter=Defaults.ctmrg_miniter`: Minimal number of CTMRG carried out
-- `verbosity=2`: Determines different levels of output information, where `0` suppresses
-  all output, `1` only prints warnings, `2` gives information at the start and end, and
-  `3` prints information every iteration
+- `verbosity=2`: Overall output information verbosity level, where `0` suppresses
+  all output, `1` only prints warnings, `2` gives information at the start and end,
+  `3` prints information every iteration, and `4` gives extra debug information
 - `trscheme=Defaults.trscheme`: SVD truncation scheme during projector computation; can be
   any `TruncationScheme` supported by the provided SVD algorithm
 - `svd_alg=Defaults.svd_fwd_alg`: SVD algorithm used for computing projectors
