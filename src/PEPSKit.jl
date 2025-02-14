@@ -23,7 +23,7 @@ include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 
 include("networks/tensors.jl")
-include("networks/effective_mpo.jl")
+include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
 include("networks/infinitegridnetwork.jl")
 

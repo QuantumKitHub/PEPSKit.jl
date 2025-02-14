@@ -1,5 +1,5 @@
 #
-# Effective MPOTensor interface
+# Interface for local effective-rank-4 tensor sandwiches
 #
 
 ## Space utils

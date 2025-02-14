@@ -322,7 +322,7 @@ function CTMRGEnv(
     return CTMRGEnv(
         f,
         T,
-        peps,
+        network,
         fill(chi_north, size(network)),
         fill(chi_east, size(network)),
         fill(chi_south, size(network)),
