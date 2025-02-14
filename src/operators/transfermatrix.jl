@@ -121,7 +121,7 @@ function InfiniteTransferPEPO(
 ) where {T,O}
     size(top, 1) == size(bot, 1) == size(mid, 1) ||
         throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
-    return InfiniteMPO(map(Tuple, zip(top, bot, Iterators.map(Tuple, eachcol(mid)))))
+    return InfiniteMPO(map(Tuple, zip(top, bot, Iterators.map(Tuple, eachrow(mid)))))
 end
 
 InfiniteTransferPEPO(top, mid) = InfiniteTransferPEPO(top, mid, top)

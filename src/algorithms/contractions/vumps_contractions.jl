@@ -45,10 +45,10 @@ function _pepo_leftenv_expr(envname, side::Symbol, H::Int)
         (
             envlabel(:S, side),
             virtuallabel(side, :top),
-            ntuple(i -> virtuallabel(side, :mid, i), 1:H)...,
+            ntuple(i -> virtuallabel(side, :mid, i), H)...,
             virtuallabel(side, :bot),
         ),
-        envlabel(:N, side),
+        (envlabel(:N, side),),
     )
 end
 
@@ -59,10 +59,10 @@ function _pepo_rightenv_expr(envname, side::Symbol, H::Int)
         (
             envlabel(:N, side),
             virtuallabel(side, :top),
-            ntuple(i -> virtuallabel(side, :mid, i), 1:H)...,
+            ntuple(i -> virtuallabel(side, :mid, i), H)...,
             virtuallabel(side, :bot),
         ),
-        envlabel(:S, side),
+        (envlabel(:S, side),),
     )
 end
 
@@ -73,10 +73,10 @@ function _pepo_mpstensor_expr(tensorname, side::Symbol, H::Int)
         (
             envlabel(side, :W),
             virtuallabel(side, :top),
-            ntuple(i -> virtuallabel(side, :mid, i), 1:H)...,
+            ntuple(i -> virtuallabel(side, :mid, i), H)...,
             virtuallabel(side, :bot),
         ),
-        envlabel(side, :E),
+        (envlabel(side, :E),),
     )
 end
 
@@ -84,7 +84,7 @@ end
 function _pepo_pepstensor_expr(tensorname, layer::Symbol, h::Int)
     return tensorexpr(
         tensorname,
-        physicallabel(h),
+        (physicallabel(h),),
         (
             virtuallabel(:N, layer),
             virtuallabel(:E, layer),
