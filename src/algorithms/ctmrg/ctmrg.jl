@@ -30,12 +30,16 @@ suppresses all output, `1` only prints warnings, `2` gives information at the st
 end, and `3` prints information every iteration.
 """
 function MPSKit.leading_boundary(network, alg::CTMRGAlgorithm)
-    return MPSKit.leading_boundary(CTMRGEnv(network, oneunit(spacetype(network))), network, alg)
+    return MPSKit.leading_boundary(
+        CTMRGEnv(network, oneunit(spacetype(network))), network, alg
+    )
 end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
     return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
 end
-function MPSKit.leading_boundary(envinit, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
+function MPSKit.leading_boundary(
+    envinit, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+)
     CS = map(x -> tsvd(x)[2], envinit.corners)
     TS = map(x -> tsvd(x)[2], envinit.edges)
 

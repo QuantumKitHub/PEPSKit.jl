@@ -30,7 +30,9 @@ function SequentialCTMRG(;
     )
 end
 
-function ctmrg_iteration(network::InfiniteSquareNetwork, env::CTMRGEnv, alg::SequentialCTMRG)
+function ctmrg_iteration(
+    network::InfiniteSquareNetwork, env::CTMRGEnv, alg::SequentialCTMRG
+)
     truncation_error = zero(real(scalartype(network)))
     condition_number = zero(real(scalartype(network)))
     for _ in 1:4 # rotate

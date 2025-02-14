@@ -122,7 +122,7 @@ function InfiniteSquareNetwork(state::InfinitePartitionFunction)
 end
 
 function ChainRulesCore.rrule(
-    ::Type{InfiniteSquareNetwork}, state::InfinitePartitionFunction, bot::InfinitePEPS
+    ::Type{InfiniteSquareNetwork}, state::InfinitePartitionFunction
 )
     network = InfiniteSquareNetwork(state)
 
