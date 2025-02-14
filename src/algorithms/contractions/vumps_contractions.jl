@@ -311,16 +311,7 @@ function MPSKit.∂AC(
         return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
     end
 
-    rhs = Expr(
-        :call,
-        :*,
-        AC_e,
-        GL_e,
-        GR_e,
-        ket_e,
-        Expr(:call, :conj, bra_e),
-        pepo_es...,
-    )
+    rhs = Expr(:call, :*, AC_e, GL_e, GR_e, ket_e, Expr(:call, :conj, bra_e), pepo_es...)
 
     return macroexpand(@__MODULE__, :(@autoopt @tensor $AC´_e := $rhs))
 end
@@ -370,16 +361,7 @@ function ∂peps(
         return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
     end
 
-    rhs = Expr(
-        :call,
-        :*,
-        AC_e,
-        Expr(:call, :conj, ĀC_e),
-        GL_e,
-        GR_e,
-        ket_e,
-        pepo_es...,
-    )
+    rhs = Expr(:call, :*, AC_e, Expr(:call, :conj, ĀC_e), GL_e, GR_e, ket_e, pepo_es...)
 
     return macroexpand(@__MODULE__, :(@autoopt @tensor $∂p_e := $rhs))
 end
