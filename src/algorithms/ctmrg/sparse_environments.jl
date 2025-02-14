@@ -170,7 +170,7 @@ function _domain_space(A, n::Int)
     return virtualspace(A, n)
 end
 
-function _codomain_space(A::NTuple{1,<:PFTensor}, n::Int)
+function _codomain_space(A, n::Int)
     return _elementwise_dual(virtualspace(A, n))
 end
 

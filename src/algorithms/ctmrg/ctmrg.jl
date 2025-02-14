@@ -29,35 +29,35 @@ Different levels of output information are printed depending on `alg.verbosity`,
 suppresses all output, `1` only prints warnings, `2` gives information at the start and
 end, and `3` prints information every iteration.
 """
-function MPSKit.leading_boundary(state, alg::CTMRGAlgorithm)
-    return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
+function MPSKit.leading_boundary(network, alg::CTMRGAlgorithm)
+    return MPSKit.leading_boundary(CTMRGEnv(network, oneunit(spacetype(network))), network, alg)
 end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
     return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
 end
-function MPSKit.leading_boundary(envinit, state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
+function MPSKit.leading_boundary(envinit, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
     CS = map(x -> tsvd(x)[2], envinit.corners)
     TS = map(x -> tsvd(x)[2], envinit.edges)
 
-    η = one(real(scalartype(state)))
+    η = one(real(scalartype(network)))
     env = deepcopy(envinit)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, state, envinit)
+        ctmrg_loginit!(log, η, network, envinit)
         local info
         for iter in 1:(alg.maxiter)
-            env, info = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
+            env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
-                ctmrg_logfinish!(log, iter, η, state, env)
+                ctmrg_logfinish!(log, iter, η, network, env)
                 break
             end
             if iter == alg.maxiter
-                ctmrg_logcancel!(log, iter, η, state, env)
+                ctmrg_logcancel!(log, iter, η, network, env)
             else
-                ctmrg_logiter!(log, iter, η, state, env)
+                ctmrg_logiter!(log, iter, η, network, env)
             end
         end
         return env, info
@@ -65,15 +65,15 @@ function MPSKit.leading_boundary(envinit, state::InfiniteSquareNetwork, alg::CTM
 end
 
 # custom CTMRG logging
-ctmrg_loginit!(log, η, state, env) = @infov 2 loginit!(log, η, value(state, env))
-function ctmrg_logiter!(log, iter, η, state, env)
-    @infov 3 logiter!(log, iter, η, value(state, env))
+ctmrg_loginit!(log, η, network, env) = @infov 2 loginit!(log, η, value(network, env))
+function ctmrg_logiter!(log, iter, η, network, env)
+    @infov 3 logiter!(log, iter, η, value(network, env))
 end
-function ctmrg_logfinish!(log, iter, η, state, env)
-    @infov 2 logfinish!(log, iter, η, value(state, env))
+function ctmrg_logfinish!(log, iter, η, network, env)
+    @infov 2 logfinish!(log, iter, η, value(network, env))
 end
-function ctmrg_logcancel!(log, iter, η, state, env)
-    @warnv 1 logcancel!(log, iter, η, value(state, env))
+function ctmrg_logcancel!(log, iter, η, network, env)
+    @warnv 1 logcancel!(log, iter, η, value(network, env))
 end
 
 @non_differentiable ctmrg_loginit!(args...)

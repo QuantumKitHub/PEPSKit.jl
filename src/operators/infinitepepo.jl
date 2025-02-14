@@ -136,7 +136,7 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
             zip(
                 unitcell(top),
                 unitcell(bot),
-                Iterators.map(Tuple, eachslice(unitcell(mid); dims=3)),
+                Iterators.map(Tuple, eachslice(unitcell(mid); dims=(1, 2))),
             ),
         ),
     )
