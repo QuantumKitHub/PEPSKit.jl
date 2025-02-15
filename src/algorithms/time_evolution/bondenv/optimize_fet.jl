@@ -1,12 +1,12 @@
 """
-    bond_optimize(benv::BondEnv{T,S}, a::AbstractTensor{T,S,3}, b::AbstractTensor{T,S,3}, alg) where {T<:Number,S<:ElementarySpace}
+    bond_optimize(a::AbstractTensor{T,S,3}, b::AbstractTensor{T,S,3}, benv::BondEnv{T,S}, alg) where {T<:Number,S<:ElementarySpace}
 
 Truncation of the bond between `a` and `b`.
 ```
     ┌-----------------------┐
     |   ┌----┐              |
     └---|    |-- a† == b† --┘
-        |benv|   ↑     ↑   
+        |benv|   ↑     ↑
     ┌---|    |-- a === b ---┐
     |   └----┘              |
     └-----------------------┘
@@ -20,9 +20,9 @@ The index order of `a` or `b` is
 ```
 """
 function bond_optimize(
-    benv::BondEnv{T,S},
     a::AbstractTensor{T,S,3},
     b::AbstractTensor{T,S,3},
+    benv::BondEnv{T,S},
     alg::FullEnvTruncation,
 ) where {T<:Number,S<:ElementarySpace}
     # dual check of physical index

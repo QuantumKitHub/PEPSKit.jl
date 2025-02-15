@@ -190,7 +190,7 @@ Then the bond matrix `u s v†` is updated by SVD:
 The SVD result of the new bond matrix `u`, `s`, `vh`.
 """
 function fullenv_truncate(
-    benv::BondEnv{T,S}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation
+    b0::AbstractTensor{T,S,2}, benv::BondEnv{T,S}, alg::FullEnvTruncation
 ) where {T<:Number,S<:ElementarySpace}
     verbose = (alg.check_interval > 0)
     # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).

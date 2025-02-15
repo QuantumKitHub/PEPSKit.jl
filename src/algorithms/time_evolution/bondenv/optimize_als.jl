@@ -39,9 +39,9 @@ function _als_message(
 end
 
 function bond_optimize(
-    benv::BondEnv{T,S},
     a::AbstractTensor{T,S,3},
     b::AbstractTensor{T,S,3},
+    benv::BondEnv{T,S},
     alg::ALSTruncation,
 ) where {T<:Number,S<:ElementarySpace}
     # dual check of physical index
