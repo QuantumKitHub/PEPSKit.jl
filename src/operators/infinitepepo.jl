@@ -114,15 +114,8 @@ end
 function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
-<<<<<<< HEAD
-    Pspaces = Array{S,2}(undef, size(T, 1), size(T, 2))
-    for i in axes(T, 1)
-        j in axes(T, 2)
-        Pspaces[i, j] = only(domain(physicalspace(T[i, j, 1])))
-=======
     Pspaces = map(Iterators.product(axes(T, 1), axes(T, 2))) do (r, c)
         return only(domain(physicalspace(T[r, c, 1])))
->>>>>>> origin/master
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
