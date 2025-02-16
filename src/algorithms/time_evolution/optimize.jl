@@ -27,8 +27,8 @@ end
 """
     bond_optimize(a::AbstractTensor{T,S,3}, b::AbstractTensor{T,S,3}, benv::BondEnv{T,S}, alg) where {T<:Number,S<:ElementarySpace}
 
-After time-evolving the reduced tensors `a` and `b` on two sides of a bond, 
-truncate the bond dimension using the positive bond environment tensor `benv`.
+After time-evolving the reduced tensors `a` and `b` connected by a bond, 
+truncate the bond dimension using the bond environment tensor `benv`.
 ```
     ┌-----------------------┐
     |   ┌----┐              |
