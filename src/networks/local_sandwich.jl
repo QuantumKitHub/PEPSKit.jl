@@ -19,7 +19,13 @@ end # follow MPSKit convention: right vspace gets a dual by default
 
 ## PartitionFunction
 
-# TODO: anything?
+_rotl90_localsandwich(O::PFTensor) = rotl90(O)
+_rotr90_localsandwich(O::PFTensor) = rotr90(O)
+_rot180_localsandwich(O::PFTensor) = rot180(O)
+
+_add_localsandwich(O1::PFTensor, O2::PFTensor) = O1 + O2
+_subtract_localsandwich(O1::PFTensor, O2::PFTensor) = O1 - O2
+_mul_localsandwich(α::PFTensor, O::PFTensor) = α * O
 
 ## PEPS
 
