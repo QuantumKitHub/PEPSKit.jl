@@ -125,7 +125,6 @@ function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS=top)
     return InfiniteSquareNetwork(map(Tuple, zip(unitcell(top), unitcell(bot))))
 end
 
-
 function ChainRulesCore.rrule(
     ::Type{InfiniteSquareNetwork}, top::InfinitePEPS, bot::InfinitePEPS
 )
