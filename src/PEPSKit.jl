@@ -216,6 +216,7 @@ export fixedpoint
 export absorb_weight
 export su_iter, simpleupdate, SimpleUpdate
 
+export InfiniteSquareNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS
