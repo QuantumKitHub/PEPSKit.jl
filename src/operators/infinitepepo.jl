@@ -130,9 +130,9 @@ Base.length(A::InfinitePEPO) = length(unitcell(A))
 Base.eltype(::Type{InfinitePEPO{T}}) where {T} = T
 Base.eltype(A::InfinitePEPO) = eltype(typeof(A))
 
-Base.copy(A::InfinitePEPO) = InfinitePEPS(copy(unitcell(A)))
-Base.similar(A::InfinitePEPO, args...) = InfinitePEPS(similar(unitcell(A), args...))
-Base.repeat(A::InfinitePEPO, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
+Base.copy(A::InfinitePEPO) = InfinitePEPO(copy(unitcell(A)))
+Base.similar(A::InfinitePEPO, args...) = InfinitePEPO(similar(unitcell(A), args...))
+Base.repeat(A::InfinitePEPO, counts...) = InfinitePEPO(repeat(unitcell(A), counts...))
 
 Base.getindex(A::InfinitePEPO, args...) = Base.getindex(unitcell(A), args...)
 Base.setindex!(A::InfinitePEPO, args...) = (Base.setindex!(unitcell(A), args...); A)

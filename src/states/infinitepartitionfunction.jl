@@ -119,12 +119,12 @@ Base.length(A::InfinitePartitionFunction) = length(unitcell(A))
 Base.eltype(::Type{InfinitePartitionFunction{T}}) where {T} = T
 Base.eltype(A::InfinitePartitionFunction) = eltype(typeof(A))
 
-Base.copy(A::InfinitePartitionFunction) = InfinitePEPS(copy(unitcell(A)))
+Base.copy(A::InfinitePartitionFunction) = InfinitePartitionFunction(copy(unitcell(A)))
 function Base.similar(A::InfinitePartitionFunction, args...)
-    return InfinitePEPS(similar(unitcell(A), args...))
+    return InfinitePartitionFunction(similar(unitcell(A), args...))
 end
 function Base.repeat(A::InfinitePartitionFunction, counts...)
-    return InfinitePEPS(repeat(unitcell(A), counts...))
+    return InfinitePartitionFunction(repeat(unitcell(A), counts...))
 end
 
 Base.getindex(A::InfinitePartitionFunction, args...) = Base.getindex(unitcell(A), args...)
