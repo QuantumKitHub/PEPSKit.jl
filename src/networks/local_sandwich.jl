@@ -7,6 +7,7 @@
 _elementwise_dual(S::ElementarySpace) = dual(S)
 _elementwise_dual(P::ProductSpace) = ProductSpace(dual.(P)...)
 
+# route all virtualspace getters through a single method for convenience
 north_virtualspace(O, args...) = virtualspace(O, args..., NORTH)
 east_virtualspace(O, args...) = virtualspace(O, args..., EAST)
 south_virtualspace(O, args...) = virtualspace(O, args..., SOUTH)
@@ -68,32 +69,3 @@ _rot180_localsandwich(O::PEPOSandwich) = (rot180(ket(O)), rot180(bra(O)), rot180
 _add_localsandwich(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .+ O2
 _subtract_localsandwich(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .- O2
 _mul_localsandwich(α::Number, O::PEPSSandwich) = α .* O
-
-## Chainrules
-
-function ChainRulesCore.rrule(::typeof(ket), O::PEPSSandwich)
-    k = ket(O)
-    ket_pullback(Δk) = NoTangent(), (unthunk(Δk), zerovector(bra(O)))
-    return k, ket_pullback
-end
-function ChainRulesCore.rrule(::typeof(bra), O::PEPSSandwich)
-    b = bra(O)
-    bra_pullback(Δb) = NoTangent(), (zerovector(ket(O)), unthunk(Δb))
-    return b, bra_pullback
-end
-
-function ChainRulesCore.rrule(::typeof(ket), O::PEPOSandwich)
-    k = ket(O)
-    ket_pullback(Δk) = NoTangent(), (unthunk(Δk), zerovector(bra(O)), zerovector.(pepo(O)))
-    return k, ket_pullback
-end
-function ChainRulesCore.rrule(::typeof(bra), O::PEPOSandwich)
-    b = bra(O)
-    bra_pullback(Δb) = NoTangent(), (zerovector(ket(O)), unthunk(Δb), zerovector.(pepo(O)))
-    return b, bra_pullback
-end
-function ChainRulesCore.rrule(::typeof(pepo), O::PEPOSandwich)
-    p = pepo(O)
-    pepo_pullback(Δp) = NoTangent(), (zerovector(ket(O)), zerovector(bra(O)), unthunk(Δp))
-    return p, pepo_pullback
-end

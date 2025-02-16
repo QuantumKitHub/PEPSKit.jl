@@ -73,8 +73,8 @@ end
     f = abs(prod(expectation_value(mps, T)))
 
     # double-layer PEPO
-    O = ising_pepo(1; unitcell=(1, 1, 2))
-    psi = initializePEPS(O, ComplexSpace(2))
+    O2 = repeat(O, 1, 1, 2)
+    psi2 = initializePEPS(O, ComplexSpace(2))
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
     mps = PEPSKit.initializeMPS(T, [ComplexSpace(8)])

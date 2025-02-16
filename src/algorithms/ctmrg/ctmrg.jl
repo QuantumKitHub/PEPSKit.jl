@@ -29,14 +29,6 @@ Different levels of output information are printed depending on `alg.verbosity`,
 suppresses all output, `1` only prints warnings, `2` gives information at the start and
 end, and `3` prints information every iteration.
 """
-function MPSKit.leading_boundary(network, alg::CTMRGAlgorithm)
-    return MPSKit.leading_boundary(
-        CTMRGEnv(network, oneunit(spacetype(network))), network, alg
-    )
-end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
-    return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
-end
 function MPSKit.leading_boundary(
     envinit, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
 )
@@ -67,6 +59,15 @@ function MPSKit.leading_boundary(
         return env, info
     end
 end
+function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
+    return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
+end
+# TODO: remove?
+# function MPSKit.leading_boundary(network, alg::CTMRGAlgorithm)
+#     return MPSKit.leading_boundary(
+#         CTMRGEnv(network, oneunit(spacetype(network))), network, alg
+#     )
+# end
 
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env)
