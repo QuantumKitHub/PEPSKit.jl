@@ -166,20 +166,12 @@ end
 # AbstractTensorMap subtyping and IterSVD compatibility
 # -----------------------------------------------------
 
-function _domain_space(A, n::Int)
-    return virtualspace(A, n)
-end
-
-function _codomain_space(A, n::Int)
-    return _elementwise_dual(virtualspace(A, n))
-end
-
 function TensorKit.domain(env::HalfInfiniteEnv)
-    return domain(env.E_4) * _domain_space(env.A_2, 3)
+    return domain(env.E_4) * _elementwise_dual(south_virtualspace(env.A_2))
 end
 
 function TensorKit.codomain(env::HalfInfiniteEnv)
-    return codomain(env.E_1)[1] * _codomain_space(env.A_1, 3)
+    return first(codomain(env.E_1)) * south_virtualspace(env.A_1)
 end
 
 function random_start_vector(env::HalfInfiniteEnv)
@@ -323,11 +315,11 @@ end
 
 # AbstractTensorMap subtyping and IterSVD compatibility
 function TensorKit.domain(env::FullInfiniteEnv)
-    return domain(env.E_8) * _domain_space(env.A_4, 3)
+    return domain(env.E_8) * _elementwise_dual(north_virtualspace(env.A_4))
 end
 
 function TensorKit.codomain(env::FullInfiniteEnv)
-    return codomain(env.E_1)[1] * _codomain_space(env.A_1, 3)
+    return first(codomain(env.E_1)) * south_virtualspace(env.A_1)
 end
 
 function random_start_vector(env::FullInfiniteEnv)
