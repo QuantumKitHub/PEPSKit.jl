@@ -11,9 +11,7 @@ abstract type CTMRGAlgorithm end
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(state, env, alg::CTMRGAlgorithm)
-    return ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
-end
+function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
 
 """
     MPSKit.leading_boundary([envinit], state, alg::CTMRGAlgorithm)

@@ -31,7 +31,7 @@ function SequentialCTMRG(;
 end
 
 function ctmrg_iteration(
-    network::InfiniteSquareNetwork, env::CTMRGEnv, alg::SequentialCTMRG
+    network, env::CTMRGEnv, alg::SequentialCTMRG
 )
     truncation_error = zero(real(scalartype(network)))
     condition_number = zero(real(scalartype(network)))
@@ -50,14 +50,14 @@ function ctmrg_iteration(
 end
 
 """
-    sequential_projectors(col::Int, network::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm)
+    sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     sequential_projectors(coordinate::NTuple{3,Int}, network::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm)
 
 Compute CTMRG projectors in the `:sequential` scheme either for an entire column `col` or
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
 """
 function sequential_projectors(
-    col::Int, network::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm
+    col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm
 )
     coordinates = eachcoordinate(env)[:, col]
     proj_and_info = dtmap(coordinates) do (r, c)
@@ -71,7 +71,7 @@ function sequential_projectors(
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
-    network::InfiniteSquareNetwork,
+    network,
     env::CTMRGEnv,
     alg::HalfInfiniteProjector,
 )
@@ -83,7 +83,7 @@ function sequential_projectors(
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int},
-    network::InfiniteSquareNetwork,
+    network,
     env::CTMRGEnv,
     alg::FullInfiniteProjector,
 )
