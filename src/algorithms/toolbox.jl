@@ -53,23 +53,23 @@ function cost_function(peps::InfinitePEPS, env::CTMRGEnv, O::LocalOperator)
 end
 
 function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
-    return value(InfiniteSquareNetwork(peps), env)
+    return network_value(InfiniteSquareNetwork(peps), env)
 end
 
 """
-    value(network::InfiniteSquareNetwork, env::CTMRGEnv)
+    network_value(network::InfiniteSquareNetwork, env::CTMRGEnv)
 
 Return the value (per unit cell) of a given contractible network contracted using a given
 CTMRG environment.
 """
-function value(network::InfiniteSquareNetwork, env::CTMRGEnv)
+function network_value(network::InfiniteSquareNetwork, env::CTMRGEnv)
     return prod(Iterators.product(axes(network)...)) do (r, c)
         return _contract_site((r, c), network, env) * _contract_corners((r, c), env) /
                _contract_vertical_edges((r, c), env) /
                _contract_horizontal_edges((r, c), env)
     end
 end
-value(state, env::CTMRGEnv) = value(InfiniteSquareNetwork(state), env)
+network_value(state, env::CTMRGEnv) = network_value(InfiniteSquareNetwork(state), env)
 
 """
     _contract_site(ind::Tuple{Int,Int}, network::InfiniteSquareNetwork, env::CTMRGEnv)

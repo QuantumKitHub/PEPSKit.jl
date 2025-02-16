@@ -209,7 +209,7 @@ export SVDAdjoint, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator
-export expectation_value, cost_function, product_peps, correlation_length
+export expectation_value, cost_function, product_peps, correlation_length, network_value
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
