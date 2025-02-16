@@ -63,16 +63,16 @@ end
 
 ## Math (for Zygote accumulation)
 function Base.:+(A₁::NWType, A₂::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(unitcell(A₁) .+ unitcell(A₂))
+    return NWType(_add_localsandwich.(unitcell(A₁), unitcell(A₂)))
 end
 function Base.:-(A₁::NWType, A₂::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(unitcell(A₁) .- unitcell(A₂))
+    return NWType(_subtract_localsandwich.(unitcell(A₁), unitcell(A₂)))
 end
 function Base.:*(α::Number, A::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(α .* unitcell(A))
+    return NWType(_mul_localsandwich.(Ref(α), unitcell(A)))
 end
 function Base.:/(A::NWType, α::Number) where {NWType<:InfiniteSquareNetwork}
-    return NWType(unitcell(A) ./ α)
+    return NWType(_mul_localsandwich.(Ref(1 / α), unitcell(A)))
 end
 function LinearAlgebra.dot(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
     return dot(unitcell(A₁), unitcell(A₂))
@@ -93,13 +93,13 @@ end
 
 ## Rotations
 function Base.rotl90(n::InfiniteSquareNetwork)
-    return InfiniteSquareNetwork(rotl90(rotl90.(unitcell(n))))
+    return InfiniteSquareNetwork(rotl90(_rotl90_localsandwich.(unitcell(n))))
 end
 function Base.rotr90(n::InfiniteSquareNetwork)
-    return InfiniteSquareNetwork(rotr90(rotr90.(unitcell(n))))
+    return InfiniteSquareNetwork(rotr90(_rotr90_localsandwich.(unitcell(n))))
 end
 function Base.rot180(n::InfiniteSquareNetwork)
-    return InfiniteSquareNetwork(rot180(rot180.(unitcell(n))))
+    return InfiniteSquareNetwork(rot180(_rot180_localsandwich.(unitcell(n))))
 end
 
 ## Chainrules

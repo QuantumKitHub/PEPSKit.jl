@@ -32,9 +32,9 @@ function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
 
-Base.rotl90(O::PEPSSandwich) = rotl90.(O)
-Base.rotr90(O::PEPSSandwich) = rotr90.(O)
-Base.rot180(O::PEPSSandwich) = rot180.(O)
+_rotl90_localsandwich(O::PEPSSandwich) = rotl90.(O)
+_rotr90_localsandwich(O::PEPSSandwich) = rotr90.(O)
+_rot180_localsandwich(O::PEPSSandwich) = rot180.(O)
 
 ## PEPO
 
@@ -53,17 +53,15 @@ function virtualspace(O::PEPOSandwich, dir)
     ])
 end
 
-Base.rotl90(O::PEPOSandwich) = (rotl90(ket(O)), rotl90(bra(O)), rotl90.(pepo(O)))
-Base.rotr90(O::PEPOSandwich) = (rotr90(ket(O)), rotr90(bra(O)), rotr90.(pepo(O)))
-Base.rot180(O::PEPOSandwich) = (rot180(ket(O)), rot180(bra(O)), rot180.(pepo(O)))
+_rotl90_localsandwich(O::PEPOSandwich) = (rotl90(ket(O)), rotl90(bra(O)), rotl90.(pepo(O)))
+_rotr90_localsandwich(O::PEPOSandwich) = (rotr90(ket(O)), rotr90(bra(O)), rotr90.(pepo(O)))
+_rot180_localsandwich(O::PEPOSandwich) = (rot180(ket(O)), rot180(bra(O)), rot180.(pepo(O)))
 
 ## Math (for Zygote accumulation)
 
-Base.:+(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .+ O2
-Base.:-(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .- O2
-Base.:*(α::Number, O::PEPSSandwich) = α .* O
-Base.similar(O::PEPSSandwich) = similar.(O)
-Base.:/(O::PEPSSandwich, α::Number) = O ./ α
+_add_localsandwich(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .+ O2
+_subtract_localsandwich(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .- O2
+_mul_localsandwich(α::Number, O::PEPSSandwich) = α .* O
 
 ## Chainrules
 
