@@ -154,6 +154,7 @@ end
 VectorInterface.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A)))
 
 ## Math
+
 function Base.:+(A₁::InfinitePEPS{T}, A₂::InfinitePEPS{T}) where {T}
     return InfinitePEPS(unitcell(A₁) + unitcell(A₂))
 end
@@ -196,7 +197,7 @@ end
 
 ## FiniteDifferences vectorization
 
-function FiniteDifferences.to_vec(A::NWType) where {NWType<:InfiniteGridNetwork}
+function FiniteDifferences.to_vec(A::InfinitePEPS)
     vec, back = FiniteDifferences.to_vec(unitcell(A))
     function state_from_vec(vec)
         return NWType(back(vec))
