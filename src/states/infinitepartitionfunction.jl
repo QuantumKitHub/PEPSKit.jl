@@ -28,6 +28,10 @@ const InfinitePF{T} = InfinitePartitionFunction{T}
 
 unitcell(t::InfinitePartitionFunction) = t.A
 
+## Spaces
+
+virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+
 ## Constructors
 
 """

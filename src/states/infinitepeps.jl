@@ -24,6 +24,11 @@ end
 
 unitcell(t::InfinitePEPS) = t.A
 
+## Spaces
+
+virtualspace(n::InfinitePEPS, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
+
 ## Constructors
 
 const ElementarySpaceLike = Union{Int,ElementarySpace}

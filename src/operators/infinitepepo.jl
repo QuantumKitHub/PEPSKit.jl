@@ -9,15 +9,19 @@ struct InfinitePEPO{T<:PEPOTensor} <: InfiniteGridNetwork{T,3}
     function InfinitePEPO(A::Array{T,3}) where {T<:PEPOTensor}
         # space checks
         for (d, w, h) in Tuple.(CartesianIndices(A))
-            only(codomain(physicalspace(A[d, w, h]))) ==
-            only(domain(physicalspace(A[d, w, _next(h, end)]))) ||
+            codomain_physicalspace(A[d, w, h]) ==
+            domain_physicalspace(A[d, w, _next(h, end)]) ||
                 throw(SpaceMismatch("Physical space at site $((d, w, h)) does not match."))
-            space(A[d, w, h], 3) == space(A[_prev(d, end), w, h], 5)' || throw(
-                SpaceMismatch("North virtual space at site $((d, w, h)) does not match."),
-            )
-            space(A[d, w, h], 4) == space(A[d, _next(w, end), h], 6)' || throw(
-                SpaceMismatch("East virtual space at site $((d, w, h)) does not match.")
-            )
+            north_virtualspace(A[d, w, h]) == south_virtualspace(A[_prev(d, end), w, h])' ||
+                throw(
+                    SpaceMismatch(
+                        "North virtual space at site $((d, w, h)) does not match."
+                    ),
+                )
+            east_virtualspace(A[d, w, h]) == west_virtualspace(A[d, _next(w, end), h])' ||
+                throw(
+                    SpaceMismatch("East virtual space at site $((d, w, h)) does not match.")
+                )
         end
         return new{T}(A)
     end
@@ -26,6 +30,17 @@ end
 ## InfiniteGridNetwork interface
 
 unitcell(T::InfinitePEPO) = T.A
+
+## Spaces
+
+virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) = virtualspace(T[r, c, h], dir)
+domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r, c, 1])
+function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    return codomain_physicalspace(T[r, c, end])
+end
+function physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    return codomain_physicalspace(T, r, c) ← domain_physicalspace(T, r, c)
+end
 
 ## Constructors
 
@@ -115,7 +130,7 @@ function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
     Pspaces = map(Iterators.product(axes(T, 1), axes(T, 2))) do (r, c)
-        return only(domain(physicalspace(T[r, c, 1])))
+        return domain_physicalspace(T, r, c)
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))

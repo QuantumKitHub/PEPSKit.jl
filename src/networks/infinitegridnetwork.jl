@@ -38,14 +38,6 @@ function eachcoordinate(A::InfiniteGridNetwork, dirs)
     return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
 end
 
-## Spaces
-virtualspace(n::InfiniteGridNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
-physicalspace(n::InfiniteGridNetwork, r::Int, c::Int) = physicalspace(n[r, c])
-function virtualspace(n::InfiniteGridNetwork, r::Int, c::Int, h::Int, dir)
-    return virtualspace(n[r, c, h], dir)
-end
-physicalspace(n::InfiniteGridNetwork, r::Int, c::Int, h::Int) = physicalspace(n[r, c, h])
-
 ## Vector interface
 function VectorInterface.scalartype(::Type{NWType}) where {NWType<:InfiniteGridNetwork}
     return scalartype(eltype(NWType))
