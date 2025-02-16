@@ -30,9 +30,7 @@ function SimultaneousCTMRG(;
     )
 end
 
-function ctmrg_iteration(
-    network, env::CTMRGEnv, alg::SimultaneousCTMRG
-)
+function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners = dtmap(eachcoordinate(network, 1:4)) do idx
         return TensorMap(EnlargedCorner(network, env, idx), idx[1])
     end  # expand environment

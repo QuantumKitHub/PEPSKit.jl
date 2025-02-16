@@ -156,7 +156,11 @@ function _rrule(
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        f(A, x) = fix_global_phases(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1])
+        function f(A, x)
+            return fix_global_phases(
+                x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
+            )
+        end
         _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
 
         # evaluate the geometric sum
