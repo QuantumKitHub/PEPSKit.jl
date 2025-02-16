@@ -6,8 +6,9 @@ Contractible square network. Wraps a matrix of 'rank-4-tensor-like' objects.
 struct InfiniteSquareNetwork{O}
     A::Matrix{O}
     InfiniteSquareNetwork{O}(A::Matrix{O}) where {O} = new{O}(A)
-    function InfiniteSquareNetwork(A::Array{O,2}) where {O}
-        for (d, w) in Tuple.(CartesianIndices(A))
+    function InfiniteSquareNetwork(A::Matrix)
+        for I in eachindex(IndexCartesian(), A)
+            d, w = Tuple(I)
             north_virtualspace(A[d, w]) ==
             _elementwise_dual(south_virtualspace(A[_prev(d, end), w])) || throw(
                 SpaceMismatch("North virtual space at site $((d, w)) does not match.")
@@ -16,7 +17,7 @@ struct InfiniteSquareNetwork{O}
             _elementwise_dual(west_virtualspace(A[d, _next(w, end)])) ||
                 throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
         end
-        return new{O}(A)
+        return InfiniteSquareNetwork{eltype(A)}(A)
     end
 end
 
@@ -25,7 +26,7 @@ unitcell(n::InfiniteSquareNetwork) = n.A
 Base.size(n::InfiniteSquareNetwork, args...) = size(unitcell(n), args...)
 Base.length(n::InfiniteSquareNetwork) = length(unitcell(n))
 Base.eltype(n::InfiniteSquareNetwork) = eltype(typeof(n))
-Base.eltype(::Type{<:InfiniteSquareNetwork{O}}) where {O} = O
+Base.eltype(::Type{InfiniteSquareNetwork{O}}) where {O} = O
 
 ## Copy
 Base.copy(n::InfiniteSquareNetwork) = InfiniteSquareNetwork(copy(unitcell(n)))
@@ -126,15 +127,15 @@ function ChainRulesCore.rrule(
     network = NWType(A)
     function InfiniteSquareNetwork_pullback(Δnetwork)
         Δnetwork = unthunk(Δnetwork)
-        return NoTangent(), unnitcell(Δnetwork)
+        return NoTangent(), unitcell(Δnetwork)
     end
     return network, InfiniteSquareNetwork_pullback
 end
 
 function ChainRulesCore.rrule(::typeof(rotl90), network::InfiniteSquareNetwork)
     network´ = rotl90(network)
-    function rotl90_pullback(Δnetwork)
-        Δnetwork = unthunk(Δnetwork)
+    function rotl90_pullback(Δnetwork_)
+        Δnetwork = unthunk(Δnetwork_)
         return NoTangent(), rotr90(Δnetwork)
     end
     return network´, rotl90_pullback

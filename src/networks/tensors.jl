@@ -27,7 +27,7 @@ Base.rotr90(t::PFTensor) = permute(t, ((2, 4), (1, 3)))
 Base.rot180(t::PFTensor) = permute(t, ((4, 3), (2, 1)))
 
 function virtualspace(t::PFTensor, dir)
-    invp = [3, 4, 2, 1] # internally, virtual directions are ordered as N, E, S, W...
+    invp = (3, 4, 2, 1) # internally, virtual directions are ordered as N, E, S, W...
     return space(t, invp[dir])
 end
 

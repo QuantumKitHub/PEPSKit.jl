@@ -119,13 +119,12 @@ end
 
 ## InfiniteSquareNetwork interface
 
-function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS)
+function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS=top)
     size(top) == size(bot) ||
         throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
     return InfiniteSquareNetwork(map(Tuple, zip(unitcell(top), unitcell(bot))))
 end
 
-InfiniteSquareNetwork(top::InfinitePEPS) = InfiniteSquareNetwork(top, top)
 
 function ChainRulesCore.rrule(
     ::Type{InfiniteSquareNetwork}, top::InfinitePEPS, bot::InfinitePEPS

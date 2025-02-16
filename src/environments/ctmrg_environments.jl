@@ -42,7 +42,7 @@ _spacetype(s::ProductSpaceLike) = _spacetype(first(s))
 
 _to_space(χ::Int) = ℂ^χ
 _to_space(χ::ElementarySpace) = χ
-_to_space(χ::ProductSpaceLike) = prod(_to_space.(χ))
+_to_space(χ::ProductSpaceLike) = prod(_to_space, χ)
 
 function _corner_tensor(
     f, ::Type{T}, left_vspace::S, right_vspace::S=left_vspace
