@@ -40,7 +40,7 @@ end
 ## Indexing
 Base.getindex(n::InfiniteSquareNetwork, args...) = Base.getindex(unitcell(n), args...)
 function Base.setindex!(n::InfiniteSquareNetwork, args...)
-    (Base.setindex!(unitcell(n), args...); n)
+    return (Base.setindex!(unitcell(n), args...); n)
 end
 Base.axes(n::InfiniteSquareNetwork, args...) = axes(unitcell(n), args...)
 eachcoordinate(n::InfiniteSquareNetwork) = collect(Iterators.product(axes(n)...))
