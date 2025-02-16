@@ -69,7 +69,9 @@ function MPSKit.leading_boundary(
 end
 
 # custom CTMRG logging
-ctmrg_loginit!(log, η, network, env) = @infov 2 loginit!(log, η, network_value(network, env))
+function ctmrg_loginit!(log, η, network, env)
+    @infov 2 loginit!(log, η, network_value(network, env))
+end
 function ctmrg_logiter!(log, iter, η, network, env)
     @infov 3 logiter!(log, iter, η, network_value(network, env))
 end
