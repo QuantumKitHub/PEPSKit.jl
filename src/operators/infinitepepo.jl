@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
 """
-struct InfinitePEPO{T<:PEPOTensor} <: InfiniteGridNetwork{T,3}
+struct InfinitePEPO{T<:PEPOTensor}
     A::Array{T,3}
 
     function InfinitePEPO(A::Array{T,3}) where {T<:PEPOTensor}
@@ -25,21 +25,6 @@ struct InfinitePEPO{T<:PEPOTensor} <: InfiniteGridNetwork{T,3}
         end
         return new{T}(A)
     end
-end
-
-## InfiniteGridNetwork interface
-
-unitcell(T::InfinitePEPO) = T.A
-
-## Spaces
-
-virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) = virtualspace(T[r, c, h], dir)
-domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r, c, 1])
-function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
-    return codomain_physicalspace(T[r, c, end])
-end
-function physicalspace(T::InfinitePEPO, r::Int, c::Int)
-    return codomain_physicalspace(T, r, c) ← domain_physicalspace(T, r, c)
 end
 
 ## Constructors
@@ -137,9 +122,40 @@ function initializePEPS(
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
 end
 
+## Unit cell interface
+
+unitcell(t::InfinitePEPO) = t.A
+Base.size(A::InfinitePEPO, args...) = size(unitcell(A), args...)
+Base.length(A::InfinitePEPO) = length(unitcell(A))
+Base.eltype(::Type{InfinitePEPO{T}}) where {T} = T
+Base.eltype(A::InfinitePEPO) = eltype(typeof(A))
+
+Base.copy(A::InfinitePEPO) = InfinitePEPS(copy(unitcell(A)))
+Base.similar(A::InfinitePEPO, args...) = InfinitePEPS(similar(unitcell(A), args...))
+Base.repeat(A::InfinitePEPO, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
+
+Base.getindex(A::InfinitePEPO, args...) = Base.getindex(unitcell(A), args...)
+Base.setindex!(A::InfinitePEPO, args...) = (Base.setindex!(unitcell(A), args...); A)
+Base.axes(A::InfinitePEPO, args...) = axes(unitcell(A), args...)
+eachcoordinate(A::InfinitePEPO) = collect(Iterators.product(axes(A)...))
+function eachcoordinate(A::InfinitePEPO, dirs)
+    return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
+end
+
+## Spaces
+
+virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) = virtualspace(T[r, c, h], dir)
+domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r, c, 1])
+function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    return codomain_physicalspace(T[r, c, end])
+end
+function physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    return codomain_physicalspace(T, r, c) ← domain_physicalspace(T, r, c)
+end
+
 ## InfiniteSquareNetwork interface
 
-function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::InfinitePEPS)
+function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::InfinitePEPS=top)
     size(top) == size(bot) == size(mid)[1:2] || throw(
         ArgumentError("Top PEPS, bottom PEPS and PEPO layers should have equal sizes")
     )
@@ -155,9 +171,25 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
     )
 end
 
-function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO)
-    return InfiniteSquareNetwork(top, mid, top)
+## (Approximate) equality
+function Base.:(==)(A₁::InfinitePEPO, A₂::InfinitePEPO)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return p₁ == p₂
+    end
 end
+function Base.isapprox(A₁::InfinitePEPO, A₂::InfinitePEPO; kwargs...)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return isapprox(p₁, p₂; kwargs...)
+    end
+end
+
+## Rotations
+
+Base.rotl90(A::InfinitePEPO) = InfinitePEPO(stack(rotl90, eachslice(unitcell(A); dims=3)))
+Base.rotr90(A::InfinitePEPO) = InfinitePEPO(stack(rotr90, eachslice(unitcell(A); dims=3)))
+Base.rot180(A::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(unitcell(A); dims=3)))
+
+## Chainrules
 
 function ChainRulesCore.rrule(
     ::Type{InfiniteSquareNetwork},

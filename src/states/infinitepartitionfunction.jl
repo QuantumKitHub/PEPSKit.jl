@@ -3,7 +3,7 @@
 
 Represents an infinite partition function on a 2D square lattice.
 """
-struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: InfiniteGridNetwork{T,2}
+struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
     A::Matrix{T}
     function InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunctionTensor}
         return new{T}(A)
@@ -23,14 +23,6 @@ struct InfinitePartitionFunction{T<:PartitionFunctionTensor} <: InfiniteGridNetw
 end
 
 const InfinitePF{T} = InfinitePartitionFunction{T}
-
-## InfiniteGridNetwork interface
-
-unitcell(t::InfinitePartitionFunction) = t.A
-
-## Spaces
-
-virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## Constructors
 
@@ -119,21 +111,64 @@ function InfinitePartitionFunction(
     return InfinitePartitionFunction(f, T, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
+## Unit cell interface
+
+unitcell(t::InfinitePartitionFunction) = t.A
+Base.size(A::InfinitePartitionFunction, args...) = size(unitcell(A), args...)
+Base.length(A::InfinitePartitionFunction) = length(unitcell(A))
+Base.eltype(::Type{InfinitePartitionFunction{T}}) where {T} = T
+Base.eltype(A::InfinitePartitionFunction) = eltype(typeof(A))
+
+Base.copy(A::InfinitePartitionFunction) = InfinitePEPS(copy(unitcell(A)))
+function Base.similar(A::InfinitePartitionFunction, args...)
+    return InfinitePEPS(similar(unitcell(A), args...))
+end
+function Base.repeat(A::InfinitePartitionFunction, counts...)
+    return InfinitePEPS(repeat(unitcell(A), counts...))
+end
+
+Base.getindex(A::InfinitePartitionFunction, args...) = Base.getindex(unitcell(A), args...)
+function Base.setindex!(A::InfinitePartitionFunction, args...)
+    return (Base.setindex!(unitcell(A), args...); A)
+end
+Base.axes(A::InfinitePartitionFunction, args...) = axes(unitcell(A), args...)
+eachcoordinate(A::InfinitePartitionFunction) = collect(Iterators.product(axes(A)...))
+function eachcoordinate(A::InfinitePartitionFunction, dirs)
+    return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
+end
+
+## Spaces
+
+virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+
 ## InfiniteSquareNetwork interface
 
 function InfiniteSquareNetwork(state::InfinitePartitionFunction)
     return InfiniteSquareNetwork(unitcell(state))
 end
 
-function ChainRulesCore.rrule(
-    ::Type{InfiniteSquareNetwork}, state::InfinitePartitionFunction
-)
-    network = InfiniteSquareNetwork(state)
-
-    function InfiniteSquareNetwork_pullback(Δnetwork_)
-        Δnetwork = unthunk(Δnetwork_)
-        Δstate = InfinitePartitionFunction(unitcell(Δnetwork))
-        return NoTangent(), Δstate
+## (Approximate) equality
+function Base.:(==)(A₁::InfinitePartitionFunction, A₂::InfinitePartitionFunction)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return p₁ == p₂
     end
-    return network, InfiniteSquareNetwork_pullback
+end
+function Base.isapprox(
+    A₁::InfinitePartitionFunction, A₂::InfinitePartitionFunction; kwargs...
+)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return isapprox(p₁, p₂; kwargs...)
+    end
+end
+
+## Rotations
+
+function Base.rotl90(A::InfinitePartitionFunction)
+    return InfinitePartitionFunction(rotl90(rotl90.(unitcell(A))))
+end
+function Base.rotr90(A::InfinitePartitionFunction)
+    return InfinitePartitionFunction(rotr90(rotr90.(unitcell(A))))
+end
+function Base.rot180(A::InfinitePartitionFunction)
+    return InfinitePartitionFunction(rot180(rot180.(unitcell(A))))
 end

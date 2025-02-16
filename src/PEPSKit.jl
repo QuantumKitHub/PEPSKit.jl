@@ -25,7 +25,6 @@ include("utility/autoopt.jl")
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
-include("networks/infinitegridnetwork.jl")
 
 include("states/infinitepeps.jl")
 include("states/infiniteweightpeps.jl")

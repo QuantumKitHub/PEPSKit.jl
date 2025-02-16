@@ -3,7 +3,7 @@
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 """
-struct InfinitePEPS{T<:PEPSTensor} <: InfiniteGridNetwork{T,2}
+struct InfinitePEPS{T<:PEPSTensor}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
@@ -19,15 +19,6 @@ struct InfinitePEPS{T<:PEPSTensor} <: InfiniteGridNetwork{T,2}
         return new{T}(A)
     end
 end
-
-## InfiniteGridNetwork interface
-
-unitcell(t::InfinitePEPS) = t.A
-
-## Spaces
-
-virtualspace(n::InfinitePEPS, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
-physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
 
 ## Constructors
 
@@ -122,12 +113,127 @@ function InfinitePEPS(
     )
 end
 
+## Unit cell interface
+
+unitcell(t::InfinitePEPS) = t.A
+Base.size(A::InfinitePEPS, args...) = size(unitcell(A), args...)
+Base.length(A::InfinitePEPS) = length(unitcell(A))
+Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
+Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
+
+Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
+Base.similar(A::InfinitePEPS, args...) = InfinitePEPS(similar(unitcell(A), args...))
+Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
+
+Base.getindex(A::InfinitePEPS, args...) = Base.getindex(unitcell(A), args...)
+Base.setindex!(A::InfinitePEPS, args...) = (Base.setindex!(unitcell(A), args...); A)
+Base.axes(A::InfinitePEPS, args...) = axes(unitcell(A), args...)
+eachcoordinate(A::InfinitePEPS) = collect(Iterators.product(axes(A)...))
+function eachcoordinate(A::InfinitePEPS, dirs)
+    return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
+end
+
+## Spaces
+
+virtualspace(n::InfinitePEPS, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
+
 ## InfiniteSquareNetwork interface
 
 function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS=top)
     size(top) == size(bot) ||
         throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
     return InfiniteSquareNetwork(map(Tuple, zip(unitcell(top), unitcell(bot))))
+end
+
+## Vector interface
+
+function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPS}
+    return scalartype(eltype(NT))
+end
+VectorInterface.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A)))
+
+## Math
+function Base.:+(A₁::InfinitePEPS{T}, A₂::InfinitePEPS{T}) where {T}
+    return InfinitePEPS(unitcell(A₁) + unitcell(A₂))
+end
+function Base.:-(A₁::InfinitePEPS{T}, A₂::InfinitePEPS{T}) where {T}
+    return InfinitePEPS(unitcell(A₁) - unitcell(A₂))
+end
+Base.:*(α::Number, A::InfinitePEPS) = InfinitePEPS(α * unitcell(A))
+Base.:/(A::InfinitePEPS, α::Number) = InfinitePEPS(unitcell(A) / α)
+LinearAlgebra.dot(A₁::InfinitePEPS, A₂::InfinitePEPS) = dot(unitcell(A₁), unitcell(A₂))
+LinearAlgebra.norm(A::InfinitePEPS) = norm(unitcell(A))
+
+## (Approximate) equality
+function Base.:(==)(A₁::InfinitePEPS, A₂::InfinitePEPS)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return p₁ == p₂
+    end
+end
+function Base.isapprox(A₁::InfinitePEPS, A₂::InfinitePEPS; kwargs...)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return isapprox(p₁, p₂; kwargs...)
+    end
+end
+
+## Rotations
+
+Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
+Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))
+Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
+
+## OptimKit optimization compatibility
+
+function LinearAlgebra.rmul!(A::InfinitePEPS, α::Number) # Used in _scale during OptimKit.optimize
+    rmul!.(unitcell(A), α)
+    return A
+end
+function LinearAlgebra.axpy!(α::Number, A₁::InfinitePEPS, A₂::InfinitePEPS) # Used in _add during OptimKit.optimize
+    axpy!.(α, unitcell(A₁), unitcell(A₂))
+    return A₂
+end
+
+## FiniteDifferences vectorization
+
+function FiniteDifferences.to_vec(A::NWType) where {NWType<:InfiniteGridNetwork}
+    vec, back = FiniteDifferences.to_vec(unitcell(A))
+    function state_from_vec(vec)
+        return NWType(back(vec))
+    end
+    return vec, state_from_vec
+end
+
+## Chainrules
+
+function ChainRulesCore.rrule(::Type{InfinitePEPS}, A::Matrix{<:PEPSTensor})
+    network = InfinitePEPS(A)
+    function InfinitePEPS_pullback(Δnetwork)
+        Δnetwork = unthunk(Δnetwork)
+        return NoTangent(), unnitcell(Δnetwork)
+    end
+    return network, InfinitePEPS_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(Base.getindex), network::InfinitePEPS, args...)
+    tensor = network[args...]
+
+    function getindex_pullback(Δtensor_)
+        Δtensor = unthunk(Δtensor_)
+        Δnetwork = zerovector(network)
+        Δnetwork[args...] = Δtensor
+        return NoTangent(), Δnetwork, NoTangent(), NoTangent()
+    end
+    return tensor, getindex_pullback
+end
+
+function ChainRulesCore.rrule(::typeof(Base.getproperty), state::InfinitePEPS, f::Symbol)
+    if f === :A
+        get_A_pullback(ΔA) = NoTangent(), InfinitePEPS(unthunk(ΔA)), NoTangent()
+        return state.A, get_A_pullback
+    else
+        throw(ArgumentError("Invalid property $f"))
+    end
 end
 
 function ChainRulesCore.rrule(
