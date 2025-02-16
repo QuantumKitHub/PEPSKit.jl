@@ -196,8 +196,8 @@ function fullenv_truncate(
     # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
     @assert codomain(benv) == domain(benv)
     time00 = time()
-    # initialize u, s, vh with (almost) untruncated SVD
-    u, s, vh = tsvd(b0, ((1,), (2,)); trunc=truncerr(1e-14))
+    # initialize u, s, vh with truncated SVD
+    u, s, vh = tsvd(b0, ((1,), (2,)); trunc=alg.trscheme)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
     s0 = deepcopy(s)
@@ -234,7 +234,7 @@ function fullenv_truncate(
         converge = (Δfid < alg.tol)
         cancel = (iter == alg.maxiter)
         showinfo =
-            verbose && (converge || cancel || iter == 1 || iter % alg.check_interval == 0)
+            cancel || (verbose && (converge || iter == 1 || iter % alg.check_interval == 0))
         if showinfo
             message = _fet_message(
                 iter, fid, Δfid, Δs, time1 - ((cancel || converge) ? time00 : time0)

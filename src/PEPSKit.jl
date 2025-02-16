@@ -52,8 +52,7 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/time_evolution/evoltools.jl")
-include("algorithms/time_evolution/bondenv/optimize_fet.jl")
-include("algorithms/time_evolution/bondenv/optimize_als.jl")
+include("algorithms/time_evolution/bondenv/optimize.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")

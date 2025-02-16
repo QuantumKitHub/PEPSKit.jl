@@ -1,3 +1,8 @@
+#= 
+In the following, the names `Ra`, `Sa` etc comes from 
+the fast full update article Physical Review B 92, 035142 (2015)
+=#
+
 """
 Construct the tensor
 ```
@@ -153,4 +158,18 @@ function cost_function_als(
     t2 = inner_prod(benv, aR2bL2, aR2bL2)
     t3 = inner_prod(benv, aR1bL1, aR2bL2)
     return real(t1) + real(t2) - 2 * real(t3)
+end
+
+"""
+Solve the equations
+```
+    Ra a = Sa, Rb b = Sb
+```
+"""
+function _solve_ab(
+    tR::AbstractTensorMap{T,S,2,2}, tS::AbstractTensor{T,S,3}, ab0::AbstractTensor{T,S,3}
+) where {T<:Number,S<:ElementarySpace}
+    f(x) = (@tensor tS2[:] := tR[-1 -2 1 2] * x[1 2 -3])
+    ab, info = linsolve(f, tS, permute(ab0, (1, 3, 2)), 0, 1)
+    return permute(ab, (1, 3, 2)), info
 end
