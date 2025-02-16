@@ -111,10 +111,8 @@ TensorKit.space(T::InfinitePEPO, i, j) = space(T[i, j, end], 1)
 function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
-    Pspaces = Array{S,2}(undef, size(T, 1), size(T, 2))
-    for i in axes(T, 1)
-        j in axes(T, 2)
-        Pspaces[i, j] = space(T, i, j)
+    Pspaces = map(Iterators.product(axes(T, 1), axes(T, 2))) do (r, c)
+        return space(T, r, c)
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
