@@ -58,7 +58,7 @@ function MPSKit.leading_boundary(state::InfiniteSquareNetwork; kwargs...)
     )
 end
 function MPSKit.leading_boundary(env₀, state::InfiniteSquareNetwork; kwargs...)
-    alg = select_leading_boundary_algorithm(leading_boundary, env₀; kwargs...)
+    alg = select_algorithm(leading_boundary, env₀; kwargs...)
     return MPSKit.leading_boundary(env₀, state, alg)
 end
 function MPSKit.leading_boundary(state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
