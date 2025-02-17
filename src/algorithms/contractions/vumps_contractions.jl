@@ -46,7 +46,7 @@ end
     @assert H == N - 3
 
     GL´_e = _pepo_edge_expr(:GL´, :SE, :NE, :E, H)
-    GL_e = _pepo_edge_expr(:GL, :SW, NW, :W, H)
+    GL_e = _pepo_edge_expr(:GL, :SW, :NW, :W, H)
     A_e = _pepo_edge_expr(:A, :NW, :NE, :N, H)
     Ā_e = _pepo_edge_expr(:Ā, :SW, :SE, :S, H)
     ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
