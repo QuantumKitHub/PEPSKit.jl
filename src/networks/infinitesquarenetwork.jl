@@ -138,31 +138,3 @@ function ChainRulesCore.rrule(::typeof(rotr90), network::InfiniteSquareNetwork)
     end
     return network´, rotr90_pullback
 end
-
-# # TODO: remove?
-# function ChainRulesCore.rrule(
-#     ::Type{NWType}, A::Matrix
-# ) where {NWType<:InfiniteSquareNetwork}
-#     network = NWType(A)
-#     function InfiniteSquareNetwork_pullback(Δnetwork)
-#         println("using InfiniteSquareNetwork constructor pullback...")
-#         Δnetwork = unthunk(Δnetwork)
-#         return NoTangent(), unitcell(Δnetwork)
-#     end
-#     return network, InfiniteSquareNetwork_pullback
-# end
-
-# # TODO: remove?
-# function ChainRulesCore.rrule(
-#     ::typeof(Base.getproperty), state::InfiniteSquareNetwork, f::Symbol
-# )
-#     if f === :A
-#         function get_A_pullback(ΔA)
-#             println("using getproperty pullback...")
-#             return NoTangent(), InfinitePEPS(unthunk(ΔA)), NoTangent()
-#         end
-#         return state.A, get_A_pullback
-#     else
-#         throw(ArgumentError("Invalid property $f"))
-#     end
-# end
