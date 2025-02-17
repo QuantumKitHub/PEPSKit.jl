@@ -153,7 +153,9 @@ function select_algorithm(
         return dim(space(corner, 1))
     end
 
-    svd_rrule_algorithm = if svd_rrule_alg <: Union{GMRES,Arnoldi}
+    svd_rrule_algorithm = if isnothing(svd_rrule_alg)
+        nothing
+    elseif svd_rrule_alg <: Union{GMRES,Arnoldi}
         svd_rrule_alg(; tol=svd_rrule_tol, krylovdim=χenv + 24, verbosity=verbosity - 2)
     elseif svd_rrule_alg <: BiCGStab
         svd_rrule_alg(; tol=svd_rrule_tol, verbosity)

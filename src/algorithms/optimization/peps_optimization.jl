@@ -30,7 +30,10 @@ struct PEPSOptimize{G}
     ) where {G}
         if gradient_alg isa GradMode
             if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
-                throw(ArgumentError(":sequential and :fixed are not compatible"))
+                msg = ":fixed was converted to :diffgauge since SequentialCTMRG does not \
+                      support :fixed differentiation mode due to sequential application of \
+                      SVDs; select SimultaneousCTMRG instead to use :fixed mode"
+                throw(ArgumentError(msg))
             end
         end
         return new{G}(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
@@ -131,12 +134,25 @@ function fixedpoint(
         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
     end
 
-    # check realness compatibility
-    if scalartype(env₀) <: Real && iterscheme(alg.gradient_alg) == :fixed
-        env₀ = complex(env₀)
-        @warn "the provided real environment was converted to a complex environment since \
-        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work \
-        with purely real environments"
+    # :fixed mode compatibility
+    if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed
+        if scalartype(env₀) <: Real # incompatible with real environments
+            env₀ = complex(env₀)
+            @warn "the provided real environment was converted to a complex environment
+            since :fixed mode generally produces complex gauges; use :diffgauge mode \
+            instead to work with purely real environments"
+        end
+        if isnothing(alg.boundary_alg.projector_alg.svd_alg.rrule_alg) # incompatible with TensorKit SVD rrule
+            G = Base.typename(typeof(alg.gradient_alg)).wrapper # simple type without iterscheme parameter
+            gradient_alg = G{:diffgauge}(
+                (getproperty(alg.gradient_alg, f) for f in fieldnames(G))...
+            )
+            @reset alg.gradient_alg = gradient_alg
+            @warn ":fixed was converted to :diffgauge since :fixed mode and \
+            rrule_alg=nothing are incompatible - nothing uses the TensorKit \
+            reverse-rule requiring access to the untruncated SVD which FixedSVD does not \
+            have; select GMRES, BiCGStab or Arnoldi instead to use :fixed mode"
+        end
     end
 
     # initialize info collection vectors

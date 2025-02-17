@@ -18,11 +18,26 @@ If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
 In case of degenerate singular values, one might need a `broadening` scheme which
 removes the divergences from the adjoint.
 """
-@kwdef struct SVDAdjoint{F,R,B}
-    fwd_alg::F = Defaults.svd_fwd_alg
-    rrule_alg::R = Defaults.svd_rrule_alg
-    broadening::B = nothing
+struct SVDAdjoint{F,R,B}
+    fwd_alg::F
+    rrule_alg::R
+    broadening::B
+
+    # Inner constructor to prohibit illegal setting combinations
+    function SVDAdjoint(fwd_alg::F, rrule_alg::R, broadening::B) where {F,R,B}
+        if fwd_alg isa FixedSVD && isnothing(rrule_alg)
+            throw(
+                ArgumentError("FixedSVD and nothing (TensorKit rrule) are not compatible")
+            )
+        end
+        return new{F,R,B}(fwd_alg, rrule_alg, broadening)
+    end
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
+function SVDAdjoint(;
+    fwd_alg=Defaults.svd_fwd_alg, rrule_alg=Defaults.svd_rrule_alg, broadening=nothing
+)
+    return SVDAdjoint(fwd_alg, rrule_alg, broadening)
+end
 
 """
     PEPSKit.tsvd(t, alg; trunc=notrunc(), p=2)
