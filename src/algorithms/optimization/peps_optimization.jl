@@ -58,15 +58,19 @@ initial guess for the first CTMRG run. By default, a random initial environment 
 
 The optimization parameters can be supplied via the keyword arguments or directly as a
 `PEPSOptimize` struct. The following keyword arguments are supported:
+
 - `tol=Defaults.optimizer_tol`: Overall tolerance for gradient norm convergence of the
   optimizer; sets related tolerance such as the boundary and boundary-gradient tolerances
   to sensible defaults unless they are explictly specified
+
 - `verbosity=1`: Overall output information verbosity level, where `0` suppresses
   all output, `1` only prints the optimizer output and warnings, `2` additionally prints
   boundary information, and `3` prints all information including AD debug outputs
+
 - `boundary_alg`: Boundary algorithm either specified as a `NamedTuple` of keyword
   arguments or directly as a `CTMRGAlgorithm`; see [`leading_boundary`](@ref) for a
   description of all possible keyword arguments
+
 - `gradient_alg`: Algorithm for computing the boundary fixed-point gradient
   specified either as a `NamedTuple` of keyword arguments or directly as a `GradMode`.
   The supported keyword arguments are:
@@ -78,6 +82,7 @@ The optimization parameters can be supplied via the keyword arguments or directl
   - `iterscheme=Defaults.gradient_alg_iterscheme`: CTMRG iteration scheme determining mode
     of differentiation; can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate
     gauge-fixing routine)
+
 - `optimization_alg`: PEPS optimization algorithm, specified either as a `NamedTuple` of
   keyword arguments or directly as a `PEPSOptimize`. By default, `OptimKit.LBFGS` is used
   in combination with a `HagerZhangLineSearch`. Possible keyword arguments are:
@@ -89,12 +94,14 @@ The optimization parameters can be supplied via the keyword arguments or directl
   on the previous environment, otherwise a random environment is used
   - `symmetrization=nothing`: Accepts `nothing` or a `SymmetrizationStyle`, in which case
   the PEPS and PEPS gradient are symmetrized after each optimization iteration
+
 - `(finalize!)=OptimKit._finalize!`: Inserts a `finalize!` function call after each
   optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
   The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
 
 The function returns the final PEPS, CTMRG environment and cost value, as well as an
 information `NamedTuple` which contains the following entries:
+
 - `last_gradient`: last gradient of the cost function
 - `fg_evaluations`: number of evaluations of the cost and gradient function
 - `costs`: history of cost values
