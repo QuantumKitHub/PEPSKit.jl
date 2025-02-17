@@ -60,12 +60,6 @@ end
 function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
     return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
 end
-# TODO: remove?
-# function MPSKit.leading_boundary(network, alg::CTMRGAlgorithm)
-#     return MPSKit.leading_boundary(
-#         CTMRGEnv(network, oneunit(spacetype(network))), network, alg
-#     )
-# end
 
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env)
