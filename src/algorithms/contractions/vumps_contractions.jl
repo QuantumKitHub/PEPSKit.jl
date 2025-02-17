@@ -36,95 +36,6 @@ end
 
 ## PEPO
 
-# some plumbing for generic expressions...
-
-# side=:W for argument, side=:E for output, PEPO height H
-function _pepo_leftenv_expr(envname, side::Symbol, H::Int)
-    return tensorexpr(
-        envname,
-        (
-            envlabel(:S, side),
-            virtuallabel(side, :top),
-            ntuple(i -> virtuallabel(side, :mid, i), H)...,
-            virtuallabel(side, :bot),
-        ),
-        (envlabel(:N, side),),
-    )
-end
-
-# side=:E for argument, side=:W for output, PEPO height H
-function _pepo_rightenv_expr(envname, side::Symbol, H::Int)
-    return tensorexpr(
-        envname,
-        (
-            envlabel(:N, side),
-            virtuallabel(side, :top),
-            ntuple(i -> virtuallabel(side, :mid, i), H)...,
-            virtuallabel(side, :bot),
-        ),
-        (envlabel(:S, side),),
-    )
-end
-
-# side=:N for ket MPS, side=:S for bra MPS, PEPO height H
-function _pepo_mpstensor_expr(tensorname, side::Symbol, H::Int)
-    return tensorexpr(
-        tensorname,
-        (
-            envlabel(side, :W),
-            virtuallabel(side, :top),
-            ntuple(i -> virtuallabel(side, :mid, i), H)...,
-            virtuallabel(side, :bot),
-        ),
-        (envlabel(side, :E),),
-    )
-end
-
-# layer=:top for ket PEPS, layer=:bot for bra PEPS, connects to PEPO slice H
-function _pepo_pepstensor_expr(tensorname, layer::Symbol, h::Int)
-    return tensorexpr(
-        tensorname,
-        (physicallabel(h),),
-        (
-            virtuallabel(:N, layer),
-            virtuallabel(:E, layer),
-            virtuallabel(:S, layer),
-            virtuallabel(:W, layer),
-        ),
-    )
-end
-
-# PEPO slice h
-function _pepo_pepotensor_expr(tensorname, h::Int)
-    return tensorexpr(
-        tensorname,
-        (physicallabel(h + 1), physicallabel(h)),
-        (
-            virtuallabel(:N, :mid, h),
-            virtuallabel(:E, :mid, h),
-            virtuallabel(:S, :mid, h),
-            virtuallabel(:W, :mid, h),
-        ),
-    )
-end
-
-# specialize simple case
-function MPSKit.transfer_left(
-    GL::GenericMPSTensor{S,4},
-    O::PEPOSandwich{1},
-    A::GenericMPSTensor{S,4},
-    Ā::GenericMPSTensor{S,4},
-) where {S}
-    return @autoopt @tensor GL′[χ_SE D_E_above D_E_mid D_E_below; χ_NE] :=
-        GL[χ_SW D_W_above D_W_mid D_W_below; χ_NW] *
-        conj(Ā[χ_SW D_S_above D_S_mid D_S_below; χ_SE]) *
-        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
-        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
-        conj(bra(O)[d_out; D_N_below D_E_below D_S_below D_W_below]) *
-        A[χ_NW D_N_above D_N_mid D_N_below; χ_NE]
-end
-
-# general case
 @generated function MPSKit.transfer_left(
     GL::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
@@ -134,15 +45,11 @@ end
     # sanity check
     @assert H == N - 3
 
-    GL´_e = _pepo_leftenv_expr(:GL´, :E, H)
-    GL_e = _pepo_leftenv_expr(:GL, :W, H)
-    A_e = _pepo_mpstensor_expr(:A, :N, H)
-    Ā_e = _pepo_mpstensor_expr(:Ā, :S, H)
-    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
-    bra_e = _pepo_pepstensor_expr(:(bra(O)), :bot, H + 1)
-    pepo_es = map(1:H) do h
-        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
-    end
+    GL´_e = _pepo_edge_expr(:GL´, :SE, :NE, :E, H)
+    GL_e = _pepo_edge_expr(:GL, :SW, NW, :W, H)
+    A_e = _pepo_edge_expr(:A, :NW, :NE, :N, H)
+    Ā_e = _pepo_edge_expr(:Ā, :SW, :SE, :S, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
 
     rhs = Expr(
         :call,
@@ -158,23 +65,6 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $GL´_e := $rhs))
 end
 
-# specialize simple case
-function MPSKit.transfer_right(
-    GR::GenericMPSTensor{S,4},
-    O::PEPOSandwich{1},
-    A::GenericMPSTensor{S,4},
-    Ā::GenericMPSTensor{S,4},
-) where {S}
-    return @tensor GR′[χ_NW D_W_above D_W_mid D_W_below; χ_SW] :=
-        GR[χ_NE D_E_above D_E_mid D_E_below; χ_SE] *
-        conj(Ā[χ_SW D_S_above D_S_mid D_S_below; χ_SE]) *
-        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
-        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
-        conj(bra(O)[d_out; D_N_below D_E_below D_S_below D_W_below]) *
-        A[χ_NW D_N_above D_N_mid D_N_below; χ_NE]
-end
-
-# general case
 @generated function MPSKit.transfer_right(
     GR::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
@@ -184,15 +74,11 @@ end
     # sanity check
     @assert H == N - 3
 
-    GR´_e = _pepo_rightenv_expr(:GR´, :W, H)
-    GR_e = _pepo_rightenv_expr(:GR, :E, H)
-    A_e = _pepo_mpstensor_expr(:A, :N, H)
-    Ā_e = _pepo_mpstensor_expr(:Ā, :S, H)
-    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
-    bra_e = _pepo_pepstensor_expr(:(bra(O)), :bot, H + 1)
-    pepo_es = map(1:H) do h
-        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
-    end
+    GR´_e = _pepo_edge_expr(:GR´, :NW, :SW, :W, H)
+    GR_e = _pepo_edge_expr(:GR, :NE, :SE, :E, H)
+    A_e = _pepo_edge_expr(:A, :NW, :NE, :N, H)
+    Ā_e = _pepo_edge_expr(:Ā, :SW, :SE, :S, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
 
     rhs = Expr(
         :call,
@@ -276,22 +162,6 @@ end
 
 ## PEPO
 
-# specialize simple case
-function MPSKit.∂AC(
-    AC::GenericMPSTensor{S,4},
-    O::PEPOSandwich{1},
-    GL::GenericMPSTensor{S,4},
-    GR::GenericMPSTensor{S,4},
-) where {S}
-    return @tensor AC′[χ_SW D_S_above D_S_mid D_S_below; χ_SE] :=
-        GL[χ_SW D_W_above D_W_mid D_W_below; χ_NW] *
-        AC[χ_NW D_N_above D_N_mid D_N_below; χ_NE] *
-        GR[χ_NE D_E_above D_E_mid D_E_below; χ_SE] *
-        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
-        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
-        conj(bra(O)[d_out; D_N_below D_E_below D_S_below D_W_below])
-end
-
 @generated function MPSKit.∂AC(
     AC::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
@@ -301,15 +171,11 @@ end
     # sanity check
     @assert H == N - 3
 
-    AC´_e = _pepo_mpstensor_expr(:AC´, :S, H)
-    AC_e = _pepo_mpstensor_expr(:AC, :N, H)
-    GL_e = _pepo_leftenv_expr(:GL, :W, H)
-    GR_e = _pepo_rightenv_expr(:GR, :E, H)
-    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
-    bra_e = _pepo_pepstensor_expr(:(bra(O)), :bot, H + 1)
-    pepo_es = map(1:H) do h
-        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
-    end
+    AC´_e = _pepo_edge_expr(:AC´, :SW, :SE, :S, H)
+    AC_e = _pepo_edge_expr(:AC, :NW, :NE, :N, H)
+    GL_e = _pepo_edge_expr(:GL, :SW, :NW, :W, H)
+    GR_e = _pepo_edge_expr(:GR, :NE, :SE, :E, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
 
     rhs = Expr(:call, :*, AC_e, GL_e, GR_e, ket_e, Expr(:call, :conj, bra_e), pepo_es...)
 
@@ -324,23 +190,6 @@ ket(p::∂PEPOSandwich) = p[1]
 pepo(p::∂PEPOSandwich) = p[2:end]
 pepo(p::∂PEPOSandwich, i::Int) = p[1 + i]
 
-# specialize simple case
-function ∂peps(
-    AC::GenericMPSTensor{S,4},
-    ĀC::GenericMPSTensor{S,4},
-    O::∂PEPOSandwich{1},
-    GL::GenericMPSTensor{S,4},
-    GR::GenericMPSTensor{S,4},
-) where {S}
-    return @tensor ∂p[d_out; D_N_below D_E_below D_S_below D_W_below] :=
-        GL[χ_SW D_W_above D_W_mid D_W_below; χ_NW] *
-        AC[χ_NW D_N_above D_N_mid D_N_below; χ_NE] *
-        ket(O)[d_in; D_N_above D_E_above D_S_above D_W_above] *
-        only(pepo(O))[d_out d_in; D_N_mid D_E_mid D_S_mid D_W_mid] *
-        GR[χ_NE D_E_above D_E_mid D_E_below; χ_SE] *
-        conj(ĀC[χ_SW D_S_above D_S_mid D_S_below; χ_SE])
-end
-
 @generated function ∂peps(
     AC::GenericMPSTensor{S,N},
     ĀC::GenericMPSTensor{S,N},
@@ -352,6 +201,7 @@ end
     @assert H == N - 3
 
     ∂p_e = _pepo_pepstensor_expr(:∂p, :bot, H + 1)
+<<<<<<< HEAD
     AC_e = _pepo_mpstensor_expr(:AC, :N, H)
     ĀC_e = _pepo_mpstensor_expr(:ĀC, :S, H)
     GL_e = _pepo_leftenv_expr(:GL, :W, H)
@@ -360,6 +210,13 @@ end
     pepo_es = map(1:H) do h
         return _pepo_pepotensor_expr(:(pepo(O, $h)), h)
     end
+=======
+    AC_e = _pepo_edge_expr(:AC, :NW, :NE, :N, H)
+    ĀC_e = _pepo_edge_expr(:ĀC, :SW, :SE, :S, H)
+    GL_e = _pepo_edge_expr(:GL, :SW, :NW, :W, H)
+    GR_e = _pepo_edge_expr(:GR, :NE, :SE, :E, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
+>>>>>>> Rough attempt at CTMRG for PEPO stacks
 
     rhs = Expr(:call, :*, AC_e, Expr(:call, :conj, ĀC_e), GL_e, GR_e, ket_e, pepo_es...)
 
