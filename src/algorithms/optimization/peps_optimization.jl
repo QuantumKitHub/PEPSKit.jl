@@ -112,10 +112,7 @@ information `NamedTuple` which contains the following entries:
 - `times`: history of times each optimization step took
 """
 function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
-    χenv = maximum(env₀.corners) do corner # extract maximal environment dimension
-        return dim(space(corner, 1))
-    end
-    alg, finalize! = select_fixedpoint_algorithm(χenv; kwargs...)
+    alg, finalize! = select_algorithm(fixedpoint, env₀; kwargs...)
     return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
@@ -189,10 +186,11 @@ function fixedpoint(
 end
 
 """
-    function select_fixedpoint_algorithm(
-        χenv::Int;
+    function select_algorithm(
+        ::typeof(fixedpoint),
+        env₀::CTMRGEnv;
         tol=Defaults.optimizer_tol,
-        verbosity=1,
+        verbosity=2,
         boundary_alg=(;),
         gradient_alg=(;),
         optimization_alg=(;),
@@ -203,8 +201,9 @@ Parse optimization keyword arguments on to the corresponding algorithm structs a
 a final `PEPSOptimize` to be used in `fixedpoint`. For a description of the keyword
 arguments, see [`fixedpoint`](@ref).
 """
-function select_fixedpoint_algorithm(
-    χenv::Int;
+function select_algorithm(
+    ::typeof(fixedpoint),
+    env₀::CTMRGEnv;
     tol=Defaults.optimizer_tol, # top-level tolerance
     verbosity=2, # top-level verbosity
     boundary_alg=(;),
@@ -212,6 +211,7 @@ function select_fixedpoint_algorithm(
     optimization_alg=(;),
     (finalize!)=OptimKit._finalize!,
 )
+
     # top-level verbosity
     if verbosity ≤ 0 # disable output
         boundary_verbosity = -1
@@ -235,8 +235,9 @@ function select_fixedpoint_algorithm(
     boundary_algorithm = if boundary_alg isa CTMRGAlgorithm
         boundary_alg
     elseif boundary_alg isa NamedTuple
-        select_leading_boundary_algorithm(
-            χenv;
+        select_algorithm(
+            leading_boundary,
+            env₀;
             tol=1e-4tol,
             verbosity=boundary_verbosity,
             svd_rrule_tol=1e-3tol,

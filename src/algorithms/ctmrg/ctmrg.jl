@@ -58,10 +58,7 @@ function MPSKit.leading_boundary(state::InfiniteSquareNetwork; kwargs...)
     )
 end
 function MPSKit.leading_boundary(env₀, state::InfiniteSquareNetwork; kwargs...)
-    χenv = maximum(env₀.corners) do corner # extract maximal environment dimension
-        return dim(space(corner, 1))
-    end
-    alg = select_leading_boundary_algorithm(χenv; kwargs...)
+    alg = select_leading_boundary_algorithm(leading_boundary, env₀; kwargs...)
     return MPSKit.leading_boundary(env₀, state, alg)
 end
 function MPSKit.leading_boundary(state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
@@ -118,8 +115,9 @@ end
 @non_differentiable ctmrg_logcancel!(args...)
 
 """
-    select_leading_boundary_algorithm(
-        χenv::Int;
+    select_algorithm(
+        ::typeof(leading_boundary),
+        env₀::CTMRGEnv;
         alg=SimultaneousCTMRG,
         tol=Defaults.ctmrg_tol,
         maxiter=Defaults.ctmrg_maxiter,
@@ -132,12 +130,13 @@ end
         projector_alg=Defaults.projector_alg_type,
     )
 
-Parse optimization keyword arguments on to the corresponding algorithm structs and return
-a final algorithm to be used in `fixedpoint`. For a description of the keyword arguments,
+Parse CTMRG keyword arguments on to the corresponding algorithm structs and return a final
+algorithm to be used in `leading_boundary`. For a description of the keyword arguments,
 see [`leading_boundary`](@ref).
 """
-function select_leading_boundary_algorithm(
-    χenv::Int;
+function select_algorithm(
+    ::typeof(leading_boundary),
+    env₀::CTMRGEnv;
     alg=SimultaneousCTMRG,
     tol=Defaults.ctmrg_tol,
     maxiter=Defaults.ctmrg_maxiter,
@@ -149,6 +148,11 @@ function select_leading_boundary_algorithm(
     svd_rrule_tol=1e1tol,
     projector_alg=Defaults.projector_alg_type,
 )
+    # extract maximal environment dimenions
+    χenv = maximum(env₀.corners) do corner
+        return dim(space(corner, 1))
+    end
+
     svd_rrule_algorithm = if svd_rrule_alg <: Union{GMRES,Arnoldi}
         svd_rrule_alg(; tol=svd_rrule_tol, krylovdim=χenv + 24, verbosity=verbosity - 2)
     elseif svd_rrule_alg <: BiCGStab
