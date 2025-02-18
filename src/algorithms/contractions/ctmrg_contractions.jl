@@ -20,12 +20,6 @@ coordinates, environments and network, or by directly providing the tensors.
          |            |
 ```
 """
-function enlarge_northwest_corner((row, col), env::CTMRGEnv, network::InfiniteSquareNetwork)
-    E_west = env.edges[WEST, row, _prev(col, end)]
-    C_northwest = env.corners[NORTHWEST, _prev(row, end), _prev(col, end)]
-    E_north = env.edges[NORTH, _prev(row, end), col]
-    return enlarge_northwest_corner(E_west, C_northwest, E_north, network[row, col])
-end
 function enlarge_northwest_corner(
     E_west::CTMRG_PEPS_EdgeTensor,
     C_northwest::CTMRGCornerTensor,
@@ -63,12 +57,6 @@ coordinates, environments and network, or by directly providing the tensors.
           |             |
 ```
 """
-function enlarge_northeast_corner((row, col), env::CTMRGEnv, network::InfiniteSquareNetwork)
-    E_north = env.edges[NORTH, _prev(row, end), col]
-    C_northeast = env.corners[NORTHEAST, _prev(row, end), _next(col, end)]
-    E_east = env.edges[EAST, row, _next(col, end)]
-    return enlarge_northeast_corner(E_north, C_northeast, E_east, network[row, col])
-end
 function enlarge_northeast_corner(
     E_north::CTMRG_PEPS_EdgeTensor,
     C_northeast::CTMRGCornerTensor,
@@ -106,12 +94,6 @@ coordinates, environments and network, or by directly providing the tensors.
     -- E_south -- C_southeast
 ```
 """
-function enlarge_southeast_corner((row, col), env::CTMRGEnv, network::InfiniteSquareNetwork)
-    E_east = env.edges[EAST, row, _next(col, end)]
-    C_southeast = env.corners[SOUTHEAST, _next(row, end), _next(col, end)]
-    E_south = env.edges[SOUTH, _next(row, end), col]
-    return enlarge_southeast_corner(E_east, C_southeast, E_south, network[row, col])
-end
 function enlarge_southeast_corner(
     E_east::CTMRG_PEPS_EdgeTensor,
     C_southeast::CTMRGCornerTensor,
@@ -149,14 +131,6 @@ coordinates, environments and network, or by directly providing the tensors.
     C_southwest -- E_south -- 
 ```
 """
-function enlarge_southwest_corner((row, col), env::CTMRGEnv, network::InfiniteSquareNetwork)
-    E_south = env.edges[SOUTH, _next(row, end), col]
-    C_southwest = env.corners[SOUTHWEST, _next(row, end), _prev(col, end)]
-    E_west = env.edges[WEST, row, _prev(col, end)]
-    return enlarge_southwest_corner(
-        E_south, C_southwest, E_west, ket[row, col], bra[row, col]
-    )
-end
 function enlarge_southwest_corner(
     E_south::CTMRG_PEPS_EdgeTensor,
     C_southwest::CTMRGCornerTensor,
