@@ -67,7 +67,7 @@ function Base.:-(A₁::NWType, A₂::NWType) where {NWType<:InfiniteSquareNetwor
     return NWType(_subtract_localsandwich.(unitcell(A₁), unitcell(A₂)))
 end
 function Base.:*(α::Number, A::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(_mul_localsandwich.(Ref(α), unitcell(A)))
+    return NWType(_mul_localsandwich.(α, unitcell(A)))
 end
 function Base.:/(A::NWType, α::Number) where {NWType<:InfiniteSquareNetwork}
     return NWType(_mul_localsandwich.(Ref(1 / α), unitcell(A)))
