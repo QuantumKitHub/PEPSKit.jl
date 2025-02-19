@@ -17,7 +17,7 @@ const InfiniteTransferPEPS{T<:PEPSTensor} = InfiniteMPO{PEPSSandwich{T}}
 function InfiniteTransferPEPS(
     top::PeriodicArray{T,1}, bot::PeriodicArray{T,1}
 ) where {T<:PEPSTensor}
-    return InfiniteMPO(map(Tuple, zip(top, bot)))
+    return InfiniteMPO(map(tuple, top, bot))
 end
 
 InfiniteTransferPEPS(top) = InfiniteTransferPEPS(top, top)
@@ -74,7 +74,7 @@ function InfiniteTransferPEPO(
 ) where {T,O}
     size(top, 1) == size(bot, 1) == size(mid, 1) ||
         throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
-    return InfiniteMPO(map(Tuple, zip(top, bot, Iterators.map(Tuple, eachrow(mid)))))
+    return InfiniteMPO(map(tuple, top, bot, eachslice(mid; dims=2)...))
 end
 
 InfiniteTransferPEPO(top, mid) = InfiniteTransferPEPO(top, mid, top)
