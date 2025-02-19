@@ -53,7 +53,7 @@ end
 virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## Vector interface
-VectorInterface.scalartype(::Type{<:InfiniteSquareNetwork{O}}) where {O} = scalartype(O)
+VectorInterface.scalartype(::Type{T}) where {T<:InfiniteSquareNetwork} = scalartype(eltype(T))
 function VectorInterface.zerovector(A::InfiniteSquareNetwork)
     return InfiniteSquareNetwork(zerovector(unitcell(A)))
 end
