@@ -150,7 +150,12 @@ function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
     return codomain_physicalspace(T[r, c, end])
 end
 function physicalspace(T::InfinitePEPO, r::Int, c::Int)
-    return codomain_physicalspace(T, r, c) ← domain_physicalspace(T, r, c)
+    codomain_physicalspace(T, r, c) == domain_physicalspace(T, r, c) || throw(
+        SpaceMismatch(
+            "Domain and codomain physical spaces at site $((r, c)) do not match."
+        ),
+    )
+    return codomain_physicalspace(T, r, c)
 end
 
 ## InfiniteSquareNetwork interface

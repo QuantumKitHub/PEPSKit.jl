@@ -127,5 +127,9 @@ Base.rot180(t::PEPOTensor) = permute(t, ((1, 2), (5, 6, 3, 4)))
 
 domain_physicalspace(t::PEPOTensor) = space(t, 2)'
 codomain_physicalspace(t::PEPOTensor) = space(t, 1)
-physicalspace(t::PEPOTensor) = codomain_physicalspace(t) ← domain_physicalspace(t)
+function physicalspace(t::PEPOTensor)
+    codomain_physicalspace(t) == domain_physicalspace(t) ||
+        throw(SpaceMismatch("Domain and codomain physical spaces do not match."))
+    return codomain_physicalspace(t)
+end
 virtualspace(t::PEPOTensor, dir) = space(t, dir + 2)
