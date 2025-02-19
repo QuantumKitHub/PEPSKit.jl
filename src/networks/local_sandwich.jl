@@ -20,13 +20,13 @@ end # follow MPSKit convention: right vspace gets a dual by default
 
 ## PartitionFunction
 
-_rotl90_localsandwich(O::PFTensor) = rotl90(O)
-_rotr90_localsandwich(O::PFTensor) = rotr90(O)
-_rot180_localsandwich(O::PFTensor) = rot180(O)
+const PFSandwich{T<:PFTensor} = Tuple{T}
 
-_add_localsandwich(O1::PFTensor, O2::PFTensor) = O1 + O2
-_subtract_localsandwich(O1::PFTensor, O2::PFTensor) = O1 - O2
-_mul_localsandwich(α::Number, O::PFTensor) = α * O
+tensor(O::PFSandwich) = O[1]
+
+function virtualspace(O::PFSandwich, dir)
+    return virtualspace(tensor(O), dir)
+end
 
 ## PEPS
 
@@ -39,18 +39,14 @@ function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
 
-_rotl90_localsandwich(O::PEPSSandwich) = rotl90.(O)
-_rotr90_localsandwich(O::PEPSSandwich) = rotr90.(O)
-_rot180_localsandwich(O::PEPSSandwich) = rot180.(O)
-
 ## PEPO
 
-const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Tuple{Vararg{P,N}}}
+const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Vararg{P,N}}
 
 ket(O::PEPOSandwich) = O[1]
 bra(O::PEPOSandwich) = O[2]
-pepo(O::PEPOSandwich) = O[3]
-pepo(O::PEPOSandwich, i::Int) = O[3][i]
+pepo(O::PEPOSandwich) = O[3:end]
+pepo(O::PEPOSandwich, i::Int) = O[2 + i]
 
 function virtualspace(O::PEPOSandwich, dir)
     return prod([
@@ -60,12 +56,14 @@ function virtualspace(O::PEPOSandwich, dir)
     ])
 end
 
-_rotl90_localsandwich(O::PEPOSandwich) = (rotl90(ket(O)), rotl90(bra(O)), rotl90.(pepo(O)))
-_rotr90_localsandwich(O::PEPOSandwich) = (rotr90(ket(O)), rotr90(bra(O)), rotr90.(pepo(O)))
-_rot180_localsandwich(O::PEPOSandwich) = (rot180(ket(O)), rot180(bra(O)), rot180.(pepo(O)))
+## Rotations
+
+_rotl90_localsandwich(O) = rotl90.(O)
+_rotr90_localsandwich(O) = rotr90.(O)
+_rot180_localsandwich(O) = rot180.(O)
 
 ## Math (for Zygote accumulation)
 
-_add_localsandwich(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .+ O2
-_subtract_localsandwich(O1::PEPSSandwich, O2::PEPSSandwich) = O1 .- O2
-_mul_localsandwich(α::Number, O::PEPSSandwich) = α .* O
+_add_localsandwich(O1, O2) = O1 .+ O2
+_subtract_localsandwich(O1, O2) = O1 .- O2
+_mul_localsandwich(α, O) = α .* O

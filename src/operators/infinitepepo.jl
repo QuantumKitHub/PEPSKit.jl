@@ -165,14 +165,7 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
         ArgumentError("Top PEPS, bottom PEPS and PEPO layers should have equal sizes")
     )
     return InfiniteSquareNetwork(
-        map(
-            Tuple,
-            zip(
-                unitcell(top),
-                unitcell(bot),
-                Iterators.map(Tuple, eachslice(unitcell(mid); dims=(1, 2))),
-            ),
-        ),
+        map(tuple, unitcell(top), unitcell(bot), eachslice(unitcell(mid); dims=3)...)
     )
 end
 

@@ -95,7 +95,7 @@ function _contract_site(
         conj(bra(network[r, c])[d; D_N_below D_E_below D_S_below D_W_below])
 end
 function _contract_site(
-    ind::Tuple{Int,Int}, network::InfiniteSquareNetwork{<:PFTensor}, env::CTMRGEnv
+    ind::Tuple{Int,Int}, network::InfiniteSquareNetwork{<:PFSandwich}, env::CTMRGEnv
 )
     r, c = ind
     return @autoopt @tensor env.edges[WEST, r, _prev(c, end)][χ_WSW D_W; χ_WNW] *
@@ -106,7 +106,7 @@ function _contract_site(
         env.corners[SOUTHEAST, _next(r, end), _next(c, end)][χ_ESE; χ_SSE] *
         env.edges[SOUTH, _next(r, end), c][χ_SSE D_S; χ_SSW] *
         env.corners[SOUTHWEST, _next(r, end), _prev(c, end)][χ_SSW; χ_WSW] *
-        network[r, c][D_W D_S; D_N D_E]
+        tensor(network[r, c])[D_W D_S; D_N D_E]
 end
 
 """

@@ -144,7 +144,7 @@ function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS=top)
     size(top) == size(bot) || throw(
         ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have the same length")
     )
-    return InfiniteSquareNetwork(map(Tuple, zip(unitcell(top), unitcell(bot))))
+    return InfiniteSquareNetwork(map(tuple, unitcell(top), unitcell(bot)))
 end
 
 ## Vector interface

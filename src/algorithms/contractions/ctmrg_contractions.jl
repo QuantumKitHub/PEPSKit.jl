@@ -43,10 +43,13 @@ function enlarge_northwest_corner(
     E_west::CTMRG_PF_EdgeTensor,
     C_northwest::CTMRGCornerTensor,
     E_north::CTMRG_PF_EdgeTensor,
-    A::PFTensor,
+    A::PFSandwich,
 )
     return @autoopt @tensor corner[χ_S D_S; χ_E D_E] :=
-        E_west[χ_S D1; χ1] * C_northwest[χ1; χ2] * E_north[χ2 D2; χ_E] * A[D1 D_S; D2 D_E]
+        E_west[χ_S D1; χ1] *
+        C_northwest[χ1; χ2] *
+        E_north[χ2 D2; χ_E] *
+        tensor(A)[D1 D_S; D2 D_E]
 end
 
 """
@@ -86,10 +89,13 @@ function enlarge_northeast_corner(
     E_north::CTMRG_PF_EdgeTensor,
     C_northeast::CTMRGCornerTensor,
     E_east::CTMRG_PF_EdgeTensor,
-    A::PFTensor,
+    A::PFSandwich,
 )
     return @autoopt @tensor corner[χ_W D_W; χ_S D_S] :=
-        E_north[χ_W D1; χ1] * C_northeast[χ1; χ2] * E_east[χ2 D2; χ_S] * A[D_W D_S; D1 D2]
+        E_north[χ_W D1; χ1] *
+        C_northeast[χ1; χ2] *
+        E_east[χ2 D2; χ_S] *
+        tensor(A)[D_W D_S; D1 D2]
 end
 
 """
@@ -129,10 +135,13 @@ function enlarge_southeast_corner(
     E_east::CTMRG_PF_EdgeTensor,
     C_southeast::CTMRGCornerTensor,
     E_south::CTMRG_PF_EdgeTensor,
-    A::PFTensor,
+    A::PFSandwich,
 )
     return @autoopt @tensor corner[χ_N D_N; χ_W D_W] :=
-        E_east[χ_N D1; χ1] * C_southeast[χ1; χ2] * E_south[χ2 D2; χ_W] * A[D_W D2; D_N D1]
+        E_east[χ_N D1; χ1] *
+        C_southeast[χ1; χ2] *
+        E_south[χ2 D2; χ_W] *
+        tensor(A)[D_W D2; D_N D1]
 end
 
 """
@@ -174,10 +183,13 @@ function enlarge_southwest_corner(
     E_south::CTMRG_PF_EdgeTensor,
     C_southwest::CTMRGCornerTensor,
     E_west::CTMRG_PF_EdgeTensor,
-    A::PFTensor,
+    A::PFSandwich,
 )
     return @autoopt @tensor corner[χ_E D_E; χ_N D_N] :=
-        E_south[χ_E D1; χ1] * C_southwest[χ1; χ2] * E_west[χ2 D2; χ_N] * A[D2 D1; D_N D_E]
+        E_south[χ_E D1; χ1] *
+        C_southwest[χ1; χ2] *
+        E_west[χ2 D2; χ_N] *
+        tensor(A)[D2 D1; D_N D_E]
 end
 
 # Projector contractions
@@ -205,12 +217,12 @@ function left_projector(E_1, C, E_2, V, isqS, A::PEPSSandwich)
         conj(V[χ4; χ3 D5 D6]) *
         isqS[χ4; χ_out]
 end
-function left_projector(E_1, C, E_2, V, isqS, A::PFTensor)
+function left_projector(E_1, C, E_2, V, isqS, A::PFSandwich)
     return @autoopt @tensor P_left[χ_in D_in; χ_out] :=
         E_1[χ_in D1; χ1] *
         C[χ1; χ2] *
         E_2[χ2 D2; χ3] *
-        A[D1 D_in; D2 D3] *
+        tensor(A)[D1 D_in; D2 D3] *
         conj(V[χ4; χ3 D3]) *
         isqS[χ4; χ_out]
 end
@@ -237,11 +249,11 @@ function right_projector(E_1, C, E_2, U, isqS, A::PEPSSandwich)
         C[χ3; χ4] *
         E_1[χ4 D5 D6; χ_out]
 end
-function right_projector(E_1, C, E_2, U, isqS, A::PFTensor)
+function right_projector(E_1, C, E_2, U, isqS, A::PFSandwich)
     return @autoopt @tensor P_right[χ_in; χ_out D_out] :=
         isqS[χ_in; χ1] *
         conj(U[χ1; χ2 D1]) *
-        A[D1 D_out; D2 D3] *
+        tensor(A)[D1 D_out; D2 D3] *
         E_2[χ2 D2; χ3] *
         C[χ3; χ4] *
         E_1[χ4 D3; χ_out]
@@ -373,26 +385,26 @@ function half_infinite_environment(
 end
 function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P
-) where {P<:PFTensor}
+) where {P<:PFSandwich}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3; χ3] *
-        A_1[D1 D_in; D3 D9] *
-        A_2[D9 D_out; D5 D7] *
+        tensor(A_1)[D1 D_in; D3 D9] *
+        tensor(A_2)[D9 D_out; D5 D7] *
         E_3[χ3 D5; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ_out]
 end
 function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{T,S,2}, A_1::P, A::P
-) where {T,S,P<:PFTensor}
+) where {T,S,P<:PFSandwich}
     return @autoopt @tensor env_x[χ_in D_in] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3; χ3] *
-        A_1[D1 D_in; D3 D9] *
-        A_2[D9 D11; D5 D7] *
+        tensor(A_1)[D1 D_in; D3 D9] *
+        tensor(A_2)[D9 D11; D5 D7] *
         E_3[χ3 D5; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ6] *
@@ -400,14 +412,14 @@ function half_infinite_environment(
 end
 function half_infinite_environment(
     x::AbstractTensor{T,S,2}, C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P
-) where {T,S,P<:PFTensor}
+) where {T,S,P<:PFSandwich}
     return @autoopt @tensor env_x[χ_in D_in] :=
         x[χ1 D1 D2] *
         conj(E_1[χ1 D3; χ2]) *
         conj(C_1[χ2; χ3]) *
         conj(E_2[χ3 D5; χ4]) *
-        conj(A_1[D3 D1; D5 D11]) *
-        conj(A_2[D11 D_in; D7 D9]) *
+        conj(tensor(A_1)[D3 D1; D5 D11]) *
+        conj(tensor(A_2)[D11 D_in; D7 D9]) *
         conj(E_3[χ4 D7; χ5]) *
         conj(C_2[χ5; χ6]) *
         conj(E_4[χ6 D9; χ_in])
@@ -660,21 +672,21 @@ function full_infinite_environment(
     A_2::P,
     A_3::P,
     A_4::P,
-) where {P<:PFTensor}
+) where {P<:PFSandwich}
     return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3; χ3] *
-        A_1[D1 D_in; D3 D11] *
-        A_2[D11 D9; D5 D7] *
+        tensor(A_1)[D1 D_in; D3 D11] *
+        tensor(A_2)[D11 D9; D5 D7] *
         E_3[χ3 D5; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ6] *
         E_5[χ6 D13; χ7] *
         C_3[χ7; χ8] *
         E_6[χ8 D15; χ9] *
-        A_3[D17 D15; D9 D13] *
-        A_4[D21 D19; D_out D17] *
+        tensor(A_3)[D17 D15; D9 D13] *
+        tensor(A_4)[D21 D19; D_out D17] *
         E_7[χ9 D19; χ10] *
         C_4[χ10; χ11] *
         E_8[χ11 D21; χ_out]
@@ -697,21 +709,21 @@ function full_infinite_environment(
     A_2::P,
     A_3::P,
     A_4::P,
-) where {T,S,P<:PFTensor}
+) where {T,S,P<:PFSandwich}
     return @autoopt @tensor env_x[χ_in D_in] :=
         E_1[χ_in D1; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3; χ3] *
-        A_1[D1 D_in; D3 D11] *
-        A_2[D11 D9; D5 D7] *
+        tensor(A_1)[D1 D_in; D3 D11] *
+        tensor(A_2)[D11 D9; D5 D7] *
         E_3[χ3 D5; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ6] *
         E_5[χ6 D13; χ7] *
         C_3[χ7; χ8] *
         E_6[χ8 D15; χ9] *
-        A_3[D17 D15; D9 D13] *
-        A_4[D21 D19; D_x D17] *
+        tensor(A_3)[D17 D15; D9 D13] *
+        tensor(A_4)[D21 D19; D_x D17] *
         E_7[χ9 D19; χ10] *
         C_4[χ10; χ11] *
         E_8[χ11 D21; χ_x] *
@@ -735,22 +747,22 @@ function full_infinite_environment(
     A_2::P,
     A_3::P,
     A_4::P,
-) where {T,S,P<:PFTensor}
+) where {T,S,P<:PFSandwich}
     return @autoopt @tensor x_env[χ_in D_in] :=
         x[χ_x D_x] *
         E_1[χ_x D1; χ1] *
         C_1[χ1; χ2] *
         E_2[χ2 D3; χ3] *
-        A_1[D1 D_x; D3 D11] *
-        A_2[D11 D9; D5 D7] *
+        tensor(A_1)[D1 D_x; D3 D11] *
+        tensor(A_2)[D11 D9; D5 D7] *
         E_3[χ3 D5; χ4] *
         C_2[χ4; χ5] *
         E_4[χ5 D7; χ6] *
         E_5[χ6 D13; χ7] *
         C_3[χ7; χ8] *
         E_6[χ8 D15; χ9] *
-        A_3[D17 D15; D9 D13] *
-        A_4[D21 D19; D_in D17] *
+        tensor(A_3)[D17 D15; D9 D13] *
+        tensor(A_4)[D21 D19; D_in D17] *
         E_7[χ9 D19; χ10] *
         C_4[χ10; χ11] *
         E_8[χ11 D21; χ_in]
@@ -831,14 +843,14 @@ function renormalize_northwest_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_northwest_corner(
-    E_west, C_northwest, E_north, P_left, P_right, A::PFTensor
+    E_west, C_northwest, E_north, P_left, P_right, A::PFSandwich
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
         E_west[χ1 D3; χ2] *
         C_northwest[χ2; χ3] *
         E_north[χ3 D5; χ4] *
-        A[D3 D1; D5 D7] *
+        tensor(A)[D3 D1; D5 D7] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -886,14 +898,14 @@ function renormalize_northeast_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_northeast_corner(
-    E_north, C_northeast, E_east, P_left, P_right, A::PFTensor
+    E_north, C_northeast, E_east, P_left, P_right, A::PFSandwich
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
         E_north[χ1 D3; χ2] *
         C_northeast[χ2; χ3] *
         E_east[χ3 D5; χ4] *
-        A[D1 D7; D3 D5] *
+        tensor(A)[D1 D7; D3 D5] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -939,14 +951,14 @@ function renormalize_southeast_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_southeast_corner(
-    E_east, C_southeast, E_south, P_left, P_right, A::PFTensor
+    E_east, C_southeast, E_south, P_left, P_right, A::PFSandwich
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
         E_east[χ1 D3; χ2] *
         C_southeast[χ2; χ3] *
         E_south[χ3 D5; χ4] *
-        A[D7 D5; D1 D3] *
+        tensor(A)[D7 D5; D1 D3] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -992,14 +1004,14 @@ function renormalize_southwest_corner(
         P_left[χ4 D7 D8; χ_out]
 end
 function renormalize_southwest_corner(
-    E_south, C_southwest, E_west, P_left, P_right, A::PFTensor
+    E_south, C_southwest, E_west, P_left, P_right, A::PFSandwich
 )
     return @autoopt @tensor corner[χ_in; χ_out] :=
         P_right[χ_in; χ1 D1] *
         E_south[χ1 D3; χ2] *
         C_southwest[χ2; χ3] *
         E_west[χ3 D5; χ4] *
-        A[D5 D3; D7 D1] *
+        tensor(A)[D5 D3; D7 D1] *
         P_left[χ4 D7; χ_out]
 end
 
@@ -1096,9 +1108,14 @@ function renormalize_north_edge(
         P_right[χ_W; χ1 D5 D6]
     return out
 end
-function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
+function renormalize_north_edge(
+    E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFSandwich
+)
     return @autoopt @tensor edge[χ_W D_S; χ_E] :=
-        E_north[χ1 D1; χ2] * A[D5 D_S; D1 D3] * P_left[χ2 D3; χ_E] * P_right[χ_W; χ1 D5]
+        E_north[χ1 D1; χ2] *
+        tensor(A)[D5 D_S; D1 D3] *
+        P_left[χ2 D3; χ_E] *
+        P_right[χ_W; χ1 D5]
 end
 
 """
@@ -1138,9 +1155,12 @@ function renormalize_east_edge(
         P_bottom[χ2 D3 D4; χ_S] *
         P_top[χ_N; χ1 D5 D6]
 end
-function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
+function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFSandwich)
     return @autoopt @tensor edge[χ_N D_W; χ_S] :=
-        E_east[χ1 D1; χ2] * A[D_W D3; D5 D1] * P_bottom[χ2 D3; χ_S] * P_top[χ_N; χ1 D5]
+        E_east[χ1 D1; χ2] *
+        tensor(A)[D_W D3; D5 D1] *
+        P_bottom[χ2 D3; χ_S] *
+        P_top[χ_N; χ1 D5]
 end
 
 """
@@ -1178,9 +1198,14 @@ function renormalize_south_edge(
         P_left[χ2 D3 D4; χ_W] *
         P_right[χ_E; χ1 D5 D6]
 end
-function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
+function renormalize_south_edge(
+    E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFSandwich
+)
     return @autoopt @tensor edge[χ_E D_N; χ_W] :=
-        E_south[χ1 D1; χ2] * A[D3 D1; D_N D5] * P_left[χ2 D3; χ_W] * P_right[χ_E; χ1 D5]
+        E_south[χ1 D1; χ2] *
+        tensor(A)[D3 D1; D_N D5] *
+        P_left[χ2 D3; χ_W] *
+        P_right[χ_E; χ1 D5]
 end
 
 """
@@ -1237,9 +1262,12 @@ function renormalize_west_edge(
         P_bottom[χ2 D3 D4; χ_N] *
         P_top[χ_S; χ1 D5 D6]
 end
-function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
+function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFSandwich)
     return @autoopt @tensor edge[χ_S D_E; χ_N] :=
-        E_west[χ1 D1; χ2] * A[D1 D5; D3 D_E] * P_bottom[χ2 D3; χ_N] * P_top[χ_S; χ1 D5]
+        E_west[χ1 D1; χ2] *
+        tensor(A)[D1 D5; D3 D_E] *
+        P_bottom[χ2 D3; χ_N] *
+        P_top[χ_S; χ1 D5]
 end
 
 # Gauge fixing contractions
