@@ -1555,7 +1555,7 @@ function _pepo_sandwich_expr(sandwichname, H::Int, args...; kwargs...)
     ket_e = _pepo_pepstensor_expr(:(ket($sandwichname)), :top, 1, args...; kwargs...)
     bra_e = _pepo_pepstensor_expr(:(bra($sandwichname)), :bot, H + 1, args...; kwargs...)
     pepo_es = map(1:H) do h
-        return _pepo_pepotensor_expr(:(pepo($sandwichname)[$h]), h, args...; kwargs...)
+        return _pepo_pepotensor_expr(:(pepo($sandwichname, $h)), h, args...; kwargs...)
     end
 
     return ket_e, bra_e, pepo_es
