@@ -70,7 +70,7 @@ function Base.:*(α::Number, A::NWType) where {NWType<:InfiniteSquareNetwork}
     return NWType(_mul_localsandwich.(α, unitcell(A)))
 end
 function Base.:/(A::NWType, α::Number) where {NWType<:InfiniteSquareNetwork}
-    return NWType(_mul_localsandwich.(Ref(1 / α), unitcell(A)))
+    return A * inv(α)
 end
 function LinearAlgebra.dot(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
     return dot(unitcell(A₁), unitcell(A₂))
