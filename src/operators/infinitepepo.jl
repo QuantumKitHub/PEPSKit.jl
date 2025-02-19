@@ -5,7 +5,7 @@ Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic la
 """
 struct InfinitePEPO{T<:PEPOTensor}
     A::Array{T,3}
-
+    InfinitePEPO{T}(A::Array{T,3}) where {T} = new{T}(A)
     function InfinitePEPO(A::Array{T,3}) where {T<:PEPOTensor}
         # space checks
         for (d, w, h) in Tuple.(CartesianIndices(A))

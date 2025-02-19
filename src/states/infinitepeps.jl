@@ -141,8 +141,9 @@ physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
 ## InfiniteSquareNetwork interface
 
 function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS=top)
-    size(top) == size(bot) ||
-        throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have the same length"))
+    size(top) == size(bot) || throw(
+        ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have the same length")
+    )
     return InfiniteSquareNetwork(map(Tuple, zip(unitcell(top), unitcell(bot))))
 end
 
@@ -155,13 +156,14 @@ VectorInterface.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A
 
 ## Math
 
-function Base.:+(A₁::InfinitePEPS{T}, A₂::InfinitePEPS{T}) where {T}
+function Base.:+(A₁::InfinitePEPS, A₂::InfinitePEPS)
     return InfinitePEPS(unitcell(A₁) + unitcell(A₂))
 end
-function Base.:-(A₁::InfinitePEPS{T}, A₂::InfinitePEPS{T}) where {T}
+function Base.:-(A₁::InfinitePEPS, A₂::InfinitePEPS)
     return InfinitePEPS(unitcell(A₁) - unitcell(A₂))
 end
 Base.:*(α::Number, A::InfinitePEPS) = InfinitePEPS(α * unitcell(A))
+Base.:*(A::InfinitePEPS, α::Number) = α * A
 Base.:/(A::InfinitePEPS, α::Number) = InfinitePEPS(unitcell(A) / α)
 LinearAlgebra.dot(A₁::InfinitePEPS, A₂::InfinitePEPS) = dot(unitcell(A₁), unitcell(A₂))
 LinearAlgebra.norm(A::InfinitePEPS) = norm(unitcell(A))

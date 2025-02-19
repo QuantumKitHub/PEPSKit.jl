@@ -53,23 +53,26 @@ end
 virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## Vector interface
-VectorInterface.scalartype(::Type{T}) where {T<:InfiniteSquareNetwork} = scalartype(eltype(T))
+function VectorInterface.scalartype(::Type{T}) where {T<:InfiniteSquareNetwork}
+    return scalartype(eltype(T))
+end
 function VectorInterface.zerovector(A::InfiniteSquareNetwork)
     return InfiniteSquareNetwork(zerovector(unitcell(A)))
 end
 
 ## Math (for Zygote accumulation)
 
-function Base.:+(A₁::NWType, A₂::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(_add_localsandwich.(unitcell(A₁), unitcell(A₂)))
+function Base.:+(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
+    return InfiniteSquareNetwork(_add_localsandwich.(unitcell(A₁), unitcell(A₂)))
 end
-function Base.:-(A₁::NWType, A₂::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(_subtract_localsandwich.(unitcell(A₁), unitcell(A₂)))
+function Base.:-(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
+    return InfiniteSquareNetwork(_subtract_localsandwich.(unitcell(A₁), unitcell(A₂)))
 end
-function Base.:*(α::Number, A::NWType) where {NWType<:InfiniteSquareNetwork}
-    return NWType(_mul_localsandwich.(α, unitcell(A)))
+function Base.:*(α::Number, A::InfiniteSquareNetwork)
+    return InfiniteSquareNetwork(_mul_localsandwich.(α, unitcell(A)))
 end
-function Base.:/(A::NWType, α::Number) where {NWType<:InfiniteSquareNetwork}
+Base.:*(A::InfiniteSquareNetwork, α::Number) = α * A
+function Base.:/(A::InfiniteSquareNetwork, α::Number)
     return A * inv(α)
 end
 function LinearAlgebra.dot(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
@@ -105,9 +108,9 @@ end
 ## Chainrules
 
 function ChainRulesCore.rrule(
-    ::typeof(Base.getindex), network::InfiniteSquareNetwork, args...
+    ::typeof(Base.getindex), network::InfiniteSquareNetwork, r::Int, c::Int
 )
-    O = network[args...]
+    O = network[r, c]
 
     function getindex_pullback(ΔO_)
         ΔO = map(unthunk, ΔO_)
@@ -115,7 +118,7 @@ function ChainRulesCore.rrule(
             ΔO = ChainRulesCore.construct(typeof(O), ChainRulesCore.backing(ΔO))
         end
         Δnetwork = zerovector(network)
-        Δnetwork[args...] = ΔO
+        Δnetwork[r, c] = ΔO
         return NoTangent(), Δnetwork, NoTangent(), NoTangent()
     end
     return O, getindex_pullback
