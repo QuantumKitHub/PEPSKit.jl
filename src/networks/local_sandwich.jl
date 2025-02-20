@@ -18,15 +18,31 @@ function MPSKit.right_virtualspace(O, args...)
     return _elementwise_dual(east_virtualspace(O, args...))
 end # follow MPSKit convention: right vspace gets a dual by default
 
+## Rotations
+
+# generic local interface
+_rotl90_localsandwich(O) = rotl90.(O)
+_rotr90_localsandwich(O) = rotr90.(O)
+_rot180_localsandwich(O) = rot180.(O)
+
+## Math (for Zygote accumulation)
+
+# generic local interface
+_add_localsandwich(O1, O2) = O1 .+ O2
+_subtract_localsandwich(O1, O2) = O1 .- O2
+_mul_localsandwich(α::Number, O) = α .* O
+
 ## PartitionFunction
 
-const PFSandwich{T<:PFTensor} = Tuple{T}
+# specialized local rotation interface
+_rotl90_localsandwich(O::PFTensor) = rotl90(O)
+_rotr90_localsandwich(O::PFTensor) = rotr90(O)
+_rot180_localsandwich(O::PFTensor) = rot180(O)
 
-tensor(O::PFSandwich) = O[1]
-
-function virtualspace(O::PFSandwich, dir)
-    return virtualspace(tensor(O), dir)
-end
+# specialized local math interface
+_add_localsandwich(O1::PFTensor, O2::PFTensor) = O1 + O2
+_subtract_localsandwich(O1::PFTensor, O2::PFTensor) = O1 - O2
+_mul_localsandwich(α::Number, O::PFTensor) = α * O
 
 ## PEPS
 
@@ -55,15 +71,3 @@ function virtualspace(O::PEPOSandwich, dir)
         virtualspace(bra(O), dir)',
     ])
 end
-
-## Rotations
-
-_rotl90_localsandwich(O) = rotl90.(O)
-_rotr90_localsandwich(O) = rotr90.(O)
-_rot180_localsandwich(O) = rot180.(O)
-
-## Math (for Zygote accumulation)
-
-_add_localsandwich(O1, O2) = O1 .+ O2
-_subtract_localsandwich(O1, O2) = O1 .- O2
-_mul_localsandwich(α, O) = α .* O

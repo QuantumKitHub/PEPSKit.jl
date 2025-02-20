@@ -107,6 +107,7 @@ end
 
 ## Chainrules
 
+# generic implementation
 function ChainRulesCore.rrule(
     ::typeof(Base.getindex), network::InfiniteSquareNetwork, r::Int, c::Int
 )
@@ -117,6 +118,21 @@ function ChainRulesCore.rrule(
         if ΔO isa Tangent
             ΔO = ChainRulesCore.construct(typeof(O), ChainRulesCore.backing(ΔO))
         end
+        Δnetwork = zerovector(network)
+        Δnetwork[r, c] = ΔO
+        return NoTangent(), Δnetwork, NoTangent(), NoTangent()
+    end
+    return O, getindex_pullback
+end
+
+# specialized PFTensor implementation
+function ChainRulesCore.rrule(
+    ::typeof(Base.getindex), network::InfiniteSquareNetwork{<:PFTensor}, r::Int, c::Int
+)
+    O = network[r, c]
+
+    function getindex_pullback(ΔO_)
+        ΔO = unthunk(ΔO_)
         Δnetwork = zerovector(network)
         Δnetwork[r, c] = ΔO
         return NoTangent(), Δnetwork, NoTangent(), NoTangent()

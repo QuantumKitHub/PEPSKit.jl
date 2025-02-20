@@ -144,7 +144,7 @@ virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n
 ## InfiniteSquareNetwork interface
 
 function InfiniteSquareNetwork(state::InfinitePartitionFunction)
-    return InfiniteSquareNetwork(map(tuple, unitcell(state)))
+    return InfiniteSquareNetwork(unitcell(state))
 end
 
 ## (Approximate) equality
