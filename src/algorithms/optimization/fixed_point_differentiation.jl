@@ -116,7 +116,7 @@ function _rrule(
         Δenv = unthunk(Δenv′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
-        f(A, x) = gauge_fix(x, ctmrg_iteration(A, x, alg)[1])[1]
+        f(A, x) = gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg)[1])[1]
         _, env_vjp = rrule_via_ad(config, f, state, env)
 
         # evaluate the geometric sum
@@ -141,7 +141,7 @@ function _rrule(
 )
     @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     env, = leading_boundary(envinit, state, alg)
-    env_conv, info = ctmrg_iteration(state, env, alg)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
     env_fixed, signs = gauge_fix(env, env_conv)
 
     # Fix SVD
@@ -156,7 +156,11 @@ function _rrule(
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        f(A, x) = fix_global_phases(x, ctmrg_iteration(A, x, alg_fixed)[1])
+        function f(A, x)
+            return fix_global_phases(
+                x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
+            )
+        end
         _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
 
         # evaluate the geometric sum
