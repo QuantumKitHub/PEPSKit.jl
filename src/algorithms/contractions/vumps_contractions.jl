@@ -201,22 +201,11 @@ pepo(p::∂PEPOSandwich, i::Int) = p[1 + i]
     @assert H == N - 3
 
     ∂p_e = _pepo_pepstensor_expr(:∂p, :bot, H + 1)
-<<<<<<< HEAD
-    AC_e = _pepo_mpstensor_expr(:AC, :N, H)
-    ĀC_e = _pepo_mpstensor_expr(:ĀC, :S, H)
-    GL_e = _pepo_leftenv_expr(:GL, :W, H)
-    GR_e = _pepo_rightenv_expr(:GR, :E, H)
-    ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
-    pepo_es = map(1:H) do h
-        return _pepo_pepotensor_expr(:(pepo(O, $h)), h)
-    end
-=======
     AC_e = _pepo_edge_expr(:AC, :NW, :NE, :N, H)
     ĀC_e = _pepo_edge_expr(:ĀC, :SW, :SE, :S, H)
     GL_e = _pepo_edge_expr(:GL, :SW, :NW, :W, H)
     GR_e = _pepo_edge_expr(:GR, :NE, :SE, :E, H)
     ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
->>>>>>> Rough attempt at CTMRG for PEPO stacks
 
     rhs = Expr(:call, :*, AC_e, Expr(:call, :conj, ĀC_e), GL_e, GR_e, ket_e, pepo_es...)
 
