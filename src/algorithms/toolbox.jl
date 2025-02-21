@@ -346,9 +346,7 @@ Contract a local tensor `O` inserted into a partition function `pf` at position 
 using the environment `env`.
 """
 function contract_local_tensor(
-    inds::Tuple{Int,Int},
-    O::PFTensor,
-    env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
+    inds::Tuple{Int,Int}, O::PFTensor, env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}
 ) where {C}
     r, c = inds
     return @autoopt @tensor env.corners[NORTHWEST, _prev(r, end), _prev(c, end)][

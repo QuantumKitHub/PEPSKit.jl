@@ -94,7 +94,7 @@ end
         env3 = deepcopy(x[3])
         return (peps, env2, env3), η
     end
-    
+
     # contract
     T = InfinitePEPO(O; unitcell=(1, 1, 1))
     psi0 = initializePEPS(T, ComplexSpace(2))
@@ -125,11 +125,11 @@ end
     n3_final = InfiniteSquareNetwork(psi_final, T)
     e = PEPSKit.contract_local_tensor((1, 1, 1), E, n3_final, env3_final)
     nrm3 = PEPSKit._contract_site((1, 1), n3_final, env3_final)
-    
+
     e_per_link = e / nrm3 / 3
 
-    @test e_per_link ≈ -0.53, atol=1e-2
-            
+    @test e_per_link ≈ -0.53, atol = 1e-2
+
     # TODO: figure out what we should actually get
     # result does not seem to match the one from https://iopscience.iop.org/article/10.1088/0305-4470/31/29/007/pdf
     # beta = 0.2240, E ≈ 0.378615(26)
