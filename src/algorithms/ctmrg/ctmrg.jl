@@ -7,19 +7,18 @@ for contracting infinite PEPS.
 abstract type CTMRGAlgorithm end
 
 """
-    ctmrg_iteration(state, env, alg::CTMRGAlgorithm) -> env′, info
+    ctmrg_iteration(network, env, alg::CTMRGAlgorithm) -> env′, info
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
+function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
-    MPSKit.leading_boundary([env₀], state; kwargs...)
+    MPSKit.leading_boundary(env₀, network; kwargs...)
     # expert version:
-    MPSKit.leading_boundary([env₀], state, alg::CTMRGAlgorithm)
+    MPSKit.leading_boundary(env₀, network, alg::CTMRGAlgorithm)
 
-Contract `state` using CTMRG and return the CTM environment. Per default, a random
-initial environment is used.
+Contract `network` using CTMRG and return the CTM environment.
 
 The algorithm can be supplied via the keyword arguments or directly as an `CTMRGAlgorithm`
 struct. The following keyword arguments are supported:
@@ -52,22 +51,22 @@ struct. The following keyword arguments are supported:
 - `projector_alg=Defaults.projector_alg_type`: Projector algorithm type, where any
   `ProjectorAlgorithm` can be used
 """
-function MPSKit.leading_boundary(env₀::CTMRGEnv, state::InfiniteSquareNetwork; kwargs...)
+function MPSKit.leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
-    return MPSKit.leading_boundary(env₀, state, alg)
+    return MPSKit.leading_boundary(env₀, network, alg)
 end
 function MPSKit.leading_boundary(
-    env₀::CTMRGEnv, state::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+    env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
 )
     CS = map(x -> tsvd(x)[2], env₀.corners)
     TS = map(x -> tsvd(x)[2], env₀.edges)
 
-    η = one(real(scalartype(state)))
+    η = one(real(scalartype(network)))
     env = deepcopy(env₀)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, state, env₀)
+        ctmrg_loginit!(log, η, network, env₀)
         local info
         for iter in 1:(alg.maxiter)
             env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
