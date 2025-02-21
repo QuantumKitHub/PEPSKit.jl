@@ -52,19 +52,13 @@ struct. The following keyword arguments are supported:
 - `projector_alg=Defaults.projector_alg_type`: Projector algorithm type, where any
   `ProjectorAlgorithm` can be used
 """
-function MPSKit.leading_boundary(state::InfiniteSquareNetwork; kwargs...)
-    return MPSKit.leading_boundary(
-        CTMRGEnv(state, oneunit(spacetype(state))), state; kwargs...
-    )
-end
-function MPSKit.leading_boundary(env₀, state::InfiniteSquareNetwork; kwargs...)
+function MPSKit.leading_boundary(env₀::CTMRGEnv, state::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
     return MPSKit.leading_boundary(env₀, state, alg)
 end
-function MPSKit.leading_boundary(state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
-    return MPSKit.leading_boundary(CTMRGEnv(state, oneunit(spacetype(state))), state, alg)
-end
-function MPSKit.leading_boundary(env₀, state::InfiniteSquareNetwork, alg::CTMRGAlgorithm)
+function MPSKit.leading_boundary(
+    env₀::CTMRGEnv, state::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+)
     CS = map(x -> tsvd(x)[2], env₀.corners)
     TS = map(x -> tsvd(x)[2], env₀.edges)
 
@@ -76,37 +70,38 @@ function MPSKit.leading_boundary(env₀, state::InfiniteSquareNetwork, alg::CTMR
         ctmrg_loginit!(log, η, state, env₀)
         local info
         for iter in 1:(alg.maxiter)
-            env, info = ctmrg_iteration(state, env, alg)  # Grow and renormalize in all 4 directions
+            env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
-                ctmrg_logfinish!(log, iter, η, state, env)
+                ctmrg_logfinish!(log, iter, η, network, env)
                 break
             end
             if iter == alg.maxiter
-                ctmrg_logcancel!(log, iter, η, state, env)
+                ctmrg_logcancel!(log, iter, η, network, env)
             else
-                ctmrg_logiter!(log, iter, η, state, env)
+                ctmrg_logiter!(log, iter, η, network, env)
             end
         end
         return env, info
     end
 end
-
-# network-specific objective functions
-ctmrg_objective(state::InfinitePEPS, env::CTMRGEnv) = norm(state, env)
-ctmrg_objective(state::InfinitePartitionFunction, env::CTMRGEnv) = value(state, env)
+function MPSKit.leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
+    return MPSKit.leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
+end
 
 # custom CTMRG logging
-ctmrg_loginit!(log, η, state, env) = @infov 2 loginit!(log, η, ctmrg_objective(state, env))
-function ctmrg_logiter!(log, iter, η, state, env)
-    @infov 3 logiter!(log, iter, η, ctmrg_objective(state, env))
+function ctmrg_loginit!(log, η, network, env)
+    @infov 2 loginit!(log, η, network_value(network, env))
 end
-function ctmrg_logfinish!(log, iter, η, state, env)
-    @infov 2 logfinish!(log, iter, η, ctmrg_objective(state, env))
+function ctmrg_logiter!(log, iter, η, network, env)
+    @infov 3 logiter!(log, iter, η, network_value(network, env))
 end
-function ctmrg_logcancel!(log, iter, η, state, env)
-    @warnv 1 logcancel!(log, iter, η, ctmrg_objective(state, env))
+function ctmrg_logfinish!(log, iter, η, network, env)
+    @infov 2 logfinish!(log, iter, η, network_value(network, env))
+end
+function ctmrg_logcancel!(log, iter, η, network, env)
+    @warnv 1 logcancel!(log, iter, η, network_value(network, env))
 end
 
 @non_differentiable ctmrg_loginit!(args...)

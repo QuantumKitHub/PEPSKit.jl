@@ -44,9 +44,10 @@ end
 )
     alg = ctmrg_alg(; tol, projector_alg)
     env_pre, psi = preconv[(S, T, unitcell)]
+    n = InfiniteSquareNetwork(psi)
     env_pre
     env, = leading_boundary(env_pre, psi, alg)
-    env′, = ctmrg_iteration(psi, env, alg)
+    env′, = ctmrg_iteration(n, env, alg)
     env_fixed, = gauge_fix(env, env′)
     @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end

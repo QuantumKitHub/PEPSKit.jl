@@ -3,53 +3,6 @@ import MPSKit: Multiline, MultilineEnvironments
 # implementation of PEPS transfer matrices in terms of MPSKit.InfiniteMPO
 
 #
-# Effective MPOTensor interface
-#
-
-## Space utils
-
-_elementwise_dual(S::ElementarySpace) = S
-_elementwise_dual(P::ProductSpace) = prod(dual.(P))
-
-north_space(O, args...) = virtual_space(O, NORTH, args...)
-east_space(O, args...) = virtual_space(O, EAST, args...)
-south_space(O, args...) = virtual_space(O, SOUTH, args...)
-west_space(O, args...) = virtual_space(O, WEST, args...)
-
-## PEPS
-
-const PEPSSandwich{T<:PEPSTensor} = Tuple{T,T}
-
-ket(p::PEPSSandwich) = p[1]
-bra(p::PEPSSandwich) = p[2]
-
-function virtual_space(p::PEPSSandwich, dir)
-    return space(ket(p), dir + 1) ⊗ space(bra(p), dir + 1)'
-end
-
-## PEPO
-
-const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Tuple{Vararg{P,N}}}
-
-ket(p::PEPOSandwich) = p[1]
-bra(p::PEPOSandwich) = p[2]
-pepo(p::PEPOSandwich) = p[3]
-pepo(p::PEPOSandwich, i::Int) = p[3][i]
-
-function virtual_space(p::PEPOSandwich, dir)
-    return prod([
-        space(ket(p), dir + 1), space.(pepo(p), Ref(dir + 2))..., space(bra(p), dir + 1)'
-    ])
-end
-
-## Common
-
-MPSKit.left_virtualspace(p::Union{PEPSSandwich,PEPOSandwich}) = west_space(p)
-function MPSKit.right_virtualspace(p::Union{PEPSSandwich,PEPOSandwich})
-    return _elementwise_dual(east_space(p))
-end # follow MPSKit convention: right vspace gets a dual by default
-
-#
 # PEPS
 #
 
@@ -64,7 +17,7 @@ const InfiniteTransferPEPS{T<:PEPSTensor} = InfiniteMPO{PEPSSandwich{T}}
 function InfiniteTransferPEPS(
     top::PeriodicArray{T,1}, bot::PeriodicArray{T,1}
 ) where {T<:PEPSTensor}
-    return InfiniteMPO(map(Tuple, zip(top, bot)))
+    return InfiniteMPO(map(tuple, top, bot))
 end
 
 InfiniteTransferPEPS(top) = InfiniteTransferPEPS(top, top)
@@ -121,7 +74,7 @@ function InfiniteTransferPEPO(
 ) where {T,O}
     size(top, 1) == size(bot, 1) == size(mid, 1) ||
         throw(ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have length"))
-    return InfiniteMPO(map(Tuple, zip(top, bot, Iterators.map(Tuple, eachrow(mid)))))
+    return InfiniteMPO(map(tuple, top, bot, eachslice(mid; dims=2)...))
 end
 
 InfiniteTransferPEPO(top, mid) = InfiniteTransferPEPO(top, mid, top)
@@ -169,7 +122,7 @@ end
 const InfiniteTransferMatrix = Union{InfiniteTransferPEPS,InfiniteTransferPEPO}
 const MultilineTransferMatrix = Union{MultilineTransferPEPS,MultilineTransferPEPO}
 
-virtual_space(O::InfiniteTransferMatrix, i, dir) = virtual_space(O[i], dir)
+virtualspace(O::InfiniteTransferMatrix, i, dir) = virtualspace(O[i], dir)
 
 """
     initializeMPS(
@@ -190,14 +143,14 @@ function initializeMPS(
     return InfiniteMPS([
         randn(
             scalartype(O),
-            virtualspaces[_prev(i, end)] * _elementwise_dual(north_space(O, i)),
+            virtualspaces[_prev(i, end)] * _elementwise_dual(north_virtualspace(O, i)),
             virtualspaces[mod1(i, end)],
         ) for i in 1:length(O)
     ])
 end
 function initializeMPS(O::InfiniteTransferMatrix, χ::Int)
     return InfiniteMPS([
-        randn(calartype(O), ℂ^χ * _elementwise_dual(north_space(O, i)), ℂ^χ) for
+        randn(calartype(O), ℂ^χ * _elementwise_dual(north_virtualspace(O, i)), ℂ^χ) for
         i in 1:length(O)
     ])
 end
