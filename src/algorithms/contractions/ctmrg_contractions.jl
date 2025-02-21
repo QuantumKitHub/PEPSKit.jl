@@ -1351,17 +1351,23 @@ Multiply edge tensor with incoming and outgoing gauge signs.
     -- σ_in -- edge -- σ_out --
 ```
 """
-function fix_gauge_edge(
-    edge::CTMRG_PEPS_EdgeTensor, σ_in::CTMRGCornerTensor, σ_out::CTMRGCornerTensor
-)
-    @autoopt @tensor edge_fix[χ_in D_above D_below; χ_out] :=
-        σ_in[χ_in; χ1] * edge[χ1 D_above D_below; χ2] * conj(σ_out[χ_out; χ2])
-end
-function fix_gauge_edge(
-    edge::CTMRG_PF_EdgeTensor, σ_in::CTMRGCornerTensor, σ_out::CTMRGCornerTensor
-)
-    @autoopt @tensor edge_fix[χ_in D_above D_below; χ_out] :=
-        σ_in[χ_in; χ1] * edge[χ1 D_above D_below; χ2] * conj(σ_out[χ_out; χ2])
+@generated function fix_gauge_edge(
+    edge::CTMRGEdgeTensor{T,S,N}, σ_in::CTMRGCornerTensor, σ_out::CTMRGCornerTensor
+) where {T,S,N}
+    edge_fix_e = tensorexpr(
+        :edge_fix,
+        (envlabel(:in), ntuple(i -> virtuallabel(i), N - 1)...),
+        (envlabel(:out),),
+    )
+    edge_e = tensorexpr(
+        :edge, (envlabel(1), ntuple(i -> virtuallabel(i), N - 1)...), (envlabel(2),)
+    )
+    σ_in_e = tensorexpr(:σ_in, (envlabel(:in),), (envlabel(1),))
+    σ_out_e = tensorexpr(:σ_out, (envlabel(:out),), (envlabel(2),))
+    return macroexpand(
+        @__MODULE__,
+        :(return @autoopt @tensor $edge_fix_e := $σ_in_e * $edge_e * conj($σ_out_e)),
+    )
 end
 
 """

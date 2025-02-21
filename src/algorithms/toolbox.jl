@@ -336,3 +336,62 @@ function product_peps(peps_args...; unitcell=(1, 1), noise_amp=1e-2, state_vecto
     ψ = prod_peps + noise_amp * noise_peps
     return ψ / norm(ψ)
 end
+
+# Contract local tensors
+
+"""
+    contract_local_tensor(inds, O::PFTensor, env)
+
+Contract a local tensor `O` inserted into a partition function `pf` at position `inds`,
+using the environment `env`.
+"""
+function contract_local_tensor(
+    inds::Tuple{Int,Int},
+    O::PFTensor,
+    env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor},
+) where {C}
+    r, c = inds
+    return @autoopt @tensor env.corners[NORTHWEST, _prev(r, end), _prev(c, end)][
+            χ_WNW
+            χ_NNW
+        ] *
+        env.edges[NORTH, _prev(r, end), c][χ_NNW D_N; χ_NNE] *
+        env.corners[NORTHEAST, _prev(r, end), _next(c, end)][χ_NNE; χ_ENE] *
+        env.edges[EAST, r, _next(c, end)][χ_ENE D_E; χ_ESE] *
+        env.corners[SOUTHEAST, _next(r, end), _next(c, end)][χ_ESE; χ_SSE] *
+        env.edges[SOUTH, _next(r, end), c][χ_SSE D_S; χ_SSW] *
+        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)][χ_SSW; χ_WSW] *
+        env.edges[WEST, r, _prev(c, end)][χ_WSW D_W; χ_WNW] *
+        O[D_W D_S; D_N D_E]
+end
+
+"""
+    contract_local_tensor(inds, O::PEPOTensor, network, env)
+
+Contract a local tensor `O` inserted into the PEPO of a given `network` at position `inds`,
+using the environment `env`.
+"""
+function contract_local_tensor(
+    ind::Tuple{Int,Int,Int},
+    O::PEPOTensor,
+    network::InfiniteSquareNetwork{<:PEPOSandwich},
+    env::CTMRGEnv,
+)
+    r, c, h = ind
+    sandwich´ = Base.setindex(network[r, c], O, h + 2)
+    return PEPSKit._contract_site(
+        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+        env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+        env.edges[NORTH, _prev(r, end), c],
+        env.edges[EAST, r, _next(c, end)],
+        env.edges[SOUTH, _next(r, end), c],
+        env.edges[WEST, r, _prev(c, end)],
+        sandwich´,
+    )
+end
+
+function contract_local_tensor(inds::CartesianIndex, O::AbstractTensorMap, env::CTMRGEnv)
+    return contract_local_tensor(Tuple(inds), O, env)
+end
