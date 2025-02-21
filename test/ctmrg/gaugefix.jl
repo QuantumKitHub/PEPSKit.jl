@@ -20,7 +20,7 @@ function _pre_converge_env(
     Random.seed!(seed)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(rand, T, physical_space, peps_space; unitcell)
     env₀ = CTMRGEnv(psi, ctm_space)
-    env_conv, = leading_boundary(env₀, psi, SequentialCTMRG(; tol))
+    env_conv, = leading_boundary(env₀, psi; alg=SequentialCTMRG, tol)
     return env_conv, psi
 end
 

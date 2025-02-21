@@ -1,8 +1,8 @@
 """
     SequentialCTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
                       miniter=Defaults.ctmrg_miniter, verbosity=0,
-                      projector_alg=typeof(Defaults.projector_alg),
-                      svd_alg=SVDAdjoint(), trscheme=FixedSpaceTruncation())
+                      svd_alg=SVDAdjoint(), trscheme=Defaults.trscheme,
+                      projector_alg=Defaults.projector_alg_type)
 
 CTMRG algorithm where the expansions and renormalization is performed sequentially
 column-wise. This is implemented as a growing and projecting step to the left, followed by
@@ -21,9 +21,9 @@ function SequentialCTMRG(;
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,
     verbosity=2,
-    projector_alg=Defaults.projector_alg_type,
     svd_alg=Defaults.svd_alg,
     trscheme=Defaults.trscheme,
+    projector_alg=Defaults.projector_alg_type,
 )
     return SequentialCTMRG(
         tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
