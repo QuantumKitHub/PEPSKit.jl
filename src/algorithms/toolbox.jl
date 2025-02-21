@@ -349,18 +349,17 @@ function contract_local_tensor(
     inds::Tuple{Int,Int}, O::PFTensor, env::CTMRGEnv{C,<:CTMRG_PF_EdgeTensor}
 ) where {C}
     r, c = inds
-    return @autoopt @tensor env.corners[NORTHWEST, _prev(r, end), _prev(c, end)][
-            χ_WNW
-            χ_NNW
-        ] *
-        env.edges[NORTH, _prev(r, end), c][χ_NNW D_N; χ_NNE] *
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)][χ_NNE; χ_ENE] *
-        env.edges[EAST, r, _next(c, end)][χ_ENE D_E; χ_ESE] *
-        env.corners[SOUTHEAST, _next(r, end), _next(c, end)][χ_ESE; χ_SSE] *
-        env.edges[SOUTH, _next(r, end), c][χ_SSE D_S; χ_SSW] *
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)][χ_SSW; χ_WSW] *
-        env.edges[WEST, r, _prev(c, end)][χ_WSW D_W; χ_WNW] *
-        O[D_W D_S; D_N D_E]
+    return _contract_site(
+        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+        env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+        env.edges[NORTH, _prev(r, end), c],
+        env.edges[EAST, r, _next(c, end)],
+        env.edges[SOUTH, _next(r, end), c],
+        env.edges[WEST, r, _prev(c, end)],
+        O,
+    )
 end
 
 """
@@ -377,7 +376,7 @@ function contract_local_tensor(
 )
     r, c, h = ind
     sandwich´ = Base.setindex(network[r, c], O, h + 2)
-    return PEPSKit._contract_site(
+    return _contract_site(
         env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
         env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
         env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
