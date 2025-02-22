@@ -3,6 +3,7 @@ module PEPSKit
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Base: @kwdef
 using Compat
+using Accessors: @set
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
@@ -10,7 +11,6 @@ using LoggingExtras
 using MPSKit: loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
-using Accessors: @set
 using OhMyThreads: tmap
 
 include("utility/util.jl")
@@ -218,7 +218,7 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
 
 export absorb_weight
-export ALSTruncation, FullEnvTruncation, fullenv_truncate
+export ALSTruncation, FullEnvTruncation
 export su_iter, simpleupdate, SimpleUpdate
 
 export InfiniteSquareNetwork
