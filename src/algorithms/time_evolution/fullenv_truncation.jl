@@ -24,9 +24,9 @@ between two states specified by the bond matrices `b1`, `b2`
 ```
 """
 function inner_prod(
-    benv::BondEnv{T,S}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
+    benv::BondEnv{T,S}, b1::AbstractTensorMap{T,S,1,1}, b2::AbstractTensorMap{T,S,1,1}
 ) where {T<:Number,S<:ElementarySpace}
-    val = @tensor conj(b1[1 2]) * benv[1 2; 3 4] * b2[3 4]
+    val = @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
     return val
 end
 
@@ -38,7 +38,7 @@ between two states specified by the bond matrices `b1`, `b2`
 ```
 """
 function fidelity(
-    benv::BondEnv{T,S}, b1::AbstractTensor{T,S,2}, b2::AbstractTensor{T,S,2}
+    benv::BondEnv{T,S}, b1::AbstractTensorMap{T,S,1,1}, b2::AbstractTensorMap{T,S,1,1}
 ) where {T<:Number,S<:ElementarySpace}
     return abs2(inner_prod(benv, b1, b2)) /
            real(inner_prod(benv, b1, b1) * inner_prod(benv, b2, b2))
@@ -65,7 +65,7 @@ function _fet_message(
 end
 
 """
-    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensor{T,S,2}, alg::FullEnvTruncation) where {T<:Number,S<:ElementarySpace}
+    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) where {T<:Number,S<:ElementarySpace}
 
 The full environment truncation algorithm (Physical Review B 98, 085155 (2018)). 
 
@@ -188,14 +188,14 @@ Then the bond matrix `u s v†` is updated by SVD:
 The SVD result of the new bond matrix `u`, `s`, `vh`.
 """
 function fullenv_truncate(
-    b0::AbstractTensor{T,S,2}, benv::BondEnv{T,S}, alg::FullEnvTruncation
+    b0::AbstractTensorMap{T,S,1,1}, benv::BondEnv{T,S}, alg::FullEnvTruncation
 ) where {T<:Number,S<:ElementarySpace}
     verbose = (alg.check_interval > 0)
     # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
     @assert codomain(benv) == domain(benv)
     time00 = time()
     # initialize u, s, vh with truncated SVD
-    u, s, vh = tsvd(b0, ((1,), (2,)); trunc=alg.trscheme)
+    u, s, vh = tsvd(b0; trunc=alg.trscheme)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
     s0 = deepcopy(s)
@@ -223,7 +223,7 @@ function fullenv_truncate(
         u, s, vh = tsvd(b1; trunc=alg.trscheme)
         s /= norm(s, Inf)
         # determine convergence
-        fid = fidelity(benv, b0, permute(b1, (1, 2)))
+        fid = fidelity(benv, b0, b1)
         Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
         Δfid = fid - fid0
         s0 = deepcopy(s)
