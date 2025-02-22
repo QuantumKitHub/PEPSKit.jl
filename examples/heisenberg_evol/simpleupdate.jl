@@ -4,10 +4,10 @@ include("heis_tools.jl")
 Dbond, χenv, symm = 4, 16, Trivial
 trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
 trscheme_env = truncerr(1e-10) & truncdim(χenv)
-N1, N2 = 2, 2
+Nr, Nc = 2, 2
 # Heisenberg model Hamiltonian
 # (already only includes nearest neighbor terms)
-ham = heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0)
+ham = heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1.0, Jy=1.0, Jz=1.0)
 # convert to real tensors
 ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
 
@@ -24,7 +24,7 @@ else
     error("Not implemented")
 end
 Random.seed!(0)
-peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+peps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
 # normalize vertex tensors
 for ind in CartesianIndices(peps.vertices)
     peps.vertices[ind] /= norm(peps.vertices[ind], Inf)
@@ -41,9 +41,9 @@ for (dt, tol) in zip(dts, tols)
 end
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
-env₀ = CTMRGEnv(rand, Float64, peps_, Espace)
+env = CTMRGEnv(rand, Float64, peps_, Espace)
 ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme_env)
-env = leading_boundary(env₀, peps_, ctm_alg)
+env, = leading_boundary(env, peps_, ctm_alg)
 meas = measure_heis(peps_, ham, env)
 display(meas)
 @info @sprintf("Energy = %.8f\n", meas["e_site"])

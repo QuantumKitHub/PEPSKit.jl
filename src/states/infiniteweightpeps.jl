@@ -96,6 +96,33 @@ end
 
 """
     InfiniteWeightPEPS(
+        f=randn, T=ComplexF64, Pspaces::M, Nspaces::M, [Espaces::M]
+    ) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+
+Create an InfiniteWeightPEPS by specifying the physical, north virtual and east virtual spaces
+of the PEPS vertex tensor at each site in the unit cell as a matrix.
+Each individual space can be specified as either an `Int` or an `ElementarySpace`.
+Bond weights are initialized as identity matrices of element type `Float64`. 
+"""
+function InfiniteWeightPEPS(
+    Pspaces::M, Nspaces::M, Espaces::M
+) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    return InfiniteWeightPEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfiniteWeightPEPS(
+    f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
+) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    vertices = InfinitePEPS(f, T, Pspaces, Nspaces, Espaces).A
+    Nr, Nc = size(vertices)
+    weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+        V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
+        DiagonalTensorMap(ones(reduceddim(V)), V)
+    end
+    return InfiniteWeightPEPS(vertices, SUWeight(weights))
+end
+
+"""
+    InfiniteWeightPEPS(
         f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
     ) where {S<:ElementarySpace}
 
@@ -106,13 +133,9 @@ Bond weights are initialized as identity matrices of element type `Float64`.
 function InfiniteWeightPEPS(
     f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:ElementarySpace}
-    vertices = InfinitePEPS(f, T, Pspace, Nspace, Espace; unitcell=unitcell).A
-    Nr, Nc = unitcell
-    weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
-        V = (d == 1 ? Espace : Nspace)
-        DiagonalTensorMap(ones(reduceddim(V)), V)
-    end
-    return InfiniteWeightPEPS(vertices, SUWeight(weights))
+    return InfiniteWeightPEPS(
+        f, T, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
+    )
 end
 
 """
@@ -193,8 +216,8 @@ Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into v
 """
 function InfinitePEPS(peps::InfiniteWeightPEPS)
     vertices = deepcopy(peps.vertices)
-    N1, N2 = size(vertices)
-    for (r, c) in Iterators.product(1:N1, 1:N2)
+    Nr, Nc = size(vertices)
+    for (r, c) in Iterators.product(1:Nr, 1:Nc)
         for ax in 2:5
             vertices[r, c] = absorb_weight(
                 vertices[r, c], r, c, ax, peps.weights; sqrtwt=true
