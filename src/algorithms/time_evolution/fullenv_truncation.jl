@@ -10,8 +10,6 @@ Algorithm struct for the full environment truncation (FET).
     check_interval::Int = 0
 end
 
-const BondEnv{T,S} = AbstractTensorMap{T,S,2,2} where {T<:Number,S<:ElementarySpace}
-
 """
 Given the bond environment `benv`, calculate the inner product
 between two states specified by the bond matrices `b1`, `b2`

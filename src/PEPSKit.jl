@@ -21,7 +21,6 @@ include("utility/mirror.jl")
 include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
-include("utility/fullenv_truncation.jl")
 
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
@@ -43,6 +42,7 @@ include("environments/vumps_environments.jl")
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
+include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
@@ -53,6 +53,7 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/time_evolution/evoltools.jl")
+include("algorithms/time_evolution/fullenv_truncation.jl")
 include("algorithms/time_evolution/optimize.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 
