@@ -43,6 +43,7 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
     end
+
     return env, (; truncation_error, condition_number)
 end
 
