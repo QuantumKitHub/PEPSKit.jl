@@ -28,7 +28,7 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
     a0, b0 = PEPSKit.absorb_s(a0, s, b0)
     fid0 = PEPSKit.fidelity(benv, PEPSKit._combine_ab(a0, b0), a2b2)
     @info "Fidelity of simple SVD truncation = $fid0.\n"
-    
+
     ss = Dict{String,DiagonalTensorMap}()
     for (label, alg) in (
         ("ALS", ALSTruncation(; trscheme, maxiter, check_interval)),
