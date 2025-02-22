@@ -13,20 +13,6 @@ struct EnlargedCorner{TC,TE,TA}
     E_2::TE
     A::TA
 end
-function EnlargedCorner(
-    C::CTMRGCornerTensor,
-    E1::CTMRG_PEPS_EdgeTensor,
-    E2::CTMRG_PEPS_EdgeTensor,
-    ket::PEPSTensor,
-    bra::PEPSTensor=ket,
-)
-    return EnlargedCorner(C, E1, E2, (bra, ket))
-end
-function EnlargedCorner(
-    C::CTMRGCornerTensor, E1::CTMRG_PF_EdgeTensor, E2::CTMRG_PF_EdgeTensor, pf::PFTensor
-)
-    return EnlargedCorner(C, E1, E2, (pf,))
-end
 
 """
     EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
@@ -75,27 +61,27 @@ direction, i.e. the way the environment and PEPS tensors connect.
 """
 function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
     if dir == NORTHWEST
-        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A...)
+        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     elseif dir == NORTHEAST
-        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.A...)
+        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     elseif dir == SOUTHEAST
-        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A...)
+        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     elseif dir == SOUTHWEST
-        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A...)
+        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     end
 end
 
 function renormalize_northwest_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_northwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A...)
+    return renormalize_northwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
 end
 function renormalize_northeast_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_northeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A...)
+    return renormalize_northeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
 end
 function renormalize_southeast_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_southeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A...)
+    return renormalize_southeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
 end
 function renormalize_southwest_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_southwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A...)
+    return renormalize_southwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
 end
 
 # Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
@@ -132,32 +118,6 @@ struct HalfInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once Tens
     A_1::TA
     A_2::TA
 end
-function HalfInfiniteEnv(
-    C_1::CTMRGCornerTensor,
-    C_2::CTMRGCornerTensor,
-    E_1::CTMRG_PEPS_EdgeTensor,
-    E_2::CTMRG_PEPS_EdgeTensor,
-    E_3::CTMRG_PEPS_EdgeTensor,
-    E_4::CTMRG_PEPS_EdgeTensor,
-    ket_1::PEPSTensor,
-    ket_2::PEPSTensor,
-    bra_1::PEPSTensor=ket_1,
-    bra_2::PEPSTensor=ket_2,
-)
-    return HalfInfiniteEnv(C_1, C_2, E_1, E_2, E_3, E_4, (bra_1, ket_1), (bra_2, ket_2))
-end
-function HalfInfiniteEnv(
-    C_1::CTMRGCornerTensor,
-    C_2::CTMRGCornerTensor,
-    E_1::CTMRG_PF_EdgeTensor,
-    E_2::CTMRG_PF_EdgeTensor,
-    E_3::CTMRG_PF_EdgeTensor,
-    E_4::CTMRG_PF_EdgeTensor,
-    pf_1::PFTensor,
-    pf_2::PFTensor,
-)
-    return HalfInfiniteEnv(C_1, C_2, E_1, E_2, E_3, E_4, (pf_1,), (pf_2,))
-end
 
 # Construct environment from two enlarged corners
 function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
@@ -180,7 +140,7 @@ Instantiate half-infinite environment as `TensorMap` explicitly.
 """
 function TensorKit.TensorMap(env::HalfInfiniteEnv)  # Dense operator
     return half_infinite_environment(
-        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1..., env.A_2...
+        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1, env.A_2
     )
 end
 
@@ -193,12 +153,12 @@ linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed
 """
 function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
     return half_infinite_environment(
-        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, x, env.A_1..., env.A_2...
+        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, x, env.A_1, env.A_2
     )
 end
 function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
     return half_infinite_environment(
-        x, env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1..., env.A_2...
+        x, env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1, env.A_2
     )
 end
 
@@ -206,26 +166,12 @@ end
 # AbstractTensorMap subtyping and IterSVD compatibility
 # -----------------------------------------------------
 
-function _domain_space(A::NTuple{2,<:PEPSTensor}, n::Int)
-    return domain(A[1])[n] * domain(A[2])[n]'
-end
-function _domain_space(A::NTuple{1,<:PFTensor}, n::Int)
-    return domain(A[1])[n]
-end
-
-function _codomain_space(A::NTuple{2,<:PEPSTensor}, n::Int)
-    return domain(A[1])[n]' * domain(A[2])[n]
-end
-function _codomain_space(A::NTuple{1,<:PFTensor}, n::Int)
-    return domain(A[1])[n]'
-end
-
 function TensorKit.domain(env::HalfInfiniteEnv)
-    return domain(env.E_4) * _domain_space(env.A_2, 3)
+    return domain(env.E_4) * _elementwise_dual(south_virtualspace(env.A_2))
 end
 
 function TensorKit.codomain(env::HalfInfiniteEnv)
-    return codomain(env.E_1)[1] * _codomain_space(env.A_1, 3)
+    return first(codomain(env.E_1)) * south_virtualspace(env.A_1)
 end
 
 function random_start_vector(env::HalfInfiniteEnv)
@@ -303,10 +249,10 @@ function TensorKit.TensorMap(env::FullInfiniteEnv)  # Dense operator
         env.E_3,
         env.E_4,
         env.E_5,
-        env.A_1...,
-        env.A_2...,
-        env.A_3...,
-        env.A_4...,
+        env.A_1,
+        env.A_2,
+        env.A_3,
+        env.A_4,
     )
 end
 
@@ -332,10 +278,10 @@ function (env::FullInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
         env.E_7,
         env.E_8,
         x,
-        env.A_1...,
-        env.A_2...,
-        env.A_3...,
-        env.A_4...,
+        env.A_1,
+        env.A_2,
+        env.A_3,
+        env.A_4,
     )
 end
 function (env::FullInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
@@ -353,10 +299,10 @@ function (env::FullInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
         env.E_6,
         env.E_7,
         env.E_8,
-        env.A_1...,
-        env.A_2...,
-        env.A_3...,
-        env.A_4...,
+        env.A_1,
+        env.A_2,
+        env.A_3,
+        env.A_4,
     )
 end
 
@@ -369,11 +315,11 @@ end
 
 # AbstractTensorMap subtyping and IterSVD compatibility
 function TensorKit.domain(env::FullInfiniteEnv)
-    return domain(env.E_8) * _domain_space(env.A_4, 3)
+    return domain(env.E_8) * _elementwise_dual(north_virtualspace(env.A_4))
 end
 
 function TensorKit.codomain(env::FullInfiniteEnv)
-    return codomain(env.E_1)[1] * _codomain_space(env.A_1, 3)
+    return first(codomain(env.E_1)) * south_virtualspace(env.A_1)
 end
 
 function random_start_vector(env::FullInfiniteEnv)

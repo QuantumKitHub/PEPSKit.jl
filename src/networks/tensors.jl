@@ -26,6 +26,11 @@ Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))
 Base.rotr90(t::PFTensor) = permute(t, ((2, 4), (1, 3)))
 Base.rot180(t::PFTensor) = permute(t, ((4, 3), (2, 1)))
 
+function virtualspace(t::PFTensor, dir)
+    invp = (3, 4, 2, 1) # internally, virtual directions are ordered as N, E, S, W...
+    return space(t, invp[dir])
+end
+
 #
 # PEPS
 #
@@ -87,6 +92,9 @@ Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
 Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
 Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))
 
+physicalspace(t::PEPSTensor) = space(t, 1)
+virtualspace(t::PEPSTensor, dir) = space(t, dir + 1)
+
 #
 # PEPO
 #
@@ -116,3 +124,12 @@ const PEPOTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,2,4}
 Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))
 Base.rotr90(t::PEPOTensor) = permute(t, ((1, 2), (6, 3, 4, 5)))
 Base.rot180(t::PEPOTensor) = permute(t, ((1, 2), (5, 6, 3, 4)))
+
+domain_physicalspace(t::PEPOTensor) = space(t, 2)'
+codomain_physicalspace(t::PEPOTensor) = space(t, 1)
+function physicalspace(t::PEPOTensor)
+    codomain_physicalspace(t) == domain_physicalspace(t) ||
+        throw(SpaceMismatch("Domain and codomain physical spaces do not match."))
+    return codomain_physicalspace(t)
+end
+virtualspace(t::PEPOTensor, dir) = space(t, dir + 2)

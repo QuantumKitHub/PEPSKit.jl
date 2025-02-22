@@ -29,7 +29,7 @@ function test_unitcell(
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
     # apply one CTMRG iteration with fixeds
-    env′, = ctmrg_iteration(peps, env, ctm_alg)
+    env′, = ctmrg_iteration(InfiniteSquareNetwork(peps), env, ctm_alg)
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(

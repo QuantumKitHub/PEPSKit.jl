@@ -24,6 +24,7 @@ include("utility/autoopt.jl")
 include("utility/fullenv_truncation.jl")
 
 include("networks/tensors.jl")
+include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
 
 include("states/infinitepeps.jl")
@@ -210,7 +211,7 @@ export SVDAdjoint, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator
-export expectation_value, cost_function, product_peps, correlation_length
+export expectation_value, cost_function, product_peps, correlation_length, network_value
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
@@ -219,6 +220,7 @@ export absorb_weight
 export ALSTruncation, FullEnvTruncation, fullenv_truncate
 export su_iter, simpleupdate, SimpleUpdate
 
+export InfiniteSquareNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS

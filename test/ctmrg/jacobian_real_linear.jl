@@ -23,7 +23,7 @@ Dbond, χenv = 2, 16
 
     # follow code of _rrule
     if iterscheme == :fixed
-        env_conv, info = ctmrg_iteration(state, env, ctm_alg)
+        env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
         env_fixed, signs = gauge_fix(env, env_conv)
         U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
         svd_alg_fixed = SVDAdjoint(;
@@ -34,12 +34,12 @@ Dbond, χenv = 2, 16
         alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
         _, env_vjp = pullback(state, env_fixed) do A, x
-            e, = PEPSKit.ctmrg_iteration(A, x, alg_fixed)
+            e, = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)
             return PEPSKit.fix_global_phases(x, e)
         end
     elseif iterscheme == :diffgauge
         _, env_vjp = pullback(state, env) do A, x
-            return gauge_fix(x, ctmrg_iteration(A, x, ctm_alg)[1])[1]
+            return gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)[1])[1]
         end
     end
 
