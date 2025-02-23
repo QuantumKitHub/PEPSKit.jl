@@ -111,6 +111,7 @@ function _rrule(
     alg::CTMRGAlgorithm,
 )
     env, info = leading_boundary(envinit, state, alg)
+    @reset alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces during differentiation
 
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)

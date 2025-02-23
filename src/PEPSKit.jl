@@ -3,7 +3,7 @@ module PEPSKit
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Base: @kwdef
 using Compat
-using Accessors: @set
+using Accessors: @set, @reset
 using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
