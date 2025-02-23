@@ -20,12 +20,12 @@ function _als_message(
     time_elapsed::Float64,
 )
     return @sprintf(
-        "%5d, fid = %.8e, Δfid = %.8e, time = %.2e s\n", iter, fid, Δfid, time_elapsed
+        "%5d, fid = %.8e, Δfid = %.8e, time = %.4f s\n", iter, fid, Δfid, time_elapsed
     ) * @sprintf("      cost = %.3e,   Δcost/cost0 = %.3e", cost, Δcost)
 end
 
 """
-    bond_optimize(a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}, benv::BondEnv{T,S}, alg) where {T<:Number,S<:ElementarySpace}
+    bond_truncate(a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}, benv::BondEnv{T,S}, alg) where {T<:Number,S<:ElementarySpace}
 
 After time-evolving the reduced tensors `a` and `b` connected by a bond, 
 truncate the bond dimension using the bond environment tensor `benv`.
@@ -46,7 +46,7 @@ The index order of `a` or `b` is
     1 -a/b- 3   b[1; 2 3]
 ```
 """
-function bond_optimize(
+function bond_truncate(
     a::AbstractTensorMap{T,S,2,1},
     b::AbstractTensorMap{T,S,1,2},
     benv::BondEnv{T,S},
@@ -129,7 +129,7 @@ function bond_optimize(
     return a, s, b, (; fid, Δfid)
 end
 
-function bond_optimize(
+function bond_truncate(
     a::AbstractTensorMap{T,S,2,1},
     b::AbstractTensorMap{T,S,1,2},
     benv::BondEnv{T,S},

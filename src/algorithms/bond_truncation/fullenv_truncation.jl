@@ -61,7 +61,7 @@ function _fet_message(
     iter::Int, fid::Float64, Δfid::Float64, Δwt::Float64, time_elapsed::Float64
 )
     return @sprintf("%5d: fid = %.8e, Δfid = %.8e, ", iter, fid, Δfid) *
-           @sprintf("|Δs| = %.6e, time = %.2e s", Δwt, time_elapsed)
+           @sprintf("|Δs| = %.6e, time = %.4f s", Δwt, time_elapsed)
 end
 
 """
