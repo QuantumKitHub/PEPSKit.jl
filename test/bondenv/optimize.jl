@@ -10,9 +10,9 @@ Random.seed!(10)
 maxiter = 500
 check_interval = 20
 trscheme = truncerr(1e-10) & truncdim(8)
-Vext = ℂ[FermionParity](0 => 100, 1 => 100)
-Vint = ℂ[FermionParity](0 => 5, 1 => 5)
-Vphy = ℂ[FermionParity](0 => 1, 1 => 2)
+Vext = Vect[FermionParity](0 => 100, 1 => 100)
+Vint = Vect[FermionParity](0 => 6, 1 => 6)
+Vphy = Vect[FermionParity](0 => 1, 1 => 2)
 for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
     Vbond = Vbondl ⊗ Vbondr
     # random positive-definite environment

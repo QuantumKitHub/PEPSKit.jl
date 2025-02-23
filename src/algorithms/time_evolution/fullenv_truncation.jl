@@ -196,6 +196,7 @@ function fullenv_truncate(
     time00 = time()
     # initialize u, s, vh with truncated SVD
     u, s, vh = tsvd(b0; trunc=alg.trscheme)
+    b1 = similar(b0)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
     s0 = deepcopy(s)
@@ -203,27 +204,27 @@ function fullenv_truncate(
     for iter in 1:(alg.maxiter)
         time0 = time()
         # update `← r -  =  ← s ← v† -`
-        @tensor r[-1 -2] := s[-1 1] * vh[1 -2]
-        @tensor p[-1 -2] := conj(u[1 -1]) * benv[1 -2; 3 4] * b0[3 4]
-        @tensor B[-1 -2; -3 -4] := conj(u[1 -1]) * benv[1 -2; 3 -4] * u[3 -3]
+        @tensor r[-1 -2] := s[-1; 1] * vh[1; -2]
+        @tensor p[-1 -2] := conj(u[1; -1]) * benv[1 -2; 3 4] * b0[3; 4]
+        @tensor B[-1 -2; -3 -4] := conj(u[1; -1]) * benv[1 -2; 3 -4] * u[3; -3]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
-        r, info_r = linsolve(x -> B * x, p, r, 0, 1)
-        @tensor b1[-1; -2] := u[-1 1] * r[1 -2]
+        r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
+        @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
         u, s, vh = tsvd(b1; trunc=alg.trscheme)
         s /= norm(s, Inf)
         # update `- l ←  =  - u ← s ←`
-        @tensor l[-1 -2] := u[-1 1] * s[1 -2]
-        @tensor p[-1 -2] := conj(vh[-2 2]) * benv[-1 2; 3 4] * b0[3 4]
-        @tensor B[-1 -2; -3 -4] := conj(vh[-2 2]) * benv[-1 2; -3 4] * vh[-4 4]
+        @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
+        @tensor p[-1 -2] := conj(vh[-2; 2]) * benv[-1 2; 3 4] * b0[3; 4]
+        @tensor B[-1 -2; -3 -4] := conj(vh[-2; 2]) * benv[-1 2; -3 4] * vh[-4; 4]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
-        l, info_l = linsolve(x -> B * x, p, l, 0, 1)
-        @tensor b1[-1; -2] := l[-1 1] * vh[1 -2]
-        u, s, vh = tsvd(b1; trunc=alg.trscheme)
+        l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
+        @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
+        fid = fidelity(benv, b0, b1)
+        u, s, vh = tsvd!(b1; trunc=alg.trscheme)
         s /= norm(s, Inf)
         # determine convergence
-        fid = fidelity(benv, b0, b1)
         Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
         Δfid = fid - fid0
         s0 = deepcopy(s)

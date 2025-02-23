@@ -1,7 +1,7 @@
 """
     ALSTruncation
 
-Algorithm struct for the alternating least square optimization step in full update. 
+Algorithm struct for the alternating least square optimization of a bond. 
 `tol` is the maximum fidelity change between two optimization steps.
 """
 @kwdef struct ALSTruncation
@@ -123,7 +123,7 @@ function bond_optimize(
         end
         converge && break
     end
-    a, s, b = tsvd(_combine_ab(a, b); trunc=truncspace(Vtrunc))
+    a, s, b = tsvd!(_combine_ab(a, b); trunc=truncspace(Vtrunc))
     # normalize singular value spectrum
     s /= norm(s, Inf)
     return a, s, b, (; fid, Δfid)
