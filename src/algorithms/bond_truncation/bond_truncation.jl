@@ -32,18 +32,18 @@ truncate the bond dimension using the bond environment tensor `benv`.
 ```
     ┌-----------------------┐
     |   ┌----┐              |
-    └---|    |-- a† == b† --┘
-        |benv|   ↑     ↑
-    ┌---|    |-- a === b ---┐
+    └---|    |-- a === b ---┘
+        |benv|   ↓     ↓
+    ┌---|    |-- a† == b† --┐
     |   └----┘              |
     └-----------------------┘
 ```
 The truncation algorithm `alg` can be either `FullEnvTruncation` or `ALSTruncation`. 
 The index order of `a` or `b` is
 ```
-        2
-        ↑       a[1 2; 3]
-    1 -a/b- 3   b[1; 2 3]
+    1 -a/b- 3
+        ↓       a[1 2; 3]
+        2       b[1; 2 3]
 ```
 """
 function bond_truncate(
@@ -64,10 +64,10 @@ function bond_truncate(
     s /= norm(s, Inf)
     Vtrunc = space(s, 1)
     a, b = absorb_s(a, s, b)
-    #= temporarily reorder axes of a and b
-            3
-            ↑
+    #= temporarily reorder axes of a and b to
         1 -a/b- 2
+            ↓
+            3
     =#
     a, b = permute(a, ((1, 3, 2), ())), permute(b, ((1, 3, 2), ()))
     ab = _combine_ab(a, b)
@@ -141,8 +141,8 @@ function bond_truncate(
     @assert codomain(benv) == domain(benv)
     #= initialize bond matrix using QR as `Ra Lb`
 
-            ↑    ↑               ↑               ↑
         --- a == b ---   ==>   - Qa - Ra == Rb - Qb -
+            ↓    ↓               ↓               ↓
     =#
     Qa, Ra = leftorth(a)
     Rb, Qb = rightorth(b)
@@ -153,11 +153,11 @@ function bond_truncate(
 
         ┌--------------------------------------┐
         |   ┌----┐                             |
-        └---|    |- 1 - Qa†- -1   -2 - Qb†- 2 -┘
-            |    |      ↑              ↑
+        └---|    |- 3 - Qa - -3   -4 - Qb - 4 -┘
+            |    |      ↓              ↓
             |benv|      5              6
-            |    |      ↑              ↑
-        ┌---|    |- 3 - Qa - -3   -4 - Qb - 4 -┐
+            |    |      ↓              ↓
+        ┌---|    |- 1 - Qa†- -1   -2 - Qb†- 2 -┐
         |   └----┘                             |
         └--------------------------------------┘
     =#
