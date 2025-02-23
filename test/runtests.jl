@@ -43,7 +43,7 @@ end
     end
     if GROUP == "ALL" || GROUP == "BONDENV"
         @time @safetestset "Iterative optimization after truncation" begin
-            include("bondenv/optimize.jl")
+            include("bondenv/bond_truncate.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
