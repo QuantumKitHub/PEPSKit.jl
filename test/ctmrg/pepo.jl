@@ -50,7 +50,7 @@ end
 ## Test
 
 # initialize
-beta = 0.224 # slightly lower temperature than βc ≈ 0.2216544
+beta = 0.2391 # slightly lower temperature than βc ≈ 0.2216544
 O, M, E = three_dimensional_classical_ising(beta)
 χpeps = ℂ^2
 χenv = ℂ^12
