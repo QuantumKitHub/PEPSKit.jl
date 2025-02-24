@@ -87,7 +87,7 @@ end
     alg_rrule = EigSolver(;
         solver=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
     )
-    opt_alg = LBFGS(32; maxiter=20, gradtol=1e-5, verbosity=3)
+    opt_alg = LBFGS(32; maxiter=50, gradtol=1e-5, verbosity=3)
     function pepo_retract(x, η, α)
         peps = deepcopy(x[1])
         peps.A .+= η.A .* α
