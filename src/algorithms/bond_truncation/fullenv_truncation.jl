@@ -2,11 +2,18 @@
     FullEnvTruncation
 
 Algorithm struct for the full environment truncation (FET).
+
+- `trscheme::Bool`: SVD truncation scheme when optimizing the new bond matrix.
+- `maxiter::Int`: Maximal number of FET iterations.
+- `tol::Float64`: FET converges when fidelity change between two FET iterations is smaller than `tol`.
+- `trunc_init::Bool`: Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
+- `check_interval::Int`: Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct FullEnvTruncation
     trscheme::TensorKit.TruncationScheme
     maxiter::Int = 50
     tol::Float64 = 1e-15
+    trunc_init::Bool = true
     check_interval::Int = 0
 end
 
@@ -194,8 +201,8 @@ function fullenv_truncate(
     # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
     @assert codomain(benv) == domain(benv)
     time00 = time()
-    # initialize u, s, vh with truncated SVD
-    u, s, vh = tsvd(b0; trunc=alg.trscheme)
+    # initialize u, s, vh with truncated or untruncated SVD
+    u, s, vh = tsvd(b0; trunc=(alg.trunc_init ? alg.trscheme : notrunc()))
     b1 = similar(b0)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)

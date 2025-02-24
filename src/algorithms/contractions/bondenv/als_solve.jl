@@ -18,10 +18,10 @@ Construct the tensor
 ```
 """
 function _tensor_Ra(
-    benv::BondEnv{T,S}, b::AbstractTensor{T,S,3}
+    benv::BondEnv{T,S}, b::AbstractTensorMap{T,S,2,1}
 ) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Ra[DX1 Db1; DX0 Db0] := (
-        benv[DX1 DY1; DX0 DY0] * b[Db0 DY0 db] * conj(b[Db1 DY1 db])
+        benv[DX1 DY1; DX0 DY0] * b[Db0 DY0; db] * conj(b[Db1 DY1; db])
     )
 end
 
@@ -40,10 +40,10 @@ Construct the tensor
 ```
 """
 function _tensor_Sa(
-    benv::BondEnv{T,S}, b::AbstractTensor{T,S,3}, a2b2::AbstractTensorMap{T,S,2,2}
+    benv::BondEnv{T,S}, b::AbstractTensorMap{T,S,2,1}, a2b2::AbstractTensorMap{T,S,2,2}
 ) where {T<:Number,S<:ElementarySpace}
-    return @autoopt @tensor Sa[DX1 Db1 da] := (
-        benv[DX1 DY1; DX0 DY0] * conj(b[Db1 DY1 db]) * a2b2[DX0 da; db DY0]
+    return @autoopt @tensor Sa[DX1 Db1; da] := (
+        benv[DX1 DY1; DX0 DY0] * conj(b[Db1 DY1; db]) * a2b2[DX0 DY0; da db]
     )
 end
 
@@ -62,10 +62,10 @@ Construct the tensor
 ```
 """
 function _tensor_Rb(
-    benv::BondEnv{T,S}, a::AbstractTensor{T,S,3}
+    benv::BondEnv{T,S}, a::AbstractTensorMap{T,S,2,1}
 ) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor Rb[Da1 DY1; Da0 DY0] := (
-        benv[DX1 DY1; DX0 DY0] * a[DX0 Da0 da] * conj(a[DX1 Da1 da])
+        benv[DX1 DY1; DX0 DY0] * a[DX0 Da0; da] * conj(a[DX1 Da1; da])
     )
 end
 
@@ -84,10 +84,10 @@ Construct the tensor
 ```
 """
 function _tensor_Sb(
-    benv::BondEnv{T,S}, a::AbstractTensor{T,S,3}, a2b2::AbstractTensorMap{T,S,2,2}
+    benv::BondEnv{T,S}, a::AbstractTensorMap{T,S,2,1}, a2b2::AbstractTensorMap{T,S,2,2}
 ) where {T<:Number,S<:ElementarySpace}
-    return @autoopt @tensor Sb[Da1 DY1 db] := (
-        benv[DX1 DY1; DX0 DY0] * conj(a[DX1 Da1 da]) * a2b2[DX0 da; db DY0]
+    return @autoopt @tensor Sb[Da1 DY1; db] := (
+        benv[DX1 DY1; DX0 DY0] * conj(a[DX1 Da1; da]) * a2b2[DX0 DY0; da db]
     )
 end
 
@@ -109,8 +109,8 @@ function inner_prod(
     benv::BondEnv{T,S}, a1b1::AbstractTensorMap{T,S,2,2}, a2b2::AbstractTensorMap{T,S,2,2}
 ) where {T<:Number,S<:ElementarySpace}
     return @autoopt @tensor benv[DX1 DY1; DX0 DY0] *
-        conj(a1b1[DX1 da; db DY1]) *
-        a2b2[DX0 da; db DY0]
+        conj(a1b1[DX1 DY1; da db]) *
+        a2b2[DX0 DY0; da db]
 end
 
 """
@@ -139,15 +139,14 @@ Contract the axis between `a` and `b` tensors
 ```
 """
 function _combine_ab(
-    a::AbstractTensor{T,S,3}, b::AbstractTensor{T,S,3}
-) where {T<:Number,S<:ElementarySpace}
-    return @tensor ab[DX da; db DY] := a[DX D da] * b[D DY db]
-end
-
-function _combine_ab(
     a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}
 ) where {T<:Number,S<:ElementarySpace}
-    return @tensor ab[DX da; db DY] := a[DX da; D] * b[D; db DY]
+    return @tensor ab[DX DY; da db] := a[DX da; D] * b[D; db DY]
+end
+function _combine_ab(
+    a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,2,1}
+) where {T<:Number,S<:ElementarySpace}
+    return @tensor ab[DX DY; da db] := a[DX D; da] * b[D DY; db]
 end
 
 """
@@ -181,9 +180,11 @@ Solve the equations `Rx x = Sx` (x = a, b) with initial guess `x0`
 ```
 """
 function _solve_ab(
-    Rx::AbstractTensorMap{T,S,2,2}, Sx::AbstractTensor{T,S,3}, x0::AbstractTensor{T,S,3}
+    Rx::AbstractTensorMap{T,S,2,2},
+    Sx::AbstractTensorMap{T,S,2,1},
+    x0::AbstractTensorMap{T,S,2,1},
 ) where {T<:Number,S<:ElementarySpace}
-    f(x) = (@tensor Sx2[:] := Rx[-1 -2; 1 2] * x[1 2 -3])
+    f(x) = (@tensor Sx2[-1 -2; -3] := Rx[-1 -2; 1 2] * x[1 2; -3])
     x1, info = linsolve(f, Sx, x0, 0, 1)
     return x1, info
 end

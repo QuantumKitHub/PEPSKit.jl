@@ -1,8 +1,12 @@
 """
     ALSTruncation
 
-Algorithm struct for the alternating least square optimization of a bond. 
-`tol` is the maximum fidelity change between two optimization steps.
+Algorithm struct for the alternating least square (ALS) optimization of a bond. 
+
+- `trscheme::Bool`: SVD truncation scheme when initilizing the truncated tensors connected by the bond.
+- `maxiter::Int`: Maximal number of ALS iterations.
+- `tol::Float64`: ALS converges when fidelity change between two FET iterations is smaller than `tol`.
+- `check_interval::Int`: Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
     trscheme::TensorKit.TruncationScheme
@@ -60,7 +64,8 @@ function bond_truncate(
     verbose = (alg.check_interval > 0)
     a2b2 = _combine_ab(a, b)
     # initialize truncated aR, bL
-    a, s, b = tsvd(a2b2; trunc=alg.trscheme)
+    perm_ab = ((1, 3), (4, 2))
+    a, s, b = tsvd(a2b2, perm_ab; trunc=alg.trscheme)
     s /= norm(s, Inf)
     Vtrunc = space(s, 1)
     a, b = absorb_s(a, s, b)
@@ -69,7 +74,8 @@ function bond_truncate(
             ↓
             3
     =#
-    a, b = permute(a, ((1, 3, 2), ())), permute(b, ((1, 3, 2), ()))
+    perm = ((1, 3), (2,))
+    a, b = permute(a, perm), permute(b, perm)
     ab = _combine_ab(a, b)
     # cost function will be normalized by initial value
     cost00 = cost_function_als(benv, ab, a2b2)
@@ -123,7 +129,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = tsvd!(_combine_ab(a, b); trunc=truncspace(Vtrunc))
+    a, s, b = tsvd(_combine_ab(a, b), perm_ab; trunc=alg.trscheme)
     # normalize singular value spectrum
     s /= norm(s, Inf)
     return a, s, b, (; fid, Δfid)
