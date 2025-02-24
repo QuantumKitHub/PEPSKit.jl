@@ -133,7 +133,7 @@ end
     nrm3 = PEPSKit._contract_site((1, 1), n3_final, env3_final)
 
     # compare to Monte-Carlo result from https://www.worldscientific.com/doi/abs/10.1142/S0129183101002383
-    @test abs(m / nrm3) ≈ 0.0 rtol = 1e-2
+    @test abs(m / nrm3) ≈ 0.667162 rtol = 1e-2
 
     # TODO: figure out issue with energy conventions...
 end
