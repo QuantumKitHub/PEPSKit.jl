@@ -55,7 +55,7 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     condition_number = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
-            env, info = ctmrg_leftmove(col, state, env, alg)
+            env, info = ctmrg_leftmove(col, network, env, alg)
             truncation_error = max(truncation_error, info.truncation_error)
             condition_number = max(condition_number, info.condition_number)
         end
