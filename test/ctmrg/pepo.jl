@@ -1,12 +1,12 @@
 
 using Test
 using Random
+using LinearAlgebra
 using PEPSKit
 using TensorKit
 using KrylovKit
 using OptimKit
 using Zygote
-using ChainrulesCore
 
 ## Setup
 
@@ -42,7 +42,7 @@ function three_dimensional_classical_ising(beta, J=1.0)
     e = e_x + e_y + e_z
 
     # fixed tensor map space for all three
-    TMS = ℂ^2 ⊗ ℂ^2 ← ℂ^2 ⊗ ℂ^2 ⊗ ℂ^2 ⊗ ℂ^2
+    TMS = ℂ^2 ⊗ (ℂ^2)' ← ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)'
 
     return TensorMap(o, TMS), TensorMap(m, TMS), TensorMap(e, TMS)
 end
@@ -52,6 +52,7 @@ end
 # initialize
 beta = 0.224 # slightly lower temperature than βc ≈ 0.2216544
 O, M, E = three_dimensional_classical_ising(beta)
+χpeps = ℂ^2
 χenv = ℂ^12
 
 # cover all different flavors
@@ -60,12 +61,12 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
 @testset "PEPO CTMRG runthroughs for unitcell=$(unitcell)" for unitcell in
                                                                [(1, 1, 1), (1, 1, 2)]
-    Random.seed!(81812781143)
+    Random.seed!(81812781144)
 
     # contract
     T = InfinitePEPO(O; unitcell=unitcell)
-    psi0 = initializePEPS(T, ComplexSpace(2))
-    n = InfiniteSquareNetwork(psi, T)
+    psi0 = initializePEPS(T, χpeps)
+    n = InfiniteSquareNetwork(psi0, T)
     env0 = CTMRGEnv(n, χenv)
 
     @testset "PEPO CTMRG contraction using $ctm_style with $projector_alg" for (
@@ -79,12 +80,12 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 end
 
 @testset "Fixed-point computation for 3D classical ising model" begin
-    Random.seed!(81812781143)
+    Random.seed!(81812781144)
 
     # prep
     ctm_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=2)
-    alg_rrule = LinSolver(;
-        solver=KrylovKit.GMRES(; maxiter=30, tol=1e-6), iterscheme=:fixed
+    alg_rrule = EigSolver(;
+        solver=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
     )
     opt_alg = LBFGS(32; maxiter=20, gradtol=1e-4, verbosity=3)
     function pepo_retract(x, η, α)
@@ -97,21 +98,26 @@ end
 
     # contract
     T = InfinitePEPO(O; unitcell=(1, 1, 1))
-    psi0 = initializePEPS(T, ComplexSpace(2))
+    psi0 = initializePEPS(T, χpeps)
     env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), χenv)
     env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), χenv)
 
     # optimize free energy per site
-    (psi_final, env2_final, env3_final), E, = optimize(
+    (psi_final, env2_final, env3_final), f, = optimize(
         (psi0, env2_0, env3_0), opt_alg; retract=pepo_retract, inner=PEPSKit.real_inner
     ) do (psi, env2, env3)
         E, gs = withgradient(psi) do ψ
-            env2′, info = hook_pullback(leading_boundary, env2, n2, ctm_alg; alg_rrule)
+            n2 = InfiniteSquareNetwork(ψ)
+            env2′, info = PEPSKit.hook_pullback(
+                leading_boundary, env2, n2, ctm_alg; alg_rrule
+            )
             n3 = InfiniteSquareNetwork(ψ, T)
-            env3′, info = hook_pullback(leading_boundary, env3, n3, ctm_alg; alg_rrule)
-            ignore_derivatives() do
-                update!(env2, env2′)
-                update!(env3, env3′)
+            env3′, info = PEPSKit.hook_pullback(
+                leading_boundary, env3, n3, ctm_alg; alg_rrule
+            )
+            PEPSKit.ignore_derivatives() do
+                PEPSKit.update!(env2, env2′)
+                PEPSKit.update!(env3, env3′)
             end
             λ3 = network_value(n3, env3)
             λ2 = network_value(n2, env2)
@@ -128,7 +134,7 @@ end
 
     e_per_link = e / nrm3 / 3
 
-    @test e_per_link ≈ -0.53, atol = 1e-2
+    @test e_per_link ≈ -0.53 atol = 1e-2
 
     # TODO: figure out what we should actually get
     # result does not seem to match the one from https://iopscience.iop.org/article/10.1088/0305-4470/31/29/007/pdf
