@@ -60,6 +60,21 @@ function MPSKitModels.heisenberg_XYZ(
     )
 end
 
+function MPSKitModels.heisenberg_XXZ(
+    T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare; J=1.0, Delta=1.0, spin=1
+)
+    h =
+        J * (
+            (S_plusmin(T, S; spin=spin) + S_minplus(T, S; spin=spin)) / 2 +
+            Delta * S_zz(T, S; spin=spin)
+        )
+    rmul!(h, 1 / 4)
+    spaces = fill(domain(h)[1], (lattice.Nrows, lattice.Ncols))
+    return LocalOperator(
+        spaces, (neighbor => h for neighbor in nearest_neighbours(lattice))...
+    )
+end
+
 """
     j1_j2([elt::Type{T}], [symm::Type{S}], [lattice::InfiniteSquare];
           J1=1.0, J2=1.0, spin=1//2, sublattice=true)
@@ -141,6 +156,7 @@ function MPSKitModels.hubbard_model(
     mu=0.0,
     n::Integer=0,
 )
+    # TODO: just add this
     @assert n == 0 "Currently no support for imposing a fixed particle number"
     N = MPSKitModels.e_number(T, particle_symmetry, spin_symmetry)
     pspace = space(N, 1)
@@ -152,6 +168,43 @@ function MPSKitModels.hubbard_model(
     site_term = U * interaction_term - mu * N
     h = (-t) * hopping + (1 / 4) * (site_term ⊗ unit + unit ⊗ site_term)
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
+end
+
+function MPSKitModels.bose_hubbard_model(
+    elt::Type{<:Number},
+    symmetry::Type{<:Sector},
+    lattice::InfiniteSquare;
+    cutoff::Integer=5,
+    t=1.0,
+    U=1.0,
+    mu=0.0,
+    n::Integer=0,
+)
+    @assert n == 0 "Currently no support for imposing a fixed particle number"
+    hopping_term =
+        a_plusmin(elt, symmetry; cutoff=cutoff) + a_minplus(elt, symmetry; cutoff=cutoff)
+    N = a_number(elt, symmetry; cutoff=cutoff)
+    interaction_term = contract_onesite(N, N - id(domain(N)))
+
+    spaces = fill(space(N, 1), (lattice.Nrows, lattice.Ncols))
+
+    H = LocalOperator(
+        spaces,
+        (neighbor => -t * hopping_term for neighbor in nearest_neighbours(lattice))...,
+        ((idx,) => U / 2 * interaction_term - mu * N for idx in vertices(lattice))...,
+    )
+
+    if symmetry === Trivial
+        iszero(n) || throw(ArgumentError("imposing particle number requires `U₁` symmetry"))
+    elseif symmetry === U1Irrep
+        isinteger(2n) ||
+            throw(ArgumentError("`U₁` symmetry requires halfinteger particle number"))
+        H = MPSKit.add_physical_charge(H, fill(U1Irrep(n), size(spaces)...))
+    else
+        throw(ArgumentError("symmetry not implemented"))
+    end
+
+    return H
 end
 
 function MPSKitModels.tj_model(
