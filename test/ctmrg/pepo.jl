@@ -87,7 +87,7 @@ end
     alg_rrule = EigSolver(;
         solver=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
     )
-    opt_alg = LBFGS(32; maxiter=20, gradtol=1e-4, verbosity=3)
+    opt_alg = LBFGS(32; maxiter=20, gradtol=1e-5, verbosity=3)
     function pepo_retract(x, η, α)
         peps = deepcopy(x[1])
         peps.A .+= η.A .* α
@@ -129,14 +129,11 @@ end
 
     # check energy
     n3_final = InfiniteSquareNetwork(psi_final, T)
-    e = PEPSKit.contract_local_tensor((1, 1, 1), E, n3_final, env3_final)
+    m = PEPSKit.contract_local_tensor((1, 1, 1), M, n3_final, env3_final)
     nrm3 = PEPSKit._contract_site((1, 1), n3_final, env3_final)
 
-    e_per_link = e / nrm3 / 3
+    # compare to Monte-Carlo result from https://www.worldscientific.com/doi/abs/10.1142/S0129183101002383
+    @test abs(m / nrm3) ≈ 0.0 rtol = 1e-2
 
-    @test e_per_link ≈ -0.53 atol = 1e-2
-
-    # TODO: figure out what we should actually get
-    # result does not seem to match the one from https://iopscience.iop.org/article/10.1088/0305-4470/31/29/007/pdf
-    # beta = 0.2240, E ≈ 0.378615(26)
+    # TODO: figure out issue with energy conventions...
 end
