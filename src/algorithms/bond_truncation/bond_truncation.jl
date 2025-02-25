@@ -63,7 +63,7 @@ function bond_truncate(
     time00 = time()
     verbose = (alg.check_interval > 0)
     a2b2 = _combine_ab(a, b)
-    # initialize truncated aR, bL
+    # initialize truncated a, b
     perm_ab = ((1, 3), (4, 2))
     a, s, b = tsvd(a2b2, perm_ab; trunc=alg.trscheme)
     s /= norm(s, Inf)
