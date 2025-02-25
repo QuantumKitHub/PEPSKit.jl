@@ -111,12 +111,15 @@ function _rrule(
     alg::CTMRGAlgorithm,
 )
     env, info = leading_boundary(envinit, state, alg)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces during differentiation
 
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
         # find partial gradients of gauge_fixed single CTMRG iteration
-        f(A, x) = gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg)[1])[1]
+        function f(A, x)
+            return gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1])[1]
+        end
         _, env_vjp = rrule_via_ad(config, f, state, env)
 
         # evaluate the geometric sum
