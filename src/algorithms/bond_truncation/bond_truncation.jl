@@ -151,10 +151,10 @@ function bond_truncate(
             ↓    ↓               ↓               ↓
     =#
     Qa, Ra = leftorth(a)
-    Rb, Qb = rightorth(b)
-    isdual(codomain(Ra, 1)) && twist!(Ra, 1)
-    isdual(domain(Rb, 1)) && twist!(Rb, 2)
-    @tensor b0[-1; -2] := Ra[-1 1] * Rb[1 -2]
+    Qb, Rb = leftorth(b, ((3, 2), (1,)))
+    isdual(space(Ra, 1)) && twist!(Ra, 1)
+    isdual(space(Rb, 1)) && twist!(Rb, 1)
+    @tensor b0[-1; -2] := Ra[-1 1] * Rb[-2 1]
     #= initialize bond environment around `Ra Lb`
 
         ┌--------------------------------------┐
@@ -168,12 +168,12 @@ function bond_truncate(
         └--------------------------------------┘
     =#
     @tensor benv2[-1 -2; -3 -4] := (
-        benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
+        benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[2 6 -2]) * Qa[3 5 -3] * Qb[4 6 -4]
     )
     # optimize bond matrix
     u, s, vh, info = fullenv_truncate(b0, benv2, alg)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
-    @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
+    @tensor b[-1; -2 -3] := vh[-1 1] * Qb[-3 -2 1]
     return a, s, b, info
 end
