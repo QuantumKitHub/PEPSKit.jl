@@ -41,6 +41,11 @@ end
             include("boundarymps/vumps.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "BONDENV"
+        @time @safetestset "Iterative optimization after truncation" begin
+            include("bondenv/bond_truncate.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "SVD wrapper" begin
             include("utility/svd_wrapper.jl")

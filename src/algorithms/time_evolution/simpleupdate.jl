@@ -49,40 +49,40 @@ function _su_bondx!(
     T2 = _absorb_weight(T2, row, cp1, "trb", peps.weights)
     #= QR and LQ decomposition
 
-        2   1               1             2
-        ↓ ↗                 ↓            ↗
-    5 ← T ← 3   ====>   3 ← X ← 4 ← 1 ← aR ← 3
+        2                   1
         ↓                   ↓
-        4                   2
+    5 ← T ← 3   ====>   3 ← X ← 4 ← 1 ← aR ← 3
+        ↓ ↘                 ↓            ↘
+        4   1               2             2
 
-        2   1                 2         2
-        ↓ ↗                 ↗           ↓
-    5 ← T ← 3   ====>  1 ← bL ← 3 ← 1 ← Y ← 3
+        2                               2
         ↓                               ↓
-        4                               4
+    5 ← T ← 3   ====>  1 ← bL ← 3 ← 1 ← Y ← 3
+        ↓ ↘                 ↘           ↓
+        4   1                 2         4
     =#
     X, aR = leftorth(T1, ((2, 4, 5), (1, 3)); alg=QRpos())
     bL, Y = rightorth(T2, ((5, 1), (2, 3, 4)); alg=LQpos())
     #= apply gate
 
-            -2         -3
-            ↑           ↑
-            |----gate---|
-            ↑           ↑
-            1           2
-            ↑           ↑
         -1← aR -← 3 -← bL ← -4
+            ↓           ↓
+            1           2
+            ↓           ↓
+            |----gate---|
+            ↓           ↓
+            -2         -3
     =#
     @tensor tmp[-1 -2; -3 -4] := gate[-2 -3; 1 2] * aR[-1 1 3] * bL[3 2 -4]
     aR, s, bL, ϵ = tsvd!(
         tmp; trunc=truncation_scheme(alg, space(T1, 3)), alg=TensorKit.SVD()
     )
     #=
-            -2         -1              -1    -2
-            |         ↗               ↗       |
-        -5- X ← 1 ← aR - -3     -5 - bL ← 1 ← Y - -3
+            -2                               -2
             |                                 |
-            -4                               -4
+        -5- X ← 1 ← aR - -3     -5 - bL ← 1 ← Y - -3
+            |         ↘               ↘       |
+            -4         -1              -1     -4
     =#
     @tensor T1[-1; -2 -3 -4 -5] := X[-2, -4, -5, 1] * aR[1, -1, -3]
     @tensor T2[-1; -2 -3 -4 -5] := bL[-5, -1, 1] * Y[1, -2, -3, -4]
