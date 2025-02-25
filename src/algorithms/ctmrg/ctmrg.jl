@@ -7,38 +7,66 @@ for contracting infinite PEPS.
 abstract type CTMRGAlgorithm end
 
 """
-    ctmrg_iteration(state, env, alg::CTMRGAlgorithm) -> env′, info
+    ctmrg_iteration(network, env, alg::CTMRGAlgorithm) -> env′, info
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
+function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
-    MPSKit.leading_boundary([envinit], state, alg::CTMRGAlgorithm)
+    MPSKit.leading_boundary(env₀, network; kwargs...)
+    # expert version:
+    MPSKit.leading_boundary(env₀, network, alg::CTMRGAlgorithm)
 
-Contract `state` using CTMRG and return the CTM environment. Per default, a random
-initial environment is used.
+Contract `network` using CTMRG and return the CTM environment.
 
-Each CTMRG run is converged up to `alg.tol` where the singular value convergence
-of the corners and edges is checked. The maximal and minimal number of CTMRG
-iterations is set with `alg.maxiter` and `alg.miniter`.
+The algorithm can be supplied via the keyword arguments or directly as an `CTMRGAlgorithm`
+struct. The following keyword arguments are supported:
 
-Different levels of output information are printed depending on `alg.verbosity`, where `0`
-suppresses all output, `1` only prints warnings, `2` gives information at the start and
-end, and `3` prints information every iteration.
+- `alg=SimultaneousCTMRG`: Variant of the CTMRG algorithm; can be any `CTMRGAlgorithm` type
+
+- `tol=Defaults.ctmrg_tol`: Tolerance checking singular value and norm convergence; also
+  sets related tolerances to sensible defaults unless they are explicitly specified
+
+- `maxiter=Defaults.ctmrg_maxiter`: Maximal number of CTMRG iterations per run
+
+- `miniter=Defaults.ctmrg_miniter`: Minimal number of CTMRG carried out
+
+- `verbosity=2`: Overall output information verbosity level, where `0` suppresses
+  all output, `1` only prints warnings, `2` gives information at the start and end,
+  `3` prints information every iteration, and `4` gives extra debug information
+
+- `trscheme=Defaults.trscheme`: SVD truncation scheme during projector computation; can be
+  any `TruncationScheme` supported by the provided SVD algorithm
+
+- `svd_alg=Defaults.svd_fwd_alg`: SVD algorithm used for computing projectors
+
+- `svd_rrule_alg=Defaults.svd_rrule_alg_type`: Algorithm for differentiating SVDs; currently
+  supported through KrylovKit where `GMRES`, `BiCGStab` and `Arnoldi` are supported (only
+  relevant if `leading_boundary` is differentiated)
+
+- `svd_rrule_tol=1e1tol`: Convergence tolerance for SVD reverse-rule algorithm (only
+  relevant if `leading_boundary` is differentiated)
+
+- `projector_alg=Defaults.projector_alg_type`: Projector algorithm type, where any
+  `ProjectorAlgorithm` can be used
 """
+function MPSKit.leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
+    alg = select_algorithm(leading_boundary, env₀; kwargs...)
+    return MPSKit.leading_boundary(env₀, network, alg)
+end
 function MPSKit.leading_boundary(
-    envinit, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+    env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
 )
-    CS = map(x -> tsvd(x)[2], envinit.corners)
-    TS = map(x -> tsvd(x)[2], envinit.edges)
+    CS = map(x -> tsvd(x)[2], env₀.corners)
+    TS = map(x -> tsvd(x)[2], env₀.edges)
 
     η = one(real(scalartype(network)))
-    env = deepcopy(envinit)
+    env = deepcopy(env₀)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, network, envinit)
+        ctmrg_loginit!(log, η, network, env₀)
         local info
         for iter in 1:(alg.maxiter)
             env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
@@ -57,8 +85,8 @@ function MPSKit.leading_boundary(
         return env, info
     end
 end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
-    return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
+function MPSKit.leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
+    return MPSKit.leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
 # custom CTMRG logging
@@ -79,6 +107,57 @@ end
 @non_differentiable ctmrg_logiter!(args...)
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
+
+"""
+    select_algorithm(
+        ::typeof(leading_boundary),
+        env₀::CTMRGEnv;
+        alg=SimultaneousCTMRG,
+        tol=Defaults.ctmrg_tol,
+        maxiter=Defaults.ctmrg_maxiter,
+        miniter=Defaults.ctmrg_miniter,
+        verbosity=2,
+        trscheme=Defaults.trscheme,
+        svd_alg=Defaults.svd_fwd_alg,
+        svd_rrule_alg=Defaults.svd_rrule_type,
+        svd_rrule_tol=1e1tol,
+        projector_alg=Defaults.projector_alg_type,
+    )
+
+Parse CTMRG keyword arguments on to the corresponding algorithm structs and return a final
+algorithm to be used in `leading_boundary`. For a description of the keyword arguments,
+see [`leading_boundary`](@ref).
+"""
+function select_algorithm(
+    ::typeof(leading_boundary),
+    env₀::CTMRGEnv;
+    alg=SimultaneousCTMRG,
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=2,
+    trscheme=Defaults.trscheme,
+    svd_alg=Defaults.svd_fwd_alg,
+    svd_rrule_alg=Defaults.svd_rrule_type,
+    svd_rrule_tol=1e1tol,
+    projector_alg=Defaults.projector_alg_type,
+)
+    # extract maximal environment dimenions
+    χenv = maximum(env₀.corners) do corner
+        return dim(space(corner, 1))
+    end
+
+    svd_rrule_algorithm = if isnothing(svd_rrule_alg)
+        nothing
+    elseif svd_rrule_alg <: Union{GMRES,Arnoldi}
+        svd_rrule_alg(; tol=svd_rrule_tol, krylovdim=χenv + 24, verbosity=verbosity - 2)
+    elseif svd_rrule_alg <: BiCGStab
+        svd_rrule_alg(; tol=svd_rrule_tol, verbosity)
+    end
+    svd_algorithm = SVDAdjoint(; fwd_alg=svd_alg, rrule_alg=svd_rrule_algorithm)
+    projector_algorithm = projector_alg(svd_algorithm, trscheme, verbosity)
+    return alg(tol, maxiter, miniter, verbosity, projector_algorithm)
+end
 
 #=
 In order to compute an error measure, we compare the singular values of the current iteration with the previous one.
