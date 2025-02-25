@@ -30,20 +30,38 @@ function SequentialCTMRG(;
     )
 end
 
+"""
+    ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+
+Perform sequential CTMRG left move on the `col`-th column.
+"""
+function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+    #=
+        ----> left move
+        C1 ← T1 ←   r-1
+        ↓    ‖
+        T4 = M ==   r
+        ↓    ‖
+        C4 → T3 →   r+1
+        c-1  c 
+    =#
+    projectors, info = sequential_projectors(col, network, env, alg.projector_alg)
+    env = renormalize_sequentially(col, projectors, network, env)
+    return env, info
+end
+
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(network)))
     condition_number = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
-            projectors, info = sequential_projectors(col, network, env, alg.projector_alg)
-            env = renormalize_sequentially(col, projectors, network, env)
+            env, info = ctmrg_leftmove(col, network, env, alg)
             truncation_error = max(truncation_error, info.truncation_error)
             condition_number = max(condition_number, info.condition_number)
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
     end
-
     return env, (; truncation_error, condition_number)
 end
 
