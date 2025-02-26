@@ -69,6 +69,7 @@ Module containing default algorithm parameter values and arguments.
 - `ctmrg_maxiter=100`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter=4`: Minimal number of CTMRG carried out
 - `ctmrg_alg_type=SimultaneousCTMRG`: Default CTMRG algorithm variant
+- `ctmrg_verbosity=2`: CTMRG output information verbosity
 - `trscheme=FixedSpaceTruncation()`: Truncation scheme for SVDs and other decompositions
 - `svd_fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
 - `svd_rrule_type = Arnoldi`: Default solver type for SVD reverse-rule algorithm
@@ -149,6 +150,7 @@ module Defaults
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
     const ctmrg_alg_type = SimultaneousCTMRG
+    const ctmrg_verbosity = 2
     const sparse = false
     const trscheme = FixedSpaceTruncation()
     const svd_fwd_alg = TensorKit.SDD()
@@ -160,7 +162,7 @@ module Defaults
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
     const ctmrg_alg = ctmrg_alg_type(
-        ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
+        ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, ctmrg_verbosity, projector_alg
     )
 
     # Optimization

@@ -32,9 +32,9 @@ struct. The following keyword arguments are supported:
 
 - `miniter=Defaults.ctmrg_miniter`: Minimal number of CTMRG carried out
 
-- `verbosity=2`: Overall output information verbosity level, where `0` suppresses
-  all output, `1` only prints warnings, `2` gives information at the start and end,
-  `3` prints information every iteration, and `4` gives extra debug information
+- `verbosity=Defaults.ctmrg_verbosity`: Overall output information verbosity level, where
+  `0` suppresses all output, `1` only prints warnings, `2` gives information at the start
+  and end, `3` prints information every iteration, and `4` gives extra debug information
 
 - `trscheme=Defaults.trscheme`: SVD truncation scheme during projector computation; can be
   any `TruncationScheme` supported by the provided SVD algorithm
@@ -116,7 +116,7 @@ end
         tol=Defaults.ctmrg_tol,
         maxiter=Defaults.ctmrg_maxiter,
         miniter=Defaults.ctmrg_miniter,
-        verbosity=2,
+        verbosity=Defaults.ctmrg_verbosity,
         trscheme=Defaults.trscheme,
         svd_alg=Defaults.svd_fwd_alg,
         svd_rrule_alg=Defaults.svd_rrule_type,
@@ -135,7 +135,7 @@ function select_algorithm(
     tol=Defaults.ctmrg_tol,
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,
-    verbosity=2,
+    verbosity=Defaults.ctmrg_verbosity,
     trscheme=Defaults.trscheme,
     svd_alg=Defaults.svd_fwd_alg,
     svd_rrule_alg=Defaults.svd_rrule_type,

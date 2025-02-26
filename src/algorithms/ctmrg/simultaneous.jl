@@ -20,7 +20,7 @@ function SimultaneousCTMRG(;
     tol=Defaults.ctmrg_tol,
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,
-    verbosity=2,
+    verbosity=Defaults.ctmrg_verbosity,
     svd_alg=Defaults.svd_alg,
     trscheme=Defaults.trscheme,
     projector_alg=Defaults.projector_alg_type,

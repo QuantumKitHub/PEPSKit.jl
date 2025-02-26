@@ -138,9 +138,10 @@ function fixedpoint(
     if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed
         if scalartype(env₀) <: Real # incompatible with real environments
             env₀ = complex(env₀)
-            @warn "the provided real environment was converted to a complex environment
+            @warn "the provided real environment was converted to a complex environment \
             since :fixed mode generally produces complex gauges; use :diffgauge mode \
-            instead to work with purely real environments"
+            instead by passing gradient_alg=(; iterscheme=:diffgauge) to the fixedpoint \
+            keyword arguments to work with purely real environments"
         end
         if isnothing(alg.boundary_alg.projector_alg.svd_alg.rrule_alg) # incompatible with TensorKit SVD rrule
             G = Base.typename(typeof(alg.gradient_alg)).wrapper # simple type without iterscheme parameter
