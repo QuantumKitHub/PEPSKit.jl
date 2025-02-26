@@ -7,8 +7,6 @@ using PEPSKit
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg_sequential = SequentialCTMRG()
-ctm_alg_simultaneous = SimultaneousCTMRG()
 unitcells = [(1, 1), (3, 4)]
 projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 
@@ -20,10 +18,10 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)
     env_sequential, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_sequential
+        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg=SequentialCTMRG, projector_alg
     )
     env_simultaneous, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg_simultaneous
+        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg=SimultaneousCTMRG, projector_alg
     )
 
     # compare norms
@@ -56,19 +54,17 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
 end
 
 # test fixedspace actually fixes space
-@testset "Fixedspace truncation using $ctmrg_alg and $projector_alg" for (
-    ctmrg_alg, projector_alg
-) in Iterators.product(
+@testset "Fixedspace truncation using $alg and $projector_alg" for (alg, projector_alg) in
+                                                                   Iterators.product(
     [SequentialCTMRG, SimultaneousCTMRG], projector_algs
 )
-    ctm_alg = ctmrg_alg(;
-        tol=1e-6, maxiter=1, verbosity=0, trscheme=FixedSpaceTruncation(), projector_alg
-    )
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]
     psi = InfinitePEPS(Ds, Ds, Ds)
     env = CTMRGEnv(psi, rand(10:20, 3, 3), rand(10:20, 3, 3))
-    env2, = leading_boundary(env, psi, ctm_alg)
+    env2, = leading_boundary(
+        env, psi; alg, maxiter=1, trscheme=FixedSpaceTruncation(), projector_alg
+    )
 
     # check that the space is fixed
     @test all(space.(env.corners) .== space.(env2.corners))

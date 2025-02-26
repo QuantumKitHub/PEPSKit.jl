@@ -1,7 +1,6 @@
 module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
-using Base: @kwdef
 using Compat
 using Accessors: @set, @reset
 using VectorInterface
@@ -74,15 +73,22 @@ Module containing default algorithm parameter values and arguments.
 - `ctmrg_tol=1e-8`: Tolerance checking singular value and norm convergence
 - `ctmrg_maxiter=100`: Maximal number of CTMRG iterations per run
 - `ctmrg_miniter=4`: Minimal number of CTMRG carried out
+- `ctmrg_alg_type=SimultaneousCTMRG`: Default CTMRG algorithm variant
 - `trscheme=FixedSpaceTruncation()`: Truncation scheme for SVDs and other decompositions
-- `fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
-- `rrule_alg`: Reverse-rule for differentiating that SVD
+- `svd_fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
+- `svd_rrule_type = Arnoldi`: Default solver type for SVD reverse-rule algorithm
+- `svd_rrule_alg`: Reverse-rule algorithm for differentiating a SVD
 
     ```
-    rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
+    svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, eager=true, krylovdim=48, verbosity=-1)
     ```
 
-- `svd_alg=SVDAdjoint(; fwd_alg, rrule_alg)`: Combination of `fwd_alg` and `rrule_alg`
+- `svd_alg`: Combination of forward and reverse SVD algorithms
+
+    ```
+    svd_alg=SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
+    ```
+
 - `projector_alg_type=HalfInfiniteProjector`: Default type of projector algorithm
 - `projector_alg`: Algorithm to compute CTMRG projectors
 
@@ -93,35 +99,43 @@ Module containing default algorithm parameter values and arguments.
 - `ctmrg_alg`: Algorithm for performing CTMRG runs
 
     ```
-    ctmrg_alg = SimultaneousCTMRG(
+    ctmrg_alg = ctmrg_alg_type(
         ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
     )
     ```
 
 # Optimization
-- `fpgrad_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
-- `fpgrad_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
-- `iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
+- `gradient_alg_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
+- `gradient_alg_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
+- `gradient_alg_iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 
     ```
-    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
+    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol)
     ```
 
-- `gradient_eigsolve`: Default eigsolver for the `EigSolver` gradient algorithm
+- `gradient_eigsolver`: Default eigsolver for the `EigSolver` gradient algorithm
 
     ```
-    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=fpgrad_maxiter, tol=fpgrad_tol, eager=true)
+    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true)
     ```
 
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
 
     ```
-    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme)
     ```
 
-- `reuse_env=true`: If `true`, the current optimization step is initialized on the previous environment
-- `optimizer=LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
+- `reuse_env=true`: If `true`, the current optimization step is initialized on the previous
+  environment, otherwise a random environment is used
+- `optimizer_tol=1e-4`: Gradient norm tolerance of the optimizer
+- `optimizer_maxiter=100`: Maximal number of optimization steps
+- `lbfgs_memory=20`: Size of limited memory representation of BFGS Hessian matrix
+- `optimizer`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
+
+    ```
+    optimizer=LBFGS(lbfgs_memory; maxiter=optimizer_maxiter, gradtol=optimizer_tol, verbosity=3)
+    ```
 
 # OhMyThreads scheduler
 - `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
@@ -139,28 +153,42 @@ module Defaults
     const ctmrg_tol = 1e-8
     const ctmrg_maxiter = 100
     const ctmrg_miniter = 4
+    const ctmrg_alg_type = SimultaneousCTMRG
     const sparse = false
     const trscheme = FixedSpaceTruncation()
-    const fwd_alg = TensorKit.SDD()
-    const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
-    const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
+    const svd_fwd_alg = TensorKit.SDD()
+    const svd_rrule_type = Arnoldi
+    const svd_rrule_alg = svd_rrule_type(;
+        tol=ctmrg_tol, eager=true, krylovdim=48, verbosity=-1
+    )
+    const svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
-    const ctmrg_alg = SimultaneousCTMRG(
+    const ctmrg_alg = ctmrg_alg_type(
         ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
     )
 
     # Optimization
-    const fpgrad_maxiter = 30
-    const fpgrad_tol = 1e-6
-    const gradient_linsolver = KrylovKit.BiCGStab(; maxiter=fpgrad_maxiter, tol=fpgrad_tol)
-    const gradient_eigsolver = KrylovKit.Arnoldi(;
-        maxiter=fpgrad_maxiter, tol=fpgrad_tol, eager=true
+    const gradient_alg_tol = 1e-6
+    const gradient_alg_maxiter = 30
+    const gradient_linsolver = BiCGStab(;
+        maxiter=gradient_alg_maxiter, tol=gradient_alg_tol
     )
-    const iterscheme = :fixed
-    const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
+    const gradient_eigsolver = Arnoldi(;
+        maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true
+    )
+    const gradient_alg_iterscheme = :fixed
+    const gradient_alg_type = LinSolver
+    const gradient_alg = gradient_alg_type(;
+        solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme
+    )
     const reuse_env = true
-    const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)
+    const optimizer_tol = 1e-4
+    const optimizer_maxiter = 100
+    const lbfgs_memory = 20
+    const optimizer = LBFGS(
+        lbfgs_memory; maxiter=optimizer_maxiter, gradtol=optimizer_tol, verbosity=3
+    )
 
     # OhMyThreads scheduler defaults
     const scheduler = Ref{Scheduler}()

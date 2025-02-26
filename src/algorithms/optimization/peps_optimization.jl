@@ -1,6 +1,7 @@
 """
-    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
-                    reuse_env::Bool=true, gradient_alg::G=Defaults.gradient_alg)
+    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, gradient_alg::G=Defaults.gradient_alg
+                    optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
+                    reuse_env::Bool=true, symmetrization::Union{Nothing,SymmetrizationStyle}=nothing)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
@@ -9,6 +10,9 @@ based on the CTMRG gradient and updates the PEPS parameters. In this optimizatio
 the CTMRG runs can be started on the converged environments of the previous optimizer
 step by setting `reuse_env` to true. Otherwise a random environment is used at each
 step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
+The `symmetrization` field accepts `nothing` or a `SymmetrizationStyle`, in which case the
+PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
+requires an initial symmmetric PEPS and environment to converge properly.
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
@@ -26,7 +30,10 @@ struct PEPSOptimize{G}
     ) where {G}
         if gradient_alg isa GradMode
             if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
-                throw(ArgumentError(":sequential and :fixed are not compatible"))
+                msg = ":fixed was converted to :diffgauge since SequentialCTMRG does not \
+                      support :fixed differentiation mode due to sequential application of \
+                      SVDs; select SimultaneousCTMRG instead to use :fixed mode"
+                throw(ArgumentError(msg))
             end
         end
         return new{G}(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
@@ -44,22 +51,60 @@ end
 
 """
     fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
+    # expert version:
     fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize;
                finalize!=OptimKit._finalize!)
     
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
-to the optimization parameters supplied in `alg`. The initial environment `env₀` serves as
-an initial guess for the first CTMRG run. By default, a random initial environment is used.
+to the supplied optimization parameters. The initial environment `env₀` serves as an
+initial guess for the first CTMRG run. By default, a random initial environment is used.
 
-The `finalize!` kwarg can be used to insert a function call after each optimization step
-by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
-The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
-The `symmetrization` kwarg accepts `nothing` or a `SymmetrizationStyle`, in which case the
-PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
-requires a symmmetric `peps₀` and `env₀` to converge properly.
+The optimization parameters can be supplied via the keyword arguments or directly as a
+`PEPSOptimize` struct. The following keyword arguments are supported:
+
+- `tol=Defaults.optimizer_tol`: Overall tolerance for gradient norm convergence of the
+  optimizer; sets related tolerance such as the boundary and boundary-gradient tolerances
+  to sensible defaults unless they are explictly specified
+
+- `verbosity=1`: Overall output information verbosity level, where `0` suppresses
+  all output, `1` only prints the optimizer output and warnings, `2` additionally prints
+  boundary information, and `3` prints all information including AD debug outputs
+
+- `boundary_alg`: Boundary algorithm either specified as a `NamedTuple` of keyword
+  arguments or directly as a `CTMRGAlgorithm`; see [`leading_boundary`](@ref) for a
+  description of all possible keyword arguments
+
+- `gradient_alg`: Algorithm for computing the boundary fixed-point gradient
+  specified either as a `NamedTuple` of keyword arguments or directly as a `GradMode`.
+  The supported keyword arguments are:
+  - `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration
+  - `maxiter=Defaults.gradient_alg_maxiter`: Maximal number of gradient problem iterations
+  - `alg=Defaults.gradient_alg_type`: Gradient algorithm type, can be any `GradMode` type
+  - `verbosity=gradient_verbosity`: Gradient output verbosity, ≤0 by default to disable too
+    verbose printing; should only be enabled for debug purposes
+  - `iterscheme=Defaults.gradient_alg_iterscheme`: CTMRG iteration scheme determining mode
+    of differentiation; can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate
+    gauge-fixing routine)
+
+- `optimization_alg`: PEPS optimization algorithm, specified either as a `NamedTuple` of
+  keyword arguments or directly as a `PEPSOptimize`. By default, `OptimKit.LBFGS` is used
+  in combination with a `HagerZhangLineSearch`. Possible keyword arguments are:
+  - `tol=tol`: Gradient norm tolerance of the optimizer
+  - `maxiter=Defaults.optimizer_maxiter`: Maximal number of optimization steps
+  - `lbfgs_memory=Defaults.lbfgs_memory`: Size of limited memory representation of BFGS
+    Hessian matrix
+  - `reuse_env=Defaults.reuse_env`: If `true`, the current optimization step is initialized
+  on the previous environment, otherwise a random environment is used
+  - `symmetrization=nothing`: Accepts `nothing` or a `SymmetrizationStyle`, in which case
+  the PEPS and PEPS gradient are symmetrized after each optimization iteration
+
+- `(finalize!)=OptimKit._finalize!`: Inserts a `finalize!` function call after each
+  optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
+  The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
 
 The function returns the final PEPS, CTMRG environment and cost value, as well as an
 information `NamedTuple` which contains the following entries:
+
 - `last_gradient`: last gradient of the cost function
 - `fg_evaluations`: number of evaluations of the cost and gradient function
 - `costs`: history of cost values
@@ -70,9 +115,8 @@ information `NamedTuple` which contains the following entries:
 - `times`: history of times each optimization step took
 """
 function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
-    throw(error("method not yet implemented"))
-    alg = fixedpoint_selector(; kwargs...) # TODO: implement fixedpoint_selector
-    return fixedpoint(operator, peps₀, env₀, alg)
+    alg, finalize! = select_algorithm(fixedpoint, env₀; kwargs...)
+    return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
     operator,
@@ -90,12 +134,25 @@ function fixedpoint(
         finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
     end
 
-    # check realness compatibility
-    if scalartype(env₀) <: Real && iterscheme(alg.gradient_alg) == :fixed
-        env₀ = complex(env₀)
-        @warn "the provided real environment was converted to a complex environment since \
-        :fixed mode generally produces complex gauges; use :diffgauge mode instead to work \
-        with purely real environments"
+    # :fixed mode compatibility
+    if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed
+        if scalartype(env₀) <: Real # incompatible with real environments
+            env₀ = complex(env₀)
+            @warn "the provided real environment was converted to a complex environment
+            since :fixed mode generally produces complex gauges; use :diffgauge mode \
+            instead to work with purely real environments"
+        end
+        if isnothing(alg.boundary_alg.projector_alg.svd_alg.rrule_alg) # incompatible with TensorKit SVD rrule
+            G = Base.typename(typeof(alg.gradient_alg)).wrapper # simple type without iterscheme parameter
+            gradient_alg = G{:diffgauge}(
+                (getproperty(alg.gradient_alg, f) for f in fieldnames(G))...
+            )
+            @reset alg.gradient_alg = gradient_alg
+            @warn ":fixed was converted to :diffgauge since :fixed mode and \
+            rrule_alg=nothing are incompatible - nothing uses the TensorKit \
+            reverse-rule requiring access to the untruncated SVD which FixedSVD does not \
+            have; select GMRES, BiCGStab or Arnoldi instead to use :fixed mode"
+        end
     end
 
     # initialize info collection vectors
@@ -131,7 +188,7 @@ function fixedpoint(
         return E, g
     end
 
-    info = (
+    info = (;
         last_gradient=∂cost,
         fg_evaluations=numfg,
         costs=convergence_history[:, 1],
@@ -142,6 +199,136 @@ function fixedpoint(
         times,
     )
     return peps_final, env_final, cost, info
+end
+
+"""
+    function select_algorithm(
+        ::typeof(fixedpoint),
+        env₀::CTMRGEnv;
+        tol=Defaults.optimizer_tol,
+        verbosity=2,
+        boundary_alg=(;),
+        gradient_alg=(;),
+        optimization_alg=(;),
+        (finalize!)=OptimKit._finalize!,
+    )
+
+Parse optimization keyword arguments on to the corresponding algorithm structs and return
+a final `PEPSOptimize` to be used in `fixedpoint`. For a description of the keyword
+arguments, see [`fixedpoint`](@ref).
+"""
+function select_algorithm(
+    ::typeof(fixedpoint),
+    env₀::CTMRGEnv;
+    tol=Defaults.optimizer_tol, # top-level tolerance
+    verbosity=2, # top-level verbosity
+    boundary_alg=(;),
+    gradient_alg=(;),
+    optimization_alg=(;),
+    (finalize!)=OptimKit._finalize!,
+)
+
+    # top-level verbosity
+    if verbosity ≤ 0 # disable output
+        boundary_verbosity = -1
+        gradient_verbosity = -1
+        optimizer_verbosity = -1
+    elseif verbosity == 1 # output only optimization steps and degeneracy warnings
+        boundary_verbosity = -1
+        gradient_verbosity = 1
+        optimizer_verbosity = 3
+    elseif verbosity == 2 # output optimization and boundary information
+        boundary_verbosity = 2
+        gradient_verbosity = -1
+        optimizer_verbosity = 3
+    elseif verbosity == 3 # verbose debug output
+        boundary_verbosity = 3
+        gradient_verbosity = 3
+        optimizer_verbosity = 3
+    end
+
+    # parse boundary algorithm
+    boundary_algorithm = if boundary_alg isa CTMRGAlgorithm
+        boundary_alg
+    elseif boundary_alg isa NamedTuple
+        select_algorithm(
+            leading_boundary,
+            env₀;
+            tol=1e-4tol,
+            verbosity=boundary_verbosity,
+            svd_rrule_tol=1e-3tol,
+            boundary_alg...,
+        )
+    else
+        throw(ArgumentError("unknown boundary algorithm: $boundary_alg"))
+    end
+
+    # parse fixed-point gradient algorithm
+    gradient_algorithm = if gradient_alg isa GradMode
+        gradient_alg
+    elseif gradient_alg isa NamedTuple
+        gradient_kwargs = (;
+            tol=1e-2tol,
+            maxiter=Defaults.gradient_alg_maxiter,
+            alg=Defaults.gradient_alg_type,
+            verbosity=gradient_verbosity,
+            iterscheme=Defaults.gradient_alg_iterscheme,
+            gradient_alg..., # replaces all specified kwargs
+        )
+        if gradient_kwargs.alg <: Union{GeomSum,ManualIter}
+            gradient_kwargs.alg(;
+                tol=gradient_kwargs.tol,
+                maxiter=gradient_kwargs.maxiter,
+                verbosity=gradient_kwargs.verbosity,
+                iterscheme=gradient_kwargs.iterscheme,
+            )
+        elseif gradient_kwargs.alg <: LinSolver
+            solver = Defaults.gradient_linsolver
+            @reset solver.maxiter = gradient_kwargs.maxiter
+            @reset solver.tol = gradient_kwargs.tol
+            @reset solver.verbosity = gradient_kwargs.verbosity
+            LinSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
+        elseif gradient_kwargs.alg <: EigSolver
+            solver = Defaults.gradient_eigsolver
+            @reset solver.maxiter = gradient_kwargs.maxiter
+            @reset solver.tol = gradient_kwargs.tol
+            @reset solver.verbosity = gradient_kwargs.verbosity
+            EigSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
+        end
+    else
+        throw(ArgumentError("unknown gradient algorithm: $gradient_alg"))
+    end
+
+    # construct final PEPSOptimize optimization algorithm
+    optimization_algorithm = if optimization_alg isa PEPSOptimize
+        optimization_alg
+    elseif optimization_alg isa NamedTuple
+        optimization_kwargs = (;
+            tol=tol,
+            maxiter=Defaults.optimizer_maxiter,
+            lbfgs_memory=Defaults.lbfgs_memory,
+            reuse_env=Defaults.reuse_env,
+            symmetrization=nothing,
+            optimization_alg..., # replaces all specified kwargs
+        )
+        optimizer = LBFGS(
+            optimization_kwargs.lbfgs_memory;
+            gradtol=optimization_kwargs.tol,
+            maxiter=optimization_kwargs.maxiter,
+            verbosity=optimizer_verbosity,
+        )
+        PEPSOptimize(
+            boundary_algorithm,
+            gradient_algorithm,
+            optimizer,
+            optimization_kwargs.reuse_env,
+            optimization_kwargs.symmetrization,
+        )
+    else
+        throw(ArgumentError("unknown optimization algorithm: $optimization_alg"))
+    end
+
+    return optimization_algorithm, finalize!
 end
 
 # Update PEPS unit cell in non-mutating way
