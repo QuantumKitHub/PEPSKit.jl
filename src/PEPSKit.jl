@@ -76,7 +76,7 @@ Module containing default algorithm parameter values and arguments.
 - `svd_rrule_alg`: Reverse-rule algorithm for differentiating a SVD
 
     ```
-    svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, eager=true, krylovdim=48, verbosity=-1)
+    svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     ```
 
 - `svd_alg`: Combination of forward and reverse SVD algorithms
@@ -155,9 +155,7 @@ module Defaults
     const trscheme = FixedSpaceTruncation()
     const svd_fwd_alg = TensorKit.SDD()
     const svd_rrule_type = Arnoldi
-    const svd_rrule_alg = svd_rrule_type(;
-        tol=ctmrg_tol, eager=true, krylovdim=48, verbosity=-1
-    )
+    const svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
