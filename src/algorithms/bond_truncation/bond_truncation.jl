@@ -67,7 +67,6 @@ function bond_truncate(
     perm_ab = ((1, 3), (4, 2))
     a, s, b = tsvd(a2b2, perm_ab; trunc=alg.trscheme)
     s /= norm(s, Inf)
-    Vtrunc = space(s, 1)
     a, b = absorb_s(a, s, b)
     #= temporarily reorder axes of a and b to
         1 -a/b- 2
@@ -129,7 +128,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = tsvd(_combine_ab(a, b), perm_ab; trunc=alg.trscheme)
+    a, s, b = tsvd!(permute(_combine_ab(a, b), perm_ab); trunc=alg.trscheme)
     # normalize singular value spectrum
     s /= norm(s, Inf)
     return a, s, b, (; fid, Δfid)
@@ -151,10 +150,13 @@ function bond_truncate(
             ↓    ↓               ↓               ↓
     =#
     Qa, Ra = leftorth(a)
-    Qb, Rb = leftorth(b, ((3, 2), (1,)))
+    Rb, Qb = rightorth(b)
+    # if Qa → Ra, a twist is needed to express a as 
+    # contraction of Rb, Qb instead of Qa * Ra
     isdual(space(Ra, 1)) && twist!(Ra, 1)
-    isdual(space(Rb, 1)) && twist!(Rb, 1)
-    @tensor b0[-1; -2] := Ra[-1 1] * Rb[-2 1]
+    # similarly if Rb → Qb
+    isdual(space(Qb, 1)) && twist!(Rb, 2)
+    @tensor b0[-1; -2] := Ra[-1 1] * Rb[1 -2]
     #= initialize bond environment around `Ra Lb`
 
         ┌--------------------------------------┐
@@ -168,12 +170,12 @@ function bond_truncate(
         └--------------------------------------┘
     =#
     @tensor benv2[-1 -2; -3 -4] := (
-        benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[2 6 -2]) * Qa[3 5 -3] * Qb[4 6 -4]
+        benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
     )
     # optimize bond matrix
     u, s, vh, info = fullenv_truncate(b0, benv2, alg)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
-    @tensor b[-1; -2 -3] := vh[-1 1] * Qb[-3 -2 1]
+    @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
     return a, s, b, info
 end
