@@ -23,7 +23,7 @@ Contract `network` using CTMRG and return the CTM environment.
 The algorithm can be supplied via the keyword arguments or directly as an `CTMRGAlgorithm`
 struct. The following keyword arguments are supported:
 
-- `alg=SimultaneousCTMRG`: Variant of the CTMRG algorithm; can be any `CTMRGAlgorithm` type
+- `alg=Defaults.ctmrg_alg_type`: Variant of the CTMRG algorithm; can be any `CTMRGAlgorithm` type
 
 - `tol=Defaults.ctmrg_tol`: Tolerance checking singular value and norm convergence; also
   sets related tolerances to sensible defaults unless they are explicitly specified
@@ -112,7 +112,7 @@ end
     select_algorithm(
         ::typeof(leading_boundary),
         env₀::CTMRGEnv;
-        alg=SimultaneousCTMRG,
+        alg=Defaults.ctmrg_alg_type,
         tol=Defaults.ctmrg_tol,
         maxiter=Defaults.ctmrg_maxiter,
         miniter=Defaults.ctmrg_miniter,
@@ -131,7 +131,7 @@ see [`leading_boundary`](@ref).
 function select_algorithm(
     ::typeof(leading_boundary),
     env₀::CTMRGEnv;
-    alg=SimultaneousCTMRG,
+    alg=Defaults.ctmrg_alg_type,
     tol=Defaults.ctmrg_tol,
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,

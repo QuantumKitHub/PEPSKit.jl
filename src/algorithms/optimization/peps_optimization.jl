@@ -79,7 +79,7 @@ The optimization parameters can be supplied via the keyword arguments or directl
   The supported keyword arguments are:
   - `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration
   - `maxiter=Defaults.gradient_alg_maxiter`: Maximal number of gradient problem iterations
-  - `alg=typeof(Defaults.gradient_alg)`: Gradient algorithm type, can be any `GradMode` type
+  - `alg=Defaults.gradient_alg_type`: Gradient algorithm type, can be any `GradMode` type
   - `verbosity=gradient_verbosity`: Gradient output verbosity, ≤0 by default to disable too
     verbose printing; should only be enabled for debug purposes
   - `iterscheme=Defaults.gradient_alg_iterscheme`: CTMRG iteration scheme determining mode
@@ -235,7 +235,7 @@ function select_algorithm(
         optimizer_verbosity = -1
     elseif verbosity == 1 # output only optimization steps and degeneracy warnings
         boundary_verbosity = -1
-        gradient_verbosity = -1
+        gradient_verbosity = 1
         optimizer_verbosity = 3
     elseif verbosity == 2 # output optimization and boundary information
         boundary_verbosity = 2
@@ -270,7 +270,7 @@ function select_algorithm(
         gradient_kwargs = (;
             tol=1e-2tol,
             maxiter=Defaults.gradient_alg_maxiter,
-            alg=typeof(Defaults.gradient_alg),
+            alg=Defaults.gradient_alg_type,
             verbosity=gradient_verbosity,
             iterscheme=Defaults.gradient_alg_iterscheme,
             gradient_alg..., # replaces all specified kwargs
