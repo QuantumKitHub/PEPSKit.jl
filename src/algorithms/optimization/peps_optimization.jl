@@ -276,7 +276,7 @@ function select_algorithm(
             gradient_alg..., # replaces all specified kwargs
         )
         if gradient_kwargs.alg <: Union{GeomSum,ManualIter}
-            gradient_alg_type(;
+            gradient_kwargs.alg(;
                 tol=gradient_kwargs.tol,
                 maxiter=gradient_kwargs.maxiter,
                 verbosity=gradient_kwargs.verbosity,

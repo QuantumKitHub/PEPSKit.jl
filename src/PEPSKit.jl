@@ -109,7 +109,7 @@ Module containing default algorithm parameter values and arguments.
     gradient_linsolver=KrylovKit.BiCGStab(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol)
     ```
 
-- `gradient_eigsolve`: Default eigsolver for the `EigSolver` gradient algorithm
+- `gradient_eigsolver`: Default eigsolver for the `EigSolver` gradient algorithm
 
     ```
     gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true)
