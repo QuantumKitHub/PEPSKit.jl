@@ -11,14 +11,6 @@ struct SimpleUpdate
     trscheme::TensorKit.TruncationScheme
 end
 
-function truncation_scheme(alg::SimpleUpdate, v::ElementarySpace)
-    if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(v)
-    else
-        return alg.trscheme
-    end
-end
-
 """
 _su_bondx!(row::Int, col::Int, gate::AbstractTensorMap{T,S,2,2},
            peps::InfiniteWeightPEPS, alg::SimpleUpdate) where {S<:ElementarySpace}
@@ -44,58 +36,23 @@ function _su_bondx!(
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
     # absorb environment weights
-    T1, T2 = peps.vertices[row, col], peps.vertices[row, cp1]
-    T1 = _absorb_weight(T1, row, col, "tbl", peps.weights)
-    T2 = _absorb_weight(T2, row, cp1, "trb", peps.weights)
-    #= QR and LQ decomposition
-
-        2                   1
-        ↓                   ↓
-    5 ← T ← 3   ====>   3 ← X ← 4 ← 1 ← aR ← 3
-        ↓ ↘                 ↓            ↘
-        4   1               2             2
-
-        2                               2
-        ↓                               ↓
-    5 ← T ← 3   ====>  1 ← bL ← 3 ← 1 ← Y ← 3
-        ↓ ↘                 ↘           ↓
-        4   1                 2         4
-    =#
-    X, aR = leftorth(T1, ((2, 4, 5), (1, 3)); alg=QRpos())
-    bL, Y = rightorth(T2, ((5, 1), (2, 3, 4)); alg=LQpos())
-    #= apply gate
-
-        -1← aR -← 3 -← bL ← -4
-            ↓           ↓
-            1           2
-            ↓           ↓
-            |----gate---|
-            ↓           ↓
-            -2         -3
-    =#
-    @tensor tmp[-1 -2; -3 -4] := gate[-2 -3; 1 2] * aR[-1 1 3] * bL[3 2 -4]
-    aR, s, bL, ϵ = tsvd!(
-        tmp; trunc=truncation_scheme(alg, space(T1, 3)), alg=TensorKit.SVD()
-    )
-    #=
-            -2                               -2
-            |                                 |
-        -5- X ← 1 ← aR - -3     -5 - bL ← 1 ← Y - -3
-            |         ↘               ↘       |
-            -4         -1              -1     -4
-    =#
-    @tensor T1[-1; -2 -3 -4 -5] := X[-2, -4, -5, 1] * aR[1, -1, -3]
-    @tensor T2[-1; -2 -3 -4 -5] := bL[-5, -1, 1] * Y[1, -2, -3, -4]
+    A, B = peps.vertices[row, col], peps.vertices[row, cp1]
+    A = _absorb_weight(A, row, col, "tbl", peps.weights)
+    B = _absorb_weight(B, row, cp1, "trb", peps.weights)
+    # apply gate
+    X, a, b, Y = _qr_bond(A, B)
+    a, s, b, ϵ = _apply_gate(a, b, gate, alg.trscheme)
+    A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
     for ax in (2, 4, 5)
-        T1 = absorb_weight(T1, row, col, ax, peps.weights; invwt=true)
+        A = absorb_weight(A, row, col, ax, peps.weights; invwt=true)
     end
     for ax in (2, 3, 4)
-        T2 = absorb_weight(T2, row, cp1, ax, peps.weights; invwt=true)
+        B = absorb_weight(B, row, cp1, ax, peps.weights; invwt=true)
     end
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
-    peps.vertices[row, col], peps.vertices[row, cp1] = T1, T2
+    peps.vertices[row, col], peps.vertices[row, cp1] = A, B
     peps.weights[1, row, col] = s / norm(s, Inf)
     return ϵ
 end
