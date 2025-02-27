@@ -108,25 +108,40 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
+# TODO: support reasonable kwargs for `trscheme::Union{TruncationScheme,NamedTuple}`?
+# TODO: bit strange to have `svd_rrule_alg` and `svd_rrule_tol`. Merge this into a single `svd_rrule_alg::Union{Symbol,Algorithm,NamedTuple}`?
+# TODO: interpolate defaults
 """
-    select_algorithm(
-        ::typeof(leading_boundary),
-        env₀::CTMRGEnv;
-        alg=Defaults.ctmrg_alg_type,
-        tol=Defaults.ctmrg_tol,
-        maxiter=Defaults.ctmrg_maxiter,
-        miniter=Defaults.ctmrg_miniter,
-        verbosity=Defaults.ctmrg_verbosity,
-        trscheme=Defaults.trscheme,
-        svd_alg=Defaults.svd_fwd_alg,
-        svd_rrule_alg=Defaults.svd_rrule_type,
-        svd_rrule_tol=1e1tol,
-        projector_alg=Defaults.projector_alg_type,
-    )
+    select_algorithm(::typeof(leading_boundary), env₀::CTMRGEnv; kwargs...) -> CTMRGAlgorithm
 
-Parse CTMRG keyword arguments on to the corresponding algorithm structs and return a final
-algorithm to be used in `leading_boundary`. For a description of the keyword arguments,
-see [`leading_boundary`](@ref).
+Parse and standardize CTMRG keyword arguments, and bundle them into a `CTMRGAlgorithm` struct,
+which is passed on to [`leading_boundary`](@ref).
+
+## Keyword arguments
+
+### CTMRG iterations
+
+* `tol::Real`: Stopping criterium for the CTMRG iterations. This is the norm convergence, as well as the distance in singular values of the corners.
+* `miniter::Int`: Minimal number of CTMRG iterations.
+* `maxiter::Int`: Maximal number of CTMRG iterations.
+* `verbosity::Int`: Output verbosity level, should be one of the following:
+    0. Suppress all output
+    1. Only print warnings
+    2. Initialization and convergence info
+    3. Iteration info
+    4. Debug info
+* `alg::Union{Symbol,Algorithm}`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
+
+### Projector algorithm
+
+* `trscheme::TruncationScheme`: Truncation scheme for the projector computation, which controls the resulting virtual spaces.
+* `svd_alg`: SVD algorithm for computing projectors. See also [`PEPSKit.tsvd`](@ref).
+* `projector_alg::Union{Symbol,Algorithm}`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
+
+### Differentiation settings
+
+* `svd_rrule_alg::Union{Symbol,Algorithm}`: Algorithm used for differentiating SVDs.
+* `svd_rrule_tol::Real` Convergence tolerance for SVD `rrule`
 """
 function select_algorithm(
     ::typeof(leading_boundary),
