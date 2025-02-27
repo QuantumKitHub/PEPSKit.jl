@@ -58,6 +58,7 @@ include("algorithms/contractions/vumps_contractions.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
+include("algorithms/contractions/bondenv/benv_ntu.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
 include("algorithms/contractions/correlator/peps.jl")
 include("algorithms/contractions/correlator/pepo_1layer.jl")
@@ -104,6 +105,7 @@ export fixedpoint
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
+export NNEnv, NNNEnv
 export su_iter, su3site_iter, simpleupdate, SimpleUpdate
 
 export InfiniteSquareNetwork
