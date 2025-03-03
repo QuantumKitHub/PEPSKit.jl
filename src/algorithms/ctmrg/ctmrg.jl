@@ -18,38 +18,34 @@ function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
     # expert version:
     MPSKit.leading_boundary(env₀, network, alg::CTMRGAlgorithm)
 
-Contract `network` using CTMRG and return the CTM environment.
+Contract `network` using CTMRG and return the CTM environment. The algorithm can be
+supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) struct.
 
-The algorithm can be supplied via the keyword arguments or directly as an `CTMRGAlgorithm`
-struct. The following keyword arguments are supported:
+## Keyword arguments
 
-- `alg=Defaults.ctmrg_alg_type`: Variant of the CTMRG algorithm; can be any `CTMRGAlgorithm` type
+### CTMRG iterations
 
-- `tol=Defaults.ctmrg_tol`: Tolerance checking singular value and norm convergence; also
-  sets related tolerances to sensible defaults unless they are explicitly specified
+* `tol::Real=$(Defaults.ctmrg_tol)`: Stopping criterium for the CTMRG iterations. This is the norm convergence, as well as the distance in singular values of the corners and edges.
+* `miniter::Int=$(Defaults.ctmrg_miniter)`: Minimal number of CTMRG iterations.
+* `maxiter::Int=$(Defaults.ctmrg_maxiter)`: Maximal number of CTMRG iterations.
+* `verbosity::Int=$(Defaults.ctmrg_verbosity)`: Output verbosity level, should be one of the following:
+    0. Suppress all output
+    1. Only print warnings
+    2. Initialization and convergence info
+    3. Iteration info
+    4. Debug info
+* `alg::Union{Symbol,<:CTMRGAlgorithm}=$(Defaults.ctmrg_alg_type)`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
 
-- `maxiter=Defaults.ctmrg_maxiter`: Maximal number of CTMRG iterations per run
+### Projector algorithm
 
-- `miniter=Defaults.ctmrg_miniter`: Minimal number of CTMRG carried out
+* `trscheme::TruncationScheme=$(Defaults.trscheme)`: Truncation scheme for the projector computation, which controls the resulting virtual spaces.
+* `svd_alg=Defaults.svd_fwd_alg`: SVD algorithm for computing projectors. See also [`PEPSKit.tsvd`](@ref).
+* `projector_alg::Union{Symbol,<:ProjectorAlgorithm}=$(Defaults.projector_alg_type)`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
 
-- `verbosity=Defaults.ctmrg_verbosity`: Overall output information verbosity level, where
-  `0` suppresses all output, `1` only prints warnings, `2` gives information at the start
-  and end, `3` prints information every iteration, and `4` gives extra debug information
+### Differentiation settings
 
-- `trscheme=Defaults.trscheme`: SVD truncation scheme during projector computation; can be
-  any `TruncationScheme` supported by the provided SVD algorithm
-
-- `svd_alg=Defaults.svd_fwd_alg`: SVD algorithm used for computing projectors
-
-- `svd_rrule_alg=Defaults.svd_rrule_alg_type`: Algorithm for differentiating SVDs; currently
-  supported through KrylovKit where `GMRES`, `BiCGStab` and `Arnoldi` are supported (only
-  relevant if `leading_boundary` is differentiated)
-
-- `svd_rrule_tol=1e1tol`: Convergence tolerance for SVD reverse-rule algorithm (only
-  relevant if `leading_boundary` is differentiated)
-
-- `projector_alg=Defaults.projector_alg_type`: Projector algorithm type, where any
-  `ProjectorAlgorithm` can be used
+* `svd_rrule_alg::Union{Symbol,Algorithm}=$(Defaults.svd_rrule_alg_type)`: Algorithm used for differentiating SVDs.
+* `svd_rrule_tol::Real=1e1tol`: Convergence tolerance for SVD `rrule`
 """
 function MPSKit.leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
@@ -110,38 +106,12 @@ end
 
 # TODO: support reasonable kwargs for `trscheme::Union{TruncationScheme,NamedTuple}`?
 # TODO: bit strange to have `svd_rrule_alg` and `svd_rrule_tol`. Merge this into a single `svd_rrule_alg::Union{Symbol,Algorithm,NamedTuple}`?
-# TODO: interpolate defaults
 """
     select_algorithm(::typeof(leading_boundary), env₀::CTMRGEnv; kwargs...) -> CTMRGAlgorithm
 
 Parse and standardize CTMRG keyword arguments, and bundle them into a `CTMRGAlgorithm` struct,
-which is passed on to [`leading_boundary`](@ref).
-
-## Keyword arguments
-
-### CTMRG iterations
-
-* `tol::Real`: Stopping criterium for the CTMRG iterations. This is the norm convergence, as well as the distance in singular values of the corners.
-* `miniter::Int`: Minimal number of CTMRG iterations.
-* `maxiter::Int`: Maximal number of CTMRG iterations.
-* `verbosity::Int`: Output verbosity level, should be one of the following:
-    0. Suppress all output
-    1. Only print warnings
-    2. Initialization and convergence info
-    3. Iteration info
-    4. Debug info
-* `alg::Union{Symbol,Algorithm}`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
-
-### Projector algorithm
-
-* `trscheme::TruncationScheme`: Truncation scheme for the projector computation, which controls the resulting virtual spaces.
-* `svd_alg`: SVD algorithm for computing projectors. See also [`PEPSKit.tsvd`](@ref).
-* `projector_alg::Union{Symbol,Algorithm}`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
-
-### Differentiation settings
-
-* `svd_rrule_alg::Union{Symbol,Algorithm}`: Algorithm used for differentiating SVDs.
-* `svd_rrule_tol::Real` Convergence tolerance for SVD `rrule`
+which is passed on to [`leading_boundary`](@ref). See [`leading_boundary`](@ref) for a
+description of all keyword arguments.
 """
 function select_algorithm(
     ::typeof(leading_boundary),

@@ -1,7 +1,7 @@
 """
-    PEPSOptimize{G}(; boundary_alg=Defaults.ctmrg_alg, gradient_alg::G=Defaults.gradient_alg
-                    optimizer::OptimKit.OptimizationAlgorithm=Defaults.optimizer
-                    reuse_env::Bool=true, symmetrization::Union{Nothing,SymmetrizationStyle}=nothing)
+    PEPSOptimize{G}(; boundary_alg=$(Defaults.ctmrg_alg), gradient_alg::G=$(Defaults.gradient_alg),
+                    optimizer::OptimKit.OptimizationAlgorithm=$(Defaults.optimizer)
+                    reuse_env::Bool=$(Defaults.reuse_env), symmetrization::Union{Nothing,SymmetrizationStyle}=nothing)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
 Set the algorithm to contract the infinite PEPS in `boundary_alg`;
@@ -62,57 +62,62 @@ initial guess for the first CTMRG run. By default, a random initial environment 
 The optimization parameters can be supplied via the keyword arguments or directly as a
 `PEPSOptimize` struct. The following keyword arguments are supported:
 
-- `tol=Defaults.optimizer_tol`: Overall tolerance for gradient norm convergence of the
-  optimizer; sets related tolerance such as the boundary and boundary-gradient tolerances
-  to sensible defaults unless they are explictly specified
+## Keyword arguments
 
-- `verbosity=1`: Overall output information verbosity level, where `0` suppresses
-  all output, `1` only prints the optimizer output and warnings, `2` additionally prints
-  boundary information, and `3` prints all information including AD debug outputs
+### Global settings
 
-- `boundary_alg`: Boundary algorithm either specified as a `NamedTuple` of keyword
-  arguments or directly as a `CTMRGAlgorithm`; see [`leading_boundary`](@ref) for a
-  description of all possible keyword arguments
+* `tol::Real=$(Defaults.optimizer_tol)`: Overall tolerance for gradient norm convergence of the optimizer. Sets related tolerance such as the boundary and boundary-gradient tolerances to sensible defaults unless they are explictly specified.
+* `verbosity::Int=1`: Overall output information verbosity level, should be one of the following:
+    0. Suppress all output
+    1. Optimizer output and warnings
+    2. Additionally print boundary information
+    3. All information including AD debug outputs
+* `(finalize!)=OptimKit._finalize!`: Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
 
-- `gradient_alg`: Algorithm for computing the boundary fixed-point gradient
-  specified either as a `NamedTuple` of keyword arguments or directly as a `GradMode`.
-  The supported keyword arguments are:
-  - `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration
-  - `maxiter=Defaults.gradient_alg_maxiter`: Maximal number of gradient problem iterations
-  - `alg=Defaults.gradient_alg_type`: Gradient algorithm type, can be any `GradMode` type
-  - `verbosity=gradient_verbosity`: Gradient output verbosity, ≤0 by default to disable too
-    verbose printing; should only be enabled for debug purposes
-  - `iterscheme=Defaults.gradient_alg_iterscheme`: CTMRG iteration scheme determining mode
-    of differentiation; can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate
-    gauge-fixing routine)
+### Boundary algorithm
 
-- `optimization_alg`: PEPS optimization algorithm, specified either as a `NamedTuple` of
-  keyword arguments or directly as a `PEPSOptimize`. By default, `OptimKit.LBFGS` is used
-  in combination with a `HagerZhangLineSearch`. Possible keyword arguments are:
-  - `tol=tol`: Gradient norm tolerance of the optimizer
-  - `maxiter=Defaults.optimizer_maxiter`: Maximal number of optimization steps
-  - `lbfgs_memory=Defaults.lbfgs_memory`: Size of limited memory representation of BFGS
-    Hessian matrix
-  - `reuse_env=Defaults.reuse_env`: If `true`, the current optimization step is initialized
-  on the previous environment, otherwise a random environment is used
-  - `symmetrization=nothing`: Accepts `nothing` or a `SymmetrizationStyle`, in which case
-  the PEPS and PEPS gradient are symmetrized after each optimization iteration
+Supply boundary algorithm parameters via `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm}`
+using either a `NamedTuple` of keyword arguments or a `CTMRGAlgorithm` directly.
+See [`leading_boundary`](@ref) for a description of all possible keyword arguments.
 
-- `(finalize!)=OptimKit._finalize!`: Inserts a `finalize!` function call after each
-  optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`.
-  The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
+### Gradient algorithm
+
+Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,<:GradMode}` using
+either a `NamedTuple` of keyword arguments or a `GradMode` struct directly. The supported
+keyword arguments are:
+
+* `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration.
+* `maxiter=$(Defaults.gradient_alg_maxiter)`: Maximal number of gradient problem iterations.
+* `alg=$(Defaults.gradient_alg_type)`: Gradient algorithm type, can be any `GradMode` type.
+* `verbosity`: Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
+* `iterscheme=$(Defaults.gradient_alg_iterscheme)`: CTMRG iteration scheme determining mode of differentiation. This can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate gauge-fixing routine).
+
+### PEPS optimization settings
+
+Supply the optimization algorithm via `optimization_alg::Union{NamedTuple,<:PEPSOptimize}`
+using either a `NamedTuple` of keyword arguments or a `PEPSOptimize` directly. By default,
+`OptimKit.LBFGS` is used in combination with a `HagerZhangLineSearch`. The supported
+keyword arguments are:
+
+* `tol=tol`: Gradient norm tolerance of the optimizer.
+* `maxiter=$(Defaults.optimizer_maxiter)`: Maximal number of optimization steps.
+* `lbfgs_memory=$(Defaults.lbfgs_memory)`: Size of limited memory representation of BFGS Hessian matrix.
+* `reuse_env=$(Defaults.reuse_env)`: If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
+* `symmetrization=nothing`: Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
+
+## Return values
 
 The function returns the final PEPS, CTMRG environment and cost value, as well as an
 information `NamedTuple` which contains the following entries:
 
-- `last_gradient`: last gradient of the cost function
-- `fg_evaluations`: number of evaluations of the cost and gradient function
-- `costs`: history of cost values
-- `gradnorms`: history of gradient norms
-- `truncation_errors`: history of truncation errors of the boundary algorithm
-- `condition_numbers`: history of condition numbers of the CTMRG environments
-- `gradnorms_unitcell`: history of gradient norms for each respective unit cell entry
-- `times`: history of times each optimization step took
+* `last_gradient`: Last gradient of the cost function.
+* `fg_evaluations`: Number of evaluations of the cost and gradient function.
+* `costs`: History of cost values.
+* `gradnorms`: History of gradient norms.
+* `truncation_errors`: History of maximal truncation errors of the boundary algorithm.
+* `condition_numbers`: History of maximal condition numbers of the CTMRG environments.
+* `gradnorms_unitcell`: History of gradient norms for each respective unit cell entry.
+* `times`: History of optimization step execution times.
 """
 function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
     alg, finalize! = select_algorithm(fixedpoint, env₀; kwargs...)

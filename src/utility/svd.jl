@@ -10,7 +10,7 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg=Defaults.svd_fwd_alg, rrule_alg=Defaults.svd_rrule_alg,
+    struct SVDAdjoint(; fwd_alg=$(Defaults.svd_fwd_alg), rrule_alg=$(Defaults.svd_rrule_alg),
                       broadening=nothing)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.

@@ -3,8 +3,8 @@ abstract type GradMode{F} end
 iterscheme(::GradMode{F}) where {F} = F
 
 """
-    struct GeomSum(; tol=Defaults.gradient_alg_tol, maxiter=Defaults.gradient_alg_maxiter,
-                   verbosity=0, iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
+    struct GeomSum(; tol=$(Defaults.gradient_alg_tol), maxiter=$(Defaults.gradient_alg_maxiter),
+                   verbosity=0, iterscheme=$(Defaults.gradient_alg_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
@@ -29,8 +29,8 @@ function GeomSum(;
 end
 
 """
-    struct ManualIter(; tol=Defaults.gradient_alg_tol, maxiter=Defaults.gradient_alg_maxiter,
-                      verbosity=0, iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
+    struct ManualIter(; tol=$(Defaults.gradient_alg_tol), maxiter=$(Defaults.gradient_alg_maxiter),
+                      verbosity=0, iterscheme=$(Defaults.gradient_alg_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
@@ -55,7 +55,7 @@ function ManualIter(;
 end
 
 """
-    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
+    struct LinSolver(; solver=$(Defaults.gradient_linsolver), iterscheme=$(Defaults.gradient_alg_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
@@ -76,7 +76,7 @@ function LinSolver(;
 end
 
 """
-    struct EigSolver(; solver=Defaults.gradient_eigsolver, iterscheme=Defaults.gradient_alg_iterscheme) <: GradMode{iterscheme}
+    struct EigSolver(; solver=$(Defaults.gradient_eigsolver), iterscheme=$(Defaults.gradient_alg_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.

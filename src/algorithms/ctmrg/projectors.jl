@@ -33,8 +33,8 @@ function truncation_scheme(alg::ProjectorAlgorithm, edge)
 end
 
 """
-    struct HalfInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
-                                      trscheme=Defaults.trscheme, verbosity=0)
+    struct HalfInfiniteProjector{S,T}(; svd_alg=$(Defaults.svd_alg),
+                                      trscheme=$(Defaults.trscheme), verbosity=0)
 
 Projector algorithm implementing projectors from SVDing the half-infinite CTMRG environment.
 """
@@ -45,8 +45,8 @@ Projector algorithm implementing projectors from SVDing the half-infinite CTMRG 
 end
 
 """
-    struct FullInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
-                                      trscheme=Defaults.trscheme, verbosity=0)
+    struct FullInfiniteProjector{S,T}(; svd_alg=$(Defaults.svd_alg),
+                                      trscheme=$(Defaults.trscheme), verbosity=0)
 
 Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG environment.
 """

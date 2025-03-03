@@ -1,8 +1,8 @@
 """
-    SimultaneousCTMRG(; tol=Defaults.ctmrg_tol, maxiter=Defaults.ctmrg_maxiter,
-                      miniter=Defaults.ctmrg_miniter, verbosity=0,
-                      svd_alg=SVDAdjoint(), trscheme=Defaults.trscheme,
-                      projector_alg=Defaults.projector_alg_type)
+    SimultaneousCTMRG(; tol=$(Defaults.ctmrg_tol), maxiter=$(Defaults.ctmrg_maxiter),
+                      miniter=$(Defaults.ctmrg_miniter), verbosity=$(Defaults.ctmrg_verbosity),
+                      svd_alg=$(Defaults.svd_alg), trscheme=$(Defaults.trscheme),
+                      projector_alg=$(Defaults.projector_alg_type))
 
 CTMRG algorithm where all sides are grown and renormalized at the same time. In particular,
 the projectors are applied to the corners from two sides simultaneously. The projectors are
