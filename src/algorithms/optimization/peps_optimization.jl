@@ -208,16 +208,7 @@ function fixedpoint(
 end
 
 """
-    function select_algorithm(
-        ::typeof(fixedpoint),
-        env₀::CTMRGEnv;
-        tol=Defaults.optimizer_tol,
-        verbosity=2,
-        boundary_alg=(;),
-        gradient_alg=(;),
-        optimization_alg=(;),
-        (finalize!)=OptimKit._finalize!,
-    )
+    function select_algorithm(::typeof(fixedpoint), env₀::CTMRGEnv; kwargs...)
 
 Parse optimization keyword arguments on to the corresponding algorithm structs and return
 a final `PEPSOptimize` to be used in `fixedpoint`. For a description of the keyword
@@ -274,33 +265,14 @@ function select_algorithm(
         gradient_alg
     elseif gradient_alg isa NamedTuple
         gradient_kwargs = (;
+            alg=Defaults.gradient_alg_type,
             tol=1e-2tol,
             maxiter=Defaults.gradient_alg_maxiter,
-            alg=Defaults.gradient_alg_type,
             verbosity=gradient_verbosity,
             iterscheme=Defaults.gradient_alg_iterscheme,
             gradient_alg..., # replaces all specified kwargs
         )
-        if gradient_kwargs.alg <: Union{GeomSum,ManualIter}
-            gradient_kwargs.alg(;
-                tol=gradient_kwargs.tol,
-                maxiter=gradient_kwargs.maxiter,
-                verbosity=gradient_kwargs.verbosity,
-                iterscheme=gradient_kwargs.iterscheme,
-            )
-        elseif gradient_kwargs.alg <: LinSolver
-            solver = Defaults.gradient_linsolver
-            @reset solver.maxiter = gradient_kwargs.maxiter
-            @reset solver.tol = gradient_kwargs.tol
-            @reset solver.verbosity = gradient_kwargs.verbosity
-            LinSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
-        elseif gradient_kwargs.alg <: EigSolver
-            solver = Defaults.gradient_eigsolver
-            @reset solver.maxiter = gradient_kwargs.maxiter
-            @reset solver.tol = gradient_kwargs.tol
-            @reset solver.verbosity = gradient_kwargs.verbosity
-            EigSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
-        end
+        select_algorithm(GradMode; gradient_kwargs...)
     else
         throw(ArgumentError("unknown gradient algorithm: $gradient_alg"))
     end
@@ -310,6 +282,7 @@ function select_algorithm(
         optimization_alg
     elseif optimization_alg isa NamedTuple
         optimization_kwargs = (;
+            alg=Defaults.optimizer_alg,
             tol=tol,
             maxiter=Defaults.optimizer_maxiter,
             lbfgs_memory=Defaults.lbfgs_memory,

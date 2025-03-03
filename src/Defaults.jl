@@ -76,14 +76,6 @@ Module containing default algorithm parameter values and arguments.
 - `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
-    using TensorKit, KrylovKit, OptimKit, OhMyThreads
-    using PEPSKit:
-        LinSolver,
-        FixedSpaceTruncation,
-        SVDAdjoint,
-        HalfInfiniteProjector,
-        SimultaneousCTMRG
-
     # CTMRG
     const ctmrg_tol = 1e-8
     const ctmrg_maxiter = 100
@@ -93,43 +85,24 @@ module Defaults
     const sparse = false # TODO: implement sparse CTMRG
 
     # SVD forward & reverse
-    const trscheme = FixedSpaceTruncation()
-    # const trscheme = FixedSpaceTruncation()
+    const trscheme = :fixedspace
     const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
-    # const svd_fwd_alg = TensorKit.SDD()
     const svd_rrule_alg = :arnoldi # ∈ {:gmres, :bicgstab, :arnoldi}
-    const svd_rrule_krylovdim_factor = 1.3
     const svd_rrule_verbosity = -1
-    # const svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
-    # const svd_alg = SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
+    const krylovdim_factor = 1.4
 
     # Projector
     const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
-    # const projector_alg_type = HalfInfiniteProjector
     const projector_verbosity = 0
-    # const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
-    # const ctmrg_alg = ctmrg_alg_type(
-    #     ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, ctmrg_verbosity, projector_alg
-    # )
 
     # Fixed-point gradient
     const gradient_alg_tol = 1e-6
     const gradient_alg_maxiter = 30
     const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
-    # const gradient_linsolver = BiCGStab(;
-    #     maxiter=gradient_alg_maxiter, tol=gradient_alg_tol
-    # )
     const gradient_eigsolver = :arnoldi
     const gradient_eigsolver_eager = true
-    # const gradient_eigsolver = Arnoldi(;
-    #     maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true
-    # )
     const gradient_alg_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
-    const gradient_alg_type = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
-    # const gradient_alg_type = LinSolver
-    # const gradient_alg = gradient_alg_type(;
-    #     solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme
-    # )
+    const gradient_alg = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
 
     # Optimization
     const reuse_env = true
@@ -137,10 +110,6 @@ module Defaults
     const optimizer_maxiter = 100
     const lbfgs_memory = 20
     const optimizer_verbosity = 3
-    const optimizer_alg = :lbfgs
-    # const optimizer = LBFGS(
-    #     lbfgs_memory; maxiter=optimizer_maxiter, gradtol=optimizer_tol, verbosity=3
-    # )
 
     # OhMyThreads scheduler defaults
     const scheduler = Ref{Scheduler}()

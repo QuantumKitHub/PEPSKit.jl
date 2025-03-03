@@ -56,6 +56,10 @@ Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG envir
     verbosity::Int = 0
 end
 
+function select_algorithm(::Type{ProjectorAlgorithm}; alg::Union{Symbol,<:ProjectorAlgorithm}, svd_alg, trscheme, verbosity)
+    # TODO
+end
+
 # TODO: add `LinearAlgebra.cond` to TensorKit
 # Compute condition number smax / smin for diagonal singular value TensorMap
 function _condition_number(S::AbstractTensorMap)

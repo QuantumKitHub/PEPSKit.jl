@@ -96,6 +96,30 @@ function EigSolver(;
     return EigSolver{iterscheme}(solver)
 end
 
+function select_algorithm(::Type{GradMode}; alg::Union{Symbol,GradMode{F}}, kwargs...) where {F}
+    # TODO
+    # if alg <: Union{GeomSum,ManualIter}
+    #     gradient_kwargs.alg(;
+    #         tol=gradient_kwargs.tol,
+    #         maxiter=gradient_kwargs.maxiter,
+    #         verbosity=gradient_kwargs.verbosity,
+    #         iterscheme=gradient_kwargs.iterscheme,
+    #     )
+    # elseif gradient_kwargs.alg <: LinSolver
+    #     solver = Defaults.gradient_linsolver
+    #     @reset solver.maxiter = gradient_kwargs.maxiter
+    #     @reset solver.tol = gradient_kwargs.tol
+    #     @reset solver.verbosity = gradient_kwargs.verbosity
+    #     LinSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
+    # elseif gradient_kwargs.alg <: EigSolver
+    #     solver = Defaults.gradient_eigsolver
+    #     @reset solver.maxiter = gradient_kwargs.maxiter
+    #     @reset solver.tol = gradient_kwargs.tol
+    #     @reset solver.verbosity = gradient_kwargs.verbosity
+    #     EigSolver(; solver, iterscheme=gradient_kwargs.iterscheme)
+    # end
+end
+
 #=
 Evaluating the gradient of the cost function for CTMRG:
 - The gradient of the cost function for CTMRG can be computed using automatic differentiation (AD) or explicit evaluation of the geometric sum.
