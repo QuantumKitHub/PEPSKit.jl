@@ -99,65 +99,6 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-# Available CTMRG algorithms as Symbols
-const ctmrg_symbols = Dict(
-    :simultaneous => SimultaneousCTMRG, :sequential => SequentialCTMRG
-)
-
-"""
-    select_algorithm(::typeof(leading_boundary), env₀::CTMRGEnv; kwargs...) -> CTMRGAlgorithm
-
-Parse and standardize CTMRG keyword arguments, and bundle them into a `CTMRGAlgorithm` struct,
-which is passed on to [`leading_boundary`](@ref). See [`leading_boundary`](@ref) for a
-description of all keyword arguments.
-"""
-function select_algorithm(
-    ::typeof(leading_boundary),
-    env₀::CTMRGEnv;
-    alg=Defaults.ctmrg_alg,
-    tol=Defaults.ctmrg_tol,
-    maxiter=Defaults.ctmrg_maxiter,
-    miniter=Defaults.ctmrg_miniter,
-    verbosity=Defaults.ctmrg_verbosity,
-    trscheme=(; alg=Defaults.trscheme),
-    svd_alg=(;),
-    projector_alg=Defaults.projector_alg, # only allows for Symbol/Type{ProjectorAlgorithm} to expose projector kwargs
-)
-    # extract maximal environment dimensions
-    χenv = maximum(env₀.corners) do corner
-        return dim(space(corner, 1))
-    end
-    krylovdim = round(Int, Defaults.krylovdim_factor * χenv)
-
-    # replace symbol with projector alg type
-    alg_type = if alg isa Symbol
-        projector_symbols[alg]
-    else
-        alg
-    end
-
-    # parse SVD forward & rrule algorithm 
-    svd_algorithm = if svd_alg isa SVDAdjoint
-        svd_alg
-    elseif svd_alg isa NamedTuple
-        alg′ = select_algorithm(
-            SVDAdjoint; rrule_alg=(; tol=1e1tol, verbosity=verbosity - 2), svd_alg...
-        )
-        if typeof(alg′.rrule_alg) <: Union{<:GMRES,<:Arnoldi}
-            @reset alg′.rrule_alg.krylovdim = krylovdim
-        end
-    else
-        throw(ArgumentError("unknown SVD algorithm: $svd_alg"))
-    end
-
-    # parse CTMRG projector algorithm
-    projector_algorithm = select_algorithm(
-        ProjectorAlgorithm; alg=projector_alg, svd_alg, trscheme, verbosity
-    )
-
-    return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
-end
-
 #=
 In order to compute an error measure, we compare the singular values of the current iteration with the previous one.
 However, when the virtual spaces change, this comparison is not directly possible.

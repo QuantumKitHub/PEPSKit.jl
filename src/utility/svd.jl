@@ -10,7 +10,7 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg=$(Defaults.svd_fwd_alg), rrule_alg=$(Defaults.svd_rrule_alg),
+    struct SVDAdjoint(; fwd_alg=$(svd_fwd_symbols[Defaults.svd_fwd_alg]), rrule_alg=$(svd_rrule_symbols[Defaults.svd_rrule_alg]),
                       broadening=nothing)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
@@ -34,51 +34,11 @@ struct SVDAdjoint{F,R,B}
     end
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 function SVDAdjoint(;
-    fwd_alg=Defaults.svd_fwd_alg, rrule_alg=Defaults.svd_rrule_alg, broadening=nothing
+    fwd_alg=svd_fwd_symbols[Defaults.svd_fwd_alg],
+    rrule_alg=svd_rrule_symbols[Defaults.svd_rrule_alg],
+    broadening=nothing,
 )
     return SVDAdjoint(fwd_alg, rrule_alg, broadening)
-end
-
-# Available forward & reverse-rule SVD algorithms as Symbols
-const svd_fwd_symbols = Dict(
-    :sdd => TensorKit.SDD, :svd => TensorKit.SVD, :iterative => IterSVD
-)
-const svd_rrule_symbols = Dict(:gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi)
-
-function select_algorithm(
-    ::Type{SVDAdjoint}; fwd_alg=(;), rrule_alg=(;), broadening=nothing
-)
-    # parse forward SVD algorithm
-    fwd_algorithm = if fwd_alg isa NamedTuple
-        fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
-        fwd_type = if fwd_kwargs.alg isa Symbol # replace symbol with alg type
-            svd_fwd_symbols[fwd_kwargs.alg]
-        else
-            fwd_kwargs.alg
-        end
-        fwd_type(fwd_kwargs...)
-    else
-        fwd_alg
-    end
-
-    # parse reverse-rule SVD algorithm
-    rrule_algorithm = if rrule_alg isa NamedTuple
-        rrule_kwargs = (;
-            alg=Defaults.svd_rrule_alg,
-            verbosity=Defaults.svd_rrule_verbosity,
-            rrule_alg...,
-        ) # overwrite with specified kwargs
-        rrule_type = if rrule_kwargs.alg isa Symbol # replace symbol with alg type
-            svd_rrule_symbols[rrule_kwargs.alg]
-        else
-            rrule_kwargs.alg
-        end
-        rrule_type(rrule_kwargs...)
-    else
-        rrule_alg
-    end
-
-    return SVDAdjoint(fwd_algorithm, rrule_algorithm, broadening)
 end
 
 """

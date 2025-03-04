@@ -55,6 +55,7 @@ include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")
+include("algorithms/select_algorithm.jl")
 
 include("utility/symmetrization.jl")
 

@@ -76,6 +76,7 @@ Module containing default algorithm parameter values and arguments.
 - `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
+using OhMyThreads
 # CTMRG
 const ctmrg_tol = 1e-8
 const ctmrg_maxiter = 100
@@ -154,3 +155,30 @@ function __init__()
     return set_scheduler!()
 end
 end
+
+# Available algorithms as Symbols to replace algorithm struct types
+const svd_fwd_symbols = Dict(
+    :sdd => TensorKit.SDD, :svd => TensorKit.SVD, :iterative => IterSVD
+)
+const svd_rrule_symbols = Dict(:gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi)
+const truncation_scheme_symbols = Dict(
+    :fixedspace => FixedSpaceTruncation,
+    :notrunc => TensorKit.NoTruncation,
+    :truncerr => TensorKit.TruncationError,
+    :truncspace => TensorKit.TruncationSpace,
+    :truncbelow => TensorKit.TruncationCutoff,
+)
+const gradmode_symbols = Dict(
+    :geomsum => GeomSum,
+    :manualiter => ManualIter,
+    :linsolver => LinSolver,
+    :eigsolver => EigSolver,
+)
+const linsolver_solver_symbols = Dict(:gmres => GMRES, :bicgstab => BiCGStab)
+const eigsolver_solver_symbols = Dict(:arnoldi => Arnoldi)
+const projector_symbols = Dict(
+    :halfinfinite => HalfInfiniteProjector, :fullinfinite => FullInfiniteProjector
+)
+const ctmrg_symbols = Dict(
+    :simultaneous => SimultaneousCTMRG, :sequential => SequentialCTMRG
+)

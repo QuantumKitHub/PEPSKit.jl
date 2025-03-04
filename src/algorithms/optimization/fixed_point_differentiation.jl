@@ -55,7 +55,7 @@ function ManualIter(;
 end
 
 """
-    struct LinSolver(; solver=$(Defaults.gradient_linsolver), iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
+    struct LinSolver(; solver=$(linsolver_solver_symbols[Defaults.gradient_linsolver]), iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
@@ -70,13 +70,14 @@ struct LinSolver{F} <: GradMode{F}
     solver::KrylovKit.LinearSolver
 end
 function LinSolver(;
-    solver=Defaults.gradient_linsolver, iterscheme=Defaults.gradient_iterscheme
+    solver=linsolver_solver_symbols[Defaults.gradient_linsolver],
+    iterscheme=Defaults.gradient_iterscheme,
 )
     return LinSolver{iterscheme}(solver)
 end
 
 """
-    struct EigSolver(; solver=$(Defaults.gradient_eigsolver), iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
+    struct EigSolver(; solver=$(eigsolver_solver_symbols[Defaults.gradient_eigsolver]), iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.
@@ -91,77 +92,10 @@ struct EigSolver{F} <: GradMode{F}
     solver::KrylovKit.KrylovAlgorithm
 end
 function EigSolver(;
-    solver=Defaults.gradient_eigsolver, iterscheme=Defaults.gradient_iterscheme
+    solver=eigsolver_solver_symbols[Defaults.gradient_eigsolver],
+    iterscheme=Defaults.gradient_iterscheme,
 )
     return EigSolver{iterscheme}(solver)
-end
-
-# Available GradMode algorithms as Symbols
-const gradmode_symbols = Dict(
-    :geomsum => GeomSum,
-    :manualiter => ManualIter,
-    :linsolver => LinSolver,
-    :eigsolver => EigSolver,
-)
-# Available LinSolver and EigSolver solver algorithms as Symbols
-const linsolver_solver_symbols = Dict(:gmres => GMRES, :bicgstab => BiCGStab)
-const eigsolver_solver_symbols = Dict(:arnoldi => Arnoldi)
-
-function select_algorithm(
-    ::Type{GradMode};
-    alg=Defaults.gradient_alg,
-    tol=Defaults.gradient_tol,
-    maxiter=Defaults.gradient_maxiter,
-    verbosity=Defaults.gradient_verbosity,
-    iterscheme=Defaults.gradient_iterscheme,
-    solver_alg=(;),
-)
-    # replace symbol with GradMode alg type
-    alg_type = if alg isa Symbol
-        gradmode_symbols[alg]
-    else
-        alg
-    end
-
-    # parse GradMode algorithm
-    gradient_algorithm = if alg_type <: Union{GeomSum,ManualIter}
-        alg_type(; tol, maxiter, verbosity, iterscheme)
-    elseif alg_type <: Union{<:LinSolver,<:EigSolver}
-        solver = if solver_alg isa NamedTuple # determine linear/eigen solver algorithm
-            solver_kwargs = (;
-                alg=Defaults.gradient_solver, tol, maxiter, verbosity, solver_alg...
-            )
-
-            solver_type = if alg <: LinSolver # replace symbol with solver alg type
-                if solver_kwargs.alg isa Symbol
-                    linsolver_solver_symbols[solver_kwargs.alg]
-                else
-                    solver_kwargs.alg
-                end
-            elseif alg <: EigSolver
-                if solver_kwargs.alg isa Symbol
-                    eigsolver_solver_symbols[solver_kwargs.alg]
-                else
-                    solver_kwargs.alg
-                end
-                solver_kwargs = (; # use default eager for EigSolver
-                    eager=Defaults.gradient_eigsolver_eager,
-                    solver_kwargs...,
-                )
-            end
-
-            solver_kwargs = Base.structdiff(solver_kwargs, (; alg)) # remove `alg` keyword argument
-            solver_type(; solver_kwargs...)
-        else
-            solver_alg
-        end
-
-        alg_type(; solver, iterscheme)
-    else
-        throw(ArgumentError("unknown gradient algorithm: $alg"))
-    end
-
-    return gradient_algorithm
 end
 
 #=
