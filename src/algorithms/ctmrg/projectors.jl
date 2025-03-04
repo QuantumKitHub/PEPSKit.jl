@@ -56,8 +56,61 @@ Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG envir
     verbosity::Int = 0
 end
 
-function select_algorithm(::Type{ProjectorAlgorithm}; alg::Union{Symbol,<:ProjectorAlgorithm}, svd_alg, trscheme, verbosity)
-    # TODO
+# Available truncation schemes as Symbols
+const truncation_scheme_symbols = Dict(
+    :fixedspace => FixedSpaceTruncation,
+    :notrunc => TensorKit.NoTruncation,
+    :truncerr => TensorKit.TruncationError,
+    :truncspace => TensorKit.TruncationSpace,
+    :truncbelow => TensorKit.TruncationCutoff,
+)
+
+function select_algorithm(
+    ::Type{TensorKit.TruncationScheme}; alg=Defaults.trscheme, kwargs...
+)
+    alg_type = alg isa Symbol ? truncation_scheme_symbols[alg] : alg # replace Symbol with TruncationScheme type
+    args = map(k -> last(kwargs[k]), keys(kwargs)) # extract only values of supplied kwargs (empty Tuple, if kwargs is empty)
+    return alg_type(args...)
+end
+
+# Available projector algorithms as Symbols
+const projector_symbols = Dict(
+    :halfinfinite => HalfInfiniteProjector, :fullinfinite => FullInfiniteProjector
+)
+
+function select_algorithm(
+    ::Type{ProjectorAlgorithm};
+    alg=Defaults.projector_alg,
+    svd_alg=(;),
+    trscheme=(;),
+    verbosity=Defaults.projector_verbosity,
+)
+    # replace symbol with projector alg type
+    alg_type = if alg isa Symbol
+        projector_symbols[alg]
+    else
+        alg
+    end
+
+    # parse SVD forward & rrule algorithm
+    svd_algorithm = if svd_alg isa SVDAdjoint
+        svd_alg
+    elseif svd_alg isa NamedTuple
+        select_algorithm(SVDAdjoint; svd_alg...)
+    else
+        throw(ArgumentError("unknown SVD algorithm: $svd_alg"))
+    end
+
+    # parse truncation scheme
+    truncation_scheme = if trscheme isa TruncationScheme
+        trscheme
+    elseif trscheme isa NamedTuple
+        select_algorithm(TruncationScheme; trscheme...)
+    else
+        throw(ArgumentError("unknown truncation scheme: $trscheme"))
+    end
+
+    return alg_type(svd_algorithm, truncation_scheme, verbosity)
 end
 
 # TODO: add `LinearAlgebra.cond` to TensorKit

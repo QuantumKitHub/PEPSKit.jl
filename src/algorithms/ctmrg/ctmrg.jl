@@ -34,18 +34,13 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     2. Initialization and convergence info
     3. Iteration info
     4. Debug info
-* `alg::Union{Symbol,<:CTMRGAlgorithm}=$(Defaults.ctmrg_alg_type)`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
+* `alg::Union{Symbol,Type{CTMRGAlgorithm}}=$(Defaults.ctmrg_alg)`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
 
 ### Projector algorithm
 
-* `trscheme::TruncationScheme=$(Defaults.trscheme)`: Truncation scheme for the projector computation, which controls the resulting virtual spaces.
-* `svd_alg=Defaults.svd_fwd_alg`: SVD algorithm for computing projectors. See also [`PEPSKit.tsvd`](@ref).
-* `projector_alg::Union{Symbol,<:ProjectorAlgorithm}=$(Defaults.projector_alg_type)`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
-
-### Differentiation settings
-
-* `svd_rrule_alg::Union{Symbol,Algorithm}=$(Defaults.svd_rrule_alg_type)`: Algorithm used for differentiating SVDs.
-* `svd_rrule_tol::Real=1e1tol`: Convergence tolerance for SVD `rrule`
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg=$(Defaults.trscheme))`: Truncation scheme for the projector computation, which controls the resulting virtual spaces.
+* `svd_alg::Union{<:SVDAdjoint,NamedTuple}`: SVD algorithm for computing projectors. See also [`PEPSKit.tsvd`](@ref).
+* `projector_alg::Union{Symbol,Type{ProjectorAlgorithm}}=$(Defaults.projector_alg)`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
 """
 function MPSKit.leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
@@ -104,8 +99,11 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-# TODO: support reasonable kwargs for `trscheme::Union{TruncationScheme,NamedTuple}`?
-# TODO: bit strange to have `svd_rrule_alg` and `svd_rrule_tol`. Merge this into a single `svd_rrule_alg::Union{Symbol,Algorithm,NamedTuple}`?
+# Available CTMRG algorithms as Symbols
+const ctmrg_symbols = Dict(
+    :simultaneous => SimultaneousCTMRG, :sequential => SequentialCTMRG
+)
+
 """
     select_algorithm(::typeof(leading_boundary), env₀::CTMRGEnv; kwargs...) -> CTMRGAlgorithm
 
@@ -116,33 +114,48 @@ description of all keyword arguments.
 function select_algorithm(
     ::typeof(leading_boundary),
     env₀::CTMRGEnv;
-    alg=Defaults.ctmrg_alg_type,
+    alg=Defaults.ctmrg_alg,
     tol=Defaults.ctmrg_tol,
     maxiter=Defaults.ctmrg_maxiter,
     miniter=Defaults.ctmrg_miniter,
     verbosity=Defaults.ctmrg_verbosity,
-    trscheme=Defaults.trscheme,
-    svd_alg=Defaults.svd_fwd_alg,
-    svd_rrule_alg=Defaults.svd_rrule_type,
-    svd_rrule_tol=1e1tol,
-    projector_alg=Defaults.projector_alg_type,
+    trscheme=(; alg=Defaults.trscheme),
+    svd_alg=(;),
+    projector_alg=Defaults.projector_alg, # only allows for Symbol/Type{ProjectorAlgorithm} to expose projector kwargs
 )
-    # extract maximal environment dimenions
+    # extract maximal environment dimensions
     χenv = maximum(env₀.corners) do corner
         return dim(space(corner, 1))
     end
     krylovdim = round(Int, Defaults.krylovdim_factor * χenv)
 
-    svd_rrule_algorithm = if isnothing(svd_rrule_alg)
-        nothing
-    elseif svd_rrule_alg <: Union{GMRES,Arnoldi}
-        svd_rrule_alg(; tol=svd_rrule_tol, krylovdim, verbosity=verbosity - 2)
-    elseif svd_rrule_alg <: BiCGStab
-        svd_rrule_alg(; tol=svd_rrule_tol, verbosity)
+    # replace symbol with projector alg type
+    alg_type = if alg isa Symbol
+        projector_symbols[alg]
+    else
+        alg
     end
-    svd_algorithm = SVDAdjoint(; fwd_alg=svd_alg, rrule_alg=svd_rrule_algorithm)
-    projector_algorithm = projector_alg(svd_algorithm, trscheme, verbosity)
-    return alg(tol, maxiter, miniter, verbosity, projector_algorithm)
+
+    # parse SVD forward & rrule algorithm 
+    svd_algorithm = if svd_alg isa SVDAdjoint
+        svd_alg
+    elseif svd_alg isa NamedTuple
+        alg′ = select_algorithm(
+            SVDAdjoint; rrule_alg=(; tol=1e1tol, verbosity=verbosity - 2), svd_alg...
+        )
+        if typeof(alg′.rrule_alg) <: Union{<:GMRES,<:Arnoldi}
+            @reset alg′.rrule_alg.krylovdim = krylovdim
+        end
+    else
+        throw(ArgumentError("unknown SVD algorithm: $svd_alg"))
+    end
+
+    # parse CTMRG projector algorithm
+    projector_algorithm = select_algorithm(
+        ProjectorAlgorithm; alg=projector_alg, svd_alg, trscheme, verbosity
+    )
+
+    return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
 end
 
 #=

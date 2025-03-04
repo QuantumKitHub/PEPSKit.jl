@@ -87,10 +87,10 @@ either a `NamedTuple` of keyword arguments or a `GradMode` struct directly. The 
 keyword arguments are:
 
 * `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration.
-* `maxiter=$(Defaults.gradient_alg_maxiter)`: Maximal number of gradient problem iterations.
+* `maxiter=$(Defaults.gradient_maxiter)`: Maximal number of gradient problem iterations.
 * `alg=$(Defaults.gradient_alg_type)`: Gradient algorithm type, can be any `GradMode` type.
 * `verbosity`: Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
-* `iterscheme=$(Defaults.gradient_alg_iterscheme)`: CTMRG iteration scheme determining mode of differentiation. This can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate gauge-fixing routine).
+* `iterscheme=$(Defaults.gradient_iterscheme)`: CTMRG iteration scheme determining mode of differentiation. This can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate gauge-fixing routine).
 
 ### PEPS optimization settings
 
@@ -208,7 +208,7 @@ function fixedpoint(
 end
 
 """
-    function select_algorithm(::typeof(fixedpoint), env₀::CTMRGEnv; kwargs...)
+    select_algorithm(::typeof(fixedpoint), env₀::CTMRGEnv; kwargs...)
 
 Parse optimization keyword arguments on to the corresponding algorithm structs and return
 a final `PEPSOptimize` to be used in `fixedpoint`. For a description of the keyword
@@ -253,7 +253,7 @@ function select_algorithm(
             env₀;
             tol=1e-4tol,
             verbosity=boundary_verbosity,
-            svd_rrule_tol=1e-3tol,
+            svd_alg=(; rrule_alg=(; tol=1e-3tol)),
             boundary_alg...,
         )
     else
@@ -264,14 +264,6 @@ function select_algorithm(
     gradient_algorithm = if gradient_alg isa GradMode
         gradient_alg
     elseif gradient_alg isa NamedTuple
-        gradient_kwargs = (;
-            alg=Defaults.gradient_alg_type,
-            tol=1e-2tol,
-            maxiter=Defaults.gradient_alg_maxiter,
-            verbosity=gradient_verbosity,
-            iterscheme=Defaults.gradient_alg_iterscheme,
-            gradient_alg..., # replaces all specified kwargs
-        )
         select_algorithm(GradMode; gradient_kwargs...)
     else
         throw(ArgumentError("unknown gradient algorithm: $gradient_alg"))

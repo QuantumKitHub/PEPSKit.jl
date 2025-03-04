@@ -39,42 +39,41 @@ function SVDAdjoint(;
     return SVDAdjoint(fwd_alg, rrule_alg, broadening)
 end
 
+# Available forward & reverse-rule SVD algorithms as Symbols
 const svd_fwd_symbols = Dict(
     :sdd => TensorKit.SDD, :svd => TensorKit.SVD, :iterative => IterSVD
-)
-const truncation_scheme_symbols = Dict(
-    :fixedspace => FixedSpaceTruncation,
-    :notrunc => TensorKit.NoTruncation,
-    :truncerr => TensorKit.TruncationError,
-    :truncspace => TensorKit.TruncationSpace,
-    :truncbelow => TensorKit.TruncationCutoff,
 )
 const svd_rrule_symbols = Dict(:gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi)
 
 function select_algorithm(
     ::Type{SVDAdjoint}; fwd_alg=(;), rrule_alg=(;), broadening=nothing
 )
+    # parse forward SVD algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
-        fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...)
-        alg =
-            fwd_kwargs.alg isa Symbol ? svd_fwd_symbols[fwd_kwargs.alg] : fwd_kwargs.alg
-        alg(fwd_kwargs...)
+        fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
+        fwd_type = if fwd_kwargs.alg isa Symbol # replace symbol with alg type
+            svd_fwd_symbols[fwd_kwargs.alg]
+        else
+            fwd_kwargs.alg
+        end
+        fwd_type(fwd_kwargs...)
     else
         fwd_alg
     end
 
+    # parse reverse-rule SVD algorithm
     rrule_algorithm = if rrule_alg isa NamedTuple
         rrule_kwargs = (;
             alg=Defaults.svd_rrule_alg,
             verbosity=Defaults.svd_rrule_verbosity,
             rrule_alg...,
-        )
-        alg = if rrule_kwargs.alg isa Symbol
+        ) # overwrite with specified kwargs
+        rrule_type = if rrule_kwargs.alg isa Symbol # replace symbol with alg type
             svd_rrule_symbols[rrule_kwargs.alg]
         else
             rrule_kwargs.alg
         end
-        alg(rrule_kwargs...)
+        rrule_type(rrule_kwargs...)
     else
         rrule_alg
     end

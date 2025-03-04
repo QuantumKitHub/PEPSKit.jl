@@ -76,83 +76,81 @@ Module containing default algorithm parameter values and arguments.
 - `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
 """
 module Defaults
-    # CTMRG
-    const ctmrg_tol = 1e-8
-    const ctmrg_maxiter = 100
-    const ctmrg_miniter = 4
-    const ctmrg_alg = :simultaneous # ∈ {:simultaneous, :sequential}
-    const ctmrg_verbosity = 2
-    const sparse = false # TODO: implement sparse CTMRG
+# CTMRG
+const ctmrg_tol = 1e-8
+const ctmrg_maxiter = 100
+const ctmrg_miniter = 4
+const ctmrg_alg = :simultaneous # ∈ {:simultaneous, :sequential}
+const ctmrg_verbosity = 2
+const sparse = false # TODO: implement sparse CTMRG
 
-    # SVD forward & reverse
-    const trscheme = :fixedspace
-    const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
-    const svd_rrule_alg = :arnoldi # ∈ {:gmres, :bicgstab, :arnoldi}
-    const svd_rrule_verbosity = -1
-    const krylovdim_factor = 1.4
+# SVD forward & reverse
+const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerr, :truncspace, :truncbelow}
+const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
+const svd_rrule_alg = :arnoldi # ∈ {:gmres, :bicgstab, :arnoldi}
+const svd_rrule_verbosity = -1
+const krylovdim_factor = 1.4
 
-    # Projector
-    const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
-    const projector_verbosity = 0
+# Projector
+const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
+const projector_verbosity = 0
 
-    # Fixed-point gradient
-    const gradient_tol = 1e-6
-    const gradient_maxiter = 30
-    const gradient_verbosity = -1
-    const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
-    const gradient_eigsolver = :arnoldi
-    const gradient_eigsolver_eager = true
-    const gradient_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
-    const gradient_alg = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
+# Fixed-point gradient
+const gradient_tol = 1e-6
+const gradient_maxiter = 30
+const gradient_verbosity = -1
+const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
+const gradient_eigsolver = :arnoldi
+const gradient_eigsolver_eager = true
+const gradient_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
+const gradient_alg = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
 
-    # Optimization
-    const reuse_env = true
-    const optimizer_tol = 1e-4
-    const optimizer_maxiter = 100
-    const lbfgs_memory = 20
-    const optimizer_verbosity = 3
+# Optimization
+const reuse_env = true
+const optimizer_tol = 1e-4
+const optimizer_maxiter = 100
+const lbfgs_memory = 20
+const optimizer_verbosity = 3
 
-    # OhMyThreads scheduler defaults
-    const scheduler = Ref{Scheduler}()
-    """
-        set_scheduler!([scheduler]; kwargs...)
+# OhMyThreads scheduler defaults
+const scheduler = Ref{Scheduler}()
+"""
+    set_scheduler!([scheduler]; kwargs...)
 
-    Set `OhMyThreads` multi-threading scheduler parameters.
+Set `OhMyThreads` multi-threading scheduler parameters.
 
-    The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or
-    as a symbol where the corresponding parameters are specificed as keyword arguments.
-    For instance, a static scheduler that uses four tasks with chunking enabled
-    can be set via
-    ```
-    set_scheduler!(StaticScheduler(; ntasks=4, chunking=true))
-    ```
-    or equivalently with 
-    ```
-    set_scheduler!(:static; ntasks=4, chunking=true)
-    ```
-    For a detailed description of all schedulers and their keyword arguments consult the
-    [`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
+The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or
+as a symbol where the corresponding parameters are specificed as keyword arguments.
+For instance, a static scheduler that uses four tasks with chunking enabled
+can be set via
+```
+set_scheduler!(StaticScheduler(; ntasks=4, chunking=true))
+```
+or equivalently with 
+```
+set_scheduler!(:static; ntasks=4, chunking=true)
+```
+For a detailed description of all schedulers and their keyword arguments consult the
+[`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
 
-    If no `scheduler` is passed and only kwargs are provided, the `DynamicScheduler`
-    constructor is used with the provided kwargs.
+If no `scheduler` is passed and only kwargs are provided, the `DynamicScheduler`
+constructor is used with the provided kwargs.
 
-    To reset the scheduler to its default value, one calls `set_scheduler!` without passing
-    arguments which then uses the default `DynamicScheduler()`. If the number of used threads is
-    just one it falls back to `SerialScheduler()`.
-    """
-    function set_scheduler!(sc=OhMyThreads.Implementation.NotGiven(); kwargs...)
-        if isempty(kwargs) && sc isa OhMyThreads.Implementation.NotGiven
-            scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
-        else
-            scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(
-                sc; kwargs...
-            )
-        end
-        return nothing
+To reset the scheduler to its default value, one calls `set_scheduler!` without passing
+arguments which then uses the default `DynamicScheduler()`. If the number of used threads is
+just one it falls back to `SerialScheduler()`.
+"""
+function set_scheduler!(sc=OhMyThreads.Implementation.NotGiven(); kwargs...)
+    if isempty(kwargs) && sc isa OhMyThreads.Implementation.NotGiven
+        scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
+    else
+        scheduler[] = OhMyThreads.Implementation._scheduler_from_userinput(sc; kwargs...)
     end
-    export set_scheduler!
+    return nothing
+end
+export set_scheduler!
 
-    function __init__()
-        return set_scheduler!()
-    end
+function __init__()
+    return set_scheduler!()
+end
 end
