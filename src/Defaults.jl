@@ -40,25 +40,25 @@ Module containing default algorithm parameter values and arguments.
     ```
 
 # Optimization
-- `gradient_alg_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
-- `gradient_alg_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
-- `gradient_alg_iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
+- `gradient_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
+- `gradient_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
+- `gradient_iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
 - `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 
     ```
-    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol)
+    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=gradient_maxiter, tol=gradient_tol)
     ```
 
 - `gradient_eigsolver`: Default eigsolver for the `EigSolver` gradient algorithm
 
     ```
-    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=gradient_alg_maxiter, tol=gradient_alg_tol, eager=true)
+    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=gradient_maxiter, tol=gradient_tol, eager=true)
     ```
 
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
 
     ```
-    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_alg_iterscheme)
+    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_iterscheme)
     ```
 
 - `reuse_env=true`: If `true`, the current optimization step is initialized on the previous
@@ -96,12 +96,13 @@ module Defaults
     const projector_verbosity = 0
 
     # Fixed-point gradient
-    const gradient_alg_tol = 1e-6
-    const gradient_alg_maxiter = 30
+    const gradient_tol = 1e-6
+    const gradient_maxiter = 30
+    const gradient_verbosity = -1
     const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
     const gradient_eigsolver = :arnoldi
     const gradient_eigsolver_eager = true
-    const gradient_alg_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
+    const gradient_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
     const gradient_alg = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
 
     # Optimization
