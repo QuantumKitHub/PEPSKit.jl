@@ -55,12 +55,13 @@ include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 
 include("algorithms/toolbox.jl")
-include("algorithms/select_algorithm.jl")
 
 include("utility/symmetrization.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
+
+include("algorithms/select_algorithm.jl")
 
 using .Defaults: set_scheduler!
 export set_scheduler!

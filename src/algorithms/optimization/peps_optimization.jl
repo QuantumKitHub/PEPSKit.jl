@@ -1,6 +1,6 @@
 """
     PEPSOptimize{G}(; boundary_alg=$(Defaults.ctmrg_alg), gradient_alg::G=$(Defaults.gradient_alg),
-                    optimizer::OptimKit.OptimizationAlgorithm=$(Defaults.optimizer)
+                    optimizer::OptimKit.OptimizationAlgorithm=$(Defaults.optimizer_alg)
                     reuse_env::Bool=$(Defaults.reuse_env), symmetrization::Union{Nothing,SymmetrizationStyle}=nothing)
 
 Algorithm struct that represent PEPS ground-state optimization using AD.
@@ -39,15 +39,7 @@ struct PEPSOptimize{G}
         return new{G}(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
     end
 end
-function PEPSOptimize(;
-    boundary_alg=Defaults.ctmrg_alg,
-    gradient_alg=Defaults.gradient_alg,
-    optimizer=Defaults.optimizer,
-    reuse_env=Defaults.reuse_env,
-    symmetrization=nothing,
-)
-    return PEPSOptimize(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
-end
+PEPSOptimize(; kwargs...) = select_algorithm(PEPSOptimize; kwargs...)
 
 """
     fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
@@ -88,7 +80,7 @@ keyword arguments are:
 
 * `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration.
 * `maxiter=$(Defaults.gradient_maxiter)`: Maximal number of gradient problem iterations.
-* `alg=$(Defaults.gradient_alg_type)`: Gradient algorithm type, can be any `GradMode` type.
+* `alg=$(Defaults.gradient_alg)`: Gradient algorithm type, can be any `GradMode` type.
 * `verbosity`: Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
 * `iterscheme=$(Defaults.gradient_iterscheme)`: CTMRG iteration scheme determining mode of differentiation. This can be `:fixed` (SVD with fixed gauge) or `:diffgauge` (differentiate gauge-fixing routine).
 
@@ -119,8 +111,14 @@ information `NamedTuple` which contains the following entries:
 * `gradnorms_unitcell`: History of gradient norms for each respective unit cell entry.
 * `times`: History of optimization step execution times.
 """
-function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; (finalize!)=OptimKit._finalize!, kwargs...)
-    alg, finalize! = select_algorithm(fixedpoint, env₀; kwargs...)
+function fixedpoint(
+    operator,
+    peps₀::InfinitePEPS,
+    env₀::CTMRGEnv;
+    (finalize!)=OptimKit._finalize!,
+    kwargs...,
+)
+    alg = select_algorithm(fixedpoint, env₀; kwargs...)
     return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
