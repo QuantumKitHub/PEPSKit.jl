@@ -110,8 +110,9 @@ const gradient_alg = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigso
 const reuse_env = true
 const optimizer_tol = 1e-4
 const optimizer_maxiter = 100
-const lbfgs_memory = 20
 const optimizer_verbosity = 3
+const optimizer_alg = :lbfgs
+const lbfgs_memory = 20
 
 # OhMyThreads scheduler defaults
 const scheduler = Ref{Scheduler}()

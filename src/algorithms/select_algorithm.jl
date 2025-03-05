@@ -1,19 +1,25 @@
 """
-    select_algorithm(::typeof(fixedpoint), env₀::CTMRGEnv; kwargs...)
+    select_algorithm(func_or_alg, args...; kwargs...) -> Algorithm
 
-Parse optimization keyword arguments on to the corresponding algorithm structs and return
-a final `PEPSOptimize` to be used in `fixedpoint`. For a description of the keyword
-arguments, see [`fixedpoint`](@ref).
+Parse arguments and keyword arguments to the algorithm struct corresponding to
+`func_or_alg` and return an algorithm instance. To that end, we use a general interface
+where all keyword arguments that can be algorithm themselves can be specified using
+
+* `alg::Algorithm`: an instance of the algorithm struct or
+* `(; alg::Union{Symbol,AlgorithmType}, alg_kwargs...)`: a `NamedTuple` where the algorithm is specified by a symbol or the type of the algorithm struct, and the algorithm keyword arguments 
+
+A full description of the keyword argument can be found in the respective function or
+algorithm struct docstrings.
 """
+function select_algorithm end
+
 function select_algorithm(
     ::typeof(fixedpoint),
     env₀::CTMRGEnv;
     tol=Defaults.optimizer_tol, # top-level tolerance
     verbosity=2, # top-level verbosity
     boundary_alg=(;),
-    gradient_alg=(;),
-    optimization_alg=(;),
-    (finalize!)=OptimKit._finalize!,
+    kwargs...,
 )
 
     # top-level verbosity
@@ -51,6 +57,27 @@ function select_algorithm(
         throw(ArgumentError("unknown boundary algorithm: $boundary_alg"))
     end
 
+    return select_algorithm(PEPSOptimize; boundary_alg=boundary_algorithm, kwargs...)
+end
+
+function select_algorithm(
+    ::Type{PEPSOptimize},
+    env₀::CTMRGEnv;
+    boundary_alg=(;),
+    gradient_alg=(;),
+    optimizer_alg=(;),
+    reuse_env=Defaults.reuse_env,
+    symmetrization=nothing,
+)
+    # parse boundary algorithm
+    boundary_algorithm = if boundary_alg isa CTMRGAlgorithm
+        boundary_alg
+    elseif boundary_alg isa NamedTuple
+        select_algorithm(leading_boundary, env₀; boundary_alg...)
+    else
+        throw(ArgumentError("unknown boundary algorithm: $boundary_alg"))
+    end
+
     # parse fixed-point gradient algorithm
     gradient_algorithm = if gradient_alg isa GradMode
         gradient_alg
@@ -61,48 +88,95 @@ function select_algorithm(
     end
 
     # construct final PEPSOptimize optimization algorithm
-    optimization_algorithm = if optimization_alg isa PEPSOptimize
+    optimizer_algorithm = if optimizer_alg isa OptimKit.OptimizationAlgorithm
         optimization_alg
-    elseif optimization_alg isa NamedTuple
-        optimization_kwargs = (;
-            alg=Defaults.optimizer_alg,
-            tol=tol,
-            maxiter=Defaults.optimizer_maxiter,
-            lbfgs_memory=Defaults.lbfgs_memory,
-            reuse_env=Defaults.reuse_env,
-            symmetrization=nothing,
-            optimization_alg..., # replaces all specified kwargs
-        )
-        optimizer = LBFGS(
-            optimization_kwargs.lbfgs_memory;
-            gradtol=optimization_kwargs.tol,
-            maxiter=optimization_kwargs.maxiter,
-            verbosity=optimizer_verbosity,
-        )
-        PEPSOptimize(
-            boundary_algorithm,
-            gradient_algorithm,
-            optimizer,
-            optimization_kwargs.reuse_env,
-            optimization_kwargs.symmetrization,
-        )
+    elseif optimizer_alg isa NamedTuple
+        select_algorithm(OptimKit.OptimizationAlgorithm; optimizer_alg...)
     else
-        throw(ArgumentError("unknown optimization algorithm: $optimization_alg"))
+        throw(ArgumentError("unknown optimization algorithm: $optimizer_alg"))
     end
 
-    return optimization_algorithm, finalize!
+    return PEPSOptimize(
+        boundary_algorithm,
+        gradient_algorithm,
+        optimizer_algorithm,
+        reuse_env,
+        symmetrization,
+    )
 end
 
-"""
-    select_algorithm(::typeof(leading_boundary), env₀::CTMRGEnv; kwargs...) -> CTMRGAlgorithm
+function select_algorithm(::Type{OptimKit.OptimizationAlgorithm};
+    alg=Defaults.optimizer_alg,
+    tol=Defaults.optimizer_tol,
+    maxiter=Defaults.optimizer_maxiter,
+    verbosity=Defaults.optimizer_verbosity,
+    lbfgs_memory=Defaults.lbfgs_memory,
+    # TODO: add linesearch, ... to kwargs and defaults?
+)
+    # replace symbol with projector alg type
+    alg_type = if alg isa Symbol
+        if alg == :gradientdescent
+            GradientDescent
+        elseif alg == :conjugategradient
+            ConjugateGradient
+        elseif alg == :lbfgs
+            (; kwargs...) -> LBFGS(lbfgs_memory; kwargs...)
+        else
+            throw(ArgumentError("unknown optimizer algorithm: $alg"))
+        end
+    else
+        alg
+    end
 
-Parse and standardize CTMRG keyword arguments, and bundle them into a `CTMRGAlgorithm` struct,
-which is passed on to [`leading_boundary`](@ref). See [`leading_boundary`](@ref) for a
-description of all keyword arguments.
-"""
+    optimizer = alg_type(;
+        gradtol=tol,
+        maxiter,
+        verbosity,
+    )
+    PEPSOptimize(
+        boundary_algorithm,
+        gradient_algorithm,
+        optimizer,
+        optimization_kwargs.reuse_env,
+        optimization_kwargs.symmetrization,
+    )
+end
+
 function select_algorithm(
     ::typeof(leading_boundary),
     env₀::CTMRGEnv;
+    alg=Defaults.ctmrg_alg,
+    tol=Defaults.ctmrg_tol,
+    verbosity=Defaults.ctmrg_verbosity,
+    svd_alg=(;),
+    kwargs...,
+)
+    # adjust SVD rrule settings to CTMRG tolerance, verbosity and environment dimension
+    svd_algorithm = if svd_alg isa SVDAdjoint
+        svd_alg
+    elseif svd_alg isa NamedTuple
+        alg′ = select_algorithm(
+            SVDAdjoint; rrule_alg=(; tol=1e1tol, verbosity=verbosity - 2), svd_alg...
+        )
+        if typeof(alg′.rrule_alg) <: Union{<:GMRES,<:Arnoldi}
+            # extract maximal environment dimensions
+            χenv = maximum(env₀.corners) do corner
+                return dim(space(corner, 1))
+            end
+            krylovdim = round(Int, Defaults.krylovdim_factor * χenv)
+            @reset alg′.rrule_alg.krylovdim = krylovdim
+        end
+    else
+        throw(ArgumentError("unknown SVD algorithm: $svd_alg"))
+    end
+
+    return select_algorithm(
+        CTMRGAlgorithm; alg, tol, verbosity, svd_alg=svd_algorithm, kwargs...
+    )
+end
+
+function select_algorithm(
+    ::Type{CTMRGAlgorithm};
     alg=Defaults.ctmrg_alg,
     tol=Defaults.ctmrg_tol,
     maxiter=Defaults.ctmrg_maxiter,
@@ -112,12 +186,6 @@ function select_algorithm(
     svd_alg=(;),
     projector_alg=Defaults.projector_alg, # only allows for Symbol/Type{ProjectorAlgorithm} to expose projector kwargs
 )
-    # extract maximal environment dimensions
-    χenv = maximum(env₀.corners) do corner
-        return dim(space(corner, 1))
-    end
-    krylovdim = round(Int, Defaults.krylovdim_factor * χenv)
-
     # replace symbol with projector alg type
     alg_type = if alg isa Symbol
         if alg == :simultaneous
@@ -131,23 +199,9 @@ function select_algorithm(
         alg
     end
 
-    # parse SVD forward & rrule algorithm 
-    svd_algorithm = if svd_alg isa SVDAdjoint
-        svd_alg
-    elseif svd_alg isa NamedTuple
-        alg′ = select_algorithm(
-            SVDAdjoint; rrule_alg=(; tol=1e1tol, verbosity=verbosity - 2), svd_alg...
-        )
-        if typeof(alg′.rrule_alg) <: Union{<:GMRES,<:Arnoldi}
-            @reset alg′.rrule_alg.krylovdim = krylovdim
-        end
-    else
-        throw(ArgumentError("unknown SVD algorithm: $svd_alg"))
-    end
-
     # parse CTMRG projector algorithm
     projector_algorithm = select_algorithm(
-        ProjectorAlgorithm; alg=projector_alg, svd_alg=svd_algorithm, trscheme, verbosity
+        ProjectorAlgorithm; alg=projector_alg, svd_alg, trscheme, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
@@ -222,7 +276,7 @@ function select_algorithm(
 
     # parse GradMode algorithm
     gradient_algorithm = if alg_type <: Union{GeomSum,ManualIter}
-        alg_type(; tol, maxiter, verbosity, iterscheme)
+        alg_type{iterscheme}(tol, maxiter, verbosity)
     elseif alg_type <: Union{<:LinSolver,<:EigSolver}
         solver = if solver_alg isa NamedTuple # determine linear/eigen solver algorithm
             solver_kwargs = (;
@@ -263,7 +317,7 @@ function select_algorithm(
             solver_alg
         end
 
-        alg_type(; solver, iterscheme)
+        alg_type{iterscheme}(solver)
     else
         throw(ArgumentError("unknown gradient algorithm: $alg"))
     end

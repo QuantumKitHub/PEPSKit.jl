@@ -119,7 +119,7 @@ information `NamedTuple` which contains the following entries:
 * `gradnorms_unitcell`: History of gradient norms for each respective unit cell entry.
 * `times`: History of optimization step execution times.
 """
-function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
+function fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; (finalize!)=OptimKit._finalize!, kwargs...)
     alg, finalize! = select_algorithm(fixedpoint, env₀; kwargs...)
     return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
