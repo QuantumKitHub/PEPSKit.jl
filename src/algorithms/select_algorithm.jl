@@ -21,7 +21,6 @@ function select_algorithm(
     boundary_alg=(;),
     kwargs...,
 )
-
     # top-level verbosity
     if verbosity ≤ 0 # disable output
         boundary_verbosity = -1
@@ -41,23 +40,66 @@ function select_algorithm(
         optimizer_verbosity = 3
     end
 
-    # parse boundary algorithm
+    # adjust CTMRG tols and verbosity
     boundary_algorithm = if boundary_alg isa CTMRGAlgorithm
         boundary_alg
     elseif boundary_alg isa NamedTuple
+        svd_alg = if haskey(boundary_alg, :svd_alg)
+            if boundary_alg.svd_alg isa SVDAdjoint
+                boundary_alg.svd_alg
+            elseif boundary_alg.svd_alg isa NamedTuple
+                select_algorithm(SVDAdjoint; rrule_alg=(; tol=1e-3tol), svd_alg...)
+            else
+                throw(ArgumentError("unknown SVD algorithm: $(boundary_alg.svd_alg)"))
+            end
+        else
+            (; rrule_alg(; tol=1e-3tol))
+        end
+
         select_algorithm(
             leading_boundary,
             env₀;
             tol=1e-4tol,
             verbosity=boundary_verbosity,
-            svd_alg=(; rrule_alg=(; tol=1e-3tol)),
+            svd_alg,
             boundary_alg...,
         )
     else
         throw(ArgumentError("unknown boundary algorithm: $boundary_alg"))
     end
 
-    return select_algorithm(PEPSOptimize; boundary_alg=boundary_algorithm, kwargs...)
+    # adjust gradient verbosity
+    gradient_algorithm = if gradient_alg isa GradMode
+        gradient_alg
+    elseif gradient_alg isa NamedTuple
+        select_algorithm(
+            GradMode; tol=1e-2tol, verbosity=gradient_verbosity, gradient_kwargs...
+        )
+    else
+        throw(ArgumentError("unknown gradient algorithm: $gradient_alg"))
+    end
+
+    # adjust optimizer tol and verbosity
+    optimizer_algorithm = if optimizer_alg isa OptimKit.OptimizationAlgorithm
+        optimization_alg
+    elseif optimizer_alg isa NamedTuple
+        select_algorithm(
+            OptimKit.OptimizationAlgorithm;
+            tol,
+            verbosity=optimizer_verbosity,
+            optimizer_alg...,
+        )
+    else
+        throw(ArgumentError("unknown optimization algorithm: $optimizer_alg"))
+    end
+
+    return select_algorithm(
+        PEPSOptimize;
+        boundary_alg=boundary_algorithm,
+        gradient_alg=gradient_algorithm,
+        optimizer_alg=optimizer_algorithm,
+        kwargs...,
+    )
 end
 
 function select_algorithm(
@@ -87,7 +129,7 @@ function select_algorithm(
         throw(ArgumentError("unknown gradient algorithm: $gradient_alg"))
     end
 
-    # construct final PEPSOptimize optimization algorithm
+    # parse optimizer algorithm
     optimizer_algorithm = if optimizer_alg isa OptimKit.OptimizationAlgorithm
         optimization_alg
     elseif optimizer_alg isa NamedTuple
@@ -105,7 +147,8 @@ function select_algorithm(
     )
 end
 
-function select_algorithm(::Type{OptimKit.OptimizationAlgorithm};
+function select_algorithm(
+    ::Type{OptimKit.OptimizationAlgorithm};
     alg=Defaults.optimizer_alg,
     tol=Defaults.optimizer_tol,
     maxiter=Defaults.optimizer_maxiter,
@@ -128,12 +171,8 @@ function select_algorithm(::Type{OptimKit.OptimizationAlgorithm};
         alg
     end
 
-    optimizer = alg_type(;
-        gradtol=tol,
-        maxiter,
-        verbosity,
-    )
-    PEPSOptimize(
+    optimizer = alg_type(; gradtol=tol, maxiter, verbosity)
+    return PEPSOptimize(
         boundary_algorithm,
         gradient_algorithm,
         optimizer,
