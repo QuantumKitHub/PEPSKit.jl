@@ -67,7 +67,7 @@ function TensorKit._tsvd!(t, alg::FixedSVD, ::NoTruncation, ::Real=2)
 end
 
 """
-    struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf)
+    struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf, start_vector=random_start_vector)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmetric) tensors.
 The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
