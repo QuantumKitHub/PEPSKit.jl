@@ -79,7 +79,7 @@ function select_algorithm(
     )
     @show boundary_algorithm
     @show gradient_algorithm
-    @show optimizer_algorithm 
+    @show optimizer_algorithm
 
     return select_algorithm(
         PEPSOptimize,

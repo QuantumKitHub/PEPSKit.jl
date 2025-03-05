@@ -16,7 +16,9 @@ struct SimultaneousCTMRG <: CTMRGAlgorithm
     verbosity::Int
     projector_alg::ProjectorAlgorithm
 end
-SimultaneousCTMRG(; kwargs...) = select_algorithm(CTMRGAlgorithm; alg=:simultaneous, kwargs...)
+function SimultaneousCTMRG(; kwargs...)
+    return select_algorithm(CTMRGAlgorithm; alg=:simultaneous, kwargs...)
+end
 # function SimultaneousCTMRG(;
 #     tol=Defaults.ctmrg_tol,
 #     maxiter=Defaults.ctmrg_maxiter,
