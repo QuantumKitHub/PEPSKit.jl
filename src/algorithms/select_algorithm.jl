@@ -77,9 +77,6 @@ function select_algorithm(
         tol,
         verbosity=optimizer_verbosity,
     )
-    @show boundary_algorithm
-    @show gradient_algorithm
-    @show optimizer_algorithm
 
     return select_algorithm(
         PEPSOptimize,
