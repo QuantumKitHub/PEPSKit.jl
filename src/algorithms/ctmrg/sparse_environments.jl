@@ -60,15 +60,16 @@ Instantiate enlarged corner as `TensorMap` where `dir` selects the correct contr
 direction, i.e. the way the environment and PEPS tensors connect.
 """
 function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
-    if dir == NORTHWEST
-        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
-    elseif dir == NORTHEAST
-        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
-    elseif dir == SOUTHEAST
-        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
-    elseif dir == SOUTHWEST
-        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
-    end
+    corner_functions = Dict(
+        NORTHWEST => enlarge_northwest_corner,
+        NORTHEAST => enlarge_northeast_corner, 
+        SOUTHEAST => enlarge_southeast_corner,
+        SOUTHWEST => enlarge_southwest_corner
+    )
+    
+    haskey(corner_functions, dir) || error("Wrong direction: $dir")
+    corner = corner_functions[dir](Q.E_1, Q.C, Q.E_2, Q.A)
+    return corner / norm(corner)
 end
 
 function renormalize_northwest_corner(ec::EnlargedCorner, P_left, P_right)

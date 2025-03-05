@@ -66,16 +66,29 @@ end
 @non_differentiable _condition_number(S::AbstractTensorMap)
 
 """
-    compute_projector(enlarged_corners, coordinate, alg::ProjectorAlgorithm)
+    compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg, alg)
 
-Determine left and right projectors at the bond given determined by the enlarged corners
-and the given coordinate using the specified `alg`.
-"""
-function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjector)
-    # SVD half-infinite environment
-    halfinf = half_infinite_environment(enlarged_corners...)
-    svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, truncation_error = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
+Given the bond connecting the left and right tensors, e.g. L and R, we compute the projectors on the bond.
+This is a general algorithm that can be used for any bond. The only thing you need worry about
+is the left and right tensors. After the projection, the arrow of the bond is now (L⊙P_L)←(P_R⊙R).
+
+```
+L⊙R=(L⊙R)*(L⊙R)^-1*(L⊙R)=(L⊙R)*(U*S*V)^-1*(L⊙R)=(L⊙R)*V'S^{-1}U'*(L⊙R)=L⊙(R*V'*S^{-1/2})*(S^{-1/2}*U'*L)⊙R=L⊙P_L*P_R⊙R
+```
+""" 
+#help function for the projection, particularly for the sign of fermions
+⊙(t1::AbstractTensorMap, t2::AbstractTensorMap)=twist(t1, filter(i -> !isdual(space(t1, i)), domainind(t1)))*t2
+
+function compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg, alg)
+    if dim(codomain(L)) > dim(domain(L))
+        _,L= leftorth!(L)
+        R,_=rightorth!(R)
+    end
+    LR=L⊙R
+    n_factor=norm(LR)
+    LR=LR/n_factor
+    
+    U, S, V, truncation_error = PEPSKit.tsvd!(LR, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -85,29 +98,14 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
         end
     end
 
-    P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
+    norm_factor = sqrt(n_factor)
+    isqS = sdiag_pow(S, -0.5)
+    PL = R * V' * isqS / norm_factor
+    PR = isqS * U' * L / norm_factor
+    
     truncation_error /= norm(S)
-    condition_number = @ignore_derivatives(_condition_number(S))
-    return (P_left, P_right), (; truncation_error, condition_number, U, S, V)
-end
-function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
-    halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
-    halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
-
-    # SVD full-infinite environment
-    fullinf = full_infinite_environment(halfinf_left, halfinf_right)
-    svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, truncation_error = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
-
-    # Check for degenerate singular values
-    Zygote.isderiving() && ignore_derivatives() do
-        if alg.verbosity > 0 && is_degenerate_spectrum(S)
-            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-            @warn("degenerate singular values detected: ", svals)
-        end
+    condition_number = ignore_derivatives() do
+        _condition_number(S)
     end
-
-    P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
-    condition_number = @ignore_derivatives(_condition_number(S))
-    return (P_left, P_right), (; truncation_error, condition_number, U, S, V)
+    return (PL, PR), (; truncation_error, condition_number, U, S, V)
 end
