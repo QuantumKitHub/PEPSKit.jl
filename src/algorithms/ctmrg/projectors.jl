@@ -33,25 +33,31 @@ function truncation_scheme(alg::ProjectorAlgorithm, edge)
 end
 
 """
-    struct HalfInfiniteProjector{S,T}(; svd_alg=SVDAdjoint(), trscheme=$(truncation_scheme_symbols[Defaults.trscheme]), verbosity=0)
+    struct HalfInfiniteProjector{S,T}(; svd_alg=TODO, trscheme=TODO, verbosity=0)
 
 Projector algorithm implementing projectors from SVDing the half-infinite CTMRG environment.
 """
-@kwdef struct HalfInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
-    svd_alg::S = SVDAdjoint()
-    trscheme::T = truncation_scheme_symbols[Defaults.trscheme]
-    verbosity::Int = 0
+struct HalfInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
+    svd_alg::S
+    trscheme::T
+    verbosity::Int
+end
+function HalfInfiniteProjector(; kwargs...)
+    return select_algorithm(ProjectorAlgorithm; alg=:halfinfinite, kwargs...)
 end
 
 """
-    struct FullInfiniteProjector{S,T}(; svd_alg=SVDAdjoint(), trscheme=$(truncation_scheme_symbols[Defaults.trscheme]), verbosity=0)
+    struct FullInfiniteProjector{S,T}(; svd_alg=TODO, trscheme=TODO, verbosity=0)
 
 Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG environment.
 """
-@kwdef struct FullInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
-    svd_alg::S = SVDAdjoint()
-    trscheme::T = truncation_scheme_symbols[Defaults.trscheme]
-    verbosity::Int = 0
+struct FullInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
+    svd_alg::S
+    trscheme::T
+    verbosity::Int
+end
+function FullInfiniteProjector(; kwargs...)
+    return select_algorithm(ProjectorAlgorithm; alg=:fullinfinite, kwargs...)
 end
 
 # TODO: add `LinearAlgebra.cond` to TensorKit

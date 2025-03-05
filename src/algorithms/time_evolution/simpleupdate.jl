@@ -10,6 +10,7 @@ struct SimpleUpdate
     maxiter::Int
     trscheme::TensorKit.TruncationScheme
 end
+# TODO: add kwarg constructor and SU Defaults
 
 function truncation_scheme(alg::SimpleUpdate, v::ElementarySpace)
     if alg.trscheme isa FixedSpaceTruncation

@@ -10,7 +10,7 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg=$(svd_fwd_symbols[Defaults.svd_fwd_alg]), rrule_alg=$(svd_rrule_symbols[Defaults.svd_rrule_alg]),
+    struct SVDAdjoint(; fwd_alg=TODO, rrule_alg=TODO,
                       broadening=nothing)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
@@ -33,13 +33,7 @@ struct SVDAdjoint{F,R,B}
         return new{F,R,B}(fwd_alg, rrule_alg, broadening)
     end
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
-function SVDAdjoint(;
-    fwd_alg=svd_fwd_symbols[Defaults.svd_fwd_alg],
-    rrule_alg=svd_rrule_symbols[Defaults.svd_rrule_alg],
-    broadening=nothing,
-)
-    return SVDAdjoint(fwd_alg, rrule_alg, broadening)
-end
+SVDAdjoint(; kwargs...) = select_algorithm(SVDAdjoint; kwargs...)
 
 """
     PEPSKit.tsvd(t, alg; trunc=notrunc(), p=2)

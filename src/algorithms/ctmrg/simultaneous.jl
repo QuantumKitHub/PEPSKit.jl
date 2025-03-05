@@ -1,8 +1,8 @@
 """
     SimultaneousCTMRG(; tol=$(Defaults.ctmrg_tol), maxiter=$(Defaults.ctmrg_maxiter),
                       miniter=$(Defaults.ctmrg_miniter), verbosity=$(Defaults.ctmrg_verbosity),
-                      svd_alg=SVDAdjoint(), trscheme=truncation_scheme_symbols[Defaults.trscheme],
-                      projector_alg=projector_symbols[Defaults.projector_alg])
+                      svd_alg=TODO, trscheme=TODO,
+                      projector_alg=TODO)
 
 CTMRG algorithm where all sides are grown and renormalized at the same time. In particular,
 the projectors are applied to the corners from two sides simultaneously. The projectors are
@@ -16,19 +16,20 @@ struct SimultaneousCTMRG <: CTMRGAlgorithm
     verbosity::Int
     projector_alg::ProjectorAlgorithm
 end
-function SimultaneousCTMRG(;
-    tol=Defaults.ctmrg_tol,
-    maxiter=Defaults.ctmrg_maxiter,
-    miniter=Defaults.ctmrg_miniter,
-    verbosity=Defaults.ctmrg_verbosity,
-    svd_alg=SVDAdjoint(),
-    trscheme=truncation_scheme_symbols[Defaults.trscheme],
-    projector_alg=projector_symbols[Defaults.projector_alg],
-)
-    return SimultaneousCTMRG(
-        tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
-    )
-end
+SimultaneousCTMRG(; kwargs...) = select_algorithm(CTMRGAlgorithm; alg=:simultaneous, kwargs...)
+# function SimultaneousCTMRG(;
+#     tol=Defaults.ctmrg_tol,
+#     maxiter=Defaults.ctmrg_maxiter,
+#     miniter=Defaults.ctmrg_miniter,
+#     verbosity=Defaults.ctmrg_verbosity,
+#     svd_alg=SVDAdjoint(),
+#     trscheme=truncation_scheme_symbols[Defaults.trscheme],
+#     projector_alg=projector_symbols[Defaults.projector_alg],
+# )
+#     return SimultaneousCTMRG(
+#         tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
+#     )
+# end
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners = dtmap(eachcoordinate(network, 1:4)) do idx

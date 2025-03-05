@@ -1,8 +1,8 @@
 """
     SequentialCTMRG(; tol=$(Defaults.ctmrg_tol), maxiter=$(Defaults.ctmrg_maxiter),
                       miniter=$(Defaults.ctmrg_miniter), verbosity=$(Defaults.ctmrg_verbosity),
-                      svd_alg=SVDAdjoint(), trscheme=truncation_scheme_symbols[Defaults.trscheme],
-                      projector_alg=projector_symbols[Defaults.projector_alg])
+                      svd_alg=TODO, trscheme=TODO,
+                      projector_alg=TODO)
 
 CTMRG algorithm where the expansions and renormalization is performed sequentially
 column-wise. This is implemented as a growing and projecting step to the left, followed by
@@ -16,19 +16,20 @@ struct SequentialCTMRG <: CTMRGAlgorithm
     verbosity::Int
     projector_alg::ProjectorAlgorithm
 end
-function SequentialCTMRG(;
-    tol=Defaults.ctmrg_tol,
-    maxiter=Defaults.ctmrg_maxiter,
-    miniter=Defaults.ctmrg_miniter,
-    verbosity=Defaults.ctmrg_verbosity,
-    svd_alg=SVDAdjoint(),
-    trscheme=truncation_scheme_symbols[Defaults.trscheme],
-    projector_alg=projector_symbols[Defaults.projector_alg],
-)
-    return SequentialCTMRG(
-        tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
-    )
-end
+SequentialCTMRG(; kwargs...) = select_algorithm(CTMRGAlgorithm; alg=:simultaneous, kwargs...)
+# function SequentialCTMRG(;
+#     tol=Defaults.ctmrg_tol,
+#     maxiter=Defaults.ctmrg_maxiter,
+#     miniter=Defaults.ctmrg_miniter,
+#     verbosity=Defaults.ctmrg_verbosity,
+#     svd_alg=SVDAdjoint(),
+#     trscheme=truncation_scheme_symbols[Defaults.trscheme],
+#     projector_alg=projector_symbols[Defaults.projector_alg],
+# )
+#     return SequentialCTMRG(
+#         tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
+#     )
+# end
 
 """
     ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)

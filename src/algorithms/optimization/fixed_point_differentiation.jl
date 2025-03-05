@@ -19,14 +19,7 @@ struct GeomSum{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-function GeomSum(;
-    tol=Defaults.gradient_tol,
-    maxiter=Defaults.gradient_maxiter,
-    verbosity=0,
-    iterscheme=Defaults.gradient_iterscheme,
-)
-    return GeomSum{iterscheme}(tol, maxiter, verbosity)
-end
+GeomSum(; kwargs...) = select_algorithm(GradMode; alg=:GeomSum, kwargs...)
 
 """
     struct ManualIter(; tol=$(Defaults.gradient_tol), maxiter=$(Defaults.gradient_maxiter),
@@ -45,17 +38,10 @@ struct ManualIter{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-function ManualIter(;
-    tol=Defaults.gradient_tol,
-    maxiter=Defaults.gradient_maxiter,
-    verbosity=0,
-    iterscheme=Defaults.gradient_iterscheme,
-)
-    return ManualIter{iterscheme}(tol, maxiter, verbosity)
-end
+ManualIter(; kwargs...) = select_algorithm(GradMode; alg=:manualiter, kwargs...)
 
 """
-    struct LinSolver(; solver=$(linsolver_solver_symbols[Defaults.gradient_linsolver]), iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
+    struct LinSolver(; solver=TODO, iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
@@ -69,15 +55,10 @@ such that `gauge_fix` will also be differentiated everytime a CTMRG derivative i
 struct LinSolver{F} <: GradMode{F}
     solver::KrylovKit.LinearSolver
 end
-function LinSolver(;
-    solver=linsolver_solver_symbols[Defaults.gradient_linsolver],
-    iterscheme=Defaults.gradient_iterscheme,
-)
-    return LinSolver{iterscheme}(solver)
-end
+LinSolver(; kwargs...) = select_algorithm(GradMode; alg=:linsolver, kwargs...)
 
 """
-    struct EigSolver(; solver=$(eigsolver_solver_symbols[Defaults.gradient_eigsolver]), iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
+    struct EigSolver(; solver=TODO, iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.
@@ -91,12 +72,7 @@ such that `gauge_fix` will also be differentiated everytime a CTMRG derivative i
 struct EigSolver{F} <: GradMode{F}
     solver::KrylovKit.KrylovAlgorithm
 end
-function EigSolver(;
-    solver=eigsolver_solver_symbols[Defaults.gradient_eigsolver],
-    iterscheme=Defaults.gradient_iterscheme,
-)
-    return EigSolver{iterscheme}(solver)
-end
+EigSolver(; kwargs...) = select_algorithm(GradMode; alg=:eigsolver, kwargs...)
 
 #=
 Evaluating the gradient of the cost function for CTMRG:

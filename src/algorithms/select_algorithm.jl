@@ -120,7 +120,13 @@ function select_algorithm(
 
     # replace symbol with projector alg type
     alg_type = if alg isa Symbol
-        projector_symbols[alg]
+        if alg == :simultaneous
+            SimultaneousCTMRG
+        elseif alg == :sequential
+            SequentialCTMRG
+        else
+            throw(ArgumentError("unknown CTMRG algorithm: $alg"))
+        end
     else
         alg
     end
@@ -156,7 +162,13 @@ function select_algorithm(
 )
     # replace symbol with projector alg type
     alg_type = if alg isa Symbol
-        projector_symbols[alg]
+        if alg == :halfinfinite
+            HalfInfiniteProjector
+        elseif alg == :fullinfinite
+            FullInfiniteProjector
+        else
+            throw(ArgumentError("unknown projector algorithm: $alg"))
+        end
     else
         alg
     end
@@ -193,7 +205,17 @@ function select_algorithm(
 )
     # replace symbol with GradMode alg type
     alg_type = if alg isa Symbol
-        gradmode_symbols[alg]
+        if alg == :geomsum
+            GeomSum
+        elseif alg == :manualiter
+            ManualIter
+        elseif alg == :linsolver
+            LinSolver
+        elseif alg == :eigsolver
+            EigSolver
+        else
+            throw(ArgumentError("unknown GradMode algorithm: $alg"))
+        end
     else
         alg
     end
@@ -209,13 +231,23 @@ function select_algorithm(
 
             solver_type = if alg <: LinSolver # replace symbol with solver alg type
                 if solver_kwargs.alg isa Symbol
-                    linsolver_solver_symbols[solver_kwargs.alg]
+                    if solver_kwargs.alg == :gmres
+                        GMRES
+                    elseif solver_kwargs.alg == :bicgstab
+                        BiCGStab
+                    else
+                        throw(ArgumentError("unknown LinSolver solver: $(solver_kwargs.alg)"))
+                    end
                 else
                     solver_kwargs.alg
                 end
             elseif alg <: EigSolver
                 if solver_kwargs.alg isa Symbol
-                    eigsolver_solver_symbols[solver_kwargs.alg]
+                    if solver_kwargs.alg == :arnoldi
+                        Arnoldi
+                    else
+                        throw(ArgumentError("unknown EigSolver solver: $(solver_kwargs.alg)"))
+                    end
                 else
                     solver_kwargs.alg
                 end
@@ -242,7 +274,24 @@ end
 function select_algorithm(
     ::Type{TensorKit.TruncationScheme}; alg=Defaults.trscheme, kwargs...
 )
-    alg_type = alg isa Symbol ? truncation_scheme_symbols[alg] : alg # replace Symbol with TruncationScheme type
+    alg_type = if alg isa Symbol # replace Symbol with TruncationScheme type
+        if alg == :fixedspace
+            FixedSpaceTruncation
+        elseif alg == :notrunc
+            TensorKit.NoTruncation
+        elseif alg == :truncerr
+            TensorKit.TruncationError
+        elseif alg == :truncspace
+            TensorKit.TruncationSpace
+        elseif alg == :truncbelow
+            TensorKit.TruncationCutoff
+        else
+            throw(ArgumentError("unknown truncation scheme: $alg"))
+        end
+    else
+        alg
+    end
+
     args = map(k -> last(kwargs[k]), keys(kwargs)) # extract only values of supplied kwargs (empty Tuple, if kwargs is empty)
     return alg_type(args...)
 end
@@ -254,7 +303,15 @@ function select_algorithm(
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
         fwd_type = if fwd_kwargs.alg isa Symbol # replace symbol with alg type
-            svd_fwd_symbols[fwd_kwargs.alg]
+            if fwd_kwargs.alg == :sdd
+                TensorKit.SDD
+            elseif fwd_kwargs.alg == :svd
+                TensorKit.SVD
+            elseif fwd_kwargs.alg == :iterative
+                IterSVD
+            else
+                throw(ArgumentError("unknown forward algorithm: $(fwd_kwargs.alg)"))
+            end
         else
             fwd_kwargs.alg
         end
@@ -271,7 +328,15 @@ function select_algorithm(
             rrule_alg...,
         ) # overwrite with specified kwargs
         rrule_type = if rrule_kwargs.alg isa Symbol # replace symbol with alg type
-            svd_rrule_symbols[rrule_kwargs.alg]
+            if rrule_kwargs.alg == :gmres
+                GMRES
+            elseif rrule_kwargs.alg == :bicgstab
+                BiCGStab
+            elseif rrule_kwargs.alg == :arnoldi
+                Arnoldi
+            else
+                throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
+            end
         else
             rrule_kwargs.alg
         end
