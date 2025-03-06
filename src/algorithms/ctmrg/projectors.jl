@@ -66,7 +66,9 @@ end
 @non_differentiable _condition_number(S::AbstractTensorMap)
 
 """
-    compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg, alg)
+    compute_projector(
+    L::AbstractTensorMap, R::AbstractTensorMap, alg::ProjectorAlgorithm
+)
 
 Given the bond connecting the left and right tensors, e.g. L and R, we compute the projectors on the bond.
 This is a general algorithm that can be used for any bond. The only thing you need worry about
@@ -76,13 +78,14 @@ is the left and right tensors. After the projection, the arrow of the bond is no
 L⊙R=(L⊙R)*(L⊙R)^-1*(L⊙R)=(L⊙R)*(U*S*V)^-1*(L⊙R)=(L⊙R)*V'S^{-1}U'*(L⊙R)=L⊙(R*V'*S^{-1/2})*(S^{-1/2}*U'*L)⊙R=L⊙P_L*P_R⊙R
 ```
 """
-#helper function for the projection, particularly for the sign of fermions
+#helper function for projection, particularly for the sign of fermions
 function ⊙(t1::AbstractTensorMap, t2::AbstractTensorMap)
     return twist(t1, filter(i -> !isdual(space(t1, i)), domainind(t1))) * t2
 end
 
-# TODO: combine svd_alg and alg into a single struct; tried, but zygote chokes.
-function compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg, alg)
+function compute_projector(
+    L::AbstractTensorMap, R::AbstractTensorMap, alg::ProjectorAlgorithm
+)
     if dim(codomain(L)) > dim(domain(L))
         _, L = leftorth!(L)
         R, _ = rightorth!(R)
@@ -91,7 +94,7 @@ function compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg, 
     n_factor = norm(LR)
     LR = LR / n_factor
 
-    U, S, V, truncation_error = PEPSKit.tsvd!(LR, svd_alg; trunc=alg.trscheme)
+    U, S, V, truncation_error = PEPSKit.tsvd!(LR, alg.svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
