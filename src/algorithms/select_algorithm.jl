@@ -316,7 +316,7 @@ function select_algorithm(
 end
 
 function select_algorithm(
-    ::Type{TensorKit.TruncationScheme}; alg=Defaults.trscheme, kwargs...
+    ::Type{TensorKit.TruncationScheme}; alg=Defaults.trscheme, η=nothing
 )
     alg_type = if alg isa Symbol # replace Symbol with TruncationScheme type
         if alg == :fixedspace
@@ -325,6 +325,8 @@ function select_algorithm(
             TensorKit.NoTruncation
         elseif alg == :truncerr
             TensorKit.TruncationError
+        elseif alg == :truncdim
+            TensorKit.TruncationDimension
         elseif alg == :truncspace
             TensorKit.TruncationSpace
         elseif alg == :truncbelow
@@ -336,8 +338,7 @@ function select_algorithm(
         alg
     end
 
-    args = map(k -> last(kwargs[k]), keys(kwargs)) # extract only values of supplied kwargs (empty Tuple, if kwargs is empty)
-    return alg_type(args...)
+    return isnothing(arg) ? alg_type() : alg_type(η)
 end
 
 function select_algorithm(

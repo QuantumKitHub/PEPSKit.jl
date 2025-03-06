@@ -64,8 +64,8 @@ The optimization parameters can be supplied via the keyword arguments or directl
     1. Optimizer output and warnings
     2. Additionally print boundary information
     3. All information including AD debug outputs
-* `reuse_env=$(Defaults.reuse_env)`: If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
-* `symmetrization=nothing`: Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
+* `reuse_env::Bool=$(Defaults.reuse_env)`: If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
+* `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing`: Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
 * `(finalize!)=OptimKit._finalize!`: Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
 
 ### Boundary algorithm
@@ -73,6 +73,7 @@ The optimization parameters can be supplied via the keyword arguments or directl
 Supply boundary algorithm parameters via `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm}`
 using either a `NamedTuple` of keyword arguments or a `CTMRGAlgorithm` directly.
 See [`leading_boundary`](@ref) for a description of all possible keyword arguments.
+By default, a CTMRG tolerance of `tol=1e-4tol` and is used.
 
 ### Gradient algorithm
 
@@ -80,17 +81,17 @@ Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,<:GradM
 either a `NamedTuple` of keyword arguments or a `GradMode` struct directly. The supported
 keyword arguments are:
 
-* `tol=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration.
-* `maxiter=$(Defaults.gradient_maxiter)`: Maximal number of gradient problem iterations.
-* `alg=$(Defaults.gradient_alg)`: Gradient algorithm type, can be any `GradMode` type or the corresponding symbol:
+* `tol::Real=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration.
+* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of gradient problem iterations.
+* `alg::Union{Symbol,Type{GradMode}}=:$(Defaults.gradient_alg)`: Gradient algorithm type, can be any `GradMode` type or the corresponding symbol:
     - `:geomsum`: Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
     - `:manualiter`: Iterate gradient geometric sum manually, see ['ManualIter'](@ref)
     - `:linsolver`: Solve fixed-point gradient linear problem using iterative solver, see ['LinSolver'](@ref)
     - `:eigsolver`: Determine gradient via eigenvalue formulation of its Sylvester equation, see [`EigSolver`](@ref)
-* `verbosity`: Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
-* `iterscheme=$(Defaults.gradient_iterscheme)`: CTMRG iteration scheme determining mode of differentiation. This can be:
-    - `:fixed`: Use SVD with fixed gauge in for reverse pass
-    - `:diffgauge`: Differentiate gauge-fixing routine in addition to CTMRG iteration
+* `verbosity::Int`: Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: CTMRG iteration scheme determining mode of differentiation. This can be:
+    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 
 ### Optimizer settings
 
@@ -99,14 +100,14 @@ using either a `NamedTuple` of keyword arguments or a `OptimKit.OptimizationAlgo
 `OptimKit.LBFGS` is used in combination with a `HagerZhangLineSearch`. The supported
 keyword arguments are:
 
-* `alg=$(Defaults.optimizer_alg)`: Optimizer algorithm, can be any `OptimKit.OptimizationAlgorithm` type or the corresponding symbol:
-    - `gradientdescent`: Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `conjugategradient`: Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `lbfgs`: L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-* `tol=tol`: Gradient norm tolerance of the optimizer.
-* `maxiter=$(Defaults.optimizer_maxiter)`: Maximal number of optimization steps.
-* `verbosity=$(Defaults.optimizer_verbosity)`: Optimizer output verbosity.
-* `lbfgs_memory=$(Defaults.lbfgs_memory)`: Size of limited memory representation of BFGS Hessian matrix.
+* `alg::Union{Symbol,Type{OptimKit.OptimizationAlgorithm}}=:$(Defaults.optimizer_alg)`: Optimizer algorithm, can be any `OptimKit.OptimizationAlgorithm` type or the corresponding symbol:
+    - `:gradientdescent`: Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:conjugategradient`: Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:lbfgs`: L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+* `tol::Real=tol`: Gradient norm tolerance of the optimizer.
+* `maxiter::Int=$(Defaults.optimizer_maxiter)`: Maximal number of optimization steps.
+* `verbosity::Int=$(Defaults.optimizer_verbosity)`: Optimizer output verbosity.
+* `lbfgs_memory::Int=$(Defaults.lbfgs_memory)`: Size of limited memory representation of BFGS Hessian matrix.
 
 ## Return values
 

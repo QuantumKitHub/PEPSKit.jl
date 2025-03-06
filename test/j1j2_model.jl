@@ -23,7 +23,7 @@ peps, env, E, = fixedpoint(
     env₀;
     tol=1e-3,
     gradient_alg=(; iterscheme=:diffgauge),
-    symmetrization=RotateReflect()
+    symmetrization=RotateReflect(),
 )
 ξ_h, ξ_v, = correlation_length(peps, env)
 

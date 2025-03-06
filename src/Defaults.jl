@@ -4,76 +4,49 @@
 Module containing default algorithm parameter values and arguments.
 
 # CTMRG
-- `ctmrg_tol=1e-8`: Tolerance checking singular value and norm convergence
-- `ctmrg_maxiter=100`: Maximal number of CTMRG iterations per run
-- `ctmrg_miniter=4`: Minimal number of CTMRG carried out
-- `ctmrg_alg_type=SimultaneousCTMRG`: Default CTMRG algorithm variant
-- `ctmrg_verbosity=2`: CTMRG output information verbosity
-- `trscheme=FixedSpaceTruncation()`: Truncation scheme for SVDs and other decompositions
-- `svd_fwd_alg=TensorKit.SDD()`: SVD algorithm that is used in the forward pass
-- `svd_rrule_type = Arnoldi`: Default solver type for SVD reverse-rule algorithm
-- `svd_rrule_alg`: Reverse-rule algorithm for differentiating a SVD
 
-    ```
-    svd_rrule_alg = svd_rrule_type(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
-    ```
+- `ctmrg_tol=$(Defaults.ctmrg_tol)`: Tolerance checking singular value and norm convergence.
+- `ctmrg_maxiter=$(Defaults.ctmrg_maxiter)`: Maximal number of CTMRG iterations per run.
+- `ctmrg_miniter=$(Defaults.ctmrg_miniter)`: Minimal number of CTMRG carried out.
+- `ctmrg_alg=:$(Defaults.ctmrg_alg)`: Default CTMRG algorithm variant.
+- `ctmrg_verbosity=$(Defaults.ctmrg_verbosity)`: CTMRG output information verbosity
 
-- `svd_alg`: Combination of forward and reverse SVD algorithms
+# SVD forward & reverse
 
-    ```
-    svd_alg=SVDAdjoint(; fwd_alg=svd_fwd_alg, rrule_alg=svd_rrule_alg)
-    ```
+- `trscheme=:$(Defaults.trscheme)`: Truncation scheme for SVDs and other decompositions.
+- `svd_fwd_alg=:$(Defaults.svd_fwd_alg)`: SVD algorithm that is used in the forward pass.
+- `svd_rrule_tol=$(Defaults.svd_rrule_tol)`: Accuracy of SVD reverse-rule.
+- `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)`: Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
+- `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)`: SVD gradient output verbosity.
+- `svd_rrule_alg=:$(Defaults.svd_rrule_alg)`: Reverse-rule algorithm for the SVD gradient.
 
-- `projector_alg_type=HalfInfiniteProjector`: Default type of projector algorithm
-- `projector_alg`: Algorithm to compute CTMRG projectors
+# Projectors
 
-    ```
-    projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
-    ```
+- `projector_alg=:$(Defaults.projector_alg)`: Default variant of the CTMRG projector algorithm.
+- `projector_verbosity=$(Defaults.projector_verbosity)`: Projector output information verbosity.
 
-- `ctmrg_alg`: Algorithm for performing CTMRG runs
+# Fixed-point gradient
 
-    ```
-    ctmrg_alg = ctmrg_alg_type(
-        ctmrg_tol, ctmrg_maxiter, ctmrg_miniter, 2, projector_alg
-    )
-    ```
+- `gradient_tol=$(Defaults.gradient_tol)`: Convergence tolerance for the fixed-point gradient iteration.
+- `gradient_maxiter=$(Defaults.gradient_maxiter)`: Maximal number of iterations for computing the CTMRG fixed-point gradient.
+- `gradient_verbosity=$(Defaults.gradient_verbosity)`: Gradient output information verbosity.
+- `gradient_linsolver=:$(Defaults.gradient_linsolver)`: Default linear solver for the `LinSolver` gradient algorithm.
+- `gradient_eigsolver=:$(Defaults.gradient_eigsolver)`: Default eigensolver for the `EigSolver` gradient algorithm.
+- `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)`: Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
+- `gradient_iterscheme=:$(Defaults.gradient_iterscheme)`: Scheme for differentiating one CTMRG iteration.
+- `gradient_alg=:$(Defaults.gradient_alg)`: Algorithm variant for computing the gradient fixed-point.
 
 # Optimization
-- `gradient_tol=1e-6`: Convergence tolerance for the fixed-point gradient iteration
-- `gradient_maxiter=30`: Maximal number of iterations for computing the CTMRG fixed-point gradient
-- `gradient_iterscheme=:fixed`: Scheme for differentiating one CTMRG iteration
-- `gradient_linsolver`: Default linear solver for the `LinSolver` gradient algorithm
 
-    ```
-    gradient_linsolver=KrylovKit.BiCGStab(; maxiter=gradient_maxiter, tol=gradient_tol)
-    ```
-
-- `gradient_eigsolver`: Default eigsolver for the `EigSolver` gradient algorithm
-
-    ```
-    gradient_eigsolver = KrylovKit.Arnoldi(; maxiter=gradient_maxiter, tol=gradient_tol, eager=true)
-    ```
-
-- `gradient_alg`: Algorithm to compute the gradient fixed-point
-
-    ```
-    gradient_alg = LinSolver(; solver_alg=gradient_linsolver, iterscheme=gradient_iterscheme)
-    ```
-
-- `reuse_env=true`: If `true`, the current optimization step is initialized on the previous
-  environment, otherwise a random environment is used
-- `optimizer_tol=1e-4`: Gradient norm tolerance of the optimizer
-- `optimizer_maxiter=100`: Maximal number of optimization steps
-- `lbfgs_memory=20`: Size of limited memory representation of BFGS Hessian matrix
-- `optimizer`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization
-
-    ```
-    optimizer=LBFGS(lbfgs_memory; maxiter=optimizer_maxiter, gradtol=optimizer_tol, verbosity=3)
-    ```
+- `reuse_env=$(Defaults.reuse_env)`: If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
+- `optimizer_tol=$(Defaults.optimizer_tol)`: Gradient norm tolerance of the optimizer.
+- `optimizer_maxiter=$(Defaults.optimizer_maxiter)`: Maximal number of optimization steps.
+- `optimizer_verbosity=$(Defaults.optimizer_verbosity)`: Optimizer output information verbosity.
+- `optimizer_alg=:$(Defaults.optimizer_alg)`: Default `OptimKit.OptimizerAlgorithm` for PEPS optimization.
+- `lbfgs_memory=$(Defaults.lbfgs_memory)`: Size of limited memory representation of BFGS Hessian matrix.
 
 # OhMyThreads scheduler
-- `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`
+- `scheduler=Ref{Scheduler}(...)`: Multi-threading scheduler which can be accessed via `set_scheduler!`.
 """
 module Defaults
 using OhMyThreads
@@ -90,11 +63,11 @@ const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerr, :truncspac
 const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
-const svd_rrule_alg = :arnoldi # ∈ {:gmres, :bicgstab, :arnoldi}
 const svd_rrule_verbosity = -1
+const svd_rrule_alg = :arnoldi # ∈ {:gmres, :bicgstab, :arnoldi}
 const krylovdim_factor = 1.4
 
-# Projector
+# Projectors
 const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
 const projector_verbosity = 0
 
