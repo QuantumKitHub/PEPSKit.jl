@@ -19,19 +19,6 @@ end
 function SimultaneousCTMRG(; kwargs...)
     return select_algorithm(CTMRGAlgorithm; alg=:simultaneous, kwargs...)
 end
-# function SimultaneousCTMRG(;
-#     tol=Defaults.ctmrg_tol,
-#     maxiter=Defaults.ctmrg_maxiter,
-#     miniter=Defaults.ctmrg_miniter,
-#     verbosity=Defaults.ctmrg_verbosity,
-#     svd_alg=SVDAdjoint(),
-#     trscheme=truncation_scheme_symbols[Defaults.trscheme],
-#     projector_alg=projector_symbols[Defaults.projector_alg],
-# )
-#     return SimultaneousCTMRG(
-#         tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
-#     )
-# end
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners = dtmap(eachcoordinate(network, 1:4)) do idx

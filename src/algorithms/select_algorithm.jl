@@ -162,7 +162,9 @@ function select_algorithm(
         χenv = maximum(env₀.corners) do corner
             return dim(space(corner, 1))
         end
-        krylovdim = round(Int, Defaults.krylovdim_factor * χenv)
+        krylovdim = max(
+            Defaults.svd_rrule_min_krylovdim, round(Int, Defaults.krylovdim_factor * χenv)
+        )
         rrule_alg = (; tol=1e1tol, verbosity=verbosity - 2, krylovdim, svd_alg.rrule_alg...)
         svd_alg = (; rrule_alg, svd_alg...)
     end
@@ -369,6 +371,8 @@ function select_algorithm(
     rrule_algorithm = if rrule_alg isa NamedTuple
         rrule_kwargs = (;
             alg=Defaults.svd_rrule_alg,
+            tol=Defaults.svd_rrule_tol,
+            krylovdim=Defaults.svd_rrule_min_krylovdim,
             verbosity=Defaults.svd_rrule_verbosity,
             rrule_alg...,
         ) # overwrite with specified kwargs
@@ -386,6 +390,8 @@ function select_algorithm(
             rrule_kwargs.alg
         end
         rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+        rrule_type <: BiCGStab &&
+            (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
         rrule_type(; rrule_kwargs...)
     else
         rrule_alg

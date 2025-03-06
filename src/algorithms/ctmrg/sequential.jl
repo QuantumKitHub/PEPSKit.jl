@@ -17,21 +17,8 @@ struct SequentialCTMRG <: CTMRGAlgorithm
     projector_alg::ProjectorAlgorithm
 end
 function SequentialCTMRG(; kwargs...)
-    return select_algorithm(CTMRGAlgorithm; alg=:simultaneous, kwargs...)
+    return select_algorithm(CTMRGAlgorithm; alg=:sequential, kwargs...)
 end
-# function SequentialCTMRG(;
-#     tol=Defaults.ctmrg_tol,
-#     maxiter=Defaults.ctmrg_maxiter,
-#     miniter=Defaults.ctmrg_miniter,
-#     verbosity=Defaults.ctmrg_verbosity,
-#     svd_alg=SVDAdjoint(),
-#     trscheme=truncation_scheme_symbols[Defaults.trscheme],
-#     projector_alg=projector_symbols[Defaults.projector_alg],
-# )
-#     return SequentialCTMRG(
-#         tol, maxiter, miniter, verbosity, projector_alg(; svd_alg, trscheme, verbosity)
-#     )
-# end
 
 """
     ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)

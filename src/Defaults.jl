@@ -88,6 +88,8 @@ const sparse = false # TODO: implement sparse CTMRG
 # SVD forward & reverse
 const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerr, :truncspace, :truncbelow}
 const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
+const svd_rrule_tol = ctmrg_tol
+const svd_rrule_min_krylovdim = 32
 const svd_rrule_alg = :arnoldi # ∈ {:gmres, :bicgstab, :arnoldi}
 const svd_rrule_verbosity = -1
 const krylovdim_factor = 1.4

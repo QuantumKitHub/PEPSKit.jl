@@ -31,23 +31,17 @@ gradmodes = [
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:fixed),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver_alg=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:fixed),
-        LinSolver(; solver_alg=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(;
-            solver_alg=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed
-        ),
-        EigSolver(;
-            solver_alg=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge
-        ),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:fixed),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
     ],
     [  # Only use :diffgauge due to high gauge-sensitivity (perhaps due to small χenv?)
         nothing,
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver_alg=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(;
-            solver_alg=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge
-        ),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
     ],
 ]
 steps = -0.01:0.005:0.01
