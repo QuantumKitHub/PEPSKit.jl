@@ -25,7 +25,7 @@ lattice = InfiniteSquare(2, 2)
 
 # spaces
 Vpeps = U1Space(0 => 2, 1 => 1, -1 => 1)
-Venv = U1Space(0 => 6, 1 => 4, -1 => 4, 2 => 2, -2 => 2)
+Venv = U1Space(0 => 6, 1 => 4, -1 => 4)
 # staggered auxiliary physical charges -> encode Néel order
 Saux = [
     U1Irrep(-1//2) U1Irrep(1//2)
