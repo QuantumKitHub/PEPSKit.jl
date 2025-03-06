@@ -94,7 +94,7 @@ keyword arguments are:
 
 ### Optimizer settings
 
-Supply the optimizer algorithm via `optimization_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
+Supply the optimizer algorithm via `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 using either a `NamedTuple` of keyword arguments or a `OptimKit.OptimizationAlgorithm` directly. By default,
 `OptimKit.LBFGS` is used in combination with a `HagerZhangLineSearch`. The supported
 keyword arguments are:

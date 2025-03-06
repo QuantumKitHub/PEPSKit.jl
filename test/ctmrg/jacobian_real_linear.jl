@@ -6,9 +6,9 @@ using TensorKit, KrylovKit, PEPSKit
 using PEPSKit: ctmrg_iteration, gauge_fix, fix_relative_phases, fix_global_phases
 
 algs = [
-    (:fixed, SimultaneousCTMRG(; projector_alg=HalfInfiniteProjector)),
-    (:diffgauge, SequentialCTMRG(; projector_alg=HalfInfiniteProjector)),
-    (:diffgauge, SimultaneousCTMRG(; projector_alg=HalfInfiniteProjector)),
+    (:fixed, SimultaneousCTMRG(; projector_alg=:halfinfinite)),
+    (:diffgauge, SequentialCTMRG(; projector_alg=:halfinfinite)),
+    (:diffgauge, SimultaneousCTMRG(; projector_alg=:halfinfinite)),
     # TODO: FullInfiniteProjector errors since even real_err_∂A, real_err_∂x are finite?
     # (:fixed, SimultaneousCTMRG(; projector_alg=FullInfiniteProjector)),
     # (:diffgauge, SequentialCTMRG(; projector_alg=FullInfiniteProjector)),
