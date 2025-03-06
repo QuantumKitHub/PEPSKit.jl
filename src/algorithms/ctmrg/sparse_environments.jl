@@ -62,11 +62,11 @@ direction, i.e. the way the environment and PEPS tensors connect.
 function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
     corner_functions = Dict(
         NORTHWEST => enlarge_northwest_corner,
-        NORTHEAST => enlarge_northeast_corner, 
+        NORTHEAST => enlarge_northeast_corner,
         SOUTHEAST => enlarge_southeast_corner,
-        SOUTHWEST => enlarge_southwest_corner
+        SOUTHWEST => enlarge_southwest_corner,
     )
-    
+
     haskey(corner_functions, dir) || error("Wrong direction: $dir")
     corner = corner_functions[dir](Q.E_1, Q.C, Q.E_2, Q.A)
     return corner / norm(corner)

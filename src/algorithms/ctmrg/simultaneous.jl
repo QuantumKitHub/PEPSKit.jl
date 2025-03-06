@@ -78,7 +78,7 @@ function simultaneous_projectors(
     coordinate′ = _next_coordinate(coordinate, size(enlarged_corners)[2:3]...)
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     svd_alg = svd_algorithm(alg, coordinate)
-    
+
     return compute_projector(ec[1], ec[2], svd_alg, alg)
 end
 function simultaneous_projectors(
@@ -95,7 +95,7 @@ function simultaneous_projectors(
         enlarged_corners[coordinate3...],
     )
     svd_alg = svd_algorithm(alg, coordinate)
-    Q1, Q2 = ec[1]⊙ec[2], ec[3]⊙ec[4]
+    Q1, Q2 = ec[1] ⊙ ec[2], ec[3] ⊙ ec[4]
     return compute_projector(Q1, Q2, svd_alg, alg)
 end
 

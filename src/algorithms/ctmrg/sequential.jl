@@ -90,10 +90,10 @@ function sequential_projectors(
     r′ = _prev(r, size(env, 2))
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)), SOUTHWEST)
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)), NORTHWEST)
-    
+
     svd_alg = svd_algorithm(alg, coordinate)
 
-    return compute_projector(Q1, Q2, svd_alg, alg)    
+    return compute_projector(Q1, Q2, svd_alg, alg)
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
@@ -109,10 +109,9 @@ function sequential_projectors(
         TensorMap(EnlargedCorner(network, env, coordinate_ne), NORTHEAST),
     )
     svd_alg = svd_algorithm(alg, coordinate)
-    Q1, Q2 = ec[1]⊙ec[2], ec[3]⊙ec[4]
+    Q1, Q2 = ec[1] ⊙ ec[2], ec[3] ⊙ ec[4]
     return compute_projector(Q1, Q2, svd_alg, alg)
 end
-
 
 """
     renormalize_sequentially(col::Int, projectors, network, env)

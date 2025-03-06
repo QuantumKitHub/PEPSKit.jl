@@ -75,19 +75,22 @@ is the left and right tensors. After the projection, the arrow of the bond is no
 ```
 L⊙R=(L⊙R)*(L⊙R)^-1*(L⊙R)=(L⊙R)*(U*S*V)^-1*(L⊙R)=(L⊙R)*V'S^{-1}U'*(L⊙R)=L⊙(R*V'*S^{-1/2})*(S^{-1/2}*U'*L)⊙R=L⊙P_L*P_R⊙R
 ```
-""" 
-#help function for the projection, particularly for the sign of fermions
-⊙(t1::AbstractTensorMap, t2::AbstractTensorMap)=twist(t1, filter(i -> !isdual(space(t1, i)), domainind(t1)))*t2
+"""
+#helper function for the projection, particularly for the sign of fermions
+function ⊙(t1::AbstractTensorMap, t2::AbstractTensorMap)
+    return twist(t1, filter(i -> !isdual(space(t1, i)), domainind(t1))) * t2
+end
 
+# TODO: combine svd_alg and alg into a single struct; tried, but zygote chokes.
 function compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg, alg)
     if dim(codomain(L)) > dim(domain(L))
-        _,L= leftorth!(L)
-        R,_=rightorth!(R)
+        _, L = leftorth!(L)
+        R, _ = rightorth!(R)
     end
-    LR=L⊙R
-    n_factor=norm(LR)
-    LR=LR/n_factor
-    
+    LR = L ⊙ R
+    n_factor = norm(LR)
+    LR = LR / n_factor
+
     U, S, V, truncation_error = PEPSKit.tsvd!(LR, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
@@ -102,7 +105,7 @@ function compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg, 
     isqS = sdiag_pow(S, -0.5)
     PL = R * V' * isqS / norm_factor
     PR = isqS * U' * L / norm_factor
-    
+
     truncation_error /= norm(S)
     condition_number = ignore_derivatives() do
         _condition_number(S)

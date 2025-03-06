@@ -247,33 +247,7 @@ function right_projector(E_1, C, E_2, U, isqS, A::PFTensor)
         E_1[χ4 D3; χ_out]
 end
 
-"""
-    contract_projectors(U, S, V, Q, Q_next)
-
-Compute projectors based on a SVD of `Q * Q_next`, where the inverse square root
-`isqS` of the singular values is computed.
-
-Left projector:
-```
-    -- |~~~~~~| -- |~~|
-       |Q_next|    |V'| -- isqS --
-    == |~~~~~~| == |~~|
-```
-
-Right projector:
-```
-               |~~| -- |~~~| --
-    -- isqS -- |U'|    | Q |
-               |~~| == |~~~| ==
-```
-"""
-function contract_projectors(U, S, V, Q, Q_next)
-    isqS = sdiag_pow(S, -0.5)
-    P_left = Q_next * V' * isqS  # use * to respect fermionic case
-    P_right = isqS * U' * Q
-    return P_left, P_right
-end
-
+# TODO: clean up infinite_environment?
 """
     half_infinite_environment(quadrant1::AbstractTensorMap{T,S,3,3}, quadrant2::AbstractTensorMap{T,S,N,N})
     half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,  A_1::P, A_2::P)
