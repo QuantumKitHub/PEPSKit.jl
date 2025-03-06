@@ -247,12 +247,12 @@ function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N
 end
 
 """
-    add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector}) where {S}
+    MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector}) where {S}
 
 Change the spaces of a `LocalOperator` by fusing in an auxiliary charge on every site,
 according to a given matrix of 'auxiliary' physical charges.
 """
-function add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
+function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
     size(H.lattice) == size(charges) ||
         throw(ArgumentError("Incompatible lattice and auxiliary charge sizes"))
     sectortype(H) === eltype(charges) ||

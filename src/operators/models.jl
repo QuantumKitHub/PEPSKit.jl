@@ -180,11 +180,10 @@ function MPSKitModels.bose_hubbard_model(
     mu=0.0,
     n::Integer=0,
 )
-    @assert n == 0 "Currently no support for imposing a fixed particle number"
     hopping_term =
         a_plusmin(elt, symmetry; cutoff=cutoff) + a_minplus(elt, symmetry; cutoff=cutoff)
     N = a_number(elt, symmetry; cutoff=cutoff)
-    interaction_term = contract_onesite(N, N - id(domain(N)))
+    interaction_term = MPSKitModels.contract_onesite(N, N - id(domain(N)))
 
     spaces = fill(space(N, 1), (lattice.Nrows, lattice.Ncols))
 
@@ -199,7 +198,7 @@ function MPSKitModels.bose_hubbard_model(
     elseif symmetry === U1Irrep
         isinteger(2n) ||
             throw(ArgumentError("`U₁` symmetry requires halfinteger particle number"))
-        H = MPSKit.add_physical_charge(H, fill(U1Irrep(n), size(spaces)...))
+        H = MPSKit.add_physical_charge(H, fill(U1Irrep(-n), size(spaces)...)) # TODO: settle on convention here?
     else
         throw(ArgumentError("symmetry not implemented"))
     end
