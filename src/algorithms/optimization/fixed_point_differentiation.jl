@@ -19,7 +19,7 @@ struct GeomSum{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-GeomSum(; kwargs...) = select_algorithm(GradMode; alg=:GeomSum, kwargs...)
+GeomSum(; kwargs...) = select_algorithm(GradMode; alg=:geomsum, kwargs...)
 
 """
     struct ManualIter(; tol=$(Defaults.gradient_tol), maxiter=$(Defaults.gradient_maxiter),
@@ -41,7 +41,7 @@ end
 ManualIter(; kwargs...) = select_algorithm(GradMode; alg=:manualiter, kwargs...)
 
 """
-    struct LinSolver(; solver=TODO, iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
+    struct LinSolver(; solver_alg=TODO, iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
@@ -53,12 +53,12 @@ the differentiated iteration consists of a CTMRG iteration and a subsequent gaug
 such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
 struct LinSolver{F} <: GradMode{F}
-    solver::KrylovKit.LinearSolver
+    solver_alg::KrylovKit.LinearSolver
 end
 LinSolver(; kwargs...) = select_algorithm(GradMode; alg=:linsolver, kwargs...)
 
 """
-    struct EigSolver(; solver=TODO, iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
+    struct EigSolver(; solver_alg=TODO, iterscheme=$(Defaults.gradient_iterscheme)) <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.
@@ -70,7 +70,7 @@ the differentiated iteration consists of a CTMRG iteration and a subsequent gaug
 such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
 """
 struct EigSolver{F} <: GradMode{F}
-    solver::KrylovKit.KrylovAlgorithm
+    solver_alg::KrylovKit.KrylovAlgorithm
 end
 EigSolver(; kwargs...) = select_algorithm(GradMode; alg=:eigsolver, kwargs...)
 
@@ -221,8 +221,8 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::LinSolver)
-    y, info = reallinsolve(∂f∂x, ∂F∂x, y₀, alg.solver, 1, -1)
-    if alg.solver.verbosity > 0 && info.converged != 1
+    y, info = reallinsolve(∂f∂x, ∂F∂x, y₀, alg.solver_alg, 1, -1)
+    if alg.solver_alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 
@@ -235,11 +235,11 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         return (y + X[2] * ∂F∂x, X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver)
-    if alg.solver.verbosity > 0 && info.converged < 1
+    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
+    if alg.solver_alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-    if norm(vecs[1][2]) < 1e-2 * alg.solver.tol
+    if norm(vecs[1][2]) < 1e-2 * alg.solver_alg.tol
         @warn "Fixed-point gradient computation using Arnoldi failed: auxiliary component should be finite but was $(vecs[1][2]). Possibly the Jacobian does not have a unique eigenvalue 1."
     end
     y = scale(vecs[1][1], 1 / vecs[1][2])

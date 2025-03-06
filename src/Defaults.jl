@@ -58,7 +58,7 @@ Module containing default algorithm parameter values and arguments.
 - `gradient_alg`: Algorithm to compute the gradient fixed-point
 
     ```
-    gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme=gradient_iterscheme)
+    gradient_alg = LinSolver(; solver_alg=gradient_linsolver, iterscheme=gradient_iterscheme)
     ```
 
 - `reuse_env=true`: If `true`, the current optimization step is initialized on the previous
