@@ -338,7 +338,7 @@ function select_algorithm(
         alg
     end
 
-    return isnothing(arg) ? alg_type() : alg_type(η)
+    return isnothing(η) ? alg_type() : alg_type(η)
 end
 
 function select_algorithm(
