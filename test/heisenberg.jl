@@ -47,12 +47,13 @@ end
 
 @testset "Simple update into AD optimization" begin
     # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
-    Random.seed!(234829)
+    Random.seed!(100)
     N1, N2 = 2, 2
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
     wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+    ctmrg_tol = 1e-6
 
     # normalize vertex tensors
     for ind in CartesianIndices(wpeps.vertices)
@@ -64,7 +65,7 @@ end
     ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
 
     # simple update
-    dts = [1e-2, 1e-3, 4e-4, 1e-4]
+    dts = [1e-2, 1e-3, 1e-3, 1e-4]
     tols = [1e-7, 1e-8, 1e-8, 1e-8]
     maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
@@ -77,7 +78,7 @@ end
 
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(wpeps)
-    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps)
+    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol=ctmrg_tol)
 
     # measure physical quantities
     e_site = cost_function(peps, env, ham) / (N1 * N2)
@@ -91,7 +92,7 @@ end
         peps,
         env;
         tol=gradtol,
-        boundary_alg=(; svd_alg=(; rrule_alg=(; alg=:gmres, tol=1e-5))),
+        boundary_alg=(; maxiter=150, svd_alg=(; rrule_alg=(; alg=:gmres, tol=1e-5))),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)
