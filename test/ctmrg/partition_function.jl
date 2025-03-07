@@ -89,8 +89,8 @@ Random.seed!(81812781143)
 env0 = CTMRGEnv(Z, χenv)
 
 # cover all different flavors
-ctm_styles = [SequentialCTMRG, SimultaneousCTMRG]
-projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
+ctm_styles = [:sequential, :simultaneous]
+projector_algs = [:halfinfinite, :fullinfinite]
 
 @testset "Classical Ising partition function using $alg with $projector_alg" for (
     alg, projector_alg

@@ -309,7 +309,7 @@ function select_algorithm(
     return isnothing(η) ? alg_type() : alg_type(η)
 end
 
-const SVD_FWD_SYMBOLS = IdDict{Symbol,<:Any}(
+const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
     :sdd => TensorKit.SDD,
     :svd => TensorKit.SVD,
     :iterative =>
