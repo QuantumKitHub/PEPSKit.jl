@@ -131,8 +131,8 @@ Base.eltype(::Type{InfinitePEPO{T}}) where {T} = T
 Base.eltype(A::InfinitePEPO) = eltype(typeof(A))
 
 Base.copy(A::InfinitePEPO) = InfinitePEPO(copy(unitcell(A)))
-function Base.similar(A::InfinitePEPO, args...)
-    return InfinitePEPO(map(t -> similar(t, args...), unitcell(A)))
+function Base.similar(A::InfinitePEPO, T::Type{TorA}=scalartype(A)) where {TorA}
+    return InfinitePEPO(map(t -> similar(t, T), unitcell(A)))
 end
 Base.repeat(A::InfinitePEPO, counts...) = InfinitePEPO(repeat(unitcell(A), counts...))
 
@@ -169,6 +169,15 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
     return InfiniteSquareNetwork(
         map(tuple, unitcell(top), unitcell(bot), eachslice(unitcell(mid); dims=3)...)
     )
+end
+
+## Vector interface
+
+function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPO}
+    return scalartype(eltype(NT))
+end
+function VectorInterface.zerovector(A::InfinitePEPO)
+    return InfinitePEPO(zerovector(unitcell(A)))
 end
 
 ## (Approximate) equality

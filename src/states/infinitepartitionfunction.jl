@@ -120,8 +120,10 @@ Base.eltype(::Type{InfinitePartitionFunction{T}}) where {T} = T
 Base.eltype(A::InfinitePartitionFunction) = eltype(typeof(A))
 
 Base.copy(A::InfinitePartitionFunction) = InfinitePartitionFunction(copy(unitcell(A)))
-function Base.similar(A::InfinitePartitionFunction, args...)
-    return InfinitePartitionFunction(map(t -> similar(t, args...), unitcell(A)))
+function Base.similar(
+    A::InfinitePartitionFunction, T::Type{TorA}=scalartype(A)
+) where {TorA}
+    return InfinitePartitionFunction(map(t -> similar(t, T), unitcell(A)))
 end
 function Base.repeat(A::InfinitePartitionFunction, counts...)
     return InfinitePartitionFunction(repeat(unitcell(A), counts...))
@@ -145,6 +147,15 @@ virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n
 
 function InfiniteSquareNetwork(state::InfinitePartitionFunction)
     return InfiniteSquareNetwork(unitcell(state))
+end
+
+## Vector interface
+
+function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePartitionFunction}
+    return scalartype(eltype(NT))
+end
+function VectorInterface.zerovector(A::InfinitePartitionFunction)
+    return InfinitePartitionFunction(zerovector(unitcell(A)))
 end
 
 ## (Approximate) equality

@@ -122,8 +122,8 @@ Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
 Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
 
 Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
-function Base.similar(A::InfinitePEPS, args...)
-    return InfinitePEPS(map(t -> similar(t, args...), unitcell(A)))
+function Base.similar(A::InfinitePEPS, T::Type{TorA}=scalartype(A)) where {TorA}
+    return InfinitePEPS(map(t -> similar(t, T), unitcell(A)))
 end
 Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
 

@@ -30,8 +30,8 @@ Base.eltype(n::InfiniteSquareNetwork) = eltype(typeof(n))
 Base.eltype(::Type{InfiniteSquareNetwork{O}}) where {O} = O
 
 Base.copy(n::InfiniteSquareNetwork) = InfiniteSquareNetwork(copy(unitcell(n)))
-function Base.similar(n::InfiniteSquareNetwork, args...)
-    return InfiniteSquareNetwork(map(t -> similar(t, args...), unitcell(n)))
+function Base.similar(n::InfiniteSquareNetwork, T::Type{TorA}=scalartype(n)) where {TorA}
+    return InfiniteSquareNetwork(map(t -> similar(t, T), unitcell(n)))
 end
 function Base.repeat(n::InfiniteSquareNetwork, counts...)
     return InfiniteSquareNetwork(repeat(unitcell(n), counts...))
@@ -53,6 +53,7 @@ end
 virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## Vector interface
+
 function VectorInterface.scalartype(::Type{T}) where {T<:InfiniteSquareNetwork}
     return scalartype(eltype(T))
 end
