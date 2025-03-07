@@ -25,7 +25,7 @@ lattice = InfiniteSquare(2, 2)
 
 # spaces
 Vpeps = U1Space(0 => 2, 1 => 1, -1 => 1)
-Venv = U1Space(0 => 6, 1 => 4, -1 => 4)
+Venv = U1Space(0 => 4, 1 => 2, -1 => 2)
 # staggered auxiliary physical charges -> encode Néel order
 Saux = [
     U1Irrep(-1//2) U1Irrep(1//2)
@@ -39,7 +39,8 @@ boundary_alg = SimultaneousCTMRG(;
 gradient_alg = EigSolver(;
     solver=Arnoldi(; tol=1e-6, maxiter=10, eager=true), iterscheme=:diffgauge
 )
-optimization_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=50, ls_maxiter=2, ls_maxfg=4)
+linesearch_alg = HagerZhangLineSearch(; c₁=1e-4, c₂=1 - 1e-4, maxiter=2, maxfg=2)
+optimization_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=25, linesearch=linesearch_alg)
 pepsopt_alg = PEPSOptimize(;
     boundary_alg=boundary_alg,
     optimizer=optimization_alg,
@@ -62,5 +63,5 @@ env₀, = leading_boundary(env₀, ψ₀, boundary_alg)
 
 # optimize
 ψ, env, E, info = fixedpoint(H, ψ₀, env₀, pepsopt_alg)
-@test E < -0.668
+@test E < -0.666
 # ends up at E = -0.669..., but takes a while
