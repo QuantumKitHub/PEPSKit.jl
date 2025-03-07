@@ -119,6 +119,11 @@ function select_algorithm(
     )
 end
 
+const OPTIMIZATION_SYMBOLS = IdDict{Symbol,Type{<:OptimKit.OptimizationAlgorithm}}(
+    :gradientdescent => GradientDescent,
+    :conjugategradient => ConjugateGradient,
+    :lbfgs => LBFGS,
+)
 function select_algorithm(
     ::Type{OptimKit.OptimizationAlgorithm};
     alg=Defaults.optimizer_alg,
@@ -128,22 +133,21 @@ function select_algorithm(
     lbfgs_memory=Defaults.lbfgs_memory,
     # TODO: add linesearch, ... to kwargs and defaults?
 )
-    # replace symbol with projector alg type
+    # replace symbol with optimizer alg type
     alg_type = if alg isa Symbol
-        if alg == :gradientdescent
-            GradientDescent
-        elseif alg == :conjugategradient
-            ConjugateGradient
-        elseif alg == :lbfgs
-            (; kwargs...) -> LBFGS(lbfgs_memory; kwargs...)
-        else
+        haskey(OPTIMIZATION_SYMBOLS, alg) ||
             throw(ArgumentError("unknown optimizer algorithm: $alg"))
-        end
+        OPTIMIZATION_SYMBOLS[alg]
     else
         alg
     end
 
-    return alg_type(; gradtol=tol, maxiter, verbosity)
+    # instantiate algorithm
+    return if alg_type <: LBFGS
+        alg_type(lbfgs_memory; gradtol=tol, maxiter, verbosity)
+    else
+        alg_type(; gradtol=tol, maxiter, verbosity)
+    end
 end
 
 function select_algorithm(
@@ -175,6 +179,9 @@ function select_algorithm(
     )
 end
 
+const CTMRG_SYMBOLS = IdDict{Symbol,Type{<:CTMRGAlgorithm}}(
+    :simultaneous => SimultaneousCTMRG, :sequential => SequentialCTMRG
+)
 function select_algorithm(
     ::Type{CTMRGAlgorithm};
     alg=Defaults.ctmrg_alg,
@@ -188,13 +195,8 @@ function select_algorithm(
 )
     # replace symbol with projector alg type
     alg_type = if alg isa Symbol
-        if alg == :simultaneous
-            SimultaneousCTMRG
-        elseif alg == :sequential
-            SequentialCTMRG
-        else
-            throw(ArgumentError("unknown CTMRG algorithm: $alg"))
-        end
+        haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
+        CTMRG_SYMBOLS[alg]
     else
         alg
     end
@@ -207,6 +209,9 @@ function select_algorithm(
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
 end
 
+const PROJECTOR_SYMBOLS = IdDict{Symbol,Type{<:ProjectorAlgorithm}}(
+    :halfinfinite => HalfInfiniteProjector, :fullinfinite => FullInfiniteProjector
+)
 function select_algorithm(
     ::Type{ProjectorAlgorithm};
     alg=Defaults.projector_alg,
@@ -216,13 +221,9 @@ function select_algorithm(
 )
     # replace symbol with projector alg type
     alg_type = if alg isa Symbol
-        if alg == :halfinfinite
-            HalfInfiniteProjector
-        elseif alg == :fullinfinite
-            FullInfiniteProjector
-        else
+        haskey(PROJECTOR_SYMBOLS, alg) ||
             throw(ArgumentError("unknown projector algorithm: $alg"))
-        end
+        PROJECTOR_SYMBOLS[alg]
     else
         alg
     end
@@ -238,6 +239,12 @@ function select_algorithm(
     return alg_type(svd_algorithm, truncation_scheme, verbosity)
 end
 
+const GRADIENT_MODE_SYMBOLS = IdDict{Symbol,Type{<:GradMode}}(
+    :geomsum => GeomSum,
+    :manualiter => ManualIter,
+    :linsolver => LinSolver,
+    :eigsolver => EigSolver,
+)
 function select_algorithm(
     ::Type{GradMode};
     alg=Defaults.gradient_alg,
@@ -249,17 +256,9 @@ function select_algorithm(
 )
     # replace symbol with GradMode alg type
     alg_type = if alg isa Symbol
-        if alg == :geomsum
-            GeomSum
-        elseif alg == :manualiter
-            ManualIter
-        elseif alg == :linsolver
-            LinSolver
-        elseif alg == :eigsolver
-            EigSolver
-        else
+        haskey(GRADIENT_MODE_SYMBOLS, alg) ||
             throw(ArgumentError("unknown GradMode algorithm: $alg"))
-        end
+        GRADIENT_MODE_SYMBOLS[alg]
     else
         alg
     end
@@ -315,25 +314,22 @@ function select_algorithm(
     return gradient_algorithm
 end
 
+const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
+    :fixedspace => FixedSpaceTruncation,
+    :notrunc => TensorKit.NoTruncation,
+    :truncerr => TensorKit.TruncationError,
+    :truncdim => TensorKit.TruncationDimension,
+    :truncspace => TensorKit.TruncationSpace,
+    :truncbelow => TensorKit.TruncationCutoff,
+)
 function select_algorithm(
     ::Type{TensorKit.TruncationScheme}; alg=Defaults.trscheme, η=nothing
 )
-    alg_type = if alg isa Symbol # replace Symbol with TruncationScheme type
-        if alg == :fixedspace
-            FixedSpaceTruncation
-        elseif alg == :notrunc
-            TensorKit.NoTruncation
-        elseif alg == :truncerr
-            TensorKit.TruncationError
-        elseif alg == :truncdim
-            TensorKit.TruncationDimension
-        elseif alg == :truncspace
-            TensorKit.TruncationSpace
-        elseif alg == :truncbelow
-            TensorKit.TruncationCutoff
-        else
+    # replace Symbol with TruncationScheme type
+    alg_type = if alg isa Symbol
+        haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||
             throw(ArgumentError("unknown truncation scheme: $alg"))
-        end
+        TRUNCATION_SCHEME_SYMBOLS[alg]
     else
         alg
     end
