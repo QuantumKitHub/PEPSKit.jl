@@ -64,7 +64,7 @@ problem using iterative solvers.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
     - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
-* `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg=:$(Defaults.gradient_linsolver)`: Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be a `KrylovKit.LinearSolver` type or the corresponding symbol:
+* `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_linsolver)`: Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
 """
@@ -87,7 +87,7 @@ problem as an eigenvalue problem.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
     - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
-* `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)`: Linear solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be a `KrylovKit.KrylovAlgorithm` type or the corresponding symbol:
+* `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)`: Eigen solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
 """
 struct EigSolver{F} <: GradMode{F}

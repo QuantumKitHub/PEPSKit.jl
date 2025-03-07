@@ -82,7 +82,7 @@ keyword arguments are:
 
 * `tol::Real=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration.
 * `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of gradient problem iterations.
-* `alg::Union{Symbol,Type{GradMode}}=:$(Defaults.gradient_alg)`: Gradient algorithm type, can be any `GradMode` type or the corresponding symbol:
+* `alg::Symbol=:$(Defaults.gradient_alg)`: Gradient algorithm variant, can be one of the following:
     - `:geomsum`: Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
     - `:manualiter`: Iterate gradient geometric sum manually, see ['ManualIter'](@ref)
     - `:linsolver`: Solve fixed-point gradient linear problem using iterative solver, see ['LinSolver'](@ref)
@@ -99,7 +99,7 @@ using either a `NamedTuple` of keyword arguments or a `OptimKit.OptimizationAlgo
 `OptimKit.LBFGS` is used in combination with a `HagerZhangLineSearch`. The supported
 keyword arguments are:
 
-* `alg::Union{Symbol,Type{OptimKit.OptimizationAlgorithm}}=:$(Defaults.optimizer_alg)`: Optimizer algorithm, can be any `OptimKit.OptimizationAlgorithm` type or the corresponding symbol:
+* `alg::Symbol=:$(Defaults.optimizer_alg)`: Optimizer algorithm, can be one of the following:
     - `:gradientdescent`: Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
     - `:conjugategradient`: Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
     - `:lbfgs`: L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)

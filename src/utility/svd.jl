@@ -19,11 +19,11 @@ removes the divergences from the adjoint.
 
 ## Keyword arguments
 
-* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg=Defaults.svd_fwd_alg)`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is an `Algorithm` type or the corresponding `Symbol`:
+* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=Defaults.svd_fwd_alg)`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
     - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
     - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
     - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
-* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg=Defaults.svd_rrule_alg)`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is an `Algorithm` type or the corresponding `Symbol`:
+* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=Defaults.svd_rrule_alg)`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details

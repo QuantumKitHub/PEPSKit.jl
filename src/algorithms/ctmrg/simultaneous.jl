@@ -1,13 +1,20 @@
 """
-    SimultaneousCTMRG(; tol=$(Defaults.ctmrg_tol), maxiter=$(Defaults.ctmrg_maxiter),
-                      miniter=$(Defaults.ctmrg_miniter), verbosity=$(Defaults.ctmrg_verbosity),
-                      svd_alg=TODO, trscheme=TODO,
-                      projector_alg=TODO)
+    struct SimultaneousCTMRG
 
 CTMRG algorithm where all sides are grown and renormalized at the same time. In particular,
-the projectors are applied to the corners from two sides simultaneously. The projectors are
-computed using `projector_alg` from `svd_alg` SVDs where the truncation scheme is set via 
-`trscheme`.
+the projectors are applied to the corners from two sides simultaneously.
+
+## Keyword arguments
+
+For a full description, see [`leading_boundary`](@ref). The supported keywords are:
+
+* `tol::Real=$(Defaults.ctmrg_tol)`
+* `maxiter::Int=$(Defaults.ctmrg_maxiter)`
+* `miniter::Int=$(Defaults.ctmrg_miniter)`
+* `verbosity::Int=$(Defaults.ctmrg_verbosity)`
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`
+* `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
+* `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
 struct SimultaneousCTMRG <: CTMRGAlgorithm
     tol::Float64

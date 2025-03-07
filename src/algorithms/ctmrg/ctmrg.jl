@@ -34,11 +34,11 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     2. Initialization and convergence info
     3. Iteration info
     4. Debug info
-* `alg::Union{Symbol,Type{CTMRGAlgorithm}}=:$(Defaults.ctmrg_alg)`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
+* `alg::Symbol=:$(Defaults.ctmrg_alg)`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
 
 ### Projector algorithm
 
-* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg=:$(Defaults.trscheme))`: Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be any `TensorKit.TruncationScheme` type or one of the following symbols:
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`: Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace`: Keep virtual spaces fixed during projection
     - `:notrunc`: No singular values are truncated and the performed SVDs are exact
     - `:truncerr`: Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
@@ -46,7 +46,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncspace`: Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:truncbelow`: Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}`: SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
-* `projector_alg::Union{Symbol,Type{ProjectorAlgorithm}}=:$(Defaults.projector_alg)`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
+* `projector_alg::Symbol=:$(Defaults.projector_alg)`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)

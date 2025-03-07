@@ -6,8 +6,19 @@
 
 CTMRG algorithm where the expansions and renormalization is performed sequentially
 column-wise. This is implemented as a growing and projecting step to the left, followed by
-a clockwise rotation (performed four times). The projectors are computed using
-`projector_alg` from `svd_alg` SVDs where the truncation scheme is set via `trscheme`.
+a clockwise rotation (performed four times).
+
+## Keyword arguments
+
+For a full description, see [`leading_boundary`](@ref). The supported keywords are:
+
+* `tol::Real=$(Defaults.ctmrg_tol)`
+* `maxiter::Int=$(Defaults.ctmrg_maxiter)`
+* `miniter::Int=$(Defaults.ctmrg_miniter)`
+* `verbosity::Int=$(Defaults.ctmrg_verbosity)`
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`
+* `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
+* `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
 struct SequentialCTMRG <: CTMRGAlgorithm
     tol::Float64
