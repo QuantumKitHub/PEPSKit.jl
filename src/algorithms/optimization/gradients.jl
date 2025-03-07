@@ -36,7 +36,7 @@ end
 function compute_gradient(
     operator, peps::InfinitePEPS, env::CTMRGEnv, alg::FixedPointGradient
 )
-    local info
+    local info, env′
     E, gs = withgradient(peps) do ψ
         env′, info = hook_pullback(
             leading_boundary, env, ψ, alg.boundary_alg; alg_rrule=alg.gradient_alg
@@ -48,7 +48,7 @@ end
 
 function compute_gradient(operator, peps::InfinitePEPS, env::CTMRGEnv, alg::SimpleGradient)
     local info
-    env′ = deepcopy(env)
+    local env′ = deepcopy(env)
     E, gs = withgradient(peps) do ψ
         for _ in 1:(alg.maxiter)
             env′, info = ctmrg_iteration(InfiniteSquareNetwork(ψ), env′, alg.boundary_alg)
