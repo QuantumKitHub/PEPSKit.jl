@@ -39,21 +39,16 @@ function _su_bondx!(
     A, B = peps.vertices[row, col], peps.vertices[row, cp1]
     sqrtsA = ntuple(dir -> (dir == EAST), 4)
     sqrtsB = ntuple(dir -> (dir == WEST), 4)
-    _allfalse, _alltrue = ntuple(Returns(false), 4), ntuple(Returns(true), 4)
-    A = _absorb_weights(A, peps.weights, row, col, Tuple(1:4), sqrtsA, _allfalse)
-    B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, _allfalse)
+    A = _absorb_weights(A, peps.weights, row, col, Tuple(1:4), sqrtsA, false)
+    B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, false)
     # apply gate
     X, a, b, Y = _qr_bond(A, B)
     a, s, b, ϵ = _apply_gate(a, b, gate, alg.trscheme)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
-    _allfalse, _alltrue = _allfalse[1:3], _alltrue[1:3]
-    A = _absorb_weights(
-        A, peps.weights, row, col, (NORTH, SOUTH, WEST), _allfalse, _alltrue
-    )
-    B = _absorb_weights(
-        B, peps.weights, row, cp1, (NORTH, SOUTH, EAST), _allfalse, _alltrue
-    )
+    _allfalse = ntuple(Returns(false), 3)
+    A = _absorb_weights(A, peps.weights, row, col, (NORTH, SOUTH, WEST), _allfalse, true)
+    B = _absorb_weights(B, peps.weights, row, cp1, (NORTH, SOUTH, EAST), _allfalse, true)
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
     peps.vertices[row, col], peps.vertices[row, cp1] = A, B

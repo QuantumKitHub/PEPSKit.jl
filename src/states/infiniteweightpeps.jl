@@ -148,8 +148,8 @@ function _absorb_weights(
     row::Int,
     col::Int,
     axs::NTuple{N,Int},
-    sqrts::NTuple{N,Bool},
-    invs::NTuple{N,Bool},
+    sqrtwts::NTuple{N,Bool},
+    invwt::Bool,
 ) where {N}
     Nr, Nc = size(weights)[2:end]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -157,7 +157,7 @@ function _absorb_weights(
     tensors = Vector{AbstractTensorMap}()
     indices = Vector{Vector{Int}}()
     indices_t = collect(-1:-1:-5)
-    for (ax, sqrtwt, invwt) in zip(axs, sqrts, invs)
+    for (ax, sqrtwt) in zip(axs, sqrtwts)
         @assert 1 <= ax <= 4
         axp1 = ax + 1
         indices_t[axp1] *= -1
@@ -236,7 +236,7 @@ function absorb_weight(
     sqrtwt::Bool=false,
     invwt::Bool=false,
 )
-    return _absorb_weights(t, weights, row, col, (ax - 1,), (sqrtwt,), (invwt,))
+    return _absorb_weights(t, weights, row, col, (ax - 1,), (sqrtwt,), invwt)
 end
 
 """
@@ -247,13 +247,11 @@ Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into v
 function InfinitePEPS(peps::InfiniteWeightPEPS)
     Nr, Nc = size(peps)
     axs = Tuple(1:4)
-    _allfalse = ntuple(_ -> false, 4)
-    _alltrue = ntuple(_ -> true, 4)
+    _alltrue = ntuple(Returns(true), 4)
     return InfinitePEPS(
         collect(
-            _absorb_weights(
-                peps.vertices[r, c], peps.weights, r, c, axs, _alltrue, _allfalse
-            ) for r in 1:Nr, c in 1:Nc
+            _absorb_weights(peps.vertices[r, c], peps.weights, r, c, axs, _alltrue, false)
+            for r in 1:Nr, c in 1:Nc
         ),
     )
 end
