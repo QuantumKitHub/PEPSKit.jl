@@ -28,7 +28,7 @@ S = fermion ⊠ particle_symmetry # symmetry sector
 # spaces
 D = 1
 Vpeps = Vect[S]((0, 0) => 2 * D, (1, 1) => D, (1, -1) => D)
-χ = 2
+χ = 1
 Venv = Vect[S](
     (0, 0) => 4 * χ, (1, -1) => 2 * χ, (1, 1) => 2 * χ, (0, 2) => χ, (0, -2) => χ
 )
@@ -41,9 +41,9 @@ boundary_alg = SimultaneousCTMRG(;
 gradient_alg = EigSolver(;
     solver=Arnoldi(; tol=1e-6, maxiter=10, eager=true), iterscheme=:diffgauge
 )
-# try to relax the line search as much as possible
+# try to relax the line search as much as possible...
 linesearch_alg = HagerZhangLineSearch(; c₁=1e-4, c₂=1 - 1e-4, maxiter=2, maxfg=2)
-optimization_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=50, linesearch=linesearch_alg)
+optimization_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=30, linesearch=linesearch_alg)
 pepsopt_alg = PEPSOptimize(;
     boundary_alg=boundary_alg,
     optimizer=optimization_alg,
@@ -59,7 +59,7 @@ Pspaces = H.lattice
 # initialize state
 Nspaces = fill(Vpeps, size(lattice)...)
 Espaces = fill(Vpeps, size(lattice)...)
-Random.seed!(2928528936)
+Random.seed!(2928528937)
 ψ₀ = naive_normalize(InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces))
 env₀ = CTMRGEnv(ψ₀, Venv)
 env₀, = leading_boundary(env₀, ψ₀, boundary_alg)
