@@ -62,6 +62,7 @@ include("algorithms/toolbox.jl")
 
 include("utility/symmetrization.jl")
 
+include("algorithms/optimization/gradients.jl")
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
 
@@ -160,6 +161,7 @@ module Defaults
     const iterscheme = :fixed
     const gradient_alg = LinSolver(; solver=gradient_linsolver, iterscheme)
     const reuse_env = true
+    const simpleGrad = false
     const optimizer = LBFGS(32; maxiter=100, gradtol=1e-4, verbosity=3)
 
     # OhMyThreads scheduler defaults

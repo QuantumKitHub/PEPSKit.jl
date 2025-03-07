@@ -16,6 +16,7 @@ struct PEPSOptimize{G}
     optimizer::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
     symmetrization::Union{Nothing,SymmetrizationStyle}
+    simpleGrad::Bool
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
         boundary_alg::CTMRGAlgorithm,
@@ -23,13 +24,16 @@ struct PEPSOptimize{G}
         optimizer,
         reuse_env,
         symmetrization,
+        simpleGrad,
     ) where {G}
         if gradient_alg isa GradMode
             if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
                 throw(ArgumentError(":sequential and :fixed are not compatible"))
             end
         end
-        return new{G}(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
+        return new{G}(
+            boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization, simpleGrad
+        )
     end
 end
 function PEPSOptimize(;
@@ -38,8 +42,11 @@ function PEPSOptimize(;
     optimizer=Defaults.optimizer,
     reuse_env=Defaults.reuse_env,
     symmetrization=nothing,
+    simpleGrad=Defaults.simpleGrad,
 )
-    return PEPSOptimize(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
+    return PEPSOptimize(
+        boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization, simpleGrad
+    )
 end
 
 """
@@ -105,27 +112,26 @@ function fixedpoint(
     gradnorms_unitcell = Vector{Matrix{T}}()
     times = Vector{Float64}()
 
+    GradMethod = FixedPointGradient(;
+        boundary_alg=alg.boundary_alg, gradient_alg=alg.gradient_alg
+    )
+    if alg.simpleGrad
+        GradMethod = SimpleGradient(; boundary_alg=alg.boundary_alg)
+    end
+
     # optimize operator cost function
     (peps_final, env_final), cost, ∂cost, numfg, convergence_history = optimize(
         (peps₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
     ) do (peps, env)
         start_time = time_ns()
-        E, gs = withgradient(peps) do ψ
-            env′, info = hook_pullback(
-                leading_boundary,
-                env,
-                ψ,
-                alg.boundary_alg;
-                alg_rrule=alg.gradient_alg,
-            )
-            ignore_derivatives() do
-                alg.reuse_env && update!(env, env′)
-                push!(truncation_errors, info.truncation_error)
-                push!(condition_numbers, info.condition_number)
-            end
-            return cost_function(ψ, env′, operator)
+        E, g, env′, info = compute_gradient(operator, peps, env, GradMethod)
+
+        ignore_derivatives() do
+            alg.reuse_env && update!(env, env′)
+            push!(truncation_errors, info.truncation_error)
+            push!(condition_numbers, info.condition_number)
         end
-        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+
         push!(gradnorms_unitcell, norm.(g.A))
         push!(times, (time_ns() - start_time) * 1e-9)
         return E, g
