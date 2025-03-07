@@ -105,7 +105,7 @@ Evaluating the gradient of the cost function for CTMRG:
 function _rrule(
     gradmode::GradMode{:diffgauge},
     config::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
+    ::typeof(leading_boundary),
     envinit,
     state,
     alg::CTMRGAlgorithm,

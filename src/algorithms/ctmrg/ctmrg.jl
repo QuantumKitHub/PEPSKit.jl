@@ -14,9 +14,9 @@ Perform a single CTMRG iteration in which all directions are being grown and ren
 function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
-    MPSKit.leading_boundary(env₀, network; kwargs...)
+    leading_boundary(env₀, network; kwargs...)
     # expert version:
-    MPSKit.leading_boundary(env₀, network, alg::CTMRGAlgorithm)
+    leading_boundary(env₀, network, alg::CTMRGAlgorithm)
 
 Contract `network` using CTMRG and return the CTM environment. The algorithm can be
 supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) struct.
@@ -48,11 +48,11 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}`: SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
 * `projector_alg::Union{Symbol,Type{ProjectorAlgorithm}}=:$(Defaults.projector_alg)`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
 """
-function MPSKit.leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
+function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
-    return MPSKit.leading_boundary(env₀, network, alg)
+    return leading_boundary(env₀, network, alg)
 end
-function MPSKit.leading_boundary(
+function leading_boundary(
     env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
 )
     CS = map(x -> tsvd(x)[2], env₀.corners)
@@ -82,8 +82,8 @@ function MPSKit.leading_boundary(
         return env, info
     end
 end
-function MPSKit.leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
-    return MPSKit.leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
+function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
+    return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
 # custom CTMRG logging

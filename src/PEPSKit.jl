@@ -7,7 +7,7 @@ using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
-using MPSKit: loginit!, logiter!, logfinish!, logcancel!
+import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
 using OhMyThreads: tmap
