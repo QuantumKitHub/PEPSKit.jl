@@ -13,7 +13,7 @@ Projector algorithm implementing projectors from SVDing the half-infinite CTMRG 
 """
 @kwdef struct SimpleGradient <: GradientAlgorithm
     boundary_alg::CTMRGAlgorithm = Defaults.boundary_alg
-    maxiter::Int = 10
+    maxiter::Int = 20
 end
 
 """
