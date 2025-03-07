@@ -3,97 +3,97 @@ abstract type GradMode{F} end
 iterscheme(::GradMode{F}) where {F} = F
 
 """
-    struct GeomSum(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                   verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct GeomSum <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
-With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
-If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
-SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
-the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
-such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
+## Keyword arguments
+
+* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance for the difference of norms of two consecutive summands in the geometric sum.
+* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of gradient iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity that can be one of the following:
+    0. Suppress output information
+    1. Print convergence warnings
+    2. Information at each gradient iteration
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 """
 struct GeomSum{F} <: GradMode{F}
-    maxiter::Int
     tol::Real
+    maxiter::Int
     verbosity::Int
 end
-function GeomSum(;
-    maxiter=Defaults.fpgrad_maxiter,
-    tol=Defaults.fpgrad_tol,
-    verbosity=0,
-    iterscheme=Defaults.iterscheme,
-)
-    return GeomSum{iterscheme}(maxiter, tol, verbosity)
-end
+GeomSum(; kwargs...) = select_algorithm(GradMode; alg=:geomsum, kwargs...)
 
 """
-    struct ManualIter(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol,
-                      verbosity=0, iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct ManualIter <: GradMode{iterscheme}
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
-With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
-If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
-SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
-the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
-such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
+## Keyword arguments
+
+* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance for the norm difference of two consecutive `dx` contributions.
+* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of gradient iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity that can be one of the following:
+    0. Suppress output information
+    1. Print convergence warnings
+    2. Information at each gradient iteration
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 """
 struct ManualIter{F} <: GradMode{F}
-    maxiter::Int
     tol::Real
+    maxiter::Int
     verbosity::Int
 end
-function ManualIter(;
-    maxiter=Defaults.fpgrad_maxiter,
-    tol=Defaults.fpgrad_tol,
-    verbosity=0,
-    iterscheme=Defaults.iterscheme,
-)
-    return ManualIter{iterscheme}(maxiter, tol, verbosity)
-end
+ManualIter(; kwargs...) = select_algorithm(GradMode; alg=:manualiter, kwargs...)
 
 """
-    struct LinSolver(; solver=KrylovKit.GMRES(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct LinSolver <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
 
-With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
-If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
-SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
-the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
-such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
+## Keyword arguments
+
+* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance of the linear solver.
+* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of solver iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity of the linear solver.
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_linsolver)`: Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
+    - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
+    - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
 """
 struct LinSolver{F} <: GradMode{F}
-    solver::KrylovKit.LinearSolver
+    solver_alg::KrylovKit.LinearSolver
 end
-function LinSolver(;
-    solver=KrylovKit.BiCGStab(; maxiter=Defaults.fpgrad_maxiter, tol=Defaults.fpgrad_tol),
-    iterscheme=Defaults.iterscheme,
-)
-    return LinSolver{iterscheme}(solver)
-end
+LinSolver(; kwargs...) = select_algorithm(GradMode; alg=:linsolver, kwargs...)
 
 """
-    struct EigSolver(; solver=KrylovKit.Arnoldi(), iterscheme=Defaults.iterscheme) <: GradMode{iterscheme}
+    struct EigSolver <: GradMode{iterscheme}
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.
 
-With `iterscheme` the style of CTMRG iteration which is being differentiated can be chosen.
-If set to `:fixed`, the differentiated CTMRG iteration is assumed to have a pre-computed
-SVD of the environments with a fixed set of gauges. Alternatively, if set to `:diffgauge`,
-the differentiated iteration consists of a CTMRG iteration and a subsequent gauge fixing step,
-such that `gauge_fix` will also be differentiated everytime a CTMRG derivative is computed.
+## Keyword arguments
+
+* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance of the linear solver.
+* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of solver iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity of the linear solver.
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)`: Eigen solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
+    - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
 """
 struct EigSolver{F} <: GradMode{F}
-    solver::KrylovKit.KrylovAlgorithm
+    solver_alg::KrylovKit.KrylovAlgorithm
 end
-function EigSolver(; solver=Defauls.gradient_eigsolver, iterscheme=Defaults.iterscheme)
-    return EigSolver{iterscheme}(solver)
-end
+EigSolver(; kwargs...) = select_algorithm(GradMode; alg=:eigsolver, kwargs...)
 
 #=
 Evaluating the gradient of the cost function for CTMRG:
@@ -105,7 +105,7 @@ Evaluating the gradient of the cost function for CTMRG:
 function _rrule(
     gradmode::GradMode{:diffgauge},
     config::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
+    ::typeof(leading_boundary),
     envinit,
     state,
     alg::CTMRGAlgorithm,
@@ -242,8 +242,8 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
 end
 
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y₀, alg::LinSolver)
-    y, info = reallinsolve(∂f∂x, ∂F∂x, y₀, alg.solver, 1, -1)
-    if alg.solver.verbosity > 0 && info.converged != 1
+    y, info = reallinsolve(∂f∂x, ∂F∂x, y₀, alg.solver_alg, 1, -1)
+    if alg.solver_alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 
@@ -256,11 +256,11 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         return (y + X[2] * ∂F∂x, X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver)
-    if alg.solver.verbosity > 0 && info.converged < 1
+    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
+    if alg.solver_alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-    if norm(vecs[1][2]) < 1e-2 * alg.solver.tol
+    if norm(vecs[1][2]) < 1e-2 * alg.solver_alg.tol
         @warn "Fixed-point gradient computation using Arnoldi failed: auxiliary component should be finite but was $(vecs[1][2]). Possibly the Jacobian does not have a unique eigenvalue 1."
     end
     y = scale(vecs[1][1], 1 / vecs[1][2])

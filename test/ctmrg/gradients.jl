@@ -19,10 +19,10 @@ names = ["Heisenberg", "p-wave superconductor"]
 gradtol = 1e-4
 ctmrg_algs = [
     [
-        SimultaneousCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector),
-        SimultaneousCTMRG(; verbosity=0, projector_alg=FullInfiniteProjector),
+        SimultaneousCTMRG(; verbosity=0, projector_alg=:halfinfinite),
+        SimultaneousCTMRG(; verbosity=0, projector_alg=:fullinfinite),
     ],
-    [SequentialCTMRG(; verbosity=0, projector_alg=HalfInfiniteProjector)],
+    [SequentialCTMRG(; verbosity=0, projector_alg=:halfinfinite)],
 ]
 gradmodes = [
     [
@@ -31,21 +31,17 @@ gradmodes = [
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:fixed),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:fixed),
-        LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(; solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
-        EigSolver(;
-            solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge
-        ),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:fixed),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
     ],
     [  # Only use :diffgauge due to high gauge-sensitivity (perhaps due to small χenv?)
         nothing,
         GeomSum(; tol=gradtol, iterscheme=:diffgauge),
         ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver=KrylovKit.BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(;
-            solver=KrylovKit.Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge
-        ),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
     ],
 ]
 steps = -0.01:0.005:0.01

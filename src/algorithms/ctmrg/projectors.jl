@@ -1,5 +1,5 @@
 """
-    FixedSpaceTruncation <: TensorKit.TruncationScheme
+    struct FixedSpaceTruncation <: TensorKit.TruncationScheme
 
 CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which the SVD
 is performed fixed. Since different environment directions and unit cell entries might
@@ -33,27 +33,59 @@ function truncation_scheme(alg::ProjectorAlgorithm, edge)
 end
 
 """
-    struct HalfInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
-                                      trscheme=Defaults.trscheme, verbosity=0)
+    struct HalfInfiniteProjector{S,T}
 
 Projector algorithm implementing projectors from SVDing the half-infinite CTMRG environment.
+
+## Keyword arguments
+
+* `svd_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()`: SVD algorithm including the reverse rule. See ['SVDAdjoint'](@ref).
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`: Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+    - `:fixedspace`: Keep virtual spaces fixed during projection
+    - `:notrunc`: No singular values are truncated and the performed SVDs are exact
+    - `:truncerr`: Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncdim`: Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncspace`: Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:truncbelow`: Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `verbosity::Int=$(Defaults.projector_verbosity)`: Projector output verbosity which can be:
+    0. Suppress output information
+    1. Print singular value degeneracy warnings
 """
-@kwdef struct HalfInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
-    svd_alg::S = Defaults.svd_alg
-    trscheme::T = Defaults.trscheme
-    verbosity::Int = 0
+struct HalfInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
+    svd_alg::S
+    trscheme::T
+    verbosity::Int
+end
+function HalfInfiniteProjector(; kwargs...)
+    return select_algorithm(ProjectorAlgorithm; alg=:halfinfinite, kwargs...)
 end
 
 """
-    struct FullInfiniteProjector{S,T}(; svd_alg=Defaults.svd_alg,
-                                      trscheme=Defaults.trscheme, verbosity=0)
+    struct FullInfiniteProjector{S,T}
 
 Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG environment.
+
+## Keyword arguments
+
+* `svd_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()`: SVD algorithm including the reverse rule. See ['SVDAdjoint'](@ref).
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`: Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+    - `:fixedspace`: Keep virtual spaces fixed during projection
+    - `:notrunc`: No singular values are truncated and the performed SVDs are exact
+    - `:truncerr`: Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncdim`: Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncspace`: Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:truncbelow`: Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `verbosity::Int=$(Defaults.projector_verbosity)`: Projector output verbosity which can be:
+    0. Suppress output information
+    1. Print singular value degeneracy warnings
 """
-@kwdef struct FullInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
-    svd_alg::S = Defaults.svd_alg
-    trscheme::T = Defaults.trscheme
-    verbosity::Int = 0
+struct FullInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
+    svd_alg::S
+    trscheme::T
+    verbosity::Int
+end
+function FullInfiniteProjector(; kwargs...)
+    return select_algorithm(ProjectorAlgorithm; alg=:fullinfinite, kwargs...)
 end
 
 # TODO: add `LinearAlgebra.cond` to TensorKit

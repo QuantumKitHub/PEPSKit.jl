@@ -183,13 +183,13 @@ the unit cell.
 """ MPSKit.expectation_value(st, op)
 
 @doc """
-    MPSKit.leading_boundary(
+    leading_boundary(
         st::InfiniteMPS, op::Union{InfiniteTransferPEPS,InfiniteTransferPEPO}, alg, [env]
     )
-    MPSKit.leading_boundary(
+    leading_boundary(
         st::MPSMulitline, op::Union{MultilineTransferPEPS,MultilineTransferPEPO}, alg, [env]
     )
 
 Approximate the leading boundary MPS eigenvector for the transfer operator `op` using `st`
 as initial guess.
-""" MPSKit.leading_boundary(st, op, alg)
+""" leading_boundary(st, op, alg)

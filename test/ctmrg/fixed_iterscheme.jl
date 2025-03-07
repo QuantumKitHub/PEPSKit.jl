@@ -15,7 +15,7 @@ using PEPSKit:
 χbond = 2
 χenv = 16
 svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SDD()), SVDAdjoint(; fwd_alg=IterSVD())]
-projector_algs = [HalfInfiniteProjector] #, FullInfiniteProjector]
+projector_algs = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1e-5
 

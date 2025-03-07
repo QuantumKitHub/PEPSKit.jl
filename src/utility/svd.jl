@@ -10,19 +10,41 @@ using TensorKit:
 const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct SVDAdjoint(; fwd_alg=Defaults.fwd_alg, rrule_alg=Defaults.rrule_alg,
-                      broadening=nothing)
+    struct SVDAdjoint
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
 In case of degenerate singular values, one might need a `broadening` scheme which
 removes the divergences from the adjoint.
+
+## Keyword arguments
+
+* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=Defaults.svd_fwd_alg)`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
+    - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
+    - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
+    - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
+* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=Defaults.svd_rrule_alg)`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
+    - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
+    - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+    - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+* `broadening=nothing`: Broadening of singular value differences to stabilize the SVD gradient. Currently not implemented.
 """
-@kwdef struct SVDAdjoint{F,R,B}
-    fwd_alg::F = Defaults.fwd_alg
-    rrule_alg::R = Defaults.rrule_alg
-    broadening::B = nothing
+struct SVDAdjoint{F,R,B}
+    fwd_alg::F
+    rrule_alg::R
+    broadening::B
+
+    # Inner constructor to prohibit illegal setting combinations
+    function SVDAdjoint(fwd_alg::F, rrule_alg::R, broadening::B) where {F,R,B}
+        if fwd_alg isa FixedSVD && isnothing(rrule_alg)
+            throw(
+                ArgumentError("FixedSVD and nothing (TensorKit rrule) are not compatible")
+            )
+        end
+        return new{F,R,B}(fwd_alg, rrule_alg, broadening)
+    end
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
+SVDAdjoint(; kwargs...) = select_algorithm(SVDAdjoint; kwargs...)
 
 """
     PEPSKit.tsvd(t, alg; trunc=notrunc(), p=2)
@@ -56,7 +78,7 @@ function TensorKit._tsvd!(t, alg::FixedSVD, ::NoTruncation, ::Real=2)
 end
 
 """
-    struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf)
+    struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf, start_vector=random_start_vector)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmetric) tensors.
 The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
