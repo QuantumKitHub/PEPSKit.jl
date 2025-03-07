@@ -39,7 +39,7 @@ function _su_bondx!(
     A, B = peps.vertices[row, col], peps.vertices[row, cp1]
     sqrtsA = ntuple(dir -> (dir == EAST), 4)
     sqrtsB = ntuple(dir -> (dir == WEST), 4)
-    _allfalse, _alltrue = ntuple(_ -> false, 4), ntuple(_ -> true, 4)
+    _allfalse, _alltrue = ntuple(Returns(false), 4), ntuple(Returns(true), 4)
     A = _absorb_weights(A, peps.weights, row, col, Tuple(1:4), sqrtsA, _allfalse)
     B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, _allfalse)
     # apply gate
