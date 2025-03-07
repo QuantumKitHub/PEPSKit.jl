@@ -2,6 +2,7 @@ name: Tests
 on:
   push:
     branches:
+      - 'simpleGrad'
       - 'master'
       - 'main'
       - 'release-'
