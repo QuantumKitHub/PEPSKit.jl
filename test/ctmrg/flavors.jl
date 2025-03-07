@@ -8,7 +8,7 @@ using PEPSKit
 χbond = 2
 χenv = 16
 unitcells = [(1, 1), (3, 4)]
-projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
+projector_algs = [:halfinfinite, :fullinfinite]
 
 @testset "$(unitcell) unit cell with $projector_alg" for (unitcell, projector_alg) in
                                                          Iterators.product(
@@ -18,10 +18,10 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)
     env_sequential, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg=SequentialCTMRG, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg=:sequential, projector_alg
     )
     env_simultaneous, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg=SimultaneousCTMRG, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg=:simultaneous, projector_alg
     )
 
     # compare norms
@@ -56,7 +56,7 @@ end
 # test fixedspace actually fixes space
 @testset "Fixedspace truncation using $alg and $projector_alg" for (alg, projector_alg) in
                                                                    Iterators.product(
-    [SequentialCTMRG, SimultaneousCTMRG], projector_algs
+    [:sequential, :simultaneous], projector_algs
 )
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]
