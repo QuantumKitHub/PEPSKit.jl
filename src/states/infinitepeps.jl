@@ -122,7 +122,9 @@ Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
 Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
 
 Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
-Base.similar(A::InfinitePEPS, args...) = InfinitePEPS(similar(unitcell(A), args...))
+function Base.similar(A::InfinitePEPS, args...)
+    return InfinitePEPS(map(t -> similar(t, args...), unitcell(A)))
+end
 Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
 
 Base.getindex(A::InfinitePEPS, args...) = Base.getindex(unitcell(A), args...)

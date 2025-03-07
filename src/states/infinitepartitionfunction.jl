@@ -121,7 +121,7 @@ Base.eltype(A::InfinitePartitionFunction) = eltype(typeof(A))
 
 Base.copy(A::InfinitePartitionFunction) = InfinitePartitionFunction(copy(unitcell(A)))
 function Base.similar(A::InfinitePartitionFunction, args...)
-    return InfinitePartitionFunction(similar(unitcell(A), args...))
+    return InfinitePartitionFunction(map(t -> similar(t, args...), unitcell(A)))
 end
 function Base.repeat(A::InfinitePartitionFunction, counts...)
     return InfinitePartitionFunction(repeat(unitcell(A), counts...))

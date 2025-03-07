@@ -31,7 +31,7 @@ Base.eltype(::Type{InfiniteSquareNetwork{O}}) where {O} = O
 
 Base.copy(n::InfiniteSquareNetwork) = InfiniteSquareNetwork(copy(unitcell(n)))
 function Base.similar(n::InfiniteSquareNetwork, args...)
-    return InfiniteSquareNetwork(similar(unitcell(n), args...))
+    return InfiniteSquareNetwork(map(t -> similar(t, args...), unitcell(n)))
 end
 function Base.repeat(n::InfiniteSquareNetwork, counts...)
     return InfiniteSquareNetwork(repeat(unitcell(n), counts...))
