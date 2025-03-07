@@ -56,15 +56,6 @@ Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG envir
     verbosity::Int = 0
 end
 
-# TODO: add `LinearAlgebra.cond` to TensorKit
-# Compute condition number smax / smin for diagonal singular value TensorMap
-function _condition_number(S::AbstractTensorMap)
-    smax = maximum(first ∘ last, blocks(S))
-    smin = maximum(last ∘ last, blocks(S))
-    return smax / smin
-end
-@non_differentiable _condition_number(S::AbstractTensorMap)
-
 """
     compute_projector(enlarged_corners, coordinate, alg::ProjectorAlgorithm)
 
@@ -75,7 +66,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, truncation_error = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -86,9 +77,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     end
 
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
-    truncation_error /= norm(S)
-    condition_number = @ignore_derivatives(_condition_number(S))
-    return (P_left, P_right), (; truncation_error, condition_number, U, S, V)
+    return (P_left, P_right), info
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
@@ -97,7 +86,7 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, truncation_error = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -108,6 +97,5 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
     end
 
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
-    condition_number = @ignore_derivatives(_condition_number(S))
-    return (P_left, P_right), (; truncation_error, condition_number, U, S, V)
+    return (P_left, P_right), info
 end

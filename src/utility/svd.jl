@@ -1,9 +1,11 @@
 using TensorKit:
     SectorDict,
+    RealOrComplexFloat,
     _tsvd!,
     _empty_svdtensors,
     _compute_svddata!,
     _create_svdtensors,
+    _compute_truncdim,
     NoTruncation,
     TruncationSpace
 
@@ -34,7 +36,74 @@ SVD from `KrylovKit.svdsolve` is used.
 """
 PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
 function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2)
-    return TensorKit.tsvd!(t; alg=alg.fwd_alg, trunc, p)
+    return TensorKit.tsvd!(t; alg, trunc, p)
+end
+
+# TODO: add `LinearAlgebra.cond` to TensorKit
+# Compute condition number smax / smin for diagonal singular value TensorMap
+function _condition_number(S::AbstractTensorMap)
+    smax = maximum(first ∘ last, blocks(S))
+    smin = maximum(last ∘ last, blocks(S))
+    return smax / smin
+end
+@non_differentiable _condition_number(S::AbstractTensorMap)
+
+# Copy code from TensorKit but additionally return full U, S and V to make compatible with :fixed mode
+function TensorKit._tsvd!(
+    t::TensorMap{<:RealOrComplexFloat}, alg::SVDAdjoint, trunc::TruncationScheme, p::Real=2
+)
+    U, Σ, V⁺, truncerr = tsvd(t; trunc=NoTruncation(), p, alg)
+
+    if !(trunc isa TensorKit.NoTruncation) && !isempty(blocksectors(t))
+        Σdata = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(Σ))
+
+        truncdim = TensorKit._compute_truncdim(Σdata, trunc, p)
+        truncerr = TensorKit._compute_truncerr(Σdata, truncdim, p)
+
+        SVDdata = TensorKit.SectorDict(
+            c => (block(U, c), Σc, block(V⁺, c)) for (c, Σc) in Σdata
+        )
+
+        Ũ, Σ̃, Ṽ⁺ = TensorKit._create_svdtensors(t, SVDdata, truncdim)
+    else
+        Ũ, Σ̃, Ṽ⁺ = U, Σ, V⁺
+    end
+
+    # construct info NamedTuple
+    truncerr /= norm(Σ)
+    condnum = @ignore_derivatives(_condition_number(S))
+    info = (; truncation_error=truncerr, condition_number=condnum, U=U, S=Σ, V=V⁺)
+    return Ũ, Σ̃, Ṽ⁺, info
+end
+
+# adjust TensorKit.tsvd! rrule to info NamedTuple return value
+function ChainRulesCore.rrule(
+    ::typeof(TensorKit.tsvd!),
+    t::AbstractTensorMap;
+    trunc::TruncationScheme=TensorKit.NoTruncation(),
+    p::Real=2,
+    alg::SVDAdjoint=SVDAdjoint(),
+)
+    Ũ, Σ̃, Ṽ⁺, info = tsvd(t; trunc, p, alg)
+    Ũ, Σ̃, Ṽ⁺ = info.U, info.S, info.V # untruncated SVD decomposition
+
+    function tsvd!_pullback(ΔUSVϵ)
+        ΔU, ΔΣ, ΔV⁺, = unthunk.(ΔUSVϵ)
+        Δt = similar(t)
+        for (c, b) in blocks(Δt)
+            Uc, Σc, V⁺c = block(U, c), block(Σ, c), block(V⁺, c)
+            ΔUc, ΔΣc, ΔV⁺c = block(ΔU, c), block(ΔΣ, c), block(ΔV⁺, c)
+            Σdc = view(Σc, diagind(Σc))
+            ΔΣdc = (ΔΣc isa AbstractZero) ? ΔΣc : view(ΔΣc, diagind(ΔΣc))
+            svd_pullback!(b, Uc, Σdc, V⁺c, ΔUc, ΔΣdc, ΔV⁺c)
+        end
+        return NoTangent(), Δt
+    end
+    function tsvd!_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+        return NoTangent(), ZeroTangent()
+    end
+
+    return (Ũ, Σ̃, Ṽ⁺, info), tsvd!_pullback
 end
 
 """
