@@ -16,7 +16,7 @@ Parse arguments and keyword arguments to the algorithm struct corresponding to
 where all keyword arguments that can be algorithm themselves can be specified using
 
 * `alg::Algorithm`: an instance of the algorithm struct or
-* `(; alg::Union{Symbol,AlgorithmType}, alg_kwargs...)`: a `NamedTuple` where the algorithm is specified by a symbol or the type of the algorithm struct, and the algorithm keyword arguments 
+* `(; alg::Symbol, alg_kwargs...)`: a `NamedTuple` where the algorithm is specified by a `Symbol` and the algorithm keyword arguments 
 
 A full description of the keyword argument can be found in the respective function or
 algorithm struct docstrings.
@@ -132,13 +132,9 @@ function select_algorithm(
     # TODO: add linesearch, ... to kwargs and defaults?
 )
     # replace symbol with optimizer alg type
-    alg_type = if alg isa Symbol
-        haskey(OPTIMIZATION_SYMBOLS, alg) ||
-            throw(ArgumentError("unknown optimizer algorithm: $alg"))
-        OPTIMIZATION_SYMBOLS[alg]
-    else
-        alg
-    end
+    haskey(OPTIMIZATION_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown optimizer algorithm: $alg"))
+    alg_type = OPTIMIZATION_SYMBOLS[alg]
 
     # instantiate algorithm
     return if alg_type <: LBFGS
@@ -192,12 +188,8 @@ function select_algorithm(
     projector_alg=Defaults.projector_alg, # only allows for Symbol/Type{ProjectorAlgorithm} to expose projector kwargs
 )
     # replace symbol with projector alg type
-    alg_type = if alg isa Symbol
-        haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
-        CTMRG_SYMBOLS[alg]
-    else
-        alg
-    end
+    haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
+    alg_type = CTMRG_SYMBOLS[alg]
 
     # parse CTMRG projector algorithm
     projector_algorithm = select_algorithm(
@@ -218,13 +210,9 @@ function select_algorithm(
     verbosity=Defaults.projector_verbosity,
 )
     # replace symbol with projector alg type
-    alg_type = if alg isa Symbol
-        haskey(PROJECTOR_SYMBOLS, alg) ||
-            throw(ArgumentError("unknown projector algorithm: $alg"))
-        PROJECTOR_SYMBOLS[alg]
-    else
-        alg
-    end
+    haskey(PROJECTOR_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown projector algorithm: $alg"))
+    alg_type = PROJECTOR_SYMBOLS[alg]
 
     # parse SVD forward & rrule algorithm
     svd_algorithm = _select_alg_or_namedtuple(svd_alg, SVDAdjoint, SVDAdjoint)
@@ -243,6 +231,12 @@ const GRADIENT_MODE_SYMBOLS = IdDict{Symbol,Type{<:GradMode}}(
     :linsolver => LinSolver,
     :eigsolver => EigSolver,
 )
+const LINSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.LinearSolver}}(
+    :gmres => GMRES, :bicgstab => BiCGStab
+)
+const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.KrylovAlgorithm}}(
+    :arnoldi => Arnoldi
+)
 function select_algorithm(
     ::Type{GradMode};
     alg=Defaults.gradient_alg,
@@ -253,13 +247,9 @@ function select_algorithm(
     solver_alg=(;),
 )
     # replace symbol with GradMode alg type
-    alg_type = if alg isa Symbol
-        haskey(GRADIENT_MODE_SYMBOLS, alg) ||
-            throw(ArgumentError("unknown GradMode algorithm: $alg"))
-        GRADIENT_MODE_SYMBOLS[alg]
-    else
-        alg
-    end
+    haskey(GRADIENT_MODE_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown GradMode algorithm: $alg"))
+    alg_type = GRADIENT_MODE_SYMBOLS[alg]
 
     # parse GradMode algorithm
     gradient_algorithm = if alg_type <: Union{GeomSum,ManualIter}
@@ -270,32 +260,20 @@ function select_algorithm(
 
             solver_type = if alg_type <: LinSolver # replace symbol with solver alg type
                 solver_kwargs = (; alg=Defaults.gradient_linsolver, solver_kwargs...)
-                if solver_kwargs.alg isa Symbol
-                    if solver_kwargs.alg == :gmres
-                        GMRES
-                    elseif solver_kwargs.alg == :bicgstab
-                        BiCGStab
-                    else
-                        throw(ArgumentError("unknown LinSolver solver: $(solver_kwargs.alg)"))
-                    end
-                else
-                    solver_kwargs.alg
-                end
+                haskey(LINSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
+                    ArgumentError("unknown LinSolver solver: $(solver_kwargs.alg)"),
+                )
+                LINSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
             elseif alg_type <: EigSolver
-                solver_kwargs = (; alg=Defaults.gradient_eigsolver, solver_kwargs...)
-                if solver_kwargs.alg isa Symbol
-                    if solver_kwargs.alg == :arnoldi
-                        Arnoldi
-                    else
-                        throw(ArgumentError("unknown EigSolver solver: $(solver_kwargs.alg)"))
-                    end
-                else
-                    solver_kwargs.alg
-                end
-                solver_kwargs = (; # use default eager for EigSolver
+                solver_kwargs = (;
+                    alg=Defaults.gradient_eigsolver,
                     eager=Defaults.gradient_eigsolver_eager,
                     solver_kwargs...,
                 )
+                haskey(EIGSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
+                    ArgumentError("unknown EigSolver solver: $(solver_kwargs.alg)"),
+                )
+                EIGSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
             end
 
             solver_kwargs = Base.structdiff(solver_kwargs, (; alg=nothing)) # remove `alg` keyword argument
@@ -324,38 +302,32 @@ function select_algorithm(
     ::Type{TensorKit.TruncationScheme}; alg=Defaults.trscheme, η=nothing
 )
     # replace Symbol with TruncationScheme type
-    alg_type = if alg isa Symbol
-        haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||
-            throw(ArgumentError("unknown truncation scheme: $alg"))
-        TRUNCATION_SCHEME_SYMBOLS[alg]
-    else
-        alg
-    end
+    haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown truncation scheme: $alg"))
+    alg_type = TRUNCATION_SCHEME_SYMBOLS[alg]
 
     return isnothing(η) ? alg_type() : alg_type(η)
 end
 
+const SVD_FWD_SYMBOLS = IdDict{Symbol,<:Any}(
+    :sdd => TensorKit.SDD,
+    :svd => TensorKit.SVD,
+    :iterative =>
+        (; tol=1e-14, krylovdim=25, kwargs...) ->
+            IterSVD(; alg=GKL(; tol, krylovdim), kwargs...),
+)
+const SVD_RRULE_SYMBOLS = IdDict{Symbol,Type{<:Any}}(
+    :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+)
 function select_algorithm(
     ::Type{SVDAdjoint}; fwd_alg=(;), rrule_alg=(;), broadening=nothing
 )
     # parse forward SVD algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
-        fwd_type = if fwd_kwargs.alg isa Symbol # replace symbol with alg type
-            if fwd_kwargs.alg == :sdd
-                TensorKit.SDD
-            elseif fwd_kwargs.alg == :svd
-                TensorKit.SVD
-            elseif fwd_kwargs.alg == :iterative
-                # circumvent alg keyword in IterSVD constructor
-                (; tol=1e-14, krylovdim=25, kwargs...) ->
-                    IterSVD(; alg=GKL(; tol, krylovdim), kwargs...)
-            else
-                throw(ArgumentError("unknown forward algorithm: $(fwd_kwargs.alg)"))
-            end
-        else
-            fwd_kwargs.alg
-        end
+        haskey(SVD_FWD_SYMBOLS, fwd_kwargs.alg) ||
+            throw(ArgumentError("unknown forward algorithm: $(fwd_kwargs.alg)"))
+        fwd_type = SVD_FWD_SYMBOLS[fwd_kwargs.alg]
         fwd_kwargs = Base.structdiff(fwd_kwargs, (; alg=nothing)) # remove `alg` keyword argument
         fwd_type(; fwd_kwargs...)
     else
@@ -371,19 +343,10 @@ function select_algorithm(
             verbosity=Defaults.svd_rrule_verbosity,
             rrule_alg...,
         ) # overwrite with specified kwargs
-        rrule_type = if rrule_kwargs.alg isa Symbol # replace symbol with alg type
-            if rrule_kwargs.alg == :gmres
-                GMRES
-            elseif rrule_kwargs.alg == :bicgstab
-                BiCGStab
-            elseif rrule_kwargs.alg == :arnoldi
-                Arnoldi
-            else
-                throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
-            end
-        else
-            rrule_kwargs.alg
-        end
+
+        haskey(SVD_RRULE_SYMBOLS, rrule_kwargs.alg) ||
+            throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
+        rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
         rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
         rrule_type <: BiCGStab &&
             (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
