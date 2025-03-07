@@ -53,7 +53,6 @@ function select_algorithm(
     end
 
     # adjust CTMRG tols and verbosity
-
     boundary_algorithm = _select_alg_or_namedtuple(
         boundary_alg,
         CTMRGAlgorithm,
@@ -62,7 +61,6 @@ function select_algorithm(
         tol=1e-4tol,
         verbosity=boundary_verbosity,
     )
-    @reset boundary_algorithm.projector_alg.svd_alg.rrule_alg.tol = 1e-3tol # use @reset for nested algs
 
     # adjust gradient verbosity
     gradient_algorithm = _select_alg_or_namedtuple(
