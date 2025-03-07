@@ -1,30 +1,25 @@
 """
-    PEPSOptimize{G}(; boundary_alg=$(Defaults.ctmrg_alg), gradient_alg::G=$(Defaults.gradient_alg),
-                    optimizer::OptimKit.OptimizationAlgorithm=$(Defaults.optimizer_alg)
-                    reuse_env::Bool=$(Defaults.reuse_env), symmetrization::Union{Nothing,SymmetrizationStyle}=nothing)
+    struct PEPSOptimize{G}
 
-Algorithm struct that represent PEPS ground-state optimization using AD.
-Set the algorithm to contract the infinite PEPS in `boundary_alg`;
-currently only `CTMRGAlgorithm`s are supported. The `optimizer` computes the gradient directions
-based on the CTMRG gradient and updates the PEPS parameters. In this optimization,
-the CTMRG runs can be started on the converged environments of the previous optimizer
-step by setting `reuse_env` to true. Otherwise a random environment is used at each
-step. The CTMRG gradient itself is computed using the `gradient_alg` algorithm.
-The `symmetrization` field accepts `nothing` or a `SymmetrizationStyle`, in which case the
-PEPS and PEPS gradient are symmetrized after each optimization iteration. Note that this
-requires an initial symmmetric PEPS and environment to converge properly.
+Algorithm struct for PEPS ground-state optimization using AD.
+
+## Keyword arguments
+
+TODO
+
+
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
     gradient_alg::G
-    optimizer::OptimKit.OptimizationAlgorithm
+    optimizer_alg::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
     symmetrization::Union{Nothing,SymmetrizationStyle}
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
         boundary_alg::CTMRGAlgorithm,
         gradient_alg::G,
-        optimizer,
+        optimizer_alg,
         reuse_env,
         symmetrization,
     ) where {G}
@@ -36,7 +31,7 @@ struct PEPSOptimize{G}
                 throw(ArgumentError(msg))
             end
         end
-        return new{G}(boundary_alg, gradient_alg, optimizer, reuse_env, symmetrization)
+        return new{G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
     end
 end
 PEPSOptimize(; kwargs...) = select_algorithm(PEPSOptimize; kwargs...)
@@ -77,8 +72,10 @@ By default, a CTMRG tolerance of `tol=1e-4tol` and is used.
 
 ### Gradient algorithm
 
-Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,<:GradMode}` using
-either a `NamedTuple` of keyword arguments or a `GradMode` struct directly. The supported
+Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
+using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradMode` struct directly.
+Pass `nothing` to fully differentiate the CTMRG run, meaning that all iterations will be
+taken into account, instead of differentiating the fixed point. The supported `NamedTuple`
 keyword arguments are:
 
 * `tol::Real=1e-2tol`: Convergence tolerance for the fixed-point gradient iteration.
@@ -180,7 +177,7 @@ function fixedpoint(
 
     # optimize operator cost function
     (peps_final, env_final), cost, ∂cost, numfg, convergence_history = optimize(
-        (peps₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
+        (peps₀, env₀), alg.optimizer_alg; retract, inner=real_inner, finalize!
     ) do (peps, env)
         start_time = time_ns()
         E, gs = withgradient(peps) do ψ
