@@ -50,7 +50,7 @@ end
 
 @testset "Simple update into AD optimization" begin
     # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
-    Random.seed!(234829)
+    Random.seed!(100)
     N1, N2 = 2, 2
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
@@ -67,11 +67,11 @@ end
     ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
 
     # simple update
-    dts = [1e-2, 1e-3, 4e-4, 1e-4]
+    dts = [1e-2, 1e-3, 1e-3, 4e-4]
     tols = [1e-7, 1e-8, 1e-8, 1e-8]
     maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        Dbond2 = (n == 1) ? Dbond + 2 : Dbond
+        Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trscheme = truncerr(1e-10) & truncdim(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; bipartite=false)
@@ -80,6 +80,7 @@ end
 
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(wpeps)
+    Random.seed!(100)
     env₀ = CTMRGEnv(rand, Float64, peps, Espace)
     env, = leading_boundary(env₀, peps, SimultaneousCTMRG())
 
