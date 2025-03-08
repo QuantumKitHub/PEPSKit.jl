@@ -10,7 +10,7 @@ struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 """
     ProjectorAlgorithm
 
-Abstract super type for all CTMRG projector algorithms.
+Abstract super type for all projector algorithms.
 """
 abstract type ProjectorAlgorithm end
 

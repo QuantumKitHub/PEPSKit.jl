@@ -76,8 +76,8 @@ function simultaneous_projectors(
     coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector
 ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(enlarged_corners)[2:3]...)
-    ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
-    ec[:] /= norm.(ec[:])
+    ec0 = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
+    ec = (ec0[1] / norm(ec0[1]), ec0[2] / norm(ec0[2]))
     alg = @set alg.svd_alg = svd_algorithm(alg, coordinate)
 
     return compute_projector(ec[1], ec[2], alg)
@@ -89,15 +89,21 @@ function simultaneous_projectors(
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
     coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
-    ec = (
+    ec0 = (
         enlarged_corners[coordinate4...],
         enlarged_corners[coordinate...],
         enlarged_corners[coordinate2...],
         enlarged_corners[coordinate3...],
     )
-    ec[:] /= norm.(ec[:])
+    ec = (
+        ec0[1] / norm(ec0[1]),
+        ec0[2] / norm(ec0[2]),
+        ec0[3] / norm(ec0[3]),
+        ec0[4] / norm(ec0[4]),
+    )
     alg = @set alg.svd_alg = svd_algorithm(alg, coordinate)
     Q1, Q2 = ec[1] ⊙ ec[2], ec[3] ⊙ ec[4]
+
     return compute_projector(Q1, Q2, alg)
 end
 
