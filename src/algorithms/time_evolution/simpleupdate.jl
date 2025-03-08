@@ -114,10 +114,10 @@ end
 
 """
     simpleupdate(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
-                 bipartite::Bool=false, check_int::Int=500)
+                 bipartite::Bool=false, check_interval::Int=500)
 
 Perform simple update with nearest neighbor Hamiltonian `ham`, where the evolution
-information is printed every `check_int` steps. 
+information is printed every `check_interval` steps. 
 
 If `bipartite == true` (for square lattice), a unit cell size of `(2, 2)` is assumed, 
 as well as tensors and x/y weights which are the same across the diagonals, i.e. at
@@ -128,7 +128,7 @@ function simpleupdate(
     ham::LocalOperator,
     alg::SimpleUpdate;
     bipartite::Bool=false,
-    check_int::Int=500,
+    check_interval::Int=500,
 )
     time_start = time()
     Nr, Nc = size(peps)
@@ -147,7 +147,7 @@ function simpleupdate(
         cancel = (count == alg.maxiter)
         wts0 = deepcopy(peps.weights)
         time1 = time()
-        if ((count == 1) || (count % check_int == 0) || converge || cancel)
+        if ((count == 1) || (count % check_interval == 0) || converge || cancel)
             @info "Space of x-weight at [1, 1] = $(space(peps.weights[1, 1, 1], 1))"
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
