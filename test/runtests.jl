@@ -23,9 +23,6 @@ end
         @time @safetestset ":fixed CTMRG iteration scheme" begin
             include("ctmrg/fixed_iterscheme.jl")
         end
-        @time @safetestset "Unit cells" begin
-            include("ctmrg/unitcell.jl")
-        end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end
@@ -34,6 +31,9 @@ end
         end
         @time @safetestset "Partition function" begin
             include("ctmrg/partition_function.jl")
+        end
+        @time @safetestset "PEPO" begin
+            include("ctmrg/pepo.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
