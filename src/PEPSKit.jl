@@ -44,6 +44,7 @@ include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
+include("algorithms/contractions/bondenv/benv_ntu.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -220,6 +221,7 @@ export fixedpoint
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
+export NTUEnvNN, NTUEnvNNN, NTUEnvNNNp
 export su_iter, simpleupdate, SimpleUpdate
 
 export InfiniteSquareNetwork
