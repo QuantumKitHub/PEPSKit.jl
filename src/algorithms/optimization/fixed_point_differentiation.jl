@@ -142,7 +142,6 @@ function _rrule(
     state,
     alg::SimultaneousCTMRG,
 )
-    @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     env, = leading_boundary(envinit, state, alg)
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
     env_fixed, signs = gauge_fix(env, env_conv)
@@ -150,7 +149,7 @@ function _rrule(
     # Fix SVD
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     svd_alg_fixed = SVDAdjoint(;
-        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed),
+        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, info.U_full, info.S_full, info.V_full),
         rrule_alg=alg.projector_alg.svd_alg.rrule_alg,
     )
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed

@@ -1,9 +1,11 @@
 using TensorKit:
     SectorDict,
+    RealOrComplexFloat,
     _tsvd!,
     _empty_svdtensors,
     _compute_svddata!,
     _create_svdtensors,
+    _compute_truncdim,
     NoTruncation,
     TruncationSpace
 
@@ -34,20 +36,95 @@ SVD from `KrylovKit.svdsolve` is used.
 """
 PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
 function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2)
-    return TensorKit.tsvd!(t; alg=alg.fwd_alg, trunc, p)
+    return TensorKit.tsvd!(t; alg, trunc, p)
+end
+
+# TODO: add `LinearAlgebra.cond` to TensorKit
+# Compute condition number smax / smin for diagonal singular value TensorMap
+function _condition_number(S::AbstractTensorMap)
+    smax = maximum(first ∘ last, blocks(S))
+    smin = maximum(last ∘ last, blocks(S))
+    return smax / smin
+end
+
+# Copy code from TensorKit but additionally return full U, S and V to make compatible with :fixed mode
+function TensorKit._tsvd!(
+    t::TensorMap{<:RealOrComplexFloat}, alg::SVDAdjoint, trunc::TruncationScheme, p::Real=2
+)
+    U, Σ, V⁺, truncerr = tsvd(t; trunc=NoTruncation(), p, alg)
+
+    if !(trunc isa TensorKit.NoTruncation) && !isempty(blocksectors(t))
+        Σdata = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(Σ))
+
+        truncdim = TensorKit._compute_truncdim(Σdata, trunc, p)
+        truncerr = TensorKit._compute_truncerr(Σdata, truncdim, p)
+
+        SVDdata = TensorKit.SectorDict(
+            c => (block(U, c), Σc, block(V⁺, c)) for (c, Σc) in Σdata
+        )
+
+        Ũ, Σ̃, Ṽ⁺ = TensorKit._create_svdtensors(t, SVDdata, truncdim)
+    else
+        Ũ, Σ̃, Ṽ⁺ = U, Σ, V⁺
+    end
+
+    # construct info NamedTuple
+    truncerr /= norm(Σ)
+    condnum = _condition_number(S)
+    info = (;
+        truncation_error=truncerr, condition_number=condnum, U_full=U, S_full=Σ, V_full=V⁺
+    )
+    return Ũ, Σ̃, Ṽ⁺, info
+end
+
+# adjust TensorKit.tsvd! rrule to info NamedTuple return value
+function ChainRulesCore.rrule(
+    ::typeof(TensorKit.tsvd!),
+    t::AbstractTensorMap;
+    trunc::TruncationScheme=TensorKit.NoTruncation(),
+    p::Real=2,
+    alg::SVDAdjoint=SVDAdjoint(),
+)
+    Ũ, Σ̃, Ṽ⁺, info = tsvd(t; trunc, p, alg)
+    Ũ, Σ̃, Ṽ⁺ = info.U, info.S, info.V # untruncated SVD decomposition
+
+    function tsvd!_pullback(ΔUSVi)
+        ΔU, ΔΣ, ΔV⁺, = unthunk.(ΔUSVi)
+        Δt = similar(t)
+        for (c, b) in blocks(Δt)
+            Uc, Σc, V⁺c = block(U, c), block(Σ, c), block(V⁺, c)
+            ΔUc, ΔΣc, ΔV⁺c = block(ΔU, c), block(ΔΣ, c), block(ΔV⁺, c)
+            Σdc = view(Σc, diagind(Σc))
+            ΔΣdc = (ΔΣc isa AbstractZero) ? ΔΣc : view(ΔΣc, diagind(ΔΣc))
+            svd_pullback!(b, Uc, Σdc, V⁺c, ΔUc, ΔΣdc, ΔV⁺c)
+        end
+        return NoTangent(), Δt
+    end
+    function tsvd!_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+        return NoTangent(), ZeroTangent()
+    end
+
+    return (Ũ, Σ̃, Ṽ⁺, info), tsvd!_pullback
 end
 
 """
     struct FixedSVD
 
-SVD struct containing a pre-computed decomposition or even multiple ones.
-The call to `tsvd` just returns the pre-computed U, S and V. In the reverse
-pass, the SVD adjoint is computed with these exact U, S, and V.
+SVD struct containing a pre-computed decomposition or even multiple ones. Additionally, it
+can contain the untruncated full decomposition as well. The call to `tsvd` just returns the
+pre-computed U, S and V. In the reverse pass, the SVD adjoint is computed with these exact
+U, S, and V and, potentially, the full decompositions if the adjoints needs access to them.
 """
-struct FixedSVD{Ut,St,Vt}
+struct FixedSVD{Ut,St,Vt,Utf,Stf,Vtf}
     U::Ut
     S::St
     V::Vt
+    U_full::Utf
+    S_full::Stf
+    V_full::Vtf
+end
+function FixedSVD(U, S, V, U_full=nothing, S_full=nothing, V_full=nothing)
+    return FixedSVD(U, S, V, U_full, S_full, V_full)
 end
 
 # Return pre-computed SVD
@@ -86,9 +163,17 @@ function TensorKit._tsvd!(
 
     SVDdata, dims = _compute_svddata!(f, alg, trunc)
     U, S, V = _create_svdtensors(f, SVDdata, dims)
-    truncerr = trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
+    truncation_error =
+        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
 
-    return U, S, V, truncerr
+    # construct info NamedTuple
+    truncation_error /= norm(S)
+    condition_number = _condition_number(S)
+    info = (;
+        truncation_error, condition_number, U_full=nothing, S_full=nothing, V_full=nothing
+    )
+
+    return U, S, V, info
 end
 function TensorKit._compute_svddata!(
     f, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}
@@ -135,11 +220,11 @@ function ChainRulesCore.rrule(
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
 ) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
-    U, S, V, ϵ = PEPSKit.tsvd(f, alg; trunc, p)
+    U, S, V, info = PEPSKit.tsvd(f, alg; trunc, p)
 
-    function tsvd!_itersvd_pullback(ΔUSVϵ)
+    function tsvd!_itersvd_pullback(ΔUSVi)
         Δf = similar(f)
-        ΔU, ΔS, ΔV, = unthunk.(ΔUSVϵ)
+        ΔU, ΔS, ΔV, = unthunk.(ΔUSVi)
 
         for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
@@ -187,5 +272,5 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, ϵ), tsvd!_itersvd_pullback
+    return (U, S, V, info), tsvd!_itersvd_pullback
 end
