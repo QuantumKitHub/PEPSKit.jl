@@ -138,11 +138,59 @@ function InfiniteWeightPEPS(
     )
 end
 
-"""
-    absorb_weight(t::T, row::Int, col::Int, ax::Int, weights::SUWeight;
-                  sqrtwt::Bool=false, invwt::Bool=false) where {T<:PEPSTensor}
+function Base.size(peps::InfiniteWeightPEPS)
+    return size(peps.vertices)
+end
 
-Absorb or remove environment weight on axis `ax` of vertex tensor `t` 
+function _absorb_weights(
+    t::PEPSTensor,
+    weights::SUWeight,
+    row::Int,
+    col::Int,
+    axs::NTuple{N,Int},
+    sqrtwts::NTuple{N,Bool},
+    invwt::Bool,
+) where {N}
+    Nr, Nc = size(weights)[2:end]
+    @assert 1 <= row <= Nr && 1 <= col <= Nc
+    @assert 1 <= N <= 4
+    tensors = Vector{AbstractTensorMap}()
+    indices = Vector{Vector{Int}}()
+    indices_t = collect(-1:-1:-5)
+    for (ax, sqrtwt) in zip(axs, sqrtwts)
+        @assert 1 <= ax <= 4
+        axp1 = ax + 1
+        indices_t[axp1] *= -1
+        wt = if ax == NORTH
+            weights[2, row, col]
+        elseif ax == EAST
+            weights[1, row, col]
+        elseif ax == SOUTH
+            weights[2, _next(row, Nr), col]
+        else # WEST
+            weights[1, row, _prev(col, Nc)]
+        end
+        # TODO: remove the dual constraint
+        @assert !isdual(space(wt, 1)) && isdual(space(wt, 2))
+        if (!sqrtwt && !invwt)
+            push!(tensors, wt)
+        else
+            pow = (sqrtwt ? 1 / 2 : 1) * (invwt ? -1 : 1)
+            push!(tensors, sdiag_pow(wt, pow))
+        end
+        push!(indices, (ax in (NORTH, EAST) ? [axp1, -axp1] : [-axp1, axp1]))
+    end
+    push!(tensors, t)
+    push!(indices, indices_t)
+    t2 = permute(ncon(tensors, indices), ((1,), Tuple(2:5)))
+    return t2
+end
+
+"""
+    absorb_weight(t::PEPSTensor, row::Int, col::Int, ax::Int, weights::SUWeight;
+                  sqrtwt::Bool=false, invwt::Bool=false)
+
+Absorb or remove environment weight on an axis of vertex tensor `t` 
 known to be located at position (`row`, `col`) in the unit cell. 
 Weights around the tensor at `(row, col)` are
 ```
@@ -159,7 +207,7 @@ Weights around the tensor at `(row, col)` are
 - `t::T`: The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
 - `row::Int`: The row index specifying the position in the tensor network.
 - `col::Int`: The column index specifying the position in the tensor network.
-- `ax::Int`: The axis along which the weight is absorbed.
+- `ax::Int`: The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
 - `weights::SUWeight`: The weight object to absorb into the tensor.
 - `sqrtwt::Bool=false` (optional): If `true`, the square root of the weight is absorbed.
 - `invwt::Bool=false` (optional): If `true`, the inverse of the weight is absorbed.
@@ -169,44 +217,26 @@ The optional kwargs `sqrtwt` and `invwt` allow taking the square root or the inv
 
 # Examples
 ```julia
-# Absorb the weight into the 2nd axis of tensor at position (2, 3)
-absorb_weight(t, 2, 3, 2, weights)
+# Absorb the weight into the north axis of tensor at position (2, 3)
+absorb_weight(t, 2, 3, 1, weights)
 
-# Absorb the square root of the weight into the tensor
-absorb_weight(t, 2, 3, 2, weights; sqrtwt=true)
+# Absorb the square root of the weight into the south axis
+absorb_weight(t, 2, 3, 3, weights; sqrtwt=true)
 
-# Absorb the inverse of (i.e. remove) the weight into the tensor
+# Absorb the inverse of (i.e. remove) the weight into the east axis
 absorb_weight(t, 2, 3, 2, weights; invwt=true)
 ```
 """
 function absorb_weight(
-    t::T,
+    t::PEPSTensor,
     row::Int,
     col::Int,
     ax::Int,
     weights::SUWeight;
     sqrtwt::Bool=false,
     invwt::Bool=false,
-) where {T<:PEPSTensor}
-    Nr, Nc = size(weights)[2:end]
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert 2 <= ax <= 5
-    pow = (sqrtwt ? 1 / 2 : 1) * (invwt ? -1 : 1)
-    if ax == 2 # north
-        wt = weights[2, row, col]
-    elseif ax == 3 # east
-        wt = weights[1, row, col]
-    elseif ax == 4 # south
-        wt = weights[2, _next(row, Nr), col]
-    else # west
-        wt = weights[1, row, _prev(col, Nc)]
-    end
-    wt2 = sdiag_pow(wt, pow)
-    indices_t = collect(-1:-1:-5)
-    indices_t[ax] = 1
-    indices_wt = (ax in (2, 3) ? [1, -ax] : [-ax, 1])
-    t2 = permute(ncon((t, wt2), (indices_t, indices_wt)), ((1,), Tuple(2:5)))
-    return t2
+)
+    return _absorb_weights(t, weights, row, col, (ax,), (sqrtwt,), invwt)
 end
 
 """
@@ -215,20 +245,15 @@ end
 Create `InfinitePEPS` from `InfiniteWeightPEPS` by absorbing bond weights into vertex tensors.
 """
 function InfinitePEPS(peps::InfiniteWeightPEPS)
-    vertices = deepcopy(peps.vertices)
-    Nr, Nc = size(vertices)
-    for (r, c) in Iterators.product(1:Nr, 1:Nc)
-        for ax in 2:5
-            vertices[r, c] = absorb_weight(
-                vertices[r, c], r, c, ax, peps.weights; sqrtwt=true
-            )
-        end
-    end
-    return InfinitePEPS(vertices)
-end
-
-function Base.size(peps::InfiniteWeightPEPS)
-    return size(peps.vertices)
+    Nr, Nc = size(peps)
+    axs = Tuple(1:4)
+    _alltrue = ntuple(Returns(true), 4)
+    return InfinitePEPS(
+        collect(
+            _absorb_weights(peps.vertices[r, c], peps.weights, r, c, axs, _alltrue, false)
+            for r in 1:Nr, c in 1:Nc
+        ),
+    )
 end
 
 """

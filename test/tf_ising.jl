@@ -21,9 +21,7 @@ mˣ = 0.91
 χenv = 16
 ctm_alg = SimultaneousCTMRG()
 opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; gradtol=1e-3, verbosity=3),
-    gradient_alg=LinSolver(; iterscheme=:diffgauge),
+    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=3)
 )
 
 # initialize states

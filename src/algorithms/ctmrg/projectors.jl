@@ -10,7 +10,7 @@ struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 """
     ProjectorAlgorithm
 
-Abstract super type for all CTMRG projector algorithms.
+Abstract super type for all projector algorithms.
 """
 abstract type ProjectorAlgorithm end
 
@@ -66,18 +66,68 @@ end
 @non_differentiable _condition_number(S::AbstractTensorMap)
 
 """
-    compute_projector(
-    L::AbstractTensorMap, R::AbstractTensorMap, alg::ProjectorAlgorithm
-)
+    compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, alg::ProjectorAlgorithm)
 
-Given the bond connecting the left and right tensors, e.g. L and R, we compute the projectors on the bond.
-This is a general algorithm that can be used for any bond. The only thing you need worry about
-is the left and right tensors. After the projection, the arrow of the bond is now (L⊙P_L)←(P_R⊙R).
+Compute projection operators for the dimension truncation on the bond between tensors L and R.
 
-```
-L⊙R=(L⊙R)*(L⊙R)^-1*(L⊙R)=(L⊙R)*(U*S*V)^-1*(L⊙R)=(L⊙R)*V'S^{-1}U'*(L⊙R)=L⊙(R*V'*S^{-1/2})*(S^{-1/2}*U'*L)⊙R=L⊙P_L*P_R⊙R
-```
+# Visual Representation
+             ----     ||       ----
+    --->----|    |    ||      |    |.........
+    ........|    |    ||      |    |---->----
+    ........|    |----||->----|    |.........
+    ---<--- |  L |....||......| R  |.........
+    ........|    |----||-<----|    |----<----
+    ---->---|    |    ||      |    |
+             ----     ||       ----
+                    Cut Here
+
+# Description
+Projection operators are essential for truncating bond dimensions while preserving the most important weights during the CTMRG iteration.
+
+# Mathematical Foundation
+The tensor contraction `L ⊙ R` can be treated as a map and decomposed using SVD:
+    
+    L ⊙ R = U * S * V'
+
+where `*` denotes map composition (distinct from tensor contraction `⊙`). Thus we have 
+
+    L ⊙ R = (L ⊙ R) * (L ⊙ R)⁻¹ * (L ⊙ R)
+           = (L ⊙ R) * V' * S⁻¹ * U' * (L ⊙ R)
+           = L ⊙ (R * V' * S^(-1/2)) * (S^(-1/2) * U' * L) ⊙ R
+           = L ⊙ P_L * P_R ⊙ R
+
+From this decomposition, we define the projectors:
+    
+    P_L = R * V' * S^(-1/2)
+    P_R = S^(-1/2) * U' * L
+
+These projectors allow us to rewrite: `L ⊙ R ≃ L ⊙ P_L * P_R ⊙ R`, implying that the bond arrow
+(`←`) is from `P_R ⊙ R` to `L ⊙ P_L`: `L ⊙ P_L ← P_R ⊙ R`.
+
+# Parameters
+- `L::AbstractTensorMap`: Left tensor in the contraction
+- `R::AbstractTensorMap`: Right tensor in the contraction
+- `alg::ProjectorAlgorithm`: Algorithm specification for `PEPSKit.tsvd!` with fields `svd_alg` and `trscheme`.
+
+# Returns
+- `(P_L, P_R)`: A tuple of two tensor maps representing the left and right projectors.
+- `(; truncation_error, condition_number, U, S, V)`: A named tuple containing:
+  - `truncation_error`: Estimated error from dimension truncation
+  - `condition_number`: Ratio of largest to smallest singular values
+  - `U, S, V`: Components from the underlying SVD decomposition
+
+# Usage Examples
+- For half-infinite environment: Use `L = C1` and `R = C2`
+- For full-infinite environment: Use `L = C4 ⊙ C1` and `R = C2 ⊙ C3`
+
+# Implementation Note
+For correct fermion sign handling in fPEPS:
+- Linear algebra operations must use map composition (`*`)
+- General tensor networks use tensor contraction (`⊙`)
+- `@tensor` macro in `TensorKit.jl` handles more general tensor contraction (`⊙`) automatically. `⊙` is used for clarity in the formal derivation of the projectors.
 """
+compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, alg::ProjectorAlgorithm)
+
 #helper function for projection, particularly for the sign of fermions
 function ⊙(t1::AbstractTensorMap, t2::AbstractTensorMap)
     return twist(t1, filter(i -> !isdual(space(t1, i)), domainind(t1))) * t2

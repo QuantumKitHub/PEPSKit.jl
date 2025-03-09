@@ -90,7 +90,7 @@ function sequential_projectors(
     r′ = _prev(r, size(env, 2))
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)), SOUTHWEST)
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)), NORTHWEST)
-
+    Q1, Q2 = Q1 / norm(Q1), Q2 / norm(Q2)
     alg = @set alg.svd_alg = svd_algorithm(alg, coordinate)
 
     return compute_projector(Q1, Q2, alg)
@@ -102,14 +102,21 @@ function sequential_projectors(
     coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
-    ec = (
+    ec0 = (
         TensorMap(EnlargedCorner(network, env, coordinate_se), SOUTHEAST),
         TensorMap(EnlargedCorner(network, env, coordinate), SOUTHWEST),
         TensorMap(EnlargedCorner(network, env, coordinate_nw), NORTHWEST),
         TensorMap(EnlargedCorner(network, env, coordinate_ne), NORTHEAST),
     )
+    ec = (
+        ec0[1] / norm(ec0[1]),
+        ec0[2] / norm(ec0[2]),
+        ec0[3] / norm(ec0[3]),
+        ec0[4] / norm(ec0[4]),
+    )
     alg = @set alg.svd_alg = svd_algorithm(alg, coordinate)
     Q1, Q2 = ec[1] ⊙ ec[2], ec[3] ⊙ ec[4]
+
     return compute_projector(Q1, Q2, alg)
 end
 
