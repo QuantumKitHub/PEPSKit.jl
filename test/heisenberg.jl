@@ -9,10 +9,7 @@ using OptimKit
 # initialize parameters
 Dbond = 2
 χenv = 16
-ctm_alg = SimultaneousCTMRG()
-opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=3)
-)
+gradtol = 1e-3
 # compare against Juraj Hasik's data:
 # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat
 E_ref = -0.6602310934799577
@@ -22,10 +19,10 @@ E_ref = -0.6602310934799577
     Random.seed!(123)
     H = heisenberg_XYZ(InfiniteSquare())
     peps₀ = InfinitePEPS(2, Dbond)
-    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg)
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths
-    peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
+    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ E_ref atol = 1e-2
@@ -38,10 +35,10 @@ end
     unitcell = (1, 2)
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
     peps₀ = InfinitePEPS(2, Dbond; unitcell)
-    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg)
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths
-    peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
+    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ 2 * E_ref atol = 1e-2
@@ -50,12 +47,13 @@ end
 
 @testset "Simple update into AD optimization" begin
     # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
-    Random.seed!(234829)
+    Random.seed!(100)
     N1, N2 = 2, 2
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
     wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+    ctmrg_tol = 1e-6
 
     # normalize vertex tensors
     for ind in CartesianIndices(wpeps.vertices)
@@ -67,11 +65,11 @@ end
     ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
 
     # simple update
-    dts = [1e-2, 1e-3, 4e-4, 1e-4]
+    dts = [1e-2, 1e-3, 1e-3, 1e-4]
     tols = [1e-7, 1e-8, 1e-8, 1e-8]
     maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        Dbond2 = (n == 1) ? Dbond + 2 : Dbond
+        Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trscheme = truncerr(1e-10) & truncdim(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; bipartite=false)
@@ -80,8 +78,7 @@ end
 
     # absorb weight into site tensors and CTMRG
     peps = InfinitePEPS(wpeps)
-    env₀ = CTMRGEnv(rand, Float64, peps, Espace)
-    env, = leading_boundary(env₀, peps, SimultaneousCTMRG())
+    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol=ctmrg_tol)
 
     # measure physical quantities
     e_site = cost_function(peps, env, ham) / (N1 * N2)
@@ -90,9 +87,13 @@ end
     @test isapprox(e_site, -0.6594; atol=1e-3)
 
     # continue with auto differentiation
-    svd_alg_gmres = SVDAdjoint(; rrule_alg=GMRES(; tol=1e-5))
-    opt_alg_gmres = @set opt_alg.boundary_alg.projector_alg.svd_alg = svd_alg_gmres
-    peps_final, env_final, E_final, = fixedpoint(ham, peps, env, opt_alg_gmres)  # sensitivity warnings and degeneracies due to SU(2)?
+    peps_final, env_final, E_final, = fixedpoint(
+        ham,
+        peps,
+        env;
+        tol=gradtol,
+        boundary_alg=(; maxiter=150, svd_alg=(; rrule_alg=(; alg=:gmres, tol=1e-5))),
+    )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)
     @info "Auto diff energy = $e_site2"

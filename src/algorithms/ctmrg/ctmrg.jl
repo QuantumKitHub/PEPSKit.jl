@@ -6,39 +6,93 @@ for contracting infinite PEPS.
 """
 abstract type CTMRGAlgorithm end
 
+const CTMRG_SYMBOLS = IdDict{Symbol,Type{<:CTMRGAlgorithm}}()
+
+function CTMRGAlgorithm(;
+    alg=Defaults.ctmrg_alg,
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=Defaults.ctmrg_verbosity,
+    trscheme=(; alg=Defaults.trscheme),
+    svd_alg=(;),
+    projector_alg=Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
+)
+    # replace symbol with projector alg type
+    haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
+    alg_type = CTMRG_SYMBOLS[alg]
+
+    # parse CTMRG projector algorithm
+
+    projector_algorithm = ProjectorAlgorithm(;
+        alg=projector_alg, svd_alg, trscheme, verbosity
+    )
+
+    return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
+end
+
 """
-    ctmrg_iteration(state, env, alg::CTMRGAlgorithm) -> env′, info
+    ctmrg_iteration(network, env, alg::CTMRGAlgorithm) -> env′, info
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(state, env, alg::CTMRGAlgorithm) end
+function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
-    MPSKit.leading_boundary([envinit], state, alg::CTMRGAlgorithm)
+    leading_boundary(env₀, network; kwargs...)
+    # expert version:
+    leading_boundary(env₀, network, alg::CTMRGAlgorithm)
 
-Contract `state` using CTMRG and return the CTM environment. Per default, a random
-initial environment is used.
+Contract `network` using CTMRG and return the CTM environment. The algorithm can be
+supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) struct.
 
-Each CTMRG run is converged up to `alg.tol` where the singular value convergence
-of the corners and edges is checked. The maximal and minimal number of CTMRG
-iterations is set with `alg.maxiter` and `alg.miniter`.
+## Keyword arguments
 
-Different levels of output information are printed depending on `alg.verbosity`, where `0`
-suppresses all output, `1` only prints warnings, `2` gives information at the start and
-end, and `3` prints information every iteration.
+### CTMRG iterations
+
+* `tol::Real=$(Defaults.ctmrg_tol)` : Stopping criterium for the CTMRG iterations. This is the norm convergence, as well as the distance in singular values of the corners and edges.
+* `miniter::Int=$(Defaults.ctmrg_miniter)` : Minimal number of CTMRG iterations.
+* `maxiter::Int=$(Defaults.ctmrg_maxiter)` : Maximal number of CTMRG iterations.
+* `verbosity::Int=$(Defaults.ctmrg_verbosity)` : Output verbosity level, should be one of the following:
+    0. Suppress all output
+    1. Only print warnings
+    2. Initialization and convergence info
+    3. Iteration info
+    4. Debug info
+* `alg::Symbol=:$(Defaults.ctmrg_alg)` : Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
+    - `:simultaneous`: Simultaneous expansion and renormalization of all sides.
+    - `:sequential`: Sequential application of left moves and rotations.
+
+### Projector algorithm
+
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:notrunc` : No singular values are truncated and the performed SVDs are exact
+    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `svd_alg::Union{<:SVDAdjoint,NamedTuple}` : SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
+* `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
+    - `halfinfinite`: Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `fullinfinite`: Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
 """
-function MPSKit.leading_boundary(
-    envinit, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
+    alg = select_algorithm(leading_boundary, env₀; kwargs...)
+    return leading_boundary(env₀, network, alg)
+end
+function leading_boundary(
+    env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
 )
-    CS = map(x -> tsvd(x)[2], envinit.corners)
-    TS = map(x -> tsvd(x)[2], envinit.edges)
+    CS = map(x -> tsvd(x)[2], env₀.corners)
+    TS = map(x -> tsvd(x)[2], env₀.edges)
 
     η = one(real(scalartype(network)))
-    env = deepcopy(envinit)
+    env = deepcopy(env₀)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        ctmrg_loginit!(log, η, network, envinit)
+        ctmrg_loginit!(log, η, network, env₀)
         local info
         for iter in 1:(alg.maxiter)
             env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
@@ -57,8 +111,8 @@ function MPSKit.leading_boundary(
         return env, info
     end
 end
-function MPSKit.leading_boundary(envinit, state, alg::CTMRGAlgorithm)
-    return MPSKit.leading_boundary(envinit, InfiniteSquareNetwork(state), alg)
+function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
+    return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
 # custom CTMRG logging

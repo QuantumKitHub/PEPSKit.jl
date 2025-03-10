@@ -47,15 +47,13 @@ _to_space(χ::ProductSpaceLike) = prod(_to_space, χ)
 function _corner_tensor(
     f, ::Type{T}, left_vspace::S, right_vspace::S=left_vspace
 ) where {T,S<:ElementarySpaceLike}
-    return TensorMap(f, T, _to_space(left_vspace) ← _to_space(right_vspace))
+    return f(T, _to_space(left_vspace) ← _to_space(right_vspace))
 end
 
 function _edge_tensor(
     f, ::Type{T}, left_vspace::S, pspaces::P, right_vspace::S=left_vspace
 ) where {T,S<:ElementarySpaceLike,P<:ProductSpaceLike}
-    return TensorMap(
-        f, T, _to_space(left_vspace) ⊗ _to_space(pspaces), _to_space(right_vspace)
-    )
+    return f(T, _to_space(left_vspace) ⊗ _to_space(pspaces), _to_space(right_vspace))
 end
 
 """

@@ -74,7 +74,7 @@ function PEPSTensor(
     Sspace::S=Nspace',
     Wspace::S=Espace',
 ) where {T,S<:ElementarySpace}
-    return TensorMap(f, T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
+    return f(T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
 end
 function PEPSTensor(
     f,
@@ -85,7 +85,7 @@ function PEPSTensor(
     Sspace::Int=Nspace,
     Wspace::Int=Espace,
 ) where {T}
-    return TensorMap(f, T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
+    return f(T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
 end
 
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))

@@ -47,7 +47,7 @@ chi = 20
 ctm_alg = SimultaneousCTMRG(; tol=1e-10, trscheme=truncdim(chi))
 opt_alg = PEPSOptimize(;
     boundary_alg=ctm_alg,
-    optimizer=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=3),
+    optimizer_alg=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=3),
     gradient_alg=LinSolver(),
     reuse_env=true,
 )
