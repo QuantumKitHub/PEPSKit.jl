@@ -17,7 +17,14 @@ abstract type ProjectorAlgorithm end
 function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
         fwd_alg = alg.svd_alg.fwd_alg
-        fix_svd = FixedSVD(fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c])
+        fix_svd = FixedSVD(
+            fwd_alg.U[dir, r, c],
+            fwd_alg.S[dir, r, c],
+            fwd_alg.V[dir, r, c],
+            fwd_alg.U_full[dir, r, c],
+            fwd_alg.S_full[dir, r, c],
+            fwd_alg.V_full[dir, r, c],
+        )
         return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
     else
         return alg.svd_alg

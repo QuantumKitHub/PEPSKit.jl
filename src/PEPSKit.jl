@@ -142,7 +142,7 @@ module Defaults
     const sparse = false
     const trscheme = FixedSpaceTruncation()
     const fwd_alg = TensorKit.SDD()
-    const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
+    const rrule_alg = nothing
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
