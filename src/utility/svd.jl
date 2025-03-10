@@ -27,6 +27,7 @@ removes the divergences from the adjoint.
     - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
     - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
+    - `:tsvd`: Uses TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [TensorKit](https://github.com/Jutho/TensorKit.jl/blob/f9cddcf97f8d001888a26f4dce7408d5c6e2228f/ext/TensorKitChainRulesCoreExt/factorizations.jl#L3)
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
@@ -56,7 +57,7 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
             IterSVD(; alg=GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol,Type{<:Any}}(
-    :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+    :tsvd => Nothing, :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
 )
 
 function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
@@ -85,10 +86,14 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
         haskey(SVD_RRULE_SYMBOLS, rrule_kwargs.alg) ||
             throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
-        rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
-        rrule_type <: BiCGStab &&
-            (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
-        rrule_type(; rrule_kwargs...)
+        if rrule_type <: Nothing
+            nothing
+        else
+            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+            rrule_type <: BiCGStab &&
+                (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
+            rrule_type(; rrule_kwargs...)
+        end
     else
         rrule_alg
     end
@@ -171,10 +176,9 @@ function TensorKit.tsvd!(
     t, alg::SVDAdjoint{F}; trunc::NoTruncation=notrunc(), p::Real=2
 ) where {F<:FixedSVD}
     svd = alg.fwd_alg
-    condition_number = _condition_number(svd.S)
     info = (;
         truncation_error=0,
-        condition_number,
+        condition_number=_condition_number(svd.S),
         U_full=svd.U_full,
         S_full=svd.S_full,
         V_full=svd.V_full,
