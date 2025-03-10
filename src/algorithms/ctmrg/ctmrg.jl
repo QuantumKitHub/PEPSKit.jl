@@ -50,28 +50,28 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 
 ### CTMRG iterations
 
-* `tol::Real=$(Defaults.ctmrg_tol)`: Stopping criterium for the CTMRG iterations. This is the norm convergence, as well as the distance in singular values of the corners and edges.
-* `miniter::Int=$(Defaults.ctmrg_miniter)`: Minimal number of CTMRG iterations.
-* `maxiter::Int=$(Defaults.ctmrg_maxiter)`: Maximal number of CTMRG iterations.
-* `verbosity::Int=$(Defaults.ctmrg_verbosity)`: Output verbosity level, should be one of the following:
+* `tol::Real=$(Defaults.ctmrg_tol)` : Stopping criterium for the CTMRG iterations. This is the norm convergence, as well as the distance in singular values of the corners and edges.
+* `miniter::Int=$(Defaults.ctmrg_miniter)` : Minimal number of CTMRG iterations.
+* `maxiter::Int=$(Defaults.ctmrg_maxiter)` : Maximal number of CTMRG iterations.
+* `verbosity::Int=$(Defaults.ctmrg_verbosity)` : Output verbosity level, should be one of the following:
     0. Suppress all output
     1. Only print warnings
     2. Initialization and convergence info
     3. Iteration info
     4. Debug info
-* `alg::Symbol=:$(Defaults.ctmrg_alg)`: Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
+* `alg::Symbol=:$(Defaults.ctmrg_alg)` : Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
 
 ### Projector algorithm
 
-* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`: Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace`: Keep virtual spaces fixed during projection
-    - `:notrunc`: No singular values are truncated and the performed SVDs are exact
-    - `:truncerr`: Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncdim`: Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
-    - `:truncspace`: Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:truncbelow`: Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `svd_alg::Union{<:SVDAdjoint,NamedTuple}`: SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
-* `projector_alg::Symbol=:$(Defaults.projector_alg)`: Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
+* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:notrunc` : No singular values are truncated and the performed SVDs are exact
+    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `svd_alg::Union{<:SVDAdjoint,NamedTuple}` : SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
+* `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)

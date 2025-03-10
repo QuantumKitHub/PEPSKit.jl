@@ -69,15 +69,15 @@ Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
 ## Keyword arguments
 
-* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance for the difference of norms of two consecutive summands in the geometric sum.
-* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of gradient iterations.
-* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity that can be one of the following:
+* `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance for the difference of norms of two consecutive summands in the geometric sum.
+* `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)` : Output information verbosity that can be one of the following:
     0. Suppress output information
     1. Print convergence warnings
     2. Information at each gradient iteration
-* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
-    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 """
 struct GeomSum{F} <: GradMode{F}
     tol::Real
@@ -95,15 +95,15 @@ Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
 ## Keyword arguments
 
-* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance for the norm difference of two consecutive `dx` contributions.
-* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of gradient iterations.
-* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity that can be one of the following:
+* `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance for the norm difference of two consecutive `dx` contributions.
+* `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)` : Output information verbosity that can be one of the following:
     0. Suppress output information
     1. Print convergence warnings
     2. Information at each gradient iteration
-* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
-    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 """
 struct ManualIter{F} <: GradMode{F}
     tol::Real
@@ -122,15 +122,15 @@ problem using iterative solvers.
 
 ## Keyword arguments
 
-* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance of the linear solver.
-* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of solver iterations.
-* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity of the linear solver.
-* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
-    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
-* `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_linsolver)`: Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
-    - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+* `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the linear solver.
+* `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of solver iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)` : Output information verbosity of the linear solver.
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_linsolver)` : Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
+    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
+    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
 """
 struct LinSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.LinearSolver
@@ -147,14 +147,14 @@ problem as an eigenvalue problem.
 
 ## Keyword arguments
 
-* `tol::Real=$(Defaults.gradient_tol)`: Convergence tolerance of the linear solver.
-* `maxiter::Int=$(Defaults.gradient_maxiter)`: Maximal number of solver iterations.
-* `verbosity::Int=$(Defaults.gradient_verbosity)`: Output information verbosity of the linear solver.
-* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)`: Style of CTMRG iteration which is being differentiated, which can be:
-    - `:fixed`: the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge`: the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
-* `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)`: Eigen solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
-    - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+* `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the linear solver.
+* `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of solver iterations.
+* `verbosity::Int=$(Defaults.gradient_verbosity)` : Output information verbosity of the linear solver.
+* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
+    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)` : Eigen solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
+    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
 """
 struct EigSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.KrylovAlgorithm
