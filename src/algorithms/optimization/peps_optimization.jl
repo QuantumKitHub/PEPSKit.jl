@@ -171,29 +171,30 @@ end
 Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step
 size `α`, giving a new PEPS `A´`,
 ```math
-A' \\leftarrow \\cos(α ||η||) A + \\sin(α ||η||) \\frac{η}{||η||},
+A' \\leftarrow \\cos \\left( α \\frac{||η||}{||A||} \\right) A + \\sin \\left( α \\frac{||η||}{||A||} \\right) ||A|| \\frac{η}{||η||},
 ```
 and corresponding directional derivative `ξ`,
 ```math
-ξ = \\cos(α ||η||) η - \\sin(α ||η||) ||η|| A,
+ξ = \\cos \\left( α \\frac{||η||}{||A||} \\right) η - \\sin \\left( α \\frac{||η||}{||A||} \\right) ||η|| \\frac{A}{||A||},
 ```
-such that ``\\langle A', ξ \\rangle = 0``. If the initial state was properly normalized, we
-have that
-```math
-||A'|| = ||A|| = 1.
-```
+such that ``\\langle A', ξ \\rangle = 0`` and ``||A'|| = ||A||``.
 """
 function peps_retract(x, η, α)
     peps = x[1]
+    norms_peps = norm.(peps.A)
     norms_η = norm.(η.A)
 
     peps´ = similar(x[1])
-    peps´.A .= cos.(α .* norms_η) .* peps.A .+ sin.(α .* norms_η) .* η.A ./ norms_η
+    peps´.A .=
+        cos.(α .* norms_η ./ norms_peps) .* peps.A .+
+        sin.(α .* norms_η ./ norms_peps) .* norms_peps .* η.A ./ norms_η
 
     env = deepcopy(x[2])
 
     ξ = similar(η)
-    ξ.A .= cos.(α .* norms_η) .* η.A .- sin.(α .* norms_η) .* norms_η .* peps.A
+    ξ.A .=
+        cos.(α .* norms_η ./ norms_peps) .* η.A .-
+        sin.(α .* norms_η ./ norms_peps) .* norms_η .* peps.A ./ norms_peps
 
     return (peps´, env), ξ
 end
@@ -209,12 +210,13 @@ from a direction `η` of the form
 ```
 where ``\\langle Δξ, A \\rangle = \\langle Δξ, η \\rangle = 0``, it returns
 ```math
-ξ(α) = \\left\\langle \\frac{η}{||η||}, ξ \\right\\rangle \\left( \\cos(α ||η||) \\frac{η}{||η||} - \\sin(α ||η||) A \\right) + Δξ
+ξ(α) = \\left\\langle \\frac{η}{||η||}, ξ \\right \\rangle \\left( \\cos \\left( α \\frac{||η||}{||A||} \\right) \\frac{η}{||η||} - \\sin( \\left( α \\frac{||η||}{||A||} \\right) \\frac{A}{||A||} \\right) + Δξ
 ```
 such that ``||ξ(α)|| = ||ξ||, \\langle A', ξ(α) \\rangle = 0``.
 """
 function peps_transport!(ξ, x, η, α, x´)
     peps = x[1]
+    norms_peps = norm.(peps.A)
 
     norms_η = norm.(η.A)
     normalized_η = η.A ./ norms_η
@@ -225,8 +227,10 @@ function peps_transport!(ξ, x, η, α, x´)
 
     # keep orthogonal component fixed, modify the rest by the proper directional derivative
     ξ.A .=
-        overlaps_η_ξ .*
-        (cos.(α .* norms_η) .* normalized_η .- sin.(α .* norms_η) .* peps.A) .+ Δξ
+        overlaps_η_ξ .* (
+            cos.(α .* norms_η ./ norms_peps) .* normalized_η .-
+            sin.(α .* norms_η ./ norms_peps) .* peps.A ./ norms_peps
+        ) .+ Δξ
 
     return ξ
 end
