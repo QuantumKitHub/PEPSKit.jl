@@ -64,6 +64,7 @@ iterscheme(::GradMode{F}) where {F} = F
 
 """
     struct GeomSum <: GradMode{iterscheme}
+    GeomSum(; kwargs...)
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
@@ -90,6 +91,7 @@ GRADIENT_MODE_SYMBOLS[:geomsum] = GeomSum
 
 """
     struct ManualIter <: GradMode{iterscheme}
+    ManualIter(; kwargs...)
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
@@ -116,6 +118,7 @@ GRADIENT_MODE_SYMBOLS[:manualiter] = ManualIter
 
 """
     struct LinSolver <: GradMode{iterscheme}
+    LinSolver(; kwargs...)
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
@@ -141,6 +144,7 @@ GRADIENT_MODE_SYMBOLS[:linsolver] = LinSolver
 
 """
     struct EigSolver <: GradMode{iterscheme}
+    EigSolver(; kwargs...)
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.

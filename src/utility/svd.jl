@@ -11,6 +11,7 @@ const CRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
     struct SVDAdjoint
+    SVDAdjoint(; kwargs...)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
@@ -126,12 +127,18 @@ end
 
 """
     struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf, start_vector=random_start_vector)
+    IterSVD(; kwargs...)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmetric) tensors.
 The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
 In particular, this make it possible to specify the targeted singular values block-wise.
 In case the symmetry block is too small as compared to the number of singular values, or
 the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
+
+## Keyword arguments
+- `alg::KrlovKit.GKL=KrylovKit.GKL(; tol=1e-14, krylovdim=25)`: GKL algorithm struct for block-wise iterative SVD.
+- `fallback_threshold::Float64=Inf`: Threshold for `howmany / minimum(size(block))` above which (if the block is too small) the algorithm falls back to TensorKit's dense SVD.
+- `start_vector=random_start_vector`: Function providing the initial vector for the iterative SVD algorithm.
 """
 @kwdef struct IterSVD
     alg::KrylovKit.GKL = KrylovKit.GKL(; tol=1e-14, krylovdim=25)

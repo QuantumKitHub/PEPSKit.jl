@@ -1,8 +1,6 @@
 """
-    SequentialCTMRG(; tol=$(Defaults.ctmrg_tol), maxiter=$(Defaults.ctmrg_maxiter),
-                      miniter=$(Defaults.ctmrg_miniter), verbosity=$(Defaults.ctmrg_verbosity),
-                      svd_alg=TODO, trscheme=TODO,
-                      projector_alg=TODO)
+    struct SequentialCTMRG <: CTMRGAlgorithm
+    SequentialCTMRG(; kwargs...)
 
 CTMRG algorithm where the expansions and renormalization is performed sequentially
 column-wise. This is implemented as a growing and projecting step to the left, followed by

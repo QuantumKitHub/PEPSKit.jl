@@ -1,5 +1,6 @@
 """
-    struct SimultaneousCTMRG
+    struct SimultaneousCTMRG <: CTMRGAlgorithm
+    SimultaneousCTMRG(; kwargs...)
 
 CTMRG algorithm where all sides are grown and renormalized at the same time. In particular,
 the projectors are applied to the corners from two sides simultaneously.

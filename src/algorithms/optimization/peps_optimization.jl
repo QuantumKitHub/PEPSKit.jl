@@ -1,5 +1,6 @@
 """
     struct PEPSOptimize{G}
+    PEPSOptimize(; kwargs...)
 
 Algorithm struct for PEPS ground-state optimization using AD. See [`fixedpoint`](@ref) for details.
 
