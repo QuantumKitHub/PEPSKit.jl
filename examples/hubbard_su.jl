@@ -27,11 +27,11 @@ ham = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu=
 # simple update
 dts = [1e-2, 1e-3, 4e-4, 1e-4]
 tols = [1e-6, 1e-8, 1e-8, 1e-8]
-maxiter = 10000
+maxiter = 20000
 for (n, (dt, tol)) in enumerate(zip(dts, tols))
     trscheme = truncerr(1e-10) & truncdim(Dbond)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-    peps, = simpleupdate(peps, ham, alg; bipartite=false)
+    global peps, = simpleupdate(peps, ham, alg; bipartite=false)
 end
 
 # absorb weight into site tensors
@@ -42,8 +42,7 @@ peps = InfinitePEPS(peps)
 Espace = Vect[fℤ₂](0 => χenv0 / 2, 1 => χenv0 / 2)
 env = CTMRGEnv(randn, Float64, peps, Espace)
 for χ in [χenv0, χenv]
-    ctm_alg = SequentialCTMRG(; maxiter=300, tol=1e-7)
-    env, = leading_boundary(env, peps, ctm_alg)
+    env, = leading_boundary(env, peps; alg=:sequential, maxiter=300, tol=1e-7)
 end
 
 # Benchmark values of the ground state energy from

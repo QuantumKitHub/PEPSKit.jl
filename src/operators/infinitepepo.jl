@@ -59,7 +59,7 @@ function InfinitePEPO(
     Ppspaces = adjoint.(circshift(Pspaces, (0, 0, -1)))
 
     P = map(Pspaces, Ppspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, Pp, N, E, S, W
-        return TensorMap(f, T, P * Pp ← N * E * S * W)
+        return f(T, P * Pp ← N * E * S * W)
     end
 
     return InfinitePEPO(P)

@@ -25,7 +25,7 @@ r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
 full_alg = SVDAdjoint(; rrule_alg=nothing)
-iter_alg = SVDAdjoint(; fwd_alg=IterSVD())
+iter_alg = SVDAdjoint(; fwd_alg=(; alg=:iterative))
 
 @testset "Non-truncacted SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)

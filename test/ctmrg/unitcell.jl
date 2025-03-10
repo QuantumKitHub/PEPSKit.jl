@@ -8,10 +8,10 @@ using TensorKit
 Random.seed!(91283219347)
 stype = ComplexF64
 ctm_algs = [
-    SequentialCTMRG(; projector_alg=HalfInfiniteProjector),
-    SequentialCTMRG(; projector_alg=FullInfiniteProjector),
-    SimultaneousCTMRG(; projector_alg=HalfInfiniteProjector),
-    SimultaneousCTMRG(; projector_alg=FullInfiniteProjector),
+    SequentialCTMRG(; projector_alg=:halfinfinite),
+    SequentialCTMRG(; projector_alg=:fullinfinite),
+    SimultaneousCTMRG(; projector_alg=:halfinfinite),
+    SimultaneousCTMRG(; projector_alg=:fullinfinite),
 ]
 
 function test_unitcell(
