@@ -49,7 +49,10 @@ function _split_proj_and_info(proj_and_info)
     U = map(x -> x[2].U, proj_and_info)
     S = map(x -> x[2].S, proj_and_info)
     V = map(x -> x[2].V, proj_and_info)
-    info = (; truncation_error, condition_number, U, S, V)
+    U_full = map(x -> x[2].U_full, proj_and_info)
+    S_full = map(x -> x[2].S_full, proj_and_info)
+    V_full = map(x -> x[2].V_full, proj_and_info)
+    info = (; truncation_error, condition_number, U, S, V, U_full, S_full, V_full)
     return (P_left, P_right), info
 end
 
