@@ -76,7 +76,7 @@ struct HalfInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
     verbosity::Int
 end
 function HalfInfiniteProjector(; kwargs...)
-    return select_algorithm(ProjectorAlgorithm; alg=:halfinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg=:halfinfinite, kwargs...)
 end
 
 PROJECTOR_SYMBOLS[:halfinfinite] = HalfInfiniteProjector
@@ -106,7 +106,7 @@ struct FullInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
     verbosity::Int
 end
 function FullInfiniteProjector(; kwargs...)
-    return select_algorithm(ProjectorAlgorithm; alg=:fullinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg=:fullinfinite, kwargs...)
 end
 
 PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
