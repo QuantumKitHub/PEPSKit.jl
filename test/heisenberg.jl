@@ -69,7 +69,7 @@ end
     tols = [1e-7, 1e-8, 1e-8, 1e-8]
     maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        Dbond2 = (n == 1) ? Dbond + 2 : Dbond
+        Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trscheme = truncerr(1e-10) & truncdim(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; bipartite=false)
