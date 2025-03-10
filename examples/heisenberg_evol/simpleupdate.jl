@@ -42,8 +42,15 @@ end
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
 env = CTMRGEnv(rand, Float64, peps_, Espace)
-ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=trscheme_env)
-env, = leading_boundary(env, peps_, ctm_alg)
+env, = leading_boundary(
+    env,
+    peps_;
+    alg=:sequential,
+    projector_alg=:fullinfinite,
+    tol=1e-10,
+    verbosity=2,
+    trscheme=trscheme_env,
+)
 meas = measure_heis(peps_, ham, env)
 display(meas)
 @info @sprintf("Energy = %.8f\n", meas["e_site"])
