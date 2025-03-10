@@ -105,9 +105,17 @@ function fixedpoint(
     gradnorms_unitcell = Vector{Matrix{T}}()
     times = Vector{Float64}()
 
+    # normalize the initial guess
+    peps₀ = peps_normalize(peps₀)
+
     # optimize operator cost function
     (peps_final, env_final), cost, ∂cost, numfg, convergence_history = optimize(
-        (peps₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
+        (peps₀, env₀),
+        alg.optimizer;
+        retract,
+        inner=real_inner,
+        finalize!,
+        (transport!)=(peps_transport!),
     ) do (peps, env)
         start_time = time_ns()
         E, gs = withgradient(peps) do ψ
@@ -144,13 +152,83 @@ function fixedpoint(
     return peps_final, env_final, cost, info
 end
 
-# Update PEPS unit cell in non-mutating way
-# Note: Both x and η are InfinitePEPS during optimization
+"""
+    peps_normalize(A::InfinitePEPS)
+
+Normalize the individual tensors in the unit cell of an `InfinitePEPS` such that they each
+have unit Euclidean norm.
+"""
+function peps_normalize(A::InfinitePEPS)
+    normalized_tensors = map(unitcell(A)) do t
+        return t / norm(t)
+    end
+    return InfinitePEPS(normalized_tensors)
+end
+
+"""
+    peps_retract(x, η, α)
+
+Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step
+size `α`, giving a new PEPS `A´`,
+```math
+A' \\leftarrow \\cos(α ||η||) A + \\sin(α ||η||) \\frac{η}{||η||},
+```
+and corresponding directional derivative `ξ`,
+```math
+ξ = \\cos(α ||η||) η - \\sin(α ||η||) ||η|| A,
+```
+such that ``\\langle A', ξ \\rangle = 0``. If the initial state was properly normalized, we
+have that
+```math
+||A'|| = ||A|| = 1.
+```
+"""
 function peps_retract(x, η, α)
-    peps = deepcopy(x[1])
-    peps.A .+= η.A .* α
+    peps = x[1]
+    norms_η = norm.(η.A)
+
+    peps´ = similar(x[1])
+    peps´.A .= cos.(α .* norms_η) .* peps.A .+ sin.(α .* norms_η) .* η.A ./ norms_η
+
     env = deepcopy(x[2])
-    return (peps, env), η
+
+    ξ = similar(η)
+    ξ.A .= cos.(α .* norms_η) .* η.A .- sin.(α .* norms_η) .* norms_η .* peps.A
+
+    return (peps´, env), ξ
+end
+
+"""
+    peps_transport!(ξ, x, η, α, x′)
+
+Transports a direction at `A = x[1]` to a valid direction at `A´ = x´[1]` corresponding to
+the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
+from a direction `η` of the form
+```math
+ξ = \\left\\langle \\frac{η}{||η||}, ξ \\right\\rangle \\frac{η}{||η||} + Δξ
+```
+where ``\\langle Δξ, A \\rangle = \\langle Δξ, η \\rangle = 0``, it returns
+```math
+ξ(α) = \\left\\langle \\frac{η}{||η||}, ξ \\right\\rangle \\left( \\cos(α ||η||) \\frac{η}{||η||} - \\sin(α ||η||) A \\right) + Δξ
+```
+such that ``||ξ(α)|| = ||ξ||, \\langle A', ξ(α) \\rangle = 0``.
+"""
+function peps_transport!(ξ, x, η, α, x´)
+    peps = x[1]
+
+    norms_η = norm.(η.A)
+    normalized_η = η.A ./ norms_η
+    overlaps_η_ξ = inner.(normalized_η, ξ.A)
+
+    # isolate the orthogonal component
+    Δξ = ξ.A .- overlaps_η_ξ .* normalized_η
+
+    # keep orthogonal component fixed, modify the rest by the proper directional derivative
+    ξ.A .=
+        overlaps_η_ξ .*
+        (cos.(α .* norms_η) .* normalized_η .- sin.(α .* norms_η) .* peps.A) .+ Δξ
+
+    return ξ
 end
 
 # Take real valued part of dot product
