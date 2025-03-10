@@ -215,10 +215,10 @@ function ChainRulesCore.rrule(
             ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
             TensorKitCRCExt.svd_pullback!(b, Uc, Sdc, V⁺c, ΔUc, ΔSdc, ΔV⁺c)
         end
-        return NoTangent(), Δt
+        return NoTangent(), Δt, NoTangent()
     end
     function tsvd!_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
-        return NoTangent(), ZeroTangent()
+        return NoTangent(), ZeroTangent(), NoTangent()
     end
 
     return (Ũ, S̃, Ṽ⁺, info), tsvd!_pullback
