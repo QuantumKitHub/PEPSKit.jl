@@ -147,7 +147,7 @@ problem as an eigenvalue problem.
 
 ## Keyword arguments
 
-* `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the linear solver.
+* `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the eigen solver.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of solver iterations.
 * `verbosity::Int=$(Defaults.gradient_verbosity)` : Output information verbosity of the linear solver.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
