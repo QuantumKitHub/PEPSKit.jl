@@ -38,19 +38,18 @@ function _su_bondx!(
     cp1 = _next(col, Nc)
     # absorb environment weights
     A, B = peps.vertices[row, col], peps.vertices[row, cp1]
-    A = _absorb_weight(A, row, col, "tbl", peps.weights)
-    B = _absorb_weight(B, row, cp1, "trb", peps.weights)
+    sqrtsA = ntuple(dir -> (dir == EAST), 4)
+    sqrtsB = ntuple(dir -> (dir == WEST), 4)
+    A = _absorb_weights(A, peps.weights, row, col, Tuple(1:4), sqrtsA, false)
+    B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, false)
     # apply gate
     X, a, b, Y = _qr_bond(A, B)
     a, s, b, ϵ = _apply_gate(a, b, gate, alg.trscheme)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
-    for ax in (2, 4, 5)
-        A = absorb_weight(A, row, col, ax, peps.weights; invwt=true)
-    end
-    for ax in (2, 3, 4)
-        B = absorb_weight(B, row, cp1, ax, peps.weights; invwt=true)
-    end
+    _allfalse = ntuple(Returns(false), 3)
+    A = _absorb_weights(A, peps.weights, row, col, (NORTH, SOUTH, WEST), _allfalse, true)
+    B = _absorb_weights(B, peps.weights, row, cp1, (NORTH, SOUTH, EAST), _allfalse, true)
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
     peps.vertices[row, col], peps.vertices[row, cp1] = A, B
@@ -116,10 +115,10 @@ end
 
 """
     simpleupdate(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
-                 bipartite::Bool=false, check_int::Int=500)
+                 bipartite::Bool=false, check_interval::Int=500)
 
 Perform simple update with nearest neighbor Hamiltonian `ham`, where the evolution
-information is printed every `check_int` steps. 
+information is printed every `check_interval` steps. 
 
 If `bipartite == true` (for square lattice), a unit cell size of `(2, 2)` is assumed, 
 as well as tensors and x/y weights which are the same across the diagonals, i.e. at
@@ -130,7 +129,7 @@ function simpleupdate(
     ham::LocalOperator,
     alg::SimpleUpdate;
     bipartite::Bool=false,
-    check_int::Int=500,
+    check_interval::Int=500,
 )
     time_start = time()
     Nr, Nc = size(peps)
@@ -149,7 +148,7 @@ function simpleupdate(
         cancel = (count == alg.maxiter)
         wts0 = deepcopy(peps.weights)
         time1 = time()
-        if ((count == 1) || (count % check_int == 0) || converge || cancel)
+        if ((count == 1) || (count % check_interval == 0) || converge || cancel)
             @info "Space of x-weight at [1, 1] = $(space(peps.weights[1, 1, 1], 1))"
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
