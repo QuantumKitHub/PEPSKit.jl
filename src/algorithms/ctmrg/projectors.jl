@@ -19,13 +19,7 @@ function ProjectorAlgorithm(;
     alg_type = PROJECTOR_SYMBOLS[alg]
 
     # parse SVD forward & rrule algorithm
-    svd_algorithm = if svd_alg isa SVDAdjoint
-        svd_alg
-    elseif svd_alg isa NamedTuple
-        SVDAdjoint(; svd_alg...)
-    else
-        throw(ArgumentError("unknown algorithm $alg"))
-    end
+    svd_algorithm = _alg_or_nt(SVDAdjoint, svd_alg)
 
     # parse truncation scheme
     truncation_scheme = if trscheme isa TruncationScheme
