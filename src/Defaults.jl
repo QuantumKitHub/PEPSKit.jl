@@ -5,45 +5,69 @@ Module containing default algorithm parameter values and arguments.
 
 ## CTMRG
 
-- `ctmrg_tol=$(Defaults.ctmrg_tol)` : Tolerance checking singular value and norm convergence.
-- `ctmrg_maxiter=$(Defaults.ctmrg_maxiter)` : Maximal number of CTMRG iterations per run.
-- `ctmrg_miniter=$(Defaults.ctmrg_miniter)` : Minimal number of CTMRG carried out.
-- `ctmrg_alg=:$(Defaults.ctmrg_alg)` : Default CTMRG algorithm variant.
-- `ctmrg_verbosity=$(Defaults.ctmrg_verbosity)` : CTMRG output information verbosity
+* `ctmrg_tol=$(Defaults.ctmrg_tol)` : Tolerance checking singular value and norm convergence.
+* `ctmrg_maxiter=$(Defaults.ctmrg_maxiter)` : Maximal number of CTMRG iterations per run.
+* `ctmrg_miniter=$(Defaults.ctmrg_miniter)` : Minimal number of CTMRG carried out.
+* `ctmrg_alg=:$(Defaults.ctmrg_alg)` : Default CTMRG algorithm variant.
+    - `:simultaneous`: Simultaneous expansion and renormalization of all sides.
+    - `:sequential`: Sequential application of left moves and rotations.
+* `ctmrg_verbosity=$(Defaults.ctmrg_verbosity)` : CTMRG output information verbosity
 
 ## SVD forward & reverse
 
-- `trscheme=:$(Defaults.trscheme)` : Truncation scheme for SVDs and other decompositions.
-- `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
-- `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
-- `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
-- `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
-- `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
+* `trscheme=:$(Defaults.trscheme)` : Truncation scheme for SVDs and other decompositions.
+    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:notrunc` : No singular values are truncated and the performed SVDs are exact
+    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
+    - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
+    - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
+    - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
+* `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
+* `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
+* `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
+* `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
+    - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
+    - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+    - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
 
 ## Projectors
 
-- `projector_alg=:$(Defaults.projector_alg)` : Default variant of the CTMRG projector algorithm.
-- `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
+* `projector_alg=:$(Defaults.projector_alg)` : Default variant of the CTMRG projector algorithm.
+    - `halfinfinite`: Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `fullinfinite`: Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+* `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
 
 ## Fixed-point gradient
 
-- `gradient_tol=$(Defaults.gradient_tol)` : Convergence tolerance for the fixed-point gradient iteration.
-- `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for computing the CTMRG fixed-point gradient.
-- `gradient_verbosity=$(Defaults.gradient_verbosity)` : Gradient output information verbosity.
-- `gradient_linsolver=:$(Defaults.gradient_linsolver)` : Default linear solver for the `LinSolver` gradient algorithm.
-- `gradient_eigsolver=:$(Defaults.gradient_eigsolver)` : Default eigensolver for the `EigSolver` gradient algorithm.
-- `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
-- `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
-- `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the gradient fixed-point.
+* `gradient_tol=$(Defaults.gradient_tol)` : Convergence tolerance for the fixed-point gradient iteration.
+* `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for computing the CTMRG fixed-point gradient.
+* `gradient_verbosity=$(Defaults.gradient_verbosity)` : Gradient output information verbosity.
+* `gradient_linsolver=:$(Defaults.gradient_linsolver)` : Default linear solver for the `LinSolver` gradient algorithm.
+    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
+    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+* `gradient_eigsolver=:$(Defaults.gradient_eigsolver)` : Default eigensolver for the `EigSolver` gradient algorithm.
+    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+* `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
+* `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
+    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the gradient fixed-point.
 
 ## Optimization
 
-- `reuse_env=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
-- `optimizer_tol=$(Defaults.optimizer_tol)` : Gradient norm tolerance of the optimizer.
-- `optimizer_maxiter=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
-- `optimizer_verbosity=$(Defaults.optimizer_verbosity)` : Optimizer output information verbosity.
-- `optimizer_alg=:$(Defaults.optimizer_alg)` : Default `OptimKit.OptimizerAlgorithm` for PEPS optimization.
-- `lbfgs_memory=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
+* `reuse_env=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
+* `optimizer_tol=$(Defaults.optimizer_tol)` : Gradient norm tolerance of the optimizer.
+* `optimizer_maxiter=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
+* `optimizer_verbosity=$(Defaults.optimizer_verbosity)` : Optimizer output information verbosity.
+* `optimizer_alg=:$(Defaults.optimizer_alg)` : Default `OptimKit.OptimizerAlgorithm` for PEPS optimization.
+    - `:gradientdescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:conjugategradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:lbfgs` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+* `lbfgs_memory=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
 
 ## OhMyThreads scheduler
 
@@ -91,7 +115,7 @@ const reuse_env = true
 const optimizer_tol = 1e-4
 const optimizer_maxiter = 100
 const optimizer_verbosity = 3
-const optimizer_alg = :lbfgs
+const optimizer_alg = :lbfgs # ∈ {:gradientdescent, :conjugategradient, :lbfgs}
 const lbfgs_memory = 20
 
 # OhMyThreads scheduler defaults
