@@ -53,8 +53,9 @@ include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
-include("algorithms/bond_truncation/fullenv_truncation.jl")
-include("algorithms/bond_truncation/bond_truncation.jl")
+include("algorithms/truncation/truncationschemes.jl")
+include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
