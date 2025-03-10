@@ -3,24 +3,30 @@
 # --------------------------------------------------------
 
 """
-    struct EnlargedCorner{TC,TE,TA}
+    struct EnlargedCorner{TC,TE,TA,TO}
 
-Enlarged CTMRG corner tensor storage.
+Enlarged CTMRG corner tensor storage (with OP).
 """
-struct EnlargedCorner{TC,TE,TA}
+struct EnlargedCorner{TC,TE,TA,TO}
     C::TC
     E_1::TE
     E_2::TE
     A::TA
+    OP::TO
 end
 
 """
-    EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
+    EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates, operator)
 
 Construct an enlarged corner with the correct row and column indices based on the given
 `coordinates` which are of the form `(dir, row, col)`.
 """
-function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
+function EnlargedCorner(
+    network::InfiniteSquareNetwork,
+    env,
+    coordinates,
+    operator=(nothing, nothing, nothing, nothing),
+)
     dir, r, c = coordinates
     if dir == NORTHWEST
         return EnlargedCorner(
@@ -28,6 +34,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[WEST, r, _prev(c, end)],
             env.edges[NORTH, _prev(r, end), c],
             network[r, c],
+            operator[NORTHWEST],
         )
     elseif dir == NORTHEAST
         return EnlargedCorner(
@@ -35,6 +42,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[NORTH, _prev(r, end), c],
             env.edges[EAST, r, _next(c, end)],
             network[r, c],
+            operator[NORTHEAST],
         )
     elseif dir == SOUTHEAST
         return EnlargedCorner(
@@ -42,6 +50,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[EAST, r, _next(c, end)],
             env.edges[SOUTH, _next(r, end), c],
             network[r, c],
+            operator[SOUTHEAST],
         )
     elseif dir == SOUTHWEST
         return EnlargedCorner(
@@ -49,6 +58,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[SOUTH, _next(r, end), c],
             env.edges[WEST, r, _prev(c, end)],
             network[r, c],
+            operator[SOUTHWEST],
         )
     end
 end
@@ -59,7 +69,7 @@ end
 Instantiate enlarged corner as `TensorMap` where `dir` selects the correct contraction
 direction, i.e. the way the environment and PEPS tensors connect.
 """
-function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
+function TensorKit.TensorMap(Q::EnlargedCorner{TC,TE,TA,Nothing}, dir::Int) where {TC,TE,TA}
     if dir == NORTHWEST
         return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     elseif dir == NORTHEAST
@@ -68,6 +78,18 @@ function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
         return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     elseif dir == SOUTHWEST
         return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
+    end
+end
+
+function TensorKit.TensorMap(Q::EnlargedCorner{TC,TE,TA,TO}, dir::Int) where {TC,TE,TA,TO}
+    if dir == NORTHWEST
+        return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A, Q.OP)
+    elseif dir == NORTHEAST
+        return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.A, Q.OP)
+    elseif dir == SOUTHEAST
+        return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A, Q.OP)
+    elseif dir == SOUTHWEST
+        return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A, Q.OP)
     end
 end
 

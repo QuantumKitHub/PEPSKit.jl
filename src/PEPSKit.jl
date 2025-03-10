@@ -35,6 +35,7 @@ include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
+include("operators/patch_mpo_models.jl")
 
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
@@ -143,7 +144,7 @@ module Defaults
     const sparse = false
     const trscheme = FixedSpaceTruncation()
     const fwd_alg = TensorKit.SDD()
-    const rrule_alg = Arnoldi(; tol=1.0e-12, krylovdim=48, verbosity=-1)
+    const rrule_alg = Arnoldi(; tol=ctmrg_tol, krylovdim=48, verbosity=-1)
     const svd_alg = SVDAdjoint(; fwd_alg, rrule_alg)
     const projector_alg_type = HalfInfiniteProjector
     const projector_alg = projector_alg_type(; svd_alg, trscheme, verbosity=0)
@@ -236,5 +237,8 @@ export showtypeofgrad
 export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
 export transverse_field_ising, heisenberg_XYZ, j1_j2
 export pwave_superconductor, hubbard_model, tj_model
+export embed_operator_in_patch, decompose_patch_to_mpo
+export patch_mpo_transverse_field_ising, patch_mpo_heisenberg_XYZ, patch_mpo_j1_j2
+export patch_mpo_pwave_superconductor, patch_mpo_hubbard_model, patch_mpo_tj_model
 
 end # module

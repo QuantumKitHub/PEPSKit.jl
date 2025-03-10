@@ -52,6 +52,43 @@ function cost_function(peps::InfinitePEPS, env::CTMRGEnv, O::LocalOperator)
     return real(E)
 end
 
+function suptr(t1::AbstractTensorMap)
+    return tr(twist(t1, filter(i -> !isdual(space(t1, i)), domainind(t1))))
+end
+function cost_function(peps::InfinitePEPS, env::CTMRGEnv, operator::PatchMPO)
+    network = InfiniteSquareNetwork(peps)
+    enlarged_corners = dtmap(eachcoordinate(network, 1:4)) do idx
+        return TensorMap(EnlargedCorner(network, env, idx), idx[1])
+    end  # expand environment
+
+    enlarged_cornersOP = dtmap(eachcoordinate(network, 1:4)) do idx
+        return TensorMap(EnlargedCorner(network, env, idx, operator), idx[1])
+    end
+
+    E = sum(eachcoordinate(env)) do coordinate
+        rowsize, colsize = size(enlarged_corners)[2:3]
+        coordinate1 = (1, coordinate...)
+        coordinate2 = _next_coordinate(coordinate1, rowsize, colsize)
+        coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
+        coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
+
+        numerator = suptr(
+            enlarged_cornersOP[coordinate1...] ⊙ enlarged_cornersOP[coordinate2...] ⊙
+            enlarged_cornersOP[coordinate3...] ⊙ enlarged_cornersOP[coordinate4...],
+        )
+        denominator = suptr(
+            enlarged_corners[coordinate1...] ⊙ enlarged_corners[coordinate2...] ⊙
+            enlarged_corners[coordinate3...] ⊙ enlarged_corners[coordinate4...],
+        )
+        return numerator / denominator
+    end
+    ignore_derivatives() do
+        isapprox(imag(E), 0; atol=sqrt(eps(real(E)))) ||
+            @warn "Expectation value is not real: $E."
+    end
+    return real(E)
+end
+
 function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     return network_value(InfiniteSquareNetwork(peps), env)
 end
