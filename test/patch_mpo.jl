@@ -64,7 +64,7 @@ EOP = zeros(length(χ))
 for i in 1:length(χ)
     χenv = χ[i]
     ctm_alg = SimultaneousCTMRG(; trscheme=truncdim(χenv))
-    env, = leading_boundary(env, peps, ctm_alg)
+    env, = leading_boundary(CTMRGEnv(peps, ComplexSpace(χenv)), peps, ctm_alg)
     E[i] = cost_function(peps, env, H)
     EOP[i] = cost_function(peps, env, HOP)
 end
@@ -74,7 +74,7 @@ plot(
     E[:];
     seriestype=:scatter,
     marker=(:circle, 4),
-    label="2x1 patch with imaginary of -0.014",
+    label="2x1 patch with imaginary of 0.31 for χenv=80",
     color=:red,
     frame=:box,
 )
@@ -83,7 +83,7 @@ plot!(
     EOP[:];
     seriestype=:scatter,
     marker=(:circle, 4),
-    label="2x2 patch with imaginary -6.50e-6",
+    label="2x2 patch with imaginary 6.70e-4  for χenv=80",
     color=:blue,
     frame=:box,
 )

@@ -120,22 +120,21 @@ function fixedpoint(
     end
 
     # optimize operator cost function
-    (peps_final, env_final), cost, ∂cost, numfg, convergence_history = optimize(
-        (peps₀, env₀), alg.optimizer; retract, inner=real_inner, finalize!
-    ) do (peps, env)
-        start_time = time_ns()
-        E, g, env′, info = compute_gradient(operator, peps, env, GradMethod)
+    peps_final, cost, ∂cost, numfg, convergence_history =
+        optimize(peps₀, alg.optimizer; inner=real_inner, finalize!) do peps
+            start_time = time_ns()
+            E, g, info = compute_gradient(operator, peps, GradMethod)
 
-        ignore_derivatives() do
-            alg.reuse_env && update!(env, env′)
-            push!(truncation_errors, info.truncation_error)
-            push!(condition_numbers, info.condition_number)
+            ignore_derivatives() do
+                # alg.reuse_env && update!(env, env′)
+                push!(truncation_errors, info.truncation_error)
+                push!(condition_numbers, info.condition_number)
+            end
+
+            push!(gradnorms_unitcell, norm.(g.A))
+            push!(times, (time_ns() - start_time) * 1e-9)
+            return E, g
         end
-
-        push!(gradnorms_unitcell, norm.(g.A))
-        push!(times, (time_ns() - start_time) * 1e-9)
-        return E, g
-    end
 
     info = (
         last_gradient=∂cost,
@@ -147,7 +146,7 @@ function fixedpoint(
         gradnorms_unitcell,
         times,
     )
-    return peps_final, env_final, cost, info
+    return peps_final, cost, info
 end
 
 # Update PEPS unit cell in non-mutating way
