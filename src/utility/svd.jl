@@ -19,7 +19,7 @@ removes the divergences from the adjoint.
 
 ## Keyword arguments
 
-* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=Defaults.svd_fwd_alg)`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
+* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
     - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
     - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
     - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
