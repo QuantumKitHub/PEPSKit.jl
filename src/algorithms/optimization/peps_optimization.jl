@@ -36,7 +36,58 @@ struct PEPSOptimize{G}
         return new{G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
     end
 end
-PEPSOptimize(; kwargs...) = select_algorithm(PEPSOptimize; kwargs...)
+
+function PEPSOptimize(;
+    boundary_alg=(;),
+    gradient_alg=(;),
+    optimizer_alg=(;),
+    reuse_env=Defaults.reuse_env,
+    symmetrization=nothing,
+)
+    boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
+    gradient_algorithm = _alg_or_nt(GradMode, gradient_alg)
+    optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
+
+    return PEPSOptimize(
+        boundary_algorithm,
+        gradient_algorithm,
+        optimizer_algorithm,
+        reuse_env,
+        symmetrization,
+    )
+end
+
+const OPTIMIZATION_SYMBOLS = IdDict{Symbol,Type{<:OptimKit.OptimizationAlgorithm}}(
+    :gradientdescent => GradientDescent,
+    :conjugategradient => ConjugateGradient,
+    :lbfgs => LBFGS,
+)
+
+# Should be OptimizationAlgorithm but piracy
+function _alg_or_nt(::Type{<:OptimKit.OptimizationAlgorithm}, alg::NamedTuple)
+    return _OptimizationAlgorithm(; alg...)
+end
+
+function _OptimizationAlgorithm(;
+    alg=Defaults.optimizer_alg,
+    tol=Defaults.optimizer_tol,
+    maxiter=Defaults.optimizer_maxiter,
+    verbosity=Defaults.optimizer_verbosity,
+    lbfgs_memory=Defaults.lbfgs_memory,
+    # TODO: add linesearch, ... to kwargs and defaults?
+)
+    # replace symbol with optimizer alg type
+    haskey(OPTIMIZATION_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown optimizer algorithm: $alg"))
+    alg_type = OPTIMIZATION_SYMBOLS[alg]
+
+    # instantiate algorithm
+    return if alg_type <: LBFGS
+        alg_type(lbfgs_memory; gradtol=tol, maxiter, verbosity)
+    else
+        alg_type(; gradtol=tol, maxiter, verbosity)
+    end
+end
 
 """
     fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)

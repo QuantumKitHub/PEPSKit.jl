@@ -44,7 +44,54 @@ struct SVDAdjoint{F,R,B}
         return new{F,R,B}(fwd_alg, rrule_alg, broadening)
     end
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
-SVDAdjoint(; kwargs...) = select_algorithm(SVDAdjoint; kwargs...)
+
+const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
+    :sdd => TensorKit.SDD,
+    :svd => TensorKit.SVD,
+    :iterative =>
+        (; tol=1e-14, krylovdim=25, kwargs...) ->
+            IterSVD(; alg=GKL(; tol, krylovdim), kwargs...),
+)
+const SVD_RRULE_SYMBOLS = IdDict{Symbol,Type{<:Any}}(
+    :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+)
+
+function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
+    # parse forward SVD algorithm
+    fwd_algorithm = if fwd_alg isa NamedTuple
+        fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
+        haskey(SVD_FWD_SYMBOLS, fwd_kwargs.alg) ||
+            throw(ArgumentError("unknown forward algorithm: $(fwd_kwargs.alg)"))
+        fwd_type = SVD_FWD_SYMBOLS[fwd_kwargs.alg]
+        fwd_kwargs = Base.structdiff(fwd_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+        fwd_type(; fwd_kwargs...)
+    else
+        fwd_alg
+    end
+
+    # parse reverse-rule SVD algorithm
+    rrule_algorithm = if rrule_alg isa NamedTuple
+        rrule_kwargs = (;
+            alg=Defaults.svd_rrule_alg,
+            tol=Defaults.svd_rrule_tol,
+            krylovdim=Defaults.svd_rrule_min_krylovdim,
+            verbosity=Defaults.svd_rrule_verbosity,
+            rrule_alg...,
+        ) # overwrite with specified kwargs
+
+        haskey(SVD_RRULE_SYMBOLS, rrule_kwargs.alg) ||
+            throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
+        rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
+        rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+        rrule_type <: BiCGStab &&
+            (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
+        rrule_type(; rrule_kwargs...)
+    else
+        rrule_alg
+    end
+
+    return SVDAdjoint(fwd_algorithm, rrule_algorithm, broadening)
+end
 
 """
     PEPSKit.tsvd(t, alg; trunc=notrunc(), p=2)

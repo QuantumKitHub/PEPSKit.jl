@@ -1,12 +1,17 @@
-function _select_alg_or_namedtuple(alg, alg_type, selects...; extra_kwargs...)
+function _select_alg_or_namedtuple(alg, alg_type; fallbacks...)
     if alg isa alg_type
         return alg
     elseif alg isa NamedTuple
-        return select_algorithm(selects...; extra_kwargs..., alg...)
+        kwargs = merge(fallbacks, alg) # default to provided kwargs, fallbacks on left
+        return alg_type(; kwargs...)
     else
         throw(ArgumentError("unknown algorithm: $alg"))
     end
 end
+
+_alg_or_nt(::Type{T}, alg::NamedTuple) where {T} = T(; alg...)
+_alg_or_nt(::Type{T}, alg::A) where {T,A<:T} = alg
+_alg_or_nt(T, alg) = throw(ArgumentError("unkown $T: $alg"))
 
 """
     select_algorithm(func_or_alg, args...; kwargs...) -> Algorithm
@@ -15,8 +20,8 @@ Parse arguments and keyword arguments to the algorithm struct corresponding to
 `func_or_alg` and return an algorithm instance. To that end, we use a general interface
 where all keyword arguments that can be algorithm themselves can be specified using
 
-* `alg::Algorithm`: an instance of the algorithm struct or
-* `(; alg::Symbol, alg_kwargs...)`: a `NamedTuple` where the algorithm is specified by a `Symbol` and the algorithm keyword arguments 
+* `alg::Algorithm` : an instance of the algorithm struct or
+* `(; alg::Symbol, alg_kwargs...)` : a `NamedTuple` where the algorithm is specified by a `Symbol` and the algorithm keyword arguments 
 
 A full description of the keyword argument can be found in the respective function or
 algorithm struct docstrings.
@@ -33,115 +38,27 @@ function select_algorithm(
     optimizer_alg=(;),
     kwargs...,
 )
-    # top-level verbosity
-    if verbosity ≤ 0 # disable output
-        boundary_verbosity = -1
-        gradient_verbosity = -1
-        optimizer_verbosity = -1
-    elseif verbosity == 1 # output only optimization steps and degeneracy warnings
-        boundary_verbosity = -1
-        gradient_verbosity = 1
-        optimizer_verbosity = 3
-    elseif verbosity == 2 # output optimization and boundary information
-        boundary_verbosity = 2
-        gradient_verbosity = -1
-        optimizer_verbosity = 3
-    elseif verbosity == 3 # verbose debug output
-        boundary_verbosity = 3
-        gradient_verbosity = 3
-        optimizer_verbosity = 3
-    end
-
     # adjust CTMRG tols and verbosity
-    boundary_algorithm = _select_alg_or_namedtuple(
-        boundary_alg,
-        CTMRGAlgorithm,
-        leading_boundary,
-        env₀;
-        tol=1e-4tol,
-        verbosity=boundary_verbosity,
-    )
+    if boundary_alg isa NamedTuple
+        defaults = (; verbosity=verbosity ≤ 1 ? -1 : verbosity, tol=1e-4tol)
+        boundary_kwargs = merge(defaults, boundary_alg)
+        boundary_alg = select_algorithm(leading_boundary, env₀; boundary_kwargs...)
+    end
 
     # adjust gradient verbosity
-    gradient_algorithm = _select_alg_or_namedtuple(
-        gradient_alg, GradMode, GradMode; tol=1e-2tol, verbosity=gradient_verbosity
-    )
+    if gradient_alg isa NamedTuple
+        # TODO: check this:
+        defaults = (; verbosity=verbosity ≤ 2 ? -1 : 3, tol=1e-2tol)
+        gradient_alg = merge(defaults, gradient_alg)
+    end
 
     # adjust optimizer tol and verbosity
-    optimizer_algorithm = _select_alg_or_namedtuple(
-        optimizer_alg,
-        OptimKit.OptimizationAlgorithm,
-        OptimKit.OptimizationAlgorithm;
-        tol,
-        verbosity=optimizer_verbosity,
-    )
-
-    return select_algorithm(
-        PEPSOptimize,
-        env₀;
-        boundary_alg=boundary_algorithm,
-        gradient_alg=gradient_algorithm,
-        optimizer_alg=optimizer_algorithm,
-        kwargs...,
-    )
-end
-
-function select_algorithm(
-    ::Type{PEPSOptimize},
-    env₀::CTMRGEnv;
-    boundary_alg=(;),
-    gradient_alg=(;),
-    optimizer_alg=(;),
-    reuse_env=Defaults.reuse_env,
-    symmetrization=nothing,
-)
-    # parse boundary algorithm
-    boundary_algorithm = _select_alg_or_namedtuple(
-        boundary_alg, CTMRGAlgorithm, leading_boundary, env₀
-    )
-
-    # parse fixed-point gradient algorithm
-    gradient_algorithm = _select_alg_or_namedtuple(gradient_alg, GradMode, GradMode)
-
-    # parse optimizer algorithm
-    optimizer_algorithm = _select_alg_or_namedtuple(
-        optimizer_alg, OptimKit.OptimizationAlgorithm, OptimKit.OptimizationAlgorithm
-    )
-
-    return PEPSOptimize(
-        boundary_algorithm,
-        gradient_algorithm,
-        optimizer_algorithm,
-        reuse_env,
-        symmetrization,
-    )
-end
-
-const OPTIMIZATION_SYMBOLS = IdDict{Symbol,Type{<:OptimKit.OptimizationAlgorithm}}(
-    :gradientdescent => GradientDescent,
-    :conjugategradient => ConjugateGradient,
-    :lbfgs => LBFGS,
-)
-function select_algorithm(
-    ::Type{OptimKit.OptimizationAlgorithm};
-    alg=Defaults.optimizer_alg,
-    tol=Defaults.optimizer_tol,
-    maxiter=Defaults.optimizer_maxiter,
-    verbosity=Defaults.optimizer_verbosity,
-    lbfgs_memory=Defaults.lbfgs_memory,
-    # TODO: add linesearch, ... to kwargs and defaults?
-)
-    # replace symbol with optimizer alg type
-    haskey(OPTIMIZATION_SYMBOLS, alg) ||
-        throw(ArgumentError("unknown optimizer algorithm: $alg"))
-    alg_type = OPTIMIZATION_SYMBOLS[alg]
-
-    # instantiate algorithm
-    return if alg_type <: LBFGS
-        alg_type(lbfgs_memory; gradtol=tol, maxiter, verbosity)
-    else
-        alg_type(; gradtol=tol, maxiter, verbosity)
+    if optimizer_alg isa NamedTuple
+        defaults = (; tol, verbosity=verbosity ≤ 1 ? -1 : 3)
+        optimizer_alg = merge(defaults, optimizer_alg)
     end
+
+    return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, kwargs...)
 end
 
 function select_algorithm(
@@ -160,200 +77,14 @@ function select_algorithm(
         χenv = maximum(env₀.corners) do corner
             return dim(space(corner, 1))
         end
+        # TODO: this should be scaled for each sector separately I think
         krylovdim = max(
             Defaults.svd_rrule_min_krylovdim, round(Int, Defaults.krylovdim_factor * χenv)
         )
         rrule_alg = (; tol=1e1tol, verbosity=verbosity - 2, krylovdim, svd_alg.rrule_alg...)
         svd_alg = (; rrule_alg, svd_alg...)
     end
-    svd_algorithm = _select_alg_or_namedtuple(svd_alg, SVDAdjoint, SVDAdjoint)
+    svd_algorithm = SVDAdjoint(; svd_alg...)
 
-    return select_algorithm(
-        CTMRGAlgorithm; alg, tol, verbosity, svd_alg=svd_algorithm, kwargs...
-    )
-end
-
-const CTMRG_SYMBOLS = IdDict{Symbol,Type{<:CTMRGAlgorithm}}(
-    :simultaneous => SimultaneousCTMRG, :sequential => SequentialCTMRG
-)
-function select_algorithm(
-    ::Type{CTMRGAlgorithm};
-    alg=Defaults.ctmrg_alg,
-    tol=Defaults.ctmrg_tol,
-    maxiter=Defaults.ctmrg_maxiter,
-    miniter=Defaults.ctmrg_miniter,
-    verbosity=Defaults.ctmrg_verbosity,
-    trscheme=(; alg=Defaults.trscheme),
-    svd_alg=(;),
-    projector_alg=Defaults.projector_alg, # only allows for Symbol/Type{ProjectorAlgorithm} to expose projector kwargs
-)
-    # replace symbol with projector alg type
-    haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
-    alg_type = CTMRG_SYMBOLS[alg]
-
-    # parse CTMRG projector algorithm
-    projector_algorithm = select_algorithm(
-        ProjectorAlgorithm; alg=projector_alg, svd_alg, trscheme, verbosity
-    )
-
-    return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
-end
-
-const PROJECTOR_SYMBOLS = IdDict{Symbol,Type{<:ProjectorAlgorithm}}(
-    :halfinfinite => HalfInfiniteProjector, :fullinfinite => FullInfiniteProjector
-)
-function select_algorithm(
-    ::Type{ProjectorAlgorithm};
-    alg=Defaults.projector_alg,
-    svd_alg=(;),
-    trscheme=(;),
-    verbosity=Defaults.projector_verbosity,
-)
-    # replace symbol with projector alg type
-    haskey(PROJECTOR_SYMBOLS, alg) ||
-        throw(ArgumentError("unknown projector algorithm: $alg"))
-    alg_type = PROJECTOR_SYMBOLS[alg]
-
-    # parse SVD forward & rrule algorithm
-    svd_algorithm = _select_alg_or_namedtuple(svd_alg, SVDAdjoint, SVDAdjoint)
-
-    # parse truncation scheme
-    truncation_scheme = _select_alg_or_namedtuple(
-        trscheme, TruncationScheme, TruncationScheme
-    )
-
-    return alg_type(svd_algorithm, truncation_scheme, verbosity)
-end
-
-const GRADIENT_MODE_SYMBOLS = IdDict{Symbol,Type{<:GradMode}}(
-    :geomsum => GeomSum,
-    :manualiter => ManualIter,
-    :linsolver => LinSolver,
-    :eigsolver => EigSolver,
-)
-const LINSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.LinearSolver}}(
-    :gmres => GMRES, :bicgstab => BiCGStab
-)
-const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.KrylovAlgorithm}}(
-    :arnoldi => Arnoldi
-)
-function select_algorithm(
-    ::Type{GradMode};
-    alg=Defaults.gradient_alg,
-    tol=Defaults.gradient_tol,
-    maxiter=Defaults.gradient_maxiter,
-    verbosity=Defaults.gradient_verbosity,
-    iterscheme=Defaults.gradient_iterscheme,
-    solver_alg=(;),
-)
-    # replace symbol with GradMode alg type
-    haskey(GRADIENT_MODE_SYMBOLS, alg) ||
-        throw(ArgumentError("unknown GradMode algorithm: $alg"))
-    alg_type = GRADIENT_MODE_SYMBOLS[alg]
-
-    # parse GradMode algorithm
-    gradient_algorithm = if alg_type <: Union{GeomSum,ManualIter}
-        alg_type{iterscheme}(tol, maxiter, verbosity)
-    elseif alg_type <: Union{<:LinSolver,<:EigSolver}
-        solver = if solver_alg isa NamedTuple # determine linear/eigen solver algorithm
-            solver_kwargs = (; tol, maxiter, verbosity, solver_alg...)
-
-            solver_type = if alg_type <: LinSolver # replace symbol with solver alg type
-                solver_kwargs = (; alg=Defaults.gradient_linsolver, solver_kwargs...)
-                haskey(LINSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
-                    ArgumentError("unknown LinSolver solver: $(solver_kwargs.alg)"),
-                )
-                LINSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
-            elseif alg_type <: EigSolver
-                solver_kwargs = (;
-                    alg=Defaults.gradient_eigsolver,
-                    eager=Defaults.gradient_eigsolver_eager,
-                    solver_kwargs...,
-                )
-                haskey(EIGSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
-                    ArgumentError("unknown EigSolver solver: $(solver_kwargs.alg)"),
-                )
-                EIGSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
-            end
-
-            solver_kwargs = Base.structdiff(solver_kwargs, (; alg=nothing)) # remove `alg` keyword argument
-            solver_type(; solver_kwargs...)
-        else
-            solver_alg
-        end
-
-        alg_type{iterscheme}(solver)
-    else
-        throw(ArgumentError("unknown gradient algorithm: $alg"))
-    end
-
-    return gradient_algorithm
-end
-
-const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
-    :fixedspace => FixedSpaceTruncation,
-    :notrunc => TensorKit.NoTruncation,
-    :truncerr => TensorKit.TruncationError,
-    :truncdim => TensorKit.TruncationDimension,
-    :truncspace => TensorKit.TruncationSpace,
-    :truncbelow => TensorKit.TruncationCutoff,
-)
-function select_algorithm(
-    ::Type{TensorKit.TruncationScheme}; alg=Defaults.trscheme, η=nothing
-)
-    # replace Symbol with TruncationScheme type
-    haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||
-        throw(ArgumentError("unknown truncation scheme: $alg"))
-    alg_type = TRUNCATION_SCHEME_SYMBOLS[alg]
-
-    return isnothing(η) ? alg_type() : alg_type(η)
-end
-
-const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
-    :sdd => TensorKit.SDD,
-    :svd => TensorKit.SVD,
-    :iterative =>
-        (; tol=1e-14, krylovdim=25, kwargs...) ->
-            IterSVD(; alg=GKL(; tol, krylovdim), kwargs...),
-)
-const SVD_RRULE_SYMBOLS = IdDict{Symbol,Type{<:Any}}(
-    :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
-)
-function select_algorithm(
-    ::Type{SVDAdjoint}; fwd_alg=(;), rrule_alg=(;), broadening=nothing
-)
-    # parse forward SVD algorithm
-    fwd_algorithm = if fwd_alg isa NamedTuple
-        fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
-        haskey(SVD_FWD_SYMBOLS, fwd_kwargs.alg) ||
-            throw(ArgumentError("unknown forward algorithm: $(fwd_kwargs.alg)"))
-        fwd_type = SVD_FWD_SYMBOLS[fwd_kwargs.alg]
-        fwd_kwargs = Base.structdiff(fwd_kwargs, (; alg=nothing)) # remove `alg` keyword argument
-        fwd_type(; fwd_kwargs...)
-    else
-        fwd_alg
-    end
-
-    # parse reverse-rule SVD algorithm
-    rrule_algorithm = if rrule_alg isa NamedTuple
-        rrule_kwargs = (;
-            alg=Defaults.svd_rrule_alg,
-            tol=Defaults.svd_rrule_tol,
-            krylovdim=Defaults.svd_rrule_min_krylovdim,
-            verbosity=Defaults.svd_rrule_verbosity,
-            rrule_alg...,
-        ) # overwrite with specified kwargs
-
-        haskey(SVD_RRULE_SYMBOLS, rrule_kwargs.alg) ||
-            throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
-        rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
-        rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
-        rrule_type <: BiCGStab &&
-            (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
-        rrule_type(; rrule_kwargs...)
-    else
-        rrule_alg
-    end
-
-    return SVDAdjoint(fwd_algorithm, rrule_algorithm, broadening)
+    return CTMRGAlgorithm(; alg, tol, verbosity, svd_alg=svd_algorithm, kwargs...)
 end

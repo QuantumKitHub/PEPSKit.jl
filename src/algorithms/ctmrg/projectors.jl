@@ -5,6 +5,40 @@ Abstract super type for all CTMRG projector algorithms.
 """
 abstract type ProjectorAlgorithm end
 
+const PROJECTOR_SYMBOLS = IdDict{Symbol,Type{<:ProjectorAlgorithm}}()
+
+function ProjectorAlgorithm(;
+    alg=Defaults.projector_alg,
+    svd_alg=(;),
+    trscheme=(;),
+    verbosity=Defaults.projector_verbosity,
+)
+    # replace symbol with projector alg type
+    haskey(PROJECTOR_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown projector algorithm: $alg"))
+    alg_type = PROJECTOR_SYMBOLS[alg]
+
+    # parse SVD forward & rrule algorithm
+    svd_algorithm = if svd_alg isa SVDAdjoint
+        svd_alg
+    elseif svd_alg isa NamedTuple
+        SVDAdjoint(; svd_alg...)
+    else
+        throw(ArgumentError("unknown algorithm $alg"))
+    end
+
+    # parse truncation scheme
+    truncation_scheme = if trscheme isa TruncationScheme
+        trscheme
+    elseif trscheme isa NamedTuple
+        _TruncationScheme(; trscheme...)
+    else
+        throw(ArgumentError("unknown trscheme $trscheme"))
+    end
+
+    return alg_type(svd_algorithm, truncation_scheme, verbosity)
+end
+
 function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
         fwd_alg = alg.svd_alg.fwd_alg
@@ -51,6 +85,8 @@ function HalfInfiniteProjector(; kwargs...)
     return select_algorithm(ProjectorAlgorithm; alg=:halfinfinite, kwargs...)
 end
 
+PROJECTOR_SYMBOLS[:halfinfinite] = HalfInfiniteProjector
+
 """
     struct FullInfiniteProjector{S,T}
 
@@ -78,6 +114,8 @@ end
 function FullInfiniteProjector(; kwargs...)
     return select_algorithm(ProjectorAlgorithm; alg=:fullinfinite, kwargs...)
 end
+
+PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
 
 # TODO: add `LinearAlgebra.cond` to TensorKit
 # Compute condition number smax / smin for diagonal singular value TensorMap

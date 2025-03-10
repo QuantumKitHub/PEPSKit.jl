@@ -24,8 +24,10 @@ struct SimultaneousCTMRG <: CTMRGAlgorithm
     projector_alg::ProjectorAlgorithm
 end
 function SimultaneousCTMRG(; kwargs...)
-    return select_algorithm(CTMRGAlgorithm; alg=:simultaneous, kwargs...)
+    return CTMRGAlgorithm(; alg=:simultaneous, kwargs...)
 end
+
+CTMRG_SYMBOLS[:simultaneous] = SimultaneousCTMRG
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners = dtmap(eachcoordinate(network, 1:4)) do idx

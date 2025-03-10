@@ -6,6 +6,31 @@ for contracting infinite PEPS.
 """
 abstract type CTMRGAlgorithm end
 
+const CTMRG_SYMBOLS = IdDict{Symbol,Type{<:CTMRGAlgorithm}}()
+
+function CTMRGAlgorithm(;
+    alg=Defaults.ctmrg_alg,
+    tol=Defaults.ctmrg_tol,
+    maxiter=Defaults.ctmrg_maxiter,
+    miniter=Defaults.ctmrg_miniter,
+    verbosity=Defaults.ctmrg_verbosity,
+    trscheme=(; alg=Defaults.trscheme),
+    svd_alg=(;),
+    projector_alg=Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
+)
+    # replace symbol with projector alg type
+    haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
+    alg_type = CTMRG_SYMBOLS[alg]
+
+    # parse CTMRG projector algorithm
+
+    projector_algorithm = ProjectorAlgorithm(;
+        alg=projector_alg, svd_alg, trscheme, verbosity
+    )
+
+    return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
+end
+
 """
     ctmrg_iteration(network, env, alg::CTMRGAlgorithm) -> env′, info
 

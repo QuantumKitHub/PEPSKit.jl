@@ -28,8 +28,10 @@ struct SequentialCTMRG <: CTMRGAlgorithm
     projector_alg::ProjectorAlgorithm
 end
 function SequentialCTMRG(; kwargs...)
-    return select_algorithm(CTMRGAlgorithm; alg=:sequential, kwargs...)
+    return CTMRGAlgorithm(; alg=:sequential, kwargs...)
 end
+
+CTMRG_SYMBOLS[:sequential] = SequentialCTMRG
 
 """
     ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)

@@ -1,5 +1,65 @@
 abstract type GradMode{F} end
 
+const GRADIENT_MODE_SYMBOLS = IdDict{Symbol,Type{<:GradMode}}()
+const LINSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.LinearSolver}}(
+    :gmres => GMRES, :bicgstab => BiCGStab
+)
+const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.KrylovAlgorithm}}(
+    :arnoldi => Arnoldi
+)
+
+function GradMode(;
+    alg=Defaults.gradient_alg,
+    tol=Defaults.gradient_tol,
+    maxiter=Defaults.gradient_maxiter,
+    verbosity=Defaults.gradient_verbosity,
+    iterscheme=Defaults.gradient_iterscheme,
+    solver_alg=(;),
+)
+    # replace symbol with GradMode alg type
+    haskey(GRADIENT_MODE_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown GradMode algorithm: $alg"))
+    alg_type = GRADIENT_MODE_SYMBOLS[alg]
+
+    # parse GradMode algorithm
+    gradient_algorithm = if alg_type <: Union{GeomSum,ManualIter}
+        alg_type{iterscheme}(tol, maxiter, verbosity)
+    elseif alg_type <: Union{<:LinSolver,<:EigSolver}
+        solver = if solver_alg isa NamedTuple # determine linear/eigen solver algorithm
+            solver_kwargs = (; tol, maxiter, verbosity, solver_alg...)
+
+            solver_type = if alg_type <: LinSolver # replace symbol with solver alg type
+                solver_kwargs = (; alg=Defaults.gradient_linsolver, solver_kwargs...)
+                haskey(LINSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
+                    ArgumentError("unknown LinSolver solver: $(solver_kwargs.alg)"),
+                )
+                LINSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
+            elseif alg_type <: EigSolver
+                solver_kwargs = (;
+                    alg=Defaults.gradient_eigsolver,
+                    eager=Defaults.gradient_eigsolver_eager,
+                    solver_kwargs...,
+                )
+                haskey(EIGSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
+                    ArgumentError("unknown EigSolver solver: $(solver_kwargs.alg)"),
+                )
+                EIGSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
+            end
+
+            solver_kwargs = Base.structdiff(solver_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+            solver_type(; solver_kwargs...)
+        else
+            solver_alg
+        end
+
+        alg_type{iterscheme}(solver)
+    else
+        throw(ArgumentError("unknown gradient algorithm: $alg"))
+    end
+
+    return gradient_algorithm
+end
+
 iterscheme(::GradMode{F}) where {F} = F
 
 """
@@ -24,7 +84,9 @@ struct GeomSum{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-GeomSum(; kwargs...) = select_algorithm(GradMode; alg=:geomsum, kwargs...)
+GeomSum(; kwargs...) = GradMode(; alg=:geomsum, kwargs...)
+
+GRADIENT_MODE_SYMBOLS[:geomsum] = GeomSum
 
 """
     struct ManualIter <: GradMode{iterscheme}
@@ -48,7 +110,9 @@ struct ManualIter{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-ManualIter(; kwargs...) = select_algorithm(GradMode; alg=:manualiter, kwargs...)
+ManualIter(; kwargs...) = GradMode(; alg=:manualiter, kwargs...)
+
+GRADIENT_MODE_SYMBOLS[:manualiter] = ManualIter
 
 """
     struct LinSolver <: GradMode{iterscheme}
@@ -71,7 +135,9 @@ problem using iterative solvers.
 struct LinSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.LinearSolver
 end
-LinSolver(; kwargs...) = select_algorithm(GradMode; alg=:linsolver, kwargs...)
+LinSolver(; kwargs...) = GradMode(; alg=:linsolver, kwargs...)
+
+GRADIENT_MODE_SYMBOLS[:linsolver] = LinSolver
 
 """
     struct EigSolver <: GradMode{iterscheme}
@@ -93,7 +159,9 @@ problem as an eigenvalue problem.
 struct EigSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.KrylovAlgorithm
 end
-EigSolver(; kwargs...) = select_algorithm(GradMode; alg=:eigsolver, kwargs...)
+EigSolver(; kwargs...) = GradMode(; alg=:eigsolver, kwargs...)
+
+GRADIENT_MODE_SYMBOLS[:eigsolver] = EigSolver
 
 #=
 Evaluating the gradient of the cost function for CTMRG:
