@@ -1,14 +1,3 @@
-function _select_alg_or_namedtuple(alg, alg_type; fallbacks...)
-    if alg isa alg_type
-        return alg
-    elseif alg isa NamedTuple
-        kwargs = merge(fallbacks, alg) # default to provided kwargs, fallbacks on left
-        return alg_type(; kwargs...)
-    else
-        throw(ArgumentError("unknown algorithm: $alg"))
-    end
-end
-
 _alg_or_nt(::Type{T}, alg::NamedTuple) where {T} = T(; alg...)
 _alg_or_nt(::Type{T}, alg::A) where {T,A<:T} = alg
 _alg_or_nt(T, alg) = throw(ArgumentError("unkown $T: $alg"))
