@@ -76,6 +76,12 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
         haskey(SVD_RRULE_SYMBOLS, rrule_kwargs.alg) ||
             throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
+
+        # IterSVD is incompatible with tsvd rrule -> default to Arnoldi
+        if rrule_type <: Nothing && fwd_algorithm isa IterSVD
+            rrule_type = Arnoldi
+        end
+
         if rrule_type <: Nothing
             nothing
         else
@@ -282,6 +288,7 @@ function ChainRulesCore.rrule(
     trunc::TruncationScheme=TensorKit.NoTruncation(),
     p::Real=2,
 ) where {F,R<:Nothing,B}
+    @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with tsvd reverse-rule"
     Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
 
