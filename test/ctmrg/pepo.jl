@@ -69,7 +69,7 @@ projector_algs = [:halfinfinite, :fullinfinite]
     n = InfiniteSquareNetwork(psi0, T)
     env0 = CTMRGEnv(n, χenv)
 
-    @testset "PEPO CTMRG contraction using $ctm_style with $projector_alg" for (
+    @testset "PEPO CTMRG contraction using $alg with $projector_alg" for (
         alg, projector_alg
     ) in Iterators.product(
         ctm_styles, projector_algs
