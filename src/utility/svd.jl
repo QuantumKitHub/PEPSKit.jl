@@ -219,7 +219,7 @@ function ChainRulesCore.rrule(
     smallest_sval = minimum(minimum(abs.(diag(b))) for (_, b) in blocks(S))
     proper_tol = clamp(rrule_alg.tol, 1e-14, 1e-2 * smallest_sval)
     rrule_alg = @set rrule_alg.tol = proper_tol
-    
+
     function tsvd!_itersvd_pullback(ΔUSVϵ)
         Δf = similar(f)
         ΔU, ΔS, ΔV, = unthunk.(ΔUSVϵ)
