@@ -220,7 +220,7 @@ function _rrule(
 
     # Fix SVD
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
-    signs_full = _extend_gauge_signs(signs, space.(info.S))
+    signs_full = _extend_gauge_signs(signs, space.(info.S_full))
     U_full_fixed, V_full_fixed = fix_relative_phases(info.U_full, info.V_full, signs_full)
     svd_alg_fixed = SVDAdjoint(;
         fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
@@ -253,17 +253,14 @@ end
 # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
 function _extend_gauge_signs(signs, spaces)
     return map(zip(signs, spaces)) do (σ, S)
-        extended_data = zeros(S)
-        for (c, b) in blocks(extended_data)
+        extended_σ = zeros(scalartype(σ), S)
+        for (c, b) in blocks(extended_σ)
             σc = block(σ, c)
             kept_dim = size(σc, 1)
-            trunc_dim = dim(S[1]) - kept_dim
+            b[diagind(b)] .= one(scalartype(σ))
             b[1:kept_dim, 1:kept_dim] .= σc
-            b[(kept_dim + 1):end, (kept_dim + 1):end] .= Matrix{scalartype(σ)}(
-                I, trunc_dim, trunc_dim
-            )
         end
-        TensorMap(extended_data, S)
+        return extended_σ
     end
 end
 
