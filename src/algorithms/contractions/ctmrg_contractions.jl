@@ -757,7 +757,9 @@ Apply projectors to each side of a quadrant.
 ```
 """
 @generated function renormalize_corner(
-    quadrant::AbstractTensorMap{<:Any,S,N,N}, P_left::AbstractTensorMap{<:Any,S,N,1}, P_right::AbstractTensorMap{<:Any,S,1,N}
+    quadrant::AbstractTensorMap{<:Any,S,N,N},
+    P_left::AbstractTensorMap{<:Any,S,N,1},
+    P_right::AbstractTensorMap{<:Any,S,1,N},
 ) where {T,S,N}
     corner_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     P_right_e = tensorexpr(
@@ -1013,7 +1015,9 @@ function renormalize_bottom_corner((row, col), env::CTMRGEnv, projectors)
     return renormalize_bottom_corner(C_southwest, E_south, P_bottom)
 end
 @generated function renormalize_bottom_corner(
-    C_southwest, E_south::CTMRGEdgeTensor{T,S,N}, P_bottom
+    C_southwest::CTMRGCornerTensor{<:Any,S},
+    E_south::CTMRGEdgeTensor{<:Any,S,N},
+    P_bottom::AbstractTensorMap{<:Any,S,N,1},
 ) where {T,S,N}
     C_out_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     C_southwest_e = tensorexpr(:C_southwest, (envlabel(:SSW),), (envlabel(:WSW),))
@@ -1051,7 +1055,9 @@ function renormalize_top_corner((row, col), env::CTMRGEnv, projectors)
     return renormalize_top_corner(C_northwest, E_north, P_top)
 end
 @generated function renormalize_top_corner(
-    C_northwest, E_north::CTMRGEdgeTensor{T,S,N}, P_top
+    C_northwest::CTMRGCornerTensor{<:Any,S},
+    E_north::CTMRGEdgeTensor{<:Any,S,N},
+    P_top::AbstractTensorMap{<:Any,S,1,N},
 ) where {T,S,N}
     C_out_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     C_northwest_e = tensorexpr(:C_northwest, (envlabel(:WNW),), (envlabel(:NNW),))
@@ -1479,8 +1485,6 @@ Multiply west right singular vectors with gauge signs from the left.
 function fix_gauge_west_right_vecs((row, col), V, signs)
     return signs[WEST, _prev(row, end), col] * V[WEST, row, col]
 end
-
-## WIP: PEPO contractions...
 
 #
 # Expressions
