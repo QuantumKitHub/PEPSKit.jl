@@ -56,8 +56,8 @@ O, M, E = three_dimensional_classical_ising(beta)
 χenv = ℂ^12
 
 # cover all different flavors
-ctm_styles = [SequentialCTMRG, SimultaneousCTMRG]
-projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
+ctm_styles = [:sequential, :simultaneous]
+projector_algs = [:halfinfinite, :fullinfinite]
 
 @testset "PEPO CTMRG runthroughs for unitcell=$(unitcell)" for unitcell in
                                                                [(1, 1, 1), (1, 1, 2)]
@@ -70,12 +70,11 @@ projector_algs = [HalfInfiniteProjector, FullInfiniteProjector]
     env0 = CTMRGEnv(n, χenv)
 
     @testset "PEPO CTMRG contraction using $ctm_style with $projector_alg" for (
-        ctm_style, projector_alg
+        alg, projector_alg
     ) in Iterators.product(
         ctm_styles, projector_algs
     )
-        ctm_alg = ctm_style(; maxiter=150, projector_alg)
-        env, = leading_boundary(env0, n, ctm_alg)
+        env, = leading_boundary(env0, n; alg, maxiter=150, projector_alg)
     end
 end
 
