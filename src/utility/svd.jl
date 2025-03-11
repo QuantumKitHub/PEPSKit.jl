@@ -161,6 +161,15 @@ struct FixedSVD{Ut,St,Vt,Utf,Stf,Vtf}
     V_full::Vtf
 end
 
+# check whether the full U, S and V are supplied
+function isfullsvd(alg::FixedSVD)
+    if isnothing(alg.U_full) || isnothing(alg.S_full) || isnothing(alg.V_full)
+        return false
+    else
+        return true
+    end
+end
+
 # Return pre-computed SVD
 function TensorKit.tsvd!(
     t, alg::SVDAdjoint{F}; trunc::NoTruncation=notrunc(), p::Real=2
@@ -276,7 +285,7 @@ function ChainRulesCore.rrule(
     Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
 
-    function tsvd!_pullback(ΔUSVi)
+    function tsvd!_nothing_pullback(ΔUSVi)
         ΔU, ΔS, ΔV⁺, = unthunk.(ΔUSVi)
         Δt = similar(t)
         for (c, b) in blocks(Δt)
@@ -288,11 +297,11 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd!_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd!_nothing_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (Ũ, S̃, Ṽ⁺, info), tsvd!_pullback
+    return (Ũ, S̃, Ṽ⁺, info), tsvd!_nothing_pullback
 end
 
 # KrylovKit rrule compatible with TensorMaps & function handles
