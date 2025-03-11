@@ -214,6 +214,12 @@ function ChainRulesCore.rrule(
 ) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
     U, S, V, ϵ = PEPSKit.tsvd(f, alg; trunc, p)
 
+    # update rrule_alg tolerance to be compatible with smallest singular value
+    rrule_alg = alg.rrule_alg
+    smallest_sval = minimum(minimum(abs.(diag(b))) for (_, b) in blocks(S))
+    proper_tol = clamp(rrule_alg.tol, 1e-14, 1e-2 * smallest_sval)
+    rrule_alg = @set rrule_alg.tol = proper_tol
+    
     function tsvd!_itersvd_pullback(ΔUSVϵ)
         Δf = similar(f)
         ΔU, ΔS, ΔV, = unthunk.(ΔUSVϵ)
@@ -230,7 +236,7 @@ function ChainRulesCore.rrule(
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
-            minimal_alg = GKL(; tol=1e-6)  # Only tolerance is used for gauge sensitivity (# TODO: How do we not hard-code this tolerance?)
+            minimal_alg = GKL(; tol=proper_tol, verbosity=1)  # Only tolerance is used for gauge sensitivity (# TODO: How do we not hard-code this tolerance?)
 
             if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
@@ -251,7 +257,7 @@ function ChainRulesCore.rrule(
                 block(f, c),
                 :LR,
                 minimal_alg,
-                alg.rrule_alg,
+                rrule_alg,
             )
             copyto!(
                 b,
