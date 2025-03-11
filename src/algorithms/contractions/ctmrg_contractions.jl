@@ -284,27 +284,13 @@ Alternatively, contract the environment with a vector `x` acting on it
 
 or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.
 """
-@generated function half_infinite_environment(
+function half_infinite_environment(
     quadrant1::AbstractTensorMap{T,S,N,N}, quadrant2::AbstractTensorMap{T,S,N,N}
 ) where {T,S,N}
-    env_e = tensorexpr(
-        :env,
-        (envlabel(:out), ntuple(i -> virtuallabel(:out, i), N - 1)...),
-        (envlabel(:in), ntuple(i -> virtuallabel(:in, i), N - 1)...),
-    )
-    quadrant1_e = tensorexpr(
-        :quadrant1,
-        (envlabel(:out), ntuple(i -> virtuallabel(:out, i), N - 1)...),
-        (envlabel(:NC), ntuple(i -> virtuallabel(:NC, i), N - 1)...),
-    )
-    quadrant2_e = tensorexpr(
-        :quadrant2,
-        (envlabel(:NC), ntuple(i -> virtuallabel(:NC, i), N - 1)...),
-        (envlabel(:in), ntuple(i -> virtuallabel(:in, i), N - 1)...),
-    )
-    return macroexpand(
-        @__MODULE__, :(return @autoopt @tensor $env_e := $quadrant1_e * $quadrant2_e)
-    )
+    p1 = (codomainind(quadrant1), domainind(quadrant1) .+ numout(quadrant1))
+    p2 = (codomainind(quadrant2), domainind(quadrant2) .+ numout(quadrant2))
+    p3 = (codomainind(quadrant1), domainind(quadrant2) .+ numout(quadrant1))
+    return tensorcontract(quadrant1, p1, false, quadrant2, p2, false, p3)
 end
 function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P
