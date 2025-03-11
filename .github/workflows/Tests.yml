@@ -30,6 +30,7 @@ jobs:
           - boundarymps
           - examples
           - utility
+          - bondenv
         os:
           - ubuntu-latest
           - macOS-latest
