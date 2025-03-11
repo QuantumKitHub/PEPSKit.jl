@@ -757,7 +757,7 @@ Apply projectors to each side of a quadrant.
 ```
 """
 @generated function renormalize_corner(
-    quadrant::AbstractTensorMap{T,S,N,N}, P_left, P_right
+    quadrant::AbstractTensorMap{<:Any,S,N,N}, P_left::AbstractTensorMap{<:Any,S,N,1}, P_right::AbstractTensorMap{<:Any,S,1,N}
 ) where {T,S,N}
     corner_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     P_right_e = tensorexpr(
