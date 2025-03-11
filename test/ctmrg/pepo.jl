@@ -84,7 +84,8 @@ end
     # prep
     ctm_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=2)
     alg_rrule = EigSolver(;
-        solver=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
+        solver_alg=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true),
+        iterscheme=:diffgauge,
     )
     opt_alg = LBFGS(32; maxiter=50, gradtol=1e-5, verbosity=3)
     function pepo_retract(x, η, α)
