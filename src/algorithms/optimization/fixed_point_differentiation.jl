@@ -328,7 +328,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         return (y + X[2] * ∂F∂x, X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
+    _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
     if alg.solver_alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
