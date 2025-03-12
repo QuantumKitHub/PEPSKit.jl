@@ -10,7 +10,7 @@ using Zygote
 
 ## Setup
 
-function three_dimensional_classical_ising(beta, J=1.0)
+function three_dimensional_classical_ising(; beta, J=1.0)
     K = beta * J
 
     # Boltzmann weights
@@ -51,7 +51,7 @@ end
 
 # initialize
 beta = 0.2391 # slightly lower temperature than βc ≈ 0.2216544
-O, M, E = three_dimensional_classical_ising(beta)
+O, M, E = three_dimensional_classical_ising(; beta)
 χpeps = ℂ^2
 χenv = ℂ^12
 

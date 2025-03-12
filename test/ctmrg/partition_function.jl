@@ -8,7 +8,7 @@ using QuadGK
 ## Setup
 
 """
-    ising_exact(beta, J)
+    classical_ising_exact(beta, J)
 
 [Exact Onsager solution](https://en.wikipedia.org/wiki/Square_lattice_Ising_model#Exact_solution)
 for the 2D classical Ising Model with partition function
@@ -43,7 +43,7 @@ Implements the 2D classical Ising model with partition function
 \\mathcal{Z}(\\beta) = \\sum_{\\{s\\}} \\exp(-\\beta H(s)) \\text{ with } H(s) = -J \\sum_{\\langle i, j \\rangle} s_i s_j
 ```
 """
-function classical_ising(beta=log(1 + sqrt(2)) / 2, J=1.0)
+function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
     K = beta * J
 
     # Boltzmann weights
@@ -80,7 +80,7 @@ end
 
 # initialize
 beta = 0.6
-O, M, E = classical_ising(beta)
+O, M, E = classical_ising(; beta)
 Z = InfinitePartitionFunction(O)
 Random.seed!(81812781143)
 
