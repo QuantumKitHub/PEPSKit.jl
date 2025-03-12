@@ -272,9 +272,7 @@ Normalize the individual tensors in the unit cell of an `InfinitePEPS` such that
 have unit Euclidean norm.
 """
 function peps_normalize(A::InfinitePEPS)
-    normalized_tensors = map(unitcell(A)) do t
-        return t / norm(t)
-    end
+    normalized_tensors = normalize.(unitcell(A))
     return InfinitePEPS(normalized_tensors)
 end
 
