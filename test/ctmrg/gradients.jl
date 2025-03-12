@@ -17,33 +17,15 @@ models = [heisenberg_XYZ(InfiniteSquare()), pwave_superconductor(InfiniteSquare(
 names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1e-4
-ctmrg_algs = [
-    [
-        SimultaneousCTMRG(; verbosity=0, projector_alg=:halfinfinite),
-        SimultaneousCTMRG(; verbosity=0, projector_alg=:fullinfinite),
-    ],
-    [SequentialCTMRG(; verbosity=0, projector_alg=:halfinfinite)],
+ctmrg_verbosity = 0
+ctmrg_algs = [[:sequential, :simultaneous], [:sequential]]
+projector_algs = [[:halfinfinite, :fullinfinite], [:halfinfinite]]
+svd_rrule_algs = [[:tsvd, :arnoldi], [:tsvd]]
+gradient_algs = [
+    [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
+    [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
 ]
-gradmodes = [
-    [
-        nothing,
-        GeomSum(; tol=gradtol, iterscheme=:fixed),
-        GeomSum(; tol=gradtol, iterscheme=:diffgauge),
-        ManualIter(; tol=gradtol, iterscheme=:fixed),
-        ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:fixed),
-        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
-        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
-    ],
-    [  # Only use :diffgauge due to high gauge-sensitivity (perhaps due to small χenv?)
-        nothing,
-        GeomSum(; tol=gradtol, iterscheme=:diffgauge),
-        ManualIter(; tol=gradtol, iterscheme=:diffgauge),
-        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:diffgauge),
-    ],
-]
+gradient_iterschemes = [[:fixed, :diffgauge], [:diffgauge]]
 steps = -0.01:0.005:0.01
 
 ## Tests
@@ -55,15 +37,37 @@ steps = -0.01:0.005:0.01
     Pspace = Pspaces[i]
     Vspace = Vspaces[i]
     Espace = Espaces[i]
-    gms = gradmodes[i]
     calgs = ctmrg_algs[i]
-    @testset "$ctmrg_alg and $alg_rrule" for (ctmrg_alg, alg_rrule) in
-                                             Iterators.product(calgs, gms)
-        @info "optimtest of $ctmrg_alg and $alg_rrule on $(names[i])"
+    palgs = projector_algs[i]
+    salgs = svd_rrule_algs[i]
+    galgs = gradient_algs[i]
+    gischemes = gradient_iterschemes[i]
+    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=:$gradient_alg, gradient_iterscheme=:$gradient_iterscheme" for (
+        ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_iterscheme
+    ) in Iterators.product(
+        calgs, palgs, salgs, galgs, gischemes
+    )
+        # filter disallowed combinations
+        (ctmrg_alg == :sequential && gradient_iterscheme == :fixed) && continue
+
+        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=:$gradient_alg and gradient_iterscheme=:$gradient_iterscheme on $(names[i])"
         Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace)
-        env, = leading_boundary(CTMRGEnv(psi, Espace), psi, ctmrg_alg)
+        # instantiate to avoid having to type this twice...
+        contrete_ctmrg_alg = PEPSKit.CTMRGAlgorithm(;
+            alg=ctmrg_alg,
+            verbosity=ctmrg_verbosity,
+            projector_alg=projector_alg,
+            svd_alg=(; rrule_alg=(; alg=svd_rrule_alg)),
+        )
+        # instantiate because hook_pullback doesn't go through the keyword selector...
+        concrete_gradient_alg = if isnothing(gradient_alg)
+            nothing # TODO: add this to the PEPSKit.GradMode selector?
+        else
+            PEPSKit.GradMode(; alg=gradient_alg, tol=gradtol, iterscheme=gradient_iterscheme)
+        end
+        env, = leading_boundary(CTMRGEnv(psi, Espace), psi, contrete_ctmrg_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
             dir;
@@ -72,7 +76,13 @@ steps = -0.01:0.005:0.01
             inner=PEPSKit.real_inner,
         ) do (peps, env)
             E, g = Zygote.withgradient(peps) do psi
-                env2, = PEPSKit.hook_pullback(leading_boundary, env, psi, ctmrg_alg; alg_rrule)
+                env2, = PEPSKit.hook_pullback(
+                    leading_boundary,
+                    env,
+                    psi,
+                    contrete_ctmrg_alg;
+                    alg_rrule=concrete_gradient_alg,
+                )
                 return cost_function(psi, env2, models[i])
             end
 
