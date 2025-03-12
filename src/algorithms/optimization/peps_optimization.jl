@@ -209,17 +209,6 @@ function fixedpoint(
             instead by passing gradient_alg=(; iterscheme=:diffgauge) to the fixedpoint \
             keyword arguments to work with purely real environments"
         end
-        if isnothing(alg.boundary_alg.projector_alg.svd_alg.rrule_alg) # incompatible with TensorKit SVD rrule
-            G = Base.typename(typeof(alg.gradient_alg)).wrapper # simple type without iterscheme parameter
-            gradient_alg = G{:diffgauge}(
-                (getproperty(alg.gradient_alg, f) for f in fieldnames(G))...
-            )
-            @reset alg.gradient_alg = gradient_alg
-            @warn ":fixed was converted to :diffgauge since :fixed mode and \
-            rrule_alg=nothing are incompatible - nothing uses the TensorKit \
-            reverse-rule requiring access to the untruncated SVD which FixedSVD does not \
-            have; select GMRES, BiCGStab or Arnoldi instead to use :fixed mode"
-        end
     end
 
     # initialize info collection vectors
