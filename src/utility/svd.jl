@@ -142,7 +142,6 @@ function TensorKit._tsvd!(
     end
 
     # construct info NamedTuple
-    truncerr /= norm(S)
     condnum = _condition_number(S)
     info = (;
         truncation_error=truncerr, condition_number=condnum, U_full=U, S_full=S, V_full=V⁺
@@ -223,8 +222,8 @@ function TensorKit.tsvd!(
 ) where {F<:IterSVD}
     # early return
     if isempty(blocksectors(f))
-        truncerr = zero(real(scalartype(f)))
-        return _empty_svdtensors(f)..., truncerr
+        truncation_error = zero(real(scalartype(f)))
+        return _empty_svdtensors(f)..., truncation_error
     end
 
     SVDdata, dims = _compute_svddata!(f, alg.fwd_alg, trunc)
@@ -233,7 +232,6 @@ function TensorKit.tsvd!(
         trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
 
     # construct info NamedTuple
-    truncation_error /= norm(S)
     condition_number = _condition_number(S)
     info = (;
         truncation_error, condition_number, U_full=nothing, S_full=nothing, V_full=nothing
