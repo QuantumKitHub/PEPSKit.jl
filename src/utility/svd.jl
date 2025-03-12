@@ -290,6 +290,9 @@ function ChainRulesCore.rrule(
     Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
 
+    smallest_sval = minimum(minimum(abs.(diag(b))) for (_, b) in blocks(S̃))
+    pullback_tol = max(1e-14, 1e-2 * smallest_sval)
+
     function tsvd!_nothing_pullback(ΔUSVi)
         ΔU, ΔS, ΔV⁺, = unthunk.(ΔUSVi)
         Δt = similar(t)
@@ -298,7 +301,9 @@ function ChainRulesCore.rrule(
             ΔUc, ΔSc, ΔV⁺c = block(ΔU, c), block(ΔS, c), block(ΔV⁺, c)
             Sdc = view(Sc, diagind(Sc))
             ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
-            TensorKitCRCExt.svd_pullback!(b, Uc, Sdc, V⁺c, ΔUc, ΔSdc, ΔV⁺c)
+            TensorKitCRCExt.svd_pullback!(
+                b, Uc, Sdc, V⁺c, ΔUc, ΔSdc, ΔV⁺c; tol=pullback_tol
+            )
         end
         return NoTangent(), Δt, NoTangent()
     end
