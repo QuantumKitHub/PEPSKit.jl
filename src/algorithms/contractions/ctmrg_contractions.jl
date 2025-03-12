@@ -287,10 +287,8 @@ or contract the adjoint environment with `x`, e.g. as needed for iterative solve
 function half_infinite_environment(
     quadrant1::AbstractTensorMap{T,S,N,N}, quadrant2::AbstractTensorMap{T,S,N,N}
 ) where {T,S,N}
-    p1 = (codomainind(quadrant1), domainind(quadrant1) .+ numout(quadrant1))
-    p2 = (codomainind(quadrant2), domainind(quadrant2) .+ numout(quadrant2))
-    p3 = (codomainind(quadrant1), domainind(quadrant2) .+ numout(quadrant1))
-    return tensorcontract(quadrant1, p1, false, quadrant2, p2, false, p3)
+    p = (codomainind(quadrant1), domainind(quadrant1))
+    return tensorcontract(quadrant1, p, false, quadrant2, p, false, p)
 end
 function half_infinite_environment(
     C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P
