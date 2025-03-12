@@ -291,7 +291,11 @@ function ChainRulesCore.rrule(
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
 
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S̃))
-    pullback_tol = max(eps(scalartype(S̃))^(3 / 4), smallest_sval)
+    pullback_tol = clamp(
+        smallest_sval,
+        eps(scalartype(S̃))^(3 / 4),
+        TensorKitCRCExt.default_pullback_gaugetol(S),
+    )
 
     function tsvd!_nothing_pullback(ΔUSVi)
         ΔU, ΔS, ΔV⁺, = unthunk.(ΔUSVi)
