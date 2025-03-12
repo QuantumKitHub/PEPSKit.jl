@@ -3,12 +3,13 @@ using Random
 using Accessors
 using Zygote
 using TensorKit, KrylovKit, PEPSKit
-using PEPSKit: ctmrg_iteration, gauge_fix, fix_relative_phases, fix_global_phases
+using PEPSKit:
+    ctmrg_iteration, gauge_fix, fix_relative_phases, fix_global_phases, _fix_svd_algorithm
 
 algs = [
-    (:fixed, SimultaneousCTMRG(; projector_alg=HalfInfiniteProjector)),
-    (:diffgauge, SequentialCTMRG(; projector_alg=HalfInfiniteProjector)),
-    (:diffgauge, SimultaneousCTMRG(; projector_alg=HalfInfiniteProjector)),
+    (:fixed, SimultaneousCTMRG(; projector_alg=:halfinfinite)),
+    (:diffgauge, SequentialCTMRG(; projector_alg=:halfinfinite)),
+    (:diffgauge, SimultaneousCTMRG(; projector_alg=:halfinfinite)),
     # TODO: FullInfiniteProjector errors since even real_err_∂A, real_err_∂x are finite?
     # (:fixed, SimultaneousCTMRG(; projector_alg=FullInfiniteProjector)),
     # (:diffgauge, SequentialCTMRG(; projector_alg=FullInfiniteProjector)),
@@ -25,11 +26,7 @@ Dbond, χenv = 2, 16
     if iterscheme == :fixed
         env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
         env_fixed, signs = gauge_fix(env, env_conv)
-        U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
-        svd_alg_fixed = SVDAdjoint(;
-            fwd_alg=PEPSKit.FixedSVD(U_fixed, info.S, V_fixed),
-            rrule_alg=ctm_alg.projector_alg.svd_alg.rrule_alg,
-        )
+        svd_alg_fixed = _fix_svd_algorithm(ctm_alg.projector_alg.svd_alg, signs, info)
         alg_fixed = @set ctm_alg.projector_alg.svd_alg = svd_alg_fixed
         alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
