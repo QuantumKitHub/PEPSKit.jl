@@ -36,8 +36,30 @@ end
 function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
         fwd_alg = alg.svd_alg.fwd_alg
-        fix_svd = FixedSVD(fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c])
-        return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
+        fix_svd = if isfullsvd(alg.svd_alg.fwd_alg)
+            FixedSVD(
+                fwd_alg.U[dir, r, c],
+                fwd_alg.S[dir, r, c],
+                fwd_alg.V[dir, r, c],
+                fwd_alg.U_full[dir, r, c],
+                fwd_alg.S_full[dir, r, c],
+                fwd_alg.V_full[dir, r, c],
+            )
+        else
+            FixedSVD(
+                fwd_alg.U[dir, r, c],
+                fwd_alg.S[dir, r, c],
+                fwd_alg.V[dir, r, c],
+                nothing,
+                nothing,
+                nothing,
+            )
+        end
+        return SVDAdjoint(;
+            fwd_alg=fix_svd,
+            rrule_alg=alg.svd_alg.rrule_alg,
+            broadening=alg.svd_alg.broadening,
+        )
     else
         return alg.svd_alg
     end
@@ -114,15 +136,6 @@ end
 
 PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
 
-# TODO: add `LinearAlgebra.cond` to TensorKit
-# Compute condition number smax / smin for diagonal singular value TensorMap
-function _condition_number(S::AbstractTensorMap)
-    smax = maximum(first ∘ last, blocks(S))
-    smin = maximum(last ∘ last, blocks(S))
-    return smax / smin
-end
-@non_differentiable _condition_number(S::AbstractTensorMap)
-
 """
     compute_projector(enlarged_corners, coordinate, alg::ProjectorAlgorithm)
 
@@ -133,7 +146,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, truncation_error = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -143,10 +156,9 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
         end
     end
 
+    @set info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
-    truncation_error /= norm(S)
-    condition_number = @ignore_derivatives(_condition_number(S))
-    return (P_left, P_right), (; truncation_error, condition_number, U, S, V)
+    return (P_left, P_right), (; U, S, V, info...)
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
@@ -155,7 +167,7 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, truncation_error = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -165,7 +177,7 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
         end
     end
 
+    @set info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
-    condition_number = @ignore_derivatives(_condition_number(S))
-    return (P_left, P_right), (; truncation_error, condition_number, U, S, V)
+    return (P_left, P_right), (; U, S, V, info...)
 end
