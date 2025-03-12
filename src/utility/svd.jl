@@ -327,7 +327,7 @@ function ChainRulesCore.rrule(
     # update rrule_alg tolerance to be compatible with smallest singular value
     rrule_alg = alg.rrule_alg
     smallest_sval = minimum(minimum(abs.(diag(b))) for (_, b) in blocks(S))
-    proper_tol = clamp(rrule_alg.tol, 1e-14, 1e-2 * smallest_sval)
+    proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3/4), 1e-2 * smallest_sval)
     rrule_alg = @set rrule_alg.tol = proper_tol
 
     function tsvd!_itersvd_pullback(ΔUSVi)
