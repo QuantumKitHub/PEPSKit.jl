@@ -236,7 +236,7 @@ function ChainRulesCore.rrule(
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
-            minimal_alg = GKL(; tol=rrule_alg.tol, verbosity=1)  # Only tolerance is used for gauge sensitivity (# TODO: How do we not hard-code this tolerance?)
+            minimal_alg = GKL(; tol=rrule_alg.tol, verbosity=1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings 
 
             if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
