@@ -30,6 +30,7 @@ Module containing default algorithm parameter values and arguments.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
+    - `:tsvd`: Uses TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [TensorKit](https://github.com/Jutho/TensorKit.jl/blob/f9cddcf97f8d001888a26f4dce7408d5c6e2228f/ext/TensorKitChainRulesCoreExt/factorizations.jl#L3)
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
@@ -93,7 +94,7 @@ const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
-const svd_rrule_alg = :arnoldi # ∈ {:gmres, :bicgstab, :arnoldi}
+const svd_rrule_alg = :tsvd # ∈ {:tsvd, :gmres, :bicgstab, :arnoldi}
 const krylovdim_factor = 1.4
 
 # Projectors

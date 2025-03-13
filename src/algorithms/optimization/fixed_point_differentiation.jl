@@ -214,17 +214,12 @@ function _rrule(
     state,
     alg::SimultaneousCTMRG,
 )
-    @assert !isnothing(alg.projector_alg.svd_alg.rrule_alg)
     env, = leading_boundary(envinit, state, alg)
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
     env_fixed, signs = gauge_fix(env, env_conv)
 
     # Fix SVD
-    U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
-    svd_alg_fixed = SVDAdjoint(;
-        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed),
-        rrule_alg=alg.projector_alg.svd_alg.rrule_alg,
-    )
+    svd_alg_fixed = _fix_svd_algorithm(alg.projector_alg.svd_alg, signs, info)
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
     alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
 
@@ -247,6 +242,38 @@ function _rrule(
     end
 
     return (env_fixed, info), leading_boundary_fixed_pullback
+end
+
+function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
+    # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
+    signs_full = map(zip(signs, info.S_full)) do (σ, S_full)
+        extended_σ = zeros(scalartype(σ), space(S_full))
+        for (c, b) in blocks(extended_σ)
+            σc = block(σ, c)
+            kept_dim = size(σc, 1)
+            b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
+            b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+        end
+        return extended_σ
+    end
+
+    # fix kept and full U and V
+    U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
+    U_full_fixed, V_full_fixed = fix_relative_phases(info.U_full, info.V_full, signs_full)
+    return SVDAdjoint(;
+        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
+        rrule_alg=alg.rrule_alg,
+        broadening=alg.broadening,
+    )
+end
+function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F<:IterSVD}
+    # fix kept U and V only since iterative SVD doesn't have access to full spectrum
+    U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
+    return SVDAdjoint(;
+        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
+        rrule_alg=alg.rrule_alg,
+        broadening=alg.broadening,
+    )
 end
 
 @doc """
@@ -328,7 +355,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         return (y + X[2] * ∂F∂x, X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    vals, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
+    _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
     if alg.solver_alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
