@@ -107,16 +107,14 @@ depending on the algorithm. E.g., for `IterSVD` the adjoint for a truncated
 SVD from `KrylovKit.svdsolve` is used.
 """
 PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
-function PEPSKit.tsvd!(
-    t::TensorMap{<:RealOrComplexFloat}, alg::SVDAdjoint; trunc=NoTruncation(), p::Real=2
-)
-    return TensorKit._tsvd!(t, alg, trunc, p)
+function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc=NoTruncation(), p::Real=2)
+    return _tsvd!(t, alg.fwd_alg, trunc, p)
 end
 function PEPSKit.tsvd!(
     t::AdjointTensorMap, alg::SVDAdjoint; trunc=NoTruncation(), p::Real=2
 )
-    u, s, vt, err = PEPSKit.tsvd!(adjoint(t), alg; trunc, p)
-    return adjoint(vt), adjoint(s), adjoint(u), err
+    u, s, vt, info = PEPSKit.tsvd!(adjoint(t), alg; trunc, p)
+    return adjoint(vt), adjoint(s), adjoint(u), info
 end
 
 ## Forward algorithms
@@ -130,10 +128,13 @@ function _condition_number(S::AbstractTensorMap)
 end
 
 # Copy code from TensorKit but additionally return full U, S and V to make compatible with :fixed mode
-function TensorKit._tsvd!(
-    t::TensorMap{<:RealOrComplexFloat}, alg::SVDAdjoint, trunc::TruncationScheme, p::Real=2
+function _tsvd!(
+    t::TensorMap{<:RealOrComplexFloat},
+    alg::Union{TensorKit.SDD,TensorKit.SVD},
+    trunc::TruncationScheme,
+    p::Real,
 )
-    U, S, V⁺, truncerr = TensorKit.tsvd!(t; trunc=NoTruncation(), p, alg=alg.fwd_alg)
+    U, S, V⁺, truncerr = TensorKit.tsvd!(t; trunc=NoTruncation(), p, alg)
 
     if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
         Sdata = SectorDict(c => diag(b) for (c, b) in blocks(S))
@@ -183,18 +184,15 @@ function isfullsvd(alg::FixedSVD)
 end
 
 # Return pre-computed SVD
-function PEPSKit.tsvd!(
-    t, alg::SVDAdjoint{F}; trunc::NoTruncation=notrunc(), p::Real=2
-) where {F<:FixedSVD}
-    svd = alg.fwd_alg
+function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
     info = (;
         truncation_error=0,
         condition_number=_condition_number(svd.S),
-        U_full=svd.U_full,
-        S_full=svd.S_full,
-        V_full=svd.V_full,
+        U_full=alg.U_full,
+        S_full=alg.S_full,
+        V_full=alg.V_full,
     )
-    return svd.U, svd.S, svd.V, info
+    return alg.U, alg.S, alg.V, info
 end
 
 """
@@ -224,16 +222,14 @@ function random_start_vector(t::AbstractMatrix)
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
-function PEPSKit.tsvd!(
-    f, alg::SVDAdjoint{F}; trunc::Union{NoTruncation,TruncationSpace}=notrunc(), p::Real=2
-) where {F<:IterSVD}
+function _tsvd!(f, alg::IterSVD, trunc::TruncationScheme, p::Real)
     # early return
     if isempty(blocksectors(f))
         truncation_error = zero(real(scalartype(f)))
         return _empty_svdtensors(f)..., truncation_error
     end
 
-    SVDdata, dims = _compute_svddata!(f, alg.fwd_alg, trunc)
+    SVDdata, dims = _compute_svddata!(f, alg, trunc)
     U, S, V = _create_svdtensors(f, SVDdata, dims)
     truncation_error =
         trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
