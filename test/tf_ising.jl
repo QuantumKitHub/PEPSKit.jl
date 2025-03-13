@@ -18,7 +18,7 @@ mˣ = 0.91
 
 # initialize parameters
 χbond = 2
-χenv = 16
+χenv = 14
 gradtol = 1e-3
 
 # initialize states
