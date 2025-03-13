@@ -187,7 +187,7 @@ end
 function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
     info = (;
         truncation_error=0,
-        condition_number=_condition_number(svd.S),
+        condition_number=_condition_number(alg.S),
         U_full=alg.U_full,
         S_full=alg.S_full,
         V_full=alg.V_full,
