@@ -9,6 +9,10 @@ using MPSKit: add_physical_charge
 
 ## The Fermi-Hubbard model with fℤ₂ ⊠ U1 symmetry, at large U and half filling
 
+# reference: https://www.osti.gov/servlets/purl/1565498
+# energy should end up at E_ref ≈ 4 * -0.5244140625 = -2.09765625, but takes a lot of time
+E_ref = -2.0
+
 # parameters
 t = 1.0
 U = 8.0
@@ -54,5 +58,4 @@ env₀, = leading_boundary(env₀, ψ₀, boundary_alg)
 
 # optimize
 ψ, env, E, info = fixedpoint(H, ψ₀, env₀, pepsopt_alg)
-@test E < -2.0
-# should eventually end up at E = -2.067042677489, but it takes a bit of luck and a lot of time
+@test E < E_ref
