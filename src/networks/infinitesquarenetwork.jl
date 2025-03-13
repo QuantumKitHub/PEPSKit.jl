@@ -20,6 +20,7 @@ struct InfiniteSquareNetwork{O}
         return InfiniteSquareNetwork{eltype(A)}(A)
     end
 end
+InfiniteSquareNetwork(n::InfiniteSquareNetwork) = n
 
 ## Unit cell interface
 
