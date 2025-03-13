@@ -89,11 +89,10 @@ end
     )
     opt_alg = LBFGS(32; maxiter=50, gradtol=1e-5, verbosity=3)
     function pepo_retract(x, η, α)
-        peps = deepcopy(x[1])
-        peps.A .+= η.A .* α
-        env2 = deepcopy(x[2])
-        env3 = deepcopy(x[3])
-        return (peps, env2, env3), η
+        return (PEPSKit.peps_retract(x[1:2], η, α)..., deepcopy(x[3])), η
+    end
+    function pepo_transport!(ξ, x, η, α, x´)
+        return PEPSKit.peps_transport!(ξ, x[1:2], η, α, x´[1:2])
     end
 
     # contract
@@ -104,7 +103,11 @@ end
 
     # optimize free energy per site
     (psi_final, env2_final, env3_final), f, = optimize(
-        (psi0, env2_0, env3_0), opt_alg; retract=pepo_retract, inner=PEPSKit.real_inner
+        (psi0, env2_0, env3_0),
+        opt_alg;
+        inner=PEPSKit.real_inner,
+        retract=pepo_retract,
+        (transport!)=(pepo_transport!),
     ) do (psi, env2, env3)
         E, gs = withgradient(psi) do ψ
             n2 = InfiniteSquareNetwork(ψ)
