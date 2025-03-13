@@ -758,7 +758,7 @@ Apply projectors to each side of a quadrant.
     quadrant::AbstractTensorMap{<:Any,S,N,N},
     P_left::AbstractTensorMap{<:Any,S,N,1},
     P_right::AbstractTensorMap{<:Any,S,1,N},
-) where {T,S,N}
+) where {S,N}
     corner_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     P_right_e = tensorexpr(
         :P_right,
@@ -1016,7 +1016,7 @@ end
     C_southwest::CTMRGCornerTensor{<:Any,S},
     E_south::CTMRGEdgeTensor{<:Any,S,N},
     P_bottom::AbstractTensorMap{<:Any,S,N,1},
-) where {T,S,N}
+) where {S,N}
     C_out_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     C_southwest_e = tensorexpr(:C_southwest, (envlabel(:SSW),), (envlabel(:WSW),))
     E_south_e = tensorexpr(
@@ -1056,7 +1056,7 @@ end
     C_northwest::CTMRGCornerTensor{<:Any,S},
     E_north::CTMRGEdgeTensor{<:Any,S,N},
     P_top::AbstractTensorMap{<:Any,S,1,N},
-) where {T,S,N}
+) where {S,N}
     C_out_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     C_northwest_e = tensorexpr(:C_northwest, (envlabel(:WNW),), (envlabel(:NNW),))
     E_north_e = tensorexpr(
