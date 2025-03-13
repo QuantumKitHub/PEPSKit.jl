@@ -27,15 +27,10 @@ boundary_alg = SimultaneousCTMRG(;
     trscheme=FixedSpaceTruncation(), tol=1e-10, miniter=3, maxiter=100, verbosity=2
 )
 gradient_alg = EigSolver(;
-    solver=Arnoldi(; tol=1e-6, maxiter=10, eager=true), iterscheme=:diffgauge
+    solver_alg=Arnoldi(; tol=1e-6, maxiter=10, eager=true), iterscheme=:diffgauge
 )
-optimization_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=40, ls_maxiter=2, ls_maxfg=2)
-pepsopt_alg = PEPSOptimize(;
-    boundary_alg=boundary_alg,
-    optimizer=optimization_alg,
-    gradient_alg=gradient_alg,
-    reuse_env=true,
-)
+optimizer_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=40, ls_maxiter=2, ls_maxfg=2)
+pepsopt_alg = PEPSOptimize(; boundary_alg, optimizer_alg, gradient_alg, reuse_env=true)
 
 # Hamiltonian
 H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff=cutoff, t=t, U=U, n=filling)

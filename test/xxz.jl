@@ -30,16 +30,11 @@ boundary_alg = SimultaneousCTMRG(;
     trscheme=FixedSpaceTruncation(), tol=1e-10, miniter=3, maxiter=100, verbosity=2
 )
 gradient_alg = EigSolver(;
-    solver=Arnoldi(; tol=1e-6, maxiter=10, eager=true), iterscheme=:diffgauge
+    solver_alg=Arnoldi(; tol=1e-6, maxiter=10, eager=true), iterscheme=:diffgauge
 )
 linesearch_alg = HagerZhangLineSearch(; c₁=1e-4, c₂=1 - 1e-4, maxiter=2, maxfg=2)
-optimization_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=25, linesearch=linesearch_alg)
-pepsopt_alg = PEPSOptimize(;
-    boundary_alg=boundary_alg,
-    optimizer=optimization_alg,
-    gradient_alg=gradient_alg,
-    reuse_env=true,
-)
+optimizer_alg = LBFGS(; gradtol=1e-4, verbosity=3, maxiter=25, linesearch=linesearch_alg)
+pepsopt_alg = PEPSOptimize(; boundary_alg, optimizer_alg, gradient_alg, reuse_env=true)
 
 # Hamiltonian
 H0 = heisenberg_XXZ(ComplexF64, symmetry, lattice; J, Delta, spin)
