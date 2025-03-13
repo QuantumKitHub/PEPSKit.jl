@@ -8,7 +8,7 @@ using OptimKit
 
 # initialize parameters
 Dbond = 2
-χenv = 14
+χenv = 16
 gradtol = 1e-3
 # compare against Juraj Hasik's data:
 # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat
