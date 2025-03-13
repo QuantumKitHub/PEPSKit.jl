@@ -89,7 +89,9 @@ end
     )
     opt_alg = LBFGS(32; maxiter=50, gradtol=1e-5, verbosity=3)
     function pepo_retract(x, η, α)
-        return (PEPSKit.peps_retract(x[1:2], η, α)..., deepcopy(x[3])), η
+        x´_partial, ξ = PEPSKit.peps_retract(x[1:2], η, α)
+        x´ = (x´_partial..., deepcopy(x[3]))
+        return x´, ξ
     end
     function pepo_transport!(ξ, x, η, α, x´)
         return PEPSKit.peps_transport!(ξ, x[1:2], η, α, x´[1:2])
