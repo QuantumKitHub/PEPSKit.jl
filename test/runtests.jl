@@ -45,6 +45,9 @@ end
         @time @safetestset "Iterative optimization after truncation" begin
             include("bondenv/bond_truncate.jl")
         end
+        @time @safetestset "Bond environments for NTU" begin
+            include("bondenv/benv_ntu.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "SVD wrapper" begin
