@@ -292,7 +292,7 @@ function ChainRulesCore.rrule(
 
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S̃))
     pullback_tol = clamp(
-        smallest_sval, eps(scalartype(S̃))^(3 / 4), eps(scalartype(S̃))^(1 / 2)
+        10 * smallest_sval, eps(scalartype(S̃))^(3 / 4), eps(scalartype(S̃))^(1 / 2)
     )
 
     function tsvd!_nothing_pullback(ΔUSVi)
