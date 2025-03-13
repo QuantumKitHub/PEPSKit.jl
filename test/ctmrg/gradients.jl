@@ -47,8 +47,7 @@ steps = -0.01:0.005:0.01
     ) in Iterators.product(
         calgs, palgs, salgs, galgs, gischemes
     )
-        # filter disallowed combinations
-        (ctmrg_alg == :sequential && gradient_iterscheme == :fixed) && continue
+        # TODO: filter disallowed combinations, and @test_throws in those cases
 
         @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=:$gradient_alg and gradient_iterscheme=:$gradient_iterscheme on $(names[i])"
         Random.seed!(42039482030)
