@@ -8,10 +8,10 @@ using TensorKit
 Random.seed!(91283219347)
 stype = ComplexF64
 ctm_algs = [
-    SequentialCTMRG(; projector_alg=HalfInfiniteProjector),
-    SequentialCTMRG(; projector_alg=FullInfiniteProjector),
-    SimultaneousCTMRG(; projector_alg=HalfInfiniteProjector),
-    SimultaneousCTMRG(; projector_alg=FullInfiniteProjector),
+    SequentialCTMRG(; projector_alg=:halfinfinite),
+    SequentialCTMRG(; projector_alg=:fullinfinite),
+    SimultaneousCTMRG(; projector_alg=:halfinfinite),
+    SimultaneousCTMRG(; projector_alg=:fullinfinite),
 ]
 
 function test_unitcell(
@@ -29,7 +29,7 @@ function test_unitcell(
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
     # apply one CTMRG iteration with fixeds
-    env′, = ctmrg_iteration(peps, env, ctm_alg)
+    env′, = ctmrg_iteration(InfiniteSquareNetwork(peps), env, ctm_alg)
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(

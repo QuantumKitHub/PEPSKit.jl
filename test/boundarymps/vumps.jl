@@ -17,9 +17,7 @@ const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitia
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(sum(expectation_value(mps, T)))
 
-    ctm, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(20)), psi, SimultaneousCTMRG(; verbosity=1)
-    )
+    ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
     N´ = abs(norm(psi, ctm))
 
     @test N ≈ N´ atol = 1e-3
@@ -33,9 +31,7 @@ end
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(prod(expectation_value(mps, T)))
 
-    ctm, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(20)), psi, SimultaneousCTMRG(; verbosity=1)
-    )
+    ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
     N´ = abs(norm(psi, ctm))
 
     @test N ≈ N´ rtol = 1e-2
@@ -73,8 +69,8 @@ end
     f = abs(prod(expectation_value(mps, T)))
 
     # double-layer PEPO
-    O = ising_pepo(1; unitcell=(1, 1, 2))
-    psi = initializePEPS(O, ComplexSpace(2))
+    O2 = repeat(O, 1, 1, 2)
+    psi2 = initializePEPS(O, ComplexSpace(2))
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
     mps = PEPSKit.initializeMPS(T, [ComplexSpace(8)])

@@ -7,7 +7,7 @@ cell, whereas the first index corresponds to the direction of the corner or edge
 directions are labeled in clockwise direction, starting from the north-west corner and north
 edge respectively.
 
-Given arrays of corners `c` and edges `t`, they connect to the partition function tensors
+Given arrays of corners `c` and edges `t`, they connect to the network tensors
 `P` at site `(r, c)` in the unit cell as:
 ```
    c[1,r-1,c-1]---t[1,r-1,c]----c[2,r-1,c+1]
@@ -18,7 +18,7 @@ Given arrays of corners `c` and edges `t`, they connect to the partition functio
 ```
 Here `P` represents an effective local constituent tensor. This can either be a single
 rank-4 tensor, a pair of PEPS tensors, or a stack of PEPS-PEPO-PEPS tensors depending on the
-partition function being contracted.
+network being contracted.
 
 # Fields
 - `corners::Array{C,3}`: Array of corner tensors.
@@ -29,9 +29,12 @@ struct CTMRGEnv{C,T}
     edges::Array{T,3}
 end
 
-const ElementarySpaceLike = Union{Int,ElementarySpace}
-const ProductSpaceLike{N} = Union{NTuple{N,Int},NTuple{N,<:ElementarySpace}}
+const ProductSpaceLike{N} = Union{
+    NTuple{N,Int},NTuple{N,<:ElementarySpace},ProductSpace{<:ElementarySpace,N}
+}
 const SpaceLike = Union{ElementarySpaceLike,ProductSpaceLike}
+
+_elementwise_dual(s::NTuple{N,<:ElementarySpace}) where {N} = dual.(s)
 
 _spacetype(::Int) = ComplexSpace
 _spacetype(::S) where {S<:ElementarySpace} = S
@@ -39,23 +42,18 @@ _spacetype(s::ProductSpaceLike) = _spacetype(first(s))
 
 _to_space(χ::Int) = ℂ^χ
 _to_space(χ::ElementarySpace) = χ
-_to_space(χ::ProductSpaceLike) = _to_space.(χ)
+_to_space(χ::ProductSpaceLike) = prod(_to_space, χ)
 
 function _corner_tensor(
     f, ::Type{T}, left_vspace::S, right_vspace::S=left_vspace
 ) where {T,S<:ElementarySpaceLike}
-    return TensorMap(f, T, _to_space(left_vspace) ← _to_space(right_vspace))
+    return f(T, _to_space(left_vspace) ← _to_space(right_vspace))
 end
 
 function _edge_tensor(
     f, ::Type{T}, left_vspace::S, pspaces::P, right_vspace::S=left_vspace
 ) where {T,S<:ElementarySpaceLike,P<:ProductSpaceLike}
-    return TensorMap(
-        f,
-        T,
-        prod([_to_space(left_vspace), _to_space.(pspaces)...]),
-        _to_space(right_vspace),
-    )
+    return f(T, _to_space(left_vspace) ⊗ _to_space(pspaces), _to_space(right_vspace))
 end
 
 """
@@ -113,8 +111,8 @@ function CTMRGEnv(
     chis_west::B=chis_north,
 ) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
     # no recursive broadcasting?
-    Ds_south = (x -> adjoint.(x)).(circshift(Ds_north, (-1, 0)))
-    Ds_west = (x -> adjoint.(x)).(circshift(Ds_east, (0, 1)))
+    Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
+    Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
 
     # do the whole thing
     N = length(first(Ds_north))
@@ -164,9 +162,10 @@ end
     ) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
 
 Construct a CTMRG environment by specifying the north and east virtual spaces of the
-corresponding [`InfinitePEPS`](@ref) and the north, east, south and west virtual spaces of
-the environment. The PEPS unit cell can be specified by the `unitcell` keyword argument. By
-default, the virtual environment spaces for all directions are taken to be the same.
+corresponding [`InfiniteSquareNetwork`](@ref) and the north, east, south and west virtual
+spaces of the environment. The network unit cell can be specified by the `unitcell` keyword
+argument. By default, the virtual environment spaces for all directions are taken to be the
+same.
 
 The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
@@ -217,10 +216,10 @@ end
 
 """
     CTMRGEnv(
-        [f=randn, T=ComplexF64], peps::InfinitePEPS, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
-    ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+        [f=randn, T=ComplexF64], network::InfiniteSquareNetwork, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
+    ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}}
 
-Construct a CTMRG environment by specifying a corresponding [`InfinitePEPS`](@ref), and the
+Construct a CTMRG environment by specifying a corresponding [`InfiniteSquareNetwork`](@ref), and the
 north, east, south and west virtual spaces of the environment as matrices. Each respective
 matrix entry corresponds to a site in the unit cell. By default, the virtual spaces for all
 directions are taken to be the same.
@@ -233,18 +232,14 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 `chis_west[r, c]` corresponds to the north space of the west edge tensor.
 """
 function CTMRGEnv(
-    peps::InfinitePEPS,
+    network::InfiniteSquareNetwork,
     chis_north::A,
     chis_east::A=chis_north,
     chis_south::A=chis_north,
     chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
-    Ds_north = map(peps.A) do t
-        return (adjoint(space(t, 2)), space(t, 2))
-    end
-    Ds_east = map(peps.A) do t
-        return (adjoint(space(t, 3)), space(t, 3))
-    end
+    Ds_north = _north_env_spaces(network)
+    Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
         randn,
         ComplexF64,
@@ -259,18 +254,14 @@ end
 function CTMRGEnv(
     f,
     T,
-    peps::InfinitePEPS,
+    network::InfiniteSquareNetwork,
     chis_north::A,
     chis_east::A=chis_north,
     chis_south::A=chis_north,
     chis_west::A=chis_north,
 ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
-    Ds_north = map(peps.A) do t
-        return (adjoint(space(t, 2)), space(t, 2))
-    end
-    Ds_east = map(peps.A) do t
-        return (adjoint(space(t, 3)), space(t, 3))
-    end
+    Ds_north = _north_env_spaces(network)
+    Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
         f,
         T,
@@ -283,106 +274,44 @@ function CTMRGEnv(
     )
 end
 
+function _north_env_spaces(network::InfiniteSquareNetwork)
+    return map(ProductSpace ∘ _elementwise_dual ∘ north_virtualspace, unitcell(network))
+end
+function _east_env_spaces(network::InfiniteSquareNetwork)
+    return map(ProductSpace ∘ _elementwise_dual ∘ east_virtualspace, unitcell(network))
+end
+
 """
     CTMRGEnv(
-        [f=randn, T=ComplexF64], partfunc::InfinitePartitionFunction, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
-    ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+        peps::InfiniteSquareNetwork, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
+    ) where {S<:ElementarySpaceLike}
 
 Construct a CTMRG environment by specifying a corresponding
-[`InfinitePartitionFunction`](@ref), and the north, east, south and west virtual spaces of
-the environment as matrices. Each respective matrix entry corresponds to a site in the unit
-cell. By default, the virtual spaces for all directions are taken to be the same.
-
-The environment virtual spaces for each site correspond to the north or east virtual space
-of the corresponding edge tensor for each direction. Specifically, for a given site
-`(r, c)`, `chis_north[r, c]` corresponds to the east space of the north edge tensor,
-`chis_east[r, c]` corresponds to the north space of the east edge tensor,
-`chis_south[r, c]` corresponds to the east space of the south edge tensor, and
-`chis_west[r, c]` corresponds to the north space of the west edge tensor.
-"""
-function CTMRGEnv(
-    partfunc::InfinitePartitionFunction,
-    chis_north::A,
-    chis_east::A=chis_north,
-    chis_south::A=chis_north,
-    chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
-    Ds_north = map(partfunc.A) do t
-        return (adjoint(space(t, 3)),)
-    end
-    Ds_east = map(partfunc.A) do t
-        return (adjoint(space(t, 4)),)
-    end
-    return CTMRGEnv(
-        randn,
-        ComplexF64,
-        Ds_north,
-        Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
-    )
-end
-function CTMRGEnv(
-    f,
-    T,
-    partfunc::InfinitePartitionFunction,
-    chis_north::A,
-    chis_east::A=chis_north,
-    chis_south::A=chis_north,
-    chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
-    Ds_north = map(partfunc.A) do t
-        return (adjoint(space(t, 3)),)
-    end
-    Ds_east = map(partfunc.A) do t
-        return (adjoint(space(t, 4)),)
-    end
-    return CTMRGEnv(
-        f,
-        T,
-        N,
-        Ds_north,
-        Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
-    )
-end
-
-"""
-    CTMRGEnv(
-        peps::InfinitePEPS, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
-    ) where {S<:Union{Int,ElementarySpace}}
-
-Construct a CTMRG environment by specifying a corresponding [`InfinitePEPS`](@ref), and the
-north, east, south and west virtual spaces of the environment. By default, the virtual
-spaces for all directions are taken to be the same.
+[`InfiniteSquareNetwork`](@ref), and the north, east, south and west virtual spaces of the
+environment. By default, the virtual spaces for all directions are taken to be the same.
 
 The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-    peps::InfinitePEPS,
+    network::InfiniteSquareNetwork,
     chi_north::S,
     chi_east::S=chi_north,
     chi_south::S=chi_north,
     chi_west::S=chi_north,
 ) where {S<:ElementarySpaceLike}
     return CTMRGEnv(
-        peps,
-        fill(chi_north, size(peps)),
-        fill(chi_east, size(peps)),
-        fill(chi_south, size(peps)),
-        fill(chi_west, size(peps)),
+        network,
+        fill(chi_north, size(network)),
+        fill(chi_east, size(network)),
+        fill(chi_south, size(network)),
+        fill(chi_west, size(network)),
     )
 end
 function CTMRGEnv(
     f,
     T,
-    peps::InfinitePEPS,
+    network::InfiniteSquareNetwork,
     chi_north::S,
     chi_east::S=chi_north,
     chi_south::S=chi_north,
@@ -391,63 +320,23 @@ function CTMRGEnv(
     return CTMRGEnv(
         f,
         T,
-        peps,
-        fill(chi_north, size(peps)),
-        fill(chi_east, size(peps)),
-        fill(chi_south, size(peps)),
-        fill(chi_west, size(peps)),
+        network,
+        fill(chi_north, size(network)),
+        fill(chi_east, size(network)),
+        fill(chi_south, size(network)),
+        fill(chi_west, size(network)),
     )
 end
 
-"""
-    CTMRGEnv(
-        peps::InfinitePartitionFunction, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
-    ) where {S<:ElementarySpaceLike
-
-Construct a CTMRG environment by specifying a corresponding
-[`InfinitePartitionFunction`](@ref), and the north, east, south and west virtual spaces of
-the environment. By default, the virtual spaces for all directions are taken to be the same.
-
-The environment virtual spaces for each site correspond to virtual space of the
-corresponding edge tensor for each direction.
-"""
-function CTMRGEnv(
-    partfunc::InfinitePartitionFunction,
-    chi_north::S,
-    chi_east::S=chi_north,
-    chi_south::S=chi_north,
-    chi_west::S=chi_north,
-) where {S<:ElementarySpaceLike}
-    return CTMRGEnv(
-        partfunc,
-        fill(chi_north, size(partfunc)),
-        fill(chi_east, size(partfunc)),
-        fill(chi_south, size(partfunc)),
-        fill(chi_west, size(partfunc)),
-    )
+# allow constructing environments for implicitly defined contractible networks
+function CTMRGEnv(state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
+    return CTMRGEnv(InfiniteSquareNetwork(state), args...)
 end
-function CTMRGEnv(
-    f,
-    T,
-    partfunc::InfinitePartitionFunction,
-    chi_north::S,
-    chi_east::S=chi_north,
-    chi_south::S=chi_north,
-    chi_west::S=chi_north,
-) where {S<:ElementarySpaceLike}
-    return CTMRGEnv(
-        f,
-        T,
-        partfunc,
-        fill(chi_north, size(partfunc)),
-        fill(chi_east, size(partfunc)),
-        fill(chi_south, size(partfunc)),
-        fill(chi_west, size(partfunc)),
-    )
+function CTMRGEnv(f, T, state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
+    return CTMRGEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
-@non_differentiable CTMRGEnv(peps::InfinitePEPS, args...)
-@non_differentiable CTMRGEnv(peps::InfinitePartitionFunction, args...)
+@non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)

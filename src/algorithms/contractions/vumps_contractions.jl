@@ -319,10 +319,10 @@ end
 # PEPS derivative
 
 # sandwich with the bottom dropped out...
-const ∂PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,Tuple{Vararg{P,N}}}
+const ∂PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,Vararg{P,N}}
 ket(p::∂PEPOSandwich) = p[1]
-pepo(p::∂PEPOSandwich) = p[2]
-pepo(p::∂PEPOSandwich, i::Int) = p[2][i]
+pepo(p::∂PEPOSandwich) = p[2:end]
+pepo(p::∂PEPOSandwich, i::Int) = p[1 + i]
 
 # specialize simple case
 function ∂peps(
@@ -358,7 +358,7 @@ end
     GR_e = _pepo_rightenv_expr(:GR, :E, H)
     ket_e = _pepo_pepstensor_expr(:(ket(O)), :top, 1)
     pepo_es = map(1:H) do h
-        return _pepo_pepotensor_expr(:(pepo(O)[$h]), h)
+        return _pepo_pepotensor_expr(:(pepo(O, $h)), h)
     end
 
     rhs = Expr(:call, :*, AC_e, Expr(:call, :conj, ĀC_e), GL_e, GR_e, ket_e, pepo_es...)

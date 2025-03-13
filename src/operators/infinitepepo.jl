@@ -3,26 +3,32 @@
 
 Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
 """
-struct InfinitePEPO{T<:PEPOTensor} <: InfiniteSquareNetwork{T,3}
+struct InfinitePEPO{T<:PEPOTensor}
     A::Array{T,3}
-
+    InfinitePEPO{T}(A::Array{T,3}) where {T} = new{T}(A)
     function InfinitePEPO(A::Array{T,3}) where {T<:PEPOTensor}
         # space checks
         for (d, w, h) in Tuple.(CartesianIndices(A))
-            space(A[d, w, h], 1) == space(A[d, w, _next(h, end)], 2)' ||
+            codomain_physicalspace(A[d, w, h]) ==
+            domain_physicalspace(A[d, w, _next(h, end)]) ||
                 throw(SpaceMismatch("Physical space at site $((d, w, h)) does not match."))
-            space(A[d, w, h], 3) == space(A[_prev(d, end), w, h], 5)' || throw(
-                SpaceMismatch("North virtual space at site $((d, w, h)) does not match."),
-            )
-            space(A[d, w, h], 4) == space(A[d, _next(w, end), h], 6)' || throw(
-                SpaceMismatch("East virtual space at site $((d, w, h)) does not match.")
-            )
+            north_virtualspace(A[d, w, h]) == south_virtualspace(A[_prev(d, end), w, h])' ||
+                throw(
+                    SpaceMismatch(
+                        "North virtual space at site $((d, w, h)) does not match."
+                    ),
+                )
+            east_virtualspace(A[d, w, h]) == west_virtualspace(A[d, _next(w, end), h])' ||
+                throw(
+                    SpaceMismatch("East virtual space at site $((d, w, h)) does not match.")
+                )
         end
         return new{T}(A)
     end
 end
 
 ## Constructors
+
 """
     InfinitePEPO(A::AbstractArray{T, 3})
 
@@ -53,7 +59,7 @@ function InfinitePEPO(
     Ppspaces = adjoint.(circshift(Pspaces, (0, 0, -1)))
 
     P = map(Pspaces, Ppspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, Pp, N, E, S, W
-        return TensorMap(f, T, P * Pp ← N * E * S * W)
+        return f(T, P * Pp ← N * E * S * W)
     end
 
     return InfinitePEPO(P)
@@ -105,16 +111,117 @@ function InfinitePEPO(
     )
 end
 
-unitcell(T::InfinitePEPO) = T.A
-TensorKit.space(T::InfinitePEPO, i, j) = space(T[i, j, end], 1)
-
 function initializePEPS(
     T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
 ) where {S<:ElementarySpace}
     Pspaces = map(Iterators.product(axes(T, 1), axes(T, 2))) do (r, c)
-        return space(T, r, c)
+        return domain_physicalspace(T, r, c)
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
+end
+
+## Unit cell interface
+
+unitcell(t::InfinitePEPO) = t.A
+Base.size(A::InfinitePEPO, args...) = size(unitcell(A), args...)
+Base.length(A::InfinitePEPO) = length(unitcell(A))
+Base.eltype(::Type{InfinitePEPO{T}}) where {T} = T
+Base.eltype(A::InfinitePEPO) = eltype(typeof(A))
+
+Base.copy(A::InfinitePEPO) = InfinitePEPO(copy(unitcell(A)))
+function Base.similar(A::InfinitePEPO, T::Type{TorA}=scalartype(A)) where {TorA}
+    return InfinitePEPO(map(t -> similar(t, T), unitcell(A)))
+end
+Base.repeat(A::InfinitePEPO, counts...) = InfinitePEPO(repeat(unitcell(A), counts...))
+
+Base.getindex(A::InfinitePEPO, args...) = Base.getindex(unitcell(A), args...)
+Base.setindex!(A::InfinitePEPO, args...) = (Base.setindex!(unitcell(A), args...); A)
+Base.axes(A::InfinitePEPO, args...) = axes(unitcell(A), args...)
+eachcoordinate(A::InfinitePEPO) = collect(Iterators.product(axes(A)...))
+function eachcoordinate(A::InfinitePEPO, dirs)
+    return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
+end
+
+## Spaces
+
+virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) = virtualspace(T[r, c, h], dir)
+domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r, c, 1])
+function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    return codomain_physicalspace(T[r, c, end])
+end
+function physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    codomain_physicalspace(T, r, c) == domain_physicalspace(T, r, c) || throw(
+        SpaceMismatch(
+            "Domain and codomain physical spaces at site $((r, c)) do not match."
+        ),
+    )
+    return codomain_physicalspace(T, r, c)
+end
+
+## InfiniteSquareNetwork interface
+
+function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::InfinitePEPS=top)
+    size(top) == size(bot) == size(mid)[1:2] || throw(
+        ArgumentError("Top PEPS, bottom PEPS and PEPO layers should have equal sizes")
+    )
+    return InfiniteSquareNetwork(
+        map(tuple, unitcell(top), unitcell(bot), eachslice(unitcell(mid); dims=3)...)
+    )
+end
+
+## Vector interface
+
+function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPO}
+    return scalartype(eltype(NT))
+end
+function VectorInterface.zerovector(A::InfinitePEPO)
+    return InfinitePEPO(zerovector(unitcell(A)))
+end
+
+## (Approximate) equality
+function Base.:(==)(A₁::InfinitePEPO, A₂::InfinitePEPO)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return p₁ == p₂
+    end
+end
+function Base.isapprox(A₁::InfinitePEPO, A₂::InfinitePEPO; kwargs...)
+    return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
+        return isapprox(p₁, p₂; kwargs...)
+    end
+end
+
+## Rotations
+
+Base.rotl90(A::InfinitePEPO) = InfinitePEPO(stack(rotl90, eachslice(unitcell(A); dims=3)))
+Base.rotr90(A::InfinitePEPO) = InfinitePEPO(stack(rotr90, eachslice(unitcell(A); dims=3)))
+Base.rot180(A::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(unitcell(A); dims=3)))
+
+## Chainrules
+
+function ChainRulesCore.rrule(
+    ::Type{InfiniteSquareNetwork},
+    top::InfinitePEPS,
+    mid::InfinitePEPO{P},
+    bot::InfinitePEPS,
+) where {P<:PEPOTensor}
+    network = InfiniteSquareNetwork(top, mid, bot)
+
+    function InfiniteSquareNetwork_pullback(Δnetwork_)
+        Δnetwork = unthunk(Δnetwork_)
+        Δtop = InfinitePEPS(map(ket, unitcell(Δnetwork)))
+        Δbot = InfinitePEPS(map(bra, unitcell(Δnetwork)))
+        Δmid = InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork))))
+        return NoTangent(), Δtop, Δmid, Δbot
+    end
+    return network, InfiniteSquareNetwork_pullback
+end
+
+function _stack_tuples(A::Matrix{NTuple{N,T}}) where {N,T}
+    out = Array{T}(undef, size(A)..., N)
+    for (r, c) in Iterators.product(axes(A)...)
+        out[r, c, :] .= A[r, c]
+    end
+    return out
 end

@@ -19,19 +19,16 @@ mˣ = 0.91
 # initialize parameters
 χbond = 2
 χenv = 16
-ctm_alg = SimultaneousCTMRG()
-opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg, optimizer=LBFGS(4; gradtol=1e-3, verbosity=3)
-)
+gradtol = 1e-3
 
 # initialize states
 H = transverse_field_ising(InfiniteSquare(); g)
 Random.seed!(2928528935)
 peps₀ = InfinitePEPS(2, χbond)
-env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀, ctm_alg)
+env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
 # find fixedpoint
-peps, env, E, = fixedpoint(H, peps₀, env₀, opt_alg)
+peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
 ξ_h, ξ_v, = correlation_length(peps, env)
 
 # compute magnetization
@@ -45,7 +42,7 @@ magn = expectation_value(peps, M, env)
 
 # find fixedpoint in polarized phase and compute correlations lengths
 H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
-peps_polar, env_polar, = fixedpoint(H_polar, peps₀, env₀, opt_alg)
+peps_polar, env_polar, = fixedpoint(H_polar, peps₀, env₀; tol=gradtol)
 ξ_h_polar, ξ_v_polar, = correlation_length(peps_polar, env_polar)
 @test ξ_h_polar < ξ_h
 @test ξ_v_polar < ξ_v
