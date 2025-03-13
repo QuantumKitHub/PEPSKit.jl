@@ -146,7 +146,10 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, info = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
+
+    # normalize tensor before svd
+    n_factor = norm(halfinf)
+    U, S, V, info = PEPSKit.tsvd!(halfinf / n_factor, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -156,8 +159,11 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
         end
     end
 
+    #put normalization factor back
     @set info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
-    P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
+    P_left, P_right = contract_projectors(
+        U, S, V, enlarged_corners[1] / sqrt(n_factor), enlarged_corners[2] / sqrt(n_factor)
+    )
     return (P_left, P_right), (; U, S, V, info...)
 end
 function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
@@ -167,7 +173,10 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, info = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
+
+    # normalize tensor before svd
+    n_factor = norm(fullinf)
+    U, S, V, info = PEPSKit.tsvd!(fullinf / n_factor, svd_alg; trunc=alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -177,7 +186,10 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
         end
     end
 
+    #put normalization factor back
     @set info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
-    P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
+    P_left, P_right = contract_projectors(
+        U, S, V, halfinf_left / sqrt(n_factor), halfinf_right / sqrt(n_factor)
+    )
     return (P_left, P_right), (; U, S, V, info...)
 end
