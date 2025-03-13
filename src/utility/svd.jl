@@ -293,8 +293,10 @@ function ChainRulesCore.rrule(
     Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
 
-    smallest_sval = minimum(minimum(abs.(diag(b))) for (_, b) in blocks(S̃))
-    pullback_tol = max(1e-14, 1e-2 * smallest_sval)
+    smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S̃))
+    pullback_tol = clamp(
+        smallest_sval, eps(scalartype(S̃))^(3 / 4), eps(scalartype(S̃))^(1 / 2)
+    )
 
     function tsvd!_nothing_pullback(ΔUSVi)
         ΔU, ΔS, ΔV⁺, = unthunk.(ΔUSVi)
