@@ -1,13 +1,14 @@
 using TensorKit:
+    AdjointTensorMap,
     SectorDict,
     RealOrComplexFloat,
     NoTruncation,
     TruncationSpace,
-    _tsvd!,
     _empty_svdtensors,
     _compute_svddata!,
     _create_svdtensors,
-    _compute_truncdim
+    _compute_truncdim,
+    _compute_truncerr
 const TensorKitCRCExt = Base.get_extension(TensorKit, :TensorKitChainRulesCoreExt)
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
@@ -106,8 +107,16 @@ depending on the algorithm. E.g., for `IterSVD` the adjoint for a truncated
 SVD from `KrylovKit.svdsolve` is used.
 """
 PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
-function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc::TruncationScheme=notrunc(), p::Real=2)
-    return TensorKit.tsvd!(t; alg, trunc, p)
+function PEPSKit.tsvd!(
+    t::TensorMap{<:RealOrComplexFloat}, alg::SVDAdjoint; trunc=NoTruncation(), p::Real=2
+)
+    return TensorKit._tsvd!(t, alg, trunc, p)
+end
+function PEPSKit.tsvd!(
+    t::AdjointTensorMap, alg::SVDAdjoint; trunc=NoTruncation(), p::Real=2
+)
+    u, s, vt, err = PEPSKit.tsvd!(adjoint(t), alg; trunc, p)
+    return adjoint(vt), adjoint(s), adjoint(u), err
 end
 
 ## Forward algorithms
@@ -124,19 +133,17 @@ end
 function TensorKit._tsvd!(
     t::TensorMap{<:RealOrComplexFloat}, alg::SVDAdjoint, trunc::TruncationScheme, p::Real=2
 )
-    U, S, V⁺, truncerr = tsvd(t; trunc=NoTruncation(), p, alg=alg.fwd_alg)
+    U, S, V⁺, truncerr = TensorKit.tsvd!(t; trunc=NoTruncation(), p, alg=alg.fwd_alg)
 
-    if !(trunc isa TensorKit.NoTruncation) && !isempty(blocksectors(t))
-        Sdata = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+    if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
+        Sdata = SectorDict(c => diag(b) for (c, b) in blocks(S))
 
-        truncdim = TensorKit._compute_truncdim(Sdata, trunc, p)
-        truncerr = TensorKit._compute_truncerr(Sdata, truncdim, p)
+        truncdim = _compute_truncdim(Sdata, trunc, p)
+        truncerr = _compute_truncerr(Sdata, truncdim, p)
 
-        SVDdata = TensorKit.SectorDict(
-            c => (block(U, c), Sc, block(V⁺, c)) for (c, Sc) in Sdata
-        )
+        SVDdata = SectorDict(c => (block(U, c), Sc, block(V⁺, c)) for (c, Sc) in Sdata)
 
-        Ũ, S̃, Ṽ⁺ = TensorKit._create_svdtensors(t, SVDdata, truncdim)
+        Ũ, S̃, Ṽ⁺ = _create_svdtensors(t, SVDdata, truncdim)
     else
         Ũ, S̃, Ṽ⁺ = U, S, V⁺
     end
@@ -176,7 +183,7 @@ function isfullsvd(alg::FixedSVD)
 end
 
 # Return pre-computed SVD
-function TensorKit.tsvd!(
+function PEPSKit.tsvd!(
     t, alg::SVDAdjoint{F}; trunc::NoTruncation=notrunc(), p::Real=2
 ) where {F<:FixedSVD}
     svd = alg.fwd_alg
@@ -217,7 +224,7 @@ function random_start_vector(t::AbstractMatrix)
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
-function TensorKit.tsvd!(
+function PEPSKit.tsvd!(
     f, alg::SVDAdjoint{F}; trunc::Union{NoTruncation,TruncationSpace}=notrunc(), p::Real=2
 ) where {F<:IterSVD}
     # early return
@@ -280,7 +287,7 @@ end
 
 # TensorKit.tsvd! rrule with info NamedTuple return value
 function ChainRulesCore.rrule(
-    ::typeof(TensorKit.tsvd!),
+    ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
     alg::SVDAdjoint{F,R,B};
     trunc::TruncationScheme=TensorKit.NoTruncation(),
@@ -321,8 +328,8 @@ function ChainRulesCore.rrule(
     alg::SVDAdjoint{F,R,B};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-) where {F<:Union{IterSVD,FixedSVD},R<:Union{GMRES,BiCGStab,Arnoldi},B}
-    U, S, V, info = PEPSKit.tsvd(f, alg; trunc, p)
+) where {F,R<:Union{GMRES,BiCGStab,Arnoldi},B}
+    U, S, V, info = tsvd(f, alg; trunc, p)
 
     # update rrule_alg tolerance to be compatible with smallest singular value
     rrule_alg = alg.rrule_alg
