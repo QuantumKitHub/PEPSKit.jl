@@ -7,13 +7,6 @@ using OptimKit
 
 using MPSKit: add_physical_charge
 
-function naive_normalize(state::InfinitePEPS)
-    normalized_tensors = map(PEPSKit.unitcell(state)) do tensor
-        return tensor / norm(tensor)
-    end
-    return InfinitePEPS(normalized_tensors)
-end
-
 ## The Fermi-Hubbard model with fℤ₂ ⊠ U1 symmetry, at large U and half filling
 
 # parameters
@@ -60,7 +53,7 @@ Pspaces = H.lattice
 Nspaces = fill(Vpeps, size(lattice)...)
 Espaces = fill(Vpeps, size(lattice)...)
 Random.seed!(2928528937)
-ψ₀ = naive_normalize(InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces))
+ψ₀ = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
 env₀ = CTMRGEnv(ψ₀, Venv)
 env₀, = leading_boundary(env₀, ψ₀, boundary_alg)
 

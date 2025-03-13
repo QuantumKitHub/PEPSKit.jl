@@ -73,11 +73,11 @@ end
         @time @safetestset "U1-symmetric XXZ model" begin
             include("xxz.jl")
         end
+        @time @safetestset "U1-symmetric Bose-Hubbard model" begin
+            include("bose_hubbard.jl")
+        end
         @time @safetestset "fZ2xU1-symmetric Fermi-Hubbard model" begin
             include("fermi_hubbard.jl")
         end
-        # @time @safetestset "U1-symmetric Bose-Hubbard model" begin
-        #     include("bose_hubbard.jl")
-        # end
     end
 end
