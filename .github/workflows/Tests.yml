@@ -28,6 +28,7 @@ jobs:
         group:
           - ctmrg
           - boundarymps
+          - gradients
           - examples
           - utility
           - bondenv
