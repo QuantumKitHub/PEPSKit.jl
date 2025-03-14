@@ -9,7 +9,7 @@ using KrylovKit
 ## Test models, gradmodes and CTMRG algorithm
 # -------------------------------------------
 χbond = 2
-χenv = 4
+χenv = 12
 Pspaces = [ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1)]
 Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
@@ -18,14 +18,14 @@ names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1e-4
 ctmrg_verbosity = 0
-ctmrg_algs = [[:sequential, :simultaneous], [:sequential]]
-projector_algs = [[:halfinfinite, :fullinfinite], [:halfinfinite]]
+ctmrg_algs = [[:sequential, :simultaneous], [:sequential, :simultaneous]]
+projector_algs = [[:halfinfinite, :fullinfinite], [:halfinfinite, :fullinfinite]]
 svd_rrule_algs = [[:tsvd, :arnoldi], [:tsvd, :arnoldi]]
 gradient_algs = [
     [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
-    [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
+    [:geomsum, :manualiter, :linsolver, :eigsolver],
 ]
-gradient_iterschemes = [[:fixed, :diffgauge], [:diffgauge]]
+gradient_iterschemes = [[:fixed, :diffgauge], [:fixed, :diffgauge]]
 steps = -0.01:0.005:0.01
 
 ## Tests
