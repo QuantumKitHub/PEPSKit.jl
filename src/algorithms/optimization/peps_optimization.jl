@@ -74,6 +74,8 @@ function _OptimizationAlgorithm(;
     tol=Defaults.optimizer_tol,
     maxiter=Defaults.optimizer_maxiter,
     verbosity=Defaults.optimizer_verbosity,
+    ls_maxiter=Defaults.ls_maxiter,
+    ls_maxfg=Defaults.ls_maxfg,
     lbfgs_memory=Defaults.lbfgs_memory,
     # TODO: add linesearch, ... to kwargs and defaults?
 )
@@ -84,9 +86,9 @@ function _OptimizationAlgorithm(;
 
     # instantiate algorithm
     return if alg_type <: LBFGS
-        alg_type(lbfgs_memory; gradtol=tol, maxiter, verbosity)
+        alg_type(lbfgs_memory; gradtol=tol, maxiter, verbosity, ls_maxiter, ls_maxfg)
     else
-        alg_type(; gradtol=tol, maxiter, verbosity)
+        alg_type(; gradtol=tol, maxiter, verbosity, ls_maxiter, ls_maxfg)
     end
 end
 
