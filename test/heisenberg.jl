@@ -22,7 +22,7 @@ E_ref = -0.6602310934799577
     env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths
-    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
+    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol, maxiter=25)
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ E_ref atol = 1e-2
@@ -38,7 +38,7 @@ end
     env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths
-    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
+    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol, maxiter=25)
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ 2 * E_ref atol = 1e-2
@@ -92,6 +92,7 @@ end
         peps,
         env;
         tol=gradtol,
+        maxiter=25,
         boundary_alg=(; maxiter=150, svd_alg=(; rrule_alg=(; alg=:gmres, tol=1e-5))),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)

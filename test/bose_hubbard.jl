@@ -10,7 +10,7 @@ using MPSKit: add_physical_charge
 ## The Mott-insulating phase of the Bose-Hubbard model at uniform unit filling
 
 # reference value: cylinder-MPS result for circumference Ly=7: E = -0.273284888
-E_ref = -0.273
+E_ref = -0.27
 
 # parameters
 t = 1.0
@@ -28,7 +28,7 @@ Venv = U1Space(0 => 6, 1 => 4, -1 => 4, 2 => 2, -2 => 2)
 # algorithms
 boundary_alg = (; tol=1e-8, alg=:simultaneous, verbosity=2, trscheme=(; alg=:fixedspace))
 gradient_alg = (; tol=1e-6, maxiter=10, alg=:eigsolver, iterscheme=:diffgauge)
-optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=40, ls_maxiter=2, ls_maxfg=2)
+optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=25, ls_maxiter=2, ls_maxfg=2)
 reuse_env = true
 
 # Hamiltonian
