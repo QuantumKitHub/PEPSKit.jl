@@ -28,6 +28,13 @@ gradient_algs = [
 gradient_iterschemes = [[:fixed, :diffgauge], [:fixed, :diffgauge]]
 steps = -0.01:0.005:0.01
 
+naive_gradient_combinations = [
+    (:simultaneous, :halfinfinite, :tsvd),
+    (:simultaneous, :fullinfinite, :tsvd),
+    (:sequential, :halfinfinite, :tsvd),
+]
+naive_gradient_done = Set()
+
 ## Tests
 # ------
 @testset "AD CTMRG energy gradients for $(names[i]) model" verbose = true for i in
@@ -49,6 +56,14 @@ steps = -0.01:0.005:0.01
     )
         # filter all disallowed combinations
         (ctmrg_alg == :sequential && gradient_iterscheme == :fixed) && continue
+
+        # check for allowed algorithm combinations when testing naive gradient
+        if isnothing(gradient_alg)
+            combo = (ctmrg_alg, projector_alg, svd_rrule_alg)
+            combo in naive_gradient_combinations || continue
+            combo in naive_gradient_done && continue
+            push!(naive_gradient_done, combo)
+        end
 
         @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=:$gradient_alg and gradient_iterscheme=:$gradient_iterscheme on $(names[i])"
         Random.seed!(42039482030)
