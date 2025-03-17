@@ -9,7 +9,7 @@ using KrylovKit
 ## Test models, gradmodes and CTMRG algorithm
 # -------------------------------------------
 χbond = 2
-χenv = 12
+χenv = 6
 Pspaces = [ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1)]
 Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
 Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
