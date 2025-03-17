@@ -34,7 +34,7 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
-        @time @safetestset "Gauge Fixing" begin
+        @time @safetestset "CTMRG gradients" begin
             include("gradients/ctmrg_gradients.jl")
         end
     end
