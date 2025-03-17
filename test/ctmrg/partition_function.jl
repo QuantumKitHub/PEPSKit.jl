@@ -1,15 +1,14 @@
 using Test
 using Random
+using LinearAlgebra
 using PEPSKit
 using TensorKit
-using LinearAlgebra
 using QuadGK
-using MPSKit
 
 ## Setup
 
 """
-    ising_exact(beta, J)
+    classical_ising_exact(beta, J)
 
 [Exact Onsager solution](https://en.wikipedia.org/wiki/Square_lattice_Ising_model#Exact_solution)
 for the 2D classical Ising Model with partition function
@@ -46,6 +45,7 @@ Implements the 2D classical Ising model with partition function
 """
 function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
     K = beta * J
+
     # Boltzmann weights
     t = ComplexF64[exp(K) exp(-K); exp(-K) exp(K)]
     r = eigen(t)

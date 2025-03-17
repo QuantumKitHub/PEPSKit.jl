@@ -56,10 +56,23 @@ end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
 # because MPSKit is not compatible with AD
+@generated function _transfer_right(
+    v::AbstractTensorMap{<:Any,S,1,N₁},
+    A::GenericMPSTensor{S,N₂},
+    Abar::GenericMPSTensor{S,N₂},
+) where {S,N₁,N₂}
+    t_out = tensorexpr(:v, -1, -(2:(N₁ + 1)))
+    t_top = tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
+    t_bot = tensorexpr(:Abar, (-(N₁ + 1), reverse(3:(N₂ + 1))...), 2)
+    t_in = tensorexpr(:v, 1, (-(2:N₁)..., 2))
+    return macroexpand(
+        @__MODULE__, :(return @tensor $t_out := $t_top * conj($t_bot) * $t_in)
+    )
+end
 function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     _, vecs, info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
         return foldr(zip(tops, bottoms); init=ρ) do (top, bottom), ρ
-            return @tensor ρ′[-1; -2] := top[-1 4 3; 1] * conj(bottom[-2 4 3; 2]) * ρ[1; 2]
+            return _transfer_right(ρ, top, bottom)
         end
     end
     info.converged > 0 || @warn "eigsolve did not converge"
