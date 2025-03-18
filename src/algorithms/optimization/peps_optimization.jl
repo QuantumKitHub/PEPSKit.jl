@@ -352,7 +352,7 @@ function symmetrize_retract_and_finalize!(
         # symmetrize retracted point and directional derivative
         peps´_symm = symmetrize!(peps´, symm)
         ξ_symm = symmetrize!(ξ, symm)
-        return (peps´_symm, env′), ξ_symm
+        return (peps´_symm, env´), ξ_symm
     end
     return retract_then_symmetrize, symmetrize_then_finalize!
 end
