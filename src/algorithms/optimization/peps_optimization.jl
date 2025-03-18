@@ -195,9 +195,9 @@ function fixedpoint(
     if isnothing(alg.symmetrization)
         retract = peps_retract
     else
-        retract, symm_finalize! = symmetrize_retract_and_finalize!(alg.symmetrization)
-        fin! = finalize!  # Previous finalize!
-        finalize! = (x, f, g, numiter) -> fin!(symm_finalize!(x, f, g, numiter)..., numiter)
+        retract, finalize! = symmetrize_retract_and_finalize!(
+            alg.symmetrization, retract, finalize!
+        )
     end
 
     # :fixed mode compatibility
@@ -282,19 +282,19 @@ end
 Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step
 size `α`, giving a new PEPS `A´`,
 ```math
-A' \\leftarrow \\cos \\left( α \\frac{||η||}{||A||} \\right) A + \\sin \\left( α \\frac{||η||}{||A||} \\right) ||A|| \\frac{η}{||η||},
+A' ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
 ```
 and corresponding directional derivative `ξ`,
 ```math
-ξ = \\cos \\left( α \\frac{||η||}{||A||} \\right) η - \\sin \\left( α \\frac{||η||}{||A||} \\right) ||η|| \\frac{A}{||A||},
+ξ = \\cos ( α ‖η‖ / ‖A‖ ) η - \\sin ( α ‖η‖ / ‖A‖ ) ‖η‖ A / ‖A‖,
 ```
-such that ``\\langle A', ξ \\rangle = 0`` and ``||A'|| = ||A||``.
+such that ``⟨ A', ξ ⟩ = 0`` and ``‖A'‖ = ‖A‖``.
 """
 function peps_retract(x, η, α)
     peps = x[1]
     env = deepcopy(x[2])
 
-    retractions = vector_retract.(unitcell(peps), unitcell(η), α)
+    retractions = norm_preserving_retract.(unitcell(peps), unitcell(η), α)
     peps´ = InfinitePEPS(map(first, retractions))
     ξ = InfinitePEPS(map(last, retractions))
 
@@ -308,19 +308,21 @@ Transports a direction at `A = x[1]` to a valid direction at `A´ = x´[1]` corr
 the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
 from a direction `η` of the form
 ```math
-ξ = \\left\\langle \\frac{η}{||η||}, ξ \\right\\rangle \\frac{η}{||η||} + Δξ
+ξ = ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
 ```
-where ``\\langle Δξ, A \\rangle = \\langle Δξ, η \\rangle = 0``, it returns
+where ``⟨ Δξ, A ⟩ = ⟨ Δξ, η ⟩ = 0``, it returns
 ```math
-ξ(α) = \\left\\langle \\frac{η}{||η||}, ξ \\right \\rangle \\left( \\cos \\left( α \\frac{||η||}{||A||} \\right) \\frac{η}{||η||} - \\sin( \\left( α \\frac{||η||}{||A||} \\right) \\frac{A}{||A||} \\right) + Δξ
+ξ(α) = ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( ( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
 ```
-such that ``||ξ(α)|| = ||ξ||, \\langle A', ξ(α) \\rangle = 0``.
+such that ``‖ξ(α)‖ = ‖ξ‖, ⟨ A', ξ(α) ⟩ = 0``.
 """
 function peps_transport!(ξ, x, η, α, x´)
     peps = x[1]
     peps´ = x´[1]
 
-    vector_transport!.(unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps´))
+    norm_preserving_transport!.(
+        unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps´)
+    )
 
     return ξ
 end
@@ -333,17 +335,22 @@ real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 
 Return the `retract` and `finalize!` function for symmetrizing the `peps` and `grad` tensors.
 """
-function symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
-    finf = function symmetrize_finalize!((peps, env), E, grad, _)
+function symmetrize_retract_and_finalize!(
+    symm::SymmetrizationStyle, retract=peps_retract, (finalize!)=OptimKit._finalize!
+)
+    function symmetrize_then_finalize!((peps, env), E, grad, numiter)
+        # symmetrize the gradient
         grad_symm = symmetrize!(grad, symm)
-        return (peps, env), E, grad_symm
+        # then finalize
+        return finalize!((peps, env), E, grad_symm, numiter)
     end
-    retf = function symmetrize_retract((peps, env), η, α)
-        peps_symm = deepcopy(peps)
-        peps_symm.A .+= η.A .* α
-        env′ = deepcopy(env)
-        symmetrize!(peps_symm, symm)
-        return (peps_symm, env′), η
+    function retract_then_symmetrize((peps, env), η, α)
+        # retract
+        (peps´, env´), ξ = retract((peps, env), η, α)
+        # symmetrize retracted point and directional derivative
+        peps´_symm = symmetrize!(peps´, symm)
+        ξ_symm = symmetrize!(ξ, symm)
+        return (peps´_symm, env′), ξ_symm
     end
-    return retf, finf
+    return retract_then_symmetrize, symmetrize_then_finalize!
 end

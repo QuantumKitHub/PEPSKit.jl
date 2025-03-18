@@ -25,9 +25,9 @@ Vpepss = [ℂ^4, U1Space(0 => 2, -1 => 1, 1 => 1)]
     add!(η, normalized_A, -inner(normalized_A, η))
     add!(ζ, normalized_A, -inner(normalized_A, ζ))
 
-    A´, ξ = PEPSKit.vector_retract(A, η, α)
+    A´, ξ = PEPSKit.norm_preserving_retract(A, η, α)
     @test norm(A´) ≈ norm(A) rtol = 1e-12
 
-    PEPSKit.vector_transport!(ζ, A, η, α, A´)
+    PEPSKit.norm_preserving_transport!(ζ, A, η, α, A´)
     @test inner(ζ, A´) ≈ 0 atol = 1e-12
 end

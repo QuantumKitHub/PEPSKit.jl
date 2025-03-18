@@ -3,20 +3,25 @@ Utilities for preserving the norm of (VectorInterface-compliant) vectors during 
 =#
 
 """
-    vector_retract(A, η, α)
+    norm_preserving_retract(A, η, α)
 
 Performs a norm-preserving retraction of vector `A` along the direction `η` with step size
 `α`, giving a new vector `A´`,
 ```math
-A' \\leftarrow \\cos \\left( α \\frac{||η||}{||A||} \\right) A + \\sin \\left( α \\frac{||η||}{||A||} \\right) ||A|| \\frac{η}{||η||},
+A' ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
 ```
 and corresponding directional derivative `ξ`,
 ```math
-ξ = \\cos \\left( α \\frac{||η||}{||A||} \\right) η - \\sin \\left( α \\frac{||η||}{||A||} \\right) ||η|| \\frac{A}{||A||},
+ξ = \\cos ( α ‖η‖ / ‖A‖ ) η - \\sin ( α ‖η‖ / ‖A‖ ) ‖η‖ A / ‖A‖,
 ```
-such that ``\\langle A', ξ \\rangle = 0`` and ``||A'|| = ||A||``.
+such that ``⟨ A', ξ ⟩ = 0`` and ``‖A'‖ = ‖A‖``.
+
+!!! note
+    The vectors `A` and `η` should satisfy the interface specified by
+    [VectorInterface.jl](https://github.com/Jutho/VectorInterface.jl)
+
 """
-function vector_retract(A, η, α)
+function norm_preserving_retract(A, η, α)
     n_A = norm(A)
     n_η = norm(η)
     sn, cs = sincos(α * n_η / n_A)
@@ -28,7 +33,7 @@ function vector_retract(A, η, α)
 end
 
 """
-    vector_transport!(ξ, A, η, α, A′)
+    norm_preserving_transport!(ξ, A, η, α, A′)
 
 Transports a direction `ξ` at `A` to a valid direction at `A´` corresponding to
 the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
@@ -36,13 +41,18 @@ from a direction `η` of the form
 ```math
 ξ = ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
 ```
-where ``\\langle Δξ, A \\rangle = \\langle Δξ, η \\rangle = 0``, it returns
+where ``⟨ Δξ, A ⟩ = ⟨ Δξ, η ⟩ = 0``, it returns
 ```math
-ξ(α) = \\left\\langle \\frac{η}{||η||}, ξ \\right \\rangle \\left( \\cos \\left( α \\frac{||η||}{||A||} \\right) \\frac{η}{||η||} - \\sin( \\left( α \\frac{||η||}{||A||} \\right) \\frac{A}{||A||} \\right) + Δξ
+ξ(α) = ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( ( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
 ```
-such that ``||ξ(α)|| = ||ξ||, \\langle A', ξ(α) \\rangle = 0``.
+such that ``‖ξ(α)‖ = ‖ξ‖, ⟨ A', ξ(α) ⟩ = 0``.
+
+!!! note
+    The vectors `A` and `η` should satisfy the interface specified by
+    [VectorInterface.jl](https://github.com/Jutho/VectorInterface.jl)
+
 """
-function vector_transport!(ξ, A, η, α, A´)
+function norm_preserving_transport!(ξ, A, η, α, A´)
     n_A = norm(A)
     n_η = norm(η)
     sn, cs = sincos(α * n_η / n_A)
