@@ -19,8 +19,7 @@ such that ``\\langle A', ξ \\rangle = 0`` and ``||A'|| = ||A||``.
 function vector_retract(A, η, α)
     n_A = norm(A)
     n_η = norm(η)
-    cs = cos(α * n_η / n_A)
-    sn = sin(α * n_η / n_A)
+    sn, cs = sincos(α * n_η / n_A)
 
     A´ = add(A, η, sn * n_A / n_η, cs)
     ξ = add(A, η, cs, -sn * n_η / n_A)
@@ -35,7 +34,7 @@ Transports a direction `ξ` at `A` to a valid direction at `A´` corresponding t
 the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
 from a direction `η` of the form
 ```math
-ξ = \\left\\langle \\frac{η}{||η||}, ξ \\right\\rangle \\frac{η}{||η||} + Δξ
+ξ = ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
 ```
 where ``\\langle Δξ, A \\rangle = \\langle Δξ, η \\rangle = 0``, it returns
 ```math
@@ -46,14 +45,11 @@ such that ``||ξ(α)|| = ||ξ||, \\langle A', ξ(α) \\rangle = 0``.
 function vector_transport!(ξ, A, η, α, A´)
     n_A = norm(A)
     n_η = norm(η)
-    cs = cos(α * n_η / n_A)
-    sn = sin(α * n_η / n_A)
+    sn, cs = sincos(α * n_η / n_A)
 
-    normalized_η = scale(η, inv(n_η))
-    normalized_A = scale(A, inv(n_A))
-    overlaps_η_ξ = inner(normalized_η, ξ)
-
-    add!(ξ, add!(normalized_η, normalized_A, -sn, cs - 1), overlaps_η_ξ)
+    overlaps_η_ξ = inner(η, ξ) / n_η
+    add!(ξ, η, (cs - 1) * overlaps_η_ξ / n_η)
+    add!(ξ, A, -sn * overlaps_η_ξ / n_A)
 
     return ξ
 end
