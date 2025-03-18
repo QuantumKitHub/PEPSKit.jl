@@ -292,20 +292,11 @@ such that ``\\langle A', ξ \\rangle = 0`` and ``||A'|| = ||A||``.
 """
 function peps_retract(x, η, α)
     peps = x[1]
-    norms_peps = norm.(peps.A)
-    norms_η = norm.(η.A)
-
-    peps´ = similar(x[1])
-    peps´.A .=
-        cos.(α .* norms_η ./ norms_peps) .* peps.A .+
-        sin.(α .* norms_η ./ norms_peps) .* norms_peps .* η.A ./ norms_η
-
     env = deepcopy(x[2])
 
-    ξ = similar(η)
-    ξ.A .=
-        cos.(α .* norms_η ./ norms_peps) .* η.A .-
-        sin.(α .* norms_η ./ norms_peps) .* norms_η .* peps.A ./ norms_peps
+    retractions = vector_retract.(unitcell(peps), unitcell(η), α)
+    peps´ = InfinitePEPS(map(first, retractions))
+    ξ = InfinitePEPS(map(last, retractions))
 
     return (peps´, env), ξ
 end
@@ -327,21 +318,9 @@ such that ``||ξ(α)|| = ||ξ||, \\langle A', ξ(α) \\rangle = 0``.
 """
 function peps_transport!(ξ, x, η, α, x´)
     peps = x[1]
-    norms_peps = norm.(peps.A)
+    peps´ = x´[1]
 
-    norms_η = norm.(η.A)
-    normalized_η = η.A ./ norms_η
-    overlaps_η_ξ = inner.(normalized_η, ξ.A)
-
-    # isolate the orthogonal component
-    Δξ = ξ.A .- overlaps_η_ξ .* normalized_η
-
-    # keep orthogonal component fixed, modify the rest by the proper directional derivative
-    ξ.A .=
-        overlaps_η_ξ .* (
-            cos.(α .* norms_η ./ norms_peps) .* normalized_η .-
-            sin.(α .* norms_η ./ norms_peps) .* peps.A ./ norms_peps
-        ) .+ Δξ
+    vector_transport!.(unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps´))
 
     return ξ
 end
