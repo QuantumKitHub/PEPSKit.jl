@@ -198,7 +198,7 @@ function fixedpoint(
         retract = peps_retract
     else
         retract, finalize! = symmetrize_retract_and_finalize!(
-            alg.symmetrization, retract, finalize!
+            alg.symmetrization, peps_retract, finalize!
         )
     end
 
