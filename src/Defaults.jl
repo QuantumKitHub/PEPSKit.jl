@@ -68,6 +68,8 @@ Module containing default algorithm parameter values and arguments.
     - `:gradientdescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
     - `:conjugategradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
     - `:lbfgs` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+* `ls_maxiter=$(Defaults.ls_maxiter)` : Maximum number of iterations for the line search in each step of the optimization.
+* `ls_maxfg=$(Defaults.ls_maxfg)` : Maximum number of function evaluations for the line search in each step of the optimization.
 * `lbfgs_memory=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
 
 ## OhMyThreads scheduler
@@ -117,6 +119,8 @@ const optimizer_tol = 1e-4
 const optimizer_maxiter = 100
 const optimizer_verbosity = 3
 const optimizer_alg = :lbfgs # ∈ {:gradientdescent, :conjugategradient, :lbfgs}
+const ls_maxiter = 10
+const ls_maxfg = 20
 const lbfgs_memory = 20
 
 # OhMyThreads scheduler defaults

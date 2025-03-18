@@ -75,5 +75,8 @@ end
         @time @safetestset "P-wave superconductor" begin
             include("examples/pwave.jl")
         end
+        @time @safetestset "U1-symmetric Bose-Hubbard model" begin
+            include("bose_hubbard.jl")
+        end
     end
 end
