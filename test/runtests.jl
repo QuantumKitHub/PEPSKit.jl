@@ -58,6 +58,9 @@ end
         @time @safetestset "Differentiable tmap" begin
             include("utility/diff_maps.jl")
         end
+        @time @safetestset "Norm-preserving retractions" begin
+            include("utility/retractions.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"
         @time @safetestset "Transverse Field Ising model" begin
