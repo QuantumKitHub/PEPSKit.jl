@@ -60,5 +60,5 @@ peps, env, E, = fixedpoint(
     H, state, env0; boundary_alg, optimizer_alg, gradient_alg, reuse_env
 )
 
-@show E # -0.6625...```
-
+@show E # -0.6625...
+```
