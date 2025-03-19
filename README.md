@@ -38,25 +38,27 @@ For example, in order to obtain the groundstate of the 2D Heisenberg model, we c
 ```julia
 using TensorKit, PEPSKit, KrylovKit, OptimKit
 
-# constructing the Hamiltonian:
+# construct the Hamiltonian
 H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1) # sublattice rotation to obtain single-site unit cell
 
-# configuring the parameters
+# choose the bond dimensions
 D = 2
 chi = 20
-ctm_alg = SimultaneousCTMRG(; tol=1e-10, trscheme=truncdim(chi))
-opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg,
-    optimizer_alg=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=3),
-    gradient_alg=LinSolver(),
-    reuse_env=true,
-)
 
-# ground state search
+# configure the algorithm parameters
+boundary_alg = (;
+    alg=:simultaneous, tol=1e-10, verbosity=2, trscheme=(; alg=:truncdim, η=chi)
+)
+optimizer_alg = (; alg=:lbfgs, tol=1e-4, verbosity=3)
+gradient_alg = (; alg=:linsolver)
+reuse_env = true
+
+# and find the ground state
 state = InfinitePEPS(2, D)
-ctm, = leading_boundary(CTMRGEnv(state, ComplexSpace(chi)), state, ctm_alg)
-peps, env, E, = fixedpoint(H, state, ctm, opt_alg)
+env0, = leading_boundary(CTMRGEnv(state, ComplexSpace(chi)), state; boundary_alg...)
+peps, env, E, = fixedpoint(
+    H, state, env0; boundary_alg, optimizer_alg, gradient_alg, reuse_env
+)
 
 @show E # -0.6625...
 ```
-
