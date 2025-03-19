@@ -19,9 +19,9 @@ include("utility/diffable_threads.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
 include("utility/mirror.jl")
-include("utility/diffset.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
+include("utility/retractions.jl")
 
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
@@ -94,7 +94,7 @@ export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
 export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
-export transverse_field_ising, heisenberg_XYZ, j1_j2
+export transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ, j1_j2, bose_hubbard_model
 export pwave_superconductor, hubbard_model, tj_model
 
 end # module

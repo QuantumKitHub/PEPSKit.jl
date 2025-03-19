@@ -14,9 +14,6 @@ end
         @time @safetestset "Gauge Fixing" begin
             include("ctmrg/gaugefix.jl")
         end
-        @time @safetestset "Gradients" begin
-            include("ctmrg/gradients.jl")
-        end
         @time @safetestset "Unit cell" begin
             include("ctmrg/unitcell.jl")
         end
@@ -34,6 +31,11 @@ end
         end
         @time @safetestset "PEPO" begin
             include("ctmrg/pepo.jl")
+        end
+    end
+    if GROUP == "ALL" || GROUP == "GRADIENTS"
+        @time @safetestset "CTMRG gradients" begin
+            include("gradients/ctmrg_gradients.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
@@ -56,19 +58,25 @@ end
         @time @safetestset "Differentiable tmap" begin
             include("utility/diff_maps.jl")
         end
+        @time @safetestset "Norm-preserving retractions" begin
+            include("utility/retractions.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"
         @time @safetestset "Transverse Field Ising model" begin
-            include("tf_ising.jl")
+            include("examples/tf_ising.jl")
         end
         @time @safetestset "Heisenberg model" begin
-            include("heisenberg.jl")
+            include("examples/heisenberg.jl")
         end
         @time @safetestset "J1-J2 model" begin
-            include("j1j2_model.jl")
+            include("examples/j1j2_model.jl")
         end
         @time @safetestset "P-wave superconductor" begin
-            include("pwave.jl")
+            include("examples/pwave.jl")
+        end
+        @time @safetestset "U1-symmetric Bose-Hubbard model" begin
+            include("bose_hubbard.jl")
         end
     end
 end
