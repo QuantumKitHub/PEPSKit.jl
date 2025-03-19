@@ -138,8 +138,8 @@ keyword arguments are:
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient problem iterations.
 * `alg::Symbol=:$(Defaults.gradient_alg)` : Gradient algorithm variant, can be one of the following:
     - `:geomsum` : Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
-    - `:manualiter` : Iterate gradient geometric sum manually, see ['ManualIter'](@ref)
-    - `:linsolver` : Solve fixed-point gradient linear problem using iterative solver, see ['LinSolver'](@ref)
+    - `:manualiter` : Iterate gradient geometric sum manually, see [`ManualIter`](@ref)
+    - `:linsolver` : Solve fixed-point gradient linear problem using iterative solver, see [`LinSolver`](@ref)
     - `:eigsolver` : Determine gradient via eigenvalue formulation of its Sylvester equation, see [`EigSolver`](@ref)
 * `verbosity::Int` : Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : CTMRG iteration scheme determining mode of differentiation. This can be:

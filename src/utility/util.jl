@@ -191,7 +191,7 @@ end
 
 Macro utility to show to type of the gradient that is about to accumulate for `x`.
 
-See also [`Zygote.@showgrad`](@ref).
+See also [`Zygote.@showgrad`](@extref).
 """
 macro showtypeofgrad(x)
     return :(
