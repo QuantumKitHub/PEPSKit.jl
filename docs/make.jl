@@ -20,12 +20,13 @@ bibpath = joinpath(@__DIR__, "src", "assets", "pepskit.bib")
 bib = CitationBibliography(bibpath; style=:authoryear)
 
 # interlinks
+# Zygote and MPSKitModels didn't update to documenter v1 yet...
 links = InterLinks(
     "TensorKit" => "https://jutho.github.io/TensorKit.jl/stable/",
     "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
     "MPSKit" => "https://quantumkithub.github.io/MPSKit.jl/stable/",
-    "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/stable/",
-    "Zygote" => "https://fluxml.ai/Zygote.jl/dev/",
+    # "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/",
+    # "Zygote" => "https://fluxml.ai/Zygote.jl/stable/",
     "ChainRulesCore" => "https://juliadiff.org/ChainRulesCore.jl/stable/",
 )
 
@@ -44,7 +45,9 @@ mathengine = MathJax3(
 makedocs(;
     modules=[PEPSKit],
     sitename="PEPSKit.jl",
-    format=Documenter.HTML(; prettyurls=get(ENV, "CI", nothing) == "true", mathengine),
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", nothing) == "true", mathengine, size_threshold=1024000
+    ),
     pages=[
         "Home" => "index.md",
         "Manual" => "man/intro.md",

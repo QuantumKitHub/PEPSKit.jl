@@ -186,12 +186,13 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
     return t, _setindex_pullback
 end
 
+# TODO: link to Zygote.showgrad once they update documenter.jl
 """
     @showtypeofgrad(x)
 
 Macro utility to show to type of the gradient that is about to accumulate for `x`.
 
-See also [`Zygote.@showgrad`](@extref).
+See also `Zygote.@showgrad`.
 """
 macro showtypeofgrad(x)
     return :(
