@@ -42,6 +42,8 @@ mathengine = MathJax3(
     ),
 )
 
+examples = ["Notebook Example" => "examples/notebook.md"]
+
 makedocs(;
     modules=[PEPSKit],
     sitename="PEPSKit.jl",
@@ -51,7 +53,7 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "Manual" => "man/intro.md",
-        "Examples" => "examples/index.md",
+        "Examples" => examples,
         "Library" => "lib/lib.md",
         "References" => "references.md",
     ],
