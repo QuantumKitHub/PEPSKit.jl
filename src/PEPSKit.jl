@@ -11,6 +11,7 @@ import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!
 using MPSKitModels
 using FiniteDifferences
 using OhMyThreads: tmap
+using DocStringExtensions
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
