@@ -1,16 +1,24 @@
 """
-    struct PEPSOptimize{G}
-    PEPSOptimize(; kwargs...)
+$(TYPEDEF)
 
 Algorithm struct for PEPS ground-state optimization using AD. See [`fixedpoint`](@ref) for details.
 
-## Keyword arguments
+## Fields
 
-* `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm}` : Supply boundary algorithm parameters using either a `NamedTuple` of keyword arguments or a `CTMRGAlgorithm` directly. See [`leading_boundary`](@ref) for a description of all possible keyword arguments.
-* `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}` : Supply gradient algorithm parameters using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradMode` directly. See [`fixedpoint`](@ref) for a description of all possible keyword arguments.
-* `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}` : Supply optimizer algorithm parameters using either a `NamedTuple` of keyword arguments, or a `OptimKit.OptimizationAlgorithm` directly. See [`fixedpoint`](@ref) for a description of all possible keyword arguments.
-* `reuse_env::Bool=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
-* `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing` : Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
+$(TYPEDFIELDS)
+
+## Constructors
+
+    PEPSOptimize(; kwargs...)
+
+Construct a PEPS optimization algorithm struct based on keyword arguments.
+For a full description, see [`fixedpoint`](@ref). The supported keywords are:
+
+* `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm}`
+* `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
+* `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
+* `reuse_env::Bool=$(Defaults.reuse_env)`
+* `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing`
 """
 struct PEPSOptimize{G}
     boundary_alg::CTMRGAlgorithm
@@ -95,8 +103,7 @@ end
 """
     fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
     # expert version:
-    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize;
-               finalize!=OptimKit._finalize!)
+    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize; finalize!=OptimKit._finalize!)
     
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
 to the supplied optimization parameters. The initial environment `env₀` serves as an

@@ -1,22 +1,22 @@
 # Hamiltonian consisting of local terms
 # -------------------------------------
 """
-    struct LocalOperator{T<:Tuple,S}
+$(TYPEDEF)
 
 A sum of local operators acting on a lattice. The lattice is stored as a matrix of vector spaces,
 and the terms are stored as a tuple of pairs of indices and operators.
 
-# Fields
+## Fields
 
 - `lattice::Matrix{S}`: The lattice on which the operator acts.
 - `terms::T`: The terms of the operator, stored as a tuple of pairs of indices and operators.
 
-# Constructors
+## Constructors
 
     LocalOperator(lattice::Matrix{S}, terms::Pair...)
     LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S} # expert mode
 
-# Examples
+## Examples
 
 ```julia
 lattice = fill(ℂ^2, 1, 1) # single-site unitcell
@@ -113,9 +113,7 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # ----------------------
 
 """
-    _mirror_antidiag_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after reflection about the anti-diagonal line.
 """
@@ -127,9 +125,7 @@ function _mirror_antidiag_site(
 end
 
 """
-    _rotr90_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after clockwise (right) rotation by 90 degrees.
 """
@@ -141,9 +137,7 @@ function _rotr90_site(
 end
 
 """
-    _rotl90_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after counter-clockwise (left) rotation by 90 degrees.
 """
@@ -155,9 +149,7 @@ function _rotl90_site(
 end
 
 """
-    _rot180_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after rotation by 180 degrees.
 """
@@ -169,7 +161,7 @@ function _rot180_site(
 end
 
 """
-    mirror_antidiag(H::LocalOperator)
+$(TYPEDSIGNATURES)
 
 Mirror a `LocalOperator` across the anti-diagonal axis of its lattice.
 """
@@ -235,6 +227,8 @@ TensorKit.sectortype(::Type{<:LocalOperator{T,S}}) where {T,S} = sectortype(S)
 end
 
 """
+$(SIGNATURES)
+
 Fuse identities on auxiliary physical spaces into a given operator.
 """
 function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N}
@@ -247,7 +241,7 @@ function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N
 end
 
 """
-    MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector}) where {S}
+$(TYPEDSIGNATURES)
 
 Change the spaces of a `LocalOperator` by fusing in an auxiliary charge on every site,
 according to a given matrix of 'auxiliary' physical charges.

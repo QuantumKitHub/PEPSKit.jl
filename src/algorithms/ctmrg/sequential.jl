@@ -1,13 +1,19 @@
 """
     struct SequentialCTMRG <: CTMRGAlgorithm
-    SequentialCTMRG(; kwargs...)
 
 CTMRG algorithm where the expansions and renormalization is performed sequentially
 column-wise. This is implemented as a growing and projecting step to the left, followed by
 a clockwise rotation (performed four times).
 
-## Keyword arguments
+## Fields
 
+$(TYPEDFIELDS)
+
+## Constructors
+
+    SequentialCTMRG(; kwargs...)
+
+Construct a sequential CTMRG algorithm struct based on keyword arguments.
 For a full description, see [`leading_boundary`](@ref). The supported keywords are:
 
 * `tol::Real=$(Defaults.ctmrg_tol)`
@@ -32,7 +38,7 @@ end
 CTMRG_SYMBOLS[:sequential] = SequentialCTMRG
 
 """
-    ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+$(TYPEDSIGNATURES)
 
 Perform sequential CTMRG left move on the `col`-th column.
 """
@@ -110,7 +116,7 @@ function sequential_projectors(
 end
 
 """
-    renormalize_sequentially(col::Int, projectors, network, env)
+$(TYPEDSIGNATURES)
 
 Renormalize one column of the CTMRG environment.
 """

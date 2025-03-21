@@ -8,6 +8,11 @@ const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.KrylovAlgorithm}
     :arnoldi => Arnoldi
 )
 
+"""
+    GradMode(; kwargs...)
+
+Keyword argument parser returning the appropriate `GradMode` algorithm struct.
+"""
 function GradMode(;
     alg=Defaults.gradient_alg,
     tol=Defaults.gradient_tol,
@@ -63,12 +68,19 @@ end
 iterscheme(::GradMode{F}) where {F} = F
 
 """
-    struct GeomSum <: GradMode{iterscheme}
-    GeomSum(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructor
+
+    GeomSum(; kwargs...)
+
+Construct the `GeomSum` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance for the difference of norms of two consecutive summands in the geometric sum.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient iterations.
@@ -90,12 +102,19 @@ GeomSum(; kwargs...) = GradMode(; alg=:geomsum, kwargs...)
 GRADIENT_MODE_SYMBOLS[:geomsum] = GeomSum
 
 """
-    struct ManualIter <: GradMode{iterscheme}
-    ManualIter(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    ManualIter(; kwargs...)
+
+Construct the `ManualIter` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance for the norm difference of two consecutive `dx` contributions.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient iterations.
@@ -117,13 +136,20 @@ ManualIter(; kwargs...) = GradMode(; alg=:manualiter, kwargs...)
 GRADIENT_MODE_SYMBOLS[:manualiter] = ManualIter
 
 """
-    struct LinSolver <: GradMode{iterscheme}
-    LinSolver(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    LinSolver(; kwargs...)
+
+Construct the `LinSolver` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the linear solver.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of solver iterations.
@@ -143,13 +169,20 @@ LinSolver(; kwargs...) = GradMode(; alg=:linsolver, kwargs...)
 GRADIENT_MODE_SYMBOLS[:linsolver] = LinSolver
 
 """
-    struct EigSolver <: GradMode{iterscheme}
-    EigSolver(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    EigSolver(; kwargs...)
+
+Construct the `EigSolver` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the eigen solver.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of solver iterations.
@@ -279,7 +312,7 @@ end
 @doc """
     fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y0, alg)
 
-Compute the gradient of the cost function for CTMRG by solving the following equation:
+Compute the gradient of the CTMRG fixed point by solving the following equation:
 
 dx = ∑ₙ (∂f∂x)ⁿ ∂f∂A dA = (1 - ∂f∂x)⁻¹ ∂f∂A dA
 

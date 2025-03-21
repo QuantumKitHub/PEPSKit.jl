@@ -1,5 +1,5 @@
 """
-    ProjectorAlgorithm
+$(TYPEDEF)
 
 Abstract super type for all CTMRG projector algorithms.
 """
@@ -7,6 +7,11 @@ abstract type ProjectorAlgorithm end
 
 const PROJECTOR_SYMBOLS = IdDict{Symbol,Type{<:ProjectorAlgorithm}}()
 
+"""
+    ProjectorAlgorithm(; kwargs...)
+
+Keyword argument parser returning the appropriate `ProjectorAlgorithm` algorithm struct.
+"""
 function ProjectorAlgorithm(;
     alg=Defaults.projector_alg,
     svd_alg=(;),
@@ -74,13 +79,19 @@ function truncation_scheme(alg::ProjectorAlgorithm, edge)
 end
 
 """
-    struct HalfInfiniteProjector{S,T} <: ProjectorAlgorithm
-    HalfInfiniteProjector(; kwargs...)
-    
+$(TYPEDEF)
 
 Projector algorithm implementing projectors from SVDing the half-infinite CTMRG environment.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    HalfInfiniteProjector(; kwargs...)
+
+Construct the half-infinite projector algorithm based on the following keyword arguments:
 
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
@@ -106,12 +117,19 @@ end
 PROJECTOR_SYMBOLS[:halfinfinite] = HalfInfiniteProjector
 
 """
-    struct FullInfiniteProjector{S,T} <: ProjectorAlgorithm
-    FullInfiniteProjector(; kwargs...)
+$(TYPEDEF)
 
 Projector algorithm implementing projectors from SVDing the full 4x4 CTMRG environment.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    FullInfiniteProjector(; kwargs...)
+
+Construct the full-infinite projector algorithm based on the following keyword arguments:
 
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:

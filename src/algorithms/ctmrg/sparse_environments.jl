@@ -106,6 +106,16 @@ end
 $(TYPEDEF)
 
 Half-infinite CTMRG environment tensor storage.
+
+## Fields
+
+$(FIELDS)
+
+## Constructors
+
+    HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
+
+Construct sparse half-infinite environment based on two sparse enlarged corners (quadrants).
 """
 struct HalfInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
     C_1::TC
@@ -117,8 +127,6 @@ struct HalfInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once Tens
     A_1::TA
     A_2::TA
 end
-
-# Construct environment from two enlarged corners
 function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
     return HalfInfiniteEnv(
         quadrant1.C,
@@ -185,6 +193,17 @@ end
 $(TYPEDEF)
 
 Full-infinite CTMRG environment tensor storage.
+
+## Fields
+
+$(FIELDS)
+
+## Constructors
+    FullInfiniteEnv(
+        quadrant1::E, quadrant2::E, quadrant3::E, quadrant4::E
+    ) where {E<:EnlargedCorner}
+    
+Construct sparse full-infinite environment based on four sparse enlarged corners (quadrants).
 """
 struct FullInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
     C_1::TC
@@ -204,8 +223,6 @@ struct FullInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once Tens
     A_3::TA
     A_4::TA
 end
-
-# Construct environment from two enlarged corners
 function FullInfiniteEnv(
     quadrant1::E, quadrant2::E, quadrant3::E, quadrant4::E
 ) where {E<:EnlargedCorner}
