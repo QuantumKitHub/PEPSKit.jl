@@ -18,6 +18,10 @@ The truncation algorithm can be constructed from the following keyword arguments
 * `tol::Float64=1e-15` : FET converges when fidelity change between two FET iterations is smaller than `tol`.
 * `trunc_init::Bool=true` : Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
+
+## References
+
+* [Glen Evenbly, Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018). 
 """
 @kwdef struct FullEnvTruncation
     trscheme::TensorKit.TruncationScheme
@@ -90,7 +94,7 @@ end
 """
     fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) -> U, S, V, info
 
-The full environment truncation algorithm (Physical Review B 98, 085155 (2018)). 
+Perform full environment truncation algorithm on `benv`.
 
 Given a fixed state `|b0⟩` with bond matrix `b0`
 and the corresponding positive-definite bond environment `benv`, 
