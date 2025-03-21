@@ -19,9 +19,13 @@ virtuallabel(args...) = tensorlabel(:D, args...)
 physicallabel(args...) = tensorlabel(:d, args...)
 
 """
-    contract_local_operator(inds, O, peps, env)
+$(SIGNATURES)
 
 Contract a local operator `O` on the PEPS `peps` at the indices `inds` using the environment `env`.
+
+This works by generating the appropriate contraction on a rectangular patch with its corners
+specified by `inds`. The `peps` is contracted with `O` from above and below, and the PEPS-operator
+sandwich is surrounded with the appropriate environment tensors.
 """
 function contract_local_operator(
     inds::NTuple{N,CartesianIndex{2}},
@@ -214,9 +218,13 @@ end
 end
 
 """
-    contract_local_norm(inds, peps, env)
+$(SIGNATURES)
 
 Contract a local norm of the PEPS `peps` around indices `inds`.
+
+This works analogously to [`contract_local_operator`](@ref) by generating the contraction
+on a rectangular patch based on `inds` but replacing the operator with an identity such
+that the PEPS norm is computed. (Note that this is not the physical norm of the state.)
 """
 function contract_local_norm(
     inds::NTuple{N,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv

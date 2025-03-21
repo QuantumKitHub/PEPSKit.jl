@@ -9,7 +9,7 @@ const SOUTHEAST = 3
 const SOUTHWEST = 4
 
 """
-    rotate_north(t, dir)
+$(SIGNATURES)
 
 Rotate the `dir` direction of `t` to face north by successive applications of `rotl90`.
 """
