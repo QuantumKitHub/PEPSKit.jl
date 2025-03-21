@@ -1,7 +1,7 @@
 """
     dtmap(args...; kwargs...)
 
-Differentiable wrapper around [`OhMyThreads.tmap`](@extref).
+Differentiable wrapper around [OhMyThreads.tmap].
 
 All calls of `dtmap` inside of PEPSKit use the threading scheduler stored inside
 `Defaults.scheduler` which can be modified using `set_scheduler!`.

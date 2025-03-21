@@ -143,7 +143,7 @@ or equivalently with
 set_scheduler!(:static; ntasks=4, chunking=true)
 ```
 For a detailed description of all schedulers and their keyword arguments consult the
-[`OhMyThreads.Schedulers.Scheduler`](@extref) documentation.
+[OhMyThreads](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#OhMyThreads.Schedulers.Scheduler) documentation.
 
 If no `scheduler` is passed and only kwargs are provided, the `DynamicScheduler`
 constructor is used with the provided kwargs.
