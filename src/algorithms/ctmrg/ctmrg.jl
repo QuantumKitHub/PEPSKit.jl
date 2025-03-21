@@ -44,7 +44,7 @@ Perform a single CTMRG iteration in which all directions are being grown and ren
 function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
-    leading_boundary(env₀, network; kwargs...)
+    leading_boundary(env₀, network; kwargs...) -> env, info
     # expert version:
     leading_boundary(env₀, network, alg::CTMRGAlgorithm)
 
@@ -88,7 +88,7 @@ The CTMRG routine returns the final CTMRG environment as well as an information 
 containing the following fields:
 
 * `truncation_error` : Last (maximal) SVD truncation error of the CTMRG projectors.
-* `condition_number` : Last (maximal) condition number of the enlarged CTMRG environment
+* `condition_number` : Last (maximal) condition number of the enlarged CTMRG environment.
 
 In case the `alg` is a `SimultaneousCTMRG`, the last SVD will also be returned:
 

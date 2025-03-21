@@ -161,7 +161,7 @@ function _rot180_site(
 end
 
 """
-$(TYPEDSIGNATURES)
+    mirror_antidiag(H::LocalOperator)
 
 Mirror a `LocalOperator` across the anti-diagonal axis of its lattice.
 """
@@ -241,7 +241,7 @@ function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N
 end
 
 """
-$(TYPEDSIGNATURES)
+    add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
 
 Change the spaces of a `LocalOperator` by fusing in an auxiliary charge on every site,
 according to a given matrix of 'auxiliary' physical charges.

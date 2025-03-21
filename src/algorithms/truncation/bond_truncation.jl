@@ -1,12 +1,22 @@
 """
-    ALSTruncation
+$(TYPEDEF)
 
 Algorithm struct for the alternating least square (ALS) optimization of a bond. 
 
-- `trscheme::Bool`: SVD truncation scheme when initilizing the truncated tensors connected by the bond.
-- `maxiter::Int`: Maximal number of ALS iterations.
-- `tol::Float64`: ALS converges when fidelity change between two FET iterations is smaller than `tol`.
-- `check_interval::Int`: Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    ALSTruncation(; kwargs...)
+
+The truncation algorithm can be constructed from the following keyword arguments:
+
+* `trscheme::TensorKit.TruncationScheme`: SVD truncation scheme when initilizing the truncated tensors connected by the bond.
+* `maxiter::Int=50` : Maximal number of ALS iterations.
+* `tol::Float64=1e-15` : ALS converges when fidelity change between two FET iterations is smaller than `tol`.
+* `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
     trscheme::TensorKit.TruncationScheme
@@ -29,7 +39,7 @@ function _als_message(
 end
 
 """
-    bond_truncate(a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}, benv::BondEnv{T,S}, alg) where {T<:Number,S<:ElementarySpace}
+    bond_truncate(a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}, benv::BondEnv{T,S}, alg) -> U, S, V, info
 
 After time-evolving the reduced tensors `a` and `b` connected by a bond, 
 truncate the bond dimension using the bond environment tensor `benv`.

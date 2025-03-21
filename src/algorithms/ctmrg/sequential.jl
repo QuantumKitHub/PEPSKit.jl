@@ -38,7 +38,7 @@ end
 CTMRG_SYMBOLS[:sequential] = SequentialCTMRG
 
 """
-$(TYPEDSIGNATURES)
+    ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
 
 Perform sequential CTMRG left move on the `col`-th column.
 """
@@ -116,7 +116,7 @@ function sequential_projectors(
 end
 
 """
-$(TYPEDSIGNATURES)
+    renormalize_sequentially(col::Int, projectors, network, env)
 
 Renormalize one column of the CTMRG environment.
 """

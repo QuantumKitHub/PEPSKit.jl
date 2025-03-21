@@ -55,7 +55,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
 end
 
 """
-$(TYPEDSIGNATURES)
+    TensorMap(Q::EnlargedCorner, dir::Int)
 
 Instantiate enlarged corner as `TensorMap` where `dir` selects the correct contraction
 direction, i.e. the way the environment and PEPS tensors connect.
@@ -141,7 +141,7 @@ function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
 end
 
 """
-$(TYPEDSIGNATURES)
+    TensorMap(env::HalfInfiniteEnv)
 
 Instantiate half-infinite environment as `TensorMap` explicitly.
 """
@@ -247,7 +247,7 @@ function FullInfiniteEnv(
 end
 
 """
-$(TYPEDSIGNATURES)
+    TensorMap(env::FullInfiniteEnv)
 
 Instantiate full-infinite environment as `TensorMap` explicitly.
 """

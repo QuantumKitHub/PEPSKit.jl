@@ -101,7 +101,7 @@ function _OptimizationAlgorithm(;
 end
 
 """
-    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...)
+    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...) -> peps_final, env_final, cost_final, info
     # expert version:
     fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize; finalize!=OptimKit._finalize!)
     
@@ -231,7 +231,7 @@ function fixedpoint(
     peps₀ = peps_normalize(peps₀)
 
     # optimize operator cost function
-    (peps_final, env_final), cost, ∂cost, numfg, convergence_history = optimize(
+    (peps_final, env_final), cost_final, ∂cost, numfg, convergence_history = optimize(
         (peps₀, env₀),
         alg.optimizer_alg;
         retract,
@@ -271,7 +271,7 @@ function fixedpoint(
         gradnorms_unitcell,
         times,
     )
-    return peps_final, env_final, cost, info
+    return peps_final, env_final, cost_final, info
 end
 
 """
@@ -286,7 +286,7 @@ function peps_normalize(A::InfinitePEPS)
 end
 
 """
-    peps_retract(x, η, α)
+$(SIGNATURES)
 
 Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step
 size `α`, giving a new PEPS `A´`,
@@ -311,7 +311,7 @@ function peps_retract(x, η, α)
 end
 
 """
-    peps_transport!(ξ, x, η, α, x′)
+$(SIGNATURES)
 
 Transports a direction at `A = x[1]` to a valid direction at `A´ = x´[1]` corresponding to
 the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
@@ -340,7 +340,7 @@ end
 real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 
 """
-    symmetrize_retract_and_finalize!(symm::SymmetrizationStyle)
+    symmetrize_retract_and_finalize!(symm::SymmetrizationStyle, [retract, finalize!])
 
 Return the `retract` and `finalize!` function for symmetrizing the `peps` and `grad` tensors.
 """

@@ -1,7 +1,11 @@
 """
-    InfiniteSquareNetwork{O}
+$(TYPEDEF)
 
 Contractible square network. Wraps a matrix of 'rank-4-tensor-like' objects.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct InfiniteSquareNetwork{O}
     A::Matrix{O}
