@@ -28,6 +28,7 @@ links = InterLinks(
     # "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/",
     # "Zygote" => "https://fluxml.ai/Zygote.jl/stable/",
     "ChainRulesCore" => "https://juliadiff.org/ChainRulesCore.jl/stable/",
+    "OhMyThreads" => "https://juliafolds2.github.io/OhMyThreads.jl/stable/",
 )
 
 # explicitly set math engine

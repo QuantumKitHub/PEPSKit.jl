@@ -31,15 +31,15 @@ Module containing default algorithm parameter values and arguments.
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
     - `:tsvd`: Uses TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [TensorKit](https://github.com/Jutho/TensorKit.jl/blob/f9cddcf97f8d001888a26f4dce7408d5c6e2228f/ext/TensorKitChainRulesCoreExt/factorizations.jl#L3)
-    - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
-    - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+    - `:gmres`: GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:bicgstab`: BiCGStab iterative linear solver, see the [`KrylovKit.GMRES`](@extref) for details
+    - `:arnoldi`: Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref) for details
 
 ## Projectors
 
 * `projector_alg=:$(Defaults.projector_alg)` : Default variant of the CTMRG projector algorithm.
-    - `halfinfinite`: Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
-    - `fullinfinite`: Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:halfinfinite`: Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `:fullinfinite`: Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
 * `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
 
 ## Fixed-point gradient
@@ -48,10 +48,10 @@ Module containing default algorithm parameter values and arguments.
 * `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for computing the CTMRG fixed-point gradient.
 * `gradient_verbosity=$(Defaults.gradient_verbosity)` : Gradient output information verbosity.
 * `gradient_linsolver=:$(Defaults.gradient_linsolver)` : Default linear solver for the `LinSolver` gradient algorithm.
-    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+    - `:gmres` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:bicgstab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 * `gradient_eigsolver=:$(Defaults.gradient_eigsolver)` : Default eigensolver for the `EigSolver` gradient algorithm.
-    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+    - `:arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
 * `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
 * `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
@@ -143,7 +143,7 @@ or equivalently with
 set_scheduler!(:static; ntasks=4, chunking=true)
 ```
 For a detailed description of all schedulers and their keyword arguments consult the
-[`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
+[`OhMyThreads.Schedulers.Scheduler`](@extref) documentation.
 
 If no `scheduler` is passed and only kwargs are provided, the `DynamicScheduler`
 constructor is used with the provided kwargs.
