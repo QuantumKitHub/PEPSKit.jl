@@ -3,9 +3,17 @@
 # --------------------------------------------------------
 
 """
-    struct EnlargedCorner{TC,TE,TA}
+$(TYPEDEF)
 
 Enlarged CTMRG corner tensor storage.
+
+## Constructors
+
+    EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
+
+Construct an enlarged corner with the correct row and column indices based on the given
+`coordinates` which are of the form `(dir, row, col)`.
+
 """
 struct EnlargedCorner{TC,TE,TA}
     C::TC
@@ -13,13 +21,6 @@ struct EnlargedCorner{TC,TE,TA}
     E_2::TE
     A::TA
 end
-
-"""
-    EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
-
-Construct an enlarged corner with the correct row and column indices based on the given
-`coordinates` which are of the form `(dir, row, col)`.
-"""
 function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
     dir, r, c = coordinates
     if dir == NORTHWEST
@@ -54,7 +55,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
 end
 
 """
-    TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
+$(TYPEDSIGNATURES)
 
 Instantiate enlarged corner as `TensorMap` where `dir` selects the correct contraction
 direction, i.e. the way the environment and PEPS tensors connect.
@@ -92,10 +93,8 @@ end
 # Compute left and right projectors sparsely without constructing enlarged corners explicitly 
 function left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
     isqS = sdiag_pow(S, -0.5)
-    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.ket, Q.bra)
-    P_right = right_projector(
-        Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.ket, Q_next.bra
-    )
+    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.A)
+    P_right = right_projector(Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.A)
     return P_left, P_right
 end
 
@@ -104,7 +103,7 @@ end
 # --------------------------------
 
 """
-    struct HalfInfiniteEnv{C,E,A,A′}
+$(TYPEDEF)
 
 Half-infinite CTMRG environment tensor storage.
 """
@@ -134,7 +133,7 @@ function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
 end
 
 """
-    TensorKit.TensorMap(env::HalfInfiniteEnv)
+$(TYPEDSIGNATURES)
 
 Instantiate half-infinite environment as `TensorMap` explicitly.
 """
@@ -183,7 +182,7 @@ end
 # --------------------------------
 
 """
-    struct FullInfiniteEnv{TC,TE,TA}
+$(TYPEDEF)
 
 Full-infinite CTMRG environment tensor storage.
 """
@@ -231,7 +230,7 @@ function FullInfiniteEnv(
 end
 
 """
-    TensorKit.TensorMap(env::FullInfiniteEnv)
+$(TYPEDSIGNATURES)
 
 Instantiate full-infinite environment as `TensorMap` explicitly.
 """
