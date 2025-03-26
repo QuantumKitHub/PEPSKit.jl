@@ -76,7 +76,7 @@ Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
 $(TYPEDFIELDS)
 
-## Constructor
+## Constructors
 
     GeomSum(; kwargs...)
 
