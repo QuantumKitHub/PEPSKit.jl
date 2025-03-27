@@ -3,7 +3,7 @@ Utilities for preserving the norm of (VectorInterface-compliant) vectors during 
 =#
 
 """
-    norm_preserving_retract(A, η, α)
+$(SIGNATURES)
 
 Performs a norm-preserving retraction of vector `A` along the direction `η` with step size
 `α`, giving a new vector `A´`,
@@ -33,7 +33,7 @@ function norm_preserving_retract(A, η, α)
 end
 
 """
-    norm_preserving_transport!(ξ, A, η, α, A′)
+$(SIGNATURES)
 
 Transports a direction `ξ` at `A` to a valid direction at `A´` corresponding to
 the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting

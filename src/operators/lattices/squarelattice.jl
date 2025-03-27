@@ -1,7 +1,17 @@
 """
-    InfiniteSquare(Nrows::Integer=1, Ncols::Integer=1)
+$(TYPEDEF)
 
 Infinite square lattice with a unit cell of size `(Nrows, Ncols)`.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructor
+
+    InfiniteSquare([Nrows=1, Ncols=1])
+
+By default, an infinite square with a (1, 1)-unitcell is constructed.
 """
 struct InfiniteSquare <: AbstractLattice{2}
     Nrows::Int

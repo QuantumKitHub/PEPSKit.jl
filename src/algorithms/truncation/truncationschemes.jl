@@ -1,5 +1,5 @@
 """
-    struct FixedSpaceTruncation <: TensorKit.TruncationScheme
+$(TYPEDEF)
 
 CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which the SVD
 is performed fixed. Since different environment directions and unit cell entries might
@@ -15,7 +15,12 @@ const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
     :truncspace => TensorKit.TruncationSpace,
     :truncbelow => TensorKit.TruncationCutoff,
 )
-# Should be TruncationScheme but piracy
+
+"""
+    _TruncationScheme(; kwargs...)
+
+Keyword argument parser returning the appropriate `TruncationScheme` algorithm struct.
+"""
 function _TruncationScheme(; alg=Defaults.trscheme, η=nothing)
     # replace Symbol with TruncationScheme type
     haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||
