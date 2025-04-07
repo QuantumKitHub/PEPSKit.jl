@@ -49,7 +49,7 @@ function compare_weights(wts1::SUWeight, wts2::SUWeight)
     return sum(_singular_value_distance, zip(wts1.data, wts2.data)) / length(wts1)
 end
 
-function Base.show(io::IO, wts::SUWeight)
+function Base.show(io::IO, ::MIME"text/plain", wts::SUWeight)
     println(io, typeof(wts))
     for idx in CartesianIndices(wts.data)
         println(io, Tuple(idx), ":")
