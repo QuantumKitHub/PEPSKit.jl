@@ -49,6 +49,17 @@ function compare_weights(wts1::SUWeight, wts2::SUWeight)
     return sum(_singular_value_distance, zip(wts1.data, wts2.data)) / length(wts1)
 end
 
+function Base.show(io::IO, wts::SUWeight)
+    println(io, typeof(wts))
+    for idx in CartesianIndices(wts.data)
+        println(io, Tuple(idx), ":")
+        for (k, b) in blocks(wts.data[idx])
+            println(io, k, " = ", diag(b))
+        end
+    end
+    return nothing
+end
+
 """
     struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
 
