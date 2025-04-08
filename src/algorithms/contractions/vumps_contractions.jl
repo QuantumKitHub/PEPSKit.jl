@@ -12,6 +12,7 @@ function MPSKit.transfer_left(
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
+    Ā = twistdual(Ā, [2, 3])
     return @autoopt @tensor GL′[χ_SE D_E_above D_E_below; χ_NE] :=
         GL[χ_SW D_W_above D_W_below; χ_NW] *
         conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
@@ -26,6 +27,7 @@ function MPSKit.transfer_right(
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
+    Ā = twistdual(Ā, [2, 3])
     return @autoopt @tensor GR′[χ_NW D_W_above D_W_below; χ_SW] :=
         GR[χ_NE D_E_above D_E_below; χ_SE] *
         conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
@@ -118,7 +120,14 @@ end
 # Derivative contractions
 #
 
-@generated function MPSKit.∂C(
+function MPSKit.∂C(
+    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
+) where {S,N}
+    GL = twistdual(GL, 1)
+    GR = twistdual(GR, numind(GR))
+    return _∂C(C, GL, GR)
+end
+@generated function _∂C(
     C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
 ) where {S,N}
     C´_e = tensorexpr(:C´, -1, -2)
@@ -136,6 +145,8 @@ function MPSKit.∂AC(
     GL::GenericMPSTensor{S,3},
     GR::GenericMPSTensor{S,3},
 ) where {S}
+    GL = twistdual(GL, 1)
+    GR = twistdual(GR, numind(GR))
     return @autoopt @tensor AC′[χ_SW D_S_above D_S_below; χ_SE] :=
         GL[χ_SW D_W_above D_W_below; χ_NW] *
         AC[χ_NW D_N_above D_N_below; χ_NE] *
