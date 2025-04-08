@@ -95,6 +95,29 @@ Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))
 physicalspace(t::PEPSTensor) = space(t, 1)
 virtualspace(t::PEPSTensor, dir) = space(t, dir + 1)
 
+# not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
+# ie type piracy
+function mpotensor(top::PEPSTensor, bot::PEPSTensor=top)
+    F_west = isomorphism(
+        storagetype(top),
+        fuse(virtualspace(top, WEST), virtualspace(bot, WEST)'),
+        virtualspace(top, WEST) ⊗ virtualspace(bot, WEST)',
+    )
+    F_south = isomorphism(
+        storagetype(top),
+        fuse(virtualspace(top, SOUTH), virtualspace(bot, SOUTH)'),
+        virtualspace(top, SOUTH) ⊗ virtualspace(bot, SOUTH)',
+    )
+    @tensor O[west south; north east] :=
+        top[phys; top_north top_east top_south top_west] *
+        conj(bot[phys; bot_north bot_east bot_south bot_west]) *
+        twist(F_west, 3)[west; top_west bot_west] *
+        twist(F_south, 3)[south; top_south bot_south] *
+        conj(F_west[east; top_east bot_east]) *
+        conj(F_south[north; top_north bot_north])
+    return O
+end
+
 #
 # PEPO
 #
