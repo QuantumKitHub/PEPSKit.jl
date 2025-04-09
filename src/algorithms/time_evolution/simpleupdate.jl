@@ -137,7 +137,7 @@ function simpleupdate(
         @assert Nr == Nc == 2
     end
     # exponentiating the 2-site Hamiltonian gate
-    gate = get_gate(alg.dt, ham)
+    gate = get_expham(alg.dt, ham)
     wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)

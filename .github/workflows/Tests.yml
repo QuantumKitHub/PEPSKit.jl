@@ -32,6 +32,7 @@ jobs:
           - examples
           - utility
           - bondenv
+          - timeevol
         os:
           - ubuntu-latest
           - macOS-latest
