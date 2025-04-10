@@ -55,7 +55,7 @@ peps, env, E, = fixedpoint(H, peps₀, env₀; tol=grad_tol, boundary_alg=(; tol
 A detailed rundown of PEPSKit's features can be found in the [Manual](@ref) section, including:
 
 ```@contents
-Pages = ["man/intro.md"]
+Pages = ["man/states.md", "man/environments.md", "man/operators.md", "man/peps_optimization.md", "man/symmetries.md", "man/multi_threading.md", "man/precompilation.md"]
 Depth = 1
 ```
 

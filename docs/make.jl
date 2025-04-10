@@ -52,7 +52,15 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Manual" => "man/intro.md",
+        "Manual" => [
+            "states.md",
+            "environments.md",
+            "operators.md",
+            "peps_optimization.md",
+            "symmetries.md",
+            "multi_threading.md",
+            "precompilation.md",
+        ],
         "Examples" => examples,
         "Library" => "lib/lib.md",
         "References" => "references.md",
