@@ -70,6 +70,11 @@ function su_iter(
     if bipartite
         @assert Nr == Nc == 2
     end
+    (Nr >= 2 && Nc >= 2) || throw(
+        ArgumentError(
+            "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
+        ),
+    )
     # TODO: make algorithm independent on the choice of dual in the network
     for (r, c) in Iterators.product(1:Nr, 1:Nc)
         @assert [isdual(space(peps.vertices[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
@@ -132,10 +137,6 @@ function simpleupdate(
     check_interval::Int=500,
 )
     time_start = time()
-    Nr, Nc = size(peps)
-    if bipartite
-        @assert Nr == Nc == 2
-    end
     # exponentiating the 2-site Hamiltonian gate
     gate = get_expham(alg.dt, ham)
     wtdiff = 1.0
