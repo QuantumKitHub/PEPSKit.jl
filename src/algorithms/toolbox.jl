@@ -146,7 +146,7 @@ function _contract_corners(ind::Tuple{Int,Int}, env::CTMRGEnv)
     C_NE = env.corners[NORTHEAST, _prev(r, end), c]
     C_SE = env.corners[SOUTHEAST, r, c]
     C_SW = env.corners[SOUTHWEST, r, _prev(c, end)]
-    return @plansor C_NW[1; 2] * C_NE[2; 3] * C_SE[3; 4] * C_SW[4; 1]
+    return @tensor C_NW[1; 2] * C_NE[2; 3] * C_SE[3; 4] * C_SW[4; 1]
 end
 
 """
