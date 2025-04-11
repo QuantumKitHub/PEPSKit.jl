@@ -43,7 +43,7 @@ function select_algorithm(
 
     # adjust optimizer tol and verbosity
     if optimizer_alg isa NamedTuple
-        defaults = (; tol, verbosity=verbosity ≤ 1 ? -1 : 3)
+        defaults = (; tol, verbosity=verbosity < 1 ? -1 : 3)
         optimizer_alg = merge(defaults, optimizer_alg)
     end
 
