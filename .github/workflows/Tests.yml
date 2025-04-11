@@ -42,7 +42,7 @@ jobs:
       group: "${{ matrix.group }}"
       julia-version: "${{ matrix.version }}"
       os: "${{ matrix.os }}"
-      timeout-minutes: 75
+      timeout-minutes: 120
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
