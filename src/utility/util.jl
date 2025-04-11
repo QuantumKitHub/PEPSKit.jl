@@ -45,7 +45,7 @@ function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
     return dst
 end
 
-_safe_pow(a::Real, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
+_safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
     sdiag_pow(s, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
