@@ -35,7 +35,6 @@ struct LocalOperator{T<:Tuple,S}
             @assert numout(operator) == numin(operator) == length(inds)
             @assert spacetype(operator) == S
 
-
             for i in 1:length(inds)
                 @assert space(operator, i) == plattice[inds[i]]
             end

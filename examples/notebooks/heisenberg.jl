@@ -4,11 +4,11 @@
 using Markdown
 using InteractiveUtils
 
+# ╔═╡ 0c1fc02f-fd78-47d3-82c2-1c261472f61e
+using Random
+
 # ╔═╡ 7da39574-7c05-492e-abf9-10b9e8f1dda9
 using TensorKit, PEPSKit
-
-# ╔═╡ 3e2bcf54-39f4-4147-9023-0744ee0b4009
-using Random; Random.seed!(123456789)
 
 # ╔═╡ ff6fa2f1-841d-42c6-acd9-b5f4cf6b7c76
 md"""
@@ -21,13 +21,24 @@ H = \sum_{\langle i,j \rangle} J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S
 ```
 
 Here, we want to set ``J_x=J_y=J_z=1`` where the Heisenberg model is in the antiferromagnetic regime. Due to the bipartite sublattice structure of antiferromagnetic order one needs a PEPS ansatz with a ``2 \times 2`` unit cell. This can be circumvented by performing a unitary sublattice rotation on all B-sites resulting in a change of parameters to ``(J_x, J_y, J_z)=(-1, 1, -1)``. This gives us a unitarily equivalent Hamiltonian (with the same spectrum) with a ground state on a single-site unit cell.
-
-Let us get started by importing `TensorKit` and `PEPSKit`, and creating the Heisenberg Hamiltonian on an infinite square lattice:
 """
 
 # ╔═╡ d806d7b2-f25b-48d0-87e7-48acfbc93678
 md"""
-We also want to fix the random seed of this example to make it deterministic:
+Let us get started by fixing the random seed of this example to make it deterministic:
+"""
+
+# ╔═╡ ba0e9dc8-1641-4c85-896d-2d335094ecc2
+Random.seed!(123456789);
+
+# ╔═╡ d463e7d9-499f-4689-bf04-260cef0af6ce
+md"""
+We're going to need only two packages: `TensorKit`, since we use that for all the underlying tensor operations, and `PEPSKit` itself. So let us import these:
+"""
+
+# ╔═╡ d42f7ddd-eb20-4441-b7e7-38b1d4996084
+md"""
+To create the sublattice rotated Heisenberg Hamiltonian on an infinite square lattice, we use:
 """
 
 # ╔═╡ 758d7f1a-b62f-400d-bf71-25410a7ce9c5
@@ -113,7 +124,7 @@ Finally, we can start the optimization by calling `fixedpoint` on `H` with our s
 
 # ╔═╡ cd246b3e-3172-4f22-ad67-9d3d5a5c0464
 peps, env, E, info_opt = fixedpoint(
-	H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
+    H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
 );
 
 # ╔═╡ 9647daa9-c730-4185-bd11-6a54a0ded025
@@ -933,9 +944,12 @@ version = "5.11.0+0"
 
 # ╔═╡ Cell order:
 # ╟─ff6fa2f1-841d-42c6-acd9-b5f4cf6b7c76
-# ╠═7da39574-7c05-492e-abf9-10b9e8f1dda9
 # ╟─d806d7b2-f25b-48d0-87e7-48acfbc93678
-# ╠═3e2bcf54-39f4-4147-9023-0744ee0b4009
+# ╠═0c1fc02f-fd78-47d3-82c2-1c261472f61e
+# ╠═ba0e9dc8-1641-4c85-896d-2d335094ecc2
+# ╟─d463e7d9-499f-4689-bf04-260cef0af6ce
+# ╠═7da39574-7c05-492e-abf9-10b9e8f1dda9
+# ╟─d42f7ddd-eb20-4441-b7e7-38b1d4996084
 # ╠═758d7f1a-b62f-400d-bf71-25410a7ce9c5
 # ╟─945f9d02-322b-47f0-85b2-f229e4d8c4d9
 # ╠═f87c548e-a8ff-4b21-b9a0-5ae06c1b7adb

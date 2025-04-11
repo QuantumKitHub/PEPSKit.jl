@@ -1,5 +1,6 @@
-using Random; Random.seed!(2394823948)
+using Random
 using TensorKit, PEPSKit
+Random.seed!(2394823948)
 
 # square lattice Heisenberg Hamiltonian, sublattice rotated to fit on a single-site unit cell
 H = heisenberg_XYZ(InfiniteSquare())
