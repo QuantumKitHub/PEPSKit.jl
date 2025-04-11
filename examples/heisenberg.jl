@@ -1,31 +1,19 @@
-using LinearAlgebra
-using TensorKit, OptimKit
-using PEPSKit, KrylovKit
+using Random; Random.seed!(2394823948)
+using TensorKit, PEPSKit
 
-# Square lattice Heisenberg Hamiltonian
-# We use the parameters (J₁, J₂, J₃) = (-1, 1, -1) by default to capture
-# the ground state in a single-site unit cell. This can be seen from
-# sublattice rotating H from parameters (1, 1, 1) to (-1, 1, -1).
-H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1)
+# square lattice Heisenberg Hamiltonian, sublattice rotated to fit on a single-site unit cell
+H = heisenberg_XYZ(InfiniteSquare())
 
-# Parameters
-χbond = 2
-χenv = 20
-ctm_alg = SimultaneousCTMRG(; tol=1e-10, verbosity=2)
-opt_alg = PEPSOptimize(;
-    boundary_alg=ctm_alg,
-    optimizer_alg=LBFGS(4; maxiter=100, gradtol=1e-4, verbosity=3),
-    gradient_alg=LinSolver(; solver_alg=GMRES(; tol=1e-6, maxiter=100)),
-    reuse_env=true,
-)
+# parameters and algorithms
+Dbond = 2
+χenv = 16
+boundary_alg = (; tol=1e-10, trscheme=(; alg=:fixedspace))
+optimizer_alg = (; alg=:lbfgs, tol=1e-4, maxiter=100, lbfgs_memory=16)
 
-# Ground state search
-# We initialize a random PEPS with bond dimension χbond and from that converge
-# a CTMRG environment with dimension χenv on the environment bonds before
-# starting the optimization. The ground-state energy should approximately approach
-# E/N = −0.6694421, which is a QMC estimate from https://arxiv.org/abs/1101.3281.
-# Of course there is a noticable bias for small χbond and χenv.
-ψ₀ = InfinitePEPS(2, χbond)
-env₀, = leading_boundary(CTMRGEnv(ψ₀, ℂ^χenv), ψ₀, ctm_alg)
-peps, env, E, = fixedpoint(H, ψ, env₀, opt_alg₀)
+# initialize PEPS and environment
+peps₀ = InfinitePEPS(2, Dbond)
+env₀, = leading_boundary(CTMRGEnv(peps₀, ℂ^χenv), peps₀; boundary_alg...)
+
+# ground state search
+peps, env, E, = fixedpoint(H, peps₀, env₀; boundary_alg, optimizer_alg, verbosity=1)
 @show E

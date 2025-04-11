@@ -7,6 +7,9 @@ using InteractiveUtils
 # ╔═╡ 7da39574-7c05-492e-abf9-10b9e8f1dda9
 using TensorKit, PEPSKit
 
+# ╔═╡ 3e2bcf54-39f4-4147-9023-0744ee0b4009
+using Random; Random.seed!(123456789)
+
 # ╔═╡ ff6fa2f1-841d-42c6-acd9-b5f4cf6b7c76
 md"""
 # Optimizing the 2D Heisenberg model
@@ -20,6 +23,11 @@ H = \sum_{\langle i,j \rangle} J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S
 Here, we want to set ``J_x=J_y=J_z=1`` where the Heisenberg model is in the antiferromagnetic regime. Due to the bipartite sublattice structure of antiferromagnetic order one needs a PEPS ansatz with a ``2 \times 2`` unit cell. This can be circumvented by performing a unitary sublattice rotation on all B-sites resulting in a change of parameters to ``(J_x, J_y, J_z)=(-1, 1, -1)``. This gives us a unitarily equivalent Hamiltonian (with the same spectrum) with a ground state on a single-site unit cell.
 
 Let us get started by importing `TensorKit` and `PEPSKit`, and creating the Heisenberg Hamiltonian on an infinite square lattice:
+"""
+
+# ╔═╡ d806d7b2-f25b-48d0-87e7-48acfbc93678
+md"""
+We also want to fix the random seed of this example to make it deterministic:
 """
 
 # ╔═╡ 758d7f1a-b62f-400d-bf71-25410a7ce9c5
@@ -96,7 +104,7 @@ Besides the converged environment, `leading_boundary` also returns a `NamedTuple
 """
 
 # ╔═╡ 4c55e732-88e4-4327-9e43-ac40abd6bb63
-info_ctmrg.truncation_error
+@show info_ctmrg.truncation_error;
 
 # ╔═╡ 72a1eb41-30f2-4844-a934-eede6c3daf83
 md"""
@@ -108,9 +116,17 @@ peps, env, E, info_opt = fixedpoint(
 	H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
 );
 
+# ╔═╡ 9647daa9-c730-4185-bd11-6a54a0ded025
+md"""
+Note that `fixedpoint` returns the final optimized PEPS, the last converged environment, the final energy estimate as well as a `NamedTuple` of diagnostics. This allows us to, e.g., analyze the number of cost function calls or the history of gradient norms to evaluate the convergence rate:
+"""
+
+# ╔═╡ c467848b-20ff-454e-b15b-00345ce6f29c
+@show info_opt.fg_evaluations info_opt.gradnorms[1:10:end];
+
 # ╔═╡ 96b429c0-25fe-411d-a016-7677819357af
 md"""
-Let's compare the optimized energy against an accurate Quantum Monte Carlo estimate by [Sandvik](@cite sandvik_computational_2011), where the energy per site was found to be ``E_{\text{ref}}=−0.6694421``. From our simple optimization we find:
+Let's now compare the optimized energy against an accurate Quantum Monte Carlo estimate by [Sandvik](@cite sandvik_computational_2011), where the energy per site was found to be ``E_{\text{ref}}=−0.6694421``. From our simple optimization we find:
 """
 
 # ╔═╡ 33174988-02f2-487f-a635-e40d35c120af
@@ -138,6 +154,7 @@ In practice, in order to obtain an accurate and variational energy estimate, one
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 PEPSKit = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 
 [compat]
@@ -151,7 +168,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.4"
 manifest_format = "2.0"
-project_hash = "95aa59c2c683c0e05c9f9d2d9af2d0980a4c8689"
+project_hash = "79f58b0126713df51e6c54bffa8c6c88c0809a34"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -893,6 +910,8 @@ version = "5.11.0+0"
 # ╔═╡ Cell order:
 # ╟─ff6fa2f1-841d-42c6-acd9-b5f4cf6b7c76
 # ╠═7da39574-7c05-492e-abf9-10b9e8f1dda9
+# ╟─d806d7b2-f25b-48d0-87e7-48acfbc93678
+# ╠═3e2bcf54-39f4-4147-9023-0744ee0b4009
 # ╠═758d7f1a-b62f-400d-bf71-25410a7ce9c5
 # ╟─945f9d02-322b-47f0-85b2-f229e4d8c4d9
 # ╠═f87c548e-a8ff-4b21-b9a0-5ae06c1b7adb
@@ -914,6 +933,8 @@ version = "5.11.0+0"
 # ╠═4c55e732-88e4-4327-9e43-ac40abd6bb63
 # ╟─72a1eb41-30f2-4844-a934-eede6c3daf83
 # ╠═cd246b3e-3172-4f22-ad67-9d3d5a5c0464
+# ╟─9647daa9-c730-4185-bd11-6a54a0ded025
+# ╠═c467848b-20ff-454e-b15b-00345ce6f29c
 # ╟─96b429c0-25fe-411d-a016-7677819357af
 # ╠═33174988-02f2-487f-a635-e40d35c120af
 # ╟─d57df214-05c1-428a-a45b-2876a582fb4f
