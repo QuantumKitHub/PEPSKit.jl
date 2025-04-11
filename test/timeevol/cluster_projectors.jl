@@ -83,7 +83,9 @@ end
     Pspace = U1Space(1//2 => 1, -1//2 => 1)
     Vspace = U1Space(0 => 2, 1//2 => 1, -1//2 => 1)
     Espace = U1Space(0 => 8, 1//2 => 4, -1//2 => 4)
-    ham = j1_j2(ComplexF64, U1Irrep, InfiniteSquare(Nr, Nc); J1=1.0, J2=0.0, sublattice=false)
+    ham = j1_j2(
+        ComplexF64, U1Irrep, InfiniteSquare(Nr, Nc); J1=1.0, J2=0.0, sublattice=false
+    )
     wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
     # convert to real tensors
     ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
