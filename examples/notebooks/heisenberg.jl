@@ -150,6 +150,30 @@ In practice, in order to obtain an accurate and variational energy estimate, one
 # ╔═╡ 65b8dd1c-e09c-450b-8fa6-9718de1d79da
 @show ξ_h ξ_v;
 
+# ╔═╡ 585f04e3-b2ad-441b-aef8-f5e46e351335
+md"""
+As a last thing, we want to see how we can compute expectation values of observables, given the optimized PEPS and its CTMRG environment. To compute, e.g., the magnetization, we first need to define the observable:
+"""
+
+# ╔═╡ b62b44a2-8fb1-4d72-9657-ab68b91c5171
+σ_z = TensorMap([1.0 0.0; 0.0 -1.0], ℂ^2, ℂ^2)
+
+# ╔═╡ 72f3e01f-f2d7-4e1f-8241-331b3f0d8789
+md"""
+In order to be able to contract it with the PEPS and environment, we define need to define a `LocalOperator` and specify on which physical spaces and sites the observable acts. That way, the PEPS-environment-operator contraction gets automatically generated (also works for multi-site operators!). See the [`LocalOperator`](@ref) docstring for more details. The magnetization is just a single-site observable, so we have:
+"""
+
+# ╔═╡ 8d31b900-5841-4979-b2db-0abbadcc347c
+M = LocalOperator(fill(ℂ^2, 1, 1), (CartesianIndex(1, 1),) => σ_z);
+
+# ╔═╡ 06a32163-887e-4eb5-960c-e153735f5f59
+md"""
+To evaluate the expecation value, we call:
+"""
+
+# ╔═╡ ff85c322-f16c-41e2-823a-95f194e6ad72
+@show expectation_value(peps, M, env);
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -941,5 +965,11 @@ version = "5.11.0+0"
 # ╟─7d743eb9-7969-486c-8d3b-f9b7cc78ba67
 # ╠═e1e3388e-4e0d-44ed-a7e0-1b04627406f1
 # ╠═65b8dd1c-e09c-450b-8fa6-9718de1d79da
+# ╟─585f04e3-b2ad-441b-aef8-f5e46e351335
+# ╠═b62b44a2-8fb1-4d72-9657-ab68b91c5171
+# ╟─72f3e01f-f2d7-4e1f-8241-331b3f0d8789
+# ╠═8d31b900-5841-4979-b2db-0abbadcc347c
+# ╟─06a32163-887e-4eb5-960c-e153735f5f59
+# ╠═ff85c322-f16c-41e2-823a-95f194e6ad72
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
