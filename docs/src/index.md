@@ -32,7 +32,7 @@ For example, in order to obtain the ground state of the 2D Heisenberg model, we 
 using TensorKit, PEPSKit
 
 # construct the Hamiltonian
-H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1) # sublattice rotation to obtain single-site unit cell
+H = heisenberg_XYZ(InfiniteSquare())
 
 # configure the parameters
 D = 2
@@ -49,6 +49,8 @@ peps, env, E, = fixedpoint(H, peps₀, env₀; tol=grad_tol, boundary_alg=(; tol
 
 @show E # -0.6625...
 ```
+
+For a more in-depth explanation of this simple example, check the [ ](@ref) notebook or consult the Manual pages.
 
 ## Table of contents
 
