@@ -21,7 +21,7 @@ function select_algorithm(
     ::typeof(fixedpoint),
     env₀::CTMRGEnv;
     tol=Defaults.optimizer_tol, # top-level tolerance
-    verbosity=2, # top-level verbosity
+    verbosity=3, # top-level verbosity
     boundary_alg=(;),
     gradient_alg=(;),
     optimizer_alg=(;),
@@ -29,7 +29,7 @@ function select_algorithm(
 )
     # adjust CTMRG tols and verbosity
     if boundary_alg isa NamedTuple
-        defaults = (; verbosity=verbosity ≤ 1 ? -1 : verbosity, tol=1e-4tol)
+        defaults = (; verbosity=verbosity ≤ 3 ? -1 : 3, tol=1e-4tol)
         boundary_kwargs = merge(defaults, boundary_alg)
         boundary_alg = select_algorithm(leading_boundary, env₀; boundary_kwargs...)
     end
@@ -37,13 +37,13 @@ function select_algorithm(
     # adjust gradient verbosity
     if gradient_alg isa NamedTuple
         # TODO: check this:
-        defaults = (; verbosity=verbosity ≤ 2 ? -1 : 3, tol=1e-2tol)
+        defaults = (; verbosity=verbosity ≤ 3 ? -1 : 3, tol=1e-2tol)
         gradient_alg = merge(defaults, gradient_alg)
     end
 
     # adjust optimizer tol and verbosity
     if optimizer_alg isa NamedTuple
-        defaults = (; tol, verbosity=verbosity < 1 ? -1 : 3)
+        defaults = (; tol, verbosity)
         optimizer_alg = merge(defaults, optimizer_alg)
     end
 
