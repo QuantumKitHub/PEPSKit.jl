@@ -1,28 +1,28 @@
 abstract type SymmetrizationStyle end
 
 """
-    struct ReflectDepth <: SymmetrizationStyle
+$(TYPEDEF)
 
 Reflection symmmetrization along the horizontal axis, such that north and south are mirrored.
 """
 struct ReflectDepth <: SymmetrizationStyle end
 
 """
-    struct ReflectWidth <: SymmetrizationStyle
+$(TYPEDEF)
 
 Reflection symmmetrization along the vertical axis, such that east and west are mirrored.
 """
 struct ReflectWidth <: SymmetrizationStyle end
 
 """
-    struct Rotate <: SymmetrizationStyle
+$(TYPEDEF)
 
 Rotation symmmetrization leaving the object invariant under π/2 rotations.
 """
 struct Rotate <: SymmetrizationStyle end
 
 """
-    struct RotateReflect <: SymmetrizationStyle
+$(TYPEDEF)
 
 Full reflection and rotation symmmetrization, such that reflection along the horizontal and
 vertical axis as well as π/2 rotations leave the object invariant.

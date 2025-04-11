@@ -1,9 +1,7 @@
 ## Model Hamiltonians
 # -------------------
 """
-    nearest_neighbour_hamiltonian(
-        lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}
-    ) where {S,T}
+    nearest_neighbour_hamiltonian(lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}) where {S,T}
 
 Create a nearest neighbor `LocalOperator` by specifying the 2-site interaction term `h`
 which acts both in horizontal and vertical direction.
@@ -76,7 +74,7 @@ function MPSKitModels.heisenberg_XXZ(
 end
 
 """
-    j1_j2([elt::Type{T}], [symm::Type{S}], [lattice::InfiniteSquare];
+    j1_j2([elt::Type{T}, symm::Type{S},] lattice::InfiniteSquare;
           J1=1.0, J2=1.0, spin=1//2, sublattice=true)
 
 Square lattice J₁-J₂ model. The `sublattice` kwarg enables a single site unit cell via a
@@ -109,7 +107,7 @@ function j1_j2(
 end
 
 """
-    pwave_superconductor(::Type{T}=ComplexF64; t=1, μ=2, Δ=1, unitcell=(1, 1))
+    pwave_superconductor([T=ComplexF64,] lattice::InfiniteSquare; t=1, μ=2, Δ=1, unitcell=(1, 1))
 
 Square lattice p-wave superconductor model.
 """
