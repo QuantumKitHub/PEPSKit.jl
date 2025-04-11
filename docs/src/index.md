@@ -50,11 +50,11 @@ peps, env, E, = fixedpoint(H, peps₀, env₀; tol=grad_tol, boundary_alg=(; tol
 @show E # -0.6625...
 ```
 
-For a more in-depth explanation of this simple example, check the [ ](@ref) notebook or consult the Manual pages.
+For a more in-depth explanation of this simple example, check the [Optimizing the 2D Heisenberg model](@ref) notebook or consult the Manual pages.
 
 ## Table of contents
 
-A detailed rundown of PEPSKit's features can be found in the [Manual](@ref) section, including:
+A detailed rundown of PEPSKit's features can be found in the Manual section, including:
 
 ```@contents
 Pages = ["man/states.md", "man/environments.md", "man/operators.md", "man/peps_optimization.md", "man/symmetries.md", "man/multi_threading.md", "man/precompilation.md"]
