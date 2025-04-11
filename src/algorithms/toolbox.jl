@@ -142,15 +142,11 @@ environment `env`.
 """
 function _contract_corners(ind::Tuple{Int,Int}, env::CTMRGEnv)
     r, c = ind
-    return tr(
-        twist(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)] *
-        env.corners[NORTHEAST, _prev(r, end), c] *
-        env.corners[SOUTHEAST, r, c] *
-            env.corners[SOUTHWEST, r, _prev(c, end)],
-            1,
-        ),
-    )
+    C_NW = env.corners[NORTHWEST, _prev(r, end), _prev(c, end)]
+    C_NE = env.corners[NORTHEAST, _prev(r, end), c]
+    C_SE = env.corners[SOUTHEAST, r, c]
+    C_SW = env.corners[SOUTHWEST, r, _prev(c, end)]
+    return @plansor C_NW[1; 2] * C_NE[2; 3] * C_SE[3; 4] * C_SW[4; 1]
 end
 
 """
