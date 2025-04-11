@@ -43,9 +43,7 @@ end
 display(collect(norm(t, Inf) for t in peps.vertices))
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
-for idx in CartesianIndices(peps_.A)
-    peps_.A[idx] /= norm(peps_.A[idx], Inf)
-end
+normalize!(peps_, Inf)
 Random.seed!(100)
 env = CTMRGEnv(rand, Float64, peps_, Espace)
 ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=3, trscheme=trscheme_env)
