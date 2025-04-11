@@ -276,6 +276,7 @@ function InfiniteWeightPEPS(peps::InfinitePEPS)
     Nr, Nc = size(peps)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         V = (d == 1 ? domain(peps[r, c])[2] : domain(peps[r, c])[1])
+        @assert !isdual(V)
         DiagonalTensorMap(ones(reduceddim(V)), V)
     end
     return InfiniteWeightPEPS(peps.A, SUWeight(weights))
