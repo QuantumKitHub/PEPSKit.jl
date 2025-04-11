@@ -6,7 +6,6 @@ using Random
 using PEPSKit: sdiag_pow, _cluster_truncate!
 include("cluster_tools.jl")
 
-Random.seed!(0)
 nrm = 20
 Vspaces = [
     (ℂ^2, ℂ^4, (ℂ^12)'),
@@ -18,6 +17,7 @@ Vspaces = [
 ]
 
 @testset "Cluster bond truncation with projectors" begin
+    Random.seed!(0)
     N, n = 5, 2
     for (Vphy, Vns, V) in Vspaces
         Vvirs = fill(Vns, N + 1)
@@ -74,4 +74,44 @@ end
         fid = fidelity_cluster(Ms1, Ms2)
         @test fid ≈ 1.0
     end
+end
+
+@testset "Heisenberg model with usual SU and 3-site SU" begin
+    Nr, Nc = 2, 2
+    ctmrg_tol = 1e-9
+    Random.seed!(100)
+    Pspace = U1Space(1//2 => 1, -1//2 => 1)
+    Vspace = U1Space(0 => 2, 1//2 => 1, -1//2 => 1)
+    Espace = U1Space(0 => 8, 1//2 => 4, -1//2 => 4)
+    ham = j1_j2(ComplexF64, U1Irrep, InfiniteSquare(Nr, Nc); J1=1.0, J2=0.0, sublattice=false)
+    wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
+    # convert to real tensors
+    ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
+    # usual 2-site simple update, and measure energy
+    dts = [1e-2, 1e-3, 1e-4]
+    tols = [1e-8, 1e-8, 1e-8]
+    maxiter = 6000
+    trscheme = truncerr(1e-10) & truncdim(4)
+    for (n, (dt, tol)) in enumerate(zip(dts, tols))
+        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
+        result = simpleupdate(wpeps, ham, alg; bipartite=false, check_interval=1000)
+        wpeps = result[1]
+    end
+    peps = InfinitePEPS(wpeps)
+    normalize!(peps)
+    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol=ctmrg_tol)
+    e_site = cost_function(peps, env, ham) / (Nr * Nc)
+    @info "2-site simple update energy = $e_site"
+    # continue with 3-site simple update; energy should not change much
+    for (n, (dt, tol)) in enumerate(zip(dts, tols))
+        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
+        result = simpleupdate3site(wpeps, ham, alg; check_interval=1000)
+        wpeps = result[1]
+    end
+    peps = InfinitePEPS(wpeps)
+    normalize!(peps)
+    env, = leading_boundary(env, peps; tol=ctmrg_tol)
+    e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
+    @info "3-site simple update energy = $e_site2"
+    @test e_site ≈ e_site2 atol = 1e-4
 end
