@@ -60,9 +60,7 @@ end
         wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
     end
     # Heisenberg model Hamiltonian (already only includes nearest neighbor terms)
-    ham = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0)
-    # convert to real tensors
-    ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
+    ham = real(heisenberg_XYZ(InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0))
 
     # simple update
     dts = [1e-2, 1e-3, 1e-3, 1e-4]
