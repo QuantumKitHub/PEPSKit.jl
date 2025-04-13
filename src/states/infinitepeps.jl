@@ -188,6 +188,18 @@ Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
 Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))
 Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
 
+## Tensor-wise normalization
+
+function LinearAlgebra.normalize!(peps::InfinitePEPS, p::Real=2)
+    for idx in CartesianIndices(peps.A)
+        peps.A[idx] /= LinearAlgebra.norm(peps.A[idx], p)
+    end
+    return peps
+end
+function LinearAlgebra.normalize(peps::InfinitePEPS, p::Real=2)
+    return LinearAlgebra.normalize!(deepcopy(peps))
+end
+
 ## OptimKit optimization compatibility
 
 function LinearAlgebra.rmul!(A::InfinitePEPS, α::Number) # Used in _scale during OptimKit.optimize
