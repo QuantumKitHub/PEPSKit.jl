@@ -1,63 +1,96 @@
 #= 
 # Mixed canonical form of an open boundary MPS
+```
+            ↑            ↑
+    |ψ⟩ =  M[1]---...---M[N]
+```
+The bond between `M[n]` and `M[n+1]` is called 
+the n-th (internal) bond (n = 1, ..., N - 1).
 
+We perform QR and LQ decompositions: starting from
 ```
-            |            |
-    |ψ⟩  =  M[1] - ... - M[N]
-```
-We perform QR and LQ decompositions 
-(for `n = 1, ..., N`, with R[0] = 1, L[N] = 1)
-```
-                |               |
-    - R[n-1] -- M[n] --  =  -- Qa[n] -- R[n] -
+    ↑           ↑
+    M[1]---  =  Qa[1]-*-R[1]---
 
-        |                               |
-    -- M[n] --- L[n] --  =  - L[n-1] -- Qb[n] --
+        ↑                   ↑
+    ---M[N]  =  --L[N-1]-*-Qb[N]
 ```
-We further perform SVD 
+we successively calculate
 ```
-    R[n] L[n] = U[n] s[n] V†[n]
+                ↑               ↑
+    ---R[n-1]---M[n]---  =  ---Qa[n]-*-R[n]---- (n = 2, ..., N - 1)
+
+        ↑                               ↑
+    --M[n+1]-*-L[n+1]--  =  ---L[n]-*-Qb[n+1]-- (n = N - 2, ..., 1)
 ```
-Then we insert identity
+Here `-*-` on the bond means a twist should be applied if
+the codomain of R[n], Qb[n+1], L[n+1] is a dual space. 
+
+NOTE: 
+In TensorKit, the `isdual` of the domain and codomain 
+of `R[n]` and `L[n]` for a given `n` are the same. 
+
+For each bond (n = 1, ..., N - 1), we perform SVD
 ```
-    Pa[n] = L[n] V[n] * 1/√s[n]
-    Pb[n] = 1/√s[n] * U†[n] R[n]
+    R[n] L[n] = U[n]-←-s[n]-←-V†[n] (n = 1, ..., N - 1)
 ```
-Evidently
+Then we define the projectors together with the Schmidt weight
 ```
-    Pa[n] Pb[n] = L[n] (R[n] L[n])⁻¹ R[n] = 1
+    ---Pa[n]-←- = L[n] V[n]-←-(1/√s[n])-←-
+    -←-Pb[n]--- = -←-(1/√s[n])-←-U†[n] R[n]
 ```
+Since the domain and the codomain of R[n] and L[n] has the same `isdual`, 
+the product `Pa Pb` is the identity operator:
+```
+    Pa[n]-←-Pb[n] = L[n] (R[n] L[n])⁻¹ R[n] = 1
+```
+The `isdual` for the domain and codomain of `Pa[n] Pb[n]` are also the same.
+
+Note that when `Pa[n] Pb[n]` is identity on a dual space, 
+a twist should be applied to put it to the bond. 
+
 The canonical form is then defined by
 ```
-    M̃[n] = Pb[n-1] M[n] Pa[n]
+        ↑                      ↑
+    -←-M̃[n]-←- = -←-Pb[n-1]---M[n]-*-Pa[n]-←-
 ```
+`-*-` means a twist should be applied if the codomain of `Pa[n]` is a dual space. 
+
 Note that
 ```
     M̃[n]
-    = 1/√s[n-1] U†[n-1] R[n-1] M[n] L[n] V[n] 1/√s[n]
-    = 1/√s[n-1] U†[n-1] Qa[n] R[n] L[n] V[n] 1/√s[n]
-    = 1/√s[n-1] U†[n-1] Qa[n] U[n] s[n] V†[n] V[n] 1/√s[n]
-    = 1/√s[n-1] U†[n-1] Qa[n] U[n] √s[n]
+    = 1/√s[n-1]←-U†[n-1](R[n-1]--M[n])-*-L[n] V[n]←-1/√s[n]
+    = 1/√s[n-1]←-U†[n-1] Qa[n] (R[n]-*-L[n]) V[n]←-1/√s[n]
+    = 1/√s[n-1]←-U†[n-1] Qa[n] U[n]←-s[n]←-(V†[n] V[n])←-1/√s[n]
+    = 1/√s[n-1]←-U†[n-1] Qa[n] U[n]←-√s[n]
 ```
-Then `M̃[n]` satisfies the (generalized) left-orthogonal condition
+Then `M̃[n]` (n = 1, ..., N - 1) satisfies the (generalized) left-orthogonal condition
 ```
-        ┌--M̃†[n]--     ┌---
-    s[n-1]   |      =  s[n]     (s[0] = 1)
-        └---M̃[n]--     └---
+        ┌→-M̃†[n]-→-     ┌-→- 1
+        |    |          |       
+    s[n-1]   ↑      =   s[n]    (s[0] = 1)
+        |    |          |
+        └-←-M̃[n]-←-     └-←- 2
 ```
 Similarly, we can express M̃ using Qb
 ```
     M̃[n]
-    = 1/√s[n-1] U†[n-1] R[n-1] L[n-1] Qb[n] V[n] 1/√s[n]
-    = 1/√s[n-1] U†[n-1] U[n-1] s[n-1] V†[n-1] Qb[n] V[n] 1/√s[n]
-    = √s[n-1] V†[n-1] Qb[n] V[n] 1/√s[n]
+    = 1/√s[n-1]←-U†[n-1] R[n-1]--(M[n]-*-L[n]) V[n]←-1/√s[n]
+    = 1/√s[n-1]←-U†[n-1] (R[n-1]--L[n-1]) Qb[n] V[n]←-1/√s[n]
+    = -*-1/√s[n-1]←-U†[n-1] (R[n-1]-*-L[n-1]) Qb[n] V[n]←-1/√s[n]
+    = -*-1/√s[n-1]←-(U†[n-1] U[n-1])←-s[n-1]←-V†[n-1] * Qb[n] V[n]←-1/√s[n]
+    = -*-√s[n-1]←-V†[n-1] Qb[n] V[n]←-1/√s[n]
 ```
-Then `M̃[n]` satisfies the (generalized) right-orthogonal condition
+Here `-*-` is a twist to be applied when the codomain of `L[n-1]` is a dual space. 
+Then `M̃[n]` (n = 2, ..., N) satisfies the (generalized) right-orthogonal condition
 ```
-    --M̃†[n]--┐      --┐
-        |   s[n] =   s[n-1]     (s[N] = 1)
-    ---M̃[n]--┘      --┘
+    -→M̃†[n]-→┐     2 -→-┐
+        ↑    |          |       
+        *   s[n] =     s[n-1]   (s[N] = 1)
+        ↑    |          |
+    -←-M̃[n]-←┘     1 -←-┘
 ```
+Here `-*-` is the twist on the physical axis. 
 
 # Truncation of a bond on OBC-MPS
 
@@ -65,7 +98,7 @@ Suppose we want to truncate the bond between
 the n-th and the (n+1)-th sites such that the truncated state
 ```
             |            |      |              |
-    |ψ̃⟩  =  M[1] - ... - M̃[n] - M̃[n+1] - ... - M[N]
+    |ψ̃⟩  =  M[1]---...---M̃[n]---M̃[n+1]---...---M[N]
 ```
 maximizes the fidelity
 ```
@@ -92,20 +125,20 @@ Then the fidelity is just
     F(ψ̃) = (norm(s̃[n], 2) / norm(s[n], 2))^2
 ```
 =#
-
 """
 Perform QR decomposition through a PEPS tensor
 ```
             | ╱         | ╱
-    - R0 -- M --  →  -- Q -- R1 -
+    --R0----M---  →  ---Q--*-R1--
            ╱           ╱
 ```
 """
 function qr_through(
     R0::AbstractTensorMap{T,S,1,1}, M::AbstractTensorMap{T,S,1,4}; normalize::Bool=true
 ) where {T<:Number,S<:ElementarySpace}
-    @plansor A[-1; -2 -3 -4 -5] := R0[-1; 1] * M[1; -2 -3 -4 -5]
+    @tensor A[-1; -2 -3 -4 -5] := R0[-1; 1] * M[1; -2 -3 -4 -5]
     q, r = leftorth(A, ((1, 2, 3, 4), (5,)); alg=QRpos())
+    @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && (r /= norm(r, Inf))
     return q, r
 end
@@ -113,6 +146,7 @@ function qr_through(
     ::Nothing, M::AbstractTensorMap{T,S,1,4}; normalize::Bool=true
 ) where {T<:Number,S<:ElementarySpace}
     q, r = leftorth(M, ((1, 2, 3, 4), (5,)); alg=QRpos())
+    @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && (r /= norm(r, Inf))
     return q, r
 end
@@ -121,7 +155,7 @@ end
 Perform LQ decomposition through a tensor
 ```
             | ╱         | ╱
-    - L0 -- Q --  ←  -- M -- L1 -
+    --L0-*--Q---  ←  ---M--*-L1--
            ╱           ╱
 ```
 """
@@ -130,6 +164,7 @@ function lq_through(
 ) where {T<:Number,S<:ElementarySpace}
     @plansor A[-1; -2 -3 -4 -5] := M[-1; -2 -3 -4 1] * L1[1; -5]
     l, q = rightorth(A; alg=LQpos())
+    @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && (l /= norm(l, Inf))
     return l, q
 end
@@ -137,8 +172,25 @@ function lq_through(
     M::AbstractTensorMap{T,S,1,4}, ::Nothing; normalize::Bool=true
 ) where {T<:Number,S<:ElementarySpace}
     l, q = rightorth(M; alg=LQpos())
+    @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && (l /= norm(l, Inf))
     return l, q
+end
+
+"""
+Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
+"""
+function _get_allRLs(Ms::Vector{T}) where {T<:AbstractTensorMap}
+    # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
+    N = length(Ms)
+    Rs = Vector{AbstractTensorMap}(undef, N - 1)
+    Ls = Vector{AbstractTensorMap}(undef, N - 1)
+    for n in 1:(N - 1)
+        m = N - n + 1
+        _, Rs[n] = qr_through((n == 1) ? nothing : Rs[n - 1], Ms[n]; normalize=true)
+        Ls[m - 1], _ = lq_through(Ms[m], (m == N) ? nothing : Ls[m]; normalize=true)
+    end
+    return Rs, Ls
 end
 
 """
@@ -162,6 +214,7 @@ function _proj_from_RL(
     rev::Bool=false,
 ) where {T<:Number,S<:ElementarySpace}
     rl = r * l
+    @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
     u, s, vh, ϵ = tsvd!(rl; trunc)
     sinv = PEPSKit.sdiag_pow(s, -1)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
@@ -179,6 +232,45 @@ function _proj_from_RL(
         @assert all(s.data .>= 0.0)
     end
     return Pa, s, Pb, ϵ
+end
+
+"""
+Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
+find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
+"""
+function _get_allprojs(Ms, Rs, Ls, trunc::TensorKit.TruncationScheme, revs::Vector{Bool})
+    N = length(Ms)
+    Pas = Vector{AbstractTensorMap}(undef, N - 1)
+    wts = Vector{DiagonalTensorMap}(undef, N - 1)
+    Pbs = Vector{AbstractTensorMap}(undef, N - 1)
+    # local truncation error on each bond
+    ϵs = zeros(N - 1)
+    for (i, (R, L, rev)) in enumerate(zip(Rs, Ls, revs))
+        trunc2 = if isa(trunc, FixedSpaceTruncation)
+            truncspace(space(Ms[i + 1], 1))
+        else
+            trunc
+        end
+        Pas[i], wts[i], Pbs[i], ϵs[i] = _proj_from_RL(R, L; trunc=trunc2, rev)
+    end
+    return Pas, Pbs, wts, ϵs
+end
+
+"""
+Find projectors to truncate internal bonds of the cluster `Ms`
+"""
+function _cluster_truncate!(
+    Ms::Vector{T}, trunc::TensorKit.TruncationScheme, revs::Vector{Bool}
+) where {T<:AbstractTensorMap}
+    Rs, Ls = _get_allRLs(Ms)
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trunc, revs)
+    # apply projectors
+    # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
+    for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
+        @plansor (Ms[i])[-1; -2 -3 -4 -5] := (Ms[i])[-1; -2 -3 -4 1] * Pa[1; -5]
+        @tensor (Ms[i + 1])[-1; -2 -3 -4 -5] := Pb[-1; 1] * (Ms[i + 1])[1; -2 -3 -4 -5]
+    end
+    return wts, ϵs, Pas, Pbs
 end
 
 function _apply_gatempo!(
@@ -221,44 +313,6 @@ function _apply_gatempo!(
 end
 
 """
-Find projectors to truncate internal bonds of the cluster `Ms`
-"""
-function _cluster_truncate!(
-    Ms::Vector{T}, trunc::TensorKit.TruncationScheme, revs::Vector{Bool}
-) where {T<:AbstractTensorMap}
-    # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
-    N = length(Ms)
-    Rs = Vector{AbstractTensorMap}(undef, N - 1)
-    Ls = Vector{AbstractTensorMap}(undef, N - 1)
-    for n in 1:(N - 1)
-        m = N - n + 1
-        _, Rs[n] = qr_through((n == 1) ? nothing : Rs[n - 1], Ms[n]; normalize=true)
-        Ls[m - 1], _ = lq_through(Ms[m], (m == N) ? nothing : Ls[m]; normalize=true)
-    end
-    # find projectors on each internal bond
-    Pas = Vector{AbstractTensorMap}(undef, N - 1)
-    wts = Vector{DiagonalTensorMap}(undef, N - 1)
-    Pbs = Vector{AbstractTensorMap}(undef, N - 1)
-    # local truncation error on each bond
-    ϵs = zeros(N - 1)
-    for (i, (R, L, rev)) in enumerate(zip(Rs, Ls, revs))
-        trunc2 = if isa(trunc, FixedSpaceTruncation)
-            truncspace(space(Ms[i + 1], 1))
-        else
-            trunc
-        end
-        Pas[i], wts[i], Pbs[i], ϵs[i] = _proj_from_RL(R, L; trunc=trunc2, rev)
-    end
-    # apply projectors
-    # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
-    for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        @plansor (Ms[i])[-1; -2 -3 -4 -5] := (Ms[i])[-1; -2 -3 -4 1] * Pa[1; -5]
-        @tensor (Ms[i + 1])[-1; -2 -3 -4 -5] := Pb[-1; 1] * (Ms[i + 1])[1; -2 -3 -4 -5]
-    end
-    return wts, ϵs
-end
-
-"""
 Apply the gate MPO on the cluster and truncate the bond
 ```
         ↑       ↑       ↑
@@ -283,7 +337,7 @@ function apply_gatempo!(
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     _apply_gatempo!(Ms, gs)
-    wts, ϵs = _cluster_truncate!(Ms, trunc, revs)
+    wts, ϵs, = _cluster_truncate!(Ms, trunc, revs)
     return wts, ϵs
 end
 
