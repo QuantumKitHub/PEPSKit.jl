@@ -25,7 +25,7 @@
 <!--
     # This information is used for caching.
     [PlutoStaticHTML.State]
-    input_sha = "24f6774f5b379b5c302ac0ebf1835128a68dcf0ddf0bdc70525869e2f013bce5"
+    input_sha = "56cc13bfcb9e08f2fb47782f1a913a1925487ae5b84f63efa187918107cc19a6"
     julia_version = "1.11.4"
 -->
 
@@ -103,8 +103,8 @@
 
 <div class="markdown"><p>Besides the converged environment, <code>leading_boundary</code> also returns a <code>NamedTuple</code> of informational quantities such as the last (maximal) SVD truncation error:</p></div>
 
-<pre class='language-julia'><code class='language-julia'>@show info_ctmrg.truncation_error;</code></pre>
-
+<pre class='language-julia'><code class='language-julia'>info_ctmrg.truncation_error</code></pre>
+<pre class="code-output documenter-example-output" id="var-hash924061">0.0006867970261442056</pre>
 
 
 <div class="markdown"><p>Finally, we can start the optimization by calling <code>fixedpoint</code> on <code>H</code> with our settings for the boundary (CTMRG) algorithm and the optimizer:</p></div>
@@ -117,14 +117,23 @@
 
 <div class="markdown"><p>Note that <code>fixedpoint</code> returns the final optimized PEPS, the last converged environment, the final energy estimate as well as a <code>NamedTuple</code> of diagnostics. This allows us to, e.g., analyze the number of cost function calls or the history of gradient norms to evaluate the convergence rate:</p></div>
 
-<pre class='language-julia'><code class='language-julia'>@show info_opt.fg_evaluations info_opt.gradnorms[1:10:end];</code></pre>
+<pre class='language-julia'><code class='language-julia'>@show info_opt.fg_evaluations</code></pre>
+<pre class="code-output documenter-example-output" id="var-hash451283">63</pre>
 
+<pre class='language-julia'><code class='language-julia'>@show info_opt.gradnorms[1:10:end]</code></pre>
+<pre class="code-output documenter-example-output" id="var-hash798835">6-element Vector{Float64}:
+ 1.925483778590241
+ 0.02781261725705649
+ 0.020509459841048863
+ 0.010080016245646474
+ 0.0025318500192082712
+ 0.00023065410662933191</pre>
 
 
 <div class="markdown"><p>Let's now compare the optimized energy against an accurate Quantum Monte Carlo estimate by <a href="@cite sandvik_computational_2011">Sandvik</a>, where the energy per site was found to be <span class="tex">\(E_{\text{ref}}=−0.6694421\)</span>. From our simple optimization we find:</p></div>
 
-<pre class='language-julia'><code class='language-julia'>@show E;</code></pre>
-
+<pre class='language-julia'><code class='language-julia'>@show E</code></pre>
+<pre class="code-output documenter-example-output" id="var-hash629819">-0.6625142864955051</pre>
 
 
 <div class="markdown"><p>While this energy is in the right ballpark, there is still quite some deviation from the accurate reference energy. This, however, can be attributed to the small bond dimension - an optimization with larger bond dimension would approach this value much more closely.</p><p>A more reasonable comparison would be against another finite bond dimension PEPS simulation. For example, Juraj Hasik's data from <span class="tex">\(J_1\text{-}J_2\)</span><a href="https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat">PEPS simulations</a> yields <span class="tex">\(E_{D=2,\chi=16}=-0.660231\dots\)</span> which is more in line with what we find here.</p></div>
@@ -135,8 +144,13 @@
 <pre class='language-julia'><code class='language-julia'>ξ_h, ξ_v, λ_h, λ_v = correlation_length(peps, env);</code></pre>
 
 
-<pre class='language-julia'><code class='language-julia'>@show ξ_h ξ_v;</code></pre>
+<pre class='language-julia'><code class='language-julia'>@show ξ_h</code></pre>
+<pre class="code-output documenter-example-output" id="var-hash117367">1-element Vector{Float64}:
+ 1.0345812166069706</pre>
 
+<pre class='language-julia'><code class='language-julia'>@show ξ_v</code></pre>
+<pre class="code-output documenter-example-output" id="var-hash175800">1-element Vector{Float64}:
+ 1.0245031504625688</pre>
 
 
 <div class="markdown"><p>As a last thing, we want to see how we can compute expectation values of observables, given the optimized PEPS and its CTMRG environment. To compute, e.g., the magnetization, we first need to define the observable:</p></div>
@@ -156,8 +170,8 @@
 
 <div class="markdown"><p>To evaluate the expecation value, we call:</p></div>
 
-<pre class='language-julia'><code class='language-julia'>@show expectation_value(peps, M, env);</code></pre>
-
+<pre class='language-julia'><code class='language-julia'>@show expectation_value(peps, M, env)</code></pre>
+<pre class="code-output documenter-example-output" id="var-hash221986">-0.7563968615093396 - 4.608071982475297e-16im</pre>
 <div class='manifest-versions'>
 <p>Built with Julia 1.11.4 and</p>
 PEPSKit 0.5.0<br>
