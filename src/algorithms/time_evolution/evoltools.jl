@@ -207,7 +207,7 @@ that contains up to next nearest neighbor terms on square lattice.
 """
 function _get_gatempos(gate::LocalOperator)
     Nr, Nc = size(gate.lattice)
-    return Dict(
+    return (;
         :sw => collect(_get_gatempo_sw(gate, r, c) for r in 1:Nr, c in 1:Nc),
         :se => collect(_get_gatempo_se(gate, r, c) for r in 1:Nr, c in 1:Nc),
     )

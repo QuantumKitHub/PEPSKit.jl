@@ -453,11 +453,11 @@ function _su3site_cluster!(
 end
 
 """
-    su3site_iter(gatempos::Dict{Symbol}, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
+    su3site_iter(gatempos::NamedTuple, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
 
 One round of 3-site simple update for Hamiltonian with 2nd neighbor terms. 
 """
-function su3site_iter(gatempos::Dict{Symbol}, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
+function su3site_iter(gatempos::NamedTuple, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
     peps2 = deepcopy(peps)
     for cluster in (:sw, :se), site in CartesianIndices(peps2.vertices)
         r, c = Tuple(site)
