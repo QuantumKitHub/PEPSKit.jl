@@ -1,6 +1,3 @@
-@static if Sys.isapple()
-    using AppleAccelerate
-end
 using Test
 using Printf
 using Random

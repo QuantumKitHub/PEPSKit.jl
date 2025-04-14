@@ -1,27 +1,27 @@
 #= 
 # Mixed canonical form of an open boundary MPS
 ```
-            ↑            ↑
     |ψ⟩ =  M[1]---...---M[N]
+            ↓            ↓
 ```
 The bond between `M[n]` and `M[n+1]` is called 
 the n-th (internal) bond (n = 1, ..., N - 1).
 
 We perform QR and LQ decompositions: starting from
 ```
-    ↑           ↑
     M[1]---  =  Qa[1]-*-R[1]---
+    ↓           ↓
 
-        ↑                   ↑
     ---M[N]  =  --L[N-1]-*-Qb[N]
+        ↓                   ↓
 ```
 we successively calculate
 ```
-                ↑               ↑
     ---R[n-1]---M[n]---  =  ---Qa[n]-*-R[n]---- (n = 2, ..., N - 1)
+                ↓               ↓
 
-        ↑                               ↑
     --M[n+1]-*-L[n+1]--  =  ---L[n]-*-Qb[n+1]-- (n = N - 2, ..., 1)
+        ↓                               ↓
 ```
 Here `-*-` on the bond means a twist should be applied if
 the codomain of R[n], Qb[n+1], L[n+1] is a dual space. 
@@ -51,8 +51,8 @@ a twist should be applied to put it to the bond.
 
 The canonical form is then defined by
 ```
-        ↑                      ↑
     -←-M̃[n]-←- = -←-Pb[n-1]---M[n]-*-Pa[n]-←-
+        ↓                      ↓
 ```
 `-*-` means a twist should be applied if the codomain of `Pa[n]` is a dual space. 
 
@@ -66,11 +66,11 @@ Note that
 ```
 Then `M̃[n]` (n = 1, ..., N - 1) satisfies the (generalized) left-orthogonal condition
 ```
-        ┌→-M̃†[n]-→-     ┌-→- 1
-        |    |          |       
-    s[n-1]   ↑      =   s[n]    (s[0] = 1)
-        |    |          |
-        └-←-M̃[n]-←-     └-←- 2
+    ┌---←--M̃[n]--←-     ┌-←- 2
+    |       |           |       
+    s[n-1]  ↓       =   s[n]    (s[0] = 1)
+    |       |           |
+    └---→--M̃†[n]-→-     └-→- 1
 ```
 Similarly, we can express M̃ using Qb
 ```
@@ -84,11 +84,11 @@ Similarly, we can express M̃ using Qb
 Here `-*-` is a twist to be applied when the codomain of `L[n-1]` is a dual space. 
 Then `M̃[n]` (n = 2, ..., N) satisfies the (generalized) right-orthogonal condition
 ```
-    -→M̃†[n]-→┐     2 -→-┐
-        ↑    |          |       
-        *   s[n] =     s[n-1]   (s[N] = 1)
-        ↑    |          |
-    -←-M̃[n]-←┘     1 -←-┘
+    -←-M̃[n]-←┐         1 -←-┐
+        ↓    |              |       
+        *    s[n]   =     s[n-1]   (s[N] = 1)
+        ↓    |              |
+    -→M̃†[n]-→┘         2 -→-┘
 ```
 Here `-*-` is the twist on the physical axis. 
 
@@ -97,8 +97,8 @@ Here `-*-` is the twist on the physical axis.
 Suppose we want to truncate the bond between 
 the n-th and the (n+1)-th sites such that the truncated state
 ```
-            |            |      |              |
     |ψ̃⟩  =  M[1]---...---M̃[n]---M̃[n+1]---...---M[N]
+            ↓            ↓      ↓              ↓
 ```
 maximizes the fidelity
 ```
@@ -108,17 +108,17 @@ maximizes the fidelity
 ```
 This is simply done by using a truncated `Pa[n], Pb[n]`; then
 ```
-            ┌-M†[1]-...-M†[n]-M†[n+1]-...-M†[N]-┐
-    ⟨ψ|ψ̃⟩ = | |         |     |           |     |
-            └-M[1]--...-M̃[n]--M̃[n+1]--...-M[N]--┘
+            M[1]--...-M̃[n]--M̃[n+1]--...-M[N]
+    ⟨ψ|ψ̃⟩ = |         |     |           |
+            M†[1]-...-M†[n]-M†[n+1]-...-M†[N]
 
-            ┌----M†[n]-M†[n+1]-┐
+            ┌----M̃[n]--M̃[n+1]--┐
         = s[n-1] |     |     s[n+1]
-            └----M̃[n]--M̃[n+1]--┘
+            └----M†[n]-M†[n+1]-┘
 
-            ┌--s[n]--┐
+            ┌--s̃[n]--┐
         =   |        |  =  s[n].s̃[n]
-            └--s̃[n]--┘
+            └--s[n]--┘
 ```
 Then the fidelity is just
 ```
@@ -128,9 +128,9 @@ Then the fidelity is just
 """
 Perform QR decomposition through a PEPS tensor
 ```
-            | ╱         | ╱
+             ╱           ╱
     --R0----M---  →  ---Q--*-R1--
-           ╱           ╱
+          ╱ |         ╱ |
 ```
 """
 function qr_through(
@@ -154,16 +154,16 @@ end
 """
 Perform LQ decomposition through a tensor
 ```
-            | ╱         | ╱
+             ╱           ╱
     --L0-*--Q---  ←  ---M--*-L1--
-           ╱           ╱
+          ╱ |         ╱ |
 ```
 """
 function lq_through(
     M::AbstractTensorMap{T,S,1,4}, L1::AbstractTensorMap{T,S,1,1}; normalize::Bool=true
 ) where {T<:Number,S<:ElementarySpace}
     @plansor A[-1; -2 -3 -4 -5] := M[-1; -2 -3 -4 1] * L1[1; -5]
-    l, q = rightorth(A; alg=LQpos())
+    l, q = rightorth!(A; alg=LQpos())
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && (l /= norm(l, Inf))
     return l, q
@@ -280,24 +280,25 @@ function _apply_gatempo!(
     for (i, (g, M)) in enumerate(zip(gs, Ms))
         @assert !isdual(space(M, 2))
         if i == 1
-            @tensor (Ms[i])[:] := g[-2 1 -5] * M[-1 1 -3 -4 -6]
+            @tensor (Ms[i])[:] :=  M[-1 1 -3 -4 -5] * g[-2 1 -6]
         elseif i == length(Ms)
             @assert !isdual(space(g, 1))
-            @tensor (Ms[i])[:] := g[-1 -3 1] * M[-2 1 -4 -5 -6]
+            @tensor (Ms[i])[:] :=  M[-1 1 -4 -5 -6] * g[-2 -3 1]
         else
             @assert !isdual(space(g, 1))
-            @tensor (Ms[i])[:] := g[-1 -3 1 -6] * M[-2 1 -4 -5 -7]
+            @tensor (Ms[i])[:] := M[-1 1 -4 -5 -6] * g[-2 -3 1 -7]
         end
     end
     for (i, M) in enumerate(Ms[2:end])
-        isdual(space(M, 2)) && twist!(Ms[i + 1], 2)
+        @assert !isdual(space(M, 2))
+        isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
     end
-    # merge axes on bonds in the gate-cluster product
+    # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
     fusers = collect(begin
-        V1, V2 = space(M, 1), space(M, 2)
+        V1, V2 = space(M, 1), space(g, 1)
         isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
-    end for M in Ms[2:end])
+    end for (M, g) in zip(Ms[2:end], gs[2:end]))
     for (i, M) in enumerate(Ms)
         if i == 1
             @tensor (Ms[i])[-1; -2 -3 -4 -5] := M[-1 -2 -3 -4 1 2] * (fusers[i])'[1 2; -5]
@@ -315,20 +316,20 @@ end
 """
 Apply the gate MPO on the cluster and truncate the bond
 ```
-        ↑       ↑       ↑
-        g1 -←-- g2 -←-- g3
-        ↑       ↑       ↑
-        | ╱     | ╱     | ╱
+         ╱       ╱       ╱
     --- M1 ---- M2 ---- M3 ---
-       ╱       ╱       ╱
+      ╱ |     ╱ |     ╱ |
+        ↓       ↓       ↓
+        g1 -←-- g2 -←-- g3
+        ↓       ↓       ↓
 ```
 In the cluster, the axes of each PEPSTensor are reordered as
 ```
-         2  3
-         | ╱
+           3
+          ╱
     1 -- M -- 5     M[1; 2 3 4 5]
-        ╱
-       4
+       ╱ |
+     4   2
 ```
 """
 function apply_gatempo!(

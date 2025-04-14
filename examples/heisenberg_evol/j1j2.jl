@@ -40,7 +40,6 @@ for (n, (dt, tol)) in enumerate(zip(dts, tols))
     result = simpleupdate3site(peps, ham, alg)
     global peps = result[1]
 end
-display(collect(norm(t, Inf) for t in peps.vertices))
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
 normalize!(peps_, Inf)

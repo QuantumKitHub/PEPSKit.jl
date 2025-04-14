@@ -134,24 +134,20 @@ end
 Convert a 3-site gate to MPO form by SVD, 
 in which the axes are ordered as
 ```
-    1               2               2
-    ↑               ↑               ↑
-    g1 ←- 3    1 ←- g2 ←- 4    1 ←- g3
-    ↑               ↑               ↑
     2               3               3
+    ↓               ↓               ↓
+    g1 ←- 3    1 ←- g2 ←- 4    1 ←- g3
+    ↓               ↓               ↓
+    1               2               2
 ```
 """
 function gate_to_mpo3(
-    gate::AbstractTensorMap{T,S,3,3}; svderr=1e-12
+    gate::AbstractTensorMap{T,S,3,3}, trunc=truncbelow(MPSKit.Defaults.tol)
 ) where {T<:Number,S<:ElementarySpace}
-    g1, s, g23 = tsvd(gate, ((1, 4), (2, 5, 3, 6)); trunc=truncerr(svderr))
-    g1, g23 = PEPSKit.absorb_s(g1, s, g23)
-    g2, s, g3 = tsvd(g23, ((1, 2, 3), (4, 5)); trunc=truncerr(svderr))
-    g2, g3 = PEPSKit.absorb_s(g2, s, g3)
-    # for possibly better numerical stability
-    g1.data[:] = round.(g1.data; digits=14)
-    g2.data[:] = round.(g2.data; digits=14)
-    g3.data[:] = round.(g3.data; digits=14)
+    Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)  
+    g1 = removeunit(Os[1], 1)  
+    g2 = Os[2]  
+    g3 = removeunit(Os[3], 4)  
     return [g1, g2, g3]
 end
 
