@@ -240,19 +240,19 @@ find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(Ms, Rs, Ls, trunc::TensorKit.TruncationScheme, revs::Vector{Bool})
     N = length(Ms)
-    Pas = Vector{AbstractTensorMap}(undef, N - 1)
-    wts = Vector{DiagonalTensorMap}(undef, N - 1)
-    Pbs = Vector{AbstractTensorMap}(undef, N - 1)
-    # local truncation error on each bond
-    ϵs = zeros(N - 1)
-    for (i, (R, L, rev)) in enumerate(zip(Rs, Ls, revs))
+    projs_errs = map(1:(N - 1)) do i
         trunc2 = if isa(trunc, FixedSpaceTruncation)
             truncspace(space(Ms[i + 1], 1))
         else
             trunc
         end
-        Pas[i], wts[i], Pbs[i], ϵs[i] = _proj_from_RL(R, L; trunc=trunc2, rev)
+        return _proj_from_RL(Rs[i], Ls[i]; trunc=trunc2, rev=revs[i])
     end
+    Pas = map(Base.Fix2(getindex, 1), projs_errs)
+    wts = map(Base.Fix2(getindex, 2), projs_errs)
+    Pbs = map(Base.Fix2(getindex, 3), projs_errs)
+    # local truncation error on each bond
+    ϵs = map(Base.Fix2(getindex, 4), projs_errs)
     return Pas, Pbs, wts, ϵs
 end
 
@@ -277,37 +277,30 @@ function _apply_gatempo!(
     Ms::Vector{T1}, gs::Vector{T2}
 ) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
     @assert length(Ms) == length(gs)
+    @assert all(!isdual(space(g, 1)) for g in gs[2:end])
+    # fusers to merge axes on bonds in the gate-cluster product
+    # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
+    fusers = collect(
+        begin
+            V1, V2 = space(M, 1), space(g, 1)
+            isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
+        end for (M, g) in zip(Ms[2:end], gs[2:end])
+    )
+    for (i, M) in enumerate(Ms[2:end])
+        isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
+    end
     for (i, (g, M)) in enumerate(zip(gs, Ms))
         @assert !isdual(space(M, 2))
         if i == 1
-            @tensor (Ms[i])[:] :=  M[-1 1 -3 -4 -5] * g[-2 1 -6]
+            fr = fusers[i]
+            @tensor (Ms[i])[-1; -2 -3 -4 -5] := M[-1; 1 -3 -4 2] * g[-2 1 3] * fr'[2 3; -5]
         elseif i == length(Ms)
-            @assert !isdual(space(g, 1))
-            @tensor (Ms[i])[:] :=  M[-1 1 -4 -5 -6] * g[-2 -3 1]
+            fl = fusers[i - 1]
+            @tensor (Ms[i])[-1; -2 -3 -4 -5] := fl[-1; 2 3] * M[2; 1 -3 -4 -5] * g[3 -2 1]
         else
-            @assert !isdual(space(g, 1))
-            @tensor (Ms[i])[:] := M[-1 1 -4 -5 -6] * g[-2 -3 1 -7]
-        end
-    end
-    for (i, M) in enumerate(Ms[2:end])
-        @assert !isdual(space(M, 2))
-        isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
-    end
-    # fusers to merge axes on bonds in the gate-cluster product
-    # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
-    fusers = collect(begin
-        V1, V2 = space(M, 1), space(g, 1)
-        isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
-    end for (M, g) in zip(Ms[2:end], gs[2:end]))
-    for (i, M) in enumerate(Ms)
-        if i == 1
-            @tensor (Ms[i])[-1; -2 -3 -4 -5] := M[-1 -2 -3 -4 1 2] * (fusers[i])'[1 2; -5]
-        elseif i == length(Ms)
+            fl, fr = fusers[i - 1], fusers[i]
             @tensor (Ms[i])[-1; -2 -3 -4 -5] :=
-                (fusers[i - 1])[-1; 1 2] * M[1 2 -2 -3 -4 -5]
-        else
-            @tensor (Ms[i])[-1; -2 -3 -4 -5] :=
-                (fusers[i - 1])[-1; 1 2] * M[1 2 -2 -3 -4 3 4] * (fusers[i])'[3 4; -5]
+                fl[-1; 2 3] * M[2; 1 -3 -4 4] * g[3 -2 1 5] * fr'[4 5; -5]
         end
     end
     return Ms
@@ -365,12 +358,20 @@ function get_3site_sw(peps::InfiniteWeightPEPS, row::Int, col::Int)
     Nr, Nc = size(peps)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     coords_sw = [(rm1, col), (row, col), (row, cp1)]
-    cluster = Vector{AbstractTensorMap}(undef, 3)
-    for (i, (coord, sqrtwts, perm)) in enumerate(zip(coords_sw, sqrtwts_sw, perms_sw))
-        M = peps.vertices[CartesianIndex(coord)]
-        M = _absorb_weights(M, peps.weights, coord[1], coord[2], Tuple(1:4), sqrtwts, false)
-        cluster[i] = permute(M, perm)
-    end
+    cluster = collect(
+        permute(
+            _absorb_weights(
+                peps.vertices[CartesianIndex(coord)],
+                peps.weights,
+                coord[1],
+                coord[2],
+                Tuple(1:4),
+                sqrtwts,
+                false,
+            ),
+            perm,
+        ) for (i, (coord, sqrtwts, perm)) in enumerate(zip(coords_sw, sqrtwts_sw, perms_sw))
+    )
     return cluster
 end
 
@@ -397,12 +398,20 @@ function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
     Nr, Nc = size(peps)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
-    cluster = Vector{AbstractTensorMap}(undef, 3)
-    for (i, (coord, sqrtwts, perm)) in enumerate(zip(coords_se, sqrtwts_se, perms_se))
-        M = peps.vertices[CartesianIndex(coord)]
-        M = _absorb_weights(M, peps.weights, coord[1], coord[2], Tuple(1:4), sqrtwts, false)
-        cluster[i] = permute(M, perm)
-    end
+    cluster = collect(
+        permute(
+            _absorb_weights(
+                peps.vertices[CartesianIndex(coord)],
+                peps.weights,
+                coord[1],
+                coord[2],
+                Tuple(1:4),
+                sqrtwts,
+                false,
+            ),
+            perm,
+        ) for (i, (coord, sqrtwts, perm)) in enumerate(zip(coords_se, sqrtwts_se, perms_se))
+    )
     return cluster
 end
 

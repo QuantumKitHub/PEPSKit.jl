@@ -52,8 +52,8 @@ end
 Verify the generalized left/right orthogonal condition
 """
 function verify_cluster_orth(
-    Ms::Vector{T}, wts::Vector{DiagonalTensorMap}
-) where {T<:AbstractTensorMap}
+    Ms::Vector{T1}, wts::Vector{T2}
+) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
     N = length(Ms)
     @assert length(wts) == N - 1
     lorths = fill(false, N - 1)
@@ -109,8 +109,8 @@ function inner_prod_cluster(
 end
 
 function absorb_wts_cluster!(
-    Ms::Vector{T}, wts::Vector{DiagonalTensorMap}
-) where {T<:AbstractTensorMap}
+    Ms::Vector{T1}, wts::Vector{T2}
+) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     for (i, (wt, rev)) in enumerate(zip(wts, revs))
         wtsqrt = sdiag_pow(wt, 0.5)

@@ -23,10 +23,9 @@ Vspaces = [
     for (Vphy, Vns, V) in Vspaces
         Vvirs = fill(Vns, N + 1)
         Vvirs[n + 1] = V
-        Ms1 = Vector{AbstractTensorMap}(undef, N)
-        for i in 1:N
+        Ms1 = map(1:N) do i
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
-            Ms1[i] = rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve) / nrm
+            return rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve) / nrm
         end
         revs = [isdual(space(M, 1)) for M in Ms1[2:end]]
         # no truncation
@@ -63,10 +62,9 @@ end
     for (Vphy, Vns, V) in Vspaces
         Vvirs = fill(Vns, N + 1)
         Vvirs[n + 1] = V
-        Ms1 = Vector{AbstractTensorMap}(undef, N)
-        for i in 1:N
+        Ms1 = map(1:N) do i
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
-            Ms1[i] = rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve) / nrm
+            return rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve) / nrm
         end
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
