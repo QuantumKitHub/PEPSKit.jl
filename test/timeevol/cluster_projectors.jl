@@ -87,9 +87,7 @@ end
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1//2) => 4, (1, -1//2) => 4)
     trscheme_env = truncerr(1e-12) & truncdim(16)
     wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
-    ham = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t=1.0, U=8.0)
-    # convert to real tensors
-    ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
+    ham = real(hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t=1.0, U=8.0))
     # usual 2-site simple update, and measure energy
     dts = [1e-2, 1e-2, 5e-3]
     tols = [1e-8, 1e-8, 1e-8]

@@ -6,9 +6,7 @@ Dbond, χenv, symm = 2, 32, U1Irrep
 trscheme_env = truncerr(1e-10) & truncdim(χenv)
 Nr, Nc = 2, 2
 J1, J2 = 1.0, 0.5
-ham = j1_j2(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false)
-# convert to real tensors
-ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
+ham = real(j1_j2(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false))
 
 # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
 if symm == Trivial
