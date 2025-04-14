@@ -5,14 +5,20 @@ using MPSKit: GenericMPSTensor, MPSBondTensor
 #
 
 function MPSKit.transfer_left(
-    GL::GenericMPSTensor{S,N}, O, A::GenericMPSTensor{S,N}, Ā::GenericMPSTensor{S,N}
+    GL::GenericMPSTensor{S,N},
+    O::NonTrivialLocalSandwich,
+    A::GenericMPSTensor{S,N},
+    Ā::GenericMPSTensor{S,N},
 ) where {S,N}
     Ā = twistdual(Ā, 2:N)
     return _transfer_left(GL, O, A, Ā)
 end
 
 function MPSKit.transfer_right(
-    GR::GenericMPSTensor{S,N}, O, A::GenericMPSTensor{S,N}, Ā::GenericMPSTensor{S,N}
+    GR::GenericMPSTensor{S,N},
+    O::NonTrivialLocalSandwich,
+    A::GenericMPSTensor{S,N},
+    Ā::GenericMPSTensor{S,N},
 ) where {S,N}
     Ā = twistdual(Ā, 2:N)
     return _transfer_right(GR, O, A, Ā)
@@ -120,7 +126,7 @@ end
 function MPSKit.contract_mpo_expval(
     AC::GenericMPSTensor{S,N},
     GL::GenericMPSTensor{S,N},
-    O::Union{PEPSSandwich,PEPOSandwich},
+    O::NonTrivialLocalSandwich,
     GR::GenericMPSTensor{S,N},
     ACbar::GenericMPSTensor{S,N}=AC,
 ) where {S,N}
@@ -150,7 +156,10 @@ end
 end
 
 function MPSKit.∂AC(
-    AC::GenericMPSTensor{S,N}, O, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
+    AC::GenericMPSTensor{S,N},
+    O::NonTrivialLocalSandwich,
+    GL::GenericMPSTensor{S,N},
+    GR::GenericMPSTensor{S,N},
 ) where {S,N}
     GL = twistdual(GL, 1)
     GR = twistdual(GR, numind(GR))
