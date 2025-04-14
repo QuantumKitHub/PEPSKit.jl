@@ -4,15 +4,28 @@ using MPSKit: GenericMPSTensor, MPSBondTensor
 # Environment transfer functions
 #
 
+function MPSKit.transfer_left(
+    GL::GenericMPSTensor{S,N}, O, A::GenericMPSTensor{S,N}, Ā::GenericMPSTensor{S,N}
+) where {S,N}
+    Ā = twistdual(Ā, 2:N)
+    return _transfer_left(GL, O, A, Ā)
+end
+
+function MPSKit.transfer_right(
+    GR::GenericMPSTensor{S,N}, O, A::GenericMPSTensor{S,N}, Ā::GenericMPSTensor{S,N}
+) where {S,N}
+    Ā = twistdual(Ā, 2:N)
+    return _transfer_right(GR, O, A, Ā)
+end
+
 ## PEPS
 
-function MPSKit.transfer_left(
+function _transfer_left(
     GL::GenericMPSTensor{S,3},
     O::PEPSSandwich,
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
-    Ā = twistdual(Ā, [2, 3])
     return @autoopt @tensor GL′[χ_SE D_E_above D_E_below; χ_NE] :=
         GL[χ_SW D_W_above D_W_below; χ_NW] *
         conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
@@ -21,13 +34,12 @@ function MPSKit.transfer_left(
         A[χ_NW D_N_above D_N_below; χ_NE]
 end
 
-function MPSKit.transfer_right(
+function _transfer_right(
     GR::GenericMPSTensor{S,3},
     O::PEPSSandwich,
     A::GenericMPSTensor{S,3},
     Ā::GenericMPSTensor{S,3},
 ) where {S}
-    Ā = twistdual(Ā, [2, 3])
     return @autoopt @tensor GR′[χ_NW D_W_above D_W_below; χ_SW] :=
         GR[χ_NE D_E_above D_E_below; χ_SE] *
         conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
@@ -38,7 +50,7 @@ end
 
 ## PEPO
 
-@generated function MPSKit.transfer_left(
+@generated function _transfer_left(
     GL::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
@@ -67,7 +79,7 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $GL´_e := $rhs))
 end
 
-@generated function MPSKit.transfer_right(
+@generated function _transfer_right(
     GR::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
@@ -137,16 +149,22 @@ end
     return macroexpand(@__MODULE__, :(return @tensor $C´_e := $GL_e * $C_e * $GR_e))
 end
 
+function MPSKit.∂AC(
+    AC::GenericMPSTensor{S,N}, O, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
+) where {S,N}
+    GL = twistdual(GL, 1)
+    GR = twistdual(GR, numind(GR))
+    return _∂AC(AC, O, GL, GR)
+end
+
 ## PEPS
 
-function MPSKit.∂AC(
+function _∂AC(
     AC::GenericMPSTensor{S,3},
     O::PEPSSandwich,
     GL::GenericMPSTensor{S,3},
     GR::GenericMPSTensor{S,3},
 ) where {S}
-    GL = twistdual(GL, 1)
-    GR = twistdual(GR, numind(GR))
     return @autoopt @tensor AC′[χ_SW D_S_above D_S_below; χ_SE] :=
         GL[χ_SW D_W_above D_W_below; χ_NW] *
         AC[χ_NW D_N_above D_N_below; χ_NE] *
@@ -173,7 +191,7 @@ end
 
 ## PEPO
 
-@generated function MPSKit.∂AC(
+@generated function _∂AC(
     AC::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     GL::GenericMPSTensor{S,N},
