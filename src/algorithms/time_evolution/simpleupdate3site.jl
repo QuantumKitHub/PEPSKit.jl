@@ -180,7 +180,7 @@ end
 """
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 """
-function _get_allRLs(Ms::Vector{T}) where {T<:AbstractTensorMap}
+function _get_allRLs(Ms::Vector{T}) where {T<:PEPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     Rs = Vector{AbstractTensorMap}(undef, N - 1)
@@ -253,7 +253,7 @@ Find projectors to truncate internal bonds of the cluster `Ms`
 """
 function _cluster_truncate!(
     Ms::Vector{T}, trunc::TensorKit.TruncationScheme, revs::Vector{Bool}
-) where {T<:AbstractTensorMap}
+) where {T<:PEPSTensor}
     Rs, Ls = _get_allRLs(Ms)
     Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trunc, revs)
     # apply projectors
@@ -267,7 +267,7 @@ end
 
 function _apply_gatempo!(
     Ms::Vector{T1}, gs::Vector{T2}
-) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
+) where {T1<:PEPSTensor,T2<:AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert all(!isdual(space(g, 1)) for g in gs[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
@@ -319,7 +319,7 @@ In the cluster, the axes of each PEPSTensor are reordered as
 """
 function apply_gatempo!(
     Ms::Vector{T1}, gs::Vector{T2}; trunc::TensorKit.TruncationScheme
-) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
+) where {T1<:PEPSTensor,T2<:AbstractTensorMap}
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     _apply_gatempo!(Ms, gs)
