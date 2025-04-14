@@ -39,7 +39,7 @@ for (dt, tol) in zip(dts, tols)
 end
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
-normalize!(peps_, Inf)
+normalize!.(peps_.A, Inf)
 env = CTMRGEnv(rand, Float64, peps_, Espace)
 env, = leading_boundary(
     env,

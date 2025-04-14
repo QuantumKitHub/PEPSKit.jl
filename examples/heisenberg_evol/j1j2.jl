@@ -40,7 +40,7 @@ for (n, (dt, tol)) in enumerate(zip(dts, tols))
 end
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
-normalize!(peps_, Inf)
+normalize!.(peps_.A, Inf)
 Random.seed!(100)
 env = CTMRGEnv(rand, Float64, peps_, Espace)
 ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=3, trscheme=trscheme_env)

@@ -101,7 +101,7 @@ end
         wpeps = result[1]
     end
     peps = InfinitePEPS(wpeps)
-    normalize!(peps)
+    normalize!.(peps.A, Inf)
     env = CTMRGEnv(rand, Float64, peps, Espace)
     env, = leading_boundary(env, peps; tol=ctmrg_tol, trscheme=trscheme_env)
     e_site = cost_function(peps, env, ham) / (Nr * Nc)
@@ -116,7 +116,7 @@ end
         wpeps = result[1]
     end
     peps = InfinitePEPS(wpeps)
-    normalize!(peps)
+    normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; tol=ctmrg_tol, trscheme=trscheme_env)
     e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
     @info "3-site simple update energy = $e_site2"
