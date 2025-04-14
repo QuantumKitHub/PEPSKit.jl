@@ -106,16 +106,16 @@ Now, the procedure is the same as before: We compute the norm once using VUMPS, 
 
 # ╔═╡ 1ea74726-b2b5-4519-9768-b1be95aee454
 begin
-	mps₀_2x2 = initializeMPS(transfer_2x2, fill(ComplexSpace(20), 2, 2))
-	mps_2x2, = leading_boundary(mps₀_2x2, transfer_2x2, VUMPS(; verbosity=2))
-	norm_2x2_vumps = abs(prod(expectation_value(mps_2x2, transfer_2x2)))
+    mps₀_2x2 = initializeMPS(transfer_2x2, fill(ComplexSpace(20), 2, 2))
+    mps_2x2, = leading_boundary(mps₀_2x2, transfer_2x2, VUMPS(; verbosity=2))
+    norm_2x2_vumps = abs(prod(expectation_value(mps_2x2, transfer_2x2)))
 
-	env_ctmrg_2x2, = leading_boundary(
-	    CTMRGEnv(peps₀_2x2, ComplexSpace(20)), peps₀_2x2; verbosity=2 
-	)
-	norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
-	
-	@show abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps
+    env_ctmrg_2x2, = leading_boundary(
+        CTMRGEnv(peps₀_2x2, ComplexSpace(20)), peps₀_2x2; verbosity=2
+    )
+    norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
+
+    @show abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps
 end
 
 # ╔═╡ eb529a9d-0d31-4c50-8a1d-135c94dccb35
@@ -138,13 +138,7 @@ function ising_pepo(β; unitcell=(1, 1, 1))
     O[1, 1, 1, 1, 1, 1] = 1
     O[2, 2, 2, 2, 2, 2] = 1
     @tensor o[-1 -2; -3 -4 -5 -6] :=
-        O[1 2; 3 4 5 6] * 
-		q[-1; 1] *
-		q[-2; 2] *
-		q[-3; 3] *
-		q[-4; 4] *
-		q[-5; 5] *
-		q[-6; 6]
+        O[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
     O = TensorMap(o, ℂ^2 ⊗ (ℂ^2)' ← ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')
 
     return InfinitePEPO(O; unitcell)
@@ -168,9 +162,9 @@ As before, we converge the boundary MPS using VUMPS and then compute the expecta
 
 # ╔═╡ 9e632086-1913-11f0-0b0c-3344cc3a50e4
 begin
-	mps₀_pepo = initializeMPS(transfer_pepo, [ComplexSpace(20)])
-	mps_pepo, = leading_boundary(mps₀_pepo, transfer_pepo, VUMPS(; verbosity=2))
-	@show abs(prod(expectation_value(mps_pepo, transfer_pepo)))
+    mps₀_pepo = initializeMPS(transfer_pepo, [ComplexSpace(20)])
+    mps_pepo, = leading_boundary(mps₀_pepo, transfer_pepo, VUMPS(; verbosity=2))
+    @show abs(prod(expectation_value(mps_pepo, transfer_pepo)))
 end
 
 # ╔═╡ adae68cb-1d76-430f-b5b5-3bdf5834823f

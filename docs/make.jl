@@ -44,7 +44,9 @@ mathengine = MathJax3(
 
 examples = [
     "Optimizing the 2D Heisenberg model" => "examples/heisenberg.md",
-    "Boundary MPS contractions using VUMPS and PEPOs" => "examples/boundary_mps.md"
+    "Boundary MPS contractions using VUMPS and PEPOs" => "examples/boundary_mps.md",
+    "Optimizing the U(1)-symmetric Bose-Hubbard model" => "examples/bose_hubbard.md",
+    "Néel order in the U(1)-symmetric XXZ model" => "examples/xxz.md",
 ]
 
 makedocs(;

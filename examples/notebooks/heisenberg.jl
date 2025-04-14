@@ -38,7 +38,9 @@ We're going to need only two packages: `TensorKit`, since we use that for all th
 
 # ╔═╡ d42f7ddd-eb20-4441-b7e7-38b1d4996084
 md"""
-To create the sublattice rotated Heisenberg Hamiltonian on an infinite square lattice, we use:
+## Defining the Heisenberg Hamiltonian
+
+To create the sublattice rotated Heisenberg Hamiltonian on an infinite square lattice, we use the `heisenberg_XYZ` method from [MPSKitModels](https://quantumkithub.github.io/MPSKitModels.jl/dev/) which is redefined for the `InfiniteSquare` and reexported in PEPSKit:
 """
 
 # ╔═╡ 758d7f1a-b62f-400d-bf71-25410a7ce9c5
@@ -46,6 +48,8 @@ H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1);
 
 # ╔═╡ 945f9d02-322b-47f0-85b2-f229e4d8c4d9
 md"""
+## Setting up the algorithms and initial guesses
+
 Next, we set the simulation parameters. During optimization, the PEPS will be contracted using CTMRG and the PEPS gradient will be computed by differentiating through the CTMRG routine using AD. Since the algorithmic stack that implements this is rather elaborate, the amount of settings one can configure is also quite large.
 To reduce this complexity, PEPSKit defaults to (presumably) reasonable settings which also dynamically adapts to the user-specified parameters.
 
@@ -119,12 +123,14 @@ info_ctmrg.truncation_error
 
 # ╔═╡ 72a1eb41-30f2-4844-a934-eede6c3daf83
 md"""
-Finally, we can start the optimization by calling `fixedpoint` on `H` with our settings for the boundary (CTMRG) algorithm and the optimizer:
+## Ground state search
+
+Finally, we can start the optimization by calling `fixedpoint` on `H` with our settings for the boundary (CTMRG) algorithm and the optimizer. This might take a while (especially the precompilation of AD code in this case):
 """
 
 # ╔═╡ cd246b3e-3172-4f22-ad67-9d3d5a5c0464
 peps, env, E, info_opt = fixedpoint(
-	H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
+    H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
 );
 
 # ╔═╡ 9647daa9-c730-4185-bd11-6a54a0ded025
@@ -155,6 +161,8 @@ A more reasonable comparison would be against another finite bond dimension PEPS
 
 # ╔═╡ 7d743eb9-7969-486c-8d3b-f9b7cc78ba67
 md"""
+## Compute the correlation lengths and transfer matrix spectra
+
 In practice, in order to obtain an accurate and variational energy estimate, one would need to compute multiple energies at different environment dimensions and extrapolate in, e.g., the correlation length or the second gap of the transfer matrix spectrum. For that, we would need the `correlation_length` function, which computes the horizontal and vertical correlation lengths and transfer matrix spectra for all unit cell coordinates:
 """
 
@@ -169,6 +177,8 @@ In practice, in order to obtain an accurate and variational energy estimate, one
 
 # ╔═╡ 585f04e3-b2ad-441b-aef8-f5e46e351335
 md"""
+## Computing observables
+
 As a last thing, we want to see how we can compute expectation values of observables, given the optimized PEPS and its CTMRG environment. To compute, e.g., the magnetization, we first need to define the observable:
 """
 
@@ -955,9 +965,9 @@ version = "5.11.0+0"
 # ╠═ba0e9dc8-1641-4c85-896d-2d335094ecc2
 # ╟─d463e7d9-499f-4689-bf04-260cef0af6ce
 # ╠═7da39574-7c05-492e-abf9-10b9e8f1dda9
-# ╟─d42f7ddd-eb20-4441-b7e7-38b1d4996084
+# ╠═d42f7ddd-eb20-4441-b7e7-38b1d4996084
 # ╠═758d7f1a-b62f-400d-bf71-25410a7ce9c5
-# ╟─945f9d02-322b-47f0-85b2-f229e4d8c4d9
+# ╠═945f9d02-322b-47f0-85b2-f229e4d8c4d9
 # ╠═f87c548e-a8ff-4b21-b9a0-5ae06c1b7adb
 # ╠═b40e0dbd-7136-4211-863d-3f489606a86c
 # ╟─2e7b56ff-df31-48a3-91e9-a621bb545baa
@@ -975,19 +985,19 @@ version = "5.11.0+0"
 # ╠═d74c45d4-31af-4e0a-8401-7e0003f90d99
 # ╟─c8aa2838-8d6d-44b3-9c2a-302ab42aa1f9
 # ╠═4c55e732-88e4-4327-9e43-ac40abd6bb63
-# ╟─72a1eb41-30f2-4844-a934-eede6c3daf83
+# ╠═72a1eb41-30f2-4844-a934-eede6c3daf83
 # ╠═cd246b3e-3172-4f22-ad67-9d3d5a5c0464
 # ╟─9647daa9-c730-4185-bd11-6a54a0ded025
 # ╠═c467848b-20ff-454e-b15b-00345ce6f29c
 # ╠═c7edf6a8-f743-47dc-bba4-bd9522bb6664
-# ╟─96b429c0-25fe-411d-a016-7677819357af
+# ╠═96b429c0-25fe-411d-a016-7677819357af
 # ╠═33174988-02f2-487f-a635-e40d35c120af
 # ╟─d57df214-05c1-428a-a45b-2876a582fb4f
-# ╟─7d743eb9-7969-486c-8d3b-f9b7cc78ba67
+# ╠═7d743eb9-7969-486c-8d3b-f9b7cc78ba67
 # ╠═e1e3388e-4e0d-44ed-a7e0-1b04627406f1
 # ╠═65b8dd1c-e09c-450b-8fa6-9718de1d79da
 # ╠═e032acf0-06dd-4b32-b41f-ea007aa07dfb
-# ╟─585f04e3-b2ad-441b-aef8-f5e46e351335
+# ╠═585f04e3-b2ad-441b-aef8-f5e46e351335
 # ╠═b62b44a2-8fb1-4d72-9657-ab68b91c5171
 # ╟─72f3e01f-f2d7-4e1f-8241-331b3f0d8789
 # ╠═8d31b900-5841-4979-b2db-0abbadcc347c

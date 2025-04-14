@@ -61,4 +61,4 @@ Pages = ["man/states.md", "man/environments.md", "man/operators.md", "man/peps_o
 Depth = 1
 ```
 
-Additionally, we provide a list of commented example notebooks in the [Examples](@ref examples_index) section.
+Additionally, we provide a list of commented example notebooks in the Examples section.

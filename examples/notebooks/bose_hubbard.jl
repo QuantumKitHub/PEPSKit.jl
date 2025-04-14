@@ -141,7 +141,7 @@ We can compare our PEPS result to the energy obtained using a cylinder-MPS calcu
 """
 
 # ╔═╡ db097785-1f22-4367-a83d-6addf8f1ad84
-E_ref -0.273284888;
+E_ref - 0.273284888;
 
 # ╔═╡ ca4c87e4-194e-11f0-0793-357226f85565
 @show (E - E_ref) / E_ref
