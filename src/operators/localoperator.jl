@@ -96,6 +96,15 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
     return LocalOperator(lattice, terms...)
 end
 
+# Real and imaginary part
+# -----------------------
+function Base.real(O::LocalOperator)
+    return LocalOperator(O.lattice, (ind => real(op) for (ind, op) in O.terms)...)
+end
+function Base.imag(O::LocalOperator)
+    return LocalOperator(O.lattice, (ind => imag(op) for (ind, op) in O.terms)...)
+end
+
 # Linear Algebra
 # --------------
 function Base.:*(α::Number, O::LocalOperator)
