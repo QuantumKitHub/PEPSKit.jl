@@ -119,9 +119,10 @@ The optimization parameters can be supplied via the keyword arguments or directl
 * `tol::Real=$(Defaults.optimizer_tol)` : Overall tolerance for gradient norm convergence of the optimizer. Sets related tolerance such as the boundary and boundary-gradient tolerances to sensible defaults unless they are explictly specified.
 * `verbosity::Int=1` : Overall output information verbosity level, should be one of the following:
     0. Suppress all output
-    1. Optimizer output and warnings
-    2. Additionally print boundary information
-    3. All information including AD debug outputs
+    1. Only print warnings
+    2. Initialization and convergence info
+    3. Iteration info
+    4. Debug info including AD outputs
 * `reuse_env::Bool=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing` : Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
 * `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
