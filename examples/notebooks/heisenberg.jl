@@ -12,7 +12,7 @@ using TensorKit, PEPSKit
 
 # ╔═╡ ff6fa2f1-841d-42c6-acd9-b5f4cf6b7c76
 md"""
-# [Optimizing the 2D Heisenberg model](@id examples_heisenberg)
+# Optimizing the 2D Heisenberg model
 
 In this example we want to provide a basic rundown of PEPSKit's optimization workflow for PEPS. To that end, we will consider the two-dimensional Heisenberg model on a square lattice
 
@@ -115,7 +115,7 @@ Besides the converged environment, `leading_boundary` also returns a `NamedTuple
 """
 
 # ╔═╡ 4c55e732-88e4-4327-9e43-ac40abd6bb63
-@show info_ctmrg.truncation_error;
+info_ctmrg.truncation_error
 
 # ╔═╡ 72a1eb41-30f2-4844-a934-eede6c3daf83
 md"""
@@ -133,7 +133,10 @@ Note that `fixedpoint` returns the final optimized PEPS, the last converged envi
 """
 
 # ╔═╡ c467848b-20ff-454e-b15b-00345ce6f29c
-@show info_opt.fg_evaluations info_opt.gradnorms[1:10:end];
+@show info_opt.fg_evaluations
+
+# ╔═╡ c7edf6a8-f743-47dc-bba4-bd9522bb6664
+@show info_opt.gradnorms[1:10:end]
 
 # ╔═╡ 96b429c0-25fe-411d-a016-7677819357af
 md"""
@@ -141,7 +144,7 @@ Let's now compare the optimized energy against an accurate Quantum Monte Carlo e
 """
 
 # ╔═╡ 33174988-02f2-487f-a635-e40d35c120af
-@show E;
+@show E
 
 # ╔═╡ d57df214-05c1-428a-a45b-2876a582fb4f
 md"""
@@ -159,7 +162,10 @@ In practice, in order to obtain an accurate and variational energy estimate, one
 ξ_h, ξ_v, λ_h, λ_v = correlation_length(peps, env);
 
 # ╔═╡ 65b8dd1c-e09c-450b-8fa6-9718de1d79da
-@show ξ_h ξ_v;
+@show ξ_h
+
+# ╔═╡ e032acf0-06dd-4b32-b41f-ea007aa07dfb
+@show ξ_v
 
 # ╔═╡ 585f04e3-b2ad-441b-aef8-f5e46e351335
 md"""
@@ -183,7 +189,7 @@ To evaluate the expecation value, we call:
 """
 
 # ╔═╡ ff85c322-f16c-41e2-823a-95f194e6ad72
-@show expectation_value(peps, M, env);
+@show expectation_value(peps, M, env)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -973,12 +979,14 @@ version = "5.11.0+0"
 # ╠═cd246b3e-3172-4f22-ad67-9d3d5a5c0464
 # ╟─9647daa9-c730-4185-bd11-6a54a0ded025
 # ╠═c467848b-20ff-454e-b15b-00345ce6f29c
+# ╠═c7edf6a8-f743-47dc-bba4-bd9522bb6664
 # ╟─96b429c0-25fe-411d-a016-7677819357af
 # ╠═33174988-02f2-487f-a635-e40d35c120af
 # ╟─d57df214-05c1-428a-a45b-2876a582fb4f
 # ╟─7d743eb9-7969-486c-8d3b-f9b7cc78ba67
 # ╠═e1e3388e-4e0d-44ed-a7e0-1b04627406f1
 # ╠═65b8dd1c-e09c-450b-8fa6-9718de1d79da
+# ╠═e032acf0-06dd-4b32-b41f-ea007aa07dfb
 # ╟─585f04e3-b2ad-441b-aef8-f5e46e351335
 # ╠═b62b44a2-8fb1-4d72-9657-ab68b91c5171
 # ╟─72f3e01f-f2d7-4e1f-8241-331b3f0d8789

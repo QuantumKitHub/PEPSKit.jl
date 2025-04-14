@@ -42,7 +42,10 @@ mathengine = MathJax3(
     ),
 )
 
-examples = ["Notebook Example" => "examples/notebook.md"]
+examples = [
+    "Examples" => "examples/index.md",
+    "Optimizing the 2D Heisenberg model" => "examples/heisenberg.md",
+]
 
 makedocs(;
     modules=[PEPSKit],

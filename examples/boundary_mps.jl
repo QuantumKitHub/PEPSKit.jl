@@ -1,10 +1,7 @@
 using Random
-using PEPSKit
+Random.seed!(29384293742893)
 using TensorKit
-using MPSKit
-using LinearAlgebra
-
-include("ising_pepo.jl")
+using PEPSKit, MPSKit
 
 # This example demonstrates some boundary-MPS methods for working with 2D projected
 # entangled-pair states and operators.
@@ -12,7 +9,6 @@ include("ising_pepo.jl")
 ## Computing a PEPS norm
 
 # We start by initializing a random initial infinite PEPS
-Random.seed!(29384293742893)
 peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
 
 # To compute its norm, we start by constructing the transfer operator corresponding to
@@ -72,6 +68,21 @@ N2´ = abs(norm(peps2, ctm2))
 # As an example, we can consider the overlap of the PEPO correponding to the partition
 # function of 3D classical ising model with our random PEPS from before and evaluate
 # <peps|O|peps>.
+
+function ising_pepo(beta; unitcell=(1, 1, 1))
+    t = ComplexF64[exp(beta) exp(-beta); exp(-beta) exp(beta)]
+    q = sqrt(t)
+
+    O = zeros(2, 2, 2, 2, 2, 2)
+    O[1, 1, 1, 1, 1, 1] = 1
+    O[2, 2, 2, 2, 2, 2] = 1
+    @tensor o[-1 -2; -3 -4 -5 -6] :=
+        O[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
+
+    O = TensorMap(o, ℂ^2 ⊗ (ℂ^2)' ← ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')
+
+    return InfinitePEPO(O; unitcell)
+end
 
 pepo = ising_pepo(1)
 T3 = InfiniteTransferPEPO(peps, pepo, 1, 1)

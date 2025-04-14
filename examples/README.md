@@ -17,7 +17,7 @@ By default, examples that haven't changed since the last build are not re-run.
 
 Note that Pluto uses its own package management system, which will use the latest registered version of this package.
 This ensures the examples are always reproducible by themselves.
-Howeer, this also means that when registering a new version of this package, the next step is to re-run the examples to ensure that they are up-to-date, and build a new version of the documentation.
+However, this also means that when registering a new version of this package, the next step is to re-run the examples to ensure that they are up-to-date, and build a new version of the documentation.
 
 Alternatively, we can decide to manually keep a local environment for the examples by using `examples/Project.toml` and including the following block:
 
