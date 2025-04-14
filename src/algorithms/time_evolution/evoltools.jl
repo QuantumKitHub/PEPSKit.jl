@@ -144,10 +144,10 @@ in which the axes are ordered as
 function gate_to_mpo3(
     gate::AbstractTensorMap{T,S,3,3}, trunc=truncbelow(MPSKit.Defaults.tol)
 ) where {T<:Number,S<:ElementarySpace}
-    Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)  
-    g1 = removeunit(Os[1], 1)  
-    g2 = Os[2]  
-    g3 = removeunit(Os[3], 4)  
+    Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
+    g1 = removeunit(Os[1], 1)
+    g2 = Os[2]
+    g3 = removeunit(Os[3], 4)
     return [g1, g2, g3]
 end
 
