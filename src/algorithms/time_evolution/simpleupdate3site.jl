@@ -362,7 +362,7 @@ function get_3site_sw(peps::InfiniteWeightPEPS, row::Int, col::Int)
                 false,
             ),
             perm,
-        ) for (i, (coord, sqrtwts, perm)) in enumerate(zip(coords_sw, sqrtwts_sw, perms_sw))
+        ) for (coord, sqrtwts, perm) in zip(coords_sw, sqrtwts_sw, perms_sw)
     )
     return cluster
 end
@@ -402,7 +402,7 @@ function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
                 false,
             ),
             perm,
-        ) for (i, (coord, sqrtwts, perm)) in enumerate(zip(coords_se, sqrtwts_se, perms_se))
+        ) for (coord, sqrtwts, perm) in zip(coords_se, sqrtwts_se, perms_se)
     )
     return cluster
 end
