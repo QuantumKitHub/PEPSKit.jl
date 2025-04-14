@@ -1,1 +1,2 @@
-For now, refer to the [examples folder](https://github.com/QuantumKitHub/PEPSKit.jl/tree/master/examples) on GitHub.
+# [Examples](@id examples_index)
+

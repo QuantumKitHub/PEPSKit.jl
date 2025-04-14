@@ -12,7 +12,7 @@ using TensorKit, PEPSKit
 
 # ╔═╡ ff6fa2f1-841d-42c6-acd9-b5f4cf6b7c76
 md"""
-# Optimizing the 2D Heisenberg model
+# [Optimizing the 2D Heisenberg model](@id examples_heisenberg)
 
 In this example we want to provide a basic rundown of PEPSKit's optimization workflow for PEPS. To that end, we will consider the two-dimensional Heisenberg model on a square lattice
 
@@ -124,7 +124,7 @@ Finally, we can start the optimization by calling `fixedpoint` on `H` with our s
 
 # ╔═╡ cd246b3e-3172-4f22-ad67-9d3d5a5c0464
 peps, env, E, info_opt = fixedpoint(
-    H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
+	H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
 );
 
 # ╔═╡ 9647daa9-c730-4185-bd11-6a54a0ded025
