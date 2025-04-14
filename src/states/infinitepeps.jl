@@ -191,13 +191,11 @@ Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
 ## Tensor-wise normalization
 
 function LinearAlgebra.normalize!(peps::InfinitePEPS, p::Real=2)
-    for idx in CartesianIndices(peps.A)
-        peps.A[idx] /= LinearAlgebra.norm(peps.A[idx], p)
-    end
+    normalize!.(unitcell(peps), p)
     return peps
 end
 function LinearAlgebra.normalize(peps::InfinitePEPS, p::Real=2)
-    return LinearAlgebra.normalize!(deepcopy(peps))
+    return LinearAlgebra.normalize!(deepcopy(peps), p)
 end
 
 ## OptimKit optimization compatibility
