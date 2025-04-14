@@ -219,16 +219,8 @@ function _proj_from_RL(
     sinv = PEPSKit.sdiag_pow(s, -1)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
-        V = space(Pb, 1)
-        f = isomorphism(flip(V), V)
-        f2 = twist(f, 1)
-        # Pa ← f†) → (f ← s ← f†) → (f ← Pb
-        @tensor begin
-            Pa[-1; -2] := Pa[-1; 1] * f'[1; -2]
-            Pb[-1; -2] := f2[-1; 1] * Pb[1; -2]
-            s[-1; -2] := f2[-1; 1] * s[1; 2] * f'[2; -2]
-        end
-        s = DiagonalTensorMap(permute(s, ((2,), (1,))))
+        Pa, Pb = flip(Pa, 2), flip(Pb, 1)
+        s = permute(DiagonalTensorMap(flip(s, (1, 2))), ((2,), (1,)))
         @assert all(s.data .>= 0.0)
     end
     return Pa, s, Pb, ϵ
