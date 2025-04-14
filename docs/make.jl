@@ -43,8 +43,8 @@ mathengine = MathJax3(
 )
 
 examples = [
-    "Examples" => "examples/index.md",
     "Optimizing the 2D Heisenberg model" => "examples/heisenberg.md",
+    "Boundary MPS contractions using VUMPS and PEPOs" => "examples/boundary_mps.md"
 ]
 
 makedocs(;
