@@ -99,10 +99,10 @@ end
 # Real and imaginary part
 # -----------------------
 function Base.real(O::LocalOperator)
-    return LocalOperator(O.lattice, Tuple(ind => real(op) for (ind, op) in O.terms)...)
+    return LocalOperator(O.lattice, (ind => real(op) for (ind, op) in O.terms)...)
 end
 function Base.imag(O::LocalOperator)
-    return LocalOperator(O.lattice, Tuple(ind => imag(op) for (ind, op) in O.terms)...)
+    return LocalOperator(O.lattice, (ind => imag(op) for (ind, op) in O.terms)...)
 end
 
 # Linear Algebra
