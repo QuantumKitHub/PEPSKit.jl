@@ -97,7 +97,17 @@ virtualspace(t::PEPSTensor, dir) = space(t, dir + 1)
 
 # not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
 # ie type piracy
-function mpotensor(top::PEPSTensor, bot::PEPSTensor=top)
+mpotensor(top::PEPSTensor) = mpotensor((top, top))
+function mpotensor((top, bot)::PEPSSandwich)
+    @assert virtualspace(top, NORTH) == dual(virtualspace(top, SOUTH)) &&
+        virtualspace(bot, NORTH) == dual(virtualspace(bot, SOUTH)) &&
+        virtualspace(top, EAST) == dual(virtualspace(top, WEST)) &&
+        virtualspace(bot, EAST) == dual(virtualspace(bot, WEST)) &&
+        isdual(virtualspace(top, NORTH)) &&
+        isdual(virtualspace(bot, NORTH)) &&
+        isdual(virtualspace(top, EAST)) &&
+        isdual(virtualspace(bot, EAST)) "Method not yet implemented for given virtual spaces"
+
     F_west = isomorphism(
         storagetype(top),
         fuse(virtualspace(top, WEST), virtualspace(bot, WEST)'),
