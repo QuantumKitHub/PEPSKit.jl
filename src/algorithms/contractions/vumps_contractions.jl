@@ -6,7 +6,7 @@ using MPSKit: GenericMPSTensor, MPSBondTensor
 
 function MPSKit.transfer_left(
     GL::GenericMPSTensor{S,N},
-    O::NonTrivialLocalSandwich,
+    O::Union{PEPSSandwich,PEPOSandwich},
     A::GenericMPSTensor{S,N},
     Ā::GenericMPSTensor{S,N},
 ) where {S,N}
@@ -16,7 +16,7 @@ end
 
 function MPSKit.transfer_right(
     GR::GenericMPSTensor{S,N},
-    O::NonTrivialLocalSandwich,
+    O::Union{PEPSSandwich,PEPOSandwich},
     A::GenericMPSTensor{S,N},
     Ā::GenericMPSTensor{S,N},
 ) where {S,N}
@@ -126,7 +126,7 @@ end
 function MPSKit.contract_mpo_expval(
     AC::GenericMPSTensor{S,N},
     GL::GenericMPSTensor{S,N},
-    O::NonTrivialLocalSandwich,
+    O::Union{PEPSSandwich,PEPOSandwich},
     GR::GenericMPSTensor{S,N},
     ACbar::GenericMPSTensor{S,N}=AC,
 ) where {S,N}
@@ -157,7 +157,7 @@ end
 
 function MPSKit.∂AC(
     AC::GenericMPSTensor{S,N},
-    O::NonTrivialLocalSandwich,
+    O::Union{PEPSSandwich,PEPOSandwich},
     GL::GenericMPSTensor{S,N},
     GR::GenericMPSTensor{S,N},
 ) where {S,N}

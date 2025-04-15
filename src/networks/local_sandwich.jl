@@ -71,9 +71,3 @@ function virtualspace(O::PEPOSandwich, dir)
         virtualspace(bra(O), dir)',
     ])
 end
-
-## LocalSandwich type union
-
-# purely for type-piracy-avoiding dispatch purposes
-
-const NonTrivialLocalSandwich = Union{PEPOSandwich,PEPSSandwich}
