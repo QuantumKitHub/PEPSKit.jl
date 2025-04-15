@@ -8,6 +8,7 @@ using LinearAlgebra
 Random.seed!(29384293742893)
 
 const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false))
+
 @testset "(1, 1) PEPS" begin
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
 
@@ -32,6 +33,22 @@ end
     N = abs(prod(expectation_value(mps, T)))
 
     ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
+    N´ = abs(norm(psi, ctm))
+
+    @test N ≈ N´ rtol = 1e-2
+end
+
+@testset "Fermionic PEPS" begin
+    D = Vect[fℤ₂](0 => 1, 1 => 1)
+    d = Vect[fℤ₂](0 => 1, 1 => 1)
+    χ = Vect[fℤ₂](0 => 10, 1 => 10)
+    psi = InfinitePEPS(D, d; unitcell=(1, 1))
+    T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
+    mps = PEPSKit.initializeMPS(T, [χ])
+    mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
+    N = abs(prod(expectation_value(mps, T)))
+
+    ctm, = leading_boundary(CTMRGEnv(psi, χ), psi)
     N´ = abs(norm(psi, ctm))
 
     @test N ≈ N´ rtol = 1e-2
