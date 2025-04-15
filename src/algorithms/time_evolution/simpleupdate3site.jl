@@ -183,12 +183,17 @@ Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 function _get_allRLs(Ms::Vector{T}) where {T<:PEPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
-    Rs = Vector{AbstractTensorMap}(undef, N - 1)
-    Ls = Vector{AbstractTensorMap}(undef, N - 1)
-    for n in 1:(N - 1)
+    # get the first R and the last L
+    R_first = qr_through(nothing, Ms[1]; normalize=true)[2]
+    L_last = lq_through(Ms[N], nothing; normalize=true)[1]
+    Rs = Vector{typeof(R_first)}(undef, N - 1)
+    Ls = Vector{typeof(L_last)}(undef, N - 1)
+    Rs[1], Ls[end] = R_first, L_last
+    # get remaining R, L matrices
+    for n in 2:(N - 1)
         m = N - n + 1
-        _, Rs[n] = qr_through((n == 1) ? nothing : Rs[n - 1], Ms[n]; normalize=true)
-        Ls[m - 1], _ = lq_through(Ms[m], (m == N) ? nothing : Ls[m]; normalize=true)
+        _, Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize=true)
+        Ls[m - 1], _ = lq_through(Ms[m], Ls[m]; normalize=true)
     end
     return Rs, Ls
 end
@@ -453,11 +458,13 @@ function _su3site_cluster!(
 end
 
 """
-    su3site_iter(gatempos::NamedTuple, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
+    su3site_iter(gatempos::NamedTuple{(:sw, :se)}, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
 
 One round of 3-site simple update for Hamiltonian with 2nd neighbor terms. 
 """
-function su3site_iter(gatempos::NamedTuple, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
+function su3site_iter(
+    gatempos::NamedTuple{(:sw, :se)}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
+)
     peps2 = deepcopy(peps)
     for cluster in (:sw, :se), site in CartesianIndices(peps2.vertices)
         r, c = Tuple(site)
