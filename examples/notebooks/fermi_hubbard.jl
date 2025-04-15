@@ -4,149 +4,144 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ ef170a00-e0bf-4d5e-9ee3-ed2ce0061a24
+# ╔═╡ e37d4924-e7ec-47b6-abd2-729e3736ca0a
 using Random
 
-# ╔═╡ 69f9cf1d-28b0-4357-bd2a-4894993e3be8
+# ╔═╡ ca35aca6-fd69-4a08-9cde-34e2570e1cca
 using TensorKit, PEPSKit
 
-# ╔═╡ 10cc8e99-035d-4240-9b7b-7ab500a81783
+# ╔═╡ 88782296-e160-4633-bca9-e3becc1012a2
 using MPSKit: add_physical_charge
 
-# ╔═╡ 0cfaf704-76fd-4e3b-8f77-c6e3d0e8af51
+# ╔═╡ 596482a0-61c1-45d2-9c3b-d65f78c8b280
 md"""
-# Optimizing the ``U(1)``-symmetric Bose-Hubbard model
+# Fermi-Hubbard model with ``f\mathbb{Z}_2 \boxtimes U(1)`` symmetry, at large ``U`` and half-filling
 
-This example demonstrates the simulation of the two-dimensional Bose-Hubbard model. In particular, the point will be to showcase the use of internal symmetries and finite particle densities in PEPS ground state searches. As we will see, incorporating symmetries into the simulation consists of initializing a symmetric Hamiltonian, PEPS state and CTM environment - made possible through TensorKit.
+In this example, we will demonstrate how to handle fermionic PEPS tensors and how to optimize them. To that end, we consider the two-dimensional Hubbard model
 
-But first let's seed the RNG and import the required modules:
+```math
+H = -t \sum_{\langle i,j \rangle} \sum_{\sigma} \left( c_{i,\sigma}^+ c_{j,\sigma}^- + c_{i,\sigma}^- c_{j,\sigma}^+ \right) + U \sum_i n_{i,\uparrow}n_{i,\downarrow} - \mu \sum_i n_i
+```
+
+where ``\sigma \in \{\uparrow,\downarrow\}`` and ``n_{i,\sigma} = c_{i,\sigma}^+ c_{i,\sigma}^-`` is the fermionic number operator. As in previous examples, using fermionic degrees of freedom is a matter of creating tensors with the right symmetry sectors - the rest of the simulation workflow remains the same.
+
+First though, we make the example deterministic by seeding the RNG, and we make our imports:
 """
 
-# ╔═╡ cc5c1119-5976-4a24-bfba-50fc20719cf5
-Random.seed!(2928528935);
+# ╔═╡ f6caf5ba-2777-46bb-9795-29f960894d6c
+Random.seed!(2928528937);
 
-# ╔═╡ 67e1786e-af9a-4fe7-a3a5-642a1004f036
+# ╔═╡ d8403224-d288-4ddc-b587-2c3d4e824090
 md"""
-## Defining the model
+## Defining the fermionic Hamiltonian
 
-We will construct the Bose-Hubbard model Hamiltonian through the [`bose_hubbard_model` function from MPSKitModels](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.bose_hubbard_model), as reexported by PEPSKit. We'll simulate the model in its Mott-insulating phase where the ratio ``U/t`` is large, since in this phase we expect the ground state to be well approximated by a PEPS with a manifest global ``U(1)`` symmetry. Furthermore, we'll impose a cutoff at 2 bosons per site, set the chemical potential to zero and use a simple 1x1 unit cell:
+Let us start by fixing the parameters of the Hubbard model. We're going to use a hopping of ``t=1`` and a large ``U=8`` on a ``2 \times 2`` unit cell:
 """
 
-# ╔═╡ 6011ff02-c309-4472-a030-08a6c9b9aceb
+# ╔═╡ c53436e1-97eb-4371-853a-48071bfdb2ac
 t = 1.0;
 
-# ╔═╡ 4a4adb42-61ea-40f3-9abb-26efb31a5c52
-U = 30.0;
+# ╔═╡ 07accc9f-a371-4c7c-a31b-304d89447250
+U = 8.0;
 
-# ╔═╡ 2fac3a67-a5b2-4480-ab4b-e079a4d2e0b8
-cutoff = 2;
+# ╔═╡ b7c9d9ca-3ff5-4808-8dfc-c6c71ea0143e
+lattice = InfiniteSquare(2, 2);
 
-# ╔═╡ fb90ff97-d3c8-410a-8b77-18c9318df8e1
-mu = 0.0;
-
-# ╔═╡ f00ba536-db79-42d4-9a34-fc51f05565d4
-lattice = InfiniteSquare(1, 1);
-
-# ╔═╡ 6e90b4fd-2a88-49dc-ae2b-81a0a2c88c5e
+# ╔═╡ 07089315-c37b-4bd7-bf48-de2e6b5cc5c5
 md"""
-Next, we impose an explicit global U(1) symmetry as well as a fixed particle number density in our simulations. We can do this by setting the `symmetry` argument of the Hamiltonian constructor to `U1Irrep` and passing one as the particle number density keyword argument `n`:
+In order to create fermionic tensors, one needs to define symmetry sectors using TensorKit's [`FermionParity`](@extref). Not only do we want use fermion parity but we also want our particles to exploit the global ``U(1)`` symmetry. The combined product sector can be obtained using the [Deligne product](https://jutho.github.io/TensorKit.jl/stable/lib/sectors/#TensorKitSectors.deligneproduct-Tuple{Sector,%20Sector}), called through `⊠` which is obtained by typing `\boxtimes+TAB`. We will not impose any extra spin symmetry, so we have:
 """
 
-# ╔═╡ f1005bd4-6133-43c5-abf0-8a1cae27ea58
-symmetry = U1Irrep;
+# ╔═╡ e770f01b-7e23-45b4-a460-ad237a778f47
+fermion = fℤ₂;
 
-# ╔═╡ 83748684-d959-4fd4-b374-5ae1a686056c
-n = 1;
+# ╔═╡ 8f072cdb-7872-445b-bbab-949a17cda272
+particle_symmetry = U1Irrep;
 
-# ╔═╡ 91e67ff3-0b1e-4e1d-9c40-2a08df0faa52
+# ╔═╡ 72276f14-447f-4ddf-b06c-a2432be93b59
+spin_symmetry = Trivial;
+
+# ╔═╡ 6644b0cf-c7c6-4c25-a5c5-ef2a826e5b90
+S = fermion ⊠ particle_symmetry;
+
+# ╔═╡ 77c04811-60d6-4c93-9083-e17dba8c61d2
 md"""
-So let's instantiate the symmetric Hamiltonian:
+The next step is defining graded virtual PEPS and environment spaces using `S`. Here we also use the symmetry sector to impose half-filling. That is all we need to define the Hubbard Hamiltonian:
 """
 
-# ╔═╡ 5fca8dcd-ab29-49d0-a605-8a5c1499eb65
-H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff, t, U, n)
+# ╔═╡ 679cc5c6-0121-43d4-8179-8cbe1084215e
+D, χ = 1, 1;
 
-# ╔═╡ f66ae429-5775-4485-b90a-0276fa1669f4
-md"""
-Before we continue, it might be interesting to inspect the corresponding lattice physical spaces:
-"""
+# ╔═╡ 1560d618-c782-4d12-9817-b66a01435c72
+V_peps = Vect[S]((0, 0) => 2 * D, (1, 1) => D, (1, -1) => D);
 
-# ╔═╡ 2d4f1c7f-9fd1-43c4-8d29-8f155216c56e
-physical_spaces = H.lattice
+# ╔═╡ 5a2ee7f3-e73b-42ba-8743-09f152921fda
+V_env = Vect[S](
+    (0, 0) => 4 * χ, (1, -1) => 2 * χ, (1, 1) => 2 * χ, (0, 2) => χ, (0, -2) => χ
+);
 
-# ╔═╡ b4617dac-204e-4f34-be4f-e7462110b796
-md"""
-Note that the physical space contains ``U(1)`` charges -1, 0 and +1. Indeed, imposing a particle number density of +1 corresponds to shifting the physical charges by -1 to 're-center' the physical charges around the desired density. When we do this with a cutoff of two bosons per site, i.e. starting from ``U(1)`` charges 0, 1 and 2 on the physical level, we indeed get the observed charges.
-"""
+# ╔═╡ d8b05a5f-bc86-4678-8595-bb296f86f28a
+S_aux = S((1, -1));
 
-# ╔═╡ d67195b6-558e-47ca-8cc1-cfbef2448165
-md"""
-## Characterizing the virtual spaces
+# ╔═╡ 8daa6402-82d7-4a7c-85a1-295fbbc5a9e1
+H₀ = hubbard_model(ComplexF64, particle_symmetry, spin_symmetry, lattice; t, U);
 
-When running PEPS simulations with explicit internal symmetries, specifying the structure of the virtual spaces of the PEPS and its environment becomes a bit more involved. For the environment, one could in principle allow the virtual space to be chosen dynamically during the boundary contraction using CTMRG by using a truncation scheme that allows for this (e.g. using alg=:truncdim or alg=:truncbelow to truncate to a fixed total bond dimension or singular value cutoff respectively). For the PEPS virtual space however, the structure has to be specified before the optimization.
+# ╔═╡ c6604da5-7125-4370-8824-578362ae16a2
+H = add_physical_charge(H₀, fill(S_aux, size(H₀.lattice)...));
 
-While there are a host of techniques to do this in an informed way (e.g. starting from a simple update result), here we just specify the virtual space manually. Since we're dealing with a model at unit filling our physical space only contains integer ``U(1)`` irreps. Therefore, we'll build our PEPS and environment spaces using integer U(1) irreps centered around the zero charge.
-"""
-
-# ╔═╡ f9d5c380-9424-4358-b2d7-eccd5c42992e
-V_peps = U1Space(0 => 2, 1 => 1, -1 => 1);
-
-# ╔═╡ 786bc842-39a7-425d-a261-c635b97b8208
-V_env = U1Space(0 => 6, 1 => 4, -1 => 4, 2 => 2, -2 => 2);
-
-# ╔═╡ 4d6bccd3-7854-4d9b-8638-89b5a6bf41e1
+# ╔═╡ 37c1c825-c6b5-4a4f-902b-b3299869dcc1
 md"""
 ## Finding the ground state
 
-Having defined our Hamiltonian and spaces, it is just a matter of plugging this into the optimization framework in the usual way to find the ground state. So, we first specify all algorithms and their tolerances:
+Again, the procedure of ground state optimization is very similar to before. First, we define all algorithmic parameters:
 """
 
-# ╔═╡ 34b6c407-5816-4714-8d7c-3c53f64007ad
+# ╔═╡ f09bd4cf-d41d-4c15-943f-a9315aa3d8e3
 boundary_alg = (; tol=1e-8, alg=:simultaneous, verbosity=2, trscheme=(; alg=:fixedspace));
 
-# ╔═╡ 42bf7d5d-526c-4630-9eb6-a065155884c3
-gradient_alg = (; tol=1e-6, maxiter=10, alg=:eigsolver, iterscheme=:diffgauge);
+# ╔═╡ b1db3cbb-aef4-4ffb-8fcc-cc5948247299
+gradient_alg = (; tol=1e-6, alg=:eigsolver, maxiter=10, iterscheme=:diffgauge);
 
-# ╔═╡ 56fc7eb6-6a9c-4152-a5a0-34f8b484f6c8
-optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=200, ls_maxiter=2, ls_maxfg=2);
+# ╔═╡ cd49f55e-94a7-481e-8287-1e80a0f4034f
+optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=100, ls_maxiter=2, ls_maxfg=2);
 
-# ╔═╡ 8ea51b8c-afdb-4b59-93a8-f66d5ab4d6da
+# ╔═╡ 7f59f1d9-b7db-4ee6-a99d-7999a83d6a53
 md"""
-!!! note
-	Taking CTMRG gradients and optimizing symmetric tensors tends to be more problematic than with dense tensors. In particular, this means that one frequently needs to tweak the `gradient_alg` and `optimizer_alg` settings. There rarely is a general-purpose set of settings which will always work, so instead one has to adjust the simulation settings for each specific application. 
-
-Keep in mind that the PEPS is constructed from a unit cell of spaces, so we have to make a matrix of `V_peps` spaces:
+Second, we initialize a PEPS state and environment (which we converge) constructed from symmetric physical and virtual spaces:
 """
 
-# ╔═╡ daf88312-1c74-4ba8-b8eb-69d5c0b2d834
+# ╔═╡ 0b8154c9-9638-4c9e-8f40-ab73b667ffb1
+physical_spaces = H.lattice;
+
+# ╔═╡ 40bb6832-e12d-4341-8d12-defc54d79145
 virtual_spaces = fill(V_peps, size(lattice)...);
 
-# ╔═╡ f9bb4230-1741-49cf-8557-eac8fd264548
+# ╔═╡ 378bcccd-3803-4754-928d-a437fe457e9f
 peps₀ = InfinitePEPS(randn, ComplexF64, physical_spaces, virtual_spaces);
 
-# ╔═╡ 6b1b770a-2b96-4600-9ba9-9c526b1b3cae
+# ╔═╡ 1a70d171-4087-4f1d-8ba7-41a178c8f80b
 env₀, = leading_boundary(CTMRGEnv(peps₀, V_env), peps₀; boundary_alg...);
 
-# ╔═╡ 1bf2305b-9c25-4ec9-bc2c-f418c4b4caee
+# ╔═╡ 63230dd6-98c5-44b0-b0a4-d7bb51e44445
 md"""
-And at last, we optimize (which might take a bit):
+And third, we start the ground state search (this does take quite long):
 """
 
-# ╔═╡ 50596cfc-bdc2-45e0-a346-60ac2f627806
-peps, env, E, info = fixedpoint(H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg);
+# ╔═╡ 6081ea87-09a4-4b52-96fc-753cb94a5d36
+peps, env, E, info = fixedpoint(H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg); 
 
-# ╔═╡ a6341a9e-c92a-4539-8516-ef9b2de0165e
+# ╔═╡ 69c92f0b-3598-4f92-8475-52f4eee2c03c
 @show E
 
-# ╔═╡ d9361e24-475f-48f6-9a64-99e00f19a190
+# ╔═╡ a872f393-fbd9-432a-aabc-ddd33f33f450
 md"""
-We can compare our PEPS result to the energy obtained using a cylinder-MPS calculation using a cylinder circumference of ``L_y = 7`` and a bond dimension of 446, which yields ``E = -0.273284888``:
+Finally, let's compare the obtained energy against a reference energy from a QMC study by [Qin et al.](@cite qin_benchmark_2016). At our parameters they obtain an energy of ``E_\text{ref} \approx 4 \times -0.5244140625 = -2.09765625`` (the factor 4 comes from the ``2 x 2`` unit cell that we use here). Thus, we find:
 """
 
-# ╔═╡ db097785-1f22-4367-a83d-6addf8f1ad84
-E_ref = -0.273284888;
+# ╔═╡ 8d8baa3a-df5b-45e0-be1f-56f6dcd99ff7
+E_ref = -2.09765625;
 
-# ╔═╡ ca4c87e4-194e-11f0-0793-357226f85565
+# ╔═╡ d5e10a13-402d-4995-9594-b4e3623a87ce
 @show (E - E_ref) / E_ref
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -909,41 +904,41 @@ version = "5.11.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═0cfaf704-76fd-4e3b-8f77-c6e3d0e8af51
-# ╠═ef170a00-e0bf-4d5e-9ee3-ed2ce0061a24
-# ╠═cc5c1119-5976-4a24-bfba-50fc20719cf5
-# ╠═69f9cf1d-28b0-4357-bd2a-4894993e3be8
-# ╠═10cc8e99-035d-4240-9b7b-7ab500a81783
-# ╠═67e1786e-af9a-4fe7-a3a5-642a1004f036
-# ╠═6011ff02-c309-4472-a030-08a6c9b9aceb
-# ╠═4a4adb42-61ea-40f3-9abb-26efb31a5c52
-# ╠═2fac3a67-a5b2-4480-ab4b-e079a4d2e0b8
-# ╠═fb90ff97-d3c8-410a-8b77-18c9318df8e1
-# ╠═f00ba536-db79-42d4-9a34-fc51f05565d4
-# ╠═6e90b4fd-2a88-49dc-ae2b-81a0a2c88c5e
-# ╠═f1005bd4-6133-43c5-abf0-8a1cae27ea58
-# ╠═83748684-d959-4fd4-b374-5ae1a686056c
-# ╠═91e67ff3-0b1e-4e1d-9c40-2a08df0faa52
-# ╠═5fca8dcd-ab29-49d0-a605-8a5c1499eb65
-# ╠═f66ae429-5775-4485-b90a-0276fa1669f4
-# ╠═2d4f1c7f-9fd1-43c4-8d29-8f155216c56e
-# ╠═b4617dac-204e-4f34-be4f-e7462110b796
-# ╠═d67195b6-558e-47ca-8cc1-cfbef2448165
-# ╠═f9d5c380-9424-4358-b2d7-eccd5c42992e
-# ╠═786bc842-39a7-425d-a261-c635b97b8208
-# ╠═4d6bccd3-7854-4d9b-8638-89b5a6bf41e1
-# ╠═34b6c407-5816-4714-8d7c-3c53f64007ad
-# ╠═42bf7d5d-526c-4630-9eb6-a065155884c3
-# ╠═56fc7eb6-6a9c-4152-a5a0-34f8b484f6c8
-# ╠═8ea51b8c-afdb-4b59-93a8-f66d5ab4d6da
-# ╠═daf88312-1c74-4ba8-b8eb-69d5c0b2d834
-# ╠═f9bb4230-1741-49cf-8557-eac8fd264548
-# ╠═6b1b770a-2b96-4600-9ba9-9c526b1b3cae
-# ╠═1bf2305b-9c25-4ec9-bc2c-f418c4b4caee
-# ╠═50596cfc-bdc2-45e0-a346-60ac2f627806
-# ╠═a6341a9e-c92a-4539-8516-ef9b2de0165e
-# ╠═d9361e24-475f-48f6-9a64-99e00f19a190
-# ╠═db097785-1f22-4367-a83d-6addf8f1ad84
-# ╠═ca4c87e4-194e-11f0-0793-357226f85565
+# ╠═596482a0-61c1-45d2-9c3b-d65f78c8b280
+# ╠═e37d4924-e7ec-47b6-abd2-729e3736ca0a
+# ╠═f6caf5ba-2777-46bb-9795-29f960894d6c
+# ╠═ca35aca6-fd69-4a08-9cde-34e2570e1cca
+# ╠═88782296-e160-4633-bca9-e3becc1012a2
+# ╠═d8403224-d288-4ddc-b587-2c3d4e824090
+# ╠═c53436e1-97eb-4371-853a-48071bfdb2ac
+# ╠═07accc9f-a371-4c7c-a31b-304d89447250
+# ╠═b7c9d9ca-3ff5-4808-8dfc-c6c71ea0143e
+# ╠═07089315-c37b-4bd7-bf48-de2e6b5cc5c5
+# ╠═e770f01b-7e23-45b4-a460-ad237a778f47
+# ╠═8f072cdb-7872-445b-bbab-949a17cda272
+# ╠═72276f14-447f-4ddf-b06c-a2432be93b59
+# ╠═6644b0cf-c7c6-4c25-a5c5-ef2a826e5b90
+# ╠═77c04811-60d6-4c93-9083-e17dba8c61d2
+# ╠═679cc5c6-0121-43d4-8179-8cbe1084215e
+# ╠═1560d618-c782-4d12-9817-b66a01435c72
+# ╠═5a2ee7f3-e73b-42ba-8743-09f152921fda
+# ╠═d8b05a5f-bc86-4678-8595-bb296f86f28a
+# ╠═8daa6402-82d7-4a7c-85a1-295fbbc5a9e1
+# ╠═c6604da5-7125-4370-8824-578362ae16a2
+# ╠═37c1c825-c6b5-4a4f-902b-b3299869dcc1
+# ╠═f09bd4cf-d41d-4c15-943f-a9315aa3d8e3
+# ╠═b1db3cbb-aef4-4ffb-8fcc-cc5948247299
+# ╠═cd49f55e-94a7-481e-8287-1e80a0f4034f
+# ╠═7f59f1d9-b7db-4ee6-a99d-7999a83d6a53
+# ╠═0b8154c9-9638-4c9e-8f40-ab73b667ffb1
+# ╠═40bb6832-e12d-4341-8d12-defc54d79145
+# ╠═378bcccd-3803-4754-928d-a437fe457e9f
+# ╠═1a70d171-4087-4f1d-8ba7-41a178c8f80b
+# ╠═63230dd6-98c5-44b0-b0a4-d7bb51e44445
+# ╠═6081ea87-09a4-4b52-96fc-753cb94a5d36
+# ╠═69c92f0b-3598-4f92-8475-52f4eee2c03c
+# ╠═a872f393-fbd9-432a-aabc-ddd33f33f450
+# ╠═8d8baa3a-df5b-45e0-be1f-56f6dcd99ff7
+# ╠═d5e10a13-402d-4995-9594-b4e3623a87ce
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
