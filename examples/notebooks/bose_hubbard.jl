@@ -77,7 +77,10 @@ physical_spaces = H.lattice
 # ╔═╡ b4617dac-204e-4f34-be4f-e7462110b796
 md"""
 Note that the physical space contains ``U(1)`` charges -1, 0 and +1. Indeed, imposing a particle number density of +1 corresponds to shifting the physical charges by -1 to 're-center' the physical charges around the desired density. When we do this with a cutoff of two bosons per site, i.e. starting from ``U(1)`` charges 0, 1 and 2 on the physical level, we indeed get the observed charges.
+"""
 
+# ╔═╡ d67195b6-558e-47ca-8cc1-cfbef2448165
+md"""
 ## Characterizing the virtual spaces
 
 When running PEPS simulations with explicit internal symmetries, specifying the structure of the virtual spaces of the PEPS and its environment becomes a bit more involved. For the environment, one could in principle allow the virtual space to be chosen dynamically during the boundary contraction using CTMRG by using a truncation scheme that allows for this (e.g. using alg=:truncdim or alg=:truncbelow to truncate to a fixed total bond dimension or singular value cutoff respectively). For the PEPS virtual space however, the structure has to be specified before the optimization.
@@ -141,7 +144,7 @@ We can compare our PEPS result to the energy obtained using a cylinder-MPS calcu
 """
 
 # ╔═╡ db097785-1f22-4367-a83d-6addf8f1ad84
-E_ref - 0.273284888;
+E_ref = -0.273284888;
 
 # ╔═╡ ca4c87e4-194e-11f0-0793-357226f85565
 @show (E - E_ref) / E_ref
@@ -925,6 +928,7 @@ version = "5.11.0+0"
 # ╠═f66ae429-5775-4485-b90a-0276fa1669f4
 # ╠═2d4f1c7f-9fd1-43c4-8d29-8f155216c56e
 # ╠═b4617dac-204e-4f34-be4f-e7462110b796
+# ╠═d67195b6-558e-47ca-8cc1-cfbef2448165
 # ╠═f9d5c380-9424-4358-b2d7-eccd5c42992e
 # ╠═786bc842-39a7-425d-a261-c635b97b8208
 # ╠═4d6bccd3-7854-4d9b-8638-89b5a6bf41e1

@@ -25,7 +25,7 @@
 <!--
     # This information is used for caching.
     [PlutoStaticHTML.State]
-    input_sha = "56cc13bfcb9e08f2fb47782f1a913a1925487ae5b84f63efa187918107cc19a6"
+    input_sha = "7103889def794a5e618bfc772ce19cad7765c6d45cb9ff9519289bb5e420def9"
     julia_version = "1.11.4"
 -->
 
@@ -47,13 +47,21 @@
 
 
 
-<div class="markdown"><p>To create the sublattice rotated Heisenberg Hamiltonian on an infinite square lattice, we use:</p></div>
+```
+## Defining the Heisenberg Hamiltonian
+```@raw html
+<div class="markdown">
+<p>To create the sublattice rotated Heisenberg Hamiltonian on an infinite square lattice, we use the <code>heisenberg_XYZ</code> method from <a href="https://quantumkithub.github.io/MPSKitModels.jl/dev/">MPSKitModels</a> which is redefined for the <code>InfiniteSquare</code> and reexported in PEPSKit:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1);</code></pre>
 
 
 
-<div class="markdown"><p>Next, we set the simulation parameters. During optimization, the PEPS will be contracted using CTMRG and the PEPS gradient will be computed by differentiating through the CTMRG routine using AD. Since the algorithmic stack that implements this is rather elaborate, the amount of settings one can configure is also quite large. To reduce this complexity, PEPSKit defaults to (presumably) reasonable settings which also dynamically adapts to the user-specified parameters.</p><p>First, we set the bond dimension <code>Dbond</code> of the virtual PEPS indices and the environment dimension <code>χenv</code> of the virtual corner and transfer matrix indices.</p></div>
+```
+## Setting up the algorithms and initial guesses
+```@raw html
+<div class="markdown">
+<p>Next, we set the simulation parameters. During optimization, the PEPS will be contracted using CTMRG and the PEPS gradient will be computed by differentiating through the CTMRG routine using AD. Since the algorithmic stack that implements this is rather elaborate, the amount of settings one can configure is also quite large. To reduce this complexity, PEPSKit defaults to (presumably) reasonable settings which also dynamically adapts to the user-specified parameters.</p><p>First, we set the bond dimension <code>Dbond</code> of the virtual PEPS indices and the environment dimension <code>χenv</code> of the virtual corner and transfer matrix indices.</p></div>
 
 <pre class='language-julia'><code class='language-julia'>Dbond = 2;</code></pre>
 
@@ -104,10 +112,14 @@
 <div class="markdown"><p>Besides the converged environment, <code>leading_boundary</code> also returns a <code>NamedTuple</code> of informational quantities such as the last (maximal) SVD truncation error:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>info_ctmrg.truncation_error</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash924061">0.0006867970261442056</pre>
+<pre class="code-output documenter-example-output" id="var-hash924061">0.0017266955527366114</pre>
 
 
-<div class="markdown"><p>Finally, we can start the optimization by calling <code>fixedpoint</code> on <code>H</code> with our settings for the boundary (CTMRG) algorithm and the optimizer:</p></div>
+```
+## Ground state search
+```@raw html
+<div class="markdown">
+<p>Finally, we can start the optimization by calling <code>fixedpoint</code> on <code>H</code> with our settings for the boundary (CTMRG) algorithm and the optimizer. This might take a while (especially the precompilation of AD code in this case):</p></div>
 
 <pre class='language-julia'><code class='language-julia'>peps, env, E, info_opt = fixedpoint(
     H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
@@ -118,42 +130,53 @@
 <div class="markdown"><p>Note that <code>fixedpoint</code> returns the final optimized PEPS, the last converged environment, the final energy estimate as well as a <code>NamedTuple</code> of diagnostics. This allows us to, e.g., analyze the number of cost function calls or the history of gradient norms to evaluate the convergence rate:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>@show info_opt.fg_evaluations</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash451283">63</pre>
+<pre class="code-output documenter-example-output" id="var-hash451283">95</pre>
 
 <pre class='language-julia'><code class='language-julia'>@show info_opt.gradnorms[1:10:end]</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash798835">6-element Vector{Float64}:
- 1.925483778590241
- 0.02781261725705649
- 0.020509459841048863
- 0.010080016245646474
- 0.0025318500192082712
- 0.00023065410662933191</pre>
+<pre class="code-output documenter-example-output" id="var-hash798835">9-element Vector{Float64}:
+ 1.5288545029023473
+ 0.42745931621092037
+ 0.04712909560745584
+ 0.02455989405793848
+ 0.012403251650572806
+ 0.003187578031911067
+ 0.001660979743126857
+ 0.0008591829333440263
+ 0.0003360213833815268</pre>
 
 
 <div class="markdown"><p>Let's now compare the optimized energy against an accurate Quantum Monte Carlo estimate by <a href="@cite sandvik_computational_2011">Sandvik</a>, where the energy per site was found to be <span class="tex">\(E_{\text{ref}}=−0.6694421\)</span>. From our simple optimization we find:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>@show E</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash629819">-0.6625142864955051</pre>
+<pre class="code-output documenter-example-output" id="var-hash629819">-0.6625142760601819</pre>
 
 
 <div class="markdown"><p>While this energy is in the right ballpark, there is still quite some deviation from the accurate reference energy. This, however, can be attributed to the small bond dimension - an optimization with larger bond dimension would approach this value much more closely.</p><p>A more reasonable comparison would be against another finite bond dimension PEPS simulation. For example, Juraj Hasik's data from <span class="tex">\(J_1\text{-}J_2\)</span><a href="https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat">PEPS simulations</a> yields <span class="tex">\(E_{D=2,\chi=16}=-0.660231\dots\)</span> which is more in line with what we find here.</p></div>
 
 
-<div class="markdown"><p>In practice, in order to obtain an accurate and variational energy estimate, one would need to compute multiple energies at different environment dimensions and extrapolate in, e.g., the correlation length or the second gap of the transfer matrix spectrum. For that, we would need the <code>correlation_length</code> function, which computes the horizontal and vertical correlation lengths and transfer matrix spectra for all unit cell coordinates:</p></div>
+```
+## Compute the correlation lengths and transfer matrix spectra
+```@raw html
+<div class="markdown">
+<p>In practice, in order to obtain an accurate and variational energy estimate, one would need to compute multiple energies at different environment dimensions and extrapolate in, e.g., the correlation length or the second gap of the transfer matrix spectrum. For that, we would need the <code>correlation_length</code> function, which computes the horizontal and vertical correlation lengths and transfer matrix spectra for all unit cell coordinates:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>ξ_h, ξ_v, λ_h, λ_v = correlation_length(peps, env);</code></pre>
 
 
 <pre class='language-julia'><code class='language-julia'>@show ξ_h</code></pre>
 <pre class="code-output documenter-example-output" id="var-hash117367">1-element Vector{Float64}:
- 1.0345812166069706</pre>
+ 1.0344958386399636</pre>
 
 <pre class='language-julia'><code class='language-julia'>@show ξ_v</code></pre>
 <pre class="code-output documenter-example-output" id="var-hash175800">1-element Vector{Float64}:
- 1.0245031504625688</pre>
+ 1.0240547254030574</pre>
 
 
-<div class="markdown"><p>As a last thing, we want to see how we can compute expectation values of observables, given the optimized PEPS and its CTMRG environment. To compute, e.g., the magnetization, we first need to define the observable:</p></div>
+```
+## Computing observables
+```@raw html
+<div class="markdown">
+<p>As a last thing, we want to see how we can compute expectation values of observables, given the optimized PEPS and its CTMRG environment. To compute, e.g., the magnetization, we first need to define the observable:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>σ_z = TensorMap([1.0 0.0; 0.0 -1.0], ℂ^2, ℂ^2)</code></pre>
 <pre class="code-output documenter-example-output" id="var-σ_z">TensorMap(ℂ^2 ← ℂ^2):
@@ -171,7 +194,7 @@
 <div class="markdown"><p>To evaluate the expecation value, we call:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>@show expectation_value(peps, M, env)</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash221986">-0.7563968615093396 - 4.608071982475297e-16im</pre>
+<pre class="code-output documenter-example-output" id="var-hash221986">0.5956380763180077 - 2.7776452606652597e-16im</pre>
 <div class='manifest-versions'>
 <p>Built with Julia 1.11.4 and</p>
 PEPSKit 0.5.0<br>

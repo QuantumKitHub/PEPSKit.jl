@@ -89,7 +89,7 @@ V_env = U1Space(0 => 6, 1 => 4, -1 => 4, 2 => 2, -2 => 2);
 
 # ╔═╡ 08213456-9a3f-44ed-99f3-11dff12cda9a
 md"""
-The physical PEPS spaaces we will extract from the Hamiltonian `LocalOperator`:
+From the virtual spaces, we will need to construct a unit cell (a matrix) of spaces which will be supplied to the PEPS constructor. The same is true for the physical spaces, which we will just extract from the Hamiltonian `LocalOperator`:
 """
 
 # ╔═╡ dc9c03ce-d620-4874-8e5b-e4d64758fc09
