@@ -11,7 +11,9 @@ const OUTPUT_DIR = joinpath(@__DIR__, "..", "docs", "src", "examples")
 @info "Building notebooks in $NOTEBOOK_DIR"
 oopts = OutputOptions(; append_build_context=true)
 output_format = documenter_output
-bopts = BuildOptions(NOTEBOOK_DIR; output_format, previous_dir=OUTPUT_DIR)
+bopts = BuildOptions(
+    NOTEBOOK_DIR; output_format, previous_dir=OUTPUT_DIR, max_concurrent_runs=1
+)
 build_notebooks(bopts, oopts)
 
 @info "Copying markdown files"

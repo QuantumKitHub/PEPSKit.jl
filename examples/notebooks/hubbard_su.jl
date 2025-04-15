@@ -94,12 +94,12 @@ maxiter = 20000;
 
 # ╔═╡ da7fe8eb-7edc-40b5-909e-39c19ae8fece
 begin
-	wpeps_su = wpeps
-	for (n, (dt, tol)) in enumerate(zip(dts, tols))
-	    trscheme = truncerr(1e-10) & truncdim(Dbond)
-	    alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-	    global wpeps_su, = simpleupdate(wpeps_su, H, alg; bipartite=false)
-	end
+    wpeps_su = wpeps
+    for (n, (dt, tol)) in enumerate(zip(dts, tols))
+        trscheme = truncerr(1e-10) & truncdim(Dbond)
+        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
+        global wpeps_su, = simpleupdate(wpeps_su, H, alg; bipartite=false)
+    end
 end;
 
 # ╔═╡ 9e3b3df0-c0f7-4a26-b425-fe9015c6e99f
@@ -125,10 +125,12 @@ env_space = Vect[fℤ₂](0 => χenv₀ / 2, 1 => χenv₀ / 2);
 
 # ╔═╡ be0441c5-394e-4812-aa44-5d1e8565723e
 begin
-	env = CTMRGEnv(rand, Float64, peps, env_space);
-	for χ in [χenv₀, χenv]
-	    global env, = leading_boundary(env, peps; alg=:sequential, tol=1e-5, trscheme=truncdim(χ))
-	end
+    env = CTMRGEnv(rand, Float64, peps, env_space)
+    for χ in [χenv₀, χenv]
+        global env, = leading_boundary(
+            env, peps; alg=:sequential, tol=1e-5, trscheme=truncdim(χ)
+        )
+    end
 end;
 
 # ╔═╡ 487caef7-ceda-41ba-82ee-3d3dc0058162

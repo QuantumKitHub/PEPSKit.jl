@@ -128,7 +128,7 @@ And third, we start the ground state search (this does take quite long):
 """
 
 # ╔═╡ 6081ea87-09a4-4b52-96fc-753cb94a5d36
-peps, env, E, info = fixedpoint(H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg); 
+peps, env, E, info = fixedpoint(H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg);
 
 # ╔═╡ 69c92f0b-3598-4f92-8475-52f4eee2c03c
 @show E
