@@ -14,7 +14,7 @@ and the terms are stored as a tuple of pairs of indices and operators.
 # Constructors
 
     LocalOperator(lattice::Matrix{S}, terms::Pair...)
-    LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S} # expert mode
+    LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S}
 
 # Examples
 
@@ -31,6 +31,7 @@ struct LocalOperator{T<:Tuple,S}
         # Check if the indices of the operator are valid with themselves and the lattice
         for (inds, operator) in terms
             @assert operator isa AbstractTensorMap
+            @assert eltype(inds) <: CartesianIndex
             @assert numout(operator) == numin(operator) == length(inds)
             @assert spacetype(operator) == S
 
@@ -52,7 +53,12 @@ function LocalOperator(
     relevant_terms = []
     for inds in unique(allinds)
         operator = sum(alloperators[findall(==(inds), allinds)])
-        norm(operator) > atol && push!(relevant_terms, inds => operator)
+        cinds = if !(eltype(inds) <: CartesianIndex) # force indices to be CartesianIndices
+            map(CartesianIndex, inds)
+        else
+            inds
+        end
+        norm(operator) > atol && push!(relevant_terms, cinds => operator)
     end
 
     terms_tuple = Tuple(relevant_terms)
@@ -88,6 +94,15 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
         push!(terms, (inds .+ Ref(offset)) => operator)
     end
     return LocalOperator(lattice, terms...)
+end
+
+# Real and imaginary part
+# -----------------------
+function Base.real(O::LocalOperator)
+    return LocalOperator(O.lattice, (ind => real(op) for (ind, op) in O.terms)...)
+end
+function Base.imag(O::LocalOperator)
+    return LocalOperator(O.lattice, (ind => imag(op) for (ind, op) in O.terms)...)
 end
 
 # Linear Algebra
