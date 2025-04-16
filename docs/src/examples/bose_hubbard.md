@@ -25,7 +25,7 @@
 <!--
     # This information is used for caching.
     [PlutoStaticHTML.State]
-    input_sha = "2b256b71b6de545f047d4715bdace175c5017ee23bd042478f67e003666a93ad"
+    input_sha = "375ff314ceb86c8f571c86fd726378d6856e5eb2c49c3b8898af1c131ee39f97"
     julia_version = "1.11.4"
 -->
 
@@ -48,7 +48,7 @@
 ## Defining the model
 ```@raw html
 <div class="markdown">
-<p>We will construct the Bose-Hubbard model Hamiltonian through the <a href="https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.bose_hubbard_model"><code>bose_hubbard_model</code> function from MPSKitModels.jl</a>, as reexported by PEPSKit. We'll simulate the model in its Mott-insulating phase where the ratio <span class="tex">\(U/t\)</span> is large, since in this phase we expect the ground state to be well approximated by a PEPS with a manifest global <span class="tex">\(U(1)\)</span> symmetry. Furthermore, we'll impose a cutoff at 2 bosons per site, set the chemical potential to zero and use a simple 1x1 unit cell:</p></div>
+<p>We will construct the Bose-Hubbard model Hamiltonian through the <a href="https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.bose_hubbard_model"><code>bose_hubbard_model</code> function from MPSKitModels</a>, as reexported by PEPSKit. We'll simulate the model in its Mott-insulating phase where the ratio <span class="tex">\(U/t\)</span> is large, since in this phase we expect the ground state to be well approximated by a PEPS with a manifest global <span class="tex">\(U(1)\)</span> symmetry. Furthermore, we'll impose a cutoff at 2 bosons per site, set the chemical potential to zero and use a simple 1x1 unit cell:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>t = 1.0;</code></pre>
 
@@ -211,7 +211,14 @@
  Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1)</pre>
 
 
-<div class="markdown"><p>Note that the physical space contains <span class="tex">\(U(1)\)</span> charges -1, 0 and +1. Indeed, imposing a particle number density of +1 corresponds to shifting the physical charges by -1 to 're-center' the physical charges around the desired density. When we do this with a cutoff of two bosons per site, i.e. starting from <span class="tex">\(U(1)\)</span> charges 0, 1 and 2 on the physical level, we indeed get the observed charges.</p><h2>Characterizing the virtual spaces</h2><p>When running PEPS simulations with explicit internal symmetries, specifying the structure of the virtual spaces of the PEPS and its environment becomes a bit more involved. For the environment, one could in principle allow the virtual space to be chosen dynamically during the boundary contraction using CTMRG by using a truncation scheme that allows for this (e.g. using alg=:truncdim or alg=:truncbelow to truncate to a fixed total bond dimension or singular value cutoff respectively). For the PEPS virtual space however, the structure has to be specified before the optimization.</p><p>While there are a host of techniques to do this in an informed way (e.g. starting from a simple update result), here we just specify the virtual space manually. Since we're dealing with a model at unit filling our physical space only contains integer <span class="tex">\(U(1)\)</span> irreps. Therefore, we'll build our PEPS and environment spaces using integer U(1) irreps centered around the zero charge.</p></div>
+<div class="markdown"><p>Note that the physical space contains <span class="tex">\(U(1)\)</span> charges -1, 0 and +1. Indeed, imposing a particle number density of +1 corresponds to shifting the physical charges by -1 to 're-center' the physical charges around the desired density. When we do this with a cutoff of two bosons per site, i.e. starting from <span class="tex">\(U(1)\)</span> charges 0, 1 and 2 on the physical level, we indeed get the observed charges.</p></div>
+
+
+```
+## Characterizing the virtual spaces
+```@raw html
+<div class="markdown">
+<p>When running PEPS simulations with explicit internal symmetries, specifying the structure of the virtual spaces of the PEPS and its environment becomes a bit more involved. For the environment, one could in principle allow the virtual space to be chosen dynamically during the boundary contraction using CTMRG by using a truncation scheme that allows for this (e.g. using alg=:truncdim or alg=:truncbelow to truncate to a fixed total bond dimension or singular value cutoff respectively). For the PEPS virtual space however, the structure has to be specified before the optimization.</p><p>While there are a host of techniques to do this in an informed way (e.g. starting from a simple update result), here we just specify the virtual space manually. Since we're dealing with a model at unit filling our physical space only contains integer <span class="tex">\(U(1)\)</span> irreps. Therefore, we'll build our PEPS and environment spaces using integer U(1) irreps centered around the zero charge.</p></div>
 
 <pre class='language-julia'><code class='language-julia'>V_peps = U1Space(0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1);</code></pre>
 
@@ -254,7 +261,7 @@
 
 
 <pre class='language-julia'><code class='language-julia'>@show E</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash629819">-0.2732668319499373</pre>
+<pre class="code-output documenter-example-output" id="var-hash629819">-0.27326633532690786</pre>
 
 
 <div class="markdown"><p>We can compare our PEPS result to the energy obtained using a cylinder-MPS calculation using a cylinder circumference of <span class="tex">\(L_y = 7\)</span> and a bond dimension of 446, which yields <span class="tex">\(E = -0.273284888\)</span>:</p></div>
@@ -263,7 +270,7 @@
 
 
 <pre class='language-julia'><code class='language-julia'>@show (E - E_ref) / E_ref</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash102569">-6.607043000021378e-5</pre>
+<pre class="code-output documenter-example-output" id="var-hash102569">-6.788766560755672e-5</pre>
 <div class='manifest-versions'>
 <p>Built with Julia 1.11.4 and</p>
 MPSKit 0.12.6<br>
