@@ -5,9 +5,16 @@ Compute `exp(-dt * H)` from Hamiltonian `H`.
 Each term in `H` must be a single `TensorMap`.
 """
 function get_expham(dt::Float64, H::LocalOperator)
-    return LocalOperator(
-        H.lattice, Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...
-    )
+    return LocalOperator(H.lattice, (sites => exp(-dt * op) for (sites, op) in H.terms)...)
+end
+
+"""
+Check if a Hamiltonian contains only nearest neighbor terms
+"""
+function is_nnham(H::LocalOperator)
+    return all([
+        numin(op) == 2 && norm(Tuple(terms[2] - terms[1])) == 1.0 for (terms, op) in H.terms
+    ])
 end
 
 """

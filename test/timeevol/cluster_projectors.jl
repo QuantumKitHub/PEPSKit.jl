@@ -112,7 +112,7 @@ end
     trscheme = truncerr(1e-10) & truncdim(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        result = simpleupdate3site(wpeps, ham, alg; check_interval=1000)
+        result = simpleupdate(wpeps, ham, alg; check_interval=1000, force_3site=true)
         wpeps = result[1]
     end
     peps = InfinitePEPS(wpeps)

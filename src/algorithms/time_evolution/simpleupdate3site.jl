@@ -460,11 +460,17 @@ end
 """
     su3site_iter(gatempos::NamedTuple{(:sw, :se)}, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
 
-One round of 3-site simple update for Hamiltonian with 2nd neighbor terms. 
+One round of 3-site simple update for Hamiltonian with next-nearest neighbor interaction terms. 
 """
 function su3site_iter(
     gatempos::NamedTuple{(:sw, :se)}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
 )
+    Nr, Nc = size(peps)
+    (Nr >= 2 && Nc >= 2) || throw(
+        ArgumentError(
+            "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
+        ),
+    )
     peps2 = deepcopy(peps)
     for cluster in (:sw, :se), site in CartesianIndices(peps2.vertices)
         r, c = Tuple(site)
@@ -485,21 +491,12 @@ function _peps_dualcheck(peps::InfiniteWeightPEPS)
 end
 
 """
-    simpleupdate3site(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int=500)
-
-Perform simple update for next-nearest neighbor Hamiltonian `ham`, 
-where the evolution information is printed every `check_interval` steps. 
+Perform 3-site simple update for Hamiltonian `ham` containing up to next-nearest neighbor interaction terms.
 """
-function simpleupdate3site(
+function _simpleupdate3site(
     peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int=500
 )
     time_start = time()
-    Nr, Nc = size(peps)
-    (Nr >= 2 && Nc >= 2) || throw(
-        ArgumentError(
-            "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
-        ),
-    )
     gate = get_expham(alg.dt, ham)
     # convert gates to 3-site MPOs
     gatempos = _get_gatempos(gate)

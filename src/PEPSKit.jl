@@ -83,8 +83,7 @@ export fixedpoint
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
-export su_iter, simpleupdate, SimpleUpdate
-export su3site_iter, simpleupdate3site
+export su_iter, su3site_iter, simpleupdate, SimpleUpdate
 
 export InfiniteSquareNetwork
 export InfinitePartitionFunction

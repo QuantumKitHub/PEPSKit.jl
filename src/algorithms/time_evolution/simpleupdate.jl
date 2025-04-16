@@ -61,6 +61,7 @@ end
     su_iter(gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool=false)
 
 One round of simple update on `peps` applying the nearest neighbor `gate`.
+When the input `peps` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
 """
 function su_iter(
     gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool=false
@@ -119,17 +120,9 @@ function su_iter(
 end
 
 """
-    simpleupdate(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
-                 bipartite::Bool=false, check_interval::Int=500)
-
-Perform simple update with nearest neighbor Hamiltonian `ham`, where the evolution
-information is printed every `check_interval` steps. 
-
-If `bipartite == true` (for square lattice), a unit cell size of `(2, 2)` is assumed, 
-as well as tensors and x/y weights which are the same across the diagonals, i.e. at
-`(row, col)` and `(row+1, col+1)`.
+Perform simple update with Hamiltonian `ham` containing up to nearest neighbor interaction terms. 
 """
-function simpleupdate(
+function _simpleupdate2site(
     peps::InfiniteWeightPEPS,
     ham::LocalOperator,
     alg::SimpleUpdate;
@@ -165,4 +158,39 @@ function simpleupdate(
         converge && break
     end
     return peps, wtdiff
+end
+
+"""
+    simpleupdate(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
+                 bipartite::Bool=false, force_3site::Bool=false, check_interval::Int=500)
+
+Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor interaction terms.
+
+## Keyword Arguments
+
+- `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. This assumes the input `peps` has a unit cell size of (2, 2). 
+- `force_3site::Bool=false`: Forces the use of the 3-site simple update algorithm, even if the Hamiltonian contains only nearest-neighbor terms.
+- `check_interval::Int=500`: Specifies the number of evolution steps between printing progress information.
+
+## Notes
+
+- The 3-site simple update algorithm is incompatible with a bipartite PEPS. Using `bipartite = true` with either `force_3site = true` or a `ham` with next-nearest neighbor terms is not allowed. 
+"""
+function simpleupdate(
+    peps::InfiniteWeightPEPS,
+    ham::LocalOperator,
+    alg::SimpleUpdate;
+    bipartite::Bool=false,
+    force_3site::Bool=false,
+    check_interval::Int=500,
+)
+    # determine if Hamiltonian contains nearest neighbor terms only
+    nnonly = is_nnham(ham)
+    use_3site = force_3site || !nnonly
+    @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
+    if use_3site
+        return _simpleupdate3site(peps, ham, alg; check_interval)
+    else
+        return _simpleupdate2site(peps, ham, alg; bipartite, check_interval)
+    end
 end

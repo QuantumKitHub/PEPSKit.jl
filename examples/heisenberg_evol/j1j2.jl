@@ -35,7 +35,7 @@ for (n, (dt, tol)) in enumerate(zip(dts, tols))
     Dcut = (n == 1) ? max(4, Dbond) : Dbond
     trscheme_peps = truncerr(1e-10) & truncdim(Dcut)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    result = simpleupdate3site(peps, ham, alg)
+    result = simpleupdate(peps, ham, alg)
     global peps = result[1]
 end
 # measure physical quantities with CTMRG
