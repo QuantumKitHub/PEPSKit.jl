@@ -25,7 +25,7 @@
 <!--
     # This information is used for caching.
     [PlutoStaticHTML.State]
-    input_sha = "5785a52feeed1116e98a8eb23aa5e3f7ab5a097e5b59433e00a2f99cb2f46f64"
+    input_sha = "ca1dbf02c01d275e7f30ee6ad0b9581045bcb08edc7db2616b39e259ff696743"
     julia_version = "1.11.4"
 -->
 
@@ -135,16 +135,16 @@
 
 
 <pre class='language-julia'><code class='language-julia'>@show E</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash629819">-0.5519574280641669</pre>
+<pre class="code-output documenter-example-output" id="var-hash629819">7.041937580964341</pre>
 
 
-<div class="markdown"><p>Finally, let's compare the obtained energy against a reference energy from a QMC study by <a href="@cite qin_benchmark_2016">Qin et al.</a>. At our parameters they obtain an energy of <span class="tex">\(E_\text{ref} \approx 4 \times -0.5244140625 = -2.09765625\)</span> (the factor 4 comes from the <span class="tex">\(2 x 2\)</span> unit cell that we use here). Thus, we find:</p></div>
+<div class="markdown"><p>Finally, let's compare the obtained energy against a reference energy from a QMC study by <a href="@cite qin_benchmark_2016">Qin et al.</a>. With the parameters specified above, they obtain an energy of <span class="tex">\(E_\text{ref} \approx 4 \times -0.5244140625 = -2.09765625\)</span> (the factor 4 comes from the <span class="tex">\(2 \times 2\)</span> unit cell that we use here). Thus, we find:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>E_ref = -2.09765625;</code></pre>
 
 
 <pre class='language-julia'><code class='language-julia'>@show (E - E_ref) / E_ref</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash102569">-0.7368694570122407</pre>
+<pre class="code-output documenter-example-output" id="var-hash102569">-4.3570503179271345</pre>
 <div class='manifest-versions'>
 <p>Built with Julia 1.11.4 and</p>
 MPSKit 0.12.6<br>

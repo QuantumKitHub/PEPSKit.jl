@@ -25,7 +25,7 @@
 <!--
     # This information is used for caching.
     [PlutoStaticHTML.State]
-    input_sha = "375ff314ceb86c8f571c86fd726378d6856e5eb2c49c3b8898af1c131ee39f97"
+    input_sha = "9965429ef683f165fcc7074da22f4fb508757e1c24b150d917eac171d0a3de04"
     julia_version = "1.11.4"
 -->
 
@@ -77,131 +77,8 @@
 
 <div class="markdown"><p>So let's instantiate the symmetric Hamiltonian:</p></div>
 
-<pre class='language-julia'><code class='language-julia'>H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff, t, U, n)</code></pre>
-<pre class="code-output documenter-example-output" id="var-H">LocalOperator{Tuple{Pair{Tuple{CartesianIndex{2}, CartesianIndex{2}}, TensorMap{ComplexF64, GradedSpace{U1Irrep, TensorKit.SortedVectorDict{U1Irrep, Int64}}, 2, 2, Vector{ComplexF64}}}, Pair{Tuple{CartesianIndex{2}, CartesianIndex{2}}, TensorMap{ComplexF64, GradedSpace{U1Irrep, TensorKit.SortedVectorDict{U1Irrep, Int64}}, 2, 2, Vector{ComplexF64}}}, Pair{Tuple{CartesianIndex{2}}, TensorMap{ComplexF64, GradedSpace{U1Irrep, TensorKit.SortedVectorDict{U1Irrep, Int64}}, 1, 1, Vector{ComplexF64}}}}, GradedSpace{U1Irrep, TensorKit.SortedVectorDict{U1Irrep, Int64}}}(GradedSpace{U1Irrep, TensorKit.SortedVectorDict{U1Irrep, Int64}}[Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1);;], ((CartesianIndex(1, 1), CartesianIndex(1, 2)) =&gt; TensorMap((Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1) ⊗ Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1)) ← (Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1) ⊗ Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1))):
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -2.0000000000000004 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- -2.0000000000000004 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -1.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- -1.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-, (CartesianIndex(1, 1), CartesianIndex(2, 1)) =&gt; TensorMap((Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1) ⊗ Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1)) ← (Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1) ⊗ Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1))):
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- -1.4142135623730951 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -2.0000000000000004 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- -2.0000000000000004 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)):
-[:, :, 1, 1] =
- -1.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](0)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- -1.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](0), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](1)) ← (Irrep[TensorKitSectors.U₁](1), Irrep[TensorKitSectors.U₁](1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](-1)) ← (Irrep[TensorKitSectors.U₁](-1), Irrep[TensorKitSectors.U₁](-1)):
-[:, :, 1, 1] =
- 0.0 + 0.0im
-, (CartesianIndex(1, 1),) =&gt; TensorMap(Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1) ← Rep[TensorKitSectors.U₁](0=&gt;1, 1=&gt;1, -1=&gt;1)):
-* Data for sector (Irrep[TensorKitSectors.U₁](0),) ← (Irrep[TensorKitSectors.U₁](0),):
- 0.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](1),) ← (Irrep[TensorKitSectors.U₁](1),):
- 30.0 + 0.0im
-* Data for sector (Irrep[TensorKitSectors.U₁](-1),) ← (Irrep[TensorKitSectors.U₁](-1),):
- 0.0 + 0.0im
-))</pre>
+<pre class='language-julia'><code class='language-julia'>H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff, t, U, n);</code></pre>
+
 
 
 <div class="markdown"><p>Before we continue, it might be interesting to inspect the corresponding lattice physical spaces:</p></div>
@@ -243,7 +120,7 @@
 
 
 
-<div class="markdown"><div class="admonition is-note"><header class="admonition-header">Note</header><div class="admonition-body"><p>Taking CTMRG gradients and optimizing symmetric tensors tends to be more problematic than with dense tensors. In particular, this means that one frequently needs to tweak the <code>gradient_alg</code> and <code>optimizer_alg</code> settings. There rarely is a general-purpose set of settings which will always work, so instead one has to adjust the simulation settings for each specific application. </p></div></div><p>Keep in mind that the PEPS is constructed from a unit cell of spaces, so we have to make a matrix of <code>V_peps</code> spaces:</p></div>
+<div class="markdown"><div class="admonition is-note"><header class="admonition-header">Note</header><div class="admonition-body"><p>Taking CTMRG gradients and optimizing symmetric tensors tends to be more problematic than with dense tensors. In particular, this means that one frequently needs to tweak the <code>boundary_alg</code>, <code>gradient_alg</code> and <code>optimizer_alg</code> settings. There rarely is a general-purpose set of settings which will always work, so instead one has to adjust the simulation settings for each specific application. For example, it might help to switch between the CTMRG flavors <code>alg=:simultaneous</code> and <code>alg=:sequential</code> to improve convergence. The evaluation of the CTMRG gradient can be instable, so there it is advised to try the different <code>iterscheme=:diffgauge</code> and <code>iterscheme=:fixed</code> schemes as well as different <code>alg</code> keywords. Of course the tolerances of the algorithms and their subalgorithms also have to be compatible. For more details on the available options, see the <a href="@ref"><code>fixedpoint</code></a> docstring.</p></div></div><p>Keep in mind that the PEPS is constructed from a unit cell of spaces, so we have to make a matrix of <code>V_peps</code> spaces:</p></div>
 
 <pre class='language-julia'><code class='language-julia'>virtual_spaces = fill(V_peps, size(lattice)...);</code></pre>
 
@@ -261,7 +138,7 @@
 
 
 <pre class='language-julia'><code class='language-julia'>@show E</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash629819">-0.27326633532690786</pre>
+<pre class="code-output documenter-example-output" id="var-hash629819">-0.026480205618883625</pre>
 
 
 <div class="markdown"><p>We can compare our PEPS result to the energy obtained using a cylinder-MPS calculation using a cylinder circumference of <span class="tex">\(L_y = 7\)</span> and a bond dimension of 446, which yields <span class="tex">\(E = -0.273284888\)</span>:</p></div>
@@ -270,7 +147,7 @@
 
 
 <pre class='language-julia'><code class='language-julia'>@show (E - E_ref) / E_ref</code></pre>
-<pre class="code-output documenter-example-output" id="var-hash102569">-6.788766560755672e-5</pre>
+<pre class="code-output documenter-example-output" id="var-hash102569">-0.9031040252072642</pre>
 <div class='manifest-versions'>
 <p>Built with Julia 1.11.4 and</p>
 MPSKit 0.12.6<br>
