@@ -113,7 +113,7 @@ optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=200, ls_maxiter=2,
 # ╔═╡ 8ea51b8c-afdb-4b59-93a8-f66d5ab4d6da
 md"""
 !!! note
-	Taking CTMRG gradients and optimizing symmetric tensors tends to be more problematic than with dense tensors. In particular, this means that one frequently needs to tweak the `gradient_alg` and `optimizer_alg` settings. There rarely is a general-purpose set of settings which will always work, so instead one has to adjust the simulation settings for each specific application. 
+	Taking CTMRG gradients and optimizing symmetric tensors tends to be more problematic than with dense tensors. In particular, this means that one frequently needs to tweak the `boundary_alg`, `gradient_alg` and `optimizer_alg` settings. There rarely is a general-purpose set of settings which will always work, so instead one has to adjust the simulation settings for each specific application. For example, it might help to switch between the CTMRG flavors `alg=:simultaneous` and `alg=:sequential` to improve convergence. The evaluation of the CTMRG gradient can be instable, so there it is advised to try the different `iterscheme=:diffgauge` and `iterscheme=:fixed` schemes as well as different `alg` keywords. Of course the tolerances of the algorithms and their subalgorithms also have to be compatible. For more details on the available options, see the [`fixedpoint`](@ref) docstring.
 
 Keep in mind that the PEPS is constructed from a unit cell of spaces, so we have to make a matrix of `V_peps` spaces:
 """
