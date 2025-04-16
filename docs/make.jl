@@ -48,6 +48,7 @@ examples = [
     "Optimizing the ``U(1)``-symmetric Bose-Hubbard model" => "examples/bose_hubbard.md",
     "Néel order in the ``U(1)``-symmetric XXZ model" => "examples/xxz.md",
     "Fermi-Hubbard model with ``f\\mathbb{Z}_2 \\boxtimes U(1)`` symmetry at large ``U`` and half-filling" => "examples/fermi_hubbard.md",
+    "Hubbard model imaginary time evolution using simple update" => "examples/hubbard_su.md",
 ]
 
 makedocs(;

@@ -135,7 +135,7 @@ peps, env, E, info = fixedpoint(H, peps₀, env₀; boundary_alg, gradient_alg, 
 
 # ╔═╡ a872f393-fbd9-432a-aabc-ddd33f33f450
 md"""
-Finally, let's compare the obtained energy against a reference energy from a QMC study by [Qin et al.](@cite qin_benchmark_2016). At our parameters they obtain an energy of ``E_\text{ref} \approx 4 \times -0.5244140625 = -2.09765625`` (the factor 4 comes from the ``2 x 2`` unit cell that we use here). Thus, we find:
+Finally, let's compare the obtained energy against a reference energy from a QMC study by [Qin et al.](@cite qin_benchmark_2016). With the parameters specified above, they obtain an energy of ``E_\text{ref} \approx 4 \times -0.5244140625 = -2.09765625`` (the factor 4 comes from the ``2 \times 2`` unit cell that we use here). Thus, we find:
 """
 
 # ╔═╡ 8d8baa3a-df5b-45e0-be1f-56f6dcd99ff7

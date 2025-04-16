@@ -64,7 +64,7 @@ So let's instantiate the symmetric Hamiltonian:
 """
 
 # ╔═╡ 5fca8dcd-ab29-49d0-a605-8a5c1499eb65
-H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff, t, U, n)
+H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff, t, U, n);
 
 # ╔═╡ f66ae429-5775-4485-b90a-0276fa1669f4
 md"""
