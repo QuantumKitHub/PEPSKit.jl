@@ -282,6 +282,21 @@ function InfinitePEPS(peps::InfiniteWeightPEPS)
 end
 
 """
+    InfiniteWeightPEPS(peps::InfinitePEPS)
+
+Create `InfiniteWeightPEPS` from `InfinitePEPS` by initializing the bond weights as identity matrices of element type `Float64`.
+"""
+function InfiniteWeightPEPS(peps::InfinitePEPS)
+    Nr, Nc = size(peps)
+    weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+        V = (d == 1 ? domain(peps[r, c])[2] : domain(peps[r, c])[1])
+        @assert !isdual(V)
+        DiagonalTensorMap(ones(reduceddim(V)), V)
+    end
+    return InfiniteWeightPEPS(peps.A, SUWeight(weights))
+end
+
+"""
     mirror_antidiag(peps::InfiniteWeightPEPS)
 
 Mirror the unit cell of an iPEPS with weights by its anti-diagonal line.

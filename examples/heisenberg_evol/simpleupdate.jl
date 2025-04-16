@@ -7,9 +7,7 @@ trscheme_env = truncerr(1e-10) & truncdim(χenv)
 Nr, Nc = 2, 2
 # Heisenberg model Hamiltonian
 # (already only includes nearest neighbor terms)
-ham = heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1.0, Jy=1.0, Jz=1.0)
-# convert to real tensors
-ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
+ham = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1.0, Jy=1.0, Jz=1.0))
 
 # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
 if symm == Trivial

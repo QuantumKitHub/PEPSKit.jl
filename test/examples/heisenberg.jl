@@ -59,10 +59,11 @@ end
     for ind in CartesianIndices(wpeps.vertices)
         wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
     end
-    # Heisenberg model Hamiltonian (already only includes nearest neighbor terms)
+    # Heisenberg model Hamiltonian
     ham = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0)
-    # convert to real tensors
-    ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
+    # assert imaginary part is zero
+    @assert length(imag(ham).terms) == 0
+    ham = real(ham)
 
     # simple update
     dts = [1e-2, 1e-3, 1e-3, 1e-4]
