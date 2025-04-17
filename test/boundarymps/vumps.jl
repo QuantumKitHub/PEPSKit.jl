@@ -7,12 +7,14 @@ using LinearAlgebra
 
 Random.seed!(29384293742893)
 
-const vumps_alg = VUMPS(; alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false))
+const vumps_alg = VUMPS(;
+    tol=1e-6, alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false), verbosity=2
+)
 @testset "(1, 1) PEPS" begin
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
 
     T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-    mps = PEPSKit.initializeMPS(T, [ComplexSpace(20)])
+    mps = initialize_mps(T, [ComplexSpace(20)])
 
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(sum(expectation_value(mps, T)))
@@ -27,7 +29,7 @@ end
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
     T = PEPSKit.MultilineTransferPEPS(psi, 1)
 
-    mps = PEPSKit.initializeMPS(T, fill(ComplexSpace(20), 2, 2))
+    mps = initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2))
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(prod(expectation_value(mps, T)))
 
@@ -64,7 +66,7 @@ end
     psi = PEPSKit.initializePEPS(O, ComplexSpace(2))
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
-    mps = PEPSKit.initializeMPS(T, [ComplexSpace(10)])
+    mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(10)])
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     f = abs(prod(expectation_value(mps, T)))
 
@@ -73,7 +75,7 @@ end
     psi2 = initializePEPS(O, ComplexSpace(2))
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
-    mps = PEPSKit.initializeMPS(T, [ComplexSpace(8)])
+    mps = initialize_mps(rand, T, [ComplexSpace(8)])
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     f = abs(prod(expectation_value(mps, T)))
 end
