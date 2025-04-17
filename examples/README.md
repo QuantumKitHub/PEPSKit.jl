@@ -18,4 +18,6 @@ delete the entries for which you wish to generate new files.
 ## Contributing
 
 Contributions are welcome! Please open an issue or a pull request if you have any questions
-or suggestions.
+or suggestions. The examples should be placed in their own folder, where the `main.jl` file
+serves as the entry point. Any other files will be copied over to the `docs/src/examples`
+folder, so you can use this to include images or other files.
