@@ -75,7 +75,7 @@ end
     psi2 = initializePEPS(O, ComplexSpace(2))
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
-    mps = initialize_mps(rand, T, [ComplexSpace(8)])
+    mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(8)])
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     f = abs(prod(expectation_value(mps, T)))
 end
