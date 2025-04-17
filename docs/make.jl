@@ -42,14 +42,10 @@ mathengine = MathJax3(
     ),
 )
 
-examples = [
-    "Optimizing the 2D Heisenberg model" => "examples/heisenberg.md",
-    "Boundary MPS contractions using VUMPS and PEPOs" => "examples/boundary_mps.md",
-    "Optimizing the ``U(1)``-symmetric Bose-Hubbard model" => "examples/bose_hubbard.md",
-    "Néel order in the ``U(1)``-symmetric XXZ model" => "examples/xxz.md",
-    "Fermi-Hubbard model with ``f\\mathbb{Z}_2 \\boxtimes U(1)`` symmetry at large ``U`` and half-filling" => "examples/fermi_hubbard.md",
-    "Hubbard model imaginary time evolution using simple update" => "examples/hubbard_su.md",
-]
+# built examples target directories
+example_pages = map(readdir(joinpath(@__DIR__, "src", "examples"))) do dir
+    return joinpath("examples", dir, "index.md")
+end
 
 makedocs(;
     modules=[PEPSKit],
@@ -68,7 +64,7 @@ makedocs(;
             "man/multi_threading.md",
             "man/precompilation.md",
         ],
-        "Examples" => examples,
+        "Examples" => example_pages,
         "Library" => "lib/lib.md",
         "References" => "references.md",
     ],

@@ -1,16 +1,6 @@
-### A Pluto.jl notebook ###
-# v0.20.5
-
-using Markdown
-using InteractiveUtils
-
-# ╔═╡ 0c1fc02f-fd78-47d3-82c2-1c261472f61e
 using Random
-
-# ╔═╡ 7da39574-7c05-492e-abf9-10b9e8f1dda9
 using TensorKit, PEPSKit
 
-# ╔═╡ ff6fa2f1-841d-42c6-acd9-b5f4cf6b7c76
 md"""
 # Optimizing the 2D Heisenberg model
 
