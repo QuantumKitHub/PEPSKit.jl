@@ -9,7 +9,6 @@ using TensorKit:
     _create_svdtensors,
     _compute_truncdim,
     _compute_truncerr
-const TensorKitCRCExt = Base.get_extension(TensorKit, :TensorKitChainRulesCoreExt)
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
@@ -32,7 +31,7 @@ removes the divergences from the adjoint.
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
-* `broadening=nothing`: Broadening of singular value differences to stabilize the SVD gradient. Currently not implemented.
+* `broadening=$(Defaults.svd_rrule_broadening)`: Lorentzian broadening of singular value differences to stabilize the SVD gradient in case of degeneracies. Currently only implemented for `rrule_alg=:tsvd`.
 """
 struct SVDAdjoint{F,R,B}
     fwd_alg::F
@@ -85,6 +84,8 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
 
         if rrule_type <: Nothing
             nothing
+            broadening =
+                isnothing(broadening) ? Defaults.svd_rrule_broadening : broadening
         else
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
             rrule_type <: BiCGStab &&
@@ -306,8 +307,16 @@ function ChainRulesCore.rrule(
             ΔUc, ΔSc, ΔV⁺c = block(ΔU, c), block(ΔS, c), block(ΔV⁺, c)
             Sdc = view(Sc, diagind(Sc))
             ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
-            TensorKitCRCExt.svd_pullback!(
-                b, Uc, Sdc, V⁺c, ΔUc, ΔSdc, ΔV⁺c; tol=pullback_tol
+            svd_pullback!(
+                b,
+                Uc,
+                Sdc,
+                V⁺c,
+                ΔUc,
+                ΔSdc,
+                ΔV⁺c;
+                tol=pullback_tol,
+                broadening=alg.broadening,
             )
         end
         return NoTangent(), Δt, NoTangent()
@@ -388,4 +397,168 @@ function ChainRulesCore.rrule(
     end
 
     return (U, S, V, info), tsvd!_itersvd_pullback
+end
+
+# scalar inverses with a cutoff tolerance and Lorentzian broadening
+function _safe_inv(x, tol, ε=0)
+    if abs(x) < tol
+        return zero(x)
+    else
+        return iszero(ε) ? inv(x) : _lorentz_broaden(x, ε)
+    end
+end
+
+# Lorentzian broadening for divergent term in SVD rrule, see
+# https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.7.013237
+function _lorentz_broaden(x, ε=1e-13)
+    return x / (x^2 + ε)
+end
+
+# SVD_pullback: pullback implementation for general (possibly truncated) SVD
+#
+# This is a modified version of TensorKit's pullback
+# https://github.com/Jutho/TensorKit.jl/blob/fa1551472ac74d7f2a61bdb2135cf418c8c53378/ext/TensorKitChainRulesCoreExt/factorizations.jl#L190)
+# with support for Lorentzian broadening and improved verbosity control
+#
+# Arguments are U, S and Vd of full (non-truncated, but still thin) SVD, as well as
+# cotangent ΔU, ΔS, ΔVd variables of truncated SVD
+# 
+# Checks whether the cotangent variables are such that they would couple to gauge-dependent
+# degrees of freedom (phases of singular vectors), and prints a warning if this is the case
+#
+# An implementation that only uses U, S, and Vd from truncated SVD is also possible, but
+# requires solving a Sylvester equation, which does not seem to be supported on GPUs.
+#
+# Other implementation considerations for GPU compatibility:
+# no scalar indexing, lots of broadcasting and views
+#
+function svd_pullback!(
+    ΔA::AbstractMatrix,
+    U::AbstractMatrix,
+    S::AbstractVector,
+    Vd::AbstractMatrix,
+    ΔU,
+    ΔS,
+    ΔVd;
+    tol::Real=default_pullback_gaugetol(S),
+    broadening::Real=0,
+)
+
+    # Basic size checks and determination
+    m, n = size(U, 1), size(Vd, 2)
+    size(U, 2) == size(Vd, 1) == length(S) == min(m, n) || throw(DimensionMismatch())
+    p = -1
+    if !(ΔU isa AbstractZero)
+        m == size(ΔU, 1) || throw(DimensionMismatch())
+        p = size(ΔU, 2)
+    end
+    if !(ΔVd isa AbstractZero)
+        n == size(ΔVd, 2) || throw(DimensionMismatch())
+        if p == -1
+            p = size(ΔVd, 1)
+        else
+            p == size(ΔVd, 1) || throw(DimensionMismatch())
+        end
+    end
+    if !(ΔS isa AbstractZero)
+        if p == -1
+            p = length(ΔS)
+        else
+            p == length(ΔS) || throw(DimensionMismatch())
+        end
+    end
+    Up = view(U, :, 1:p)
+    Vp = view(Vd, 1:p, :)'
+    Sp = view(S, 1:p)
+
+    # rank
+    r = searchsortedlast(S, tol; rev=true)
+
+    # compute antihermitian part of projection of ΔU and ΔV onto U and V
+    # also already subtract this projection from ΔU and ΔV
+    if !(ΔU isa AbstractZero)
+        UΔU = Up' * ΔU
+        aUΔU = rmul!(UΔU - UΔU', 1 / 2)
+        if m > p
+            ΔU -= Up * UΔU
+        end
+    else
+        aUΔU = fill!(similar(U, (p, p)), 0)
+    end
+    if !(ΔVd isa AbstractZero)
+        VΔV = Vp' * ΔVd'
+        aVΔV = rmul!(VΔV - VΔV', 1 / 2)
+        if n > p
+            ΔVd -= VΔV' * Vp'
+        end
+    else
+        aVΔV = fill!(similar(Vd, (p, p)), 0)
+    end
+
+    # check whether cotangents arise from gauge-invariance objective function
+    mask = abs.(Sp' .- Sp) .< tol
+    Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
+    if p > r
+        rprange = (r + 1):p
+        Δgauge = max(Δgauge, norm(view(aUΔU, rprange, rprange), Inf))
+        Δgauge = max(Δgauge, norm(view(aVΔV, rprange, rprange), Inf))
+    end
+    Δgauge < tol || @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+
+    UdΔAV =
+        (aUΔU .+ aVΔV) .* _safe_inv.(Sp' .- Sp, tol, broadening) .+
+        (aUΔU .- aVΔV) .* _safe_inv.(Sp' .+ Sp, tol)
+    if !(ΔS isa ZeroTangent)
+        UdΔAV[diagind(UdΔAV)] .+= real.(ΔS)
+        # in principle, ΔS is real, but maybe not if coming from an anyonic tensor
+    end
+    mul!(ΔA, Up, UdΔAV * Vp')
+
+    if r > p # contribution from truncation
+        Ur = view(U, :, (p + 1):r)
+        Vr = view(Vd, (p + 1):r, :)'
+        Sr = view(S, (p + 1):r)
+
+        if !(ΔU isa AbstractZero)
+            UrΔU = Ur' * ΔU
+            if m > r
+                ΔU -= Ur * UrΔU # subtract this part from ΔU
+            end
+        else
+            UrΔU = fill!(similar(U, (r - p, p)), 0)
+        end
+        if !(ΔVd isa AbstractZero)
+            VrΔV = Vr' * ΔVd'
+            if n > r
+                ΔVd -= VrΔV' * Vr' # subtract this part from ΔV
+            end
+        else
+            VrΔV = fill!(similar(Vd, (r - p, p)), 0)
+        end
+
+        X =
+            (1//2) .* (
+                (UrΔU .+ VrΔV) .* _safe_inv.(Sp' .- Sr, tol, broadening) .+
+                (UrΔU .- VrΔV) .* _safe_inv.(Sp' .+ Sr, tol)
+            )
+        Y =
+            (1//2) .* (
+                (UrΔU .+ VrΔV) .* _safe_inv.(Sp' .- Sr, tol, broadening) .-
+                (UrΔU .- VrΔV) .* _safe_inv.(Sp' .+ Sr, tol)
+            )
+
+        # ΔA += Ur * X * Vp' + Up * Y' * Vr'
+        mul!(ΔA, Ur, X * Vp', 1, 1)
+        mul!(ΔA, Up * Y', Vr', 1, 1)
+    end
+
+    if m > max(r, p) && !(ΔU isa AbstractZero) # remaining ΔU is already orthogonal to U[:,1:max(p,r)]
+        # ΔA += (ΔU .* _safe_inv.(Sp', tol)) * Vp'
+        mul!(ΔA, ΔU .* _safe_inv.(Sp', tol), Vp', 1, 1)
+    end
+    if n > max(r, p) && !(ΔVd isa AbstractZero) # remaining ΔV is already orthogonal to V[:,1:max(p,r)]
+        # ΔA += U * (_safe_inv.(Sp, tol) .* ΔVd)
+        mul!(ΔA, Up, _safe_inv.(Sp, tol) .* ΔVd, 1, 1)
+    end
+    return ΔA
 end
