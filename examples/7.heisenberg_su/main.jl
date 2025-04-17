@@ -32,7 +32,7 @@ no internal symmetries (`symm = Trivial`) or use the global $U(1)$ symmetry
 (`symm = U1Irrep`):
 """
 
-symm = Trivial # ∈ {Trivial, U1Irrep}
+symm = Trivial ## ∈ {Trivial, U1Irrep}
 Nr, Nc = 2, 2
 H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1, Jy=1, Jz=1));
 
@@ -88,7 +88,7 @@ In order to compute observable expectation values, we need to converge a CTMRG e
 on the evolved PEPS. Let's do so:
 """
 
-peps = InfinitePEPS(wpeps) # absorb the weights
+peps = InfinitePEPS(wpeps) ## absorb the weights
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
 trscheme_env = truncerr(1e-10) & truncdim(χenv)
 env, = leading_boundary(
@@ -109,12 +109,12 @@ directions:
 function compute_mags(peps::InfinitePEPS, env::CTMRGEnv)
     lattice = collect(space(t, 1) for t in peps.A)
 
-    # detect symmetry on physical axis
+    ## detect symmetry on physical axis
     symm = sectortype(space(peps.A[1, 1]))
     if symm == Trivial
         S_ops = real.([S_x(symm), im * S_y(symm), S_z(symm)])
     elseif symm == U1Irrep
-        S_ops = real.([S_z(symm)]) # only Sz preserves <Sz>
+        S_ops = real.([S_z(symm)]) ## only Sz preserves <Sz>
     end
 
     return [

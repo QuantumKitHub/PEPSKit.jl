@@ -1,6 +1,6 @@
 using Markdown
 md"""
-# Néel order in the U(1)-symmetric XXZ model
+# Néel order in the $U(1)$-symmetric XXZ model
 
 Here, we want to look at a special case of the Heisenberg model, where the $x$ and $y$
 couplings are equal, called the XXZ model
@@ -71,7 +71,7 @@ From this point onwards it's business as usual: Create an initial PEPS and envir
 (using the symmetric spaces), specify the algorithmic parameters and optimize:
 """
 
-boundary_alg = (; tol=1e-8, alg=:simultaneous, verbosity=2, trscheme=(; alg=:fixedspace))
+boundary_alg = (; tol=1e-8, alg=:simultaneous, trscheme=(; alg=:fixedspace))
 gradient_alg = (; tol=1e-6, alg=:eigsolver, maxiter=10, iterscheme=:diffgauge)
 optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=100, ls_maxiter=2, ls_maxfg=2)
 
