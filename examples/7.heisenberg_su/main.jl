@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # Simple update for the Heisenberg model
 

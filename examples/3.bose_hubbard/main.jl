@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # Optimizing the $U(1)$-symmetric Bose-Hubbard model
 

@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # Boundary MPS contractions using VUMPS and PEPOs
 

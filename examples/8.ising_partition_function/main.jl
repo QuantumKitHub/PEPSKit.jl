@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # 2D classical Ising partition function using CTMRG
 

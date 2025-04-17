@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # Néel order in the $U(1)$-symmetric XXZ model
 

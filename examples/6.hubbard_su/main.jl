@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # Hubbard model imaginary time evolution using simple update
 

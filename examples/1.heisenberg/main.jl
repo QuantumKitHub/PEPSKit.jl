@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # [Optimizing the 2D Heisenberg model](@id examples_heisenberg)
 

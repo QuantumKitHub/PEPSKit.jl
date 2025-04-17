@@ -1,4 +1,4 @@
-using Markdown
+using Markdown #hide
 md"""
 # Fermi-Hubbard model with $f\mathbb{Z}_2 \boxtimes U(1)$ symmetry, at large $U$ and half-filling
 
