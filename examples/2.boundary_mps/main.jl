@@ -21,10 +21,12 @@ using TensorKit, PEPSKit, MPSKit
 md"""
 ## Computing a PEPS norm
 
-We start by initializing a random initial infinite PEPS:
+We start by initializing a random initial infinite PEPS. Let us use uniformly distributed
+complex entries using `rand` (which sometimes lead to better convergence than Gaussian
+distributed `randn` elements):
 """
 
-peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
+peps₀ = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2))
 
 md"""
 To compute its norm, we need to construct the transfer operator corresponding to
