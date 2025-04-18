@@ -224,8 +224,8 @@ function _proj_from_RL(
     sinv = PEPSKit.sdiag_pow(s, -1)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
-        Pa, Pb = flip(Pa, 2), flip(Pb, 1)
-        s = permute(DiagonalTensorMap(flip(s, (1, 2))), ((2,), (1,)))
+        Pa, s, Pb = flip_svd(Pa, s, Pb)
+        s = permute(s, ((2,), (1,)))
         @assert all(s.data .>= 0.0)
     end
     return Pa, s, Pb, ϵ
