@@ -83,9 +83,9 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
         end
 
         if rrule_type <: Nothing
-            nothing
             broadening =
                 isnothing(broadening) ? Defaults.svd_rrule_broadening : broadening
+            nothing
         else
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
             rrule_type <: BiCGStab &&
