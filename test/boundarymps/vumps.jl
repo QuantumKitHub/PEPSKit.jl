@@ -46,10 +46,10 @@ end
 
     psi = InfinitePEPS(D, d; unitcell=(1, 1))
     n = InfiniteSquareNetwork(psi)
-    T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
+    T = InfiniteTransferPEPS(psi, 1, 1)
 
     # compare boundary MPS contraction to CTMRG contraction
-    mps = PEPSKit.initializeMPS(T, [χ])
+    mps = initialize_mps(T, [χ])
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N_vumps = abs(prod(expectation_value(mps, T)))
 
