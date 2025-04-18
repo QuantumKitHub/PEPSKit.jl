@@ -102,6 +102,22 @@ function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorM
     return U * sqrt_S, sqrt_S * V
 end
 
+"""
+    twistdual(t::AbstractTensorMap, i)
+    twistdual!(t::AbstractTensorMap, i)
+
+Twist the i-th leg of a tensor `t` if it represents a dual space.
+"""
+function twistdual!(t::AbstractTensorMap, i::Int)
+    isdual(space(t, i)) || return t
+    return twist!(t, i)
+end
+function twistdual!(t::AbstractTensorMap, is)
+    is′ = filter(i -> isdual(space(t, i)), is)
+    return twist!(t, is′)
+end
+twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
+
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
 function is_degenerate_spectrum(
     S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
