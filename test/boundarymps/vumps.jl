@@ -42,16 +42,35 @@ end
     D = Vect[fℤ₂](0 => 1, 1 => 1)
     d = Vect[fℤ₂](0 => 1, 1 => 1)
     χ = Vect[fℤ₂](0 => 10, 1 => 10)
+
     psi = InfinitePEPS(D, d; unitcell=(1, 1))
+    n = InfiniteSquareNetwork(psi)
     T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
+
+    # compare boundary MPS contraction to CTMRG contraction
     mps = PEPSKit.initializeMPS(T, [χ])
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
-    N = abs(prod(expectation_value(mps, T)))
+    N_vumps = abs(prod(expectation_value(mps, T)))
 
     ctm, = leading_boundary(CTMRGEnv(psi, χ), psi)
-    N´ = abs(norm(psi, ctm))
+    N_ctm = abs(norm(psi, ctm))
 
-    @test N ≈ N´ rtol = 1e-2
+    @test N_vumps ≈ N_ctm rtol = 1e-2
+
+    # and again after blocking the local sandwiches
+    n´ = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(n)))
+    T´ = InfiniteMPO(map(PEPSKit.mpotensor, T.O))
+
+    mps´ = InfiniteMPS(randn, ComplexF64, [physicalspace(T´, 1)], [χ])
+    mps´, env´, ϵ = leading_boundary(mps´, T´, vumps_alg)
+    N_vumps´ = abs(prod(expectation_value(mps´, T´)))
+
+    ctm´, = leading_boundary(CTMRGEnv(n´, χ), n´)
+    N_ctm´ = abs(network_value(n´, ctm´))
+
+    @show N_vumps´
+    @test N_vumps´ ≈ N_vumps rtol = 1e-2
+    @test N_vumps´ ≈ N_ctm´ rtol = 1e-2
 end
 
 @testset "PEPO runthrough" begin
