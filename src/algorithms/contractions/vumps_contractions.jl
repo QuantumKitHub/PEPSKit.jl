@@ -4,9 +4,29 @@ using MPSKit: GenericMPSTensor, MPSBondTensor
 # Environment transfer functions
 #
 
+function MPSKit.transfer_left(
+    GL::GenericMPSTensor{S,N},
+    O::Union{PEPSSandwich,PEPOSandwich},
+    A::GenericMPSTensor{S,N},
+    Ā::GenericMPSTensor{S,N},
+) where {S,N}
+    Ā = twistdual(Ā, 2:N)
+    return _transfer_left(GL, O, A, Ā)
+end
+
+function MPSKit.transfer_right(
+    GR::GenericMPSTensor{S,N},
+    O::Union{PEPSSandwich,PEPOSandwich},
+    A::GenericMPSTensor{S,N},
+    Ā::GenericMPSTensor{S,N},
+) where {S,N}
+    Ā = twistdual(Ā, 2:N)
+    return _transfer_right(GR, O, A, Ā)
+end
+
 ## PEPS
 
-function MPSKit.transfer_left(
+function _transfer_left(
     GL::GenericMPSTensor{S,3},
     O::PEPSSandwich,
     A::GenericMPSTensor{S,3},
@@ -20,7 +40,7 @@ function MPSKit.transfer_left(
         A[χ_NW D_N_above D_N_below; χ_NE]
 end
 
-function MPSKit.transfer_right(
+function _transfer_right(
     GR::GenericMPSTensor{S,3},
     O::PEPSSandwich,
     A::GenericMPSTensor{S,3},
@@ -36,7 +56,7 @@ end
 
 ## PEPO
 
-@generated function MPSKit.transfer_left(
+@generated function _transfer_left(
     GL::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
@@ -65,7 +85,7 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $GL´_e := $rhs))
 end
 
-@generated function MPSKit.transfer_right(
+@generated function _transfer_right(
     GR::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     A::GenericMPSTensor{S,N},
@@ -118,7 +138,14 @@ end
 # Derivative contractions
 #
 
-@generated function MPSKit.∂C(
+function MPSKit.∂C(
+    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
+) where {S,N}
+    GL = twistdual(GL, 1)
+    GR = twistdual(GR, numind(GR))
+    return _∂C(C, GL, GR)
+end
+@generated function _∂C(
     C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
 ) where {S,N}
     C´_e = tensorexpr(:C´, -1, -2)
@@ -128,9 +155,20 @@ end
     return macroexpand(@__MODULE__, :(return @tensor $C´_e := $GL_e * $C_e * $GR_e))
 end
 
+function MPSKit.∂AC(
+    AC::GenericMPSTensor{S,N},
+    O::Union{PEPSSandwich,PEPOSandwich},
+    GL::GenericMPSTensor{S,N},
+    GR::GenericMPSTensor{S,N},
+) where {S,N}
+    GL = twistdual(GL, 1)
+    GR = twistdual(GR, numind(GR))
+    return _∂AC(AC, O, GL, GR)
+end
+
 ## PEPS
 
-function MPSKit.∂AC(
+function _∂AC(
     AC::GenericMPSTensor{S,3},
     O::PEPSSandwich,
     GL::GenericMPSTensor{S,3},
@@ -162,7 +200,7 @@ end
 
 ## PEPO
 
-@generated function MPSKit.∂AC(
+@generated function _∂AC(
     AC::GenericMPSTensor{S,N},
     O::PEPOSandwich{H},
     GL::GenericMPSTensor{S,N},
