@@ -84,7 +84,7 @@ First, we construct a PEPS with a $2 \times 2$ unit cell using the `unitcell` ke
 argument and then define the corresponding transfer PEPS:
 """
 
-peps₀_2x2 = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
+peps₀_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
 transfer_2x2 = PEPSKit.MultilineTransferPEPS(peps₀_2x2, 1);
 
 md"""
@@ -100,7 +100,7 @@ env_ctmrg_2x2, = leading_boundary(
 )
 norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
 
-@show abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps
+@show abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps;
 
 md"""
 Again, the results are compatible. Note that for larger unit cells and non-Hermitian PEPS

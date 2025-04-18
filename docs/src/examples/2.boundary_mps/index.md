@@ -6,9 +6,6 @@ EditURL = "../../../../examples/2.boundary_mps/main.jl"
 [![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/.//2.boundary_mps/main.ipynb)
 [![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/.//2.boundary_mps)
 
-````julia
-using Markdown
-````
 
 # Boundary MPS contractions using VUMPS and PEPOs
 
@@ -38,7 +35,7 @@ peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
 ````
 
 ````
-InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}[TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')):
+InfinitePEPS{TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}}(TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}[TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')):
 [:, :, 1, 1, 1] =
  -0.5524390176345264 - 0.07357188568178248im  0.34014501646081047 - 0.7552574870030472im
  -0.5455245317233405 + 0.8946618856309984im     1.249282911658007 + 0.45352274131986825im
@@ -81,7 +78,7 @@ transfer = InfiniteTransferPEPS(peps₀, 1, 1)
 ````
 
 ````
-single site MPSKit.InfiniteMPO{Tuple{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}}:
+single site InfiniteMPO{Tuple{TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}}}:
 ╷  ⋮
 ┼ O[1]: (TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')))
 ╵  ⋮
@@ -119,7 +116,7 @@ mps, env, ϵ = leading_boundary(mps₀, transfer, VUMPS(; tol=1e-6, verbosity=2)
 
 ````
 [ Info: VUMPS init:	obj = +1.674563752306e+00 +3.035692829590e+00im	err = 7.5576e-01
-[ Info: VUMPS conv 120:	obj = +6.831610878163e+00 -1.001928853191e-08im	err = 9.5332406967e-07	time = 5.64 sec
+[ Info: VUMPS conv 120:	obj = +6.831610878163e+00 -1.001928853191e-08im	err = 9.5332406967e-07	time = 1.80 sec
 
 ````
 
@@ -146,7 +143,7 @@ norm_ctmrg = abs(norm(peps₀, env_ctmrg))
 
 ````
 [ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579630e-01im	err = 1.0000e+00
-[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595140e-07	time = 0.23 sec
+[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595140e-07	time = 0.28 sec
 abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674637855860049e-6
 
 ````
@@ -164,7 +161,7 @@ First, we construct a PEPS with a $2 \times 2$ unit cell using the `unitcell` ke
 argument and then define the corresponding transfer PEPS:
 
 ````julia
-peps₀_2x2 = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
+peps₀_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
 transfer_2x2 = PEPSKit.MultilineTransferPEPS(peps₀_2x2, 1);
 ````
 
@@ -180,11 +177,16 @@ env_ctmrg_2x2, = leading_boundary(
 )
 norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
 
-@show abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps
+@show abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps;
 ````
 
 ````
-0.001753056153861759
+[ Info: VUMPS init:	obj = +8.149302834396e+02 -8.860408249120e+01im	err = 8.6172e-01
+[ Info: VUMPS conv 37:	obj = +1.046633709901e+05 -1.858418959285e-05im	err = 4.5282584466e-07	time = 2.10 sec
+[ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510263e+01im	err = 1.0000e+00
+[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6993045675e-07	time = 1.71 sec
+abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 4.725134987376298e-9
+
 ````
 
 Again, the results are compatible. Note that for larger unit cells and non-Hermitian PEPS
@@ -225,7 +227,7 @@ transfer_pepo = InfiniteTransferPEPO(peps₀, pepo, 1, 1)
 ````
 
 ````
-single site MPSKit.InfiniteMPO{Tuple{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 4, Vector{ComplexF64}}}}:
+single site InfiniteMPO{Tuple{TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorMap{ComplexF64, ComplexSpace, 2, 4, Vector{ComplexF64}}}}:
 ╷  ⋮
 ┼ O[1]: (TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap((ℂ^2 ⊗ (ℂ^2)') ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')))
 ╵  ⋮
@@ -242,10 +244,10 @@ norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 ````
 
 ````
-[ Info: VUMPS init:	obj = +2.488222368854e+01 +3.652981254368e-01im	err = 9.0735e-01
-┌ Warning: VUMPS cancel 200:	obj = +9.667589206130e+01 -1.135822593507e+00im	err = 8.3337202584e-02	time = 30.62 sec
+[ Info: VUMPS init:	obj = +2.655321432467e+01 +3.760603778362e-01im	err = 8.9759e-01
+┌ Warning: VUMPS cancel 200:	obj = -2.194912861838e+01 -6.105468516794e+01im	err = 5.7061338213e-01	time = 32.78 sec
 └ @ MPSKit ~/.julia/packages/MPSKit/EfZBD/src/algorithms/statmech/vumps.jl:51
-norm_pepo = 96.68256408894005
+norm_pepo = 64.88018825545267
 
 ````
 

@@ -89,7 +89,7 @@ algorithms and their tolerances:
 
 boundary_alg = (; tol=1e-8, alg=:simultaneous, trscheme=(; alg=:fixedspace))
 gradient_alg = (; tol=1e-6, maxiter=10, alg=:eigsolver, iterscheme=:diffgauge)
-optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=200, ls_maxiter=2, ls_maxfg=2);
+optimizer_alg = (; tol=1e-4, alg=:lbfgs, maxiter=150, ls_maxiter=2, ls_maxfg=2);
 
 md"""
 !!! note
@@ -117,7 +117,9 @@ md"""
 And at last, we optimize (which might take a bit):
 """
 
-peps, env, E, info = fixedpoint(H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg)
+peps, env, E, info = fixedpoint(
+    H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity=3
+)
 @show E;
 
 md"""

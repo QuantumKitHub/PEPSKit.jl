@@ -18,7 +18,7 @@ Let's get started by seeding the RNG and importing the required modules:
 
 using Random
 using TensorKit, PEPSKit
-Random.seed!(1298351928);
+Random.seed!(12329348592498);
 
 md"""
 ## Defining the Hamiltonian
@@ -92,7 +92,7 @@ and then use that to initialize another run with bigger environment dimension. W
 run:
 """
 
-χenv₀, χenv = 6, 20
+χenv₀, χenv = 6, 16
 env_space = Vect[fℤ₂](0 => χenv₀ / 2, 1 => χenv₀ / 2)
 
 env = CTMRGEnv(rand, Float64, peps, env_space)

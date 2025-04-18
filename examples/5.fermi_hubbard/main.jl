@@ -36,7 +36,7 @@ lattice = InfiniteSquare(2, 2);
 
 md"""
 In order to create fermionic tensors, one needs to define symmetry sectors using TensorKit's
-[`FermionParity`](@extref). Not only do we want use fermion parity but we also want our
+`FermionParity`. Not only do we want use fermion parity but we also want our
 particles to exploit the global $U(1)$ symmetry. The combined product sector can be obtained
 using the [Deligne product](https://jutho.github.io/TensorKit.jl/stable/lib/sectors/#TensorKitSectors.deligneproduct-Tuple{Sector,%20Sector}),
 called through `⊠` which is obtained by typing `\boxtimes+TAB`. We will not impose any extra
@@ -72,7 +72,7 @@ define all algorithmic parameters:
 
 boundary_alg = (; tol=1e-8, alg=:simultaneous, trscheme=(; alg=:fixedspace))
 gradient_alg = (; tol=1e-6, alg=:eigsolver, maxiter=10, iterscheme=:diffgauge)
-optimizer_alg = (; tol=1e-4, alg=:lbfgs, verbosity=3, maxiter=100, ls_maxiter=2, ls_maxfg=2)
+optimizer_alg = (; tol=1e-4, alg=:lbfgs, maxiter=80, ls_maxiter=3, ls_maxfg=3)
 
 md"""
 Second, we initialize a PEPS state and environment (which we converge) constructed from
@@ -88,7 +88,9 @@ md"""
 And third, we start the ground state search (this does take quite long):
 """
 
-peps, env, E, info = fixedpoint(H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg)
+peps, env, E, info = fixedpoint(
+    H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity=3
+)
 @show E;
 
 md"""

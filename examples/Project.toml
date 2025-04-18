@@ -2,6 +2,7 @@
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 MPSKit = "bb1c41ca-d63c-52ed-829e-0820dda26502"
+MPSKitModels = "ca635005-6f8c-4cd1-b51d-8491250ef2ab"
 PEPSKit = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
