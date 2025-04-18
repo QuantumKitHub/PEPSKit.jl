@@ -2,6 +2,17 @@
     struct InfinitePEPS{T<:PEPSTensor}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    InfinitePEPS(A::AbstractMatrix{T})
+    InfinitePEPS([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))
+    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 """
 struct InfinitePEPS{T<:PEPSTensor}
     A::Matrix{T}
@@ -35,9 +46,7 @@ function InfinitePEPS(A::AbstractMatrix{<:PEPSTensor})
 end
 
 """
-    InfinitePEPS(
-        f=randn, T=ComplexF64, Pspaces::A, Nspaces::A, [Espaces::A]
-    ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    InfinitePEPS([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
 
 Create an `InfinitePEPS` by specifying the physical, north virtual and east virtual spaces
 of the PEPS tensor at each site in the unit cell as a matrix. Each individual space can be
@@ -65,7 +74,7 @@ function InfinitePEPS(
 end
 
 """
-    InfinitePEPS(A; unitcell=(1, 1))
+    InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))
 
 Create an `InfinitePEPS` by specifying a tensor and unit cell.
 
@@ -89,7 +98,7 @@ function InfinitePEPS(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PEPSTenso
 end
 
 """
-    InfinitePEPS(f=randn, T=ComplexF64, Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 Spaces can be specified either via `Int` or via `ElementarySpace`.
@@ -201,6 +210,12 @@ end
 
 ## FiniteDifferences vectorization
 
+"""
+    to_vec(A::InfinitePEPS) -> vec, state_from_vec
+
+Vectorize an `InfinitePEPS` into a vector of real numbers. A vectorized infinite PEPS can
+retrieved again as an `InfinitePEPS` by application of the `state_from_vec` map.
+"""
 function FiniteDifferences.to_vec(A::InfinitePEPS)
     vec, back = FiniteDifferences.to_vec(unitcell(A))
     function state_from_vec(vec)
