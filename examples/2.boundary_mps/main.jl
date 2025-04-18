@@ -86,7 +86,9 @@ First, we construct a PEPS with a $2 \times 2$ unit cell using the `unitcell` ke
 argument and then define the corresponding transfer PEPS:
 """
 
-peps₀_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
+peps₀_2x2 = InfinitePEPS(
+    rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2)
+)
 transfer_2x2 = PEPSKit.MultilineTransferPEPS(peps₀_2x2, 1);
 
 md"""
