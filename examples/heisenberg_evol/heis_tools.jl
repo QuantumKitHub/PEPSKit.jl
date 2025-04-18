@@ -1,9 +1,10 @@
 using Test
 using Printf
 using Random
-import Statistics: mean
 using TensorKit
 using PEPSKit
+using LinearAlgebra
+import Statistics: mean
 
 module MeasureHeis
 

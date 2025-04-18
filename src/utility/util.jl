@@ -102,6 +102,19 @@ function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensor
     return u * sqrt_s, sqrt_s * vh
 end
 
+"""
+    flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+
+Given `tsvd` result `u ← s ← vh`, flip the arrow between the three tensors 
+to `u2 → s2 → vh2` such that
+```
+    u * s * vh = (@tensor t2[-1; -2] := u2[-1; 1] * s2[1; 2] * vh2[2; -2])
+```
+"""
+function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+    return flip(u, 2), DiagonalTensorMap(flip(s, (1, 2))), flip(vh, 1)
+end
+
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
 function is_degenerate_spectrum(
     S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
