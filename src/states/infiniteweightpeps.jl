@@ -10,8 +10,8 @@ const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
 """
     struct SUWeight{E<:PEPSWeight}
 
-Schmidt bond weights used in simple/cluster update.
-Weight elements are always real.
+Schmidt weights on nearest neighbor bonds of an `InfiniteWeightPEPS`.
+Weight elements are always real non-negative.
 """
 struct SUWeight{E<:PEPSWeight}
     data::Array{E,3}
@@ -43,6 +43,21 @@ VectorInterface.scalartype(::Type{T}) where {T<:SUWeight} = scalartype(eltype(T)
 Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
 Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
 Base.axes(W::SUWeight, args...) = axes(W.data, args...)
+Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
+
+## (Approximate) equality
+function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
+    for (wt1, wt2) in zip(wts1, wts2)
+        !(wt1 == wt2) && return false
+    end
+    return true
+end
+function Base.isapprox(wts1::SUWeight, wts2::SUWeight; kwargs...)
+    for (wt1, wt2) in zip(wts1, wts2)
+        !isapprox(wt1, wt2; kwargs...) && return false
+    end
+    return true
+end
 
 function compare_weights(wts1::SUWeight, wts2::SUWeight)
     @assert size(wts1) == size(wts2)
@@ -64,7 +79,21 @@ end
     struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice
-consisting of vertex tensors and bond weights.
+consisting of vertex tensors and bond weights. 
+The vertex tensor, x-weight and y-weight at row `i`, column `j` 
+are defined as (the numbers show the axis order)
+```
+        2
+        |
+        yᵢⱼ
+        | 
+        1
+        2
+        |
+    5--Tᵢⱼ--3  1--xᵢⱼ--2
+        | ↘
+        4   1
+```
 """
 struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
     vertices::Matrix{T}
@@ -75,6 +104,8 @@ struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
     ) where {T<:PEPSTensor,E<:PEPSWeight}
         @assert size(vertices) == size(weights)[2:end]
         Nr, Nc = size(vertices)
+        # TODO: Relax the domain == codomain constraint on weights after TensorKit update on DiagonalTensorMap.
+        @assert all(domain(wt) == codomain(wt) for wt in weights.data)
         for (r, c) in Iterators.product(1:Nr, 1:Nc)
             space(weights[2, r, c], 1)' == space(vertices[r, c], 2) || throw(
                 SpaceMismatch("South space of bond weight y$((r, c)) does not match.")
@@ -282,17 +313,216 @@ function InfiniteWeightPEPS(peps::InfinitePEPS)
     return InfiniteWeightPEPS(peps.A, SUWeight(weights))
 end
 
+## (Approximate) equality (gauge freedom is not allowed)
+function Base.:(==)(peps1::InfiniteWeightPEPS, peps2::InfiniteWeightPEPS)
+    for (v1, v2) in zip(peps1.vertices, peps2.vertices)
+        !(v1 == v2) && return false
+    end
+    !(peps1.weights == peps2.weights) && return false
+    return true
+end
+function Base.isapprox(peps1::InfiniteWeightPEPS, peps2::InfiniteWeightPEPS; kwargs...)
+    for (v1, v2) in zip(peps1.vertices, peps2.vertices)
+        !isapprox(v1, v2; kwargs...) && return false
+    end
+    !isapprox(peps1.weights, peps2.weights; kwargs...) && return false
+    return true
+end
+
+# Mirroring and rotation
+#= Example: 3 x 3 network
+
+- Original
+    ```
+            |         |         |
+            y₁₁       y₁₂       y₁₃
+            |         |         |
+    ..x₁₃...┼---x₁₁---┼---x₁₂---┼---x₁₃---
+            |         |         |           2
+            y₂₁       y₂₂       y₂₃         |
+            |         |         |           y
+    ..x₂₃...┼---x₂₁---┼---x₂₂---┼---x₂₃---  |
+            |         |         |           1
+            y₃₁       y₃₂       y₃₃
+            |         |         |           1 -- x -- 2
+    ..x₃₃...┼---x₃₁---┼---x₃₂---┼---x₃₃---
+            :         :         :
+            y₁₁       y₁₂       y₁₃
+            :         :         :
+    ```
+
+- After `mirror_antidiag`, x/y-weights are exchanged. 
+    ```
+            |         |         |
+            x₃₃       x₂₃       x₁₃
+            |         |         |
+    ..y₁₃...┼---y₃₃---┼---y₂₃---┼---y₁₃---
+            |         |         |           2
+            x₃₂       x₂₂       x₁₂         |
+            |         |         |           x
+    ..y₁₂...┼---y₃₂---┼---y₂₂---┼---y₁₂---  |
+            |         |         |           1
+            x₃₁       x₂₁       x₁₁
+            |         |         |           1 -- y -- 2
+    ..y₁₁...┼---y₃₁---┼---y₂₁---┼---y₁₁---
+            :         :         :
+            x₃₃       x₂₃       x₁₃
+            :         :         :
+    ```
+    No further operations are needed. 
+
+- After `rotl90`, x/y-weights are exchanged. 
+    ```
+            |         |         |
+            x₁₃       x₂₃       x₃₃
+            |         |         |
+    --y₁₃---┼---y₂₃---┼---y₃₃---┼...y₁₃...
+            |         |         |                     2
+            x₁₂       x₂₂       x₃₂                   |
+            |         |         |                     x
+    --y₁₂---┼---y₂₂---┼---y₃₂---┼...y₁₂...            |
+            |         |         |                     1
+            x₁₁       x₂₁       x₃₁
+            |         |         |           2 -- y -- 1
+    --y₁₁---┼---y₂₁---┼---y₃₁---┼...y₁₁...
+            :         :         :
+            x₁₃       x₂₃       x₃₃
+            :         :         :
+    ```
+    We need to further:
+    - Move 1st column of x-weights to the last column.
+    - Permute axes of x-weights and twist their axis 1 (to keep weight elements positive).
+    - Twist axis 3 of each vertex tensor to cancel the twist on x-weights. 
+
+- After `rotr90`, x/y-weights are exchanged. 
+    ```
+            :         :         :
+            x₃₃       x₂₃       x₁₃
+            :         :         :
+    ..y₁₁...┼---y₃₁---┼---y₂₁---┼---y₁₁---
+            |         |         |           1 -- y -- 2
+            x₃₁       x₂₁       x₁₁
+            |         |         |           1
+    ..y₁₂...┼---y₃₂---┼---y₂₂---┼---y₁₂---  |
+            |         |         |           x
+            x₃₂       x₂₂       x₁₂         |
+            |         |         |           2
+    ..y₁₃...┼---y₃₃---┼---y₂₃---┼---y₁₃---
+            |         |         |
+            x₃₃       x₂₃       x₁₃
+            |         |         |
+    ```
+    We need to further:
+    - Move last row of y-weights to the 1st row. 
+    - Permute axes of y-weights and twist their axis 1. 
+    - Twist axis 2 of each vertex tensor to cancel the twist on y-weights. 
+
+After `rot180`, x/y-weights are not exchanged. 
+    ```
+            :         :         :
+            y₁₃       y₁₂       y₁₁
+            :         :         :
+    --x₃₃---┼---x₃₂---┼---x₃₁---┼...x₃₃...
+            |         |         |           2 -- x -- 1
+            y₃₃       y₃₂       y₃₁
+            |         |         |                     1
+    --x₂₃---┼---x₂₂---┼---x₂₁---┼...x₂₃...            |
+            |         |         |                     y
+            y₂₃       y₂₂       y₂₁                   |
+            |         |         |                     2
+    --x₁₃---┼---x₁₂---┼---x₁₁---┼...x₁₃...
+            |         |         |
+            y₁₃       y₁₂       y₁₁
+            |         |         |
+    ```
+    We need to further:
+    - Move 1st column of x-weights to the last column.
+    - Move last row of y-weights to the 1st row.
+    - Permute axes of all weights and twist their axis 1. 
+    - Twist axes 2, 3 of each vertex tensor to cancel the twist on weights. 
+=#
+
+"""
+Mirror an `SUWeight` by its anti-diagonal line.
+"""
+function mirror_antidiag(wts::SUWeight)
+    weights2_x = mirror_antidiag(wts[2, :, :])
+    weights2_y = mirror_antidiag(wts[1, :, :])
+    return SUWeight(weights2_x, weights2_y)
+end
+function Base.rotl90(wts::SUWeight)
+    wts_x = rotl90(wts[2, :, :])
+    Nc = size(wts_x, 2)
+    wts_x = wts_x[:, vcat(2:Nc, 1)]
+    for (i, wt) in enumerate(wts_x)
+        wts_x[i] = twist!(permute(wt, ((2,), (1,))), 1)
+        @assert all(wts_x[i].data .>= 0)
+    end
+    wts_y = rotl90(wts[1, :, :])
+    return SUWeight(wts_x, wts_y)
+end
+function Base.rotr90(wts::SUWeight)
+    wts_x = rotr90(wts[2, :, :])
+    wts_y = rotr90(wts[1, :, :])
+    Nr = size(wts_y, 1)
+    wts_y = wts_y[vcat(Nr, 1:(Nr - 1)), :]
+    for (i, wt) in enumerate(wts_y)
+        wts_y[i] = twist!(permute(wt, ((2,), (1,))), 1)
+        @assert all(wts_y[i].data .>= 0)
+    end
+    return SUWeight(wts_x, wts_y)
+end
+function Base.rot180(wts::SUWeight)
+    wts_x = rot180(wts[1, :, :])
+    wts_y = rot180(wts[2, :, :])
+    Nr, Nc = size(wts_x)
+    wts_x = wts_x[:, vcat(2:Nc, 1)]
+    wts_y = wts_y[vcat(Nr, 1:(Nr - 1)), :]
+    for (i, wt) in enumerate(wts_x)
+        wts_x[i] = twist!(permute(wt, ((2,), (1,))), 1)
+        @assert all(wts_x[i].data .>= 0)
+    end
+    for (i, wt) in enumerate(wts_y)
+        wts_y[i] = twist!(permute(wt, ((2,), (1,))), 1)
+        @assert all(wts_y[i].data .>= 0)
+    end
+    return SUWeight(wts_x, wts_y)
+end
+
 """
     mirror_antidiag(peps::InfiniteWeightPEPS)
 
-Mirror the unit cell of an iPEPS with weights by its anti-diagonal line.
+Mirror an `InfiniteWeightPEPS` by its anti-diagonal line.
 """
 function mirror_antidiag(peps::InfiniteWeightPEPS)
     vertices2 = mirror_antidiag(peps.vertices)
     for (i, t) in enumerate(vertices2)
-        vertices2[i] = permute(t, ((1,), (3, 2, 5, 4)))
+        vertices2[i] = mirror_antidiag(t)
     end
-    weights2_x = mirror_antidiag(peps.weights[2, :, :])
-    weights2_y = mirror_antidiag(peps.weights[1, :, :])
-    return InfiniteWeightPEPS(vertices2, weights2_x, weights2_y)
+    weights2 = mirror_antidiag(peps.weights)
+    return InfiniteWeightPEPS(vertices2, weights2)
+end
+function Base.rotl90(peps::InfiniteWeightPEPS)
+    vertices2 = rotl90(peps.vertices)
+    for (i, t) in enumerate(vertices2)
+        vertices2[i] = twist!(rotl90(t), 3)
+    end
+    weights2 = rotl90(peps.weights)
+    return InfiniteWeightPEPS(vertices2, weights2)
+end
+function Base.rotr90(peps::InfiniteWeightPEPS)
+    vertices2 = rotr90(peps.vertices)
+    for (i, t) in enumerate(vertices2)
+        vertices2[i] = twist!(rotr90(t), 2)
+    end
+    weights2 = rotr90(peps.weights)
+    return InfiniteWeightPEPS(vertices2, weights2)
+end
+function Base.rot180(peps::InfiniteWeightPEPS)
+    vertices2 = rot180(peps.vertices)
+    for (i, t) in enumerate(vertices2)
+        vertices2[i] = twist!(rot180(t), (2, 3))
+    end
+    weights2 = rot180(peps.weights)
+    return InfiniteWeightPEPS(vertices2, weights2)
 end
