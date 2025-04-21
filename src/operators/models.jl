@@ -1,5 +1,8 @@
-## Model Hamiltonians
-# -------------------
+
+#
+## Tools for defining Hamiltonians
+#
+
 """
     nearest_neighbour_hamiltonian(lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}) where {S,T}
 
@@ -18,6 +21,10 @@ function nearest_neighbour_hamiltonian(
     end
     return LocalOperator(lattice, terms...)
 end
+
+#
+## MPSKitModels.jl re-exports
+#
 
 function MPSKitModels.transverse_field_ising(
     T::Type{<:Number},
@@ -159,12 +166,25 @@ function MPSKitModels.tj_model(
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
 end
 
+#
+## Models not yet defined in MPSKitModels
+#
+
 """
     j1_j2_model([elt::Type{T}, symm::Type{S},] lattice::InfiniteSquare;
-          J1=1.0, J2=1.0, spin=1//2, sublattice=true)
+                J1=1.0, J2=1.0, spin=1//2, sublattice=true)
 
-Square lattice J₁-J₂ model. The `sublattice` kwarg enables a single site unit cell via a
-sublattice rotation.
+Square lattice ``J_1\\text{-}J_2`` model, defined by the Hamiltonian
+
+```math
+H = J_1 \\sum_{\\langle i,j \\rangle} \\vec{S}_i \\cdot \\vec{S}_j
++ J_2 \\sum_{\\langle\\langle i,j \\rangle\\rangle} \\vec{S}_i \\cdot \\vec{S}_j,
+```
+
+where ``\\vec{S}_i = (S_i^x, S_i^y, S_i^z)``. We denote the nearest and next-nearest neighbor
+terms using ``\\langle i,j \\rangle`` and ``\\langle\\langle i,j \\rangle\\rangle``,
+respectively. The `sublattice` kwarg enables a single-site unit cell ground state via a
+unitary sublattice rotation.
 """
 function j1_j2_model(lattice::InfiniteSquare; kwargs...)
     return j1_j2_model(ComplexF64, Trivial, lattice; kwargs...)
@@ -193,9 +213,17 @@ function j1_j2_model(
 end
 
 """
-    pwave_superconductor([T=ComplexF64,] lattice::InfiniteSquare; t=1, μ=2, Δ=1, unitcell=(1, 1))
+    pwave_superconductor([T=ComplexF64,] lattice::InfiniteSquare; t=1, μ=2, Δ=1)
 
-Square lattice p-wave superconductor model.
+Square lattice ``p``-wave superconductor model, defined by the Hamiltonian
+
+```math
+    H = -\\sum_{\\langle i,j \\rangle} \\left( t c_i^\\dagger c_j +
+    \\Delta c_i c_j + \\text{h.c.} \\right) - \\mu \\sum_i n_i,
+```
+
+where ``t`` is the hopping amplitude, ``\\Delta`` specifies the superconducting gap, ``\\mu``
+is the chemical potential, and ``n_i = c_i^\\dagger c_i`` is the fermionic number operator.
 """
 function pwave_superconductor(lattice::InfiniteSquare; kwargs...)
     return pwave_superconductor(ComplexF64, lattice; kwargs...)
