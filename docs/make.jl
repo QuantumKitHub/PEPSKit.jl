@@ -56,11 +56,12 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "Manual" => [
-            "man/states.md",
-            "man/environments.md",
-            "man/operators.md",
-            "man/peps_optimization.md",
-            "man/symmetries.md",
+            # "man/states.md",
+            # "man/environments.md",
+            # "man/operators.md",
+            # "man/peps_optimization.md",
+            # "man/symmetries.md",
+            "man/models.md",
             "man/multi_threading.md",
             "man/precompilation.md",
         ],
