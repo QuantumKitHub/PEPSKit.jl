@@ -90,7 +90,7 @@ export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO
-export initializeMPS, initializePEPS
+export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
