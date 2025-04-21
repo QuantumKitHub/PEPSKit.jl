@@ -54,11 +54,11 @@ For a more in-depth explanation of this simple example, check the [Optimizing th
 
 ## Table of contents
 
-A detailed rundown of PEPSKit's features can be found in the Manual section, including:
+A detailed rundown of PEPSKit's features can be found in the Manual section (not yet complete - coming soon™), including:
 
 ```@contents
-Pages = ["man/states.md", "man/environments.md", "man/operators.md", "man/peps_optimization.md", "man/symmetries.md", "man/multi_threading.md", "man/precompilation.md"]
+Pages = ["man/models.md", "man/multi_threading.md", "man/precompilation.md"]
 Depth = 1
 ```
 
-Additionally, we provide a list of commented example notebooks in the Examples section.
+Additionally, we provide a list of commented examples in the Examples section which showcases most of PEPSKit's capabilities in action.
