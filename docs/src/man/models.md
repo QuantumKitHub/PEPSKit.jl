@@ -7,12 +7,12 @@ already implemented models.
 ## Implementing custom models
 
 In order to define custom Hamiltonians, we leverage several of the useful tools provided in MPSKitModels.
-In particular, we use many of the pre-defined [operators](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/operators/), which is especially useful when defining models with symmetric and fermionic tensors, since most of these operators can take a symmetry [`Sector`](@extref) as an argument, returning the appropriate symmetric `TensorMap`.
+In particular, we use many of the pre-defined [operators](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/operators/), which is especially useful when defining models with symmetric and fermionic tensors, since most of these operators can take a symmetry as an argument, returning the appropriate symmetric `TensorMap`.
 In order to specify the lattice on which the Hamiltonian is defined, we construct two-dimensional lattices as subtypes of `MPSKitModels.AbstractLattice`.
 Note that so far, all models are defined on infinite square lattices, see [`InfiniteSquare`](@ref), but in the future, we plan to support other lattice geometries as well.
 In order to specify tensors acting on particular lattice sites, there are a couple of handy methods that we want to point to: see `vertices`, `nearest_neighbors` and `next_nearest_neighbors` defined [here](https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/src/operators/lattices/squarelattice.jl).
 
-For a simple example on how to implement a custom model, let's look at the implementation of the [`transverse_field_ising`](@ref) model:
+For a simple example on how to implement a custom model, let's look at the implementation of the `transverse_field_ising` model:
 
 ```julia
 function MPSKitModels.transverse_field_ising(
@@ -45,12 +45,18 @@ For more model implementations, check the [PEPSKit repository](https://github.co
 
 While PEPSKit provides an interface for specifying custom Hamiltonians, it also provides a number of [pre-defined models](https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/src/operators/models.jl). Some of these are models already defined in [MPSKitModels](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/), which are overloaded for two-dimensional lattices and re-exported, but there are new additions as well. The following models are provided:
 
+### MPSKitModels.jl models
+
+- [`transverse_field_ising`](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.transverse_field_ising)
+- [`heisenberg_XYZ`](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.heisenberg_XYZ)
+- [`heisenberg_XXZ`](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.heisenberg_XXZ)
+- [`hubbard_model`](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.hubbard_model)
+- [`bose_hubbard_model`](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.bose_hubbard_model)
+- [`tj_model`](https://github.com/QuantumKitHub/MPSKitModels.jl/blob/dadd066ff6588c8491d33ce9b812033f3bb4a970/src/models/hamiltonians.jl#L400)
+
+### PEPSKit.jl models
+
 ```@docs
-heisenberg_XYZ
-heisenberg_XXZ
 j1_j2_model
-hubbard_model
-bose_hubbard_model
-tj_model
 pwave_superconductor
 ```

@@ -7,7 +7,7 @@ Since these details have been explained many times elsewhere, we here want to po
 ## Multi-threading in PEPSKit
 
 PEPSKit's multi-threading features are provided through [OhMyThreads.jl](https://juliafolds2.github.io/OhMyThreads.jl/stable/).
-In addition, we also supply a differentiable parallel map, which parallelizes not only the forward pass but also the reverse pass of the map application, see [`dtmap`](@ref).
+In addition, we also supply a differentiable parallel map, which parallelizes not only the forward pass but also the reverse pass of the map application, see [`PEPSKit.dtmap`](@ref).
 The threading behaviour can be specified through a global `scheduler` that is interfaced through the [`set_scheduler!`](@ref) function:
 
 ```@docs
