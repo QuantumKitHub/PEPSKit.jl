@@ -12,9 +12,6 @@ using DocumenterCitations
 using DocumenterInterLinks
 using PEPSKit
 
-# examples
-example_dir = joinpath(@__DIR__, "src", "examples")
-
 # bibliography
 bibpath = joinpath(@__DIR__, "src", "assets", "pepskit.bib")
 bib = CitationBibliography(bibpath; style=:authoryear)
@@ -42,11 +39,6 @@ mathengine = MathJax3(
     ),
 )
 
-# built examples target directories
-example_pages = map(readdir(joinpath(@__DIR__, "src", "examples"))) do dir
-    return joinpath("examples", dir, "index.md")
-end
-
 makedocs(;
     modules=[PEPSKit],
     sitename="PEPSKit.jl",
@@ -65,7 +57,7 @@ makedocs(;
             "man/multi_threading.md",
             "man/precompilation.md",
         ],
-        "Examples" => example_pages,
+        "Examples" => "examples/index.md",
         "Library" => "lib/lib.md",
         "References" => "references.md",
     ],
