@@ -23,7 +23,7 @@ r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 broadenings = [10.0^k for k in -16:-4]
 
-full_alg = SVDAdjoint(; rrule_alg=(; alg=:tsvd), broadening=0)
+full_alg = SVDAdjoint(; rrule_alg=(; alg=:full, broadening=0))
 iter_alg = SVDAdjoint(; fwd_alg=(; alg=:iterative))
 
 @testset "Non-truncacted SVD" begin
@@ -43,7 +43,7 @@ end
 end
 
 @testset "Truncated SVD with χ=$χ and ε=$ε broadening" for ε in broadenings
-    broadened_alg = @set full_alg.broadening = ε
+    broadened_alg = @set full_alg.rrule_alg.broadening = ε
     l_unbroadened, g_unbroadened = withgradient(A -> lossfun(A, full_alg, R, trunc), r)
     l_broadened, g_broadened = withgradient(A -> lossfun(A, broadened_alg, R, trunc), r)
 
@@ -81,7 +81,7 @@ symm_R = randn(dtype, space(symm_r))
 end
 
 @testset "Truncated symmetric SVD with χ=$χ and ε=$ε broadening" for ε in broadenings
-    broadened_alg = @set full_alg.broadening = ε
+    broadened_alg = @set full_alg.rrule_alg.broadening = ε
     l_unbroadened, g_unbroadened = withgradient(
         A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r
     )
