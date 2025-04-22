@@ -12,13 +12,28 @@ using TensorKit:
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
+    struct FullReverse
+    FullReverse(; kwargs...)
+
+SVD reverse-rule algorithm which uses a modified version of TensorKit's `tsvd!` reverse-rule
+allowing for Lorentzian broadening and output verbosity control.
+
+## Keyword arguments
+
+* `broadening::Float64=$(Defaults.svd_rrule_broadening)`: Lorentzian broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
+* `verbosity::Int=0`: Suppresses all output if `≤0`, print gauge dependency warnings if `1`, and always print gauge dependency if `≥2`.
+"""
+@kwdef struct FullReverse
+    broadening::Float64 = Defaults.svd_rrule_broadening
+    verbosity::Int = 0
+end
+
+"""
     struct SVDAdjoint
     SVDAdjoint(; kwargs...)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
-In case of degenerate singular values, one might need a `broadening` scheme which
-removes the divergences from the adjoint.
 
 ## Keyword arguments
 
@@ -27,16 +42,14 @@ removes the divergences from the adjoint.
     - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
     - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:tsvd`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD.
+    - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD.
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
-* `broadening=$(Defaults.svd_rrule_broadening)`: Lorentzian broadening of singular value differences to stabilize the SVD gradient in case of degeneracies. Currently only implemented for `rrule_alg=:tsvd`.
 """
-struct SVDAdjoint{F,R,B}
+struct SVDAdjoint{F,R}
     fwd_alg::F
     rrule_alg::R
-    broadening::B
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
@@ -47,10 +60,10 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
             IterSVD(; alg=GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol,Type{<:Any}}(
-    :tsvd => Nothing, :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+    :full => FullReverse, :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
 )
 
-function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
+function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;))
     # parse forward SVD algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
@@ -69,6 +82,7 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
             alg=Defaults.svd_rrule_alg,
             tol=Defaults.svd_rrule_tol,
             krylovdim=Defaults.svd_rrule_min_krylovdim,
+            broadening=Defaults.svd_rrule_broadening,
             verbosity=Defaults.svd_rrule_verbosity,
             rrule_alg...,
         ) # overwrite with specified kwargs
@@ -78,24 +92,23 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;), broadening=nothing)
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
 
         # IterSVD is incompatible with tsvd rrule -> default to Arnoldi
-        if rrule_type <: Nothing && fwd_algorithm isa IterSVD
+        if rrule_type <: FullReverse && fwd_algorithm isa IterSVD
             rrule_type = Arnoldi
         end
 
-        if rrule_type <: Nothing
-            broadening = isnothing(broadening) ? Defaults.svd_rrule_broadening : broadening
-            nothing
+        if rrule_type <: FullReverse
+            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing, tol=0.0, krylovdim=0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
         else
-            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing, broadening=0.0)) # remove `alg` and `broadening` keyword arguments
             rrule_type <: BiCGStab &&
                 (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
-            rrule_type(; rrule_kwargs...)
         end
+        rrule_type(; rrule_kwargs...)
     else
         rrule_alg
     end
 
-    return SVDAdjoint(fwd_algorithm, rrule_algorithm, broadening)
+    return SVDAdjoint(fwd_algorithm, rrule_algorithm)
 end
 
 """
@@ -245,7 +258,7 @@ end
 function TensorKit._compute_svddata!(
     f, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}
 )
-    InnerProductStyle(f) === EuclideanInnerProduct() || throw_invalid_innerproduct(:tsvd!)
+    InnerProductStyle(f) === EuclideanInnerProduct() || throw_invalid_innerproduct(:full!)
     I = sectortype(f)
     dims = SectorDict{I,Int}()
 
@@ -285,10 +298,10 @@ end
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     t::AbstractTensorMap,
-    alg::SVDAdjoint{F,R,B};
+    alg::SVDAdjoint{F,R};
     trunc::TruncationScheme=TensorKit.NoTruncation(),
     p::Real=2,
-) where {F,R<:Nothing,B}
+) where {F,R<:FullReverse}
     @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with tsvd reverse-rule"
     Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
@@ -315,7 +328,8 @@ function ChainRulesCore.rrule(
                 ΔSdc,
                 ΔV⁺c;
                 tol=pullback_tol,
-                broadening=alg.broadening,
+                broadening=alg.rrule_alg.broadening,
+                verbosity=alg.rrule_alg.verbosity,
             )
         end
         return NoTangent(), Δt, NoTangent()
@@ -331,10 +345,10 @@ end
 function ChainRulesCore.rrule(
     ::typeof(PEPSKit.tsvd!),
     f,
-    alg::SVDAdjoint{F,R,B};
+    alg::SVDAdjoint{F,R};
     trunc::TruncationScheme=notrunc(),
     p::Real=2,
-) where {F,R<:Union{GMRES,BiCGStab,Arnoldi},B}
+) where {F,R<:Union{GMRES,BiCGStab,Arnoldi}}
     U, S, V, info = tsvd(f, alg; trunc, p)
 
     # update rrule_alg tolerance to be compatible with smallest singular value
@@ -413,6 +427,11 @@ function _lorentz_broaden(x, ε=1e-13)
     return x / (x^2 + ε)
 end
 
+function _default_pullback_gaugetol(x)
+    n = norm(x, Inf)
+    return eps(eltype(n))^(3 / 4) * max(n, one(n))
+end
+
 # SVD_pullback: pullback implementation for general (possibly truncated) SVD
 #
 # This is a modified version of TensorKit's pullback
@@ -439,9 +458,9 @@ function svd_pullback!(
     ΔU,
     ΔS,
     ΔVd;
-    tol::Real=default_pullback_gaugetol(S),
+    tol::Real=_default_pullback_gaugetol(S),
     broadening::Real=0,
-    suppress_gauge_warning=false,
+    verbosity=1,
 )
 
     # Basic size checks and determination
@@ -503,8 +522,11 @@ function svd_pullback!(
         Δgauge = max(Δgauge, norm(view(aUΔU, rprange, rprange), Inf))
         Δgauge = max(Δgauge, norm(view(aVΔV, rprange, rprange), Inf))
     end
-    (!suppress_gauge_warning && Δgauge < tol) ||
+    if verbosity == 1 && Δgauge < tol # warn if verbosity is 1
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    elseif verbosity ≥ 2 # always info for debugging purposes
+        @info "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
+    end
 
     UdΔAV =
         (aUΔU .+ aVΔV) .* _safe_inv.(Sp' .- Sp, tol, broadening) .+
