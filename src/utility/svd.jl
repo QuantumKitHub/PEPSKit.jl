@@ -522,7 +522,7 @@ function svd_pullback!(
         Δgauge = max(Δgauge, norm(view(aUΔU, rprange, rprange), Inf))
         Δgauge = max(Δgauge, norm(view(aVΔV, rprange, rprange), Inf))
     end
-    if verbosity == 1 && Δgauge < tol # warn if verbosity is 1
+    if verbosity == 1 && Δgauge > tol # warn if verbosity is 1
         @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     elseif verbosity ≥ 2 # always info for debugging purposes
         @info "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
