@@ -57,7 +57,7 @@ For a more in-depth explanation of this simple example, check the [Optimizing th
 A detailed rundown of PEPSKit's features can be found in the Manual section (not yet complete, more coming soon™), including:
 
 ```@contents
-Pages = ["man/models.md", "man/multi_threading.md", "man/precompilation.md"]
+Pages = ["man/models.md", "man/multithreading.md", "man/precompilation.md"]
 Depth = 1
 ```
 

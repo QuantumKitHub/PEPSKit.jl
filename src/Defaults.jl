@@ -74,7 +74,7 @@ Module containing default algorithm parameter values and arguments.
 
 ## OhMyThreads scheduler
 
-- `scheduler=Ref{Scheduler}(...)` : Multi-threading scheduler which can be accessed via `set_scheduler!`.
+- `scheduler=Ref{Scheduler}(...)` : Multithreading scheduler which can be accessed via `set_scheduler!`.
 """
 module Defaults
 
@@ -129,7 +129,7 @@ const scheduler = Ref{Scheduler}()
 """
     set_scheduler!([scheduler]; kwargs...)
 
-Set `OhMyThreads` multi-threading scheduler parameters.
+Set `OhMyThreads` multithreading scheduler parameters.
 
 The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or
 as a symbol where the corresponding parameters are specificed as keyword arguments.

@@ -54,7 +54,7 @@ makedocs(;
             # "man/peps_optimization.md",
             # "man/symmetries.md",
             "man/models.md",
-            "man/multi_threading.md",
+            "man/multithreading.md",
             "man/precompilation.md",
         ],
         "Examples" => "examples/index.md",
