@@ -12,8 +12,8 @@ using TensorKit:
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct FullReverse
-    FullReverse(; kwargs...)
+    struct FullSVDReverseRule
+    FullSVDReverseRule(; kwargs...)
 
 SVD reverse-rule algorithm which uses a modified version of TensorKit's `tsvd!` reverse-rule
 allowing for Lorentzian broadening and output verbosity control.
@@ -23,7 +23,7 @@ allowing for Lorentzian broadening and output verbosity control.
 * `broadening::Float64=$(Defaults.svd_rrule_broadening)`: Lorentzian broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
 * `verbosity::Int=0`: Suppresses all output if `≤0`, print gauge dependency warnings if `1`, and always print gauge dependency if `≥2`.
 """
-@kwdef struct FullReverse
+@kwdef struct FullSVDReverseRule
     broadening::Float64 = Defaults.svd_rrule_broadening
     verbosity::Int = 0
 end
@@ -42,7 +42,7 @@ If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
     - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
     - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD.
+    - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [`FullSVDReverseRule`](@ref).
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
@@ -60,7 +60,7 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
             IterSVD(; alg=GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol,Type{<:Any}}(
-    :full => FullReverse, :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+    :full => FullSVDReverseRule, :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
 )
 
 function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;))
@@ -92,11 +92,11 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;))
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
 
         # IterSVD is incompatible with tsvd rrule -> default to Arnoldi
-        if rrule_type <: FullReverse && fwd_algorithm isa IterSVD
+        if rrule_type <: FullSVDReverseRule && fwd_algorithm isa IterSVD
             rrule_type = Arnoldi
         end
 
-        if rrule_type <: FullReverse
+        if rrule_type <: FullSVDReverseRule
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing, tol=0.0, krylovdim=0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
         else
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing, broadening=0.0)) # remove `alg` and `broadening` keyword arguments
@@ -301,7 +301,7 @@ function ChainRulesCore.rrule(
     alg::SVDAdjoint{F,R};
     trunc::TruncationScheme=TensorKit.NoTruncation(),
     p::Real=2,
-) where {F,R<:FullReverse}
+) where {F,R<:FullSVDReverseRule}
     @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with tsvd reverse-rule"
     Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
