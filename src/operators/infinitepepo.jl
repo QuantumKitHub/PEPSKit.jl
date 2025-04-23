@@ -171,6 +171,19 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
     )
 end
 
+function InfiniteSquareNetwork(mid::InfinitePEPO)
+    return InfiniteSquareNetwork(
+        map(tuple, eachslice(unitcell(mid); dims=3)...)
+    )
+end
+
+## Dagger
+
+function dagger(O::PEPOTensor)    
+    @tensor O_conj[-1 -2; -3 -4 -5 -6] := conj(O[-2 -1; -3 -4 -5 -6])
+    return twist(flip(O_conj, [3 4 5 6]), [3 4])
+end
+
 ## Vector interface
 
 function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPO}
@@ -214,6 +227,20 @@ function ChainRulesCore.rrule(
         Δbot = InfinitePEPS(map(bra, unitcell(Δnetwork)))
         Δmid = InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork))))
         return NoTangent(), Δtop, Δmid, Δbot
+    end
+    return network, InfiniteSquareNetwork_pullback
+end
+
+function ChainRulesCore.rrule(
+    ::Type{InfiniteSquareNetwork},
+    mid::InfinitePEPO{P},
+) where {P<:PEPOTensor}
+    network = InfiniteSquareNetwork(top, mid, bot)
+
+    function InfiniteSquareNetwork_pullback(Δnetwork_)
+        Δnetwork = unthunk(Δnetwork_)
+        Δmid = InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork))))
+        return NoTangent(), Δmid
     end
     return network, InfiniteSquareNetwork_pullback
 end

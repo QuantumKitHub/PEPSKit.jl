@@ -104,3 +104,16 @@ function virtualspace(O::PEPOSandwich, dir)
         virtualspace(bra(O), dir)',
     ])
 end
+
+## Only PEPO layers
+
+const PEPOLayersSandwich{N,P<:PEPOTensor} = Tuple{Vararg{P,N}}
+
+pepo(O::PEPOLayersSandwich) = O[1:end]
+pepo(O::PEPOLayersSandwich, i::Int) = O[i]
+
+function virtualspace(O::PEPOLayersSandwich, dir)
+    return prod([
+        virtualspace.(pepo(O), Ref(dir))...
+    ])
+end

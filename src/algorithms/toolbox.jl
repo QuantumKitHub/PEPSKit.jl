@@ -388,6 +388,27 @@ function contract_local_tensor(
     )
 end
 
+function contract_local_tensor(
+    ind::Tuple{Int,Int,Int},
+    O::PEPOTensor,
+    network::InfiniteSquareNetwork{<:PEPOLayersSandwich},
+    env::CTMRGEnv,
+)
+    r, c, h = ind
+    sandwich´ = Base.setindex(network[r, c], O, h)
+    return _contract_site(
+        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
+        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
+        env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
+        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
+        env.edges[NORTH, _prev(r, end), c],
+        env.edges[EAST, r, _next(c, end)],
+        env.edges[SOUTH, _next(r, end), c],
+        env.edges[WEST, r, _prev(c, end)],
+        sandwich´,
+    )
+end
+
 function contract_local_tensor(inds::CartesianIndex, O::AbstractTensorMap, env::CTMRGEnv)
     return contract_local_tensor(Tuple(inds), O, env)
 end

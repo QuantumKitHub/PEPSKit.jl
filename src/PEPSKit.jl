@@ -90,7 +90,7 @@ export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight, InfiniteWeightPEPS
 export InfinitePEPO, InfiniteTransferPEPO
 export initialize_mps, initializePEPS
-export ReflectDepth, ReflectWidth, Rotate, RotateReflect
+export ReflectDepth, ReflectWidth, Rotate, RotateReflect, dagger
 export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
 export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
