@@ -423,7 +423,7 @@ end
 
 # Lorentzian broadening for divergent term in SVD rrule, see
 # https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.7.013237
-function _lorentz_broaden(x, ε=eps(real(scalartype(x)))^(3/4))
+function _lorentz_broaden(x, ε=eps(real(scalartype(x)))^(3 / 4))
     return x / (x^2 + ε)
 end
 
