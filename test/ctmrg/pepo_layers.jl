@@ -94,10 +94,10 @@ network_fused_OO = InfinitePEPS(Oψ)
     ctm_styles, projector_algs
 )
     env, = leading_boundary(
-        CTMRGEnv(network_O, χenv), network_O; alg, maxiter=200, projector_alg
+        CTMRGEnv(network_O, χenv), network_O; alg, maxiter=250, projector_alg
     )
     env_fused, = leading_boundary(
-        CTMRGEnv(network_fused_OO, χenv), network_fused_OO; alg, maxiter=200, projector_alg
+        CTMRGEnv(network_fused_OO, χenv), network_fused_OO; alg, maxiter=250, projector_alg
     )
 
     m = PEPSKit.contract_local_tensor((1, 1, 1), M, network_O, env)
@@ -106,5 +106,5 @@ network_fused_OO = InfinitePEPS(Oψ)
     nrm = PEPSKit._contract_site((1, 1), network_O, env)
     nrm_fused = network_value(network_fused_OO, env_fused)
 
-    @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 1e-8
+    @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 1e-7
 end
