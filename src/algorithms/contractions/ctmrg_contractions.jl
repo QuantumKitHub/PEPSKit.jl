@@ -1558,7 +1558,7 @@ function _pepo_pepolayerstensor_expr(
     layer = Symbol(:mid, :_, h)
     return tensorexpr(
         tensorname,
-        (physicallabel(mod1(h + 1,H), args...), physicallabel(h, args...)),
+        (physicallabel(mod1(h + 1, H), args...), physicallabel(h, args...)),
         (
             virtuallabel(_north_labels(layer, args...; contract=contract_north)...),
             virtuallabel(_east_labels(layer, args...; contract=contract_east)...),
@@ -1897,14 +1897,7 @@ end
 
     C_out_e = _pepolayers_enlarged_corner_expr(:C_northwest´, :SW, :NE, :S, :E, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        E_west_e,
-        C_northwest_e,
-        E_north_e,
-        pepo_es...,
-    )
+    rhs = Expr(:call, :*, E_west_e, C_northwest_e, E_north_e, pepo_es...)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
@@ -1953,14 +1946,7 @@ end
 
     C_out_e = _pepolayers_enlarged_corner_expr(:C_northeast´, :NW, :SE, :W, :S, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        E_north_e,
-        C_northeast,
-        E_east_e,
-        pepo_es...,
-    )
+    rhs = Expr(:call, :*, E_north_e, C_northeast, E_east_e, pepo_es...)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
@@ -2009,14 +1995,7 @@ end
 
     C_out_e = _pepolayers_enlarged_corner_expr(:C_southeast´, :NE, :SW, :N, :W, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        E_east_e,
-        C_southeast_e,
-        E_south_e,
-        pepo_es...,
-    )
+    rhs = Expr(:call, :*, E_east_e, C_southeast_e, E_south_e, pepo_es...)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
@@ -2065,14 +2044,7 @@ end
 
     C_out_e = _pepolayers_enlarged_corner_expr(:C_southwest´, :SE, :NW, :E, :N, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        E_south_e,
-        C_southwest_e,
-        E_west_e,
-        pepo_es...,
-    )
+    rhs = Expr(:call, :*, E_south_e, C_southwest_e, E_west_e, pepo_es...)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
@@ -2378,14 +2350,7 @@ end
     P_left_e = _pepolayers_domain_projector_expr(:P_left, :E, :E, :in, H)
 
     rhs = Expr(
-        :call,
-        :*,
-        P_right_e,
-        E_west_e,
-        C_northwest_e,
-        E_north_e,
-        pepo_es...,
-        P_left_e,
+        :call, :*, P_right_e, E_west_e, C_northwest_e, E_north_e, pepo_es..., P_left_e
     )
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
@@ -2432,14 +2397,7 @@ end
     P_left_e = _pepolayers_domain_projector_expr(:P_left, :S, :S, :in, H)
 
     rhs = Expr(
-        :call,
-        :*,
-        P_right_e,
-        E_north_e,
-        C_northeast_e,
-        E_east_e,
-        pepo_es...,
-        P_left_e,
+        :call, :*, P_right_e, E_north_e, C_northeast_e, E_east_e, pepo_es..., P_left_e
     )
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
@@ -2486,14 +2444,7 @@ end
     P_left_e = _pepolayers_domain_projector_expr(:P_left, :W, :W, :in, H)
 
     rhs = Expr(
-        :call,
-        :*,
-        P_right_e,
-        E_east_e,
-        C_southeast_e,
-        E_south_e,
-        pepo_es...,
-        P_left_e,
+        :call, :*, P_right_e, E_east_e, C_southeast_e, E_south_e, pepo_es..., P_left_e
     )
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
@@ -2540,14 +2491,7 @@ end
     P_left_e = _pepolayers_domain_projector_expr(:P_left, :N, :N, :in, H)
 
     rhs = Expr(
-        :call,
-        :*,
-        P_right_e,
-        E_south_e,
-        C_southwest_e,
-        E_west_e,
-        pepo_es...,
-        P_left_e,
+        :call, :*, P_right_e, E_south_e, C_southwest_e, E_west_e, pepo_es..., P_left_e
     )
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
@@ -2593,14 +2537,7 @@ end
     pepo_es = _pepolayers_sandwich_expr(:A, H)
     P_left_e = _pepolayers_domain_projector_expr(:P_left, :E, :E, :in, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        P_right_e,
-        E_north_e,
-        pepo_es...,
-        P_left_e,
-    )
+    rhs = Expr(:call, :*, P_right_e, E_north_e, pepo_es..., P_left_e)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
@@ -2643,14 +2580,7 @@ end
     pepo_es = _pepolayers_sandwich_expr(:A, H)
     P_bottom_e = _pepolayers_domain_projector_expr(:P_bottom, :S, :S, :in, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        P_top_e,
-        E_east_e,
-        pepo_es...,
-        P_bottom_e,
-    )
+    rhs = Expr(:call, :*, P_top_e, E_east_e, pepo_es..., P_bottom_e)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
@@ -2693,14 +2623,7 @@ end
     pepo_es = _pepolayers_sandwich_expr(:A, H)
     P_left_e = _pepolayers_domain_projector_expr(:P_left, :W, :W, :in, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        P_right_e,
-        E_south_e,
-        pepo_es...,
-        P_left_e,
-    )
+    rhs = Expr(:call, :*, P_right_e, E_south_e, pepo_es..., P_left_e)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
@@ -2743,14 +2666,7 @@ end
     pepo_es = _pepolayers_sandwich_expr(:A, H)
     P_bottom_e = _pepolayers_domain_projector_expr(:P_bottom, :N, :N, :in, H)
 
-    rhs = Expr(
-        :call,
-        :*,
-        P_top_e,
-        E_west_e,
-        pepo_es...,
-        P_bottom_e,
-    )
+    rhs = Expr(:call, :*, P_top_e, E_west_e, pepo_es..., P_bottom_e)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end

@@ -55,39 +55,6 @@ function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
 
-# not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
-# ie type piracy
-mpotensor(top::PEPSTensor) = mpotensor((top, top))
-function mpotensor((top, bot)::PEPSSandwich)
-    @assert virtualspace(top, NORTH) == dual(virtualspace(top, SOUTH)) &&
-        virtualspace(bot, NORTH) == dual(virtualspace(bot, SOUTH)) &&
-        virtualspace(top, EAST) == dual(virtualspace(top, WEST)) &&
-        virtualspace(bot, EAST) == dual(virtualspace(bot, WEST)) &&
-        isdual(virtualspace(top, NORTH)) &&
-        isdual(virtualspace(bot, NORTH)) &&
-        isdual(virtualspace(top, EAST)) &&
-        isdual(virtualspace(bot, EAST)) "Method not yet implemented for given virtual spaces"
-
-    F_west = isomorphism(
-        storagetype(top),
-        fuse(virtualspace(top, WEST), virtualspace(bot, WEST)'),
-        virtualspace(top, WEST) ⊗ virtualspace(bot, WEST)',
-    )
-    F_south = isomorphism(
-        storagetype(top),
-        fuse(virtualspace(top, SOUTH), virtualspace(bot, SOUTH)'),
-        virtualspace(top, SOUTH) ⊗ virtualspace(bot, SOUTH)',
-    )
-    @tensor O[west south; north east] :=
-        top[phys; top_north top_east top_south top_west] *
-        conj(bot[phys; bot_north bot_east bot_south bot_west]) *
-        twist(F_west, 3)[west; top_west bot_west] *
-        twist(F_south, 3)[south; top_south bot_south] *
-        conj(F_west[east; top_east bot_east]) *
-        conj(F_south[north; top_north bot_north])
-    return O
-end
-
 ## PEPO
 
 const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Vararg{P,N}}
@@ -113,7 +80,94 @@ pepo(O::PEPOLayersSandwich) = O[1:end]
 pepo(O::PEPOLayersSandwich, i::Int) = O[i]
 
 function virtualspace(O::PEPOLayersSandwich, dir)
-    return prod([
-        virtualspace.(pepo(O), Ref(dir))...
-    ])
+    return prod([virtualspace.(pepo(O), Ref(dir))...])
+end
+
+#
+# Expressions for mpotensor
+#
+
+function _pepo_fuser_tensor_expr(tensorname, H::Int, dir, args...;)
+    return tensorexpr(
+        tensorname,
+        (virtuallabel(dir, :fuser, args...),),
+        (
+            virtuallabel(dir, :top),
+            ntuple(h -> virtuallabel(_virtual_labels(dir, :mid, h, args...)...), H)...,
+            virtuallabel(dir, :bot),
+        ),
+    )
+end
+
+function _pepolayers_fuser_tensor_expr(tensorname, H::Int, dir, args...;)
+    return tensorexpr(
+        tensorname,
+        (virtuallabel(dir, :fuser, args...),),
+        (ntuple(h -> virtuallabel(_virtual_labels(dir, :mid, h, args...)...), H)...,),
+    )
+end
+
+@generated function _mpotensor_contraction(
+    F_west::AbstractTensorMap{T,S}, F_south::AbstractTensorMap{T,S}, O::PEPOSandwich{H}
+) where {T,S,H}
+    fuser_north = _pepo_fuser_tensor_expr(:F_south, H, :N)
+    fuser_east = _pepo_fuser_tensor_expr(:F_west, H, :E)
+    fuser_south = _pepo_fuser_tensor_expr(:F_south, H, :S)
+    fuser_west = _pepo_fuser_tensor_expr(:F_west, H, :W)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
+
+    result = tensorexpr(:res, (:D_W_fuser, :D_S_fuser), (:D_N_fuser, :D_E_fuser))
+
+    rhs = Expr(
+        :call,
+        :*,
+        Expr(:call, :conj, fuser_north),
+        Expr(:call, :conj, fuser_east),
+        # fuser_north,
+        # fuser_east,
+        fuser_south,
+        fuser_west,
+        ket_e,
+        Expr(:call, :conj, bra_e),
+        pepo_es...,
+    )
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $result := $rhs))
+end
+
+@generated function _mpotensor_contraction(
+    F_west::AbstractTensorMap{T,S},
+    F_south::AbstractTensorMap{T,S},
+    O::PEPOLayersSandwich{H},
+) where {T,S,H}
+    fuser_north = _pepolayers_fuser_tensor_expr(:F_south, H, :N)
+    fuser_east = _pepolayers_fuser_tensor_expr(:F_west, H, :E)
+    fuser_south = _pepolayers_fuser_tensor_expr(:F_south, H, :S)
+    fuser_west = _pepolayers_fuser_tensor_expr(:F_west, H, :W)
+    pepo_es = _pepolayers_sandwich_expr(:O, H)
+
+    result = tensorexpr(:res, (:D_W_fuser, :D_S_fuser), (:D_N_fuser, :D_E_fuser))
+
+    rhs = Expr(
+        :call,
+        :*,
+        Expr(:call, :conj, fuser_north),
+        Expr(:call, :conj, fuser_east),
+        fuser_south,
+        fuser_west,
+        pepo_es...,
+    )
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $result := $rhs))
+end
+
+# not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
+# ie type piracy
+mpotensor(top::PEPSTensor) = mpotensor((top, top))
+function mpotensor(network::Union{PEPOSandwich{H},PEPOLayersSandwich{H}}) where {H}
+    F_west = isomorphism(
+        storagetype(network[1]), fuse(virtualspace(network, 4)), virtualspace(network, 4)
+    )
+    F_south = isomorphism(
+        storagetype(network[1]), fuse(virtualspace(network, 3)), virtualspace(network, 3)
+    )
+    return _mpotensor_contraction(F_west, F_south, network)
 end

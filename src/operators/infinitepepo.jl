@@ -172,14 +172,12 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
 end
 
 function InfiniteSquareNetwork(mid::InfinitePEPO)
-    return InfiniteSquareNetwork(
-        map(tuple, eachslice(unitcell(mid); dims=3)...)
-    )
+    return InfiniteSquareNetwork(map(tuple, eachslice(unitcell(mid); dims=3)...))
 end
 
 ## Dagger
 
-function dagger(O::PEPOTensor)    
+function dagger(O::PEPOTensor)
     @tensor O_conj[-1 -2; -3 -4 -5 -6] := conj(O[-2 -1; -3 -4 -5 -6])
     return twist(flip(O_conj, [3 4 5 6]), [3 4])
 end
@@ -232,8 +230,7 @@ function ChainRulesCore.rrule(
 end
 
 function ChainRulesCore.rrule(
-    ::Type{InfiniteSquareNetwork},
-    mid::InfinitePEPO{P},
+    ::Type{InfiniteSquareNetwork}, mid::InfinitePEPO{P}
 ) where {P<:PEPOTensor}
     network = InfiniteSquareNetwork(top, mid, bot)
 
