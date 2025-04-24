@@ -93,7 +93,7 @@ end
         peps,
         env;
         optimizer_alg=(; tol=gradtol, maxiter=25),
-        boundary_alg=(; maxiter=150, svd_alg=(; rrule_alg=(; alg=:tsvd, tol=1e-5))),
+        boundary_alg=(; maxiter=150, svd_alg=(; rrule_alg=(; alg=:full, tol=1e-5))),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)

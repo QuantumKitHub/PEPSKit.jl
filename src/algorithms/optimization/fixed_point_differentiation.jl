@@ -296,7 +296,6 @@ function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
     return SVDAdjoint(;
         fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
         rrule_alg=alg.rrule_alg,
-        broadening=alg.broadening,
     )
 end
 function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F<:IterSVD}
@@ -305,7 +304,6 @@ function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F<:IterSVD}
     return SVDAdjoint(;
         fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
         rrule_alg=alg.rrule_alg,
-        broadening=alg.broadening,
     )
 end
 

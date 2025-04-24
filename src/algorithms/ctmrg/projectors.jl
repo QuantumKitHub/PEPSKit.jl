@@ -60,11 +60,7 @@ function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
                 nothing,
             )
         end
-        return SVDAdjoint(;
-            fwd_alg=fix_svd,
-            rrule_alg=alg.svd_alg.rrule_alg,
-            broadening=alg.svd_alg.broadening,
-        )
+        return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
     else
         return alg.svd_alg
     end
