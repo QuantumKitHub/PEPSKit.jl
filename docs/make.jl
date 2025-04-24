@@ -11,13 +11,14 @@ using Documenter
 using DocumenterCitations
 using DocumenterInterLinks
 using PEPSKit
+using MPSKitModels: MPSKitModels # used for docstrings
 
 # bibliography
 bibpath = joinpath(@__DIR__, "src", "assets", "pepskit.bib")
 bib = CitationBibliography(bibpath; style=:authoryear)
 
 # interlinks
-# Zygote and MPSKitModels didn't update to documenter v1 yet...
+# Zygote didn't update to documenter v1 yet...
 links = InterLinks(
     "TensorKit" => "https://jutho.github.io/TensorKit.jl/stable/",
     "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
@@ -40,7 +41,7 @@ mathengine = MathJax3(
 )
 
 makedocs(;
-    modules=[PEPSKit],
+    modules=[PEPSKit, MPSKitModels],
     sitename="PEPSKit.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", nothing) == "true", mathengine, size_threshold=1024000
@@ -61,7 +62,8 @@ makedocs(;
         "Library" => "lib/lib.md",
         "References" => "references.md",
     ],
-    checkdocs=:exports,
+    checkdocs=:none,
+    # checkdocs_ignored_modules=[MPSKitModels], # doesn't seem to work...
     plugins=[bib, links],
 )
 

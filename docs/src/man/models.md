@@ -47,12 +47,14 @@ While PEPSKit provides an interface for specifying custom Hamiltonians, it also 
 
 ### MPSKitModels.jl models
 
-- [`MPSKitModels.transverse_field_ising`](@extref)
-- [`MPSKitModels.heisenberg_XYZ`](@extref)
-- [`MPSKitModels.heisenberg_XXZ`](@extref)
-- [`MPSKitModels.hubbard_model`](@extref)
-- [`MPSKitModels.bose_hubbard_model`](@extref)
-- [`MPSKitModels.tj_model`](@extref)
+```@docs
+MPSKitModels.transverse_field_ising
+MPSKitModels.heisenberg_XYZ
+MPSKitModels.heisenberg_XXZ
+MPSKitModels.hubbard_model
+MPSKitModels.bose_hubbard_model
+MPSKitModels.tj_model
+```
 
 ### PEPSKit.jl models
 
