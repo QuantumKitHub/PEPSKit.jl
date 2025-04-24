@@ -108,10 +108,14 @@ function _pepolayers_fuser_tensor_expr(tensorname, H::Int, dir, args...;)
 end
 
 @generated function _mpotensor_contraction(
-    F_west::AbstractTensorMap{T,S}, F_south::AbstractTensorMap{T,S}, O::PEPOSandwich{H}
+    F_north::AbstractTensorMap{T,S},
+    F_east::AbstractTensorMap{T,S},
+    F_south::AbstractTensorMap{T,S},
+    F_west::AbstractTensorMap{T,S},
+    O::PEPOSandwich{H},
 ) where {T,S,H}
-    fuser_north = _pepo_fuser_tensor_expr(:F_south, H, :N)
-    fuser_east = _pepo_fuser_tensor_expr(:F_west, H, :E)
+    fuser_north = _pepo_fuser_tensor_expr(:F_north, H, :N)
+    fuser_east = _pepo_fuser_tensor_expr(:F_east, H, :E)
     fuser_south = _pepo_fuser_tensor_expr(:F_south, H, :S)
     fuser_west = _pepo_fuser_tensor_expr(:F_west, H, :W)
     ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
@@ -123,8 +127,6 @@ end
         :*,
         Expr(:call, :conj, fuser_north),
         Expr(:call, :conj, fuser_east),
-        # fuser_north,
-        # fuser_east,
         fuser_south,
         fuser_west,
         ket_e,
@@ -135,12 +137,14 @@ end
 end
 
 @generated function _mpotensor_contraction(
-    F_west::AbstractTensorMap{T,S},
+    F_north::AbstractTensorMap{T,S},
+    F_east::AbstractTensorMap{T,S},
     F_south::AbstractTensorMap{T,S},
+    F_west::AbstractTensorMap{T,S},
     O::PEPOLayersSandwich{H},
 ) where {T,S,H}
-    fuser_north = _pepolayers_fuser_tensor_expr(:F_south, H, :N)
-    fuser_east = _pepolayers_fuser_tensor_expr(:F_west, H, :E)
+    fuser_north = _pepolayers_fuser_tensor_expr(:F_north, H, :N)
+    fuser_east = _pepolayers_fuser_tensor_expr(:F_east, H, :E)
     fuser_south = _pepolayers_fuser_tensor_expr(:F_south, H, :S)
     fuser_west = _pepolayers_fuser_tensor_expr(:F_west, H, :W)
     pepo_es = _pepolayers_sandwich_expr(:O, H)
@@ -162,12 +166,32 @@ end
 # not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
 # ie type piracy
 mpotensor(top::PEPSTensor) = mpotensor((top, top))
-function mpotensor(network::Union{PEPOSandwich{H},PEPOLayersSandwich{H}}) where {H}
+function mpotensor(network::PEPOSandwich{H}) where {H}
     F_west = isomorphism(
-        storagetype(network[1]), fuse(virtualspace(network, 4)), virtualspace(network, 4)
+        storagetype(network[1]),
+        fuse(virtualspace(network, WEST)),
+        virtualspace(network, WEST),
     )
     F_south = isomorphism(
-        storagetype(network[1]), fuse(virtualspace(network, 3)), virtualspace(network, 3)
+        storagetype(network[1]),
+        fuse(virtualspace(network, SOUTH)),
+        virtualspace(network, SOUTH),
     )
-    return _mpotensor_contraction(F_west, F_south, network)
+    return _mpotensor_contraction(
+        F_south, F_west, twist(F_south, H + 3), twist(F_west, H + 3), network
+    )
+end
+
+function mpotensor(network::PEPOLayersSandwich{H}) where {H}
+    F_west = isomorphism(
+        storagetype(network[1]),
+        fuse(virtualspace(network, WEST)),
+        virtualspace(network, WEST),
+    )
+    F_south = isomorphism(
+        storagetype(network[1]),
+        fuse(virtualspace(network, SOUTH)),
+        virtualspace(network, SOUTH),
+    )
+    return _mpotensor_contraction(F_south, F_west, F_south, F_west, network)
 end
