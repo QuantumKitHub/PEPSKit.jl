@@ -73,6 +73,7 @@ function virtualspace(O::PEPOSandwich, dir)
 end
 
 ## Only PEPO layers
+# In a CTMRG contraction, the top physical leg of the top PEPOTensor is contracted with the bottom physical leg of the bottom PEPOTensor
 
 const PEPOLayersSandwich{N,P<:PEPOTensor} = Tuple{Vararg{P,N}}
 
