@@ -75,12 +75,6 @@ function su_iter(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    # TODO: make algorithm independent on the choice of dual in the network
-    for (r, c) in Iterators.product(1:Nr, 1:Nc)
-        @assert [isdual(space(peps.vertices[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
-        @assert [isdual(space(peps.weights[1, r, c], ax)) for ax in 1:2] == [0, 1]
-        @assert [isdual(space(peps.weights[2, r, c], ax)) for ax in 1:2] == [0, 1]
-    end
     peps2 = deepcopy(peps)
     gate_mirrored = mirror_antidiag(gate)
     for direction in 1:2
