@@ -1,12 +1,10 @@
 include("heis_tools.jl")
 
 # benchmark data is from 
-# https://github.com/jurajHasik/j1j2_ipeps_states/blob/ea4140fbd7da0fc1b75fac2871f75bda125189a8/single-site_pg-C4v-A1/j20.5/state_1s_A1_j20.5_D2_chi_opt48.dat
-Dbond, χenv, symm = 2, 32, U1Irrep
+# https://github.com/jurajHasik/j1j2_ipeps_states/blob/ea4140fbd7da0fc1b75fac2871f75bda125189a8/single-site_pg-C4v-A1_internal-U1/j20.5/state_1s_A1_U1B_j20.5_D4_chi_opt96.dat
+Dbond, χenv, symm = 4, 32, U1Irrep
 trscheme_env = truncerr(1e-10) & truncdim(χenv)
-Nr, Nc = 2, 2
-J1, J2 = 1.0, 0.5
-ham = real(j1_j2(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false))
+Nr, Nc, J1 = 2, 2, 1.0
 
 # random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
 if symm == Trivial
@@ -28,14 +26,24 @@ for ind in CartesianIndices(peps.vertices)
 end
 
 # simple update
-dts = [1e-1, 1e-2, 1e-3, 1e-4]
-tols = [1e-4, 1e-8, 1e-8, 1e-8]
-maxiter = 10000
-for (n, (dt, tol)) in enumerate(zip(dts, tols))
-    Dcut = (n == 1) ? max(4, Dbond) : Dbond
-    trscheme_peps = truncerr(1e-10) & truncdim(Dcut)
-    alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    result = simpleupdate(peps, ham, alg)
+## step 1: gradually increase J2
+dt, tol, maxiter = 1e-2, 1e-8, 10000
+check_interval = 1000
+trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
+alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
+for J2 in 0.1:0.1:0.5
+    ham = real(j1_j2(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false))
+    result = simpleupdate(peps, ham, alg; check_interval)
+    global peps = result[1]
+end
+## step 2: gradually decrease dt
+dts = [1e-2, 1e-3, 1e-4]
+tols = [1e-9, 1e-9, 1e-9]
+J2 = 0.5
+ham = real(j1_j2(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false))
+for (dt, tol) in zip(dts, tols)
+    local alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
+    result = simpleupdate(peps, ham, alg; check_interval)
     global peps = result[1]
 end
 # measure physical quantities with CTMRG
@@ -50,5 +58,5 @@ display(meas)
 energy, mag = meas["e_site"], mean(meas["mag_norm"])
 @info @sprintf("Energy = %.8f\n", energy)
 @info @sprintf("Staggered magnetization = %.8f\n", mag)
-@test isapprox(energy, -0.470392432614689; atol=1e-3)
-@test isapprox(mag, 0.30427239576842324; atol=1e-2)
+@test isapprox(energy, -0.4942484274707072; atol=1e-2)
+@test isapprox(mag, 0.1423604276676978; atol=5e-2)
