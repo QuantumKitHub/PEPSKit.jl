@@ -23,7 +23,7 @@ T = InfiniteTransferPEPS(peps, 1, 1)
 # encodes the norm of the state
 
 # Fist we build an initial guess for the boundary MPS, choosing a bond dimension of 20
-mps = PEPSKit.initializeMPS(T, [ComplexSpace(20)])
+mps = initialize_mps(T, [ComplexSpace(20)])
 
 # We then find the leading boundary MPS fixed point using the VUMPS algorithm
 mps, env, ϵ = leading_boundary(mps, T, VUMPS())
@@ -51,7 +51,7 @@ N´ = abs(norm(peps, ctm))
 peps2 = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
 T2 = PEPSKit.MultilineTransferPEPS(peps2, 1)
 
-mps2 = PEPSKit.initializeMPS(T2, fill(ComplexSpace(20), 2, 2))
+mps2 = initialize_mps(T2, fill(ComplexSpace(20), 2, 2))
 mps2, env2, ϵ = leading_boundary(mps2, T2, VUMPS())
 N2 = abs(prod(expectation_value(mps2, T2)))
 
@@ -76,7 +76,7 @@ N2´ = abs(norm(peps2, ctm2))
 pepo = ising_pepo(1)
 T3 = InfiniteTransferPEPO(peps, pepo, 1, 1)
 
-mps3 = PEPSKit.initializeMPS(T3, [ComplexSpace(20)])
+mps3 = initialize_mps(T3, [ComplexSpace(20)])
 mps3, env3, ϵ = leading_boundary(mps3, T3, VUMPS())
 @show N3 = abs(prod(expectation_value(mps3, T3)))
 
