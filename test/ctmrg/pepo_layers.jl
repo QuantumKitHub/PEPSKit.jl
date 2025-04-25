@@ -108,3 +108,17 @@ network_fused_OO = InfinitePEPS(Oψ)
 
     @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 1e-7
 end
+
+@testset "mpotensor for PEPOLayersSandwich" begin
+    network = InfiniteSquareNetwork(OOdag)
+
+    # Fuse the two physical legs of the PEPO to convert it to a PEPS
+    F = isomorphism(fuse(codomain(O)), codomain(O))
+    @tensor O_fused[-1; -2 -3 -4 -5] := O[1 2; -2 -3 -4 -5] * F[-1; 1 2]
+    network_fused = InfiniteSquareNetwork(InfinitePEPS(O_fused))
+
+    # Construct the mpotensor of the double-layer and compare
+    mpo = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(netw)))
+    mpo_fused = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(netw2)))
+    @test mpo_netw ≈ mpo_netw2
+end
