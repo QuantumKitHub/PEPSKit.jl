@@ -327,49 +327,10 @@ function apply_gatempo!(
 ) where {T1<:PEPSTensor,T2<:AbstractTensorMap}
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
+    @assert !all(revs)
     _apply_gatempo!(Ms, gs)
     wts, ϵs, = _cluster_truncate!(Ms, trunc, revs)
     return wts, ϵs
-end
-
-const openaxs_sw = [(NORTH, EAST, WEST), (SOUTH, WEST), (NORTH, EAST, SOUTH)]
-const sqrtwts_sw = [ntuple(dir -> !(dir in idxs), 4) for idxs in openaxs_sw]
-const invperms_sw = [((2,), (1, 3, 5, 4)), ((2,), (1, 5, 3, 4)), ((2,), (3, 5, 4, 1))]
-const perms_sw = [
-    begin
-        p = invperm((p1..., p2...))
-        ((p[1],), p[2:end])
-    end for (p1, p2) in invperms_sw
-]
-"""
-Obtain the following 3-site cluster with `M2` at `[r, c]`
-``` 
-    r-1 M1
-        |
-        ↓
-    r   M2 -←- M3
-        c      c+1
-```
-"""
-function get_3site_sw(peps::InfiniteWeightPEPS, row::Int, col::Int)
-    Nr, Nc = size(peps)
-    rm1, cp1 = _prev(row, Nr), _next(col, Nc)
-    coords_sw = [(rm1, col), (row, col), (row, cp1)]
-    cluster = collect(
-        permute(
-            _absorb_weights(
-                peps.vertices[CartesianIndex(coord)],
-                peps.weights,
-                coord[1],
-                coord[2],
-                Tuple(1:4),
-                sqrtwts,
-                false,
-            ),
-            perm,
-        ) for (coord, sqrtwts, perm) in zip(coords_sw, sqrtwts_sw, perms_sw)
-    )
-    return cluster
 end
 
 const openaxs_se = [(NORTH, SOUTH, WEST), (EAST, SOUTH), (NORTH, EAST, WEST)]
@@ -412,41 +373,23 @@ function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
     return cluster
 end
 
-function _su3site_cluster!(
-    row::Int,
-    col::Int,
-    gs::Vector{T},
-    peps::InfiniteWeightPEPS,
-    alg::SimpleUpdate,
-    cluster::Symbol,
+function _su3site_se!(
+    row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
 ) where {T<:AbstractTensorMap}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert cluster in (:sw, :se)
-    _peps_dualcheck(peps)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
-    Ms, coords, wt_idxs, invperms, openaxs = if cluster == :sw
-        (
-            get_3site_sw(peps, row, col),
-            ((rm1, col), (row, col), (row, cp1)),
-            ((2, row, col), (1, row, col)),
-            invperms_sw,
-            openaxs_sw,
-        )
-    else
-        (
-            get_3site_se(peps, row, col),
-            ((row, col), (row, cp1), (rm1, cp1)),
-            ((1, row, col), (2, row, cp1)),
-            invperms_se,
-            openaxs_se,
-        )
-    end
+    # southwest 3-site cluster
+    Ms = get_3site_se(peps, row, col)
+    # sites in the cluster
+    coords = ((row, col), (row, cp1), (rm1, cp1))
+    # weights in the cluster
+    wt_idxs = ((1, row, col), (2, row, cp1))
     wts, ϵ = apply_gatempo!(Ms, gs; trunc=alg.trscheme)
     for (wt, wt_idx) in zip(wts, wt_idxs)
         peps.weights[CartesianIndex(wt_idx)] = wt / norm(wt, Inf)
     end
-    for (M, coord, invperm, axs) in zip(Ms, coords, invperms, openaxs)
+    for (M, coord, invperm, axs) in zip(Ms, coords, invperms_se, openaxs_se)
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
@@ -458,13 +401,13 @@ function _su3site_cluster!(
 end
 
 """
-    su3site_iter(gatempos::NamedTuple{(:sw, :se)}, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
+    su3site_iter(gatempos, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
 
-One round of 3-site simple update for Hamiltonian with next-nearest neighbor interaction terms. 
+One round of 3-site simple update. 
 """
 function su3site_iter(
-    gatempos::NamedTuple{(:sw, :se)}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
-)
+    gatempos::Vector{G}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
+) where {G<:AbstractMatrix}
     Nr, Nc = size(peps)
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError(
@@ -472,26 +415,23 @@ function su3site_iter(
         ),
     )
     peps2 = deepcopy(peps)
-    for cluster in (:sw, :se), site in CartesianIndices(peps2.vertices)
-        r, c = Tuple(site)
-        gs = gatempos[cluster][r, c]
-        _su3site_cluster!(r, c, gs, peps2, alg, cluster)
+    for i in 1:4
+        for site in CartesianIndices(peps2.vertices)
+            r, c = site[1], site[2]
+            gs = gatempos[i][r, c]
+            _su3site_se!(r, c, gs, peps2, alg)
+        end
+        peps2 = rotl90(peps2)
+    end
+    # for fermions, undo the twists caused by repeated flipping
+    for i in CartesianIndices(peps2.vertices)
+        twist!(peps2.vertices[i], Tuple(2:5))
     end
     return peps2
 end
 
-function _peps_dualcheck(peps::InfiniteWeightPEPS)
-    Nr, Nc = size(peps)
-    for r in Nr, c in Nc
-        @assert [isdual(space(peps.vertices[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
-        @assert [isdual(space(peps.weights[1, r, c], ax)) for ax in 1:2] == [0, 1]
-        @assert [isdual(space(peps.weights[2, r, c], ax)) for ax in 1:2] == [0, 1]
-    end
-    return nothing
-end
-
 """
-Perform 3-site simple update for Hamiltonian `ham` containing up to next-nearest neighbor interaction terms.
+Perform 3-site simple update for Hamiltonian `ham`.
 """
 function _simpleupdate3site(
     peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int=500
@@ -499,7 +439,13 @@ function _simpleupdate3site(
     time_start = time()
     gate = get_expham(alg.dt, ham)
     # convert gates to 3-site MPOs
-    gatempos = _get_gatempos(gate)
+    gatempos1 = _get_gatempos_se(gate)
+    gatempos = Vector{typeof(gatempos1)}(undef, 4)
+    gatempos[1] = gatempos1
+    for i in 2:4
+        gate = rotl90(gate)
+        gatempos[i] = _get_gatempos_se(gate)
+    end
     wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)

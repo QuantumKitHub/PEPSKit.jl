@@ -159,30 +159,6 @@ function gate_to_mpo3(
 end
 
 """
-Obtain the 3-site gate MPO on the southwest cluster at position `[row, col]`
-```
-    r-1 g1
-        |       
-        ↑
-    r   g2 -←- g3
-        c      c+1
-```
-"""
-function _get_gatempo_sw(gate::LocalOperator, row::Int, col::Int)
-    Nr, Nc = size(gate.lattice)
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
-    unit = id(space(gate.terms[1].second, 1))
-    sites = (
-        CartesianIndex(row - 1, col), CartesianIndex(row, col), CartesianIndex(row, col + 1)
-    )
-    nb1y = get_gateterm(gate, (sites[1], sites[2]))
-    nb1x = get_gateterm(gate, (sites[2], sites[3]))
-    nb2 = get_gateterm(gate, (sites[1], sites[3]))
-    op = (1 / 2) * (nb1y ⊗ unit + unit ⊗ nb1x) + permute(nb2 ⊗ unit, ((1, 3, 2), (4, 6, 5)))
-    return gate_to_mpo3(op)
-end
-
-"""
 Obtain the 3-site gate MPO on the southeast cluster at position `[row, col]`
 ```
     r-1        g3
@@ -209,13 +185,10 @@ function _get_gatempo_se(gate::LocalOperator, row::Int, col::Int)
 end
 
 """
-Construct the 3-site gate MPOs for simple update for a Hamiltonian 
-that contains up to next nearest neighbor terms on square lattice.
+Construct the 3-site gate MPOs on the southeast cluster 
+for 3-site simple update on square lattice.
 """
-function _get_gatempos(gate::LocalOperator)
+function _get_gatempos_se(gate::LocalOperator)
     Nr, Nc = size(gate.lattice)
-    return (;
-        :sw => collect(_get_gatempo_sw(gate, r, c) for r in 1:Nr, c in 1:Nc),
-        :se => collect(_get_gatempo_se(gate, r, c) for r in 1:Nr, c in 1:Nc),
-    )
+    return collect(_get_gatempo_se(gate, r, c) for r in 1:Nr, c in 1:Nc)
 end
