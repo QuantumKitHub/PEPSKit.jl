@@ -88,6 +88,7 @@ function PEPSTensor(
     return f(T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
 end
 
+mirror_antidiag(t::PEPSTensor) = permute(t, ((1,), (3, 2, 5, 4)))
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
 Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
 Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))

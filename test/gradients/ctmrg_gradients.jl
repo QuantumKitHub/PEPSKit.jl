@@ -20,7 +20,7 @@ gradtol = 1e-4
 ctmrg_verbosity = 0
 ctmrg_algs = [[:sequential, :simultaneous], [:sequential, :simultaneous]]
 projector_algs = [[:halfinfinite, :fullinfinite], [:halfinfinite, :fullinfinite]]
-svd_rrule_algs = [[:tsvd, :arnoldi], [:tsvd, :arnoldi]]
+svd_rrule_algs = [[:full, :arnoldi], [:full, :arnoldi]]
 gradient_algs = [
     [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
     [:geomsum, :manualiter, :linsolver, :eigsolver],
@@ -29,9 +29,9 @@ gradient_iterschemes = [[:fixed, :diffgauge], [:fixed, :diffgauge]]
 steps = -0.01:0.005:0.01
 
 naive_gradient_combinations = [
-    (:simultaneous, :halfinfinite, :tsvd),
-    (:simultaneous, :fullinfinite, :tsvd),
-    (:sequential, :halfinfinite, :tsvd),
+    (:simultaneous, :halfinfinite, :full),
+    (:simultaneous, :fullinfinite, :full),
+    (:sequential, :halfinfinite, :full),
 ]
 naive_gradient_done = Set()
 
