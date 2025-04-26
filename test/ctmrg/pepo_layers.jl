@@ -118,7 +118,9 @@ end
     network_fused = InfiniteSquareNetwork(InfinitePEPS(O_fused))
 
     # Construct the mpotensor of the double-layer and compare
-    mpo = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(netw)))
-    mpo_fused = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(netw2)))
-    @test mpo_netw ≈ mpo_netw2
+    mpo = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(network)))
+    mpo_fused = InfiniteSquareNetwork(
+        map(PEPSKit.mpotensor, PEPSKit.unitcell(network_fused))
+    )
+    @test mpo ≈ mpo_fused
 end

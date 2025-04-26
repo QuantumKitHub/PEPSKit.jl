@@ -168,6 +168,20 @@ end
 # ie type piracy
 mpotensor(top::PEPSTensor) = mpotensor((top, top))
 function mpotensor(network::PEPOSandwich{H}) where {H}
+    @assert virtualspace(ket(network), NORTH) == dual(virtualspace(ket(network), SOUTH)) &&
+        virtualspace(bra(network), NORTH) == dual(virtualspace(bra(network), SOUTH)) &&
+        virtualspace(ket(network), EAST) == dual(virtualspace(ket(network), WEST)) &&
+        virtualspace(bra(network), EAST) == dual(virtualspace(bra(network), WEST)) &&
+        isdual(virtualspace(ket(network), NORTH)) &&
+        isdual(virtualspace(bra(network), NORTH)) &&
+        isdual(virtualspace(ket(network), EAST)) &&
+        isdual(virtualspace(bra(network), EAST)) "Method not yet implemented for given virtual spaces"
+    for h in 1:H
+        @assert virtualspace(network[h], NORTH) == dual(virtualspace(network[h], SOUTH)) &&
+            virtualspace(network[h], EAST) == dual(virtualspace(network[h], WEST)) &&
+            isdual(virtualspace(network[h], NORTH)) &&
+            isdual(virtualspace(network[h], EAST)) "Method not yet implemented for given virtual spaces"
+    end
     F_west = isomorphism(
         storagetype(network[1]),
         fuse(virtualspace(network, WEST)),
@@ -184,6 +198,12 @@ function mpotensor(network::PEPOSandwich{H}) where {H}
 end
 
 function mpotensor(network::PEPOLayersSandwich{H}) where {H}
+    for h in 1:H
+        @assert virtualspace(network[h], NORTH) == dual(virtualspace(network[h], SOUTH)) &&
+            virtualspace(network[h], EAST) == dual(virtualspace(network[h], WEST)) &&
+            isdual(virtualspace(network[h], NORTH)) &&
+            isdual(virtualspace(network[h], EAST)) "Method not yet implemented for given virtual spaces"
+    end
     F_west = isomorphism(
         storagetype(network[1]),
         fuse(virtualspace(network, WEST)),
