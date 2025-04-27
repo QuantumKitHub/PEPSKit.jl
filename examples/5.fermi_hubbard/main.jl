@@ -6,7 +6,7 @@ In this example, we will demonstrate how to handle fermionic PEPS tensors and ho
 optimize them. To that end, we consider the two-dimensional Hubbard model
 
 ```math
-H = -t \sum_{\langle i,j \rangle} \sum_{\sigma} \left( c_{i,\sigma}^+ c_{j,\sigma}^- +
+H = -t \sum_{\langle i,j \rangle} \sum_{\sigma} \left( c_{i,\sigma}^+ c_{j,\sigma}^- -
 c_{i,\sigma}^- c_{j,\sigma}^+ \right) + U \sum_i n_{i,\uparrow}n_{i,\downarrow} - \mu \sum_i n_i
 ```
 

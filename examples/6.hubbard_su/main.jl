@@ -1,13 +1,13 @@
 using Markdown #hide
 md"""
-# Hubbard model imaginary time evolution using simple update
+# Simple update for the Fermi-Hubbard model at half-filling
 
 Once again, we consider the Hubbard model but this time we obtain the ground-state PEPS by
 imaginary time evoluation. In particular, we'll use the [`SimpleUpdate`](@ref) algorithm.
 As a reminder, we define the Hubbard model as
 
 ```math
-H = -t \sum_{\langle i,j \rangle} \sum_{\sigma} \left( c_{i,\sigma}^+ c_{j,\sigma}^- +
+H = -t \sum_{\langle i,j \rangle} \sum_{\sigma} \left( c_{i,\sigma}^+ c_{j,\sigma}^- -
 c_{i,\sigma}^- c_{j,\sigma}^+ \right) + U \sum_i n_{i,\uparrow}n_{i,\downarrow} - \mu \sum_i n_i
 ```
 
