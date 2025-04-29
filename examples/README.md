@@ -11,7 +11,7 @@ generation, run:
 ``julia examples/make.jl`
 
 By default, this will only generate files when the input file has not changed. This is
-achieved by keeping a checksum of the `main.jl` file in each example in a `cache.toml`.
+achieved by keeping a checksum of the `main.jl` file in each example in a `Cache.toml`.
 Total recompilation can be achieved by deleting this file, or alternatively you can just
 delete the entries for which you wish to generate new files.
 
