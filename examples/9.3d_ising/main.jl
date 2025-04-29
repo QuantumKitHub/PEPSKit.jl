@@ -43,7 +43,7 @@ Just as in the 2D case, the first step is to define the partition function as a 
 network. The procedure is exactly the same as before, the only difference being that now
 every spin participates in interactions associated to six links adjacent to that site. This
 means that the partition function can be written as an infinite 3D network with a single
-constituent rank-6 [`PEPOTensor`](@ref) `O` located at each site of the cubic lattice. To
+constituent rank-6 [`PEPSKit.PEPOTensor`](@ref) `O` located at each site of the cubic lattice. To
 verify our example we will check the magnetization and energy, so we also define the
 corresponding rank-6 tensors `M` and `E` while we're at it.
 """
@@ -51,25 +51,25 @@ corresponding rank-6 tensors `M` and `E` while we're at it.
 function three_dimensional_classical_ising(; beta, J=1.0)
     K = beta * J
 
-    # Boltzmann weights
+    ## Boltzmann weights
     t = ComplexF64[exp(K) exp(-K); exp(-K) exp(K)]
     r = eigen(t)
     q = r.vectors * sqrt(LinearAlgebra.Diagonal(r.values)) * r.vectors
 
-    # local partition function tensor
+    ## local partition function tensor
     O = zeros(2, 2, 2, 2, 2, 2)
     O[1, 1, 1, 1, 1, 1] = 1
     O[2, 2, 2, 2, 2, 2] = 1
     @tensor o[-1 -2; -3 -4 -5 -6] :=
         O[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
 
-    # magnetization tensor
+    ## magnetization tensor
     M = copy(O)
     M[2, 2, 2, 2, 2, 2] *= -1
     @tensor m[-1 -2; -3 -4 -5 -6] :=
         M[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
 
-    # bond interaction tensor and energy-per-site tensor
+    ## bond interaction tensor and energy-per-site tensor
     e = ComplexF64[-J J; J -J] .* q
     @tensor e_x[-1 -2; -3 -4 -5 -6] :=
         O[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * e[-4; 4] * q[-5; 5] * q[-6; 6]
@@ -79,11 +79,11 @@ function three_dimensional_classical_ising(; beta, J=1.0)
         O[1 2; 3 4 5 6] * e[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
     e = e_x + e_y + e_z
 
-    # fixed tensor map space for all three
+    ## fixed tensor map space for all three
     TMS = ℂ^2 ⊗ (ℂ^2)' ← ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)'
 
     return TensorMap(o, TMS), TensorMap(m, TMS), TensorMap(e, TMS)
-end
+end;
 
 md"""
 Let's initialize these tensors at inverse temperature ``\beta=0.2391``, which corresponds to a slightly
@@ -131,41 +131,41 @@ of the two relevant 2D networks. In addition, we'll specify the specific reverse
 algorithm that will be used to compute the gradient of this cost function
 """
 
-boundary_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=2)
+boundary_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=1)
 rrule_alg = EigSolver(;
     solver_alg=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
 )
 T = InfinitePEPO(O)
 
 function pepo_costfun((psi, env2, env3))
-    # use Zygote to compute the gradient automatically
+    ## use Zygote to compute the gradient automatically
     E, gs = withgradient(psi) do ψ
-        # construct the PEPS norm network
+        ## construct the PEPS norm network
         n2 = InfiniteSquareNetwork(ψ)
-        # contract this network
+        ## contract this network
         env2′, info = PEPSKit.hook_pullback(
             leading_boundary, env2, n2, boundary_alg; alg_rrule=rrule_alg
         )
-        # construct the PEPS-PEPO-PEPS overlap network
+        ## construct the PEPS-PEPO-PEPS overlap network
         n3 = InfiniteSquareNetwork(ψ, T)
-        # contract this network
+        ## contract this network
         env3′, info = PEPSKit.hook_pullback(
             leading_boundary, env3, n3, boundary_alg; alg_rrule=rrule_alg
         )
-        # update the environments for reuse
+        ## update the environments for reuse
         PEPSKit.ignore_derivatives() do
             PEPSKit.update!(env2, env2′)
             PEPSKit.update!(env3, env3′)
         end
-        # compute the network values per site
+        ## compute the network values per site
         λ3 = network_value(n3, env3)
         λ2 = network_value(n2, env2)
-        # use this to compute the actual cost function
+        ## use this to compute the actual cost function
         return -log(real(λ3 / λ2))
     end
     g = only(gs)
     return E, g
-end
+end;
 
 md"""
 There are a few things to note about this cost function definition. Since we will pass
@@ -214,14 +214,15 @@ function pepo_retract(x, η, α)
 end
 function pepo_transport!(ξ, x, η, α, x´)
     return PEPSKit.peps_transport!(ξ, x[1:2], η, α, x´[1:2])
-end
+end;
 
 md"""
 ### Finding the fixed point
 
 All that is left then is to specify the virtual spaces of the PEPS and the two environments,
 initialize them in the appropriate way, choose an optimization algortithm and call the
-`optimize` function from OptimKit.jl to get our desired PEPS fixed point. """
+`optimize` function from OptimKit.jl to get our desired PEPS fixed point.
+"""
 
 Vpeps = ℂ^2
 Venv = ℂ^12
@@ -230,7 +231,7 @@ psi0 = initializePEPS(T, Vpeps)
 env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), Venv)
 env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), Venv)
 
-optimizer_alg = LBFGS(32; maxiter=50, gradtol=1e-5, verbosity=3)
+optimizer_alg = LBFGS(32; maxiter=100, gradtol=1e-5, verbosity=3)
 
 (psi_final, env2_final, env3_final), f, = optimize(
     pepo_costfun,
@@ -239,7 +240,7 @@ optimizer_alg = LBFGS(32; maxiter=50, gradtol=1e-5, verbosity=3)
     inner=PEPSKit.real_inner,
     retract=pepo_retract,
     (transport!)=(pepo_transport!),
-)
+);
 
 md"""
 ### Verifying the result
