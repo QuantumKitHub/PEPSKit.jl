@@ -134,52 +134,62 @@ function MPSKit.contract_mpo_expval(
     return environment_overlap(GL´, GR)
 end
 
-#
 # Derivative contractions
-#
+# -----------------------
+# This is appropriating the MPSKit MPO derivative structures, which might not be the best
+# idea in the long run.
 
-function MPSKit.∂C(
-    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
-) where {S,N}
+const PEPS_C_Hamiltonian{S,N} = MPSKit.MPO_C_Hamiltonian{
+    <:GenericMPSTensor{S,N},<:GenericMPSTensor{S,N}
+} # this one is technically type-piracy
+PEPS_C_Hamiltonian(GL, GR) = MPSKit.MPODerivativeOperator(GL, (), GR)
+
+const PEPS_AC_Hamiltonian{S,N} = MPSKit.MPO_AC_Hamiltonian{
+    <:GenericMPSTensor{S,N},<:Union{PEPSSandwich,PEPOSandwich},<:GenericMPSTensor{S,N}
+}
+PEPS_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
+
+# Constructors
+#
+function MPSKit.C_hamiltonian(site::Int, below, ::InfiniteTransferMatrix, above, envs)
+    GL = leftenv(envs, site + 1, below)
+    GL = twistdual(GL, 1)
+    GR = rightenv(envs, site, below)
+    GR = twistdual(GR, numind(GR))
+    return PEPS_C_Hamiltonian(GL, GR)
+end
+
+function MPSKit.AC_hamiltonian(
+    site::Int, below, operator::InfiniteTransferMatrix, above, envs
+)
+    GL = leftenv(envs, site, below)
+    GL = twistdual(GL, 1)
+    GR = rightenv(envs, site, below)
+    GR = twistdual(GR, numind(GR))
+    return PEPS_AC_Hamiltonian(GL, operator[site], GR)
+end
+
     GL = twistdual(GL, 1)
     GR = twistdual(GR, numind(GR))
-    return _∂C(C, GL, GR)
 end
-@generated function _∂C(
-    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
-) where {S,N}
+
+# Actions
+#
+@generated function (h::PEPS_C_Hamiltonian{S,N})(C::MPSBondTensor{S}) where {S,N}
     C´_e = tensorexpr(:C´, -1, -2)
     C_e = tensorexpr(:C, 1, 2)
-    GL_e = tensorexpr(:GL, (-1, (3:(N + 1))...), 1)
-    GR_e = tensorexpr(:GR, 2:(N + 1), -2)
+    GL_e = tensorexpr(:(h.leftenv), (-1, (3:(N + 1))...), 1)
+    GR_e = tensorexpr(:(h.rightenv), (2:(N + 1)...,), -2)
     return macroexpand(@__MODULE__, :(return @tensor $C´_e := $GL_e * $C_e * $GR_e))
 end
 
-function MPSKit.∂AC(
-    AC::GenericMPSTensor{S,N},
-    O::Union{PEPSSandwich,PEPOSandwich},
-    GL::GenericMPSTensor{S,N},
-    GR::GenericMPSTensor{S,N},
-) where {S,N}
-    GL = twistdual(GL, 1)
-    GR = twistdual(GR, numind(GR))
-    return _∂AC(AC, O, GL, GR)
-end
-
-## PEPS
-
-function _∂AC(
-    AC::GenericMPSTensor{S,3},
-    O::PEPSSandwich,
-    GL::GenericMPSTensor{S,3},
-    GR::GenericMPSTensor{S,3},
-) where {S}
+function (h::PEPS_AC_Hamiltonian{S,N})(AC::GenericMPSTensor{S,N}) where {S,N}
     return @autoopt @tensor AC′[χ_SW D_S_above D_S_below; χ_SE] :=
-        GL[χ_SW D_W_above D_W_below; χ_NW] *
+        h.leftenv[χ_SW D_W_above D_W_below; χ_NW] *
         AC[χ_NW D_N_above D_N_below; χ_NE] *
-        GR[χ_NE D_E_above D_E_below; χ_SE] *
-        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
-        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
+        h.rightenv[χ_NE D_E_above D_E_below; χ_SE] *
+        ket(h.operators[1])[d; D_N_above D_E_above D_S_above D_W_above] *
+        conj(bra(h.operators[1])[d; D_N_below D_E_below D_S_below D_W_below])
 end
 
 # PEPS derivative
