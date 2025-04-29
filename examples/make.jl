@@ -90,7 +90,7 @@ function build_example(root, name)
     end
 end
 
-function build(root="")
+function build(root="./")
     return cd(@__DIR__) do
         examples = filter(isdir, readdir(joinpath(@__DIR__, root))) # filter out directories to ignore Cache.toml, etc.
         return map(ex -> build_example(root, ex), examples)
