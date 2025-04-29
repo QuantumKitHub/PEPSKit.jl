@@ -255,7 +255,7 @@ end
     AC_e = _pepo_edge_expr(:AC, :NW, :NE, :N, H)
     GL_e = _pepo_edge_expr(:(h.leftenv), :SW, :NW, :W, H)
     GR_e = _pepo_edge_expr(:(h.rightenv), :NE, :SE, :E, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:(h.operator[1]), H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:(h.operators[1]), H)
 
     rhs = Expr(:call, :*, AC_e, GL_e, GR_e, ket_e, Expr(:call, :conj, bra_e), pepo_es...)
 
