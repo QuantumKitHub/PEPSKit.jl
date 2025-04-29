@@ -1,5 +1,10 @@
 ["./"]
 bose_hubbard = "2d25bbc749632d5e194c8405e1309f37af8e7d5d680eed393fa2cf975f6d0619"
+hubbard_su = "27bb6bc05ae104080e6048f9f1ae84b086bea034b794d7997baf6da9e2d2f257"
 2d_ising_partition_function = "acafb9139119ccc89fb928b18c55ea9e827f676a737e34a84850666f8ca35702"
 3d_ising_partition_function = "55e6501df7b73ea3ee8030e78b46ab24261e337354dfa2a74dbc77638b9bba9c"
 boundary_mps = "fd8f0378c5261ae37b8d3862fb28a0b7f2697cbaf5c65f4e768bf95720683e8d"
+heisenberg_su = "27d48d1b9dfbc600c3cfa829f3bb5708f21e95ea92da2930afdf6973fb3bcaec"
+xxz = "8319d9b985dcf48b5bcdf992b44923a5f8fe8fc7e83be3d55eeddfe07048fb03"
+fermi_hubbard = "958a68a2395a3fae6aaee4b1b3376c3b47a28609ecb29257b778b8b83c937316"
+heisenberg = "65ccc80fefe009ef3a626e497e3d054fbc1a8f92d40cef3cb8a5bf6254a6a57f"
