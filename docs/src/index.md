@@ -15,7 +15,7 @@ pkg> add PEPSKit
 ## Key features
 
 - Construction and manipulation of infinite projected entangled-pair states (PEPS)
-- Contraction of infinite PEPS using the corner transfer matrix renormalization group (CTMRG) and variational uniform matrix product states (VUMPS)
+- Contraction of infinite PEPS using the corner transfer matrix renormalization group (CTMRG) and boundary MPS methods
 - Native support for symmetric tensors through [TensorKit](https://github.com/Jutho/TensorKit.jl), including fermionic tensors
 - PEPS optimization using automatic differentiation (AD) provided through [Zygote](https://fluxml.ai/Zygote.jl/stable/)
 - Imaginary time evolution algorithms
