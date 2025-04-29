@@ -145,17 +145,12 @@ const PEPS_C_Hamiltonian{S,N} = MPSKit.MPO_C_Hamiltonian{
 PEPS_C_Hamiltonian(GL, GR) = MPSKit.MPODerivativeOperator(GL, (), GR)
 
 const PEPS_AC_Hamiltonian{S,N} = MPSKit.MPO_AC_Hamiltonian{
-    <:GenericMPSTensor{S,N},
-    <:PEPSSandwich,
-    <:GenericMPSTensor{S,N},
+    <:GenericMPSTensor{S,N},<:PEPSSandwich,<:GenericMPSTensor{S,N}
 }
 PEPS_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
 
 const PEPS_AC2_Hamiltonian{S,N} = MPSKit.MPO_AC2_Hamiltonian{
-    <:GenericMPSTensor{S,N},
-    <:PEPSSandwich,
-    <:PEPSSandwich,
-    <:GenericMPSTensor{S,N},
+    <:GenericMPSTensor{S,N},<:PEPSSandwich,<:PEPSSandwich,<:GenericMPSTensor{S,N}
 }
 PEPS_AC2_Hamiltonian(GL, O1, O2, GR) = MPSKit.MPODerivativeOperator(GL, (O1, O2), GR)
 
@@ -170,11 +165,7 @@ function MPSKit.C_hamiltonian(site::Int, below, ::InfiniteTransferMatrix, above,
 end
 
 function MPSKit.AC_hamiltonian(
-    site::Int,
-    below,
-    operator::InfiniteTransferPEPS,
-    above,
-    envs,
+    site::Int, below, operator::InfiniteTransferPEPS, above, envs
 )
     GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
@@ -184,11 +175,7 @@ function MPSKit.AC_hamiltonian(
 end
 
 function MPSKit.AC2_hamiltonian(
-    site::Int,
-    below,
-    operator::InfiniteTransferPEPS,
-    above,
-    envs,
+    site::Int, below, operator::InfiniteTransferPEPS, above, envs
 )
     GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
