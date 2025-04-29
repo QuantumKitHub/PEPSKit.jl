@@ -149,6 +149,14 @@ const PEPS_AC_Hamiltonian{S,N} = MPSKit.MPO_AC_Hamiltonian{
 }
 PEPS_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
 
+const PEPS_AC2_Hamiltonian{S,N} = MPSKit.MPO_AC2_Hamiltonian{
+    <:GenericMPSTensor{S,N},
+    <:Union{PEPSSandwich,PEPOSandwich},
+    <:Union{PEPSSandwich,PEPOSandwich},
+    <:GenericMPSTensor{S,N},
+}
+PEPS_AC2_Hamiltonian(GL, O1, O2, GR) = MPSKit.MPODerivativeOperator(GL, (O1, O2), GR)
+
 # Constructors
 #
 function MPSKit.C_hamiltonian(site::Int, below, ::InfiniteTransferMatrix, above, envs)
@@ -169,8 +177,14 @@ function MPSKit.AC_hamiltonian(
     return PEPS_AC_Hamiltonian(GL, operator[site], GR)
 end
 
+function MPSKit.AC2_hamiltonian(
+    site::Int, below, operator::InfiniteTransferMatrix, above, envs
+)
+    GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
+    GR = rightenv(envs, site + 1, below)
     GR = twistdual(GR, numind(GR))
+    return PEPS_AC2_Hamiltonian(GL, operator[site], operator[site + 1], GR)
 end
 
 # Actions
@@ -190,6 +204,17 @@ function (h::PEPS_AC_Hamiltonian{S,N})(AC::GenericMPSTensor{S,N}) where {S,N}
         h.rightenv[χ_NE D_E_above D_E_below; χ_SE] *
         ket(h.operators[1])[d; D_N_above D_E_above D_S_above D_W_above] *
         conj(bra(h.operators[1])[d; D_N_below D_E_below D_S_below D_W_below])
+end
+
+function (h::PEPS_AC2_Hamiltonian{S,3})(AC2::AbstractTensorMap{<:Any,S,3,3}) where {S}
+    return @autoopt @tensor AC2′[χ_SW D_S_above1 D_S_below1; χ_SE D_S_below2 D_S_above2] :=
+        h.leftenv[χ_SW D_W_above1 D_W_below1; χ_NW] *
+        AC2[χ_NW D_N_above1 D_N_below1; χ_NE D_N_below2 D_N_above2] *
+        h.rightenv[χ_NE D_E_above2 D_E_below2; χ_SE] *
+        ket(h.operators[1])[d1; D_N_above1 D_E_above1 D_S_above1 D_W_above1] *
+        conj(bra(h.operators[1])[d1; D_N_below1 D_E_below1 D_S_below1 D_W_below1]) *
+        ket(h.operators[2])[d2; D_N_above2 D_E_above2 D_S_above2 D_E_above1] *
+        conj(bra(h.operators[2])[d2; D_N_below2 D_E_below2 D_S_below2 D_E_below1])
 end
 
 # PEPS derivative
