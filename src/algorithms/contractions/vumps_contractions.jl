@@ -134,8 +134,8 @@ function MPSKit.contract_mpo_expval(
     return environment_overlap(GL´, GR)
 end
 
-# Derivative contractions
-# -----------------------
+# PEPS Derivative contractions
+# ----------------------------
 # This is appropriating the MPSKit MPO derivative structures, which might not be the best
 # idea in the long run.
 
@@ -145,14 +145,16 @@ const PEPS_C_Hamiltonian{S,N} = MPSKit.MPO_C_Hamiltonian{
 PEPS_C_Hamiltonian(GL, GR) = MPSKit.MPODerivativeOperator(GL, (), GR)
 
 const PEPS_AC_Hamiltonian{S,N} = MPSKit.MPO_AC_Hamiltonian{
-    <:GenericMPSTensor{S,N},<:Union{PEPSSandwich,PEPOSandwich},<:GenericMPSTensor{S,N}
+    <:GenericMPSTensor{S,N},
+    <:PEPSSandwich,
+    <:GenericMPSTensor{S,N},
 }
 PEPS_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
 
 const PEPS_AC2_Hamiltonian{S,N} = MPSKit.MPO_AC2_Hamiltonian{
     <:GenericMPSTensor{S,N},
-    <:Union{PEPSSandwich,PEPOSandwich},
-    <:Union{PEPSSandwich,PEPOSandwich},
+    <:PEPSSandwich,
+    <:PEPSSandwich,
     <:GenericMPSTensor{S,N},
 }
 PEPS_AC2_Hamiltonian(GL, O1, O2, GR) = MPSKit.MPODerivativeOperator(GL, (O1, O2), GR)
@@ -168,7 +170,11 @@ function MPSKit.C_hamiltonian(site::Int, below, ::InfiniteTransferMatrix, above,
 end
 
 function MPSKit.AC_hamiltonian(
-    site::Int, below, operator::InfiniteTransferMatrix, above, envs
+    site::Int,
+    below,
+    operator::InfiniteTransferPEPS,
+    above,
+    envs,
 )
     GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
@@ -178,7 +184,11 @@ function MPSKit.AC_hamiltonian(
 end
 
 function MPSKit.AC2_hamiltonian(
-    site::Int, below, operator::InfiniteTransferMatrix, above, envs
+    site::Int,
+    below,
+    operator::InfiniteTransferPEPS,
+    above,
+    envs,
 )
     GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
@@ -233,22 +243,32 @@ function ∂peps(
         conj(ĀC[χ_SW D_S_above D_S_below; χ_SE])
 end
 
-## PEPO
+# PEPO Derivative contractions
+# ----------------------------
+const PEPO_AC_Hamiltonian{S,N,H} = MPSKit.MPO_AC_Hamiltonian{
+    <:GenericMPSTensor{S,N},<:PEPOSandwich{H},<:GenericMPSTensor{S,N}
+}
+PEPO_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
 
-@generated function _∂AC(
-    AC::GenericMPSTensor{S,N},
-    O::PEPOSandwich{H},
-    GL::GenericMPSTensor{S,N},
-    GR::GenericMPSTensor{S,N},
-) where {S,N,H}
+function MPSKit.AC_hamiltonian(
+    site::Int, below, operator::InfiniteTransferPEPO, above, envs
+)
+    GL = leftenv(envs, site, below)
+    GL = twistdual(GL, 1)
+    GR = rightenv(envs, site, below)
+    GR = twistdual(GR, numind(GR))
+    return PEPO_AC_Hamiltonian(GL, operator[site], GR)
+end
+
+@generated function (h::PEPO_AC_Hamiltonian{S,N,H})(AC::GenericMPSTensor{S,N}) where {S,N,H}
     # sanity check
-    @assert H == N - 3
+    @assert H == N - 3 "Incompatible number of legs and layers"
 
     AC´_e = _pepo_edge_expr(:AC´, :SW, :SE, :S, H)
     AC_e = _pepo_edge_expr(:AC, :NW, :NE, :N, H)
-    GL_e = _pepo_edge_expr(:GL, :SW, :NW, :W, H)
-    GR_e = _pepo_edge_expr(:GR, :NE, :SE, :E, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
+    GL_e = _pepo_edge_expr(:(h.leftenv), :SW, :NW, :W, H)
+    GR_e = _pepo_edge_expr(:(h.rightenv), :NE, :SE, :E, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:(h.operator[1]), H)
 
     rhs = Expr(:call, :*, AC_e, GL_e, GR_e, ket_e, Expr(:call, :conj, bra_e), pepo_es...)
 
