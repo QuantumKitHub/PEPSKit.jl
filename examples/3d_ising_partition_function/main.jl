@@ -1,18 +1,16 @@
 using Markdown #hide
 md"""
-# The 3D classical Ising model
+# [The 3D classical Ising model](@id e_3d_ising)
 
 In a previous example we have already demonstrated an application of PEPSKit.jl to the study
-of two-dimensional classical statistical mechanics models. In this example, we will take
-this one step further, and showcase how one can use PEPSKit.jl to study three-dimensional
-classical statistical mechanics models. We will demonstrate this for the specific case of
-the three-dimensional classical Ising model, but the same techniques can be applied to other
-three-dimensional classical models as well.
+of 2D classical statistical mechanics models. In this example, we will take this one step
+further, and showcase how one can use PEPSKit.jl to study 3D classical statistical mechanics
+models. We will demonstrate this for the specific case of the 3D classical Ising model, but
+the same techniques can be applied to other 3D classical models as well.
 
 The workflow showcased in this example is a bit more experimental and less 'black-box' than
 previous examples. Therefore it also serves as a demonstration of some of the more internal
-functionality of PEPSKit.jl, and how one can adapt it to different or less 'standard' kinds
-of problems.
+functionality of PEPSKit.jl, and how one can adapt it to less 'standard' kinds of problems.
 
 Let us consider again the partition function of the classical Ising model,
 
@@ -20,11 +18,11 @@ Let us consider again the partition function of the classical Ising model,
 \mathcal{Z}(\beta) = \sum_{\{s\}} \exp(-\beta H(s)) \text{ with } H(s) = -J \sum_{\langle i, j \rangle} s_i s_j .
 ```
 
-where now the classical spins $s_i \in \{+1, -1\}$ are located on the vertices $i$ of a
-three-dimensional cubic lattice. The partition function of this model can be represented as
-a 3D tensor network with a rank-6 tensor at each vertex of the lattice. Such a network can
-be contracted by finding the fixed point of the corresponding transfer operator, in exactly
-the same spirit as the boundary MPS methods demonstrated in a previous example.
+where now the classical spins $s_i \in \{+1, -1\}$ are located on the vertices $i$ of a 3D
+cubic lattice. The partition function of this model can be represented as a 3D tensor
+network with a rank-6 tensor at each vertex of the lattice. Such a network can be contracted
+by finding the fixed point of the corresponding transfer operator, in exactly the same
+spirit as the [boundary MPS methods](@ref e_boundary_mps) demonstrated in another example.
 
 Let's start by making the example deterministic and we doing our imports:
 """
@@ -43,9 +41,9 @@ Just as in the 2D case, the first step is to define the partition function as a 
 network. The procedure is exactly the same as before, the only difference being that now
 every spin participates in interactions associated to six links adjacent to that site. This
 means that the partition function can be written as an infinite 3D network with a single
-constituent rank-6 [`PEPSKit.PEPOTensor`](@ref) `O` located at each site of the cubic lattice. To
-verify our example we will check the magnetization and energy, so we also define the
-corresponding rank-6 tensors `M` and `E` while we're at it.
+constituent rank-6 [`PEPSKit.PEPOTensor`](@ref) `O` located at each site of the cubic
+lattice. To verify our example we will check the magnetization and energy, so we also define
+the corresponding rank-6 tensors `M` and `E` while we're at it.
 """
 
 function three_dimensional_classical_ising(; beta, J=1.0)
@@ -86,8 +84,8 @@ function three_dimensional_classical_ising(; beta, J=1.0)
 end;
 
 md"""
-Let's initialize these tensors at inverse temperature ``\beta=0.2391``, which corresponds to a slightly
-lower temperature than the critical value ``\beta_c=0.2216544…``
+Let's initialize these tensors at inverse temperature ``\beta=0.2391``, which corresponds to
+a slightly lower temperature than the critical value ``\beta_c=0.2216544…``
 """
 
 beta = 0.2391
@@ -99,10 +97,10 @@ md"""
 
 To contract our infinite 3D partition function, we first reinterpret it as an infinite power
 of a slice-to-slice transfer operator ``T``, where ``T`` can be seen as an infinite 2D
-projected entangled-pair operator (PEPO) consisting of the rank-6 tensor `O` at each site of
-an infinite 3D square lattice. In the same spirit as the boundary MPS approach, all we need
-to contract the whole partition function is to find the leading eigenvector of this PEPO.
-The fixed point of such a PEPO exactly corresponds to a PEPS, and for the case of a
+projected entangled-pair operator (PEPO) which consists of the rank-6 tensor `O` at each
+site of an infinite 2D square lattice. In the same spirit as the boundary MPS approach, all
+we need to contract the whole partition function is to find the leading eigenvector of this
+PEPO. The fixed point of such a PEPO exactly corresponds to a PEPS, and for the case of a
 Hermitian transfer operator we can find this PEPS through [variational optimization](@cite
 vanderstraeten_residual_2018).
 
@@ -110,25 +108,27 @@ Indeed, for a Hermition transfer operator ``T`` we can formulate the eigenvalue 
 for a fixed point PEPS ``|\psi\rangle`` as a variational problem
 
 ```math
-|\psi\rangle = \text{argmin}_{|\psi\rangle} - \lim_{N \to ∞} \frac{1}{N} \log \left( \frac{\langle \psi | T | \psi \rangle}{\langle \psi | \psi \rangle} \right)
+|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | T | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right )
 ```
 where ``N`` is the diverging number of sites of the 2D transfer operator ``T``.
 
 ### Defining the cost function
 
-Using PEPSKit.jl, this cost function and its gradient can be easily computed, after which we can use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it.
-recognize the denominator ``\langle \psi | \psi \rangle`` as the familiar PEPS norm, where
-we can compute the norm per site as the [`network_value`](@ref) of the corresponding
-[`InfiniteSquareNetwork`](@ref) by contracting it with the CTMRG algorithm. Similarly, the
-numerator ``\langle \psi | T | \psi \rangle`` is nothing more than an
+Using PEPSKit.jl, this cost function and its gradient can be easily computed, after which we
+can use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it. We can
+immediately recognize the denominator ``\langle \psi | \psi \rangle`` as the familiar PEPS
+norm, where we can compute the norm per site as the [`network_value`](@ref) of the
+corresponding [`InfiniteSquareNetwork`](@ref) by contracting it with the CTMRG algorithm.
+Similarly, the numerator ``\langle \psi | T | \psi \rangle`` is nothing more than an
 `InfiniteSquareNetwork` consisting of three layers corresponding to the ket, transfer
-operator and bra objects. This object can be constructed and contracted in a straightforward
-way, after we can again compute its `network_value`.
+operator and bra objects. This object can also be constructed and contracted in a
+straightforward way, after we can again compute its `network_value`.
 
 So to define our cost function, we just need to construct the transfer operator as an
-[`InfinitePEPO`](@ref) and specify a contraction algorithm we can use to compute the values
-of the two relevant 2D networks. In addition, we'll specify the specific reverse rule
-algorithm that will be used to compute the gradient of this cost function
+[`InfinitePEPO`](@ref), contruct the both relevant infinite 2D contractible networks from
+the current PEPS and this transfer operator, and specify a contraction algorithm we can use
+to compute the values of these two networks. In addition, we'll specify the specific reverse
+rule algorithm that will be used to compute the gradient of this cost function.
 """
 
 boundary_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=1)
@@ -168,13 +168,13 @@ function pepo_costfun((psi, env2, env3))
 end;
 
 md"""
-There are a few things to note about this cost function definition. Since we will pass
-it to the `optimize` method from OptimKit.jl, we require it to return both our cost function
-and the corresponding gradient. To do this, we simply use the `withgradient` method from
-Zygote.jl to automatically compute the gradient of the cost function straight from the
-primal computation. Since our cost function involves contraction using `leading_boundary`,
-we also have to specify exactly how Zygote should handle the backpropagation of the gradient
-through this function. This can be done using the [`PEPSKit.hook_pullback`](@ref) function from
+There are a few things to note about this cost function definition. Since we will pass it to
+the `OptimKit.optimize`, we require it to return both our cost function and the
+corresponding gradient. To do this, we simply use the `withgradient` method from Zygote.jl
+to automatically compute the gradient of the cost function straight from the primal
+computation. Since our cost function involves contractions using `leading_boundary`, we also
+have to specify exactly how Zygote should handle the backpropagation of the gradient through
+this function. This can be done using the [`PEPSKit.hook_pullback`](@ref) function from
 PEPSKit.jl, which allows to hook into the pullback of a given function by specifying a
 specific algorithm for the pullback computation. Here, we opted to use an Arnoldi method to
 solve the linear problem defining the gradient of the network contraction at its fixed

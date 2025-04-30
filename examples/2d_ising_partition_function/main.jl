@@ -1,18 +1,21 @@
 using Markdown #hide
 md"""
-# 2D classical Ising partition function using CTMRG
+# The 2D classical Ising model using CTMRG
 
 All previous examples dealt with quantum systems, describing their states by `InfinitePEPS`
-that can be contracted using CTMRG or VUMPS techniques. Here, we shift our focus towards
-classical physics and consider the 2D classical Ising model with the partition function
+that can be contracted using CTMRG or [boundary MPS techniques](@ref e_boundary_mps). Here,
+we shift our focus towards classical physics and consider the 2D classical Ising model with
+the partition function
 
 ```math
 \mathcal{Z}(\beta) = \sum_{\{s\}} \exp(-\beta H(s)) \text{ with } H(s) = -J \sum_{\langle i, j \rangle} s_i s_j .
 ```
 
-The idea is to encode the partition function into an infinite square lattice of rank-4
-tensors which can then be contracted using CTMRG. These rank-4 tensors are represented by
-[`InfinitePartitionFunction`](@ref) states, as we will see.
+where the classical spins $s_i \in \{+1, -1\}$ are located on the vertices $i$ of a 2D
+square lattice. The idea is to encode the partition function as an infinite square network
+consisting of local rank-4 tensors, which can then be contracted using CTMRG. An infinite
+square network of these rank-4 tensors can be represented as an
+[`InfinitePartitionFunction`](@ref) object, as we will see.
 
 But first, let's seed the RNG and import all required modules:
 """
@@ -26,8 +29,16 @@ md"""
 ## Defining the partition function
 
 The first step is to define the rank-4 tensor that, when contracted on a square lattice,
-evaluates to the partition function value at a given $\beta$. Since we later want to compute
-the magnetization and energy, we define the appropriate rank-4 tensors as well:
+evaluates to the partition function value at a given $\beta$. This is done through a
+[fairly generic procedure](@cite haegeman_diagonalizing_2017) where the interaction weights
+are distributed among vertex tensors in an appropriate way. Concretely, here we first define
+a 'link' matrix containing the Boltzmann weights associated to all possible spin
+configurations across a given link on the lattice. Next, we define site tensors as
+delta-tensors that ensiure that the spin value on all adjacent links is the same. Since we
+only want tensors on the sites in the end, we can symmetrically absorb the link weight
+tensors into the site tensors, which gives us exactly the kind of network we're looking for.
+Since we later want to compute the magnetization and energy to check our results, we define
+the appropriate rank-4 tensors here as well while we're at it.
 """
 
 function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
@@ -64,30 +75,32 @@ function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
 end;
 
 md"""
-So let's initialize these tensors at inverse temperature ``\beta=0.6`` and construct the
-corresponding `InfinitePartitionFunction`:
+So let's initialize these tensors at inverse temperature ``\beta=0.6``, check that
+they are indeed rank-4 and construct the corresponding `InfinitePartitionFunction`:
 """
 
 beta = 0.6
 O, M, E = classical_ising(; beta)
+@show space(O)
 Z = InfinitePartitionFunction(O)
 
 md"""
 ## Contracting the partition function
 
 Next, we can contract the partition function as per usual by constructing a `CTMRGEnv` with
-a specified environment dimension (or space) and calling `leading_boundary` with appropriate
+a specified environment virtual space and calling `leading_boundary` with appropriate
 settings:
 """
 
-χenv = 20
-env₀ = CTMRGEnv(Z, χenv)
+Venv = ℂ^20
+env₀ = CTMRGEnv(Z, Venv)
 env, = leading_boundary(env₀, Z; tol=1e-8, maxiter=500);
 
 md"""
 Note that CTMRG environments for partition functions differ from the PEPS environments only
-by the edge tensors - instead of two legs connecting the edges and the PEPS-PEPS sandwich,
-there is only one leg connecting the edges and the partition function tensor:
+by the edge tensors. Instead of two legs connecting the edges and the PEPS-PEPS sandwich,
+there is only one leg connecting the edges and the partition function tensor, meaning that
+the edge tensors are now rank-3:
 """
 
 space.(env.edges)
@@ -96,7 +109,7 @@ md"""
 To compute the value of the partition function, we have to contract `Z` with the converged
 environment using [`network_value`](@ref). Additionally, we will compute the magnetization
 and energy (per site), again using [`expectation_value`](@ref) but this time also specifying
-the index in the unit cell, where we want to insert the local tensor:
+the index in the unit cell where we want to insert the local tensor:
 """
 
 λ = network_value(Z, env)
@@ -108,9 +121,10 @@ md"""
 ## Comparing against the exact Onsager solution
 
 In order to assess our results, we will compare against the
-[exact Onsager solution](https://en.wikipedia.org/wiki/Square_lattice_Ising_model#Exact_solution).
-To that end, we compute the exact free energy, magnetization and energy per site (where
-`quadgk` performs the integral from $0$ to $\pi/2$):
+[exact Onsager solution](https://en.wikipedia.org/wiki/Square_lattice_Ising_model#Exact_solution)
+of the 2D classical Ising model. To that end, we compute the exact free energy,
+magnetization and energy per site (where we use `quadgk` to perform integrals of an
+auxiliary variable from $0$ to $\pi/2$):
 """
 
 function classical_ising_exact(; beta=log(1 + sqrt(2)) / 2, J=1.0)

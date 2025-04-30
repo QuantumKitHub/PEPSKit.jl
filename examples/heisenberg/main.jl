@@ -6,7 +6,7 @@ In this example we want to provide a basic rundown of PEPSKit's optimization wor
 PEPS. To that end, we will consider the two-dimensional Heisenberg model on a square lattice
 
 ```math
-H = \sum_{\langle i,j \rangle} J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S^{z}_i S^{z}_j
+H = \sum_{\langle i,j \rangle} \left ( J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S^{z}_i S^{z}_j \right )
 ```
 
 Here, we want to set $J_x=J_y=J_z=1$ where the Heisenberg model is in the antiferromagnetic
