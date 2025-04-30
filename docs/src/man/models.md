@@ -1,6 +1,6 @@
 # Models
 
-PEPSKit implements physical models through the [MPSKitModels.jl](https://quantumkithub.github.io/MPSKitModels.jl/dev/) package as [`LocalOperator`](@ref) structs.
+PEPSKit implements physical models through the [MPSKitModels.jl](https://quantumkithub.github.io/MPSKitModels.jl/dev/) package as [`PEPSKit.LocalOperator`](@ref) structs.
 Here, we want to explain how users can define their own Hamiltonians and provide a list of
 already implemented models.
 
