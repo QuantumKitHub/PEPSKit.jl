@@ -7,7 +7,7 @@ using VectorInterface
 using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
-import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!
+import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 using MPSKitModels
 using FiniteDifferences
 using OhMyThreads: tmap
@@ -75,7 +75,7 @@ export set_scheduler!
 export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
-export LocalOperator
+export LocalOperator, physicalspace
 export expectation_value, cost_function, product_peps, correlation_length, network_value
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver

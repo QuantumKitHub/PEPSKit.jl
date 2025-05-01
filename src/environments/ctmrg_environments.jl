@@ -25,7 +25,9 @@ network being contracted.
 $(TYPEDFIELDS)
 """
 struct CTMRGEnv{C,T}
+    "4 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
     corners::Array{C,3}
+    "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
     edges::Array{T,3}
 end
 

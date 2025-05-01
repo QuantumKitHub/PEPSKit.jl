@@ -2,23 +2,22 @@ using Markdown #hide
 md"""
 # [The 3D classical Ising model](@id e_3d_ising)
 
-In a previous example we have already demonstrated an application of PEPSKit.jl to the study
-of 2D classical statistical mechanics models. In this example, we will take this one step
-further, and showcase how one can use PEPSKit.jl to study 3D classical statistical mechanics
-models. We will demonstrate this for the specific case of the 3D classical Ising model, but
-the same techniques can be applied to other 3D classical models as well.
+In this example, we will showcase how one can use PEPSKit to study 3D classical statistical
+mechanics models. In particular, we will consider a specific case of the 3D classical Ising
+model, but the same techniques can be applied to other 3D classical models as well.
 
-The workflow showcased in this example is a bit more experimental and less 'black-box' than
-previous examples. Therefore it also serves as a demonstration of some of the more internal
-functionality of PEPSKit.jl, and how one can adapt it to less 'standard' kinds of problems.
+As compared to simulations of [2D partition functions](@ref e_2d_ising), the workflow
+presented in this example is a bit more experimental and less 'black-box'. Therefore, it
+also serves as a demonstration of some of the more internal functionality of PEPSKit,
+and how one can adapt it to less 'standard' kinds of problems.
 
-Let us consider again the partition function of the classical Ising model,
+Let us consider the partition function of the classical Ising model,
 
 ```math
 \mathcal{Z}(\beta) = \sum_{\{s\}} \exp(-\beta H(s)) \text{ with } H(s) = -J \sum_{\langle i, j \rangle} s_i s_j .
 ```
 
-where now the classical spins $s_i \in \{+1, -1\}$ are located on the vertices $i$ of a 3D
+where the classical spins $s_i \in \{+1, -1\}$ are located on the vertices $i$ of a 3D
 cubic lattice. The partition function of this model can be represented as a 3D tensor
 network with a rank-6 tensor at each vertex of the lattice. Such a network can be contracted
 by finding the fixed point of the corresponding transfer operator, in exactly the same

@@ -49,16 +49,7 @@ virtual_space = Vect[fℤ₂](0 => Dbond / 2, 1 => Dbond / 2)
 wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, virtual_space; unitcell=(Nr, Nc));
 
 md"""
-Before starting the simple update routine, we normalize the vertex tensors of `wpeps` by
-dividing with the maximal vertex element (using the infinity norm):
-"""
-
-for ind in CartesianIndices(wpeps.vertices)
-    wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
-end
-
-md"""
-Let's set algorithm parameters: The plan is to successively decrease the time interval of
+Let's set the algorithm parameters: The plan is to successively decrease the time interval of
 the Trotter-Suzuki as well as the convergence tolerance such that we obtain a more accurate
 result at each iteration. To run the simple update, we call [`simpleupdate`](@ref) where we
 use the keyword `bipartite=false` - meaning that we use the full $2 \times 2$ unit cell

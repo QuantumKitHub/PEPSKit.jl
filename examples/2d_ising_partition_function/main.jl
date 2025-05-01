@@ -1,6 +1,6 @@
 using Markdown #hide
 md"""
-# The 2D classical Ising model using CTMRG
+# [The 2D classical Ising model using CTMRG](@id e_2d_ising)
 
 While PEPSKit has a lot of use in quantum systems, describing states using InfinitePEPS that can be contracted via CTMRG or [boundary MPS techniques](@ref e_boundary_mps), here we shift our focus to classical physics.
 We consider the 2D classical Ising model and compute its partition function defined as:

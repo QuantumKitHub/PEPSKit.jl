@@ -58,11 +58,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Manual" => [
-            "man/models.md",
-            "man/multithreading.md",
-            "man/precompilation.md",
-        ],
+        "Manual" => ["man/models.md", "man/multithreading.md", "man/precompilation.md"],
         "Examples" => [
             "examples/index.md",
             "Optimization" => joinpath.(Ref("examples"), examples_optimization),

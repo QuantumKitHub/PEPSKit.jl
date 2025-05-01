@@ -2,16 +2,16 @@ using Markdown #hide
 md"""
 # Simple update for the Heisenberg model
 
-In this next example, we will use [`SimpleUpdate`](@ref) imaginary time evolution to treat
+In this example, we will use [`SimpleUpdate`](@ref) imaginary time evolution to treat
 the two-dimensional Heisenberg model once again:
 
 ```math
 H = \sum_{\langle i,j \rangle} J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S^{z}_i S^{z}_j.
 ```
 
-In the previous examples, we used a sublattice rotation to simulate antiferromagnetic
-Hamiltonian on a single-site unit cell. Here, we will instead use a $2 \times 2$ unit cell
-and set $J_x = J_y = J_z = 1$.
+In order to simulate the antiferromagnetic order of the Hamiltonian on a single-site unit
+cell one typically applies a unitary sublattice rotation. Here, we will instead use a
+$2 \times 2$ unit cell and set $J_x = J_y = J_z = 1$.
 
 Let's get started by seeding the RNG and importing all required modules:
 """
@@ -39,9 +39,8 @@ H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1, Jy=1, Jz
 md"""
 ## Simple updating
 
-We proceed by initializing a random weighted PEPS that will be evolved. Again, we'll
-normalize its vertex tensors. First though, we need to define the appropriate
-(symmetric) spaces:
+We proceed by initializing a random weighted PEPS that will be evolved. First though, we
+need to define the appropriate (symmetric) spaces:
 """
 
 Dbond = 4
@@ -58,10 +57,7 @@ else
     error("not implemented")
 end
 
-wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, bond_space; unitcell=(Nr, Nc))
-for ind in CartesianIndices(wpeps.vertices)
-    wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
-end
+wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, bond_space; unitcell=(Nr, Nc));
 
 md"""
 Next, we can start the `SimpleUpdate` routine, successively decreasing the time intervals
@@ -117,18 +113,16 @@ function compute_mags(peps::InfinitePEPS, env::CTMRGEnv)
         S_ops = real.([S_z(symm)]) ## only Sz preserves <Sz>
     end
 
-    return [
-        collect(
-            expectation_value(
-                peps, LocalOperator(lattice, (CartesianIndex(r, c),) => S), env
-            ) for (r, c) in Iterators.product(1:size(peps, 1), 1:size(peps, 2))
-        ) for S in S_ops
-    ]
+    return map(Iterators.product(axes(peps, 1), axes(peps, 2), S_ops)) do (r, c, S)
+        expectation_value(peps, LocalOperator(lattice, (CartesianIndex(r, c),) => S), env)
+    end
 end
 
 E = expectation_value(peps, H, env) / (Nr * Nc)
 Ms = compute_mags(peps, env)
-M_norms = collect(norm([m[r, c] for m in Ms]) for (r, c) in Iterators.product(1:Nr, 1:Nc))
+M_norms = map(
+    rc -> norm(Ms[rc[1], rc[2], :]), Iterators.product(axes(peps, 1), axes(peps, 2))
+)
 @show E Ms M_norms;
 
 md"""

@@ -101,7 +101,7 @@ end
 
 Return lattice of physical spaces on which the `LocalOperator` is defined.
 """
-function MPSKit.physicalspace(O::LocalOperator)
+function physicalspace(O::LocalOperator)
     return O.lattice
 end
 
