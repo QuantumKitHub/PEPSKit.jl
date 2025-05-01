@@ -91,7 +91,7 @@ peps, env, E, info = fixedpoint(
 @show E;
 
 md"""
-Note that for the specified parameters $J=\Delta=1$, we simulated the same Hamiltonian as
+Note that for the specified parameters $J = \Delta = 1$, we simulated the same Hamiltonian as
 in the [Heisenberg example](@ref examples_heisenberg). In that example, with a non-symmetric
 $D=2$ PEPS simulation, we reached a ground-state energy of around $E_\text{D=2} = -0.6625\dots$.
 Again comparing against [Sandvik's](@cite sandvik_computational_2011) accurate QMC estimate
