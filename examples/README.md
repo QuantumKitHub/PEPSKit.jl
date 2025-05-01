@@ -8,7 +8,9 @@ scripts and are embedded into the docs using [Literate.jl](https://fredrikekre.g
 The example files have to be built and updated manually. In order to trigger the file
 generation, run:
 
-``julia examples/make.jl`
+```bash
+julia examples/make.jl
+```
 
 By default, this will only generate files when the input file has not changed. This is
 achieved by keeping a checksum of the `main.jl` file in each example in a `Cache.toml`.
