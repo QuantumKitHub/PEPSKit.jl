@@ -6,14 +6,6 @@ Represents an infinite partition function on a 2D square lattice.
 ## Fields
 
 $(TYPEDFIELDS)
-
-## Constructors
-
-    InfinitePartitionFunction(A::AbstractMatrix{T})
-    InfinitePartitionFunction(
-        [f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]
-    ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
-    InfinitePartitionFunction(A::PartitionFunctionTensor; unitcell=(1, 1))
 """
 struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
     A::Matrix{T}

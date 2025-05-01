@@ -23,22 +23,6 @@ network being contracted.
 ## Fields
 
 $(TYPEDFIELDS)
-
-## Constructors
-
-    CTMRGEnv(
-        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
-    ) where {A<:AbstractMatrix{<:SpaceLike}, B<:AbstractMatrix{<:ElementarySpaceLike}}
-    CTMRGEnv(
-        [f=randn, T=ComplexF64], D_north::P, D_east::P, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S];
-        unitcell::Tuple{Int,Int}=(1, 1),
-    ) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
-    CTMRGEnv(
-        [f=randn, T=ComplexF64], network::InfiniteSquareNetwork, chis_north::A, [chis_east::A], [chis_south::A], [chis_west::A]
-    ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}}
-    CTMRGEnv(
-        [f=randn, T=ComplexF64,] network::InfiniteSquareNetwork, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
-    ) where {S<:ElementarySpaceLike}
 """
 struct CTMRGEnv{C,T}
     corners::Array{C,3}

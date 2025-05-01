@@ -6,13 +6,6 @@ Represents an infinite projected entangled-pair state on a 2D square lattice.
 ## Fields
 
 $(TYPEDFIELDS)
-
-## Constructors
-
-    InfinitePEPS(A::AbstractMatrix{T})
-    InfinitePEPS([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
-    InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))
-    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 """
 struct InfinitePEPS{T<:PEPSTensor}
     A::Matrix{T}

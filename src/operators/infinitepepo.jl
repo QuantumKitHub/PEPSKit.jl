@@ -6,13 +6,6 @@ Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic la
 ## Fields
 
 $(TYPEDFIELDS)
-
-## Constructors
-
-    InfinitePEPO(A::AbstractArray{T, 3})
-    InfinitePEPO([f=randn, T=ComplexF64,] Pspaces, Nspaces, Espaces)
-    InfinitePEPO(A::PEPOTensor; unitcell=(1, 1, 1))
-    InfinitePEPO([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, [Espace::S]; unitcell=(1,1,1)) where {S<:ElementarySpace}
 """
 struct InfinitePEPO{T<:PEPOTensor}
     A::Array{T,3}
