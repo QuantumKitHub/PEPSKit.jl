@@ -198,7 +198,7 @@ function MPSKitModels.bose_hubbard_model(
     elseif symmetry === U1Irrep
         isinteger(2n) ||
             throw(ArgumentError("`U₁` symmetry requires halfinteger particle number"))
-        H = MPSKit.add_physical_charge(H, fill(U1Irrep(n), size(spaces)...)) # TODO: settle on convention here?
+        H = MPSKit.add_physical_charge(H, fill(U1Irrep(n), size(spaces)...))
     else
         throw(ArgumentError("symmetry not implemented"))
     end
