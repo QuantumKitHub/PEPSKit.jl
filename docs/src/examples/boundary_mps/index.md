@@ -19,13 +19,14 @@ Before we start, we'll fix the random seed for reproducability:
 ````julia
 using Random
 Random.seed!(29384293742893);
+````
 
-md""" Besides `TensorKit` and `PEPSKit`, here we also need to load the
+Besides `TensorKit` and `PEPSKit`, here we also need to load the
 [`MPSKit.jl`](https://quantumkithub.github.io/MPSKit.jl/stable/) package which implements a
 host of tools for working with 1D matrix product states (MPS), including the VUMPS
 algorithm:
-"""
 
+````julia
 using TensorKit, PEPSKit, MPSKit
 ````
 
@@ -133,7 +134,7 @@ mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol=1e-6, verbosity=2));
 
 ````
 [ Info: VUMPS init:	obj = +5.052950412844e+00 +1.493192627823e-02im	err = 8.4684e-01
-[ Info: VUMPS conv 4:	obj = +1.744071150138e+01 +2.417441166152e-08im	err = 1.9047772248e-07	time = 0.94 sec
+[ Info: VUMPS conv 4:	obj = +1.744071150138e+01 +2.417441166152e-08im	err = 1.9047772248e-07	time = 8.20 sec
 
 ````
 
@@ -160,7 +161,7 @@ norm_ctmrg = abs(norm(peps₀, env_ctmrg))
 
 ````
 [ Info: CTMRG init:	obj = -5.571758356204e-01 +1.608051219314e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 31:	obj = +1.744071151099e+01	err = 1.5225866698e-07	time = 2.49 sec
+[ Info: CTMRG conv 31:	obj = +1.744071151099e+01	err = 1.5225866698e-07	time = 9.04 sec
 abs(norm_vumps - norm_ctmrg) / norm_vumps = 5.510376342345678e-10
 
 ````
@@ -201,16 +202,16 @@ norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
 
 ````
 [ Info: VUMPS init:	obj = +6.462580940431e+02 -1.088925136214e+02im	err = 8.6506e-01
-┌ Warning: VUMPS cancel 200:	obj = +9.724487741058e+04 +1.904137949329e+00im	err = 5.9545749280e-04	time = 1.61 min
+┌ Warning: VUMPS cancel 200:	obj = +9.724487741058e+04 +1.904137949329e+00im	err = 5.9545749280e-04	time = 1.16 min
 └ @ MPSKit ~/.julia/packages/MPSKit/EfZBD/src/algorithms/statmech/vumps.jl:51
 [ Info: CTMRG init:	obj = -7.927906985598e-02 +1.728135792446e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 53:	obj = +9.723959008610e+04	err = 1.8278113657e-07	time = 9.86 sec
+[ Info: CTMRG conv 53:	obj = +9.723959008610e+04	err = 1.8278113657e-07	time = 7.78 sec
 abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 5.437143071679346e-5
 
 ````
 
 Again, the results are compatible. Note that for larger unit cells and non-Hermitian PEPS
-[the VUMPS algorithm may become unstable](@cite vanderstraeten_variational_2021), in which
+[the VUMPS algorithm may become unstable](@cite vanderstraeten_variational_2022), in which
 case the CTMRG algorithm is recommended.
 
 ## Contracting PEPO overlaps
@@ -266,7 +267,7 @@ norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 
 ````
 [ Info: VUMPS init:	obj = +3.726983052001e+01 +3.098676794848e-02im	err = 9.2460e-01
-[ Info: VUMPS conv 5:	obj = +2.483696260467e+02 +5.249041643967e-07im	err = 1.7125391303e-08	time = 4.32 sec
+[ Info: VUMPS conv 5:	obj = +2.483696260467e+02 +5.249041643967e-07im	err = 1.7125391303e-08	time = 4.57 sec
 norm_pepo = 248.36962604668662
 
 ````

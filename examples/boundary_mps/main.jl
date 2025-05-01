@@ -13,7 +13,8 @@ Before we start, we'll fix the random seed for reproducability:
 using Random
 Random.seed!(29384293742893);
 
-md""" Besides `TensorKit` and `PEPSKit`, here we also need to load the
+md"""
+Besides `TensorKit` and `PEPSKit`, here we also need to load the
 [`MPSKit.jl`](https://quantumkithub.github.io/MPSKit.jl/stable/) package which implements a
 host of tools for working with 1D matrix product states (MPS), including the VUMPS
 algorithm:
@@ -124,7 +125,7 @@ norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
 
 md"""
 Again, the results are compatible. Note that for larger unit cells and non-Hermitian PEPS
-[the VUMPS algorithm may become unstable](@cite vanderstraeten_variational_2021), in which
+[the VUMPS algorithm may become unstable](@cite vanderstraeten_variational_2022), in which
 case the CTMRG algorithm is recommended.
 
 ## Contracting PEPO overlaps
