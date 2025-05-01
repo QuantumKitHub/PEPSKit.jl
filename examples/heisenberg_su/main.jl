@@ -11,7 +11,7 @@ H = \sum_{\langle i,j \rangle} J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S
 
 In the previous examples, we used a sublattice rotation to simulate antiferromagnetic
 Hamiltonian on a single-site unit cell. Here, we will instead use a $2 \times 2$ unit cell
-and set $J_x=J_y=J_z=1$.
+and set $J_x = J_y = J_z = 1$.
 
 Let's get started by seeding the RNG and importing all required modules:
 """
