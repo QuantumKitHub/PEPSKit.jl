@@ -122,7 +122,7 @@ corresponding [`InfiniteSquareNetwork`](@ref) by contracting it with the CTMRG a
 Similarly, the numerator ``\langle \psi | T | \psi \rangle`` is nothing more than an
 `InfiniteSquareNetwork` consisting of three layers corresponding to the ket, transfer
 operator and bra objects. This object can also be constructed and contracted in a
-straightforward way, after we can again compute its `network_value`.
+straightforward way, so we can again compute its `network_value`.
 
 So to define our cost function, we just need to construct the transfer operator as an
 [`InfinitePEPO`](@ref), contruct the both relevant infinite 2D contractible networks from
