@@ -43,11 +43,16 @@ ket [`PEPSKit.PEPSTensor`](@ref) across their physical leg. Since the network we
 contract can be interpreted as the infinite power of ``T``, we can contract it by finding
 its leading eigenvector as a 1D MPS, which we call the boundary MPS.
 
-In PEPSKit.jl, we can directly contruct the transfer operator corresponding to a PEPS norm
+In PEPSKit.jl, we can directly construct the transfer operator corresponding to a PEPS norm
 network from a given infinite PEPS as an [`InfiniteTransferPEPS`](@ref) object.
+Additionally, we need to specify which direction should be facing north (`dir=1`
+corresponding to north, counting clockwise) and which row is selected from the north - but
+since we have a trivial unit cell there is only one row:
 """
 
-T = InfiniteTransferPEPS(peps₀, 1, 1)
+dir = 1 ## does not rotate the partition function
+row = 1
+T = InfiniteTransferPEPS(peps₀, dir, row)
 
 md"""
 Since we'll find the leading eigenvector of ``T`` as a boundary MPS, we first need to
@@ -65,9 +70,7 @@ Note that this will just construct a MPS with random Gaussian entries based on t
 spaces of the supplied transfer operator. Of course, one might come up with a better initial
 guess (leading to better convergence) depending on the application. To find the leading
 boundary MPS fixed point, we call [`leading_boundary`](@ref) using the
-[`MPSKit.VUMPS`](@extref) algorithm from MPSKit. Note that, by default, `leading_boundary`
-uses CTMRG where the settings are supplied as keyword arguments, so in the present case we
-need to supply the VUMPS algorithm struct explicitly:
+[`MPSKit.VUMPS`](@extref) algorithm from MPSKit:
 """
 
 mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol=1e-6, verbosity=2));
@@ -100,13 +103,14 @@ case, the boundary MPS is an [`MultilineMPS`](@extref) object, which should be i
 by specifying a virtual space for each site in the partition function unit cell.
 
 First, we construct a PEPS with a $2 \times 2$ unit cell using the `unitcell` keyword
-argument and then define the corresponding transfer operator:
+argument and then define the corresponding transfer operator, where we again specify the
+direction which will be facing north:
 """
 
 peps₀_2x2 = InfinitePEPS(
     rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2)
 )
-T_2x2 = PEPSKit.MultilineTransferPEPS(peps₀_2x2, 1);
+T_2x2 = PEPSKit.MultilineTransferPEPS(peps₀_2x2, dir);
 
 md"""
 Now, the procedure is the same as before: We compute the norm once using VUMPS, once using CTMRG and then compare.
