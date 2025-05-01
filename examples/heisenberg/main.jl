@@ -102,7 +102,9 @@ env₀, info_ctmrg = leading_boundary(env_random, peps₀; boundary_alg...);
 
 md"""
 Besides the converged environment, `leading_boundary` also returns a `NamedTuple` of
-informational quantities such as the last (maximal) SVD truncation error:
+informational quantities such as the last maximal truncation error - that is, the SVD
+approximation error incurred in the last CTMRG iteration, maximized over all spatial
+directions and unit cell entries:
 """
 
 @show info_ctmrg.truncation_error;
