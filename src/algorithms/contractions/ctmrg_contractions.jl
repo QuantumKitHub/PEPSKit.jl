@@ -1727,7 +1727,7 @@ function _pepolayers_codomain_projector_expr(
         (envlabel(codom_label, args...),),
         (
             envlabel(dom_label, args...),
-            ntuple(i -> virtuallabel(dom_dir, :mid, i, args...), H)...,
+            ntuple(i -> virtuallabel(dom_dir, i, args...), H)...,
         ),
     )
 end
