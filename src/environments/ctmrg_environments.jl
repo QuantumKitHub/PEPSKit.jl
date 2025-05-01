@@ -242,7 +242,7 @@ function CTMRGEnv(
     Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
         randn,
-        ComplexF64,
+        scalartype(network),
         Ds_north,
         Ds_east,
         _to_space.(chis_north),
