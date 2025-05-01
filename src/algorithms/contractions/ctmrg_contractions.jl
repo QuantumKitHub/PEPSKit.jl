@@ -1616,7 +1616,7 @@ function _pepolayers_edge_expr(edgename, codom_label, dom_label, dir, H::Int, ar
         edgename,
         (
             envlabel(codom_label, args...),
-            ntuple(i -> virtuallabel(dir, :mid, i, args...), H)...,
+            ntuple(i -> virtuallabel(dir, i, args...), H)...,
         ),
         (envlabel(dom_label, args...),),
     )
