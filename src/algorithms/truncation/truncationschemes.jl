@@ -16,11 +16,7 @@ const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
     :truncbelow => TensorKit.TruncationCutoff,
 )
 
-"""
-    _TruncationScheme(; kwargs...)
-
-Keyword argument parser returning the appropriate `TruncationScheme` algorithm struct.
-"""
+# Should be TruncationScheme but rename to avoid type piracy
 function _TruncationScheme(; alg=Defaults.trscheme, η=nothing)
     # replace Symbol with TruncationScheme type
     haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||

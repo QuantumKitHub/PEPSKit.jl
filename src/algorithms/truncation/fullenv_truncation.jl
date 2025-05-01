@@ -94,7 +94,8 @@ end
 """
     fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) -> U, S, V, info
 
-Perform full environment truncation algorithm on `benv`.
+Perform full environment truncation algorithm from
+[Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018) on `benv`.
 
 Given a fixed state `|b0⟩` with bond matrix `b0`
 and the corresponding positive-definite bond environment `benv`, 
