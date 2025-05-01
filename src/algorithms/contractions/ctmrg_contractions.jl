@@ -1651,7 +1651,7 @@ function _pepolayers_enlarged_corner_expr(
         cornername,
         (
             envlabel(codom_label, args...),
-            ntuple(i -> virtuallabel(codom_dir, :mid, i, args...), H)...,
+            ntuple(i -> virtuallabel(codom_dir, i, args...), H)...,
         ),
         (
             envlabel(dom_label, args...),
