@@ -114,7 +114,7 @@ where ``N`` is the diverging number of sites of the 2D transfer operator ``T``.
 
 ### Defining the cost function
 
-Using PEPSKit.jl, this cost function and its gradient can be easily computed, after which we
+Using PEPSKit.jl, this cost function and its gradient can be computed, after which we
 can use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it. We can
 immediately recognize the denominator ``\langle \psi | \psi \rangle`` as the familiar PEPS
 norm, where we can compute the norm per site as the [`network_value`](@ref) of the
