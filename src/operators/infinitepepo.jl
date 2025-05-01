@@ -181,9 +181,13 @@ end
 Create the dagger of a PEPOTensor such that `InfinitePEPO(dagger(O))` is the adjoint of `InfinitePEPO(O)`.
 """
 
-function dagger(O::PEPOTensor)
+function _dagger(O::PEPOTensor)
     @tensor O_conj[-1 -2; -3 -4 -5 -6] := conj(O[-2 -1; -3 -4 -5 -6])
     return twist(flip(O_conj, [3 4 5 6]), [3 4])
+end
+
+function dagger(O::InfinitePEPO)
+    return InfinitePEPO(_dagger.(unitcell(O)))
 end
 
 ## Vector interface

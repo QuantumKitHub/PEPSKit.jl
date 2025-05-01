@@ -80,8 +80,10 @@ end
     fuser_conj[6 7; -5] *
     fuser_conj[8 9; -6]
 
-O_stack = fill(O, 1, 1, 2)
-O_stack[1, 1, 2] = dagger(O)
+(Nr, Nc) = (1, 1)
+Oinf = InfinitePEPO(O; unitcell=(Nr, Nc, 1))
+O_stack = fill(O, Nr, Nc, 2)
+O_stack[:, :, 2] .= unitcell(dagger(Oinf))
 OOdag = InfinitePEPO(O_stack)
 
 network_O = InfiniteSquareNetwork(InfinitePEPS(ψ), OOdag, InfinitePEPS(ψ))
