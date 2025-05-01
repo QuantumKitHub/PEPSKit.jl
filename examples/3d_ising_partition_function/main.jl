@@ -125,7 +125,7 @@ operator and bra objects. This object can also be constructed and contracted in 
 straightforward way, so we can again compute its `network_value`.
 
 To define our cost function, we then need to construct the transfer operator as an
-[`InfinitePEPO`](@ref), contruct the both relevant infinite 2D contractible networks from
+[`InfinitePEPO`](@ref), construct the two infinite 2D contractible networks for the numerator and denominator from
 the current PEPS and this transfer operator, and specify a contraction algorithm we can use
 to compute the values of these two networks. In addition, we'll specify the specific reverse
 rule algorithm that will be used to compute the gradient of this cost function.
