@@ -24,7 +24,7 @@ network with a rank-6 tensor at each vertex of the lattice. Such a network can b
 by finding the fixed point of the corresponding transfer operator, in exactly the same
 spirit as the [boundary MPS methods](@ref e_boundary_mps) demonstrated in another example.
 
-Let's start by making the example deterministic and we doing our imports:
+Let's start by making the example deterministic and importing the required packages:
 """
 
 using Random
