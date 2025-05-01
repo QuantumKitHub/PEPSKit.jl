@@ -124,7 +124,7 @@ Similarly, the numerator ``\langle \psi | T | \psi \rangle`` is nothing more tha
 operator and bra objects. This object can also be constructed and contracted in a
 straightforward way, so we can again compute its `network_value`.
 
-So to define our cost function, we just need to construct the transfer operator as an
+To define our cost function, we then need to construct the transfer operator as an
 [`InfinitePEPO`](@ref), contruct the both relevant infinite 2D contractible networks from
 the current PEPS and this transfer operator, and specify a contraction algorithm we can use
 to compute the values of these two networks. In addition, we'll specify the specific reverse
