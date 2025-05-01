@@ -40,7 +40,7 @@ md"""
 ## Simple updating
 
 We proceed by initializing a random weighted PEPS that will be evolved. Again, we'll
-normalize its vertex tensors. First though, we need to take of defining the appropriate
+normalize its vertex tensors. First though, we need to define the appropriate
 (symmetric) spaces:
 """
 
