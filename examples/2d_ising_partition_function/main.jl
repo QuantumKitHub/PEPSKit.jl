@@ -2,10 +2,8 @@ using Markdown #hide
 md"""
 # The 2D classical Ising model using CTMRG
 
-All previous examples dealt with quantum systems, describing their states by `InfinitePEPS`
-that can be contracted using CTMRG or [boundary MPS techniques](@ref e_boundary_mps). Here,
-we shift our focus towards classical physics and consider the 2D classical Ising model with
-the partition function
+While PEPSKit has a lot of use in quantum systems, describing states using InfinitePEPS that can be contracted via CTMRG or [boundary MPS techniques](@ref e_boundary_mps), here we shift our focus to classical physics.
+We consider the 2D classical Ising model and compute its partition function defined as:
 
 ```math
 \mathcal{Z}(\beta) = \sum_{\{s\}} \exp(-\beta H(s)) \text{ with } H(s) = -J \sum_{\langle i, j \rangle} s_i s_j .
