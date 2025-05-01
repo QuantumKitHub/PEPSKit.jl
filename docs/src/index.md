@@ -21,7 +21,7 @@ pkg> add PEPSKit
 - Imaginary time evolution algorithms
 - Support for PEPS with generic unit cells
 - Support for classical 2D partition functions and projected entangled-pair operators (PEPOs)
-- Easy to implement custom states, operators and algorithms
+- Extensible system for custom states, operators and algorithms
 
 ## Quickstart
 
