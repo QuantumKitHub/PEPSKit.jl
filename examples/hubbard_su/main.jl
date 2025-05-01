@@ -3,7 +3,7 @@ md"""
 # Simple update for the Fermi-Hubbard model at half-filling
 
 Once again, we consider the Hubbard model but this time we obtain the ground-state PEPS by
-imaginary time evoluation. In particular, we'll use the [`SimpleUpdate`](@ref) algorithm.
+imaginary time evolution. In particular, we'll use the [`SimpleUpdate`](@ref) algorithm.
 As a reminder, we define the Hubbard model as
 
 ```math
