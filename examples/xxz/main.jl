@@ -10,7 +10,7 @@ H_0 = J \big(\sum_{\langle i, j \rangle} S_i^x S_j^x + S_i^y S_j^y + \Delta S_i^
 ```
 
 For appropriate $\Delta$, the model enters an antiferromagnetic phase (Néel order) which we
-will force by adding staggered magnetic charges to ``H_0``. Furthermore, since the XXZ
+will force by adding staggered magnetic charges to $H_0$. Furthermore, since the XXZ
 Hamiltonian obeys a $U(1)$ symmetry, we will make use of that and work with $U(1)$-symmetric
 PEPS and CTMRG environments. For simplicity, we will consider spin-$1/2$ operators.
 
