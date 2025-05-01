@@ -1555,7 +1555,7 @@ function _pepo_pepolayerstensor_expr(
     contract_south=nothing,
     contract_west=nothing,
 )
-    layer = Symbol(:mid, :_, h)
+    layer = Symbol(h)
     return tensorexpr(
         tensorname,
         (physicallabel(mod1(h + 1, H), args...), physicallabel(h, args...)),
@@ -1614,10 +1614,7 @@ end
 function _pepolayers_edge_expr(edgename, codom_label, dom_label, dir, H::Int, args...)
     return tensorexpr(
         edgename,
-        (
-            envlabel(codom_label, args...),
-            ntuple(i -> virtuallabel(dir, i, args...), H)...,
-        ),
+        (envlabel(codom_label, args...), ntuple(i -> virtuallabel(dir, i, args...), H)...),
         (envlabel(dom_label, args...),),
     )
 end
