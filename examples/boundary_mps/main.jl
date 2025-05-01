@@ -51,7 +51,7 @@ T = InfiniteTransferPEPS(peps₀, 1, 1)
 
 md"""
 Since we'll find the leading eigenvector of ``T`` as a boundary MPS, we first need to
-initialize an initial guess to supply to our algorithm. We can do this using the
+construct an initial guess to supply to our algorithm. We can do this using the
 [`initialize_mps`](@ref) function, which constructs a random MPS with a specific virtual
 space for a given transfer operator. Here, we'll build an initial guess for the boundary MPS
 with a bond dimension of 20:
