@@ -2,17 +2,15 @@
 EditURL = "../../../../examples/2d_ising_partition_function/main.jl"
 ```
 
-[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/.//2d_ising_partition_function/main.ipynb)
-[![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/.//2d_ising_partition_function/main.ipynb)
-[![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/.//2d_ising_partition_function)
+[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/2d_ising_partition_function/main.ipynb)
+[![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/2d_ising_partition_function/main.ipynb)
+[![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/2d_ising_partition_function)
 
 
-# The 2D classical Ising model using CTMRG
+# [The 2D classical Ising model using CTMRG](@id e_2d_ising)
 
-All previous examples dealt with quantum systems, describing their states by `InfinitePEPS`
-that can be contracted using CTMRG or [boundary MPS techniques](@ref e_boundary_mps). Here,
-we shift our focus towards classical physics and consider the 2D classical Ising model with
-the partition function
+While PEPSKit has a lot of use in quantum systems, describing states using InfinitePEPS that can be contracted via CTMRG or [boundary MPS techniques](@ref e_boundary_mps), here we shift our focus to classical physics.
+We consider the 2D classical Ising model and compute its partition function defined as:
 
 ```math
 \mathcal{Z}(\beta) = \sum_{\{s\}} \exp(-\beta H(s)) \text{ with } H(s) = -J \sum_{\langle i, j \rangle} s_i s_j .
@@ -31,6 +29,13 @@ using Random, LinearAlgebra
 using TensorKit, PEPSKit
 using QuadGK
 Random.seed!(234923);
+````
+
+````
+Precompiling QuadGK...
+    744.1 ms  ✓ QuadGK
+  1 dependency successfully precompiled in 1 seconds. 12 already precompiled.
+
 ````
 
 ## Defining the partition function
@@ -125,8 +130,8 @@ env, = leading_boundary(env₀, Z; tol=1e-8, maxiter=500);
 ````
 
 ````
-[ Info: CTMRG init:	obj = +1.767587313024e+00 -1.536527975696e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 62:	obj = +3.353928644031e+00	err = 4.7636155793e-09	time = 6.03 sec
+[ Info: CTMRG init:	obj = +1.784252138312e+00 -1.557258880375e+00im	err = 1.0000e+00
+[ Info: CTMRG conv 63:	obj = +3.353928644031e+00	err = 4.5940673351e-09	time = 9.20 sec
 
 ````
 
@@ -161,9 +166,9 @@ e = expectation_value(Z, (1, 1) => E, env)
 ````
 
 ````
-λ = 3.3539286440313765 - 3.486341495761219e-16im
-m = 0.9736086674403004 + 7.16942808669034e-17im
-e = -1.8637796145082448 + 0.0im
+λ = 3.3539286440313787 - 4.111412204695009e-16im
+m = 0.9736086674402998 + 1.8261433647976018e-16im
+e = -1.8637796145082444 - 1.4609146918380815e-16im
 
 ````
 
@@ -207,9 +212,9 @@ extrapolation):
 ````
 
 ````
-(-(log(λ)) / beta - f_exact) / f_exact = -1.1009271732942546e-15 - 8.58980335690302e-17im
-(abs(m) - abs(m_exact)) / abs(m_exact) = -1.1403175236145204e-16
-(e - e_exact) / e_exact = -0.02373206809908996 - 0.0im
+(-(log(λ)) / beta - f_exact) / f_exact = -6.605563039765528e-16 - 1.0129880391935085e-16im
+(abs(m) - abs(m_exact)) / abs(m_exact) = -6.841905141687122e-16
+(e - e_exact) / e_exact = -0.023732068099090193 + 7.65242925602409e-17im
 
 ````
 
