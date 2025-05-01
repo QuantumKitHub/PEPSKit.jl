@@ -12,7 +12,8 @@ The threading behaviour can be specified through a global `scheduler` that is in
 set_scheduler!
 ```
 
-By default, the OhMyThreads machinery will be used to parallelize certain parts of the code, if Julia started with multiple threads. Cases where PEPSKit can leverage parallel threads are:
+By default, the OhMyThreads machinery will be used to parallelize certain parts of the code, if Julia started with multiple threads.
+Cases where PEPSKit can leverage parallel threads are:
 
 - CTMRG steps using the `:simultaneous` scheme, where we parallelize over all unit cell coordinates and spatial directions
 - The reverse pass of these parallelized CTMRG steps
