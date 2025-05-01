@@ -17,4 +17,4 @@ Cases where PEPSKit can leverage parallel threads are:
 
 - CTMRG steps using the `:simultaneous` scheme, where we parallelize over all unit cell coordinates and spatial directions
 - The reverse pass of these parallelized CTMRG steps
-- Evaluating expectation values of observables, where we parallelize over the terms contained in the `LocalOperator`
+- Evaluating expectation values of observables, where we parallelize over the terms contained in the [`LocalOperator`](@ref PEPSKit.LocalOperator)
