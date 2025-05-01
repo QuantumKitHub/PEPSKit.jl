@@ -179,7 +179,7 @@ PEPSKit.jl, which allows to hook into the pullback of a given function by specif
 specific algorithm for the pullback computation. Here, we opted to use an Arnoldi method to
 solve the linear problem defining the gradient of the network contraction at its fixed
 point. This is exactly the workflow that internally underlies [`PEPSKit.fixedpoint`](@ref), and
-more info on particular gradient algorithms can be found in the corresponding docstring.
+more info on particular gradient algorithms can be found in the corresponding docstrings.
 
 ### Characterizing the optimization manifold
 
