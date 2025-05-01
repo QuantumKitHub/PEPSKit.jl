@@ -8,7 +8,7 @@ function get_gate(dt::Float64, H::LocalOperator)
         numin(op) == 2 && norm(Tuple(terms[2] - terms[1])) == 1.0 for (terms, op) in H.terms
     ]) "Only nearest-neighbour terms allowed"
     return LocalOperator(
-        H.lattice, Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...
+        physicalspace(H), Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...
     )
 end
 

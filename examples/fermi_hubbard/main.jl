@@ -79,7 +79,7 @@ Second, we initialize a PEPS state and environment (which we converge) construct
 symmetric physical and virtual spaces:
 """
 
-physical_spaces = H.lattice
+physical_spaces = physicalspace(H)
 virtual_spaces = fill(V_peps, size(lattice)...)
 peps₀ = InfinitePEPS(randn, ComplexF64, physical_spaces, virtual_spaces)
 env₀, = leading_boundary(CTMRGEnv(peps₀, V_env), peps₀; boundary_alg...);

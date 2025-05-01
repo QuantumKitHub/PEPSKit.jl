@@ -33,7 +33,7 @@ reuse_env = true
 
 # Hamiltonian
 H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff, t, U, n)
-Pspaces = H.lattice
+Pspaces = physicalspace(H)
 
 # initialize state
 Nspaces = fill(Vpeps, size(lattice)...)

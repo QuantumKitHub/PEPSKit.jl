@@ -50,7 +50,7 @@ Before we continue, it might be interesting to inspect the corresponding lattice
 spaces (which is here just a $1 \times 1$ matrix due to the single-site unit cell):
 """
 
-physical_spaces = H.lattice
+physical_spaces = physicalspace(H)
 
 md"""
 Note that the physical space contains $U(1)$ charges -1, 0 and +1. Indeed, imposing a

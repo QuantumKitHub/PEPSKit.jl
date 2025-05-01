@@ -96,6 +96,15 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
     return LocalOperator(lattice, terms...)
 end
 
+"""
+    physicalspace(O::LocalOperator)
+
+Return lattice of physical spaces on which the `LocalOperator` is defined.
+"""
+function MPSKit.physicalspace(O::LocalOperator)
+    return O.lattice
+end
+
 # Real and imaginary part
 # -----------------------
 function Base.real(O::LocalOperator)
@@ -181,36 +190,38 @@ end
 Mirror a `LocalOperator` across the anti-diagonal axis of its lattice.
 """
 function mirror_antidiag(H::LocalOperator)
-    lattice2 = mirror_antidiag(H.lattice)
+    lattice2 = mirror_antidiag(physicalspace(H))
     terms2 = (
-        (Tuple(_mirror_antidiag_site(site, size(H.lattice)) for site in sites) => op) for
-        (sites, op) in H.terms
+        (
+            Tuple(_mirror_antidiag_site(site, size(physicalspace(H))) for site in sites) =>
+                op
+        ) for (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rotr90(H::LocalOperator)
-    lattice2 = rotr90(H.lattice)
+    lattice2 = rotr90(physicalspace(H))
     terms2 = (
-        (Tuple(_rotr90_site(site, size(H.lattice)) for site in sites) => op) for
+        (Tuple(_rotr90_site(site, size(physicalspace(H))) for site in sites) => op) for
         (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rotl90(H::LocalOperator)
-    lattice2 = rotl90(H.lattice)
+    lattice2 = rotl90(physicalspace(H))
     terms2 = (
-        (Tuple(_rotl90_site(site, size(H.lattice)) for site in sites) => op) for
+        (Tuple(_rotl90_site(site, size(physicalspace(H))) for site in sites) => op) for
         (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rot180(H::LocalOperator)
-    lattice2 = rot180(H.lattice)
+    lattice2 = rot180(physicalspace(H))
     terms2 = (
-        (Tuple(_rot180_site(site, size(H.lattice)) for site in sites) => op) for
+        (Tuple(_rot180_site(site, size(physicalspace(H))) for site in sites) => op) for
         (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
@@ -262,7 +273,7 @@ Change the spaces of a `LocalOperator` by fusing in an auxiliary charge on every
 according to a given matrix of 'auxiliary' physical charges.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
-    size(H.lattice) == size(charges) ||
+    size(physicalspace(H)) == size(charges) ||
         throw(ArgumentError("Incompatible lattice and auxiliary charge sizes"))
     sectortype(H) === eltype(charges) ||
         throw(SectorMismatch("Incompatible lattice and auxiliary charge sizes"))
@@ -271,7 +282,7 @@ function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:
     Paux = PeriodicArray(map(c -> Vect[typeof(c)](c => 1), charges))
 
     # new physical spaces
-    Pspaces = map(fuse, H.lattice, Paux)
+    Pspaces = map(fuse, physicalspace(H), Paux)
 
     new_terms = map(H.terms) do (sites, op)
         Paux_slice = map(Base.Fix1(getindex, Paux), sites)

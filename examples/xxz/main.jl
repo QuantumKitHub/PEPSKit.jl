@@ -62,7 +62,7 @@ spaces, which can be extracted directly from the Hamiltonian `LocalOperator`:
 V_peps = U1Space(0 => 2, 1 => 1, -1 => 1)
 V_env = U1Space(0 => 6, 1 => 4, -1 => 4, 2 => 2, -2 => 2)
 virtual_spaces = fill(V_peps, size(lattice)...)
-physical_spaces = H.lattice
+physical_spaces = physicalspace(H)
 
 md"""
 ## Ground state search
