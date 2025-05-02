@@ -48,6 +48,11 @@ end
             include("bondenv/bond_truncate.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "TIMEEVOL"
+        @time @safetestset "Cluster truncation with projectors" begin
+            include("timeevol/cluster_projectors.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "SVD wrapper" begin
             include("utility/svd_wrapper.jl")
@@ -60,6 +65,9 @@ end
         end
         @time @safetestset "Norm-preserving retractions" begin
             include("utility/retractions.jl")
+        end
+        @time @safetestset "Rotation of InfiniteWeightPEPS" begin
+            include("utility/iwpeps_rotation.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"

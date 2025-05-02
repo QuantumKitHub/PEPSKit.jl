@@ -1,13 +1,14 @@
 using Test
 using Printf
 using Random
-import Statistics: mean
 using TensorKit
 using PEPSKit
+using LinearAlgebra
+import Statistics: mean
 
 module MeasureHeis
 
-export measure_heis
+export cal_spincor, measure_heis
 
 using TensorKit
 import MPSKitModels: S_x, S_y, S_z, S_exchange
@@ -39,6 +40,31 @@ function cal_mags(peps::InfinitePEPS, env::CTMRGEnv)
 end
 
 """
+Measure spin correlation ⟨Sᵢ⋅Sⱼ⟩ on each nearest neighbor bond
+"""
+function cal_spincor(peps::InfinitePEPS, env::CTMRGEnv)
+    Nr, Nc = size(peps)
+    symm = sectortype(peps.A[1, 1])
+    op = real(S_exchange(ComplexF64, symm))
+    lattice = collect(space(t, 1) for t in peps.A)
+    corHs = collect(
+        expectation_value(
+            peps,
+            LocalOperator(lattice, (CartesianIndex(r, c), CartesianIndex(r, c + 1)) => op),
+            env,
+        ) for (r, c) in Iterators.product(1:Nr, 1:Nc)
+    )
+    corVs = collect(
+        expectation_value(
+            peps,
+            LocalOperator(lattice, (CartesianIndex(r, c), CartesianIndex(r - 1, c)) => op),
+            env,
+        ) for (r, c) in Iterators.product(1:Nr, 1:Nc)
+    )
+    return corHs, corVs
+end
+
+"""
 Measure physical quantities for Heisenberg model
 """
 function measure_heis(peps::InfinitePEPS, H::LocalOperator, env::CTMRGEnv)
@@ -50,6 +76,7 @@ function measure_heis(peps::InfinitePEPS, H::LocalOperator, env::CTMRGEnv)
         norm([mags[r, c] for mags in results["mag"]]) for
         (r, c) in Iterators.product(1:Nr, 1:Nc)
     )
+    results["corH"], results["corV"] = cal_spincor(peps, env)
     return results
 end
 

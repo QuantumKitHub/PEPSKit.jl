@@ -15,9 +15,9 @@ if symm == Trivial
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
 elseif symm == U1Irrep
-    Pspace = ℂ[U1Irrep](1//2 => 1, -1//2 => 1)
-    Vspace = ℂ[U1Irrep](0 => Dbond ÷ 2, 1//2 => Dbond ÷ 4, -1//2 => Dbond ÷ 4)
-    Espace = ℂ[U1Irrep](0 => χenv ÷ 2, 1//2 => χenv ÷ 4, -1//2 => χenv ÷ 4)
+    Pspace = Vect[U1Irrep](1//2 => 1, -1//2 => 1)
+    Vspace = Vect[U1Irrep](0 => Dbond ÷ 2, 1//2 => Dbond ÷ 4, -1//2 => Dbond ÷ 4)
+    Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1//2 => χenv ÷ 4, -1//2 => χenv ÷ 4)
 else
     error("Not implemented")
 end
@@ -39,19 +39,21 @@ for (dt, tol) in zip(dts, tols)
 end
 # measure physical quantities with CTMRG
 peps_ = InfinitePEPS(peps)
+normalize!.(peps_.A, Inf)
 env = CTMRGEnv(rand, Float64, peps_, Espace)
 env, = leading_boundary(
     env,
     peps_;
     alg=:sequential,
-    projector_alg=:fullinfinite,
+    projector_alg=:halfinfinite,
     tol=1e-10,
     verbosity=2,
     trscheme=trscheme_env,
 )
 meas = measure_heis(peps_, ham, env)
 display(meas)
-@info @sprintf("Energy = %.8f\n", meas["e_site"])
-@info @sprintf("Staggered magnetization = %.8f\n", mean(meas["mag_norm"]))
-@test isapprox(meas["e_site"], -0.6675; atol=1e-3)
-@test isapprox(mean(meas["mag_norm"]), 0.3767; atol=1e-3)
+energy, mag = meas["e_site"], mean(meas["mag_norm"])
+@info @sprintf("Energy = %.8f\n", energy)
+@info @sprintf("Staggered magnetization = %.8f\n", mag)
+@test isapprox(energy, -0.6675; atol=1e-3)
+@test isapprox(mag, 0.3767; atol=1e-3)
