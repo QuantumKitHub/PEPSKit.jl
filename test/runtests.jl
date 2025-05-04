@@ -32,8 +32,8 @@ end
         @time @safetestset "PEPO" begin
             include("ctmrg/pepo.jl")
         end
-        @time @safetestset "PEPOLayers" begin
-            include("ctmrg/pepo_layers.jl")
+        @time @safetestset "PEPOTrace" begin
+            include("ctmrg/pepotrace.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "GRADIENTS"

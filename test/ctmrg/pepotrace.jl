@@ -1,25 +1,27 @@
 using Test
 using Random
 using LinearAlgebra
-using PEPSKit
 using TensorKit
 using KrylovKit
 using OptimKit
 using Zygote
+using PEPSKit
+import PEPSKit: unitcell
 
 pspace = ℂ^2
 vspace = ℂ^2
 χenv = 24
+T = ComplexF64
 
 Random.seed!(1564654824)
 
 # Construct random PEPO tensors
-O = randn(pspace ⊗ pspace', vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
-M = randn(pspace ⊗ pspace', vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
+O = randn(T, pspace ⊗ pspace', vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
+M = randn(T, pspace ⊗ pspace', vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
 
 # Fuse a layer consisting of O-O and MO together
-fuser = isometry(vspace ⊗ vspace, fuse(vspace, vspace))
-fuser_conj = isometry(vspace' ⊗ vspace', fuse(vspace, vspace)')
+fuser = isometry(T, vspace ⊗ vspace, fuse(vspace, vspace))
+fuser_conj = isometry(T, vspace' ⊗ vspace', fuse(vspace, vspace)')
 @tensor O2[-1 -2; -3 -4 -5 -6] :=
     O[-1 1; 2 4 6 8] *
     O[1 -2; 3 5 7 9] *
@@ -64,7 +66,7 @@ projector_algs = [:halfinfinite, :fullinfinite]
     @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 1e-9
 end
 
-ψ = ones(pspace, vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
+ψ = randn(T, pspace, vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
 @tensor Oψ[-1; -3 -4 -5 -6] :=
     O[-1 1; 2 4 6 8] *
     ψ[1; 3 5 7 9] *
@@ -111,7 +113,7 @@ network_fused_OO = InfinitePEPS(Oψ)
     @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 1e-7
 end
 
-@testset "mpotensor for PEPOLayersSandwich" begin
+@testset "mpotensor for PEPOTraceSandwich" begin
     network = InfiniteSquareNetwork(OOdag)
 
     # Fuse the two physical legs of the PEPO to convert it to a PEPS

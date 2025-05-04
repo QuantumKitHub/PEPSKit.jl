@@ -72,15 +72,15 @@ function virtualspace(O::PEPOSandwich, dir)
     ])
 end
 
-## Only PEPO layers
+## PEPOTraceSandwich
 # In a CTMRG contraction, the top physical leg of the top PEPOTensor is contracted with the bottom physical leg of the bottom PEPOTensor
 
-const PEPOLayersSandwich{N,P<:PEPOTensor} = Tuple{Vararg{P,N}}
+const PEPOTraceSandwich{N,P<:PEPOTensor} = Tuple{Vararg{P,N}}
 
-pepo(O::PEPOLayersSandwich) = O[1:end]
-pepo(O::PEPOLayersSandwich, i::Int) = O[i]
+pepo(O::PEPOTraceSandwich) = O[1:end]
+pepo(O::PEPOTraceSandwich, i::Int) = O[i]
 
-function virtualspace(O::PEPOLayersSandwich, dir)
+function virtualspace(O::PEPOTraceSandwich, dir)
     return prod([virtualspace.(pepo(O), Ref(dir))...])
 end
 
@@ -100,11 +100,11 @@ function _pepo_fuser_tensor_expr(tensorname, H::Int, dir, args...;)
     )
 end
 
-function _pepolayers_fuser_tensor_expr(tensorname, H::Int, dir, args...;)
+function _pepotrace_fuser_tensor_expr(tensorname, H::Int, dir, args...;)
     return tensorexpr(
         tensorname,
         (virtuallabel(dir, :fuser, args...),),
-        (ntuple(h -> virtuallabel(_virtual_labels(dir, :mid, h, args...)...), H)...,),
+        (ntuple(h -> virtuallabel(_virtual_labels(dir, h, args...)...), H)...,),
     )
 end
 
@@ -142,13 +142,13 @@ end
     F_east::AbstractTensorMap{T,S},
     F_south::AbstractTensorMap{T,S},
     F_west::AbstractTensorMap{T,S},
-    O::PEPOLayersSandwich{H},
+    O::PEPOTraceSandwich{H},
 ) where {T,S,H}
-    fuser_north = _pepolayers_fuser_tensor_expr(:F_north, H, :N)
-    fuser_east = _pepolayers_fuser_tensor_expr(:F_east, H, :E)
-    fuser_south = _pepolayers_fuser_tensor_expr(:F_south, H, :S)
-    fuser_west = _pepolayers_fuser_tensor_expr(:F_west, H, :W)
-    pepo_es = _pepolayers_sandwich_expr(:O, H)
+    fuser_north = _pepotrace_fuser_tensor_expr(:F_north, H, :N)
+    fuser_east = _pepotrace_fuser_tensor_expr(:F_east, H, :E)
+    fuser_south = _pepotrace_fuser_tensor_expr(:F_south, H, :S)
+    fuser_west = _pepotrace_fuser_tensor_expr(:F_west, H, :W)
+    pepo_es = _pepotrace_sandwich_expr(:O, H)
 
     result = tensorexpr(:res, (:D_W_fuser, :D_S_fuser), (:D_N_fuser, :D_E_fuser))
 
@@ -197,7 +197,7 @@ function mpotensor(network::PEPOSandwich{H}) where {H}
     )
 end
 
-function mpotensor(network::PEPOLayersSandwich{H}) where {H}
+function mpotensor(network::PEPOTraceSandwich{H}) where {H}
     for h in 1:H
         @assert virtualspace(network[h], NORTH) == dual(virtualspace(network[h], SOUTH)) &&
             virtualspace(network[h], EAST) == dual(virtualspace(network[h], WEST)) &&

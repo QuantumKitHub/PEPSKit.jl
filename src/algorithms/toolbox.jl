@@ -391,7 +391,7 @@ end
 function contract_local_tensor(
     ind::Tuple{Int,Int,Int},
     O::PEPOTensor,
-    network::InfiniteSquareNetwork{<:PEPOLayersSandwich},
+    network::InfiniteSquareNetwork{<:PEPOTraceSandwich},
     env::CTMRGEnv,
 )
     r, c, h = ind
