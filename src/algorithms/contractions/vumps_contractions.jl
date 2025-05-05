@@ -134,52 +134,84 @@ function MPSKit.contract_mpo_expval(
     return environment_overlap(GL´, GR)
 end
 
-#
-# Derivative contractions
-#
+# PEPS Derivative contractions
+# ----------------------------
+# This is appropriating the MPSKit MPO derivative structures, which might not be the best
+# idea in the long run.
 
-function MPSKit.∂C(
-    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
-) where {S,N}
+const PEPS_C_Hamiltonian{S,N} = MPSKit.MPO_C_Hamiltonian{
+    <:GenericMPSTensor{S,N},<:GenericMPSTensor{S,N}
+} # this one is technically type-piracy
+PEPS_C_Hamiltonian(GL, GR) = MPSKit.MPODerivativeOperator(GL, (), GR)
+
+const PEPS_AC_Hamiltonian{S,N} = MPSKit.MPO_AC_Hamiltonian{
+    <:GenericMPSTensor{S,N},<:PEPSSandwich,<:GenericMPSTensor{S,N}
+}
+PEPS_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
+
+const PEPS_AC2_Hamiltonian{S,N} = MPSKit.MPO_AC2_Hamiltonian{
+    <:GenericMPSTensor{S,N},<:PEPSSandwich,<:PEPSSandwich,<:GenericMPSTensor{S,N}
+}
+PEPS_AC2_Hamiltonian(GL, O1, O2, GR) = MPSKit.MPODerivativeOperator(GL, (O1, O2), GR)
+
+# Constructors
+#
+function MPSKit.C_hamiltonian(site::Int, below, ::InfiniteTransferMatrix, above, envs)
+    GL = leftenv(envs, site + 1, below)
     GL = twistdual(GL, 1)
+    GR = rightenv(envs, site, below)
     GR = twistdual(GR, numind(GR))
-    return _∂C(C, GL, GR)
+    return PEPS_C_Hamiltonian(GL, GR)
 end
-@generated function _∂C(
-    C::MPSBondTensor{S}, GL::GenericMPSTensor{S,N}, GR::GenericMPSTensor{S,N}
-) where {S,N}
+
+function MPSKit.AC_hamiltonian(
+    site::Int, below, operator::InfiniteTransferPEPS, above, envs
+)
+    GL = leftenv(envs, site, below)
+    GL = twistdual(GL, 1)
+    GR = rightenv(envs, site, below)
+    GR = twistdual(GR, numind(GR))
+    return PEPS_AC_Hamiltonian(GL, operator[site], GR)
+end
+
+function MPSKit.AC2_hamiltonian(
+    site::Int, below, operator::InfiniteTransferPEPS, above, envs
+)
+    GL = leftenv(envs, site, below)
+    GL = twistdual(GL, 1)
+    GR = rightenv(envs, site + 1, below)
+    GR = twistdual(GR, numind(GR))
+    return PEPS_AC2_Hamiltonian(GL, operator[site], operator[site + 1], GR)
+end
+
+# Actions
+#
+@generated function (h::PEPS_C_Hamiltonian{S,N})(C::MPSBondTensor{S}) where {S,N}
     C´_e = tensorexpr(:C´, -1, -2)
     C_e = tensorexpr(:C, 1, 2)
-    GL_e = tensorexpr(:GL, (-1, (3:(N + 1))...), 1)
-    GR_e = tensorexpr(:GR, 2:(N + 1), -2)
+    GL_e = tensorexpr(:(h.leftenv), (-1, (3:(N + 1))...), 1)
+    GR_e = tensorexpr(:(h.rightenv), (2:(N + 1)...,), -2)
     return macroexpand(@__MODULE__, :(return @tensor $C´_e := $GL_e * $C_e * $GR_e))
 end
 
-function MPSKit.∂AC(
-    AC::GenericMPSTensor{S,N},
-    O::Union{PEPSSandwich,PEPOSandwich},
-    GL::GenericMPSTensor{S,N},
-    GR::GenericMPSTensor{S,N},
-) where {S,N}
-    GL = twistdual(GL, 1)
-    GR = twistdual(GR, numind(GR))
-    return _∂AC(AC, O, GL, GR)
+function (h::PEPS_AC_Hamiltonian{S,N})(AC::GenericMPSTensor{S,N}) where {S,N}
+    return @autoopt @tensor AC′[χ_SW D_S_above D_S_below; χ_SE] :=
+        h.leftenv[χ_SW D_W_above D_W_below; χ_NW] *
+        AC[χ_NW D_N_above D_N_below; χ_NE] *
+        h.rightenv[χ_NE D_E_above D_E_below; χ_SE] *
+        ket(h.operators[1])[d; D_N_above D_E_above D_S_above D_W_above] *
+        conj(bra(h.operators[1])[d; D_N_below D_E_below D_S_below D_W_below])
 end
 
-## PEPS
-
-function _∂AC(
-    AC::GenericMPSTensor{S,3},
-    O::PEPSSandwich,
-    GL::GenericMPSTensor{S,3},
-    GR::GenericMPSTensor{S,3},
-) where {S}
-    return @autoopt @tensor AC′[χ_SW D_S_above D_S_below; χ_SE] :=
-        GL[χ_SW D_W_above D_W_below; χ_NW] *
-        AC[χ_NW D_N_above D_N_below; χ_NE] *
-        GR[χ_NE D_E_above D_E_below; χ_SE] *
-        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
-        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
+function (h::PEPS_AC2_Hamiltonian{S,3})(AC2::AbstractTensorMap{<:Any,S,3,3}) where {S}
+    return @autoopt @tensor AC2′[χ_SW D_S_above1 D_S_below1; χ_SE D_S_below2 D_S_above2] :=
+        h.leftenv[χ_SW D_W_above1 D_W_below1; χ_NW] *
+        AC2[χ_NW D_N_above1 D_N_below1; χ_NE D_N_below2 D_N_above2] *
+        h.rightenv[χ_NE D_E_above2 D_E_below2; χ_SE] *
+        ket(h.operators[1])[d1; D_N_above1 D_E_above1 D_S_above1 D_W_above1] *
+        conj(bra(h.operators[1])[d1; D_N_below1 D_E_below1 D_S_below1 D_W_below1]) *
+        ket(h.operators[2])[d2; D_N_above2 D_E_above2 D_S_above2 D_E_above1] *
+        conj(bra(h.operators[2])[d2; D_N_below2 D_E_below2 D_S_below2 D_E_below1])
 end
 
 # PEPS derivative
@@ -198,22 +230,32 @@ function ∂peps(
         conj(ĀC[χ_SW D_S_above D_S_below; χ_SE])
 end
 
-## PEPO
+# PEPO Derivative contractions
+# ----------------------------
+const PEPO_AC_Hamiltonian{S,N,H} = MPSKit.MPO_AC_Hamiltonian{
+    <:GenericMPSTensor{S,N},<:PEPOSandwich{H},<:GenericMPSTensor{S,N}
+}
+PEPO_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
 
-@generated function _∂AC(
-    AC::GenericMPSTensor{S,N},
-    O::PEPOSandwich{H},
-    GL::GenericMPSTensor{S,N},
-    GR::GenericMPSTensor{S,N},
-) where {S,N,H}
+function MPSKit.AC_hamiltonian(
+    site::Int, below, operator::InfiniteTransferPEPO, above, envs
+)
+    GL = leftenv(envs, site, below)
+    GL = twistdual(GL, 1)
+    GR = rightenv(envs, site, below)
+    GR = twistdual(GR, numind(GR))
+    return PEPO_AC_Hamiltonian(GL, operator[site], GR)
+end
+
+@generated function (h::PEPO_AC_Hamiltonian{S,N,H})(AC::GenericMPSTensor{S,N}) where {S,N,H}
     # sanity check
-    @assert H == N - 3
+    @assert H == N - 3 "Incompatible number of legs and layers"
 
     AC´_e = _pepo_edge_expr(:AC´, :SW, :SE, :S, H)
     AC_e = _pepo_edge_expr(:AC, :NW, :NE, :N, H)
-    GL_e = _pepo_edge_expr(:GL, :SW, :NW, :W, H)
-    GR_e = _pepo_edge_expr(:GR, :NE, :SE, :E, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
+    GL_e = _pepo_edge_expr(:(h.leftenv), :SW, :NW, :W, H)
+    GR_e = _pepo_edge_expr(:(h.rightenv), :NE, :SE, :E, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:(h.operators[1]), H)
 
     rhs = Expr(:call, :*, AC_e, GL_e, GR_e, ket_e, Expr(:call, :conj, bra_e), pepo_es...)
 

@@ -10,6 +10,7 @@ Random.seed!(29384293742893)
 const vumps_alg = VUMPS(;
     tol=1e-6, alg_eigsolve=MPSKit.Defaults.alg_eigsolve(; ishermitian=false), verbosity=2
 )
+
 @testset "(1, 1) PEPS" begin
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
 
@@ -18,6 +19,11 @@ const vumps_alg = VUMPS(;
 
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(sum(expectation_value(mps, T)))
+
+    mps2, = changebonds(mps, T, OptimalExpand(; trscheme=truncdim(30)))
+    mps2, env2, ϵ = leading_boundary(mps2, T, vumps_alg)
+    N2 = abs(sum(expectation_value(mps2, T)))
+    @test N ≈ N2 rtol = 1e-2
 
     ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
     N´ = abs(norm(psi, ctm))
