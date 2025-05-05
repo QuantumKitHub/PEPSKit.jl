@@ -192,7 +192,6 @@ end
 
 Create the dagger of a PEPOTensor such that `InfinitePEPO(dagger(O))` is the adjoint of `InfinitePEPO(O)` with respect to the physical action of the PEPO on a PEPS.
 """
-
 function dagger(O::InfinitePEPO)
     return InfinitePEPO(_dag.(unitcell(O)))
 end
