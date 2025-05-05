@@ -2,23 +2,23 @@
 EditURL = "../../../../examples/heisenberg_su/main.jl"
 ```
 
-[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/.//heisenberg_su/main.ipynb)
-[![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/.//heisenberg_su/main.ipynb)
-[![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/.//heisenberg_su)
+[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/heisenberg_su/main.ipynb)
+[![](https://img.shields.io/badge/show-nbviewer-579ACA.svg)](https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/heisenberg_su/main.ipynb)
+[![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/heisenberg_su)
 
 
 # Simple update for the Heisenberg model
 
-In this next example, we will use [`SimpleUpdate`](@ref) imaginary time evolution to treat
+In this example, we will use [`SimpleUpdate`](@ref) imaginary time evolution to treat
 the two-dimensional Heisenberg model once again:
 
 ```math
 H = \sum_{\langle i,j \rangle} J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S^{z}_i S^{z}_j.
 ```
 
-In the previous examples, we used a sublattice rotation to simulate antiferromagnetic
-Hamiltonian on a single-site unit cell. Here, we will instead use a $2 \times 2$ unit cell
-and set $J_x=J_y=J_z=1$.
+In order to simulate the antiferromagnetic order of the Hamiltonian on a single-site unit
+cell one typically applies a unitary sublattice rotation. Here, we will instead use a
+$2 \times 2$ unit cell and set $J_x = J_y = J_z = 1$.
 
 Let's get started by seeding the RNG and importing all required modules:
 
@@ -46,9 +46,8 @@ H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1, Jy=1, Jz
 
 ## Simple updating
 
-We proceed by initializing a random weighted PEPS that will be evolved. Again, we'll
-normalize its vertex tensors. First though, we need to take of defining the appropriate
-(symmetric) spaces:
+We proceed by initializing a random weighted PEPS that will be evolved. First though, we
+need to define the appropriate (symmetric) spaces:
 
 ````julia
 Dbond = 4
@@ -65,10 +64,7 @@ else
     error("not implemented")
 end
 
-wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, bond_space; unitcell=(Nr, Nc))
-for ind in CartesianIndices(wpeps.vertices)
-    wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
-end
+wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, bond_space; unitcell=(Nr, Nc));
 ````
 
 Next, we can start the `SimpleUpdate` routine, successively decreasing the time intervals
@@ -91,11 +87,11 @@ end
 
 ````
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.683e+00,  time = 10.318 sec
+[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.683e+00,  time = 10.602 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 500    :  dt = 1e-02,  weight diff = 3.879e-06,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 596    :  dt = 1e-02,  weight diff = 9.933e-07,  time = 11.765 sec
+[ Info: SU conv 596    :  dt = 1e-02,  weight diff = 9.933e-07,  time = 12.073 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 1      :  dt = 1e-03,  weight diff = 2.135e-03,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
@@ -107,7 +103,7 @@ end
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.683e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 2205   :  dt = 1e-03,  weight diff = 9.978e-09,  time = 4.599 sec
+[ Info: SU conv 2205   :  dt = 1e-03,  weight diff = 9.978e-09,  time = 4.545 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 1      :  dt = 4e-04,  weight diff = 1.418e-04,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
@@ -119,7 +115,7 @@ end
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 1.157e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 2133   :  dt = 4e-04,  weight diff = 9.999e-09,  time = 4.428 sec
+[ Info: SU conv 2133   :  dt = 4e-04,  weight diff = 9.999e-09,  time = 4.379 sec
 
 ````
 
@@ -143,8 +139,8 @@ env, = leading_boundary(
 ````
 
 ````
-[ Info: CTMRG init:	obj = +8.705922473442e-05	err = 1.0000e+00
-[ Info: CTMRG conv 15:	obj = +9.514115680898e-01	err = 3.3105929548e-11	time = 9.37 sec
+[ Info: CTMRG init:	obj = +8.705922473439e-05	err = 1.0000e+00
+[ Info: CTMRG conv 15:	obj = +9.514115680898e-01	err = 6.0310868148e-11	time = 9.35 sec
 
 ````
 
@@ -164,25 +160,23 @@ function compute_mags(peps::InfinitePEPS, env::CTMRGEnv)
         S_ops = real.([S_z(symm)]) ## only Sz preserves <Sz>
     end
 
-    return [
-        collect(
-            expectation_value(
-                peps, LocalOperator(lattice, (CartesianIndex(r, c),) => S), env
-            ) for (r, c) in Iterators.product(1:size(peps, 1), 1:size(peps, 2))
-        ) for S in S_ops
-    ]
+    return map(Iterators.product(axes(peps, 1), axes(peps, 2), S_ops)) do (r, c, S)
+        expectation_value(peps, LocalOperator(lattice, (CartesianIndex(r, c),) => S), env)
+    end
 end
 
 E = expectation_value(peps, H, env) / (Nr * Nc)
 Ms = compute_mags(peps, env)
-M_norms = collect(norm([m[r, c] for m in Ms]) for (r, c) in Iterators.product(1:Nr, 1:Nc))
+M_norms = map(
+    rc -> norm(Ms[rc[1], rc[2], :]), Iterators.product(axes(peps, 1), axes(peps, 2))
+)
 @show E Ms M_norms;
 ````
 
 ````
-E = -0.6674685583160916
-Ms = [[0.03199644951239792 -0.029802620495572755; -0.029802620502593708 0.03199644954611694], [2.289729198376439e-12 -1.051667672083661e-12; -2.117130756284402e-12 8.869747853359352e-13], [0.3755961090665969 -0.3757765476186198; -0.3757765476169762 0.37559610906659047]]
-M_norms = [0.3769565093314697 0.37695650933306873; 0.3769565093319854 0.37695650933432534]
+E = -0.6674685583160895
+Ms = [0.03199644951247372 -0.02980262049564095; -0.029802620502662757 0.03199644954619281;;; 2.2896091139871975e-12 -1.0506898420176606e-12; -2.118251543953617e-12 8.853279136399547e-13;;; 0.37559610906659674 -0.3757765476186203; -0.3757765476169772 0.37559610906659097]
+M_norms = [0.37695650933147595 0.3769565093330746; 0.3769565093319919 0.3769565093343323]
 
 ````
 
@@ -201,8 +195,8 @@ M_ref = 0.3767
 ````
 
 ````
-(E - E_ref) / E_ref = -4.71036463046289e-5
-(mean(M_norms) - M_ref) / E_ref = -0.00038428364451283597
+(E - E_ref) / E_ref = -4.7103646307789086e-5
+(mean(M_norms) - M_ref) / E_ref = -0.0003842836445223997
 
 ````
 
