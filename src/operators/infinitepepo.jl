@@ -175,13 +175,20 @@ function InfiniteSquareNetwork(mid::InfinitePEPO)
     return InfiniteSquareNetwork(map(tuple, eachslice(unitcell(mid); dims=3)...))
 end
 
+"""
+    _dag(O::PEPOTensor)
+
+Calculate the conjugate of an operator O, while permuting the physical indices.
+Flips and twists are included to ensure the correct arrow convention of a PEPOTensor.
+"""
+
 function _dag(O::PEPOTensor)
     @tensor O_conj[-1 -2; -3 -4 -5 -6] := conj(O[-2 -1; -3 -4 -5 -6])
     return twist(flip(O_conj, [3 4 5 6]), [3 4])
 end
 
 """
-    dagger(O::PEPOTensor)
+    dagger(O::InfinitePEPO)
 
 Create the dagger of a PEPOTensor such that `InfinitePEPO(dagger(O))` is the adjoint of `InfinitePEPO(O)` with respect to the physical action of the PEPO on a PEPS.
 """
