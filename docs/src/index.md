@@ -61,4 +61,4 @@ Pages = ["man/models.md", "man/multithreading.md", "man/precompilation.md"]
 Depth = 1
 ```
 
-Additionally, we provide a list of commented examples in the Examples section which showcases most of PEPSKit's capabilities in action.
+Additionally, we provide a list of commented examples in the [Examples section](@ref e_overview) which showcases most of PEPSKit's capabilities in action.
