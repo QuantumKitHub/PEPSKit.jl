@@ -99,22 +99,27 @@ of a slice-to-slice transfer operator ``T``, where ``T`` can be seen as an infin
 projected entangled-pair operator (PEPO) which consists of the rank-6 tensor `O` at each
 site of an infinite 2D square lattice. In the same spirit as the boundary MPS approach, all
 we need to contract the whole partition function is to find the leading eigenvector of this
-PEPO. The fixed point of such a PEPO exactly corresponds to a PEPS, and for the case of a
+PEPO. The fixed point of such a PEPO can be parametrized as a PEPS, and for the case of a
 Hermitian transfer operator we can find this PEPS through [variational optimization](@cite
 vanderstraeten_residual_2018).
 
-Indeed, for a Hermition transfer operator ``T`` we can formulate the eigenvalue equation as
-for a fixed point PEPS ``|\psi\rangle`` as a variational problem
+Indeed, for a Hermitian transfer operator ``T`` we can characterize the fixed point PEPS
+``|\psi\rangle`` which satisfies the eigenvalue equation
+``T |\psi\rangle = \Lambda |\psi\rangle`` corresponding to the largest magnitude eigenvalue
+``\Lambda`` as the solution of a variational problem
 
 ```math
-|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | T | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right )
+|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | T | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,
 ```
-where ``N`` is the diverging number of sites of the 2D transfer operator ``T``.
+
+where ``N`` is the diverging number of sites of the 2D transfer operator ``T``. The function
+minimized in this expression is exactly the free energy per site of the partition function,
+so we essentially find the fixed-point PEPS by variationally minimizing the free energy.
 
 ### Defining the cost function
 
-Using PEPSKit.jl, this cost function and its gradient can be computed, after which we
-can use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it. We can
+Using PEPSKit.jl, this cost function and its gradient can be computed, after which we can
+use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it. We can
 immediately recognize the denominator ``\langle \psi | \psi \rangle`` as the familiar PEPS
 norm, where we can compute the norm per site as the [`network_value`](@ref) of the
 corresponding [`InfiniteSquareNetwork`](@ref) by contracting it with the CTMRG algorithm.
@@ -124,10 +129,11 @@ operator and bra objects. This object can also be constructed and contracted in 
 straightforward way, so we can again compute its `network_value`.
 
 To define our cost function, we then need to construct the transfer operator as an
-[`InfinitePEPO`](@ref), construct the two infinite 2D contractible networks for the numerator and denominator from
-the current PEPS and this transfer operator, and specify a contraction algorithm we can use
-to compute the values of these two networks. In addition, we'll specify the specific reverse
-rule algorithm that will be used to compute the gradient of this cost function.
+[`InfinitePEPO`](@ref), construct the two infinite 2D contractible networks for the
+numerator and denominator from the current PEPS and this transfer operator, and specify a
+contraction algorithm we can use to compute the values of these two networks. In addition,
+we'll specify the specific reverse rule algorithm that will be used to compute the gradient
+of this cost function.
 """
 
 boundary_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=1)
@@ -136,29 +142,37 @@ rrule_alg = EigSolver(;
 )
 T = InfinitePEPO(O)
 
-function pepo_costfun((psi, env2, env3))
+function pepo_costfun((peps, env_double_layer, env_triple_layer))
     ## use Zygote to compute the gradient automatically
-    E, gs = withgradient(psi) do ψ
+    E, gs = withgradient(peps) do ψ
         ## construct the PEPS norm network
-        n2 = InfiniteSquareNetwork(ψ)
+        n_double_layer = InfiniteSquareNetwork(ψ)
         ## contract this network
-        env2′, info = PEPSKit.hook_pullback(
-            leading_boundary, env2, n2, boundary_alg; alg_rrule=rrule_alg
+        env_double_layer′, info = PEPSKit.hook_pullback(
+            leading_boundary,
+            env_double_layer,
+            n_double_layer,
+            boundary_alg;
+            alg_rrule=rrule_alg,
         )
         ## construct the PEPS-PEPO-PEPS overlap network
-        n3 = InfiniteSquareNetwork(ψ, T)
+        n_triple_layer = InfiniteSquareNetwork(ψ, T)
         ## contract this network
-        env3′, info = PEPSKit.hook_pullback(
-            leading_boundary, env3, n3, boundary_alg; alg_rrule=rrule_alg
+        env_triple_layer′, info = PEPSKit.hook_pullback(
+            leading_boundary,
+            env_triple_layer,
+            n_triple_layer,
+            boundary_alg;
+            alg_rrule=rrule_alg,
         )
         ## update the environments for reuse
         PEPSKit.ignore_derivatives() do
-            PEPSKit.update!(env2, env2′)
-            PEPSKit.update!(env3, env3′)
+            PEPSKit.update!(env_double_layer, env_double_layer′)
+            PEPSKit.update!(env_triple_layer, env_triple_layer′)
         end
         ## compute the network values per site
-        λ3 = network_value(n3, env3)
-        λ2 = network_value(n2, env2)
+        λ3 = network_value(n_triple_layer, env_triple_layer)
+        λ2 = network_value(n_double_layer, env_double_layer)
         ## use this to compute the actual cost function
         return -log(real(λ3 / λ2))
     end
@@ -198,21 +212,31 @@ a transport. The retraction, corresponding to the `retract` keyword argument of
 direction to obtain a new manifold point. The transport, corresponding to the `transport!`
 keyword argument of `OptimKit.optimize`, specifies how to transport a descent direction at a
 given manifold point to a valid descent direction at a different manifold point according to
-the appropriate metric. In PEPSKit.jl, these two procedures are defined through the
-[`PEPSKit.peps_retract`](@ref) and [`PEPSKit.peps_transport!`](@ref) methods. While it is
-instructive to read the corresponding docstrings in order to understand what these actually
-do, here we can just blindly reuse them where the only difference is that we have to pass
-along an extra environment since our cost function requires two distinct contractions as
-opposed to the setting of Hamiltonian PEPS optimization.
+the appropriate metric. For a more detailed explanation we refer to the
+[OptimKit.jl README](https://github.com/Jutho/OptimKit.jl). In PEPSKit.jl, these two
+procedures are defined through the [`PEPSKit.peps_retract`](@ref) and
+[`PEPSKit.peps_transport!`](@ref) methods. While it is instructive to read the corresponding
+docstrings in order to understand what these actually do, here we can just blindly reuse
+them where the only difference is that we have to pass along an extra environment since our
+cost function requires two distinct contractions as opposed to the setting of Hamiltonian
+PEPS optimization which only requires a double-layer contraction.
 """
 
-function pepo_retract(x, η, α)
-    x´_partial, ξ = PEPSKit.peps_retract(x[1:2], η, α)
-    x´ = (x´_partial..., deepcopy(x[3]))
-    return x´, ξ
+function pepo_retract((peps, env_double_layer, env_triple_layer), η, α)
+    (peps´, env_double_layer´), ξ = PEPSKit.peps_retract((peps, env_double_layer), η, α)
+    env_triple_layer´ = deepcopy(env_triple_layer)
+    return (peps´, env_double_layer´, env_triple_layer´), ξ
 end
-function pepo_transport!(ξ, x, η, α, x´)
-    return PEPSKit.peps_transport!(ξ, x[1:2], η, α, x´[1:2])
+function pepo_transport!(
+    ξ,
+    (peps, env_double_layer, env_triple_layer),
+    η,
+    α,
+    (peps´, env_double_layer´, env_triple_layer´),
+)
+    return PEPSKit.peps_transport!(
+        ξ, (peps, env_double_layer), η, α, (peps´, env_double_layer´)
+    )
 end;
 
 md"""
