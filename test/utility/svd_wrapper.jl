@@ -2,7 +2,6 @@ using Test
 using Random
 using LinearAlgebra
 using TensorKit
-using KrylovKit
 using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
@@ -10,21 +9,21 @@ using PEPSKit
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R=randn(space(A)), trunc=notrunc())
-    U, _, V, = PEPSKit.tsvd(A, alg; trunc)
-    return real(dot(R, U * V))  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
+    U, S, V, = PEPSKit.tsvd(A, alg; trunc)
+    return real(dot(R, U * V)) + dot(S, S)  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
 end
 
 m, n = 20, 30
 dtype = ComplexF64
 χ = 12
 trunc = truncspace(ℂ^χ)
-# lorentz_broadening = 1e-12
 rtol = 1e-9
 Random.seed!(123456789)
 r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
+broadenings = [10.0^k for k in -16:-4]
 
-full_alg = SVDAdjoint(; rrule_alg=(; alg=:tsvd))
+full_alg = SVDAdjoint(; rrule_alg=(; alg=:full, broadening=0))
 iter_alg = SVDAdjoint(; fwd_alg=(; alg=:iterative))
 
 @testset "Non-truncacted SVD" begin
@@ -43,20 +42,14 @@ end
     @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
 end
 
-# TODO: Add when Lorentzian broadening is implemented
-# @testset "Truncated SVD with χ=$χ and ε=$lorentz_broadening broadening" begin
-#     l_fullsvd, g_fullsvd = withgradient(
-#         A -> lossfun(A, FullSVD(; lorentz_broadening, R; trunc), r
-#     )
-#     l_oldsvd, g_oldsvd = withgradient(A -> lossfun(A, OldSVD(; lorentz_broadening), R; trunc), r)
-#     l_itersvd, g_itersvd = withgradient(
-#         A -> lossfun(A, IterSVD(; howmany=χ, lorentz_broadening), R; trunc), r
-#     )
+@testset "Truncated SVD with χ=$χ and ε=$ε broadening" for ε in broadenings
+    broadened_alg = @set full_alg.rrule_alg.broadening = ε
+    l_unbroadened, g_unbroadened = withgradient(A -> lossfun(A, full_alg, R, trunc), r)
+    l_broadened, g_broadened = withgradient(A -> lossfun(A, broadened_alg, R, trunc), r)
 
-#     @test l_oldsvd ≈ l_itersvd ≈ l_fullsvd 
-#     @test norm(g_fullsvd[1] - g_oldsvd[1]) / norm(g_fullsvd[1]) > rtol
-#     @test norm(g_fullsvd[1] - g_itersvd[1]) / norm(g_fullsvd[1]) < rtol
-# end
+    @test l_unbroadened ≈ l_broadened
+    @test 1e1 * norm(g_broadened[1]) * ε > norm(g_unbroadened[1] - g_broadened[1]) > ε
+end
 
 symm_m, symm_n = 18, 24
 symm_space = Z2Space(0 => symm_m, 1 => symm_n)
@@ -85,6 +78,19 @@ symm_R = randn(dtype, space(symm_r))
     )
     @test l_itersvd_fb ≈ l_fullsvd_tr
     @test g_fullsvd_tr[1] ≈ g_itersvd_fb[1] rtol = rtol
+end
+
+@testset "Truncated symmetric SVD with χ=$χ and ε=$ε broadening" for ε in broadenings
+    broadened_alg = @set full_alg.rrule_alg.broadening = ε
+    l_unbroadened, g_unbroadened = withgradient(
+        A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r
+    )
+    l_broadened, g_broadened = withgradient(
+        A -> lossfun(A, broadened_alg, symm_R, symm_trspace), symm_r
+    )
+
+    @test l_unbroadened ≈ l_broadened
+    @test 1e1 * norm(g_broadened[1]) * ε > norm(g_unbroadened[1] - g_broadened[1]) > ε
 end
 
 # TODO: Add when IterSVD is implemented for HalfInfiniteEnv

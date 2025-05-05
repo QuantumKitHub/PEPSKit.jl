@@ -25,21 +25,22 @@ Module containing default algorithm parameter values and arguments.
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
     - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
     - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
-    - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
+    - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
-    - `:tsvd`: Uses TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [TensorKit](https://github.com/Jutho/TensorKit.jl/blob/f9cddcf97f8d001888a26f4dce7408d5c6e2228f/ext/TensorKitChainRulesCoreExt/factorizations.jl#L3)
+    - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [`PEPSKit.FullSVDReverseRule`](@ref).
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+* `svd_rrule_broadening=$(Defaults.svd_rrule_broadening)` : Lorentzian broadening amplitude which smoothens the divergent term in the SVD adjoint in case of (pseudo) degenerate singular values
 
 ## Projectors
 
 * `projector_alg=:$(Defaults.projector_alg)` : Default variant of the CTMRG projector algorithm.
-    - `halfinfinite`: Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
-    - `fullinfinite`: Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:halfinfinite`: Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `:fullinfinite`: Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
 * `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
 
 ## Fixed-point gradient
@@ -48,10 +49,10 @@ Module containing default algorithm parameter values and arguments.
 * `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for computing the CTMRG fixed-point gradient.
 * `gradient_verbosity=$(Defaults.gradient_verbosity)` : Gradient output information verbosity.
 * `gradient_linsolver=:$(Defaults.gradient_linsolver)` : Default linear solver for the `LinSolver` gradient algorithm.
-    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+    - `:gmres` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:bicgstab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 * `gradient_eigsolver=:$(Defaults.gradient_eigsolver)` : Default eigensolver for the `EigSolver` gradient algorithm.
-    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+    - `:arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
 * `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
 * `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
@@ -68,11 +69,13 @@ Module containing default algorithm parameter values and arguments.
     - `:gradientdescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
     - `:conjugategradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
     - `:lbfgs` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+* `ls_maxiter=$(Defaults.ls_maxiter)` : Maximum number of iterations for the line search in each step of the optimization.
+* `ls_maxfg=$(Defaults.ls_maxfg)` : Maximum number of function evaluations for the line search in each step of the optimization.
 * `lbfgs_memory=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
 
 ## OhMyThreads scheduler
 
-- `scheduler=Ref{Scheduler}(...)` : Multi-threading scheduler which can be accessed via `set_scheduler!`.
+- `scheduler=Ref{Scheduler}(...)` : Multithreading scheduler which can be accessed via `set_scheduler!`.
 """
 module Defaults
 
@@ -94,7 +97,8 @@ const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
-const svd_rrule_alg = :tsvd # ∈ {:tsvd, :gmres, :bicgstab, :arnoldi}
+const svd_rrule_alg = :full # ∈ {:full, :gmres, :bicgstab, :arnoldi}
+const svd_rrule_broadening = 1e-13
 const krylovdim_factor = 1.4
 
 # Projectors
@@ -117,6 +121,8 @@ const optimizer_tol = 1e-4
 const optimizer_maxiter = 100
 const optimizer_verbosity = 3
 const optimizer_alg = :lbfgs # ∈ {:gradientdescent, :conjugategradient, :lbfgs}
+const ls_maxiter = 10
+const ls_maxfg = 20
 const lbfgs_memory = 20
 
 # OhMyThreads scheduler defaults
@@ -125,7 +131,7 @@ const scheduler = Ref{Scheduler}()
 """
     set_scheduler!([scheduler]; kwargs...)
 
-Set `OhMyThreads` multi-threading scheduler parameters.
+Set `OhMyThreads` multithreading scheduler parameters.
 
 The function either accepts a `scheduler` as an `OhMyThreads.Scheduler` or
 as a symbol where the corresponding parameters are specificed as keyword arguments.
@@ -139,7 +145,7 @@ or equivalently with
 set_scheduler!(:static; ntasks=4, chunking=true)
 ```
 For a detailed description of all schedulers and their keyword arguments consult the
-[`OhMyThreads` documentation](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#Schedulers).
+[OhMyThreads](https://juliafolds2.github.io/OhMyThreads.jl/stable/refs/api/#OhMyThreads.Schedulers.Scheduler) documentation.
 
 If no `scheduler` is passed and only kwargs are provided, the `DynamicScheduler`
 constructor is used with the provided kwargs.

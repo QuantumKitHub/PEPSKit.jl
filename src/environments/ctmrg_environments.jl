@@ -1,5 +1,5 @@
 """
-    struct CTMRGEnv{C,T}
+$(TYPEDEF)
 
 Corner transfer-matrix environment containing unit-cell arrays of corner and edge tensors.
 The last two indices of the arrays correspond to the row and column indices of the unit
@@ -20,12 +20,14 @@ Here `P` represents an effective local constituent tensor. This can either be a 
 rank-4 tensor, a pair of PEPS tensors, or a stack of PEPS-PEPO-PEPS tensors depending on the
 network being contracted.
 
-# Fields
-- `corners::Array{C,3}`: Array of corner tensors.
-- `edges::Array{T,3}`: Array of edge tensors.
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct CTMRGEnv{C,T}
+    "4 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
     corners::Array{C,3}
+    "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
     edges::Array{T,3}
 end
 
@@ -58,7 +60,7 @@ end
 
 """
     CTMRGEnv(
-        [f=randn, ComplexF64], Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
+        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
     ) where {A<:AbstractMatrix{<:SpaceLike}, B<:AbstractMatrix{<:ElementarySpaceLike}}
 
 Construct a CTMRG environment by specifying matrices of north and east virtual spaces of the
@@ -158,7 +160,8 @@ end
 
 """
     CTMRGEnv(
-        [f=randn, ComplexF64], D_north::P, D_east::P, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S]; unitcell::Tuple{Int,Int}=(1, 1),
+        [f=randn, T=ComplexF64], D_north::P, D_east::P, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S];
+        unitcell::Tuple{Int,Int}=(1, 1),
     ) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
 
 Construct a CTMRG environment by specifying the north and east virtual spaces of the
@@ -178,7 +181,7 @@ function CTMRGEnv(
     chi_south::S=chi_north,
     chi_west::S=chi_north;
     unitcell::Tuple{Int,Int}=(1, 1),
-) where {P<:ProductSpaceLike,S<:Union{Int,ElementarySpace}}
+) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
     return CTMRGEnv(
         randn,
         ComplexF64,
@@ -200,7 +203,7 @@ function CTMRGEnv(
     chi_south::S=chi_north,
     chi_west::S=chi_north;
     unitcell::Tuple{Int,Int}=(1, 1),
-) where {P<:ProductSpaceLike,S<:Union{Int,ElementarySpace}}
+) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
     return CTMRGEnv(
         f,
         T,
@@ -242,7 +245,7 @@ function CTMRGEnv(
     Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
         randn,
-        ComplexF64,
+        scalartype(network),
         Ds_north,
         Ds_east,
         _to_space.(chis_north),
@@ -283,7 +286,7 @@ end
 
 """
     CTMRGEnv(
-        peps::InfiniteSquareNetwork, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
+        [f=randn, T=ComplexF64,] network::InfiniteSquareNetwork, chi_north::S, [chi_east::S], [chi_south::S], [chi_west::S],
     ) where {S<:ElementarySpaceLike}
 
 Construct a CTMRG environment by specifying a corresponding

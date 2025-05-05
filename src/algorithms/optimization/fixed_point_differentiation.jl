@@ -8,6 +8,11 @@ const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.KrylovAlgorithm}
     :arnoldi => Arnoldi
 )
 
+"""
+    GradMode(; kwargs...)
+
+Keyword argument parser returning the appropriate `GradMode` algorithm struct.
+"""
 function GradMode(;
     alg=Defaults.gradient_alg,
     tol=Defaults.gradient_tol,
@@ -63,12 +68,19 @@ end
 iterscheme(::GradMode{F}) where {F} = F
 
 """
-    struct GeomSum <: GradMode{iterscheme}
-    GeomSum(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode for CTMRG using explicit evaluation of the geometric sum.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    GeomSum(; kwargs...)
+
+Construct the `GeomSum` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance for the difference of norms of two consecutive summands in the geometric sum.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient iterations.
@@ -90,12 +102,19 @@ GeomSum(; kwargs...) = GradMode(; alg=:geomsum, kwargs...)
 GRADIENT_MODE_SYMBOLS[:geomsum] = GeomSum
 
 """
-    struct ManualIter <: GradMode{iterscheme}
-    ManualIter(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode for CTMRG using manual iteration to solve the linear problem.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    ManualIter(; kwargs...)
+
+Construct the `ManualIter` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance for the norm difference of two consecutive `dx` contributions.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient iterations.
@@ -117,13 +136,20 @@ ManualIter(; kwargs...) = GradMode(; alg=:manualiter, kwargs...)
 GRADIENT_MODE_SYMBOLS[:manualiter] = ManualIter
 
 """
-    struct LinSolver <: GradMode{iterscheme}
-    LinSolver(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode wrapper around `KrylovKit.LinearSolver` for solving the gradient linear
 problem using iterative solvers.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    LinSolver(; kwargs...)
+
+Construct the `LinSolver` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the linear solver.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of solver iterations.
@@ -132,8 +158,8 @@ problem using iterative solvers.
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
     - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 * `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_linsolver)` : Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
-    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+    - `:gmres` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:bicgstab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 """
 struct LinSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.LinearSolver
@@ -143,13 +169,20 @@ LinSolver(; kwargs...) = GradMode(; alg=:linsolver, kwargs...)
 GRADIENT_MODE_SYMBOLS[:linsolver] = LinSolver
 
 """
-    struct EigSolver <: GradMode{iterscheme}
-    EigSolver(; kwargs...)
+$(TYPEDEF)
 
 Gradient mode wrapper around `KrylovKit.KrylovAlgorithm` for solving the gradient linear
 problem as an eigenvalue problem.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    EigSolver(; kwargs...)
+
+Construct the `EigSolver` algorithm struct based on the following keyword arguments:
 
 * `tol::Real=$(Defaults.gradient_tol)` : Convergence tolerance of the eigen solver.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of solver iterations.
@@ -158,7 +191,7 @@ problem as an eigenvalue problem.
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
     - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 * `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)` : Eigen solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
-    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+    - `:arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
 """
 struct EigSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.KrylovAlgorithm
@@ -263,7 +296,6 @@ function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
     return SVDAdjoint(;
         fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
         rrule_alg=alg.rrule_alg,
-        broadening=alg.broadening,
     )
 end
 function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F<:IterSVD}
@@ -272,14 +304,13 @@ function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F<:IterSVD}
     return SVDAdjoint(;
         fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
         rrule_alg=alg.rrule_alg,
-        broadening=alg.broadening,
     )
 end
 
 @doc """
     fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y0, alg)
 
-Compute the gradient of the cost function for CTMRG by solving the following equation:
+Compute the gradient of the CTMRG fixed point by solving the following equation:
 
 dx = ∑ₙ (∂f∂x)ⁿ ∂f∂A dA = (1 - ∂f∂x)⁻¹ ∂f∂A dA
 

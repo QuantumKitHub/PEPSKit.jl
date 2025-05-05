@@ -55,6 +55,39 @@ function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
 
+# not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
+# ie type piracy
+mpotensor(top::PEPSTensor) = mpotensor((top, top))
+function mpotensor((top, bot)::PEPSSandwich)
+    @assert virtualspace(top, NORTH) == dual(virtualspace(top, SOUTH)) &&
+        virtualspace(bot, NORTH) == dual(virtualspace(bot, SOUTH)) &&
+        virtualspace(top, EAST) == dual(virtualspace(top, WEST)) &&
+        virtualspace(bot, EAST) == dual(virtualspace(bot, WEST)) &&
+        isdual(virtualspace(top, NORTH)) &&
+        isdual(virtualspace(bot, NORTH)) &&
+        isdual(virtualspace(top, EAST)) &&
+        isdual(virtualspace(bot, EAST)) "Method not yet implemented for given virtual spaces"
+
+    F_west = isomorphism(
+        storagetype(top),
+        fuse(virtualspace(top, WEST), virtualspace(bot, WEST)'),
+        virtualspace(top, WEST) ⊗ virtualspace(bot, WEST)',
+    )
+    F_south = isomorphism(
+        storagetype(top),
+        fuse(virtualspace(top, SOUTH), virtualspace(bot, SOUTH)'),
+        virtualspace(top, SOUTH) ⊗ virtualspace(bot, SOUTH)',
+    )
+    @tensor O[west south; north east] :=
+        top[phys; top_north top_east top_south top_west] *
+        conj(bot[phys; bot_north bot_east bot_south bot_west]) *
+        twist(F_west, 3)[west; top_west bot_west] *
+        twist(F_south, 3)[south; top_south bot_south] *
+        conj(F_west[east; top_east bot_east]) *
+        conj(F_south[north; top_north bot_north])
+    return O
+end
+
 ## PEPO
 
 const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Vararg{P,N}}

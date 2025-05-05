@@ -22,7 +22,7 @@ E_ref = -0.6602310934799577
     env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths
-    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
+    peps, env, E, = fixedpoint(H, peps₀, env₀; optimizer_alg=(; tol=gradtol, maxiter=25))
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ E_ref atol = 1e-2
@@ -38,7 +38,7 @@ end
     env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths
-    peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
+    peps, env, E, = fixedpoint(H, peps₀, env₀; optimizer_alg=(; tol=gradtol, maxiter=25))
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ 2 * E_ref atol = 1e-2
@@ -59,10 +59,11 @@ end
     for ind in CartesianIndices(wpeps.vertices)
         wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
     end
-    # Heisenberg model Hamiltonian (already only includes nearest neighbor terms)
+    # Heisenberg model Hamiltonian
     ham = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx=1.0, Jy=1.0, Jz=1.0)
-    # convert to real tensors
-    ham = LocalOperator(ham.lattice, Tuple(ind => real(op) for (ind, op) in ham.terms)...)
+    # assert imaginary part is zero
+    @assert length(imag(ham).terms) == 0
+    ham = real(ham)
 
     # simple update
     dts = [1e-2, 1e-3, 1e-3, 1e-4]
@@ -91,8 +92,8 @@ end
         ham,
         peps,
         env;
-        tol=gradtol,
-        boundary_alg=(; maxiter=150, svd_alg=(; rrule_alg=(; alg=:gmres, tol=1e-5))),
+        optimizer_alg=(; tol=gradtol, maxiter=25),
+        boundary_alg=(; maxiter=150, svd_alg=(; rrule_alg=(; alg=:full, tol=1e-5))),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)

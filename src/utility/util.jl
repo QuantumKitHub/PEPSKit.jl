@@ -28,7 +28,7 @@ end
 
 # iterator over each coordinates
 """
-    eachcoordinate(x, dirs=1:4)
+    eachcoordinate(x, [dirs=1:4])
 
 Enumerate all (dir, row, col) pairs.
 """
@@ -45,7 +45,7 @@ function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
     return dst
 end
 
-_safe_pow(a::Real, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
+_safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
     sdiag_pow(s, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
@@ -89,18 +89,34 @@ function ChainRulesCore.rrule(
 end
 
 """
-    absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+    absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorMap)
 
-Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
+Given `tsvd` result `U`, `S` and `V`, absorb singular values `S` into `U` and `V` by:
 ```
-    u -> u * sqrt(s), vh -> sqrt(s) * vh
+    U -> U * sqrt(S), V -> sqrt(S) * V
 ```
 """
-function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-    @assert !isdual(space(s, 1))
-    sqrt_s = sdiag_pow(s, 0.5)
-    return u * sqrt_s, sqrt_s * vh
+function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorMap)
+    @assert !isdual(space(S, 1))
+    sqrt_S = sdiag_pow(S, 0.5)
+    return U * sqrt_S, sqrt_S * V
 end
+
+"""
+    twistdual(t::AbstractTensorMap, i)
+    twistdual!(t::AbstractTensorMap, i)
+
+Twist the i-th leg of a tensor `t` if it represents a dual space.
+"""
+function twistdual!(t::AbstractTensorMap, i::Int)
+    isdual(space(t, i)) || return t
+    return twist!(t, i)
+end
+function twistdual!(t::AbstractTensorMap, is)
+    is′ = filter(i -> isdual(space(t, i)), is)
+    return twist!(t, is′)
+end
+twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
 function is_degenerate_spectrum(
@@ -186,12 +202,13 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
     return t, _setindex_pullback
 end
 
+# TODO: link to Zygote.showgrad once they update documenter.jl
 """
     @showtypeofgrad(x)
 
 Macro utility to show to type of the gradient that is about to accumulate for `x`.
 
-See also [`Zygote.@showgrad`](@ref).
+See also `Zygote.@showgrad`.
 """
 macro showtypeofgrad(x)
     return :(
