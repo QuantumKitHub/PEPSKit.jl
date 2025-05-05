@@ -245,7 +245,7 @@ end
 function ChainRulesCore.rrule(
     ::Type{InfiniteSquareNetwork}, mid::InfinitePEPO{P}
 ) where {P<:PEPOTensor}
-    network = InfiniteSquareNetwork(top, mid, bot)
+    network = InfiniteSquareNetwork(mid)
 
     function InfiniteSquareNetwork_pullback(Δnetwork_)
         Δnetwork = unthunk(Δnetwork_)
