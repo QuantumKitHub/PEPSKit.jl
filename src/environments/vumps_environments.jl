@@ -5,9 +5,9 @@ using MPSKit: InfiniteEnvironments
 
 function MPSKit.issamespace(
     env::InfiniteEnvironments,
-    above::InfiniteMPS,
-    operator::InfiniteTransferMatrix,
     below::InfiniteMPS,
+    operator::InfiniteTransferMatrix,
+    above::InfiniteMPS,
 )
     L = MPSKit.check_length(above, operator, below)
     for i in 1:L
