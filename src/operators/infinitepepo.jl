@@ -187,11 +187,11 @@ function _dag(O::PEPOTensor)
 end
 
 """
-    dagger(O::InfinitePEPO)
+    adjoint(O::InfinitePEPO)
 
-Create the dagger of a PEPOTensor such that `InfinitePEPO(dagger(O))` is the adjoint of `InfinitePEPO(O)` with respect to the physical action of the PEPO on a PEPS.
+Create the adjoint of an InfinitePEPO.
 """
-function dagger(O::InfinitePEPO)
+function TensorKit.adjoint(O::InfinitePEPO)
     return InfinitePEPO(_dag.(unitcell(O)))
 end
 
@@ -238,19 +238,6 @@ function ChainRulesCore.rrule(
         Δbot = InfinitePEPS(map(bra, unitcell(Δnetwork)))
         Δmid = InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork))))
         return NoTangent(), Δtop, Δmid, Δbot
-    end
-    return network, InfiniteSquareNetwork_pullback
-end
-
-function ChainRulesCore.rrule(
-    ::Type{InfiniteSquareNetwork}, mid::InfinitePEPO{P}
-) where {P<:PEPOTensor}
-    network = InfiniteSquareNetwork(mid)
-
-    function InfiniteSquareNetwork_pullback(Δnetwork_)
-        Δnetwork = unthunk(Δnetwork_)
-        Δmid = InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork))))
-        return NoTangent(), Δmid
     end
     return network, InfiniteSquareNetwork_pullback
 end

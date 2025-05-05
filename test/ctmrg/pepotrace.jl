@@ -85,14 +85,14 @@ end
 (Nr, Nc) = (1, 1)
 Oinf = InfinitePEPO(O; unitcell=(Nr, Nc, 1))
 O_stack = fill(O, Nr, Nc, 2)
-O_stack[:, :, 2] .= unitcell(PEPSKit.dagger(Oinf))
+O_stack[:, :, 2] .= unitcell(adjoint(Oinf))
 OOdag = InfinitePEPO(O_stack)
 
 network_O = InfiniteSquareNetwork(InfinitePEPS(ψ), OOdag, InfinitePEPS(ψ))
 network_fused_MO = InfiniteSquareNetwork(InfinitePEPS(Mψ), InfinitePEPS(Oψ))
 network_fused_OO = InfinitePEPS(Oψ)
 
-@testset "PEPO layers CTMRG contraction with dagger using $alg with $projector_alg" for (
+@testset "PEPO layers CTMRG contraction with its adjoint using $alg with $projector_alg" for (
     alg, projector_alg
 ) in Iterators.product(
     ctm_styles, projector_algs
