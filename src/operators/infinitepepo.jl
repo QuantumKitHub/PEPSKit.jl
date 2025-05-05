@@ -181,7 +181,6 @@ end
 Calculate the conjugate of an operator O, while permuting the physical indices.
 Flips and twists are included to ensure the correct arrow convention of a PEPOTensor.
 """
-
 function _dag(O::PEPOTensor)
     @tensor O_conj[-1 -2; -3 -4 -5 -6] := conj(O[-2 -1; -3 -4 -5 -6])
     return twist(flip(O_conj, [3 4 5 6]), [3 4])
