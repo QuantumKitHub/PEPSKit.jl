@@ -2,6 +2,10 @@
     struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
 
 Represents an infinite partition function on a 2D square lattice.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
     A::Matrix{T}
@@ -38,7 +42,7 @@ end
 
 """
     InfinitePartitionFunction(
-        f=randn, T=ComplexF64, Pspaces::A, Nspaces::A, [Espaces::A]
+        [f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]
     ) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
 
 Create an `InfinitePartitionFunction` by specifying the physical, north virtual and east virtual spaces
@@ -93,7 +97,9 @@ function InfinitePartitionFunction(
 end
 
 """
-    InfinitePartitionFunction(f=randn, T=ComplexF64, Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePartitionFunction(
+        [f=randn, T=ComplexF64,] Pspace::S, Nspace::S, [Espace::S]; unitcell=(1,1)
+    ) where {S<:ElementarySpaceLike}
 
 Create an InfinitePartitionFunction by specifying its physical, north and east spaces and unit cell.
 Spaces can be specified either via `Int` or via `ElementarySpace`.

@@ -1,22 +1,22 @@
 # Hamiltonian consisting of local terms
 # -------------------------------------
 """
-    struct LocalOperator{T<:Tuple,S}
+$(TYPEDEF)
 
 A sum of local operators acting on a lattice. The lattice is stored as a matrix of vector spaces,
 and the terms are stored as a tuple of pairs of indices and operators.
 
-# Fields
+## Fields
 
 - `lattice::Matrix{S}`: The lattice on which the operator acts.
 - `terms::T`: The terms of the operator, stored as a tuple of pairs of indices and operators.
 
-# Constructors
+## Constructors
 
     LocalOperator(lattice::Matrix{S}, terms::Pair...)
     LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S}
 
-# Examples
+## Examples
 
 ```julia
 lattice = fill(ℂ^2, 1, 1) # single-site unitcell
@@ -96,6 +96,15 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
     return LocalOperator(lattice, terms...)
 end
 
+"""
+    physicalspace(O::LocalOperator)
+
+Return lattice of physical spaces on which the `LocalOperator` is defined.
+"""
+function physicalspace(O::LocalOperator)
+    return O.lattice
+end
+
 # Real and imaginary part
 # -----------------------
 function Base.real(O::LocalOperator)
@@ -128,9 +137,7 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # ----------------------
 
 """
-    _mirror_antidiag_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after reflection about the anti-diagonal line.
 """
@@ -142,9 +149,7 @@ function _mirror_antidiag_site(
 end
 
 """
-    _rotr90_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after clockwise (right) rotation by 90 degrees.
 """
@@ -156,9 +161,7 @@ function _rotr90_site(
 end
 
 """
-    _rotl90_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after counter-clockwise (left) rotation by 90 degrees.
 """
@@ -170,9 +173,7 @@ function _rotl90_site(
 end
 
 """
-    _rot180_site(
-        site::S, (Nrow, Ncol)::NTuple{2,Int}
-    ) where {S<:Union{CartesianIndex{2},NTuple{2,Int}}}
+$(SIGNATURES)
 
 Get the position of `site` after rotation by 180 degrees.
 """
@@ -189,36 +190,38 @@ end
 Mirror a `LocalOperator` across the anti-diagonal axis of its lattice.
 """
 function mirror_antidiag(H::LocalOperator)
-    lattice2 = mirror_antidiag(H.lattice)
+    lattice2 = mirror_antidiag(physicalspace(H))
     terms2 = (
-        (Tuple(_mirror_antidiag_site(site, size(H.lattice)) for site in sites) => op) for
-        (sites, op) in H.terms
+        (
+            Tuple(_mirror_antidiag_site(site, size(physicalspace(H))) for site in sites) =>
+                op
+        ) for (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rotr90(H::LocalOperator)
-    lattice2 = rotr90(H.lattice)
+    lattice2 = rotr90(physicalspace(H))
     terms2 = (
-        (Tuple(_rotr90_site(site, size(H.lattice)) for site in sites) => op) for
+        (Tuple(_rotr90_site(site, size(physicalspace(H))) for site in sites) => op) for
         (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rotl90(H::LocalOperator)
-    lattice2 = rotl90(H.lattice)
+    lattice2 = rotl90(physicalspace(H))
     terms2 = (
-        (Tuple(_rotl90_site(site, size(H.lattice)) for site in sites) => op) for
+        (Tuple(_rotl90_site(site, size(physicalspace(H))) for site in sites) => op) for
         (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rot180(H::LocalOperator)
-    lattice2 = rot180(H.lattice)
+    lattice2 = rot180(physicalspace(H))
     terms2 = (
-        (Tuple(_rot180_site(site, size(H.lattice)) for site in sites) => op) for
+        (Tuple(_rot180_site(site, size(physicalspace(H))) for site in sites) => op) for
         (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
@@ -250,6 +253,8 @@ TensorKit.sectortype(::Type{<:LocalOperator{T,S}}) where {T,S} = sectortype(S)
 end
 
 """
+$(SIGNATURES)
+
 Fuse identities on auxiliary physical spaces into a given operator.
 """
 function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N}
@@ -262,13 +267,13 @@ function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N
 end
 
 """
-    MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector}) where {S}
+    add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
 
 Change the spaces of a `LocalOperator` by fusing in an auxiliary charge into the domain of
 the operator on every site, according to a given matrix of 'auxiliary' physical charges.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
-    size(H.lattice) == size(charges) ||
+    size(physicalspace(H)) == size(charges) ||
         throw(ArgumentError("Incompatible lattice and auxiliary charge sizes"))
     sectortype(H) === eltype(charges) ||
         throw(SectorMismatch("Incompatible lattice and auxiliary charge sizes"))
@@ -279,7 +284,7 @@ function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:
     Paux = PeriodicArray(map(c -> Vect[typeof(c)](c => 1)', charges))
 
     # new physical spaces
-    Pspaces = map(fuse, H.lattice, Paux)
+    Pspaces = map(fuse, physicalspace(H), Paux)
 
     new_terms = map(H.terms) do (sites, op)
         Paux_slice = map(Base.Fix1(getindex, Paux), sites)

@@ -2,6 +2,10 @@
     struct InfinitePEPO{T<:PEPOTensor}
 
 Represents an infinite projected entangled-pair operator (PEPO) on a 3D cubic lattice.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct InfinitePEPO{T<:PEPOTensor}
     A::Array{T,3}
@@ -39,7 +43,7 @@ function InfinitePEPO(A::AbstractArray{T,3}) where {T<:PEPOTensor}
 end
 
 """
-    InfinitePEPO(f=randn, T=ComplexF64, Pspaces, Nspaces, Espaces)
+    InfinitePEPO([f=randn, T=ComplexF64,] Pspaces, Nspaces, Espaces)
 
 Allow users to pass in arrays of spaces.
 """
@@ -79,16 +83,16 @@ function InfinitePEPO(
 end
 
 """
-    InfinitePEPO(A; unitcell=(1, 1, 1))
+    InfinitePEPO(A::PEPOTensor; unitcell=(1, 1, 1))
 
-Create an InfinitePEPO by specifying a tensor and unit cell.
+Create an InfinitePEPO by specifying a tensor which is repeated across the unit cell.
 """
 function InfinitePEPO(A::T; unitcell::Tuple{Int,Int,Int}=(1, 1, 1)) where {T<:PEPOTensor}
     return InfinitePEPO(fill(A, unitcell))
 end
 
 """
-    InfinitePEPO(f=randn, T=ComplexF64, Pspace, Nspace, [Espace]; unitcell=(1,1,1))
+    InfinitePEPO([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, [Espace::S]; unitcell=(1,1,1)) where {S<:ElementarySpace}
 
 Create an InfinitePEPO by specifying its spaces and unit cell.
 """

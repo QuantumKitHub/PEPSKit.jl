@@ -11,6 +11,7 @@ import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, phy
 using MPSKitModels
 using FiniteDifferences
 using OhMyThreads: tmap
+using DocStringExtensions
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
@@ -74,7 +75,7 @@ export set_scheduler!
 export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
-export LocalOperator
+export LocalOperator, physicalspace
 export expectation_value, cost_function, product_peps, correlation_length, network_value
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
@@ -94,7 +95,8 @@ export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!
 export showtypeofgrad
 export InfiniteSquare, vertices, nearest_neighbours, next_nearest_neighbours
-export transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ, j1_j2, bose_hubbard_model
+export transverse_field_ising,
+    heisenberg_XYZ, heisenberg_XXZ, j1_j2_model, bose_hubbard_model
 export pwave_superconductor, hubbard_model, tj_model
 
 end # module

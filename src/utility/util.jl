@@ -28,7 +28,7 @@ end
 
 # iterator over each coordinates
 """
-    eachcoordinate(x, dirs=1:4)
+    eachcoordinate(x, [dirs=1:4])
 
 Enumerate all (dir, row, col) pairs.
 """
@@ -89,17 +89,17 @@ function ChainRulesCore.rrule(
 end
 
 """
-    absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+    absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorMap)
 
-Given `tsvd` result `u`, `s` and `vh`, absorb singular values `s` into `u` and `vh` by:
+Given `tsvd` result `U`, `S` and `V`, absorb singular values `S` into `U` and `V` by:
 ```
-    u -> u * sqrt(s), vh -> sqrt(s) * vh
+    U -> U * sqrt(S), V -> sqrt(S) * V
 ```
 """
-function absorb_s(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-    @assert !isdual(space(s, 1))
-    sqrt_s = sdiag_pow(s, 0.5)
-    return u * sqrt_s, sqrt_s * vh
+function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorMap)
+    @assert !isdual(space(S, 1))
+    sqrt_S = sdiag_pow(S, 0.5)
+    return U * sqrt_S, sqrt_S * V
 end
 
 """
@@ -202,12 +202,13 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
     return t, _setindex_pullback
 end
 
+# TODO: link to Zygote.showgrad once they update documenter.jl
 """
     @showtypeofgrad(x)
 
 Macro utility to show to type of the gradient that is about to accumulate for `x`.
 
-See also [`Zygote.@showgrad`](@ref).
+See also `Zygote.@showgrad`.
 """
 macro showtypeofgrad(x)
     return :(

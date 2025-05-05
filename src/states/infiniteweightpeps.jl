@@ -10,8 +10,15 @@ const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
 """
     struct SUWeight{E<:PEPSWeight}
 
-Schmidt bond weights used in simple/cluster update.
-Weight elements are always real.
+Schmidt bond weights used in simple/cluster update. Weight elements are always real.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
 """
 struct SUWeight{E<:PEPSWeight}
     data::Array{E,3}
@@ -65,6 +72,16 @@ end
 
 Represents an infinite projected entangled-pair state on a 2D square lattice
 consisting of vertex tensors and bond weights.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    InfiniteWeightPEPS(vertices::Matrix{T}, weight_mats::Matrix{E}...) where {T<:PEPSTensor,E<:PEPSWeight}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspaces::M, Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 """
 struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
     vertices::Matrix{T}
@@ -92,9 +109,7 @@ struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
 end
 
 """
-    InfiniteWeightPEPS(
-        vertices::Matrix{T}, weight_mats::Matrix{E}...
-    ) where {T<:PEPSTensor,E<:PEPSWeight}
+    InfiniteWeightPEPS(vertices::Matrix{T}, weight_mats::Matrix{E}...) where {T<:PEPSTensor,E<:PEPSWeight}
 
 Create an InfiniteWeightPEPS from matrices of vertex tensors,
 and separate matrices of weights on each type of bond at all locations in the unit cell.
@@ -106,9 +121,7 @@ function InfiniteWeightPEPS(
 end
 
 """
-    InfiniteWeightPEPS(
-        f=randn, T=ComplexF64, Pspaces::M, Nspaces::M, [Espaces::M]
-    ) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspaces::M, Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
 
 Create an InfiniteWeightPEPS by specifying the physical, north virtual and east virtual spaces
 of the PEPS vertex tensor at each site in the unit cell as a matrix.
@@ -133,14 +146,15 @@ function InfiniteWeightPEPS(
 end
 
 """
-    InfiniteWeightPEPS(
-        f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-    ) where {S<:ElementarySpace}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
 Create an InfiniteWeightPEPS by specifying its physical, north and east spaces (as `ElementarySpace`s) and unit cell size.
 Use `T` to specify the element type of the vertex tensors. 
 Bond weights are initialized as identity matrices of element type `Float64`. 
 """
+function InfiniteWeightPEPS(Pspaces::S, Nspaces::S, Espaces::S) where {S<:ElementarySpace}
+    return InfiniteWeightPEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
 function InfiniteWeightPEPS(
     f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:ElementarySpace}
@@ -198,12 +212,10 @@ function _absorb_weights(
 end
 
 """
-    absorb_weight(t::PEPSTensor, row::Int, col::Int, ax::Int, weights::SUWeight;
-                  sqrtwt::Bool=false, invwt::Bool=false)
+    absorb_weight(t::PEPSTensor, row::Int, col::Int, ax::Int, weights::SUWeight; sqrtwt::Bool=false, invwt::Bool=false)
 
-Absorb or remove environment weight on an axis of vertex tensor `t` 
-known to be located at position (`row`, `col`) in the unit cell. 
-Weights around the tensor at `(row, col)` are
+Absorb or remove environment weight on an axis of vertex tensor `t`  known to be located at
+position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, col)` are
 ```
                     ↓
                 [2,r,c]
@@ -214,19 +226,21 @@ Weights around the tensor at `(row, col)` are
                     ↓
 ```
 
-# Arguments
-- `t::T`: The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
-- `row::Int`: The row index specifying the position in the tensor network.
-- `col::Int`: The column index specifying the position in the tensor network.
-- `ax::Int`: The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
-- `weights::SUWeight`: The weight object to absorb into the tensor.
-- `sqrtwt::Bool=false` (optional): If `true`, the square root of the weight is absorbed.
-- `invwt::Bool=false` (optional): If `true`, the inverse of the weight is absorbed.
+## Arguments
 
-# Details
-The optional kwargs `sqrtwt` and `invwt` allow taking the square root or the inverse of the weight before absorption. 
+- `t::T` : The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
+- `row::Int` : The row index specifying the position in the tensor network.
+- `col::Int` : The column index specifying the position in the tensor network.
+- `ax::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
+- `weights::SUWeight` : The weight object to absorb into the tensor.
 
-# Examples
+## Keyword arguments 
+
+- `sqrtwt::Bool=false` : If `true`, the square root of the weight is absorbed.
+- `invwt::Bool=false` : If `true`, the inverse of the weight is absorbed.
+
+## Examples
+
 ```julia
 # Absorb the weight into the north axis of tensor at position (2, 3)
 absorb_weight(t, 2, 3, 1, weights)
