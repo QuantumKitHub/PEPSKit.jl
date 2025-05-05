@@ -85,7 +85,7 @@ end
 (Nr, Nc) = (1, 1)
 Oinf = InfinitePEPO(O; unitcell=(Nr, Nc, 1))
 O_stack = fill(O, Nr, Nc, 2)
-O_stack[:, :, 2] .= unitcell(dagger(Oinf))
+O_stack[:, :, 2] .= unitcell(PEPSKit.dagger(Oinf))
 OOdag = InfinitePEPO(O_stack)
 
 network_O = InfiniteSquareNetwork(InfinitePEPS(ψ), OOdag, InfinitePEPS(ψ))
