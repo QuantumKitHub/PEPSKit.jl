@@ -264,8 +264,8 @@ end
 """
     MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector}) where {S}
 
-Change the spaces of a `LocalOperator` by fusing in an auxiliary charge on every site,
-according to a given matrix of 'auxiliary' physical charges.
+Change the spaces of a `LocalOperator` by fusing in an auxiliary charge into the domain of
+the operator on every site, according to a given matrix of 'auxiliary' physical charges.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
     size(H.lattice) == size(charges) ||
@@ -273,8 +273,10 @@ function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:
     sectortype(H) === eltype(charges) ||
         throw(SectorMismatch("Incompatible lattice and auxiliary charge sizes"))
 
-    # make indexing periodic, for convenience
-    Paux = PeriodicArray(map(c -> Vect[typeof(c)](c => 1), charges))
+    # auxiliary spaces will be fused into codomain, so need to dualize the space to fuse
+    # the charge into the domain as desired
+    # also, make indexing periodic for convenience
+    Paux = PeriodicArray(map(c -> Vect[typeof(c)](c => 1)', charges))
 
     # new physical spaces
     Pspaces = map(fuse, H.lattice, Paux)
