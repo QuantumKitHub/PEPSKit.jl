@@ -79,7 +79,7 @@ end
             include("examples/pwave.jl")
         end
         @time @safetestset "U1-symmetric Bose-Hubbard model" begin
-            include("bose_hubbard.jl")
+            include("examples/bose_hubbard.jl")
         end
     end
 end

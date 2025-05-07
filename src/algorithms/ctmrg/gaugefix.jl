@@ -1,5 +1,5 @@
 """
-    gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
+$(SIGNATURES)
 
 Fix the gauge of `envfinal` based on the previous environment `envprev`.
 This assumes that the `envfinal` is the result of one CTMRG iteration on `envprev`.
@@ -139,7 +139,13 @@ function fix_relative_phases(
     return U_fixed, V_fixed
 end
 
-# Fix global phases of corners and edges via dot product (to ensure compatibility with symm. tensors)
+"""
+$(SIGNATURES)
+
+Fix global multiplicative phase of the environment tensors. To that end, the dot products
+between all corners and all edges are computed to obtain the global phase which is then
+divided out.
+"""
 function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
     cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
         φ = dot(Cprev, Cfix)
@@ -156,7 +162,7 @@ end
     calc_elementwise_convergence(envfinal, envfix; atol=1e-6)
 
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
-CTMRG environments are below some tolerance.
+CTMRG environments are below `atol` and return the maximal difference.
 """
 function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6)
     ΔC = envfinal.corners .- envfix.corners

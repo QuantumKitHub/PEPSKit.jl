@@ -8,12 +8,17 @@ function get_gate(dt::Float64, H::LocalOperator)
         numin(op) == 2 && norm(Tuple(terms[2] - terms[1])) == 1.0 for (terms, op) in H.terms
     ]) "Only nearest-neighbour terms allowed"
     return LocalOperator(
-        H.lattice, Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...
+        physicalspace(H), Tuple(sites => exp(-dt * op) for (sites, op) in H.terms)...
     )
 end
 
 """
-    is_equivalent(bond1::NTuple{2,CartesianIndex{2}}, bond2::NTuple{2,CartesianIndex{2}}, (Nrow, Ncol)::NTuple{2,Int})
+    is_equivalent(
+        bond1::NTuple{2,CartesianIndex{2}},
+        bond2::NTuple{2,CartesianIndex{2}},
+        (Nrow, Ncol)::NTuple{2,Int},
+    )
+
 
 Check if two 2-site bonds are related by a (periodic) lattice translation.
 """
@@ -51,6 +56,8 @@ function get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
 end
 
 """
+$(SIGNATURES)
+
 Use QR decomposition on two tensors connected by a bond
 to get the reduced tensors
 ```
@@ -81,6 +88,8 @@ function _qr_bond(A::PEPSTensor, B::PEPSTensor)
 end
 
 """
+$(SIGNATURES)
+
 Reconstruct the tensors connected by a bond from their QR results
 obtained from `_qr_bond`
 ```
@@ -98,6 +107,8 @@ function _qr_bond_undo(X::PEPSOrth, a::AbstractTensorMap, b::AbstractTensorMap, 
 end
 
 """
+$(SIGNATURES)
+
 Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
     -1← a -← 3 -← b ← -4
