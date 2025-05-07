@@ -24,7 +24,7 @@ struct SUWeight{E<:PEPSWeight}
     data::Array{E,3}
 
     function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
-        eltype(data[1]) <: Real || error("Weight elements must be real numbers.")
+        scalartype(data) <: Real || error("Weight elements must be real numbers.")
         for wt in data
             isa(wt, DiagonalTensorMap) ||
                 error("Each weight matrix should be a DiagonalTensorMap")
@@ -63,10 +63,7 @@ Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
 ## (Approximate) equality
 function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
-    for (wt1, wt2) in zip(wts1, wts2)
-        !(wt1 == wt2) && return false
-    end
-    return true
+    return wts1.data == wts2.data
 end
 function Base.isapprox(wts1::SUWeight, wts2::SUWeight; kwargs...)
     for (wt1, wt2) in zip(wts1, wts2)
@@ -326,11 +323,7 @@ end
 
 ## (Approximate) equality (gauge freedom is not allowed)
 function Base.:(==)(peps1::InfiniteWeightPEPS, peps2::InfiniteWeightPEPS)
-    for (v1, v2) in zip(peps1.vertices, peps2.vertices)
-        !(v1 == v2) && return false
-    end
-    !(peps1.weights == peps2.weights) && return false
-    return true
+    return peps1.vertices == peps2.vertices && peps1.weights == peps2.weights
 end
 function Base.isapprox(peps1::InfiniteWeightPEPS, peps2::InfiniteWeightPEPS; kwargs...)
     for (v1, v2) in zip(peps1.vertices, peps2.vertices)
