@@ -286,7 +286,9 @@ function TensorKit._compute_svddata!(
     I = sectortype(f)
     dims = SectorDict{I,Int}()
 
-    generator = Base.Iterators.map(blocks(f)) do (c, b)
+    sectors = trunc isa NoTruncation ? blocksectors(f) : blocksectors(trunc.space)
+    generator = Base.Iterators.map(sectors) do c
+        b = block(f, c)
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
