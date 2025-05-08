@@ -121,7 +121,7 @@ Perform simple update with Hamiltonian `ham` containing up to nearest neighbor i
 """
 function _simpleupdate2site(
     peps::InfiniteWeightPEPS,
-    H::LocalOperator,
+    ham::LocalOperator,
     alg::SimpleUpdate;
     bipartite::Bool=false,
     check_interval::Int=500,
