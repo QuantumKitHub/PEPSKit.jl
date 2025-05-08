@@ -32,6 +32,9 @@ end
         @time @safetestset "PEPO" begin
             include("ctmrg/pepo.jl")
         end
+        @time @safetestset "PEPOTrace" begin
+            include("ctmrg/pepotrace.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
         @time @safetestset "CTMRG gradients" begin

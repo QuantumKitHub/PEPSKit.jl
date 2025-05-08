@@ -175,6 +175,30 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
     )
 end
 
+function InfiniteSquareNetwork(mid::InfinitePEPO)
+    return InfiniteSquareNetwork(map(tuple, eachslice(unitcell(mid); dims=3)...))
+end
+
+"""
+    _dag(O::PEPOTensor)
+
+Calculate the conjugate of an operator O, while permuting the physical indices.
+Flips and twists are included to ensure the correct arrow convention of a PEPOTensor.
+"""
+function _dag(O::PEPOTensor)
+    @tensor O_conj[-1 -2; -3 -4 -5 -6] := conj(O[-2 -1; -3 -4 -5 -6])
+    return twist(flip(O_conj, [3 4 5 6]), [3 4])
+end
+
+"""
+    adjoint(O::InfinitePEPO)
+
+Create the adjoint of an InfinitePEPO.
+"""
+function TensorKit.adjoint(O::InfinitePEPO)
+    return InfinitePEPO(_dag.(unitcell(O)))
+end
+
 ## Vector interface
 
 function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPO}
