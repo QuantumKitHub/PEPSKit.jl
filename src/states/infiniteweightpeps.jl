@@ -22,20 +22,21 @@ $(TYPEDFIELDS)
 """
 struct SUWeight{E<:PEPSWeight}
     data::Array{E,3}
+    SUWeight{E}(data::Array{E,3}) where {E} = new{E}(data)
+end
 
-    function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
-        scalartype(data) <: Real || error("Weight elements must be real numbers.")
-        for wt in data
-            isa(wt, DiagonalTensorMap) ||
-                error("Each weight matrix should be a DiagonalTensorMap")
-            domain(wt, 1) == codomain(wt, 1) ||
-                error("Domain and codomain of each weight matrix must be the same.")
-            !isdual(codomain(wt, 1)) ||
-                error("Domain and codomain of each weight matrix cannot be a dual space.")
-            all(wt.data .>= 0) || error("Weight elements must be non-negative.")
-        end
-        return new{E}(data)
+function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
+    scalartype(data) <: Real || error("Weight elements must be real numbers.")
+    for wt in data
+        isa(wt, DiagonalTensorMap) ||
+            error("Each weight matrix should be a DiagonalTensorMap")
+        domain(wt, 1) == codomain(wt, 1) ||
+            error("Domain and codomain of each weight matrix must be the same.")
+        !isdual(codomain(wt, 1)) ||
+            error("Domain and codomain of each weight matrix cannot be a dual space.")
+        all(wt.data .>= 0) || error("Weight elements must be non-negative.")
     end
+    return SUWeight{E}(data)
 end
 
 function SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
