@@ -10,24 +10,33 @@ const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
 """
     struct SUWeight{E<:PEPSWeight}
 
-Schmidt weights on nearest neighbor bonds of an `InfiniteWeightPEPS`.
+Schmidt bond weights used in simple/cluster update. Weight elements are always real.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
 """
 struct SUWeight{E<:PEPSWeight}
     data::Array{E,3}
+    SUWeight{E}(data::Array{E,3}) where {E} = new{E}(data)
+end
 
-    function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
-        eltype(data[1]) <: Real || error("Weight elements must be real numbers.")
-        for wt in data
-            isa(wt, DiagonalTensorMap) ||
-                error("Each weight matrix should be a DiagonalTensorMap")
-            domain(wt, 1) == codomain(wt, 1) ||
-                error("Domain and codomain of each weight matrix must be the same.")
-            !isdual(codomain(wt, 1)) ||
-                error("Domain and codomain of each weight matrix cannot be a dual space.")
-            all(wt.data .>= 0) || error("Weight elements must be non-negative.")
-        end
-        return new{E}(data)
+function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
+    scalartype(data) <: Real || error("Weight elements must be real numbers.")
+    for wt in data
+        isa(wt, DiagonalTensorMap) ||
+            error("Each weight matrix should be a DiagonalTensorMap")
+        domain(wt, 1) == codomain(wt, 1) ||
+            error("Domain and codomain of each weight matrix must be the same.")
+        !isdual(codomain(wt, 1)) ||
+            error("Domain and codomain of each weight matrix cannot be a dual space.")
+        all(wt.data .>= 0) || error("Weight elements must be non-negative.")
     end
+    return SUWeight{E}(data)
 end
 
 function SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
@@ -55,10 +64,7 @@ Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
 ## (Approximate) equality
 function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
-    for (wt1, wt2) in zip(wts1, wts2)
-        !(wt1 == wt2) && return false
-    end
-    return true
+    return wts1.data == wts2.data
 end
 function Base.isapprox(wts1::SUWeight, wts2::SUWeight; kwargs...)
     for (wt1, wt2) in zip(wts1, wts2)
@@ -87,21 +93,17 @@ end
     struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice
-consisting of vertex tensors and bond weights. 
-The vertex tensor, x-weight and y-weight at row `i`, column `j` 
-are defined as (the numbers show the axis order)
-```
-        2
-        ↓
-        yᵢⱼ
-        ↓
-        1
-        2
-        ↓
-    5←-Tᵢⱼ←-3  1←-xᵢⱼ←-2
-        ↓ ↘
-        4   1
-```
+consisting of vertex tensors and bond weights.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    InfiniteWeightPEPS(vertices::Matrix{T}, weight_mats::Matrix{E}...) where {T<:PEPSTensor,E<:PEPSWeight}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspaces::M, Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 """
 struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
     vertices::Matrix{T}
@@ -130,9 +132,7 @@ struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
 end
 
 """
-    InfiniteWeightPEPS(
-        vertices::Matrix{T}, weight_mats::Matrix{E}...
-    ) where {T<:PEPSTensor,E<:PEPSWeight}
+    InfiniteWeightPEPS(vertices::Matrix{T}, weight_mats::Matrix{E}...) where {T<:PEPSTensor,E<:PEPSWeight}
 
 Create an InfiniteWeightPEPS from matrices of vertex tensors,
 and separate matrices of weights on each type of bond at all locations in the unit cell.
@@ -144,9 +144,7 @@ function InfiniteWeightPEPS(
 end
 
 """
-    InfiniteWeightPEPS(
-        f=randn, T=ComplexF64, Pspaces::M, Nspaces::M, [Espaces::M]
-    ) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspaces::M, Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
 
 Create an InfiniteWeightPEPS by specifying the physical, north virtual and east virtual spaces
 of the PEPS vertex tensor at each site in the unit cell as a matrix.
@@ -174,14 +172,15 @@ function InfiniteWeightPEPS(
 end
 
 """
-    InfiniteWeightPEPS(
-        f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-    ) where {S<:ElementarySpace}
+    InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
 Create an InfiniteWeightPEPS by specifying its physical, north and east spaces (as `ElementarySpace`s) and unit cell size.
 Use `T` to specify the element type of the vertex tensors. 
 Bond weights are initialized as identity matrices of element type `Float64`. 
 """
+function InfiniteWeightPEPS(Pspaces::S, Nspaces::S, Espaces::S) where {S<:ElementarySpace}
+    return InfiniteWeightPEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
 function InfiniteWeightPEPS(
     f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
 ) where {S<:ElementarySpace}
@@ -239,12 +238,10 @@ function _absorb_weights(
 end
 
 """
-    absorb_weight(t::PEPSTensor, row::Int, col::Int, ax::Int, weights::SUWeight;
-                  sqrtwt::Bool=false, invwt::Bool=false)
+    absorb_weight(t::PEPSTensor, row::Int, col::Int, ax::Int, weights::SUWeight; sqrtwt::Bool=false, invwt::Bool=false)
 
-Absorb or remove environment weight on an axis of vertex tensor `t` 
-known to be located at position (`row`, `col`) in the unit cell. 
-Weights around the tensor at `(row, col)` are
+Absorb or remove environment weight on an axis of vertex tensor `t`  known to be located at
+position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, col)` are
 ```
                     ↓
                 [2,r,c]
@@ -255,19 +252,21 @@ Weights around the tensor at `(row, col)` are
                     ↓
 ```
 
-# Arguments
-- `t::T`: The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
-- `row::Int`: The row index specifying the position in the tensor network.
-- `col::Int`: The column index specifying the position in the tensor network.
-- `ax::Int`: The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
-- `weights::SUWeight`: The weight object to absorb into the tensor.
-- `sqrtwt::Bool=false` (optional): If `true`, the square root of the weight is absorbed.
-- `invwt::Bool=false` (optional): If `true`, the inverse of the weight is absorbed.
+## Arguments
 
-# Details
-The optional kwargs `sqrtwt` and `invwt` allow taking the square root or the inverse of the weight before absorption. 
+- `t::T` : The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
+- `row::Int` : The row index specifying the position in the tensor network.
+- `col::Int` : The column index specifying the position in the tensor network.
+- `ax::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
+- `weights::SUWeight` : The weight object to absorb into the tensor.
 
-# Examples
+## Keyword arguments 
+
+- `sqrtwt::Bool=false` : If `true`, the square root of the weight is absorbed.
+- `invwt::Bool=false` : If `true`, the inverse of the weight is absorbed.
+
+## Examples
+
 ```julia
 # Absorb the weight into the north axis of tensor at position (2, 3)
 absorb_weight(t, 2, 3, 1, weights)
@@ -325,11 +324,7 @@ end
 
 ## (Approximate) equality (gauge freedom is not allowed)
 function Base.:(==)(peps1::InfiniteWeightPEPS, peps2::InfiniteWeightPEPS)
-    for (v1, v2) in zip(peps1.vertices, peps2.vertices)
-        !(v1 == v2) && return false
-    end
-    !(peps1.weights == peps2.weights) && return false
-    return true
+    return peps1.vertices == peps2.vertices && peps1.weights == peps2.weights
 end
 function Base.isapprox(peps1::InfiniteWeightPEPS, peps2::InfiniteWeightPEPS; kwargs...)
     for (v1, v2) in zip(peps1.vertices, peps2.vertices)
@@ -461,9 +456,7 @@ function mirror_antidiag(wts::SUWeight)
     return SUWeight(weights2_x, weights2_y)
 end
 function Base.rotl90(wts::SUWeight)
-    wts_x = rotl90(wts[2, :, :])
-    Nc = size(wts_x, 2)
-    wts_x = wts_x[:, vcat(2:Nc, 1)]
+    wts_x = circshift(rotl90(wts[2, :, :]), (0, -1))
     for (i, wt) in enumerate(wts_x)
         wts_x[i] = DiagonalTensorMap(flip(permute(wt, ((2,), (1,))), (1, 2)))
     end
@@ -472,20 +465,15 @@ function Base.rotl90(wts::SUWeight)
 end
 function Base.rotr90(wts::SUWeight)
     wts_x = rotr90(wts[2, :, :])
-    wts_y = rotr90(wts[1, :, :])
-    Nr = size(wts_y, 1)
-    wts_y = wts_y[vcat(Nr, 1:(Nr - 1)), :]
+    wts_y = circshift(rotr90(wts[1, :, :]), (1, 0))
     for (i, wt) in enumerate(wts_y)
         wts_y[i] = DiagonalTensorMap(flip(permute(wt, ((2,), (1,))), (1, 2)))
     end
     return SUWeight(wts_x, wts_y)
 end
 function Base.rot180(wts::SUWeight)
-    wts_x = rot180(wts[1, :, :])
-    wts_y = rot180(wts[2, :, :])
-    Nr, Nc = size(wts_x)
-    wts_x = wts_x[:, vcat(2:Nc, 1)]
-    wts_y = wts_y[vcat(Nr, 1:(Nr - 1)), :]
+    wts_x = circshift(rot180(wts[1, :, :]), (0, -1))
+    wts_y = circshift(rot180(wts[2, :, :]), (1, 0))
     for (i, wt) in enumerate(wts_x)
         wts_x[i] = DiagonalTensorMap(flip(permute(wt, ((2,), (1,))), (1, 2)))
     end

@@ -11,7 +11,7 @@ using OptimKit
 
 # initialize states
 Random.seed!(91283219347)
-H = j1_j2(InfiniteSquare(); J2=0.25)
+H = j1_j2_model(InfiniteSquare(); J2=0.25)
 peps₀ = product_peps(2, χbond; noise_amp=1e-1)
 peps₀ = symmetrize!(peps₀, RotateReflect())
 env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)

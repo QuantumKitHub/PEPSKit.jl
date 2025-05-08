@@ -63,4 +63,6 @@ weights = SUWeight(weights)
 pepswt = InfiniteWeightPEPS(vertices, weights)
 
 test_rotation(weights)
-test_rotation(pepswt)
+@static if pkgversion(TensorKit) >= v"0.14.6"
+    test_rotation(pepswt)
+end

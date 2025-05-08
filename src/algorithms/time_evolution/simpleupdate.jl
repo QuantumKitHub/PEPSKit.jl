@@ -1,8 +1,12 @@
 """
-    struct SimpleUpdate
+$(TYPEDEF)
 
 Algorithm struct for simple update (SU) of infinite PEPS with bond weights.
 Each SU run is converged when the singular value difference becomes smaller than `tol`.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct SimpleUpdate
     dt::Float64
@@ -13,8 +17,7 @@ end
 # TODO: add kwarg constructor and SU Defaults
 
 """
-_su_bondx!(row::Int, col::Int, gate::AbstractTensorMap{T,S,2,2},
-           peps::InfiniteWeightPEPS, alg::SimpleUpdate) where {S<:ElementarySpace}
+$(SIGNATURES)
 
 Simple update of the x-bond `peps.weights[1,r,c]`.
 
@@ -118,7 +121,7 @@ Perform simple update with Hamiltonian `ham` containing up to nearest neighbor i
 """
 function _simpleupdate2site(
     peps::InfiniteWeightPEPS,
-    ham::LocalOperator,
+    H::LocalOperator,
     alg::SimpleUpdate;
     bipartite::Bool=false,
     check_interval::Int=500,

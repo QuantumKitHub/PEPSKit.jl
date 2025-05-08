@@ -65,6 +65,8 @@ function get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
 end
 
 """
+$(SIGNATURES)
+
 Use QR decomposition on two tensors connected by a bond
 to get the reduced tensors
 ```
@@ -95,6 +97,8 @@ function _qr_bond(A::PEPSTensor, B::PEPSTensor)
 end
 
 """
+$(SIGNATURES)
+
 Reconstruct the tensors connected by a bond from their QR results
 obtained from `_qr_bond`
 ```
@@ -112,6 +116,8 @@ function _qr_bond_undo(X::PEPSOrth, a::AbstractTensorMap, b::AbstractTensorMap, 
 end
 
 """
+$(SIGNATURES)
+
 Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
     -1← a -← 3 -← b ← -4

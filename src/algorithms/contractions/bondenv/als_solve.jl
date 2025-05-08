@@ -4,6 +4,8 @@ the fast full update article Physical Review B 92, 035142 (2015)
 =#
 
 """
+$(SIGNATURES)
+
 Construct the tensor
 ```
     ┌-----------------------------------┐
@@ -26,6 +28,8 @@ function _tensor_Ra(
 end
 
 """
+$(SIGNATURES)
+
 Construct the tensor
 ```
     ┌-----------------------------------┐
@@ -48,6 +52,8 @@ function _tensor_Sa(
 end
 
 """
+$(SIGNATURES)
+
 Construct the tensor
 ```
     ┌-----------------------------------┐
@@ -70,6 +76,8 @@ function _tensor_Rb(
 end
 
 """
+$(SIGNATURES)
+
 Construct the tensor
 ```
     ┌-----------------------------------┐
@@ -92,6 +100,8 @@ function _tensor_Sb(
 end
 
 """
+$(SIGNATURES)
+
 Calculate the inner product <a1,b1|a2,b2>
 ```
     ┌--------------------------------┐
@@ -114,6 +124,8 @@ function inner_prod(
 end
 
 """
+$(SIGNATURES)
+
 Calculate the fidelity between two evolution steps
 ```
         |⟨a1,b1|a2,b2⟩|^2
@@ -131,6 +143,8 @@ function fidelity(
 end
 
 """
+$(SIGNATURES)
+
 Contract the axis between `a` and `b` tensors
 ```
     -- DX - a - D - b - DY --
@@ -150,6 +164,8 @@ function _combine_ab(
 end
 
 """
+$(SIGNATURES)
+
 Calculate the cost function
 ```
     f(a,b)  = ‖ |a1,b1⟩ - |a2,b2⟩ ‖^2
@@ -166,6 +182,8 @@ function cost_function_als(
 end
 
 """
+$(SIGNATURES)
+
 Solve the equations `Rx x = Sx` (x = a, b) with initial guess `x0`
 ```
     ┌---------------------------┐

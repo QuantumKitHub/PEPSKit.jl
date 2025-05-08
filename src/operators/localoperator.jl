@@ -1,22 +1,22 @@
 # Hamiltonian consisting of local terms
 # -------------------------------------
 """
-    struct LocalOperator{T<:Tuple,S}
+$(TYPEDEF)
 
 A sum of local operators acting on a lattice. The lattice is stored as a matrix of vector spaces,
 and the terms are stored as a tuple of pairs of indices and operators.
 
-# Fields
+## Fields
 
 - `lattice::Matrix{S}`: The lattice on which the operator acts.
 - `terms::T`: The terms of the operator, stored as a tuple of pairs of indices and operators.
 
-# Constructors
+## Constructors
 
     LocalOperator(lattice::Matrix{S}, terms::Pair...)
     LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S}
 
-# Examples
+## Examples
 
 ```julia
 lattice = fill(ℂ^2, 1, 1) # single-site unitcell
@@ -96,6 +96,15 @@ function Base.repeat(O::LocalOperator, m::Int, n::Int)
     return LocalOperator(lattice, terms...)
 end
 
+"""
+    physicalspace(O::LocalOperator)
+
+Return lattice of physical spaces on which the `LocalOperator` is defined.
+"""
+function physicalspace(O::LocalOperator)
+    return O.lattice
+end
+
 # Real and imaginary part
 # -----------------------
 function Base.real(O::LocalOperator)
@@ -149,7 +158,7 @@ Base.rot180(site::CartesianIndex{2}) = CartesianIndex(2 - site[1], 2 - site[2])
 Mirror a `LocalOperator` across the anti-diagonal axis of its lattice.
 """
 function mirror_antidiag(H::LocalOperator)
-    lattice2 = mirror_antidiag(H.lattice)
+    lattice2 = mirror_antidiag(physicalspace(H))
     terms2 = (
         (Tuple(mirror_antidiag(site, size(H.lattice)) for site in sites) => op) for
         (sites, op) in H.terms
@@ -201,6 +210,8 @@ TensorKit.sectortype(::Type{<:LocalOperator{T,S}}) where {T,S} = sectortype(S)
 end
 
 """
+$(SIGNATURES)
+
 Fuse identities on auxiliary physical spaces into a given operator.
 """
 function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N}
@@ -213,22 +224,24 @@ function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N
 end
 
 """
-    MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector}) where {S}
+    add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
 
-Change the spaces of a `LocalOperator` by fusing in an auxiliary charge on every site,
-according to a given matrix of 'auxiliary' physical charges.
+Change the spaces of a `LocalOperator` by fusing in an auxiliary charge into the domain of
+the operator on every site, according to a given matrix of 'auxiliary' physical charges.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
-    size(H.lattice) == size(charges) ||
+    size(physicalspace(H)) == size(charges) ||
         throw(ArgumentError("Incompatible lattice and auxiliary charge sizes"))
     sectortype(H) === eltype(charges) ||
         throw(SectorMismatch("Incompatible lattice and auxiliary charge sizes"))
 
-    # make indexing periodic, for convenience
-    Paux = PeriodicArray(map(c -> Vect[typeof(c)](c => 1), charges))
+    # auxiliary spaces will be fused into codomain, so need to dualize the space to fuse
+    # the charge into the domain as desired
+    # also, make indexing periodic for convenience
+    Paux = PeriodicArray(map(c -> Vect[typeof(c)](c => 1)', charges))
 
     # new physical spaces
-    Pspaces = map(fuse, H.lattice, Paux)
+    Pspaces = map(fuse, physicalspace(H), Paux)
 
     new_terms = map(H.terms) do (sites, op)
         Paux_slice = map(Base.Fix1(getindex, Paux), sites)
