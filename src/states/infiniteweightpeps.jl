@@ -455,9 +455,7 @@ function mirror_antidiag(wts::SUWeight)
     return SUWeight(weights2_x, weights2_y)
 end
 function Base.rotl90(wts::SUWeight)
-    wts_x = rotl90(wts[2, :, :])
-    Nc = size(wts_x, 2)
-    wts_x = wts_x[:, vcat(2:Nc, 1)]
+    wts_x = circshift(rotl90(wts[2, :, :]), (0, -1))
     for (i, wt) in enumerate(wts_x)
         wts_x[i] = DiagonalTensorMap(flip(permute(wt, ((2,), (1,))), (1, 2)))
     end
@@ -466,20 +464,15 @@ function Base.rotl90(wts::SUWeight)
 end
 function Base.rotr90(wts::SUWeight)
     wts_x = rotr90(wts[2, :, :])
-    wts_y = rotr90(wts[1, :, :])
-    Nr = size(wts_y, 1)
-    wts_y = wts_y[vcat(Nr, 1:(Nr - 1)), :]
+    wts_y = circshift(rotr90(wts[1, :, :]), (1, 0))
     for (i, wt) in enumerate(wts_y)
         wts_y[i] = DiagonalTensorMap(flip(permute(wt, ((2,), (1,))), (1, 2)))
     end
     return SUWeight(wts_x, wts_y)
 end
 function Base.rot180(wts::SUWeight)
-    wts_x = rot180(wts[1, :, :])
-    wts_y = rot180(wts[2, :, :])
-    Nr, Nc = size(wts_x)
-    wts_x = wts_x[:, vcat(2:Nc, 1)]
-    wts_y = wts_y[vcat(Nr, 1:(Nr - 1)), :]
+    wts_x = circshift(rot180(wts[1, :, :]), (0, -1))
+    wts_y = circshift(rot180(wts[2, :, :]), (1, 0))
     for (i, wt) in enumerate(wts_x)
         wts_x[i] = DiagonalTensorMap(flip(permute(wt, ((2,), (1,))), (1, 2)))
     end
