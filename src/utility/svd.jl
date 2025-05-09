@@ -443,7 +443,7 @@ _safe_inv(x, tol) = abs(x) < tol ? zero(x) : inv(x)
 
 # compute inverse singular value difference contribution to SVD gradient with broadening ε
 function _broadened_inv_S(S::AbstractVector{T}, tol, ε=0) where {T}
-    F = Matrix{T}(undef, length(S), length(S))
+    F = similar(S, (axes(S, 1), axes(S, 1)))
     @inbounds for j in axes(F, 2), i in axes(F, 1)
         F[i, j] = if i == j
             zero(T)
