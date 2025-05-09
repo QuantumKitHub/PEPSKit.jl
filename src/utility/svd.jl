@@ -593,8 +593,8 @@ function svd_pullback!(
         end
 
         X = @. (1//2) * (
-            (UrΔU + VrΔV) * _safe_inv(Sp' .- Sr, tol) +
-            (UrΔU - VrΔV) * _safe_inv(Sp' .+ Sr, tol)
+            (UrΔU + VrΔV) * _safe_inv(Sp' - Sr, tol) +
+            (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
         )
         Y = @. (1//2) * (
             (UrΔU + VrΔV) * _safe_inv(Sp' .- Sr, tol) -
