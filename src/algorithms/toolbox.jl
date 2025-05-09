@@ -273,7 +273,7 @@ in a specific symmetry sector).
 
 """
 function MPSKit.correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...)
-    _correlation_length(env; num_vals, kwargs...)
+    return _correlation_length(env; num_vals, kwargs...)
 end
 
 function _correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
