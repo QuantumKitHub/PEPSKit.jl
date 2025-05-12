@@ -103,6 +103,19 @@ function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorM
 end
 
 """
+    flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+
+Given `tsvd` result `u ← s ← vh`, flip the arrow between the three tensors 
+to `u2 → s2 → vh2` such that
+```
+    u * s * vh = (@tensor t2[-1; -2] := u2[-1; 1] * s2[1; 2] * vh2[2; -2])
+```
+"""
+function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
+    return flip(u, 2), DiagonalTensorMap(flip(s, (1, 2))), flip(vh, 1)
+end
+
+"""
     twistdual(t::AbstractTensorMap, i)
     twistdual!(t::AbstractTensorMap, i)
 
