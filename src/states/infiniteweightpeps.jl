@@ -176,9 +176,9 @@ end
 function InfiniteWeightPEPS(
     f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
 ) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
-    @assert all(!isdual(Pspace) for Pspace in Pspaces)
-    @assert all(!isdual(Nspace) for Nspace in Nspaces)
-    @assert all(!isdual(Espace) for Espace in Espaces)
+    @assert all(!isdual, Pspaces)
+    @assert all(!isdual, Nspaces)
+    @assert all(!isdual, Espaces)
     vertices = InfinitePEPS(f, T, Pspaces, Nspaces, Espaces).A
     Nr, Nc = size(vertices)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
