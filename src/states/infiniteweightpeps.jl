@@ -10,7 +10,10 @@ const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
 """
     struct SUWeight{E<:PEPSWeight}
 
-Schmidt bond weights used in simple/cluster update. Weight elements are always real.
+Schmidt bond weights used in simple/cluster update. 
+Weight elements are always real and non-negative.
+The domain and codomain of each weight matrix 
+must be an un-dualed `ElementarySapce`.
 
 ## Fields
 
@@ -94,6 +97,20 @@ end
 
 Represents an infinite projected entangled-pair state on a 2D square lattice
 consisting of vertex tensors and bond weights.
+The vertex tensor, x-weight and y-weight at row `i`, column `j` 
+are defined as (the numbers show the axis order)
+```
+        2
+        ↓
+        yᵢⱼ
+        ↓
+        1
+        2
+        ↓
+    5←-Tᵢⱼ←-3  1←-xᵢⱼ←-2
+        ↓ ↘
+        4   1
+```
 
 ## Fields
 
@@ -159,9 +176,9 @@ end
 function InfiniteWeightPEPS(
     f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
 ) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
-    @assert all(!isdual(Pspace) for Pspace in Pspaces)
-    @assert all(!isdual(Nspace) for Nspace in Nspaces)
-    @assert all(!isdual(Espace) for Espace in Espaces)
+    @assert all(!isdual, Pspaces)
+    @assert all(!isdual, Nspaces)
+    @assert all(!isdual, Espaces)
     vertices = InfinitePEPS(f, T, Pspaces, Nspaces, Espaces).A
     Nr, Nc = size(vertices)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)

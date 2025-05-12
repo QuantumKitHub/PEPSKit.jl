@@ -18,21 +18,34 @@ function test_rotation(wts::SUWeight)
     return nothing
 end
 
+function flip_twice(a::AbstractTensorMap, idx; inv::Bool=false)
+    _flip(a) = flip(a, idx; inv)
+    return (_flip ∘ _flip)(a)
+end
+
 function test_rotation(psi::InfiniteWeightPEPS)
     peps = InfinitePEPS(psi)
     @test compose_n(rotl90, 2)(psi) ≈ compose_n(rotr90, 2)(psi)
     @test compose_n(rotr90, 2)(psi) ≈ rot180(psi)
-    # flipping twice results in a twist
     psi_lr = (rotl90 ∘ rotr90)(psi)
     psi_rl = (rotr90 ∘ rotl90)(psi)
     @test psi_lr.weights ≈ psi_rl.weights ≈ psi.weights
-    @test all(twist(v1, (3, 5)) ≈ v2 for (v1, v2) in zip(psi_lr.vertices, psi.vertices))
-    @test all(twist(v1, (2, 4)) ≈ v2 for (v1, v2) in zip(psi_rl.vertices, psi.vertices))
+    @test all(
+        flip_twice(v1, (3, 5); inv=true) ≈ v2 for
+        (v1, v2) in zip(psi_lr.vertices, psi.vertices)
+    )
+    @test all(
+        flip_twice(v1, (2, 4); inv=true) ≈ v2 for
+        (v1, v2) in zip(psi_rl.vertices, psi.vertices)
+    )
     psi_l4 = compose_n(rotl90, 4)(psi)
     psi_r4 = compose_n(rotr90, 4)(psi)
     psi_2 = compose_n(rot180, 2)(psi)
     @test psi_l4 ≈ psi_r4 ≈ psi_2
-    @test all(twist(v1, Tuple(2:5)) ≈ v2 for (v1, v2) in zip(psi_2.vertices, psi.vertices))
+    @test all(
+        flip_twice(v1, Tuple(2:5); inv=true) ≈ v2 for
+        (v1, v2) in zip(psi_2.vertices, psi.vertices)
+    )
     # conversion to InfinitePEPS
     psi_l = rotl90(psi)
     peps_l = InfinitePEPS(psi_l)
