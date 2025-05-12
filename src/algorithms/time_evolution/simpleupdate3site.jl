@@ -415,17 +415,13 @@ function su3site_iter(
         ),
     )
     peps2 = deepcopy(peps)
-    for i in 1:4
+    for i in 1:2
         for site in CartesianIndices(peps2.vertices)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
             _su3site_se!(r, c, gs, peps2, alg)
         end
-        peps2 = rotl90(peps2)
-    end
-    # for fermions, undo the twists caused by repeated flipping
-    for i in CartesianIndices(peps2.vertices)
-        twist!(peps2.vertices[i], Tuple(2:5))
+        peps2 = (i == 1) ? rotl90(peps2) : rotr90(peps2)
     end
     return peps2
 end
@@ -439,13 +435,7 @@ function _simpleupdate3site(
     time_start = time()
     gate = get_expham(alg.dt, ham)
     # convert gates to 3-site MPOs
-    gatempos1 = _get_gatempos_se(gate)
-    gatempos = Vector{typeof(gatempos1)}(undef, 4)
-    gatempos[1] = gatempos1
-    for i in 2:4
-        gate = rotl90(gate)
-        gatempos[i] = _get_gatempos_se(gate)
-    end
+    gatempos = [_get_gatempos_se(gate), _get_gatempos_se(rotl90(gate))]
     wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)
