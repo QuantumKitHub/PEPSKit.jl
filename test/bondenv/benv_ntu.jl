@@ -8,12 +8,10 @@ using Random
 Nr, Nc = 2, 2
 Random.seed!(20)
 Pspace = Vect[FermionParity](0 => 1, 1 => 1)
-V2 = Vect[FermionParity](0 => 1, 1 => 1)
-V3 = Vect[FermionParity](0 => 1, 1 => 2)
+V2 = Vect[FermionParity](0 => 4, 1 => 1)
+V3 = Vect[FermionParity](0 => 3, 1 => 2)
 V4 = Vect[FermionParity](0 => 2, 1 => 2)
-V5 = Vect[FermionParity](0 => 3, 1 => 2)
-W1 = Vect[FermionParity](0 => 2, 1 => 3)
-W2 = Vect[FermionParity](0 => 4, 1 => 1)
+V5 = Vect[FermionParity](0 => 2, 1 => 3)
 Pspaces = fill(Pspace, (Nr, Nc))
 Nspaces = [V2 V2; V4 V4]
 Espaces = [V3 V5; V5 V3]
