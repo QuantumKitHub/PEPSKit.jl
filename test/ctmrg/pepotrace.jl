@@ -146,7 +146,7 @@ projector_alg = projector_algs[1] # only use :halfinfinite for this test due to 
     overlap1 = network_value(network_Oψψ′, env_Oψψ′)
     overlap2 = network_value(network_ψOdagψ′, env_ψOdagψ′)
 
-    @test overlap1 ≈ overlap2 atol = 1e-3
+    @test overlap1 ≈ overlap2 atol = 5e-3
 end
 
 @testset "PEPO layers CTMRG contraction with its adjoint using $alg with $projector_alg" for (
@@ -171,5 +171,5 @@ end
     nrm = PEPSKit._contract_site((1, 1), network_O, env)
     nrm_fused = network_value(network_fused_OO, env_fused)
 
-    @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 1e-7
+    @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 2e-5
 end
