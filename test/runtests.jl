@@ -64,6 +64,9 @@ end
         @time @safetestset "Norm-preserving retractions" begin
             include("utility/retractions.jl")
         end
+        @time @safetestset "Rotation of InfiniteWeightPEPS" begin
+            include("utility/iwpeps_rotation.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"
         @time @safetestset "Transverse Field Ising model" begin

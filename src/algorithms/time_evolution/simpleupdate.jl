@@ -1,8 +1,12 @@
 """
-    struct SimpleUpdate
+$(TYPEDEF)
 
 Algorithm struct for simple update (SU) of infinite PEPS with bond weights.
 Each SU run is converged when the singular value difference becomes smaller than `tol`.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct SimpleUpdate
     dt::Float64
@@ -13,8 +17,7 @@ end
 # TODO: add kwarg constructor and SU Defaults
 
 """
-_su_bondx!(row::Int, col::Int, gate::AbstractTensorMap{T,S,2,2},
-           peps::InfiniteWeightPEPS, alg::SimpleUpdate) where {S<:ElementarySpace}
+$(SIGNATURES)
 
 Simple update of the x-bond `peps.weights[1,r,c]`.
 
@@ -75,12 +78,6 @@ function su_iter(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    # TODO: make algorithm independent on the choice of dual in the network
-    for (r, c) in Iterators.product(1:Nr, 1:Nc)
-        @assert [isdual(space(peps.vertices[r, c], ax)) for ax in 1:5] == [0, 1, 1, 0, 0]
-        @assert [isdual(space(peps.weights[1, r, c], ax)) for ax in 1:2] == [0, 1]
-        @assert [isdual(space(peps.weights[2, r, c], ax)) for ax in 1:2] == [0, 1]
-    end
     peps2 = deepcopy(peps)
     gate_mirrored = mirror_antidiag(gate)
     for direction in 1:2
@@ -119,10 +116,10 @@ function su_iter(
 end
 
 """
-    simpleupdate(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
+    simpleupdate(peps::InfiniteWeightPEPS, H::LocalOperator, alg::SimpleUpdate;
                  bipartite::Bool=false, check_interval::Int=500)
 
-Perform simple update with nearest neighbor Hamiltonian `ham`, where the evolution
+Perform simple update with nearest neighbor Hamiltonian `H`, where the evolution
 information is printed every `check_interval` steps. 
 
 If `bipartite == true` (for square lattice), a unit cell size of `(2, 2)` is assumed, 
@@ -131,14 +128,14 @@ as well as tensors and x/y weights which are the same across the diagonals, i.e.
 """
 function simpleupdate(
     peps::InfiniteWeightPEPS,
-    ham::LocalOperator,
+    H::LocalOperator,
     alg::SimpleUpdate;
     bipartite::Bool=false,
     check_interval::Int=500,
 )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
-    gate = get_gate(alg.dt, ham)
+    gate = get_gate(alg.dt, H)
     wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)

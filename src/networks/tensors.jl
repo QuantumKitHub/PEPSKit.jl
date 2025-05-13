@@ -57,9 +57,7 @@ const PEPSTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,1,4}
 
 """
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
-               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:ElementarySpace}
-    PEPSTensor(f, ::Type{T}, Pspace::Int, Nspace::Int,
-               [Espace::Int], [Sspace::Int], [Wspace::Int]) where {T}
+               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
                 
 Construct a PEPS tensor based on the physical, north, east, west and south spaces.
 Alternatively, only the space dimensions can be provided and ℂ is assumed as the field.
@@ -88,6 +86,7 @@ function PEPSTensor(
     return f(T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
 end
 
+mirror_antidiag(t::PEPSTensor) = permute(t, ((1,), (3, 2, 5, 4)))
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
 Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
 Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))

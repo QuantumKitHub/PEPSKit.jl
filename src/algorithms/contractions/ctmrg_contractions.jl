@@ -7,8 +7,7 @@ const CTMRGCornerTensor{T,S} = AbstractTensorMap{T,S,1,1}
 # ----------------------------
 
 """
-    enlarge_northwest_corner((row, col), env, network::InfiniteSquareNetwork{O})
-    enlarge_northwest_corner(E_west, C_northwest, E_north, A::O)
+$(SIGNATURES)
 
 Contract the enlarged northwest corner of the CTMRG environment, either by specifying the
 coordinates, environments and network, or by directly providing the tensors.
@@ -44,8 +43,7 @@ function enlarge_northwest_corner(
 end
 
 """
-    enlarge_northeast_corner((row, col), env, network::InfiniteSquareNetwork{O})
-    enlarge_northeast_corner(E_north, C_northeast, E_east, A::O)
+$(SIGNATURES)
 
 Contract the enlarged northeast corner of the CTMRG environment, either by specifying the
 coordinates, environments and network, or by directly providing the tensors.
@@ -81,8 +79,7 @@ function enlarge_northeast_corner(
 end
 
 """
-    enlarge_southeast_corner((row, col), env, network::InfiniteSquareNetwork{O})
-    enlarge_southeast_corner(E_east, C_southeast, E_south, A::O)
+$(SIGNATURES)
 
 Contract the enlarged southeast corner of the CTMRG environment, either by specifying the
 coordinates, environments and network, or by directly providing the tensors.
@@ -118,8 +115,7 @@ function enlarge_southeast_corner(
 end
 
 """
-    enlarge_southwest_corner((row, col), env, network::InfiniteSquareNetwork{O})
-    enlarge_southwest_corner(E_south, C_southwest, E_west, A::O)
+$(SIGNATURES)
 
 Contract the enlarged southwest corner of the CTMRG environment, either by specifying the
 coordinates, environments and network, or by directly providing the tensors.
@@ -158,7 +154,7 @@ end
 # ----------------------
 
 """
-    left_projector(E_1, C, E_2, V, isqS, A)
+$(SIGNATURES)
 
 Contract the CTMRG left projector with the higher-dimensional subspace facing to the left.
 
@@ -190,7 +186,7 @@ function left_projector(E_1, C, E_2, V, isqS, A::PFTensor)
 end
 
 """
-    right_projector(E_1, C, E_2, U, isqS, A)
+$(SIGNATURES)
 
 Contract the CTMRG right projector with the higher-dimensional subspace facing to the right.
 
@@ -222,7 +218,7 @@ function right_projector(E_1, C, E_2, U, isqS, A::PFTensor)
 end
 
 """
-    contract_projectors(U, S, V, Q, Q_next)
+$(SIGNATURES)
 
 Compute projectors based on a SVD of `Q * Q_next`, where the inverse square root
 `isqS` of the singular values is computed.
@@ -249,10 +245,10 @@ function contract_projectors(U, S, V, Q, Q_next)
 end
 
 """
-    half_infinite_environment(quadrant1::AbstractTensorMap{T,S,3,3}, quadrant2::AbstractTensorMap{T,S,N,N})
-    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4,  A_1::P, A_2::P)
-    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x, A_1::P, A_2::P)
-    half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P)
+    half_infinite_environment(quadrant1, quadrant2)
+    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, A_1, A_2)
+    half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x, A_1, A_2)
+    half_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4, A_1, A_2)
 
 Contract two quadrants (enlarged corners) to form a half-infinite environment.
 
@@ -380,18 +376,11 @@ function half_infinite_environment(
 end
 
 """
-    full_infinite_environment(
-        quadrant1::T, quadrant2::T, quadrant3::T, quadrant4::T
-    ) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,N,N}}
-    function full_infinite_environment(
-        half1::T, half2::T
-    ) where {T<:AbstractTensorMap{<:Number,<:ElementarySpace,N,N}}
-    full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
-                              A_1::P, A_2::P, A_3::P, A_4::P)
-    full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x,
-                              A_1::P, A_2::P, A_3::P, A_4::P)
-    full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4,
-                              A_1::P, A_2::P, A_3::P, A_4::P)
+    full_infinite_environment(quadrant1, quadrant2, quadrant3, quadrant4)
+    full_infinite_environment(half1, half2)
+    full_infinite_environment(C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8, A_1, A_2, A_3, A_4)
+    full_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, x, A_1, A_2, A_3, A_4)
+    full_infinite_environment(x, C_1, C_2, E_1, E_2, E_3, E_4, A_1, A_2, A_3, A_4)
 
 Contract four quadrants (enlarged corners) to form a full-infinite environment.
 
@@ -740,8 +729,7 @@ end
 # corners
 
 """
-    renormalize_corner(quadrant::AbstractTensorMap{T,S,3,3}, P_left, P_right)
-    renormalize_corner(quadrant::AbstractTensorMap{T,S,2,2}, P_left, P_right)
+$(SIGNATURES)
 
 Apply projectors to each side of a quadrant.
 
@@ -782,11 +770,21 @@ Apply projectors to each side of a quadrant.
 end
 
 """
-    renormalize_northwest_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
-    renormalize_northwest_corner(quadrant::AbstractTensorMap{T,S,N,N}, P_left, P_right) where {T,S,N}
-    renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, A::O)
+    renormalize_northwest_corner((row, col), enlarged_env, P_left, P_right)
+    renormalize_northwest_corner(quadrant, P_left, P_right)
+    renormalize_northwest_corner(E_west, C_northwest, E_north, P_left, P_right, A)
 
 Apply `renormalize_corner` to the enlarged northwest corner.
+
+```
+    |~~~~~~~~| -- |~~~~~~|
+    |quadrant|    |P_left| --
+    |~~~~~~~~| -- |~~~~~~|
+     |     |
+    [P_right]
+        |
+```
+
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
@@ -835,11 +833,21 @@ function renormalize_northwest_corner(
 end
 
 """
-    renormalize_northeast_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
-    renormalize_northeast_corner(quadrant::AbstractTensorMap{T,S,N,N}, P_left, P_right) where {T,S,N}
-    renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, A::O)
+    renormalize_northeast_corner((row, col), enlarged_env, P_left, P_right)
+    renormalize_northeast_corner(quadrant, P_left, P_right)
+    renormalize_northeast_corner(E_north, C_northeast, E_east, P_left, P_right, A)
 
 Apply `renormalize_corner` to the enlarged northeast corner.
+
+```
+       |~~~~~~~| -- |~~~~~~~~|
+    -- |P_right|    |quadrant|
+       |~~~~~~~| -- |~~~~~~~~|
+                      |    |
+                     [P_left]
+                         |
+```
+
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
@@ -890,11 +898,21 @@ function renormalize_northeast_corner(
 end
 
 """
-    renormalize_southeast_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
-    renormalize_southeast_corner(quadrant::AbstractTensorMap{T,S,N,N}, P_left, P_right) where {T,S,N}
-    renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, A::O)
+    renormalize_southeast_corner((row, col), enlarged_env, P_left, P_right)
+    renormalize_southeast_corner(quadrant, P_left, P_right)
+    renormalize_southeast_corner(E_east, C_southeast, E_south, P_left, P_right, A)
 
 Apply `renormalize_corner` to the enlarged southeast corner.
+
+```
+                        |
+                    [P_right]
+                      |   |
+       |~~~~~~| -- |~~~~~~~~|
+    -- |P_left|    |quadrant|
+       |~~~~~~| -- |~~~~~~~~|
+```
+
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
@@ -943,20 +961,30 @@ function renormalize_southeast_corner(
 end
 
 """
-    renormalize_southwest_corner((row, col), enlarged_env::CTMRGEnv, P_left, P_right)
-    renormalize_southwest_corner(quadrant::AbstractTensorMap{T,S,N,N}, P_left, P_right) where {T,S,N}
-    renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, A::O)
+    renormalize_southwest_corner((row, col), enlarged_env, P_left, P_right)
+    renormalize_southwest_corner(quadrant, P_left, P_right)
+    renormalize_southwest_corner(E_south, C_southwest, E_west, P_left, P_right, A)
 
 Apply `renormalize_corner` to the enlarged southwest corner.
+
+```
+         |
+     [P_left]
+      |    |
+    |~~~~~~~~| -- |~~~~~~|
+    |quadrant|    |P_left| --
+    |~~~~~~~~| -- |~~~~~~|
+```
+
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
                |
-       [~~~~P_right~~~~~]
+       [~~~~~P_left~~~~~]
          |            |
-       E_west   --    A    -- |~~~~~~|
-         |            |       |P_left| --
-    C_southwest -- E_south -- |~~~~~~|
+       E_west   --    A    -- |~~~~~~~|
+         |            |       |P_right| --
+    C_southwest -- E_south -- |~~~~~~~|
 ```
 """
 function renormalize_southwest_corner((row, col), enlarged_env, P_left, P_right)
@@ -997,6 +1025,7 @@ end
 
 """
     renormalize_bottom_corner((r, c), env, projectors)
+    renormalize_bottom_corner(C_southwest, E_south, P_bottom)
 
 Apply bottom projector to southwest corner and south edge.
 ```
@@ -1036,7 +1065,8 @@ end
 end
 
 """
-    renormalize_top_corner((row, col), env::CTMRGEnv, projectors)
+    renormalize_top_corner((row, col), env, projectors)
+    renormalize_top_corner(C_northwest, E_north, P_top)
 
 Apply top projector to northwest corner and north edge.
 ```
@@ -1260,7 +1290,7 @@ end
 # corners 
 
 """
-    fix_gauge_corner(corner, σ_in, σ_out)
+$(SIGNATURES)
 
 Multiply corner tensor with incoming and outgoing gauge signs.
 
@@ -1279,7 +1309,7 @@ function fix_gauge_corner(
 end
 
 """
-    fix_gauge_northwest_corner((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northwest corner with appropriate row and column indices.
 """
@@ -1292,7 +1322,7 @@ function fix_gauge_northwest_corner((row, col), env::CTMRGEnv, signs)
 end
 
 """
-    fix_gauge_northeast_corner((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northeast corner with appropriate row and column indices.
 """
@@ -1305,7 +1335,7 @@ function fix_gauge_northeast_corner((row, col), env::CTMRGEnv, signs)
 end
 
 """
-    fix_gauge_southeast_corner((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southeast corner with appropriate row and column indices.
 """
@@ -1318,7 +1348,7 @@ function fix_gauge_southeast_corner((row, col), env::CTMRGEnv, signs)
 end
 
 """
-    fix_gauge_southwest_corner((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southwest corner with appropriate row and column indices.
 """
@@ -1333,7 +1363,7 @@ end
 # edges
 
 """
-    fix_gauge_edge(edge, σ_in, σ_out)
+$(SIGNATURES)
 
 Multiply edge tensor with incoming and outgoing gauge signs.
 
@@ -1361,7 +1391,7 @@ Multiply edge tensor with incoming and outgoing gauge signs.
 end
 
 """
-    fix_gauge_north_edge((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_edge` to the north edge with appropriate row and column indices.
 """
@@ -1374,7 +1404,7 @@ function fix_gauge_north_edge((row, col), env::CTMRGEnv, signs)
 end
 
 """
-    fix_gauge_east_edge((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_edge` to the east edge with appropriate row and column indices.
 """
@@ -1385,7 +1415,7 @@ function fix_gauge_east_edge((row, col), env::CTMRGEnv, signs)
 end
 
 """
-    fix_gauge_south_edge((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_edge` to the south edge with appropriate row and column indices.
 """
@@ -1398,7 +1428,7 @@ function fix_gauge_south_edge((row, col), env::CTMRGEnv, signs)
 end
 
 """
-    fix_gauge_south_edge((row, col), env, signs)
+$(SIGNATURES)
 
 Apply `fix_gauge_edge` to the west edge with appropriate row and column indices.
 """
@@ -1411,7 +1441,7 @@ end
 # left singular vectors
 
 """
-    fix_gauge_north_left_vecs((row, col), U, signs)
+$(SIGNATURES)
 
 Multiply north left singular vectors with gauge signs from the right.
 """
@@ -1420,7 +1450,7 @@ function fix_gauge_north_left_vecs((row, col), U, signs)
 end
 
 """
-    fix_gauge_east_left_vecs((row, col), U, signs)
+$(SIGNATURES)
 
 Multiply east left singular vectors with gauge signs from the right.
 """
@@ -1429,7 +1459,7 @@ function fix_gauge_east_left_vecs((row, col), U, signs)
 end
 
 """
-    fix_gauge_south_left_vecs((row, col), U, signs)
+$(SIGNATURES)
 
 Multiply south left singular vectors with gauge signs from the right.
 """
@@ -1438,7 +1468,7 @@ function fix_gauge_south_left_vecs((row, col), U, signs)
 end
 
 """
-    fix_gauge_west_left_vecs((row, col), U, signs)
+$(SIGNATURES)
 
 Multiply west left singular vectors with gauge signs from the right.
 """
@@ -1449,7 +1479,7 @@ end
 # right singular vectors
 
 """
-    fix_gauge_north_right_vecs((row, col), V, signs)
+$(SIGNATURES)
 
 Multiply north right singular vectors with gauge signs from the left.
 """
@@ -1458,7 +1488,7 @@ function fix_gauge_north_right_vecs((row, col), V, signs)
 end
 
 """
-    fix_gauge_east_right_vecs((row, col), V, signs)
+$(SIGNATURES)
 
 Multiply east right singular vectors with gauge signs from the left.
 """
@@ -1467,7 +1497,7 @@ function fix_gauge_east_right_vecs((row, col), V, signs)
 end
 
 """
-    fix_gauge_south_right_vecs((row, col), V, signs)
+$(SIGNATURES)
 
 Multiply south right singular vectors with gauge signs from the left.
 """
@@ -1476,7 +1506,7 @@ function fix_gauge_south_right_vecs((row, col), V, signs)
 end
 
 """
-    fix_gauge_west((row, col), V, signs)
+$(SIGNATURES)
 
 Multiply west right singular vectors with gauge signs from the left.
 """
@@ -1758,7 +1788,7 @@ function _pepotrace_domain_projector_expr(
 end
 
 #
-# Contractions
+# PEPO Contractions
 #
 
 ## Site contraction

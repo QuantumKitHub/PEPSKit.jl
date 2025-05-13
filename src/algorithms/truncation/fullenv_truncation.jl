@@ -1,13 +1,27 @@
 """
-    FullEnvTruncation
+$(TYPEDEF)
 
 Algorithm struct for the full environment truncation (FET).
 
-- `trscheme::Bool`: SVD truncation scheme when optimizing the new bond matrix.
-- `maxiter::Int`: Maximal number of FET iterations.
-- `tol::Float64`: FET converges when fidelity change between two FET iterations is smaller than `tol`.
-- `trunc_init::Bool`: Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
-- `check_interval::Int`: Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    FullEnvTruncation(; kwargs...)
+
+The truncation algorithm can be constructed from the following keyword arguments:
+
+* `trscheme::TensorKit.TruncationScheme` : SVD truncation scheme when optimizing the new bond matrix.
+* `maxiter::Int=50` : Maximal number of FET iterations.
+* `tol::Float64=1e-15` : FET converges when fidelity change between two FET iterations is smaller than `tol`.
+* `trunc_init::Bool=true` : Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
+* `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
+
+## References
+
+* [Glen Evenbly, Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018). 
 """
 @kwdef struct FullEnvTruncation
     trscheme::TensorKit.TruncationScheme
@@ -18,6 +32,8 @@ Algorithm struct for the full environment truncation (FET).
 end
 
 """
+$(SIGNATURES)
+
 Given the bond environment `benv`, calculate the inner product
 between two states specified by the bond matrices `b1`, `b2`
 ```
@@ -38,6 +54,8 @@ function inner_prod(
 end
 
 """
+$(SIGNATURES)
+
 Given the bond environment `benv`, calculate the fidelity
 between two states specified by the bond matrices `b1`, `b2`
 ```
@@ -52,6 +70,8 @@ function fidelity(
 end
 
 """
+$(SIGNATURES)
+
 Apply a twist to domain or codomain indices that correspond to dual spaces
 """
 function _linearmap_twist!(t::AbstractTensorMap)
@@ -72,9 +92,10 @@ function _fet_message(
 end
 
 """
-    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) where {T<:Number,S<:ElementarySpace}
+    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) -> U, S, V, info
 
-The full environment truncation algorithm (Physical Review B 98, 085155 (2018)). 
+Perform full environment truncation algorithm from
+[Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018) on `benv`.
 
 Given a fixed state `|b0⟩` with bond matrix `b0`
 and the corresponding positive-definite bond environment `benv`, 
@@ -190,9 +211,14 @@ Then the bond matrix `u s v†` is updated by SVD:
     - l ← v† -   ==>    - u ← s ← v† -
 ```
 
-## Returns
+## Return values
 
-The SVD result of the new bond matrix `u`, `s`, `vh`.
+Returns the SVD result of the new bond matrix `U`, `S`, `V`, as well as an information
+`NamedTuple` containing the following fields:
+
+* `fid` : Last fidelity.
+* `Δfid` : Last fidelity difference.
+* `Δs` : Last singular value difference.
 """
 function fullenv_truncate(
     b0::AbstractTensorMap{T,S,1,1}, benv::BondEnv{T,S}, alg::FullEnvTruncation

@@ -33,7 +33,7 @@ peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
 
 # compute magnetization
 σx = TensorMap(scalartype(peps₀)[0 1; 1 0], ℂ^2, ℂ^2)
-M = LocalOperator(H.lattice, (CartesianIndex(1, 1),) => σx)
+M = LocalOperator(physicalspace(H), (CartesianIndex(1, 1),) => σx)
 magn = expectation_value(peps, M, env)
 
 @test E ≈ e atol = 1e-2

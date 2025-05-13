@@ -12,16 +12,23 @@ using TensorKit:
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
-    struct FullSVDReverseRule
-    FullSVDReverseRule(; kwargs...)
+$(TYPEDEF)
 
 SVD reverse-rule algorithm which uses a modified version of TensorKit's `tsvd!` reverse-rule
 allowing for Lorentzian broadening and output verbosity control.
 
-## Keyword arguments
+## Fields
 
-* `broadening::Float64=$(Defaults.svd_rrule_broadening)`: Lorentzian broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
-* `verbosity::Int=0`: Suppresses all output if `≤0`, print gauge dependency warnings if `1`, and always print gauge dependency if `≥2`.
+$(TYPEDFIELDS)
+
+## Constructors
+
+    FullSVDReverseRule(; kwargs...)
+
+Construct a `FullSVDReverseRule` algorithm struct from the following keyword arguments:
+
+* `broadening::Float64=$(Defaults.svd_rrule_broadening)` : Lorentzian broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
+* `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct FullSVDReverseRule
     broadening::Float64 = Defaults.svd_rrule_broadening
@@ -29,18 +36,25 @@ allowing for Lorentzian broadening and output verbosity control.
 end
 
 """
-    struct SVDAdjoint
-    SVDAdjoint(; kwargs...)
+$(TYPEDEF)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
 
-## Keyword arguments
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    SVDAdjoint(; kwargs...)
+
+Construct a `SVDAdjoint` algorithm struct based on the following keyword arguments:
 
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
-    - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
-    - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see ['IterSVD'](@ref)
+    - `:sdd` : TensorKit's wrapper for LAPACK's `_gesdd`
+    - `:svd` : TensorKit's wrapper for LAPACK's `_gesvd`
+    - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [`FullSVDReverseRule`](@ref).
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
@@ -112,7 +126,7 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;))
 end
 
 """
-    PEPSKit.tsvd(t, alg; trunc=notrunc(), p=2)
+    PEPSKit.tsvd(t, alg::SVDAdjoint; trunc=notrunc(), p=2)
 
 Wrapper around `TensorKit.tsvd` which dispatches on the `alg` argument.
 This is needed since a custom adjoint for `PEPSKit.tsvd` may be defined,
@@ -132,7 +146,6 @@ end
 
 ## Forward algorithms
 
-# TODO: add `LinearAlgebra.cond` to TensorKit
 # Compute condition number smax / smin for diagonal singular value TensorMap
 function _condition_number(S::AbstractTensorMap)
     smax = maximum(first ∘ last, blocks(S))
@@ -171,12 +184,16 @@ function _tsvd!(
 end
 
 """
-    struct FixedSVD
+$(TYPEDEF)
 
 SVD struct containing a pre-computed decomposition or even multiple ones. Additionally, it
 can contain the untruncated full decomposition as well. The call to `tsvd` just returns the
 pre-computed U, S and V. In the reverse pass, the SVD adjoint is computed with these exact
 U, S, and V and, potentially, the full decompositions if the adjoints needs access to them.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
 struct FixedSVD{Ut,St,Vt,Utf,Stf,Vtf}
     U::Ut
@@ -209,8 +226,7 @@ function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
 end
 
 """
-    struct IterSVD(; alg=KrylovKit.GKL(), fallback_threshold = Inf, start_vector=random_start_vector)
-    IterSVD(; kwargs...)
+$(TYPEDEF)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmetric) tensors.
 The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
@@ -218,11 +234,19 @@ In particular, this make it possible to specify the targeted singular values blo
 In case the symmetry block is too small as compared to the number of singular values, or
 the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
 
-## Keyword arguments
+## Fields
 
-* `alg::KrlovKit.GKL=KrylovKit.GKL(; tol=1e-14, krylovdim=25)`: GKL algorithm struct for block-wise iterative SVD.
-* `fallback_threshold::Float64=Inf`: Threshold for `howmany / minimum(size(block))` above which (if the block is too small) the algorithm falls back to TensorKit's dense SVD.
-* `start_vector=random_start_vector`: Function providing the initial vector for the iterative SVD algorithm.
+$(TYPEDFIELDS)
+
+## Constructors
+
+    IterSVD(; kwargs...)
+
+Construct an `IterSVD` algorithm struct based on the following keyword arguments:
+
+* `alg::KrylovKit.GKL=KrylovKit.GKL(; tol=1e-14, krylovdim=25)` : GKL algorithm struct for block-wise iterative SVD.
+* `fallback_threshold::Float64=Inf` : Threshold for `howmany / minimum(size(block))` above which (if the block is too small) the algorithm falls back to TensorKit's dense SVD.
+* `start_vector=random_start_vector` : Function providing the initial vector for the iterative SVD algorithm.
 """
 @kwdef struct IterSVD
     alg::KrylovKit.GKL = KrylovKit.GKL(; tol=1e-14, krylovdim=25)
@@ -262,7 +286,9 @@ function TensorKit._compute_svddata!(
     I = sectortype(f)
     dims = SectorDict{I,Int}()
 
-    generator = Base.Iterators.map(blocks(f)) do (c, b)
+    sectors = trunc isa NoTruncation ? blocksectors(f) : blocksectors(trunc.space)
+    generator = Base.Iterators.map(sectors) do c
+        b = block(f, c)
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
