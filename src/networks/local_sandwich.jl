@@ -171,17 +171,7 @@ function mpotensor(network::PEPOSandwich{H}) where {H}
     @assert virtualspace(ket(network), NORTH) == dual(virtualspace(ket(network), SOUTH)) &&
         virtualspace(bra(network), NORTH) == dual(virtualspace(bra(network), SOUTH)) &&
         virtualspace(ket(network), EAST) == dual(virtualspace(ket(network), WEST)) &&
-        virtualspace(bra(network), EAST) == dual(virtualspace(bra(network), WEST)) &&
-        isdual(virtualspace(ket(network), NORTH)) &&
-        isdual(virtualspace(bra(network), NORTH)) &&
-        isdual(virtualspace(ket(network), EAST)) &&
-        isdual(virtualspace(bra(network), EAST)) "Method not yet implemented for given virtual spaces"
-    for h in 1:H
-        @assert virtualspace(network[h], NORTH) == dual(virtualspace(network[h], SOUTH)) &&
-            virtualspace(network[h], EAST) == dual(virtualspace(network[h], WEST)) &&
-            isdual(virtualspace(network[h], NORTH)) &&
-            isdual(virtualspace(network[h], EAST)) "Method not yet implemented for given virtual spaces"
-    end
+        virtualspace(bra(network), EAST) == dual(virtualspace(bra(network), WEST)) "Method not yet implemented for given virtual spaces"
     F_west = isomorphism(
         storagetype(network[1]),
         fuse(virtualspace(network, WEST)),
@@ -192,18 +182,25 @@ function mpotensor(network::PEPOSandwich{H}) where {H}
         fuse(virtualspace(network, SOUTH)),
         virtualspace(network, SOUTH),
     )
-    return _mpotensor_contraction(
-        F_south, F_west, twist(F_south, H + 3), twist(F_west, H + 3), network
-    )
+    F_east = copy(F_west)
+    F_north = copy(F_south)
+
+    isdual(virtualspace(ket(network), NORTH)) || twist!(F_north, 2)
+    isdual(virtualspace(bra(network), NORTH)) || twist!(F_north, H + 3)
+    isdual(virtualspace(ket(network), EAST)) || twist!(F_east, 2)
+    isdual(virtualspace(bra(network), EAST)) || twist!(F_east, H + 3)
+    for h in 1:H
+        @assert virtualspace(network[h], NORTH) == dual(virtualspace(network[h], SOUTH)) &&
+            virtualspace(network[h], EAST) == dual(virtualspace(network[h], WEST)) "Method not yet implemented for given virtual spaces"
+        isdual(virtualspace(network[h], NORTH)) || twist!(F_north, h + 2)
+        isdual(virtualspace(network[h], EAST)) || twist!(F_east, h + 2)
+    end
+    twist!(F_west, H + 3)
+    twist!(F_south, H + 3)
+    return _mpotensor_contraction(F_north, F_east, F_south, F_west, network)
 end
 
 function mpotensor(network::PEPOTraceSandwich{H}) where {H}
-    for h in 1:H
-        @assert virtualspace(network[h], NORTH) == dual(virtualspace(network[h], SOUTH)) &&
-            virtualspace(network[h], EAST) == dual(virtualspace(network[h], WEST)) &&
-            isdual(virtualspace(network[h], NORTH)) &&
-            isdual(virtualspace(network[h], EAST)) "Method not yet implemented for given virtual spaces"
-    end
     F_west = isomorphism(
         storagetype(network[1]),
         fuse(virtualspace(network, WEST)),
@@ -214,5 +211,14 @@ function mpotensor(network::PEPOTraceSandwich{H}) where {H}
         fuse(virtualspace(network, SOUTH)),
         virtualspace(network, SOUTH),
     )
-    return _mpotensor_contraction(F_south, F_west, F_south, F_west, network)
+    F_east = copy(F_west)
+    F_north = copy(F_south)
+
+    for h in 1:H
+        @assert virtualspace(network[h], NORTH) == dual(virtualspace(network[h], SOUTH)) &&
+            virtualspace(network[h], EAST) == dual(virtualspace(network[h], WEST)) "Method not yet implemented for given virtual spaces"
+        isdual(virtualspace(network[h], NORTH)) || twist!(F_north, h)
+        isdual(virtualspace(network[h], EAST)) || twist!(F_east, h)
+    end
+    return _mpotensor_contraction(F_north, F_east, F_south, F_west, network)
 end

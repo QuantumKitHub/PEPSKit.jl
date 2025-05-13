@@ -179,19 +179,22 @@ end
     _dag(O::PEPOTensor)
 
 Calculate the conjugate of an operator O, while permuting the physical indices.
-Flips and twists are included to ensure the correct arrow convention of a PEPOTensor.
+Twists are included to ensure the correct result for the adjoint function.
 """
 function _dag(O::PEPOTensor)
     @tensor O_conj[-1 -2; -3 -4 -5 -6] := conj(O[-2 -1; -3 -4 -5 -6])
-    return twist(flip(O_conj, [3 4 5 6]), [3 4])
+    isdual(codomain(O_conj)[1]) && twist!(O_conj, 1)
+    isdual(codomain(O_conj)[2]) || twist!(O_conj, 2)
+    return O_conj
 end
 
 """
     adjoint(O::InfinitePEPO)
 
 Create the adjoint of an InfinitePEPO.
+With this definition, <Oψ₁, ψ₂> = <ψ₁, adjoint(O)ψ₂>, with Oψ the physical action of the PEPO O on the PEPS ψ.
 """
-function TensorKit.adjoint(O::InfinitePEPO)
+function Base.adjoint(O::InfinitePEPO)
     return InfinitePEPO(_dag.(unitcell(O)))
 end
 
