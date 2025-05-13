@@ -94,6 +94,7 @@ ctm_styles = [:sequential, :simultaneous]
 projector_algs = [:halfinfinite, :fullinfinite]
 
 @testset "mpotensor for PEPOTraceSandwich" begin
+    # Test whether the mpotensor of a double layer of PEPOs is the same as in the case where the layers are fused
     mpo = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(network)))
     mpo_fused = InfiniteSquareNetwork(
         map(PEPSKit.mpotensor, PEPSKit.unitcell(network_fused))
@@ -106,6 +107,7 @@ end
 ) in Iterators.product(
     ctm_styles, projector_algs
 )
+    # Test whether calculating the environment of a double layer of PEPOs results in the same expectation value as in the case where the layers are fused
     env, = leading_boundary(
         CTMRGEnv(network, envspace), network; alg, maxiter=250, projector_alg
     )
@@ -124,6 +126,7 @@ end
 projector_alg = projector_algs[1] # only use :halfinfinite for this test due to convergence issues
 @testset "Test adjoint of an InfinitePEPO using $alg with $projector_alg" for alg in
                                                                               ctm_styles
+    # Test the definition of the adjoint of an operator, i.e. <Oψ₁, ψ₂> = <ψ₁, adjoint(O)ψ₂>, with Oψ the physical action of the PEPO O on the PEPS ψ.
     network_Oψψ′ = InfiniteSquareNetwork(InfinitePEPS(Oψ), InfinitePEPS(ψ′))
     network_ψOdagψ′ = InfiniteSquareNetwork(InfinitePEPS(ψ), InfinitePEPS(Odagψ′))
 
@@ -154,6 +157,7 @@ end
 ) in Iterators.product(
     ctm_styles, projector_algs
 )
+    # Test whether calculating the environment of `PEPOSandwich` results in the same expectation value as when the PEPO is fused with the PEPS
     env, = leading_boundary(
         CTMRGEnv(network_O, envspace), network_O; alg, maxiter=400, projector_alg
     )
