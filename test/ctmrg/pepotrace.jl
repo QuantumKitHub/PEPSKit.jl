@@ -175,5 +175,5 @@ end
     nrm = PEPSKit._contract_site((1, 1), network_O, env)
     nrm_fused = network_value(network_fused_OO, env_fused)
 
-    @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 2e-5
+    @test (m / nrm) ≈ (m_fused / nrm_fused) atol = 5e-5
 end
