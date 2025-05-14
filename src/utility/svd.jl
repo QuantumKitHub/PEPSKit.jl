@@ -438,13 +438,21 @@ function ChainRulesCore.rrule(
     return (U, S, V, info), tsvd!_itersvd_pullback
 end
 
-# scalar inverses with a cutoff tolerance and Lorentzian broadening
-function _safe_inv(x, tol, ε=0)
-    if abs(x) < tol
-        return zero(x)
-    else
-        return iszero(ε) ? inv(x) : _lorentz_broaden(x, ε)
+# scalar inverses with a cutoff tolerance
+_safe_inv(x, tol) = abs(x) < tol ? zero(x) : inv(x)
+
+# compute inverse singular value difference contribution to SVD gradient with broadening ε
+function _broadened_inv_S(S::AbstractVector{T}, tol, ε=0) where {T}
+    F = similar(S, (axes(S, 1), axes(S, 1)))
+    @inbounds for j in axes(F, 2), i in axes(F, 1)
+        F[i, j] = if i == j
+            zero(T)
+        else
+            Δsᵢⱼ = S[j] - S[i]
+            ε > 0 ? _lorentz_broaden(Δsᵢⱼ, ε) : _safe_inv(Δsᵢⱼ, tol)
+        end
     end
+    return F
 end
 
 # Lorentzian broadening for divergent term in SVD rrule, see
@@ -554,9 +562,8 @@ function svd_pullback!(
         @info "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
     end
 
-    UdΔAV =
-        (aUΔU .+ aVΔV) .* _safe_inv.(Sp' .- Sp, tol, broadening) .+
-        (aUΔU .- aVΔV) .* _safe_inv.(Sp' .+ Sp, tol)
+    inv_S_minus = _broadened_inv_S(Sp, tol, broadening) # possibly divergent/broadened contribution
+    UdΔAV = @. (aUΔU + aVΔV) * inv_S_minus + (aUΔU - aVΔV) * _safe_inv(Sp' .+ Sp, tol)
     if !(ΔS isa ZeroTangent)
         UdΔAV[diagind(UdΔAV)] .+= real.(ΔS)
         # in principle, ΔS is real, but maybe not if coming from an anyonic tensor
@@ -585,16 +592,14 @@ function svd_pullback!(
             VrΔV = fill!(similar(Vd, (r - p, p)), 0)
         end
 
-        X =
-            (1//2) .* (
-                (UrΔU .+ VrΔV) .* _safe_inv.(Sp' .- Sr, tol, broadening) .+
-                (UrΔU .- VrΔV) .* _safe_inv.(Sp' .+ Sr, tol)
-            )
-        Y =
-            (1//2) .* (
-                (UrΔU .+ VrΔV) .* _safe_inv.(Sp' .- Sr, tol, broadening) .-
-                (UrΔU .- VrΔV) .* _safe_inv.(Sp' .+ Sr, tol)
-            )
+        X = @. (1//2) * (
+            (UrΔU + VrΔV) * _safe_inv(Sp' - Sr, tol) +
+            (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
+        )
+        Y = @. (1//2) * (
+            (UrΔU + VrΔV) * _safe_inv(Sp' - Sr, tol) -
+            (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
+        )
 
         # ΔA += Ur * X * Vp' + Up * Y' * Vr'
         mul!(ΔA, Ur, X * Vp', 1, 1)
