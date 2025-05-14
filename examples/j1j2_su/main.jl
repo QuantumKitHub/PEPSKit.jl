@@ -53,7 +53,7 @@ trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
 alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
 for J2 in 0.1:0.1:0.5
     H = real( ## convert Hamiltonian `LocalOperator` to real floats
-        j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false)
+        j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false),
     )
     result = simpleupdate(wpeps, H, alg; check_interval)
     global wpeps = result[1]
@@ -84,7 +84,7 @@ the expectation value, where we make sure to normalize by the unit cell size:
 peps = InfinitePEPS(wpeps)
 normalize!.(peps.A, Inf) ## normalize PEPS with absorbed weights by largest element
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
-env, = leading_boundary(env₀, peps; tol=1e-10, trscheme=trscheme_env)
+env, = leading_boundary(env₀, peps; tol=1e-10, alg=:sequential, trscheme=trscheme_env);
 E = expectation_value(peps, H, env) / (Nr * Nc)
 
 md"""
@@ -94,14 +94,28 @@ which utilizes AD-based PEPS optimization to find $E_\text{ref}=-0.49425$:
 """
 
 E_ref = -0.49425
-@show (E - E_ref) / abs(E_ref)
+@show (E - E_ref) / abs(E_ref);
 
 md"""
 ## Variational PEPS optimization using AD
 
 As a last step, we will use the SU-evolved PEPS as a starting point for a [`fixedpoint`](@ref)]
-PEPS optimization.
+PEPS optimization. Note that we could have also used a sublattice-rotated version of `H` to
+fit the Hamiltonian onto a single-site unit cell which would require us to optimize fewer
+parameters and hence lead to a faster optimization. But here we instead take advantage of
+the already evolved `peps`, thus giving us a physical initial guess for the optimization:
 """
 
-peps_opt, env_opt, E_opt, = fixedpoint(H, peps, env; tol=1e-4);
+peps_opt, env_opt, E_opt, = fixedpoint(
+    H, peps, env; optimizer_alg=(; tol=1e-4, maxiter=120)
+);
 
+md"""
+Finally, we compare the variationally optimized energy against the reference energy. Indeed,
+we find that the additional AD-based optimization improves the SU-evolved PEPS and leads to
+a more accurate energy estimate.
+"""
+
+E_opt /= (Nr * Nc)
+@show E_opt
+@show (E_opt - E_ref) / abs(E_ref);
