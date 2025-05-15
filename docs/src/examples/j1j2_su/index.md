@@ -157,7 +157,7 @@ E = expectation_value(peps, H, env) / (Nr * Nc)
 ````
 
 Let us compare that estimate with benchmark data obtained from the
-[YASTN/peps-torch package]((https://github.com/jurajHasik/j1j2_ipeps_states/blob/ea4140fbd7da0fc1b75fac2871f75bda125189a8/single-site_pg-C4v-A1_internal-U1/j20.5/state_1s_A1_U1B_j20.5_D4_chi_opt96.dat)).
+[YASTN/peps-torch package](https://github.com/jurajHasik/j1j2_ipeps_states/blob/ea4140fbd7da0fc1b75fac2871f75bda125189a8/single-site_pg-C4v-A1_internal-U1/j20.5/state_1s_A1_U1B_j20.5_D4_chi_opt96.dat).
 which utilizes AD-based PEPS optimization to find $E_\text{ref}=-0.49425$:
 
 ````julia
@@ -172,7 +172,7 @@ E_ref = -0.49425
 
 ## Variational PEPS optimization using AD
 
-As a last step, we will use the SU-evolved PEPS as a starting point for a [`fixedpoint`](@ref)]
+As a last step, we will use the SU-evolved PEPS as a starting point for a [`fixedpoint`](@ref)
 PEPS optimization. Note that we could have also used a sublattice-rotated version of `H` to
 fit the Hamiltonian onto a single-site unit cell which would require us to optimize fewer
 parameters and hence lead to a faster optimization. But here we instead take advantage of

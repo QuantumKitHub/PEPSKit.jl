@@ -43,7 +43,7 @@ mathengine = MathJax3(
 # examples pages
 examples_optimization =
     joinpath.(["heisenberg", "bose_hubbard", "xxz", "fermi_hubbard"], Ref("index.md"))
-examples_time_evolution = joinpath.(["heisenberg_su", "hubbard_su"], Ref("index.md"))
+examples_time_evolution = joinpath.(["heisenberg_su", "hubbard_su", "j1j2_su"], Ref("index.md"))
 examples_partition_functions =
     joinpath.(
         ["2d_ising_partition_function", "3d_ising_partition_function"], Ref("index.md")
