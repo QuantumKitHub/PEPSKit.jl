@@ -1152,11 +1152,11 @@ environment tensors.
 
 ```
            |
-     [~P_bottom~]
-      |        |
-    E_east --  A -- 
-      |        |
      [~~P_top~~~]
+      |        |
+   -- A  --  E_east
+      |        |
+     [~P_bottom~]
            |
 ```
 """
@@ -1236,7 +1236,7 @@ environment tensors.
            |
      [~P_bottom~]
       |        |
-   -- A  --  E_west
+    E_west --  A -- 
       |        |
      [~~P_top~~~]
            |
