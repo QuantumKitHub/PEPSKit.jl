@@ -285,7 +285,7 @@ function _correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
         vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
         return vals ./ abs(vals[1]) # normalize largest eigenvalue
     end
-    ξ_h = map(λ_row -> -n_rows / log(abs(λ_row[2])), λ_h)
+    ξ_h = map(λ -> -1 / log(abs(λ[2])), λ_h)
 
     # Vertical
     λ_v = map(1:n_cols) do c
@@ -294,7 +294,7 @@ function _correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
         vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
         return vals ./ abs(vals[1]) # normalize largest eigenvalue
     end
-    ξ_v = map(λ_col -> -n_cols / log(abs(λ_col[2])), λ_v)
+    ξ_v = map(λ -> -1 / log(abs(λ[2])), λ_v)
 
     return ξ_h, ξ_v, λ_h, λ_v
 end
