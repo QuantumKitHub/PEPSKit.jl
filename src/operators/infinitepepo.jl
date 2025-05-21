@@ -196,7 +196,7 @@ end
     adjoint(O::InfinitePEPO)
 
 Create the adjoint of an InfinitePEPO.
-With this definition, <Oψ₁, ψ₂> = <ψ₁, adjoint(O)ψ₂>, with Oψ the physical action of the PEPO O on the PEPS ψ.
+This is defined such that `dot(psi, O, phi) == dot(psi, O * phi) == dot(O' * psi, phi)` for any two states `psi` and `phi`.
 """
 function Base.adjoint(O::InfinitePEPO)
     return InfinitePEPO(_dag.(unitcell(O)))
