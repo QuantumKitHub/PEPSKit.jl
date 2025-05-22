@@ -2,11 +2,29 @@ using Test
 using Random
 using LinearAlgebra
 using TensorKit
-using KrylovKit
-using OptimKit
-using Zygote
 using PEPSKit
-import PEPSKit: unitcell
+
+function fuse_PEPO_PEPS(O, A, fuser)
+    @tensor t[-1; -3 -4 -5 -6] :=
+        O[-1 1; 2 4 6 8] *
+        A[1; 3 5 7 9] *
+        fuser[2 3; -3] *
+        fuser[4 5; -4] *
+        conj(fuser[6 7; -5]) *
+        conj(fuser[8 9; -6])
+    return t
+end
+
+function fuse_PEPO_PEPO(O₁, O₂, fuser)
+    @tensor t[-1 -2; -3 -4 -5 -6] :=
+        O₁[-1 1; 2 4 6 8] *
+        O₂[1 -2; 3 5 7 9] *
+        fuser[2 3; -3] *
+        fuser[4 5; -4] *
+        conj(fuser[6 7; -5]) *
+        conj(fuser[8 9; -6])
+    return t
+end
 
 χenv = 24
 T = ComplexF64
@@ -27,61 +45,20 @@ M = M + twist(flip(PEPSKit._dag(M), 3:6), [4 6])
 # Fuse a layer consisting of O-O and MO together
 fuser = isomorphism(T, vspace ⊗ vspace, fuse(vspace, vspace))
 fuser_adj = isomorphism(T, vspace' ⊗ vspace, fuse(vspace', vspace))
-@tensor O2[-1 -2; -3 -4 -5 -6] :=
-    O[-1 1; 2 4 6 8] *
-    O[1 -2; 3 5 7 9] *
-    fuser[2 3; -3] *
-    fuser[4 5; -4] *
-    conj(fuser[6 7; -5]) *
-    conj(fuser[8 9; -6])
-@tensor MO[-1 -2; -3 -4 -5 -6] :=
-    M[-1 1; 2 4 6 8] *
-    O[1 -2; 3 5 7 9] *
-    fuser[2 3; -3] *
-    fuser[4 5; -4] *
-    conj(fuser[6 7; -5]) *
-    conj(fuser[8 9; -6])
+
+O2 = fuse_PEPO_PEPO(O, O, fuser)
+MO = fuse_PEPO_PEPO(M, O, fuser)
 
 # Create `InfiniteSquareNetwork`s of of both options
 O_stack = fill(O, 1, 1, 2)
 network = InfiniteSquareNetwork(InfinitePEPO(O_stack));
 network_fused = InfiniteSquareNetwork(InfinitePEPO(O2));
 
+# Construct random PEPS tensors
 ψ = randn(T, pspace, vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
 ψ = ψ / norm(ψ)
-@tensor Oψ[-1; -3 -4 -5 -6] :=
-    O[-1 1; 2 4 6 8] *
-    ψ[1; 3 5 7 9] *
-    fuser[2 3; -3] *
-    fuser[4 5; -4] *
-    conj(fuser[6 7; -5]) *
-    conj(fuser[8 9; -6])
-@tensor Mψ[-1; -3 -4 -5 -6] :=
-    M[-1 1; 2 4 6 8] *
-    ψ[1; 3 5 7 9] *
-    fuser[2 3; -3] *
-    fuser[4 5; -4] *
-    conj(fuser[6 7; -5]) *
-    conj(fuser[8 9; -6])
 ϕ = randn(T, pspace, vspace ⊗ vspace ⊗ vspace' ⊗ vspace')
 ϕ = ϕ / norm(ϕ)
-@tensor Odagϕ[-1; -3 -4 -5 -6] :=
-    twist(PEPSKit._dag(O), 1:4)[-1 1; 2 4 6 8] *
-    ϕ[1; 3 5 7 9] *
-    fuser_adj[2 3; -3] *
-    fuser_adj[4 5; -4] *
-    conj(fuser_adj[6 7; -5]) *
-    conj(fuser_adj[8 9; -6])
-
-(Nr, Nc) = (1, 1)
-Oinf = InfinitePEPO(O; unitcell=(Nr, Nc, 1))
-O_stack = fill(O, Nr, Nc, 2)
-O_stack[:, :, 2] .= unitcell(adjoint(Oinf))
-OOdag = InfinitePEPO(O_stack)
-
-network_O = InfiniteSquareNetwork(InfinitePEPS(ψ), OOdag, InfinitePEPS(ψ))
-network_fused_MO = InfiniteSquareNetwork(InfinitePEPS(Mψ), InfinitePEPS(Oψ))
-network_fused_OO = InfinitePEPS(Oψ)
 
 # cover all different flavors
 ctm_styles = [:sequential, :simultaneous]
@@ -129,7 +106,10 @@ end
 projector_alg = projector_algs[1] # only use :halfinfinite for this test due to convergence issues
 @testset "Test adjoint of an InfinitePEPO using $alg with $projector_alg" for alg in
                                                                               ctm_styles
-    # Test the definition of the adjoint of an operator, i.e. dot(psi, O, phi) == dot(psi, O * phi) == dot(O' * psi, phi) for any two states psi and phi.
+    # Test the definition of the adjoint of an operator, i.e. dot(psi, O', phi) == dot(psi, O' * phi) == dot(O * psi, phi) for any two states psi and phi.
+    Oψ = fuse_PEPO_PEPS(O, ψ, fuser)
+    Odagϕ = fuse_PEPO_PEPS(twist(PEPSKit._dag(O), 1:4), ϕ, fuser_adj)
+
     network_ψOϕ = InfiniteSquareNetwork(
         InfinitePEPS(ψ), InfinitePEPO(PEPSKit._dag(O)), InfinitePEPS(ϕ)
     )
@@ -175,6 +155,20 @@ end
     ctm_styles, projector_algs
 )
     # Test whether calculating the environment of `PEPOSandwich` results in the same expectation value as when the PEPO is fused with the PEPS
+
+    (Nr, Nc) = (1, 1)
+    Oinf = InfinitePEPO(O; unitcell=(Nr, Nc, 1))
+    O_stack = fill(O, Nr, Nc, 2)
+    O_stack[:, :, 2] .= PEPSKit.unitcell(adjoint(Oinf))
+    OOdag = InfinitePEPO(O_stack)
+
+    Oψ = fuse_PEPO_PEPS(O, ψ, fuser)
+    Mψ = fuse_PEPO_PEPS(M, ψ, fuser)
+
+    network_O = InfiniteSquareNetwork(InfinitePEPS(ψ), OOdag, InfinitePEPS(ψ))
+    network_fused_MO = InfiniteSquareNetwork(InfinitePEPS(Mψ), InfinitePEPS(Oψ))
+    network_fused_OO = InfinitePEPS(Oψ)
+
     env, = leading_boundary(
         CTMRGEnv(network_O, envspace), network_O; alg, maxiter=400, projector_alg
     )
