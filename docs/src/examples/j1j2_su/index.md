@@ -32,9 +32,10 @@ Random.seed!(2025);
 
 ## Simple updating a challenging phase
 
-Let's start by initializing an `InfiniteWeightPEPS` for which we set the required
-parameters as well as physical and virtual vector spaces. Since the $J_1$-$J_2$ model has
-*next*-neighbor interactions, the simple update algorithm requires a $2 \times 2$ unit cell:
+Let's start by initializing an `InfiniteWeightPEPS` for which we set the required parameters
+as well as physical and virtual vector spaces. We use the minimal unit cell size
+($2 \times 2$) required by the simple update algorithm for Hamiltonians with
+next-nearest-neighbour interactions:
 
 ````julia
 Dbond, χenv, symm = 4, 32, U1Irrep
