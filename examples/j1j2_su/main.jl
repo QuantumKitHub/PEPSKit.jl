@@ -3,7 +3,7 @@ md"""
 # Three-site simple update for the $J_1$-$J_2$ model
 
 In this example, we will use [`SimpleUpdate`](@ref) imaginary time evolution to treat
-the two-dimensional $J_1$-$J_2$ model, which contains next-nearest neighbor interactions:
+the two-dimensional $J_1$-$J_2$ model, which contains next-nearest-neighbour interactions:
 
 ```math
 H = J_1 \sum_{\langle i,j \rangle} \mathbf{S}_i \cdot \mathbf{S}_j
@@ -27,7 +27,7 @@ md"""
 Let's start by initializing an `InfiniteWeightPEPS` for which we set 
 the required parameters as well as physical and virtual vector spaces. 
 We use the minimal unit cell size ($2 \times 2$) required by the simple update 
-algorithm for Hamiltonians with next-nearest-neighbor interactions:
+algorithm for Hamiltonians with next-nearest-neighbour interactions:
 """
 
 Dbond, χenv, symm = 4, 32, U1Irrep
