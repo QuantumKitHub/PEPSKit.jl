@@ -136,10 +136,10 @@ Perform QR decomposition through a PEPS tensor
 function qr_through(
     R0::AbstractTensorMap{T,S,1,1}, M::AbstractTensorMap{T,S,1,4}; normalize::Bool=true
 ) where {T<:Number,S<:ElementarySpace}
-    @tensor A[-1; -2 -3 -4 -5] := R0[-1; 1] * M[1; -2 -3 -4 -5]
-    q, r = leftorth(A, ((1, 2, 3, 4), (5,)); alg=QRpos())
+    @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1; -2 -3 -4 -5]
+    q, r = leftorth!(A; alg=QRpos())
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
-    normalize && (r /= norm(r, Inf))
+    normalize && normalize!(r, Inf)
     return q, r
 end
 function qr_through(
@@ -147,7 +147,7 @@ function qr_through(
 ) where {T<:Number,S<:ElementarySpace}
     q, r = leftorth(M, ((1, 2, 3, 4), (5,)); alg=QRpos())
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
-    normalize && (r /= norm(r, Inf))
+    normalize && normalize!(r, Inf)
     return q, r
 end
 
@@ -165,7 +165,7 @@ function lq_through(
     @plansor A[-1; -2 -3 -4 -5] := M[-1; -2 -3 -4 1] * L1[1; -5]
     l, q = rightorth!(A; alg=LQpos())
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
-    normalize && (l /= norm(l, Inf))
+    normalize && normalize!(l, Inf)
     return l, q
 end
 function lq_through(
@@ -173,7 +173,7 @@ function lq_through(
 ) where {T<:Number,S<:ElementarySpace}
     l, q = rightorth(M; alg=LQpos())
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
-    normalize && (l /= norm(l, Inf))
+    normalize && normalize!(l, Inf)
     return l, q
 end
 
