@@ -276,29 +276,25 @@ MPSKit.correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...) =
     _correlation_length(env; num_vals, kwargs...)
 
 function _correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
-    T = scalartype(env)
-    ξ_h = Vector{real(T)}(undef, size(env, 2))
-    ξ_v = Vector{real(T)}(undef, size(env, 3))
-    λ_h = Vector{Vector{T}}(undef, size(env, 2))
-    λ_v = Vector{Vector{T}}(undef, size(env, 3))
+    _, n_rows, n_cols = size(env)
 
     # Horizontal
-    λ_h = map(1:size(env, 2)) do r
+    λ_h = map(1:n_rows) do r
         above = InfiniteMPS(env.edges[NORTH, r, :])
-        below = InfiniteMPS(_dag.(env.edges[SOUTH, r, :]))
+        below = InfiniteMPS(_dag.(env.edges[SOUTH, _next(r, n_rows), :]))
         vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
         return vals ./ abs(vals[1]) # normalize largest eigenvalue
     end
-    ξ_h = map(λ_row -> -1 / log(abs(λ_row[2])), λ_h)
+    ξ_h = map(λ -> -1 / log(abs(λ[2])), λ_h)
 
     # Vertical
-    λ_v = map(1:size(env, 3)) do c
+    λ_v = map(1:n_cols) do c
         above = InfiniteMPS(env.edges[EAST, :, c])
-        below = InfiniteMPS(_dag.(env.edges[WEST, :, c]))
+        below = InfiniteMPS(_dag.(env.edges[WEST, :, _next(c, n_cols)]))
         vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
         return vals ./ abs(vals[1]) # normalize largest eigenvalue
     end
-    ξ_v = map(λ_row -> -1 / log(abs(λ_row[2])), λ_v)
+    ξ_v = map(λ -> -1 / log(abs(λ[2])), λ_v)
 
     return ξ_h, ξ_v, λ_h, λ_v
 end
