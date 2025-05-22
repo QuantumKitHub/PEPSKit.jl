@@ -35,6 +35,9 @@ end
         @time @safetestset "PEPOTrace" begin
             include("ctmrg/pepotrace.jl")
         end
+        @time @safetestset "correlation length" begin
+            include("ctmrg/correlation_length.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
         @time @safetestset "CTMRG gradients" begin
