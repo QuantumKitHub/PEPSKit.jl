@@ -62,17 +62,13 @@ function verify_cluster_orth(
     for i in 1:(N - 1)
         M, sl0 = Ms[i], wts[i]
         sl1 = _contract_left(M, i == 1 ? nothing : wts[i - 1])
-        normalize!(sl0)
-        normalize!(sl1)
-        lorths[i] = (sl0 ≈ sl1)
+        lorths[i] = (normalize(sl0) ≈ normalize(sl1))
     end
     # right orthogonal
     for i in 2:N
         M, sr0 = Ms[i], wts[i - 1]
         sr1 = _contract_right(M, i == N ? nothing : wts[i])
-        normalize!(sl0)
-        normalize!(sl1)
-        rorths[i - 1] = (sr0 ≈ sr1)
+        rorths[i - 1] = (normalize(sr0) ≈ normalize(sr1))
     end
     return lorths, rorths
 end
