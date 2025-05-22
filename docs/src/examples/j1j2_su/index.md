@@ -17,10 +17,10 @@ H = J_1 \sum_{\langle i,j \rangle} \mathbf{S}_i \cdot \mathbf{S}_j
 + J_2 \sum_{\langle \langle i,j \rangle \rangle} \mathbf{S}_i \cdot \mathbf{S}_j
 ```
 
-Note that the $J_1$-$J_2$ model exhibits a $U(1)$ spin rotation symmetry, which we want to
-exploit here. The goal will be to calculate the energy at $J_1 = 1$ and $J_2 = 1/2$, first
-using the simple update algorithm and then, to refine the energy estimate, using AD-based
-variational PEPS optimization.
+Here we will exploit the $U(1)$ spin rotation symmetry in the $J_1$-$J_2$ model. The goal
+will be to calculate the energy at $J_1 = 1$ and $J_2 = 1/2$, first using the simple update
+algorithm and then, to refine the energy estimate, using AD-based variational PEPS
+optimization.
 
 We first import all required modules and seed the RNG:
 
@@ -48,10 +48,10 @@ Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1//2 => χenv ÷ 4, -1//2 => χenv ÷ 4)
 wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc));
 ````
 
-The value $J_2 / J_1 = 0.5$ is close to a possible spin liquid phase, which is challenging
-for SU to produce a relatively good state from random initialization. Therefore, we shall
-gradually increase $J_2 / J_1$ from 0.1 to 0.5, each time initializing on the previously
-evolved PEPS:
+The value $J_2 / J_1 = 0.5$ corresponds to a [possible spin liquid phase](@cite liu_gapless_2022),
+which is challenging for SU to produce a relatively good state from random initialization.
+Therefore, we shall gradually increase $J_2 / J_1$ from 0.1 to 0.5, each time initializing
+on the previously evolved PEPS:
 
 ````julia
 dt, tol, maxiter = 1e-2, 1e-8, 30000
