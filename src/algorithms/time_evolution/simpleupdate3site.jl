@@ -277,12 +277,10 @@ function _apply_gatempo!(
     @assert all(!isdual(space(g, 1)) for g in gs[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
-    fusers = collect(
-        begin
-            V1, V2 = space(M, 1), space(g, 1)
-            isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
-        end for (M, g) in zip(Ms[2:end], gs[2:end])
-    )
+    fusers = map(Ms[2:end], gs[2:end]) do M, g
+        V1, V2 = space(M, 1), space(g, 1)
+        return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
+    end
     for (i, M) in enumerate(Ms[2:end])
         isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
     end
