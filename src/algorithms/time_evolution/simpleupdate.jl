@@ -182,7 +182,7 @@ function simpleupdate(
     check_interval::Int=500,
 )
     # determine if Hamiltonian contains nearest neighbor terms only
-    nnonly = is_nnham(ham)
+    nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
     if use_3site

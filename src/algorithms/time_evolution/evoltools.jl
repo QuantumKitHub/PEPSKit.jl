@@ -1,20 +1,25 @@
 """
-    get_expham(dt::Float64, H::LocalOperator)
+    get_expham(dt::Number, H::LocalOperator)
 
-Compute `exp(-dt * H)` from Hamiltonian `H`.
-Each term in `H` must be a single `TensorMap`.
+Compute `exp(-dt * op)` for each term `op` in `H`,
+and combine them into a new LocalOperator.
+Each `op` in `H` must be a single `TensorMap`.
 """
-function get_expham(dt::Float64, H::LocalOperator)
-    return LocalOperator(H.lattice, (sites => exp(-dt * op) for (sites, op) in H.terms)...)
+function get_expham(dt::Number, H::LocalOperator)
+    return LocalOperator(
+        physicalspace(H), (sites => exp(-dt * op) for (sites, op) in H.terms)...
+    )
 end
 
 """
-Check if a Hamiltonian contains only nearest neighbor terms
+    is_nearest_neighbour(H::LocalOperator)
+
+Check if an operator `H` contains only nearest neighbor terms.
 """
-function is_nnham(H::LocalOperator)
-    return all([
-        numin(op) == 2 && norm(Tuple(terms[2] - terms[1])) == 1.0 for (terms, op) in H.terms
-    ])
+function is_nearest_neighbour(H::LocalOperator)
+    return all(H.terms) do (sites, op)
+        return numin(op) == 2 && sum(abs, Tuple(sites[2] - sites[1])) == 1
+    end
 end
 
 """
