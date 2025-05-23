@@ -141,11 +141,12 @@ function _apply_gate(
     trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
     @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
-    return tsvd!(
-        a2b2;
-        trunc=((trscheme isa FixedSpaceTruncation) ? truncspace(space(a, 3)) : trscheme),
-        alg=TensorKit.SVD(),
-    )
+    return tsvd!(a2b2; trunc=if trscheme isa FixedSpaceTruncation
+        V = space(b, 1)
+        truncspace(isdual(V) ? V' : V)
+    else
+        trscheme
+    end, alg=TensorKit.SVD())
 end
 
 """
