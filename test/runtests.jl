@@ -53,7 +53,7 @@ end
         @time @safetestset "Gauge fixing" begin
             include("bondenv/benv_gaugefix.jl")
         end
-        @time @safetestset "Full bond environment from CTMRG" begin
+        @time @safetestset "Full update bond environment" begin
             include("bondenv/benv_fu.jl")
         end
     end

@@ -147,9 +147,17 @@ end
 ## Forward algorithms
 
 # Compute condition number smax / smin for diagonal singular value TensorMap
-function _condition_number(S::AbstractTensorMap)
+function _condition_number_sdiag(S::AbstractTensorMap)
     smax = maximum(first ∘ last, blocks(S))
     smin = maximum(last ∘ last, blocks(S))
+    return smax / smin
+end
+
+# Compute condition number smax / smin for any TensorMap
+function _condition_number(a::AbstractTensorMap)
+    s = tsvd(a)[2]
+    smax = maximum(s.data)
+    smin = minimum(s.data)
     return smax / smin
 end
 
@@ -176,7 +184,7 @@ function _tsvd!(
     end
 
     # construct info NamedTuple
-    condnum = _condition_number(S)
+    condnum = _condition_number_sdiag(S)
     info = (;
         truncation_error=truncerr, condition_number=condnum, U_full=U, S_full=S, V_full=V⁺
     )
@@ -217,7 +225,7 @@ end
 function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
     info = (;
         truncation_error=0,
-        condition_number=_condition_number(alg.S),
+        condition_number=_condition_number_sdiag(alg.S),
         U_full=alg.U_full,
         S_full=alg.S_full,
         V_full=alg.V_full,
@@ -272,7 +280,7 @@ function _tsvd!(f, alg::IterSVD, trunc::TruncationScheme, p::Real)
         trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
 
     # construct info NamedTuple
-    condition_number = _condition_number(S)
+    condition_number = _condition_number_sdiag(S)
     info = (;
         truncation_error, condition_number, U_full=nothing, S_full=nothing, V_full=nothing
     )
