@@ -239,7 +239,8 @@ function _get_allprojs(Ms, Rs, Ls, trunc::TensorKit.TruncationScheme, revs::Vect
     N = length(Ms)
     projs_errs = map(1:(N - 1)) do i
         trunc2 = if isa(trunc, FixedSpaceTruncation)
-            truncspace(space(Ms[i + 1], 1))
+            V = space(Ms[i + 1], 1)
+            truncspace(isdual(V) ? V' : V)
         else
             trunc
         end
