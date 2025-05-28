@@ -1,12 +1,12 @@
 """
 Construct the environment (norm) tensor
 ```
-    C1 --- T1 --------- T1 --- C2     r-1
-    |      ‖             ‖     |
-    T4 === XX ==     == YY === T2     r
-    |      ‖             ‖     |
-    C4 --- T3 --------- T3 --- C3     r+1
-    c-1    c           c+1    c+2
+    C1---T1---------T1---C2   r-1
+    |    ‖          ‖    |
+    T4===XX==     ==YY===T2    r
+    |    ‖          ‖    |
+    C4---T3---------T3---C3   r+1
+    c-1  c         c+1  c+2
 ```
 where `XX = X' X` and `YY = Y' Y` (stacked together).
 
@@ -14,9 +14,9 @@ Axis order: `[DX1 DY1; DX0 DY0]`, as in
 ```
     ┌---------------------┐
     | ┌----┐              |
-    └-|    |-- DX0  DY0 --┘
-      |benv|           
-    ┌-|    |-- DX1  DY1 --┐
+    └-|    |---DX0  DY0---┘
+      |benv|
+    ┌-|    |---DX1  DY1---┐
     | └----┘              |
     └---------------------┘
 ```
@@ -38,30 +38,25 @@ function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, env::CTMRGEnv)
     t4 = env.edges[4, row, cm1]
     #= index labels
 
-    left half                       right half
-    C1 -χ4 - T1 ------- χ6 ------- T1 - χ8 - C2     r-1
+    C1--χ4--T1X---------χ6---------T1Y--χ8---C2     r-1
     |        ‖                      ‖        |
     χ2      DNX                    DNY      χ10
     |        ‖                      ‖        |
-    T4 =DWX= XX = DX =       = DY = YY =DEY= T2     r
+    T4==DWX==XX===DX==       ==DY===YY==DEY==T2     r
     |        ‖                      ‖        |
     χ1      DSX                    DSY       χ9
     |        ‖                      ‖        |
-    C4 -χ3 - T3 ------- χ5 ------- T3 - χ7 - C3     r+1
+    C4--χ3--T3X---------χ5---------T3Y--χ7---C3     r+1
     c-1      c                      c+1     c+2
     =#
-    # left half
-    @autoopt @tensor lhalf[DX1 DX0 χ5 χ6] := (
+    @autoopt @tensor benv[DX1 DY1; DX0 DY0] := (
         c4[χ3 χ1] *
         t4[χ1 DWX0 DWX1 χ2] *
         c1[χ2 χ4] *
         t3X[χ5 DSX0 DSX1 χ3] *
         X[DNX0 DX0 DSX0 DWX0] *
         conj(X[DNX1 DX1 DSX1 DWX1]) *
-        t1X[χ4 DNX0 DNX1 χ6]
-    )
-    # right half
-    @autoopt @tensor rhalf[DY1 DY0 χ5 χ6] := (
+        t1X[χ4 DNX0 DNX1 χ6] *
         c3[χ9 χ7] *
         t2[χ10 DEY0 DEY1 χ9] *
         c2[χ8 χ10] *
@@ -70,8 +65,6 @@ function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, env::CTMRGEnv)
         conj(Y[DNY1 DEY1 DSY1 DY1]) *
         t1Y[χ6 DNY0 DNY1 χ8]
     )
-    # combine
-    @autoopt @tensor benv[DX1 DY1; DX0 DY0] := (lhalf[DX1 DX0 χ5 χ6] * rhalf[DY1 DY0 χ5 χ6])
     normalize!(benv, Inf)
     return benv
 end
