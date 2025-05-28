@@ -149,7 +149,7 @@ end
 # Compute condition number smax / smin for diagonal singular value TensorMap
 function _condition_number(S::AbstractTensorMap)
     smax = maximum(first ∘ last, blocks(S))
-    smin = maximum(last ∘ last, blocks(S))
+    smin = minimum(last ∘ last, blocks(S))
     return smax / smin
 end
 
