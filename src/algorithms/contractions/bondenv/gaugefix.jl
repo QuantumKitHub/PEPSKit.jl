@@ -22,8 +22,8 @@ function positive_approx(benv::BondEnv)
     # we can multiply it by (-1).
     data = D.data
     @inbounds for i in eachindex(data)
-        d = sgn == -1 ? -data[i] : data[i]
-        data[i] = ifelse(d > 0, sqrt(d), zero(d))
+        d = (sgn == -1) ? -data[i] : data[i]
+        data[i] = (d > 0) ? sqrt(d) : zero(d)
     end
     Z = D * U'
     return Z
@@ -61,6 +61,8 @@ function fixgauge_benv(
     =#
     QL, L = leftorth(Z, ((2, 1), (3,)))
     QR, R = leftorth(Z, ((3, 1), (2,)))
+    @debug "Condition number of L = $(LinearAlgebra.cond(L))"
+    @debug "Condition number of L = $(LinearAlgebra.cond(R))"
     Linv, Rinv = inv(L), inv(R)
     #= fix gauge of Z, a, b
         ┌---------------------------------------┐
