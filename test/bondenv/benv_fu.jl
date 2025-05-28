@@ -5,32 +5,44 @@ using LinearAlgebra
 using KrylovKit
 using Random
 
-Nr, Nc = 2, 3
-# create random PEPS
 Random.seed!(0)
-Pspace = Vect[FermionParity](0 => 1, 1 => 1)
-Nspace = Vect[FermionParity](0 => 2, 1 => 2)
-peps = InfinitePEPS(randn, ComplexF64, Pspace, Nspace; unitcell=(Nr, Nc))
-normalize!.(peps.A, Inf)
+Nr, Nc = 2, 2
+# create Hubbard iPEPS using simple update
+function get_hubbard_state(t::Float64=1.0, U::Float64=8.0)
+    H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu=U / 2)
+    Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 1)
+    wpeps = InfiniteWeightPEPS(rand, ComplexF64, Vphy, Vphy; unitcell=(Nr, Nc))
+    alg = SimpleUpdate(1e-2, 1e-7, 10000, truncerr(1e-10) & truncdim(4))
+    wpeps, = simpleupdate(wpeps, H, alg; bipartite=false)
+    peps = InfinitePEPS(wpeps)
+    normalize!.(peps.A, Inf)
+    return peps
+end
+
+peps = get_hubbard_state()
 # calculate CTMRG environment
-Envspace = Vect[FermionParity](0 => 3, 1 => 3)
-ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=FixedSpaceTruncation())
+Envspace = Vect[FermionParity ⊠ U1Irrep](
+    (0, 0) => 4, (1, 1//2) => 1, (1, -1//2) => 1, (0, 1) => 1, (0, -1) => 1
+)
+ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=truncerr(1e-10) & truncdim(8))
 env, = leading_boundary(CTMRGEnv(rand, ComplexF64, peps, Envspace), peps, ctm_alg)
 for row in 1:Nr, col in 1:Nc
-    cp1 = PEPSKit._next(1, Nc)
+    cp1 = PEPSKit._next(col, Nc)
     A, B = peps.A[row, col], peps.A[row, cp1]
     X, a, b, Y = PEPSKit._qr_bond(A, B)
-    # verify that gauge fixing can reduce condition number
     benv = PEPSKit.bondenv_fu(row, col, X, Y, env)
     @assert [isdual(space(benv, ax)) for ax in 1:numind(benv)] == [0, 0, 1, 1]
-    @tensor ab[DX DY; da db] := a[DX; da D] * b[D db; DY]
-    nrm1 = PEPSKit.inner_prod(benv, ab, ab)
-    # gauge fixing
     Z = PEPSKit.positive_approx(benv)
+    # verify that gauge fixing can greatly reduce 
+    # condition number for physical state bond envs
     cond = PEPSKit._condition_number(Z' * Z)
     Z2, a2, b2, (Linv, Rinv) = PEPSKit.fixgauge_benv(Z, a, b)
     benv2 = Z2' * Z2
     cond2 = PEPSKit._condition_number(benv2)
     @test 1 <= cond2 < cond
     @info "benv cond number: (gauge-fixed) $(cond2) ≤ $(cond) (initial)"
+    # verify gauge fixing is done correctly
+    @tensor half[:] := Z[-1; 1 3] * a[1; -2 2] * b[2 -3; 3]
+    @tensor half2[:] := Z2[-1; 1 3] * a2[1; -2 2] * b2[2 -3; 3]
+    @test half ≈ half2
 end
