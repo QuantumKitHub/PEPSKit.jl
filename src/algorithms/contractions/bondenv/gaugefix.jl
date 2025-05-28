@@ -15,15 +15,17 @@ function positive_approx(benv::BondEnv)
     # eigen-decomposition: benv = U D U'
     D, U = eigh((benv + benv') / 2)
     # determine if `env` is (mostly) positive or negative
-    sgn = sign(mean(D.data))
+    sgn = sign(sum(D.data))
     # When optimizing the truncation of a bond, 
     # its environment can always be multiplied by a number.
     # If `benv` is negative (e.g. obtained approximately from CTMRG), 
     # we can multiply it by (-1).
-    (sgn == -1) && (D *= -1)
-    # set (small) negative eigenvalues to 0
-    D.data .= max.(D.data, 0)
-    Z = sdiag_pow(D, 0.5) * U'
+    data = D.data
+    @inbounds for i in eachindex(data)
+        d = sgn == -1 ? -data[i] : data[i]
+        data[i] = ifelse(d > 0, sqrt(d), zero(d))
+    end
+    Z = D * U'
     return Z
 end
 
