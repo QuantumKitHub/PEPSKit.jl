@@ -61,8 +61,7 @@ function fixgauge_benv(
     =#
     QL, L = leftorth(Z, ((2, 1), (3,)))
     QR, R = leftorth(Z, ((3, 1), (2,)))
-    @debug "Condition number of L = $(LinearAlgebra.cond(L))"
-    @debug "Condition number of L = $(LinearAlgebra.cond(R))"
+    @debug "cond(L) = $(LinearAlgebra.cond(L)); cond(R) = $(LinearAlgebra.cond(R))"
     Linv, Rinv = inv(L), inv(R)
     #= fix gauge of Z, a, b
         ┌---------------------------------------┐
