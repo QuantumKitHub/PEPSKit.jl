@@ -5,15 +5,15 @@ using LinearAlgebra
 using KrylovKit
 using Random
 
-Random.seed!(0)
+Random.seed!(100)
 Nr, Nc = 2, 2
 # create Hubbard iPEPS using simple update
 function get_hubbard_state(t::Float64=1.0, U::Float64=8.0)
     H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu=U / 2)
     Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 1)
     wpeps = InfiniteWeightPEPS(rand, ComplexF64, Vphy, Vphy; unitcell=(Nr, Nc))
-    alg = SimpleUpdate(1e-2, 1e-7, 10000, truncerr(1e-10) & truncdim(4))
-    wpeps, = simpleupdate(wpeps, H, alg; bipartite=false)
+    alg = SimpleUpdate(1e-2, 1e-8, 10000, truncerr(1e-10) & truncdim(4))
+    wpeps, = simpleupdate(wpeps, H, alg; bipartite=false, check_interval=2000)
     peps = InfinitePEPS(wpeps)
     normalize!.(peps.A, Inf)
     return peps
