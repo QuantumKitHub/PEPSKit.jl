@@ -168,6 +168,8 @@ keyword arguments are:
 * `tol::Real=tol` : Gradient norm tolerance of the optimizer.
 * `maxiter::Int=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
 * `verbosity::Int=$(Defaults.optimizer_verbosity)` : Optimizer output verbosity.
+* `ls_maxiter::Int=$(Defaults.ls_maxiter)` : Maximal number of linesearch iterations.
+* `ls_maxfg::Int=$(Defaults.ls_maxfg)` : Maximal number of function-gradient evaluations during linesearch.
 * `lbfgs_memory::Int=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
 
 ## Return values
