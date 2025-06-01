@@ -35,12 +35,12 @@ for row in 1:Nr, col in 1:Nc
     Z = PEPSKit.positive_approx(benv)
     # verify that gauge fixing can greatly reduce 
     # condition number for physical state bond envs
-    cond = LinearAlgebra.cond(Z' * Z)
+    cond1 = cond(Z' * Z)
     Z2, a2, b2, (Linv, Rinv) = PEPSKit.fixgauge_benv(Z, a, b)
     benv2 = Z2' * Z2
-    cond2 = LinearAlgebra.cond(benv2)
-    @test 1 <= cond2 < cond
-    @info "benv cond number: (gauge-fixed) $(cond2) ≤ $(cond) (initial)"
+    cond2 = cond(benv2)
+    @test 1 <= cond2 < cond1
+    @info "benv cond number: (gauge-fixed) $(cond2) ≤ $(cond1) (initial)"
     # verify gauge fixing is done correctly
     @tensor half[:] := Z[-1; 1 3] * a[1; -2 2] * b[2 -3; 3]
     @tensor half2[:] := Z2[-1; 1 3] * a2[1; -2 2] * b2[2 -3; 3]
