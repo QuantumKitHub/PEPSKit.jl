@@ -39,7 +39,9 @@ The reduced bond tensors `a`, `b` and `Z` are arranged as
         |   ↓   ↓
         ↓
 ```
-Reference: Physical Review B 92, 035142 (2015)
+Reference: 
+- Physical Review B 90, 064425 (2014)
+- Physical Review B 92, 035142 (2015)
 """
 function fixgauge_benv(
     Z::AbstractTensorMap{T,S,1,2},
@@ -62,6 +64,7 @@ function fixgauge_benv(
     QL, L = leftorth(Z, ((2, 1), (3,)))
     QR, R = leftorth(Z, ((3, 1), (2,)))
     @debug "cond(L) = $(LinearAlgebra.cond(L)); cond(R) = $(LinearAlgebra.cond(R))"
+    # TODO: find a better way to fix gauge that avoids `inv`
     Linv, Rinv = inv(L), inv(R)
     #= fix gauge of Z, a, b
         ┌---------------------------------------┐
