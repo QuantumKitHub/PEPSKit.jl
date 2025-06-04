@@ -170,7 +170,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
         end
     end
 
-    @set info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
+    @reset info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
     return (P_left, P_right), (; U, S, V, info...)
 end
@@ -191,7 +191,7 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
         end
     end
 
-    @set info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
+    @reset info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
     return (P_left, P_right), (; U, S, V, info...)
 end
