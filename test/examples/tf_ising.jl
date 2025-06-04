@@ -33,12 +33,29 @@ peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
 
 # compute magnetization
 σx = TensorMap(scalartype(peps₀)[0 1; 1 0], ℂ^2, ℂ^2)
-M = LocalOperator(physicalspace(H), (CartesianIndex(1, 1),) => σx)
-magn = expectation_value(peps, M, env)
+σz = TensorMap(scalartype(peps₀)[1 0; 0 -1], ℂ^2, ℂ^2)
+Mx = LocalOperator(physicalspace(H), (CartesianIndex(1, 1),) => σx)
+Mz = LocalOperator(physicalspace(H), (CartesianIndex(1, 1),) => σz)
+magnx = expectation_value(peps, Mx, env)
+magnz = expectation_value(peps, Mz, env)
 
 @test E ≈ e atol = 1e-2
-@test imag(magn) ≈ 0 atol = 1e-6
-@test abs(magn) ≈ mˣ atol = 5e-2
+@test imag(magnx) ≈ 0 atol = 1e-6
+@test abs(magnx) ≈ mˣ atol = 5e-2
+
+# compute horizontal connected correlation function
+corr =
+    correlator_horizontal(
+        peps, peps, env, σz, σz, (CartesianIndex(1, 1), CartesianIndex(1, 21))
+    ) .- magnz^2
+corr_2 =
+    correlator_horizontal(
+        peps, peps, env, σz ⊗ σz, (CartesianIndex(1, 1), CartesianIndex(1, 21))
+    ) .- magnz^2
+
+@test corr[end] ≈ 0.0 atol = 1e-5
+@test 1 / log(corr[18] / corr[19]) ≈ ξ_h[1] atol = 2e-2 # test correlation length far away from short-range effects
+@test maximum(abs.(corr - corr_2)) < 1e-14
 
 # find fixedpoint in polarized phase and compute correlations lengths
 H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
