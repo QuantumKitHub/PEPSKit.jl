@@ -81,7 +81,6 @@ corrv_2 =
         env,
     ) .- magnz^2
 
-
 @test corrh[end] ≈ 0.0 atol = 1e-5
 @test 1 / log(corrh[18] / corrh[19]) ≈ ξ_h[1] atol = 2e-2 # test correlation length far away from short-range effects
 @test corrv[end] ≈ 0.0 atol = 1e-5
