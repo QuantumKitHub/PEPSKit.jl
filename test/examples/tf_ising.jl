@@ -52,10 +52,21 @@ corr_2 =
     correlator_horizontal(
         peps, peps, env, σz ⊗ σz, (CartesianIndex(1, 1), CartesianIndex(1, 21))
     ) .- magnz^2
+corrv =
+    correlator_vertical(
+        peps, peps, env, σz, σz, (CartesianIndex(1, 1), CartesianIndex(21, 1))
+    ) .- magnz^2
+corrv_2 =
+    correlator_vertical(
+        peps, peps, env, σz ⊗ σz, (CartesianIndex(1, 1), CartesianIndex(21, 1))
+    ) .- magnz^2
 
 @test corr[end] ≈ 0.0 atol = 1e-5
 @test 1 / log(corr[18] / corr[19]) ≈ ξ_h[1] atol = 2e-2 # test correlation length far away from short-range effects
-@test maximum(abs.(corr - corr_2)) < 1e-14
+@test corrv[end] ≈ 0.0 atol = 1e-5
+@test 1 / log(corrv[18] / corrv[19]) ≈ ξ_v[1] atol = 3e-2 # test correlation length far away from short-range effects
+@test maximum(abs.(corrv - corrv_2)) < 1e-14
+@test maximum(abs.(corrv - corr)) < 1e-4
 
 # find fixedpoint in polarized phase and compute correlations lengths
 H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
