@@ -1,16 +1,16 @@
 function correlator_horizontal(
-    ket::InfinitePEPS,
     bra::InfinitePEPS,
+    O::Tuple{AbstractTensorMap{T,S},AbstractTensorMap{T,S}},
+    i::CartesianIndex{2},
+    j::CartesianIndices{2},
+    ket::InfinitePEPS,
     env::CTMRGEnv,
-    O₁::AbstractTensorMap{T,S},
-    O₂::AbstractTensorMap{T,S},
-    inds::Tuple{CartesianIndex{2},CartesianIndex{2}},
 ) where {T,S}
     @assert size(ket) == size(bra) "The ket and bra must have the same unit cell."
-    (r, c₁) = Tuple(inds[1])
-    (r₂, c₂) = Tuple(inds[2])
-    @assert r == r₂ "Not a horizontal correlation function."
-    @assert c₁ < c₂ "The first column index must be less than the second."
+    (r, c₁) = Tuple(i)
+    cs = sort([ind[2] for ind in j]; dims=2)
+    @assert all([r == ind[1] for ind in j]) "Not a horizontal correlation function."
+    @assert all(c₁ .< cs) "The first column index must be less than the second."
 
     (Nr, Nc) = size(ket)
     corr = T[]
@@ -23,7 +23,7 @@ function correlator_horizontal(
     left_side = transfer_left(
         left_start,
         env.edges[1, _prev(r, Nr), mod1(c₁, Nc)],
-        (ket[mod1(r, Nr), mod1(c₁, Nc)], O₁, bra[mod1(r, Nr), mod1(c₁, Nc)]),
+        (ket[mod1(r, Nr), mod1(c₁, Nc)], O[1], bra[mod1(r, Nr), mod1(c₁, Nc)]),
         env.edges[3, _next(r, Nr), mod1(c₁, Nc)],
     )
     left_side_norm = transfer_left(
@@ -33,35 +33,36 @@ function correlator_horizontal(
         env.edges[3, _next(r, Nr), mod1(c₁, Nc)],
     )
 
-    for c in (c₁ + 1):c₂
-        left_side_final =
-            left_side * HorizontalTransferMatrix(
-                env.edges[1, _prev(r, Nr), mod1(c, Nc)],
-                (ket[mod1(r, Nr), mod1(c, Nc)], O₂, bra[mod1(r, Nr), mod1(c, Nc)]),
-                env.edges[3, _next(r, Nr), mod1(c, Nc)],
+    for c in (c₁ + 1):cs[end]
+        if c ∈ cs
+            left_side_final =
+                left_side * HorizontalTransferMatrix(
+                    env.edges[1, _prev(r, Nr), mod1(c, Nc)],
+                    (ket[mod1(r, Nr), mod1(c, Nc)], O[2], bra[mod1(r, Nr), mod1(c, Nc)]),
+                    env.edges[3, _next(r, Nr), mod1(c, Nc)],
+                )
+            final = end_right(
+                left_side_final,
+                env.corners[2, _prev(r, Nr), _next(c, Nc)],
+                env.edges[2, mod1(r, Nr), _next(c, Nc)],
+                env.corners[3, _next(r, Nr), _next(c, Nc)],
             )
-        final = end_right(
-            left_side_final,
-            env.corners[2, _prev(r, Nr), _next(c, Nc)],
-            env.edges[2, mod1(r, Nr), _next(c, Nc)],
-            env.corners[3, _next(r, Nr), _next(c, Nc)],
-        )
 
-        left_side_norm_final =
-            left_side_norm * HorizontalTransferMatrix(
-                env.edges[1, _prev(r, Nr), mod1(c, Nc)],
-                (ket[mod1(r, Nr), mod1(c, Nc)], bra[mod1(r, Nr), mod1(c, Nc)]),
-                env.edges[3, _next(r, Nr), mod1(c, Nc)],
+            left_side_norm_final =
+                left_side_norm * HorizontalTransferMatrix(
+                    env.edges[1, _prev(r, Nr), mod1(c, Nc)],
+                    (ket[mod1(r, Nr), mod1(c, Nc)], bra[mod1(r, Nr), mod1(c, Nc)]),
+                    env.edges[3, _next(r, Nr), mod1(c, Nc)],
+                )
+            final_norm = end_right(
+                left_side_norm_final,
+                env.corners[2, _prev(r, Nr), _next(c, Nc)],
+                env.edges[2, mod1(r, Nr), _next(c, Nc)],
+                env.corners[3, _next(r, Nr), _next(c, Nc)],
             )
-        final_norm = end_right(
-            left_side_norm_final,
-            env.corners[2, _prev(r, Nr), _next(c, Nc)],
-            env.edges[2, mod1(r, Nr), _next(c, Nc)],
-            env.corners[3, _next(r, Nr), _next(c, Nc)],
-        )
-
-        push!(corr, final / final_norm)
-        if c ≠ c₂
+            push!(corr, final / final_norm)
+        end
+        if c ≠ cs[end]
             (left_side, left_side_norm) = [
                 l * HorizontalTransferMatrix(
                     env.edges[1, _prev(r, Nr), mod1(c, Nc)],
@@ -75,54 +76,65 @@ function correlator_horizontal(
 end
 
 function correlator_horizontal(
-    ket::InfinitePEPS,
     bra::InfinitePEPS,
-    env::CTMRGEnv,
     O::AbstractTensorMap{T,S,2,2},
-    inds::Tuple{CartesianIndex{2},CartesianIndex{2}},
+    i::CartesianIndex{2},
+    j::CartesianIndices{2},
+    ket::InfinitePEPS,
+    env::CTMRGEnv,
 ) where {T,S}
     U, Σ, V = tsvd(O, ((1, 3), (2, 4)))
     O₁ = permute(U * sqrt(Σ), ((1,), (2, 3)))
     O₂ = permute(sqrt(Σ) * V, ((1, 2), (3,)))
-    return correlator_horizontal(ket, bra, env, O₁, O₂, inds)
+    return correlator_horizontal(bra, (O₁, O₂), i, j, ket, env)
 end
 
 function correlator_vertical(
-    ket::InfinitePEPS,
     bra::InfinitePEPS,
+    O,
+    i::CartesianIndex{2},
+    j::CartesianIndices{2},
+    ket::InfinitePEPS,
     env::CTMRGEnv,
-    O::AbstractTensorMap{T,S,2,2},
-    inds::Tuple{CartesianIndex{2},CartesianIndex{2}},
-) where {T,S}
-    (r, c₁) = Tuple(inds[1])
-    (r₂, c₂) = Tuple(inds[2])
+)
+    i_rot = CartesianIndex(i[2], i[1])
+    j_rot = CartesianIndex(j[1][2], j[1][1]):CartesianIndex(j[end][2], j[end][1])
 
-    return correlator_horizontal(
-        rotr90(ket),
-        rotr90(bra),
-        rotr90(env),
-        O,
-        (CartesianIndex(c₁, r), CartesianIndex(c₂, r₂)),
-    )
+    return correlator_horizontal(rotr90(bra), O, i_rot, j_rot, rotr90(ket), rotr90(env))
+end
+
+function correlator_horizontal(
+    bra::InfinitePEPS,
+    O,
+    i::CartesianIndex{2},
+    j::CartesianIndex{2},
+    ket::InfinitePEPS,
+    env::CTMRGEnv,
+)
+    return first(correlator_horizontal(bra, O, i, j:j, ket, env))
 end
 
 function correlator_vertical(
-    ket::InfinitePEPS,
     bra::InfinitePEPS,
+    O,
+    i::CartesianIndex{2},
+    j::CartesianIndex{2},
+    ket::InfinitePEPS,
     env::CTMRGEnv,
-    O₁::AbstractTensorMap{T,S},
-    O₂::AbstractTensorMap{T,S},
-    inds::Tuple{CartesianIndex{2},CartesianIndex{2}};
-) where {T,S}
-    (r, c₁) = Tuple(inds[1])
-    (r₂, c₂) = Tuple(inds[2])
+)
+    return first(correlator_vertical(bra, O, i, j:j, ket, env))
+end
 
-    return correlator_horizontal(
-        rotr90(ket),
-        rotr90(bra),
-        rotr90(env),
-        O₁,
-        O₂,
-        (CartesianIndex(c₁, r), CartesianIndex(c₂, r₂)),
-    )
+function correlator_horizontal(
+    bra::InfinitePEPS, O, i::CartesianIndex{2}, dist::Int, ket::InfinitePEPS, env::CTMRGEnv
+)
+    j = (i + CartesianIndex(0, 1)):(i + CartesianIndex(0, dist))
+    return correlator_horizontal(bra, O, i, j, ket, env)
+end
+
+function correlator_vertical(
+    bra::InfinitePEPS, O, i::CartesianIndex{2}, dist::Int, ket::InfinitePEPS, env::CTMRGEnv
+)
+    j = (i + CartesianIndex(1, 0)):(i + CartesianIndex(dist, 0))
+    return correlator_vertical(bra, O, i, j, ket, env)
 end
