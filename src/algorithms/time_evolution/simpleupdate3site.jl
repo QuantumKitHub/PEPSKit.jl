@@ -373,7 +373,11 @@ function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
 end
 
 function _su3site_se!(
-    row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
+    row::Int,
+    col::Int,
+    gs::Vector{T},
+    peps::InfiniteWeightPEPS,
+    trscheme::TensorKit.TruncationScheme,
 ) where {T<:AbstractTensorMap}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -384,7 +388,7 @@ function _su3site_se!(
     coords = ((row, col), (row, cp1), (rm1, cp1))
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
-    wts, ϵ = apply_gatempo!(Ms, gs; trunc=alg.trscheme)
+    wts, ϵ = apply_gatempo!(Ms, gs; trunc=trscheme)
     for (wt, wt_idx) in zip(wts, wt_idxs)
         peps.weights[CartesianIndex(wt_idx)] = wt / norm(wt, Inf)
     end
@@ -418,7 +422,7 @@ function su3site_iter(
         for site in CartesianIndices(peps2.vertices)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
-            _su3site_se!(r, c, gs, peps2, alg)
+            _su3site_se!(r, c, gs, peps2, alg.trschemes[i])
         end
         peps2 = (i == 1) ? rotl90(peps2) : rotr90(peps2)
     end
