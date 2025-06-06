@@ -80,7 +80,7 @@ export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
 export expectation_value, cost_function, product_peps, correlation_length, network_value
-export correlator_horizontal, correlator_vertical
+export correlator
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint

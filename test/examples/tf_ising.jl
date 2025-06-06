@@ -45,40 +45,28 @@ magnz = expectation_value(peps, Mz, env)
 
 # compute connected correlation functions
 corrh =
-    correlator_horizontal(
+    correlator(
         peps,
         (σz, σz),
         CartesianIndex(1, 1),
         CartesianIndex(1, 2):CartesianIndex(1, 21),
-        peps,
         env,
     ) .- magnz^2
 corrh_2 =
-    correlator_horizontal(
-        peps,
-        σz ⊗ σz,
-        CartesianIndex(1, 1),
-        CartesianIndex(1, 2):CartesianIndex(1, 21),
-        peps,
-        env,
+    correlator(
+        peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(1, 2):CartesianIndex(1, 21), env
     ) .- magnz^2
 corrv =
-    correlator_vertical(
+    correlator(
         peps,
         (σz, σz),
         CartesianIndex(1, 1),
         CartesianIndex(2, 1):CartesianIndex(21, 1),
-        peps,
         env,
     ) .- magnz^2
 corrv_2 =
-    correlator_vertical(
-        peps,
-        σz ⊗ σz,
-        CartesianIndex(1, 1),
-        CartesianIndex(2, 1):CartesianIndex(21, 1),
-        peps,
-        env,
+    correlator(
+        peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(2, 1):CartesianIndex(21, 1), env
     ) .- magnz^2
 
 @test corrh[end] ≈ 0.0 atol = 1e-5
@@ -91,22 +79,14 @@ corrv_2 =
 
 # Change from specific values and distances to a range
 corrh_int =
-    correlator_horizontal(
-        peps, (σz, σz), CartesianIndex(1, 1), CartesianIndex(1, 21), peps, env
-    ) .- magnz^2
+    correlator(peps, (σz, σz), CartesianIndex(1, 1), CartesianIndex(1, 21), env) - magnz^2
 corrv_int =
-    correlator_vertical(
-        peps, (σz, σz), CartesianIndex(1, 1), CartesianIndex(21, 1), peps, env
-    ) .- magnz^2
-corrh_dist =
-    correlator_horizontal(peps, (σz, σz), CartesianIndex(1, 1), 20, peps, env) .- magnz^2
-corrv_dist =
-    correlator_vertical(peps, (σz, σz), CartesianIndex(1, 1), 20, peps, env) .- magnz^2
+    correlator(peps, (σz, σz), CartesianIndex(1, 1), CartesianIndex(21, 1), env) - magnz^2
 
 @test corrh_int ≈ corrh[20]
-@test maximum(abs.(corrh - corrh_dist)) < 1e-14
 @test corrv_int ≈ corrv[20]
-@test maximum(abs.(corrv - corrv_dist)) < 1e-14
+
+@test_broken correlator(peps, (σz, σz), CartesianIndex(1, 1), CartesianIndex(2, 2), env)
 
 # find fixedpoint in polarized phase and compute correlations lengths
 H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)

@@ -1,22 +1,8 @@
-abstract type AbstractTransferMatrix end;
-
-struct HorizontalTransferMatrix{T,S} <: AbstractTransferMatrix
-    above::TensorMap{T,S}
-    network
-    below::TensorMap{T,S}
-end
-
-# TransferMatrix acting on a vector using *
-Base.:*(vec, tm::AbstractTransferMatrix) = tm(vec);
-# Base.:*(vec, tm::TransferMatrix) = flip(tm)(vec);
-
-# TransferMatrix acting as a function
-function (d::HorizontalTransferMatrix)(vec)
-    return transfer_left(vec, d.above, d.network, d.below)
-end;
-
-function transfer_left(
-    vec::TensorMap{T,S,4,1}, above, network::Tuple{PEPSTensor,PEPSTensor}, below
+function MPSKit.transfer_left(
+    vec::TensorMap{T,S,4,1},
+    network::Tuple{PEPSTensor,PEPSTensor},
+    above::TensorMap{T,S,3,1},
+    below::TensorMap{T,S,3,1},
 ) where {T,S}
     @autoopt @tensor vec[χS DEt Dstring DEb; χN] :=
         vec[χ1 DWt Dstring DWb; χ4] *
@@ -27,8 +13,11 @@ function transfer_left(
     return vec
 end
 
-function transfer_left(
-    vec::TensorMap{T,S,3,1}, above, network::Tuple{PEPSTensor,PEPSTensor}, below
+function MPSKit.transfer_left(
+    vec::TensorMap{T,S,3,1},
+    network::Tuple{PEPSTensor,PEPSTensor},
+    above::TensorMap{T,S,3,1},
+    below::TensorMap{T,S,3,1},
 ) where {T,S}
     @autoopt @tensor vec[χS DEt DEb; χN] :=
         vec[χ1 DWt DWb; χ4] *
@@ -39,11 +28,11 @@ function transfer_left(
     return vec
 end
 
-function transfer_left(
+function MPSKit.transfer_left(
     vec::TensorMap{T,S,3,1},
-    above,
     network::Tuple{PEPSTensor,AbstractTensorMap{T,S,1,1},PEPSTensor},
-    below,
+    above::TensorMap{T,S,3,1},
+    below::TensorMap{T,S,3,1},
 ) where {T,S}
     @autoopt @tensor vec[χS DEt DEb; χN] :=
         vec[χ1 DWt DWb; χ4] *
@@ -55,11 +44,11 @@ function transfer_left(
     return vec
 end
 
-function transfer_left(
+function MPSKit.transfer_left(
     vec::TensorMap{T,S,3,1},
-    above,
     network::Tuple{PEPSTensor,AbstractTensorMap{T,S,1,2},PEPSTensor},
-    below,
+    above::TensorMap{T,S,3,1},
+    below::TensorMap{T,S,3,1},
 ) where {T,S}
     @autoopt @tensor vec[χS DEt Dstring DEb; χN] :=
         vec[χ1 DWt DWb; χ4] *
@@ -71,11 +60,11 @@ function transfer_left(
     return vec
 end
 
-function transfer_left(
+function MPSKit.transfer_left(
     vec::TensorMap{T,S,4,1},
-    above,
     network::Tuple{PEPSTensor,AbstractTensorMap{T,S,2,1},PEPSTensor},
-    below,
+    above::TensorMap{T,S,3,1},
+    below::TensorMap{T,S,3,1},
 ) where {T,S}
     @autoopt @tensor vec[χS DEt DEb; χN] :=
         vec[χ1 DWt Dstring DWb; χ4] *
@@ -87,13 +76,13 @@ function transfer_left(
     return vec
 end
 
-function start_left(above, middle, below)
+function start_left(middle, above, below)
     @autoopt @tensor vec[χ1 DWt DWb; χ4] :=
         above[χ3; χ4] * middle[χ2 DWt DWb; χ3] * below[χ1; χ2]
     return vec
 end
 
-function end_right(vec, above, middle, below)
+function end_right(vec, middle, above, below)
     return @autoopt @tensor vec[χ5 DEt DEb; χ2] *
         above[χ2; χ3] *
         middle[χ3 DEt DEb; χ4] *
