@@ -65,6 +65,8 @@ include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
 
 include("algorithms/toolbox.jl")
+include("algorithms/transfermatrix.jl")
+include("algorithms/correlators.jl")
 
 include("utility/symmetrization.jl")
 
@@ -80,6 +82,7 @@ export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
 export expectation_value, cost_function, product_peps, correlation_length, network_value
+export correlator
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
