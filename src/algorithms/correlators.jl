@@ -24,13 +24,13 @@ function correlator_horizontal(
         left_start * MPSKit.TransferMatrix(
             env.edges[1, _prev(r, Nr), mod1(c₁, Nc)],
             (ket[mod1(r, Nr), mod1(c₁, Nc)], O[1], bra[mod1(r, Nr), mod1(c₁, Nc)]),
-            env.edges[3, _next(r, Nr), mod1(c₁, Nc)],
+            _dag(env.edges[3, _next(r, Nr), mod1(c₁, Nc)]),
         )
     left_side_norm =
         left_start * MPSKit.TransferMatrix(
             env.edges[1, _prev(r, Nr), mod1(c₁, Nc)],
             (ket[mod1(r, Nr), mod1(c₁, Nc)], bra[mod1(r, Nr), mod1(c₁, Nc)]),
-            env.edges[3, _next(r, Nr), mod1(c₁, Nc)],
+            _dag(env.edges[3, _next(r, Nr), mod1(c₁, Nc)]),
         )
     for c in (c₁ + 1):cs[end]
         if c ∈ cs
@@ -38,7 +38,7 @@ function correlator_horizontal(
                 left_side * MPSKit.TransferMatrix(
                     env.edges[1, _prev(r, Nr), mod1(c, Nc)],
                     (ket[mod1(r, Nr), mod1(c, Nc)], O[2], bra[mod1(r, Nr), mod1(c, Nc)]),
-                    env.edges[3, _next(r, Nr), mod1(c, Nc)],
+                    _dag(env.edges[3, _next(r, Nr), mod1(c, Nc)]),
                 )
             final = end_right(
                 left_side_final,
@@ -51,7 +51,7 @@ function correlator_horizontal(
             l * MPSKit.TransferMatrix(
                 env.edges[1, _prev(r, Nr), mod1(c, Nc)],
                 (ket[mod1(r, Nr), mod1(c, Nc)], bra[mod1(r, Nr), mod1(c, Nc)]),
-                env.edges[3, _next(r, Nr), mod1(c, Nc)],
+                _dag(env.edges[3, _next(r, Nr), mod1(c, Nc)]),
             ) for l in (left_side, left_side_norm)
         ]
         if c ∈ cs
