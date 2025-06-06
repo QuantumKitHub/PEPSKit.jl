@@ -50,6 +50,12 @@ end
         @time @safetestset "Iterative optimization after truncation" begin
             include("bondenv/bond_truncate.jl")
         end
+        @time @safetestset "Gauge fixing" begin
+            include("bondenv/benv_gaugefix.jl")
+        end
+        @time @safetestset "Full update bond environment" begin
+            include("bondenv/benv_fu.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
         @time @safetestset "Cluster truncation with projectors" begin
