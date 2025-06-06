@@ -12,9 +12,15 @@ struct SimpleUpdate
     dt::Float64
     tol::Float64
     maxiter::Int
-    trscheme::TensorKit.TruncationScheme
+    trschemes::NTuple{2,TensorKit.TruncationScheme} # truncation schemes for x and y bonds
 end
 # TODO: add kwarg constructor and SU Defaults
+
+function SimpleUpdate(
+    dt::Float64, tol::Float64, maxiter::Int, trscheme::TensorKit.TruncationScheme
+)
+    return SimpleUpdate(dt, tol, maxiter, (trscheme, trscheme))
+end
 
 """
 $(SIGNATURES)
@@ -34,7 +40,7 @@ function _su_bondx!(
     col::Int,
     gate::AbstractTensorMap{T,S,2,2},
     peps::InfiniteWeightPEPS,
-    alg::SimpleUpdate,
+    trscheme::TensorKit.TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -47,7 +53,7 @@ function _su_bondx!(
     B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, false)
     # apply gate
     X, a, b, Y = _qr_bond(A, B)
-    a, s, b, ϵ = _apply_gate(a, b, gate, alg.trscheme)
+    a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
     _allfalse = ntuple(Returns(false), 3)
@@ -94,7 +100,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
-                ϵ = _su_bondx!(r, 1, term, peps2, alg)
+                ϵ = _su_bondx!(r, 1, term, peps2, alg.trschemes[direction])
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
                 peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
@@ -106,7 +112,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
-                ϵ = _su_bondx!(r, c, term, peps2, alg)
+                ϵ = _su_bondx!(r, c, term, peps2, alg.trschemes[direction])
             end
         end
         if direction == 2
