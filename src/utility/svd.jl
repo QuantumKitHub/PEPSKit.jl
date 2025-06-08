@@ -609,3 +609,9 @@ function svd_pullback!(
     end
     return ΔA
 end
+
+# Calculate the pseudo-inverse using SVD
+function _pinv!(a::AbstractTensorMap; kwargs...)
+    u, s, vh, ϵ = tsvd!(a; kwargs...)
+    return vh' * sdiag_pow(s, -1) * u', ϵ
+end

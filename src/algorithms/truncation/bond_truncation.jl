@@ -16,12 +16,14 @@ The truncation algorithm can be constructed from the following keyword arguments
 * `trscheme::TensorKit.TruncationScheme`: SVD truncation scheme when initilizing the truncated tensors connected by the bond.
 * `maxiter::Int=50` : Maximal number of ALS iterations.
 * `tol::Float64=1e-15` : ALS converges when fidelity change between two FET iterations is smaller than `tol`.
+* `use_pinv::Bool=true`: Use pseudo-inverse (instead of `KrylovKit.linsolve`) to solve linear equations in ALS itertions.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
     trscheme::TensorKit.TruncationScheme
     maxiter::Int = 50
     tol::Float64 = 1e-15
+    use_pinv::Bool = true
     check_interval::Int = 0
 end
 
@@ -103,11 +105,20 @@ function bond_truncate(
         =#
         Ra = _tensor_Ra(benv, b)
         Sa = _tensor_Sa(benv, b, a2b2)
-        a, info_a = _solve_ab(Ra, Sa, a)
+        a, info_a = if alg.use_pinv
+            _solve_ab_pinv!(Ra, Sa; trunc=truncerr(1e-10))
+        else
+            _solve_ab(Ra, Sa, a)
+        end
         # Fixing `a`, solve for `b` from `Rb b = Sb`
         Rb = _tensor_Rb(benv, a)
         Sb = _tensor_Sb(benv, a, a2b2)
-        b, info_b = _solve_ab(Rb, Sb, b)
+        b, info_b = if alg.use_pinv
+            _solve_ab_pinv!(Rb, Sb; trunc=truncerr(1e-10))
+        else
+            _solve_ab(Rb, Sb, b)
+        end
+        @debug "Bond truncation info" info_a info_b
         ab = _combine_ab(a, b)
         cost = cost_function_als(benv, ab, a2b2)
         fid = fidelity(benv, ab, a2b2)
