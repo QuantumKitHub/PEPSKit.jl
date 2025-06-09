@@ -290,7 +290,7 @@ function _correlation_length(
         if isone(sector)
             N = abs(first(vals))
         else
-            vals_triv = MPSKit.transfer_spectrum(above; below; num_vals=1, kwargs...)
+            vals_triv = MPSKit.transfer_spectrum(above; below, num_vals=1, kwargs...)
             N = abs(first(vals_triv))
         end
         return vals ./ N # normalize largest eigenvalue
@@ -308,7 +308,7 @@ function _correlation_length(
         if isone(sector)
             N = abs(first(vals))
         else
-            vals_triv = MPSKit.transfer_spectrum(above; below; num_vals=1, kwargs...)
+            vals_triv = MPSKit.transfer_spectrum(above; below, num_vals=1, kwargs...)
             N = abs(first(vals_triv))
         end
         return vals ./ N # normalize largest eigenvalue
