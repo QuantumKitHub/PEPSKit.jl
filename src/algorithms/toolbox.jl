@@ -296,7 +296,6 @@ function _correlation_length(
         return vals ./ N # normalize largest eigenvalue
     end
 
-
     # Vertical
     λ_v = map(1:n_cols) do c
         above = InfiniteMPS(env.edges[EAST, :, c])
