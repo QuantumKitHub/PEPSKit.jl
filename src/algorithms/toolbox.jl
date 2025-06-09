@@ -288,15 +288,14 @@ function _correlation_length(
 
         # normalize using largest eigenvalue in trivial sector
         if isone(sector)
-            N = abs(first(vals))
+            N = first(vals)
         else
             vals_triv = MPSKit.transfer_spectrum(above; below, num_vals=1, kwargs...)
-            N = abs(first(vals_triv))
+            N = first(vals_triv)
         end
         return vals ./ N # normalize largest eigenvalue
     end
 
-    ξ_h = map(λ -> -1 / log(abs(λ[2])), λ_h)
 
     # Vertical
     λ_v = map(1:n_cols) do c
@@ -306,15 +305,21 @@ function _correlation_length(
 
         # normalize using largest eigenvalue in trivial sector
         if isone(sector)
-            N = abs(first(vals))
+            N = first(vals)
         else
             vals_triv = MPSKit.transfer_spectrum(above; below, num_vals=1, kwargs...)
-            N = abs(first(vals_triv))
+            N = first(vals_triv)
         end
         return vals ./ N # normalize largest eigenvalue
     end
 
-    ξ_v = map(λ -> -1 / log(abs(λ[2])), λ_v)
+    if isone(sector)
+        ξ_h = map(λ -> -1 / log(abs(λ[2])), λ_h)
+        ξ_v = map(λ -> -1 / log(abs(λ[2])), λ_v)
+    else
+        ξ_h = map(λ -> -1 / log(abs(λ[1])), λ_h)
+        ξ_v = map(λ -> -1 / log(abs(λ[1])), λ_v)
+    end
 
     return ξ_h, ξ_v, λ_h, λ_v
 end
