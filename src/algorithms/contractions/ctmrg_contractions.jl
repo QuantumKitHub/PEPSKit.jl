@@ -25,12 +25,14 @@ function enlarge_northwest_corner(
     E_north::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_S D_Sabove D_Sbelow; χ_E D_Eabove D_Ebelow] :=
-        E_west[χ_S D1 D2; χ1] *
-        C_northwest[χ1; χ2] *
-        E_north[χ2 D3 D4; χ_E] *
-        ket(A)[d; D3 D_Eabove D_Sabove D1] *
-        conj(bra(A)[d; D4 D_Ebelow D_Sbelow D2])
+    return @tensor order = (χ1, χ2, D2, D4, d, D1, D3) begin
+        corner[χ_S D_Sabove D_Sbelow; χ_E D_Eabove D_Ebelow] :=
+            E_west[χ_S D1 D2; χ1] *
+            C_northwest[χ1; χ2] *
+            E_north[χ2 D3 D4; χ_E] *
+            ket(A)[d; D3 D_Eabove D_Sabove D1] *
+            conj(bra(A)[d; D4 D_Ebelow D_Sbelow D2])
+    end
 end
 function enlarge_northwest_corner(
     E_west::CTMRG_PF_EdgeTensor,
@@ -61,12 +63,14 @@ function enlarge_northeast_corner(
     E_east::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_W D_Wabove D_Wbelow; χ_S D_Sabove D_Sbelow] :=
-        E_north[χ_W D1 D2; χ1] *
-        C_northeast[χ1; χ2] *
-        E_east[χ2 D3 D4; χ_S] *
-        ket(A)[d; D1 D3 D_Sabove D_Wabove] *
-        conj(bra(A)[d; D2 D4 D_Sbelow D_Wbelow])
+    return @tensor order = (χ1, χ2, D2, D4, d, D1, D3) begin
+        corner[χ_W D_Wabove D_Wbelow; χ_S D_Sabove D_Sbelow] :=
+            E_north[χ_W D1 D2; χ1] *
+            C_northeast[χ1; χ2] *
+            E_east[χ2 D3 D4; χ_S] *
+            ket(A)[d; D1 D3 D_Sabove D_Wabove] *
+            conj(bra(A)[d; D2 D4 D_Sbelow D_Wbelow])
+    end
 end
 function enlarge_northeast_corner(
     E_north::CTMRG_PF_EdgeTensor,
@@ -97,12 +101,14 @@ function enlarge_southeast_corner(
     E_south::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_N D_Nabove D_Nbelow; χ_W D_Wabove D_Wbelow] :=
-        E_east[χ_N D1 D2; χ1] *
-        C_southeast[χ1; χ2] *
-        E_south[χ2 D3 D4; χ_W] *
-        ket(A)[d; D_Nabove D1 D3 D_Wabove] *
-        conj(bra(A)[d; D_Nbelow D2 D4 D_Wbelow])
+    return @tensor order = (χ1, χ2, D2, D4, d, D1, D3) begin
+        corner[χ_N D_Nabove D_Nbelow; χ_W D_Wabove D_Wbelow] :=
+            E_east[χ_N D1 D2; χ1] *
+            C_southeast[χ1; χ2] *
+            E_south[χ2 D3 D4; χ_W] *
+            ket(A)[d; D_Nabove D1 D3 D_Wabove] *
+            conj(bra(A)[d; D_Nbelow D2 D4 D_Wbelow])
+    end
 end
 function enlarge_southeast_corner(
     E_east::CTMRG_PF_EdgeTensor,
@@ -133,12 +139,14 @@ function enlarge_southwest_corner(
     E_west::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_E D_Eabove D_Ebelow; χ_N D_Nabove D_Nbelow] :=
-        E_south[χ_E D1 D2; χ1] *
-        C_southwest[χ1; χ2] *
-        E_west[χ2 D3 D4; χ_N] *
-        ket(A)[d; D_Nabove D_Eabove D1 D3] *
-        conj(bra(A)[d; D_Nbelow D_Ebelow D2 D4])
+    return @tensor order = (χ1, χ2, D2, D4, d, D1, D3) begin
+        corner[χ_E D_Eabove D_Ebelow; χ_N D_Nabove D_Nbelow] :=
+            E_south[χ_E D1 D2; χ1] *
+            C_southwest[χ1; χ2] *
+            E_west[χ2 D3 D4; χ_N] *
+            ket(A)[d; D_Nabove D_Eabove D1 D3] *
+            conj(bra(A)[d; D_Nbelow D_Ebelow D2 D4])
+    end
 end
 function enlarge_southwest_corner(
     E_south::CTMRG_PF_EdgeTensor,
