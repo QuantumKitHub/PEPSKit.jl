@@ -275,26 +275,50 @@ in a specific symmetry sector).
 MPSKit.correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...) =
     _correlation_length(env; num_vals, kwargs...)
 
-function _correlation_length(env::CTMRGEnv; num_vals=2, kwargs...)
+function _correlation_length(
+    env::CTMRGEnv; num_vals=2, sector=one(sectortype(env)), kwargs...
+)
     _, n_rows, n_cols = size(env)
 
     # Horizontal
     λ_h = map(1:n_rows) do r
         above = InfiniteMPS(env.edges[NORTH, r, :])
         below = InfiniteMPS(_dag.(env.edges[SOUTH, _next(r, n_rows), :]))
-        vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
-        return vals ./ abs(vals[1]) # normalize largest eigenvalue
+        vals = MPSKit.transfer_spectrum(above; below, num_vals, sector, kwargs...)
+
+        # normalize using largest eigenvalue in trivial sector
+        if isone(sector)
+            N = first(vals)
+        else
+            vals_triv = MPSKit.transfer_spectrum(above; below, num_vals=1, kwargs...)
+            N = first(vals_triv)
+        end
+        return vals ./ N # normalize largest eigenvalue
     end
-    ξ_h = map(λ -> -1 / log(abs(λ[2])), λ_h)
 
     # Vertical
     λ_v = map(1:n_cols) do c
         above = InfiniteMPS(env.edges[EAST, :, c])
         below = InfiniteMPS(_dag.(env.edges[WEST, :, _next(c, n_cols)]))
-        vals = MPSKit.transfer_spectrum(above; below, num_vals, kwargs...)
-        return vals ./ abs(vals[1]) # normalize largest eigenvalue
+        vals = MPSKit.transfer_spectrum(above; below, num_vals, sector, kwargs...)
+
+        # normalize using largest eigenvalue in trivial sector
+        if isone(sector)
+            N = first(vals)
+        else
+            vals_triv = MPSKit.transfer_spectrum(above; below, num_vals=1, kwargs...)
+            N = first(vals_triv)
+        end
+        return vals ./ N # normalize largest eigenvalue
     end
-    ξ_v = map(λ -> -1 / log(abs(λ[2])), λ_v)
+
+    if isone(sector)
+        ξ_h = map(λ -> -1 / log(abs(λ[2])), λ_h)
+        ξ_v = map(λ -> -1 / log(abs(λ[2])), λ_v)
+    else
+        ξ_h = map(λ -> -1 / log(abs(λ[1])), λ_h)
+        ξ_v = map(λ -> -1 / log(abs(λ[1])), λ_v)
+    end
 
     return ξ_h, ξ_v, λ_h, λ_v
 end
