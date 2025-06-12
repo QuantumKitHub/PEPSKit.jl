@@ -194,12 +194,6 @@ function MPSKit.correlator(
     return only(correlator(bra, O, i, j:j, ket, env))
 end
 
-function MPSKit.correlator(
-    state::InfinitePEPS,
-    O,
-    i::CartesianIndex{2},
-    j,
-    env::CTMRGEnv,
-)
+function MPSKit.correlator(state::InfinitePEPS, O, i::CartesianIndex{2}, j, env::CTMRGEnv)
     return MPSKit.correlator(state, O, i, j, state, env)
 end

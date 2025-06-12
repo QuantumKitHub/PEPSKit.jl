@@ -50,11 +50,7 @@ corrh =
     ) .- magnz^2
 corrv =
     correlator(
-        peps,
-        σz ⊗ σz,
-        CartesianIndex(1, 1),
-        CartesianIndex(2, 1):CartesianIndex(21, 1),
-        env,
+        peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(2, 1):CartesianIndex(21, 1), env
     ) .- magnz^2
 
 @test corrh[end] ≈ 0.0 atol = 1e-5
