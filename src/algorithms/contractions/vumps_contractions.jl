@@ -40,6 +40,21 @@ function _transfer_left(
         A[χ_NW D_N_above D_N_below; χ_NE]
 end
 
+# transfer with excited GL
+function MPSKit.transfer_left(
+    GL::GenericMPSTensor{S,4},
+    O::PEPSSandwich,
+    A::GenericMPSTensor{S,3},
+    Ā::GenericMPSTensor{S,3},
+) where {S}
+    @autoopt @tensor GL′[χ_SE D_E_above d_string D_E_below; χ_NE] :=
+        GL[χ_SW D_W_above d_string D_W_below; χ_NW] *
+        conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
+        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
+        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below]) *
+        A[χ_NW D_N_above D_N_below; χ_NE]
+end
+
 function _transfer_right(
     GR::GenericMPSTensor{S,3},
     O::PEPSSandwich,
