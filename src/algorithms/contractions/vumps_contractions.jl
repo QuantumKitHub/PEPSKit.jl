@@ -1,5 +1,3 @@
-using MPSKit: GenericMPSTensor, MPSBondTensor
-
 #
 # Environment transfer functions
 #

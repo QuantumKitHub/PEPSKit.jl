@@ -1,114 +1,185 @@
 function correlator_horizontal(
     bra::InfinitePEPS,
-    O::Tuple{AbstractTensorMap{T,S},AbstractTensorMap{T,S}},
+    operator,
     i::CartesianIndex{2},
-    j::CartesianIndices{2},
+    js::AbstractVector{CartesianIndex{2}},
     ket::InfinitePEPS,
     env::CTMRGEnv,
-) where {T,S}
-    @assert size(ket) == size(bra) "The ket and bra must have the same unit cell."
-    (r, c₁) = Tuple(i)
-    cs = sort([ind[2] for ind in j]; dims=2)
-    @assert all([r == ind[1] for ind in j]) "Not a horizontal correlation function."
-    @assert all(c₁ .< cs) "The first column index must be less than the second."
+)
+    size(ket) == size(bra) ||
+        throw(DimensionMismatch("The ket and bra must have the same unit cell."))
+    all(==(i[1]) ∘ first ∘ Tuple, js) ||
+        throw(ArgumentError("Not a horizontal correlation function"))
+    issorted(vcat(i, js); by=last ∘ Tuple) ||
+        throw(ArgumentError("Not an increasing sequence of coordinates"))
 
-    (Nr, Nc) = size(ket)
-    corr = T[]
+    O = FiniteMPO(operator)
+    length(O) == 2 || throw(ArgumentError("Operator must act on two sites"))
 
-    left_start = start_left(
-        env.edges[4, mod1(r, Nr), _prev(c₁, Nc)],
-        env.corners[1, _prev(r, Nr), _prev(c₁, Nc)],
-        env.corners[4, _next(r, Nr), _prev(c₁, Nc)],
+    # preallocate with correct scalartype
+    G = similar(
+        js,
+        TensorOperations.promote_contract(
+            scalartype(bra), scalartype(ket), scalartype(env), scalartype.(O)...
+        ),
     )
-    left_side =
-        left_start * MPSKit.TransferMatrix(
-            env.edges[1, _prev(r, Nr), mod1(c₁, Nc)],
-            (ket[mod1(r, Nr), mod1(c₁, Nc)], O[1], bra[mod1(r, Nr), mod1(c₁, Nc)]),
-            _dag(env.edges[3, _next(r, Nr), mod1(c₁, Nc)]),
-        )
-    left_side_norm =
-        left_start * MPSKit.TransferMatrix(
-            env.edges[1, _prev(r, Nr), mod1(c₁, Nc)],
-            (ket[mod1(r, Nr), mod1(c₁, Nc)], bra[mod1(r, Nr), mod1(c₁, Nc)]),
-            _dag(env.edges[3, _next(r, Nr), mod1(c₁, Nc)]),
-        )
-    for c in (c₁ + 1):cs[end]
-        if c ∈ cs
-            left_side_final =
-                left_side * MPSKit.TransferMatrix(
-                    env.edges[1, _prev(r, Nr), mod1(c, Nc)],
-                    (ket[mod1(r, Nr), mod1(c, Nc)], O[2], bra[mod1(r, Nr), mod1(c, Nc)]),
-                    _dag(env.edges[3, _next(r, Nr), mod1(c, Nc)]),
-                )
-            final = end_right(
-                left_side_final,
-                env.edges[2, mod1(r, Nr), _next(c, Nc)],
-                env.corners[2, _prev(r, Nr), _next(c, Nc)],
-                env.corners[3, _next(r, Nr), _next(c, Nc)],
+
+    # left start for operator and norm contractions
+    Vn, Vo = start_correlator(i, bra, O[1], ket, env)
+    i += CartesianIndex(0, 1)
+
+    for (k, j) in enumerate(js)
+        # transfer until left of site j
+        while j > i
+            Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
+            Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+            sandwich = (
+                ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)]
             )
+            T = TransferMatrix(Atop, sandwich, _dag(Abot))
+            Vo = Vo * T
+            Vn = Vn * T
+            i += CartesianIndex(0, 1)
         end
-        (left_side, left_side_norm) = [
-            l * MPSKit.TransferMatrix(
-                env.edges[1, _prev(r, Nr), mod1(c, Nc)],
-                (ket[mod1(r, Nr), mod1(c, Nc)], bra[mod1(r, Nr), mod1(c, Nc)]),
-                _dag(env.edges[3, _next(r, Nr), mod1(c, Nc)]),
-            ) for l in (left_side, left_side_norm)
-        ]
-        if c ∈ cs
-            final_norm = end_right(
-                left_side_norm,
-                env.edges[2, mod1(r, Nr), _next(c, Nc)],
-                env.corners[2, _prev(r, Nr), _next(c, Nc)],
-                env.corners[3, _next(r, Nr), _next(c, Nc)],
-            )
-            push!(corr, final / final_norm)
-        end
+
+        # compute overlap with operator
+        numerator = end_correlator_numerator(j, Vo, bra, O[2], ket, env)
+
+        # transfer right of site j
+        Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
+        Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+        sandwich = (
+            ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)]
+        )
+        T = TransferMatrix(Atop, sandwich, _dag(Abot))
+        Vo = Vo * T
+        Vn = Vn * T
+        i += CartesianIndex(0, 1)
+
+        # compute overlap without operator
+        denominator = end_correlator_denominator(j, Vn, env)
+
+        G[k] = numerator / denominator
     end
-    return corr
+
+    return G
 end
 
-function correlator_horizontal(
-    bra::InfinitePEPS,
-    O::AbstractTensorMap{T,S,2,2},
+function start_correlator(
     i::CartesianIndex{2},
-    j::CartesianIndices{2},
-    ket::InfinitePEPS,
+    below::InfinitePEPS,
+    O::MPOTensor,
+    above::InfinitePEPS,
     env::CTMRGEnv,
-) where {T,S}
-    U, Σ, V = tsvd(O, ((1, 3), (2, 4)))
-    O₁ = permute(U * sqrt(Σ), ((1,), (2, 3)))
-    O₂ = permute(sqrt(Σ) * V, ((1, 2), (3,)))
-    return correlator_horizontal(bra, (O₁, O₂), i, j, ket, env)
+)
+    r, c = Tuple(i)
+    E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
+    E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
+    E_west = env.edges[WEST, mod1(r, end), _prev(c, end)]
+    C_northwest = env.corners[NORTHWEST, _prev(r, end), _prev(c, end)]
+    C_southwest = env.corners[SOUTHWEST, _next(r, end), _prev(c, end)]
+    sandwich = (below[mod1(r, end), mod1(c, end)], above[mod1(r, end), mod1(c, end)])
+
+    # TODO: part of these contractions is duplicated between the two output tensors,
+    # so could be optimized further
+    @autoopt @tensor Vn[χSE Detop Debot; χNE] :=
+        E_south[χSE Dstop Dsbot; χSW2] *
+        C_southwest[χSW2; χSW] *
+        E_west[χSW Dwtop Dwbot; χNW] *
+        C_northwest[χNW; χN] *
+        conj(bra(sandwich)[d; Dnbot Debot Dsbot Dwbot]) *
+        ket(sandwich)[d; Dntop Detop Dstop Dwtop] *
+        E_north[χN Dntop Dnbot; χNE]
+
+    @autoopt @tensor Vo[χSE Detop dstring Debot; χNE] :=
+        E_south[χSE Dstop Dsbot; χSW2] *
+        C_southwest[χSW2; χSW] *
+        E_west[χSW Dwtop Dwbot; χNW] *
+        C_northwest[χNW; χN] *
+        conj(bra(sandwich)[d1; Dnbot Debot Dsbot Dwbot]) *
+        removeunit(O, 1)[d1; d2 dstring] *
+        ket(sandwich)[d2; Dntop Detop Dstop Dwtop] *
+        E_north[χN Dntop Dnbot; χNE]
+
+    return Vn, Vo
+end
+
+function end_correlator_numerator(
+    j::CartesianIndex{2},
+    V,
+    above::InfinitePEPS,
+    O::MPOTensor,
+    below::InfinitePEPS,
+    env::CTMRGEnv,
+)
+    r, c = Tuple(j)
+    E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
+    E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
+    E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
+    C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
+    C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
+    sandwich = (above[mod1(r, end), mod1(c, end)], below[mod1(r, end), mod1(c, end)])
+
+    return @autoopt @tensor contractcheck = true V[χSW DWt dstring DWb; χNW] *
+        E_south[χSSE DSt DSb; χSW] *
+        E_east[χNEE DEt DEb; χSEE] *
+        E_north[χNW DNt DNb; χNNE] *
+        C_northeast[χNNE; χNEE] *
+        C_southeast[χSEE; χSSE] *
+        conj(bra(sandwich)[db; DNb DEb DSb DWb]) *
+        ket(sandwich)[dt; DNt DEt DSt DWt] *
+        removeunit(O, 4)[dstring db; dt]
+end
+
+function end_correlator_denominator(j::CartesianIndex{2}, V, env::CTMRGEnv)
+    r, c = Tuple(j)
+    C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
+    E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
+    C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
+
+    return @autoopt @tensor V[χS DEt DEb; χN] *
+        C_northeast[χN; χNE] *
+        E_east[χNE DEt DEb; χSE] *
+        C_southeast[χSE; χS]
 end
 
 function correlator_vertical(
     bra::InfinitePEPS,
     O,
     i::CartesianIndex{2},
-    j::CartesianIndices{2},
+    js::AbstractVector{CartesianIndex{2}},
     ket::InfinitePEPS,
     env::CTMRGEnv,
 )
-    i_rot = CartesianIndex(i[2], i[1])
-    j_rot = CartesianIndex(j[1][2], j[1][1]):CartesianIndex(j[end][2], j[end][1])
+    rotated_bra = rotl90(bra)
+    rotated_ket = bra === ket ? rotated_bra : rotl90(ket)
 
-    return correlator_horizontal(rotr90(bra), O, i_rot, j_rot, rotr90(ket), rotr90(env))
+    rotated_i = rotl90(i)
+    rotated_j = map(rotl90, js)
+
+    return correlator_horizontal(
+        rotated_bra, O, rotated_i, rotated_j, rotated_ket, rotl90(env)
+    )
 end
+
+const CoordCollection{N} = Union{AbstractVector{CartesianIndex{N}},CartesianIndices{N}}
 
 function MPSKit.correlator(
     bra::InfinitePEPS,
     O,
     i::CartesianIndex{2},
-    j::CartesianIndices{2},
+    js::CoordCollection{2},
     ket::InfinitePEPS,
     env::CTMRGEnv,
 )
-    if i[1] == j[1][1]
-        return correlator_horizontal(bra, O, i, j, ket, env)
-    elseif i[2] == j[1][2]
-        return correlator_vertical(bra, O, i, j, ket, env)
+    js = vec(js) # map CartesianIndices to actual Vector instead of Matrix
+
+    if all(==(i[1]) ∘ first ∘ Tuple, js)
+        return correlator_horizontal(bra, O, i, js, ket, env)
+    elseif all(==(i[2]) ∘ last ∘ Tuple, js)
+        return correlator_vertical(bra, O, i, js, ket, env)
     else
-        error("The indices must be either horizontal or vertical.")
+        error("Only horizontal or vertical correlators are implemented")
     end
 end
 
@@ -120,20 +191,14 @@ function MPSKit.correlator(
     ket::InfinitePEPS,
     env::CTMRGEnv,
 )
-    if i[1] == j[1]
-        return first(correlator_horizontal(bra, O, i, j:j, ket, env))
-    elseif i[2] == j[2]
-        return first(correlator_vertical(bra, O, i, j:j, ket, env))
-    else
-        error("Only horizontal and vertical correlators are implemented.")
-    end
+    return only(correlator(bra, O, i, j:j, ket, env))
 end
 
 function MPSKit.correlator(
     state::InfinitePEPS,
     O,
     i::CartesianIndex{2},
-    j::Union{CartesianIndex{2},CartesianIndices{2}},
+    j,
     env::CTMRGEnv,
 )
     return MPSKit.correlator(state, O, i, j, state, env)
