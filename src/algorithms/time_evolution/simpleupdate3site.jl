@@ -436,7 +436,7 @@ function _simpleupdate3site(
     # Since each bond is updated 4 times, 
     # `dt` for each MPO should be divided by 4
     gatempos = [
-        _get_gatempos_se(ham, alg.dt / 4), 
+        _get_gatempos_se(ham, alg.dt / 4),
         _get_gatempos_se(rotl90(ham), alg.dt / 4),
         _get_gatempos_se(rot180(ham), alg.dt / 4),
         _get_gatempos_se(rotr90(ham), alg.dt / 4),
