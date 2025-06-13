@@ -20,6 +20,7 @@ struct EnlargedCorner{TC,TE,TA}
     E_1::TE
     E_2::TE
     A::TA
+    dir::Int
 end
 function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
     dir, r, c = coordinates
@@ -29,6 +30,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[WEST, r, _prev(c, end)],
             env.edges[NORTH, _prev(r, end), c],
             network[r, c],
+            dir,
         )
     elseif dir == NORTHEAST
         return EnlargedCorner(
@@ -36,6 +38,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[NORTH, _prev(r, end), c],
             env.edges[EAST, r, _next(c, end)],
             network[r, c],
+            dir,
         )
     elseif dir == SOUTHEAST
         return EnlargedCorner(
@@ -43,6 +46,7 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[EAST, r, _next(c, end)],
             env.edges[SOUTH, _next(r, end), c],
             network[r, c],
+            dir,
         )
     elseif dir == SOUTHWEST
         return EnlargedCorner(
@@ -50,24 +54,24 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             env.edges[SOUTH, _next(r, end), c],
             env.edges[WEST, r, _prev(c, end)],
             network[r, c],
+            dir,
         )
     end
 end
 
 """
-    TensorMap(Q::EnlargedCorner, dir::Int)
+    TensorMap(Q::EnlargedCorner)
 
-Instantiate enlarged corner as `TensorMap` where `dir` selects the correct contraction
-direction, i.e. the way the environment and PEPS tensors connect.
+Instantiate enlarged corner as a `TensorMap`.
 """
-function TensorKit.TensorMap(Q::EnlargedCorner, dir::Int)
-    if dir == NORTHWEST
+function TensorKit.TensorMap(Q::EnlargedCorner)
+    if Q.dir == NORTHWEST
         return enlarge_northwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
-    elseif dir == NORTHEAST
+    elseif Q.dir == NORTHEAST
         return enlarge_northeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
-    elseif dir == SOUTHEAST
+    elseif Q.dir == SOUTHEAST
         return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
-    elseif dir == SOUTHWEST
+    elseif Q.dir == SOUTHWEST
         return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     end
 end
