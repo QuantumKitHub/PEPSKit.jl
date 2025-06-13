@@ -6,6 +6,20 @@ const CTMRGCornerTensor{T,S} = AbstractTensorMap{T,S,1,1}
 # Enlarged corner contractions
 # ----------------------------
 
+#=
+These contractions are hand-optimized by the following heuristics:
+
+1. ensure contraction order gives minimal scaling in χ = D²
+2. ensure dominant permutation is as efficient as possible by making large legs contiguous,
+    ie moving them to the front
+
+This second part is mostly important for dealing with non-abelian symmetries, where the
+    permutations are strongly non-negligable.
+
+For a small benchmark study:
+https://gist.github.com/lkdvos/a562c2b09ef461398729ccefdab34745
+=#
+
 """
 $(SIGNATURES)
 
@@ -25,12 +39,18 @@ function enlarge_northwest_corner(
     E_north::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_S D_Sabove D_Sbelow; χ_E D_Eabove D_Ebelow] :=
-        E_west[χ_S D1 D2; χ1] *
-        C_northwest[χ1; χ2] *
-        E_north[χ2 D3 D4; χ_E] *
-        ket(A)[d; D3 D_Eabove D_Sabove D1] *
-        conj(bra(A)[d; D4 D_Ebelow D_Sbelow D2])
+    return @tensor begin
+        EC[χS DWt DWb; χ2] := E_west[χS DWt DWb; χ1] * C_northwest[χ1; χ2]
+
+        # already putting χE in front here to make next permute cheaper
+        ECE[χS χE DWb DNb; DWt DNt] := EC[χS DWt DWb; χ2] * E_north[χ2 DNt DNb; χE]
+
+        ECEket[χS χE DEt DSt; DWb DNb d] :=
+            ECE[χS χE DWb DNb; DWt DNt] * ket(A)[d; DNt DEt DSt DWt]
+
+        corner[χS DSt DSb; χE DEt DEb] :=
+            ECEket[χS χE DEt DSt; DWb DNb d] * conj(bra(A)[d; DNb DEb DSb DWb])
+    end
 end
 function enlarge_northwest_corner(
     E_west::CTMRG_PF_EdgeTensor,
@@ -61,12 +81,18 @@ function enlarge_northeast_corner(
     E_east::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_W D_Wabove D_Wbelow; χ_S D_Sabove D_Sbelow] :=
-        E_north[χ_W D1 D2; χ1] *
-        C_northeast[χ1; χ2] *
-        E_east[χ2 D3 D4; χ_S] *
-        ket(A)[d; D1 D3 D_Sabove D_Wabove] *
-        conj(bra(A)[d; D2 D4 D_Sbelow D_Wbelow])
+    return @tensor begin
+        EC[χW DNt DNb; χ2] := E_north[χW DNt DNb; χ1] * C_northeast[χ1; χ2]
+
+        # already putting χE in front here to make next permute cheaper
+        ECE[χW χS DNb DEb; DNt DEt] := EC[χW DNt DNb; χ2] * E_east[χ2 DEt DEb; χS]
+
+        ECEket[χW χS DSt DWt; DNb DEb d] :=
+            ECE[χW χS DNb DEb; DNt DEt] * ket(A)[d; DNt DEt DSt DWt]
+
+        corner[χW DWt DWb; χS DSt DSb] :=
+            ECEket[χW χS DSt DWt; DNb DEb d] * conj(bra(A)[d; DNb DEb DSb DWb])
+    end
 end
 function enlarge_northeast_corner(
     E_north::CTMRG_PF_EdgeTensor,
@@ -97,12 +123,18 @@ function enlarge_southeast_corner(
     E_south::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_N D_Nabove D_Nbelow; χ_W D_Wabove D_Wbelow] :=
-        E_east[χ_N D1 D2; χ1] *
-        C_southeast[χ1; χ2] *
-        E_south[χ2 D3 D4; χ_W] *
-        ket(A)[d; D_Nabove D1 D3 D_Wabove] *
-        conj(bra(A)[d; D_Nbelow D2 D4 D_Wbelow])
+    return @tensor begin
+        EC[χN DEt DEb; χ2] := E_east[χN DEt DEb; χ1] * C_southeast[χ1; χ2]
+
+        # already putting χE in front here to make next permute cheaper
+        ECE[χN χW DEb DSb; DEt DSt] := EC[χN DEt DEb; χ2] * E_south[χ2 DSt DSb; χW]
+
+        ECEket[χN χW DNt DWt; DEb DSb d] :=
+            ECE[χN χW DEb DSb; DEt DSt] * ket(A)[d; DNt DEt DSt DWt]
+
+        corner[χN DNt DNb; χW DWt DWb] :=
+            ECEket[χN χW DNt DWt; DEb DSb d] * conj(bra(A)[d; DNb DEb DSb DWb])
+    end
 end
 function enlarge_southeast_corner(
     E_east::CTMRG_PF_EdgeTensor,
@@ -133,12 +165,18 @@ function enlarge_southwest_corner(
     E_west::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @autoopt @tensor corner[χ_E D_Eabove D_Ebelow; χ_N D_Nabove D_Nbelow] :=
-        E_south[χ_E D1 D2; χ1] *
-        C_southwest[χ1; χ2] *
-        E_west[χ2 D3 D4; χ_N] *
-        ket(A)[d; D_Nabove D_Eabove D1 D3] *
-        conj(bra(A)[d; D_Nbelow D_Ebelow D2 D4])
+    return @tensor begin
+        EC[χE DSt DSb; χ2] := E_south[χE DSt DSb; χ1] * C_southwest[χ1; χ2]
+
+        # already putting χE in front here to make next permute cheaper
+        ECE[χE χN DSb DWb; DSt DWt] := EC[χE DSt DSb; χ2] * E_west[χ2 DWt DWb; χN]
+
+        ECEket[χE χN DNt DEt; DSb DWb d] :=
+            ECE[χE χN DSb DWb; DSt DWt] * ket(A)[d; DNt DEt DSt DWt]
+
+        corner[χE DEt DEb; χN DNt DNb] :=
+            ECEket[χE χN DNt DEt; DSb DWb d] * conj(bra(A)[d; DNb DEb DSb DWb])
+    end
 end
 function enlarge_southwest_corner(
     E_south::CTMRG_PF_EdgeTensor,
