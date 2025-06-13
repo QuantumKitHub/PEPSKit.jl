@@ -44,6 +44,7 @@ include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
+include("environments/bp_environments.jl")
 
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/localoperator.jl")
