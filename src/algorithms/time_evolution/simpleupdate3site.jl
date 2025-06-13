@@ -414,13 +414,13 @@ function su3site_iter(
         ),
     )
     peps2 = deepcopy(peps)
-    for i in 1:2
+    for i in 1:4
         for site in CartesianIndices(peps2.vertices)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
             _su3site_se!(r, c, gs, peps2, alg)
         end
-        peps2 = (i == 1) ? rotl90(peps2) : rotr90(peps2)
+        peps2 = rotl90(peps2)
     end
     return peps2
 end
@@ -432,9 +432,15 @@ function _simpleupdate3site(
     peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int=500
 )
     time_start = time()
-    gate = get_expham(alg.dt, ham)
-    # convert gates to 3-site MPOs
-    gatempos = [_get_gatempos_se(gate), _get_gatempos_se(rotl90(gate))]
+    # Convert Hamiltonian to 3-site exponentiated gate MPOs.
+    # Since each bond is updated 4 times, 
+    # `dt` for each MPO should be divided by 4
+    gatempos = [
+        _get_gatempos_se(ham, alg.dt / 4), 
+        _get_gatempos_se(rotl90(ham), alg.dt / 4),
+        _get_gatempos_se(rot180(ham), alg.dt / 4),
+        _get_gatempos_se(rotr90(ham), alg.dt / 4),
+    ]
     wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)
