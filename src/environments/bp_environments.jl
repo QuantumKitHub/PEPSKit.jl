@@ -67,3 +67,32 @@ end
 function BPEnv(f, T, state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
+
+# VectorInterface
+# ---------------
+
+import VectorInterface as VI
+
+VI.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
+
+VI.zerovector(env::BPEnv, ::Type{S}) where {S<:Number} = BPEnv(zerovector.(env.messages, S))
+VI.zerovector!(env::BPEnv) = (zerovector!.(env.messages); env)
+VI.zerovector!!(env::BPEnv) = zerovector!(env)
+
+VI.scale(env::BPEnv, α::Number) = BPEnv(scale.(env.messages, α))
+VI.scale!(env::BPEnv, α::Number) = (scale!.(env.messages, α); env)
+VI.scale!(dst::BPEnv, src::BPEnv, α::Number) = (scale!.(dst.messages, src.messages, α); dst)
+VI.scale!!(env::BPEnv, α::Number) = scale!(env, α)
+VI.scale!!(dst::BPEnv, src::BPEnv, α::Number) = scale!(dst, src, α)
+
+function VI.add(dst::BPEnv, src::BPEnv, α::Number, β::Number)
+    return BPEnv(add.(dst.messages, src.messages, α, β))
+end
+function VI.add!(dst::BPEnv, src::BPEnv, α::Number, β::Number)
+    (add!.(dst.messages, src.messages, α, β); dst)
+end
+VI.add!!(dst::BPEnv, src::BPEnv, α::Number, β::Number) = add!(dst, src, α, β)
+
+VI.inner(env1::BPEnv, env2::BPEnv) = inner(env1.messages, env2.messages)
+VI.norm(env::BPEnv) = norm(env.messages)
+
