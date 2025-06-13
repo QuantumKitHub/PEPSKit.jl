@@ -2,7 +2,7 @@
 """
     const PEPSWeight
 
-Default type for PEPS bond weights with 2 virtual indices, conventionally ordered as: ``wt : WS ← EN``. 
+Default type for PEPS bond weights with 2 virtual indices, conventionally ordered as: ``wt : WS ← EN``.
 `WS`, `EN` denote the west/south, east/north spaces for x/y-weights on the square lattice, respectively.
 """
 const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
@@ -10,9 +10,9 @@ const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
 """
     struct SUWeight{E<:PEPSWeight}
 
-Schmidt bond weights used in simple/cluster update. 
+Schmidt bond weights used in simple/cluster update.
 Weight elements are always real and non-negative.
-The domain and codomain of each weight matrix 
+The domain and codomain of each weight matrix
 must be an un-dualed `ElementarySapce`.
 
 ## Fields
@@ -65,6 +65,12 @@ Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
 Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
+## spaces
+TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
+TensorKit.spacetype(::Type{T}) where {E,T<:SUWeight{E}} = spacetype(E)
+TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
+TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
+
 ## (Approximate) equality
 function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
     return wts1.data == wts2.data
@@ -97,7 +103,7 @@ end
 
 Represents an infinite projected entangled-pair state on a 2D square lattice
 consisting of vertex tensors and bond weights.
-The vertex tensor, x-weight and y-weight at row `i`, column `j` 
+The vertex tensor, x-weight and y-weight at row `i`, column `j`
 are defined as (the numbers show the axis order)
 ```
         2
@@ -166,7 +172,7 @@ end
 Create an InfiniteWeightPEPS by specifying the physical, north virtual and east virtual spaces
 of the PEPS vertex tensor at each site in the unit cell as a matrix.
 Each individual space can be specified as either an `Int` or an `ElementarySpace`.
-Bond weights are initialized as identity matrices of element type `Float64`. 
+Bond weights are initialized as identity matrices of element type `Float64`.
 """
 function InfiniteWeightPEPS(
     Pspaces::M, Nspaces::M, Espaces::M
@@ -192,8 +198,8 @@ end
     InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
 Create an InfiniteWeightPEPS by specifying its physical, north and east spaces (as `ElementarySpace`s) and unit cell size.
-Use `T` to specify the element type of the vertex tensors. 
-Bond weights are initialized as identity matrices of element type `Float64`. 
+Use `T` to specify the element type of the vertex tensors.
+Bond weights are initialized as identity matrices of element type `Float64`.
 """
 function InfiniteWeightPEPS(Pspaces::S, Nspaces::S, Espaces::S) where {S<:ElementarySpace}
     return InfiniteWeightPEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
@@ -209,6 +215,11 @@ end
 function Base.size(peps::InfiniteWeightPEPS)
     return size(peps.vertices)
 end
+
+TensorKit.spacetype(peps::InfiniteWeightPEPS) = spacetype(typeof(peps))
+TensorKit.spacetype(::Type{T}) where {E,T<:InfiniteWeightPEPS{E}} = spacetype(E)
+TensorKit.sectortype(peps::InfiniteWeightPEPS) = sectortype(typeof(peps))
+TensorKit.sectortype(::Type{<:InfiniteWeightPEPS{T}}) where {T} = sectortype(spacetype(T))
 
 function _absorb_weights(
     t::PEPSTensor,
@@ -271,13 +282,13 @@ position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, co
 
 ## Arguments
 
-- `t::T` : The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis. 
+- `t::T` : The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis.
 - `row::Int` : The row index specifying the position in the tensor network.
 - `col::Int` : The column index specifying the position in the tensor network.
 - `ax::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
 - `weights::SUWeight` : The weight object to absorb into the tensor.
 
-## Keyword arguments 
+## Keyword arguments
 
 - `sqrtwt::Bool=false` : If `true`, the square root of the weight is absorbed.
 - `invwt::Bool=false` : If `true`, the inverse of the weight is absorbed.
@@ -373,7 +384,7 @@ end
             :         :         :
     ```
 
-- After `mirror_antidiag`, x/y-weights are exchanged. 
+- After `mirror_antidiag`, x/y-weights are exchanged.
     ```
             |         |         |
             x₃₃       x₂₃       x₁₃
@@ -391,9 +402,9 @@ end
             x₃₃       x₂₃       x₁₃
             :         :         :
     ```
-    No further operations are needed. 
+    No further operations are needed.
 
-- After `rotl90`, x/y-weights are exchanged. 
+- After `rotl90`, x/y-weights are exchanged.
     ```
             |         |         |
             x₁₃       x₂₃       x₃₃
@@ -414,9 +425,9 @@ end
     We need to further:
     - Move 1st column of x-weights to the last column.
     - Permute axes of x-weights.
-    - Flip x-arrows from → to ←. 
+    - Flip x-arrows from → to ←.
 
-- After `rotr90`, x/y-weights are exchanged. 
+- After `rotr90`, x/y-weights are exchanged.
     ```
             :         :         :
             x₃₃       x₂₃       x₁₃
@@ -435,11 +446,11 @@ end
             |         |         |
     ```
     We need to further:
-    - Move last row of y-weights to the 1st row. 
-    - Permute axes of y-weights. 
-    - Flip y-arrows from ↑ to ↓. 
+    - Move last row of y-weights to the 1st row.
+    - Permute axes of y-weights.
+    - Flip y-arrows from ↑ to ↓.
 
-After `rot180`, x/y-weights are not exchanged. 
+After `rot180`, x/y-weights are not exchanged.
     ```
             :         :         :
             y₁₃       y₁₂       y₁₁
@@ -460,8 +471,8 @@ After `rot180`, x/y-weights are not exchanged.
     We need to further:
     - Move 1st column of x-weights to the last column.
     - Move last row of y-weights to the 1st row.
-    - Permute axes of all weights and twist their axis 1. 
-    - Flip x-arrows from → to ←, and y-arrows from ↑ to ↓. 
+    - Permute axes of all weights and twist their axis 1.
+    - Flip x-arrows from → to ←, and y-arrows from ↑ to ↓.
 =#
 
 """

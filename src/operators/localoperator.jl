@@ -139,7 +139,7 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 """
     mirror_antidiag(site::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2,Int})
 
-Get the position of `site` after reflection about 
+Get the position of `site` after reflection about
 the anti-diagonal line of a unit cell of size `(Nrow, Ncol)`.
 """
 function mirror_antidiag(site::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2,Int})
@@ -186,9 +186,10 @@ end
 
 # Charge shifting
 # ---------------
-
 TensorKit.sectortype(O::LocalOperator) = sectortype(typeof(O))
 TensorKit.sectortype(::Type{<:LocalOperator{T,S}}) where {T,S} = sectortype(S)
+TensorKit.spacetype(O::LocalOperator) = spacetype(typeof(O))
+TensorKit.spacetype(::Type{T}) where {S,T<:LocalOperator{<:Any,S}} = S
 
 @generated function _fuse_isomorphisms(
     op::AbstractTensorMap{<:Any,S,N,N}, fs::Vector{<:AbstractTensorMap{<:Any,S,1,2}}
