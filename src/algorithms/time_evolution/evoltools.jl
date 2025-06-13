@@ -77,20 +77,18 @@ to get the reduced tensors
 ```
         2                   1
         |                   |
-    5 - A ← 3   ====>   4 - X ← 2   1 ← a ← 3
+    5 - A - 3   ====>   4 - X ← 2   1 ← a - 3
         | ↘                 |            ↘
         4   1               3             2
 
         2                               1
         |                               |
-    5 ← B - 3   ====>   1 ← b → 3   4 → Y - 2
+    5 - B - 3   ====>   1 - b → 3   4 → Y - 2
         | ↘                  ↘          |
         4   1                 2         3
 ```
 """
 function _qr_bond(A::PEPSTensor, B::PEPSTensor)
-    # TODO: relax dual requirement on the bonds
-    @assert isdual(space(A, 3)) # currently only allow A ← B
     X, a = leftorth(A, ((2, 4, 5), (1, 3)))
     Y, b = leftorth(B, ((2, 3, 4), (1, 5)))
     @assert !isdual(space(a, 1))
@@ -125,7 +123,7 @@ $(SIGNATURES)
 
 Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
-    -1← a -← 3 -← b ← -4
+    -1← a -- 3 -- b ← -4
         ↓           ↓
         1           2
         ↓           ↓
@@ -135,8 +133,8 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
 """
 function _apply_gate(
-    a::AbstractTensorMap{T,S},
-    b::AbstractTensorMap{T,S},
+    a::AbstractTensorMap,
+    b::AbstractTensorMap,
     gate::AbstractTensorMap{T,S,2,2},
     trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
