@@ -95,8 +95,8 @@ function sequential_projectors(
 )
     _, r, c = coordinate
     r′ = _prev(r, size(env, 2))
-    Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)), SOUTHWEST)
-    Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)), NORTHWEST)
+    Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
+    Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
     return compute_projector((Q1, Q2), coordinate, alg)
 end
 function sequential_projectors(
@@ -107,10 +107,10 @@ function sequential_projectors(
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
     ec = (
-        TensorMap(EnlargedCorner(network, env, coordinate_se), SOUTHEAST),
-        TensorMap(EnlargedCorner(network, env, coordinate), SOUTHWEST),
-        TensorMap(EnlargedCorner(network, env, coordinate_nw), NORTHWEST),
-        TensorMap(EnlargedCorner(network, env, coordinate_ne), NORTHEAST),
+        TensorMap(EnlargedCorner(network, env, coordinate_se)),
+        TensorMap(EnlargedCorner(network, env, coordinate)),
+        TensorMap(EnlargedCorner(network, env, coordinate_nw)),
+        TensorMap(EnlargedCorner(network, env, coordinate_ne)),
     )
     return compute_projector(ec, coordinate, alg)
 end
