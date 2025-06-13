@@ -4,10 +4,14 @@ using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Compat
 using Accessors: @set, @reset
 using VectorInterface
-using TensorKit, KrylovKit, MPSKit, OptimKit, TensorOperations
+using TensorKit, KrylovKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
+
+using MPSKit
+using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
 import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
+
 using MPSKitModels
 using FiniteDifferences
 using OhMyThreads: tmap
@@ -65,6 +69,7 @@ include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
 
 include("algorithms/toolbox.jl")
+include("algorithms/correlators.jl")
 
 include("utility/symmetrization.jl")
 
@@ -80,6 +85,7 @@ export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
 export expectation_value, cost_function, product_peps, correlation_length, network_value
+export correlator
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
