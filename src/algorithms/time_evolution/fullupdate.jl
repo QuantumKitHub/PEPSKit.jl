@@ -120,7 +120,7 @@ function fu_iter(gate::LocalOperator, peps::InfinitePEPS, env::CTMRGEnv, alg::Fu
         N = size(peps2, 2)
         for col in 1:N
             wts_col, fid_col = _fu_column!(col, gate, peps2, env2, alg)
-            fid = min(fidmin, fid_col)
+            fidmin = min(fidmin, fid_col)
             # assign the weights to the un-rotated `wts`
             if i == 1
                 wts[1, :, col] = wts_col
