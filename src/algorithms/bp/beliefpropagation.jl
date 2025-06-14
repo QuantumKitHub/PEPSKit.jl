@@ -15,7 +15,9 @@ function bp_iteration(network::InfiniteSquareNetwork, env::BPEnv, alg::BeliefPro
         elseif dir == WEST
             col -= 1
         end
-        messages[dir, mod1(row, end), mod1(col, end)] = update_message(I, network, env)
+        messages[dir, mod1(row, end), mod1(col, end)] = normalize!(
+            update_message(I, network, env)
+        )
     end
     return BPEnv(messages)
 end

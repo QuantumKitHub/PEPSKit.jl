@@ -96,3 +96,5 @@ VI.add!!(dst::BPEnv, src::BPEnv, α::Number, β::Number) = add!(dst, src, α, β
 VI.inner(env1::BPEnv, env2::BPEnv) = inner(env1.messages, env2.messages)
 VI.norm(env::BPEnv) = norm(env.messages)
 
+LinearAlgebra.normalize(env::BPEnv) = scale(env, inv(norm(env)))
+LinearAlgebra.normalize!(env::BPEnv) = scale!(env, inv(norm(env)))
