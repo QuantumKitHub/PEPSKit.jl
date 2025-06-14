@@ -75,6 +75,11 @@ weights = collect(tsvd(rand(Float64, V ← V))[2] for dir in 1:2, r in 1:Nr, c i
 weights = SUWeight(weights)
 pepswt = InfiniteWeightPEPS(vertices, weights)
 
+@test sectortype(weights) === sectortype(V)
+@test spacetype(weights) === spacetype(V)
+@test sectortype(pepswt) === sectortype(V)
+@test spacetype(pepswt) === spacetype(V)
+
 test_rotation(weights)
 @static if pkgversion(TensorKit) >= v"0.14.6"
     test_rotation(pepswt)

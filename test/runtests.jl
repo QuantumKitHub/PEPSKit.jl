@@ -71,6 +71,9 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
+        @time @safetestset "LocalOperator" begin
+            include("utility/localoperator.jl")
+        end
         @time @safetestset "SVD wrapper" begin
             include("utility/svd_wrapper.jl")
         end
