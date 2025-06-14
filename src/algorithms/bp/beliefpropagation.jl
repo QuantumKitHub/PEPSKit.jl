@@ -4,6 +4,57 @@
     verbosity::Int = 2
 end
 
+function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv=BPEnv(psi))
+    # Compute belief propagation fixed point solutions
+    env, err = bp_fixedpoint(env, InfiniteSquareNetwork(psi), alg)
+
+    # Bring PEPS to the Vidal gauge
+    sqrtmsgs = map(env.messages) do M
+        U, S, Vᴴ = tsvd!(M)
+        sqrtM = U * sdiag_pow(S, 1 / 2) * Vᴴ
+        isqrtM = U * sdiag_pow(S, -1 / 2) * Vᴴ
+        return sqrtM, isqrtM
+    end
+    bond_svds = map(eachcoordinate(psi, 1:2)) do (dir, r, c)
+        # TODO: would be more reasonable to define SOUTH as adjoint(NORTH)...
+        MM = sqrtmsgs[dir, r, c][1] * transpose(sqrtmsgs[mod1(dir + 2, 4), r, c][1])
+        U, S, Vᴴ = tsvd!(MM)
+        return U, S, Vᴴ
+    end
+    vertices = map(eachcoordinate(psi)) do (r, c)
+        isqrtM_north = sqrtmsgs[NORTH, _prev(r, end), c][2]
+        isqrtM_south = sqrtmsgs[SOUTH, _next(r, end), c][2]
+        isqrtM_east = sqrtmsgs[EAST, r, _next(c, end)][2]
+        isqrtM_west = sqrtmsgs[WEST, r, _prev(c, end)][2]
+
+        U_north = bond_svds[NORTH, _prev(r, end), c][1]
+        U_east = bond_svds[EAST, r, _next(c, end)][1]
+        Vᴴ_south = bond_svds[NORTH, _next(r, end), c][3]
+        Vᴴ_west = bond_svds[EAST, r, _prev(c, end)][3]
+
+        @tensor contractcheck = true begin
+            A[d; DN DE DS DW] ≔
+                psi[r, c][d; DN1 DE1 DS1 DW1] *
+                (isqrtM_north[DN1; DN2] * U_north[DN2; DN]) *
+                (isqrtM_east[DE1; DE2] * U_east[DE2; DE]) *
+                (isqrtM_south[DS1; DS2] * Vᴴ_south[DS; DS2]) *
+                (isqrtM_west[DW1; DW2] * Vᴴ_west[DW; DW2])
+        end
+        return A
+    end
+    # TODO: decide on a convention here, possibly altering InfiniteWeightPEPS
+    weight_mats = SUWeight(
+        map(eachcoordinate(psi, 1:2)) do (dir, r, c)
+            if dir == 1 # horizontal direction
+                return bond_svds[EAST, r, _next(c, end)][2]
+            else # vertical direction
+                return bond_svds[NORTH, _prev(r, end), c][2]
+            end
+        end,
+    )
+    return InfiniteWeightPEPS(vertices, weight_mats)
+end
+
 function bp_fixedpoint(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
     log = MPSKit.IterLog("BP")
     ϵ = Inf
