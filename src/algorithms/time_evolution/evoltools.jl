@@ -182,19 +182,29 @@ Obtain the 3-site gate MPO on the southeast cluster at position `[row, col]`
 ```
 """
 function _get_gatempo_se(ham::LocalOperator, dt::Number, row::Int, col::Int)
-    Nr, Nc = size(ham.lattice)
+    Nr, Nc = size(ham)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    unit = id(space(ham.terms[1].second, 1))
-    sites = (
+    sites = [
         CartesianIndex(row, col),
         CartesianIndex(row, col + 1),
         CartesianIndex(row - 1, col + 1),
-    )
+    ]
     nb1x = get_gateterm(ham, (sites[1], sites[2]))
     nb1y = get_gateterm(ham, (sites[2], sites[3]))
     nb2 = get_gateterm(ham, (sites[1], sites[3]))
-    op = (1 / 2) * (nb1x ⊗ unit + unit ⊗ nb1y) + permute(nb2 ⊗ unit, ((1, 3, 2), (4, 6, 5)))
-    op = exp(-dt * op)
+    # identity operator at each site
+    units = map(sites) do site
+        site_ = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
+        return id(physicalspace(ham)[site_])
+    end
+    # when iterating through ┘, └, ┌, ┐ clusters in the unit cell,
+    # NN / NNN bonds are counted 4 / 2 times, respectively.
+    @tensor Odt[i' j' k'; i j k] :=
+        -dt * (
+            (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4 +
+            (nb2[i' k'; i k] * units[2][j'; j]) / 2
+        )
+    op = exp(Odt)
     return gate_to_mpo3(op)
 end
 

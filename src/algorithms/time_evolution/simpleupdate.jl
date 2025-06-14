@@ -9,7 +9,7 @@ Each SU run is converged when the singular value difference becomes smaller than
 $(TYPEDFIELDS)
 """
 struct SimpleUpdate
-    dt::Float64
+    dt::Number
     tol::Float64
     maxiter::Int
     trscheme::TensorKit.TruncationScheme
