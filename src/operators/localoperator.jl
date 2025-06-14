@@ -105,9 +105,7 @@ function physicalspace(O::LocalOperator)
     return O.lattice
 end
 
-function Base.size(O::LocalOperator)
-    return size(O.lattice)
-end
+Base.size(O::LocalOperator) = size(physicalspace(O))
 
 # Real and imaginary part
 # -----------------------
