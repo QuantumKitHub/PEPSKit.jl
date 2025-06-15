@@ -272,8 +272,9 @@ passed through to `MPSKit.transfer_spectrum` (e.g. allowing to target the correl
 in a specific symmetry sector).
 
 """
-MPSKit.correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...) =
+function MPSKit.correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...)
     _correlation_length(env; num_vals, kwargs...)
+end
 
 function _correlation_length(
     env::CTMRGEnv; num_vals=2, sector=one(sectortype(env)), kwargs...
