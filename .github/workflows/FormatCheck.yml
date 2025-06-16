@@ -12,3 +12,5 @@ jobs:
   format-check:
     name: "Format Check"
     uses: "QuantumKitHub/.github/.github/workflows/formatcheck.yml@main"
+    with: 
+      juliaformatter-version: "2"
