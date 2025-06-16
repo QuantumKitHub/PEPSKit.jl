@@ -12,15 +12,9 @@ struct SimpleUpdate
     dt::Float64
     tol::Float64
     maxiter::Int
-    trschemes::NTuple{2,TensorKit.TruncationScheme} # truncation schemes for x and y bonds
+    trscheme::TensorKit.TruncationScheme
 end
 # TODO: add kwarg constructor and SU Defaults
-
-function SimpleUpdate(
-    dt::Float64, tol::Float64, maxiter::Int, trscheme::TensorKit.TruncationScheme
-)
-    return SimpleUpdate(dt, tol, maxiter, (trscheme, trscheme))
-end
 
 """
 $(SIGNATURES)
@@ -100,7 +94,13 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
-                ϵ = _su_bondx!(r, 1, term, peps2, alg.trschemes[direction])
+                ϵ = _su_bondx!(
+                    r,
+                    1,
+                    term,
+                    peps2,
+                    truncation_scheme(alg.trscheme; direction, r, c, mirror_antidiag=true),
+                )
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
                 peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
@@ -112,7 +112,13 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
-                ϵ = _su_bondx!(r, c, term, peps2, alg.trschemes[direction])
+                ϵ = _su_bondx!(
+                    r,
+                    c,
+                    term,
+                    peps2,
+                    truncation_scheme(alg.trscheme; direction, r, c, mirror_antidiag=true),
+                )
             end
         end
         if direction == 2

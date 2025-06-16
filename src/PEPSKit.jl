@@ -82,7 +82,8 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
-export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
+export FixedSpaceTruncation, SiteDependentTruncation
+export HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
 export expectation_value, cost_function, product_peps, correlation_length, network_value
 export correlator
