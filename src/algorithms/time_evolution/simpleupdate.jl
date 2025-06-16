@@ -128,7 +128,7 @@ function _simpleupdate2site(
 )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
-    gate = get_expham(alg.dt, ham)
+    gate = get_expham(ham, alg.dt)
     wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)
