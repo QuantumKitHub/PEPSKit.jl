@@ -59,7 +59,7 @@ V_peps = Vect[S]((0, 0) => 2 * D, (1, 1) => D, (1, -1) => D)
 V_env = Vect[S](
     (0, 0) => 4 * χ, (1, -1) => 2 * χ, (1, 1) => 2 * χ, (0, 2) => χ, (0, -2) => χ
 )
-S_aux = S((1, -1))
+S_aux = S((1, 1))
 H₀ = hubbard_model(ComplexF64, particle_symmetry, spin_symmetry, lattice; t, U)
 H = add_physical_charge(H₀, fill(S_aux, size(H₀.lattice)...));
 
