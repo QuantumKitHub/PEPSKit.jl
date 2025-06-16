@@ -143,7 +143,7 @@ Full update an infinite PEPS with nearest neighbor Hamiltonian.
 function fu_iter2(ham::LocalOperator, peps::InfinitePEPS, env::CTMRGEnv, alg::FullUpdate)
     # Each NN bond is updated twice in _fu_iter, 
     # thus `dt` is divided by 2 when exponentiating `ham`.
-    gate = get_expham(alg.dt / 2, ham)
+    gate = get_expham(ham, alg.dt / 2)
     wts, fidmin = nothing, 1.0
     for it in 1:(alg.niter)
         peps, env, wts, fid = fu_iter(gate, peps, env, alg)
