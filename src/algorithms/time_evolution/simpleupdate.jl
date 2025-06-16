@@ -29,7 +29,7 @@ Simple update of the x-bond `peps.weights[1,r,c]`.
                 [2,r+1,c]           [2,r+1,c+1]
 ```
 """
-function _su_bondx!(
+function _su_xbond!(
     row::Int,
     col::Int,
     gate::AbstractTensorMap{T,S,2,2},
@@ -94,7 +94,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
-                ϵ = _su_bondx!(r, 1, term, peps2, alg)
+                ϵ = _su_xbond!(r, 1, term, peps2, alg)
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
                 peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
@@ -106,7 +106,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
-                ϵ = _su_bondx!(r, c, term, peps2, alg)
+                ϵ = _su_xbond!(r, c, term, peps2, alg)
             end
         end
         if direction == 2
