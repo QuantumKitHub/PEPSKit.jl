@@ -9,7 +9,7 @@ Each SU run is converged when the singular value difference becomes smaller than
 $(TYPEDFIELDS)
 """
 struct SimpleUpdate
-    dt::Float64
+    dt::Number
     tol::Float64
     maxiter::Int
     trscheme::TensorKit.TruncationScheme
@@ -29,7 +29,7 @@ Simple update of the x-bond `peps.weights[1,r,c]`.
                 [2,r+1,c]           [2,r+1,c+1]
 ```
 """
-function _su_bondx!(
+function _su_xbond!(
     row::Int,
     col::Int,
     gate::AbstractTensorMap{T,S,2,2},
@@ -94,7 +94,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
-                ϵ = _su_bondx!(
+                ϵ = _su_xbond!(
                     r,
                     1,
                     term,
@@ -112,7 +112,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
-                ϵ = _su_bondx!(
+                ϵ = _su_xbond!(
                     r,
                     c,
                     term,
@@ -140,7 +140,7 @@ function _simpleupdate2site(
 )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
-    gate = get_expham(alg.dt, ham)
+    gate = get_expham(ham, alg.dt)
     wtdiff = 1.0
     wts0 = deepcopy(peps.weights)
     for count in 1:(alg.maxiter)
