@@ -157,10 +157,29 @@ end
 
 ## Vector interface
 
-function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPS}
-    return scalartype(eltype(NT))
+VI.scalartype(::Type{NT}) where {NT<:InfinitePEPS} = scalartype(eltype(NT))
+VI.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A)))
+
+function VI.scale(ψ::InfinitePEPS, α::Number)
+    _scale = Base.Fix2(scale, α)
+    return InfinitePEPS(map(_scale, unitcell(ψ)))
 end
-VectorInterface.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A)))
+function VI.scale!(ψ::InfinitePEPS, α::Number)
+    _scale! = Base.Fix2(scale!, α)
+    return foreach(_scale!, unitcell(ψ))
+end
+VI.scale!!(ψ::InfinitePEPS, α::Number) = scale!(ψ, α)
+
+function VI.add(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number)
+    _add(x, y) = add(x, y, α, β)
+    return InfinitePEPS(map(_add, unitcell(ψ₁), unitcell(ψ₂)))
+end
+function VI.add!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number)
+    _add!(x, y) = add!(x, y, α, β)
+    foreach(_add!, unitcell(ψ₁), unitcell(ψ₂))
+    return ψ₁
+end
+VI.add!!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number) = add!(ψ₁, ψ₂, α, β)
 
 ## Math
 
