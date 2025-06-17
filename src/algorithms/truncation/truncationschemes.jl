@@ -61,6 +61,8 @@ function truncation_scheme(
 end
 
 # Mirror a TruncationScheme by its anti-diagonal line.
+# When the number of directions is 2, it swaps the first and second direction, consistent with xbonds and ybonds, respectively.
+# When the number of directions is 4, it swaps the first and second, and third and fourth directions, consistent with the order NORTH, EAST, SOUTH, WEST.
 function mirror_antidiag(trscheme::T) where {T<:TensorKit.TruncationScheme}
     return trscheme
 end
