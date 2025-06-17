@@ -157,10 +157,36 @@ end
 
 ## Vector interface
 
-function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPS}
-    return scalartype(eltype(NT))
+VI.scalartype(::Type{NT}) where {NT<:InfinitePEPS} = scalartype(eltype(NT))
+VI.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A)))
+
+function VI.scale(ψ::InfinitePEPS, α::Number)
+    _scale = Base.Fix2(scale, α)
+    return InfinitePEPS(map(_scale, unitcell(ψ)))
 end
-VectorInterface.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A)))
+function VI.scale!(ψ::InfinitePEPS, α::Number)
+    _scale! = Base.Fix2(scale!, α)
+    foreach(_scale!, unitcell(ψ))
+    return ψ
+end
+function VI.scale!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number)
+    _scale!(x, y) = scale!(x, y, α)
+    foreach(_scale!, unitcell(ψ₁), unitcell(ψ₂))
+    return ψ₁
+end
+VI.scale!!(ψ::InfinitePEPS, α::Number) = scale!(ψ, α)
+VI.scale!!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number) = scale!(ψ₁, ψ₂, α)
+
+function VI.add(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number)
+    _add(x, y) = add(x, y, α, β)
+    return InfinitePEPS(map(_add, unitcell(ψ₁), unitcell(ψ₂)))
+end
+function VI.add!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number)
+    _add!(x, y) = add!(x, y, α, β)
+    foreach(_add!, unitcell(ψ₁), unitcell(ψ₂))
+    return ψ₁
+end
+VI.add!!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number) = add!(ψ₁, ψ₂, α, β)
 
 ## Math
 
@@ -194,7 +220,7 @@ Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
 Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))
 Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
 
-## OptimKit optimization compatibility
+## OptimKit optimization backwards compatibility (v0.4 uses VectorInterface)
 
 function LinearAlgebra.rmul!(A::InfinitePEPS, α::Number) # Used in _scale during OptimKit.optimize
     rmul!.(unitcell(A), α)
