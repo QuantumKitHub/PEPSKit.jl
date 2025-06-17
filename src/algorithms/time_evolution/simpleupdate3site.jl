@@ -422,13 +422,7 @@ function su3site_iter(
         for site in CartesianIndices(peps2.vertices)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
-            _su3site_se!(
-                r,
-                c,
-                gs,
-                peps2,
-                truncation_scheme(alg.trscheme, direction, r, c; mirror_antidiag=true),
-            )
+            _su3site_se!(r, c, gs, peps2, truncation_scheme(alg.trscheme, direction, r, c))
         end
         peps2 = rotl90(peps2)
     end

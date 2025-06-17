@@ -11,15 +11,21 @@ struct SiteDependentTruncation <: TensorKit.TruncationScheme
     trschemes::Array{T,3} where {T<:TensorKit.TruncationScheme}
 end
 
-function SiteDependentTruncation(trscheme::TensorKit.TruncationScheme, Nr::Int, Nc::Int)
-    return SiteDependentTruncation(reshape(fill(trscheme, Nr, Nc), 2, Nr, Nc))
+function SiteDependentTruncation(
+    trscheme::TensorKit.TruncationScheme, directions::Int; unitcell::Tuple{Int,Int}=(1, 1)
+)
+    Nr, Nc = unitcell
+    return SiteDependentTruncation(fill(trscheme, directions, Nr, Nc))
 end
 
+# This constructor for SiteDependentTruncation takes one truncation scheme for each direction, independent on the site of the unit cell.
+# If the input is an Tuple of size N, trschemes becomes an Array of size NxNrxNc, where trschemes[N,Nr,Nc] = truncation_schemes[N].
 function SiteDependentTruncation(
-    trschemes::Tuple{T,S}, Nr::Int, Nc::Int
-) where {T<:TensorKit.TruncationScheme,S<:TensorKit.TruncationScheme}
+    truncation_schemes::NTuple{N,T}; unitcell::Tuple{Int,Int}=(1, 1)
+) where {N,T<:TensorKit.TruncationScheme}
+    Nr, Nc = unitcell
     return SiteDependentTruncation(
-        reshape([trschemes[mod1(i, 2)] for i in 1:(2 * Nr * Nc)], 2, Nr, Nc)
+        reshape([truncation_schemes[mod1(i, N)] for i in 1:(N * Nr * Nc)], N, Nr, Nc)
     )
 end
 
@@ -42,21 +48,35 @@ function _TruncationScheme(; alg=Defaults.trscheme, η=nothing)
     return isnothing(η) ? alg_type() : alg_type(η)
 end
 
-function truncation_scheme(trscheme::T; kwargs...) where {T<:TensorKit.TruncationScheme}
+function truncation_scheme(
+    trscheme::T, direction::Int, row::Int, col::Int; kwargs...
+) where {T<:TensorKit.TruncationScheme}
     return trscheme
 end
 
 function truncation_scheme(
-    trscheme::SiteDependentTruncation;
-    direction::Int,
-    r::Int,
-    c::Int,
-    mirror_antidiag::Bool=false,
+    trscheme::SiteDependentTruncation, direction::Int, row::Int, col::Int;
 )
-    if mirror_antidiag && direction == 2
-        depth, Nr, Nc = size(trscheme.trschemes)
-        @assert depth == 2
-        return trscheme.trschemes[direction, Nc - c + 1, Nr - r + 1]
+    return trscheme.trschemes[direction, row, col]
+end
+
+# Mirror a TruncationScheme by its anti-diagonal line.
+function mirror_antidiag(trscheme::T) where {T<:TensorKit.TruncationScheme}
+    return trscheme
+end
+function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
+    directions = size(trscheme.trschemes)[1]
+    trschemes_mirrored = permutedims(trscheme.trschemes, (1, 3, 2))
+    if directions == 2
+        trschemes_mirrored[1, :, :] = mirror_antidiag(trscheme.trschemes[2, :, :])
+        trschemes_mirrored[2, :, :] = mirror_antidiag(trscheme.trschemes[1, :, :])
+    elseif directions == 4
+        trschemes_mirrored[1, :, :] = mirror_antidiag(trscheme.trschemes[2, :, :])
+        trschemes_mirrored[2, :, :] = mirror_antidiag(trscheme.trschemes[1, :, :])
+        trschemes_mirrored[3, :, :] = mirror_antidiag(trscheme.trschemes[4, :, :])
+        trschemes_mirrored[4, :, :] = mirror_antidiag(trscheme.trschemes[3, :, :])
+    else
+        error("Unsupported number of directions for mirror_antidiag: $directions")
     end
-    return trscheme.trschemes[direction, r, c]
+    return SiteDependentTruncation(trschemes_mirrored)
 end

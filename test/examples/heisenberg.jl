@@ -73,9 +73,8 @@ end
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         if n == 2
             trscheme = SiteDependentTruncation(
-                (truncerr(tol) & truncdim(Dbond2), truncerr(tol) & truncdim(Dbond2 + 1)),
-                N1,
-                N2,
+                (truncerr(tol) & truncdim(Dbond2), truncerr(tol) & truncdim(Dbond2 + 1));
+                unitcell=(N1, N2),
             )
         elseif n == 3
             trscheme = SiteDependentTruncation(

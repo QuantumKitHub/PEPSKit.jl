@@ -86,6 +86,9 @@ function su_iter(
         # to update them using code for x-weights
         if direction == 2
             peps2 = mirror_antidiag(peps2)
+            trscheme = mirror_antidiag(alg.trscheme)
+        else
+            trscheme = alg.trscheme
         end
         if bipartite
             for r in 1:2
@@ -95,11 +98,7 @@ function su_iter(
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
                 ϵ = _su_xbond!(
-                    r,
-                    1,
-                    term,
-                    peps2,
-                    truncation_scheme(alg.trscheme; direction, r, c, mirror_antidiag=true),
+                    r, 1, term, peps2, truncation_scheme(trscheme, direction, r, 1)
                 )
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
@@ -113,11 +112,7 @@ function su_iter(
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
                 ϵ = _su_xbond!(
-                    r,
-                    c,
-                    term,
-                    peps2,
-                    truncation_scheme(alg.trscheme; direction, r, c, mirror_antidiag=true),
+                    r, c, term, peps2, truncation_scheme(trscheme, direction, r, c)
                 )
             end
         end
