@@ -7,26 +7,15 @@ have different spaces, this truncation style is different from `TruncationSpace`
 """
 struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
-struct SiteDependentTruncation <: TensorKit.TruncationScheme
+struct VariableTruncation <: TensorKit.TruncationScheme
     trschemes::Array{T,3} where {T<:TensorKit.TruncationScheme}
 end
 
-function SiteDependentTruncation(
+function VariableTruncation(
     trscheme::TensorKit.TruncationScheme, directions::Int; unitcell::Tuple{Int,Int}=(1, 1)
 )
     Nr, Nc = unitcell
-    return SiteDependentTruncation(fill(trscheme, directions, Nr, Nc))
-end
-
-# This constructor for SiteDependentTruncation takes one truncation scheme for each direction, independent on the site of the unit cell.
-# If the input is an Tuple of size N, trschemes becomes an Array of size NxNrxNc, where trschemes[N,Nr,Nc] = truncation_schemes[N].
-function SiteDependentTruncation(
-    truncation_schemes::NTuple{N,T}; unitcell::Tuple{Int,Int}=(1, 1)
-) where {N,T<:TensorKit.TruncationScheme}
-    Nr, Nc = unitcell
-    return SiteDependentTruncation(
-        reshape([truncation_schemes[mod1(i, N)] for i in 1:(N * Nr * Nc)], N, Nr, Nc)
-    )
+    return VariableTruncation(fill(trscheme, directions, Nr, Nc))
 end
 
 const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
@@ -55,7 +44,7 @@ function truncation_scheme(
 end
 
 function truncation_scheme(
-    trscheme::SiteDependentTruncation, direction::Int, row::Int, col::Int;
+    trscheme::VariableTruncation, direction::Int, row::Int, col::Int;
 )
     return trscheme.trschemes[direction, row, col]
 end
@@ -66,7 +55,7 @@ end
 function mirror_antidiag(trscheme::T) where {T<:TensorKit.TruncationScheme}
     return trscheme
 end
-function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
+function mirror_antidiag(trscheme::T) where {T<:VariableTruncation}
     directions = size(trscheme.trschemes)[1]
     trschemes_mirrored = permutedims(trscheme.trschemes, (1, 3, 2))
     if directions == 2
@@ -80,5 +69,26 @@ function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
     else
         error("Unsupported number of directions for mirror_antidiag: $directions")
     end
-    return SiteDependentTruncation(trschemes_mirrored)
+    return VariableTruncation(trschemes_mirrored)
+end
+
+function Base.rotl90(trscheme::T) where {T<:TensorKit.TruncationScheme}
+    return trscheme
+end
+
+function Base.rotl90(trscheme::T) where {T<:VariableTruncation}
+    directions = size(trscheme.trschemes)[1]
+    trschemes_rotated = permutedims(trscheme.trschemes, (1, 3, 2))
+    if directions == 2
+        trschemes_rotated[1, :, :] = circshift(rotl90(trscheme.trschemes[2, :, :]), (0, -1))
+        trschemes_rotated[2, :, :] = rotl90(trscheme.trschemes[1, :, :])
+    elseif directions == 4
+        trschemes_rotated[1, :, :] = rotl90(trscheme.trschemes[2, :, :])
+        trschemes_rotated[2, :, :] = rotl90(trscheme.trschemes[3, :, :])
+        trschemes_rotated[3, :, :] = rotl90(trscheme.trschemes[4, :, :])
+        trschemes_rotated[4, :, :] = rotl90(trscheme.trschemes[1, :, :])
+    else
+        error("Unsupported number of directions for rotl90: $directions")
+    end
+    return VariableTruncation(trschemes_rotated)
 end

@@ -418,17 +418,19 @@ function su3site_iter(
         ),
     )
     peps2 = deepcopy(peps)
+    trscheme = alg.trscheme
     for i in 1:4
         for site in CartesianIndices(peps2.vertices)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
             trschemes = [
-                truncation_scheme(alg.trscheme, 1, r, c)
-                truncation_scheme(alg.trscheme, 2, r, _next(c, Nc))
+                truncation_scheme(trscheme, 1, r, c)
+                truncation_scheme(trscheme, 2, r, _next(c, Nc))
             ]
             _su3site_se!(r, c, gs, peps2, trschemes)
         end
         peps2 = rotl90(peps2)
+        trscheme = rotl90(trscheme)
     end
     return peps2
 end
