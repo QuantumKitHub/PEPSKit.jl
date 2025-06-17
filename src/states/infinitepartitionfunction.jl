@@ -158,7 +158,9 @@ end
 ## Vector interface
 
 VI.scalartype(::Type{NT}) where {NT<:InfinitePartitionFunction} = scalartype(eltype(NT))
-VI.zerovector(A::InfinitePartitionFunction) = InfinitePartitionFunction(zerovector(unitcell(A)))
+function VI.zerovector(A::InfinitePartitionFunction)
+    InfinitePartitionFunction(zerovector(unitcell(A)))
+end
 
 ## (Approximate) equality
 function Base.:(==)(A₁::InfinitePartitionFunction, A₂::InfinitePartitionFunction)

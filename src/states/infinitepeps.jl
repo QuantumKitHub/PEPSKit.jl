@@ -166,7 +166,13 @@ function VI.scale(ψ::InfinitePEPS, α::Number)
 end
 function VI.scale!(ψ::InfinitePEPS, α::Number)
     _scale! = Base.Fix2(scale!, α)
-    return foreach(_scale!, unitcell(ψ))
+    foreach(_scale!, unitcell(ψ))
+    return ψ
+end
+function VI.scale!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number)
+    _scale!(x, y) = scale!(x, y, α)
+    foreach(_scale!, unitcell(ψ₁), unitcell(ψ₂))
+    return ψ₁
 end
 VI.scale!!(ψ::InfinitePEPS, α::Number) = scale!(ψ, α)
 
@@ -213,7 +219,7 @@ Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
 Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))
 Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
 
-## OptimKit optimization compatibility
+## OptimKit optimization backwards compatibility (v0.4 uses VectorInterface)
 
 function LinearAlgebra.rmul!(A::InfinitePEPS, α::Number) # Used in _scale during OptimKit.optimize
     rmul!.(unitcell(A), α)
