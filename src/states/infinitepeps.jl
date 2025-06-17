@@ -175,6 +175,7 @@ function VI.scale!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number)
     return ψ₁
 end
 VI.scale!!(ψ::InfinitePEPS, α::Number) = scale!(ψ, α)
+VI.scale!!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number) = scale!(ψ₁, ψ₂, α)
 
 function VI.add(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number)
     _add(x, y) = add(x, y, α, β)
