@@ -488,8 +488,6 @@ end
 # big vector. In other words, the associated vector space is not the natural one associated
 # to the original (physical) system, and addition, scaling, etc. are performed element-wise.
 
-import VectorInterface as VI
-
 function VI.scalartype(::Type{CTMRGEnv{C,T}}) where {C,T}
     S₁ = scalartype(C)
     S₂ = scalartype(T)
