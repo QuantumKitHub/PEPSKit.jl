@@ -91,7 +91,7 @@ Z = InfinitePartitionFunction(O)
 ````
 
 ````
-InfinitePartitionFunction{TensorMap{ComplexF64, ComplexSpace, 2, 2, Vector{ComplexF64}}}(TensorMap{ComplexF64, ComplexSpace, 2, 2, Vector{ComplexF64}}[TensorMap((ℂ^2 ⊗ ℂ^2) ← (ℂ^2 ⊗ ℂ^2)):
+InfinitePartitionFunction{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}[TensorMap((ℂ^2 ⊗ ℂ^2) ← (ℂ^2 ⊗ ℂ^2)):
 [:, :, 1, 1] =
   3.169519816780443 + 0.0im  0.4999999999999995 + 0.0im
  0.4999999999999995 + 0.0im  0.1505971059561009 + 0.0im
@@ -124,7 +124,7 @@ env, = leading_boundary(env₀, Z; tol=1e-8, maxiter=500);
 
 ````
 [ Info: CTMRG init:	obj = +1.784252138312e+00 -1.557258880375e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 63:	obj = +3.353928644031e+00	err = 4.6005361791e-09	time = 3.52 sec
+[ Info: CTMRG conv 63:	obj = +3.353928644031e+00	err = 4.5903314811e-09	time = 8.12 sec
 
 ````
 
@@ -138,7 +138,7 @@ space.(env.edges)
 ````
 
 ````
-4×1×1 Array{TensorMapSpace{ComplexSpace, 2, 1}, 3}:
+4×1×1 Array{TensorKit.TensorMapSpace{TensorKit.ComplexSpace, 2, 1}, 3}:
 [:, :, 1] =
  (ℂ^20 ⊗ ℂ^2) ← ℂ^20
  (ℂ^20 ⊗ ℂ^2) ← ℂ^20
@@ -159,9 +159,9 @@ e = expectation_value(Z, (1, 1) => E, env)
 ````
 
 ````
-λ = 3.353928644031376 - 1.11587056863837e-15im
-m = 0.9736086674403005 - 1.8262801879417628e-17im
-e = -1.8637796145082448 + 7.305120751767051e-17im
+λ = 3.3539286440313782 - 5.873212040152551e-16im
+m = 0.9736086674403001 + 1.8262157316829647e-17im
+e = -1.8637796145082437 - 1.4609725853463717e-16im
 
 ````
 
@@ -205,9 +205,9 @@ extrapolation):
 ````
 
 ````
-(-(log(λ)) / beta - f_exact) / f_exact = -1.3211126079531055e-15 - 2.749331575238102e-16im
-(abs(m) - abs(m_exact)) / abs(m_exact) = 0.0
-(e - e_exact) / e_exact = -0.02373206809908996 - 3.82650130578649e-17im
+(-(log(λ)) / beta - f_exact) / f_exact = -6.605563039765528e-16 - 1.447068124555315e-16im
+(abs(m) - abs(m_exact)) / abs(m_exact) = -4.561270094458082e-16
+(e - e_exact) / e_exact = -0.023732068099090543 + 7.652732508485748e-17im
 
 ````
 

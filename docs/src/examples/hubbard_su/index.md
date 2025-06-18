@@ -76,63 +76,63 @@ end
 
 ````
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 2.355e+00,  time = 13.262 sec
+[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 2.355e+00,  time = 22.185 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 1e-02,  weight diff = 3.984e-04,  time = 0.033 sec
+[ Info: SU iter 500    :  dt = 1e-02,  weight diff = 3.984e-04,  time = 0.015 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 1e-02,  weight diff = 2.866e-06,  time = 0.031 sec
+[ Info: SU iter 1000   :  dt = 1e-02,  weight diff = 2.866e-06,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 1061   :  dt = 1e-02,  weight diff = 9.956e-07,  time = 31.894 sec
+[ Info: SU conv 1061   :  dt = 1e-02,  weight diff = 9.956e-07,  time = 41.388 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 6.070e-03,  time = 0.038 sec
+[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 6.070e-03,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 1e-03,  weight diff = 1.874e-06,  time = 0.012 sec
+[ Info: SU iter 500    :  dt = 1e-03,  weight diff = 1.874e-06,  time = 0.024 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 1e-03,  weight diff = 6.437e-07,  time = 0.012 sec
+[ Info: SU iter 1000   :  dt = 1e-03,  weight diff = 6.437e-07,  time = 0.021 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1500   :  dt = 1e-03,  weight diff = 2.591e-07,  time = 0.012 sec
+[ Info: SU iter 1500   :  dt = 1e-03,  weight diff = 2.591e-07,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.053e-07,  time = 0.012 sec
+[ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.053e-07,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2500   :  dt = 1e-03,  weight diff = 4.280e-08,  time = 0.012 sec
+[ Info: SU iter 2500   :  dt = 1e-03,  weight diff = 4.280e-08,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3000   :  dt = 1e-03,  weight diff = 1.741e-08,  time = 0.012 sec
+[ Info: SU iter 3000   :  dt = 1e-03,  weight diff = 1.741e-08,  time = 0.021 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 3309   :  dt = 1e-03,  weight diff = 9.983e-09,  time = 56.141 sec
+[ Info: SU conv 3309   :  dt = 1e-03,  weight diff = 9.983e-09,  time = 58.103 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 4.030e-04,  time = 0.011 sec
+[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 4.030e-04,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 4e-04,  weight diff = 1.776e-07,  time = 0.012 sec
+[ Info: SU iter 500    :  dt = 4e-04,  weight diff = 1.776e-07,  time = 0.016 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 4e-04,  weight diff = 7.091e-08,  time = 0.012 sec
+[ Info: SU iter 1000   :  dt = 4e-04,  weight diff = 7.091e-08,  time = 0.016 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1500   :  dt = 4e-04,  weight diff = 3.997e-08,  time = 0.012 sec
+[ Info: SU iter 1500   :  dt = 4e-04,  weight diff = 3.997e-08,  time = 0.021 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 2.622e-08,  time = 0.012 sec
+[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 2.622e-08,  time = 0.016 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2500   :  dt = 4e-04,  weight diff = 1.796e-08,  time = 0.011 sec
+[ Info: SU iter 2500   :  dt = 4e-04,  weight diff = 1.796e-08,  time = 0.021 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3000   :  dt = 4e-04,  weight diff = 1.245e-08,  time = 0.011 sec
+[ Info: SU iter 3000   :  dt = 4e-04,  weight diff = 1.245e-08,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 3303   :  dt = 4e-04,  weight diff = 9.997e-09,  time = 55.693 sec
+[ Info: SU conv 3303   :  dt = 4e-04,  weight diff = 9.997e-09,  time = 57.388 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 1e-04,  weight diff = 2.014e-04,  time = 0.033 sec
+[ Info: SU iter 1      :  dt = 1e-04,  weight diff = 2.014e-04,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 1e-04,  weight diff = 5.664e-08,  time = 0.013 sec
+[ Info: SU iter 500    :  dt = 1e-04,  weight diff = 5.664e-08,  time = 0.016 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 1e-04,  weight diff = 4.106e-08,  time = 0.012 sec
+[ Info: SU iter 1000   :  dt = 1e-04,  weight diff = 4.106e-08,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1500   :  dt = 1e-04,  weight diff = 3.033e-08,  time = 0.012 sec
+[ Info: SU iter 1500   :  dt = 1e-04,  weight diff = 3.033e-08,  time = 0.021 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2000   :  dt = 1e-04,  weight diff = 2.290e-08,  time = 0.032 sec
+[ Info: SU iter 2000   :  dt = 1e-04,  weight diff = 2.290e-08,  time = 0.021 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2500   :  dt = 1e-04,  weight diff = 1.773e-08,  time = 0.012 sec
+[ Info: SU iter 2500   :  dt = 1e-04,  weight diff = 1.773e-08,  time = 0.014 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3000   :  dt = 1e-04,  weight diff = 1.410e-08,  time = 0.011 sec
+[ Info: SU iter 3000   :  dt = 1e-04,  weight diff = 1.410e-08,  time = 0.015 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3500   :  dt = 1e-04,  weight diff = 1.152e-08,  time = 0.011 sec
+[ Info: SU iter 3500   :  dt = 1e-04,  weight diff = 1.152e-08,  time = 0.023 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 3893   :  dt = 1e-04,  weight diff = 9.997e-09,  time = 65.654 sec
+[ Info: SU conv 3893   :  dt = 1e-04,  weight diff = 9.997e-09,  time = 69.269 sec
 
 ````
 
@@ -164,11 +164,11 @@ end
 ````
 
 ````
-[ Info: CTMRG init:	obj = -3.050596045736e-08	err = 1.0000e+00
-┌ Warning: CTMRG cancel 100:	obj = +6.015068543571e-01	err = 1.5525020185e-02	time = 18.35 sec
-└ @ PEPSKit ~/.julia/packages/PEPSKit/2FBaz/src/algorithms/ctmrg/ctmrg.jl:155
-[ Info: CTMRG init:	obj = +6.015068543571e-01	err = 1.0000e+00
-[ Info: CTMRG conv 11:	obj = +5.889572774193e-01	err = 8.9970586516e-06	time = 12.18 sec
+[ Info: CTMRG init:	obj = -1.542952315399e-10	err = 1.0000e+00
+┌ Warning: CTMRG cancel 100:	obj = +6.651673256987e-01	err = 4.3704037477e-01	time = 34.96 sec
+└ @ PEPSKit ~/repos/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:155
+[ Info: CTMRG init:	obj = +6.651673256987e-01	err = 1.0000e+00
+[ Info: CTMRG conv 38:	obj = +5.888235917397e-01	err = 5.1440892086e-06	time = 1.54 min
 
 ````
 
@@ -181,7 +181,7 @@ E = expectation_value(peps, H, env) / (Nr * Nc)
 ````
 
 ````
-E = -3.633461319161078
+E = -3.6333025742768026
 
 ````
 
@@ -196,7 +196,7 @@ E_exact = Es_exact[U] - U / 2
 ````
 
 ````
-(E - E_exact) / E_exact = -0.006355096354341832
+(E - E_exact) / E_exact = -0.006398508415565196
 
 ````
 

@@ -41,7 +41,7 @@ peps₀ = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2))
 ````
 
 ````
-InfinitePEPS{TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}}(TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}[TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')):
+InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}[TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')):
 [:, :, 1, 1, 1] =
  0.8343040072662887 + 0.15425705836788395im  0.4612746978522435 + 0.7411151918989216im
  0.6640771294125087 + 0.4428356798799721im   0.9163597170532635 + 0.24145695415210522im
@@ -99,7 +99,7 @@ T = InfiniteTransferPEPS(peps₀, dir, row)
 ````
 
 ````
-single site MPSKit.InfiniteMPO{Tuple{TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}}}:
+single site MPSKit.InfiniteMPO{Tuple{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}}:
 ╷  ⋮
 ┼ O[1]: (TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')))
 ╵  ⋮
@@ -137,7 +137,7 @@ mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol=1e-6, verbosity=2));
 
 ````
 [ Info: VUMPS init:	obj = +5.052950412844e+00 +1.493192627823e-02im	err = 8.4684e-01
-[ Info: VUMPS conv 4:	obj = +1.744071149764e+01 +2.162482215518e-08im	err = 2.0274771864e-07	time = 2.78 sec
+[ Info: VUMPS conv 4:	obj = +1.744071149764e+01 +2.162482270345e-08im	err = 2.0274771848e-07	time = 4.39 sec
 
 ````
 
@@ -149,7 +149,7 @@ norm_vumps = abs(prod(expectation_value(mps, T)))
 ````
 
 ````
-17.440711497641615
+17.440711497641633
 ````
 
 This can be compared to the result obtained using CTMRG, where we see that the results match:
@@ -164,8 +164,8 @@ norm_ctmrg = abs(norm(peps₀, env_ctmrg))
 
 ````
 [ Info: CTMRG init:	obj = -5.556349490423e-01 +1.605938670370e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 37:	obj = +1.744071151099e+01	err = 3.2013507863e-07	time = 0.15 sec
-abs(norm_vumps - norm_ctmrg) / norm_vumps = 7.653157885484634e-10
+[ Info: CTMRG conv 37:	obj = +1.744071151099e+01	err = 3.2046524013e-07	time = 0.19 sec
+abs(norm_vumps - norm_ctmrg) / norm_vumps = 7.653151774414538e-10
 
 ````
 
@@ -206,10 +206,11 @@ norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
 
 ````
 [ Info: VUMPS init:	obj = +6.668046237341e+02 -1.267878277078e+01im	err = 8.7901e-01
-[ Info: VUMPS conv 101:	obj = +9.723958853252e+04 +1.933478098677e-03im	err = 4.1930714637e-07	time = 2.92 sec
+┌ Warning: VUMPS cancel 200:	obj = +9.713547617328e+04 -3.270767578613e+02im	err = 4.7663743999e-02	time = 8.25 sec
+└ @ MPSKit ~/.julia/packages/MPSKit/XpTWn/src/algorithms/groundstate/vumps.jl:73
 [ Info: CTMRG init:	obj = +1.074898090007e+03 -2.096255594496e+02im	err = 1.0000e+00
-[ Info: CTMRG conv 41:	obj = +9.723959008610e+04	err = 6.0876980113e-07	time = 0.37 sec
-abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 1.5976813021479506e-8
+[ Info: CTMRG conv 41:	obj = +9.723959008610e+04	err = 6.0700367621e-07	time = 0.66 sec
+abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.0010661671847507165
 
 ````
 
@@ -252,7 +253,7 @@ transfer_pepo = InfiniteTransferPEPO(peps₀, pepo, 1, 1)
 ````
 
 ````
-single site MPSKit.InfiniteMPO{Tuple{TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorMap{ComplexF64, ComplexSpace, 2, 4, Vector{ComplexF64}}}}:
+single site MPSKit.InfiniteMPO{Tuple{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 4, Vector{ComplexF64}}}}:
 ╷  ⋮
 ┼ O[1]: (TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap((ℂ^2 ⊗ (ℂ^2)') ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')))
 ╵  ⋮
@@ -269,9 +270,9 @@ norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 ````
 
 ````
-[ Info: VUMPS init:	obj = +3.309203535702e+01 -4.227375981213e-01im	err = 9.3280e-01
-[ Info: VUMPS conv 5:	obj = +2.483696258643e+02 +2.405967620689e-07im	err = 5.0410779189e-08	time = 2.32 sec
-norm_pepo = 248.36962586426355
+[ Info: VUMPS init:	obj = +3.309203535702e+01 -4.227375981212e-01im	err = 9.3280e-01
+[ Info: VUMPS conv 5:	obj = +2.483696258643e+02 +2.405968608492e-07im	err = 5.0410779107e-08	time = 3.38 sec
+norm_pepo = 248.36962586426358
 
 ````
 
