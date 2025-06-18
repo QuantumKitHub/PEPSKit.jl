@@ -1,5 +1,5 @@
 struct BPEnv{T}
-    "4 x rows x cols array of message tensors, where the first dimension specifies the spactial direction"
+    "4 x rows x cols array of message tensors, where the first dimension specifies the spatial direction"
     messages::Array{T,3}
 end
 
@@ -70,8 +70,6 @@ end
 
 # VectorInterface
 # ---------------
-
-import VectorInterface as VI
 
 VI.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
 
