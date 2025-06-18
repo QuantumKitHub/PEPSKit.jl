@@ -133,8 +133,8 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
 """
 function _apply_gate(
-    a::AbstractTensorMap,
-    b::AbstractTensorMap,
+    a::AbstractTensorMap{T,S},
+    b::AbstractTensorMap{T,S},
     gate::AbstractTensorMap{T,S,2,2},
     trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
