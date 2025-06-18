@@ -177,12 +177,8 @@ end
 
 ## Vector interface
 
-function VectorInterface.scalartype(::Type{NT}) where {NT<:InfinitePEPO}
-    return scalartype(eltype(NT))
-end
-function VectorInterface.zerovector(A::InfinitePEPO)
-    return InfinitePEPO(zerovector(unitcell(A)))
-end
+VI.scalartype(::Type{NT}) where {NT<:InfinitePEPO} = scalartype(eltype(NT))
+VI.zerovector(A::InfinitePEPO) = InfinitePEPO(zerovector(unitcell(A)))
 
 ## (Approximate) equality
 function Base.:(==)(A₁::InfinitePEPO, A₂::InfinitePEPO)

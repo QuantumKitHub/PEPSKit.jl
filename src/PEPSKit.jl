@@ -4,6 +4,7 @@ using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Compat
 using Accessors: @set, @reset
 using VectorInterface
+import VectorInterface as VI
 using TensorKit, KrylovKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
