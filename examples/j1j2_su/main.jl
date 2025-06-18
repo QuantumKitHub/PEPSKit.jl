@@ -20,7 +20,7 @@ We first import all required modules and seed the RNG:
 
 using Random
 using TensorKit, PEPSKit
-Random.seed!(2025);
+Random.seed!(29385293);
 
 md"""
 ## Simple updating a challenging phase
@@ -104,11 +104,18 @@ As a last step, we will use the SU-evolved PEPS as a starting point for a [`fixe
 PEPS optimization. Note that we could have also used a sublattice-rotated version of `H` to
 fit the Hamiltonian onto a single-site unit cell which would require us to optimize fewer
 parameters and hence lead to a faster optimization. But here we instead take advantage of
-the already evolved `peps`, thus giving us a physical initial guess for the optimization:
+the already evolved `peps`, thus giving us a physical initial guess for the optimization.
+In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit of noise to it
+- this is conviently done using MPSKit's `randomize!` function. (Breaking some of the spatial
+symmetry can be advantageous for obtaining lower energies.)
 """
 
+using MPSKit: randomize!
+
+noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
+peps₀ = peps + 1e-1noise_peps
 peps_opt, env_opt, E_opt, = fixedpoint(
-    H, peps, env; optimizer_alg=(; tol=1e-4, maxiter=120)
+    H, peps₀, env; optimizer_alg=(; tol=1e-4, maxiter=80)
 );
 
 md"""
