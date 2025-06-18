@@ -58,7 +58,7 @@ Base.size(W::SUWeight, i) = size(W.data, i)
 Base.length(W::SUWeight) = length(W.data)
 Base.eltype(W::SUWeight) = eltype(typeof(W))
 Base.eltype(::Type{SUWeight{E}}) where {E} = E
-VectorInterface.scalartype(::Type{T}) where {T<:SUWeight} = scalartype(eltype(T))
+VI.scalartype(::Type{T}) where {T<:SUWeight} = scalartype(eltype(T))
 
 Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
 Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
