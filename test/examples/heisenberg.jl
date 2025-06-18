@@ -72,11 +72,11 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         if n == 2
-            trscheme = VariableTruncation(
+            trscheme = SiteDependentTruncation(
                 truncerr(tol) & truncdim(Dbond2), 2; unitcell=(N1, N2)
             )
         elseif n == 3
-            trscheme = VariableTruncation(
+            trscheme = SiteDependentTruncation(
                 reshape(
                     [truncerr(tol) & truncdim(Dbond2) truncerr(tol) & truncdim(Dbond2 + 1) truncerr(
                         tol

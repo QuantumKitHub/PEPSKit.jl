@@ -7,15 +7,15 @@ have different spaces, this truncation style is different from `TruncationSpace`
 """
 struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
 
-struct VariableTruncation <: TensorKit.TruncationScheme
+struct SiteDependentTruncation <: TensorKit.TruncationScheme
     trschemes::Array{T,3} where {T<:TensorKit.TruncationScheme}
 end
 
-function VariableTruncation(
+function SiteDependentTruncation(
     trscheme::TensorKit.TruncationScheme, directions::Int; unitcell::Tuple{Int,Int}=(1, 1)
 )
     Nr, Nc = unitcell
-    return VariableTruncation(fill(trscheme, directions, Nr, Nc))
+    return SiteDependentTruncation(fill(trscheme, directions, Nr, Nc))
 end
 
 const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
@@ -44,7 +44,7 @@ function truncation_scheme(
 end
 
 function truncation_scheme(
-    trscheme::VariableTruncation, direction::Int, row::Int, col::Int;
+    trscheme::SiteDependentTruncation, direction::Int, row::Int, col::Int;
 )
     return trscheme.trschemes[direction, row, col]
 end
@@ -55,7 +55,7 @@ end
 function mirror_antidiag(trscheme::T) where {T<:TensorKit.TruncationScheme}
     return trscheme
 end
-function mirror_antidiag(trscheme::T) where {T<:VariableTruncation}
+function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
     directions = size(trscheme.trschemes)[1]
     trschemes_mirrored = permutedims(trscheme.trschemes, (1, 3, 2))
     if directions == 2
@@ -69,14 +69,14 @@ function mirror_antidiag(trscheme::T) where {T<:VariableTruncation}
     else
         error("Unsupported number of directions for mirror_antidiag: $directions")
     end
-    return VariableTruncation(trschemes_mirrored)
+    return SiteDependentTruncation(trschemes_mirrored)
 end
 
 function Base.rotl90(trscheme::T) where {T<:TensorKit.TruncationScheme}
     return trscheme
 end
 
-function Base.rotl90(trscheme::T) where {T<:VariableTruncation}
+function Base.rotl90(trscheme::T) where {T<:SiteDependentTruncation}
     directions = size(trscheme.trschemes)[1]
     trschemes_rotated = permutedims(trscheme.trschemes, (1, 3, 2))
     if directions == 2
@@ -90,5 +90,5 @@ function Base.rotl90(trscheme::T) where {T<:VariableTruncation}
     else
         error("Unsupported number of directions for rotl90: $directions")
     end
-    return VariableTruncation(trschemes_rotated)
+    return SiteDependentTruncation(trschemes_rotated)
 end
