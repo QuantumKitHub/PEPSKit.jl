@@ -95,7 +95,9 @@ end
     tols = [1e-8, 1e-8, 1e-8]
     maxiter = 10000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trscheme = truncerr(1e-10) & truncdim(n == 1 ? 4 : 2)
+        trscheme = VariableTruncation(
+            truncerr(1e-10) & truncdim(n == 1 ? 4 : 2), 2; unitcell=(Nr, Nc)
+        )
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; bipartite=true, check_interval=1000)
         wpeps = result[1]
