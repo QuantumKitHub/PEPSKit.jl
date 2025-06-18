@@ -95,9 +95,7 @@ end
     tols = [1e-8, 1e-8, 1e-8]
     maxiter = 10000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trscheme = VariableTruncation(
-            truncerr(1e-10) & truncdim(n == 1 ? 4 : 2), 2; unitcell=(Nr, Nc)
-        )
+        trscheme = truncerr(1e-10) & truncdim(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; bipartite=true, check_interval=1000)
         wpeps = result[1]
@@ -111,7 +109,7 @@ end
     # continue with 3-site simple update; energy should not change much
     dts = [1e-2, 5e-3]
     tols = [1e-8, 1e-8]
-    trscheme = truncerr(1e-10) & truncdim(2)
+    trscheme = VariableTruncation(truncerr(1e-10) & truncdim(2), 2; unitcell=(Nr, Nc))
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; check_interval=1000, force_3site=true)
