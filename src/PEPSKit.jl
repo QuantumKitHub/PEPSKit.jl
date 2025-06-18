@@ -45,10 +45,12 @@ include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
+include("environments/bp_environments.jl")
 
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
+include("algorithms/contractions/bp_contractions.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
@@ -60,6 +62,8 @@ include("algorithms/ctmrg/projectors.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
+
+include("algorithms/bp/beliefpropagation.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
