@@ -5,17 +5,10 @@ CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which 
 is performed fixed. Since different environment directions and unit cell entries might
 have different spaces, this truncation style is different from `TruncationSpace`.
 """
-struct FixedSpaceTruncation <: TensorKit.TruncationScheme end
+struct FixedSpaceTruncation <: TruncationScheme end
 
-struct SiteDependentTruncation <: TensorKit.TruncationScheme
-    trschemes::Array{T,3} where {T<:TensorKit.TruncationScheme}
-end
-
-function SiteDependentTruncation(
-    trscheme::TensorKit.TruncationScheme, directions::Int; unitcell::Tuple{Int,Int}=(1, 1)
-)
-    Nr, Nc = unitcell
-    return SiteDependentTruncation(fill(trscheme, directions, Nr, Nc))
+struct SiteDependentTruncation <: TruncationScheme
+    trschemes::Array{T,3} where {T<:TruncationScheme}
 end
 
 const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
@@ -39,7 +32,7 @@ end
 
 function truncation_scheme(
     trscheme::T, direction::Int, row::Int, col::Int; kwargs...
-) where {T<:TensorKit.TruncationScheme}
+) where {T<:TruncationScheme}
     return trscheme
 end
 
@@ -52,7 +45,7 @@ end
 # Mirror a TruncationScheme by its anti-diagonal line.
 # When the number of directions is 2, it swaps the first and second direction, consistent with xbonds and ybonds, respectively.
 # When the number of directions is 4, it swaps the first and second, and third and fourth directions, consistent with the order NORTH, EAST, SOUTH, WEST.
-function mirror_antidiag(trscheme::T) where {T<:TensorKit.TruncationScheme}
+function mirror_antidiag(trscheme::T) where {T<:TruncationScheme}
     return trscheme
 end
 function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
@@ -72,21 +65,24 @@ function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
     return SiteDependentTruncation(trschemes_mirrored)
 end
 
-function Base.rotl90(trscheme::T) where {T<:TensorKit.TruncationScheme}
+# TODO: type piracy
+function Base.rotl90(trscheme::T) where {T<:TruncationScheme}
     return trscheme
 end
 
 function Base.rotl90(trscheme::T) where {T<:SiteDependentTruncation}
     directions = size(trscheme.trschemes)[1]
     trschemes_rotated = permutedims(trscheme.trschemes, (1, 3, 2))
-    if directions == 2
-        trschemes_rotated[1, :, :] = circshift(rotl90(trscheme.trschemes[2, :, :]), (0, -1))
-        trschemes_rotated[2, :, :] = rotl90(trscheme.trschemes[1, :, :])
+    if directions == EAST
+        trschemes_rotated[NORTH, :, :] = circshift(
+            rotl90(trscheme.trschemes[EAST, :, :]), (0, -1)
+        )
+        trschemes_rotated[EAST, :, :] = rotl90(trscheme.trschemes[NORTH, :, :])
     elseif directions == 4
-        trschemes_rotated[1, :, :] = rotl90(trscheme.trschemes[2, :, :])
-        trschemes_rotated[2, :, :] = rotl90(trscheme.trschemes[3, :, :])
-        trschemes_rotated[3, :, :] = rotl90(trscheme.trschemes[4, :, :])
-        trschemes_rotated[4, :, :] = rotl90(trscheme.trschemes[1, :, :])
+        trschemes_rotated[NORTH, :, :] = rotl90(trscheme.trschemes[EAST, :, :])
+        trschemes_rotated[EAST, :, :] = rotl90(trscheme.trschemes[SOUTH, :, :])
+        trschemes_rotated[SOUTH, :, :] = rotl90(trscheme.trschemes[WEST, :, :])
+        trschemes_rotated[WEST, :, :] = rotl90(trscheme.trschemes[NORTH, :, :])
     else
         error("Unsupported number of directions for rotl90: $directions")
     end

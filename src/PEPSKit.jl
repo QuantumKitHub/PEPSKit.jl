@@ -5,7 +5,11 @@ using Compat
 using Accessors: @set, @reset
 using VectorInterface
 import VectorInterface as VI
-using TensorKit, KrylovKit, OptimKit, TensorOperations
+
+using TensorKit
+using TensorKit: TruncationScheme
+
+using KrylovKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
 

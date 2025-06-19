@@ -109,7 +109,7 @@ end
     # continue with 3-site simple update; energy should not change much
     dts = [1e-2, 5e-3]
     tols = [1e-8, 1e-8]
-    trscheme = SiteDependentTruncation(truncerr(1e-10) & truncdim(2), 2; unitcell=(Nr, Nc))
+    trscheme = SiteDependentTruncation(fill(truncerr(1e-10) & truncdim(2), 2, Nr, Nc))
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; check_interval=1000, force_3site=true)

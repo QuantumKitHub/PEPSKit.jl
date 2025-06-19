@@ -73,20 +73,17 @@ end
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         if n == 2
             trscheme = SiteDependentTruncation(
-                truncerr(tol) & truncdim(Dbond2), 2; unitcell=(N1, N2)
+                fill(truncerr(tol) & truncdim(Dbond2), 2, N1, N2)
             )
         elseif n == 3
+            trunc_low = truncerr(tol) & truncdim(Dbond2)
+            trunc_high = truncerr(tol) & truncdim(Dbond2 + 1)
             trscheme = SiteDependentTruncation(
                 reshape(
-                    [truncerr(tol) & truncdim(Dbond2) truncerr(tol) & truncdim(Dbond2 + 1) truncerr(
-                        tol
-                    ) & truncdim(
-                        Dbond2
-                    ) truncerr(tol) & truncdim(Dbond2 + 1) truncerr(tol) & truncdim(Dbond2) truncerr(
-                        tol
-                    ) & truncdim(
-                        Dbond2
-                    ) truncerr(tol) & truncdim(Dbond2) truncerr(tol) & truncdim(Dbond2)],
+                    [
+                        trunc_low trunc_high trunc_low trunc_high
+                        trunc_low trunc_low trunc_low trunc_low
+                    ],
                     2,
                     2,
                     2,
