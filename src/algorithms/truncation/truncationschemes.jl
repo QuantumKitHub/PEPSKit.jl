@@ -50,15 +50,21 @@ function mirror_antidiag(trscheme::T) where {T<:TruncationScheme}
 end
 function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
     directions = size(trscheme.trschemes)[1]
-    trschemes_mirrored = permutedims(trscheme.trschemes, (1, 3, 2))
     if directions == 2
-        trschemes_mirrored[1, :, :] = mirror_antidiag(trscheme.trschemes[2, :, :])
-        trschemes_mirrored[2, :, :] = mirror_antidiag(trscheme.trschemes[1, :, :])
+        trschemes_mirrored = stack(
+            (
+                mirror_antidiag(trscheme.trschemes[EAST, :, :]),
+                mirror_antidiag(trscheme.trschemes[NORTH, :, :]),
+            );
+            dims=1,
+        )
     elseif directions == 4
-        trschemes_mirrored[1, :, :] = mirror_antidiag(trscheme.trschemes[2, :, :])
-        trschemes_mirrored[2, :, :] = mirror_antidiag(trscheme.trschemes[1, :, :])
-        trschemes_mirrored[3, :, :] = mirror_antidiag(trscheme.trschemes[4, :, :])
-        trschemes_mirrored[4, :, :] = mirror_antidiag(trscheme.trschemes[3, :, :])
+        trschemes_mirrored = stack((
+            mirror_antidiag(trscheme.trschemes[EAST, :, :]),
+            mirror_antidiag(trscheme.trschemes[NORTH, :, :]),
+            mirror_antidiag(trscheme.trschemes[WEST, :, :]),
+            mirror_antidiag(trscheme.trschemes[SOUTH, :, :]),
+        ))
     else
         error("Unsupported number of directions for mirror_antidiag: $directions")
     end
