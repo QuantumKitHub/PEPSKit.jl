@@ -87,35 +87,35 @@ end
 
 ````
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.683e+00,  time = 6.907 sec
+[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.683e+00,  time = 11.440 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    :  dt = 1e-02,  weight diff = 3.879e-06,  time = 0.001 sec
+[ Info: SU iter 500    :  dt = 1e-02,  weight diff = 3.879e-06,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 596    :  dt = 1e-02,  weight diff = 9.933e-07,  time = 7.936 sec
+[ Info: SU conv 596    :  dt = 1e-02,  weight diff = 9.933e-07,  time = 15.728 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 2.135e-03,  time = 0.001 sec
+[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 2.135e-03,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    :  dt = 1e-03,  weight diff = 9.632e-07,  time = 0.001 sec
+[ Info: SU iter 500    :  dt = 1e-03,  weight diff = 9.632e-07,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   :  dt = 1e-03,  weight diff = 2.415e-07,  time = 0.001 sec
+[ Info: SU iter 1000   :  dt = 1e-03,  weight diff = 2.415e-07,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   :  dt = 1e-03,  weight diff = 6.291e-08,  time = 0.001 sec
+[ Info: SU iter 1500   :  dt = 1e-03,  weight diff = 6.291e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.683e-08,  time = 0.001 sec
+[ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.683e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 2205   :  dt = 1e-03,  weight diff = 9.978e-09,  time = 3.436 sec
+[ Info: SU conv 2205   :  dt = 1e-03,  weight diff = 9.978e-09,  time = 4.523 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 1.418e-04,  time = 0.001 sec
+[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 1.418e-04,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    :  dt = 4e-04,  weight diff = 6.377e-08,  time = 0.001 sec
+[ Info: SU iter 500    :  dt = 4e-04,  weight diff = 6.377e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   :  dt = 4e-04,  weight diff = 3.544e-08,  time = 0.001 sec
+[ Info: SU iter 1000   :  dt = 4e-04,  weight diff = 3.544e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   :  dt = 4e-04,  weight diff = 2.013e-08,  time = 0.001 sec
+[ Info: SU iter 1500   :  dt = 4e-04,  weight diff = 2.013e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 1.157e-08,  time = 0.001 sec
+[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 1.157e-08,  time = 0.002 sec
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 2133   :  dt = 4e-04,  weight diff = 9.999e-09,  time = 3.308 sec
+[ Info: SU conv 2133   :  dt = 4e-04,  weight diff = 9.999e-09,  time = 4.370 sec
 
 ````
 
@@ -139,8 +139,8 @@ env, = leading_boundary(
 ````
 
 ````
-[ Info: CTMRG init:	obj = +8.705922473431e-05	err = 1.0000e+00
-[ Info: CTMRG conv 15:	obj = +9.514115680898e-01	err = 3.9575966820e-11	time = 6.20 sec
+[ Info: CTMRG init:	obj = +8.705922473439e-05	err = 1.0000e+00
+[ Info: CTMRG conv 15:	obj = +9.514115680898e-01	err = 3.3233542719e-11	time = 12.38 sec
 
 ````
 
@@ -174,9 +174,9 @@ M_norms = map(
 ````
 
 ````
-E = -0.6674685583160899
-Ms = [0.0319964495122907 -0.029802620495498332; -0.029802620502518886 0.031996449546009505;;; 2.292153759482175e-12 -1.0542180358841855e-12; -2.118182924299063e-12 8.847532240412788e-13;;; 0.3755961090666107 -0.37577654761863405; -0.3757765476169892 0.37559610906660795]
-M_norms = [0.3769565093314743 0.3769565093330771; 0.37695650933199243 0.37695650933433367]
+E = -0.6674685583160885
+Ms = [0.031996449512473865 -0.029802620495641228; -0.029802620502662372 0.03199644954619269;;; 2.2900437051231523e-12 -1.0535461351073279e-12; -2.117937037209822e-12 8.849733787661354e-13;;; 0.3755961090665973 -0.3757765476186222; -0.3757765476169785 0.3755961090665911]
+M_norms = [0.3769565093314765 0.3769565093330766; 0.3769565093319931 0.3769565093343324]
 
 ````
 
@@ -195,8 +195,8 @@ M_ref = 0.3767
 ````
 
 ````
-(E - E_ref) / E_ref = -4.710364630729011e-5
-(mean(M_norms) - M_ref) / E_ref = -0.00038428364452348083
+(E - E_ref) / E_ref = -4.710364630928602e-5
+(mean(M_norms) - M_ref) / E_ref = -0.00038428364452381346
 
 ````
 

@@ -30,7 +30,15 @@ function setcached(name)
     return open(f -> TOML.print(f, cache), CACHEFILE, "w")
 end
 
-checksum(name) = bytes2hex(sha256(joinpath(@__DIR__, name, "main.jl")))
+# generate checksum based on path relative to ~/.../PEPSKit.jl
+# such that different users do not have to rerun already cached examples
+function checksum(name)
+    example_path = joinpath(@__DIR__, name, "main.jl")
+    @assert isfile(example_path)
+    return open(example_path, "r") do io
+        bytes2hex(sha256(io))
+    end
+end
 
 # ---------------------------------------------------------------------------------------- #
 # Building
