@@ -425,7 +425,7 @@ function su3site_iter(
             gs = gatempos[i][r, c]
             trschemes = [
                 truncation_scheme(trscheme, 1, r, c)
-                truncation_scheme(trscheme, 2, r, _next(c, Nc))
+                truncation_scheme(trscheme, 2, r, _next(c, size(peps2)[2]))
             ]
             _su3site_se!(r, c, gs, peps2, trschemes)
         end

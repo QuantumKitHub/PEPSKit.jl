@@ -97,9 +97,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
-                ϵ = _su_xbond!(
-                    r, 1, term, peps2, truncation_scheme(trscheme, direction, r, 1)
-                )
+                ϵ = _su_xbond!(r, 1, term, peps2, truncation_scheme(trscheme, 1, r, 1))
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
                 peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
@@ -111,9 +109,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
-                ϵ = _su_xbond!(
-                    r, c, term, peps2, truncation_scheme(trscheme, direction, r, c)
-                )
+                ϵ = _su_xbond!(r, c, term, peps2, truncation_scheme(trscheme, 1, r, c))
             end
         end
         if direction == 2
@@ -192,6 +188,8 @@ function simpleupdate(
     nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
+    bipartite &&
+        @assert size(peps) == (2, 2) "Bipartite structure is only compatible with square unit cells."
     if use_3site
         return _simpleupdate3site(peps, ham, alg; check_interval)
     else

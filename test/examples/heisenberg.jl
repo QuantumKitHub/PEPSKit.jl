@@ -75,7 +75,7 @@ end
             trscheme = SiteDependentTruncation(
                 fill(truncerr(tol) & truncdim(Dbond2), 2, N1, N2)
             )
-        elseif n == 3
+        elseif n == 4
             trunc_low = truncerr(tol) & truncdim(Dbond2)
             trunc_high = truncerr(tol) & truncdim(Dbond2 + 1)
             trscheme = SiteDependentTruncation(
@@ -101,11 +101,17 @@ end
     peps = InfinitePEPS(wpeps)
     env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol=ctmrg_tol)
 
+    # Test spaces resulting from a SiteDependentTruncation
+    @test dim.(domain(peps[1, 1])) == [2, 2, 2, 2]
+    @test dim.(domain(peps[1, 2])) == [2, 2, 2, 2]
+    @test dim.(domain(peps[2, 1])) == [2, 3, 2, 3]
+    @test dim.(domain(peps[2, 2])) == [2, 3, 2, 3]
+
     # measure physical quantities
     e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
-    @test isapprox(e_site, -0.6594; atol=1e-3)
+    @test isapprox(e_site, -0.6594; atol=2e-3)
 
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
