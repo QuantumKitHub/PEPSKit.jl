@@ -188,8 +188,7 @@ function simpleupdate(
     nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
-    bipartite &&
-        @assert size(peps) == (2, 2) "Bipartite structure is only compatible with square unit cells."
+    # TODO: check SiteDependentTruncation is compatible with bipartite structure
     if use_3site
         return _simpleupdate3site(peps, ham, alg; check_interval)
     else
