@@ -8,6 +8,8 @@ All calls of `dtmap` inside of PEPSKit use the threading scheduler stored inside
 """
 dtmap(args...; scheduler=Defaults.scheduler[]) = tmap(args...; scheduler)
 
+dtmap!!(args...; scheduler=Defaults.scheduler[]) = tmap!(args...; scheduler)
+
 # Follows the `map` rrule from ChainRules.jl but specified for the case of one AbstractArray that is being mapped
 # https://github.com/JuliaDiff/ChainRules.jl/blob/e245d50a1ae56ce46fc8c1f0fe9b925964f1146e/src/rulesets/Base/base.jl#L243
 function ChainRulesCore.rrule(
@@ -31,6 +33,17 @@ function ChainRulesCore.rrule(
     end
 
     return y, dtmap_pullback
+end
+
+function ChainRulesCore.rrule(
+    config::RuleConfig{>:HasReverseMode},
+    ::typeof(dtmap!!),
+    f,
+    C::AbstractArray,
+    A::AbstractArray;
+    kwargs...,
+)
+    return rrule(config, dtmap(f, A; kwargs...))
 end
 
 """
