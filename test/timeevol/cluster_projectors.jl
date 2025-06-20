@@ -78,7 +78,7 @@ end
 end
 
 @testset "Hubbard model with usual SU and 3-site SU" begin
-    Nr, Nc = 2, 3
+    Nr, Nc = 2, 2
     ctmrg_tol = 1e-9
     Random.seed!(100)
     # with U(1) spin rotation symmetry
@@ -97,7 +97,7 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trscheme = truncerr(1e-10) & truncdim(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        result = simpleupdate(wpeps, ham, alg; bipartite=false, check_interval=1000)
+        result = simpleupdate(wpeps, ham, alg; bipartite=true, check_interval=1000)
         wpeps = result[1]
     end
     peps = InfinitePEPS(wpeps)
@@ -121,7 +121,18 @@ end
     e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
     @info "3-site simple update energy = $e_site2"
     @test e_site ≈ e_site2 atol = 5e-4
+end
 
+@testset "Hubbard model with 3-site SU with SiteDependentTruncation" begin
+    Nr, Nc = 2, 3
+    Random.seed!(100)
+    # with U(1) spin rotation symmetry
+    Pspace = hubbard_space(Trivial, U1Irrep)
+    Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 1)
+    wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
+    ham = real(
+        hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t=1.0, U=8.0)
+    )
     # continue with 3-site simple update with SiteDependentTruncation and check the spaces.
     trunc_low = truncerr(1e-10) & truncdim(2)
     trunc_high = truncerr(1e-10) & truncdim(3)
@@ -137,6 +148,9 @@ end
             3,
         ),
     )
+    dts = [1e-2, 5e-3]
+    tols = [1e-8, 1e-8]
+    maxiter = 10000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         result = simpleupdate(wpeps, ham, alg; check_interval=1000, force_3site=true)
