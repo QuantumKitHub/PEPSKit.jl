@@ -80,29 +80,40 @@ function simultaneous_projectors(
 ) where {E}
     coordinates = eachcoordinate(env, 1:4)
     T_dst = Base.promote_op(
-        simultaneous_projectors, NTuple{3,Int}, typeof(enlarged_corners), typeof(alg)
+        simultaneous_projectors,
+        NTuple{3,Int},
+        typeof(enlarged_corners),
+        typeof(env),
+        typeof(alg),
     )
     proj_and_info′ = similar(coordinates, T_dst)
     proj_and_info::typeof(proj_and_info′) =
         dtmap!!(proj_and_info′, coordinates) do coordinate
-        coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
-        trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-        return simultaneous_projectors(
-            coordinate, enlarged_corners, @set(alg.trscheme = trscheme)
-        )
+            return simultaneous_projectors(coordinate, enlarged_corners, env, alg)
     end
     return _split_proj_and_info(proj_and_info)
 end
 function simultaneous_projectors(
-    coordinate, enlarged_corners::Array{E,3}, alg::HalfInfiniteProjector
+    coordinate,
+    enlarged_corners::Array{E,3},
+    env,
+    alg::HalfInfiniteProjector,
 ) where {E}
-    coordinate′ = _next_coordinate(coordinate, size(enlarged_corners)[2:3]...)
+    coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
+    trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    alg′ = @set alg.trscheme = trscheme
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
-    return compute_projector(ec, coordinate, alg)
+    return compute_projector(ec, coordinate, alg′)
 end
 function simultaneous_projectors(
-    coordinate, enlarged_corners::Array{E,3}, alg::FullInfiniteProjector
+    coordinate,
+    enlarged_corners::Array{E,3},
+    env,
+    alg::FullInfiniteProjector,
 ) where {E}
+    coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
+    trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    alg′ = @set alg.trscheme = trscheme
     rowsize, colsize = size(enlarged_corners)[2:3]
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
@@ -113,7 +124,7 @@ function simultaneous_projectors(
         enlarged_corners[coordinate2...],
         enlarged_corners[coordinate3...],
     )
-    return compute_projector(ec, coordinate, alg)
+    return compute_projector(ec, coordinate, alg′)
 end
 
 """
