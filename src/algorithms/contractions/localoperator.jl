@@ -212,7 +212,7 @@ end
     )
 
     returnex = quote
-        @autoopt @tensor opt = $multiplication_ex
+        @autoopt @tensor $multiplication_ex
     end
     return macroexpand(@__MODULE__, returnex)
 end
@@ -266,7 +266,67 @@ end
     )
 
     returnex = quote
-        @autoopt @tensor opt = $multiplication_ex
+        @autoopt @tensor $multiplication_ex
+    end
+    return macroexpand(@__MODULE__, returnex)
+end
+
+"""
+$(SIGNATURES)
+
+Construct the reduced density matrix `ρ` of the PEPS `peps` with open indices `inds` using the environment `env`.
+
+This works by generating the appropriate contraction on a rectangular patch with its corners
+specified by `inds`. The result is normalized such that `tr(ρ) = 1`. 
+"""
+function reduced_densitymatrix(
+    inds::NTuple{N,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+) where {N}
+    static_inds = Val.(inds)
+    return _contract_densitymatrix(static_inds, ket, bra, env)
+end
+function reduced_densitymatrix(
+    inds::NTuple{N,Tuple{Int,Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+) where {N}
+    return reduced_densitymatrix(CartesianIndex.(inds), ket, bra, env)
+end
+
+@generated function _contract_densitymatrix(
+    inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+) where {N}
+    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
+    allunique(cartesian_inds) ||
+        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
+    rowrange = getindex.(cartesian_inds, 1)
+    colrange = getindex.(cartesian_inds, 2)
+
+    corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
+    edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange)
+    result = tensorexpr(
+        :ρ,
+        ntuple(i -> physicallabel(:O, :ket, i), N),
+        ntuple(i -> physicallabel(:O, :bra, i), N),
+    )
+    bra, ket = _contract_state_expr(rowrange, colrange, cartesian_inds)
+
+    multiplication_ex = Expr(
+        :call,
+        :*,
+        corner_NW,
+        corner_NE,
+        corner_SE,
+        corner_SW,
+        edges_N...,
+        edges_E...,
+        edges_S...,
+        edges_W...,
+        ket...,
+        map(x -> Expr(:call, :conj, x), bra)...,
+    )
+
+    returnex = quote
+        @autoopt @tensor $result := $multiplication_ex
+        return scale!!(ρ, inv(tr(ρ)))
     end
     return macroexpand(@__MODULE__, returnex)
 end
