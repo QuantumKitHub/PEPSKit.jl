@@ -7,8 +7,12 @@ for a PEPS `peps` using a given CTMRG environment `env`.
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv)
     checklattice(peps, O)
     term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        contract_local_operator(inds, operator, peps, peps, env) /
-        contract_local_norm(inds, peps, peps, env)
+        ρ = reduced_densitymatrix(inds, peps, peps, env)
+        # Note: evaluating this in one go allocates slightly less but is same speed
+        # but not visible in small tests.
+        # tr(operator * ρ) = dot(operator', ρ)
+        # tr(operator * ρ) = dot(operator, ρ) if operator is hermitian (not worth checking)
+        return dot(operator', ρ)
     end
     return sum(term_vals)
 end
