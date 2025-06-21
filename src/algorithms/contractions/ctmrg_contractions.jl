@@ -1310,12 +1310,19 @@ end
 function renormalize_west_edge(
     E_west::CTMRG_PEPS_EdgeTensor, P_bottom, P_top, A::PEPSSandwich
 )
-    return @autoopt @tensor edge[χ_S D_Eab D_Ebe; χ_N] :=
-        E_west[χ1 D1 D2; χ2] *
-        ket(A)[d; D3 D_Eab D5 D1] *
-        conj(bra(A)[d; D4 D_Ebe D6 D2]) *
-        P_bottom[χ2 D3 D4; χ_N] *
-        P_top[χ_S; χ1 D5 D6]
+    # starting with P_top to save one permute in the end
+    return @tensor begin
+        # already putting χE in front here to make next permute cheaper
+        PE[χS χNW DSb DWb; DSt DWt] := P_top[χS; χSW DSt DSb] * E_west[χSW DWt DWb; χNW]
+
+        PEket[χS χNW DNt DEt; DSb DWb d] :=
+            PE[χS χNW DSb DWb; DSt DWt] * ket(A)[d; DNt DEt DSt DWt]
+
+        corner[χS DEt DEb; χNW DNt DNb] :=
+            PEket[χS χNW DNt DEt; DSb DWb d] * conj(bra(A)[d; DNb DEb DSb DWb])
+
+        edge[χS DEt DEb; χN] := corner[χS DEt DEb; χNW DNt DNb] * P_bottom[χNW DNt DNb; χN]
+    end
 end
 function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
     return @autoopt @tensor edge[χ_S D_E; χ_N] :=

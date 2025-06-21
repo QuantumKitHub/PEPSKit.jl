@@ -1,4 +1,4 @@
-using Test
+using Test, TestExtras
 using Random
 using TensorKit
 using MPSKit
