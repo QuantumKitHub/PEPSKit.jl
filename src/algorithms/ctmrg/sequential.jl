@@ -81,7 +81,9 @@ for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequen
 """
 function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     coordinates = eachcoordinate(env)[:, col]
-    T_dst = Base.promote_op(sequential_projectors, NTuple{3,Int}, typeof(network), typeof(env), typeof(alg))
+    T_dst = Base.promote_op(
+        sequential_projectors, NTuple{3,Int}, typeof(network), typeof(env), typeof(alg)
+    )
     proj_and_info = similar(coordinates, T_dst)
     proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
         trscheme = truncation_scheme(alg, env.edges[WEST, _prev(r, size(env, 2)), c])

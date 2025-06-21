@@ -1320,7 +1320,7 @@ function renormalize_west_edge(
 
         corner[χS DEt DEb; χNW DNt DNb] :=
             PEket[χS χNW DNt DEt; DSb DWb d] * conj(bra(A)[d; DNb DEb DSb DWb])
-        
+
         edge[χS DEt DEb; χN] := corner[χS DEt DEb; χNW DNt DNb] * P_bottom[χNW DNt DNb; χN]
     end
 end
