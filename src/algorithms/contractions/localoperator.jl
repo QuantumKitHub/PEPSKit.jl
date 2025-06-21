@@ -326,7 +326,7 @@ end
 
     returnex = quote
         @autoopt @tensor $result := $multiplication_ex
-        return scale!!(ρ, inv(tr(ρ)))
+        return ρ / tr(ρ)
     end
     return macroexpand(@__MODULE__, returnex)
 end
