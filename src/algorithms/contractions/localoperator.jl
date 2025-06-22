@@ -291,6 +291,48 @@ function reduced_densitymatrix(
     return reduced_densitymatrix(CartesianIndex.(inds), ket, bra, env)
 end
 
+# Special case 1x1 density matrix:
+# Keep contraction order but try to optimize intermediate permutations:
+# EE_SWA is largest object so keep largest legs to the front there
+function reduced_densitymatrix(
+    inds::Tuple{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+)
+    row, col = Tuple(inds[1])
+
+    # Unpack variables and absorb corners
+    A = ket[mod1(row, end), mod1(col, end)]
+    Ā = bra[mod1(row, end), mod1(col, end)]
+
+    E_north =
+        env.edges[NORTH, mod1(row - 1, end), mod1(col, end)] *
+        env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)]
+    E_east =
+        env.edges[EAST, mod1(row, end), mod1(col + 1, end)] *
+        env.corners[SOUTHEAST, mod1(row + 1, end), mod1(col + 1, end)]
+    E_south =
+        env.edges[SOUTH, mod1(row + 1, end), mod1(col, end)] *
+        env.corners[SOUTHWEST, mod1(row + 1, end), mod1(col - 1, end)]
+    E_west =
+        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
+        env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)]
+
+    @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
+        E_south[χSE DSt DSb; χSW] * E_west[χSW DWt DWb; χNW]
+
+    @tensor EE_SWA[χSE χNW DNt DEt; dt DSb DWb] :=
+        EE_SW[χSE χNW DSb DWb; DSt DWt] * A[dt; DNt DEt DSt DWt]
+
+    @tensor EE_NE[DNb DEb; χSE χNW DNt DEt] :=
+        E_north[χNW DNt DNb; χNE] * E_east[χNE DEt DEb; χSE]
+
+    @tensor EEAEE[dt; DNb DEb DSb DWb] :=
+        EE_NE[DNb DEb; χSE χNW DNt DEt] * EE_SWA[χSE χNW DNt DEt; dt DSb DWb]
+
+    @tensor ρ[dt; db] := EEAEE[dt; DNb DEb DSb DWb] * conj(Ā[db; DNb DEb DSb DWb])
+
+    return ρ / str(ρ)
+end
+
 @generated function _contract_densitymatrix(
     inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
