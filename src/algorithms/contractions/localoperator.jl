@@ -333,6 +333,69 @@ function reduced_densitymatrix(
     return ρ / str(ρ)
 end
 
+function reduced_densitymatrix(
+    inds::NTuple{2,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+)
+    if inds[2] - inds[1] == CartesianIndex(1, 0)
+        return reduced_densitymatrix2x1(inds[1], ket, bra, env)
+    else
+        static_inds = Val.(inds)
+        return _contract_densitymatrix(static_inds, ket, bra, env)
+    end
+end
+
+# Special case 2x1 density matrix:
+# Keep contraction order but try to optimize intermediate permutations:
+function reduced_densitymatrix2x1(
+    ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+)
+    row, col = Tuple(ind)
+
+    # Unpack variables and absorb corners
+    A_north = ket[mod1(row, end), mod1(col, end)]
+    Ā_north = bra[mod1(row, end), mod1(col, end)]
+    A_south = ket[mod1(row + 1, end), mod1(col, end)]
+    Ā_south = bra[mod1(row + 1, end), mod1(col, end)]
+
+    E_north =
+        env.edges[NORTH, mod1(row - 1, end), mod1(col, end)] *
+        env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)]
+    E_northeast = env.edges[EAST, mod1(row, end), mod1(col + 1, end)]
+    E_southeast =
+        env.edges[EAST, mod1(row + 1, end), mod1(col + 1, end)] *
+        env.corners[SOUTHEAST, mod1(row + 2, end), mod1(col + 1, end)]
+    E_south =
+        env.edges[SOUTH, mod1(row + 2, end), mod1(col, end)] *
+        env.corners[SOUTHWEST, mod1(row + 2, end), mod1(col - 1, end)]
+    E_southwest = env.edges[WEST, mod1(row + 1, end), mod1(col - 1, end)]
+    E_northwest =
+        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
+        env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)]
+
+    @tensor EE_NW[χW χNE DNWt DNt; DNWb DNb] :=
+        E_northwest[χW DNWt DNWb; χNW] * E_north[χNW DNt DNb; χNE]
+    @tensor EEA_NW[χW DMb dNb χNE DNEb; DNWt DNt] :=
+        EE_NW[χW χNE DNWt DNt; DNWb DNb] * conj(Ā_north[dNb; DNb DNEb DMb DNWb])
+    @tensor EEAA_NW[χW DMb dNb dNt DMt; χNE DNEt DNEb] :=
+        EEA_NW[χW DMb dNb χNE DNEb; DNWt DNt] * A_north[dNt; DNt DNEt DMt DNWt]
+    @tensor EEEAA_N[dNt dNb; χW DMt DMb χE] :=
+        EEAA_NW[χW DMb dNb dNt DMt; χNE DNEt DNEb] * E_northeast[χNE DNEt DNEb; χE]
+
+    @tensor EE_SE[χE χSW DSEt DSt; DSEb DSb] :=
+        E_southeast[χE DSEt DSEb; χSE] * E_south[χSE DSt DSb; χSW]
+    @tensor EEA_SE[χE DMb dSb χSW DSWb; DSEt DSt] :=
+        EE_SE[χE χSW DSEt DSt; DSEb DSb] * conj(Ā_south[dSb; DMb DSEb DSb DSWb])
+    @tensor EEAA_SE[χE DMb dSb dSt DMt; χSW DSWt DSWb] :=
+        EEA_SE[χE DMb dSb χSW DSWb; DSEt DSt] * A_south[dSt; DMt DSEt DSt DSWt]
+    @tensor EEEAA_S[χW DMt DMb χE; dSt dSb] :=
+        EEAA_SE[χE DMb dSb dSt DMt; χSW DSWt DSWb] * E_southwest[χSW DSWt DSWb; χW]
+
+    @tensor ρ[dNt dSt; dNb dSb] :=
+        EEEAA_N[dNt dNb; χW DMt DMb χE] * EEEAA_S[χW DMt DMb χE; dSt dSb]
+
+    return ρ / str(ρ)
+end
+
 @generated function _contract_densitymatrix(
     inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
 ) where {N}
