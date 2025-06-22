@@ -323,10 +323,9 @@ end
         ket...,
         map(x -> Expr(:call, :conj, x), bra)...,
     )
-
-    returnex = quote
-        @autoopt @tensor $result := $multiplication_ex
-        return ρ / tr(ρ)
+    multex = :(@autoopt @tensor $result := $multiplication_ex)
+    return quote
+        $(macroexpand(@__MODULE__, multex))
+        return ρ / str(ρ)
     end
-    return macroexpand(@__MODULE__, returnex)
 end

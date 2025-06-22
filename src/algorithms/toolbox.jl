@@ -8,11 +8,7 @@ function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTM
     checklattice(peps, O)
     term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, peps, peps, env)
-        # Note: evaluating this in one go allocates slightly less but is same speed
-        # but not visible in small tests.
-        # tr(operator * ρ) = dot(operator', ρ)
-        # tr(operator * ρ) = dot(operator, ρ) if operator is hermitian (not worth checking)
-        return dot(operator', ρ)
+        return trmul(operator, ρ)
     end
     return sum(term_vals)
 end

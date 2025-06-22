@@ -131,6 +131,31 @@ function twistdual!(t::AbstractTensorMap, is)
 end
 twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
 
+"""
+    str(t)
+
+Fermionic supertrace by using `@tensor`.
+"""
+str(t::AbstractTensorMap) = _str(BraidingStyle(sectortype(t)), t)
+_str(::Bosonic, t::AbstractTensorMap) = tr(t)
+@generated function _str(::Fermionic, t::AbstractTensorMap{<:Any,<:Any,N,N}) where {N}
+    tex = tensorexpr(:t, ntuple(identity, N), ntuple(identity, N))
+    return macroexpand(@__MODULE__, :(@tensor $tex))
+end
+
+"""
+    trmul(H, ρ)
+
+Compute `tr(H * ρ)` without forming `H * ρ`.
+"""
+@generated function trmul(
+    H::AbstractTensorMap{<:Any,S,N,N}, ρ::AbstractTensorMap{<:Any,S,N,N}
+) where {S,N}
+    Hex = tensorexpr(:H, ntuple(identity, N), ntuple(i -> i + N, N))
+    ρex = tensorexpr(:ρ, ntuple(i -> i + N, N), ntuple(identity, N))
+    return macroexpand(@__MODULE__, :(@tensor $Hex * $ρex))
+end
+
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
 function is_degenerate_spectrum(
     S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
