@@ -290,6 +290,9 @@ function reduced_densitymatrix(
 ) where {N}
     return reduced_densitymatrix(CartesianIndex.(inds), ket, bra, env)
 end
+function reduced_densitymatrix(inds, ket::InfinitePEPS, env::CTMRGEnv)
+    return reduced_densitymatrix(inds, ket, ket, env)
+end
 
 # Special case 1x1 density matrix:
 # Keep contraction order but try to optimize intermediate permutations:
