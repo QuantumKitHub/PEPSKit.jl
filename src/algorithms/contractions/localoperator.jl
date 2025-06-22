@@ -338,6 +338,8 @@ function reduced_densitymatrix(
 )
     if inds[2] - inds[1] == CartesianIndex(1, 0)
         return reduced_densitymatrix2x1(inds[1], ket, bra, env)
+    elseif inds[2] - inds[1] == CartesianIndex(0, 1)
+        return reduced_densitymatrix1x2(inds[1], ket, bra, env)
     else
         static_inds = Val.(inds)
         return _contract_densitymatrix(static_inds, ket, bra, env)
@@ -392,6 +394,56 @@ function reduced_densitymatrix2x1(
 
     @tensor ρ[dNt dSt; dNb dSb] :=
         EEEAA_N[dNt dNb; χW DMt DMb χE] * EEEAA_S[χW DMt DMb χE; dSt dSb]
+
+    return ρ / str(ρ)
+end
+
+function reduced_densitymatrix1x2(
+    ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+)
+    row, col = Tuple(ind)
+
+    # Unpack variables and absorb corners
+    A_west = ket[mod1(row, end), mod1(col, end)]
+    Ā_west = bra[mod1(row, end), mod1(col, end)]
+    A_east = ket[mod1(row, end), mod1(col + 1, end)]
+    Ā_east = bra[mod1(row, end), mod1(col + 1, end)]
+
+    E_northwest = env.edges[NORTH, mod1(row - 1, end), mod1(col, end)]
+    E_northeast =
+        env.edges[NORTH, mod1(row - 1, end), mod1(col + 1, end)] *
+        twistdual(env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 2, end)], 1)
+    E_east =
+        env.edges[EAST, mod1(row, end), mod1(col + 2, end)] *
+        twistdual(env.corners[SOUTHEAST, mod1(row + 1, end), mod1(col + 2, end)], 1)
+    E_southeast = env.edges[SOUTH, mod1(row + 1, end), mod1(col + 1, end)]
+    E_southwest =
+        env.edges[SOUTH, mod1(row + 1, end), mod1(col, end)] *
+        twistdual(env.corners[SOUTHWEST, mod1(row + 1, end), mod1(col - 1, end)], 1)
+    E_west =
+        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
+        twistdual(env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)], 1)
+
+    @tensor EE_SW[χS χNW DSWt DWt; DSWb DWb] :=
+        E_southwest[χS DSWt DSWb; χSW] * E_west[χSW DWt DWb; χNW]
+    @tensor EEA_SW[χS DMb dWb χNW DNWb; DSWt DWt] :=
+        EE_SW[χS χNW DSWt DWt; DSWb DWb] * conj(Ā_west[dWb; DNWb DMb DSWb DWb])
+    @tensor EEAA_SW[χS DMb dWb dWt DMt; χNW DNWt DNWb] :=
+        EEA_SW[χS DMb dWb χNW DNWb; DSWt DWt] * A_west[dWt; DNWt DMt DSWt DWt]
+    @tensor EEEAA_W[dWt dWb; χS DMt DMb χN] :=
+        EEAA_SW[χS DMb dWb dWt DMt; χNW DNWt DNWb] * E_northwest[χNW DNWt DNWb; χN]
+
+    @tensor EE_NE[χN χSE DNEt DEt; DNEb DEb] :=
+        E_northeast[χN DNEt DNEb; χNE] * E_east[χNE DEt DEb; χSE]
+    @tensor EEA_NE[χN DMb dEb χSE DSEb; DNEt DEt] :=
+        EE_NE[χN χSE DNEt DEt; DNEb DEb] * conj(Ā_east[dEb; DNEb DEb DSEb DMb])
+    @tensor EEAA_NE[χN DMb dEb dEt DMt; χSE DSEt DSEb] :=
+        EEA_NE[χN DMb dEb χSE DSEb; DNEt DEt] * A_east[dEt; DNEt DEt DSEt DMt]
+    @tensor EEEAA_E[χS DMt DMb χN; dEt dEb] :=
+        EEAA_NE[χN DMb dEb dEt DMt; χSE DSEt DSEb] * E_southeast[χSE DSEt DSEb; χS]
+
+    @tensor ρ[dWt dEt; dWb dEb] :=
+        EEEAA_W[dWt dWb; χS DMt DMb χN] * EEEAA_E[χS DMt DMb χN; dEt dEb]
 
     return ρ / str(ρ)
 end
