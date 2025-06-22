@@ -144,7 +144,7 @@ function _contract_state_expr(rowrange, colrange, cartesian_inds=nothing)
                 physicallabel(:O, side, inds_id)
             end
             return tensorexpr(
-                :(bra[mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)]),
+                :($(side)[mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)]),
                 (physical_label,),
                 (
                     if i == 1
