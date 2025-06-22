@@ -305,16 +305,16 @@ function reduced_densitymatrix(
 
     E_north =
         env.edges[NORTH, mod1(row - 1, end), mod1(col, end)] *
-        env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)]
+        twistdual(env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)], 1)
     E_east =
         env.edges[EAST, mod1(row, end), mod1(col + 1, end)] *
-        env.corners[SOUTHEAST, mod1(row + 1, end), mod1(col + 1, end)]
+        twistdual(env.corners[SOUTHEAST, mod1(row + 1, end), mod1(col + 1, end)], 1)
     E_south =
         env.edges[SOUTH, mod1(row + 1, end), mod1(col, end)] *
-        env.corners[SOUTHWEST, mod1(row + 1, end), mod1(col - 1, end)]
+        twistdual(env.corners[SOUTHWEST, mod1(row + 1, end), mod1(col - 1, end)], 1)
     E_west =
         env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
-        env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)]
+        twistdual(env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)], 1)
 
     @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
         E_south[χSE DSt DSb; χSW] * E_west[χSW DWt DWb; χNW]
@@ -359,18 +359,18 @@ function reduced_densitymatrix2x1(
 
     E_north =
         env.edges[NORTH, mod1(row - 1, end), mod1(col, end)] *
-        env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)]
+        twistdual(env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)], 1)
     E_northeast = env.edges[EAST, mod1(row, end), mod1(col + 1, end)]
     E_southeast =
         env.edges[EAST, mod1(row + 1, end), mod1(col + 1, end)] *
-        env.corners[SOUTHEAST, mod1(row + 2, end), mod1(col + 1, end)]
+        twistdual(env.corners[SOUTHEAST, mod1(row + 2, end), mod1(col + 1, end)], 1)
     E_south =
         env.edges[SOUTH, mod1(row + 2, end), mod1(col, end)] *
-        env.corners[SOUTHWEST, mod1(row + 2, end), mod1(col - 1, end)]
+        twistdual(env.corners[SOUTHWEST, mod1(row + 2, end), mod1(col - 1, end)], 1)
     E_southwest = env.edges[WEST, mod1(row + 1, end), mod1(col - 1, end)]
     E_northwest =
         env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
-        env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)]
+        twistdual(env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)], 1)
 
     @tensor EE_NW[χW χNE DNWt DNt; DNWb DNb] :=
         E_northwest[χW DNWt DNWb; χNW] * E_north[χNW DNt DNb; χNE]
