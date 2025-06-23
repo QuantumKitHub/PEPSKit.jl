@@ -110,14 +110,12 @@ end
 function leading_boundary(
     env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
 )
-    CS = map(x -> tsvd(x)[2], env₀.corners)
-    TS = map(x -> tsvd(x)[2], env₀.edges)
-
-    η = one(real(scalartype(network)))
-    env = deepcopy(env₀)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
-
     return LoggingExtras.withlevel(; alg.verbosity) do
+        env = deepcopy(env₀)
+        CS = map(x -> tsvd(x)[2], env₀.corners)
+        TS = map(x -> tsvd(x)[2], env₀.edges)
+        η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
         local info
         for iter in 1:(alg.maxiter)

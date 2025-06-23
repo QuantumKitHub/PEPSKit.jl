@@ -1,4 +1,5 @@
 using Test
+using TestExtras: @constinferred
 using Accessors
 using Random
 using LinearAlgebra
@@ -37,7 +38,7 @@ atol = 1e-5
     env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
 
     # do extra iteration to get SVD
-    env_conv2, info = ctmrg_iteration(n, env_conv1, ctm_alg)
+    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv1, env_conv2)
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
@@ -47,7 +48,7 @@ atol = 1e-5
     ctm_alg_fix = @set ctm_alg_fix.projector_alg.trscheme = notrunc()
 
     # do iteration with FixedSVD
-    env_fixedsvd, = ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
