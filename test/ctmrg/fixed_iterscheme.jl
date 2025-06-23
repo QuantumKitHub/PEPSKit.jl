@@ -1,4 +1,5 @@
-using Test, TestExtras
+using Test
+using TestExtras: @constinferred
 using Accessors
 using Random
 using LinearAlgebra
