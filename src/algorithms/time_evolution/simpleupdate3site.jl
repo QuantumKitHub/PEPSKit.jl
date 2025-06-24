@@ -241,7 +241,6 @@ function _get_allprojs(
     N = length(Ms)
     @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
-        trunc = trschemes[i]
         trunc = if isa(trschemes[i], FixedSpaceTruncation)
             V = space(Ms[i + 1], 1)
             truncspace(isdual(V) ? V' : V)
