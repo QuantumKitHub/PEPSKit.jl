@@ -76,7 +76,7 @@ Base.rotl90(trscheme::TruncationScheme) = trscheme
 function Base.rotl90(trscheme::SiteDependentTruncation)
     directions = size(trscheme.trschemes)[1]
     trschemes_rotated = permutedims(trscheme.trschemes, (1, 3, 2))
-    if directions == EAST
+    if directions == 2
         trschemes_rotated[NORTH, :, :] = circshift(
             rotl90(trscheme.trschemes[EAST, :, :]), (0, -1)
         )
