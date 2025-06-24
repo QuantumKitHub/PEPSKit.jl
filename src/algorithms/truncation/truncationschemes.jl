@@ -74,20 +74,21 @@ end
 Base.rotl90(trscheme::TruncationScheme) = trscheme
 
 function Base.rotl90(trscheme::SiteDependentTruncation)
-    directions = size(trscheme.trschemes)[1]
-    trschemes_rotated = permutedims(trscheme.trschemes, (1, 3, 2))
+    directions, rows, cols = size(trscheme.trschemes)
+    trschemes_rotated = similar(trscheme.trschemes, directions, cols, rows)
+
     if directions == 2
         trschemes_rotated[NORTH, :, :] = circshift(
             rotl90(trscheme.trschemes[EAST, :, :]), (0, -1)
         )
         trschemes_rotated[EAST, :, :] = rotl90(trscheme.trschemes[NORTH, :, :])
     elseif directions == 4
-        trschemes_rotated[NORTH, :, :] = rotl90(trscheme.trschemes[EAST, :, :])
-        trschemes_rotated[EAST, :, :] = rotl90(trscheme.trschemes[SOUTH, :, :])
-        trschemes_rotated[SOUTH, :, :] = rotl90(trscheme.trschemes[WEST, :, :])
-        trschemes_rotated[WEST, :, :] = rotl90(trscheme.trschemes[NORTH, :, :])
+        for dir in 1:4
+            dir′ = _prev(dir, 4)
+            trschemes_rotated[dir′, :, :] = rotl90(trscheme.trschemes[dir, :, :])
+        end
     else
-        error("Unsupported number of directions for rotl90: $directions")
+        throw(ArgumentError("Unsupported number of directions for rotl90: $directions"))
     end
     return SiteDependentTruncation(trschemes_rotated)
 end
