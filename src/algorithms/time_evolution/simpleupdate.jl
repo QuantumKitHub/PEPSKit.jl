@@ -12,7 +12,7 @@ struct SimpleUpdate
     dt::Number
     tol::Float64
     maxiter::Int
-    trscheme::TensorKit.TruncationScheme
+    trscheme::TruncationScheme
 end
 # TODO: add kwarg constructor and SU Defaults
 
@@ -34,7 +34,7 @@ function _su_xbond!(
     col::Int,
     gate::AbstractTensorMap{T,S,2,2},
     peps::InfiniteWeightPEPS,
-    trscheme::TensorKit.TruncationScheme,
+    trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
