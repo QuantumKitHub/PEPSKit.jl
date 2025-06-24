@@ -18,6 +18,7 @@ const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
     :truncdim => TensorKit.TruncationDimension,
     :truncspace => TensorKit.TruncationSpace,
     :truncbelow => TensorKit.TruncationCutoff,
+    :sitedependent => SiteDependentTruncation,
 )
 
 # Should be TruncationScheme but rename to avoid type piracy
