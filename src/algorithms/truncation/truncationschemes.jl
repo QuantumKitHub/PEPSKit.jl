@@ -7,8 +7,8 @@ have different spaces, this truncation style is different from `TruncationSpace`
 """
 struct FixedSpaceTruncation <: TruncationScheme end
 
-struct SiteDependentTruncation <: TruncationScheme
-    trschemes::Array{T,3} where {T<:TruncationScheme}
+struct SiteDependentTruncation{T<:TruncationScheme} <: TruncationScheme
+    trschemes::Array{T,3}
 end
 
 const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
@@ -31,8 +31,8 @@ function _TruncationScheme(; alg=Defaults.trscheme, η=nothing)
 end
 
 function truncation_scheme(
-    trscheme::T, direction::Int, row::Int, col::Int; kwargs...
-) where {T<:TruncationScheme}
+    trscheme::TruncationScheme, direction::Int, row::Int, col::Int; kwargs...
+)
     return trscheme
 end
 
@@ -45,10 +45,8 @@ end
 # Mirror a TruncationScheme by its anti-diagonal line.
 # When the number of directions is 2, it swaps the first and second direction, consistent with xbonds and ybonds, respectively.
 # When the number of directions is 4, it swaps the first and second, and third and fourth directions, consistent with the order NORTH, EAST, SOUTH, WEST.
-function mirror_antidiag(trscheme::T) where {T<:TruncationScheme}
-    return trscheme
-end
-function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
+mirror_antidiag(trscheme::TruncationScheme) = trscheme
+function mirror_antidiag(trscheme::SiteDependentTruncation)
     directions = size(trscheme.trschemes)[1]
     if directions == 2
         trschemes_mirrored = stack(
@@ -72,11 +70,9 @@ function mirror_antidiag(trscheme::T) where {T<:SiteDependentTruncation}
 end
 
 # TODO: type piracy
-function Base.rotl90(trscheme::T) where {T<:TruncationScheme}
-    return trscheme
-end
+Base.rotl90(trscheme::TruncationScheme) = trscheme
 
-function Base.rotl90(trscheme::T) where {T<:SiteDependentTruncation}
+function Base.rotl90(trscheme::SiteDependentTruncation)
     directions = size(trscheme.trschemes)[1]
     trschemes_rotated = permutedims(trscheme.trschemes, (1, 3, 2))
     if directions == EAST
