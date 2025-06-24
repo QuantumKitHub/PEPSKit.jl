@@ -215,7 +215,7 @@ The arrows between `Pa`, `s`, `Pb` are
 function _proj_from_RL(
     r::AbstractTensorMap{T,S,1,1},
     l::AbstractTensorMap{T,S,1,1};
-    trunc::TensorKit.TruncationScheme=notrunc(),
+    trunc::TruncationScheme=notrunc(),
     rev::Bool=false,
 ) where {T<:Number,S<:ElementarySpace}
     rl = r * l
@@ -237,7 +237,7 @@ find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
     Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
-) where {E<:TensorKit.TruncationScheme}
+) where {E<:TruncationScheme}
     N = length(Ms)
     @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
@@ -262,7 +262,7 @@ Find projectors to truncate internal bonds of the cluster `Ms`
 """
 function _cluster_truncate!(
     Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
-) where {T<:PEPSTensor,E<:TensorKit.TruncationScheme}
+) where {T<:PEPSTensor,E<:TruncationScheme}
     Rs, Ls = _get_allRLs(Ms)
     Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
     # apply projectors
@@ -326,7 +326,7 @@ In the cluster, the axes of each PEPSTensor are reordered as
 """
 function apply_gatempo!(
     Ms::Vector{T1}, gs::Vector{T2}; trschemes::Vector{E}
-) where {T1<:PEPSTensor,T2<:AbstractTensorMap,E<:TensorKit.TruncationScheme}
+) where {T1<:PEPSTensor,T2<:AbstractTensorMap,E<:TruncationScheme}
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     @assert !all(revs)
@@ -377,7 +377,7 @@ end
 
 function _su3site_se!(
     row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, trschemes::Vector{E}
-) where {T<:AbstractTensorMap,E<:TensorKit.TruncationScheme}
+) where {T<:AbstractTensorMap,E<:TruncationScheme}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
