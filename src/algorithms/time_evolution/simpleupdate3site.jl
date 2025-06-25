@@ -215,7 +215,7 @@ The arrows between `Pa`, `s`, `Pb` are
 function _proj_from_RL(
     r::AbstractTensorMap{T,S,1,1},
     l::AbstractTensorMap{T,S,1,1};
-    trunc::TensorKit.TruncationScheme=notrunc(),
+    trunc::TruncationScheme=notrunc(),
     rev::Bool=false,
 ) where {T<:Number,S<:ElementarySpace}
     rl = r * l
@@ -235,16 +235,19 @@ end
 Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
 find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
-function _get_allprojs(Ms, Rs, Ls, trunc::TensorKit.TruncationScheme, revs::Vector{Bool})
+function _get_allprojs(
+    Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
+) where {E<:TruncationScheme}
     N = length(Ms)
+    @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
-        trunc2 = if isa(trunc, FixedSpaceTruncation)
+        trunc = if isa(trschemes[i], FixedSpaceTruncation)
             V = space(Ms[i + 1], 1)
             truncspace(isdual(V) ? V' : V)
         else
-            trunc
+            trschemes[i]
         end
-        return _proj_from_RL(Rs[i], Ls[i]; trunc=trunc2, rev=revs[i])
+        return _proj_from_RL(Rs[i], Ls[i]; trunc, rev=revs[i])
     end
     Pas = map(Base.Fix2(getindex, 1), projs_errs)
     wts = map(Base.Fix2(getindex, 2), projs_errs)
@@ -258,10 +261,10 @@ end
 Find projectors to truncate internal bonds of the cluster `Ms`
 """
 function _cluster_truncate!(
-    Ms::Vector{T}, trunc::TensorKit.TruncationScheme, revs::Vector{Bool}
-) where {T<:PEPSTensor}
+    Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
+) where {T<:PEPSTensor,E<:TruncationScheme}
     Rs, Ls = _get_allRLs(Ms)
-    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trunc, revs)
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
@@ -322,13 +325,13 @@ In the cluster, the axes of each PEPSTensor are reordered as
 ```
 """
 function apply_gatempo!(
-    Ms::Vector{T1}, gs::Vector{T2}; trunc::TensorKit.TruncationScheme
-) where {T1<:PEPSTensor,T2<:AbstractTensorMap}
+    Ms::Vector{T1}, gs::Vector{T2}; trschemes::Vector{E}
+) where {T1<:PEPSTensor,T2<:AbstractTensorMap,E<:TruncationScheme}
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     @assert !all(revs)
     _apply_gatempo!(Ms, gs)
-    wts, ϵs, = _cluster_truncate!(Ms, trunc, revs)
+    wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
     return wts, ϵs
 end
 
@@ -373,8 +376,8 @@ function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
 end
 
 function _su3site_se!(
-    row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
-) where {T<:AbstractTensorMap}
+    row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, trschemes::Vector{E}
+) where {T<:AbstractTensorMap,E<:TruncationScheme}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
@@ -384,7 +387,7 @@ function _su3site_se!(
     coords = ((row, col), (row, cp1), (rm1, cp1))
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
-    wts, ϵ = apply_gatempo!(Ms, gs; trunc=alg.trscheme)
+    wts, ϵ = apply_gatempo!(Ms, gs; trschemes)
     for (wt, wt_idx) in zip(wts, wt_idxs)
         peps.weights[CartesianIndex(wt_idx)] = wt / norm(wt, Inf)
     end
@@ -414,13 +417,19 @@ function su3site_iter(
         ),
     )
     peps2 = deepcopy(peps)
+    trscheme = alg.trscheme
     for i in 1:4
         for site in CartesianIndices(peps2.vertices)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
-            _su3site_se!(r, c, gs, peps2, alg)
+            trschemes = [
+                truncation_scheme(trscheme, 1, r, c)
+                truncation_scheme(trscheme, 2, r, _next(c, size(peps2)[2]))
+            ]
+            _su3site_se!(r, c, gs, peps2, trschemes)
         end
         peps2 = rotl90(peps2)
+        trscheme = rotl90(trscheme)
     end
     return peps2
 end

@@ -61,6 +61,9 @@ end
         @time @safetestset "Cluster truncation with projectors" begin
             include("timeevol/cluster_projectors.jl")
         end
+        @time @safetestset "Time evolution with site-dependent truncation" begin
+            include("timeevol/sitedep_truncation.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
         @time @safetestset "Cluster truncation with projectors" begin

@@ -290,7 +290,11 @@ function TensorKit._compute_svddata!(
             V = V[1:howmany, :]
         else
             x₀ = alg.start_vector(b)
-            S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, alg.alg)
+            svd_alg = alg.alg
+            if howmany > alg.alg.krylovdim
+                svd_alg = @set svd_alg.krylovdim = round(Int, howmany * 1.2)
+            end
+            S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, svd_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
                 U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())

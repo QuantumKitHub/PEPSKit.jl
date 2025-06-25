@@ -56,6 +56,8 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
             network[r, c],
             dir,
         )
+    else
+        throw(ArgumentError(lazy"Invalid direction $dir"))
     end
 end
 
@@ -73,6 +75,8 @@ function TensorKit.TensorMap(Q::EnlargedCorner)
         return enlarge_southeast_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     elseif Q.dir == SOUTHWEST
         return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
+    else
+        throw(ArgumentError(lazy"Invalid direction $dir"))
     end
 end
 

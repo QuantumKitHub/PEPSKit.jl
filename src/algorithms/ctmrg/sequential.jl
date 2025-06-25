@@ -24,12 +24,12 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
-struct SequentialCTMRG <: CTMRGAlgorithm
+struct SequentialCTMRG{P<:ProjectorAlgorithm} <: CTMRGAlgorithm
     tol::Float64
     maxiter::Int
     miniter::Int
     verbosity::Int
-    projector_alg::ProjectorAlgorithm
+    projector_alg::P
 end
 function SequentialCTMRG(; kwargs...)
     return CTMRGAlgorithm(; alg=:sequential, kwargs...)
@@ -102,14 +102,18 @@ for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequen
 """
 function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     coordinates = eachcoordinate(env)[:, col]
-    proj_and_info = dtmap(coordinates) do (r, c)
+    T_dst = Base.promote_op(
+        sequential_projectors, NTuple{3,Int}, typeof(network), typeof(env), typeof(alg)
+    )
+    proj_and_info = similar(coordinates, T_dst)
+    proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
         trscheme = truncation_scheme(alg, env.edges[WEST, _prev(r, size(env, 2)), c])
         proj, info = sequential_projectors(
             (WEST, r, c), network, env, @set(alg.trscheme = trscheme)
         )
         return proj, info
     end
-    return _split_proj_and_info(proj_and_info)
+    return _split_proj_and_info(proj_and_info′)
 end
 function sequential_projectors(
     coordinate::NTuple{3,Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector

@@ -12,7 +12,7 @@ struct SimpleUpdate
     dt::Number
     tol::Float64
     maxiter::Int
-    trscheme::TensorKit.TruncationScheme
+    trscheme::TruncationScheme
 end
 # TODO: add kwarg constructor and SU Defaults
 
@@ -34,7 +34,7 @@ function _su_xbond!(
     col::Int,
     gate::AbstractTensorMap{T,S,2,2},
     peps::InfiniteWeightPEPS,
-    alg::SimpleUpdate,
+    trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -47,7 +47,7 @@ function _su_xbond!(
     B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, false)
     # apply gate
     X, a, b, Y = _qr_bond(A, B)
-    a, s, b, ϵ = _apply_gate(a, b, gate, alg.trscheme)
+    a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
     _allfalse = ntuple(Returns(false), 3)
@@ -86,6 +86,9 @@ function su_iter(
         # to update them using code for x-weights
         if direction == 2
             peps2 = mirror_antidiag(peps2)
+            trscheme = mirror_antidiag(alg.trscheme)
+        else
+            trscheme = alg.trscheme
         end
         if bipartite
             for r in 1:2
@@ -94,7 +97,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, 1), CartesianIndex(r, 2)),
                 )
-                ϵ = _su_xbond!(r, 1, term, peps2, alg)
+                ϵ = _su_xbond!(r, 1, term, peps2, truncation_scheme(trscheme, 1, r, 1))
                 peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
                 peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
                 peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
@@ -106,7 +109,7 @@ function su_iter(
                     direction == 1 ? gate : gate_mirrored,
                     (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
                 )
-                ϵ = _su_xbond!(r, c, term, peps2, alg)
+                ϵ = _su_xbond!(r, c, term, peps2, truncation_scheme(trscheme, 1, r, c))
             end
         end
         if direction == 2
@@ -185,6 +188,7 @@ function simpleupdate(
     nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
+    # TODO: check SiteDependentTruncation is compatible with bipartite structure
     if use_3site
         return _simpleupdate3site(peps, ham, alg; check_interval)
     else

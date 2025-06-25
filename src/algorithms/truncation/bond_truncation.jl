@@ -13,14 +13,14 @@ $(TYPEDFIELDS)
 
 The truncation algorithm can be constructed from the following keyword arguments:
 
-* `trscheme::TensorKit.TruncationScheme`: SVD truncation scheme when initilizing the truncated tensors connected by the bond.
+* `trscheme::TruncationScheme`: SVD truncation scheme when initilizing the truncated tensors connected by the bond.
 * `maxiter::Int=50` : Maximal number of ALS iterations.
 * `tol::Float64=1e-15` : ALS converges when fidelity change between two FET iterations is smaller than `tol`.
 * `use_pinv::Bool=true`: Use pseudo-inverse (instead of `KrylovKit.linsolve`) to solve linear equations in ALS itertions.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
-    trscheme::TensorKit.TruncationScheme
+    trscheme::TruncationScheme
     maxiter::Int = 50
     tol::Float64 = 1e-15
     use_pinv::Bool = true

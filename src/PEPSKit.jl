@@ -5,7 +5,11 @@ using Compat
 using Accessors: @set, @reset
 using VectorInterface
 import VectorInterface as VI
-using TensorKit, KrylovKit, OptimKit, TensorOperations
+
+using TensorKit
+using TensorKit: TruncationScheme
+
+using KrylovKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
 
@@ -15,7 +19,7 @@ import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, phy
 
 using MPSKitModels
 using FiniteDifferences
-using OhMyThreads: tmap
+using OhMyThreads: tmap, tmap!
 using DocStringExtensions
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
@@ -84,7 +88,8 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
-export FixedSpaceTruncation, HalfInfiniteProjector, FullInfiniteProjector
+export FixedSpaceTruncation, SiteDependentTruncation
+export HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
 export expectation_value, cost_function, product_peps, correlation_length, network_value
 export correlator

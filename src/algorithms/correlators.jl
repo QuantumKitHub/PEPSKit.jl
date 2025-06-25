@@ -120,7 +120,7 @@ function end_correlator_numerator(
     C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
     sandwich = (above[mod1(r, end), mod1(c, end)], below[mod1(r, end), mod1(c, end)])
 
-    return @autoopt @tensor contractcheck = true V[χSW DWt dstring DWb; χNW] *
+    return @autoopt @tensor V[χSW DWt dstring DWb; χNW] *
         E_south[χSSE DSt DSb; χSW] *
         E_east[χNEE DEt DEb; χSEE] *
         E_north[χNW DNt DNb; χNNE] *

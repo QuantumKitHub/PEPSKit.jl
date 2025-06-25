@@ -30,7 +30,7 @@ Vspaces = [
         revs = [isdual(space(M, 1)) for M in Ms1[2:end]]
         # no truncation
         Ms2 = deepcopy(Ms1)
-        wts2, ϵs, = _cluster_truncate!(Ms2, FixedSpaceTruncation(), revs)
+        wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N-1), revs)
         @test all((ϵ == 0) for ϵ in ϵs)
         absorb_wts_cluster!(Ms2, wts2)
         for (i, M) in enumerate(Ms2)
@@ -41,7 +41,7 @@ Vspaces = [
         @test all(lorths) && all(rorths)
         # truncation on one bond
         Ms3 = deepcopy(Ms1)
-        wts3, ϵs, = _cluster_truncate!(Ms3, truncspace(Vns), revs)
+        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(Vns), N-1), revs)
         @test all((i == n) || (ϵ == 0) for (i, ϵ) in enumerate(ϵs))
         absorb_wts_cluster!(Ms3, wts3)
         for (i, M) in enumerate(Ms3)
