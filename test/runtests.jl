@@ -65,6 +65,14 @@ end
             include("timeevol/sitedep_truncation.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "TIMEEVOL"
+        @time @safetestset "Cluster truncation with projectors" begin
+            include("timeevol/cluster_projectors.jl")
+        end
+        @time @safetestset "Transverse Field Ising model: real-time full update " begin
+            include("timeevol/tf_ising_fu.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "LocalOperator" begin
             include("utility/localoperator.jl")
