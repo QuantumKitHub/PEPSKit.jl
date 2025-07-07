@@ -84,6 +84,9 @@ end
         @time @safetestset "Rotation of InfiniteWeightPEPS" begin
             include("utility/iwpeps_rotation.jl")
         end
+        @time @safetestset "Correlators" begin
+            include("utility/correlator.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"
         @time @safetestset "Transverse Field Ising model" begin
