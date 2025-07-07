@@ -13,8 +13,8 @@ env = CTMRGEnv(rand, ComplexF64, peps, Espace);
 lattice = collect(space(t, 1) for t in peps.A)
 
 site0 = CartesianIndex(1, 1)
-maxsep = 6
-site1s = collect(site0 + CartesianIndex(0, i) for i in 1:maxsep)
+maxsep = 8
+site1s = collect(site0 + CartesianIndex(0, i) for i in 2:2:maxsep)
 
 op = tJ.S_exchange(ComplexF64, Trivial, Trivial);
 
