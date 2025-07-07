@@ -19,10 +19,8 @@ site1s = collect(site0 + CartesianIndex(0, i) for i in 1:maxsep)
 op = tJ.S_exchange(ComplexF64, Trivial, Trivial);
 
 vals1 = correlator(peps, op, site0, site1s, env)
-vals2 = collect(
-    begin
-        O = LocalOperator(lattice, (site0, site1) => op)
-        val = expectation_value(peps, O, env)
-    end for site1 in site1s
-)
+vals2 = collect(begin
+    O = LocalOperator(lattice, (site0, site1) => op)
+    val = expectation_value(peps, O, env)
+end for site1 in site1s)
 @test vals1 ≈ vals2
