@@ -38,6 +38,7 @@ function correlator_horizontal(
             )
             T = TransferMatrix(Atop, sandwich, _dag(Abot))
             Vo = Vo * T
+            twistdual!(T.below, 2:numout(T.below))
             Vn = Vn * T
             i += CartesianIndex(0, 1)
         end
@@ -53,6 +54,7 @@ function correlator_horizontal(
         )
         T = TransferMatrix(Atop, sandwich, _dag(Abot))
         Vo = Vo * T
+        twistdual!(T.below, 2:numout(T.below))
         Vn = Vn * T
         i += CartesianIndex(0, 1)
 
