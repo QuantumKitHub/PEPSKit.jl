@@ -1,5 +1,5 @@
 """
-    struct InfinitePEPS{T<:PEPSTensor}
+    struct InfinitePEPS{T<:AbstractMatrix{<:PEPSTensor}}
 
 Represents an infinite projected entangled-pair state on a 2D square lattice.
 
@@ -7,26 +7,12 @@ Represents an infinite projected entangled-pair state on a 2D square lattice.
 
 $(TYPEDFIELDS)
 """
-struct InfinitePEPS{T<:PEPSTensor}
-    A::Matrix{T}
-    InfinitePEPS{T}(A::Matrix{T}) where {T<:PEPSTensor} = new{T}(A)
-    function InfinitePEPS(A::Array{T,2}) where {T<:PEPSTensor}
-        for (d, w) in Tuple.(CartesianIndices(A))
-            north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
-                throw(
-                    SpaceMismatch("North virtual space at site $((d, w)) does not match.")
-                )
-            east_virtualspace(A[d, w]) == west_virtualspace(A[d, _next(w, end)])' ||
-                throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
-            dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
-        end
-        return new{T}(A)
-    end
+struct InfinitePEPS{T<:AbstractMatrix{<:PEPSTensor}}
+    A::T
+    InfinitePEPS{T}(A::T) where {T<:AbstractMatrix{<:PEPSTensor}} = new{T}(A)
 end
 
 ## Constructors
-
-const ElementarySpaceLike = Union{Int,ElementarySpace}
 
 """
     InfinitePEPS(A::AbstractMatrix{T})
@@ -34,9 +20,18 @@ const ElementarySpaceLike = Union{Int,ElementarySpace}
 Create an `InfinitePEPS` by specifying a matrix containing the PEPS tensors at each site in
 the unit cell.
 """
-function InfinitePEPS(A::AbstractMatrix{<:PEPSTensor})
-    return InfinitePEPS(Array(deepcopy(A))) # TODO: find better way to copy
+function InfinitePEPS(A::AbstractMatrix{T}) where {T<:PEPSTensor}
+    for (d, w) in Tuple.(CartesianIndices(A))
+        north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
+            throw(SpaceMismatch("North virtual space at site $((d, w)) does not match."))
+        east_virtualspace(A[d, w]) == west_virtualspace(A[d, _next(w, end)])' ||
+            throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
+        dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
+    end
+    return InfinitePEPS{typeof(A)}(A)
 end
+
+const ElementarySpaceLike = Union{Int,ElementarySpace}
 
 """
     InfinitePEPS([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
@@ -120,7 +115,7 @@ end
 unitcell(t::InfinitePEPS) = t.A
 Base.size(A::InfinitePEPS, args...) = size(unitcell(A), args...)
 Base.length(A::InfinitePEPS) = length(unitcell(A))
-Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
+Base.eltype(::Type{InfinitePEPS{T}}) where {T} = eltype(T)
 Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
 
 Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
