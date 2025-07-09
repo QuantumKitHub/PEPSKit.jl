@@ -24,11 +24,11 @@ network being contracted.
 
 $(TYPEDFIELDS)
 """
-struct CTMRGEnv{C,T}
+struct CTMRGEnv{C<:AbstractArray{<:Any,3},T<:AbstractArray{<:Any,3}}
     "4 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
-    corners::Array{C,3}
+    corners::C
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
-    edges::Array{T,3}
+    edges::T
 end
 
 const ProductSpaceLike{N} = Union{
@@ -380,9 +380,9 @@ Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
 Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
 
 cornertype(env::CTMRGEnv) = cornertype(typeof(env))
-cornertype(::Type{CTMRGEnv{C,E}}) where {C,E} = C
+cornertype(::Type{CTMRGEnv{C,E}}) where {C,E} = eltype(C)
 edgetype(env::CTMRGEnv) = edgetype(typeof(env))
-edgetype(::Type{CTMRGEnv{C,E}}) where {C,E} = E
+edgetype(::Type{CTMRGEnv{C,E}}) where {C,E} = eltype(E)
 
 TensorKit.spacetype(env::CTMRGEnv) = spacetype(typeof(env))
 TensorKit.spacetype(::Type{E}) where {E<:CTMRGEnv} = spacetype(cornertype(E))
@@ -390,7 +390,7 @@ TensorKit.sectortype(env::CTMRGEnv) = sectortype(typeof(env))
 TensorKit.sectortype(::Type{E}) where {E<:CTMRGEnv} = sectortype(cornertype(E))
 
 # In-place update of environment
-function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
+function update!(env::CTMRGEnv, env´::CTMRGEnv)
     env.corners .= env´.corners
     env.edges .= env´.edges
     return env
@@ -399,10 +399,8 @@ end
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(
-        Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
-    )
-    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
+    corners′ = Zygote.Buffer(C(undef, 4, size(env.corners, 3), size(env.corners, 2)))
+    edges′ = Zygote.Buffer(T(undef, 4, size(env.edges, 3), size(env.edges, 2)))
     for dir in 1:4
         dir2 = _prev(dir, 4)
         corners′[dir2, :, :] = rotl90(env.corners[dir, :, :])
@@ -414,10 +412,8 @@ end
 # Rotate corners & edges clockwise
 function Base.rotr90(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(
-        Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
-    )
-    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
+    corners′ = Zygote.Buffer(C(undef, 4, size(env.corners, 3), size(env.corners, 2)))
+    edges′ = Zygote.Buffer(T(undef, 4, size(env.edges, 3), size(env.edges, 2)))
     for dir in 1:4
         dir2 = _next(dir, 4)
         corners′[dir2, :, :] = rotr90(env.corners[dir, :, :])
@@ -429,10 +425,8 @@ end
 # Rotate corners & edges by 180 degrees
 function Base.rot180(env::CTMRGEnv{C,T}) where {C,T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(
-        Array{C,3}(undef, 4, size(env.corners, 2), size(env.corners, 3))
-    )
-    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 2), size(env.edges, 3)))
+    corners′ = Zygote.Buffer(C(undef, 4, size(env.corners, 2), size(env.corners, 3)))
+    edges′ = Zygote.Buffer(T(undef, 4, size(env.edges, 2), size(env.edges, 3)))
     for dir in 1:4
         dir2 = _next(_next(dir, 4), 4)
         corners′[dir2, :, :] = rot180(env.corners[dir, :, :])
@@ -488,9 +482,9 @@ end
 # big vector. In other words, the associated vector space is not the natural one associated
 # to the original (physical) system, and addition, scaling, etc. are performed element-wise.
 
-function VI.scalartype(::Type{CTMRGEnv{C,T}}) where {C,T}
-    S₁ = scalartype(C)
-    S₂ = scalartype(T)
+function VI.scalartype(::Type{T}) where {T<:CTMRGEnv}
+    S₁ = scalartype(cornertype(T))
+    S₂ = scalartype(edgetype(T))
     return promote_type(S₁, S₂)
 end
 
