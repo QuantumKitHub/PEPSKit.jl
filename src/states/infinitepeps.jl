@@ -7,9 +7,20 @@ Represents an infinite projected entangled-pair state on a 2D square lattice.
 
 $(TYPEDFIELDS)
 """
-struct InfinitePEPS{T<:AbstractMatrix{<:PEPSTensor}}
-    A::T
-    InfinitePEPS{T}(A::T) where {T<:AbstractMatrix{<:PEPSTensor}} = new{T}(A)
+struct InfinitePEPS{T<:PEPSTensor}
+    A::InfiniteTiledArray{T,2}
+    function InfinitePEPS(A::InfiniteTiledArray{T,2}) where {T<:PEPSTensor}
+        Iv = CartesianIndex(1, 0)
+        Ih = CartesianIndex(0, 1)
+        for I in CartesianIndices(A)
+            north_virtualspace(A[I]) == south_virtualspace(A[I - Iv])' ||
+                throw(SpaceMismatch("North virtual space at site $I does not match."))
+            east_virtualspace(A[I]) == west_virtualspace(A[I + Ih])' ||
+                throw(SpaceMismatch("East virtual space at site $I does not match."))
+            dim(space(A[I])) > 0 || @warn "no fusion channels at site $I"
+        end
+        return new{T}(A)
+    end
 end
 
 ## Constructors
@@ -21,14 +32,7 @@ Create an `InfinitePEPS` by specifying a matrix containing the PEPS tensors at e
 the unit cell.
 """
 function InfinitePEPS(A::AbstractMatrix{T}) where {T<:PEPSTensor}
-    for (d, w) in Tuple.(CartesianIndices(A))
-        north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
-            throw(SpaceMismatch("North virtual space at site $((d, w)) does not match."))
-        east_virtualspace(A[d, w]) == west_virtualspace(A[d, _next(w, end)])' ||
-            throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
-        dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
-    end
-    return InfinitePEPS{typeof(A)}(A)
+    return InfinitePEPS(InfiniteTiledArray(A))
 end
 
 const ElementarySpaceLike = Union{Int,ElementarySpace}
@@ -41,24 +45,37 @@ of the PEPS tensor at each site in the unit cell as a matrix. Each individual sp
 specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePEPS(
-    Pspaces::A, Nspaces::A, Espaces::A
+    Pspaces::A, Nspaces::A, Espaces::A=Nspaces
 ) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
     return InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
 end
 function InfinitePEPS(
     f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
-) where {M<:AbstractMatrix{<:ElementarySpaceLike}}
-    size(Pspaces) == size(Nspaces) == size(Espaces) ||
-        throw(ArgumentError("Input spaces should have equal sizes."))
+) where {M<:InfiniteTiledArray{<:ElementarySpaceLike,2}}
+    tiling(Pspaces) == tiling(Nspaces) == tiling(Espaces) ||
+        throw(DimensionMismatch("Input spaces do not have matching tilings"))
 
-    Sspaces = adjoint.(circshift(Nspaces, (-1, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, 1)))
+    Sspaces = tiledmap(adjoint, circshift(Nspaces, (-1, 0)))
+    Wspaces = tiledmap(adjoint, circshift(Espaces, (0, 1)))
 
-    A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
+    tensors = map(eachtilingindex(Pspaces)) do I
+        P, N, E, S, W = getindex.((Pspaces, Nspaces, Espaces, Sspaces, Wspaces), Ref(I))
         return PEPSTensor(f, T, P, N, E, S, W)
     end
+    A = InfiniteTiledArray(reshape(tensors, :), tiling(Pspaces))
 
     return InfinitePEPS(A)
+end
+function InfinitePEPS(
+    f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
+) where {M<:AbstractMatrix{<:ElementarySpaceLike}}
+    return InfinitePEPS(
+        f,
+        T,
+        InfiniteTiledArray(Pspaces),
+        InfiniteTiledArray(Nspaces),
+        InfiniteTiledArray(Espaces),
+    )
 end
 
 """
@@ -84,6 +101,7 @@ size of the unit cell.
 function InfinitePEPS(A::T; unitcell::Tuple{Int,Int}=(1, 1)) where {T<:PEPSTensor}
     return InfinitePEPS(fill(A, unitcell))
 end
+# TODO: consider replacing `unitcell` with `tiling` and updating meaning.
 
 """
     InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
@@ -115,8 +133,10 @@ end
 unitcell(t::InfinitePEPS) = t.A
 Base.size(A::InfinitePEPS, args...) = size(unitcell(A), args...)
 Base.length(A::InfinitePEPS) = length(unitcell(A))
-Base.eltype(::Type{InfinitePEPS{T}}) where {T} = eltype(T)
+Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
 Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
+
+TiledArrays.tiling(A::InfinitePEPS) = tiling(unitcell(A))
 
 Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
 function Base.similar(A::InfinitePEPS, T::Type{TorA}=scalartype(A)) where {TorA}
@@ -144,10 +164,12 @@ physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
 ## InfiniteSquareNetwork interface
 
 function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS=top)
-    size(top) == size(bot) || throw(
-        ArgumentError("Top PEPS, bottom PEPS and PEPO rows should have the same length")
+    tiling(top) == tiling(bot) || throw(
+        DimensionMismatch(
+            "Top PEPS, bottom PEPS and PEPO rows should have the same tiling"
+        ),
     )
-    return InfiniteSquareNetwork(map(tuple, unitcell(top), unitcell(bot)))
+    return InfiniteSquareNetwork(tiledmap(tuple, unitcell(top), unitcell(bot)))
 end
 
 ## Vector interface

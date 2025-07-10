@@ -8,27 +8,33 @@ Contractible square network. Wraps a matrix of 'rank-4-tensor-like' objects.
 $(TYPEDFIELDS)
 """
 struct InfiniteSquareNetwork{O}
-    A::Matrix{O}
-    InfiniteSquareNetwork{O}(A::Matrix{O}) where {O} = new{O}(A)
-    function InfiniteSquareNetwork(A::Matrix)
-        for I in eachindex(IndexCartesian(), A)
-            d, w = Tuple(I)
-            north_virtualspace(A[d, w]) ==
-            _elementwise_dual(south_virtualspace(A[_prev(d, end), w])) || throw(
-                SpaceMismatch("North virtual space at site $((d, w)) does not match.")
-            )
-            east_virtualspace(A[d, w]) ==
-            _elementwise_dual(west_virtualspace(A[d, _next(w, end)])) ||
-                throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
-        end
-        return InfiniteSquareNetwork{eltype(A)}(A)
-    end
+    A::InfiniteTiledArray{O,2}
+    InfiniteSquareNetwork{O}(A::InfiniteTiledArray{O,2}) where {O} = new{O}(A)
 end
+function InfiniteSquareNetwork(A::InfiniteTiledArray{O,2}) where {O}
+    Iv = CartesianIndex(1, 0)
+    Ih = CartesianIndex(0, 1)
+    for I in eachtilingindex(IndexCartesian(), A)
+        north_virtualspace(A[I]) == _elementwise_dual(south_virtualspace(A[I - Iv])) ||
+            throw(SpaceMismatch("North virtual space at site $I does not match."))
+        east_virtualspace(A[I]) == _elementwise_dual(west_virtualspace(A[I + Ih])) ||
+            throw(SpaceMismatch("East virtual space at site $I does not match."))
+    end
+    return InfiniteSquareNetwork{O}(A)
+end
+InfiniteSquareNetwork(A::AbstractMatrix) = InfiniteSquareNetwork(InfiniteTiledArray(A))
 InfiniteSquareNetwork(n::InfiniteSquareNetwork) = n
 
 ## Unit cell interface
 
 unitcell(n::InfiniteSquareNetwork) = n.A
+
+TiledArrays.tiling(n::InfiniteSquareNetwork) = tiling(unitcell(n))
+TiledArrays.eachtilingindex(n::InfiniteSquareNetwork) = eachtilingindex(unitcell(n))
+function TiledArrays.eachtilingindex(l::IndexStyle, n::InfiniteSquareNetwork)
+    return eachtilingindex(l, unitcell(n))
+end
+
 Base.size(n::InfiniteSquareNetwork, args...) = size(unitcell(n), args...)
 Base.length(n::InfiniteSquareNetwork) = length(unitcell(n))
 Base.eltype(n::InfiniteSquareNetwork) = eltype(typeof(n))

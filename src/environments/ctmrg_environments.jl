@@ -24,11 +24,21 @@ network being contracted.
 
 $(TYPEDFIELDS)
 """
-struct CTMRGEnv{C<:AbstractArray{<:Any,3},T<:AbstractArray{<:Any,3}}
+struct CTMRGEnv{C,T}
     "4 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
-    corners::C
+    corners::InfiniteTiledArray{C,3}
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
-    edges::T
+    edges::InfiniteTiledArray{T,3}
+end
+
+function CTMRGEnv{C,T}(
+    ::UndefInitializer, tile::TiledArrays.PeriodicArray{Int,2,Matrix{Int}}
+) where {C,T}
+    tile_stacked =
+        stack(ntuple(Returns(tile), 4); dims=1) .+ reshape(maximum(tile) * (0:3), 4, 1, 1)
+    corners = InfiniteTiledArray{C}(undef, tile_stacked)
+    edges = InfiniteTiledArray{T}(undef, tile_stacked)
+    return CTMRGEnv(corners, edges)
 end
 
 const ProductSpaceLike{N} = Union{
@@ -112,9 +122,33 @@ function CTMRGEnv(
     chis_south::B=chis_north,
     chis_west::B=chis_north,
 ) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
+    return CTMRGEnv(
+        f,
+        T,
+        InfiniteTiledArray.((
+            Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west
+        ))...,
+    )
+end
+function CTMRGEnv(
+    f,
+    T,
+    Ds_north::A,
+    Ds_east::A,
+    chis_north::B,
+    chis_east::B=chis_north,
+    chis_south::B=chis_north,
+    chis_west::B=chis_north,
+) where {
+    A<:InfiniteTiledArray{<:ProductSpaceLike},B<:InfiniteTiledArray{<:ElementarySpaceLike}
+}
+    allequal(tiling, (Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west)) ||
+        throw(DimensionMismatch("Input spaces do not have matching tilings"))
+    tile = tiling(Ds_north)
+
     # no recursive broadcasting?
-    Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
-    Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
+    Ds_south = tiledmap(_elementwise_dual, circshift(Ds_north, (-1, 0)))
+    Ds_west = tiledmap(_elementwise_dual, circshift(Ds_east, (0, 1)))
 
     # do the whole thing
     N = length(first(Ds_north))
@@ -123,39 +157,28 @@ function CTMRGEnv(
     T_type = tensormaptype(st, N + 1, 1, T)
 
     # First index is direction
-    corners = Array{C_type}(undef, 4, size(Ds_north)...)
-    edges = Array{T_type}(undef, 4, size(Ds_north)...)
+    env = CTMRGEnv{C_type,T_type}(undef, tile)
+    edges = env.edges
+    corners = env.corners
 
-    for I in CartesianIndices(Ds_north)
-        r, c = I.I
-        edges[NORTH, r, c] = _edge_tensor(
-            f, T, chis_north[r, _prev(c, end)], Ds_north[_next(r, end), c], chis_north[r, c]
-        )
-        edges[EAST, r, c] = _edge_tensor(
-            f, T, chis_east[r, c], Ds_east[r, _prev(c, end)], chis_east[_next(r, end), c]
-        )
-        edges[SOUTH, r, c] = _edge_tensor(
-            f, T, chis_south[r, c], Ds_south[_prev(r, end), c], chis_south[r, _prev(c, end)]
-        )
-        edges[WEST, r, c] = _edge_tensor(
-            f, T, chis_west[_next(r, end), c], Ds_west[r, _next(c, end)], chis_west[r, c]
-        )
+    Iv = CartesianIndex(1, 0)
+    Ih = CartesianIndex(0, 1)
+    __edgetensor(χ1, D, χ2) = normalize(_edge_tensor(f, T, χ1, D, χ2))
+    __cornertensor(χ1, χ2) = normalize(_corner_tensor(f, T, χ1, χ2))
 
-        corners[NORTHWEST, r, c] = _corner_tensor(
-            f, T, chis_west[_next(r, end), c], chis_north[r, c]
-        )
-        corners[NORTHEAST, r, c] = _corner_tensor(
-            f, T, chis_north[r, _prev(c, end)], chis_east[_next(r, end), c]
-        )
-        corners[SOUTHEAST, r, c] = _corner_tensor(
-            f, T, chis_east[r, c], chis_south[r, _prev(c, end)]
-        )
-        corners[SOUTHWEST, r, c] = _corner_tensor(f, T, chis_south[r, c], chis_west[r, c])
+    for I in eachtilingindex(Ds_north)
+        edges[NORTH, I] = __edgetensor(chis_north[I - Ih], Ds_north[I + Iv], chis_north[I])
+        edges[EAST, I] = __edgetensor(chis_east[I], Ds_east[I - Iv], chis_east[I + Ih])
+        edges[SOUTH, I] = __edgetensor(chis_south[I], Ds_south[I - Iv], chis_south[I - Ih])
+        edges[WEST, I] = __edgetensor(chis_west[I + Iv], Ds_west[I + Ih], chis_west[I])
+
+        corners[NORTHWEST, I] = __cornertensor(chis_west[I + Iv], chis_north[I])
+        corners[NORTHEAST, I] = __cornertensor(chis_north[I - Ih], chis_east[I + Iv])
+        corners[SOUTHEAST, I] = __cornertensor(chis_east[I], chis_south[I - Ih])
+        corners[SOUTHWEST, I] = __cornertensor(chis_south[I], chis_west[I])
     end
 
-    corners[:, :, :] ./= norm.(corners[:, :, :])
-    edges[:, :, :] ./= norm.(edges[:, :, :])
-    return CTMRGEnv(corners, edges)
+    return env
 end
 
 """
@@ -248,10 +271,10 @@ function CTMRGEnv(
         scalartype(network),
         Ds_north,
         Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
+        tiledmap(_to_space, chis_north),
+        tiledmap(_to_space, chis_east),
+        tiledmap(_to_space, chis_south),
+        tiledmap(_to_space, chis_west),
     )
 end
 function CTMRGEnv(
@@ -270,18 +293,20 @@ function CTMRGEnv(
         T,
         Ds_north,
         Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
+        tiledmap(_to_space, chis_north),
+        tiledmap(_to_space, chis_east),
+        tiledmap(_to_space, chis_south),
+        tiledmap(_to_space, chis_west),
     )
 end
 
 function _north_env_spaces(network::InfiniteSquareNetwork)
-    return map(ProductSpace ∘ _elementwise_dual ∘ north_virtualspace, unitcell(network))
+    return tiledmap(
+        ProductSpace ∘ _elementwise_dual ∘ north_virtualspace, unitcell(network)
+    )
 end
 function _east_env_spaces(network::InfiniteSquareNetwork)
-    return map(ProductSpace ∘ _elementwise_dual ∘ east_virtualspace, unitcell(network))
+    return tiledmap(ProductSpace ∘ _elementwise_dual ∘ east_virtualspace, unitcell(network))
 end
 
 """
@@ -376,13 +401,17 @@ end
 function eachcoordinate(x::CTMRGEnv, dirs)
     return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
 end
+
+TiledArrays.tiling(env::CTMRGEnv) = tiling(env.corners)
+TiledArrays.eachtilingindex(env::CTMRGEnv) = eachtilingindex(env.corners)
+
 Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
 Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
 
 cornertype(env::CTMRGEnv) = cornertype(typeof(env))
-cornertype(::Type{CTMRGEnv{C,E}}) where {C,E} = eltype(C)
+cornertype(::Type{CTMRGEnv{C,E}}) where {C,E} = C
 edgetype(env::CTMRGEnv) = edgetype(typeof(env))
-edgetype(::Type{CTMRGEnv{C,E}}) where {C,E} = eltype(E)
+edgetype(::Type{CTMRGEnv{C,E}}) where {C,E} = E
 
 TensorKit.spacetype(env::CTMRGEnv) = spacetype(typeof(env))
 TensorKit.spacetype(::Type{E}) where {E<:CTMRGEnv} = spacetype(cornertype(E))
@@ -391,8 +420,9 @@ TensorKit.sectortype(::Type{E}) where {E<:CTMRGEnv} = sectortype(cornertype(E))
 
 # In-place update of environment
 function update!(env::CTMRGEnv, env´::CTMRGEnv)
-    env.corners .= env´.corners
-    env.edges .= env´.edges
+    tiling(env) == tiling(env′) || throw(DimensionMismatch())
+    copy!(env.corners.data, env′.corners.data)
+    copy!(env.edges.data, env′.edges.data)
     return env
 end
 

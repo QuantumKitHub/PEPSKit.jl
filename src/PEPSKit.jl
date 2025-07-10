@@ -14,7 +14,7 @@ using ChainRulesCore, Zygote
 using LoggingExtras
 
 using MPSKit
-using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix, PeriodicArray
+using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
 import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 
 using MPSKitModels
@@ -22,7 +22,8 @@ using FiniteDifferences
 using OhMyThreads: tmap, tmap!
 using DocStringExtensions
 
-using TiledArrays
+using TiledArrays: TiledArrays, InfiniteTiledArray
+using TiledArrays: tiling, tilinglength, eachtilingindex, tiledmap
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
