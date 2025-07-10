@@ -1283,10 +1283,10 @@ environment tensors.
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
     (row, col),
     env::CTMRGEnv,
-    P_bottom::Array{Pb,3},
-    P_top::Array{Pt,3},
+    P_bottom,
+    P_top,
     network::InfiniteSquareNetwork,
-) where {Pt,Pb}
+)
     return renormalize_west_edge(
         env.edges[WEST, row, _prev(col, end)],
         P_bottom[WEST, row, col],
