@@ -22,6 +22,9 @@ struct EnlargedCorner{TC,TE,TA}
     A::TA
     dir::Int
 end
+function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates::CartesianIndex{3})
+    return EnlargedCorner(network, env, coordinates.I)
+end
 function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
     dir, r, c = coordinates
     if dir == NORTHWEST

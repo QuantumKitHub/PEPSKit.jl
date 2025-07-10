@@ -38,6 +38,9 @@ function ProjectorAlgorithm(;
     return alg_type(svd_algorithm, truncation_scheme, verbosity)
 end
 
+function svd_algorithm(alg::ProjectorAlgorithm, I::CartesianIndex{3})
+    return svd_algorithm(alg, I.I)
+end
 function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
         fwd_alg = alg.svd_alg.fwd_alg

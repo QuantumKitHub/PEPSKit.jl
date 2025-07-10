@@ -3,6 +3,9 @@ _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
 
 # Get next and previous coordinate (direction, row, column), given a direction and going around the environment clockwise
+function _next_coordinate(I::CartesianIndex{3}, rowsize, colsize)
+    return CartesianIndex(_next_coordinate(I.I, rowsize, colsize))
+end
 function _next_coordinate((dir, row, col), rowsize, colsize)
     if dir == 1
         return (_next(dir, 4), row, _next(col, colsize))
@@ -13,6 +16,9 @@ function _next_coordinate((dir, row, col), rowsize, colsize)
     elseif dir == 4
         return (_next(dir, 4), _prev(row, rowsize), col)
     end
+end
+function _pref_coordinate(I::CartesianIndex{3}, rowsize, colsize)
+    return CartesianIndex(_prev_coordinate(I.I, rowsize, colsize))
 end
 function _prev_coordinate((dir, row, col), rowsize, colsize)
     if dir == 1
