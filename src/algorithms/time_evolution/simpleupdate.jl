@@ -45,6 +45,8 @@ function _su_xbond!(
     sqrtsB = ntuple(dir -> (dir == WEST), 4)
     A = _absorb_weights(A, peps.weights, row, col, Tuple(1:4), sqrtsA, false)
     B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, false)
+    normalize!(A, Inf)
+    normalize!(B, Inf)
     # apply gate
     X, a, b, Y = _qr_bond(A, B)
     a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
@@ -53,10 +55,13 @@ function _su_xbond!(
     _allfalse = ntuple(Returns(false), 3)
     A = _absorb_weights(A, peps.weights, row, col, (NORTH, SOUTH, WEST), _allfalse, true)
     B = _absorb_weights(B, peps.weights, row, cp1, (NORTH, SOUTH, EAST), _allfalse, true)
+    normalize!(A, Inf)
+    normalize!(B, Inf)
+    normalize!(s, Inf)
     # update tensor dict and weight on current bond 
     # (max element of weight is normalized to 1)
     peps.vertices[row, col], peps.vertices[row, cp1] = A, B
-    peps.weights[1, row, col] = s / norm(s, Inf)
+    peps.weights[1, row, col] = s
     return ϵ
 end
 

@@ -383,6 +383,7 @@ function _su3site_se!(
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster
     Ms = get_3site_se(peps, row, col)
+    normalize!.(Ms, Inf)
     # sites in the cluster
     coords = ((row, col), (row, cp1), (rm1, cp1))
     # weights in the cluster
@@ -397,7 +398,7 @@ function _su3site_se!(
         # remove weights on open axes of the cluster
         _allfalse = ntuple(Returns(false), length(axs))
         M = _absorb_weights(M, peps.weights, coord[1], coord[2], axs, _allfalse, true)
-        peps.vertices[CartesianIndex(coord)] = M * (100.0 / norm(M, Inf))
+        peps.vertices[CartesianIndex(coord)] = M / norm(M, Inf)
     end
     return nothing
 end
