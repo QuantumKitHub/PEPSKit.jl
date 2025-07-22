@@ -106,15 +106,13 @@ function Base.isapprox(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork;
 end
 
 ## Rotations
-
-function Base.rotl90(n::InfiniteSquareNetwork)
-    return InfiniteSquareNetwork(rotl90(_rotl90_localsandwich.(unitcell(n))))
-end
-function Base.rotr90(n::InfiniteSquareNetwork)
-    return InfiniteSquareNetwork(rotr90(_rotr90_localsandwich.(unitcell(n))))
-end
-function Base.rot180(n::InfiniteSquareNetwork)
-    return InfiniteSquareNetwork(rot180(_rot180_localsandwich.(unitcell(n))))
+for f in (:rotl90, :rotr90, :rot180)
+    f_local = Symbol(:_, f, :_localsandwich)
+    @eval function Base.$f(n::InfiniteSquareNetwork)
+        data = map($f_local, tilingdata(unitcell(n)))
+        tile = $f(tiling(unitcell(n)))
+        return InfiniteSquareNetwork(InfiniteTiledArray(data, tile))
+    end
 end
 
 ## Chainrules

@@ -419,50 +419,21 @@ TensorKit.sectortype(env::CTMRGEnv) = sectortype(typeof(env))
 TensorKit.sectortype(::Type{E}) where {E<:CTMRGEnv} = sectortype(cornertype(E))
 
 # In-place update of environment
-function update!(env::CTMRGEnv, env´::CTMRGEnv)
-    tiling(env) == tiling(env′) || throw(DimensionMismatch())
-    copy!(env.corners.data, env′.corners.data)
-    copy!(env.edges.data, env′.edges.data)
-    return env
+function update!(dst::CTMRGEnv, src::CTMRGEnv)
+    tiling(src) == tiling(dst) || throw(DimensionMismatch())
+    copy!(dst.corners.data, src.corners.data)
+    copy!(dst.edges.data, src.edges.data)
+    return dst
 end
 
-# Rotate corners & edges counter-clockwise
-function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
-    # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(C(undef, 4, size(env.corners, 3), size(env.corners, 2)))
-    edges′ = Zygote.Buffer(T(undef, 4, size(env.edges, 3), size(env.edges, 2)))
-    for dir in 1:4
-        dir2 = _prev(dir, 4)
-        corners′[dir2, :, :] = rotl90(env.corners[dir, :, :])
-        edges′[dir2, :, :] = rotl90(env.edges[dir, :, :])
+# Rotate corners & edges by rotating tiling
+for (i, f) in enumerate((:rotr90, :rot180, :rotl90))
+    @eval function Base.$f(env::CTMRGEnv)
+        rotated_tile = circshift(stack($f, eachslice(tiling(env); dims=1); dims=1), $i)
+        corners = InfiniteTiledArray(copy(tilingdata(env.corners)), rotated_tile)
+        edges = InfiniteTiledArray(copy(tilingdata(env.edges)), rotated_tile)
+        return CTMRGEnv(corners, edges)
     end
-    return CTMRGEnv(copy(corners′), copy(edges′))
-end
-
-# Rotate corners & edges clockwise
-function Base.rotr90(env::CTMRGEnv{C,T}) where {C,T}
-    # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(C(undef, 4, size(env.corners, 3), size(env.corners, 2)))
-    edges′ = Zygote.Buffer(T(undef, 4, size(env.edges, 3), size(env.edges, 2)))
-    for dir in 1:4
-        dir2 = _next(dir, 4)
-        corners′[dir2, :, :] = rotr90(env.corners[dir, :, :])
-        edges′[dir2, :, :] = rotr90(env.edges[dir, :, :])
-    end
-    return CTMRGEnv(copy(corners′), copy(edges′))
-end
-
-# Rotate corners & edges by 180 degrees
-function Base.rot180(env::CTMRGEnv{C,T}) where {C,T}
-    # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(C(undef, 4, size(env.corners, 2), size(env.corners, 3)))
-    edges′ = Zygote.Buffer(T(undef, 4, size(env.edges, 2), size(env.edges, 3)))
-    for dir in 1:4
-        dir2 = _next(_next(dir, 4), 4)
-        corners′[dir2, :, :] = rot180(env.corners[dir, :, :])
-        edges′[dir2, :, :] = rot180(env.edges[dir, :, :])
-    end
-    return CTMRGEnv(copy(corners′), copy(edges′))
 end
 
 # Functions used for FP differentiation and by KrylovKit.linsolve

@@ -232,10 +232,13 @@ function Base.isapprox(A₁::InfinitePEPS, A₂::InfinitePEPS; kwargs...)
 end
 
 ## Rotations
-
-Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
-Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))
-Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
+for f in (:rotl90, :rotr90, :rot180)
+    @eval function Base.$f(A::InfinitePEPS)
+        data = map($f, tilingdata(unitcell(A)))
+        tile = $f(tiling(A))
+        return InfinitePEPS(InfiniteTiledArray(data, tile))
+    end
+end
 
 ## OptimKit optimization backwards compatibility (v0.4 uses VectorInterface)
 
