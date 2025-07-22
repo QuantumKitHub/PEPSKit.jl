@@ -62,6 +62,7 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     condition_number = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
+            @info "left move on $col"
             env, info = ctmrg_leftmove(col, network, env, alg)
             truncation_error = max(truncation_error, info.truncation_error)
             condition_number = max(condition_number, info.condition_number)
@@ -80,33 +81,36 @@ Compute CTMRG projectors in the `:sequential` scheme either for an entire column
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
 """
 function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
-    coordinates = eachcoordinate(env)[:, col]
+    tile = tiling(network)
+    tile_slice = tile[:, col]
+    coordinates = indexin(unique(tile_slice), tile)
     T_dst = Base.promote_op(
-        sequential_projectors, NTuple{3,Int}, typeof(network), typeof(env), typeof(alg)
+        sequential_projectors, CartesianIndex{3}, typeof(network), typeof(env), typeof(alg)
     )
-    proj_and_info = similar(coordinates, T_dst)
-    proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
-        trscheme = truncation_scheme(alg, env.edges[WEST, _prev(r, size(env, 2)), c])
-        proj, info = sequential_projectors(
-            (WEST, r, c), network, env, @set(alg.trscheme = trscheme)
-        )
-        return proj, info
+    proj_and_info′ = similar(coordinates, T_dst)
+    proj_and_info::typeof(proj_and_info′) = dtmap!!(proj_and_info′, coordinates) do I
+        trscheme = truncation_scheme(alg, env.edges[WEST, I - CartesianIndex(1, 0)])
+        I′ = CartesianIndex(WEST, Tuple(I)...)
+        return sequential_projectors(I′, network, env, @set(alg.trscheme = trscheme))
     end
-    return _split_proj_and_info(proj_and_info′)
+    Ps, info = _split_proj_and_info(proj_and_info′)
+    Ps_tiled = InfiniteTiledArray.(Ps, Ref(tile_slice))
+    return Ps_tiled, info
 end
 function sequential_projectors(
-    coordinate::NTuple{3,Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
+    coordinate::CartesianIndex{3}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
 )
-    _, r, c = coordinate
+    dir, r, c = Tuple(coordinate)
+    @assert dir == WEST
     r′ = _prev(r, size(env, 2))
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
     return compute_projector((Q1, Q2), coordinate, alg)
 end
 function sequential_projectors(
-    coordinate::NTuple{3,Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
+    coordinate::CartesianIndex{3}, network, env::CTMRGEnv, alg::FullInfiniteProjector
 )
-    rowsize, colsize = size(env)[2:3]
+    rowsize, colsize = size(env, 2), size(env, 3)
     coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
@@ -125,29 +129,34 @@ end
 Renormalize one column of the CTMRG environment.
 """
 function renormalize_sequentially(col::Int, projectors, network, env)
-    corners = Zygote.Buffer(env.corners)
-    edges = Zygote.Buffer(env.edges)
+    # copy over everything, overwrite afterwards
+    corners_data = Zygote.Buffer(tilingdata(env.corners))
+    corners_data .= tilingdata(env.corners)
+    edges_data = Zygote.Buffer(tilingdata(env.edges))
+    edges_data .= tilingdata(env.edges)
 
-    for (dir, r, c) in eachcoordinate(network, 1:4)
-        (c == col && dir in [SOUTHWEST, NORTHWEST]) && continue
-        corners[dir, r, c] = env.corners[dir, r, c]
-    end
-    for (dir, r, c) in eachcoordinate(network, 1:4)
-        (c == col && dir == WEST) && continue
-        edges[dir, r, c] = env.edges[dir, r, c]
-    end
+    # TODO: this is a very ugly hack to deal with Zygote not being differentiable
+    # when mutating elements
+    tile = tiling(network)
+    rows = unique(row -> tile[row, col], axes(tile, 1))
+    env_tile = tiling(env)
 
     # Apply projectors to renormalize corners and edge
-    for row in axes(env.corners, 2)
-        C_southwest = renormalize_bottom_corner((row, col), env, projectors)
-        corners[SOUTHWEST, row, col] = C_southwest / norm(C_southwest)
+    for row in rows
+        I = CartesianIndex(row, col)
+        @assert I[2] == col
+        C_southwest = renormalize_bottom_corner(I, env, projectors)
+        corners_data[env_tile[SOUTHWEST, I]] = normalize(C_southwest)
 
-        C_northwest = renormalize_top_corner((row, col), env, projectors)
-        corners[NORTHWEST, row, col] = C_northwest / norm(C_northwest)
+        C_northwest = renormalize_top_corner(I, env, projectors)
+        corners_data[env_tile[NORTHWEST, I]] = normalize(C_northwest)
 
-        E_west = renormalize_west_edge((row, col), env, projectors, network)
-        edges[WEST, row, col] = E_west / norm(E_west)
+        E_west = renormalize_west_edge(I, env, projectors, network)
+        edges_data[env_tile[WEST, I]] = normalize(E_west)
     end
 
-    return CTMRGEnv(copy(corners), copy(edges))
+    corners = InfiniteTiledArray(copy(corners_data), env_tile)
+    edges = InfiniteTiledArray(copy(edges_data), env_tile)
+
+    return CTMRGEnv(corners, edges)
 end
