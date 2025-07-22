@@ -44,9 +44,10 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners′ = similar(coordinates, T_corners)
     enlarged_corners::typeof(enlarged_corners′) =
         dtmap!!(enlarged_corners′, eachcoordinate(network, 1:4)) do idx
-            return TensorMap(EnlargedCorner(network, env, idx))
+            corner = TensorMap(EnlargedCorner(network, env, idx))
+            return corner / norm(corner)
         end  # expand environment
-    projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
+    projectors, info = simultaneous_projectors0(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)  # renormalize enlarged corners
     return env′, info
 end
@@ -107,18 +108,54 @@ function simultaneous_projectors(
 ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
     trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-    alg′ = @set alg.trscheme = trscheme
     rowsize, colsize = size(enlarged_corners)[2:3]
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
     coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
-    ec = (
-        enlarged_corners[coordinate4...],
-        enlarged_corners[coordinate...],
-        enlarged_corners[coordinate2...],
-        enlarged_corners[coordinate3...],
+    L::AbstractTensorMap =
+        enlarged_corners[coordinate4...] ⊙ enlarged_corners[coordinate...]
+    R::AbstractTensorMap =
+        enlarged_corners[coordinate2...] ⊙ enlarged_corners[coordinate3...]
+    svd_alg = svd_algorithm(alg, coordinate)
+    return compute_projector(L, R, svd_alg, trscheme)
+end
+
+function simultaneous_projectors0(
+    enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::FullInfiniteProjector
+) where {E}
+    rowsize, colsize = size(enlarged_corners)[2:3]
+    coordinates = eachcoordinate(env, 1:4)
+
+    enlarged_corners′ = similar(coordinates, E)
+    enlarged_corners_full::typeof(enlarged_corners′) =
+        dtmap!!(enlarged_corners′, coordinates) do coordinate
+            return enlarged_corners[_prev_coordinate(coordinate, rowsize, colsize)...] ⊙
+                   enlarged_corners[coordinate...]
+        end
+
+    T_dst = Base.promote_op(
+        compute_projector,
+        AbstractTensorMap,
+        AbstractTensorMap,
+        SVDAdjoint,
+        TruncationScheme,
     )
-    return compute_projector(ec, coordinate, alg′)
+    proj_and_info′ = similar(coordinates, T_dst)
+    proj_and_info::typeof(proj_and_info′) =
+        dtmap!!(proj_and_info′, coordinates) do coordinate
+            coordinate′ = _next_coordinate(coordinate, rowsize, colsize)
+            trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+
+            coordinate3 = _next_coordinate(coordinate′, rowsize, colsize)
+            svd_alg = svd_algorithm(alg, coordinate)
+            return compute_projector(
+                enlarged_corners_full[coordinate...],
+                enlarged_corners_full[coordinate3...],
+                svd_alg,
+                trscheme,
+            )
+        end
+    return _split_proj_and_info(proj_and_info)
 end
 
 """

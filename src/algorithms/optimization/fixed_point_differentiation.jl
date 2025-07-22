@@ -248,7 +248,10 @@ function _rrule(
     alg::SimultaneousCTMRG,
 )
     env, = leading_boundary(envinit, state, alg)
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces for gauge fixing
+    alg_fixed = @set alg_fixed.projector_alg.svd_alg = SVDAdjoint(; fwd_alg=TensorKit.SVD()) # more accurate svd_alg
+    env, = leading_boundary(env, state, alg_fixed)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     env_fixed, signs = gauge_fix(env, env_conv)
 
     # Fix SVD

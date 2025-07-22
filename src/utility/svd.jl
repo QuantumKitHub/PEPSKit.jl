@@ -10,7 +10,7 @@ using TensorKit:
     _compute_truncdim,
     _compute_truncerr
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
-
+const TensorKitCRCExt = Base.get_extension(TensorKit, :TensorKitChainRulesCoreExt)
 """
 $(TYPEDEF)
 
@@ -342,18 +342,19 @@ function ChainRulesCore.rrule(
             ΔUc, ΔSc, ΔV⁺c = block(ΔU, c), block(ΔS, c), block(ΔV⁺, c)
             Sdc = view(Sc, diagind(Sc))
             ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
-            svd_pullback!(
-                b,
-                Uc,
-                Sdc,
-                V⁺c,
-                ΔUc,
-                ΔSdc,
-                ΔV⁺c;
-                tol=pullback_tol,
-                broadening=alg.rrule_alg.broadening,
-                verbosity=alg.rrule_alg.verbosity,
-            )
+            TensorKitCRCExt.svd_pullback!(b, Uc, Sdc, V⁺c, ΔUc, ΔSdc, ΔV⁺c)
+            # svd_pullback!(
+            #     b,
+            #     Uc,
+            #     Sdc,
+            #     V⁺c,
+            #     ΔUc,
+            #     ΔSdc,
+            #     ΔV⁺c;
+            #     # tol=pullback_tol,
+            #     # broadening=alg.rrule_alg.broadening,
+            #     # verbosity=alg.rrule_alg.verbosity,
+            # )
         end
         return NoTangent(), Δt, NoTangent()
     end
