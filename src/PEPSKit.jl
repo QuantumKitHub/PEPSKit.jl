@@ -23,7 +23,7 @@ using OhMyThreads: tmap, tmap!
 using DocStringExtensions
 
 using TiledArrays: TiledArrays, InfiniteTiledArray
-using TiledArrays: tiling, tilinglength, eachtilingindex, tiledmap
+using TiledArrays: tiling, tilinglength, tilingdata, eachtilingindex, tiledmap
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
