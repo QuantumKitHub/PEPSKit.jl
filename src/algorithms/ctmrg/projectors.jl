@@ -219,14 +219,11 @@ function ⊙(t1::AbstractTensorMap, t2::AbstractTensorMap)
 end
 
 function compute_projector(
-    L::AbstractTensorMap, R::AbstractTensorMap, svd_alg::SVDAdjoint, trscheme::TruncationScheme
+    L::AbstractTensorMap,
+    R::AbstractTensorMap,
+    svd_alg::SVDAdjoint,
+    trscheme::TruncationScheme,
 )
-    # L = deepcopy(L) / norm(L)
-    # R = deepcopy(R) / norm(R)
-    # if dim(codomain(L)) > dim(domain(L))
-    #     _, L = leftorth!(L)
-    #     R, _ = rightorth!(R)
-    # end
     LR = L ⊙ R
     n_factor = norm(LR)
     LR = LR / n_factor
@@ -234,12 +231,12 @@ function compute_projector(
     U, S, V, info = PEPSKit.tsvd!(LR, svd_alg; trunc=trscheme)
 
     # Check for degenerate singular values
-    # Zygote.isderiving() && ignore_derivatives() do
-    #     if alg.verbosity > 0 && is_degenerate_spectrum(S)
-    #         svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-    #         @warn("degenerate singular values detected: ", svals)
-    #     end
-    # end
+    Zygote.isderiving() && ignore_derivatives() do
+        if alg.verbosity > 0 && is_degenerate_spectrum(S)
+            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+            @warn("degenerate singular values detected: ", svals)
+        end
+    end
 
     norm_factor = sqrt(n_factor)
     isqS = sdiag_pow(S, -0.5)
