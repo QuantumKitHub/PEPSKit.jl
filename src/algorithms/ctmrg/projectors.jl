@@ -151,7 +151,7 @@ end
 PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
 
 """
-    compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, alg::ProjectorAlgorithm)
+    compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, svd_alg::SVDAdjoint, trscheme::TruncationScheme)
 
 Compute projection operators for the dimension truncation on the bond between tensors L and R.
 
@@ -211,7 +211,6 @@ For correct fermion sign handling in fPEPS:
 - General tensor networks use tensor contraction (`⊙`)
 - `@tensor` macro in `TensorKit.jl` handles more general tensor contraction (`⊙`) automatically. `⊙` is used for clarity in the formal derivation of the projectors.
 """
-compute_projector(L::AbstractTensorMap, R::AbstractTensorMap, alg::ProjectorAlgorithm)
 
 #helper function for projection, particularly for the sign of fermions
 function ⊙(t1::AbstractTensorMap, t2::AbstractTensorMap)
