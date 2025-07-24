@@ -10,7 +10,7 @@ using TensorKit:
     _compute_truncdim,
     _compute_truncerr
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
-const TensorKitCRCExt = Base.get_extension(TensorKit, :TensorKitChainRulesCoreExt)
+
 """
 $(TYPEDEF)
 
@@ -209,7 +209,7 @@ end
 # Return pre-computed SVD
 function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
     info = (;
-        truncation_error=0,
+        truncation_error=0.0,
         condition_number=cond(alg.S),
         U_full=alg.U_full,
         S_full=alg.S_full,
@@ -342,19 +342,18 @@ function ChainRulesCore.rrule(
             ΔUc, ΔSc, ΔV⁺c = block(ΔU, c), block(ΔS, c), block(ΔV⁺, c)
             Sdc = view(Sc, diagind(Sc))
             ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
-            TensorKitCRCExt.svd_pullback!(b, Uc, Sdc, V⁺c, ΔUc, ΔSdc, ΔV⁺c)
-            # svd_pullback!(
-            #     b,
-            #     Uc,
-            #     Sdc,
-            #     V⁺c,
-            #     ΔUc,
-            #     ΔSdc,
-            #     ΔV⁺c;
-            #     # tol=pullback_tol,
-            #     # broadening=alg.rrule_alg.broadening,
-            #     # verbosity=alg.rrule_alg.verbosity,
-            # )
+            svd_pullback!(
+                b,
+                Uc,
+                Sdc,
+                V⁺c,
+                ΔUc,
+                ΔSdc,
+                ΔV⁺c;
+                tol=pullback_tol,
+                broadening=alg.rrule_alg.broadening,
+                verbosity=alg.rrule_alg.verbosity,
+            )
         end
         return NoTangent(), Δt, NoTangent()
     end

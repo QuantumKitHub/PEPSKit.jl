@@ -86,6 +86,7 @@ function simultaneous_projectors(
         AbstractTensorMap,
         SVDAdjoint,
         TruncationScheme,
+        Int,
     )
     proj_and_info′ = similar(coordinates, T_dst)
     proj_and_info::typeof(proj_and_info′) =
@@ -99,6 +100,7 @@ function simultaneous_projectors(
                 enlarged_corners[coordinate′...],
                 svd_alg,
                 trscheme,
+                alg.verbosity,
             )
         end
     return _split_proj_and_info(proj_and_info)
@@ -122,6 +124,7 @@ function simultaneous_projectors(
         AbstractTensorMap,
         SVDAdjoint,
         TruncationScheme,
+        Int,
     )
     proj_and_info′ = similar(coordinates, T_dst)
     proj_and_info::typeof(proj_and_info′) =
@@ -136,6 +139,7 @@ function simultaneous_projectors(
                 enlarged_corners_full[coordinate3...],
                 svd_alg,
                 trscheme,
+                alg.verbosity,
             )
         end
     return _split_proj_and_info(proj_and_info)

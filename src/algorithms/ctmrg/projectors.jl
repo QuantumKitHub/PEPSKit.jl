@@ -222,6 +222,7 @@ function compute_projector(
     R::AbstractTensorMap,
     svd_alg::SVDAdjoint,
     trscheme::TruncationScheme,
+    verbosity::Int=0,
 )
     LR = L ⊙ R
     n_factor = norm(LR)
@@ -231,7 +232,7 @@ function compute_projector(
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
-        if alg.verbosity > 0 && is_degenerate_spectrum(S)
+        if verbosity > 0 && is_degenerate_spectrum(S)
             svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
             @warn("degenerate singular values detected: ", svals)
         end
