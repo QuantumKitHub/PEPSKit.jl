@@ -116,7 +116,7 @@ end
 
     # 4x4 unit cell with all 32 inequivalent bonds
     #
-    #    32     4     7    10
+    #    10     4     7    32
     #     |     |     |     |
     #  3--A--1--B--5--C--8--D--3
     #     |     |     |     |
@@ -132,7 +132,7 @@ end
     #     |     |     |     |
     # 29--M-28--N-30--O-31--P-29
     #     |     |     |     |
-    #    32     4     7    10
+    #    10     4     7    32
 
     phys_space = Vect[U1Irrep](1 => 1, -1 => 1)
     corner_space = Vect[U1Irrep](0 => 1, 1 => 1, -1 => 1)
@@ -147,7 +147,7 @@ end
     ]
 
     Nspaces = [
-        vspaces[32] vspaces[4] vspaces[7] vspaces[10]
+        vspaces[10] vspaces[4] vspaces[7] vspaces[32]
         vspaces[2] vspaces[6] vspaces[9] vspaces[11]
         vspaces[13] vspaces[16] vspaces[18] vspaces[19]
         vspaces[21] vspaces[24] vspaces[26] vspaces[27]
