@@ -1168,7 +1168,7 @@ end
 function renormalize_north_edge(
     E_north::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich
 )
-    A_west = map(t -> permute(t, ((1,), (3, 4, 5, 2))), A)
+    A_west = (permute(ket(A), ((1,), (3, 4, 5, 2))), permute(bra(A), ((1,), (3, 4, 5, 2))))
     return renormalize_west_edge(E_north, P_left, P_right, A_west)
 end
 function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
@@ -1206,7 +1206,7 @@ end
 function renormalize_east_edge(
     E_east::CTMRG_PEPS_EdgeTensor, P_bottom, P_top, A::PEPSSandwich
 )
-    A_west = map(t -> permute(t, ((1,), (4, 5, 2, 3))), A)
+    A_west = (permute(ket(A), ((1,), (4, 5, 2, 3))), permute(bra(A), ((1,), (4, 5, 2, 3))))
     return renormalize_west_edge(E_east, P_bottom, P_top, A_west)
 end
 function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
@@ -1243,7 +1243,7 @@ end
 function renormalize_south_edge(
     E_south::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich
 )
-    A_west = map(t -> permute(t, ((1,), (5, 2, 3, 4))), A)
+    A_west = (permute(ket(A), ((1,), (5, 2, 3, 4))), permute(bra(A), ((1,), (5, 2, 3, 4))))
     return renormalize_west_edge(E_south, P_left, P_right, A_west)
 end
 function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
