@@ -152,8 +152,8 @@ end
         vspaces[13] vspaces[16] vspaces[18] vspaces[19]
         vspaces[21] vspaces[24] vspaces[26] vspaces[27]
     ]
-    Pspaces = map(_ -> phys_space, Iterators.product(1:4, 1:4))
-    chis = map(_ -> corner_space, Iterators.product(1:4, 1:4))
+    Pspaces = fill(phys_space, (4, 4))
+    chis = fill(corner_space, (4, 4))
 
     test_unitcell(ctm_alg, unitcell, Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
 end
