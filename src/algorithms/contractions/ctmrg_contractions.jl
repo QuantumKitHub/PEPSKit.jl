@@ -1165,9 +1165,7 @@ function renormalize_north_edge(
         network[row, col], # so here it's fine
     )
 end
-function renormalize_north_edge(
-    E_north::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich
-)
+function renormalize_north_edge(E_north, P_left, P_right, A)
     A_west = _rotl90_localsandwich(A)
     return renormalize_west_edge(E_north, P_left, P_right, A_west)
 end
@@ -1203,9 +1201,7 @@ function renormalize_east_edge(
         network[row, col],
     )
 end
-function renormalize_east_edge(
-    E_east::CTMRG_PEPS_EdgeTensor, P_bottom, P_top, A::PEPSSandwich
-)
+function renormalize_east_edge(E_east, P_bottom, P_top, A)
     A_west = _rot180_localsandwich(A)
     return renormalize_west_edge(E_east, P_bottom, P_top, A_west)
 end
@@ -1240,9 +1236,7 @@ function renormalize_south_edge(
     )
 end
 
-function renormalize_south_edge(
-    E_south::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich
-)
+function renormalize_south_edge(E_south, P_left, P_right, A)
     A_west = _rotr90_localsandwich(A)
     return renormalize_west_edge(E_south, P_left, P_right, A_west)
 end
