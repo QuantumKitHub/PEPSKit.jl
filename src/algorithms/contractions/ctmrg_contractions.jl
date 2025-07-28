@@ -1169,10 +1169,6 @@ function renormalize_north_edge(E_north, P_left, P_right, A)
     A_west = _rotl90_localsandwich(A)
     return renormalize_west_edge(E_north, P_left, P_right, A_west)
 end
-function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @autoopt @tensor edge[χ_W D_S; χ_E] :=
-        E_north[χ1 D1; χ2] * A[D5 D_S; D1 D3] * P_left[χ2 D3; χ_E] * P_right[χ_W; χ1 D5]
-end
 
 """
     renormalize_east_edge((row, col), env, P_top, P_bottom, network::InfiniteSquareNetwork{P})
@@ -1205,10 +1201,6 @@ function renormalize_east_edge(E_east, P_bottom, P_top, A)
     A_west = _rot180_localsandwich(A)
     return renormalize_west_edge(E_east, P_bottom, P_top, A_west)
 end
-function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
-    return @autoopt @tensor edge[χ_N D_W; χ_S] :=
-        E_east[χ1 D1; χ2] * A[D_W D3; D5 D1] * P_bottom[χ2 D3; χ_S] * P_top[χ_N; χ1 D5]
-end
 
 """
     renormalize_south_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
@@ -1239,10 +1231,6 @@ end
 function renormalize_south_edge(E_south, P_left, P_right, A)
     A_west = _rotr90_localsandwich(A)
     return renormalize_west_edge(E_south, P_left, P_right, A_west)
-end
-function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @autoopt @tensor edge[χ_E D_N; χ_W] :=
-        E_south[χ1 D1; χ2] * A[D3 D1; D_N D5] * P_left[χ2 D3; χ_W] * P_right[χ_E; χ1 D5]
 end
 
 """
