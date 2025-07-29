@@ -153,10 +153,10 @@ Contract the enlarged southwest corner of the CTMRG environment, either by speci
 coordinates, environments and network, or by directly providing the tensors.
 
 ```
-          |           |       
+          |           |
        E_west   --    A    --
-          |           |       
-    C_southwest -- E_south -- 
+          |           |
+    C_southwest -- E_south --
 ```
 """
 function enlarge_southwest_corner(
@@ -301,7 +301,7 @@ The environment can also be contracted directly from all its constituent tensors
 
 ```
     C_1 -- E_2 -- E_3 -- C_2
-     |      |      |      | 
+     |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
 ```
@@ -310,7 +310,7 @@ Alternatively, contract the environment with a vector `x` acting on it
 
 ```
     C_1 -- E_2 -- E_3 -- C_2
-     |      |      |      | 
+     |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
                   [~~~x~~~~]
@@ -452,7 +452,7 @@ The environment can also be contracted directly from all its constituent tensors
 
 ```
     C_1 -- E_2 -- E_3 -- C_2
-     |      |      |      | 
+     |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
                    |      |
@@ -466,7 +466,7 @@ Alternatively, contract the environment with a vector `x` acting on it
 
 ```
     C_1 -- E_2 -- E_3 -- C_2
-     |      |      |      | 
+     |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
                    |      |
@@ -890,7 +890,7 @@ Alternatively, provide the constituent tensors and perform the complete contract
 
 ```
        |~~~~~~~| -- E_north -- C_northeast
-    -- |P_right|       |            |  
+    -- |P_right|       |            |
        |~~~~~~~| --    A    --    E_east
                        |            |
                      [~~~~~P_left~~~~~]
@@ -1067,7 +1067,7 @@ end
 
 Apply bottom projector to southwest corner and south edge.
 ```
-        | 
+        |
     [P_bottom]
      |     |
      C --  E -- in
@@ -1108,10 +1108,10 @@ end
 
 Apply top projector to northwest corner and north edge.
 ```
-     C -- E -- 
+     C -- E --
      |    |
     [~P_top~]
-        | 
+        |
 ```
 """
 function renormalize_top_corner((row, col), env::CTMRGEnv, projectors)
@@ -1149,9 +1149,9 @@ Absorb a local effective tensor `A` into the north edge using the given projecto
 environment tensors.
 
 ```
-       |~~~~~~| -- E_north -- |~~~~~~~| 
+       |~~~~~~| -- E_north -- |~~~~~~~|
     -- |P_left|       |       |P_right| --
-       |~~~~~~| --    A    -- |~~~~~~~| 
+       |~~~~~~| --    A    -- |~~~~~~~|
                       |
 ```
 """
@@ -1165,20 +1165,9 @@ function renormalize_north_edge(
         network[row, col], # so here it's fine
     )
 end
-function renormalize_north_edge(
-    E_north::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich
-)
-    out = @autoopt @tensor edge[χ_W D_Sab D_Sbe; χ_E] :=
-        E_north[χ1 D1 D2; χ2] *
-        ket(A)[d; D1 D3 D_Sab D5] *
-        conj(bra(A)[d; D2 D4 D_Sbe D6]) *
-        P_left[χ2 D3 D4; χ_E] *
-        P_right[χ_W; χ1 D5 D6]
-    return out
-end
-function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @autoopt @tensor edge[χ_W D_S; χ_E] :=
-        E_north[χ1 D1; χ2] * A[D5 D_S; D1 D3] * P_left[χ2 D3; χ_E] * P_right[χ_W; χ1 D5]
+function renormalize_north_edge(E_north, P_left, P_right, A)
+    A_west = _rotl90_localsandwich(A)
+    return renormalize_west_edge(E_north, P_left, P_right, A_west)
 end
 
 """
@@ -1208,19 +1197,9 @@ function renormalize_east_edge(
         network[row, col],
     )
 end
-function renormalize_east_edge(
-    E_east::CTMRG_PEPS_EdgeTensor, P_bottom, P_top, A::PEPSSandwich
-)
-    return @autoopt @tensor edge[χ_N D_Wab D_Wbe; χ_S] :=
-        E_east[χ1 D1 D2; χ2] *
-        ket(A)[d; D5 D1 D3 D_Wab] *
-        conj(bra(A)[d; D6 D2 D4 D_Wbe]) *
-        P_bottom[χ2 D3 D4; χ_S] *
-        P_top[χ_N; χ1 D5 D6]
-end
-function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
-    return @autoopt @tensor edge[χ_N D_W; χ_S] :=
-        E_east[χ1 D1; χ2] * A[D_W D3; D5 D1] * P_bottom[χ2 D3; χ_S] * P_top[χ_N; χ1 D5]
+function renormalize_east_edge(E_east, P_bottom, P_top, A)
+    A_west = _rot180_localsandwich(A)
+    return renormalize_west_edge(E_east, P_bottom, P_top, A_west)
 end
 
 """
@@ -1232,9 +1211,9 @@ environment tensors.
 
 ```
                        |
-       |~~~~~~~| --    A    -- |~~~~~~| 
+       |~~~~~~~| --    A    -- |~~~~~~|
     -- |P_right|       |       |P_left| --
-       |~~~~~~~| -- E_south -- |~~~~~~| 
+       |~~~~~~~| -- E_south -- |~~~~~~|
                        |
 ```
 """
@@ -1248,19 +1227,10 @@ function renormalize_south_edge(
         network[row, col],
     )
 end
-function renormalize_south_edge(
-    E_south::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich
-)
-    return @autoopt @tensor edge[χ_E D_Nab D_Nbe; χ_W] :=
-        E_south[χ1 D1 D2; χ2] *
-        ket(A)[d; D_Nab D5 D1 D3] *
-        conj(bra(A)[d; D_Nbe D6 D2 D4]) *
-        P_left[χ2 D3 D4; χ_W] *
-        P_right[χ_E; χ1 D5 D6]
-end
-function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @autoopt @tensor edge[χ_E D_N; χ_W] :=
-        E_south[χ1 D1; χ2] * A[D3 D1; D_N D5] * P_left[χ2 D3; χ_W] * P_right[χ_E; χ1 D5]
+
+function renormalize_south_edge(E_south, P_left, P_right, A)
+    A_west = _rotr90_localsandwich(A)
+    return renormalize_west_edge(E_south, P_left, P_right, A_west)
 end
 
 """
@@ -1274,7 +1244,7 @@ environment tensors.
            |
      [~P_bottom~]
       |        |
-    E_west --  A -- 
+    E_west --  A --
       |        |
      [~~P_top~~~]
            |
@@ -1332,7 +1302,7 @@ end
 # Gauge fixing contractions
 # -------------------------
 
-# corners 
+# corners
 
 """
 $(SIGNATURES)
@@ -1341,7 +1311,7 @@ Multiply corner tensor with incoming and outgoing gauge signs.
 
 ```
     corner -- σ_out --
-      |  
+      |
      σ_in
       |
 ```
