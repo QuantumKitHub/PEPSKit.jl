@@ -383,13 +383,14 @@ function _su3site_se!(
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster
     Ms = get_3site_se(peps, row, col)
+    normalize!.(Ms, Inf)
     # sites in the cluster
     coords = ((row, col), (row, cp1), (rm1, cp1))
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
     wts, ϵ = apply_gatempo!(Ms, gs; trschemes)
     for (wt, wt_idx) in zip(wts, wt_idxs)
-        peps.weights[CartesianIndex(wt_idx)] = wt / norm(wt, Inf)
+        peps.weights[CartesianIndex(wt_idx)] = normalize(wt, Inf)
     end
     for (M, coord, invperm, axs) in zip(Ms, coords, invperms_se, openaxs_se)
         # restore original axes order
@@ -397,7 +398,7 @@ function _su3site_se!(
         # remove weights on open axes of the cluster
         _allfalse = ntuple(Returns(false), length(axs))
         M = _absorb_weights(M, peps.weights, coord[1], coord[2], axs, _allfalse, true)
-        peps.vertices[CartesianIndex(coord)] = M * (100.0 / norm(M, Inf))
+        peps.vertices[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return nothing
 end

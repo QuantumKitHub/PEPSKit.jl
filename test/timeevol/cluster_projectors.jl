@@ -7,7 +7,6 @@ import MPSKitModels: hubbard_space
 using PEPSKit: sdiag_pow, _cluster_truncate!
 include("cluster_tools.jl")
 
-nrm = 20
 Vspaces = [
     (ℂ^2, ℂ^4, (ℂ^12)'),
     (
@@ -25,7 +24,7 @@ Vspaces = [
         Vvirs[n + 1] = V
         Ms1 = map(1:N) do i
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
-            return rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve) / nrm
+            return normalize(rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve), Inf)
         end
         revs = [isdual(space(M, 1)) for M in Ms1[2:end]]
         # no truncation
@@ -33,9 +32,7 @@ Vspaces = [
         wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N-1), revs)
         @test all((ϵ == 0) for ϵ in ϵs)
         absorb_wts_cluster!(Ms2, wts2)
-        for (i, M) in enumerate(Ms2)
-            Ms2[i] *= 0.05 / norm(M, Inf)
-        end
+        normalize!.(Ms2, Inf)
         @test fidelity_cluster(Ms1, Ms2) ≈ 1.0
         lorths, rorths = verify_cluster_orth(Ms2, wts2)
         @test all(lorths) && all(rorths)
@@ -44,9 +41,7 @@ Vspaces = [
         wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(Vns), N-1), revs)
         @test all((i == n) || (ϵ == 0) for (i, ϵ) in enumerate(ϵs))
         absorb_wts_cluster!(Ms3, wts3)
-        for (i, M) in enumerate(Ms3)
-            Ms3[i] *= 0.05 / norm(M, Inf)
-        end
+        normalize!.(Ms3)
         ϵ = ϵs[n]
         wt2, wt3 = wts2[n], wts3[n]
         fid3, fid3_ = fidelity_cluster(Ms1, Ms3), fidelity_cluster(Ms2, Ms3)
@@ -64,7 +59,7 @@ end
         Vvirs[n + 1] = V
         Ms1 = map(1:N) do i
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
-            return rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve) / nrm
+            return normalize(rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve), Inf)
         end
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
