@@ -225,8 +225,6 @@ function _proj_from_RL(
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
         Pa, s, Pb = flip_svd(Pa, s, Pb)
-        s = permute(s, ((2,), (1,)))
-        @assert all(s.data .>= 0.0)
     end
     return Pa, s, Pb, ϵ
 end
@@ -354,29 +352,33 @@ Obtain the following 3-site cluster
         c      c+1
 ```
 """
-function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
+function get_3site_se(peps::InfinitePEPS, env::SUWeight, row::Int, col::Int)
     Nr, Nc = size(peps)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
     cluster = collect(
         permute(
             _absorb_weights(
-                peps.vertices[CartesianIndex(coord)],
+                peps.A[CartesianIndex(coord)],
                 peps.weights,
                 coord[1],
                 coord[2],
-                Tuple(1:4),
-                sqrtwts,
-                false,
+                Tuple(1:4);
+                invwt=false,
             ),
             perm,
-        ) for (coord, sqrtwts, perm) in zip(coords_se, sqrtwts_se, perms_se)
+        ) for (coord, perm) in zip(coords_se, perms_se)
     )
     return cluster
 end
 
 function _su3site_se!(
-    row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, trschemes::Vector{E}
+    row::Int,
+    col::Int,
+    gs::Vector{T},
+    peps::InfinitePEPS,
+    env::SUWeight,
+    trschemes::Vector{E},
 ) where {T<:AbstractTensorMap,E<:TruncationScheme}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -398,18 +400,18 @@ function _su3site_se!(
         # remove weights on open axes of the cluster
         _allfalse = ntuple(Returns(false), length(axs))
         M = _absorb_weights(M, peps.weights, coord[1], coord[2], axs, _allfalse, true)
-        peps.vertices[CartesianIndex(coord)] = normalize(M, Inf)
+        peps.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return nothing
 end
 
 """
-    su3site_iter(gatempos, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
+    su3site_iter(gatempos, peps::InfinitePEPS, env::SUWeight, alg::SimpleUpdate)
 
 One round of 3-site simple update. 
 """
 function su3site_iter(
-    gatempos::Vector{G}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
+    gatempos::Vector{G}, peps::InfinitePEPS, env::SUWeight, alg::SimpleUpdate
 ) where {G<:AbstractMatrix}
     Nr, Nc = size(peps)
     (Nr >= 2 && Nc >= 2) || throw(
@@ -420,7 +422,7 @@ function su3site_iter(
     peps2 = deepcopy(peps)
     trscheme = alg.trscheme
     for i in 1:4
-        for site in CartesianIndices(peps2.vertices)
+        for site in CartesianIndices(peps2.A)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
             trschemes = [
@@ -432,14 +434,18 @@ function su3site_iter(
         peps2 = rotl90(peps2)
         trscheme = rotl90(trscheme)
     end
-    return peps2
+    return peps2, env2
 end
 
 """
 Perform 3-site simple update for Hamiltonian `ham`.
 """
 function _simpleupdate3site(
-    peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int=500
+    peps::InfinitePEPS,
+    env::SUWeight,
+    ham::LocalOperator,
+    alg::SimpleUpdate;
+    check_interval::Int=500,
 )
     time_start = time()
     # convert Hamiltonian to 3-site exponentiated gate MPOs
@@ -450,17 +456,17 @@ function _simpleupdate3site(
         _get_gatempos_se(rotr90(ham), alg.dt),
     ]
     wtdiff = 1.0
-    wts0 = deepcopy(peps.weights)
+    env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps = su3site_iter(gatempos, peps, alg)
-        wtdiff = compare_weights(peps.weights, wts0)
+        peps, env = su3site_iter(gatempos, peps, env, alg)
+        wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
-        wts0 = deepcopy(peps.weights)
+        env0 = deepcopy(env)
         time1 = time()
         if ((count == 1) || (count % check_interval == 0) || converge || cancel)
-            @info "Space of x-weight at [1, 1] = $(space(peps.weights[1, 1, 1], 1))"
+            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
@@ -474,5 +480,5 @@ function _simpleupdate3site(
         end
         converge && break
     end
-    return peps, wtdiff
+    return peps, env, wtdiff
 end

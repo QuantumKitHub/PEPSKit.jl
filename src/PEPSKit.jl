@@ -28,7 +28,6 @@ include("utility/util.jl")
 include("utility/diffable_threads.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
-include("utility/mirror.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 include("utility/retractions.jl")
@@ -38,7 +37,6 @@ include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
 
 include("states/infinitepeps.jl")
-include("states/infiniteweightpeps.jl")
 include("states/infinitepartitionfunction.jl")
 
 include("operators/infinitepepo.jl")
@@ -49,6 +47,7 @@ include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
+include("environments/suweight.jl")
 
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/localoperator.jl")
@@ -104,7 +103,7 @@ export su_iter, su3site_iter, simpleupdate, SimpleUpdate
 export InfiniteSquareNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
-export SUWeight, InfiniteWeightPEPS
+export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
