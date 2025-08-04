@@ -28,7 +28,7 @@ md"""
 To construct the Heisenberg Hamiltonian as just discussed, we'll use `heisenberg_XYZ` and,
 in addition, make it real (`real` and `imag` works for `LocalOperator`s) since we want to
 use PEPS and environments with real entries. We can either initialize the Hamiltonian with
-no internal symmetries (`symm = Trivial`) or use the global $U(1)$ symmetry
+no internal symmetries (`symm = Trivial`) or use the global spin $U(1)$ symmetry
 (`symm = U1Irrep`):
 """
 
@@ -39,8 +39,9 @@ H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1, Jy=1, Jz
 md"""
 ## Simple updating
 
-We proceed by initializing a random weighted PEPS that will be evolved. First though, we
-need to define the appropriate (symmetric) spaces:
+We proceed by initializing a random PEPS that will be evolved. 
+The weights used for simple update are initialized as identity matrices.
+First though, we need to define the appropriate (symmetric) spaces:
 """
 
 Dbond = 4
@@ -57,7 +58,8 @@ else
     error("not implemented")
 end
 
-wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, bond_space; unitcell=(Nr, Nc));
+peps = InfinitePEPS(rand, Float64, physical_space, bond_space; unitcell=(Nr, Nc));
+wts = SUWeight(peps);
 
 md"""
 Next, we can start the `SimpleUpdate` routine, successively decreasing the time intervals
@@ -73,8 +75,7 @@ trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
 
 for (dt, tol) in zip(dts, tols)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    result = simpleupdate(wpeps, H, alg; bipartite=true)
-    global wpeps = result[1]
+    global peps, wts, = simpleupdate(peps, wts, H, alg; bipartite=true)
 end
 
 md"""
@@ -83,8 +84,7 @@ md"""
 In order to compute observable expectation values, we need to converge a CTMRG environment
 on the evolved PEPS. Let's do so:
 """
-
-peps = InfinitePEPS(wpeps) ## absorb the weights
+normalize!.(peps.A, Inf)
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
 trscheme_env = truncerr(1e-10) & truncdim(χenv)
 env, = leading_boundary(
@@ -136,5 +136,5 @@ well as finite bond dimension effects and a lacking extrapolation:
 
 E_ref = -0.6675
 M_ref = 0.3767
-@show (E - E_ref) / E_ref
-@show (mean(M_norms) - M_ref) / E_ref;
+@show (E - E_ref) / abs(E_ref)
+@show (mean(M_norms) - M_ref) / M_ref;
