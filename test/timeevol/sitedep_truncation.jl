@@ -59,7 +59,7 @@ end
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # 3-site SU
-    # peps, env, = simpleupdate(peps0, ham, alg; bipartite=false, force_3site=true)
-    # @test get_bonddims(peps) == bonddims
+    peps, env, = simpleupdate(peps0, env0, ham, alg; bipartite=false, force_3site=true)
+    @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
 end

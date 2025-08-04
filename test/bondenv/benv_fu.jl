@@ -11,10 +11,10 @@ Nr, Nc = 2, 2
 function get_hubbard_state(t::Float64=1.0, U::Float64=8.0)
     H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu=U / 2)
     Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 1)
-    wpeps = InfiniteWeightPEPS(rand, ComplexF64, Vphy, Vphy; unitcell=(Nr, Nc))
+    peps = InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell=(Nr, Nc))
+    wts = SUWeight(peps)
     alg = SimpleUpdate(1e-2, 1e-8, 10000, truncerr(1e-10) & truncdim(4))
-    wpeps, = simpleupdate(wpeps, H, alg; bipartite=false, check_interval=2000)
-    peps = InfinitePEPS(wpeps)
+    peps, = simpleupdate(peps, wts, H, alg; bipartite=false, check_interval=2000)
     normalize!.(peps.A, Inf)
     return peps
 end
