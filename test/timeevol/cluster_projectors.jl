@@ -35,7 +35,6 @@ Vspaces = [
         # no truncation
         Ms2 = deepcopy(Ms1)
         wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N-1), revs)
-        @show ϵs
         @test all((ϵ == 0) for ϵ in ϵs)
         normalize!.(Ms2, Inf)
         @test fidelity_cluster(Ms1, Ms2) ≈ 1.0
@@ -79,7 +78,7 @@ end
 @testset "Hubbard model with usual SU and 3-site SU" begin
     Nr, Nc = 2, 2
     ctmrg_tol = 1e-9
-    Random.seed!(3104876)
+    Random.seed!(100)
     # with U(1) spin rotation symmetry
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 1)
@@ -89,7 +88,7 @@ end
     wts = SUWeight(peps)
     ham = real(
         hubbard_model(
-            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t=1.0, U=6.0, mu=0.0
+            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t=1.0, U=8.0, mu=0.0
         ),
     )
     # usual 2-site simple update, and measure energy
@@ -99,7 +98,7 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trscheme = truncerr(1e-10) & truncdim(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, ham, wts, alg; bipartite=true, check_interval=1000)
+        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite=true, check_interval=1000)
     end
     normalize!.(peps.A, Inf)
     env = CTMRGEnv(rand, Float64, peps, Espace)
