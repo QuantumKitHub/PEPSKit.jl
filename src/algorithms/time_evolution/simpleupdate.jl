@@ -92,8 +92,8 @@ function _su_ybond!(
     a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
     # remove environment weights
-    A = _absorb_weights(A, row, col, (EAST, SOUTH, WEST), env; invwt = true)
-    B = _absorb_weights(B, rm1, col, (NORTH, EAST, WEST), env; invwt = true)
+    A = _absorb_weights(A, row, col, (EAST, SOUTH, WEST), env; invwt=true)
+    B = _absorb_weights(B, rm1, col, (NORTH, EAST, WEST), env; invwt=true)
     # update tensor dict and weight on current bond 
     normalize!(A, Inf)
     normalize!(B, Inf)

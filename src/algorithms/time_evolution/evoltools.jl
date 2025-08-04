@@ -138,13 +138,10 @@ function _apply_gate(
     gate::AbstractTensorMap{T,S,2,2},
     trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
-    need_flip = isdual(space(b, 1))
+    V = space(b, 1)
+    need_flip = isdual(V)
     @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
-    trunc = if trscheme isa FixedSpaceTruncation
-        truncspace(need_flip ? V' : V)
-    else
-        trscheme
-    end
+    trunc = (trscheme isa FixedSpaceTruncation) ? truncspace(V) : trscheme
     a, s, b, ϵ = tsvd!(a2b2; trunc, alg=TensorKit.SVD())
     a, b = absorb_s(a, s, b)
     if need_flip

@@ -24,6 +24,19 @@ For a square lattice InfinitePEPS, the weights are placed as
         |                   |
 ```
 
+Axis order of each weight matrix is
+```
+    x-weights:
+        1 ← x ← 2   or   2 → x → 1
+    
+    y-weights:
+        2           1
+        ↓           ↑  
+        y    or     y
+        ↓           ↑
+        1           2
+```
+
 ## Fields
 
 $(TYPEDFIELDS)

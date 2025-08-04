@@ -205,10 +205,10 @@ such that the contraction of `Pa`, `s`, `Pb` is identity when `trunc = notrunc`,
 
 The arrows between `Pa`, `s`, `Pb` are
 ```
-    rev = false: - Pa ← s ← Pb -
+    rev = false: - Pa --←-- Pb -
                     1 ← s ← 2
 
-    rev = true:  - Pa → s → Pb - 
+    rev = true:  - Pa --→-- Pb - 
                     2 → s → 1
 ```
 """
@@ -221,7 +221,7 @@ function _proj_from_RL(
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
     u, s, vh, ϵ = tsvd!(rl; trunc)
-    sinv = PEPSKit.sdiag_pow(s, -1)
+    sinv = PEPSKit.sdiag_pow(s, -1/2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
         Pa, s, Pb = flip_svd(Pa, s, Pb)
@@ -240,8 +240,7 @@ function _get_allprojs(
     @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
         trunc = if isa(trschemes[i], FixedSpaceTruncation)
-            V = space(Ms[i + 1], 1)
-            truncspace(isdual(V) ? V' : V)
+            truncspace(space(Ms[i + 1], 1))
         else
             trschemes[i]
         end
@@ -327,14 +326,12 @@ function apply_gatempo!(
 ) where {T1<:PEPSTensor,T2<:AbstractTensorMap,E<:TruncationScheme}
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
-    @assert !all(revs)
     _apply_gatempo!(Ms, gs)
     wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
     return wts, ϵs
 end
 
 const openaxs_se = [(NORTH, SOUTH, WEST), (EAST, SOUTH), (NORTH, EAST, WEST)]
-const sqrtwts_se = [ntuple(dir -> !(dir in idxs), 4) for idxs in openaxs_se]
 const invperms_se = [((2,), (3, 5, 4, 1)), ((2,), (5, 3, 4, 1)), ((2,), (5, 3, 1, 4))]
 const perms_se = [
     begin
@@ -359,15 +356,10 @@ function get_3site_se(peps::InfinitePEPS, env::SUWeight, row::Int, col::Int)
     cluster = collect(
         permute(
             _absorb_weights(
-                peps.A[CartesianIndex(coord)],
-                peps.weights,
-                coord[1],
-                coord[2],
-                Tuple(1:4);
-                invwt=false,
+                peps.A[CartesianIndex(coord)], coord[1], coord[2], openaxs, env; invwt=false
             ),
             perm,
-        ) for (coord, perm) in zip(coords_se, perms_se)
+        ) for (coord, openaxs, perm) in zip(coords_se, openaxs_se, perms_se)
     )
     return cluster
 end
@@ -384,7 +376,7 @@ function _su3site_se!(
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster
-    Ms = get_3site_se(peps, row, col)
+    Ms = get_3site_se(peps, env, row, col)
     normalize!.(Ms, Inf)
     # sites in the cluster
     coords = ((row, col), (row, cp1), (rm1, cp1))
@@ -392,14 +384,13 @@ function _su3site_se!(
     wt_idxs = ((1, row, col), (2, row, cp1))
     wts, ϵ = apply_gatempo!(Ms, gs; trschemes)
     for (wt, wt_idx) in zip(wts, wt_idxs)
-        peps.weights[CartesianIndex(wt_idx)] = normalize(wt, Inf)
+        env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
     end
-    for (M, coord, invperm, axs) in zip(Ms, coords, invperms_se, openaxs_se)
+    for (M, coord, invperm, openaxs) in zip(Ms, coords, invperms_se, openaxs_se)
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
-        _allfalse = ntuple(Returns(false), length(axs))
-        M = _absorb_weights(M, peps.weights, coord[1], coord[2], axs, _allfalse, true)
+        M = _absorb_weights(M, coord[1], coord[2], openaxs, env; invwt=true)
         peps.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return nothing
@@ -419,7 +410,7 @@ function su3site_iter(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    peps2 = deepcopy(peps)
+    peps2, env2 = deepcopy(peps), deepcopy(env)
     trscheme = alg.trscheme
     for i in 1:4
         for site in CartesianIndices(peps2.A)
@@ -429,9 +420,9 @@ function su3site_iter(
                 truncation_scheme(trscheme, 1, r, c)
                 truncation_scheme(trscheme, 2, r, _next(c, size(peps2)[2]))
             ]
-            _su3site_se!(r, c, gs, peps2, trschemes)
+            _su3site_se!(r, c, gs, peps2, env2, trschemes)
         end
-        peps2 = rotl90(peps2)
+        peps2, env2 = rotl90(peps2), rotl90(env2)
         trscheme = rotl90(trscheme)
     end
     return peps2, env2
