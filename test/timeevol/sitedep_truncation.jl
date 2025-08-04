@@ -28,7 +28,7 @@ end
     bonddims = stack([[6 4; 4 6], [5 7; 7 5]]; dims=1)
     trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
     alg = SimpleUpdate(1e-2, 1e-14, 4, trscheme)
-    peps, env, = simpleupdate(peps0, env0, ham, alg; bipartite=true)
+    peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite=true)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # check bipartite structure is preserved
@@ -55,11 +55,11 @@ end
     trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
     alg = SimpleUpdate(1e-2, 1e-14, 2, trscheme)
     # 2-site SU
-    peps, env, = simpleupdate(peps0, env0, ham, alg; bipartite=false)
+    peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite=false)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # 3-site SU
-    peps, env, = simpleupdate(peps0, env0, ham, alg; bipartite=false, force_3site=true)
+    peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite=false, force_3site=true)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
 end

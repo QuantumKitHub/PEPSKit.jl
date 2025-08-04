@@ -99,7 +99,7 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trscheme = truncerr(1e-10) & truncdim(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, wts, ham, alg; bipartite=true, check_interval=1000)
+        peps, wts, = simpleupdate(peps, ham, wts, alg; bipartite=true, check_interval=1000)
     end
     normalize!.(peps.A, Inf)
     env = CTMRGEnv(rand, Float64, peps, Espace)
@@ -113,7 +113,7 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         peps, wts, = simpleupdate(
-            peps, wts, ham, alg; check_interval=1000, force_3site=true
+            peps, ham, alg, wts; check_interval=1000, force_3site=true
         )
     end
     normalize!.(peps.A, Inf)

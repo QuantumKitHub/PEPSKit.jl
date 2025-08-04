@@ -365,11 +365,11 @@ function get_3site_se(peps::InfinitePEPS, env::SUWeight, row::Int, col::Int)
 end
 
 function _su3site_se!(
+    peps::InfinitePEPS,
+    gs::Vector{T},
+    env::SUWeight,
     row::Int,
     col::Int,
-    gs::Vector{T},
-    peps::InfinitePEPS,
-    env::SUWeight,
     trschemes::Vector{E},
 ) where {T<:AbstractTensorMap,E<:TruncationScheme}
     Nr, Nc = size(peps)
@@ -397,12 +397,12 @@ function _su3site_se!(
 end
 
 """
-    su3site_iter(gatempos, peps::InfinitePEPS, env::SUWeight, alg::SimpleUpdate)
+    su3site_iter(peps::InfinitePEPS, gatempos, alg::SimpleUpdate, env::SUWeight)
 
 One round of 3-site simple update. 
 """
 function su3site_iter(
-    gatempos::Vector{G}, peps::InfinitePEPS, env::SUWeight, alg::SimpleUpdate
+    peps::InfinitePEPS, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
 ) where {G<:AbstractMatrix}
     Nr, Nc = size(peps)
     (Nr >= 2 && Nc >= 2) || throw(
@@ -420,7 +420,7 @@ function su3site_iter(
                 truncation_scheme(trscheme, 1, r, c)
                 truncation_scheme(trscheme, 2, r, _next(c, size(peps2)[2]))
             ]
-            _su3site_se!(r, c, gs, peps2, env2, trschemes)
+            _su3site_se!(peps2, gs, env2, r, c, trschemes)
         end
         peps2, env2 = rotl90(peps2), rotl90(env2)
         trscheme = rotl90(trscheme)
@@ -433,9 +433,9 @@ Perform 3-site simple update for Hamiltonian `ham`.
 """
 function _simpleupdate3site(
     peps::InfinitePEPS,
-    env::SUWeight,
     ham::LocalOperator,
-    alg::SimpleUpdate;
+    alg::SimpleUpdate,
+    env::SUWeight;
     check_interval::Int=500,
 )
     time_start = time()
@@ -450,7 +450,7 @@ function _simpleupdate3site(
     env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps, env = su3site_iter(gatempos, peps, env, alg)
+        peps, env = su3site_iter(peps, gatempos, alg, env)
         wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)

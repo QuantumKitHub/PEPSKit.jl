@@ -56,7 +56,7 @@ for J2 in 0.1:0.1:0.5
     H = real( ## convert Hamiltonian `LocalOperator` to real floats
         j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false),
     )
-    global peps, wts, = simpleupdate(peps, wts, H, alg; check_interval)
+    global peps, wts, = simpleupdate(peps, H, wts, alg; check_interval)
 end
 
 md"""
@@ -70,7 +70,7 @@ J2 = 0.5
 H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false))
 for (dt, tol) in zip(dts, tols)
     alg′ = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    global peps, wts, = simpleupdate(peps, wts, H, alg′; check_interval)
+    global peps, wts, = simpleupdate(peps, H, alg′, wts; check_interval)
 end
 
 md"""

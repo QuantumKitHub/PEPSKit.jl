@@ -28,11 +28,11 @@ Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 ```
 """
 function _su_xbond!(
+    peps::InfinitePEPS,
+    gate::AbstractTensorMap{T,S,2,2},
+    env::SUWeight,
     row::Int,
     col::Int,
-    gate::AbstractTensorMap{T,S,2,2},
-    peps::InfinitePEPS,
-    env::SUWeight,
     trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
@@ -71,11 +71,11 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
 ```
 """
 function _su_ybond!(
+    peps::InfinitePEPS,
+    gate::AbstractTensorMap{T,S,2,2},
+    env::SUWeight,
     row::Int,
     col::Int,
-    gate::AbstractTensorMap{T,S,2,2},
-    peps::InfinitePEPS,
-    env::SUWeight,
     trscheme::TruncationScheme,
 ) where {T<:Number,S<:ElementarySpace}
     Nr, Nc = size(peps)
@@ -104,16 +104,16 @@ function _su_ybond!(
 end
 
 """
-    su_iter(gate::LocalOperator, peps::InfinitePEPS, env::SUWeight, alg::SimpleUpdate; bipartite::Bool=false)
+    su_iter(peps::InfinitePEPS, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; bipartite::Bool=false)
 
 One round of simple update on `peps` applying the nearest neighbor `gate`.
 When the input `peps` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
 """
 function su_iter(
-    gate::LocalOperator,
     peps::InfinitePEPS,
-    env::SUWeight,
-    alg::SimpleUpdate;
+    gate::LocalOperator,
+    alg::SimpleUpdate,
+    env::SUWeight;
     bipartite::Bool=false,
 )
     @assert size(gate.lattice) == size(peps)
@@ -128,7 +128,7 @@ function su_iter(
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trscheme = truncation_scheme(alg.trscheme, 1, r, c)
-        _su_xbond!(r, c, term, peps2, env2, trscheme)
+        _su_xbond!(peps2, term, env2, r, c, trscheme)
         if bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
             peps2.A[rp1, cp1] = deepcopy(peps2.A[r, c])
@@ -137,7 +137,7 @@ function su_iter(
         end
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trscheme = truncation_scheme(alg.trscheme, 2, r, c)
-        _su_ybond!(r, c, term, peps2, env2, trscheme)
+        _su_ybond!(peps2, term, env2, r, c, trscheme)
         if bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
             peps2.A[rm1, cm1] = deepcopy(peps2.A[r, c])
@@ -153,9 +153,9 @@ Perform simple update with Hamiltonian `ham` containing up to nearest neighbor i
 """
 function _simpleupdate2site(
     peps::InfinitePEPS,
-    env::SUWeight,
     ham::LocalOperator,
-    alg::SimpleUpdate;
+    alg::SimpleUpdate,
+    env::SUWeight;
     bipartite::Bool=false,
     check_interval::Int=500,
 )
@@ -166,7 +166,7 @@ function _simpleupdate2site(
     env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps, env = su_iter(gate, peps, env, alg; bipartite)
+        peps, env = su_iter(peps, gate, alg, env; bipartite)
         wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
@@ -191,7 +191,7 @@ function _simpleupdate2site(
 end
 
 """
-    simpleupdate(peps::InfinitePEPS, env::SUWeight, ham::LocalOperator, alg::SimpleUpdate;
+    simpleupdate(peps::InfinitePEPS, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
                  bipartite::Bool=false, force_3site::Bool=false, check_interval::Int=500)
 
 Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor interaction terms.
@@ -208,9 +208,9 @@ Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham
 """
 function simpleupdate(
     peps::InfinitePEPS,
-    env::SUWeight,
     ham::LocalOperator,
-    alg::SimpleUpdate;
+    alg::SimpleUpdate,
+    env::SUWeight;
     bipartite::Bool=false,
     force_3site::Bool=false,
     check_interval::Int=500,
@@ -221,8 +221,8 @@ function simpleupdate(
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
     # TODO: check SiteDependentTruncation is compatible with bipartite structure
     if use_3site
-        return _simpleupdate3site(peps, env, ham, alg; check_interval)
+        return _simpleupdate3site(peps, ham, alg, env; check_interval)
     else
-        return _simpleupdate2site(peps, env, ham, alg; bipartite, check_interval)
+        return _simpleupdate2site(peps, ham, alg, env; bipartite, check_interval)
     end
 end

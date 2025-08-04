@@ -71,7 +71,7 @@ end
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trscheme = truncerr(1e-10) & truncdim(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, wts, ham, alg; bipartite=false)
+        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite=false)
     end
 
     # measure physical quantities with CTMRG

@@ -14,7 +14,7 @@ function get_hubbard_state(t::Float64=1.0, U::Float64=8.0)
     peps = InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell=(Nr, Nc))
     wts = SUWeight(peps)
     alg = SimpleUpdate(1e-2, 1e-8, 10000, truncerr(1e-10) & truncdim(4))
-    peps, = simpleupdate(peps, wts, H, alg; bipartite=false, check_interval=2000)
+    peps, = simpleupdate(peps, H, alg, wts; bipartite=false, check_interval=2000)
     normalize!.(peps.A, Inf)
     return peps
 end

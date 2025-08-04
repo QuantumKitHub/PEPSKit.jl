@@ -75,7 +75,7 @@ trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
 
 for (dt, tol) in zip(dts, tols)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    global peps, wts, = simpleupdate(peps, wts, H, alg; bipartite=true)
+    global peps, wts, = simpleupdate(peps, H, alg, wts; bipartite=true)
 end
 
 md"""
