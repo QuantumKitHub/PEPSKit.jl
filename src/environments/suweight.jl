@@ -172,25 +172,9 @@ function Base.show(io::IO, ::MIME"text/plain", wts::SUWeight)
     return nothing
 end
 
-function _absorb_weights(
-    t::PEPSTensor,
-    row::Int,
-    col::Int,
-    axs::NTuple{N,Int},
-    weights::SUWeight;
-    invwt::Bool=false,
-) where {N}
-    Nr, Nc = size(weights)[2:end]
-    @assert 1 <= row <= Nr && 1 <= col <= Nc && 1 <= N <= 4
-    t2 = copy(t)
-    for ax in axs
-        t2 = absorb_weight(t2, row, col, ax, weights; invwt)
-    end
-    return t2
-end
-
 """
-    absorb_weight(t::PEPSTensor, row::Int, col::Int, ax::Int, weights::SUWeight; invwt::Bool=false)
+    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; invwt::Bool=false)
+    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::NTuple{N,Int}; invwt::Bool=false)
 
 Absorb or remove environment weight on an axis of vertex tensor `t`  known to be located at
 position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, col)` are
@@ -207,10 +191,10 @@ position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, co
 ## Arguments
 
 - `t::T` : The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis.
+- `weights::SUWeight` : All simple update weights.
 - `row::Int` : The row index specifying the position in the tensor network.
 - `col::Int` : The column index specifying the position in the tensor network.
 - `ax::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
-- `weights::SUWeight` : All simple update weights.
 
 ## Keyword arguments
 
@@ -220,14 +204,14 @@ position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, co
 
 ```julia
 # Absorb the weight into the north axis of tensor at position (2, 3)
-absorb_weight(t, 2, 3, 1, weights)
+absorb_weight(t, weights, 2, 3, 1)
 
 # Absorb the inverse of (i.e. remove) the weight into the east axis
-absorb_weight(t, 2, 3, 2, weights; invwt=true)
+absorb_weight(t, weights, 2, 3, 2; invwt=true)
 ```
 """
 function absorb_weight(
-    t::PEPSTensor, row::Int, col::Int, ax::Int, weights::SUWeight; invwt::Bool=false
+    t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; invwt::Bool=false
 )
     Nr, Nc = size(weights)[2:end]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -253,6 +237,20 @@ function absorb_weight(
         [-axp1, 1] # t → wt
     end
     return permute(ncon((t, wt), (t_idx, wt_idx)), ((1,), Tuple(2:5)))
+end
+function absorb_weight(
+    t::PEPSTensor,
+    weights::SUWeight,
+    row::Int,
+    col::Int,
+    ax::NTuple{N,Int};
+    invwt::Bool=false,
+) where {N}
+    t2 = copy(t)
+    for a in ax
+        t2 = absorb_weight(t2, weights, row, col, a; invwt)
+    end
+    return t2
 end
 
 #= Rotation of SUWeight. Example: 3 x 3 network

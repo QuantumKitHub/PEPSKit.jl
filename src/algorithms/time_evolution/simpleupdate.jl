@@ -40,8 +40,8 @@ function _su_xbond!(
     cp1 = _next(col, Nc)
     # absorb environment weights
     A, B = peps.A[row, col], peps.A[row, cp1]
-    A = _absorb_weights(A, row, col, (NORTH, SOUTH, WEST), env; invwt=false)
-    B = _absorb_weights(B, row, cp1, (NORTH, SOUTH, EAST), env; invwt=false)
+    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); invwt=false)
+    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); invwt=false)
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
@@ -49,8 +49,8 @@ function _su_xbond!(
     a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
-    A = _absorb_weights(A, row, col, (NORTH, SOUTH, WEST), env; invwt=true)
-    B = _absorb_weights(B, row, cp1, (NORTH, SOUTH, EAST), env; invwt=true)
+    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); invwt=true)
+    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); invwt=true)
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
@@ -83,8 +83,8 @@ function _su_ybond!(
     rm1 = _prev(row, Nr)
     # absorb environment weights
     A, B = peps.A[row, col], peps.A[rm1, col]
-    A = _absorb_weights(A, row, col, (EAST, SOUTH, WEST), env; invwt=false)
-    B = _absorb_weights(B, rm1, col, (NORTH, EAST, WEST), env; invwt=false)
+    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); invwt=false)
+    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); invwt=false)
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
@@ -92,8 +92,8 @@ function _su_ybond!(
     a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
     # remove environment weights
-    A = _absorb_weights(A, row, col, (EAST, SOUTH, WEST), env; invwt=true)
-    B = _absorb_weights(B, rm1, col, (NORTH, EAST, WEST), env; invwt=true)
+    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); invwt=true)
+    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); invwt=true)
     # update tensor dict and weight on current bond 
     normalize!(A, Inf)
     normalize!(B, Inf)

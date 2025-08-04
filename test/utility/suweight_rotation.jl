@@ -1,7 +1,6 @@
 using Test
 using TensorKit
 using PEPSKit
-using PEPSKit: _absorb_weights
 
 function compose_n(f, n)
     n == 0 && return identity
@@ -24,14 +23,14 @@ function test_rotation(peps::InfinitePEPS, wts::SUWeight)
         rot = compose_n(rotl90, n)
         A1 = InfinitePEPS(
             collect(
-                _absorb_weights(peps.A[idx], idx[1], idx[2], Tuple(1:4), wts) for
+                absorb_weight(peps.A[idx], wts, idx[1], idx[2], Tuple(1:4)) for
                 idx in CartesianIndices(peps.A)
             ),
         )
         peps2, wts2 = rot(peps), rot(wts)
         A2 = InfinitePEPS(
             collect(
-                _absorb_weights(peps2.A[idx], idx[1], idx[2], Tuple(1:4), wts2) for
+                absorb_weight(peps2.A[idx], wts2, idx[1], idx[2], Tuple(1:4)) for
                 idx in CartesianIndices(peps2.A)
             ),
         )

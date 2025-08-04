@@ -355,8 +355,8 @@ function get_3site_se(peps::InfinitePEPS, env::SUWeight, row::Int, col::Int)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
     cluster = collect(
         permute(
-            _absorb_weights(
-                peps.A[CartesianIndex(coord)], coord[1], coord[2], openaxs, env; invwt=false
+            absorb_weight(
+                peps.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs; invwt=false
             ),
             perm,
         ) for (coord, openaxs, perm) in zip(coords_se, openaxs_se, perms_se)
@@ -390,7 +390,7 @@ function _su3site_se!(
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
-        M = _absorb_weights(M, coord[1], coord[2], openaxs, env; invwt=true)
+        M = absorb_weight(M, env, coord[1], coord[2], openaxs; invwt=true)
         peps.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return nothing
