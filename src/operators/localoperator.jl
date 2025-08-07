@@ -188,9 +188,6 @@ end
 
 # Charge shifting
 # ---------------
-TensorKit.sectortype(O::LocalOperator) = sectortype(typeof(O))
-TensorKit.sectortype(::Type{<:LocalOperator{T,S}}) where {T,S} = sectortype(S)
-TensorKit.spacetype(O::LocalOperator) = spacetype(typeof(O))
 TensorKit.spacetype(::Type{T}) where {S,T<:LocalOperator{<:Any,S}} = S
 
 @generated function _fuse_isomorphisms(
