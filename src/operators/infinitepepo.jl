@@ -150,6 +150,7 @@ end
 
 ## Spaces
 
+TensorKit.spacetype(::Type{P}) where {P<:InfinitePEPO} = spacetype(eltype(P))
 virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) = virtualspace(T[r, c, h], dir)
 domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r, c, 1])
 function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)

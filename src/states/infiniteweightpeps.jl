@@ -66,10 +66,7 @@ Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
 ## spaces
-TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
 TensorKit.spacetype(::Type{T}) where {E,T<:SUWeight{E}} = spacetype(E)
-TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
-TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
 
 ## (Approximate) equality
 function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
@@ -216,10 +213,7 @@ function Base.size(peps::InfiniteWeightPEPS)
     return size(peps.vertices)
 end
 
-TensorKit.spacetype(peps::InfiniteWeightPEPS) = spacetype(typeof(peps))
 TensorKit.spacetype(::Type{T}) where {E,T<:InfiniteWeightPEPS{E}} = spacetype(E)
-TensorKit.sectortype(peps::InfiniteWeightPEPS) = sectortype(typeof(peps))
-TensorKit.sectortype(::Type{<:InfiniteWeightPEPS{T}}) where {T} = sectortype(spacetype(T))
 
 function _absorb_weights(
     t::PEPSTensor,

@@ -384,10 +384,7 @@ cornertype(::Type{CTMRGEnv{C,E}}) where {C,E} = C
 edgetype(env::CTMRGEnv) = edgetype(typeof(env))
 edgetype(::Type{CTMRGEnv{C,E}}) where {C,E} = E
 
-TensorKit.spacetype(env::CTMRGEnv) = spacetype(typeof(env))
 TensorKit.spacetype(::Type{E}) where {E<:CTMRGEnv} = spacetype(cornertype(E))
-TensorKit.sectortype(env::CTMRGEnv) = sectortype(typeof(env))
-TensorKit.sectortype(::Type{E}) where {E<:CTMRGEnv} = sectortype(cornertype(E))
 
 # In-place update of environment
 function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
