@@ -92,6 +92,11 @@ env0 = CTMRGEnv(Z, χenv)
 ctm_styles = [:sequential, :simultaneous]
 projector_algs = [:halfinfinite, :fullinfinite]
 
+@test spacetype(typeof(Z)) === ComplexSpace
+@test spacetype(Z) === ComplexSpace
+@test sectortype(typeof(Z)) === Trivial
+@test sectortype(Z) === Trivial
+
 @testset "Classical Ising partition function using $alg with $projector_alg" for (
     alg, projector_alg
 ) in Iterators.product(

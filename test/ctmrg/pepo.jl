@@ -69,6 +69,11 @@ projector_algs = [:halfinfinite, :fullinfinite]
     n = InfiniteSquareNetwork(psi0, T)
     env0 = CTMRGEnv(n, χenv)
 
+    @test spacetype(typeof(T)) === ComplexSpace
+    @test spacetype(T) === ComplexSpace
+    @test sectortype(typeof(T)) === Trivial
+    @test sectortype(T) === Trivial
+
     @testset "PEPO CTMRG contraction using $alg with $projector_alg" for (
         alg, projector_alg
     ) in Iterators.product(
