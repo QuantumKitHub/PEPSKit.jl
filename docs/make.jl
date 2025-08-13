@@ -56,7 +56,7 @@ makedocs(;
     modules=[PEPSKit, MPSKitModels],
     sitename="PEPSKit.jl",
     format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", nothing) == "true", mathengine, size_threshold=1024000
+        prettyurls=true, mathengine, assets=["assets/custom.css"], size_threshold=1024000
     ),
     pages=[
         "Home" => "index.md",
