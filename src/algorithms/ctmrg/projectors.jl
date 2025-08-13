@@ -5,7 +5,7 @@ Abstract super type for all CTMRG projector algorithms.
 """
 abstract type ProjectorAlgorithm end
 
-const PROJECTOR_SYMBOLS = IdDict{Symbol,Type{<:ProjectorAlgorithm}}()
+const PROJECTOR_SYMBOLS = IdDict{Symbol, Type{<:ProjectorAlgorithm}}()
 
 """
     ProjectorAlgorithm(; kwargs...)
@@ -13,11 +13,11 @@ const PROJECTOR_SYMBOLS = IdDict{Symbol,Type{<:ProjectorAlgorithm}}()
 Keyword argument parser returning the appropriate `ProjectorAlgorithm` algorithm struct.
 """
 function ProjectorAlgorithm(;
-    alg=Defaults.projector_alg,
-    svd_alg=(;),
-    trscheme=(;),
-    verbosity=Defaults.projector_verbosity,
-)
+        alg = Defaults.projector_alg,
+        svd_alg = (;),
+        trscheme = (;),
+        verbosity = Defaults.projector_verbosity,
+    )
     # replace symbol with projector alg type
     haskey(PROJECTOR_SYMBOLS, alg) ||
         throw(ArgumentError("unknown projector algorithm: $alg"))
@@ -60,7 +60,7 @@ function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
                 nothing,
             )
         end
-        return SVDAdjoint(; fwd_alg=fix_svd, rrule_alg=alg.svd_alg.rrule_alg)
+        return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = alg.svd_alg.rrule_alg)
     else
         return alg.svd_alg
     end
@@ -101,13 +101,13 @@ Construct the half-infinite projector algorithm based on the following keyword a
     0. Suppress output information
     1. Print singular value degeneracy warnings
 """
-struct HalfInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
+struct HalfInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     svd_alg::S
     trscheme::T
     verbosity::Int
 end
 function HalfInfiniteProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg=:halfinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg = :halfinfinite, kwargs...)
 end
 
 PROJECTOR_SYMBOLS[:halfinfinite] = HalfInfiniteProjector
@@ -139,13 +139,13 @@ Construct the full-infinite projector algorithm based on the following keyword a
     0. Suppress output information
     1. Print singular value degeneracy warnings
 """
-struct FullInfiniteProjector{S<:SVDAdjoint,T} <: ProjectorAlgorithm
+struct FullInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     svd_alg::S
     trscheme::T
     verbosity::Int
 end
 function FullInfiniteProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg=:fullinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg = :fullinfinite, kwargs...)
 end
 
 PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
@@ -160,7 +160,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, info = PEPSKit.tsvd!(halfinf, svd_alg; trunc=alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(halfinf, svd_alg; trunc = alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -181,7 +181,7 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, info = PEPSKit.tsvd!(fullinf, svd_alg; trunc=alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(fullinf, svd_alg; trunc = alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do

@@ -30,12 +30,12 @@ Simple update of the x-bond `peps.weights[1,r,c]`.
 ```
 """
 function _su_xbond!(
-    row::Int,
-    col::Int,
-    gate::AbstractTensorMap{T,S,2,2},
-    peps::InfiniteWeightPEPS,
-    trscheme::TruncationScheme,
-) where {T<:Number,S<:ElementarySpace}
+        row::Int,
+        col::Int,
+        gate::AbstractTensorMap{T, S, 2, 2},
+        peps::InfiniteWeightPEPS,
+        trscheme::TruncationScheme,
+    ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
@@ -53,7 +53,7 @@ function _su_xbond!(
     _allfalse = ntuple(Returns(false), 3)
     A = _absorb_weights(A, peps.weights, row, col, (NORTH, SOUTH, WEST), _allfalse, true)
     B = _absorb_weights(B, peps.weights, row, cp1, (NORTH, SOUTH, EAST), _allfalse, true)
-    # update tensor dict and weight on current bond 
+    # update tensor dict and weight on current bond
     # (max element of weight is normalized to 1)
     peps.vertices[row, col], peps.vertices[row, cp1] = A, B
     peps.weights[1, row, col] = s / norm(s, Inf)
@@ -67,8 +67,8 @@ One round of simple update on `peps` applying the nearest neighbor `gate`.
 When the input `peps` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
 """
 function su_iter(
-    gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool=false
-)
+        gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool = false
+    )
     @assert size(gate.lattice) == size(peps)
     Nr, Nc = size(peps)
     if bipartite
@@ -82,7 +82,7 @@ function su_iter(
     peps2 = deepcopy(peps)
     gate_mirrored = mirror_antidiag(gate)
     for direction in 1:2
-        # mirror the y-weights to x-direction 
+        # mirror the y-weights to x-direction
         # to update them using code for x-weights
         if direction == 2
             peps2 = mirror_antidiag(peps2)
@@ -123,12 +123,12 @@ end
 Perform simple update with Hamiltonian `ham` containing up to nearest neighbor interaction terms. 
 """
 function _simpleupdate2site(
-    peps::InfiniteWeightPEPS,
-    ham::LocalOperator,
-    alg::SimpleUpdate;
-    bipartite::Bool=false,
-    check_interval::Int=500,
-)
+        peps::InfiniteWeightPEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate;
+        bipartite::Bool = false,
+        check_interval::Int = 500,
+    )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
     gate = get_expham(ham, alg.dt)
@@ -177,13 +177,13 @@ Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham
 - The 3-site simple update algorithm is incompatible with a bipartite PEPS. Using `bipartite = true` with either `force_3site = true` or a `ham` with next-nearest neighbor terms is not allowed. 
 """
 function simpleupdate(
-    peps::InfiniteWeightPEPS,
-    ham::LocalOperator,
-    alg::SimpleUpdate;
-    bipartite::Bool=false,
-    force_3site::Bool=false,
-    check_interval::Int=500,
-)
+        peps::InfiniteWeightPEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate;
+        bipartite::Bool = false,
+        force_3site::Bool = false,
+        check_interval::Int = 500,
+    )
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly

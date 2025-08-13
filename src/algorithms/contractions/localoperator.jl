@@ -28,26 +28,26 @@ specified by `inds`. The `peps` is contracted with `O` from above and below, and
 sandwich is surrounded with the appropriate environment tensors.
 """
 function contract_local_operator(
-    inds::NTuple{N,CartesianIndex{2}},
-    O::AbstractTensorMap{T,S,N,N},
-    ket::InfinitePEPS,
-    bra::InfinitePEPS,
-    env::CTMRGEnv,
-) where {T,S,N}
+        inds::NTuple{N, CartesianIndex{2}},
+        O::AbstractTensorMap{T, S, N, N},
+        ket::InfinitePEPS,
+        bra::InfinitePEPS,
+        env::CTMRGEnv,
+    ) where {T, S, N}
     static_inds = Val.(inds)
     return _contract_local_operator(static_inds, O, ket, bra, env)
 end
 function contract_local_operator(
-    inds::NTuple{N,Tuple{Int,Int}},
-    O::AbstractTensorMap{T,S,N,N},
-    ket::InfinitePEPS,
-    bra::InfinitePEPS,
-    env::CTMRGEnv,
-) where {T,S,N}
+        inds::NTuple{N, Tuple{Int, Int}},
+        O::AbstractTensorMap{T, S, N, N},
+        ket::InfinitePEPS,
+        bra::InfinitePEPS,
+        env::CTMRGEnv,
+    ) where {T, S, N}
     return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
 end
 
-# This implements the contraction of an operator acting on sites `inds`. 
+# This implements the contraction of an operator acting on sites `inds`.
 # The generated function ensures that we can use @tensor to write dynamic contractions (and maximize performance).
 
 function _contract_corner_expr(rowrange, colrange)
@@ -126,7 +126,7 @@ function _contract_edge_expr(rowrange, colrange)
     return edges_N, edges_E, edges_S, edges_W
 end
 
-function _contract_state_expr(rowrange, colrange, cartesian_inds=nothing)
+function _contract_state_expr(rowrange, colrange, cartesian_inds = nothing)
     rmin, rmax = extrema(rowrange)
     cmin, cmax = extrema(colrange)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
@@ -174,12 +174,12 @@ function _contract_state_expr(rowrange, colrange, cartesian_inds=nothing)
 end
 
 @generated function _contract_local_operator(
-    inds::NTuple{N,Val},
-    O::AbstractTensorMap{T,S,N,N},
-    ket::InfinitePEPS,
-    bra::InfinitePEPS,
-    env::CTMRGEnv,
-) where {T,S,N}
+        inds::NTuple{N, Val},
+        O::AbstractTensorMap{T, S, N, N},
+        ket::InfinitePEPS,
+        bra::InfinitePEPS,
+        env::CTMRGEnv,
+    ) where {T, S, N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
     allunique(cartesian_inds) ||
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
@@ -227,19 +227,19 @@ on a rectangular patch based on `inds` but replacing the operator with an identi
 that the PEPS norm is computed. (Note that this is not the physical norm of the state.)
 """
 function contract_local_norm(
-    inds::NTuple{N,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-) where {N}
+        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    ) where {N}
     static_inds = Val.(inds)
     return _contract_local_norm(static_inds, ket, bra, env)
 end
 function contract_local_norm(
-    inds::NTuple{N,Tuple{Int,Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-) where {N}
+        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    ) where {N}
     return contract_local_norm(CartesianIndex.(inds), ket, bra, env)
 end
 @generated function _contract_local_norm(
-    inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-) where {N}
+        inds::NTuple{N, Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    ) where {N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
     allunique(cartesian_inds) ||
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
@@ -280,14 +280,14 @@ This works by generating the appropriate contraction on a rectangular patch with
 specified by `inds`. The result is normalized such that `tr(ρ) = 1`. 
 """
 function reduced_densitymatrix(
-    inds::NTuple{N,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-) where {N}
+        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    ) where {N}
     static_inds = Val.(inds)
     return _contract_densitymatrix(static_inds, ket, bra, env)
 end
 function reduced_densitymatrix(
-    inds::NTuple{N,Tuple{Int,Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-) where {N}
+        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    ) where {N}
     return reduced_densitymatrix(CartesianIndex.(inds), ket, bra, env)
 end
 function reduced_densitymatrix(inds, ket::InfinitePEPS, env::CTMRGEnv)
@@ -298,8 +298,8 @@ end
 # Keep contraction order but try to optimize intermediate permutations:
 # EE_SWA is largest object so keep largest legs to the front there
 function reduced_densitymatrix(
-    inds::Tuple{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-)
+        inds::Tuple{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    )
     row, col = Tuple(inds[1])
 
     # Unpack variables and absorb corners
@@ -337,8 +337,8 @@ function reduced_densitymatrix(
 end
 
 function reduced_densitymatrix(
-    inds::NTuple{2,CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-)
+        inds::NTuple{2, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    )
     if inds[2] - inds[1] == CartesianIndex(1, 0)
         return reduced_densitymatrix2x1(inds[1], ket, bra, env)
     elseif inds[2] - inds[1] == CartesianIndex(0, 1)
@@ -352,8 +352,8 @@ end
 # Special case 2x1 density matrix:
 # Keep contraction order but try to optimize intermediate permutations:
 function reduced_densitymatrix2x1(
-    ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-)
+        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    )
     row, col = Tuple(ind)
 
     # Unpack variables and absorb corners
@@ -402,8 +402,8 @@ function reduced_densitymatrix2x1(
 end
 
 function reduced_densitymatrix1x2(
-    ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-)
+        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    )
     row, col = Tuple(ind)
 
     # Unpack variables and absorb corners
@@ -452,8 +452,8 @@ function reduced_densitymatrix1x2(
 end
 
 @generated function _contract_densitymatrix(
-    inds::NTuple{N,Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-) where {N}
+        inds::NTuple{N, Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    ) where {N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
     allunique(cartesian_inds) ||
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))

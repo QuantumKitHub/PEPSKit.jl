@@ -8,7 +8,7 @@ using PEPSKit
 # using PEPSKit: HalfInfiniteEnv
 
 # Gauge-invariant loss function
-function lossfun(A, alg, R=randn(space(A)), trunc=notrunc())
+function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
     U, S, V, = PEPSKit.tsvd(A, alg; trunc)
     return real(dot(R, U * V)) + dot(S, S)  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
 end
@@ -17,13 +17,13 @@ m, n = 20, 30
 dtype = ComplexF64
 χ = 12
 trunc = truncspace(ℂ^χ)
-rtol = 1e-9
+rtol = 1.0e-9
 Random.seed!(123456789)
 r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
-full_alg = SVDAdjoint(; rrule_alg=(; alg=:full, broadening=0))
-iter_alg = SVDAdjoint(; fwd_alg=(; alg=:iterative))
+full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, broadening = 0))
+iter_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative))
 
 @testset "Non-truncacted SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
@@ -46,8 +46,8 @@ end
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     r_degen = u * s * v
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1e-30
-    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1e-13
+    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1.0e-30
+    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, full_alg, R, trunc), r_degen
@@ -62,7 +62,7 @@ end
     )
 
     @test l_only_cutoff ≈ l_no_broadening_no_cutoff ≈ l_small_broadening
-    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1e-1 # divergences mess up the gradient
+    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-1 # divergences mess up the gradient
     @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and Lorentzian broadening have similar effect
 end
 
@@ -100,8 +100,8 @@ end
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     symm_r_degen = u * s * v
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1e-30
-    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1e-13
+    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1.0e-30
+    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r_degen
@@ -116,7 +116,7 @@ end
     )
 
     @test l_only_cutoff ≈ l_no_broadening_no_cutoff ≈ l_small_broadening
-    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1e-2 # divergences mess up the gradient
+    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-2 # divergences mess up the gradient
     @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and Lorentzian broadening have similar effect
 end
 

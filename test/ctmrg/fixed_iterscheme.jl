@@ -17,17 +17,17 @@ using PEPSKit:
 # initialize parameters
 χbond = 2
 χenv = 16
-svd_algs = [SVDAdjoint(; fwd_alg=TensorKit.SDD()), SVDAdjoint(; fwd_alg=IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg = TensorKit.SDD()), SVDAdjoint(; fwd_alg = IterSVD())]
 projector_algs = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
-atol = 1e-5
+atol = 1.0e-5
 
 # test for element-wise convergence after application of fixed step
 @testset "$unitcell unit cell with $(typeof(svd_alg.fwd_alg)) and $projector_alg" for (
-    unitcell, svd_alg, projector_alg
-) in Iterators.product(
-    unitcells, svd_algs, projector_algs
-)
+        unitcell, svd_alg, projector_alg,
+    ) in Iterators.product(
+        unitcells, svd_algs, projector_algs
+    )
     ctm_alg = SimultaneousCTMRG(; svd_alg, projector_alg)
 
     # initialize states
@@ -55,10 +55,10 @@ end
 
 @testset "Element-wise consistency of TensorKit.SDD and IterSVD" begin
     ctm_alg_iter = SimultaneousCTMRG(;
-        maxiter=200,
-        svd_alg=SVDAdjoint(; fwd_alg=IterSVD(; alg=GKL(; tol=1e-14, krylovdim=χenv + 10))),
+        maxiter = 200,
+        svd_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χenv + 10))),
     )
-    ctm_alg_full = SimultaneousCTMRG(; svd_alg=SVDAdjoint(; fwd_alg=TensorKit.SDD()))
+    ctm_alg_full = SimultaneousCTMRG(; svd_alg = SVDAdjoint(; fwd_alg = TensorKit.SDD()))
 
     # initialize states
     Random.seed!(91283219347)

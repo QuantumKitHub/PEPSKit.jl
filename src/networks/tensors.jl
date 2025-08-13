@@ -19,7 +19,7 @@ and west spaces, respectively.
     S 
 ```
 """
-const PartitionFunctionTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,2,2}
+const PartitionFunctionTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 2, 2}
 const PFTensor = PartitionFunctionTensor
 
 Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))
@@ -53,7 +53,7 @@ respectively.
      S  P
 ```
 """
-const PEPSTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,1,4}
+const PEPSTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 1, 4}
 
 """
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
@@ -64,25 +64,25 @@ Alternatively, only the space dimensions can be provided and ℂ is assumed as t
 The tensor elements are generated based on `f` and the element type is specified in `T`.
 """
 function PEPSTensor(
-    f,
-    ::Type{T},
-    Pspace::S,
-    Nspace::S,
-    Espace::S=Nspace,
-    Sspace::S=Nspace',
-    Wspace::S=Espace',
-) where {T,S<:ElementarySpace}
+        f,
+        ::Type{T},
+        Pspace::S,
+        Nspace::S,
+        Espace::S = Nspace,
+        Sspace::S = Nspace',
+        Wspace::S = Espace',
+    ) where {T, S <: ElementarySpace}
     return f(T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
 end
 function PEPSTensor(
-    f,
-    ::Type{T},
-    Pspace::Int,
-    Nspace::Int,
-    Espace::Int=Nspace,
-    Sspace::Int=Nspace,
-    Wspace::Int=Espace,
-) where {T}
+        f,
+        ::Type{T},
+        Pspace::Int,
+        Nspace::Int,
+        Espace::Int = Nspace,
+        Sspace::Int = Nspace,
+        Wspace::Int = Espace,
+    ) where {T}
     return f(T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
 end
 
@@ -118,7 +118,7 @@ mapping from ``P´'`` to ``P`` where ``P´'`` corresponds to a physical PEPS ind
      S  P
 ```
 """
-const PEPOTensor{S<:ElementarySpace} = AbstractTensorMap{<:Any,S,2,4}
+const PEPOTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 2, 4}
 
 Base.rotl90(t::PEPOTensor) = permute(t, ((1, 2), (4, 5, 6, 3)))
 Base.rotr90(t::PEPOTensor) = permute(t, ((1, 2), (6, 3, 4, 5)))

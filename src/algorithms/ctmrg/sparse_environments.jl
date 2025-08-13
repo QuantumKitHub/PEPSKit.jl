@@ -15,7 +15,7 @@ Construct an enlarged corner with the correct row and column indices based on th
 `coordinates` which are of the form `(dir, row, col)`.
 
 """
-struct EnlargedCorner{TC,TE,TA}
+struct EnlargedCorner{TC, TE, TA}
     C::TC
     E_1::TE
     E_2::TE
@@ -98,7 +98,7 @@ function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
     return HalfInfiniteEnv(ec_1, ec_2)
 end
 
-# Compute left and right projectors sparsely without constructing enlarged corners explicitly 
+# Compute left and right projectors sparsely without constructing enlarged corners explicitly
 function left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
     isqS = sdiag_pow(S, -0.5)
     P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.A)
@@ -125,7 +125,7 @@ $(FIELDS)
 
 Construct sparse half-infinite environment based on two sparse enlarged corners (quadrants).
 """
-struct HalfInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
+struct HalfInfiniteEnv{TC, TE, TA}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
     C_1::TC
     C_2::TC
     E_1::TE
@@ -213,7 +213,7 @@ $(FIELDS)
     
 Construct sparse full-infinite environment based on four sparse enlarged corners (quadrants).
 """
-struct FullInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
+struct FullInfiniteEnv{TC, TE, TA}  # TODO: subtype as AbstractTensorMap once TensorKit is updated
     C_1::TC
     C_2::TC
     C_3::TC
@@ -232,8 +232,8 @@ struct FullInfiniteEnv{TC,TE,TA}  # TODO: subtype as AbstractTensorMap once Tens
     A_4::TA
 end
 function FullInfiniteEnv(
-    quadrant1::E, quadrant2::E, quadrant3::E, quadrant4::E
-) where {E<:EnlargedCorner}
+        quadrant1::E, quadrant2::E, quadrant3::E, quadrant4::E
+    ) where {E <: EnlargedCorner}
     return FullInfiniteEnv(
         quadrant1.C,
         quadrant2.C,
@@ -332,8 +332,8 @@ end
 
 # Wrapper around full_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
 function full_infinite_environment(
-    ec_1::E, ec_2::E, ec_3::E, ec_4::E
-) where {E<:EnlargedCorner}
+        ec_1::E, ec_2::E, ec_3::E, ec_4::E
+    ) where {E <: EnlargedCorner}
     return FullInfiniteEnv(ec_1, ec_2, ec_3, ec_4)
 end
 

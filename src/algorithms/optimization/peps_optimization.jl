@@ -25,15 +25,15 @@ struct PEPSOptimize{G}
     gradient_alg::G
     optimizer_alg::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
-    symmetrization::Union{Nothing,SymmetrizationStyle}
+    symmetrization::Union{Nothing, SymmetrizationStyle}
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
-        boundary_alg::CTMRGAlgorithm,
-        gradient_alg::G,
-        optimizer_alg,
-        reuse_env,
-        symmetrization,
-    ) where {G}
+            boundary_alg::CTMRGAlgorithm,
+            gradient_alg::G,
+            optimizer_alg,
+            reuse_env,
+            symmetrization,
+        ) where {G}
         if gradient_alg isa GradMode
             if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
                 msg = ":fixed was converted to :diffgauge since SequentialCTMRG does not \
@@ -47,12 +47,12 @@ struct PEPSOptimize{G}
 end
 
 function PEPSOptimize(;
-    boundary_alg=(;),
-    gradient_alg=(;),
-    optimizer_alg=(;),
-    reuse_env=Defaults.reuse_env,
-    symmetrization=nothing,
-)
+        boundary_alg = (;),
+        gradient_alg = (;),
+        optimizer_alg = (;),
+        reuse_env = Defaults.reuse_env,
+        symmetrization = nothing,
+    )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
     gradient_algorithm = _alg_or_nt(GradMode, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
@@ -66,7 +66,7 @@ function PEPSOptimize(;
     )
 end
 
-const OPTIMIZATION_SYMBOLS = IdDict{Symbol,Type{<:OptimKit.OptimizationAlgorithm}}(
+const OPTIMIZATION_SYMBOLS = IdDict{Symbol, Type{<:OptimKit.OptimizationAlgorithm}}(
     :gradientdescent => GradientDescent,
     :conjugategradient => ConjugateGradient,
     :lbfgs => LBFGS,
@@ -78,15 +78,15 @@ function _alg_or_nt(::Type{<:OptimKit.OptimizationAlgorithm}, alg::NamedTuple)
 end
 
 function _OptimizationAlgorithm(;
-    alg=Defaults.optimizer_alg,
-    tol=Defaults.optimizer_tol,
-    maxiter=Defaults.optimizer_maxiter,
-    verbosity=Defaults.optimizer_verbosity,
-    ls_maxiter=Defaults.ls_maxiter,
-    ls_maxfg=Defaults.ls_maxfg,
-    lbfgs_memory=Defaults.lbfgs_memory,
-    # TODO: add linesearch, ... to kwargs and defaults?
-)
+        alg = Defaults.optimizer_alg,
+        tol = Defaults.optimizer_tol,
+        maxiter = Defaults.optimizer_maxiter,
+        verbosity = Defaults.optimizer_verbosity,
+        ls_maxiter = Defaults.ls_maxiter,
+        ls_maxfg = Defaults.ls_maxfg,
+        lbfgs_memory = Defaults.lbfgs_memory,
+        # TODO: add linesearch, ... to kwargs and defaults?
+    )
     # replace symbol with optimizer alg type
     haskey(OPTIMIZATION_SYMBOLS, alg) ||
         throw(ArgumentError("unknown optimizer algorithm: $alg"))
@@ -94,9 +94,9 @@ function _OptimizationAlgorithm(;
 
     # instantiate algorithm
     return if alg_type <: LBFGS
-        alg_type(lbfgs_memory; gradtol=tol, maxiter, verbosity, ls_maxiter, ls_maxfg)
+        alg_type(lbfgs_memory; gradtol = tol, maxiter, verbosity, ls_maxiter, ls_maxfg)
     else
-        alg_type(; gradtol=tol, maxiter, verbosity, ls_maxiter, ls_maxfg)
+        alg_type(; gradtol = tol, maxiter, verbosity, ls_maxiter, ls_maxfg)
     end
 end
 
@@ -187,22 +187,22 @@ information `NamedTuple` which contains the following entries:
 * `times` : History of optimization step execution times.
 """
 function fixedpoint(
-    operator,
-    peps₀::InfinitePEPS,
-    env₀::CTMRGEnv;
-    (finalize!)=OptimKit._finalize!,
-    kwargs...,
-)
+        operator,
+        peps₀::InfinitePEPS,
+        env₀::CTMRGEnv;
+        (finalize!) = OptimKit._finalize!,
+        kwargs...,
+    )
     alg = select_algorithm(fixedpoint, env₀; kwargs...)
     return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
-    operator,
-    peps₀::InfinitePEPS,
-    env₀::CTMRGEnv,
-    alg::PEPSOptimize;
-    (finalize!)=OptimKit._finalize!,
-)
+        operator,
+        peps₀::InfinitePEPS,
+        env₀::CTMRGEnv,
+        alg::PEPSOptimize;
+        (finalize!) = OptimKit._finalize!,
+    )
     # setup retract and finalize! for symmetrization
     if isnothing(alg.symmetrization)
         retract = peps_retract
@@ -238,9 +238,9 @@ function fixedpoint(
         (peps₀, env₀),
         alg.optimizer_alg;
         retract,
-        inner=real_inner,
+        inner = real_inner,
         finalize!,
-        (transport!)=(peps_transport!),
+        (transport!) = (peps_transport!),
     ) do (peps, env)
         start_time = time_ns()
         E, gs = withgradient(peps) do ψ
@@ -249,7 +249,7 @@ function fixedpoint(
                 env,
                 ψ,
                 alg.boundary_alg;
-                alg_rrule=alg.gradient_alg,
+                alg_rrule = alg.gradient_alg,
             )
             ignore_derivatives() do
                 alg.reuse_env && update!(env, env′)
@@ -260,15 +260,15 @@ function fixedpoint(
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
         push!(gradnorms_unitcell, norm.(g.A))
-        push!(times, (time_ns() - start_time) * 1e-9)
+        push!(times, (time_ns() - start_time) * 1.0e-9)
         return E, g
     end
 
     info = (;
-        last_gradient=∂cost,
-        fg_evaluations=numfg,
-        costs=convergence_history[:, 1],
-        gradnorms=convergence_history[:, 2],
+        last_gradient = ∂cost,
+        fg_evaluations = numfg,
+        costs = convergence_history[:, 1],
+        gradnorms = convergence_history[:, 2],
         truncation_errors,
         condition_numbers,
         gradnorms_unitcell,
@@ -348,8 +348,8 @@ real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 Return the `retract` and `finalize!` function for symmetrizing the `peps` and `grad` tensors.
 """
 function symmetrize_retract_and_finalize!(
-    symm::SymmetrizationStyle, retract=peps_retract, (finalize!)=OptimKit._finalize!
-)
+        symm::SymmetrizationStyle, retract = peps_retract, (finalize!) = OptimKit._finalize!
+    )
     function symmetrize_then_finalize!((peps, env), E, grad, numiter)
         # symmetrize the gradient
         grad_symm = symmetrize!(grad, symm)

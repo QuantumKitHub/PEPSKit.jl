@@ -2,7 +2,7 @@
 if Base.active_project() != joinpath(@__DIR__, "Project.toml")
     using Pkg
     Pkg.activate(@__DIR__)
-    Pkg.develop(PackageSpec(; path=joinpath(@__DIR__, "..")))
+    Pkg.develop(PackageSpec(; path = joinpath(@__DIR__, "..")))
     Pkg.resolve()
     Pkg.instantiate()
 end
@@ -15,7 +15,7 @@ using MPSKitModels: MPSKitModels # used for docstrings
 
 # bibliography
 bibpath = joinpath(@__DIR__, "src", "assets", "pepskit.bib")
-bib = CitationBibliography(bibpath; style=:authoryear)
+bib = CitationBibliography(bibpath; style = :authoryear)
 
 # interlinks
 # Zygote didn't update to documenter v1 yet...
@@ -53,12 +53,12 @@ examples_partition_functions = joinpath.(
 examples_boundary_mps = joinpath.(["boundary_mps"], Ref("index.md"))
 
 makedocs(;
-    modules=[PEPSKit, MPSKitModels],
-    sitename="PEPSKit.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", nothing) == "true", mathengine, size_threshold=1024000
+    modules = [PEPSKit, MPSKitModels],
+    sitename = "PEPSKit.jl",
+    format = Documenter.HTML(;
+        prettyurls = get(ENV, "CI", nothing) == "true", mathengine, size_threshold = 1024000
     ),
-    pages=[
+    pages = [
         "Home" => "index.md",
         "Manual" => ["man/models.md", "man/multithreading.md", "man/precompilation.md"],
         "Examples" => [
@@ -72,9 +72,9 @@ makedocs(;
         "Library" => "lib/lib.md",
         "References" => "references.md",
     ],
-    checkdocs=:none,
+    checkdocs = :none,
     # checkdocs_ignored_modules=[MPSKitModels], # doesn't seem to work...
-    plugins=[bib, links],
+    plugins = [bib, links],
 )
 
-deploydocs(; repo="github.com/QuantumKitHub/PEPSKit.jl.git", push_preview=true)
+deploydocs(; repo = "github.com/QuantumKitHub/PEPSKit.jl.git", push_preview = true)

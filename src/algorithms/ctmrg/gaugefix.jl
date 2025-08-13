@@ -6,7 +6,7 @@ This assumes that the `envfinal` is the result of one CTMRG iteration on `envpre
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
-function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
+function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -57,10 +57,10 @@ end
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
 # because MPSKit is not compatible with AD
 @generated function _transfer_right(
-    v::AbstractTensorMap{<:Any,S,1,N₁},
-    A::GenericMPSTensor{S,N₂},
-    Abar::GenericMPSTensor{S,N₂},
-) where {S,N₁,N₂}
+        v::AbstractTensorMap{<:Any, S, 1, N₁},
+        A::GenericMPSTensor{S, N₂},
+        Abar::GenericMPSTensor{S, N₂},
+    ) where {S, N₁, N₂}
     t_out = tensorexpr(:v, -1, -(2:(N₁ + 1)))
     t_top = tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
     t_bot = tensorexpr(:Abar, (-(N₁ + 1), reverse(3:(N₂ + 1))...), 2)
@@ -71,7 +71,7 @@ end
 end
 function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     _, vecs, info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
-        return foldr(zip(tops, bottoms); init=ρ) do (top, bottom), ρ
+        return foldr(zip(tops, bottoms); init = ρ) do (top, bottom), ρ
             return _transfer_right(ρ, top, bottom)
         end
     end
@@ -108,8 +108,8 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
     return corners_fixed, edges_fixed
 end
 function fix_relative_phases(
-    U::Array{Ut,3}, V::Array{Vt,3}, signs
-) where {Ut<:AbstractTensorMap,Vt<:AbstractTensorMap}
+        U::Array{Ut, 3}, V::Array{Vt, 3}, signs
+    ) where {Ut <: AbstractTensorMap, Vt <: AbstractTensorMap}
     U_fixed = map(CartesianIndices(U)) do I
         dir, r, c = I.I
         if dir == NORTHWEST
@@ -164,7 +164,7 @@ end
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
 CTMRG environments are below `atol` and return the maximal difference.
 """
-function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real=1e-6)
+function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real = 1.0e-6)
     ΔC = envfinal.corners .- envfix.corners
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)

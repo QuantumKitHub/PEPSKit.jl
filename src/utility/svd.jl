@@ -61,30 +61,30 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
 """
-struct SVDAdjoint{F,R}
+struct SVDAdjoint{F, R}
     fwd_alg::F
     rrule_alg::R
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
-const SVD_FWD_SYMBOLS = IdDict{Symbol,Any}(
+const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :sdd => TensorKit.SDD,
     :svd => TensorKit.SVD,
     :iterative =>
-        (; tol=1e-14, krylovdim=25, kwargs...) ->
-            IterSVD(; alg=GKL(; tol, krylovdim), kwargs...),
+        (; tol = 1.0e-14, krylovdim = 25, kwargs...) ->
+    IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
-const SVD_RRULE_SYMBOLS = IdDict{Symbol,Type{<:Any}}(
+const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullSVDReverseRule, :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
 )
 
-function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;))
+function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse forward SVD algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
-        fwd_kwargs = (; alg=Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
+        fwd_kwargs = (; alg = Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
         haskey(SVD_FWD_SYMBOLS, fwd_kwargs.alg) ||
             throw(ArgumentError("unknown forward algorithm: $(fwd_kwargs.alg)"))
         fwd_type = SVD_FWD_SYMBOLS[fwd_kwargs.alg]
-        fwd_kwargs = Base.structdiff(fwd_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+        fwd_kwargs = Base.structdiff(fwd_kwargs, (; alg = nothing)) # remove `alg` keyword argument
         fwd_type(; fwd_kwargs...)
     else
         fwd_alg
@@ -93,11 +93,11 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;))
     # parse reverse-rule SVD algorithm
     rrule_algorithm = if rrule_alg isa NamedTuple
         rrule_kwargs = (;
-            alg=Defaults.svd_rrule_alg,
-            tol=Defaults.svd_rrule_tol,
-            krylovdim=Defaults.svd_rrule_min_krylovdim,
-            broadening=Defaults.svd_rrule_broadening,
-            verbosity=Defaults.svd_rrule_verbosity,
+            alg = Defaults.svd_rrule_alg,
+            tol = Defaults.svd_rrule_tol,
+            krylovdim = Defaults.svd_rrule_min_krylovdim,
+            broadening = Defaults.svd_rrule_broadening,
+            verbosity = Defaults.svd_rrule_verbosity,
             rrule_alg...,
         ) # overwrite with specified kwargs
 
@@ -111,11 +111,11 @@ function SVDAdjoint(; fwd_alg=(;), rrule_alg=(;))
         end
 
         if rrule_type <: FullSVDReverseRule
-            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing, tol=0.0, krylovdim=0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
+            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, tol = 0.0, krylovdim = 0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
         else
-            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg=nothing, broadening=0.0)) # remove `alg` and `broadening` keyword arguments
+            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, broadening = 0.0)) # remove `alg` and `broadening` keyword arguments
             rrule_type <: BiCGStab &&
-                (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim=nothing))) # BiCGStab doens't take `krylovdim`
+                (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim = nothing))) # BiCGStab doens't take `krylovdim`
         end
         rrule_type(; rrule_kwargs...)
     else
@@ -134,12 +134,12 @@ depending on the algorithm. E.g., for `IterSVD` the adjoint for a truncated
 SVD from `KrylovKit.svdsolve` is used.
 """
 PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
-function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc=NoTruncation(), p::Real=2)
+function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc = NoTruncation(), p::Real = 2)
     return _tsvd!(t, alg.fwd_alg, trunc, p)
 end
 function PEPSKit.tsvd!(
-    t::AdjointTensorMap, alg::SVDAdjoint; trunc=NoTruncation(), p::Real=2
-)
+        t::AdjointTensorMap, alg::SVDAdjoint; trunc = NoTruncation(), p::Real = 2
+    )
     u, s, vt, info = PEPSKit.tsvd!(adjoint(t), alg; trunc, p)
     return adjoint(vt), adjoint(s), adjoint(u), info
 end
@@ -148,12 +148,12 @@ end
 
 # Copy code from TensorKit but additionally return full U, S and V to make compatible with :fixed mode
 function _tsvd!(
-    t::TensorMap{<:RealOrComplexFloat},
-    alg::Union{TensorKit.SDD,TensorKit.SVD},
-    trunc::TruncationScheme,
-    p::Real,
-)
-    U, S, V⁺, truncerr = TensorKit.tsvd!(t; trunc=NoTruncation(), p, alg)
+        t::TensorMap{<:RealOrComplexFloat},
+        alg::Union{TensorKit.SDD, TensorKit.SVD},
+        trunc::TruncationScheme,
+        p::Real,
+    )
+    U, S, V⁺, truncerr = TensorKit.tsvd!(t; trunc = NoTruncation(), p, alg)
 
     if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
         Sdata = SectorDict(c => diag(b) for (c, b) in blocks(S))
@@ -171,7 +171,7 @@ function _tsvd!(
     # construct info NamedTuple
     condnum = cond(S)
     info = (;
-        truncation_error=truncerr, condition_number=condnum, U_full=U, S_full=S, V_full=V⁺
+        truncation_error = truncerr, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
     )
     return Ũ, S̃, Ṽ⁺, info
 end
@@ -188,7 +188,7 @@ U, S, and V and, potentially, the full decompositions if the adjoints needs acce
 
 $(TYPEDFIELDS)
 """
-struct FixedSVD{Ut,St,Vt,Utf,Stf,Vtf}
+struct FixedSVD{Ut, St, Vt, Utf, Stf, Vtf}
     U::Ut
     S::St
     V::Vt
@@ -209,11 +209,11 @@ end
 # Return pre-computed SVD
 function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
     info = (;
-        truncation_error=0,
-        condition_number=cond(alg.S),
-        U_full=alg.U_full,
-        S_full=alg.S_full,
-        V_full=alg.V_full,
+        truncation_error = 0,
+        condition_number = cond(alg.S),
+        U_full = alg.U_full,
+        S_full = alg.S_full,
+        V_full = alg.V_full,
     )
     return alg.U, alg.S, alg.V, info
 end
@@ -242,7 +242,7 @@ Construct an `IterSVD` algorithm struct based on the following keyword arguments
 * `start_vector=random_start_vector` : Function providing the initial vector for the iterative SVD algorithm.
 """
 @kwdef struct IterSVD
-    alg::KrylovKit.GKL = KrylovKit.GKL(; tol=1e-14, krylovdim=25)
+    alg::KrylovKit.GKL = KrylovKit.GKL(; tol = 1.0e-14, krylovdim = 25)
     fallback_threshold::Float64 = Inf
     start_vector = random_start_vector
 end
@@ -267,17 +267,17 @@ function _tsvd!(f, alg::IterSVD, trunc::TruncationScheme, p::Real)
     # construct info NamedTuple
     condition_number = cond(S)
     info = (;
-        truncation_error, condition_number, U_full=nothing, S_full=nothing, V_full=nothing
+        truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
     )
 
     return U, S, V, info
 end
 function TensorKit._compute_svddata!(
-    f, alg::IterSVD, trunc::Union{NoTruncation,TruncationSpace}
-)
+        f, alg::IterSVD, trunc::Union{NoTruncation, TruncationSpace}
+    )
     InnerProductStyle(f) === EuclideanInnerProduct() || throw_invalid_innerproduct(:full!)
     I = sectortype(f)
-    dims = SectorDict{I,Int}()
+    dims = SectorDict{I, Int}()
 
     sectors = trunc isa NoTruncation ? blocksectors(f) : blocksectors(trunc.space)
     generator = Base.Iterators.map(sectors) do c
@@ -302,7 +302,7 @@ function TensorKit._compute_svddata!(
                 V = V[1:howmany, :]
             else  # Slice in case more values were converged than requested
                 U = stack(view(lvecs, 1:howmany))
-                V = stack(conj, view(rvecs, 1:howmany); dims=1)
+                V = stack(conj, view(rvecs, 1:howmany); dims = 1)
             end
         end
 
@@ -319,12 +319,12 @@ end
 
 # TensorKit.tsvd! rrule with info NamedTuple return value
 function ChainRulesCore.rrule(
-    ::typeof(PEPSKit.tsvd!),
-    t::AbstractTensorMap,
-    alg::SVDAdjoint{F,R};
-    trunc::TruncationScheme=TensorKit.NoTruncation(),
-    p::Real=2,
-) where {F,R<:FullSVDReverseRule}
+        ::typeof(PEPSKit.tsvd!),
+        t::AbstractTensorMap,
+        alg::SVDAdjoint{F, R};
+        trunc::TruncationScheme = TensorKit.NoTruncation(),
+        p::Real = 2,
+    ) where {F, R <: FullSVDReverseRule}
     @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with tsvd reverse-rule"
     Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
@@ -350,14 +350,14 @@ function ChainRulesCore.rrule(
                 ΔUc,
                 ΔSdc,
                 ΔV⁺c;
-                tol=pullback_tol,
-                broadening=alg.rrule_alg.broadening,
-                verbosity=alg.rrule_alg.verbosity,
+                tol = pullback_tol,
+                broadening = alg.rrule_alg.broadening,
+                verbosity = alg.rrule_alg.verbosity,
             )
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd!_nothing_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd!_nothing_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
@@ -366,18 +366,18 @@ end
 
 # KrylovKit rrule compatible with TensorMaps & function handles
 function ChainRulesCore.rrule(
-    ::typeof(PEPSKit.tsvd!),
-    f,
-    alg::SVDAdjoint{F,R};
-    trunc::TruncationScheme=notrunc(),
-    p::Real=2,
-) where {F,R<:Union{GMRES,BiCGStab,Arnoldi}}
+        ::typeof(PEPSKit.tsvd!),
+        f,
+        alg::SVDAdjoint{F, R};
+        trunc::TruncationScheme = notrunc(),
+        p::Real = 2,
+    ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
     U, S, V, info = tsvd(f, alg; trunc, p)
 
     # update rrule_alg tolerance to be compatible with smallest singular value
     rrule_alg = alg.rrule_alg
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
-    proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1e-2 * smallest_sval)
+    proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
     rrule_alg = @set rrule_alg.tol = proper_tol
 
     function tsvd!_itersvd_pullback(ΔUSVi)
@@ -396,7 +396,7 @@ function ChainRulesCore.rrule(
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
-            minimal_alg = GKL(; tol=rrule_alg.tol, verbosity=1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings 
+            minimal_alg = GKL(; tol = rrule_alg.tol, verbosity = 1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings
 
             if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
                 Δlvecs = fill(ZeroTangent(), n_vals)
@@ -428,7 +428,7 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δf, NoTangent()
     end
-    function tsvd!_itersvd_pullback(::Tuple{ZeroTangent,ZeroTangent,ZeroTangent})
+    function tsvd!_itersvd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
@@ -439,7 +439,7 @@ end
 _safe_inv(x, tol) = abs(x) < tol ? zero(x) : inv(x)
 
 # compute inverse singular value difference contribution to SVD gradient with broadening ε
-function _broadened_inv_S(S::AbstractVector{T}, tol, ε=0) where {T}
+function _broadened_inv_S(S::AbstractVector{T}, tol, ε = 0) where {T}
     F = similar(S, (axes(S, 1), axes(S, 1)))
     @inbounds for j in axes(F, 2), i in axes(F, 1)
         F[i, j] = if i == j
@@ -454,7 +454,7 @@ end
 
 # Lorentzian broadening for divergent term in SVD rrule, see
 # https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.7.013237
-function _lorentz_broaden(x, ε=eps(real(scalartype(x)))^(3 / 4))
+function _lorentz_broaden(x, ε = eps(real(scalartype(x)))^(3 / 4))
     return x / (x^2 + ε)
 end
 
@@ -471,7 +471,7 @@ end
 #
 # Arguments are U, S and Vd of full (non-truncated, but still thin) SVD, as well as
 # cotangent ΔU, ΔS, ΔVd variables of truncated SVD
-# 
+#
 # Checks whether the cotangent variables are such that they would couple to gauge-dependent
 # degrees of freedom (phases of singular vectors), and prints a warning if this is the case
 #
@@ -482,17 +482,17 @@ end
 # no scalar indexing, lots of broadcasting and views
 #
 function svd_pullback!(
-    ΔA::AbstractMatrix,
-    U::AbstractMatrix,
-    S::AbstractVector,
-    Vd::AbstractMatrix,
-    ΔU,
-    ΔS,
-    ΔVd;
-    tol::Real=_default_pullback_gaugetol(S),
-    broadening::Real=0,
-    verbosity=1,
-)
+        ΔA::AbstractMatrix,
+        U::AbstractMatrix,
+        S::AbstractVector,
+        Vd::AbstractMatrix,
+        ΔU,
+        ΔS,
+        ΔVd;
+        tol::Real = _default_pullback_gaugetol(S),
+        broadening::Real = 0,
+        verbosity = 1,
+    )
 
     # Basic size checks and determination
     m, n = size(U, 1), size(Vd, 2)
@@ -522,7 +522,7 @@ function svd_pullback!(
     Sp = view(S, 1:p)
 
     # rank
-    r = searchsortedlast(S, tol; rev=true)
+    r = searchsortedlast(S, tol; rev = true)
 
     # compute antihermitian part of projection of ΔU and ΔV onto U and V
     # also already subtract this projection from ΔU and ΔV
@@ -589,13 +589,13 @@ function svd_pullback!(
             VrΔV = fill!(similar(Vd, (r - p, p)), 0)
         end
 
-        X = @. (1//2) * (
+        X = @. (1 // 2) * (
             (UrΔU + VrΔV) * _safe_inv(Sp' - Sr, tol) +
-            (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
+                (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
         )
-        Y = @. (1//2) * (
+        Y = @. (1 // 2) * (
             (UrΔU + VrΔV) * _safe_inv(Sp' - Sr, tol) -
-            (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
+                (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
         )
 
         # ΔA += Ur * X * Vp' + Up * Y' * Vr'

@@ -28,10 +28,10 @@ end
 Check if two 2-site bonds are related by a (periodic) lattice translation.
 """
 function is_equivalent_bond(
-    bond1::NTuple{2,CartesianIndex{2}},
-    bond2::NTuple{2,CartesianIndex{2}},
-    (Nrow, Ncol)::NTuple{2,Int},
-)
+        bond1::NTuple{2, CartesianIndex{2}},
+        bond2::NTuple{2, CartesianIndex{2}},
+        (Nrow, Ncol)::NTuple{2, Int},
+    )
     r1 = bond1[1] - bond1[2]
     r2 = bond2[1] - bond2[2]
     shift_row = bond1[1][1] - bond2[1][1]
@@ -45,7 +45,7 @@ end
 Get the term of a 2-site gate acting on a certain bond.
 Input `gate` should only include one term for each nearest neighbor bond.
 """
-function get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
+function get_gateterm(gate::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
     bonds = findall(p -> is_equivalent_bond(p.first, bond, size(gate.lattice)), gate.terms)
     if length(bonds) == 0
         # try reversed site order
@@ -135,11 +135,11 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
 """
 function _apply_gate(
-    a::AbstractTensorMap{T,S},
-    b::AbstractTensorMap{T,S},
-    gate::AbstractTensorMap{T,S,2,2},
-    trscheme::TruncationScheme,
-) where {T<:Number,S<:ElementarySpace}
+        a::AbstractTensorMap{T, S},
+        b::AbstractTensorMap{T, S},
+        gate::AbstractTensorMap{T, S, 2, 2},
+        trscheme::TruncationScheme,
+    ) where {T <: Number, S <: ElementarySpace}
     @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     trunc = if trscheme isa FixedSpaceTruncation
         V = space(b, 1)
@@ -147,7 +147,7 @@ function _apply_gate(
     else
         trscheme
     end
-    return tsvd!(a2b2; trunc, alg=TensorKit.SVD())
+    return tsvd!(a2b2; trunc, alg = TensorKit.SVD())
 end
 
 """
@@ -162,8 +162,8 @@ in which the axes are ordered as
 ```
 """
 function gate_to_mpo3(
-    gate::AbstractTensorMap{T,S,3,3}, trunc=truncbelow(MPSKit.Defaults.tol)
-) where {T<:Number,S<:ElementarySpace}
+        gate::AbstractTensorMap{T, S, 3, 3}, trunc = truncbelow(MPSKit.Defaults.tol)
+    ) where {T <: Number, S <: ElementarySpace}
     Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
     g1 = removeunit(Os[1], 1)
     g2 = Os[2]
@@ -201,9 +201,9 @@ function _get_gatempo_se(ham::LocalOperator, dt::Number, row::Int, col::Int)
     # NN / NNN bonds are counted 4 / 2 times, respectively.
     @tensor Odt[i' j' k'; i j k] :=
         -dt * (
-            (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4 +
+        (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4 +
             (nb2[i' k'; i k] * units[2][j'; j]) / 2
-        )
+    )
     op = exp(Odt)
     return gate_to_mpo3(op)
 end

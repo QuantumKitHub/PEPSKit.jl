@@ -134,18 +134,18 @@ Perform QR decomposition through a PEPS tensor
 ```
 """
 function qr_through(
-    R0::AbstractTensorMap{T,S,1,1}, M::AbstractTensorMap{T,S,1,4}; normalize::Bool=true
-) where {T<:Number,S<:ElementarySpace}
+        R0::AbstractTensorMap{T, S, 1, 1}, M::AbstractTensorMap{T, S, 1, 4}; normalize::Bool = true
+    ) where {T <: Number, S <: ElementarySpace}
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1; -2 -3 -4 -5]
-    q, r = leftorth!(A; alg=QRpos())
+    q, r = leftorth!(A; alg = QRpos())
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
 end
 function qr_through(
-    ::Nothing, M::AbstractTensorMap{T,S,1,4}; normalize::Bool=true
-) where {T<:Number,S<:ElementarySpace}
-    q, r = leftorth(M, ((1, 2, 3, 4), (5,)); alg=QRpos())
+        ::Nothing, M::AbstractTensorMap{T, S, 1, 4}; normalize::Bool = true
+    ) where {T <: Number, S <: ElementarySpace}
+    q, r = leftorth(M, ((1, 2, 3, 4), (5,)); alg = QRpos())
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
@@ -160,18 +160,18 @@ Perform LQ decomposition through a tensor
 ```
 """
 function lq_through(
-    M::AbstractTensorMap{T,S,1,4}, L1::AbstractTensorMap{T,S,1,1}; normalize::Bool=true
-) where {T<:Number,S<:ElementarySpace}
+        M::AbstractTensorMap{T, S, 1, 4}, L1::AbstractTensorMap{T, S, 1, 1}; normalize::Bool = true
+    ) where {T <: Number, S <: ElementarySpace}
     @plansor A[-1; -2 -3 -4 -5] := M[-1; -2 -3 -4 1] * L1[1; -5]
-    l, q = rightorth!(A; alg=LQpos())
+    l, q = rightorth!(A; alg = LQpos())
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
 end
 function lq_through(
-    M::AbstractTensorMap{T,S,1,4}, ::Nothing; normalize::Bool=true
-) where {T<:Number,S<:ElementarySpace}
-    l, q = rightorth(M; alg=LQpos())
+        M::AbstractTensorMap{T, S, 1, 4}, ::Nothing; normalize::Bool = true
+    ) where {T <: Number, S <: ElementarySpace}
+    l, q = rightorth(M; alg = LQpos())
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
@@ -180,20 +180,20 @@ end
 """
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 """
-function _get_allRLs(Ms::Vector{T}) where {T<:PEPSTensor}
+function _get_allRLs(Ms::Vector{T}) where {T <: PEPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     # get the first R and the last L
-    R_first = qr_through(nothing, Ms[1]; normalize=true)[2]
-    L_last = lq_through(Ms[N], nothing; normalize=true)[1]
+    R_first = qr_through(nothing, Ms[1]; normalize = true)[2]
+    L_last = lq_through(Ms[N], nothing; normalize = true)[1]
     Rs = Vector{typeof(R_first)}(undef, N - 1)
     Ls = Vector{typeof(L_last)}(undef, N - 1)
     Rs[1], Ls[end] = R_first, L_last
     # get remaining R, L matrices
     for n in 2:(N - 1)
         m = N - n + 1
-        _, Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize=true)
-        Ls[m - 1], _ = lq_through(Ms[m], Ls[m]; normalize=true)
+        _, Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true)
+        Ls[m - 1], _ = lq_through(Ms[m], Ls[m]; normalize = true)
     end
     return Rs, Ls
 end
@@ -213,11 +213,11 @@ The arrows between `Pa`, `s`, `Pb` are
 ```
 """
 function _proj_from_RL(
-    r::AbstractTensorMap{T,S,1,1},
-    l::AbstractTensorMap{T,S,1,1};
-    trunc::TruncationScheme=notrunc(),
-    rev::Bool=false,
-) where {T<:Number,S<:ElementarySpace}
+        r::AbstractTensorMap{T, S, 1, 1},
+        l::AbstractTensorMap{T, S, 1, 1};
+        trunc::TruncationScheme = notrunc(),
+        rev::Bool = false,
+    ) where {T <: Number, S <: ElementarySpace}
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
     u, s, vh, ϵ = tsvd!(rl; trunc)
@@ -236,8 +236,8 @@ Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
 find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
-    Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
-) where {E<:TruncationScheme}
+        Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
+    ) where {E <: TruncationScheme}
     N = length(Ms)
     @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
@@ -247,7 +247,7 @@ function _get_allprojs(
         else
             trschemes[i]
         end
-        return _proj_from_RL(Rs[i], Ls[i]; trunc, rev=revs[i])
+        return _proj_from_RL(Rs[i], Ls[i]; trunc, rev = revs[i])
     end
     Pas = map(Base.Fix2(getindex, 1), projs_errs)
     wts = map(Base.Fix2(getindex, 2), projs_errs)
@@ -261,8 +261,8 @@ end
 Find projectors to truncate internal bonds of the cluster `Ms`
 """
 function _cluster_truncate!(
-    Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
-) where {T<:PEPSTensor,E<:TruncationScheme}
+        Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
+    ) where {T <: PEPSTensor, E <: TruncationScheme}
     Rs, Ls = _get_allRLs(Ms)
     Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
     # apply projectors
@@ -275,8 +275,8 @@ function _cluster_truncate!(
 end
 
 function _apply_gatempo!(
-    Ms::Vector{T1}, gs::Vector{T2}
-) where {T1<:PEPSTensor,T2<:AbstractTensorMap}
+        Ms::Vector{T1}, gs::Vector{T2}
+    ) where {T1 <: PEPSTensor, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert all(!isdual(space(g, 1)) for g in gs[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
@@ -325,8 +325,8 @@ In the cluster, the axes of each PEPSTensor are reordered as
 ```
 """
 function apply_gatempo!(
-    Ms::Vector{T1}, gs::Vector{T2}; trschemes::Vector{E}
-) where {T1<:PEPSTensor,T2<:AbstractTensorMap,E<:TruncationScheme}
+        Ms::Vector{T1}, gs::Vector{T2}; trschemes::Vector{E}
+    ) where {T1 <: PEPSTensor, T2 <: AbstractTensorMap, E <: TruncationScheme}
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     @assert !all(revs)
@@ -340,9 +340,9 @@ const sqrtwts_se = [ntuple(dir -> !(dir in idxs), 4) for idxs in openaxs_se]
 const invperms_se = [((2,), (3, 5, 4, 1)), ((2,), (5, 3, 4, 1)), ((2,), (5, 3, 1, 4))]
 const perms_se = [
     begin
-        p = invperm((p1..., p2...))
-        ((p[1],), p[2:end])
-    end for (p1, p2) in invperms_se
+            p = invperm((p1..., p2...))
+            ((p[1],), p[2:end])
+        end for (p1, p2) in invperms_se
 ]
 """
 Obtain the following 3-site cluster
@@ -360,24 +360,24 @@ function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
     cluster = collect(
         permute(
-            _absorb_weights(
-                peps.vertices[CartesianIndex(coord)],
-                peps.weights,
-                coord[1],
-                coord[2],
-                Tuple(1:4),
-                sqrtwts,
-                false,
-            ),
-            perm,
-        ) for (coord, sqrtwts, perm) in zip(coords_se, sqrtwts_se, perms_se)
+                _absorb_weights(
+                    peps.vertices[CartesianIndex(coord)],
+                    peps.weights,
+                    coord[1],
+                    coord[2],
+                    Tuple(1:4),
+                    sqrtwts,
+                    false,
+                ),
+                perm,
+            ) for (coord, sqrtwts, perm) in zip(coords_se, sqrtwts_se, perms_se)
     )
     return cluster
 end
 
 function _su3site_se!(
-    row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, trschemes::Vector{E}
-) where {T<:AbstractTensorMap,E<:TruncationScheme}
+        row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, trschemes::Vector{E}
+    ) where {T <: AbstractTensorMap, E <: TruncationScheme}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
@@ -408,8 +408,8 @@ end
 One round of 3-site simple update. 
 """
 function su3site_iter(
-    gatempos::Vector{G}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
-) where {G<:AbstractMatrix}
+        gatempos::Vector{G}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
+    ) where {G <: AbstractMatrix}
     Nr, Nc = size(peps)
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError(
@@ -438,8 +438,8 @@ end
 Perform 3-site simple update for Hamiltonian `ham`.
 """
 function _simpleupdate3site(
-    peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int=500
-)
+        peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int = 500
+    )
     time_start = time()
     # convert Hamiltonian to 3-site exponentiated gate MPOs
     gatempos = [

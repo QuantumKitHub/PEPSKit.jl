@@ -52,15 +52,15 @@ _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a)
 
 Compute `s^pow` for a diagonal matrix `s`.
 """
-function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
+function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(scalartype(s))^(3 / 4))
     # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
     tol *= norm(s, Inf)
     spow = DiagonalTensorMap(_safe_pow.(s.data, pow, tol), space(s, 1))
     return spow
 end
 function sdiag_pow(
-    s::AbstractTensorMap{T,S,1,1}, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4)
-) where {T,S}
+        s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(scalartype(s))^(3 / 4)
+    ) where {T, S}
     # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
     tol *= norm(s, Inf)
     spow = similar(s)
@@ -73,11 +73,11 @@ function sdiag_pow(
 end
 
 function ChainRulesCore.rrule(
-    ::typeof(sdiag_pow),
-    s::AbstractTensorMap,
-    pow::Real;
-    tol::Real=eps(scalartype(s))^(3 / 4),
-)
+        ::typeof(sdiag_pow),
+        s::AbstractTensorMap,
+        pow::Real;
+        tol::Real = eps(scalartype(s))^(3 / 4),
+    )
     tol *= norm(s, Inf)
     spow = sdiag_pow(s, pow; tol)
     spow_minus1_conj = scale!(sdiag_pow(s', pow - 1; tol), pow)
@@ -138,7 +138,7 @@ Fermionic supertrace by using `@tensor`.
 """
 str(t::AbstractTensorMap) = _str(BraidingStyle(sectortype(t)), t)
 _str(::Bosonic, t::AbstractTensorMap) = tr(t)
-@generated function _str(::Fermionic, t::AbstractTensorMap{<:Any,<:Any,N,N}) where {N}
+@generated function _str(::Fermionic, t::AbstractTensorMap{<:Any, <:Any, N, N}) where {N}
     tex = tensorexpr(:t, ntuple(identity, N), ntuple(identity, N))
     return macroexpand(@__MODULE__, :(@tensor $tex))
 end
@@ -149,8 +149,8 @@ end
 Compute `tr(H * ρ)` without forming `H * ρ`.
 """
 @generated function trmul(
-    H::AbstractTensorMap{<:Any,S,N,N}, ρ::AbstractTensorMap{<:Any,S,N,N}
-) where {S,N}
+        H::AbstractTensorMap{<:Any, S, N, N}, ρ::AbstractTensorMap{<:Any, S, N, N}
+    ) where {S, N}
     Hex = tensorexpr(:H, ntuple(identity, N), ntuple(i -> i + N, N))
     ρex = tensorexpr(:ρ, ntuple(i -> i + N, N), ntuple(identity, N))
     return macroexpand(@__MODULE__, :(@tensor $Hex * $ρex))
@@ -158,8 +158,8 @@ end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance
 function is_degenerate_spectrum(
-    S; atol::Real=0, rtol::Real=atol > 0 ? 0 : sqrt(eps(scalartype(S)))
-)
+        S; atol::Real = 0, rtol::Real = atol > 0 ? 0 : sqrt(eps(scalartype(S)))
+    )
     for (_, b) in blocks(S)
         s = real(diag(b))
         for i in 1:(length(s) - 1)
@@ -234,7 +234,7 @@ function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...
             end
         end
         return (
-            NoTangent(), backwards_a, backwards_tv, fill(ZeroTangent(), length(args))...
+            NoTangent(), backwards_a, backwards_tv, fill(ZeroTangent(), length(args))...,
         )
     end
     return t, _setindex_pullback

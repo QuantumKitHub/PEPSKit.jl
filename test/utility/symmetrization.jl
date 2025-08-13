@@ -8,7 +8,7 @@ using TensorKit
 
     peps_depth = symmetrize!(deepcopy(peps), ReflectDepth())
     peps_reflect = _fit_spaces(
-        InfinitePEPS(reverse(map(herm_depth, peps_depth.A); dims=1)), peps_depth
+        InfinitePEPS(reverse(map(herm_depth, peps_depth.A); dims = 1)), peps_depth
     )
     @test peps_depth ≈ peps_reflect
 end
@@ -18,7 +18,7 @@ end
 
     peps_width = symmetrize!(deepcopy(peps), ReflectWidth())
     peps_reflect = _fit_spaces(
-        InfinitePEPS(reverse(map(herm_width, peps_width.A); dims=2)), peps_width
+        InfinitePEPS(reverse(map(herm_width, peps_width.A); dims = 2)), peps_width
     )
     @test peps_width ≈ peps_reflect
 end
@@ -41,12 +41,12 @@ end
     @test peps_full ≈ _fit_spaces(rotr90(peps_full), peps_full)
 
     peps_reflect_depth = _fit_spaces(
-        InfinitePEPS(reverse(map(herm_depth, peps_full.A); dims=1)), peps_full
+        InfinitePEPS(reverse(map(herm_depth, peps_full.A); dims = 1)), peps_full
     )
     @test peps_full ≈ peps_reflect_depth
 
     peps_reflect_width = _fit_spaces(
-        InfinitePEPS(reverse(map(herm_width, peps_full.A); dims=2)), peps_full
+        InfinitePEPS(reverse(map(herm_width, peps_full.A); dims = 2)), peps_full
     )
     @test peps_full ≈ peps_reflect_width
 end

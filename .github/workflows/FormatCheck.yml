@@ -1,4 +1,4 @@
-name: "Format Check"
+name: FormatCheck
 
 on:
   push:
@@ -7,10 +7,12 @@ on:
       - 'master'
     tags: '*'
   pull_request:
+    branches:
+      - 'main'
+      - 'master'
 
 jobs:
-  format-check:
+  formatcheck:
     name: "Format Check"
-    uses: "QuantumKitHub/.github/.github/workflows/formatcheck.yml@main"
-    with: 
-      juliaformatter-version: "2"
+    uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/FormatCheck.yml@main"
+    

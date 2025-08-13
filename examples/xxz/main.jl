@@ -31,7 +31,7 @@ parameters:
 
 J = 1.0
 Delta = 1.0
-spin = 1//2
+spin = 1 // 2
 symmetry = U1Irrep
 lattice = InfiniteSquare(2, 2)
 H₀ = heisenberg_XXZ(ComplexF64, symmetry, lattice; J, Delta, spin);
@@ -43,8 +43,8 @@ charges:
 """
 
 S_aux = [
-    U1Irrep(-1//2) U1Irrep(1//2)
-    U1Irrep(1//2) U1Irrep(-1//2)
+    U1Irrep(-1 // 2) U1Irrep(1 // 2)
+    U1Irrep(1 // 2) U1Irrep(-1 // 2)
 ]
 H = add_physical_charge(H₀, S_aux);
 
@@ -71,9 +71,9 @@ From this point onwards it's business as usual: Create an initial PEPS and envir
 (using the symmetric spaces), specify the algorithmic parameters and optimize:
 """
 
-boundary_alg = (; tol=1e-8, alg=:simultaneous, trscheme=(; alg=:fixedspace))
-gradient_alg = (; tol=1e-6, alg=:eigsolver, maxiter=10, iterscheme=:diffgauge)
-optimizer_alg = (; tol=1e-4, alg=:lbfgs, maxiter=85, ls_maxiter=3, ls_maxfg=3)
+boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trscheme = (; alg = :fixedspace))
+gradient_alg = (; tol = 1.0e-6, alg = :eigsolver, maxiter = 10, iterscheme = :diffgauge)
+optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 85, ls_maxiter = 3, ls_maxfg = 3)
 
 peps₀ = InfinitePEPS(randn, ComplexF64, physical_spaces, virtual_spaces)
 env₀, = leading_boundary(CTMRGEnv(peps₀, V_env), peps₀; boundary_alg...);
@@ -86,7 +86,7 @@ and environment dimensions):
 """
 
 peps, env, E, info = fixedpoint(
-    H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity=3
+    H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity = 3
 )
 @show E;
 

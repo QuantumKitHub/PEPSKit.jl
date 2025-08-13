@@ -51,19 +51,19 @@ function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, env::CTMRGEnv)
     =#
     @autoopt @tensor benv[DX1 DY1; DX0 DY0] := (
         c4[χ3 χ1] *
-        t4[χ1 DWX0 DWX1 χ2] *
-        c1[χ2 χ4] *
-        t3X[χ5 DSX0 DSX1 χ3] *
-        X[DNX0 DX0 DSX0 DWX0] *
-        conj(X[DNX1 DX1 DSX1 DWX1]) *
-        t1X[χ4 DNX0 DNX1 χ6] *
-        c3[χ9 χ7] *
-        t2[χ10 DEY0 DEY1 χ9] *
-        c2[χ8 χ10] *
-        t3Y[χ7 DSY0 DSY1 χ5] *
-        Y[DNY0 DEY0 DSY0 DY0] *
-        conj(Y[DNY1 DEY1 DSY1 DY1]) *
-        t1Y[χ6 DNY0 DNY1 χ8]
+            t4[χ1 DWX0 DWX1 χ2] *
+            c1[χ2 χ4] *
+            t3X[χ5 DSX0 DSX1 χ3] *
+            X[DNX0 DX0 DSX0 DWX0] *
+            conj(X[DNX1 DX1 DSX1 DWX1]) *
+            t1X[χ4 DNX0 DNX1 χ6] *
+            c3[χ9 χ7] *
+            t2[χ10 DEY0 DEY1 χ9] *
+            c2[χ8 χ10] *
+            t3Y[χ7 DSY0 DSY1 χ5] *
+            Y[DNY0 DEY0 DSY0 DY0] *
+            conj(Y[DNY1 DEY1 DSY1 DY1]) *
+            t1Y[χ6 DNY0 DNY1 χ8]
     )
     normalize!(benv, Inf)
     return benv

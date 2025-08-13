@@ -23,7 +23,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
-struct SimultaneousCTMRG{P<:ProjectorAlgorithm} <: CTMRGAlgorithm
+struct SimultaneousCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     tol::Float64
     maxiter::Int
     miniter::Int
@@ -31,7 +31,7 @@ struct SimultaneousCTMRG{P<:ProjectorAlgorithm} <: CTMRGAlgorithm
     projector_alg::P
 end
 function SimultaneousCTMRG(; kwargs...)
-    return CTMRGAlgorithm(; alg=:simultaneous, kwargs...)
+    return CTMRGAlgorithm(; alg = :simultaneous, kwargs...)
 end
 
 CTMRG_SYMBOLS[:simultaneous] = SimultaneousCTMRG
@@ -44,8 +44,8 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners′ = similar(coordinates, T_corners)
     enlarged_corners::typeof(enlarged_corners′) =
         dtmap!!(enlarged_corners′, eachcoordinate(network, 1:4)) do idx
-            return TensorMap(EnlargedCorner(network, env, idx))
-        end  # expand environment
+        return TensorMap(EnlargedCorner(network, env, idx))
+    end  # expand environment
     projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)  # renormalize enlarged corners
     return env′, info
@@ -76,12 +76,12 @@ Compute CTMRG projectors in the `:simultaneous` scheme either for all provided
 enlarged corners or on a specific `coordinate`.
 """
 function simultaneous_projectors(
-    enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm
-) where {E}
+        enlarged_corners::Array{E, 3}, env::CTMRGEnv, alg::ProjectorAlgorithm
+    ) where {E}
     coordinates = eachcoordinate(env, 1:4)
     T_dst = Base.promote_op(
         simultaneous_projectors,
-        NTuple{3,Int},
+        NTuple{3, Int},
         typeof(enlarged_corners),
         typeof(env),
         typeof(alg),
@@ -89,13 +89,13 @@ function simultaneous_projectors(
     proj_and_info′ = similar(coordinates, T_dst)
     proj_and_info::typeof(proj_and_info′) =
         dtmap!!(proj_and_info′, coordinates) do coordinate
-            return simultaneous_projectors(coordinate, enlarged_corners, env, alg)
-        end
+        return simultaneous_projectors(coordinate, enlarged_corners, env, alg)
+    end
     return _split_proj_and_info(proj_and_info)
 end
 function simultaneous_projectors(
-    coordinate, enlarged_corners::Array{E,3}, env, alg::HalfInfiniteProjector
-) where {E}
+        coordinate, enlarged_corners::Array{E, 3}, env, alg::HalfInfiniteProjector
+    ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
     trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
     alg′ = @set alg.trscheme = trscheme
@@ -103,8 +103,8 @@ function simultaneous_projectors(
     return compute_projector(ec, coordinate, alg′)
 end
 function simultaneous_projectors(
-    coordinate, enlarged_corners::Array{E,3}, env, alg::FullInfiniteProjector
-) where {E}
+        coordinate, enlarged_corners::Array{E, 3}, env, alg::FullInfiniteProjector
+    ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
     trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
     alg′ = @set alg.trscheme = trscheme
@@ -129,33 +129,33 @@ Renormalize all enlarged corners and edges simultaneously.
 function renormalize_simultaneously(enlarged_corners, projectors, network, env)
     P_left, P_right = projectors
     coordinates = eachcoordinate(env, 1:4)
-    T_CE = Tuple{cornertype(env),edgetype(env)}
+    T_CE = Tuple{cornertype(env), edgetype(env)}
     corners_edges′ = similar(coordinates, T_CE)
     corners_edges::typeof(corners_edges′) =
         dtmap!!(corners_edges′, coordinates) do (dir, r, c)
-            if dir == NORTH
-                corner = renormalize_northwest_corner(
-                    (r, c), enlarged_corners, P_left, P_right
-                )
-                edge = renormalize_north_edge((r, c), env, P_left, P_right, network)
-            elseif dir == EAST
-                corner = renormalize_northeast_corner(
-                    (r, c), enlarged_corners, P_left, P_right
-                )
-                edge = renormalize_east_edge((r, c), env, P_left, P_right, network)
-            elseif dir == SOUTH
-                corner = renormalize_southeast_corner(
-                    (r, c), enlarged_corners, P_left, P_right
-                )
-                edge = renormalize_south_edge((r, c), env, P_left, P_right, network)
-            elseif dir == WEST
-                corner = renormalize_southwest_corner(
-                    (r, c), enlarged_corners, P_left, P_right
-                )
-                edge = renormalize_west_edge((r, c), env, P_left, P_right, network)
-            end
-            return corner / norm(corner), edge / norm(edge)
+        if dir == NORTH
+            corner = renormalize_northwest_corner(
+                (r, c), enlarged_corners, P_left, P_right
+            )
+            edge = renormalize_north_edge((r, c), env, P_left, P_right, network)
+        elseif dir == EAST
+            corner = renormalize_northeast_corner(
+                (r, c), enlarged_corners, P_left, P_right
+            )
+            edge = renormalize_east_edge((r, c), env, P_left, P_right, network)
+        elseif dir == SOUTH
+            corner = renormalize_southeast_corner(
+                (r, c), enlarged_corners, P_left, P_right
+            )
+            edge = renormalize_south_edge((r, c), env, P_left, P_right, network)
+        elseif dir == WEST
+            corner = renormalize_southwest_corner(
+                (r, c), enlarged_corners, P_left, P_right
+            )
+            edge = renormalize_west_edge((r, c), env, P_left, P_right, network)
         end
+        return corner / norm(corner), edge / norm(edge)
+    end
 
     return CTMRGEnv(map(first, corners_edges), map(last, corners_edges))
 end
