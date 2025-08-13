@@ -7,12 +7,15 @@ authors:
   - family-names: "Burgelman"
     given-names: "Lander"
     orcid: "https://orcid.org/0000-0003-1724-5330"
+  - family-names: "Yue"
+    given-names: "Zhengyuan"
+    orcid: "https://orcid.org/0000-0001-7065-7989"
   - family-names: "Devos"
     given-names: "Lukas"
     orcid: "https://orcid.org/0000-0002-0256-4200"
 title: "PEPSKit"
-version: 0.2.2
+version: 0.6.1
 identifiers:
   - type: doi
     value: 10.5281/zenodo.13938737
-date-released: 2021-10-16
+date-released: 2025-08-06
