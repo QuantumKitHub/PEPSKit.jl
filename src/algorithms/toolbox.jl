@@ -79,14 +79,14 @@ Contract around a single site `ind` of a square network using a given CTMRG envi
 function _contract_site(ind::Tuple{Int,Int}, network, env::CTMRGEnv)
     r, c = ind
     return _contract_site(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-        env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-        env.edges[NORTH, _prev(r, end), c],
-        env.edges[EAST, r, _next(c, end)],
-        env.edges[SOUTH, _next(r, end), c],
-        env.edges[WEST, r, _prev(c, end)],
+        env.corners[NORTHWEST][_prev(r, end), _prev(c, end)],
+        env.corners[NORTHEAST][_prev(r, end), _next(c, end)],
+        env.corners[SOUTHEAST][_next(r, end), _next(c, end)],
+        env.corners[SOUTHWEST][_next(r, end), _prev(c, end)],
+        env.edges[NORTH][_prev(r, end), c],
+        env.edges[EAST][r, _next(c, end)],
+        env.edges[SOUTH][_next(r, end), c],
+        env.edges[WEST][r, _prev(c, end)],
         network[r, c],
     )
 end
@@ -142,10 +142,10 @@ environment `env`.
 """
 function _contract_corners(ind::Tuple{Int,Int}, env::CTMRGEnv)
     r, c = ind
-    C_NW = env.corners[NORTHWEST, _prev(r, end), _prev(c, end)]
-    C_NE = env.corners[NORTHEAST, _prev(r, end), c]
-    C_SE = env.corners[SOUTHEAST, r, c]
-    C_SW = env.corners[SOUTHWEST, r, _prev(c, end)]
+    C_NW = env.corners[NORTHWEST][_prev(r, end), _prev(c, end)]
+    C_NE = env.corners[NORTHEAST][_prev(r, end), c]
+    C_SE = env.corners[SOUTHEAST][r, c]
+    C_SW = env.corners[SOUTHWEST][r, _prev(c, end)]
     return @tensor C_NW[1; 2] * C_NE[2; 3] * C_SE[3; 4] * C_SW[4; 1]
 end
 
@@ -158,12 +158,12 @@ CTMRG environment `env`.
 function _contract_vertical_edges(ind::Tuple{Int,Int}, env::CTMRGEnv)
     r, c = ind
     return _contract_vertical_edges(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), c],
-        env.corners[SOUTHEAST, _next(r, end), c],
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-        env.edges[EAST, r, c],
-        env.edges[WEST, r, _prev(c, end)],
+        env.corners[NORTHWEST][_prev(r, end), _prev(c, end)],
+        env.corners[NORTHEAST][_prev(r, end), c],
+        env.corners[SOUTHEAST][_next(r, end), c],
+        env.corners[SOUTHWEST][_next(r, end), _prev(c, end)],
+        env.edges[EAST][r, c],
+        env.edges[WEST][r, _prev(c, end)],
     )
 end
 @generated function _contract_vertical_edges(
@@ -209,12 +209,12 @@ CTMRG environment `env`.
 function _contract_horizontal_edges(ind::Tuple{Int,Int}, env::CTMRGEnv)
     r, c = ind
     return _contract_horizontal_edges(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-        env.corners[SOUTHEAST, r, _next(c, end)],
-        env.corners[SOUTHWEST, r, _prev(c, end)],
-        env.edges[NORTH, _prev(r, end), c],
-        env.edges[SOUTH, r, c],
+        env.corners[NORTHWEST][_prev(r, end), _prev(c, end)],
+        env.corners[NORTHEAST][_prev(r, end), _next(c, end)],
+        env.corners[SOUTHEAST][r, _next(c, end)],
+        env.corners[SOUTHWEST][r, _prev(c, end)],
+        env.edges[NORTH][_prev(r, end), c],
+        env.edges[SOUTH][r, c],
     )
 end
 @generated function _contract_horizontal_edges(

@@ -165,7 +165,7 @@ function enlarge_southwest_corner(
     E_west::CTMRG_PEPS_EdgeTensor,
     A::PEPSSandwich,
 )
-    return @tensor contractcheck = true begin
+    return @tensor begin
         EC[χE DSt DSb; χ2] := E_south[χE DSt DSb; χ1] * C_southwest[χ1; χ2]
 
         # already putting χE in front here to make next permute cheaper
@@ -836,9 +836,9 @@ Alternatively, provide the constituent tensors and perform the complete contract
 """
 function renormalize_northwest_corner((row, col), enlarged_env, P_left, P_right)
     return renormalize_northwest_corner(
-        enlarged_env[NORTHWEST, row, col],
-        P_left[NORTH, row, col],
-        P_right[WEST, _next(row, end), col],
+        enlarged_env[NORTHWEST][row, col],
+        P_left[NORTH][row, col],
+        P_right[WEST][row + 1, col],
     )
 end
 function renormalize_northwest_corner(
@@ -899,9 +899,9 @@ Alternatively, provide the constituent tensors and perform the complete contract
 """
 function renormalize_northeast_corner((row, col), enlarged_env, P_left, P_right)
     return renormalize_northeast_corner(
-        enlarged_env[NORTHEAST, row, col],
-        P_left[EAST, row, col],
-        P_right[NORTH, row, _prev(col, end)],
+        enlarged_env[NORTHEAST][row, col],
+        P_left[EAST][row, col],
+        P_right[NORTH][row, col - 1],
     )
 end
 
@@ -964,9 +964,9 @@ Alternatively, provide the constituent tensors and perform the complete contract
 """
 function renormalize_southeast_corner((row, col), enlarged_env, P_left, P_right)
     return renormalize_southeast_corner(
-        enlarged_env[SOUTHEAST, row, col],
-        P_left[SOUTH, row, col],
-        P_right[EAST, _prev(row, end), col],
+        enlarged_env[SOUTHEAST][row, col],
+        P_left[SOUTH][row, col],
+        P_right[EAST][row - 1, col],
     )
 end
 function renormalize_southeast_corner(
@@ -1028,9 +1028,9 @@ Alternatively, provide the constituent tensors and perform the complete contract
 function renormalize_southwest_corner(I, enlarged_env, P_left, P_right)
     row, col = Tuple(I)
     return renormalize_corner(
-        enlarged_env[SOUTHWEST, row, col],
-        P_left[WEST, row, col],
-        P_right[SOUTH, row, _next(col, end)],
+        enlarged_env[SOUTHWEST][row, col],
+        P_left[WEST][row, col],
+        P_right[SOUTH][row, col + 1],
     )
 end
 function renormalize_southwest_corner(
@@ -1076,9 +1076,9 @@ Apply bottom projector to southwest corner and south edge.
 """
 function renormalize_bottom_corner(I, env::CTMRGEnv, projectors)
     row, col = Tuple(I)
-    C_southwest = env.corners[SOUTHWEST, row, _prev(col, end)]
-    E_south = env.edges[SOUTH, row, col]
-    P_bottom = projectors[1][row]
+    C_southwest = env.corners[SOUTHWEST][row, col - 1]
+    E_south = env.edges[SOUTH][row, col]
+    P_bottom = projectors[1][row, col]
     return renormalize_bottom_corner(C_southwest, E_south, P_bottom)
 end
 
@@ -1119,9 +1119,9 @@ Apply top projector to northwest corner and north edge.
 """
 function renormalize_top_corner(I, env::CTMRGEnv, projectors)
     row, col = Tuple(I)
-    C_northwest = env.corners[NORTHWEST, row, _prev(col, end)]
-    E_north = env.edges[NORTH, row, col]
-    P_top = projectors[2][_next(row, end)]
+    C_northwest = env.corners[NORTHWEST][row, col - 1]
+    E_north = env.edges[NORTH][row, col]
+    P_top = projectors[2][row + 1, col]
     return renormalize_top_corner(C_northwest, E_north, P_top)
 end
 @generated function renormalize_top_corner(
@@ -1164,9 +1164,9 @@ function renormalize_north_edge(
 )
     row, col = Tuple(I)
     return renormalize_north_edge(
-        env.edges[NORTH, _prev(row, end), col],
-        P_left[NORTH, row, col],
-        P_right[NORTH, row, _prev(col, end)],
+        env.edges[NORTH][row - 1, col],
+        P_left[NORTH][row, col],
+        P_right[NORTH][row, col - 1],
         network[row, col], # so here it's fine
     )
 end
@@ -1208,9 +1208,9 @@ function renormalize_east_edge(
 )
     row, col = Tuple(I)
     return renormalize_east_edge(
-        env.edges[EAST, row, _next(col, end)],
-        P_bottom[EAST, row, col, end],
-        P_top[EAST, _prev(row, end), col],
+        env.edges[EAST][row, col + 1],
+        P_bottom[EAST][row, col],
+        P_top[EAST][row - 1, col],
         network[row, col],
     )
 end
@@ -1249,9 +1249,9 @@ function renormalize_south_edge(
 )
     row, col = Tuple(I)
     return renormalize_south_edge(
-        env.edges[SOUTH, _next(row, end), col],
-        P_left[SOUTH, row, col],
-        P_right[SOUTH, row, _next(col, end)],
+        env.edges[SOUTH][row + 1, col],
+        P_left[SOUTH][row, col],
+        P_right[SOUTH][row, col + 1],
         network[row, col],
     )
 end
@@ -1296,9 +1296,9 @@ function renormalize_west_edge(  # For simultaneous CTMRG scheme
 )
     row, col = Tuple(I)
     return renormalize_west_edge(
-        env.edges[WEST, row, _prev(col, end)],
-        P_bottom[WEST, row, col],
-        P_top[WEST, _next(row, end), col],
+        env.edges[WEST][row, col - 1],
+        P_bottom[WEST][row, col],
+        P_top[WEST][row + 1, col],
         network[row, col],
     )
 end
@@ -1310,9 +1310,9 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
 )
     row, col = Tuple(I)
     return renormalize_west_edge(
-        env.edges[WEST, row, _prev(col, end)],
-        projectors[1][row],
-        projectors[2][_next(row, end)],
+        env.edges[WEST][row, col - 1],
+        projectors[1][row, col],
+        projectors[2][row + 1, col],
         network[row, col],
     )
 end
@@ -1370,9 +1370,7 @@ Apply `fix_gauge_corner` to the northwest corner with appropriate row and column
 function fix_gauge_northwest_corner(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_corner(
-        env.corners[NORTHWEST, row, col],
-        signs[WEST, row, col],
-        signs[NORTH, row, _next(col, end)],
+        env.corners[NORTHWEST][row, col], signs[WEST][row, col], signs[NORTH][row, col + 1]
     )
 end
 
@@ -1384,9 +1382,7 @@ Apply `fix_gauge_corner` to the northeast corner with appropriate row and column
 function fix_gauge_northeast_corner(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_corner(
-        env.corners[NORTHEAST, row, col],
-        signs[NORTH, row, col],
-        signs[EAST, _next(row, end), col],
+        env.corners[NORTHEAST][row, col], signs[NORTH][row, col], signs[EAST][row + 1, col]
     )
 end
 
@@ -1398,9 +1394,7 @@ Apply `fix_gauge_corner` to the southeast corner with appropriate row and column
 function fix_gauge_southeast_corner(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_corner(
-        env.corners[SOUTHEAST, row, col],
-        signs[EAST, row, col],
-        signs[SOUTH, row, _prev(col, end)],
+        env.corners[SOUTHEAST][row, col], signs[EAST][row, col], signs[SOUTH][row, col - 1]
     )
 end
 
@@ -1412,9 +1406,7 @@ Apply `fix_gauge_corner` to the southwest corner with appropriate row and column
 function fix_gauge_southwest_corner(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_corner(
-        env.corners[SOUTHWEST, row, col],
-        signs[SOUTH, row, col],
-        signs[WEST, _prev(row, end), col],
+        env.corners[SOUTHWEST][row, col], signs[SOUTH][row, col], signs[WEST][row - 1, col]
     )
 end
 
@@ -1456,9 +1448,7 @@ Apply `fix_gauge_edge` to the north edge with appropriate row and column indices
 function fix_gauge_north_edge(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_edge(
-        env.edges[NORTH, row, col],
-        signs[NORTH, row, col],
-        signs[NORTH, row, _next(col, end)],
+        env.edges[NORTH][row, col], signs[NORTH][row, col], signs[NORTH][row, col + 1]
     )
 end
 
@@ -1470,7 +1460,7 @@ Apply `fix_gauge_edge` to the east edge with appropriate row and column indices.
 function fix_gauge_east_edge(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_edge(
-        env.edges[EAST, row, col], signs[EAST, row, col], signs[EAST, _next(row, end), col]
+        env.edges[EAST][row, col], signs[EAST][row, col], signs[EAST][row + 1, col]
     )
 end
 
@@ -1482,9 +1472,7 @@ Apply `fix_gauge_edge` to the south edge with appropriate row and column indices
 function fix_gauge_south_edge(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_edge(
-        env.edges[SOUTH, row, col],
-        signs[SOUTH, row, col],
-        signs[SOUTH, row, _prev(col, end)],
+        env.edges[SOUTH][row, col], signs[SOUTH][row, col], signs[SOUTH][row, col - 1]
     )
 end
 
@@ -1496,7 +1484,7 @@ Apply `fix_gauge_edge` to the west edge with appropriate row and column indices.
 function fix_gauge_west_edge(I, env::CTMRGEnv, signs)
     row, col = Tuple(I)
     return fix_gauge_edge(
-        env.edges[WEST, row, col], signs[WEST, row, col], signs[WEST, _prev(row, end), col]
+        env.edges[WEST][row, col], signs[WEST][row, col], signs[WEST][row - 1, col]
     )
 end
 
@@ -1509,7 +1497,7 @@ Multiply north left singular vectors with gauge signs from the right.
 """
 function fix_gauge_north_left_vecs(I, U, signs)
     row, col = Tuple(I)
-    return U[NORTH, row, col] * signs[NORTH, row, _next(col, end)]'
+    return U[NORTH][row, col] * signs[NORTH][row, col + 1]'
 end
 
 """
@@ -1519,7 +1507,7 @@ Multiply east left singular vectors with gauge signs from the right.
 """
 function fix_gauge_east_left_vecs(I, U, signs)
     row, col = Tuple(I)
-    return U[EAST, row, col] * signs[EAST, _next(row, end), col]'
+    return U[EAST][row, col] * signs[EAST][row + 1, col]'
 end
 
 """
@@ -1529,7 +1517,7 @@ Multiply south left singular vectors with gauge signs from the right.
 """
 function fix_gauge_south_left_vecs(I, U, signs)
     row, col = Tuple(I)
-    return U[SOUTH, row, col] * signs[SOUTH, row, _prev(col, end)]'
+    return U[SOUTH][row, col] * signs[SOUTH][row, col - 1]'
 end
 
 """
@@ -1539,7 +1527,7 @@ Multiply west left singular vectors with gauge signs from the right.
 """
 function fix_gauge_west_left_vecs(I, U, signs)
     row, col = Tuple(I)
-    return U[WEST, row, col] * signs[WEST, _prev(row, end), col]'
+    return U[WEST][row, col] * signs[WEST][row - 1, col]'
 end
 
 # right singular vectors
@@ -1551,7 +1539,7 @@ Multiply north right singular vectors with gauge signs from the left.
 """
 function fix_gauge_north_right_vecs(I, V, signs)
     row, col = Tuple(I)
-    return signs[NORTH, row, _next(col, end)] * V[NORTH, row, col]
+    return signs[NORTH][row, col + 1] * V[NORTH][row, col]
 end
 
 """
@@ -1561,7 +1549,7 @@ Multiply east right singular vectors with gauge signs from the left.
 """
 function fix_gauge_east_right_vecs(I, V, signs)
     row, col = Tuple(I)
-    return signs[EAST, _next(row, end), col] * V[EAST, row, col]
+    return signs[EAST][row + 1, col] * V[EAST][row, col]
 end
 
 """
@@ -1571,7 +1559,7 @@ Multiply south right singular vectors with gauge signs from the left.
 """
 function fix_gauge_south_right_vecs(I, V, signs)
     row, col = Tuple(I)
-    return signs[SOUTH, row, _prev(col, end)] * V[SOUTH, row, col]
+    return signs[SOUTH][row, col - 1] * V[SOUTH][row, col]
 end
 
 """
@@ -1581,7 +1569,7 @@ Multiply west right singular vectors with gauge signs from the left.
 """
 function fix_gauge_west_right_vecs(I, V, signs)
     row, col = Tuple(I)
-    return signs[WEST, _prev(row, end), col] * V[WEST, row, col]
+    return signs[WEST][row - 1, col] * V[WEST][row, col]
 end
 
 #

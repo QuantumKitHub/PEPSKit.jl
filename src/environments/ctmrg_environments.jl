@@ -26,18 +26,16 @@ $(TYPEDFIELDS)
 """
 struct CTMRGEnv{C,T}
     "4 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
-    corners::InfiniteTiledArray{C,3}
+    corners::Vector{InfiniteTiledArray{C,2}}
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
-    edges::InfiniteTiledArray{T,3}
+    edges::Vector{InfiniteTiledArray{T,2}}
 end
 
 function CTMRGEnv{C,T}(
     ::UndefInitializer, tile::TiledArrays.PeriodicArray{Int,2,Matrix{Int}}
 ) where {C,T}
-    tile_stacked =
-        stack(ntuple(Returns(tile), 4); dims=1) .+ reshape(maximum(tile) * (0:3), 4, 1, 1)
-    corners = InfiniteTiledArray{C}(undef, tile_stacked)
-    edges = InfiniteTiledArray{T}(undef, tile_stacked)
+    corners = [InfiniteTiledArray{C}(undef, tile) for _ in 1:4]
+    edges = [InfiniteTiledArray{T}(undef, tile) for _ in 1:4]
     return CTMRGEnv(corners, edges)
 end
 
@@ -167,15 +165,15 @@ function CTMRGEnv(
     __cornertensor(χ1, χ2) = normalize(_corner_tensor(f, T, χ1, χ2))
 
     for I in eachtilingindex(Ds_north)
-        edges[NORTH, I] = __edgetensor(chis_north[I - Ih], Ds_north[I + Iv], chis_north[I])
-        edges[EAST, I] = __edgetensor(chis_east[I], Ds_east[I - Iv], chis_east[I + Ih])
-        edges[SOUTH, I] = __edgetensor(chis_south[I], Ds_south[I - Iv], chis_south[I - Ih])
-        edges[WEST, I] = __edgetensor(chis_west[I + Iv], Ds_west[I + Ih], chis_west[I])
+        edges[NORTH][I] = __edgetensor(chis_north[I - Ih], Ds_north[I + Iv], chis_north[I])
+        edges[EAST][I] = __edgetensor(chis_east[I], Ds_east[I - Iv], chis_east[I + Ih])
+        edges[SOUTH][I] = __edgetensor(chis_south[I], Ds_south[I - Iv], chis_south[I - Ih])
+        edges[WEST][I] = __edgetensor(chis_west[I + Iv], Ds_west[I + Ih], chis_west[I])
 
-        corners[NORTHWEST, I] = __cornertensor(chis_west[I + Iv], chis_north[I])
-        corners[NORTHEAST, I] = __cornertensor(chis_north[I - Ih], chis_east[I + Iv])
-        corners[SOUTHEAST, I] = __cornertensor(chis_east[I], chis_south[I - Ih])
-        corners[SOUTHWEST, I] = __cornertensor(chis_south[I], chis_west[I])
+        corners[NORTHWEST][I] = __cornertensor(chis_west[I + Iv], chis_north[I])
+        corners[NORTHEAST][I] = __cornertensor(chis_north[I - Ih], chis_east[I + Iv])
+        corners[SOUTHEAST][I] = __cornertensor(chis_east[I], chis_south[I - Ih])
+        corners[SOUTHWEST][I] = __cornertensor(chis_south[I], chis_west[I])
     end
 
     return env
@@ -393,8 +391,10 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     end
 end
 
-Base.size(env::CTMRGEnv, args...) = size(env.corners, args...)
-Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
+Base.size(env::CTMRGEnv) = (length(env.corners), size(first(env.corners))...)
+Base.size(env::CTMRGEnv, i::Integer) = size(env)[i]
+Base.axes(env::CTMRGEnv) = (axes(env.corners, 1), axes(first(env.corners))...)
+Base.axes(env::CTMRGEnv, i::Integer) = axes(env)[i]
 function eachcoordinate(x::CTMRGEnv)
     return collect(Iterators.product(axes(x, 2), axes(x, 3)))
 end
@@ -402,8 +402,8 @@ function eachcoordinate(x::CTMRGEnv, dirs)
     return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
 end
 
-TiledArrays.tiling(env::CTMRGEnv) = tiling(env.corners)
-TiledArrays.eachtilingindex(env::CTMRGEnv) = eachtilingindex(env.corners)
+TiledArrays.tiling(env::CTMRGEnv) = tiling(first(env.corners))
+TiledArrays.eachtilingindex(env::CTMRGEnv) = eachtilingindex(first(env.corners))
 
 Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
 Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
@@ -421,17 +421,19 @@ TensorKit.sectortype(::Type{E}) where {E<:CTMRGEnv} = sectortype(cornertype(E))
 # In-place update of environment
 function update!(dst::CTMRGEnv, src::CTMRGEnv)
     tiling(src) == tiling(dst) || throw(DimensionMismatch())
-    copy!(dst.corners.data, src.corners.data)
-    copy!(dst.edges.data, src.edges.data)
+    dirs = 1:4
+    for i in dirs
+        copy!.(dst.corners[i].data, src.corners[i].data)
+        copy!.(dst.edges[i].data, src.edges[i].data)
+    end
     return dst
 end
 
 # Rotate corners & edges by rotating tiling
 for (i, f) in enumerate((:rotr90, :rot180, :rotl90))
     @eval function Base.$f(env::CTMRGEnv)
-        rotated_tile = circshift(stack($f, eachslice(tiling(env); dims=1); dims=1), $i)
-        corners = InfiniteTiledArray(copy(tilingdata(env.corners)), rotated_tile)
-        edges = InfiniteTiledArray(copy(tilingdata(env.edges)), rotated_tile)
+        corners = circshift(map($f, env.corners), $i)
+        edges = circshift(map($f, env.edges), $i)
         return CTMRGEnv(corners, edges)
     end
 end

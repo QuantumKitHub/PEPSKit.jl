@@ -113,8 +113,8 @@ function leading_boundary(
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
-        CS = map(x -> tsvd(x)[2], env₀.corners)
-        TS = map(x -> tsvd(x)[2], env₀.edges)
+        CS = map(x -> tiledmap(C -> tsvd(C)[2], x), env₀.corners)
+        TS = map(x -> tiledmap(E -> tsvd(E)[2], x), env₀.edges)
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
         local info
@@ -189,19 +189,19 @@ This determined either from the previous corner and edge singular values
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
 function calc_convergence(env, CS_old, TS_old)
-    CS_new = map(x -> tsvd(x)[2], env.corners)
-    ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
+    CS_new = map(x -> tiledmap(C -> tsvd(C)[2], x), env.corners)
+    ΔCS = maximum(x -> maximum(_singular_value_distance, zip(x...)), zip(CS_old, CS_new))
 
-    TS_new = map(x -> tsvd(x)[2], env.edges)
-    ΔTS = maximum(_singular_value_distance, zip(TS_old, TS_new))
+    TS_new = map(x -> tiledmap(E -> tsvd(E)[2], x), env.edges)
+    ΔTS = maximum(x -> maximum(_singular_value_distance, zip(x...)), zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
 
     return max(ΔCS, ΔTS), CS_new, TS_new
 end
 function calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
-    CS_old = map(x -> tsvd(x)[2], env_old.corners)
-    TS_old = map(x -> tsvd(x)[2], env_old.edges)
+    CS_old = map(x -> tiledmap(C -> tsvd(C)[2], x), env_old.corners)
+    TS_old = map(x -> tiledmap(E -> tsvd(E)[2], x), env_old.edges)
     return calc_convergence(env_new, CS_old, TS_old)
 end
 @non_differentiable calc_convergence(args...)

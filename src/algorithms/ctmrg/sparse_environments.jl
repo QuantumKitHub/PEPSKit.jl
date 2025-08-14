@@ -26,36 +26,36 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates::Cartes
     return EnlargedCorner(network, env, coordinates.I)
 end
 function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
-    dir, r, c = coordinates
+    dir, r, c = Tuple(coordinates)
     if dir == NORTHWEST
         return EnlargedCorner(
-            env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-            env.edges[WEST, r, _prev(c, end)],
-            env.edges[NORTH, _prev(r, end), c],
+            env.corners[NORTHWEST][_prev(r, end), _prev(c, end)],
+            env.edges[WEST][r, _prev(c, end)],
+            env.edges[NORTH][_prev(r, end), c],
             network[r, c],
             dir,
         )
     elseif dir == NORTHEAST
         return EnlargedCorner(
-            env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-            env.edges[NORTH, _prev(r, end), c],
-            env.edges[EAST, r, _next(c, end)],
+            env.corners[NORTHEAST][_prev(r, end), _next(c, end)],
+            env.edges[NORTH][_prev(r, end), c],
+            env.edges[EAST][r, _next(c, end)],
             network[r, c],
             dir,
         )
     elseif dir == SOUTHEAST
         return EnlargedCorner(
-            env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-            env.edges[EAST, r, _next(c, end)],
-            env.edges[SOUTH, _next(r, end), c],
+            env.corners[SOUTHEAST][_next(r, end), _next(c, end)],
+            env.edges[EAST][r, _next(c, end)],
+            env.edges[SOUTH][_next(r, end), c],
             network[r, c],
             dir,
         )
     elseif dir == SOUTHWEST
         return EnlargedCorner(
-            env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-            env.edges[SOUTH, _next(r, end), c],
-            env.edges[WEST, r, _prev(c, end)],
+            env.corners[SOUTHWEST][_next(r, end), _prev(c, end)],
+            env.edges[SOUTH][_next(r, end), c],
+            env.edges[WEST][r, _prev(c, end)],
             network[r, c],
             dir,
         )
