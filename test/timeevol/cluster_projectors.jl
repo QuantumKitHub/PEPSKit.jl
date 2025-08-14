@@ -81,14 +81,14 @@ end
     Random.seed!(100)
     # with U(1) spin rotation symmetry
     Pspace = hubbard_space(Trivial, U1Irrep)
-    Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 1)
-    Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1//2) => 4, (1, -1//2) => 4)
-    trscheme_env = truncerr(1e-12) & truncdim(16)
-    peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc))
+    Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
+    Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
+    trscheme_env = truncerr(1.0e-12) & truncdim(16)
+    peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
     ham = real(
         hubbard_model(
-            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t=1.0, U=8.0, mu=0.0
+            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 8.0, mu = 0.0
         ),
     )
     # usual 2-site simple update, and measure energy
@@ -98,7 +98,7 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trscheme = truncerr(1.0e-10) & truncdim(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite=true, check_interval=1000)
+        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = true, check_interval = 1000)
     end
     normalize!.(peps.A, Inf)
     env = CTMRGEnv(rand, Float64, peps, Espace)
@@ -112,7 +112,7 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         peps, wts, = simpleupdate(
-            peps, ham, alg, wts; check_interval=1000, force_3site=true
+            peps, ham, alg, wts; check_interval = 1000, force_3site = true
         )
     end
     normalize!.(peps.A, Inf)

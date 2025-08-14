@@ -24,29 +24,30 @@ function test_rotation(peps::InfinitePEPS, wts::SUWeight)
         A1 = InfinitePEPS(
             collect(
                 absorb_weight(peps.A[idx], wts, idx[1], idx[2], Tuple(1:4)) for
-                idx in CartesianIndices(peps.A)
+                    idx in CartesianIndices(peps.A)
             ),
         )
         peps2, wts2 = rot(peps), rot(wts)
         A2 = InfinitePEPS(
             collect(
                 absorb_weight(peps2.A[idx], wts2, idx[1], idx[2], Tuple(1:4)) for
-                idx in CartesianIndices(peps2.A)
+                    idx in CartesianIndices(peps2.A)
             ),
         )
         @test A2 ≈ rot(A1)
     end
+    return
 end
 
-Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1//2) => 1, (1, -1//2) => 2)
+Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1 // 2) => 1, (1, -1 // 2) => 2)
 Vs = (
     # Espace
-    Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 3, (1, -1//2) => 2),
+    Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 3, (1, -1 // 2) => 2),
     # Nspace
-    Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 4),
+    Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 4),
 )
 Nr, Nc = 2, 3
-peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell=(Nr, Nc))
+peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc))
 wts = collect(
     tsvd(rand(Float64, Vs[dir] ← Vs[dir]))[2] for dir in 1:2, r in 1:Nr, c in 1:Nc
 )

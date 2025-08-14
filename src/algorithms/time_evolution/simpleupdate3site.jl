@@ -221,7 +221,7 @@ function _proj_from_RL(
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
     u, s, vh, ϵ = tsvd!(rl; trunc)
-    sinv = PEPSKit.sdiag_pow(s, -1/2)
+    sinv = PEPSKit.sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
         Pa, s, Pb = flip_svd(Pa, s, Pb)
@@ -355,23 +355,23 @@ function get_3site_se(peps::InfinitePEPS, env::SUWeight, row::Int, col::Int)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
     cluster = collect(
         permute(
-            absorb_weight(
-                peps.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs; invwt=false
-            ),
-            perm,
-        ) for (coord, openaxs, perm) in zip(coords_se, openaxs_se, perms_se)
+                absorb_weight(
+                    peps.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs; invwt = false
+                ),
+                perm,
+            ) for (coord, openaxs, perm) in zip(coords_se, openaxs_se, perms_se)
     )
     return cluster
 end
 
 function _su3site_se!(
-    peps::InfinitePEPS,
-    gs::Vector{T},
-    env::SUWeight,
-    row::Int,
-    col::Int,
-    trschemes::Vector{E},
-) where {T<:AbstractTensorMap,E<:TruncationScheme}
+        peps::InfinitePEPS,
+        gs::Vector{T},
+        env::SUWeight,
+        row::Int,
+        col::Int,
+        trschemes::Vector{E},
+    ) where {T <: AbstractTensorMap, E <: TruncationScheme}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
@@ -390,7 +390,7 @@ function _su3site_se!(
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
-        M = absorb_weight(M, env, coord[1], coord[2], openaxs; invwt=true)
+        M = absorb_weight(M, env, coord[1], coord[2], openaxs; invwt = true)
         peps.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return nothing
@@ -402,8 +402,8 @@ end
 One round of 3-site simple update. 
 """
 function su3site_iter(
-    peps::InfinitePEPS, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
-) where {G<:AbstractMatrix}
+        peps::InfinitePEPS, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
+    ) where {G <: AbstractMatrix}
     Nr, Nc = size(peps)
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError(
@@ -432,12 +432,12 @@ end
 Perform 3-site simple update for Hamiltonian `ham`.
 """
 function _simpleupdate3site(
-    peps::InfinitePEPS,
-    ham::LocalOperator,
-    alg::SimpleUpdate,
-    env::SUWeight;
-    check_interval::Int=500,
-)
+        peps::InfinitePEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        check_interval::Int = 500,
+    )
     time_start = time()
     # convert Hamiltonian to 3-site exponentiated gate MPOs
     gatempos = [

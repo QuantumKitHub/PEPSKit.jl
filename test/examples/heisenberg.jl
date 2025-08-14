@@ -52,8 +52,8 @@ end
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
-    ctmrg_tol = 1e-8
-    peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell=(N1, N2))
+    ctmrg_tol = 1.0e-8
+    peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (N1, N2))
     wts = SUWeight(peps)
     normalize!.(peps.A, Inf)
 
@@ -71,12 +71,12 @@ end
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trscheme = truncerr(1.0e-10) & truncdim(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite=false)
+        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = false)
     end
 
     # measure physical quantities with CTMRG
     normalize!.(peps.A, Inf)
-    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol=ctmrg_tol)
+    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol = ctmrg_tol)
     e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)

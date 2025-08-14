@@ -31,7 +31,7 @@ constructed on a $2 \times 2$ unit cell, so we have:
 t = 1
 U = 6
 Nr, Nc = 2, 2
-H = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu=U / 2);
+H = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu = U / 2);
 physical_space = Vect[fℤ₂](0 => 2, 1 => 2);
 
 md"""
@@ -49,7 +49,7 @@ The bond weights are still initialized as identity matrices.
 """
 
 virtual_space = Vect[fℤ₂](0 => 2, 1 => 2)
-peps = InfinitePEPS(rand, Float64, physical_space, virtual_space; unitcell=(Nr, Nc));
+peps = InfinitePEPS(rand, Float64, physical_space, virtual_space; unitcell = (Nr, Nc));
 wts = SUWeight(peps)
 
 md"""
@@ -59,16 +59,16 @@ we first increase D to 12, and drop it back to D = 8 after a while.
 Afterwards, we keep D = 8 and gradually decrease `dt` to `1e-4` to improve convergence.
 """
 
-dts = [1e-2, 1e-2, 1e-3, 4e-4, 1e-4]
-tols = [1e-7, 1e-7, 1e-8, 1e-8, 1e-8]
+dts = [1.0e-2, 1.0e-2, 1.0e-3, 4.0e-4, 1.0e-4]
+tols = [1.0e-7, 1.0e-7, 1.0e-8, 1.0e-8, 1.0e-8]
 Ds = [4, 12, 8, 8, 8]
 maxiter = 20000
 
 for (dt, tol, Dbond) in zip(dts, tols, Ds)
-    trscheme = truncerr(1e-10) & truncdim(Dbond)
+    trscheme = truncerr(1.0e-10) & truncdim(Dbond)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
     global peps, wts, = simpleupdate(
-        peps, H, alg, wts; bipartite=false, check_interval=2000
+        peps, H, alg, wts; bipartite = false, check_interval = 2000
     )
 end
 
@@ -88,7 +88,7 @@ normalize!.(peps.A, Inf)
 env = CTMRGEnv(rand, Float64, peps, env_space)
 for χ in [χenv₀, χenv]
     global env, = leading_boundary(
-        env, peps; alg=:sequential, tol=1e-8, maxiter=50, trscheme=truncdim(χ)
+        env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trscheme = truncdim(χ)
     )
 end
 

@@ -1,10 +1,9 @@
-
 """
     const PEPSWeight
 
 Default type for PEPS bond weights with 2 virtual indices.
 """
-const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
+const PEPSWeight{T, S} = AbstractTensorMap{T, S, 1, 1}
 
 """
     struct SUWeight{E<:PEPSWeight}
@@ -45,12 +44,12 @@ $(TYPEDFIELDS)
 
     SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
 """
-struct SUWeight{E<:PEPSWeight}
-    data::Array{E,3}
-    SUWeight{E}(data::Array{E,3}) where {E} = new{E}(data)
+struct SUWeight{E <: PEPSWeight}
+    data::Array{E, 3}
+    SUWeight{E}(data::Array{E, 3}) where {E} = new{E}(data)
 end
 
-function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
+function SUWeight(data::Array{E, 3}) where {E <: PEPSWeight}
     scalartype(data) <: Real || error("Weight elements must be real numbers.")
     for wt in data
         isa(wt, DiagonalTensorMap) ||
@@ -64,7 +63,7 @@ function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
     return SUWeight{E}(data)
 end
 
-function SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
+function SUWeight(wts_mats::AbstractMatrix{E}...) where {E <: PEPSWeight}
     n_mat = length(wts_mats)
     Nr, Nc = size(wts_mats[1])
     @assert all((Nr, Nc) == size(wts_mat) for wts_mat in wts_mats)
@@ -82,8 +81,8 @@ Each individual space can be specified as either an `Int` or an `ElementarySpace
 The weights are initialized as identity matrices of element type `Float64`.
 """
 function SUWeight(
-    Nspaces::M, Espaces::M=Nspaces
-) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+        Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:Union{Int, ElementarySpace}}}
     @assert all(!isdual, Nspaces)
     @assert all(!isdual, Espaces)
     @assert size(Nspaces) == size(Espaces)
@@ -103,8 +102,8 @@ as `ElementarySpace`s) and unit cell size.
 The weights are initialized as identity matrices of element type `Float64`.
 """
 function SUWeight(
-    Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-) where {S<:ElementarySpace}
+        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace}
     return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
@@ -132,7 +131,7 @@ Base.size(W::SUWeight, i) = size(W.data, i)
 Base.length(W::SUWeight) = length(W.data)
 Base.eltype(W::SUWeight) = eltype(typeof(W))
 Base.eltype(::Type{SUWeight{E}}) where {E} = E
-VI.scalartype(::Type{T}) where {T<:SUWeight} = scalartype(eltype(T))
+VI.scalartype(::Type{T}) where {T <: SUWeight} = scalartype(eltype(T))
 
 Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
 Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
@@ -141,7 +140,7 @@ Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
 ## spaces
 TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
-TensorKit.spacetype(::Type{T}) where {E,T<:SUWeight{E}} = spacetype(E)
+TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
 TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
 
@@ -211,8 +210,8 @@ absorb_weight(t, weights, 2, 3, 2; invwt=true)
 ```
 """
 function absorb_weight(
-    t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; invwt::Bool=false
-)
+        t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; invwt::Bool = false
+    )
     Nr, Nc = size(weights)[2:end]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     @assert 1 <= ax <= 4
@@ -239,13 +238,13 @@ function absorb_weight(
     return permute(ncon((t, wt), (t_idx, wt_idx)), ((1,), Tuple(2:5)))
 end
 function absorb_weight(
-    t::PEPSTensor,
-    weights::SUWeight,
-    row::Int,
-    col::Int,
-    ax::NTuple{N,Int};
-    invwt::Bool=false,
-) where {N}
+        t::PEPSTensor,
+        weights::SUWeight,
+        row::Int,
+        col::Int,
+        ax::NTuple{N, Int};
+        invwt::Bool = false,
+    ) where {N}
     t2 = copy(t)
     for a in ax
         t2 = absorb_weight(t2, weights, row, col, a; invwt)

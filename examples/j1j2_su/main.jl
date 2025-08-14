@@ -36,9 +36,9 @@ Dbond, symm = 4, U1Irrep
 Nr, Nc, J1 = 2, 2, 1.0
 
 ## random initialization of 2x2 iPEPS (using real numbers) and SUWeight
-Pspace = Vect[U1Irrep](1//2 => 1, -1//2 => 1)
-Vspace = Vect[U1Irrep](0 => 2, 1//2 => 1, -1//2 => 1)
-peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc));
+Pspace = Vect[U1Irrep](1 // 2 => 1, -1 // 2 => 1)
+Vspace = Vect[U1Irrep](0 => 2, 1 // 2 => 1, -1 // 2 => 1)
+peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc));
 wts = SUWeight(peps);
 
 md"""
@@ -82,8 +82,8 @@ the expectation value, where we first normalize tensors in the PEPS:
 
 normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
 χenv = 32
-trscheme_env = truncerr(1e-10) & truncdim(χenv)
-Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1//2 => χenv ÷ 4, -1//2 => χenv ÷ 4)
+trscheme_env = truncerr(1.0e-10) & truncdim(χenv)
+Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
 env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trscheme = trscheme_env);
 E = expectation_value(peps, H, env) / (Nr * Nc)

@@ -28,20 +28,20 @@ Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 ```
 """
 function _su_xbond!(
-    peps::InfinitePEPS,
-    gate::AbstractTensorMap{T,S,2,2},
-    env::SUWeight,
-    row::Int,
-    col::Int,
-    trscheme::TruncationScheme,
-) where {T<:Number,S<:ElementarySpace}
+        peps::InfinitePEPS,
+        gate::AbstractTensorMap{T, S, 2, 2},
+        env::SUWeight,
+        row::Int,
+        col::Int,
+        trscheme::TruncationScheme,
+    ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
     # absorb environment weights
     A, B = peps.A[row, col], peps.A[row, cp1]
-    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); invwt=false)
-    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); invwt=false)
+    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); invwt = false)
+    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); invwt = false)
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
@@ -49,12 +49,12 @@ function _su_xbond!(
     a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
-    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); invwt=true)
-    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); invwt=true)
+    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); invwt = true)
+    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); invwt = true)
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    # update tensor dict and weight on current bond 
+    # update tensor dict and weight on current bond
     peps.A[row, col], peps.A[row, cp1] = A, B
     env.data[1, row, col] = s
     return ϵ
@@ -71,20 +71,20 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
 ```
 """
 function _su_ybond!(
-    peps::InfinitePEPS,
-    gate::AbstractTensorMap{T,S,2,2},
-    env::SUWeight,
-    row::Int,
-    col::Int,
-    trscheme::TruncationScheme,
-) where {T<:Number,S<:ElementarySpace}
+        peps::InfinitePEPS,
+        gate::AbstractTensorMap{T, S, 2, 2},
+        env::SUWeight,
+        row::Int,
+        col::Int,
+        trscheme::TruncationScheme,
+    ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1 = _prev(row, Nr)
     # absorb environment weights
     A, B = peps.A[row, col], peps.A[rm1, col]
-    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); invwt=false)
-    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); invwt=false)
+    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); invwt = false)
+    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); invwt = false)
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
@@ -92,9 +92,9 @@ function _su_ybond!(
     a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
     # remove environment weights
-    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); invwt=true)
-    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); invwt=true)
-    # update tensor dict and weight on current bond 
+    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); invwt = true)
+    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); invwt = true)
+    # update tensor dict and weight on current bond
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
@@ -110,12 +110,12 @@ One round of simple update on `peps` applying the nearest neighbor `gate`.
 When the input `peps` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
 """
 function su_iter(
-    peps::InfinitePEPS,
-    gate::LocalOperator,
-    alg::SimpleUpdate,
-    env::SUWeight;
-    bipartite::Bool=false,
-)
+        peps::InfinitePEPS,
+        gate::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        bipartite::Bool = false,
+    )
     @assert size(gate.lattice) == size(peps)
     Nr, Nc = size(peps)
     bipartite && (@assert Nr == Nc == 2)
@@ -150,13 +150,13 @@ end
 Perform simple update with Hamiltonian `ham` containing up to nearest neighbor interaction terms. 
 """
 function _simpleupdate2site(
-    peps::InfinitePEPS,
-    ham::LocalOperator,
-    alg::SimpleUpdate,
-    env::SUWeight;
-    bipartite::Bool=false,
-    check_interval::Int=500,
-)
+        peps::InfinitePEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        bipartite::Bool = false,
+        check_interval::Int = 500,
+    )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
     gate = get_expham(ham, alg.dt)
@@ -201,14 +201,14 @@ Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham
 - The 3-site simple update algorithm is incompatible with a bipartite PEPS. Using `bipartite = true` with either `force_3site = true` or a `ham` with next-nearest neighbor terms is not allowed. 
 """
 function simpleupdate(
-    peps::InfinitePEPS,
-    ham::LocalOperator,
-    alg::SimpleUpdate,
-    env::SUWeight;
-    bipartite::Bool=false,
-    force_3site::Bool=false,
-    check_interval::Int=500,
-)
+        peps::InfinitePEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        bipartite::Bool = false,
+        force_3site::Bool = false,
+        check_interval::Int = 500,
+    )
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly

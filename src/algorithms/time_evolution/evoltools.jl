@@ -132,16 +132,16 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
 """
 function _apply_gate(
-    a::AbstractTensorMap{T,S},
-    b::AbstractTensorMap{T,S},
-    gate::AbstractTensorMap{T,S,2,2},
-    trscheme::TruncationScheme,
-) where {T<:Number,S<:ElementarySpace}
+        a::AbstractTensorMap{T, S},
+        b::AbstractTensorMap{T, S},
+        gate::AbstractTensorMap{T, S, 2, 2},
+        trscheme::TruncationScheme,
+    ) where {T <: Number, S <: ElementarySpace}
     V = space(b, 1)
     need_flip = isdual(V)
     @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     trunc = (trscheme isa FixedSpaceTruncation) ? truncspace(V) : trscheme
-    a, s, b, ϵ = tsvd!(a2b2; trunc, alg=TensorKit.SVD())
+    a, s, b, ϵ = tsvd!(a2b2; trunc, alg = TensorKit.SVD())
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip_svd(a, s, b)
