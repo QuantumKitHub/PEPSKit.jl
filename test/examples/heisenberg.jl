@@ -52,13 +52,11 @@ end
     Pspace = ℂ^2
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
-    wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell = (N1, N2))
-    ctmrg_tol = 1.0e-6
+    ctmrg_tol = 1.0e-8
+    peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (N1, N2))
+    wts = SUWeight(peps)
+    normalize!.(peps.A, Inf)
 
-    # normalize vertex tensors
-    for ind in CartesianIndices(wpeps.vertices)
-        wpeps.vertices[ind] /= norm(wpeps.vertices[ind], Inf)
-    end
     # Heisenberg model Hamiltonian
     ham = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx = 1.0, Jy = 1.0, Jz = 1.0)
     # assert imaginary part is zero
@@ -73,15 +71,12 @@ end
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trscheme = truncerr(1.0e-10) & truncdim(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        result = simpleupdate(wpeps, ham, alg; bipartite = false)
-        wpeps = result[1]
+        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = false)
     end
 
-    # absorb weight into site tensors and CTMRG
-    peps = InfinitePEPS(wpeps)
+    # measure physical quantities with CTMRG
+    normalize!.(peps.A, Inf)
     env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol = ctmrg_tol)
-
-    # measure physical quantities
     e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)

@@ -76,20 +76,18 @@ to get the reduced tensors
 ```
         2                   1
         |                   |
-    5 - A ← 3   ====>   4 - X ← 2   1 ← a ← 3
+    5 - A - 3   ====>   4 - X ← 2   1 ← a - 3
         | ↘                 |            ↘
         4   1               3             2
 
         2                               1
         |                               |
-    5 ← B - 3   ====>   1 ← b → 3   4 → Y - 2
+    5 - B - 3   ====>   1 - b → 3   4 → Y - 2
         | ↘                  ↘          |
         4   1                 2         3
 ```
 """
 function _qr_bond(A::PEPSTensor, B::PEPSTensor)
-    # TODO: relax dual requirement on the bonds
-    @assert isdual(space(A, 3)) # currently only allow A ← B
     X, a = leftorth(A, ((2, 4, 5), (1, 3)))
     Y, b = leftorth(B, ((2, 3, 4), (1, 5)))
     @assert !isdual(space(a, 1))
@@ -124,7 +122,7 @@ $(SIGNATURES)
 
 Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
-    -1← a -← 3 -← b ← -4
+    -1← a --- 3 --- b ← -4
         ↓           ↓
         1           2
         ↓           ↓
@@ -134,18 +132,21 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
 """
 function _apply_gate(
-        a::AbstractTensorMap{T, S}, b::AbstractTensorMap{T, S},
+        a::AbstractTensorMap{T, S},
+        b::AbstractTensorMap{T, S},
         gate::AbstractTensorMap{T, S, 2, 2},
         trscheme::TruncationScheme,
     ) where {T <: Number, S <: ElementarySpace}
+    V = space(b, 1)
+    need_flip = isdual(V)
     @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
-    trunc = if trscheme isa FixedSpaceTruncation
-        V = space(b, 1)
-        truncspace(isdual(V) ? V' : V)
-    else
-        trscheme
+    trunc = (trscheme isa FixedSpaceTruncation) ? truncspace(V) : trscheme
+    a, s, b, ϵ = tsvd!(a2b2; trunc, alg = TensorKit.SVD())
+    a, b = absorb_s(a, s, b)
+    if need_flip
+        a, s, b = flip_svd(a, s, b)
     end
-    return tsvd!(a2b2; trunc, alg = TensorKit.SVD())
+    return a, s, b, ϵ
 end
 
 """

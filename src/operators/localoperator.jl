@@ -134,38 +134,14 @@ end
 Base.:-(O::LocalOperator) = -1 * O
 Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 
-# Rotation and mirroring
+# Rotation
 # ----------------------
 
-"""
-    mirror_antidiag(site::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2,Int})
-
-Get the position of `site` after reflection about
-the anti-diagonal line of a unit cell of size `(Nrow, Ncol)`.
-"""
-function mirror_antidiag(site::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2, Int})
-    r, c = site[1], site[2]
-    return CartesianIndex(Ncol - c + 1, Nrow - r + 1)
-end
-
 # rotation of a lattice site
+# TODO: type piracy
 Base.rotl90(site::CartesianIndex{2}) = CartesianIndex(2 - site[2], site[1])
 Base.rotr90(site::CartesianIndex{2}) = CartesianIndex(site[2], 2 - site[1])
 Base.rot180(site::CartesianIndex{2}) = CartesianIndex(2 - site[1], 2 - site[2])
-
-"""
-    mirror_antidiag(H::LocalOperator)
-
-Mirror a `LocalOperator` across the anti-diagonal axis of its lattice.
-"""
-function mirror_antidiag(H::LocalOperator)
-    lattice2 = mirror_antidiag(physicalspace(H))
-    terms2 = (
-        (Tuple(mirror_antidiag(site, size(H.lattice)) for site in sites) => op) for
-            (sites, op) in H.terms
-    )
-    return LocalOperator(lattice2, terms2...)
-end
 
 function Base.rotr90(H::LocalOperator)
     lattice2 = rotr90(H.lattice)
