@@ -22,9 +22,9 @@ end
 peps = get_hubbard_state()
 # calculate CTMRG environment
 Envspace = Vect[FermionParity ⊠ U1Irrep](
-    (0, 0) => 4, (1, 1//2) => 1, (1, -1//2) => 1, (0, 1) => 1, (0, -1) => 1
+    (0, 0) => 4, (1, 1 // 2) => 1, (1, -1 // 2) => 1, (0, 1) => 1, (0, -1) => 1
 )
-ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=truncerr(1e-10) & truncdim(8))
+ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trscheme = truncerr(1.0e-10) & truncdim(8))
 env, = leading_boundary(CTMRGEnv(rand, ComplexF64, peps, Envspace), peps, ctm_alg)
 for row in 1:Nr, col in 1:Nc
     cp1 = PEPSKit._next(col, Nc)
@@ -33,7 +33,7 @@ for row in 1:Nr, col in 1:Nc
     benv = PEPSKit.bondenv_fu(row, col, X, Y, env)
     @assert [isdual(space(benv, ax)) for ax in 1:numind(benv)] == [0, 0, 1, 1]
     Z = PEPSKit.positive_approx(benv)
-    # verify that gauge fixing can greatly reduce 
+    # verify that gauge fixing can greatly reduce
     # condition number for physical state bond envs
     cond1 = cond(Z' * Z)
     Z2, a2, b2, (Linv, Rinv) = PEPSKit.fixgauge_benv(Z, a, b)

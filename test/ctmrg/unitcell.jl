@@ -8,23 +8,16 @@ using TensorKit
 Random.seed!(91283219347)
 stype = ComplexF64
 ctm_algs = [
-    SequentialCTMRG(; projector_alg=:halfinfinite),
-    SequentialCTMRG(; projector_alg=:fullinfinite),
-    SimultaneousCTMRG(; projector_alg=:halfinfinite),
-    SimultaneousCTMRG(; projector_alg=:fullinfinite),
+    SequentialCTMRG(; projector_alg = :halfinfinite),
+    SequentialCTMRG(; projector_alg = :fullinfinite),
+    SimultaneousCTMRG(; projector_alg = :halfinfinite),
+    SimultaneousCTMRG(; projector_alg = :fullinfinite),
 ]
 
 function test_unitcell(
-    ctm_alg,
-    unitcell,
-    Pspaces,
-    Nspaces,
-    Espaces,
-    chis_north,
-    chis_east,
-    chis_south,
-    chis_west,
-)
+        ctm_alg, unitcell,
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
@@ -36,14 +29,13 @@ function test_unitcell(
         PEPSKit._to_space.(Pspaces),
         [
             (c,) => randn(
-                scalartype(peps),
-                PEPSKit._to_space(Pspaces[c]),
-                PEPSKit._to_space(Pspaces[c]),
-            ) for c in CartesianIndices(unitcell)
+                    scalartype(peps),
+                    PEPSKit._to_space(Pspaces[c]), PEPSKit._to_space(Pspaces[c]),
+                ) for c in CartesianIndices(unitcell)
         ]...,
     )
     @test expectation_value(peps, random_op, env) isa Number
-    @test expectation_value(peps, random_op, env′) isa Number
+    return @test expectation_value(peps, random_op, env′) isa Number
 end
 
 function random_dualize!(M::AbstractMatrix{<:ElementarySpace})
@@ -64,15 +56,8 @@ end
     chis_west = rand(5:10, unitcell...)
 
     test_unitcell(
-        ctm_alg,
-        unitcell,
-        Pspaces,
-        Nspaces,
-        Espaces,
-        chis_north,
-        chis_east,
-        chis_south,
-        chis_west,
+        ctm_alg, unitcell,
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
     )
 end
 
@@ -88,15 +73,8 @@ end
     chis_west = random_dualize!(ComplexSpace.(rand(5:10, unitcell...)))
 
     test_unitcell(
-        ctm_alg,
-        unitcell,
-        Pspaces,
-        Nspaces,
-        Espaces,
-        chis_north,
-        chis_east,
-        chis_south,
-        chis_west,
+        ctm_alg, unitcell,
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
     )
 end
 

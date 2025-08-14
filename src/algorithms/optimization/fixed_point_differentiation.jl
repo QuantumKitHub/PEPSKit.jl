@@ -1,10 +1,10 @@
 abstract type GradMode{F} end
 
-const GRADIENT_MODE_SYMBOLS = IdDict{Symbol,Type{<:GradMode}}()
-const LINSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.LinearSolver}}(
+const GRADIENT_MODE_SYMBOLS = IdDict{Symbol, Type{<:GradMode}}()
+const LINSOLVER_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:KrylovKit.LinearSolver}}(
     :gmres => GMRES, :bicgstab => BiCGStab
 )
-const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.KrylovAlgorithm}}(
+const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:KrylovKit.KrylovAlgorithm}}(
     :arnoldi => Arnoldi
 )
 
@@ -14,35 +14,35 @@ const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol,Type{<:KrylovKit.KrylovAlgorithm}
 Keyword argument parser returning the appropriate `GradMode` algorithm struct.
 """
 function GradMode(;
-    alg=Defaults.gradient_alg,
-    tol=Defaults.gradient_tol,
-    maxiter=Defaults.gradient_maxiter,
-    verbosity=Defaults.gradient_verbosity,
-    iterscheme=Defaults.gradient_iterscheme,
-    solver_alg=(;),
-)
+        alg = Defaults.gradient_alg,
+        tol = Defaults.gradient_tol,
+        maxiter = Defaults.gradient_maxiter,
+        verbosity = Defaults.gradient_verbosity,
+        iterscheme = Defaults.gradient_iterscheme,
+        solver_alg = (;),
+    )
     # replace symbol with GradMode alg type
     haskey(GRADIENT_MODE_SYMBOLS, alg) ||
         throw(ArgumentError("unknown GradMode algorithm: $alg"))
     alg_type = GRADIENT_MODE_SYMBOLS[alg]
 
     # parse GradMode algorithm
-    gradient_algorithm = if alg_type <: Union{GeomSum,ManualIter}
+    gradient_algorithm = if alg_type <: Union{GeomSum, ManualIter}
         alg_type{iterscheme}(tol, maxiter, verbosity)
-    elseif alg_type <: Union{<:LinSolver,<:EigSolver}
+    elseif alg_type <: Union{<:LinSolver, <:EigSolver}
         solver = if solver_alg isa NamedTuple # determine linear/eigen solver algorithm
             solver_kwargs = (; tol, maxiter, verbosity, solver_alg...)
 
             solver_type = if alg_type <: LinSolver # replace symbol with solver alg type
-                solver_kwargs = (; alg=Defaults.gradient_linsolver, solver_kwargs...)
+                solver_kwargs = (; alg = Defaults.gradient_linsolver, solver_kwargs...)
                 haskey(LINSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
                     ArgumentError("unknown LinSolver solver: $(solver_kwargs.alg)"),
                 )
                 LINSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
             elseif alg_type <: EigSolver
                 solver_kwargs = (;
-                    alg=Defaults.gradient_eigsolver,
-                    eager=Defaults.gradient_eigsolver_eager,
+                    alg = Defaults.gradient_eigsolver,
+                    eager = Defaults.gradient_eigsolver_eager,
                     solver_kwargs...,
                 )
                 haskey(EIGSOLVER_SOLVER_SYMBOLS, solver_kwargs.alg) || throw(
@@ -51,7 +51,7 @@ function GradMode(;
                 EIGSOLVER_SOLVER_SYMBOLS[solver_kwargs.alg]
             end
 
-            solver_kwargs = Base.structdiff(solver_kwargs, (; alg=nothing)) # remove `alg` keyword argument
+            solver_kwargs = Base.structdiff(solver_kwargs, (; alg = nothing)) # remove `alg` keyword argument
             solver_type(; solver_kwargs...)
         else
             solver_alg
@@ -97,7 +97,7 @@ struct GeomSum{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-GeomSum(; kwargs...) = GradMode(; alg=:geomsum, kwargs...)
+GeomSum(; kwargs...) = GradMode(; alg = :geomsum, kwargs...)
 
 GRADIENT_MODE_SYMBOLS[:geomsum] = GeomSum
 
@@ -131,7 +131,7 @@ struct ManualIter{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-ManualIter(; kwargs...) = GradMode(; alg=:manualiter, kwargs...)
+ManualIter(; kwargs...) = GradMode(; alg = :manualiter, kwargs...)
 
 GRADIENT_MODE_SYMBOLS[:manualiter] = ManualIter
 
@@ -164,7 +164,7 @@ Construct the `LinSolver` algorithm struct based on the following keyword argume
 struct LinSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.LinearSolver
 end
-LinSolver(; kwargs...) = GradMode(; alg=:linsolver, kwargs...)
+LinSolver(; kwargs...) = GradMode(; alg = :linsolver, kwargs...)
 
 GRADIENT_MODE_SYMBOLS[:linsolver] = LinSolver
 
@@ -196,7 +196,7 @@ Construct the `EigSolver` algorithm struct based on the following keyword argume
 struct EigSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.KrylovAlgorithm
 end
-EigSolver(; kwargs...) = GradMode(; alg=:eigsolver, kwargs...)
+EigSolver(; kwargs...) = GradMode(; alg = :eigsolver, kwargs...)
 
 GRADIENT_MODE_SYMBOLS[:eigsolver] = EigSolver
 
@@ -208,13 +208,13 @@ Evaluating the gradient of the cost function for CTMRG:
 =#
 
 function _rrule(
-    gradmode::GradMode{:diffgauge},
-    config::RuleConfig,
-    ::typeof(leading_boundary),
-    envinit,
-    state,
-    alg::CTMRGAlgorithm,
-)
+        gradmode::GradMode{:diffgauge},
+        config::RuleConfig,
+        ::typeof(leading_boundary),
+        envinit,
+        state,
+        alg::CTMRGAlgorithm,
+    )
     env, info = leading_boundary(envinit, state, alg)
     alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces during differentiation
 
@@ -240,13 +240,13 @@ end
 
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V
 function _rrule(
-    gradmode::GradMode{:fixed},
-    config::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
-    envinit,
-    state,
-    alg::SimultaneousCTMRG,
-)
+        gradmode::GradMode{:fixed},
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit,
+        state,
+        alg::SimultaneousCTMRG,
+    )
     env, = leading_boundary(envinit, state, alg)
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
     env_fixed, signs = gauge_fix(env, env_conv)
@@ -294,16 +294,16 @@ function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     U_full_fixed, V_full_fixed = fix_relative_phases(info.U_full, info.V_full, signs_full)
     return SVDAdjoint(;
-        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
-        rrule_alg=alg.rrule_alg,
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
+        rrule_alg = alg.rrule_alg,
     )
 end
-function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F<:IterSVD}
+function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     # fix kept U and V only since iterative SVD doesn't have access to full spectrum
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     return SVDAdjoint(;
-        fwd_alg=FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
-        rrule_alg=alg.rrule_alg,
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
+        rrule_alg = alg.rrule_alg,
     )
 end
 
@@ -390,7 +390,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
     if alg.solver_alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-    if norm(vecs[1][2]) < 1e-2 * alg.solver_alg.tol
+    if norm(vecs[1][2]) < 1.0e-2 * alg.solver_alg.tol
         @warn "Fixed-point gradient computation using Arnoldi failed: auxiliary component should be finite but was $(vecs[1][2]). Possibly the Jacobian does not have a unique eigenvalue 1."
     end
     y = scale(vecs[1][1], 1 / vecs[1][2])

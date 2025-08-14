@@ -10,3 +10,4 @@ TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 
 [compat]
 Documenter = "1.0"
+DocumenterInterLinks = "~1.0"

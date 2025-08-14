@@ -120,9 +120,7 @@ function su_iter(
     Nr, Nc = size(peps)
     bipartite && (@assert Nr == Nc == 2)
     (Nr >= 2 && Nc >= 2) || throw(
-        ArgumentError(
-            "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
-        ),
+        ArgumentError("iPEPS unit cell size for simple update should be no smaller than (2, 2)."),
     )
     peps2, env2 = deepcopy(peps), deepcopy(env)
     for r in 1:Nr, c in 1:Nc
@@ -177,11 +175,7 @@ function _simpleupdate2site(
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
-                label,
-                count,
-                alg.dt,
-                wtdiff,
-                time1 - ((converge || cancel) ? time_start : time0)
+                label, count, alg.dt, wtdiff, time1 - ((converge || cancel) ? time_start : time0)
             )
             cancel ? (@warn message) : (@info message)
         end

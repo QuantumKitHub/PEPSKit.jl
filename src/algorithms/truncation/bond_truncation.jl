@@ -21,18 +21,13 @@ The truncation algorithm can be constructed from the following keyword arguments
 @kwdef struct ALSTruncation
     trscheme::TruncationScheme
     maxiter::Int = 50
-    tol::Float64 = 1e-15
+    tol::Float64 = 1.0e-15
     check_interval::Int = 0
 end
 
 function _als_message(
-    iter::Int,
-    cost::Float64,
-    fid::Float64,
-    Δcost::Float64,
-    Δfid::Float64,
-    time_elapsed::Float64,
-)
+        iter::Int, cost::Float64, fid::Float64, Δcost::Float64, Δfid::Float64, time_elapsed::Float64,
+    )
     return @sprintf(
         "%5d, fid = %.8e, Δfid = %.8e, time = %.4f s\n", iter, fid, Δfid, time_elapsed
     ) * @sprintf("      cost = %.3e,   Δcost/cost0 = %.3e", cost, Δcost)
@@ -61,11 +56,11 @@ The index order of `a` or `b` is
 ```
 """
 function bond_truncate(
-    a::AbstractTensorMap{T,S,2,1},
-    b::AbstractTensorMap{T,S,1,2},
-    benv::BondEnv{T,S},
-    alg::ALSTruncation,
-) where {T<:Number,S<:ElementarySpace}
+        a::AbstractTensorMap{T, S, 2, 1},
+        b::AbstractTensorMap{T, S, 1, 2},
+        benv::BondEnv{T, S},
+        alg::ALSTruncation,
+    ) where {T <: Number, S <: ElementarySpace}
     # dual check of physical index
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
@@ -75,7 +70,7 @@ function bond_truncate(
     a2b2 = _combine_ab(a, b)
     # initialize truncated a, b
     perm_ab = ((1, 3), (4, 2))
-    a, s, b = tsvd(a2b2, perm_ab; trunc=alg.trscheme)
+    a, s, b = tsvd(a2b2, perm_ab; trunc = alg.trscheme)
     s /= norm(s, Inf)
     a, b = absorb_s(a, s, b)
     #= temporarily reorder axes of a and b to
@@ -121,12 +116,7 @@ function bond_truncate(
             cancel || (verbose && (converge || iter == 1 || iter % alg.check_interval == 0))
         if showinfo
             message = _als_message(
-                iter,
-                cost,
-                fid,
-                Δcost,
-                Δfid,
-                time1 - ((cancel || converge) ? time00 : time0),
+                iter, cost, fid, Δcost, Δfid, time1 - ((cancel || converge) ? time00 : time0),
             )
             if converge
                 @info "ALS conv" * message
@@ -138,18 +128,18 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = tsvd!(permute(_combine_ab(a, b), perm_ab); trunc=alg.trscheme)
+    a, s, b = tsvd!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trscheme)
     # normalize singular value spectrum
     s /= norm(s, Inf)
     return a, s, b, (; fid, Δfid)
 end
 
 function bond_truncate(
-    a::AbstractTensorMap{T,S,2,1},
-    b::AbstractTensorMap{T,S,1,2},
-    benv::BondEnv{T,S},
-    alg::FullEnvTruncation,
-) where {T<:Number,S<:ElementarySpace}
+        a::AbstractTensorMap{T, S, 2, 1},
+        b::AbstractTensorMap{T, S, 1, 2},
+        benv::BondEnv{T, S},
+        alg::FullEnvTruncation,
+    ) where {T <: Number, S <: ElementarySpace}
     # dual check of physical index
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
@@ -161,7 +151,7 @@ function bond_truncate(
     =#
     Qa, Ra = leftorth(a)
     Rb, Qb = rightorth(b)
-    # if Qa → Ra, a twist is needed to express a as 
+    # if Qa → Ra, a twist is needed to express a as
     # contraction of Rb, Qb instead of Qa * Ra
     isdual(space(Ra, 1)) && twist!(Ra, 1)
     # similarly if Rb → Qb

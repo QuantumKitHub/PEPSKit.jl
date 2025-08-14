@@ -1,4 +1,3 @@
-
 using Test
 using Random
 using LinearAlgebra
@@ -10,7 +9,7 @@ using Zygote
 
 ## Setup
 
-function three_dimensional_classical_ising(; beta, J=1.0)
+function three_dimensional_classical_ising(; beta, J = 1.0)
     K = beta * J
 
     # Boltzmann weights
@@ -60,21 +59,24 @@ ctm_styles = [:sequential, :simultaneous]
 projector_algs = [:halfinfinite, :fullinfinite]
 
 @testset "PEPO CTMRG runthroughs for unitcell=$(unitcell)" for unitcell in
-                                                               [(1, 1, 1), (1, 1, 2)]
+    [(1, 1, 1), (1, 1, 2)]
     Random.seed!(81812781144)
 
     # contract
-    T = InfinitePEPO(O; unitcell=unitcell)
+    T = InfinitePEPO(O; unitcell = unitcell)
     psi0 = initializePEPS(T, χpeps)
     n = InfiniteSquareNetwork(psi0, T)
     env0 = CTMRGEnv(n, χenv)
 
+    @test spacetype(typeof(T)) === ComplexSpace
+    @test spacetype(T) === ComplexSpace
+    @test sectortype(typeof(T)) === Trivial
+    @test sectortype(T) === Trivial
+
     @testset "PEPO CTMRG contraction using $alg with $projector_alg" for (
-        alg, projector_alg
-    ) in Iterators.product(
-        ctm_styles, projector_algs
-    )
-        env, = leading_boundary(env0, n; alg, maxiter=150, projector_alg)
+            alg, projector_alg,
+        ) in Iterators.product(ctm_styles, projector_algs)
+        env, = leading_boundary(env0, n; alg, maxiter = 150, projector_alg)
     end
 end
 
@@ -82,12 +84,12 @@ end
     Random.seed!(81812781144)
 
     # prep
-    ctm_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=2)
+    ctm_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 2)
     alg_rrule = EigSolver(;
-        solver_alg=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true),
-        iterscheme=:diffgauge,
+        solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true),
+        iterscheme = :diffgauge,
     )
-    opt_alg = LBFGS(32; maxiter=50, gradtol=1e-5, verbosity=3)
+    opt_alg = LBFGS(32; maxiter = 50, gradtol = 1.0e-5, verbosity = 3)
     function pepo_retract(x, η, α)
         x´_partial, ξ = PEPSKit.peps_retract(x[1:2], η, α)
         x´ = (x´_partial..., deepcopy(x[3]))
@@ -98,7 +100,7 @@ end
     end
 
     # contract
-    T = InfinitePEPO(O; unitcell=(1, 1, 1))
+    T = InfinitePEPO(O; unitcell = (1, 1, 1))
     psi0 = initializePEPS(T, χpeps)
     env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), χenv)
     env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), χenv)
@@ -107,9 +109,9 @@ end
     (psi_final, env2_final, env3_final), f, = optimize(
         (psi0, env2_0, env3_0),
         opt_alg;
-        inner=PEPSKit.real_inner,
-        retract=pepo_retract,
-        (transport!)=(pepo_transport!),
+        inner = PEPSKit.real_inner,
+        retract = pepo_retract,
+        (transport!) = (pepo_transport!),
     ) do (psi, env2, env3)
         E, gs = withgradient(psi) do ψ
             n2 = InfiniteSquareNetwork(ψ)
@@ -138,5 +140,5 @@ end
     nrm3 = PEPSKit._contract_site((1, 1), n3_final, env3_final)
 
     # compare to Monte-Carlo result from https://www.worldscientific.com/doi/abs/10.1142/S0129183101002383
-    @test abs(m / nrm3) ≈ 0.667162 rtol = 1e-2
+    @test abs(m / nrm3) ≈ 0.667162 rtol = 1.0e-2
 end

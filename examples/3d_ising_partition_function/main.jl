@@ -45,7 +45,7 @@ lattice. To verify our example we will check the magnetization and energy, so we
 the corresponding rank-6 tensors `M` and `E` while we're at it.
 """
 
-function three_dimensional_classical_ising(; beta, J=1.0)
+function three_dimensional_classical_ising(; beta, J = 1.0)
     K = beta * J
 
     ## Boltzmann weights
@@ -95,26 +95,40 @@ md"""
 ## Contracting the partition function
 
 To contract our infinite 3D partition function, we first reinterpret it as an infinite power
-of a slice-to-slice transfer operator ``T``, where ``T`` can be seen as an infinite 2D
+of a slice-to-slice transfer operator ``\mathbb{T}``, where ``\mathbb{T}`` can be seen as an infinite 2D
 projected entangled-pair operator (PEPO) which consists of the rank-6 tensor `O` at each
-site of an infinite 2D square lattice. In the same spirit as the boundary MPS approach, all
-we need to contract the whole partition function is to find the leading eigenvector of this
-PEPO. The fixed point of such a PEPO can be parametrized as a PEPS, and for the case of a
-Hermitian transfer operator we can find this PEPS through [variational optimization](@cite
-vanderstraeten_residual_2018).
+site of an infinite 2D square lattice,
 
-Indeed, for a Hermitian transfer operator ``T`` we can characterize the fixed point PEPS
-``|\psi\rangle`` which satisfies the eigenvalue equation
-``T |\psi\rangle = \Lambda |\psi\rangle`` corresponding to the largest magnitude eigenvalue
-``\Lambda`` as the solution of a variational problem
-
-```math
-|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | T | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,
+```@raw html
+<center>
+<img src="../../assets/figures/pepo.svg" alt="pepo" class="color-invertible" style="zoom: 180%"/>
+</center>
 ```
 
-where ``N`` is the diverging number of sites of the 2D transfer operator ``T``. The function
-minimized in this expression is exactly the free energy per site of the partition function,
-so we essentially find the fixed-point PEPS by variationally minimizing the free energy.
+To contract the original infinite network, all we need to do is to find the leading
+eigenvector of the PEPO ``\mathbb{T}``, The fixed point of such a PEPO can be parametrized
+as a PEPS ``\psi``, which should then satisfy the eigenvalue equation 
+``\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle``, or diagrammatically:
+
+```@raw html
+<center>
+<img src="../../assets/figures/pepo_fixedpoint_equation.svg" alt="pepo fixedpoint equation" class="color-invertible" style="zoom: 180%"/>
+</center>
+```
+
+For a Hermitian transfer operator ``\mathbb{T}`` we can characterize the fixed point PEPS
+``|\psi\rangle`` which satisfies the eigenvalue equation
+``\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle`` corresponding to the largest magnitude
+eigenvalue ``\Lambda`` as the solution of a variational problem
+
+```math
+|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | \mathbb{T} | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,
+```
+
+where ``N`` is the diverging number of sites of the 2D transfer operator ``\mathbb{T}``. The function
+minimized in this expression is exactly the free energy per site of the partition function.
+This means we can directly find the fixed-point PEPS by
+[variationally minimizing the free energy](@cite vanderstraeten_residual_2018).
 
 ### Defining the cost function
 
@@ -123,7 +137,7 @@ use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it.
 immediately recognize the denominator ``\langle \psi | \psi \rangle`` as the familiar PEPS
 norm, where we can compute the norm per site as the [`network_value`](@ref) of the
 corresponding [`InfiniteSquareNetwork`](@ref) by contracting it with the CTMRG algorithm.
-Similarly, the numerator ``\langle \psi | T | \psi \rangle`` is nothing more than an
+Similarly, the numerator ``\langle \psi | \mathbb{T} | \psi \rangle`` is nothing more than an
 `InfiniteSquareNetwork` consisting of three layers corresponding to the ket, transfer
 operator and bra objects. This object can also be constructed and contracted in a
 straightforward way, so we can again compute its `network_value`.
@@ -136,9 +150,9 @@ we'll specify the specific reverse rule algorithm that will be used to compute t
 of this cost function.
 """
 
-boundary_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=1)
+boundary_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 1)
 rrule_alg = EigSolver(;
-    solver_alg=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
+    solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true), iterscheme = :diffgauge
 )
 T = InfinitePEPO(O)
 
@@ -153,7 +167,7 @@ function pepo_costfun((peps, env_double_layer, env_triple_layer))
             env_double_layer,
             n_double_layer,
             boundary_alg;
-            alg_rrule=rrule_alg,
+            alg_rrule = rrule_alg,
         )
         ## construct the PEPS-PEPO-PEPS overlap network
         n_triple_layer = InfiniteSquareNetwork(ψ, T)
@@ -163,7 +177,7 @@ function pepo_costfun((peps, env_double_layer, env_triple_layer))
             env_triple_layer,
             n_triple_layer,
             boundary_alg;
-            alg_rrule=rrule_alg,
+            alg_rrule = rrule_alg,
         )
         ## update the environments for reuse
         PEPSKit.ignore_derivatives() do
@@ -228,12 +242,12 @@ function pepo_retract((peps, env_double_layer, env_triple_layer), η, α)
     return (peps´, env_double_layer´, env_triple_layer´), ξ
 end
 function pepo_transport!(
-    ξ,
-    (peps, env_double_layer, env_triple_layer),
-    η,
-    α,
-    (peps´, env_double_layer´, env_triple_layer´),
-)
+        ξ,
+        (peps, env_double_layer, env_triple_layer),
+        η,
+        α,
+        (peps´, env_double_layer´, env_triple_layer´),
+    )
     return PEPSKit.peps_transport!(
         ξ, (peps, env_double_layer), η, α, (peps´, env_double_layer´)
     )
@@ -254,15 +268,15 @@ psi0 = initializePEPS(T, Vpeps)
 env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), Venv)
 env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), Venv)
 
-optimizer_alg = LBFGS(32; maxiter=100, gradtol=1e-5, verbosity=3)
+optimizer_alg = LBFGS(32; maxiter = 100, gradtol = 1.0e-5, verbosity = 3)
 
 (psi_final, env2_final, env3_final), f, = optimize(
     pepo_costfun,
     (psi0, env2_0, env3_0),
     optimizer_alg;
-    inner=PEPSKit.real_inner,
-    retract=pepo_retract,
-    (transport!)=(pepo_transport!),
+    inner = PEPSKit.real_inner,
+    retract = pepo_retract,
+    (transport!) = (pepo_transport!),
 );
 
 md"""

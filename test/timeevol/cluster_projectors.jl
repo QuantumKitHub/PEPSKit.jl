@@ -34,7 +34,7 @@ Vspaces = [
         revs = [isdual(space(M, 1)) for M in Ms1[2:end]]
         # no truncation
         Ms2 = deepcopy(Ms1)
-        wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N-1), revs)
+        wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N - 1), revs)
         @test all((ϵ == 0) for ϵ in ϵs)
         normalize!.(Ms2, Inf)
         @test fidelity_cluster(Ms1, Ms2) ≈ 1.0
@@ -42,7 +42,7 @@ Vspaces = [
         @test all(lorths) && all(rorths)
         # truncation on one bond
         Ms3 = deepcopy(Ms1)
-        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(Vns), N-1), revs)
+        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(Vns), N - 1), revs)
         @test all((i == n) || (ϵ == 0) for (i, ϵ) in enumerate(ϵs))
         normalize!.(Ms3, Inf)
         ϵ = ϵs[n]
@@ -77,7 +77,7 @@ end
 
 @testset "Hubbard model with usual SU and 3-site SU" begin
     Nr, Nc = 2, 2
-    ctmrg_tol = 1e-9
+    ctmrg_tol = 1.0e-9
     Random.seed!(100)
     # with U(1) spin rotation symmetry
     Pspace = hubbard_space(Trivial, U1Irrep)
@@ -92,23 +92,23 @@ end
         ),
     )
     # usual 2-site simple update, and measure energy
-    dts = [1e-2, 1e-2, 5e-3]
-    tols = [1e-8, 1e-8, 1e-8]
+    dts = [1.0e-2, 1.0e-2, 5.0e-3]
+    tols = [1.0e-8, 1.0e-8, 1.0e-8]
     maxiter = 10000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trscheme = truncerr(1e-10) & truncdim(n == 1 ? 4 : 2)
+        trscheme = truncerr(1.0e-10) & truncdim(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite=true, check_interval=1000)
     end
     normalize!.(peps.A, Inf)
     env = CTMRGEnv(rand, Float64, peps, Espace)
-    env, = leading_boundary(env, peps; tol=ctmrg_tol, trscheme=trscheme_env)
+    env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)
     e_site = cost_function(peps, env, ham) / (Nr * Nc)
     @info "2-site simple update energy = $e_site"
     # continue with 3-site simple update; energy should not change much
-    dts = [1e-2, 5e-3]
-    tols = [1e-8, 1e-8]
-    trscheme = truncerr(1e-10) & truncdim(2)
+    dts = [1.0e-2, 5.0e-3]
+    tols = [1.0e-8, 1.0e-8]
+    trscheme = truncerr(1.0e-10) & truncdim(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         peps, wts, = simpleupdate(
@@ -116,8 +116,8 @@ end
         )
     end
     normalize!.(peps.A, Inf)
-    env, = leading_boundary(env, peps; tol=ctmrg_tol, trscheme=trscheme_env)
+    env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)
     e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
     @info "3-site simple update energy = $e_site2"
-    @test e_site ≈ e_site2 atol = 5e-4
+    @test e_site ≈ e_site2 atol = 5.0e-4
 end

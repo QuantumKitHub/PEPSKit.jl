@@ -46,7 +46,7 @@ _mul_localsandwich(α::Number, O::PFTensor) = α * O
 
 ## PEPS
 
-const PEPSSandwich{T<:PEPSTensor} = Tuple{T,T}
+const PEPSSandwich{T <: PEPSTensor} = Tuple{T, T}
 
 ket(O::PEPSSandwich) = O[1]
 bra(O::PEPSSandwich) = O[2]
@@ -90,7 +90,7 @@ end
 
 ## PEPO
 
-const PEPOSandwich{N,T<:PEPSTensor,P<:PEPOTensor} = Tuple{T,T,Vararg{P,N}}
+const PEPOSandwich{N, T <: PEPSTensor, P <: PEPOTensor} = Tuple{T, T, Vararg{P, N}}
 
 ket(O::PEPOSandwich) = O[1]
 bra(O::PEPOSandwich) = O[2]
@@ -98,9 +98,11 @@ pepo(O::PEPOSandwich) = O[3:end]
 pepo(O::PEPOSandwich, i::Int) = O[2 + i]
 
 function virtualspace(O::PEPOSandwich, dir)
-    return prod([
-        virtualspace(ket(O), dir),
-        virtualspace.(pepo(O), Ref(dir))...,
-        virtualspace(bra(O), dir)',
-    ])
+    return prod(
+        [
+            virtualspace(ket(O), dir),
+            virtualspace.(pepo(O), Ref(dir))...,
+            virtualspace(bra(O), dir)',
+        ]
+    )
 end

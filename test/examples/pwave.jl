@@ -20,7 +20,7 @@ peps₀ = InfinitePEPS(Pspace, Vspace, Vspace; unitcell)
 env₀, = leading_boundary(CTMRGEnv(peps₀, Envspace), peps₀)
 
 # find fixedpoint
-_, _, E, = fixedpoint(H, peps₀, env₀; tol=1e-3, optimizer_alg=(; maxiter=10))
+_, _, E, = fixedpoint(H, peps₀, env₀; tol = 1.0e-3, optimizer_alg = (; maxiter = 10))
 
 # comparison with Gaussian PEPS minimum at D=2 on 1000x1000 square lattice with aPBC
-@test E / prod(size(peps₀)) ≈ -2.6241 atol = 5e-2
+@test E / prod(size(peps₀)) ≈ -2.6241 atol = 5.0e-2

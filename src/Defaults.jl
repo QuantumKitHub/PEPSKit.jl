@@ -84,7 +84,7 @@ export set_scheduler!
 using OhMyThreads
 
 # CTMRG
-const ctmrg_tol = 1e-8
+const ctmrg_tol = 1.0e-8
 const ctmrg_maxiter = 100
 const ctmrg_miniter = 4
 const ctmrg_alg = :simultaneous # ∈ {:simultaneous, :sequential}
@@ -98,7 +98,7 @@ const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
 const svd_rrule_alg = :full # ∈ {:full, :gmres, :bicgstab, :arnoldi}
-const svd_rrule_broadening = 1e-13
+const svd_rrule_broadening = 1.0e-13
 const krylovdim_factor = 1.4
 
 # Projectors
@@ -106,7 +106,7 @@ const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
 const projector_verbosity = 0
 
 # Fixed-point gradient
-const gradient_tol = 1e-6
+const gradient_tol = 1.0e-6
 const gradient_maxiter = 30
 const gradient_verbosity = -1
 const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
@@ -117,7 +117,7 @@ const gradient_alg = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigso
 
 # Optimization
 const reuse_env = true
-const optimizer_tol = 1e-4
+const optimizer_tol = 1.0e-4
 const optimizer_maxiter = 100
 const optimizer_verbosity = 3
 const optimizer_alg = :lbfgs # ∈ {:gradientdescent, :conjugategradient, :lbfgs}
@@ -154,7 +154,7 @@ To reset the scheduler to its default value, one calls `set_scheduler!` without 
 arguments which then uses the default `DynamicScheduler()`. If the number of used threads is
 just one it falls back to `SerialScheduler()`.
 """
-function set_scheduler!(sc=OhMyThreads.Implementation.NotGiven(); kwargs...)
+function set_scheduler!(sc = OhMyThreads.Implementation.NotGiven(); kwargs...)
     if isempty(kwargs) && sc isa OhMyThreads.Implementation.NotGiven
         scheduler[] = Threads.nthreads() == 1 ? SerialScheduler() : DynamicScheduler()
     else

@@ -37,7 +37,7 @@ the `heisenberg_XYZ` method from [MPSKitModels](https://quantumkithub.github.io/
 which is redefined for the `InfiniteSquare` and reexported in PEPSKit:
 """
 
-H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1)
+H = heisenberg_XYZ(InfiniteSquare(); Jx = -1, Jy = 1, Jz = -1)
 
 md"""
 ## Setting up the algorithms and initial guesses
@@ -63,7 +63,7 @@ arguments. To see a description of all arguments, see the docstring of
 specific tolerance and during the CTMRG run keep all index dimensions fixed:
 """
 
-boundary_alg = (; tol=1e-10, trscheme=(; alg=:fixedspace));
+boundary_alg = (; tol = 1.0e-10, trscheme = (; alg = :fixedspace));
 
 md"""
 Let us also configure the optimizer algorithm. We are going to optimize the PEPS using the
@@ -72,7 +72,7 @@ the convergence tolerance (for the gradient norm) as well as the maximal number 
 and the BFGS memory size (which is used to approximate the Hessian):
 """
 
-optimizer_alg = (; alg=:lbfgs, tol=1e-4, maxiter=100, lbfgs_memory=16);
+optimizer_alg = (; alg = :lbfgs, tol = 1.0e-4, maxiter = 100, lbfgs_memory = 16);
 
 md"""
 Additionally, during optimization, we want to reuse the previous CTMRG environment to

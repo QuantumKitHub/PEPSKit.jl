@@ -7,11 +7,11 @@ have different spaces, this truncation style is different from `TruncationSpace`
 """
 struct FixedSpaceTruncation <: TruncationScheme end
 
-struct SiteDependentTruncation{T<:TruncationScheme} <: TruncationScheme
-    trschemes::Array{T,3}
+struct SiteDependentTruncation{T <: TruncationScheme} <: TruncationScheme
+    trschemes::Array{T, 3}
 end
 
-const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
+const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol, Type{<:TruncationScheme}}(
     :fixedspace => FixedSpaceTruncation,
     :notrunc => TensorKit.NoTruncation,
     :truncerr => TensorKit.TruncationError,
@@ -22,7 +22,7 @@ const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol,Type{<:TruncationScheme}}(
 )
 
 # Should be TruncationScheme but rename to avoid type piracy
-function _TruncationScheme(; alg=Defaults.trscheme, η=nothing)
+function _TruncationScheme(; alg = Defaults.trscheme, η = nothing)
     # replace Symbol with TruncationScheme type
     haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||
         throw(ArgumentError("unknown truncation scheme: $alg"))
@@ -32,14 +32,14 @@ function _TruncationScheme(; alg=Defaults.trscheme, η=nothing)
 end
 
 function truncation_scheme(
-    trscheme::TruncationScheme, direction::Int, row::Int, col::Int; kwargs...
-)
+        trscheme::TruncationScheme, direction::Int, row::Int, col::Int; kwargs...
+    )
     return trscheme
 end
 
 function truncation_scheme(
-    trscheme::SiteDependentTruncation, direction::Int, row::Int, col::Int;
-)
+        trscheme::SiteDependentTruncation, direction::Int, row::Int, col::Int
+    )
     return trscheme.trschemes[direction, row, col]
 end
 

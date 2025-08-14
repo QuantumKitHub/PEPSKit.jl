@@ -34,7 +34,7 @@ no internal symmetries (`symm = Trivial`) or use the global spin $U(1)$ symmetry
 
 symm = Trivial ## ∈ {Trivial, U1Irrep}
 Nr, Nc = 2, 2
-H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx=1, Jy=1, Jz=1));
+H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx = 1, Jy = 1, Jz = 1));
 
 md"""
 ## Simple updating
@@ -51,9 +51,9 @@ if symm == Trivial
     bond_space = ℂ^Dbond
     env_space = ℂ^χenv
 elseif symm == U1Irrep
-    physical_space = ℂ[U1Irrep](1//2 => 1, -1//2 => 1)
-    bond_space = ℂ[U1Irrep](0 => Dbond ÷ 2, 1//2 => Dbond ÷ 4, -1//2 => Dbond ÷ 4)
-    env_space = ℂ[U1Irrep](0 => χenv ÷ 2, 1//2 => χenv ÷ 4, -1//2 => χenv ÷ 4)
+    physical_space = ℂ[U1Irrep](1 // 2 => 1, -1 // 2 => 1)
+    bond_space = ℂ[U1Irrep](0 => Dbond ÷ 2, 1 // 2 => Dbond ÷ 4, -1 // 2 => Dbond ÷ 4)
+    env_space = ℂ[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 else
     error("not implemented")
 end
@@ -68,10 +68,10 @@ truncation schemes, which we use here to set a maximal bond dimension and at the
 fix a truncation error (if that can be reached by remaining below `Dbond`):
 """
 
-dts = [1e-2, 1e-3, 4e-4]
-tols = [1e-6, 1e-8, 1e-8]
+dts = [1.0e-2, 1.0e-3, 4.0e-4]
+tols = [1.0e-6, 1.0e-8, 1.0e-8]
 maxiter = 10000
-trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
+trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
 
 for (dt, tol) in zip(dts, tols)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
@@ -86,14 +86,14 @@ on the evolved PEPS. Let's do so:
 """
 normalize!.(peps.A, Inf)
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
-trscheme_env = truncerr(1e-10) & truncdim(χenv)
+trscheme_env = truncerr(1.0e-10) & truncdim(χenv)
 env, = leading_boundary(
     env₀,
     peps;
-    alg=:sequential,
-    projector_alg=:fullinfinite,
-    tol=1e-10,
-    trscheme=trscheme_env,
+    alg = :sequential,
+    projector_alg = :fullinfinite,
+    tol = 1.0e-10,
+    trscheme = trscheme_env,
 );
 
 md"""
