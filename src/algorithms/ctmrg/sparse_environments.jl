@@ -137,14 +137,9 @@ struct HalfInfiniteEnv{TC, TE, TA}  # TODO: subtype as AbstractTensorMap once Te
 end
 function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
     return HalfInfiniteEnv(
-        quadrant1.C,
-        quadrant2.C,
-        quadrant1.E_1,
-        quadrant1.E_2,
-        quadrant2.E_1,
-        quadrant2.E_2,
-        quadrant1.A_1,
-        quadrant2.A_2,
+        quadrant1.C, quadrant2.C,
+        quadrant1.E_1, quadrant1.E_2, quadrant2.E_1, quadrant2.E_2,
+        quadrant1.A_1, quadrant2.A_2,
     )
 end
 
@@ -235,22 +230,10 @@ function FullInfiniteEnv(
         quadrant1::E, quadrant2::E, quadrant3::E, quadrant4::E
     ) where {E <: EnlargedCorner}
     return FullInfiniteEnv(
-        quadrant1.C,
-        quadrant2.C,
-        quadrant3.C,
-        quadrant4.C,
-        quadrant1.E_1,
-        quadrant1.E_2,
-        quadrant2.E_1,
-        quadrant2.E_2,
-        quadrant3.E_1,
-        quadrant3.E_2,
-        quadrant4.E_1,
-        quadrant4.E_2,
-        quadrant1.A,
-        quadrant2.A,
-        quadrant3.A,
-        quadrant4.A,
+        quadrant1.C, quadrant2.C, quadrant3.C, quadrant4.C,
+        quadrant1.E_1, quadrant1.E_2, quadrant2.E_1, quadrant2.E_2,
+        quadrant3.E_1, quadrant3.E_2, quadrant4.E_1, quadrant4.E_2,
+        quadrant1.A, quadrant2.A, quadrant3.A, quadrant4.A,
     )
 end
 
@@ -261,22 +244,9 @@ Instantiate full-infinite environment as `TensorMap` explicitly.
 """
 function TensorKit.TensorMap(env::FullInfiniteEnv)  # Dense operator
     return full_infinite_environment(
-        env.C_1,
-        env.C_2,
-        env.C_3,
-        env.C_4,
-        env.E_1,
-        env.E_2,
-        env.E_3,
-        env.E_4,
-        env.E_2,
-        env.E_3,
-        env.E_4,
-        env.E_5,
-        env.A_1,
-        env.A_2,
-        env.A_3,
-        env.A_4,
+        env.C_1, env.C_2, env.C_3, env.C_4,
+        env.E_1, env.E_2, env.E_3, env.E_4, env.E_2, env.E_3, env.E_4, env.E_5,
+        env.A_1, env.A_2, env.A_3, env.A_4,
     )
 end
 
@@ -289,44 +259,18 @@ linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed
 """
 function (env::FullInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
     return full_infinite_environment(
-        env.C_1,
-        env.C_2,
-        env.C_3,
-        env.C_4,
-        env.E_1,
-        env.E_2,
-        env.E_3,
-        env.E_4,
-        env.E_5,
-        env.E_6,
-        env.E_7,
-        env.E_8,
+        env.C_1, env.C_2, env.C_3, env.C_4,
+        env.E_1, env.E_2, env.E_3, env.E_4, env.E_5, env.E_6, env.E_7, env.E_8,
         x,
-        env.A_1,
-        env.A_2,
-        env.A_3,
-        env.A_4,
+        env.A_1, env.A_2, env.A_3, env.A_4,
     )
 end
 function (env::FullInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
     return full_infinite_environment(
         x,
-        env.C_1,
-        env.C_2,
-        env.C_3,
-        env.C_4,
-        env.E_1,
-        env.E_2,
-        env.E_3,
-        env.E_4,
-        env.E_5,
-        env.E_6,
-        env.E_7,
-        env.E_8,
-        env.A_1,
-        env.A_2,
-        env.A_3,
-        env.A_4,
+        env.C_1, env.C_2, env.C_3, env.C_4,
+        env.E_1, env.E_2, env.E_3, env.E_4, env.E_5, env.E_6, env.E_7, env.E_8,
+        env.A_1, env.A_2, env.A_3, env.A_4,
     )
 end
 
