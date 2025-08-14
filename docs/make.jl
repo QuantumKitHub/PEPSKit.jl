@@ -53,10 +53,10 @@ examples_partition_functions = joinpath.(
 examples_boundary_mps = joinpath.(["boundary_mps"], Ref("index.md"))
 
 makedocs(;
-    modules = [PEPSKit, MPSKitModels],
-    sitename = "PEPSKit.jl",
-    format = Documenter.HTML(;
-        prettyurls = get(ENV, "CI", nothing) == "true", mathengine, size_threshold = 1024000
+    modules=[PEPSKit, MPSKitModels],
+    sitename="PEPSKit.jl",
+    format=Documenter.HTML(;
+        prettyurls=true, mathengine, assets=["assets/custom.css"], size_threshold=1024000
     ),
     pages = [
         "Home" => "index.md",

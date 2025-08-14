@@ -95,26 +95,40 @@ md"""
 ## Contracting the partition function
 
 To contract our infinite 3D partition function, we first reinterpret it as an infinite power
-of a slice-to-slice transfer operator ``T``, where ``T`` can be seen as an infinite 2D
+of a slice-to-slice transfer operator ``\mathbb{T}``, where ``\mathbb{T}`` can be seen as an infinite 2D
 projected entangled-pair operator (PEPO) which consists of the rank-6 tensor `O` at each
-site of an infinite 2D square lattice. In the same spirit as the boundary MPS approach, all
-we need to contract the whole partition function is to find the leading eigenvector of this
-PEPO. The fixed point of such a PEPO can be parametrized as a PEPS, and for the case of a
-Hermitian transfer operator we can find this PEPS through [variational optimization](@cite
-vanderstraeten_residual_2018).
+site of an infinite 2D square lattice,
 
-Indeed, for a Hermitian transfer operator ``T`` we can characterize the fixed point PEPS
-``|\psi\rangle`` which satisfies the eigenvalue equation
-``T |\psi\rangle = \Lambda |\psi\rangle`` corresponding to the largest magnitude eigenvalue
-``\Lambda`` as the solution of a variational problem
-
-```math
-|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | T | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,
+```@raw html
+<center>
+<img src="../../assets/figures/pepo.svg" alt="pepo" class="color-invertible" style="zoom: 180%"/>
+</center>
 ```
 
-where ``N`` is the diverging number of sites of the 2D transfer operator ``T``. The function
-minimized in this expression is exactly the free energy per site of the partition function,
-so we essentially find the fixed-point PEPS by variationally minimizing the free energy.
+To contract the original infinite network, all we need to do is to find the leading
+eigenvector of the PEPO ``\mathbb{T}``, The fixed point of such a PEPO can be parametrized
+as a PEPS ``\psi``, which should then satisfy the eigenvalue equation 
+``\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle``, or diagrammatically:
+
+```@raw html
+<center>
+<img src="../../assets/figures/pepo_fixedpoint_equation.svg" alt="pepo fixedpoint equation" class="color-invertible" style="zoom: 180%"/>
+</center>
+```
+
+For a Hermitian transfer operator ``\mathbb{T}`` we can characterize the fixed point PEPS
+``|\psi\rangle`` which satisfies the eigenvalue equation
+``\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle`` corresponding to the largest magnitude
+eigenvalue ``\Lambda`` as the solution of a variational problem
+
+```math
+|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | \mathbb{T} | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,
+```
+
+where ``N`` is the diverging number of sites of the 2D transfer operator ``\mathbb{T}``. The function
+minimized in this expression is exactly the free energy per site of the partition function.
+This means we can directly find the fixed-point PEPS by
+[variationally minimizing the free energy](@cite vanderstraeten_residual_2018).
 
 ### Defining the cost function
 
@@ -123,7 +137,7 @@ use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it.
 immediately recognize the denominator ``\langle \psi | \psi \rangle`` as the familiar PEPS
 norm, where we can compute the norm per site as the [`network_value`](@ref) of the
 corresponding [`InfiniteSquareNetwork`](@ref) by contracting it with the CTMRG algorithm.
-Similarly, the numerator ``\langle \psi | T | \psi \rangle`` is nothing more than an
+Similarly, the numerator ``\langle \psi | \mathbb{T} | \psi \rangle`` is nothing more than an
 `InfiniteSquareNetwork` consisting of three layers corresponding to the ket, transfer
 operator and bra objects. This object can also be constructed and contracted in a
 straightforward way, so we can again compute its `network_value`.
