@@ -142,7 +142,7 @@ This can be compared to the result obtained using CTMRG, where we see that the r
 match:
 """
 
-env_ctmrg, = leading_boundary(CTMRGEnv(ψ, ComplexSpace(20)), ψ; tol=1e-6, verbosity=2)
+env_ctmrg, = leading_boundary(CTMRGEnv(ψ, ComplexSpace(20)), ψ; tol = 1.0e-6, verbosity = 2)
 norm_ctmrg = abs(norm(ψ, env_ctmrg))
 @show abs(norm_vumps - norm_ctmrg) / norm_vumps;
 
@@ -162,7 +162,7 @@ argument and then define the corresponding transfer operator, where we again spe
 direction which will be facing north:
 """
 
-ψ_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
+ψ_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell = (2, 2))
 T_2x2 = PEPSKit.MultilineTransferPEPS(ψ_2x2, dir);
 
 md"""
@@ -174,7 +174,7 @@ mps_2x2, = leading_boundary(mps₀_2x2, T_2x2, VUMPS(; tol = 1.0e-6, verbosity =
 norm_2x2_vumps = abs(prod(expectation_value(mps_2x2, T_2x2)))
 
 env_ctmrg_2x2, = leading_boundary(
-    CTMRGEnv(ψ_2x2, ComplexSpace(20)), ψ_2x2; tol=1e-6, verbosity=2
+    CTMRGEnv(ψ_2x2, ComplexSpace(20)), ψ_2x2; tol = 1.0e-6, verbosity = 2
 )
 norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
