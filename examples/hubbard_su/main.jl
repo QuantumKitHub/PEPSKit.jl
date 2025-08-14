@@ -31,7 +31,7 @@ constructed on a $2 \times 2$ unit cell, so we have:
 t = 1
 U = 6
 Nr, Nc = 2, 2
-H = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu=U / 2);
+H = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu = U / 2);
 
 md"""
 ## Running the simple update algorithm
@@ -46,7 +46,7 @@ real `Float64` entries:
 Dbond = 8
 physical_space = Vect[fℤ₂](0 => 2, 1 => 2)
 virtual_space = Vect[fℤ₂](0 => Dbond / 2, 1 => Dbond / 2)
-wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, virtual_space; unitcell=(Nr, Nc));
+wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, virtual_space; unitcell = (Nr, Nc));
 
 md"""
 Let's set the algorithm parameters: The plan is to successively decrease the time interval of
@@ -56,14 +56,14 @@ use the keyword `bipartite=false` - meaning that we use the full $2 \times 2$ un
 without assuming a bipartite structure. Thus, we can start evolving:
 """
 
-dts = [1e-2, 1e-3, 4e-4, 1e-4]
-tols = [1e-6, 1e-8, 1e-8, 1e-8]
+dts = [1.0e-2, 1.0e-3, 4.0e-4, 1.0e-4]
+tols = [1.0e-6, 1.0e-8, 1.0e-8, 1.0e-8]
 maxiter = 20000
 
 for (n, (dt, tol)) in enumerate(zip(dts, tols))
-    trscheme = truncerr(1e-10) & truncdim(Dbond)
+    trscheme = truncerr(1.0e-10) & truncdim(Dbond)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-    global wpeps, = simpleupdate(wpeps, H, alg; bipartite=false)
+    global wpeps, = simpleupdate(wpeps, H, alg; bipartite = false)
 end
 
 md"""
@@ -89,7 +89,7 @@ env_space = Vect[fℤ₂](0 => χenv₀ / 2, 1 => χenv₀ / 2)
 env = CTMRGEnv(rand, Float64, peps, env_space)
 for χ in [χenv₀, χenv]
     global env, = leading_boundary(
-        env, peps; alg=:sequential, tol=1e-5, trscheme=truncdim(χ)
+        env, peps; alg = :sequential, tol = 1.0e-5, trscheme = truncdim(χ)
     )
 end
 

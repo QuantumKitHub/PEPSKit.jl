@@ -26,7 +26,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 @kwdef struct FullEnvTruncation
     trscheme::TruncationScheme
     maxiter::Int = 50
-    tol::Float64 = 1e-15
+    tol::Float64 = 1.0e-15
     trunc_init::Bool = true
     check_interval::Int = 0
 end
@@ -47,8 +47,8 @@ between two states specified by the bond matrices `b1`, `b2`
 ```
 """
 function inner_prod(
-    benv::BondEnv{T,S}, b1::AbstractTensorMap{T,S,1,1}, b2::AbstractTensorMap{T,S,1,1}
-) where {T<:Number,S<:ElementarySpace}
+        benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
+    ) where {T <: Number, S <: ElementarySpace}
     val = @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
     return val
 end
@@ -63,10 +63,10 @@ between two states specified by the bond matrices `b1`, `b2`
 ```
 """
 function fidelity(
-    benv::BondEnv{T,S}, b1::AbstractTensorMap{T,S,1,1}, b2::AbstractTensorMap{T,S,1,1}
-) where {T<:Number,S<:ElementarySpace}
+        benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
+    ) where {T <: Number, S <: ElementarySpace}
     return abs2(inner_prod(benv, b1, b2)) /
-           real(inner_prod(benv, b1, b1) * inner_prod(benv, b2, b2))
+        real(inner_prod(benv, b1, b1) * inner_prod(benv, b2, b2))
 end
 
 """
@@ -85,10 +85,10 @@ function _linearmap_twist!(t::AbstractTensorMap)
 end
 
 function _fet_message(
-    iter::Int, fid::Float64, Δfid::Float64, Δwt::Float64, time_elapsed::Float64
-)
+        iter::Int, fid::Float64, Δfid::Float64, Δwt::Float64, time_elapsed::Float64
+    )
     return @sprintf("%5d: fid = %.8e, Δfid = %.8e, ", iter, fid, Δfid) *
-           @sprintf("|Δs| = %.6e, time = %.4f s", Δwt, time_elapsed)
+        @sprintf("|Δs| = %.6e, time = %.4f s", Δwt, time_elapsed)
 end
 
 """
@@ -221,14 +221,14 @@ Returns the SVD result of the new bond matrix `U`, `S`, `V`, as well as an infor
 * `Δs` : Last singular value difference.
 """
 function fullenv_truncate(
-    b0::AbstractTensorMap{T,S,1,1}, benv::BondEnv{T,S}, alg::FullEnvTruncation
-) where {T<:Number,S<:ElementarySpace}
+        b0::AbstractTensorMap{T, S, 1, 1}, benv::BondEnv{T, S}, alg::FullEnvTruncation
+    ) where {T <: Number, S <: ElementarySpace}
     verbose = (alg.check_interval > 0)
     # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
     @assert codomain(benv) == domain(benv)
     time00 = time()
     # initialize u, s, vh with truncated or untruncated SVD
-    u, s, vh = tsvd(b0; trunc=(alg.trunc_init ? alg.trscheme : notrunc()))
+    u, s, vh = tsvd(b0; trunc = (alg.trunc_init ? alg.trscheme : notrunc()))
     b1 = similar(b0)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
@@ -244,7 +244,7 @@ function fullenv_truncate(
         _linearmap_twist!(B)
         r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
         @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
-        u, s, vh = tsvd(b1; trunc=alg.trscheme)
+        u, s, vh = tsvd(b1; trunc = alg.trscheme)
         s /= norm(s, Inf)
         # update `- l ←  =  - u ← s ←`
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
@@ -255,7 +255,7 @@ function fullenv_truncate(
         l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
         fid = fidelity(benv, b0, b1)
-        u, s, vh = tsvd!(b1; trunc=alg.trscheme)
+        u, s, vh = tsvd!(b1; trunc = alg.trscheme)
         s /= norm(s, Inf)
         # determine convergence
         Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN

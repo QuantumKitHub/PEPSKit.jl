@@ -6,7 +6,7 @@ for contracting infinite PEPS.
 """
 abstract type CTMRGAlgorithm end
 
-const CTMRG_SYMBOLS = IdDict{Symbol,Type{<:CTMRGAlgorithm}}()
+const CTMRG_SYMBOLS = IdDict{Symbol, Type{<:CTMRGAlgorithm}}()
 
 """
     CTMRGAlgorithm(; kwargs...)
@@ -14,15 +14,14 @@ const CTMRG_SYMBOLS = IdDict{Symbol,Type{<:CTMRGAlgorithm}}()
 Keyword argument parser returning the appropriate `CTMRGAlgorithm` algorithm struct.
 """
 function CTMRGAlgorithm(;
-    alg=Defaults.ctmrg_alg,
-    tol=Defaults.ctmrg_tol,
-    maxiter=Defaults.ctmrg_maxiter,
-    miniter=Defaults.ctmrg_miniter,
-    verbosity=Defaults.ctmrg_verbosity,
-    trscheme=(; alg=Defaults.trscheme),
-    svd_alg=(;),
-    projector_alg=Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
-)
+        alg = Defaults.ctmrg_alg,
+        tol = Defaults.ctmrg_tol,
+        maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
+        verbosity = Defaults.ctmrg_verbosity,
+        trscheme = (; alg = Defaults.trscheme),
+        svd_alg = (;),
+        projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
+    )
     # replace symbol with projector alg type
     haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
     alg_type = CTMRG_SYMBOLS[alg]
@@ -30,7 +29,7 @@ function CTMRGAlgorithm(;
     # parse CTMRG projector algorithm
 
     projector_algorithm = ProjectorAlgorithm(;
-        alg=projector_alg, svd_alg, trscheme, verbosity
+        alg = projector_alg, svd_alg, trscheme, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
@@ -108,8 +107,8 @@ function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwar
     return leading_boundary(env₀, network, alg)
 end
 function leading_boundary(
-    env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
-)
+        env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+    )
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
@@ -141,16 +140,16 @@ end
 
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env)
-    @infov 2 loginit!(log, η, network_value(network, env))
+    return @infov 2 loginit!(log, η, network_value(network, env))
 end
 function ctmrg_logiter!(log, iter, η, network, env)
-    @infov 3 logiter!(log, iter, η, network_value(network, env))
+    return @infov 3 logiter!(log, iter, η, network_value(network, env))
 end
 function ctmrg_logfinish!(log, iter, η, network, env)
-    @infov 2 logfinish!(log, iter, η, network_value(network, env))
+    return @infov 2 logfinish!(log, iter, η, network_value(network, env))
 end
 function ctmrg_logcancel!(log, iter, η, network, env)
-    @warnv 1 logcancel!(log, iter, η, network_value(network, env))
+    return @warnv 1 logcancel!(log, iter, η, network_value(network, env))
 end
 
 @non_differentiable ctmrg_loginit!(args...)

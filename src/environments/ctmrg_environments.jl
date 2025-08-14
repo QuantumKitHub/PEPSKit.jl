@@ -24,22 +24,22 @@ network being contracted.
 
 $(TYPEDFIELDS)
 """
-struct CTMRGEnv{C,T}
+struct CTMRGEnv{C, T}
     "4 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
-    corners::Array{C,3}
+    corners::Array{C, 3}
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
-    edges::Array{T,3}
+    edges::Array{T, 3}
 end
 
 const ProductSpaceLike{N} = Union{
-    NTuple{N,Int},NTuple{N,<:ElementarySpace},ProductSpace{<:ElementarySpace,N}
+    NTuple{N, Int}, NTuple{N, <:ElementarySpace}, ProductSpace{<:ElementarySpace, N},
 }
-const SpaceLike = Union{ElementarySpaceLike,ProductSpaceLike}
+const SpaceLike = Union{ElementarySpaceLike, ProductSpaceLike}
 
-_elementwise_dual(s::NTuple{N,<:ElementarySpace}) where {N} = dual.(s)
+_elementwise_dual(s::NTuple{N, <:ElementarySpace}) where {N} = dual.(s)
 
 _spacetype(::Int) = ComplexSpace
-_spacetype(::S) where {S<:ElementarySpace} = S
+_spacetype(::S) where {S <: ElementarySpace} = S
 _spacetype(s::ProductSpaceLike) = _spacetype(first(s))
 
 _to_space(χ::Int) = ℂ^χ
@@ -47,14 +47,14 @@ _to_space(χ::ElementarySpace) = χ
 _to_space(χ::ProductSpaceLike) = prod(_to_space, χ)
 
 function _corner_tensor(
-    f, ::Type{T}, left_vspace::S, right_vspace::S=left_vspace
-) where {T,S<:ElementarySpaceLike}
+        f, ::Type{T}, left_vspace::S, right_vspace::S = left_vspace
+    ) where {T, S <: ElementarySpaceLike}
     return f(T, _to_space(left_vspace) ← _to_space(right_vspace))
 end
 
 function _edge_tensor(
-    f, ::Type{T}, left_vspace::S, pspaces::P, right_vspace::S=left_vspace
-) where {T,S<:ElementarySpaceLike,P<:ProductSpaceLike}
+        f, ::Type{T}, left_vspace::S, pspaces::P, right_vspace::S = left_vspace
+    ) where {T, S <: ElementarySpaceLike, P <: ProductSpaceLike}
     return f(T, _to_space(left_vspace) ⊗ _to_space(pspaces), _to_space(right_vspace))
 end
 
@@ -83,35 +83,18 @@ representing a product space for the case of a partition function representing o
 PEPSs and PEPOs.
 """
 function CTMRGEnv(
-    Ds_north::A,
-    Ds_east::A,
-    chis_north::B,
-    chis_east::B=chis_north,
-    chis_south::B=chis_north,
-    chis_west::B=chis_north,
-) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
+        Ds_north::A, Ds_east::A,
+        chis_north::B, chis_east::B = chis_north, chis_south::B = chis_north, chis_west::B = chis_north,
+    ) where {A <: AbstractMatrix{<:ProductSpaceLike}, B <: AbstractMatrix{<:ElementarySpaceLike}}
     return CTMRGEnv(
-        randn,
-        ComplexF64,
-        N,
-        Ds_north,
-        Ds_east,
-        chis_north,
-        chis_east,
-        chis_south,
-        chis_west,
+        randn, ComplexF64, N, Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west,
     )
 end
 function CTMRGEnv(
-    f,
-    T,
-    Ds_north::A,
-    Ds_east::A,
-    chis_north::B,
-    chis_east::B=chis_north,
-    chis_south::B=chis_north,
-    chis_west::B=chis_north,
-) where {A<:AbstractMatrix{<:ProductSpaceLike},B<:AbstractMatrix{<:ElementarySpaceLike}}
+        f, T,
+        Ds_north::A, Ds_east::A,
+        chis_north::B, chis_east::B = chis_north, chis_south::B = chis_north, chis_west::B = chis_north,
+    ) where {A <: AbstractMatrix{<:ProductSpaceLike}, B <: AbstractMatrix{<:ElementarySpaceLike}}
     # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
     Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
@@ -174,46 +157,29 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-    D_north::P,
-    D_east::P,
-    chi_north::S,
-    chi_east::S=chi_north,
-    chi_south::S=chi_north,
-    chi_west::S=chi_north;
-    unitcell::Tuple{Int,Int}=(1, 1),
-) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
+        D_north::P, D_east::P,
+        chi_north::S, chi_east::S = chi_north, chi_south::S = chi_north, chi_west::S = chi_north;
+        unitcell::Tuple{Int, Int} = (1, 1),
+    ) where {P <: ProductSpaceLike, S <: ElementarySpaceLike}
     return CTMRGEnv(
-        randn,
-        ComplexF64,
-        fill(D_north, unitcell),
-        fill(D_east, unitcell),
-        fill(chi_north, unitcell),
-        fill(chi_east, unitcell),
-        fill(chi_south, unitcell),
-        fill(chi_west, unitcell),
+        randn, ComplexF64,
+        fill(D_north, unitcell), fill(D_east, unitcell),
+        fill(chi_north, unitcell), fill(chi_east, unitcell),
+        fill(chi_south, unitcell), fill(chi_west, unitcell),
     )
 end
 function CTMRGEnv(
-    f,
-    T,
-    D_north::P,
-    D_east::P,
-    chi_north::S,
-    chi_east::S=chi_north,
-    chi_south::S=chi_north,
-    chi_west::S=chi_north;
-    unitcell::Tuple{Int,Int}=(1, 1),
-) where {P<:ProductSpaceLike,S<:ElementarySpaceLike}
+        f, T,
+        D_north::P, D_east::P,
+        chi_north::S, chi_east::S = chi_north,
+        chi_south::S = chi_north, chi_west::S = chi_north;
+        unitcell::Tuple{Int, Int} = (1, 1),
+    ) where {P <: ProductSpaceLike, S <: ElementarySpaceLike}
     return CTMRGEnv(
-        f,
-        T,
-        N,
-        fill(D_north, unitcell),
-        fill(D_east, unitcell),
-        fill(chi_north, unitcell),
-        fill(chi_east, unitcell),
-        fill(chi_south, unitcell),
-        fill(chi_west, unitcell),
+        f, T, N,
+        fill(D_north, unitcell), fill(D_east, unitcell),
+        fill(chi_north, unitcell), fill(chi_east, unitcell),
+        fill(chi_south, unitcell), fill(chi_west, unitcell),
     )
 end
 
@@ -235,45 +201,28 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 `chis_west[r, c]` corresponds to the north space of the west edge tensor.
 """
 function CTMRGEnv(
-    network::InfiniteSquareNetwork,
-    chis_north::A,
-    chis_east::A=chis_north,
-    chis_south::A=chis_north,
-    chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
+        network::InfiniteSquareNetwork,
+        chis_north::A, chis_east::A = chis_north, chis_south::A = chis_north, chis_west::A = chis_north,
+    ) where {A <: AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = _north_env_spaces(network)
     Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
-        randn,
-        scalartype(network),
-        Ds_north,
-        Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
+        randn, scalartype(network),
+        Ds_north, Ds_east,
+        _to_space.(chis_north), _to_space.(chis_east), _to_space.(chis_south), _to_space.(chis_west),
     )
 end
 function CTMRGEnv(
-    f,
-    T,
-    network::InfiniteSquareNetwork,
-    chis_north::A,
-    chis_east::A=chis_north,
-    chis_south::A=chis_north,
-    chis_west::A=chis_north,
-) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
+        f, T,
+        network::InfiniteSquareNetwork,
+        chis_north::A, chis_east::A = chis_north, chis_south::A = chis_north, chis_west::A = chis_north,
+    ) where {A <: AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = _north_env_spaces(network)
     Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
-        f,
-        T,
-        Ds_north,
-        Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
+        f, T,
+        Ds_north, Ds_east,
+        _to_space.(chis_north), _to_space.(chis_east), _to_space.(chis_south), _to_space.(chis_west),
     )
 end
 
@@ -297,49 +246,37 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-    network::InfiniteSquareNetwork,
-    chi_north::S,
-    chi_east::S=chi_north,
-    chi_south::S=chi_north,
-    chi_west::S=chi_north,
-) where {S<:ElementarySpaceLike}
+        network::InfiniteSquareNetwork,
+        chi_north::S, chi_east::S = chi_north, chi_south::S = chi_north, chi_west::S = chi_north,
+    ) where {S <: ElementarySpaceLike}
     return CTMRGEnv(
         network,
-        fill(chi_north, size(network)),
-        fill(chi_east, size(network)),
-        fill(chi_south, size(network)),
-        fill(chi_west, size(network)),
+        fill(chi_north, size(network)), fill(chi_east, size(network)),
+        fill(chi_south, size(network)), fill(chi_west, size(network)),
     )
 end
 function CTMRGEnv(
-    f,
-    T,
-    network::InfiniteSquareNetwork,
-    chi_north::S,
-    chi_east::S=chi_north,
-    chi_south::S=chi_north,
-    chi_west::S=chi_north,
-) where {S<:ElementarySpaceLike}
+        f, T,
+        network::InfiniteSquareNetwork,
+        chi_north::S, chi_east::S = chi_north, chi_south::S = chi_north, chi_west::S = chi_north,
+    ) where {S <: ElementarySpaceLike}
     return CTMRGEnv(
-        f,
-        T,
+        f, T,
         network,
-        fill(chi_north, size(network)),
-        fill(chi_east, size(network)),
-        fill(chi_south, size(network)),
-        fill(chi_west, size(network)),
+        fill(chi_north, size(network)), fill(chi_east, size(network)),
+        fill(chi_south, size(network)), fill(chi_west, size(network)),
     )
 end
 
 # allow constructing environments for implicitly defined contractible networks
-function CTMRGEnv(state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
+function CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
     return CTMRGEnv(InfiniteSquareNetwork(state), args...)
 end
-function CTMRGEnv(f, T, state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
+function CTMRGEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
     return CTMRGEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
-@non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
+@non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
@@ -380,26 +317,26 @@ Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
 Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
 
 cornertype(env::CTMRGEnv) = cornertype(typeof(env))
-cornertype(::Type{CTMRGEnv{C,E}}) where {C,E} = C
+cornertype(::Type{CTMRGEnv{C, E}}) where {C, E} = C
 edgetype(env::CTMRGEnv) = edgetype(typeof(env))
-edgetype(::Type{CTMRGEnv{C,E}}) where {C,E} = E
+edgetype(::Type{CTMRGEnv{C, E}}) where {C, E} = E
 
-TensorKit.spacetype(::Type{E}) where {E<:CTMRGEnv} = spacetype(cornertype(E))
+TensorKit.spacetype(::Type{E}) where {E <: CTMRGEnv} = spacetype(cornertype(E))
 
 # In-place update of environment
-function update!(env::CTMRGEnv{C,T}, env´::CTMRGEnv{C,T}) where {C,T}
+function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C, T}) where {C, T}
     env.corners .= env´.corners
     env.edges .= env´.edges
     return env
 end
 
 # Rotate corners & edges counter-clockwise
-function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
+function Base.rotl90(env::CTMRGEnv{C, T}) where {C, T}
     # Initialize rotated corners & edges with rotated sizes
     corners′ = Zygote.Buffer(
-        Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
+        Array{C, 3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
     )
-    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
+    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
     for dir in 1:4
         dir2 = _prev(dir, 4)
         corners′[dir2, :, :] = rotl90(env.corners[dir, :, :])
@@ -409,12 +346,12 @@ function Base.rotl90(env::CTMRGEnv{C,T}) where {C,T}
 end
 
 # Rotate corners & edges clockwise
-function Base.rotr90(env::CTMRGEnv{C,T}) where {C,T}
+function Base.rotr90(env::CTMRGEnv{C, T}) where {C, T}
     # Initialize rotated corners & edges with rotated sizes
     corners′ = Zygote.Buffer(
-        Array{C,3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
+        Array{C, 3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
     )
-    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
+    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
     for dir in 1:4
         dir2 = _next(dir, 4)
         corners′[dir2, :, :] = rotr90(env.corners[dir, :, :])
@@ -424,12 +361,12 @@ function Base.rotr90(env::CTMRGEnv{C,T}) where {C,T}
 end
 
 # Rotate corners & edges by 180 degrees
-function Base.rot180(env::CTMRGEnv{C,T}) where {C,T}
+function Base.rot180(env::CTMRGEnv{C, T}) where {C, T}
     # Initialize rotated corners & edges with rotated sizes
     corners′ = Zygote.Buffer(
-        Array{C,3}(undef, 4, size(env.corners, 2), size(env.corners, 3))
+        Array{C, 3}(undef, 4, size(env.corners, 2), size(env.corners, 3))
     )
-    edges′ = Zygote.Buffer(Array{T,3}(undef, 4, size(env.edges, 2), size(env.edges, 3)))
+    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 2), size(env.edges, 3)))
     for dir in 1:4
         dir2 = _next(_next(dir, 4), 4)
         corners′[dir2, :, :] = rot180(env.corners[dir, :, :])
@@ -485,13 +422,13 @@ end
 # big vector. In other words, the associated vector space is not the natural one associated
 # to the original (physical) system, and addition, scaling, etc. are performed element-wise.
 
-function VI.scalartype(::Type{CTMRGEnv{C,T}}) where {C,T}
+function VI.scalartype(::Type{CTMRGEnv{C, T}}) where {C, T}
     S₁ = scalartype(C)
     S₂ = scalartype(T)
     return promote_type(S₁, S₂)
 end
 
-function VI.zerovector(env::CTMRGEnv, ::Type{S}) where {S<:Number}
+function VI.zerovector(env::CTMRGEnv, ::Type{S}) where {S <: Number}
     _zerovector = Base.Fix2(zerovector, S)
     return CTMRGEnv(map(_zerovector, env.corners), map(_zerovector, env.edges))
 end

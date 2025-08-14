@@ -23,10 +23,10 @@ lattice = fill(ℂ^2, 1, 1) # single-site unitcell
 O1 = LocalOperator(lattice, ((1, 1),) => σx, ((1, 1), (1, 2)) => σx ⊗ σx, ((1, 1), (2, 1)) => σx ⊗ σx)
 ```
 """
-struct LocalOperator{T<:Tuple,S}
+struct LocalOperator{T <: Tuple, S}
     lattice::Matrix{S}
     terms::T
-    function LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S}
+    function LocalOperator{T, S}(lattice::Matrix{S}, terms::T) where {T, S}
         plattice = PeriodicArray(lattice)
         # Check if the indices of the operator are valid with themselves and the lattice
         for (inds, operator) in terms
@@ -39,14 +39,13 @@ struct LocalOperator{T<:Tuple,S}
                 @assert space(operator, i) == plattice[inds[i]]
             end
         end
-        return new{T,S}(lattice, terms)
+        return new{T, S}(lattice, terms)
     end
 end
 function LocalOperator(
-    lattice::Matrix,
-    terms::Pair...;
-    atol=maximum(x -> eps(real(scalartype(x[2])))^(3 / 4), terms),
-)
+        lattice::Matrix, terms::Pair...;
+        atol = maximum(x -> eps(real(scalartype(x[2])))^(3 / 4), terms),
+    )
     allinds = getindex.(terms, 1)
     alloperators = getindex.(terms, 2)
 
@@ -62,7 +61,7 @@ function LocalOperator(
     end
 
     terms_tuple = Tuple(relevant_terms)
-    return LocalOperator{typeof(terms_tuple),eltype(lattice)}(lattice, terms_tuple)
+    return LocalOperator{typeof(terms_tuple), eltype(lattice)}(lattice, terms_tuple)
 end
 
 """
@@ -120,7 +119,7 @@ end
 # --------------
 function Base.:*(α::Number, O::LocalOperator)
     scaled_terms = map(((inds, operator),) -> (inds => α * operator), O.terms)
-    return LocalOperator{typeof(scaled_terms),eltype(O.lattice)}(O.lattice, scaled_terms)
+    return LocalOperator{typeof(scaled_terms), eltype(O.lattice)}(O.lattice, scaled_terms)
 end
 Base.:*(O::LocalOperator, α::Number) = α * O
 
@@ -144,7 +143,7 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 Get the position of `site` after reflection about
 the anti-diagonal line of a unit cell of size `(Nrow, Ncol)`.
 """
-function mirror_antidiag(site::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2,Int})
+function mirror_antidiag(site::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2, Int})
     r, c = site[1], site[2]
     return CartesianIndex(Ncol - c + 1, Nrow - r + 1)
 end
@@ -163,7 +162,7 @@ function mirror_antidiag(H::LocalOperator)
     lattice2 = mirror_antidiag(physicalspace(H))
     terms2 = (
         (Tuple(mirror_antidiag(site, size(H.lattice)) for site in sites) => op) for
-        (sites, op) in H.terms
+            (sites, op) in H.terms
     )
     return LocalOperator(lattice2, terms2...)
 end
@@ -188,11 +187,11 @@ end
 
 # Charge shifting
 # ---------------
-TensorKit.spacetype(::Type{T}) where {S,T<:LocalOperator{<:Any,S}} = S
+TensorKit.spacetype(::Type{T}) where {S, T <: LocalOperator{<:Any, S}} = S
 
 @generated function _fuse_isomorphisms(
-    op::AbstractTensorMap{<:Any,S,N,N}, fs::Vector{<:AbstractTensorMap{<:Any,S,1,2}}
-) where {S,N}
+        op::AbstractTensorMap{<:Any, S, N, N}, fs::Vector{<:AbstractTensorMap{<:Any, S, 1, 2}}
+    ) where {S, N}
     op_out_e = tensorexpr(:op_out, -(1:N), -((1:N) .+ N))
     op_e = tensorexpr(:op, 1:3:(3 * N), 2:3:(3 * N))
     f_es = map(1:N) do i
@@ -214,7 +213,7 @@ $(SIGNATURES)
 
 Fuse identities on auxiliary physical spaces into a given operator.
 """
-function _fuse_ids(op::AbstractTensorMap{T,S,N,N}, Ps::NTuple{N,S}) where {T,S,N}
+function _fuse_ids(op::AbstractTensorMap{T, S, N, N}, Ps::NTuple{N, S}) where {T, S, N}
     # make isomorphisms
     fs = map(1:N) do i
         return isomorphism(fuse(space(op, i), Ps[i]), space(op, i) ⊗ Ps[i])

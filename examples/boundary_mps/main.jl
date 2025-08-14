@@ -128,7 +128,7 @@ boundary MPS fixed point, we call [`leading_boundary`](@ref) using the
 [`MPSKit.VUMPS`](@extref) algorithm:
 """
 
-mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol=1e-6, verbosity=2));
+mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol = 1.0e-6, verbosity = 2));
 
 md"""
 The norm of the state per unit cell is then given by the expectation value
@@ -142,7 +142,7 @@ This can be compared to the result obtained using CTMRG, where we see that the r
 match:
 """
 
-env_ctmrg, = leading_boundary(CTMRGEnv(ψ, ComplexSpace(20)), ψ; tol=1e-6, verbosity=2)
+env_ctmrg, = leading_boundary(CTMRGEnv(ψ, ComplexSpace(20)), ψ; tol = 1.0e-6, verbosity = 2)
 norm_ctmrg = abs(norm(ψ, env_ctmrg))
 @show abs(norm_vumps - norm_ctmrg) / norm_vumps;
 
@@ -162,7 +162,7 @@ argument and then define the corresponding transfer operator, where we again spe
 direction which will be facing north:
 """
 
-ψ_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
+ψ_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell = (2, 2))
 T_2x2 = PEPSKit.MultilineTransferPEPS(ψ_2x2, dir);
 
 md"""
@@ -170,11 +170,11 @@ Now, the procedure is the same as before: We compute the norm once using VUMPS, 
 """
 
 mps₀_2x2 = initialize_mps(T_2x2, fill(ComplexSpace(20), 2, 2))
-mps_2x2, = leading_boundary(mps₀_2x2, T_2x2, VUMPS(; tol=1e-6, verbosity=2))
+mps_2x2, = leading_boundary(mps₀_2x2, T_2x2, VUMPS(; tol = 1.0e-6, verbosity = 2))
 norm_2x2_vumps = abs(prod(expectation_value(mps_2x2, T_2x2)))
 
 env_ctmrg_2x2, = leading_boundary(
-    CTMRGEnv(ψ_2x2, ComplexSpace(20)), ψ_2x2; tol=1e-6, verbosity=2
+    CTMRGEnv(ψ_2x2, ComplexSpace(20)), ψ_2x2; tol = 1.0e-6, verbosity = 2
 )
 norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
@@ -196,7 +196,7 @@ T | \psi \rangle$.
 The classical Ising PEPO is defined as follows:
 """
 
-function ising_pepo(β; unitcell=(1, 1, 1))
+function ising_pepo(β; unitcell = (1, 1, 1))
     t = ComplexF64[exp(β) exp(-β); exp(-β) exp(β)]
     q = sqrt(t)
 
@@ -223,7 +223,7 @@ As before, we converge the boundary MPS using VUMPS and then compute the expecta
 """
 
 mps₀_pepo = initialize_mps(transfer_pepo, [ComplexSpace(20)])
-mps_pepo, = leading_boundary(mps₀_pepo, transfer_pepo, VUMPS(; tol=1e-6, verbosity=2))
+mps_pepo, = leading_boundary(mps₀_pepo, transfer_pepo, VUMPS(; tol = 1.0e-6, verbosity = 2))
 norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 @show norm_pepo;
 

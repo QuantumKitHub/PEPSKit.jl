@@ -55,8 +55,8 @@ end
 # this is definitely not what you would want to do, but it circumvents having to think
 # about what hermiticity means at the level of transfer operators, which is something
 function _fit_spaces(
-    y::AbstractTensorMap{T,S,N₁,N₂}, x::AbstractTensorMap{T,S,N₁,N₂}
-) where {T,S<:IndexSpace,N₁,N₂}
+        y::AbstractTensorMap{T, S, N₁, N₂}, x::AbstractTensorMap{T, S, N₁, N₂}
+    ) where {T, S <: IndexSpace, N₁, N₂}
     for i in 1:(N₁ + N₂)
         if space(x, i) ≠ space(y, i)
             f = unitary(space(x, i) ← space(y, i))
@@ -70,11 +70,11 @@ function _fit_spaces(
 end
 _fit_spaces(y::InfinitePEPS, x::InfinitePEPS) = InfinitePEPS(map(_fit_spaces, y.A, x.A))
 
-function herm_depth_inv(x::Union{PEPSTensor,PEPOTensor})
+function herm_depth_inv(x::Union{PEPSTensor, PEPOTensor})
     return 0.5 * (x + _fit_spaces(herm_depth(x), x))
 end
 
-function herm_width_inv(x::Union{PEPSTensor,PEPOTensor})
+function herm_width_inv(x::Union{PEPSTensor, PEPOTensor})
     return 0.5 * (x + _fit_spaces(herm_width(x), x))
 end
 
@@ -87,9 +87,9 @@ end
 function rot_inv(x)
     return 0.25 * (
         x +
-        _fit_spaces(rotl90(x), x) +
-        _fit_spaces(rot180(x), x) +
-        _fit_spaces(rotr90(x), x)
+            _fit_spaces(rotl90(x), x) +
+            _fit_spaces(rot180(x), x) +
+            _fit_spaces(rotr90(x), x)
     )
 end
 

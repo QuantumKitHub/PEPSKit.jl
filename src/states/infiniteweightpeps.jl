@@ -1,11 +1,10 @@
-
 """
     const PEPSWeight
 
 Default type for PEPS bond weights with 2 virtual indices, conventionally ordered as: ``wt : WS ← EN``.
 `WS`, `EN` denote the west/south, east/north spaces for x/y-weights on the square lattice, respectively.
 """
-const PEPSWeight{T,S} = AbstractTensorMap{T,S,1,1}
+const PEPSWeight{T, S} = AbstractTensorMap{T, S, 1, 1}
 
 """
     struct SUWeight{E<:PEPSWeight}
@@ -23,12 +22,12 @@ $(TYPEDFIELDS)
 
     SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
 """
-struct SUWeight{E<:PEPSWeight}
-    data::Array{E,3}
-    SUWeight{E}(data::Array{E,3}) where {E} = new{E}(data)
+struct SUWeight{E <: PEPSWeight}
+    data::Array{E, 3}
+    SUWeight{E}(data::Array{E, 3}) where {E} = new{E}(data)
 end
 
-function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
+function SUWeight(data::Array{E, 3}) where {E <: PEPSWeight}
     scalartype(data) <: Real || error("Weight elements must be real numbers.")
     for wt in data
         isa(wt, DiagonalTensorMap) ||
@@ -42,7 +41,7 @@ function SUWeight(data::Array{E,3}) where {E<:PEPSWeight}
     return SUWeight{E}(data)
 end
 
-function SUWeight(wts_mats::AbstractMatrix{E}...) where {E<:PEPSWeight}
+function SUWeight(wts_mats::AbstractMatrix{E}...) where {E <: PEPSWeight}
     n_mat = length(wts_mats)
     Nr, Nc = size(wts_mats[1])
     @assert all((Nr, Nc) == size(wts_mat) for wts_mat in wts_mats)
@@ -58,7 +57,7 @@ Base.size(W::SUWeight, i) = size(W.data, i)
 Base.length(W::SUWeight) = length(W.data)
 Base.eltype(W::SUWeight) = eltype(typeof(W))
 Base.eltype(::Type{SUWeight{E}}) where {E} = E
-VI.scalartype(::Type{T}) where {T<:SUWeight} = scalartype(eltype(T))
+VI.scalartype(::Type{T}) where {T <: SUWeight} = scalartype(eltype(T))
 
 Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
 Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
@@ -66,7 +65,7 @@ Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
 ## spaces
-TensorKit.spacetype(::Type{T}) where {E,T<:SUWeight{E}} = spacetype(E)
+TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 
 ## (Approximate) equality
 function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
@@ -125,13 +124,13 @@ $(TYPEDFIELDS)
     InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspaces::M, Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
     InfiniteWeightPEPS([f=randn, T=ComplexF64,] Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 """
-struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
+struct InfiniteWeightPEPS{T <: PEPSTensor, E <: PEPSWeight}
     vertices::Matrix{T}
     weights::SUWeight{E}
 
     function InfiniteWeightPEPS(
-        vertices::Matrix{T}, weights::SUWeight{E}
-    ) where {T<:PEPSTensor,E<:PEPSWeight}
+            vertices::Matrix{T}, weights::SUWeight{E}
+        ) where {T <: PEPSTensor, E <: PEPSWeight}
         @assert size(vertices) == size(weights)[2:end]
         Nr, Nc = size(vertices)
         # check space matching between vertex tensors and weight matrices
@@ -147,7 +146,7 @@ struct InfiniteWeightPEPS{T<:PEPSTensor,E<:PEPSWeight}
             space(weights[1, r, c], 2)' == space(vertices[r, _next(c, Nc)], 5) ||
                 throw(SpaceMismatch("East space of bond weight x$((r, c)) does not match."))
         end
-        return new{T,E}(vertices, weights)
+        return new{T, E}(vertices, weights)
     end
 end
 
@@ -158,8 +157,8 @@ Create an InfiniteWeightPEPS from matrices of vertex tensors,
 and separate matrices of weights on each type of bond at all locations in the unit cell.
 """
 function InfiniteWeightPEPS(
-    vertices::Matrix{T}, weight_mats::Matrix{E}...
-) where {T<:PEPSTensor,E<:PEPSWeight}
+        vertices::Matrix{T}, weight_mats::Matrix{E}...
+    ) where {T <: PEPSTensor, E <: PEPSWeight}
     return InfiniteWeightPEPS(vertices, SUWeight(weight_mats...))
 end
 
@@ -172,13 +171,13 @@ Each individual space can be specified as either an `Int` or an `ElementarySpace
 Bond weights are initialized as identity matrices of element type `Float64`.
 """
 function InfiniteWeightPEPS(
-    Pspaces::M, Nspaces::M, Espaces::M
-) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+        Pspaces::M, Nspaces::M, Espaces::M
+    ) where {M <: AbstractMatrix{<:Union{Int, ElementarySpace}}}
     return InfiniteWeightPEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
 end
 function InfiniteWeightPEPS(
-    f, T, Pspaces::M, Nspaces::M, Espaces::M=Nspaces
-) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+        f, T, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:Union{Int, ElementarySpace}}}
     @assert all(!isdual, Pspaces)
     @assert all(!isdual, Nspaces)
     @assert all(!isdual, Espaces)
@@ -198,12 +197,12 @@ Create an InfiniteWeightPEPS by specifying its physical, north and east spaces (
 Use `T` to specify the element type of the vertex tensors.
 Bond weights are initialized as identity matrices of element type `Float64`.
 """
-function InfiniteWeightPEPS(Pspaces::S, Nspaces::S, Espaces::S) where {S<:ElementarySpace}
+function InfiniteWeightPEPS(Pspaces::S, Nspaces::S, Espaces::S) where {S <: ElementarySpace}
     return InfiniteWeightPEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
 end
 function InfiniteWeightPEPS(
-    f, T, Pspace::S, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-) where {S<:ElementarySpace}
+        f, T, Pspace::S, Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace}
     return InfiniteWeightPEPS(
         f, T, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
     )
@@ -213,17 +212,12 @@ function Base.size(peps::InfiniteWeightPEPS)
     return size(peps.vertices)
 end
 
-TensorKit.spacetype(::Type{T}) where {E,T<:InfiniteWeightPEPS{E}} = spacetype(E)
+TensorKit.spacetype(::Type{T}) where {E, T <: InfiniteWeightPEPS{E}} = spacetype(E)
 
 function _absorb_weights(
-    t::PEPSTensor,
-    weights::SUWeight,
-    row::Int,
-    col::Int,
-    axs::NTuple{N,Int},
-    sqrtwts::NTuple{N,Bool},
-    invwt::Bool,
-) where {N}
+        t::PEPSTensor, weights::SUWeight,
+        row::Int, col::Int, axs::NTuple{N, Int}, sqrtwts::NTuple{N, Bool}, invwt::Bool,
+    ) where {N}
     Nr, Nc = size(weights)[2:end]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     @assert 1 <= N <= 4
@@ -301,14 +295,14 @@ absorb_weight(t, 2, 3, 2, weights; invwt=true)
 ```
 """
 function absorb_weight(
-    t::PEPSTensor,
-    row::Int,
-    col::Int,
-    ax::Int,
-    weights::SUWeight;
-    sqrtwt::Bool=false,
-    invwt::Bool=false,
-)
+        t::PEPSTensor,
+        row::Int,
+        col::Int,
+        ax::Int,
+        weights::SUWeight;
+        sqrtwt::Bool = false,
+        invwt::Bool = false,
+    )
     return _absorb_weights(t, weights, row, col, (ax,), (sqrtwt,), invwt)
 end
 
@@ -324,7 +318,7 @@ function InfinitePEPS(peps::InfiniteWeightPEPS)
     return InfinitePEPS(
         collect(
             _absorb_weights(peps.vertices[r, c], peps.weights, r, c, axs, _alltrue, false)
-            for r in 1:Nr, c in 1:Nc
+                for r in 1:Nr, c in 1:Nc
         ),
     )
 end

@@ -17,7 +17,7 @@ for the 2D classical Ising Model with partition function
 \\mathcal{Z}(\\beta) = \\sum_{\\{s\\}} \\exp(-\\beta H(s)) \\text{ with } H(s) = -J \\sum_{\\langle i, j \\rangle} s_i s_j
 ```
 """
-function classical_ising_exact(; beta=log(1 + sqrt(2)) / 2, J=1.0)
+function classical_ising_exact(; beta = log(1 + sqrt(2)) / 2, J = 1.0)
     K = beta * J
 
     k = 1 / sinh(2 * K)^2
@@ -43,7 +43,7 @@ Implements the 2D classical Ising model with partition function
 \\mathcal{Z}(\\beta) = \\sum_{\\{s\\}} \\exp(-\\beta H(s)) \\text{ with } H(s) = -J \\sum_{\\langle i, j \\rangle} s_i s_j
 ```
 """
-function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
+function classical_ising(; beta = log(1 + sqrt(2)) / 2, J = 1.0)
     K = beta * J
 
     # Boltzmann weights
@@ -98,11 +98,11 @@ projector_algs = [:halfinfinite, :fullinfinite]
 @test sectortype(Z) === Trivial
 
 @testset "Classical Ising partition function using $alg with $projector_alg" for (
-    alg, projector_alg
-) in Iterators.product(
-    ctm_styles, projector_algs
-)
-    env, = leading_boundary(env0, Z; alg, maxiter=150, projector_alg)
+        alg, projector_alg,
+    ) in Iterators.product(
+        ctm_styles, projector_algs
+    )
+    env, = leading_boundary(env0, Z; alg, maxiter = 150, projector_alg)
 
     # check observables
     λ = network_value(Z, env)
@@ -111,12 +111,12 @@ projector_algs = [:halfinfinite, :fullinfinite]
     f_exact, m_exact, e_exact = classical_ising_exact(; beta)
 
     # should be real-ish
-    @test abs(imag(λ)) < 1e-4
-    @test abs(imag(m)) < 1e-4
-    @test abs(imag(e)) < 1e-4
+    @test abs(imag(λ)) < 1.0e-4
+    @test abs(imag(m)) < 1.0e-4
+    @test abs(imag(e)) < 1.0e-4
 
     # should match exact solution
-    @test -log(λ) / beta ≈ f_exact rtol = 1e-4
-    @test abs(m) ≈ abs(m_exact) rtol = 1e-4
-    @test e ≈ e_exact rtol = 1e-1 # accuracy limited by bond dimension and maxiter
+    @test -log(λ) / beta ≈ f_exact rtol = 1.0e-4
+    @test abs(m) ≈ abs(m_exact) rtol = 1.0e-4
+    @test e ≈ e_exact rtol = 1.0e-1 # accuracy limited by bond dimension and maxiter
 end

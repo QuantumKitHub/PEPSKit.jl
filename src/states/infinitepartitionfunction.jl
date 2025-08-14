@@ -7,17 +7,17 @@ Represents an infinite partition function on a 2D square lattice.
 
 $(TYPEDFIELDS)
 """
-struct InfinitePartitionFunction{T<:PartitionFunctionTensor}
+struct InfinitePartitionFunction{T <: PartitionFunctionTensor}
     A::Matrix{T}
-    function InfinitePartitionFunction{T}(A::Matrix{T}) where {T<:PartitionFunctionTensor}
+    function InfinitePartitionFunction{T}(A::Matrix{T}) where {T <: PartitionFunctionTensor}
         return new{T}(A)
     end
-    function InfinitePartitionFunction(A::Matrix{T}) where {T<:PartitionFunctionTensor}
+    function InfinitePartitionFunction(A::Matrix{T}) where {T <: PartitionFunctionTensor}
         for (d, w) in Tuple.(CartesianIndices(A))
             north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
                 throw(
-                    SpaceMismatch("North virtual space at site $((d, w)) does not match.")
-                )
+                SpaceMismatch("North virtual space at site $((d, w)) does not match.")
+            )
             east_virtualspace(A[d, w]) == west_virtualspace(A[d, _next(w, end)])' ||
                 throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
             dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
@@ -36,7 +36,7 @@ const InfinitePF{T} = InfinitePartitionFunction{T}
 Create an `InfinitePartitionFunction` by specifying a matrix containing the PEPS tensors at each site in
 the unit cell.
 """
-function InfinitePartitionFunction(A::AbstractMatrix{T}) where {T<:PartitionFunctionTensor}
+function InfinitePartitionFunction(A::AbstractMatrix{T}) where {T <: PartitionFunctionTensor}
     return InfinitePartitionFunction(Array(deepcopy(A))) # TODO: find better way to copy
 end
 
@@ -50,13 +50,13 @@ of the PEPS tensor at each site in the unit cell as a matrix. Each individual sp
 specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePartitionFunction(
-    Nspaces::A, Espaces::A
-) where {A<:AbstractMatrix{<:ElementarySpaceLike}}
+        Nspaces::A, Espaces::A
+    ) where {A <: AbstractMatrix{<:ElementarySpaceLike}}
     return InfinitePartitionFunction(randn, ComplexF64, Nspaces, Espaces)
 end
 function InfinitePartitionFunction(
-    f, T, Nspaces::M, Espaces::M=Nspaces
-) where {M<:AbstractMatrix{<:ElementarySpaceLike}}
+        f, T, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:ElementarySpaceLike}}
     size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -91,8 +91,8 @@ The unit cell has periodic boundary conditions, so `[r, c]` is indexed modulo th
 size of the unit cell.
 """
 function InfinitePartitionFunction(
-    A::T; unitcell::Tuple{Int,Int}=(1, 1)
-) where {T<:PartitionFunctionTensor}
+        A::T; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {T <: PartitionFunctionTensor}
     return InfinitePartitionFunction(fill(A, unitcell))
 end
 
@@ -105,15 +105,15 @@ Create an InfinitePartitionFunction by specifying its physical, north and east s
 Spaces can be specified either via `Int` or via `ElementarySpace`.
 """
 function InfinitePartitionFunction(
-    Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-) where {S<:ElementarySpaceLike}
+        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpaceLike}
     return InfinitePartitionFunction(
         randn, ComplexF64, fill(Nspace, unitcell), fill(Espace, unitcell)
     )
 end
 function InfinitePartitionFunction(
-    f, T, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)
-) where {S<:ElementarySpaceLike}
+        f, T, Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpaceLike}
     return InfinitePartitionFunction(f, T, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
@@ -127,8 +127,8 @@ Base.eltype(A::InfinitePartitionFunction) = eltype(typeof(A))
 
 Base.copy(A::InfinitePartitionFunction) = InfinitePartitionFunction(copy(unitcell(A)))
 function Base.similar(
-    A::InfinitePartitionFunction, T::Type{TorA}=scalartype(A)
-) where {TorA}
+        A::InfinitePartitionFunction, T::Type{TorA} = scalartype(A)
+    ) where {TorA}
     return InfinitePartitionFunction(map(t -> similar(t, T), unitcell(A)))
 end
 function Base.repeat(A::InfinitePartitionFunction, counts...)
@@ -147,7 +147,7 @@ end
 
 ## Spaces
 
-TensorKit.spacetype(::Type{T}) where {T<:InfinitePartitionFunction} = spacetype(eltype(T))
+TensorKit.spacetype(::Type{T}) where {T <: InfinitePartitionFunction} = spacetype(eltype(T))
 virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## InfiniteSquareNetwork interface
@@ -158,9 +158,9 @@ end
 
 ## Vector interface
 
-VI.scalartype(::Type{NT}) where {NT<:InfinitePartitionFunction} = scalartype(eltype(NT))
+VI.scalartype(::Type{NT}) where {NT <: InfinitePartitionFunction} = scalartype(eltype(NT))
 function VI.zerovector(A::InfinitePartitionFunction)
-    InfinitePartitionFunction(zerovector(unitcell(A)))
+    return InfinitePartitionFunction(zerovector(unitcell(A)))
 end
 
 ## (Approximate) equality
@@ -170,8 +170,8 @@ function Base.:(==)(A₁::InfinitePartitionFunction, A₂::InfinitePartitionFunc
     end
 end
 function Base.isapprox(
-    A₁::InfinitePartitionFunction, A₂::InfinitePartitionFunction; kwargs...
-)
+        A₁::InfinitePartitionFunction, A₂::InfinitePartitionFunction; kwargs...
+    )
     return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
         return isapprox(p₁, p₂; kwargs...)
     end

@@ -45,7 +45,7 @@ lattice. To verify our example we will check the magnetization and energy, so we
 the corresponding rank-6 tensors `M` and `E` while we're at it.
 """
 
-function three_dimensional_classical_ising(; beta, J=1.0)
+function three_dimensional_classical_ising(; beta, J = 1.0)
     K = beta * J
 
     ## Boltzmann weights
@@ -150,9 +150,9 @@ we'll specify the specific reverse rule algorithm that will be used to compute t
 of this cost function.
 """
 
-boundary_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=1)
+boundary_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 1)
 rrule_alg = EigSolver(;
-    solver_alg=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
+    solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true), iterscheme = :diffgauge
 )
 T = InfinitePEPO(O)
 
@@ -167,7 +167,7 @@ function pepo_costfun((peps, env_double_layer, env_triple_layer))
             env_double_layer,
             n_double_layer,
             boundary_alg;
-            alg_rrule=rrule_alg,
+            alg_rrule = rrule_alg,
         )
         ## construct the PEPS-PEPO-PEPS overlap network
         n_triple_layer = InfiniteSquareNetwork(ψ, T)
@@ -177,7 +177,7 @@ function pepo_costfun((peps, env_double_layer, env_triple_layer))
             env_triple_layer,
             n_triple_layer,
             boundary_alg;
-            alg_rrule=rrule_alg,
+            alg_rrule = rrule_alg,
         )
         ## update the environments for reuse
         PEPSKit.ignore_derivatives() do
@@ -242,12 +242,12 @@ function pepo_retract((peps, env_double_layer, env_triple_layer), η, α)
     return (peps´, env_double_layer´, env_triple_layer´), ξ
 end
 function pepo_transport!(
-    ξ,
-    (peps, env_double_layer, env_triple_layer),
-    η,
-    α,
-    (peps´, env_double_layer´, env_triple_layer´),
-)
+        ξ,
+        (peps, env_double_layer, env_triple_layer),
+        η,
+        α,
+        (peps´, env_double_layer´, env_triple_layer´),
+    )
     return PEPSKit.peps_transport!(
         ξ, (peps, env_double_layer), η, α, (peps´, env_double_layer´)
     )
@@ -268,15 +268,15 @@ psi0 = initializePEPS(T, Vpeps)
 env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), Venv)
 env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), Venv)
 
-optimizer_alg = LBFGS(32; maxiter=100, gradtol=1e-5, verbosity=3)
+optimizer_alg = LBFGS(32; maxiter = 100, gradtol = 1.0e-5, verbosity = 3)
 
 (psi_final, env2_final, env3_final), f, = optimize(
     pepo_costfun,
     (psi0, env2_0, env3_0),
     optimizer_alg;
-    inner=PEPSKit.real_inner,
-    retract=pepo_retract,
-    (transport!)=(pepo_transport!),
+    inner = PEPSKit.real_inner,
+    retract = pepo_retract,
+    (transport!) = (pepo_transport!),
 );
 
 md"""

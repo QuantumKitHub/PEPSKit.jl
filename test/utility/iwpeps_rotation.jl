@@ -18,7 +18,7 @@ function test_rotation(wts::SUWeight)
     return nothing
 end
 
-function flip_twice(a::AbstractTensorMap, idx; inv::Bool=false)
+function flip_twice(a::AbstractTensorMap, idx; inv::Bool = false)
     _flip(a) = flip(a, idx; inv)
     return (_flip ∘ _flip)(a)
 end
@@ -31,40 +31,40 @@ function test_rotation(psi::InfiniteWeightPEPS)
     psi_rl = (rotr90 ∘ rotl90)(psi)
     @test psi_lr.weights ≈ psi_rl.weights ≈ psi.weights
     @test all(
-        flip_twice(v1, (3, 5); inv=true) ≈ v2 for
-        (v1, v2) in zip(psi_lr.vertices, psi.vertices)
+        flip_twice(v1, (3, 5); inv = true) ≈ v2 for
+            (v1, v2) in zip(psi_lr.vertices, psi.vertices)
     )
     @test all(
-        flip_twice(v1, (2, 4); inv=true) ≈ v2 for
-        (v1, v2) in zip(psi_rl.vertices, psi.vertices)
+        flip_twice(v1, (2, 4); inv = true) ≈ v2 for
+            (v1, v2) in zip(psi_rl.vertices, psi.vertices)
     )
     psi_l4 = compose_n(rotl90, 4)(psi)
     psi_r4 = compose_n(rotr90, 4)(psi)
     psi_2 = compose_n(rot180, 2)(psi)
     @test psi_l4 ≈ psi_r4 ≈ psi_2
     @test all(
-        flip_twice(v1, Tuple(2:5); inv=true) ≈ v2 for
-        (v1, v2) in zip(psi_2.vertices, psi.vertices)
+        flip_twice(v1, Tuple(2:5); inv = true) ≈ v2 for
+            (v1, v2) in zip(psi_2.vertices, psi.vertices)
     )
     # conversion to InfinitePEPS
     psi_l = rotl90(psi)
     peps_l = InfinitePEPS(psi_l)
     for (i, t) in enumerate(peps_l.A)
-        peps_l.A[i] = flip(t, (3, 5); inv=true)
+        peps_l.A[i] = flip(t, (3, 5); inv = true)
     end
     @test peps_l ≈ rotl90(peps)
     psi_r = rotr90(psi)
     peps_r = InfinitePEPS(psi_r)
     for (i, t) in enumerate(peps_r.A)
-        peps_r.A[i] = flip(t, (2, 4); inv=true)
+        peps_r.A[i] = flip(t, (2, 4); inv = true)
     end
     @test peps_r ≈ rotr90(peps)
     psi_2 = rot180(psi)
     peps_2 = InfinitePEPS(psi_2)
     for (i, t) in enumerate(peps_2.A)
-        peps_2.A[i] = flip(t, Tuple(2:5); inv=true)
+        peps_2.A[i] = flip(t, Tuple(2:5); inv = true)
     end
-    @test peps_2 ≈ rot180(peps)
+    return @test peps_2 ≈ rot180(peps)
 end
 
 Vphy = Vect[FermionParity](0 => 1, 1 => 1)

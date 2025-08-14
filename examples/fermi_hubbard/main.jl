@@ -70,9 +70,9 @@ Again, the procedure of ground state optimization is very similar to before. Fir
 define all algorithmic parameters:
 """
 
-boundary_alg = (; tol=1e-8, alg=:simultaneous, trscheme=(; alg=:fixedspace))
-gradient_alg = (; tol=1e-6, alg=:eigsolver, maxiter=10, iterscheme=:diffgauge)
-optimizer_alg = (; tol=1e-4, alg=:lbfgs, maxiter=80, ls_maxiter=3, ls_maxfg=3)
+boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trscheme = (; alg = :fixedspace))
+gradient_alg = (; tol = 1.0e-6, alg = :eigsolver, maxiter = 10, iterscheme = :diffgauge)
+optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 80, ls_maxiter = 3, ls_maxfg = 3)
 
 md"""
 Second, we initialize a PEPS state and environment (which we converge) constructed from
@@ -89,7 +89,7 @@ And third, we start the ground state search (this does take quite long):
 """
 
 peps, env, E, info = fixedpoint(
-    H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity=3
+    H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity = 3
 )
 @show E;
 

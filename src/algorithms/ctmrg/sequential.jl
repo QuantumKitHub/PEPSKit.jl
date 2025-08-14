@@ -24,7 +24,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
-struct SequentialCTMRG{P<:ProjectorAlgorithm} <: CTMRGAlgorithm
+struct SequentialCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     tol::Float64
     maxiter::Int
     miniter::Int
@@ -32,7 +32,7 @@ struct SequentialCTMRG{P<:ProjectorAlgorithm} <: CTMRGAlgorithm
     projector_alg::P
 end
 function SequentialCTMRG(; kwargs...)
-    return CTMRGAlgorithm(; alg=:sequential, kwargs...)
+    return CTMRGAlgorithm(; alg = :sequential, kwargs...)
 end
 
 CTMRG_SYMBOLS[:sequential] = SequentialCTMRG
@@ -82,7 +82,7 @@ for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequen
 function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     coordinates = eachcoordinate(env)[:, col]
     T_dst = Base.promote_op(
-        sequential_projectors, NTuple{3,Int}, typeof(network), typeof(env), typeof(alg)
+        sequential_projectors, NTuple{3, Int}, typeof(network), typeof(env), typeof(alg)
     )
     proj_and_info = similar(coordinates, T_dst)
     proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
@@ -95,8 +95,8 @@ function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorA
     return _split_proj_and_info(proj_and_info′)
 end
 function sequential_projectors(
-    coordinate::NTuple{3,Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
-)
+        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
+    )
     _, r, c = coordinate
     r′ = _prev(r, size(env, 2))
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
@@ -104,8 +104,8 @@ function sequential_projectors(
     return compute_projector((Q1, Q2), coordinate, alg)
 end
 function sequential_projectors(
-    coordinate::NTuple{3,Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
-)
+        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
+    )
     rowsize, colsize = size(env)[2:3]
     coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
