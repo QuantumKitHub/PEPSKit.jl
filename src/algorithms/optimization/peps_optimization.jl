@@ -28,11 +28,8 @@ struct PEPSOptimize{G}
     symmetrization::Union{Nothing, SymmetrizationStyle}
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
-            boundary_alg::CTMRGAlgorithm,
-            gradient_alg::G,
-            optimizer_alg,
-            reuse_env,
-            symmetrization,
+            boundary_alg::CTMRGAlgorithm, gradient_alg::G, optimizer_alg,
+            reuse_env, symmetrization,
         ) where {G}
         if gradient_alg isa GradMode
             if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
@@ -47,22 +44,16 @@ struct PEPSOptimize{G}
 end
 
 function PEPSOptimize(;
-        boundary_alg = (;),
-        gradient_alg = (;),
-        optimizer_alg = (;),
-        reuse_env = Defaults.reuse_env,
-        symmetrization = nothing,
+        boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
+        reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
     gradient_algorithm = _alg_or_nt(GradMode, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
 
     return PEPSOptimize(
-        boundary_algorithm,
-        gradient_algorithm,
-        optimizer_algorithm,
-        reuse_env,
-        symmetrization,
+        boundary_algorithm, gradient_algorithm, optimizer_algorithm,
+        reuse_env, symmetrization,
     )
 end
 
@@ -187,20 +178,14 @@ information `NamedTuple` which contains the following entries:
 * `times` : History of optimization step execution times.
 """
 function fixedpoint(
-        operator,
-        peps₀::InfinitePEPS,
-        env₀::CTMRGEnv;
-        (finalize!) = OptimKit._finalize!,
-        kwargs...,
+        operator, peps₀::InfinitePEPS, env₀::CTMRGEnv;
+        (finalize!) = OptimKit._finalize!, kwargs...,
     )
     alg = select_algorithm(fixedpoint, env₀; kwargs...)
     return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
-        operator,
-        peps₀::InfinitePEPS,
-        env₀::CTMRGEnv,
-        alg::PEPSOptimize;
+        operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize;
         (finalize!) = OptimKit._finalize!,
     )
     # setup retract and finalize! for symmetrization
@@ -235,20 +220,13 @@ function fixedpoint(
 
     # optimize operator cost function
     (peps_final, env_final), cost_final, ∂cost, numfg, convergence_history = optimize(
-        (peps₀, env₀),
-        alg.optimizer_alg;
-        retract,
-        inner = real_inner,
-        finalize!,
-        (transport!) = (peps_transport!),
+        (peps₀, env₀), alg.optimizer_alg;
+        retract, inner = real_inner, finalize!, (transport!) = (peps_transport!),
     ) do (peps, env)
         start_time = time_ns()
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
-                leading_boundary,
-                env,
-                ψ,
-                alg.boundary_alg;
+                leading_boundary, env, ψ, alg.boundary_alg;
                 alg_rrule = alg.gradient_alg,
             )
             ignore_derivatives() do

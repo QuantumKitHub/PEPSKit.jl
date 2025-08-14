@@ -64,24 +64,16 @@ Alternatively, only the space dimensions can be provided and ℂ is assumed as t
 The tensor elements are generated based on `f` and the element type is specified in `T`.
 """
 function PEPSTensor(
-        f,
-        ::Type{T},
+        f, ::Type{T},
         Pspace::S,
-        Nspace::S,
-        Espace::S = Nspace,
-        Sspace::S = Nspace',
-        Wspace::S = Espace',
+        Nspace::S, Espace::S = Nspace, Sspace::S = Nspace', Wspace::S = Espace',
     ) where {T, S <: ElementarySpace}
     return f(T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
 end
 function PEPSTensor(
-        f,
-        ::Type{T},
+        f, ::Type{T},
         Pspace::Int,
-        Nspace::Int,
-        Espace::Int = Nspace,
-        Sspace::Int = Nspace,
-        Wspace::Int = Espace,
+        Nspace::Int, Espace::Int = Nspace, Sspace::Int = Nspace, Wspace::Int = Espace,
     ) where {T}
     return f(T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
 end

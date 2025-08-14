@@ -81,10 +81,7 @@ function simultaneous_projectors(
     coordinates = eachcoordinate(env, 1:4)
     T_dst = Base.promote_op(
         simultaneous_projectors,
-        NTuple{3, Int},
-        typeof(enlarged_corners),
-        typeof(env),
-        typeof(alg),
+        NTuple{3, Int}, typeof(enlarged_corners), typeof(env), typeof(alg),
     )
     proj_and_info′ = similar(coordinates, T_dst)
     proj_and_info::typeof(proj_and_info′) =

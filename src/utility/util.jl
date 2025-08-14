@@ -73,9 +73,7 @@ function sdiag_pow(
 end
 
 function ChainRulesCore.rrule(
-        ::typeof(sdiag_pow),
-        s::AbstractTensorMap,
-        pow::Real;
+        ::typeof(sdiag_pow), s::AbstractTensorMap, pow::Real;
         tol::Real = eps(scalartype(s))^(3 / 4),
     )
     tol *= norm(s, Inf)

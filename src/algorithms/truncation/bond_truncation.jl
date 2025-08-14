@@ -26,12 +26,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 end
 
 function _als_message(
-        iter::Int,
-        cost::Float64,
-        fid::Float64,
-        Δcost::Float64,
-        Δfid::Float64,
-        time_elapsed::Float64,
+        iter::Int, cost::Float64, fid::Float64, Δcost::Float64, Δfid::Float64, time_elapsed::Float64,
     )
     return @sprintf(
         "%5d, fid = %.8e, Δfid = %.8e, time = %.4f s\n", iter, fid, Δfid, time_elapsed
@@ -121,12 +116,7 @@ function bond_truncate(
             cancel || (verbose && (converge || iter == 1 || iter % alg.check_interval == 0))
         if showinfo
             message = _als_message(
-                iter,
-                cost,
-                fid,
-                Δcost,
-                Δfid,
-                time1 - ((cancel || converge) ? time00 : time0),
+                iter, cost, fid, Δcost, Δfid, time1 - ((cancel || converge) ? time00 : time0),
             )
             if converge
                 @info "ALS conv" * message

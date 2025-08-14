@@ -15,15 +15,8 @@ ctm_algs = [
 ]
 
 function test_unitcell(
-        ctm_alg,
-        unitcell,
-        Pspaces,
-        Nspaces,
-        Espaces,
-        chis_north,
-        chis_east,
-        chis_south,
-        chis_west,
+        ctm_alg, unitcell,
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
     )
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
@@ -37,8 +30,7 @@ function test_unitcell(
         [
             (c,) => randn(
                     scalartype(peps),
-                    PEPSKit._to_space(Pspaces[c]),
-                    PEPSKit._to_space(Pspaces[c]),
+                    PEPSKit._to_space(Pspaces[c]), PEPSKit._to_space(Pspaces[c]),
                 ) for c in CartesianIndices(unitcell)
         ]...,
     )
@@ -64,15 +56,8 @@ end
     chis_west = rand(5:10, unitcell...)
 
     test_unitcell(
-        ctm_alg,
-        unitcell,
-        Pspaces,
-        Nspaces,
-        Espaces,
-        chis_north,
-        chis_east,
-        chis_south,
-        chis_west,
+        ctm_alg, unitcell,
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
     )
 end
 
@@ -88,15 +73,8 @@ end
     chis_west = random_dualize!(ComplexSpace.(rand(5:10, unitcell...)))
 
     test_unitcell(
-        ctm_alg,
-        unitcell,
-        Pspaces,
-        Nspaces,
-        Espaces,
-        chis_north,
-        chis_east,
-        chis_south,
-        chis_west,
+        ctm_alg, unitcell,
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
     )
 end
 

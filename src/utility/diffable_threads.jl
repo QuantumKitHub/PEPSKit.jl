@@ -36,11 +36,8 @@ function ChainRulesCore.rrule(
 end
 
 function ChainRulesCore.rrule(
-        config::RuleConfig{>:HasReverseMode},
-        ::typeof(dtmap!!),
-        f,
-        C′::AbstractArray,
-        A::AbstractArray;
+        config::RuleConfig{>:HasReverseMode}, ::typeof(dtmap!!),
+        f, C′::AbstractArray, A::AbstractArray;
         kwargs...,
     )
     C, dtmap_pullback = rrule(config, dtmap, f, A; kwargs...)

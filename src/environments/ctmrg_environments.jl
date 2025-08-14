@@ -83,34 +83,17 @@ representing a product space for the case of a partition function representing o
 PEPSs and PEPOs.
 """
 function CTMRGEnv(
-        Ds_north::A,
-        Ds_east::A,
-        chis_north::B,
-        chis_east::B = chis_north,
-        chis_south::B = chis_north,
-        chis_west::B = chis_north,
+        Ds_north::A, Ds_east::A,
+        chis_north::B, chis_east::B = chis_north, chis_south::B = chis_north, chis_west::B = chis_north,
     ) where {A <: AbstractMatrix{<:ProductSpaceLike}, B <: AbstractMatrix{<:ElementarySpaceLike}}
     return CTMRGEnv(
-        randn,
-        ComplexF64,
-        N,
-        Ds_north,
-        Ds_east,
-        chis_north,
-        chis_east,
-        chis_south,
-        chis_west,
+        randn, ComplexF64, N, Ds_north, Ds_east, chis_north, chis_east, chis_south, chis_west,
     )
 end
 function CTMRGEnv(
-        f,
-        T,
-        Ds_north::A,
-        Ds_east::A,
-        chis_north::B,
-        chis_east::B = chis_north,
-        chis_south::B = chis_north,
-        chis_west::B = chis_north,
+        f, T,
+        Ds_north::A, Ds_east::A,
+        chis_north::B, chis_east::B = chis_north, chis_south::B = chis_north, chis_west::B = chis_north,
     ) where {A <: AbstractMatrix{<:ProductSpaceLike}, B <: AbstractMatrix{<:ElementarySpaceLike}}
     # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
@@ -174,46 +157,29 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-        D_north::P,
-        D_east::P,
-        chi_north::S,
-        chi_east::S = chi_north,
-        chi_south::S = chi_north,
-        chi_west::S = chi_north;
+        D_north::P, D_east::P,
+        chi_north::S, chi_east::S = chi_north, chi_south::S = chi_north, chi_west::S = chi_north;
         unitcell::Tuple{Int, Int} = (1, 1),
     ) where {P <: ProductSpaceLike, S <: ElementarySpaceLike}
     return CTMRGEnv(
-        randn,
-        ComplexF64,
-        fill(D_north, unitcell),
-        fill(D_east, unitcell),
-        fill(chi_north, unitcell),
-        fill(chi_east, unitcell),
-        fill(chi_south, unitcell),
-        fill(chi_west, unitcell),
+        randn, ComplexF64,
+        fill(D_north, unitcell), fill(D_east, unitcell),
+        fill(chi_north, unitcell), fill(chi_east, unitcell),
+        fill(chi_south, unitcell), fill(chi_west, unitcell),
     )
 end
 function CTMRGEnv(
-        f,
-        T,
-        D_north::P,
-        D_east::P,
-        chi_north::S,
-        chi_east::S = chi_north,
-        chi_south::S = chi_north,
-        chi_west::S = chi_north;
+        f, T,
+        D_north::P, D_east::P,
+        chi_north::S, chi_east::S = chi_north,
+        chi_south::S = chi_north, chi_west::S = chi_north;
         unitcell::Tuple{Int, Int} = (1, 1),
     ) where {P <: ProductSpaceLike, S <: ElementarySpaceLike}
     return CTMRGEnv(
-        f,
-        T,
-        N,
-        fill(D_north, unitcell),
-        fill(D_east, unitcell),
-        fill(chi_north, unitcell),
-        fill(chi_east, unitcell),
-        fill(chi_south, unitcell),
-        fill(chi_west, unitcell),
+        f, T, N,
+        fill(D_north, unitcell), fill(D_east, unitcell),
+        fill(chi_north, unitcell), fill(chi_east, unitcell),
+        fill(chi_south, unitcell), fill(chi_west, unitcell),
     )
 end
 
@@ -236,44 +202,27 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 """
 function CTMRGEnv(
         network::InfiniteSquareNetwork,
-        chis_north::A,
-        chis_east::A = chis_north,
-        chis_south::A = chis_north,
-        chis_west::A = chis_north,
+        chis_north::A, chis_east::A = chis_north, chis_south::A = chis_north, chis_west::A = chis_north,
     ) where {A <: AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = _north_env_spaces(network)
     Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
-        randn,
-        scalartype(network),
-        Ds_north,
-        Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
+        randn, scalartype(network),
+        Ds_north, Ds_east,
+        _to_space.(chis_north), _to_space.(chis_east), _to_space.(chis_south), _to_space.(chis_west),
     )
 end
 function CTMRGEnv(
-        f,
-        T,
+        f, T,
         network::InfiniteSquareNetwork,
-        chis_north::A,
-        chis_east::A = chis_north,
-        chis_south::A = chis_north,
-        chis_west::A = chis_north,
+        chis_north::A, chis_east::A = chis_north, chis_south::A = chis_north, chis_west::A = chis_north,
     ) where {A <: AbstractMatrix{<:ElementarySpaceLike}}
     Ds_north = _north_env_spaces(network)
     Ds_east = _east_env_spaces(network)
     return CTMRGEnv(
-        f,
-        T,
-        Ds_north,
-        Ds_east,
-        _to_space.(chis_north),
-        _to_space.(chis_east),
-        _to_space.(chis_south),
-        _to_space.(chis_west),
+        f, T,
+        Ds_north, Ds_east,
+        _to_space.(chis_north), _to_space.(chis_east), _to_space.(chis_south), _to_space.(chis_west),
     )
 end
 
@@ -298,36 +247,24 @@ corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
         network::InfiniteSquareNetwork,
-        chi_north::S,
-        chi_east::S = chi_north,
-        chi_south::S = chi_north,
-        chi_west::S = chi_north,
+        chi_north::S, chi_east::S = chi_north, chi_south::S = chi_north, chi_west::S = chi_north,
     ) where {S <: ElementarySpaceLike}
     return CTMRGEnv(
         network,
-        fill(chi_north, size(network)),
-        fill(chi_east, size(network)),
-        fill(chi_south, size(network)),
-        fill(chi_west, size(network)),
+        fill(chi_north, size(network)), fill(chi_east, size(network)),
+        fill(chi_south, size(network)), fill(chi_west, size(network)),
     )
 end
 function CTMRGEnv(
-        f,
-        T,
+        f, T,
         network::InfiniteSquareNetwork,
-        chi_north::S,
-        chi_east::S = chi_north,
-        chi_south::S = chi_north,
-        chi_west::S = chi_north,
+        chi_north::S, chi_east::S = chi_north, chi_south::S = chi_north, chi_west::S = chi_north,
     ) where {S <: ElementarySpaceLike}
     return CTMRGEnv(
-        f,
-        T,
+        f, T,
         network,
-        fill(chi_north, size(network)),
-        fill(chi_east, size(network)),
-        fill(chi_south, size(network)),
-        fill(chi_west, size(network)),
+        fill(chi_north, size(network)), fill(chi_east, size(network)),
+        fill(chi_south, size(network)), fill(chi_west, size(network)),
     )
 end
 

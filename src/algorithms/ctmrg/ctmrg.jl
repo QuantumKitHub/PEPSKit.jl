@@ -16,8 +16,7 @@ Keyword argument parser returning the appropriate `CTMRGAlgorithm` algorithm str
 function CTMRGAlgorithm(;
         alg = Defaults.ctmrg_alg,
         tol = Defaults.ctmrg_tol,
-        maxiter = Defaults.ctmrg_maxiter,
-        miniter = Defaults.ctmrg_miniter,
+        maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
         verbosity = Defaults.ctmrg_verbosity,
         trscheme = (; alg = Defaults.trscheme),
         svd_alg = (;),

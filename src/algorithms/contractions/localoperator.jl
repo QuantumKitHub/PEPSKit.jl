@@ -30,8 +30,7 @@ sandwich is surrounded with the appropriate environment tensors.
 function contract_local_operator(
         inds::NTuple{N, CartesianIndex{2}},
         O::AbstractTensorMap{T, S, N, N},
-        ket::InfinitePEPS,
-        bra::InfinitePEPS,
+        ket::InfinitePEPS, bra::InfinitePEPS,
         env::CTMRGEnv,
     ) where {T, S, N}
     static_inds = Val.(inds)
@@ -40,8 +39,7 @@ end
 function contract_local_operator(
         inds::NTuple{N, Tuple{Int, Int}},
         O::AbstractTensorMap{T, S, N, N},
-        ket::InfinitePEPS,
-        bra::InfinitePEPS,
+        ket::InfinitePEPS, bra::InfinitePEPS,
         env::CTMRGEnv,
     ) where {T, S, N}
     return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
@@ -176,8 +174,7 @@ end
 @generated function _contract_local_operator(
         inds::NTuple{N, Val},
         O::AbstractTensorMap{T, S, N, N},
-        ket::InfinitePEPS,
-        bra::InfinitePEPS,
+        ket::InfinitePEPS, bra::InfinitePEPS,
         env::CTMRGEnv,
     ) where {T, S, N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
@@ -196,18 +193,10 @@ end
     bra, ket = _contract_state_expr(rowrange, colrange, cartesian_inds)
 
     multiplication_ex = Expr(
-        :call,
-        :*,
-        corner_NW,
-        corner_NE,
-        corner_SE,
-        corner_SW,
-        edges_N...,
-        edges_E...,
-        edges_S...,
-        edges_W...,
-        ket...,
-        map(x -> Expr(:call, :conj, x), bra)...,
+        :call, :*,
+        corner_NW, corner_NE, corner_SE, corner_SW,
+        edges_N..., edges_E..., edges_S..., edges_W...,
+        ket..., map(x -> Expr(:call, :conj, x), bra)...,
         operator,
     )
 
@@ -241,8 +230,7 @@ end
         inds::NTuple{N, Val}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
     ) where {N}
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
-    allunique(cartesian_inds) ||
-        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
+    allunique(cartesian_inds) || throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
     rowrange = getindex.(cartesian_inds, 1)
     colrange = getindex.(cartesian_inds, 2)
 
@@ -251,18 +239,10 @@ end
     bra, ket = _contract_state_expr(rowrange, colrange)
 
     multiplication_ex = Expr(
-        :call,
-        :*,
-        corner_NW,
-        corner_NE,
-        corner_SE,
-        corner_SW,
-        edges_N...,
-        edges_E...,
-        edges_S...,
-        edges_W...,
-        ket...,
-        map(x -> Expr(:call, :conj, x), bra)...,
+        :call, :*,
+        corner_NW, corner_NE, corner_SE, corner_SW,
+        edges_N..., edges_E..., edges_S..., edges_W...,
+        ket..., map(x -> Expr(:call, :conj, x), bra)...,
     )
 
     returnex = quote
@@ -470,18 +450,10 @@ end
     bra, ket = _contract_state_expr(rowrange, colrange, cartesian_inds)
 
     multiplication_ex = Expr(
-        :call,
-        :*,
-        corner_NW,
-        corner_NE,
-        corner_SE,
-        corner_SW,
-        edges_N...,
-        edges_E...,
-        edges_S...,
-        edges_W...,
-        ket...,
-        map(x -> Expr(:call, :conj, x), bra)...,
+        :call, :*,
+        corner_NW, corner_NE, corner_SE, corner_SW,
+        edges_N..., edges_E..., edges_S..., edges_W...,
+        ket..., map(x -> Expr(:call, :conj, x), bra)...,
     )
     multex = :(@autoopt @tensor $result := $multiplication_ex)
     return quote

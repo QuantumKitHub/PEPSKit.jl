@@ -30,10 +30,8 @@ Simple update of the x-bond `peps.weights[1,r,c]`.
 ```
 """
 function _su_xbond!(
-        row::Int,
-        col::Int,
-        gate::AbstractTensorMap{T, S, 2, 2},
-        peps::InfiniteWeightPEPS,
+        row::Int, col::Int,
+        gate::AbstractTensorMap{T, S, 2, 2}, peps::InfiniteWeightPEPS,
         trscheme::TruncationScheme,
     ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(peps)
@@ -75,9 +73,7 @@ function su_iter(
         @assert Nr == Nc == 2
     end
     (Nr >= 2 && Nc >= 2) || throw(
-        ArgumentError(
-            "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
-        ),
+        ArgumentError("iPEPS unit cell size for simple update should be no smaller than (2, 2)."),
     )
     peps2 = deepcopy(peps)
     gate_mirrored = mirror_antidiag(gate)
@@ -123,11 +119,8 @@ end
 Perform simple update with Hamiltonian `ham` containing up to nearest neighbor interaction terms. 
 """
 function _simpleupdate2site(
-        peps::InfiniteWeightPEPS,
-        ham::LocalOperator,
-        alg::SimpleUpdate;
-        bipartite::Bool = false,
-        check_interval::Int = 500,
+        peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
+        bipartite::Bool = false, check_interval::Int = 500,
     )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
@@ -147,11 +140,7 @@ function _simpleupdate2site(
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
-                label,
-                count,
-                alg.dt,
-                wtdiff,
-                time1 - ((converge || cancel) ? time_start : time0)
+                label, count, alg.dt, wtdiff, time1 - ((converge || cancel) ? time_start : time0)
             )
             cancel ? (@warn message) : (@info message)
         end
@@ -177,12 +166,8 @@ Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham
 - The 3-site simple update algorithm is incompatible with a bipartite PEPS. Using `bipartite = true` with either `force_3site = true` or a `ham` with next-nearest neighbor terms is not allowed. 
 """
 function simpleupdate(
-        peps::InfiniteWeightPEPS,
-        ham::LocalOperator,
-        alg::SimpleUpdate;
-        bipartite::Bool = false,
-        force_3site::Bool = false,
-        check_interval::Int = 500,
+        peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
+        bipartite::Bool = false, force_3site::Bool = false, check_interval::Int = 500,
     )
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(ham)

@@ -28,8 +28,7 @@ end
 Check if two 2-site bonds are related by a (periodic) lattice translation.
 """
 function is_equivalent_bond(
-        bond1::NTuple{2, CartesianIndex{2}},
-        bond2::NTuple{2, CartesianIndex{2}},
+        bond1::NTuple{2, CartesianIndex{2}}, bond2::NTuple{2, CartesianIndex{2}},
         (Nrow, Ncol)::NTuple{2, Int},
     )
     r1 = bond1[1] - bond1[2]
@@ -135,8 +134,7 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
 """
 function _apply_gate(
-        a::AbstractTensorMap{T, S},
-        b::AbstractTensorMap{T, S},
+        a::AbstractTensorMap{T, S}, b::AbstractTensorMap{T, S},
         gate::AbstractTensorMap{T, S, 2, 2},
         trscheme::TruncationScheme,
     ) where {T <: Number, S <: ElementarySpace}

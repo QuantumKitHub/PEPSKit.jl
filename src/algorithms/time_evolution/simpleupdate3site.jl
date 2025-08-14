@@ -361,13 +361,8 @@ function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
     cluster = collect(
         permute(
                 _absorb_weights(
-                    peps.vertices[CartesianIndex(coord)],
-                    peps.weights,
-                    coord[1],
-                    coord[2],
-                    Tuple(1:4),
-                    sqrtwts,
-                    false,
+                    peps.vertices[CartesianIndex(coord)], peps.weights,
+                    coord[1], coord[2], Tuple(1:4), sqrtwts, false,
                 ),
                 perm,
             ) for (coord, sqrtwts, perm) in zip(coords_se, sqrtwts_se, perms_se)
@@ -463,11 +458,7 @@ function _simpleupdate3site(
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
-                label,
-                count,
-                alg.dt,
-                wtdiff,
-                time1 - ((converge || cancel) ? time_start : time0)
+                label, count, alg.dt, wtdiff, time1 - ((converge || cancel) ? time_start : time0)
             )
             cancel ? (@warn message) : (@info message)
         end

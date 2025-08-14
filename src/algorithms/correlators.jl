@@ -1,8 +1,7 @@
 function correlator_horizontal(
         bra::InfinitePEPS,
         operator,
-        i::CartesianIndex{2},
-        js::AbstractVector{CartesianIndex{2}},
+        i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
         ket::InfinitePEPS,
         env::CTMRGEnv,
     )
@@ -148,8 +147,7 @@ end
 function correlator_vertical(
         bra::InfinitePEPS,
         O,
-        i::CartesianIndex{2},
-        js::AbstractVector{CartesianIndex{2}},
+        i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
         ket::InfinitePEPS,
         env::CTMRGEnv,
     )
@@ -169,8 +167,7 @@ const CoordCollection{N} = Union{AbstractVector{CartesianIndex{N}}, CartesianInd
 function MPSKit.correlator(
         bra::InfinitePEPS,
         O,
-        i::CartesianIndex{2},
-        js::CoordCollection{2},
+        i::CartesianIndex{2}, js::CoordCollection{2},
         ket::InfinitePEPS,
         env::CTMRGEnv,
     )
@@ -188,8 +185,7 @@ end
 function MPSKit.correlator(
         bra::InfinitePEPS,
         O,
-        i::CartesianIndex{2},
-        j::CartesianIndex{2},
+        i::CartesianIndex{2}, j::CartesianIndex{2},
         ket::InfinitePEPS,
         env::CTMRGEnv,
     )

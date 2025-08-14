@@ -3,20 +3,16 @@
 #
 
 function MPSKit.transfer_left(
-        GL::GenericMPSTensor{S, N},
-        O::Union{PEPSSandwich, PEPOSandwich},
-        A::GenericMPSTensor{S, N},
-        Ā::GenericMPSTensor{S, N},
+        GL::GenericMPSTensor{S, N}, O::Union{PEPSSandwich, PEPOSandwich},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N}
     Ā = twistdual(Ā, 2:N)
     return _transfer_left(GL, O, A, Ā)
 end
 
 function MPSKit.transfer_right(
-        GR::GenericMPSTensor{S, N},
-        O::Union{PEPSSandwich, PEPOSandwich},
-        A::GenericMPSTensor{S, N},
-        Ā::GenericMPSTensor{S, N},
+        GR::GenericMPSTensor{S, N}, O::Union{PEPSSandwich, PEPOSandwich},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N}
     Ā = twistdual(Ā, 2:N)
     return _transfer_right(GR, O, A, Ā)
@@ -25,10 +21,8 @@ end
 ## PEPS
 
 function _transfer_left(
-        GL::GenericMPSTensor{S, 3},
-        O::PEPSSandwich,
-        A::GenericMPSTensor{S, 3},
-        Ā::GenericMPSTensor{S, 3},
+        GL::GenericMPSTensor{S, 3}, O::PEPSSandwich,
+        A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3},
     ) where {S}
     return @autoopt @tensor GL′[χ_SE D_E_above D_E_below; χ_NE] :=
         GL[χ_SW D_W_above D_W_below; χ_NW] *
@@ -40,10 +34,8 @@ end
 
 # transfer with excited GL
 function MPSKit.transfer_left(
-        GL::GenericMPSTensor{S, 4},
-        O::PEPSSandwich,
-        A::GenericMPSTensor{S, 3},
-        Ā::GenericMPSTensor{S, 3},
+        GL::GenericMPSTensor{S, 4}, O::PEPSSandwich,
+        A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3},
     ) where {S}
     return @autoopt @tensor GL′[χ_SE D_E_above d_string D_E_below; χ_NE] :=
         GL[χ_SW D_W_above d_string D_W_below; χ_NW] *
@@ -54,10 +46,8 @@ function MPSKit.transfer_left(
 end
 
 function _transfer_right(
-        GR::GenericMPSTensor{S, 3},
-        O::PEPSSandwich,
-        A::GenericMPSTensor{S, 3},
-        Ā::GenericMPSTensor{S, 3},
+        GR::GenericMPSTensor{S, 3}, O::PEPSSandwich,
+        A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3},
     ) where {S}
     return @autoopt @tensor GR′[χ_NW D_W_above D_W_below; χ_SW] :=
         GR[χ_NE D_E_above D_E_below; χ_SE] *
@@ -70,10 +60,8 @@ end
 ## PEPO
 
 @generated function _transfer_left(
-        GL::GenericMPSTensor{S, N},
-        O::PEPOSandwich{H},
-        A::GenericMPSTensor{S, N},
-        Ā::GenericMPSTensor{S, N},
+        GL::GenericMPSTensor{S, N}, O::PEPOSandwich{H},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N, H}
     # sanity check
     @assert H == N - 3
@@ -85,13 +73,10 @@ end
     ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
 
     rhs = Expr(
-        :call,
-        :*,
+        :call, :*,
         GL_e,
-        A_e,
-        Expr(:call, :conj, Ā_e),
-        ket_e,
-        Expr(:call, :conj, bra_e),
+        A_e, Expr(:call, :conj, Ā_e),
+        ket_e, Expr(:call, :conj, bra_e),
         pepo_es...,
     )
 
@@ -99,10 +84,8 @@ end
 end
 
 @generated function _transfer_right(
-        GR::GenericMPSTensor{S, N},
-        O::PEPOSandwich{H},
-        A::GenericMPSTensor{S, N},
-        Ā::GenericMPSTensor{S, N},
+        GR::GenericMPSTensor{S, N}, O::PEPOSandwich{H},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N, H}
     # sanity check
     @assert H == N - 3
@@ -114,13 +97,10 @@ end
     ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
 
     rhs = Expr(
-        :call,
-        :*,
+        :call, :*,
         GR_e,
-        A_e,
-        Expr(:call, :conj, Ā_e),
-        ket_e,
-        Expr(:call, :conj, bra_e),
+        A_e, Expr(:call, :conj, Ā_e),
+        ket_e, Expr(:call, :conj, bra_e),
         pepo_es...,
     )
 
@@ -137,10 +117,8 @@ end
 
 # TODO: properly implement in the most efficient way
 function MPSKit.contract_mpo_expval(
-        AC::GenericMPSTensor{S, N},
-        GL::GenericMPSTensor{S, N},
-        O::Union{PEPSSandwich, PEPOSandwich},
-        GR::GenericMPSTensor{S, N},
+        AC::GenericMPSTensor{S, N}, GL::GenericMPSTensor{S, N},
+        O::Union{PEPSSandwich, PEPOSandwich}, GR::GenericMPSTensor{S, N},
         ACbar::GenericMPSTensor{S, N} = AC,
     ) where {S, N}
     GL´ = MPSKit.transfer_left(GL, O, AC, ACbar)
@@ -284,11 +262,9 @@ pepo(p::∂PEPOSandwich) = p[2:end]
 pepo(p::∂PEPOSandwich, i::Int) = p[1 + i]
 
 @generated function ∂peps(
-        AC::GenericMPSTensor{S, N},
-        ĀC::GenericMPSTensor{S, N},
+        AC::GenericMPSTensor{S, N}, ĀC::GenericMPSTensor{S, N},
         O::∂PEPOSandwich{H},
-        GL::GenericMPSTensor{S, N},
-        GR::GenericMPSTensor{S, N},
+        GL::GenericMPSTensor{S, N}, GR::GenericMPSTensor{S, N},
     ) where {S, N, H}
     # sanity check
     @assert H == N - 3

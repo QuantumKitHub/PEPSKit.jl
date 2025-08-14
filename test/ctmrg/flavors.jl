@@ -11,9 +11,7 @@ unitcells = [(1, 1), (3, 4)]
 projector_algs = [:halfinfinite, :fullinfinite]
 
 @testset "$(unitcell) unit cell with $projector_alg" for (unitcell, projector_alg) in
-    Iterators.product(
-        unitcells, projector_algs
-    )
+    Iterators.product(unitcells, projector_algs)
     # compute environments
     Random.seed!(32350283290358)
     psi = InfinitePEPS(2, χbond; unitcell)
@@ -55,9 +53,7 @@ end
 
 # test fixedspace actually fixes space
 @testset "Fixedspace truncation using $alg and $projector_alg" for (alg, projector_alg) in
-    Iterators.product(
-        [:sequential, :simultaneous], projector_algs
-    )
+    Iterators.product([:sequential, :simultaneous], projector_algs)
     Ds = fill(2, 3, 3)
     χs = [16 17 18; 15 20 21; 14 19 22]
     psi = InfinitePEPS(Ds, Ds, Ds)

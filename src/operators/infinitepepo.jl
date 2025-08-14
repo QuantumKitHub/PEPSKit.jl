@@ -100,11 +100,8 @@ function InfinitePEPO(
         Pspace::S, Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int, Int} = (1, 1, 1)
     ) where {S <: ElementarySpace}
     return InfinitePEPO(
-        randn,
-        ComplexF64,
-        fill(Pspace, unitcell),
-        fill(Nspace, unitcell),
-        fill(Espace, unitcell),
+        randn, ComplexF64,
+        fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell),
     )
 end
 function InfinitePEPO(
@@ -203,9 +200,7 @@ Base.rot180(A::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(unitcell(A);
 
 function ChainRulesCore.rrule(
         ::Type{InfiniteSquareNetwork},
-        top::InfinitePEPS,
-        mid::InfinitePEPO{P},
-        bot::InfinitePEPS,
+        top::InfinitePEPS, mid::InfinitePEPO{P}, bot::InfinitePEPS,
     ) where {P <: PEPOTensor}
     network = InfiniteSquareNetwork(top, mid, bot)
 

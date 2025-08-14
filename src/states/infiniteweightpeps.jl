@@ -215,13 +215,8 @@ end
 TensorKit.spacetype(::Type{T}) where {E, T <: InfiniteWeightPEPS{E}} = spacetype(E)
 
 function _absorb_weights(
-        t::PEPSTensor,
-        weights::SUWeight,
-        row::Int,
-        col::Int,
-        axs::NTuple{N, Int},
-        sqrtwts::NTuple{N, Bool},
-        invwt::Bool,
+        t::PEPSTensor, weights::SUWeight,
+        row::Int, col::Int, axs::NTuple{N, Int}, sqrtwts::NTuple{N, Bool}, invwt::Bool,
     ) where {N}
     Nr, Nc = size(weights)[2:end]
     @assert 1 <= row <= Nr && 1 <= col <= Nc

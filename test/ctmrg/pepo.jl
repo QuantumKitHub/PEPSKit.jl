@@ -75,9 +75,7 @@ projector_algs = [:halfinfinite, :fullinfinite]
 
     @testset "PEPO CTMRG contraction using $alg with $projector_alg" for (
             alg, projector_alg,
-        ) in Iterators.product(
-            ctm_styles, projector_algs
-        )
+        ) in Iterators.product(ctm_styles, projector_algs)
         env, = leading_boundary(env0, n; alg, maxiter = 150, projector_alg)
     end
 end

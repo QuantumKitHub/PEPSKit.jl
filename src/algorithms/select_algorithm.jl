@@ -22,9 +22,7 @@ function select_algorithm(
         env₀::CTMRGEnv;
         tol = Defaults.optimizer_tol, # top-level tolerance
         verbosity = 3, # top-level verbosity
-        boundary_alg = (;),
-        gradient_alg = (;),
-        optimizer_alg = (;),
+        boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
         kwargs...,
     )
     # adjust CTMRG tols and verbosity

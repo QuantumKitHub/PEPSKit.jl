@@ -26,11 +26,8 @@ end
 #
 
 function MPSKitModels.transverse_field_ising(
-        T::Type{<:Number},
-        S::Union{Type{Trivial}, Type{Z2Irrep}},
-        lattice::InfiniteSquare;
-        J = 1.0,
-        g = 1.0,
+        T::Type{<:Number}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
+        J = 1.0, g = 1.0,
     )
     ZZ = rmul!(σᶻᶻ(T, S), -J)
     X = rmul!(σˣ(T, S), g * -J)
@@ -46,13 +43,8 @@ function MPSKitModels.heisenberg_XYZ(lattice::InfiniteSquare; kwargs...)
     return heisenberg_XYZ(ComplexF64, Trivial, lattice; kwargs...)
 end
 function MPSKitModels.heisenberg_XYZ(
-        T::Type{<:Number},
-        S::Type{<:Sector},
-        lattice::InfiniteSquare;
-        Jx = -1.0,
-        Jy = 1.0,
-        Jz = -1.0,
-        spin = 1 // 2,
+        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
+        Jx = -1.0, Jy = 1.0, Jz = -1.0, spin = 1 // 2,
     )
     term =
         rmul!(S_xx(T, S; spin = spin), Jx) +
@@ -65,7 +57,8 @@ function MPSKitModels.heisenberg_XYZ(
 end
 
 function MPSKitModels.heisenberg_XXZ(
-        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare; J = 1.0, Delta = 1.0, spin = 1
+        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
+        J = 1.0, Delta = 1.0, spin = 1
     )
     h =
         J * (
@@ -80,14 +73,9 @@ function MPSKitModels.heisenberg_XXZ(
 end
 
 function MPSKitModels.hubbard_model(
-        T::Type{<:Number},
-        particle_symmetry::Type{<:Sector},
-        spin_symmetry::Type{<:Sector},
+        T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
-        t = 1.0,
-        U = 1.0,
-        mu = 0.0,
-        n::Integer = 0,
+        t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
     )
     # TODO: just add this
     @assert n == 0 "Currently no support for imposing a fixed particle number"
@@ -104,14 +92,8 @@ function MPSKitModels.hubbard_model(
 end
 
 function MPSKitModels.bose_hubbard_model(
-        elt::Type{<:Number},
-        symmetry::Type{<:Sector},
-        lattice::InfiniteSquare;
-        cutoff::Integer = 5,
-        t = 1.0,
-        U = 1.0,
-        mu = 0.0,
-        n::Integer = 0,
+        elt::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
+        cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
     )
     hopping_term =
         a_plusmin(elt, symmetry; cutoff = cutoff) + a_minplus(elt, symmetry; cutoff = cutoff)
@@ -140,14 +122,9 @@ function MPSKitModels.bose_hubbard_model(
 end
 
 function MPSKitModels.tj_model(
-        T::Type{<:Number},
-        particle_symmetry::Type{<:Sector},
-        spin_symmetry::Type{<:Sector},
+        T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
-        t = 2.5,
-        J = 1.0,
-        mu = 0.0,
-        slave_fermion::Bool = false,
+        t = 2.5, J = 1.0, mu = 0.0, slave_fermion::Bool = false,
     )
     hopping =
         TJOperators.e_plusmin(particle_symmetry, spin_symmetry; slave_fermion) +
@@ -189,13 +166,8 @@ function j1_j2_model(lattice::InfiniteSquare; kwargs...)
     return j1_j2_model(ComplexF64, Trivial, lattice; kwargs...)
 end
 function j1_j2_model(
-        T::Type{<:Number},
-        S::Type{<:Sector},
-        lattice::InfiniteSquare;
-        J1 = 1.0,
-        J2 = 1.0,
-        spin = 1 // 2,
-        sublattice = true,
+        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
+        J1 = 1.0, J2 = 1.0, spin = 1 // 2, sublattice = true,
     )
     term_AA = S_xx(T, S; spin) + S_yy(T, S; spin) + S_zz(T, S; spin)
     term_AB = if sublattice
@@ -228,7 +200,8 @@ function pwave_superconductor(lattice::InfiniteSquare; kwargs...)
     return pwave_superconductor(ComplexF64, lattice; kwargs...)
 end
 function pwave_superconductor(
-        T::Type{<:Number}, lattice::InfiniteSquare; t::Number = 1, μ::Number = 2, Δ::Number = 1
+        T::Type{<:Number}, lattice::InfiniteSquare;
+        t::Number = 1, μ::Number = 2, Δ::Number = 1
     )
     physical_space = Vect[FermionParity](0 => 1, 1 => 1)
     spaces = fill(physical_space, (lattice.Nrows, lattice.Ncols))

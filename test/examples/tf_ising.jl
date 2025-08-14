@@ -62,19 +62,15 @@ corrv =
 # compute weird geometries
 corrh_2 =
     correlator(
-    peps,
-    σz ⊗ σz,
-    CartesianIndex(3, 2),
-    CartesianIndex(3, 3):CartesianIndex(1, 2):CartesianIndex(3, 7),
+    peps, σz ⊗ σz,
+    CartesianIndex(3, 2), CartesianIndex(3, 3):CartesianIndex(1, 2):CartesianIndex(3, 7),
     env,
 ) .- magnz^2
 @test corrh_2 ≈ corrh[1:2:5]
 corrv_2 =
     correlator(
-    peps,
-    σz ⊗ σz,
-    CartesianIndex(2, 3),
-    CartesianIndex(3, 3):CartesianIndex(2, 1):CartesianIndex(7, 3),
+    peps, σz ⊗ σz,
+    CartesianIndex(2, 3), CartesianIndex(3, 3):CartesianIndex(2, 1):CartesianIndex(7, 3),
     env,
 ) .- magnz^2
 @test corrv_2 ≈ corrv[1:2:5]

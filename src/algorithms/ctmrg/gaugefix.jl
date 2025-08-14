@@ -58,8 +58,7 @@ end
 # because MPSKit is not compatible with AD
 @generated function _transfer_right(
         v::AbstractTensorMap{<:Any, S, 1, N₁},
-        A::GenericMPSTensor{S, N₂},
-        Abar::GenericMPSTensor{S, N₂},
+        A::GenericMPSTensor{S, N₂}, Abar::GenericMPSTensor{S, N₂},
     ) where {S, N₁, N₂}
     t_out = tensorexpr(:v, -1, -(2:(N₁ + 1)))
     t_top = tensorexpr(:A, (-1, reverse(3:(N₂ + 1))...), 1)
