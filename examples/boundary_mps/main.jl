@@ -25,38 +25,94 @@ using TensorKit, PEPSKit, MPSKit
 md"""
 ## Computing a PEPS norm
 
-We start by initializing a random infinite PEPS. Let us use uniformly distributed complex
-entries using `rand` (which sometimes lead to better convergence than Gaussian distributed
-`randn` elements):
+We start by initializing a random infinite PEPS. Let us use normally distributed complex
+entries using `randn`:
 """
 
-peps₀ = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2))
+ψ = InfinitePEPS(randn, ComplexF64, ComplexSpace(2), ComplexSpace(2))
 
 md"""
-To compute its norm, usually we would construct a double-layer `InfiniteSquareNetwork` which
-encodes the bra-ket PEPS overlap and then contract this infinite square network, for example
-using CTMRG. Here however, we will use another approach. If we take out a single row of this
-infinite norm network, we can interpret it as a 2D row-to-row transfer operator ``T``. Here,
-this transfer operator consists of an effective local rank-4 tensor at every site of a 2D
-square lattice, where the local effective tensor is given by the contraction of a bra and
-ket [`PEPSKit.PEPSTensor`](@ref) across their physical leg. Since the network we want to
-contract can be interpreted as the infinite power of ``T``, we can contract it by finding
-its leading eigenvector as a 1D MPS, which we call the boundary MPS.
 
-In PEPSKit.jl, we can directly construct the transfer operator corresponding to a PEPS norm
-network from a given infinite PEPS as an [`InfiniteTransferPEPS`](@ref) object.
-Additionally, we need to specify which direction should be facing north (`dir=1`
-corresponding to north, counting clockwise) and which row is selected from the north - but
-since we have a trivial unit cell there is only one row:
+To compute its norm, we have to contract a double-layer network which encodes the bra-ket
+PEPS overlap ``\langle ψ | ψ \rangle``:
+
+```@raw html
+<center>
+<img src="../../assets/figures/peps_norm_network.svg" alt="peps norm network" class="color-invertible" style="zoom: 180%"/>
+</center>
+```
+
+In PEPSKit.jl, this structure is represented as an [`InfiniteSquareNetwork`](@ref) object,
+whose effective local rank-4 constituent tensor is given by the contraction of a pair of bra
+and ket [`PEPSKit.PEPSTensor`](@ref)s across their physical legs. Until now, we have always
+contracted such a network using the CTMRG algorithm. Here however, we will use another
+approach.
+
+If we take out a single row of this infinite norm network, we can interpret it as a 1D
+row-to-row transfer operator ``\mathbb{T}``,
+
+```@raw html
+<center>
+<img src="../../assets/figures/peps_transfer_operator.svg" alt="peps transfer operator" class="color-invertible" style="zoom: 180%"/>
+</center>
+```
+
+This transfer operator can be seen as an infinite chain of the effective local rank-4
+tensors that make up the PEPS norm network. Since the network we want to contract can be
+interpreted as the infinite power of ``\mathbb{T}``, we can contract it by finding its
+leading eigenvector as a 1D MPS ``| \psi_{\text{MPS}} \rangle``, which we call the boundary
+MPS. This boundary MPS should satisfy the eigenvalue equation
+``\mathbb{T} | \psi_{\text{MPS}} \rangle \approx \Lambda | \psi_{\text{MPS}} \rangle``, or
+diagrammatically:
+
+```@raw html
+<center>
+<img src="../../assets/figures/peps_transfer_fixedpoint_equation.svg" alt="peps transfer fixedpoint equation" class="color-invertible" style="zoom: 180%"/>
+</center>
+```
+
+Note that if ``\mathbb{T}`` is Hermitian, we can formulate this eigenvalue equation in terms of a
+variational problem for the free energy,
+
+```math
+\begin{align} 
+f &= \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi_{\text{MPS}} | \mathbb{T} | \psi_{\text{MPS}} \rangle}{\langle \psi_{\text{MPS}} | \psi_{\text{MPS}} \rangle} \right),
+\\
+&= -\log(\lambda)
+\end{align}
+```
+
+where ``\lambda = \Lambda^{1/N}`` is the 'eigenvalue per site' of ``\mathbb{T}``, giving
+``f`` the meaning of a free energy density.
+
+Since the contraction of a PEPS norm network is in essence exactly the same problem as the
+contraction of a 2D classical partition function, we can directly use boundary MPS
+algorithms designed for 2D statistical mechanics models in this context. In particular,
+we'll use the [the VUMPS algorithm](@cite vanderstraeten_tangentspace_2019) to perform the
+boundary MPS contraction, and we'll call it through the [`leading_boundary`](@ref) method
+from MPSKit.jl. This method precisely finds the MPS fixed point of a 1D transfer operator.
+
+## Boundary MPS contractions with PEPSKit.jl
+
+To use [`leading_boundary`](@ref), we first need to contruct the transfer operator
+``\mathbb{T}`` as an [`MPSKit.InfiniteMPO`](@extref) object. In PEPSKit.jl, we can directly
+construct the transfer operator corresponding to a PEPS norm network from a given infinite
+PEPS as an [`InfiniteTransferPEPS`](@ref) object, which is a specific kind of
+[`MPSKit.InfiniteMPO`](@extref).
+
+To construct a 1D transfer operator from a 2D PEPS state, we need to specify which direction
+should be facing north (`dir=1` corresponding to north, counting clockwise) and which row of
+the network is selected from the north - but since we have a trivial unit cell there is only
+one row here:
 """
 
 dir = 1 ## does not rotate the partition function
 row = 1
-T = InfiniteTransferPEPS(peps₀, dir, row)
+T = InfiniteTransferPEPS(ψ, dir, row)
 
 md"""
-Since we'll find the leading eigenvector of ``T`` as a boundary MPS, we first need to
-construct an initial guess to supply to our algorithm. We can do this using the
+Since we'll find the leading eigenvector of ``\mathbb{T}`` as a boundary MPS, we first need
+to construct an initial guess to supply to our algorithm. We can do this using the
 [`initialize_mps`](@ref) function, which constructs a random MPS with a specific virtual
 space for a given transfer operator. Here, we'll build an initial guess for the boundary MPS
 with a bond dimension of 20:
@@ -65,31 +121,29 @@ with a bond dimension of 20:
 mps₀ = initialize_mps(T, [ComplexSpace(20)])
 
 md"""
-
 Note that this will just construct a MPS with random Gaussian entries based on the physical
 spaces of the supplied transfer operator. Of course, one might come up with a better initial
 guess (leading to better convergence) depending on the application. To find the leading
 boundary MPS fixed point, we call [`leading_boundary`](@ref) using the
-[`MPSKit.VUMPS`](@extref) algorithm from MPSKit:
+[`MPSKit.VUMPS`](@extref) algorithm:
 """
 
 mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol=1e-6, verbosity=2));
 
 md"""
 The norm of the state per unit cell is then given by the expectation value
-$\langle \psi_\text{MPS} | \mathbb{T} | \psi_\text{MPS} \rangle$:
+$\langle \psi_\text{MPS} | \mathbb{T} | \psi_\text{MPS} \rangle$ per site:
 """
 
 norm_vumps = abs(prod(expectation_value(mps, T)))
 
 md"""
-This can be compared to the result obtained using CTMRG, where we see that the results match:
+This can be compared to the result obtained using CTMRG, where we see that the results
+match:
 """
 
-env_ctmrg, = leading_boundary(
-    CTMRGEnv(peps₀, ComplexSpace(20)), peps₀; tol=1e-6, verbosity=2
-)
-norm_ctmrg = abs(norm(peps₀, env_ctmrg))
+env_ctmrg, = leading_boundary(CTMRGEnv(ψ, ComplexSpace(20)), ψ; tol=1e-6, verbosity=2)
+norm_ctmrg = abs(norm(ψ, env_ctmrg))
 @show abs(norm_vumps - norm_ctmrg) / norm_vumps;
 
 md"""
@@ -98,19 +152,18 @@ md"""
 For PEPS with non-trivial unit cells, the principle is exactly the same. The only difference
 is that now the transfer operator of the PEPS norm partition function has multiple rows or
 'lines', each of which can be represented by an [`InfiniteTransferPEPS`](@ref) object. Such
-a multi-line transfer operator is represented by a `MultilineTransferPEPS` object. In this
-case, the boundary MPS is an [`MultilineMPS`](@extref) object, which should be initialized
-by specifying a virtual space for each site in the partition function unit cell.
+a multi-line transfer operator is represented by a [`PEPSKit.MultilineTransferPEPS`](@ref)
+object. In this case, the boundary MPS is an [`MultilineMPS`](@extref) object, which should
+be initialized by specifying a virtual space for each site in the partition function unit
+cell.
 
 First, we construct a PEPS with a $2 \times 2$ unit cell using the `unitcell` keyword
 argument and then define the corresponding transfer operator, where we again specify the
 direction which will be facing north:
 """
 
-peps₀_2x2 = InfinitePEPS(
-    rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2)
-)
-T_2x2 = PEPSKit.MultilineTransferPEPS(peps₀_2x2, dir);
+ψ_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
+T_2x2 = PEPSKit.MultilineTransferPEPS(ψ_2x2, dir);
 
 md"""
 Now, the procedure is the same as before: We compute the norm once using VUMPS, once using CTMRG and then compare.
@@ -121,9 +174,9 @@ mps_2x2, = leading_boundary(mps₀_2x2, T_2x2, VUMPS(; tol=1e-6, verbosity=2))
 norm_2x2_vumps = abs(prod(expectation_value(mps_2x2, T_2x2)))
 
 env_ctmrg_2x2, = leading_boundary(
-    CTMRGEnv(peps₀_2x2, ComplexSpace(20)), peps₀_2x2; tol=1e-6, verbosity=2
+    CTMRGEnv(ψ_2x2, ComplexSpace(20)), ψ_2x2; tol=1e-6, verbosity=2
 )
-norm_2x2_ctmrg = abs(norm(peps₀_2x2, env_ctmrg_2x2))
+norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
 @show abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps;
 
@@ -137,8 +190,8 @@ case the CTMRG algorithm is recommended.
 Using exactly the same machinery, we can contract 2D networks which encode the expectation
 value of a PEPO for a given PEPS state. As an example, we can consider the overlap of the
 PEPO correponding to the partition function of [3D classical Ising model](@ref e_3d_ising)
-with our random PEPS from before and evaluate the overlap $\langle \psi_\text{PEPS} |
-O_\text{PEPO} | \psi_\text{PEPS} \rangle$.
+with our random PEPS from before and evaluate the overlap $\langle \psi |
+T | \psi \rangle$.
 
 The classical Ising PEPO is defined as follows:
 """
@@ -162,8 +215,8 @@ To evaluate the overlap, we instantiate the PEPO and the corresponding [`Infinit
 in the right direction, on the right row of the partition function (trivial here):
 """
 
-pepo = ising_pepo(1)
-transfer_pepo = InfiniteTransferPEPO(peps₀, pepo, 1, 1)
+T = ising_pepo(1)
+transfer_pepo = InfiniteTransferPEPO(ψ, T, 1, 1)
 
 md"""
 As before, we converge the boundary MPS using VUMPS and then compute the expectation value:

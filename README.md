@@ -1,7 +1,4 @@
-<picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/docs/src/assets/logo-dark.svg">
-    <img alt="PEPSKit.jl logo" src="https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/docs/src/assets/logo.svg" width="150">
-</picture>
+<img src="./docs/src/assets/logo_readme.svg" width="150">
 
 # PEPSKit.jl
 
@@ -20,7 +17,7 @@
 
 **Tools for working with projected entangled-pair states**
 
-It contracts, it optimizes, it may break.
+*It contracts, it optimizes, it evolves.*
 
 ## Installation
 
