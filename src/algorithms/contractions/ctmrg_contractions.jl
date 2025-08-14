@@ -1480,7 +1480,7 @@ end
         C_northwest, C_northeast, C_southeast, C_southwest,
         E_north::TE, E_east::TE, E_south::TE, E_west::TE,
         O::PEPOSandwich{H},
-    ) where {TE<:CTMRGEdgeTensor, H}
+    ) where {TE <: CTMRGEdgeTensor, H}
     @assert numout(TE) == H + 3
 
     C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
