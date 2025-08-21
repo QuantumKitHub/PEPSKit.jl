@@ -391,9 +391,16 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
     if norm(vecs[1][2]) < 1.0e-2 * alg.solver_alg.tol
-        @warn "Fixed-point gradient computation using Arnoldi failed: auxiliary component should be finite but was $(vecs[1][2]). Possibly the Jacobian does not have a unique eigenvalue 1."
+        @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(vecs[1][2])\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
+        @info "Falling back to linear solver for fixed-point gradient computation."
+        backup_ls_alg = GMRES(; tol = alg.solver_alg.tol, maxiter = alg.solver_alg.maxiter, verbosity = alg.solver_alg.verbosity)
+        y, info = reallinsolve(∂f∂x, ∂F∂x, x₀, backup_ls_alg, 1, -1)
+        if alg.solver_alg.verbosity > 0 && info.converged != 1
+            @warn("backup gradient fixed-point iteration reached maximal number of iterations:", info)
+        end
+    else
+        y = scale(vecs[1][1], 1 / vecs[1][2])
     end
-    y = scale(vecs[1][1], 1 / vecs[1][2])
 
     return ∂f∂A(y)
 end
