@@ -281,7 +281,7 @@ function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
     signs_full = map(Iterators.product(1:4, 1:size(signs, 2), 1:size(signs, 3))) do (dir, r, c)
         σ = signs[dir, r, c]
-        space = if dir == NORTH # take unit cell interdependency of signs into account
+        extended_space = if dir == NORTH # take unit cell interdependency of signs into account
             domain(info.U_full[dir, r, _prev(c, end)]) ← codomain(info.V_full[dir, r, _prev(c, end)])
         elseif dir == EAST
             domain(info.U_full[dir, _prev(r, end), c]) ← codomain(info.V_full[dir, _prev(r, end), c])
@@ -290,7 +290,7 @@ function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
         elseif dir == WEST
             domain(info.U_full[dir, _next(r, end), c]) ← codomain(info.V_full[dir, _next(r, end), c])
         end
-        extended_σ = zeros(scalartype(σ), space)
+        extended_σ = zeros(scalartype(σ), extended_space)
         for (c, b) in blocks(extended_σ)
             σc = block(σ, c)
             kept_dim = size(σc, 1)

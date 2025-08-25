@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iteration
+using PEPSKit: _prev, _next, ctmrg_iteration, gauge_fix, _fix_svd_algorithm
 using TensorKit
 
 # settings
@@ -22,7 +22,7 @@ function test_unitcell(
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
     # apply one CTMRG iteration with fixeds
-    env′, = ctmrg_iteration(InfiniteSquareNetwork(peps), env, ctm_alg)
+    env′, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env, ctm_alg)
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(
@@ -35,7 +35,17 @@ function test_unitcell(
         ]...,
     )
     @test expectation_value(peps, random_op, env) isa Number
-    return @test expectation_value(peps, random_op, env′) isa Number
+    @test expectation_value(peps, random_op, env′) isa Number
+
+    # test if gauge fixing routines run through
+    _, signs = gauge_fix(env, env′)
+    @test signs isa Array
+    if ctm_alg isa SimultaneousCTMRG # also test :fixed mode gauge fixing for simultaneous CTMRG
+        svd_alg_fixed_full = _fix_svd_algorithm(SVDAdjoint(; fwd_alg=(; alg=:sdd)), signs, info)
+        svd_alg_fixed_iter = _fix_svd_algorithm(SVDAdjoint(; fwd_alg=(; alg=:iterative)), signs, info)
+        @test svd_alg_fixed_full isa SVDAdjoint
+        @test svd_alg_fixed_iter isa SVDAdjoint
+    end
 end
 
 function random_dualize!(M::AbstractMatrix{<:ElementarySpace})
