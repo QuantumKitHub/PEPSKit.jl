@@ -113,7 +113,7 @@ const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
 const gradient_eigsolver = :arnoldi
 const gradient_eigsolver_eager = true
 const gradient_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
-const gradient_alg = :linsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
+const gradient_alg = :eigsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
 
 # Optimization
 const reuse_env = true
