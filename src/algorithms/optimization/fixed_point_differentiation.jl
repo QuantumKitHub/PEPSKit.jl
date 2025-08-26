@@ -393,7 +393,16 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
     if norm(vecs[1][2]) < 1.0e-2 * alg.solver_alg.tol
         @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(vecs[1][2])\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
         @info "Falling back to linear solver for fixed-point gradient computation."
-        backup_ls_alg = _alg_or_nt(GradMode, (; alg = :linsolver, tol = alg.solver_alg.tol, maxiter = alg.solver_alg.maxiter, verbosity = alg.solver_alg.verbosity, iterscheme = iterscheme(alg))
+        backup_ls_alg = _alg_or_nt(
+            GradMode,
+            (;
+                alg = :linsolver,
+                tol = alg.solver_alg.tol,
+                maxiter = alg.solver_alg.maxiter,
+                verbosity = alg.solver_alg.verbosity,
+                iterscheme = iterscheme(alg),
+            )
+        )
         return fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, backup_ls_alg)
     else
         y = scale(vecs[1][1], 1 / vecs[1][2])
