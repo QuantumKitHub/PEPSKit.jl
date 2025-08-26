@@ -172,8 +172,8 @@ function Base.show(io::IO, ::MIME"text/plain", wts::SUWeight)
 end
 
 """
-    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; invwt::Bool=false)
-    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::NTuple{N,Int}; invwt::Bool=false)
+    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool=false)
+    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::NTuple{N,Int}; inv::Bool=false)
 
 Absorb or remove environment weight on an axis of vertex tensor `t`  known to be located at
 position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, col)` are
@@ -197,7 +197,7 @@ position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, co
 
 ## Keyword arguments
 
-- `invwt::Bool=false` : If `true`, the inverse square root of the weight is absorbed.
+- `inv::Bool=false` : If `true`, the inverse square root of the weight is absorbed.
 
 ## Examples
 
@@ -206,16 +206,16 @@ position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, co
 absorb_weight(t, weights, 2, 3, 1)
 
 # Absorb the inverse of (i.e. remove) the weight into the east axis
-absorb_weight(t, weights, 2, 3, 2; invwt=true)
+absorb_weight(t, weights, 2, 3, 2; inv=true)
 ```
 """
 function absorb_weight(
-        t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; invwt::Bool = false
+        t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
     )
     Nr, Nc = size(weights)[2:end]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     @assert 1 <= ax <= 4
-    pow = invwt ? -1 / 2 : 1 / 2
+    pow = inv ? -1 / 2 : 1 / 2
     wt = sdiag_pow(
         if ax == NORTH
             weights[2, row, col]
@@ -243,11 +243,11 @@ function absorb_weight(
         row::Int,
         col::Int,
         ax::NTuple{N, Int};
-        invwt::Bool = false,
+        inv::Bool = false,
     ) where {N}
     t2 = copy(t)
     for a in ax
-        t2 = absorb_weight(t2, weights, row, col, a; invwt)
+        t2 = absorb_weight(t2, weights, row, col, a; inv)
     end
     return t2
 end
