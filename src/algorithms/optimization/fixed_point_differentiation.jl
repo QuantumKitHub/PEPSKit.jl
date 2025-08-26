@@ -248,7 +248,8 @@ function _rrule(
         alg::SimultaneousCTMRG,
     )
     env, = leading_boundary(envinit, state, alg)
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces during differentiation
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     env_fixed, signs = gauge_fix(env, env_conv)
 
     # Fix SVD
@@ -279,8 +280,20 @@ end
 
 function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
-    signs_full = map(zip(signs, info.S_full)) do (σ, S_full)
-        extended_σ = zeros(scalartype(σ), space(S_full))
+    rowsize, colsize = size(signs, 2), size(signs, 3)
+    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, r, c)
+        σ = signs[dir, r, c]
+        r_sign, c_sign = if dir == NORTH # take unit cell interdependency of signs into account
+            r, _prev(c, colsize)
+        elseif dir == EAST
+            _prev(r, rowsize), c
+        elseif dir == SOUTH
+            r, _next(c, colsize)
+        elseif dir == WEST
+            _next(r, rowsize), c
+        end
+        extended_space = domain(info.U_full[dir, r_sign, c_sign]) ← codomain(info.V_full[dir, r_sign, c_sign])
+        extended_σ = zeros(scalartype(σ), extended_space)
         for (c, b) in blocks(extended_σ)
             σc = block(σ, c)
             kept_dim = size(σc, 1)
