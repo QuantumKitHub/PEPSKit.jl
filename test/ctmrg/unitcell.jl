@@ -40,9 +40,9 @@ function test_unitcell(
     # test if gauge fixing routines run through
     _, signs = gauge_fix(env, env′)
     @test signs isa Array
-    if ctm_alg isa SimultaneousCTMRG # also test :fixed mode gauge fixing for simultaneous CTMRG
-        svd_alg_fixed_full = _fix_svd_algorithm(SVDAdjoint(; fwd_alg=(; alg=:sdd)), signs, info)
-        svd_alg_fixed_iter = _fix_svd_algorithm(SVDAdjoint(; fwd_alg=(; alg=:iterative)), signs, info)
+    return if ctm_alg isa SimultaneousCTMRG # also test :fixed mode gauge fixing for simultaneous CTMRG
+        svd_alg_fixed_full = _fix_svd_algorithm(SVDAdjoint(; fwd_alg = (; alg = :sdd)), signs, info)
+        svd_alg_fixed_iter = _fix_svd_algorithm(SVDAdjoint(; fwd_alg = (; alg = :iterative)), signs, info)
         @test svd_alg_fixed_full isa SVDAdjoint
         @test svd_alg_fixed_iter isa SVDAdjoint
     end
