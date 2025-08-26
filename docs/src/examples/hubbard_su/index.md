@@ -38,109 +38,76 @@ constructed on a $2 \times 2$ unit cell, so we have:
 t = 1
 U = 6
 Nr, Nc = 2, 2
-H = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu=U / 2);
+H = hubbard_model(Float64, Trivial, Trivial, InfiniteSquare(Nr, Nc); t, U, mu = U / 2);
+physical_space = Vect[fℤ₂](0 => 2, 1 => 2);
 ````
 
 ## Running the simple update algorithm
 
-Next, we'll specify the virtual PEPS bond dimension and define the fermionic physical and
-virtual spaces. The simple update algorithm evolves an infinite PEPS with weights on the
-virtual bonds, so we here need to intialize an [`InfiniteWeightPEPS`](@ref). By default,
-the bond weights will be identity. Unlike in the other examples, we here use tensors with
-real `Float64` entries:
+Suppose the goal is to use imaginary-time simple update to optimize a PEPS
+with bond dimension D = 8, and $2 \times 2$ unit cells.
+For a challenging model like the Hubbard model, a naive evolution starting from a
+random PEPS at D = 8 will almost always produce a sub-optimal state.
+In this example, we shall demonstrate some common practices to improve SU result.
+
+First, we shall use a small D for the random PEPS initialization, which is chosen as 4 here.
+For convenience, here we work with real tensors with `Float64` entries.
+The bond weights are still initialized as identity matrices.
 
 ````julia
-Dbond = 8
-physical_space = Vect[fℤ₂](0 => 2, 1 => 2)
-virtual_space = Vect[fℤ₂](0 => Dbond / 2, 1 => Dbond / 2)
-wpeps = InfiniteWeightPEPS(rand, Float64, physical_space, virtual_space; unitcell=(Nr, Nc));
+virtual_space = Vect[fℤ₂](0 => 2, 1 => 2)
+peps = InfinitePEPS(rand, Float64, physical_space, virtual_space; unitcell = (Nr, Nc));
+wts = SUWeight(peps);
 ````
 
-Let's set the algorithm parameters: The plan is to successively decrease the time interval of
-the Trotter-Suzuki as well as the convergence tolerance such that we obtain a more accurate
-result at each iteration. To run the simple update, we call [`simpleupdate`](@ref) where we
-use the keyword `bipartite=false` - meaning that we use the full $2 \times 2$ unit cell
-without assuming a bipartite structure. Thus, we can start evolving:
+Starting from the random state, we first use a relatively large evolution time step
+`dt = 1e-2`. After convergence at D = 4, to avoid stucking at some bad local minimum,
+we first increase D to 12, and drop it back to D = 8 after a while.
+Afterwards, we keep D = 8 and gradually decrease `dt` to `1e-4` to improve convergence.
 
 ````julia
-dts = [1e-2, 1e-3, 4e-4, 1e-4]
-tols = [1e-6, 1e-8, 1e-8, 1e-8]
+dts = [1.0e-2, 1.0e-2, 1.0e-3, 4.0e-4, 1.0e-4]
+tols = [1.0e-7, 1.0e-7, 1.0e-8, 1.0e-8, 1.0e-8]
+Ds = [4, 12, 8, 8, 8]
 maxiter = 20000
 
-for (n, (dt, tol)) in enumerate(zip(dts, tols))
-    trscheme = truncerr(1e-10) & truncdim(Dbond)
+for (dt, tol, Dbond) in zip(dts, tols, Ds)
+    trscheme = truncerr(1.0e-10) & truncdim(Dbond)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-    global wpeps, = simpleupdate(wpeps, H, alg; bipartite=false)
+    global peps, wts, = simpleupdate(
+        peps, H, alg, wts; bipartite = false, check_interval = 2000
+    )
 end
 ````
 
 ````
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 2.355e+00,  time = 22.185 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 1e-02,  weight diff = 3.984e-04,  time = 0.015 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 1e-02,  weight diff = 2.866e-06,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 1061   :  dt = 1e-02,  weight diff = 9.956e-07,  time = 41.388 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 6.070e-03,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 1e-03,  weight diff = 1.874e-06,  time = 0.024 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 1e-03,  weight diff = 6.437e-07,  time = 0.021 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1500   :  dt = 1e-03,  weight diff = 2.591e-07,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.053e-07,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2500   :  dt = 1e-03,  weight diff = 4.280e-08,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3000   :  dt = 1e-03,  weight diff = 1.741e-08,  time = 0.021 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 3309   :  dt = 1e-03,  weight diff = 9.983e-09,  time = 58.103 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 4.030e-04,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 4e-04,  weight diff = 1.776e-07,  time = 0.016 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 4e-04,  weight diff = 7.091e-08,  time = 0.016 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1500   :  dt = 4e-04,  weight diff = 3.997e-08,  time = 0.021 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 2.622e-08,  time = 0.016 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2500   :  dt = 4e-04,  weight diff = 1.796e-08,  time = 0.021 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3000   :  dt = 4e-04,  weight diff = 1.245e-08,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 3303   :  dt = 4e-04,  weight diff = 9.997e-09,  time = 57.388 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1      :  dt = 1e-04,  weight diff = 2.014e-04,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 500    :  dt = 1e-04,  weight diff = 5.664e-08,  time = 0.016 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1000   :  dt = 1e-04,  weight diff = 4.106e-08,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 1500   :  dt = 1e-04,  weight diff = 3.033e-08,  time = 0.021 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2000   :  dt = 1e-04,  weight diff = 2.290e-08,  time = 0.021 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 2500   :  dt = 1e-04,  weight diff = 1.773e-08,  time = 0.014 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3000   :  dt = 1e-04,  weight diff = 1.410e-08,  time = 0.015 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU iter 3500   :  dt = 1e-04,  weight diff = 1.152e-08,  time = 0.023 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>4, 1=>4)
-[ Info: SU conv 3893   :  dt = 1e-04,  weight diff = 9.997e-09,  time = 69.269 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>2, 1=>2)
+[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.316e+00,  time = 29.863 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>2, 1=>2)
+[ Info: SU conv 1045   :  dt = 1e-02,  weight diff = 9.843e-08,  time = 40.243 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>6, 1=>6)
+[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 6.459e-06,  time = 0.221 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>6, 1=>6)
+[ Info: SU conv 584    :  dt = 1e-02,  weight diff = 9.946e-08,  time = 54.366 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 5.245e-03,  time = 0.064 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.418e-07,  time = 0.018 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU conv 3791   :  dt = 1e-03,  weight diff = 9.990e-09,  time = 69.986 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 3.256e-04,  time = 0.018 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 1.888e-08,  time = 0.018 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU conv 3034   :  dt = 4e-04,  weight diff = 9.997e-09,  time = 55.772 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU iter 1      :  dt = 1e-04,  weight diff = 1.627e-04,  time = 0.018 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU iter 2000   :  dt = 1e-04,  weight diff = 1.532e-08,  time = 0.018 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
+[ Info: SU conv 2916   :  dt = 1e-04,  weight diff = 9.997e-09,  time = 53.494 sec
 
-````
-
-To obtain the evolved `InfiniteWeightPEPS` as an actual PEPS without weights on the bonds,
-we can just call the following constructor:
-
-````julia
-peps = InfinitePEPS(wpeps);
 ````
 
 ## Computing the ground-state energy
@@ -154,21 +121,21 @@ run:
 ````julia
 χenv₀, χenv = 6, 16
 env_space = Vect[fℤ₂](0 => χenv₀ / 2, 1 => χenv₀ / 2)
-
+normalize!.(peps.A, Inf)
 env = CTMRGEnv(rand, Float64, peps, env_space)
 for χ in [χenv₀, χenv]
     global env, = leading_boundary(
-        env, peps; alg=:sequential, tol=1e-5, trscheme=truncdim(χ)
+        env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trscheme = truncdim(χ)
     )
 end
 ````
 
 ````
-[ Info: CTMRG init:	obj = -1.542952315399e-10	err = 1.0000e+00
-┌ Warning: CTMRG cancel 100:	obj = +6.651673256987e-01	err = 4.3704037477e-01	time = 34.96 sec
-└ @ PEPSKit ~/repos/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:155
-[ Info: CTMRG init:	obj = +6.651673256987e-01	err = 1.0000e+00
-[ Info: CTMRG conv 38:	obj = +5.888235917397e-01	err = 5.1440892086e-06	time = 1.54 min
+[ Info: CTMRG init:	obj = -5.833426130181e-11	err = 1.0000e+00
+┌ Warning: CTMRG cancel 50:	obj = +1.777694558949e+00	err = 3.0337552604e-05	time = 26.36 sec
+└ @ PEPSKit ~/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:152
+[ Info: CTMRG init:	obj = +1.777694558949e+00	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.781063096357e+00	err = 3.5802336737e-10	time = 25.47 sec
 
 ````
 
@@ -181,7 +148,7 @@ E = expectation_value(peps, H, env) / (Nr * Nc)
 ````
 
 ````
-E = -3.6333025742768026
+E = -3.6524975622613396
 
 ````
 
@@ -192,11 +159,11 @@ agree:
 ````julia
 Es_exact = Dict(0 => -1.62, 2 => -0.176, 4 => 0.8603, 6 => -0.6567, 8 => -0.5243)
 E_exact = Es_exact[U] - U / 2
-@show (E - E_exact) / E_exact;
+@show (E - E_exact) / abs(E_exact);
 ````
 
 ````
-(E - E_exact) / E_exact = -0.006398508415565196
+(E - E_exact) / abs(E_exact) = 0.0011492432353379406
 
 ````
 

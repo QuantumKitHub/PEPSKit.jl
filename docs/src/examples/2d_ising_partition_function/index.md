@@ -46,7 +46,7 @@ Since we later want to compute the magnetization and energy to check our results
 the appropriate rank-4 tensors here as well while we're at it.
 
 ````julia
-function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
+function classical_ising(; beta = log(1 + sqrt(2)) / 2, J = 1.0)
     K = beta * J
 
     # Boltzmann weights
@@ -119,12 +119,12 @@ settings:
 ````julia
 Venv = ℂ^20
 env₀ = CTMRGEnv(Z, Venv)
-env, = leading_boundary(env₀, Z; tol=1e-8, maxiter=500);
+env, = leading_boundary(env₀, Z; tol = 1.0e-8, maxiter = 500);
 ````
 
 ````
 [ Info: CTMRG init:	obj = +1.784252138312e+00 -1.557258880375e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 63:	obj = +3.353928644031e+00	err = 4.5903314811e-09	time = 8.12 sec
+[ Info: CTMRG conv 63:	obj = +3.353928644031e+00	err = 4.6019411538e-09	time = 5.41 sec
 
 ````
 
@@ -159,9 +159,9 @@ e = expectation_value(Z, (1, 1) => E, env)
 ````
 
 ````
-λ = 3.3539286440313782 - 5.873212040152551e-16im
-m = 0.9736086674403001 + 1.8262157316829647e-17im
-e = -1.8637796145082437 - 1.4609725853463717e-16im
+λ = 3.353928644031378 + 5.873373924198149e-16im
+m = 0.9736086674403004 - 3.652331379360598e-17im
+e = -1.8637796145082444 - 3.652331379360598e-17im
 
 ````
 
@@ -174,7 +174,7 @@ magnetization and energy per site (where we use `quadgk` to perform integrals of
 auxiliary variable from $0$ to $\pi/2$):
 
 ````julia
-function classical_ising_exact(; beta=log(1 + sqrt(2)) / 2, J=1.0)
+function classical_ising_exact(; beta = log(1 + sqrt(2)) / 2, J = 1.0)
     K = beta * J
 
     k = 1 / sinh(2 * K)^2
@@ -205,9 +205,9 @@ extrapolation):
 ````
 
 ````
-(-(log(λ)) / beta - f_exact) / f_exact = -6.605563039765528e-16 - 1.447068124555315e-16im
-(abs(m) - abs(m_exact)) / abs(m_exact) = -4.561270094458082e-16
-(e - e_exact) / e_exact = -0.023732068099090543 + 7.652732508485748e-17im
+(-(log(λ)) / beta - f_exact) / f_exact = -8.807417386354037e-16 + 1.4471080102670276e-16im
+(abs(m) - abs(m_exact)) / abs(m_exact) = -1.1403175236145204e-16
+(e - e_exact) / e_exact = -0.023732068099090193 + 1.9131307020363357e-17im
 
 ````
 
