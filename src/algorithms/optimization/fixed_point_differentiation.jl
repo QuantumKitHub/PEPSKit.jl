@@ -248,7 +248,8 @@ function _rrule(
         alg::SimultaneousCTMRG,
     )
     env, = leading_boundary(envinit, state, alg)
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
+    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces during differentiation
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     env_fixed, signs = gauge_fix(env, env_conv)
 
     # Fix SVD
