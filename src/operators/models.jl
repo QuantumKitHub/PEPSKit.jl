@@ -169,7 +169,7 @@ function j1_j2_model(
         T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
         J1 = 1.0, J2 = 1.0, spin = 1 // 2, sublattice = true,
     )
-    term_AA = S_xx(T, S; spin) + S_yy(T, S; spin) + S_zz(T, S; spin)
+    term_AA = S_exchange(T, S; spin)
     term_AB = if sublattice
         -S_xx(T, S; spin) + S_yy(T, S; spin) - S_zz(T, S; spin)  # Apply sublattice rotation
     else
