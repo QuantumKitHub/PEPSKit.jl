@@ -23,6 +23,7 @@ function test_unitcell(
 
     # apply one CTMRG iteration with fixeds
     env′, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env, ctm_alg)
+    env″, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env′, ctm_alg) # another iteration to fix spaces
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(
@@ -38,7 +39,7 @@ function test_unitcell(
     @test expectation_value(peps, random_op, env′) isa Number
 
     # test if gauge fixing routines run through
-    _, signs = gauge_fix(env, env′)
+    _, signs = gauge_fix(env′, env″)
     @test signs isa Array
     return if ctm_alg isa SimultaneousCTMRG # also test :fixed mode gauge fixing for simultaneous CTMRG
         svd_alg_fixed_full = _fix_svd_algorithm(SVDAdjoint(; fwd_alg = (; alg = :sdd)), signs, info)
