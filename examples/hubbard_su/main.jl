@@ -50,7 +50,7 @@ The bond weights are still initialized as identity matrices.
 
 virtual_space = Vect[fℤ₂](0 => 2, 1 => 2)
 peps = InfinitePEPS(rand, Float64, physical_space, virtual_space; unitcell = (Nr, Nc));
-wts = SUWeight(peps)
+wts = SUWeight(peps);
 
 md"""
 Starting from the random state, we first use a relatively large evolution time step 
