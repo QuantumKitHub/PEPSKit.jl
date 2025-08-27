@@ -187,12 +187,12 @@ boundary MPS fixed point, we call [`leading_boundary`](@ref) using the
 [`MPSKit.VUMPS`](@extref) algorithm:
 
 ````julia
-mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol=1e-6, verbosity=2));
+mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol = 1.0e-6, verbosity = 2));
 ````
 
 ````
 [ Info: VUMPS init:	obj = +1.674563752306e+00 +3.035692829590e+00im	err = 7.5576e-01
-[ Info: VUMPS conv 120:	obj = +6.831610878310e+00 -9.694386191727e-09im	err = 9.5145748780e-07	time = 25.25 sec
+[ Info: VUMPS conv 120:	obj = +6.831610878310e+00 -9.694385865125e-09im	err = 9.5145748821e-07	time = 7.42 sec
 
 ````
 
@@ -204,22 +204,22 @@ norm_vumps = abs(prod(expectation_value(mps, T)))
 ````
 
 ````
-6.831610878309706
+6.831610878309698
 ````
 
 This can be compared to the result obtained using CTMRG, where we see that the results
 match:
 
 ````julia
-env_ctmrg, = leading_boundary(CTMRGEnv(ψ, ComplexSpace(20)), ψ; tol=1e-6, verbosity=2)
+env_ctmrg, = leading_boundary(CTMRGEnv(ψ, ComplexSpace(20)), ψ; tol = 1.0e-6, verbosity = 2)
 norm_ctmrg = abs(norm(ψ, env_ctmrg))
 @show abs(norm_vumps - norm_ctmrg) / norm_vumps;
 ````
 
 ````
-[ Info: CTMRG init:	obj = -1.530193898578e+01 +2.533005049756e-01im	err = 1.0000e+00
-[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 4.7443353447e-07	time = 3.78 sec
-abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674852619316525e-6
+[ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579631e-01im	err = 1.0000e+00
+[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595139e-07	time = 0.40 sec
+abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674852575113105e-6
 
 ````
 
@@ -238,7 +238,7 @@ argument and then define the corresponding transfer operator, where we again spe
 direction which will be facing north:
 
 ````julia
-ψ_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell=(2, 2))
+ψ_2x2 = InfinitePEPS(rand, ComplexF64, ComplexSpace(2), ComplexSpace(2); unitcell = (2, 2))
 T_2x2 = PEPSKit.MultilineTransferPEPS(ψ_2x2, dir);
 ````
 
@@ -246,11 +246,11 @@ Now, the procedure is the same as before: We compute the norm once using VUMPS, 
 
 ````julia
 mps₀_2x2 = initialize_mps(T_2x2, fill(ComplexSpace(20), 2, 2))
-mps_2x2, = leading_boundary(mps₀_2x2, T_2x2, VUMPS(; tol=1e-6, verbosity=2))
+mps_2x2, = leading_boundary(mps₀_2x2, T_2x2, VUMPS(; tol = 1.0e-6, verbosity = 2))
 norm_2x2_vumps = abs(prod(expectation_value(mps_2x2, T_2x2)))
 
 env_ctmrg_2x2, = leading_boundary(
-    CTMRGEnv(ψ_2x2, ComplexSpace(20)), ψ_2x2; tol=1e-6, verbosity=2
+    CTMRGEnv(ψ_2x2, ComplexSpace(20)), ψ_2x2; tol = 1.0e-6, verbosity = 2
 )
 norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
@@ -258,12 +258,12 @@ norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 ````
 
 ````
-[ Info: VUMPS init:	obj = +9.819004336879e+02 +3.170023011746e+01im	err = 8.6013e-01
-┌ Warning: VUMPS cancel 200:	obj = +1.050428151028e+05 -1.899053741715e+02im	err = 2.8823293066e-02	time = 2.71 min
+[ Info: VUMPS init:	obj = +8.149302834396e+02 -8.860408249120e+01im	err = 8.6172e-01
+┌ Warning: VUMPS cancel 200:	obj = +1.046992011815e+05 -2.212181695361e+00im	err = 6.9503579749e-03	time = 13.67 sec
 └ @ MPSKit ~/.julia/packages/MPSKit/cKwp2/src/algorithms/groundstate/vumps.jl:76
-[ Info: CTMRG init:	obj = -5.668964998506e+01 -2.489382614044e+01im	err = 1.0000e+00
-[ Info: CTMRG conv 82:	obj = +1.046633714846e+05	err = 7.6507920704e-07	time = 36.93 sec
-abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.0036139041100238267
+[ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510263e+01im	err = 1.0000e+00
+[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6991268013e-07	time = 1.84 sec
+abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.00034221579358038244
 
 ````
 
@@ -282,7 +282,7 @@ T | \psi \rangle$.
 The classical Ising PEPO is defined as follows:
 
 ````julia
-function ising_pepo(β; unitcell=(1, 1, 1))
+function ising_pepo(β; unitcell = (1, 1, 1))
     t = ComplexF64[exp(β) exp(-β); exp(-β) exp(β)]
     q = sqrt(t)
 
@@ -317,16 +317,16 @@ As before, we converge the boundary MPS using VUMPS and then compute the expecta
 
 ````julia
 mps₀_pepo = initialize_mps(transfer_pepo, [ComplexSpace(20)])
-mps_pepo, = leading_boundary(mps₀_pepo, transfer_pepo, VUMPS(; tol=1e-6, verbosity=2))
+mps_pepo, = leading_boundary(mps₀_pepo, transfer_pepo, VUMPS(; tol = 1.0e-6, verbosity = 2))
 norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 @show norm_pepo;
 ````
 
 ````
-[ Info: VUMPS init:	obj = +2.552585816795e+01 -2.455978462565e-01im	err = 8.9526e-01
-┌ Warning: VUMPS cancel 200:	obj = +6.211569029510e+01 +1.206390478837e+00im	err = 6.9644987097e-01	time = 3.12 min
+[ Info: VUMPS init:	obj = +2.655321432467e+01 +3.760603778362e-01im	err = 8.9759e-01
+┌ Warning: VUMPS cancel 200:	obj = +7.226394646816e+01 +6.223361199138e+00im	err = 5.7986634490e-01	time = 37.47 sec
 └ @ MPSKit ~/.julia/packages/MPSKit/cKwp2/src/algorithms/groundstate/vumps.jl:76
-norm_pepo = 62.12740424984486
+norm_pepo = 72.5314289378628
 
 ````
 

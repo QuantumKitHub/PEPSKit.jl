@@ -104,23 +104,6 @@ function inner_prod_cluster(
     return @tensor res[1 2] * M[1 2]
 end
 
-function absorb_wts_cluster!(
-        Ms::Vector{T1}, wts::Vector{T2}
-    ) where {T1 <: AbstractTensorMap, T2 <: AbstractTensorMap}
-    revs = [isdual(space(M, 1)) for M in Ms[2:end]]
-    for (i, (wt, rev)) in enumerate(zip(wts, revs))
-        wtsqrt = sdiag_pow(wt, 0.5)
-        if rev
-            wtsqrt = permute(wtsqrt, ((2,), (1,)))
-        end
-        @tensor begin
-            Ms[i][-1; -2 -3 -4 -5] = Ms[i][-1; -2 -3 -4 1] * wtsqrt[1; -5]
-            Ms[i + 1][-1; -2 -3 -4 -5] = wtsqrt[-1; 1] * Ms[i + 1][1; -2 -3 -4 -5]
-        end
-    end
-    return
-end
-
 function fidelity_cluster(
         Ms1::Vector{T1}, Ms2::Vector{T2}
     ) where {T1 <: AbstractTensorMap, T2 <: AbstractTensorMap}

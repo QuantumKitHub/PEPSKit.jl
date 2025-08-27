@@ -19,124 +19,159 @@ end
 """
 $(SIGNATURES)
 
-Simple update of the x-bond `peps.weights[1,r,c]`.
+Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 
 ```
-                [2,r,c]             [2,r,c+1]
-                ↓                   ↓
-    [1,r,c-1] ← T[r,c] ← [1,r,c] ←- T[r,c+1] ← [1,r,c+1]
-                ↓                   ↓
-                [2,r+1,c]           [2,r+1,c+1]
+        |           |
+    -- T[r,c] -- T[r,c+1] --
+        |           |
 ```
 """
 function _su_xbond!(
-        row::Int, col::Int,
-        gate::AbstractTensorMap{T, S, 2, 2}, peps::InfiniteWeightPEPS,
+        peps::InfinitePEPS,
+        gate::AbstractTensorMap{T, S, 2, 2},
+        env::SUWeight,
+        row::Int,
+        col::Int,
         trscheme::TruncationScheme,
     ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
     # absorb environment weights
-    A, B = peps.vertices[row, col], peps.vertices[row, cp1]
-    sqrtsA = ntuple(dir -> (dir == EAST), 4)
-    sqrtsB = ntuple(dir -> (dir == WEST), 4)
-    A = _absorb_weights(A, peps.weights, row, col, Tuple(1:4), sqrtsA, false)
-    B = _absorb_weights(B, peps.weights, row, cp1, Tuple(1:4), sqrtsB, false)
+    A, B = peps.A[row, col], peps.A[row, cp1]
+    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = false)
+    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = false)
+    normalize!(A, Inf)
+    normalize!(B, Inf)
     # apply gate
     X, a, b, Y = _qr_bond(A, B)
     a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
-    _allfalse = ntuple(Returns(false), 3)
-    A = _absorb_weights(A, peps.weights, row, col, (NORTH, SOUTH, WEST), _allfalse, true)
-    B = _absorb_weights(B, peps.weights, row, cp1, (NORTH, SOUTH, EAST), _allfalse, true)
+    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = true)
+    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = true)
+    normalize!(A, Inf)
+    normalize!(B, Inf)
+    normalize!(s, Inf)
     # update tensor dict and weight on current bond
-    # (max element of weight is normalized to 1)
-    peps.vertices[row, col], peps.vertices[row, cp1] = A, B
-    peps.weights[1, row, col] = s / norm(s, Inf)
+    peps.A[row, col], peps.A[row, cp1] = A, B
+    env.data[1, row, col] = s
     return ϵ
 end
 
 """
-    su_iter(gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool=false)
+Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
+```
+        |
+    --T[r-1,c] --
+        |
+    -- T[r,c] ---
+        |
+```
+"""
+function _su_ybond!(
+        peps::InfinitePEPS,
+        gate::AbstractTensorMap{T, S, 2, 2},
+        env::SUWeight,
+        row::Int,
+        col::Int,
+        trscheme::TruncationScheme,
+    ) where {T <: Number, S <: ElementarySpace}
+    Nr, Nc = size(peps)
+    @assert 1 <= row <= Nr && 1 <= col <= Nc
+    rm1 = _prev(row, Nr)
+    # absorb environment weights
+    A, B = peps.A[row, col], peps.A[rm1, col]
+    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = false)
+    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = false)
+    normalize!(A, Inf)
+    normalize!(B, Inf)
+    # apply gate
+    X, a, b, Y = _qr_bond(rotr90(A), rotr90(B))
+    a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
+    A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
+    # remove environment weights
+    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = true)
+    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = true)
+    # update tensor dict and weight on current bond
+    normalize!(A, Inf)
+    normalize!(B, Inf)
+    normalize!(s, Inf)
+    peps.A[row, col], peps.A[rm1, col] = A, B
+    env.data[2, row, col] = s
+    return ϵ
+end
+
+"""
+    su_iter(peps::InfinitePEPS, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; bipartite::Bool=false)
 
 One round of simple update on `peps` applying the nearest neighbor `gate`.
 When the input `peps` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
 """
 function su_iter(
-        gate::LocalOperator, peps::InfiniteWeightPEPS, alg::SimpleUpdate; bipartite::Bool = false
+        peps::InfinitePEPS,
+        gate::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        bipartite::Bool = false,
     )
     @assert size(gate.lattice) == size(peps)
     Nr, Nc = size(peps)
-    if bipartite
-        @assert Nr == Nc == 2
-    end
+    bipartite && (@assert Nr == Nc == 2)
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError("iPEPS unit cell size for simple update should be no smaller than (2, 2)."),
     )
-    peps2 = deepcopy(peps)
-    gate_mirrored = mirror_antidiag(gate)
-    for direction in 1:2
-        # mirror the y-weights to x-direction
-        # to update them using code for x-weights
-        if direction == 2
-            peps2 = mirror_antidiag(peps2)
-            trscheme = mirror_antidiag(alg.trscheme)
-        else
-            trscheme = alg.trscheme
-        end
+    peps2, env2 = deepcopy(peps), deepcopy(env)
+    for r in 1:Nr, c in 1:Nc
+        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
+        trscheme = truncation_scheme(alg.trscheme, 1, r, c)
+        _su_xbond!(peps2, term, env2, r, c, trscheme)
         if bipartite
-            for r in 1:2
-                rp1 = _next(r, 2)
-                term = get_gateterm(
-                    direction == 1 ? gate : gate_mirrored,
-                    (CartesianIndex(r, 1), CartesianIndex(r, 2)),
-                )
-                ϵ = _su_xbond!(r, 1, term, peps2, truncation_scheme(trscheme, 1, r, 1))
-                peps2.vertices[rp1, 2] = deepcopy(peps2.vertices[r, 1])
-                peps2.vertices[rp1, 1] = deepcopy(peps2.vertices[r, 2])
-                peps2.weights[1, rp1, 2] = deepcopy(peps2.weights[1, r, 1])
-            end
-        else
-            for site in CartesianIndices(peps2.vertices)
-                r, c = Tuple(site)
-                term = get_gateterm(
-                    direction == 1 ? gate : gate_mirrored,
-                    (CartesianIndex(r, c), CartesianIndex(r, c + 1)),
-                )
-                ϵ = _su_xbond!(r, c, term, peps2, truncation_scheme(trscheme, 1, r, c))
-            end
+            rp1, cp1 = _next(r, Nr), _next(c, Nc)
+            peps2.A[rp1, cp1] = deepcopy(peps2.A[r, c])
+            peps2.A[rp1, c] = deepcopy(peps2.A[r, cp1])
+            env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
-        if direction == 2
-            peps2 = mirror_antidiag(peps2)
+        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
+        trscheme = truncation_scheme(alg.trscheme, 2, r, c)
+        _su_ybond!(peps2, term, env2, r, c, trscheme)
+        if bipartite
+            rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
+            peps2.A[rm1, cm1] = deepcopy(peps2.A[r, c])
+            peps2.A[r, cm1] = deepcopy(peps2.A[rm1, c])
+            env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
         end
     end
-    return peps2
+    return peps2, env2
 end
 
 """
 Perform simple update with Hamiltonian `ham` containing up to nearest neighbor interaction terms. 
 """
 function _simpleupdate2site(
-        peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
-        bipartite::Bool = false, check_interval::Int = 500,
+        peps::InfinitePEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        bipartite::Bool = false,
+        check_interval::Int = 500,
     )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
     gate = get_expham(ham, alg.dt)
     wtdiff = 1.0
-    wts0 = deepcopy(peps.weights)
+    env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps = su_iter(gate, peps, alg; bipartite)
-        wtdiff = compare_weights(peps.weights, wts0)
+        peps, env = su_iter(peps, gate, alg, env; bipartite)
+        wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
-        wts0 = deepcopy(peps.weights)
+        env0 = deepcopy(env)
         time1 = time()
         if ((count == 1) || (count % check_interval == 0) || converge || cancel)
-            @info "Space of x-weight at [1, 1] = $(space(peps.weights[1, 1, 1], 1))"
+            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
@@ -146,11 +181,11 @@ function _simpleupdate2site(
         end
         converge && break
     end
-    return peps, wtdiff
+    return peps, env, wtdiff
 end
 
 """
-    simpleupdate(peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
+    simpleupdate(peps::InfinitePEPS, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
                  bipartite::Bool=false, force_3site::Bool=false, check_interval::Int=500)
 
 Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor interaction terms.
@@ -166,8 +201,13 @@ Perform a simple update on the infinite PEPS (`peps`) using the Hamiltonian `ham
 - The 3-site simple update algorithm is incompatible with a bipartite PEPS. Using `bipartite = true` with either `force_3site = true` or a `ham` with next-nearest neighbor terms is not allowed. 
 """
 function simpleupdate(
-        peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate;
-        bipartite::Bool = false, force_3site::Bool = false, check_interval::Int = 500,
+        peps::InfinitePEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        bipartite::Bool = false,
+        force_3site::Bool = false,
+        check_interval::Int = 500,
     )
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(ham)
@@ -175,8 +215,8 @@ function simpleupdate(
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
     # TODO: check SiteDependentTruncation is compatible with bipartite structure
     if use_3site
-        return _simpleupdate3site(peps, ham, alg; check_interval)
+        return _simpleupdate3site(peps, ham, alg, env; check_interval)
     else
-        return _simpleupdate2site(peps, ham, alg; bipartite, check_interval)
+        return _simpleupdate2site(peps, ham, alg, env; bipartite, check_interval)
     end
 end

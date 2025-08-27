@@ -81,8 +81,8 @@ end
         @time @safetestset "Norm-preserving retractions" begin
             include("utility/retractions.jl")
         end
-        @time @safetestset "Rotation of InfiniteWeightPEPS" begin
-            include("utility/iwpeps_rotation.jl")
+        @time @safetestset "Rotation of SUWeight" begin
+            include("utility/suweight_rotation.jl")
         end
         @time @safetestset "Correlators" begin
             include("utility/correlator.jl")

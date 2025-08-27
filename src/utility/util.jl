@@ -106,11 +106,17 @@ end
 Given `tsvd` result `u ← s ← vh`, flip the arrow between the three tensors 
 to `u2 → s2 → vh2` such that
 ```
-    u * s * vh = (@tensor t2[-1; -2] := u2[-1; 1] * s2[1; 2] * vh2[2; -2])
+    u * s * vh = (@tensor t2[-1, ...; -2, ...] := u2[-1, ...; 2] * s2[1; 2] * vh2[1; -2, ...])
+```
+The axis orders for `s`, `s2` are
+```
+    1 ← s ← 2   2 → s2 → 1
 ```
 """
 function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-    return flip(u, 2), DiagonalTensorMap(flip(s, (1, 2))), flip(vh, 1)
+    return flip(u, numind(u)),
+        permute(DiagonalTensorMap(flip(s, (1, 2))), ((2,), (1,))),
+        flip(vh, 1)
 end
 
 """

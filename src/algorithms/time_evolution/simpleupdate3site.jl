@@ -205,10 +205,10 @@ such that the contraction of `Pa`, `s`, `Pb` is identity when `trunc = notrunc`,
 
 The arrows between `Pa`, `s`, `Pb` are
 ```
-    rev = false: - Pa ← s ← Pb -
+    rev = false: - Pa --←-- Pb -
                     1 ← s ← 2
 
-    rev = true:  - Pa → s → Pb - 
+    rev = true:  - Pa --→-- Pb - 
                     2 → s → 1
 ```
 """
@@ -221,12 +221,10 @@ function _proj_from_RL(
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
     u, s, vh, ϵ = tsvd!(rl; trunc)
-    sinv = PEPSKit.sdiag_pow(s, -1)
+    sinv = PEPSKit.sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
         Pa, s, Pb = flip_svd(Pa, s, Pb)
-        s = permute(s, ((2,), (1,)))
-        @assert all(s.data .>= 0.0)
     end
     return Pa, s, Pb, ϵ
 end
@@ -242,8 +240,7 @@ function _get_allprojs(
     @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
         trunc = if isa(trschemes[i], FixedSpaceTruncation)
-            V = space(Ms[i + 1], 1)
-            truncspace(isdual(V) ? V' : V)
+            truncspace(space(Ms[i + 1], 1))
         else
             trschemes[i]
         end
@@ -329,14 +326,12 @@ function apply_gatempo!(
     ) where {T1 <: PEPSTensor, T2 <: AbstractTensorMap, E <: TruncationScheme}
     @assert length(Ms) == length(gs)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
-    @assert !all(revs)
     _apply_gatempo!(Ms, gs)
     wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
     return wts, ϵs
 end
 
 const openaxs_se = [(NORTH, SOUTH, WEST), (EAST, SOUTH), (NORTH, EAST, WEST)]
-const sqrtwts_se = [ntuple(dir -> !(dir in idxs), 4) for idxs in openaxs_se]
 const invperms_se = [((2,), (3, 5, 4, 1)), ((2,), (5, 3, 4, 1)), ((2,), (5, 3, 1, 4))]
 const perms_se = [
     begin
@@ -354,56 +349,60 @@ Obtain the following 3-site cluster
         c      c+1
 ```
 """
-function get_3site_se(peps::InfiniteWeightPEPS, row::Int, col::Int)
+function get_3site_se(peps::InfinitePEPS, env::SUWeight, row::Int, col::Int)
     Nr, Nc = size(peps)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
     cluster = collect(
         permute(
-                _absorb_weights(
-                    peps.vertices[CartesianIndex(coord)], peps.weights,
-                    coord[1], coord[2], Tuple(1:4), sqrtwts, false,
+                absorb_weight(
+                    peps.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs; inv = false
                 ),
                 perm,
-            ) for (coord, sqrtwts, perm) in zip(coords_se, sqrtwts_se, perms_se)
+            ) for (coord, openaxs, perm) in zip(coords_se, openaxs_se, perms_se)
     )
     return cluster
 end
 
 function _su3site_se!(
-        row::Int, col::Int, gs::Vector{T}, peps::InfiniteWeightPEPS, trschemes::Vector{E}
+        peps::InfinitePEPS,
+        gs::Vector{T},
+        env::SUWeight,
+        row::Int,
+        col::Int,
+        trschemes::Vector{E},
     ) where {T <: AbstractTensorMap, E <: TruncationScheme}
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster
-    Ms = get_3site_se(peps, row, col)
+    Ms = get_3site_se(peps, env, row, col)
+    normalize!.(Ms, Inf)
     # sites in the cluster
     coords = ((row, col), (row, cp1), (rm1, cp1))
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
     wts, ϵ = apply_gatempo!(Ms, gs; trschemes)
     for (wt, wt_idx) in zip(wts, wt_idxs)
-        peps.weights[CartesianIndex(wt_idx)] = wt / norm(wt, Inf)
+        env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
     end
-    for (M, coord, invperm, axs) in zip(Ms, coords, invperms_se, openaxs_se)
+    for (M, coord, invperm, openaxs) in zip(Ms, coords, invperms_se, openaxs_se)
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
-        _allfalse = ntuple(Returns(false), length(axs))
-        M = _absorb_weights(M, peps.weights, coord[1], coord[2], axs, _allfalse, true)
-        peps.vertices[CartesianIndex(coord)] = M * (100.0 / norm(M, Inf))
+        M = absorb_weight(M, env, coord[1], coord[2], openaxs; inv = true)
+        peps.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return nothing
 end
 
 """
-    su3site_iter(gatempos, peps::InfiniteWeightPEPS, alg::SimpleUpdate)
+    su3site_iter(peps::InfinitePEPS, gatempos, alg::SimpleUpdate, env::SUWeight)
 
 One round of 3-site simple update. 
 """
 function su3site_iter(
-        gatempos::Vector{G}, peps::InfiniteWeightPEPS, alg::SimpleUpdate
+        peps::InfinitePEPS, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
     ) where {G <: AbstractMatrix}
     Nr, Nc = size(peps)
     (Nr >= 2 && Nc >= 2) || throw(
@@ -411,29 +410,33 @@ function su3site_iter(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    peps2 = deepcopy(peps)
+    peps2, env2 = deepcopy(peps), deepcopy(env)
     trscheme = alg.trscheme
     for i in 1:4
-        for site in CartesianIndices(peps2.vertices)
+        for site in CartesianIndices(peps2.A)
             r, c = site[1], site[2]
             gs = gatempos[i][r, c]
             trschemes = [
                 truncation_scheme(trscheme, 1, r, c)
                 truncation_scheme(trscheme, 2, r, _next(c, size(peps2)[2]))
             ]
-            _su3site_se!(r, c, gs, peps2, trschemes)
+            _su3site_se!(peps2, gs, env2, r, c, trschemes)
         end
-        peps2 = rotl90(peps2)
+        peps2, env2 = rotl90(peps2), rotl90(env2)
         trscheme = rotl90(trscheme)
     end
-    return peps2
+    return peps2, env2
 end
 
 """
 Perform 3-site simple update for Hamiltonian `ham`.
 """
 function _simpleupdate3site(
-        peps::InfiniteWeightPEPS, ham::LocalOperator, alg::SimpleUpdate; check_interval::Int = 500
+        peps::InfinitePEPS,
+        ham::LocalOperator,
+        alg::SimpleUpdate,
+        env::SUWeight;
+        check_interval::Int = 500,
     )
     time_start = time()
     # convert Hamiltonian to 3-site exponentiated gate MPOs
@@ -444,17 +447,17 @@ function _simpleupdate3site(
         _get_gatempos_se(rotr90(ham), alg.dt),
     ]
     wtdiff = 1.0
-    wts0 = deepcopy(peps.weights)
+    env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps = su3site_iter(gatempos, peps, alg)
-        wtdiff = compare_weights(peps.weights, wts0)
+        peps, env = su3site_iter(peps, gatempos, alg, env)
+        wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
-        wts0 = deepcopy(peps.weights)
+        env0 = deepcopy(env)
         time1 = time()
         if ((count == 1) || (count % check_interval == 0) || converge || cancel)
-            @info "Space of x-weight at [1, 1] = $(space(peps.weights[1, 1, 1], 1))"
+            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
             message = @sprintf(
                 "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
@@ -464,5 +467,5 @@ function _simpleupdate3site(
         end
         converge && break
     end
-    return peps, wtdiff
+    return peps, env, wtdiff
 end
