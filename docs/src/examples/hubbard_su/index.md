@@ -82,31 +82,31 @@ end
 
 ````
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>2, 1=>2)
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.316e+00,  time = 29.863 sec
+[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.316e+00,  time = 27.486 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>2, 1=>2)
-[ Info: SU conv 1045   :  dt = 1e-02,  weight diff = 9.843e-08,  time = 40.243 sec
+[ Info: SU conv 1045   :  dt = 1e-02,  weight diff = 9.843e-08,  time = 34.956 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>6, 1=>6)
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 6.459e-06,  time = 0.221 sec
+[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 6.459e-06,  time = 0.077 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>6, 1=>6)
-[ Info: SU conv 584    :  dt = 1e-02,  weight diff = 9.946e-08,  time = 54.366 sec
+[ Info: SU conv 584    :  dt = 1e-02,  weight diff = 9.946e-08,  time = 42.322 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 5.245e-03,  time = 0.064 sec
+[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 5.245e-03,  time = 0.235 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
 [ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.418e-07,  time = 0.018 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU conv 3791   :  dt = 1e-03,  weight diff = 9.990e-09,  time = 69.986 sec
+[ Info: SU conv 3791   :  dt = 1e-03,  weight diff = 9.990e-09,  time = 78.783 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
 [ Info: SU iter 1      :  dt = 4e-04,  weight diff = 3.256e-04,  time = 0.018 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 1.888e-08,  time = 0.018 sec
+[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 1.888e-08,  time = 0.024 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU conv 3034   :  dt = 4e-04,  weight diff = 9.997e-09,  time = 55.772 sec
+[ Info: SU conv 3034   :  dt = 4e-04,  weight diff = 9.997e-09,  time = 62.113 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 1      :  dt = 1e-04,  weight diff = 1.627e-04,  time = 0.018 sec
+[ Info: SU iter 1      :  dt = 1e-04,  weight diff = 1.627e-04,  time = 0.024 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
 [ Info: SU iter 2000   :  dt = 1e-04,  weight diff = 1.532e-08,  time = 0.018 sec
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU conv 2916   :  dt = 1e-04,  weight diff = 9.997e-09,  time = 53.494 sec
+[ Info: SU conv 2916   :  dt = 1e-04,  weight diff = 9.997e-09,  time = 59.560 sec
 
 ````
 
@@ -131,11 +131,11 @@ end
 ````
 
 ````
-[ Info: CTMRG init:	obj = -5.833426130181e-11	err = 1.0000e+00
-┌ Warning: CTMRG cancel 50:	obj = +1.777694558949e+00	err = 3.0337552604e-05	time = 26.36 sec
+[ Info: CTMRG init:	obj = +4.034556135739e-13	err = 1.0000e+00
+┌ Warning: CTMRG cancel 50:	obj = +1.777694990783e+00	err = 2.1447151954e-06	time = 18.75 sec
 └ @ PEPSKit ~/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:152
-[ Info: CTMRG init:	obj = +1.777694558949e+00	err = 1.0000e+00
-[ Info: CTMRG conv 7:	obj = +1.781063096357e+00	err = 3.5802336737e-10	time = 25.47 sec
+[ Info: CTMRG init:	obj = +1.777694990783e+00	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.781063096355e+00	err = 3.5793745596e-10	time = 21.32 sec
 
 ````
 
@@ -148,7 +148,7 @@ E = expectation_value(peps, H, env) / (Nr * Nc)
 ````
 
 ````
-E = -3.6524975622613396
+E = -3.652497562261351
 
 ````
 
@@ -163,7 +163,7 @@ E_exact = Es_exact[U] - U / 2
 ````
 
 ````
-(E - E_exact) / abs(E_exact) = 0.0011492432353379406
+(E - E_exact) / abs(E_exact) = 0.001149243235334783
 
 ````
 

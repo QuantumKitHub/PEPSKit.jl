@@ -182,7 +182,7 @@ env₀, info_ctmrg = leading_boundary(env_random, peps₀; boundary_alg...);
 
 ````
 [ Info: CTMRG init:	obj = -2.749614463601e+00 +3.639628057806e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 27:	obj = +9.727103564786e+00	err = 2.6201215053e-11	time = 0.33 sec
+[ Info: CTMRG conv 27:	obj = +9.727103564786e+00	err = 2.6201801020e-11	time = 0.22 sec
 
 ````
 
@@ -196,7 +196,7 @@ directions and unit cell entries:
 ````
 
 ````
-info_ctmrg.truncation_error = 0.0008076332824218667
+info_ctmrg.truncation_error = 0.000807633282421865
 
 ````
 
@@ -214,92 +214,88 @@ peps, env, E, info_opt = fixedpoint(
 
 ````
 [ Info: LBFGS: initializing with f = 0.000601645310, ‖∇f‖ = 9.3547e-01
-[ Info: LBFGS: iter    1, time  653.15 s: f = -0.489780515313, ‖∇f‖ = 6.0029e-01, α = 5.94e+01, m = 0, nfg = 5
-[ Info: LBFGS: iter    2, time  654.16 s: f = -0.501969370077, ‖∇f‖ = 5.3739e-01, α = 2.80e-01, m = 1, nfg = 2
-[ Info: LBFGS: iter    3, time  654.65 s: f = -0.523150697048, ‖∇f‖ = 3.9920e-01, α = 1.00e+00, m = 2, nfg = 1
-[ Info: LBFGS: iter    4, time  655.75 s: f = -0.538654572541, ‖∇f‖ = 4.1550e-01, α = 2.29e-01, m = 3, nfg = 2
-[ Info: LBFGS: iter    5, time  658.50 s: f = -0.549895732386, ‖∇f‖ = 4.4023e-01, α = 6.96e-02, m = 4, nfg = 4
-[ Info: LBFGS: iter    6, time  659.76 s: f = -0.568903773686, ‖∇f‖ = 4.8251e-01, α = 2.23e-01, m = 5, nfg = 2
-[ Info: LBFGS: iter    7, time  660.31 s: f = -0.586868032201, ‖∇f‖ = 4.2837e-01, α = 1.00e+00, m = 6, nfg = 1
-[ Info: LBFGS: iter    8, time  660.82 s: f = -0.599838784692, ‖∇f‖ = 2.2069e-01, α = 1.00e+00, m = 7, nfg = 1
-[ Info: LBFGS: iter    9, time  661.31 s: f = -0.606610614248, ‖∇f‖ = 1.9251e-01, α = 1.00e+00, m = 8, nfg = 1
-[ Info: LBFGS: iter   10, time  662.59 s: f = -0.624864046584, ‖∇f‖ = 2.9515e-01, α = 1.00e+00, m = 9, nfg = 1
-[ Info: LBFGS: iter   11, time  663.09 s: f = -0.638375158459, ‖∇f‖ = 2.3675e-01, α = 1.00e+00, m = 10, nfg = 1
-[ Info: LBFGS: iter   12, time  663.68 s: f = -0.644407078574, ‖∇f‖ = 3.2337e-01, α = 1.00e+00, m = 11, nfg = 1
-[ Info: LBFGS: iter   13, time  664.08 s: f = -0.651446429820, ‖∇f‖ = 1.3169e-01, α = 1.00e+00, m = 12, nfg = 1
-[ Info: LBFGS: iter   14, time  664.50 s: f = -0.654528109037, ‖∇f‖ = 6.6176e-02, α = 1.00e+00, m = 13, nfg = 1
-[ Info: LBFGS: iter   15, time  664.95 s: f = -0.655971360877, ‖∇f‖ = 5.1875e-02, α = 1.00e+00, m = 14, nfg = 1
-[ Info: LBFGS: iter   16, time  665.38 s: f = -0.657229359806, ‖∇f‖ = 5.8978e-02, α = 1.00e+00, m = 15, nfg = 1
-[ Info: LBFGS: iter   17, time  665.83 s: f = -0.658531955909, ‖∇f‖ = 5.5554e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   18, time  666.25 s: f = -0.659295132779, ‖∇f‖ = 3.0496e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   19, time  666.67 s: f = -0.659541951057, ‖∇f‖ = 2.2298e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   20, time  667.08 s: f = -0.659737986345, ‖∇f‖ = 2.7588e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   21, time  667.50 s: f = -0.659907309276, ‖∇f‖ = 1.9371e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   22, time  667.92 s: f = -0.660097028509, ‖∇f‖ = 1.4424e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   23, time  668.36 s: f = -0.660261859113, ‖∇f‖ = 1.2401e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   24, time  668.81 s: f = -0.660393163797, ‖∇f‖ = 1.9193e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   25, time  669.24 s: f = -0.660497281892, ‖∇f‖ = 1.3339e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   26, time  669.67 s: f = -0.660573874658, ‖∇f‖ = 1.2488e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   27, time  670.11 s: f = -0.660741356363, ‖∇f‖ = 1.6202e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   28, time  670.59 s: f = -0.660904313975, ‖∇f‖ = 1.8663e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   29, time  671.07 s: f = -0.661016298846, ‖∇f‖ = 1.3962e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   30, time  671.57 s: f = -0.661073848989, ‖∇f‖ = 8.0058e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   31, time  672.01 s: f = -0.661115844316, ‖∇f‖ = 7.7806e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   32, time  672.47 s: f = -0.661170943776, ‖∇f‖ = 9.2021e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   33, time  672.96 s: f = -0.661189817452, ‖∇f‖ = 1.7374e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   34, time  673.41 s: f = -0.661228750949, ‖∇f‖ = 5.5231e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   35, time  673.87 s: f = -0.661241674868, ‖∇f‖ = 4.6578e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   36, time  674.33 s: f = -0.661255547431, ‖∇f‖ = 5.3447e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   37, time  674.77 s: f = -0.661267661951, ‖∇f‖ = 1.2055e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   38, time  675.20 s: f = -0.661283905499, ‖∇f‖ = 6.5966e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   39, time  675.64 s: f = -0.661292308568, ‖∇f‖ = 4.6474e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   40, time  676.08 s: f = -0.661305252841, ‖∇f‖ = 5.5812e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   41, time  676.53 s: f = -0.661333862066, ‖∇f‖ = 1.0254e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   42, time  677.01 s: f = -0.661388075788, ‖∇f‖ = 1.3577e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   43, time  677.49 s: f = -0.661466685819, ‖∇f‖ = 2.6791e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   44, time  677.96 s: f = -0.661613254953, ‖∇f‖ = 1.8756e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   45, time  678.45 s: f = -0.661816072567, ‖∇f‖ = 3.1851e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   46, time  678.94 s: f = -0.661914094913, ‖∇f‖ = 2.3406e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   47, time  679.41 s: f = -0.661987579533, ‖∇f‖ = 2.6289e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   48, time  679.90 s: f = -0.662122271528, ‖∇f‖ = 4.1730e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   49, time  681.13 s: f = -0.662298461024, ‖∇f‖ = 1.1879e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   50, time  681.68 s: f = -0.662344054505, ‖∇f‖ = 8.9729e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   51, time  682.28 s: f = -0.662406789067, ‖∇f‖ = 9.2057e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   52, time  682.77 s: f = -0.662448593102, ‖∇f‖ = 1.3971e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   53, time  683.24 s: f = -0.662470562406, ‖∇f‖ = 1.1117e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   54, time  683.71 s: f = -0.662486893225, ‖∇f‖ = 3.8704e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   55, time  684.18 s: f = -0.662492565560, ‖∇f‖ = 2.6533e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   56, time  684.65 s: f = -0.662499211249, ‖∇f‖ = 2.5921e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   57, time  685.16 s: f = -0.662501070713, ‖∇f‖ = 7.0067e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   58, time  685.65 s: f = -0.662505878725, ‖∇f‖ = 2.3803e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   59, time  686.11 s: f = -0.662507798937, ‖∇f‖ = 1.4097e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   60, time  686.57 s: f = -0.662509615613, ‖∇f‖ = 1.5457e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   61, time  687.04 s: f = -0.662510402676, ‖∇f‖ = 3.4157e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   62, time  687.51 s: f = -0.662511467817, ‖∇f‖ = 1.2986e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   63, time  687.95 s: f = -0.662511687943, ‖∇f‖ = 7.7089e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   64, time  688.39 s: f = -0.662511962285, ‖∇f‖ = 7.3725e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   65, time  688.82 s: f = -0.662512306742, ‖∇f‖ = 9.1907e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   66, time  689.33 s: f = -0.662512716968, ‖∇f‖ = 1.2363e-03, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   67, time  689.79 s: f = -0.662513054490, ‖∇f‖ = 9.9891e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   68, time  690.25 s: f = -0.662513253128, ‖∇f‖ = 6.6281e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   69, time  690.70 s: f = -0.662513427524, ‖∇f‖ = 6.7118e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   70, time  691.17 s: f = -0.662513545690, ‖∇f‖ = 5.7281e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   71, time  691.62 s: f = -0.662513765491, ‖∇f‖ = 5.8790e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   72, time  692.07 s: f = -0.662513833730, ‖∇f‖ = 8.6229e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   73, time  692.52 s: f = -0.662513921748, ‖∇f‖ = 5.0238e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   74, time  692.97 s: f = -0.662514033473, ‖∇f‖ = 3.8872e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   75, time  693.46 s: f = -0.662514109735, ‖∇f‖ = 4.1002e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   76, time  693.92 s: f = -0.662514164938, ‖∇f‖ = 6.5939e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   77, time  694.37 s: f = -0.662514209083, ‖∇f‖ = 4.7716e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   78, time  694.81 s: f = -0.662514236258, ‖∇f‖ = 1.4391e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   79, time  695.24 s: f = -0.662514243007, ‖∇f‖ = 1.0857e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   80, time  695.67 s: f = -0.662514252524, ‖∇f‖ = 1.5648e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   81, time  696.10 s: f = -0.662514257885, ‖∇f‖ = 2.6735e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   82, time  696.53 s: f = -0.662514266008, ‖∇f‖ = 1.3673e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   83, time  696.96 s: f = -0.662514267342, ‖∇f‖ = 1.5962e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   84, time  697.39 s: f = -0.662514272294, ‖∇f‖ = 1.0461e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   85, time  697.82 s: f = -0.662514280046, ‖∇f‖ = 1.2844e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: converged after 86 iterations and time 698.25 s: f = -0.662514280578, ‖∇f‖ = 8.2691e-05
+[ Info: LBFGS: iter    1, time  653.26 s: f = -0.489780489234, ‖∇f‖ = 6.0028e-01, α = 5.94e+01, m = 0, nfg = 5
+[ Info: LBFGS: iter    2, time  654.02 s: f = -0.501969351328, ‖∇f‖ = 5.3739e-01, α = 2.80e-01, m = 1, nfg = 2
+[ Info: LBFGS: iter    3, time  654.40 s: f = -0.523150649702, ‖∇f‖ = 3.9920e-01, α = 1.00e+00, m = 2, nfg = 1
+[ Info: LBFGS: iter    4, time  655.20 s: f = -0.538654553217, ‖∇f‖ = 4.1550e-01, α = 2.29e-01, m = 3, nfg = 2
+[ Info: LBFGS: iter    5, time  657.28 s: f = -0.549895529711, ‖∇f‖ = 4.4023e-01, α = 6.96e-02, m = 4, nfg = 4
+[ Info: LBFGS: iter    6, time  658.20 s: f = -0.568903885964, ‖∇f‖ = 4.8252e-01, α = 2.23e-01, m = 5, nfg = 2
+[ Info: LBFGS: iter    7, time  658.58 s: f = -0.586868365051, ‖∇f‖ = 4.2836e-01, α = 1.00e+00, m = 6, nfg = 1
+[ Info: LBFGS: iter    8, time  658.96 s: f = -0.599839175727, ‖∇f‖ = 2.2069e-01, α = 1.00e+00, m = 7, nfg = 1
+[ Info: LBFGS: iter    9, time  659.33 s: f = -0.606610941341, ‖∇f‖ = 1.9251e-01, α = 1.00e+00, m = 8, nfg = 1
+[ Info: LBFGS: iter   10, time  659.69 s: f = -0.624864467621, ‖∇f‖ = 2.9516e-01, α = 1.00e+00, m = 9, nfg = 1
+[ Info: LBFGS: iter   11, time  660.04 s: f = -0.638376467572, ‖∇f‖ = 2.3674e-01, α = 1.00e+00, m = 10, nfg = 1
+[ Info: LBFGS: iter   12, time  660.39 s: f = -0.644410588164, ‖∇f‖ = 3.2330e-01, α = 1.00e+00, m = 11, nfg = 1
+[ Info: LBFGS: iter   13, time  660.71 s: f = -0.651444381192, ‖∇f‖ = 1.3176e-01, α = 1.00e+00, m = 12, nfg = 1
+[ Info: LBFGS: iter   14, time  661.05 s: f = -0.654528265227, ‖∇f‖ = 6.6190e-02, α = 1.00e+00, m = 13, nfg = 1
+[ Info: LBFGS: iter   15, time  661.39 s: f = -0.655971175652, ‖∇f‖ = 5.1869e-02, α = 1.00e+00, m = 14, nfg = 1
+[ Info: LBFGS: iter   16, time  661.72 s: f = -0.657229077727, ‖∇f‖ = 5.8976e-02, α = 1.00e+00, m = 15, nfg = 1
+[ Info: LBFGS: iter   17, time  662.06 s: f = -0.658532053807, ‖∇f‖ = 5.5534e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   18, time  662.40 s: f = -0.659295183671, ‖∇f‖ = 3.0535e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   19, time  662.73 s: f = -0.659542164961, ‖∇f‖ = 2.2302e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   20, time  663.05 s: f = -0.659738061987, ‖∇f‖ = 2.7531e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   21, time  663.38 s: f = -0.659907342873, ‖∇f‖ = 1.9373e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   22, time  663.73 s: f = -0.660097470227, ‖∇f‖ = 1.4408e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   23, time  664.05 s: f = -0.660262757053, ‖∇f‖ = 1.2375e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   24, time  664.39 s: f = -0.660393125905, ‖∇f‖ = 1.9300e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   25, time  664.72 s: f = -0.660497546366, ‖∇f‖ = 1.3215e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   26, time  665.04 s: f = -0.660574185878, ‖∇f‖ = 1.2473e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   27, time  665.39 s: f = -0.660741803152, ‖∇f‖ = 1.6340e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   28, time  665.75 s: f = -0.660903655648, ‖∇f‖ = 1.8796e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   29, time  666.10 s: f = -0.661017363978, ‖∇f‖ = 1.3066e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   30, time  666.45 s: f = -0.661073166057, ‖∇f‖ = 8.0202e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   31, time  666.80 s: f = -0.661117738290, ‖∇f‖ = 7.9517e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   32, time  667.99 s: f = -0.661172741238, ‖∇f‖ = 9.8830e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   33, time  668.32 s: f = -0.661193956739, ‖∇f‖ = 1.5397e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   34, time  668.72 s: f = -0.661227726765, ‖∇f‖ = 5.4743e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   35, time  669.07 s: f = -0.661241731905, ‖∇f‖ = 4.7251e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   36, time  669.42 s: f = -0.661255581390, ‖∇f‖ = 5.4063e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   37, time  669.74 s: f = -0.661264752007, ‖∇f‖ = 1.3807e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   38, time  670.08 s: f = -0.661283616258, ‖∇f‖ = 5.9652e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   39, time  670.40 s: f = -0.661291824999, ‖∇f‖ = 4.3576e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   40, time  670.74 s: f = -0.661304230051, ‖∇f‖ = 6.0191e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   41, time  671.08 s: f = -0.661331508375, ‖∇f‖ = 1.1163e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   42, time  671.43 s: f = -0.661376470938, ‖∇f‖ = 1.2657e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   43, time  671.79 s: f = -0.661468673389, ‖∇f‖ = 2.1031e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   44, time  672.15 s: f = -0.661514982560, ‖∇f‖ = 3.2277e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   45, time  672.52 s: f = -0.661747546318, ‖∇f‖ = 2.1689e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   46, time  672.87 s: f = -0.661905953148, ‖∇f‖ = 1.6677e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   47, time  673.23 s: f = -0.662062528550, ‖∇f‖ = 1.6193e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   48, time  673.58 s: f = -0.662213957905, ‖∇f‖ = 2.0197e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   49, time  673.95 s: f = -0.662326044624, ‖∇f‖ = 1.8366e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   50, time  674.32 s: f = -0.662393005733, ‖∇f‖ = 1.1551e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   51, time  674.68 s: f = -0.662429954725, ‖∇f‖ = 1.0083e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   52, time  675.04 s: f = -0.662449363090, ‖∇f‖ = 1.3903e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   53, time  675.40 s: f = -0.662477942405, ‖∇f‖ = 6.7608e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   54, time  675.76 s: f = -0.662486360536, ‖∇f‖ = 3.8704e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   55, time  676.11 s: f = -0.662492546495, ‖∇f‖ = 3.5233e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   56, time  676.45 s: f = -0.662497882956, ‖∇f‖ = 6.1259e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   57, time  676.81 s: f = -0.662502369825, ‖∇f‖ = 2.9147e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   58, time  677.17 s: f = -0.662504348191, ‖∇f‖ = 2.1731e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   59, time  677.52 s: f = -0.662507141108, ‖∇f‖ = 1.8340e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   60, time  677.87 s: f = -0.662508298294, ‖∇f‖ = 4.6222e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   61, time  678.24 s: f = -0.662510158234, ‖∇f‖ = 1.5689e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   62, time  678.57 s: f = -0.662510768904, ‖∇f‖ = 9.6230e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   63, time  678.93 s: f = -0.662511246489, ‖∇f‖ = 8.8002e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   64, time  679.26 s: f = -0.662511761487, ‖∇f‖ = 1.6668e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   65, time  679.59 s: f = -0.662512148273, ‖∇f‖ = 7.9766e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   66, time  679.92 s: f = -0.662512357751, ‖∇f‖ = 6.8594e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   67, time  680.26 s: f = -0.662512976280, ‖∇f‖ = 7.1623e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   68, time  680.93 s: f = -0.662513222472, ‖∇f‖ = 1.0991e-03, α = 4.99e-01, m = 16, nfg = 2
+[ Info: LBFGS: iter   69, time  681.26 s: f = -0.662513507229, ‖∇f‖ = 5.7699e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   70, time  681.60 s: f = -0.662513689584, ‖∇f‖ = 4.2137e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   71, time  681.94 s: f = -0.662513825899, ‖∇f‖ = 6.8079e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   72, time  682.27 s: f = -0.662513929736, ‖∇f‖ = 4.8212e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   73, time  682.60 s: f = -0.662514019314, ‖∇f‖ = 3.6338e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   74, time  682.94 s: f = -0.662514148429, ‖∇f‖ = 3.7588e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   75, time  683.59 s: f = -0.662514184144, ‖∇f‖ = 4.0858e-04, α = 3.36e-01, m = 16, nfg = 2
+[ Info: LBFGS: iter   76, time  683.94 s: f = -0.662514214340, ‖∇f‖ = 2.6812e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   77, time  684.27 s: f = -0.662514236095, ‖∇f‖ = 1.7703e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   78, time  684.60 s: f = -0.662514249499, ‖∇f‖ = 1.8355e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   79, time  684.92 s: f = -0.662514261393, ‖∇f‖ = 1.2213e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   80, time  685.25 s: f = -0.662514269951, ‖∇f‖ = 2.1828e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   81, time  685.59 s: f = -0.662514275813, ‖∇f‖ = 1.6011e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: converged after 82 iterations and time 685.90 s: f = -0.662514279390, ‖∇f‖ = 9.7855e-05
 
 ````
 
@@ -313,8 +309,8 @@ the convergence rate:
 ````
 
 ````
-info_opt.fg_evaluations = 97
-info_opt.gradnorms[1:10:end] = [0.9354698847828768, 0.2951509773910037, 0.027588479373987673, 0.008005782175537665, 0.005581239160769203, 0.008972947287595543, 0.0015457251607028555, 0.000572806562953061, 0.00015648235851587362]
+info_opt.fg_evaluations = 95
+info_opt.gradnorms[1:10:end] = [0.9354703925772283, 0.29515809534278165, 0.02753139081589741, 0.008020152153989112, 0.0060190768119257575, 0.011551265856046971, 0.004622157491340677, 0.00042136817837828673, 0.00021828441953116996]
 
 ````
 
@@ -327,7 +323,7 @@ $E_{\text{ref}}=−0.6694421$. From our simple optimization we find:
 ````
 
 ````
-E = -0.6625142805775173
+E = -0.6625142793898271
 
 ````
 
@@ -354,8 +350,8 @@ correlation lengths and transfer matrix spectra for all unit cell coordinates:
 ````
 
 ````
-ξ_h = [1.0345313008323207]
-ξ_v = [1.0242824078560868]
+ξ_h = [1.0343546234867007]
+ξ_v = [1.024223131377083]
 
 ````
 
@@ -400,7 +396,7 @@ Finally, to evaluate the expecation value on the `LocalOperator`, we call:
 ````
 
 ````
-expectation_value(peps, M, env) = -0.7550965992105596 + 1.717376241217039e-16im
+expectation_value(peps, M, env) = -0.755066246984657 - 1.0408340855860843e-16im
 
 ````
 

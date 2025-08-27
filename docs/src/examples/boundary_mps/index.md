@@ -192,7 +192,7 @@ mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol = 1.0e-6, verbosity = 2))
 
 ````
 [ Info: VUMPS init:	obj = +1.674563752306e+00 +3.035692829590e+00im	err = 7.5576e-01
-[ Info: VUMPS conv 120:	obj = +6.831610878310e+00 -9.694381423284e-09im	err = 9.5145748805e-07	time = 8.18 sec
+[ Info: VUMPS conv 120:	obj = +6.831610878310e+00 -9.694385865125e-09im	err = 9.5145748821e-07	time = 7.42 sec
 
 ````
 
@@ -204,7 +204,7 @@ norm_vumps = abs(prod(expectation_value(mps, T)))
 ````
 
 ````
-6.8316108783096965
+6.831610878309698
 ````
 
 This can be compared to the result obtained using CTMRG, where we see that the results
@@ -217,9 +217,9 @@ norm_ctmrg = abs(norm(ψ, env_ctmrg))
 ````
 
 ````
-[ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579630e-01im	err = 1.0000e+00
-[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595014e-07	time = 0.41 sec
-abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674852575113107e-6
+[ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579631e-01im	err = 1.0000e+00
+[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595139e-07	time = 0.40 sec
+abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674852575113105e-6
 
 ````
 
@@ -259,11 +259,11 @@ norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
 ````
 [ Info: VUMPS init:	obj = +8.149302834396e+02 -8.860408249120e+01im	err = 8.6172e-01
-┌ Warning: VUMPS cancel 200:	obj = +1.039568424084e+05 -2.327807569892e+02im	err = 4.9605529536e-02	time = 16.18 sec
+┌ Warning: VUMPS cancel 200:	obj = +1.046992011815e+05 -2.212181695361e+00im	err = 6.9503579749e-03	time = 13.67 sec
 └ @ MPSKit ~/.julia/packages/MPSKit/cKwp2/src/algorithms/groundstate/vumps.jl:76
 [ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510263e+01im	err = 1.0000e+00
-[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6992333376e-07	time = 2.05 sec
-abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.0067938450954321385
+[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6991268013e-07	time = 1.84 sec
+abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.00034221579358038244
 
 ````
 
@@ -324,9 +324,9 @@ norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 
 ````
 [ Info: VUMPS init:	obj = +2.655321432467e+01 +3.760603778362e-01im	err = 8.9759e-01
-┌ Warning: VUMPS cancel 200:	obj = +7.017602162218e+01 -2.716472398028e-01im	err = 6.3937078739e-01	time = 55.92 sec
+┌ Warning: VUMPS cancel 200:	obj = +7.226394646816e+01 +6.223361199138e+00im	err = 5.7986634490e-01	time = 37.47 sec
 └ @ MPSKit ~/.julia/packages/MPSKit/cKwp2/src/algorithms/groundstate/vumps.jl:76
-norm_pepo = 70.17654738542562
+norm_pepo = 72.5314289378628
 
 ````
 
