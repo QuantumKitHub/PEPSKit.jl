@@ -104,7 +104,7 @@ export InfiniteSquareNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
-export InfinitePEPO, InfiniteTransferPEPO
+export InfinitePEPO, InfiniteTransferPEPO, trivial_InfinitePEPO
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!

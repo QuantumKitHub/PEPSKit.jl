@@ -123,6 +123,21 @@ function initializePEPS(
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
 end
 
+"""
+    trivial_InfinitePEPO([T::Type{<:Number},] Vp::ElementarySpace, unitcell::NTuple{3, Int})
+
+Create the trivial InfinitePEPO with physical space `Vp ⊗ Vp'` and virtual bond dimension 1,
+which is the product of identity operators on `Vp`.
+"""
+function trivial_InfinitePEPO(T::Type{<:Number}, Vp::ElementarySpace, unitcell::NTuple{3, Int})
+    ψ = permute(TensorKit.id(T, Vp), (1, 2))
+    Vv = oneunit(Vp) # trivial (1D) virtual space
+    virt = ones(T, domain(ψ) ← Vv ⊗ Vv ⊗ Vv' ⊗ Vv')
+    A = ψ * virt
+    return InfinitePEPO(A; unitcell)
+end
+trivial_InfinitePEPO(Vp, unitcell) = trivial_InfinitePEPO(ComplexF64, Vp, unitcell)
+
 ## Unit cell interface
 
 unitcell(t::InfinitePEPO) = t.A
@@ -220,4 +235,48 @@ function _stack_tuples(A::Matrix{NTuple{N, T}}) where {N, T}
         out[r, c, :] .= A[r, c]
     end
     return out
+end
+
+## Conversion to InfinitePEPS and InfinitePartitionFunction for 1-layer InfinitePEPO
+
+# convert a PEPSTensor to PEPOTensor by unfusing its physical space to `Vp ⊗ Vp′`
+function _pepst_to_pepot(t::PEPSTensor, Vp::ElementarySpace, Vp′::ElementarySpace = Vp')
+    f = isometry(Vp ⊗ Vp′, codomain(t, 1))
+    return f * t
+end
+
+# convert a PEPOTensor to PEPStensor by fusing its physical spaces
+function _pepot_to_pepst(t::PEPOTensor)
+    f = isometry(fuse(codomain(t)), codomain(t))
+    return f * t
+end
+
+"""
+    InfinitePEPS(pepo::InfinitePEPO)
+
+Creates an InfinitePEPS by fusing the physical spaces of a one-layer InfinitePEPO.
+"""
+function InfinitePEPS(pepo::InfinitePEPO)
+    if size(pepo, 3) != 1
+        throw(ArgumentError("To convert a PEPO to PEPS, it must have only 1 layer."))
+    end
+    A = map(pepo.A[:, :, 1]) do t
+        _pepot_to_pepst(t)
+    end
+    return InfinitePEPS(A)
+end
+
+"""
+    InfinitePartitionFunction(pepo::InfinitePEPO)
+
+Creates an InfinitePartitionFunction by tracing out the physical spaces of a one-layer InfinitePEPO.
+"""
+function InfinitePartitionFunction(pepo::InfinitePEPO)
+    if size(pepo, 3) != 1
+        throw(ArgumentError("To convert a PEPO to partition function, it must have only 1 layer."))
+    end
+    A = map(pepo.A[:, :, 1]) do t
+        return @tensor a[w s; n e] := t[p p; n e s w]
+    end
+    return InfinitePartitionFunction(A)
 end

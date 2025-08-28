@@ -1,3 +1,5 @@
+const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
+
 """
     get_expham(H::LocalOperator, dt::Number)
 
@@ -71,29 +73,49 @@ end
 """
 $(SIGNATURES)
 
-Use QR decomposition on two tensors connected by a bond
-to get the reduced tensors
+Use QR decomposition on two tensors `A`, `B` connected by a bond to get the reduced tensors.
+When `A`, `B` are PEPSTensors,
 ```
-        2                   1
-        |                   |
-    5 - A - 3   ====>   4 - X ← 2   1 ← a - 3
-        | ↘                 |            ↘
-        4   1               3             2
-
-        2                               1
-        |                               |
-    5 - B - 3   ====>   1 - b → 3   4 → Y - 2
-        | ↘                  ↘          |
-        4   1                 2         3
+        2                   1                                   1
+        |                   |                                   |
+    5 -A/B- 3   ====>   4 - X ← 2   1 ← a - 3   1 - b → 3   4 → Y - 2
+        | ↘                 |            ↘           ↘          |
+        4   1               3             2           2         3
+```
+When `A`, `B` are PEPOTensors, 
+- If `gate_ax = 1`
+```
+    2   3                1  2                                1  2
+      ↘ |                 ↘ |                                 ↘ |
+    6 -A/B- 4   ====>   5 - X ← 3   1 ← a - 3   1 - b → 3   5 → Y - 3
+        | ↘                 |            ↘           ↘          |
+        5   1               4             2           2         4
+```
+- If `gate_ax = 2`
+```
+    2   3                   2         2           2             2
+      ↘ |                   |          ↘           ↘            |
+    6 -A/B- 4   ====>   5 - X ← 3   1 ← a - 3   1 - b → 3   5 → Y - 3
+        | ↘                 | ↘                                 | ↘
+        5   1               4  1                                4  1
 ```
 """
-function _qr_bond(A::PEPSTensor, B::PEPSTensor)
-    X, a = leftorth(A, ((2, 4, 5), (1, 3)))
-    Y, b = leftorth(B, ((2, 3, 4), (1, 5)))
+function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor, PEPOTensor}}
+    @assert 1 <= gate_ax <= numout(A)
+    permA, permB, permX, permY = if A isa PEPSTensor
+        ((2, 4, 5), (1, 3)), ((2, 3, 4), (1, 5)), (1, 4, 2, 3), Tuple(1:4)
+    else
+        if gate_ax == 1
+            ((2, 3, 5, 6), (1, 4)), ((2, 3, 4, 5), (1, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
+        else
+            ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
+        end
+    end
+    X, a = leftorth(A, permA)
+    Y, b = leftorth(B, permB)
     @assert !isdual(space(a, 1))
     @assert !isdual(space(b, 1))
-    X = permute(X, (1, 4, 2, 3))
-    Y = permute(Y, (1, 2, 3, 4))
+    X, Y = permute(X, permX), permute(Y, permY)
     b = permute(b, ((3, 2), (1,)))
     return X, a, b, Y
 end
@@ -101,8 +123,8 @@ end
 """
 $(SIGNATURES)
 
-Reconstruct the tensors connected by a bond from their QR results
-obtained from `_qr_bond`
+Reconstruct the tensors connected by a bond from their `_qr_bond` results.
+For PEPSTensors,
 ```
         -2                             -2
         |                               |
@@ -110,10 +132,34 @@ obtained from `_qr_bond`
         |        ↘               ↘      |
         -4        -1              -1   -4
 ```
+For PEPOTensors
+```
+    -2  -3                          -2  -3
+      ↘ |                             ↘ |
+    -6- X - 1 - a - -4     -6 - b - 1 - Y - -4
+        |        ↘               ↘      |
+        -5        -1              -1   -5
+
+        -3   -2              -2        -3
+        |      ↘               ↘        |
+    -6- X - 1 - a - -4     -6 - b - 1 - Y - -4
+        | ↘                             | ↘
+        -5 -1                          -5  -1
+```
 """
 function _qr_bond_undo(X::PEPSOrth, a::AbstractTensorMap, b::AbstractTensorMap, Y::PEPSOrth)
     @tensor A[-1; -2 -3 -4 -5] := X[-2 1 -4 -5] * a[1 -1 -3]
     @tensor B[-1; -2 -3 -4 -5] := b[-5 -1 1] * Y[-2 -3 -4 1]
+    return A, B
+end
+function _qr_bond_undo(X::PEPOOrth, a::AbstractTensorMap, b::AbstractTensorMap, Y::PEPOOrth)
+    if !isdual(space(a, 2))
+        @tensor A[-1 -2; -3 -4 -5 -6] := X[-2 -3 1 -5 -6] * a[1 -1 -4]
+        @tensor B[-1 -2; -3 -4 -5 -6] := b[-6 -1 1] * Y[-2 -3 -4 -5 1]
+    else
+        @tensor A[-1 -2; -3 -4 -5 -6] := X[-1 -3 1 -5 -6] * a[1 -2 -4]
+        @tensor B[-1 -2; -3 -4 -5 -6] := b[-6 -2 1] * Y[-1 -3 -4 -5 1]
+    end
     return A, B
 end
 
@@ -122,24 +168,26 @@ $(SIGNATURES)
 
 Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
-    -1← a --- 3 --- b ← -4
-        ↓           ↓
-        1           2
-        ↓           ↓
-        |----gate---|
-        ↓           ↓
-        -2         -3
+    -1← a --- 3 --- b ← -4          -2         -3
+        ↓           ↓               ↓           ↓
+        1           2               |----gate---|
+        ↓           ↓       or      ↓           ↓
+        |----gate---|               1           2
+        ↓           ↓               ↓           ↓
+        -2         -3           -1← a --- 3 --- b ← -4
 ```
 """
 function _apply_gate(
-        a::AbstractTensorMap{T, S},
-        b::AbstractTensorMap{T, S},
-        gate::AbstractTensorMap{T, S, 2, 2},
-        trscheme::TruncationScheme,
+        a::AbstractTensorMap{T, S}, b::AbstractTensorMap{T, S},
+        gate::AbstractTensorMap{T, S, 2, 2}, trscheme::TruncationScheme
     ) where {T <: Number, S <: ElementarySpace}
     V = space(b, 1)
     need_flip = isdual(V)
-    @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
+    if isdual(space(a, 2))
+        @tensor a2b2[-1 -2; -3 -4] := gate[1 2; -2 -3] * a[-1 1 3] * b[3 2 -4]
+    else
+        @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
+    end
     trunc = (trscheme isa FixedSpaceTruncation) ? truncspace(V) : trscheme
     a, s, b, ϵ = tsvd!(a2b2; trunc, alg = TensorKit.SVD())
     a, b = absorb_s(a, s, b)
