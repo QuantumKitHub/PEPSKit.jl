@@ -119,9 +119,10 @@ When the input `state` has a unit cell size of (2, 2), one can set `bipartite = 
 """
 function su_iter(
         state::InfinitePEPS, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false,
+        bipartite::Bool = false, gate_side::Symbol = :both
     )
     @assert size(gate.lattice) == size(state)
+    @assert gate_side in (:both, :codomain)
     Nr, Nc = size(state)
     bipartite && (@assert Nr == Nc == 2)
     (Nr >= 2 && Nc >= 2) || throw(
@@ -153,9 +154,10 @@ end
 
 function su_iter(
         state::InfinitePEPO, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false,
+        bipartite::Bool = false, gate_side::Symbol = :both
     )
     @assert size(gate.lattice) == size(state)[1:2]
+    @assert gate_side in (:both, :codomain, :domain)
     @assert size(state, 3) == 1
     Nr, Nc = size(state)[1:2]
     bipartite && (@assert Nr == Nc == 2)
@@ -163,11 +165,13 @@ function su_iter(
         ArgumentError("`state` unit cell size for simple update should be no smaller than (2, 2)."),
     )
     state2, env2 = deepcopy(state), deepcopy(env)
+    gate_axs = (gate_side == :both) ? (1:2) : ((gate_side == :codomain) ? (1:1) : (2:2))
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trscheme = truncation_scheme(alg.trscheme, 1, r, c)
-        _su_xbond!(state2, term, env2, r, c, trscheme; gate_ax = 1)
-        _su_xbond!(state2, term, env2, r, c, trscheme; gate_ax = 2)
+        for gate_ax in gate_axs
+            _su_xbond!(state2, term, env2, r, c, trscheme; gate_ax)
+        end
         if bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
             state2.A[rp1, cp1, 1] = deepcopy(state2.A[r, c, 1])
@@ -176,8 +180,9 @@ function su_iter(
         end
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trscheme = truncation_scheme(alg.trscheme, 2, r, c)
-        _su_ybond!(state2, term, env2, r, c, trscheme; gate_ax = 1)
-        _su_ybond!(state2, term, env2, r, c, trscheme; gate_ax = 2)
+        for gate_ax in gate_axs
+            _su_ybond!(state2, term, env2, r, c, trscheme; gate_ax)
+        end
         if bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
             state2.A[rm1, cm1, 1] = deepcopy(state2.A[r, c, 1])
@@ -193,16 +198,17 @@ Perform simple update with Hamiltonian `ham` containing up to nearest neighbor i
 """
 function _simpleupdate2site(
         state::P, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, check_interval::Int = 500,
+        bipartite::Bool = false, check_interval::Int = 500, gate_side::Symbol = :both
     ) where {P <: InfiniteState}
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
-    gate = get_expham(ham, alg.dt)
+    dt = (gate_side == :both && state isa InfinitePEPO) ? (alg.dt / 2) : alg.dt
+    gate = get_expham(ham, dt)
     wtdiff = 1.0
     env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        state, env = su_iter(state, gate, alg, env; bipartite)
+        state, env = su_iter(state, gate, alg, env; bipartite, gate_side)
         wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
@@ -235,6 +241,7 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 ## Keyword Arguments
 
 - `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. This assumes the input `peps` has a unit cell size of (2, 2). 
+- `gate_side::Symbol=:both`: Chooses how to apply Trotter gates to the PEPO (effective only for PEPO evolution): `:both` to apply exp(-H dt/2) on both sides; `:codomain` or `:domain` to apply `exp(-H dt)` on the physical codomain or domain side. 
 - `force_3site::Bool=false`: Forces the use of the 3-site simple update algorithm, even if the Hamiltonian contains only nearest-neighbor terms.
 - `check_interval::Int=500`: Specifies the number of evolution steps between printing progress information.
 
@@ -244,7 +251,8 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 """
 function simpleupdate(
         state::P, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, force_3site::Bool = false, check_interval::Int = 500,
+        bipartite::Bool = false, gate_side::Symbol = :both, 
+        force_3site::Bool = false, check_interval::Int = 500
     ) where {P <: InfiniteState}
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(ham)
@@ -254,6 +262,6 @@ function simpleupdate(
     if use_3site
         return _simpleupdate3site(state, ham, alg, env; check_interval)
     else
-        return _simpleupdate2site(state, ham, alg, env; bipartite, check_interval)
+        return _simpleupdate2site(state, ham, alg, env; bipartite, gate_side, check_interval)
     end
 end

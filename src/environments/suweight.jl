@@ -209,7 +209,7 @@ Weights around the tensor at `(row, col)` are
 
 ## Arguments
 
-- `t::T` : PEPSTensor or PEPOTensor to which the weight will be absorbed. 
+- `t::PT` : PEPSTensor or PEPOTensor to which the weight will be absorbed. 
 - `weights::SUWeight` : All simple update weights.
 - `row::Int` : The row index specifying the position in the tensor network.
 - `col::Int` : The column index specifying the position in the tensor network.

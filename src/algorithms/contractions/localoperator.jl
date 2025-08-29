@@ -1,6 +1,5 @@
 # Contraction of local operators on arbitrary lattice locations
 # -------------------------------------------------------------
-import MPSKit: tensorexpr
 
 # currently need this because MPSKit restricts tensor names to symbols
 _totuple(t) = t isa Tuple ? t : tuple(t)

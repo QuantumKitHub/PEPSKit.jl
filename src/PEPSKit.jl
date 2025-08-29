@@ -15,7 +15,7 @@ using LoggingExtras
 
 using MPSKit
 using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
-import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
+import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 
 using MPSKitModels
 using FiniteDifferences
@@ -42,6 +42,7 @@ include("states/infinitepartitionfunction.jl")
 include("operators/infinitepepo.jl")
 include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
+include("operators/ancilla.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
@@ -104,7 +105,8 @@ export InfiniteSquareNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
-export InfinitePEPO, InfiniteTransferPEPO, trivial_InfinitePEPO
+export InfinitePEPO, InfiniteTransferPEPO
+export trivial_InfinitePEPO, attach_ancilla
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!
