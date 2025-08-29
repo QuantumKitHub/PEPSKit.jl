@@ -29,9 +29,9 @@ end
 function converge_env(state, χ::Int)
     trscheme1 = truncdim(4) & truncerr(1.0e-12)
     env0 = CTMRGEnv(randn, Float64, state, ℂ^4)
-    env, = leading_boundary(env0, state; trscheme = trscheme1, tol = 1.0e-10)
+    env, = leading_boundary(env0, state; alg = :sequential, trscheme = trscheme1, tol = 1.0e-10)
     trscheme2 = truncdim(χ) & truncerr(1.0e-12)
-    env, = leading_boundary(env, state; trscheme = trscheme2, tol = 1.0e-10)
+    env, = leading_boundary(env, state; alg = :sequential, trscheme = trscheme2, tol = 1.0e-10)
     return env
 end
 
