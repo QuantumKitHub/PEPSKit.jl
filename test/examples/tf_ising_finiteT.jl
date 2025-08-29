@@ -28,9 +28,9 @@ end
 
 function measure_mag(pepo::InfinitePEPO, pf::InfinitePartitionFunction, env::CTMRGEnv)
     r, c = 1, 1
-    @tensor M[w s; n e] := σx[p2; p1] * (pepo.A[r, c, 1])[p1 p2; n e s w];
+    @tensor M[w s; n e] := σx[p2; p1] * (pepo.A[r, c, 1])[p1 p2; n e s w]
     magx = expectation_value(pf, (r, c) => M, env)
-    @tensor M[w s; n e] := σz[p2; p1] * (pepo.A[r, c, 1])[p1 p2; n e s w];
+    @tensor M[w s; n e] := σz[p2; p1] * (pepo.A[r, c, 1])[p1 p2; n e s w]
     magz = expectation_value(pf, (r, c) => M, env)
     return [magx, magz]
 end
@@ -63,18 +63,18 @@ alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)
 pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; gate_side = :both)
 pf = InfinitePartitionFunction(pepo)
 env0 = CTMRGEnv(randn, Float64, pf, ℂ^16)
-env, = leading_boundary(env0, pf; trscheme = trscheme_env, tol = 1e-10)
+env, = leading_boundary(env0, pf; trscheme = trscheme_env, tol = 1.0e-10)
 result_β = measure_mag(pepo, pf, env)
-@info "Magnetization at T = $(1/β)" result_β
-@test isapprox(result_β, bm_β, rtol = 1e-2)
+@info "Magnetization at T = $(1 / β)" result_β
+@test isapprox(result_β, bm_β, rtol = 1.0e-2)
 
 ## results at 2β, or T = 1.25
 pepo, wts, = simpleupdate(pepo, ham, alg, wts; gate_side = :both)
 pf = InfinitePartitionFunction(pepo)
-env, = leading_boundary(env, pf; trscheme = trscheme_env, tol = 1e-10)
+env, = leading_boundary(env, pf; trscheme = trscheme_env, tol = 1.0e-10)
 result_2β = measure_mag(pepo, pf, env)
 @info "Magnetization at T = $(1 / (2β))" result_2β
-@test isapprox(result_2β, bm_2β, rtol = 1e-4)
+@test isapprox(result_2β, bm_2β, rtol = 1.0e-4)
 
 # purification approach (should match 2β result)
 pepo, = simpleupdate(pepo0, ham, alg, wts0; gate_side = :codomain)
@@ -83,4 +83,4 @@ env0 = CTMRGEnv(randn, Float64, peps, ℂ^8)
 env, = leading_boundary(env0, peps; trscheme = truncdim(8) & truncerr(1.0e-12))
 result_2β′ = measure_mag(peps, env)
 @info "Magnetization at T = $(1 / (2β)) (purification approach)" result_2β′
-@test isapprox(result_2β′, bm_2β, rtol = 1e-2)
+@test isapprox(result_2β′, bm_2β, rtol = 1.0e-2)

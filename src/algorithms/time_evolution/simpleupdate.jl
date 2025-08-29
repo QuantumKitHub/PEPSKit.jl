@@ -251,7 +251,7 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 """
 function simpleupdate(
         state::P, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_side::Symbol = :both, 
+        bipartite::Bool = false, gate_side::Symbol = :both,
         force_3site::Bool = false, check_interval::Int = 500
     ) where {P <: InfiniteState}
     # determine if Hamiltonian contains nearest neighbor terms only

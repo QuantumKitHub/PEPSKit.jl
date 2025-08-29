@@ -28,7 +28,7 @@ Attach the ancilla space to all terms in the LocalOperator `O`
 """
 function attach_ancilla(O::LocalOperator; Va0 = nothing)
     return LocalOperator(
-        collect(fuse(Vp, isnothing(Va0) ? Vp' : Va0) for Vp in physicalspace(O)), 
+        collect(fuse(Vp, isnothing(Va0) ? Vp' : Va0) for Vp in physicalspace(O)),
         (sites => attach_ancilla(op; Va0) for (sites, op) in O.terms)...
     )
 end
