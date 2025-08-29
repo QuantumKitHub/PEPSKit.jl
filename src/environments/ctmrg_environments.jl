@@ -276,18 +276,6 @@ function CTMRGEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, a
     return CTMRGEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
-# create a trivial environment
-function trivial_CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS})
-    v0 = oneunit(spacetype(state))
-    T = scalartype(state)
-    corners = fill(id(T, v0), (4, size(state)...))
-    edges = map(Iterators.product([SOUTH, WEST, NORTH, EAST], state.A)) do (dir, t)
-        vD = domain(t)[dir]
-        return permute(id(T, vD ⊗ v0), (2, 3, 1), (4,))
-    end
-    return CTMRGEnv(corners, edges)
-end
-
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
