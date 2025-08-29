@@ -240,14 +240,14 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 
 ## Keyword Arguments
 
-- `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. This assumes the input `peps` has a unit cell size of (2, 2). 
+- `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. 
 - `gate_side::Symbol=:both`: Chooses how to apply Trotter gates to the PEPO (effective only for PEPO evolution): `:both` to apply exp(-H dt/2) on both sides; `:codomain` or `:domain` to apply `exp(-H dt)` on the physical codomain or domain side. 
 - `force_3site::Bool=false`: Forces the use of the 3-site simple update algorithm, even if the Hamiltonian contains only nearest-neighbor terms.
 - `check_interval::Int=500`: Specifies the number of evolution steps between printing progress information.
 
 ## Notes
 
-- The 3-site simple update algorithm is incompatible with a bipartite state. Using `bipartite = true` with either `force_3site = true` or a `ham` with next-nearest neighbor terms is not allowed. 
+- Setting `bipartite = true` is allowed only for PEPS evolution with up to next-nearest neighbor terms, and requires the input `peps` to have a unit cell size of (2, 2). 
 """
 function simpleupdate(
         state::P, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
@@ -257,6 +257,7 @@ function simpleupdate(
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly
+    @assert !(state isa InfinitePEPO && bipartite) "Evolution of PEPO with bipartite structure is not implemented."
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
     # TODO: check SiteDependentTruncation is compatible with bipartite structure
     if use_3site
