@@ -260,7 +260,7 @@ function InfinitePEPS(pepo::InfinitePEPO)
     if size(pepo, 3) != 1
         throw(ArgumentError("To convert a PEPO to PEPS, it must have only 1 layer."))
     end
-    A = map(pepo.A[:, :, 1]) do t
+    A = map(@view(pepo.A[:, :, 1])) do t
         _pepot_to_pepst(t)
     end
     return InfinitePEPS(A)
@@ -275,7 +275,7 @@ function InfinitePartitionFunction(pepo::InfinitePEPO)
     if size(pepo, 3) != 1
         throw(ArgumentError("To convert a PEPO to partition function, it must have only 1 layer."))
     end
-    A = map(pepo.A[:, :, 1]) do t
+    A = map(@view(pepo.A[:, :, 1])) do t
         return @tensor a[w s; n e] := t[p p; n e s w]
     end
     return InfinitePartitionFunction(A)

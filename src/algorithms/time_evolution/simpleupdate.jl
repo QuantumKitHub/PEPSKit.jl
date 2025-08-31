@@ -28,18 +28,14 @@ Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 ```
 """
 function _su_xbond!(
-        state::P, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
-    ) where {P <: InfiniteState, T <: Number, S <: ElementarySpace}
+    ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(state)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
     # absorb environment weights
-    A, B = if state isa InfinitePEPS
-        state.A[row, col], state.A[row, cp1]
-    else
-        state.A[row, col, 1], state.A[row, cp1, 1]
-    end
+    A, B = state.A[row, col], state.A[row, cp1]
     A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = false)
     B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = false)
     normalize!(A, Inf)
@@ -55,11 +51,7 @@ function _su_xbond!(
     normalize!(B, Inf)
     normalize!(s, Inf)
     # update tensor dict and weight on current bond
-    if state isa InfinitePEPS
-        state.A[row, col], state.A[row, cp1] = A, B
-    else
-        state.A[row, col, 1], state.A[row, cp1, 1] = A, B
-    end
+    state.A[row, col], state.A[row, cp1] = A, B
     env.data[1, row, col] = s
     return ϵ
 end
@@ -75,18 +67,14 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
 ```
 """
 function _su_ybond!(
-        state::P, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
-    ) where {P <: InfiniteState, T <: Number, S <: ElementarySpace}
+    ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(state)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1 = _prev(row, Nr)
     # absorb environment weights
-    A, B = if state isa InfinitePEPS
-        state.A[row, col], state.A[rm1, col]
-    else
-        state.A[row, col, 1], state.A[rm1, col, 1]
-    end
+    A, B = state.A[row, col], state.A[rm1, col]
     A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = false)
     B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = false)
     normalize!(A, Inf)
@@ -102,63 +90,29 @@ function _su_ybond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    if state isa InfinitePEPS
-        state.A[row, col], state.A[rm1, col] = A, B
-    else
-        state.A[row, col, 1], state.A[rm1, col, 1] = A, B
-    end
+    state.A[row, col], state.A[rm1, col] = A, B
     env.data[2, row, col] = s
     return ϵ
 end
 
 """
-    su_iter(peps::P, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; kwargs...) where {P <: InfiniteState}
+    su_iter(state::InfinitePEPS, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; bipartite::Bool = false)
+    su_iter(densitymatrix::InfinitePEPO, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; gate_side::Symbol = :codomain)
 
-One round of simple update on InfinitePEPS or InfinitePEPO `state` applying the nearest neighbor `gate`.
+One round of simple update, which applies the nearest neighbor `gate` on an InfinitePEPS `state` or InfinitePEPO `densitymatrix`.
 When the input `state` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
 """
 function su_iter(
-        state::InfinitePEPS, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_side::Symbol = :both
-    )
-    @assert size(gate.lattice) == size(state)
-    @assert gate_side in (:both, :codomain)
-    Nr, Nc = size(state)
-    bipartite && (@assert Nr == Nc == 2)
-    (Nr >= 2 && Nc >= 2) || throw(
-        ArgumentError("`state` unit cell size for simple update should be no smaller than (2, 2)."),
-    )
-    state2, env2 = deepcopy(state), deepcopy(env)
-    for r in 1:Nr, c in 1:Nc
-        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
-        trscheme = truncation_scheme(alg.trscheme, 1, r, c)
-        _su_xbond!(state2, term, env2, r, c, trscheme)
-        if bipartite
-            rp1, cp1 = _next(r, Nr), _next(c, Nc)
-            state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
-            state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
-            env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
-        end
-        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
-        trscheme = truncation_scheme(alg.trscheme, 2, r, c)
-        _su_ybond!(state2, term, env2, r, c, trscheme)
-        if bipartite
-            rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-            state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
-            state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
-            env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
-        end
-    end
-    return state2, env2
-end
-
-function su_iter(
-        state::InfinitePEPO, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_side::Symbol = :both
+        state::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight;
+        bipartite::Bool = false, gate_side::Symbol = :codomain
     )
     @assert size(gate.lattice) == size(state)[1:2]
-    @assert gate_side in (:both, :codomain, :domain)
-    @assert size(state, 3) == 1
+    if state isa InfinitePEPS
+        @assert gate_side == :codomain
+    else
+        @assert gate_side in (:both, :codomain, :domain)
+        @assert size(state, 3) == 1
+    end
     Nr, Nc = size(state)[1:2]
     bipartite && (@assert Nr == Nc == 2)
     (Nr >= 2 && Nc >= 2) || throw(
@@ -174,8 +128,8 @@ function su_iter(
         end
         if bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
-            state2.A[rp1, cp1, 1] = deepcopy(state2.A[r, c, 1])
-            state2.A[rp1, c, 1] = deepcopy(state2.A[r, cp1, 1])
+            state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
+            state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
@@ -185,8 +139,8 @@ function su_iter(
         end
         if bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-            state2.A[rm1, cm1, 1] = deepcopy(state2.A[r, c, 1])
-            state2.A[r, cm1, 1] = deepcopy(state2.A[rm1, c, 1])
+            state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
+            state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
             env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
         end
     end
@@ -197,9 +151,9 @@ end
 Perform simple update with Hamiltonian `ham` containing up to nearest neighbor interaction terms. 
 """
 function _simpleupdate2site(
-        state::P, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
+        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
         bipartite::Bool = false, check_interval::Int = 500, gate_side::Symbol = :both
-    ) where {P <: InfiniteState}
+    )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
     dt = (gate_side == :both && state isa InfinitePEPO) ? (alg.dt / 2) : alg.dt
@@ -230,12 +184,15 @@ end
 
 """
     simpleupdate(
-        state::P, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, force_3site::Bool = false, check_interval::Int = 500,
-    ) where {P <: InfiniteState}
-                 bipartite::Bool=false, force_3site::Bool=false, check_interval::Int=500)
+        state::InfinitePEPS, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
+        bipartite::Bool = false, force_3site::Bool = false, check_interval::Int = 500
+    )
+    simpleupdate(
+        densitymatrix::InfinitePEPO, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
+        gate_side::Symbol = :codomain, force_3site::Bool = false, check_interval::Int = 500
+    )
 
-Perform a simple update on `state` (which can be either an InfinitePEPS or InfinitePEPO) 
+Perform a simple update on an InfinitePEPS `state` or an InfinitePEPO `densitymatrix`
 using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor interaction terms.
 
 ## Keyword Arguments
@@ -250,10 +207,10 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 - Setting `bipartite = true` is allowed only for PEPS evolution with up to next-nearest neighbor terms, and requires the input `peps` to have a unit cell size of (2, 2). 
 """
 function simpleupdate(
-        state::P, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
+        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
         bipartite::Bool = false, gate_side::Symbol = :both,
         force_3site::Bool = false, check_interval::Int = 500
-    ) where {P <: InfiniteState}
+    )
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(ham)
     use_3site = force_3site || !nnonly

@@ -133,12 +133,12 @@ The weights are initialized as identity matrices of element type `Float64`.
 """
 function SUWeight(pepo::InfinitePEPO)
     @assert size(pepo, 3) == 1
-    Nspaces = map(pepo.A[:, :, 1]) do t
-        V = domain(t, NORTH)
+    Nspaces = map(@view(pepo.A[:, :, 1])) do t
+        V = north_virtualspace(t)
         isdual(V) ? V' : V
     end
-    Espaces = map(pepo.A[:, :, 1]) do t
-        V = domain(t, EAST)
+    Espaces = map(@view(pepo.A[:, :, 1])) do t
+        V = east_virtualspace(t)
         isdual(V) ? V' : V
     end
     return SUWeight(Nspaces, Espaces)
@@ -191,8 +191,8 @@ function Base.show(io::IO, ::MIME"text/plain", wts::SUWeight)
 end
 
 """
-    absorb_weight(t::PT, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool=false)
-    absorb_weight(t::PT, weights::SUWeight, row::Int, col::Int, ax::NTuple{N,Int}; inv::Bool=false)
+    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false)
+    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false)
 
 Absorb or remove environment weight on an axis of tensor `t` known to be located at
 position (`row`, `col`) in the unit cell of an InfinitePEPS or InfinitePEPO. 
@@ -230,8 +230,9 @@ absorb_weight(t, weights, 2, 3, 2; inv=true)
 ```
 """
 function absorb_weight(
-        t::PT, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
-    ) where {PT <: Union{PEPSTensor, PEPOTensor}}
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        row::Int, col::Int, ax::Int; inv::Bool = false
+    )
     Nr, Nc = size(weights)[2:end]
     nin, nout, ntol = numin(t), numout(t), numind(t)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -259,13 +260,9 @@ function absorb_weight(
     return permute(ncon((t, wt), (t_idx, wt_idx)), (Tuple(1:nout), Tuple((nout + 1):ntol)))
 end
 function absorb_weight(
-        t::PT,
-        weights::SUWeight,
-        row::Int,
-        col::Int,
-        ax::NTuple{N, Int};
-        inv::Bool = false,
-    ) where {PT <: Union{PEPSTensor, PEPOTensor}, N}
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false
+    ) where {N}
     t2 = copy(t)
     for a in ax
         t2 = absorb_weight(t2, weights, row, col, a; inv)
