@@ -152,7 +152,7 @@ Perform simple update with Hamiltonian `ham` containing up to nearest neighbor i
 """
 function _simpleupdate2site(
         state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, check_interval::Int = 500, gate_side::Symbol = :both
+        bipartite::Bool = false, check_interval::Int = 500, gate_side::Symbol = :codomain
     )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
@@ -198,7 +198,7 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 ## Keyword Arguments
 
 - `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. 
-- `gate_side::Symbol=:both`: Chooses how to apply Trotter gates to the PEPO (effective only for PEPO evolution): `:both` to apply exp(-H dt/2) on both sides; `:codomain` or `:domain` to apply `exp(-H dt)` on the physical codomain or domain side. 
+- `gate_side::Symbol=:codomain`: Chooses how to apply Trotter gates to the PEPO (effective only for PEPO evolution): `:both` to apply exp(-H dt/2) on both sides; `:codomain` or `:domain` to apply `exp(-H dt)` on the physical codomain or domain side. 
 - `force_3site::Bool=false`: Forces the use of the 3-site simple update algorithm, even if the Hamiltonian contains only nearest-neighbor terms.
 - `check_interval::Int=500`: Specifies the number of evolution steps between printing progress information.
 
@@ -208,7 +208,7 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 """
 function simpleupdate(
         state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_side::Symbol = :both,
+        bipartite::Bool = false, gate_side::Symbol = :codomain,
         force_3site::Bool = false, check_interval::Int = 500
     )
     # determine if Hamiltonian contains nearest neighbor terms only
