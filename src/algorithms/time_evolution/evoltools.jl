@@ -8,7 +8,7 @@ function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
         virt = ones(T, domain(ψ) ← Vv ⊗ Vv ⊗ Vv' ⊗ Vv')
         return ψ * virt
     end
-    return InfinitePEPO(cat(A; dims=3))
+    return InfinitePEPO(cat(A; dims = 3))
 end
 
 """
