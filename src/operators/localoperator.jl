@@ -185,9 +185,10 @@ TensorKit.spacetype(::Type{T}) where {S, T <: LocalOperator{<:Any, S}} = S
 end
 
 """
-$(SIGNATURES)
+    _fuse_ids(op::AbstractTensorMap{T, S, N, N}, [Ps::NTuple{N, S}]) where {T, S, N}
 
-Fuse identities on auxiliary physical spaces into a given operator.
+Fuse identities on auxiliary physical spaces `Ps` into a given operator `op`.
+When `Ps` is not specified, it defaults to the domain spaces of `op`.
 """
 function _fuse_ids(op::AbstractTensorMap{T, S, N, N}, Ps::NTuple{N, S}) where {T, S, N}
     # make isomorphisms
@@ -196,6 +197,9 @@ function _fuse_ids(op::AbstractTensorMap{T, S, N, N}, Ps::NTuple{N, S}) where {T
     end
     # and fuse them into the operator
     return _fuse_isomorphisms(op, fs)
+end
+function _fuse_ids(op::AbstractTensorMap{T, S, N, N}) where {T, S, N}
+    return _fuse_ids(op, Tuple(domain(op)))
 end
 
 """

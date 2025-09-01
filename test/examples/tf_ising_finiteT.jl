@@ -2,9 +2,9 @@ using Test
 using Random
 using LinearAlgebra
 using TensorKit
-using MPSKitModels
+import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-using PEPSKit: LocalOperator
+using PEPSKit: infinite_temperature_density_matrix, _fuse_ids
 
 Random.seed!(10235876)
 σx = σˣ(Float64, Trivial)
@@ -46,20 +46,20 @@ end
 
 function measure_mag(peps::InfinitePEPS, env::CTMRGEnv)
     lattice = collect(space(t, 1) for t in peps.A)
-    O = LocalOperator(lattice, ((1, 1),) => attach_ancilla(σx))
+    O = LocalOperator(lattice, ((1, 1),) => _fuse_ids(σx))
     magx = expectation_value(peps, O, env)
-    O = LocalOperator(lattice, ((1, 1),) => attach_ancilla(σz))
+    O = LocalOperator(lattice, ((1, 1),) => _fuse_ids(σz))
     magz = expectation_value(peps, O, env)
     return [magx, magz]
 end
 
 Nr, Nc = 2, 2
-pepo0 = trivial_InfinitePEPO(Float64, ℂ^2, (Nr, Nc, 1))
+ham = tfising_model(Float64, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
+pepo0 = infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 
 trscheme_pepo = truncdim(8) & truncerr(1.0e-12)
 
-ham = tfising_model(Float64, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
 dt, maxiter = 1.0e-3, 400
 β = dt * maxiter
 alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)

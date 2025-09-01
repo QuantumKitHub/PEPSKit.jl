@@ -16,6 +16,7 @@ using LoggingExtras
 using MPSKit
 using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
+import MPSKit: infinite_temperature_density_matrix
 
 using MPSKitModels
 using FiniteDifferences
@@ -42,7 +43,6 @@ include("states/infinitepartitionfunction.jl")
 include("operators/infinitepepo.jl")
 include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
-include("operators/ancilla.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
@@ -106,7 +106,7 @@ export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
-export trivial_InfinitePEPO, attach_ancilla
+export infinite_temperature_density_matrix
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!

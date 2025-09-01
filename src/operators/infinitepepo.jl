@@ -123,21 +123,6 @@ function initializePEPS(
     return InfinitePEPS(Pspaces, Nspaces, Espaces)
 end
 
-"""
-    trivial_InfinitePEPO([T::Type{<:Number},] Vp::ElementarySpace, unitcell::NTuple{3, Int})
-
-Create the trivial InfinitePEPO with physical space `Vp ⊗ Vp'` and virtual bond dimension 1,
-which is the product of identity operators on `Vp`.
-"""
-function trivial_InfinitePEPO(T::Type{<:Number}, Vp::ElementarySpace, unitcell::NTuple{3, Int})
-    ψ = permute(TensorKit.id(T, Vp), (1, 2))
-    Vv = oneunit(Vp) # trivial (1D) virtual space
-    virt = ones(T, domain(ψ) ← Vv ⊗ Vv ⊗ Vv' ⊗ Vv')
-    A = ψ * virt
-    return InfinitePEPO(A; unitcell)
-end
-trivial_InfinitePEPO(Vp, unitcell) = trivial_InfinitePEPO(ComplexF64, Vp, unitcell)
-
 ## Unit cell interface
 
 unitcell(t::InfinitePEPO) = t.A

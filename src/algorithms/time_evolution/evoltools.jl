@@ -1,5 +1,16 @@
 const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
 
+function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
+    T = promote_type((scalartype(t.second) for t in H.terms)...)
+    A = map(physicalspace(H)) do Vp
+        ψ = permute(TensorKit.id(T, Vp), (1, 2))
+        Vv = oneunit(Vp) # trivial (1D) virtual space
+        virt = ones(T, domain(ψ) ← Vv ⊗ Vv ⊗ Vv' ⊗ Vv')
+        return ψ * virt
+    end
+    return InfinitePEPO(cat(A; dims=3))
+end
+
 """
     get_expham(H::LocalOperator, dt::Number)
 
