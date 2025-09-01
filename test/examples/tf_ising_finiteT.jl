@@ -68,7 +68,7 @@ alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)
 
 # PEPO approach
 ## results at β, or T = 2.5
-pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; gate_side = :both)
+pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = true)
 pf = InfinitePartitionFunction(pepo)
 env = converge_env(pf, 16)
 result_β = measure_mag(pepo, pf, env)
@@ -76,7 +76,7 @@ result_β = measure_mag(pepo, pf, env)
 @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
 ## results at 2β, or T = 1.25
-pepo, wts, = simpleupdate(pepo, ham, alg, wts; gate_side = :both)
+pepo, wts, = simpleupdate(pepo, ham, alg, wts; gate_bothsides = true)
 pf = InfinitePartitionFunction(pepo)
 env = converge_env(pf, 16)
 result_2β = measure_mag(pepo, pf, env)
@@ -84,7 +84,7 @@ result_2β = measure_mag(pepo, pf, env)
 @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
 
 # purification approach (should match 2β result)
-pepo, = simpleupdate(pepo0, ham, alg, wts0; gate_side = :codomain)
+pepo, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = false)
 peps = InfinitePEPS(pepo)
 env = converge_env(peps, 8)
 result_2β′ = measure_mag(peps, env)

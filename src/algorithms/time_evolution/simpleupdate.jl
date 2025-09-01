@@ -97,20 +97,19 @@ end
 
 """
     su_iter(state::InfinitePEPS, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; bipartite::Bool = false)
-    su_iter(densitymatrix::InfinitePEPO, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; gate_side::Symbol = :codomain)
+    su_iter(densitymatrix::InfinitePEPO, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; gate_bothsides::Bool = true)
 
 One round of simple update, which applies the nearest neighbor `gate` on an InfinitePEPS `state` or InfinitePEPO `densitymatrix`.
 When the input `state` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
 """
 function su_iter(
         state::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_side::Symbol = :codomain
+        bipartite::Bool = false, gate_bothsides::Bool = true
     )
     @assert size(gate.lattice) == size(state)[1:2]
     if state isa InfinitePEPS
-        @assert gate_side == :codomain
+        gate_bothsides = false
     else
-        @assert gate_side in (:both, :codomain, :domain)
         @assert size(state, 3) == 1
     end
     Nr, Nc = size(state)[1:2]
@@ -119,7 +118,7 @@ function su_iter(
         ArgumentError("`state` unit cell size for simple update should be no smaller than (2, 2)."),
     )
     state2, env2 = deepcopy(state), deepcopy(env)
-    gate_axs = (gate_side == :both) ? (1:2) : ((gate_side == :codomain) ? (1:1) : (2:2))
+    gate_axs = gate_bothsides ? (1:2) : (1:1)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trscheme = truncation_scheme(alg.trscheme, 1, r, c)
@@ -152,17 +151,20 @@ Perform simple update with Hamiltonian `ham` containing up to nearest neighbor i
 """
 function _simpleupdate2site(
         state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, check_interval::Int = 500, gate_side::Symbol = :codomain
+        bipartite::Bool = false, check_interval::Int = 500, gate_bothsides::Bool = true
     )
     time_start = time()
     # exponentiating the 2-site Hamiltonian gate
-    dt = (gate_side == :both && state isa InfinitePEPO) ? (alg.dt / 2) : alg.dt
+    if state isa InfinitePEPS
+        gate_bothsides = false
+    end
+    dt = gate_bothsides ? (alg.dt / 2) : alg.dt
     gate = get_expham(ham, dt)
     wtdiff = 1.0
     env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        state, env = su_iter(state, gate, alg, env; bipartite, gate_side)
+        state, env = su_iter(state, gate, alg, env; bipartite, gate_bothsides)
         wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
@@ -189,7 +191,7 @@ end
     )
     simpleupdate(
         densitymatrix::InfinitePEPO, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        gate_side::Symbol = :codomain, force_3site::Bool = false, check_interval::Int = 500
+        gate_bothsides::Bool = true, force_3site::Bool = false, check_interval::Int = 500
     )
 
 Perform a simple update on an InfinitePEPS `state` or an InfinitePEPO `densitymatrix`
@@ -198,7 +200,7 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 ## Keyword Arguments
 
 - `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. 
-- `gate_side::Symbol=:codomain`: Chooses how to apply Trotter gates to the PEPO (effective only for PEPO evolution): `:both` to apply exp(-H dt/2) on both sides; `:codomain` or `:domain` to apply `exp(-H dt)` on the physical codomain or domain side. 
+- `gate_bothsides::Bool=true`: (Effective only for PEPO evolution)
 - `force_3site::Bool=false`: Forces the use of the 3-site simple update algorithm, even if the Hamiltonian contains only nearest-neighbor terms.
 - `check_interval::Int=500`: Specifies the number of evolution steps between printing progress information.
 
@@ -208,7 +210,7 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 """
 function simpleupdate(
         state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_side::Symbol = :codomain,
+        bipartite::Bool = false, gate_bothsides::Bool = true,
         force_3site::Bool = false, check_interval::Int = 500
     )
     # determine if Hamiltonian contains nearest neighbor terms only
@@ -220,6 +222,6 @@ function simpleupdate(
     if use_3site
         return _simpleupdate3site(state, ham, alg, env; check_interval)
     else
-        return _simpleupdate2site(state, ham, alg, env; bipartite, gate_side, check_interval)
+        return _simpleupdate2site(state, ham, alg, env; bipartite, gate_bothsides, check_interval)
     end
 end
