@@ -32,6 +32,9 @@ end
         @time @safetestset "PEPO" begin
             include("ctmrg/pepo.jl")
         end
+        @time @safetestset "PEPOTrace" begin
+            include("ctmrg/pepotrace.jl")
+        end
         @time @safetestset "correlation length" begin
             include("ctmrg/correlation_length.jl")
         end

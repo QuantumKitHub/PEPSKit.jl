@@ -1348,6 +1348,30 @@ function _pepo_pepotensor_expr(
     )
 end
 
+# PEPO layers slice h
+function _pepo_pepotracetensor_expr(
+    tensorname,
+    h::Int,
+    H::Int,
+    args...;
+    contract_north=nothing,
+    contract_east=nothing,
+    contract_south=nothing,
+    contract_west=nothing,
+)
+    layer = Symbol(h)
+    return tensorexpr(
+        tensorname,
+        (physicallabel(mod1(h + 1, H), args...), physicallabel(h, args...)),
+        (
+            virtuallabel(_north_labels(layer, args...; contract=contract_north)...),
+            virtuallabel(_east_labels(layer, args...; contract=contract_east)...),
+            virtuallabel(_south_labels(layer, args...; contract=contract_south)...),
+            virtuallabel(_west_labels(layer, args...; contract=contract_west)...),
+        ),
+    )
+end
+
 # PEPOSandwich
 function _pepo_sandwich_expr(sandwichname, H::Int, args...; kwargs...)
     ket_e = _pepo_pepstensor_expr(:(ket($sandwichname)), :top, 1, args...; kwargs...)
@@ -1357,6 +1381,15 @@ function _pepo_sandwich_expr(sandwichname, H::Int, args...; kwargs...)
     end
 
     return ket_e, bra_e, pepo_es
+end
+
+# PEPOTraceSandwich
+function _pepotrace_sandwich_expr(sandwichname, H::Int, args...; kwargs...)
+    pepo_es = map(1:H) do h
+        return _pepo_pepotracetensor_expr(:(pepo($sandwichname, $h)), h, H, args...; kwargs...)
+    end
+
+    return pepo_es
 end
 
 ## Corner expressions
@@ -1382,6 +1415,14 @@ function _pepo_edge_expr(edgename, codom_label, dom_label, dir, H::Int, args...)
     )
 end
 
+function _pepotrace_edge_expr(edgename, codom_label, dom_label, dir, H::Int, args...)
+    return tensorexpr(
+        edgename,
+        (envlabel(codom_label, args...), ntuple(i -> virtuallabel(dir, i, args...), H)...),
+        (envlabel(dom_label, args...),),
+    )
+end
+
 ## Enlarged corner (quadrant) expressions
 
 function _pepo_enlarged_corner_expr(
@@ -1400,6 +1441,22 @@ function _pepo_enlarged_corner_expr(
             virtuallabel(dom_dir, :top, args...),
             ntuple(i -> virtuallabel(dom_dir, :mid, i, args...), H)...,
             virtuallabel(dom_dir, :bot, args...),
+        ),
+    )
+end
+
+function _pepotrace_enlarged_corner_expr(
+    cornername, codom_label, dom_label, codom_dir, dom_dir, H::Int, args...
+)
+    return tensorexpr(
+        cornername,
+        (
+            envlabel(codom_label, args...),
+            ntuple(i -> virtuallabel(codom_dir, i, args...), H)...,
+        ),
+        (
+            envlabel(dom_label, args...),
+            ntuple(i -> virtuallabel(dom_dir, i, args...), H)...,
         ),
     )
 end
@@ -1456,6 +1513,19 @@ function _pepo_codomain_projector_expr(
     )
 end
 
+function _pepotrace_codomain_projector_expr(
+    projname, codom_label, dom_label, dom_dir, H::Int, args...
+)
+    return tensorexpr(
+        projname,
+        (envlabel(codom_label, args...),),
+        (
+            envlabel(dom_label, args...),
+            ntuple(i -> virtuallabel(dom_dir, i, args...), H)...,
+        ),
+    )
+end
+
 function _pepo_domain_projector_expr(
         projname, codom_label, codom_dir, dom_label, H::Int, args...
     )
@@ -1466,6 +1536,19 @@ function _pepo_domain_projector_expr(
             virtuallabel(codom_dir, :top, args...),
             ntuple(i -> virtuallabel(codom_dir, :mid, i, args...), H)...,
             virtuallabel(codom_dir, :bot, args...),
+        ),
+        (envlabel(dom_label, args...),),
+    )
+end
+
+function _pepotrace_domain_projector_expr(
+    projname, codom_label, codom_dir, dom_label, H::Int, args...
+)
+    return tensorexpr(
+        projname,
+        (
+            envlabel(codom_label, args...),
+            ntuple(i -> virtuallabel(codom_dir, i, args...), H)...,
         ),
         (envlabel(dom_label, args...),),
     )
@@ -1506,6 +1589,48 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
 end
 
+@generated function _contract_site(
+    C_northwest,
+    C_northeast,
+    C_southeast,
+    C_southwest,
+    E_north::CTMRGEdgeTensor{T,S,N},
+    E_east::CTMRGEdgeTensor{T,S,N},
+    E_south::CTMRGEdgeTensor{T,S,N},
+    E_west::CTMRGEdgeTensor{T,S,N},
+    O::PEPOTraceSandwich{H},
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
+    C_northeast_e = _corner_expr(:C_northeast, :NNE, :ENE)
+    C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
+    C_southwest_e = _corner_expr(:C_southwest, :SSW, :WSW)
+
+    E_north_e = _pepotrace_edge_expr(:E_north, :NNW, :NNE, :N, H)
+    E_east_e = _pepotrace_edge_expr(:E_east, :ENE, :ESE, :E, H)
+    E_south_e = _pepotrace_edge_expr(:E_south, :SSE, :SSW, :S, H)
+    E_west_e = _pepotrace_edge_expr(:E_west, :WSW, :WNW, :W, H)
+
+    pepo_es = _pepotrace_sandwich_expr(:O, H)
+
+    rhs = Expr(
+        :call,
+        :*,
+        C_northwest_e,
+        C_northeast_e,
+        C_southeast_e,
+        C_southwest_e,
+        E_north_e,
+        E_east_e,
+        E_south_e,
+        E_west_e,
+        pepo_es...,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
+end
+
 ## Enlarged corner contractions
 
 @generated function enlarge_northwest_corner(
@@ -1529,6 +1654,26 @@ end
         ket_e, Expr(:call, :conj, bra_e),
         pepo_es...,
     )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+@generated function enlarge_northwest_corner(
+    E_west::CTMRGEdgeTensor{T,S,N},
+    C_northwest::CTMRGCornerTensor,
+    E_north::CTMRGEdgeTensor{T,S,N},
+    O::PEPOTraceSandwich{H},
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_west_e = _pepotrace_edge_expr(:E_west, :SW, :WNW, :W, H)
+    C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
+    E_north_e = _pepotrace_edge_expr(:E_north, :NNW, :NE, :N, H)
+    pepo_es = _pepotrace_sandwich_expr(:O, H)
+
+    C_out_e = _pepotrace_enlarged_corner_expr(:C_northwest´, :SW, :NE, :S, :E, H)
+
+    rhs = Expr(:call, :*, E_west_e, C_northwest_e, E_north_e, pepo_es...)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
@@ -1558,6 +1703,26 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
 
+@generated function enlarge_northeast_corner(
+    E_north::CTMRGEdgeTensor{T,S,N},
+    C_northeast::CTMRGCornerTensor,
+    E_east::CTMRGEdgeTensor{T,S,N},
+    O::PEPOTraceSandwich{H},
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_north_e = _pepotrace_edge_expr(:E_north, :NW, :NNE, :N, H)
+    C_northeast = _corner_expr(:C_northeast, :NNE, :ENE)
+    E_east_e = _pepotrace_edge_expr(:E_east, :ENE, :SE, :E, H)
+    pepo_es = _pepotrace_sandwich_expr(:O, H)
+
+    C_out_e = _pepotrace_enlarged_corner_expr(:C_northeast´, :NW, :SE, :W, :S, H)
+
+    rhs = Expr(:call, :*, E_north_e, C_northeast, E_east_e, pepo_es...)
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
 @generated function enlarge_southeast_corner(
         E_east::CTMRGEdgeTensor{T, S, N},
         C_southeast::CTMRGCornerTensor,
@@ -1583,6 +1748,26 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
 
+@generated function enlarge_southeast_corner(
+    E_east::CTMRGEdgeTensor{T,S,N},
+    C_southeast::CTMRGCornerTensor,
+    E_south::CTMRGEdgeTensor{T,S,N},
+    O::PEPOTraceSandwich{H},
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_east_e = _pepotrace_edge_expr(:E_east, :NE, :ESE, :E, H)
+    C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
+    E_south_e = _pepotrace_edge_expr(:E_south, :SSE, :SW, :S, H)
+    pepo_es = _pepotrace_sandwich_expr(:O, H)
+
+    C_out_e = _pepotrace_enlarged_corner_expr(:C_southeast´, :NE, :SW, :N, :W, H)
+
+    rhs = Expr(:call, :*, E_east_e, C_southeast_e, E_south_e, pepo_es...)
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
 @generated function enlarge_southwest_corner(
         E_south::CTMRGEdgeTensor{T, S, N},
         C_southwest::CTMRGCornerTensor,
@@ -1604,6 +1789,26 @@ end
         ket_e, Expr(:call, :conj, bra_e),
         pepo_es...,
     )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+@generated function enlarge_southwest_corner(
+    E_south::CTMRGEdgeTensor{T,S,N},
+    C_southwest::CTMRGCornerTensor,
+    E_west::CTMRGEdgeTensor{T,S,N},
+    O::PEPOTraceSandwich{H},
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_south_e = _pepotrace_edge_expr(:E_south, :SE, :SSW, :S, H)
+    C_southwest_e = _corner_expr(:C_southwest, :SSW, :WSW)
+    E_west_e = _pepotrace_edge_expr(:E_west, :WSW, :NW, :W, H)
+    pepo_es = _pepotrace_sandwich_expr(:O, H)
+
+    C_out_e = _pepotrace_enlarged_corner_expr(:C_southwest´, :SE, :NW, :E, :N, H)
+
+    rhs = Expr(:call, :*, E_south_e, C_southwest_e, E_west_e, pepo_es...)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
@@ -1823,6 +2028,25 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
 
+@generated function renormalize_northwest_corner(
+    E_west, C_northwest, E_north, P_left, P_right, A::PEPOTraceSandwich{H}
+) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepotrace_codomain_projector_expr(:P_right, :out, :S, :S, H)
+    E_west_e = _pepotrace_edge_expr(:E_west, :S, :WNW, :W, H)
+    C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
+    E_north_e = _pepotrace_edge_expr(:E_north, :NNW, :E, :N, H)
+    pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_left_e = _pepotrace_domain_projector_expr(:P_left, :E, :E, :in, H)
+
+    rhs = Expr(
+        :call, :*, P_right_e, E_west_e, C_northwest_e, E_north_e, pepo_es..., P_left_e
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
 @generated function renormalize_northeast_corner(
         E_north, C_northeast, E_east, P_left, P_right, A::PEPOSandwich{H}
     ) where {H}
@@ -1842,6 +2066,25 @@ end
         ket_e, Expr(:call, :conj, bra_e),
         pepo_es...,
         P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+@generated function renormalize_northeast_corner(
+    E_north, C_northeast, E_east, P_left, P_right, A::PEPOTraceSandwich{H}
+) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepotrace_codomain_projector_expr(:P_right, :out, :W, :W, H)
+    E_north_e = _pepotrace_edge_expr(:E_north, :W, :NNE, :N, H)
+    C_northeast_e = _corner_expr(:C_northeast, :NNE, :ENE)
+    E_east_e = _pepotrace_edge_expr(:E_east, :ENE, :S, :E, H)
+    pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_left_e = _pepotrace_domain_projector_expr(:P_left, :S, :S, :in, H)
+
+    rhs = Expr(
+        :call, :*, P_right_e, E_north_e, C_northeast_e, E_east_e, pepo_es..., P_left_e
     )
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
@@ -1871,6 +2114,25 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
 
+@generated function renormalize_southeast_corner(
+    E_east, C_southeast, E_south, P_left, P_right, A::PEPOTraceSandwich{H}
+) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepotrace_codomain_projector_expr(:P_right, :out, :N, :N, H)
+    E_east_e = _pepotrace_edge_expr(:E_east, :N, :EWE, :E, H)
+    C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
+    E_south_e = _pepotrace_edge_expr(:E_south, :SSE, :W, :S, H)
+    ket_e, bra_e, pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_left_e = _pepotrace_domain_projector_expr(:P_left, :W, :W, :in, H)
+
+    rhs = Expr(
+        :call, :*, P_right_e, E_east_e, C_southeast_e, E_south_e, pepo_es..., P_left_e
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
 @generated function renormalize_southwest_corner(
         E_south, C_southwest, E_west, P_left, P_right, A::PEPOSandwich{H}
     ) where {H}
@@ -1890,6 +2152,25 @@ end
         ket_e, Expr(:call, :conj, bra_e),
         pepo_es...,
         P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+@generated function renormalize_southwest_corner(
+    E_south, C_southwest, E_west, P_left, P_right, A::PEPOTraceSandwich{H}
+) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepotrace_codomain_projector_expr(:P_right, :out, :E, :E, H)
+    E_south_e = _pepotrace_edge_expr(:E_south, :E, :SSW, :S, H)
+    C_southwest_e = _corner_expr(:C_southwest, :SSW, :WSW)
+    E_west_e = _pepotrace_edge_expr(:E_west, :WSW, :N, :W, H)
+    ket_e, bra_e, pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_left_e = _pepotrace_domain_projector_expr(:P_left, :N, :N, :in, H)
+
+    rhs = Expr(
+        :call, :*, P_right_e, E_south_e, C_southwest_e, E_west_e, pepo_es..., P_left_e
     )
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
@@ -1921,6 +2202,23 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
 
+@generated function renormalize_north_edge(
+    E_north::CTMRGEdgeTensor{T,S,N}, P_left, P_right, A::PEPOTraceSandwich{H}
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_out_e = _pepotrace_edge_expr(:edge, :out, :in, :S, H)
+
+    P_right_e = _pepotrace_codomain_projector_expr(:P_right, :out, :W, :W, H)
+    E_north_e = _pepotrace_edge_expr(:E_north, :W, :E, :N, H)
+    pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_left_e = _pepotrace_domain_projector_expr(:P_left, :E, :E, :in, H)
+
+    rhs = Expr(:call, :*, P_right_e, E_north_e, pepo_es..., P_left_e)
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+end
+
 @generated function renormalize_east_edge(
         E_east::CTMRGEdgeTensor{T, S, N}, P_bottom, P_top, A::PEPOSandwich{H}
     ) where {T, S, N, H}
@@ -1941,6 +2239,23 @@ end
         pepo_es...,
         P_bottom_e,
     )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+end
+
+@generated function renormalize_east_edge(
+    E_east::CTMRGEdgeTensor{T,S,N}, P_bottom, P_top, A::PEPOTraceSandwich{H}
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_out_e = _pepotrace_edge_expr(:edge, :out, :in, :W, H)
+
+    P_top_e = _pepotrace_codomain_projector_expr(:P_top, :out, :N, :N, H)
+    E_east_e = _pepotrace_edge_expr(:E_east, :N, :S, :E, H)
+    pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_bottom_e = _pepotrace_domain_projector_expr(:P_bottom, :S, :S, :in, H)
+
+    rhs = Expr(:call, :*, P_top_e, E_east_e, pepo_es..., P_bottom_e)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
@@ -1969,6 +2284,23 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
 
+@generated function renormalize_south_edge(
+    E_south::CTMRGEdgeTensor{T,S,N}, P_left, P_right, A::PEPOTraceSandwich{H}
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_out_e = _pepotrace_edge_expr(:edge, :out, :in, :N, H)
+
+    P_right_e = _pepotrace_codomain_projector_expr(:P_right, :out, :E, :E, H)
+    E_south_e = _pepotrace_edge_expr(:E_south, :E, :W, :S, H)
+    pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_left_e = _pepotrace_domain_projector_expr(:P_left, :W, :W, :in, H)
+
+    rhs = Expr(:call, :*, P_right_e, E_south_e, pepo_es..., P_left_e)
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+end
+
 @generated function renormalize_west_edge(
         E_west::CTMRGEdgeTensor{T, S, N}, P_bottom, P_top, A::PEPOSandwich{H}
     ) where {T, S, N, H}
@@ -1989,6 +2321,23 @@ end
         pepo_es...,
         P_bottom_e,
     )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+end
+
+@generated function renormalize_west_edge(
+    E_west::CTMRGEdgeTensor{T,S,N}, P_bottom, P_top, A::PEPOTraceSandwich{H}
+) where {T,S,N,H}
+    @assert N == H + 1
+
+    E_out_e = _pepotrace_edge_expr(:edge, :out, :in, :E, H)
+
+    P_top_e = _pepotrace_codomain_projector_expr(:P_top, :out, :S, :S, H)
+    E_west_e = _pepotrace_edge_expr(:E_west, :S, :N, :W, H)
+    pepo_es = _pepotrace_sandwich_expr(:A, H)
+    P_bottom_e = _pepotrace_domain_projector_expr(:P_bottom, :N, :N, :in, H)
+
+    rhs = Expr(:call, :*, P_top_e, E_west_e, pepo_es..., P_bottom_e)
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
