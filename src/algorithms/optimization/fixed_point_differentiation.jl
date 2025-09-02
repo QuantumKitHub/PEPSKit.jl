@@ -279,15 +279,18 @@ end
 
 function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
-    signs_full = map(zip(signs, info.S_full)) do (σ, S_full)
-        extended_σ = zeros(scalartype(σ), space(S_full))
-        for (c, b) in blocks(extended_σ)
-            σc = block(σ, c)
-            kept_dim = size(σc, 1)
-            b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
-            b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+    signs_full = map(signs, info.S_full) do σs, Ss
+        data = map(tilingdata(σs), tilingdata(Ss)) do σ, S_full
+            extended_σ = zeros(scalartype(σ), space(S_full))
+            for (c, b) in blocks(extended_σ)
+                σc = block(σ, c)
+                kept_dim = size(σc, 1)
+                b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
+                b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+            end
+            return extended_σ
         end
-        return extended_σ
+        return InfiniteTiledArray(data, tiling(σs))
     end
 
     # fix kept and full U and V

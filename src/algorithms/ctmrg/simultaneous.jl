@@ -101,7 +101,17 @@ function simultaneous_projectors(enlarged_corners, env::CTMRGEnv, alg::Projector
     (P_left, P_right), info = _split_proj_and_info(proj_and_info)
     P_left_tiled = map(Base.Fix2(InfiniteTiledArray, tiling(env)) ∘ copy, eachcol(P_left))
     P_right_tiled = map(Base.Fix2(InfiniteTiledArray, tiling(env)) ∘ copy, eachcol(P_right))
-    return (P_left_tiled, P_right_tiled), info
+    info_tiled = NamedTuple{keys(info)}(
+        map(info) do val
+            return if val isa Number
+                val
+            else
+                map(Base.Fix2(InfiniteTiledArray, tiling(env)) ∘ copy, eachcol(val))
+            end
+        end,
+    )
+
+    return (P_left_tiled, P_right_tiled), info_tiled
 end
 function simultaneous_projectors(
     coordinate, enlarged_corners, env, alg::HalfInfiniteProjector

@@ -371,18 +371,36 @@ function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
 end
 
 # Custom adjoint for CTMRGEnv getproperty, to avoid creating named tuples in backward pass
-function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
+Base.@constprop :aggressive function ChainRulesCore.rrule(
+    ::typeof(getproperty), e::CTMRGEnv, name::Symbol
+)
     result = getproperty(e, name)
     if name === :corners
         function corner_pullback(Δcorners_)
             Δcorners = unthunk(Δcorners_)
-            return NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
+            env = zerovector(e)
+            for dir in 1:4
+                for I in eachtilingindex(env.corners[dir])
+                    if !(Δcorners[dir][I] isa ZeroTangent)
+                        env.corners[dir][I] = Δcorners[dir][I]
+                    end
+                end
+            end
+            return NoTangent(), env, NoTangent()
         end
         return result, corner_pullback
     elseif name === :edges
         function edge_pullback(Δedges_)
             Δedges = unthunk(Δedges_)
-            return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
+            env = zerovector(e)
+            for dir in 1:4
+                for I in eachtilingindex(env.edges[dir])
+                    if !(Δedges[dir][I] isa ZeroTangent)
+                        env.edges[dir][I] = Δedges[dir][I]
+                    end
+                end
+            end
+            return NoTangent(), env, NoTangent()
         end
         return result, edge_pullback
     else
@@ -439,16 +457,13 @@ for (i, f) in enumerate((:rotr90, :rot180, :rotl90))
 end
 
 # Functions used for FP differentiation and by KrylovKit.linsolve
-function Base.:+(e₁::CTMRGEnv, e₂::CTMRGEnv)
-    return CTMRGEnv(e₁.corners + e₂.corners, e₁.edges + e₂.edges)
-end
+Base.:+(e₁::CTMRGEnv, e₂::CTMRGEnv) = add(e₁, e₂)
+Base.:-(e₁::CTMRGEnv, e₂::CTMRGEnv) = add(e₁, e₂, -1)
 
-function Base.:-(e₁::CTMRGEnv, e₂::CTMRGEnv)
-    return CTMRGEnv(e₁.corners - e₂.corners, e₁.edges - e₂.edges)
-end
+Base.:*(α::Number, e::CTMRGEnv) = scale(e, α)
+Base.:*(e::CTMRGEnv, α::Number) = scale(e, α)
 
-Base.:*(α::Number, e::CTMRGEnv) = CTMRGEnv(α * e.corners, α * e.edges)
-Base.similar(e::CTMRGEnv) = CTMRGEnv(similar(e.corners), similar(e.edges))
+Base.similar(e::CTMRGEnv) = CTMRGEnv(similar.(e.corners), similar.(e.edges))
 
 function LinearAlgebra.mul!(edst::CTMRGEnv, esrc::CTMRGEnv, α::Number)
     edst.corners .= α * esrc.corners
@@ -492,12 +507,16 @@ function VI.scalartype(::Type{T}) where {T<:CTMRGEnv}
 end
 
 function VI.zerovector(env::CTMRGEnv, ::Type{S}) where {S<:Number}
-    _zerovector = Base.Fix2(zerovector, S)
+    _zerovector(x) = tiledmap(Base.Fix2(zerovector, S), x)
     return CTMRGEnv(map(_zerovector, env.corners), map(_zerovector, env.edges))
 end
 function VI.zerovector!(env::CTMRGEnv)
-    foreach(zerovector!, env.corners)
-    foreach(zerovector!, env.edges)
+    foreach(env.corners) do Cs
+        foreach(zerovector!, tilingdata(Cs))
+    end
+    foreach(env.edges) do Es
+        foreach(zerovector!, tilingdata(Es))
+    end
     return env
 end
 VI.zerovector!!(env::CTMRGEnv) = zerovector!(env)
@@ -507,7 +526,7 @@ function VI.scale(env::CTMRGEnv, α::Number)
     return CTMRGEnv(map(_scale, env.corners), map(_scale, env.edges))
 end
 function VI.scale!(env::CTMRGEnv, α::Number)
-    _scale! = Base.Fix2(scale!, α)
+    _scale!(x) = foreach(Base.Fix2(scale!, α), tilingdata(x))
     foreach(_scale!, env.corners)
     foreach(_scale!, env.edges)
     return env
@@ -524,7 +543,7 @@ VI.scale!!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number) = scale!(env₁, env�
 function VI.add(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
     _add(x, y) = add(x, y, α, β)
     return CTMRGEnv(
-        map(_add, env₁.corners, env₂.corners), map(_add, env₁.edges, env₂.edges)
+        tiledmap.(_add, env₁.corners, env₂.corners), tiledmap.(_add, env₁.edges, env₂.edges)
     )
 end
 function VI.add!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)

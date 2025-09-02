@@ -8,27 +8,38 @@ element-wise converged to `envprev`.
 """
 function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
     # Check if spaces in envprev and envfinal are the same
-    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
-            space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
+    @assert tiling(envprev) == tiling(envfinal)
+    for dir in 1:4, I in eachtilingindex(envprev)
+        r, c = Tuple(I)
+        if space(envfinal.edges[dir][r, c]) != space(envprev.edges[dir][r, c]) ||
+            space(envfinal.corners[dir][r, c]) != space(envprev.corners[dir][r, c])
+            throw(
+                SpaceMismatch("Spaces of previous and final environment are not the same")
+            )
+        end
     end
-    @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
+
+    coordinates = map(
+        ((I, dir),) -> CartesianIndex(dir, Tuple(I)...),
+        Iterators.product(eachtilingindex(envprev), 1:4),
+    )
 
     # Try the "general" algorithm from https://arxiv.org/abs/2311.11894
-    signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    signs_data = map(coordinates) do I
+        dir, r, c = Tuple(I)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
-            Tsprev = circshift(envprev.edges[dir, r, :], 1 - c)
-            Tsfinal = circshift(envfinal.edges[dir, r, :], 1 - c)
+            Tsprev = circshift(envprev.edges[dir][r, :], 1 - c)
+            Tsfinal = circshift(envfinal.edges[dir][r, :], 1 - c)
         elseif dir == EAST
-            Tsprev = circshift(envprev.edges[dir, :, c], 1 - r)
-            Tsfinal = circshift(envfinal.edges[dir, :, c], 1 - r)
+            Tsprev = circshift(envprev.edges[dir][:, c], 1 - r)
+            Tsfinal = circshift(envfinal.edges[dir][:, c], 1 - r)
         elseif dir == SOUTH
-            Tsprev = circshift(reverse(envprev.edges[dir, r, :]), c)
-            Tsfinal = circshift(reverse(envfinal.edges[dir, r, :]), c)
+            Tsprev = circshift(reverse(envprev.edges[dir][r, :]), c)
+            Tsfinal = circshift(reverse(envfinal.edges[dir][r, :]), c)
         elseif dir == WEST
-            Tsprev = circshift(reverse(envprev.edges[dir, :, c]), r)
-            Tsfinal = circshift(reverse(envfinal.edges[dir, :, c]), r)
+            Tsprev = circshift(reverse(envprev.edges[dir][:, c]), r)
+            Tsfinal = circshift(reverse(envfinal.edges[dir][:, c]), r)
         end
 
         # Random MPS of same bond dimension
@@ -49,6 +60,9 @@ function gauge_fix(envprev::CTMRGEnv{C,T}, envfinal::CTMRGEnv{C,T}) where {C,T}
 
         return Qprev * Qfinal'
     end
+    signs = map(
+        Base.Fix2(InfiniteTiledArray, tiling(envprev)) ∘ collect, eachcol(signs_data)
+    )
 
     cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
     return fix_global_phases(envprev, CTMRGEnv(cornersfix, edgesfix)), signs
@@ -81,7 +95,13 @@ end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
 function fix_relative_phases(envfinal::CTMRGEnv, signs)
-    corners_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    coordinates = map(
+        ((I, dir),) -> CartesianIndex(dir, Tuple(I)...),
+        Iterators.product(eachtilingindex(envfinal), 1:4),
+    )
+
+    corners_fixed_data = map(coordinates) do I
+        dir, r, c = Tuple(I)
         if dir == NORTHWEST
             fix_gauge_northwest_corner((r, c), envfinal, signs)
         elseif dir == NORTHEAST
@@ -92,8 +112,13 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
             fix_gauge_southwest_corner((r, c), envfinal, signs)
         end
     end
+    corners_fixed = map(
+        Base.Fix2(InfiniteTiledArray, tiling(envfinal)) ∘ collect,
+        eachcol(corners_fixed_data),
+    )
 
-    edges_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    edges_fixed_data = map(coordinates) do I
+        dir, r, c = Tuple(I)
         if dir == NORTHWEST
             fix_gauge_north_edge((r, c), envfinal, signs)
         elseif dir == NORTHEAST
@@ -104,36 +129,43 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
             fix_gauge_west_edge((r, c), envfinal, signs)
         end
     end
+    edges_fixed = map(
+        Base.Fix2(InfiniteTiledArray, tiling(envfinal)) ∘ collect, eachcol(edges_fixed_data)
+    )
 
     return corners_fixed, edges_fixed
 end
-function fix_relative_phases(
-    U::Array{Ut,3}, V::Array{Vt,3}, signs
-) where {Ut<:AbstractTensorMap,Vt<:AbstractTensorMap}
-    U_fixed = map(CartesianIndices(U)) do I
-        dir, r, c = I.I
-        if dir == NORTHWEST
-            fix_gauge_north_left_vecs((r, c), U, signs)
-        elseif dir == NORTHEAST
-            fix_gauge_east_left_vecs((r, c), U, signs)
-        elseif dir == SOUTHEAST
-            fix_gauge_south_left_vecs((r, c), U, signs)
-        elseif dir == SOUTHWEST
-            fix_gauge_west_left_vecs((r, c), U, signs)
+function fix_relative_phases(U, V, signs)
+    U_fixed = map(enumerate(U)) do (dir, Us)
+        data = map(eachtilingindex(Us)) do I
+            r, c = Tuple(I)
+            if dir == NORTHWEST
+                fix_gauge_north_left_vecs((r, c), U, signs)
+            elseif dir == NORTHEAST
+                fix_gauge_east_left_vecs((r, c), U, signs)
+            elseif dir == SOUTHEAST
+                fix_gauge_south_left_vecs((r, c), U, signs)
+            elseif dir == SOUTHWEST
+                fix_gauge_west_left_vecs((r, c), U, signs)
+            end
         end
+        return InfiniteTiledArray(data, tiling(Us))
     end
 
-    V_fixed = map(CartesianIndices(V)) do I
-        dir, r, c = I.I
-        if dir == NORTHWEST
-            fix_gauge_north_right_vecs((r, c), V, signs)
-        elseif dir == NORTHEAST
-            fix_gauge_east_right_vecs((r, c), V, signs)
-        elseif dir == SOUTHEAST
-            fix_gauge_south_right_vecs((r, c), V, signs)
-        elseif dir == SOUTHWEST
-            fix_gauge_west_right_vecs((r, c), V, signs)
+    V_fixed = map(enumerate(V)) do (dir, Vs)
+        data = map(eachtilingindex(Vs)) do I
+            r, c = Tuple(I)
+            if dir == NORTHWEST
+                fix_gauge_north_right_vecs((r, c), V, signs)
+            elseif dir == NORTHEAST
+                fix_gauge_east_right_vecs((r, c), V, signs)
+            elseif dir == SOUTHEAST
+                fix_gauge_south_right_vecs((r, c), V, signs)
+            elseif dir == SOUTHWEST
+                fix_gauge_west_right_vecs((r, c), V, signs)
+            end
         end
+        return InfiniteTiledArray(data, tiling(Vs))
     end
 
     return U_fixed, V_fixed
@@ -147,13 +179,20 @@ between all corners and all edges are computed to obtain the global phase which 
 divided out.
 """
 function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
-    cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
-        φ = dot(Cprev, Cfix)
-        φ' * Cfix
+    cornersgfix = map(envprev.corners, envfix.corners) do Cprev, Cfix
+        data = map(tilingdata(Cprev), tilingdata(Cfix)) do cp, cf
+            φ = dot(cp, cf)
+            return φ' * cf
+        end
+        return InfiniteTiledArray(data, tiling(envprev))
     end
-    edgesgfix = map(zip(envprev.edges, envfix.edges)) do (Tprev, Tfix)
-        φ = dot(Tprev, Tfix)
-        φ' * Tfix
+
+    edgesgfix = map(envprev.edges, envfix.edges) do Tprev, Tfix
+        data = map(tilingdata(Tprev), tilingdata(Tfix)) do tp, tf
+            φ = dot(tp, tf)
+            return φ' * tf
+        end
+        return InfiniteTiledArray(data, tiling(envprev))
     end
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
