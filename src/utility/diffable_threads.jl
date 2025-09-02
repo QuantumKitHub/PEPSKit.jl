@@ -13,9 +13,9 @@ dtmap!!(args...; scheduler=Defaults.scheduler[]) = tmap!(args...; scheduler)
 # Follows the `map` rrule from ChainRules.jl but specified for the case of one AbstractArray that is being mapped
 # https://github.com/JuliaDiff/ChainRules.jl/blob/e245d50a1ae56ce46fc8c1f0fe9b925964f1146e/src/rulesets/Base/base.jl#L243
 function ChainRulesCore.rrule(
-    config::RuleConfig{>:HasReverseMode}, ::typeof(dtmap), f, A::AbstractArray; kwargs...
+    config::RuleConfig{>:HasReverseMode}, ::typeof(dtmap), f, A::AbstractArray; scheduler=Defaults.scheduler[]
 )
-    el_rrules = tmap(A; kwargs...) do a
+    el_rrules = tmap(A; scheduler) do a
         rrule_via_ad(config, f, a)
     end
     y = map(first, el_rrules)
@@ -24,7 +24,7 @@ function ChainRulesCore.rrule(
 
     function dtmap_pullback(dy_raw)
         dys = unthunk(dy_raw)
-        backevals = tmap(el_rrules, dys; kwargs...) do el_rrule, dy
+        backevals = tmap(el_rrules, dys; scheduler) do el_rrule, dy
             last(el_rrule)(dy)
         end
         df = f_projector(sum(first, backevals))
