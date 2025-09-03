@@ -173,6 +173,23 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
     )
 end
 
+## Conversion to states
+
+function InfinitePartitionFunction(ρ::InfinitePEPO)
+    size(ρ, 3) == 1 || throw(DimensionMismatch("Only single-layer density matrices can be converted to partition functions"))
+    return InfinitePartitionFunction(
+        trace_physicalspaces.(reshape(unitcell(ρ), size(ρ, 1), size(ρ, 2)))
+    )
+end
+
+function InfinitePEPS(ρ::InfinitePEPO)
+    size(ρ, 3) == 1 || throw(DimensionMismatch("Only single-layer density matrices can be converted to partition functions"))
+    return InfinitePEPS(
+        first.(fuse_physicalspaces.(reshape(unitcell(ρ), size(ρ, 1), size(ρ, 2))))
+    )
+end
+
+
 ## Vector interface
 
 VI.scalartype(::Type{NT}) where {NT <: InfinitePEPO} = scalartype(eltype(NT))
