@@ -33,6 +33,7 @@ jobs:
           - utility
           - bondenv
           - timeevol
+          - toolbox
         os:
           - ubuntu-latest
           - macOS-latest

@@ -65,6 +65,11 @@ end
             include("timeevol/sitedep_truncation.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "TOOLBOX"
+        @time @safetestset "Cluster truncation with projectors" begin
+            include("toolbox/densitymatrices.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "LocalOperator" begin
             include("utility/localoperator.jl")
