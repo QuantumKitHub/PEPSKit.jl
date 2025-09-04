@@ -3,15 +3,14 @@ using PEPSKit
 using Test
 using TestExtras
 
-ds = Dict(Trivial => ℂ^2, U1Irrep => U1Space(i => 1 for i in -1:1), FermionParity => Vect[FermionParity](0 => 1, 1 => 1))
-Ds = Dict(Trivial => ℂ^3, U1Irrep => U1Space(i => 2 for i in -1:1), FermionParity => Vect[FermionParity](0 => 2, 1 => 2))
-χs = Dict(Trivial => ℂ^4, U1Irrep => U1Space(i => 3 for i in -2:2), FermionParity => Vect[FermionParity](0 => 4, 1 => 4))
+ds = Dict(Trivial => ℂ^2, U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))), FermionParity => Vect[FermionParity](0 => 2, 1 => 1))
+Ds = Dict(Trivial => ℂ^3, U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (1, 2, 2))), FermionParity => Vect[FermionParity](0 => 3, 1 => 2))
+χs = Dict(Trivial => ℂ^4, U1Irrep => U1Space(i => χ for (i, χ) in zip(-2:2, (1, 3, 2))), FermionParity => Vect[FermionParity](0 => 3, 1 => 2))
 
 @testset "Double-layer densitymatrix contractions ($I)" for I in keys(ds)
     d = ds[I]
     D = Ds[I]
     χ = χs[I]
-
     ρ = InfinitePEPO(d, D)
 
     ρ_peps = @constinferred InfinitePEPS(ρ)

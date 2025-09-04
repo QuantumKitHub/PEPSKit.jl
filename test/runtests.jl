@@ -66,7 +66,7 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "TOOLBOX"
-        @time @safetestset "Cluster truncation with projectors" begin
+        @time @safetestset "Density matrix from double-layer PEPO" begin
             include("toolbox/densitymatrices.jl")
         end
     end
