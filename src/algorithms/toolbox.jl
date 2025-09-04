@@ -1,17 +1,25 @@
 """
-    expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv)
+    expectation_value(state, O::LocalOperator, env::CTMRGEnv)
+    expectation_value(bra, O::LocalOperator, ket, env::CTMRGEnv)
 
-Compute the expectation value ⟨peps|O|peps⟩ / ⟨peps|peps⟩ of a [`LocalOperator`](@ref) `O`
-for a PEPS `peps` using a given CTMRG environment `env`.
+Compute the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩ of a [`LocalOperator`](@ref) `O`.
+This can be done either for a PEPS, or alternatively for a density matrix PEPO.
+In the latter case the first signature corresponds to a single layer PEPO contraction, while
+the second signature yields a bilayer contraction instead.
 """
-function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv)
-    checklattice(peps, O)
+function MPSKit.expectation_value(
+        bra::Union{InfinitePEPS, InfinitePEPO}, O::LocalOperator,
+        ket::Union{InfinitePEPS, InfinitePEPO}, env::CTMRGEnv
+    )
+    checklattice(bra, O, ket)
     term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        ρ = reduced_densitymatrix(inds, peps, peps, env)
+        ρ = reduced_densitymatrix(inds, ket, bra, env)
         return trmul(operator, ρ)
     end
     return sum(term_vals)
 end
+MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv) = expectation_value(peps, O, peps, env)
+
 """
     expectation_value(pf::InfinitePartitionFunction, inds => O, env::CTMRGEnv)
 
