@@ -153,6 +153,7 @@ domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r
 function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
     return codomain_physicalspace(T[r, c, end])
 end
+physicalspace(T::InfinitePEPO) = physicalspace.(Ref(T), 1:size(T, 1), 1:size(T, 2))
 function physicalspace(T::InfinitePEPO, r::Int, c::Int)
     codomain_physicalspace(T, r, c) == domain_physicalspace(T, r, c) || throw(
         SpaceMismatch(
@@ -172,6 +173,23 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
         map(tuple, unitcell(top), unitcell(bot), eachslice(unitcell(mid); dims = 3)...)
     )
 end
+
+## Conversion to states
+
+function InfinitePartitionFunction(ρ::InfinitePEPO)
+    size(ρ, 3) == 1 || throw(DimensionMismatch("Only single-layer density matrices can be converted to partition functions"))
+    return InfinitePartitionFunction(
+        trace_physicalspaces.(reshape(unitcell(ρ), size(ρ, 1), size(ρ, 2)))
+    )
+end
+
+function InfinitePEPS(ρ::InfinitePEPO)
+    size(ρ, 3) == 1 || throw(DimensionMismatch("Only single-layer density matrices can be converted to partition functions"))
+    return InfinitePEPS(
+        first.(fuse_physicalspaces.(reshape(unitcell(ρ), size(ρ, 1), size(ρ, 2))))
+    )
+end
+
 
 ## Vector interface
 

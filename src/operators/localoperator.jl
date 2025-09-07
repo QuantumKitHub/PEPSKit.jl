@@ -74,6 +74,10 @@ while the second version throws an error if the lattices do not match.
 function checklattice(args...)
     return checklattice(Bool, args...) || throw(ArgumentError("Lattice mismatch."))
 end
+checklattice(::Type{Bool}, arg) = true
+function checklattice(::Type{Bool}, arg1, arg2, args...)
+    return checklattice(Bool, arg1, arg2) && checklattice(Bool, arg2, args...)
+end
 function checklattice(::Type{Bool}, H1::LocalOperator, H2::LocalOperator)
     return H1.lattice == H2.lattice
 end
@@ -82,6 +86,12 @@ function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
 end
 function checklattice(::Type{Bool}, H::LocalOperator, peps::InfinitePEPS)
     return checklattice(Bool, peps, H)
+end
+function checklattice(::Type{Bool}, pepo::InfinitePEPO, O::LocalOperator)
+    return size(pepo, 3) == 1 && reshape(physicalspace(pepo), size(pepo, 1), size(pepo, 2)) == physicalspace(O)
+end
+function checklattice(::Type{Bool}, O::LocalOperator, pepo::InfinitePEPO)
+    return checklattice(Bool, pepo, O)
 end
 @non_differentiable checklattice(args...)
 
