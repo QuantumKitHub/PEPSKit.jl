@@ -123,3 +123,23 @@ function physicalspace(t::PEPOTensor)
     return codomain_physicalspace(t)
 end
 virtualspace(t::PEPOTensor, dir) = space(t, dir + 2)
+
+"""
+    $(SIGNATURES)
+
+Fuse the physical indices of a PEPO tensor, obtaining a PEPS tensor.
+"""
+function fuse_physicalspaces(O::PEPOTensor)
+    F = isomorphism(Int, fuse(codomain(O)), codomain(O))
+    return F * O, F
+end
+
+"""
+    $(SIGNATURES)
+
+Trace out the physical indices of a PEPO tensor, obtaining a partition function tensor.
+"""
+function trace_physicalspaces(O::PEPOTensor)
+    @plansor t[W S; N E] := O[p p; N E S W]
+    return t
+end
