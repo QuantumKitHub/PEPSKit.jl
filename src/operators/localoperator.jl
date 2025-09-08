@@ -176,10 +176,10 @@ TensorKit.spacetype(::Type{T}) where {S, T <: LocalOperator{<:Any, S}} = S
     end
     f_dag_es = map(1:N) do i
         j = 3 * (i - 1) + 1
-        return tensorexpr(:(fs[$i]), -(N + i), (j + 1, j + 2))
+        return tensorexpr(:(twistdual(fs[$i]', 1:2)), (j + 1, j + 2), -(N + i))
     end
     multiplication_ex = Expr(
-        :call, :*, op_e, f_es..., map(x -> Expr(:call, :conj, x), f_dag_es)...
+        :call, :*, op_e, f_es..., f_dag_es...
     )
     return macroexpand(@__MODULE__, :(return @tensor $op_out_e := $multiplication_ex))
 end
