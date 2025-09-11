@@ -71,6 +71,7 @@ include("algorithms/truncation/bond_truncation.jl")
 include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
+include("algorithms/time_evolution/fidelity_maximization.jl")
 
 include("algorithms/toolbox.jl")
 include("algorithms/correlators.jl")
@@ -99,6 +100,7 @@ export fixedpoint
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
 export su_iter, su3site_iter, simpleupdate, SimpleUpdate
+export maximize_fidelity!
 
 export InfiniteSquareNetwork
 export InfinitePartitionFunction
