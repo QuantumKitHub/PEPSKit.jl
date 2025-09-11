@@ -64,7 +64,7 @@ projector_algs = [:halfinfinite, :fullinfinite]
 
     # contract
     T = InfinitePEPO(O; unitcell = unitcell)
-    psi0 = initializePEPS(T, χpeps)
+    psi0 = initialize_peps(T, χpeps)
     n = InfiniteSquareNetwork(psi0, T)
     env0 = CTMRGEnv(n, χenv)
 
@@ -101,7 +101,7 @@ end
 
     # contract
     T = InfinitePEPO(O; unitcell = (1, 1, 1))
-    psi0 = initializePEPS(T, χpeps)
+    psi0 = initialize_peps(T, χpeps)
     env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), χenv)
     env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), χenv)
 

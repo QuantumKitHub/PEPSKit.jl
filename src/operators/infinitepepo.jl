@@ -112,7 +112,7 @@ function InfinitePEPO(
     )
 end
 
-function initializePEPS(
+function initialize_peps(
         T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
     ) where {S <: ElementarySpace}
     Pspaces = map(Iterators.product(axes(T, 1), axes(T, 2))) do (r, c)

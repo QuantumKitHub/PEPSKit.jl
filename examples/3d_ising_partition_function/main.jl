@@ -264,7 +264,7 @@ initialize them in the appropriate way, choose an optimization algortithm and ca
 Vpeps = ℂ^2
 Venv = ℂ^12
 
-psi0 = initializePEPS(T, Vpeps)
+psi0 = initialize_peps(T, Vpeps)
 env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), Venv)
 env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), Venv)
 

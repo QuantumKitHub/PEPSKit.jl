@@ -98,7 +98,7 @@ end
 
     # single-layer PEPO
     O = ising_pepo(1)
-    psi = PEPSKit.initializePEPS(O, ComplexSpace(2))
+    psi = PEPSKit.initialize_peps(O, ComplexSpace(2))
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
     mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(10)])
@@ -107,7 +107,7 @@ end
 
     # double-layer PEPO
     O2 = repeat(O, 1, 1, 2)
-    psi2 = initializePEPS(O, ComplexSpace(2))
+    psi2 = initialize_peps(O, ComplexSpace(2))
     T = InfiniteTransferPEPO(psi, O, 1, 1)
 
     mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(8)])
