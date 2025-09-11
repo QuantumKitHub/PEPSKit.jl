@@ -1046,7 +1046,7 @@ end
 function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
     # specialize to avoid extra permute on A when calling renormalize_west_edge
     return @tensor begin
-        P_leftp = permute(P_leftp, ((3, 2), (1,)))  # impose χ_W as 1st leg
+        P_leftp = permute(P_left, ((3, 2), (1,)))  # impose χ_W as 1st leg
         PE[χ_W χSE; D_W D_S] := P_leftp[χ_W D_W; χSW] * E_south[χSE D_S; χSW]
         PEA[χ_W D_N; χSE D_E] := PE[χ_W χSE; D_W D_S] * A[D_W D_S; D_N D_E]
         edge[χ_E D_N; χ_W] := PEA[χ_W D_N; χSE D_E] * P_right[χ_E; χSE D_E]
