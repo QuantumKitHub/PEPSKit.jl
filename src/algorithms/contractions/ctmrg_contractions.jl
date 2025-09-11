@@ -98,7 +98,7 @@ function enlarge_northeast_corner(
     return @tensor begin
         EC[DN χ_W; χ2] := E_north[χ_W DN; χ1] * C_northeast[χ1; χ2]
         ECE[DN DE; χ_S χ_W] := EC[DN χ_W; χ2] * E_east[χ2 DE; χ_S]
-        corner[χ_W D_W; χ_S D_S] :=  A[D_W D_S; DN DE] * ECE[DN DE; χ_S χ_W]
+        corner[χ_W D_W; χ_S D_S] := A[D_W D_S; DN DE] * ECE[DN DE; χ_S χ_W]
     end
 end
 
