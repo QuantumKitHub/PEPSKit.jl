@@ -96,9 +96,9 @@ function enlarge_northeast_corner(
         E_east::CTMRG_PF_EdgeTensor, A::PFTensor,
     )
     return @tensor begin
-        EC[χ_W DN; χ2] := E_north[χ_W DN; χ1] * C_northeast[χ1; χ2]
-        ECE[χ_W χ_S; DN DE] := EC[χ_W DN; χ2] * E_east[χ2 DE; χ_S]
-        corner[χ_W D_W; χ_S D_S] := ECE[χ_W χ_S; DN DE] * A[D_W D_S; DN DE]
+        EC[DN χ_W; χ2] := E_north[χ_W DN; χ1] * C_northeast[χ1; χ2]
+        ECE[DN DE; χ_S χ_W] := EC[DN χ_W; χ2] * E_east[χ2 DE; χ_S]
+        corner[χ_W D_W; χ_S D_S] :=  A[D_W D_S; DN DE] * ECE[DN DE; χ_S χ_W]
     end
 end
 
