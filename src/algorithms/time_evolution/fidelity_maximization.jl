@@ -1,58 +1,64 @@
 """
     maximize_fidelity!(
-        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, env₀::CTMRGEnv;
-        maxiter = 5, tol = 1.0e-3, kwargs...
+        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
+        maxiter = 5, tol = 1.0e-3, boundary_alg=(; verbosity=1)
     )
 
 Iteratively maximize the fidelity of `pepssrc` and `pepsdst` where the contents of `pepssrc`
-are embedded into `pepsdst`. To contract the respective networks, the virtual spaces of
-`env₀` are used and kept fixed. The CTMRG contraction algorithm is specified using the
-`kwargs...` which are passed onto the `leading_boundary` calls.
+are embedded into `pepsdst`. To contract the respective networks, the specified `envspace`
+is used on the environment bonds and kept fixed. The CTMRG contraction algorithm is specified
+via the `boundary_alg` `NamedTuple`.
 """
 function maximize_fidelity!(
-        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, env₀::CTMRGEnv;
-        maxiter = 5, tol = 1.0e-3, kwargs...
+        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
+        maxiter = 5, tol = 1.0e-3, boundary_alg = (; verbosity = 1)
     )
     @assert size(pepsdst) == size(pepssrc) "incompatible unit cell sizes"
 
+    # absorb src PEPS tensors into dst tensors in-place
     for (pdst, psrc) in zip(unitcell(pepsdst), unitcell(pepssrc))
         embed!(pdst, psrc)
     end
 
     peps = pepssrc
     peps′ = pepsdst
-    env, = leading_boundary(env₀, peps; kwargs...)
+    env, = leading_boundary(CTMRGEnv(peps, envspace), peps; boundary_alg...)
     peps /= sqrt(norm(peps, env)) # normalize PEPSs to ensure that fidelity is bounded by 1
     fid = 0.0
     for i in 1:maxiter
         # normalize updated PEPS and contract ⟨ψ₁|ψ₂⟩
-        env′, = leading_boundary(env, peps′; kwargs...)
+        env′, = leading_boundary(CTMRGEnv(peps′, envspace), peps′; boundary_alg...)
         peps′ /= sqrt(norm(peps′, env′))
         nw = InfiniteSquareNetwork(peps′, peps)
-        envnw, = leading_boundary(env′, nw; kwargs...)
+        envnw, = leading_boundary(CTMRGEnv(nw, envspace), nw; boundary_alg...)
 
         # remove peps′ from fidelity network and compute fidelity
-        ∂fid = _∂contract_site(peps′, envnw)
-        fid′ = real(_fidelity(peps, ∂fid))
+        ∂nval = ∂network_value(peps′, envnw)
+        fid′ = abs2(network_value(peps, ∂nval))
         @info @sprintf("Fidmax. iter %d:   fid = %.4e   Δfid = %.4e", i, fid′, fid′ - fid)
-        1 - fid′ ≤ tol && break
+        abs(1 - fid′) ≤ tol && break
 
         # update PEPSs
         peps = peps′
-        peps′ = ∂fid
+        peps′ = ∂nval
         fid = fid′
     end
 
     return peps′
 end
 
-function _fidelity(peps::InfinitePEPS, ∂fid::InfinitePEPS)
+function network_value(peps::InfinitePEPS, ∂nval::InfinitePEPS)
     return prod(eachcoordinate(peps)) do (r, c)
-        @tensor conj(peps[r, c][d; D_N D_E D_S D_W]) * ∂fid[r, c][d; D_N D_E D_S D_W]
+        @tensor conj(peps[r, c][d; D_N D_E D_S D_W]) * ∂nval[r, c][d; D_N D_E D_S D_W]
     end
 end
 
-function _∂contract_site(peps::InfinitePEPS, env::CTMRGEnv)
+"""
+    ∂network_value(peps::InfinitePEPS, env::CTMRGEnv)
+
+Compute the `InfinitePEPS` resulting from removing the bra PEPS tensors in `network_value`.
+"""
+function ∂network_value(peps::InfinitePEPS, env::CTMRGEnv)
     return InfinitePEPS(
         map(eachcoordinate(peps)) do ind
             _∂contract_site(ind, peps, env) * _contract_corners(ind, env) /
@@ -60,6 +66,7 @@ function _∂contract_site(peps::InfinitePEPS, env::CTMRGEnv)
         end
     )
 end
+
 function _∂contract_site(ind::Tuple{Int, Int}, peps::InfinitePEPS, env::CTMRGEnv)
     r, c = ind
     return _∂contract_site(
