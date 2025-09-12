@@ -1,4 +1,37 @@
 """
+    single_site_fidelity_initialize(
+        peps₀::InfinitePEPS, envspace, [bondspace = _maxspace(peps₀)];
+        noise_amp = 1.0e-2, kwargs...
+    )
+
+Generate a single-site unit cell PEPS from a (possibly) multi-site `peps₀` by maximizing
+the fidelity w.r.t. `peps₀`. Here, `envspace` determines the virtual environment spaces for
+CTMRG contractions. By default, the maximal bond space of `peps₀` is used for all virtual
+legs of the single-site PEPS.
+
+The single-site PEPS is intialized with Gaussian nosie and multiplied by `noise_amp`.
+The `kwargs...` are passed onto the [`maximize_fidelity!`](@ref) call, refer to the docs
+for further details.
+"""
+function single_site_fidelity_initialize(
+        peps₀::InfinitePEPS, envspace, bondspace = _maxspace(peps₀);
+        noise_amp = 1.0e-2, kwargs...
+    )
+    @assert allequal(map(p -> space(p, 1), unitcell(peps₀))) "PEPS must have uniform physical spaces"
+
+    physspace = space(unitcell(peps₀)[1], 1)
+    peps_single = noise_amp * InfinitePEPS(randn, scalartype(peps₀), physspace, bondspace) # single-site unit cell with random noise
+
+    peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps₀))) # fill peps₀ unit cell with peps_singles
+    maximize_fidelity!(peps_uc, peps₀, envspace; kwargs...) # modifies peps_single in-place
+
+    return peps_single
+end
+
+# maximal virtual space over unit cell
+_spacemax(peps::InfinitePEPS) = argmax(dim, map(p -> argmax(dim, domain(p)), unitcell(peps)))
+
+"""
     maximize_fidelity!(
         pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
         maxiter = 5, tol = 1.0e-3, boundary_alg=(; verbosity=1)
