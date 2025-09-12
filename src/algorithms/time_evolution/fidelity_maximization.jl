@@ -56,48 +56,52 @@ function maximize_fidelity!(
     peps = pepssrc
     peps′ = pepsdst
     env, = leading_boundary(CTMRGEnv(peps, envspace), peps; boundary_alg...)
-    peps /= sqrt(norm(peps, env)) # normalize PEPSs to ensure that fidelity is bounded by 1
+    peps /= sqrt(_local_norm(peps, peps, env)) # normalize PEPSs to ensure that fidelity is bounded by 1
     fid = 0.0
     for i in 1:maxiter
         # normalize updated PEPS and contract ⟨ψ₁|ψ₂⟩
         env′, = leading_boundary(CTMRGEnv(peps′, envspace), peps′; boundary_alg...)
-        peps′ /= sqrt(norm(peps′, env′))
+        peps′ /= sqrt(_local_norm(peps′, peps′, env′))
         nw = InfiniteSquareNetwork(peps′, peps)
         envnw, = leading_boundary(CTMRGEnv(nw, envspace), nw; boundary_alg...)
 
         # remove peps′ from fidelity network and compute fidelity
-        ∂nval = ∂network_value(peps′, envnw)
-        fid′ = abs2(network_value(peps, ∂nval))
+        ∂norm = _∂local_norm(peps′, envnw)
+        fid′ = abs2(_local_norm(peps, ∂norm))
         @info @sprintf("Fidmax. iter %d:   fid = %.4e   Δfid = %.4e", i, fid′, fid′ - fid)
         abs(1 - fid′) ≤ tol && break
 
         # update PEPSs
         peps = peps′
-        peps′ = ∂nval
+        peps′ = ∂norm
         fid = fid′
     end
 
     return peps′
 end
 
-function network_value(peps::InfinitePEPS, ∂nval::InfinitePEPS)
-    return prod(eachcoordinate(peps)) do (r, c)
-        @tensor conj(peps[r, c][d; D_N D_E D_S D_W]) * ∂nval[r, c][d; D_N D_E D_S D_W]
+"""
+$(SIGNATURES)
+
+Sum over `contract_local_norm` values of all unit cell entries.
+"""
+function _local_norm(ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv)
+    return sum(ind -> contract_local_norm((ind,), ket, bra, env), eachcoordinate(ket))
+end
+function _local_norm(peps::InfinitePEPS, ∂norm::InfinitePEPS)
+    return sum(eachcoordinate(peps)) do (r, c)
+        @tensor conj(peps[r, c][d; D_N D_E D_S D_W]) * ∂norm[r, c][d; D_N D_E D_S D_W]
     end
 end
 
-"""
-    ∂network_value(peps::InfinitePEPS, env::CTMRGEnv)
 
-Compute the `InfinitePEPS` resulting from removing the bra PEPS tensors in `network_value`.
 """
-function ∂network_value(peps::InfinitePEPS, env::CTMRGEnv)
-    return InfinitePEPS(
-        map(eachcoordinate(peps)) do ind
-            _∂contract_site(ind, peps, env) * _contract_corners(ind, env) /
-                _contract_vertical_edges(ind, env) / _contract_horizontal_edges(ind, env)
-        end
-    )
+    _∂local_norm(peps::InfinitePEPS, env::CTMRGEnv)
+
+Compute the `InfinitePEPS` resulting from removing the bra PEPS tensors in `_local_norm`.
+"""
+function _∂local_norm(peps::InfinitePEPS, env::CTMRGEnv)
+    return InfinitePEPS(map(ind -> _∂contract_site(ind, peps, env), eachcoordinate(peps)))
 end
 
 function _∂contract_site(ind::Tuple{Int, Int}, peps::InfinitePEPS, env::CTMRGEnv)
