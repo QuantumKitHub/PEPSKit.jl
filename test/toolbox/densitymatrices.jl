@@ -1,5 +1,6 @@
 using TensorKit
 using PEPSKit
+using PEPSKit: contract_local_operator, contract_local_norm
 using Test
 using TestExtras
 
@@ -50,11 +51,15 @@ end
     @tensor O_doubled[-1; -2] := F[-1; 1 2] * O[1; 3] * twist(F', 2)[3 2; -2]
 
     # Single site
-    O_singlesite = LocalOperator(reshape(physicalspace(ρ), 1, 1), ((1, 1),) => O)
+    site = (1, 1)
+    O_singlesite = LocalOperator(reshape(physicalspace(ρ), 1, 1), (site,) => O)
     E1 = expectation_value(ρ, O_singlesite, ρ, env)
-    O_doubled_singlesite = LocalOperator(physicalspace(ρ_peps), ((1, 1),) => O_doubled)
+    O_doubled_singlesite = LocalOperator(physicalspace(ρ_peps), (site,) => O_doubled)
     E2 = expectation_value(ρ_peps, O_doubled_singlesite, ρ_peps, env)
     @test E1 ≈ E2
+    val = contract_local_operator((site,), O_doubled, ρ_peps, ρ_peps, env)
+    nrm = contract_local_norm((site,), ρ_peps, ρ_peps, env)
+    @test E1 ≈ val / nrm
 
     # two sites
     for inds in zip(
@@ -66,5 +71,8 @@ end
         O_doubled_twosite = LocalOperator(physicalspace(ρ_peps), inds => O_doubled ⊗ O_doubled)
         E2 = expectation_value(ρ_peps, O_doubled_twosite, ρ_peps, env)
         @test E1 ≈ E2
+        val = contract_local_operator(inds, O_doubled ⊗ O_doubled, ρ_peps, ρ_peps, env)
+        nrm = contract_local_norm(inds, ρ_peps, ρ_peps, env)
+        @test E1 ≈ val / nrm
     end
 end

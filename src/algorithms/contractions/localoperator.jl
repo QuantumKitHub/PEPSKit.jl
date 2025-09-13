@@ -34,7 +34,7 @@ function contract_local_operator(
         env::CTMRGEnv,
     ) where {T, S, N}
     static_inds = Val.(inds)
-    return _contract_local_operator(static_inds, O, ket, bra, env)
+    return _contract_local_operator(static_inds, O, (ket, bra), env)
 end
 function contract_local_operator(
         inds::NTuple{N, Tuple{Int, Int}},
@@ -248,10 +248,10 @@ end
     edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, 2)
     operator = tensorexpr(
         :O,
-        ntuple(i -> physicallabel(:O, 1, i), N),
         ntuple(i -> physicallabel(:O, 2, i), N),
+        ntuple(i -> physicallabel(:O, 1, i), N),
     )
-    bra, ket = _contract_state_expr(rowrange, colrange, 2, cartesian_inds)
+    ket, bra = _contract_state_expr(rowrange, colrange, 2, cartesian_inds)
 
     multiplication_ex = Expr(
         :call, :*,
@@ -297,7 +297,7 @@ end
 
     corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
     edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, 2)
-    bra, ket = _contract_state_expr(rowrange, colrange, 2)
+    ket, bra = _contract_state_expr(rowrange, colrange, 2)
 
     multiplication_ex = Expr(
         :call, :*,
