@@ -153,7 +153,7 @@ domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r
 function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
     return codomain_physicalspace(T[r, c, end])
 end
-physicalspace(T::InfinitePEPO) = physicalspace.(Ref(T), 1:size(T, 1), 1:size(T, 2))
+physicalspace(T::InfinitePEPO) = physicalspace.(@view(unitcell(T)[:, :, end]))
 function physicalspace(T::InfinitePEPO, r::Int, c::Int)
     codomain_physicalspace(T, r, c) == domain_physicalspace(T, r, c) || throw(
         SpaceMismatch(
