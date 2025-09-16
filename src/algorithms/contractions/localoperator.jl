@@ -160,10 +160,10 @@ function _contract_state_expr(rowrange, colrange, height, cartesian_inds = nothi
 end
 
 function _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds = nothing)
+    @assert height == 1 || height == 2 "Contraction with more than 2 layers of PEPO is unintended."
     rmin, rmax = extrema(rowrange)
     cmin, cmax = extrema(colrange)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
-
     return map(1:height) do side
         return map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
             inds_id = if isnothing(cartesian_inds)
@@ -183,7 +183,7 @@ function _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds = 
                     physicallabel(:O, 1, inds_id)
                 end
                 tensor_name = :(twistdual(state[1][mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)], 2))
-            elseif height == 2
+            else
                 physical_label_in = if isnothing(inds_id)
                     physicallabel(:in, i, j)
                 else
@@ -199,8 +199,6 @@ function _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds = 
                 else
                     :(twistdual(state[1][mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)], (1, 2)))
                 end
-            else
-                error("tba")
             end
 
             return tensorexpr(
@@ -315,8 +313,8 @@ end
 @doc """
 $(SIGNATURES)
 
-Construct the reduced density matrix `ρ` of the PEPS `peps` with open indices `inds` using the environment `env`.
-Alternatively, construct the reduced density matrix `ρ` of a full density matrix PEPO with open indices `inds` using the environment `env`.
+Construct the reduced density matrix `ρ` of PEPS or PEPO (representing PEPS with ancilla legs) `ket`, `bra` with open indices `inds` using the environment `env`.
+Alternatively, construct the reduced density matrix `ρ` of a mixed state specified by the density matrix PEPO `state` with open indices `inds` using the environment `env`.
 
 This works by generating the appropriate contraction on a rectangular patch with its corners
 specified by `inds`. The result is normalized such that `tr(ρ) = 1`. 
@@ -553,13 +551,13 @@ end
 @generated function _contract_densitymatrix(
         inds::NTuple{N, Val}, state::Tuple{InfinitePEPO, Vararg{InfinitePEPO, M}}, env::CTMRGEnv
     ) where {N, M}
+    height = M + 1
+    @assert height == 1 || height == 2 "Contraction with more than 2 layers of PEPO is unintended."
     cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
     allunique(cartesian_inds) ||
         throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
     rowrange = getindex.(cartesian_inds, 1)
     colrange = getindex.(cartesian_inds, 2)
-    height = M + 1
-    @assert height == 1 || height == 2 "TBA"
 
     corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
     edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, height)
