@@ -79,7 +79,7 @@ function checklattice(::Type{Bool}, arg1, arg2, args...)
     return checklattice(Bool, arg1, arg2) && checklattice(Bool, arg2, args...)
 end
 function checklattice(::Type{Bool}, H1::LocalOperator, H2::LocalOperator)
-    return H1.lattice == H2.lattice
+    return physicalspace(H1) == physicalspace(H2)
 end
 function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
     return physicalspace(peps) == physicalspace(O)

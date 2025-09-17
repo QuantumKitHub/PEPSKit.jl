@@ -150,10 +150,8 @@ end
 TensorKit.spacetype(::Type{P}) where {P <: InfinitePEPO} = spacetype(eltype(P))
 virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) = virtualspace(T[r, c, h], dir)
 domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r, c, 1])
-function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
-    return codomain_physicalspace(T[r, c, end])
-end
-physicalspace(T::InfinitePEPO) = physicalspace.(@view(unitcell(T)[:, :, end]))
+codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = codomain_physicalspace(T[r, c, end])
+physicalspace(T::InfinitePEPO) = [physicalspace(T, row, col) for row in axes(T, 1), col in axes(T, 2)]
 function physicalspace(T::InfinitePEPO, r::Int, c::Int)
     codomain_physicalspace(T, r, c) == domain_physicalspace(T, r, c) || throw(
         SpaceMismatch(
