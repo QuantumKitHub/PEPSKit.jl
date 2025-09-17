@@ -79,16 +79,16 @@ function checklattice(::Type{Bool}, arg1, arg2, args...)
     return checklattice(Bool, arg1, arg2) && checklattice(Bool, arg2, args...)
 end
 function checklattice(::Type{Bool}, H1::LocalOperator, H2::LocalOperator)
-    return H1.lattice == H2.lattice
+    return physicalspace(H1) == physicalspace(H2)
 end
 function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
-    return size(peps) == size(O.lattice)
+    return physicalspace(peps) == physicalspace(O)
 end
 function checklattice(::Type{Bool}, H::LocalOperator, peps::InfinitePEPS)
     return checklattice(Bool, peps, H)
 end
 function checklattice(::Type{Bool}, pepo::InfinitePEPO, O::LocalOperator)
-    return size(pepo, 3) == 1 && reshape(physicalspace(pepo), size(pepo, 1), size(pepo, 2)) == physicalspace(O)
+    return size(pepo, 3) == 1 && physicalspace(pepo) == physicalspace(O)
 end
 function checklattice(::Type{Bool}, O::LocalOperator, pepo::InfinitePEPO)
     return checklattice(Bool, pepo, O)
