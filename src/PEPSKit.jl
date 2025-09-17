@@ -71,7 +71,6 @@ include("algorithms/truncation/bond_truncation.jl")
 include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
-include("algorithms/time_evolution/fidelity_maximization.jl")
 
 include("algorithms/toolbox.jl")
 include("algorithms/correlators.jl")
@@ -80,6 +79,7 @@ include("utility/symmetrization.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
+include("algorithms/optimization/fidelity_initialize.jl")
 
 include("algorithms/select_algorithm.jl")
 

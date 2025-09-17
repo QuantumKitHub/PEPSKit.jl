@@ -32,17 +32,17 @@ end
 _spacemax(peps::InfinitePEPS) = argmax(dim, map(p -> argmax(dim, domain(p)), unitcell(peps)))
 
 """
-    maximize_fidelity!(
+    approximate!(
         pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
         maxiter = 5, tol = 1.0e-3, boundary_alg=(; verbosity=1)
     )
 
-Iteratively maximize the fidelity of `pepssrc` and `pepsdst` where the contents of `pepssrc`
-are embedded into `pepsdst`. To contract the respective networks, the specified `envspace`
-is used on the environment bonds and kept fixed. The CTMRG contraction algorithm is specified
-via the `boundary_alg` `NamedTuple`.
+Approximate `pepssrc` with `pepsdst` by iteratively maximizing their fidelity where the
+contents of `pepssrc` are embedded into `pepsdst`. To contract the respective networks, the
+specified `envspace` is used on the environment bonds and kept fixed. The CTMRG contraction
+algorithm is specified via the `boundary_alg` `NamedTuple`.
 """
-function maximize_fidelity!(
+function MPSKit.approximate!(
         pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
         maxiter = 5, tol = 1.0e-3, boundary_alg = (; verbosity = 1)
     )
@@ -50,7 +50,7 @@ function maximize_fidelity!(
 
     # absorb src PEPS tensors into dst tensors in-place
     for (pdst, psrc) in zip(unitcell(pepsdst), unitcell(pepssrc))
-        embed!(pdst, psrc)
+        absorb(pdst, psrc)
     end
 
     peps = pepssrc
