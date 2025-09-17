@@ -19,6 +19,16 @@ function MPSKit.expectation_value(
     return sum(term_vals)
 end
 MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv) = expectation_value(peps, O, peps, env)
+function MPSKit.expectation_value(
+        state::InfinitePEPO, O::LocalOperator, env::CTMRGEnv
+    )
+    checklattice(state, O)
+    term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+        ρ = reduced_densitymatrix(inds, state, env)
+        return trmul(operator, ρ)
+    end
+    return sum(term_vals)
+end
 
 """
     expectation_value(pf::InfinitePartitionFunction, inds => O, env::CTMRGEnv)
