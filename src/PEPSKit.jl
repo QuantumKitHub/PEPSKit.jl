@@ -96,11 +96,11 @@ export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
+export single_site_fidelity_initialize
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
 export su_iter, su3site_iter, simpleupdate, SimpleUpdate
-export maximize_fidelity!, single_site_fidelity_initialize
 
 export InfiniteSquareNetwork
 export InfinitePartitionFunction
