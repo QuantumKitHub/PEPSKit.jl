@@ -4,11 +4,8 @@ using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-using PEPSKit: infinite_temperature_density_matrix, _fuse_ids
 
 Random.seed!(10235876)
-σx = σˣ(Float64, Trivial)
-σz = σᶻ(Float64, Trivial)
 
 # Benchmark data of [σx, σz] from HOTRG
 # Physical Review B 86, 045139 (2012) Fig. 15-16
@@ -35,21 +32,18 @@ function converge_env(state, χ::Int)
     return env
 end
 
-function measure_mag(pepo::InfinitePEPO, pf::InfinitePartitionFunction, env::CTMRGEnv)
+function measure_mag(pepo::InfinitePEPO, env::CTMRGEnv; purified::Bool = false)
     r, c = 1, 1
-    @tensor M[w s; n e] := σx[p2; p1] * (pepo.A[r, c, 1])[p1 p2; n e s w]
-    magx = expectation_value(pf, (r, c) => M, env)
-    @tensor M[w s; n e] := σz[p2; p1] * (pepo.A[r, c, 1])[p1 p2; n e s w]
-    magz = expectation_value(pf, (r, c) => M, env)
-    return [magx, magz]
-end
-
-function measure_mag(peps::InfinitePEPS, env::CTMRGEnv)
-    lattice = collect(space(t, 1) for t in peps.A)
-    O = LocalOperator(lattice, ((1, 1),) => _fuse_ids(σx))
-    magx = expectation_value(peps, O, env)
-    O = LocalOperator(lattice, ((1, 1),) => _fuse_ids(σz))
-    magz = expectation_value(peps, O, env)
+    lattice = physicalspace(pepo)
+    Mx = LocalOperator(lattice, ((r, c),) => σˣ(Float64, Trivial))
+    Mz = LocalOperator(lattice, ((r, c),) => σᶻ(Float64, Trivial))
+    if purified
+        magx = expectation_value(pepo, Mx, pepo, env)
+        magz = expectation_value(pepo, Mz, pepo, env)
+    else
+        magx = expectation_value(pepo, Mx, env)
+        magz = expectation_value(pepo, Mz, env)
+    end
     return [magx, magz]
 end
 
@@ -69,24 +63,21 @@ alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)
 # PEPO approach
 ## results at β, or T = 2.5
 pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = true)
-pf = InfinitePartitionFunction(pepo)
-env = converge_env(pf, 16)
-result_β = measure_mag(pepo, pf, env)
+env = converge_env(InfinitePartitionFunction(pepo), 16)
+result_β = measure_mag(pepo, env)
 @info "Magnetization at T = $(1 / β)" result_β
 @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
 ## results at 2β, or T = 1.25
 pepo, wts, = simpleupdate(pepo, ham, alg, wts; gate_bothsides = true)
-pf = InfinitePartitionFunction(pepo)
-env = converge_env(pf, 16)
-result_2β = measure_mag(pepo, pf, env)
+env = converge_env(InfinitePartitionFunction(pepo), 16)
+result_2β = measure_mag(pepo, env)
 @info "Magnetization at T = $(1 / (2β))" result_2β
 @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
 
 # purification approach (should match 2β result)
 pepo, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = false)
-peps = InfinitePEPS(pepo)
-env = converge_env(peps, 8)
-result_2β′ = measure_mag(peps, env)
+env = converge_env(InfinitePEPS(pepo), 8)
+result_2β′ = measure_mag(pepo, env; purified = true)
 @info "Magnetization at T = $(1 / (2β)) (purification approach)" result_2β′
 @test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)
