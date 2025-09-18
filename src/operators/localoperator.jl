@@ -79,16 +79,16 @@ function checklattice(::Type{Bool}, arg1, arg2, args...)
     return checklattice(Bool, arg1, arg2) && checklattice(Bool, arg2, args...)
 end
 function checklattice(::Type{Bool}, H1::LocalOperator, H2::LocalOperator)
-    return H1.lattice == H2.lattice
+    return physicalspace(H1) == physicalspace(H2)
 end
 function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalOperator)
-    return size(peps) == size(O.lattice)
+    return physicalspace(peps) == physicalspace(O)
 end
 function checklattice(::Type{Bool}, H::LocalOperator, peps::InfinitePEPS)
     return checklattice(Bool, peps, H)
 end
 function checklattice(::Type{Bool}, pepo::InfinitePEPO, O::LocalOperator)
-    return size(pepo, 3) == 1 && reshape(physicalspace(pepo), size(pepo, 1), size(pepo, 2)) == physicalspace(O)
+    return size(pepo, 3) == 1 && physicalspace(pepo) == physicalspace(O)
 end
 function checklattice(::Type{Bool}, O::LocalOperator, pepo::InfinitePEPO)
     return checklattice(Bool, pepo, O)
@@ -144,6 +144,13 @@ end
 Base.:-(O::LocalOperator) = -1 * O
 Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 
+# VectorInterface
+# ---------------
+
+function VI.scalartype(::Type{<:LocalOperator{T}}) where {T}
+    return promote_type((scalartype(last(fieldtypes(p))) for p in fieldtypes(T))...)
+end
+
 # Rotation
 # ----------------------
 
@@ -195,9 +202,10 @@ TensorKit.spacetype(::Type{T}) where {S, T <: LocalOperator{<:Any, S}} = S
 end
 
 """
-$(SIGNATURES)
+    _fuse_ids(op::AbstractTensorMap{T, S, N, N}, [Ps::NTuple{N, S}]) where {T, S, N}
 
-Fuse identities on auxiliary physical spaces into a given operator.
+Fuse identities on auxiliary physical spaces `Ps` into a given operator `op`.
+When `Ps` is not specified, it defaults to the domain spaces of `op`.
 """
 function _fuse_ids(op::AbstractTensorMap{T, S, N, N}, Ps::NTuple{N, S}) where {T, S, N}
     # make isomorphisms
@@ -206,6 +214,9 @@ function _fuse_ids(op::AbstractTensorMap{T, S, N, N}, Ps::NTuple{N, S}) where {T
     end
     # and fuse them into the operator
     return _fuse_isomorphisms(op, fs)
+end
+function _fuse_ids(op::AbstractTensorMap{T, S, N, N}) where {T, S, N}
+    return _fuse_ids(op, Tuple(domain(op)))
 end
 
 """
