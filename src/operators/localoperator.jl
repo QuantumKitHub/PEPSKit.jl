@@ -147,8 +147,8 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # VectorInterface
 # ---------------
 
-function VI.scalartype(O::LocalOperator)
-    return promote_type((scalartype(t.second) for t in O.terms)...)
+function VI.scalartype(::Type{<:LocalOperator{T}}) where {T}
+    return promote_type((scalartype(last(fieldtypes(p))) for p in fieldtypes(T))...)
 end
 
 # Rotation
