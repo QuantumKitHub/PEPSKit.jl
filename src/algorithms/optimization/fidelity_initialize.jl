@@ -29,7 +29,9 @@ function single_site_fidelity_initialize(
 end
 
 # maximal virtual space over unit cell
-_spacemax(peps::InfinitePEPS) = argmax(dim, map(p -> argmax(dim, domain(p)), unitcell(peps)))
+function _spacemax(peps::InfinitePEPS)
+    return reduce(supremum, map(p -> supremum(domain(p)[1], domain(p)[2]), unitcell(peps)))
+end
 
 """
     approximate!(
@@ -105,7 +107,7 @@ end
 
 
 """
-    _∂local_norm(peps::InfinitePEPS, env::CTMRGEnv)
+$(SIGNATURES)
 
 Compute the `InfinitePEPS` resulting from removing the bra PEPS tensors in `_local_norm`.
 """

@@ -1,5 +1,6 @@
 using TensorKit
 using PEPSKit
+using PEPSKit: _spacemax
 using Random
 using Test
 
@@ -16,4 +17,20 @@ using Test
         boundary_alg = (; tol = 1.0e-6, maxiter = 20, verbosity = 1)
     )
     @test peps_single isa InfinitePEPS
+end
+
+_spacemax(peps::InfinitePEPS) = reduce(supremum, map(p -> (dim, domain(p)), PEPSKit.unitcell(peps)))
+
+@testset "_spacemax for non-uniform unit cell and symmetry sectors" begin
+    Pspaces = fill(Z2Space(0 => 1, 1 => 1), (2, 2))
+    Nspaces = [
+        Z2Space(0 => 2, 1 => 3) Z2Space(0 => 2, 1 => 5)
+        Z2Space(0 => 4, 1 => 3) Z2Space(0 => 2, 1 => 1)
+    ]
+    Espaces = [
+        Z2Space(0 => 6, 1 => 3) Z2Space(0 => 2, 1 => 1)
+        Z2Space(0 => 2, 1 => 3) Z2Space(0 => 2, 1 => 4)
+    ]
+    peps = InfinitePEPS(Pspaces, Nspaces, Espaces)
+    @test _spacemax(peps) == Z2Space(0 => 6, 1 => 5)
 end
