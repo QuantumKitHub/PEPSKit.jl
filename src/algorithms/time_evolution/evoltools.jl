@@ -1,7 +1,7 @@
 const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
 
 function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
-    T = promote_type((scalartype(t.second) for t in H.terms)...)
+    T = scalartype(H)
     A = map(physicalspace(H)) do Vp
         ψ = permute(TensorKit.id(T, Vp), (1, 2))
         Vv = oneunit(Vp) # trivial (1D) virtual space
