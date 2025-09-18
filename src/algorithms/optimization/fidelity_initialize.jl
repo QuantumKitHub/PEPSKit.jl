@@ -14,8 +14,8 @@ The `kwargs...` are passed onto the [`maximize_fidelity!`](@ref) call, refer to 
 for further details.
 """
 function single_site_fidelity_initialize(
-        peps₀::InfinitePEPS, envspace, bondspace = _maxspace(peps₀);
-        noise_amp = 1.0e-2, kwargs...
+        peps₀::InfinitePEPS, envspace, bondspace = _spacemax(peps₀);
+        noise_amp = 1.0e-1, kwargs...
     )
     @assert allequal(map(p -> space(p, 1), unitcell(peps₀))) "PEPS must have uniform physical spaces"
 
@@ -23,9 +23,9 @@ function single_site_fidelity_initialize(
     peps_single = noise_amp * InfinitePEPS(randn, scalartype(peps₀), physspace, bondspace) # single-site unit cell with random noise
 
     peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps₀))) # fill peps₀ unit cell with peps_singles
-    approximate!(peps_uc, peps₀, envspace; kwargs...) # modifies peps_single in-place
+    peps_single, env_single = approximate!(peps_uc, peps₀, envspace; kwargs...) # modifies peps_single in-place
 
-    return peps_single
+    return peps_single, env_single
 end
 
 # maximal virtual space over unit cell
@@ -44,40 +44,49 @@ algorithm is specified via the `boundary_alg` `NamedTuple`.
 """
 function MPSKit.approximate!(
         pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
-        maxiter = 5, tol = 1.0e-3, boundary_alg = (; verbosity = 1)
+        maxiter = 10, tol = 1.0e-3, boundary_alg = (; verbosity = 1)
     )
     @assert size(pepsdst) == size(pepssrc) "incompatible unit cell sizes"
 
     # absorb src PEPS tensors into dst tensors in-place
     for (pdst, psrc) in zip(unitcell(pepsdst), unitcell(pepssrc))
-        absorb(pdst, psrc)
+        absorb!(pdst, psrc)
     end
 
-    peps = pepssrc
-    peps′ = pepsdst
+    # normalize reference PEPS
+    peps₀ = pepssrc # smaller bond spaces
+    env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀; boundary_alg...)
+    peps₀ /= sqrt(abs(_local_norm(peps₀, peps₀, env₀))) # normalize to ensure that fidelity is bounded by 1
+
+    # normalize maximizer PEPS
+    peps = pepsdst
     env, = leading_boundary(CTMRGEnv(peps, envspace), peps; boundary_alg...)
-    peps /= sqrt(_local_norm(peps, peps, env)) # normalize PEPSs to ensure that fidelity is bounded by 1
+    peps /= sqrt(abs(_local_norm(peps, peps, env)))
+
+    nw₀ = InfiniteSquareNetwork(peps₀, peps)
+    envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀; boundary_alg...)
+    peps′ = _∂local_norm(peps₀, envnw)
     fid = 0.0
     for i in 1:maxiter
-        # normalize updated PEPS and contract ⟨ψ₁|ψ₂⟩
-        env′, = leading_boundary(CTMRGEnv(peps′, envspace), peps′; boundary_alg...)
-        peps′ /= sqrt(_local_norm(peps′, peps′, env′))
-        nw = InfiniteSquareNetwork(peps′, peps)
-        envnw, = leading_boundary(CTMRGEnv(nw, envspace), nw; boundary_alg...)
-
-        # remove peps′ from fidelity network and compute fidelity
-        ∂norm = _∂local_norm(peps′, envnw)
-        fid′ = abs2(_local_norm(peps, ∂norm))
+        # compute fidelity from ∂norm
+        fid′ = abs2(_local_norm(peps, peps′))
         @info @sprintf("Fidmax. iter %d:   fid = %.4e   Δfid = %.4e", i, fid′, fid′ - fid)
         abs(1 - fid′) ≤ tol && break
 
-        # update PEPSs
+        # contract boundary of fidelity network
+        envnw, = leading_boundary(env, InfiniteSquareNetwork(peps, peps′); boundary_alg...)
+        ∂norm = _∂local_norm(peps, envnw)
+
+        # renormalize current PEPS
         peps = peps′
+        env, = leading_boundary(env, peps; boundary_alg...)
+        peps /= sqrt(abs(_local_norm(peps, peps, env)))
+
         peps′ = ∂norm
         fid = fid′
     end
 
-    return peps′
+    return peps, env
 end
 
 """
