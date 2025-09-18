@@ -33,7 +33,7 @@ pkg> add PEPSKit
 - Contraction of infinite PEPS using the corner transfer matrix renormalization group (CTMRG) and boundary MPS methods
 - Native support for symmetric tensors through [TensorKit](https://github.com/Jutho/TensorKit.jl), including fermionic tensors
 - PEPS optimization using automatic differentiation (AD) provided through [Zygote](https://fluxml.ai/Zygote.jl/stable/)
-- Imaginary time evolution algorithms
+- Imaginary time evolution algorithms (including ground state and finite-temperature simulations)
 - Support for PEPS with generic unit cells
 - Support for classical 2D partition functions and projected entangled-pair operators (PEPOs)
 - Extensible system for custom states, operators and algorithms
