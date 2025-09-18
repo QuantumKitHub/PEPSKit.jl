@@ -19,8 +19,6 @@ using Test
     @test peps_single isa InfinitePEPS
 end
 
-_spacemax(peps::InfinitePEPS) = reduce(supremum, map(p -> (dim, domain(p)), PEPSKit.unitcell(peps)))
-
 @testset "_spacemax for non-uniform unit cell and symmetry sectors" begin
     Pspaces = fill(Z2Space(0 => 1, 1 => 1), (2, 2))
     Nspaces = [
