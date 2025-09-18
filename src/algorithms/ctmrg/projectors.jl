@@ -203,48 +203,13 @@ PROJECTOR_SYMBOLS[:randomized] = RandomizedProjector
 
 svd_algorithm(alg::RandomizedProjector) = alg.svd_alg
 
-#=
-# TBD is this needed?
-function RandomizedProjector(;
-        rng = Random.default_rng(),
-        svd_alg = (;),
-        trscheme = (;),
-        oversampling = 10,
-        max_full = 100,
-        verbosity = Defaults.projector_verbosity,
-    )
-
-    # parse SVD forward & rrule algorithm
-    svd_algorithm = _alg_or_nt(SVDAdjoint, svd_alg)
-
-    # parse truncation scheme
-    truncation_scheme = if trscheme isa TruncationScheme
-        trscheme
-    elseif trscheme isa NamedTuple
-        _TruncationScheme(; trscheme...)
-    else
-        throw(ArgumentError("unknown trscheme $trscheme"))
-    end
-
-    return RandomizedProjector(
-        svd_algorithm, truncation_scheme, rng, oversampling, max_full, verbosity
-    )
-end
-=#
-
+_default_randomized_oversampling = 10
+_default_randomized_max_full = 100
 
 # needed as default interface in PEPSKit.ProjectorAlgorithm
 function RandomizedProjector(svd_algorithm, trscheme, verbosity)
-    @show "Hi RandomizedProjector"
-    @show which(
-        RandomizedProjector, typeof.(
-            (
-                svd_algorithm, trscheme, Random.default_rng(), 10, 100, verbosity,
-            )
-        )
-    )
     return RandomizedProjector(
-        svd_algorithm, trscheme, Random.default_rng(), 10, 100, verbosity
+        svd_algorithm, trscheme, Random.default_rng(), _default_randomized_oversampling, _default_randomized_max_full, verbosity
     )
 end
 
