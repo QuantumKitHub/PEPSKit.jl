@@ -125,6 +125,25 @@ function SUWeight(peps::InfinitePEPS)
     return SUWeight(Nspaces, Espaces)
 end
 
+"""
+    SUWeight(pepo::InfinitePEPO)
+
+Create an SUWeight for a given one-layer InfinitePEPO.
+The weights are initialized as identity matrices of element type `Float64`.
+"""
+function SUWeight(pepo::InfinitePEPO)
+    @assert size(pepo, 3) == 1
+    Nspaces = map(@view(pepo.A[:, :, 1])) do t
+        V = north_virtualspace(t)
+        isdual(V) ? V' : V
+    end
+    Espaces = map(@view(pepo.A[:, :, 1])) do t
+        V = east_virtualspace(t)
+        isdual(V) ? V' : V
+    end
+    return SUWeight(Nspaces, Espaces)
+end
+
 ## Shape and size
 Base.size(W::SUWeight) = size(W.data)
 Base.size(W::SUWeight, i) = size(W.data, i)
@@ -172,11 +191,12 @@ function Base.show(io::IO, ::MIME"text/plain", wts::SUWeight)
 end
 
 """
-    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool=false)
-    absorb_weight(t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::NTuple{N,Int}; inv::Bool=false)
+    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false)
+    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false)
 
-Absorb or remove environment weight on an axis of vertex tensor `t`  known to be located at
-position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, col)` are
+Absorb or remove environment weight on an axis of tensor `t` known to be located at
+position (`row`, `col`) in the unit cell of an InfinitePEPS or InfinitePEPO. 
+Weights around the tensor at `(row, col)` are
 ```
                     |
                 [2,r,c]
@@ -189,7 +209,7 @@ position (`row`, `col`) in the unit cell. Weights around the tensor at `(row, co
 
 ## Arguments
 
-- `t::T` : The vertex tensor to which the weight will be absorbed. The first axis of `t` should be the physical axis.
+- `t::PT` : PEPSTensor or PEPOTensor to which the weight will be absorbed. 
 - `weights::SUWeight` : All simple update weights.
 - `row::Int` : The row index specifying the position in the tensor network.
 - `col::Int` : The column index specifying the position in the tensor network.
@@ -210,11 +230,13 @@ absorb_weight(t, weights, 2, 3, 2; inv=true)
 ```
 """
 function absorb_weight(
-        t::PEPSTensor, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        row::Int, col::Int, ax::Int; inv::Bool = false
     )
     Nr, Nc = size(weights)[2:end]
+    nin, nout, ntol = numin(t), numout(t), numind(t)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert 1 <= ax <= 4
+    @assert 1 <= ax <= nin
     pow = inv ? -1 / 2 : 1 / 2
     wt = sdiag_pow(
         if ax == NORTH
@@ -228,22 +250,18 @@ function absorb_weight(
         end,
         pow,
     )
-    axp1 = ax + 1
-    t_idx = collect((n - 1 == ax) ? 1 : -n for n in 1:5)
-    wt_idx = if isdual(space(t, ax + 1))
-        [1, -axp1] # t ← wt
+    t_idx = [(n - nout == ax) ? 1 : -n for n in 1:ntol]
+    ax′ = ax + nout
+    wt_idx = if isdual(space(t, ax′))
+        [1, -ax′] # t ← wt
     else
-        [-axp1, 1] # t → wt
+        [-ax′, 1] # t → wt
     end
-    return permute(ncon((t, wt), (t_idx, wt_idx)), ((1,), Tuple(2:5)))
+    return permute(ncon((t, wt), (t_idx, wt_idx)), (Tuple(1:nout), Tuple((nout + 1):ntol)))
 end
 function absorb_weight(
-        t::PEPSTensor,
-        weights::SUWeight,
-        row::Int,
-        col::Int,
-        ax::NTuple{N, Int};
-        inv::Bool = false,
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false
     ) where {N}
     t2 = copy(t)
     for a in ax

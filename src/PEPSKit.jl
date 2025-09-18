@@ -15,7 +15,8 @@ using LoggingExtras
 
 using MPSKit
 using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
-import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
+import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
+import MPSKit: infinite_temperature_density_matrix
 
 using MPSKitModels
 using FiniteDifferences
