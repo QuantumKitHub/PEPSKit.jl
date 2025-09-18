@@ -49,7 +49,7 @@ end
 
 Nr, Nc = 2, 2
 ham = tfising_model(Float64, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
-pepo0 = infinite_temperature_density_matrix(ham)
+pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 
 trscheme_pepo = truncdim(8) & truncerr(1.0e-12)
