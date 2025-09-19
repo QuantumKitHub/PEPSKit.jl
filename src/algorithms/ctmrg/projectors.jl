@@ -194,8 +194,9 @@ struct RandomizedProjector{S, T, R} <: ProjectorAlgorithm
     svd_alg::S
     trscheme::T
     rng::R
-    oversampling::Int64
-    max_full::Int64
+    oversampling::Int
+    max_full::Int
+    n_subspace_iter::Int
     verbosity::Int
 end
 
@@ -205,11 +206,13 @@ svd_algorithm(alg::RandomizedProjector) = alg.svd_alg
 
 _default_randomized_oversampling = 10
 _default_randomized_max_full = 100
+_default_n_subspace_iter = 2
 
 # needed as default interface in PEPSKit.ProjectorAlgorithm
 function RandomizedProjector(svd_algorithm, trscheme, verbosity)
     return RandomizedProjector(
-        svd_algorithm, trscheme, Random.default_rng(), _default_randomized_oversampling, _default_randomized_max_full, verbosity
+        svd_algorithm, trscheme, Random.default_rng(), _default_randomized_oversampling,
+        _default_randomized_max_full, _default_n_subspace_iter, verbosity
     )
 end
 
@@ -229,11 +232,17 @@ end
 function randomized_range_finder(A::AbstractTensorMap, alg::RandomizedProjector, randomized_space)
     Q = TensorMap{eltype(A)}(undef, domain(A) ← randomized_space)
     foreach(blocks(Q)) do (s, b)
+        Aad = A'
         m, n = size(b)
         if m <= alg.max_full
             b .= LinearAlgebra.I(m)
         else
             Ω = randn(alg.rng, eltype(A), domain(A) ← Vect[sectortype(A)](s => n))
+            for _ in 1:alg.n_subspace_iter
+                Y = A * Ω
+                Qs, _ = leftorth!(Y)
+                Ω, _ = leftorth!(Aad * Qs)
+            end
             Y = A * Ω
             Qs, _ = leftorth!(Y)
             b .= block(Qs, s)
@@ -248,6 +257,7 @@ function compute_projector(fq, coordinate, last_space, alg::RandomizedProjector)
     randomized_space = random_domain(alg, full_space, last_space)
     Q = randomized_range_finder(fq, alg, randomized_space)
     B = Q' * fq
+    normalize!(B)  # TODO better way?
 
     svd_alg = svd_algorithm(alg, coordinate)
     U′, S, V, info = tsvd!(B, svd_alg; trunc = alg.trscheme)
