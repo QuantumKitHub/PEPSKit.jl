@@ -10,7 +10,7 @@ CTMRG contractions. By default, the maximal bond space of `peps₀` is used for 
 legs of the single-site PEPS.
 
 The single-site PEPS is intialized with Gaussian nosie and multiplied by `noise_amp`.
-The `kwargs...` are passed onto the [`maximize_fidelity!`](@ref) call, refer to the docs
+The `kwargs...` are passed onto the [`approximate!`](@ref) call, refer to the docs
 for further details.
 """
 function single_site_fidelity_initialize(
