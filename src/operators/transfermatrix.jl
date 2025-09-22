@@ -138,7 +138,7 @@ virtualspace(O::InfiniteTransferMatrix, i, dir) = virtualspace(O[i], dir)
         virtualspaces::AbstractArray{<:ElementarySpace,2}
     )
 
-Inialize a boundary MPS for the transfer operator `O` by specifying an array of virtual
+Initialize a boundary MPS for the transfer operator `O` by specifying an array of virtual
 spaces consistent with the unit cell.
 """
 function initialize_mps(O::Union{InfiniteTransferMatrix, MultilineTransferMatrix}, arg) # initialize(f=randn, T=scalartype(O), O, ...)
