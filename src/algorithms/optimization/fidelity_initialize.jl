@@ -1,7 +1,6 @@
 """
     single_site_fidelity_initialize(
-        peps₀::InfinitePEPS, envspace, [bondspace = _maxspace(peps₀)];
-        noise_amp = 1.0e-2, kwargs...
+        peps₀::InfinitePEPS, envspace, [bondspace = _maxspace(peps₀)]; kwargs...
     )
 
 Generate a single-site unit cell PEPS from a (possibly) multi-site `peps₀` by maximizing
@@ -9,9 +8,10 @@ the fidelity w.r.t. `peps₀`. Here, `envspace` determines the virtual environme
 CTMRG contractions. By default, the maximal bond space of `peps₀` is used for all virtual
 legs of the single-site PEPS.
 
-The single-site PEPS is intialized with Gaussian nosie and multiplied by `noise_amp`.
-The `kwargs...` are passed onto the [`approximate!`](@ref) call, refer to the docs
-for further details.
+## Keyword arguments
+- `noise_amp=1.0-1` : Gaussian noise amplitude of initial single-site PEPS
+
+Additionally, all keyword arguments of [`approximate!`](@ref) can be passed.
 """
 function single_site_fidelity_initialize(
         peps₀::InfinitePEPS, envspace, bondspace = _spacemax(peps₀);
@@ -36,9 +36,6 @@ end
 @doc """
     approximate(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
     approximate!(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
-        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
-        maxiter = 5, tol = 1.0e-3, boundary_alg=(; verbosity=1)
-    )
 
 Approximate `pepssrc` with `pepsdst` by iteratively maximizing their fidelity where the
 contents of `pepssrc` are embedded into `pepsdst`. To contract the respective networks, the
