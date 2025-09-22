@@ -33,17 +33,24 @@ function _spacemax(peps::InfinitePEPS)
     return reduce(supremum, map(p -> supremum(domain(p)[1], domain(p)[2]), unitcell(peps)))
 end
 
-"""
-    approximate!(
+@doc """
+    approximate(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
+    approximate!(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
         pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
         maxiter = 5, tol = 1.0e-3, boundary_alg=(; verbosity=1)
     )
 
 Approximate `pepssrc` with `pepsdst` by iteratively maximizing their fidelity where the
 contents of `pepssrc` are embedded into `pepsdst`. To contract the respective networks, the
-specified `envspace` is used on the environment bonds and kept fixed. The CTMRG contraction
-algorithm is specified via the `boundary_alg` `NamedTuple`.
+specified `envspace` is used on the environment bonds and kept fixed.
+
+## Keyword arguments
+- `maxiter=5` : Maximal number of maximization iterations
+- `tol=1.0e-3` : Absolute convergence tolerance for the infidelity
+- `boundary_alg=(; verbosity=2)` : CTMRG contraction algorithm, either specified as a `NamedTuple` or `CTMRGAlgorithm`
 """
+approximate, approximate!
+
 function MPSKit.approximate!(
         pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
         maxiter = 10, tol = 1.0e-3, boundary_alg = (; verbosity = 1)
@@ -57,6 +64,7 @@ function MPSKit.approximate!(
 
     # normalize reference PEPS
     peps₀ = pepssrc # smaller bond spaces
+    boundary_alg = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
     env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀; boundary_alg...)
     peps₀ /= sqrt(abs(_local_norm(peps₀, peps₀, env₀))) # normalize to ensure that fidelity is bounded by 1
 
@@ -89,6 +97,9 @@ function MPSKit.approximate!(
     end
 
     return peps, env
+end
+function MPSKit.approximate(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
+    return approximate!(deepcopy(pepsdst), pepssrc, envspace; kwargs...)
 end
 
 """
