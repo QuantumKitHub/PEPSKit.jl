@@ -72,10 +72,10 @@ function MPSKit.approximate!(
         env, = leading_boundary(CTMRGEnv(peps, envspace), peps, boundary_alg)
         peps /= sqrt(abs(_local_norm(peps, peps, env)))
 
+        approximate_loginit!(log, one(real(scalartype(peps))), zero(real(scalartype(peps))))
         nw₀ = InfiniteSquareNetwork(peps₀, peps)
         envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, boundary_alg)
         peps′ = _∂local_norm(peps₀, envnw)
-        approximate_loginit!(log, one(real(scalartype(peps))), zero(real(scalartype(peps))))
         for iter in 1:maxiter
             # compute fidelity from ∂norm
             fid = abs2(_local_norm(peps, peps′))
@@ -86,6 +86,7 @@ function MPSKit.approximate!(
             end
             if iter == maxiter
                 approximate_logcancel!(log, iter, infid, fid)
+                break
             else
                 approximate_logiter!(log, iter, infid, fid)
             end
