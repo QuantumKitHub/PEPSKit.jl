@@ -112,15 +112,45 @@ function InfinitePEPO(
     )
 end
 
+"""
+$(SIGNATURES)
+
+Initialize a PEPS fixed point for a PEPS transfer operator `O` by specifying arrays of
+north and east virtual spaces consistent with the unit cell.
+"""
+function initialize_peps(O::InfinitePEPO, Nspaces, Espaces)
+    return initialize_peps(randn, scalartype(O), O, Nspaces, Espaces)
+end
 function initialize_peps(
-        T::InfinitePEPO{<:PEPOTensor{S}}, vspace::S
-    ) where {S <: ElementarySpace}
-    Pspaces = map(Iterators.product(axes(T, 1), axes(T, 2))) do (r, c)
-        return domain_physicalspace(T, r, c)
+        f,
+        T,
+        O::InfinitePEPO,
+        Nspaces::M,
+        Espaces::M = Nspaces,
+    ) where {M <: AbstractMatrix{<:ElementarySpaceLike}}
+    size(Nspaces) == (size(O, 1), size(O, 2)) || throw(ArgumentError("Invalid Nspaces size"))
+    size(Espaces) == (size(O, 1), size(O, 2)) || throw(ArgumentError("Invalid Espaces size"))
+
+    Pspaces = map(Iterators.product(axes(O, 1), axes(O, 2))) do (r, c)
+        return domain_physicalspace(O, r, c)
     end
-    Nspaces = repeat([vspace], size(T, 1), size(T, 2))
-    Espaces = repeat([vspace], size(T, 1), size(T, 2))
-    return InfinitePEPS(Pspaces, Nspaces, Espaces)
+
+    return InfinitePEPS(f, T, Pspaces, Nspaces, Espaces)
+end
+function initialize_peps(
+        f,
+        T,
+        O::InfinitePEPO,
+        Nspace::ElementarySpaceLike,
+        Espace::ElementarySpaceLike = Nspace,
+    )
+    return initialize_peps(
+        f,
+        T,
+        O,
+        fill(Nspace, size(O, 1), size(O, 2)),
+        fill(Espace, size(O, 1), size(O, 2)),
+    )
 end
 
 ## Unit cell interface
