@@ -23,9 +23,9 @@ function single_site_fidelity_initialize(
     peps_single = noise_amp * InfinitePEPS(randn, scalartype(peps₀), physspace, bondspace) # single-site unit cell with random noise
 
     peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps₀))) # fill peps₀ unit cell with peps_singles
-    peps_single, env_single = approximate!(peps_uc, peps₀, envspace; kwargs...) # modifies peps_single in-place
+    peps_single, = approximate!(peps_uc, peps₀, envspace; kwargs...) # modifies peps_single in-place
 
-    return peps_single, env_single
+    return InfinitePEPS([peps_single[1];;])
 end
 
 # maximal virtual space over unit cell
