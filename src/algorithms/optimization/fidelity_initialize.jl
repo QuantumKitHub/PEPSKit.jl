@@ -53,7 +53,7 @@ approximate, approximate!
 
 function MPSKit.approximate!(
         pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
-        maxiter = 10, tol = 1.0e-3, boundary_alg = (; verbosity = 1)
+        maxiter = 10, tol = 1.0e-3, verbosity = 3, boundary_alg = (; verbosity = 1)
     )
     @assert size(pepsdst) == size(pepssrc) "incompatible unit cell sizes"
 
@@ -62,45 +62,70 @@ function MPSKit.approximate!(
         absorb!(pdst, psrc)
     end
 
-    # normalize reference PEPS
-    peps₀ = pepssrc # smaller bond spaces
-    boundary_alg = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
-    env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀; boundary_alg...)
-    peps₀ /= sqrt(abs(_local_norm(peps₀, peps₀, env₀))) # normalize to ensure that fidelity is bounded by 1
+    log = MPSKit.IterLog("Approx.")
+    return LoggingExtras.withlevel(; verbosity) do
+        # normalize reference PEPS
+        peps₀ = pepssrc # smaller bond spaces
+        boundary_alg = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
+        env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀, boundary_alg)
+        peps₀ /= sqrt(abs(_local_norm(peps₀, peps₀, env₀))) # normalize to ensure that fidelity is bounded by 1
 
-    # normalize maximizer PEPS
-    peps = pepsdst
-    env, = leading_boundary(CTMRGEnv(peps, envspace), peps; boundary_alg...)
-    peps /= sqrt(abs(_local_norm(peps, peps, env)))
-
-    nw₀ = InfiniteSquareNetwork(peps₀, peps)
-    envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀; boundary_alg...)
-    peps′ = _∂local_norm(peps₀, envnw)
-    fid = 0.0
-    for i in 1:maxiter
-        # compute fidelity from ∂norm
-        fid′ = abs2(_local_norm(peps, peps′))
-        @info @sprintf("Fidmax. iter %d:   fid = %.4e   Δfid = %.4e", i, fid′, fid′ - fid)
-        abs(1 - fid′) ≤ tol && break
-
-        # contract boundary of fidelity network
-        envnw, = leading_boundary(env, InfiniteSquareNetwork(peps, peps′); boundary_alg...)
-        ∂norm = _∂local_norm(peps, envnw)
-
-        # renormalize current PEPS
-        peps = peps′
-        env, = leading_boundary(env, peps; boundary_alg...)
+        # normalize maximizer PEPS
+        peps = pepsdst
+        env, = leading_boundary(CTMRGEnv(peps, envspace), peps, boundary_alg)
         peps /= sqrt(abs(_local_norm(peps, peps, env)))
 
-        peps′ = ∂norm
-        fid = fid′
-    end
+        nw₀ = InfiniteSquareNetwork(peps₀, peps)
+        envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, boundary_alg)
+        peps′ = _∂local_norm(peps₀, envnw)
+        approximate_loginit!(log, one(real(scalartype(peps))), zero(real(scalartype(peps))))
+        for iter in 1:maxiter
+            # compute fidelity from ∂norm
+            fid = abs2(_local_norm(peps, peps′))
+            infid = 1 - fid
+            if abs(infid) ≤ tol
+                approximate_logfinish!(log, iter, infid, fid)
+                break
+            end
+            if iter == maxiter
+                approximate_logcancel!(log, iter, infid, fid)
+            else
+                approximate_logiter!(log, iter, infid, fid)
+            end
 
-    return peps, env
+            # contract boundary of fidelity network
+            envnw, = leading_boundary(env, InfiniteSquareNetwork(peps, peps′), boundary_alg)
+            ∂norm = _∂local_norm(peps, envnw)
+
+            # renormalize current PEPS
+            peps = peps′
+            env, = leading_boundary(env, peps, boundary_alg)
+            peps /= sqrt(abs(_local_norm(peps, peps, env)))
+
+            peps′ = ∂norm
+        end
+
+        return peps, env
+    end
 end
 function MPSKit.approximate(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
     return approximate!(deepcopy(pepsdst), pepssrc, envspace; kwargs...)
 end
+
+# custom fidelity maximization logging
+function approximate_loginit!(log, infid, fid)
+    return @infov 2 loginit!(log, infid, fid)
+end
+function approximate_logiter!(log, iter, infid, fid)
+    return @infov 3 logiter!(log, iter, infid, fid)
+end
+function approximate_logfinish!(log, iter, infid, fid)
+    return @infov 2 logfinish!(log, iter, infid, fid)
+end
+function approximate_logcancel!(log, iter, infid, fid)
+    return @warnv 1 logcancel!(log, iter, infid, fid)
+end
+
 
 """
 $(SIGNATURES)
