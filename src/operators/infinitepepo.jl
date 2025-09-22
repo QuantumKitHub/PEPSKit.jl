@@ -13,19 +13,12 @@ struct InfinitePEPO{T <: PEPOTensor}
     function InfinitePEPO(A::Array{T, 3}) where {T <: PEPOTensor}
         # space checks
         for (d, w, h) in Tuple.(CartesianIndices(A))
-            codomain_physicalspace(A[d, w, h]) ==
-                domain_physicalspace(A[d, w, _next(h, end)]) ||
+            codomain_physicalspace(A[d, w, h]) == domain_physicalspace(A[d, w, _next(h, end)]) ||
                 throw(SpaceMismatch("Physical space at site $((d, w, h)) does not match."))
             north_virtualspace(A[d, w, h]) == south_virtualspace(A[_prev(d, end), w, h])' ||
-                throw(
-                SpaceMismatch(
-                    "North virtual space at site $((d, w, h)) does not match."
-                ),
-            )
+                throw(SpaceMismatch("North virtual space at site $((d, w, h)) does not match."))
             east_virtualspace(A[d, w, h]) == west_virtualspace(A[d, _next(w, end), h])' ||
-                throw(
-                SpaceMismatch("East virtual space at site $((d, w, h)) does not match.")
-            )
+                throw(SpaceMismatch("East virtual space at site $((d, w, h)) does not match."))
         end
         return new{T}(A)
     end
