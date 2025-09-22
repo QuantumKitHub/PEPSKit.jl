@@ -200,7 +200,7 @@ using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor inter
 ## Keyword Arguments
 
 - `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. 
-- `gate_bothsides::Bool=true`: (Effective only for PEPO evolution)
+- `gate_bothsides::Bool=true`: (Effective only for PEPO evolution) If true, apply the Trotter gate to both side of the PEPO. Otherwise, the gate is only applied to the physical codomain legs. 
 - `force_3site::Bool=false`: Forces the use of the 3-site simple update algorithm, even if the Hamiltonian contains only nearest-neighbor terms.
 - `check_interval::Int=500`: Specifies the number of evolution steps between printing progress information.
 
@@ -220,7 +220,7 @@ function simpleupdate(
     @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
     # TODO: check SiteDependentTruncation is compatible with bipartite structure
     if use_3site
-        return _simpleupdate3site(state, ham, alg, env; check_interval)
+        return _simpleupdate3site(state, ham, alg, env; gate_bothsides, check_interval)
     else
         return _simpleupdate2site(state, ham, alg, env; bipartite, gate_bothsides, check_interval)
     end

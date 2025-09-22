@@ -5,6 +5,7 @@ using LinearAlgebra
 using Random
 import MPSKitModels: hubbard_space
 using PEPSKit: sdiag_pow, _cluster_truncate!
+using MPSKit: GenericMPSTensor, MPSBondTensor
 include("cluster_tools.jl")
 
 Vspaces = [
@@ -28,7 +29,7 @@ Vspaces = [
         Vvirs[n + 1] = V
         Ms1 = map(1:N) do i
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
-            return rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve)
+            return rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve)
         end
         normalize!.(Ms1, Inf)
         revs = [isdual(space(M, 1)) for M in Ms1[2:end]]
@@ -62,20 +63,41 @@ end
         Vvirs[n + 1] = V
         Ms1 = map(1:N) do i
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
-            return normalize(rand(Vw ← Vphy' ⊗ Vns ⊗ Vns' ⊗ Ve), Inf)
+            return normalize(rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve), Inf)
         end
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
         gs = PEPSKit.gate_to_mpo3(gate)
         @test mpo_to_gate3(gs) ≈ gate
         Ms2 = deepcopy(Ms1)
-        PEPSKit._apply_gatempo!(Ms2, gs)
+        PEPSKit.apply_gatempo!(Ms2, gs)
         fid = fidelity_cluster(Ms1, Ms2)
         @test fid ≈ 1.0
     end
+    for (Vphy, Vns, V) in Vspaces
+        Vvirs = fill(Vns, N + 1)
+        Vvirs[n + 1] = V
+        Ms1 = map(1:N) do i
+            Vw, Ve = Vvirs[i], Vvirs[i + 1]
+            return normalize(rand(Vw ⊗ Vphy ⊗ Vphy' ⊗ Vns' ⊗ Vns ← Ve), Inf)
+        end
+        unit = id(Vphy)
+        gate = reduce(⊗, fill(unit, 3))
+        gs = PEPSKit.gate_to_mpo3(gate)
+        @test mpo_to_gate3(gs) ≈ gate
+        for gate_ax in 1:2
+            Ms2 = deepcopy(Ms1)
+            PEPSKit.apply_gatempo!(Ms2, gs)
+            fid = fidelity_cluster(
+                [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms1], 
+                [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms2]
+            )
+            @test fid ≈ 1.0
+        end
+    end
 end
 
-@testset "Hubbard model with usual SU and 3-site SU" begin
+@testset "Hubbard model with 2-site and 3-site SU" begin
     Nr, Nc = 2, 2
     ctmrg_tol = 1.0e-9
     Random.seed!(100)
@@ -94,7 +116,7 @@ end
     # usual 2-site simple update, and measure energy
     dts = [1.0e-2, 1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8, 1.0e-8]
-    maxiter = 10000
+    maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trscheme = truncerr(1.0e-10) & truncdim(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
