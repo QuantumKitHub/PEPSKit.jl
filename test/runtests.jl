@@ -65,7 +65,7 @@ end
             include("timeevol/sitedep_truncation.jl")
         end
         @time @safetestset "Transverse Field Ising model: real-time full update " begin
-            include("timeevol/tf_ising_fu.jl")
+            include("timeevol/tf_ising_realtime.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "TOOLBOX"

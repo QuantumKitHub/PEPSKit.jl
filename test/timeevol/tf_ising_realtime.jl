@@ -10,7 +10,7 @@ const hc = 3.044382
 const formatter = Printf.Format("t = %.2f, ⟨σˣ⟩ = %.7e + %.7e im. Time = %.3f s")
 # real time evolution of ⟨σx⟩
 # benchmark data from Physical Review B 104, 094411 (2021) Figure 6(a)
-# calculated with D = 8 and χ = 4 D = 32
+# calculated with D = 8 and χ = 4D = 32
 const data = [
     0.01 9.9920027e-1
     0.06 9.7274912e-1

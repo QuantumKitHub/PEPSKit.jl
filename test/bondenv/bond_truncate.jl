@@ -37,9 +37,9 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
         a1, ss[label], b1, info = PEPSKit.bond_truncate(a2, b2, benv, alg)
         @info "$label improved fidelity = $(info.fid)."
         display(ss[label])
-        a1, b1 = PEPSKit.absorb_s(a1, ss[label], b1)
         @test info.fid ≈ PEPSKit.fidelity(benv, PEPSKit._combine_ab(a1, b1), a2b2)
         @test info.fid > fid0
     end
+    @test isapprox(ss["ALS"], ss["ALS (pinv)"], atol = 1.0e-3)
     @test isapprox(ss["ALS"], ss["FET"], atol = 1.0e-3)
 end
