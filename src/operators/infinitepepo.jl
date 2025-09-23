@@ -208,9 +208,12 @@ end
 
 ## Rotations
 
-Base.rotl90(A::InfinitePEPO) = InfinitePEPO(stack(rotl90, eachslice(unitcell(A); dims = 3)))
-Base.rotr90(A::InfinitePEPO) = InfinitePEPO(stack(rotr90, eachslice(unitcell(A); dims = 3)))
-Base.rot180(A::InfinitePEPO) = InfinitePEPO(stack(rot180, eachslice(unitcell(A); dims = 3)))
+Base.rotl90(A::InfinitePEPO) =
+    InfinitePEPO(stack(rotl90, eachslice(rotl90.(unitcell(A)); dims = 3)))
+Base.rotr90(A::InfinitePEPO) =
+    InfinitePEPO(stack(rotr90, eachslice(rotr90.(unitcell(A)); dims = 3)))
+Base.rot180(A::InfinitePEPO) =
+    InfinitePEPO(stack(rot180, eachslice(rot180.(unitcell(A)); dims = 3)))
 
 ## Chainrules
 
