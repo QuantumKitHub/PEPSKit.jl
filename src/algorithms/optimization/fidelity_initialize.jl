@@ -9,6 +9,7 @@ CTMRG contractions. By default, the maximal bond space of `peps₀` is used for 
 legs of the single-site PEPS.
 
 ## Keyword arguments
+
 - `noise_amp=1.0-1` : Gaussian noise amplitude of initial single-site PEPS
 
 Additionally, all keyword arguments of [`approximate!`](@ref) can be passed.
@@ -22,8 +23,10 @@ function single_site_fidelity_initialize(
     physspace = space(unitcell(peps₀)[1], 1)
     peps_single = noise_amp * InfinitePEPS(randn, scalartype(peps₀), physspace, bondspace) # single-site unit cell with random noise
 
+    # absorb peps₀ tensors into single-site tensors in-place
     peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps₀))) # fill peps₀ unit cell with peps_singles
-    peps_single, = approximate!(peps_uc, peps₀, envspace; kwargs...) # modifies peps_single in-place
+    absorb!(peps_uc[1], peps₀[1]) # absorb (1, 1) tensor of peps₀ (applies to all peps_uc entries since absorb! is mutating)
+    peps_single, = approximate!(peps_uc, peps₀, envspace; kwargs...)
 
     return InfinitePEPS([peps_single[1];;])
 end
@@ -37,11 +40,12 @@ end
     approximate(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
     approximate!(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
 
-Approximate `pepssrc` with `pepsdst` by iteratively maximizing their fidelity where the
-contents of `pepssrc` are embedded into `pepsdst`. To contract the respective networks, the
-specified `envspace` is used on the environment bonds and kept fixed.
+Approximate `pepssrc` with `pepsdst` by iteratively maximizing their fidelity, using
+`pepsdst` as an initial guess. To contract the respective networks, the specified `envspace`
+is used on the environment bonds and kept fixed.
 
 ## Keyword arguments
+
 - `maxiter=5` : Maximal number of maximization iterations
 - `tol=1.0e-3` : Absolute convergence tolerance for the infidelity
 - `boundary_alg=(; verbosity=2)` : CTMRG contraction algorithm, either specified as a `NamedTuple` or `CTMRGAlgorithm`
@@ -53,11 +57,7 @@ function MPSKit.approximate!(
         maxiter = 10, tol = 1.0e-3, verbosity = 3, boundary_alg = (; verbosity = 1)
     )
     @assert size(pepsdst) == size(pepssrc) "incompatible unit cell sizes"
-
-    # absorb src PEPS tensors into dst tensors in-place
-    for (pdst, psrc) in zip(unitcell(pepsdst), unitcell(pepssrc))
-        absorb!(pdst, psrc)
-    end
+    @assert all(map((pdst, psrc) -> space(pdst, 1) == space(psrc, 1), unitcell(pepsdst), unitcell(pepssrc))) "incompatible physical spaces"
 
     log = MPSKit.IterLog("Approx.")
     return LoggingExtras.withlevel(; verbosity) do

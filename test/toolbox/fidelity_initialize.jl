@@ -1,6 +1,6 @@
 using TensorKit
 using PEPSKit
-using PEPSKit: _spacemax
+using PEPSKit: single_site_fidelity_initialize, _spacemax
 using Random
 using Test
 
