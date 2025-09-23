@@ -16,7 +16,7 @@ By default, an infinite square with a (1, 1)-unitcell is constructed.
 struct InfiniteSquare <: AbstractLattice{2}
     Nrows::Int
     Ncols::Int
-    function InfiniteSquare(Nrows::Integer=1, Ncols::Integer=1)
+    function InfiniteSquare(Nrows::Integer = 1, Ncols::Integer = 1)
         Nrows > 0 && Ncols > 0 || error("unit cell size needs to be positive")
         return new(Nrows, Ncols)
     end
@@ -29,7 +29,7 @@ function vertices(lattice::InfiniteSquare)
 end
 
 function nearest_neighbours(lattice::InfiniteSquare)
-    neighbors = Tuple{CartesianIndex,CartesianIndex}[]
+    neighbors = Tuple{CartesianIndex, CartesianIndex}[]
     for idx in vertices(lattice)
         push!(neighbors, (idx, idx + CartesianIndex(0, 1)))
         push!(neighbors, (idx, idx + CartesianIndex(1, 0)))
@@ -38,7 +38,7 @@ function nearest_neighbours(lattice::InfiniteSquare)
 end
 
 function next_nearest_neighbours(lattice::InfiniteSquare)
-    neighbors = Tuple{CartesianIndex,CartesianIndex}[]
+    neighbors = Tuple{CartesianIndex, CartesianIndex}[]
     for idx in vertices(lattice)
         push!(neighbors, (idx, idx + CartesianIndex(1, 1)))
         push!(neighbors, (idx + CartesianIndex(0, 1), idx + CartesianIndex(1, 0)))

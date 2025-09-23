@@ -1,5 +1,7 @@
 using TensorKit
 using PEPSKit
+using MPSKit: add_physical_charge
+using MPSKitModels: a_number, nꜛnꜜ, contract_onesite
 using Test
 
 vds = (ℂ^2, Rep[U₁](1 => 1, -1 => 1), Rep[SU₂](1 / 2 => 1))
@@ -42,4 +44,45 @@ vds = (ℂ^2, Rep[U₁](1 => 1, -1 => 1), Rep[SU₂](1 / 2 => 1))
     @test op5 isa LocalOperator
     @test physicalspace(op5) == physical_spaces
     @test length(op5.terms) == 2
+end
+
+@testset "Charge shifting" begin
+    lattice = InfiniteSquare(1, 1)
+    elt = ComplexF64
+    U = 30.0
+
+    # bosonic case
+    cutoff = 2
+    N = a_number(elt, U1Irrep; cutoff)
+    H_U = U / 2 * contract_onesite(N, N - id(domain(N)))
+    spaces = fill(space(H_U, 1), (lattice.Nrows, lattice.Ncols))
+    H = LocalOperator(spaces, ((1, 1),) => H_U)
+    tr_before = tr(last(only(H.terms)))
+    # shift to unit filling
+    caux = U1Irrep(1)
+    H_shifted = add_physical_charge(H, fill(caux, size(H.lattice)...))
+    # check if spaces were correctly shifted
+    @test H_shifted.lattice == map(
+        fuse, H.lattice, fill(U1Space(caux => 1)', size(H.lattice)...)
+    )
+    # check if trace is properly preserved
+    tr_after = tr(last(only(H_shifted.terms)))
+    @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
+
+    # fermionic case
+    symmetry = FermionParity ⊠ U1Irrep
+    H_U = U * nꜛnꜜ(elt, U1Irrep, Trivial)
+    spaces = fill(space(H_U, 1), (lattice.Nrows, lattice.Ncols))
+    H = LocalOperator(spaces, ((1, 1),) => H_U)
+    tr_before = tr(last(only(H.terms)))
+    # shift to unit filling
+    caux = symmetry((1, 1))
+    H_shifted = add_physical_charge(H, fill(caux, size(H.lattice)...))
+    # check if spaces were correctly shifted
+    @test H_shifted.lattice == map(
+        fuse, H.lattice, fill(Vect[symmetry](caux => 1)', size(H.lattice)...)
+    )
+    # check if trace is properly preserved
+    tr_after = tr(last(only(H_shifted.terms)))
+    @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
 end

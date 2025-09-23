@@ -1,3 +1,16 @@
+const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
+
+function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
+    T = scalartype(H)
+    A = map(physicalspace(H)) do Vp
+        ψ = permute(TensorKit.id(T, Vp), (1, 2))
+        Vv = oneunit(Vp) # trivial (1D) virtual space
+        virt = ones(T, domain(ψ) ← Vv ⊗ Vv ⊗ Vv' ⊗ Vv')
+        return ψ * virt
+    end
+    return InfinitePEPO(cat(A; dims = 3))
+end
+
 """
     get_expham(H::LocalOperator, dt::Number)
 
@@ -28,10 +41,9 @@ end
 Check if two 2-site bonds are related by a (periodic) lattice translation.
 """
 function is_equivalent_bond(
-    bond1::NTuple{2,CartesianIndex{2}},
-    bond2::NTuple{2,CartesianIndex{2}},
-    (Nrow, Ncol)::NTuple{2,Int},
-)
+        bond1::NTuple{2, CartesianIndex{2}}, bond2::NTuple{2, CartesianIndex{2}},
+        (Nrow, Ncol)::NTuple{2, Int},
+    )
     r1 = bond1[1] - bond1[2]
     r2 = bond2[1] - bond2[2]
     shift_row = bond1[1][1] - bond2[1][1]
@@ -45,7 +57,7 @@ end
 Get the term of a 2-site gate acting on a certain bond.
 Input `gate` should only include one term for each nearest neighbor bond.
 """
-function get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
+function get_gateterm(gate::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
     bonds = findall(p -> is_equivalent_bond(p.first, bond, size(gate.lattice)), gate.terms)
     if length(bonds) == 0
         # try reversed site order
@@ -72,29 +84,49 @@ end
 """
 $(SIGNATURES)
 
-Use QR decomposition on two tensors connected by a bond
-to get the reduced tensors
+Use QR decomposition on two tensors `A`, `B` connected by a bond to get the reduced tensors.
+When `A`, `B` are PEPSTensors,
 ```
-        2                   1
-        |                   |
-    5 - A - 3   ====>   4 - X ← 2   1 ← a - 3
-        | ↘                 |            ↘
-        4   1               3             2
-
-        2                               1
-        |                               |
-    5 - B - 3   ====>   1 - b → 3   4 → Y - 2
-        | ↘                  ↘          |
-        4   1                 2         3
+        2                   1                                   1
+        |                   |                                   |
+    5 -A/B- 3   ====>   4 - X ← 2   1 ← a - 3   1 - b → 3   4 → Y - 2
+        | ↘                 |            ↘           ↘          |
+        4   1               3             2           2         3
+```
+When `A`, `B` are PEPOTensors, 
+- If `gate_ax = 1`
+```
+    2   3                1  2                                1  2
+      ↘ |                 ↘ |                                 ↘ |
+    6 -A/B- 4   ====>   5 - X ← 3   1 ← a - 3   1 - b → 3   5 → Y - 3
+        | ↘                 |            ↘           ↘          |
+        5   1               4             2           2         4
+```
+- If `gate_ax = 2`
+```
+    2   3                   2         2           2             2
+      ↘ |                   |          ↘           ↘            |
+    6 -A/B- 4   ====>   5 - X ← 3   1 ← a - 3   1 - b → 3   5 → Y - 3
+        | ↘                 | ↘                                 | ↘
+        5   1               4  1                                4  1
 ```
 """
-function _qr_bond(A::PEPSTensor, B::PEPSTensor)
-    X, a = leftorth(A, ((2, 4, 5), (1, 3)))
-    Y, b = leftorth(B, ((2, 3, 4), (1, 5)))
+function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor, PEPOTensor}}
+    @assert 1 <= gate_ax <= numout(A)
+    permA, permB, permX, permY = if A isa PEPSTensor
+        ((2, 4, 5), (1, 3)), ((2, 3, 4), (1, 5)), (1, 4, 2, 3), Tuple(1:4)
+    else
+        if gate_ax == 1
+            ((2, 3, 5, 6), (1, 4)), ((2, 3, 4, 5), (1, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
+        else
+            ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
+        end
+    end
+    X, a = leftorth(A, permA)
+    Y, b = leftorth(B, permB)
     @assert !isdual(space(a, 1))
     @assert !isdual(space(b, 1))
-    X = permute(X, (1, 4, 2, 3))
-    Y = permute(Y, (1, 2, 3, 4))
+    X, Y = permute(X, permX), permute(Y, permY)
     b = permute(b, ((3, 2), (1,)))
     return X, a, b, Y
 end
@@ -102,8 +134,8 @@ end
 """
 $(SIGNATURES)
 
-Reconstruct the tensors connected by a bond from their QR results
-obtained from `_qr_bond`
+Reconstruct the tensors connected by a bond from their `_qr_bond` results.
+For PEPSTensors,
 ```
         -2                             -2
         |                               |
@@ -111,10 +143,34 @@ obtained from `_qr_bond`
         |        ↘               ↘      |
         -4        -1              -1   -4
 ```
+For PEPOTensors
+```
+    -2  -3                          -2  -3
+      ↘ |                             ↘ |
+    -6- X - 1 - a - -4     -6 - b - 1 - Y - -4
+        |        ↘               ↘      |
+        -5        -1              -1   -5
+
+        -3   -2              -2        -3
+        |      ↘               ↘        |
+    -6- X - 1 - a - -4     -6 - b - 1 - Y - -4
+        | ↘                             | ↘
+        -5 -1                          -5  -1
+```
 """
 function _qr_bond_undo(X::PEPSOrth, a::AbstractTensorMap, b::AbstractTensorMap, Y::PEPSOrth)
     @tensor A[-1; -2 -3 -4 -5] := X[-2 1 -4 -5] * a[1 -1 -3]
     @tensor B[-1; -2 -3 -4 -5] := b[-5 -1 1] * Y[-2 -3 -4 1]
+    return A, B
+end
+function _qr_bond_undo(X::PEPOOrth, a::AbstractTensorMap, b::AbstractTensorMap, Y::PEPOOrth)
+    if !isdual(space(a, 2))
+        @tensor A[-1 -2; -3 -4 -5 -6] := X[-2 -3 1 -5 -6] * a[1 -1 -4]
+        @tensor B[-1 -2; -3 -4 -5 -6] := b[-6 -1 1] * Y[-2 -3 -4 -5 1]
+    else
+        @tensor A[-1 -2; -3 -4 -5 -6] := X[-1 -3 1 -5 -6] * a[1 -2 -4]
+        @tensor B[-1 -2; -3 -4 -5 -6] := b[-6 -2 1] * Y[-1 -3 -4 -5 1]
+    end
     return A, B
 end
 
@@ -123,29 +179,33 @@ $(SIGNATURES)
 
 Apply 2-site `gate` on the reduced matrices `a`, `b`
 ```
-    -1← a -- 3 -- b ← -4
-        ↓           ↓
-        1           2
-        ↓           ↓
-        |----gate---|
-        ↓           ↓
-        -2         -3
+    -1← a --- 3 --- b ← -4          -2         -3
+        ↓           ↓               ↓           ↓
+        1           2               |----gate---|
+        ↓           ↓       or      ↓           ↓
+        |----gate---|               1           2
+        ↓           ↓               ↓           ↓
+        -2         -3           -1← a --- 3 --- b ← -4
 ```
 """
 function _apply_gate(
-    a::AbstractTensorMap{T,S},
-    b::AbstractTensorMap{T,S},
-    gate::AbstractTensorMap{T,S,2,2},
-    trscheme::TruncationScheme,
-) where {T<:Number,S<:ElementarySpace}
-    @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
-    trunc = if trscheme isa FixedSpaceTruncation
-        V = space(b, 1)
-        truncspace(isdual(V) ? V' : V)
+        a::AbstractTensorMap{T, S}, b::AbstractTensorMap{T, S},
+        gate::AbstractTensorMap{T, S, 2, 2}, trscheme::TruncationScheme
+    ) where {T <: Number, S <: ElementarySpace}
+    V = space(b, 1)
+    need_flip = isdual(V)
+    if isdual(space(a, 2))
+        @tensor a2b2[-1 -2; -3 -4] := gate[1 2; -2 -3] * a[-1 1 3] * b[3 2 -4]
     else
-        trscheme
+        @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
-    return tsvd!(a2b2; trunc, alg=TensorKit.SVD())
+    trunc = (trscheme isa FixedSpaceTruncation) ? truncspace(V) : trscheme
+    a, s, b, ϵ = tsvd!(a2b2; trunc, alg = TensorKit.SVD())
+    a, b = absorb_s(a, s, b)
+    if need_flip
+        a, s, b = flip_svd(a, s, b)
+    end
+    return a, s, b, ϵ
 end
 
 """
@@ -160,8 +220,8 @@ in which the axes are ordered as
 ```
 """
 function gate_to_mpo3(
-    gate::AbstractTensorMap{T,S,3,3}, trunc=truncbelow(MPSKit.Defaults.tol)
-) where {T<:Number,S<:ElementarySpace}
+        gate::AbstractTensorMap{T, S, 3, 3}, trunc = truncbelow(MPSKit.Defaults.tol)
+    ) where {T <: Number, S <: ElementarySpace}
     Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
     g1 = removeunit(Os[1], 1)
     g2 = Os[2]
@@ -199,9 +259,9 @@ function _get_gatempo_se(ham::LocalOperator, dt::Number, row::Int, col::Int)
     # NN / NNN bonds are counted 4 / 2 times, respectively.
     @tensor Odt[i' j' k'; i j k] :=
         -dt * (
-            (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4 +
+        (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4 +
             (nb2[i' k'; i k] * units[2][j'; j]) / 2
-        )
+    )
     op = exp(Odt)
     return gate_to_mpo3(op)
 end

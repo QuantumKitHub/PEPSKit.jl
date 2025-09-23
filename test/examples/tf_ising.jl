@@ -19,7 +19,7 @@ mˣ = 0.91
 # initialize parameters
 χbond = 2
 χenv = 16
-gradtol = 1e-3
+gradtol = 1.0e-3
 
 # initialize states
 H = transverse_field_ising(InfiniteSquare(); g)
@@ -28,7 +28,7 @@ peps₀ = InfinitePEPS(2, χbond)
 env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
 # find fixedpoint
-peps, env, E, = fixedpoint(H, peps₀, env₀; tol=gradtol)
+peps, env, E, = fixedpoint(H, peps₀, env₀; tol = gradtol)
 ξ_h, ξ_v, = correlation_length(peps, env)
 
 # compute magnetization
@@ -39,44 +39,40 @@ Mz = LocalOperator(physicalspace(H), (CartesianIndex(1, 1),) => σz)
 magnx = expectation_value(peps, Mx, env)
 magnz = expectation_value(peps, Mz, env)
 
-@test E ≈ e atol = 1e-2
-@test imag(magnx) ≈ 0 atol = 1e-6
-@test abs(magnx) ≈ mˣ atol = 5e-2
+@test E ≈ e atol = 1.0e-2
+@test imag(magnx) ≈ 0 atol = 1.0e-6
+@test abs(magnx) ≈ mˣ atol = 5.0e-2
 
 # compute connected correlation functions
 corrh =
     correlator(
-        peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(1, 2):CartesianIndex(1, 21), env
-    ) .- magnz^2
+    peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(1, 2):CartesianIndex(1, 21), env
+) .- magnz^2
 corrv =
     correlator(
-        peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(2, 1):CartesianIndex(21, 1), env
-    ) .- magnz^2
+    peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(2, 1):CartesianIndex(21, 1), env
+) .- magnz^2
 
-@test corrh[end] ≈ 0.0 atol = 1e-5
-@test 1 / log(corrh[18] / corrh[19]) ≈ ξ_h[1] atol = 2e-2 # test correlation length far away from short-range effects
-@test corrv[end] ≈ 0.0 atol = 1e-5
-@test 1 / log(corrv[18] / corrv[19]) ≈ ξ_v[1] atol = 3e-2 # test correlation length far away from short-range effects
-@test corrv ≈ corrh rtol = 1e-2
+@test corrh[end] ≈ 0.0 atol = 1.0e-5
+@test 1 / log(corrh[18] / corrh[19]) ≈ ξ_h[1] atol = 2.0e-2 # test correlation length far away from short-range effects
+@test corrv[end] ≈ 0.0 atol = 1.0e-5
+@test 1 / log(corrv[18] / corrv[19]) ≈ ξ_v[1] atol = 3.0e-2 # test correlation length far away from short-range effects
+@test corrv ≈ corrh rtol = 1.0e-2
 
 # compute weird geometries
 corrh_2 =
     correlator(
-        peps,
-        σz ⊗ σz,
-        CartesianIndex(3, 2),
-        CartesianIndex(3, 3):CartesianIndex(1, 2):CartesianIndex(3, 7),
-        env,
-    ) .- magnz^2
+    peps, σz ⊗ σz,
+    CartesianIndex(3, 2), CartesianIndex(3, 3):CartesianIndex(1, 2):CartesianIndex(3, 7),
+    env,
+) .- magnz^2
 @test corrh_2 ≈ corrh[1:2:5]
 corrv_2 =
     correlator(
-        peps,
-        σz ⊗ σz,
-        CartesianIndex(2, 3),
-        CartesianIndex(3, 3):CartesianIndex(2, 1):CartesianIndex(7, 3),
-        env,
-    ) .- magnz^2
+    peps, σz ⊗ σz,
+    CartesianIndex(2, 3), CartesianIndex(3, 3):CartesianIndex(2, 1):CartesianIndex(7, 3),
+    env,
+) .- magnz^2
 @test corrv_2 ≈ corrv[1:2:5]
 
 # Change from specific values and distances to a range
@@ -91,8 +87,8 @@ corrv_int =
 @test_broken correlator(peps, σz ⊗ σz, CartesianIndex(1, 1), CartesianIndex(2, 2), env)
 
 # find fixedpoint in polarized phase and compute correlations lengths
-H_polar = transverse_field_ising(InfiniteSquare(); g=4.5)
-peps_polar, env_polar, = fixedpoint(H_polar, peps₀, env₀; tol=gradtol)
+H_polar = transverse_field_ising(InfiniteSquare(); g = 4.5)
+peps_polar, env_polar, = fixedpoint(H_polar, peps₀, env₀; tol = gradtol)
 ξ_h_polar, ξ_v_polar, = correlation_length(peps_polar, env_polar)
 @test ξ_h_polar < ξ_h
 @test ξ_v_polar < ξ_v

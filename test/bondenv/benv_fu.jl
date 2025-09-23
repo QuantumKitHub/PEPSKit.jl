@@ -8,13 +8,13 @@ using Random
 Random.seed!(100)
 Nr, Nc = 2, 2
 # create Hubbard iPEPS using simple update
-function get_hubbard_state(t::Float64=1.0, U::Float64=8.0)
-    H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu=U / 2)
-    Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1//2) => 1, (1, -1//2) => 1)
-    wpeps = InfiniteWeightPEPS(rand, ComplexF64, Vphy, Vphy; unitcell=(Nr, Nc))
-    alg = SimpleUpdate(1e-2, 1e-8, 10000, truncerr(1e-10) & truncdim(4))
-    wpeps, = simpleupdate(wpeps, H, alg; bipartite=false, check_interval=2000)
-    peps = InfinitePEPS(wpeps)
+function get_hubbard_state(t::Float64 = 1.0, U::Float64 = 8.0)
+    H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu = U / 2)
+    Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
+    peps = InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell = (Nr, Nc))
+    wts = SUWeight(peps)
+    alg = SimpleUpdate(1.0e-2, 1.0e-8, 10000, truncerr(1.0e-10) & truncdim(4))
+    peps, = simpleupdate(peps, H, alg, wts; bipartite = false, check_interval = 2000)
     normalize!.(peps.A, Inf)
     return peps
 end
@@ -22,9 +22,9 @@ end
 peps = get_hubbard_state()
 # calculate CTMRG environment
 Envspace = Vect[FermionParity ⊠ U1Irrep](
-    (0, 0) => 4, (1, 1//2) => 1, (1, -1//2) => 1, (0, 1) => 1, (0, -1) => 1
+    (0, 0) => 4, (1, 1 // 2) => 1, (1, -1 // 2) => 1, (0, 1) => 1, (0, -1) => 1
 )
-ctm_alg = SequentialCTMRG(; tol=1e-10, verbosity=2, trscheme=truncerr(1e-10) & truncdim(8))
+ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trscheme = truncerr(1.0e-10) & truncdim(8))
 env, = leading_boundary(CTMRGEnv(rand, ComplexF64, peps, Envspace), peps, ctm_alg)
 for row in 1:Nr, col in 1:Nc
     cp1 = PEPSKit._next(col, Nc)
@@ -33,7 +33,7 @@ for row in 1:Nr, col in 1:Nc
     benv = PEPSKit.bondenv_fu(row, col, X, Y, env)
     @assert [isdual(space(benv, ax)) for ax in 1:numind(benv)] == [0, 0, 1, 1]
     Z = PEPSKit.positive_approx(benv)
-    # verify that gauge fixing can greatly reduce 
+    # verify that gauge fixing can greatly reduce
     # condition number for physical state bond envs
     cond1 = cond(Z' * Z)
     Z2, a2, b2, (Linv, Rinv) = PEPSKit.fixgauge_benv(Z, a, b)

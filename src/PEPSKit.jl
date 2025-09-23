@@ -15,7 +15,8 @@ using LoggingExtras
 
 using MPSKit
 using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
-import MPSKit: leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
+import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
+import MPSKit: infinite_temperature_density_matrix
 
 using MPSKitModels
 using FiniteDifferences
@@ -28,7 +29,6 @@ include("utility/util.jl")
 include("utility/diffable_threads.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
-include("utility/mirror.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 include("utility/retractions.jl")
@@ -38,7 +38,6 @@ include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
 
 include("states/infinitepeps.jl")
-include("states/infiniteweightpeps.jl")
 include("states/infinitepartitionfunction.jl")
 
 include("operators/infinitepepo.jl")
@@ -49,6 +48,7 @@ include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
+include("environments/suweight.jl")
 
 include("algorithms/contractions/ctmrg_contractions.jl")
 include("algorithms/contractions/localoperator.jl")
@@ -91,8 +91,9 @@ export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
-export expectation_value, cost_function, product_peps, correlation_length, network_value
-export correlator
+export product_peps
+export reduced_densitymatrix, expectation_value, network_value, cost_function
+export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
@@ -105,7 +106,7 @@ export fu_iter, fu_iter2, FullUpdate
 export InfiniteSquareNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
-export SUWeight, InfiniteWeightPEPS
+export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect

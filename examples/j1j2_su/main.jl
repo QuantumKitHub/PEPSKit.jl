@@ -25,21 +25,21 @@ Random.seed!(29385293);
 md"""
 ## Simple updating a challenging phase
 
-Let's start by initializing an `InfiniteWeightPEPS` for which we set the required parameters
-as well as physical and virtual vector spaces. We use the minimal unit cell size
-($2 \times 2$) required by the simple update algorithm for Hamiltonians with
-next-nearest-neighbour interactions:
+Let's start by initializing an `InfinitePEPS` for which we set the required parameters
+as well as physical and virtual vector spaces. 
+The `SUWeight` used by simple update will be initialized to identity matrices.
+We use the minimal unit cell size ($2 \times 2$) required by the simple update algorithm 
+for Hamiltonians with next-nearest-neighbour interactions:
 """
 
-Dbond, χenv, symm = 4, 32, U1Irrep
-trscheme_env = truncerr(1e-10) & truncdim(χenv)
+Dbond, symm = 4, U1Irrep
 Nr, Nc, J1 = 2, 2, 1.0
 
-## random initialization of 2x2 iPEPS with weights and CTMRGEnv (using real numbers)
-Pspace = Vect[U1Irrep](1//2 => 1, -1//2 => 1)
-Vspace = Vect[U1Irrep](0 => 2, 1//2 => 1, -1//2 => 1)
-Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1//2 => χenv ÷ 4, -1//2 => χenv ÷ 4)
-wpeps = InfiniteWeightPEPS(rand, Float64, Pspace, Vspace; unitcell=(Nr, Nc));
+## random initialization of 2x2 iPEPS (using real numbers) and SUWeight
+Pspace = Vect[U1Irrep](1 // 2 => 1, -1 // 2 => 1)
+Vspace = Vect[U1Irrep](0 => 2, 1 // 2 => 1, -1 // 2 => 1)
+peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc));
+wts = SUWeight(peps);
 
 md"""
 The value $J_2 / J_1 = 0.5$ corresponds to a [possible spin liquid phase](@cite liu_gapless_2022),
@@ -48,16 +48,15 @@ Therefore, we shall gradually increase $J_2 / J_1$ from 0.1 to 0.5, each time in
 on the previously evolved PEPS:
 """
 
-dt, tol, maxiter = 1e-2, 1e-8, 30000
+dt, tol, maxiter = 1.0e-2, 1.0e-8, 30000
 check_interval = 4000
-trscheme_peps = truncerr(1e-10) & truncdim(Dbond)
+trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
 alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
 for J2 in 0.1:0.1:0.5
     H = real( ## convert Hamiltonian `LocalOperator` to real floats
-        j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false),
+        j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
     )
-    result = simpleupdate(wpeps, H, alg; check_interval)
-    global wpeps = result[1]
+    global peps, wts, = simpleupdate(peps, H, alg, wts; check_interval)
 end
 
 md"""
@@ -65,27 +64,28 @@ After we reach $J_2 / J_1 = 0.5$, we gradually decrease the evolution time step 
 a more accurately evolved PEPS:
 """
 
-dts = [1e-3, 1e-4]
-tols = [1e-9, 1e-9]
+dts = [1.0e-3, 1.0e-4]
+tols = [1.0e-9, 1.0e-9]
 J2 = 0.5
-H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice=false))
+H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false))
 for (dt, tol) in zip(dts, tols)
     alg′ = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    result = simpleupdate(wpeps, H, alg′; check_interval)
-    global wpeps = result[1]
+    global peps, wts, = simpleupdate(peps, H, alg′, wts; check_interval)
 end
 
 md"""
 ## Computing the simple update energy estimate
 
 Finally, we measure the ground-state energy by converging a CTMRG environment and computing
-the expectation value, where we make sure to normalize by the unit cell size:
+the expectation value, where we first normalize tensors in the PEPS:
 """
 
-peps = InfinitePEPS(wpeps)
-normalize!.(peps.A, Inf) ## normalize PEPS with absorbed weights by largest element
+normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
+χenv = 32
+trscheme_env = truncerr(1.0e-10) & truncdim(χenv)
+Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
-env, = leading_boundary(env₀, peps; tol=1e-10, alg=:sequential, trscheme=trscheme_env);
+env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trscheme = trscheme_env);
 E = expectation_value(peps, H, env) / (Nr * Nc)
 
 md"""
@@ -113,9 +113,9 @@ symmetry can be advantageous for obtaining lower energies.)
 using MPSKit: randomize!
 
 noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
-peps₀ = peps + 1e-1noise_peps
+peps₀ = peps + 1.0e-1noise_peps
 peps_opt, env_opt, E_opt, = fixedpoint(
-    H, peps₀, env; optimizer_alg=(; tol=1e-4, maxiter=80)
+    H, peps₀, env; optimizer_alg = (; tol = 1.0e-4, maxiter = 80)
 );
 
 md"""

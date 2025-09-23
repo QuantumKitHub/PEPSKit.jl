@@ -14,11 +14,11 @@ struct InfiniteSquareNetwork{O}
         for I in eachindex(IndexCartesian(), A)
             d, w = Tuple(I)
             north_virtualspace(A[d, w]) ==
-            _elementwise_dual(south_virtualspace(A[_prev(d, end), w])) || throw(
+                _elementwise_dual(south_virtualspace(A[_prev(d, end), w])) || throw(
                 SpaceMismatch("North virtual space at site $((d, w)) does not match.")
             )
             east_virtualspace(A[d, w]) ==
-            _elementwise_dual(west_virtualspace(A[d, _next(w, end)])) ||
+                _elementwise_dual(west_virtualspace(A[d, _next(w, end)])) ||
                 throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
         end
         return InfiniteSquareNetwork{eltype(A)}(A)
@@ -35,7 +35,7 @@ Base.eltype(n::InfiniteSquareNetwork) = eltype(typeof(n))
 Base.eltype(::Type{InfiniteSquareNetwork{O}}) where {O} = O
 
 Base.copy(n::InfiniteSquareNetwork) = InfiniteSquareNetwork(copy(unitcell(n)))
-function Base.similar(n::InfiniteSquareNetwork, T::Type{TorA}=scalartype(n)) where {TorA}
+function Base.similar(n::InfiniteSquareNetwork, T::Type{TorA} = scalartype(n)) where {TorA}
     return InfiniteSquareNetwork(map(t -> similar(t, T), unitcell(n)))
 end
 function Base.repeat(n::InfiniteSquareNetwork, counts...)
@@ -59,7 +59,7 @@ virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, 
 
 ## Vector interface
 
-function VectorInterface.scalartype(::Type{T}) where {T<:InfiniteSquareNetwork}
+function VectorInterface.scalartype(::Type{T}) where {T <: InfiniteSquareNetwork}
     return scalartype(eltype(T))
 end
 function VectorInterface.zerovector(A::InfiniteSquareNetwork)
@@ -115,8 +115,8 @@ end
 
 # generic implementation
 function ChainRulesCore.rrule(
-    ::typeof(Base.getindex), network::InfiniteSquareNetwork, r::Int, c::Int
-)
+        ::typeof(Base.getindex), network::InfiniteSquareNetwork, r::Int, c::Int
+    )
     O = network[r, c]
 
     function getindex_pullback(ΔO_)
@@ -133,8 +133,8 @@ end
 
 # specialized PFTensor implementation
 function ChainRulesCore.rrule(
-    ::typeof(Base.getindex), network::InfiniteSquareNetwork{<:PFTensor}, r::Int, c::Int
-)
+        ::typeof(Base.getindex), network::InfiniteSquareNetwork{<:PFTensor}, r::Int, c::Int
+    )
     O = network[r, c]
 
     function getindex_pullback(ΔO_)

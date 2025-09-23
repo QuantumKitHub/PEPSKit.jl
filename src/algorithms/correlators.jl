@@ -1,16 +1,15 @@
 function correlator_horizontal(
-    bra::InfinitePEPS,
-    operator,
-    i::CartesianIndex{2},
-    js::AbstractVector{CartesianIndex{2}},
-    ket::InfinitePEPS,
-    env::CTMRGEnv,
-)
+        bra::InfinitePEPS,
+        operator,
+        i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
+        ket::InfinitePEPS,
+        env::CTMRGEnv,
+    )
     size(ket) == size(bra) ||
         throw(DimensionMismatch("The ket and bra must have the same unit cell."))
     all(==(i[1]) ∘ first ∘ Tuple, js) ||
         throw(ArgumentError("Not a horizontal correlation function"))
-    issorted(vcat(i, js); by=last ∘ Tuple) ||
+    issorted(vcat(i, js); by = last ∘ Tuple) ||
         throw(ArgumentError("Not an increasing sequence of coordinates"))
 
     O = FiniteMPO(operator)
@@ -34,10 +33,11 @@ function correlator_horizontal(
             Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
             Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
             sandwich = (
-                ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)]
+                ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
             )
             T = TransferMatrix(Atop, sandwich, _dag(Abot))
             Vo = Vo * T
+            twistdual!(T.below, 2:numout(T.below))
             Vn = Vn * T
             i += CartesianIndex(0, 1)
         end
@@ -49,10 +49,11 @@ function correlator_horizontal(
         Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
         Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
         sandwich = (
-            ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)]
+            ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
         )
         T = TransferMatrix(Atop, sandwich, _dag(Abot))
         Vo = Vo * T
+        twistdual!(T.below, 2:numout(T.below))
         Vn = Vn * T
         i += CartesianIndex(0, 1)
 
@@ -66,12 +67,12 @@ function correlator_horizontal(
 end
 
 function start_correlator(
-    i::CartesianIndex{2},
-    below::InfinitePEPS,
-    O::MPOTensor,
-    above::InfinitePEPS,
-    env::CTMRGEnv,
-)
+        i::CartesianIndex{2},
+        below::InfinitePEPS,
+        O::MPOTensor,
+        above::InfinitePEPS,
+        env::CTMRGEnv,
+    )
     r, c = Tuple(i)
     E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
     E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
@@ -105,13 +106,13 @@ function start_correlator(
 end
 
 function end_correlator_numerator(
-    j::CartesianIndex{2},
-    V,
-    above::InfinitePEPS,
-    O::MPOTensor,
-    below::InfinitePEPS,
-    env::CTMRGEnv,
-)
+        j::CartesianIndex{2},
+        V,
+        above::InfinitePEPS,
+        O::MPOTensor,
+        below::InfinitePEPS,
+        env::CTMRGEnv,
+    )
     r, c = Tuple(j)
     E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
     E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
@@ -144,13 +145,12 @@ function end_correlator_denominator(j::CartesianIndex{2}, V, env::CTMRGEnv)
 end
 
 function correlator_vertical(
-    bra::InfinitePEPS,
-    O,
-    i::CartesianIndex{2},
-    js::AbstractVector{CartesianIndex{2}},
-    ket::InfinitePEPS,
-    env::CTMRGEnv,
-)
+        bra::InfinitePEPS,
+        O,
+        i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
+        ket::InfinitePEPS,
+        env::CTMRGEnv,
+    )
     rotated_bra = rotl90(bra)
     rotated_ket = bra === ket ? rotated_bra : rotl90(ket)
 
@@ -162,16 +162,15 @@ function correlator_vertical(
     )
 end
 
-const CoordCollection{N} = Union{AbstractVector{CartesianIndex{N}},CartesianIndices{N}}
+const CoordCollection{N} = Union{AbstractVector{CartesianIndex{N}}, CartesianIndices{N}}
 
 function MPSKit.correlator(
-    bra::InfinitePEPS,
-    O,
-    i::CartesianIndex{2},
-    js::CoordCollection{2},
-    ket::InfinitePEPS,
-    env::CTMRGEnv,
-)
+        bra::InfinitePEPS,
+        O,
+        i::CartesianIndex{2}, js::CoordCollection{2},
+        ket::InfinitePEPS,
+        env::CTMRGEnv,
+    )
     js = vec(js) # map CartesianIndices to actual Vector instead of Matrix
 
     if all(==(i[1]) ∘ first ∘ Tuple, js)
@@ -184,13 +183,12 @@ function MPSKit.correlator(
 end
 
 function MPSKit.correlator(
-    bra::InfinitePEPS,
-    O,
-    i::CartesianIndex{2},
-    j::CartesianIndex{2},
-    ket::InfinitePEPS,
-    env::CTMRGEnv,
-)
+        bra::InfinitePEPS,
+        O,
+        i::CartesianIndex{2}, j::CartesianIndex{2},
+        ket::InfinitePEPS,
+        env::CTMRGEnv,
+    )
     return only(correlator(bra, O, i, j:j, ket, env))
 end
 

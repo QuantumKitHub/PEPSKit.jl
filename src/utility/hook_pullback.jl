@@ -22,13 +22,13 @@ pullback.
 
 See also [`_rrule`](@ref).
 """
-function hook_pullback(@nospecialize(f), args...; alg_rrule=nothing, kwargs...)
+function hook_pullback(@nospecialize(f), args...; alg_rrule = nothing, kwargs...)
     return f(args...; kwargs...)
 end
 
 function ChainRulesCore.rrule(
-    config::RuleConfig, ::typeof(hook_pullback), f, args...; alg_rrule=nothing, kwargs...
-)
+        config::RuleConfig, ::typeof(hook_pullback), f, args...; alg_rrule = nothing, kwargs...
+    )
     # Need to add ∂hook_pullback
     y, f_pullback = _rrule(alg_rrule, config, f, args...; kwargs...)
     return y, Δ -> (NoTangent(), f_pullback(Δ)...)
@@ -45,5 +45,5 @@ the default `alg_rrule=nothing` results in the default AD pullback.
     No tangent is expected for the `alg_rrule` argument
 """
 function _rrule(::Nothing, config::RuleConfig, f, args...; kwargs...)
-    rrule_via_ad(config, f, args...; kwargs...)
+    return rrule_via_ad(config, f, args...; kwargs...)
 end

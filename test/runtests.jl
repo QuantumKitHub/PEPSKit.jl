@@ -64,13 +64,13 @@ end
         @time @safetestset "Time evolution with site-dependent truncation" begin
             include("timeevol/sitedep_truncation.jl")
         end
-    end
-    if GROUP == "ALL" || GROUP == "TIMEEVOL"
-        @time @safetestset "Cluster truncation with projectors" begin
-            include("timeevol/cluster_projectors.jl")
-        end
         @time @safetestset "Transverse Field Ising model: real-time full update " begin
             include("timeevol/tf_ising_fu.jl")
+        end
+    end
+    if GROUP == "ALL" || GROUP == "TOOLBOX"
+        @time @safetestset "Density matrix from double-layer PEPO" begin
+            include("toolbox/densitymatrices.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
@@ -89,13 +89,19 @@ end
         @time @safetestset "Norm-preserving retractions" begin
             include("utility/retractions.jl")
         end
-        @time @safetestset "Rotation of InfiniteWeightPEPS" begin
-            include("utility/iwpeps_rotation.jl")
+        @time @safetestset "Rotation of SUWeight" begin
+            include("utility/suweight_rotation.jl")
+        end
+        @time @safetestset "Correlators" begin
+            include("utility/correlator.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"
-        @time @safetestset "Transverse Field Ising model" begin
+        @time @safetestset "Transverse field Ising model" begin
             include("examples/tf_ising.jl")
+        end
+        @time @safetestset "Transverse field Ising model at finite temperature" begin
+            include("examples/tf_ising_finiteT.jl")
         end
         @time @safetestset "Heisenberg model" begin
             include("examples/heisenberg.jl")

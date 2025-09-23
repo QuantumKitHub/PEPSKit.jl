@@ -52,7 +52,7 @@ lattice. To verify our example we will check the magnetization and energy, so we
 the corresponding rank-6 tensors `M` and `E` while we're at it.
 
 ````julia
-function three_dimensional_classical_ising(; beta, J=1.0)
+function three_dimensional_classical_ising(; beta, J = 1.0)
     K = beta * J
 
     # Boltzmann weights
@@ -106,26 +106,40 @@ true
 ## Contracting the partition function
 
 To contract our infinite 3D partition function, we first reinterpret it as an infinite power
-of a slice-to-slice transfer operator ``T``, where ``T`` can be seen as an infinite 2D
+of a slice-to-slice transfer operator ``\mathbb{T}``, where ``\mathbb{T}`` can be seen as an infinite 2D
 projected entangled-pair operator (PEPO) which consists of the rank-6 tensor `O` at each
-site of an infinite 2D square lattice. In the same spirit as the boundary MPS approach, all
-we need to contract the whole partition function is to find the leading eigenvector of this
-PEPO. The fixed point of such a PEPO can be parametrized as a PEPS, and for the case of a
-Hermitian transfer operator we can find this PEPS through [variational optimization](@cite
-vanderstraeten_residual_2018).
+site of an infinite 2D square lattice,
 
-Indeed, for a Hermitian transfer operator ``T`` we can characterize the fixed point PEPS
-``|\psi\rangle`` which satisfies the eigenvalue equation
-``T |\psi\rangle = \Lambda |\psi\rangle`` corresponding to the largest magnitude eigenvalue
-``\Lambda`` as the solution of a variational problem
-
-```math
-|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | T | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,
+```@raw html
+<center>
+<img src="../../assets/figures/pepo.svg" alt="pepo" class="color-invertible" style="zoom: 180%"/>
+</center>
 ```
 
-where ``N`` is the diverging number of sites of the 2D transfer operator ``T``. The function
-minimized in this expression is exactly the free energy per site of the partition function,
-so we essentially find the fixed-point PEPS by variationally minimizing the free energy.
+To contract the original infinite network, all we need to do is to find the leading
+eigenvector of the PEPO ``\mathbb{T}``, The fixed point of such a PEPO can be parametrized
+as a PEPS ``\psi``, which should then satisfy the eigenvalue equation
+``\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle``, or diagrammatically:
+
+```@raw html
+<center>
+<img src="../../assets/figures/pepo_fixedpoint_equation.svg" alt="pepo fixedpoint equation" class="color-invertible" style="zoom: 180%"/>
+</center>
+```
+
+For a Hermitian transfer operator ``\mathbb{T}`` we can characterize the fixed point PEPS
+``|\psi\rangle`` which satisfies the eigenvalue equation
+``\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle`` corresponding to the largest magnitude
+eigenvalue ``\Lambda`` as the solution of a variational problem
+
+```math
+|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | \mathbb{T} | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,
+```
+
+where ``N`` is the diverging number of sites of the 2D transfer operator ``\mathbb{T}``. The function
+minimized in this expression is exactly the free energy per site of the partition function.
+This means we can directly find the fixed-point PEPS by
+[variationally minimizing the free energy](@cite vanderstraeten_residual_2018).
 
 ### Defining the cost function
 
@@ -134,7 +148,7 @@ use [OptimKit.jl](https://github.com/Jutho/OptimKit.jl) to actually optimize it.
 immediately recognize the denominator ``\langle \psi | \psi \rangle`` as the familiar PEPS
 norm, where we can compute the norm per site as the [`network_value`](@ref) of the
 corresponding [`InfiniteSquareNetwork`](@ref) by contracting it with the CTMRG algorithm.
-Similarly, the numerator ``\langle \psi | T | \psi \rangle`` is nothing more than an
+Similarly, the numerator ``\langle \psi | \mathbb{T} | \psi \rangle`` is nothing more than an
 `InfiniteSquareNetwork` consisting of three layers corresponding to the ket, transfer
 operator and bra objects. This object can also be constructed and contracted in a
 straightforward way, so we can again compute its `network_value`.
@@ -147,9 +161,9 @@ we'll specify the specific reverse rule algorithm that will be used to compute t
 of this cost function.
 
 ````julia
-boundary_alg = SimultaneousCTMRG(; maxiter=150, tol=1e-8, verbosity=1)
+boundary_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 1)
 rrule_alg = EigSolver(;
-    solver_alg=KrylovKit.Arnoldi(; maxiter=30, tol=1e-6, eager=true), iterscheme=:diffgauge
+    solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true), iterscheme = :diffgauge
 )
 T = InfinitePEPO(O)
 
@@ -164,7 +178,7 @@ function pepo_costfun((peps, env_double_layer, env_triple_layer))
             env_double_layer,
             n_double_layer,
             boundary_alg;
-            alg_rrule=rrule_alg,
+            alg_rrule = rrule_alg,
         )
         # construct the PEPS-PEPO-PEPS overlap network
         n_triple_layer = InfiniteSquareNetwork(ψ, T)
@@ -174,7 +188,7 @@ function pepo_costfun((peps, env_double_layer, env_triple_layer))
             env_triple_layer,
             n_triple_layer,
             boundary_alg;
-            alg_rrule=rrule_alg,
+            alg_rrule = rrule_alg,
         )
         # update the environments for reuse
         PEPSKit.ignore_derivatives() do
@@ -239,12 +253,12 @@ function pepo_retract((peps, env_double_layer, env_triple_layer), η, α)
     return (peps´, env_double_layer´, env_triple_layer´), ξ
 end
 function pepo_transport!(
-    ξ,
-    (peps, env_double_layer, env_triple_layer),
-    η,
-    α,
-    (peps´, env_double_layer´, env_triple_layer´),
-)
+        ξ,
+        (peps, env_double_layer, env_triple_layer),
+        η,
+        α,
+        (peps´, env_double_layer´, env_triple_layer´),
+    )
     return PEPSKit.peps_transport!(
         ξ, (peps, env_double_layer), η, α, (peps´, env_double_layer´)
     )
@@ -265,97 +279,97 @@ psi0 = initializePEPS(T, Vpeps)
 env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), Venv)
 env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), Venv)
 
-optimizer_alg = LBFGS(32; maxiter=100, gradtol=1e-5, verbosity=3)
+optimizer_alg = LBFGS(32; maxiter = 100, gradtol = 1.0e-5, verbosity = 3)
 
 (psi_final, env2_final, env3_final), f, = optimize(
     pepo_costfun,
     (psi0, env2_0, env3_0),
     optimizer_alg;
-    inner=PEPSKit.real_inner,
-    retract=pepo_retract,
-    (transport!)=(pepo_transport!),
+    inner = PEPSKit.real_inner,
+    retract = pepo_retract,
+    (transport!) = (pepo_transport!),
 );
 ````
 
 ````
 [ Info: LBFGS: initializing with f = -0.554073395182, ‖∇f‖ = 7.7844e-01
-┌ Warning: CTMRG cancel 150:	obj = +1.702942228759e+01 +1.443123032606e-07im	err = 2.4386740957e-05	time = 1.12 sec
-└ @ PEPSKit ~/repos/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:155
-[ Info: LBFGS: iter    1, time  117.39 s: f = -0.777080930369, ‖∇f‖ = 3.1305e-02, α = 7.10e+02, m = 0, nfg = 7
-[ Info: LBFGS: iter    2, time  118.47 s: f = -0.784111515961, ‖∇f‖ = 2.0103e-02, α = 1.00e+00, m = 1, nfg = 1
-[ Info: LBFGS: iter    3, time  118.64 s: f = -0.792705733484, ‖∇f‖ = 2.3327e-02, α = 1.00e+00, m = 2, nfg = 1
-[ Info: LBFGS: iter    4, time  118.78 s: f = -0.796289732476, ‖∇f‖ = 2.2475e-02, α = 1.00e+00, m = 3, nfg = 1
-[ Info: LBFGS: iter    5, time  118.89 s: f = -0.799674902374, ‖∇f‖ = 7.0288e-03, α = 1.00e+00, m = 4, nfg = 1
-[ Info: LBFGS: iter    6, time  118.98 s: f = -0.800082100121, ‖∇f‖ = 1.2717e-03, α = 1.00e+00, m = 5, nfg = 1
-[ Info: LBFGS: iter    7, time  119.08 s: f = -0.800110603125, ‖∇f‖ = 1.3384e-03, α = 1.00e+00, m = 6, nfg = 1
-[ Info: LBFGS: iter    8, time  119.18 s: f = -0.800262201996, ‖∇f‖ = 2.4945e-03, α = 1.00e+00, m = 7, nfg = 1
-[ Info: LBFGS: iter    9, time  119.27 s: f = -0.800450505448, ‖∇f‖ = 2.9259e-03, α = 1.00e+00, m = 8, nfg = 1
-[ Info: LBFGS: iter   10, time  119.36 s: f = -0.800764917087, ‖∇f‖ = 1.7221e-03, α = 1.00e+00, m = 9, nfg = 1
-[ Info: LBFGS: iter   11, time  119.45 s: f = -0.800876048838, ‖∇f‖ = 2.2475e-03, α = 1.00e+00, m = 10, nfg = 1
-[ Info: LBFGS: iter   12, time  119.53 s: f = -0.801100867467, ‖∇f‖ = 1.5561e-03, α = 1.00e+00, m = 11, nfg = 1
-[ Info: LBFGS: iter   13, time  119.63 s: f = -0.801317048856, ‖∇f‖ = 1.1561e-03, α = 1.00e+00, m = 12, nfg = 1
-[ Info: LBFGS: iter   14, time  119.73 s: f = -0.801373050545, ‖∇f‖ = 7.1300e-04, α = 1.00e+00, m = 13, nfg = 1
-[ Info: LBFGS: iter   15, time  119.82 s: f = -0.801388615264, ‖∇f‖ = 2.8462e-04, α = 1.00e+00, m = 14, nfg = 1
-[ Info: LBFGS: iter   16, time  119.91 s: f = -0.801394633333, ‖∇f‖ = 2.7607e-04, α = 1.00e+00, m = 15, nfg = 1
-[ Info: LBFGS: iter   17, time  119.99 s: f = -0.801408061564, ‖∇f‖ = 3.6096e-04, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   18, time  120.09 s: f = -0.801509542169, ‖∇f‖ = 1.9822e-03, α = 1.00e+00, m = 17, nfg = 1
-[ Info: LBFGS: iter   19, time  120.20 s: f = -0.801578405251, ‖∇f‖ = 1.8040e-03, α = 1.00e+00, m = 18, nfg = 1
-[ Info: LBFGS: iter   20, time  120.59 s: f = -0.801694524424, ‖∇f‖ = 2.9356e-03, α = 5.48e-01, m = 19, nfg = 3
-[ Info: LBFGS: iter   21, time  121.07 s: f = -0.801761920683, ‖∇f‖ = 1.1993e-03, α = 3.82e-01, m = 20, nfg = 2
-[ Info: LBFGS: iter   22, time  121.19 s: f = -0.801797785494, ‖∇f‖ = 6.0337e-04, α = 1.00e+00, m = 21, nfg = 1
-[ Info: LBFGS: iter   23, time  121.45 s: f = -0.801808747834, ‖∇f‖ = 3.7053e-04, α = 5.24e-01, m = 22, nfg = 2
-[ Info: LBFGS: iter   24, time  121.58 s: f = -0.801812729173, ‖∇f‖ = 3.0781e-04, α = 1.00e+00, m = 23, nfg = 1
-[ Info: LBFGS: iter   25, time  121.71 s: f = -0.801816445211, ‖∇f‖ = 2.9994e-04, α = 1.00e+00, m = 24, nfg = 1
-[ Info: LBFGS: iter   26, time  121.84 s: f = -0.801824713130, ‖∇f‖ = 3.6496e-04, α = 1.00e+00, m = 25, nfg = 1
-[ Info: LBFGS: iter   27, time  121.98 s: f = -0.801839673823, ‖∇f‖ = 5.4222e-04, α = 1.00e+00, m = 26, nfg = 1
-[ Info: LBFGS: iter   28, time  122.12 s: f = -0.801857478904, ‖∇f‖ = 2.7917e-04, α = 1.00e+00, m = 27, nfg = 1
-[ Info: LBFGS: iter   29, time  122.29 s: f = -0.801864555224, ‖∇f‖ = 1.2319e-04, α = 1.00e+00, m = 28, nfg = 1
-[ Info: LBFGS: iter   30, time  122.48 s: f = -0.801865598736, ‖∇f‖ = 8.6048e-05, α = 1.00e+00, m = 29, nfg = 1
-[ Info: LBFGS: iter   31, time  122.63 s: f = -0.801867571755, ‖∇f‖ = 8.8636e-05, α = 1.00e+00, m = 30, nfg = 1
-[ Info: LBFGS: iter   32, time  122.78 s: f = -0.801870393528, ‖∇f‖ = 2.6554e-04, α = 1.00e+00, m = 31, nfg = 1
-[ Info: LBFGS: iter   33, time  122.93 s: f = -0.801874797039, ‖∇f‖ = 2.7841e-04, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   34, time  123.13 s: f = -0.801877566644, ‖∇f‖ = 1.8523e-04, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   35, time  123.33 s: f = -0.801878506245, ‖∇f‖ = 2.0638e-04, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   36, time  123.51 s: f = -0.801878995097, ‖∇f‖ = 5.6081e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   37, time  123.67 s: f = -0.801879153573, ‖∇f‖ = 6.2356e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   38, time  123.82 s: f = -0.801879355075, ‖∇f‖ = 6.0528e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   39, time  123.97 s: f = -0.801880115100, ‖∇f‖ = 6.2768e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   40, time  124.12 s: f = -0.801881475065, ‖∇f‖ = 6.2301e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   41, time  124.29 s: f = -0.801882272425, ‖∇f‖ = 9.5267e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   42, time  124.44 s: f = -0.801882600033, ‖∇f‖ = 5.1283e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   43, time  124.59 s: f = -0.801882711875, ‖∇f‖ = 2.6091e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   44, time  124.73 s: f = -0.801882805828, ‖∇f‖ = 2.9316e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   45, time  124.85 s: f = -0.801883027060, ‖∇f‖ = 2.7982e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   46, time  124.98 s: f = -0.801883402178, ‖∇f‖ = 3.8102e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   47, time  125.13 s: f = -0.801883718321, ‖∇f‖ = 5.3658e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   48, time  125.26 s: f = -0.801883962887, ‖∇f‖ = 2.8728e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   49, time  125.40 s: f = -0.801884158085, ‖∇f‖ = 3.0680e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   50, time  125.55 s: f = -0.801884385940, ‖∇f‖ = 4.1973e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   51, time  125.70 s: f = -0.801884810459, ‖∇f‖ = 6.8881e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   52, time  125.85 s: f = -0.801885011014, ‖∇f‖ = 3.8651e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   53, time  126.00 s: f = -0.801885126625, ‖∇f‖ = 1.9013e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   54, time  126.14 s: f = -0.801885186489, ‖∇f‖ = 3.2919e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   55, time  126.29 s: f = -0.801885309713, ‖∇f‖ = 4.8521e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   56, time  126.45 s: f = -0.801885491631, ‖∇f‖ = 1.1478e-04, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   57, time  126.61 s: f = -0.801885912857, ‖∇f‖ = 7.7221e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   58, time  126.77 s: f = -0.801886451980, ‖∇f‖ = 6.5316e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   59, time  126.91 s: f = -0.801886639804, ‖∇f‖ = 5.1567e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   60, time  127.25 s: f = -0.801886699372, ‖∇f‖ = 4.5540e-05, α = 3.68e-01, m = 32, nfg = 2
-[ Info: LBFGS: iter   61, time  127.43 s: f = -0.801886723992, ‖∇f‖ = 2.1992e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   62, time  127.61 s: f = -0.801886735202, ‖∇f‖ = 1.8064e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   63, time  127.80 s: f = -0.801886771395, ‖∇f‖ = 3.8651e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   64, time  127.97 s: f = -0.801886801952, ‖∇f‖ = 4.2630e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   65, time  128.14 s: f = -0.801886837856, ‖∇f‖ = 3.9318e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   66, time  128.30 s: f = -0.801886916784, ‖∇f‖ = 3.8747e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   67, time  128.45 s: f = -0.801887030055, ‖∇f‖ = 3.7139e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   68, time  128.62 s: f = -0.801887141198, ‖∇f‖ = 5.7017e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   69, time  128.95 s: f = -0.801887199205, ‖∇f‖ = 3.0700e-05, α = 5.24e-01, m = 32, nfg = 2
-[ Info: LBFGS: iter   70, time  129.10 s: f = -0.801887246613, ‖∇f‖ = 1.3885e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   71, time  129.25 s: f = -0.801887263716, ‖∇f‖ = 1.5769e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   72, time  129.40 s: f = -0.801887319464, ‖∇f‖ = 2.1424e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   73, time  129.56 s: f = -0.801887406143, ‖∇f‖ = 1.9896e-05, α = 1.00e+00, m = 32, nfg = 1
-[ Info: LBFGS: iter   74, time  129.88 s: f = -0.801887467460, ‖∇f‖ = 1.9800e-05, α = 3.61e-01, m = 32, nfg = 2
-[ Info: LBFGS: converged after 75 iterations and time 130.03 s: f = -0.801887535670, ‖∇f‖ = 9.9339e-06
+┌ Warning: CTMRG cancel 150:	obj = +1.702942228759e+01 +1.443123606306e-07im	err = 2.4386740905e-05	time = 2.49 sec
+└ @ PEPSKit ~/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:152
+[ Info: LBFGS: iter    1, time  154.68 s: f = -0.777080930369, ‖∇f‖ = 3.1305e-02, α = 7.10e+02, m = 0, nfg = 7
+[ Info: LBFGS: iter    2, time  156.09 s: f = -0.784111515961, ‖∇f‖ = 2.0103e-02, α = 1.00e+00, m = 1, nfg = 1
+[ Info: LBFGS: iter    3, time  156.40 s: f = -0.792705733484, ‖∇f‖ = 2.3327e-02, α = 1.00e+00, m = 2, nfg = 1
+[ Info: LBFGS: iter    4, time  156.65 s: f = -0.796289732476, ‖∇f‖ = 2.2475e-02, α = 1.00e+00, m = 3, nfg = 1
+[ Info: LBFGS: iter    5, time  156.86 s: f = -0.799674902374, ‖∇f‖ = 7.0288e-03, α = 1.00e+00, m = 4, nfg = 1
+[ Info: LBFGS: iter    6, time  157.05 s: f = -0.800082100121, ‖∇f‖ = 1.2717e-03, α = 1.00e+00, m = 5, nfg = 1
+[ Info: LBFGS: iter    7, time  157.27 s: f = -0.800110603125, ‖∇f‖ = 1.3384e-03, α = 1.00e+00, m = 6, nfg = 1
+[ Info: LBFGS: iter    8, time  157.45 s: f = -0.800262201996, ‖∇f‖ = 2.4945e-03, α = 1.00e+00, m = 7, nfg = 1
+[ Info: LBFGS: iter    9, time  157.64 s: f = -0.800450505448, ‖∇f‖ = 2.9259e-03, α = 1.00e+00, m = 8, nfg = 1
+[ Info: LBFGS: iter   10, time  157.85 s: f = -0.800764917087, ‖∇f‖ = 1.7221e-03, α = 1.00e+00, m = 9, nfg = 1
+[ Info: LBFGS: iter   11, time  158.07 s: f = -0.800876048838, ‖∇f‖ = 2.2475e-03, α = 1.00e+00, m = 10, nfg = 1
+[ Info: LBFGS: iter   12, time  158.26 s: f = -0.801100867467, ‖∇f‖ = 1.5561e-03, α = 1.00e+00, m = 11, nfg = 1
+[ Info: LBFGS: iter   13, time  158.48 s: f = -0.801317048856, ‖∇f‖ = 1.1561e-03, α = 1.00e+00, m = 12, nfg = 1
+[ Info: LBFGS: iter   14, time  158.69 s: f = -0.801373050545, ‖∇f‖ = 7.1300e-04, α = 1.00e+00, m = 13, nfg = 1
+[ Info: LBFGS: iter   15, time  158.89 s: f = -0.801388615264, ‖∇f‖ = 2.8462e-04, α = 1.00e+00, m = 14, nfg = 1
+[ Info: LBFGS: iter   16, time  159.10 s: f = -0.801394633333, ‖∇f‖ = 2.7607e-04, α = 1.00e+00, m = 15, nfg = 1
+[ Info: LBFGS: iter   17, time  159.28 s: f = -0.801408061564, ‖∇f‖ = 3.6096e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   18, time  159.53 s: f = -0.801509542169, ‖∇f‖ = 1.9822e-03, α = 1.00e+00, m = 17, nfg = 1
+[ Info: LBFGS: iter   19, time  159.77 s: f = -0.801578405251, ‖∇f‖ = 1.8040e-03, α = 1.00e+00, m = 18, nfg = 1
+[ Info: LBFGS: iter   20, time  160.69 s: f = -0.801694524424, ‖∇f‖ = 2.9356e-03, α = 5.48e-01, m = 19, nfg = 3
+[ Info: LBFGS: iter   21, time  161.31 s: f = -0.801761920683, ‖∇f‖ = 1.1993e-03, α = 3.82e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   22, time  161.60 s: f = -0.801797785494, ‖∇f‖ = 6.0337e-04, α = 1.00e+00, m = 21, nfg = 1
+[ Info: LBFGS: iter   23, time  162.21 s: f = -0.801808747834, ‖∇f‖ = 3.7053e-04, α = 5.24e-01, m = 22, nfg = 2
+[ Info: LBFGS: iter   24, time  162.50 s: f = -0.801812729173, ‖∇f‖ = 3.0781e-04, α = 1.00e+00, m = 23, nfg = 1
+[ Info: LBFGS: iter   25, time  162.80 s: f = -0.801816445211, ‖∇f‖ = 2.9994e-04, α = 1.00e+00, m = 24, nfg = 1
+[ Info: LBFGS: iter   26, time  163.09 s: f = -0.801824713130, ‖∇f‖ = 3.6496e-04, α = 1.00e+00, m = 25, nfg = 1
+[ Info: LBFGS: iter   27, time  163.41 s: f = -0.801839673823, ‖∇f‖ = 5.4222e-04, α = 1.00e+00, m = 26, nfg = 1
+[ Info: LBFGS: iter   28, time  163.74 s: f = -0.801857478904, ‖∇f‖ = 2.7917e-04, α = 1.00e+00, m = 27, nfg = 1
+[ Info: LBFGS: iter   29, time  164.06 s: f = -0.801864555224, ‖∇f‖ = 1.2319e-04, α = 1.00e+00, m = 28, nfg = 1
+[ Info: LBFGS: iter   30, time  164.37 s: f = -0.801865598736, ‖∇f‖ = 8.6048e-05, α = 1.00e+00, m = 29, nfg = 1
+[ Info: LBFGS: iter   31, time  164.68 s: f = -0.801867571755, ‖∇f‖ = 8.8636e-05, α = 1.00e+00, m = 30, nfg = 1
+[ Info: LBFGS: iter   32, time  165.00 s: f = -0.801870393528, ‖∇f‖ = 2.6554e-04, α = 1.00e+00, m = 31, nfg = 1
+[ Info: LBFGS: iter   33, time  165.35 s: f = -0.801874797039, ‖∇f‖ = 2.7841e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   34, time  165.70 s: f = -0.801877566644, ‖∇f‖ = 1.8523e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   35, time  166.02 s: f = -0.801878506245, ‖∇f‖ = 2.0638e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   36, time  166.33 s: f = -0.801878995097, ‖∇f‖ = 5.6081e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   37, time  166.64 s: f = -0.801879153573, ‖∇f‖ = 6.2356e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   38, time  166.94 s: f = -0.801879355075, ‖∇f‖ = 6.0528e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   39, time  167.25 s: f = -0.801880115100, ‖∇f‖ = 6.2768e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   40, time  167.60 s: f = -0.801881475065, ‖∇f‖ = 6.2301e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   41, time  167.96 s: f = -0.801882272425, ‖∇f‖ = 9.5267e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   42, time  168.29 s: f = -0.801882600033, ‖∇f‖ = 5.1283e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   43, time  168.61 s: f = -0.801882711875, ‖∇f‖ = 2.6091e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   44, time  168.92 s: f = -0.801882805828, ‖∇f‖ = 2.9316e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   45, time  169.21 s: f = -0.801883027060, ‖∇f‖ = 2.7982e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   46, time  169.52 s: f = -0.801883402178, ‖∇f‖ = 3.8102e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   47, time  169.85 s: f = -0.801883718321, ‖∇f‖ = 5.3658e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   48, time  170.17 s: f = -0.801883962887, ‖∇f‖ = 2.8728e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   49, time  170.51 s: f = -0.801884158085, ‖∇f‖ = 3.0680e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   50, time  170.84 s: f = -0.801884385940, ‖∇f‖ = 4.1973e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   51, time  171.20 s: f = -0.801884810459, ‖∇f‖ = 6.8881e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   52, time  171.54 s: f = -0.801885011014, ‖∇f‖ = 3.8651e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   53, time  171.87 s: f = -0.801885126625, ‖∇f‖ = 1.9013e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   54, time  172.21 s: f = -0.801885186489, ‖∇f‖ = 3.2919e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   55, time  172.56 s: f = -0.801885309713, ‖∇f‖ = 4.8521e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   56, time  172.91 s: f = -0.801885491631, ‖∇f‖ = 1.1478e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   57, time  173.29 s: f = -0.801885912857, ‖∇f‖ = 7.7221e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   58, time  173.66 s: f = -0.801886451980, ‖∇f‖ = 6.5316e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   59, time  174.01 s: f = -0.801886639803, ‖∇f‖ = 5.1567e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   60, time  174.69 s: f = -0.801886699372, ‖∇f‖ = 4.5540e-05, α = 3.68e-01, m = 32, nfg = 2
+[ Info: LBFGS: iter   61, time  174.99 s: f = -0.801886723992, ‖∇f‖ = 2.1992e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   62, time  175.28 s: f = -0.801886735202, ‖∇f‖ = 1.8064e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   63, time  175.61 s: f = -0.801886771395, ‖∇f‖ = 3.8651e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   64, time  175.93 s: f = -0.801886801952, ‖∇f‖ = 4.2630e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   65, time  176.24 s: f = -0.801886837856, ‖∇f‖ = 3.9318e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   66, time  176.55 s: f = -0.801886916783, ‖∇f‖ = 3.8747e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   67, time  176.88 s: f = -0.801887030054, ‖∇f‖ = 3.7140e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   68, time  177.23 s: f = -0.801887141197, ‖∇f‖ = 5.7017e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   69, time  177.94 s: f = -0.801887199203, ‖∇f‖ = 3.0700e-05, α = 5.24e-01, m = 32, nfg = 2
+[ Info: LBFGS: iter   70, time  178.28 s: f = -0.801887246612, ‖∇f‖ = 1.3885e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   71, time  178.61 s: f = -0.801887263715, ‖∇f‖ = 1.5769e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   72, time  178.95 s: f = -0.801887319463, ‖∇f‖ = 2.1423e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   73, time  179.30 s: f = -0.801887406143, ‖∇f‖ = 1.9895e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   74, time  180.00 s: f = -0.801887467460, ‖∇f‖ = 1.9799e-05, α = 3.61e-01, m = 32, nfg = 2
+[ Info: LBFGS: converged after 75 iterations and time 180.33 s: f = -0.801887535670, ‖∇f‖ = 9.9342e-06
 
 ````
 
@@ -370,7 +384,7 @@ the final value of the cost function we have just optimized.
 ````
 
 ````
--0.8018875356699146
+-0.8018875356702571
 ````
 
 As another check, we can compute the magnetization per site and compare it to a [reference
@@ -388,7 +402,7 @@ m_ref = 0.667162
 ````
 
 ````
-0.00011315233182807027
+0.00011315585491944447
 ````
 
 ---

@@ -16,9 +16,9 @@ function positive_approx(benv::BondEnv)
     D, U = eigh((benv + benv') / 2)
     # determine if `env` is (mostly) positive or negative
     sgn = sign(sum(D.data))
-    # When optimizing the truncation of a bond, 
+    # When optimizing the truncation of a bond,
     # its environment can always be multiplied by a number.
-    # If `benv` is negative (e.g. obtained approximately from CTMRG), 
+    # If `benv` is negative (e.g. obtained approximately from CTMRG),
     # we can multiply it by (-1).
     data = D.data
     @inbounds for i in eachindex(data)
@@ -44,10 +44,10 @@ Reference:
 - Physical Review B 92, 035142 (2015)
 """
 function fixgauge_benv(
-    Z::AbstractTensorMap{T,S,1,2},
-    a::AbstractTensorMap{T,S,1,2},
-    b::AbstractTensorMap{T,S,2,1},
-) where {T<:Number,S<:ElementarySpace}
+        Z::AbstractTensorMap{T, S, 1, 2},
+        a::AbstractTensorMap{T, S, 1, 2},
+        b::AbstractTensorMap{T, S, 2, 1},
+    ) where {T <: Number, S <: ElementarySpace}
     @assert !isdual(space(Z, 1))
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
@@ -109,11 +109,11 @@ apply the gauge transformation `Linv`, `Rinv` for `Z` to `X`, `Y`:
 ```
 """
 function _fixgauge_benvXY(
-    X::PEPSOrth{T,S},
-    Y::PEPSOrth{T,S},
-    Linv::AbstractTensorMap{T,S,1,1},
-    Rinv::AbstractTensorMap{T,S,1,1},
-) where {T<:Number,S<:ElementarySpace}
+        X::PEPSOrth{T, S},
+        Y::PEPSOrth{T, S},
+        Linv::AbstractTensorMap{T, S, 1, 1},
+        Rinv::AbstractTensorMap{T, S, 1, 1},
+    ) where {T <: Number, S <: ElementarySpace}
     @plansor X[-1 -2 -3 -4] := X[-1 1 -3 -4] * Rinv[1; -2]
     @plansor Y[-1 -2 -3 -4] := Y[-1 -2 -3 1] * Linv[1; -4]
     return X, Y

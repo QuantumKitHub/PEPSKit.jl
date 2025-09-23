@@ -1,6 +1,6 @@
 function _contract_left(
-    M::AbstractTensorMap{T,S,1,4}, sl::DiagonalTensorMap{T,S}
-) where {T<:Number,S<:ElementarySpace}
+        M::AbstractTensorMap{T, S, 1, 4}, sl::DiagonalTensorMap{T, S}
+    ) where {T <: Number, S <: ElementarySpace}
     M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
     if isdual(codomain(M, 1))
         @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w0; w1] * M0[w0; p n s e0]
@@ -13,8 +13,8 @@ function _contract_left(
     return sl1
 end
 function _contract_left(
-    M::AbstractTensorMap{T,S,1,4}, ::Nothing
-) where {T<:Number,S<:ElementarySpace}
+        M::AbstractTensorMap{T, S, 1, 4}, ::Nothing
+    ) where {T <: Number, S <: ElementarySpace}
     M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
     @tensor sl1[e1; e0] := conj(M[w; p n s e1]) * M0[w; p n s e0]
     if isdual(space(sl1, 1))
@@ -24,8 +24,8 @@ function _contract_left(
 end
 
 function _contract_right(
-    M::AbstractTensorMap{T,S,1,4}, sr::DiagonalTensorMap{T,S}
-) where {T<:Number,S<:ElementarySpace}
+        M::AbstractTensorMap{T, S, 1, 4}, sr::DiagonalTensorMap{T, S}
+    ) where {T <: Number, S <: ElementarySpace}
     M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
     if isdual(domain(M, 4))
         @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e1; e0] * conj(M[w1; p n s e1])
@@ -38,8 +38,8 @@ function _contract_right(
     return sr1
 end
 function _contract_right(
-    M::AbstractTensorMap{T,S,1,4}, ::Nothing
-) where {T<:Number,S<:ElementarySpace}
+        M::AbstractTensorMap{T, S, 1, 4}, ::Nothing
+    ) where {T <: Number, S <: ElementarySpace}
     M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
     @tensor sr1[w0; w1] := M0[w0; p n s e] * conj(M[w1; p n s e])
     if isdual(space(sr1, 1))
@@ -52,8 +52,8 @@ end
 Verify the generalized left/right orthogonal condition
 """
 function verify_cluster_orth(
-    Ms::Vector{T1}, wts::Vector{T2}
-) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
+        Ms::Vector{T1}, wts::Vector{T2}
+    ) where {T1 <: AbstractTensorMap, T2 <: AbstractTensorMap}
     N = length(Ms)
     @assert length(wts) == N - 1
     lorths = fill(false, N - 1)
@@ -74,8 +74,8 @@ function verify_cluster_orth(
 end
 
 function inner_prod_cluster(
-    Ms1::Vector{T1}, Ms2::Vector{T2}
-) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
+        Ms1::Vector{T1}, Ms2::Vector{T2}
+    ) where {T1 <: AbstractTensorMap, T2 <: AbstractTensorMap}
     N = length(Ms1)
     @assert length(Ms2) == N
     @assert all((numout(t) == 1 && numin(t) == 4) for t in Ms1)
@@ -104,30 +104,14 @@ function inner_prod_cluster(
     return @tensor res[1 2] * M[1 2]
 end
 
-function absorb_wts_cluster!(
-    Ms::Vector{T1}, wts::Vector{T2}
-) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
-    revs = [isdual(space(M, 1)) for M in Ms[2:end]]
-    for (i, (wt, rev)) in enumerate(zip(wts, revs))
-        wtsqrt = sdiag_pow(wt, 0.5)
-        if rev
-            wtsqrt = permute(wtsqrt, ((2,), (1,)))
-        end
-        @tensor begin
-            Ms[i][-1; -2 -3 -4 -5] = Ms[i][-1; -2 -3 -4 1] * wtsqrt[1; -5]
-            Ms[i + 1][-1; -2 -3 -4 -5] = wtsqrt[-1; 1] * Ms[i + 1][1; -2 -3 -4 -5]
-        end
-    end
-end
-
 function fidelity_cluster(
-    Ms1::Vector{T1}, Ms2::Vector{T2}
-) where {T1<:AbstractTensorMap,T2<:AbstractTensorMap}
+        Ms1::Vector{T1}, Ms2::Vector{T2}
+    ) where {T1 <: AbstractTensorMap, T2 <: AbstractTensorMap}
     return abs2(inner_prod_cluster(Ms1, Ms2)) /
-           (inner_prod_cluster(Ms1, Ms1) * inner_prod_cluster(Ms2, Ms2))
+        (inner_prod_cluster(Ms1, Ms1) * inner_prod_cluster(Ms2, Ms2))
 end
 
-function mpo_to_gate3(gs::Vector{T}) where {T<:AbstractTensorMap}
+function mpo_to_gate3(gs::Vector{T}) where {T <: AbstractTensorMap}
     #= 
     -1         -2        -3
     ↑          ↑          ↑

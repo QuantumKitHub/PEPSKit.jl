@@ -39,7 +39,7 @@ Since we later want to compute the magnetization and energy to check our results
 the appropriate rank-4 tensors here as well while we're at it.
 """
 
-function classical_ising(; beta=log(1 + sqrt(2)) / 2, J=1.0)
+function classical_ising(; beta = log(1 + sqrt(2)) / 2, J = 1.0)
     K = beta * J
 
     ## Boltzmann weights
@@ -92,7 +92,7 @@ settings:
 
 Venv = ℂ^20
 env₀ = CTMRGEnv(Z, Venv)
-env, = leading_boundary(env₀, Z; tol=1e-8, maxiter=500);
+env, = leading_boundary(env₀, Z; tol = 1.0e-8, maxiter = 500);
 
 md"""
 Note that CTMRG environments for partition functions differ from the PEPS environments only
@@ -125,7 +125,7 @@ magnetization and energy per site (where we use `quadgk` to perform integrals of
 auxiliary variable from $0$ to $\pi/2$):
 """
 
-function classical_ising_exact(; beta=log(1 + sqrt(2)) / 2, J=1.0)
+function classical_ising_exact(; beta = log(1 + sqrt(2)) / 2, J = 1.0)
     K = beta * J
 
     k = 1 / sinh(2 * K)^2
