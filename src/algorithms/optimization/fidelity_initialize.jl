@@ -73,7 +73,7 @@ function MPSKit.approximate!(
         peps /= sqrt(abs(_local_norm(peps, peps, env)))
 
         approximate_loginit!(log, one(real(scalartype(peps))), zero(real(scalartype(peps))))
-        nw₀ = InfiniteSquareNetwork(peps₀, peps)
+        nw₀ = InfiniteSquareNetwork(peps₀, peps) # peps₀ has different virtual spaces than peps
         envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, boundary_alg)
         peps′ = _∂local_norm(peps₀, envnw)
         for iter in 1:maxiter
@@ -92,6 +92,7 @@ function MPSKit.approximate!(
             end
 
             # contract boundary of fidelity network
+            # initialize CTMRG on environment of peps′ (must have matching virtual spaces!)
             envnw, = leading_boundary(env, InfiniteSquareNetwork(peps, peps′), boundary_alg)
             ∂norm = _∂local_norm(peps, envnw)
 
