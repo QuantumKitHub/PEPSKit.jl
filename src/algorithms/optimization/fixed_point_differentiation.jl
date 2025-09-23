@@ -411,7 +411,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
             (;
                 alg = :linsolver,
                 tol = alg.solver_alg.tol,
-                maxiter = alg.solver_alg.maxiter,
+                maxiter = alg.solver_alg.maxiter * alg.solver_alg.krylovdim,
                 verbosity = alg.solver_alg.verbosity,
                 iterscheme = iterscheme(alg),
             )
