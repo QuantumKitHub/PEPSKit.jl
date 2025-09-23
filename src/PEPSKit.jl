@@ -97,7 +97,6 @@ export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
-export single_site_fidelity_initialize
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
