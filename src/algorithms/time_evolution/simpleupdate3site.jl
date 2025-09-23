@@ -294,7 +294,7 @@ In the cluster, the axes of each tensor use the MPS order
     M[1 2 3 4; 5]  M[1 2 3 4 5; 6]
 ```
 """
-function apply_gatempo!(
+function _apply_gatempo!(
         Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
@@ -334,7 +334,7 @@ function apply_gatempo!(
     return Ms
 end
 
-function apply_gatempo!(
+function _apply_gatempo!(
         Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 5}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
@@ -466,7 +466,7 @@ function _su3site_se!(
     gate_axs = gate_bothsides ? (1:2) : (1:1)
     ϵs = nothing
     for gate_ax in gate_axs
-        apply_gatempo!(Ms, gs; gate_ax)
+        _apply_gatempo!(Ms, gs; gate_ax)
         if isa(state, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end

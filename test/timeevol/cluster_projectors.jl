@@ -70,7 +70,7 @@ end
         gs = PEPSKit.gate_to_mpo3(gate)
         @test mpo_to_gate3(gs) ≈ gate
         Ms2 = deepcopy(Ms1)
-        PEPSKit.apply_gatempo!(Ms2, gs)
+        PEPSKit._apply_gatempo!(Ms2, gs)
         fid = fidelity_cluster(Ms1, Ms2)
         @test fid ≈ 1.0
     end
@@ -87,7 +87,7 @@ end
         @test mpo_to_gate3(gs) ≈ gate
         for gate_ax in 1:2
             Ms2 = deepcopy(Ms1)
-            PEPSKit.apply_gatempo!(Ms2, gs)
+            PEPSKit._apply_gatempo!(Ms2, gs)
             fid = fidelity_cluster(
                 [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms1],
                 [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms2]
