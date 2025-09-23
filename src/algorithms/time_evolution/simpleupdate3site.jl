@@ -456,7 +456,7 @@ function _su3site_se!(
     # southwest 3-site cluster and arrow direction within it
     Ms = get_3site_se(state, env, row, col)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
-    Vphys = [codomain(M, 1) for M in Ms]
+    Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
     # sites in the cluster
     coords = ((row, col), (row, cp1), (rm1, cp1))
@@ -471,15 +471,15 @@ function _su3site_se!(
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
         wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
+        if isa(state, InfinitePEPO)
+            Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
+        end
         for (wt, wt_idx) in zip(wts, wt_idxs)
             env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
         end
     end
     invperms_se = isa(state, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
     for (M, coord, invperm, openaxs, Vphy) in zip(Ms, coords, invperms_se, openaxs_se, Vphys)
-        if isa(state, InfinitePEPO)
-            M = first(_unfuse_physicalspace(M, Vphy))
-        end
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
