@@ -16,18 +16,18 @@ $(TYPEDFIELDS)
     "Fix gauge of bond environment."
     fixgauge::Bool = true
     "Bond truncation algorithm after applying time evolution gate."
-    opt_alg::Union{ALSTruncation,FullEnvTruncation} = ALSTruncation(;
-        trscheme=truncerr(1e-10)
+    opt_alg::Union{ALSTruncation, FullEnvTruncation} = ALSTruncation(;
+        trscheme = truncerr(1.0e-10)
     )
     "CTMRG algorithm to reconverge environment.
     Its `projector_alg` is also used for the fast update
     of the environment after each FU iteration."
     ctm_alg::CTMRGAlgorithm = SequentialCTMRG(;
-        tol=1e-9,
-        maxiter=20,
-        verbosity=1,
-        trscheme=truncerr(1e-10),
-        projector_alg=:fullinfinite,
+        tol = 1.0e-9,
+        maxiter = 20,
+        verbosity = 1,
+        trscheme = truncerr(1.0e-10),
+        projector_alg = :fullinfinite,
     )
 end
 
@@ -35,13 +35,13 @@ end
 Full update for the bond between `[row, col]` and `[row, col+1]`.
 """
 function _fu_xbond!(
-    row::Int,
-    col::Int,
-    gate::AbstractTensorMap{T,S,2,2},
-    peps::InfinitePEPS,
-    env::CTMRGEnv,
-    alg::FullUpdate,
-) where {T<:Number,S<:ElementarySpace}
+        row::Int,
+        col::Int,
+        gate::AbstractTensorMap{T, S, 2, 2},
+        peps::InfinitePEPS,
+        env::CTMRGEnv,
+        alg::FullUpdate,
+    ) where {T <: Number, S <: ElementarySpace}
     cp1 = _next(col, size(peps, 2))
     A, B = peps[row, col], peps[row, cp1]
     X, a, b, Y = _qr_bond(A, B)
@@ -58,22 +58,16 @@ function _fu_xbond!(
     end
     benv = Z' * Z
     # apply gate
-    need_flip = isdual(space(b, 1))
-    a, s, b, = _apply_gate(a, b, gate, truncerr(1e-15))
-    a, b = absorb_s(a, s, b)
+    a, s, b, = _apply_gate(a, b, gate, truncerr(1.0e-15))
     # optimize a, b
     a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
-    a, b = absorb_s(a, s, b)
-    # bond truncation is done with arrow `a ← b`.
-    # now revert back to `a → b` when needed.
-    if need_flip
-        a, b = flip(a, 3), flip(b, 1)
-    end
-    a /= norm(a, Inf)
-    b /= norm(b, Inf)
+    normalize!(a, Inf)
+    normalize!(b, Inf)
     A, B = _qr_bond_undo(X, a, b, Y)
-    peps.A[row, col] = A / norm(A, Inf)
-    peps.A[row, cp1] = B / norm(B, Inf)
+    normalize!(A, Inf)
+    normalize!(B, Inf)
+    normalize!(s, Inf)
+    peps.A[row, col], peps.A[row, cp1] = A, B
     return s, info
 end
 
@@ -84,8 +78,8 @@ To update rows, rotate the network clockwise by 90 degrees.
 The iPEPS `peps` is modified in place.
 """
 function _fu_column!(
-    col::Int, gate::LocalOperator, peps::InfinitePEPS, env::CTMRGEnv, alg::FullUpdate
-)
+        col::Int, gate::LocalOperator, peps::InfinitePEPS, env::CTMRGEnv, alg::FullUpdate
+    )
     Nr, Nc = size(peps)
     @assert 1 <= col <= Nc
     fid = 1.0
@@ -111,7 +105,7 @@ One round of full update on the input InfinitePEPS `peps` and its CTMRGEnv `env`
 
 Reference: Physical Review B 92, 035142 (2015)
 """
-function fu_iter(gate::LocalOperator, peps::InfinitePEPS, env::CTMRGEnv, alg::FullUpdate)
+function fu_iter(peps::InfinitePEPS, gate::LocalOperator, alg::FullUpdate, env::CTMRGEnv)
     Nr, Nc = size(peps)
     fidmin = 1.0
     peps2, env2 = deepcopy(peps), deepcopy(env)
@@ -140,13 +134,13 @@ end
 """
 Full update an infinite PEPS with nearest neighbor Hamiltonian.
 """
-function fu_iter2(ham::LocalOperator, peps::InfinitePEPS, env::CTMRGEnv, alg::FullUpdate)
-    # Each NN bond is updated twice in _fu_iter, 
+function fu_iter2(peps::InfinitePEPS, ham::LocalOperator, alg::FullUpdate, env::CTMRGEnv)
+    # Each NN bond is updated twice in _fu_iter,
     # thus `dt` is divided by 2 when exponentiating `ham`.
     gate = get_expham(ham, alg.dt / 2)
     wts, fidmin = nothing, 1.0
     for it in 1:(alg.niter)
-        peps, env, wts, fid = fu_iter(gate, peps, env, alg)
+        peps, env, wts, fid = fu_iter(peps, gate, alg, env)
         fidmin = min(fidmin, fid)
     end
     # reconverge environment

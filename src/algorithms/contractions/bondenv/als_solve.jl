@@ -208,8 +208,8 @@ function _solve_ab(
 end
 
 function _solve_ab_pinv!(
-    Rx::AbstractTensorMap{T,S,2,2}, Sx::AbstractTensorMap{T,S,2,1}; kwargs...
-) where {T<:Number,S<:ElementarySpace}
+        Rx::AbstractTensorMap{T, S, 2, 2}, Sx::AbstractTensorMap{T, S, 2, 1}; kwargs...
+    ) where {T <: Number, S <: ElementarySpace}
     Rx_inv, ϵ = _pinv!(copy(Rx); kwargs...)
     is = filter(i -> isdual(codomain(Rx_inv, i)), 1:numout(Rx_inv))
     x = Rx_inv * Sx

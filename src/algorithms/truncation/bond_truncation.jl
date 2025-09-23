@@ -67,6 +67,7 @@ function bond_truncate(
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
     @assert codomain(benv) == domain(benv)
+    need_flip = isdual(space(b, 1))
     time00 = time()
     verbose = (alg.check_interval > 0)
     a2b2 = _combine_ab(a, b)
@@ -101,7 +102,7 @@ function bond_truncate(
         Ra = _tensor_Ra(benv, b)
         Sa = _tensor_Sa(benv, b, a2b2)
         a, info_a = if alg.use_pinv
-            _solve_ab_pinv!(Ra, Sa; trunc=truncerr(1e-10))
+            _solve_ab_pinv!(Ra, Sa; trunc = truncerr(1.0e-10))
         else
             _solve_ab(Ra, Sa, a)
         end
@@ -109,7 +110,7 @@ function bond_truncate(
         Rb = _tensor_Rb(benv, a)
         Sb = _tensor_Sb(benv, a, a2b2)
         b, info_b = if alg.use_pinv
-            _solve_ab_pinv!(Rb, Sb; trunc=truncerr(1e-10))
+            _solve_ab_pinv!(Rb, Sb; trunc = truncerr(1.0e-10))
         else
             _solve_ab(Rb, Sb, b)
         end
@@ -142,6 +143,10 @@ function bond_truncate(
     a, s, b = tsvd!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trscheme)
     # normalize singular value spectrum
     s /= norm(s, Inf)
+    a, b = absorb_s(a, s, b)
+    if need_flip
+        a, s, b = flip_svd(a, s, b)
+    end
     return a, s, b, (; fid, Δfid)
 end
 
@@ -155,6 +160,7 @@ function bond_truncate(
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
     @assert codomain(benv) == domain(benv)
+    need_flip = isdual(space(b, 1))
     #= initialize bond matrix using QR as `Ra Lb`
 
         --- a == b ---   ==>   - Qa - Ra == Rb - Qb -
@@ -185,8 +191,12 @@ function bond_truncate(
     )
     # optimize bond matrix
     u, s, vh, info = fullenv_truncate(b0, benv2, alg)
+    u, vh = absorb_s(u, s, vh)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
     @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
+    if need_flip
+        a, s, b = flip_svd(a, s, vh)
+    end
     return a, s, b, info
 end
