@@ -89,7 +89,7 @@ end
             Ms2 = deepcopy(Ms1)
             PEPSKit.apply_gatempo!(Ms2, gs)
             fid = fidelity_cluster(
-                [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms1], 
+                [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms1],
                 [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms2]
             )
             @test fid ≈ 1.0

@@ -106,6 +106,9 @@ end
         @time @safetestset "J1-J2 model" begin
             include("examples/j1j2_model.jl")
         end
+        @time @safetestset "J1-J2 model at finite temperature" begin
+            include("examples/j1j2_finiteT.jl")
+        end
         @time @safetestset "P-wave superconductor" begin
             include("examples/pwave.jl")
         end
