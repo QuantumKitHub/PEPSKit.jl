@@ -30,6 +30,7 @@ struct FidelityMaxCrude <: ApproximateAlgorithm
     maxiter::Int
     miniter::Int
     verbosity::Int
+    envspace::ElementarySpace
     boundary_alg::CTMRGAlgorithm
 end
 function FidelityMaxCrude(; kwargs...)
@@ -61,33 +62,32 @@ end
 
 """
     single_site_fidelity_initialize(
-        peps₀::InfinitePEPS, envspace, [bondspace = _maxspace(peps₀)]; kwargs...
+        peps::InfinitePEPS, [bondspace = _maxspace(peps₀)]; kwargs...
     )
 
-Generate a single-site unit cell PEPS from a (possibly) multi-site `peps₀` by maximizing
-the fidelity w.r.t. `peps₀`. Here, `envspace` determines the virtual environment spaces for
-CTMRG contractions. By default, the maximal bond space of `peps₀` is used for all virtual
-legs of the single-site PEPS.
+Generate a single-site unit cell PEPS from a (possibly) multi-site `peps` by approximating
+the respective entries using [`approximate!`](@ref). By default, the maximal bond space of
+`peps₀` is used for all virtual legs of the single-site PEPS.
 
 ## Keyword arguments
 
-- `noise_amp=1.0-1` : Gaussian noise amplitude of initial single-site PEPS
+* `noise_amp=1.0-1` : Gaussian noise amplitude of initial single-site PEPS
 
-Additionally, all keyword arguments of [`approximate!`](@ref) can be passed.
+All additional keyword arguments will be passed to the [`approximate!`](@ref) call.
 """
 function single_site_fidelity_initialize(
-        peps₀::InfinitePEPS, envspace, bondspace = _spacemax(peps₀);
+        peps::InfinitePEPS, bondspace = _spacemax(peps);
         noise_amp = 1.0e-1, kwargs...
     )
-    @assert allequal(map(p -> space(p, 1), unitcell(peps₀))) "PEPS must have uniform physical spaces"
+    @assert allequal(map(p -> space(p, 1), unitcell(peps))) "PEPS must have uniform physical spaces"
 
-    physspace = space(unitcell(peps₀)[1], 1)
-    peps_single = noise_amp * InfinitePEPS(randn, scalartype(peps₀), physspace, bondspace) # single-site unit cell with random noise
+    physspace = space(unitcell(peps)[1], 1)
+    peps_single = noise_amp * InfinitePEPS(randn, scalartype(peps), physspace, bondspace) # single-site unit cell with random noise
 
     # absorb peps₀ tensors into single-site tensors in-place
-    peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps₀))) # fill peps₀ unit cell with peps_singles
-    absorb!(peps_uc[1], peps₀[1]) # absorb (1, 1) tensor of peps₀ (applies to all peps_uc entries since absorb! is mutating)
-    peps_single, = approximate!(peps_uc, peps₀, envspace; kwargs...)
+    peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps))) # fill unit cell with peps_single tensors
+    absorb!(peps_uc[1], peps[1]) # absorb (1, 1) tensor of peps₀ (applies to all peps_uc entries since absorb! is mutating)
+    peps_single, = approximate!(peps_uc, peps; kwargs...)
 
     return InfinitePEPS([peps_single[1];;])
 end
@@ -98,48 +98,57 @@ function _spacemax(peps::InfinitePEPS)
 end
 
 @doc """
-    approximate(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
-    approximate!(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
+    approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
+    approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
+    # expert versions
+    approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::ApproximateAlgorithm)
+    approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::ApproximateAlgorithm)
 
-Approximate `pepssrc` with `pepsdst` by iteratively maximizing their fidelity, using
-`pepsdst` as an initial guess. To contract the respective networks, the specified `envspace`
-is used on the environment bonds and kept fixed.
+Approximate `ψ` from the initial guess `ψ₀`. The approximation algorithm is specified via
+the keyword arguments or directly by passing an [`ApproximateAlgorithm`](@ref) struct.
 
 ## Keyword arguments
 
-- `maxiter=5` : Maximal number of maximization iterations
-- `tol=1.0e-3` : Absolute convergence tolerance for the infidelity
-- `boundary_alg=(; verbosity=2)` : CTMRG contraction algorithm, either specified as a `NamedTuple` or `CTMRGAlgorithm`
+* `alg::Symbol=:$(Defaults.approximate_alg)` : Approximation algorithm, which can be one of the following:
+    - `:fidelitymaxcrude` : Maximize the fidelity from the fidelity gradient in a power-method fashion.
+* `tol::Float64=$(Defaults.approximate_tol)` : Infidelity tolerance of the approximation iteration.
+* `maxiter::Int=$(Defaults.approximate_maxiter)` : Maximal number of approximation steps.
+* `miniter::Int=$(Defaults.approximate_miniter)` : Minimal number of approximation steps.
+* `verbosity::Int=$(Defaults.approximate_verbosity)` : Approximator output information verbosity.
+* `boundary_alg::Union{<:CTMRGAlgorithm,NamedTuple}` : CTMRG algorithm used for contracting the norm and fidelity networks.
+
+## Return values
+
+The final approximator and its environment are returned.
 """
 approximate, approximate!
 
 
-function MPSKit.approximate!(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
+function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
     alg = ApproximateAlgorithm(; kwargs...)
-    return approximate!(pepsdst, pepssrc, envspace, alg)
+    return approximate!(ψ₀, ψ, alg)
 end
-function MPSKit.approximate!(
-        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace, alg::ApproximateAlgorithm
-    )
-    @assert size(pepsdst) == size(pepssrc) "incompatible unit cell sizes"
-    @assert all(map((pdst, psrc) -> space(pdst, 1) == space(psrc, 1), unitcell(pepsdst), unitcell(pepssrc))) "incompatible physical spaces"
+function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::FidelityMaxCrude)
+    @assert size(ψ₀) == size(ψ) "incompatible unit cell sizes"
+    @assert all(map((p₀, p) -> space(p₀, 1) == space(p, 1), unitcell(ψ₀), unitcell(ψ))) "incompatible physical spaces"
 
-    log = MPSKit.IterLog("Approx.")
+    log = MPSKit.IterLog("Approximate")
     return LoggingExtras.withlevel(; alg.verbosity) do
         # normalize reference PEPS
-        peps₀ = pepssrc # smaller bond spaces
-        env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀, alg.boundary_alg)
-        peps₀ /= sqrt(abs(_local_norm(peps₀, peps₀, env₀))) # normalize to ensure that fidelity is bounded by 1
+        peps_init = ψ # smaller bond spaces
+        envspace = domain(ψ₀[1])
+        env₀, = leading_boundary(CTMRGEnv(peps_init, envspace), peps_init, alg.boundary_alg)
+        peps_init /= sqrt(abs(_local_norm(peps_init, peps_init, env₀))) # normalize to ensure that fidelity is bounded by 1
 
         # normalize maximizer PEPS
-        peps = pepsdst
+        peps = ψ₀
         env, = leading_boundary(CTMRGEnv(peps, envspace), peps, alg.boundary_alg)
         peps /= sqrt(abs(_local_norm(peps, peps, env)))
 
         approximate_loginit!(log, one(real(scalartype(peps))), zero(real(scalartype(peps))))
-        nw₀ = InfiniteSquareNetwork(peps₀, peps) # peps₀ has different virtual spaces than peps
+        nw₀ = InfiniteSquareNetwork(peps_init, peps) # peps₀ has different virtual spaces than peps
         envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, alg.boundary_alg)
-        peps′ = _∂local_norm(peps₀, envnw)
+        peps′ = _∂local_norm(peps_init, envnw)
         for iter in 1:maxiter
             # compute fidelity from ∂norm
             fid = abs2(_local_norm(peps, peps′))
@@ -171,8 +180,8 @@ function MPSKit.approximate!(
         return peps, env
     end
 end
-function MPSKit.approximate(pepsdst::InfinitePEPS, args...; kwargs...)
-    return approximate!(deepcopy(pepsdst), args...; kwargs...)
+function MPSKit.approximate(ψ₀::InfinitePEPS, args...; kwargs...)
+    return approximate!(deepcopy(ψ₀), args...; kwargs...)
 end
 
 # custom fidelity maximization logging
@@ -214,6 +223,7 @@ function _∂local_norm(peps::InfinitePEPS, env::CTMRGEnv)
     return InfinitePEPS(map(ind -> _∂contract_site(ind, peps, env), eachcoordinate(peps)))
 end
 
+# contract CTMRG environment leaving open the bra-PEPS virtual and physical bonds
 function _∂contract_site(ind::Tuple{Int, Int}, peps::InfinitePEPS, env::CTMRGEnv)
     r, c = ind
     return _∂contract_site(
