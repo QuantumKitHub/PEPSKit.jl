@@ -4,12 +4,13 @@ using PEPSKit: single_site_fidelity_initialize, _spacemax
 using Random
 using Test
 
-@testset "Fidelity initialization with approximate!" begin
+@testset "Fidelity initialization with single_site_fidelity_initialize" begin
     Random.seed!(18092025)
 
-    pepssrc_1x1 = InfinitePEPS(randn, ComplexF64, 2, 2)
+    peps_1x1 = InfinitePEPS(randn, ComplexF64, 2, 2)
     peps_single1 = single_site_fidelity_initialize(
-        pepssrc_1x1, ℂ^6, ℂ^3; noise_amp = 0.3, tol = 1.0e-2,
+        peps_1x1, ℂ^3; noise_amp = 0.3, tol = 1.0e-2, miniter = 5,
+        boundary_alg = (; tol = 1.0e-6, trscheme = truncdim(10), verbosity = 1)
     )
     @test peps_single1 isa InfinitePEPS
     @test size(peps_single1) == (1, 1)
@@ -18,10 +19,10 @@ using Test
     Pspaces = fill(2, unitcell...)
     Nspaces = rand(2:4, unitcell...)
     Espaces = rand(2:4, unitcell...)
-    pepssrc_3x3 = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+    peps_3x3 = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
 
     peps_single2 = single_site_fidelity_initialize(
-        pepssrc_3x3, ℂ^6; maxiter = 10, noise_amp = 0.1,
+        peps_3x3; maxiter = 10, noise_amp = 0.1,
         boundary_alg = (; tol = 1.0e-6, maxiter = 20, verbosity = 1)
     )
     @test peps_single2 isa InfinitePEPS

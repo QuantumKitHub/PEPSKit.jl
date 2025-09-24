@@ -30,7 +30,6 @@ struct FidelityMaxCrude <: ApproximateAlgorithm
     maxiter::Int
     miniter::Int
     verbosity::Int
-    envspace::ElementarySpace
     boundary_alg::CTMRGAlgorithm
 end
 function FidelityMaxCrude(; kwargs...)
@@ -49,7 +48,7 @@ function ApproximateAlgorithm(;
         tol = Defaults.approximate_tol,
         maxiter = Defaults.approximate_maxiter, miniter = Defaults.approximate_miniter,
         verbosity = Defaults.approximate_verbosity,
-        boundary_alg = (; verbosity = maximum(1, verbosity - 2)),  # shouldn't be smaller than one by default
+        boundary_alg = (; verbosity = max(1, verbosity - 2)),  # shouldn't be smaller than one by default
     )
     # replace symbol with projector alg type
     haskey(APPROXIMATE_SYMBOLS, alg) || throw(ArgumentError("unknown approximate algorithm: $alg"))
@@ -87,7 +86,7 @@ function single_site_fidelity_initialize(
     # absorb peps₀ tensors into single-site tensors in-place
     peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps))) # fill unit cell with peps_single tensors
     absorb!(peps_uc[1], peps[1]) # absorb (1, 1) tensor of peps₀ (applies to all peps_uc entries since absorb! is mutating)
-    peps_single, = approximate!(peps_uc, peps; kwargs...)
+    peps_single, = approximate(peps_uc, peps; kwargs...)
 
     return InfinitePEPS([peps_single[1];;])
 end
@@ -99,10 +98,8 @@ end
 
 @doc """
     approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
-    approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
-    # expert versions
+    # expert version
     approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::ApproximateAlgorithm)
-    approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::ApproximateAlgorithm)
 
 Approximate `ψ` from the initial guess `ψ₀`. The approximation algorithm is specified via
 the keyword arguments or directly by passing an [`ApproximateAlgorithm`](@ref) struct.
@@ -121,14 +118,14 @@ the keyword arguments or directly by passing an [`ApproximateAlgorithm`](@ref) s
 
 The final approximator and its environment are returned.
 """
-approximate, approximate!
+approximate
 
 
-function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
+function MPSKit.approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
     alg = ApproximateAlgorithm(; kwargs...)
-    return approximate!(ψ₀, ψ, alg)
+    return approximate(ψ₀, ψ, alg)
 end
-function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::FidelityMaxCrude)
+function MPSKit.approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::FidelityMaxCrude)
     @assert size(ψ₀) == size(ψ) "incompatible unit cell sizes"
     @assert all(map((p₀, p) -> space(p₀, 1) == space(p, 1), unitcell(ψ₀), unitcell(ψ))) "incompatible physical spaces"
 
@@ -136,7 +133,7 @@ function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::Fidelit
     return LoggingExtras.withlevel(; alg.verbosity) do
         # normalize reference PEPS
         peps_init = ψ # smaller bond spaces
-        envspace = domain(ψ₀[1])
+        envspace = domain(ψ₀[1])[1]
         env₀, = leading_boundary(CTMRGEnv(peps_init, envspace), peps_init, alg.boundary_alg)
         peps_init /= sqrt(abs(_local_norm(peps_init, peps_init, env₀))) # normalize to ensure that fidelity is bounded by 1
 
@@ -149,7 +146,7 @@ function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::Fidelit
         nw₀ = InfiniteSquareNetwork(peps_init, peps) # peps₀ has different virtual spaces than peps
         envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, alg.boundary_alg)
         peps′ = _∂local_norm(peps_init, envnw)
-        for iter in 1:maxiter
+        for iter in 1:(alg.maxiter)
             # compute fidelity from ∂norm
             fid = abs2(_local_norm(peps, peps′))
             infid = 1 - fid
@@ -171,7 +168,7 @@ function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::Fidelit
 
             # renormalize current PEPS
             peps = peps′
-            env, = leading_boundary(env, peps, boundary_alg)
+            env, = leading_boundary(env, peps, alg.boundary_alg)
             peps /= sqrt(abs(_local_norm(peps, peps, env)))
 
             peps′ = ∂norm
@@ -179,9 +176,6 @@ function MPSKit.approximate!(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::Fidelit
 
         return peps, env
     end
-end
-function MPSKit.approximate(ψ₀::InfinitePEPS, args...; kwargs...)
-    return approximate!(deepcopy(ψ₀), args...; kwargs...)
 end
 
 # custom fidelity maximization logging
