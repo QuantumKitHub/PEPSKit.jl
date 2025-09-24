@@ -134,18 +134,18 @@ Perform QR decomposition through a PEPS tensor
 ```
 """
 function qr_through(
-        R0::AbstractTensorMap{T, S, 1, 1}, M::AbstractTensorMap{T, S, 1, 4}; normalize::Bool = true
-    ) where {T <: Number, S <: ElementarySpace}
-    @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1; -2 -3 -4 -5]
+        R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
+    ) where {S <: ElementarySpace}
+    @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
     q, r = leftorth!(A; alg = QRpos())
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
 end
 function qr_through(
-        ::Nothing, M::AbstractTensorMap{T, S, 1, 4}; normalize::Bool = true
-    ) where {T <: Number, S <: ElementarySpace}
-    q, r = leftorth(M, ((1, 2, 3, 4), (5,)); alg = QRpos())
+        ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
+    ) where {S <: ElementarySpace}
+    q, r = leftorth(M; alg = QRpos())
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
@@ -160,18 +160,18 @@ Perform LQ decomposition through a tensor
 ```
 """
 function lq_through(
-        M::AbstractTensorMap{T, S, 1, 4}, L1::AbstractTensorMap{T, S, 1, 1}; normalize::Bool = true
-    ) where {T <: Number, S <: ElementarySpace}
-    @plansor A[-1; -2 -3 -4 -5] := M[-1; -2 -3 -4 1] * L1[1; -5]
-    l, q = rightorth!(A; alg = LQpos())
+        M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
+    ) where {S <: ElementarySpace}
+    @plansor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
+    l, q = rightorth!(permute(A, ((1,), (2, 3, 4, 5))); alg = LQpos())
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
 end
 function lq_through(
-        M::AbstractTensorMap{T, S, 1, 4}, ::Nothing; normalize::Bool = true
-    ) where {T <: Number, S <: ElementarySpace}
-    l, q = rightorth(M; alg = LQpos())
+        M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
+    ) where {S <: ElementarySpace}
+    l, q = rightorth(M, ((1,), (2, 3, 4, 5)); alg = LQpos())
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
@@ -180,7 +180,7 @@ end
 """
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 """
-function _get_allRLs(Ms::Vector{T}) where {T <: PEPSTensor}
+function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpace, 4}}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     # get the first R and the last L
@@ -213,11 +213,9 @@ The arrows between `Pa`, `s`, `Pb` are
 ```
 """
 function _proj_from_RL(
-        r::AbstractTensorMap{T, S, 1, 1},
-        l::AbstractTensorMap{T, S, 1, 1};
-        trunc::TruncationScheme = notrunc(),
-        rev::Bool = false,
-    ) where {T <: Number, S <: ElementarySpace}
+        r::MPSBondTensor, l::MPSBondTensor;
+        trunc::TruncationScheme = notrunc(), rev::Bool = false,
+    )
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
     u, s, vh, ϵ = tsvd!(rl; trunc)
@@ -255,26 +253,52 @@ function _get_allprojs(
 end
 
 """
-Find projectors to truncate internal bonds of the cluster `Ms`
+Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
         Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
-    ) where {T <: PEPSTensor, E <: TruncationScheme}
+    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationScheme}
     Rs, Ls = _get_allRLs(Ms)
     Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        @plansor (Ms[i])[-1; -2 -3 -4 -5] := (Ms[i])[-1; -2 -3 -4 1] * Pa[1; -5]
-        @tensor (Ms[i + 1])[-1; -2 -3 -4 -5] := Pb[-1; 1] * (Ms[i + 1])[1; -2 -3 -4 -5]
+        @plansor (Ms[i])[-1 -2 -3 -4; -5] := (Ms[i])[-1 -2 -3 -4; 1] * Pa[1; -5]
+        @tensor (Ms[i + 1])[-1 -2 -3 -4; -5] := Pb[-1; 1] * (Ms[i + 1])[1 -2 -3 -4; -5]
     end
     return wts, ϵs, Pas, Pbs
 end
 
+"""
+Apply the gate MPO `gs` on the cluster `Ms`.
+When `gate_ax` is 1 or 2, the gate acts from the physical codomain or domain side.
+
+e.g. Cluster in PEPS with `gate_ax = 1`:
+```
+         ╱       ╱       ╱
+    --- M1 ---- M2 ---- M3 ---
+      ╱ |     ╱ |     ╱ |
+        ↓       ↓       ↓
+        g1 -←-- g2 -←-- g3
+        ↓       ↓       ↓
+```
+
+In the cluster, the axes of each tensor use the MPS order
+```
+    PEPS:           PEPO:
+           3             3  4
+          ╱              | ╱
+    1 -- M -- 5     1 -- M -- 6
+       ╱ |             ╱ |
+      4  2            5  2
+    M[1 2 3 4; 5]  M[1 2 3 4 5; 6]
+```
+"""
 function _apply_gatempo!(
-        Ms::Vector{T1}, gs::Vector{T2}
-    ) where {T1 <: PEPSTensor, T2 <: AbstractTensorMap}
+        Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
+    ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
+    @assert gate_ax == 1
     @assert all(!isdual(space(g, 1)) for g in gs[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
@@ -285,62 +309,122 @@ function _apply_gatempo!(
     for (i, M) in enumerate(Ms[2:end])
         isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
     end
+    #= gate on codomain of PEPS
+           -3                         -3                          -3
+          ╱    ┌-┐          ┌-┐      ╱    ┌-┐           ┌-┐      ╱
+    -1 --M--2--┤ |          | ├--2--M--4--┤ |           | ├--2--M-- -5
+       ╱ |     | ├- -5  -1 -┤ |   ╱ |     | ├- -5   -1 -┤ |   ╱ |
+     -4  1     | |          | | -4  1     | |           | | -4  1
+         ├--3--┤ |          | ├--3--┼--5--┤ |           | ├--3--┤
+         -2    └-┘          └-┘    -2     └-┘           └-┘    -2
+    =#
     for (i, (g, M)) in enumerate(zip(gs, Ms))
         @assert !isdual(space(M, 2))
         if i == 1
             fr = fusers[i]
-            @tensor (Ms[i])[-1; -2 -3 -4 -5] := M[-1; 1 -3 -4 2] * g[-2 1 3] * fr'[2 3; -5]
+            @tensor (Ms[i])[-1 -2 -3 -4; -5] := M[-1 1 -3 -4; 2] * g[-2 1 3] * fr'[2 3; -5]
         elseif i == length(Ms)
             fl = fusers[i - 1]
-            @tensor (Ms[i])[-1; -2 -3 -4 -5] := fl[-1; 2 3] * M[2; 1 -3 -4 -5] * g[3 -2 1]
+            @tensor (Ms[i])[-1 -2 -3 -4; -5] := fl[-1; 2 3] * M[2 1 -3 -4; -5] * g[3 -2 1]
         else
             fl, fr = fusers[i - 1], fusers[i]
-            @tensor (Ms[i])[-1; -2 -3 -4 -5] :=
-                fl[-1; 2 3] * M[2; 1 -3 -4 4] * g[3 -2 1 5] * fr'[4 5; -5]
+            @tensor (Ms[i])[-1 -2 -3 -4; -5] := fl[-1; 2 3] * M[2 1 -3 -4; 4] * g[3 -2 1 5] * fr'[4 5; -5]
         end
     end
     return Ms
 end
 
-"""
-Apply the gate MPO on the cluster and truncate the bond
-```
-         ╱       ╱       ╱
-    --- M1 ---- M2 ---- M3 ---
-      ╱ |     ╱ |     ╱ |
-        ↓       ↓       ↓
-        g1 -←-- g2 -←-- g3
-        ↓       ↓       ↓
-```
-In the cluster, the axes of each PEPSTensor are reordered as
-```
-           3
-          ╱
-    1 -- M -- 5     M[1; 2 3 4 5]
-       ╱ |
-     4   2
-```
-"""
-function apply_gatempo!(
-        Ms::Vector{T1}, gs::Vector{T2}; trschemes::Vector{E}
-    ) where {T1 <: PEPSTensor, T2 <: AbstractTensorMap, E <: TruncationScheme}
+function _apply_gatempo!(
+        Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
+    ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 5}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
-    revs = [isdual(space(M, 1)) for M in Ms[2:end]]
-    _apply_gatempo!(Ms, gs)
-    wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
-    return wts, ϵs
+    @assert gate_ax == 1 || gate_ax == 2
+    @assert all(!isdual(space(g, 1)) for g in gs[2:end])
+    # fusers to merge axes on bonds in the gate-cluster product
+    # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
+    fusers = map(Ms[2:end], gs[2:end]) do M, g
+        V1, V2 = space(M, 1), space(g, 1)
+        return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
+    end
+    for (i, M) in enumerate(Ms[2:end])
+        isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
+    end
+    #= gate on codomain of PEPO (gate_ax = 1)
+
+        -3  -4                     -3  -4                      -3  -4
+         | ╱   ┌-┐          ┌-┐     | ╱   ┌-┐           ┌-┐     | ╱
+    -1 --M--2--┤ |          | ├--2--M--4--┤ |           | ├--2--M-- -6
+       ╱ |     | ├- -6  -1 -┤ |   ╱ |     | ├- -6   -1 -┤ |   ╱ |
+     -5  1     | |          | | -5  1     | |           | | -5  1
+         ├--3--┤ |          | ├--3--┼--5--┤ |           | ├--3--┤
+         -2    └-┘          └-┘    -2     └-┘           └-┘    -2
+
+        gate on domain of PEPO (gate_ax = 2)
+
+        -3     ┌-┐          ┌-┐    -3     ┌-┐           ┌-┐    -3
+         ├--3--┤ |          | ├--3--┼--5--┤ |           | ├--3--┤
+         1  -4 | ├- -6  -1 -┤ |     1  -4 | ├- -6   -1 -┤ |     1  -4
+         | ╱   | |          | |     | ╱   | |           | |     | ╱
+    -1 --M--2--┤ |          | ├--2--M--4--┤ |           | ├--2--M-- -6
+       ╱ |     └-┘          └-┘   ╱ |     └-┘           └-┘   ╱ |
+     -5 -2                      -5 -2                       -5 -2
+    =#
+    for (i, (g, M)) in enumerate(zip(gs, Ms))
+        @assert !isdual(space(M, 2))
+        if i == 1
+            fr = fusers[i]
+            if gate_ax == 1
+                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := M[-1 1 -3 -4 -5; 2] * g[-2 1 3] * fr'[2 3; -6]
+            else
+                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := M[-1 -2 1 -4 -5; 2] * g[1 -3 3] * fr'[2 3; -6]
+            end
+        elseif i == length(Ms)
+            fl = fusers[i - 1]
+            if gate_ax == 1
+                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 1 -3 -4 -5; -6] * g[3 -2 1]
+            else
+                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 -2 1 -4 -5; -6] * g[3 1 -3]
+            end
+        else
+            fl, fr = fusers[i - 1], fusers[i]
+            if gate_ax == 1
+                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 1 -3 -4 -5; 4] * g[3 -2 1 5] * fr'[4 5; -6]
+            else
+                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 -2 1 -4 -5; 4] * g[3 1 -3 5] * fr'[4 5; -6]
+            end
+        end
+    end
+    return Ms
+end
+
+function _fuse_physicalspaces(O::GenericMPSTensor{S, 5}) where {S <: ElementarySpace}
+    V1, V2 = codomain(O, 2), codomain(O, 3)
+    F = isomorphism(Int, fuse(V1, V2), V1 ⊗ V2)
+    @plansor O_fused[-1 -2 -4 -5; -6] := F[-2; 2 3] * O[-1 2 3 -4 -5; -6]
+    return O_fused, F
+end
+
+function _unfuse_physicalspace(
+        O::GenericMPSTensor{S, 4}, Vout::ElementarySpace, Vin::ElementarySpace = Vout'
+    ) where {S <: ElementarySpace}
+    F = isomorphism(Int, Vout ⊗ Vin, fuse(Vout ⊗ Vin))
+    @plansor O_unfused[-1 -2 -3 -4 -5; -6] := F[-2 -3; 1] * O[-1 1 -4 -5; -6]
+    return O_unfused, F
 end
 
 const openaxs_se = [(NORTH, SOUTH, WEST), (EAST, SOUTH), (NORTH, EAST, WEST)]
-const invperms_se = [((2,), (3, 5, 4, 1)), ((2,), (5, 3, 4, 1)), ((2,), (5, 3, 1, 4))]
-const perms_se = [
-    begin
-            p = invperm((p1..., p2...))
-            ((p[1],), p[2:end])
-        end for (p1, p2) in invperms_se
-]
+const invperms_se_peps = [((2,), (3, 5, 4, 1)), ((2,), (5, 3, 4, 1)), ((2,), (5, 3, 1, 4))]
+const perms_se_peps = map(invperms_se_peps) do (p1, p2)
+    p = invperm((p1..., p2...))
+    return (p[1:(end - 1)], (p[end],))
+end
+const invperms_se_pepo = [((2, 3), (4, 6, 5, 1)), ((2, 3), (6, 4, 5, 1)), ((2, 3), (6, 4, 1, 5))]
+const perms_se_pepo = map(invperms_se_pepo) do (p1, p2)
+    p = invperm((p1..., p2...))
+    return (p[1:(end - 1)], (p[end],))
+end
 """
-Obtain the following 3-site cluster
+Obtain the 3-site cluster in the "southeast corner" of a square plaquette.
 ``` 
     r-1         M3
                 |
@@ -349,108 +433,126 @@ Obtain the following 3-site cluster
         c      c+1
 ```
 """
-function get_3site_se(peps::InfinitePEPS, env::SUWeight, row::Int, col::Int)
-    Nr, Nc = size(peps)
+function get_3site_se(state::InfiniteState, env::SUWeight, row::Int, col::Int)
+    Nr, Nc = size(state)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
-    cluster = collect(
-        permute(
-                absorb_weight(
-                    peps.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs; inv = false
-                ),
-                perm,
-            ) for (coord, openaxs, perm) in zip(coords_se, openaxs_se, perms_se)
-    )
-    return cluster
+    perms_se = isa(state, InfinitePEPS) ? perms_se_peps : perms_se_pepo
+    Ms = map(zip(coords_se, perms_se, openaxs_se)) do (coord, perm, openaxs)
+        M = absorb_weight(state.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs)
+        return permute(M, perm)
+    end
+    return Ms
 end
 
 function _su3site_se!(
-        peps::InfinitePEPS,
-        gs::Vector{T},
-        env::SUWeight,
-        row::Int,
-        col::Int,
-        trschemes::Vector{E},
+        state::InfiniteState, gs::Vector{T}, env::SUWeight,
+        row::Int, col::Int, trschemes::Vector{E};
+        gate_bothsides::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationScheme}
-    Nr, Nc = size(peps)
+    Nr, Nc = size(state)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
-    # southwest 3-site cluster
-    Ms = get_3site_se(peps, env, row, col)
+    # southwest 3-site cluster and arrow direction within it
+    Ms = get_3site_se(state, env, row, col)
+    revs = [isdual(space(M, 1)) for M in Ms[2:end]]
+    Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
     # sites in the cluster
     coords = ((row, col), (row, cp1), (rm1, cp1))
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
-    wts, ϵ = apply_gatempo!(Ms, gs; trschemes)
-    for (wt, wt_idx) in zip(wts, wt_idxs)
-        env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
+    # apply gate MPOs
+    gate_axs = gate_bothsides ? (1:2) : (1:1)
+    ϵs = nothing
+    for gate_ax in gate_axs
+        _apply_gatempo!(Ms, gs; gate_ax)
+        if isa(state, InfinitePEPO)
+            Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
+        end
+        wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
+        if isa(state, InfinitePEPO)
+            Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
+        end
+        for (wt, wt_idx) in zip(wts, wt_idxs)
+            env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
+        end
     end
-    for (M, coord, invperm, openaxs) in zip(Ms, coords, invperms_se, openaxs_se)
+    invperms_se = isa(state, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
+    for (M, coord, invperm, openaxs, Vphy) in zip(Ms, coords, invperms_se, openaxs_se, Vphys)
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
         M = absorb_weight(M, env, coord[1], coord[2], openaxs; inv = true)
-        peps.A[CartesianIndex(coord)] = normalize(M, Inf)
+        state.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
-    return nothing
+    return ϵs
 end
 
 """
-    su3site_iter(peps::InfinitePEPS, gatempos, alg::SimpleUpdate, env::SUWeight)
+    su3site_iter(state::InfinitePEPS, gatempos, alg::SimpleUpdate, env::SUWeight)
+    su3site_iter(densitymatrix::InfinitePEPO, gatempos, alg::SimpleUpdate, env::SUWeight; gate_bothsides::Bool = true)
 
-One round of 3-site simple update. 
+One round of 3-site simple update, which applies the Trotter gate MPOs `gatempos`
+on an InfinitePEPS `state` or InfinitePEPO `densitymatrix`.
 """
 function su3site_iter(
-        peps::InfinitePEPS, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
+        state::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight;
+        gate_bothsides::Bool = true
     ) where {G <: AbstractMatrix}
-    Nr, Nc = size(peps)
+    if state isa InfinitePEPS
+        gate_bothsides = false
+    else
+        @assert size(state, 3) == 1
+    end
+    Nr, Nc = size(state)[1:2]
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    peps2, env2 = deepcopy(peps), deepcopy(env)
+    state2, env2 = deepcopy(state), deepcopy(env)
     trscheme = alg.trscheme
     for i in 1:4
-        for site in CartesianIndices(peps2.A)
-            r, c = site[1], site[2]
+        Nr, Nc = size(state2)[1:2]
+        for r in 1:Nr, c in 1:Nc
             gs = gatempos[i][r, c]
             trschemes = [
                 truncation_scheme(trscheme, 1, r, c)
-                truncation_scheme(trscheme, 2, r, _next(c, size(peps2)[2]))
+                truncation_scheme(trscheme, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(peps2, gs, env2, r, c, trschemes)
+            _su3site_se!(state2, gs, env2, r, c, trschemes; gate_bothsides)
         end
-        peps2, env2 = rotl90(peps2), rotl90(env2)
+        state2, env2 = rotl90(state2), rotl90(env2)
         trscheme = rotl90(trscheme)
     end
-    return peps2, env2
+    return state2, env2
 end
 
 """
 Perform 3-site simple update for Hamiltonian `ham`.
 """
 function _simpleupdate3site(
-        peps::InfinitePEPS,
-        ham::LocalOperator,
-        alg::SimpleUpdate,
-        env::SUWeight;
-        check_interval::Int = 500,
+        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
+        check_interval::Int = 500, gate_bothsides::Bool = true
     )
     time_start = time()
     # convert Hamiltonian to 3-site exponentiated gate MPOs
+    if state isa InfinitePEPS
+        gate_bothsides = false
+    end
+    dt = gate_bothsides ? (alg.dt / 2) : alg.dt
     gatempos = [
-        _get_gatempos_se(ham, alg.dt),
-        _get_gatempos_se(rotl90(ham), alg.dt),
-        _get_gatempos_se(rot180(ham), alg.dt),
-        _get_gatempos_se(rotr90(ham), alg.dt),
+        _get_gatempos_se(ham, dt),
+        _get_gatempos_se(rotl90(ham), dt),
+        _get_gatempos_se(rot180(ham), dt),
+        _get_gatempos_se(rotr90(ham), dt),
     ]
     wtdiff = 1.0
     env0 = deepcopy(env)
     for count in 1:(alg.maxiter)
         time0 = time()
-        peps, env = su3site_iter(peps, gatempos, alg, env)
+        state, env = su3site_iter(state, gatempos, alg, env; gate_bothsides)
         wtdiff = compare_weights(env, env0)
         converge = (wtdiff < alg.tol)
         cancel = (count == alg.maxiter)
@@ -467,5 +569,5 @@ function _simpleupdate3site(
         end
         converge && break
     end
-    return peps, env, wtdiff
+    return state, env, wtdiff
 end
