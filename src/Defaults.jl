@@ -73,6 +73,14 @@ Module containing default algorithm parameter values and arguments.
 * `ls_maxfg=$(Defaults.ls_maxfg)` : Maximum number of function evaluations for the line search in each step of the optimization.
 * `lbfgs_memory=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
 
+## Approximate
+
+* `approximate_alg=:$(Defaults.approximate_alg)` : Default `ApproximateAlgorithm` for PEPS approximation.
+* `approximate_tol=$(Defaults.approximate_tol)` : Infidelity tolerance of the approximation iteration.
+* `approximate_maxiter=$(Defaults.approximate_maxiter)` : Maximal number of approximation steps.
+* `approximate_miniter=$(Defaults.approximate_miniter)` : Minimal number of approximation steps.
+* `approximate_verbosity=$(Defaults.approximate_verbosity)` : Approximator output information verbosity.
+
 ## OhMyThreads scheduler
 
 - `scheduler=Ref{Scheduler}(...)` : Multithreading scheduler which can be accessed via `set_scheduler!`.
@@ -124,6 +132,13 @@ const optimizer_alg = :lbfgs # ∈ {:gradientdescent, :conjugategradient, :lbfgs
 const ls_maxiter = 10
 const ls_maxfg = 20
 const lbfgs_memory = 20
+
+# Approximate
+const approximate_alg = :fidelitymaxcrude
+const approximate_tol = 1.0e-2
+const approximate_maxiter = 10
+const approximate_miniter = 3
+const approximate_verbosity = 3
 
 # OhMyThreads scheduler defaults
 const scheduler = Ref{Scheduler}()

@@ -1,4 +1,65 @@
 """
+$(TYPEDEF)
+
+Abstract super type for tensor approximation algorithms.
+"""
+abstract type ApproximateAlgorithm end
+
+const APPROXIMATE_SYMBOLS = IdDict{Symbol, Type{<:ApproximateAlgorithm}}()
+
+"""
+$(TYPEDEF)
+
+PEPS approximation algorithm maximizing the fidelity by successively applying the fidelity
+derivative with respect to the approximator PEPS.
+
+## Constructors
+
+    FidelityMaxCrude(; kwargs...)
+
+Construct the approximation algorithm from the following keyword arguments:
+
+* `tol::Float64=$(Defaults.approximate_tol)` : Infidelity tolerance of the approximation iteration.
+* `maxiter::Int=$(Defaults.approximate_maxiter)` : Maximal number of approximation steps.
+* `miniter::Int=$(Defaults.approximate_miniter)` : Minimal number of approximation steps.
+* `verbosity::Int=$(Defaults.approximate_verbosity)` : Approximator output information verbosity.
+* `boundary_alg::Union{<:CTMRGAlgorithm,NamedTuple}` : CTMRG algorithm used for contracting the norm and fidelity networks.
+"""
+struct FidelityMaxCrude <: ApproximateAlgorithm
+    tol::Float64
+    maxiter::Int
+    miniter::Int
+    verbosity::Int
+    boundary_alg::CTMRGAlgorithm
+end
+function FidelityMaxCrude(; kwargs...)
+    return ApproximateAlgorithm(; alg = :fidelitymaxcrude, kwargs...)
+end
+
+APPROXIMATE_SYMBOLS[:fidelitymaxcrude] = FidelityMaxCrude
+
+"""
+    ApproximateAlgorithm(; kwargs...)
+
+Keyword argument parser returning the appropriate `ApproximateAlgorithm` algorithm struct.
+"""
+function ApproximateAlgorithm(;
+        alg = Defaults.approximate_alg,
+        tol = Defaults.approximate_tol,
+        maxiter = Defaults.approximate_maxiter, miniter = Defaults.approximate_miniter,
+        verbosity = Defaults.approximate_verbosity,
+        boundary_alg = (; verbosity = maximum(1, verbosity - 2)),  # shouldn't be smaller than one by default
+    )
+    # replace symbol with projector alg type
+    haskey(APPROXIMATE_SYMBOLS, alg) || throw(ArgumentError("unknown approximate algorithm: $alg"))
+    alg_type = APPROXIMATE_SYMBOLS[alg]
+
+    boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
+
+    return alg_type(tol, maxiter, miniter, verbosity, boundary_algorithm)
+end
+
+"""
     single_site_fidelity_initialize(
         peps₀::InfinitePEPS, envspace, [bondspace = _maxspace(peps₀)]; kwargs...
     )
@@ -52,39 +113,42 @@ is used on the environment bonds and kept fixed.
 """
 approximate, approximate!
 
+
+function MPSKit.approximate!(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
+    alg = ApproximateAlgorithm(; kwargs...)
+    return approximate!(pepsdst, pepssrc, envspace, alg)
+end
 function MPSKit.approximate!(
-        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace;
-        maxiter = 10, tol = 1.0e-3, verbosity = 3, boundary_alg = (; verbosity = 1)
+        pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace, alg::ApproximateAlgorithm
     )
     @assert size(pepsdst) == size(pepssrc) "incompatible unit cell sizes"
     @assert all(map((pdst, psrc) -> space(pdst, 1) == space(psrc, 1), unitcell(pepsdst), unitcell(pepssrc))) "incompatible physical spaces"
 
     log = MPSKit.IterLog("Approx.")
-    return LoggingExtras.withlevel(; verbosity) do
+    return LoggingExtras.withlevel(; alg.verbosity) do
         # normalize reference PEPS
         peps₀ = pepssrc # smaller bond spaces
-        boundary_alg = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
-        env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀, boundary_alg)
+        env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀, alg.boundary_alg)
         peps₀ /= sqrt(abs(_local_norm(peps₀, peps₀, env₀))) # normalize to ensure that fidelity is bounded by 1
 
         # normalize maximizer PEPS
         peps = pepsdst
-        env, = leading_boundary(CTMRGEnv(peps, envspace), peps, boundary_alg)
+        env, = leading_boundary(CTMRGEnv(peps, envspace), peps, alg.boundary_alg)
         peps /= sqrt(abs(_local_norm(peps, peps, env)))
 
         approximate_loginit!(log, one(real(scalartype(peps))), zero(real(scalartype(peps))))
         nw₀ = InfiniteSquareNetwork(peps₀, peps) # peps₀ has different virtual spaces than peps
-        envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, boundary_alg)
+        envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, alg.boundary_alg)
         peps′ = _∂local_norm(peps₀, envnw)
         for iter in 1:maxiter
             # compute fidelity from ∂norm
             fid = abs2(_local_norm(peps, peps′))
             infid = 1 - fid
-            if abs(infid) ≤ tol
+            if abs(infid) ≤ alg.tol && iter ≥ alg.miniter
                 approximate_logfinish!(log, iter, infid, fid)
                 break
             end
-            if iter == maxiter
+            if iter == alg.maxiter
                 approximate_logcancel!(log, iter, infid, fid)
                 break
             else
@@ -93,7 +157,7 @@ function MPSKit.approximate!(
 
             # contract boundary of fidelity network
             # initialize CTMRG on environment of peps′ (must have matching virtual spaces!)
-            envnw, = leading_boundary(env, InfiniteSquareNetwork(peps, peps′), boundary_alg)
+            envnw, = leading_boundary(env, InfiniteSquareNetwork(peps, peps′), alg.boundary_alg)
             ∂norm = _∂local_norm(peps, envnw)
 
             # renormalize current PEPS
@@ -107,8 +171,8 @@ function MPSKit.approximate!(
         return peps, env
     end
 end
-function MPSKit.approximate(pepsdst::InfinitePEPS, pepssrc::InfinitePEPS, envspace; kwargs...)
-    return approximate!(deepcopy(pepsdst), pepssrc, envspace; kwargs...)
+function MPSKit.approximate(pepsdst::InfinitePEPS, args...; kwargs...)
+    return approximate!(deepcopy(pepsdst), args...; kwargs...)
 end
 
 # custom fidelity maximization logging
