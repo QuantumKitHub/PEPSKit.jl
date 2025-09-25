@@ -54,8 +54,11 @@ function enlarge_northwest_corner(
         E_west::CTMRG_PF_EdgeTensor, C_northwest::CTMRGCornerTensor,
         E_north::CTMRG_PF_EdgeTensor, A::PFTensor,
     )
-    return @autoopt @tensor corner[χ_S D_S; χ_E D_E] :=
-        E_west[χ_S D1; χ1] * C_northwest[χ1; χ2] * E_north[χ2 D2; χ_E] * A[D1 D_S; D2 D_E]
+    return @tensor begin
+        EC[χ_S DW; χ2] := E_west[χ_S DW; χ1] * C_northwest[χ1; χ2]
+        ECE[χ_S χ_E; DW DN] := EC[χ_S DW; χ2] * E_north[χ2 DN; χ_E]
+        corner[χ_S D_S; χ_E D_E] := ECE[χ_S χ_E; DW DN] * A[DW D_S; DN D_E]
+    end
 end
 
 """
@@ -92,8 +95,11 @@ function enlarge_northeast_corner(
         E_north::CTMRG_PF_EdgeTensor, C_northeast::CTMRGCornerTensor,
         E_east::CTMRG_PF_EdgeTensor, A::PFTensor,
     )
-    return @autoopt @tensor corner[χ_W D_W; χ_S D_S] :=
-        E_north[χ_W D1; χ1] * C_northeast[χ1; χ2] * E_east[χ2 D2; χ_S] * A[D_W D_S; D1 D2]
+    return @tensor begin
+        EC[DN χ_W; χ2] := E_north[χ_W DN; χ1] * C_northeast[χ1; χ2]
+        ECE[DN DE; χ_S χ_W] := EC[DN χ_W; χ2] * E_east[χ2 DE; χ_S]
+        corner[χ_W D_W; χ_S D_S] := A[D_W D_S; DN DE] * ECE[DN DE; χ_S χ_W]
+    end
 end
 
 """
@@ -130,8 +136,11 @@ function enlarge_southeast_corner(
         E_east::CTMRG_PF_EdgeTensor, C_southeast::CTMRGCornerTensor,
         E_south::CTMRG_PF_EdgeTensor, A::PFTensor,
     )
-    return @autoopt @tensor corner[χ_N D_N; χ_W D_W] :=
-        E_east[χ_N D1; χ1] * C_southeast[χ1; χ2] * E_south[χ2 D2; χ_W] * A[D_W D2; D_N D1]
+    return @tensor begin
+        EC[χ_N D1; χ2] := E_east[χ_N D1; χ1] * C_southeast[χ1; χ2]
+        ECE[χ_N χ_W; D1 D2] := EC[χ_N D1; χ2] * E_south[χ2 D2; χ_W]
+        corner[χ_N D_N; χ_W D_W] := ECE[χ_N χ_W; D1 D2] * A[D_W D2; D_N D1]
+    end
 end
 
 """
@@ -168,8 +177,11 @@ function enlarge_southwest_corner(
         E_south::CTMRG_PF_EdgeTensor, C_southwest::CTMRGCornerTensor,
         E_west::CTMRG_PF_EdgeTensor, A::PFTensor,
     )
-    return @autoopt @tensor corner[χ_E D_E; χ_N D_N] :=
-        E_south[χ_E D1; χ1] * C_southwest[χ1; χ2] * E_west[χ2 D2; χ_N] * A[D2 D1; D_N D_E]
+    return @tensor begin
+        EC[χ_E D1; χ2] := E_south[χ_E D1; χ1] * C_southwest[χ1; χ2]
+        ECE[χ_E χ_N; D2 D1] := EC[χ_E D1; χ2] * E_west[χ2 D2; χ_N]
+        corner[χ_E D_E; χ_N D_N] := ECE[χ_E χ_N; D2 D1] * A[D2 D1; D_N D_E]
+    end
 end
 
 # Projector contractions
@@ -935,18 +947,28 @@ environment tensors.
 ```
 """
 function renormalize_north_edge(
-        (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
+        (row, col), env::CTMRGEnv, P_right, P_left, network::InfiniteSquareNetwork
     )
     return renormalize_north_edge(
         env.edges[NORTH, _prev(row, end), col],
-        P_left[NORTH, row, col],
-        P_right[NORTH, row, _prev(col, end)],
+        P_right[NORTH, row, col],
+        P_left[NORTH, row, _prev(col, end)],
         network[row, col], # so here it's fine
     )
 end
-function renormalize_north_edge(E_north, P_left, P_right, A)
+function renormalize_north_edge(E_north, P_right, P_left, A)
     A_west = _rotl90_localsandwich(A)
-    return renormalize_west_edge(E_north, P_left, P_right, A_west)
+    return renormalize_west_edge(E_north, P_right, P_left, A_west)
+end
+# specialize PartitionFunction to avoid permute(A)
+function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_right, P_left, A::PFTensor)
+    return @tensor begin
+        temp = permute(E_north, ((2, 1), (3,))) # impose D_N as 1st leg
+        PE[D_N D_E; χNW χ_E] := temp[D_N χNW; χNE] * P_right[χNE D_E; χ_E]
+        PEA[D_W χNW; D_S χ_E] := A[D_W D_S; D_N D_E] * PE[D_N D_E; χNW χ_E]
+        P_leftp = permute(P_left, ((1,), (3, 2)))
+        edge[χ_W D_S; χ_E] := P_leftp[χ_W; D_W χNW] * PEA[D_W χNW; D_S χ_E]
+    end
 end
 
 """
@@ -980,6 +1002,15 @@ function renormalize_east_edge(E_east, P_bottom, P_top, A)
     A_west = _rot180_localsandwich(A)
     return renormalize_west_edge(E_east, P_bottom, P_top, A_west)
 end
+# specialize PartitionFunction to avoid permute(A)
+function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
+    return @tensor begin
+        temp = permute(P_top, ((3, 1), (2,)))  # impose D_N as 1st leg
+        PE[D_N D_E; χN χSE] := temp[D_N χN; χNE] * E_east[χNE D_E; χSE]
+        PEA[D_W χN; χSE D_S] := A[D_W D_S; D_N D_E] * PE[D_N D_E; χN χSE]
+        edge[χ_N D_W; χ_S] := PEA[D_W χ_N; χSE D_S] * P_bottom[χSE D_S; χ_S]
+    end
+end
 
 """
     renormalize_south_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
@@ -1012,6 +1043,16 @@ function renormalize_south_edge(E_south, P_left, P_right, A)
     return renormalize_west_edge(E_south, P_left, P_right, A_west)
 end
 
+function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
+    # specialize to avoid extra permute on A when calling renormalize_west_edge
+    return @tensor begin
+        P_leftp = permute(P_left, ((3, 2), (1,)))  # impose χ_W as 1st leg
+        PE[χ_W χSE; D_W D_S] := P_leftp[χ_W D_W; χSW] * E_south[χSE D_S; χSW]
+        PEA[χ_W D_N; χSE D_E] := PE[χ_W χSE; D_W D_S] * A[D_W D_S; D_N D_E]
+        edge[χ_E D_N; χ_W] := PEA[χ_W D_N; χSE D_E] * P_right[χ_E; χSE D_E]
+    end
+end
+
 """
     renormalize_west_edge((row, col), env, P_top, P_bottom, network::InfiniteSquareNetwork{P})
     renormalize_west_edge(E_west, P_top, P_bottom, A::P)
@@ -1030,12 +1071,12 @@ environment tensors.
 ```
 """
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
-        (row, col), env::CTMRGEnv, P_bottom::Array{Pb, 3}, P_top::Array{Pt, 3}, network::InfiniteSquareNetwork,
+        (row, col), env::CTMRGEnv, P_top::Array{Pt, 3}, P_bottom::Array{Pb, 3}, network::InfiniteSquareNetwork,
     ) where {Pt, Pb}
     return renormalize_west_edge(
         env.edges[WEST, row, _prev(col, end)],
-        P_bottom[WEST, row, col],
-        P_top[WEST, _next(row, end), col],
+        P_top[WEST, row, col],
+        P_bottom[WEST, _next(row, end), col],
         network[row, col],
     )
 end
@@ -1050,12 +1091,12 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
     )
 end
 function renormalize_west_edge(
-        E_west::CTMRG_PEPS_EdgeTensor, P_bottom, P_top, A::PEPSSandwich
+        E_west::CTMRG_PEPS_EdgeTensor, P_top, P_bottom, A::PEPSSandwich
     )
-    # starting with P_top to save one permute in the end
+    # starting with P_bottom to save one permute in the end
     return @tensor begin
         # already putting χE in front here to make next permute cheaper
-        PE[χS χNW DSb DWb; DSt DWt] := P_top[χS; χSW DSt DSb] * E_west[χSW DWt DWb; χNW]
+        PE[χS χNW DSb DWb; DSt DWt] := P_bottom[χS; χSW DSt DSb] * E_west[χSW DWt DWb; χNW]
 
         PEket[χS χNW DNt DEt; DSb DWb d] :=
             PE[χS χNW DSb DWb; DSt DWt] * ket(A)[d; DNt DEt DSt DWt]
@@ -1063,12 +1104,15 @@ function renormalize_west_edge(
         corner[χS DEt DEb; χNW DNt DNb] :=
             PEket[χS χNW DNt DEt; DSb DWb d] * conj(bra(A)[d; DNb DEb DSb DWb])
 
-        edge[χS DEt DEb; χN] := corner[χS DEt DEb; χNW DNt DNb] * P_bottom[χNW DNt DNb; χN]
+        edge[χS DEt DEb; χN] := corner[χS DEt DEb; χNW DNt DNb] * P_top[χNW DNt DNb; χN]
     end
 end
-function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::PFTensor)
-    return @autoopt @tensor edge[χ_S D_E; χ_N] :=
-        E_west[χ1 D1; χ2] * A[D1 D5; D3 D_E] * P_bottom[χ2 D3; χ_N] * P_top[χ_S; χ1 D5]
+function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_top, P_bottom, A::PFTensor)
+    return @tensor begin
+        PE[χ_S χNW; D_W D_S] := P_bottom[χ_S; χSW D_S] * E_west[χSW D_W; χNW]
+        PEA[χ_S D_E; χNW D_N] := PE[χ_S χNW; D_W D_S] * A[D_W D_S; D_N D_E]
+        edge[χ_S D_E; χ_N] := PEA[χ_S D_E; χNW D_N] * P_top[χNW D_N; χ_N]
+    end
 end
 
 # Gauge fixing contractions
