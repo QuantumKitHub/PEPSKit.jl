@@ -477,3 +477,34 @@ function VI.inner(env₁::CTMRGEnv, env₂::CTMRGEnv)
     return inner((env₁.corners, env₁.edges), (env₂.corners, env₂.edges))
 end
 VI.norm(env::CTMRGEnv) = norm((env.corners, env.edges))
+
+# ==========================================================================================
+
+struct FourQuadrants{S, T, N, TM} <: AbstractTensorMap{S, T, N, N}
+    Q1::TM
+    Q2::TM
+    Q3::TM
+    Q4::TM
+
+    function FourQuadrants{T, S, N, TM}(
+            Q1, Q2, Q3, Q4
+        ) where {S, T, N, TM <: AbstractTensorMap{T, S, N, N}}
+        return new{T, S, N, TM}(Q1, Q2, Q3, Q4)
+    end
+end
+
+function FourQuadrants(Q1, Q2, Q3, Q4)
+    return FourQuadrants{eltype(Q1), spacetype(Q1), numin(Q1), typeof(Q1)}(Q1, Q2, Q3, Q4)
+end
+
+TensorKit.TensorMap(fq::FourQuadrants) = fq.Q1 * fq.Q2 * fq.Q3 * fq.Q4
+
+TensorKit.space(fq::FourQuadrants) = codomain(fq.Q1) ← domain(fq.Q4)
+
+# TBD use tensorcontract to handle fermions?
+(fq::FourQuadrants)(m) = fq.Q1 * (fq.Q2 * (fq.Q3 * (fq.Q4 * m)))
+
+Base.:*(m::AbstractTensorMap, fq::FourQuadrants) = m * fq.Q1 * fq.Q2 * fq.Q3 * fq.Q4
+Base.:*(fq::FourQuadrants, m::AbstractTensorMap) = fq.Q1 * (fq.Q2 * (fq.Q3 * (fq.Q4 * m)))
+
+Base.adjoint(fq::FourQuadrants) = FourQuadrants(fq.Q4', fq.Q3', fq.Q2', fq.Q1')
