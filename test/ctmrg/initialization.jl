@@ -35,7 +35,7 @@ boundary_alg = (;
     Random.seed!(sd)
     env0_rand = initialize_environment(n, RandomInitialization(), Venv)
     env_rand, info = leading_boundary(env0_rand, n; boundary_alg...)
-    @test info.convergence_error > tol
+    @test_broken info.convergence_error ≤ tol
 
     # embedded product state, converges
     Random.seed!(sd)
