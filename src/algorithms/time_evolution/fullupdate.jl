@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Algorithm struct for full update (FU) of infinite PEPS.
+Algorithm struct for full update (FU) of InfinitePEPS or InfinitePEPO.
 
 ## Fields
 
@@ -35,15 +35,11 @@ end
 Full update for the bond between `[row, col]` and `[row, col+1]`.
 """
 function _fu_xbond!(
-        row::Int,
-        col::Int,
-        gate::AbstractTensorMap{T, S, 2, 2},
-        peps::InfinitePEPS,
-        env::CTMRGEnv,
-        alg::FullUpdate,
+        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::CTMRGEnv,
+        row::Int, col::Int, alg::FullUpdate
     ) where {T <: Number, S <: ElementarySpace}
-    cp1 = _next(col, size(peps, 2))
-    A, B = peps[row, col], peps[row, cp1]
+    cp1 = _next(col, size(state, 2))
+    A, B = state[row, col], state[row, cp1]
     X, a, b, Y = _qr_bond(A, B)
     # positive/negative-definite approximant: benv = ± Z Z†
     benv = bondenv_fu(row, col, X, Y, env)
@@ -67,7 +63,7 @@ function _fu_xbond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    peps.A[row, col], peps.A[row, cp1] = A, B
+    state.A[row, col], state.A[row, cp1] = A, B
     return s, info
 end
 
@@ -75,22 +71,27 @@ end
 Update all horizontal bonds in the c-th column
 (i.e. `(r,c) (r,c+1)` for all `r = 1, ..., Nr`).
 To update rows, rotate the network clockwise by 90 degrees.
-The iPEPS `peps` is modified in place.
+The iPEPS/iPEPO `state` is modified in place.
 """
 function _fu_column!(
-        col::Int, gate::LocalOperator, peps::InfinitePEPS, env::CTMRGEnv, alg::FullUpdate
+        state::InfiniteState, gate::LocalOperator,
+        alg::FullUpdate, env::CTMRGEnv, col::Int
     )
-    Nr, Nc = size(peps)
+    Nr, Nc = size(state)
     @assert 1 <= col <= Nc
     fid = 1.0
     wts_col = Vector{PEPSWeight}(undef, Nr)
     for row in 1:Nr
         term = get_gateterm(gate, (CartesianIndex(row, col), CartesianIndex(row, col + 1)))
-        wts_col[row], info = _fu_xbond!(row, col, term, peps, env, alg)
+        wts_col[row], info = _fu_xbond!(state, term, env, row, col, alg)
         fid = min(fid, info.fid)
     end
-    # update CTMRGEnv
-    network = InfiniteSquareNetwork(peps)
+    # update 2-layer CTMRGEnv
+    network = if isa(state, InfinitePEPS)
+        InfiniteSquareNetwork(state)
+    else
+        InfiniteSquareNetwork(InfinitePEPS(state))
+    end
     env2, info = ctmrg_leftmove(col, network, env, alg.ctm_alg.projector_alg)
     env2, info = ctmrg_rightmove(_next(col, Nc), network, env2, alg.ctm_alg.projector_alg)
     for c in [col, _next(col, Nc)]
@@ -100,20 +101,29 @@ function _fu_column!(
     return wts_col, fid
 end
 
+const _fu_pepo_warning_shown = Ref(false)
+
 """
-One round of full update on the input InfinitePEPS `peps` and its CTMRGEnv `env`.
+One round of fast full update on the input InfinitePEPS or InfinitePEPO `state`
+and its 2-layer CTMRGEnv `env`, without fully reconverging `env`.
 
 Reference: Physical Review B 92, 035142 (2015)
 """
-function fu_iter(peps::InfinitePEPS, gate::LocalOperator, alg::FullUpdate, env::CTMRGEnv)
-    Nr, Nc = size(peps)
+function fu_iter(
+        state::InfiniteState, gate::LocalOperator, alg::FullUpdate, env::CTMRGEnv
+    )
+    if state isa InfinitePEPO && !_fu_pepo_warning_shown[]
+        @warn "Full update of InfinitePEPO is experimental."
+        _fu_pepo_warning_shown[] = true
+    end
+    Nr, Nc = size(state)[1:2]
     fidmin = 1.0
-    peps2, env2 = deepcopy(peps), deepcopy(env)
+    state2, env2 = deepcopy(state), deepcopy(env)
     wts = Array{PEPSWeight}(undef, 2, Nr, Nc)
     for i in 1:4
-        N = size(peps2, 2)
+        N = size(state2, 2)
         for col in 1:N
-            wts_col, fid_col = _fu_column!(col, gate, peps2, env2, alg)
+            wts_col, fid_col = _fu_column!(state2, gate, alg, env2, col)
             fidmin = min(fidmin, fid_col)
             # assign the weights to the un-rotated `wts`
             if i == 1
@@ -126,24 +136,31 @@ function fu_iter(peps::InfinitePEPS, gate::LocalOperator, alg::FullUpdate, env::
                 wts[2, N + 1 - col, :] = wts_col
             end
         end
-        gate, peps2, env2 = rotl90(gate), rotl90(peps2), rotl90(env2)
+        gate, state2, env2 = rotl90(gate), rotl90(state2), rotl90(env2)
     end
-    return peps2, env2, SUWeight(collect(wt for wt in wts)), fidmin
+    return state2, env2, SUWeight(collect(wt for wt in wts)), fidmin
 end
 
 """
 Full update an infinite PEPS with nearest neighbor Hamiltonian.
 """
-function fu_iter2(peps::InfinitePEPS, ham::LocalOperator, alg::FullUpdate, env::CTMRGEnv)
-    # Each NN bond is updated twice in _fu_iter,
+function fullupdate(
+        state::InfiniteState, ham::LocalOperator, alg::FullUpdate, env::CTMRGEnv
+    )
+    if state isa InfinitePEPO && !_fu_pepo_warning_shown[]
+        @warn "Full update of InfinitePEPO is an experimental feature."
+        _fu_pepo_warning_shown[] = true
+    end
+    # Each NN bond is updated twice in fu_iter,
     # thus `dt` is divided by 2 when exponentiating `ham`.
     gate = get_expham(ham, alg.dt / 2)
     wts, fidmin = nothing, 1.0
     for it in 1:(alg.niter)
-        peps, env, wts, fid = fu_iter(peps, gate, alg, env)
+        state, env, wts, fid = fu_iter(state, gate, alg, env)
         fidmin = min(fidmin, fid)
     end
     # reconverge environment
-    env, = leading_boundary(env, peps, alg.ctm_alg)
-    return peps, env, wts, fidmin
+    network = isa(state, InfinitePEPS) ? state : InfinitePEPS(state)
+    env, = leading_boundary(env, network, alg.ctm_alg)
+    return state, env, wts, fidmin
 end

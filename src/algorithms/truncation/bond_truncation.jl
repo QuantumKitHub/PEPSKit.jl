@@ -196,7 +196,7 @@ function bond_truncate(
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
     @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
     if need_flip
-        a, s, b = flip_svd(a, s, vh)
+        a, s, b = flip_svd(a, s, b)
     end
     return a, s, b, info
 end
