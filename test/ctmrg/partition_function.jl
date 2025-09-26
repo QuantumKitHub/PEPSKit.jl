@@ -5,6 +5,21 @@ using PEPSKit
 using TensorKit
 using QuadGK
 
+
+@testset "Check spaces in partition function CTMRG" begin
+    zA = randn(ℂ^6 ⊗ ℂ^8 ← ℂ^4 ⊗ ℂ^2)
+    zB = randn(ℂ^2 ⊗ ℂ^9 ← ℂ^5 ⊗ ℂ^6)
+    zC = randn(ℂ^7 ⊗ ℂ^4 ← ℂ^8 ⊗ ℂ^3)
+    zD = randn(ℂ^3 ⊗ ℂ^5 ← ℂ^9 ⊗ ℂ^7)
+
+    Z = InfinitePartitionFunction([zA zB; zC zD])
+    χenv = ℂ^12
+    env0 = CTMRGEnv(Z, χenv)
+    env, = leading_boundary(env0, Z; alg = :simultaneous, maxiter = 3, projector_alg = :fullinfinite)
+    @test env isa CTMRGEnv
+end
+
+
 ## Setup
 
 """
