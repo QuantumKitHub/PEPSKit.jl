@@ -111,7 +111,7 @@ function InfinitePEPS(
     return InfinitePEPS(
         f, T,
         _fill_state_physical_spaces(Pspace, unitcell),
-        _fill_state_virtual_spaces(vspaces...; unitcell)...,
+        _fill_state_virtual_spaces(vspaces..., unitcell)...,
     )
 end
 
