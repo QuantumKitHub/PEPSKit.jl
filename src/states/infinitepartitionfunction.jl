@@ -50,13 +50,8 @@ of the PEPS tensor at each site in the unit cell as a matrix. Each individual sp
 specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePartitionFunction(
-        Nspaces::A, Espaces::A
-    ) where {A <: AbstractMatrix{<:ElementarySpaceLike}}
-    return InfinitePartitionFunction(randn, ComplexF64, Nspaces, Espaces)
-end
-function InfinitePartitionFunction(
         f, T, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpaceLike}}
+    ) where {M <: AbstractMatrix{<:ElementarySpace}}
     size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -68,6 +63,9 @@ function InfinitePartitionFunction(
     end
 
     return InfinitePartitionFunction(A)
+end
+function InfinitePartitionFunction(Nspaces::A, args...) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
+    return InfinitePartitionFunction(randn, ComplexF64, Nspaces, args...)
 end
 
 """
@@ -99,22 +97,15 @@ end
 """
     InfinitePartitionFunction(
         [f=randn, T=ComplexF64,] Pspace::S, Nspace::S, [Espace::S]; unitcell=(1,1)
-    ) where {S<:ElementarySpaceLike}
+    ) where {S<:ElementarySpace}
 
 Create an InfinitePartitionFunction by specifying its physical, north and east spaces and unit cell.
 Spaces can be specified either via `Int` or via `ElementarySpace`.
 """
 function InfinitePartitionFunction(
-        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpaceLike}
-    return InfinitePartitionFunction(
-        randn, ComplexF64, fill(Nspace, unitcell), fill(Espace, unitcell)
-    )
-end
-function InfinitePartitionFunction(
         f, T, Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpaceLike}
-    return InfinitePartitionFunction(f, T, fill(Nspace, unitcell), fill(Espace, unitcell))
+    ) where {S <: ElementarySpace}
+    return InfinitePartitionFunction(f, T, _fill_state_virtual_spaces(Nspace, Espace; unitcell)...)
 end
 
 ## Unit cell interface

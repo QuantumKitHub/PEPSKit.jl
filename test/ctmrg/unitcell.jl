@@ -27,11 +27,11 @@ function test_unitcell(
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(
-        PEPSKit._to_space.(Pspaces),
+        Pspaces,
         [
             (c,) => randn(
                     scalartype(peps),
-                    PEPSKit._to_space(Pspaces[c]), PEPSKit._to_space(Pspaces[c]),
+                    Pspaces[c], Pspaces[c],
                 ) for c in CartesianIndices(unitcell)
         ]...,
     )
@@ -53,23 +53,6 @@ function random_dualize!(M::AbstractMatrix{<:ElementarySpace})
     mask = rand([true, false], size(M))
     M[mask] .= adjoint.(M[mask])
     return M
-end
-
-@testset "Integer space specifiers with $ctm_alg" for ctm_alg in ctm_algs
-    unitcell = (3, 3)
-
-    Pspaces = rand(2:3, unitcell...)
-    Nspaces = rand(2:4, unitcell...)
-    Espaces = rand(2:4, unitcell...)
-    chis_north = rand(5:10, unitcell...)
-    chis_east = rand(5:10, unitcell...)
-    chis_south = rand(5:10, unitcell...)
-    chis_west = rand(5:10, unitcell...)
-
-    test_unitcell(
-        ctm_alg, unitcell,
-        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
-    )
 end
 
 @testset "Random Cartesian spaces with $ctm_alg" for ctm_alg in ctm_algs

@@ -41,7 +41,7 @@ ctmrg_tol = 1e-10
 grad_tol = 1e-4
 
 # initialize a PEPS and CTMRG environment
-peps₀ = InfinitePEPS(2, D)
+peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(D))
 env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χ)), peps₀; tol=ctmrg_tol)
 
 # ground state search
