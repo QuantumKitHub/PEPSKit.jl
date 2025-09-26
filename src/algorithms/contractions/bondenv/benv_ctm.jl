@@ -8,7 +8,8 @@ Construct the environment (norm) tensor
     C4---T3---------T3---C3   r+1
     c-1  c         c+1  c+2
 ```
-where `XX = X' X` and `YY = Y' Y` (stacked together).
+where `X, Y` are unitary tensors produced when finding the reduced site tensors 
+with `_qr_bond`; and `XX = X' X` and `YY = Y' Y` (stacked together).
 
 Axis order: `[DX1 DY1; DX0 DY0]`, as in
 ```
@@ -21,7 +22,9 @@ Axis order: `[DX1 DY1; DX0 DY0]`, as in
     └---------------------┘
 ```
 """
-function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, env::CTMRGEnv)
+function bondenv_fu(
+        row::Int, col::Int, X::PO, Y::PO, env::CTMRGEnv
+    ) where {PO <: Union{PEPSOrth, PEPOOrth}}
     Nr, Nc = size(env.corners)[[2, 3]]
     cm1 = _prev(col, Nc)
     cp1 = _next(col, Nc)
@@ -49,12 +52,23 @@ function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, env::CTMRGEnv)
     C4--χ3--T3X---------χ5---------T3Y--χ7---C3     r+1
     c-1      c                      c+1     c+2
     =#
-    @autoopt @tensor benv[DX1 DY1; DX0 DY0] :=
-        c4[χ3 χ1] * t4[χ1 DWX0 DWX1 χ2] * c1[χ2 χ4] * t3X[χ5 DSX0 DSX1 χ3] *
-        X[DNX0 DX0 DSX0 DWX0] * conj(X[DNX1 DX1 DSX1 DWX1]) * t1X[χ4 DNX0 DNX1 χ6] *
-        c3[χ9 χ7] * t2[χ10 DEY0 DEY1 χ9] * c2[χ8 χ10] * t3Y[χ7 DSY0 DSY1 χ5] *
-        Y[DNY0 DEY0 DSY0 DY0] * conj(Y[DNY1 DEY1 DSY1 DY1]) * t1Y[χ6 DNY0 DNY1 χ8]
-
+    benv = nothing
+    if PO <: PEPSOrth
+        @autoopt @tensor benv[DX1 DY1; DX0 DY0] :=
+            c4[χ3 χ1] * t4[χ1 DWX0 DWX1 χ2] * c1[χ2 χ4] * t3X[χ5 DSX0 DSX1 χ3] *
+            X[DNX0 DX0 DSX0 DWX0] * conj(X[DNX1 DX1 DSX1 DWX1]) * t1X[χ4 DNX0 DNX1 χ6] *
+            c3[χ9 χ7] * t2[χ10 DEY0 DEY1 χ9] * c2[χ8 χ10] * t3Y[χ7 DSY0 DSY1 χ5] *
+            Y[DNY0 DEY0 DSY0 DY0] * conj(Y[DNY1 DEY1 DSY1 DY1]) * t1Y[χ6 DNY0 DNY1 χ8]
+    else
+        # eliminate fermion sign when contracting the remaining physical axis in X, Y
+        X2 = isdual(space(X, 1)) ? twist(X, 1) : X
+        Y2 = isdual(space(Y, 1)) ? twist(Y, 1) : Y
+        @autoopt @tensor benv[DX1 DY1; DX0 DY0] :=
+            c4[χ3 χ1] * t4[χ1 DWX0 DWX1 χ2] * c1[χ2 χ4] * t3X[χ5 DSX0 DSX1 χ3] *
+            X2[pX DNX0 DX0 DSX0 DWX0] * conj(X[pX DNX1 DX1 DSX1 DWX1]) * t1X[χ4 DNX0 DNX1 χ6] *
+            c3[χ9 χ7] * t2[χ10 DEY0 DEY1 χ9] * c2[χ8 χ10] * t3Y[χ7 DSY0 DSY1 χ5] *
+            Y2[pY DNY0 DEY0 DSY0 DY0] * conj(Y[pY DNY1 DEY1 DSY1 DY1]) * t1Y[χ6 DNY0 DNY1 χ8]
+    end
     normalize!(benv, Inf)
     return benv
 end
