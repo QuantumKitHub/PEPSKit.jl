@@ -26,8 +26,6 @@ end
 
 ## Constructors
 
-const ElementarySpaceLike = Union{Int, ElementarySpace}
-
 """
     InfinitePEPS(A::AbstractMatrix{T})
 
@@ -39,20 +37,14 @@ function InfinitePEPS(A::AbstractMatrix{<:PEPSTensor})
 end
 
 """
-    InfinitePEPS([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
+    InfinitePEPS([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{ElementarySpace}}
 
 Create an `InfinitePEPS` by specifying the physical, north virtual and east virtual spaces
-of the PEPS tensor at each site in the unit cell as a matrix. Each individual space can be
-specified as either an `Int` or an `ElementarySpace`.
+of the PEPS tensor at each site in the unit cell as a matrix.
 """
 function InfinitePEPS(
-        Pspaces::A, Nspaces::A, Espaces::A
-    ) where {A <: AbstractMatrix{<:ElementarySpaceLike}}
-    return InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
-end
-function InfinitePEPS(
         f, T, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpaceLike}}
+    ) where {M <: AbstractMatrix{<:ElementarySpace}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -64,6 +56,11 @@ function InfinitePEPS(
     end
 
     return InfinitePEPS(A)
+end
+function InfinitePEPS(
+        Pspaces::A, virtual_spaces...
+    ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
+    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...)
 end
 
 """
@@ -90,6 +87,18 @@ function InfinitePEPS(A::T; unitcell::Tuple{Int, Int} = (1, 1)) where {T <: PEPS
     return InfinitePEPS(fill(A, unitcell))
 end
 
+# expand physical PEPS spaces to unit cell size
+function _fill_state_physical_spaces(
+        Pspace::S, unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace}
+    return fill(Pspace, unitcell), fill(Espace, unitcell)
+end
+function _fill_state_virtual_spaces(
+        Nspace::S, Espace::S = Nspace, unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace}
+    return (fill(Nspace, unitcell), fill(Espace, unitcell))
+end
+
 """
     InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 
@@ -97,18 +106,12 @@ Create an InfinitePEPS by specifying its physical, north and east spaces and uni
 Spaces can be specified either via `Int` or via `ElementarySpace`.
 """
 function InfinitePEPS(
-        Pspace::S, Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpaceLike}
+        f, T, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace}
     return InfinitePEPS(
-        randn, ComplexF64,
-        fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell),
-    )
-end
-function InfinitePEPS(
-        f, T, Pspace::S, Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpaceLike}
-    return InfinitePEPS(
-        f, T, fill(Pspace, unitcell), fill(Nspace, unitcell), fill(Espace, unitcell)
+        f, T,
+        _fill_state_physical_spaces(Pspace, unitcell),
+        _fill_state_virtual_spaces(vspaces...; unitcell)...,
     )
 end
 
