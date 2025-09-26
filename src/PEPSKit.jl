@@ -2,7 +2,7 @@ module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Compat
-using Accessors: @set, @reset
+using Accessors: @set, @reset, @insert
 using VectorInterface
 import VectorInterface as VI
 

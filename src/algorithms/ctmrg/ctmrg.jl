@@ -88,6 +88,7 @@ containing the following fields:
 
 * `truncation_error` : Last (maximal) SVD truncation error of the CTMRG projectors.
 * `condition_number` : Last (maximal) condition number of the enlarged CTMRG environment.
+* `convergence_error` : Convergence error of the CTMRG algorithm at termination.
 
 In case the `alg` is a `SimultaneousCTMRG`, the last SVD will also be returned:
 
@@ -120,6 +121,7 @@ function leading_boundary(
         for iter in 1:(alg.maxiter)
             env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
             η, CS, TS = calc_convergence(env, CS, TS)
+            info = @insert info.convergence_error = η
 
             if η ≤ alg.tol && iter ≥ alg.miniter
                 ctmrg_logfinish!(log, iter, η, network, env)
