@@ -27,7 +27,7 @@ function get_hubbard_pepo(t::Float64 = 1.0, U::Float64 = 8.0)
     H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu = U / 2)
     pepo = PEPSKit.infinite_temperature_density_matrix(H)
     wts = SUWeight(pepo)
-    alg = SimpleUpdate(2e-3, 0.0, 500, truncerr(1.0e-10) & truncdim(4))
+    alg = SimpleUpdate(2.0e-3, 0.0, 500, truncerr(1.0e-10) & truncdim(4))
     pepo, = simpleupdate(pepo, H, alg, wts; bipartite = false, check_interval = 100)
     normalize!.(pepo.A, Inf)
     return pepo
@@ -56,6 +56,7 @@ function test_benv_fu(state::Union{InfinitePEPS, InfinitePEPO})
         @tensor half2[:] := Z2[-1; 1 3] * a2[1; -2 2] * b2[2 -3; 3]
         @test half ≈ half2
     end
+    return
 end
 
 peps = get_hubbard_peps()
