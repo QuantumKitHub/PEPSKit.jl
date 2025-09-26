@@ -55,6 +55,7 @@ end
 
 ## Spaces
 
+TensorKit.spacetype(::Type{T}) where {T <: InfiniteSquareNetwork} = spacetype(eltype(T))
 virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## Vector interface
