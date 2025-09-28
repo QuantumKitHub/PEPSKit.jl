@@ -126,12 +126,12 @@ end
 
 # expand physical edge spaces to unit cell size
 function _fill_edge_physical_spaces(
-        D_north::S, D_east::S = D_north, unitcell::Tuple{Int, Int} = (1, 1)
+        D_north::S, D_east::S = D_north; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: VectorSpace}
     return fill(D_north, unitcell), fill(D_east, unitcell)
 end
 function _fill_edge_physical_spaces(
-        Ds_north::M, Ds_east::M = Ds_north, unitcell::Tuple{Int, Int} = (1, 1)
+        Ds_north::M, Ds_east::M = Ds_north; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {M <: Matrix{<:VectorSpace}}
     @assert size(Ds_north) == size(Ds_east) == unitcell "Incompatible size"
     return map(ProductSpace, Ds_north), map(ProductSpace, Ds_east)
@@ -139,7 +139,7 @@ end
 
 # expand virtual environment spaces to unit cell size
 function _fill_environment_virtual_spaces(
-        chis_north::S, chis_east::S = chis_north, chis_south::S = chis_north, chis_west::S = chis_north,
+        chis_north::S, chis_east::S = chis_north, chis_south::S = chis_north, chis_west::S = chis_north;
         unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return fill(chis_north, unitcell), fill(chis_east, unitcell), fill(chis_south, unitcell), fill(chis_west, unitcell)
@@ -166,8 +166,8 @@ function CTMRGEnv(
     ) where {S <: VectorSpace}
     return CTMRGEnv(
         f, T,
-        _fill_edge_physical_spaces(D_north, D_east, unitcell)...,
-        _fill_environment_virtual_spaces(virtual_spaces..., unitcell)...,
+        _fill_edge_physical_spaces(D_north, D_east; unitcell)...,
+        _fill_environment_virtual_spaces(virtual_spaces...; unitcell)...,
     )
 end
 
@@ -201,7 +201,8 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 function CTMRGEnv(f, T, network::InfiniteSquareNetwork, virtual_spaces...)
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
-    return CTMRGEnv(f, T, Ds_north, Ds_east, virtual_spaces...; unitcell = size(network))
+    virtual_spaces = _fill_environment_virtual_spaces(virtual_spaces...; unitcell = size(network))
+    return CTMRGEnv(f, T, Ds_north, Ds_east, virtual_spaces...)
 end
 function CTMRGEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS}, virtual_spaces...)
     return CTMRGEnv(randn, scalartype(network), network, virtual_spaces...)

@@ -89,12 +89,12 @@ end
 
 # expand physical PEPS spaces to unit cell size
 function _fill_state_physical_spaces(
-        Pspace::S, unitcell::Tuple{Int, Int} = (1, 1)
+        Pspace::S; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return fill(Pspace, unitcell)
 end
 function _fill_state_virtual_spaces(
-        Nspace::S, Espace::S = Nspace, unitcell::Tuple{Int, Int} = (1, 1)
+        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return (fill(Nspace, unitcell), fill(Espace, unitcell))
 end
@@ -110,8 +110,8 @@ function InfinitePEPS(
     ) where {S <: ElementarySpace}
     return InfinitePEPS(
         f, T,
-        _fill_state_physical_spaces(Pspace, unitcell),
-        _fill_state_virtual_spaces(vspaces..., unitcell)...,
+        _fill_state_physical_spaces(Pspace; unitcell),
+        _fill_state_virtual_spaces(vspaces...; unitcell)...,
     )
 end
 
