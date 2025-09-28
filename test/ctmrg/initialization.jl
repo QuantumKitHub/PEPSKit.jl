@@ -45,7 +45,7 @@ boundary_alg = (;
 
     # grown product state, converges
     Random.seed!(sd)
-    env0_appl = initialize_environment(n, ApplicationInitialization(), truncdim(χ))
+    env0_appl = initialize_environment(InfiniteSquareNetwork(n), ApplicationInitialization(), truncdim(χ))
     env_appl, info = leading_boundary(env0_appl, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 end

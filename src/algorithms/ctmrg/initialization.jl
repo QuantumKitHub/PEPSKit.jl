@@ -3,29 +3,29 @@ struct ProductStateInitialization <: InitializationStyle end
 struct RandomInitialization <: InitializationStyle end
 struct ApplicationInitialization <: InitializationStyle end
 
-_to_tuple(x) = (x,)
-_to_tuple(x::Tuple) = x
-
 function initialize_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
         ::RandomInitialization,
-        init_spec = oneunit(spacetype(n)),
+        virtual_spaces... = oneunit(spacetype(n)),
     )
-    return CTMRGEnv(randn, elt, n, _to_tuple(init_spec)...)
+    return CTMRGEnv(randn, elt, n, virtual_spaces...)
 end
 
 function initialize_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
         ::ProductStateInitialization,
-        init_spec = oneunit(spacetype(n)),
+        virtual_spaces... = oneunit(spacetype(n)),
     )
-    i = one(sectortype(init_spec))
-    env = CTMRGEnv(ones, elt, n, _to_tuple(init_spec)...)
+    i = one(sectortype(n))
+    env = CTMRGEnv(ones, elt, n, virtual_spaces...)
     for (dir, r, c) in Iterators.product(axes(env)...)
         @assert i in blocksectors(env.corners[dir, r, c])
-        block(env.corners[dir, r, c], i)[1, 1] = 1
+        for (c, b) in blocks(env.corners[dir, r, c])
+            b .= 0
+            c == i && (b[1, 1] = 1)
+        end
     end
     return env
 end
@@ -34,9 +34,9 @@ function initialize_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
         ::ApplicationInitialization,
-        init_spec::TruncationScheme;
+        trscheme::TruncationScheme;
         boundary_alg = (;
-            alg = :sequential, tol = 1.0e-5, maxiter = 10, verbosity = -1, trscheme = init_spec,
+            alg = :sequential, tol = 1.0e-5, maxiter = 10, verbosity = -1, trscheme,
         )
     )
     env = initialize_environment(elt, n, ProductStateInitialization())
