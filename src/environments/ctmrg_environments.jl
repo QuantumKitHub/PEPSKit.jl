@@ -138,7 +138,7 @@ function _fill_edge_physical_spaces(
 end
 function _fill_edge_physical_spaces(
         Ds_north::M, Ds_east::M = Ds_north; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {M <: Matrix{<:ProducSpace}}
+    ) where {M <: Matrix{<:ProductSpace}}
     @assert size(Ds_north) == size(Ds_east) == unitcell "Incompatible size"
     return Ds_north, Ds_east
 end
