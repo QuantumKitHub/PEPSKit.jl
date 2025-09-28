@@ -58,9 +58,9 @@ function InfinitePEPS(
     return InfinitePEPS(A)
 end
 function InfinitePEPS(
-        Pspaces::A, virtual_spaces...
+        Pspaces::A, virtual_spaces...; kwargs...
     ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
-    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...)
+    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...; kwargs...)
 end
 
 """
