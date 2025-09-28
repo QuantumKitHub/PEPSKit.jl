@@ -14,7 +14,7 @@ projector_algs = [:halfinfinite, :fullinfinite]
     Iterators.product(unitcells, projector_algs)
     # compute environments
     Random.seed!(32350283290358)
-    psi = InfinitePEPS(2, χbond; unitcell)
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond); unitcell)
     env_sequential, = leading_boundary(
         CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg = :sequential, projector_alg
     )
@@ -54,8 +54,8 @@ end
 # test fixedspace actually fixes space
 @testset "Fixedspace truncation using $alg and $projector_alg" for (alg, projector_alg) in
     Iterators.product([:sequential, :simultaneous], projector_algs)
-    Ds = fill(2, 3, 3)
-    χs = [16 17 18; 15 20 21; 14 19 22]
+    Ds = ComplexSpace.(fill(2, 3, 3))
+    χs = ComplexSpace.([16 17 18; 15 20 21; 14 19 22])
     psi = InfinitePEPS(Ds, Ds, Ds)
     env = CTMRGEnv(psi, rand(10:20, 3, 3), rand(10:20, 3, 3))
     env2, = leading_boundary(
