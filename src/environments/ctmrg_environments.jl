@@ -136,6 +136,12 @@ function _fill_edge_physical_spaces(
     @assert size(Ds_north) == size(Ds_east) == unitcell "Incompatible size"
     return map(ProductSpace, Ds_north), map(ProductSpace, Ds_east)
 end
+function _fill_edge_physical_spaces(
+        Ds_north::M, Ds_east::M = Ds_north; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {M <: Matrix{<:ProducSpace}}
+    @assert size(Ds_north) == size(Ds_east) == unitcell "Incompatible size"
+    return Ds_north, Ds_east
+end
 
 # expand virtual environment spaces to unit cell size
 function _fill_environment_virtual_spaces(
@@ -143,6 +149,13 @@ function _fill_environment_virtual_spaces(
         unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return fill(chis_north, unitcell), fill(chis_east, unitcell), fill(chis_south, unitcell), fill(chis_west, unitcell)
+end
+function _fill_environment_virtual_spaces(
+        chis_north::M, chis_east::M = chis_north, chis_south::M = chis_north, chis_west::M = chis_north;
+        unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+    @assert size(chis_north) == size(chis_east) == size(chis_south) == size(chis_west) == unitcell "Incompatible size"
+    return chis_north, chis_east, chis_south, chis_west
 end
 
 """

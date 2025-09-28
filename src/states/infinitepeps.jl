@@ -87,16 +87,28 @@ function InfinitePEPS(A::T; unitcell::Tuple{Int, Int} = (1, 1)) where {T <: PEPS
     return InfinitePEPS(fill(A, unitcell))
 end
 
-# expand physical PEPS spaces to unit cell size
+# expand PEPS spaces to unit cell size
 function _fill_state_physical_spaces(
         Pspace::S; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return fill(Pspace, unitcell)
 end
+function _fill_state_physical_spaces(
+        Pspaces::M; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+    @assert size(Pspaces) == unitcell || @warn "Input physical spaces size does not match unit cell size."
+    return Pspaces
+end
 function _fill_state_virtual_spaces(
         Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
-    return (fill(Nspace, unitcell), fill(Espace, unitcell))
+    return fill(Nspace, unitcell), fill(Espace, unitcell)
+end
+function _fill_state_virtual_spaces(
+        Nspaces::M, Espaces::M = Nspaces; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+    @assert size(Nspaces) == size(Espaces) == unitcell || @warn "Input virtual spaces size does not match unit cell size."
+    return Nspaces, Espaces
 end
 
 """
