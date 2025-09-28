@@ -57,7 +57,7 @@ end
     Ds = ComplexSpace.(fill(2, 3, 3))
     χs = ComplexSpace.([16 17 18; 15 20 21; 14 19 22])
     psi = InfinitePEPS(Ds, Ds, Ds)
-    env = CTMRGEnv(psi, rand(10:20, 3, 3), rand(10:20, 3, 3))
+    env = CTMRGEnv(psi, ComplexSpace.(rand(10:20, 3, 3)), ComplexSpace.(rand(10:20, 3, 3)))
     env2, = leading_boundary(
         env, psi; alg, maxiter = 1, trscheme = FixedSpaceTruncation(), projector_alg
     )
