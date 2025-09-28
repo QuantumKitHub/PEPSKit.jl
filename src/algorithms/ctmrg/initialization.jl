@@ -36,9 +36,10 @@ function initialize_environment(
         ::ApplicationInitialization,
         trscheme::TruncationScheme;
         boundary_alg = (;
-            alg = :sequential, tol = 1.0e-5, maxiter = 10, verbosity = -1, trscheme,
+            alg = :sequential, tol = 1.0e-5, maxiter = 10, verbosity = -1,
         )
     )
+    boundary_alg = (; boundary_alg..., trscheme) # merge trscheme with optional alg definition
     env = initialize_environment(elt, n, ProductStateInitialization())
     env, = leading_boundary(env, n; boundary_alg...)
     return env
