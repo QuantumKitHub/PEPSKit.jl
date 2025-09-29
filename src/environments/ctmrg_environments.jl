@@ -128,19 +128,7 @@ end
 function _fill_edge_physical_spaces(
         D_north::S, D_east::S = D_north; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: VectorSpace}
-    return fill(D_north, unitcell), fill(D_east, unitcell)
-end
-function _fill_edge_physical_spaces(
-        Ds_north::M, Ds_east::M = Ds_north; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {M <: Matrix{<:VectorSpace}}
-    @assert size(Ds_north) == size(Ds_east) == unitcell "Incompatible size"
-    return map(ProductSpace, Ds_north), map(ProductSpace, Ds_east)
-end
-function _fill_edge_physical_spaces(
-        Ds_north::M, Ds_east::M = Ds_north; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {M <: Matrix{<:ProductSpace}}
-    @assert size(Ds_north) == size(Ds_east) == unitcell "Incompatible size"
-    return Ds_north, Ds_east
+    return fill(ProductSpace(D_north), unitcell), fill(ProductSpace(D_east), unitcell)
 end
 
 # expand virtual environment spaces to unit cell size
