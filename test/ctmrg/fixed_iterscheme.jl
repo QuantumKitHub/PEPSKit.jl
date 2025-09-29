@@ -32,7 +32,7 @@ atol = 1.0e-5
 
     # initialize states
     Random.seed!(2394823842)
-    psi = InfinitePEPS(2, χbond; unitcell)
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond); unitcell)
     n = InfiniteSquareNetwork(psi)
 
     env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
@@ -62,7 +62,7 @@ end
 
     # initialize states
     Random.seed!(91283219347)
-    psi = InfinitePEPS(2, χbond)
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond))
     n = InfiniteSquareNetwork(psi)
     env₀ = CTMRGEnv(psi, ComplexSpace(χenv))
     env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
