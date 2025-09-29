@@ -63,7 +63,7 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 Each entry of the `Ds_north` and `Ds_east` matrices corresponds to an effective local space
 of the partition function, and can be represented as an `ElementarySpace` (e.g. for the case
 of a partition function defined in terms of local rank-4 tensors) or a `ProductSpace` (e.g.
-for the case of a partition function representing overlaps of PEPSs and PEPOs).
+for the case of a network representing overlaps of PEPSs and PEPOs).
 """
 function CTMRGEnv(
         f, T, Ds_north::A, Ds_east::A, chis_north::B, chis_east::B = chis_north,
