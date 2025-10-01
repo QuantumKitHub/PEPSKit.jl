@@ -46,10 +46,10 @@ function initialize_environment(
 end
 
 function initialize_environment(n::InfiniteSquareNetwork, args...; kwargs...)
-    return initialize_environment(ComplexF64, n, args...; kwargs...)
+    return initialize_environment(scalartype(n), n, args...; kwargs...)
 end
 function initialize_environment(A::Union{InfinitePEPS, InfinitePartitionFunction}, args...; kwargs...)
-    return initialize_environment(ComplexF64, A, args...; kwargs...)
+    return initialize_environment(scalartype(A), A, args...; kwargs...)
 end
 function initialize_environment(elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...; kwargs...)
     return initialize_environment(elt, InfiniteSquareNetwork(A), args...; kwargs...)
