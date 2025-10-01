@@ -86,3 +86,35 @@ end
     tr_after = tr(last(only(H_shifted.terms)))
     @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
 end
+
+@testset "Operator rotations" begin
+    op_1x1 = LocalOperator([ℂ^2;;], ((1, 1), (1, 2)) => randn(ℂ^2, ℂ^2) ⊗ randn(ℂ^2, ℂ^2))
+    @test rotl90(op_1x1) isa LocalOperator
+    @test rotr90(op_1x1) isa LocalOperator
+    @test rot180(op_1x1) isa LocalOperator
+
+    charges = [
+        U1Irrep(-1 // 2) U1Irrep(1 // 2)
+        U1Irrep(1 // 2) U1Irrep(-1 // 2)
+    ] # staggered charges to make physical spaces non-uniform
+    H₀ = j1_j2_model(ComplexF64, U1Irrep, InfiniteSquare(2, 2))
+    op_2x2 = add_physical_charge(H₀, charges)
+    @test rotl90(op_2x2) isa LocalOperator
+    @test rotr90(op_2x2) isa LocalOperator
+    @test rot180(op_2x2) isa LocalOperator
+
+    lat_2x3 = [
+        ℂ^1 ℂ^2 ℂ^3
+        ℂ^4 ℂ^5 ℂ^6
+    ]
+    terms_2x3 = (
+        ((1, 1), (1, 2)) => randn(ℂ^1, ℂ^1) ⊗ randn(ℂ^2, ℂ^2),
+        ((2, 1), (1, 1)) => randn(ℂ^4, ℂ^4) ⊗ randn(ℂ^1, ℂ^1),
+        ((1, 2), (2, 3)) => randn(ℂ^2, ℂ^2) ⊗ randn(ℂ^6, ℂ^6),
+        ((1, 3), (2, 2)) => randn(ℂ^3, ℂ^3) ⊗ randn(ℂ^5, ℂ^5),
+    )
+    op_2x3 = LocalOperator(lat_2x3, terms_2x3...)
+    @test rotl90(op_2x3) isa LocalOperator
+    @test rotr90(op_2x3) isa LocalOperator
+    @test rot180(op_2x3) isa LocalOperator
+end
