@@ -1,5 +1,6 @@
 using TensorKit
 using PEPSKit
+using PEPSKit: siterotl90, siterotr90, siterot180
 using MPSKit: add_physical_charge
 using MPSKitModels: a_number, nꜛnꜜ, contract_onesite
 using Test
@@ -85,6 +86,19 @@ end
     # check if trace is properly preserved
     tr_after = tr(last(only(H_shifted.terms)))
     @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
+end
+
+unitcells = [(1, 1), (2, 3), (3, 3), (4, 3)]
+@testset "Site rotations on $uc unitcell" for uc in unitcells
+    unrotated_inds = collect(CartesianIndices(uc))
+    # use reverse(uc) to account for transposing when using rotl90, rotr90 on non-square unit cells
+    rr_rotated_inds = rotr90(siterotr90.(collect(CartesianIndices(reverse(uc))), Ref(reverse(uc))))
+    ll_rotated_inds = rotr90(siterotr90.(collect(CartesianIndices(reverse(uc))), Ref(reverse(uc))))
+    half_rotated_inds = rot180(siterot180.(collect(CartesianIndices(uc)), Ref(uc)))
+
+    @test unrotated_inds == rr_rotated_inds
+    @test unrotated_inds == ll_rotated_inds
+    @test unrotated_inds == half_rotated_inds
 end
 
 @testset "Operator rotations" begin
