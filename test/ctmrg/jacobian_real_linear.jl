@@ -19,7 +19,7 @@ Dbond, χenv = 2, 16
 
 @testset "$iterscheme and $ctm_alg" for (iterscheme, ctm_alg) in algs
     Random.seed!(123521938519)
-    state = InfinitePEPS(2, Dbond)
+    state = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
     env, = leading_boundary(CTMRGEnv(state, ComplexSpace(χenv)), state, ctm_alg)
 
     # follow code of _rrule

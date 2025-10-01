@@ -24,7 +24,7 @@ gradtol = 1.0e-3
 # initialize states
 H = transverse_field_ising(InfiniteSquare(); g)
 Random.seed!(2928528935)
-peps₀ = InfinitePEPS(2, χbond)
+peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond))
 env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
 # find fixedpoint
