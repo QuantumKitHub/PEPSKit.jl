@@ -155,26 +155,29 @@ end
 # ----------------------
 
 # rotation of a lattice site
-# TODO: type piracy
-Base.rotl90(site::CartesianIndex{2}) = CartesianIndex(2 - site[2], site[1])
-Base.rotr90(site::CartesianIndex{2}) = CartesianIndex(site[2], 2 - site[1])
-Base.rot180(site::CartesianIndex{2}) = CartesianIndex(2 - site[1], 2 - site[2])
+# (copy logic from Base.rotl90, Base.rotr90, Base.rot180)
+siterotl90(site::CartesianIndex{2}, n::Int) = CartesianIndex(n - site[2], site[1])
+siterotr90(site::CartesianIndex{2}, n::Int) = CartesianIndex(site[2], n - site[1])
+siterot180(site::CartesianIndex{2}, nr::Int, nc::Int) = CartesianIndex(nr - site[1], nc - site[2])
 
 function Base.rotr90(H::LocalOperator)
+    nr = size(H.lattice, 1)
     lattice2 = rotr90(H.lattice)
-    terms2 = ((Tuple(rotr90(site) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotr90(site, nr + 1) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rotl90(H::LocalOperator)
+    nc = size(H.lattice, 2)
     lattice2 = rotl90(H.lattice)
-    terms2 = ((Tuple(rotl90(site) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotl90(site, nc + 1) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rot180(H::LocalOperator)
+    nr, nc = size(H.lattice)
     lattice2 = rot180(H.lattice)
-    terms2 = ((Tuple(rot180(site) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterot180(site, nr + 1, nc + 1) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
 
