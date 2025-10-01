@@ -156,28 +156,32 @@ end
 
 # rotation of a lattice site
 # (copy logic from Base.rotl90, Base.rotr90, Base.rot180)
-siterotl90(site::CartesianIndex{2}, n::Int) = CartesianIndex(n - site[2], site[1])
-siterotr90(site::CartesianIndex{2}, n::Int) = CartesianIndex(site[2], n - site[1])
-siterot180(site::CartesianIndex{2}, nr::Int, nc::Int) = CartesianIndex(nr - site[1], nc - site[2])
+function siterotl90(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(unitcell[2] + 1 - site[2], site[1])
+end
+function siterotr90(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(site[2], unitcell[1] + 1 - site[1])
+end
+function siterot180(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(unitcell[1] + 1 - site[1], unitcell[2] + 1 - site[2])
+end
 
 function Base.rotr90(H::LocalOperator)
-    nr = size(H.lattice, 1) + 1
+    Hsize = size(H.lattice)
     lattice2 = rotr90(H.lattice)
-    terms2 = ((Tuple(siterotr90(site, nr) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotr90(site, Hsize) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
-
 function Base.rotl90(H::LocalOperator)
-    nc = size(H.lattice, 2) + 1
+    Hsize = size(H.lattice)
     lattice2 = rotl90(H.lattice)
-    terms2 = ((Tuple(siterotl90(site, nc) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotl90(site, Hsize) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
-
 function Base.rot180(H::LocalOperator)
-    nr, nc = size(H.lattice)
+    Hsize = size(H.lattice)
     lattice2 = rot180(H.lattice)
-    terms2 = ((Tuple(siterot180(site, nr + 1, nc + 1) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterot180(site, Hsize) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
 
