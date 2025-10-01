@@ -93,7 +93,7 @@ unitcells = [(1, 1), (2, 3), (3, 3), (4, 3)]
     unrotated_inds = collect(CartesianIndices(uc))
     # use reverse(uc) to account for transposing when using rotl90, rotr90 on non-square unit cells
     rr_rotated_inds = rotr90(siterotr90.(collect(CartesianIndices(reverse(uc))), Ref(reverse(uc))))
-    ll_rotated_inds = rotr90(siterotr90.(collect(CartesianIndices(reverse(uc))), Ref(reverse(uc))))
+    ll_rotated_inds = rotl90(siterotl90.(collect(CartesianIndices(reverse(uc))), Ref(reverse(uc))))
     half_rotated_inds = rot180(siterot180.(collect(CartesianIndices(uc)), Ref(uc)))
 
     @test unrotated_inds == rr_rotated_inds
