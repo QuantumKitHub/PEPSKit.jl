@@ -161,16 +161,16 @@ siterotr90(site::CartesianIndex{2}, n::Int) = CartesianIndex(site[2], n - site[1
 siterot180(site::CartesianIndex{2}, nr::Int, nc::Int) = CartesianIndex(nr - site[1], nc - site[2])
 
 function Base.rotr90(H::LocalOperator)
-    nr = size(H.lattice, 1)
+    nr = size(H.lattice, 1) + 1
     lattice2 = rotr90(H.lattice)
-    terms2 = ((Tuple(siterotr90(site, nr + 1) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotr90(site, nr) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
 
 function Base.rotl90(H::LocalOperator)
-    nc = size(H.lattice, 2)
+    nc = size(H.lattice, 2) + 1
     lattice2 = rotl90(H.lattice)
-    terms2 = ((Tuple(siterotl90(site, nc + 1) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotl90(site, nc) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
 
