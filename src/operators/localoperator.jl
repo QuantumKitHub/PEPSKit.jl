@@ -151,30 +151,48 @@ function VI.scalartype(::Type{<:LocalOperator{T}}) where {T}
     return promote_type((scalartype(last(fieldtypes(p))) for p in fieldtypes(T))...)
 end
 
+# Equivalence
+# -----------
+
+function Base.:(==)(O₁::LocalOperator, O₂::LocalOperator)
+    lat = O₁.lattice == O₂.lattice
+    terms = all(zip(O₁.terms, O₂.terms)) do (t₁, t₂)
+        return t₁ == t₂
+    end
+    return lat && terms
+end
+
 # Rotation
 # ----------------------
 
 # rotation of a lattice site
-# TODO: type piracy
-Base.rotl90(site::CartesianIndex{2}) = CartesianIndex(2 - site[2], site[1])
-Base.rotr90(site::CartesianIndex{2}) = CartesianIndex(site[2], 2 - site[1])
-Base.rot180(site::CartesianIndex{2}) = CartesianIndex(2 - site[1], 2 - site[2])
+# (copy logic from Base.rotl90, Base.rotr90, Base.rot180)
+function siterotl90(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(unitcell[2] + 1 - site[2], site[1])
+end
+function siterotr90(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(site[2], unitcell[1] + 1 - site[1])
+end
+function siterot180(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(unitcell[1] + 1 - site[1], unitcell[2] + 1 - site[2])
+end
 
 function Base.rotr90(H::LocalOperator)
+    Hsize = size(H.lattice)
     lattice2 = rotr90(H.lattice)
-    terms2 = ((Tuple(rotr90(site) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotr90(site, Hsize) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
-
 function Base.rotl90(H::LocalOperator)
+    Hsize = size(H.lattice)
     lattice2 = rotl90(H.lattice)
-    terms2 = ((Tuple(rotl90(site) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterotl90(site, Hsize) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
-
 function Base.rot180(H::LocalOperator)
+    Hsize = size(H.lattice)
     lattice2 = rot180(H.lattice)
-    terms2 = ((Tuple(rot180(site) for site in sites) => op) for (sites, op) in H.terms)
+    terms2 = ((Tuple(siterot180(site, Hsize) for site in sites) => op) for (sites, op) in H.terms)
     return LocalOperator(lattice2, terms2...)
 end
 
