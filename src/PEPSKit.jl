@@ -80,6 +80,7 @@ include("utility/symmetrization.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
+include("algorithms/optimization/fidelity_initialize.jl")
 
 include("algorithms/select_algorithm.jl")
 
@@ -96,6 +97,7 @@ export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
+export FidelityMaxCrude, approximate
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
