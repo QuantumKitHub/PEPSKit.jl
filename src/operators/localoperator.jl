@@ -151,6 +151,17 @@ function VI.scalartype(::Type{<:LocalOperator{T}}) where {T}
     return promote_type((scalartype(last(fieldtypes(p))) for p in fieldtypes(T))...)
 end
 
+# Equivalence
+# -----------
+
+function Base.:(==)(O₁::LocalOperator, O₂::LocalOperator)
+    lat = O₁.lattice == O₂.lattice
+    terms = all(zip(O₁.terms, O₂.terms)) do (t₁, t₂)
+        return t₁ == t₂
+    end
+    return lat && terms
+end
+
 # Rotation
 # ----------------------
 
