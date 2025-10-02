@@ -38,11 +38,11 @@ end
 CTMRG_SYMBOLS[:sequential] = SequentialCTMRG
 
 """
-    ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+    ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
 
 Perform sequential CTMRG left move on the `col`-th column.
 """
-function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     #=
         ----> left move
         C1 ← T1 ←   r-1
@@ -52,9 +52,30 @@ function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
         C4 → T3 →   r+1
         c-1  c 
     =#
-    projectors, info = sequential_projectors(col, network, env, alg.projector_alg)
+    projectors, info = sequential_projectors(col, network, env, alg)
     env = renormalize_sequentially(col, projectors, network, env)
     return env, info
+end
+
+"""
+    ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
+
+Perform sequential CTMRG right move on the `col`-th column.
+"""
+function ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
+    #= 
+        right move <---
+        ←-- T1 ← C2     r-1
+            ‖    ↑
+        === M' = T2     r
+            ‖    ↑
+        --→ T3 → C3     r+1
+            c   c+1
+    =#
+    Nc = size(network)[2]
+    @assert 1 <= col <= Nc
+    env, info = ctmrg_leftmove(Nc + 1 - col, rot180(network), rot180(env), alg)
+    return rot180(env), info
 end
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
@@ -62,7 +83,7 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     condition_number = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
-            env, info = ctmrg_leftmove(col, network, env, alg)
+            env, info = ctmrg_leftmove(col, network, env, alg.projector_alg)
             truncation_error = max(truncation_error, info.truncation_error)
             condition_number = max(condition_number, info.condition_number)
         end
