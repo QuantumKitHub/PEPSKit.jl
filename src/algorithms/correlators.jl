@@ -154,8 +154,8 @@ function correlator_vertical(
     rotated_bra = rotl90(bra)
     rotated_ket = bra === ket ? rotated_bra : rotl90(ket)
 
-    rotated_i = rotl90(i)
-    rotated_j = map(rotl90, js)
+    rotated_i = siterotl90(i, size(bra))
+    rotated_j = map(j -> siterotl90(j, size(bra)), js)
 
     return correlator_horizontal(
         rotated_bra, O, rotated_i, rotated_j, rotated_ket, rotl90(env)
