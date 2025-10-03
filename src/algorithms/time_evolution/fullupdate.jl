@@ -95,13 +95,9 @@ function _fu_column!(
     colmove_alg = if alg.ctm_alg isa SequentialCTMRG
         alg.ctm_alg
     else
-        # extract projector_alg to construct an auxiliary SequentialCTMRG struct
-        projector_alg = if alg.ctm_alg.projector_alg isa FullInfiniteProjector
-            :fullinfinite
-        else
-            :halfinfinite
-        end
-        SequentialCTMRG(; projector_alg)
+        c = alg.ctm_alg
+        # an auxiliary struct to pass `projector_alg` to left/right move
+        SequentialCTMRG(c.tol, c.maxiter, c.miniter, c.verbosity, c.projector_alg)
     end
     env2, info = ctmrg_leftmove(col, network, env, colmove_alg)
     env2, info = ctmrg_rightmove(_next(col, Nc), network, env2, colmove_alg)
