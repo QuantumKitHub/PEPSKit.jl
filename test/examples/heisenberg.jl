@@ -18,7 +18,7 @@ E_ref = -0.6602310934799577
     # initialize states
     Random.seed!(123)
     H = heisenberg_XYZ(InfiniteSquare())
-    peps₀ = InfinitePEPS(2, Dbond)
+    peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
     env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths
@@ -34,7 +34,7 @@ end
     Random.seed!(456)
     unitcell = (1, 2)
     H = heisenberg_XYZ(InfiniteSquare(unitcell...))
-    peps₀ = InfinitePEPS(2, Dbond; unitcell)
+    peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond); unitcell)
     env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 
     # optimize energy and compute correlation lengths

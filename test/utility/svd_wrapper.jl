@@ -126,7 +126,7 @@ end
 # ctm_alg = CTMRG(; tol=1e-10, verbosity=2, svd_alg=SVDAdjoint())
 # Random.seed!(91283219347)
 # H = heisenberg_XYZ(InfiniteSquare())
-# psi = InfinitePEPS(2, χbond)
+# psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond))
 # env = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg);
 # hienv = HalfInfiniteEnv(
 #     env.corners[1],
