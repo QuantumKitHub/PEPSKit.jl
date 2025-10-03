@@ -45,7 +45,7 @@ end
 
 function tfising_fu(g::Float64, maxiter::Int, Dcut::Int, chi::Int; als = true, use_pinv = true)
     # the fully polarized state
-    peps = InfinitePEPS(randn, ComplexF64, 2, 1; unitcell = (2, 2))
+    peps = InfinitePEPS(randn, ComplexF64, ℂ^2, ℂ^1; unitcell = (2, 2))
     for t in peps.A
         t[1, 1, 1, 1, 1] = 1.0
         t[2, 1, 1, 1, 1] = 1.0
@@ -56,7 +56,7 @@ function tfising_fu(g::Float64, maxiter::Int, Dcut::Int, chi::Int; als = true, u
 
     trscheme_peps = truncerr(1.0e-10) & truncdim(Dcut)
     trscheme_env = truncerr(1.0e-10) & truncdim(chi)
-    env = CTMRGEnv(rand, ComplexF64, peps, chi)
+    env = CTMRGEnv(rand, ComplexF64, peps, ℂ^chi)
     env, = leading_boundary(env, peps; tol = 1.0e-10, verbosity = 2, trscheme = trscheme_env)
 
     ctm_alg = SequentialCTMRG(;
