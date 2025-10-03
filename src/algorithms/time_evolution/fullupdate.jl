@@ -92,8 +92,19 @@ function _fu_column!(
     else
         InfiniteSquareNetwork(InfinitePEPS(state))
     end
-    env2, info = ctmrg_leftmove(col, network, env, alg.ctm_alg.projector_alg)
-    env2, info = ctmrg_rightmove(_next(col, Nc), network, env2, alg.ctm_alg.projector_alg)
+    colmove_alg = if alg.ctm_alg isa SequentialCTMRG
+        alg.ctm_alg
+    else
+        # extract projector_alg to construct an auxiliary SequentialCTMRG struct
+        projector_alg = if alg.ctm_alg.projector_alg isa FullInfiniteProjector
+            :fullinfinite
+        else
+            :halfinfinite
+        end
+        SequentialCTMRG(; projector_alg)
+    end
+    env2, info = ctmrg_leftmove(col, network, env, colmove_alg)
+    env2, info = ctmrg_rightmove(_next(col, Nc), network, env2, colmove_alg)
     for c in [col, _next(col, Nc)]
         env.corners[:, :, c] = env2.corners[:, :, c]
         env.edges[:, :, c] = env2.edges[:, :, c]

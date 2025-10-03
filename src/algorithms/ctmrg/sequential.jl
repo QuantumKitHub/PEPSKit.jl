@@ -38,11 +38,11 @@ end
 CTMRG_SYMBOLS[:sequential] = SequentialCTMRG
 
 """
-    ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
+    ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
 
 Perform sequential CTMRG left move on the `col`-th column.
 """
-function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
+function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
     #=
         ----> left move
         C1 ← T1 ←   r-1
@@ -52,17 +52,17 @@ function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorith
         C4 → T3 →   r+1
         c-1  c 
     =#
-    projectors, info = sequential_projectors(col, network, env, alg)
+    projectors, info = sequential_projectors(col, network, env, alg.projector_alg)
     env = renormalize_sequentially(col, projectors, network, env)
     return env, info
 end
 
 """
-    ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
+    ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
 
 Perform sequential CTMRG right move on the `col`-th column.
 """
-function ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
+function ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
     #= 
         right move <---
         ←-- T1 ← C2     r-1
@@ -83,7 +83,7 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     condition_number = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
-            env, info = ctmrg_leftmove(col, network, env, alg.projector_alg)
+            env, info = ctmrg_leftmove(col, network, env, alg)
             truncation_error = max(truncation_error, info.truncation_error)
             condition_number = max(condition_number, info.condition_number)
         end
