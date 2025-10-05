@@ -5,6 +5,7 @@ using Compat
 using Accessors: @set, @reset
 using VectorInterface
 import VectorInterface as VI
+import Random
 
 using TensorKit
 using TensorKit: TruncationScheme
