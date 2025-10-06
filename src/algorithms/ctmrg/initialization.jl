@@ -1,15 +1,18 @@
 abstract type InitializationStyle end
 struct ProductStateInitialization <: InitializationStyle end
-struct RandomInitialization <: InitializationStyle end
+struct RandomInitialization{F} <: InitializationStyle
+    f::F
+    RandomInitialization(f::F = randn) where {F} = new{F}(f)
+end
 struct ApplicationInitialization <: InitializationStyle end
 
 function initialize_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
-        ::RandomInitialization,
+        alg::RandomInitialization,
         virtual_spaces... = oneunit(spacetype(n)),
     )
-    return CTMRGEnv(randn, elt, n, virtual_spaces...)
+    return CTMRGEnv(alg.f, elt, n, virtual_spaces...)
 end
 
 function initialize_environment(
