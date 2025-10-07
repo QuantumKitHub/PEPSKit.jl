@@ -143,7 +143,7 @@ For PEPSTensors,
         |        ↘               ↘      |
         -4        -1              -1   -4
 ```
-For PEPOTensors
+For PEPOTensors,
 ```
     -2  -3                          -2  -3
       ↘ |                             ↘ |
@@ -157,6 +157,7 @@ For PEPOTensors
         | ↘                             | ↘
         -5 -1                          -5  -1
 ```
+It is assumed that the physical domain and codomain spaces are not dualed.
 """
 function _qr_bond_undo(X::PEPSOrth, a::AbstractTensorMap, b::AbstractTensorMap, Y::PEPSOrth)
     @tensor A[-1; -2 -3 -4 -5] := X[-2 1 -4 -5] * a[1 -1 -3]
