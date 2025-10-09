@@ -4,7 +4,7 @@ using LinearAlgebra
 using PEPSKit
 using TensorKit
 using QuadGK
-
+using Test
 
 @testset "Check spaces in partition function CTMRG" begin
     zA = randn(ℂ^6 ⊗ ℂ^8 ← ℂ^4 ⊗ ℂ^2)
@@ -107,10 +107,18 @@ env0 = CTMRGEnv(Z, χenv)
 ctm_styles = [:sequential, :simultaneous]
 projector_algs = [:halfinfinite, :fullinfinite]
 
+# Basic properties
 @test spacetype(typeof(Z)) === ComplexSpace
 @test spacetype(Z) === ComplexSpace
 @test sectortype(typeof(Z)) === Trivial
 @test sectortype(Z) === Trivial
+@test length(Z)  == 1
+@test size(Z, 1) == 1
+@test size(Z, 2) == 1
+@test eltype(similar(Z)) == eltype(Z) 
+@test copy(Z) == Z
+@test copy(Z) ≈ Z
+
 
 @testset "Classical Ising partition function using $alg with $projector_alg" for (
         alg, projector_alg,
