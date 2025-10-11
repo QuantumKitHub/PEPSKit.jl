@@ -3,23 +3,29 @@ using Random
 using TensorKit
 using PEPSKit
 
-Nr, Nc = 2, 2
-Vphy = Vect[FermionParity](0 => 1, 1 => 1)
-Pspaces = fill(Vphy, (Nr, Nc))
-op = randn(ComplexF64, Vphy ⊗ Vphy → Vphy ⊗ Vphy)
+const syms = (Z2Irrep, FermionParity)
 
-V = Vect[FermionParity](0 => 1, 1 => 2)
-Venv = Vect[FermionParity](0 => 2, 1 => 2)
-Nspaces = [V' V; V V']
-Espaces = [V V'; V' V]
+function get_spaces(sym::Type{<:Sector})
+    @assert sym in syms
+    Nr, Nc = 2, 2
+    Vphy = Vect[sym](0 => 1, 1 => 1)
+    Pspaces = fill(Vphy, (Nr, Nc))
+    V = Vect[sym](0 => 1, 1 => 2)
+    Venv = Vect[sym](0 => 2, 1 => 2)
+    Nspaces = [V' V; V V']
+    Espaces = [V V'; V' V]
+    return Vphy, Venv, Pspaces, Nspaces, Espaces
+end
 
 site0 = CartesianIndex(1, 1)
 maxsep = 6
 site1xs = collect(site0 + CartesianIndex(0, i) for i in 2:2:maxsep)
 site1ys = collect(site0 + CartesianIndex(i, 0) for i in 2:2:maxsep)
 
-@testset "Correlator in InfinitePEPS" begin
+@testset "Correlator in InfinitePEPS ($(sym))" for sym in syms
     Random.seed!(100)
+    Vphy, Venv, Pspaces, Nspaces, Espaces = get_spaces(sym)
+    op = randn(ComplexF64, Vphy ⊗ Vphy → Vphy ⊗ Vphy)
     peps = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
     env = CTMRGEnv(randn, ComplexF64, peps, Venv)
     for site1s in (site1xs, site1ys)
@@ -34,8 +40,10 @@ site1ys = collect(site0 + CartesianIndex(i, 0) for i in 2:2:maxsep)
     end
 end
 
-@testset "Correlator in InfinitePEPO (1-layer)" begin
+@testset "Correlator in 1-layer InfinitePEPO ($(sym))" for sym in syms
     Random.seed!(100)
+    Vphy, Venv, Pspaces, Nspaces, Espaces = get_spaces(sym)
+    op = randn(ComplexF64, Vphy ⊗ Vphy → Vphy ⊗ Vphy)
     pepo = InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
     pf = InfinitePartitionFunction(pepo)
     env = CTMRGEnv(randn, ComplexF64, pf, Venv)

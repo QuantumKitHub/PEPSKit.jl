@@ -1,3 +1,17 @@
+function _transfer_left(
+        vec::GenericMPSTensor{S, 2}, d::MPSKit.SingleTransferMatrix
+    ) where {S}
+    return @tensor y[-1 -2; -3] := vec[1 2; 4] *
+        d.above[4 5; -3] * d.middle[2 3; 5 -2] * conj(d.below[1 3; -1])
+end
+
+function _transfer_left(
+        vec::GenericMPSTensor{S, 3}, d::MPSKit.SingleTransferMatrix
+    ) where {S}
+    return @tensor y[-1 dstring -2; -3] := vec[1 dstring 2; 4] *
+        d.above[4 5; -3] * d.middle[2 3; 5 -2] * conj(d.below[1 3; -1])
+end
+
 function correlator_horizontal(
         ρ::InfinitePEPO, operator,
         i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
@@ -29,9 +43,8 @@ function correlator_horizontal(
             @tensor Amid[w s; n e] := t[d d; n e s w]
             Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
             T = TransferMatrix(Atop, Amid, _dag(Abot))
-            twistdual!(T.below, 2:numout(T.below))
-            Vn = Vn * T
-            Vo = Vo * T
+            Vn = _transfer_left(Vn, T)
+            Vo = _transfer_left(Vo, T)
             i += CartesianIndex(0, 1)
         end
         # compute overlap with operator
@@ -42,8 +55,10 @@ function correlator_horizontal(
         @tensor Amid[w s; n e] := t[d d; n e s w]
         Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
         T = TransferMatrix(Atop, Amid, _dag(Abot))
-        twistdual!(T.below, 2:numout(T.below))
-        Vn = Vn * T
+        Vn = _transfer_left(Vn, T)
+        if k < length(js)
+            Vo = _transfer_left(Vo, T)
+        end
         i += CartesianIndex(0, 1)
         # compute overlap without operator
         denominator = end_correlator_denominator(j, Vn, env)
@@ -74,8 +89,8 @@ function start_correlator(
     @autoopt @tensor Vo[χSE dstring De; χNE] :=
         E_south[χSE Ds; χSW2] * C_southwest[χSW2; χSW] *
         E_west[χSW Dw; χNW] * C_northwest[χNW; χN] *
-        removeunit(O, 1)[d1; d2 dstring] *
-        t[d2 d1; Dn De Ds Dw] * E_north[χN Dn; χNE]
+        removeunit(O, 1)[d2; d1 dstring] *
+        t[d1 d2; Dn De Ds Dw] * E_north[χN Dn; χNE]
     return Vn, Vo
 end
 
@@ -96,7 +111,7 @@ function end_correlator_numerator(
     return @autoopt @tensor V[χSW dstring DW; χNW] *
         E_south[χSSE DS; χSW] * E_east[χNEE DE; χSEE] * E_north[χNW DN; χNNE] *
         C_northeast[χNNE; χNEE] * C_southeast[χSEE; χSSE] *
-        t[dt db; DN DE DS DW] * removeunit(O, 4)[dstring db; dt]
+        t[d1 d2; DN DE DS DW] * removeunit(O, 4)[dstring d2; d1]
 end
 
 function end_correlator_denominator(
@@ -116,8 +131,9 @@ function correlator_vertical(
         env::CTMRGEnv,
     )
     rotated_ρ = rotl90(ρ)
-    rotated_i = siterotl90(i, size(bra))
-    rotated_js = map(j -> siterotl90(j, size(bra)), js)
+    unitcell = size(ρ)[1:2]
+    rotated_i = siterotl90(i, unitcell)
+    rotated_js = map(j -> siterotl90(j, unitcell), js)
     return correlator_horizontal(
         rotated_ρ, operator, rotated_i, rotated_js, rotl90(env)
     )

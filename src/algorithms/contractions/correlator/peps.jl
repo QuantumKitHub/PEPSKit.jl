@@ -52,7 +52,9 @@ function correlator_horizontal(
             ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
         )
         T = TransferMatrix(Atop, sandwich, _dag(Abot))
-        Vo = Vo * T
+        if k < length(js)
+            Vo = Vo * T
+        end
         twistdual!(T.below, 2:numout(T.below))
         Vn = Vn * T
         i += CartesianIndex(0, 1)
