@@ -52,7 +52,9 @@ function correlator_horizontal(
             ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
         )
         T = TransferMatrix(Atop, sandwich, _dag(Abot))
-        Vo = Vo * T
+        if k < length(js)
+            Vo = Vo * T
+        end
         twistdual!(T.below, 2:numout(T.below))
         Vn = Vn * T
         i += CartesianIndex(0, 1)
@@ -107,12 +109,12 @@ end
 
 function end_correlator_numerator(
         j::CartesianIndex{2},
-        V,
+        V::AbstractTensorMap{T, S, 4, 1},
         above::InfinitePEPS,
         O::MPOTensor,
         below::InfinitePEPS,
         env::CTMRGEnv,
-    )
+    ) where {T, S}
     r, c = Tuple(j)
     E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
     E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
@@ -132,7 +134,10 @@ function end_correlator_numerator(
         removeunit(O, 4)[dstring db; dt]
 end
 
-function end_correlator_denominator(j::CartesianIndex{2}, V, env::CTMRGEnv)
+function end_correlator_denominator(
+        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
+        env::CTMRGEnv
+    ) where {T, S}
     r, c = Tuple(j)
     C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
     E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
@@ -146,7 +151,7 @@ end
 
 function correlator_vertical(
         bra::InfinitePEPS,
-        O,
+        operator,
         i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
         ket::InfinitePEPS,
         env::CTMRGEnv,
@@ -155,10 +160,10 @@ function correlator_vertical(
     rotated_ket = bra === ket ? rotated_bra : rotl90(ket)
 
     rotated_i = siterotl90(i, size(bra))
-    rotated_j = map(j -> siterotl90(j, size(bra)), js)
+    rotated_js = map(j -> siterotl90(j, size(bra)), js)
 
     return correlator_horizontal(
-        rotated_bra, O, rotated_i, rotated_j, rotated_ket, rotl90(env)
+        rotated_bra, operator, rotated_i, rotated_js, rotated_ket, rotl90(env)
     )
 end
 
