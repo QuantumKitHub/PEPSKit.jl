@@ -39,8 +39,7 @@ function correlator_horizontal(
         # transfer until left of site j
         while j > i
             Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-            t = ρ[mod1(i[1], end), mod1(i[2], end)]
-            @tensor Amid[w s; n e] := t[d d; n e s w]
+            Amid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
             Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
             T = TransferMatrix(Atop, Amid, _dag(Abot))
             Vn = _transfer_left(Vn, T)
@@ -51,8 +50,7 @@ function correlator_horizontal(
         numerator = end_correlator_numerator(j, Vo, ρ, O[2], env)
         # transfer right of site j
         Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-        t = ρ[mod1(i[1], end), mod1(i[2], end)]
-        @tensor Amid[w s; n e] := t[d d; n e s w]
+        Amid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
         Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
         T = TransferMatrix(Atop, Amid, _dag(Abot))
         Vn = _transfer_left(Vn, T)
@@ -79,7 +77,7 @@ function start_correlator(
     E_west = env.edges[WEST, mod1(r, end), _prev(c, end)]
     C_northwest = env.corners[NORTHWEST, _prev(r, end), _prev(c, end)]
     C_southwest = env.corners[SOUTHWEST, _next(r, end), _prev(c, end)]
-    t = ρ[mod1(r, end), mod1(c, end)]
+    t = twistdual(ρ[mod1(r, end), mod1(c, end)], 1:2)
     # TODO: part of these contractions is duplicated between the two output tensors,
     # so could be optimized further
     @autoopt @tensor Vn[χSE De; χNE] :=
@@ -107,7 +105,7 @@ function end_correlator_numerator(
     E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
     C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
     C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
-    t = ρ[mod1(r, end), mod1(c, end)]
+    t = twistdual(ρ[mod1(r, end), mod1(c, end)], 1:2)
     return @autoopt @tensor V[χSW dstring DW; χNW] *
         E_south[χSSE DS; χSW] * E_east[χNEE DE; χSEE] * E_north[χNW DN; χNNE] *
         C_northeast[χNNE; χNEE] * C_southeast[χSEE; χSSE] *
