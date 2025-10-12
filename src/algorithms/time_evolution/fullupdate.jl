@@ -92,13 +92,8 @@ function _fu_column!(
     else
         InfiniteSquareNetwork(InfinitePEPS(state))
     end
-    colmove_alg = if alg.ctm_alg isa SequentialCTMRG
-        alg.ctm_alg
-    else
-        c = alg.ctm_alg
-        # an auxiliary struct to pass `projector_alg` to left/right move
-        SequentialCTMRG(c.tol, c.maxiter, c.miniter, c.verbosity, c.projector_alg)
-    end
+    colmove_alg = SequentialCTMRG()
+    @reset colmove_alg.projector_alg = alg.ctm_alg.projector_alg
     env2, info = ctmrg_leftmove(col, network, env, colmove_alg)
     env2, info = ctmrg_rightmove(_next(col, Nc), network, env2, colmove_alg)
     for c in [col, _next(col, Nc)]
