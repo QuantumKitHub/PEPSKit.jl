@@ -4,7 +4,7 @@ using PEPSKit: herm_depth, herm_width, _fit_spaces
 using TensorKit
 
 @testset "ReflectDepth" for unitcell in [(1, 1), (2, 2), (3, 3)]
-    peps = InfinitePEPS(2, 2; unitcell)
+    peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell)
 
     peps_depth = symmetrize!(deepcopy(peps), ReflectDepth())
     peps_reflect = _fit_spaces(
@@ -14,7 +14,7 @@ using TensorKit
 end
 
 @testset "ReflectWidth" for unitcell in [(1, 1), (2, 2), (3, 3)]
-    peps = InfinitePEPS(2, 2; unitcell)
+    peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell)
 
     peps_width = symmetrize!(deepcopy(peps), ReflectWidth())
     peps_reflect = _fit_spaces(
@@ -24,7 +24,7 @@ end
 end
 
 @testset "Rotate" for unitcell in [(1, 1), (2, 2), (3, 3)]
-    peps = InfinitePEPS(2, 2; unitcell)
+    peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell)
 
     peps_rot = symmetrize!(deepcopy(peps), Rotate())
     @test peps_rot ≈ _fit_spaces(rotl90(peps_rot), peps_rot)
@@ -33,7 +33,7 @@ end
 end
 
 @testset "RotateReflect" for unitcell in [(1, 1), (2, 2), (3, 3)]
-    peps = InfinitePEPS(2, 2; unitcell)
+    peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell)
 
     peps_full = symmetrize!(deepcopy(peps), RotateReflect())
     @test peps_full ≈ _fit_spaces(rotl90(peps_full), peps_full)
