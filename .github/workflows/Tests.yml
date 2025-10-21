@@ -24,7 +24,7 @@ jobs:
       matrix:
         version:
           - 'lts' # minimal supported version
-          - '1' # latest released Julia version
+          - '1.11' # latest released Julia version
         group:
           - ctmrg
           - boundarymps
