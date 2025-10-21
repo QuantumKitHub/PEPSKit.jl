@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1.11' # automatically expands to the latest stable 1.x release of Julia
+          - '1.11' # TODO: update to '1' when compatible
         os:
           - ubuntu-latest
         arch:
