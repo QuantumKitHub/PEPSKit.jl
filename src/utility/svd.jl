@@ -108,7 +108,7 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         else
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, broadening = 0.0)) # remove `alg` and `broadening` keyword arguments
             rrule_type <: BiCGStab &&
-                (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim = nothing))) # BiCGStab doens't take `krylovdim`
+                (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim = nothing))) # BiCGStab doesn't take `krylovdim`
         end
         rrule_type(; rrule_kwargs...)
     else

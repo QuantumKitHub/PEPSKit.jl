@@ -21,10 +21,10 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
     benv = Z' * Z
     # untruncated bond tensor
     a2b2 = randn(Float64, Vbondl ⊗ Vbondr ← Vphy' ⊗ Vphy')
-    a2, s, b2 = tsvd(a2b2, perm_ab)
+    a2, s, b2 = svd_compact(permute(a2b2, perm_ab))
     a2, b2 = PEPSKit.absorb_s(a2, s, b2)
     # bond tensor (truncated SVD initialization)
-    a0, s, b0 = tsvd(a2b2, perm_ab; trunc = trscheme)
+    a0, s, b0 = svd_trunc(permute(a2b2, perm_ab); trunc = trscheme)
     a0, b0 = PEPSKit.absorb_s(a0, s, b0)
     fid0 = PEPSKit.fidelity(benv, PEPSKit._combine_ab(a0, b0), a2b2)
     @info "Fidelity of simple SVD truncation = $fid0.\n"

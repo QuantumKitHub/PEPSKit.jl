@@ -72,7 +72,7 @@ Nr, Nc = 2, 3
 peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc))
 pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
 wts = collect(
-    tsvd(rand(Float64, Vs[dir] ← Vs[dir]))[2] for dir in 1:2, r in 1:Nr, c in 1:Nc
+    svd_compact(rand(Float64, Vs[dir] ← Vs[dir]))[2] for dir in 1:2, r in 1:Nr, c in 1:Nc
 )
 wts = SUWeight(wts)
 

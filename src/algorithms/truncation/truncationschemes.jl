@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-CTMRG specific truncation strategy for `tsvd` which keeps the bond space on which the SVD
+CTMRG specific truncation strategy for `svd_trunc` which keeps the bond space on which the SVD
 is performed fixed. Since different environment directions and unit cell entries might
 have different spaces, this truncation style is different from `TruncationSpace`.
 """
@@ -12,12 +12,12 @@ struct SiteDependentTruncation{T <: TruncationStrategy} <: TruncationStrategy
 end
 
 const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
-    :fixedspace => FixedSpaceTruncation,
-    :notrunc => TensorKit.NoTruncation,
-    :truncerror => TensorKit.TruncationError,
-    :truncrank => TensorKit.TruncationDimension,
+    :notrunc => MatrixAlgebraKit.NoTruncation,
+    :truncerror => MatrixAlgebraKit.TruncationByError,
+    :truncrank => MatrixAlgebraKit.TruncationByOrder,
+    :trunctol => MatrixAlgebraKit.TruncationByValue,
     :truncspace => TensorKit.TruncationSpace,
-    :trunctol => TensorKit.TruncationCutoff,
+    :fixedspace => FixedSpaceTruncation,
     :sitedependent => SiteDependentTruncation,
 )
 

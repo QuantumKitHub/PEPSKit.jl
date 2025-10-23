@@ -70,7 +70,7 @@ function bond_truncate(
     a2b2 = _combine_ab(a, b)
     # initialize truncated a, b
     perm_ab = ((1, 3), (4, 2))
-    a, s, b = tsvd(a2b2, perm_ab; trunc = alg.trscheme)
+    a, s, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trscheme)
     s /= norm(s, Inf)
     a, b = absorb_s(a, s, b)
     #= temporarily reorder axes of a and b to
@@ -128,7 +128,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = tsvd!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trscheme)
+    a, s, b = svd_trunc!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trscheme)
     # normalize singular value spectrum
     s /= norm(s, Inf)
     return a, s, b, (; fid, Δfid)
@@ -149,8 +149,8 @@ function bond_truncate(
         --- a == b ---   ==>   - Qa - Ra == Rb - Qb -
             ↓    ↓               ↓               ↓
     =#
-    Qa, Ra = leftorth(a)
-    Rb, Qb = rightorth(b)
+    Qa, Ra = left_orth(a)
+    Rb, Qb = right_orth(b)
     # if Qa → Ra, a twist is needed to express a as
     # contraction of Rb, Qb instead of Qa * Ra
     isdual(space(Ra, 1)) && twist!(Ra, 1)

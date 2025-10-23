@@ -228,7 +228,7 @@ function fullenv_truncate(
     @assert codomain(benv) == domain(benv)
     time00 = time()
     # initialize u, s, vh with truncated or untruncated SVD
-    u, s, vh = tsvd(b0; trunc = (alg.trunc_init ? alg.trscheme : notrunc()))
+    u, s, vh = svd_trunc(b0; trunc = (alg.trunc_init ? alg.trscheme : notrunc()))
     b1 = similar(b0)
     # normalize `s` (bond matrices can always be normalized)
     s /= norm(s, Inf)
@@ -244,7 +244,7 @@ function fullenv_truncate(
         _linearmap_twist!(B)
         r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
         @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
-        u, s, vh = tsvd(b1; trunc = alg.trscheme)
+        u, s, vh = svd_trunc(b1; trunc = alg.trscheme)
         s /= norm(s, Inf)
         # update `- l ←  =  - u ← s ←`
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
@@ -255,7 +255,7 @@ function fullenv_truncate(
         l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
         fid = fidelity(benv, b0, b1)
-        u, s, vh = tsvd!(b1; trunc = alg.trscheme)
+        u, s, vh = svd_trunc!(b1; trunc = alg.trscheme)
         s /= norm(s, Inf)
         # determine convergence
         Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN

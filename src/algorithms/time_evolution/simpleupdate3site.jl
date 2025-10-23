@@ -137,7 +137,7 @@ function qr_through(
         R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
-    q, r = leftorth!(A; alg = QRpos())
+    q, r = left_orth!(A)
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
@@ -145,7 +145,7 @@ end
 function qr_through(
         ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    q, r = leftorth(M; alg = QRpos())
+    q, r = left_orth(M)
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
@@ -163,7 +163,7 @@ function lq_through(
         M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @plansor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
-    l, q = rightorth!(permute(A, ((1,), (2, 3, 4, 5))); alg = LQpos())
+    l, q = right_orth!(permute(A, ((1,), (2, 3, 4, 5))))
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
@@ -171,7 +171,7 @@ end
 function lq_through(
         M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    l, q = rightorth(M, ((1,), (2, 3, 4, 5)); alg = LQpos())
+    l, q = right_orth(permute(M, ((1,), (2, 3, 4, 5))))
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
@@ -218,7 +218,8 @@ function _proj_from_RL(
     )
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
-    u, s, vh, ϵ = tsvd!(rl; trunc)
+    u, s, vh = svd_trunc!(rl; trunc)
+    ϵ = 0.0 # TODO: replace this with actual truncation error once TensorKit is updated
     sinv = PEPSKit.sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
