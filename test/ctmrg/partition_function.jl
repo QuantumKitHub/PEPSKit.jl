@@ -112,10 +112,10 @@ projector_algs = [:halfinfinite, :fullinfinite]
 @test spacetype(Z) === ComplexSpace
 @test sectortype(typeof(Z)) === Trivial
 @test sectortype(Z) === Trivial
-@test length(Z)  == 1
+@test length(Z) == 1
 @test size(Z, 1) == 1
 @test size(Z, 2) == 1
-@test eltype(similar(Z)) == eltype(Z) 
+@test eltype(similar(Z)) == eltype(Z)
 @test copy(Z) == Z
 @test copy(Z) ≈ Z
 
