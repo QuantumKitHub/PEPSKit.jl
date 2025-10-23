@@ -65,7 +65,6 @@ function MPSKitModels.heisenberg_XXZ(
         (S_plusmin(T, S; spin = spin) + S_minplus(T, S; spin = spin)) / 2 +
             Delta * S_zz(T, S; spin = spin)
     )
-    rmul!(h, 1 / 4)
     spaces = fill(domain(h)[1], (lattice.Nrows, lattice.Ncols))
     return LocalOperator(
         spaces, (neighbor => h for neighbor in nearest_neighbours(lattice))...
