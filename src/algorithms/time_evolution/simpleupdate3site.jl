@@ -497,12 +497,9 @@ One round of 3-site simple update, which applies the Trotter gate MPOs `gatempos
 on an InfinitePEPS `state` or InfinitePEPO `densitymatrix`.
 """
 function su3site_iter(
-        state::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight;
-        gate_bothsides::Bool = true
+        state::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
     ) where {G <: AbstractMatrix}
-    if state isa InfinitePEPS
-        gate_bothsides = false
-    else
+    if state isa InfinitePEPO
         @assert size(state, 3) == 1
     end
     Nr, Nc = size(state)[1:2]
@@ -521,53 +518,52 @@ function su3site_iter(
                 truncation_scheme(trscheme, 1, r, c)
                 truncation_scheme(trscheme, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(state2, gs, env2, r, c, trschemes; gate_bothsides)
+            _su3site_se!(state2, gs, env2, r, c, trschemes; alg.gate_bothsides)
         end
         state2, env2 = rotl90(state2), rotl90(env2)
         trscheme = rotl90(trscheme)
     end
-    return state2, env2
+    wtdiff = compare_weights(env2, env)
+    return state2, env2, (; wtdiff)
 end
 
 """
-Perform 3-site simple update for Hamiltonian `ham`.
+Perform 3-site simple update for Hamiltonian `H`.
 """
 function _simpleupdate3site(
-        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        check_interval::Int = 500, gate_bothsides::Bool = true
+        state::InfiniteState, H::LocalOperator,
+        dt::Float64, nstep::Int, alg::SimpleUpdate, env::SUWeight;
+        imaginary_time::Bool
     )
     time_start = time()
-    # convert Hamiltonian to 3-site exponentiated gate MPOs
-    if state isa InfinitePEPS
-        gate_bothsides = false
-    end
-    dt = gate_bothsides ? (alg.dt / 2) : alg.dt
+    dt′, check_convergence = _process_timeevol_args(state, dt, imaginary_time, alg.tol)
     gatempos = [
-        _get_gatempos_se(ham, dt),
-        _get_gatempos_se(rotl90(ham), dt),
-        _get_gatempos_se(rot180(ham), dt),
-        _get_gatempos_se(rotr90(ham), dt),
+        _get_gatempos_se(H, dt′),
+        _get_gatempos_se(rotl90(H), dt′),
+        _get_gatempos_se(rot180(H), dt′),
+        _get_gatempos_se(rotr90(H), dt′),
     ]
-    wtdiff = 1.0
-    env0 = deepcopy(env)
-    for count in 1:(alg.maxiter)
+    info = nothing
+    for step in 1:nstep
         time0 = time()
-        state, env = su3site_iter(state, gatempos, alg, env; gate_bothsides)
-        wtdiff = compare_weights(env, env0)
-        converge = (wtdiff < alg.tol)
-        cancel = (count == alg.maxiter)
-        env0 = deepcopy(env)
+        state, env, info = su3site_iter(state, gatempos, alg, env)
+        converge = (info.wtdiff < alg.tol)
         time1 = time()
-        if ((count == 1) || (count % check_interval == 0) || converge || cancel)
+        if (step % alg.check_interval == 0) || (step == nstep) || converge
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-            label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
-            message = @sprintf(
-                "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
-                label, count, alg.dt, wtdiff, time1 - ((converge || cancel) ? time_start : time0)
+            @info @sprintf(
+                "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
+                step, dt, info.wtdiff, time1 - time0
             )
-            cancel ? (@warn message) : (@info message)
         end
-        converge && break
+        if check_convergence
+            converge && break
+            if step == nstep
+                @warn "SU ground state search has not converged."
+            end
+        end
     end
-    return state, env, wtdiff
+    time_end = time()
+    @info @sprintf("Simple update finished. Time elasped: %.2f s", time_end - time_start)
+    return state, env, info
 end

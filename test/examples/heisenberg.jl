@@ -66,12 +66,12 @@ end
     # simple update
     dts = [1.0e-2, 1.0e-3, 1.0e-3, 1.0e-4]
     tols = [1.0e-7, 1.0e-8, 1.0e-8, 1.0e-8]
-    maxiter = 5000
+    nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trscheme = truncerr(1.0e-10) & truncdim(Dbond2)
-        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = false)
+        alg = SimpleUpdate(; trscheme, bipartite = false)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts)
     end
 
     # measure physical quantities with CTMRG

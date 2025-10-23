@@ -116,11 +116,11 @@ end
     # usual 2-site simple update, and measure energy
     dts = [1.0e-2, 1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8, 1.0e-8]
-    maxiter = 5000
+    nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trscheme = truncerr(1.0e-10) & truncdim(n == 1 ? 4 : 2)
-        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = true, check_interval = 1000)
+        alg = SimpleUpdate(; tol, trscheme, bipartite = true, check_interval = 1000)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts)
     end
     normalize!.(peps.A, Inf)
     env = CTMRGEnv(rand, Float64, peps, Espace)
@@ -132,10 +132,8 @@ end
     tols = [1.0e-8, 1.0e-8]
     trscheme = truncerr(1.0e-10) & truncdim(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(
-            peps, ham, alg, wts; check_interval = 1000, force_3site = true
-        )
+        alg = SimpleUpdate(; tol, trscheme, check_interval = 1000)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; force_3site = true)
     end
     normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)

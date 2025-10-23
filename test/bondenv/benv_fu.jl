@@ -13,8 +13,8 @@ function get_hubbard_state(t::Float64 = 1.0, U::Float64 = 8.0)
     Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     peps = InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
-    alg = SimpleUpdate(1.0e-2, 1.0e-8, 10000, truncerr(1.0e-10) & truncdim(4))
-    peps, = simpleupdate(peps, H, alg, wts; bipartite = false, check_interval = 2000)
+    alg = SimpleUpdate(; tol = 1.0e-8, trscheme = truncerr(1.0e-10) & truncdim(4), check_interval = 2000)
+    peps, = time_evolve(peps, H, 1.0e-2, 10000, alg, wts)
     normalize!.(peps.A, Inf)
     return peps
 end
