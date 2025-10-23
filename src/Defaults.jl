@@ -23,8 +23,8 @@ Module containing default algorithm parameter values and arguments.
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
-    - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
-    - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
+    - `:sdd`: MatrixAlgebraKit's `LAPACK_DivideAndConquer`
+    - `:svd`: MatrixAlgebraKit's `LAPACK_QRIteration`
     - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).

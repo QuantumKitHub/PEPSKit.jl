@@ -7,7 +7,7 @@ using VectorInterface
 import VectorInterface as VI
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: TruncationStrategy
+using MatrixAlgebraKit: TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration
 using TensorKit
 
 using KrylovKit, OptimKit, TensorOperations

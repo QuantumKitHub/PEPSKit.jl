@@ -45,8 +45,8 @@ $(TYPEDFIELDS)
 Construct a `SVDAdjoint` algorithm struct based on the following keyword arguments:
 
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:sdd` : TensorKit's wrapper for LAPACK's `_gesdd`
-    - `:svd` : TensorKit's wrapper for LAPACK's `_gesvd`
+    - `:sdd`: MatrixAlgebraKit's `LAPACK_DivideAndConquer`
+    - `:svd`: MatrixAlgebraKit's `LAPACK_QRIteration`
     - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [`FullSVDReverseRule`](@ref).
@@ -60,8 +60,8 @@ struct SVDAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :sdd => TensorKit.SDD,
-    :svd => TensorKit.SVD,
+    :sdd => LAPACK_DivideAndConquer,
+    :svd => LAPACK_QRIteration,
     :iterative =>
         (; tol = 1.0e-14, krylovdim = 25, kwargs...) ->
     IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
@@ -142,7 +142,7 @@ end
 # Copy code from TensorKit but additionally return full U, S and V to make compatible with :fixed mode
 function _tsvd!(
         t::TensorMap{<:RealOrComplexFloat},
-        alg::Union{TensorKit.SDD, TensorKit.SVD},
+        alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration},
         trunc::TruncationStrategy,
         p::Real,
     )
@@ -278,7 +278,7 @@ function TensorKit._compute_svddata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
-            U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
+            U, S, V = TensorKit.MatrixAlgebra.svd!(b, LAPACK_DivideAndConquer())
             U = U[:, 1:howmany]
             V = V[1:howmany, :]
         else
@@ -290,7 +290,7 @@ function TensorKit._compute_svddata!(
             S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, svd_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
-                U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
+                U, S, V = TensorKit.MatrixAlgebra.svd!(b, LAPACK_DivideAndConquer())
                 U = U[:, 1:howmany]
                 V = V[1:howmany, :]
             else  # Slice in case more values were converged than requested
