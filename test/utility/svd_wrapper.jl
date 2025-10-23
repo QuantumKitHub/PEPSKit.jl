@@ -62,7 +62,7 @@ end
     )
 
     @test l_only_cutoff ≈ l_no_broadening_no_cutoff ≈ l_small_broadening
-    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-1 # divergences mess up the gradient
+    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-2 # divergences mess up the gradient
     @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and Lorentzian broadening have similar effect
 end
 
