@@ -1,50 +1,50 @@
 """
 $(TYPEDEF)
 
-CTMRG specific truncation scheme for `tsvd` which keeps the bond space on which the SVD
+CTMRG specific truncation strategy for `tsvd` which keeps the bond space on which the SVD
 is performed fixed. Since different environment directions and unit cell entries might
 have different spaces, this truncation style is different from `TruncationSpace`.
 """
-struct FixedSpaceTruncation <: TruncationScheme end
+struct FixedSpaceTruncation <: TruncationStrategy end
 
-struct SiteDependentTruncation{T <: TruncationScheme} <: TruncationScheme
+struct SiteDependentTruncation{T <: TruncationStrategy} <: TruncationStrategy
     trschemes::Array{T, 3}
 end
 
-const TRUNCATION_SCHEME_SYMBOLS = IdDict{Symbol, Type{<:TruncationScheme}}(
+const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
     :fixedspace => FixedSpaceTruncation,
     :notrunc => TensorKit.NoTruncation,
-    :truncerr => TensorKit.TruncationError,
-    :truncdim => TensorKit.TruncationDimension,
+    :truncerror => TensorKit.TruncationError,
+    :truncrank => TensorKit.TruncationDimension,
     :truncspace => TensorKit.TruncationSpace,
-    :truncbelow => TensorKit.TruncationCutoff,
+    :trunctol => TensorKit.TruncationCutoff,
     :sitedependent => SiteDependentTruncation,
 )
 
-# Should be TruncationScheme but rename to avoid type piracy
-function _TruncationScheme(; alg = Defaults.trscheme, η = nothing)
-    # replace Symbol with TruncationScheme type
-    haskey(TRUNCATION_SCHEME_SYMBOLS, alg) ||
-        throw(ArgumentError("unknown truncation scheme: $alg"))
-    alg_type = TRUNCATION_SCHEME_SYMBOLS[alg]
+# Should be TruncationStrategy but rename to avoid type piracy
+function _TruncationStrategy(; alg = Defaults.trscheme, η = nothing)
+    # replace Symbol with TruncationStrategy type
+    haskey(TRUNCATION_STRATEGY_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown truncation strategy: $alg"))
+    alg_type = TRUNCATION_STRATEGY_SYMBOLS[alg]
 
     return isnothing(η) ? alg_type() : alg_type(η)
 end
 
-function truncation_scheme(
-        trscheme::TruncationScheme, direction::Int, row::Int, col::Int; kwargs...
+function truncation_strategy(
+        trscheme::TruncationStrategy, direction::Int, row::Int, col::Int; kwargs...
     )
     return trscheme
 end
 
-function truncation_scheme(
+function truncation_strategy(
         trscheme::SiteDependentTruncation, direction::Int, row::Int, col::Int
     )
     return trscheme.trschemes[direction, row, col]
 end
 
 # TODO: type piracy
-Base.rotl90(trscheme::TruncationScheme) = trscheme
+Base.rotl90(trscheme::TruncationStrategy) = trscheme
 
 function Base.rotl90(trscheme::SiteDependentTruncation)
     directions, rows, cols = size(trscheme.trschemes)

@@ -12,7 +12,7 @@ struct SimpleUpdate
     dt::Number
     tol::Float64
     maxiter::Int
-    trscheme::TruncationScheme
+    trscheme::TruncationStrategy
 end
 # TODO: add kwarg constructor and SU Defaults
 
@@ -29,7 +29,7 @@ Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 """
 function _su_xbond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
-        row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
+        row::Int, col::Int, trscheme::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(state)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -68,7 +68,7 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
 """
 function _su_ybond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
-        row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
+        row::Int, col::Int, trscheme::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(state)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -121,7 +121,7 @@ function su_iter(
     gate_axs = gate_bothsides ? (1:2) : (1:1)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
-        trscheme = truncation_scheme(alg.trscheme, 1, r, c)
+        trscheme = truncation_strategy(alg.trscheme, 1, r, c)
         for gate_ax in gate_axs
             _su_xbond!(state2, term, env2, r, c, trscheme; gate_ax)
         end
@@ -132,7 +132,7 @@ function su_iter(
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
-        trscheme = truncation_scheme(alg.trscheme, 2, r, c)
+        trscheme = truncation_strategy(alg.trscheme, 2, r, c)
         for gate_ax in gate_axs
             _su_ybond!(state2, term, env2, r, c, trscheme; gate_ax)
         end

@@ -1,7 +1,7 @@
 using TensorKit:
     AdjointTensorMap, SectorDict, RealOrComplexFloat, NoTruncation, TruncationSpace,
-    _empty_svdtensors, _compute_svddata!, _create_svdtensors, _compute_truncdim,
-    _compute_truncerr
+    _empty_svdtensors, _compute_svddata!, _create_svdtensors, _compute_truncrank,
+    _compute_truncerror
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
@@ -143,20 +143,20 @@ end
 function _tsvd!(
         t::TensorMap{<:RealOrComplexFloat},
         alg::Union{TensorKit.SDD, TensorKit.SVD},
-        trunc::TruncationScheme,
+        trunc::TruncationStrategy,
         p::Real,
     )
-    U, S, V⁺, truncerr = TensorKit.tsvd!(t; trunc = NoTruncation(), p, alg)
+    U, S, V⁺, truncerror = TensorKit.tsvd!(t; trunc = NoTruncation(), p, alg)
 
     if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
         Sdata = SectorDict(c => diag(b) for (c, b) in blocks(S))
 
-        truncdim = _compute_truncdim(Sdata, trunc, p)
-        truncerr = _compute_truncerr(Sdata, truncdim, p)
+        truncrank = _compute_truncrank(Sdata, trunc, p)
+        truncerror = _compute_truncerror(Sdata, truncrank, p)
 
         SVDdata = SectorDict(c => (block(U, c), Sc, block(V⁺, c)) for (c, Sc) in Sdata)
 
-        Ũ, S̃, Ṽ⁺ = _create_svdtensors(t, SVDdata, truncdim)
+        Ũ, S̃, Ṽ⁺ = _create_svdtensors(t, SVDdata, truncrank)
     else
         Ũ, S̃, Ṽ⁺ = U, S, V⁺
     end
@@ -164,7 +164,7 @@ function _tsvd!(
     # construct info NamedTuple
     condnum = cond(S)
     info = (;
-        truncation_error = truncerr, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
+        truncation_error = truncerror, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
     )
     return Ũ, S̃, Ṽ⁺, info
 end
@@ -200,7 +200,7 @@ function isfullsvd(alg::FixedSVD)
 end
 
 # Return pre-computed SVD
-function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
+function _tsvd!(_, alg::FixedSVD, ::TruncationStrategy, ::Real)
     info = (;
         truncation_error = 0,
         condition_number = cond(alg.S),
@@ -245,7 +245,7 @@ function random_start_vector(t::AbstractMatrix)
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
-function _tsvd!(f, alg::IterSVD, trunc::TruncationScheme, p::Real)
+function _tsvd!(f, alg::IterSVD, trunc::TruncationStrategy, p::Real)
     # early return
     if isempty(blocksectors(f))
         truncation_error = zero(real(scalartype(f)))
@@ -315,7 +315,7 @@ function ChainRulesCore.rrule(
         ::typeof(PEPSKit.tsvd!),
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R};
-        trunc::TruncationScheme = TensorKit.NoTruncation(),
+        trunc::TruncationStrategy = TensorKit.NoTruncation(),
         p::Real = 2,
     ) where {F, R <: FullSVDReverseRule}
     @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with tsvd reverse-rule"
@@ -362,7 +362,7 @@ function ChainRulesCore.rrule(
         ::typeof(PEPSKit.tsvd!),
         f,
         alg::SVDAdjoint{F, R};
-        trunc::TruncationScheme = notrunc(),
+        trunc::TruncationStrategy = notrunc(),
         p::Real = 2,
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
     U, S, V, info = tsvd(f, alg; trunc, p)

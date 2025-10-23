@@ -27,15 +27,15 @@ function ProjectorAlgorithm(;
     svd_algorithm = _alg_or_nt(SVDAdjoint, svd_alg)
 
     # parse truncation scheme
-    truncation_scheme = if trscheme isa TruncationScheme
+    truncation_strategy = if trscheme isa TruncationStrategy
         trscheme
     elseif trscheme isa NamedTuple
-        _TruncationScheme(; trscheme...)
+        _TruncationStrategy(; trscheme...)
     else
         throw(ArgumentError("unknown trscheme $trscheme"))
     end
 
-    return alg_type(svd_algorithm, truncation_scheme, verbosity)
+    return alg_type(svd_algorithm, truncation_strategy, verbosity)
 end
 
 function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
@@ -58,7 +58,7 @@ function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     end
 end
 
-function truncation_scheme(alg::ProjectorAlgorithm, edge)
+function truncation_strategy(alg::ProjectorAlgorithm, edge)
     if alg.trscheme isa FixedSpaceTruncation
         return truncspace(space(edge, 1))
     else
@@ -82,13 +82,13 @@ $(TYPEDFIELDS)
 Construct the half-infinite projector algorithm based on the following keyword arguments:
 
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
-* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+* `trscheme::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `verbosity::Int=$(Defaults.projector_verbosity)` : Projector output verbosity which can be:
     0. Suppress output information
     1. Print singular value degeneracy warnings
@@ -120,13 +120,13 @@ $(TYPEDFIELDS)
 Construct the full-infinite projector algorithm based on the following keyword arguments:
 
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
-* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+* `trscheme::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `verbosity::Int=$(Defaults.projector_verbosity)` : Projector output verbosity which can be:
     0. Suppress output information
     1. Print singular value degeneracy warnings
@@ -152,7 +152,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, info = PEPSKit.tsvd!(halfinf, svd_alg; trunc = alg.trscheme)
+    U, S, V, info = PEPSKit.tsv(halfinf, svd_alg; trunc = alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do

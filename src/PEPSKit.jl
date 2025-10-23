@@ -6,8 +6,9 @@ using Accessors: @set, @reset
 using VectorInterface
 import VectorInterface as VI
 
+using MatrixAlgebraKit
+using MatrixAlgebraKit: TruncationStrategy
 using TensorKit
-using TensorKit: TruncationScheme
 
 using KrylovKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote

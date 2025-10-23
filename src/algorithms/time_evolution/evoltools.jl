@@ -190,7 +190,7 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 """
 function _apply_gate(
         a::AbstractTensorMap, b::AbstractTensorMap,
-        gate::AbstractTensorMap{T, S, 2, 2}, trscheme::TruncationScheme
+        gate::AbstractTensorMap{T, S, 2, 2}, trscheme::TruncationStrategy
     ) where {T <: Number, S <: ElementarySpace}
     V = space(b, 1)
     need_flip = isdual(V)
@@ -220,7 +220,7 @@ in which the axes are ordered as
 ```
 """
 function gate_to_mpo3(
-        gate::AbstractTensorMap{T, S, 3, 3}, trunc = truncbelow(MPSKit.Defaults.tol)
+        gate::AbstractTensorMap{T, S, 3, 3}, trunc = trunctol(; atol = MPSKit.Defaults.tol)
     ) where {T <: Number, S <: ElementarySpace}
     Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
     g1 = removeunit(Os[1], 1)

@@ -1,6 +1,6 @@
 using Test: @test, @testset
 using TensorKit
-using TensorKit: ←, ⊗, SU2Irrep, Vect, permute, truncdim, truncbelow
+using TensorKit: ←, ⊗, SU2Irrep, Vect, permute, truncrank, trunctol
 using MPSKit: correlation_length, leading_boundary
 using PEPSKit: CTMRGEnv, InfinitePEPS
 
@@ -12,7 +12,7 @@ using PEPSKit: CTMRGEnv, InfinitePEPS
     tAKLT_B = permute(adjoint(tAKLT_A), ((5,), (1, 2, 3, 4)))
 
     ψ = InfinitePEPS([tAKLT_A tAKLT_B; tAKLT_B tAKLT_A])
-    trscheme = truncbelow(1.0e-12) & truncdim(48)
+    trscheme = trunctol(; atol=1.0e-12) & truncrank(48)
     boundary_alg = (; tol = 1.0e-10, trscheme = trscheme, maxiter = 400, verbosity = 3)
     env0 = CTMRGEnv(randn, Float64, ψ, oneunit(vD))
     env, info_ctmrg = leading_boundary(env0, ψ; boundary_alg...)

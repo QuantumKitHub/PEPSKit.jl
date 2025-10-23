@@ -69,7 +69,7 @@ end
     maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
-        trscheme = truncerr(1.0e-10) & truncdim(Dbond2)
+        trscheme = truncerror(1.0e-10) & truncrank(Dbond2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = false)
     end

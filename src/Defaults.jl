@@ -18,10 +18,10 @@ Module containing default algorithm parameter values and arguments.
 * `trscheme=:$(Defaults.trscheme)` : Truncation scheme for SVDs and other decompositions.
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
     - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
     - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
@@ -92,7 +92,7 @@ const ctmrg_verbosity = 2
 const sparse = false # TODO: implement sparse CTMRG
 
 # SVD forward & reverse
-const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerr, :truncspace, :truncbelow}
+const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
 const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48

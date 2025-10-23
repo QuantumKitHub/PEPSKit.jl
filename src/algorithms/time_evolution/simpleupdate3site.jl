@@ -214,7 +214,7 @@ The arrows between `Pa`, `s`, `Pb` are
 """
 function _proj_from_RL(
         r::MPSBondTensor, l::MPSBondTensor;
-        trunc::TruncationScheme = notrunc(), rev::Bool = false,
+        trunc::TruncationStrategy = notrunc(), rev::Bool = false,
     )
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
@@ -233,7 +233,7 @@ find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
         Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
-    ) where {E <: TruncationScheme}
+    ) where {E <: TruncationStrategy}
     N = length(Ms)
     @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
@@ -257,7 +257,7 @@ Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
         Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
-    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationScheme}
+    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
     Rs, Ls = _get_allRLs(Ms)
     Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
     # apply projectors
@@ -449,7 +449,7 @@ function _su3site_se!(
         state::InfiniteState, gs::Vector{T}, env::SUWeight,
         row::Int, col::Int, trschemes::Vector{E};
         gate_bothsides::Bool = true
-    ) where {T <: AbstractTensorMap, E <: TruncationScheme}
+    ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
@@ -518,8 +518,8 @@ function su3site_iter(
         for r in 1:Nr, c in 1:Nc
             gs = gatempos[i][r, c]
             trschemes = [
-                truncation_scheme(trscheme, 1, r, c)
-                truncation_scheme(trscheme, 2, r, _next(c, Nc))
+                truncation_strategy(trscheme, 1, r, c)
+                truncation_strategy(trscheme, 2, r, _next(c, Nc))
             ]
             _su3site_se!(state2, gs, env2, r, c, trschemes; gate_bothsides)
         end

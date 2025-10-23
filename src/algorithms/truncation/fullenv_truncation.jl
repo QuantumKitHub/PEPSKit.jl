@@ -13,7 +13,7 @@ $(TYPEDFIELDS)
 
 The truncation algorithm can be constructed from the following keyword arguments:
 
-* `trscheme::TruncationScheme` : SVD truncation scheme when optimizing the new bond matrix.
+* `trscheme::TruncationStrategy` : SVD truncation strategy when optimizing the new bond matrix.
 * `maxiter::Int=50` : Maximal number of FET iterations.
 * `tol::Float64=1e-15` : FET converges when fidelity change between two FET iterations is smaller than `tol`.
 * `trunc_init::Bool=true` : Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
@@ -24,7 +24,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 * [Glen Evenbly, Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018). 
 """
 @kwdef struct FullEnvTruncation
-    trscheme::TruncationScheme
+    trscheme::TruncationStrategy
     maxiter::Int = 50
     tol::Float64 = 1.0e-15
     trunc_init::Bool = true

@@ -20,7 +20,7 @@ const vumps_alg = VUMPS(;
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(sum(expectation_value(mps, T)))
 
-    mps2, = changebonds(mps, T, OptimalExpand(; trscheme = truncdim(30)))
+    mps2, = changebonds(mps, T, OptimalExpand(; trscheme = truncrank(30)))
     mps2, env2, ϵ = leading_boundary(mps2, T, vumps_alg)
     N2 = abs(sum(expectation_value(mps2, T)))
     @test N ≈ N2 rtol = 1.0e-2
