@@ -152,7 +152,7 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, info = PEPSKit.tsvd!(halfinf, svd_alg; trunc = alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(halfinf / norm(halfinf), svd_alg; trunc = alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -173,7 +173,7 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = svd_algorithm(alg, coordinate)
-    U, S, V, info = PEPSKit.tsvd!(fullinf, svd_alg; trunc = alg.trscheme)
+    U, S, V, info = PEPSKit.tsvd!(fullinf / norm(fullinf), svd_alg; trunc = alg.trscheme)
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
