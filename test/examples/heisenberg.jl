@@ -53,6 +53,7 @@ end
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
     ctmrg_tol = 1.0e-8
+    ctmrg_maxiter = 200
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (N1, N2))
     wts = SUWeight(peps)
     normalize!.(peps.A, Inf)
@@ -76,7 +77,7 @@ end
 
     # measure physical quantities with CTMRG
     normalize!.(peps.A, Inf)
-    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol = ctmrg_tol)
+    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol = ctmrg_tol, maxiter = ctmrg_maxiter)
     e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
@@ -88,7 +89,8 @@ end
         peps,
         env;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
-        boundary_alg = (; maxiter = 150, svd_alg = (; rrule_alg = (; alg = :full, tol = 1.0e-5))),
+        boundary_alg = (; maxiter = ctmrg_maxiter),
+        gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)
