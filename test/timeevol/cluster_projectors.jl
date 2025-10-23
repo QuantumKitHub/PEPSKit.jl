@@ -132,8 +132,8 @@ end
     tols = [1.0e-8, 1.0e-8]
     trscheme = truncerr(1.0e-10) & truncdim(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        alg = SimpleUpdate(; tol, trscheme, check_interval = 1000)
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; force_3site = true)
+        alg = SimpleUpdate(; tol, trscheme, check_interval = 1000, force_3site = true)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts)
     end
     normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)

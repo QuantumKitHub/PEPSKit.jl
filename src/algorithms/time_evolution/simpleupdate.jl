@@ -10,6 +10,7 @@ $(TYPEDFIELDS)
 @kwdef struct SimpleUpdate
     trscheme::TruncationScheme
     check_interval::Int = 500
+    force_3site::Bool = false
     # only applicable to ground state search
     bipartite::Bool = false
     tol::Float64 = 0.0
@@ -172,11 +173,11 @@ end
 function MPSKit.time_evolve(
         state::InfiniteState, H::LocalOperator,
         dt::Float64, nstep::Int, alg::SimpleUpdate, env::SUWeight;
-        imaginary_time::Bool = true, force_3site::Bool = false
+        imaginary_time::Bool = true
     )
     # determine if Hamiltonian contains nearest neighbor terms only
     nnonly = is_nearest_neighbour(H)
-    use_3site = force_3site || !nnonly
+    use_3site = alg.force_3site || !nnonly
     @assert !(alg.bipartite && state isa InfinitePEPO) "Evolution of PEPO with bipartite structure is not implemented."
     @assert !(alg.bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
     if state isa InfinitePEPS
