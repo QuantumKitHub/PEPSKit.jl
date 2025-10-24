@@ -308,7 +308,7 @@ function _compute_svddata!(
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
                 U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
-                S = S.diag 
+                S = S.diag
                 U = U[:, 1:howmany]
                 V = V[1:howmany, :]
             else  # Slice in case more values were converged than requested
