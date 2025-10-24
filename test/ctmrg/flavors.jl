@@ -26,8 +26,8 @@ projector_algs = [:halfinfinite, :fullinfinite]
     @test abs(norm(psi, env_sequential)) ≈ abs(norm(psi, env_simultaneous)) rtol = 1.0e-6
 
     # compare singular values
-    CS_sequential = map(c -> svd_compact(c)[2], env_sequential.corners)
-    CS_simultaneous = map(c -> svd_compact(c)[2], env_simultaneous.corners)
+    CS_sequential = map(svd_vals, env_sequential.corners)
+    CS_simultaneous = map(svd_vals, env_simultaneous.corners)
     ΔCS = maximum(zip(CS_sequential, CS_simultaneous)) do (c_lm, c_as)
         smallest = infimum(MPSKit._firstspace(c_lm), MPSKit._firstspace(c_as))
         e_old = isometry(MPSKit._firstspace(c_lm), smallest)
@@ -36,8 +36,8 @@ projector_algs = [:halfinfinite, :fullinfinite]
     end
     @test ΔCS < 1.0e-2
 
-    TS_sequential = map(t -> svd_compact(t)[2], env_sequential.edges)
-    TS_simultaneous = map(t -> svd_compact(t)[2], env_simultaneous.edges)
+    TS_sequential = map(svd_vals, env_sequential.edges)
+    TS_simultaneous = map(svd_vals, env_simultaneous.edges)
     ΔTS = maximum(zip(TS_sequential, TS_simultaneous)) do (t_lm, t_as)
         MPSKit._firstspace(t_lm) == MPSKit._firstspace(t_as) || return scalartype(t_lm)(Inf)
         return norm(t_as - t_lm)
