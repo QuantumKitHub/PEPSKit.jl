@@ -14,7 +14,7 @@ using ChainRulesCore, Zygote
 using LoggingExtras
 
 using MPSKit
-using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
+using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
