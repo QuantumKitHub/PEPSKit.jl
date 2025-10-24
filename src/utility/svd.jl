@@ -148,7 +148,7 @@ function _svd_trunc!(
     truncerror = zero(real(scalartype(S))) # TODO: replace this with actual truncation error once TensorKit is updated
 
     if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
-        Ũ, S̃, Ṽ⁺, = truncate(svd_trunc!, (U, S, V⁺), trunc)
+        Ũ, S̃, Ṽ⁺ = truncate(svd_trunc!, (U, S, V⁺), trunc)[1]
     else
         Ũ, S̃, Ṽ⁺ = U, S, V⁺
     end
@@ -250,7 +250,7 @@ function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
 
     # construct info NamedTuple
     truncation_error =
-        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
+        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, 2) # fix p=2 for now
     condition_number = cond(S)
     info = (;
         truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
@@ -295,6 +295,7 @@ function _compute_svddata!(
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
             U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
+            S = S.diag # extracts diagonal as Vector instead of Diagonal to make compatible with S of svdsolve
             U = U[:, 1:howmany]
             V = V[1:howmany, :]
         else
@@ -307,6 +308,7 @@ function _compute_svddata!(
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
                 U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
+                S = S.diag 
                 U = U[:, 1:howmany]
                 V = V[1:howmany, :]
             else  # Slice in case more values were converged than requested
@@ -379,7 +381,7 @@ function ChainRulesCore.rrule(
         alg::SVDAdjoint{F, R};
         trunc::TruncationStrategy = notrunc(),
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
-    U, S, V, info = svd_trunc(f, alg; trunc, p)
+    U, S, V, info = svd_trunc(f, alg; trunc)
 
     # update rrule_alg tolerance to be compatible with smallest singular value
     rrule_alg = alg.rrule_alg
