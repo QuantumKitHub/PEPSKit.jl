@@ -1,5 +1,6 @@
 using Test
 using Random
+using MatrixAlgebraKit
 using TensorKit
 using MPSKit
 using PEPSKit
