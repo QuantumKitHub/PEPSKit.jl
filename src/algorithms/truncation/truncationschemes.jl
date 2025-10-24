@@ -16,7 +16,7 @@ const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
     :truncerror => MatrixAlgebraKit.TruncationByError,
     :truncrank => MatrixAlgebraKit.TruncationByOrder,
     :trunctol => MatrixAlgebraKit.TruncationByValue,
-    :truncspace => TensorKit.TruncationSpace,
+    :truncspace => TensorKit.Factorizations.TruncationSpace,
     :fixedspace => FixedSpaceTruncation,
     :sitedependent => SiteDependentTruncation,
 )

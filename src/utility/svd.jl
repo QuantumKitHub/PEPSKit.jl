@@ -1,5 +1,5 @@
 using MatrixAlgebraKit: NoTruncation, truncate
-using TensorKit: AdjointTensorMap, SectorDict, TruncationSpace # Why doesn't TruncationSpace exist anymore?
+using TensorKit: AdjointTensorMap, SectorDict, Factorizations.TruncationSpace
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
@@ -206,7 +206,7 @@ end
 $(TYPEDEF)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmetric) tensors.
-The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
+The number of targeted singular values is set via the `truncspace` in `ProjectorAlg`.
 In particular, this make it possible to specify the targeted singular values block-wise.
 In case the symmetry block is too small as compared to the number of singular values, or
 the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
