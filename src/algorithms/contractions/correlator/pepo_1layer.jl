@@ -1,8 +1,8 @@
 function MPSKit.transfer_left(
-        vec::AbstractTensorMap{T, S, 1, 2}, 
+        vec::AbstractTensorMap{T, S, 1, 2},
         O::MPOTensor{S}, A::MPSTensor{S}, Ab::MPSTensor{S}
     ) where {T, S}
-    return @tensor y[-1; -2 -3] := vec[1 2; 4] *
+    return @tensor y[-1; -2 -3] := vec[1; 2 4] *
         A[4 5; -3] * O[2 3; 5 -2] * conj(Ab[1 3; -1])
 end
 
@@ -11,59 +11,6 @@ function MPSKit.transfer_left(
     ) where {S}
     return @tensor t[d_string -1 -2; -3] := v[d_string 1 2; 4] *
         A[4 5; -3] * O[2 3; 5 -2] * conj(Ab[1 3; -1])
-end
-
-function correlator_horizontal(
-        ρ::InfinitePEPO, operator,
-        i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
-        env::CTMRGEnv
-    )
-    (size(ρ, 3) == 1) ||
-        throw(ArgumentError("The input PEPO ρ must have only one layer."))
-    all(==(i[1]) ∘ first ∘ Tuple, js) ||
-        throw(ArgumentError("Not a horizontal correlation function"))
-    issorted(vcat(i, js); by = last ∘ Tuple) ||
-        throw(ArgumentError("Not an increasing sequence of coordinates"))
-    O = FiniteMPO(operator)
-    length(O) == 2 || throw(ArgumentError("Operator must act on two sites"))
-    # preallocate with correct scalartype
-    G = similar(
-        js,
-        TensorOperations.promote_contract(
-            scalartype(ρ), scalartype(env), scalartype.(O)...
-        ),
-    )
-    # left start for operator and norm contractions
-    Vn, Vo = start_correlator(i, ρ, O[1], env)
-    i += CartesianIndex(0, 1)
-    for (k, j) in enumerate(js)
-        # transfer until left of site j
-        while j > i
-            Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-            Amid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
-            Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
-            T = TransferMatrix(Atop, Amid, _dag(Abot))
-            Vo = Vo * T
-            Vn = Vn * T
-            i += CartesianIndex(0, 1)
-        end
-        # compute overlap with operator
-        numerator = end_correlator_numerator(j, Vo, ρ, O[2], env)
-        # transfer right of site j
-        Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-        Amid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
-        Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
-        T = TransferMatrix(Atop, Amid, _dag(Abot))
-        if k < length(js)
-            Vo = Vo * T
-        end
-        Vn = Vn * T
-        i += CartesianIndex(0, 1)
-        # compute overlap without operator
-        denominator = end_correlator_denominator(j, Vn, env)
-        G[k] = numerator / denominator
-    end
-    return G
 end
 
 function start_correlator(
@@ -122,18 +69,4 @@ function end_correlator_denominator(
     C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
     return @autoopt @tensor V[χS; DE χN] * C_northeast[χN; χNE] *
         E_east[χNE DE; χSE] * C_southeast[χSE; χS]
-end
-
-function correlator_vertical(
-        ρ::InfinitePEPO, operator,
-        i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
-        env::CTMRGEnv,
-    )
-    rotated_ρ = rotl90(ρ)
-    unitcell = size(ρ)[1:2]
-    rotated_i = siterotl90(i, unitcell)
-    rotated_js = map(j -> siterotl90(j, unitcell), js)
-    return correlator_horizontal(
-        rotated_ρ, operator, rotated_i, rotated_js, rotl90(env)
-    )
 end
