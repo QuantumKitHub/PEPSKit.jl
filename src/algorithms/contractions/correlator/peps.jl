@@ -166,37 +166,3 @@ function correlator_vertical(
         rotated_bra, operator, rotated_i, rotated_js, rotated_ket, rotl90(env)
     )
 end
-
-const CoordCollection{N} = Union{AbstractVector{CartesianIndex{N}}, CartesianIndices{N}}
-
-function MPSKit.correlator(
-        bra::InfinitePEPS,
-        O,
-        i::CartesianIndex{2}, js::CoordCollection{2},
-        ket::InfinitePEPS,
-        env::CTMRGEnv,
-    )
-    js = vec(js) # map CartesianIndices to actual Vector instead of Matrix
-
-    if all(==(i[1]) ∘ first ∘ Tuple, js)
-        return correlator_horizontal(bra, O, i, js, ket, env)
-    elseif all(==(i[2]) ∘ last ∘ Tuple, js)
-        return correlator_vertical(bra, O, i, js, ket, env)
-    else
-        error("Only horizontal or vertical correlators are implemented")
-    end
-end
-
-function MPSKit.correlator(
-        bra::InfinitePEPS,
-        O,
-        i::CartesianIndex{2}, j::CartesianIndex{2},
-        ket::InfinitePEPS,
-        env::CTMRGEnv,
-    )
-    return only(correlator(bra, O, i, j:j, ket, env))
-end
-
-function MPSKit.correlator(state::InfinitePEPS, O, i::CartesianIndex{2}, j, env::CTMRGEnv)
-    return MPSKit.correlator(state, O, i, j, state, env)
-end

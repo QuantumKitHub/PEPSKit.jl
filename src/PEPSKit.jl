@@ -76,6 +76,7 @@ include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
 
 include("algorithms/toolbox.jl")
+include("algorithms/correlators.jl")
 
 include("utility/symmetrization.jl")
 
