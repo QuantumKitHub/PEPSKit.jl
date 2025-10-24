@@ -1,5 +1,6 @@
 using MatrixAlgebraKit: NoTruncation, truncate
-using TensorKit: AdjointTensorMap, SectorDict, Factorizations.TruncationSpace
+using TensorKit: AdjointTensorMap, SectorDict, Factorizations.TruncationSpace,
+    throw_invalid_innerproduct, similarstoragetype
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
@@ -144,7 +145,7 @@ function _svd_trunc!(
         trunc::TruncationStrategy,
     )
     U, S, V⁺ = svd_compact!(t; alg)
-    truncerror = 0 # TODO: replace this with actual truncation error once TensorKit is updated
+    truncerror = zero(real(scalartype(S))) # TODO: replace this with actual truncation error once TensorKit is updated
 
     if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
         Ũ, S̃, Ṽ⁺, = truncate(svd_trunc!, (U, S, V⁺), trunc)
@@ -193,7 +194,7 @@ end
 # Return pre-computed SVD
 function _tsvd!(_, alg::FixedSVD, ::TruncationStrategy)
     info = (;
-        truncation_error = 0,
+        truncation_error = zero(real(scalartype(alg.S))),
         condition_number = cond(alg.S),
         U_full = alg.U_full,
         S_full = alg.S_full,
@@ -236,20 +237,20 @@ function random_start_vector(t::AbstractMatrix)
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
-# TODO: redefine _empty_svdtensors, _compute_svddata!, _create_svdtensors
+# TODO: redefine _empty_svdtensors, _create_svdtensors
 function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
-    # early return
-    if isempty(blocksectors(f))
+    U, S, V = if isempty(blocksectors(f))
+        # early return
         truncation_error = zero(real(scalartype(f)))
-        return _empty_svdtensors(f)..., truncation_error
+        MatrixAlgebraKit.initialize_output(svd_compact!, f, LAPACK_QRIteration()) # specified algorithm doesn't matter here
+    else
+        SVDdata, dims = _compute_svddata!(f, alg, trunc)
+        _create_svdtensors(f, SVDdata, dims)
     end
 
-    SVDdata, dims = _compute_svddata!(f, alg, trunc)
-    U, S, V = _create_svdtensors(f, SVDdata, dims)
+    # construct info NamedTuple
     truncation_error =
         trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
-
-    # construct info NamedTuple
     condition_number = cond(S)
     info = (;
         truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
@@ -257,6 +258,29 @@ function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
 
     return U, S, V, info
 end
+
+# Copy from TensorKit v0.14 internal functions
+function _create_svdtensors(t::TensorMap, SVDdata, dims)
+    T = scalartype(t)
+    S = spacetype(t)
+    W = S(dims)
+
+    Tr = real(T)
+    A = similarstoragetype(t, Tr)
+    Σ = DiagonalTensorMap{Tr, S, A}(undef, W)
+
+    U = similar(t, codomain(t) ← W)
+    V⁺ = similar(t, W ← domain(t))
+    for (c, (Uc, Σc, V⁺c)) in SVDdata
+        r = Base.OneTo(dims[c])
+        copy!(block(U, c), view(Uc, :, r))
+        copy!(block(Σ, c), Diagonal(view(Σc, r)))
+        copy!(block(V⁺, c), view(V⁺c, r, :))
+    end
+    return U, Σ, V⁺
+end
+
+# Interface between KrylovKit's svdsolve and TensorMap data
 function _compute_svddata!(
         f, alg::IterSVD, trunc::Union{NoTruncation, TruncationSpace}
     )
@@ -279,7 +303,7 @@ function _compute_svddata!(
             if howmany > alg.alg.krylovdim
                 svd_alg = @set svd_alg.krylovdim = round(Int, howmany * 1.2)
             end
-            S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, svd_alg)
+            S, lvecs, rvecs, info = svdsolve(b, x₀, howmany, :LR, svd_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
                 U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
