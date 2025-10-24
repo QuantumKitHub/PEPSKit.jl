@@ -1,5 +1,5 @@
 using MatrixAlgebraKit: NoTruncation, truncate
-using TensorKit: AdjointTensorMap, SectorDict, RealOrComplexFloat, TruncationSpace
+using TensorKit: AdjointTensorMap, SectorDict, TruncationSpace # Why doesn't TruncationSpace exist anymore?
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
@@ -139,7 +139,7 @@ end
 
 # Truncated SVD but also return full U, S and V to make it compatible with :fixed mode
 function _svd_trunc!(
-        t::TensorMap{<:RealOrComplexFloat},
+        t::TensorMap,
         alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration},
         trunc::TruncationStrategy,
     )
