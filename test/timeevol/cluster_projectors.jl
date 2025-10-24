@@ -105,7 +105,7 @@ end
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
-    trscheme_env = truncerror(1.0e-12) & truncrank(16)
+    trscheme_env = truncerror(; atol = 1.0e-12) & truncrank(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
     ham = real(
@@ -118,7 +118,7 @@ end
     tols = [1.0e-8, 1.0e-8, 1.0e-8]
     maxiter = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trscheme = truncerror(1.0e-10) & truncrank(n == 1 ? 4 : 2)
+        trscheme = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = true, check_interval = 1000)
     end
@@ -130,7 +130,7 @@ end
     # continue with 3-site simple update; energy should not change much
     dts = [1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8]
-    trscheme = truncerror(1.0e-10) & truncrank(2)
+    trscheme = truncerror(; atol = 1.0e-10) & truncrank(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(dt, tol, maxiter, trscheme)
         peps, wts, = simpleupdate(

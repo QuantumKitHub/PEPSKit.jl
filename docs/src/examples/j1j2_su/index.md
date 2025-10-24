@@ -57,7 +57,7 @@ on the previously evolved PEPS:
 ````julia
 dt, tol, maxiter = 1.0e-2, 1.0e-8, 30000
 check_interval = 4000
-trscheme_peps = truncerror(1.0e-10) & truncrank(Dbond)
+trscheme_peps = truncerror(; atol=1.0e-10) & truncrank(Dbond)
 alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
 for J2 in 0.1:0.1:0.5
     H = real( ## convert Hamiltonian `LocalOperator` to real floats
@@ -125,7 +125,7 @@ the expectation value, where we first normalize tensors in the PEPS:
 ````julia
 normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
 χenv = 32
-trscheme_env = truncerror(1.0e-10) & truncrank(χenv)
+trscheme_env = truncerror(; atol=1.0e-10) & truncrank(χenv)
 Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
 env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trscheme = trscheme_env);

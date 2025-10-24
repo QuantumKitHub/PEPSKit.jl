@@ -9,7 +9,7 @@ using KrylovKit
 Random.seed!(0)
 maxiter = 500
 check_interval = 20
-trscheme = truncerror(1.0e-10) & truncrank(8)
+trscheme = truncerror(; atol = 1.0e-10) & truncrank(8)
 Vext = Vect[FermionParity](0 => 100, 1 => 100)
 Vint = Vect[FermionParity](0 => 6, 1 => 6)
 Vphy = Vect[FermionParity](0 => 1, 1 => 2)

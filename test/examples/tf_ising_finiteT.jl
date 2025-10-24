@@ -24,10 +24,10 @@ function tfising_model(T::Type{<:Number}, lattice::InfiniteSquare; J = 1.0, g = 
 end
 
 function converge_env(state, χ::Int)
-    trscheme1 = truncrank(4) & truncerror(1.0e-12)
+    trscheme1 = truncrank(4) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(randn, Float64, state, ℂ^4)
     env, = leading_boundary(env0, state; alg = :sequential, trscheme = trscheme1, tol = 1.0e-10)
-    trscheme2 = truncrank(χ) & truncerror(1.0e-12)
+    trscheme2 = truncrank(χ) & truncerror(; atol = 1.0e-12)
     env, = leading_boundary(env, state; alg = :sequential, trscheme = trscheme2, tol = 1.0e-10)
     return env
 end
@@ -52,7 +52,7 @@ ham = tfising_model(Float64, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
 pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 
-trscheme_pepo = truncrank(8) & truncerror(1.0e-12)
+trscheme_pepo = truncrank(8) & truncerror(; atol = 1.0e-12)
 
 dt, maxiter = 1.0e-3, 400
 β = dt * maxiter

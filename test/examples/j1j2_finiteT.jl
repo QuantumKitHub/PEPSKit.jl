@@ -13,7 +13,7 @@ Random.seed!(10235876)
 bm = [-0.1235, -0.213]
 
 function converge_env(state, χ::Int)
-    trscheme1 = truncrank(χ) & truncerror(1.0e-12)
+    trscheme1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(randn, Float64, state, Vect[SU2Irrep](0 => 1))
     env, = leading_boundary(env0, state; alg = :sequential, trscheme = trscheme1, tol = 1.0e-10)
     return env
@@ -27,7 +27,7 @@ ham = j1_j2_model(
 pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 # 7 = 1 (spin-0) + 2 x 3 (spin-1)
-trscheme_pepo = truncrank(7) & truncerror(1.0e-12)
+trscheme_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
 check_interval = 100
 
 # PEPO approach

@@ -71,7 +71,7 @@ fix a truncation error (if that can be reached by remaining below `Dbond`):
 dts = [1.0e-2, 1.0e-3, 4.0e-4]
 tols = [1.0e-6, 1.0e-8, 1.0e-8]
 maxiter = 10000
-trscheme_peps = truncerror(1.0e-10) & truncrank(Dbond)
+trscheme_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
 
 for (dt, tol) in zip(dts, tols)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
@@ -86,7 +86,7 @@ on the evolved PEPS. Let's do so:
 """
 normalize!.(peps.A, Inf)
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
-trscheme_env = truncerror(1.0e-10) & truncrank(χenv)
+trscheme_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 env, = leading_boundary(
     env₀,
     peps;

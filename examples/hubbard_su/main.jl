@@ -65,7 +65,7 @@ Ds = [4, 12, 8, 8, 8]
 maxiter = 20000
 
 for (dt, tol, Dbond) in zip(dts, tols, Ds)
-    trscheme = truncerror(1.0e-10) & truncrank(Dbond)
+    trscheme = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
     alg = SimpleUpdate(dt, tol, maxiter, trscheme)
     global peps, wts, = simpleupdate(
         peps, H, alg, wts; bipartite = false, check_interval = 2000
