@@ -192,7 +192,7 @@ function isfullsvd(alg::FixedSVD)
 end
 
 # Return pre-computed SVD
-function _tsvd!(_, alg::FixedSVD, ::TruncationStrategy)
+function _svd_trunc!(_, alg::FixedSVD, ::TruncationStrategy)
     info = (;
         truncation_error = zero(real(scalartype(alg.S))),
         condition_number = cond(alg.S),
