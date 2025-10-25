@@ -14,7 +14,7 @@ using ChainRulesCore, Zygote
 using LoggingExtras
 
 using MPSKit
-using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
+using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
@@ -57,6 +57,8 @@ include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
+include("algorithms/contractions/correlator/peps.jl")
+include("algorithms/contractions/correlator/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
