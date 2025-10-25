@@ -137,7 +137,7 @@ function qr_through(
         R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
-    q, r = leftorth!(A; alg = QRpos())
+    q, r = left_orth!(A)
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
@@ -145,7 +145,7 @@ end
 function qr_through(
         ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    q, r = leftorth(M; alg = QRpos())
+    q, r = left_orth(M)
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
     normalize && normalize!(r, Inf)
     return q, r
@@ -163,7 +163,7 @@ function lq_through(
         M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @plansor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
-    l, q = rightorth!(permute(A, ((1,), (2, 3, 4, 5))); alg = LQpos())
+    l, q = right_orth!(permute(A, ((1,), (2, 3, 4, 5))))
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
@@ -171,7 +171,7 @@ end
 function lq_through(
         M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    l, q = rightorth(M, ((1,), (2, 3, 4, 5)); alg = LQpos())
+    l, q = right_orth(permute(M, ((1,), (2, 3, 4, 5))))
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
     normalize && normalize!(l, Inf)
     return l, q
@@ -214,11 +214,12 @@ The arrows between `Pa`, `s`, `Pb` are
 """
 function _proj_from_RL(
         r::MPSBondTensor, l::MPSBondTensor;
-        trunc::TruncationScheme = notrunc(), rev::Bool = false,
+        trunc::TruncationStrategy = notrunc(), rev::Bool = false,
     )
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
-    u, s, vh, ϵ = tsvd!(rl; trunc)
+    u, s, vh = svd_trunc!(rl; trunc)
+    ϵ = 0.0 # TODO: replace this with actual truncation error once TensorKit is updated
     sinv = PEPSKit.sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
@@ -233,7 +234,7 @@ find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
         Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
-    ) where {E <: TruncationScheme}
+    ) where {E <: TruncationStrategy}
     N = length(Ms)
     @assert length(trschemes) == N - 1
     projs_errs = map(1:(N - 1)) do i
@@ -257,7 +258,7 @@ Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
         Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
-    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationScheme}
+    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
     Rs, Ls = _get_allRLs(Ms)
     Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
     # apply projectors
@@ -449,7 +450,7 @@ function _su3site_se!(
         state::InfiniteState, gs::Vector{T}, env::SUWeight,
         row::Int, col::Int, trschemes::Vector{E};
         gate_bothsides::Bool = true
-    ) where {T <: AbstractTensorMap, E <: TruncationScheme}
+    ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
@@ -518,8 +519,8 @@ function su3site_iter(
         for r in 1:Nr, c in 1:Nc
             gs = gatempos[i][r, c]
             trschemes = [
-                truncation_scheme(trscheme, 1, r, c)
-                truncation_scheme(trscheme, 2, r, _next(c, Nc))
+                truncation_strategy(trscheme, 1, r, c)
+                truncation_strategy(trscheme, 2, r, _next(c, Nc))
             ]
             _su3site_se!(state2, gs, env2, r, c, trschemes; gate_bothsides)
         end

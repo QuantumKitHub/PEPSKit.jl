@@ -44,8 +44,8 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
         ρfinal = transfermatrix_fixedpoint(Tsfinal, M, ρinit)
 
         # Decompose and multiply
-        Qprev, = leftorth!(ρprev)
-        Qfinal, = leftorth!(ρfinal)
+        Qprev, = left_orth!(ρprev)
+        Qfinal, = left_orth!(ρfinal)
 
         return Qprev * Qfinal'
     end

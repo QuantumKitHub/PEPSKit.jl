@@ -4,6 +4,7 @@ using Accessors
 using Random
 using LinearAlgebra
 using TensorKit, KrylovKit
+using MatrixAlgebraKit: LAPACK_DivideAndConquer
 using PEPSKit
 using PEPSKit:
     FixedSVD,
@@ -17,7 +18,7 @@ using PEPSKit:
 # initialize parameters
 χbond = 2
 χenv = 16
-svd_algs = [SVDAdjoint(; fwd_alg = TensorKit.SDD()), SVDAdjoint(; fwd_alg = IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer), SVDAdjoint(; fwd_alg = IterSVD())]
 projector_algs = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
@@ -53,12 +54,12 @@ atol = 1.0e-5
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
-@testset "Element-wise consistency of TensorKit.SDD and IterSVD" begin
+@testset "Element-wise consistency of LAPACK_DivideAndConquer and IterSVD" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
         svd_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χenv + 10))),
     )
-    ctm_alg_full = SimultaneousCTMRG(; svd_alg = SVDAdjoint(; fwd_alg = TensorKit.SDD()))
+    ctm_alg_full = SimultaneousCTMRG(; svd_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer))
 
     # initialize states
     Random.seed!(91283219347)

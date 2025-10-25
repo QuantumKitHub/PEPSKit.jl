@@ -18,19 +18,19 @@ Module containing default algorithm parameter values and arguments.
 * `trscheme=:$(Defaults.trscheme)` : Truncation scheme for SVDs and other decompositions.
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
-    - `:sdd`: TensorKit's wrapper for LAPACK's `_gesdd`
-    - `:svd`: TensorKit's wrapper for LAPACK's `_gesvd`
+    - `:sdd`: MatrixAlgebraKit's `LAPACK_DivideAndConquer`
+    - `:svd`: MatrixAlgebraKit's `LAPACK_QRIteration`
     - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
-    - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [`PEPSKit.FullSVDReverseRule`](@ref).
+    - `:full`: Uses a modified version of MatrixAlgebraKit's reverse-rule for `svd_compact` which doesn't solve any linear problem and instead requires access to the full SVD, see [`PEPSKit.FullSVDReverseRule`](@ref).
     - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
@@ -92,7 +92,7 @@ const ctmrg_verbosity = 2
 const sparse = false # TODO: implement sparse CTMRG
 
 # SVD forward & reverse
-const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerr, :truncspace, :truncbelow}
+const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
 const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48

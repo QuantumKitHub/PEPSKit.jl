@@ -26,7 +26,7 @@ end
     normalize!.(peps0.A, Inf)
     # set trscheme to be compatible with bipartite structure
     bonddims = stack([[6 4; 4 6], [5 7; 7 5]]; dims = 1)
-    trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
+    trscheme = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
     alg = SimpleUpdate(1.0e-2, 1.0e-14, 4, trscheme)
     peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite = true)
     @test get_bonddims(peps) == bonddims
@@ -52,7 +52,7 @@ end
     # Site dependent truncation
     bonddims = rand(2:8, 2, Nr, Nc)
     @show bonddims
-    trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
+    trscheme = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
     alg = SimpleUpdate(1.0e-2, 1.0e-14, 2, trscheme)
     # 2-site SU
     peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite = false)
