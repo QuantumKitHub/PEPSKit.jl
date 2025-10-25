@@ -54,29 +54,29 @@ wts0 = SUWeight(pepo0)
 
 trscheme_pepo = truncdim(8) & truncerr(1.0e-12)
 
-dt, maxiter = 1.0e-3, 400
-β = dt * maxiter
-alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)
+dt, nstep = 1.0e-3, 400
+β = dt * nstep
 
 # when g = 2, β = 0.4 and 2β = 0.8 belong to two phases (without and with nonzero σᶻ)
 
-# PEPO approach
-## results at β, or T = 2.5
-pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = true)
+# PEPO approach: results at β, or T = 2.5
+alg = SimpleUpdate(; trscheme = trscheme_pepo, gate_bothsides = true)
+pepo, wts, = time_evolve(pepo0, ham, dt, nstep, alg, wts0)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 result_β = measure_mag(pepo, env)
 @info "Magnetization at T = $(1 / β)" result_β
 @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
-## results at 2β, or T = 1.25
-pepo, wts, = simpleupdate(pepo, ham, alg, wts; gate_bothsides = true)
+# continue to get results at 2β, or T = 1.25
+pepo, wts, = time_evolve(pepo, ham, dt, nstep, alg, wts)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 result_2β = measure_mag(pepo, env)
 @info "Magnetization at T = $(1 / (2β))" result_2β
 @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
 
-# purification approach (should match 2β result)
-pepo, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = false)
+# Purification approach: results at 2β, or T = 1.25
+alg = SimpleUpdate(; trscheme = trscheme_pepo, gate_bothsides = false)
+pepo, = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0)
 env = converge_env(InfinitePEPS(pepo), 8)
 result_2β′ = measure_mag(pepo, env; purified = true)
 @info "Magnetization at T = $(1 / (2β)) (purification approach)" result_2β′

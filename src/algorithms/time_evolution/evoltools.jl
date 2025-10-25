@@ -1,5 +1,24 @@
 const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
 
+function _process_timeevol_args(
+        state::InfiniteState, dt::Float64, imaginary_time::Bool, tol::Float64
+    )
+    dt′ = (state isa InfinitePEPS) ? dt : (dt / 2)
+    if (state isa InfinitePEPO)
+        @assert size(state)[3] == 1
+    end
+    if !imaginary_time
+        @assert (state isa InfinitePEPS) "Real time evolution of InfinitePEPO (Heisenberg picture) is not implemented."
+        dt′ = 1.0im * dt′
+    end
+    @assert tol >= 0
+    check_convergence = (tol > 0)
+    if check_convergence
+        @assert ((state isa InfinitePEPS) && imaginary_time) "Convergence check can only be enabled for ground state search."
+    end
+    return dt′, check_convergence
+end
+
 function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
     T = scalartype(H)
     A = map(physicalspace(H)) do Vp
