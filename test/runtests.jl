@@ -20,6 +20,9 @@ end
         @time @safetestset ":fixed CTMRG iteration scheme" begin
             include("ctmrg/fixed_iterscheme.jl")
         end
+        @time @safetestset "SUWeight conversion" begin
+            include("ctmrg/suweight.jl")
+        end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end

@@ -370,3 +370,49 @@ function Base.rot180(wts::SUWeight)
     wts_y = circshift(rot180(wts[2, :, :]), (1, 0))
     return SUWeight(wts_x, wts_y)
 end
+
+function _CTMRGEnv(wts::SUWeight, flips::Array{Bool, 3})
+    @assert size(wts) == size(flips)
+    _, Nr, Nc = size(wts)
+    edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
+        wt_idx = if d == NORTH
+            CartesianIndex(2, _next(r, Nr), c)
+        elseif d == EAST
+            CartesianIndex(1, r, _prev(c, Nc))
+        elseif d == SOUTH
+            CartesianIndex(2, r, c)
+        else # WEST
+            CartesianIndex(1, r, c)
+        end
+        wt = deepcopy(wts[wt_idx])
+        if (flips[wt_idx] && d in (NORTH, EAST)) || (!flips[wt_idx] && d in (SOUTH, WEST))
+            wt = permute(wt, ((2,), (1,)))
+        end
+        twistdual!(wt, 1)
+        wt = insertrightunit(insertleftunit(wt, 1))
+        return permute(wt, ((1, 2, 3), (4,)))
+    end
+    corners = map(CartesianIndices(edges)) do idx
+        return TensorKit.id(Float64, codomain(edges[idx], 1))
+    end
+    return CTMRGEnv(corners, edges)
+end
+
+"""
+    CTMRGEnv(wts::SUWeight, peps::InfinitePEPS)
+
+Construct a CTMRG environment with bond dimension χ = 1 
+for an InfinitePEPS `peps` from the accompanying SUWeight `wts`.
+The scalartype of the returned environment is always `Float64`.
+"""
+function CTMRGEnv(wts::SUWeight, peps::InfinitePEPS)
+    _, Nr, Nc = size(wts)
+    flips = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+        return if d == 1
+            isdual(domain(peps[r, c], EAST))
+        else
+            isdual(domain(peps[r, c], NORTH))
+        end
+    end
+    return _CTMRGEnv(wts, flips)
+end
