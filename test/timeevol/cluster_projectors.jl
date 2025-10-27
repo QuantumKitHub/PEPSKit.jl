@@ -43,7 +43,8 @@ Vspaces = [
         @test all(lorths) && all(rorths)
         # truncation on one bond
         Ms3 = deepcopy(Ms1)
-        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(Vns), N - 1), revs)
+        tspace = isdual(Vns) ? dual(Vns) : Vns 
+        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(tspace), N - 1), revs)
         @test all((i == n) || (ϵ == 0) for (i, ϵ) in enumerate(ϵs))
         normalize!.(Ms3, Inf)
         ϵ = ϵs[n]

@@ -199,7 +199,11 @@ function _apply_gate(
     else
         @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
-    trunc = (trscheme isa FixedSpaceTruncation) ? truncspace(V) : trscheme
+    trunc = if trscheme isa FixedSpaceTruncation
+        need_flip ? truncspace(dual(V)) : truncspace(V)
+    else
+        trscheme
+    end
     a, s, b = svd_trunc!(a2b2; trunc, alg = LAPACK_QRIteration())
     ϵ = 0 # TODO: replace this with actual truncation error once TensorKit is updated
     a, b = absorb_s(a, s, b)
