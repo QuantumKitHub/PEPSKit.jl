@@ -60,7 +60,8 @@ end
 
 function truncation_strategy(alg::ProjectorAlgorithm, edge)
     if alg.trscheme isa FixedSpaceTruncation
-        return truncspace(space(edge, 1))
+        tspace = space(edge, 1)
+        return isdual(tspace) ? truncspace(dual(tspace)) : truncspace(tspace)
     else
         return alg.trscheme
     end
