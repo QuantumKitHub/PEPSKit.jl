@@ -201,7 +201,7 @@ function _apply_gate(
         @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
     trunc = if trscheme isa FixedSpaceTruncation
-        need_flip ? truncspace(dual(V)) : truncspace(V)
+        need_flip ? truncspace(flip(V)) : truncspace(V)
     else
         trscheme
     end

@@ -249,7 +249,7 @@ function _get_allprojs(
     projs_errs = map(1:(N - 1)) do i
         trunc = if isa(trschemes[i], FixedSpaceTruncation)
             tspace = space(Ms[i + 1], 1)
-            isdual(tspace) ? truncspace(dual(tspace)) : truncspace(tspace)
+            isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
         else
             trschemes[i]
         end
