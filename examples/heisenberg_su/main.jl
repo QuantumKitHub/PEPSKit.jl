@@ -74,8 +74,11 @@ nstep = 10000
 trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
 
 for (dt, tol) in zip(dts, tols)
-    alg = SimpleUpdate(; tol, trscheme = trscheme_peps, bipartite = true, check_interval = 500)
-    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts)
+    alg = SimpleUpdate(;
+        ψ0 = peps, env0 = wts, H, dt, tol, nstep,
+        trscheme = trscheme_peps, bipartite = true, check_interval = 500
+    )
+    global peps, wts, = time_evolve(alg)
 end
 
 md"""

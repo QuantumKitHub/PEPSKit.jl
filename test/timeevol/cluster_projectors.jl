@@ -108,7 +108,7 @@ end
     trscheme_env = truncerr(1.0e-12) & truncdim(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
-    ham = real(
+    H = real(
         hubbard_model(
             ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 8.0, mu = 0.0
         ),
@@ -119,25 +119,33 @@ end
     nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trscheme = truncerr(1.0e-10) & truncdim(n == 1 ? 4 : 2)
-        alg = SimpleUpdate(; tol, trscheme, bipartite = true, check_interval = 1000)
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts)
+        alg = SimpleUpdate(;
+            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trscheme,
+            bipartite = true, check_interval = 1000
+        )
+        peps, wts, = time_evolve(alg)
     end
     normalize!.(peps.A, Inf)
-    env = CTMRGEnv(rand, Float64, peps, Espace)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)
-    e_site = cost_function(peps, env, ham) / (Nr * Nc)
+    env, = leading_boundary(
+        CTMRGEnv(wts, peps), peps;
+        tol = ctmrg_tol, trscheme = trscheme_env
+    )
+    e_site = cost_function(peps, env, H) / (Nr * Nc)
     @info "2-site simple update energy = $e_site"
     # continue with 3-site simple update; energy should not change much
     dts = [1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8]
     trscheme = truncerr(1.0e-10) & truncdim(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        alg = SimpleUpdate(; tol, trscheme, check_interval = 1000, force_3site = true)
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts)
+        alg = SimpleUpdate(;
+            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trscheme,
+            check_interval = 1000, force_3site = true
+        )
+        peps, wts, = time_evolve(alg)
     end
     normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)
-    e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
+    e_site2 = cost_function(peps, env, H) / (Nr * Nc)
     @info "3-site simple update energy = $e_site2"
     @test e_site ≈ e_site2 atol = 5.0e-4
 end
