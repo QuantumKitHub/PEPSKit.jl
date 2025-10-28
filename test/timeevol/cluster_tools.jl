@@ -81,6 +81,7 @@ function inner_prod_cluster(
     }
     N = length(Ms1)
     @assert length(Ms2) == N
+    # physical spaces are assumed to be non-dual
     @assert all(!isdual(space(t, 2)) for t in Ms1)
     @assert all(!isdual(space(t, 2)) for t in Ms2)
     # not the most efficient implementation
@@ -117,11 +118,11 @@ end
 
 function mpo_to_gate3(gs::Vector{T}) where {T <: AbstractTensorMap}
     #= 
-    -1         -2        -3
-    ↑          ↑          ↑
-    g1 ←- 1 ←- g2 ←- 2 ←- g3
-    ↑          ↑          ↑
     -4         -5        -6
+    ↓           ↓         ↓
+    g1 ←- 1 ←- g2 ←- 2 ←- g3
+    ↓           ↓         ↓
+    -1         -2        -3
     =#
     @assert length(gs) == 3
     @tensor gate[-1 -2 -3; -4 -5 -6] := gs[1][-1 -4 1] * gs[2][1 -2 -5 2] * gs[3][2 -3 -6]

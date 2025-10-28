@@ -26,9 +26,8 @@ we successively calculate
 Here `-*-` on the bond means a twist should be applied if
 the codomain of R[n], Qb[n+1], L[n+1] is a dual space. 
 
-NOTE: 
-In TensorKit, the `isdual` of the domain and codomain 
-of `R[n]` and `L[n]` for a given `n` are the same. 
+Here we make the `isdual` of the domain and codomain 
+of `R[n]` and `L[n]` for a given `n` the same. 
 
 For each bond (n = 1, ..., N - 1), we perform SVD
 ```
@@ -138,7 +137,9 @@ function qr_through(
     ) where {S <: ElementarySpace}
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
     q, r = left_orth!(A)
-    # @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
+    if isdual(domain(r, 1)) != isdual(codomain(r, 1))
+        r = flip(r, 1)
+    end
     normalize && normalize!(r, Inf)
     return q, r
 end
@@ -146,7 +147,9 @@ function qr_through(
         ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
     q, r = left_orth(M)
-    # @assert isdual(domain(r, 1)) == isdual(codomain(r, 1)) space(r)
+    if isdual(domain(r, 1)) != isdual(codomain(r, 1))
+        r = flip(r, 1)
+    end
     normalize && normalize!(r, Inf)
     return q, r
 end
@@ -163,16 +166,22 @@ function lq_through(
         M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @plansor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
-    l, q = right_orth!(permute(A, ((1,), (2, 3, 4, 5))))
-    # @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
+    A = permute(A, ((1,), (2, 3, 4, 5)))
+    l, q = right_orth!(A)
+    if isdual(domain(l, 1)) != isdual(codomain(l, 1))
+        l = flip(l, 2)
+    end
     normalize && normalize!(l, Inf)
     return l, q
 end
 function lq_through(
         M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    l, q = right_orth(permute(M, ((1,), (2, 3, 4, 5))))
-    # @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
+    A = permute(M, ((1,), (2, 3, 4, 5)))
+    l, q = right_orth!(A)
+    if isdual(domain(l, 1)) != isdual(codomain(l, 1))
+        l = flip(l, 2)
+    end
     normalize && normalize!(l, Inf)
     return l, q
 end
