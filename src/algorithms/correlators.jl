@@ -30,30 +30,28 @@ function correlator_horizontal(
     for (k, j) in enumerate(js)
         # transfer until left of site j
         while j > i
-            Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-            Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+            Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
+            Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
             sandwich = (
                 ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
             )
-            T = TransferMatrix(Atop, sandwich, _dag(Abot))
+            T = edge_transfermatrix(Etop, sandwich, Ebot)
             Vo = Vo * T
-            twistdual!(T.below, 2:numout(T.below))
             Vn = Vn * T
             i += CartesianIndex(0, 1)
         end
         # compute overlap with operator
         numerator = end_correlator_numerator(j, Vo, bra, O[2], ket, env)
         # transfer right of site j
-        Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-        Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+        Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
+        Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
         sandwich = (
             ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
         )
-        T = TransferMatrix(Atop, sandwich, _dag(Abot))
+        T = edge_transfermatrix(Etop, sandwich, Ebot)
         if k < length(js)
             Vo = Vo * T
         end
-        twistdual!(T.below, 2:numout(T.below))
         Vn = Vn * T
         i += CartesianIndex(0, 1)
         # compute overlap without operator
@@ -139,10 +137,10 @@ function correlator_horizontal(
     for (k, j) in enumerate(js)
         # transfer until left of site j
         while j > i
-            Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-            Amid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
-            Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
-            T = TransferMatrix(Atop, Amid, _dag(Abot))
+            Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
+            Omid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
+            Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+            T = edge_transfermatrix(Etop, Omid, Ebot)
             Vo = Vo * T
             Vn = Vn * T
             i += CartesianIndex(0, 1)
@@ -150,10 +148,10 @@ function correlator_horizontal(
         # compute overlap with operator
         numerator = end_correlator_numerator(j, Vo, ρ, O[2], env)
         # transfer right of site j
-        Atop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-        Amid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
-        Abot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
-        T = TransferMatrix(Atop, Amid, _dag(Abot))
+        Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
+        Omid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
+        Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+        T = edge_transfermatrix(Etop, Omid, Ebot)
         if k < length(js)
             Vo = Vo * T
         end

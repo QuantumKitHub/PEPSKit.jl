@@ -7,7 +7,7 @@ function MPSKit.transfer_left(
         A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N}
     Ā = twistdual(Ā, 2:N)
-    return _transfer_left(GL, O, A, Ā)
+    return mps_transfer_left(GL, O, A, Ā)
 end
 
 function MPSKit.transfer_right(
@@ -15,12 +15,12 @@ function MPSKit.transfer_right(
         A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N}
     Ā = twistdual(Ā, 2:N)
-    return _transfer_right(GR, O, A, Ā)
+    return mps_transfer_right(GR, O, A, Ā)
 end
 
 ## PEPS
 
-function _transfer_left(
+function mps_transfer_left(
         GL::GenericMPSTensor{S, 3}, O::PEPSSandwich,
         A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3},
     ) where {S}
@@ -32,7 +32,7 @@ function _transfer_left(
         A[χ_NW D_N_above D_N_below; χ_NE]
 end
 
-function _transfer_right(
+function mps_transfer_right(
         GR::GenericMPSTensor{S, 3}, O::PEPSSandwich,
         A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3},
     ) where {S}
@@ -46,7 +46,7 @@ end
 
 ## PEPO
 
-@generated function _transfer_left(
+@generated function mps_transfer_left(
         GL::GenericMPSTensor{S, N}, O::PEPOSandwich{H},
         A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N, H}
@@ -70,7 +70,7 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $GL´_e := $rhs))
 end
 
-@generated function _transfer_right(
+@generated function mps_transfer_right(
         GR::GenericMPSTensor{S, N}, O::PEPOSandwich{H},
         A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
     ) where {S, N, H}
