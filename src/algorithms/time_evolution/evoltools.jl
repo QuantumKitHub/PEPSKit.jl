@@ -1,5 +1,19 @@
 const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
 
+function _process_timeevol_args(
+        state::InfiniteState, dt::Float64, imaginary_time::Bool
+    )
+    dt′ = (state isa InfinitePEPS) ? dt : (dt / 2)
+    if (state isa InfinitePEPO)
+        @assert size(state)[3] == 1
+    end
+    if !imaginary_time
+        @assert (state isa InfinitePEPS) "Real time evolution of InfinitePEPO (Heisenberg picture) is not implemented."
+        dt′ = 1.0im * dt′
+    end
+    return dt′
+end
+
 function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
     T = scalartype(H)
     A = map(physicalspace(H)) do Vp

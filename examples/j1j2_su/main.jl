@@ -48,15 +48,17 @@ Therefore, we shall gradually increase $J_2 / J_1$ from 0.1 to 0.5, each time in
 on the previously evolved PEPS:
 """
 
-dt, tol, maxiter = 1.0e-2, 1.0e-8, 30000
+dt, tol, nstep = 1.0e-2, 1.0e-8, 30000
 check_interval = 4000
 trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
-alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
 for J2 in 0.1:0.1:0.5
     H = real( ## convert Hamiltonian `LocalOperator` to real floats
         j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
     )
-    global peps, wts, = simpleupdate(peps, H, alg, wts; check_interval)
+    alg = SimpleUpdate(;
+        ψ0 = peps, env0 = wts, H, dt, tol, nstep, trscheme = trscheme_peps, check_interval
+    )
+    global peps, wts, = time_evolve(alg)
 end
 
 md"""
@@ -69,8 +71,10 @@ tols = [1.0e-9, 1.0e-9]
 J2 = 0.5
 H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false))
 for (dt, tol) in zip(dts, tols)
-    alg′ = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    global peps, wts, = simpleupdate(peps, H, alg′, wts; check_interval)
+    alg = SimpleUpdate(;
+        ψ0 = peps, env0 = wts, H, dt, tol, nstep, trscheme = trscheme_peps, check_interval
+    )
+    global peps, wts, = time_evolve(alg)
 end
 
 md"""
@@ -115,7 +119,7 @@ using MPSKit: randomize!
 noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
 peps₀ = peps + 1.0e-1noise_peps
 peps_opt, env_opt, E_opt, = fixedpoint(
-    H, peps₀, env; optimizer_alg = (; tol = 1.0e-4, maxiter = 80)
+    H, peps₀, env; optimizer_alg = (; tol = 1.0e-4, nstep = 80)
 );
 
 md"""

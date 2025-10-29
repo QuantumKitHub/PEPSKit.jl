@@ -125,14 +125,14 @@ Then the fidelity is just
     F(ψ̃) = (norm(s̃[n], 2) / norm(s[n], 2))^2
 ```
 =#
-"""
+#=
 Perform QR decomposition through a PEPS tensor
 ```
              ╱           ╱
     --R0----M---  →  ---Q--*-R1--
           ╱ |         ╱ |
 ```
-"""
+=#
 function qr_through(
         R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
@@ -151,14 +151,14 @@ function qr_through(
     return q, r
 end
 
-"""
+#=
 Perform LQ decomposition through a tensor
 ```
              ╱           ╱
     --L0-*--Q---  ←  ---M--*-L1--
           ╱ |         ╱ |
 ```
-"""
+=#
 function lq_through(
         M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
     ) where {S <: ElementarySpace}
@@ -177,9 +177,9 @@ function lq_through(
     return l, q
 end
 
-"""
+#=
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
-"""
+=#
 function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpace, 4}}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
@@ -198,7 +198,7 @@ function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpa
     return Rs, Ls
 end
 
-"""
+#=
 Given the tensors `R`, `L` on a bond, construct 
 the projectors `Pa`, `Pb` and the new bond weight `s`
 such that the contraction of `Pa`, `s`, `Pb` is identity when `trunc = notrunc`,
@@ -211,7 +211,7 @@ The arrows between `Pa`, `s`, `Pb` are
     rev = true:  - Pa --→-- Pb - 
                     2 → s → 1
 ```
-"""
+=#
 function _proj_from_RL(
         r::MPSBondTensor, l::MPSBondTensor;
         trunc::TruncationScheme = notrunc(), rev::Bool = false,
@@ -227,10 +227,10 @@ function _proj_from_RL(
     return Pa, s, Pb, ϵ
 end
 
-"""
+#=
 Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
 find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
-"""
+=#
 function _get_allprojs(
         Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
     ) where {E <: TruncationScheme}
@@ -252,9 +252,9 @@ function _get_allprojs(
     return Pas, Pbs, wts, ϵs
 end
 
-"""
+#=
 Find projectors to truncate internal bonds of the cluster `Ms`.
-"""
+=#
 function _cluster_truncate!(
         Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
     ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationScheme}
@@ -269,7 +269,7 @@ function _cluster_truncate!(
     return wts, ϵs, Pas, Pbs
 end
 
-"""
+#=
 Apply the gate MPO `gs` on the cluster `Ms`.
 When `gate_ax` is 1 or 2, the gate acts from the physical codomain or domain side.
 
@@ -293,7 +293,7 @@ In the cluster, the axes of each tensor use the MPS order
       4  2            5  2
     M[1 2 3 4; 5]  M[1 2 3 4 5; 6]
 ```
-"""
+=#
 function _apply_gatempo!(
         Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: AbstractTensorMap}
@@ -423,7 +423,7 @@ const perms_se_pepo = map(invperms_se_pepo) do (p1, p2)
     p = invperm((p1..., p2...))
     return (p[1:(end - 1)], (p[end],))
 end
-"""
+#=
 Obtain the 3-site cluster in the "southeast corner" of a square plaquette.
 ``` 
     r-1         M3
@@ -432,29 +432,29 @@ Obtain the 3-site cluster in the "southeast corner" of a square plaquette.
     r   M1 -←- M2
         c      c+1
 ```
-"""
-function get_3site_se(state::InfiniteState, env::SUWeight, row::Int, col::Int)
-    Nr, Nc = size(state)
+=#
+function get_3site_se(ψ::InfiniteState, env::SUWeight, row::Int, col::Int)
+    Nr, Nc = size(ψ)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
-    perms_se = isa(state, InfinitePEPS) ? perms_se_peps : perms_se_pepo
+    perms_se = isa(ψ, InfinitePEPS) ? perms_se_peps : perms_se_pepo
     Ms = map(zip(coords_se, perms_se, openaxs_se)) do (coord, perm, openaxs)
-        M = absorb_weight(state.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs)
+        M = absorb_weight(ψ.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs)
         return permute(M, perm)
     end
     return Ms
 end
 
 function _su3site_se!(
-        state::InfiniteState, gs::Vector{T}, env::SUWeight,
+        ψ::InfiniteState, gs::Vector{T}, env::SUWeight,
         row::Int, col::Int, trschemes::Vector{E};
         gate_bothsides::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationScheme}
-    Nr, Nc = size(state)
+    Nr, Nc = size(ψ)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster and arrow direction within it
-    Ms = get_3site_se(state, env, row, col)
+    Ms = get_3site_se(ψ, env, row, col)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
@@ -467,107 +467,55 @@ function _su3site_se!(
     ϵs = nothing
     for gate_ax in gate_axs
         _apply_gatempo!(Ms, gs; gate_ax)
-        if isa(state, InfinitePEPO)
+        if isa(ψ, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
         wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
-        if isa(state, InfinitePEPO)
+        if isa(ψ, InfinitePEPO)
             Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
         end
         for (wt, wt_idx) in zip(wts, wt_idxs)
             env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
         end
     end
-    invperms_se = isa(state, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
+    invperms_se = isa(ψ, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
     for (M, coord, invperm, openaxs, Vphy) in zip(Ms, coords, invperms_se, openaxs_se, Vphys)
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
         M = absorb_weight(M, env, coord[1], coord[2], openaxs; inv = true)
-        state.A[CartesianIndex(coord)] = normalize(M, Inf)
+        ψ.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return ϵs
 end
 
-"""
-    su3site_iter(state::InfinitePEPS, gatempos, alg::SimpleUpdate, env::SUWeight)
-    su3site_iter(densitymatrix::InfinitePEPO, gatempos, alg::SimpleUpdate, env::SUWeight; gate_bothsides::Bool = true)
-
-One round of 3-site simple update, which applies the Trotter gate MPOs `gatempos`
-on an InfinitePEPS `state` or InfinitePEPO `densitymatrix`.
-"""
-function su3site_iter(
-        state::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight;
-        gate_bothsides::Bool = true
+function su_iter(
+        ψ::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
     ) where {G <: AbstractMatrix}
-    if state isa InfinitePEPS
-        gate_bothsides = false
-    else
-        @assert size(state, 3) == 1
+    if ψ isa InfinitePEPO
+        @assert size(ψ, 3) == 1
     end
-    Nr, Nc = size(state)[1:2]
+    Nr, Nc = size(ψ)[1:2]
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    state2, env2 = deepcopy(state), deepcopy(env)
+    ψ2, env2 = deepcopy(ψ), deepcopy(env)
     trscheme = alg.trscheme
     for i in 1:4
-        Nr, Nc = size(state2)[1:2]
+        Nr, Nc = size(ψ2)[1:2]
         for r in 1:Nr, c in 1:Nc
             gs = gatempos[i][r, c]
             trschemes = [
                 truncation_scheme(trscheme, 1, r, c)
                 truncation_scheme(trscheme, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(state2, gs, env2, r, c, trschemes; gate_bothsides)
+            _su3site_se!(ψ2, gs, env2, r, c, trschemes; alg.gate_bothsides)
         end
-        state2, env2 = rotl90(state2), rotl90(env2)
+        ψ2, env2 = rotl90(ψ2), rotl90(env2)
         trscheme = rotl90(trscheme)
     end
-    return state2, env2
-end
-
-"""
-Perform 3-site simple update for Hamiltonian `ham`.
-"""
-function _simpleupdate3site(
-        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        check_interval::Int = 500, gate_bothsides::Bool = true
-    )
-    time_start = time()
-    # convert Hamiltonian to 3-site exponentiated gate MPOs
-    if state isa InfinitePEPS
-        gate_bothsides = false
-    end
-    dt = gate_bothsides ? (alg.dt / 2) : alg.dt
-    gatempos = [
-        _get_gatempos_se(ham, dt),
-        _get_gatempos_se(rotl90(ham), dt),
-        _get_gatempos_se(rot180(ham), dt),
-        _get_gatempos_se(rotr90(ham), dt),
-    ]
-    wtdiff = 1.0
-    env0 = deepcopy(env)
-    for count in 1:(alg.maxiter)
-        time0 = time()
-        state, env = su3site_iter(state, gatempos, alg, env; gate_bothsides)
-        wtdiff = compare_weights(env, env0)
-        converge = (wtdiff < alg.tol)
-        cancel = (count == alg.maxiter)
-        env0 = deepcopy(env)
-        time1 = time()
-        if ((count == 1) || (count % check_interval == 0) || converge || cancel)
-            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-            label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
-            message = @sprintf(
-                "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
-                label, count, alg.dt, wtdiff, time1 - ((converge || cancel) ? time_start : time0)
-            )
-            cancel ? (@warn message) : (@info message)
-        end
-        converge && break
-    end
-    return state, env, wtdiff
+    wtdiff = compare_weights(env2, env)
+    return ψ2, env2, (; wtdiff)
 end

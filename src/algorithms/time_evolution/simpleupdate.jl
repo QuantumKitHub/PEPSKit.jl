@@ -1,24 +1,41 @@
 """
 $(TYPEDEF)
 
-Algorithm struct for simple update (SU) of infinite PEPS with bond weights.
-Each SU run is converged when the singular value difference becomes smaller than `tol`.
+Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 
 ## Fields
 
 $(TYPEDFIELDS)
 """
-struct SimpleUpdate
-    dt::Number
-    tol::Float64
-    maxiter::Int
+@kwdef struct SimpleUpdate <: TimeEvolution
+    # Initial state (InfinitePEPS or InfinitePEPO)
+    ψ0::InfiniteState
+    # Hamiltonian
+    H::LocalOperator
+    # Initial Bond weights
+    env0::SUWeight
+    # Trotter time step
+    dt::Float64
+    # number of iteration steps
+    nstep::Int
+    # Truncation scheme after applying Trotter gates
     trscheme::TruncationScheme
+    # Switch for imaginary or real time
+    imaginary_time::Bool = true
+    # controls interval to print information
+    check_interval::Int = 500
+    # force usage of 3-site simple update
+    force_3site::Bool = false
+    # ---- only applicable to ground state search ----
+    # assume bipartite unit cell structure
+    bipartite::Bool = false
+    # converged change of weight between two steps
+    tol::Float64 = 0.0
+    # ---- only applicable to PEPO evolution ----
+    gate_bothsides::Bool = false # when false, purified approach is assumed
 end
-# TODO: add kwarg constructor and SU Defaults
 
-"""
-$(SIGNATURES)
-
+#=
 Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 
 ```
@@ -26,16 +43,16 @@ Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
     -- T[r,c] -- T[r,c+1] --
         |           |
 ```
-"""
+=#
 function _su_xbond!(
-        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        ψ::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
-    Nr, Nc = size(state)[1:2]
+    Nr, Nc = size(ψ)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
     # absorb environment weights
-    A, B = state.A[row, col], state.A[row, cp1]
+    A, B = ψ.A[row, col], ψ.A[row, cp1]
     A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = false)
     B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = false)
     normalize!(A, Inf)
@@ -51,12 +68,12 @@ function _su_xbond!(
     normalize!(B, Inf)
     normalize!(s, Inf)
     # update tensor dict and weight on current bond
-    state.A[row, col], state.A[row, cp1] = A, B
+    ψ.A[row, col], ψ.A[row, cp1] = A, B
     env.data[1, row, col] = s
     return ϵ
 end
 
-"""
+#=
 Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
 ```
         |
@@ -65,16 +82,16 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
     -- T[r,c] ---
         |
 ```
-"""
+=#
 function _su_ybond!(
-        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        ψ::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
-    Nr, Nc = size(state)[1:2]
+    Nr, Nc = size(ψ)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1 = _prev(row, Nr)
     # absorb environment weights
-    A, B = state.A[row, col], state.A[rm1, col]
+    A, B = ψ.A[row, col], ψ.A[rm1, col]
     A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = false)
     B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = false)
     normalize!(A, Inf)
@@ -90,138 +107,101 @@ function _su_ybond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    state.A[row, col], state.A[rm1, col] = A, B
+    ψ.A[row, col], ψ.A[rm1, col] = A, B
     env.data[2, row, col] = s
     return ϵ
 end
 
-"""
-    su_iter(state::InfinitePEPS, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; bipartite::Bool = false)
-    su_iter(densitymatrix::InfinitePEPO, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight; gate_bothsides::Bool = true)
-
-One round of simple update, which applies the nearest neighbor `gate` on an InfinitePEPS `state` or InfinitePEPO `densitymatrix`.
-When the input `state` has a unit cell size of (2, 2), one can set `bipartite = true` to enforce the bipartite structure. 
-"""
 function su_iter(
-        state::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_bothsides::Bool = true
+        ψ::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight
     )
-    @assert size(gate.lattice) == size(state)[1:2]
-    if state isa InfinitePEPS
-        gate_bothsides = false
-    else
-        @assert size(state, 3) == 1
-    end
-    Nr, Nc = size(state)[1:2]
-    bipartite && (@assert Nr == Nc == 2)
+    @assert size(gate.lattice) == size(ψ)[1:2]
+    Nr, Nc = size(ψ)[1:2]
+    alg.bipartite && (@assert Nr == Nc == 2)
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError("`state` unit cell size for simple update should be no smaller than (2, 2)."),
     )
-    state2, env2 = deepcopy(state), deepcopy(env)
-    gate_axs = gate_bothsides ? (1:2) : (1:1)
+    ψ2, env2 = deepcopy(ψ), deepcopy(env)
+    gate_axs = alg.gate_bothsides ? (1:2) : (1:1)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trscheme = truncation_scheme(alg.trscheme, 1, r, c)
         for gate_ax in gate_axs
-            _su_xbond!(state2, term, env2, r, c, trscheme; gate_ax)
+            _su_xbond!(ψ2, term, env2, r, c, trscheme; gate_ax)
         end
-        if bipartite
+        if alg.bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
-            state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
-            state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
+            ψ2.A[rp1, cp1] = deepcopy(ψ2.A[r, c])
+            ψ2.A[rp1, c] = deepcopy(ψ2.A[r, cp1])
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trscheme = truncation_scheme(alg.trscheme, 2, r, c)
         for gate_ax in gate_axs
-            _su_ybond!(state2, term, env2, r, c, trscheme; gate_ax)
+            _su_ybond!(ψ2, term, env2, r, c, trscheme; gate_ax)
         end
-        if bipartite
+        if alg.bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-            state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
-            state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
+            ψ2.A[rm1, cm1] = deepcopy(ψ2.A[r, c])
+            ψ2.A[r, cm1] = deepcopy(ψ2.A[rm1, c])
             env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
         end
     end
-    return state2, env2
+    wtdiff = compare_weights(env2, env)
+    return ψ2, env2, (; wtdiff)
 end
 
-"""
-Perform simple update with Hamiltonian `ham` containing up to nearest neighbor interaction terms. 
-"""
-function _simpleupdate2site(
-        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, check_interval::Int = 500, gate_bothsides::Bool = true
-    )
-    time_start = time()
-    # exponentiating the 2-site Hamiltonian gate
-    if state isa InfinitePEPS
-        gate_bothsides = false
+# Initial iteration
+function Base.iterate(alg::SimpleUpdate)
+    # sanity checks
+    nnonly = is_nearest_neighbour(alg.H)
+    use_3site = alg.force_3site || !nnonly
+    @assert alg.tol >= 0
+    @assert !(alg.bipartite && alg.ψ0 isa InfinitePEPO) "Evolution of PEPO with bipartite structure is not implemented."
+    @assert !(alg.bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
+    if alg.ψ0 isa InfinitePEPS
+        @assert !(alg.gate_bothsides) "alg.gate_bothsides = true is incompatible with PEPS evolution."
     end
-    dt = gate_bothsides ? (alg.dt / 2) : alg.dt
-    gate = get_expham(ham, dt)
-    wtdiff = 1.0
-    env0 = deepcopy(env)
-    for count in 1:(alg.maxiter)
-        time0 = time()
-        state, env = su_iter(state, gate, alg, env; bipartite, gate_bothsides)
-        wtdiff = compare_weights(env, env0)
-        converge = (wtdiff < alg.tol)
-        cancel = (count == alg.maxiter)
-        env0 = deepcopy(env)
-        time1 = time()
-        if ((count == 1) || (count % check_interval == 0) || converge || cancel)
-            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-            label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
-            message = @sprintf(
-                "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
-                label, count, alg.dt, wtdiff, time1 - ((converge || cancel) ? time_start : time0)
-            )
-            cancel ? (@warn message) : (@info message)
-        end
-        converge && break
-    end
-    return state, env, wtdiff
-end
-
-"""
-    simpleupdate(
-        state::InfinitePEPS, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, force_3site::Bool = false, check_interval::Int = 500
-    )
-    simpleupdate(
-        densitymatrix::InfinitePEPO, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        gate_bothsides::Bool = true, force_3site::Bool = false, check_interval::Int = 500
-    )
-
-Perform a simple update on an InfinitePEPS `state` or an InfinitePEPO `densitymatrix`
-using the Hamiltonian `ham`, which can contain up to next-nearest-neighbor interaction terms.
-
-## Keyword Arguments
-
-- `bipartite::Bool=false`: If `true`, enforces the bipartite structure of the PEPS. 
-- `gate_bothsides::Bool=true`: (Effective only for PEPO evolution) If true, apply the Trotter gate to both side of the PEPO. Otherwise, the gate is only applied to the physical codomain legs. 
-- `force_3site::Bool=false`: Forces the use of the 3-site simple update algorithm, even if the Hamiltonian contains only nearest-neighbor terms.
-- `check_interval::Int=500`: Specifies the number of evolution steps between printing progress information.
-
-## Notes
-
-- Setting `bipartite = true` is allowed only for PEPS evolution with up to next-nearest neighbor terms, and requires the input `peps` to have a unit cell size of (2, 2). 
-"""
-function simpleupdate(
-        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        bipartite::Bool = false, gate_bothsides::Bool = true,
-        force_3site::Bool = false, check_interval::Int = 500
-    )
-    # determine if Hamiltonian contains nearest neighbor terms only
-    nnonly = is_nearest_neighbour(ham)
-    use_3site = force_3site || !nnonly
-    @assert !(state isa InfinitePEPO && bipartite) "Evolution of PEPO with bipartite structure is not implemented."
-    @assert !(bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
-    # TODO: check SiteDependentTruncation is compatible with bipartite structure
-    if use_3site
-        return _simpleupdate3site(state, ham, alg, env; gate_bothsides, check_interval)
+    # construct Trotter 2-site gates or 3-site gate-MPOs
+    dt′ = _process_timeevol_args(alg.ψ0, alg.dt, alg.imaginary_time)
+    gate = if use_3site
+        [
+            _get_gatempos_se(alg.H, dt′),
+            _get_gatempos_se(rotl90(alg.H), dt′),
+            _get_gatempos_se(rot180(alg.H), dt′),
+            _get_gatempos_se(rotr90(alg.H), dt′),
+        ]
     else
-        return _simpleupdate2site(state, ham, alg, env; bipartite, gate_bothsides, check_interval)
+        get_expham(alg.H, dt′)
     end
+    time0 = time()
+    ψ, env, info = su_iter(alg.ψ0, gate, alg, alg.env0)
+    elapsed_time = time() - time0
+    converged = false
+    return (ψ, env, info), (ψ, env, info, gate, converged, 1, elapsed_time)
+end
+
+# subsequent iterations
+function Base.iterate(alg::SimpleUpdate, state)
+    ψ0, env0, info, gate, converged, it, elapsed_time = state
+    check_convergence = (alg.tol > 0)
+    if (it % alg.check_interval == 0) || (it == 1) || (it == alg.nstep) || converged
+        @info "Space of x-weight at [1, 1] = $(space(env0[1, 1, 1], 1))"
+        @info @sprintf(
+            "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
+            it, alg.dt, info.wtdiff, elapsed_time
+        )
+        if (it == alg.nstep)
+            check_convergence && (@warn "SU: bond weights have not converged.")
+            return nothing
+        elseif converged
+            @info "SU: bond weights have converged."
+            return nothing
+        end
+    end
+    time0 = time()
+    ψ, env, info = su_iter(ψ0, gate, alg, env0)
+    elapsed_time = time() - time0
+    converged = check_convergence ? (info.wtdiff < alg.tol) : false
+    return (ψ, env, info), (ψ, env, info, gate, converged, it + 1, elapsed_time)
 end

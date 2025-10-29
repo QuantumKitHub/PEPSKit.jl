@@ -19,7 +19,7 @@ end
 
 @testset "Simple update: bipartite 2-site" begin
     Nr, Nc = 2, 2
-    ham = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
+    H = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
     Random.seed!(100)
     peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
     env0 = SUWeight(peps0)
@@ -27,8 +27,8 @@ end
     # set trscheme to be compatible with bipartite structure
     bonddims = stack([[6 4; 4 6], [5 7; 7 5]]; dims = 1)
     trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
-    alg = SimpleUpdate(1.0e-2, 1.0e-14, 4, trscheme)
-    peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite = true)
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trscheme, bipartite = true)
+    peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # check bipartite structure is preserved
@@ -44,22 +44,23 @@ end
 
 @testset "Simple update: generic 2-site and 3-site" begin
     Nr, Nc = 3, 4
-    ham = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
     Random.seed!(100)
     peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
     normalize!.(peps0.A, Inf)
     env0 = SUWeight(peps0)
     # Site dependent truncation
     bonddims = rand(2:8, 2, Nr, Nc)
-    @show bonddims
     trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
-    alg = SimpleUpdate(1.0e-2, 1.0e-14, 2, trscheme)
     # 2-site SU
-    peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite = false)
+    H = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trscheme)
+    peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # 3-site SU
-    peps, env, = simpleupdate(peps0, ham, alg, env0; bipartite = false, force_3site = true)
+    H = real(j1_j2_model(InfiniteSquare(Nr, Nc); J1 = 1.0, J2 = 0.5, sublattice = false))
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trscheme)
+    peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
 end
