@@ -207,7 +207,7 @@ function _apply_gate(
     end
 
     # TODO: replace this with actual truncation error once TensorKit is updated
-    a, s, b = svd_compact!(a2b2; alg = LAPACK_QRIteration())
+    ac, sc, bc = svd_compact!(a2b2; alg = LAPACK_QRIteration())
     a, s, b, ϵ = _truncate_compact((ac, sc, bc), trunc)
 
     a, b = absorb_s(a, s, b)
