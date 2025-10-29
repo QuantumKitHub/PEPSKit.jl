@@ -95,7 +95,7 @@ Here `-*-` is the twist on the physical axis.
 # Truncation of a bond on OBC-MPS
 
 Suppose we want to truncate the bond between 
-the n-th and the (n+1)-th sites such that the truncated ψ
+the n-th and the (n+1)-th sites such that the truncated state
 ```
     |ψ̃⟩  =  M[1]---...---M̃[n]---M̃[n+1]---...---M[N]
             ↓            ↓      ↓              ↓
