@@ -227,8 +227,11 @@ function _proj_from_RL(
     )
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
-    u, s, vh = svd_trunc!(rl; trunc)
-    ϵ = 0.0 # TODO: replace this with actual truncation error once TensorKit is updated
+
+    # TODO: replace this with actual truncation error once TensorKit is updated
+    uc, sc, vhc = svd_compact!(rl)
+    u, s, vh, ϵ = _truncate_compact((uc, sc, vhc), trunc)
+
     sinv = PEPSKit.sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev

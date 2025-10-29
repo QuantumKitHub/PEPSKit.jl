@@ -145,13 +145,7 @@ function _svd_trunc!(
         trunc::TruncationStrategy,
     )
     U, S, V⁺ = svd_compact!(t; alg)
-    truncerror = zero(real(scalartype(S))) # TODO: replace this with actual truncation error once TensorKit is updated
-
-    if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
-        Ũ, S̃, Ṽ⁺ = truncate(svd_trunc!, (U, S, V⁺), trunc)[1]
-    else
-        Ũ, S̃, Ṽ⁺ = U, S, V⁺
-    end
+    Ũ, S̃, Ṽ⁺, truncerror = _truncate_compact((U, S, V⁺), trunc)
 
     # construct info NamedTuple
     condnum = cond(S)
@@ -159,6 +153,23 @@ function _svd_trunc!(
         truncation_error = truncerror, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
     )
     return Ũ, S̃, Ṽ⁺, info
+end
+
+# hacky way of computing the truncation error for current version of svd_trunc!
+# TODO: replace once TensorKit updates to new MatrixAlgebraKit which returns truncation error as well
+function _truncate_compact((U, S, V⁺), trunc::TruncationStrategy)
+    if !(trunc isa NoTruncation) && !isempty(blocksectors(S))
+        Ũ, S̃, Ṽ⁺ = truncate(svd_trunc!, (U, S, V⁺), trunc)[1]
+        truncerror = sqrt(
+            sum(blocks(S)) do (c, b)
+                trrank = length(diag(block(S̃, c)))
+                norm(diag(b)[(trrank + 1):end])^2
+            end
+        )
+        return Ũ, S̃, Ṽ⁺, truncerror
+    else
+        return U, S, V⁺, zero(real(scalartype(S)))
+    end
 end
 
 """
@@ -250,7 +261,7 @@ function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
 
     # construct info NamedTuple
     truncation_error =
-        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, 2) # fix p=2 for now
+        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f)
     condition_number = cond(S)
     info = (;
         truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
