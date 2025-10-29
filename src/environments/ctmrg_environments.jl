@@ -29,11 +29,12 @@ struct CTMRGEnv{C, T}
     corners::Array{C, 3}
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
     edges::Array{T, 3}
-    function CTMRGEnv(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
+    function CTMRGEnv(corners::Array{C, 3}, edges::Array{T, 3}) where {C <: AbstractTensorMap, T <: AbstractTensorMap}
         any(isdual.(space.(edges, 1))) &&
             throw(ArgumentError("Dual environment virtual spaces are not allowed (for now)."))
         return new{C, T}(corners, edges)
     end
+    CTMRGEnv(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T} = new{C, T}(corners, edges)
 end
 
 function _corner_tensor(
