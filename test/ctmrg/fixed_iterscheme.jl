@@ -18,7 +18,7 @@ using PEPSKit:
 # initialize parameters
 χbond = 2
 χenv = 16
-svd_algs = [SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer), SVDAdjoint(; fwd_alg = IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()), SVDAdjoint(; fwd_alg = IterSVD())]
 projector_algs = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
