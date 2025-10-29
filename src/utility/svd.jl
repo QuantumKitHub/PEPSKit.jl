@@ -160,12 +160,7 @@ end
 function _truncate_compact((U, S, V⁺), trunc::TruncationStrategy)
     if !(trunc isa NoTruncation) && !isempty(blocksectors(S))
         Ũ, S̃, Ṽ⁺ = truncate(svd_trunc!, (U, S, V⁺), trunc)[1]
-        truncerror = sqrt(
-            sum(blocks(S)) do (c, b)
-                trrank = length(diag(block(S̃, c)))
-                norm(diag(b)[(trrank + 1):end])^2
-            end
-        )
+        truncerror = sqrt(norm(S)^2 - norm(S̃)^2)
         return Ũ, S̃, Ṽ⁺, truncerror
     else
         return U, S, V⁺, zero(real(scalartype(S)))
