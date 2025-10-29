@@ -112,8 +112,9 @@ function leading_boundary(
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
-        CS = map(svd_vals, env₀.corners)
-        TS = map(svd_vals, env₀.edges)
+        CS, TS = ignore_derivatives() do
+            return map(svd_vals, env₀.corners), map(svd_vals, env₀.edges)
+        end
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
         local info
