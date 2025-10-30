@@ -206,44 +206,6 @@ function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
     return rotr90(a), rotr90_pullback
 end
 
-# Differentiable setindex! alternative
-function _setindex(a::AbstractArray, v, args...)
-    b::typeof(a) = copy(a)
-    b[args...] = v
-    return b
-end
-
-function ChainRulesCore.rrule(::typeof(_setindex), a::AbstractArray, tv, args...)
-    t = _setindex(a, tv, args...)
-
-    function _setindex_pullback(v)
-        if iszero(v)
-            backwards_tv = ZeroTangent()
-            backwards_a = ZeroTangent()
-        else
-            v = if v isa Tangent
-                ChainRulesCore.construct(typeof(a), ChainRulesCore.backing(v))
-            else
-                v
-            end
-            # TODO: Fix this for ZeroTangents
-            v = typeof(v) != typeof(a) ? convert(typeof(a), v) : v
-            #v = convert(typeof(a),v);
-            backwards_tv = v[args...]
-            backwards_a = copy(v)
-            if typeof(backwards_tv) == eltype(a)
-                backwards_a[args...] = zero(v[args...])
-            else
-                backwards_a[args...] = zero.(v[args...])
-            end
-        end
-        return (
-            NoTangent(), backwards_a, backwards_tv, fill(ZeroTangent(), length(args))...,
-        )
-    end
-    return t, _setindex_pullback
-end
-
 # TODO: link to Zygote.showgrad once they update documenter.jl
 """
     @showtypeofgrad(x)
