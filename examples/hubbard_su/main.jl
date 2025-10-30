@@ -65,8 +65,8 @@ Ds = [4, 12, 8, 8, 8]
 maxiter = 20000
 
 for (dt, tol, Dbond) in zip(dts, tols, Ds)
-    trscheme = truncerr(1.0e-10) & truncdim(Dbond)
-    alg = SimpleUpdate(dt, tol, maxiter, trscheme)
+    trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
+    alg = SimpleUpdate(dt, tol, maxiter, trunc)
     global peps, wts, = simpleupdate(
         peps, H, alg, wts; bipartite = false, check_interval = 2000
     )
@@ -78,7 +78,7 @@ md"""
 In order to compute the energy expectation value with evolved PEPS, we need to converge a
 CTMRG environment on it. We first converge an environment with a small enviroment dimension
 and then use that to initialize another run with bigger environment dimension. We'll use
-`trscheme=truncdim(χ)` for that such that the dimension is increased during the second CTMRG
+`trunc=truncrank(χ)` for that such that the dimension is increased during the second CTMRG
 run:
 """
 
@@ -88,7 +88,7 @@ normalize!.(peps.A, Inf)
 env = CTMRGEnv(rand, Float64, peps, env_space)
 for χ in [χenv₀, χenv]
     global env, = leading_boundary(
-        env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trscheme = truncdim(χ)
+        env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trunc = truncrank(χ)
     )
 end
 

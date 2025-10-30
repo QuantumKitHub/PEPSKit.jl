@@ -13,9 +13,9 @@ Random.seed!(10235876)
 bm = [-0.1235, -0.213]
 
 function converge_env(state, χ::Int)
-    trscheme1 = truncdim(χ) & truncerr(1.0e-12)
+    trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(randn, Float64, state, Vect[SU2Irrep](0 => 1))
-    env, = leading_boundary(env0, state; alg = :sequential, trscheme = trscheme1, tol = 1.0e-10)
+    env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
     return env
 end
 
@@ -27,12 +27,12 @@ ham = j1_j2_model(
 pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 # 7 = 1 (spin-0) + 2 x 3 (spin-1)
-trscheme_pepo = truncdim(7) & truncerr(1.0e-12)
+trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
 check_interval = 100
 
 # PEPO approach
 dt, maxiter = 1.0e-3, 600
-alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)
+alg = SimpleUpdate(dt, 0.0, maxiter, trunc_pepo)
 pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; check_interval, gate_bothsides = true)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 energy = expectation_value(pepo, ham, env) / (Nr * Nc)
@@ -41,7 +41,7 @@ energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 
 # PEPS (purified PEPO) approach
 dt, maxiter = 1.0e-3, 300
-alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)
+alg = SimpleUpdate(dt, 0.0, maxiter, trunc_pepo)
 pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; check_interval, gate_bothsides = false)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 energy = expectation_value(pepo, ham, env) / (Nr * Nc)

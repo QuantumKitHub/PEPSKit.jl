@@ -4,6 +4,7 @@ using Accessors
 using Random
 using LinearAlgebra
 using TensorKit, KrylovKit
+using MatrixAlgebraKit: LAPACK_DivideAndConquer
 using PEPSKit
 using PEPSKit:
     FixedSVD,
@@ -17,7 +18,7 @@ using PEPSKit:
 # initialize parameters
 χbond = 2
 χenv = 16
-svd_algs = [SVDAdjoint(; fwd_alg = TensorKit.SDD()), SVDAdjoint(; fwd_alg = IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()), SVDAdjoint(; fwd_alg = IterSVD())]
 projector_algs = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
@@ -45,7 +46,7 @@ atol = 1.0e-5
     # fix gauge of SVD
     svd_alg_fix = _fix_svd_algorithm(ctm_alg.projector_alg.svd_alg, signs, info)
     ctm_alg_fix = @set ctm_alg.projector_alg.svd_alg = svd_alg_fix
-    ctm_alg_fix = @set ctm_alg_fix.projector_alg.trscheme = notrunc()
+    ctm_alg_fix = @set ctm_alg_fix.projector_alg.trunc = notrunc()
 
     # do iteration with FixedSVD
     env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
@@ -53,12 +54,12 @@ atol = 1.0e-5
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
-@testset "Element-wise consistency of TensorKit.SDD and IterSVD" begin
+@testset "Element-wise consistency of LAPACK_DivideAndConquer and IterSVD" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
         svd_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χenv + 10))),
     )
-    ctm_alg_full = SimultaneousCTMRG(; svd_alg = SVDAdjoint(; fwd_alg = TensorKit.SDD()))
+    ctm_alg_full = SimultaneousCTMRG(; svd_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()))
 
     # initialize states
     Random.seed!(91283219347)
@@ -81,13 +82,13 @@ end
         ctm_alg_iter.projector_alg.svd_alg, signs_iter, info_iter
     )
     ctm_alg_fix_iter = @set ctm_alg_iter.projector_alg.svd_alg = svd_alg_fix_iter
-    ctm_alg_fix_iter = @set ctm_alg_fix_iter.projector_alg.trscheme = notrunc()
+    ctm_alg_fix_iter = @set ctm_alg_fix_iter.projector_alg.trunc = notrunc()
 
     svd_alg_fix_full = _fix_svd_algorithm(
         ctm_alg_full.projector_alg.svd_alg, signs_full, info_full
     )
     ctm_alg_fix_full = @set ctm_alg_full.projector_alg.svd_alg = svd_alg_fix_full
-    ctm_alg_fix_full = @set ctm_alg_fix_full.projector_alg.trscheme = notrunc()
+    ctm_alg_fix_full = @set ctm_alg_fix_full.projector_alg.trunc = notrunc()
 
     # do iteration with FixedSVD
     env_fixedsvd_iter, = ctmrg_iteration(n, env_conv1, ctm_alg_fix_iter)

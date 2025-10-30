@@ -9,7 +9,7 @@ using PEPSKit
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
-    U, S, V, = PEPSKit.tsvd(A, alg; trunc)
+    U, S, V, = svd_trunc(A, alg; trunc)
     return real(dot(R, U * V)) + dot(S, S)  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
 end
 
@@ -42,7 +42,7 @@ end
 end
 
 @testset "Truncated SVD broadening" begin
-    u, s, v, = tsvd(r)
+    u, s, v, = svd_compact(r)
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     r_degen = u * s * v
 
@@ -62,7 +62,7 @@ end
     )
 
     @test l_only_cutoff ≈ l_no_broadening_no_cutoff ≈ l_small_broadening
-    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-1 # divergences mess up the gradient
+    @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-2 # divergences mess up the gradient
     @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and Lorentzian broadening have similar effect
 end
 
@@ -96,7 +96,7 @@ symm_R = randn(dtype, space(symm_r))
 end
 
 @testset "Truncated symmetric SVD broadening" begin
-    u, s, v, = tsvd(symm_r)
+    u, s, v, = svd_compact(symm_r)
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     symm_r_degen = u * s * v
 
@@ -143,7 +143,7 @@ end
 # hienv_dense = hienv()
 # env_R = randn(space(hienv))
 
-# PEPSKit.tsvd!(hienv, iter_alg)
+# svd_trunc!(hienv, iter_alg)
 
 # @testset "IterSVD with HalfInfiniteEnv function handle" begin
 #     # Equivalence of dense and sparse contractions

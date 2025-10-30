@@ -62,13 +62,13 @@ function verify_cluster_orth(
     for i in 1:(N - 1)
         M, sl0 = Ms[i], wts[i]
         sl1 = _contract_left(M, i == 1 ? nothing : wts[i - 1])
-        lorths[i] = (normalize(sl0) ≈ normalize(sl1))
+        lorths[i] = (normalize(TensorMap(sl0)) ≈ normalize(sl1)) # sl0 is DiagonalTensorMap while sl1 is not
     end
     # right orthogonal
     for i in 2:N
         M, sr0 = Ms[i], wts[i - 1]
         sr1 = _contract_right(M, i == N ? nothing : wts[i])
-        rorths[i - 1] = (normalize(sr0) ≈ normalize(sr1))
+        rorths[i - 1] = (normalize(TensorMap(sr0)) ≈ normalize(sr1))
     end
     return lorths, rorths
 end
@@ -81,6 +81,7 @@ function inner_prod_cluster(
     }
     N = length(Ms1)
     @assert length(Ms2) == N
+    # physical spaces are assumed to be non-dual
     @assert all(!isdual(space(t, 2)) for t in Ms1)
     @assert all(!isdual(space(t, 2)) for t in Ms2)
     # not the most efficient implementation
@@ -117,11 +118,11 @@ end
 
 function mpo_to_gate3(gs::Vector{T}) where {T <: AbstractTensorMap}
     #= 
-    -1         -2        -3
-    ↑          ↑          ↑
-    g1 ←- 1 ←- g2 ←- 2 ←- g3
-    ↑          ↑          ↑
     -4         -5        -6
+    ↓           ↓         ↓
+    g1 ←- 1 ←- g2 ←- 2 ←- g3
+    ↓           ↓         ↓
+    -1         -2        -3
     =#
     @assert length(gs) == 3
     @tensor gate[-1 -2 -3; -4 -5 -6] := gs[1][-1 -4 1] * gs[2][1 -2 -5 2] * gs[3][2 -3 -6]
