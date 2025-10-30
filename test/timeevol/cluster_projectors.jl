@@ -124,7 +124,7 @@ end
         peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = true, check_interval = 1000)
     end
     normalize!.(peps.A, Inf)
-    env = CTMRGEnv(rand, Float64, peps, Espace)
+    env = CTMRGEnv(wts, peps)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)
     e_site = cost_function(peps, env, ham) / (Nr * Nc)
     @info "2-site simple update energy = $e_site"
