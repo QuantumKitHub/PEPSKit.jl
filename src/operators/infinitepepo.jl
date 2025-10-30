@@ -65,14 +65,17 @@ end
 function InfinitePEPO(
         Pspaces::A, Nspaces::A, Espaces::A = Nspaces
     ) where {A <: AbstractArray{<:ElementarySpace, 2}}
+    return InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfinitePEPO(
+        f, T, Pspaces::A, Nspaces::A, Espaces::A = Nspaces
+    ) where {A <: AbstractArray{<:ElementarySpace, 2}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
-
     Pspaces = reshape(Pspaces, (size(Pspaces)..., 1))
     Nspaces = reshape(Pspaces, (size(Nspaces)..., 1))
     Espaces = reshape(Pspaces, (size(Espaces)..., 1))
-
-    return InfinitePEPO(Pspaces, Nspaces, Espaces)
+    return InfinitePEPO(f, T, Pspaces, Nspaces, Espaces)
 end
 
 """

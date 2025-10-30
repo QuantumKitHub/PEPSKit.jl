@@ -240,13 +240,35 @@ end
 end
 
 """
-Adjoint of an MPS tensor, but permutes the physical spaces back into the codomain.
-Intuitively, this conjugates a tensor and then reinterprets its 'direction' as an MPS
-tensor.
+    edge_transfer_spectrum(top::Vector{E}, bot::Vector{E}; tol=Defaults.tol, num_vals=20,
+                           sector=one(sectortype(E))) where {E<:CTMRGEdgeTensor}
+
+Calculate the partial spectrum of the left edge transfer matrix corresponding to the given
+`top` vector of edges and a `bot` vector of edge. The `sector` keyword argument can be used
+to specify a non-trivial total charge for the transfer matrix eigenvectors. Specifically, an
+auxiliary space `ℂ[typeof(sector)](sector => 1)'` will be added to the domain of each
+eigenvector. The `tol` and `num_vals` keyword arguments are passed to `KrylovKit.eigolve`.
 """
-function _dag(A::MPSKit.GenericMPSTensor{S, N}) where {S, N}
-    return permute(A', ((1, (3:(N + 1))...), (2,)))
+function edge_transfer_spectrum(
+        top::Vector{E}, bot::Vector{E}; tol = MPSKit.Defaults.tol, num_vals = 20,
+        sector = one(sectortype(E))
+    ) where {E <: CTMRGEdgeTensor}
+    init = randn(
+        scalartype(E),
+        MPSKit._lastspace(first(bot))' ← ℂ[typeof(sector)](sector => 1)' ⊗ MPSKit._firstspace(first(top)),
+    )
+
+    transferspace = fuse(MPSKit._firstspace(first(top)) * MPSKit._lastspace(first(bot)))
+    num_vals = min(dim(transferspace, sector), num_vals) # we can ask at most this many values
+    eigenvals, eigenvecs, convhist = eigsolve(
+        flip(edge_transfermatrix(top, bot)), init, num_vals, :LM; tol = tol
+    )
+    convhist.converged < num_vals &&
+        @warn "correlation length failed to converge: normres = $(convhist.normres)"
+
+    return eigenvals
 end
+
 
 # TODO: decide on appropriate signature and returns for the more generic case
 """
@@ -271,15 +293,15 @@ function _correlation_length(
 
     # Horizontal
     λ_h = map(1:n_rows) do r
-        above = InfiniteMPS(env.edges[NORTH, r, :])
-        below = InfiniteMPS(_dag.(env.edges[SOUTH, _next(r, n_rows), :]))
-        vals = MPSKit.transfer_spectrum(above; below, num_vals, sector, kwargs...)
+        top = env.edges[NORTH, r, :]
+        bot = env.edges[SOUTH, _next(r, n_rows), :]
+        vals = edge_transfer_spectrum(top, bot; num_vals, sector, kwargs...)
 
         # normalize using largest eigenvalue in trivial sector
         if isone(sector)
             N = first(vals)
         else
-            vals_triv = MPSKit.transfer_spectrum(above; below, num_vals = 1, kwargs...)
+            vals_triv = edge_transfer_spectrum(top, bot; num_vals = 1, kwargs...)
             N = first(vals_triv)
         end
         return vals ./ N # normalize largest eigenvalue
@@ -287,15 +309,15 @@ function _correlation_length(
 
     # Vertical
     λ_v = map(1:n_cols) do c
-        above = InfiniteMPS(env.edges[EAST, :, c])
-        below = InfiniteMPS(_dag.(env.edges[WEST, :, _next(c, n_cols)]))
-        vals = MPSKit.transfer_spectrum(above; below, num_vals, sector, kwargs...)
+        top = env.edges[EAST, :, c]
+        bot = env.edges[WEST, :, _next(c, n_cols)]
+        vals = edge_transfer_spectrum(top, bot; num_vals, sector, kwargs...)
 
         # normalize using largest eigenvalue in trivial sector
         if isone(sector)
             N = first(vals)
         else
-            vals_triv = MPSKit.transfer_spectrum(above; below, num_vals = 1, kwargs...)
+            vals_triv = edge_transfer_spectrum(top, bot; num_vals = 1, kwargs...)
             N = first(vals_triv)
         end
         return vals ./ N # normalize largest eigenvalue
