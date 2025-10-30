@@ -60,7 +60,7 @@ end
     psi = InfinitePEPS(Ds, Ds, Ds)
     env = CTMRGEnv(psi, ComplexSpace.(rand(10:20, 3, 3)), ComplexSpace.(rand(10:20, 3, 3)))
     env2, = leading_boundary(
-        env, psi; alg, maxiter = 1, trscheme = FixedSpaceTruncation(), projector_alg
+        env, psi; alg, maxiter = 1, trunc = FixedSpaceTruncation(), projector_alg
     )
 
     # check that the space is fixed

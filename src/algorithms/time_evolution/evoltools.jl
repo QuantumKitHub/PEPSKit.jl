@@ -191,7 +191,7 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 """
 function _apply_gate(
         a::AbstractTensorMap, b::AbstractTensorMap,
-        gate::AbstractTensorMap{T, S, 2, 2}, trscheme::TruncationStrategy
+        gate::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
     ) where {T <: Number, S <: ElementarySpace}
     V = space(b, 1)
     need_flip = isdual(V)
@@ -200,10 +200,10 @@ function _apply_gate(
     else
         @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
-    trunc = if trscheme isa FixedSpaceTruncation
+    trunc = if trunc isa FixedSpaceTruncation
         need_flip ? truncspace(flip(V)) : truncspace(V)
     else
-        trscheme
+        trunc
     end
 
     # TODO: replace this with actual truncation error once TensorKit is updated

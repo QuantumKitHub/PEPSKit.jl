@@ -19,7 +19,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `maxiter::Int=$(Defaults.ctmrg_maxiter)`
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
-* `trscheme::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
@@ -94,8 +94,8 @@ function simultaneous_projectors(
         coordinate, enlarged_corners::Array{E, 3}, env, alg::HalfInfiniteProjector
     ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
-    trscheme = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-    alg′ = @set alg.trscheme = trscheme
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    alg′ = @set alg.trunc = trunc
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     return compute_projector(ec, coordinate, alg′)
 end
@@ -103,8 +103,8 @@ function simultaneous_projectors(
         coordinate, enlarged_corners::Array{E, 3}, env, alg::FullInfiniteProjector
     ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
-    trscheme = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-    alg′ = @set alg.trscheme = trscheme
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    alg′ = @set alg.trunc = trunc
     rowsize, colsize = size(enlarged_corners)[2:3]
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)

@@ -18,7 +18,7 @@ function CTMRGAlgorithm(;
         tol = Defaults.ctmrg_tol,
         maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
         verbosity = Defaults.ctmrg_verbosity,
-        trscheme = (; alg = Defaults.trscheme),
+        trunc = (; alg = Defaults.trunc),
         svd_alg = (;),
         projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
     )
@@ -29,7 +29,7 @@ function CTMRGAlgorithm(;
     # parse CTMRG projector algorithm
 
     projector_algorithm = ProjectorAlgorithm(;
-        alg = projector_alg, svd_alg, trscheme, verbosity
+        alg = projector_alg, svd_alg, trunc, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
@@ -69,7 +69,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 
 ### Projector algorithm
 
-* `trscheme::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`

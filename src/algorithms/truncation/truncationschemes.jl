@@ -8,7 +8,7 @@ have different spaces, this truncation style is different from `TruncationSpace`
 struct FixedSpaceTruncation <: TruncationStrategy end
 
 struct SiteDependentTruncation{T <: TruncationStrategy} <: TruncationStrategy
-    trschemes::Array{T, 3}
+    truncs::Array{T, 3}
 end
 
 const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
@@ -22,7 +22,7 @@ const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
 )
 
 # Should be TruncationStrategy but rename to avoid type piracy
-function _TruncationStrategy(; alg = Defaults.trscheme, η = nothing)
+function _TruncationStrategy(; alg = Defaults.trunc, η = nothing)
     # replace Symbol with TruncationStrategy type
     haskey(TRUNCATION_STRATEGY_SYMBOLS, alg) ||
         throw(ArgumentError("unknown truncation strategy: $alg"))
@@ -32,36 +32,36 @@ function _TruncationStrategy(; alg = Defaults.trscheme, η = nothing)
 end
 
 function truncation_strategy(
-        trscheme::TruncationStrategy, direction::Int, row::Int, col::Int; kwargs...
+        trunc::TruncationStrategy, direction::Int, row::Int, col::Int; kwargs...
     )
-    return trscheme
+    return trunc
 end
 
 function truncation_strategy(
-        trscheme::SiteDependentTruncation, direction::Int, row::Int, col::Int
+        trunc::SiteDependentTruncation, direction::Int, row::Int, col::Int
     )
-    return trscheme.trschemes[direction, row, col]
+    return trunc.truncs[direction, row, col]
 end
 
 # TODO: type piracy
-Base.rotl90(trscheme::TruncationStrategy) = trscheme
+Base.rotl90(trunc::TruncationStrategy) = trunc
 
-function Base.rotl90(trscheme::SiteDependentTruncation)
-    directions, rows, cols = size(trscheme.trschemes)
-    trschemes_rotated = similar(trscheme.trschemes, directions, cols, rows)
+function Base.rotl90(trunc::SiteDependentTruncation)
+    directions, rows, cols = size(trunc.truncs)
+    truncs_rotated = similar(trunc.truncs, directions, cols, rows)
 
     if directions == 2
-        trschemes_rotated[NORTH, :, :] = circshift(
-            rotl90(trscheme.trschemes[EAST, :, :]), (0, -1)
+        truncs_rotated[NORTH, :, :] = circshift(
+            rotl90(trunc.truncs[EAST, :, :]), (0, -1)
         )
-        trschemes_rotated[EAST, :, :] = rotl90(trscheme.trschemes[NORTH, :, :])
+        truncs_rotated[EAST, :, :] = rotl90(trunc.truncs[NORTH, :, :])
     elseif directions == 4
         for dir in 1:4
             dir′ = _prev(dir, 4)
-            trschemes_rotated[dir′, :, :] = rotl90(trscheme.trschemes[dir, :, :])
+            truncs_rotated[dir′, :, :] = rotl90(trunc.truncs[dir, :, :])
         end
     else
         throw(ArgumentError("Unsupported number of directions for rotl90: $directions"))
     end
-    return SiteDependentTruncation(trschemes_rotated)
+    return SiteDependentTruncation(truncs_rotated)
 end

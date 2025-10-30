@@ -15,7 +15,7 @@ Module containing default algorithm parameter values and arguments.
 
 ## SVD forward & reverse
 
-* `trscheme=:$(Defaults.trscheme)` : Truncation scheme for SVDs and other decompositions.
+* `trunc=:$(Defaults.trunc)` : Truncation scheme for SVDs and other decompositions.
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
@@ -92,7 +92,7 @@ const ctmrg_verbosity = 2
 const sparse = false # TODO: implement sparse CTMRG
 
 # SVD forward & reverse
-const trscheme = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
+const trunc = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
 const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48

@@ -24,7 +24,7 @@ peps = get_hubbard_state()
 Envspace = Vect[FermionParity ⊠ U1Irrep](
     (0, 0) => 4, (1, 1 // 2) => 1, (1, -1 // 2) => 1, (0, 1) => 1, (0, -1) => 1
 )
-ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trscheme = truncerror(; atol = 1.0e-10) & truncrank(8))
+ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trunc = truncerror(; atol = 1.0e-10) & truncrank(8))
 env, = leading_boundary(CTMRGEnv(rand, ComplexF64, peps, Envspace), peps, ctm_alg)
 for row in 1:Nr, col in 1:Nc
     cp1 = PEPSKit._next(col, Nc)

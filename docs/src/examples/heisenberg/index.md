@@ -106,7 +106,7 @@ arguments. To see a description of all arguments, see the docstring of
 specific tolerance and during the CTMRG run keep all index dimensions fixed:
 
 ````julia
-boundary_alg = (; tol = 1.0e-10, trscheme = (; alg = :fixedspace));
+boundary_alg = (; tol = 1.0e-10, trunc = (; alg = :fixedspace));
 ````
 
 Let us also configure the optimizer algorithm. We are going to optimize the PEPS using the

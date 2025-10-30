@@ -245,16 +245,16 @@ Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
 find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
-        Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
+        Ms, Rs, Ls, truncs::Vector{E}, revs::Vector{Bool}
     ) where {E <: TruncationStrategy}
     N = length(Ms)
-    @assert length(trschemes) == N - 1
+    @assert length(truncs) == N - 1
     projs_errs = map(1:(N - 1)) do i
-        trunc = if isa(trschemes[i], FixedSpaceTruncation)
+        trunc = if isa(truncs[i], FixedSpaceTruncation)
             tspace = space(Ms[i + 1], 1)
             isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
         else
-            trschemes[i]
+            truncs[i]
         end
         return _proj_from_RL(Rs[i], Ls[i]; trunc, rev = revs[i])
     end
@@ -270,10 +270,10 @@ end
 Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
-        Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
+        Ms::Vector{T}, truncs::Vector{E}, revs::Vector{Bool}
     ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
     Rs, Ls = _get_allRLs(Ms)
-    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, truncs, revs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
@@ -461,7 +461,7 @@ end
 
 function _su3site_se!(
         state::InfiniteState, gs::Vector{T}, env::SUWeight,
-        row::Int, col::Int, trschemes::Vector{E};
+        row::Int, col::Int, truncs::Vector{E};
         gate_bothsides::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
@@ -484,7 +484,7 @@ function _su3site_se!(
         if isa(state, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
-        wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
+        wts, ϵs, = _cluster_truncate!(Ms, truncs, revs)
         if isa(state, InfinitePEPO)
             Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
         end
@@ -526,19 +526,19 @@ function su3site_iter(
         ),
     )
     state2, env2 = deepcopy(state), deepcopy(env)
-    trscheme = alg.trscheme
+    trunc = alg.trunc
     for i in 1:4
         Nr, Nc = size(state2)[1:2]
         for r in 1:Nr, c in 1:Nc
             gs = gatempos[i][r, c]
-            trschemes = [
-                truncation_strategy(trscheme, 1, r, c)
-                truncation_strategy(trscheme, 2, r, _next(c, Nc))
+            truncs = [
+                truncation_strategy(trunc, 1, r, c)
+                truncation_strategy(trunc, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(state2, gs, env2, r, c, trschemes; gate_bothsides)
+            _su3site_se!(state2, gs, env2, r, c, truncs; gate_bothsides)
         end
         state2, env2 = rotl90(state2), rotl90(env2)
-        trscheme = rotl90(trscheme)
+        trunc = rotl90(trunc)
     end
     return state2, env2
 end

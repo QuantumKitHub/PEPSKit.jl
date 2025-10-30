@@ -46,7 +46,7 @@ atol = 1.0e-5
     # fix gauge of SVD
     svd_alg_fix = _fix_svd_algorithm(ctm_alg.projector_alg.svd_alg, signs, info)
     ctm_alg_fix = @set ctm_alg.projector_alg.svd_alg = svd_alg_fix
-    ctm_alg_fix = @set ctm_alg_fix.projector_alg.trscheme = notrunc()
+    ctm_alg_fix = @set ctm_alg_fix.projector_alg.trunc = notrunc()
 
     # do iteration with FixedSVD
     env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
@@ -82,13 +82,13 @@ end
         ctm_alg_iter.projector_alg.svd_alg, signs_iter, info_iter
     )
     ctm_alg_fix_iter = @set ctm_alg_iter.projector_alg.svd_alg = svd_alg_fix_iter
-    ctm_alg_fix_iter = @set ctm_alg_fix_iter.projector_alg.trscheme = notrunc()
+    ctm_alg_fix_iter = @set ctm_alg_fix_iter.projector_alg.trunc = notrunc()
 
     svd_alg_fix_full = _fix_svd_algorithm(
         ctm_alg_full.projector_alg.svd_alg, signs_full, info_full
     )
     ctm_alg_fix_full = @set ctm_alg_full.projector_alg.svd_alg = svd_alg_fix_full
-    ctm_alg_fix_full = @set ctm_alg_fix_full.projector_alg.trscheme = notrunc()
+    ctm_alg_fix_full = @set ctm_alg_fix_full.projector_alg.trunc = notrunc()
 
     # do iteration with FixedSVD
     env_fixedsvd_iter, = ctmrg_iteration(n, env_conv1, ctm_alg_fix_iter)
