@@ -89,7 +89,7 @@ end
 """
     absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorMap)
 
-Given `tsvd` result `U`, `S` and `V`, absorb singular values `S` into `U` and `V` by:
+Given SVD result `U`, `S` and `V`, absorb singular values `S` into `U` and `V` by:
 ```
     U -> U * sqrt(S), V -> sqrt(S) * V
 ```
@@ -103,7 +103,7 @@ end
 """
     flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
 
-Given `tsvd` result `u ← s ← vh`, flip the arrow between the three tensors 
+Given SVD result `u ← s ← vh`, flip the arrow between the three tensors 
 to `u2 → s2 → vh2` such that
 ```
     u * s * vh = (@tensor t2[-1, ...; -2, ...] := u2[-1, ...; 2] * s2[1; 2] * vh2[1; -2, ...])
