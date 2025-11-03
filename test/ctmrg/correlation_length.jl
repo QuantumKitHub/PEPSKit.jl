@@ -1,6 +1,6 @@
 using Test: @test, @testset
 using TensorKit
-using TensorKit: ←, ⊗, SU2Irrep, Vect, permute, truncrank, trunctol
+using TensorKit: ←, ⊗, SU2Irrep, Vect, permute
 using MPSKit: correlation_length, leading_boundary
 using PEPSKit: CTMRGEnv, InfinitePEPS
 
