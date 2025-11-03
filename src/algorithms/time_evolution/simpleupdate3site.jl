@@ -136,22 +136,22 @@ function qr_through(
         R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
-    q, r = left_orth!(A)
+    _, r = left_orth!(A)
     if isdual(domain(r, 1)) != isdual(codomain(r, 1))
         r = flip(r, 1)
     end
     normalize && normalize!(r, Inf)
-    return q, r
+    return r
 end
 function qr_through(
         ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    q, r = left_orth(M)
+    _, r = left_orth(M)
     if isdual(domain(r, 1)) != isdual(codomain(r, 1))
         r = flip(r, 1)
     end
     normalize && normalize!(r, Inf)
-    return q, r
+    return r
 end
 
 """
@@ -167,23 +167,23 @@ function lq_through(
     ) where {S <: ElementarySpace}
     @plansor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
     A = permute(A, ((1,), (2, 3, 4, 5)))
-    l, q = right_orth!(A)
+    l, _ = right_orth!(A)
     if isdual(domain(l, 1)) != isdual(codomain(l, 1))
         l = flip(l, 2)
     end
     normalize && normalize!(l, Inf)
-    return l, q
+    return l
 end
 function lq_through(
         M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
     ) where {S <: ElementarySpace}
     A = permute(M, ((1,), (2, 3, 4, 5)))
-    l, q = right_orth!(A)
+    l, _ = right_orth!(A)
     if isdual(domain(l, 1)) != isdual(codomain(l, 1))
         l = flip(l, 2)
     end
     normalize && normalize!(l, Inf)
-    return l, q
+    return l
 end
 
 """
@@ -193,16 +193,16 @@ function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpa
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     # get the first R and the last L
-    R_first = qr_through(nothing, Ms[1]; normalize = true)[2]
-    L_last = lq_through(Ms[N], nothing; normalize = true)[1]
+    R_first = qr_through(nothing, Ms[1]; normalize = true)
+    L_last = lq_through(Ms[N], nothing; normalize = true)
     Rs = Vector{typeof(R_first)}(undef, N - 1)
     Ls = Vector{typeof(L_last)}(undef, N - 1)
     Rs[1], Ls[end] = R_first, L_last
     # get remaining R, L matrices
     for n in 2:(N - 1)
         m = N - n + 1
-        _, Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true)
-        Ls[m - 1], _ = lq_through(Ms[m], Ls[m]; normalize = true)
+        Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true)
+        Ls[m - 1] = lq_through(Ms[m], Ls[m]; normalize = true)
     end
     return Rs, Ls
 end
