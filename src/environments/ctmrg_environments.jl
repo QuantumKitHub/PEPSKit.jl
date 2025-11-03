@@ -32,11 +32,15 @@ struct CTMRGEnv{C, T}
     corners::Array{C, 3}
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
     edges::Array{T, 3}
-    function CTMRGEnv(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
-        foreach(check_environment_virtualspace, edges)
+    function CTMRGEnv{C, T}(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
         return new{C, T}(corners, edges)
     end
 end
+function CTMRGEnv(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
+    foreach(check_environment_virtualspace, edges)
+    return CTMRGEnv{C, T}(corners, edges)
+end
+
 check_environment_virtualspace(::AbstractZero) = nothing
 function check_environment_virtualspace(E::CTMRGEdgeTensor)
     return isdual(space(E, 1)) &&
