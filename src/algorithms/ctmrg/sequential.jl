@@ -20,7 +20,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `maxiter::Int=$(Defaults.ctmrg_maxiter)`
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
-* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))`
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
@@ -86,9 +86,9 @@ function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorA
     )
     proj_and_info = similar(coordinates, T_dst)
     proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
-        trscheme = truncation_scheme(alg, env.edges[WEST, _prev(r, size(env, 2)), c])
+        trunc = truncation_strategy(alg, env.edges[WEST, _prev(r, size(env, 2)), c])
         proj, info = sequential_projectors(
-            (WEST, r, c), network, env, @set(alg.trscheme = trscheme)
+            (WEST, r, c), network, env, @set(alg.trunc = trunc)
         )
         return proj, info
     end

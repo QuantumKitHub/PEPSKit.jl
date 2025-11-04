@@ -70,8 +70,8 @@ end
     nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
-        trscheme = truncerr(1.0e-10) & truncdim(Dbond2)
-        alg = SimpleUpdate(; ψ0 = peps, env0 = wts, H, dt, nstep, trscheme, bipartite = false)
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond2)
+        alg = SimpleUpdate(; ψ0 = peps, env0 = wts, H, dt, nstep, trunc, bipartite = false)
         peps, wts, = time_evolve(alg)
     end
 

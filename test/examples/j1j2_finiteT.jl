@@ -13,9 +13,9 @@ Random.seed!(10235876)
 bm = [-0.1235, -0.213]
 
 function converge_env(state, χ::Int)
-    trscheme1 = truncdim(χ) & truncerr(1.0e-12)
+    trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(randn, Float64, state, Vect[SU2Irrep](0 => 1))
-    env, = leading_boundary(env0, state; alg = :sequential, trscheme = trscheme1, tol = 1.0e-10)
+    env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
     return env
 end
 
@@ -27,13 +27,13 @@ H = j1_j2_model(
 ψ0 = PEPSKit.infinite_temperature_density_matrix(H)
 wts0 = SUWeight(ψ0)
 # 7 = 1 (spin-0) + 2 x 3 (spin-1)
-trscheme_ψ = truncdim(7) & truncerr(1.0e-12)
+trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
 check_interval = 100
 
 # PEPO approach
 dt, nstep = 1.0e-3, 600
 alg = SimpleUpdate(;
-    ψ0, env0 = wts0, H, dt, nstep, trscheme = trscheme_ψ,
+    ψ0, env0 = wts0, H, dt, nstep, trunc = trunc_pepo,
     gate_bothsides = true, check_interval
 )
 ψ, wts, = time_evolve(alg)
@@ -44,7 +44,7 @@ energy = expectation_value(ψ, H, env) / (Nr * Nc)
 
 # PEPS (purified PEPO) approach
 alg = SimpleUpdate(;
-    ψ0, env0 = wts0, H, dt, nstep, trscheme = trscheme_ψ,
+    ψ0, env0 = wts0, H, dt, nstep, trunc = trunc_pepo,
     gate_bothsides = false, check_interval
 )
 ψ, wts, = time_evolve(alg)

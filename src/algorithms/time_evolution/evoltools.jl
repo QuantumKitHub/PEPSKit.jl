@@ -136,10 +136,11 @@ function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor,
             ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
         end
     end
-    X, a = leftorth(A, permA)
-    Y, b = leftorth(B, permB)
-    @assert !isdual(space(a, 1))
-    @assert !isdual(space(b, 1))
+    X, a = left_orth(permute(A, permA))
+    Y, b = left_orth(permute(B, permB))
+    # no longer needed after TensorKit 0.15
+    # @assert !isdual(space(a, 1))
+    # @assert !isdual(space(b, 1))
     X, Y = permute(X, permX), permute(Y, permY)
     b = permute(b, ((3, 2), (1,)))
     return X, a, b, Y
@@ -204,7 +205,7 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 """
 function _apply_gate(
         a::AbstractTensorMap, b::AbstractTensorMap,
-        gate::AbstractTensorMap{T, S, 2, 2}, trscheme::TruncationScheme
+        gate::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
     ) where {T <: Number, S <: ElementarySpace}
     V = space(b, 1)
     need_flip = isdual(V)
@@ -213,8 +214,16 @@ function _apply_gate(
     else
         @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
-    trunc = (trscheme isa FixedSpaceTruncation) ? truncspace(V) : trscheme
-    a, s, b, ϵ = tsvd!(a2b2; trunc, alg = TensorKit.SVD())
+    trunc = if trunc isa FixedSpaceTruncation
+        need_flip ? truncspace(flip(V)) : truncspace(V)
+    else
+        trunc
+    end
+
+    # TODO: replace this with actual truncation error once TensorKit is updated
+    ac, sc, bc = svd_compact!(a2b2; alg = LAPACK_QRIteration())
+    a, s, b, ϵ = _truncate_compact((ac, sc, bc), trunc)
+
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip_svd(a, s, b)
@@ -234,7 +243,7 @@ in which the axes are ordered as
 ```
 """
 function gate_to_mpo3(
-        gate::AbstractTensorMap{T, S, 3, 3}, trunc = truncbelow(MPSKit.Defaults.tol)
+        gate::AbstractTensorMap{T, S, 3, 3}, trunc = trunctol(; atol = MPSKit.Defaults.tol)
     ) where {T <: Number, S <: ElementarySpace}
     Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
     g1 = removeunit(Os[1], 1)

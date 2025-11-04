@@ -24,11 +24,11 @@ function tfising_model(T::Type{<:Number}, lattice::InfiniteSquare; J = 1.0, g = 
 end
 
 function converge_env(ψ, χ::Int)
-    trscheme1 = truncdim(4) & truncerr(1.0e-12)
+    trunc1 = truncrank(4) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(randn, Float64, ψ, ℂ^4)
-    env, = leading_boundary(env0, ψ; alg = :sequential, trscheme = trscheme1, tol = 1.0e-10)
-    trscheme2 = truncdim(χ) & truncerr(1.0e-12)
-    env, = leading_boundary(env, ψ; alg = :sequential, trscheme = trscheme2, tol = 1.0e-10)
+    env, = leading_boundary(env0, ψ; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
+    trunc2 = truncrank(χ) & truncerror(; atol = 1.0e-12)
+    env, = leading_boundary(env, ψ; alg = :sequential, trunc = trunc2, tol = 1.0e-10)
     return env
 end
 
@@ -52,7 +52,7 @@ H = tfising_model(Float64, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
 ψ0 = PEPSKit.infinite_temperature_density_matrix(H)
 wts0 = SUWeight(ψ0)
 
-trscheme_ψ = truncdim(8) & truncerr(1.0e-12)
+trunc_pepo = truncrank(8) & truncerror(; atol = 1.0e-12)
 
 dt, nstep = 1.0e-3, 400
 β = dt * nstep
@@ -62,7 +62,7 @@ dt, nstep = 1.0e-3, 400
 # PEPO approach: results at β, or T = 2.5
 alg = SimpleUpdate(;
     ψ0, env0 = wts0, H, dt, nstep,
-    trscheme = trscheme_ψ, gate_bothsides = true
+    trunc = trunc_pepo, gate_bothsides = true
 )
 ψ, wts, = time_evolve(alg)
 env = converge_env(InfinitePartitionFunction(ψ), 16)
@@ -73,7 +73,7 @@ result_β = measure_mag(ψ, env)
 # continue to get results at 2β, or T = 1.25
 alg = SimpleUpdate(;
     ψ0 = ψ, env0 = wts, H, dt, nstep,
-    trscheme = trscheme_ψ, gate_bothsides = true
+    trunc = trunc_pepo, gate_bothsides = true
 )
 ψ, wts, = time_evolve(alg)
 env = converge_env(InfinitePartitionFunction(ψ), 16)
@@ -84,7 +84,7 @@ result_2β = measure_mag(ψ, env)
 # Purification approach: results at 2β, or T = 1.25
 alg = SimpleUpdate(;
     ψ0, env0 = wts0, H, dt, nstep = 2 * nstep,
-    trscheme = trscheme_ψ, gate_bothsides = false
+    trunc = trunc_pepo, gate_bothsides = false
 )
 ψ, = time_evolve(alg)
 env = converge_env(InfinitePEPS(ψ), 8)

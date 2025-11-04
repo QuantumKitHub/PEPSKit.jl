@@ -50,13 +50,13 @@ on the previously evolved PEPS:
 
 dt, tol, nstep = 1.0e-2, 1.0e-8, 30000
 check_interval = 4000
-trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
+trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
 for J2 in 0.1:0.1:0.5
     H = real( ## convert Hamiltonian `LocalOperator` to real floats
         j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
     )
     alg = SimpleUpdate(;
-        ψ0 = peps, env0 = wts, H, dt, tol, nstep, trscheme = trscheme_peps, check_interval
+        ψ0 = peps, env0 = wts, H, dt, tol, nstep, trunc = trunc_peps, check_interval
     )
     global peps, wts, = time_evolve(alg)
 end
@@ -72,7 +72,7 @@ J2 = 0.5
 H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false))
 for (dt, tol) in zip(dts, tols)
     alg = SimpleUpdate(;
-        ψ0 = peps, env0 = wts, H, dt, tol, nstep, trscheme = trscheme_peps, check_interval
+        ψ0 = peps, env0 = wts, H, dt, tol, nstep, trunc = trunc_peps, check_interval
     )
     global peps, wts, = time_evolve(alg)
 end
@@ -86,10 +86,10 @@ the expectation value, where we first normalize tensors in the PEPS:
 
 normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
 χenv = 32
-trscheme_env = truncerr(1.0e-10) & truncdim(χenv)
+trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
-env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trscheme = trscheme_env);
+env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trunc = trunc_env);
 E = expectation_value(peps, H, env) / (Nr * Nc)
 
 md"""

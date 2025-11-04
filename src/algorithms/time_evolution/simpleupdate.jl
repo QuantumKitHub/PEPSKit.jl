@@ -19,7 +19,7 @@ $(TYPEDFIELDS)
     # number of iteration steps
     nstep::Int
     # Truncation scheme after applying Trotter gates
-    trscheme::TruncationScheme
+    trunc::TruncationStrategy
     # Switch for imaginary or real time
     imaginary_time::Bool = true
     # controls interval to print information
@@ -46,7 +46,7 @@ Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 =#
 function _su_xbond!(
         ψ::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
-        row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
+        row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(ψ)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -59,7 +59,7 @@ function _su_xbond!(
     normalize!(B, Inf)
     # apply gate
     X, a, b, Y = _qr_bond(A, B; gate_ax)
-    a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
+    a, s, b, ϵ = _apply_gate(a, b, gate, trunc)
     A, B = _qr_bond_undo(X, a, b, Y)
     # remove environment weights
     A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = true)
@@ -85,7 +85,7 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
 =#
 function _su_ybond!(
         ψ::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
-        row::Int, col::Int, trscheme::TruncationScheme; gate_ax::Int = 1
+        row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
     Nr, Nc = size(ψ)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -98,7 +98,7 @@ function _su_ybond!(
     normalize!(B, Inf)
     # apply gate
     X, a, b, Y = _qr_bond(rotr90(A), rotr90(B); gate_ax)
-    a, s, b, ϵ = _apply_gate(a, b, gate, trscheme)
+    a, s, b, ϵ = _apply_gate(a, b, gate, trunc)
     A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
     # remove environment weights
     A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = true)
@@ -125,9 +125,9 @@ function su_iter(
     gate_axs = alg.gate_bothsides ? (1:2) : (1:1)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
-        trscheme = truncation_scheme(alg.trscheme, 1, r, c)
+        trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
-            _su_xbond!(ψ2, term, env2, r, c, trscheme; gate_ax)
+            _su_xbond!(ψ2, term, env2, r, c, trunc; gate_ax)
         end
         if alg.bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
@@ -136,9 +136,9 @@ function su_iter(
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
-        trscheme = truncation_scheme(alg.trscheme, 2, r, c)
+        trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs
-            _su_ybond!(ψ2, term, env2, r, c, trscheme; gate_ax)
+            _su_ybond!(ψ2, term, env2, r, c, trunc; gate_ax)
         end
         if alg.bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)

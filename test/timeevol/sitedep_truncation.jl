@@ -24,10 +24,10 @@ end
     peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
     env0 = SUWeight(peps0)
     normalize!.(peps0.A, Inf)
-    # set trscheme to be compatible with bipartite structure
+    # set trunc to be compatible with bipartite structure
     bonddims = stack([[6 4; 4 6], [5 7; 7 5]]; dims = 1)
-    trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trscheme, bipartite = true)
+    trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trunc, bipartite = true)
     peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
@@ -50,7 +50,8 @@ end
     env0 = SUWeight(peps0)
     # Site dependent truncation
     bonddims = rand(2:8, 2, Nr, Nc)
-    trscheme = SiteDependentTruncation(collect(truncdim(d) for d in bonddims))
+    @show bonddims
+    trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
     # 2-site SU
     H = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
     alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trscheme)

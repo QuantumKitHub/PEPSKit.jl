@@ -28,7 +28,7 @@ Dbond, χenv = 2, 16
         env_fixed, signs = gauge_fix(env, env_conv)
         svd_alg_fixed = _fix_svd_algorithm(ctm_alg.projector_alg.svd_alg, signs, info)
         alg_fixed = @set ctm_alg.projector_alg.svd_alg = svd_alg_fixed
-        alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
+        alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
 
         _, env_vjp = pullback(state, env_fixed) do A, x
             e, = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)

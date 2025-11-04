@@ -43,7 +43,8 @@ Vspaces = [
         @test all(lorths) && all(rorths)
         # truncation on one bond
         Ms3 = deepcopy(Ms1)
-        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(Vns), N - 1), revs)
+        tspace = isdual(Vns) ? flip(Vns) : Vns
+        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(tspace), N - 1), revs)
         @test all((i == n) || (ϵ == 0) for (i, ϵ) in enumerate(ϵs))
         normalize!.(Ms3, Inf)
         ϵ = ϵs[n]
@@ -105,7 +106,7 @@ end
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
-    trscheme_env = truncerr(1.0e-12) & truncdim(16)
+    trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
     H = real(
@@ -118,9 +119,9 @@ end
     tols = [1.0e-8, 1.0e-8, 1.0e-8]
     nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trscheme = truncerr(1.0e-10) & truncdim(n == 1 ? 4 : 2)
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
         alg = SimpleUpdate(;
-            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trscheme,
+            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trunc,
             bipartite = true, check_interval = 1000
         )
         peps, wts, = time_evolve(alg)
@@ -135,10 +136,10 @@ end
     # continue with 3-site simple update; energy should not change much
     dts = [1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8]
-    trscheme = truncerr(1.0e-10) & truncdim(2)
+    trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(;
-            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trscheme,
+            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trunc,
             check_interval = 1000, force_3site = true
         )
         peps, wts, = time_evolve(alg)
