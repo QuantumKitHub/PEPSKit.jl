@@ -463,7 +463,7 @@ function _su3site_se!(
         ψ::InfiniteState, gs::Vector{T}, env::SUWeight,
         row::Int, col::Int, truncs::Vector{E};
         gate_bothsides::Bool = true
-    ) where {T <: AbstractTensorMap, E <: TruncationScheme}
+    ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(ψ)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)

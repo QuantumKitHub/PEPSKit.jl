@@ -54,13 +54,13 @@ end
     trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
     # 2-site SU
     H = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trscheme)
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trunc)
     peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # 3-site SU
     H = real(j1_j2_model(InfiniteSquare(Nr, Nc); J1 = 1.0, J2 = 0.5, sublattice = false))
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trscheme)
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trunc)
     peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
