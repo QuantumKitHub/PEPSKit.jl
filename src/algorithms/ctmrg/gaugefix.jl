@@ -38,7 +38,7 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
 
         # Find right fixed points of mixed transfer matrices
         ρinit = randn(
-            scalartype(T), MPSKit._lastspace(Tsfinal[end])' ← MPSKit._lastspace(M[end])'
+            scalartype(T), space(Tsfinal[end], numind(Tsfinal[end]))' ← space(M[end], numind(M[end]))'
         )
         ρprev = transfermatrix_fixedpoint(Tsprev, M, ρinit)
         ρfinal = transfermatrix_fixedpoint(Tsfinal, M, ρinit)

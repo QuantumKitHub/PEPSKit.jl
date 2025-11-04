@@ -255,10 +255,10 @@ function edge_transfer_spectrum(
     ) where {E <: CTMRGEdgeTensor}
     init = randn(
         scalartype(E),
-        MPSKit._lastspace(first(bot))' ← ℂ[typeof(sector)](sector => 1)' ⊗ MPSKit._firstspace(first(top)),
+        space(first(bot), numind(first(bot)))' ← ℂ[typeof(sector)](sector => 1)' ⊗ space(first(top), 1),
     )
 
-    transferspace = fuse(MPSKit._firstspace(first(top)) * MPSKit._lastspace(first(bot)))
+    transferspace = fuse(space(first(top), 1) * space(first(bot), numind(first(bot)))')
     num_vals = min(dim(transferspace, sector), num_vals) # we can ask at most this many values
     eigenvals, eigenvecs, convhist = eigsolve(
         flip(edge_transfermatrix(top, bot)), init, num_vals, :LM; tol = tol
