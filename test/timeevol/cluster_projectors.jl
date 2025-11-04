@@ -109,7 +109,7 @@ end
     trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
-    H = real(
+    ham = real(
         hubbard_model(
             ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 8.0, mu = 0.0
         ),
@@ -121,17 +121,15 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
         alg = SimpleUpdate(;
-            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trunc,
+            ψ0 = peps, env0 = wts, H = ham, dt, nstep, tol, trunc,
             bipartite = true, check_interval = 1000
         )
         peps, wts, = time_evolve(alg)
     end
     normalize!.(peps.A, Inf)
-    env, = leading_boundary(
-        CTMRGEnv(wts, peps), peps;
-        tol = ctmrg_tol, trunc = trunc_env
-    )
-    e_site = cost_function(peps, env, H) / (Nr * Nc)
+    env = CTMRGEnv(wts, peps)
+    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
+    e_site = cost_function(peps, env, ham) / (Nr * Nc)
     @info "2-site simple update energy = $e_site"
     # continue with 3-site simple update; energy should not change much
     dts = [1.0e-2, 5.0e-3]
@@ -139,14 +137,14 @@ end
     trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         alg = SimpleUpdate(;
-            ψ0 = peps, env0 = wts, H, dt, nstep, tol, trunc,
+            ψ0 = peps, env0 = wts, H = ham, dt, nstep, tol, trunc,
             check_interval = 1000, force_3site = true
         )
         peps, wts, = time_evolve(alg)
     end
     normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
-    e_site2 = cost_function(peps, env, H) / (Nr * Nc)
+    e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
     @info "3-site simple update energy = $e_site2"
     @test e_site ≈ e_site2 atol = 5.0e-4
 end

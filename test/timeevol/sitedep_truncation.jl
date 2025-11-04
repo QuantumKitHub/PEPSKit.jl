@@ -19,7 +19,7 @@ end
 
 @testset "Simple update: bipartite 2-site" begin
     Nr, Nc = 2, 2
-    H = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
+    ham = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
     Random.seed!(100)
     peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
     env0 = SUWeight(peps0)
@@ -27,7 +27,7 @@ end
     # set trunc to be compatible with bipartite structure
     bonddims = stack([[6 4; 4 6], [5 7; 7 5]]; dims = 1)
     trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trunc, bipartite = true)
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H = ham, dt = 1.0e-2, nstep = 4, trunc, bipartite = true)
     peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
@@ -44,6 +44,7 @@ end
 
 @testset "Simple update: generic 2-site and 3-site" begin
     Nr, Nc = 3, 4
+    ham = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
     Random.seed!(100)
     peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
     normalize!.(peps0.A, Inf)
@@ -53,14 +54,12 @@ end
     @show bonddims
     trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
     # 2-site SU
-    H = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trunc)
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H = ham, dt = 1.0e-2, nstep = 4, trunc)
     peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # 3-site SU
-    H = real(j1_j2_model(InfiniteSquare(Nr, Nc); J1 = 1.0, J2 = 0.5, sublattice = false))
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H, dt = 1.0e-2, nstep = 4, trunc)
+    alg = SimpleUpdate(; ψ0 = peps0, env0, H = ham, dt = 1.0e-2, nstep = 4, trunc, force_3site = true)
     peps, env, = time_evolve(alg)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims

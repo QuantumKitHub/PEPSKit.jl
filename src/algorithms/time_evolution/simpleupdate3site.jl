@@ -447,28 +447,28 @@ Obtain the 3-site cluster in the "southeast corner" of a square plaquette.
         c      c+1
 ```
 =#
-function get_3site_se(ψ::InfiniteState, env::SUWeight, row::Int, col::Int)
-    Nr, Nc = size(ψ)
+function get_3site_se(state::InfiniteState, env::SUWeight, row::Int, col::Int)
+    Nr, Nc = size(state)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     coords_se = [(row, col), (row, cp1), (rm1, cp1)]
-    perms_se = isa(ψ, InfinitePEPS) ? perms_se_peps : perms_se_pepo
+    perms_se = isa(state, InfinitePEPS) ? perms_se_peps : perms_se_pepo
     Ms = map(zip(coords_se, perms_se, openaxs_se)) do (coord, perm, openaxs)
-        M = absorb_weight(ψ.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs)
+        M = absorb_weight(state.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs)
         return permute(M, perm)
     end
     return Ms
 end
 
 function _su3site_se!(
-        ψ::InfiniteState, gs::Vector{T}, env::SUWeight,
+        state::InfiniteState, gs::Vector{T}, env::SUWeight,
         row::Int, col::Int, truncs::Vector{E};
         gate_bothsides::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
-    Nr, Nc = size(ψ)
+    Nr, Nc = size(state)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster and arrow direction within it
-    Ms = get_3site_se(ψ, env, row, col)
+    Ms = get_3site_se(state, env, row, col)
     revs = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
@@ -481,55 +481,55 @@ function _su3site_se!(
     ϵs = nothing
     for gate_ax in gate_axs
         _apply_gatempo!(Ms, gs; gate_ax)
-        if isa(ψ, InfinitePEPO)
+        if isa(state, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
         wts, ϵs, = _cluster_truncate!(Ms, truncs, revs)
-        if isa(ψ, InfinitePEPO)
+        if isa(state, InfinitePEPO)
             Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
         end
         for (wt, wt_idx) in zip(wts, wt_idxs)
             env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
         end
     end
-    invperms_se = isa(ψ, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
+    invperms_se = isa(state, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
     for (M, coord, invperm, openaxs, Vphy) in zip(Ms, coords, invperms_se, openaxs_se, Vphys)
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
         M = absorb_weight(M, env, coord[1], coord[2], openaxs; inv = true)
-        ψ.A[CartesianIndex(coord)] = normalize(M, Inf)
+        state.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
     return ϵs
 end
 
 function su_iter(
-        ψ::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
+        state::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
     ) where {G <: AbstractMatrix}
-    if ψ isa InfinitePEPO
-        @assert size(ψ, 3) == 1
+    if state isa InfinitePEPO
+        @assert size(state, 3) == 1
     end
-    Nr, Nc = size(ψ)[1:2]
+    Nr, Nc = size(state)[1:2]
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    ψ2, env2 = deepcopy(ψ), deepcopy(env)
+    state2, env2 = deepcopy(state), deepcopy(env)
     trunc = alg.trunc
     for i in 1:4
-        Nr, Nc = size(ψ2)[1:2]
+        Nr, Nc = size(state2)[1:2]
         for r in 1:Nr, c in 1:Nc
             gs = gatempos[i][r, c]
             truncs = [
                 truncation_strategy(trunc, 1, r, c)
                 truncation_strategy(trunc, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(ψ2, gs, env2, r, c, truncs; alg.gate_bothsides)
+            _su3site_se!(state2, gs, env2, r, c, truncs; alg.gate_bothsides)
         end
-        ψ2, env2 = rotl90(ψ2), rotl90(env2)
+        state2, env2 = rotl90(state2), rotl90(env2)
         trunc = rotl90(trunc)
     end
     wtdiff = compare_weights(env2, env)
-    return ψ2, env2, (; wtdiff)
+    return state2, env2, (; wtdiff)
 end

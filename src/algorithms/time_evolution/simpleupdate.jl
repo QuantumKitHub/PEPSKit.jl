@@ -45,14 +45,14 @@ Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
 ```
 =#
 function _su_xbond!(
-        ψ::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
-    Nr, Nc = size(ψ)[1:2]
+    Nr, Nc = size(state)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     cp1 = _next(col, Nc)
     # absorb environment weights
-    A, B = ψ.A[row, col], ψ.A[row, cp1]
+    A, B = state.A[row, col], state.A[row, cp1]
     A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = false)
     B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = false)
     normalize!(A, Inf)
@@ -68,7 +68,7 @@ function _su_xbond!(
     normalize!(B, Inf)
     normalize!(s, Inf)
     # update tensor dict and weight on current bond
-    ψ.A[row, col], ψ.A[row, cp1] = A, B
+    state.A[row, col], state.A[row, cp1] = A, B
     env.data[1, row, col] = s
     return ϵ
 end
@@ -84,14 +84,14 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
 ```
 =#
 function _su_ybond!(
-        ψ::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
-    Nr, Nc = size(ψ)[1:2]
+    Nr, Nc = size(state)[1:2]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1 = _prev(row, Nr)
     # absorb environment weights
-    A, B = ψ.A[row, col], ψ.A[rm1, col]
+    A, B = state.A[row, col], state.A[rm1, col]
     A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = false)
     B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = false)
     normalize!(A, Inf)
@@ -107,48 +107,48 @@ function _su_ybond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    ψ.A[row, col], ψ.A[rm1, col] = A, B
+    state.A[row, col], state.A[rm1, col] = A, B
     env.data[2, row, col] = s
     return ϵ
 end
 
 function su_iter(
-        ψ::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight
+        state::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight
     )
-    @assert size(gate.lattice) == size(ψ)[1:2]
-    Nr, Nc = size(ψ)[1:2]
+    @assert size(gate.lattice) == size(state)[1:2]
+    Nr, Nc = size(state)[1:2]
     alg.bipartite && (@assert Nr == Nc == 2)
     (Nr >= 2 && Nc >= 2) || throw(
         ArgumentError("`state` unit cell size for simple update should be no smaller than (2, 2)."),
     )
-    ψ2, env2 = deepcopy(ψ), deepcopy(env)
+    state2, env2 = deepcopy(state), deepcopy(env)
     gate_axs = alg.gate_bothsides ? (1:2) : (1:1)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
-            _su_xbond!(ψ2, term, env2, r, c, trunc; gate_ax)
+            _su_xbond!(state2, term, env2, r, c, trunc; gate_ax)
         end
         if alg.bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
-            ψ2.A[rp1, cp1] = deepcopy(ψ2.A[r, c])
-            ψ2.A[rp1, c] = deepcopy(ψ2.A[r, cp1])
+            state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
+            state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs
-            _su_ybond!(ψ2, term, env2, r, c, trunc; gate_ax)
+            _su_ybond!(state2, term, env2, r, c, trunc; gate_ax)
         end
         if alg.bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-            ψ2.A[rm1, cm1] = deepcopy(ψ2.A[r, c])
-            ψ2.A[r, cm1] = deepcopy(ψ2.A[rm1, c])
+            state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
+            state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
             env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
         end
     end
     wtdiff = compare_weights(env2, env)
-    return ψ2, env2, (; wtdiff)
+    return state2, env2, (; wtdiff)
 end
 
 # Initial iteration

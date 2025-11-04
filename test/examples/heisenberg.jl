@@ -59,10 +59,10 @@ end
     normalize!.(peps.A, Inf)
 
     # Heisenberg model Hamiltonian
-    H = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx = 1.0, Jy = 1.0, Jz = 1.0)
+    ham = heisenberg_XYZ(InfiniteSquare(N1, N2); Jx = 1.0, Jy = 1.0, Jz = 1.0)
     # assert imaginary part is zero
-    @assert length(imag(H).terms) == 0
-    H = real(H)
+    @assert length(imag(ham).terms) == 0
+    ham = real(ham)
 
     # simple update
     dts = [1.0e-2, 1.0e-3, 1.0e-3, 1.0e-4]
@@ -71,21 +71,23 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond2)
-        alg = SimpleUpdate(; ψ0 = peps, env0 = wts, H, dt, nstep, trunc, bipartite = false)
+        alg = SimpleUpdate(; ψ0 = peps, env0 = wts, H = ham, dt, nstep, trunc, bipartite = false)
         peps, wts, = time_evolve(alg)
     end
 
     # measure physical quantities with CTMRG
     normalize!.(peps.A, Inf)
     env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol = ctmrg_tol, maxiter = ctmrg_maxiter)
-    e_site = cost_function(peps, env, H) / (N1 * N2)
+    e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol = 1.0e-3)
 
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
-        H, peps, env;
+        ham,
+        peps,
+        env;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
         gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),

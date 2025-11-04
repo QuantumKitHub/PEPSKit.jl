@@ -20,12 +20,12 @@ function converge_env(state, χ::Int)
 end
 
 Nr, Nc = 2, 2
-H = j1_j2_model(
+ham = j1_j2_model(
     Float64, SU2Irrep, InfiniteSquare(Nr, Nc);
     J1 = 1.0, J2 = 0.5, sublattice = false
 )
-ψ0 = PEPSKit.infinite_temperature_density_matrix(H)
-wts0 = SUWeight(ψ0)
+pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
+wts0 = SUWeight(pepo0)
 # 7 = 1 (spin-0) + 2 x 3 (spin-1)
 trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
 check_interval = 100
@@ -33,27 +33,27 @@ check_interval = 100
 # PEPO approach
 dt, nstep = 1.0e-3, 600
 alg = SimpleUpdate(;
-    ψ0, env0 = wts0, H, dt, nstep, trunc = trunc_pepo,
+    ψ0 = pepo0, env0 = wts0, H = ham, dt, nstep, trunc = trunc_pepo,
     gate_bothsides = true, check_interval
 )
-ψ, wts, = time_evolve(alg)
-env = converge_env(InfinitePartitionFunction(ψ), 16)
-energy = expectation_value(ψ, H, env) / (Nr * Nc)
+pepo, wts, = time_evolve(alg)
+env = converge_env(InfinitePartitionFunction(pepo), 16)
+energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 @info "β = $(dt * nstep): tr(ρH) = $(energy)"
 @test energy ≈ bm[2] atol = 5.0e-3
 
 # PEPS (purified PEPO) approach
 alg = SimpleUpdate(;
-    ψ0, env0 = wts0, H, dt, nstep, trunc = trunc_pepo,
+    ψ0 = pepo0, env0 = wts0, H = ham, dt, nstep, trunc = trunc_pepo,
     gate_bothsides = false, check_interval
 )
-ψ, wts, = time_evolve(alg)
-env = converge_env(InfinitePartitionFunction(ψ), 16)
-energy = expectation_value(ψ, H, env) / (Nr * Nc)
+pepo, wts, = time_evolve(alg)
+env = converge_env(InfinitePartitionFunction(pepo), 16)
+energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 @info "β = $(dt * nstep) / 2: tr(ρH) = $(energy)"
 @test energy ≈ bm[1] atol = 5.0e-3
 
-env = converge_env(InfinitePEPS(ψ), 16)
-energy = expectation_value(ψ, H, ψ, env) / (Nr * Nc)
-@info "β = $(dt * nstep): ⟨ρ|H|ρ⟩ = $(energy)"
+env = converge_env(InfinitePEPS(pepo), 16)
+energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
+@info "β = $(dt * nstep): ⟨ρ|ham|ρ⟩ = $(energy)"
 @test energy ≈ bm[2] atol = 5.0e-3
