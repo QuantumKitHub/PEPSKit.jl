@@ -26,9 +26,8 @@ we successively calculate
 Here `-*-` on the bond means a twist should be applied if
 the codomain of R[n], Qb[n+1], L[n+1] is a dual space. 
 
-NOTE: 
-In TensorKit, the `isdual` of the domain and codomain 
-of `R[n]` and `L[n]` for a given `n` are the same. 
+Here we make the `isdual` of the domain and codomain 
+of `R[n]` and `L[n]` for a given `n` the same. 
 
 For each bond (n = 1, ..., N - 1), we perform SVD
 ```
@@ -137,18 +136,22 @@ function qr_through(
         R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
-    q, r = leftorth!(A; alg = QRpos())
-    @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
+    _, r = left_orth!(A)
+    if isdual(domain(r, 1)) != isdual(codomain(r, 1))
+        r = flip(r, 1)
+    end
     normalize && normalize!(r, Inf)
-    return q, r
+    return r
 end
 function qr_through(
         ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    q, r = leftorth(M; alg = QRpos())
-    @assert isdual(domain(r, 1)) == isdual(codomain(r, 1))
+    _, r = left_orth(M)
+    if isdual(domain(r, 1)) != isdual(codomain(r, 1))
+        r = flip(r, 1)
+    end
     normalize && normalize!(r, Inf)
-    return q, r
+    return r
 end
 
 """
@@ -163,18 +166,24 @@ function lq_through(
         M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @plansor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
-    l, q = rightorth!(permute(A, ((1,), (2, 3, 4, 5))); alg = LQpos())
-    @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
+    A = permute(A, ((1,), (2, 3, 4, 5)))
+    l, _ = right_orth!(A)
+    if isdual(domain(l, 1)) != isdual(codomain(l, 1))
+        l = flip(l, 2)
+    end
     normalize && normalize!(l, Inf)
-    return l, q
+    return l
 end
 function lq_through(
         M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    l, q = rightorth(M, ((1,), (2, 3, 4, 5)); alg = LQpos())
-    @assert isdual(domain(l, 1)) == isdual(codomain(l, 1))
+    A = permute(M, ((1,), (2, 3, 4, 5)))
+    l, _ = right_orth!(A)
+    if isdual(domain(l, 1)) != isdual(codomain(l, 1))
+        l = flip(l, 2)
+    end
     normalize && normalize!(l, Inf)
-    return l, q
+    return l
 end
 
 """
@@ -184,16 +193,16 @@ function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpa
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     # get the first R and the last L
-    R_first = qr_through(nothing, Ms[1]; normalize = true)[2]
-    L_last = lq_through(Ms[N], nothing; normalize = true)[1]
+    R_first = qr_through(nothing, Ms[1]; normalize = true)
+    L_last = lq_through(Ms[N], nothing; normalize = true)
     Rs = Vector{typeof(R_first)}(undef, N - 1)
     Ls = Vector{typeof(L_last)}(undef, N - 1)
     Rs[1], Ls[end] = R_first, L_last
     # get remaining R, L matrices
     for n in 2:(N - 1)
         m = N - n + 1
-        _, Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true)
-        Ls[m - 1], _ = lq_through(Ms[m], Ls[m]; normalize = true)
+        Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true)
+        Ls[m - 1] = lq_through(Ms[m], Ls[m]; normalize = true)
     end
     return Rs, Ls
 end
@@ -214,11 +223,15 @@ The arrows between `Pa`, `s`, `Pb` are
 """
 function _proj_from_RL(
         r::MPSBondTensor, l::MPSBondTensor;
-        trunc::TruncationScheme = notrunc(), rev::Bool = false,
+        trunc::TruncationStrategy = notrunc(), rev::Bool = false,
     )
     rl = r * l
     @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
-    u, s, vh, ϵ = tsvd!(rl; trunc)
+
+    # TODO: replace this with actual truncation error once TensorKit is updated
+    uc, sc, vhc = svd_compact!(rl)
+    u, s, vh, ϵ = _truncate_compact((uc, sc, vhc), trunc)
+
     sinv = PEPSKit.sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     if rev
@@ -232,15 +245,16 @@ Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
 find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
-        Ms, Rs, Ls, trschemes::Vector{E}, revs::Vector{Bool}
-    ) where {E <: TruncationScheme}
+        Ms, Rs, Ls, truncs::Vector{E}, revs::Vector{Bool}
+    ) where {E <: TruncationStrategy}
     N = length(Ms)
-    @assert length(trschemes) == N - 1
+    @assert length(truncs) == N - 1
     projs_errs = map(1:(N - 1)) do i
-        trunc = if isa(trschemes[i], FixedSpaceTruncation)
-            truncspace(space(Ms[i + 1], 1))
+        trunc = if isa(truncs[i], FixedSpaceTruncation)
+            tspace = space(Ms[i + 1], 1)
+            isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
         else
-            trschemes[i]
+            truncs[i]
         end
         return _proj_from_RL(Rs[i], Ls[i]; trunc, rev = revs[i])
     end
@@ -256,10 +270,10 @@ end
 Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
-        Ms::Vector{T}, trschemes::Vector{E}, revs::Vector{Bool}
-    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationScheme}
+        Ms::Vector{T}, truncs::Vector{E}, revs::Vector{Bool}
+    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
     Rs, Ls = _get_allRLs(Ms)
-    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, trschemes, revs)
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, truncs, revs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
@@ -447,9 +461,9 @@ end
 
 function _su3site_se!(
         state::InfiniteState, gs::Vector{T}, env::SUWeight,
-        row::Int, col::Int, trschemes::Vector{E};
+        row::Int, col::Int, truncs::Vector{E};
         gate_bothsides::Bool = true
-    ) where {T <: AbstractTensorMap, E <: TruncationScheme}
+    ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
@@ -470,7 +484,7 @@ function _su3site_se!(
         if isa(state, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
-        wts, ϵs, = _cluster_truncate!(Ms, trschemes, revs)
+        wts, ϵs, = _cluster_truncate!(Ms, truncs, revs)
         if isa(state, InfinitePEPO)
             Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
         end
@@ -512,19 +526,19 @@ function su3site_iter(
         ),
     )
     state2, env2 = deepcopy(state), deepcopy(env)
-    trscheme = alg.trscheme
+    trunc = alg.trunc
     for i in 1:4
         Nr, Nc = size(state2)[1:2]
         for r in 1:Nr, c in 1:Nc
             gs = gatempos[i][r, c]
-            trschemes = [
-                truncation_scheme(trscheme, 1, r, c)
-                truncation_scheme(trscheme, 2, r, _next(c, Nc))
+            truncs = [
+                truncation_strategy(trunc, 1, r, c)
+                truncation_strategy(trunc, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(state2, gs, env2, r, c, trschemes; gate_bothsides)
+            _su3site_se!(state2, gs, env2, r, c, truncs; gate_bothsides)
         end
         state2, env2 = rotl90(state2), rotl90(env2)
-        trscheme = rotl90(trscheme)
+        trunc = rotl90(trunc)
     end
     return state2, env2
 end
