@@ -98,7 +98,7 @@ const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
 const svd_rrule_alg = :full # ∈ {:full, :gmres, :bicgstab, :arnoldi}
-const svd_rrule_broadening = 1.0e-13
+const svd_rrule_broadening = 1.0e-10
 const krylovdim_factor = 1.4
 
 # Projectors
