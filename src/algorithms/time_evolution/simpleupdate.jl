@@ -233,7 +233,13 @@ function MPSKit.timestep(
     Pspaces = physicalspace(it.state.ψ)
     _timeevol_sanity_check(ψ, Pspaces, it.tol, it.alg)
     state = SUState(iter, t, NaN, ψ, env)
-    return first(iterate(it, state))
+    result = iterate(it, state)
+    if result === nothing
+        @warn "TimeEvolver `it` has already reached the end."
+        return ψ, env, (; t, ϵ = NaN)
+    else
+        return first(result)
+    end
 end
 
 # evolve till the end
