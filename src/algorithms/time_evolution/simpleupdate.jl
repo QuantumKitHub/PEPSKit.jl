@@ -258,8 +258,8 @@ end
 """
     time_evolve(it::TimeEvolver{<:SimpleUpdate})
 
-Perform time evolution until the set number of iterations or convergence
-directly using the specified TimeEvolver iterator.
+Perform time evolution until convergence or the set number of iterations
+using the specified TimeEvolver iterator `it` directly.
 """
 function MPSKit.time_evolve(it::TimeEvolver{<:SimpleUpdate})
     time_start = time()
