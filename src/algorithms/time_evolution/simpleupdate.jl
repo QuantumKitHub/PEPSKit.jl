@@ -41,7 +41,7 @@ end
     TimeEvolver(
         ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int, 
         alg::SimpleUpdate, env₀::SUWeight; 
-        tol::Float64 = 0.0, t₀::Float64 = 0.0
+        tol::Float64 = 0.0, t₀::Float64 = 0.0, verbosity = 1
     )
 
 Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
@@ -54,7 +54,7 @@ starting from the initial state `ψ₀` and SUWeight environment `env₀`.
 function TimeEvolver(
         ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
         alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Float64 = 0.0
+        tol::Float64 = 0.0, t₀::Float64 = 0.0, verbosity::Int = 1
     )
     # sanity checks
     _timeevol_sanity_check(ψ₀, physicalspace(H), tol, alg)
@@ -76,7 +76,7 @@ function TimeEvolver(
         get_expham(H, dt′)
     end
     state = SUState(0, t₀, NaN, ψ₀, env₀)
-    return TimeEvolver(alg, dt, nstep, gate, tol, state)
+    return TimeEvolver(alg, dt, nstep, gate, tol, verbosity, state)
 end
 
 #=
@@ -190,41 +190,43 @@ function su_iter(
 end
 
 function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
-    alg = it.alg
-    iter, t, diff = state.iter, state.t, state.diff
-    check_convergence = (it.tol > 0)
-    if check_convergence
-        if diff < it.tol
-            @info "SU: bond weights have converged."
-            return nothing
-        elseif iter == it.nstep
-            @warn "SU: bond weights have not converged."
-            return nothing
+    return LoggingExtras.withlevel(; it.verbosity) do
+        alg = it.alg
+        iter, t, diff = state.iter, state.t, state.diff
+        check_convergence = (it.tol > 0)
+        if check_convergence
+            if diff < it.tol
+                @infov 1 "SU: bond weights have converged."
+                return nothing
+            elseif iter == it.nstep
+                @warn "SU: bond weights have not converged."
+                return nothing
+            end
+        else
+            (iter == it.nstep) && return nothing
         end
-    else
-        (iter == it.nstep) && return nothing
+        # perform one iteration and record time
+        time0 = time()
+        ψ, env, ϵ = su_iter(state.ψ, it.gate, it.alg, state.env)
+        diff = compare_weights(env, state.env)
+        elapsed_time = time() - time0
+        # update internal state
+        iter += 1
+        t += it.dt
+        it.state = SUState(iter, t, diff, ψ, env)
+        # output information
+        converged = check_convergence ? (diff < it.tol) : false
+        showinfo = (iter % alg.check_interval == 0) || (iter == 1) || (iter == it.nstep) || converged
+        if showinfo
+            @infov 1 "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
+            @infov 1 @sprintf(
+                "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
+                iter, it.dt, diff, elapsed_time
+            )
+        end
+        info = (; t, ϵ)
+        return (ψ, env, info), it.state
     end
-    # perform one iteration and record time
-    time0 = time()
-    ψ, env, ϵ = su_iter(state.ψ, it.gate, it.alg, state.env)
-    diff = compare_weights(env, state.env)
-    elapsed_time = time() - time0
-    # update internal state
-    iter += 1
-    t += it.dt
-    it.state = SUState(iter, t, diff, ψ, env)
-    # output information
-    converged = check_convergence ? (diff < it.tol) : false
-    showinfo = (iter % alg.check_interval == 0) || (iter == 1) || (iter == it.nstep) || converged
-    if showinfo
-        @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-        @info @sprintf(
-            "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
-            iter, it.dt, diff, elapsed_time
-        )
-    end
-    info = (; t, ϵ)
-    return (ψ, env, info), it.state
 end
 
 """
@@ -276,7 +278,7 @@ end
     time_evolve(
         ψ₀::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
         dt::Float64, nstep::Int, alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Float64 = 0.0
+        tol::Float64 = 0.0, t₀::Float64 = 0.0, verbosity::Int = 1
     ) -> (ψ, env, info)
 
 Perform time evolution on the initial state `ψ₀` and initial environment `env₀`
@@ -292,8 +294,8 @@ with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for
 function MPSKit.time_evolve(
         ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
         alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Float64 = 0.0
+        tol::Float64 = 0.0, t₀::Float64 = 0.0, verbosity::Int = 1
     )
-    it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; tol, t₀)
+    it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; tol, t₀, verbosity)
     return time_evolve(it)
 end

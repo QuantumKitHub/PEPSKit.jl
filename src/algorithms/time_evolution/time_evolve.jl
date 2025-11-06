@@ -25,6 +25,8 @@ mutable struct TimeEvolver{TE <: TimeEvolution, G, S}
     gate::G
     # Convergence tolerance (change of weight or energy from last iteration)
     tol::Float64
+    # verbosity level for showing information during evolution
+    verbosity::Int
     # PEPS/PEPO (and environment)
     state::S
 end
