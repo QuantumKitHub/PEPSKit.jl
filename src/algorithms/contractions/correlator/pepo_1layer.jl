@@ -37,7 +37,7 @@ function end_correlator_numerator(
     E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
     C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
     C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
-    t = twistdual(ρ[mod1(r, end), mod1(c, end)], 1:2) # TODO: is this still needed?
+    t = twistdual(ρ[mod1(r, end), mod1(c, end)], 1:2)
     return @autoopt @tensor V[χSW DW dstring; χNW] *
         E_south[χSSE DS; χSW] * E_east[χNEE DE; χSEE] * E_north[χNW DN; χNNE] *
         C_northeast[χNNE; χNEE] * C_southeast[χSEE; χSSE] *
