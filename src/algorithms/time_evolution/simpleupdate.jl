@@ -55,7 +55,7 @@ function TimeEvolver(
         tol::Float64 = 0.0, t₀::Float64 = 0.0
     )
     # sanity checks
-    _timeevol_sanity_check(ψ₀, H, tol, alg)
+    _timeevol_sanity_check(ψ₀, physicalspace(H), tol, alg)
     # create Trotter gates
     nnonly = is_nearest_neighbour(H)
     use_3site = alg.force_3site || !nnonly
@@ -74,7 +74,7 @@ function TimeEvolver(
         get_expham(H, dt′)
     end
     state = SUState(0, t₀, NaN, ψ₀, env₀)
-    return TimeEvolver(alg, dt, nstep, H, gate, tol, state)
+    return TimeEvolver(alg, dt, nstep, gate, tol, state)
 end
 
 #=
@@ -163,7 +163,7 @@ function su_iter(
         trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
             ϵ′ = _su_xbond!(state2, term, env2, r, c, trunc; gate_ax)
-            ϵ = maximum(ϵ, ϵ′)
+            ϵ = max(ϵ, ϵ′)
         end
         if alg.bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
@@ -175,7 +175,7 @@ function su_iter(
         trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs
             ϵ′ = _su_ybond!(state2, term, env2, r, c, trunc; gate_ax)
-            ϵ = maximum(ϵ, ϵ′)
+            ϵ = max(ϵ, ϵ′)
         end
         if alg.bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
@@ -230,7 +230,8 @@ function MPSKit.timestep(
         it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
         iter::Int = it.state.iter, t::Float64 = it.state.t
     )
-    _timeevol_sanity_check(ψ, it.H, it.tol, it.alg)
+    Pspaces = physicalspace(it.state.ψ)
+    _timeevol_sanity_check(ψ, Pspaces, it.tol, it.alg)
     state = SUState(iter, t, NaN, ψ, env)
     return first(iterate(it, state))
 end
