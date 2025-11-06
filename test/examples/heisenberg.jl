@@ -71,8 +71,8 @@ end
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond2)
-        alg = SimpleUpdate(; ψ0 = peps, env0 = wts, H = ham, dt, nstep, trunc, bipartite = false)
-        peps, wts, = time_evolve(alg)
+        alg = SimpleUpdate(; trunc, bipartite = false)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol)
     end
 
     # measure physical quantities with CTMRG

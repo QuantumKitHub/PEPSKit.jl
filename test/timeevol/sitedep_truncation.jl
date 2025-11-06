@@ -27,8 +27,8 @@ end
     # set trunc to be compatible with bipartite structure
     bonddims = stack([[6 4; 4 6], [5 7; 7 5]]; dims = 1)
     trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H = ham, dt = 1.0e-2, nstep = 4, trunc, bipartite = true)
-    peps, env, = time_evolve(alg)
+    alg = SimpleUpdate(; trunc, bipartite = true)
+    peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # check bipartite structure is preserved
@@ -54,13 +54,13 @@ end
     @show bonddims
     trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
     # 2-site SU
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H = ham, dt = 1.0e-2, nstep = 4, trunc)
-    peps, env, = time_evolve(alg)
+    alg = SimpleUpdate(; trunc)
+    peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # 3-site SU
-    alg = SimpleUpdate(; ψ0 = peps0, env0, H = ham, dt = 1.0e-2, nstep = 4, trunc, force_3site = true)
-    peps, env, = time_evolve(alg)
+    alg = SimpleUpdate(; trunc, force_3site = true)
+    peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
 end
