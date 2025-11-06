@@ -1,5 +1,19 @@
+"""
+$(TYPEDEF)
+
+Abstract super type for time evolution algorithms of InfinitePEPS or InfinitePEPO.
+"""
 abstract type TimeEvolution end
 
+"""
+    mutable struct TimeEvolver{TE <: TimeEvolution, G, S}
+
+Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
 mutable struct TimeEvolver{TE <: TimeEvolution, G, S}
     # Time evolution algorithm
     alg::TE

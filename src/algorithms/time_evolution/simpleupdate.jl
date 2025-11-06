@@ -46,8 +46,10 @@ end
 
 Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
 starting from the initial state `ψ₀` and SUWeight environment `env₀`.
-The initial time is specified by `t₀`.
-Convergence check is enabled by setting `tol > 0`; otherwise it is disabled.
+
+- The initial (real or imaginary) time is specified by `t₀`.
+- Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
+    For other usages it should not be changed.
 """
 function TimeEvolver(
         ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
@@ -225,7 +227,18 @@ function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
     return (ψ, env, info), it.state
 end
 
-# evolve one step from given state
+"""
+    timestep(
+        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
+        iter::Int = it.state.iter, t::Float64 = it.state.t
+    ) -> (ψ, env, info)
+
+Given the TimeEvolver iterator `it`, perform one step of time evolution
+on the input state `ψ` and its environment `env`.
+
+- Using `iter` and `t` to reset the current iteration number and evolved time
+    respectively of the TimeEvolver `it`.
+"""
 function MPSKit.timestep(
         it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
         iter::Int = it.state.iter, t::Float64 = it.state.t
@@ -242,7 +255,12 @@ function MPSKit.timestep(
     end
 end
 
-# evolve till the end
+"""
+    time_evolve(it::TimeEvolver{<:SimpleUpdate})
+
+Perform time evolution until the set number of iterations or convergence
+directly using the specified TimeEvolver iterator.
+"""
 function MPSKit.time_evolve(it::TimeEvolver{<:SimpleUpdate})
     time_start = time()
     result = nothing
@@ -254,7 +272,23 @@ function MPSKit.time_evolve(it::TimeEvolver{<:SimpleUpdate})
     return result
 end
 
-# ordinary mode
+"""
+    time_evolve(
+        ψ₀::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
+        dt::Float64, nstep::Int, alg::SimpleUpdate, env₀::SUWeight;
+        tol::Float64 = 0.0, t₀::Float64 = 0.0
+    ) -> (ψ, env, info)
+
+Perform time evolution on the initial state `ψ₀` and initial environment `env₀`
+with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for 
+`nstep` number of steps. 
+
+- Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
+    For other usages it should not be changed.
+- Using `t₀` to specify the initial (real or imaginary) time of `ψ₀`.
+- `info` is a NamedTuple containing information of the evolution, 
+    including the time evolved since `ψ₀`.
+"""
 function MPSKit.time_evolve(
         ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
         alg::SimpleUpdate, env₀::SUWeight;
