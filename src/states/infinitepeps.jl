@@ -11,7 +11,10 @@ struct InfinitePEPS{T <: PEPSTensor}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T <: PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T, 2}) where {T <: PEPSTensor}
+        bosonic_braiding = BraidingStyle(sectortype(T)) === Bosonic()
         for (d, w) in Tuple.(CartesianIndices(A))
+            (bosonic_braiding || !isdual(physicalspace(A[d, w]))) ||
+                throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are not allowed (for now)."))
             north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
                 throw(
                 SpaceMismatch("North virtual space at site $((d, w)) does not match.")
