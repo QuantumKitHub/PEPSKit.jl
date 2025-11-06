@@ -56,6 +56,9 @@ end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
 # because MPSKit is not compatible with AD
+# NOTE: the action of the transfer operator here is NOT the same as that of
+# MPSKit.transfer_right; to match the MPSKit implementation, it would require a twist on any
+# index where spaces(Abar, 2:end) is dual (which we can just ignore as long as we use a random Abar)
 @generated function mps_transfer_right(
         v::AbstractTensorMap{<:Any, S, 1, N₁},
         A::GenericMPSTensor{S, N₂}, Abar::GenericMPSTensor{S, N₂},
