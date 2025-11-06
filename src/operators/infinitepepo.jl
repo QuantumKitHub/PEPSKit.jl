@@ -15,7 +15,7 @@ struct InfinitePEPO{T <: PEPOTensor}
         bosonic_braiding = BraidingStyle(sectortype(T)) === Bosonic()
         for (d, w, h) in Tuple.(CartesianIndices(A))
             (bosonic_braiding || (!isdual(domain_physicalspace(A[d, w, h])) && !isdual(codomain_physicalspace(A[d, w, h])))) ||
-                throw(ArgumentError("Dual physical spaces are not allowed (for now)."))
+                throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are not allowed (for now)."))
             codomain_physicalspace(A[d, w, h]) == domain_physicalspace(A[d, w, _next(h, end)]) ||
                 throw(SpaceMismatch("Physical space at site $((d, w, h)) does not match."))
             north_virtualspace(A[d, w, h]) == south_virtualspace(A[_prev(d, end), w, h])' ||
