@@ -15,7 +15,7 @@ using ChainRulesCore, Zygote
 using LoggingExtras
 
 using MPSKit
-using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
+using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
@@ -52,12 +52,15 @@ include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 
 include("algorithms/contractions/ctmrg_contractions.jl")
+include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
+include("algorithms/contractions/correlator/peps.jl")
+include("algorithms/contractions/correlator/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -74,6 +77,7 @@ include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
 
+include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/correlators.jl")
 
