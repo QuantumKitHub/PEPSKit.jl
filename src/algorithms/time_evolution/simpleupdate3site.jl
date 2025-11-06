@@ -500,7 +500,7 @@ function _su3site_se!(
         M = absorb_weight(M, env, coord[1], coord[2], openaxs; inv = true)
         state.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
-    return ϵs
+    return maximum(ϵs)
 end
 
 function su_iter(
@@ -515,7 +515,7 @@ function su_iter(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    state2, env2 = deepcopy(state), deepcopy(env)
+    state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     trunc = alg.trunc
     for i in 1:4
         Nr, Nc = size(state2)[1:2]
@@ -525,11 +525,10 @@ function su_iter(
                 truncation_strategy(trunc, 1, r, c)
                 truncation_strategy(trunc, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(state2, gs, env2, r, c, truncs; alg.gate_bothsides)
+            ϵ = _su3site_se!(state2, gs, env2, r, c, truncs; alg.gate_bothsides)
         end
         state2, env2 = rotl90(state2), rotl90(env2)
         trunc = rotl90(trunc)
     end
-    wtdiff = compare_weights(env2, env)
-    return state2, env2, (; wtdiff)
+    return state2, env2, ϵ
 end

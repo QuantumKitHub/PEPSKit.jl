@@ -102,7 +102,7 @@ export fixedpoint
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
 export SimpleUpdate
-export time_evolve
+export TimeEvolver, timestep, time_evolve
 
 export InfiniteSquareNetwork
 export InfinitePartitionFunction

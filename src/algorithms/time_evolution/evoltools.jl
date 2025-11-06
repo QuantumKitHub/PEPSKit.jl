@@ -1,6 +1,6 @@
 const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
 
-function _process_timeevol_args(
+function _get_dt(
         state::InfiniteState, dt::Float64, imaginary_time::Bool
     )
     dt′ = (state isa InfinitePEPS) ? dt : (dt / 2)

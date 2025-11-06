@@ -8,16 +8,6 @@ Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 $(TYPEDFIELDS)
 """
 @kwdef struct SimpleUpdate <: TimeEvolution
-    # Initial state (InfinitePEPS or InfinitePEPO)
-    ψ0::InfiniteState
-    # Hamiltonian
-    H::LocalOperator
-    # Initial Bond weights
-    env0::SUWeight
-    # Trotter time step
-    dt::Float64
-    # number of iteration steps
-    nstep::Int
     # Truncation scheme after applying Trotter gates
     trunc::TruncationStrategy
     # Switch for imaginary or real time
@@ -29,10 +19,62 @@ $(TYPEDFIELDS)
     # ---- only applicable to ground state search ----
     # assume bipartite unit cell structure
     bipartite::Bool = false
-    # converged change of weight between two steps
-    tol::Float64 = 0.0
     # ---- only applicable to PEPO evolution ----
     gate_bothsides::Bool = false # when false, purified approach is assumed
+end
+
+# internal state of simple update algorithm
+struct SUState{S}
+    # number of performed iterations
+    iter::Int
+    # evolved time
+    t::Float64
+    # measure of difference (of SUWeight, energy, etc.) from last iteration
+    diff::Float64
+    # PEPS/PEPO
+    ψ::S
+    # SUWeight environment
+    env::SUWeight
+end
+
+"""
+    TimeEvolver(
+        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int, 
+        alg::SimpleUpdate, env₀::SUWeight; 
+        tol::Float64 = 0.0, t₀::Float64 = 0.0
+    )
+
+Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
+starting from the initial state `ψ₀` and SUWeight environment `env₀`.
+The initial time is specified by `t₀`.
+Convergence check is enabled by setting `tol > 0`; otherwise it is disabled.
+"""
+function TimeEvolver(
+        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
+        alg::SimpleUpdate, env₀::SUWeight;
+        tol::Float64 = 0.0, t₀::Float64 = 0.0
+    )
+    # sanity checks
+    _timeevol_sanity_check(ψ₀, H, tol, alg)
+    # create Trotter gates
+    nnonly = is_nearest_neighbour(H)
+    use_3site = alg.force_3site || !nnonly
+    if alg.bipartite
+        @assert !use_3site "3-site simple update is incompatible with bipartite lattice."
+    end
+    dt′ = _get_dt(ψ₀, dt, alg.imaginary_time)
+    gate = if use_3site
+        [
+            _get_gatempos_se(H, dt′),
+            _get_gatempos_se(rotl90(H), dt′),
+            _get_gatempos_se(rot180(H), dt′),
+            _get_gatempos_se(rotr90(H), dt′),
+        ]
+    else
+        get_expham(H, dt′)
+    end
+    state = SUState(0, t₀, NaN, ψ₀, env₀)
+    return TimeEvolver(alg, dt, nstep, H, gate, tol, state)
 end
 
 #=
@@ -48,8 +90,7 @@ function _su_xbond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
-    Nr, Nc = size(state)[1:2]
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
+    Nr, Nc, = size(state)
     cp1 = _next(col, Nc)
     # absorb environment weights
     A, B = state.A[row, col], state.A[row, cp1]
@@ -87,8 +128,7 @@ function _su_ybond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
         row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
     ) where {T <: Number, S <: ElementarySpace}
-    Nr, Nc = size(state)[1:2]
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
+    Nr, Nc, = size(state)
     rm1 = _prev(row, Nr)
     # absorb environment weights
     A, B = state.A[row, col], state.A[rm1, col]
@@ -115,19 +155,15 @@ end
 function su_iter(
         state::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight
     )
-    @assert size(gate.lattice) == size(state)[1:2]
-    Nr, Nc = size(state)[1:2]
-    alg.bipartite && (@assert Nr == Nc == 2)
-    (Nr >= 2 && Nc >= 2) || throw(
-        ArgumentError("`state` unit cell size for simple update should be no smaller than (2, 2)."),
-    )
-    state2, env2 = deepcopy(state), deepcopy(env)
+    Nr, Nc, = size(state)
+    state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     gate_axs = alg.gate_bothsides ? (1:2) : (1:1)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
-            _su_xbond!(state2, term, env2, r, c, trunc; gate_ax)
+            ϵ′ = _su_xbond!(state2, term, env2, r, c, trunc; gate_ax)
+            ϵ = maximum(ϵ, ϵ′)
         end
         if alg.bipartite
             rp1, cp1 = _next(r, Nr), _next(c, Nc)
@@ -138,7 +174,8 @@ function su_iter(
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs
-            _su_ybond!(state2, term, env2, r, c, trunc; gate_ax)
+            ϵ′ = _su_ybond!(state2, term, env2, r, c, trunc; gate_ax)
+            ϵ = maximum(ϵ, ϵ′)
         end
         if alg.bipartite
             rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
@@ -147,61 +184,75 @@ function su_iter(
             env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
         end
     end
-    wtdiff = compare_weights(env2, env)
-    return state2, env2, (; wtdiff)
+    return state2, env2, ϵ
 end
 
-# Initial iteration
-function Base.iterate(alg::SimpleUpdate)
-    # sanity checks
-    nnonly = is_nearest_neighbour(alg.H)
-    use_3site = alg.force_3site || !nnonly
-    @assert alg.tol >= 0
-    @assert !(alg.bipartite && alg.ψ0 isa InfinitePEPO) "Evolution of PEPO with bipartite structure is not implemented."
-    @assert !(alg.bipartite && use_3site) "3-site simple update is incompatible with bipartite lattice."
-    if alg.ψ0 isa InfinitePEPS
-        @assert !(alg.gate_bothsides) "alg.gate_bothsides = true is incompatible with PEPS evolution."
-    end
-    # construct Trotter 2-site gates or 3-site gate-MPOs
-    dt′ = _process_timeevol_args(alg.ψ0, alg.dt, alg.imaginary_time)
-    gate = if use_3site
-        [
-            _get_gatempos_se(alg.H, dt′),
-            _get_gatempos_se(rotl90(alg.H), dt′),
-            _get_gatempos_se(rot180(alg.H), dt′),
-            _get_gatempos_se(rotr90(alg.H), dt′),
-        ]
-    else
-        get_expham(alg.H, dt′)
-    end
-    time0 = time()
-    ψ, env, info = su_iter(alg.ψ0, gate, alg, alg.env0)
-    elapsed_time = time() - time0
-    converged = false
-    return (ψ, env, info), (ψ, env, info, gate, converged, 1, elapsed_time)
-end
-
-# subsequent iterations
-function Base.iterate(alg::SimpleUpdate, state)
-    ψ0, env0, info, gate, converged, it, elapsed_time = state
-    check_convergence = (alg.tol > 0)
-    if (it % alg.check_interval == 0) || (it == 1) || (it == alg.nstep) || converged
-        @info "Space of x-weight at [1, 1] = $(space(env0[1, 1, 1], 1))"
-        @info @sprintf(
-            "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
-            it, alg.dt, info.wtdiff, elapsed_time
-        )
-        if (it == alg.nstep)
-            check_convergence && (@warn "SU: bond weights have not converged.")
-            return nothing
-        elseif converged
+function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
+    alg = it.alg
+    iter, t, diff = state.iter, state.t, state.diff
+    check_convergence = (it.tol > 0)
+    if check_convergence
+        if diff < it.tol
             @info "SU: bond weights have converged."
             return nothing
+        elseif iter == it.nstep
+            @warn "SU: bond weights have not converged."
+            return nothing
         end
+    else
+        (iter == it.nstep) && return nothing
     end
+    # perform one iteration and record time
     time0 = time()
-    ψ, env, info = su_iter(ψ0, gate, alg, env0)
+    ψ, env, ϵ = su_iter(state.ψ, it.gate, it.alg, state.env)
+    diff = compare_weights(env, state.env)
     elapsed_time = time() - time0
-    converged = check_convergence ? (info.wtdiff < alg.tol) : false
-    return (ψ, env, info), (ψ, env, info, gate, converged, it + 1, elapsed_time)
+    # update internal state
+    iter += 1
+    t += it.dt
+    it.state = SUState(iter, t, diff, ψ, env)
+    # output information
+    converged = check_convergence ? (diff < it.tol) : false
+    showinfo = (iter % alg.check_interval == 0) || (iter == 1) || (iter == it.nstep) || converged
+    if showinfo
+        @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
+        @info @sprintf(
+            "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
+            iter, it.dt, diff, elapsed_time
+        )
+    end
+    info = (; t, ϵ)
+    return (ψ, env, info), it.state
+end
+
+# evolve one step from given state
+function MPSKit.timestep(
+        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
+        iter::Int = it.state.iter, t::Float64 = it.state.t
+    )
+    _timeevol_sanity_check(ψ, it.H, it.tol, it.alg)
+    state = SUState(iter, t, NaN, ψ, env)
+    return first(iterate(it, state))
+end
+
+# evolve till the end
+function MPSKit.time_evolve(it::TimeEvolver{<:SimpleUpdate})
+    time_start = time()
+    result = nothing
+    for state in it
+        result = state
+    end
+    time_end = time()
+    @info @sprintf("Simple update finished. Total time elasped: %.2f s", time_end - time_start)
+    return result
+end
+
+# ordinary mode
+function MPSKit.time_evolve(
+        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
+        alg::SimpleUpdate, env₀::SUWeight;
+        tol::Float64 = 0.0, t₀::Float64 = 0.0
+    )
+    it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; tol, t₀)
+    return time_evolve(it)
 end
