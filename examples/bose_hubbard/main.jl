@@ -65,7 +65,7 @@ When running PEPS simulations with explicit internal symmetries, specifying the 
 the virtual spaces of the PEPS and its environment becomes a bit more involved. For the
 environment, one could in principle allow the virtual space to be chosen dynamically during
 the boundary contraction using CTMRG by using a truncation scheme that allows for this
-(e.g. using `alg=:truncdim` or `alg=:truncbelow` to truncate to a fixed total bond dimension
+(e.g. using `alg=:truncrank` or `alg=:trunctol` to truncate to a fixed total bond dimension
 or singular value cutoff respectively). For the PEPS virtual space however, the structure
 has to be specified before the optimization.
 
@@ -87,7 +87,7 @@ optimization framework in the usual way to find the ground state. So, we first s
 algorithms and their tolerances:
 """
 
-boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trscheme = (; alg = :fixedspace))
+boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
 gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :eigsolver, iterscheme = :diffgauge)
 optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 150, ls_maxiter = 2, ls_maxfg = 2);
 

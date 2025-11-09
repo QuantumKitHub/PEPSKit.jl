@@ -10,15 +10,18 @@ Nr, Nc = 2, 2
 Envspace = Vect[FermionParity ⊠ U1Irrep](
     (0, 0) => 4, (1, 1 // 2) => 1, (1, -1 // 2) => 1, (0, 1) => 1, (0, -1) => 1
 )
-ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trscheme = truncerr(1.0e-10) & truncdim(8))
+ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trunc = truncerror(; atol = 1.0e-10) & truncrank(8))
 # create Hubbard iPEPS using simple update
 function get_hubbard_peps(t::Float64 = 1.0, U::Float64 = 8.0)
     H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu = U / 2)
     Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     peps = InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
-    alg = SimpleUpdate(1.0e-2, 1.0e-8, 10000, truncerr(1.0e-10) & truncdim(4))
-    peps, = simpleupdate(peps, H, alg, wts; bipartite = false, check_interval = 2000)
+    alg = SimpleUpdate(;
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(4), check_interval = 2000
+    )
+    evolver = TimeEvolver(peps, H, 1.0e-2, 10000, alg, wts; tol = 1.0e-8)
+    peps, = time_evolve(evolver)
     normalize!.(peps.A, Inf)
     return peps
 end
@@ -27,8 +30,10 @@ function get_hubbard_pepo(t::Float64 = 1.0, U::Float64 = 8.0)
     H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu = U / 2)
     pepo = PEPSKit.infinite_temperature_density_matrix(H)
     wts = SUWeight(pepo)
-    alg = SimpleUpdate(2.0e-3, 0.0, 500, truncerr(1.0e-10) & truncdim(4))
-    pepo, = simpleupdate(pepo, H, alg, wts; bipartite = false, check_interval = 100)
+    alg = SimpleUpdate(;
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(4), bipartite = false, check_interval = 100
+    )
+    pepo, = time_evolve(pepo, H, 2.0e-3, 500, alg, wts)
     normalize!.(pepo.A, Inf)
     return pepo
 end

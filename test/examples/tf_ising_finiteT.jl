@@ -24,11 +24,11 @@ function tfising_model(T::Type{<:Number}, lattice::InfiniteSquare; J = 1.0, g = 
 end
 
 function converge_env(state, χ::Int)
-    trscheme1 = truncdim(4) & truncerr(1.0e-12)
+    trunc1 = truncrank(4) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(randn, Float64, state, ℂ^4)
-    env, = leading_boundary(env0, state; alg = :sequential, trscheme = trscheme1, tol = 1.0e-10)
-    trscheme2 = truncdim(χ) & truncerr(1.0e-12)
-    env, = leading_boundary(env, state; alg = :sequential, trscheme = trscheme2, tol = 1.0e-10)
+    env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
+    trunc2 = truncrank(χ) & truncerror(; atol = 1.0e-12)
+    env, = leading_boundary(env, state; alg = :sequential, trunc = trunc2, tol = 1.0e-10)
     return env
 end
 
@@ -52,32 +52,35 @@ ham = tfising_model(Float64, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
 pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 
-trscheme_pepo = truncdim(8) & truncerr(1.0e-12)
+trunc_pepo = truncrank(8) & truncerror(; atol = 1.0e-12)
 
-dt, maxiter = 1.0e-3, 400
-β = dt * maxiter
-alg = SimpleUpdate(dt, 0.0, maxiter, trscheme_pepo)
+dt, nstep = 1.0e-3, 400
+β = dt * nstep
 
 # when g = 2, β = 0.4 and 2β = 0.8 belong to two phases (without and with nonzero σᶻ)
 
-# PEPO approach
-## results at β, or T = 2.5
-pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = true)
+# PEPO approach: results at β, or T = 2.5
+alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = true)
+pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 result_β = measure_mag(pepo, env)
-@info "Magnetization at T = $(1 / β)" result_β
+@info "tr(σ(x,z)ρ) at T = $(1 / β)" result_β
+@test β ≈ info.t
 @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
-## results at 2β, or T = 1.25
-pepo, wts, = simpleupdate(pepo, ham, alg, wts; gate_bothsides = true)
+# continue to get results at 2β, or T = 1.25
+pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t₀ = β)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 result_2β = measure_mag(pepo, env)
-@info "Magnetization at T = $(1 / (2β))" result_2β
+@info "tr(σ(x,z)ρ) at T = $(1 / (2β))" result_2β
+@test 2 * β ≈ info.t
 @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
 
-# purification approach (should match 2β result)
-pepo, = simpleupdate(pepo0, ham, alg, wts0; gate_bothsides = false)
+# Purification approach: results at 2β, or T = 1.25
+alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = false)
+pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0)
 env = converge_env(InfinitePEPS(pepo), 8)
 result_2β′ = measure_mag(pepo, env; purified = true)
-@info "Magnetization at T = $(1 / (2β)) (purification approach)" result_2β′
+@info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)) (purification approach)" result_2β′
+@test 2 * β ≈ info.t
 @test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)

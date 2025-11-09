@@ -20,6 +20,9 @@ end
         @time @safetestset ":fixed CTMRG iteration scheme" begin
             include("ctmrg/fixed_iterscheme.jl")
         end
+        @time @safetestset "SUWeight conversion" begin
+            include("ctmrg/suweight.jl")
+        end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
         end
@@ -58,6 +61,9 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
+        @time @safetestset "`timestep` function" begin
+            include("timeevol/timestep.jl")
+        end
         @time @safetestset "Cluster truncation with projectors" begin
             include("timeevol/cluster_projectors.jl")
         end

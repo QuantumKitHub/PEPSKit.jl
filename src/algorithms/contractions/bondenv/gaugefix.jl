@@ -13,7 +13,7 @@ Replace bond environment `benv` by its positive approximant `Z† Z`
 """
 function positive_approx(benv::BondEnv)
     # eigen-decomposition: benv = U D U'
-    D, U = eigh((benv + benv') / 2)
+    D, U = eigh_full((benv + benv') / 2)
     # determine if `env` is (mostly) positive or negative
     sgn = sign(sum(D.data))
     # When optimizing the truncation of a bond,
@@ -61,8 +61,8 @@ function fixgauge_benv(
                             ↓
                             2
     =#
-    QL, L = leftorth(Z, ((2, 1), (3,)))
-    QR, R = leftorth(Z, ((3, 1), (2,)))
+    QL, L = left_orth(permute(Z, ((2, 1), (3,))))
+    QR, R = left_orth(permute(Z, ((3, 1), (2,))))
     @debug "cond(L) = $(LinearAlgebra.cond(L)); cond(R) = $(LinearAlgebra.cond(R))"
     # TODO: find a better way to fix gauge that avoids `inv`
     Linv, Rinv = inv(L), inv(R)

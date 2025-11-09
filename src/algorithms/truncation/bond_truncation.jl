@@ -13,14 +13,14 @@ $(TYPEDFIELDS)
 
 The truncation algorithm can be constructed from the following keyword arguments:
 
-* `trscheme::TruncationScheme`: SVD truncation scheme when initilizing the truncated tensors connected by the bond.
+* `trunc::TruncationStrategy`: SVD truncation strategy when initilizing the truncated tensors connected by the bond.
 * `maxiter::Int=50` : Maximal number of ALS iterations.
 * `tol::Float64=1e-15` : ALS converges when fidelity change between two FET iterations is smaller than `tol`.
 * `use_pinv::Bool=true`: Use pseudo-inverse (instead of `KrylovKit.linsolve`) to solve linear equations in ALS itertions.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
-    trscheme::TruncationScheme
+    trunc::TruncationStrategy
     maxiter::Int = 50
     tol::Float64 = 1.0e-15
     use_pinv::Bool = true
@@ -73,7 +73,7 @@ function bond_truncate(
     a2b2 = _combine_ab(a, b)
     # initialize truncated a, b
     perm_ab = ((1, 3), (4, 2))
-    a, s, b = tsvd(a2b2, perm_ab; trunc = alg.trscheme)
+    a, s, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trunc)
     s /= norm(s, Inf)
     a, b = absorb_s(a, s, b)
     #= temporarily reorder axes of a and b to
@@ -102,7 +102,7 @@ function bond_truncate(
         Ra = _tensor_Ra(benv, b)
         Sa = _tensor_Sa(benv, b, a2b2)
         a, info_a = if alg.use_pinv
-            _solve_ab_pinv!(Ra, Sa; trunc = truncerr(1.0e-10))
+            _solve_ab_pinv!(Ra, Sa; trunc = truncerror(; atol = 1.0e-12))
         else
             _solve_ab(Ra, Sa, a)
         end
@@ -110,7 +110,7 @@ function bond_truncate(
         Rb = _tensor_Rb(benv, a)
         Sb = _tensor_Sb(benv, a, a2b2)
         b, info_b = if alg.use_pinv
-            _solve_ab_pinv!(Rb, Sb; trunc = truncerr(1.0e-10))
+            _solve_ab_pinv!(Rb, Sb; trunc = truncerror(; atol = 1.0e-12))
         else
             _solve_ab(Rb, Sb, b)
         end
@@ -140,7 +140,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = tsvd!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trscheme)
+    a, s, b = svd_trunc!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trunc)
     # normalize singular value spectrum
     s /= norm(s, Inf)
     a, b = absorb_s(a, s, b)
@@ -166,8 +166,8 @@ function bond_truncate(
         --- a == b ---   ==>   - Qa - Ra == Rb - Qb -
             ↓    ↓               ↓               ↓
     =#
-    Qa, Ra = leftorth(a)
-    Rb, Qb = rightorth(b)
+    Qa, Ra = left_orth(a)
+    Rb, Qb = right_orth(b)
     # if Qa → Ra, a twist is needed to express a as
     # contraction of Rb, Qb instead of Qa * Ra
     isdual(space(Ra, 1)) && twist!(Ra, 1)

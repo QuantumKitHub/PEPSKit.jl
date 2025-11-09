@@ -43,7 +43,8 @@ Vspaces = [
         @test all(lorths) && all(rorths)
         # truncation on one bond
         Ms3 = deepcopy(Ms1)
-        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(Vns), N - 1), revs)
+        tspace = isdual(Vns) ? flip(Vns) : Vns
+        wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(tspace), N - 1), revs)
         @test all((i == n) || (ϵ == 0) for (i, ϵ) in enumerate(ϵs))
         normalize!.(Ms3, Inf)
         ϵ = ϵs[n]
@@ -105,7 +106,7 @@ end
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
-    trscheme_env = truncerr(1.0e-12) & truncdim(16)
+    trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
     ham = real(
@@ -116,29 +117,27 @@ end
     # usual 2-site simple update, and measure energy
     dts = [1.0e-2, 1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8, 1.0e-8]
-    maxiter = 5000
+    nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trscheme = truncerr(1.0e-10) & truncdim(n == 1 ? 4 : 2)
-        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = true, check_interval = 1000)
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
+        alg = SimpleUpdate(; trunc, bipartite = true, check_interval = 1000)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol)
     end
     normalize!.(peps.A, Inf)
-    env = CTMRGEnv(rand, Float64, peps, Espace)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)
+    env = CTMRGEnv(wts, peps)
+    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
     e_site = cost_function(peps, env, ham) / (Nr * Nc)
     @info "2-site simple update energy = $e_site"
     # continue with 3-site simple update; energy should not change much
     dts = [1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8]
-    trscheme = truncerr(1.0e-10) & truncdim(2)
+    trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
+    alg = SimpleUpdate(; trunc, check_interval = 1000, force_3site = true)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(
-            peps, ham, alg, wts; check_interval = 1000, force_3site = true
-        )
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol)
     end
     normalize!.(peps.A, Inf)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trscheme = trscheme_env)
+    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
     e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
     @info "3-site simple update energy = $e_site2"
     @test e_site ≈ e_site2 atol = 5.0e-4

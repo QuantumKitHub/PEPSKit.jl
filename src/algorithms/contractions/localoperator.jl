@@ -1,15 +1,5 @@
 # Contraction of local operators on arbitrary lattice locations
 # -------------------------------------------------------------
-
-# currently need this because MPSKit restricts tensor names to symbols
-_totuple(t) = t isa Tuple ? t : tuple(t)
-MPSKit.tensorexpr(ex::Expr, inds::Tuple) = Expr(:ref, ex, _totuple(inds)...)
-function MPSKit.tensorexpr(ex::Expr, indout, indin)
-    return Expr(
-        :typed_vcat, ex, Expr(:row, _totuple(indout)...), Expr(:row, _totuple(indin)...)
-    )
-end
-
 function tensorlabel(args...)
     return Symbol(ntuple(i -> iseven(i) ? :_ : args[(i + 1) >> 1], 2 * length(args) - 1)...)
 end

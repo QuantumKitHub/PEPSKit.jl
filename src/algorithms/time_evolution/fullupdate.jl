@@ -17,7 +17,7 @@ $(TYPEDFIELDS)
     fixgauge::Bool = true
     "Bond truncation algorithm after applying time evolution gate."
     opt_alg::Union{ALSTruncation, FullEnvTruncation} = ALSTruncation(;
-        trscheme = truncerr(1.0e-10)
+        trunc = truncerror(; atol = 1.0e-10)
     )
     "CTMRG algorithm to reconverge environment.
     Its `projector_alg` is also used for the fast update
@@ -26,7 +26,7 @@ $(TYPEDFIELDS)
         tol = 1.0e-9,
         maxiter = 20,
         verbosity = 1,
-        trscheme = truncerr(1.0e-10),
+        trunc = truncerror(; atol = 1.0e-10),
         projector_alg = :fullinfinite,
     )
 end
@@ -54,7 +54,7 @@ function _fu_xbond!(
     end
     benv = Z' * Z
     # apply gate
-    a, s, b, = _apply_gate(a, b, gate, truncerr(1.0e-15))
+    a, s, b, = _apply_gate(a, b, gate, truncerror(; atol = 1.0e-15))
     # optimize a, b
     a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
     normalize!(a, Inf)

@@ -1,7 +1,6 @@
-using TensorKit:
-    AdjointTensorMap, SectorDict, RealOrComplexFloat, NoTruncation, TruncationSpace,
-    _empty_svdtensors, _compute_svddata!, _create_svdtensors, _compute_truncdim,
-    _compute_truncerr
+using MatrixAlgebraKit: NoTruncation, truncate
+using TensorKit: AdjointTensorMap, SectorDict, Factorizations.TruncationSpace,
+    throw_invalid_innerproduct, similarstoragetype
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 """
@@ -45,8 +44,8 @@ $(TYPEDFIELDS)
 Construct a `SVDAdjoint` algorithm struct based on the following keyword arguments:
 
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:sdd` : TensorKit's wrapper for LAPACK's `_gesdd`
-    - `:svd` : TensorKit's wrapper for LAPACK's `_gesvd`
+    - `:sdd`: MatrixAlgebraKit's `LAPACK_DivideAndConquer`
+    - `:svd`: MatrixAlgebraKit's `LAPACK_QRIteration`
     - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:full`: Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [`FullSVDReverseRule`](@ref).
@@ -60,8 +59,8 @@ struct SVDAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :sdd => TensorKit.SDD,
-    :svd => TensorKit.SVD,
+    :sdd => LAPACK_DivideAndConquer,
+    :svd => LAPACK_QRIteration,
     :iterative =>
         (; tol = 1.0e-14, krylovdim = 25, kwargs...) ->
     IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
@@ -108,7 +107,7 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         else
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, broadening = 0.0)) # remove `alg` and `broadening` keyword arguments
             rrule_type <: BiCGStab &&
-                (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim = nothing))) # BiCGStab doens't take `krylovdim`
+                (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim = nothing))) # BiCGStab doesn't take `krylovdim`
         end
         rrule_type(; rrule_kwargs...)
     else
@@ -119,61 +118,60 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
 end
 
 """
-    PEPSKit.tsvd(t, alg::SVDAdjoint; trunc=notrunc(), p=2)
+    svd_trunc(t, alg::SVDAdjoint; trunc=notrunc())
+    svd_trunc!(t, alg::SVDAdjoint; trunc=notrunc())
 
-Wrapper around `TensorKit.tsvd` which dispatches on the `alg` argument.
-This is needed since a custom adjoint for `PEPSKit.tsvd` may be defined,
-depending on the algorithm. E.g., for `IterSVD` the adjoint for a truncated
-SVD from `KrylovKit.svdsolve` is used.
+Wrapper around `svd_trunc(!)` which dispatches on the `SVDAdjoint` algorithm.
+This is needed since a custom adjoint may be defined, depending on the `alg`.
+E.g., for `IterSVD` the adjoint for a truncated SVD from `KrylovKit.svdsolve` is used.
 """
-PEPSKit.tsvd(t, alg; kwargs...) = PEPSKit.tsvd!(copy(t), alg; kwargs...)
-function PEPSKit.tsvd!(t, alg::SVDAdjoint; trunc = NoTruncation(), p::Real = 2)
-    return _tsvd!(t, alg.fwd_alg, trunc, p)
+MatrixAlgebraKit.svd_trunc(t, alg::SVDAdjoint; kwargs...) = svd_trunc!(copy(t), alg; kwargs...)
+function MatrixAlgebraKit.svd_trunc!(t, alg::SVDAdjoint; trunc = notrunc())
+    return _svd_trunc!(t, alg.fwd_alg, trunc)
 end
-function PEPSKit.tsvd!(
-        t::AdjointTensorMap, alg::SVDAdjoint; trunc = NoTruncation(), p::Real = 2
+function MatrixAlgebraKit.svd_trunc!(
+        t::AdjointTensorMap, alg::SVDAdjoint; trunc = notrunc()
     )
-    u, s, vt, info = PEPSKit.tsvd!(adjoint(t), alg; trunc, p)
+    u, s, vt, info = svd_trunc!(adjoint(t), alg; trunc)
     return adjoint(vt), adjoint(s), adjoint(u), info
 end
 
 ## Forward algorithms
 
-# Copy code from TensorKit but additionally return full U, S and V to make compatible with :fixed mode
-function _tsvd!(
-        t::TensorMap{<:RealOrComplexFloat},
-        alg::Union{TensorKit.SDD, TensorKit.SVD},
-        trunc::TruncationScheme,
-        p::Real,
+# Truncated SVD but also return full U, S and V to make it compatible with :fixed mode
+function _svd_trunc!(
+        t::TensorMap,
+        alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration},
+        trunc::TruncationStrategy,
     )
-    U, S, V⁺, truncerr = TensorKit.tsvd!(t; trunc = NoTruncation(), p, alg)
-
-    if !(trunc isa NoTruncation) && !isempty(blocksectors(t))
-        Sdata = SectorDict(c => diag(b) for (c, b) in blocks(S))
-
-        truncdim = _compute_truncdim(Sdata, trunc, p)
-        truncerr = _compute_truncerr(Sdata, truncdim, p)
-
-        SVDdata = SectorDict(c => (block(U, c), Sc, block(V⁺, c)) for (c, Sc) in Sdata)
-
-        Ũ, S̃, Ṽ⁺ = _create_svdtensors(t, SVDdata, truncdim)
-    else
-        Ũ, S̃, Ṽ⁺ = U, S, V⁺
-    end
+    U, S, V⁺ = svd_compact!(t; alg)
+    Ũ, S̃, Ṽ⁺, truncerror = _truncate_compact((U, S, V⁺), trunc)
 
     # construct info NamedTuple
     condnum = cond(S)
     info = (;
-        truncation_error = truncerr, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
+        truncation_error = truncerror, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
     )
     return Ũ, S̃, Ṽ⁺, info
+end
+
+# hacky way of computing the truncation error for current version of svd_trunc!
+# TODO: replace once TensorKit updates to new MatrixAlgebraKit which returns truncation error as well
+function _truncate_compact((U, S, V⁺), trunc::TruncationStrategy)
+    if !(trunc isa NoTruncation) && !isempty(blocksectors(S))
+        Ũ, S̃, Ṽ⁺ = truncate(svd_trunc!, (U, S, V⁺), trunc)[1]
+        truncerror = sqrt(norm(S)^2 - norm(S̃)^2)
+        return Ũ, S̃, Ṽ⁺, truncerror
+    else
+        return U, S, V⁺, zero(real(scalartype(S)))
+    end
 end
 
 """
 $(TYPEDEF)
 
 SVD struct containing a pre-computed decomposition or even multiple ones. Additionally, it
-can contain the untruncated full decomposition as well. The call to `tsvd` just returns the
+can contain the untruncated full decomposition as well. The call to `svd_trunc` just returns the
 pre-computed U, S and V. In the reverse pass, the SVD adjoint is computed with these exact
 U, S, and V and, potentially, the full decompositions if the adjoints needs access to them.
 
@@ -200,9 +198,9 @@ function isfullsvd(alg::FixedSVD)
 end
 
 # Return pre-computed SVD
-function _tsvd!(_, alg::FixedSVD, ::TruncationScheme, ::Real)
+function _svd_trunc!(_, alg::FixedSVD, ::TruncationStrategy)
     info = (;
-        truncation_error = 0,
+        truncation_error = zero(real(scalartype(alg.S))),
         condition_number = cond(alg.S),
         U_full = alg.U_full,
         S_full = alg.S_full,
@@ -215,7 +213,7 @@ end
 $(TYPEDEF)
 
 Iterative SVD solver based on KrylovKit's GKL algorithm, adapted to (symmetric) tensors.
-The number of targeted singular values is set via the `TruncationSpace` in `ProjectorAlg`.
+The number of targeted singular values is set via the `truncspace` in `ProjectorAlg`.
 In particular, this make it possible to specify the targeted singular values block-wise.
 In case the symmetry block is too small as compared to the number of singular values, or
 the iterative SVD didn't converge, the algorithm falls back to a dense SVD.
@@ -245,19 +243,20 @@ function random_start_vector(t::AbstractMatrix)
 end
 
 # Compute SVD data block-wise using KrylovKit algorithm
-function _tsvd!(f, alg::IterSVD, trunc::TruncationScheme, p::Real)
-    # early return
-    if isempty(blocksectors(f))
+# TODO: redefine _empty_svdtensors, _create_svdtensors
+function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
+    U, S, V = if isempty(blocksectors(f))
+        # early return
         truncation_error = zero(real(scalartype(f)))
-        return _empty_svdtensors(f)..., truncation_error
+        MatrixAlgebraKit.initialize_output(svd_compact!, f, LAPACK_QRIteration()) # specified algorithm doesn't matter here
+    else
+        SVDdata, dims = _compute_svddata!(f, alg, trunc)
+        _create_svdtensors(f, SVDdata, dims)
     end
 
-    SVDdata, dims = _compute_svddata!(f, alg, trunc)
-    U, S, V = _create_svdtensors(f, SVDdata, dims)
-    truncation_error =
-        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f, p)
-
     # construct info NamedTuple
+    truncation_error =
+        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f)
     condition_number = cond(S)
     info = (;
         truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
@@ -265,7 +264,30 @@ function _tsvd!(f, alg::IterSVD, trunc::TruncationScheme, p::Real)
 
     return U, S, V, info
 end
-function TensorKit._compute_svddata!(
+
+# Copy from TensorKit v0.14 internal functions
+function _create_svdtensors(t::TensorMap, SVDdata, dims)
+    T = scalartype(t)
+    S = spacetype(t)
+    W = S(dims)
+
+    Tr = real(T)
+    A = similarstoragetype(t, Tr)
+    Σ = DiagonalTensorMap{Tr, S, A}(undef, W)
+
+    U = similar(t, codomain(t) ← W)
+    V⁺ = similar(t, W ← domain(t))
+    for (c, (Uc, Σc, V⁺c)) in SVDdata
+        r = Base.OneTo(dims[c])
+        copy!(block(U, c), view(Uc, :, r))
+        copy!(block(Σ, c), Diagonal(view(Σc, r)))
+        copy!(block(V⁺, c), view(V⁺c, r, :))
+    end
+    return U, Σ, V⁺
+end
+
+# Interface between KrylovKit's svdsolve and TensorMap data
+function _compute_svddata!(
         f, alg::IterSVD, trunc::Union{NoTruncation, TruncationSpace}
     )
     InnerProductStyle(f) === EuclideanInnerProduct() || throw_invalid_innerproduct(:full!)
@@ -278,7 +300,8 @@ function TensorKit._compute_svddata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
-            U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
+            U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
+            S = S.diag # extracts diagonal as Vector instead of Diagonal to make compatible with S of svdsolve
             U = U[:, 1:howmany]
             V = V[1:howmany, :]
         else
@@ -287,10 +310,11 @@ function TensorKit._compute_svddata!(
             if howmany > alg.alg.krylovdim
                 svd_alg = @set svd_alg.krylovdim = round(Int, howmany * 1.2)
             end
-            S, lvecs, rvecs, info = KrylovKit.svdsolve(b, x₀, howmany, :LR, svd_alg)
+            S, lvecs, rvecs, info = svdsolve(b, x₀, howmany, :LR, svd_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
-                U, S, V = TensorKit.MatrixAlgebra.svd!(b, TensorKit.SDD())
+                U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
+                S = S.diag
                 U = U[:, 1:howmany]
                 V = V[1:howmany, :]
             else  # Slice in case more values were converged than requested
@@ -312,14 +336,13 @@ end
 
 # TensorKit.tsvd! rrule with info NamedTuple return value
 function ChainRulesCore.rrule(
-        ::typeof(PEPSKit.tsvd!),
+        ::typeof(svd_trunc!),
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R};
-        trunc::TruncationScheme = TensorKit.NoTruncation(),
-        p::Real = 2,
+        trunc::TruncationStrategy = notrunc(),
     ) where {F, R <: FullSVDReverseRule}
-    @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with tsvd reverse-rule"
-    Ũ, S̃, Ṽ⁺, info = tsvd(t, alg; trunc, p)
+    @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with full SVD reverse-rule"
+    Ũ, S̃, Ṽ⁺, info = svd_trunc(t, alg; trunc)
     U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
 
     smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S̃))
@@ -327,7 +350,7 @@ function ChainRulesCore.rrule(
         smallest_sval, eps(scalartype(S̃))^(3 / 4), eps(scalartype(S̃))^(1 / 2)
     )
 
-    function tsvd!_nothing_pullback(ΔUSVi)
+    function svd_trunc!_full_pullback(ΔUSVi)
         ΔU, ΔS, ΔV⁺, = unthunk.(ΔUSVi)
         Δt = similar(t)
         for (c, b) in blocks(Δt)
@@ -350,22 +373,21 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δt, NoTangent()
     end
-    function tsvd!_nothing_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+    function svd_trunc!_full_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (Ũ, S̃, Ṽ⁺, info), tsvd!_nothing_pullback
+    return (Ũ, S̃, Ṽ⁺, info), svd_trunc!_full_pullback
 end
 
 # KrylovKit rrule compatible with TensorMaps & function handles
 function ChainRulesCore.rrule(
-        ::typeof(PEPSKit.tsvd!),
+        ::typeof(svd_trunc!),
         f,
         alg::SVDAdjoint{F, R};
-        trunc::TruncationScheme = notrunc(),
-        p::Real = 2,
+        trunc::TruncationStrategy = notrunc(),
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
-    U, S, V, info = tsvd(f, alg; trunc, p)
+    U, S, V, info = svd_trunc(f, alg; trunc)
 
     # update rrule_alg tolerance to be compatible with smallest singular value
     rrule_alg = alg.rrule_alg
@@ -373,7 +395,7 @@ function ChainRulesCore.rrule(
     proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
     rrule_alg = @set rrule_alg.tol = proper_tol
 
-    function tsvd!_itersvd_pullback(ΔUSVi)
+    function svd_trunc!_itersvd_pullback(ΔUSVi)
         Δf = similar(f)
         ΔU, ΔS, ΔV, = unthunk.(ΔUSVi)
 
@@ -421,11 +443,11 @@ function ChainRulesCore.rrule(
         end
         return NoTangent(), Δf, NoTangent()
     end
-    function tsvd!_itersvd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+    function svd_trunc!_itersvd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, info), tsvd!_itersvd_pullback
+    return (U, S, V, info), svd_trunc!_itersvd_pullback
 end
 
 # scalar inverses with a cutoff tolerance
@@ -608,7 +630,9 @@ function svd_pullback!(
 end
 
 # Calculate the pseudo-inverse using SVD
-function _pinv!(a::AbstractTensorMap; kwargs...)
-    u, s, vh, ϵ = tsvd!(a; kwargs...)
+function _pinv!(a::AbstractTensorMap; trunc::TruncationStrategy)
+    # TODO: replace this with actual truncation error once TensorKit is updated
+    u, s, vh = svd_compact!(a; alg = LAPACK_QRIteration())
+    u, s, vh, ϵ = _truncate_compact((u, s, vh), trunc)
     return vh' * sdiag_pow(s, -1) * u', ϵ
 end

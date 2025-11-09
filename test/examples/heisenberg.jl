@@ -53,6 +53,7 @@ end
     Vspace = ℂ^Dbond
     Espace = ℂ^χenv
     ctmrg_tol = 1.0e-8
+    ctmrg_maxiter = 200
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (N1, N2))
     wts = SUWeight(peps)
     normalize!.(peps.A, Inf)
@@ -66,17 +67,17 @@ end
     # simple update
     dts = [1.0e-2, 1.0e-3, 1.0e-3, 1.0e-4]
     tols = [1.0e-7, 1.0e-8, 1.0e-8, 1.0e-8]
-    maxiter = 5000
+    nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
-        trscheme = truncerr(1.0e-10) & truncdim(Dbond2)
-        alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-        peps, wts, = simpleupdate(peps, ham, alg, wts; bipartite = false)
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond2)
+        alg = SimpleUpdate(; trunc, bipartite = false)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol)
     end
 
     # measure physical quantities with CTMRG
     normalize!.(peps.A, Inf)
-    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol = ctmrg_tol)
+    env, = leading_boundary(CTMRGEnv(rand, Float64, peps, Espace), peps; tol = ctmrg_tol, maxiter = ctmrg_maxiter)
     e_site = cost_function(peps, env, ham) / (N1 * N2)
     @info "Simple update energy = $e_site"
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
@@ -88,7 +89,8 @@ end
         peps,
         env;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
-        boundary_alg = (; maxiter = 150, svd_alg = (; rrule_alg = (; alg = :full, tol = 1.0e-5))),
+        boundary_alg = (; maxiter = ctmrg_maxiter),
+        gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)
