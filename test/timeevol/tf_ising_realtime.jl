@@ -4,6 +4,7 @@ import MPSKitModels: S_zz, σˣ
 using PEPSKit
 using Printf
 using Random
+using PEPSKit: fullupdate
 Random.seed!(0)
 
 const hc = 3.044382
@@ -54,22 +55,22 @@ function tfising_fu(g::Float64, maxiter::Int, Dcut::Int, chi::Int; als = true, u
     op = LocalOperator(lattice, ((1, 1),) => σˣ())
     ham = tfising(ComplexF64, Trivial, InfiniteSquare(2, 2); J = 1.0, g = g)
 
-    trscheme_peps = truncerror(; atol = 1.0e-10) & truncdim(Dcut)
-    trscheme_env = truncerror(; atol = 1.0e-10) & truncdim(chi)
+    trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dcut)
+    trunc_env = truncerror(; atol = 1.0e-10) & truncrank(chi)
     env = CTMRGEnv(rand, ComplexF64, peps, ℂ^chi)
-    env, = leading_boundary(env, peps; tol = 1.0e-10, verbosity = 2, trscheme = trscheme_env)
+    env, = leading_boundary(env, peps; tol = 1.0e-10, verbosity = 2, trunc = trunc_env)
 
     ctm_alg = SequentialCTMRG(;
         tol = 1.0e-9,
         maxiter = 50,
         verbosity = 2,
-        trscheme = trscheme_env,
+        trunc = trunc_env,
         projector_alg = :fullinfinite,
     )
     opt_alg = if als
-        ALSTruncation(; trscheme = trscheme_peps, tol = 1.0e-10, use_pinv)
+        ALSTruncation(; trunc = trunc_peps, tol = 1.0e-10, use_pinv)
     else
-        FullEnvTruncation(; trscheme = trscheme_peps, tol = 1.0e-10)
+        FullEnvTruncation(; trunc = trunc_peps, tol = 1.0e-10)
     end
 
     # do one extra step at the beginning to match benchmark data
