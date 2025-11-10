@@ -6,7 +6,7 @@ Abstract super type for time evolution algorithms of InfinitePEPS or InfinitePEP
 abstract type TimeEvolution end
 
 """
-    mutable struct TimeEvolver{TE <: TimeEvolution, G, S}
+    mutable struct TimeEvolver{TE <: TimeEvolution, H, G, S}
 
 Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 
@@ -14,13 +14,15 @@ Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 
 $(TYPEDFIELDS)
 """
-mutable struct TimeEvolver{TE <: TimeEvolution, G, S}
+mutable struct TimeEvolver{TE <: TimeEvolution, H, G, S}
     # Time evolution algorithm
     alg::TE
     # Trotter time step
     dt::Float64
     # Maximal iteration steps
     nstep::Int
+    # Hamiltonian
+    ham::H
     # Trotter gates
     gate::G
     # Convergence tolerance (change of weight or energy from last iteration)
@@ -34,11 +36,11 @@ end
 Base.iterate(it::TimeEvolver) = iterate(it, it.state)
 
 function _timeevol_sanity_check(
-        ψ₀::InfiniteState, Pspaces::M, tol::Float64, alg::A
-    ) where {A <: TimeEvolution, M <: AbstractMatrix{<:ElementarySpace}}
+        ψ₀::InfiniteState, ham::LocalOperator, tol::Float64, alg::A
+    ) where {A <: TimeEvolution}
     Nr, Nc, = size(ψ₀)
     @assert (Nr >= 2 && Nc >= 2) "Unit cell size for simple update should be no smaller than (2, 2)."
-    @assert Pspaces == physicalspace(ψ₀) "Physical spaces of `ψ₀` do not match `Pspaces`."
+    @assert physicalspace(ham) == physicalspace(ψ₀) "Physical spaces of `ψ₀` do not match `Pspaces`."
     @assert tol >= 0
     if tol > 0
         @assert alg.imaginary_time "`tol` should be 0 for real time evolution."

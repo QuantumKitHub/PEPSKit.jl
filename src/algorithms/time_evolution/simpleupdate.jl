@@ -29,7 +29,7 @@ struct SUState{S}
     iter::Int
     # evolved time
     t::Float64
-    # measure of difference (of SUWeight, energy, etc.) from last iteration
+    # SUWeight difference from last iteration
     diff::Float64
     # PEPS/PEPO
     ψ::S
@@ -57,7 +57,7 @@ function TimeEvolver(
         tol::Float64 = 0.0, t₀::Float64 = 0.0, verbosity::Int = 1
     )
     # sanity checks
-    _timeevol_sanity_check(ψ₀, physicalspace(H), tol, alg)
+    _timeevol_sanity_check(ψ₀, H, tol, alg)
     # create Trotter gates
     nnonly = is_nearest_neighbour(H)
     use_3site = alg.force_3site || !nnonly
@@ -76,7 +76,7 @@ function TimeEvolver(
         get_expham(H, dt′)
     end
     state = SUState(0, t₀, NaN, ψ₀, env₀)
-    return TimeEvolver(alg, dt, nstep, gate, tol, verbosity, state)
+    return TimeEvolver(alg, dt, nstep, H, gate, tol, verbosity, state)
 end
 
 #=
@@ -245,8 +245,7 @@ function MPSKit.timestep(
         it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
         iter::Int = it.state.iter, t::Float64 = it.state.t
     )
-    Pspaces = physicalspace(it.state.ψ)
-    _timeevol_sanity_check(ψ, Pspaces, it.tol, it.alg)
+    _timeevol_sanity_check(ψ, it.ham, it.tol, it.alg)
     state = SUState(iter, t, NaN, ψ, env)
     result = iterate(it, state)
     if result === nothing
