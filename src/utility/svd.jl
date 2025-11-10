@@ -630,9 +630,9 @@ function svd_pullback!(
 end
 
 # Calculate the pseudo-inverse using SVD
-function _pinv!(a::AbstractTensorMap; trunc::TruncationStrategy)
+function _pinv!(a::AbstractTensorMap; kwargs...)
     # TODO: replace this with actual truncation error once TensorKit is updated
     u, s, vh = svd_compact!(a; alg = LAPACK_QRIteration())
-    u, s, vh, ϵ = _truncate_compact((u, s, vh), trunc)
+    u, s, vh, ϵ = _truncate_compact((u, s, vh), truncerror(; kwargs...))
     return vh' * sdiag_pow(s, -1) * u', ϵ
 end

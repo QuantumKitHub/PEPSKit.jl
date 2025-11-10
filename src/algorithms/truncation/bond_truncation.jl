@@ -102,7 +102,7 @@ function bond_truncate(
         Ra = _tensor_Ra(benv, b)
         Sa = _tensor_Sa(benv, b, a2b2)
         a, info_a = if alg.use_pinv
-            _solve_ab_pinv!(Ra, Sa; trunc = truncerror(; atol = 1.0e-12))
+            _solve_ab_pinv!(Ra, Sa; atol = 1.0e-10)
         else
             _solve_ab(Ra, Sa, a)
         end
@@ -110,7 +110,7 @@ function bond_truncate(
         Rb = _tensor_Rb(benv, a)
         Sb = _tensor_Sb(benv, a, a2b2)
         b, info_b = if alg.use_pinv
-            _solve_ab_pinv!(Rb, Sb; trunc = truncerror(; atol = 1.0e-12))
+            _solve_ab_pinv!(Rb, Sb; atol = 1.0e-10)
         else
             _solve_ab(Rb, Sb, b)
         end
