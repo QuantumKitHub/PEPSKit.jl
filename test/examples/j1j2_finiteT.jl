@@ -32,9 +32,9 @@ check_interval = 100
 
 # PEPO approach
 dt, nstep = 1.0e-3, 600
-alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = true, check_interval)
+alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = true)
 evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
-pepo, wts, info = time_evolve(evolver)
+pepo, wts, info = time_evolve(evolver; check_interval)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 @info "β = $(dt * nstep): tr(ρH) = $(energy)"
@@ -42,9 +42,9 @@ energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 @test energy ≈ bm[2] atol = 5.0e-3
 
 # PEPS (purified PEPO) approach
-alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = false, check_interval)
+alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = false)
 evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
-pepo, wts, = time_evolve(evolver)
+pepo, wts, = time_evolve(evolver; check_interval)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 @info "β = $(dt * nstep) / 2: tr(ρH) = $(energy)"
