@@ -14,8 +14,8 @@ function get_hubbard_state(t::Float64 = 1.0, U::Float64 = 8.0)
     peps = InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
     alg = SimpleUpdate(; trunc = truncerror(; atol = 1.0e-10) & truncrank(4))
-    evolver = TimeEvolver(peps, H, 1.0e-2, 10000, alg, wts; tol = 1.0e-8, check_interval = 2000)
-    peps, = time_evolve(evolver)
+    evolver = TimeEvolver(peps, H, 1.0e-2, 10000, alg, wts)
+    peps, = time_evolve(evolver; tol = 1.0e-8, check_interval = 2000)
     normalize!.(peps.A, Inf)
     return peps
 end
