@@ -120,8 +120,8 @@ end
     nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
-        alg = SimpleUpdate(; trunc, bipartite = true, check_interval = 1000)
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol)
+        alg = SimpleUpdate(; trunc, bipartite = true)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol, check_interval = 1000)
     end
     normalize!.(peps.A, Inf)
     env = CTMRGEnv(wts, peps)
@@ -132,9 +132,9 @@ end
     dts = [1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8]
     trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
-    alg = SimpleUpdate(; trunc, check_interval = 1000, force_3site = true)
+    alg = SimpleUpdate(; trunc, force_3site = true)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol)
+        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol, check_interval = 1000)
     end
     normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
