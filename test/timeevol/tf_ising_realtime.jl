@@ -57,8 +57,11 @@ function tfising_fu(g::Float64, maxiter::Int, Dcut::Int, chi::Int; als = true, u
 
     trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dcut)
     trunc_env = truncerror(; atol = 1.0e-10) & truncrank(chi)
-    env = CTMRGEnv(rand, ComplexF64, peps, ℂ^chi)
-    env, = leading_boundary(env, peps; tol = 1.0e-10, verbosity = 2, trunc = trunc_env)
+    env = CTMRGEnv(ones, ComplexF64, peps, ℂ^1)
+    env, = leading_boundary(
+        env, peps; alg = :sequential,
+        tol = 1.0e-10, verbosity = 2, trunc = trunc_env
+    )
 
     ctm_alg = SequentialCTMRG(;
         tol = 1.0e-9,

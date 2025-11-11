@@ -164,5 +164,7 @@ function fullupdate(
     # reconverge environment
     network = isa(state, InfinitePEPS) ? state : InfinitePEPS(state)
     env, = leading_boundary(env, network, alg.ctm_alg)
+    espace = codomain(env.corners[1, 1, 1], 1)
+    @info "Space of env.corner[1, 1, 1] = $(espace)."
     return state, env, wts, fidmin
 end
