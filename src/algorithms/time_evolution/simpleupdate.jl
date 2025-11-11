@@ -49,7 +49,7 @@ function TimeEvolver(
         alg::SimpleUpdate, env₀::SUWeight; t₀::Float64 = 0.0
     )
     # sanity checks
-    _timeevol_sanity_check(ψ₀, H, alg)
+    _timeevol_sanity_check(ψ₀, physicalspace(H), alg)
     # create Trotter gates
     nnonly = is_nearest_neighbour(H)
     use_3site = alg.force_3site || !nnonly
@@ -212,7 +212,7 @@ function MPSKit.timestep(
         it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
         iter::Int = it.state.iter, t::Float64 = it.state.t
     )
-    _timeevol_sanity_check(ψ, it.ham, it.alg)
+    _timeevol_sanity_check(ψ, physicalspace(it.state.ψ), it.alg)
     state = SUState(iter, t, ψ, env)
     result = iterate(it, state)
     if result === nothing

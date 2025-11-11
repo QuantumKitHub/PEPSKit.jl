@@ -30,11 +30,11 @@ end
 Base.iterate(it::TimeEvolver) = iterate(it, it.state)
 
 function _timeevol_sanity_check(
-        ψ₀::InfiniteState, ham::LocalOperator, alg::A
-    ) where {A <: TimeEvolution}
+        ψ₀::InfiniteState, Pspaces::M, alg::A
+    ) where {A <: TimeEvolution, M <: AbstractMatrix{<:ElementarySpace}}
     Nr, Nc, = size(ψ₀)
     @assert (Nr >= 2 && Nc >= 2) "Unit cell size for simple update should be no smaller than (2, 2)."
-    @assert physicalspace(ham) == physicalspace(ψ₀) "Physical spaces of `ψ₀` do not match `Pspaces`."
+    @assert Pspaces == physicalspace(ψ₀) "Physical spaces of `ψ₀` do not match `Pspaces`."
     if hasfield(typeof(alg), :gate_bothsides) && alg.gate_bothsides
         @assert ψ₀ isa InfinitePEPO "alg.gate_bothsides = true is only compatible with PEPO."
     end
