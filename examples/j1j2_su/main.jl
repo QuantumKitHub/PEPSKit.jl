@@ -51,13 +51,13 @@ on the previously evolved PEPS:
 dt, tol, nstep = 1.0e-2, 1.0e-8, 30000
 check_interval = 4000
 trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
-alg = SimpleUpdate(; trunc = trunc_peps, check_interval)
+alg = SimpleUpdate(; trunc = trunc_peps)
 for J2 in 0.1:0.1:0.5
     ## convert Hamiltonian `LocalOperator` to real floats
     H = real(
         j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
     )
-    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval)
 end
 
 md"""

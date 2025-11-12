@@ -124,14 +124,14 @@ Then the fidelity is just
     F(ψ̃) = (norm(s̃[n], 2) / norm(s[n], 2))^2
 ```
 =#
-#=
+"""
 Perform QR decomposition through a PEPS tensor
 ```
              ╱           ╱
     --R0----M---  →  ---Q--*-R1--
           ╱ |         ╱ |
 ```
-=#
+"""
 function qr_through(
         R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
@@ -154,14 +154,14 @@ function qr_through(
     return r
 end
 
-#=
+"""
 Perform LQ decomposition through a tensor
 ```
              ╱           ╱
     --L0-*--Q---  ←  ---M--*-L1--
           ╱ |         ╱ |
 ```
-=#
+"""
 function lq_through(
         M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
     ) where {S <: ElementarySpace}
@@ -186,9 +186,9 @@ function lq_through(
     return l
 end
 
-#=
+"""
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
-=#
+"""
 function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpace, 4}}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
@@ -207,7 +207,7 @@ function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpa
     return Rs, Ls
 end
 
-#=
+"""
 Given the tensors `R`, `L` on a bond, construct 
 the projectors `Pa`, `Pb` and the new bond weight `s`
 such that the contraction of `Pa`, `s`, `Pb` is identity when `trunc = notrunc`,
@@ -220,7 +220,7 @@ The arrows between `Pa`, `s`, `Pb` are
     rev = true:  - Pa --→-- Pb - 
                     2 → s → 1
 ```
-=#
+"""
 function _proj_from_RL(
         r::MPSBondTensor, l::MPSBondTensor;
         trunc::TruncationStrategy = notrunc(), rev::Bool = false,
@@ -240,10 +240,10 @@ function _proj_from_RL(
     return Pa, s, Pb, ϵ
 end
 
-#=
+"""
 Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
 find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
-=#
+"""
 function _get_allprojs(
         Ms, Rs, Ls, truncs::Vector{E}, revs::Vector{Bool}
     ) where {E <: TruncationStrategy}
@@ -266,9 +266,9 @@ function _get_allprojs(
     return Pas, Pbs, wts, ϵs
 end
 
-#=
+"""
 Find projectors to truncate internal bonds of the cluster `Ms`.
-=#
+"""
 function _cluster_truncate!(
         Ms::Vector{T}, truncs::Vector{E}, revs::Vector{Bool}
     ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
@@ -283,7 +283,7 @@ function _cluster_truncate!(
     return wts, ϵs, Pas, Pbs
 end
 
-#=
+"""
 Apply the gate MPO `gs` on the cluster `Ms`.
 When `gate_ax` is 1 or 2, the gate acts from the physical codomain or domain side.
 
@@ -307,7 +307,7 @@ In the cluster, the axes of each tensor use the MPS order
       4  2            5  2
     M[1 2 3 4; 5]  M[1 2 3 4 5; 6]
 ```
-=#
+"""
 function _apply_gatempo!(
         Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: AbstractTensorMap}
@@ -437,7 +437,7 @@ const perms_se_pepo = map(invperms_se_pepo) do (p1, p2)
     p = invperm((p1..., p2...))
     return (p[1:(end - 1)], (p[end],))
 end
-#=
+"""
 Obtain the 3-site cluster in the "southeast corner" of a square plaquette.
 ``` 
     r-1         M3
@@ -446,7 +446,7 @@ Obtain the 3-site cluster in the "southeast corner" of a square plaquette.
     r   M1 -←- M2
         c      c+1
 ```
-=#
+"""
 function get_3site_se(state::InfiniteState, env::SUWeight, row::Int, col::Int)
     Nr, Nc = size(state)
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)

@@ -72,9 +72,9 @@ dts = [1.0e-2, 1.0e-3, 4.0e-4]
 tols = [1.0e-6, 1.0e-8, 1.0e-8]
 nstep = 10000
 trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
-alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true, check_interval = 500)
+alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true)
 for (dt, tol) in zip(dts, tols)
-    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval = 500)
 end
 
 md"""
