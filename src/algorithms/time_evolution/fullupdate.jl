@@ -8,24 +8,17 @@ Algorithm struct for full update (FU) of InfinitePEPS or InfinitePEPO.
 $(TYPEDFIELDS)
 """
 @kwdef struct FullUpdate
-    "Time evolution step, such that the Trotter gate is exp(-dt * Hᵢⱼ).
-    Use imaginary `dt` for real time evolution."
-    dt::Number
-    "Number of evolution steps without fully reconverging the environment."
-    niter::Int
-    "Fix gauge of bond environment."
+    # Fix gauge of bond environment
     fixgauge::Bool = true
-    "Bond truncation algorithm after applying time evolution gate."
+    # Switch for imaginary or real time
+    imaginary_time::Bool = true
+    # Bond truncation algorithm after applying time evolution gate
     opt_alg::Union{ALSTruncation, FullEnvTruncation} = ALSTruncation(;
         trunc = truncerror(; atol = 1.0e-10)
     )
-    "CTMRG algorithm to reconverge environment.
-    Its `projector_alg` is also used for the fast update
-    of the environment after each FU iteration."
+    # CTMRG algorithm to reconverge environment. Its `projector_alg` is also used for the fast update of the environment after each FU iteration
     ctm_alg::CTMRGAlgorithm = SequentialCTMRG(;
-        tol = 1.0e-9,
-        maxiter = 20,
-        verbosity = 1,
+        tol = 1.0e-9, maxiter = 20, verbosity = 1,
         trunc = truncerror(; atol = 1.0e-10),
         projector_alg = :fullinfinite,
     )
@@ -103,8 +96,6 @@ function _fu_column!(
     return wts_col, fid
 end
 
-const _fu_pepo_warning_shown = Ref(false)
-
 """
 One round of fast full update on the input InfinitePEPS or InfinitePEPO `state`
 and its 2-layer CTMRGEnv `env`, without fully reconverging `env`.
@@ -147,17 +138,15 @@ end
 Full update an infinite PEPS with nearest neighbor Hamiltonian.
 """
 function fullupdate(
-        state::InfiniteState, ham::LocalOperator, alg::FullUpdate, env::CTMRGEnv
+        state::InfiniteState, ham::LocalOperator, dt::Float64, 
+        alg::FullUpdate, env::CTMRGEnv; reconv_interval::Int = 5
     )
-    if state isa InfinitePEPO && !_fu_pepo_warning_shown[]
-        @warn "Full update of InfinitePEPO is an experimental feature."
-        _fu_pepo_warning_shown[] = true
-    end
     # Each NN bond is updated twice in fu_iter,
     # thus `dt` is divided by 2 when exponentiating `ham`.
-    gate = get_expham(ham, alg.dt / 2)
+    dt′ = _get_dt(state, dt, alg.imaginary_time)
+    gate = get_expham(ham, dt′ / 2)
     wts, fidmin = nothing, 1.0
-    for it in 1:(alg.niter)
+    for it in 1:reconv_interval
         state, env, wts, fid = fu_iter(state, gate, alg, env)
         fidmin = min(fidmin, fid)
     end

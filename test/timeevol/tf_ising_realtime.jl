@@ -78,18 +78,17 @@ function tfising_fu(g::Float64, maxiter::Int, Dcut::Int, chi::Int; als = true, u
 
     # do one extra step at the beginning to match benchmark data
     t = 0.01
-    fu_alg = FullUpdate(; dt = 0.01im, niter = 1, opt_alg, ctm_alg)
+    fu_alg = FullUpdate(; opt_alg, ctm_alg, imaginary_time = false)
     time0 = time()
-    peps, env, = fullupdate(peps, ham, fu_alg, env)
+    peps, env, = fullupdate(peps, ham, 0.01, fu_alg, env; reconv_interval = 1)
     magx = expectation_value(peps, op, env)
     time1 = time()
     @info Printf.format(formatter, t, real(magx), imag(magx), time1 - time0)
     @test isapprox(magx, data[1, 2]; atol = 0.005)
 
-    fu_alg = FullUpdate(; dt = 0.01im, niter = 5, opt_alg, ctm_alg)
     for count in 1:maxiter
         time0 = time()
-        peps, env, = fullupdate(peps, ham, fu_alg, env)
+        peps, env, = fullupdate(peps, ham, 0.01, fu_alg, env; reconv_interval = 5)
         magx = expectation_value(peps, op, env)
         time1 = time()
         t += 0.05
