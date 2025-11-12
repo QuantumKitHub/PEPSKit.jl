@@ -212,6 +212,9 @@ function MPSKit.timestep(
         if reconverge_env && !(it.state.reconverged)
             network = isa(ψ, InfinitePEPS) ? ψ : InfinitePEPS(ψ)
             env, = leading_boundary(env, network, it.alg.ctm_alg)
+            # update internal state of `it`
+            state0 = it.state
+            it.state = (@set state0.env = env)
         end
         return ψ, env, info
     end

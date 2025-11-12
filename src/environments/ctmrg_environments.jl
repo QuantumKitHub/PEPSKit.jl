@@ -277,6 +277,11 @@ edgetype(::Type{CTMRGEnv{C, E}}) where {C, E} = E
 
 TensorKit.spacetype(::Type{E}) where {E <: CTMRGEnv} = spacetype(cornertype(E))
 
+## (Approximate) equality
+function Base.:(==)(env1::CTMRGEnv, env2::CTMRGEnv)
+    return env1.corners == env2.corners && env1.edges == env2.edges
+end
+
 # In-place update of environment
 function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C, T}) where {C, T}
     env.corners .= env´.corners

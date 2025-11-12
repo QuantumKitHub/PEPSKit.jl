@@ -4,11 +4,11 @@ import MPSKitModels: S_zz, σˣ
 using PEPSKit
 using Printf
 using Random
-using PEPSKit: fullupdate
+using Accessors: @set
 Random.seed!(0)
 
 const hc = 3.044382
-const formatter = Printf.Format("t = %.2f, ⟨σˣ⟩ = %.7e + %.7e im. Time = %.3f s")
+const formatter = Printf.Format("t = %.2f, ⟨σˣ⟩ = %.7e + %.7e im.")
 # real time evolution of ⟨σx⟩
 # benchmark data from Physical Review B 104, 094411 (2021) Figure 6(a)
 # calculated with D = 8 and χ = 4D = 32
@@ -44,7 +44,7 @@ function tfising(
     )
 end
 
-function tfising_fu(g::Float64, maxiter::Int, Dcut::Int, chi::Int; als = true, use_pinv = true)
+function tfising_fu(g::Float64, Dcut::Int, chi::Int; als = true, use_pinv = true)
     # the fully polarized state
     peps = InfinitePEPS(randn, ComplexF64, ℂ^2, ℂ^1; unitcell = (2, 2))
     for t in peps.A
@@ -77,25 +77,33 @@ function tfising_fu(g::Float64, maxiter::Int, Dcut::Int, chi::Int; als = true, u
     end
 
     # do one extra step at the beginning to match benchmark data
-    t = 0.01
-    fu_alg = FullUpdate(; opt_alg, ctm_alg, imaginary_time = false)
-    time0 = time()
-    peps, env, = fullupdate(peps, ham, 0.01, fu_alg, env; reconv_interval = 1)
+    fu_alg = FullUpdate(; opt_alg, ctm_alg, imaginary_time = false, reconverge_interval = 5)
+    evolver = TimeEvolver(peps, ham, 0.01, 50, fu_alg, env)
+    peps, env, info = timestep(evolver, peps, env; reconverge_env = true)
+    # ensure the recoverged environment is updated to the internal state of `evolver`
+    @test env == evolver.state.env
     magx = expectation_value(peps, op, env)
-    time1 = time()
-    @info Printf.format(formatter, t, real(magx), imag(magx), time1 - time0)
+    @info Printf.format(formatter, info.t, real(magx), imag(magx))
     @test isapprox(magx, data[1, 2]; atol = 0.005)
 
-    for count in 1:maxiter
-        time0 = time()
-        peps, env, = fullupdate(peps, ham, 0.01, fu_alg, env; reconv_interval = 5)
+    # reset the number of performed iterations
+    state0 = evolver.state
+    evolver.state = (@set state0.iter = 0)
+    # continue the remaining evolution
+    count = 2
+    for (peps, env, info) in evolver
+        !evolver.state.reconverged && continue
+        # monitor the growth of env dimension
+        corner = env.corners[1, 1, 1]
+        corner_dim = dim.(space(corner, ax) for ax in 1:numind(corner))
+        @info "Dimension of env.corner[1, 1, 1] = $(corner_dim)."
+
         magx = expectation_value(peps, op, env)
-        time1 = time()
-        t += 0.05
-        @info Printf.format(formatter, t, real(magx), imag(magx), time1 - time0)
-        @test isapprox(magx, data[count + 1, 2]; atol = 0.005)
+        @info Printf.format(formatter, info.t, real(magx), imag(magx))
+        @test isapprox(magx, data[count, 2]; atol = 0.005)
+        count += 1
     end
     return nothing
 end
 
-tfising_fu(hc, 10, 6, 24; als = false, use_pinv = true)
+tfising_fu(hc, 6, 24; als = false, use_pinv = true)
