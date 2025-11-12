@@ -6,12 +6,16 @@ Algorithm struct for full update (FU) of InfinitePEPS or InfinitePEPO.
 ## Fields
 
 $(TYPEDFIELDS)
+
+Reference: Physical Review B 92, 035142 (2015)
 """
-@kwdef struct FullUpdate
+@kwdef struct FullUpdate <: TimeEvolution
     # Fix gauge of bond environment
     fixgauge::Bool = true
     # Switch for imaginary or real time
     imaginary_time::Bool = true
+    # Number of iterations without fully reconverging the environment
+    reconverge_interval::Int = 5
     # Bond truncation algorithm after applying time evolution gate
     opt_alg::Union{ALSTruncation, FullEnvTruncation} = ALSTruncation(;
         trunc = truncerror(; atol = 1.0e-10)
@@ -22,6 +26,42 @@ $(TYPEDFIELDS)
         trunc = truncerror(; atol = 1.0e-10),
         projector_alg = :fullinfinite,
     )
+end
+
+# internal state of full update algorithm
+struct FUState{S <: InfiniteState, E <: CTMRGEnv}
+    # number of performed iterations
+    iter::Int
+    # evolved time
+    t::Float64
+    # PEPS/PEPO
+    ψ::S
+    # CTMRG environment
+    env::E
+    # whether the current environment is reconverged
+    reconverged::Bool
+end
+
+"""
+    TimeEvolver(
+        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int, 
+        alg::FullUpdate, env₀::CTMRGEnv; t₀::Float64 = 0.0
+    )
+
+Initialize a TimeEvolver with Hamiltonian `H` and full update `alg`, 
+starting from the initial state `ψ₀` and CTMRG environment `env₀`.
+
+- The initial (real or imaginary) time is specified by `t₀`.
+"""
+function TimeEvolver(
+        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
+        alg::FullUpdate, env₀::CTMRGEnv; t₀::Float64 = 0.0
+    )
+    _timeevol_sanity_check(ψ₀, physicalspace(H), alg)
+    dt′ = _get_dt(ψ₀, dt, alg.imaginary_time)
+    gate = get_expham(H, dt′ / 2)
+    state = FUState(0, t₀, ψ₀, env₀, true)
+    return TimeEvolver(alg, dt, nstep, gate, state)
 end
 
 """
@@ -70,8 +110,7 @@ function _fu_column!(
         state::InfiniteState, gate::LocalOperator,
         alg::FullUpdate, env::CTMRGEnv, col::Int
     )
-    Nr, Nc = size(state)
-    @assert 1 <= col <= Nc
+    Nr, Nc, = size(state)
     fid = 1.0
     wts_col = Vector{PEPSWeight}(undef, Nr)
     for row in 1:Nr
@@ -99,17 +138,11 @@ end
 """
 One round of fast full update on the input InfinitePEPS or InfinitePEPO `state`
 and its 2-layer CTMRGEnv `env`, without fully reconverging `env`.
-
-Reference: Physical Review B 92, 035142 (2015)
 """
 function fu_iter(
         state::InfiniteState, gate::LocalOperator, alg::FullUpdate, env::CTMRGEnv
     )
-    if state isa InfinitePEPO && !_fu_pepo_warning_shown[]
-        @warn "Full update of InfinitePEPO is experimental."
-        _fu_pepo_warning_shown[] = true
-    end
-    Nr, Nc = size(state)[1:2]
+    Nr, Nc, = size(state)
     fidmin = 1.0
     state2, env2 = deepcopy(state), deepcopy(env)
     wts = Array{PEPSWeight}(undef, 2, Nr, Nc)
@@ -134,26 +167,139 @@ function fu_iter(
     return state2, env2, SUWeight(collect(wt for wt in wts)), fidmin
 end
 
+function Base.iterate(it::TimeEvolver{<:FullUpdate}, state = it.state)
+    iter, t = state.iter, state.t
+    (iter == it.nstep) && return nothing
+    ψ, env, wts, fid = fu_iter(state.ψ, it.gate, it.alg, state.env)
+    iter, t = iter + 1, t + it.dt
+    # reconverge environment for the last step and every `reconverge_interval` steps
+    reconverged = (iter % it.alg.reconverge_interval == 0) || (iter == it.nstep)
+    if reconverged
+        network = isa(ψ, InfinitePEPS) ? ψ : InfinitePEPS(ψ)
+        env, = leading_boundary(env, network, it.alg.ctm_alg)
+    end
+    # update internal state
+    it.state = FUState(iter, t, ψ, env, reconverged)
+    info = (; t, wts, fid)
+    return (ψ, env, info), it.state
+end
+
+"""
+    timestep(
+        it::TimeEvolver{<:FullUpdate}, ψ::InfiniteState, env::CTMRGEnv;
+        iter::Int = it.state.iter, t::Float64 = it.state.t
+    ) -> (ψ, env, info)
+
+Given the TimeEvolver iterator `it`, perform one step of time evolution
+on the input state `ψ` and its environment `env`.
+
+- Using `iter` and `t` to reset the current iteration number and evolved time
+    respectively of the TimeEvolver `it`.
+- Use `reconverge_env` to force reconverging the obtained environment.
+"""
+function MPSKit.timestep(
+        it::TimeEvolver{<:FullUpdate}, ψ::InfiniteState, env::CTMRGEnv;
+        iter::Int = it.state.iter, t::Float64 = it.state.t, reconverge_env::Bool = false
+    )
+    _timeevol_sanity_check(ψ, physicalspace(it.state.ψ), it.alg)
+    state = FUState(iter, t, ψ, env, true)
+    result = iterate(it, state)
+    if result === nothing
+        @warn "TimeEvolver `it` has already reached the end."
+        return nothing
+    else
+        ψ, env, info = first(result)
+        if reconverge_env && !(it.state.reconverged)
+            network = isa(ψ, InfinitePEPS) ? ψ : InfinitePEPS(ψ)
+            env, = leading_boundary(env, network, it.alg.ctm_alg)
+        end
+        return ψ, env, info
+    end
+end
+
+function MPSKit.time_evolve(
+        it::TimeEvolver{<:FullUpdate};
+        tol::Float64 = 0.0, H::Union{Nothing, LocalOperator} = nothing
+    )
+    time_start = time()
+    check_convergence = (tol > 0)
+    if check_convergence
+        @assert (it.state.ψ isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+        @assert H isa LocalOperator "Hamiltonian should be provided for convergence checking in full update."
+    end
+    time0 = time()
+    iter0, t0 = it.state.iter, it.state.t
+    ψ0, env0, info0 = it.state.ψ, it.state.env, nothing
+    energy0 = check_convergence ?
+        expectation_value(ψ0, H, ψ0, env0) / prod(size(ψ0)) : NaN
+    if check_convergence
+        @info "FU: initial state energy = $(energy0)."
+    end
+    for (ψ, env, info) in it
+        !(it.state.reconverged) && continue
+        # do the following only when env has been reconverged
+        iter = it.state.iter
+        energy = check_convergence ?
+            expectation_value(ψ, H, ψ, env) / prod(size(ψ)) : NaN
+        diff = energy - energy0
+        stop = (iter == it.nstep) || (diff < 0 && abs(diff) < tol) || (diff > 0)
+        showinfo = (iter == 1) || it.state.reconverged || stop
+        time1 = time()
+        if showinfo
+            corner = env.corners[1, 1, 1]
+            corner_dim = dim.(space(corner, ax) for ax in 1:numind(corner))
+            @info "Dimension of env.corner[1, 1, 1] = $(corner_dim)."
+            Δλ = (info0 === nothing) ? NaN : compare_weights(info.wts, info0.wts)
+            if check_convergence
+                @info @sprintf(
+                    "FU iter %-6d: E = %.5f, ΔE = %.3e, |Δλ| = %.3e. Time: %.2f s",
+                    it.state.iter, energy, diff, Δλ, time1 - time0
+                )
+            else
+                @info @sprintf(
+                    "FU iter %d: t = %.2e, |Δλ| = %.3e. Time: %.2f s",
+                    it.state.iter, it.state.t, Δλ, time1 - time0
+                )
+            end
+        end
+        if check_convergence
+            if (diff < 0 && abs(diff) < tol)
+                @info "FU: energy has converged."
+                return ψ, env, info
+            end
+            if diff > 0
+                @warn "FU: energy has increased from last check. Abort evolution and return results from last check."
+                # also reset internal state of `it` to last check
+                it.state = FUState(iter0, t0, ψ0, env0, true)
+                return ψ0, env0, info0
+            end
+            if iter == it.nstep
+                @info "FU: energy has not converged."
+                return ψ, env, info
+            end
+        end
+        if stop
+            time_end = time()
+            @info @sprintf("Full update finished. Total time elasped: %.2f s", time_end - time_start)
+            return ψ, env, info
+        else
+            # update backup variables
+            iter0, t0 = it.state.iter, it.state.t
+            ψ0, env0, info0, energy0 = ψ, env, info, energy
+        end
+        time0 = time()
+    end
+    return
+end
+
 """
 Full update an infinite PEPS with nearest neighbor Hamiltonian.
 """
-function fullupdate(
-        state::InfiniteState, ham::LocalOperator, dt::Float64, 
-        alg::FullUpdate, env::CTMRGEnv; reconv_interval::Int = 5
+function MPSKit.time_evolve(
+        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
+        alg::FullUpdate, env₀::CTMRGEnv;
+        tol::Float64 = 0.0, t₀::Float64 = 0.0
     )
-    # Each NN bond is updated twice in fu_iter,
-    # thus `dt` is divided by 2 when exponentiating `ham`.
-    dt′ = _get_dt(state, dt, alg.imaginary_time)
-    gate = get_expham(ham, dt′ / 2)
-    wts, fidmin = nothing, 1.0
-    for it in 1:reconv_interval
-        state, env, wts, fid = fu_iter(state, gate, alg, env)
-        fidmin = min(fidmin, fid)
-    end
-    # reconverge environment
-    network = isa(state, InfinitePEPS) ? state : InfinitePEPS(state)
-    env, = leading_boundary(env, network, alg.ctm_alg)
-    espace = codomain(env.corners[1, 1, 1], 1)
-    @info "Space of env.corner[1, 1, 1] = $(espace)."
-    return state, env, wts, fidmin
+    it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; t₀)
+    return time_evolve(it; tol, H)
 end
