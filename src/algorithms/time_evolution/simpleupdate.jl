@@ -10,7 +10,7 @@ $(TYPEDFIELDS)
 @kwdef struct SimpleUpdate <: TimeEvolution
     # Truncation scheme after applying Trotter gates
     trunc::TruncationStrategy
-    # Switch for imaginary or real time
+    # Switch for imaginary time (exp(-H dt)) or real time (exp(-iH dt)) evolution
     imaginary_time::Bool = true
     # force usage of 3-site simple update
     force_3site::Bool = false
@@ -22,11 +22,11 @@ $(TYPEDFIELDS)
 end
 
 # internal state of simple update algorithm
-struct SUState{S <: InfiniteState, E <: SUWeight}
+struct SUState{N <: Number, S <: InfiniteState, E <: SUWeight}
     # number of performed iterations
     iter::Int
     # evolved time
-    t::Float64
+    t::N
     # PEPS/PEPO
     ψ::S
     # SUWeight environment
@@ -35,8 +35,8 @@ end
 
 """
     TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int, 
-        alg::SimpleUpdate, env₀::SUWeight; t₀::Float64 = 0.0
+        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
+        alg::SimpleUpdate, env₀::SUWeight; t₀::Number = 0.0
     )
 
 Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
@@ -45,8 +45,8 @@ starting from the initial state `ψ₀` and SUWeight environment `env₀`.
 - The initial (real or imaginary) time is specified by `t₀`.
 """
 function TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
-        alg::SimpleUpdate, env₀::SUWeight; t₀::Float64 = 0.0
+        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::SimpleUpdate, env₀::SUWeight; t₀::Number = 0.0
     )
     # sanity checks
     _timeevol_sanity_check(ψ₀, physicalspace(H), alg)
@@ -217,7 +217,7 @@ function MPSKit.timestep(
     result = iterate(it, state)
     if result === nothing
         @warn "TimeEvolver `it` has already reached the end."
-        return ψ, env, (; t, ϵ = NaN)
+        return nothing
     else
         return first(result)
     end
@@ -251,8 +251,9 @@ function MPSKit.time_evolve(
         if showinfo
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             @info @sprintf(
-                "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
-                iter, it.dt, diff, time1 - time0
+                "SU iter %-7d: dt = %s, |Δλ| = %.3e. Time = %.3f s/it",
+                # using `string` since `dt` can be complex
+                iter, string(it.dt), diff, time1 - time0
             )
         end
         if check_convergence
@@ -278,8 +279,8 @@ end
 """
     time_evolve(
         ψ₀::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
-        dt::Float64, nstep::Int, alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Float64 = 0.0, check_interval::Int = 500
+        dt::Number, nstep::Int, alg::SimpleUpdate, env₀::SUWeight;
+        tol::Float64 = 0.0, t₀::Number = 0.0, check_interval::Int = 500
     ) -> (ψ, env, info)
 
 Perform time evolution on the initial state `ψ₀` and initial environment `env₀`
@@ -293,9 +294,9 @@ with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for
     including the time evolved since `ψ₀`.
 """
 function MPSKit.time_evolve(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
+        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
         alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Float64 = 0.0, check_interval::Int = 500
+        tol::Float64 = 0.0, t₀::Number = 0.0, check_interval::Int = 500
     )
     it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; t₀)
     return time_evolve(it; tol, check_interval)

@@ -1,7 +1,7 @@
 const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
 
 function _get_dt(
-        state::InfiniteState, dt::Float64, imaginary_time::Bool
+        state::InfiniteState, dt::Number, imaginary_time::Bool
     )
     dt′ = (state isa InfinitePEPS) ? dt : (dt / 2)
     if (state isa InfinitePEPO)
