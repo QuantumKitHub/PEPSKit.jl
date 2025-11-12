@@ -239,7 +239,7 @@ function MPSKit.time_evolve(
     time_start = time()
     check_convergence = (tol > 0)
     if check_convergence
-        @assert (it.state.ψ isa InfinitePEPS) && it.alg.imaginary_time
+        @assert (it.state.ψ isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     end
     env0, time0 = it.state.env, time()
     for (ψ, env, info) in it
