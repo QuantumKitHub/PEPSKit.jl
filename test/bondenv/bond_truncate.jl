@@ -7,7 +7,7 @@ using LinearAlgebra
 using KrylovKit
 
 Random.seed!(0)
-maxiter = 500
+maxiter = 600
 check_interval = 20
 trunc = truncerror(; atol = 1.0e-10) & truncrank(8)
 Vext = Vect[FermionParity](0 => 100, 1 => 100)

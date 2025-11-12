@@ -29,9 +29,9 @@ function get_hubbard_pepo(t::Float64 = 1.0, U::Float64 = 8.0)
     pepo = PEPSKit.infinite_temperature_density_matrix(H)
     wts = SUWeight(pepo)
     alg = SimpleUpdate(;
-        trunc = truncerror(; atol = 1.0e-10) & truncrank(4), bipartite = false, check_interval = 100
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(4), bipartite = false
     )
-    pepo, = time_evolve(pepo, H, 2.0e-3, 500, alg, wts)
+    pepo, = time_evolve(pepo, H, 2.0e-3, 500, alg, wts; check_interval = 100)
     normalize!.(pepo.A, Inf)
     return pepo
 end
