@@ -22,7 +22,7 @@ $(TYPEDFIELDS)
 end
 
 # internal state of simple update algorithm
-struct SUState{N <: Number, S <: InfiniteState, E <: SUWeight}
+struct SUState{S <: InfiniteState, E <: SUWeight, N <: Number}
     # number of performed iterations
     iter::Int
     # evolved time
