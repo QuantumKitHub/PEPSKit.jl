@@ -22,7 +22,7 @@ $(TYPEDFIELDS)
 end
 
 # internal state of simple update algorithm
-struct SUState{S}
+struct SUState{S <: InfiniteState, E <: SUWeight}
     # number of performed iterations
     iter::Int
     # evolved time
@@ -30,7 +30,7 @@ struct SUState{S}
     # PEPS/PEPO
     ψ::S
     # SUWeight environment
-    env::SUWeight
+    env::E
 end
 
 """
