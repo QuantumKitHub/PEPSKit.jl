@@ -1,11 +1,8 @@
 using Test
-using Random
 using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-
-Random.seed!(10235876)
 
 # Benchmark data of [σx, σz] from HOTRG
 # Physical Review B 86, 045139 (2012) Fig. 15-16

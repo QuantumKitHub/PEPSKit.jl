@@ -1,11 +1,8 @@
 using Test
-using Random
 using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-
-Random.seed!(10235876)
 
 # Benchmark energy from high-temperature expansion
 # at β = 0.3, 0.6
@@ -14,7 +11,7 @@ bm = [-0.1235, -0.213]
 
 function converge_env(state, χ::Int)
     trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
-    env0 = CTMRGEnv(randn, Float64, state, Vect[SU2Irrep](0 => 1))
+    env0 = CTMRGEnv(ones, Float64, state, Vect[SU2Irrep](0 => 1))
     env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
     return env
 end
