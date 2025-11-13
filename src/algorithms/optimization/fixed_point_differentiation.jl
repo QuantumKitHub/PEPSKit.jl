@@ -216,7 +216,7 @@ function _rrule(
         alg::CTMRGAlgorithm,
     )
     env, info = leading_boundary(envinit, state, alg)
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
 
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
@@ -248,14 +248,14 @@ function _rrule(
         alg::SimultaneousCTMRG,
     )
     env, = leading_boundary(envinit, state, alg)
-    alg_fixed = @set alg.projector_alg.trscheme = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     env_fixed, signs = gauge_fix(env, env_conv)
 
     # Fix SVD
     svd_alg_fixed = _fix_svd_algorithm(alg.projector_alg.svd_alg, signs, info)
     alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
-    alg_fixed = @set alg_fixed.projector_alg.trscheme = notrunc()
+    alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)

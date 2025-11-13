@@ -12,7 +12,10 @@ struct InfinitePEPO{T <: PEPOTensor}
     InfinitePEPO{T}(A::Array{T, 3}) where {T} = new{T}(A)
     function InfinitePEPO(A::Array{T, 3}) where {T <: PEPOTensor}
         # space checks
+        bosonic_braiding = BraidingStyle(sectortype(T)) === Bosonic()
         for (d, w, h) in Tuple.(CartesianIndices(A))
+            (bosonic_braiding || (!isdual(domain_physicalspace(A[d, w, h])) && !isdual(codomain_physicalspace(A[d, w, h])))) ||
+                throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are not allowed (for now)."))
             codomain_physicalspace(A[d, w, h]) == domain_physicalspace(A[d, w, _next(h, end)]) ||
                 throw(SpaceMismatch("Physical space at site $((d, w, h)) does not match."))
             north_virtualspace(A[d, w, h]) == south_virtualspace(A[_prev(d, end), w, h])' ||
@@ -65,14 +68,17 @@ end
 function InfinitePEPO(
         Pspaces::A, Nspaces::A, Espaces::A = Nspaces
     ) where {A <: AbstractArray{<:ElementarySpace, 2}}
+    return InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfinitePEPO(
+        f, T, Pspaces::A, Nspaces::A, Espaces::A = Nspaces
+    ) where {A <: AbstractArray{<:ElementarySpace, 2}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
-
     Pspaces = reshape(Pspaces, (size(Pspaces)..., 1))
     Nspaces = reshape(Pspaces, (size(Nspaces)..., 1))
     Espaces = reshape(Pspaces, (size(Espaces)..., 1))
-
-    return InfinitePEPO(Pspaces, Nspaces, Espaces)
+    return InfinitePEPO(f, T, Pspaces, Nspaces, Espaces)
 end
 
 """

@@ -38,14 +38,14 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
 
         # Find right fixed points of mixed transfer matrices
         ρinit = randn(
-            scalartype(T), MPSKit._lastspace(Tsfinal[end])' ← MPSKit._lastspace(M[end])'
+            scalartype(T), space(Tsfinal[end], numind(Tsfinal[end]))' ← space(M[end], numind(M[end]))'
         )
         ρprev = transfermatrix_fixedpoint(Tsprev, M, ρinit)
         ρfinal = transfermatrix_fixedpoint(Tsfinal, M, ρinit)
 
         # Decompose and multiply
-        Qprev, = leftorth!(ρprev)
-        Qfinal, = leftorth!(ρfinal)
+        Qprev, = left_orth!(ρprev)
+        Qfinal, = left_orth!(ρfinal)
 
         return Qprev * Qfinal'
     end
@@ -56,7 +56,10 @@ end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
 # because MPSKit is not compatible with AD
-@generated function _transfer_right(
+# NOTE: the action of the transfer operator here is NOT the same as that of
+# MPSKit.transfer_right; to match the MPSKit implementation, it would require a twist on any
+# index where spaces(Abar, 2:end) is dual (which we can just ignore as long as we use a random Abar)
+@generated function mps_transfer_right(
         v::AbstractTensorMap{<:Any, S, 1, N₁},
         A::GenericMPSTensor{S, N₂}, Abar::GenericMPSTensor{S, N₂},
     ) where {S, N₁, N₂}
@@ -71,7 +74,7 @@ end
 function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     _, vecs, info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
         return foldr(zip(tops, bottoms); init = ρ) do (top, bottom), ρ
-            return _transfer_right(ρ, top, bottom)
+            return mps_transfer_right(ρ, top, bottom)
         end
     end
     info.converged > 0 || @warn "eigsolve did not converge"
