@@ -8,28 +8,29 @@ Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 $(TYPEDFIELDS)
 """
 @kwdef struct SimpleUpdate <: TimeEvolution
-    # Truncation scheme after applying Trotter gates
+    "Truncation strategy for bonds updated by Trotter gates"
     trunc::TruncationStrategy
-    # Switch for imaginary time (exp(-H dt)) or real time (exp(-iH dt)) evolution
+    "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
-    # force usage of 3-site simple update
+    "When true, force the usage of 3-site simple update"
     force_3site::Bool = false
-    # ---- only applicable to ground state search ----
-    # assume bipartite unit cell structure
+    "(Only applicable to InfinitePEPS) When true, assume bipartite unit cell structure"
     bipartite::Bool = false
-    # ---- only applicable to PEPO evolution ----
-    gate_bothsides::Bool = false # when false, purified approach is assumed
+    "(Only applicable to InfinitePEPO) When true (or false), the PEPO is updated as `exp(-H dt/2) * ρ * exp(-H dt/2)` (or `exp(-H dt) ρ`) in each Trotter step"
+    gate_bothsides::Bool = false
 end
 
-# internal state of simple update algorithm
+"""
+Internal state of simple update algorithm
+"""
 struct SUState{S <: InfiniteState, E <: SUWeight, N <: Number}
-    # number of performed iterations
+    "number of performed iterations"
     iter::Int
-    # evolved time
+    "evolved time"
     t::N
-    # PEPS/PEPO
+    "PEPS/PEPO"
     ψ::S
-    # SUWeight environment
+    "SUWeight environment"
     env::E
 end
 
@@ -42,7 +43,7 @@ end
 Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
 starting from the initial state `ψ₀` and SUWeight environment `env₀`.
 
-- The initial (real or imaginary) time is specified by `t₀`.
+- The initial time is specified by `t₀`.
 """
 function TimeEvolver(
         ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
@@ -73,12 +74,13 @@ end
 
 """
 Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
-
 ```
         |           |
     -- T[r,c] -- T[r,c+1] --
         |           |
 ```
+When `gate_ax = 1` (or `2`), the gate will be applied to 
+the codomain (or domain) physicsl legs of `state`.
 """
 function _su_xbond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
@@ -117,6 +119,8 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
     -- T[r,c] ---
         |
 ```
+When `gate_ax = 1` (or `2`), the gate will be applied to 
+the codomain (or domain) physicsl legs of `state`.
 """
 function _su_ybond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
@@ -227,10 +231,14 @@ end
     time_evolve(
         it::TimeEvolver{<:SimpleUpdate}; 
         tol::Float64 = 0.0, check_interval::Int = 500
-    )
+    ) -> (ψ, env, info)
 
 Perform time evolution to the end of TimeEvolver iterator `it`,
 or until convergence of SUWeight set by a positive `tol`.
+
+- Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
+    For other usages it should not be changed.
+- `check_interval` sets the number of iterations between outputs of information.
 """
 function MPSKit.time_evolve(
         it::TimeEvolver{<:SimpleUpdate};
@@ -246,7 +254,8 @@ function MPSKit.time_evolve(
         iter = it.state.iter
         diff = compare_weights(env0, env)
         stop = (iter == it.nstep) || (diff < tol)
-        showinfo = (iter % check_interval == 0) || (iter == 1) || stop
+        showinfo = (check_interval > 0) &&
+            ((iter % check_interval == 0) || (iter == 1) || stop)
         time1 = time()
         if showinfo
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
@@ -289,9 +298,10 @@ with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for
 
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
-- Using `t₀` to specify the initial (real or imaginary) time of `ψ₀`.
+- Use `t₀` to specify the initial time of `ψ₀`.
+- `check_interval` sets the interval to output information. Output during the evolution can be turned off by setting `check_interval <= 0`.
 - `info` is a NamedTuple containing information of the evolution, 
-    including the time evolved since `ψ₀`.
+    including the time `info.t` evolved since `ψ₀`.
 """
 function MPSKit.time_evolve(
         ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
