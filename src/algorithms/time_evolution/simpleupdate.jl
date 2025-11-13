@@ -16,8 +16,12 @@ $(TYPEDFIELDS)
     force_3site::Bool = false
     "(Only applicable to InfinitePEPS) When true, assume bipartite unit cell structure"
     bipartite::Bool = false
-    "(Only applicable to InfinitePEPO) When true (or false), the PEPO is updated as `exp(-H dt/2) * ρ * exp(-H dt/2)` (or `exp(-H dt) ρ`) in each Trotter step"
-    gate_bothsides::Bool = false
+    "(Only applicable to InfinitePEPO) 
+    When true, the PEPO is regarded as a purified PEPS, and updated as
+    `|ρ(t + dt)⟩ = exp(-H dt/2) |ρ(t)⟩`.
+    When false, the PEPO is updated as 
+    `ρ(t + dt) = exp(-H dt/2) ρ(t) exp(-H dt/2)`."
+    purified::Bool = true
 end
 
 """
@@ -158,7 +162,7 @@ function su_iter(
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    gate_axs = alg.gate_bothsides ? (1:2) : (1:1)
+    gate_axs = alg.purified ? (1:1) : (1:2)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
