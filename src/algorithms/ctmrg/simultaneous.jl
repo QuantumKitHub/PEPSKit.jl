@@ -125,8 +125,8 @@ function simultaneous_projectors(
         coordinate, enlarged_corners::Array{E, 3}, env, alg::RandomizedProjector
     ) where {E}
     coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
-    trscheme = truncation_scheme(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-    alg′ = @set alg.trscheme = trscheme
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    alg′ = @set alg.trunc = trunc
     rowsize, colsize = size(enlarged_corners)[2:3]
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)

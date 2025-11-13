@@ -193,7 +193,7 @@ end
 # TBD: compute ncv vectors proj.ncv_ratio * old_nvectors?
 struct RandomizedProjector{S, T, R} <: ProjectorAlgorithm
     svd_alg::S
-    trscheme::T
+    trunc::T
     rng::R
     oversampling::Int
     max_full::Int
@@ -210,9 +210,9 @@ _default_randomized_max_full = 100
 _default_n_subspace_iter = 2
 
 # needed as default interface in PEPSKit.ProjectorAlgorithm
-function RandomizedProjector(svd_algorithm, trscheme, verbosity)
+function RandomizedProjector(svd_algorithm, trunc, verbosity)
     return RandomizedProjector(
-        svd_algorithm, trscheme, Random.default_rng(), _default_randomized_oversampling,
+        svd_algorithm, trunc, Random.default_rng(), _default_randomized_oversampling,
         _default_randomized_max_full, _default_n_subspace_iter, verbosity
     )
 end
@@ -261,7 +261,7 @@ function compute_projector(fq, coordinate, last_space, alg::RandomizedProjector)
     normalize!(B)  # TODO better way?
 
     svd_alg = svd_algorithm(alg, coordinate)
-    U′, S, V, info = tsvd!(B, svd_alg; trunc = alg.trscheme)
+    U′, S, V, info = svd_trunc!(B, svd_alg; trunc = alg.trunc)
     U = Q * U′
     foreach(blocks(S)) do (s, b)
         if size(b, 1) == dim(randomized_space, s) && size(b, 1) < dim(full_space, s)
