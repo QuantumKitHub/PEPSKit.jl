@@ -8,45 +8,50 @@ Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 $(TYPEDFIELDS)
 """
 @kwdef struct SimpleUpdate <: TimeEvolution
-    # Truncation scheme after applying Trotter gates
+    "Truncation strategy for bonds updated by Trotter gates"
     trunc::TruncationStrategy
-    # Switch for imaginary or real time
+    "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
-    # force usage of 3-site simple update
+    "When true, force the usage of 3-site simple update"
     force_3site::Bool = false
-    # ---- only applicable to ground state search ----
-    # assume bipartite unit cell structure
+    "(Only applicable to InfinitePEPS) When true, assume bipartite unit cell structure"
     bipartite::Bool = false
-    # ---- only applicable to PEPO evolution ----
-    gate_bothsides::Bool = false # when false, purified approach is assumed
+    "(Only applicable to InfinitePEPO) 
+    When true, the PEPO is regarded as a purified PEPS, and updated as
+    `|ρ(t + dt)⟩ = exp(-H dt/2) |ρ(t)⟩`.
+    When false, the PEPO is updated as 
+    `ρ(t + dt) = exp(-H dt/2) ρ(t) exp(-H dt/2)`."
+    purified::Bool = true
 end
 
-# internal state of simple update algorithm
-struct SUState{S}
-    # number of performed iterations
+"""
+Internal state of simple update algorithm
+"""
+struct SUState{S <: InfiniteState, E <: SUWeight, N <: Number}
+    "number of performed iterations"
     iter::Int
-    # evolved time
-    t::Float64
-    # PEPS/PEPO
+    "evolved time"
+    t::N
+    "PEPS/PEPO"
     ψ::S
-    # SUWeight environment
-    env::SUWeight
+    "SUWeight environment"
+    env::E
 end
 
 """
     TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int, 
-        alg::SimpleUpdate, env₀::SUWeight; t₀::Float64 = 0.0
+        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
+        alg::SimpleUpdate, env₀::SUWeight; t₀::Number = 0.0
     )
 
 Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
 starting from the initial state `ψ₀` and SUWeight environment `env₀`.
 
-- The initial (real or imaginary) time is specified by `t₀`.
+- The initial time is specified by `t₀`.
 """
 function TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
-        alg::SimpleUpdate, env₀::SUWeight; t₀::Float64 = 0.0
+        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::SimpleUpdate, env₀::SUWeight; t₀::Number = 0.0
     )
     # sanity checks
     _timeevol_sanity_check(ψ₀, physicalspace(H), alg)
@@ -73,12 +78,13 @@ end
 
 """
 Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
-
 ```
         |           |
     -- T[r,c] -- T[r,c+1] --
         |           |
 ```
+When `gate_ax = 1` (or `2`), the gate will be applied to 
+the codomain (or domain) physicsl legs of `state`.
 """
 function _su_xbond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
@@ -117,6 +123,8 @@ Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
     -- T[r,c] ---
         |
 ```
+When `gate_ax = 1` (or `2`), the gate will be applied to 
+the codomain (or domain) physicsl legs of `state`.
 """
 function _su_ybond!(
         state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
@@ -154,7 +162,7 @@ function su_iter(
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    gate_axs = alg.gate_bothsides ? (1:2) : (1:1)
+    gate_axs = alg.purified ? (1:1) : (1:2)
     for r in 1:Nr, c in 1:Nc
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
@@ -217,7 +225,7 @@ function MPSKit.timestep(
     result = iterate(it, state)
     if result === nothing
         @warn "TimeEvolver `it` has already reached the end."
-        return ψ, env, (; t, ϵ = NaN)
+        return nothing
     else
         return first(result)
     end
@@ -227,10 +235,14 @@ end
     time_evolve(
         it::TimeEvolver{<:SimpleUpdate}; 
         tol::Float64 = 0.0, check_interval::Int = 500
-    )
+    ) -> (ψ, env, info)
 
 Perform time evolution to the end of TimeEvolver iterator `it`,
 or until convergence of SUWeight set by a positive `tol`.
+
+- Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
+    For other usages it should not be changed.
+- `check_interval` sets the number of iterations between outputs of information.
 """
 function MPSKit.time_evolve(
         it::TimeEvolver{<:SimpleUpdate};
@@ -239,20 +251,22 @@ function MPSKit.time_evolve(
     time_start = time()
     check_convergence = (tol > 0)
     if check_convergence
-        @assert (it.state.ψ isa InfinitePEPS) && it.alg.imaginary_time
+        @assert (it.state.ψ isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     end
     env0, time0 = it.state.env, time()
     for (ψ, env, info) in it
         iter = it.state.iter
         diff = compare_weights(env0, env)
         stop = (iter == it.nstep) || (diff < tol)
-        showinfo = (iter % check_interval == 0) || (iter == 1) || stop
+        showinfo = (check_interval > 0) &&
+            ((iter % check_interval == 0) || (iter == 1) || stop)
         time1 = time()
         if showinfo
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             @info @sprintf(
-                "SU iter %-7d: dt = %.0e, |Δλ| = %.3e. Time = %.3f s/it",
-                iter, it.dt, diff, time1 - time0
+                "SU iter %-7d: dt = %s, |Δλ| = %.3e. Time = %.3f s/it",
+                # using `string` since `dt` can be complex
+                iter, string(it.dt), diff, time1 - time0
             )
         end
         if check_convergence
@@ -278,8 +292,8 @@ end
 """
     time_evolve(
         ψ₀::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
-        dt::Float64, nstep::Int, alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Float64 = 0.0, check_interval::Int = 500
+        dt::Number, nstep::Int, alg::SimpleUpdate, env₀::SUWeight;
+        tol::Float64 = 0.0, t₀::Number = 0.0, check_interval::Int = 500
     ) -> (ψ, env, info)
 
 Perform time evolution on the initial state `ψ₀` and initial environment `env₀`
@@ -288,14 +302,15 @@ with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for
 
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
-- Using `t₀` to specify the initial (real or imaginary) time of `ψ₀`.
+- Use `t₀` to specify the initial time of `ψ₀`.
+- `check_interval` sets the interval to output information. Output during the evolution can be turned off by setting `check_interval <= 0`.
 - `info` is a NamedTuple containing information of the evolution, 
-    including the time evolved since `ψ₀`.
+    including the time `info.t` evolved since `ψ₀`.
 """
 function MPSKit.time_evolve(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Float64, nstep::Int,
+        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
         alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Float64 = 0.0, check_interval::Int = 500
+        tol::Float64 = 0.0, t₀::Number = 0.0, check_interval::Int = 500
     )
     it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; t₀)
     return time_evolve(it; tol, check_interval)

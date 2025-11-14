@@ -462,7 +462,7 @@ end
 function _su3site_se!(
         state::InfiniteState, gs::Vector{T}, env::SUWeight,
         row::Int, col::Int, truncs::Vector{E};
-        gate_bothsides::Bool = true
+        purified::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -477,7 +477,7 @@ function _su3site_se!(
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
     # apply gate MPOs
-    gate_axs = gate_bothsides ? (1:2) : (1:1)
+    gate_axs = purified ? (1:1) : (1:2)
     ϵs = nothing
     for gate_ax in gate_axs
         _apply_gatempo!(Ms, gs; gate_ax)
@@ -525,7 +525,7 @@ function su_iter(
                 truncation_strategy(trunc, 1, r, c)
                 truncation_strategy(trunc, 2, r, _next(c, Nc))
             ]
-            ϵ = _su3site_se!(state2, gs, env2, r, c, truncs; alg.gate_bothsides)
+            ϵ = _su3site_se!(state2, gs, env2, r, c, truncs; alg.purified)
         end
         state2, env2 = rotl90(state2), rotl90(env2)
         trunc = rotl90(trunc)

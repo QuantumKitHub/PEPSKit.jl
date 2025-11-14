@@ -6,7 +6,7 @@ Abstract super type for time evolution algorithms of InfinitePEPS or InfinitePEP
 abstract type TimeEvolution end
 
 """
-    mutable struct TimeEvolver{TE <: TimeEvolution, H, G, S}
+    mutable struct TimeEvolver{TE <: TimeEvolution, G, S, N <: Number}
 
 Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 
@@ -14,16 +14,16 @@ Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 
 $(TYPEDFIELDS)
 """
-mutable struct TimeEvolver{TE <: TimeEvolution, G, S}
-    # Time evolution algorithm
+mutable struct TimeEvolver{TE <: TimeEvolution, G, S, N <: Number}
+    "Time evolution algorithm (currently supported: `SimpleUpdate`)"
     alg::TE
-    # Trotter time step
-    dt::Float64
-    # Maximal iteration steps
+    "Trotter time step"
+    dt::N
+    "The number of iteration steps"
     nstep::Int
-    # Trotter gates
+    "Trotter gates"
     gate::G
-    # PEPS/PEPO (and environment)
+    "PEPS/PEPO and its environment"
     state::S
 end
 
@@ -35,8 +35,8 @@ function _timeevol_sanity_check(
     Nr, Nc, = size(ψ₀)
     @assert (Nr >= 2 && Nc >= 2) "Unit cell size for simple update should be no smaller than (2, 2)."
     @assert Pspaces == physicalspace(ψ₀) "Physical spaces of `ψ₀` do not match `Pspaces`."
-    if hasfield(typeof(alg), :gate_bothsides) && alg.gate_bothsides
-        @assert ψ₀ isa InfinitePEPO "alg.gate_bothsides = true is only compatible with PEPO."
+    if hasfield(typeof(alg), :purified) && !alg.purified
+        @assert ψ₀ isa InfinitePEPO "alg.purified = false is only applicable to PEPO."
     end
     if hasfield(typeof(alg), :bipartite) && alg.bipartite
         @assert Nr == Nc == 2 "`bipartite = true` requires 2 x 2 unit cell size."

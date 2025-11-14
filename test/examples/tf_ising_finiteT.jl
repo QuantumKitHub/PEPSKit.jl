@@ -1,11 +1,8 @@
 using Test
-using Random
 using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-
-Random.seed!(10235876)
 
 # Benchmark data of [σx, σz] from HOTRG
 # Physical Review B 86, 045139 (2012) Fig. 15-16
@@ -60,7 +57,7 @@ dt, nstep = 1.0e-3, 400
 # when g = 2, β = 0.4 and 2β = 0.8 belong to two phases (without and with nonzero σᶻ)
 
 # PEPO approach: results at β, or T = 2.5
-alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = true)
+alg = SimpleUpdate(; trunc = trunc_pepo, purified = false)
 pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 result_β = measure_mag(pepo, env)
@@ -77,7 +74,7 @@ result_2β = measure_mag(pepo, env)
 @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
 
 # Purification approach: results at 2β, or T = 1.25
-alg = SimpleUpdate(; trunc = trunc_pepo, gate_bothsides = false)
+alg = SimpleUpdate(; trunc = trunc_pepo, purified = true)
 pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0)
 env = converge_env(InfinitePEPS(pepo), 8)
 result_2β′ = measure_mag(pepo, env; purified = true)
