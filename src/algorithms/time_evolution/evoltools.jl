@@ -1,5 +1,3 @@
-const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
-
 """
 Process the Trotter time step `dt` according to the intended usage.
 """
