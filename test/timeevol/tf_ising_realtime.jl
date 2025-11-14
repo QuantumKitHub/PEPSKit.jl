@@ -54,25 +54,20 @@ function tfising_fu(g::Float64, Dcut::Int, chi::Int; als = true, use_pinv = true
     ham = tfising(ComplexF64, Trivial, InfiniteSquare(2, 2); J = 1.0, g = g)
 
     trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dcut)
-    trunc_env = truncerror(; atol = 1.0e-10) & truncrank(chi)
-    env = CTMRGEnv(ones, ComplexF64, peps, ℂ^1)
-    env, = leading_boundary(
-        env, peps; alg = :sequential,
-        tol = 1.0e-10, verbosity = 2, trunc = trunc_env
-    )
-
-    ctm_alg = SequentialCTMRG(;
-        tol = 1.0e-9,
-        maxiter = 50,
-        verbosity = 2,
-        trunc = trunc_env,
-        projector_alg = :fullinfinite,
-    )
     opt_alg = if als
         ALSTruncation(; trunc = trunc_peps, tol = 1.0e-10, use_pinv)
     else
         FullEnvTruncation(; trunc = trunc_peps, tol = 1.0e-10)
     end
+
+    trunc_env = truncerror(; atol = 1.0e-10) & truncrank(chi)
+    ctm_alg = SequentialCTMRG(;
+        tol = 1.0e-8, maxiter = 50, verbosity = 2,
+        trunc = trunc_env, projector_alg = :fullinfinite
+    )
+
+    env = CTMRGEnv(ones, ComplexF64, peps, ℂ^1)
+    env, = leading_boundary(env, peps, ctm_alg)
 
     # do one extra step at the beginning to match benchmark data
     fu_alg = FullUpdate(; opt_alg, ctm_alg, imaginary_time = false, reconverge_interval = 5)
