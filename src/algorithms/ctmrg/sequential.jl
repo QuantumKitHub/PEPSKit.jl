@@ -57,6 +57,27 @@ function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
     return env, info
 end
 
+"""
+    ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+
+Perform sequential CTMRG right move on the `col`-th column.
+"""
+function ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+    #= 
+        right move <---
+        ←-- T1 ← C2     r-1
+            ‖    ↑
+        === M' = T2     r
+            ‖    ↑
+        --→ T3 → C3     r+1
+            c   c+1
+    =#
+    Nc = size(network)[2]
+    @assert 1 <= col <= Nc
+    env, info = ctmrg_leftmove(Nc + 1 - col, rot180(network), rot180(env), alg)
+    return rot180(env), info
+end
+
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(network)))
     condition_number = zero(real(scalartype(network)))

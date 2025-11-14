@@ -48,15 +48,16 @@ Therefore, we shall gradually increase $J_2 / J_1$ from 0.1 to 0.5, each time in
 on the previously evolved PEPS:
 """
 
-dt, tol, maxiter = 1.0e-2, 1.0e-8, 30000
+dt, tol, nstep = 1.0e-2, 1.0e-8, 30000
 check_interval = 4000
 trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
-alg = SimpleUpdate(dt, tol, maxiter, trunc_peps)
+alg = SimpleUpdate(; trunc = trunc_peps)
 for J2 in 0.1:0.1:0.5
-    H = real( ## convert Hamiltonian `LocalOperator` to real floats
+    ## convert Hamiltonian `LocalOperator` to real floats
+    H = real(
         j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
     )
-    global peps, wts, = simpleupdate(peps, H, alg, wts; check_interval)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval)
 end
 
 md"""
@@ -69,8 +70,7 @@ tols = [1.0e-9, 1.0e-9]
 J2 = 0.5
 H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false))
 for (dt, tol) in zip(dts, tols)
-    alg′ = SimpleUpdate(dt, tol, maxiter, trunc_peps)
-    global peps, wts, = simpleupdate(peps, H, alg′, wts; check_interval)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol)
 end
 
 md"""
