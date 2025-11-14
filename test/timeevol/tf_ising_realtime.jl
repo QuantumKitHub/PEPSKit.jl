@@ -3,9 +3,7 @@ using TensorKit
 import MPSKitModels: S_zz, σˣ
 using PEPSKit
 using Printf
-using Random
 using Accessors: @set
-Random.seed!(0)
 
 const hc = 3.044382
 const formatter = Printf.Format("t = %.2f, ⟨σˣ⟩ = %.7e + %.7e im.")
@@ -46,7 +44,7 @@ end
 
 function tfising_fu(g::Float64, Dcut::Int, chi::Int; als = true, use_pinv = true)
     # the fully polarized state
-    peps = InfinitePEPS(randn, ComplexF64, ℂ^2, ℂ^1; unitcell = (2, 2))
+    peps = InfinitePEPS(zeros, ComplexF64, ℂ^2, ℂ^1; unitcell = (2, 2))
     for t in peps.A
         t[1, 1, 1, 1, 1] = 1.0
         t[2, 1, 1, 1, 1] = 1.0
