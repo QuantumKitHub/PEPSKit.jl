@@ -66,7 +66,7 @@ result_β = measure_mag(pepo, env)
 @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
 # continue to get results at 2β, or T = 1.25
-pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t₀ = β)
+pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t0 = β)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 result_2β = measure_mag(pepo, env)
 @info "tr(σ(x,z)ρ) at T = $(1 / (2β))" result_2β
