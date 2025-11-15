@@ -27,6 +27,8 @@ struct InfinitePEPO{T <: PEPOTensor}
     end
 end
 
+const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
+
 ## Constructors
 
 """
