@@ -23,7 +23,8 @@ mutable struct TimeEvolver{TE <: TimeEvolution, G, S, N <: Number}
     nstep::Int
     "Trotter gates"
     gate::G
-    "PEPS/PEPO and its environment"
+    "Internal state of the iterator, including the number of
+    already performed iterations, evolved time, PEPS/PEPO and its environment"
     state::S
 end
 
