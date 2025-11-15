@@ -206,22 +206,17 @@ end
 
 """
     timestep(
-        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
+        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight
     ) -> (ψ, env, info)
 
 Given the TimeEvolver iterator `it`, perform one step of time evolution
 on the input state `ψ` and its environment `env`.
-
-- Using `iter` and `t` to reset the current iteration number and evolved time
-    respectively of the TimeEvolver `it`.
 """
 function MPSKit.timestep(
-        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
+        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight
     )
     _timeevol_sanity_check(ψ, physicalspace(it.state.ψ), it.alg)
-    state = SUState(iter, t, ψ, env)
+    state = SUState(it.state.iter, it.state.t, ψ, env)
     result = iterate(it, state)
     if result === nothing
         @warn "TimeEvolver `it` has already reached the end."
