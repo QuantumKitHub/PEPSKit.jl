@@ -55,7 +55,10 @@ end
 
 ## Spaces
 
-virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+function virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir)
+    Nr, Nc = size(n)
+    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
+end
 
 ## Vector interface
 

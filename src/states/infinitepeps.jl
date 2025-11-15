@@ -143,9 +143,15 @@ end
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePEPS} = spacetype(eltype(T))
 virtualspace(n::InfinitePEPS, dir) = virtualspace.(unitcell(n), dir)
-virtualspace(n::InfinitePEPS, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+function virtualspace(n::InfinitePEPS, r::Int, c::Int, dir)
+    Nr, Nc = size(n)
+    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
+end
 physicalspace(n::InfinitePEPS) = physicalspace.(unitcell(n))
-physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
+function physicalspace(n::InfinitePEPS, r::Int, c::Int)
+    Nr, Nc = size(n)
+    return physicalspace(n[mod1(r, Nr), mod1(c, Nc)])
+end
 
 ## InfiniteSquareNetwork interface
 
