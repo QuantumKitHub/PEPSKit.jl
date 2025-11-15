@@ -462,7 +462,7 @@ end
 function _su3site_se!(
         state::InfiniteState, gs::Vector{T}, env::SUWeight,
         row::Int, col::Int, truncs::Vector{E};
-        gate_bothsides::Bool = true
+        purified::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
@@ -477,7 +477,7 @@ function _su3site_se!(
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
     # apply gate MPOs
-    gate_axs = gate_bothsides ? (1:2) : (1:1)
+    gate_axs = purified ? (1:1) : (1:2)
     ϵs = nothing
     for gate_ax in gate_axs
         _apply_gatempo!(Ms, gs; gate_ax)
@@ -500,23 +500,13 @@ function _su3site_se!(
         M = absorb_weight(M, env, coord[1], coord[2], openaxs; inv = true)
         state.A[CartesianIndex(coord)] = normalize(M, Inf)
     end
-    return ϵs
+    return maximum(ϵs)
 end
 
-"""
-    su3site_iter(state::InfinitePEPS, gatempos, alg::SimpleUpdate, env::SUWeight)
-    su3site_iter(densitymatrix::InfinitePEPO, gatempos, alg::SimpleUpdate, env::SUWeight; gate_bothsides::Bool = true)
-
-One round of 3-site simple update, which applies the Trotter gate MPOs `gatempos`
-on an InfinitePEPS `state` or InfinitePEPO `densitymatrix`.
-"""
-function su3site_iter(
-        state::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight;
-        gate_bothsides::Bool = true
+function su_iter(
+        state::InfiniteState, gatempos::Vector{G}, alg::SimpleUpdate, env::SUWeight
     ) where {G <: AbstractMatrix}
-    if state isa InfinitePEPS
-        gate_bothsides = false
-    else
+    if state isa InfinitePEPO
         @assert size(state, 3) == 1
     end
     Nr, Nc = size(state)[1:2]
@@ -525,7 +515,7 @@ function su3site_iter(
             "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
         ),
     )
-    state2, env2 = deepcopy(state), deepcopy(env)
+    state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     trunc = alg.trunc
     for i in 1:4
         Nr, Nc = size(state2)[1:2]
@@ -535,53 +525,10 @@ function su3site_iter(
                 truncation_strategy(trunc, 1, r, c)
                 truncation_strategy(trunc, 2, r, _next(c, Nc))
             ]
-            _su3site_se!(state2, gs, env2, r, c, truncs; gate_bothsides)
+            ϵ = _su3site_se!(state2, gs, env2, r, c, truncs; alg.purified)
         end
         state2, env2 = rotl90(state2), rotl90(env2)
         trunc = rotl90(trunc)
     end
-    return state2, env2
-end
-
-"""
-Perform 3-site simple update for Hamiltonian `ham`.
-"""
-function _simpleupdate3site(
-        state::InfiniteState, ham::LocalOperator, alg::SimpleUpdate, env::SUWeight;
-        check_interval::Int = 500, gate_bothsides::Bool = true
-    )
-    time_start = time()
-    # convert Hamiltonian to 3-site exponentiated gate MPOs
-    if state isa InfinitePEPS
-        gate_bothsides = false
-    end
-    dt = gate_bothsides ? (alg.dt / 2) : alg.dt
-    gatempos = [
-        _get_gatempos_se(ham, dt),
-        _get_gatempos_se(rotl90(ham), dt),
-        _get_gatempos_se(rot180(ham), dt),
-        _get_gatempos_se(rotr90(ham), dt),
-    ]
-    wtdiff = 1.0
-    env0 = deepcopy(env)
-    for count in 1:(alg.maxiter)
-        time0 = time()
-        state, env = su3site_iter(state, gatempos, alg, env; gate_bothsides)
-        wtdiff = compare_weights(env, env0)
-        converge = (wtdiff < alg.tol)
-        cancel = (count == alg.maxiter)
-        env0 = deepcopy(env)
-        time1 = time()
-        if ((count == 1) || (count % check_interval == 0) || converge || cancel)
-            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-            label = (converge ? "conv" : (cancel ? "cancel" : "iter"))
-            message = @sprintf(
-                "SU %s %-7d:  dt = %.0e,  weight diff = %.3e,  time = %.3f sec\n",
-                label, count, alg.dt, wtdiff, time1 - ((converge || cancel) ? time_start : time0)
-            )
-            cancel ? (@warn message) : (@info message)
-        end
-        converge && break
-    end
-    return state, env, wtdiff
+    return state2, env2, ϵ
 end

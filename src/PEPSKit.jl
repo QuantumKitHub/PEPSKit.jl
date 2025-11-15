@@ -74,6 +74,7 @@ include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/time_evolution/evoltools.jl")
+include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
 
@@ -104,7 +105,8 @@ export fixedpoint
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
-export su_iter, su3site_iter, simpleupdate, SimpleUpdate
+export SimpleUpdate
+export TimeEvolver, timestep, time_evolve
 
 export InfiniteSquareNetwork
 export InfinitePartitionFunction
