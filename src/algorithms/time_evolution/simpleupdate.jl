@@ -164,6 +164,8 @@ function su_iter(
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     gate_axs = alg.purified ? (1:1) : (1:2)
     for r in 1:Nr, c in 1:Nc
+        (alg.bipartite && r > 1) && continue
+        # update x-bonds
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
@@ -176,6 +178,7 @@ function su_iter(
             state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
+        # update y-bonds
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs

@@ -55,29 +55,30 @@ dt, nstep = 1.0e-3, 400
 β = dt * nstep
 
 # when g = 2, β = 0.4 and 2β = 0.8 belong to two phases (without and with nonzero σᶻ)
+@testset "Finite-T SU (bipartite = $(bipartite))" for bipartite in (true, false)
+    # PEPO approach: results at β, or T = 2.5
+    alg = SimpleUpdate(; trunc = trunc_pepo, purified = false, bipartite)
+    pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0)
+    env = converge_env(InfinitePartitionFunction(pepo), 16)
+    result_β = measure_mag(pepo, env)
+    @info "tr(σ(x,z)ρ) at T = $(1 / β): $(result_β)."
+    @test β ≈ info.t
+    @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
-# PEPO approach: results at β, or T = 2.5
-alg = SimpleUpdate(; trunc = trunc_pepo, purified = false)
-pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0)
-env = converge_env(InfinitePartitionFunction(pepo), 16)
-result_β = measure_mag(pepo, env)
-@info "tr(σ(x,z)ρ) at T = $(1 / β)" result_β
-@test β ≈ info.t
-@test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
+    # continue to get results at 2β, or T = 1.25
+    pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t0 = β)
+    env = converge_env(InfinitePartitionFunction(pepo), 16)
+    result_2β = measure_mag(pepo, env)
+    @info "tr(σ(x,z)ρ) at T = $(1 / (2β)): $(result_2β)."
+    @test 2 * β ≈ info.t
+    @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
 
-# continue to get results at 2β, or T = 1.25
-pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t0 = β)
-env = converge_env(InfinitePartitionFunction(pepo), 16)
-result_2β = measure_mag(pepo, env)
-@info "tr(σ(x,z)ρ) at T = $(1 / (2β))" result_2β
-@test 2 * β ≈ info.t
-@test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
-
-# Purification approach: results at 2β, or T = 1.25
-alg = SimpleUpdate(; trunc = trunc_pepo, purified = true)
-pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0)
-env = converge_env(InfinitePEPS(pepo), 8)
-result_2β′ = measure_mag(pepo, env; purified = true)
-@info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)) (purification approach)" result_2β′
-@test 2 * β ≈ info.t
-@test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)
+    # Purification approach: results at 2β, or T = 1.25
+    alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite)
+    pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0)
+    env = converge_env(InfinitePEPS(pepo), 8)
+    result_2β′ = measure_mag(pepo, env; purified = true)
+    @info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)): $(result_2β′)."
+    @test 2 * β ≈ info.t
+    @test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)
+end
