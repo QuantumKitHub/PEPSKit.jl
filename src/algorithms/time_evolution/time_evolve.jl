@@ -41,7 +41,6 @@ function _timeevol_sanity_check(
     end
     if hasfield(typeof(alg), :bipartite) && alg.bipartite
         @assert Nr == Nc == 2 "`bipartite = true` requires 2 x 2 unit cell size."
-        @assert ψ₀ isa InfinitePEPS "Evolution of PEPO with bipartite structure is not implemented."
     end
     return nothing
 end

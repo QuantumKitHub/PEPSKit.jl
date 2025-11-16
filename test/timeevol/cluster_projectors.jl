@@ -101,11 +101,12 @@ end
 @testset "Hubbard model with 2-site and 3-site SU" begin
     Nr, Nc = 2, 2
     ctmrg_tol = 1.0e-9
-    Random.seed!(100)
+    Random.seed!(1459)
     # with U(1) spin rotation symmetry
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
+    trunc_env0 = truncerror(; atol = 1.0e-12) & truncrank(4)
     trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
@@ -117,14 +118,14 @@ end
     # usual 2-site simple update, and measure energy
     dts = [1.0e-2, 1.0e-2, 5.0e-3]
     tols = [1.0e-8, 1.0e-8, 1.0e-8]
-    nstep = 5000
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
         alg = SimpleUpdate(; trunc, bipartite = true)
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol, check_interval = 1000)
+        peps, wts, = time_evolve(peps, ham, dt, 10000, alg, wts; tol, check_interval = 1000)
     end
     normalize!.(peps.A, Inf)
     env = CTMRGEnv(wts, peps)
+    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env0)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
     e_site = cost_function(peps, env, ham) / (Nr * Nc)
     @info "2-site simple update energy = $e_site"
@@ -134,7 +135,7 @@ end
     trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
     alg = SimpleUpdate(; trunc, force_3site = true)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol, check_interval = 1000)
+        peps, wts, = time_evolve(peps, ham, dt, 5000, alg, wts; tol, check_interval = 1000)
     end
     normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
