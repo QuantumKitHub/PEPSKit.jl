@@ -18,10 +18,10 @@ const data = [
     0.21 8.1894325e-1
     0.26 8.0003708e-1
     0.31 8.0081082e-1
-    0.36 8.0979257e-1
-    0.41 8.1559623e-1
-    0.46 8.1541661e-1
-    0.51 8.1274128e-1
+    # 0.36 8.0979257e-1
+    # 0.41 8.1559623e-1
+    # 0.46 8.1541661e-1
+    # 0.51 8.1274128e-1
 ]
 
 # redefine tfising Hamiltonian with only 2-site gate
@@ -62,7 +62,7 @@ function tfising_fu(g::Float64, Dcut::Int, chi::Int; als = true, use_pinv = true
 
     trunc_env = truncerror(; atol = 1.0e-10) & truncrank(chi)
     ctm_alg = SequentialCTMRG(;
-        tol = 1.0e-8, maxiter = 50, verbosity = 2,
+        tol = 1.0e-8, maxiter = 30, verbosity = 2,
         trunc = trunc_env, projector_alg = :fullinfinite
     )
 

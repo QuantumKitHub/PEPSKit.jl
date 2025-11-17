@@ -18,26 +18,6 @@ function _get_dt(
     return dt′
 end
 
-"""
-Process the Trotter time step `dt` according to the intended usage.
-"""
-function _get_dt(
-        state::InfiniteState, dt::Number, imaginary_time::Bool
-    )
-    # PEPS update: exp(-H dt)|ψ⟩
-    # PEPO update (purified): exp(-H dt/2)|ρ⟩
-    # PEPO update (not purified): exp(-H dt/2) ρ exp(-H dt/2)
-    dt′ = (state isa InfinitePEPS) ? dt : (dt / 2)
-    if (state isa InfinitePEPO)
-        @assert size(state)[3] == 1
-    end
-    if !imaginary_time
-        @assert (state isa InfinitePEPS) "Real time evolution of InfinitePEPO (Heisenberg picture) is not implemented."
-        dt′ = 1.0im * dt′
-    end
-    return dt′
-end
-
 function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
     T = scalartype(H)
     A = map(physicalspace(H)) do Vp
@@ -182,7 +162,7 @@ For PEPSTensors,
         |        ↘               ↘      |
         -4        -1              -1   -4
 ```
-For PEPOTensors,
+For PEPOTensors
 ```
     -2  -3                          -2  -3
       ↘ |                             ↘ |
@@ -196,7 +176,6 @@ For PEPOTensors,
         | ↘                             | ↘
         -5 -1                          -5  -1
 ```
-It is assumed that the physical domain and codomain spaces are not dualed.
 """
 function _qr_bond_undo(X::PEPSOrth, a::AbstractTensorMap, b::AbstractTensorMap, Y::PEPSOrth)
     @tensor A[-1; -2 -3 -4 -5] := X[-2 1 -4 -5] * a[1 -1 -3]

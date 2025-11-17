@@ -78,6 +78,44 @@ function ctmrg_rightmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
     return rot180(env), info
 end
 
+"""
+    ctmrg_upmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+
+Perform sequential CTMRG up move on the `row`-th row.
+"""
+function ctmrg_upmove(row::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+    #= 
+            c-1  c   c+1
+        r-1 C1 ← T1 ← C2
+            ↓    ‖    ↑     |  up
+        r   T4 = M == T2    ↓  move
+            ↓    ‖    ↑
+    =#
+    Nr = size(network)[1]
+    @assert 1 <= row <= Nr
+    env, info = ctmrg_leftmove(Nr + 1 - row, rotl90(network), rotl90(env), alg)
+    return rotr90(env), info
+end
+
+"""
+    ctmrg_downmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+
+Perform sequential CTMRG down move on the `row`-th row.
+"""
+function ctmrg_downmove(row::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+    #= 
+            ↓    ‖    ↑
+        r   T4 = M == T2    ↑  down
+            ↓    ‖    ↑     |  move
+        r+1 C4 → T3 → C3
+            c-1  c   c+1
+    =#
+    Nr = size(network)[1]
+    @assert 1 <= row <= Nr
+    env, info = ctmrg_leftmove(row, rotr90(network), rotr90(env), alg)
+    return rotl90(env), info
+end
+
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(network)))
     condition_number = zero(real(scalartype(network)))
