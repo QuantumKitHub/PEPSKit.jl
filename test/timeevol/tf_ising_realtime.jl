@@ -62,7 +62,7 @@ function tfising_fu(g::Float64, Dcut::Int, chi::Int; als = true, use_pinv = true
 
     trunc_env = truncerror(; atol = 1.0e-10) & truncrank(chi)
     ctm_alg = SequentialCTMRG(;
-        tol = 1.0e-8, maxiter = 30, verbosity = 2,
+        tol = 1.0e-8, maxiter = 50, verbosity = 2,
         trunc = trunc_env, projector_alg = :fullinfinite
     )
 
@@ -71,7 +71,7 @@ function tfising_fu(g::Float64, Dcut::Int, chi::Int; als = true, use_pinv = true
 
     # do one extra step at the beginning to match benchmark data
     fu_alg = FullUpdate(; opt_alg, ctm_alg, imaginary_time = false, reconverge_interval = 5)
-    evolver = TimeEvolver(peps, ham, 0.01, 50, fu_alg, env)
+    evolver = TimeEvolver(peps, ham, 0.01, 30, fu_alg, env)
     peps, env, info = timestep(evolver, peps, env; reconverge_env = true)
     # ensure the recoverged environment is updated to the internal state of `evolver`
     @test env == evolver.state.env
