@@ -105,9 +105,9 @@ PEPS optimization. Note that we could have also used a sublattice-rotated versio
 fit the Hamiltonian onto a single-site unit cell which would require us to optimize fewer
 parameters and hence lead to a faster optimization. But here we instead take advantage of
 the already evolved `peps`, thus giving us a physical initial guess for the optimization.
-In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit of noise to it
-- this is conviently done using MPSKit's `randomize!` function. (Breaking some of the spatial
-symmetry can be advantageous for obtaining lower energies.)
+In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit of noise to it.
+This is conviently done using MPSKit's `randomize!` function.
+(Breaking some of the spatial symmetry can be advantageous for obtaining lower energies.)
 """
 
 using MPSKit: randomize!
