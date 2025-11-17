@@ -27,6 +27,8 @@ struct InfinitePEPO{T <: PEPOTensor}
     end
 end
 
+const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
+
 ## Constructors
 
 """
@@ -68,14 +70,17 @@ end
 function InfinitePEPO(
         Pspaces::A, Nspaces::A, Espaces::A = Nspaces
     ) where {A <: AbstractArray{<:ElementarySpace, 2}}
+    return InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+end
+function InfinitePEPO(
+        f, T, Pspaces::A, Nspaces::A, Espaces::A = Nspaces
+    ) where {A <: AbstractArray{<:ElementarySpace, 2}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
-
     Pspaces = reshape(Pspaces, (size(Pspaces)..., 1))
     Nspaces = reshape(Pspaces, (size(Nspaces)..., 1))
     Espaces = reshape(Pspaces, (size(Espaces)..., 1))
-
-    return InfinitePEPO(Pspaces, Nspaces, Espaces)
+    return InfinitePEPO(f, T, Pspaces, Nspaces, Espaces)
 end
 
 """
@@ -144,9 +149,18 @@ end
 ## Spaces
 
 TensorKit.spacetype(::Type{P}) where {P <: InfinitePEPO} = spacetype(eltype(P))
-virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) = virtualspace(T[r, c, h], dir)
-domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = domain_physicalspace(T[r, c, 1])
-codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int) = codomain_physicalspace(T[r, c, end])
+function virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir)
+    Nr, Nc, Nh = size(T)
+    return virtualspace(T[mod1(r, Nr), mod1(c, Nc), mod1(h, Nh)], dir)
+end
+function domain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    Nr, Nc, = size(T)
+    return domain_physicalspace(T[mod1(r, Nr), mod1(c, Nc), 1])
+end
+function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
+    Nr, Nc, = size(T)
+    return codomain_physicalspace(T[mod1(r, Nr), mod1(c, Nc), end])
+end
 physicalspace(T::InfinitePEPO) = [physicalspace(T, row, col) for row in axes(T, 1), col in axes(T, 2)]
 function physicalspace(T::InfinitePEPO, r::Int, c::Int)
     codomain_physicalspace(T, r, c) == domain_physicalspace(T, r, c) || throw(

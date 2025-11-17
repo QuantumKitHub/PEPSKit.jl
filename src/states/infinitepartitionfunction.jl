@@ -139,7 +139,10 @@ end
 ## Spaces
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePartitionFunction} = spacetype(eltype(T))
-virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+function virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir)
+    Nr, Nc = size(n)
+    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
+end
 
 ## InfiniteSquareNetwork interface
 

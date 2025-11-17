@@ -1,4 +1,22 @@
-const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
+"""
+Process the Trotter time step `dt` according to the intended usage.
+"""
+function _get_dt(
+        state::InfiniteState, dt::Number, imaginary_time::Bool
+    )
+    # PEPS update: exp(-H dt)|ψ⟩
+    # PEPO update (purified): exp(-H dt/2)|ρ⟩
+    # PEPO update (not purified): exp(-H dt/2) ρ exp(-H dt/2)
+    dt′ = (state isa InfinitePEPS) ? dt : (dt / 2)
+    if (state isa InfinitePEPO)
+        @assert size(state)[3] == 1
+    end
+    if !imaginary_time
+        @assert (state isa InfinitePEPS) "Real time evolution of InfinitePEPO (Heisenberg picture) is not implemented."
+        dt′ = 1.0im * dt′
+    end
+    return dt′
+end
 
 """
 Process the Trotter time step `dt` according to the intended usage.

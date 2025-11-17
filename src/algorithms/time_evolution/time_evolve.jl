@@ -23,7 +23,8 @@ mutable struct TimeEvolver{TE <: TimeEvolution, G, S, N <: Number}
     nstep::Int
     "Trotter gates"
     gate::G
-    "PEPS/PEPO and its environment"
+    "Internal state of the iterator, including the number of
+    already performed iterations, evolved time, PEPS/PEPO and its environment"
     state::S
 end
 
@@ -40,7 +41,6 @@ function _timeevol_sanity_check(
     end
     if hasfield(typeof(alg), :bipartite) && alg.bipartite
         @assert Nr == Nc == 2 "`bipartite = true` requires 2 x 2 unit cell size."
-        @assert ψ₀ isa InfinitePEPS "Evolution of PEPO with bipartite structure is not implemented."
     end
     return nothing
 end

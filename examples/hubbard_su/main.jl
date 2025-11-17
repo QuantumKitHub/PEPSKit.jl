@@ -76,8 +76,8 @@ md"""
 In order to compute the energy expectation value with evolved PEPS, we need to converge a
 CTMRG environment on it. We first converge an environment with a small enviroment dimension,
 which is initialized using the simple update bond weights. Next we use it to initialize 
-another run with bigger environment dimension. The dynamic adjustion of environment dimension
-is achieved by using `trunc=truncrank(χ)` in the CTMRG runs:
+another run with bigger environment dimension. The dynamic adjustment of environment dimension
+is achieved by using `trunc=truncrank(χ)` with different `χ`s in the CTMRG runs:
 """
 
 χenv₀, χenv = 6, 16

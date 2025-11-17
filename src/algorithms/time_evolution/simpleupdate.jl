@@ -33,35 +33,35 @@ struct SUState{S <: InfiniteState, E <: SUWeight, N <: Number}
     "evolved time"
     t::N
     "PEPS/PEPO"
-    ψ::S
+    psi::S
     "SUWeight environment"
     env::E
 end
 
 """
     TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
-        alg::SimpleUpdate, env₀::SUWeight; t₀::Number = 0.0
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
+        alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0
     )
 
 Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
-starting from the initial state `ψ₀` and SUWeight environment `env₀`.
+starting from the initial state `psi0` and SUWeight environment `env0`.
 
-- The initial time is specified by `t₀`.
+- The initial time is specified by `t0`.
 """
 function TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env₀::SUWeight; t₀::Number = 0.0
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0
     )
     # sanity checks
-    _timeevol_sanity_check(ψ₀, physicalspace(H), alg)
+    _timeevol_sanity_check(psi0, physicalspace(H), alg)
     # create Trotter gates
     nnonly = is_nearest_neighbour(H)
     use_3site = alg.force_3site || !nnonly
     if alg.bipartite
         @assert !use_3site "3-site simple update is incompatible with bipartite lattice."
     end
-    dt′ = _get_dt(ψ₀, dt, alg.imaginary_time)
+    dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     gate = if use_3site
         [
             _get_gatempos_se(H, dt′),
@@ -72,7 +72,7 @@ function TimeEvolver(
     else
         get_expham(H, dt′)
     end
-    state = SUState(0, t₀, ψ₀, env₀)
+    state = SUState(0, t0, psi0, env0)
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
 
@@ -164,6 +164,8 @@ function su_iter(
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     gate_axs = alg.purified ? (1:1) : (1:2)
     for r in 1:Nr, c in 1:Nc
+        (alg.bipartite && r > 1) && continue
+        # update x-bonds
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
@@ -176,6 +178,7 @@ function su_iter(
             state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
+        # update y-bonds
         term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs
@@ -195,33 +198,28 @@ end
 function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    ψ, env, ϵ = su_iter(state.ψ, it.gate, it.alg, state.env)
+    psi, env, ϵ = su_iter(state.psi, it.gate, it.alg, state.env)
     # update internal state
     iter += 1
     t += it.dt
-    it.state = SUState(iter, t, ψ, env)
+    it.state = SUState(iter, t, psi, env)
     info = (; t, ϵ)
-    return (ψ, env, info), it.state
+    return (psi, env, info), it.state
 end
 
 """
     timestep(
-        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
-    ) -> (ψ, env, info)
+        it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight
+    ) -> (psi, env, info)
 
 Given the TimeEvolver iterator `it`, perform one step of time evolution
-on the input state `ψ` and its environment `env`.
-
-- Using `iter` and `t` to reset the current iteration number and evolved time
-    respectively of the TimeEvolver `it`.
+on the input state `psi` and its environment `env`.
 """
 function MPSKit.timestep(
-        it::TimeEvolver{<:SimpleUpdate}, ψ::InfiniteState, env::SUWeight;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
+        it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight
     )
-    _timeevol_sanity_check(ψ, physicalspace(it.state.ψ), it.alg)
-    state = SUState(iter, t, ψ, env)
+    _timeevol_sanity_check(psi, physicalspace(it.state.psi), it.alg)
+    state = SUState(it.state.iter, it.state.t, psi, env)
     result = iterate(it, state)
     if result === nothing
         @warn "TimeEvolver `it` has already reached the end."
@@ -235,7 +233,7 @@ end
     time_evolve(
         it::TimeEvolver{<:SimpleUpdate}; 
         tol::Float64 = 0.0, check_interval::Int = 500
-    ) -> (ψ, env, info)
+    ) -> (psi, env, info)
 
 Perform time evolution to the end of TimeEvolver iterator `it`,
 or until convergence of SUWeight set by a positive `tol`.
@@ -251,10 +249,10 @@ function MPSKit.time_evolve(
     time_start = time()
     check_convergence = (tol > 0)
     if check_convergence
-        @assert (it.state.ψ isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+        @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     end
     env0, time0 = it.state.env, time()
-    for (ψ, env, info) in it
+    for (psi, env, info) in it
         iter = it.state.iter
         diff = compare_weights(env0, env)
         stop = (iter == it.nstep) || (diff < tol)
@@ -280,7 +278,7 @@ function MPSKit.time_evolve(
         if stop
             time_end = time()
             @info @sprintf("Simple update finished. Total time elasped: %.2f s", time_end - time_start)
-            return ψ, env, info
+            return psi, env, info
         else
             env0 = env
         end
@@ -291,27 +289,27 @@ end
 
 """
     time_evolve(
-        ψ₀::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
-        dt::Number, nstep::Int, alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Number = 0.0, check_interval::Int = 500
-    ) -> (ψ, env, info)
+        psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
+        dt::Number, nstep::Int, alg::SimpleUpdate, env0::SUWeight;
+        tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
+    ) -> (psi, env, info)
 
-Perform time evolution on the initial state `ψ₀` and initial environment `env₀`
+Perform time evolution on the initial state `psi0` and initial environment `env0`
 with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for 
 `nstep` number of steps. 
 
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
-- Use `t₀` to specify the initial time of `ψ₀`.
+- Use `t0` to specify the initial time of the evolution.
 - `check_interval` sets the interval to output information. Output during the evolution can be turned off by setting `check_interval <= 0`.
 - `info` is a NamedTuple containing information of the evolution, 
-    including the time `info.t` evolved since `ψ₀`.
+    including the time `info.t` evolved since `psi0`.
 """
 function MPSKit.time_evolve(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env₀::SUWeight;
-        tol::Float64 = 0.0, t₀::Number = 0.0, check_interval::Int = 500
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::SimpleUpdate, env0::SUWeight;
+        tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     )
-    it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; t₀)
+    it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0)
     return time_evolve(it; tol, check_interval)
 end

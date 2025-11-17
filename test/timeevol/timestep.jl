@@ -49,7 +49,7 @@ end
     evolver = TimeEvolver(ψ0, H, dt, nstep, alg, env0)
     ψ1, env1, info1 = deepcopy(ψ0), deepcopy(env0), nothing
     for iter in 0:(nstep - 1)
-        ψ1, env1, info1 = timestep(evolver, ψ1, env1; iter)
+        ψ1, env1, info1 = timestep(evolver, ψ1, env1)
     end
     # time_evolve
     ψ2, env2, info2 = time_evolve(ψ0, H, dt, nstep, alg, env0)
