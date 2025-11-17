@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Algorithm struct for the alternating least square (ALS) optimization of a bond. 
+Algorithm struct for the alternating least square (ALS) optimization of a bond between two tensors. 
 
 ## Fields
 
@@ -15,24 +15,25 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * `trunc::TruncationStrategy`: SVD truncation strategy when initilizing the truncated tensors connected by the bond.
 * `maxiter::Int=50` : Maximal number of ALS iterations.
-* `tol::Float64=1e-15` : ALS converges when fidelity change between two FET iterations is smaller than `tol`.
+* `tol::Float64=1e-9` : ALS converges when bond SVD spectrum change between two iterations is smaller than `tol`.
 * `use_pinv::Bool=true`: Use pseudo-inverse (instead of `KrylovKit.linsolve`) to solve linear equations in ALS itertions.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
     trunc::TruncationStrategy
     maxiter::Int = 50
-    tol::Float64 = 1.0e-15
+    tol::Float64 = 1.0e-9
     use_pinv::Bool = true
     check_interval::Int = 0
 end
 
 function _als_message(
-        iter::Int, cost::Float64, fid::Float64, Δcost::Float64, Δfid::Float64, time_elapsed::Float64,
+        iter::Int, cost::Float64, fid::Float64, Δcost::Float64,
+        Δfid::Float64, Δs::Float64, time_elapsed::Float64,
     )
     return @sprintf(
         "%5d, fid = %.8e, Δfid = %.8e, time = %.4f s\n", iter, fid, Δfid, time_elapsed
-    ) * @sprintf("      cost = %.3e,   Δcost/cost0 = %.3e", cost, Δcost)
+    ) * @sprintf("      cost = %.3e, Δcost/cost0 = %.3e, |Δs| = %.4e.", cost, Δcost, Δs)
 end
 
 """
@@ -73,9 +74,9 @@ function bond_truncate(
     a2b2 = _combine_ab(a, b)
     # initialize truncated a, b
     perm_ab = ((1, 3), (4, 2))
-    a, s, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trunc)
-    s /= norm(s, Inf)
-    a, b = absorb_s(a, s, b)
+    a, s0, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trunc)
+    normalize!(s0, Inf)
+    a, b = absorb_s(a, s0, b)
     #= temporarily reorder axes of a and b to
         1 -a/b- 2
             ↓
@@ -87,8 +88,8 @@ function bond_truncate(
     # cost function will be normalized by initial value
     cost00 = cost_function_als(benv, ab, a2b2)
     fid = fidelity(benv, ab, a2b2)
-    cost0, fid0, Δfid = cost00, fid, 0.0
-    verbose && @info "ALS init" * _als_message(0, cost0, fid, NaN, NaN, 0.0)
+    cost0, fid0, Δcost, Δfid, Δs = cost00, fid, NaN, NaN, NaN
+    verbose && @info "ALS init" * _als_message(0, cost0, fid, Δcost, Δfid, Δs, 0.0)
     for iter in 1:(alg.maxiter)
         time0 = time()
         #= 
@@ -118,17 +119,22 @@ function bond_truncate(
         ab = _combine_ab(a, b)
         cost = cost_function_als(benv, ab, a2b2)
         fid = fidelity(benv, ab, a2b2)
+        _, s, _ = svd_trunc!(permute(ab, perm_ab); trunc = alg.trunc)
+        normalize!(s, Inf)
+        # fidelity, cost and bond-s change
+        Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
         Δcost = abs(cost - cost0) / cost00
         Δfid = abs(fid - fid0)
-        cost0, fid0 = cost, fid
+        cost0, fid0, s0 = cost, fid, s
         time1 = time()
-        converge = (Δfid < alg.tol)
+        converge = (Δs < alg.tol)
         cancel = (iter == alg.maxiter)
         showinfo =
             cancel || (verbose && (converge || iter == 1 || iter % alg.check_interval == 0))
         if showinfo
             message = _als_message(
-                iter, cost, fid, Δcost, Δfid, time1 - ((cancel || converge) ? time00 : time0),
+                iter, cost, fid, Δcost, Δfid, Δs,
+                time1 - ((cancel || converge) ? time00 : time0),
             )
             if converge
                 @info "ALS conv" * message
@@ -147,7 +153,7 @@ function bond_truncate(
     if need_flip
         a, s, b = flip_svd(a, s, b)
     end
-    return a, s, b, (; fid, Δfid)
+    return a, s, b, (; fid, Δfid, Δs)
 end
 
 function bond_truncate(

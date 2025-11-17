@@ -15,7 +15,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * `trunc::TruncationStrategy` : SVD truncation strategy when optimizing the new bond matrix.
 * `maxiter::Int=50` : Maximal number of FET iterations.
-* `tol::Float64=1e-15` : FET converges when fidelity change between two FET iterations is smaller than `tol`.
+* `tol::Float64=1e-9` : FET converges when bond SVD spectrum change between two FET iterations is smaller than `tol`.
 * `trunc_init::Bool=true` : Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 
@@ -26,7 +26,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 @kwdef struct FullEnvTruncation
     trunc::TruncationStrategy
     maxiter::Int = 50
-    tol::Float64 = 1.0e-15
+    tol::Float64 = 1.0e-9
     trunc_init::Bool = true
     check_interval::Int = 0
 end
@@ -242,7 +242,7 @@ function fullenv_truncate(
         @tensor B[-1 -2; -3 -4] := conj(u[1; -1]) * benv[1 -2; 3 -4] * u[3; -3]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
-        r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
+        r, info_r = linsolve(Base.Fix1(*, B), p, r)
         @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
         u, s, vh = svd_trunc(b1; trunc = alg.trunc)
         s /= norm(s, Inf)
@@ -252,7 +252,8 @@ function fullenv_truncate(
         @tensor B[-1 -2; -3 -4] := conj(vh[-2; 2]) * benv[-1 2; -3 4] * vh[-4; 4]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
-        l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
+        l, info_l = linsolve(Base.Fix1(*, B), p, l)
+        @debug "Bond truncation info" info_l info_r
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
         fid = fidelity(benv, b0, b1)
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
@@ -263,7 +264,7 @@ function fullenv_truncate(
         s0 = deepcopy(s)
         fid0 = fid
         time1 = time()
-        converge = (Δfid < alg.tol)
+        converge = (Δs < alg.tol)
         cancel = (iter == alg.maxiter)
         showinfo =
             cancel || (verbose && (converge || iter == 1 || iter % alg.check_interval == 0))
