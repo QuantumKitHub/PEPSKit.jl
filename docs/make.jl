@@ -70,6 +70,7 @@ makedocs(;
             "Boundary MPS" => joinpath.(Ref("examples"), examples_boundary_mps),
         ],
         "Library" => "lib/lib.md",
+        "Changelog" => "changelog.md",
         "References" => "references.md",
     ],
     checkdocs = :none,
