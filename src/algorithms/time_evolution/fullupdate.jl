@@ -41,7 +41,7 @@ struct FUState{S <: InfiniteState, E <: CTMRGEnv, N <: Number}
     "evolved time"
     t::N
     "PEPS/PEPO"
-    ψ::S
+    psi::S
     "CTMRG environment"
     env::E
     "whether the current environment is reconverged"
@@ -50,23 +50,23 @@ end
 
 """
     TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
-        alg::FullUpdate, env₀::CTMRGEnv; t₀::Number = 0.0
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
+        alg::FullUpdate, env0::CTMRGEnv; t0::Number = 0.0
     )
 
 Initialize a TimeEvolver with Hamiltonian `H` and full update `alg`, 
-starting from the initial state `ψ₀` and CTMRG environment `env₀`.
+starting from the initial state `psi0` and CTMRG environment `env0`.
 
-- The initial time is specified by `t₀`.
+- The initial time is specified by `t0`.
 """
 function TimeEvolver(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::FullUpdate, env₀::CTMRGEnv; t₀::Number = 0.0
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::FullUpdate, env0::CTMRGEnv; t0::Number = 0.0
     )
-    _timeevol_sanity_check(ψ₀, physicalspace(H), alg)
-    dt′ = _get_dt(ψ₀, dt, alg.imaginary_time)
+    _timeevol_sanity_check(psi0, physicalspace(H), alg)
+    dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     gate = get_expham(H, dt′ / 2)
-    state = FUState(0, t₀, ψ₀, env₀, true)
+    state = FUState(0, t0, psi0, env0, true)
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
 
@@ -186,83 +186,83 @@ end
 function Base.iterate(it::TimeEvolver{<:FullUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    ψ, env, wts, fid = fu_iter(state.ψ, it.gate, it.alg, state.env)
+    psi, env, wts, fid = fu_iter(state.psi, it.gate, it.alg, state.env)
     iter, t = iter + 1, t + it.dt
     # reconverge environment for the last step and every `reconverge_interval` steps
     reconverged = (iter % it.alg.reconverge_interval == 0) || (iter == it.nstep)
     if reconverged
-        network = isa(ψ, InfinitePEPS) ? ψ : InfinitePEPS(ψ)
+        network = isa(psi, InfinitePEPS) ? psi : InfinitePEPS(psi)
         env, = leading_boundary(env, network, it.alg.ctm_alg)
     end
     # update internal state
-    it.state = FUState(iter, t, ψ, env, reconverged)
+    it.state = FUState(iter, t, psi, env, reconverged)
     info = (; t, wts, fid)
-    return (ψ, env, info), it.state
+    return (psi, env, info), it.state
 end
 
 """
     timestep(
-        it::TimeEvolver{<:FullUpdate}, ψ::InfiniteState, env::CTMRGEnv;
+        it::TimeEvolver{<:FullUpdate}, psi::InfiniteState, env::CTMRGEnv;
         iter::Int = it.state.iter, t::Float64 = it.state.t
-    ) -> (ψ, env, info)
+    ) -> (psi, env, info)
 
 Given the TimeEvolver iterator `it`, perform one step of time evolution
-on the input state `ψ` and its environment `env`.
+on the input state `psi` and its environment `env`.
 
 - Using `iter` and `t` to reset the current iteration number and evolved time
     respectively of the TimeEvolver `it`.
 - Use `reconverge_env` to force reconverging the obtained environment.
 """
 function MPSKit.timestep(
-        it::TimeEvolver{<:FullUpdate}, ψ::InfiniteState, env::CTMRGEnv;
+        it::TimeEvolver{<:FullUpdate}, psi::InfiniteState, env::CTMRGEnv;
         iter::Int = it.state.iter, t::Float64 = it.state.t, reconverge_env::Bool = false
     )
-    _timeevol_sanity_check(ψ, physicalspace(it.state.ψ), it.alg)
-    state = FUState(iter, t, ψ, env, true)
+    _timeevol_sanity_check(psi, physicalspace(it.state.psi), it.alg)
+    state = FUState(iter, t, psi, env, true)
     result = iterate(it, state)
     if result === nothing
         @warn "TimeEvolver `it` has already reached the end."
         return nothing
     else
-        ψ, env, info = first(result)
+        psi, env, info = first(result)
         if reconverge_env && !(it.state.reconverged)
-            network = isa(ψ, InfinitePEPS) ? ψ : InfinitePEPS(ψ)
+            network = isa(psi, InfinitePEPS) ? psi : InfinitePEPS(psi)
             env, = leading_boundary(env, network, it.alg.ctm_alg)
             # update internal state of `it`
             state0 = it.state
             it.state = (@set state0.env = env)
         end
-        return ψ, env, info
+        return psi, env, info
     end
 end
 
 """
-Imaginary time evolution of InfinitePEPS with convergence checking
+Imaginary time full update of InfinitePEPS with convergence checking
 """
 function _time_evolve_gs(
         it::TimeEvolver{<:FullUpdate}, tol::Float64, H::LocalOperator
     )
     time_start = time()
-    @assert (it.state.ψ isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+    @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     time0 = time()
     # backup variables
     iter0, t0 = it.state.iter, it.state.t
-    ψ0, env0, info0 = it.state.ψ, it.state.env, nothing
-    energy0 = expectation_value(ψ0, H, ψ0, env0) / prod(size(ψ0))
+    psi0, env0, info0 = it.state.psi, it.state.env, nothing
+    energy0 = expectation_value(psi0, H, psi0, env0) / prod(size(psi0))
     @info "FU: initial state energy = $(energy0)."
-    for (ψ, env, info) in it
+    for (psi, env, info) in it
         iter = it.state.iter
         if iter == 1
             # reconverge for the 1st step
-            network = isa(ψ, InfinitePEPS) ? ψ : InfinitePEPS(ψ)
+            network = isa(psi, InfinitePEPS) ? psi : InfinitePEPS(psi)
             env, = leading_boundary(env, network, it.alg.ctm_alg)
             # update internal state of `it`
             # TODO: more elegant to use `Accessors.@set`
-            it.state = FUState(iter, it.state.t, it.state.ψ, env, true)
+            it.state = FUState(iter, it.state.t, it.state.psi, env, true)
         end
         !(it.state.reconverged) && continue
         # do the following only when env has been reconverged
-        energy = expectation_value(ψ, H, ψ, env) / prod(size(ψ))
+        energy = expectation_value(psi, H, psi, env) / prod(size(psi))
         diff = energy - energy0
         stop = (iter == it.nstep) || (diff < 0 && abs(diff) < tol) || (diff > 0)
         showinfo = (iter == 1) || it.state.reconverged || stop
@@ -282,9 +282,9 @@ function _time_evolve_gs(
         end
         if diff > 0
             @warn "FU: energy has increased from last check. Abort evolution and return results from last check."
-            ψ, env, info, energy = ψ0, env0, info0, energy0
+            psi, env, info, energy = psi0, env0, info0, energy0
             # also reset internal state of `it` to last check
-            it.state = FUState(iter0, t0, ψ0, env0, true)
+            it.state = FUState(iter0, t0, psi0, env0, true)
         end
         if iter == it.nstep
             @info "FU: energy has not converged."
@@ -293,11 +293,11 @@ function _time_evolve_gs(
             @assert it.state.reconverged
             time_end = time()
             @info @sprintf("Full update finished. Total time elasped: %.2f s", time_end - time_start)
-            return ψ, env, info
+            return psi, env, info
         else
             # update backup variables
             iter0, t0 = it.state.iter, it.state.t
-            ψ0, env0, info0, energy0 = ψ, env, info, energy
+            psi0, env0, info0, energy0 = psi, env, info, energy
         end
         time0 = time()
     end
@@ -305,12 +305,12 @@ function _time_evolve_gs(
 end
 
 """
-Time evolution without convergence checking
+Full update without convergence checking
 """
 function _time_evolve(it::TimeEvolver{<:FullUpdate})
     time_start = time0 = time()
     info0 = nothing
-    for (ψ, env, info) in it
+    for (psi, env, info) in it
         iter = it.state.iter
         !(it.state.reconverged) && continue
         # do the following only when env has been reconverged
@@ -331,7 +331,7 @@ function _time_evolve(it::TimeEvolver{<:FullUpdate})
             @assert it.state.reconverged
             time_end = time()
             @info @sprintf("Full update finished. Total time elasped: %.2f s", time_end - time_start)
-            return ψ, env, info
+            return psi, env, info
         else
             info0 = info
         end
@@ -366,26 +366,26 @@ end
 
 """
     MPSKit.time_evolve(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::FullUpdate, env₀::CTMRGEnv;
-        tol::Float64 = 0.0, t₀::Number = 0.0
-    ) -> (ψ, env, info)
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::FullUpdate, env0::CTMRGEnv;
+        tol::Float64 = 0.0, t0::Number = 0.0
+    ) -> (psi, env, info)
 
-Perform time evolution on the initial state `ψ₀` and initial environment `env₀`
+Perform time evolution on the initial state `psi0` and initial environment `env0`
 with Hamiltonian `H`, using FullUpdate algorithm `alg`, time step `dt` for 
 `nstep` number of steps. 
 
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
-- Use `t₀` to specify the initial time of `ψ₀`.
+- Use `t0` to specify the initial time of `psi0`.
 - `info` is a NamedTuple containing information of the evolution, 
-    including the time `info.t` evolved since `ψ₀`.
+    including the time `info.t` evolved since `psi0`.
 """
 function MPSKit.time_evolve(
-        ψ₀::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::FullUpdate, env₀::CTMRGEnv;
-        tol::Float64 = 0.0, t₀::Number = 0.0
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::FullUpdate, env0::CTMRGEnv;
+        tol::Float64 = 0.0, t0::Number = 0.0
     )
-    it = TimeEvolver(ψ₀, H, dt, nstep, alg, env₀; t₀)
+    it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0)
     return time_evolve(it; tol, H)
 end
