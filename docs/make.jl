@@ -20,7 +20,7 @@ bib = CitationBibliography(bibpath; style = :authoryear)
 # interlinks
 # Zygote didn't update to documenter v1 yet...
 links = InterLinks(
-    "TensorKit" => "https://jutho.github.io/TensorKit.jl/stable/",
+    "TensorKit" => "https://quantumkithub.github.io/TensorKit.jl/stable/",
     "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
     "MPSKit" => "https://quantumkithub.github.io/MPSKit.jl/stable/",
     "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/dev/",
@@ -70,6 +70,7 @@ makedocs(;
             "Boundary MPS" => joinpath.(Ref("examples"), examples_boundary_mps),
         ],
         "Library" => "lib/lib.md",
+        "Changelog" => "changelog.md",
         "References" => "references.md",
     ],
     checkdocs = :none,
