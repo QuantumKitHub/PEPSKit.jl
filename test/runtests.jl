@@ -39,6 +39,11 @@ end
             include("ctmrg/correlation_length.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "BP"
+        @time @safetestset "Unit cell" begin
+            include("bp/unitcell.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
         @time @safetestset "CTMRG gradients" begin
             include("gradients/ctmrg_gradients.jl")
