@@ -5,7 +5,7 @@ end
 
 function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpace}
     Vp = pspaces
-    V  = permute(Vp ← one(Vp), (ntuple(identity, length(pspaces) - 1), (length(pspaces),)))
+    V = permute(Vp ← one(Vp), (ntuple(identity, length(pspaces) - 1), (length(pspaces),)))
     return f(T, V)
 end
 
