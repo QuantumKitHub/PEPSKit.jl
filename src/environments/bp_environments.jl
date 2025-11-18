@@ -3,16 +3,16 @@ struct BPEnv{T}
     messages::Array{T, 3}
 end
 
-function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpaceLike}
+function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpace}
     Vp = _to_space(pspaces)
     V = permute(Vp ← one(Vp), (ntuple(identity, length(pspaces) - 1), (length(pspaces),)))
     return f(T, V)
 end
 
-function BPEnv(Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpaceLike}}
+function BPEnv(Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpace}}
     return BPEnv(randn, ComplexF64, N, Ds_north, Ds_east)
 end
-function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpaceLike}}
+function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpace}}
     # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
     Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
@@ -41,12 +41,12 @@ end
 
 function BPEnv(
         D_north::P, D_east::P; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {P <: ProductSpaceLike}
+    ) where {P <: ProductSpace}
     return BPEnv(randn, ComplexF64, fill(D_north, unitcell), fill(D_east, unitcell))
 end
 function BPEnv(
         f, T, D_north::P, D_east::P; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {P <: ProductSpaceLike}
+    ) where {P <: ProductSpace}
     return BPEnv(f, T, N, fill(D_north, unitcell), fill(D_east, unitcell))
 end
 
