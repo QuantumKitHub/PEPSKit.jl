@@ -42,7 +42,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv
         end
         return A
     end
-    # TODO: decide on a convention here, possibly altering InfiniteWeightPEPS
+    # TODO: decide on a convention here, possibly altering InfinitePEPS
     weight_mats = SUWeight(
         map(eachcoordinate(psi, 1:2)) do (dir, r, c)
             if dir == 1 # horizontal direction
@@ -52,7 +52,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv
             end
         end,
     )
-    return InfiniteWeightPEPS(vertices, weight_mats)
+    return InfinitePEPS(vertices), weight_mats, env
 end
 
 function bp_fixedpoint(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
