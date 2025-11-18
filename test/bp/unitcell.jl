@@ -8,9 +8,9 @@ using TensorKit
 Random.seed!(91283219347)
 stype = ComplexF64
 
-function test_unitcell(alg, unitcell, Pspaces, Nspaces, Espaces,)
+function test_unitcell(alg, unitcell, Pspaces, Nspaces, Espaces)
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
-    env  = BPEnv(randn, stype, peps)
+    env = BPEnv(randn, stype, peps)
 
     # apply one BP iteration with fixeds
     env′ = bp_iteration(InfiniteSquareNetwork(peps), env, alg)

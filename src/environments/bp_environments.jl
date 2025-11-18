@@ -15,7 +15,7 @@ end
 function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpace}}
     # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
-    Ds_west  = _elementwise_dual.(circshift(Ds_east, (0, 1)))
+    Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
 
     # do the whole thing
     N = length(first(Ds_north))
@@ -30,9 +30,9 @@ function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:Produ
     for I in CartesianIndices(Ds_north)
         r, c = I.I
         messages[NORTH, r, c] = _message_tensor(f, T, Ds_north[_next(r, end), c])
-        messages[EAST, r, c]  = _message_tensor(f, T, Ds_east[r, _prev(c, end)])
+        messages[EAST, r, c] = _message_tensor(f, T, Ds_east[r, _prev(c, end)])
         messages[SOUTH, r, c] = _message_tensor(f, T, Ds_south[_prev(r, end), c])
-        messages[WEST, r, c]  = _message_tensor(f, T, Ds_west[r, _next(c, end)])
+        messages[WEST, r, c] = _message_tensor(f, T, Ds_west[r, _next(c, end)])
     end
     normalize!.(messages)
 
@@ -52,7 +52,7 @@ end
 
 function BPEnv(f, T, network::InfiniteSquareNetwork)
     Ds_north = _north_edge_physical_spaces(network)
-    Ds_east  = _east_edge_physical_spaces(network)
+    Ds_east = _east_edge_physical_spaces(network)
     return BPEnv(f, T, Ds_north, Ds_east)
 end
 BPEnv(network::InfiniteSquareNetwork) = BPEnv(randn, scalartype(network), network)
