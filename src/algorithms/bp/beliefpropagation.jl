@@ -1,10 +1,10 @@
 @kwdef struct BeliefPropagation
     maxiter::Int = 10
-    tol::Float64 = 1e-6
+    tol::Float64 = 1.0e-6
     verbosity::Int = 2
 end
 
-function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv=BPEnv(psi))
+function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv(psi))
     # Compute belief propagation fixed point solutions
     env, err = bp_fixedpoint(env, InfiniteSquareNetwork(psi), alg)
 
@@ -130,9 +130,9 @@ function tr_distance(A::BPEnv, B::BPEnv)
     end
 end
 
-function trnorm(M::AbstractTensorMap, p::Real=1)
+function trnorm(M::AbstractTensorMap, p::Real = 1)
     return TensorKit._norm(svdvals(M), p, zero(real(scalartype(M))))
 end
-function trnorm!(M::AbstractTensorMap, p::Real=1)
+function trnorm!(M::AbstractTensorMap, p::Real = 1)
     return TensorKit._norm(svdvals!(M), p, zero(real(scalartype(M))))
 end

@@ -1,18 +1,18 @@
 struct BPEnv{T}
     "4 x rows x cols array of message tensors, where the first dimension specifies the spatial direction"
-    messages::Array{T,3}
+    messages::Array{T, 3}
 end
 
-function _message_tensor(f, ::Type{T}, pspaces::P) where {T,P<:ProductSpaceLike}
+function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpaceLike}
     Vp = _to_space(pspaces)
     V = permute(Vp ← one(Vp), (ntuple(identity, length(pspaces) - 1), (length(pspaces),)))
     return f(T, V)
 end
 
-function BPEnv(Ds_north::A, Ds_east::A) where {A<:AbstractMatrix{<:ProductSpaceLike}}
+function BPEnv(Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpaceLike}}
     return BPEnv(randn, ComplexF64, N, Ds_north, Ds_east)
 end
-function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A<:AbstractMatrix{<:ProductSpaceLike}}
+function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpaceLike}}
     # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
     Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
@@ -40,13 +40,13 @@ function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A<:AbstractMatrix{<:Product
 end
 
 function BPEnv(
-    D_north::P, D_east::P; unitcell::Tuple{Int,Int}=(1, 1)
-) where {P<:ProductSpaceLike}
+        D_north::P, D_east::P; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {P <: ProductSpaceLike}
     return BPEnv(randn, ComplexF64, fill(D_north, unitcell), fill(D_east, unitcell))
 end
 function BPEnv(
-    f, T, D_north::P, D_east::P; unitcell::Tuple{Int,Int}=(1, 1)
-) where {P<:ProductSpaceLike}
+        f, T, D_north::P, D_east::P; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {P <: ProductSpaceLike}
     return BPEnv(f, T, N, fill(D_north, unitcell), fill(D_east, unitcell))
 end
 
@@ -61,10 +61,10 @@ function BPEnv(f, T, network::InfiniteSquareNetwork)
     return BPEnv(f, T, Ds_north, Ds_east)
 end
 
-function BPEnv(state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
+function BPEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
     return BPEnv(InfiniteSquareNetwork(state), args...)
 end
-function BPEnv(f, T, state::Union{InfinitePartitionFunction,InfinitePEPS}, args...)
+function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
@@ -73,7 +73,7 @@ end
 
 VI.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
 
-VI.zerovector(env::BPEnv, ::Type{S}) where {S<:Number} = BPEnv(zerovector.(env.messages, S))
+VI.zerovector(env::BPEnv, ::Type{S}) where {S <: Number} = BPEnv(zerovector.(env.messages, S))
 VI.zerovector!(env::BPEnv) = (zerovector!.(env.messages); env)
 VI.zerovector!!(env::BPEnv) = zerovector!(env)
 
