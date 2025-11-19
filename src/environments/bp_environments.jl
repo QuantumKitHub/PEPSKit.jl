@@ -1,3 +1,28 @@
+"""
+$(TYPEDEF)
+
+Belief propagation environment for a square lattice network, 
+containing a 4 x rows x cols array of message tensors, defined for 
+each *oriented* nearest neighbor bond in the network. 
+
+The message tensors connect to the network tensors 
+`P` at site `[r,c]` in the unit cell as:
+```
+                    m[1,r-1,c]
+                    |
+    m[4,r,c-1]------P[r,c]------m[2,r,c+1]
+                    |
+                    m[3,r+1,c]
+```
+- `[1,r-1,c]`: message from `P[r-1,c]` to `P[r,c]`
+- `[2,r,c+1]`: message from `P[r,c+1]` to `P[r,c]`
+- `[3,r+1,c]`: message from `P[r+1,c]` to `P[r,c]`
+- `[4,r,c-1]`: message from `P[r,c-1]` to `P[r,c]`
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
 struct BPEnv{T}
     "4 x rows x cols array of message tensors, where the first dimension specifies the spatial direction"
     messages::Array{T, 3}
