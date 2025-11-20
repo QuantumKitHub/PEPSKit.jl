@@ -77,9 +77,7 @@ function transfermatrix_fixedpoint(tops, bottoms, ρinit)
             return mps_transfer_right(ρ, top, bottom)
         end
     end
-    ignore_derivatives() do
-        info.converged > 0 || @warn "eigsolve did not converge"
-    end
+    info.converged > 0 || @warn "eigsolve did not converge"
     return first(vecs)
 end
 
