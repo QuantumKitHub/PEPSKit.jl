@@ -39,7 +39,7 @@ end
     Nspaces = ComplexSpace.(rand(2:4, unitcell...))
     Espaces = ComplexSpace.(rand(2:4, unitcell...))
 
-    alg = BeliefPropagation(; maxiter = 50)
+    alg = BeliefPropagation()
     test_unitcell(alg, unitcell, Pspaces, Nspaces, Espaces)
 end
 
@@ -54,7 +54,7 @@ end
     Pspaces = [PA PB; PB PA]
     Nspaces = [Vpeps Vpeps'; Vpeps' Vpeps]
 
-    alg = BeliefPropagation(; maxiter = 100)
+    alg = BeliefPropagation()
     test_unitcell(alg, unitcell, Pspaces, Nspaces, Nspaces)
 
     # 4x4 unit cell with all 32 inequivalent bonds

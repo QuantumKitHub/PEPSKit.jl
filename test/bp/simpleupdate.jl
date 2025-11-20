@@ -28,21 +28,18 @@ function gauge_fix_su(peps::InfinitePEPS; maxiter::Int = 100, tol::Float64 = 1.0
     wts0 = SUWeight(peps)
     # use default constructor to avoid calculation of exp(-H * 0)
     evolver = TimeEvolver(alg, 0.0, maxiter, H, SUState(0, 0.0, peps, wts0))
-    for (i, (peps, wts, _)) in enumerate(evolver)
+    for (i, (peps, wts, info)) in enumerate(evolver)
         ϵ = compare_weights(wts, wts0)
-        if i % 10 == 0
+        if i % 10 == 0 || ϵ < tol
             @info "SU gauging step $i: ϵ = $ϵ."
+            (ϵ < tol) && return peps, wts, ϵ
         end
-        if ϵ < tol
-            return peps, wts, ϵ
-        else
-            wts0 = deepcopy(wts)
-        end
+        wts0 = deepcopy(wts)
     end
     return
 end
 
-@testset "Compare BP and SU" begin
+@testset "Compare BP and SU (no symmetry)" begin
     unitcell = (3, 3)
     stype = ComplexF64
     maxiter, tol = 100, 1.0e-9
@@ -58,8 +55,10 @@ end
 
     bp_alg = BeliefPropagation(; maxiter, tol)
     env0 = BPEnv(ones, stype, peps)
-    peps2, wts2 = gauge_fix(peps, alg, env0)
+    peps2, wts2 = gauge_fix(peps, bp_alg, env0)
     normalize!.(wts2.data)
 
+    # Even with the same bond weights, the PEPS can still 
+    # differ by a unitary gauge transformation on virtual legs.
     @test isapprox(wts1, wts2)
 end
