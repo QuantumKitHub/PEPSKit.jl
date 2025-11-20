@@ -58,7 +58,7 @@ end
     peps2, wts2 = gauge_fix(peps, bp_alg, env0)
     normalize!.(wts2.data)
 
-    # Even with the same bond weights, the PEPS can still 
+    # Even with the same bond weights, the PEPS can still
     # differ by a unitary gauge transformation on virtual legs.
     @test isapprox(wts1, wts2)
 end
