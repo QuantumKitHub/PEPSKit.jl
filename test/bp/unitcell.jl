@@ -27,10 +27,6 @@ function test_unitcell(alg, unitcell, Pspaces, Nspaces, Espaces)
     @test expectation_value(peps, random_op, env0) isa Number
     @test expectation_value(peps, random_op, env1) isa Number
 
-    # test if gauge fixing routines run through
-    # TODO: enable this test later
-    # peps2, wts2, env2 = gauge_fix(peps, alg, env1)
-
     # _, signs = gauge_fix(env′, env″)
     # @test signs isa Array
     return

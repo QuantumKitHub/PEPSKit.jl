@@ -43,6 +43,9 @@ end
         @time @safetestset "Unit cell" begin
             include("bp/unitcell.jl")
         end
+        @time @safetestset "Simple update gauging" begin
+            include("bp/simpleupdate.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
         @time @safetestset "CTMRG gradients" begin
