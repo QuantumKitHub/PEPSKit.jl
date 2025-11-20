@@ -32,7 +32,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Performance
 
-## [0.7.0](https://github.com/quantumkithub/pepskit.jl/compare/v0.6.0...v0.7.0) - 2025-11-17
+## [0.7.0](https://github.com/quantumkithub/pepskit.jl/compare/v0.6.1...v0.7.0) - 2025-11-17
 
 ### Added
 
