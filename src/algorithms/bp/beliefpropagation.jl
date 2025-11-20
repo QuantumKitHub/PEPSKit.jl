@@ -1,10 +1,20 @@
 @kwdef struct BeliefPropagation
-    maxiter::Int = 10
+    maxiter::Int = 50
     tol::Float64 = 1.0e-6
     verbosity::Int = 2
 end
 
 function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv(psi))
+    # Compute belief propagation fixed point solutions
+    env, err = bp_fixedpoint(env, InfiniteSquareNetwork(psi), alg)
+    psi′, wts = _bp_gauge_fix(psi, env)
+    return psi′, wts, env
+end
+
+"""
+Use BP environment `env` to fix gauge of InfinitePEPS `psi`.
+"""
+function _bp_gauge_fix(psi::InfinitePEPS, env::BPEnv)
     # Compute belief propagation fixed point solutions
     env, err = bp_fixedpoint(env, InfiniteSquareNetwork(psi), alg)
 
@@ -54,9 +64,12 @@ function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv
         end
         return absorb_weight(Γ, weight_mats, r, c, Tuple(1:4))
     end
-    return InfinitePEPS(psi′), weight_mats, env
+    return InfinitePEPS(psi′), weight_mats
 end
 
+"""
+Find the fixed point solution of the BP equations.
+"""
 function bp_fixedpoint(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
     log = MPSKit.IterLog("BP")
     ϵ = Inf
@@ -84,46 +97,45 @@ function bp_fixedpoint(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPr
     end
 end
 
+"""
+One iteration to update the BP environment.
+"""
 function bp_iteration(network::InfiniteSquareNetwork, env::BPEnv, alg::BeliefPropagation)
     messages = similar(env.messages)
-    for I in eachindex(IndexCartesian(), messages)
-        dir, row, col = Tuple(I)
-        if dir == NORTH
-            row += 1
-        elseif dir == EAST
-            col += 1
-        elseif dir == SOUTH
-            row -= 1
-        elseif dir == WEST
-            col -= 1
-        end
-        messages[dir, mod1(row, end), mod1(col, end)] = normalize!(
-            update_message(I, network, env)
-        )
+    for I in CartesianIndices(messages)
+        messages[I] = normalize!(update_message(I, network, env))
     end
     return BPEnv(messages)
 end
 
+"""
+Update the BP message in `env.messages[I]`.
+"""
 function update_message(I::CartesianIndex{3}, network::InfiniteSquareNetwork, env::BPEnv)
     dir, row, col = Tuple(I)
-
+    (1 <= dir <= 4) || throw(ArgumentError("Invalid direction $dir"))
     A = network[row, col]
-    dir == SOUTH || (M_north = env.messages[NORTH, _prev(row, end), col])
-    dir == WEST || (M_east = env.messages[EAST, row, _next(col, end)])
-    dir == NORTH || (M_south = env.messages[SOUTH, _next(row, end), col])
-    dir == EAST || (M_west = env.messages[WEST, row, _prev(col, end)])
-
-    return if dir == NORTH
+    dir == SOUTH || (M_north = env[NORTH, _prev(row, end), col])
+    dir == WEST || (M_east = env[EAST, row, _next(col, end)])
+    dir == NORTH || (M_south = env[SOUTH, _next(row, end), col])
+    dir == EAST || (M_west = env[WEST, row, _prev(col, end)])
+    new_message = if dir == NORTH
         contract_north_message(A, M_west, M_north, M_east)
     elseif dir == EAST
         contract_east_message(A, M_north, M_east, M_south)
     elseif dir == SOUTH
         contract_south_message(A, M_east, M_south, M_west)
-    elseif dir == WEST
+    else # dir == WEST
         contract_west_message(A, M_south, M_west, M_north)
-    else
-        throw(ArgumentError("Invalid direction $dir"))
     end
+    @assert space(new_message) == space(env[I])
+    # TODO: enforce hermiticity (avoid accumulation of numerical errors)
+    if env[I] ≈ env[I]'
+        # ensure a single iteration preserves hermiticity
+        @assert new_message ≈ new_message'
+        new_message = (new_message + new_message') / 2
+    end
+    return new_message
 end
 
 function tr_distance(A::BPEnv, B::BPEnv)

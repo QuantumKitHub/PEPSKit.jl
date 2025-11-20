@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Belief propagation environment for a square lattice network, 
+Belief propagation environment for a square lattice norm network, 
 containing a 4 x rows x cols array of message tensors, defined for 
 each *oriented* nearest neighbor bond in the network. 
 
@@ -29,10 +29,14 @@ struct BPEnv{T}
 end
 
 function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpace}
-    Vp = pspaces
-    V = permute(Vp ← one(Vp), (ntuple(identity, length(pspaces) - 1), (length(pspaces),)))
+    V = permute(
+        pspaces ← one(pspaces),
+        (ntuple(identity, length(pspaces) - 1), (length(pspaces),))
+    )
     return f(T, V)
 end
+
+# TODO: enforce positive semi-definiteness when initializing message tensors
 
 function BPEnv(Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpace}}
     return BPEnv(randn, ComplexF64, N, Ds_north, Ds_east)
@@ -51,7 +55,6 @@ function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:Produ
 
     # First index is direction
     messages = Array{T_type}(undef, 4, size(Ds_north)...)
-
     for I in CartesianIndices(Ds_north)
         r, c = I.I
         messages[NORTH, r, c] = _message_tensor(f, T, Ds_north[_next(r, end), c])
@@ -88,3 +91,6 @@ end
 function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
+
+Base.getindex(A::BPEnv, args...) = Base.getindex(A.messages, args...)
+Base.axes(A::BPEnv, args...) = Base.axes(A.messages, args...)
