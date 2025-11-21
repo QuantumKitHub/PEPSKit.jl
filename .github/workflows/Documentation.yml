@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1.11' # TODO: update to '1' when compatible
+          - '1'
         os:
           - ubuntu-latest
         arch:
