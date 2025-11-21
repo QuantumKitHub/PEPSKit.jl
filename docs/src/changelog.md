@@ -51,7 +51,6 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - BoundaryMPS methods now have their own custom transfer functions, avoiding a double conjugation and twist issues for fermions
 - `physicalspace` and related functions now correctly handle periodic indexing for infinite networks
 - Updated compatibility with TensorKit v0.15
-- Restrict Julia to `<v1.12` due to Zygote incompatibility
 - Runic formatter
 
 ### Removed
