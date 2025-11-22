@@ -22,6 +22,13 @@ function dummy_ham(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: Elementa
     return LocalOperator(lattice, terms...)
 end
 
+function random_dual!(Vs::AbstractMatrix{E}) where {E <: ElementarySpace}
+    for (i, V) in enumerate(Vs)
+        (rand() < 0.7) && (Vs[i] = V')
+    end
+    return Vs
+end
+
 function gauge_fix_su(peps::InfinitePEPS; maxiter::Int = 100, tol::Float64 = 1.0e-6)
     H = dummy_ham(scalartype(peps), physicalspace(peps))
     alg = SimpleUpdate(; trunc = FixedSpaceTruncation())
@@ -46,16 +53,18 @@ end
 
     Random.seed!(0)
     Pspaces = ComplexSpace.(rand(2:3, unitcell...))
-    Nspaces = ComplexSpace.(rand(2:4, unitcell...))
-    Espaces = ComplexSpace.(rand(2:4, unitcell...))
+    Nspaces = random_dual!(ComplexSpace.(rand(2:4, unitcell...)))
+    Espaces = random_dual!(ComplexSpace.(rand(2:4, unitcell...)))
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
 
     peps1, wts1 = gauge_fix_su(peps; maxiter, tol)
+    @test all(space.(peps1.A) .== space.(peps.A))
     normalize!.(wts1.data)
 
     bp_alg = BeliefPropagation(; maxiter, tol)
     env0 = BPEnv(ones, stype, peps)
     peps2, wts2 = gauge_fix(peps, bp_alg, env0)
+    @test all(space.(peps2.A) .== space.(peps.A))
     normalize!.(wts2.data)
 
     # Even with the same bond weights, the PEPS can still

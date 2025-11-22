@@ -11,18 +11,23 @@ function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv
     return psi′, wts, env
 end
 
-"""
-Use BP environment `env` to fix gauge of InfinitePEPS `psi`.
-"""
-function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
-    # Bring PEPS to the Vidal gauge
-    sqrtmsgs = map(env.messages) do M
+function _get_sqrt_messages(env::BPEnv)
+    return map(env.messages) do M
         # U = V for positive semi-definite message M
+        # TODO: switch to eigh! after enforcing positive semi-definiteness
         U, S, Vᴴ = svd_compact!(M)
         sqrtM = U * sdiag_pow(S, 1 / 2) * Vᴴ
         isqrtM = U * sdiag_pow(S, -1 / 2) * Vᴴ
         return sqrtM, isqrtM
     end
+end
+
+"""
+Use BP environment `env` to fix gauge of InfinitePEPS `psi`.
+"""
+function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
+    # Bring PEPS to the Vidal gauge
+    sqrtmsgs = _get_sqrt_messages(env)
     bond_svds = map(eachcoordinate(psi, 1:2)) do (dir, r, c)
         # TODO: would be more reasonable to define SOUTH as adjoint(NORTH)...
         # TODO: figure out twists for fermion
@@ -39,8 +44,10 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
         else
             transpose(sqrtmsgs[SOUTH, r, c][1]) * sqrtmsgs[NORTH, _prev(r, end), c][1]
         end
-        # TODO: preserve bond arrow direction (e.g. with flip_svd?)
         U, S, Vᴴ = svd_compact!(MM)
+        if isdual(space(U, 1))
+            U, S, Vᴴ = flip_svd(U, S, Vᴴ)
+        end
         return U, S, Vᴴ
     end
     ## bond weights Λ
@@ -69,6 +76,7 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
                 (isqrtM_south[DS1; DS2] * Vᴴ_south[DS; DS2]) *
                 (isqrtM_west[DW1; DW2] * Vᴴ_west[DW; DW2])
         end
+        # convert to symmetric gauge by absorbing sqrt of weights
         return absorb_weight(Γ, wts, r, c, Tuple(1:4))
     end
     return InfinitePEPS(psi′), wts
