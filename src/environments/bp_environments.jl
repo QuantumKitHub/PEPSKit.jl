@@ -95,6 +95,27 @@ end
 Base.getindex(A::BPEnv, args...) = Base.getindex(A.messages, args...)
 Base.axes(A::BPEnv, args...) = Base.axes(A.messages, args...)
 
+# conversion to CTMRGEnv
+"""
+    CTMRGEnv(bp_env::BPEnv)
+
+Construct a CTMRG environment with bond dimension χ = 1 
+from the belief propagation environment `bp_env`.
+"""
+function CTMRGEnv(bp_env::BPEnv{T}) where {T}
+    elt = scalartype(T)
+    envspace = oneunit(space(bp_env[1, 1, 1], 1))
+    id_env = TensorKit.id(elt, envspace)
+    edges = map(bp_env.messages) do M
+        # attach identity on environment spaces
+        return permute(M ⊗ id_env, ((2, 1, 3), (4,)))
+    end
+    corners = map(CartesianIndices(edges)) do idx
+        return TensorKit.id(elt, envspace)
+    end
+    return CTMRGEnv(corners, edges)
+end
+
 # rotation (the behavior is the same as CTMRGEnv edges)
 
 function Base.rotl90(env::BPEnv{T}) where {T}
