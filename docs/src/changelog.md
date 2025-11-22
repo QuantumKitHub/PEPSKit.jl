@@ -32,7 +32,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Performance
 
-## [0.7.0](https://github.com/quantumkithub/pepskit.jl/compare/v0.6.0...v0.7.0) - 2025-11-17
+## [0.7.0](https://github.com/quantumkithub/pepskit.jl/compare/v0.6.1...v0.7.0) - 2025-11-17
 
 ### Added
 
@@ -51,7 +51,6 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - BoundaryMPS methods now have their own custom transfer functions, avoiding a double conjugation and twist issues for fermions
 - `physicalspace` and related functions now correctly handle periodic indexing for infinite networks
 - Updated compatibility with TensorKit v0.15
-- Restrict Julia to `<v1.12` due to Zygote incompatibility
 - Runic formatter
 
 ### Removed

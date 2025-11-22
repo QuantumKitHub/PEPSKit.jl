@@ -157,13 +157,6 @@ function initialize_mps(
         ]
     )
 end
-function initialize_mps(f, T, O::InfiniteTransferMatrix, χ::Int)
-    return InfiniteMPS(
-        [
-            f(T, ℂ^χ * _elementwise_dual(north_virtualspace(O, i)), ℂ^χ) for i in 1:length(O)
-        ]
-    )
-end
 function initialize_mps(
         f, T, O::MultilineTransferMatrix, virtualspaces::AbstractArray{S, 2}
     ) where {S}
@@ -179,9 +172,6 @@ function initialize_mps(
 end
 function initialize_mps(f, T, O::MultilineTransferMatrix, V::ElementarySpace)
     return initialize_mps(f, T, O, repeat([V], length(O), length(O[1])))
-end
-function initialize_mps(f, T, O::MultilineTransferMatrix, χ::Int)
-    return initialize_mps(f, T, O, repeat([ℂ^χ], length(O), length(O[1])))
 end
 
 @doc """
