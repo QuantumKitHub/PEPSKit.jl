@@ -40,8 +40,11 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "BP"
-        @time @safetestset "Unit cell" begin
+        @time @safetestset "Unit cell bond matching" begin
             include("bp/unitcell.jl")
+        end
+        @time @safetestset "Rotation of BPEnv" begin
+            include("bp/rotation.jl")
         end
         @time @safetestset "Simple update gauging" begin
             include("bp/simpleupdate.jl")

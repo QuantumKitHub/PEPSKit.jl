@@ -94,3 +94,32 @@ end
 
 Base.getindex(A::BPEnv, args...) = Base.getindex(A.messages, args...)
 Base.axes(A::BPEnv, args...) = Base.axes(A.messages, args...)
+
+# rotation (the behavior is the same as CTMRGEnv edges)
+
+function Base.rotl90(env::BPEnv{T}) where {T}
+    messages′ = Array{T, 3}(undef, 4, size(env.messages, 3), size(env.messages, 2))
+    for dir in 1:4
+        dir2 = _prev(dir, 4)
+        messages′[dir2, :, :] = rotl90(env.messages[dir, :, :])
+    end
+    return BPEnv(copy(messages′))
+end
+
+function Base.rotr90(env::BPEnv{T}) where {T}
+    messages′ = Array{T, 3}(undef, 4, size(env.messages, 3), size(env.messages, 2))
+    for dir in 1:4
+        dir2 = _next(dir, 4)
+        messages′[dir2, :, :] = rotr90(env.messages[dir, :, :])
+    end
+    return BPEnv(copy(messages′))
+end
+
+function Base.rot180(env::BPEnv{T}) where {T}
+    messages′ = Array{T, 3}(undef, 4, size(env.messages, 2), size(env.messages, 3))
+    for dir in 1:4
+        dir2 = _next(_next(dir, 4), 4)
+        messages′[dir2, :, :] = rot180(env.messages[dir, :, :])
+    end
+    return BPEnv(copy(messages′))
+end
