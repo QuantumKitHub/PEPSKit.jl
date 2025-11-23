@@ -8,14 +8,14 @@ using TensorKit
 Random.seed!(91283219347)
 stype = ComplexF64
 
-function test_unitcell(alg, unitcell, Pspaces, Nspaces, Espaces)
+function test_unitcell(unitcell, Pspaces, Nspaces, Espaces)
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
     env0 = BPEnv(ones, stype, peps)
 
     # apply one BP iteration
-    env1 = bp_iteration(InfiniteSquareNetwork(peps), env0, alg)
+    env1 = bp_iteration(InfiniteSquareNetwork(peps), env0)
     # another iteration to detect bond mismatches
-    env1 = bp_iteration(InfiniteSquareNetwork(peps), env1, alg)
+    env1 = bp_iteration(InfiniteSquareNetwork(peps), env1)
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(
@@ -39,8 +39,7 @@ end
     Nspaces = ComplexSpace.(rand(2:4, unitcell...))
     Espaces = ComplexSpace.(rand(2:4, unitcell...))
 
-    alg = BeliefPropagation()
-    test_unitcell(alg, unitcell, Pspaces, Nspaces, Espaces)
+    test_unitcell(unitcell, Pspaces, Nspaces, Espaces)
 end
 
 @testset "Specific U1 spaces with BP" begin
@@ -54,8 +53,7 @@ end
     Pspaces = [PA PB; PB PA]
     Nspaces = [Vpeps Vpeps'; Vpeps' Vpeps]
 
-    alg = BeliefPropagation()
-    test_unitcell(alg, unitcell, Pspaces, Nspaces, Nspaces)
+    test_unitcell(unitcell, Pspaces, Nspaces, Nspaces)
 
     # 4x4 unit cell with all 32 inequivalent bonds
     #
@@ -97,5 +95,5 @@ end
     ]
     Pspaces = fill(phys_space, (4, 4))
 
-    test_unitcell(alg, unitcell, Pspaces, Nspaces, Nspaces)
+    test_unitcell(unitcell, Pspaces, Nspaces, Nspaces)
 end
