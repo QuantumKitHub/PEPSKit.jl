@@ -72,6 +72,7 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
 include("algorithms/bp/beliefpropagation.jl")
+include("algorithms/bp/gaugefix.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
