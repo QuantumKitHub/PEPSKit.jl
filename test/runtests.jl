@@ -46,8 +46,8 @@ end
         @time @safetestset "Rotation of BPEnv" begin
             include("bp/rotation.jl")
         end
-        @time @safetestset "Simple update gauging" begin
-            include("bp/simpleupdate.jl")
+        @time @safetestset "Gauge-fixing iPEPS" begin
+            include("bp/gaugefix.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
