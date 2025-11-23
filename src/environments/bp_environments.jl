@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Belief propagation environment for a square lattice norm network, 
+Belief propagation (BP) environment for a square lattice norm network, 
 containing a 4 x rows x cols array of message tensors, defined for 
 each *oriented* nearest neighbor bond in the network. 
 
@@ -127,8 +127,9 @@ function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
-Base.getindex(A::BPEnv, args...) = Base.getindex(A.messages, args...)
-Base.axes(A::BPEnv, args...) = Base.axes(A.messages, args...)
+Base.size(env::BPEnv, args...) = size(env.messages, args...)
+Base.getindex(env::BPEnv, args...) = Base.getindex(env.messages, args...)
+Base.axes(env::BPEnv, args...) = Base.axes(env.messages, args...)
 
 # conversion to CTMRGEnv
 """
