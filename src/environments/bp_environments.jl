@@ -28,16 +28,36 @@ struct BPEnv{T}
     messages::Array{T, 3}
 end
 
+"""
+Construct a message tensor on a certain bond of a network,
+with bond space specified by `pspaces`. 
+In the 2-layer case, the message tensor will be
+```
+    ┌--- pspaces[1]
+    m
+    └--- pspaces[2]
+```
+"""
 function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpace}
-    V = permute(
-        pspaces ← one(pspaces),
-        (ntuple(identity, length(pspaces) - 1), (length(pspaces),))
-    )
+    N = length(pspaces)
+    V = permute(pspaces ← one(pspaces), (ntuple(identity, N - 1), (N,)))
     return f(T, V)
 end
 
 # TODO: enforce positive semi-definiteness when initializing message tensors
 
+"""
+    BPEnv(
+        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A
+    ) where {A <: AbstractMatrix{<:ProductSpace}}
+
+Construct a BP environment by specifying matrices of north and east virtual spaces of the
+corresponding `InfiniteSquareNetwork`. Each matrix entry corresponds to a site in the unit cell.
+
+Each entry of the `Ds_north` and `Ds_east` matrices corresponds to an effective local space
+of the network, and can be represented as a `ProductSpace` (e.g.
+for the case of a network representing overlaps of PEPSs).
+"""
 function BPEnv(Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpace}}
     return BPEnv(randn, ComplexF64, N, Ds_north, Ds_east)
 end
@@ -48,7 +68,7 @@ function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:Produ
 
     # do the whole thing
     N = length(first(Ds_north))
-    @assert N == 2
+    @assert N == 2 "BPEnv is currently only defined for 2-layer InfiniteSquareNetwork."
     st = spacetype(first(Ds_north))
 
     T_type = tensormaptype(st, N - 1, 1, T)
@@ -67,6 +87,16 @@ function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:Produ
     return BPEnv(messages)
 end
 
+"""
+    BPEnv(
+        [f=randn, T=ComplexF64], D_north::P, D_east::P;
+        unitcell::Tuple{Int, Int} = (1, 1),
+    ) where {P <: ProductSpace}
+
+Construct a BP environment by specifying the north and east virtual spaces of the
+corresponding [`InfiniteSquareNetwork`](@ref). The network unit cell can be specified
+by the `unitcell` keyword argument.
+"""
 function BPEnv(
         D_north::P, D_east::P; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {P <: ProductSpace}
@@ -78,6 +108,11 @@ function BPEnv(
     return BPEnv(f, T, N, fill(D_north, unitcell), fill(D_east, unitcell))
 end
 
+"""
+    BPEnv([f=randn, T=ComplexF64], network::InfiniteSquareNetwork)
+
+Construct a BP environment by specifying a corresponding [`InfiniteSquareNetwork`](@ref).
+"""
 function BPEnv(f, T, network::InfiniteSquareNetwork)
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)

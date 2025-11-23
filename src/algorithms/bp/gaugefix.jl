@@ -75,7 +75,7 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
                 (isqrtM_west[DW1; DW2] * Vᴴ_west[DW; DW2])
         end
         # convert to symmetric gauge by absorbing sqrt of weights
-        return absorb_weight(Γ, wts, r, c, Tuple(1:4))
+        return absorb_weight(Γ, wts, r, c, ntuple(identity, 4))
     end
     return InfinitePEPS(psi′), wts
 end
