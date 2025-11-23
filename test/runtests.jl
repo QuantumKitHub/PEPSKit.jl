@@ -43,6 +43,9 @@ end
         @time @safetestset "Unit cell bond matching" begin
             include("bp/unitcell.jl")
         end
+        @time @safetestset "Expectation values" begin
+            include("bp/expvals.jl")
+        end
         @time @safetestset "Rotation of BPEnv" begin
             include("bp/rotation.jl")
         end
