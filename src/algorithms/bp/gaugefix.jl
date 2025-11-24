@@ -10,14 +10,19 @@ function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv
 end
 
 function _get_sqrt_messages(env::BPEnv)
-    return map(env.messages) do M
+    sqrtmsgs = map(env.messages) do M
         # U = V for positive semi-definite message M
         # TODO: switch to eigh! after enforcing positive semi-definiteness
-        U, S, Vᴴ = svd_compact!(M)
-        sqrtM = U * sdiag_pow(S, 1 / 2) * Vᴴ
-        isqrtM = U * sdiag_pow(S, -1 / 2) * Vᴴ
+        U, S, Vᴴ = svd_compact(M)
+        sqrtS = sdiag_pow(S, 0.5)
+        isqrtS = sdiag_pow(S, -0.5)
+        sqrtM = U * sqrtS * Vᴴ
+        isqrtM = U * isqrtS * Vᴴ
         return sqrtM, isqrtM
     end
+    sqrtMs = map(x -> x[1], sqrtmsgs)
+    isqrtMs = map(x -> x[2], sqrtmsgs)
+    return sqrtMs, isqrtMs
 end
 
 """
@@ -25,7 +30,7 @@ Use BP environment `env` to fix gauge of InfinitePEPS `psi`.
 """
 function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
     # Bring PEPS to the Vidal gauge
-    sqrtmsgs = _get_sqrt_messages(env)
+    sqrtMs, isqrtMs = _get_sqrt_messages(env)
     bond_svds = map(eachcoordinate(psi, 1:2)) do (dir, r, c)
         # TODO: would be more reasonable to define SOUTH as adjoint(NORTH)...
         # TODO: figure out twists for fermion
@@ -38,33 +43,32 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
             m[(r-1,c) → (r,c)] = env[1, r-1, c]
         =#
         MM = if dir == 1
-            transpose(sqrtmsgs[WEST, r, c][1]) * sqrtmsgs[EAST, r, _next(c, end)][1]
+            transpose(sqrtMs[WEST, r, c]) * sqrtMs[EAST, r, _next(c, end)]
         else
-            transpose(sqrtmsgs[SOUTH, r, c][1]) * sqrtmsgs[NORTH, _prev(r, end), c][1]
+            transpose(sqrtMs[SOUTH, r, c]) * sqrtMs[NORTH, _prev(r, end), c]
         end
-        U, S, Vᴴ = svd_compact!(MM)
+        U, S, Vᴴ = svd_compact(MM)
         if isdual(space(U, 1))
             U, S, Vᴴ = flip_svd(U, S, Vᴴ)
         end
         return U, S, Vᴴ
     end
+    Us = map(x -> x[1], bond_svds)
+    Ss = map(x -> x[2], bond_svds)
+    Vs = map(x -> x[3], bond_svds)
     ## bond weights Λ
-    wts = SUWeight(
-        map(eachcoordinate(psi, 1:2)) do (dir, r, c)
-            return bond_svds[dir, r, c][2]
-        end
-    )
+    wts = SUWeight(Ss)
     ## gauge-fixed state
     psi′ = map(eachcoordinate(psi)) do (r, c)
-        isqrtM_north = transpose(sqrtmsgs[SOUTH, r, c][2])
-        isqrtM_south = transpose(sqrtmsgs[NORTH, r, c][2])
-        isqrtM_east = transpose(sqrtmsgs[WEST, r, c][2])
-        isqrtM_west = transpose(sqrtmsgs[EAST, r, c][2])
+        isqrtM_north = transpose(isqrtMs[SOUTH, r, c])
+        isqrtM_south = transpose(isqrtMs[NORTH, r, c])
+        isqrtM_east = transpose(isqrtMs[WEST, r, c])
+        isqrtM_west = transpose(isqrtMs[EAST, r, c])
 
-        U_north = bond_svds[2, r, c][1]
-        U_east = bond_svds[1, r, c][1]
-        Vᴴ_south = bond_svds[2, _next(r, end), c][3]
-        Vᴴ_west = bond_svds[1, r, _prev(c, end)][3]
+        U_north = Us[2, r, c]
+        U_east = Us[1, r, c]
+        Vᴴ_south = Vs[2, _next(r, end), c]
+        Vᴴ_west = Vs[1, r, _prev(c, end)]
         # Vertex Γ tensors in Vidal gauge
         @tensor contractcheck = true begin
             Γ[d; DN DE DS DW] ≔
@@ -75,7 +79,7 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
                 (isqrtM_west[DW1; DW2] * Vᴴ_west[DW; DW2])
         end
         # convert to symmetric gauge by absorbing sqrt of weights
-        return absorb_weight(Γ, wts, r, c, ntuple(identity, 4))
+        return _absorb_weights(Γ, wts, r, c)
     end
     return InfinitePEPS(psi′), wts
 end

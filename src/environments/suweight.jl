@@ -58,7 +58,7 @@ function SUWeight(data::Array{E, 3}) where {E <: PEPSWeight}
             error("Domain and codomain of each weight matrix must be the same.")
         !isdual(codomain(wt, 1)) ||
             error("Domain and codomain of each weight matrix cannot be a dual space.")
-        all(wt.data .>= 0) || error("Weight elements must be non-negative.")
+        # all(wt.data .>= 0) || error("Weight elements must be non-negative.") # AD PATCH: allow negative entries in adjoints
     end
     return SUWeight{E}(data)
 end

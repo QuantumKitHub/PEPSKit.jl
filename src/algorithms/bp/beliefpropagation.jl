@@ -8,11 +8,11 @@ end
 Find the fixed point solution of the BP equations.
 """
 function bp_fixedpoint(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
-    log = MPSKit.IterLog("BP")
+    log = ignore_derivatives(() -> MPSKit.IterLog("BP"))
     ϵ = Inf
 
     return LoggingExtras.withlevel(; alg.verbosity) do
-        @infov 1 loginit!(log, ϵ)
+        bp_loginit!(log, ϵ)
         iter = 0
         while true
             iter += 1
@@ -21,26 +21,45 @@ function bp_fixedpoint(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPr
             env = env′
 
             if ϵ < alg.tol
-                @infov 2 logfinish!(log, iter, ϵ)
+                bp_logfinish!(log, iter, ϵ)
                 return env, ϵ
             end
             if iter ≥ alg.maxiter
-                @warnv 1 logcancel!(log, iter, ϵ)
+                bp_logcancel!(log, iter, ϵ)
                 return env, ϵ
             end
 
-            @infov 3 logiter!(log, iter, ϵ)
+            bp_logiter!(log, iter, ϵ)
         end
     end
 end
+
+# custom BP logging
+function bp_loginit!(log, η)
+    return @infov 2 loginit!(log, η)
+end
+function bp_logiter!(log, iter, η)
+    return @infov 3 logiter!(log, iter, η)
+end
+function bp_logfinish!(log, iter, η)
+    return @infov 2 logfinish!(log, iter, η)
+end
+function bp_logcancel!(log, iter, η)
+    return @warnv 1 logcancel!(log, iter, η)
+end
+
+@non_differentiable bp_loginit!(args...)
+@non_differentiable bp_logiter!(args...)
+@non_differentiable bp_logfinish!(args...)
+@non_differentiable bp_logcancel!(args...)
 
 """
 One iteration to update the BP environment.
 """
 function bp_iteration(network::InfiniteSquareNetwork, env::BPEnv)
-    messages = similar(env.messages)
-    for I in CartesianIndices(messages)
-        messages[I] = normalize!(update_message(I, network, env))
+    messages = map(CartesianIndices(env.messages)) do I
+        m = update_message(I, network, env)
+        return m / norm(m)
     end
     return BPEnv(messages)
 end
@@ -76,14 +95,19 @@ function update_message(I::CartesianIndex{3}, network::InfiniteSquareNetwork, en
 end
 
 function tr_distance(A::BPEnv, B::BPEnv)
-    return sum(zip(A.messages, B.messages)) do (a, b)
-        return trnorm(add(a, b, -inv(tr(b)), inv(tr(a))))
+    return sum(Iterators.product(axes(A)...)) do (dir, r, c)
+        M_A = A[dir, r, c]
+        M_B = B[dir, r, c]
+        # PATCH: add doesn't work when coefficients aren't `Number`s
+        return trnorm(inv(tr(M_A)) * M_A - inv(tr(M_B)) * M_B)
     end
 end
 
 function trnorm(M::AbstractTensorMap, p::Real = 1)
-    return TensorKit._norm(svdvals(M), p, zero(real(scalartype(M))))
+    _, S, _ = svd_compact(M)
+    return TensorKit._norm(blocks(S), p, zero(real(scalartype(M))))
 end
 function trnorm!(M::AbstractTensorMap, p::Real = 1)
-    return TensorKit._norm(svdvals!(M), p, zero(real(scalartype(M))))
+    _, S, _ = svd_compact(M)
+    return TensorKit._norm(blocks(S), p, zero(real(scalartype(M))))
 end

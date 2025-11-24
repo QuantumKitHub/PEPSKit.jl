@@ -71,6 +71,7 @@ include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
+include("algorithms/bp/ad_patches.jl")
 include("algorithms/bp/beliefpropagation.jl")
 include("algorithms/bp/gaugefix.jl")
 
