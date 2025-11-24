@@ -137,3 +137,27 @@ function _multiply_weights(t, wt_N, wt_E, wt_S, wt_W)
     end
     return tw
 end
+
+## Pullback of TensorKit.transpose patch
+
+_transpose(t::AbstractTensorMap{T, S, 1, 1}) where {T, S} = permute(t, ((2,), (1,)))
+
+## Pullback of one-norm of a diagonal matrix (hopefully)
+
+# NOTE: this probably only actually works for a real, diagonal and positive primal; at the very least real
+_diag_one_norm(t::AbstractTensorMap) = TensorKit._norm(blocks(t), 1, zero(real(scalartype(t))))
+function ChainRulesCore.rrule(::typeof(_diag_one_norm), t::AbstractTensorMap)
+    n = _diag_one_norm(t)
+    P_t = ProjectTo(t) # for the diagonal case
+
+    function _diag_one_norm_pullback(Δn_)
+        Δn = unthunk(Δn_)
+        Δt = similar(t)
+        for (c, b) in blocks(t)
+            b .= Δn * dim(c) * sign(b)
+        end
+        return NoTangent(), P_t(Δt)
+    end
+
+    return n, _diag_one_norm_pullback
+end

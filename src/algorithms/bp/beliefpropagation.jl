@@ -104,10 +104,9 @@ function tr_distance(A::BPEnv, B::BPEnv)
 end
 
 function trnorm(M::AbstractTensorMap, p::Real = 1)
+    ignore_derivatives() do
+        p == 1 || error("currently only implemented for p = 2")
+    end
     _, S, _ = svd_compact(M)
-    return TensorKit._norm(blocks(S), p, zero(real(scalartype(M))))
-end
-function trnorm!(M::AbstractTensorMap, p::Real = 1)
-    _, S, _ = svd_compact(M)
-    return TensorKit._norm(blocks(S), p, zero(real(scalartype(M))))
+    return _diag_one_norm(S) # PATCH: use a custom differentiable one-norm here
 end

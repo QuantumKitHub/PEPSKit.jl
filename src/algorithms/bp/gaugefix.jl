@@ -43,9 +43,9 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
             m[(r-1,c) → (r,c)] = env[1, r-1, c]
         =#
         MM = if dir == 1
-            transpose(sqrtMs[WEST, r, c]) * sqrtMs[EAST, r, _next(c, end)]
+            _transpose(sqrtMs[WEST, r, c]) * sqrtMs[EAST, r, _next(c, end)]
         else
-            transpose(sqrtMs[SOUTH, r, c]) * sqrtMs[NORTH, _prev(r, end), c]
+            _transpose(sqrtMs[SOUTH, r, c]) * sqrtMs[NORTH, _prev(r, end), c]
         end
         U, S, Vᴴ = svd_compact(MM)
         if isdual(space(U, 1))
@@ -60,10 +60,10 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
     wts = SUWeight(Ss)
     ## gauge-fixed state
     psi′ = map(eachcoordinate(psi)) do (r, c)
-        isqrtM_north = transpose(isqrtMs[SOUTH, r, c])
-        isqrtM_south = transpose(isqrtMs[NORTH, r, c])
-        isqrtM_east = transpose(isqrtMs[WEST, r, c])
-        isqrtM_west = transpose(isqrtMs[EAST, r, c])
+        isqrtM_north = _transpose(isqrtMs[SOUTH, r, c])
+        isqrtM_south = _transpose(isqrtMs[NORTH, r, c])
+        isqrtM_east = _transpose(isqrtMs[WEST, r, c])
+        isqrtM_west = _transpose(isqrtMs[EAST, r, c])
 
         U_north = Us[2, r, c]
         U_east = Us[1, r, c]
