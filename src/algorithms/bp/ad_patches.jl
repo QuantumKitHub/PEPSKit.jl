@@ -142,22 +142,27 @@ end
 
 _transpose(t::AbstractTensorMap{T, S, 1, 1}) where {T, S} = permute(t, ((2,), (1,)))
 
-## Pullback of one-norm of a diagonal matrix (hopefully)
+## Pullback of one-norm of a TensorMap
 
-# NOTE: this probably only actually works for a real, diagonal and positive primal; at the very least real
-_diag_one_norm(t::AbstractTensorMap) = TensorKit._norm(blocks(t), 1, zero(real(scalartype(t))))
-function ChainRulesCore.rrule(::typeof(_diag_one_norm), t::AbstractTensorMap)
-    n = _diag_one_norm(t)
-    P_t = ProjectTo(t) # for the diagonal case
-
-    function _diag_one_norm_pullback(Δn_)
+_one_norm(t::AbstractTensorMap) = TensorKit._norm(blocks(t), 1, zero(real(scalartype(t))))
+function ChainRulesCore.rrule(
+        cfg::RuleConfig{>:HasReverseMode}, ::typeof(_one_norm), t::AbstractTensorMap
+    )
+    P_t = ProjectTo(t)
+    n = float(zero(scalartype(t)))
+    abssum(x) = sum(abs, x)
+    abssum_pullbacks = map(blocks(t)) do (c, b)
+        temp, abssum_pullback = rrule_via_ad(cfg, abssum, b)
+        n += oftype(n, dim(c) * temp)
+        return c => abssum_pullback
+    end
+    function _one_norm_pullback(Δn_)
         Δn = unthunk(Δn_)
         Δt = similar(t)
-        for (c, b) in blocks(t)
-            b .= Δn * dim(c) * sign(b)
+        for (c, pb) in abssum_pullbacks
+            copy!(block(Δt, c), last(pb(Δn * dim(c))))
         end
         return NoTangent(), P_t(Δt)
     end
-
-    return n, _diag_one_norm_pullback
+    return n, _one_norm_pullback
 end

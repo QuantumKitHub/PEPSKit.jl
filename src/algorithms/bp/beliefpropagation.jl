@@ -105,8 +105,8 @@ end
 
 function trnorm(M::AbstractTensorMap, p::Real = 1)
     ignore_derivatives() do
-        p == 1 || error("currently only implemented for p = 2")
+        p == 1 || error("currently only implemented for p = 1")
     end
     _, S, _ = svd_compact(M)
-    return _diag_one_norm(S) # PATCH: use a custom differentiable one-norm here
+    return _one_norm(S) # PATCH: use a custom differentiable one-norm here
 end
