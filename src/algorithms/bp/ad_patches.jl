@@ -106,10 +106,10 @@ end
 function _absorb_weights(t::PEPSTensor, weights::SUWeight, row::Int, col::Int)
     Nr, Nc = size(weights)[2:end]
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    wt_N = sdiag_pow(weights[2, row, col], -0.5)
-    wt_E = sdiag_pow(weights[1, row, col], -0.5)
-    wt_S = sdiag_pow(weights[2, _next(row, Nr), col], -0.5)
-    wt_W = sdiag_pow(weights[1, row, _prev(col, Nc)], -0.5)
+    wt_N = sdiag_pow(weights[2, row, col], 0.5)
+    wt_E = sdiag_pow(weights[1, row, col], 0.5)
+    wt_S = sdiag_pow(weights[2, _next(row, Nr), col], 0.5)
+    wt_W = sdiag_pow(weights[1, row, _prev(col, Nc)], 0.5)
     return _multiply_weights(t, wt_N, wt_E, wt_S, wt_W)
 end
 function _multiply_weights(t, wt_N, wt_E, wt_S, wt_W)
