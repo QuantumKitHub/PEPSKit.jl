@@ -70,12 +70,11 @@ fix a truncation error (if that can be reached by remaining below `Dbond`):
 
 dts = [1.0e-2, 1.0e-3, 4.0e-4]
 tols = [1.0e-6, 1.0e-8, 1.0e-8]
-maxiter = 10000
+nstep = 10000
 trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
-
+alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true)
 for (dt, tol) in zip(dts, tols)
-    alg = SimpleUpdate(dt, tol, maxiter, trunc_peps)
-    global peps, wts, = simpleupdate(peps, H, alg, wts; bipartite = true)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval = 500)
 end
 
 md"""

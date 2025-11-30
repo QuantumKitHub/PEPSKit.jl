@@ -1,11 +1,8 @@
 using Test
-using Random
 using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-
-Random.seed!(10235876)
 
 # Benchmark energy from high-temperature expansion
 # at β = 0.3, 0.6
@@ -14,7 +11,7 @@ bm = [-0.1235, -0.213]
 
 function converge_env(state, χ::Int)
     trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
-    env0 = CTMRGEnv(randn, Float64, state, Vect[SU2Irrep](0 => 1))
+    env0 = CTMRGEnv(ones, Float64, state, Vect[SU2Irrep](0 => 1))
     env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
     return env
 end
@@ -31,24 +28,27 @@ trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
 check_interval = 100
 
 # PEPO approach
-dt, maxiter = 1.0e-3, 600
-alg = SimpleUpdate(dt, 0.0, maxiter, trunc_pepo)
-pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; check_interval, gate_bothsides = true)
+dt, nstep = 1.0e-3, 600
+alg = SimpleUpdate(; trunc = trunc_pepo, purified = false)
+evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
+pepo, wts, info = time_evolve(evolver; check_interval)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 energy = expectation_value(pepo, ham, env) / (Nr * Nc)
-@info "β = $(dt * maxiter): tr(ρH) = $(energy)"
+@info "β = $(dt * nstep): tr(ρH) = $(energy)"
+@test dt * nstep ≈ info.t
 @test energy ≈ bm[2] atol = 5.0e-3
 
 # PEPS (purified PEPO) approach
-dt, maxiter = 1.0e-3, 300
-alg = SimpleUpdate(dt, 0.0, maxiter, trunc_pepo)
-pepo, wts, = simpleupdate(pepo0, ham, alg, wts0; check_interval, gate_bothsides = false)
+alg = SimpleUpdate(; trunc = trunc_pepo, purified = true)
+evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
+pepo, wts, info = time_evolve(evolver; check_interval)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
 energy = expectation_value(pepo, ham, env) / (Nr * Nc)
-@info "β = $(dt * maxiter): tr(ρH) = $(energy)"
+@info "β = $(dt * nstep) / 2: tr(ρH) = $(energy)"
 @test energy ≈ bm[1] atol = 5.0e-3
 
 env = converge_env(InfinitePEPS(pepo), 16)
 energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
-@info "β = 2 × $(dt * maxiter): ⟨ρ|H|ρ⟩ = $(energy)"
+@info "β = $(dt * nstep): ⟨ρ|H|ρ⟩ = $(energy)"
+@test dt * nstep ≈ info.t
 @test energy ≈ bm[2] atol = 5.0e-3

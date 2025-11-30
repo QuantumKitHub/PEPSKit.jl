@@ -1,4 +1,22 @@
-const InfiniteState = Union{InfinitePEPS, InfinitePEPO}
+"""
+Process the Trotter time step `dt` according to the intended usage.
+"""
+function _get_dt(
+        state::InfiniteState, dt::Number, imaginary_time::Bool
+    )
+    # PEPS update: exp(-H dt)|ψ⟩
+    # PEPO update (purified): exp(-H dt/2)|ρ⟩
+    # PEPO update (not purified): exp(-H dt/2) ρ exp(-H dt/2)
+    dt′ = (state isa InfinitePEPS) ? dt : (dt / 2)
+    if (state isa InfinitePEPO)
+        @assert size(state)[3] == 1
+    end
+    if !imaginary_time
+        @assert (state isa InfinitePEPS) "Real time evolution of InfinitePEPO (Heisenberg picture) is not implemented."
+        dt′ = 1.0im * dt′
+    end
+    return dt′
+end
 
 function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
     T = scalartype(H)
@@ -67,10 +85,13 @@ function get_gateterm(gate::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
         if length(bonds) == 1
             return permute(gate.terms[bonds[1]].second, ((2, 1), (4, 3)))
         elseif length(bonds) == 0
-            # if term not found, return the zero operator
-            dtype = scalartype(gate.terms[1].second)
-            V = space(gate.terms[1].second, 1)
-            return zeros(dtype, V ⊗ V ← V ⊗ V)
+            # if term not found, return the zero operator on this bond
+            dtype = scalartype(gate)
+            r1, c1 = (mod1(bond[1][i], n) for (i, n) in zip(1:2, size(gate)))
+            r2, c2 = (mod1(bond[2][i], n) for (i, n) in zip(1:2, size(gate)))
+            V1 = physicalspace(gate)[r1, c1]
+            V2 = physicalspace(gate)[r2, c2]
+            return zeros(dtype, V1 ⊗ V2 ← V1 ⊗ V2)
         else
             error("There are multiple terms in `gate` corresponding to the bond $(bond).")
         end
