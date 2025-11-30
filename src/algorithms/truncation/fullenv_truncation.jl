@@ -255,7 +255,7 @@ function fullenv_truncate(
         fid = fidelity(benv, b0, b1)
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
         # determine convergence
-        Δs = (space(s) == space(s0)) ? 
+        Δs = (space(s) == space(s0)) ?
             _singular_value_distance((normalize(s, Inf), normalize(s0, Inf))) : NaN
         Δfid = fid - fid0
         s0 = deepcopy(s)
