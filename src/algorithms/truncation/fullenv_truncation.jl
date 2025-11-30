@@ -230,8 +230,6 @@ function fullenv_truncate(
     # initialize u, s, vh with truncated or untruncated SVD
     u, s, vh = svd_trunc(b0; trunc = (alg.trunc_init ? alg.trunc : notrunc()))
     b1 = similar(b0)
-    # normalize `s` (bond matrices can always be normalized)
-    s /= norm(s, Inf)
     s0 = deepcopy(s)
     Δfid, Δs, fid, fid0 = NaN, NaN, 0.0, 0.0
     for iter in 1:(alg.maxiter)
@@ -245,7 +243,6 @@ function fullenv_truncate(
         r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
         @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
         u, s, vh = svd_trunc(b1; trunc = alg.trunc)
-        s /= norm(s, Inf)
         # update `- l ←  =  - u ← s ←`
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
         @tensor p[-1 -2] := conj(vh[-2; 2]) * benv[-1 2; 3 4] * b0[3; 4]
@@ -257,9 +254,9 @@ function fullenv_truncate(
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
         fid = fidelity(benv, b0, b1)
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
-        s /= norm(s, Inf)
         # determine convergence
-        Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
+        Δs = (space(s) == space(s0)) ? 
+            _singular_value_distance((normalize(s, Inf), normalize(s0, Inf))) : NaN
         Δfid = fid - fid0
         s0 = deepcopy(s)
         fid0 = fid
