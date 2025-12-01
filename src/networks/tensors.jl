@@ -22,6 +22,21 @@ and west spaces, respectively.
 const PartitionFunctionTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 2, 2}
 const PFTensor = PartitionFunctionTensor
 
+"""
+    PartitionFunctionTensor(f, ::Type{T}, Pspace::S, Nspace::S,
+               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
+                
+Construct a PartitionFunctionTensor tensor based on the north, east, west and south spaces.
+The tensor elements are generated based on `f` and the element type is specified in `T`.
+"""
+function PartitionFunctionTensor(
+        f, ::Type{T},
+        Pspace::S,
+        Nspace::S, Espace::S = Nspace, Sspace::S = Nspace, Wspace::S = Espace,
+    ) where {T, S <: ElementarySpace}
+    return f(T, Wspace ⊗ Sspace ← Nspace ⊗ Espace)
+end
+
 Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))
 Base.rotr90(t::PFTensor) = permute(t, ((2, 4), (1, 3)))
 Base.rot180(t::PFTensor) = permute(t, ((4, 3), (2, 1)))
