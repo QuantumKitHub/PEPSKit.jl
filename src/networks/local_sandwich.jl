@@ -55,6 +55,8 @@ function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
 
+TensorKit.spacetype(::Type{P}) where {P <: PEPSSandwich} = spacetype(eltype(P))
+
 # not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
 # ie type piracy
 mpotensor(top::PEPSTensor) = mpotensor((top, top))
@@ -106,3 +108,5 @@ function virtualspace(O::PEPOSandwich, dir)
         ]
     )
 end
+
+TensorKit.spacetype(::Type{P}) where {P <: PEPOSandwich} = spacetype(eltype(P))

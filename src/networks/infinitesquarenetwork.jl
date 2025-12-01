@@ -55,6 +55,7 @@ end
 
 ## Spaces
 
+TensorKit.spacetype(::Type{T}) where {T <: InfiniteSquareNetwork} = spacetype(eltype(T))
 function virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir)
     Nr, Nc = size(n)
     return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
