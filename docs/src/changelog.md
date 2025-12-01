@@ -24,9 +24,13 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- Bump OptimKit.jl compatibility to v0.4
+
 ### Deprecated
 
 ### Removed
+
+- Unused implementations of `LinearAlgebra` methods for `CTRMGEnv` and `InfinitePEPS`
 
 ### Fixed
 
