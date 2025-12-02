@@ -227,17 +227,6 @@ Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
 Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))
 Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
 
-## OptimKit optimization backwards compatibility (v0.4 uses VectorInterface)
-
-function LinearAlgebra.rmul!(A::InfinitePEPS, α::Number) # Used in _scale during OptimKit.optimize
-    rmul!.(unitcell(A), α)
-    return A
-end
-function LinearAlgebra.axpy!(α::Number, A₁::InfinitePEPS, A₂::InfinitePEPS) # Used in _add during OptimKit.optimize
-    axpy!.(α, unitcell(A₁), unitcell(A₂))
-    return A₂
-end
-
 ## FiniteDifferences vectorization
 
 """
