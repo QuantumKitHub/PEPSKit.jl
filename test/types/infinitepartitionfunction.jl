@@ -20,4 +20,8 @@ sizes = [(1, 1), (3, 3)]
     @test scalartype(pf) == T
     @test eltype(pf) <: PFTensor{typeof(V)}
     @test spacetype(pf) == typeof(V)
+
+    @test (rotl90 ∘ rotl90)(pf) ≈ rot180(pf)
+    @test (rotr90 ∘ rotr90 ∘ rotr90)(pf) ≈ rotl90(pf)
+    @test length(pf) == prod(sz)
 end
