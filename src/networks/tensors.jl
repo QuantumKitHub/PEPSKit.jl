@@ -31,7 +31,6 @@ The tensor elements are generated based on `f` and the element type is specified
 """
 function PartitionFunctionTensor(
         f, ::Type{T},
-        Pspace::S,
         Nspace::S, Espace::S = Nspace, Sspace::S = Nspace, Wspace::S = Espace,
     ) where {T, S <: ElementarySpace}
     return f(T, Wspace ⊗ Sspace ← Nspace ⊗ Espace)

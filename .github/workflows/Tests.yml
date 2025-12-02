@@ -26,6 +26,7 @@ jobs:
           - 'lts' # minimal supported version
           - '1'
         group:
+          - types
           - ctmrg
           - boundarymps
           - gradients
