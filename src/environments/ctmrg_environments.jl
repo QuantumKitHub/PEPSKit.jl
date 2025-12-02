@@ -341,34 +341,6 @@ end
 Base.:*(α::Number, e::CTMRGEnv) = CTMRGEnv(α * e.corners, α * e.edges)
 Base.similar(e::CTMRGEnv) = CTMRGEnv(similar(e.corners), similar(e.edges))
 
-function LinearAlgebra.mul!(edst::CTMRGEnv, esrc::CTMRGEnv, α::Number)
-    edst.corners .= α * esrc.corners
-    edst.edges .= α * esrc.edges
-    return edst
-end
-
-function LinearAlgebra.rmul!(e::CTMRGEnv, α::Number)
-    rmul!.(e.corners, α)
-    rmul!.(e.edges, α)
-    return e
-end
-
-function LinearAlgebra.axpy!(α::Number, e₁::CTMRGEnv, e₂::CTMRGEnv)
-    axpy!.(α, e₁.corners, e₂.corners)
-    axpy!.(α, e₁.edges, e₂.edges)
-    return e₂
-end
-
-function LinearAlgebra.axpby!(α::Number, e₁::CTMRGEnv, β::Number, e₂::CTMRGEnv)
-    e₂.corners .= α * e₁.corners + β * e₂.corners
-    e₂.edges .= α * e₁.edges + β * e₂.edges
-    return e₂
-end
-
-function LinearAlgebra.dot(e₁::CTMRGEnv, e₂::CTMRGEnv)
-    return dot(e₁.corners, e₂.corners) + dot(e₁.edges, e₂.edges)
-end
-
 # VectorInterface
 # ---------------
 

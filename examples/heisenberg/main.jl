@@ -89,7 +89,7 @@ optimization. To get a PEPS with physical dimension 2 (since we have a spin-1/2 
 with complex-valued random Gaussian entries, we set:
 """
 
-peps₀ = InfinitePEPS(randn, ComplexF64, 2, Dbond)
+peps₀ = InfinitePEPS(randn, ComplexF64, ℂ^2, ℂ^Dbond)
 
 md"""
 The last thing we need before we can start the optimization is an initial CTMRG environment.

@@ -61,6 +61,9 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
+        @time @safetestset "`timestep` function" begin
+            include("timeevol/timestep.jl")
+        end
         @time @safetestset "Cluster truncation with projectors" begin
             include("timeevol/cluster_projectors.jl")
         end

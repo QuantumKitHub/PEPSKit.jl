@@ -77,36 +77,51 @@ fix a truncation error (if that can be reached by remaining below `Dbond`):
 ````julia
 dts = [1.0e-2, 1.0e-3, 4.0e-4]
 tols = [1.0e-6, 1.0e-8, 1.0e-8]
-maxiter = 10000
-trunc_peps = truncerror(; atol=1.0e-10) & truncrank(Dbond)
-
+nstep = 10000
+trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
+alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true)
 for (dt, tol) in zip(dts, tols)
-    alg = SimpleUpdate(dt, tol, maxiter, trunc_peps)
-    global peps, wts, = simpleupdate(peps, H, alg, wts; bipartite = true)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval = 500)
 end
 ````
 
 ````
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.731e+00,  time = 16.560 sec
+[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.683e+00. Time = 16.029 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 323    :  dt = 1e-02,  weight diff = 9.986e-07,  time = 21.354 sec
+[ Info: SU iter 500    : dt = 0.01, |Δλ| = 3.917e-06. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 2.187e-03,  time = 0.004 sec
+[ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.003 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elasped: 18.10 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    :  dt = 1e-03,  weight diff = 2.420e-07,  time = 0.004 sec
+[ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   :  dt = 1e-03,  weight diff = 1.665e-08,  time = 0.004 sec
+[ Info: SU iter 500    : dt = 0.001, |Δλ| = 9.631e-07. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 1098   :  dt = 1e-03,  weight diff = 9.958e-09,  time = 4.536 sec
+[ Info: SU iter 1000   : dt = 0.001, |Δλ| = 2.415e-07. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 1.442e-04,  time = 0.004 sec
+[ Info: SU iter 1500   : dt = 0.001, |Δλ| = 6.291e-08. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    :  dt = 4e-04,  weight diff = 3.551e-08,  time = 0.004 sec
+[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.683e-08. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   :  dt = 4e-04,  weight diff = 1.159e-08,  time = 0.004 sec
+[ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.003 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elasped: 7.01 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU conv 1068   :  dt = 4e-04,  weight diff = 9.987e-09,  time = 4.404 sec
+[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 500    : dt = 0.0004, |Δλ| = 6.377e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1000   : dt = 0.0004, |Δλ| = 3.544e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1500   : dt = 0.0004, |Δλ| = 2.013e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.157e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.003 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elasped: 6.74 s
 
 ````
 
@@ -118,7 +133,7 @@ on the evolved PEPS. Let's do so:
 ````julia
 normalize!.(peps.A, Inf)
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
-trunc_env = truncerror(; atol=1.0e-10) & truncrank(χenv)
+trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 env, = leading_boundary(
     env₀,
     peps;
@@ -130,8 +145,8 @@ env, = leading_boundary(
 ````
 
 ````
-[ Info: CTMRG init:	obj = +1.188518474239e-04	err = 1.0000e+00
-[ Info: CTMRG conv 14:	obj = +1.298574138984e+00	err = 8.6101675686e-11	time = 5.39 sec
+[ Info: CTMRG init:	obj = +1.852686271621e-15	err = 1.0000e+00
+[ Info: CTMRG conv 14:	obj = +1.297823093603e+00	err = 4.2791045109e-11	time = 7.73 sec
 
 ````
 
@@ -165,9 +180,9 @@ M_norms = map(
 ````
 
 ````
-E = -0.6674725905835921
-Ms = [0.028455537297763654 -0.026889489648298712; -0.026889489681467996 0.028455537252025265;;; 1.060553381226903e-11 -4.813673765147186e-12; -9.758601912657205e-12 3.9884293784320235e-12;;; 0.37587672522461946 -0.3759920019289313; -0.3759920019256273 0.3758767252290504]
-M_norms = [0.37695229163448324 0.37695229163393; 0.3769522916330006 0.37695229163544886]
+E = -0.667468537043687
+Ms = [0.02728716257542508 -0.025087419805416306; -0.025087419894948337 0.027287162545045957;;; -2.3992008033046908e-11 2.6495396154846418e-11; -4.827289089293085e-11 4.5508758220180745e-11;;; 0.37596759542523767 -0.3761207830204173; -0.37612078301296753 0.37596759542925773]
+M_norms = [0.37695652541274954 0.3769565254142512; 0.3769565254127766 0.37695652541455993]
 
 ````
 
@@ -186,8 +201,8 @@ M_ref = 0.3767
 ````
 
 ````
-(E - E_ref) / abs(E_ref) = 4.106279611668376e-5
-(mean(M_norms) - M_ref) / M_ref = 0.0006697415296408165
+(E - E_ref) / abs(E_ref) = 4.7135515075588574e-5
+(mean(M_norms) - M_ref) / M_ref = 0.0006809806572453966
 
 ````
 
