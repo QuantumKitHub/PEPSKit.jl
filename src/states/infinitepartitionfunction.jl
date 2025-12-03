@@ -55,10 +55,10 @@ function InfinitePartitionFunction(
     size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
-    Sspaces = adjoint.(circshift(Nspaces, (-1, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, 1)))
+    Sspaces = circshift(Nspaces, (-1, 0))
+    Wspaces = circshift(Espaces, (0, 1))
 
-    A = map(Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
+    A = map(Nspaces, Espaces, Sspaces, Wspaces) do N, E, S, W
         return PartitionFunctionTensor(f, T, N, E, S, W)
     end
 
