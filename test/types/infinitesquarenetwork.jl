@@ -49,7 +49,7 @@ sizes = [(1, 1), (3, 3)]
     @test (rotl90 ∘ rotl90)(peps_n) ≈ rot180(peps_n)
 
     @test pf_n + pf_n ≈ 2 * pf_n
-    @test (rotr90 ∘ rotr90)(pf_n) ≈ rot180(peps_n)
+    @test (rotr90 ∘ rotr90)(pf_n) ≈ rot180(pf_n)
 
     @test length(peps_n) == prod(sz)
 end
