@@ -15,7 +15,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * `trunc::TruncationStrategy`: SVD truncation strategy when initilizing the truncated tensors connected by the bond.
 * `maxiter::Int=50` : Maximal number of ALS iterations.
-* `tol::Float64=1e-9` : ALS converges when the relative change in bond SVD spectrum (normalized by maximum element) between two iterations is smaller than `tol`.
+* `tol::Float64=1e-9` : ALS converges when the relative change in bond SVD spectrum between two iterations is smaller than `tol`.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
