@@ -15,7 +15,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * `trunc::TruncationStrategy` : SVD truncation strategy when optimizing the new bond matrix.
 * `maxiter::Int=50` : Maximal number of FET iterations.
-* `tol::Float64=1e-9` : FET converges when the change in bond SVD spectrum (normalized by maximum element) between two FET iterations is smaller than `tol`.
+* `tol::Float64=1e-9` : FET converges when the relative change in bond SVD spectrum between two FET iterations is smaller than `tol`.
 * `trunc_init::Bool=true` : Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 
@@ -255,8 +255,8 @@ function fullenv_truncate(
         fid = fidelity(benv, b0, b1)
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
         # determine convergence
-        Δs = (space(s) == space(s0)) ?
-            _singular_value_distance((normalize(s, Inf), normalize(s0, Inf))) : NaN
+        s_nrm = norm(s0, Inf)
+        Δs = ((space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN) / s_nrm
         Δfid = fid - fid0
         s0 = deepcopy(s)
         fid0 = fid
