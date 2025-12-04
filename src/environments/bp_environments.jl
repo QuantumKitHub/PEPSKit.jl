@@ -131,7 +131,7 @@ Base.eltype(::Type{BPEnv{T}}) where {T} = T
 Base.size(env::BPEnv, args...) = size(env.messages, args...)
 Base.getindex(env::BPEnv, args...) = Base.getindex(env.messages, args...)
 Base.axes(env::BPEnv, args...) = Base.axes(env.messages, args...)
-
+Base.eachindex(env::BPEnv) = eachindex(IndexCartesian(), env.messages)
 VectorInterface.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
 TensorKit.spacetype(::Type{BPEnv{T}}) where {T} = spacetype(T)
 

@@ -40,7 +40,7 @@ function leading_boundary(env::BPEnv, network::InfiniteSquareNetwork, alg::Belie
             ϵ = oftype(ϵ, tr_distance(env, env′))
             env = env′
 
-            if ϵ <= alg.tol && iter >= algminiter
+            if ϵ <= alg.tol && iter >= alg.miniter
                 @infov 2 logfinish!(log, iter, ϵ)
                 break
             end
@@ -62,7 +62,7 @@ function bp_iteration(network::InfiniteSquareNetwork, env::BPEnv, alg::BeliefPro
     messages = map(eachindex(env)) do I
         M = update_message(I, network, env)
         normalize!(M)
-        alg.project_hermitian && (M = project_hermitian!!(t))
+        alg.project_hermitian && (M = project_hermitian!!(M))
         return M
     end
     return BPEnv(messages)
