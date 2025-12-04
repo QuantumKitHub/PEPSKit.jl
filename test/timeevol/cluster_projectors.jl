@@ -32,9 +32,9 @@ Vspaces = [
             return rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve)
         end
         normalize!.(Ms1, Inf)
-        revs = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
         # no truncation
-        Ms2 = _flip_virtuals!(deepcopy(Ms1), revs)
+        Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
         wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N - 1))
         @test all((ϵ == 0) for ϵ in ϵs)
         normalize!.(Ms2, Inf)
@@ -42,14 +42,14 @@ Vspaces = [
         lorths, rorths = verify_cluster_orth(Ms2, wts2)
         @test all(lorths) && all(rorths)
         # truncation on one bond
-        Ms3 = _flip_virtuals!(deepcopy(Ms1), revs)
+        Ms3 = _flip_virtuals!(deepcopy(Ms1), flips)
         tspace = isdual(Vns) ? flip(Vns) : Vns
         wts3, ϵs, = _cluster_truncate!(Ms3, fill(truncspace(tspace), N - 1))
         @test all((i == n) || (ϵ == 0) for (i, ϵ) in enumerate(ϵs))
         normalize!.(Ms3, Inf)
         ϵ = ϵs[n]
         wt2, wt3 = wts2[n], wts3[n]
-        _flip_virtuals!(Ms3, revs)
+        _flip_virtuals!(Ms3, flips)
         fid3, fid3_ = fidelity_cluster(Ms1, Ms3), fidelity_cluster(Ms2, Ms3)
         @info "Fidelity of truncated cluster = $(fid3)"
         @test fid3 ≈ fid3_
