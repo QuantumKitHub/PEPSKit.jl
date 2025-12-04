@@ -11,11 +11,12 @@ stype = ComplexF64
 function test_unitcell(unitcell, Pspaces, Nspaces, Espaces)
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
     env0 = BPEnv(ones, stype, peps)
+    alg = BeliefPropagation()
 
     # apply one BP iteration
-    env1 = bp_iteration(InfiniteSquareNetwork(peps), env0)
+    env1 = bp_iteration(InfiniteSquareNetwork(peps), env0, alg)
     # another iteration to detect bond mismatches
-    env1 = bp_iteration(InfiniteSquareNetwork(peps), env1)
+    env1 = bp_iteration(InfiniteSquareNetwork(peps), env1, alg)
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(

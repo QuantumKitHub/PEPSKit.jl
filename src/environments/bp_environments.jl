@@ -140,6 +140,13 @@ Base.eachindex(env::BPEnv) = eachindex(IndexCartesian(), env.messages)
 VectorInterface.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
 TensorKit.spacetype(::Type{BPEnv{T}}) where {T} = spacetype(T)
 
+function eachcoordinate(x::BPEnv)
+    return collect(Iterators.product(axes(x, 2), axes(x, 3)))
+end
+function eachcoordinate(x::BPEnv, dirs)
+    return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
+end
+
 # conversion to CTMRGEnv
 """
     CTMRGEnv(bp_env::BPEnv)

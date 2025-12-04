@@ -1,4 +1,4 @@
-using Test
+using Test, TestExtras
 using Random
 using TensorKit
 using PEPSKit
@@ -10,10 +10,10 @@ A dummy Hamiltonian containing identity gates on all nearest neighbor bonds.
 function dummy_ham(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: ElementarySpace}
     terms = []
     for site1 in CartesianIndices(lattice)
-        r1, c1 = (mod1(x, N) for (x, N) in zip(site1.I, size(lattice)))
+        r1, c1 = mod1.(Tuple(site1), size(lattice))
         for d in (CartesianIndex(1, 0), CartesianIndex(0, 1))
             site2 = site1 + d
-            r2, c2 = (mod1(x, N) for (x, N) in zip(site2.I, size(lattice)))
+            r2, c2 = mod1.(Tuple(site2), size(lattice))
             V1, V2 = lattice[r1, c1], lattice[r2, c2]
             h = TensorKit.id(elt, V1 ⊗ V2)
             push!(terms, (site1, site2) => h)
@@ -46,6 +46,8 @@ function gauge_fix_su(peps::InfinitePEPS; maxiter::Int = 100, tol::Float64 = 1.0
     return
 end
 
+isapproxone(X; kwargs...) = isapprox(X, id!(similar(X)); kwargs...)
+
 @testset "Compare BP and SU (no symmetry)" begin
     unitcell = (3, 3)
     stype = ComplexF64
@@ -57,17 +59,21 @@ end
     Espaces = random_dual!(ComplexSpace.(rand(2:4, unitcell...)))
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
 
+    # start by gauging with SU
     peps1, wts1 = gauge_fix_su(peps; maxiter, tol)
-    @test all(space.(peps1.A) .== space.(peps.A))
+    for (a1, a2) in zip(peps1.A, peps.A)
+        @test space(a1) == space(a2)
+    end
     normalize!.(wts1.data)
 
+    # gauging again with BP should give unitary gauge
     bp_alg = BeliefPropagation(; maxiter, tol)
     env0 = BPEnv(ones, stype, peps)
-    peps2, wts2 = gauge_fix(peps, bp_alg, env0)
-    @test all(space.(peps2.A) .== space.(peps.A))
-    normalize!.(wts2.data)
-
-    # Even with the same bond weights, the PEPS can still
-    # differ by a unitary gauge transformation on virtual legs.
-    @test isapprox(wts1, wts2)
+    peps2, XXinv, env = @constinferred gauge_fix(peps1, bp_alg, env0)
+    for (a1, a2) in zip(peps1.A, peps.A)
+        @test space(a1) == space(a2)
+    end
+    for (X, Xinv) in XXinv
+        @test inv(X) ≈ adjoint(X) ≈ Xinv
+    end
 end
