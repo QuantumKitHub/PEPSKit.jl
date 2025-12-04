@@ -121,7 +121,7 @@ function edge_transfer_right(
     @autoopt @tensor v′[χ_NW D_W_above D_W_below; χ_SW] :=
         v[χ_NE D_E_above D_E_below; χ_SE] *
         Etop[χ_NW D_N_above D_N_below; χ_NE] *
-        Ebot[χ_SE D_S_below D_S_above; χ_SW] *
+        Ebot[χ_SE D_S_above D_S_below; χ_SW] *
         ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
         conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
 
