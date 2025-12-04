@@ -51,6 +51,15 @@ function contract_west_message(
     end
 end
 
+absorb_north_message(A::PEPSTensor, M::PEPSMessage) =
+    @tensor A′[d; N' E S W] := A[d; N E S W] * M[N; N']
+absorb_east_message(A::PEPSTensor, M::PEPSMessage) =
+    @tensor A′[d; N E' S W] := A[d; N E S W] * M[E; E']
+absorb_south_message(A::PEPSTensor, M::PEPSMessage) =
+    @tensor A′[d; N E S' W] := A[d; N E S W] * M[S; S']
+absorb_west_message(A::PEPSTensor, M::PEPSMessage) =
+    @tensor A′[d; N E S W'] := A[d; N E S W] * M[W; W']
+
 # Belief Propagation Expectation values
 # -------------------------------------
 function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::BPEnv)
