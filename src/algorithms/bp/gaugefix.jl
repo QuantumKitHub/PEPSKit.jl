@@ -6,10 +6,11 @@ Fix the gauge of `psi` using fixed point environment of belief propagation.
 function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv(psi))
     env, err = leading_boundary(env, InfiniteSquareNetwork(psi), alg)
     psi′ = copy(psi)
-    for I in eachcoordinate(psi, 1:2)
-        psi′, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env; ishermitian = alg.project_hermitian)
+    XXinv = map(eachcoordinate(psi, 1:2)) do I
+        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env; ishermitian = alg.project_hermitian)
+        return X, Xinv
     end
-    return psi′, env
+    return psi′, XXinv, env
 end
 
 """
