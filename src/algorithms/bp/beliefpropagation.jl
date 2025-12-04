@@ -95,7 +95,7 @@ end
 function tr_distance(A::BPEnv, B::BPEnv)
     return sum(zip(A.messages, B.messages)) do (a, b)
         return trnorm(add(a, b, -inv(tr(b)), inv(tr(a))))
-    end
+    end / length(A.messages)
 end
 
 function trnorm(M::AbstractTensorMap, p::Real = 1)
