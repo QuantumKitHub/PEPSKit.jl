@@ -29,11 +29,11 @@ end
 
 Contract `network` in the BP approximation and return the corresponding messages.
 """
-function leading_boundary(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
-    log = MPSKit.IterLog("BP")
-    ϵ = Inf
-
+function leading_boundary(env₀::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
     return LoggingExtras.withlevel(; alg.verbosity) do
+        env = deepcopy(env₀)
+        log = MPSKit.IterLog("BP")
+        ϵ = Inf
         @infov 1 loginit!(log, ϵ)
         for iter in 1:(alg.maxiter)
             env′ = bp_iteration(network, env, alg)
