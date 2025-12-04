@@ -127,9 +127,13 @@ function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
+Base.eltype(::Type{BPEnv{T}}) where {T} = T
 Base.size(env::BPEnv, args...) = size(env.messages, args...)
 Base.getindex(env::BPEnv, args...) = Base.getindex(env.messages, args...)
 Base.axes(env::BPEnv, args...) = Base.axes(env.messages, args...)
+
+VectorInterface.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
+TensorKit.spacetype(::Type{BPEnv{T}}) where {T} = spacetype(T)
 
 # conversion to CTMRGEnv
 """
@@ -138,16 +142,12 @@ Base.axes(env::BPEnv, args...) = Base.axes(env.messages, args...)
 Construct a CTMRG environment with bond dimension χ = 1 
 from the belief propagation environment `bp_env`.
 """
-function CTMRGEnv(bp_env::BPEnv{T}) where {T}
-    elt = scalartype(T)
-    envspace = oneunit(space(bp_env[1, 1, 1], 1))
-    id_env = TensorKit.id(elt, envspace)
+function CTMRGEnv(bp_env::BPEnv)
     edges = map(bp_env.messages) do M
-        # attach identity on environment spaces
-        return permute(M ⊗ id_env, ((2, 1, 3), (4,)))
+        return insertleftunit(insertleftunit(repartition(M, numind(M), 0)), 1)
     end
-    corners = map(CartesianIndices(edges)) do idx
-        return TensorKit.id(elt, envspace)
+    corners = map(CartesianIndices(edges)) do _
+        return TensorKit.id(scalartype(bp_env), oneunit(spacetype(bp_env)))
     end
     return CTMRGEnv(corners, edges)
 end
