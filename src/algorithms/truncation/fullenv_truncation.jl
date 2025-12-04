@@ -15,7 +15,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * `trunc::TruncationStrategy` : SVD truncation strategy when optimizing the new bond matrix.
 * `maxiter::Int=50` : Maximal number of FET iterations.
-* `tol::Float64=1e-15` : FET converges when fidelity change between two FET iterations is smaller than `tol`.
+* `tol::Float64=1e-9` : FET converges when the relative change in bond SVD spectrum between two FET iterations is smaller than `tol`.
 * `trunc_init::Bool=true` : Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 
@@ -26,7 +26,7 @@ The truncation algorithm can be constructed from the following keyword arguments
 @kwdef struct FullEnvTruncation
     trunc::TruncationStrategy
     maxiter::Int = 50
-    tol::Float64 = 1.0e-15
+    tol::Float64 = 1.0e-9
     trunc_init::Bool = true
     check_interval::Int = 0
 end
@@ -230,8 +230,6 @@ function fullenv_truncate(
     # initialize u, s, vh with truncated or untruncated SVD
     u, s, vh = svd_trunc(b0; trunc = (alg.trunc_init ? alg.trunc : notrunc()))
     b1 = similar(b0)
-    # normalize `s` (bond matrices can always be normalized)
-    s /= norm(s, Inf)
     s0 = deepcopy(s)
     Δfid, Δs, fid, fid0 = NaN, NaN, 0.0, 0.0
     for iter in 1:(alg.maxiter)
@@ -245,7 +243,6 @@ function fullenv_truncate(
         r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
         @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
         u, s, vh = svd_trunc(b1; trunc = alg.trunc)
-        s /= norm(s, Inf)
         # update `- l ←  =  - u ← s ←`
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
         @tensor p[-1 -2] := conj(vh[-2; 2]) * benv[-1 2; 3 4] * b0[3; 4]
@@ -253,17 +250,18 @@ function fullenv_truncate(
         _linearmap_twist!(p)
         _linearmap_twist!(B)
         l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
+        @debug "Bond truncation info" info_l info_r
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
         fid = fidelity(benv, b0, b1)
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
-        s /= norm(s, Inf)
         # determine convergence
-        Δs = (space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN
+        s_nrm = norm(s0, Inf)
+        Δs = ((space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN) / s_nrm
         Δfid = fid - fid0
         s0 = deepcopy(s)
         fid0 = fid
         time1 = time()
-        converge = (Δfid < alg.tol)
+        converge = (Δs < alg.tol)
         cancel = (iter == alg.maxiter)
         showinfo =
             cancel || (verbose && (converge || iter == 1 || iter % alg.check_interval == 0))

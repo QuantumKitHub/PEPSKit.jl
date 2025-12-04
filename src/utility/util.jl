@@ -114,10 +114,9 @@ The axis orders for `s`, `s2` are
 ```
 """
 function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-    return flip(u, numind(u)),
-        permute(DiagonalTensorMap(flip(s, (1, 2))), ((2,), (1,))),
-        flip(vh, 1)
+    return flip(u, numind(u)), _flip_s(s), flip(vh, 1)
 end
+_flip_s(s::DiagonalTensorMap) = permute(DiagonalTensorMap(flip(s, (1, 2))), ((2,), (1,)))
 
 """
     twistdual(t::AbstractTensorMap, i)

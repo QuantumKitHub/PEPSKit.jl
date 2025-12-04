@@ -27,6 +27,7 @@ jobs:
           - '1'
         group:
           - bp
+          - types
           - ctmrg
           - boundarymps
           - gradients

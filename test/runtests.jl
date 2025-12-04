@@ -10,6 +10,20 @@ else
 end
 
 @time begin
+    if GROUP == "ALL" || GROUP == "TYPES"
+        @time @safetestset "InfiniteSquareNetwork" begin
+            include("types/infinitesquarenetwork.jl")
+        end
+        @time @safetestset "InfinitePartitionFunction" begin
+            include("types/infinitepartitionfunction.jl")
+        end
+        @time @safetestset "SUWeight" begin
+            include("types/suweight.jl")
+        end
+        @time @safetestset "LocalOperator" begin
+            include("types/localoperator.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "CTMRG"
         @time @safetestset "Gauge Fixing" begin
             include("ctmrg/gaugefix.jl")
@@ -91,9 +105,6 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
-        @time @safetestset "LocalOperator" begin
-            include("utility/localoperator.jl")
-        end
         @time @safetestset "SVD wrapper" begin
             include("utility/svd_wrapper.jl")
         end
@@ -105,9 +116,6 @@ end
         end
         @time @safetestset "Norm-preserving retractions" begin
             include("utility/retractions.jl")
-        end
-        @time @safetestset "Rotation of SUWeight" begin
-            include("utility/suweight_rotation.jl")
         end
         @time @safetestset "Correlators" begin
             include("utility/correlator.jl")

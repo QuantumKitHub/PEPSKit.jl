@@ -3,7 +3,7 @@ using PEPSKit
 using PEPSKit: herm_depth, herm_width, _fit_spaces
 using TensorKit
 
-@testset "ReflectDepth" for unitcell in [(1, 1), (2, 2), (3, 3)]
+@testset "ReflectDepth" for unitcell in [(1, 1), (2, 2), (3, 3), (3, 2)]
     peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell)
 
     peps_depth = symmetrize!(deepcopy(peps), ReflectDepth())
@@ -13,7 +13,7 @@ using TensorKit
     @test peps_depth ≈ peps_reflect
 end
 
-@testset "ReflectWidth" for unitcell in [(1, 1), (2, 2), (3, 3)]
+@testset "ReflectWidth" for unitcell in [(1, 1), (2, 2), (3, 3), (3, 2)]
     peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell)
 
     peps_width = symmetrize!(deepcopy(peps), ReflectWidth())
