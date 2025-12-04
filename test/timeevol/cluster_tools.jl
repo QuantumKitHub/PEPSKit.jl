@@ -1,50 +1,34 @@
 function _contract_left(
         M::GenericMPSTensor{S, 4}, sl::DiagonalTensorMap{T, S}
     ) where {T <: Number, S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
     M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
-    if isdual(codomain(M, 1))
-        @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w0; w1] * M0[w0; p n s e0]
-    else
-        @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w1; w0] * M0[w0; p n s e0]
-    end
-    if isdual(space(sl1, 1))
-        sl1 = twist(permute(sl1, ((2,), (1,))), 1)
-    end
+    @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w1; w0] * M0[w0; p n s e0]
     return sl1
 end
 function _contract_left(
         M::GenericMPSTensor{S, 4}, ::Nothing
     ) where {S <: ElementarySpace}
+    @assert !isdual(domain(M, 1))
     M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
     @tensor sl1[e1; e0] := conj(M[w; p n s e1]) * M0[w; p n s e0]
-    if isdual(space(sl1, 1))
-        sl1 = twist(permute(sl1, ((2,), (1,))), 1)
-    end
     return sl1
 end
 
 function _contract_right(
         M::GenericMPSTensor{S, 4}, sr::DiagonalTensorMap{T, S}
     ) where {T <: Number, S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
     M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
-    if isdual(domain(M, 1))
-        @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e1; e0] * conj(M[w1; p n s e1])
-    else
-        @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e0; e1] * conj(M[w1; p n s e1])
-    end
-    if isdual(space(sr1, 1))
-        sr1 = twist(permute(sr1, ((2,), (1,))), 1)
-    end
+    @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e0; e1] * conj(M[w1; p n s e1])
     return sr1
 end
 function _contract_right(
         M::GenericMPSTensor{S, 4}, ::Nothing
     ) where {S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1))
     M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
     @tensor sr1[w0; w1] := M0[w0; p n s e] * conj(M[w1; p n s e])
-    if isdual(space(sr1, 1))
-        sr1 = twist(permute(sr1, ((2,), (1,))), 1)
-    end
     return sr1
 end
 
