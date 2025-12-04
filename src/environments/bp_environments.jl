@@ -120,8 +120,13 @@ function BPEnv(f, T, network::InfiniteSquareNetwork)
 end
 BPEnv(network::InfiniteSquareNetwork) = BPEnv(randn, scalartype(network), network)
 
-function BPEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
+function BPEnv(state::InfinitePartitionFunction, args...)
     return BPEnv(InfiniteSquareNetwork(state), args...)
+end
+function BPEnv(state::InfinitePEPS, args...)
+    bp_env = BPEnv(InfiniteSquareNetwork(state), args...)
+    TensorKit.id!.(bp_env.messages)
+    return bp_env
 end
 function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...)
