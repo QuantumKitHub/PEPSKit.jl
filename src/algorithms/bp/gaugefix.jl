@@ -4,7 +4,7 @@ $(SIGNATURES)
 Fix the gauge of `psi` using fixed point environment of belief propagation.
 """
 function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv(psi))
-    env, err = bp_fixedpoint(env, InfiniteSquareNetwork(psi), alg)
+    env, err = leading_boundary(env, InfiniteSquareNetwork(psi), alg)
     psi′, wts = _gauge_fix_bp(psi, env)
     return psi′, wts, env
 end

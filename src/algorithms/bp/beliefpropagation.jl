@@ -1,37 +1,57 @@
+"""
+    struct BeliefPropagation
+
+Algorithm for computing the belief propagation fixed point messages.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
 @kwdef struct BeliefPropagation
-    maxiter::Int = 50
+    "Stopping criterion for the BP iterations in relative trace norm difference"
     tol::Float64 = 1.0e-6
-    verbosity::Int = 2
+
+    "Minimal number of BP iterations"
+    miniter::Int = 2
+
+    "Maximal number of BP iterations"
+    maxiter::Int = 50
+
+    "Toggle for projecting onto the hermitian subspace"
     project_hermitian::Bool = true
+
+    "Output verbosity level"
+    verbosity::Int = 2
 end
 
 """
-Find the fixed point solution of the BP equations.
+    leading_boundary(env₀::BPEnv, network, alg::BeliefPropagation)
+
+Contract `network` in the BP approximation and return the corresponding messages.
 """
-function bp_fixedpoint(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
+function leading_boundary(env::BPEnv, network::InfiniteSquareNetwork, alg::BeliefPropagation)
     log = MPSKit.IterLog("BP")
     ϵ = Inf
 
     return LoggingExtras.withlevel(; alg.verbosity) do
         @infov 1 loginit!(log, ϵ)
-        iter = 0
-        while true
-            iter += 1
+        for iter in 1:(alg.maxiter)
             env′ = bp_iteration(network, env, alg)
             ϵ = oftype(ϵ, tr_distance(env, env′))
             env = env′
 
-            if ϵ < alg.tol
+            if ϵ <= alg.tol && iter >= algminiter
                 @infov 2 logfinish!(log, iter, ϵ)
-                return env, ϵ
+                break
             end
             if iter ≥ alg.maxiter
                 @warnv 1 logcancel!(log, iter, ϵ)
-                return env, ϵ
+            else
+                @infov 3 logiter!(log, iter, ϵ)
             end
-
-            @infov 3 logiter!(log, iter, ϵ)
         end
+
+        return env, ϵ
     end
 end
 
