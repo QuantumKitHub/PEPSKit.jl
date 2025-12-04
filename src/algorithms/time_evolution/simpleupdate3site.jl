@@ -152,8 +152,7 @@ function lq_through(
     ) where {S <: ElementarySpace}
     @assert !isdual(domain(L1, 1))
     @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
-    @tensor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
-    A = permute(A, ((1,), (2, 3, 4, 5)))
+    @tensor A[-1; -2 -3 -4 -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
     l, _ = right_orth!(A)
     normalize && normalize!(l, Inf)
     return l
@@ -213,7 +212,7 @@ function _proj_from_RL(
     uc, sc, vhc = svd_compact!(rl)
     u, s, vh, ϵ = _truncate_compact((uc, sc, vhc), trunc)
 
-    sinv = PEPSKit.sdiag_pow(s, -1 / 2)
+    sinv = sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     return Pa, s, Pb, ϵ
 end
