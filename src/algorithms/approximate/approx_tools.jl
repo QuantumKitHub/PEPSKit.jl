@@ -12,10 +12,10 @@ function _check_virtual_dualness(state::Union{InfinitePEPS, InfinitePEPO})
         @assert size(state, 3) == 1
     end
     flip_xs = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
-        return isdual(virtualspace(state[r, c], EAST))
+        return !isdual(virtualspace(state[r, c], EAST))
     end
     flip_ys = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
-        return isdual(virtualspace(state[r, c], NORTH))
+        return !isdual(virtualspace(state[r, c], NORTH))
     end
     return flip_xs, flip_ys
 end
@@ -27,10 +27,12 @@ function _standardize_virtual_spaces!(
     )
     Nr, Nc = size(flip_xs)
     for r in 1:Nr, c in 1:Nc
-        inds = [
-            flip_ys[r, c], flip_xs[r, c], 
-            flip_ys[_next(r, Nr), c], flip_xs[r, _prev(c, Nc)]
-        ]
+        inds = findall(
+            [
+                flip_ys[r, c], flip_xs[r, c],
+                flip_ys[_next(r, Nr), c], flip_xs[r, _prev(c, Nc)],
+            ]
+        ) .+ (isa(state, InfinitePEPS) ? 1 : 2)
         state.A[r, c] = flip(state.A[r, c], inds; inv)
     end
     return state
