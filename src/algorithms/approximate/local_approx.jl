@@ -121,5 +121,5 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
             Pn[n1 n2; n] * Pe[e1 e2; e] * Ps[s; s1 s2] * Pw[w; w1 w2]
         return A
     end
-    return InfinitePEPO(As)
+    return InfinitePEPO(cat(As; dims = 3))
 end

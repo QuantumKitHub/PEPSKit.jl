@@ -106,6 +106,9 @@ export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
 
+export LocalApprox
+export approximate
+
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
 export SimpleUpdate
