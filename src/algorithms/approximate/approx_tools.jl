@@ -4,7 +4,7 @@ $(TYPEDEF)
 Abstract super type for the truncation algorithms of
 virtual spaces in InfinitePEPO or InfinitePEPS.
 """
-abstract type ApproxAlgorithm end
+abstract type ApproximateAlgorithm end
 
 function _check_virtual_dualness(state::Union{InfinitePEPS, InfinitePEPO})
     Nr, Nc = size(state)
@@ -20,7 +20,7 @@ function _check_virtual_dualness(state::Union{InfinitePEPS, InfinitePEPO})
     return flip_xs, flip_ys
 end
 
-function _standardize_virtual_spaces!(
+function _flip_virtual_spaces!(
         state::Union{InfinitePEPS, InfinitePEPO},
         flip_xs::AbstractMatrix{Bool}, flip_ys::AbstractMatrix{Bool};
         inv::Bool = false
@@ -47,7 +47,7 @@ function standardize_virtual_spaces(
     )
     flip_xs, flip_ys = _check_virtual_dualness(state)
     !all(flip_xs) && !all(flip_ys) && (return state)
-    return _standardize_virtual_spaces!(deepcopy(state), flip_xs, flip_ys; inv)
+    return _flip_virtual_spaces!(deepcopy(state), flip_xs, flip_ys; inv)
 end
 """
 Flip all north and east virtual spaces of `state` to non-dual spaces.
@@ -58,5 +58,5 @@ function standardize_virtual_spaces!(
     )
     flip_xs, flip_ys = _check_virtual_dualness(state)
     !all(flip_xs) && !all(flip_ys) && (return state)
-    return _standardize_virtual_spaces!(state, flip_xs, flip_ys; inv)
+    return _flip_virtual_spaces!(state, flip_xs, flip_ys; inv)
 end

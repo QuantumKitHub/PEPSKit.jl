@@ -1,4 +1,4 @@
-struct LocalApprox <: ApproxAlgorithm
+struct LocalApprox <: ApproximateAlgorithm
     trunc::TruncationStrategy
 end
 
