@@ -85,6 +85,11 @@ end
             include("timeevol/sitedep_truncation.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "APPROX"
+        @time @safetestset "Local approximation" begin
+            include("approximate/local_approx.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "TOOLBOX"
         @time @safetestset "Density matrix from double-layer PEPO" begin
             include("toolbox/densitymatrices.jl")
