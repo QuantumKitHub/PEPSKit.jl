@@ -84,13 +84,13 @@ end
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 2, 1 => 2)
 [ Info: SU iter 1045   : dt = 0.01, |Δλ| = 9.843e-08. Time = 0.012 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 35.64 s
+[ Info: Simple update finished. Total time elapsed: 35.64 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 6, 1 => 6)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 6.459e-06. Time = 0.134 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 6, 1 => 6)
 [ Info: SU iter 584    : dt = 0.01, |Δλ| = 9.946e-08. Time = 0.114 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 71.51 s
+[ Info: Simple update finished. Total time elapsed: 71.51 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
 [ Info: SU iter 1      : dt = 0.001, |Δλ| = 5.245e-03. Time = 0.373 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
@@ -98,7 +98,7 @@ end
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
 [ Info: SU iter 3791   : dt = 0.001, |Δλ| = 9.990e-09. Time = 0.037 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 131.97 s
+[ Info: Simple update finished. Total time elapsed: 131.97 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
 [ Info: SU iter 1      : dt = 0.0004, |Δλ| = 3.256e-04. Time = 0.037 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
@@ -106,7 +106,7 @@ end
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
 [ Info: SU iter 3034   : dt = 0.0004, |Δλ| = 9.997e-09. Time = 0.037 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 105.93 s
+[ Info: Simple update finished. Total time elapsed: 105.93 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
 [ Info: SU iter 1      : dt = 0.0001, |Δλ| = 1.627e-04. Time = 0.037 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
@@ -114,7 +114,7 @@ end
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
 [ Info: SU iter 2916   : dt = 0.0001, |Δλ| = 9.997e-09. Time = 0.037 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 100.89 s
+[ Info: Simple update finished. Total time elapsed: 100.89 s
 
 ````
 

@@ -93,7 +93,7 @@ end
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 18.10 s
+[ Info: Simple update finished. Total time elapsed: 18.10 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
@@ -107,7 +107,7 @@ end
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 7.01 s
+[ Info: Simple update finished. Total time elapsed: 7.01 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
@@ -121,7 +121,7 @@ end
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 6.74 s
+[ Info: Simple update finished. Total time elapsed: 6.74 s
 
 ````
 
