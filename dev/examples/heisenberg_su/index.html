@@ -34,7 +34,7 @@ end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 18.10 s
+[ Info: Simple update finished. Total time elapsed: 18.10 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
@@ -48,7 +48,7 @@ end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 7.01 s
+[ Info: Simple update finished. Total time elapsed: 7.01 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
@@ -62,7 +62,7 @@ end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at
 [ Info: Space of x-weight at [1, 1] = ℂ^4
 [ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 6.74 s
+[ Info: Simple update finished. Total time elapsed: 6.74 s
 </code></pre><h2 id="Computing-the-ground-state-energy-and-magnetizations"><a class="docs-heading-anchor" href="#Computing-the-ground-state-energy-and-magnetizations">Computing the ground-state energy and magnetizations</a><a id="Computing-the-ground-state-energy-and-magnetizations-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-the-ground-state-energy-and-magnetizations" title="Permalink"></a></h2><p>In order to compute observable expectation values, we need to converge a CTMRG environment on the evolved PEPS. Let&#39;s do so:</p><pre><code class="language-julia hljs">normalize!.(peps.A, Inf)
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
 trunc_env = truncerror(; atol = 1.0e-10) &amp; truncrank(χenv)
@@ -104,4 +104,4 @@ M_ref = 0.3767
 @show (E - E_ref) / abs(E_ref)
 @show (mean(M_norms) - M_ref) / M_ref;</code></pre><pre><code class="nohighlight hljs">(E - E_ref) / abs(E_ref) = 4.7135515075588574e-5
 (mean(M_norms) - M_ref) / M_ref = 0.0006809806572453966
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../fermi_hubbard/">« Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a><a class="docs-footer-nextpage" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Thursday 4 December 2025 22:37">Thursday 4 December 2025</span>. Using Julia version 1.12.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../fermi_hubbard/">« Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a><a class="docs-footer-nextpage" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Monday 8 December 2025 15:36">Monday 8 December 2025</span>. Using Julia version 1.12.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -24,31 +24,31 @@ end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 1833   : dt = 0.01, |Δλ| = 9.859e-09. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 159.85 s
+[ Info: Simple update finished. Total time elapsed: 159.85 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.401e-04. Time = 0.063 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 523    : dt = 0.01, |Δλ| = 9.965e-09. Time = 0.076 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 33.42 s
+[ Info: Simple update finished. Total time elapsed: 33.42 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.526e-04. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 611    : dt = 0.01, |Δλ| = 9.848e-09. Time = 0.076 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 38.95 s
+[ Info: Simple update finished. Total time elapsed: 38.95 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.664e-04. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 735    : dt = 0.01, |Δλ| = 9.963e-09. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 46.82 s
+[ Info: Simple update finished. Total time elapsed: 46.82 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.828e-04. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 901    : dt = 0.01, |Δλ| = 9.995e-09. Time = 0.077 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 57.45 s
+[ Info: Simple update finished. Total time elapsed: 57.45 s
 </code></pre><p>After we reach <span>$J_2 / J_1 = 0.5$</span>, we gradually decrease the evolution time step to obtain a more accurately evolved PEPS:</p><pre><code class="language-julia hljs">dts = [1.0e-3, 1.0e-4]
 tols = [1.0e-9, 1.0e-9]
 J2 = 0.5
@@ -72,7 +72,7 @@ end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 3295   : dt = 0.001, |Δλ| = 9.994e-10. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 209.81 s
+[ Info: Simple update finished. Total time elapsed: 209.81 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 1      : dt = 0.0001, |Δλ| = 4.467e-05. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
@@ -80,7 +80,7 @@ end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
 [ Info: SU iter 873    : dt = 0.0001, |Δλ| = 9.998e-10. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 55.60 s
+[ Info: Simple update finished. Total time elapsed: 55.60 s
 </code></pre><h2 id="Computing-the-simple-update-energy-estimate"><a class="docs-heading-anchor" href="#Computing-the-simple-update-energy-estimate">Computing the simple update energy estimate</a><a id="Computing-the-simple-update-energy-estimate-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-the-simple-update-energy-estimate" title="Permalink"></a></h2><p>Finally, we measure the ground-state energy by converging a CTMRG environment and computing the expectation value, where we first normalize tensors in the PEPS:</p><pre><code class="language-julia hljs">normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
 χenv = 32
 trunc_env = truncerror(; atol = 1.0e-10) &amp; truncrank(χenv)
@@ -183,4 +183,4 @@ peps_opt, env_opt, E_opt, = fixedpoint(
 @show E_opt
 @show (E_opt - E_ref) / abs(E_ref);</code></pre><pre><code class="nohighlight hljs">E_opt = -0.49451636486378536
 (E_opt - E_ref) / abs(E_ref) = -0.0005389273925854121
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../hubbard_su/">« Simple update for the Fermi-Hubbard model at half-filling</a><a class="docs-footer-nextpage" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Thursday 4 December 2025 22:37">Thursday 4 December 2025</span>. Using Julia version 1.12.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../hubbard_su/">« Simple update for the Fermi-Hubbard model at half-filling</a><a class="docs-footer-nextpage" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Monday 8 December 2025 15:36">Monday 8 December 2025</span>. Using Julia version 1.12.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
