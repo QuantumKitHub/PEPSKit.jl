@@ -55,6 +55,7 @@ end
 
 ## Spaces
 
+TensorKit.spacetype(::Type{T}) where {T <: InfiniteSquareNetwork} = spacetype(eltype(T))
 function virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir)
     Nr, Nc = size(n)
     return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
@@ -98,7 +99,7 @@ function Base.:(==)(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork)
 end
 function Base.isapprox(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork; kwargs...)
     return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)
-        return isapprox(p₁, p₂; kwargs...)
+        return _isapprox_localsandwich(p₁, p₂; kwargs...)
     end
 end
 

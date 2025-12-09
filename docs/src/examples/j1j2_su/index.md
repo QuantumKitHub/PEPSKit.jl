@@ -74,31 +74,31 @@ end
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 1833   : dt = 0.01, |Δλ| = 9.859e-09. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 159.85 s
+[ Info: Simple update finished. Total time elapsed: 159.85 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.401e-04. Time = 0.063 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 523    : dt = 0.01, |Δλ| = 9.965e-09. Time = 0.076 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 33.42 s
+[ Info: Simple update finished. Total time elapsed: 33.42 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.526e-04. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 611    : dt = 0.01, |Δλ| = 9.848e-09. Time = 0.076 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 38.95 s
+[ Info: Simple update finished. Total time elapsed: 38.95 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.664e-04. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 735    : dt = 0.01, |Δλ| = 9.963e-09. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 46.82 s
+[ Info: Simple update finished. Total time elapsed: 46.82 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.828e-04. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 901    : dt = 0.01, |Δλ| = 9.995e-09. Time = 0.077 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 57.45 s
+[ Info: Simple update finished. Total time elapsed: 57.45 s
 
 ````
 
@@ -133,7 +133,7 @@ end
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 3295   : dt = 0.001, |Δλ| = 9.994e-10. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 209.81 s
+[ Info: Simple update finished. Total time elapsed: 209.81 s
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 1      : dt = 0.0001, |Δλ| = 4.467e-05. Time = 0.061 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
@@ -141,7 +141,7 @@ end
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
 [ Info: SU iter 873    : dt = 0.0001, |Δλ| = 9.998e-10. Time = 0.060 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 55.60 s
+[ Info: Simple update finished. Total time elapsed: 55.60 s
 
 ````
 

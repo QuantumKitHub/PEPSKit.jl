@@ -277,7 +277,7 @@ function MPSKit.time_evolve(
         end
         if stop
             time_end = time()
-            @info @sprintf("Simple update finished. Total time elasped: %.2f s", time_end - time_start)
+            @info @sprintf("Simple update finished. Total time elapsed: %.2f s", time_end - time_start)
             return psi, env, info
         else
             env0 = env

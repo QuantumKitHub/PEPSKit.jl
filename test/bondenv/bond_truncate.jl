@@ -7,7 +7,7 @@ using LinearAlgebra
 using KrylovKit
 
 Random.seed!(0)
-maxiter = 500
+maxiter = 600
 check_interval = 20
 trunc = truncerror(; atol = 1.0e-10) & truncrank(8)
 Vext = Vect[FermionParity](0 => 100, 1 => 100)
@@ -35,8 +35,7 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
         )
         a1, ss[label], b1, info = PEPSKit.bond_truncate(a2, b2, benv, alg)
         @info "$label improved fidelity = $(info.fid)."
-        display(ss[label])
-        a1, b1 = PEPSKit.absorb_s(a1, ss[label], b1)
+        # display(ss[label])
         @test info.fid ≈ PEPSKit.fidelity(benv, PEPSKit._combine_ab(a1, b1), a2b2)
         @test info.fid > fid0
     end

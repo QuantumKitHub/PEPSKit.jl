@@ -1,67 +1,55 @@
 #= 
 # Mixed canonical form of an open boundary MPS
 ```
-    |ψ⟩ =  M[1]---...---M[N]
+    |ψ⟩ =  M[1]-←-...-←-M[N]
             ↓            ↓
 ```
-The bond between `M[n]` and `M[n+1]` is called 
-the n-th (internal) bond (n = 1, ..., N - 1).
+For convenience, assume all virtual arrows are ←.
 
 We perform QR and LQ decompositions: starting from
 ```
-    M[1]---  =  Qa[1]-*-R[1]---
+    M[1]-←-  =  Qa[1]-←-R[1]-←-
     ↓           ↓
 
-    ---M[N]  =  --L[N-1]-*-Qb[N]
+    -←-M[N]  =  -←-L[N-1]-←-Qb[N]
         ↓                   ↓
 ```
 we successively calculate
 ```
-    ---R[n-1]---M[n]---  =  ---Qa[n]-*-R[n]---- (n = 2, ..., N - 1)
-                ↓               ↓
+    -←-R[n-1]-←-M[n]-←-    =  -←-Qa[n]-←-R[n]--←-- (n = 2, ..., N - 1)
+                ↓                ↓
 
-    --M[n+1]-*-L[n+1]--  =  ---L[n]-*-Qb[n+1]-- (n = N - 2, ..., 1)
+    -←-M[n+1]-←-L[n+1]-←-  =  -←-L[n]-←-Qb[n+1]-←- (n = N - 2, ..., 1)
         ↓                               ↓
 ```
-Here `-*-` on the bond means a twist should be applied if
-the codomain of R[n], Qb[n+1], L[n+1] is a dual space. 
-
-Here we make the `isdual` of the domain and codomain 
-of `R[n]` and `L[n]` for a given `n` the same. 
 
 For each bond (n = 1, ..., N - 1), we perform SVD
 ```
-    R[n] L[n] = U[n]-←-s[n]-←-V†[n] (n = 1, ..., N - 1)
+    R[n] L[n] = U[n] s[n] V†[n] (n = 1, ..., N - 1)
 ```
 Then we define the projectors together with the Schmidt weight
 ```
-    ---Pa[n]-←- = L[n] V[n]-←-(1/√s[n])-←-
-    -←-Pb[n]--- = -←-(1/√s[n])-←-U†[n] R[n]
+    -←-Pa[n]-←- = L[n] V[n]-←-(1/√s[n])-←-
+    -←-Pb[n]-←- = -←-(1/√s[n])-←-U†[n] R[n]
 ```
-Since the domain and the codomain of R[n] and L[n] has the same `isdual`, 
-the product `Pa Pb` is the identity operator:
+The product `Pa Pb` is the identity operator:
 ```
     Pa[n]-←-Pb[n] = L[n] (R[n] L[n])⁻¹ R[n] = 1
 ```
-The `isdual` for the domain and codomain of `Pa[n] Pb[n]` are also the same.
-
-Note that when `Pa[n] Pb[n]` is identity on a dual space, 
-a twist should be applied to put it to the bond. 
 
 The canonical form is then defined by
 ```
-    -←-M̃[n]-←- = -←-Pb[n-1]---M[n]-*-Pa[n]-←-
+    -←-M̃[n]-←- = -←-Pb[n-1]-←-M[n]-←-Pa[n]-←-
         ↓                      ↓
 ```
-`-*-` means a twist should be applied if the codomain of `Pa[n]` is a dual space. 
 
 Note that
 ```
     M̃[n]
-    = 1/√s[n-1]←-U†[n-1](R[n-1]--M[n])-*-L[n] V[n]←-1/√s[n]
-    = 1/√s[n-1]←-U†[n-1] Qa[n] (R[n]-*-L[n]) V[n]←-1/√s[n]
-    = 1/√s[n-1]←-U†[n-1] Qa[n] U[n]←-s[n]←-(V†[n] V[n])←-1/√s[n]
-    = 1/√s[n-1]←-U†[n-1] Qa[n] U[n]←-√s[n]
+    = 1/√s[n-1] U†[n-1] (R[n-1] M[n]) L[n] V[n] 1/√s[n]
+    = 1/√s[n-1] U†[n-1] Qa[n] (R[n] L[n]) V[n] 1/√s[n]
+    = 1/√s[n-1] U†[n-1] Qa[n] U[n] s[n] (V†[n] V[n]) 1/√s[n]
+    = 1/√s[n-1] U†[n-1] Qa[n] U[n] √s[n]
 ```
 Then `M̃[n]` (n = 1, ..., N - 1) satisfies the (generalized) left-orthogonal condition
 ```
@@ -74,13 +62,12 @@ Then `M̃[n]` (n = 1, ..., N - 1) satisfies the (generalized) left-orthogonal co
 Similarly, we can express M̃ using Qb
 ```
     M̃[n]
-    = 1/√s[n-1]←-U†[n-1] R[n-1]--(M[n]-*-L[n]) V[n]←-1/√s[n]
-    = 1/√s[n-1]←-U†[n-1] (R[n-1]--L[n-1]) Qb[n] V[n]←-1/√s[n]
-    = -*-1/√s[n-1]←-U†[n-1] (R[n-1]-*-L[n-1]) Qb[n] V[n]←-1/√s[n]
-    = -*-1/√s[n-1]←-(U†[n-1] U[n-1])←-s[n-1]←-V†[n-1] * Qb[n] V[n]←-1/√s[n]
-    = -*-√s[n-1]←-V†[n-1] Qb[n] V[n]←-1/√s[n]
+    = 1/√s[n-1] U†[n-1] R[n-1] (M[n] L[n]) V[n] 1/√s[n]
+    = 1/√s[n-1] U†[n-1] (R[n-1] L[n-1]) Qb[n] V[n] 1/√s[n]
+    = 1/√s[n-1] U†[n-1] (R[n-1] L[n-1]) Qb[n] V[n] 1/√s[n]
+    = 1/√s[n-1] (U†[n-1] U[n-1]) s[n-1] V†[n-1] Qb[n] V[n] 1/√s[n]
+    = √s[n-1] V†[n-1] Qb[n] V[n] 1/√s[n]
 ```
-Here `-*-` is a twist to be applied when the codomain of `L[n-1]` is a dual space. 
 Then `M̃[n]` (n = 2, ..., N) satisfies the (generalized) right-orthogonal condition
 ```
     -←-M̃[n]-←┐         1 -←-┐
@@ -96,7 +83,7 @@ Here `-*-` is the twist on the physical axis.
 Suppose we want to truncate the bond between 
 the n-th and the (n+1)-th sites such that the truncated state
 ```
-    |ψ̃⟩  =  M[1]---...---M̃[n]---M̃[n+1]---...---M[N]
+    |ψ̃⟩  =  M[1]-←-...-←-M̃[n]-←-M̃[n+1]-←-...-←-M[N]
             ↓            ↓      ↓              ↓
 ```
 maximizes the fidelity
@@ -127,29 +114,27 @@ Then the fidelity is just
 """
 Perform QR decomposition through a PEPS tensor
 ```
-             ╱           ╱
-    --R0----M---  →  ---Q--*-R1--
-          ╱ |         ╱ |
+             ╱            ╱
+    -←-R0-←-M-←-  =>  ---Q-←-R1-←-
+          ╱ |          ╱ |
 ```
 """
 function qr_through(
         R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
+    @assert !isdual(codomain(R0, 1))
+    @assert !isdual(domain(M, 1)) && !isdual(codomain(M, 1))
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
     _, r = left_orth!(A)
-    if isdual(domain(r, 1)) != isdual(codomain(r, 1))
-        r = flip(r, 1)
-    end
     normalize && normalize!(r, Inf)
     return r
 end
+# for `M` at the left end of the MPS
 function qr_through(
         ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
+    @assert !isdual(domain(M, 1))
     _, r = left_orth(M)
-    if isdual(domain(r, 1)) != isdual(codomain(r, 1))
-        r = flip(r, 1)
-    end
     normalize && normalize!(r, Inf)
     return r
 end
@@ -157,31 +142,28 @@ end
 """
 Perform LQ decomposition through a tensor
 ```
-             ╱           ╱
-    --L0-*--Q---  ←  ---M--*-L1--
-          ╱ |         ╱ |
+             ╱            ╱
+    -←-L0-←-Q-←-  <=  -←-M-←-L1-←-
+          ╱ |          ╱ |
 ```
 """
 function lq_through(
         M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
     ) where {S <: ElementarySpace}
-    @plansor A[-1 -2 -3 -4; -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
-    A = permute(A, ((1,), (2, 3, 4, 5)))
+    @assert !isdual(domain(L1, 1))
+    @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
+    @tensor A[-1; -2 -3 -4 -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
     l, _ = right_orth!(A)
-    if isdual(domain(l, 1)) != isdual(codomain(l, 1))
-        l = flip(l, 2)
-    end
     normalize && normalize!(l, Inf)
     return l
 end
+# for `M` at the right end of the MPS
 function lq_through(
         M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
     ) where {S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1))
     A = permute(M, ((1,), (2, 3, 4, 5)))
     l, _ = right_orth!(A)
-    if isdual(domain(l, 1)) != isdual(codomain(l, 1))
-        l = flip(l, 2)
-    end
     normalize && normalize!(l, Inf)
     return l
 end
@@ -214,29 +196,24 @@ such that the contraction of `Pa`, `s`, `Pb` is identity when `trunc = notrunc`,
 
 The arrows between `Pa`, `s`, `Pb` are
 ```
-    rev = false: - Pa --←-- Pb -
-                    1 ← s ← 2
-
-    rev = true:  - Pa --→-- Pb - 
-                    2 → s → 1
+    - Pa --←-- Pb -
+       1 ← s ← 2
 ```
 """
 function _proj_from_RL(
         r::MPSBondTensor, l::MPSBondTensor;
-        trunc::TruncationStrategy = notrunc(), rev::Bool = false,
+        trunc::TruncationStrategy = notrunc()
     )
+    @assert isdual(domain(r, 1)) == isdual(codomain(r, 1)) == false
+    @assert isdual(domain(l, 1)) == isdual(codomain(l, 1)) == false
     rl = r * l
-    @assert isdual(domain(rl, 1)) == isdual(codomain(rl, 1))
 
     # TODO: replace this with actual truncation error once TensorKit is updated
     uc, sc, vhc = svd_compact!(rl)
     u, s, vh, ϵ = _truncate_compact((uc, sc, vhc), trunc)
 
-    sinv = PEPSKit.sdiag_pow(s, -1 / 2)
+    sinv = sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
-    if rev
-        Pa, s, Pb = flip_svd(Pa, s, Pb)
-    end
     return Pa, s, Pb, ϵ
 end
 
@@ -244,9 +221,7 @@ end
 Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
 find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
 """
-function _get_allprojs(
-        Ms, Rs, Ls, truncs::Vector{E}, revs::Vector{Bool}
-    ) where {E <: TruncationStrategy}
+function _get_allprojs(Ms, Rs, Ls, truncs::Vector{E}) where {E <: TruncationStrategy}
     N = length(Ms)
     @assert length(truncs) == N - 1
     projs_errs = map(1:(N - 1)) do i
@@ -256,7 +231,7 @@ function _get_allprojs(
         else
             truncs[i]
         end
-        return _proj_from_RL(Rs[i], Ls[i]; trunc, rev = revs[i])
+        return _proj_from_RL(Rs[i], Ls[i]; trunc)
     end
     Pas = map(Base.Fix2(getindex, 1), projs_errs)
     wts = map(Base.Fix2(getindex, 2), projs_errs)
@@ -267,17 +242,33 @@ function _get_allprojs(
 end
 
 """
+Flip the virtual arrows in the MPS `Ms`
+"""
+function _flip_virtuals!(
+        Ms::Vector{T}, flips::Vector{Bool}; inv::Bool = false
+    ) where {T <: GenericMPSTensor}
+    @assert length(flips) == length(Ms) - 1
+    for (n, flip) in enumerate(flips)
+        !flip && continue
+        M1, M2 = Ms[n], Ms[n + 1]
+        Ms[n] = TensorKit.flip(M1, numind(M1); inv)
+        Ms[n + 1] = TensorKit.flip(M2, 1; inv)
+    end
+    return Ms
+end
+
+"""
 Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
-        Ms::Vector{T}, truncs::Vector{E}, revs::Vector{Bool}
+        Ms::Vector{T}, truncs::Vector{E}
     ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
     Rs, Ls = _get_allRLs(Ms)
-    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, truncs, revs)
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, truncs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        @plansor (Ms[i])[-1 -2 -3 -4; -5] := (Ms[i])[-1 -2 -3 -4; 1] * Pa[1; -5]
+        @tensor (Ms[i])[-1 -2 -3 -4; -5] := (Ms[i])[-1 -2 -3 -4; 1] * Pa[1; -5]
         @tensor (Ms[i + 1])[-1 -2 -3 -4; -5] := Pb[-1; 1] * (Ms[i + 1])[1 -2 -3 -4; -5]
     end
     return wts, ϵs, Pas, Pbs
@@ -290,7 +281,7 @@ When `gate_ax` is 1 or 2, the gate acts from the physical codomain or domain sid
 e.g. Cluster in PEPS with `gate_ax = 1`:
 ```
          ╱       ╱       ╱
-    --- M1 ---- M2 ---- M3 ---
+    --- M1 -←-- M2 -←-- M3 ---
       ╱ |     ╱ |     ╱ |
         ↓       ↓       ↓
         g1 -←-- g2 -←-- g3
@@ -314,14 +305,12 @@ function _apply_gatempo!(
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1
     @assert all(!isdual(space(g, 1)) for g in gs[2:end])
+    @assert all(!isdual(space(M, 1)) for M in Ms[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
     fusers = map(Ms[2:end], gs[2:end]) do M, g
         V1, V2 = space(M, 1), space(g, 1)
         return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
-    end
-    for (i, M) in enumerate(Ms[2:end])
-        isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
     end
     #= gate on codomain of PEPS
            -3                         -3                          -3
@@ -354,14 +343,12 @@ function _apply_gatempo!(
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1 || gate_ax == 2
     @assert all(!isdual(space(g, 1)) for g in gs[2:end])
+    @assert all(!isdual(space(M, 1)) for M in Ms[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
     fusers = map(Ms[2:end], gs[2:end]) do M, g
         V1, V2 = space(M, 1), space(g, 1)
         return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
-    end
-    for (i, M) in enumerate(Ms[2:end])
-        isdual(space(M, 1)) && twist!(Ms[i + 1], 1)
     end
     #= gate on codomain of PEPO (gate_ax = 1)
 
@@ -454,6 +441,7 @@ function get_3site_se(state::InfiniteState, env::SUWeight, row::Int, col::Int)
     perms_se = isa(state, InfinitePEPS) ? perms_se_peps : perms_se_pepo
     Ms = map(zip(coords_se, perms_se, openaxs_se)) do (coord, perm, openaxs)
         M = absorb_weight(state.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs)
+        # permute to MPS axes order
         return permute(M, perm)
     end
     return Ms
@@ -469,14 +457,16 @@ function _su3site_se!(
     rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster and arrow direction within it
     Ms = get_3site_se(state, env, row, col)
-    revs = [isdual(space(M, 1)) for M in Ms[2:end]]
+    flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
+    # flip virtual arrows in `Ms` to ←
+    _flip_virtuals!(Ms, flips)
     # sites in the cluster
     coords = ((row, col), (row, cp1), (rm1, cp1))
     # weights in the cluster
     wt_idxs = ((1, row, col), (2, row, cp1))
-    # apply gate MPOs
+    # apply gate MPOs and truncate
     gate_axs = purified ? (1:1) : (1:2)
     ϵs = nothing
     for gate_ax in gate_axs
@@ -484,14 +474,17 @@ function _su3site_se!(
         if isa(state, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
-        wts, ϵs, = _cluster_truncate!(Ms, truncs, revs)
+        wts, ϵs, = _cluster_truncate!(Ms, truncs)
         if isa(state, InfinitePEPO)
             Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
         end
-        for (wt, wt_idx) in zip(wts, wt_idxs)
-            env[CartesianIndex(wt_idx)] = normalize(wt, Inf)
+        for (wt, wt_idx, flip) in zip(wts, wt_idxs, flips)
+            env[CartesianIndex(wt_idx)] = normalize(flip ? _flip_s(wt) : wt, Inf)
         end
     end
+    # restore virtual arrows in `Ms`
+    _flip_virtuals!(Ms, flips)
+    # update `state` from `Ms`
     invperms_se = isa(state, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
     for (M, coord, invperm, openaxs, Vphy) in zip(Ms, coords, invperms_se, openaxs_se, Vphys)
         # restore original axes order
