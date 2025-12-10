@@ -95,6 +95,9 @@ end
         @time @safetestset "Density matrix from double-layer PEPO" begin
             include("toolbox/densitymatrices.jl")
         end
+        @time @safetestset "Expectation value of identity operator" begin
+            include("toolbox/expval_id.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "SVD wrapper" begin
