@@ -5,7 +5,7 @@
 ## Space utils
 
 _elementwise_dual(S::ElementarySpace) = dual(S)
-_elementwise_dual(P::ProductSpace) = ProductSpace(dual.(P)...)
+_elementwise_dual(P::ProductSpace{S, N}) where {S, N} = ProductSpace{S, N}(dual.(P)...)
 
 # route all virtualspace getters through a single method for convenience
 north_virtualspace(O, args...) = virtualspace(O, args..., NORTH)
