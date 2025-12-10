@@ -166,3 +166,13 @@ function ChainRulesCore.rrule(
     end
     return n, _one_norm_pullback
 end
+
+## Degeneracy checking
+
+function check_degenerate_spectrum(S::AbstractTensorMap)
+    if PEPSKit.is_degenerate_spectrum(S)
+        svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+        @warn("Degenerate singular values in root of BP message: ", svals)
+    end
+    return nothing
+end

@@ -3,18 +3,27 @@ $(SIGNATURES)
 
 Fix the gauge of `psi` using fixed point environment of belief propagation.
 """
-function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv(psi))
+function gauge_fix(
+        psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv(psi),
+        svd_alg::SVDAdjoint = SVDAdjoint(),
+    )
     env, err = bp_fixedpoint(env, InfiniteSquareNetwork(psi), alg)
-    psi′, wts = _gauge_fix_bp(psi, env)
+    psi′, wts = _gauge_fix_bp(psi, env, svd_alg)
     return psi′, wts, env
 end
 
-function _get_sqrt_messages(env::BPEnv)
+function _get_sqrt_messages(env::BPEnv, svd_alg::SVDAdjoint)
     sqrtmsgs = map(env.messages) do M
         # U = V for positive semi-definite message M
         # TODO: switch to eigh! after enforcing positive semi-definiteness
-        U, S, Vᴴ = svd_compact(M)
-        sqrtS = sdiag_pow(S, 0.5)
+        nrm = norm(M)
+        U, S, Vᴴ, = svd_trunc!(M / nrm, svd_alg; trunc = notrunc())
+        S *= nrm
+        # Check for degenerate singular values
+        Zygote.isderiving() && ignore_derivatives() do
+            check_degenerate_spectrum(S)
+        end
+        sqrtS = sdiag_pow(S, 0.5) # TODO: check this...
         isqrtS = sdiag_pow(S, -0.5)
         sqrtM = U * sqrtS * Vᴴ
         isqrtM = U * isqrtS * Vᴴ
@@ -28,9 +37,9 @@ end
 """
 Use BP environment `env` to fix gauge of InfinitePEPS `psi`.
 """
-function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
+function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv, svd_alg::SVDAdjoint)
     # Bring PEPS to the Vidal gauge
-    sqrtMs, isqrtMs = _get_sqrt_messages(env)
+    sqrtMs, isqrtMs = _get_sqrt_messages(env, svd_alg)
     bond_svds = map(eachcoordinate(psi, 1:2)) do (dir, r, c)
         # TODO: would be more reasonable to define SOUTH as adjoint(NORTH)...
         # TODO: figure out twists for fermion
@@ -47,7 +56,13 @@ function _gauge_fix_bp(psi::InfinitePEPS, env::BPEnv)
         else
             _transpose(sqrtMs[SOUTH, r, c]) * sqrtMs[NORTH, _prev(r, end), c]
         end
-        U, S, Vᴴ = svd_compact(MM)
+        # DEBUG: add normalization
+        nrm = norm(MM)
+        U, S, Vᴴ, = svd_trunc!(MM / nrm, svd_alg; trunc = notrunc())
+        S *= nrm
+        Zygote.isderiving() && ignore_derivatives() do
+            check_degenerate_spectrum(S)
+        end
         if isdual(space(U, 1))
             U, S, Vᴴ = flip_svd(U, S, Vᴴ)
         end
