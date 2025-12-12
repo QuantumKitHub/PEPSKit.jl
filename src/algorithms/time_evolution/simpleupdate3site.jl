@@ -479,7 +479,7 @@ function _su3site_se!(
             Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
         end
         for (wt, wt_idx, flip) in zip(wts, wt_idxs, flips)
-            env[CartesianIndex(wt_idx)] = normalize(flip ? _flip_s(wt) : wt, Inf)
+            env[CartesianIndex(wt_idx)] = normalize(flip ? _fliptwist_s(wt) : wt, Inf)
         end
     end
     # restore virtual arrows in `Ms`

@@ -100,23 +100,7 @@ function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorM
     return U * sqrt_S, sqrt_S * V
 end
 
-"""
-    flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-
-Given SVD result `u ← s ← vh`, flip the arrow between the three tensors 
-to `u2 → s2 → vh2` such that
-```
-    u * s * vh = (@tensor t2[-1, ...; -2, ...] := u2[-1, ...; 2] * s2[1; 2] * vh2[1; -2, ...])
-```
-The axis orders for `s`, `s2` are
-```
-    1 ← s ← 2   2 → s2 → 1
-```
-"""
-function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-    return flip(u, numind(u)), _flip_s(s), flip(vh, 1)
-end
-_flip_s(s::DiagonalTensorMap) = permute(DiagonalTensorMap(flip(s, (1, 2))), ((2,), (1,)))
+_fliptwist_s(s::DiagonalTensorMap) = twist!(DiagonalTensorMap(flip(s, 1:2)), 1)
 
 """
     twistdual(t::AbstractTensorMap, i)

@@ -2,6 +2,15 @@ using Test
 using TensorKit
 using PEPSKit
 
+function rand_wts(state::Union{InfinitePEPS, InfinitePEPO})
+    wts = SUWeight(state)
+    for idx in CartesianIndices(wts.data)
+        n = length(wts.data[idx].data)
+        wts.data[idx].data[:] = sort(rand(Float64, n); lt = !isless)
+    end
+    return wts
+end
+
 function compose_n(f, n)
     n == 0 && return identity
     return f ∘ compose_n(f, n - 1)
@@ -18,43 +27,20 @@ function test_rotation(wts::SUWeight)
     return nothing
 end
 
-function test_rotation(peps::InfinitePEPS, wts::SUWeight)
+function test_rotation(state::Union{InfinitePEPS, InfinitePEPO}, wts::SUWeight)
+    InfiniteState = (state isa InfinitePEPS) ? InfinitePEPS : InfinitePEPO
+    A1 = InfiniteState(
+        map(CartesianIndices(state.A)) do idx
+            return absorb_weight(state.A[idx], wts, idx[1], idx[2], Tuple(1:4))
+        end
+    )
     for n in 1:4
         rot = compose_n(rotl90, n)
-        A1 = InfinitePEPS(
-            collect(
-                absorb_weight(peps.A[idx], wts, idx[1], idx[2], Tuple(1:4)) for
-                    idx in CartesianIndices(peps.A)
-            ),
-        )
-        peps2, wts2 = rot(peps), rot(wts)
-        A2 = InfinitePEPS(
-            collect(
-                absorb_weight(peps2.A[idx], wts2, idx[1], idx[2], Tuple(1:4)) for
-                    idx in CartesianIndices(peps2.A)
-            ),
-        )
-        @test A2 ≈ rot(A1)
-    end
-    return
-end
-
-function test_rotation(pepo::InfinitePEPO, wts::SUWeight)
-    @assert size(pepo, 3) == 1
-    for n in 1:4
-        rot = compose_n(rotl90, n)
-        A1 = InfinitePEPO(
-            collect(
-                absorb_weight(pepo.A[idx], wts, idx[1], idx[2], Tuple(1:4)) for
-                    idx in CartesianIndices(pepo.A)
-            ),
-        )
-        pepo2, wts2 = rot(pepo), rot(wts)
-        A2 = InfinitePEPO(
-            collect(
-                absorb_weight(pepo2.A[idx], wts2, idx[1], idx[2], Tuple(1:4)) for
-                    idx in CartesianIndices(pepo2.A)
-            ),
+        state2, wts2 = rot(state), rot(wts)
+        A2 = InfiniteState(
+            map(CartesianIndices(state2.A)) do idx
+                return absorb_weight(state2.A[idx], wts2, idx[1], idx[2], Tuple(1:4))
+            end
         )
         @test A2 ≈ rot(A1)
     end
@@ -71,10 +57,7 @@ Vs = (
 Nr, Nc = 2, 3
 peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc))
 pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
-wts = collect(
-    svd_compact(rand(Float64, Vs[dir] ← Vs[dir]))[2] for dir in 1:2, r in 1:Nr, c in 1:Nc
-)
-wts = SUWeight(wts)
+wts = rand_wts(peps)
 
 @test sectortype(wts) === sectortype(Vs[1])
 @test spacetype(wts) === spacetype(Vs[1])

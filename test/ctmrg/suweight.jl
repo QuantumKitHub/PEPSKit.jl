@@ -2,7 +2,18 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: str
+using PEPSKit: str, twistdual, _prev, _next
+
+Vps = Dict(
+    Z2Irrep => Vect[Z2Irrep](0 => 1, 1 => 2),
+    U1Irrep => Vect[U1Irrep](0 => 2, 1 => 2, -1 => 1),
+    FermionParity => Vect[FermionParity](0 => 1, 1 => 2),
+)
+Vvs = Dict(
+    Z2Irrep => Vect[Z2Irrep](0 => 2, 1 => 2),
+    U1Irrep => Vect[U1Irrep](0 => 3, 1 => 1, -1 => 2),
+    FermionParity => Vect[FermionParity](0 => 2, 1 => 2),
+)
 
 function rand_wts(peps::InfinitePEPS)
     wts = SUWeight(peps)
@@ -13,27 +24,35 @@ function rand_wts(peps::InfinitePEPS)
     return wts
 end
 
-function su_rdm_1x1(row::Int, col::Int, peps::InfinitePEPS, wts::SUWeight)
+function su_rdm_1x1(
+        row::Int, col::Int, peps::InfinitePEPS, wts::Union{Nothing, SUWeight} = nothing
+    )
     Nr, Nc = size(peps)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
     t = peps.A[row, col]
-    t = absorb_weight(t, wts, row, col, Tuple(1:4))
-    ρ = t * t'
+    if !(wts === nothing)
+        t = absorb_weight(t, wts, row, col, Tuple(1:4))
+    end
+    # contract local ⟨t|t⟩ without virtual twists
+    @tensor ρ[k; b] := conj(t[b; n e s w]) * twistdual(t, 2:5)[k; n e s w]
     return ρ / str(ρ)
 end
 
-Vps = [Vect[U1Irrep](0 => 2, 1 => 2, -1 => 1), Vect[FermionParity](0 => 1, 1 => 2)]
-Vvs = [Vect[U1Irrep](0 => 3, 1 => 1, -1 => 2), Vect[FermionParity](0 => 2, 1 => 2)]
+@testset "SUWeight ($(init) init, $(sect))" for (init, sect) in
+    Iterators.product([:trivial, :random], keys(Vps))
 
-for (Vp, Vv) in zip(Vps, Vvs)
+    Vp, Vv = Vps[sect], Vvs[sect]
     Nspaces = [Vv Vv' Vv; Vv' Vv Vv']
     Espaces = [Vv Vv Vv'; Vv Vv' Vv']
     Pspaces = fill(Vp, size(Nspaces))
     peps = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
-    wts = rand_wts(peps)
-    env = CTMRGEnv(wts, peps)
+    wts = (init == :trivial) ? SUWeight(peps) : rand_wts(peps)
+    env = CTMRGEnv(wts)
     for (r, c) in Tuple.(CartesianIndices(peps.A))
         ρ1 = su_rdm_1x1(r, c, peps, wts)
+        if init == :trivial
+            @test ρ1 ≈ su_rdm_1x1(r, c, peps, nothing)
+        end
         ρ2 = reduced_densitymatrix(((r, c),), peps, env)
         @test ρ1 ≈ ρ2
     end
