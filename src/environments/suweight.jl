@@ -104,8 +104,7 @@ end
 """
     SUWeight(pepo::InfinitePEPO)
 
-Create an SUWeight for a given one-layer InfinitePEPO.
-The weights are initialized as identity matrices of element type `Float64`.
+Create a trivial SUWeight for a given one-layer InfinitePEPO.
 """
 function SUWeight(pepo::InfinitePEPO)
     @assert size(pepo, 3) == 1
