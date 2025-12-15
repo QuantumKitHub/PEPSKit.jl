@@ -326,31 +326,57 @@ end
     - need to move last row of y-weights to the 1st row.
 =#
 
-function Base.rotl90(wts::SUWeight)
-    wts_x = circshift(rotl90(wts[2, :, :]), (0, -1))
+function _rotl90_wts_x(wts_x::AbstractMatrix{<:PEPSWeight})
+    wts_y = rotl90(wts_x)
+    return wts_y
+end
+function _rotr90_wts_x(wts_x::AbstractMatrix{<:PEPSWeight})
+    wts_y = circshift(rotr90(wts_x), (1, 0))
+    for (i, wt) in enumerate(wts_y)
+        wts_y[i] = DiagonalTensorMap(transpose(wt; copy = true))
+    end
+    return wts_y
+end
+function _rot180_wts_x(wts_x::AbstractMatrix{<:PEPSWeight})
+    wts_x_ = circshift(rot180(wts_x), (0, -1))
+    for (i, wt) in enumerate(wts_x_)
+        wts_x_[i] = DiagonalTensorMap(transpose(wt; copy = true))
+    end
+    return wts_x_
+end
+
+function _rotl90_wts_y(wts_y::AbstractMatrix{<:PEPSWeight})
+    wts_x = circshift(rotl90(wts_y), (0, -1))
     for (i, wt) in enumerate(wts_x)
         wts_x[i] = DiagonalTensorMap(transpose(wt; copy = true))
     end
-    wts_y = rotl90(wts[1, :, :])
+    return wts_x
+end
+function _rotr90_wts_y(wts_y::AbstractMatrix{<:PEPSWeight})
+    wts_x = rotr90(wts_y)
+    return wts_x
+end
+function _rot180_wts_y(wts_y::AbstractMatrix{<:PEPSWeight})
+    wts_y_ = circshift(rot180(wts_y), (1, 0))
+    for (i, wt) in enumerate(wts_y_)
+        wts_y_[i] = DiagonalTensorMap(transpose(wt; copy = true))
+    end
+    return wts_y_
+end
+
+function Base.rotl90(wts::SUWeight)
+    wts_y = _rotl90_wts_x(wts[1, :, :])
+    wts_x = _rotl90_wts_y(wts[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rotr90(wts::SUWeight)
-    wts_x = rotr90(wts[2, :, :])
-    wts_y = circshift(rotr90(wts[1, :, :]), (1, 0))
-    for (i, wt) in enumerate(wts_y)
-        wts_y[i] = DiagonalTensorMap(transpose(wt; copy = true))
-    end
+    wts_y = _rotr90_wts_x(wts[1, :, :])
+    wts_x = _rotr90_wts_y(wts[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rot180(wts::SUWeight)
-    wts_x = circshift(rot180(wts[1, :, :]), (0, -1))
-    wts_y = circshift(rot180(wts[2, :, :]), (1, 0))
-    for (i, wt) in enumerate(wts_x)
-        wts_x[i] = DiagonalTensorMap(transpose(wt; copy = true))
-    end
-    for (i, wt) in enumerate(wts_y)
-        wts_y[i] = DiagonalTensorMap(transpose(wt; copy = true))
-    end
+    wts_x = _rot180_wts_x(wts[1, :, :])
+    wts_y = _rot180_wts_y(wts[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 
