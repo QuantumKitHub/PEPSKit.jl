@@ -394,8 +394,9 @@ end
 """
     CTMRGEnv(wts::SUWeight)
 
-Construct a CTMRG environment with bond dimension χ = 1 from SUWeight `wts`,
-with a real scalartype the same as `scalartype(wts)`.
+Construct a CTMRG environment with a trivial environment space 
+(bond dimension χ = 1) from SUWeight `wts`,
+which has the same real scalartype as ``wts`.
 """
 function CTMRGEnv(wts::SUWeight)
     _, Nr, Nc = size(wts)
@@ -412,12 +413,13 @@ function CTMRGEnv(wts::SUWeight)
             CartesianIndex(1, r, c)
         end
         # temporarily make wt axis order ([bra], [ket])
-        wt = deepcopy(wts[wt_idx])
-        if d in (NORTH, EAST)
-            wt = transpose(wt)
+        wt = if d in (NORTH, EAST)
+            twist!(repartition(wts[wt_idx], 2, 0; copy = true), 1)
+        else
+            permute(wts[wt_idx], ((2, 1), ()); copy = true)
         end
         # attach identity on environment space
-        return @tensor edge[l t b; r] := wt[b; t] * TensorKit.id(elt, V_env)[l; r]
+        return insertleftunit(insertleftunit(wt), 1)
     end
     corners = map(CartesianIndices(edges)) do idx
         return TensorKit.id(elt, V_env)
