@@ -2,15 +2,6 @@ using Test
 using TensorKit
 using PEPSKit
 
-function rand_wts(state::Union{InfinitePEPS, InfinitePEPO})
-    wts = SUWeight(state)
-    for idx in CartesianIndices(wts.data)
-        n = length(wts.data[idx].data)
-        wts.data[idx].data[:] = sort(rand(Float64, n); lt = !isless)
-    end
-    return wts
-end
-
 function compose_n(f, n)
     n == 0 && return identity
     return f ∘ compose_n(f, n - 1)
@@ -57,11 +48,11 @@ Vs = (
 Nr, Nc = 2, 3
 peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc))
 pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
-wts = rand_wts(peps)
+wts = SUWeight(peps; random = true)
 
 @test sectortype(wts) === sectortype(Vs[1])
 @test spacetype(wts) === spacetype(Vs[1])
 
 test_rotation(wts)
 test_rotation(peps, wts)
-test_rotation(pepo, wts)
+test_rotation(pepo, SUWeight(pepo; random = true))

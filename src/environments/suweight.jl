@@ -8,7 +8,7 @@ const PEPSWeight{T, S} = AbstractTensorMap{T, S, 1, 1}
 """
     struct SUWeight{E<:PEPSWeight}
 
-Schmidt bond weights used in simple/cluster update. 
+Schmidt bond weights used in simple/cluster update.
 Each weight is a real and semi-positive definite
 `DiagonalTensorMap`, with the same codomain and domain.
 
@@ -45,6 +45,9 @@ function SUWeight(data::Array{E, 3}) where {E <: PEPSWeight}
     for wt in data
         isa(wt, DiagonalTensorMap) ||
             error("Each weight matrix should be a DiagonalTensorMap")
+        # in case TensorKit drops this requirement
+        domain(wt, 1) == codomain(wt, 1) ||
+            error("Domain and codomain of each weight matrix must be the same.")
         all(wt.data .>= 0) || error("Weight elements must be non-negative.")
     end
     return SUWeight{E}(data)
@@ -54,63 +57,71 @@ function SUWeight(wts_mats::AbstractMatrix{E}...) where {E <: PEPSWeight}
     n_mat = length(wts_mats)
     Nr, Nc = size(wts_mats[1])
     @assert all((Nr, Nc) == size(wts_mat) for wts_mat in wts_mats)
-    weights = collect(
-        wts_mats[d][r, c] for (d, r, c) in Iterators.product(1:n_mat, 1:Nr, 1:Nc)
-    )
-    return SUWeight(weights)
-end
-
-"""
-    SUWeight(Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:Union{Int,ElementarySpace}}}
-
-Create a trivial SUWeight by specifying the vertical (north) or horizontal (east) virtual bond spaces.
-Each individual space can be specified as either an `Int` or an `ElementarySpace`.
-"""
-function SUWeight(
-        Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:Union{Int, ElementarySpace}}}
-    @assert size(Nspaces) == size(Espaces)
-    Nr, Nc = size(Nspaces)
-    weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
-        V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
-        DiagonalTensorMap(ones(reduceddim(V)), V)
+    weights = map(Iterators.product(1:n_mat, 1:Nr, 1:Nc)) do (d, r, c)
+        return wts_mats[d][r, c]
     end
     return SUWeight(weights)
 end
 
 """
-    SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
+    SUWeight(Nspaces::M, [Espaces::M]; random::Bool=false) where {M<:AbstractMatrix{<:ElementarySpace}}
 
-Create an trivial SUWeight by specifying its vertical (north) and horizontal (east) 
-as `ElementarySpace`s) and unit cell size.
+Create an `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
+When `random = false`, a trivial `SUWeight` is returned.
+Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
 """
 function SUWeight(
-        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
+        Nspaces::M, Espaces::M = Nspaces; random::Bool = false
+    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+    @assert size(Nspaces) == size(Espaces)
+    Nr, Nc = size(Nspaces)
+    weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+        V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
+        data = random ? sort!(normalize!(rand(reduceddim(V)), Inf)) : ones(reduceddim(V))
+        DiagonalTensorMap(data, V)
+    end
+    return SUWeight(weights)
+end
+
+"""
+    SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1), random::Bool=false) where {S<:ElementarySpace}
+
+Create an `SUWeight` by specifying its vertical (north) and horizontal (east) 
+as `ElementarySpace`s) and unit cell size.
+When `random = false`, a trivial `SUWeight` is returned.
+Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
+"""
+function SUWeight(
+        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1), random::Bool = false
     ) where {S <: ElementarySpace}
-    return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell))
+    return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell); random)
 end
 
 """
-    SUWeight(peps::InfinitePEPS)
+    SUWeight(peps::InfinitePEPS; random::Bool = false)
 
-Create a trivial SUWeight for a given InfinitePEPS. 
+Create an `SUWeight` for a given InfinitePEPS.
+When `random = false`, a trivial `SUWeight` is returned.
+Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
 """
-function SUWeight(peps::InfinitePEPS)
-    Nspaces = collect(domain(t, NORTH) for t in peps.A)
-    Espaces = collect(domain(t, EAST) for t in peps.A)
-    return SUWeight(Nspaces, Espaces)
+function SUWeight(peps::InfinitePEPS; random::Bool = false)
+    Nspaces = map(Base.Fix2(domain, NORTH), unitcell(peps))
+    Espaces = map(Base.Fix2(domain, EAST), unitcell(peps))
+    return SUWeight(Nspaces, Espaces; random)
 end
 
 """
-    SUWeight(pepo::InfinitePEPO)
+    SUWeight(pepo::InfinitePEPO; random::Bool = false)
 
-Create a trivial SUWeight for a given one-layer InfinitePEPO.
+Create an `SUWeight` for a given one-layer InfinitePEPO.
+When `random = false`, a trivial `SUWeight` is returned.
+Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
 """
-function SUWeight(pepo::InfinitePEPO)
+function SUWeight(pepo::InfinitePEPO; random::Bool = false)
     @assert size(pepo, 3) == 1
-    Nspaces = collect(domain(t, NORTH) for t in @view(pepo.A[:, :, 1]))
-    Espaces = collect(domain(t, EAST) for t in @view(pepo.A[:, :, 1]))
-    return SUWeight(Nspaces, Espaces)
+    Nspaces = map(Base.Fix2(domain, NORTH), @view(unitcell(pepo)[:, :, 1]))
+    Espaces = map(Base.Fix2(domain, EAST), @view(unitcell(pepo)[:, :, 1]))
+    return SUWeight(Nspaces, Espaces; random)
 end
 
 ## Shape and size
@@ -179,7 +190,7 @@ in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
 
 ## Arguments
 
-- `t::Union{PEPSTensor, PEPOTensor}` : PEPSTensor or PEPOTensor to which the weight will be absorbed. 
+- `t::Union{PEPSTensor, PEPOTensor}` : PEPSTensor or PEPOTensor to which the weight will be absorbed.
 - `weights::SUWeight` : All simple update weights.
 - `row::Int` : The row index specifying the position in the tensor network.
 - `col::Int` : The column index specifying the position in the tensor network.
@@ -383,12 +394,12 @@ end
 """
     CTMRGEnv(wts::SUWeight)
 
-Construct a CTMRG environment with bond dimension χ = 1 from SUWeight `wts`.
-The scalartype of the returned environment is always `Float64`.
+Construct a CTMRG environment with bond dimension χ = 1 from SUWeight `wts`,
+with a real scalartype the same as `scalartype(wts)`.
 """
 function CTMRGEnv(wts::SUWeight)
     _, Nr, Nc = size(wts)
-    S = sectortype(wts)
+    elt, S = scalartype(wts), sectortype(wts)
     V_env = Vect[S](one(S) => 1)
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH
@@ -406,10 +417,10 @@ function CTMRGEnv(wts::SUWeight)
             wt = transpose(wt)
         end
         # attach identity on environment space
-        return permute(wt ⊗ TensorKit.id(Float64, V_env), ((2, 3, 1), (4,)))
+        return @tensor edge[l t b; r] := wt[b; t] * TensorKit.id(elt, V_env)[l; r]
     end
     corners = map(CartesianIndices(edges)) do idx
-        return TensorKit.id(Float64, V_env)
+        return TensorKit.id(elt, V_env)
     end
     return CTMRGEnv(corners, edges)
 end

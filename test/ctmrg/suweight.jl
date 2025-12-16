@@ -15,15 +15,6 @@ Vvs = Dict(
     FermionParity => Vect[FermionParity](0 => 2, 1 => 2),
 )
 
-function rand_wts(peps::InfinitePEPS)
-    wts = SUWeight(peps)
-    for idx in CartesianIndices(wts.data)
-        n = length(wts.data[idx].data)
-        wts.data[idx].data[:] = sort(rand(Float64, n); lt = !isless)
-    end
-    return wts
-end
-
 function su_rdm_1x1(
         row::Int, col::Int, peps::InfinitePEPS, wts::Union{Nothing, SUWeight} = nothing
     )
@@ -46,7 +37,7 @@ end
     Espaces = [Vv Vv Vv'; Vv Vv' Vv']
     Pspaces = fill(Vp, size(Nspaces))
     peps = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
-    wts = (init == :trivial) ? SUWeight(peps) : rand_wts(peps)
+    wts = SUWeight(peps; random = (init != :trivial))
     env = CTMRGEnv(wts)
     for (r, c) in Tuple.(CartesianIndices(peps.A))
         ρ1 = su_rdm_1x1(r, c, peps, wts)
