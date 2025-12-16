@@ -412,7 +412,7 @@ function CTMRGEnv(wts::SUWeight)
         else # WEST
             CartesianIndex(1, r, c)
         end
-        # temporarily make wt axis order ([bra], [ket])
+        # make wt axis order ([ket], [bra])
         wt = if d in (NORTH, EAST)
             twist!(repartition(wts[wt_idx], 2, 0; copy = true), 1)
         else
