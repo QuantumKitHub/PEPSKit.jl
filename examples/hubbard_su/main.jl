@@ -83,7 +83,7 @@ is achieved by using `trunc=truncrank(χ)` with different `χ`s in the CTMRG run
 χenv₀, χenv = 6, 16
 env_space = Vect[fℤ₂](0 => χenv₀ / 2, 1 => χenv₀ / 2)
 normalize!.(peps.A, Inf)
-env = CTMRGEnv(wts, peps)
+env = CTMRGEnv(wts)
 for χ in [χenv₀, χenv]
     global env, = leading_boundary(
         env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trunc = truncrank(χ)
