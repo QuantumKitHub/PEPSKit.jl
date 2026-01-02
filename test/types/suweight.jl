@@ -48,11 +48,17 @@ Vs = (
 Nr, Nc = 2, 3
 peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc))
 pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
-wts = SUWeight(peps; random = true)
+wts = SUWeight(peps)
+rand!(wts)
+normalize!.(wts.data, Inf)
 
 @test sectortype(wts) === sectortype(Vs[1])
 @test spacetype(wts) === spacetype(Vs[1])
 
 test_rotation(wts)
 test_rotation(peps, wts)
-test_rotation(pepo, SUWeight(pepo; random = true))
+
+wts = SUWeight(pepo)
+rand!(wts)
+normalize!.(wts.data, Inf)
+test_rotation(pepo, wts)

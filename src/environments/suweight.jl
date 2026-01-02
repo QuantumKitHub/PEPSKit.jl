@@ -54,74 +54,67 @@ function SUWeight(data::Array{E, 3}) where {E <: PEPSWeight}
 end
 
 function SUWeight(wts_mats::AbstractMatrix{E}...) where {E <: PEPSWeight}
-    n_mat = length(wts_mats)
-    Nr, Nc = size(wts_mats[1])
-    @assert all((Nr, Nc) == size(wts_mat) for wts_mat in wts_mats)
-    weights = map(Iterators.product(1:n_mat, 1:Nr, 1:Nc)) do (d, r, c)
-        return wts_mats[d][r, c]
-    end
-    return SUWeight(weights)
+    return SUWeight(stack(wts_mats; dims = 1))
 end
 
 """
-    SUWeight(Nspaces::M, [Espaces::M]; random::Bool=false) where {M<:AbstractMatrix{<:ElementarySpace}}
+    SUWeight(Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:ElementarySpace}}
 
-Create an `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
-When `random = false`, a trivial `SUWeight` is returned.
-Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
+Create a trivial `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
 """
 function SUWeight(
-        Nspaces::M, Espaces::M = Nspaces; random::Bool = false
+        Nspaces::M, Espaces::M = Nspaces
     ) where {M <: AbstractMatrix{<:ElementarySpace}}
     @assert size(Nspaces) == size(Espaces)
     Nr, Nc = size(Nspaces)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
-        data = random ? sort!(normalize!(rand(reduceddim(V)), Inf)) : ones(reduceddim(V))
-        DiagonalTensorMap(data, V)
+        DiagonalTensorMap(ones(reduceddim(V)), V)
     end
     return SUWeight(weights)
 end
 
 """
-    SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1), random::Bool=false) where {S<:ElementarySpace}
+    SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
-Create an `SUWeight` by specifying its vertical (north) and horizontal (east) 
+Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east) 
 as `ElementarySpace`s) and unit cell size.
-When `random = false`, a trivial `SUWeight` is returned.
-Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
 """
 function SUWeight(
-        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1), random::Bool = false
+        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
-    return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell); random)
+    return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
 """
-    SUWeight(peps::InfinitePEPS; random::Bool = false)
+    SUWeight(peps::InfinitePEPS)
 
-Create an `SUWeight` for a given InfinitePEPS.
-When `random = false`, a trivial `SUWeight` is returned.
-Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
+Create a trivial `SUWeight` for a given InfinitePEPS.
 """
-function SUWeight(peps::InfinitePEPS; random::Bool = false)
+function SUWeight(peps::InfinitePEPS)
     Nspaces = map(Base.Fix2(domain, NORTH), unitcell(peps))
     Espaces = map(Base.Fix2(domain, EAST), unitcell(peps))
-    return SUWeight(Nspaces, Espaces; random)
+    return SUWeight(Nspaces, Espaces)
 end
 
 """
-    SUWeight(pepo::InfinitePEPO; random::Bool = false)
+    SUWeight(pepo::InfinitePEPO)
 
-Create an `SUWeight` for a given one-layer InfinitePEPO.
-When `random = false`, a trivial `SUWeight` is returned.
-Otherwise each weight is randomly generated, and normalized with its `Inf`-norm.
+Create a trivial `SUWeight` for a given one-layer InfinitePEPO.
 """
-function SUWeight(pepo::InfinitePEPO; random::Bool = false)
+function SUWeight(pepo::InfinitePEPO)
     @assert size(pepo, 3) == 1
     Nspaces = map(Base.Fix2(domain, NORTH), @view(unitcell(pepo)[:, :, 1]))
     Espaces = map(Base.Fix2(domain, EAST), @view(unitcell(pepo)[:, :, 1]))
-    return SUWeight(Nspaces, Espaces; random)
+    return SUWeight(Nspaces, Espaces)
+end
+
+function Random.rand!(wts::SUWeight)
+    for idx in CartesianIndices(wts.data)
+        newdata = rand(length(wts.data[idx].data))
+        wts.data[idx].data[:] = sort!(newdata; lt = !isless)
+    end
+    return wts
 end
 
 ## Shape and size
@@ -400,8 +393,8 @@ which has the same real scalartype as ``wts`.
 """
 function CTMRGEnv(wts::SUWeight)
     _, Nr, Nc = size(wts)
-    elt, S = scalartype(wts), sectortype(wts)
-    V_env = Vect[S](one(S) => 1)
+    elt = scalartype(wts)
+    V_env = oneunit(spacetype(wts))
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH
             CartesianIndex(2, _next(r, Nr), c)
@@ -412,7 +405,6 @@ function CTMRGEnv(wts::SUWeight)
         else # WEST
             CartesianIndex(1, r, c)
         end
-        # make wt axis order ([ket], [bra])
         wt = if d in (NORTH, EAST)
             twist!(repartition(wts[wt_idx], 2, 0; copy = true), 1)
         else

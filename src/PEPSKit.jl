@@ -1,6 +1,7 @@
 module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
+using Random
 using Compat
 using Accessors: @set, @reset
 using VectorInterface

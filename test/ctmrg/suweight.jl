@@ -37,7 +37,11 @@ end
     Espaces = [Vv Vv Vv'; Vv Vv' Vv']
     Pspaces = fill(Vp, size(Nspaces))
     peps = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
-    wts = SUWeight(peps; random = (init != :trivial))
+    wts = SUWeight(peps)
+    if init != :trivial
+        rand!(wts)
+        normalize!.(wts.data, Inf)
+    end
     env = CTMRGEnv(wts)
     for (r, c) in Tuple.(CartesianIndices(peps.A))
         ρ1 = su_rdm_1x1(r, c, peps, wts)
