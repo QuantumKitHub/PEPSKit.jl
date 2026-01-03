@@ -51,6 +51,8 @@ pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
 wts = SUWeight(peps)
 rand!(wts)
 normalize!.(wts.data, Inf)
+# check that elements of wts are successfully randomized
+@test !(wts ≈ SUWeight(peps))
 
 @test sectortype(wts) === sectortype(Vs[1])
 @test spacetype(wts) === spacetype(Vs[1])

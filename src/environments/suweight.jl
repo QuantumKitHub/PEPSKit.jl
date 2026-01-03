@@ -109,10 +109,12 @@ function SUWeight(pepo::InfinitePEPO)
     return SUWeight(Nspaces, Espaces)
 end
 
-function Random.rand!(wts::SUWeight)
-    for idx in CartesianIndices(wts.data)
-        newdata = rand(length(wts.data[idx].data))
-        wts.data[idx].data[:] = sort!(newdata; lt = !isless)
+Random.rand!(wts::SUWeight) = rand!(Random.default_rng(), wts)
+function Random.rand!(rng::Random.AbstractRNG, wts::SUWeight)
+    foreach(wts.data) do wt
+        for (_, b) in blocks(wt)
+            sort!(rand!(rng, b.diag); rev = true)
+        end
     end
     return wts
 end
