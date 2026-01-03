@@ -233,7 +233,7 @@ function _apply_gate(
 
     a, b = absorb_s(a, s, b)
     if need_flip
-        a, s, b = flip_svd(a, s, b)
+        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end
     return a, s, b, ϵ
 end
