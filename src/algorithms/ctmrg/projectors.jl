@@ -241,11 +241,11 @@ function randomized_range_finder(A::AbstractTensorMap, alg::RandomizedProjector,
             Ω = randn(alg.rng, eltype(A), domain(A) ← Vect[sectortype(A)](s => n))
             for _ in 1:alg.n_subspace_iter
                 Y = A * Ω
-                Qs, _ = leftorth!(Y)
-                Ω, _ = leftorth!(Aad * Qs)
+                Qs, _ = left_orth!(Y)
+                Ω, _ = left_orth!(Aad * Qs)
             end
             Y = A * Ω
-            Qs, _ = leftorth!(Y)
+            Qs, _ = left_orth!(Y)
             b .= block(Qs, s)
         end
     end
