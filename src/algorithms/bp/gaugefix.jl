@@ -39,13 +39,12 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv; ish
     sqrtMᴴ, isqrtMᴴ = sqrt_invsqrt(transpose(Mᴴ); ishermitian)
 
     U, Λ, Vᴴ = svd_compact!(sqrtM * sqrtMᴴ)
-    if !isdual(space(Mᴴ, 1))
-        U, Λ′, Vᴴ = flip_svd(U, Λ, Vᴴ)
-        Λ = transpose(Λ′)
-    end
     sqrtΛ = sdiag_pow(Λ, 1 / 2)
     X = isqrtM * U * sqrtΛ
     invX = sqrtΛ * Vᴴ * isqrtMᴴ
+    if !isdual(space(Mᴴ, 1))
+        X, Λ, invX = flip(X, 2), _fliptwist_s(Λ), flip(invX, 1)
+    end
 
     if dir == NORTH
         psi[row, col] = absorb_north_message(psi[row, col], X)
