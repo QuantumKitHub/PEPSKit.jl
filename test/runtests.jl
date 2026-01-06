@@ -98,6 +98,12 @@ end
         @time @safetestset "Time evolution with site-dependent truncation" begin
             include("timeevol/sitedep_truncation.jl")
         end
+        @time @safetestset "Transverse field Ising model at finite temperature" begin
+            include("timeevol/tf_ising_finiteT.jl")
+        end
+        @time @safetestset "J1-J2 model at finite temperature" begin
+            include("timeevol/j1j2_finiteT.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "TOOLBOX"
         @time @safetestset "Density matrix from double-layer PEPO" begin
@@ -125,17 +131,11 @@ end
         @time @safetestset "Transverse field Ising model" begin
             include("examples/tf_ising.jl")
         end
-        @time @safetestset "Transverse field Ising model at finite temperature" begin
-            include("examples/tf_ising_finiteT.jl")
-        end
         @time @safetestset "Heisenberg model" begin
             include("examples/heisenberg.jl")
         end
         @time @safetestset "J1-J2 model" begin
             include("examples/j1j2_model.jl")
-        end
-        @time @safetestset "J1-J2 model at finite temperature" begin
-            include("examples/j1j2_finiteT.jl")
         end
         @time @safetestset "P-wave superconductor" begin
             include("examples/pwave.jl")
