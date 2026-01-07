@@ -70,6 +70,9 @@ isapproxone(X; kwargs...) = isapprox(X, id!(similar(X)); kwargs...)
     bp_alg = BeliefPropagation(; maxiter, tol)
     env = BPEnv(ones, stype, peps1)
     env, err = leading_boundary(env, peps1, bp_alg)
+    wts2 = SUWeight(env)
+    normalize!.(wts2.data)
+    @test compare_weights(wts1, wts2) < 1.0e-9
 
     # BP should differ from SU only by a unitary gauge transformation
     bpg_alg = BPGauge()

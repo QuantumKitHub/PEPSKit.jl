@@ -26,6 +26,17 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
     return psi′, XXinv
 end
 
+function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv; ishermitian::Bool = true)
+    dir, row, col = Tuple(I)
+    @assert dir == NORTH || dir == EAST
+
+    M = env[dir, dir == NORTH ? _prev(row, end) : row, dir == EAST ? _next(col, end) : col]
+    sqrtM, isqrtM = sqrt_invsqrt(M; ishermitian)
+    Mᴴ = env[dir + 2, row, col]
+    sqrtMᴴ, isqrtMᴴ = sqrt_invsqrt(transpose(Mᴴ); ishermitian)
+    return sqrtM, isqrtM, sqrtMᴴ, isqrtMᴴ
+end
+
 """
     _bp_gauge_fix!(I, psi::InfinitePEPS, env::BPEnv; ishermitian::Bool = true) -> psi, X, X⁻¹
 
@@ -46,17 +57,13 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv; ish
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
 
-    M = env[dir, dir == NORTH ? _prev(row, end) : row, dir == EAST ? _next(col, end) : col]
-    sqrtM, isqrtM = sqrt_invsqrt(M; ishermitian)
-    Mᴴ = env[dir + 2, row, col]
-    sqrtMᴴ, isqrtMᴴ = sqrt_invsqrt(transpose(Mᴴ); ishermitian)
-
+    sqrtM, isqrtM, sqrtMᴴ, isqrtMᴴ = _sqrt_bp_messages(I, env; ishermitian)
     U, Λ, Vᴴ = svd_compact!(sqrtM * sqrtMᴴ)
     sqrtΛ = sdiag_pow(Λ, 1 / 2)
     X = isqrtM * U * sqrtΛ
     invX = sqrtΛ * Vᴴ * isqrtMᴴ
-    if !isdual(space(Mᴴ, 1))
-        X, Λ, invX = flip(X, 2), _fliptwist_s(Λ), flip(invX, 1)
+    if isdual(space(sqrtM, 1))
+        X, invX = flip(X, 2), flip(invX, 1)
     end
 
     if dir == NORTH
@@ -68,6 +75,21 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv; ish
     end
 
     return psi, X, invX
+end
+
+"""
+    SUWeight(env::BPEnv)
+
+Construct `SUWeight` from belief propagation fixed point environment `env`
+"""
+function SUWeight(env::BPEnv)
+    wts = map(Iterators.product(1:2, axes(env, 2), axes(env, 3))) do (dir′, row, col)
+        I = CartesianIndex(mod1(dir′ + 1, 2), row, col)
+        sqrtM, _, sqrtMᴴ, _ = _sqrt_bp_messages(I, env; ishermitian = true)
+        Λ = svd_vals!(sqrtM * sqrtMᴴ)
+        return isdual(space(sqrtM, 1)) ? _fliptwist_s(Λ) : Λ
+    end
+    return SUWeight(wts)
 end
 
 function sqrt_invsqrt(A; ishermitian::Bool = true)
