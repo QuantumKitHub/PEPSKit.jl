@@ -2,9 +2,9 @@ using Test, TestExtras
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: SUGauge, gauge_fix, gauge_fix_su, compare_weights, random_dual!
+using PEPSKit: SUGauge, gauge_fix, compare_weights, random_dual!
 
-@testset "Compare BP and SU $(S)" for S in [U1Irrep, FermionParity]
+@testset "Compare BP and SU ($S)" for S in [U1Irrep, FermionParity]
     unitcell = (2, 3)
     stype = ComplexF64
     maxiter, tol = 100, 1.0e-9
@@ -35,7 +35,7 @@ using PEPSKit: SUGauge, gauge_fix, gauge_fix_su, compare_weights, random_dual!
     peps0 = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
 
     # start by gauging with SU
-    peps1, wts1 = gauge_fix_su(peps0, SUGauge(; maxiter, tol))
+    peps1, wts1 = gauge_fix(peps0, SUGauge(; maxiter, tol))
     for (a0, a1) in zip(peps0.A, peps1.A)
         @test space(a0) == space(a1)
     end

@@ -341,6 +341,17 @@ end
 Base.:*(α::Number, e::CTMRGEnv) = CTMRGEnv(α * e.corners, α * e.edges)
 Base.similar(e::CTMRGEnv) = CTMRGEnv(similar(e.corners), similar(e.edges))
 
+# (approximate) equality
+function Base.isapprox(env1::CTMRGEnv, env2::CTMRGEnv; kwargs...)
+    for (c1, c2) in zip(env1.corners, env2.corners)
+        !isapprox(c1, c2; kwargs...) && return false
+    end
+    for (e1, e2) in zip(env1.edges, env2.edges)
+        !isapprox(e1, e2; kwargs...) && return false
+    end
+    return true
+end
+
 # VectorInterface
 # ---------------
 

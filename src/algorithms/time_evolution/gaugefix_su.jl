@@ -35,21 +35,26 @@ function _trivial_gates(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: Ele
     return LocalOperator(lattice, terms...)
 end
 
-function gauge_fix_su(peps0::InfinitePEPS, alg::SUGauge)
-    gates = _trivial_gates(scalartype(peps0), physicalspace(peps0))
+"""
+$(SIGNATURES)
+
+Fix the gauge of `psi` using trivial simple update.
+"""
+function gauge_fix(psi::InfinitePEPS, alg::SUGauge)
+    gates = _trivial_gates(scalartype(psi), physicalspace(psi))
     su_alg = SimpleUpdate(; trunc = FixedSpaceTruncation())
-    wts0 = SUWeight(peps0)
+    wts0 = SUWeight(psi)
     # use default constructor to avoid calculation of exp(-H * 0)
-    evolver = TimeEvolver(su_alg, 0.0, alg.maxiter, gates, SUState(0, 0.0, peps0, wts0))
-    for (i, (peps0, wts, info)) in enumerate(evolver)
+    evolver = TimeEvolver(su_alg, 0.0, alg.maxiter, gates, SUState(0, 0.0, psi, wts0))
+    for (i, (psi′, wts, info)) in enumerate(evolver)
         ϵ = compare_weights(wts, wts0)
         if i >= alg.miniter && ϵ < alg.tol
             @info "Trivial SU conv $i: |Δλ| = $ϵ."
-            return peps0, wts, ϵ
+            return psi′, wts, ϵ
         end
         if i == alg.maxiter
             @warn "Trivial SU cancel $i: |Δλ| = $ϵ."
-            return peps0, wts, ϵ
+            return psi′, wts, ϵ
         end
         wts0 = deepcopy(wts)
     end

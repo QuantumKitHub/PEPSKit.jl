@@ -80,7 +80,7 @@ end
 """
     SUWeight(env::BPEnv)
 
-Construct `SUWeight` from belief propagation fixed point environment `env`
+Construct `SUWeight` from belief propagation fixed point environment `env`.
 """
 function SUWeight(env::BPEnv)
     wts = map(Iterators.product(1:2, axes(env, 2), axes(env, 3))) do (dir′, row, col)
@@ -90,6 +90,28 @@ function SUWeight(env::BPEnv)
         return isdual(space(sqrtM, 1)) ? _fliptwist_s(Λ) : Λ
     end
     return SUWeight(wts)
+end
+
+"""
+    BPEnv(wts::SUWeight)
+
+Convert fixed point weights `wts` of trivial simple update
+to a belief propagation environment.
+"""
+function BPEnv(wts::SUWeight)
+    messages = map(Iterators.product(1:4, axes(wts, 2), axes(wts, 3))) do (d, r, c)
+        wt = if d == NORTH
+            twist(wts[2, _next(r, end), c], 1)
+        elseif d == EAST
+            twist(wts[1, r, _prev(c, end)], 1)
+        elseif d == SOUTH
+            permute(wts[2, r, c], ((2,), (1,)); copy = true)
+        else # WEST
+            permute(wts[1, r, c], ((2,), (1,)); copy = true)
+        end
+        return TensorMap(wt)
+    end
+    return BPEnv(messages)
 end
 
 function sqrt_invsqrt(A; ishermitian::Bool = true)
