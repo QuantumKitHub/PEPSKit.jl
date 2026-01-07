@@ -72,9 +72,6 @@ include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
-include("algorithms/bp/beliefpropagation.jl")
-include("algorithms/bp/gaugefix.jl")
-
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_truncation.jl")
@@ -83,6 +80,10 @@ include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
+include("algorithms/time_evolution/gaugefix_su.jl")
+
+include("algorithms/bp/beliefpropagation.jl")
+include("algorithms/bp/gaugefix.jl")
 
 include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
