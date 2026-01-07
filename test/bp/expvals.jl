@@ -2,6 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
+using PEPSKit: random_dual!
 
 ds = Dict(
     U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))),
@@ -12,13 +13,6 @@ Ds = Dict(
     FermionParity => Vect[FermionParity](0 => 3, 1 => 2)
 )
 Random.seed!(41973582)
-
-function random_dual!(Vs::AbstractMatrix{E}) where {E <: ElementarySpace}
-    for (i, V) in enumerate(Vs)
-        (rand() < 0.7) && (Vs[i] = V')
-    end
-    return Vs
-end
 
 @testset "Expectation values of BPEnv ($S)" for S in keys(ds)
     d, D, uc = ds[S], Ds[S], (2, 3)

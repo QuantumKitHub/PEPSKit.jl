@@ -2,7 +2,7 @@ using Test, TestExtras
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: SUState, gauge_fix, compare_weights
+using PEPSKit: SUState, gauge_fix, compare_weights, random_dual!
 
 """
 A dummy Hamiltonian containing identity gates on all nearest neighbor bonds.
@@ -20,13 +20,6 @@ function dummy_ham(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: Elementa
         end
     end
     return LocalOperator(lattice, terms...)
-end
-
-function random_dual!(Vs::AbstractMatrix{E}) where {E <: ElementarySpace}
-    for (i, V) in enumerate(Vs)
-        (rand() < 0.7) && (Vs[i] = V')
-    end
-    return Vs
 end
 
 function gauge_fix_su(peps0::InfinitePEPS; maxiter::Int = 100, tol::Float64 = 1.0e-6)
@@ -48,15 +41,34 @@ end
 
 isapproxone(X; kwargs...) = isapprox(X, id!(similar(X)); kwargs...)
 
-@testset "Compare BP and SU (no symmetry)" begin
-    unitcell = (3, 3)
+@testset "Compare BP and SU $(S)" for S in [U1Irrep, FermionParity]
+    unitcell = (2, 3)
     stype = ComplexF64
     maxiter, tol = 100, 1.0e-9
 
     Random.seed!(0)
-    Pspaces = ComplexSpace.(rand(2:3, unitcell...))
-    Nspaces = random_dual!(ComplexSpace.(rand(2:4, unitcell...)))
-    Espaces = random_dual!(ComplexSpace.(rand(2:4, unitcell...)))
+    Pspaces, Nspaces, Espaces = if S == U1Irrep
+        map(zip(rand(1:2, unitcell), rand(1:2, unitcell), rand(1:2, unitcell))) do (d0, d1, d2)
+                Vect[S](0 => d0, 1 => d1, -1 => d2)
+        end,
+            map(zip(rand(2:4, unitcell), rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1, d2)
+                Vect[S](0 => d0, 1 => d1, -1 => d2)
+        end,
+            map(zip(rand(2:4, unitcell), rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1, d2)
+                Vect[S](0 => d0, 1 => d1, -1 => d2)
+        end
+    else
+        map(zip(rand(2:3, unitcell), rand(2:3, unitcell))) do (d0, d1)
+                Vect[S](0 => d0, 1 => d1)
+        end,
+            map(zip(rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1)
+                Vect[S](0 => d0, 1 => d1)
+        end,
+            map(zip(rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1)
+                Vect[S](0 => d0, 1 => d1)
+        end
+    end
+    Nspaces, Espaces = random_dual!(Nspaces), random_dual!(Espaces)
     peps0 = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
 
     # start by gauging with SU

@@ -2,6 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
+using PEPSKit: random_dual!
 
 ds = Dict(
     Trivial => ℂ^2,
@@ -14,13 +15,6 @@ Ds = Dict(
     FermionParity => Vect[FermionParity](0 => 3, 1 => 2)
 )
 Random.seed!(41973582)
-
-function random_dual!(Vs::AbstractMatrix{E}) where {E <: ElementarySpace}
-    for (i, V) in enumerate(Vs)
-        (rand() < 0.7) && (Vs[i] = V')
-    end
-    return Vs
-end
 
 function meas_sites(
         op::O, ψ::InfinitePEPS, env::Union{BPEnv, CTMRGEnv}

@@ -205,3 +205,13 @@ macro showtypeofgrad(x)
         end
     )
 end
+
+"""
+Randomly take the dual of `ElementarySpace`s in `Vs` with propability `p`
+"""
+function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpace}
+    for (i, V) in enumerate(Vs)
+        (rand() < p) && (Vs[i] = V')
+    end
+    return Vs
+end
