@@ -33,14 +33,15 @@ Construct a message tensor on a certain bond of a network,
 with bond space specified by `pspaces`. 
 In the 2-layer case, the message tensor will be
 ```
-    ┌--- pspaces[1]
+    ┌--- pspaces[1] (ket layer)
     m
-    └--- pspaces[2]
+    └--- pspaces[2] (bra layer)
 ```
 """
 function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpace}
     N = length(pspaces)
-    V = permute(pspaces ← one(pspaces), (ntuple(identity, N - 1), (N,)))
+    @assert N == 2 "BPEnv is currently only defined for 2-layer InfiniteSquareNetwork."
+    V = permute(pspaces ← one(pspaces), ((1,), (2,)))
     return f(T, V)
 end
 
@@ -65,25 +66,18 @@ function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:Produ
     # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
     Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
-
-    # do the whole thing
-    N = length(first(Ds_north))
-    @assert N == 2 "BPEnv is currently only defined for 2-layer InfiniteSquareNetwork."
-    st = spacetype(first(Ds_north))
-
-    T_type = tensormaptype(st, N - 1, 1, T)
-
-    # First index is direction
-    messages = Array{T_type}(undef, 4, size(Ds_north)...)
-    for I in CartesianIndices(Ds_north)
-        r, c = I.I
-        messages[NORTH, r, c] = _message_tensor(f, T, Ds_north[_next(r, end), c])
-        messages[EAST, r, c] = _message_tensor(f, T, Ds_east[r, _prev(c, end)])
-        messages[SOUTH, r, c] = _message_tensor(f, T, Ds_south[_prev(r, end), c])
-        messages[WEST, r, c] = _message_tensor(f, T, Ds_west[r, _next(c, end)])
+    messages = map(Iterators.product(1:4, axes(Ds_north, 1), axes(Ds_north, 2))) do (dir, r, c)
+        if dir == NORTH
+            _message_tensor(f, T, Ds_north[_next(r, end), c])
+        elseif dir == EAST
+            _message_tensor(f, T, Ds_east[r, _prev(c, end)])
+        elseif dir == SOUTH
+            _message_tensor(f, T, Ds_south[_prev(r, end), c])
+        else # WEST
+            _message_tensor(f, T, Ds_west[r, _next(c, end)])
+        end
     end
     normalize!.(messages)
-
     return BPEnv(messages)
 end
 
