@@ -120,7 +120,7 @@ export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
 
-export BPEnv, BeliefPropagation
+export BPEnv, BeliefPropagation, BPGauge
 
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect

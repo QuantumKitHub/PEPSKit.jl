@@ -54,6 +54,9 @@ function leading_boundary(env₀::BPEnv, network::InfiniteSquareNetwork, alg::Be
         return env, ϵ
     end
 end
+function leading_boundary(env₀::BPEnv, state, args...)
+    return leading_boundary(env₀, InfiniteSquareNetwork(state), args...)
+end
 
 """
 One iteration to update the BP environment.

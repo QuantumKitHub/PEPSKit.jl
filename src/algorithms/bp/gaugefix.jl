@@ -1,16 +1,29 @@
 """
+    struct BPGauge
+
+Algorithm for gauging PEPS with belief propagation fixed point messages.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
+@kwdef struct BPGauge
+    "Assume BP messages are Hermitian"
+    ishermitian::Bool = true
+end
+
+"""
 $(SIGNATURES)
 
-Fix the gauge of `psi` using fixed point environment of belief propagation.
+Fix the gauge of `psi` using fixed point environment `env` of belief propagation.
 """
-function gauge_fix(psi::InfinitePEPS, alg::BeliefPropagation, env::BPEnv = BPEnv(psi))
-    env, err = leading_boundary(env, InfiniteSquareNetwork(psi), alg)
+function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
     psi′ = copy(psi)
     XXinv = map(eachcoordinate(psi, 1:2)) do I
-        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env; ishermitian = alg.project_hermitian)
+        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env; ishermitian = alg.ishermitian)
         return X, Xinv
     end
-    return psi′, XXinv, env
+    return psi′, XXinv
 end
 
 """

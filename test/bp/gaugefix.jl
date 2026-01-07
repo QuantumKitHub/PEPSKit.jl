@@ -29,17 +29,17 @@ function random_dual!(Vs::AbstractMatrix{E}) where {E <: ElementarySpace}
     return Vs
 end
 
-function gauge_fix_su(peps::InfinitePEPS; maxiter::Int = 100, tol::Float64 = 1.0e-6)
-    H = dummy_ham(scalartype(peps), physicalspace(peps))
+function gauge_fix_su(peps0::InfinitePEPS; maxiter::Int = 100, tol::Float64 = 1.0e-6)
+    H = dummy_ham(scalartype(peps0), physicalspace(peps0))
     alg = SimpleUpdate(; trunc = FixedSpaceTruncation())
-    wts0 = SUWeight(peps)
+    wts0 = SUWeight(peps0)
     # use default constructor to avoid calculation of exp(-H * 0)
-    evolver = TimeEvolver(alg, 0.0, maxiter, H, SUState(0, 0.0, peps, wts0))
-    for (i, (peps, wts, info)) in enumerate(evolver)
+    evolver = TimeEvolver(alg, 0.0, maxiter, H, SUState(0, 0.0, peps0, wts0))
+    for (i, (peps0, wts, info)) in enumerate(evolver)
         ϵ = compare_weights(wts, wts0)
         if i % 10 == 0 || ϵ < tol
             @info "SU gauging step $i: ϵ = $ϵ."
-            (ϵ < tol) && return peps, wts, ϵ
+            (ϵ < tol) && return peps0, wts, ϵ
         end
         wts0 = deepcopy(wts)
     end
@@ -57,20 +57,24 @@ isapproxone(X; kwargs...) = isapprox(X, id!(similar(X)); kwargs...)
     Pspaces = ComplexSpace.(rand(2:3, unitcell...))
     Nspaces = random_dual!(ComplexSpace.(rand(2:4, unitcell...)))
     Espaces = random_dual!(ComplexSpace.(rand(2:4, unitcell...)))
-    peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
+    peps0 = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
 
     # start by gauging with SU
-    peps1, wts1 = gauge_fix_su(peps; maxiter, tol)
-    for (a1, a2) in zip(peps1.A, peps.A)
-        @test space(a1) == space(a2)
+    peps1, wts1 = gauge_fix_su(peps0; maxiter, tol)
+    for (a0, a1) in zip(peps0.A, peps1.A)
+        @test space(a0) == space(a1)
     end
     normalize!.(wts1.data)
 
-    # gauging again with BP should give unitary gauge
+    # find BP fixed point and SUWeight
     bp_alg = BeliefPropagation(; maxiter, tol)
-    env0 = BPEnv(ones, stype, peps)
-    peps2, XXinv, env = @constinferred gauge_fix(peps1, bp_alg, env0)
-    for (a1, a2) in zip(peps1.A, peps.A)
+    env = BPEnv(ones, stype, peps1)
+    env, err = leading_boundary(env, peps1, bp_alg)
+
+    # BP should differ from SU only by a unitary gauge transformation
+    bpg_alg = BPGauge()
+    peps2, XXinv = @constinferred gauge_fix(peps1, bpg_alg, env)
+    for (a1, a2) in zip(peps1.A, peps2.A)
         @test space(a1) == space(a2)
     end
     for (X, Xinv) in XXinv
