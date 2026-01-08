@@ -4,7 +4,7 @@ using TensorKit
 using PEPSKit
 using PEPSKit: SUGauge, gauge_fix, compare_weights, random_dual!
 
-@testset "Compare BP and SU ($S, Herm msgs = $h)" for (S, h) in
+@testset "Compare BP and SU ($S, posdef msgs = $h)" for (S, h) in
     Iterators.product([U1Irrep], [true, false])
     unitcell = (2, 3)
     elt = ComplexF64
@@ -44,7 +44,7 @@ using PEPSKit: SUGauge, gauge_fix, compare_weights, random_dual!
 
     # find BP fixed point and SUWeight
     bp_alg = BeliefPropagation(; maxiter, tol, project_hermitian = h)
-    env = BPEnv(h ? ones : randn, elt, peps1)
+    env = BPEnv(randn, elt, peps1; posdef = h)
     env, err = leading_boundary(env, peps1, bp_alg)
     wts2 = SUWeight(env)
     normalize!.(wts2.data)

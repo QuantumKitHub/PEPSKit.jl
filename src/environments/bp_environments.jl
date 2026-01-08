@@ -37,45 +37,58 @@ In the 2-layer case, the message tensor will be
     m
     └--- pspaces[2] (bra layer)
 ```
+Returning axis order is `bra ← ket`.
+
+When `posdef` is true, the message will be made semi-posdef definite
+(when interpreted as a `bra ← ket` TensorMap).
 """
-function _message_tensor(f, ::Type{T}, pspaces::P) where {T, P <: ProductSpace}
+function _message_tensor(f, ::Type{T}, pspaces::P; posdef::Bool = true) where {T, P <: ProductSpace}
     N = length(pspaces)
     @assert N == 2 "BPEnv is currently only defined for 2-layer InfiniteSquareNetwork."
-    V = permute(pspaces ← one(pspaces), ((1,), (2,)))
-    return f(T, V)
+    m = f(T, pspaces[2] ← pspaces[1]')
+    return posdef ? (m' * m) : m
 end
-
-# TODO: enforce positive semi-definiteness when initializing message tensors
 
 """
     BPEnv(
-        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A
+        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A; posdef::Bool = true
     ) where {A <: AbstractMatrix{<:ProductSpace}}
 
 Construct a BP environment by specifying matrices of north and east virtual spaces of the
 corresponding `InfiniteSquareNetwork`. Each matrix entry corresponds to a site in the unit cell.
 
+When `posdef` is true, all messages will be made semi-posdef definite
+(when interpreted as a `bra ← ket` TensorMap).
+
 Each entry of the `Ds_north` and `Ds_east` matrices corresponds to an effective local space
 of the network, and can be represented as a `ProductSpace` (e.g.
 for the case of a network representing overlaps of PEPSs).
 """
-function BPEnv(Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpace}}
-    return BPEnv(randn, ComplexF64, N, Ds_north, Ds_east)
+function BPEnv(
+        Ds_north::A, Ds_east::A; posdef::Bool = true
+    ) where {A <: AbstractMatrix{<:ProductSpace}}
+    return BPEnv(randn, ComplexF64, N, Ds_north, Ds_east; posdef)
 end
-function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:ProductSpace}}
+function BPEnv(
+        f, T, Ds_north::A, Ds_east::A; posdef::Bool = true
+    ) where {A <: AbstractMatrix{<:ProductSpace}}
     # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
     Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
     messages = map(Iterators.product(1:4, axes(Ds_north, 1), axes(Ds_north, 2))) do (dir, r, c)
-        if dir == NORTH
-            _message_tensor(f, T, Ds_north[_next(r, end), c])
+        msg = if dir == NORTH
+            _message_tensor(f, T, Ds_north[_next(r, end), c]; posdef)
         elseif dir == EAST
-            _message_tensor(f, T, Ds_east[r, _prev(c, end)])
+            _message_tensor(f, T, Ds_east[r, _prev(c, end)]; posdef)
         elseif dir == SOUTH
-            permute(_message_tensor(f, T, Ds_south[_prev(r, end), c]), ((2,), (1,)))
+            _message_tensor(f, T, Ds_south[_prev(r, end), c]; posdef)
         else # WEST
-            permute(_message_tensor(f, T, Ds_west[r, _next(c, end)]), ((2,), (1,)))
+            _message_tensor(f, T, Ds_west[r, _next(c, end)]; posdef)
         end
+        if dir == NORTH || dir == EAST
+            msg = permute(msg, ((2,), (1,)))
+        end
+        return msg
     end
     normalize!.(messages)
     return BPEnv(messages)
@@ -84,7 +97,7 @@ end
 """
     BPEnv(
         [f=randn, T=ComplexF64], D_north::P, D_east::P;
-        unitcell::Tuple{Int, Int} = (1, 1),
+        unitcell::Tuple{Int, Int} = (1, 1), posdef::Bool = true
     ) where {P <: ProductSpace}
 
 Construct a BP environment by specifying the north and east virtual spaces of the
@@ -92,38 +105,42 @@ corresponding [`InfiniteSquareNetwork`](@ref). The network unit cell can be spec
 by the `unitcell` keyword argument.
 """
 function BPEnv(
-        D_north::P, D_east::P; unitcell::Tuple{Int, Int} = (1, 1)
+        D_north::P, D_east::P;
+        unitcell::Tuple{Int, Int} = (1, 1), posdef::Bool = true
     ) where {P <: ProductSpace}
-    return BPEnv(randn, ComplexF64, fill(D_north, unitcell), fill(D_east, unitcell))
+    return BPEnv(randn, ComplexF64, D_north, D_east; unitcell, posdef)
 end
 function BPEnv(
-        f, T, D_north::P, D_east::P; unitcell::Tuple{Int, Int} = (1, 1)
+        f, T, D_north::P, D_east::P;
+        unitcell::Tuple{Int, Int} = (1, 1), posdef::Bool = true
     ) where {P <: ProductSpace}
-    return BPEnv(f, T, N, fill(D_north, unitcell), fill(D_east, unitcell))
+    return BPEnv(f, T, N, fill(D_north, unitcell), fill(D_east, unitcell); posdef)
 end
 
 """
-    BPEnv([f=randn, T=ComplexF64], network::InfiniteSquareNetwork)
+    BPEnv([f=randn, T=ComplexF64], network::InfiniteSquareNetwork; posdef::Bool = true)
 
 Construct a BP environment by specifying a corresponding [`InfiniteSquareNetwork`](@ref).
 """
-function BPEnv(f, T, network::InfiniteSquareNetwork)
+function BPEnv(f, T, network::InfiniteSquareNetwork; posdef::Bool = true)
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
-    return BPEnv(f, T, Ds_north, Ds_east)
+    return BPEnv(f, T, Ds_north, Ds_east; posdef)
 end
-BPEnv(network::InfiniteSquareNetwork) = BPEnv(randn, scalartype(network), network)
+function BPEnv(network::InfiniteSquareNetwork; posdef::Bool = true)
+    return BPEnv(randn, scalartype(network), network; posdef)
+end
 
-function BPEnv(state::InfinitePartitionFunction, args...)
-    return BPEnv(InfiniteSquareNetwork(state), args...)
+function BPEnv(state::InfinitePartitionFunction, args...; kwargs...)
+    return BPEnv(InfiniteSquareNetwork(state), args...; kwargs...)
 end
-function BPEnv(state::InfinitePEPS, args...)
-    bp_env = BPEnv(InfiniteSquareNetwork(state), args...)
+function BPEnv(state::InfinitePEPS, args...; kwargs...)
+    bp_env = BPEnv(InfiniteSquareNetwork(state), args...; kwargs...)
     TensorKit.id!.(bp_env.messages)
     return bp_env
 end
-function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
-    return BPEnv(f, T, InfiniteSquareNetwork(state), args...)
+function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...; kwargs...)
+    return BPEnv(f, T, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
 Base.eltype(::Type{BPEnv{T}}) where {T} = T
