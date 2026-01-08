@@ -1,35 +1,33 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: bp_iteration, gauge_fix
+using PEPSKit: bp_iteration
 using TensorKit
 
 # settings
 Random.seed!(91283219347)
-stype = ComplexF64
+elt = ComplexF64
 
 function test_unitcell(unitcell, Pspaces, Nspaces, Espaces)
-    peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
-    env0 = BPEnv(ones, stype, peps)
+    peps = InfinitePEPS(randn, elt, Pspaces, Nspaces, Espaces)
+    env0 = BPEnv(ones, elt, peps)
     alg = BeliefPropagation()
 
     # apply one BP iteration
-    env1 = bp_iteration(InfiniteSquareNetwork(peps), env0, alg)
+    network = InfiniteSquareNetwork(peps)
+    env1 = bp_iteration(network, env0, alg)
     # another iteration to detect bond mismatches
-    env1 = bp_iteration(InfiniteSquareNetwork(peps), env1, alg)
+    env1 = bp_iteration(network, env1, alg)
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(
         Pspaces, (
-            (c,) => randn(scalartype(peps), Pspaces[c], Pspaces[c])
+            (c,) => randn(elt, Pspaces[c], Pspaces[c])
                 for c in CartesianIndices(unitcell)
         )...,
     )
     @test expectation_value(peps, random_op, env0) isa Number
     @test expectation_value(peps, random_op, env1) isa Number
-
-    # _, signs = gauge_fix(env′, env″)
-    # @test signs isa Array
     return
 end
 

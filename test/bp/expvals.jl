@@ -29,7 +29,7 @@ Random.seed!(41973582)
     ctm_env = CTMRGEnv(wts)
     @test ctm_env ≈ CTMRGEnv(bp_env)
 
-    # wts should already be a BP fixed point of ψ
+    # SU fixed point wts should already be a BP fixed point of ψ
     bp_alg = BeliefPropagation(; miniter = 1, maxiter = 1, tol = 1.0e-7)
     _, err = leading_boundary(bp_env, ψ, bp_alg)
     @test err < 1.0e-9

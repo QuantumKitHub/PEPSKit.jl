@@ -14,10 +14,10 @@ The message tensors connect to the network tensors
                     |
                     m[3,r+1,c]
 ```
-- `[1,r-1,c]`: message from `P[r-1,c]` to `P[r,c]`
-- `[2,r,c+1]`: message from `P[r,c+1]` to `P[r,c]`
-- `[3,r+1,c]`: message from `P[r+1,c]` to `P[r,c]`
-- `[4,r,c-1]`: message from `P[r,c-1]` to `P[r,c]`
+- `[1,r-1,c]`: message from `P[r-1,c]` to `P[r,c]` (axis order: ket ← bra)
+- `[2,r,c+1]`: message from `P[r,c+1]` to `P[r,c]` (axis order: ket ← bra)
+- `[3,r+1,c]`: message from `P[r+1,c]` to `P[r,c]` (axis order: bra ← ket)
+- `[4,r,c-1]`: message from `P[r,c-1]` to `P[r,c]` (axis order: bra ← ket)
 
 ## Fields
 
@@ -72,9 +72,9 @@ function BPEnv(f, T, Ds_north::A, Ds_east::A) where {A <: AbstractMatrix{<:Produ
         elseif dir == EAST
             _message_tensor(f, T, Ds_east[r, _prev(c, end)])
         elseif dir == SOUTH
-            _message_tensor(f, T, Ds_south[_prev(r, end), c])
+            permute(_message_tensor(f, T, Ds_south[_prev(r, end), c]), ((2,), (1,)))
         else # WEST
-            _message_tensor(f, T, Ds_west[r, _next(c, end)])
+            permute(_message_tensor(f, T, Ds_west[r, _next(c, end)]), ((2,), (1,)))
         end
     end
     normalize!.(messages)
@@ -149,8 +149,14 @@ Construct a CTMRG environment with bond dimension χ = 1
 from the belief propagation environment `bp_env`.
 """
 function CTMRGEnv(bp_env::BPEnv)
-    edges = map(bp_env.messages) do M
-        return insertleftunit(insertleftunit(repartition(M, numind(M), 0)), 1)
+    edges = map(CartesianIndices(bp_env.messages)) do idx
+        M = bp_env.messages[idx]
+        M = if idx[1] == SOUTH || idx[1] == WEST
+            permute(M, ((2, 1), ()))
+        else
+            repartition(M, numind(M), 0; copy = true)
+        end
+        return insertleftunit(insertleftunit(M), 1)
     end
     corners = map(CartesianIndices(edges)) do _
         return TensorKit.id(scalartype(bp_env), oneunit(spacetype(bp_env)))
@@ -166,7 +172,12 @@ function Base.rotl90(env::BPEnv{T}) where {T}
         dir2 = _prev(dir, 4)
         messages′[dir2, :, :] = rotl90(env.messages[dir, :, :])
     end
-    return BPEnv(copy(messages′))
+    env2 = BPEnv(copy(messages′))
+    for idx in eachcoordinate(env2, (EAST, WEST))
+        cidx = CartesianIndex(idx)
+        env2.messages[cidx] = permute(env2.messages[cidx], ((2,), (1,)))
+    end
+    return env2
 end
 
 function Base.rotr90(env::BPEnv{T}) where {T}
@@ -175,7 +186,12 @@ function Base.rotr90(env::BPEnv{T}) where {T}
         dir2 = _next(dir, 4)
         messages′[dir2, :, :] = rotr90(env.messages[dir, :, :])
     end
-    return BPEnv(copy(messages′))
+    env2 = BPEnv(copy(messages′))
+    for idx in eachcoordinate(env2, (NORTH, SOUTH))
+        cidx = CartesianIndex(idx)
+        env2.messages[cidx] = permute(env2.messages[cidx], ((2,), (1,)))
+    end
+    return env2
 end
 
 function Base.rot180(env::BPEnv{T}) where {T}
@@ -184,5 +200,9 @@ function Base.rot180(env::BPEnv{T}) where {T}
         dir2 = _next(_next(dir, 4), 4)
         messages′[dir2, :, :] = rot180(env.messages[dir, :, :])
     end
-    return BPEnv(copy(messages′))
+    env2 = BPEnv(copy(messages′))
+    for cidx in CartesianIndices(env2.messages)
+        env2.messages[cidx] = permute(env2.messages[cidx], ((2,), (1,)))
+    end
+    return env2
 end

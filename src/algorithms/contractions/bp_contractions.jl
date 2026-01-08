@@ -7,11 +7,8 @@ function contract_north_message(
     )
     return @autoopt @tensor begin
         M_north′[DSt; DSb] :=
-            ket(A)[d; DNt DEt DSt DWt] *
-            conj(bra(A)[d; DNb DEb DSb DWb]) *
-            M_west[DWt; DWb] *
-            M_north[DNt; DNb] *
-            M_east[DEt; DEb]
+            ket(A)[d; DNt DEt DSt DWt] * conj(bra(A)[d; DNb DEb DSb DWb]) *
+            M_west[DWb; DWt] * M_north[DNt; DNb] * M_east[DEt; DEb]
     end
 end
 function contract_east_message(
@@ -19,35 +16,26 @@ function contract_east_message(
     )
     return @autoopt @tensor begin
         M_east′[DWt; DWb] :=
-            ket(A)[d; DNt DEt DSt DWt] *
-            conj(bra(A)[d; DNb DEb DSb DWb]) *
-            M_north[DNt; DNb] *
-            M_east[DEt; DEb] *
-            M_south[DSt; DSb]
+            ket(A)[d; DNt DEt DSt DWt] * conj(bra(A)[d; DNb DEb DSb DWb]) *
+            M_north[DNt; DNb] * M_east[DEt; DEb] * M_south[DSb; DSt]
     end
 end
 function contract_south_message(
         A::PEPSSandwich, M_east::PEPSMessage, M_south::PEPSMessage, M_west::PEPSMessage
     )
     return @autoopt @tensor begin
-        M_south′[DNt; DNb] :=
-            ket(A)[d; DNt DEt DSt DWt] *
-            conj(bra(A)[d; DNb DEb DSb DWb]) *
-            M_east[DEt; DEb] *
-            M_south[DSt; DSb] *
-            M_west[DWt; DWb]
+        M_south′[DNb; DNt] :=
+            ket(A)[d; DNt DEt DSt DWt] * conj(bra(A)[d; DNb DEb DSb DWb]) *
+            M_east[DEt; DEb] * M_south[DSb; DSt] * M_west[DWb; DWt]
     end
 end
 function contract_west_message(
         A::PEPSSandwich, M_south::PEPSMessage, M_west::PEPSMessage, M_north::PEPSMessage
     )
     return @autoopt @tensor begin
-        M_west′[DEt; DEb] :=
-            ket(A)[d; DNt DEt DSt DWt] *
-            conj(bra(A)[d; DNb DEb DSb DWb]) *
-            M_south[DSt; DSb] *
-            M_west[DWt; DWb] *
-            M_north[DNt; DNb]
+        M_west′[DEb; DEt] :=
+            ket(A)[d; DNt DEt DSt DWt] * conj(bra(A)[d; DNb DEb DSb DWb]) *
+            M_south[DSb; DSt] * M_west[DWb; DWt] * M_north[DNt; DNb]
     end
 end
 
@@ -56,9 +44,9 @@ absorb_north_message(A::PEPSTensor, M::PEPSMessage) =
 absorb_east_message(A::PEPSTensor, M::PEPSMessage) =
     @tensor A′[d; N E' S W] := A[d; N E S W] * M[E; E']
 absorb_south_message(A::PEPSTensor, M::PEPSMessage) =
-    @tensor A′[d; N E S' W] := A[d; N E S W] * M[S; S']
+    @tensor A′[d; N E S' W] := A[d; N E S W] * M[S'; S]
 absorb_west_message(A::PEPSTensor, M::PEPSMessage) =
-    @tensor A′[d; N E S W'] := A[d; N E S W] * M[W; W']
+    @tensor A′[d; N E S W'] := A[d; N E S W] * M[W'; W]
 
 # Belief Propagation Expectation values
 # -------------------------------------
@@ -90,8 +78,8 @@ function contract_local_operator(
             O[db; dt] *
             M_north[DNt; DNb] *
             M_east[DEt; DEb] *
-            M_south[DSt; DSb] *
-            M_west[DWt; DWb]
+            M_south[DSb; DSt] *
+            M_west[DWb; DWt]
     end
 end
 
@@ -109,8 +97,8 @@ function contract_local_norm(
             conj(bra[mod1(row, end), mod1(col, end)][d; DNb DEb DSb DWb]) *
             M_north[DNt; DNb] *
             M_east[DEt; DEb] *
-            M_south[DSt; DSb] *
-            M_west[DWt; DWb]
+            M_south[DSb; DSt] *
+            M_west[DWb; DWt]
     end
 end
 
@@ -153,9 +141,9 @@ function contract_vertical_operator(
         M_north[DNt; DNb] *
         M_northeast[DNEt; DNEb] *
         M_southeast[DSEt; DSEb] *
-        M_south[DSt; DSb] *
-        M_southwest[DSWt; DSWb] *
-        M_northwest[DNWt; DNWb] *
+        M_south[DSb; DSt] *
+        M_southwest[DSWb; DSWt] *
+        M_northwest[DNWb; DNWt] *
         O[dNb dSb; dNt dSt]
 end
 
@@ -183,12 +171,12 @@ function contract_horizontal_operator(
             A_east[dEt; DNEt DEt DSEt DMt] *
             conj(Ā_west[dWb; DNWb DMb DSWb DWb]) *
             conj(Ā_east[dEb; DNEb DEb DSEb DMb]) *
-            M_west[DWt; DWb] *
+            M_west[DWb; DWt] *
             M_northwest[DNWt; DNWb] *
             M_northeast[DNEt; DNEb] *
             M_east[DEt; DEb] *
-            M_southeast[DSEt; DSEb] *
-            M_southwest[DSWt; DSWb] *
+            M_southeast[DSEb; DSEt] *
+            M_southwest[DSWb; DSWt] *
             O[dWb dEb; dWt dEt]
     end
 end
@@ -224,9 +212,9 @@ function contract_vertical_norm(
         M_north[DNt; DNb] *
         M_northeast[DNEt; DNEb] *
         M_southeast[DSEt; DSEb] *
-        M_south[DSt; DSb] *
-        M_southwest[DSWt; DSWb] *
-        M_northwest[DNWt; DNWb]
+        M_south[DSb; DSt] *
+        M_southwest[DSWb; DSWt] *
+        M_northwest[DNWb; DNWt]
 end
 
 function contract_horizontal_norm(
@@ -251,11 +239,11 @@ function contract_horizontal_norm(
             A_east[dE; DNEt DEt DSEt DMt] *
             conj(Ā_west[dW; DNWb DMb DSWb DWb]) *
             conj(Ā_east[dE; DNEb DEb DSEb DMb]) *
-            M_west[DWt; DWb] *
+            M_west[DWb; DWt] *
             M_northwest[DNWt; DNWb] *
             M_northeast[DNEt; DNEb] *
             M_east[DEt; DEb] *
-            M_southeast[DSEt; DSEb] *
-            M_southwest[DSWt; DSWb]
+            M_southeast[DSEb; DSEt] *
+            M_southwest[DSWb; DSWt]
     end
 end

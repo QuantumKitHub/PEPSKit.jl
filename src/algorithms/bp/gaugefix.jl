@@ -29,12 +29,11 @@ end
 function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv; ishermitian::Bool = true)
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
-
-    M = env[dir, dir == NORTH ? _prev(row, end) : row, dir == EAST ? _next(col, end) : col]
-    sqrtM, isqrtM = sqrt_invsqrt(M; ishermitian)
-    Mᴴ = env[dir + 2, row, col]
-    sqrtMᴴ, isqrtMᴴ = sqrt_invsqrt(transpose(Mᴴ); ishermitian)
-    return sqrtM, isqrtM, sqrtMᴴ, isqrtMᴴ
+    M12 = env[dir, dir == NORTH ? _prev(row, end) : row, dir == EAST ? _next(col, end) : col]
+    sqrtM12, isqrtM12 = sqrt_invsqrt(M12; ishermitian)
+    M21 = env[dir + 2, row, col]
+    sqrtM21, isqrtM21 = sqrt_invsqrt(M21; ishermitian)
+    return sqrtM12, isqrtM12, sqrtM21, isqrtM21
 end
 
 """
@@ -57,37 +56,37 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv; ish
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
 
-    sqrtM, isqrtM, sqrtMᴴ, isqrtMᴴ = _sqrt_bp_messages(I, env; ishermitian)
-    U, Λ, Vᴴ = svd_compact!(sqrtM * sqrtMᴴ)
+    sqrtM12, isqrtM12, sqrtM21, isqrtM21 = _sqrt_bp_messages(I, env; ishermitian)
+    U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21)
     sqrtΛ = sdiag_pow(Λ, 1 / 2)
-    X = isqrtM * U * sqrtΛ
-    invX = sqrtΛ * Vᴴ * isqrtMᴴ
-    if isdual(space(sqrtM, 1))
+    X = isqrtM12 * U * sqrtΛ
+    invX = sqrtΛ * Vᴴ * isqrtM21
+    if isdual(space(sqrtM12, 1))
         X, invX = flip(X, 2), flip(invX, 1)
     end
 
     if dir == NORTH
         psi[row, col] = absorb_north_message(psi[row, col], X)
-        psi[_prev(row, end), col] = absorb_south_message(psi[_prev(row, end), col], transpose(invX))
+        psi[_prev(row, end), col] = absorb_south_message(psi[_prev(row, end), col], invX)
     elseif dir == EAST
         psi[row, col] = absorb_east_message(psi[row, col], X)
-        psi[row, _next(col, end)] = absorb_west_message(psi[row, _next(col, end)], transpose(invX))
+        psi[row, _next(col, end)] = absorb_west_message(psi[row, _next(col, end)], invX)
     end
 
     return psi, X, invX
 end
 
 """
-    SUWeight(env::BPEnv)
+    SUWeight(env::BPEnv; ishermitian::Bool = true)
 
 Construct `SUWeight` from belief propagation fixed point environment `env`.
 """
-function SUWeight(env::BPEnv)
+function SUWeight(env::BPEnv; ishermitian::Bool = true)
     wts = map(Iterators.product(1:2, axes(env, 2), axes(env, 3))) do (dir′, row, col)
         I = CartesianIndex(mod1(dir′ + 1, 2), row, col)
-        sqrtM, _, sqrtMᴴ, _ = _sqrt_bp_messages(I, env; ishermitian = true)
-        Λ = svd_vals!(sqrtM * sqrtMᴴ)
-        return isdual(space(sqrtM, 1)) ? _fliptwist_s(Λ) : Λ
+        sqrtM12, _, sqrtM21, _ = _sqrt_bp_messages(I, env; ishermitian)
+        Λ = svd_vals!(sqrtM12 * sqrtM21)
+        return isdual(space(sqrtM12, 1)) ? _fliptwist_s(Λ) : Λ
     end
     return SUWeight(wts)
 end
@@ -105,9 +104,9 @@ function BPEnv(wts::SUWeight)
         elseif d == EAST
             twist(wts[1, r, _prev(c, end)], 1)
         elseif d == SOUTH
-            permute(wts[2, r, c], ((2,), (1,)); copy = true)
+            copy(wts[2, r, c])
         else # WEST
-            permute(wts[1, r, c], ((2,), (1,)); copy = true)
+            copy(wts[1, r, c])
         end
         return TensorMap(wt)
     end
@@ -125,6 +124,7 @@ function sqrt_invsqrt(A; ishermitian::Bool = true)
         sqrtA = V * sdiag_pow(D, 1 / 2) * V⁻¹
         isqrtA = V * sdiag_pow(D, -1 / 2) * V⁻¹
         if scalartype(A) <: Real
+            # TODO: is this valid?
             sqrtA = real(sqrtA)
             isqrtA = real(isqrtA)
         end
