@@ -4,7 +4,8 @@ using TensorKit
 using PEPSKit
 using PEPSKit: SUGauge, gauge_fix, compare_weights, random_dual!
 
-@testset "Compare BP and SU ($S, Herm msgs = $h)" for (S, h) in Iterators.product([U1Irrep], [true, false])
+@testset "Compare BP and SU ($S, Herm msgs = $h)" for (S, h) in
+    Iterators.product([U1Irrep], [true, false])
     unitcell = (2, 3)
     elt = ComplexF64
     maxiter, tol = 100, 1.0e-9
@@ -45,12 +46,12 @@ using PEPSKit: SUGauge, gauge_fix, compare_weights, random_dual!
     bp_alg = BeliefPropagation(; maxiter, tol, project_hermitian = h)
     env = BPEnv(h ? ones : randn, elt, peps1)
     env, err = leading_boundary(env, peps1, bp_alg)
-    wts2 = SUWeight(env; ishermitian = h)
+    wts2 = SUWeight(env)
     normalize!.(wts2.data)
     @test compare_weights(wts1, wts2) < 1.0e-9
 
     # BP should differ from SU only by a unitary gauge transformation
-    bpg_alg = BPGauge(; ishermitian = h)
+    bpg_alg = BPGauge()
     peps2, XXinv = @constinferred gauge_fix(peps1, bpg_alg, env)
     for (a1, a2) in zip(peps1.A, peps2.A)
         @test space(a1) == space(a2)
