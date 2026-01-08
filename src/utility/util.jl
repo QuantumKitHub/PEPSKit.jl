@@ -48,20 +48,20 @@ end
 _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
-    sdiag_pow(s, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
+    sdiag_pow(s, pow::Real; tol::Real=eps(real(scalartype(s)))^(3 / 4))
 
 Compute `s^pow` for a diagonal matrix `s`.
 """
-function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(scalartype(s))^(3 / 4))
-    # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4))
+    # Relative tol w.r.t. largest abs value of `s` (use norm(∘, Inf) to make differentiable)
     tol *= norm(s, Inf)
     spow = DiagonalTensorMap(_safe_pow.(s.data, pow, tol), space(s, 1))
     return spow
 end
 function sdiag_pow(
-        s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(scalartype(s))^(3 / 4)
+        s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
     ) where {T, S}
-    # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    # Relative tol w.r.t. largest abs value of `s` (use norm(∘, Inf) to make differentiable)
     tol *= norm(s, Inf)
     spow = similar(s)
     for (k, b) in blocks(s)
@@ -74,7 +74,7 @@ end
 
 function ChainRulesCore.rrule(
         ::typeof(sdiag_pow), s::AbstractTensorMap, pow::Real;
-        tol::Real = eps(scalartype(s))^(3 / 4),
+        tol::Real = eps(real(scalartype(s)))^(3 / 4),
     )
     tol *= norm(s, Inf)
     spow = sdiag_pow(s, pow; tol)
@@ -204,4 +204,14 @@ macro showtypeofgrad(x)
             x̄
         end
     )
+end
+
+"""
+Randomly take the dual of `ElementarySpace`s in `Vs` with propability `p`
+"""
+function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpace}
+    for (i, V) in enumerate(Vs)
+        (rand() < p) && (Vs[i] = V')
+    end
+    return Vs
 end

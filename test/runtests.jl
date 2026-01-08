@@ -53,6 +53,20 @@ end
             include("ctmrg/correlation_length.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "BP"
+        @time @safetestset "Unit cell bond matching" begin
+            include("bp/unitcell.jl")
+        end
+        @time @safetestset "Expectation values" begin
+            include("bp/expvals.jl")
+        end
+        @time @safetestset "Rotation of BPEnv" begin
+            include("bp/rotation.jl")
+        end
+        @time @safetestset "Gauge-fixing iPEPS" begin
+            include("bp/gaugefix.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
         @time @safetestset "CTMRG gradients" begin
             include("gradients/ctmrg_gradients.jl")
