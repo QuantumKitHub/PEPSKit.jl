@@ -25,7 +25,7 @@ function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv)
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
     M12 = env[dir, dir == NORTH ? _prev(row, end) : row, dir == EAST ? _next(col, end) : col]
-    sqrtM12, isqrtM12 = sqrt_invsqrt(M12)
+    sqrtM12, isqrtM12 = sqrt_invsqrt(twist(M12, 1))
     M21 = env[dir + 2, row, col]
     sqrtM21, isqrtM21 = sqrt_invsqrt(M21)
     return sqrtM12, isqrtM12, sqrtM21, isqrtM21
@@ -109,7 +109,7 @@ function BPEnv(wts::SUWeight)
 end
 
 function sqrt_invsqrt(A::PEPSMessage)
-    if ishermitian(A)
+    if isposdef(A)
         D, V = eigh_full(A)
         sqrtA = V * sdiag_pow(D, 1 / 2) * V'
         isqrtA = V * sdiag_pow(D, -1 / 2) * V'
