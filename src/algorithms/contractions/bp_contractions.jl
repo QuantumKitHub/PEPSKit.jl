@@ -115,7 +115,7 @@ function contract_local_operator(
     elseif ind_relative == CartesianIndex(0, 1)
         contract_horizontal_operator(inds[1], O, ket, bra, env)
     else
-        error("Not implemented")
+        error("Only contractions for nearest neighbor bonds are implemented.")
     end
 end
 
@@ -190,7 +190,7 @@ function contract_local_norm(
     elseif ind_relative == CartesianIndex(0, 1)
         contract_horizontal_norm(inds[1], ket, bra, env)
     else
-        error("Not implemented")
+        error("Only contractions for nearest neighbor bonds are implemented.")
     end
 end
 

@@ -17,7 +17,7 @@ $(TYPEDFIELDS)
     "Maximal number of BP iterations"
     maxiter::Int = 50
 
-    "Toggle for projecting onto the hermitian subspace"
+    "Toggle for projecting messages onto the hermitian subspace immediately after update through BP equation"
     project_hermitian::Bool = true
 
     "Output verbosity level"
