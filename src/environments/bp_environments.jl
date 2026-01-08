@@ -55,9 +55,9 @@ end
     ) where {A <: AbstractMatrix{<:ProductSpace}}
 
 Construct a BP environment by specifying matrices of north and east virtual spaces of the
-corresponding `InfiniteSquareNetwork`. Each matrix entry corresponds to a site in the unit cell.
+corresponding [`InfiniteSquareNetwork`](@ref). Each matrix entry corresponds to a site in the unit cell.
 
-When `posdef` is true, all messages will be made semi-posdef definite
+When `posdef` is true, all messages will be made semi-positive definite
 (when interpreted as a `bra ← ket` TensorMap).
 
 Each entry of the `Ds_north` and `Ds_east` matrices corresponds to an effective local space
