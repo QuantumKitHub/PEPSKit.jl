@@ -34,13 +34,14 @@ end
 """
     _bp_gauge_fix!(I, psi::InfinitePEPS, env::BPEnv) -> psi, X, X⁻¹
 
-For the bond at direction `I[1]` from site `I[2], I[3]`, we identify the following gauge matrices,
+For the bond at direction `I[1]` (which can be `NORTH` or `EAST`)
+from site `I[2], I[3]`, we identify the following gauge matrices,
 along the canonical direction of the PEPS arrows (`SOUTH ← NORTH` or `WEST ← EAST`):
 
 ```math
-    I = √M⁻¹ √M √Mᴴ √M⁻ᴴ
-      = √M⁻¹ (U Λ Vᴴ) √M⁻ᴴ
-      = (√M⁻¹ U √Λ) (√Λ Vᴴ √M⁻ᴴ)
+    I = √M₁₂⁻¹ √M₁₂ √M₂₁ √M₂₁⁻¹
+      = √M₁₂⁻¹ (U Λ Vᴴ) √M₂₁⁻¹
+      = (√M₁₂⁻¹ U √Λ) (√Λ Vᴴ √M₂₁⁻¹)
       = X X⁻¹
 ```
 
@@ -57,9 +58,8 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv)
     X = isqrtM12 * U * sqrtΛ
     invX = sqrtΛ * Vᴴ * isqrtM21
     if isdual(space(sqrtM12, 1))
-        X, invX = flip(X, 2), flip(invX, 1)
+        X, invX = twist(flip(X, 2), 1), flip(invX, 1)
     end
-
     if dir == NORTH
         psi[row, col] = absorb_north_message(psi[row, col], X)
         psi[_prev(row, end), col] = absorb_south_message(psi[_prev(row, end), col], invX)
@@ -67,7 +67,6 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv)
         psi[row, col] = absorb_east_message(psi[row, col], X)
         psi[row, _next(col, end)] = absorb_west_message(psi[row, _next(col, end)], invX)
     end
-
     return psi, X, invX
 end
 
