@@ -2,7 +2,7 @@ using Test, TestExtras
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: SUGauge, gauge_fix, compare_weights, random_dual!, twistdual
+using PEPSKit: compare_weights, random_dual!, twistdual
 
 @testset "Compare BP and SU ($S, posdef msgs = $h)" for (S, h) in
     Iterators.product([U1Irrep, FermionParity], [true, false])

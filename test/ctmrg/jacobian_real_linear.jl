@@ -4,7 +4,7 @@ using Accessors
 using Zygote
 using TensorKit, KrylovKit, PEPSKit
 using PEPSKit:
-    ctmrg_iteration, gauge_fix, fix_relative_phases, fix_global_phases, _fix_svd_algorithm
+    ctmrg_iteration, fix_relative_phases, fix_global_phases, _fix_svd_algorithm
 
 algs = [
     (:fixed, SimultaneousCTMRG(; projector_alg = :halfinfinite)),

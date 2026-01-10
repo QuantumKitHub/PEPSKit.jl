@@ -221,7 +221,7 @@ function _rrule(
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        # find partial gradients of gauge_fixed single CTMRG iteration
+        # find partial gradients of gauge-fixed single CTMRG iteration
         function f(A, x)
             return gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1])[1]
         end

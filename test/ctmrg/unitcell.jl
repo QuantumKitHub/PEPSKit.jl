@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iteration, gauge_fix, _fix_svd_algorithm
+using PEPSKit: _prev, _next, ctmrg_iteration, _fix_svd_algorithm
 using TensorKit
 
 # settings
