@@ -221,9 +221,9 @@ function _rrule(
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        # find partial gradients of gauge_fixed single CTMRG iteration
+        # find partial gradients of gauge-fixed single CTMRG iteration
         function f(A, x)
-            return gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1])[1]
+            return env_gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1])[1]
         end
         _, env_vjp = rrule_via_ad(config, f, state, env)
 
@@ -250,7 +250,7 @@ function _rrule(
     env, = leading_boundary(envinit, state, alg)
     alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    env_fixed, signs = gauge_fix(env, env_conv)
+    env_fixed, signs = env_gauge_fix(env, env_conv)
 
     # Fix SVD
     svd_alg_fixed = _fix_svd_algorithm(alg.projector_alg.svd_alg, signs, info)

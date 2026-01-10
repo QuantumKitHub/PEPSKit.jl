@@ -9,7 +9,7 @@ using PEPSKit
 using PEPSKit:
     FixedSVD,
     ctmrg_iteration,
-    gauge_fix,
+    env_gauge_fix,
     fix_relative_phases,
     fix_global_phases,
     calc_elementwise_convergence,
@@ -40,7 +40,7 @@ atol = 1.0e-5
 
     # do extra iteration to get SVD
     env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-    env_fix, signs = gauge_fix(env_conv1, env_conv2)
+    env_fix, signs = env_gauge_fix(env_conv1, env_conv2)
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
     # fix gauge of SVD
@@ -70,11 +70,11 @@ end
 
     # do extra iteration to get SVD
     env_conv2_iter, info_iter = ctmrg_iteration(n, env_conv1, ctm_alg_iter)
-    env_fix_iter, signs_iter = gauge_fix(env_conv1, env_conv2_iter)
+    env_fix_iter, signs_iter = env_gauge_fix(env_conv1, env_conv2_iter)
     @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
     env_conv2_full, info_full = ctmrg_iteration(n, env_conv1, ctm_alg_full)
-    env_fix_full, signs_full = gauge_fix(env_conv1, env_conv2_full)
+    env_fix_full, signs_full = env_gauge_fix(env_conv1, env_conv2_full)
     @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
     # fix gauge of SVD

@@ -6,7 +6,7 @@ This assumes that the `envfinal` is the result of one CTMRG iteration on `envpre
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
-function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, T}
+function env_gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&

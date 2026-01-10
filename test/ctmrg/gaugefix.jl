@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 
-using PEPSKit: ctmrg_iteration, gauge_fix, calc_elementwise_convergence
+using PEPSKit: ctmrg_iteration, env_gauge_fix, calc_elementwise_convergence
 
 spacetypes = [ComplexSpace, Z2Space]
 scalartypes = [Float64, ComplexF64]
@@ -48,6 +48,6 @@ end
     env_pre
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
-    env_fixed, = gauge_fix(env, env′)
+    env_fixed, = env_gauge_fix(env, env′)
     @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end
