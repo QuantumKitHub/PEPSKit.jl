@@ -2,7 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: random_dual!, SUGauge, gauge_fix
+using PEPSKit: random_dual!
 
 ds = Dict(
     U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))),

@@ -47,6 +47,11 @@ energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 @info "β = $(dt * nstep) / 2: tr(ρH) = $(energy)"
 @test energy ≈ bm[1] atol = 5.0e-3
 
+# test BP gauge fixing for purified iPEPO
+bp_alg = BeliefPropagation(; maxiter = 100, tol = 1.0e-9)
+bp_env, = leading_boundary(BPEnv(ones, Float64, pepo), pepo, bp_alg)
+pepo, = gauge_fix(pepo, BPGauge(), bp_env)
+
 env = converge_env(InfinitePEPS(pepo), 16)
 energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
 @info "β = $(dt * nstep): ⟨ρ|H|ρ⟩ = $(energy)"

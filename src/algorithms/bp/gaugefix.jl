@@ -8,9 +8,11 @@ Algorithm for gauging PEPS with belief propagation fixed point messages.
 end
 
 """
-$(SIGNATURES)
+    gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::BPGauge, env::BPEnv)
 
-Fix the gauge of `psi` using fixed point environment `env` of belief propagation.
+Fix the gauge of `psi` (which can be an [`InfinitePEPS`](@ref), or
+an [`InfinitePEPO`](@ref) interpreted as purified state with two physical legs) 
+using fixed point environment `env` of belief propagation.
 """
 function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
     psi′ = copy(psi)
@@ -19,6 +21,24 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
         return X, Xinv
     end
     return psi′, XXinv
+end
+function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
+    # convert to iPEPS, and store physical leg fusers
+    Nr, Nc, Nh = size(psi)
+    @assert Nh == 1
+    psi_Fs = map(psi.A) do t
+        return fuse_physicalspaces(t)
+    end
+    psi_Fs = reshape(psi_Fs, (Nr, Nc))
+    psi′ = map(Base.Fix2(getindex, 1), psi_Fs)
+    Fs = map(Base.Fix2(getindex, 2), psi_Fs)
+    psi′, XXinv = gauge_fix(InfinitePEPS(psi′), alg, env)
+    # convert back to iPEPO
+    psi′ = map(zip(psi′.A, Fs)) do (t, F)
+        return F' * t
+    end
+    psi′ = reshape(psi′, (Nr, Nc, 1))
+    return InfinitePEPO(psi′), XXinv
 end
 
 function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv)
