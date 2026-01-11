@@ -30,6 +30,22 @@ end
 
 Base.iterate(it::TimeEvolver) = iterate(it, it.state)
 
+function _state_bipartite_check(psi::InfiniteState)
+    if isa(psi, InfinitePEPO)
+        @assert size(psi, 3) == 1 "Input InfinitePEPO is expected to have only one layer."
+    end
+    if !(size(psi, 1) == size(psi, 2) == 2)
+        return false
+    end
+    for (r, c) in Iterators.product(1:2, 1:2)
+        r′, c′ = _next(r, 2), _next(c, 2)
+        if psi[r, c] != psi[r′, c′]
+            return false
+        end
+    end
+    return true
+end
+
 function _timeevol_sanity_check(
         ψ₀::InfiniteState, Pspaces::M, alg::A
     ) where {A <: TimeEvolution, M <: AbstractMatrix{<:ElementarySpace}}
@@ -40,7 +56,7 @@ function _timeevol_sanity_check(
         @assert ψ₀ isa InfinitePEPO "alg.purified = false is only applicable to PEPO."
     end
     if hasfield(typeof(alg), :bipartite) && alg.bipartite
-        @assert Nr == Nc == 2 "`bipartite = true` requires 2 x 2 unit cell size."
+        @assert _state_bipartite_check(ψ₀) "Input state is not bipartite with 2 x 2 unit cell."
     end
     return nothing
 end

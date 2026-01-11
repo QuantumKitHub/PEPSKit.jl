@@ -3,7 +3,7 @@ using LinearAlgebra
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: NORTH, EAST
+using PEPSKit: NORTH, EAST, _next
 
 function get_bonddims(peps::InfinitePEPS)
     xdims = collect(dim(domain(t, EAST)) for t in peps.A)
@@ -22,6 +22,10 @@ end
     ham = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
     Random.seed!(100)
     peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
+    # make state bipartite
+    for r in 1:2
+        peps0.A[_next(r, 2), 2] = copy(peps0.A[r, 1])
+    end
     env0 = SUWeight(peps0)
     normalize!.(peps0.A, Inf)
     # set trunc to be compatible with bipartite structure
