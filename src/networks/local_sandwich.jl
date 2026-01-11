@@ -5,7 +5,7 @@
 ## Space utils
 
 _elementwise_dual(S::ElementarySpace) = dual(S)
-_elementwise_dual(P::ProductSpace) = ProductSpace(dual.(P)...)
+_elementwise_dual(P::ProductSpace{S, N}) where {S, N} = ProductSpace{S, N}(dual.(P)...)
 
 # route all virtualspace getters through a single method for convenience
 north_virtualspace(O, args...) = virtualspace(O, args..., NORTH)
@@ -31,6 +31,7 @@ _rot180_localsandwich(O) = rot180.(O)
 _add_localsandwich(O1, O2) = O1 .+ O2
 _subtract_localsandwich(O1, O2) = O1 .- O2
 _mul_localsandwich(α::Number, O) = α .* O
+_isapprox_localsandwich(O1, O2; kwargs...) = all(isapprox.(O1, O2; kwargs...))
 
 ## PartitionFunction
 
@@ -43,6 +44,7 @@ _rot180_localsandwich(O::PFTensor) = rot180(O)
 _add_localsandwich(O1::PFTensor, O2::PFTensor) = O1 + O2
 _subtract_localsandwich(O1::PFTensor, O2::PFTensor) = O1 - O2
 _mul_localsandwich(α::Number, O::PFTensor) = α * O
+_isapprox_localsandwich(O1::PFTensor, O2::PFTensor; kwargs...) = isapprox(O1, O2; kwargs...)
 
 ## PEPS
 
@@ -54,6 +56,8 @@ bra(O::PEPSSandwich) = O[2]
 function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
+
+TensorKit.spacetype(::Type{P}) where {P <: PEPSSandwich} = spacetype(eltype(P))
 
 # not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
 # ie type piracy
@@ -106,3 +110,5 @@ function virtualspace(O::PEPOSandwich, dir)
         ]
     )
 end
+
+TensorKit.spacetype(::Type{P}) where {P <: PEPOSandwich} = spacetype(eltype(P))

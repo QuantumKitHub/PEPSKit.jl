@@ -72,70 +72,77 @@ Ds = [4, 12, 8, 8, 8]
 maxiter = 20000
 
 for (dt, tol, Dbond) in zip(dts, tols, Ds)
-    trscheme = truncerr(1.0e-10) & truncdim(Dbond)
-    alg = SimpleUpdate(dt, tol, maxiter, trscheme)
-    global peps, wts, = simpleupdate(
-        peps, H, alg, wts; bipartite = false, check_interval = 2000
-    )
+    trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
+    alg = SimpleUpdate(; trunc, bipartite = false)
+    global peps, wts, = time_evolve(peps, H, dt, maxiter, alg, wts; tol, check_interval = 2000)
 end
 ````
 
 ````
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>2, 1=>2)
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 1.316e+00,  time = 27.486 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>2, 1=>2)
-[ Info: SU conv 1045   :  dt = 1e-02,  weight diff = 9.843e-08,  time = 34.956 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>6, 1=>6)
-[ Info: SU iter 1      :  dt = 1e-02,  weight diff = 6.459e-06,  time = 0.077 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>6, 1=>6)
-[ Info: SU conv 584    :  dt = 1e-02,  weight diff = 9.946e-08,  time = 42.322 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 1      :  dt = 1e-03,  weight diff = 5.245e-03,  time = 0.235 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 2000   :  dt = 1e-03,  weight diff = 1.418e-07,  time = 0.018 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU conv 3791   :  dt = 1e-03,  weight diff = 9.990e-09,  time = 78.783 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 1      :  dt = 4e-04,  weight diff = 3.256e-04,  time = 0.018 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 2000   :  dt = 4e-04,  weight diff = 1.888e-08,  time = 0.024 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU conv 3034   :  dt = 4e-04,  weight diff = 9.997e-09,  time = 62.113 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 1      :  dt = 1e-04,  weight diff = 1.627e-04,  time = 0.024 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU iter 2000   :  dt = 1e-04,  weight diff = 1.532e-08,  time = 0.018 sec
-[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0=>3, 1=>5)
-[ Info: SU conv 2916   :  dt = 1e-04,  weight diff = 9.997e-09,  time = 59.560 sec
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 2, 1 => 2)
+[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.316e+00. Time = 21.601 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 2, 1 => 2)
+[ Info: SU iter 1045   : dt = 0.01, |Δλ| = 9.843e-08. Time = 0.012 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elapsed: 35.64 s
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 6, 1 => 6)
+[ Info: SU iter 1      : dt = 0.01, |Δλ| = 6.459e-06. Time = 0.134 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 6, 1 => 6)
+[ Info: SU iter 584    : dt = 0.01, |Δλ| = 9.946e-08. Time = 0.114 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elapsed: 71.51 s
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 1      : dt = 0.001, |Δλ| = 5.245e-03. Time = 0.373 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.418e-07. Time = 0.037 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 3791   : dt = 0.001, |Δλ| = 9.990e-09. Time = 0.037 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elapsed: 131.97 s
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 3.256e-04. Time = 0.037 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.888e-08. Time = 0.037 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 3034   : dt = 0.0004, |Δλ| = 9.997e-09. Time = 0.037 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elapsed: 105.93 s
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 1      : dt = 0.0001, |Δλ| = 1.627e-04. Time = 0.037 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 2000   : dt = 0.0001, |Δλ| = 1.532e-08. Time = 0.037 s/it
+[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
+[ Info: SU iter 2916   : dt = 0.0001, |Δλ| = 9.997e-09. Time = 0.037 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elapsed: 100.89 s
 
 ````
 
 ## Computing the ground-state energy
 
 In order to compute the energy expectation value with evolved PEPS, we need to converge a
-CTMRG environment on it. We first converge an environment with a small enviroment dimension
-and then use that to initialize another run with bigger environment dimension. We'll use
-`trscheme=truncdim(χ)` for that such that the dimension is increased during the second CTMRG
-run:
+CTMRG environment on it. We first converge an environment with a small enviroment dimension,
+which is initialized using the simple update bond weights. Next we use it to initialize
+another run with bigger environment dimension. The dynamic adjustment of environment dimension
+is achieved by using `trunc=truncrank(χ)` with different `χ`s in the CTMRG runs:
 
 ````julia
 χenv₀, χenv = 6, 16
 env_space = Vect[fℤ₂](0 => χenv₀ / 2, 1 => χenv₀ / 2)
 normalize!.(peps.A, Inf)
-env = CTMRGEnv(rand, Float64, peps, env_space)
+env = CTMRGEnv(wts)
 for χ in [χenv₀, χenv]
     global env, = leading_boundary(
-        env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trscheme = truncdim(χ)
+        env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trunc = truncrank(χ)
     )
 end
 ````
 
 ````
-[ Info: CTMRG init:	obj = +4.034556135739e-13	err = 1.0000e+00
-┌ Warning: CTMRG cancel 50:	obj = +1.777694990783e+00	err = 2.1447151954e-06	time = 18.75 sec
-└ @ PEPSKit ~/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:152
-[ Info: CTMRG init:	obj = +1.777694990783e+00	err = 1.0000e+00
-[ Info: CTMRG conv 7:	obj = +1.781063096355e+00	err = 3.5793745596e-10	time = 21.32 sec
+[ Info: CTMRG init:	obj = +3.208695223790e-01	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.777694992786e+00	err = 2.2836831592e-09	time = 8.64 sec
+[ Info: CTMRG init:	obj = +1.777694992786e+00	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.781063096355e+00	err = 3.5793721430e-10	time = 37.81 sec
 
 ````
 

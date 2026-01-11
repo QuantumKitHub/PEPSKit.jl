@@ -10,6 +10,20 @@ else
 end
 
 @time begin
+    if GROUP == "ALL" || GROUP == "TYPES"
+        @time @safetestset "InfiniteSquareNetwork" begin
+            include("types/infinitesquarenetwork.jl")
+        end
+        @time @safetestset "InfinitePartitionFunction" begin
+            include("types/infinitepartitionfunction.jl")
+        end
+        @time @safetestset "SUWeight" begin
+            include("types/suweight.jl")
+        end
+        @time @safetestset "LocalOperator" begin
+            include("types/localoperator.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "CTMRG"
         @time @safetestset "Gauge Fixing" begin
             include("ctmrg/gaugefix.jl")
@@ -19,6 +33,9 @@ end
         end
         @time @safetestset ":fixed CTMRG iteration scheme" begin
             include("ctmrg/fixed_iterscheme.jl")
+        end
+        @time @safetestset "SUWeight conversion" begin
+            include("ctmrg/suweight.jl")
         end
         @time @safetestset "Flavors" begin
             include("ctmrg/flavors.jl")
@@ -37,6 +54,20 @@ end
         end
         @time @safetestset "initialization" begin
             include("ctmrg/initialization.jl")
+        end
+    end
+    if GROUP == "ALL" || GROUP == "BP"
+        @time @safetestset "Unit cell bond matching" begin
+            include("bp/unitcell.jl")
+        end
+        @time @safetestset "Expectation values" begin
+            include("bp/expvals.jl")
+        end
+        @time @safetestset "Rotation of BPEnv" begin
+            include("bp/rotation.jl")
+        end
+        @time @safetestset "Gauge-fixing iPEPS" begin
+            include("bp/gaugefix.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "GRADIENTS"
@@ -61,11 +92,20 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
+        @time @safetestset "`timestep` function" begin
+            include("timeevol/timestep.jl")
+        end
         @time @safetestset "Cluster truncation with projectors" begin
             include("timeevol/cluster_projectors.jl")
         end
         @time @safetestset "Time evolution with site-dependent truncation" begin
             include("timeevol/sitedep_truncation.jl")
+        end
+        @time @safetestset "Transverse field Ising model at finite temperature" begin
+            include("timeevol/tf_ising_finiteT.jl")
+        end
+        @time @safetestset "J1-J2 model at finite temperature" begin
+            include("timeevol/j1j2_finiteT.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "TOOLBOX"
@@ -74,9 +114,6 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
-        @time @safetestset "LocalOperator" begin
-            include("utility/localoperator.jl")
-        end
         @time @safetestset "SVD wrapper" begin
             include("utility/svd_wrapper.jl")
         end
@@ -89,9 +126,6 @@ end
         @time @safetestset "Norm-preserving retractions" begin
             include("utility/retractions.jl")
         end
-        @time @safetestset "Rotation of SUWeight" begin
-            include("utility/suweight_rotation.jl")
-        end
         @time @safetestset "Correlators" begin
             include("utility/correlator.jl")
         end
@@ -100,17 +134,11 @@ end
         @time @safetestset "Transverse field Ising model" begin
             include("examples/tf_ising.jl")
         end
-        @time @safetestset "Transverse field Ising model at finite temperature" begin
-            include("examples/tf_ising_finiteT.jl")
-        end
         @time @safetestset "Heisenberg model" begin
             include("examples/heisenberg.jl")
         end
         @time @safetestset "J1-J2 model" begin
             include("examples/j1j2_model.jl")
-        end
-        @time @safetestset "J1-J2 model at finite temperature" begin
-            include("examples/j1j2_finiteT.jl")
         end
         @time @safetestset "P-wave superconductor" begin
             include("examples/pwave.jl")

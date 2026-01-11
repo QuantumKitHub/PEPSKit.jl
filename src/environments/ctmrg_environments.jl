@@ -1,3 +1,6 @@
+const CTMRGEdgeTensor{T, S, N} = AbstractTensorMap{T, S, N, 1}
+const CTMRGCornerTensor{T, S} = AbstractTensorMap{T, S, 1, 1}
+
 """
 $(TYPEDEF)
 
@@ -29,6 +32,19 @@ struct CTMRGEnv{C, T}
     corners::Array{C, 3}
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
     edges::Array{T, 3}
+    function CTMRGEnv{C, T}(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
+        return new{C, T}(corners, edges)
+    end
+end
+function CTMRGEnv(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
+    foreach(check_environment_virtualspace, edges)
+    return CTMRGEnv{C, T}(corners, edges)
+end
+
+check_environment_virtualspace(::AbstractZero) = nothing
+function check_environment_virtualspace(E::CTMRGEdgeTensor)
+    return isdual(space(E, 1)) &&
+        throw(ArgumentError("Dual environment virtual spaces are not allowed (for now)."))
 end
 
 function _corner_tensor(
@@ -325,32 +341,15 @@ end
 Base.:*(α::Number, e::CTMRGEnv) = CTMRGEnv(α * e.corners, α * e.edges)
 Base.similar(e::CTMRGEnv) = CTMRGEnv(similar(e.corners), similar(e.edges))
 
-function LinearAlgebra.mul!(edst::CTMRGEnv, esrc::CTMRGEnv, α::Number)
-    edst.corners .= α * esrc.corners
-    edst.edges .= α * esrc.edges
-    return edst
-end
-
-function LinearAlgebra.rmul!(e::CTMRGEnv, α::Number)
-    rmul!.(e.corners, α)
-    rmul!.(e.edges, α)
-    return e
-end
-
-function LinearAlgebra.axpy!(α::Number, e₁::CTMRGEnv, e₂::CTMRGEnv)
-    axpy!.(α, e₁.corners, e₂.corners)
-    axpy!.(α, e₁.edges, e₂.edges)
-    return e₂
-end
-
-function LinearAlgebra.axpby!(α::Number, e₁::CTMRGEnv, β::Number, e₂::CTMRGEnv)
-    e₂.corners .= α * e₁.corners + β * e₂.corners
-    e₂.edges .= α * e₁.edges + β * e₂.edges
-    return e₂
-end
-
-function LinearAlgebra.dot(e₁::CTMRGEnv, e₂::CTMRGEnv)
-    return dot(e₁.corners, e₂.corners) + dot(e₁.edges, e₂.edges)
+# (approximate) equality
+function Base.isapprox(env1::CTMRGEnv, env2::CTMRGEnv; kwargs...)
+    for (c1, c2) in zip(env1.corners, env2.corners)
+        !isapprox(c1, c2; kwargs...) && return false
+    end
+    for (e1, e2) in zip(env1.edges, env2.edges)
+        !isapprox(e1, e2; kwargs...) && return false
+    end
+    return true
 end
 
 # VectorInterface

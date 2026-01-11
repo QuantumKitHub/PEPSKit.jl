@@ -1,50 +1,34 @@
 function _contract_left(
         M::GenericMPSTensor{S, 4}, sl::DiagonalTensorMap{T, S}
     ) where {T <: Number, S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
     M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
-    if isdual(codomain(M, 1))
-        @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w0; w1] * M0[w0; p n s e0]
-    else
-        @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w1; w0] * M0[w0; p n s e0]
-    end
-    if isdual(space(sl1, 1))
-        sl1 = twist(permute(sl1, ((2,), (1,))), 1)
-    end
+    @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w1; w0] * M0[w0; p n s e0]
     return sl1
 end
 function _contract_left(
         M::GenericMPSTensor{S, 4}, ::Nothing
     ) where {S <: ElementarySpace}
+    @assert !isdual(domain(M, 1))
     M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
     @tensor sl1[e1; e0] := conj(M[w; p n s e1]) * M0[w; p n s e0]
-    if isdual(space(sl1, 1))
-        sl1 = twist(permute(sl1, ((2,), (1,))), 1)
-    end
     return sl1
 end
 
 function _contract_right(
         M::GenericMPSTensor{S, 4}, sr::DiagonalTensorMap{T, S}
     ) where {T <: Number, S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
     M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
-    if isdual(domain(M, 1))
-        @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e1; e0] * conj(M[w1; p n s e1])
-    else
-        @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e0; e1] * conj(M[w1; p n s e1])
-    end
-    if isdual(space(sr1, 1))
-        sr1 = twist(permute(sr1, ((2,), (1,))), 1)
-    end
+    @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e0; e1] * conj(M[w1; p n s e1])
     return sr1
 end
 function _contract_right(
         M::GenericMPSTensor{S, 4}, ::Nothing
     ) where {S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1))
     M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
     @tensor sr1[w0; w1] := M0[w0; p n s e] * conj(M[w1; p n s e])
-    if isdual(space(sr1, 1))
-        sr1 = twist(permute(sr1, ((2,), (1,))), 1)
-    end
     return sr1
 end
 
@@ -62,13 +46,13 @@ function verify_cluster_orth(
     for i in 1:(N - 1)
         M, sl0 = Ms[i], wts[i]
         sl1 = _contract_left(M, i == 1 ? nothing : wts[i - 1])
-        lorths[i] = (normalize(sl0) ≈ normalize(sl1))
+        lorths[i] = (normalize(TensorMap(sl0)) ≈ normalize(sl1)) # sl0 is DiagonalTensorMap while sl1 is not
     end
     # right orthogonal
     for i in 2:N
         M, sr0 = Ms[i], wts[i - 1]
         sr1 = _contract_right(M, i == N ? nothing : wts[i])
-        rorths[i - 1] = (normalize(sr0) ≈ normalize(sr1))
+        rorths[i - 1] = (normalize(TensorMap(sr0)) ≈ normalize(sr1))
     end
     return lorths, rorths
 end
@@ -81,6 +65,7 @@ function inner_prod_cluster(
     }
     N = length(Ms1)
     @assert length(Ms2) == N
+    # physical spaces are assumed to be non-dual
     @assert all(!isdual(space(t, 2)) for t in Ms1)
     @assert all(!isdual(space(t, 2)) for t in Ms2)
     # not the most efficient implementation
@@ -117,11 +102,11 @@ end
 
 function mpo_to_gate3(gs::Vector{T}) where {T <: AbstractTensorMap}
     #= 
-    -1         -2        -3
-    ↑          ↑          ↑
-    g1 ←- 1 ←- g2 ←- 2 ←- g3
-    ↑          ↑          ↑
     -4         -5        -6
+    ↓           ↓         ↓
+    g1 ←- 1 ←- g2 ←- 2 ←- g3
+    ↓           ↓         ↓
+    -1         -2        -3
     =#
     @assert length(gs) == 3
     @tensor gate[-1 -2 -3; -4 -5 -6] := gs[1][-1 -4 1] * gs[2][1 -2 -5 2] * gs[3][2 -3 -6]

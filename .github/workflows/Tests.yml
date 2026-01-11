@@ -24,8 +24,10 @@ jobs:
       matrix:
         version:
           - 'lts' # minimal supported version
-          - '1.11' # TODO: update to '1' when compatible
+          - '1'
         group:
+          - bp
+          - types
           - ctmrg
           - boundarymps
           - gradients

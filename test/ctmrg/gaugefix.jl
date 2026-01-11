@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using TensorKit
 
-using PEPSKit: ctmrg_iteration, gauge_fix, calc_elementwise_convergence
+using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
 
 spacetypes = [ComplexSpace, Z2Space]
 scalartypes = [Float64, ComplexF64]

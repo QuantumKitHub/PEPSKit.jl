@@ -18,7 +18,7 @@ function CTMRGAlgorithm(;
         tol = Defaults.ctmrg_tol,
         maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
         verbosity = Defaults.ctmrg_verbosity,
-        trscheme = (; alg = Defaults.trscheme),
+        trunc = (; alg = Defaults.trunc),
         svd_alg = (;),
         projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
     )
@@ -29,7 +29,7 @@ function CTMRGAlgorithm(;
     # parse CTMRG projector algorithm
 
     projector_algorithm = ProjectorAlgorithm(;
-        alg = projector_alg, svd_alg, trscheme, verbosity
+        alg = projector_alg, svd_alg, trunc, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
@@ -69,13 +69,13 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 
 ### Projector algorithm
 
-* `trscheme::Union{TruncationScheme,NamedTuple}=(; alg::Symbol=:$(Defaults.trscheme))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerr` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncdim` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:truncbelow` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `svd_alg::Union{<:SVDAdjoint,NamedTuple}` : SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
@@ -113,8 +113,9 @@ function leading_boundary(
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
-        CS = map(x -> tsvd(x)[2], env₀.corners)
-        TS = map(x -> tsvd(x)[2], env₀.edges)
+        CS, TS = ignore_derivatives() do
+            return map(svd_vals, env₀.corners), map(svd_vals, env₀.edges)
+        end
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
         local info
@@ -190,10 +191,10 @@ This determined either from the previous corner and edge singular values
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
 function calc_convergence(env, CS_old, TS_old)
-    CS_new = map(x -> tsvd(x)[2], env.corners)
+    CS_new = map(svd_vals, env.corners)
     ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
 
-    TS_new = map(x -> tsvd(x)[2], env.edges)
+    TS_new = map(svd_vals, env.edges)
     ΔTS = maximum(_singular_value_distance, zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
@@ -201,8 +202,8 @@ function calc_convergence(env, CS_old, TS_old)
     return max(ΔCS, ΔTS), CS_new, TS_new
 end
 function calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
-    CS_old = map(x -> tsvd(x)[2], env_old.corners)
-    TS_old = map(x -> tsvd(x)[2], env_old.edges)
+    CS_old = map(svd_vals, env_old.corners)
+    TS_old = map(svd_vals, env_old.edges)
     return calc_convergence(env_new, CS_old, TS_old)
 end
 @non_differentiable calc_convergence(args...)

@@ -9,5 +9,5 @@ PEPSKit = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
 TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
 
 [compat]
-Documenter = "1.0"
+Documenter = "1"
 DocumenterInterLinks = "~1.0"

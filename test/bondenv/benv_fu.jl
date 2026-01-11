@@ -13,8 +13,9 @@ function get_hubbard_state(t::Float64 = 1.0, U::Float64 = 8.0)
     Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     peps = InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell = (Nr, Nc))
     wts = SUWeight(peps)
-    alg = SimpleUpdate(1.0e-2, 1.0e-8, 10000, truncerr(1.0e-10) & truncdim(4))
-    peps, = simpleupdate(peps, H, alg, wts; bipartite = false, check_interval = 2000)
+    alg = SimpleUpdate(; trunc = truncerror(; atol = 1.0e-10) & truncrank(4))
+    evolver = TimeEvolver(peps, H, 1.0e-2, 10000, alg, wts)
+    peps, = time_evolve(evolver; tol = 1.0e-8, check_interval = 2000)
     normalize!.(peps.A, Inf)
     return peps
 end
@@ -24,7 +25,7 @@ peps = get_hubbard_state()
 Envspace = Vect[FermionParity ⊠ U1Irrep](
     (0, 0) => 4, (1, 1 // 2) => 1, (1, -1 // 2) => 1, (0, 1) => 1, (0, -1) => 1
 )
-ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trscheme = truncerr(1.0e-10) & truncdim(8))
+ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trunc = truncerror(; atol = 1.0e-10) & truncrank(8))
 env, = leading_boundary(CTMRGEnv(rand, ComplexF64, peps, Envspace), peps, ctm_alg)
 for row in 1:Nr, col in 1:Nc
     cp1 = PEPSKit._next(col, Nc)

@@ -70,12 +70,11 @@ fix a truncation error (if that can be reached by remaining below `Dbond`):
 
 dts = [1.0e-2, 1.0e-3, 4.0e-4]
 tols = [1.0e-6, 1.0e-8, 1.0e-8]
-maxiter = 10000
-trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
-
+nstep = 10000
+trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
+alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true)
 for (dt, tol) in zip(dts, tols)
-    alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    global peps, wts, = simpleupdate(peps, H, alg, wts; bipartite = true)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval = 500)
 end
 
 md"""
@@ -86,14 +85,14 @@ on the evolved PEPS. Let's do so:
 """
 normalize!.(peps.A, Inf)
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
-trscheme_env = truncerr(1.0e-10) & truncdim(χenv)
+trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 env, = leading_boundary(
     env₀,
     peps;
     alg = :sequential,
     projector_alg = :fullinfinite,
     tol = 1.0e-10,
-    trscheme = trscheme_env,
+    trunc = trunc_env,
 );
 
 md"""

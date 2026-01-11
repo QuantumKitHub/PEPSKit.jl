@@ -48,15 +48,16 @@ Therefore, we shall gradually increase $J_2 / J_1$ from 0.1 to 0.5, each time in
 on the previously evolved PEPS:
 """
 
-dt, tol, maxiter = 1.0e-2, 1.0e-8, 30000
+dt, tol, nstep = 1.0e-2, 1.0e-8, 30000
 check_interval = 4000
-trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
-alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
+trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
+alg = SimpleUpdate(; trunc = trunc_peps)
 for J2 in 0.1:0.1:0.5
-    H = real( ## convert Hamiltonian `LocalOperator` to real floats
+    ## convert Hamiltonian `LocalOperator` to real floats
+    H = real(
         j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
     )
-    global peps, wts, = simpleupdate(peps, H, alg, wts; check_interval)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval)
 end
 
 md"""
@@ -69,8 +70,7 @@ tols = [1.0e-9, 1.0e-9]
 J2 = 0.5
 H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false))
 for (dt, tol) in zip(dts, tols)
-    alg′ = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    global peps, wts, = simpleupdate(peps, H, alg′, wts; check_interval)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol)
 end
 
 md"""
@@ -82,10 +82,10 @@ the expectation value, where we first normalize tensors in the PEPS:
 
 normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
 χenv = 32
-trscheme_env = truncerr(1.0e-10) & truncdim(χenv)
+trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
-env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trscheme = trscheme_env);
+env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trunc = trunc_env);
 E = expectation_value(peps, H, env) / (Nr * Nc)
 
 md"""
@@ -105,9 +105,9 @@ PEPS optimization. Note that we could have also used a sublattice-rotated versio
 fit the Hamiltonian onto a single-site unit cell which would require us to optimize fewer
 parameters and hence lead to a faster optimization. But here we instead take advantage of
 the already evolved `peps`, thus giving us a physical initial guess for the optimization.
-In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit of noise to it
-- this is conviently done using MPSKit's `randomize!` function. (Breaking some of the spatial
-symmetry can be advantageous for obtaining lower energies.)
+In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit of noise to it.
+This is conviently done using MPSKit's `randomize!` function.
+(Breaking some of the spatial symmetry can be advantageous for obtaining lower energies.)
 """
 
 using MPSKit: randomize!

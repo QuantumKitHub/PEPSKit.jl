@@ -1,20 +1,22 @@
 module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
+using Random
 using Compat
 using Accessors: @set, @reset, @insert
 using VectorInterface
 import VectorInterface as VI
 
+using MatrixAlgebraKit
+using MatrixAlgebraKit: TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration
 using TensorKit
-using TensorKit: TruncationScheme
 
 using KrylovKit, OptimKit, TensorOperations
 using ChainRulesCore, Zygote
 using LoggingExtras
 
 using MPSKit
-using MPSKit: MPOTensor, GenericMPSTensor, MPSBondTensor, TransferMatrix
+using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
@@ -49,14 +51,19 @@ include("operators/models.jl")
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
+include("environments/bp_environments.jl")
 
 include("algorithms/contractions/ctmrg_contractions.jl")
+include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
+include("algorithms/contractions/bp_contractions.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
+include("algorithms/contractions/correlator/peps.jl")
+include("algorithms/contractions/correlator/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
@@ -71,9 +78,15 @@ include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/time_evolution/evoltools.jl")
+include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
+include("algorithms/time_evolution/gaugefix_su.jl")
 
+include("algorithms/bp/beliefpropagation.jl")
+include("algorithms/bp/gaugefix.jl")
+
+include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/correlators.jl")
 
@@ -102,13 +115,19 @@ export fixedpoint
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
-export su_iter, su3site_iter, simpleupdate, SimpleUpdate
+export SimpleUpdate
+export TimeEvolver, timestep, time_evolve
 
 export InfiniteSquareNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
+
+export BPEnv, BeliefPropagation
+export BPGauge, SUGauge
+export gauge_fix
+
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!

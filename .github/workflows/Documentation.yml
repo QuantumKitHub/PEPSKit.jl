@@ -20,13 +20,13 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1.11' # TODO: update to '1' when compatible
+          - '1'
         os:
           - ubuntu-latest
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}
