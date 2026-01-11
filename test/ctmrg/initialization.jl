@@ -14,12 +14,12 @@ symmetries = [Z2Irrep, Trivial]
 tol = 1.0e-4
 maxiter = 1000
 verbosity = 2
-trscheme = FixedSpaceTruncation()
+trunc = FixedSpaceTruncation()
 boundary_alg = (;
     alg = :simultaneous,
     tol,
     verbosity,
-    trscheme,
+    trunc,
     maxiter,
 )
 
