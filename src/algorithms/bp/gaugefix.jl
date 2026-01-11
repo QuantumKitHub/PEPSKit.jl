@@ -32,7 +32,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
         return X, Xinv
     end
     if bipartite
-        # copy 1st column to 2nd column to eliminate differences 
+        # copy 1st column to 2nd column to eliminate differences
         # caused by order of applying gauge transformations
         for r in 1:2
             psi′[_next(r, 2), 2] = copy(psi′[r, 1])
