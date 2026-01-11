@@ -36,13 +36,13 @@ function _trivial_gates(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: Ele
 end
 
 """
-$(SIGNATURES)
+    gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::SUGauge)
 
 Fix the gauge of `psi` using trivial simple update.
 """
-function gauge_fix(psi::InfinitePEPS, alg::SUGauge)
+function gauge_fix(psi::InfiniteState, alg::SUGauge)
     gates = _trivial_gates(scalartype(psi), physicalspace(psi))
-    su_alg = SimpleUpdate(; trunc = FixedSpaceTruncation())
+    su_alg = SimpleUpdate(; trunc = FixedSpaceTruncation(), bipartite = _state_bipartite_check(psi))
     wts0 = SUWeight(psi)
     # use default constructor to avoid calculation of exp(-H * 0)
     evolver = TimeEvolver(su_alg, 0.0, alg.maxiter, gates, SUState(0, 0.0, psi, wts0))

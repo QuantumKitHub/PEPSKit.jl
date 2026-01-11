@@ -20,6 +20,9 @@ $(TYPEDFIELDS)
     "Toggle for projecting messages onto the hermitian subspace immediately after update through BP equation"
     project_hermitian::Bool = true
 
+    "When true, preserve bipartite structure of BPEnv inherited from input network"
+    bipartite::Bool = false
+
     "Output verbosity level"
     verbosity::Int = 2
 end
@@ -54,21 +57,47 @@ function leading_boundary(env₀::BPEnv, network::InfiniteSquareNetwork, alg::Be
         return env, ϵ
     end
 end
-function leading_boundary(env₀::BPEnv, state, args...)
-    return leading_boundary(env₀, InfiniteSquareNetwork(state), args...)
+function leading_boundary(env₀::BPEnv, state::InfiniteState, alg::BeliefPropagation)
+    if alg.bipartite
+        @assert _state_bipartite_check(state)
+    end
+    return leading_boundary(env₀, InfiniteSquareNetwork(state), alg)
 end
 
 """
 One iteration to update the BP environment.
 """
 function bp_iteration(network::InfiniteSquareNetwork, env::BPEnv, alg::BeliefPropagation)
-    messages = map(eachindex(env)) do I
-        M = update_message(I, network, env)
-        normalize!(M)
-        alg.project_hermitian && (M = project_hermitian!!(M))
-        return M
+    if alg.bipartite
+        @assert size(network, 1) == size(network, 2) == 2
+        # update BP env around 1st column of state
+        # [N/S, 1:2, 1], [E/W, 1:2, 2]
+        msgs = map(Iterators.product(1:4, 1:2)) do (d, r)
+            c = (d == NORTH || d == SOUTH) ? 1 : 2
+            I = CartesianIndex(d, r, c)
+            M = update_message(I, network, env)
+            normalize!(M)
+            alg.project_hermitian && (M = project_hermitian!!(M))
+            return M
+        end
+        messages = map(Iterators.product(1:4, 1:2, 1:2)) do (d, r, c)
+            r′ = _next(r, 2)
+            if d == NORTH || d == SOUTH
+                return (c == 1) ? msgs[d, r] : copy(msgs[d, r′])
+            else
+                return (c == 2) ? msgs[d, r] : copy(msgs[d, r′])
+            end
+        end
+        return BPEnv(messages)
+    else
+        messages = map(eachindex(env)) do I
+            M = update_message(I, network, env)
+            normalize!(M)
+            alg.project_hermitian && (M = project_hermitian!!(M))
+            return M
+        end
+        return BPEnv(messages)
     end
-    return BPEnv(messages)
 end
 
 """
