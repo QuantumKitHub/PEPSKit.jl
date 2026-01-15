@@ -70,23 +70,19 @@ One iteration to update the BP environment.
 function bp_iteration(network::InfiniteSquareNetwork, env::BPEnv, alg::BeliefPropagation)
     if alg.bipartite
         @assert size(network, 1) == size(network, 2) == 2
-        # update BP env around 1st column of state
-        # [N/S, 1:2, 1], [E/W, 1:2, 2]
-        messages = map(Iterators.product(1:4, 1:2)) do (d, r)
+        messages = similar(env.messages)
+        for (d, r) in Iterators.product(1:4, 1:2)
+            # update BP env around 1st column of state
+            # [N/S, 1:2, 1], [E/W, 1:2, 2]
             c = (d == NORTH || d == SOUTH) ? 1 : 2
             I = CartesianIndex(d, r, c)
             M = update_message(I, network, env)
             normalize!(M)
             alg.project_hermitian && (M = project_hermitian!!(M))
-            return M
-        end
-        messages = map(Iterators.product(1:4, 1:2, 1:2)) do (d, r, c)
-            r′ = _next(r, 2)
-            if d == NORTH || d == SOUTH
-                return (c == 1) ? messages[d, r] : copy(messages[d, r′])
-            else
-                return (c == 2) ? messages[d, r] : copy(messages[d, r′])
-            end
+            messages[I] = M
+            # copy to the other column
+            I′ = CartesianIndex(d, _next(r, 2), _next(c, 2))
+            messages[I′] = copy(M)
         end
         return BPEnv(messages)
     else
