@@ -6,6 +6,7 @@ using Compat
 using Accessors: @set, @reset
 using VectorInterface
 import VectorInterface as VI
+import Random
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration
