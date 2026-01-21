@@ -1,3 +1,14 @@
+function gauge_fix(boundary_alg::CTMRGAlgorithm, signs, info)
+    # TODO
+    decomp_alg_fixed = _fix_decomposition(decomposition_algorithm(alg.projector_alg), signs, info)
+    alg_fixed = @set alg.projector_alg.alg = decomp_alg_fixed
+    alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
+    return alg_fixed
+end
+
+struct ScramblingEnvGauge end
+struct ScramblingEnvGaugeC4v end
+
 """
 $(SIGNATURES)
 
@@ -6,7 +17,7 @@ This assumes that the `envfinal` is the result of one CTMRG iteration on `envpre
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
-function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, T}
+function gauge_fix(envfinal::CTMRGEnv{C, T}, ::ScramblingEnvGauge, envprev::CTMRGEnv{C, T}) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -54,6 +65,42 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
     return fix_global_phases(envprev, CTMRGEnv(cornersfix, edgesfix)), signs
 end
 
+# C4v specialized gauge fixing routine with Hermitian transfer matrix
+function gauge_fix(envfinal::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v, envprev::CTMRGEnv{C, T}) where {C, T}
+    # Check if spaces in envprev and envfinal are the same
+    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
+            space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
+    end
+    @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
+
+    # "general" algorithm from https://arxiv.org/abs/2311.11894
+    Tprev = envprev.edges[1, 1, 1]
+    Tfinal = envfinal.edges[1, 1, 1]
+
+    # Random Hermitian MPS of same bond dimension
+    # (make Hermitian such that T-M transfer matrix has real eigenvalues)
+    M = project_hermitian(randn(scalartype(Tfinal), space(Tfinal)))
+
+    # Find right fixed points of mixed transfer matrices
+    ρinit = randn(
+        scalartype(T), MPSKit._lastspace(Tfinal)' ← MPSKit._lastspace(M)'
+    )
+    ρprev = c4v_transfermatrix_fixedpoint(Tprev, M, ρinit)
+    ρfinal = c4v_transfermatrix_fixedpoint(Tfinal, M, ρinit)
+
+    # Decompose and multiply
+    Qprev, = left_orth!(ρprev)
+    Qfinal, = left_orth!(ρfinal)
+
+    σ = Qprev * Qfinal'
+
+    @tensor cornerfix[χ_in; χ_out] := σ[χ_in; χ1] * envfinal.corners[1][χ1; χ2] * conj(σ[χ_out; χ2])
+    @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
+        σ[χ_in; χ1] * envfinal.edges[1][χ1 D_in_above D_in_below; χ2] * conj(σ[χ_out; χ2])
+    return _c4v_env(cornerfix, edgefix), fill(σ, (4, 1, 1))
+end
+
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
 # because MPSKit is not compatible with AD
 # NOTE: the action of the transfer operator here is NOT the same as that of
@@ -80,6 +127,13 @@ function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     ignore_derivatives() do
         info.converged > 0 || @warn "eigsolve did not converge"
     end
+    return first(vecs)
+end
+function c4v_transfermatrix_fixedpoint(top, bottom, ρinit)
+    _, vecs, info = eigsolve(ρinit, 1, :LM, Lanczos()) do ρ
+        PEPSKit.mps_transfer_right(ρ, top, bottom)
+    end
+    info.converged > 0 || @warn "eigsolve did not converge"
     return first(vecs)
 end
 

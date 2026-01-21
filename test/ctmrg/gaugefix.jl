@@ -4,12 +4,14 @@ using PEPSKit
 using TensorKit
 
 using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
+using PEPSKit: ScramblingEnvGauge, ScramblingEnvGaugeC4v
 
 spacetypes = [ComplexSpace, Z2Space]
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 ctmrg_algs = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs = [:halfinfinite, :fullinfinite]
+gauge_algs = [ScramblingEnvGauge()]
 tol = 1.0e-6  # large tol due to χ=6
 χ = 6
 atol = 1.0e-4
@@ -37,17 +39,35 @@ for (S, T, unitcell) in Iterators.product(spacetypes, scalartypes, unitcells)
     push!(preconv, (S, T, unitcell) => result)
 end
 
-@testset "($S) - ($T) - ($unitcell) - ($ctmrg_alg) - ($projector_alg)" for (
-        S, T, unitcell, ctmrg_alg, projector_alg,
+# asymmetric CTMRG
+@testset "($S) - ($T) - ($unitcell) - ($ctmrg_alg) - ($projector_alg) - ($gauge_alg)" for (
+        S, T, unitcell, ctmrg_alg, projector_alg, gauge_alg,
     ) in Iterators.product(
-        spacetypes, scalartypes, unitcells, ctmrg_algs, projector_algs
+        spacetypes, scalartypes, unitcells, ctmrg_algs, projector_algs, gauge_algs
     )
     alg = ctmrg_alg(; tol, projector_alg)
     env_pre, psi = preconv[(S, T, unitcell)]
     n = InfiniteSquareNetwork(psi)
-    env_pre
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
-    env_fixed, = gauge_fix(env, env′)
+    env_fixed, = gauge_fix(env′, gauge_alg, env)
+    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
+end
+
+projector_algs_c4v = [:c4v_eigh, :c4v_qr]
+gauge_algs_c4v = [ScramblingEnvGaugeC4v()]
+
+# C4v CTMRG
+@testset "($S) - ($T) - ($projector_alg) - ($gauge_alg)" for (
+        S, T, unitcell, ctmrg_alg, projector_alg, gauge_alg,
+    ) in Iterators.product(
+        spacetypes, scalartypes, projector_algs_c4v, gauge_algs_c4v
+    )
+    alg = C4vCTMRG(; tol, projector_alg)
+    env_pre, psi = preconv[(S, T, unitcell)] # TODO
+    n = InfiniteSquareNetwork(psi)
+    env, = leading_boundary(env_pre, psi, alg)
+    env′, = ctmrg_iteration(n, env, alg)
+    env_fixed, = gauge_fix(env′, gauge_alg, env)
     @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end
