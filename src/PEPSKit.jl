@@ -29,6 +29,7 @@ include("Defaults.jl")  # Include first to allow for docstring interpolation wit
 
 include("utility/util.jl")
 include("utility/diffable_threads.jl")
+include("utility/eig.jl")
 include("utility/svd.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
@@ -71,6 +72,7 @@ include("algorithms/ctmrg/projectors.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
+include("algorithms/ctmrg/c4v.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")

@@ -1,8 +1,3 @@
-using MatrixAlgebraKit: NoTruncation, truncate
-using TensorKit: AdjointTensorMap, SectorDict, Factorizations.TruncationSpace,
-    throw_invalid_innerproduct, similarstoragetype
-const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
-
 """
 $(TYPEDEF)
 
@@ -53,7 +48,7 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
     - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
 """
-struct SVDAdjoint{F, R}
+struct SVDAdjoint{F, R} <: DecompositionAdjoint
     fwd_alg::F
     rrule_alg::R
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information

@@ -101,6 +101,11 @@ const svd_rrule_alg = :full # ∈ {:full, :gmres, :bicgstab, :arnoldi}
 const svd_rrule_broadening = 1.0e-13
 const krylovdim_factor = 1.4
 
+# eigh forward & reverse
+const eigh_fwd_alg = :qriteration
+const eigh_rrule_alg = :trunc
+const eigh_rrule_verbosity = 0
+
 # Projectors
 const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
 const projector_verbosity = 0
