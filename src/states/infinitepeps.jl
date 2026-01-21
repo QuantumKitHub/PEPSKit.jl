@@ -270,3 +270,34 @@ function ChainRulesCore.rrule(
     end
     return network, InfiniteSquareNetwork_pullback
 end
+
+## Gauge transform
+
+"""
+    gauge_transform(ψ::InfinitePEPS, XXinv)
+
+Transform the InfinitePEPS `ψ` with gauge transformations `XXinv` on its virtual bonds.
+
+`XXinv` consists of `(X, X⁻¹)` pairs on each virtual bond of `ψ`.
+```
+    T[r-1,c]
+    |
+    X⁻¹
+    |   [NORTH,r,c]
+    X
+    |
+    T[r,c]----X---X⁻¹----T[r,c+1]
+            [EAST,r,c]
+```
+"""
+function gauge_transform(ψ::InfinitePEPS, XXinv)
+    A2 = map(eachcoordinate(ψ)) do (r, c)
+        Xn = XXinv[NORTH, r, c][1]
+        Xe = XXinv[EAST, r, c][1]
+        Xs = XXinv[NORTH, _next(r, end), c][2]
+        Xw = XXinv[EAST, r, _prev(c, end)][2]
+        return @tensor t[p; n e s w] := ψ[r, c][p; n′ e′ s′ w′] *
+            Xn[n′; n] * Xe[e′; e] * Xs[s; s′] * Xw[w; w′]
+    end
+    return InfinitePEPS(A2)
+end

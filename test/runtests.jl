@@ -28,6 +28,9 @@ end
         @time @safetestset "Gauge Fixing" begin
             include("ctmrg/gaugefix.jl")
         end
+        @time @safetestset "Gauge Transform" begin
+            include("ctmrg/gaugetrans.jl")
+        end
         @time @safetestset "Unit cell" begin
             include("ctmrg/unitcell.jl")
         end
