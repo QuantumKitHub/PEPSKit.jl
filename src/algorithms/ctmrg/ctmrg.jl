@@ -19,7 +19,7 @@ function CTMRGAlgorithm(;
         maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
         verbosity = Defaults.ctmrg_verbosity,
         trunc = (; alg = Defaults.trunc),
-        svd_alg = (;),
+        decomposition_alg = (;),
         projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
     )
     # replace symbol with projector alg type
@@ -29,7 +29,7 @@ function CTMRGAlgorithm(;
     # parse CTMRG projector algorithm
 
     projector_algorithm = ProjectorAlgorithm(;
-        alg = projector_alg, svd_alg, trunc, verbosity
+        alg = projector_alg, decomposition_alg, trunc, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)

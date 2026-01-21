@@ -14,7 +14,7 @@ Keyword argument parser returning the appropriate `ProjectorAlgorithm` algorithm
 """
 function ProjectorAlgorithm(;
         alg = Defaults.projector_alg,
-        svd_alg = (;),
+        decomposition_alg = (;),
         trunc = (;),
         verbosity = Defaults.projector_verbosity,
     )
@@ -24,7 +24,7 @@ function ProjectorAlgorithm(;
     alg_type = PROJECTOR_SYMBOLS[alg]
 
     # parse SVD forward & rrule algorithm
-    svd_algorithm = _alg_or_nt(SVDAdjoint, svd_alg)
+    decomposition_algorithm = _alg_or_nt(SVDAdjoint, decomposition_alg) # TODO: generalize this to DecompositionAdjoint
 
     # parse truncation scheme
     truncation_strategy = if trunc isa TruncationStrategy
@@ -35,13 +35,14 @@ function ProjectorAlgorithm(;
         throw(ArgumentError("unknown trunc $trunc"))
     end
 
-    return alg_type(svd_algorithm, truncation_strategy, verbosity)
+    return alg_type(decomposition_algorithm, truncation_strategy, verbosity)
 end
 
-function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
-    if alg.svd_alg isa SVDAdjoint{<:FixedSVD}
-        fwd_alg = alg.svd_alg.fwd_alg
-        fix_svd = if isfullsvd(alg.svd_alg.fwd_alg)
+function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
+    decomp_alg = decomposition_algorithm(alg)
+    if decomp_alg isa SVDAdjoint{<:FixedSVD}
+        fwd_alg = decomp_alg.fwd_alg
+        fix_svd = if isfullsvd(decomp_alg.fwd_alg)
             FixedSVD(
                 fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
                 fwd_alg.U_full[dir, r, c], fwd_alg.S_full[dir, r, c], fwd_alg.V_full[dir, r, c],
@@ -52,9 +53,9 @@ function svd_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
                 nothing, nothing, nothing,
             )
         end
-        return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = alg.svd_alg.rrule_alg)
+        return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = decomp_alg.rrule_alg)
     else
-        return alg.svd_alg
+        return decomp_alg
     end
 end
 
