@@ -27,7 +27,9 @@ function CTMRGAlgorithm(;
     alg_type = CTMRG_SYMBOLS[alg]
 
     # parse CTMRG projector algorithm
-
+    if alg == :c4v && projector_alg == Defaults.projector_alg
+        projector_alg = Defaults.projector_alg_c4v
+    end
     projector_algorithm = ProjectorAlgorithm(;
         alg = projector_alg, decomposition_alg, trunc, verbosity
     )
@@ -76,7 +78,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `svd_alg::Union{<:SVDAdjoint,NamedTuple}` : SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
+* `decomposition_alg::Union{<:DecompositionAdjoint,NamedTuple}` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
