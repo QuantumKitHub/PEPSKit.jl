@@ -47,7 +47,7 @@ end
 function c4v_projector(enlarged_corner, alg::C4vEighProjector)
     hermitian_corner = 0.5 * (enlarged_corner + enlarged_corner') / norm(enlarged_corner)
     trunc = truncation_strategy(alg, enlarged_corner)
-    D, V, info = eigh_trunc!(hermitian_corner, decomposition_algorithm(alg); trunc)
+    D, U, info = eigh_trunc!(hermitian_corner, decomposition_algorithm(alg); trunc)
 
     # Check for degenerate eigenvalues
     Zygote.isderiving() && ignore_derivatives() do
@@ -57,7 +57,7 @@ function c4v_projector(enlarged_corner, alg::C4vEighProjector)
         end
     end
 
-    return D / norm(D), V, (; D, V, info...)
+    return D / norm(D), U, (; D, U, info...)
 end
 
 function c4v_projector(enlarged_corner, alg::C4vQRProjector)
@@ -90,6 +90,14 @@ end
 function physical_flip(A::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     return flip(A, 2:N)
 end
+function project_hermitian(E::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
+    E´ = (E + physical_flip(_dag(E))) / 2
+    return E´
+end
+function project_hermitian(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
+    C´ = (C + C') / 2
+    return C´
+end
 
 # should perform this check at the beginning of `leading_boundary` really...
 function check_symmetry(state, ::RotateReflect; atol = 1.0e-10)
@@ -117,6 +125,6 @@ end
 function initialize_random_c4v_env(Vpeps::ElementarySpace, Venv::ElementarySpace, T = ComplexF64)
     corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
     edge₀ = randn(T, Venv ⊗ Vpeps ⊗ Vpeps' ← Venv)
-    edge₀ = 0.5 * (edge₀ + physical_flip(_dag(edge₀)))
+    edge₀ = project_hermitian(edge₀)
     return CTMRGEnv(corner₀, edge₀)
 end

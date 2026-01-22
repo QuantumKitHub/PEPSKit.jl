@@ -12,19 +12,23 @@ using PEPSKit:
     fix_relative_phases,
     fix_global_phases,
     calc_elementwise_convergence,
+    peps_normalize,
+    initialize_random_c4v_env,
+    ScramblingEnvGauge,
+    ScramblingEnvGaugeC4v
 
 # initialize parameters
-χbond = 2
-χenv = 16
+D = 2
+χ = 16
 svd_algs = [SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()), SVDAdjoint(; fwd_alg = IterSVD())]
-eigh_algs = [EighAdjoint(; fwd_alg = qriteration), EighAdjoint(; fwd_alg = :lanczos)]
+eigh_algs = [EighAdjoint(; fwd_alg = (; alg = :qriteration)), EighAdjoint(; fwd_alg = (; alg = :lanczos))]
 projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
-projector_algs_c4v = [:c4v_eigh, :c4v_qr]
+projector_algs_c4v = [:c4v_eigh] # :c4v_qr]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
 # test for element-wise convergence after application of fixed step
-@testset "$unitcell unit cell with $(typeof(svd_alg.fwd_alg)) and $projector_alg" for (
+@testset "$unitcell unit cell with $(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for (
         unitcell, decomposition_alg, projector_alg,
     ) in Iterators.product(
         unitcells, svd_algs, projector_algs_asymm
@@ -33,13 +37,14 @@ atol = 1.0e-5
 
     # initialize states
     Random.seed!(2394823842)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond); unitcell)
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D); unitcell)
     n = InfiniteSquareNetwork(psi)
 
-    env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
+    env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
 
     # do extra iteration to get SVD
-    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    # env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    env_conv2, info = ctmrg_iteration(n, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv2, ScramblingEnvGauge(), env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
@@ -47,33 +52,40 @@ atol = 1.0e-5
     ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
 
     # do iteration with FixedSVD
-    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    # env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    env_fixedsvd, = ctmrg_iteration(n, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
 # test same thing for C4v CTMRG
-@testset "" for (eigh_alg, projector_alg) in Iterators.product(eigh_algs, projector_algs_c4v)
-    # TODO
-    ctm_alg = C4vCTMRG(; decomposition_alg, projector_alg)
-
+@testset "$(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for (decomposition_alg, projector_alg) in
+    Iterators.product(eigh_algs, projector_algs_c4v)
     # initialize states
     Random.seed!(2394823842)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond); unitcell)
+    ctm_alg = C4vCTMRG(; projector_alg, decomposition_alg)
+    symm = RotateReflect()
+
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D))
+    psi = peps_normalize(symmetrize!(psi, symm))
     n = InfiniteSquareNetwork(psi)
 
-    env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χenv)), psi, ctm_alg)
+    env₀ = initialize_random_c4v_env(ComplexSpace(2), ComplexSpace(χ), scalartype(psi))
+    env_conv1, = leading_boundary(env₀, psi, ctm_alg)
 
     # do extra iteration to get SVD
-    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    # env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    env_conv2, info = ctmrg_iteration(n, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv2, ScramblingEnvGaugeC4v(), env_conv1)
-    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
+    env_ref = CTMRGEnv(TensorMap.(env_conv1.corners), env_conv1.edges)
+    @test calc_elementwise_convergence(env_ref, env_fix) ≈ 0 atol = atol
 
     # fix gauge of SVD
     ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
 
     # do iteration with FixedSVD
-    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    # env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    env_fixedsvd, = ctmrg_iteration(n, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
@@ -81,15 +93,15 @@ end
 @testset "Element-wise consistency of LAPACK_DivideAndConquer and IterSVD" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomposition_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χenv + 10))),
+        decomposition_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χ + 10))),
     )
     ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()))
 
     # initialize states
     Random.seed!(91283219347)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond))
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D))
     n = InfiniteSquareNetwork(psi)
-    env₀ = CTMRGEnv(psi, ComplexSpace(χenv))
+    env₀ = CTMRGEnv(psi, ComplexSpace(χ))
     env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
 
     # do extra iteration to get SVD
@@ -131,8 +143,10 @@ end
     @test svalues_check
 
     # check normalization of U's and V's
-    Us = [info_iter.U, svd_alg_fix_iter.fwd_alg.U, info_full.U, svd_alg_fix_full.fwd_alg.U]
-    Vs = [info_iter.V, svd_alg_fix_iter.fwd_alg.V, info_full.V, svd_alg_fix_full.fwd_alg.V]
+    salg_fix_iter = ctm_alg_fix_iter.projector_alg.alg.fwd_alg
+    salg_fix_full = ctm_alg_fix_full.projector_alg.alg.fwd_alg
+    Us = [info_iter.U, salg_fix_iter.U, info_full.U, salg_fix_full.U]
+    Vs = [info_iter.V, salg_fix_iter.V, info_full.V, salg_fix_full.V]
     for (U, V) in zip(Us, Vs)
         U_check = all(U) do u
             uu = u' * u

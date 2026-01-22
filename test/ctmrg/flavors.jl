@@ -90,4 +90,5 @@ end
         env₀, peps; alg = :c4v, projector_alg,
         decomposition_alg = (; fwd_alg = (; alg = eigh_alg))
     )
+    @test env isa CTMRGEnv
 end

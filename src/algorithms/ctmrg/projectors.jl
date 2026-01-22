@@ -27,9 +27,9 @@ function ProjectorAlgorithm(;
 
     decomposition_algorithm = if alg in [:halfinfinite, :fullinfinite]
         _alg_or_nt(SVDAdjoint, decomposition_alg)
-    elseif alg in [:c4v_eigh,]
+    elseif alg in [:c4v_eigh]
         _alg_or_nt(EighAdjoint, decomposition_alg)
-    elseif alg in [:c4v_qr,]
+    elseif alg in [:c4v_qr]
         _alg_or_nt(QRAdjoint, decomposition_alg)
     end # TODO: how do we solve this in a proper way?
 

@@ -44,6 +44,8 @@ include("networks/infinitesquarenetwork.jl")
 include("states/infinitepeps.jl")
 include("states/infinitepartitionfunction.jl")
 
+include("utility/symmetrization.jl")
+
 include("operators/infinitepepo.jl")
 include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
@@ -91,8 +93,6 @@ include("algorithms/bp/gaugefix.jl")
 include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/correlators.jl")
-
-include("utility/symmetrization.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
