@@ -46,9 +46,7 @@ between two states specified by the bond matrices `b1`, `b2`
             └--------------------┘
 ```
 """
-function inner_prod(
-        benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
-    ) where {T <: Number, S <: ElementarySpace}
+function inner_prod(benv::BondEnv, b1::MPSBondTensor, b2::MPSBondTensor)
     val = @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
     return val
 end
@@ -62,9 +60,7 @@ between two states specified by the bond matrices `b1`, `b2`
     F(b1, b2) = (⟨b1|b2⟩ ⟨b2|b1⟩) / (⟨b1|b1⟩ ⟨b2|b2⟩)
 ```
 """
-function fidelity(
-        benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
-    ) where {T <: Number, S <: ElementarySpace}
+function fidelity(benv::BondEnv, b1::MPSBondTensor, b2::MPSBondTensor)
     return abs2(inner_prod(benv, b1, b2)) /
         real(inner_prod(benv, b1, b1) * inner_prod(benv, b2, b2))
 end
@@ -92,7 +88,7 @@ function _fet_message(
 end
 
 """
-    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) -> U, S, V, info
+    fullenv_truncate(b0::MPSBondTensor, benv::BondEnv, alg::FullEnvTruncation)
 
 Perform full environment truncation algorithm from
 [Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018) on `benv`.
@@ -220,9 +216,7 @@ Returns the SVD result of the new bond matrix `U`, `S`, `V`, as well as an infor
 * `Δfid` : Last fidelity difference.
 * `Δs` : Last singular value difference.
 """
-function fullenv_truncate(
-        b0::AbstractTensorMap{T, S, 1, 1}, benv::BondEnv{T, S}, alg::FullEnvTruncation
-    ) where {T <: Number, S <: ElementarySpace}
+function fullenv_truncate(b0::MPSBondTensor, benv::BondEnv, alg::FullEnvTruncation)
     verbose = (alg.check_interval > 0)
     # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
     @assert codomain(benv) == domain(benv)

@@ -11,19 +11,15 @@ Construct the tensor
     ┌-----------------------------------┐
     |   ┌----┐                          |
     └---|    |- DX0     Db0 - b -- DY0 -┘
-        |    |                ↓
-        |benv|                db
-        |    |                ↓
+        |benv|
     ┌---|    |- DX1     Db1 - b† - DY1 -┐
     |   └----┘                          |
     └-----------------------------------┘
 ```
 """
-function _tensor_Ra(
-        benv::BondEnv{T, S}, b::AbstractTensorMap{T, S, 2, 1}
-    ) where {T <: Number, S <: ElementarySpace}
+function _tensor_Ra(benv::BondEnv, b::MPSBondTensor)
     return @autoopt @tensor Ra[DX1 Db1; DX0 Db0] := (
-        benv[DX1 DY1; DX0 DY0] * b[Db0 DY0; db] * conj(b[Db1 DY1; db])
+        benv[DX1 DY1; DX0 DY0] * b[Db0; DY0] * conj(b[Db1; DY1])
     )
 end
 
@@ -35,19 +31,15 @@ Construct the tensor
     ┌-----------------------------------┐
     |   ┌----┐                          |
     └---|    |- DX0 -- (a2 b2) -- DY0 --┘
-        |    |         ↓     ↓
-        |benv|         da    db
-        |    |               ↓
+        |benv|
     ┌---|    |- DX1   Db1 -- b† - DY1 --┐
     |   └----┘                          |
     └-----------------------------------┘
 ```
 """
-function _tensor_Sa(
-        benv::BondEnv{T, S}, b::AbstractTensorMap{T, S, 2, 1}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor Sa[DX1 Db1; da] := (
-        benv[DX1 DY1; DX0 DY0] * conj(b[Db1 DY1; db]) * a2b2[DX0 DY0; da db]
+function _tensor_Sa(benv::BondEnv, b::MPSBondTensor, a2b2::MPSBondTensor)
+    return @autoopt @tensor Sa[DX1; Db1] := (
+        benv[DX1 DY1; DX0 DY0] * conj(b[Db1; DY1]) * a2b2[DX0; DY0]
     )
 end
 
@@ -59,19 +51,15 @@ Construct the tensor
     ┌-----------------------------------┐
     |   ┌----┐                          |
     └---|    |- DX0 - a -- Da0     DY0 -┘
-        |    |        ↓
-        |benv|        da
-        |    |        ↓
+        |benv|
     ┌---|    |- DX1 - a† - Da1     DY1 -┐
     |   └----┘                          |
     └-----------------------------------┘
 ```
 """
-function _tensor_Rb(
-        benv::BondEnv{T, S}, a::AbstractTensorMap{T, S, 2, 1}
-    ) where {T <: Number, S <: ElementarySpace}
+function _tensor_Rb(benv::BondEnv, a::MPSBondTensor)
     return @autoopt @tensor Rb[Da1 DY1; Da0 DY0] := (
-        benv[DX1 DY1; DX0 DY0] * a[DX0 Da0; da] * conj(a[DX1 Da1; da])
+        benv[DX1 DY1; DX0 DY0] * a[DX0; Da0] * conj(a[DX1; Da1])
     )
 end
 
@@ -83,63 +71,16 @@ Construct the tensor
     ┌-----------------------------------┐
     |   ┌----┐                          |
     └---|    |- DX0 -- (a2 b2) -- DY0 --┘
-        |    |         ↓     ↓
-        |benv|         da    db
-        |    |         ↓
+        |benv|
     ┌---|    |- DX1 -- a† - Da1   DY1 --┐
     |   └----┘                          |
     └-----------------------------------┘
 ```
 """
-function _tensor_Sb(
-        benv::BondEnv{T, S}, a::AbstractTensorMap{T, S, 2, 1}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor Sb[Da1 DY1; db] := (
-        benv[DX1 DY1; DX0 DY0] * conj(a[DX1 Da1; da]) * a2b2[DX0 DY0; da db]
+function _tensor_Sb(benv::BondEnv, a::MPSBondTensor, a2b2::MPSBondTensor)
+    return @autoopt @tensor Sb[Da1; DY1] := (
+        benv[DX1 DY1; DX0 DY0] * conj(a[DX1; Da1]) * a2b2[DX0; DY0]
     )
-end
-
-"""
-$(SIGNATURES)
-
-Calculate the inner product <a1,b1|a2,b2>
-```
-    ┌--------------------------------┐
-    |   ┌----┐                       |
-    └---|    |- DX0 - (a2 b2) - DY0 -┘
-        |    |        ↓    ↓
-        |benv|        da   db
-        |    |        ↓    ↓
-    ┌---|    |- DX1 - (a1 b1)†- DY1 -┐
-    |   └----┘                       |
-    └--------------------------------┘
-```
-"""
-function inner_prod(
-        benv::BondEnv{T, S}, a1b1::AbstractTensorMap{T, S, 2, 2}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor benv[DX1 DY1; DX0 DY0] *
-        conj(a1b1[DX1 DY1; da db]) *
-        a2b2[DX0 DY0; da db]
-end
-
-"""
-$(SIGNATURES)
-
-Calculate the fidelity between two evolution steps
-```
-        |⟨a1,b1|a2,b2⟩|^2
-    --------------------------
-    ⟨a1,b1|a1,b1⟩⟨a2,b2|a2,b2⟩
-```
-"""
-function fidelity(
-        benv::BondEnv{T, S}, a1b1::AbstractTensorMap{T, S, 2, 2}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    b12 = inner_prod(benv, a1b1, a2b2)
-    b11 = inner_prod(benv, a1b1, a1b1)
-    b22 = inner_prod(benv, a2b2, a2b2)
-    return abs2(b12) / abs(b11 * b22)
 end
 
 """
@@ -148,19 +89,10 @@ $(SIGNATURES)
 Contract the axis between `a` and `b` tensors
 ```
     -- DX - a - D - b - DY --
-            ↓       ↓
-            da      db
 ```
 """
-function _combine_ab(
-        a::AbstractTensorMap{T, S, 2, 1}, b::AbstractTensorMap{T, S, 1, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @tensor ab[DX DY; da db] := a[DX da; D] * b[D; db DY]
-end
-function _combine_ab(
-        a::AbstractTensorMap{T, S, 2, 1}, b::AbstractTensorMap{T, S, 2, 1}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @tensor ab[DX DY; da db] := a[DX D; da] * b[D DY; db]
+function _combine_ab(a::MPSBondTensor, b::MPSBondTensor)
+    return @tensor ab[DX; DY] := a[DX; D] * b[D; DY]
 end
 
 """
@@ -173,8 +105,8 @@ Calculate the cost function
 ```
 """
 function cost_function_als(
-        benv::BondEnv{T, S}, a1b1::AbstractTensorMap{T, S, 2, 2}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
+        benv::BondEnv, a1b1::MPSBondTensor, a2b2::MPSBondTensor
+    )
     t1 = inner_prod(benv, a1b1, a1b1)
     t2 = inner_prod(benv, a2b2, a2b2)
     t3 = inner_prod(benv, a1b1, a2b2)
@@ -189,20 +121,14 @@ Solve the equations `Rx x = Sx` (x = a, b) with initial guess `x0`
     ┌---------------------------┐
     |   ┌----┐                  |
     └---|    |--- 1 -- x -- 2 --┘
-        |    |         ↓
-        | Rx |        -3
-        |    |
+        | Rx |
     ┌---|    |--- -1       -2 --┐
     |   └----┘                  |
     └---------------------------┘
 ```
 """
-function _solve_ab(
-        Rx::AbstractTensorMap{T, S, 2, 2},
-        Sx::AbstractTensorMap{T, S, 2, 1},
-        x0::AbstractTensorMap{T, S, 2, 1},
-    ) where {T <: Number, S <: ElementarySpace}
-    f(x) = (@tensor Sx2[-1 -2; -3] := Rx[-1 -2; 1 2] * x[1 2; -3])
+function _solve_ab(Rx::BondEnv, Sx::MPSBondTensor, x0::MPSBondTensor)
+    f(x) = (@tensor Sx2[-1; -2] := Rx[-1 -2; 1 2] * x[1; 2])
     x1, info = linsolve(f, Sx, x0, 0, 1)
     return x1, info
 end

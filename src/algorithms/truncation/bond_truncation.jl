@@ -35,7 +35,7 @@ function _als_message(
 end
 
 """
-    bond_truncate(a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}, benv::BondEnv{T,S}, alg) -> U, S, V, info
+    bond_truncate(a::MPSBondTensor, b::MPSBondTensor,benv::BondEnv, alg)
 
 After time-evolving the reduced tensors `a` and `b` connected by a bond, 
 truncate the bond dimension using the bond environment tensor `benv`.
@@ -43,44 +43,26 @@ truncate the bond dimension using the bond environment tensor `benv`.
     ┌-----------------------┐
     |   ┌----┐              |
     └---|    |-- a === b ---┘
-        |benv|   ↓     ↓
+        |benv|
     ┌---|    |-- a† == b† --┐
     |   └----┘              |
     └-----------------------┘
 ```
-The truncation algorithm `alg` can be either `FullEnvTruncation` or `ALSTruncation`. 
-The index order of `a` or `b` is
-```
-    1 -a/b- 3
-        ↓       a[1 2; 3]
-        2       b[1; 2 3]
-```
+ The truncation algorithm `alg` can be either `FullEnvTruncation` or `ALSTruncation`. 
 """
 function bond_truncate(
-        a::AbstractTensorMap{T, S, 2, 1},
-        b::AbstractTensorMap{T, S, 1, 2},
-        benv::BondEnv{T, S},
-        alg::ALSTruncation,
-    ) where {T <: Number, S <: ElementarySpace}
-    # dual check of physical index
-    @assert !isdual(space(a, 2))
-    @assert !isdual(space(b, 2))
+        a::MPSBondTensor, b::MPSBondTensor,
+        benv::BondEnv, alg::ALSTruncation
+    )
     @assert codomain(benv) == domain(benv)
     need_flip = isdual(space(b, 1))
     time00 = time()
     verbose = (alg.check_interval > 0)
     a2b2 = _combine_ab(a, b)
     # initialize truncated a, b
-    perm_ab = ((1, 3), (4, 2))
-    a, s0, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trunc)
+    # TODO: initial truncation with effect of `benv`
+    a, s0, b = svd_trunc(a2b2; trunc = alg.trunc)
     a, b = absorb_s(a, s0, b)
-    #= temporarily reorder axes of a and b to
-        1 -a/b- 2
-            ↓
-            3
-    =#
-    perm = ((1, 3), (2,))
-    a, b = permute(a, perm), permute(b, perm)
     ab = _combine_ab(a, b)
     # cost function will be normalized by initial value
     cost00 = cost_function_als(benv, ab, a2b2)
@@ -109,7 +91,7 @@ function bond_truncate(
         cost = cost_function_als(benv, ab, a2b2)
         fid = fidelity(benv, ab, a2b2)
         # TODO: replace with truncated svdvals (without calculating u, vh)
-        _, s, _ = svd_trunc!(permute(ab, perm_ab); trunc = alg.trunc)
+        _, s, _ = svd_trunc!(ab; trunc = alg.trunc)
         # fidelity, cost and normalized bond-s change
         s_nrm = norm(s0, Inf)
         Δs = ((space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN) / s_nrm
@@ -136,7 +118,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = svd_trunc!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trunc)
+    a, s, b = svd_trunc!(_combine_ab(a, b); trunc = alg.trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
@@ -145,46 +127,15 @@ function bond_truncate(
 end
 
 function bond_truncate(
-        a::AbstractTensorMap{T, S, 2, 1},
-        b::AbstractTensorMap{T, S, 1, 2},
-        benv::BondEnv{T, S},
-        alg::FullEnvTruncation,
-    ) where {T <: Number, S <: ElementarySpace}
-    # dual check of physical index
-    @assert !isdual(space(a, 2))
-    @assert !isdual(space(b, 2))
+        a::MPSBondTensor, b::MPSBondTensor,
+        benv::BondEnv, alg::FullEnvTruncation
+    )
     @assert codomain(benv) == domain(benv)
     need_flip = isdual(space(b, 1))
-    #= initialize bond matrix using QR as `Ra Lb`
-
-        --- a == b ---   ==>   - Qa ← Ra == Rb ← Qb -
-            ↓    ↓               ↓               ↓
-    =#
-    Qa, Ra = left_orth(a)
-    Rb, Qb = right_orth(b)
-    @assert !isdual(space(Ra, 1)) && !isdual(space(Qb, 1))
-    @tensor b0[-1; -2] := Ra[-1 1] * Rb[1 -2]
-    #= initialize bond environment around `Ra Lb`
-
-        ┌--------------------------------------┐
-        |   ┌----┐                             |
-        └---|    |- 3 - Qa - -3   -4 - Qb - 4 -┘
-            |    |      ↓              ↓
-            |benv|      5              6
-            |    |      ↓              ↓
-        ┌---|    |- 1 - Qa†- -1   -2 - Qb†- 2 -┐
-        |   └----┘                             |
-        └--------------------------------------┘
-    =#
-    @tensor benv2[-1 -2; -3 -4] := (
-        benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
-    )
     # optimize bond matrix
-    u, s, vh, info = fullenv_truncate(b0, benv2, alg)
-    u, vh = absorb_s(u, s, vh)
-    # truncate a, b tensors with u, s, vh
-    @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
-    @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
+    ab0 = _combine_ab(a, b)
+    u, s, vh, info = fullenv_truncate(ab0, benv, alg)
+    a, b = absorb_s(u, s, vh)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end
