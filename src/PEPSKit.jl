@@ -29,8 +29,9 @@ include("Defaults.jl")  # Include first to allow for docstring interpolation wit
 
 include("utility/util.jl")
 include("utility/diffable_threads.jl")
-include("utility/eig.jl")
+include("utility/eigh.jl")
 include("utility/svd.jl")
+include("utility/qr.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
@@ -104,6 +105,7 @@ export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
+export EighAdjoint, C4vCTMRG, C4vEighProjector, C4vQRProjector
 export LocalOperator, physicalspace
 export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function

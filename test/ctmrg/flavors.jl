@@ -4,24 +4,27 @@ using MatrixAlgebraKit
 using TensorKit
 using MPSKit
 using PEPSKit
+using PEPSKit: peps_normalize, initialize_random_c4v_env, initialize_singlet_c4v_env
 
 # initialize parameters
-χbond = 2
-χenv = 16
+D = 2
+χ = 16
 unitcells = [(1, 1), (3, 4)]
 projector_algs_asymm = [:halfinfinite, :fullinfinite]
-projector_algs_c4v = [:c4v_eigh, :c4v_qr]
+projector_algs_c4v = [:c4v_eigh] # :c4v_qr]
+Ts = [Float64, ComplexF64]
+eigh_algs = [:qriteration, :lanczos]
 
 @testset "$(unitcell) unit cell with $projector_alg" for (unitcell, projector_alg) in
     Iterators.product(unitcells, projector_algs_asymm)
     # compute environments
     Random.seed!(32350283290358)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond); unitcell)
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D); unitcell)
     env_sequential, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg = :sequential, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :sequential, projector_alg
     )
     env_simultaneous, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg = :simultaneous, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :simultaneous, projector_alg
     )
 
     # compare norms
@@ -69,8 +72,22 @@ end
     @test all(space.(env.edges) .== space.(env2.edges))
 end
 
-@testset "C4v CTMRG using $alg and $projector_alg" for (alg, projector_alg) in
-    Iterators.product([:c4v], projector_algs_c4v)
+@testset "C4v with ($T) - ($projector_alg) - ($eigh_alg)" for (projector_alg, T, eigh_alg) in
+    Iterators.product(projector_algs_c4v, Ts, eigh_algs)
 
-    # TODO
+    Random.seed!(29358293829382)
+    symm = RotateReflect()
+    Vphys = ComplexSpace(2)
+    Vpeps = ComplexSpace(D)
+    Venv = ComplexSpace(χ)
+
+    peps = InfinitePEPS(randn, T, Vphys, Vpeps, Vpeps)
+    peps = peps_normalize(symmetrize!(peps, symm))
+
+    # boundary_alg = C4vCTMRG(; projector_alg, decomposition_alg = (; fwd_alg))
+    env₀ = initialize_random_c4v_env(Vpeps, Venv, scalartype(peps))
+    env, = leading_boundary(
+        env₀, peps; alg = :c4v, projector_alg,
+        decomposition_alg = (; fwd_alg = (; alg = eigh_alg))
+    )
 end

@@ -12,24 +12,24 @@ using PEPSKit:
     fix_relative_phases,
     fix_global_phases,
     calc_elementwise_convergence,
-    fix_decomposition,
-    gauge_fix
 
 # initialize parameters
 χbond = 2
 χenv = 16
 svd_algs = [SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()), SVDAdjoint(; fwd_alg = IterSVD())]
-projector_algs = [:halfinfinite] #, :fullinfinite]
+eigh_algs = [EighAdjoint(; fwd_alg = qriteration), EighAdjoint(; fwd_alg = :lanczos)]
+projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
+projector_algs_c4v = [:c4v_eigh, :c4v_qr]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
 # test for element-wise convergence after application of fixed step
 @testset "$unitcell unit cell with $(typeof(svd_alg.fwd_alg)) and $projector_alg" for (
-        unitcell, svd_alg, projector_alg,
+        unitcell, decomposition_alg, projector_alg,
     ) in Iterators.product(
-        unitcells, svd_algs, projector_algs
+        unitcells, svd_algs, projector_algs_asymm
     )
-    ctm_alg = SimultaneousCTMRG(; svd_alg, projector_alg)
+    ctm_alg = SimultaneousCTMRG(; decomposition_alg, projector_alg)
 
     # initialize states
     Random.seed!(2394823842)
@@ -52,13 +52,10 @@ atol = 1.0e-5
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
-eigh_algs = [EighAdjoint(; fwd_alg = qriteration), EighAdjoint(; fwd_alg = :lanczos)]
-projector_algs = [:c4v_eigh, :c4v_qr]
-
 # test same thing for C4v CTMRG
-@testset "" for (eigh_alg, projector_alg) in Iterators.product(eigh_algs, projector_algs)
+@testset "" for (eigh_alg, projector_alg) in Iterators.product(eigh_algs, projector_algs_c4v)
     # TODO
-    ctm_alg = C4vCTMRG(; eigh_alg, projector_alg)
+    ctm_alg = C4vCTMRG(; decomposition_alg, projector_alg)
 
     # initialize states
     Random.seed!(2394823842)
@@ -84,9 +81,9 @@ end
 @testset "Element-wise consistency of LAPACK_DivideAndConquer and IterSVD" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        svd_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χenv + 10))),
+        decomposition_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χenv + 10))),
     )
-    ctm_alg_full = SimultaneousCTMRG(; svd_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()))
+    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()))
 
     # initialize states
     Random.seed!(91283219347)

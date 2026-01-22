@@ -4,7 +4,7 @@ using Accessors
 using Zygote
 using TensorKit, KrylovKit, PEPSKit
 using PEPSKit:
-    ctmrg_iteration, fix_relative_phases, fix_global_phases, fix_decomposition, ScramblingEnvGauge
+    ctmrg_iteration, fix_relative_phases, fix_global_phases, ScramblingEnvGauge
 
 algs = [
     (:fixed, SimultaneousCTMRG(; projector_alg = :halfinfinite)),

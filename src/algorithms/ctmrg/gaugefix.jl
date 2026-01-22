@@ -1,12 +1,38 @@
-function gauge_fix(boundary_alg::CTMRGAlgorithm, signs, info)
-    # TODO
-    decomp_alg_fixed = _fix_decomposition(decomposition_algorithm(alg.projector_alg), signs, info)
-    alg_fixed = @set alg.projector_alg.alg = decomp_alg_fixed
-    alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
+
+"""
+    gauge_fix(alg::CTMRGAlgorithm, signs, info)
+    gauge_fix(alg::ProjectorAlgorithm, signs, info)
+
+Fix the free gauges of the tensor decompositions associated with `alg`.
+"""
+function gauge_fix(alg::CTMRGAlgorithm, signs, info)
+    alg_fixed = @set alg.projector_alg = gauge_fix(alg.projector_alg, signs, info)
+    return alg_fixed
+end
+function gauge_fix(alg::ProjectorAlgorithm, signs, info)
+    decomposition_alg_fixed = gauge_fix(alg.alg, signs, info) # every ProjectorAlgorithm needs an `alg` field
+    alg_fixed = @set alg.alg = decomposition_alg_fixed 
+    alg_fixed = @set alg_fixed.trunc = notrunc()
     return alg_fixed
 end
 
+"""
+$(TYPEDEF)
+
+CTMRG environment gauge fixing algorithm implementing the "general" technique from
+https://arxiv.org/abs/2311.11894. This works by constructing a transfer matrix consisting
+of an edge tensor and a random MPS, thus scrambling potential degeneracies, and then
+performing a QR decomposition to extract the gauge signs. This is adapted accordingly for
+asymmetric CTMRG algorithms using multi-site unit cell transfer matrices.
+"""
 struct ScramblingEnvGauge end
+
+"""
+$(TYPEDEF)
+
+C4v-symmetric equivalent of the [ScramblingEnvGauge`](@ref) environment gauge fixing
+algorithm.
+"""
 struct ScramblingEnvGaugeC4v end
 
 """
@@ -25,7 +51,6 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, ::ScramblingEnvGauge, envprev::CTMR
     end
     @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
 
-    # Try the "general" algorithm from https://arxiv.org/abs/2311.11894
     signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
@@ -98,7 +123,7 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v, envprev::C
     @tensor cornerfix[χ_in; χ_out] := σ[χ_in; χ1] * envfinal.corners[1][χ1; χ2] * conj(σ[χ_out; χ2])
     @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
         σ[χ_in; χ1] * envfinal.edges[1][χ1 D_in_above D_in_below; χ2] * conj(σ[χ_out; χ2])
-    return _c4v_env(cornerfix, edgefix), fill(σ, (4, 1, 1))
+    return CTMRGEnv(cornerfix, edgefix), fill(σ, (4, 1, 1))
 end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix

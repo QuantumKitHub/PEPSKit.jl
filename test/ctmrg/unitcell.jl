@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iteration, fix_decomposition
+using PEPSKit: _prev, _next, ctmrg_iteration, gauge_fix
 using TensorKit
 
 # settings
@@ -42,8 +42,8 @@ function test_unitcell(
     _, signs = gauge_fix(env″, ScramblingEnvGauge(), env′)
     @test signs isa Array
     return if ctm_alg isa SimultaneousCTMRG # also test :fixed mode gauge fixing for simultaneous CTMRG
-        svd_alg_fixed_full = fix_decomposition(SVDAdjoint(; fwd_alg = (; alg = :sdd)), signs, info)
-        svd_alg_fixed_iter = fix_decomposition(SVDAdjoint(; fwd_alg = (; alg = :iterative)), signs, info)
+        svd_alg_fixed_full = gauge_fix(SVDAdjoint(; fwd_alg = (; alg = :sdd)), signs, info)
+        svd_alg_fixed_iter = gauge_fix(SVDAdjoint(; fwd_alg = (; alg = :iterative)), signs, info)
         @test svd_alg_fixed_full isa SVDAdjoint
         @test svd_alg_fixed_iter isa SVDAdjoint
     end

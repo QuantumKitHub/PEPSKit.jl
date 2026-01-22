@@ -278,7 +278,7 @@ function _rrule(
     return (env_fixed, info), leading_boundary_fixed_pullback
 end
 
-function fix_decomposition(alg::SVDAdjoint, signs, info)
+function gauge_fix(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
     rowsize, colsize = size(signs, 2), size(signs, 3)
     signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, r, c)
@@ -311,7 +311,7 @@ function fix_decomposition(alg::SVDAdjoint, signs, info)
         rrule_alg = alg.rrule_alg,
     )
 end
-function fix_decomposition(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
+function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     # fix kept U and V only since iterative SVD doesn't have access to full spectrum
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     return SVDAdjoint(;
@@ -319,7 +319,7 @@ function fix_decomposition(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
         rrule_alg = alg.rrule_alg,
     )
 end
-function fix_decomposition(alg::EighAdjoint, signs, info)
+function gauge_fix(alg::EighAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full V on truncated subspace
     σ = signs[1]
     extended_σ = zeros(scalartype(σ), space(info.D_full))
@@ -338,7 +338,7 @@ function fix_decomposition(alg::EighAdjoint, signs, info)
         rrule_alg = alg.rrule_alg,
     )
 end
-function fix_decomposition(alg::EighAdjoint{F}, signs, info) where {F <: IterEig}
+function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEig}
     # fix kept U only since iterative decomposition doesn't have access to full spectrum
     U_fixed = info.U * signs[1]'
     return EighAdjoint(;

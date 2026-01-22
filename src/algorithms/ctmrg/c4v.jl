@@ -18,7 +18,6 @@ end
 function C4vEighProjector(; kwargs...)
     return ProjectorAlgorithm(; alg = :c4v_eigh, kwargs...)
 end
-decomposition_algorithm(alg::C4vEighProjector) = alg.alg
 PROJECTOR_SYMBOLS[:c4v_eigh] = C4vEighProjector
 
 struct C4vQRProjector{S, T} <: ProjectorAlgorithm
@@ -28,8 +27,11 @@ end
 function C4vQRProjector(; kwargs...)
     return ProjectorAlgorithm(; alg = :c4v_qr, kwargs...)
 end
-decomposition_algorithm(alg::C4vEighProjector) = alg.alg
 PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
+
+#
+## C4v-symmetric CTMRG iteration (called through `leading_boundary`)
+#
 
 function ctmrg_iteration(
         network,
@@ -39,7 +41,7 @@ function ctmrg_iteration(
     enlarged_corner = TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
     corner′, projector, info = c4v_projector(enlarged_corner, alg.projector_alg)
     edge′ = c4v_renormalize(network, env, projector)
-    return _c4v_env(corner′, edge′), info
+    return CTMRGEnv(corner′, edge′), info
 end
 
 function c4v_projector(enlarged_corner, alg::C4vEighProjector)
@@ -67,21 +69,43 @@ function c4v_renormalize(network, env, projector)
     return new_edge / norm(new_edge)
 end
 
-# TODO: this won't differentiate properly probably due to custom CTMRGEnv rrule defined in PEPSKit
-function CTMRGEnv(corner::CornerTensor, edge::EdgeTensor)
+function CTMRGEnv(
+        corner::AbstractTensorMap{T, S, 1, 1}, edge::AbstractTensorMap{T′, S, N, 1}
+    ) where {T, T′, S, N}
     corners = fill(corner, 4, 1, 1)
     edge_SW = physical_flip(edge)
     edges = reshape([edge, edge, edge_SW, edge_SW], (4, 1, 1))
     return CTMRGEnv(corners, edges)
 end
 
-function _c4v_env(corner::CornerTensor, edge::EdgeTensor)
-    corners = fill(corner, 4, 1, 1)
-    edge_SW = physical_flip(edge)
-    edges = reshape([edge, edge, edge_SW, edge_SW], (4, 1, 1))
-    return CTMRGEnv(corners, edges)
+#
+## utility
+#
+
+# Adjoint of an edge tensor, but permutes the physical spaces back into the codomain.
+# Intuitively, this conjugates a tensor and then reinterprets its 'direction' as an edge tensor.
+function _dag(A::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
+    return permute(A', ((1, (3:(N + 1))...), (2,)))
+end
+function physical_flip(A::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
+    return flip(A, 2:N)
 end
 
+# should perform this check at the beginning of `leading_boundary` really...
+function check_symmetry(state, ::RotateReflect; atol = 1.0e-10)
+    @assert length(state) == 1 "check_symmetry only works for single site unit cells"
+    @assert norm(state[1] - _fit_spaces(rotl90(state[1]), state[1])) /
+        norm(state[1]) < atol "not rotation invariant"
+    @assert norm(state[1] - _fit_spaces(herm_depth(state[1]), state[1])) /
+        norm(state[1]) < atol "not hermitian-reflection invariant"
+    return nothing
+end
+
+#
+## environment initialization
+#
+
+# TODO: rewrite this using `initialize_environment` and C4v-specific initialization algorithms
 # environment with dummy corner singlet(V) ← singlet(V) and identity edge V ← V, initialized at dim(Venv)
 function initialize_singlet_c4v_env(Vpeps::ElementarySpace, Venv::ElementarySpace, T = ComplexF64)
     corner₀ = DiagonalTensorMap(zeros(real(T), Venv ← Venv))
@@ -93,6 +117,6 @@ end
 function initialize_random_c4v_env(Vpeps::ElementarySpace, Venv::ElementarySpace, T = ComplexF64)
     corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
     edge₀ = randn(T, Venv ⊗ Vpeps ⊗ Vpeps' ← Venv)
-    edge₀ = project_hermitian(edge₀)
+    edge₀ = 0.5 * (edge₀ + physical_flip(_dag(edge₀)))
     return CTMRGEnv(corner₀, edge₀)
 end
