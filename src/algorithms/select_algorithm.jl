@@ -75,3 +75,10 @@ function select_algorithm(
 
     return CTMRGAlgorithm(; alg, tol, verbosity, svd_alg = svd_algorithm, kwargs...)
 end
+
+function select_algorithm(
+        ::typeof(leading_boundary),
+        env₀::CTMRGTriaEnv
+    )
+    return SimultaneousCTMRGTria()
+end
