@@ -20,14 +20,14 @@ function C4vEighProjector(; kwargs...)
 end
 PROJECTOR_SYMBOLS[:c4v_eigh] = C4vEighProjector
 
-struct C4vQRProjector{S, T} <: ProjectorAlgorithm
-    alg::S
-    verbosity::Int
-end
-function C4vQRProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg = :c4v_qr, kwargs...)
-end
-PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
+# struct C4vQRProjector{S, T} <: ProjectorAlgorithm
+#     alg::S
+#     verbosity::Int
+# end
+# function C4vQRProjector(; kwargs...)
+#     return ProjectorAlgorithm(; alg = :c4v_qr, kwargs...)
+# end
+# PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
 
 #
 ## C4v-symmetric CTMRG iteration (called through `leading_boundary`)
@@ -38,11 +38,18 @@ function ctmrg_iteration(
         env::CTMRGEnv,
         alg::C4vCTMRG,
     )
-    enlarged_corner = TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
+    enlarged_corner = c4v_enlarge(network, env, alg.projector_alg)
     corner′, projector, info = c4v_projector(enlarged_corner, alg.projector_alg)
     edge′ = c4v_renormalize(network, env, projector)
     return CTMRGEnv(corner′, edge′), info
 end
+
+function c4v_enlarge(network, env, ::C4vEighProjector)
+    return TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
+end
+# function c4v_enlarge(enlarged_corner, alg::C4vQRProjector)
+#     # TODO
+# end
 
 function c4v_projector(enlarged_corner, alg::C4vEighProjector)
     hermitian_corner = 0.5 * (enlarged_corner + enlarged_corner') / norm(enlarged_corner)
@@ -59,10 +66,9 @@ function c4v_projector(enlarged_corner, alg::C4vEighProjector)
 
     return D / norm(D), U, (; D, U, info...)
 end
-
-function c4v_projector(enlarged_corner, alg::C4vQRProjector)
-    # TODO
-end
+# function c4v_projector(enlarged_corner, alg::C4vQRProjector)
+#     # TODO
+# end
 
 function c4v_renormalize(network, env, projector)
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
