@@ -52,7 +52,7 @@ end
             optimizer_alg = LBFGS(4; maxiter = 10)
             real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
             reuse_env = true
-            peps = copy(ket)
+            peps₀ = copy(ket)
 
             function peps_retract(x, η, α)
                 peps = x[1]
@@ -70,7 +70,7 @@ end
             # optimize operator cost function
             (peps_final, env_final), cost_final, ∂cost, numfg, convergence_history = optimize(
                 (peps₀, env₀), optimizer_alg;
-                retract, inner = real_inner, finalize!, (transport!) = (peps_transport!),
+                retract, inner = real_inner,
             ) do (peps, env)
                 start_time = time_ns()
                 E, gs = withgradient(peps) do ψ
