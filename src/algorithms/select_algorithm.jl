@@ -23,7 +23,7 @@ function select_algorithm(
         tol = Defaults.optimizer_tol, # top-level tolerance
         verbosity = 3, # top-level verbosity
         boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
-        kwargs...,
+        symmetrization = nothing, kwargs...,
     )
     # adjust CTMRG tols and verbosity
     if boundary_alg isa NamedTuple
@@ -45,7 +45,12 @@ function select_algorithm(
         optimizer_alg = merge(defaults, optimizer_alg)
     end
 
-    return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, kwargs...)
+    # symmetrize state and gradient when doing C4v optimization
+    if boundary_alg isa C4vCTMRG && isnothing(symmetrization)
+        symmetrization = RotateReflect()
+    end
+
+    return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, symmetrization, kwargs...)
 end
 
 function select_algorithm(
