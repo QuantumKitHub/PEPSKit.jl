@@ -64,12 +64,12 @@ end
     peps, env, E, = fixedpoint(
         H, peps₀, env₀;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
-        boundary_alg = (; alg = :c4v), symmetrization = symm,
+        boundary_alg = (; alg = :c4v),
     )
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ E_ref atol = 1.0e-2
-    @test all(@. ξ_h > 0 && ξ_v > 0)
+    @test only(ξ_h) ≈ only(ξ_v)
 end
 
 @testset "(1, 2) unit cell AD optimization" begin
