@@ -5,6 +5,8 @@ using PEPSKit
 using TensorKit
 using KrylovKit
 using OptimKit
+using PEPSKit: peps_normalize, initialize_random_c4v_env
+using MPSKitModels: S_xx, S_yy, S_zz
 
 # initialize parameters
 Dbond = 2
@@ -13,6 +15,25 @@ gradtol = 1.0e-3
 # compare against Juraj Hasik's data:
 # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat
 E_ref = -0.6602310934799577
+
+# Heisenberg model assuming C4v symmetric PEPS and environment, which only evaluates necessary term
+function heisenberg_XYZ_c4v(lattice::InfiniteSquare; kwargs...)
+    return heisenberg_XYZ_c4v(ComplexF64, Trivial, lattice; kwargs...)
+end
+function heisenberg_XYZ_c4v(
+        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
+        Jx = -1.0, Jy = 1.0, Jz = -1.0, spin = 1 // 2,
+    )
+    @assert size(lattice) == (1, 1) "only trivial unit cells supported by C4v-symmetric Hamiltonians"
+    term =
+        rmul!(S_xx(T, S; spin = spin), Jx) +
+        rmul!(S_yy(T, S; spin = spin), Jy) +
+        rmul!(S_zz(T, S; spin = spin), Jz)
+    spaces = fill(domain(term)[1], (1, 1))
+    return LocalOperator( # horizontal and vertical contributions are identical
+        spaces, (CartesianIndex(1, 1), CartesianIndex(1, 2)) => 2 * term
+    )
+end
 
 @testset "(1, 1) unit cell AD optimization" begin
     # initialize states
@@ -23,6 +44,28 @@ E_ref = -0.6602310934799577
 
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(H, peps₀, env₀; optimizer_alg = (; tol = gradtol, maxiter = 25))
+    ξ_h, ξ_v, = correlation_length(peps, env)
+
+    @test E ≈ E_ref atol = 1.0e-2
+    @test all(@. ξ_h > 0 && ξ_v > 0)
+end
+
+@testset "C4v AD optimization" begin
+    # initialize symmetric states
+    Random.seed!(123)
+    symm = RotateReflect()
+    H = heisenberg_XYZ_c4v(InfiniteSquare())
+    peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
+    peps₀ = peps_normalize(symmetrize!(peps₀, symm))
+    e₀ = initialize_random_c4v_env(peps₀, ComplexSpace(χenv))
+    env₀, = leading_boundary(e₀, peps₀; alg = :c4v)
+
+    # optimize energy and compute correlation lengths
+    peps, env, E, = fixedpoint(
+        H, peps₀, env₀;
+        optimizer_alg = (; tol = gradtol, maxiter = 25),
+        boundary_alg = (; alg = :c4v), symmetrization = symm,
+    )
     ξ_h, ξ_v, = correlation_length(peps, env)
 
     @test E ≈ E_ref atol = 1.0e-2

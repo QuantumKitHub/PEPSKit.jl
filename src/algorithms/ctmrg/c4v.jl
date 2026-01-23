@@ -128,7 +128,7 @@ end
 #     return CTMRGEnv(corner₀, edge₀)
 # end
 
-function initialize_random_c4v_env(Vstate::ElementarySpace, Venv::ElementarySpace, T = ComplexF64)
+function initialize_random_c4v_env(Vstate::VectorSpace, Venv::ElementarySpace, T = ComplexF64)
     corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
     edge₀ = randn(T, Venv ⊗ Vstate ← Venv)
     edge₀ = project_hermitian(edge₀)
