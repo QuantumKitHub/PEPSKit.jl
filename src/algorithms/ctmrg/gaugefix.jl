@@ -246,7 +246,9 @@ end
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
 CTMRG environments are below `atol` and return the maximal difference.
 """
-function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real = 1.0e-6)
+function calc_elementwise_convergence(
+        envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real = 1.0e-6
+    )
     ΔC = envfinal.corners .- envfix.corners
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
@@ -271,6 +273,19 @@ function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol
     end
 
     return max(ΔCmax, ΔTmax)
+end
+function calc_elementwise_convergence(
+        envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; kwargs...
+    ) where {C <: DiagonalTensorMap, C′} # case where one of the environments might have diagonal corners
+    return calc_elementwise_convergence( # make corners non-diagonal TensorMaps such that you can compute difference
+        CTMRGEnv(convert.(TensorMap, envfinal.corners), envfinal.edges; kwargs...),
+        CTMRGEnv(envfix.corners, envfix.edges; kwargs...)
+    )
+end
+function calc_elementwise_convergence(
+        envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; kwargs...
+    ) where {C, C′ <: DiagonalTensorMap}
+    return calc_elementwise_convergence(envfix, envfinal)
 end
 
 @non_differentiable calc_elementwise_convergence(args...)

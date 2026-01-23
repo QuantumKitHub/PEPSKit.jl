@@ -43,8 +43,7 @@ atol = 1.0e-5
     env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
 
     # do extra iteration to get SVD
-    # env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-    env_conv2, info = ctmrg_iteration(n, env_conv1, ctm_alg)
+    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv2, ScramblingEnvGauge(), env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
@@ -52,8 +51,7 @@ atol = 1.0e-5
     ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
 
     # do iteration with FixedSVD
-    # env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
-    env_fixedsvd, = ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
@@ -70,22 +68,19 @@ end
     psi = peps_normalize(symmetrize!(psi, symm))
     n = InfiniteSquareNetwork(psi)
 
-    env₀ = initialize_random_c4v_env(ComplexSpace(2), ComplexSpace(χ), scalartype(psi))
+    env₀ = initialize_random_c4v_env(psi, ComplexSpace(χ))
     env_conv1, = leading_boundary(env₀, psi, ctm_alg)
 
     # do extra iteration to get SVD
-    # env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-    env_conv2, info = ctmrg_iteration(n, env_conv1, ctm_alg)
+    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv2, ScramblingEnvGaugeC4v(), env_conv1)
-    env_ref = CTMRGEnv(TensorMap.(env_conv1.corners), env_conv1.edges)
-    @test calc_elementwise_convergence(env_ref, env_fix) ≈ 0 atol = atol
+    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
     # fix gauge of SVD
     ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
 
     # do iteration with FixedSVD
-    # env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
-    env_fixedsvd, = ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
