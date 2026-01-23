@@ -338,7 +338,7 @@ function gauge_fix(alg::EighAdjoint, signs, info)
         rrule_alg = alg.rrule_alg,
     )
 end
-function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEig}
+function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEigh}
     # fix kept U only since iterative decomposition doesn't have access to full spectrum
     U_fixed = info.U * signs[1]'
     return EighAdjoint(;

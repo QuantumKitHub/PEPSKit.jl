@@ -79,10 +79,10 @@ const EIGH_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :multiple => LAPACK_MultipleRelativelyRobustRepresentations,
     :lanczos =>
         (; tol = 1.0e-14, krylovdim = 30, kwargs...) ->
-    IterEig(; alg = Lanczos(; tol, krylovdim), kwargs...),
+    IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
     :blocklanczos =>
         (; tol = 1.0e-14, krylovdim = 30, kwargs...) ->
-    IterEig(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
+    IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
 )
 const EIGH_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullEighPullback, :trunc => TruncEighPullback,
@@ -229,22 +229,22 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    IterEig(; kwargs...)
+    IterEigh(; kwargs...)
 
-Construct an `IterEig` algorithm struct based on the following keyword arguments:
+Construct an `IterEigh` algorithm struct based on the following keyword arguments:
 
 * `alg=KrylovKit.Lanczos(; tol=1e-14, krylovdim=25)` : KrylovKit algorithm struct for iterative eigenvalue decomposition.
 * `fallback_threshold::Float64=Inf` : Threshold for `howmany / minimum(size(block))` above which (if the block is too small) the algorithm falls back to a dense decomposition.
 * `start_vector=random_start_vector` : Function providing the initial vector for the iterative algorithm.
 """
-@kwdef struct IterEig
+@kwdef struct IterEigh
     alg = KrylovKit.Lanczos(; tol = 1.0e-14, krylovdim = 25)
     fallback_threshold::Float64 = Inf
     start_vector = random_start_vector
 end
 
 # Compute eigh data block-wise using KrylovKit algorithm
-function _eigh_trunc!(f, alg::IterEig, trunc::TruncationStrategy)
+function _eigh_trunc!(f, alg::IterEigh, trunc::TruncationStrategy)
     D, U = if isempty(blocksectors(f))
         # early return
         truncation_error = zero(real(scalartype(f)))
@@ -265,7 +265,7 @@ end
 
 # Obtain sparse decomposition from block-wise eigsolve calls
 function _compute_eighdata!(
-        f, alg::IterEig, trunc::Union{NoTruncation, TruncationSpace}
+        f, alg::IterEigh, trunc::Union{NoTruncation, TruncationSpace}
     )
     InnerProductStyle(f) === EuclideanInnerProduct() || throw_invalid_innerproduct(:eigh_trunc!)
     domain(f) == codomain(f) ||
@@ -282,7 +282,8 @@ function _compute_eighdata!(
             D, U = eigh_full!(b, LAPACK_QRIteration())
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
-            U = view(U, lm_ordering)[:, 1:howmany]
+            @show lm_ordering
+            U = stack(eachcol(U)[lm_ordering])[:, 1:howmany]
         else
             x₀ = alg.start_vector(b)
             eig_alg = alg.alg
@@ -295,7 +296,7 @@ function _compute_eighdata!(
                 D, U = eigh_full!(b, LAPACK_QRIteration())
                 lm_ordering = sortperm(abs.(D.diag); rev = true)
                 D = D.diag[lm_ordering]
-                U = view(U, lm_ordering)[:, 1:howmany]
+                U = stack(eachcol(U)[lm_ordering])[:, 1:howmany]
             else  # Slice in case more values were converged than requested
                 U = stack(view(lvecs, 1:howmany))
             end
@@ -367,13 +368,13 @@ function ChainRulesCore.rrule(
     return (D̃, Ũ, info), eigh_trunc!_full_pullback
 end
 
-# eigh_trunc! rrule wrapping MatrixAlgebraKit's eigh_trunc_pullback! (also works for IterEig)
+# eigh_trunc! rrule wrapping MatrixAlgebraKit's eigh_trunc_pullback! (also works for IterEigh)
 function ChainRulesCore.rrule(
         ::typeof(eigh_trunc!),
         t,
         alg::EighAdjoint{F, R};
         trunc::TruncationStrategy = notrunc(),
-    ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig, IterEig}, R <: TruncEighPullback}
+    ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig, IterEigh}, R <: TruncEighPullback}
     D, U, info = eigh_trunc(t, alg; trunc)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 

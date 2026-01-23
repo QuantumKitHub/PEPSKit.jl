@@ -112,6 +112,9 @@ end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "SVD wrapper" begin
+            include("utility/eigh_wrapper.jl")
+        end
+        @time @safetestset "SVD wrapper" begin
             include("utility/svd_wrapper.jl")
         end
         @time @safetestset "Symmetrization" begin
