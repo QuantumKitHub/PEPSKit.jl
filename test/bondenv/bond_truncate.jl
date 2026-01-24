@@ -11,8 +11,8 @@ Random.seed!(0)
 maxiter = 600
 check_interval = 20
 trunc = truncerror(; atol = 1.0e-10) & truncrank(8)
-Vext = Vect[Z2Irrep](0 => 100, 1 => 100)
-Vint = Vect[Z2Irrep](0 => 6, 1 => 6)
+Vext = Vect[FermionParity](0 => 100, 1 => 100)
+Vint = Vect[FermionParity](0 => 6, 1 => 6)
 for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
     Vbond = Vbondl ⊗ Vbondr
     # random positive-definite environment
