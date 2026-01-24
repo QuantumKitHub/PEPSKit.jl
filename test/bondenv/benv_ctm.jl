@@ -31,7 +31,7 @@ for row in 1:Nr, col in 1:Nc
     cp1 = PEPSKit._next(col, Nc)
     A, B = peps.A[row, col], peps.A[row, cp1]
     X, a, b, Y = PEPSKit._qr_bond(A, B)
-    benv = PEPSKit.bondenv_fu(row, col, X, Y, env)
+    benv = PEPSKit.bondenv_ctm(row, col, X, Y, env)
     @assert [isdual(space(benv, ax)) for ax in 1:numind(benv)] == [0, 0, 1, 1]
     Z = PEPSKit.positive_approx(benv)
     # verify that gauge fixing can greatly reduce

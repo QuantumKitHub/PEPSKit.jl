@@ -21,7 +21,7 @@ Axis order: `[DX1 DY1; DX0 DY0]`, as in
     └---------------------┘
 ```
 """
-function bondenv_fu(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, env::CTMRGEnv)
+function bondenv_ctm(row::Int, col::Int, X::PEPSOrth, Y::PEPSOrth, env::CTMRGEnv)
     Nr, Nc = size(env.corners)[[2, 3]]
     cm1 = _prev(col, Nc)
     cp1 = _next(col, Nc)

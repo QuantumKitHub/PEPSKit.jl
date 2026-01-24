@@ -85,7 +85,7 @@ end
             include("bondenv/benv_gaugefix.jl")
         end
         @time @safetestset "Full update bond environment" begin
-            include("bondenv/benv_fu.jl")
+            include("bondenv/benv_ctm.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
