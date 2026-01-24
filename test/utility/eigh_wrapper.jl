@@ -4,7 +4,7 @@ using LinearAlgebra
 using TensorKit
 using ChainRulesCore, Zygote
 using Accessors
-using FixedPointAD
+using PEPSKit
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
