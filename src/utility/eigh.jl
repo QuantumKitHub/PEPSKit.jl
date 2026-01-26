@@ -23,7 +23,7 @@ Construct a `FullEighPullback` algorithm struct from the following keyword argum
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct FullEighPullback
-    verbosity::Int = 1
+    verbosity::Int = 0
 end
 
 """
@@ -44,10 +44,9 @@ Construct a `TruncEighPullback` algorithm struct from the following keyword argu
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct TruncEighPullback
-    verbosity::Int = 1
+    verbosity::Int = 0
 end
 
-# TODO: should this be same struct as SVDAdjoint?
 """
 $(TYPEDEF)
 
@@ -142,7 +141,9 @@ function MatrixAlgebraKit.eigh_trunc!(
     return adjoint(D), adjoint(U), info
 end
 
+#
 ## Forward algorithms
+#
 
 # Truncated eigh but also return full D and U to make it compatible with :fixed mode
 function _eigh_trunc!(
@@ -331,7 +332,10 @@ function _create_eightensors(t::TensorMap, eighdata, dims)
     return D, U
 end
 
+#
 ## Reverse-rule algorithms
+#
+
 function _get_pullback_gauge_tol(verbosity::Int)
     if verbosity ≤ 0 # never print gauge sensitivity
         return (_) -> Inf

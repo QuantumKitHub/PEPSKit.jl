@@ -66,8 +66,9 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     3. Iteration info
     4. Debug info
 * `alg::Symbol=:$(Defaults.ctmrg_alg)` : Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
-    - `:simultaneous`: Simultaneous expansion and renormalization of all sides.
-    - `:sequential`: Sequential application of left moves and rotations.
+    - `:simultaneous` : Simultaneous expansion and renormalization of all sides.
+    - `:sequential` : Sequential application of left moves and rotations.
+    - `:c4v` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
 
 ### Projector algorithm
 
@@ -82,6 +83,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner.
 
 ## Return values
 
@@ -103,6 +105,8 @@ set of vectors and values will be returned as well:
 * `U_full` : Last unit cell of all left singular vectors.
 * `S_full` : Last unit cell of all singular values.
 * `V_full` : Last unit cell of all right singular vectors.
+
+For `C4vCTMRG` instead the last eigendecomposition `U` and `D` (and `U_full`, `D_full`) will be returned.
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)

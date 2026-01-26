@@ -114,7 +114,7 @@ const eigh_rrule_verbosity = 0
 # Projectors
 const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
 const projector_verbosity = 0
-const projector_alg_c4v = :c4v_eigh
+const projector_alg_c4v = :c4v_eigh # ∈ {:c4v_eigh, :c4v_qr (TODO)}
 
 # Fixed-point gradient
 const gradient_tol = 1.0e-6

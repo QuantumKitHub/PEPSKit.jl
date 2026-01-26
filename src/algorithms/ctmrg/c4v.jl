@@ -1,3 +1,29 @@
+"""
+$(TYPEDEF)
+
+CTMRG algorithm assuming a C₄ᵥ-symmetric PEPS, i.e. invariance under 90° spatial rotation and
+Hermitian reflection. This requires a single-site unit cell. The projector is obtained from
+`eigh` decomposing the Hermitian enlarged corner.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    C4vCTMRG(; kwargs...)
+
+Construct a C₄ᵥ CTMRG algorithm struct based on keyword arguments.
+For a full description, see [`leading_boundary`](@ref). The supported keywords are:
+
+* `tol::Real=$(Defaults.ctmrg_tol)`
+* `maxiter::Int=$(Defaults.ctmrg_maxiter)`
+* `miniter::Int=$(Defaults.ctmrg_miniter)`
+* `verbosity::Int=$(Defaults.ctmrg_verbosity)`
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
+* `decomp_alg::Union{<:EighAdjoint,NamedTuple}`
+* `projector_alg::Symbol=:$(Defaults.projector_alg_c4v)`
+"""
 struct C4vCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     tol::Float64
     maxiter::Int
@@ -10,6 +36,33 @@ function C4vCTMRG(; kwargs...)
 end
 CTMRG_SYMBOLS[:c4v] = C4vCTMRG
 
+"""
+$(TYPEDEF)
+
+Projector algorithm implementing the `eigh` decomposition of a Hermitian enlarged corner.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    C4vEighProjector(; kwargs...)
+
+Construct the C₄ᵥ `eigh`-based projector algorithm based on the following keyword arguments:
+
+* `decomp_alg::Union{<:EighAdjoint,NamedTuple}=EighAdjoint()` : `eigh` algorithm including the reverse rule. See [`EighAdjoint`](@ref).
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
+    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:notrunc` : No singular values are truncated and the performed SVDs are exact
+    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `verbosity::Int=$(Defaults.projector_verbosity)` : Projector output verbosity which can be:
+    0. Suppress output information
+    1. Print singular value degeneracy warnings
+"""
 struct C4vEighProjector{S <: EighAdjoint, T} <: ProjectorAlgorithm
     decomp_alg::S
     trunc::T
@@ -44,15 +97,26 @@ function ctmrg_iteration(
     return CTMRGEnv(corner′, edge′), info
 end
 
+"""
+    c4v_enlarge(network, env, ::C4vEighProjector)
+
+Compute the normalized and Hermitian-symmetrized C₄ᵥ enlarged corner.
+"""
 function c4v_enlarge(network, env, ::C4vEighProjector)
-    return TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
+    enlarged_corner = TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
+    return 0.5 * (enlarged_corner + enlarged_corner') / norm(enlarged_corner)
 end
 # function c4v_enlarge(enlarged_corner, alg::C4vQRProjector)
 #     # TODO
 # end
 
+"""
+    c4v_projector(enlarged_corner, alg::C4vEighProjector)
+
+Compute the C₄ᵥ projector from `eigh` decomposing the Hermitian `enlarged_corner`.
+Also return the normalized eigenvalues as the new corner tensor.
+"""
 function c4v_projector(enlarged_corner, alg::C4vEighProjector)
-    hermitian_corner = 0.5 * (enlarged_corner + enlarged_corner') / norm(enlarged_corner)
     trunc = truncation_strategy(alg, enlarged_corner)
     D, U, info = eigh_trunc!(hermitian_corner, decomposition_algorithm(alg); trunc)
 
@@ -70,11 +134,17 @@ end
 #     # TODO
 # end
 
+"""
+    c4v_renormalize(network, env, projector)
+
+Renormalize the single edge tensor.
+"""
 function c4v_renormalize(network, env, projector)
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
     return new_edge / norm(new_edge)
 end
 
+# TODO: this should eventually be the constructor for a new C4vCTMRGEnv type
 function CTMRGEnv(
         corner::AbstractTensorMap{T, S, 1, 1}, edge::AbstractTensorMap{T′, S, N, 1}
     ) where {T, T′, S, N}

@@ -45,6 +45,14 @@ function ProjectorAlgorithm(;
     return alg_type(decomp_algorithm, truncation_strategy, verbosity)
 end
 
+"""
+    decomposition_algorithm(alg::ProjectorAlgorithm)
+    decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
+
+Return the tensor decomposition algorithm of the `alg` projector algorithm.
+Additionally, the multi-index `(dir, r, c)` can be supplied which will return the
+decomposition performed at that index, e.g. when using `FixedEigh` or `FixedSVD`.
+"""
 decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomp_alg
 function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     decomp_alg = decomposition_algorithm(alg)
