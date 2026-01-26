@@ -91,7 +91,7 @@ $(TYPEDFIELDS)
 
 Construct the half-infinite projector algorithm based on the following keyword arguments:
 
-* `alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
+* `decomp_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
@@ -129,7 +129,7 @@ $(TYPEDFIELDS)
 
 Construct the full-infinite projector algorithm based on the following keyword arguments:
 
-* `alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
+* `decomp_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
