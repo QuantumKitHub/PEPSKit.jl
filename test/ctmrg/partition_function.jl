@@ -5,6 +5,7 @@ using PEPSKit
 using TensorKit
 using QuadGK
 using Test
+using PEPSKit: initialize_random_c4v_env
 
 @testset "Check spaces in partition function CTMRG" begin
     zA = randn(ℂ^6 ⊗ ℂ^8 ← ℂ^4 ⊗ ℂ^2)
