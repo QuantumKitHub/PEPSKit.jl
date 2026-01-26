@@ -59,13 +59,13 @@ function select_algorithm(
         alg = Defaults.ctmrg_alg,
         tol = Defaults.ctmrg_tol,
         verbosity = Defaults.ctmrg_verbosity,
-        decomposition_alg = (;),
+        decomp_alg = (;),
         kwargs...,
     )
     # adjust SVD rrule settings to CTMRG tolerance, verbosity and environment dimension
-    if decomposition_alg isa NamedTuple &&
-            haskey(decomposition_alg, :rrule_alg) &&
-            decomposition_alg.rrule_alg isa NamedTuple
+    if decomp_alg isa NamedTuple &&
+            haskey(decomp_alg, :rrule_alg) &&
+            decomp_alg.rrule_alg isa NamedTuple
         χenv = maximum(env₀.corners) do corner
             return dim(space(corner, 1))
         end
@@ -73,9 +73,9 @@ function select_algorithm(
         krylovdim = max(
             Defaults.svd_rrule_min_krylovdim, round(Int, Defaults.krylovdim_factor * χenv)
         )
-        rrule_alg = (; tol = 1.0e1tol, verbosity = verbosity - 2, krylovdim, decomposition_alg.rrule_alg...)
-        decomposition_alg = (; rrule_alg, decomposition_alg...)
+        rrule_alg = (; tol = 1.0e1tol, verbosity = verbosity - 2, krylovdim, decomp_alg.rrule_alg...)
+        decomp_alg = (; rrule_alg, decomp_alg...)
     end
 
-    return CTMRGAlgorithm(; alg, tol, verbosity, decomposition_alg, kwargs...)
+    return CTMRGAlgorithm(; alg, tol, verbosity, decomp_alg, kwargs...)
 end

@@ -9,8 +9,8 @@ function gauge_fix(alg::CTMRGAlgorithm, signs, info)
     return alg_fixed
 end
 function gauge_fix(alg::ProjectorAlgorithm, signs, info)
-    decomposition_alg_fixed = gauge_fix(alg.alg, signs, info) # every ProjectorAlgorithm needs an `alg` field
-    alg_fixed = @set alg.alg = decomposition_alg_fixed
+    decomp_alg_fixed = gauge_fix(decomposition_algorithm(alg), signs, info)
+    alg_fixed = @set alg.decomp_alg = decomp_alg_fixed # every ProjectorAlgorithm needs an `decomp_alg` field?
     alg_fixed = @set alg_fixed.trunc = notrunc()
     return alg_fixed
 end
@@ -249,8 +249,9 @@ CTMRG environments are below `atol` and return the maximal difference.
 function calc_elementwise_convergence(
         envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; atol::Real = 1.0e-6
     ) where {C, C′}
-    ΔC = (C <: DiagonalTensorMap) ? convert.(TensorMap, envfinal.corners) : envfinal.corners .-
-        (C′ <: DiagonalTensorMap) ? convert.(TensorMap, envfix.corners) : envfix.corners
+    Cfinal = (C <: DiagonalTensorMap) ? convert.(TensorMap, envfinal.corners) : envfinal.corners
+    Cfix = (C′ <: DiagonalTensorMap) ? convert.(TensorMap, envfix.corners) : envfix.corners
+    ΔC = Cfinal .- Cfix
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
     @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"
@@ -274,19 +275,6 @@ function calc_elementwise_convergence(
     end
 
     return max(ΔCmax, ΔTmax)
-end
-function calc_elementwise_convergence(
-        envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; kwargs...
-    ) where {C <: DiagonalTensorMap, C′} # case where one of the environments might have diagonal corners
-    return calc_elementwise_convergence( # make corners non-diagonal TensorMaps such that you can compute difference
-        CTMRGEnv(convert.(TensorMap, envfinal.corners), envfinal.edges; kwargs...),
-        CTMRGEnv(envfix.corners, envfix.edges; kwargs...)
-    )
-end
-function calc_elementwise_convergence(
-        envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; kwargs...
-    ) where {C, C′ <: DiagonalTensorMap}
-    return calc_elementwise_convergence(envfix, envfinal)
 end
 
 @non_differentiable calc_elementwise_convergence(args...)

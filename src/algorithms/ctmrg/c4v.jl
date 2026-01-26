@@ -11,7 +11,7 @@ end
 CTMRG_SYMBOLS[:c4v] = C4vCTMRG
 
 struct C4vEighProjector{S <: EighAdjoint, T} <: ProjectorAlgorithm
-    alg::S
+    decomp_alg::S
     trunc::T
     verbosity::Int
 end
@@ -21,7 +21,7 @@ end
 PROJECTOR_SYMBOLS[:c4v_eigh] = C4vEighProjector
 
 # struct C4vQRProjector{S, T} <: ProjectorAlgorithm
-#     alg::S
+#     decomp_alg::S
 #     verbosity::Int
 # end
 # function C4vQRProjector(; kwargs...)

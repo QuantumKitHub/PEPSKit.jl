@@ -84,11 +84,10 @@ end
     peps = InfinitePEPS(randn, T, Vphys, Vpeps, Vpeps)
     peps = peps_normalize(symmetrize!(peps, symm))
 
-    # boundary_alg = C4vCTMRG(; projector_alg, decomposition_alg = (; fwd_alg))
     env₀ = initialize_random_c4v_env(peps, Venv)
     env, = leading_boundary(
         env₀, peps; alg = :c4v, projector_alg,
-        decomposition_alg = (; fwd_alg = (; alg = eigh_alg))
+        decomp_alg = (; fwd_alg = (; alg = eigh_alg))
     )
     @test env isa CTMRGEnv
 end

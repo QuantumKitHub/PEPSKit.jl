@@ -14,7 +14,7 @@ Keyword argument parser returning the appropriate `ProjectorAlgorithm` algorithm
 """
 function ProjectorAlgorithm(;
         alg = Defaults.projector_alg,
-        decomposition_alg = (;),
+        decomp_alg = (;),
         trunc = (;),
         verbosity = Defaults.projector_verbosity,
     )
@@ -25,12 +25,12 @@ function ProjectorAlgorithm(;
 
     # parse SVD forward & rrule algorithm
 
-    decomposition_algorithm = if alg in [:halfinfinite, :fullinfinite]
-        _alg_or_nt(SVDAdjoint, decomposition_alg)
+    decomp_algorithm = if alg in [:halfinfinite, :fullinfinite]
+        _alg_or_nt(SVDAdjoint, decomp_alg)
     elseif alg in [:c4v_eigh]
-        _alg_or_nt(EighAdjoint, decomposition_alg)
+        _alg_or_nt(EighAdjoint, decomp_alg)
     elseif alg in [:c4v_qr]
-        _alg_or_nt(QRAdjoint, decomposition_alg)
+        _alg_or_nt(QRAdjoint, decomp_alg)
     end # TODO: how do we solve this in a proper way?
 
     # parse truncation scheme
@@ -42,10 +42,10 @@ function ProjectorAlgorithm(;
         throw(ArgumentError("unknown trunc $trunc"))
     end
 
-    return alg_type(decomposition_algorithm, truncation_strategy, verbosity)
+    return alg_type(decomp_algorithm, truncation_strategy, verbosity)
 end
 
-decomposition_algorithm(alg::ProjectorAlgorithm) = alg.alg
+decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomp_alg
 function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
     decomp_alg = decomposition_algorithm(alg)
     if decomp_alg isa SVDAdjoint{<:FixedSVD}
@@ -104,7 +104,7 @@ Construct the half-infinite projector algorithm based on the following keyword a
     1. Print singular value degeneracy warnings
 """
 struct HalfInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
-    alg::S
+    decomp_alg::S
     trunc::T
     verbosity::Int
 end
@@ -142,7 +142,7 @@ Construct the full-infinite projector algorithm based on the following keyword a
     1. Print singular value degeneracy warnings
 """
 struct FullInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
-    alg::S
+    decomp_alg::S
     trunc::T
     verbosity::Int
 end

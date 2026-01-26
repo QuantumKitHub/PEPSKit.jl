@@ -74,7 +74,7 @@ naive_gradient_done = Set()
             alg = ctmrg_alg,
             verbosity = ctmrg_verbosity,
             projector_alg = projector_alg,
-            decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg)),
+            decomp_alg = (; rrule_alg = (; alg = svd_rrule_alg)),
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
