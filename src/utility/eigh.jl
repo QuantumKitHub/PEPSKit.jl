@@ -64,7 +64,15 @@ $(TYPEDFIELDS)
 Construct a `EighAdjoint` algorithm struct based on the following keyword arguments:
 
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_fwd_alg))`: Eig algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
+    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`
+    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`
+    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
+    - `:multiple` : MatrixAlgebraKit's `LAPACK_MultipleRelativelyRobustRepresentations`
+    - `:lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Lanczos)
+    - `:blocklanczos` : Block version of `:lanczos` for repeated extremal eigenvalues, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BlockLanczos)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
+    - `:trunc` : MatrixAlgebraKit's `eigh_trunc_pullback` solving a Sylvester equation on the truncated subspace
+    - `:full` : MatrixAlgebraKit's `eigh_pullback` that requires access to the full spectrum
 """
 struct EighAdjoint{F, R}
     fwd_alg::F
