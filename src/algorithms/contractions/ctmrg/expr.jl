@@ -1,6 +1,5 @@
-#
 # Expressions
-#
+# -----------
 
 ## PEPS tensor expressions
 

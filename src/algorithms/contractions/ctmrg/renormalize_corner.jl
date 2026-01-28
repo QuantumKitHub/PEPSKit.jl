@@ -39,6 +39,9 @@ Apply projectors to each side of a quadrant.
     )
 end
 
+# Northwest corner
+# ----------------
+
 """
     renormalize_northwest_corner((row, col), enlarged_env, P_left, P_right)
     renormalize_northwest_corner(quadrant, P_left, P_right)
@@ -96,6 +99,33 @@ function renormalize_northwest_corner(
         A[D3 D1; D5 D7] *
         P_left[χ4 D7; χ_out]
 end
+
+@generated function renormalize_northwest_corner(
+        E_west, C_northwest, E_north, P_left, P_right, A::PEPOSandwich{H}
+    ) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :S, :S, H)
+    E_west_e = _pepo_edge_expr(:E_west, :S, :WNW, :W, H)
+    C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
+    E_north_e = _pepo_edge_expr(:E_north, :NNW, :E, :N, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
+    P_left_e = _pepo_domain_projector_expr(:P_left, :E, :E, :in, H)
+
+    rhs = Expr(
+        :call, :*,
+        P_right_e,
+        E_west_e, C_northwest_e, E_north_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+        P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+# Northeast corner
+# ----------------
 
 """
     renormalize_northeast_corner((row, col), enlarged_env, P_left, P_right)
@@ -157,6 +187,33 @@ function renormalize_northeast_corner(
         P_left[χ4 D7; χ_out]
 end
 
+@generated function renormalize_northeast_corner(
+        E_north, C_northeast, E_east, P_left, P_right, A::PEPOSandwich{H}
+    ) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :W, :W, H)
+    E_north_e = _pepo_edge_expr(:E_north, :W, :NNE, :N, H)
+    C_northeast_e = _corner_expr(:C_northeast, :NNE, :ENE)
+    E_east_e = _pepo_edge_expr(:E_east, :ENE, :S, :E, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
+    P_left_e = _pepo_domain_projector_expr(:P_left, :S, :S, :in, H)
+
+    rhs = Expr(
+        :call, :*,
+        P_right_e,
+        E_north_e, C_northeast_e, E_east_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+        P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+# Southeast corner
+# ----------------
+
 """
     renormalize_southeast_corner((row, col), enlarged_env, P_left, P_right)
     renormalize_southeast_corner(quadrant, P_left, P_right)
@@ -215,6 +272,33 @@ function renormalize_southeast_corner(
         P_left[χ4 D7; χ_out]
 end
 
+@generated function renormalize_southeast_corner(
+        E_east, C_southeast, E_south, P_left, P_right, A::PEPOSandwich{H}
+    ) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :N, :N, H)
+    E_east_e = _pepo_edge_expr(:E_east, :N, :EWE, :E, H)
+    C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
+    E_south_e = _pepo_edge_expr(:E_south, :SSE, :W, :S, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
+    P_left_e = _pepo_domain_projector_expr(:P_left, :W, :W, :in, H)
+
+    rhs = Expr(
+        :call, :*,
+        P_right_e,
+        E_east_e, C_southeast_e, E_south_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+        P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+# Southwest corner
+# ----------------
+
 """
     renormalize_southwest_corner((row, col), enlarged_env, P_left, P_right)
     renormalize_southwest_corner(quadrant, P_left, P_right)
@@ -272,6 +356,33 @@ function renormalize_southwest_corner(
         A[D5 D3; D7 D1] *
         P_left[χ4 D7; χ_out]
 end
+
+@generated function renormalize_southwest_corner(
+        E_south, C_southwest, E_west, P_left, P_right, A::PEPOSandwich{H}
+    ) where {H}
+    C_out_e = _corner_expr(:corner, :out, :in)
+
+    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :E, :E, H)
+    E_south_e = _pepo_edge_expr(:E_south, :E, :SSW, :S, H)
+    C_southwest_e = _corner_expr(:C_southwest, :SSW, :WSW)
+    E_west_e = _pepo_edge_expr(:E_west, :WSW, :N, :W, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
+    P_left_e = _pepo_domain_projector_expr(:P_left, :N, :N, :in, H)
+
+    rhs = Expr(
+        :call, :*,
+        P_right_e,
+        E_south_e, C_southwest_e, E_west_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+        P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+# For SequentialCTMRG left move only
+# ----------------------------------
 
 """
     renormalize_bottom_corner((r, c), env, projectors)
@@ -349,102 +460,4 @@ end
         @__MODULE__,
         :(return @autoopt @tensor $C_out_e := $E_north_e * $C_northwest_e * $P_top_e),
     )
-end
-
-## Corner renormalization contractions
-
-@generated function renormalize_northwest_corner(
-        E_west, C_northwest, E_north, P_left, P_right, A::PEPOSandwich{H}
-    ) where {H}
-    C_out_e = _corner_expr(:corner, :out, :in)
-
-    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :S, :S, H)
-    E_west_e = _pepo_edge_expr(:E_west, :S, :WNW, :W, H)
-    C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
-    E_north_e = _pepo_edge_expr(:E_north, :NNW, :E, :N, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
-    P_left_e = _pepo_domain_projector_expr(:P_left, :E, :E, :in, H)
-
-    rhs = Expr(
-        :call, :*,
-        P_right_e,
-        E_west_e, C_northwest_e, E_north_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-        P_left_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
-end
-
-@generated function renormalize_northeast_corner(
-        E_north, C_northeast, E_east, P_left, P_right, A::PEPOSandwich{H}
-    ) where {H}
-    C_out_e = _corner_expr(:corner, :out, :in)
-
-    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :W, :W, H)
-    E_north_e = _pepo_edge_expr(:E_north, :W, :NNE, :N, H)
-    C_northeast_e = _corner_expr(:C_northeast, :NNE, :ENE)
-    E_east_e = _pepo_edge_expr(:E_east, :ENE, :S, :E, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
-    P_left_e = _pepo_domain_projector_expr(:P_left, :S, :S, :in, H)
-
-    rhs = Expr(
-        :call, :*,
-        P_right_e,
-        E_north_e, C_northeast_e, E_east_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-        P_left_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
-end
-
-@generated function renormalize_southeast_corner(
-        E_east, C_southeast, E_south, P_left, P_right, A::PEPOSandwich{H}
-    ) where {H}
-    C_out_e = _corner_expr(:corner, :out, :in)
-
-    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :N, :N, H)
-    E_east_e = _pepo_edge_expr(:E_east, :N, :EWE, :E, H)
-    C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
-    E_south_e = _pepo_edge_expr(:E_south, :SSE, :W, :S, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
-    P_left_e = _pepo_domain_projector_expr(:P_left, :W, :W, :in, H)
-
-    rhs = Expr(
-        :call, :*,
-        P_right_e,
-        E_east_e, C_southeast_e, E_south_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-        P_left_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
-end
-
-@generated function renormalize_southwest_corner(
-        E_south, C_southwest, E_west, P_left, P_right, A::PEPOSandwich{H}
-    ) where {H}
-    C_out_e = _corner_expr(:corner, :out, :in)
-
-    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :E, :E, H)
-    E_south_e = _pepo_edge_expr(:E_south, :E, :SSW, :S, H)
-    C_southwest_e = _corner_expr(:C_southwest, :SSW, :WSW)
-    E_west_e = _pepo_edge_expr(:E_west, :WSW, :N, :W, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
-    P_left_e = _pepo_domain_projector_expr(:P_left, :N, :N, :in, H)
-
-    rhs = Expr(
-        :call, :*,
-        P_right_e,
-        E_south_e, C_southwest_e, E_west_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-        P_left_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end

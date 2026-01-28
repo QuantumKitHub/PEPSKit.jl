@@ -1,4 +1,5 @@
-# edges
+# North edge
+# ----------
 
 """
     renormalize_north_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
@@ -38,6 +39,33 @@ function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_right, P_left, A
         edge[χ_W D_S; χ_E] := P_leftp[χ_W; D_W χNW] * PEA[D_W χNW; D_S χ_E]
     end
 end
+
+@generated function renormalize_north_edge(
+        E_north::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
+    ) where {T, S, N, H}
+    @assert N == H + 3
+
+    E_out_e = _pepo_edge_expr(:edge, :out, :in, :S, H)
+
+    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :W, :W, H)
+    E_north_e = _pepo_edge_expr(:E_north, :W, :E, :N, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
+    P_left_e = _pepo_domain_projector_expr(:P_left, :E, :E, :in, H)
+
+    rhs = Expr(
+        :call, :*,
+        P_right_e,
+        E_north_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+        P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+end
+
+# East edge
+# ---------
 
 """
     renormalize_east_edge((row, col), env, P_top, P_bottom, network::InfiniteSquareNetwork{P})
@@ -80,6 +108,33 @@ function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_bottom, P_top, A::
     end
 end
 
+@generated function renormalize_east_edge(
+        E_east::CTMRGEdgeTensor{T, S, N}, P_bottom, P_top, A::PEPOSandwich{H}
+    ) where {T, S, N, H}
+    @assert N == H + 3
+
+    E_out_e = _pepo_edge_expr(:edge, :out, :in, :W, H)
+
+    P_top_e = _pepo_codomain_projector_expr(:P_top, :out, :N, :N, H)
+    E_east_e = _pepo_edge_expr(:E_east, :N, :S, :E, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
+    P_bottom_e = _pepo_domain_projector_expr(:P_bottom, :S, :S, :in, H)
+
+    rhs = Expr(
+        :call, :*,
+        P_top_e,
+        E_east_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+        P_bottom_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+end
+
+# South edge
+# ----------
+
 """
     renormalize_south_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
     renormalize_south_edge(E_south, P_left, P_right, A::P)
@@ -120,6 +175,33 @@ function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A
         edge[χ_E D_N; χ_W] := PEA[χ_W D_N; χSE D_E] * P_right[χ_E; χSE D_E]
     end
 end
+
+@generated function renormalize_south_edge(
+        E_south::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
+    ) where {T, S, N, H}
+    @assert N == H + 3
+
+    E_out_e = _pepo_edge_expr(:edge, :out, :in, :N, H)
+
+    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :E, :E, H)
+    E_south_e = _pepo_edge_expr(:E_south, :E, :W, :S, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
+    P_left_e = _pepo_domain_projector_expr(:P_left, :W, :W, :in, H)
+
+    rhs = Expr(
+        :call, :*,
+        P_right_e,
+        E_south_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+        P_left_e,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+end
+
+# West edge
+# ---------
 
 """
     renormalize_west_edge((row, col), env, P_top, P_bottom, network::InfiniteSquareNetwork{P})
@@ -183,80 +265,6 @@ function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_top, P_bottom, A::
     end
 end
 
-## Edge renormalization contractions
-
-@generated function renormalize_north_edge(
-        E_north::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
-    ) where {T, S, N, H}
-    @assert N == H + 3
-
-    E_out_e = _pepo_edge_expr(:edge, :out, :in, :S, H)
-
-    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :W, :W, H)
-    E_north_e = _pepo_edge_expr(:E_north, :W, :E, :N, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
-    P_left_e = _pepo_domain_projector_expr(:P_left, :E, :E, :in, H)
-
-    rhs = Expr(
-        :call, :*,
-        P_right_e,
-        E_north_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-        P_left_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
-end
-
-@generated function renormalize_east_edge(
-        E_east::CTMRGEdgeTensor{T, S, N}, P_bottom, P_top, A::PEPOSandwich{H}
-    ) where {T, S, N, H}
-    @assert N == H + 3
-
-    E_out_e = _pepo_edge_expr(:edge, :out, :in, :W, H)
-
-    P_top_e = _pepo_codomain_projector_expr(:P_top, :out, :N, :N, H)
-    E_east_e = _pepo_edge_expr(:E_east, :N, :S, :E, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
-    P_bottom_e = _pepo_domain_projector_expr(:P_bottom, :S, :S, :in, H)
-
-    rhs = Expr(
-        :call, :*,
-        P_top_e,
-        E_east_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-        P_bottom_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
-end
-
-@generated function renormalize_south_edge(
-        E_south::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
-    ) where {T, S, N, H}
-    @assert N == H + 3
-
-    E_out_e = _pepo_edge_expr(:edge, :out, :in, :N, H)
-
-    P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :E, :E, H)
-    E_south_e = _pepo_edge_expr(:E_south, :E, :W, :S, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
-    P_left_e = _pepo_domain_projector_expr(:P_left, :W, :W, :in, H)
-
-    rhs = Expr(
-        :call, :*,
-        P_right_e,
-        E_south_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-        P_left_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
-end
-
 @generated function renormalize_west_edge(
         E_west::CTMRGEdgeTensor{T, S, N}, P_bottom, P_top, A::PEPOSandwich{H}
     ) where {T, S, N, H}
@@ -280,4 +288,3 @@ end
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
 end
-
