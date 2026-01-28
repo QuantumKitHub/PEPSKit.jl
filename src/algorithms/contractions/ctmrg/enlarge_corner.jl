@@ -15,6 +15,9 @@ For a small benchmark study:
 https://gist.github.com/lkdvos/a562c2b09ef461398729ccefdab34745
 =#
 
+# Northwest corner
+# ----------------
+
 """
 $(SIGNATURES)
 
@@ -55,6 +58,34 @@ function enlarge_northwest_corner(
         corner[χ_S D_S; χ_E D_E] := ECE[χ_S χ_E; DW DN] * A[DW D_S; DN D_E]
     end
 end
+
+@generated function enlarge_northwest_corner(
+        E_west::CTMRGEdgeTensor{T, S, N},
+        C_northwest::CTMRGCornerTensor,
+        E_north::CTMRGEdgeTensor{T, S, N},
+        O::PEPOSandwich{H},
+    ) where {T, S, N, H}
+    @assert N == H + 3
+
+    E_west_e = _pepo_edge_expr(:E_west, :SW, :WNW, :W, H)
+    C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
+    E_north_e = _pepo_edge_expr(:E_north, :NNW, :NE, :N, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
+
+    C_out_e = _pepo_enlarged_corner_expr(:C_northwest´, :SW, :NE, :S, :E, H)
+
+    rhs = Expr(
+        :call, :*,
+        E_west_e, C_northwest_e, E_north_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+# Northeast corner
+# ----------------
 
 """
 $(SIGNATURES)
@@ -97,6 +128,34 @@ function enlarge_northeast_corner(
     end
 end
 
+@generated function enlarge_northeast_corner(
+        E_north::CTMRGEdgeTensor{T, S, N},
+        C_northeast::CTMRGCornerTensor,
+        E_east::CTMRGEdgeTensor{T, S, N},
+        O::PEPOSandwich{H},
+    ) where {T, S, N, H}
+    @assert N == H + 3
+
+    E_north_e = _pepo_edge_expr(:E_north, :NW, :NNE, :N, H)
+    C_northeast = _corner_expr(:C_northeast, :NNE, :ENE)
+    E_east_e = _pepo_edge_expr(:E_east, :ENE, :SE, :E, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
+
+    C_out_e = _pepo_enlarged_corner_expr(:C_northeast´, :NW, :SE, :W, :S, H)
+
+    rhs = Expr(
+        :call, :*,
+        E_north_e, C_northeast, E_east_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+# Southeast corner
+# ----------------
+
 """
 $(SIGNATURES)
 
@@ -138,6 +197,34 @@ function enlarge_southeast_corner(
     end
 end
 
+@generated function enlarge_southeast_corner(
+        E_east::CTMRGEdgeTensor{T, S, N},
+        C_southeast::CTMRGCornerTensor,
+        E_south::CTMRGEdgeTensor{T, S, N},
+        O::PEPOSandwich{H},
+    ) where {T, S, N, H}
+    @assert N == H + 3
+
+    E_east_e = _pepo_edge_expr(:E_east, :NE, :ESE, :E, H)
+    C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
+    E_south_e = _pepo_edge_expr(:E_south, :SSE, :SW, :S, H)
+    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
+
+    C_out_e = _pepo_enlarged_corner_expr(:C_southeast´, :NE, :SW, :N, :W, H)
+
+    rhs = Expr(
+        :call, :*,
+        E_east_e, C_southeast_e, E_south_e,
+        ket_e, Expr(:call, :conj, bra_e),
+        pepo_es...,
+    )
+
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
+end
+
+# Southwest corner
+# ----------------
+
 """
 $(SIGNATURES)
 
@@ -177,84 +264,6 @@ function enlarge_southwest_corner(
         ECE[χ_E χ_N; D2 D1] := EC[χ_E D1; χ2] * E_west[χ2 D2; χ_N]
         corner[χ_E D_E; χ_N D_N] := ECE[χ_E χ_N; D2 D1] * A[D2 D1; D_N D_E]
     end
-end
-
-
-## Enlarged corner contractions
-
-@generated function enlarge_northwest_corner(
-        E_west::CTMRGEdgeTensor{T, S, N},
-        C_northwest::CTMRGCornerTensor,
-        E_north::CTMRGEdgeTensor{T, S, N},
-        O::PEPOSandwich{H},
-    ) where {T, S, N, H}
-    @assert N == H + 3
-
-    E_west_e = _pepo_edge_expr(:E_west, :SW, :WNW, :W, H)
-    C_northwest_e = _corner_expr(:C_northwest, :WNW, :NNW)
-    E_north_e = _pepo_edge_expr(:E_north, :NNW, :NE, :N, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
-
-    C_out_e = _pepo_enlarged_corner_expr(:C_northwest´, :SW, :NE, :S, :E, H)
-
-    rhs = Expr(
-        :call, :*,
-        E_west_e, C_northwest_e, E_north_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
-end
-
-@generated function enlarge_northeast_corner(
-        E_north::CTMRGEdgeTensor{T, S, N},
-        C_northeast::CTMRGCornerTensor,
-        E_east::CTMRGEdgeTensor{T, S, N},
-        O::PEPOSandwich{H},
-    ) where {T, S, N, H}
-    @assert N == H + 3
-
-    E_north_e = _pepo_edge_expr(:E_north, :NW, :NNE, :N, H)
-    C_northeast = _corner_expr(:C_northeast, :NNE, :ENE)
-    E_east_e = _pepo_edge_expr(:E_east, :ENE, :SE, :E, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
-
-    C_out_e = _pepo_enlarged_corner_expr(:C_northeast´, :NW, :SE, :W, :S, H)
-
-    rhs = Expr(
-        :call, :*,
-        E_north_e, C_northeast, E_east_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
-end
-
-@generated function enlarge_southeast_corner(
-        E_east::CTMRGEdgeTensor{T, S, N},
-        C_southeast::CTMRGCornerTensor,
-        E_south::CTMRGEdgeTensor{T, S, N},
-        O::PEPOSandwich{H},
-    ) where {T, S, N, H}
-    @assert N == H + 3
-
-    E_east_e = _pepo_edge_expr(:E_east, :NE, :ESE, :E, H)
-    C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
-    E_south_e = _pepo_edge_expr(:E_south, :SSE, :SW, :S, H)
-    ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:O, H)
-
-    C_out_e = _pepo_enlarged_corner_expr(:C_southeast´, :NE, :SW, :N, :W, H)
-
-    rhs = Expr(
-        :call, :*,
-        E_east_e, C_southeast_e, E_south_e,
-        ket_e, Expr(:call, :conj, bra_e),
-        pepo_es...,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $C_out_e := $rhs))
 end
 
 @generated function enlarge_southwest_corner(
