@@ -23,23 +23,30 @@ r = 0.5 * (r + r') # make r Hermitian
 R = randn(space(r))
 R = 0.5 * (R + R')
 
-full_alg = EighAdjoint(; fwd_alg = (; alg = :qriteration), rrule_alg = (; alg = :trunc))
+full_alg = EighAdjoint(; fwd_alg = (; alg = :qriteration), rrule_alg = (; alg = :full))
+trunc_alg = EighAdjoint(; fwd_alg = (; alg = :qriteration), rrule_alg = (; alg = :trunc))
 iter_alg = EighAdjoint(; fwd_alg = (; alg = :lanczos), rrule_alg = (; alg = :trunc))
 
-@testset "Non-truncacted eigh" begin
+@testset "Non-truncated eigh" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)
+    l_trunc, g_trunc = withgradient(A -> lossfun(A, trunc_alg, R), r)
     l_iter, g_iter = withgradient(A -> lossfun(A, iter_alg, R), r)
 
-    @test l_iter ≈ l_full
+    @test l_full ≈ l_trunc ≈ l_iter
+    @test g_full[1] ≈ g_trunc[1] rtol = rtol
     @test g_full[1] ≈ g_iter[1] rtol = rtol
+    @test g_trunc[1] ≈ g_iter[1] rtol = rtol
 end
 
 @testset "Truncated eigh with χ=$χ" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R, trunc), r)
+    l_trunc, g_trunc = withgradient(A -> lossfun(A, trunc_alg, R, trunc), r)
     l_iter, g_iter = withgradient(A -> lossfun(A, iter_alg, R, trunc), r)
 
-    @test l_iter ≈ l_full
+    @test l_full ≈ l_trunc ≈ l_iter
+    @test g_full[1] ≈ g_trunc[1] rtol = rtol
     @test g_full[1] ≈ g_iter[1] rtol = rtol
+    @test g_trunc[1] ≈ g_iter[1] rtol = rtol
 end
 
 symm_m, symm_n = 18, 24
@@ -52,23 +59,32 @@ symm_R = 0.5 * (symm_R + symm_R')
 
 @testset "IterEig of symmetric tensors" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, symm_R), symm_r)
+    l_trunc, g_trunc = withgradient(A -> lossfun(A, trunc_alg, symm_R), symm_r)
     l_iter, g_iter = withgradient(A -> lossfun(A, iter_alg, symm_R), symm_r)
-    @test l_iter ≈ l_full
+    @test l_full ≈ l_trunc ≈ l_iter
+    @test g_full[1] ≈ g_trunc[1] rtol = rtol
     @test g_full[1] ≈ g_iter[1] rtol = rtol
+    @test g_trunc[1] ≈ g_iter[1] rtol = rtol
 
     l_full_tr, g_full_tr = withgradient(
         A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r
     )
+    l_trunc_tr, g_trunc_tr = withgradient(
+        A -> lossfun(A, trunc_alg, symm_R, symm_trspace), symm_r
+    )
     l_iter_tr, g_iter_tr = withgradient(
         A -> lossfun(A, iter_alg, symm_R, symm_trspace), symm_r
     )
-    @test l_iter_tr ≈ l_full_tr
+    @test l_full_tr ≈ l_trunc_tr ≈ l_full_tr
+    @test g_full_tr[1] ≈ g_trunc_tr[1] rtol = rtol
     @test g_full_tr[1] ≈ g_iter_tr[1] rtol = rtol
+    @test g_trunc_tr[1] ≈ g_iter_tr[1] rtol = rtol
 
     iter_alg_fallback = @set iter_alg.fwd_alg.fallback_threshold = 0.4  # Do dense decomposition in one block, sparse one in the other
     l_iter_fb, g_iter_fb = withgradient(
         A -> lossfun(A, iter_alg_fallback, symm_R, symm_trspace), symm_r
     )
-    @test l_iter_fb ≈ l_full_tr
+    @test l_iter_fb ≈ l_trunc_tr ≈ l_full_tr
     @test g_full_tr[1] ≈ g_iter_fb[1] rtol = rtol
+    @test g_trunc_tr[1] ≈ g_iter_fb[1] rtol = rtol
 end

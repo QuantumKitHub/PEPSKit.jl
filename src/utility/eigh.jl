@@ -2,6 +2,7 @@ using MatrixAlgebraKit: TruncationStrategy, NoTruncation, LAPACK_EighAlgorithm, 
 using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!, findtruncated, diagview
 using TensorKit: AdjointTensorMap, SectorDict, Factorizations.TruncationSpace,
     throw_invalid_innerproduct, similarstoragetype
+using TensorKit.Factorizations: _notrunc_ind
 using KrylovKit: Lanczos, BlockLanczos
 const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
@@ -363,7 +364,11 @@ function ChainRulesCore.rrule(
     ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig}, R <: FullEighPullback}
     D̃, Ũ, info = eigh_trunc(t, alg; trunc)
     D, U = info.D_full, info.U_full # untruncated decomposition
-    inds = findtruncated(diagview(D), truncspace(only(domain(D̃))))
+    inds = if space(D) == space(D̃)
+        _notrunc_ind(t)
+    else # only shuffle indices when `eigh` truncates
+        findtruncated(diagview(D), truncspace(only(domain(D̃))))
+    end
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function eigh_trunc!_full_pullback(ΔDU)

@@ -102,8 +102,8 @@ const svd_rrule_broadening = 1.0e-13
 const krylovdim_factor = 1.4
 
 # eigh forward & reverse
-const eigh_fwd_alg = :qriteration
-const eigh_rrule_alg = :trunc
+const eigh_fwd_alg = :qriteration # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
+const eigh_rrule_alg = :trunc # ∈ {:trunc, :full}
 const eigh_rrule_verbosity = 0
 
 # QR forward & reverse
