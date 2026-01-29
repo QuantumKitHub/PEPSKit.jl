@@ -218,12 +218,12 @@ environment tensors.
 ```
 """
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
-        (row, col), env::CTMRGEnv, P_top, P_bottom, network::InfiniteSquareNetwork,
+        (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork,
     )
     return renormalize_west_edge(
         env.edges[WEST, row, _prev(col, end)],
-        P_top[WEST, row, col],
-        P_bottom[WEST, _next(row, end), col],
+        P_left[WEST, row, col],
+        P_right[WEST, _next(row, end), col],
         network[row, col],
     )
 end
