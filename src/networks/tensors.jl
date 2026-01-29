@@ -31,10 +31,10 @@ The tensor elements are generated based on `f` and the element type and storage 
 specified in `T`.
 """
 function PartitionFunctionTensor(
-        f, ::Type{T},
+        f, ::Type{TorA},
         Nspace::S, Espace::S = Nspace, Sspace::S = Nspace, Wspace::S = Espace,
-    ) where {T, S <: ElementarySpace}
-    return f(T, Wspace ⊗ Sspace ← Nspace ⊗ Espace)
+    ) where {TorA, S <: ElementarySpace}
+    return f(TorA, Wspace ⊗ Sspace ← Nspace ⊗ Espace)
 end
 
 Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))

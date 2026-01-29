@@ -63,8 +63,11 @@ end
 function InfinitePEPS(
         Pspaces::A, virtual_spaces...; kwargs...
     ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
-    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...; kwargs...)
+    return InfinitePEPS(randn, Vector{ComplexF64}, Pspaces, virtual_spaces...; kwargs...)
 end
+
+TensorKit.storagetype(peps::InfinitePEPS{T}) where {T} = storagetype(T)
+TensorKit.storagetype(::Type{InfinitePEPS{T}}) where {T} = storagetype(T)
 
 """
     InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))
@@ -103,7 +106,7 @@ function _fill_state_virtual_spaces(
 end
 
 """
-    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPS([f=randn, TorA=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 """
