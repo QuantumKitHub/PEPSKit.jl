@@ -28,7 +28,7 @@ function vertices(lattice::InfiniteSquare)
     return CartesianIndices((1:(lattice.Nrows), 1:(lattice.Ncols)))
 end
 
-function nearest_neighbours(lattice::InfiniteSquare)
+function MPSKitModels.nearest_neighbours(lattice::InfiniteSquare)
     neighbors = Tuple{CartesianIndex, CartesianIndex}[]
     for idx in vertices(lattice)
         push!(neighbors, (idx, idx + CartesianIndex(0, 1)))
@@ -37,7 +37,7 @@ function nearest_neighbours(lattice::InfiniteSquare)
     return neighbors
 end
 
-function next_nearest_neighbours(lattice::InfiniteSquare)
+function MPSKitModels.next_nearest_neighbours(lattice::InfiniteSquare)
     neighbors = Tuple{CartesianIndex, CartesianIndex}[]
     for idx in vertices(lattice)
         push!(neighbors, (idx, idx + CartesianIndex(1, 1)))

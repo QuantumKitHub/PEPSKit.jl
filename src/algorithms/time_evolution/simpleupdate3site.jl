@@ -310,7 +310,7 @@ function _apply_gatempo!(
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
     fusers = map(Ms[2:end], gs[2:end]) do M, g
         V1, V2 = space(M, 1), space(g, 1)
-        return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
+        return isomorphism(storagetype(first(gs)), fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPS
            -3                         -3                          -3

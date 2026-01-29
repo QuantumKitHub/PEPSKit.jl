@@ -164,7 +164,6 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-# TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
 """
     _singular_value_distance((S₁, S₂))
 
@@ -173,18 +172,20 @@ To that end, the singular values of the current iteration `S₁` are compared wi
 previous one `S₂`. When the virtual spaces change, this comparison is not directly possible
 such that both tensors are projected into the smaller space and then subtracted.
 """
-function _singular_value_distance((S₁, S₂))
+function _singular_value_distance(S₁S₂::Tuple{DiagonalTensorMap, DiagonalTensorMap})
+    S₁, S₂ = S₁S₂
     V₁ = space(S₁, 1)
     V₂ = space(S₂, 1)
     if V₁ == V₂
         return norm(S₁ - S₂)
     else
         V = infimum(V₁, V₂)
-        e1 = isometry(V₁, V)
-        e2 = isometry(V₂, V)
+        e1 = isometry(storagetype(S₁), V₁, V)
+        e2 = isometry(storagetype(S₂), V₂, V)
         return norm(e1' * S₁ * e1 - e2' * S₂ * e2)
     end
 end
+_singular_value_distance((S₁, S₂)) = _singular_value_distance((DiagonalTensorMap(S₁), DiagonalTensorMap(S₂)))
 
 """
     calc_convergence(env, CS_old, TS_old)

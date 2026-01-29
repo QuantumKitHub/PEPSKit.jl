@@ -12,11 +12,11 @@ function MPSKit.expectation_value(
         ket::Union{InfinitePEPS, InfinitePEPO}, env::CTMRGEnv
     )
     checklattice(bra, O, ket)
-    term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+    ev = mapreduce(+, [O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, ket, bra, env)
         return trmul(operator, ρ)
     end
-    return sum(term_vals)
+    return ev
 end
 MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv) = expectation_value(peps, O, peps, env)
 function MPSKit.expectation_value(
@@ -254,7 +254,7 @@ function edge_transfer_spectrum(
         sector = one(sectortype(E))
     ) where {E <: CTMRGEdgeTensor}
     init = randn(
-        scalartype(E),
+        storagetype(E),
         space(first(bot), numind(first(bot)))' ← ℂ[typeof(sector)](sector => 1)' ⊗ space(first(top), 1),
     )
 
@@ -351,7 +351,7 @@ function product_peps(peps_args...; unitcell = (1, 1), noise_amp = 1.0e-2, state
         error("symmetric tensors not generically supported")
     if isnothing(state_vector)
         state_vector = map(noise_peps.A) do t
-            randn(scalartype(t), dim(space(t, 1)))
+            randn(storagetype(t), dim(space(t, 1)))
         end
     else
         all(dim.(space.(noise_peps.A, 1)) .== length.(state_vector)) ||

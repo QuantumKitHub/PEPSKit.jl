@@ -25,10 +25,22 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
+[weakdeps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
+
+[extensions]
+PEPSKitAdaptExt = "Adapt"
+PEPSKitCUDAExt = ["CUDA", "cuTENSOR"]
+
 [compat]
+Adapt = "4"
 Accessors = "0.1"
 ChainRulesCore = "1.0"
 Compat = "3.46, 4.2"
+CUDA = "5"
+cuTENSOR = "2"
 DocStringExtensions = "0.9.3"
 FiniteDifferences = "0.12"
 KrylovKit = "0.9.5, 0.10"
@@ -36,14 +48,14 @@ LinearAlgebra = "1"
 LoggingExtras = "1"
 MPSKit = "0.13.7"
 MPSKitModels = "0.4"
-MatrixAlgebraKit = "0.5.0"
+MatrixAlgebraKit = "0.6"
 OhMyThreads = "0.7, 0.8"
 OptimKit = "0.4"
 Printf = "1"
 QuadGK = "2.11.1"
 Random = "1"
 Statistics = "1"
-TensorKit = "0.15"
+TensorKit = "0.16"
 TensorOperations = "5"
 TestExtras = "0.3"
 VectorInterface = "0.4, 0.5"
@@ -51,7 +63,10 @@ Zygote = "0.6, 0.7"
 julia = "1.10"
 
 [extras]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
 FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
@@ -59,4 +74,9 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 
 [targets]
-test = ["Test", "TestExtras", "SafeTestsets", "ChainRulesTestUtils", "FiniteDifferences", "QuadGK"]
+test = ["Test", "TestExtras", "SafeTestsets", "ChainRulesTestUtils", "FiniteDifferences", "QuadGK", "Adapt","CUDA", "cuTENSOR"]
+
+[sources]
+#MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev="main"}
+MPSKit = {path = "/home/kshyatt/.julia/dev/MPSKit"}
+MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev="main"}

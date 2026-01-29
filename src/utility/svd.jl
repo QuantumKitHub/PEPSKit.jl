@@ -58,6 +58,8 @@ end  # Keep truncation algorithm separate to be able to specify CTMRG dependent 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :sdd => LAPACK_DivideAndConquer,
     :svd => LAPACK_QRIteration,
+    :cusvd => CUSOLVER_QRIteration,
+    :cusvdj => CUSOLVER_Jacobi,
     :iterative =>
         (; tol = 1.0e-14, krylovdim = 25, kwargs...) ->
     IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
@@ -138,7 +140,7 @@ end
 # Truncated SVD but also return full U, S and V to make it compatible with :fixed mode
 function _svd_trunc!(
         t::TensorMap,
-        alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration},
+        alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration, CUSOLVER_Jacobi, CUSOLVER_QRIteration},
         trunc::TruncationStrategy,
     )
     U, S, V⁺ = svd_compact!(t; alg)
@@ -475,6 +477,9 @@ function _default_pullback_gaugetol(x)
     return eps(eltype(n))^(3 / 4) * max(n, one(n))
 end
 
+# utility wrapper so that we can allow scalar on GPU-backed arrays
+_svd_rank(S, tol) = searchsortedlast(Array(S), tol; rev = true)
+
 # SVD_pullback: pullback implementation for general (possibly truncated) SVD
 #
 # This is a modified version of TensorKit's pullback
@@ -533,9 +538,6 @@ function svd_pullback!(
     Vp = view(Vd, 1:p, :)'
     Sp = view(S, 1:p)
 
-    # rank
-    r = searchsortedlast(S, tol; rev = true)
-
     # compute antihermitian part of projection of ΔU and ΔV onto U and V
     # also already subtract this projection from ΔU and ΔV
     if !(ΔU isa AbstractZero)
@@ -556,10 +558,15 @@ function svd_pullback!(
     else
         aVΔV = fill!(similar(Vd, (p, p)), 0)
     end
+    
+    # rank
+    @show typeof(S)
+    r = _svd_rank(S, tol)
 
     # check whether cotangents arise from gauge-invariance objective function
     mask = abs.(Sp' .- Sp) .< tol
     Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
+
     if p > r
         rprange = (r + 1):p
         Δgauge = max(Δgauge, norm(view(aUΔU, rprange, rprange), Inf))

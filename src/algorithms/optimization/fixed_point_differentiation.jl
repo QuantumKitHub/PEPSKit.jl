@@ -293,7 +293,7 @@ function gauge_fix(alg::SVDAdjoint, signs, info)
             _next(r, rowsize), c
         end
         extended_space = domain(info.U_full[dir, r_sign, c_sign]) ← codomain(info.V_full[dir, r_sign, c_sign])
-        extended_σ = zeros(scalartype(σ), extended_space)
+        extended_σ = zeros(storagetype(σ), extended_space)
         for (c, b) in blocks(extended_σ)
             σc = block(σ, c)
             kept_dim = size(σc, 1)

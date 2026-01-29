@@ -16,6 +16,7 @@ using TensorKit
 using TensorKit: AdjointTensorMap, SectorDict
 using TensorKit: throw_invalid_innerproduct, similarstoragetype
 using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
+import TensorKit: storagetype
 
 using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos

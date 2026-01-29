@@ -76,6 +76,7 @@ function select_algorithm(
         rrule_alg = (; tol = 1.0e1tol, verbosity = verbosity - 2, krylovdim, decomposition_alg.rrule_alg...)
         decomposition_alg = (; rrule_alg, decomposition_alg...)
     end
+    decomposition_alg = isa(decomposition_alg, SVDAdjoint) ? decomposition_alg : SVDAdjoint(; decomposition_alg...)
 
     return CTMRGAlgorithm(; alg, tol, verbosity, decomposition_alg, kwargs...)
 end

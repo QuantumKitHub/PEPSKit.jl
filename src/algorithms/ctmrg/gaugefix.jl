@@ -69,12 +69,12 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
 
         # Random MPS of same bond dimension
         M = map(Tsfinal) do t
-            randn(scalartype(t), codomain(t) ← domain(t))
+            randn(storagetype(T), codomain(t) ← domain(t))
         end
 
         # Find right fixed points of mixed transfer matrices
         ρinit = randn(
-            scalartype(T), space(Tsfinal[end], numind(Tsfinal[end]))' ← space(M[end], numind(M[end]))'
+            storagetype(T), space(Tsfinal[end], numind(Tsfinal[end]))' ← space(M[end], numind(M[end]))'
         )
         ρprev = transfermatrix_fixedpoint(Tsprev, M, ρinit)
         ρfinal = transfermatrix_fixedpoint(Tsfinal, M, ρinit)

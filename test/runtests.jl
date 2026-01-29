@@ -131,20 +131,35 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "EXAMPLES"
-        @time @safetestset "Transverse field Ising model" begin
-            include("examples/tf_ising.jl")
+        is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
+        if !is_buildkite
+            @time @safetestset "Transverse field Ising model" begin
+                include("examples/tf_ising.jl")
+            end
+            @time @safetestset "Heisenberg model" begin
+                include("examples/heisenberg.jl")
+            end
+            @time @safetestset "J1-J2 model" begin
+                include("examples/j1j2_model.jl")
+            end
+            @time @safetestset "P-wave superconductor" begin
+                include("examples/pwave.jl")
+            end
+            @time @safetestset "U1-symmetric Bose-Hubbard model" begin
+                include("examples/bose_hubbard.jl")
+            end
         end
-        @time @safetestset "Heisenberg model" begin
-            include("examples/heisenberg.jl")
+        @time @safetestset "CUDA Heisenberg model" begin
+            include("examples/cu_heisenberg.jl")
         end
-        @time @safetestset "J1-J2 model" begin
-            include("examples/j1j2_model.jl")
+        @time @safetestset "CUDA Boundary MPS" begin
+            include("examples/cu_boundary_mps.jl")
         end
-        @time @safetestset "P-wave superconductor" begin
-            include("examples/pwave.jl")
+        @time @safetestset "CUDA J1-J2 model" begin
+            include("examples/cu_j1j2_model.jl")
         end
-        @time @safetestset "U1-symmetric Bose-Hubbard model" begin
-            include("examples/bose_hubbard.jl")
+        @time @safetestset "CUDA U1-symmetric Bose-Hubbard model" begin
+            include("examples/cu_bose_hubbard.jl")
         end
     end
 end

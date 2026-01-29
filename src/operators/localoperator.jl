@@ -63,6 +63,7 @@ function LocalOperator(
     terms_tuple = Tuple(relevant_terms)
     return LocalOperator{typeof(terms_tuple), eltype(lattice)}(lattice, terms_tuple)
 end
+TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S} = storagetype(first(lo.terms)[2]) # horrible!
 
 """
     checklattice(Bool, args...)
@@ -226,9 +227,10 @@ Fuse identities on auxiliary physical spaces `Ps` into a given operator `op`.
 When `Ps` is not specified, it defaults to the domain spaces of `op`.
 """
 function _fuse_ids(op::AbstractTensorMap{T, S, N, N}, Ps::NTuple{N, S}) where {T, S, N}
+    TA = TensorKit.storagetype(op)
     # make isomorphisms
     fs = map(1:N) do i
-        return isomorphism(fuse(space(op, i), Ps[i]), space(op, i) ⊗ Ps[i])
+        return isomorphism(TA, fuse(space(op, i), Ps[i]), space(op, i) ⊗ Ps[i])
     end
     # and fuse them into the operator
     return _fuse_isomorphisms(op, fs)

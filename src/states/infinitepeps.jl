@@ -46,8 +46,8 @@ Create an `InfinitePEPS` by specifying the physical, north virtual and east virt
 of the PEPS tensor at each site in the unit cell as a matrix.
 """
 function InfinitePEPS(
-        f, T::Type{<:Number}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+      f, ::Type{TorA}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+     ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -55,7 +55,7 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(f, T, P, N, E, S, W)
+        return PEPSTensor(f, TorA, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
@@ -63,8 +63,11 @@ end
 function InfinitePEPS(
         Pspaces::A, virtual_spaces...; kwargs...
     ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
-    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...; kwargs...)
+    return InfinitePEPS(randn, Vector{ComplexF64}, Pspaces, virtual_spaces...; kwargs...)
 end
+
+TensorKit.storagetype(peps::InfinitePEPS{T}) where {T} = storagetype(T)
+TensorKit.storagetype(::Type{InfinitePEPS{T}}) where {T} = storagetype(T)
 
 """
     InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))
@@ -103,15 +106,15 @@ function _fill_state_virtual_spaces(
 end
 
 """
-    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPS([f=randn, TorA=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 """
 function InfinitePEPS(
-        f, T::Type{<:Number}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpace}
+        f, ::Type{TorA}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace, TorA}
     return InfinitePEPS(
-        f, T,
+        f, TorA,
         _fill_state_physical_spaces(Pspace; unitcell),
         _fill_state_virtual_spaces(vspaces...; unitcell)...,
     )

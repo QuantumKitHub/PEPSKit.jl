@@ -62,14 +62,20 @@ end
 
 Create a trivial `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
 """
-function SUWeight(
+function SUWeight(::Type{TorA},
         Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+    ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
     @assert size(Nspaces) == size(Espaces)
     Nr, Nc = size(Nspaces)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
-        DiagonalTensorMap(ones(reduceddim(V)), V)
+        if TorA <: AbstractArray
+            diag = TorA(undef, reduceddim(V))
+            fill!(diag, 1)
+        else
+            diag = ones(TorA, reduceddim(V))
+        end
+        DiagonalTensorMap(diag, V)
     end
     return SUWeight(weights)
 end
@@ -80,10 +86,10 @@ end
 Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east) 
 as `ElementarySpace`s) and unit cell size.
 """
-function SUWeight(
+function SUWeight(::Type{TorA},
         Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpace}
-    return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell))
+    ) where {S <: ElementarySpace, TorA}
+    return SUWeight(TorA, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
 """
@@ -94,7 +100,7 @@ Create a trivial `SUWeight` for a given InfinitePEPS.
 function SUWeight(peps::InfinitePEPS)
     Nspaces = map(Base.Fix2(domain, NORTH), unitcell(peps))
     Espaces = map(Base.Fix2(domain, EAST), unitcell(peps))
-    return SUWeight(Nspaces, Espaces)
+    return SUWeight(storagetype(peps), Nspaces, Espaces)
 end
 
 """
@@ -106,7 +112,7 @@ function SUWeight(pepo::InfinitePEPO)
     @assert size(pepo, 3) == 1
     Nspaces = map(Base.Fix2(domain, NORTH), @view(unitcell(pepo)[:, :, 1]))
     Espaces = map(Base.Fix2(domain, EAST), @view(unitcell(pepo)[:, :, 1]))
-    return SUWeight(Nspaces, Espaces)
+    return SUWeight(storagetype(pepo), Nspaces, Espaces)
 end
 
 Random.rand!(wts::SUWeight) = rand!(Random.default_rng(), wts)

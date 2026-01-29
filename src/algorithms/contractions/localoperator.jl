@@ -371,9 +371,8 @@ function reduced_densitymatrix(
         env.edges[SOUTH, mod1(row + 1, end), mod1(col, end)] *
         twistdual(env.corners[SOUTHWEST, mod1(row + 1, end), mod1(col - 1, end)], 1)
     E_west =
-        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
+        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] * 
         twistdual(env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)], 1)
-
     @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
         E_south[χSE DSt DSb; χSW] * E_west[χSW DWt DWb; χNW]
 
@@ -387,7 +386,6 @@ function reduced_densitymatrix(
         EE_NE[DNb DEb; χSE χNW DNt DEt] * EE_SWA[χSE χNW DNt DEt; dt DSb DWb]
 
     @tensor ρ[dt; db] := EEAEE[dt; DNb DEb DSb DWb] * conj(Ā[db; DNb DEb DSb DWb])
-
     return ρ / str(ρ)
 end
 

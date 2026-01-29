@@ -228,7 +228,7 @@ function _apply_gate(
     end
 
     # TODO: replace this with actual truncation error once TensorKit is updated
-    ac, sc, bc = svd_compact!(a2b2; alg = LAPACK_QRIteration())
+    ac, sc, bc = svd_compact!(a2b2; alg = MPSKit.Defaults.alg_svd())
     a, s, b, ϵ = _truncate_compact((ac, sc, bc), trunc)
 
     a, b = absorb_s(a, s, b)
@@ -283,7 +283,7 @@ function _get_gatempo_se(ham::LocalOperator, dt::Number, row::Int, col::Int)
     # identity operator at each site
     units = map(sites) do site
         site_ = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
-        return id(physicalspace(ham)[site_])
+        return id(storagetype(ham), physicalspace(ham)[site_])
     end
     # when iterating through ┘, └, ┌, ┐ clusters in the unit cell,
     # NN / NNN bonds are counted 4 / 2 times, respectively.

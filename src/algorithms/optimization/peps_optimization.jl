@@ -230,11 +230,14 @@ function fixedpoint(
                 alg_rrule = alg.gradient_alg,
             )
             ignore_derivatives() do
-                alg.reuse_env && update!(env, env′)
+                if alg.reuse_env
+                    update!(env, env′)
+                end
                 push!(truncation_errors, info.truncation_error)
                 push!(condition_numbers, info.condition_number)
             end
-            return cost_function(ψ, env′, operator)
+            cf = cost_function(ψ, env′, operator)
+            return cf
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
         push!(gradnorms_unitcell, norm.(g.A))

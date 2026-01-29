@@ -23,17 +23,17 @@ const PartitionFunctionTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S
 const PFTensor = PartitionFunctionTensor
 
 """
-    PartitionFunctionTensor(f, ::Type{T}, Pspace::S, Nspace::S,
-               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
+    PartitionFunctionTensor(f, ::Type{TorA}, Pspace::S, Nspace::S,
+               [Espace::S], [Sspace::S], [Wspace::S]) where {TorA, S<:Union{Int,ElementarySpace}}
                 
-Construct a PartitionFunctionTensor tensor based on the north, east, west and south spaces.
+Construct a `PartitionFunctionTensor` tensor based on the north, east, west and south spaces.
 The tensor elements are generated based on `f` and the element type is specified in `T`.
 """
 function PartitionFunctionTensor(
-        f, ::Type{T},
+        f, ::Type{TorA},
         Nspace::S, Espace::S = Nspace, Sspace::S = Nspace, Wspace::S = Espace,
-    ) where {T, S <: ElementarySpace}
-    return f(T, Wspace ⊗ Sspace ← Nspace ⊗ Espace)
+    ) where {TorA, S <: ElementarySpace}
+    return f(TorA, Wspace ⊗ Sspace ← Nspace ⊗ Espace)
 end
 
 Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))
@@ -70,18 +70,19 @@ respectively.
 const PEPSTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 1, 4}
 
 """
-    PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
-               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
+    PEPSTensor(f, ::Type{TorA}, Pspace::S, Nspace::S,
+               [Espace::S], [Sspace::S], [Wspace::S]) where {TorA, S<:Union{Int,ElementarySpace}}
                 
 Construct a PEPS tensor based on the physical, north, east, south and west spaces.
 The tensor elements are generated based on `f` and the element type is specified in `T`.
 """
 function PEPSTensor(
-        f, ::Type{T},
+        f,
+        ::Type{TorA},
         Pspace::S,
         Nspace::S, Espace::S = Nspace, Sspace::S = Nspace', Wspace::S = Espace',
-    ) where {T, S <: ElementarySpace}
-    return f(T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
+    ) where {TorA, S <: ElementarySpace}
+    return f(TorA, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
 end
 
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
