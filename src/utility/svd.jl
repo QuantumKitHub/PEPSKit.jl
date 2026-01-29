@@ -61,6 +61,8 @@ end  # Keep truncation algorithm separate to be able to specify CTMRG dependent 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :sdd => LAPACK_DivideAndConquer,
     :svd => LAPACK_QRIteration,
+    :cusvd => CUSOLVER_QRIteration,
+    :cusvdj => CUSOLVER_Jacobi,
     :iterative =>
         (; tol = 1.0e-14, krylovdim = 25, kwargs...) ->
     IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
@@ -141,7 +143,7 @@ end
 # Truncated SVD but also return full U, S and V to make it compatible with :fixed mode
 function _svd_trunc!(
         t::TensorMap,
-        alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration},
+        alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration, CUSOLVER_Jacobi, CUSOLVER_QRIteration},
         trunc::TruncationStrategy,
     )
     U, S, V⁺ = svd_compact!(t; alg)

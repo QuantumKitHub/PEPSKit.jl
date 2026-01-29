@@ -158,7 +158,6 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-# TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
 """
     _singular_value_distance((S₁, S₂))
 
@@ -168,16 +167,30 @@ previous one `S₂`. When the virtual spaces change, this comparison is not dire
 such that both tensors are projected into the smaller space and then subtracted.
 """
 function _singular_value_distance((S₁, S₂))
-    V₁ = space(S₁, 1)
-    V₂ = space(S₂, 1)
-    if V₁ == V₂
-        return norm(S₁ - S₂)
-    else
-        V = infimum(V₁, V₂)
-        e1 = isometry(V₁, V)
-        e2 = isometry(V₂, V)
-        return norm(e1' * S₁ * e1 - e2' * S₂ * e2)
+    S₁.structure == S₂.structure && return norm(add(S₁, S₂, -1))
+
+    T = scalartype(S₁)
+    result = float(zero(T))
+    _diff = T[]
+    for c in union(blocksectors(S₁), blocksectors(S₂))
+        if !haskey(S₁, c)
+            @assert haskey(S₂, c)
+            result += norm(S₂[c])^2 * dim(c)
+        elseif !haskey(S₂, c)
+            @assert haskey(S₁, c)
+            result += norm(S₁[c])^2 * dim(c)
+        else
+            s₁ = S₁[c]
+            s₂ = S₂[c]
+            resize!(_diff, max(length(s₁), length(s₂)))
+            zerovector!(_diff)
+            add!(view(_diff, 1:length(s₁)), s₁)
+            add!(view(_diff, 1:length(s₂)), s₂, -1)
+            result += norm(_diff)^2 * dim(c)
+        end
     end
+
+    return sqrt(result)
 end
 
 """

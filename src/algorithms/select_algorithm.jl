@@ -71,7 +71,7 @@ function select_algorithm(
         rrule_alg = (; tol = 1.0e1tol, verbosity = verbosity - 2, krylovdim, svd_alg.rrule_alg...)
         svd_alg = (; rrule_alg, svd_alg...)
     end
-    svd_algorithm = SVDAdjoint(; svd_alg...)
+    svd_algorithm = isa(svd_alg, SVDAdjoint) ? svd_alg : SVDAdjoint(; svd_alg...)
 
     return CTMRGAlgorithm(; alg, tol, verbosity, svd_alg = svd_algorithm, kwargs...)
 end

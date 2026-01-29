@@ -26,9 +26,9 @@ end
 #
 
 function MPSKitModels.transverse_field_ising(
-        T::Type{<:Number}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
+        ::Type{T}, ::Type{TA}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
         J = 1.0, g = 1.0,
-    )
+    ) where {T <: Number, TA <: AbstractArray{T}}
     ZZ = rmul!(σᶻᶻ(T, S), -J)
     X = rmul!(σˣ(T, S), g * -J)
     spaces = fill(domain(X)[1], (lattice.Nrows, lattice.Ncols))
@@ -72,15 +72,15 @@ function MPSKitModels.heisenberg_XXZ(
 end
 
 function MPSKitModels.hubbard_model(
-        T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
+        ::Type{T}, ::Type{TA}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
         t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
-    )
+    ) where {T <: Number, TA <: AbstractArray{T}}
     # TODO: just add this
     @assert n == 0 "Currently no support for imposing a fixed particle number"
     N = MPSKitModels.e_number(T, particle_symmetry, spin_symmetry)
     pspace = space(N, 1)
-    unit = TensorKit.id(pspace)
+    unit = id(TA, pspace)
     hopping =
         MPSKitModels.e⁺e⁻(T, particle_symmetry, spin_symmetry) +
         MPSKitModels.e⁻e⁺(T, particle_symmetry, spin_symmetry)
@@ -91,13 +91,13 @@ function MPSKitModels.hubbard_model(
 end
 
 function MPSKitModels.bose_hubbard_model(
-        elt::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
+        ::Type{TorA}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
         cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
-    )
+    ) where {TorA}
     hopping_term =
-        a_plusmin(elt, symmetry; cutoff = cutoff) + a_minplus(elt, symmetry; cutoff = cutoff)
-    N = a_number(elt, symmetry; cutoff = cutoff)
-    interaction_term = MPSKitModels.contract_onesite(N, N - id(domain(N)))
+        a_plusmin(TorA, symmetry; cutoff = cutoff) + a_minplus(TorA, symmetry; cutoff = cutoff)
+    N = a_number(TorA, symmetry; cutoff = cutoff)
+    interaction_term = MPSKitModels.contract_onesite(N, N - id(TorA, domain(N)))
 
     spaces = fill(space(N, 1), (lattice.Nrows, lattice.Ncols))
 
@@ -121,10 +121,10 @@ function MPSKitModels.bose_hubbard_model(
 end
 
 function MPSKitModels.tj_model(
-        T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
+        ::Type{TorA}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
         t = 2.5, J = 1.0, mu = 0.0, slave_fermion::Bool = false,
-    )
+       ) where {TorA}
     hopping =
         TJOperators.e_plusmin(particle_symmetry, spin_symmetry; slave_fermion) +
         TJOperators.e_minplus(particle_symmetry, spin_symmetry; slave_fermion)
@@ -133,9 +133,9 @@ function MPSKitModels.tj_model(
         TJOperators.S_exchange(particle_symmetry, spin_symmetry; slave_fermion) -
         (1 / 4) * (num ⊗ num)
     pspace = space(num, 1)
-    unit = TensorKit.id(pspace)
+    unit = id(TorA, pspace)
     h = (-t) * hopping + J * heis - (mu / 4) * (num ⊗ unit + unit ⊗ num)
-    if T <: Real
+    if eltype(TorA) <: Real
         h = real(h)
     end
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
@@ -146,7 +146,7 @@ end
 #
 
 """
-    j1_j2_model([elt::Type{T}, symm::Type{S},] lattice::InfiniteSquare;
+    j1_j2_model([::Type{TorA}, symm::Type{S},] lattice::InfiniteSquare;
                 J1=1.0, J2=1.0, spin=1//2, sublattice=true)
 
 Square lattice ``J_1\\text{-}J_2`` model, defined by the Hamiltonian
@@ -165,12 +165,12 @@ function j1_j2_model(lattice::InfiniteSquare; kwargs...)
     return j1_j2_model(ComplexF64, Trivial, lattice; kwargs...)
 end
 function j1_j2_model(
-        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
+        ::Type{TorA}, S::Type{<:Sector}, lattice::InfiniteSquare;
         J1 = 1.0, J2 = 1.0, spin = 1 // 2, sublattice = true,
-    )
-    term_AA = S_exchange(T, S; spin)
+    ) where {TorA}
+    term_AA = S_exchange(TorA, S; spin)
     term_AB = if sublattice
-        -S_xx(T, S; spin) + S_yy(T, S; spin) - S_zz(T, S; spin)  # Apply sublattice rotation
+        -S_xx(TorA, S; spin) + S_yy(TorA, S; spin) - S_zz(TorA, S; spin)  # Apply sublattice rotation
     else
         term_AA
     end
@@ -199,23 +199,24 @@ function pwave_superconductor(lattice::InfiniteSquare; kwargs...)
     return pwave_superconductor(ComplexF64, lattice; kwargs...)
 end
 function pwave_superconductor(
-        T::Type{<:Number}, lattice::InfiniteSquare;
+        ::Type{T}, ::Type{TA}, lattice::InfiniteSquare;
         t::Number = 1, μ::Number = 2, Δ::Number = 1
-    )
+    ) where {T <: Number, TA <: AbstractArray{T}}
     physical_space = Vect[FermionParity](0 => 1, 1 => 1)
     spaces = fill(physical_space, (lattice.Nrows, lattice.Ncols))
 
     # on-site
-    h0 = zeros(T, physical_space ← physical_space)
+    # TODO
+    h0 = TA(zeros(T, physical_space ← physical_space))
     block(h0, FermionParity(1)) .= -μ
 
     # two-site (x-direction)
-    hx = zeros(T, physical_space^2 ← physical_space^2)
+    hx = TA(zeros(T, physical_space^2 ← physical_space^2))
     block(hx, FermionParity(0)) .= [0 -Δ; -Δ 0]
     block(hx, FermionParity(1)) .= [0 -t; -t 0]
 
     # two-site (y-direction)
-    hy = zeros(T, physical_space^2 ← physical_space^2)
+    hy = TA(zeros(T, physical_space^2 ← physical_space^2))
     block(hy, FermionParity(0)) .= [0 Δ * im; -Δ * im 0]
     block(hy, FermionParity(1)) .= [0 -t; -t 0]
 

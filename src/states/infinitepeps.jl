@@ -46,8 +46,8 @@ Create an `InfinitePEPS` by specifying the physical, north virtual and east virt
 of the PEPS tensor at each site in the unit cell as a matrix.
 """
 function InfinitePEPS(
-        f, T::Type{<:Number}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+      f, ::Type{T}, ::Type{TA}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+     ) where {M <: AbstractMatrix{<:ElementarySpace}, T <: Number, TA <: AbstractArray{T}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -55,7 +55,7 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(f, T, P, N, E, S, W)
+        return PEPSTensor(f, T, TA, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
@@ -63,7 +63,7 @@ end
 function InfinitePEPS(
         Pspaces::A, virtual_spaces...; kwargs...
     ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
-    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...; kwargs...)
+    return InfinitePEPS(randn, ComplexF64, Vector{ComplexF64}, Pspaces, virtual_spaces...; kwargs...)
 end
 
 """
