@@ -82,7 +82,7 @@ function compute_relative_phases(
 
         # Random MPS of same bond dimension
         M = map(Tsfinal) do t
-            randn(scalartype(t), codomain(t) ← domain(t))
+            randn(storagetype(T), codomain(t) ← domain(t))
         end
 
         # Find right fixed points of mixed transfer matrices

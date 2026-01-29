@@ -29,10 +29,22 @@ TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
+[weakdeps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
+
+[extensions]
+PEPSKitAdaptExt = "Adapt"
+PEPSKitCUDAExt = ["CUDA", "cuTENSOR"]
+
 [compat]
+Adapt = "4"
 Accessors = "0.1"
 ChainRulesCore = "1.0"
 Compat = "3.46, 4.2"
+CUDA = "5"
+cuTENSOR = "2"
 DocStringExtensions = "0.9.3"
 FiniteDifferences = "0.12"
 KrylovKit = "0.9.5, 0.10"
@@ -52,3 +64,7 @@ TupleTools = "1.6.0"
 VectorInterface = "0.4, 0.5"
 Zygote = "0.6, 0.7"
 julia = "1.10"
+
+[sources]
+MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev="main"}
+MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev="main"}

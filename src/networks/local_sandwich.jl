@@ -54,6 +54,8 @@ _isapprox_localsandwich(O1::PFTensor, O2::PFTensor; kwargs...) = isapprox(O1, O2
 ## PEPS
 
 const PEPSSandwich{T <: PEPSTensor} = Tuple{T, T}
+TensorKit.storagetype(::Type{PEPSSandwich{T}}) where {T} = T
+TensorKit.storagetype(S::PEPSSandwich{T}) where {T} = T
 
 ket(O::PEPSSandwich) = O[1]
 bra(O::PEPSSandwich) = O[2]

@@ -213,7 +213,8 @@ function fixedpoint(
                 alg.reuse_env && update!(env, env′)
                 push!(contraction_metrics, info.contraction_metrics)
             end
-            return cost_function(ψ, env′, operator)
+            cf = cost_function(ψ, env′, operator)
+            return cf
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
         push!(gradnorms_unitcell, norm.(g.A))
