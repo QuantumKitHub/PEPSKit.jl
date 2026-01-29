@@ -112,15 +112,15 @@ function full_infinite_environment(
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
         A_1::P, A_2::P, A_3::P, A_4::P,
     ) where {P <: PEPSSandwich}
-    return @autoopt @tensor env[χ_in D_inabove D_inbelow; χ_out D_outabove D_outbelow] :=
-        E_1[χ_in D1 D2; χ1] * C_1[χ1; χ2] * E_2[χ2 D3 D4; χ3] *
-        ket(A_1)[d1; D3 D11 D_inabove D1] * conj(bra(A_1)[d1; D4 D12 D_inbelow D2]) *
+    return @autoopt @tensor env[χ_out D_outabove D_outbelow; χ_in D_inabove D_inbelow] :=
+        E_1[χ_out D1 D2; χ1] * C_1[χ1; χ2] * E_2[χ2 D3 D4; χ3] *
+        ket(A_1)[d1; D3 D11 D_outabove D1] * conj(bra(A_1)[d1; D4 D12 D_outbelow D2]) *
         ket(A_2)[d2; D5 D7 D9 D11] * conj(bra(A_2)[d2; D6 D8 D10 D12]) *
         E_3[χ3 D5 D6; χ4] * C_2[χ4; χ5] * E_4[χ5 D7 D8; χ6] *
         E_5[χ6 D13 D14; χ7] * C_3[χ7; χ8] * E_6[χ8 D15 D16; χ9] *
         ket(A_3)[d3; D9 D13 D15 D17] * conj(bra(A_3)[d3; D10 D14 D16 D18]) *
-        ket(A_4)[d4; D_outabove D17 D19 D21] * conj(bra(A_4)[d4; D_outbelow D18 D20 D22]) *
-        E_7[χ9 D19 D20; χ10] * C_4[χ10; χ11] * E_8[χ11 D21 D22; χ_out]
+        ket(A_4)[d4; D_inabove D17 D19 D21] * conj(bra(A_4)[d4; D_inbelow D18 D20 D22]) *
+        E_7[χ9 D19 D20; χ10] * C_4[χ10; χ11] * E_8[χ11 D21 D22; χ_in]
 end
 function full_infinite_environment(
         C_1, C_2, C_3, C_4,
@@ -128,9 +128,9 @@ function full_infinite_environment(
         x::AbstractTensor{T, S, 3},
         A_1::P, A_2::P, A_3::P, A_4::P,
     ) where {T, S, P <: PEPSSandwich}
-    return @autoopt @tensor env_x[χ_in D_inabove D_inbelow] :=
-        E_1[χ_in D1 D2; χ1] * C_1[χ1; χ2] * E_2[χ2 D3 D4; χ3] *
-        ket(A_1)[d1; D3 D11 D_inabove D1] * conj(bra(A_1)[d1; D4 D12 D_inbelow D2]) *
+    return @autoopt @tensor env_x[χ_out D_outabove D_outbelow] :=
+        E_1[χ_out D1 D2; χ1] * C_1[χ1; χ2] * E_2[χ2 D3 D4; χ3] *
+        ket(A_1)[d1; D3 D11 D_outabove D1] * conj(bra(A_1)[d1; D4 D12 D_outbelow D2]) *
         ket(A_2)[d2; D5 D7 D9 D11] * conj(bra(A_2)[d2; D6 D8 D10 D12]) *
         E_3[χ3 D5 D6; χ4] * C_2[χ4; χ5] * E_4[χ5 D7 D8; χ6] *
         E_5[χ6 D13 D14; χ7] * C_3[χ7; χ8] * E_6[χ8 D15 D16; χ9] *
@@ -161,15 +161,15 @@ function full_infinite_environment(
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
         A_1::P, A_2::P, A_3::P, A_4::P,
     ) where {P <: PFTensor}
-    return @autoopt @tensor env[χ_in D_in; χ_out D_out] :=
-        E_1[χ_in D1; χ1] * C_1[χ1; χ2] * E_2[χ2 D3; χ3] *
-        A_1[D1 D_in; D3 D11] *
+    return @autoopt @tensor env[χ_out D_out; χ_in D_in] :=
+        E_1[χ_out D1; χ1] * C_1[χ1; χ2] * E_2[χ2 D3; χ3] *
+        A_1[D1 D_out; D3 D11] *
         A_2[D11 D9; D5 D7] *
         E_3[χ3 D5; χ4] * C_2[χ4; χ5] * E_4[χ5 D7; χ6] *
         E_5[χ6 D13; χ7] * C_3[χ7; χ8] * E_6[χ8 D15; χ9] *
         A_3[D17 D15; D9 D13] *
-        A_4[D21 D19; D_out D17] *
-        E_7[χ9 D19; χ10] * C_4[χ10; χ11] * E_8[χ11 D21; χ_out]
+        A_4[D21 D19; D_in D17] *
+        E_7[χ9 D19; χ10] * C_4[χ10; χ11] * E_8[χ11 D21; χ_in]
 end
 function full_infinite_environment(
         C_1, C_2, C_3, C_4,
@@ -177,9 +177,9 @@ function full_infinite_environment(
         x::AbstractTensor{T, S, 2},
         A_1::P, A_2::P, A_3::P, A_4::P,
     ) where {T, S, P <: PFTensor}
-    return @autoopt @tensor env_x[χ_in D_in] :=
-        E_1[χ_in D1; χ1] * C_1[χ1; χ2] * E_2[χ2 D3; χ3] *
-        A_1[D1 D_in; D3 D11] *
+    return @autoopt @tensor env_x[χ_out D_out] :=
+        E_1[χ_out D1; χ1] * C_1[χ1; χ2] * E_2[χ2 D3; χ3] *
+        A_1[D1 D_out; D3 D11] *
         A_2[D11 D9; D5 D7] *
         E_3[χ3 D5; χ4] * C_2[χ4; χ5] * E_4[χ5 D7; χ6] *
         E_5[χ6 D13; χ7] * C_3[χ7; χ8] * E_6[χ8 D15; χ9] *
