@@ -306,7 +306,8 @@ function fixedpoint(
                 alg.reuse_env && update!(env, env′)
                 tracked_finalizer.contraction_metrics[end] = info.contraction_metrics
             end
-            return cost_function(ψ, env′, operator)
+            cf = cost_function(ψ, env′, operator)
+            return cf
         end
         g = peps_project_tangent(only(gs), peps)
         tracked_finalizer.gradnorms_unitcell[end] = norm.(unitcell(g))
