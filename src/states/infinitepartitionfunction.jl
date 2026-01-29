@@ -50,8 +50,8 @@ of the PEPS tensor at each site in the unit cell as a matrix. Each individual sp
 specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePartitionFunction(
-        f, T, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+       f, ::Type{T}, ::Type{TA}, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:ElementarySpace}, T <: Number, TA <: AbstractArray{T}}
     size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -59,13 +59,13 @@ function InfinitePartitionFunction(
     Wspaces = circshift(Espaces, (0, 1))
 
     A = map(Nspaces, Espaces, Sspaces, Wspaces) do N, E, S, W
-        return PartitionFunctionTensor(f, T, N, E, S, W)
+        return PartitionFunctionTensor(f, T, TA, N, E, S, W)
     end
 
     return InfinitePartitionFunction(A)
 end
 function InfinitePartitionFunction(Nspaces::A, args...) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
-    return InfinitePartitionFunction(randn, ComplexF64, Nspaces, args...)
+    return InfinitePartitionFunction(randn, ComplexF64, Vector{ComplexF64}, Nspaces, args...)
 end
 
 """

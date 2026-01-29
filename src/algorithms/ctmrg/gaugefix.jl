@@ -82,7 +82,7 @@ function compute_relative_phases(
 
         # Random MPS of same bond dimension
         M = map(Tsfinal) do t
-            randn(scalartype(t), codomain(t) ← domain(t))
+            randn(storagetype(T), codomain(t) ← domain(t))
         end
 
         # Find right fixed points of mixed transfer matrices
@@ -145,7 +145,7 @@ end
 
 function initialize_right_fixedpoint(tops, bottoms)
     ρ0 = randn(
-        scalartype(tops), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
+        TensorKit.promote_storagetype(tops...), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
     )
     return ρ0
 end
