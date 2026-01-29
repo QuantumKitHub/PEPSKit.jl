@@ -17,10 +17,10 @@ Multiply corner tensor with incoming and outgoing gauge signs.
 ```
 """
 function fix_gauge_corner(
-        corner::CTMRGCornerTensor, σ_in::CTMRGCornerTensor, σ_out::CTMRGCornerTensor
+        corner::CTMRGCornerTensor, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor
     )
     return @autoopt @tensor corner_fix[χ_out; χ_in] :=
-        σ_in[χ_out; χ1] * corner[χ1; χ2] * conj(σ_out[χ_in; χ2])
+        σ_out[χ_out; χ1] * corner[χ1; χ2] * conj(σ_in[χ_in; χ2])
 end
 
 """
