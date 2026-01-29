@@ -12,7 +12,9 @@ Contract four quadrants (enlarged corners) to form a full-infinite environment.
     |quadrant1|    |quadrant2|
     |~~~~~~~~~| -- |~~~~~~~~~|
       |     |        |     |
+     out             |     |
                      |     |
+     in              |     |
       |     |        |     |
     |~~~~~~~~~| -- |~~~~~~~~~|
     |quadrant4|    |quadrant3|
@@ -26,7 +28,9 @@ In the same manner two halfs can be used to contract the full-infinite environme
     |         half1          |
     |~~~~~~~~~~~~~~~~~~~~~~~~|
       |     |        |     |
+     out             |     |
                      |     |
+     in              |     |
       |     |        |     |
     |~~~~~~~~~~~~~~~~~~~~~~~~|
     |         half2          |
@@ -40,7 +44,9 @@ The environment can also be contracted directly from all its constituent tensors
      |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
+    out            |      |
                    |      |
+    in      |      |      |
      |      |      |      |
     E_8 -- A_4 -- A_3 -- E_5
      |      |      |      |
@@ -54,6 +60,7 @@ Alternatively, contract the environment with a vector `x` acting on it
      |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
+    out            |      |
                    |      |
     [~~~~x~~~]     |      |
      |      |      |      |

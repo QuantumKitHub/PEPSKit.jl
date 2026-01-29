@@ -5,11 +5,12 @@ Apply projectors to each side of a quadrant.
 
 ```
     |~~~~~~~~| -- |~~~~~~|
-    |quadrant|    |P_left| --
+    |quadrant|    |P_left| --in
     |~~~~~~~~| -- |~~~~~~|
      |     |
     [P_right]
         |
+       out
 ```
 """
 @generated function renormalize_corner(
@@ -51,22 +52,24 @@ Apply `renormalize_corner` to the enlarged northwest corner.
 
 ```
     |~~~~~~~~| -- |~~~~~~|
-    |quadrant|    |P_left| --
+    |quadrant|    |P_left| --in
     |~~~~~~~~| -- |~~~~~~|
      |     |
     [P_right]
         |
+       out
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
     C_northwest -- E_north -- |~~~~~~|
-         |           |        |P_left| --
+         |           |        |P_left| --in
       E_west    --   A     -- |~~~~~~|
          |           |
       [~~~~~P_right~~~~]
                |
+              out
 ```
 """
 function renormalize_northwest_corner((row, col), enlarged_env, P_left, P_right)
@@ -135,23 +138,25 @@ end
 Apply `renormalize_corner` to the enlarged northeast corner.
 
 ```
-       |~~~~~~~| -- |~~~~~~~~|
-    -- |P_right|    |quadrant|
-       |~~~~~~~| -- |~~~~~~~~|
-                      |    |
-                     [P_left]
-                         |
+          |~~~~~~~| -- |~~~~~~~~|
+    out-- |P_right|    |quadrant|
+          |~~~~~~~| -- |~~~~~~~~|
+                         |    |
+                        [P_left]
+                            |
+                            in
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
-       |~~~~~~~| -- E_north -- C_northeast
-    -- |P_right|       |            |
-       |~~~~~~~| --    A    --    E_east
-                       |            |
-                     [~~~~~P_left~~~~~]
-                              |
+          |~~~~~~~| -- E_north -- C_northeast
+    out-- |P_right|       |            |
+          |~~~~~~~| --    A    --    E_east
+                          |            |
+                        [~~~~~P_left~~~~~]
+                                 |
+                                 in
 ```
 """
 function renormalize_northeast_corner((row, col), enlarged_env, P_left, P_right)
@@ -222,23 +227,25 @@ end
 Apply `renormalize_corner` to the enlarged southeast corner.
 
 ```
-                        |
-                    [P_right]
-                      |   |
-       |~~~~~~| -- |~~~~~~~~|
-    -- |P_left|    |quadrant|
-       |~~~~~~| -- |~~~~~~~~|
+                         out
+                          |
+                      [P_right]
+                        |   |
+         |~~~~~~| -- |~~~~~~~~|
+    in-- |P_left|    |quadrant|
+         |~~~~~~| -- |~~~~~~~~|
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
-                            |
-                    [~~~~P_right~~~~]
-                      |           |
-       |~~~~~~| --    A    --   E_east
-    -- |P_left|       |           |
-       |~~~~~~| -- E_south -- C_southeast
+                             out
+                              |
+                      [~~~~P_right~~~~]
+                        |           |
+         |~~~~~~| --    A    --   E_east
+    in-- |P_left|       |           |
+         |~~~~~~| -- E_south -- C_southeast
 ```
 """
 function renormalize_southeast_corner((row, col), enlarged_env, P_left, P_right)
@@ -307,22 +314,24 @@ end
 Apply `renormalize_corner` to the enlarged southwest corner.
 
 ```
+         in
          |
      [P_left]
       |    |
     |~~~~~~~~| -- |~~~~~~~|
-    |quadrant|    |P_right| --
+    |quadrant|    |P_right| --out
     |~~~~~~~~| -- |~~~~~~~|
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
+               in
                |
        [~~~~~P_left~~~~~]
          |            |
        E_west   --    A    -- |~~~~~~~|
-         |            |       |P_right| --
+         |            |       |P_right| --out
     C_southwest -- E_south -- |~~~~~~~|
 ```
 """
@@ -390,10 +399,11 @@ end
 
 Apply left projector to southwest corner and south edge.
 ```
+        in
         |
     [P_left]
      |    |
-     C -- E -- in
+     C -- E --out
 ```
 """
 function renormalize_bottom_corner((row, col), env::CTMRGEnv, projectors)
@@ -431,10 +441,11 @@ end
 
 Apply right projector to northwest corner and north edge.
 ```
-     C --- E --
+     C --- E --in
      |     |
     [P_right]
         |
+       out
 ```
 """
 function renormalize_top_corner((row, col), env::CTMRGEnv, projectors)

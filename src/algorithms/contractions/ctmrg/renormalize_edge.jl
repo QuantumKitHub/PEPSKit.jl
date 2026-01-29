@@ -9,10 +9,10 @@ Absorb a local effective tensor `A` into the north edge using the given projecto
 environment tensors.
 
 ```
-       |~~~~~~~| -- E_north -- |~~~~~~|
-    -- |P_right|       |       |P_left| --
-       |~~~~~~~| --    A    -- |~~~~~~|
-                      |
+          |~~~~~~~| -- E_north -- |~~~~~~|
+    out-- |P_right|       |       |P_left| --in
+          |~~~~~~~| --    A    -- |~~~~~~|
+                          |
 ```
 """
 function renormalize_north_edge(
@@ -75,13 +75,15 @@ Absorb a local effective tensor into the east edge using the given projectors an
 environment tensors.
 
 ```
-            |
-        [~P_right~]
-        |       |
+          out
+           |
+      [~P_right~]
+       |       |
     -- A -- E_east
-        |       |
-        [~~P_left~]
-            |
+       |       |
+      [~~P_left~]
+           |
+           in
 ```
 """
 function renormalize_east_edge(
@@ -143,10 +145,10 @@ Absorb a local effective tensor into the south edge using the given projectors a
 environment tensors.
 
 ```
-                      |
-       |~~~~~~| --    A    -- |~~~~~~~|
-    -- |P_left|       |       |P_right| --
-       |~~~~~~| -- E_south -- |~~~~~~~|
+                        |
+         |~~~~~~| --    A    -- |~~~~~~~|
+    in-- |P_left|       |       |P_right| --out
+         |~~~~~~| -- E_south -- |~~~~~~~|
 ```
 """
 function renormalize_south_edge(
@@ -208,6 +210,7 @@ Absorb a local effective tensor into the west edge using the given projectors an
 environment tensors.
 
 ```
+          in
           |
      [~~P_left~]
       |       |
@@ -215,6 +218,7 @@ environment tensors.
       |       |
      [~P_right~]
           |
+         out
 ```
 """
 function renormalize_west_edge(  # For simultaneous CTMRG scheme

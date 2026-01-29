@@ -8,9 +8,10 @@ Contract the CTMRG left projector with the higher-dimensional subspace facing to
 
 ```
      C  --  E_2    -- |~~|
-     |       |        |V'| -- isqS --
+     |       |        |V'| -- isqS --in
     E_1 --   A     -- |~~|
      |       |
+    out
 ```
 """
 function left_projector(E_1, C, E_2, V, isqS, A::PEPSSandwich)
@@ -31,10 +32,11 @@ $(SIGNATURES)
 Contract the CTMRG right projector with the higher-dimensional subspace facing to the right.
 
 ```
-               |~~| --   E_2   --  C
-    -- isqS -- |U'|      |         |
-               |~~| --   A     -- E_1
-                         |         |
+                  |~~| --   E_2   --  C
+    out-- isqS -- |U'|      |         |
+                  |~~| --   A     -- E_1
+                            |         |
+                                      in
 ```
 """
 function right_projector(E_1, C, E_2, U, isqS, A::PEPSSandwich)

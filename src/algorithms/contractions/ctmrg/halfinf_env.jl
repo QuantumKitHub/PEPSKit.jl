@@ -11,6 +11,7 @@ Contract two quadrants (enlarged corners) to form a half-infinite environment.
     |quadrant1|    |quadrant2|
     |~~~~~~~~~| -- |~~~~~~~~~|
       |     |        |     |
+     out                   in
 ```
 
 The environment can also be contracted directly from all its constituent tensors.
@@ -20,6 +21,7 @@ The environment can also be contracted directly from all its constituent tensors
      |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
+    out                   in
 ```
 
 Alternatively, contract the environment with a vector `x` acting on it
@@ -29,7 +31,7 @@ Alternatively, contract the environment with a vector `x` acting on it
      |      |      |      |
     E_1 -- A_1 -- A_2 -- E_4
      |      |      |      |
-                  [~~~x~~~~]
+    out           [~~~x~~~~]
 ```
 
 or contract the adjoint environment with `x`, e.g. as needed for iterative solvers.

@@ -9,10 +9,11 @@ $(SIGNATURES)
 Multiply corner tensor with incoming and outgoing gauge signs.
 
 ```
-    corner -- σ_in --
+    corner -- σ_in --in
       |
      σ_out
       |
+     out
 ```
 """
 function fix_gauge_corner(
@@ -82,7 +83,8 @@ $(SIGNATURES)
 Multiply edge tensor with incoming and outgoing gauge signs.
 
 ```
-    -- σ_out -- edge -- σ_in --
+    out-- σ_out -- edge -- σ_in --in
+                    |
 ```
 """
 @generated function fix_gauge_edge(
