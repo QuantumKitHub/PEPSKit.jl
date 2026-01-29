@@ -67,7 +67,7 @@ specifies the storage type. If `T <: Number` the default storage type is `Vector
 function SUWeight(
         T,
         Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+    ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
     @assert size(Nspaces) == size(Espaces)
     Nr, Nc = size(Nspaces)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
@@ -102,7 +102,7 @@ end
 Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
 as `ElementarySpace`s) and unit cell size.
 """
-function SUWeight(
+function SUWeight(::Type{TorA},
         Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return SUWeight(ComplexF64, fill(Nspace, unitcell), fill(Espace, unitcell))

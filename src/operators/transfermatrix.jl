@@ -14,6 +14,8 @@ function which corresponds to the overlap between 'ket' and 'bra' `InfinitePEPS`
 """
 const InfiniteTransferPEPS{T <: PEPSTensor} = InfiniteMPO{PEPSSandwich{T}}
 
+TensorKit.storagetype(::InfiniteTransferPEPS{T}) where {T} = storagetype(T)
+
 function InfiniteTransferPEPS(
         top::PeriodicArray{T, 1}, bot::PeriodicArray{T, 1}
     ) where {T <: PEPSTensor}
@@ -68,6 +70,8 @@ function which corresponds to the expectation value of an `InfinitePEPO` between
 'bra' `InfinitePEPS` states.
 """
 const InfiniteTransferPEPO{H, T <: PEPSTensor, O <: PEPOTensor} = InfiniteMPO{PEPOSandwich{H, T, O}}
+
+TensorKit.storagetype(::InfiniteTransferPEPO{H,T,O}) where {H,T,O} = storagetype(T)
 
 function InfiniteTransferPEPO(
         top::PeriodicArray{T, 1}, mid::PeriodicArray{O, 2}, bot::PeriodicArray{T, 1}
