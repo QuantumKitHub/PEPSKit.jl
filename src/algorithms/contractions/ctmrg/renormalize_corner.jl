@@ -394,8 +394,8 @@ end
 # ----------------------------------
 
 """
-    renormalize_bottom_corner((r, c), env, projectors)
-    renormalize_bottom_corner(C_southwest, E_south, P_left)
+    renormalize_southwest_corner((r, c), env, projectors)
+    renormalize_southwest_corner(C_southwest, E_south, P_left)
 
 Apply left projector to southwest corner and south edge.
 ```
@@ -406,13 +406,13 @@ Apply left projector to southwest corner and south edge.
      C -- E --out
 ```
 """
-function renormalize_bottom_corner((row, col), env::CTMRGEnv, projectors)
+function renormalize_southwest_corner((row, col), env::CTMRGEnv, projectors)
     C_southwest = env.corners[SOUTHWEST, row, _prev(col, end)]
     E_south = env.edges[SOUTH, row, col]
     P_left = projectors[1][row]
-    return renormalize_bottom_corner(C_southwest, E_south, P_left)
+    return renormalize_southwest_corner(C_southwest, E_south, P_left)
 end
-@generated function renormalize_bottom_corner(
+@generated function renormalize_southwest_corner(
         C_southwest::CTMRGCornerTensor{<:Any, S},
         E_south::CTMRGEdgeTensor{<:Any, S, N},
         P_left::AbstractTensorMap{<:Any, S, N, 1},
@@ -436,8 +436,8 @@ end
 end
 
 """
-    renormalize_top_corner((row, col), env, projectors)
-    renormalize_top_corner(C_northwest, E_north, P_right)
+    renormalize_northwest_corner((row, col), env, projectors)
+    renormalize_northwest_corner(C_northwest, E_north, P_right)
 
 Apply right projector to northwest corner and north edge.
 ```
@@ -448,13 +448,13 @@ Apply right projector to northwest corner and north edge.
        out
 ```
 """
-function renormalize_top_corner((row, col), env::CTMRGEnv, projectors)
+function renormalize_northwest_corner((row, col), env::CTMRGEnv, projectors)
     C_northwest = env.corners[NORTHWEST, row, _prev(col, end)]
     E_north = env.edges[NORTH, row, col]
     P_right = projectors[2][_next(row, end)]
-    return renormalize_top_corner(C_northwest, E_north, P_right)
+    return renormalize_northwest_corner(C_northwest, E_north, P_right)
 end
-@generated function renormalize_top_corner(
+@generated function renormalize_northwest_corner(
         C_northwest::CTMRGCornerTensor{<:Any, S},
         E_north::CTMRGEdgeTensor{<:Any, S, N},
         P_right::AbstractTensorMap{<:Any, S, 1, N},
