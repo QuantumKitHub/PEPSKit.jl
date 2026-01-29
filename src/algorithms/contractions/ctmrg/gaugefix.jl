@@ -88,7 +88,7 @@ Multiply edge tensor with incoming and outgoing gauge signs.
 ```
 """
 @generated function fix_gauge_edge(
-        edge::CTMRGEdgeTensor{T, S, N}, σ_in::CTMRGCornerTensor, σ_out::CTMRGCornerTensor
+        edge::CTMRGEdgeTensor{T, S, N}, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor
     ) where {T, S, N}
     edge_fix_e = tensorexpr(
         :edge_fix,
