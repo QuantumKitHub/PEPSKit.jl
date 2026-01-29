@@ -59,6 +59,12 @@ dt, nstep = 1.0e-3, 400
     # PEPO approach: results at β, or T = 2.5
     alg = SimpleUpdate(; trunc = trunc_pepo, purified = false, bipartite)
     pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0)
+
+    ## BP gauge fixing
+    bp_alg = BeliefPropagation(; maxiter = 100, tol = 1.0e-9, bipartite)
+    bp_env, = leading_boundary(BPEnv(ones, Float64, pepo), pepo, bp_alg)
+    pepo, = gauge_fix(pepo, BPGauge(), bp_env)
+
     env = converge_env(InfinitePartitionFunction(pepo), 16)
     result_β = measure_mag(pepo, env)
     @info "tr(σ(x,z)ρ) at T = $(1 / β): $(result_β)."
