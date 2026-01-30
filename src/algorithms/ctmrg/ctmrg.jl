@@ -19,7 +19,7 @@ function CTMRGAlgorithm(;
         maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
         verbosity = Defaults.ctmrg_verbosity,
         trunc = (; alg = Defaults.trunc),
-        decomp_alg = (;),
+        decomposition_alg = (;),
         projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
     )
     # replace symbol with projector alg type
@@ -31,7 +31,7 @@ function CTMRGAlgorithm(;
         projector_alg = Defaults.projector_alg_c4v
     end
     projector_algorithm = ProjectorAlgorithm(;
-        alg = projector_alg, decomp_alg, trunc, verbosity
+        alg = projector_alg, decomposition_alg, trunc, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
@@ -79,7 +79,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `decomp_alg::Union{<:DecompositionAdjoint,NamedTuple}` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
+* `decomposition_alg::Union{<:DecompositionAdjoint,NamedTuple}` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.

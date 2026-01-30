@@ -20,7 +20,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
-* `decomp_alg::Union{<:SVDAdjoint,NamedTuple}`
+* `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
 struct SimultaneousCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm

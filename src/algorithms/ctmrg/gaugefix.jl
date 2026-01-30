@@ -9,8 +9,8 @@ function gauge_fix(alg::CTMRGAlgorithm, signs, info)
     return alg_fixed
 end
 function gauge_fix(alg::ProjectorAlgorithm, signs, info)
-    decomp_alg_fixed = gauge_fix(decomposition_algorithm(alg), signs, info)
-    alg_fixed = @set alg.decomp_alg = decomp_alg_fixed # every ProjectorAlgorithm needs an `decomp_alg` field?
+    decomposition_alg_fixed = gauge_fix(decomposition_algorithm(alg), signs, info)
+    alg_fixed = @set alg.decomposition_alg = decomposition_alg_fixed # every ProjectorAlgorithm needs an `decomposition_alg` field?
     alg_fixed = @set alg_fixed.trunc = notrunc()
     return alg_fixed
 end

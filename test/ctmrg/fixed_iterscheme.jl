@@ -28,12 +28,12 @@ unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
 # test for element-wise convergence after application of fixed step
-@testset "$unitcell unit cell with $(typeof(decomp_alg.fwd_alg)) and $projector_alg" for (
-        unitcell, decomp_alg, projector_alg,
+@testset "$unitcell unit cell with $(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for (
+        unitcell, decomposition_alg, projector_alg,
     ) in Iterators.product(
         unitcells, svd_algs, projector_algs_asymm
     )
-    ctm_alg = SimultaneousCTMRG(; decomp_alg, projector_alg)
+    ctm_alg = SimultaneousCTMRG(; decomposition_alg, projector_alg)
 
     # initialize states
     Random.seed!(2394823842)
@@ -57,11 +57,11 @@ atol = 1.0e-5
 end
 
 # test same thing for C4v CTMRG
-@testset "$(typeof(decomp_alg.fwd_alg)) and $projector_alg" for (decomp_alg, projector_alg) in
+@testset "$(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for (decomposition_alg, projector_alg) in
     Iterators.product(eigh_algs, projector_algs_c4v)
     # initialize states
     Random.seed!(2394823842)
-    ctm_alg = C4vCTMRG(; projector_alg, decomp_alg)
+    ctm_alg = C4vCTMRG(; projector_alg, decomposition_alg)
     symm = RotateReflect()
 
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D))
@@ -88,9 +88,9 @@ end
 @testset "Element-wise consistency of LAPACK_DivideAndConquer and IterSVD" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomp_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χ + 10))),
+        decomposition_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χ + 10))),
     )
-    ctm_alg_full = SimultaneousCTMRG(; decomp_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()))
+    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()))
 
     # initialize states
     Random.seed!(91283219347)
@@ -138,8 +138,8 @@ end
     @test svalues_check
 
     # check normalization of U's and V's
-    salg_fix_iter = ctm_alg_fix_iter.projector_alg.decomp_alg.fwd_alg
-    salg_fix_full = ctm_alg_fix_full.projector_alg.decomp_alg.fwd_alg
+    salg_fix_iter = ctm_alg_fix_iter.projector_alg.decomposition_alg.fwd_alg
+    salg_fix_full = ctm_alg_fix_full.projector_alg.decomposition_alg.fwd_alg
     Us = [info_iter.U, salg_fix_iter.U, info_full.U, salg_fix_full.U]
     Vs = [info_iter.V, salg_fix_iter.V, info_full.V, salg_fix_full.V]
     for (U, V) in zip(Us, Vs)

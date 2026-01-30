@@ -14,7 +14,7 @@ Keyword argument parser returning the appropriate `ProjectorAlgorithm` algorithm
 """
 function ProjectorAlgorithm(;
         alg = Defaults.projector_alg,
-        decomp_alg = (;),
+        decomposition_alg = (;),
         trunc = (;),
         verbosity = Defaults.projector_verbosity,
     )
@@ -25,12 +25,12 @@ function ProjectorAlgorithm(;
 
     # parse SVD forward & rrule algorithm
 
-    decomp_algorithm = if alg in [:halfinfinite, :fullinfinite]
-        _alg_or_nt(SVDAdjoint, decomp_alg)
+    decomposition_algorithm = if alg in [:halfinfinite, :fullinfinite]
+        _alg_or_nt(SVDAdjoint, decomposition_alg)
     elseif alg in [:c4v_eigh]
-        _alg_or_nt(EighAdjoint, decomp_alg)
+        _alg_or_nt(EighAdjoint, decomposition_alg)
     elseif alg in [:c4v_qr]
-        _alg_or_nt(QRAdjoint, decomp_alg)
+        _alg_or_nt(QRAdjoint, decomposition_alg)
     end # TODO: how do we solve this in a proper way?
 
     # parse truncation scheme
@@ -42,7 +42,7 @@ function ProjectorAlgorithm(;
         throw(ArgumentError("unknown trunc $trunc"))
     end
 
-    return alg_type(decomp_algorithm, truncation_strategy, verbosity)
+    return alg_type(decomposition_algorithm, truncation_strategy, verbosity)
 end
 
 """
@@ -53,12 +53,12 @@ Return the tensor decomposition algorithm of the `alg` projector algorithm.
 Additionally, the multi-index `(dir, r, c)` can be supplied which will return the
 decomposition performed at that index, e.g. when using `FixedEigh` or `FixedSVD`.
 """
-decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomp_alg
+decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
 function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
-    decomp_alg = decomposition_algorithm(alg)
-    if decomp_alg isa SVDAdjoint{<:FixedSVD}
-        fwd_alg = decomp_alg.fwd_alg
-        fix_svd = if isfullsvd(decomp_alg.fwd_alg)
+    decomposition_alg = decomposition_algorithm(alg)
+    if decomposition_alg isa SVDAdjoint{<:FixedSVD}
+        fwd_alg = decomposition_alg.fwd_alg
+        fix_svd = if isfullsvd(decomposition_alg.fwd_alg)
             FixedSVD(
                 fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
                 fwd_alg.U_full[dir, r, c], fwd_alg.S_full[dir, r, c], fwd_alg.V_full[dir, r, c],
@@ -69,9 +69,9 @@ function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
                 nothing, nothing, nothing,
             )
         end
-        return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = decomp_alg.rrule_alg)
+        return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = decomposition_alg.rrule_alg)
     else
-        return decomp_alg
+        return decomposition_alg
     end
 end
 
@@ -99,7 +99,7 @@ $(TYPEDFIELDS)
 
 Construct the half-infinite projector algorithm based on the following keyword arguments:
 
-* `decomp_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
+* `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
@@ -112,7 +112,7 @@ Construct the half-infinite projector algorithm based on the following keyword a
     1. Print singular value degeneracy warnings
 """
 struct HalfInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
-    decomp_alg::S
+    decomposition_alg::S
     trunc::T
     verbosity::Int
 end
@@ -137,7 +137,7 @@ $(TYPEDFIELDS)
 
 Construct the full-infinite projector algorithm based on the following keyword arguments:
 
-* `decomp_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
+* `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
@@ -150,7 +150,7 @@ Construct the full-infinite projector algorithm based on the following keyword a
     1. Print singular value degeneracy warnings
 """
 struct FullInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
-    decomp_alg::S
+    decomposition_alg::S
     trunc::T
     verbosity::Int
 end

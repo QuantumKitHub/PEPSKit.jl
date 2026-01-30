@@ -21,7 +21,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
-* `decomp_alg::Union{<:EighAdjoint,NamedTuple}`
+* `decomposition_alg::Union{<:EighAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg_c4v)`
 """
 struct C4vCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
@@ -51,7 +51,7 @@ $(TYPEDFIELDS)
 
 Construct the C₄ᵥ `eigh`-based projector algorithm based on the following keyword arguments:
 
-* `decomp_alg::Union{<:EighAdjoint,NamedTuple}=EighAdjoint()` : `eigh` algorithm including the reverse rule. See [`EighAdjoint`](@ref).
+* `decomposition_alg::Union{<:EighAdjoint,NamedTuple}=EighAdjoint()` : `eigh` algorithm including the reverse rule. See [`EighAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:fixedspace` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
@@ -64,7 +64,7 @@ Construct the C₄ᵥ `eigh`-based projector algorithm based on the following ke
     1. Print singular value degeneracy warnings
 """
 struct C4vEighProjector{S <: EighAdjoint, T} <: ProjectorAlgorithm
-    decomp_alg::S
+    decomposition_alg::S
     trunc::T
     verbosity::Int
 end
@@ -74,7 +74,7 @@ end
 PROJECTOR_SYMBOLS[:c4v_eigh] = C4vEighProjector
 
 # struct C4vQRProjector{S, T} <: ProjectorAlgorithm
-#     decomp_alg::S
+#     decomposition_alg::S
 #     verbosity::Int
 # end
 # function C4vQRProjector(; kwargs...)
