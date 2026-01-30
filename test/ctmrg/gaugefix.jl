@@ -27,7 +27,7 @@ function _pre_converge_env(
     psi = InfinitePEPS(rand, T, physical_space, peps_space; unitcell)
     alg == :c4v && (psi = peps_normalize(symmetrize!(psi, RotateReflect())))
     env₀ = if alg == :c4v
-        initialize_random_c4v_env(randn, T, psi, env_space)
+        initialize_singlet_c4v_env(T, psi, env_space)
     else
         CTMRGEnv(psi, env_space)
     end

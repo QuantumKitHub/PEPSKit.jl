@@ -189,14 +189,6 @@ end
 ## environment initialization
 #
 
-# environment with dummy corner singlet(V) ← singlet(V) and identity edge V ← V, initialized at dim(Venv)
-# function initialize_singlet_c4v_env(Vpeps::ElementarySpace, Venv::ElementarySpace, T = ComplexF64)
-#     corner₀ = DiagonalTensorMap(zeros(real(T), Venv ← Venv))
-#     corner₀.data[1] = one(real(T))
-#     edge₀ = permute(id(T, Venv ⊗ Vpeps), ((1, 2, 4), (3,)))
-#     return CTMRGEnv(corner₀, edge₀)
-# end
-
 """
     initialize_random_c4v_env([f=randn, T=scalartype(state)], state, Venv::ElementarySpace)
 
@@ -218,5 +210,25 @@ function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySp
     corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
     edge₀ = f(T, Venv ⊗ Vstate ← Venv)
     edge₀ = project_hermitian(edge₀)
+    return CTMRGEnv(corner₀, edge₀)
+end
+
+"""
+    initialize_singlet_c4v_env([T=scalartype(state)], state::InfinitePEPS, Venv::ElementarySpace)
+
+Initialize a C₄ᵥ-symmetric `CTMRGEnv` with a singlet corner of dimension `dim(Venv)` and an
+identity edge from `id(T, Venv ⊗ Vpeps)`.
+"""
+function initialize_singlet_c4v_env(state::InfinitePEPS, Venv::ElementarySpace)
+    return initialize_singlet_c4v_env(scalartype(state), state, Venv)
+end
+function initialize_singlet_c4v_env(T, state::InfinitePEPS, Venv::ElementarySpace)
+    Vpeps = domain(state[1])[1]
+    return initialize_singlet_c4v_env(T, Vpeps, Venv)
+end
+function initialize_singlet_c4v_env(T, Vpeps::ElementarySpace, Venv::ElementarySpace)
+    corner₀ = DiagonalTensorMap(zeros(real(T), Venv ← Venv))
+    corner₀.data[1] = one(real(T))
+    edge₀ = permute(id(T, Venv ⊗ Vpeps), ((1, 2, 4), (3,)))
     return CTMRGEnv(corner₀, edge₀)
 end
