@@ -106,6 +106,7 @@ export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export EighAdjoint, IterEigh, C4vCTMRG, C4vEighProjector, C4vQRProjector
+export initialize_random_c4v_env
 export LocalOperator, physicalspace
 export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function

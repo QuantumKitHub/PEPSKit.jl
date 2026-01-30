@@ -5,7 +5,7 @@ using TensorKit
 
 using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
 using PEPSKit: ScramblingEnvGauge, ScramblingEnvGaugeC4v
-using PEPSKit: peps_normalize, initialize_random_c4v_env
+using PEPSKit: peps_normalize
 
 spacetypes = [ComplexSpace, Z2Space]
 scalartypes = [Float64, ComplexF64]
@@ -27,7 +27,7 @@ function _pre_converge_env(
     psi = InfinitePEPS(rand, T, physical_space, peps_space; unitcell)
     alg == :c4v && (psi = peps_normalize(symmetrize!(psi, RotateReflect())))
     env₀ = if alg == :c4v
-        initialize_random_c4v_env(psi, env_space, T)
+        initialize_random_c4v_env(randn, T, psi, env_space)
     else
         CTMRGEnv(psi, env_space)
     end

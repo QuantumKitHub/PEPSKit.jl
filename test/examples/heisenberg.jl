@@ -5,7 +5,7 @@ using PEPSKit
 using TensorKit
 using KrylovKit
 using OptimKit
-using PEPSKit: peps_normalize, initialize_random_c4v_env
+using PEPSKit: peps_normalize
 using MPSKitModels: S_xx, S_yy, S_zz
 
 # initialize parameters

@@ -4,7 +4,7 @@ using MatrixAlgebraKit
 using TensorKit
 using MPSKit
 using PEPSKit
-using PEPSKit: peps_normalize, initialize_random_c4v_env
+using PEPSKit: peps_normalize
 
 # initialize parameters
 D = 2

@@ -13,7 +13,6 @@ using PEPSKit:
     fix_global_phases,
     calc_elementwise_convergence,
     peps_normalize,
-    initialize_random_c4v_env,
     ScramblingEnvGauge,
     ScramblingEnvGaugeC4v
 

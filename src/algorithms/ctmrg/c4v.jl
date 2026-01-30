@@ -189,7 +189,6 @@ end
 ## environment initialization
 #
 
-# TODO: rewrite this using `initialize_environment` and C4v-specific initialization algorithms
 # environment with dummy corner singlet(V) ← singlet(V) and identity edge V ← V, initialized at dim(Venv)
 # function initialize_singlet_c4v_env(Vpeps::ElementarySpace, Venv::ElementarySpace, T = ComplexF64)
 #     corner₀ = DiagonalTensorMap(zeros(real(T), Venv ← Venv))
@@ -198,17 +197,26 @@ end
 #     return CTMRGEnv(corner₀, edge₀)
 # end
 
-function initialize_random_c4v_env(Vstate::VectorSpace, Venv::ElementarySpace, T = ComplexF64)
+"""
+    initialize_random_c4v_env([f=randn, T=scalartype(state)], state, Venv::ElementarySpace)
+
+Initialize a C₄ᵥ-symmetric `CTMRGEnv` on virtual spaces `Venv` with random entries created
+by `f` and scalartype `T`.
+"""
+function initialize_random_c4v_env(state, Venv::ElementarySpace)
+    return initialize_random_c4v_env(randn, scalartype(state), state, Venv)
+end
+function initialize_random_c4v_env(f, T, state::InfinitePEPS, Venv::ElementarySpace)
+    Vpeps = domain(state[1])[1]
+    return initialize_random_c4v_env(f, T, Vpeps ⊗ Vpeps', Venv)
+end
+function initialize_random_c4v_env(f, T, state::InfinitePartitionFunction, Venv::ElementarySpace)
+    Vpf = domain(state[1])[1]
+    return initialize_random_c4v_env(f, T, Vpf, Venv)
+end
+function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
     corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
-    edge₀ = randn(T, Venv ⊗ Vstate ← Venv)
+    edge₀ = f(T, Venv ⊗ Vstate ← Venv)
     edge₀ = project_hermitian(edge₀)
     return CTMRGEnv(corner₀, edge₀)
-end
-function initialize_random_c4v_env(state::InfinitePEPS, Venv::ElementarySpace, T = scalartype(state))
-    Vpeps = domain(state[1])[1]
-    return initialize_random_c4v_env(Vpeps ⊗ Vpeps', Venv, T)
-end
-function initialize_random_c4v_env(state::InfinitePartitionFunction, Venv::ElementarySpace, T = scalartype(state))
-    Vpf = domain(state[1])[1]
-    return initialize_random_c4v_env(Vpf, Venv, T)
 end
