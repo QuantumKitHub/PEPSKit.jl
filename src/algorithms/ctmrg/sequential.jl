@@ -139,10 +139,10 @@ function renormalize_sequentially(col::Int, projectors, network, env)
 
     # Apply projectors to renormalize corners and edge
     for row in axes(env.corners, 2)
-        C_southwest = renormalize_bottom_corner((row, col), env, projectors)
+        C_southwest = renormalize_southwest_corner((row, col), env, projectors)
         corners[SOUTHWEST, row, col] = C_southwest / norm(C_southwest)
 
-        C_northwest = renormalize_top_corner((row, col), env, projectors)
+        C_northwest = renormalize_northwest_corner((row, col), env, projectors)
         corners[NORTHWEST, row, col] = C_northwest / norm(C_northwest)
 
         E_west = renormalize_west_edge((row, col), env, projectors, network)

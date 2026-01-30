@@ -5,11 +5,12 @@ Apply projectors to each side of a quadrant.
 
 ```
     |~~~~~~~~| -- |~~~~~~|
-    |quadrant|    |P_left| --
+    |quadrant|    |P_left| --in
     |~~~~~~~~| -- |~~~~~~|
      |     |
     [P_right]
         |
+       out
 ```
 """
 @generated function renormalize_corner(
@@ -51,22 +52,24 @@ Apply `renormalize_corner` to the enlarged northwest corner.
 
 ```
     |~~~~~~~~| -- |~~~~~~|
-    |quadrant|    |P_left| --
+    |quadrant|    |P_left| --in
     |~~~~~~~~| -- |~~~~~~|
      |     |
     [P_right]
         |
+       out
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
     C_northwest -- E_north -- |~~~~~~|
-         |           |        |P_left| --
+         |           |        |P_left| --in
       E_west    --   A     -- |~~~~~~|
          |           |
       [~~~~~P_right~~~~]
                |
+              out
 ```
 """
 function renormalize_northwest_corner((row, col), enlarged_env, P_left, P_right)
@@ -84,20 +87,20 @@ end
 function renormalize_northwest_corner(
         E_west, C_northwest, E_north, P_left, P_right, A::PEPSSandwich
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1 D2] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1 D2] *
         E_west[χ1 D3 D4; χ2] * C_northwest[χ2; χ3] * E_north[χ3 D5 D6; χ4] *
         ket(A)[d; D5 D7 D1 D3] * conj(bra(A)[d; D6 D8 D2 D4]) *
-        P_left[χ4 D7 D8; χ_out]
+        P_left[χ4 D7 D8; χ_in]
 end
 function renormalize_northwest_corner(
         E_west, C_northwest, E_north, P_left, P_right, A::PFTensor
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1] *
         E_west[χ1 D3; χ2] * C_northwest[χ2; χ3] * E_north[χ3 D5; χ4] *
         A[D3 D1; D5 D7] *
-        P_left[χ4 D7; χ_out]
+        P_left[χ4 D7; χ_in]
 end
 
 @generated function renormalize_northwest_corner(
@@ -135,23 +138,25 @@ end
 Apply `renormalize_corner` to the enlarged northeast corner.
 
 ```
-       |~~~~~~~| -- |~~~~~~~~|
-    -- |P_right|    |quadrant|
-       |~~~~~~~| -- |~~~~~~~~|
-                      |    |
-                     [P_left]
-                         |
+          |~~~~~~~| -- |~~~~~~~~|
+    out-- |P_right|    |quadrant|
+          |~~~~~~~| -- |~~~~~~~~|
+                         |    |
+                        [P_left]
+                            |
+                            in
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
-       |~~~~~~~| -- E_north -- C_northeast
-    -- |P_right|       |            |
-       |~~~~~~~| --    A    --    E_east
-                       |            |
-                     [~~~~~P_left~~~~~]
-                              |
+          |~~~~~~~| -- E_north -- C_northeast
+    out-- |P_right|       |            |
+          |~~~~~~~| --    A    --    E_east
+                          |            |
+                        [~~~~~P_left~~~~~]
+                                 |
+                                 in
 ```
 """
 function renormalize_northeast_corner((row, col), enlarged_env, P_left, P_right)
@@ -171,20 +176,20 @@ end
 function renormalize_northeast_corner(
         E_north, C_northeast, E_east, P_left, P_right, A::PEPSSandwich
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1 D2] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1 D2] *
         E_north[χ1 D3 D4; χ2] * C_northeast[χ2; χ3] * E_east[χ3 D5 D6; χ4] *
         ket(A)[d; D3 D5 D7 D1] * conj(bra(A)[d; D4 D6 D8 D2]) *
-        P_left[χ4 D7 D8; χ_out]
+        P_left[χ4 D7 D8; χ_in]
 end
 function renormalize_northeast_corner(
         E_north, C_northeast, E_east, P_left, P_right, A::PFTensor
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1] *
         E_north[χ1 D3; χ2] * C_northeast[χ2; χ3] * E_east[χ3 D5; χ4] *
         A[D1 D7; D3 D5] *
-        P_left[χ4 D7; χ_out]
+        P_left[χ4 D7; χ_in]
 end
 
 @generated function renormalize_northeast_corner(
@@ -222,23 +227,25 @@ end
 Apply `renormalize_corner` to the enlarged southeast corner.
 
 ```
-                        |
-                    [P_right]
-                      |   |
-       |~~~~~~| -- |~~~~~~~~|
-    -- |P_left|    |quadrant|
-       |~~~~~~| -- |~~~~~~~~|
+                         out
+                          |
+                      [P_right]
+                        |   |
+         |~~~~~~| -- |~~~~~~~~|
+    in-- |P_left|    |quadrant|
+         |~~~~~~| -- |~~~~~~~~|
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
-                            |
-                    [~~~~P_right~~~~]
-                      |           |
-       |~~~~~~| --    A    --   E_east
-    -- |P_left|       |           |
-       |~~~~~~| -- E_south -- C_southeast
+                             out
+                              |
+                      [~~~~P_right~~~~]
+                        |           |
+         |~~~~~~| --    A    --   E_east
+    in-- |P_left|       |           |
+         |~~~~~~| -- E_south -- C_southeast
 ```
 """
 function renormalize_southeast_corner((row, col), enlarged_env, P_left, P_right)
@@ -256,20 +263,20 @@ end
 function renormalize_southeast_corner(
         E_east, C_southeast, E_south, P_left, P_right, A::PEPSSandwich
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1 D2] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1 D2] *
         E_east[χ1 D3 D4; χ2] * C_southeast[χ2; χ3] * E_south[χ3 D5 D6; χ4] *
         ket(A)[d; D1 D3 D5 D7] * conj(bra(A)[d; D2 D4 D6 D8]) *
-        P_left[χ4 D7 D8; χ_out]
+        P_left[χ4 D7 D8; χ_in]
 end
 function renormalize_southeast_corner(
         E_east, C_southeast, E_south, P_left, P_right, A::PFTensor
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1] *
         E_east[χ1 D3; χ2] * C_southeast[χ2; χ3] * E_south[χ3 D5; χ4] *
         A[D7 D5; D1 D3] *
-        P_left[χ4 D7; χ_out]
+        P_left[χ4 D7; χ_in]
 end
 
 @generated function renormalize_southeast_corner(
@@ -307,22 +314,24 @@ end
 Apply `renormalize_corner` to the enlarged southwest corner.
 
 ```
+         in
          |
      [P_left]
       |    |
-    |~~~~~~~~| -- |~~~~~~|
-    |quadrant|    |P_left| --
-    |~~~~~~~~| -- |~~~~~~|
+    |~~~~~~~~| -- |~~~~~~~|
+    |quadrant|    |P_right| --out
+    |~~~~~~~~| -- |~~~~~~~|
 ```
 
 Alternatively, provide the constituent tensors and perform the complete contraction.
 
 ```
+               in
                |
        [~~~~~P_left~~~~~]
          |            |
        E_west   --    A    -- |~~~~~~~|
-         |            |       |P_right| --
+         |            |       |P_right| --out
     C_southwest -- E_south -- |~~~~~~~|
 ```
 """
@@ -341,20 +350,20 @@ end
 function renormalize_southwest_corner(
         E_south, C_southwest, E_west, P_left, P_right, A::PEPSSandwich
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1 D2] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1 D2] *
         E_south[χ1 D3 D4; χ2] * C_southwest[χ2; χ3] * E_west[χ3 D5 D6; χ4] *
         ket(A)[d; D7 D1 D3 D5] * conj(bra(A)[d; D8 D2 D4 D6]) *
-        P_left[χ4 D7 D8; χ_out]
+        P_left[χ4 D7 D8; χ_in]
 end
 function renormalize_southwest_corner(
         E_south, C_southwest, E_west, P_left, P_right, A::PFTensor
     )
-    return @autoopt @tensor corner[χ_in; χ_out] :=
-        P_right[χ_in; χ1 D1] *
+    return @autoopt @tensor corner[χ_out; χ_in] :=
+        P_right[χ_out; χ1 D1] *
         E_south[χ1 D3; χ2] * C_southwest[χ2; χ3] * E_west[χ3 D5; χ4] *
         A[D5 D3; D7 D1] *
-        P_left[χ4 D7; χ_out]
+        P_left[χ4 D7; χ_in]
 end
 
 @generated function renormalize_southwest_corner(
@@ -385,27 +394,28 @@ end
 # ----------------------------------
 
 """
-    renormalize_bottom_corner((r, c), env, projectors)
-    renormalize_bottom_corner(C_southwest, E_south, P_bottom)
+    renormalize_southwest_corner((r, c), env, projectors)
+    renormalize_southwest_corner(C_southwest, E_south, P_left)
 
-Apply bottom projector to southwest corner and south edge.
+Apply left projector to southwest corner and south edge.
 ```
+        in
         |
-    [P_bottom]
-     |     |
-     C --  E -- in
+    [P_left]
+     |    |
+     C -- E --out
 ```
 """
-function renormalize_bottom_corner((row, col), env::CTMRGEnv, projectors)
+function renormalize_southwest_corner((row, col), env::CTMRGEnv, projectors)
     C_southwest = env.corners[SOUTHWEST, row, _prev(col, end)]
     E_south = env.edges[SOUTH, row, col]
-    P_bottom = projectors[1][row]
-    return renormalize_bottom_corner(C_southwest, E_south, P_bottom)
+    P_left = projectors[1][row]
+    return renormalize_southwest_corner(C_southwest, E_south, P_left)
 end
-@generated function renormalize_bottom_corner(
+@generated function renormalize_southwest_corner(
         C_southwest::CTMRGCornerTensor{<:Any, S},
         E_south::CTMRGEdgeTensor{<:Any, S, N},
-        P_bottom::AbstractTensorMap{<:Any, S, N, 1},
+        P_left::AbstractTensorMap{<:Any, S, N, 1},
     ) where {S, N}
     C_out_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     C_southwest_e = tensorexpr(:C_southwest, (envlabel(:SSW),), (envlabel(:WSW),))
@@ -414,50 +424,51 @@ end
         (envlabel(:out), ntuple(i -> virtuallabel(i), N - 1)...),
         (envlabel(:SSW),),
     )
-    P_bottom_e = tensorexpr(
-        :P_bottom,
+    P_left_e = tensorexpr(
+        :P_left,
         (envlabel(:WSW), ntuple(i -> virtuallabel(i), N - 1)...),
         (envlabel(:in),),
     )
     return macroexpand(
         @__MODULE__,
-        :(return @autoopt @tensor $C_out_e := $E_south_e * $C_southwest_e * $P_bottom_e),
+        :(return @autoopt @tensor $C_out_e := $E_south_e * $C_southwest_e * $P_left_e),
     )
 end
 
 """
-    renormalize_top_corner((row, col), env, projectors)
-    renormalize_top_corner(C_northwest, E_north, P_top)
+    renormalize_northwest_corner((row, col), env, projectors)
+    renormalize_northwest_corner(C_northwest, E_north, P_right)
 
-Apply top projector to northwest corner and north edge.
+Apply right projector to northwest corner and north edge.
 ```
-     C -- E --
-     |    |
-    [~P_top~]
+     C --- E --in
+     |     |
+    [P_right]
         |
+       out
 ```
 """
-function renormalize_top_corner((row, col), env::CTMRGEnv, projectors)
+function renormalize_northwest_corner((row, col), env::CTMRGEnv, projectors)
     C_northwest = env.corners[NORTHWEST, row, _prev(col, end)]
     E_north = env.edges[NORTH, row, col]
-    P_top = projectors[2][_next(row, end)]
-    return renormalize_top_corner(C_northwest, E_north, P_top)
+    P_right = projectors[2][_next(row, end)]
+    return renormalize_northwest_corner(C_northwest, E_north, P_right)
 end
-@generated function renormalize_top_corner(
+@generated function renormalize_northwest_corner(
         C_northwest::CTMRGCornerTensor{<:Any, S},
         E_north::CTMRGEdgeTensor{<:Any, S, N},
-        P_top::AbstractTensorMap{<:Any, S, 1, N},
+        P_right::AbstractTensorMap{<:Any, S, 1, N},
     ) where {S, N}
     C_out_e = tensorexpr(:corner, (envlabel(:out),), (envlabel(:in),))
     C_northwest_e = tensorexpr(:C_northwest, (envlabel(:WNW),), (envlabel(:NNW),))
     E_north_e = tensorexpr(
         :E_north, (envlabel(:NNW), ntuple(i -> virtuallabel(i), N - 1)...), (envlabel(:in),)
     )
-    P_top_e = tensorexpr(
-        :P_top, (envlabel(:out),), (envlabel(:WNW), ntuple(i -> virtuallabel(i), N - 1)...)
+    P_right_e = tensorexpr(
+        :P_right, (envlabel(:out),), (envlabel(:WNW), ntuple(i -> virtuallabel(i), N - 1)...)
     )
     return macroexpand(
         @__MODULE__,
-        :(return @autoopt @tensor $C_out_e := $E_north_e * $C_northwest_e * $P_top_e),
+        :(return @autoopt @tensor $C_out_e := $E_north_e * $C_northwest_e * $P_right_e),
     )
 end
