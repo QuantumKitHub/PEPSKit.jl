@@ -3,7 +3,7 @@ module PEPSKit
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Random
 using Compat
-using Accessors: @set, @reset
+using Accessors: @set, @reset, @insert
 using VectorInterface
 import VectorInterface as VI
 
@@ -81,6 +81,7 @@ include("algorithms/ctmrg/projectors.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
+include("algorithms/ctmrg/initialization.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
@@ -110,6 +111,8 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export initialize_environment,
+    RandomInitialization, ProductStateInitialization, ApplicationInitialization
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
