@@ -1,11 +1,3 @@
-using MatrixAlgebraKit: TruncationStrategy, NoTruncation, LAPACK_EighAlgorithm, truncate
-using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!, findtruncated, diagview
-using TensorKit: AdjointTensorMap, SectorDict, Factorizations.TruncationSpace,
-    throw_invalid_innerproduct, similarstoragetype
-using TensorKit.Factorizations: _notrunc_ind
-using KrylovKit: Lanczos, BlockLanczos
-const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
-
 """
 $(TYPEDEF)
 

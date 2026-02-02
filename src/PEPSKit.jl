@@ -9,14 +9,25 @@ import VectorInterface as VI
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit: TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration
-using TensorKit
+using MatrixAlgebraKit: NoTruncation, LAPACK_EighAlgorithm, truncate
+using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!, findtruncated, diagview
 
-using KrylovKit, OptimKit, TensorOperations
+using TensorKit
+using TensorKit: AdjointTensorMap, SectorDict
+using TensorKit: throw_invalid_innerproduct, similarstoragetype
+using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
+
+using KrylovKit
+using KrylovKit: Lanczos, BlockLanczos
+const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
+
+using TensorOperations, OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
+using MPSKit: InfiniteEnvironments
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
