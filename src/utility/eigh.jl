@@ -146,40 +146,40 @@ end
 function MatrixAlgebraKit.eigh_trunc!(
         t::AdjointTensorMap, alg::EighAdjoint; trunc = notrunc()
     )
-    D, U, info = eigh_trunc!(adjoint(t), alg; trunc)
-    return adjoint(D), adjoint(U), info
+    D, V, info = eigh_trunc!(adjoint(t), alg; trunc)
+    return adjoint(D), adjoint(V), info
 end
 
 #
 ## Forward algorithms
 #
 
-# Truncated eigh but also return full D and U to make it compatible with :fixed mode
+# Truncated eigh but also return full D and V to make it compatible with :fixed mode
 function _eigh_trunc!(
         t::TensorMap,
         alg::LAPACK_EighAlgorithm,
         trunc::TruncationStrategy,
     )
-    D, U = eigh_full!(t; alg)
-    D̃, Ũ, truncerror = _truncate_eigh((D, U), trunc)
+    D, V = eigh_full!(t; alg)
+    D̃, Ṽ, truncerror = _truncate_eigh((D, V), trunc)
 
     # construct info NamedTuple
     condnum = cond(D)
     info = (;
-        truncation_error = truncerror, condition_number = condnum, D_full = D, U_full = U,
+        truncation_error = truncerror, condition_number = condnum, D_full = D, V_full = V,
     )
-    return D̃, Ũ, info
+    return D̃, Ṽ, info
 end
 
 # hacky way of computing the truncation error for current version of eigh_trunc!
 # TODO: replace once TensorKit updates to new MatrixAlgebraKit which returns truncation error as well
-function _truncate_eigh((D, U), trunc::TruncationStrategy)
+function _truncate_eigh((D, V), trunc::TruncationStrategy)
     if !(trunc isa NoTruncation) && !isempty(blocksectors(D))
-        D̃, Ũ = truncate(eigh_trunc!, (D, U), trunc)[1]
+        D̃, Ṽ = truncate(eigh_trunc!, (D, V), trunc)[1]
         truncerror = sqrt(abs(norm(D)^2 - norm(D̃)^2))
-        return D̃, Ũ, truncerror
+        return D̃, Ṽ, truncerror
     else
-        return D, U, zero(real(scalartype(D)))
+        return D, V, zero(real(scalartype(D)))
     end
 end
 
@@ -188,23 +188,23 @@ $(TYPEDEF)
 
 Eigenvalue decomposition struct containing a pre-computed decomposition or even multiple ones.
 Additionally, it can contain the untruncated full decomposition as well. The call to
-`eigh_trunc`/`eig_trunc` just returns the pre-computed D and U. In the reverse pass,
-the adjoint is computed with these exact D and U and, potentially, the full decompositions
+`eigh_trunc`/`eig_trunc` just returns the pre-computed D and V. In the reverse pass,
+the adjoint is computed with these exact D and V and, potentially, the full decompositions
 if the adjoints needs access to them.
 
 ## Fields
 
 $(TYPEDFIELDS)
 """
-struct FixedEig{Dt, Ut, Dtf, Utf}
+struct FixedEig{Dt, Vt, Dtf, Vtf}
     D::Dt
-    U::Ut
+    V::Vt
     D_full::Dtf
-    U_full::Utf
+    V_full::Vtf
 end
 
-# check whether the full D and U are supplied
-isfulleig(alg::FixedEig) = !isnothing(alg.D_full) && !isnothing(alg.U_full)
+# check whether the full D and V are supplied
+isfulleig(alg::FixedEig) = !isnothing(alg.D_full) && !isnothing(alg.V_full)
 
 # Return pre-computed decomposition
 function _eigh_trunc!(_, alg::FixedEig, ::TruncationStrategy)
@@ -212,9 +212,9 @@ function _eigh_trunc!(_, alg::FixedEig, ::TruncationStrategy)
         truncation_error = zero(real(scalartype(alg.D))),
         condition_number = cond(alg.D),
         D_full = alg.D_full,
-        U_full = alg.U_full,
+        V_full = alg.V_full,
     )
-    return alg.D, alg.U, info
+    return alg.D, alg.V, info
 end
 
 
@@ -249,7 +249,7 @@ end
 
 # Compute eigh data block-wise using KrylovKit algorithm
 function _eigh_trunc!(f, alg::IterEigh, trunc::TruncationStrategy)
-    D, U = if isempty(blocksectors(f))
+    D, V = if isempty(blocksectors(f))
         # early return
         truncation_error = zero(real(scalartype(f)))
         MatrixAlgebraKit.initialize_output(eigh_full!, f, LAPACK_QRIteration()) # specified algorithm doesn't matter here
@@ -260,11 +260,11 @@ function _eigh_trunc!(f, alg::IterEigh, trunc::TruncationStrategy)
 
     # construct info NamedTuple
     truncation_error =
-        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * D * U' - f)
+        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(V * D * V' - f)
     condition_number = cond(D)
-    info = (; truncation_error, condition_number, D_full = nothing, U_full = nothing)
+    info = (; truncation_error, condition_number, D_full = nothing, V_full = nothing)
 
-    return D, U, info
+    return D, V, info
 end
 
 # Obtain sparse decomposition from block-wise eigsolve calls
@@ -283,11 +283,11 @@ function _compute_eighdata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense decomposition for small blocks
-            D, U = eigh_full!(b, LAPACK_QRIteration())
+            D, V = eigh_full!(b, LAPACK_QRIteration())
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
             @show lm_ordering
-            U = stack(eachcol(U)[lm_ordering])[:, 1:howmany]
+            V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
         else
             x₀ = alg.start_vector(b)
             eig_alg = alg.alg
@@ -297,18 +297,18 @@ function _compute_eighdata!(
             D, lvecs, info = eigsolve(b, x₀, howmany, :LM, eig_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative eigendecomposition did not converge for block $c, falling back to eigh_full"
-                D, U = eigh_full!(b, LAPACK_QRIteration())
+                D, V = eigh_full!(b, LAPACK_QRIteration())
                 lm_ordering = sortperm(abs.(D.diag); rev = true)
                 D = D.diag[lm_ordering]
-                U = stack(eachcol(U)[lm_ordering])[:, 1:howmany]
+                V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
             else  # Slice in case more values were converged than requested
-                U = stack(view(lvecs, 1:howmany))
+                V = stack(view(lvecs, 1:howmany))
             end
         end
 
         resize!(D, howmany)
         dims[c] = length(D)
-        return c => (D, U)
+        return c => (D, V)
     end
 
     eigdata = SectorDict(generator)
@@ -326,13 +326,13 @@ function _create_eightensors(t::TensorMap, eighdata, dims)
     Tr = real(T)
     A = similarstoragetype(t, Tr)
     D = DiagonalTensorMap{Tr, S, A}(undef, W)
-    U = similar(t, domain(t) ← W)
-    for (c, (Dc, Uc)) in eighdata
+    V = similar(t, domain(t) ← W)
+    for (c, (Dc, Vc)) in eighdata
         r = Base.OneTo(dims[c])
         copy!(block(D, c), Diagonal(view(Dc, r)))
-        copy!(block(U, c), view(Uc, :, r))
+        copy!(block(V, c), view(Vc, :, r))
     end
-    return D, U
+    return D, V
 end
 
 #
@@ -356,8 +356,8 @@ function ChainRulesCore.rrule(
         alg::EighAdjoint{F, R};
         trunc::TruncationStrategy = notrunc(),
     ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig}, R <: FullEighPullback}
-    D̃, Ũ, info = eigh_trunc(t, alg; trunc)
-    D, U = info.D_full, info.U_full # untruncated decomposition
+    D̃, Ṽ, info = eigh_trunc(t, alg; trunc)
+    D, V = info.D_full, info.V_full # untruncated decomposition
     inds = if space(D) == space(D̃)
         _notrunc_ind(t)
     else # only shuffle indices when `eigh` truncates
@@ -365,10 +365,10 @@ function ChainRulesCore.rrule(
     end
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
-    function eigh_trunc!_full_pullback(ΔDU)
-        Δt = eigh_pullback!( # TODO: does this work by now?
-            zeros(scalartype(t), space(t)), t, (D, U), ΔDU, inds;
-            gauge_atol = gtol(ΔDU)
+    function eigh_trunc!_full_pullback(ΔDV)
+        Δt = eigh_pullback!(
+            zeros(scalartype(t), space(t)), t, (D, V), ΔDV, inds;
+            gauge_atol = gtol(ΔDV)
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -376,7 +376,7 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (D̃, Ũ, info), eigh_trunc!_full_pullback
+    return (D̃, Ṽ, info), eigh_trunc!_full_pullback
 end
 
 # eigh_trunc! rrule wrapping MatrixAlgebraKit's eigh_trunc_pullback! (also works for IterEigh)
@@ -386,13 +386,13 @@ function ChainRulesCore.rrule(
         alg::EighAdjoint{F, R};
         trunc::TruncationStrategy = notrunc(),
     ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig, IterEigh}, R <: TruncEighPullback}
-    D, U, info = eigh_trunc(t, alg; trunc)
+    D, V, info = eigh_trunc(t, alg; trunc)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
-    function eigh_trunc!_trunc_pullback(ΔDU)
+    function eigh_trunc!_trunc_pullback(ΔDV)
         Δf = eigh_trunc_pullback!(
-            zeros(scalartype(t), space(t)), t, (D, U), ΔDU;
-            gauge_atol = gtol(ΔDU)
+            zeros(scalartype(t), space(t)), t, (D, V), ΔDV;
+            gauge_atol = gtol(ΔDV)
         )
         return NoTangent(), Δf, NoTangent()
     end
@@ -400,5 +400,5 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (D, U, info), eigh_trunc!_trunc_pullback
+    return (D, V, info), eigh_trunc!_trunc_pullback
 end

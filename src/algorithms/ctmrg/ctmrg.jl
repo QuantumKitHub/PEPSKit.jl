@@ -106,7 +106,7 @@ set of vectors and values will be returned as well:
 * `S_full` : Last unit cell of all singular values.
 * `V_full` : Last unit cell of all right singular vectors.
 
-For `C4vCTMRG` instead the last eigendecomposition `U` and `D` (and `U_full`, `D_full`) will be returned.
+For `C4vCTMRG` instead the last eigendecomposition `V` and `D` (and `V_full`, `D_full`) will be returned.
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
