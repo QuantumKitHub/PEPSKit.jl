@@ -19,7 +19,6 @@ using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
 
 using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
-const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
 
 using TensorOperations, OptimKit
 using ChainRulesCore, Zygote
