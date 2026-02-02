@@ -4,7 +4,7 @@ using PEPSKit
 using LinearAlgebra
 using Random
 import MPSKitModels: hubbard_space
-using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
+using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!, _next
 using MPSKit: GenericMPSTensor, MPSBondTensor
 include("cluster_tools.jl")
 
@@ -112,6 +112,10 @@ end
     trunc_env0 = truncerror(; atol = 1.0e-12) & truncrank(4)
     trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
+    # make state bipartite
+    for r in 1:2
+        peps.A[_next(r, 2), 2] = copy(peps.A[r, 1])
+    end
     wts = SUWeight(peps)
     ham = real(
         hubbard_model(

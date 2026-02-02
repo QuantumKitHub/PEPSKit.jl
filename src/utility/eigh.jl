@@ -204,13 +204,7 @@ struct FixedEig{Dt, Ut, Dtf, Utf}
 end
 
 # check whether the full D and U are supplied
-function isfulleig(alg::FixedEig)
-    if isnothing(alg.D_full) || isnothing(alg.U_full)
-        return false
-    else
-        return true
-    end
-end
+isfulleig(alg::FixedEig) = !isnothing(alg.D_full) && !isnothing(alg.U_full)
 
 # Return pre-computed decomposition
 function _eigh_trunc!(_, alg::FixedEig, ::TruncationStrategy)
