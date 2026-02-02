@@ -79,7 +79,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `decomposition_alg::Union{<:DecompositionAdjoint,NamedTuple}` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
+* `decomposition_alg` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
