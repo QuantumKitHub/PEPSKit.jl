@@ -111,7 +111,7 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
-        @time @safetestset "SVD wrapper" begin
+        @time @safetestset "Eigh wrapper" begin
             include("utility/eigh_wrapper.jl")
         end
         @time @safetestset "SVD wrapper" begin
