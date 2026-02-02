@@ -163,14 +163,17 @@ end
 function _dag(A::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     return permute(A', ((1, (3:(N + 1))...), (2,)))
 end
+
 function physical_flip(A::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     return flip(A, 2:N)
 end
-function project_hermitian(E::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
+
+# call `hermitian_project` to avoid type piracy with MAK's exported project_hermitian
+function hermitian_project(E::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     E´ = (E + physical_flip(_dag(E))) / 2
     return E´
 end
-function project_hermitian(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
+function hermitian_project(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
     C´ = (C + C') / 2
     return C´
 end
@@ -209,7 +212,7 @@ end
 function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
     corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
     edge₀ = f(T, Venv ⊗ Vstate ← Venv)
-    edge₀ = project_hermitian(edge₀)
+    edge₀ = hermitian_project(edge₀)
     return CTMRGEnv(corner₀, edge₀)
 end
 
