@@ -118,7 +118,7 @@ Also return the normalized eigenvalues as the new corner tensor.
 """
 function c4v_projector(enlarged_corner, alg::C4vEighProjector)
     trunc = truncation_strategy(alg, enlarged_corner)
-    D, U, info = eigh_trunc!(enlarged_corner, decomposition_algorithm(alg); trunc)
+    D, V, info = eigh_trunc!(enlarged_corner, decomposition_algorithm(alg); trunc)
 
     # Check for degenerate eigenvalues
     Zygote.isderiving() && ignore_derivatives() do
@@ -128,7 +128,7 @@ function c4v_projector(enlarged_corner, alg::C4vEighProjector)
         end
     end
 
-    return D / norm(D), U, (; D, U, info...)
+    return D / norm(D), V, (; D, V, info...)
 end
 # function c4v_projector(enlarged_corner, alg::C4vQRProjector)
 #     # TODO

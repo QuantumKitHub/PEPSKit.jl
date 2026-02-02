@@ -330,7 +330,7 @@ function gauge_fix(alg::EighAdjoint, signs, info)
         b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
     end
 
-    # fix kept and full U
+    # fix kept and full V
     V_fixed = info.V * σ'
     V_full_fixed = info.V_full * extended_σ'
     return EighAdjoint(;
