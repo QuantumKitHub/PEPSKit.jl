@@ -278,7 +278,6 @@ function _compute_eighdata!(
             D, V = eigh_full!(b, LAPACK_QRIteration())
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
-            @show lm_ordering
             V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
         else
             x₀ = alg.start_vector(b)

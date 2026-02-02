@@ -4,7 +4,6 @@ using Accessors
 using Random
 using LinearAlgebra
 using TensorKit, KrylovKit
-using MatrixAlgebraKit: LAPACK_DivideAndConquer
 using PEPSKit
 using PEPSKit:
     FixedSVD,
@@ -19,7 +18,7 @@ using PEPSKit:
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()), SVDAdjoint(; fwd_alg = IterSVD())]
+svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :sdd)), SVDAdjoint(; fwd_alg = (; alg = :iterative))]
 eigh_algs = [EighAdjoint(; fwd_alg = (; alg = :qriteration)), EighAdjoint(; fwd_alg = (; alg = :lanczos))]
 projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
 projector_algs_c4v = [:c4v_eigh] # :c4v_qr]
@@ -42,7 +41,8 @@ atol = 1.0e-5
     env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
 
     # do extra iteration to get SVD
-    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    # env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    env_conv2, info = ctmrg_iteration(n, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv2, ScramblingEnvGauge(), env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
@@ -50,7 +50,8 @@ atol = 1.0e-5
     ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
 
     # do iteration with FixedSVD
-    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    # env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+    env_fixedsvd, = ctmrg_iteration(n, env_conv1, ctm_alg_fix)
     env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
