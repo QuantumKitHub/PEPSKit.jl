@@ -1,3 +1,5 @@
+const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreExt)
+
 """
 $(TYPEDEF)
 
