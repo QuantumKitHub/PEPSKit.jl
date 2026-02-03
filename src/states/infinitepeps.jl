@@ -1,3 +1,64 @@
+struct InfinitePEPSStructure{S <: IndexSpace}
+    pspaces::PeriodicMatrix{S}
+    nspaces::PeriodicMatrix{S}
+    espaces::PeriodicMatrix{S}
+
+    function InfinitePEPSStructure{S}(
+            pspaces::PeriodicMatrix{S}, nspaces::PeriodicMatrix{S}, espaces::PeriodicMatrix{S}
+        ) where {S <: IndexSpace}
+        size(pspaces) == size(nspaces) == size(espaces) ||
+            throw(DimensionMismatch("non-matching unit cell sizes"))
+        return new{S}(pspaces, nspaces, espaces)
+    end
+end
+
+function InfinitePEPSStructure(
+        pspace::S, nspace::S, espace::S = nspace;
+        unitcell::Base.Dims{2} = (1, 1)
+    ) where {S <: IndexSpace}
+    return InfinitePEPSStructure{S}(
+        PeriodicMatrix(S[pspace;;]), PeriodicMatrix(S[nspace;;]), PeriodicMatrix(S[espace;;])
+    )
+end
+function InfinitePEPSStructure(
+        pspaces::AbstractMatrix{S}, nspaces::AbstractMatrix{S}, espaces::AbstractMatrix{S} = nspaces
+    ) where {S <: IndexSpace}
+    size(pspaces) == size(nspaces) == size(espaces) ||
+        throw(DimensionMismatch("non-matching unit cell sizes"))
+    return InfinitePEPSStructure{S}(
+        PeriodicMatrix(collect(pspaces)),
+        PeriodicMatrix(collect(nspaces)),
+        PeriodicMatrix(collect(espaces)),
+    )
+end
+
+TensorKit.spacetype(::Type{InfinitePEPSStructure{S}}) where {S} = S
+
+physicalspace(structure::InfinitePEPSStructure, row::Int, col::Int) =
+    structure.pspaces[row, col]
+north_virtualspace(structure::InfinitePEPSStructure, row::Int, col::Int) =
+    structure.nspaces[row, col]
+east_virtualspace(structure::InfinitePEPSStructure, row::Int, col::Int) =
+    structure.espaces[row, col]
+south_virtualspace(structure::InfinitePEPSStructure, row::Int, col::Int) =
+    north_virtualspace(structure, row + 1, col)'
+west_virtualspace(structure::InfinitePEPSStructure, row::Int, col::Int) =
+    east_virtualspace(structure, row, col - 1)'
+
+Base.size(structure::InfinitePEPSStructure, args...) = size(structure.pspaces, args...)
+Base.axes(structure::InfinitePEPSStructure, args...) = axes(structure.pspaces, args...)
+Base.eltype(::Type{InfinitePEPSStructure{S}}) where {S} = TensorKit.TensorMapSpace{S, 1, 4}
+
+Base.getindex(structure::InfinitePEPSStructure, args...) =
+    physicalspace(structure, args...) ←
+    north_virtualspace(structure, args...) ⊗ east_virtualspace(structure, args...) ⊗
+    south_virtualspace(structure, args...) ⊗ west_virtualspace(structure, args...)
+
+
+# ==========================
+#       InfinitePEPS
+# ==========================
+
 """
     struct InfinitePEPS{T<:PEPSTensor}
 
@@ -9,62 +70,200 @@ $(TYPEDFIELDS)
 """
 struct InfinitePEPS{T <: PEPSTensor}
     A::Matrix{T}
+
+    # constructor from data
     InfinitePEPS{T}(A::Matrix{T}) where {T <: PEPSTensor} = new{T}(A)
-    function InfinitePEPS(A::Array{T, 2}) where {T <: PEPSTensor}
-        bosonic_braiding = BraidingStyle(sectortype(T)) === Bosonic()
-        for (d, w) in Tuple.(CartesianIndices(A))
-            (bosonic_braiding || !isdual(physicalspace(A[d, w]))) ||
-                throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are not allowed (for now)."))
-            north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
-                throw(
-                SpaceMismatch("North virtual space at site $((d, w)) does not match.")
-            )
-            east_virtualspace(A[d, w]) == west_virtualspace(A[d, _next(w, end)])' ||
-                throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
-            dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
-        end
-        return new{T}(A)
-    end
+
+    # constructor from undef
+    InfinitePEPS{T}(::UndefInitializer, size::Dims{2}) where {T <: PEPSTensor} =
+        new{T}(Matrix{T}(undef, size))
 end
 
-## Constructors
+# Constructors
+# ------------
+function InfinitePEPS{T}(::UndefInitializer, structure::InfinitePEPSStructure) where {T <: PEPSTensor}
+    A = Matrix{T}(undef, size(structure))
+    for col in axes(structure, 2), row in axes(structure, 1)
+        A[row, col] = T(undef, structure[row, col])
+    end
+    return InfinitePEPS{T}(A)
+end
 
-"""
-    InfinitePEPS(A::AbstractMatrix{T})
-
-Create an `InfinitePEPS` by specifying a matrix containing the PEPS tensors at each site in
-the unit cell.
-"""
 function InfinitePEPS(A::AbstractMatrix{<:PEPSTensor})
-    return InfinitePEPS(Array(deepcopy(A))) # TODO: find better way to copy
+    peps = InfinitePEPS{eltype(A)}(undef, size(A))
+    unitcell(peps) .= copy.(A) # ensure to not take ownership of the data
+    spacecheck(peps)
+    return peps
 end
 
+
+# Higher-level constructors
+# -------------------------
+const PEPS_SCALARTYPE = ComplexF64
+
+@doc """
+    zeros([TorA = $PEPS_SCALARTYPE], structure::InfinitePEPSStructure)
+
+Create an [`InfinitePEPS`](@ref) with element or storage type `TorA`, of all zeros with spaces specified by `structure`.
 """
-    InfinitePEPS([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{ElementarySpace}}
+Base.zeros(::Type, ::InfinitePEPSStructure)
 
-Create an `InfinitePEPS` by specifying the physical, north virtual and east virtual spaces
-of the PEPS tensor at each site in the unit cell as a matrix.
+@doc """
+    ones([TorA = $PEPS_SCALARTYPE], structure::InfinitePEPSStructure)
+
+Create an [`InfinitePEPS`](@ref) with element or storage type `TorA`, of all ones with spaces specified by `structure`.
 """
-function InfinitePEPS(
-        f, T::Type{<:Number}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
-    size(Pspaces) == size(Nspaces) == size(Espaces) ||
-        throw(ArgumentError("Input spaces should have equal sizes."))
+Base.ones(::Type, ::InfinitePEPSStructure)
 
-    Sspaces = adjoint.(circshift(Nspaces, (-1, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, 1)))
+for (fname, felt) in ((:zeros, :zero), (:ones, :one))
+    @eval begin
+        # default eltype
+        Base.$fname(structure::InfinitePEPSStructure) = Base.$fname(PEPS_SCALARTYPE, structure)
 
-    A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(f, T, P, N, E, S, W)
+        # implementation
+        function Base.$fname(::Type{T}, structure::InfinitePEPSStructure) where {T}
+            peps = pepstype(spacetype(structure), T)
+            foreach(Base.Fix2(fill!, $felt(scalartype(peps))), unitcell(peps))
+            return peps
+        end
     end
+end
 
-    return InfinitePEPS(A)
+for randfun in (:rand, :randn)
+    randfun! = Symbol(randfun, :!)
+
+    _docstr = """
+        $randfun([rng = default_rng()], [TorA = $PEPS_SCALARTYPE], structure::InfinitePEPSStructure)
+
+    Generate an [`InfinitePEPS`](@ref) with entries generated by `$randfun`.
+    The type `TorA` can be used to control the element type of the data, or the storage type of the tensors,
+    or the tensor type itself. For example, if `TorA` is a `CuVector{ComplexF32}`, then the final `InfinitePEPS`
+    will have tensors that have `TorA` as a storage type.
+
+    See also [`$randfun!`](@ref).
+    """
+    _docstr! = """
+        $randfun!([rng = default_rng()], peps::InfinitePEPS)
+
+    Fill the tensors of a `peps` with entries generated by `$randfun!`.
+
+    See also [`$randfun`](@ref).
+    """
+
+    @eval begin
+        @doc $_docstr $randfun(::Random.AbstractRNG, ::Type, ::InfinitePEPSStructure)
+        @doc $_docstr! $randfun!(::Random.AbstractRNG, ::InfinitePEPS)
+
+        # default eltype
+        Random.$randfun(structure::InfinitePEPSStructure) = $randfun(PEPS_SCALARTYPE, structure)
+        Random.$randfun(rng::Random.AbstractRNG, structure::InfinitePEPSStructure) = $randfun(rng, PEPS_SCALARTYPE, structure)
+
+        # filling in RNG
+        Random.$randfun(::Type{T}, structure::InfinitePEPSStructure) where {T} =
+            $randfun(Random.default_rng(), T, structure)
+        Random.$randfun!(peps::InfinitePEPS) = Random.$randfun!(Random.default_rng(), peps)
+
+        # implementation
+        function Random.$randfun(rng::Random.AbstractRNG, ::Type{T}, structure::InfinitePEPSStructure) where {T}
+            peps = pepstype(spacetype(structure), T)(undef, structure)
+            return $randfun!(rng, peps)
+        end
+        function Random.$randfun!(rng::Random.AbstractRNG, peps::InfinitePEPS)
+            foreach(Base.Fix1($randfun!, rng), unitcell(peps))
+            return peps
+        end
+    end
 end
-function InfinitePEPS(
-        Pspaces::A, virtual_spaces...; kwargs...
-    ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
-    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...; kwargs...)
+
+
+# Deprecated constructors
+# -----------------------
+Base.@deprecate(
+    InfinitePEPS(
+        f, T::Type{<:Number}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:ElementarySpace}},
+    f(T, InfinitePEPSStructure(Pspaces, Nspaces, Espaces))
+)
+Base.@deprecate(
+    InfinitePEPS(
+        Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:ElementarySpace}},
+    randn(ComplexF64, InfinitePEPSStructure(Pspaces, Nspaces, Espaces))
+)
+Base.@deprecate(
+    InfinitePEPS(
+        f, T::Type{<:Number}, Pspace::S, vspaces...;
+        unitcell::Base.Dims{2} = (1, 1)
+    ) where {S <: ElementarySpace},
+    f(T, InfinitePEPSStructure(Pspace, vspaces...; unitcell))
+)
+
+
+# Utility
+# -------
+
+# utility helper function to obtain type
+Base.@assume_effects :foldable pepstype(::Type{S}, ::Type{TorA}) where {S <: IndexSpace, TorA} =
+    InfinitePEPS{TensorKit.tensormaptype(S, 1, 4, TorA)}
+Base.@assume_effects :foldable pepstype(::Type{S}, ::Type{TorA}) where {S <: IndexSpace, TorA <: PEPSTensor} =
+    InfinitePEPS{TorA}
+
+@noinline function spacecheck(peps::InfinitePEPS)
+    A = unitcell(peps)
+    bosonic_braiding = BraidingStyle(sectortype(eltype(peps))) isa Bosonic
+    for col in axes(A, 2), row in axes(A, 1)
+        north_virtualspace(A[row, col]) == south_virtualspace(A[_prev(row, end), col])' ||
+            throw(SpaceMismatch("North virtual space at site $((row, col)) does not match."))
+        east_virtualspace(A[row, col]) == west_virtualspace(A[row, _next(col, end)])' ||
+            throw(SpaceMismatch("North virtual space at site $((row, col)) does not match."))
+        bosonic_braiding || !isdual(physicalspace(A[row, col])) ||
+            throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are currently not supported."))
+        dim(space(A[row, col])) > 0 || @warn "no fusion channels at site ($row, $col)"
+    end
+    return nothing
 end
+
+# Array interface
+# ---------------
+
+unitcell(t::InfinitePEPS) = t.A
+
+Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
+Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
+
+Base.axes(A::InfinitePEPS, args...) = axes(unitcell(A), args...)
+Base.size(A::InfinitePEPS, args...) = size(unitcell(A), args...)
+Base.length(A::InfinitePEPS) = length(unitcell(A))
+eachcoordinate(A::InfinitePEPS) = collect(Iterators.product(axes(A)...))
+function eachcoordinate(A::InfinitePEPS, dirs)
+    return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
+end
+
+Base.getindex(A::InfinitePEPS, args...) = Base.getindex(unitcell(A), args...)
+Base.setindex!(A::InfinitePEPS, args...) = (Base.setindex!(unitcell(A), args...); A)
+
+Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
+function Base.similar(A::InfinitePEPS, T::Type{TorA} = scalartype(A)) where {TorA}
+    return InfinitePEPS(map(t -> similar(t, T), unitcell(A)))
+end
+Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
+
+# Spaces
+# ------
+TensorKit.spacetype(::Type{T}) where {T <: InfinitePEPS} = spacetype(eltype(T))
+
+virtualspace(n::InfinitePEPS, dir) = virtualspace.(unitcell(n), dir)
+function virtualspace(n::InfinitePEPS, r::Int, c::Int, dir)
+    Nr, Nc = size(n)
+    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
+end
+
+physicalspace(n::InfinitePEPS) = physicalspace.(unitcell(n))
+function physicalspace(n::InfinitePEPS, r::Int, c::Int)
+    Nr, Nc = size(n)
+    return physicalspace(n[mod1(r, Nr), mod1(c, Nc)])
+end
+
 
 """
     InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))
@@ -102,58 +301,9 @@ function _fill_state_virtual_spaces(
     return fill(Nspace, unitcell), fill(Espace, unitcell)
 end
 
-"""
-    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 
-Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
-"""
-function InfinitePEPS(
-        f, T::Type{<:Number}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpace}
-    return InfinitePEPS(
-        f, T,
-        _fill_state_physical_spaces(Pspace; unitcell),
-        _fill_state_virtual_spaces(vspaces...; unitcell)...,
-    )
-end
-
-## Unit cell interface
-
-unitcell(t::InfinitePEPS) = t.A
-Base.size(A::InfinitePEPS, args...) = size(unitcell(A), args...)
-Base.length(A::InfinitePEPS) = length(unitcell(A))
-Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
-Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
-
-Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
-function Base.similar(A::InfinitePEPS, T::Type{TorA} = scalartype(A)) where {TorA}
-    return InfinitePEPS(map(t -> similar(t, T), unitcell(A)))
-end
-Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
-
-Base.getindex(A::InfinitePEPS, args...) = Base.getindex(unitcell(A), args...)
-Base.setindex!(A::InfinitePEPS, args...) = (Base.setindex!(unitcell(A), args...); A)
-Base.axes(A::InfinitePEPS, args...) = axes(unitcell(A), args...)
-eachcoordinate(A::InfinitePEPS) = collect(Iterators.product(axes(A)...))
-function eachcoordinate(A::InfinitePEPS, dirs)
-    return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
-end
-
-## Spaces
-
-TensorKit.spacetype(::Type{T}) where {T <: InfinitePEPS} = spacetype(eltype(T))
-virtualspace(n::InfinitePEPS, dir) = virtualspace.(unitcell(n), dir)
-function virtualspace(n::InfinitePEPS, r::Int, c::Int, dir)
-    Nr, Nc = size(n)
-    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
-end
-physicalspace(n::InfinitePEPS) = physicalspace.(unitcell(n))
-function physicalspace(n::InfinitePEPS, r::Int, c::Int)
-    Nr, Nc = size(n)
-    return physicalspace(n[mod1(r, Nr), mod1(c, Nc)])
-end
-
-## InfiniteSquareNetwork interface
+# InfiniteSquareNetwork interface
+# -------------------------------
 
 function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS = top)
     size(top) == size(bot) || throw(
@@ -162,7 +312,8 @@ function InfiniteSquareNetwork(top::InfinitePEPS, bot::InfinitePEPS = top)
     return InfiniteSquareNetwork(map(tuple, unitcell(top), unitcell(bot)))
 end
 
-## Vector interface
+# Vector interface
+# ----------------
 
 VI.scalartype(::Type{NT}) where {NT <: InfinitePEPS} = scalartype(eltype(NT))
 VI.zerovector(A::InfinitePEPS) = InfinitePEPS(zerovector(unitcell(A)))
@@ -195,7 +346,8 @@ function VI.add!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Numbe
 end
 VI.add!!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number) = add!(ψ₁, ψ₂, α, β)
 
-## Math
+# Math
+# ----
 
 function Base.:+(A₁::InfinitePEPS, A₂::InfinitePEPS)
     return InfinitePEPS(unitcell(A₁) + unitcell(A₂))
@@ -221,7 +373,8 @@ function Base.isapprox(A₁::InfinitePEPS, A₂::InfinitePEPS; kwargs...)
     end
 end
 
-## Rotations
+# Rotations
+# ---------
 
 Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
 Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))

@@ -141,7 +141,7 @@ export TimeEvolver, timestep, time_evolve
 
 export InfiniteSquareNetwork
 export InfinitePartitionFunction
-export InfinitePEPS, InfiniteTransferPEPS
+export InfinitePEPS, InfinitePEPSStructure, InfiniteTransferPEPS
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
 
