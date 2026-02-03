@@ -85,12 +85,13 @@ end
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
-@testset "Element-wise consistency of LAPACK_DivideAndConquer and IterSVD" begin
+@testset "Element-wise consistency of :sdd and :iterative" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomposition_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χ + 10))),
+        # decomposition_alg = SVDAdjoint(; fwd_alg = IterSVD(; alg = GKL(; tol = 1.0e-14, krylovdim = χ + 10))),
+        decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative, krylovdim = χ + 10)),
     )
-    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = LAPACK_DivideAndConquer()))
+    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :sdd)))
 
     # initialize states
     Random.seed!(91283219347)
