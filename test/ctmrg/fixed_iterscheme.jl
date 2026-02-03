@@ -4,6 +4,7 @@ using Accessors
 using Random
 using LinearAlgebra
 using TensorKit, KrylovKit
+using MatrixAlgebraKit: LAPACK_DivideAndConquer
 using PEPSKit
 using PEPSKit:
     FixedSVD,
