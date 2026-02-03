@@ -104,7 +104,7 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v, envprev::C
 
     # Random Hermitian MPS of same bond dimension
     # (make Hermitian such that T-M transfer matrix has real eigenvalues)
-    M = hermitian_project(randn(scalartype(Tfinal), space(Tfinal)))
+    M = _project_hermitian(randn(scalartype(Tfinal), space(Tfinal)))
 
     # Find right fixed points of mixed transfer matrices
     ρinit = randn(

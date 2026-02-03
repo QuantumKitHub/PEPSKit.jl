@@ -141,7 +141,7 @@ Renormalize the single edge tensor.
 """
 function c4v_renormalize(network, env, projector)
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
-    new_edge = hermitian_project(new_edge) # additional Hermitian projection step for numerical stability
+    new_edge = _project_hermitian(new_edge) # additional Hermitian projection step for numerical stability
     return new_edge / norm(new_edge)
 end
 
@@ -169,12 +169,12 @@ function physical_flip(A::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     return flip(A, 2:N)
 end
 
-# call `hermitian_project` to avoid type piracy with MAK's exported project_hermitian
-function hermitian_project(E::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
+# call it `_project_hermitian` to avoid type piracy with MAK's exported project_hermitian
+function _project_hermitian(E::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     E´ = (E + physical_flip(_dag(E))) / 2
     return E´
 end
-function hermitian_project(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
+function _project_hermitian(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
     C´ = (C + C') / 2
     return C´
 end
@@ -213,7 +213,7 @@ end
 function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
     corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
     edge₀ = f(T, Venv ⊗ Vstate ← Venv)
-    edge₀ = hermitian_project(edge₀)
+    edge₀ = _project_hermitian(edge₀)
     return CTMRGEnv(corner₀, edge₀)
 end
 
