@@ -141,6 +141,7 @@ Renormalize the single edge tensor.
 """
 function c4v_renormalize(network, env, projector)
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
+    new_edge = hermitian_project(new_edge) # additional Hermitian projection step for numerical stability
     return new_edge / norm(new_edge)
 end
 
