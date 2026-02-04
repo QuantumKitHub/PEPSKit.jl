@@ -26,7 +26,7 @@ alg_gauge = ScramblingEnvGauge()
     # follow code of _rrule
     if iterscheme == :fixed
         env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
-        env_fixed, signs = gauge_fix(env_conv, alg_gauge, env)
+        env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
         alg_fixed = gauge_fix(ctm_alg, signs, info)
 
         _, env_vjp = pullback(state, env_fixed) do A, x
@@ -35,7 +35,7 @@ alg_gauge = ScramblingEnvGauge()
         end
     elseif iterscheme == :diffgauge
         _, env_vjp = pullback(state, env) do A, x
-            return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)[1], alg_gauge, x)[1]
+            return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)[1], x, alg_gauge)[1]
         end
     end
 

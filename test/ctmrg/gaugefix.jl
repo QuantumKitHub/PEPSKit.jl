@@ -71,7 +71,7 @@ end
     n = InfiniteSquareNetwork(psi)
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
-    env_fixed, = gauge_fix(env′, gauge_alg, env)
+    env_fixed, = gauge_fix(env′, env, gauge_alg)
     @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end
 
@@ -86,6 +86,6 @@ end
     n = InfiniteSquareNetwork(psi)
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
-    env_fixed, = gauge_fix(env′, gauge_alg, env)
+    env_fixed, = gauge_fix(env′, env, gauge_alg)
     @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
 end

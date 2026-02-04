@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iteration, gauge_fix, ScramblingEnvGauge
+using PEPSKit: _prev, _next, ctmrg_iteration, ScramblingEnvGauge
 using TensorKit
 
 # settings
@@ -39,7 +39,7 @@ function test_unitcell(
     @test expectation_value(peps, random_op, env′) isa Number
 
     # test if gauge fixing routines run through
-    _, signs = gauge_fix(env″, ScramblingEnvGauge(), env′)
+    _, signs = gauge_fix(env″, env′, ScramblingEnvGauge())
     @test signs isa Array
     return if ctm_alg isa SimultaneousCTMRG # also test :fixed mode gauge fixing for simultaneous CTMRG
         svd_alg_fixed_full = gauge_fix(SVDAdjoint(; fwd_alg = (; alg = :sdd)), signs, info)

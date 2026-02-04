@@ -42,7 +42,7 @@ atol = 1.0e-5
 
     # do extra iteration to get SVD
     env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-    env_fix, signs = gauge_fix(env_conv2, ScramblingEnvGauge(), env_conv1)
+    env_fix, signs = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
     # fix gauge of SVD
@@ -71,7 +71,7 @@ end
 
     # do extra iteration to get SVD
     env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-    env_fix, signs = gauge_fix(env_conv2, ScramblingEnvGaugeC4v(), env_conv1)
+    env_fix, signs = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
     @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
 
     # fix gauge of SVD
@@ -99,11 +99,11 @@ end
 
     # do extra iteration to get SVD
     env_conv2_iter, info_iter = ctmrg_iteration(n, env_conv1, ctm_alg_iter)
-    env_fix_iter, signs_iter = gauge_fix(env_conv2_iter, ScramblingEnvGauge(), env_conv1)
+    env_fix_iter, signs_iter = gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
     env_conv2_full, info_full = ctmrg_iteration(n, env_conv1, ctm_alg_full)
-    env_fix_full, signs_full = gauge_fix(env_conv2_full, ScramblingEnvGauge(), env_conv1)
+    env_fix_full, signs_full = gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
     # fix gauge of SVD
