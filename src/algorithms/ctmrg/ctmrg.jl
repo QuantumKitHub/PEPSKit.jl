@@ -168,6 +168,8 @@ previous one `S₂`. When the virtual spaces change, this comparison is not dire
 such that both tensors are projected into the smaller space and then subtracted.
 """
 function _singular_value_distance((S₁, S₂))
+    S₁ = isa(S₁, AbstractTensorMap) ? S₁ : sv_to_dtm(S₁)
+    S₂ = isa(S₂, AbstractTensorMap) ? S₂ : sv_to_dtm(S₂)
     V₁ = space(S₁, 1)
     V₂ = space(S₂, 1)
     if V₁ == V₂
@@ -189,6 +191,7 @@ This determined either from the previous corner and edge singular values
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
 function calc_convergence(env, CS_old, TS_old)
+    # TODO: convert CS from SectorVector to DiagonalTensorMap
     CS_new = map(svd_vals, env.corners)
     ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
 
