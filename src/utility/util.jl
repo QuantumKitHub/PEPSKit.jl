@@ -48,20 +48,20 @@ end
 _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
-    sdiag_pow(s, pow::Real; tol::Real=eps(scalartype(s))^(3 / 4))
+    sdiag_pow(s, pow::Real; tol::Real=eps(real(scalartype(s)))^(3 / 4))
 
 Compute `s^pow` for a diagonal matrix `s`.
 """
-function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(scalartype(s))^(3 / 4))
-    # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4))
+    # Relative tol w.r.t. largest abs value of `s` (use norm(∘, Inf) to make differentiable)
     tol *= norm(s, Inf)
     spow = DiagonalTensorMap(_safe_pow.(s.data, pow, tol), space(s, 1))
     return spow
 end
 function sdiag_pow(
-        s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(scalartype(s))^(3 / 4)
+        s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
     ) where {T, S}
-    # Relative tol w.r.t. largest singular value (use norm(∘, Inf) to make differentiable)
+    # Relative tol w.r.t. largest abs value of `s` (use norm(∘, Inf) to make differentiable)
     tol *= norm(s, Inf)
     spow = similar(s)
     for (k, b) in blocks(s)
@@ -74,7 +74,7 @@ end
 
 function ChainRulesCore.rrule(
         ::typeof(sdiag_pow), s::AbstractTensorMap, pow::Real;
-        tol::Real = eps(scalartype(s))^(3 / 4),
+        tol::Real = eps(real(scalartype(s)))^(3 / 4),
     )
     tol *= norm(s, Inf)
     spow = sdiag_pow(s, pow; tol)
@@ -100,23 +100,7 @@ function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorM
     return U * sqrt_S, sqrt_S * V
 end
 
-"""
-    flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-
-Given SVD result `u ← s ← vh`, flip the arrow between the three tensors 
-to `u2 → s2 → vh2` such that
-```
-    u * s * vh = (@tensor t2[-1, ...; -2, ...] := u2[-1, ...; 2] * s2[1; 2] * vh2[1; -2, ...])
-```
-The axis orders for `s`, `s2` are
-```
-    1 ← s ← 2   2 → s2 → 1
-```
-"""
-function flip_svd(u::AbstractTensorMap, s::DiagonalTensorMap, vh::AbstractTensorMap)
-    return flip(u, numind(u)), _flip_s(s), flip(vh, 1)
-end
-_flip_s(s::DiagonalTensorMap) = permute(DiagonalTensorMap(flip(s, (1, 2))), ((2,), (1,)))
+_fliptwist_s(s::DiagonalTensorMap) = twist!(DiagonalTensorMap(flip(s, 1:2)), 1)
 
 """
     twistdual(t::AbstractTensorMap, i)
@@ -220,4 +204,14 @@ macro showtypeofgrad(x)
             x̄
         end
     )
+end
+
+"""
+Randomly take the dual of `ElementarySpace`s in `Vs` with propability `p`
+"""
+function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpace}
+    for (i, V) in enumerate(Vs)
+        (rand() < p) && (Vs[i] = V')
+    end
+    return Vs
 end

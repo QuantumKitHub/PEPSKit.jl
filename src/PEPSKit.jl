@@ -1,6 +1,7 @@
 module PEPSKit
 
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
+using Random
 using Compat
 using Accessors: @set, @reset
 using VectorInterface
@@ -50,11 +51,23 @@ include("operators/models.jl")
 include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
+include("environments/bp_environments.jl")
 
-include("algorithms/contractions/ctmrg_contractions.jl")
+include("algorithms/contractions/ctmrg/types.jl")
+include("algorithms/contractions/ctmrg/expr.jl")
+include("algorithms/contractions/ctmrg/enlarge_corner.jl")
+include("algorithms/contractions/ctmrg/projector.jl")
+include("algorithms/contractions/ctmrg/halfinf_env.jl")
+include("algorithms/contractions/ctmrg/fullinf_env.jl")
+include("algorithms/contractions/ctmrg/renormalize_corner.jl")
+include("algorithms/contractions/ctmrg/renormalize_edge.jl")
+include("algorithms/contractions/ctmrg/contract_site.jl")
+include("algorithms/contractions/ctmrg/gaugefix.jl")
+
 include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
+include("algorithms/contractions/bp_contractions.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
@@ -77,6 +90,10 @@ include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
+include("algorithms/time_evolution/gaugefix_su.jl")
+
+include("algorithms/bp/beliefpropagation.jl")
+include("algorithms/bp/gaugefix.jl")
 
 include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
@@ -113,6 +130,11 @@ export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
+
+export BPEnv, BeliefPropagation
+export BPGauge, SUGauge
+export gauge_fix
+
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
 export symmetrize!, symmetrize_retract_and_finalize!

@@ -9,7 +9,6 @@ using PEPSKit
 using PEPSKit:
     FixedSVD,
     ctmrg_iteration,
-    gauge_fix,
     fix_relative_phases,
     fix_global_phases,
     calc_elementwise_convergence,
