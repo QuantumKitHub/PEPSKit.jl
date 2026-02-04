@@ -97,15 +97,16 @@ end
 beta = 0.6
 O, M, E = classical_ising(; beta)
 Z = InfinitePartitionFunction(O)
+Venv = ℂ^12
 Random.seed!(81812781143)
-
-# contract
-χenv = ℂ^12
-env0 = CTMRGEnv(Z, χenv)
-
+env₀ = CTMRGEnv(Z, Venv)
+env₀_c4v = initialize_random_c4v_env(Z, Venv)
 # cover all different flavors
-ctm_styles = [:sequential, :simultaneous]
-projector_algs = [:halfinfinite, :fullinfinite]
+args = [
+    (:sequential, :halfinfinite), (:sequential, :fullinfinite),
+    (:simultaneous, :halfinfinite), (:simultaneous, :fullinfinite),
+    (:c4v, :c4v_eigh), #(:c4v, :c4v_qr)
+]
 
 # Basic properties
 @test spacetype(typeof(Z)) === ComplexSpace
@@ -122,10 +123,9 @@ projector_algs = [:halfinfinite, :fullinfinite]
 
 @testset "Classical Ising partition function using $alg with $projector_alg" for (
         alg, projector_alg,
-    ) in Iterators.product(
-        ctm_styles, projector_algs
-    )
-    env, = leading_boundary(env0, Z; alg, maxiter = 150, projector_alg)
+    ) in args
+    env₀₀ = alg == :c4v ? env₀_c4v : env₀
+    env, = leading_boundary(env₀₀, Z; alg, maxiter = 300, projector_alg)
 
     # check observables
     λ = network_value(Z, env)

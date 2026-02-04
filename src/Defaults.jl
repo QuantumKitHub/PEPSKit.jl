@@ -101,9 +101,20 @@ const svd_rrule_alg = :full # ∈ {:full, :gmres, :bicgstab, :arnoldi}
 const svd_rrule_broadening = 1.0e-13
 const krylovdim_factor = 1.4
 
+# eigh forward & reverse
+const eigh_fwd_alg = :qriteration # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
+const eigh_rrule_alg = :trunc # ∈ {:trunc, :full}
+const eigh_rrule_verbosity = 0
+
+# QR forward & reverse
+# const qr_fwd_alg = :something # TODO
+# const qr_rrule_alg = :something
+# const qr_rrule_verbosity = :something
+
 # Projectors
 const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
 const projector_verbosity = 0
+const projector_alg_c4v = :c4v_eigh # ∈ {:c4v_eigh, :c4v_qr (TODO)}
 
 # Fixed-point gradient
 const gradient_tol = 1.0e-6
