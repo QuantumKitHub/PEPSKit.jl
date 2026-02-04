@@ -35,7 +35,8 @@ atol = 1.0e-5
 
     # initialize states
     Random.seed!(2394823842)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D); unitcell)
+    structure = InfinitePEPSStructure(ℂ^2, ℂ^D; unitcell)
+    psi = randn(structure)
     n = InfiniteSquareNetwork(psi)
 
     env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
@@ -92,7 +93,8 @@ end
 
     # initialize states
     Random.seed!(91283219347)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D))
+    structure = InfinitePEPSStructure(ℂ^2, ℂ^D)
+    psi = randn(structure)
     n = InfiniteSquareNetwork(psi)
     env₀ = CTMRGEnv(psi, ComplexSpace(χ))
     env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
