@@ -127,10 +127,12 @@ function tr_distance(A::BPEnv, B::BPEnv)
 end
 
 function trnorm(M::AbstractTensorMap, p::Real = 1)
-    return TensorKit._norm(svdvals(M), p, zero(real(scalartype(M))))
+    blockiter = blocks(svdvals(M))
+    return TensorKit._norm(blockiter, p, zero(real(scalartype(M))))
 end
 function trnorm!(M::AbstractTensorMap, p::Real = 1)
-    return TensorKit._norm(svdvals!(M), p, zero(real(scalartype(M))))
+    blockiter = blocks(svdvals!(M))
+    return TensorKit._norm(blockiter, p, zero(real(scalartype(M))))
 end
 
 project_hermitian!!(t) = add(t, t', 1 / 2, 1 / 2)
