@@ -15,6 +15,7 @@ function gauge_fix(alg::ProjectorAlgorithm, signs, info)
     return alg_fixed
 end
 
+# TODO: add eigensolver algorithm, verbosity to gauge algorithm structs
 """
 $(TYPEDEF)
 
