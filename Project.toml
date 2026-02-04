@@ -28,6 +28,8 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [compat]
 Accessors = "0.1"
 ChainRulesCore = "1.0"
+ChainRulesTestUtils = "1.13"
+SafeTestsets = "0.1"
 Compat = "3.46, 4.2"
 DocStringExtensions = "0.9.3"
 FiniteDifferences = "0.12"
