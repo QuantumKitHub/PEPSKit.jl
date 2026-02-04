@@ -87,7 +87,7 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, ::ScramblingEnvGauge, envprev::CTMR
     end
 
     cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
-    return fix_global_phases(envprev, CTMRGEnv(cornersfix, edgesfix)), signs
+    return fix_global_phases(CTMRGEnv(cornersfix, edgesfix), envprev), signs
 end
 
 # C4v specialized gauge fixing routine with Hermitian transfer matrix
@@ -229,7 +229,7 @@ Fix global multiplicative phase of the environment tensors. To that end, the dot
 between all corners and all edges are computed to obtain the global phase which is then
 divided out.
 """
-function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
+function fix_global_phases(envfix::CTMRGEnv, envprev::CTMRGEnv)
     cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
         φ = dot(Cprev, Cfix)
         φ' * Cfix

@@ -50,7 +50,7 @@ atol = 1.0e-5
 
     # do iteration with FixedSVD
     env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
-    env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
+    env_fixedsvd = fix_global_phases(env_fixedsvd, env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
@@ -79,7 +79,7 @@ end
 
     # do iteration with FixedSVD
     env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
-    env_fixedsvd = fix_global_phases(env_conv1, env_fixedsvd)
+    env_fixedsvd = fix_global_phases(env_fixedsvd, env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
 end
 
@@ -112,11 +112,11 @@ end
 
     # do iteration with FixedSVD
     env_fixedsvd_iter, = ctmrg_iteration(n, env_conv1, ctm_alg_fix_iter)
-    env_fixedsvd_iter = fix_global_phases(env_conv1, env_fixedsvd_iter)
+    env_fixedsvd_iter = fix_global_phases(env_fixedsvd_iter, env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = atol  # This doesn't work for x₀ = rand(size(b, 1))?
 
     env_fixedsvd_full, = ctmrg_iteration(n, env_conv1, ctm_alg_fix_full)
-    env_fixedsvd_full = fix_global_phases(env_conv1, env_fixedsvd_full)
+    env_fixedsvd_full = fix_global_phases(env_fixedsvd_full, env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_full) ≈ 0 atol = atol
 
     # check matching decompositions

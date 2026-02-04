@@ -31,7 +31,7 @@ alg_gauge = ScramblingEnvGauge()
 
         _, env_vjp = pullback(state, env_fixed) do A, x
             e, = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)
-            return PEPSKit.fix_global_phases(x, e)
+            return PEPSKit.fix_global_phases(e, x)
         end
     elseif iterscheme == :diffgauge
         _, env_vjp = pullback(state, env) do A, x

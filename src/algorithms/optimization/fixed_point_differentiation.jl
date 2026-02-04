@@ -262,7 +262,7 @@ function _rrule(
 
         function f(A, x)
             return fix_global_phases(
-                x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
+                ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x
             )
         end
         _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
