@@ -145,7 +145,7 @@ function _svd_trunc!(
         trunc::TruncationStrategy,
     )
     U, S, V⁺ = svd_compact!(t; alg)
-    Ũ, S̃, Ṽ⁺, ind = truncate(svd_trunc!, (U, S, V⁺), trunc)
+    (Ũ, S̃, Ṽ⁺), ind = truncate(svd_trunc!, (U, S, V⁺), trunc)
     truncerror = MatrixAlgebraKit.truncation_error(diagview(S), ind)
 
     # construct info NamedTuple
