@@ -8,7 +8,8 @@ using VectorInterface
 import VectorInterface as VI
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration
+using MatrixAlgebraKit:
+    TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration, truncation_error, diagview
 using TensorKit
 
 using KrylovKit, OptimKit, TensorOperations
