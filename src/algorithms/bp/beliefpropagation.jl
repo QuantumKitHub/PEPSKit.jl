@@ -126,13 +126,7 @@ function tr_distance(A::BPEnv, B::BPEnv)
     end / length(A.messages)
 end
 
-function trnorm(M::AbstractTensorMap, p::Real = 1)
-    blockiter = blocks(svdvals(M))
-    return TensorKit._norm(blockiter, p, zero(real(scalartype(M))))
-end
-function trnorm!(M::AbstractTensorMap, p::Real = 1)
-    blockiter = blocks(svdvals!(M))
-    return TensorKit._norm(blockiter, p, zero(real(scalartype(M))))
-end
+trnorm(M::AbstractTensorMap, p::Real = 1) = norm(svdvals(M), p)
+trnorm!(M::AbstractTensorMap, p::Real = 1) = norm(svdvals!(M), p)
 
 project_hermitian!!(t) = add(t, t', 1 / 2, 1 / 2)
