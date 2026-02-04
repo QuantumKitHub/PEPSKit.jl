@@ -207,11 +207,7 @@ function _proj_from_RL(
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1)) == false
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1)) == false
     rl = r * l
-
-    # TODO: replace this with actual truncation error once TensorKit is updated
-    uc, sc, vhc = svd_compact!(rl)
-    u, s, vh, ϵ = _truncate_compact((uc, sc, vhc), trunc)
-
+    u, s, vh, ϵ = svd_trunc!(rl; trunc)
     sinv = sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     return Pa, s, Pb, ϵ
