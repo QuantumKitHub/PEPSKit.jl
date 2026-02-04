@@ -168,18 +168,20 @@ previous one `S₂`. When the virtual spaces change, this comparison is not dire
 such that both tensors are projected into the smaller space and then subtracted.
 """
 function _singular_value_distance((S₁, S₂))
-    S₁ = isa(S₁, AbstractTensorMap) ? S₁ : sv_to_dtm(S₁)
-    S₂ = isa(S₂, AbstractTensorMap) ? S₂ : sv_to_dtm(S₂)
-    V₁ = space(S₁, 1)
-    V₂ = space(S₂, 1)
-    if V₁ == V₂
-        return norm(S₁ - S₂)
-    else
-        V = infimum(V₁, V₂)
-        e1 = isometry(V₁, V)
-        e2 = isometry(V₂, V)
-        return norm(e1' * S₁ * e1 - e2' * S₂ * e2)
+    # allocate vector for difference - possibly grow
+    T = VI.promote_add(scalartype(S₁), scalartype(S₂), Int)
+    V₁ = Vect[sectortype(S₁)](c => length(v) for (c, v) in blocks(S₁))
+    V₂ = Vect[sectortype(S₂)](c => length(v) for (c, v) in blocks(S₂))
+    diff = zerovector!(similar(S₁, T, supremum(V₁, V₂)))
+
+    for (c, b) in S₁
+        diff[c][1:length(b)] .= b
     end
+    for (c, b) in S₂
+        diff[c][1:length(b)] .-= b
+    end
+
+    return norm(diff)
 end
 
 """
