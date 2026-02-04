@@ -203,11 +203,11 @@ function initialize_random_c4v_env(state, Venv::ElementarySpace)
     return initialize_random_c4v_env(randn, scalartype(state), state, Venv)
 end
 function initialize_random_c4v_env(f, T, state::InfinitePEPS, Venv::ElementarySpace)
-    Vpeps = domain(state[1])[1]
+    Vpeps = north_virtualspace(state, 1, 1)
     return initialize_random_c4v_env(f, T, Vpeps ⊗ Vpeps', Venv)
 end
 function initialize_random_c4v_env(f, T, state::InfinitePartitionFunction, Venv::ElementarySpace)
-    Vpf = domain(state[1])[1]
+    Vpf = north_virtualspace(state, 1, 1)
     return initialize_random_c4v_env(f, T, Vpf, Venv)
 end
 function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
@@ -227,7 +227,7 @@ function initialize_singlet_c4v_env(state::InfinitePEPS, Venv::ElementarySpace)
     return initialize_singlet_c4v_env(scalartype(state), state, Venv)
 end
 function initialize_singlet_c4v_env(T, state::InfinitePEPS, Venv::ElementarySpace)
-    Vpeps = domain(state[1])[1]
+    Vpeps = north_virtualspace(state, 1, 1)
     return initialize_singlet_c4v_env(T, Vpeps, Venv)
 end
 function initialize_singlet_c4v_env(T, Vpeps::ElementarySpace, Venv::ElementarySpace)
