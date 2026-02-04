@@ -4,7 +4,6 @@ using MatrixAlgebraKit
 using TensorKit
 using MPSKit
 using PEPSKit
-using PEPSKit: sv_to_dtm
 
 # initialize parameters
 χbond = 2
@@ -30,20 +29,12 @@ projector_algs = [:halfinfinite, :fullinfinite]
     # compare singular values
     CS_sequential = sv_to_dtm.(map(svd_vals, env_sequential.corners))
     CS_simultaneous = sv_to_dtm.(map(svd_vals, env_simultaneous.corners))
-    ΔCS = maximum(zip(CS_sequential, CS_simultaneous)) do (c_lm, c_as)
-        smallest = infimum(MPSKit._firstspace(c_lm), MPSKit._firstspace(c_as))
-        e_old = isometry(MPSKit._firstspace(c_lm), smallest)
-        e_new = isometry(MPSKit._firstspace(c_as), smallest)
-        return norm(e_new' * c_as * e_new - e_old' * c_lm * e_old)
-    end
+    ΔCS = maximum(PEPSKit._singular_value_distance, zip(CS_sequential, CS_simultaneous))
     @test ΔCS < 1.0e-2
 
     TS_sequential = sv_to_dtm.(map(svd_vals, env_sequential.edges))
     TS_simultaneous = sv_to_dtm.(map(svd_vals, env_simultaneous.edges))
-    ΔTS = maximum(zip(TS_sequential, TS_simultaneous)) do (t_lm, t_as)
-        MPSKit._firstspace(t_lm) == MPSKit._firstspace(t_as) || return scalartype(t_lm)(Inf)
-        return norm(t_as - t_lm)
-    end
+    ΔTS = maximum(PEPSKit._singular_value_distance, zip(TS_sequential, TS_simultaneous))
     @test ΔTS < 1.0e-2
 
     # compare Heisenberg energies
