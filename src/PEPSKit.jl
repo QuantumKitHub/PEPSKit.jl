@@ -49,6 +49,9 @@ include("utility/retractions.jl")
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
+include("networks/tensors_tria.jl")
+include("networks/local_triangular_sandwich.jl")
+include("networks/infinitetriangularnetwork.jl")
 
 include("states/infinitepeps.jl")
 include("states/infinitepartitionfunction.jl")
@@ -62,6 +65,7 @@ include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
+include("environments/ctmrg_tria_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
@@ -96,6 +100,10 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/ctmrg/c4v.jl")
 
+include("algorithms/triangular_ctmrg/ctmrg.jl")
+include("algorithms/triangular_ctmrg/utility.jl")
+include("algorithms/triangular_ctmrg/simultaneous.jl")
+
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_truncation.jl")
@@ -122,6 +130,7 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export CTMRGTriaEnv, SimultaneousCTMRGTria
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export EighAdjoint, IterEigh, C4vCTMRG, C4vEighProjector, C4vQRProjector
@@ -139,7 +148,7 @@ export ALSTruncation, FullEnvTruncation
 export SimpleUpdate
 export TimeEvolver, timestep, time_evolve
 
-export InfiniteSquareNetwork
+export InfiniteSquareNetwork, InfiniteTriangularNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
