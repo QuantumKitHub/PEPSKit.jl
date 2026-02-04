@@ -191,7 +191,6 @@ This determined either from the previous corner and edge singular values
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
 function calc_convergence(env, CS_old, TS_old)
-    # TODO: convert CS from SectorVector to DiagonalTensorMap
     CS_new = map(svd_vals, env.corners)
     ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
 
