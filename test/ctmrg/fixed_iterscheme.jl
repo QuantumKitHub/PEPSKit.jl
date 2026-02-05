@@ -14,6 +14,7 @@ using PEPSKit:
     peps_normalize,
     ScramblingEnvGauge,
     ScramblingEnvGaugeC4v
+using PEPSKit.Defaults: ctmrg_tol
 
 # initialize parameters
 D = 2
@@ -62,7 +63,10 @@ c4v_algs = [
     (projector_alg, decomposition_alg) in c4v_algs
     # initialize states
     Random.seed!(2394823842)
-    ctm_alg = C4vCTMRG(; projector_alg, decomposition_alg)
+    ctm_alg = C4vCTMRG(;
+        projector_alg, decomposition_alg, maxiter = 200,
+        tol = (projector_alg == :c4v_qr ? 1.0e-12 : ctmrg_tol)
+    )
     symm = RotateReflect()
 
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D))
