@@ -73,14 +73,37 @@ function C4vEighProjector(; kwargs...)
 end
 PROJECTOR_SYMBOLS[:c4v_eigh] = C4vEighProjector
 
-# struct C4vQRProjector{S, T} <: ProjectorAlgorithm
-#     decomposition_alg::S
-#     verbosity::Int
-# end
-# function C4vQRProjector(; kwargs...)
-#     return ProjectorAlgorithm(; alg = :c4v_qr, kwargs...)
-# end
-# PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
+"""
+$(TYPEDEF)
+
+Projector algorithm implementing the `qr` decomposition of a column-enlarged corner.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    C4vQRProjector(; kwargs...)
+
+Construct the C₄ᵥ `qr`-based projector algorithm
+based on the following keyword arguments:
+
+* `decomposition_alg::Union{<:QRAdjoint,NamedTuple}=QRAdjoint()` : `qr` algorithm including the reverse rule. See [`QRAdjoint`](@ref).
+* `verbosity::Int=$(Defaults.projector_verbosity)` : Projector output verbosity which can be:
+    0. Suppress output information
+    1. Print singular value degeneracy warnings
+"""
+struct C4vQRProjector{S, T} <: ProjectorAlgorithm
+    decomposition_alg::S
+    # TODO: remove unused attributes
+    trunc::T
+    verbosity::Int
+end
+function C4vQRProjector(; kwargs...)
+    return ProjectorAlgorithm(; alg = :c4v_qr, kwargs...)
+end
+PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
 
 #
 ## C4v-symmetric CTMRG iteration (called through `leading_boundary`)
@@ -91,10 +114,20 @@ function ctmrg_iteration(
         env::CTMRGEnv,
         alg::C4vCTMRG,
     )
-    enlarged_corner = c4v_enlarge(network, env, alg.projector_alg)
-    corner′, projector, info = c4v_projector(enlarged_corner, alg.projector_alg)
-    edge′ = c4v_renormalize(network, env, projector)
-    return CTMRGEnv(corner′, edge′), info
+    if isa(alg.projector_alg, C4vEighProjector)
+        enlarged_corner = c4v_enlarge(network, env, alg.projector_alg)
+        corner′, projector, info = c4v_projector!(enlarged_corner, alg.projector_alg)
+        edge′ = c4v_renormalize_edge(network, env, projector)
+        return CTMRGEnv(corner′, edge′), info
+    elseif isa(alg.projector_alg, C4vQRProjector)
+        enlarged_corner = c4v_enlarge(env, alg.projector_alg)
+        projector, info = c4v_projector!(enlarged_corner, alg.projector_alg)
+        edge′ = c4v_renormalize_edge(network, env, projector)
+        corner′ = c4v_qr_renormalize_corner(edge′, projector, info.R)
+        return CTMRGEnv(corner′, edge′), info
+    else
+        throw(ArgumentError("Invalid C4v projector algorithm."))
+    end
 end
 
 """
@@ -106,17 +139,22 @@ function c4v_enlarge(network, env, ::C4vEighProjector)
     enlarged_corner = TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
     return 0.5 * (enlarged_corner + enlarged_corner') / norm(enlarged_corner)
 end
-# function c4v_enlarge(enlarged_corner, alg::C4vQRProjector)
-#     # TODO
-# end
+"""
+    c4v_enlarge(network, env, ::C4vEighProjector)
+
+Compute the normalized column-enlarged northeast corner.
+"""
+function c4v_enlarge(env, ::C4vQRProjector)
+    return TensorMap(ColumnEnlargedCorner(env, (NORTHWEST, 1, 1)))
+end
 
 """
-    c4v_projector(enlarged_corner, alg::C4vEighProjector)
+    c4v_projector!(enlarged_corner, alg::C4vEighProjector)
 
 Compute the C₄ᵥ projector from `eigh` decomposing the Hermitian `enlarged_corner`.
 Also return the normalized eigenvalues as the new corner tensor.
 """
-function c4v_projector(enlarged_corner, alg::C4vEighProjector)
+function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
     trunc = truncation_strategy(alg, enlarged_corner)
     D, V, info = eigh_trunc!(enlarged_corner, decomposition_algorithm(alg); trunc)
 
@@ -130,20 +168,84 @@ function c4v_projector(enlarged_corner, alg::C4vEighProjector)
 
     return D / norm(D), V, (; D, V, info...)
 end
-# function c4v_projector(enlarged_corner, alg::C4vQRProjector)
-#     # TODO
-# end
+"""
+    c4v_projector!(enlarged_corner, alg::C4vQRProjector)
+
+Compute the C₄ᵥ projector from `qr` decomposing the column-enlarged corner.
+```
+                   R--←--
+                   ↓
+    C-←-E-←-  =  [~Q~]    
+    ↓   |        ↓   |
+```
+"""
+function c4v_projector!(enlarged_corner, ::C4vQRProjector)
+    # TODO: use positive left_orth, and specify alg options in C4vQRProjector
+    Q, R = left_orth!(enlarged_corner)
+    return Q, (; Q, R)
+end
 
 """
-    c4v_renormalize(network, env, projector)
+    c4v_renormalize_edge(network, env, projector)
 
 Renormalize the single edge tensor.
+```
+        |~~~|-←-E-←-|~~~|
+    -←--| P'|   |   | P |--←-
+        |~~~|---A---|~~~|
+                |
+```
 """
-function c4v_renormalize(network, env, projector)
+function c4v_renormalize_edge(network, env, projector)
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
-    new_edge = _project_hermitian(new_edge) # additional Hermitian projection step for numerical stability
-    return new_edge / norm(new_edge)
+    # additional Hermitian projection step for numerical stability
+    new_edge = _project_hermitian(new_edge)
+    return normalize(new_edge)
 end
+
+"""
+    c4v_qr_renormalize_corner(new_edge, projector, R)
+
+Renormalize the single corner tensor
+```
+    C-←-E-←-|~~~|
+    |   |   | P |-←-
+    E---A---|~~~|
+    |   |
+    [~P']
+      ↓
+```
+Using the already calculated QR decomposition
+```
+                   R--←--
+                   ↓
+    C-←-E-←-  =  [~P~]    
+    ↓   |        ↓   |
+```
+we rewrite the renormalized corner as
+```
+    R-←-|~~~|
+    ↓   | P |-←-
+    E′--|~~~|
+    ↓
+```
+which reuses the renormalized edge `E′` (`new_edge`).
+(Credit: https://github.com/qiyang-ustc/QRCTM/blob/dd160116c3d7b02076691ceaf0a9833511ae532d/heisenberg.py#L80)
+"""
+function c4v_qr_renormalize_corner(new_edge::CTMRG_PEPS_EdgeTensor, projector, R)
+    # TODO: relation between north and east edges?
+    @tensor new_corner[χ; χ′] :=
+        flip(new_edge, 2:3)[χ Dt Db; χ1] * R[χ1; χ2] * projector[χ2 Dt Db; χ′]
+    new_corner = _project_hermitian(new_corner)
+    return normalize(new_corner)
+end
+function c4v_qr_renormalize_corner(new_edge::CTMRG_PF_EdgeTensor, projector, R)
+    @tensor new_corner[χ; χ′] :=
+        flip(new_edge, 2)[χ D; χ1] * R[χ1; χ2] * projector[χ2 D; χ′]
+    new_corner = _project_hermitian(new_corner)
+    return normalize(new_corner)
+end
+# TODO: PEPS-PEPO-PEPS sandwich
 
 # TODO: this should eventually be the constructor for a new C4vCTMRGEnv type
 function CTMRGEnv(
