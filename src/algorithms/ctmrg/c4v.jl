@@ -90,11 +90,9 @@ Construct the C₄ᵥ `qr`-based projector algorithm
 based on the following keyword arguments:
 
 * `decomposition_alg::Union{<:QRAdjoint,NamedTuple}=QRAdjoint()` : `qr` algorithm including the reverse rule. See [`QRAdjoint`](@ref).
-* `verbosity::Int=$(Defaults.projector_verbosity)` : Projector output verbosity which can be:
-    0. Suppress output information
-    1. Print singular value degeneracy warnings
 """
 struct C4vQRProjector{S, T} <: ProjectorAlgorithm
+    # TODO: support all `left_orth` algorithms
     decomposition_alg::S
     # TODO: remove unused attributes
     trunc::T
@@ -140,9 +138,9 @@ function c4v_enlarge(network, env, ::C4vEighProjector)
     return 0.5 * (enlarged_corner + enlarged_corner') / norm(enlarged_corner)
 end
 """
-    c4v_enlarge(network, env, ::C4vEighProjector)
+    c4v_enlarge(network, env, ::C4vQRProjector)
 
-Compute the normalized column-enlarged northeast corner.
+Compute the normalized column-enlarged northeast corner for C₄ᵥ QR-CTMRG.
 """
 function c4v_enlarge(env, ::C4vQRProjector)
     return TensorMap(ColumnEnlargedCorner(env, (NORTHWEST, 1, 1)))
@@ -171,7 +169,7 @@ end
 """
     c4v_projector!(enlarged_corner, alg::C4vQRProjector)
 
-Compute the C₄ᵥ projector from `qr` decomposing the column-enlarged corner.
+Compute the C₄ᵥ projector by decomposing the column-enlarged corner with `left_orth`.
 ```
                    R--←--
                    ↓
@@ -180,7 +178,7 @@ Compute the C₄ᵥ projector from `qr` decomposing the column-enlarged corner.
 ```
 """
 function c4v_projector!(enlarged_corner, ::C4vQRProjector)
-    # TODO: use positive left_orth, and specify alg options in C4vQRProjector
+    # TODO: support all `left_orth` algorithms
     Q, R = left_orth!(enlarged_corner)
     return Q, (; Q, R)
 end
@@ -233,15 +231,14 @@ which reuses the renormalized edge `E′` (`new_edge`).
 (Credit: https://github.com/qiyang-ustc/QRCTM/blob/dd160116c3d7b02076691ceaf0a9833511ae532d/heisenberg.py#L80)
 """
 function c4v_qr_renormalize_corner(new_edge::CTMRG_PEPS_EdgeTensor, projector, R)
-    # TODO: relation between north and east edges?
     @tensor new_corner[χ; χ′] :=
-        flip(new_edge, 2:3)[χ Dt Db; χ1] * R[χ1; χ2] * projector[χ2 Dt Db; χ′]
+        physical_flip(new_edge)[χ Dt Db; χ1] * R[χ1; χ2] * projector[χ2 Dt Db; χ′]
     new_corner = _project_hermitian(new_corner)
     return normalize(new_corner)
 end
 function c4v_qr_renormalize_corner(new_edge::CTMRG_PF_EdgeTensor, projector, R)
     @tensor new_corner[χ; χ′] :=
-        flip(new_edge, 2)[χ D; χ1] * R[χ1; χ2] * projector[χ2 D; χ′]
+        physical_flip(new_edge)[χ D; χ1] * R[χ1; χ2] * projector[χ2 D; χ′]
     new_corner = _project_hermitian(new_corner)
     return normalize(new_corner)
 end
