@@ -135,10 +135,12 @@ Compute the normalized and Hermitian-symmetrized C₄ᵥ enlarged corner.
 """
 function c4v_enlarge(network, env, ::C4vEighProjector)
     enlarged_corner = TensorMap(EnlargedCorner(network, env, (NORTHWEST, 1, 1)))
-    return 0.5 * (enlarged_corner + enlarged_corner') / norm(enlarged_corner)
+    # TODO: replace by `project_hermitian`
+    enlarged_corner = 0.5 * (enlarged_corner + enlarged_corner')
+    return enlarged_corner / norm(enlarged_corner)
 end
 """
-    c4v_enlarge(network, env, ::C4vQRProjector)
+    c4v_enlarge(env, ::C4vQRProjector)
 
 Compute the normalized column-enlarged northeast corner for C₄ᵥ QR-CTMRG.
 """
@@ -198,7 +200,7 @@ function c4v_renormalize_edge(network, env, projector)
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
     # additional Hermitian projection step for numerical stability
     new_edge = _project_hermitian(new_edge)
-    return normalize(new_edge)
+    return new_edge / norm(new_edge)
 end
 
 """
@@ -234,13 +236,13 @@ function c4v_qr_renormalize_corner(new_edge::CTMRG_PEPS_EdgeTensor, projector, R
     @tensor new_corner[χ; χ′] :=
         physical_flip(new_edge)[χ Dt Db; χ1] * R[χ1; χ2] * projector[χ2 Dt Db; χ′]
     new_corner = _project_hermitian(new_corner)
-    return normalize(new_corner)
+    return new_corner / norm(new_corner)
 end
 function c4v_qr_renormalize_corner(new_edge::CTMRG_PF_EdgeTensor, projector, R)
     @tensor new_corner[χ; χ′] :=
         physical_flip(new_edge)[χ D; χ1] * R[χ1; χ2] * projector[χ2 D; χ′]
     new_corner = _project_hermitian(new_corner)
-    return normalize(new_corner)
+    return new_corner / norm(new_corner)
 end
 # TODO: PEPS-PEPO-PEPS sandwich
 
