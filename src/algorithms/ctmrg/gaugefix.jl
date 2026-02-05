@@ -1,4 +1,41 @@
 """
+    gauge_fix(alg::CTMRGAlgorithm, signs, info)
+    gauge_fix(alg::ProjectorAlgorithm, signs, info)
+
+Fix the free gauges of the tensor decompositions associated with `alg`.
+"""
+function gauge_fix(alg::CTMRGAlgorithm, signs, info)
+    alg_fixed = @set alg.projector_alg = gauge_fix(alg.projector_alg, signs, info)
+    return alg_fixed
+end
+function gauge_fix(alg::ProjectorAlgorithm, signs, info)
+    decomposition_alg_fixed = gauge_fix(decomposition_algorithm(alg), signs, info)
+    alg_fixed = @set alg.decomposition_alg = decomposition_alg_fixed # every ProjectorAlgorithm needs an `decomposition_alg` field?
+    alg_fixed = @set alg_fixed.trunc = notrunc()
+    return alg_fixed
+end
+
+# TODO: add eigensolver algorithm, verbosity to gauge algorithm structs
+"""
+$(TYPEDEF)
+
+CTMRG environment gauge fixing algorithm implementing the "general" technique from
+https://arxiv.org/abs/2311.11894. This works by constructing a transfer matrix consisting
+of an edge tensor and a random MPS, thus scrambling potential degeneracies, and then
+performing a QR decomposition to extract the gauge signs. This is adapted accordingly for
+asymmetric CTMRG algorithms using multi-site unit cell transfer matrices.
+"""
+struct ScramblingEnvGauge end
+
+"""
+$(TYPEDEF)
+
+C4v-symmetric equivalent of the [ScramblingEnvGauge`](@ref) environment gauge fixing
+algorithm.
+"""
+struct ScramblingEnvGaugeC4v end
+
+"""
 $(SIGNATURES)
 
 Fix the gauge of `envfinal` based on the previous environment `envprev`.
@@ -6,7 +43,7 @@ This assumes that the `envfinal` is the result of one CTMRG iteration on `envpre
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
-function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, T}
+function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGauge) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -14,7 +51,6 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
     end
     @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
 
-    # Try the "general" algorithm from https://arxiv.org/abs/2311.11894
     signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
@@ -51,7 +87,43 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
     end
 
     cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
-    return fix_global_phases(envprev, CTMRGEnv(cornersfix, edgesfix)), signs
+    return fix_global_phases(CTMRGEnv(cornersfix, edgesfix), envprev), signs
+end
+
+# C4v specialized gauge fixing routine with Hermitian transfer matrix
+function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}
+    # Check if spaces in envprev and envfinal are the same
+    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
+            space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
+    end
+    @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
+
+    # "general" algorithm from https://arxiv.org/abs/2311.11894
+    Tprev = envprev.edges[1, 1, 1]
+    Tfinal = envfinal.edges[1, 1, 1]
+
+    # Random Hermitian MPS of same bond dimension
+    # (make Hermitian such that T-M transfer matrix has real eigenvalues)
+    M = _project_hermitian(randn(scalartype(Tfinal), space(Tfinal)))
+
+    # Find right fixed points of mixed transfer matrices
+    ρinit = randn(
+        scalartype(T), MPSKit._lastspace(Tfinal)' ← MPSKit._lastspace(M)'
+    )
+    ρprev = c4v_transfermatrix_fixedpoint(Tprev, M, ρinit)
+    ρfinal = c4v_transfermatrix_fixedpoint(Tfinal, M, ρinit)
+
+    # Decompose and multiply
+    Qprev, = left_orth!(ρprev)
+    Qfinal, = left_orth!(ρfinal)
+
+    σ = Qprev * Qfinal'
+
+    @tensor cornerfix[χ_in; χ_out] := σ[χ_in; χ1] * envfinal.corners[1][χ1; χ2] * conj(σ[χ_out; χ2])
+    @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
+        σ[χ_in; χ1] * envfinal.edges[1][χ1 D_in_above D_in_below; χ2] * conj(σ[χ_out; χ2])
+    return CTMRGEnv(cornerfix, edgefix), fill(σ, (4, 1, 1))
 end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
@@ -80,6 +152,13 @@ function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     ignore_derivatives() do
         info.converged > 0 || @warn "eigsolve did not converge"
     end
+    return first(vecs)
+end
+function c4v_transfermatrix_fixedpoint(top, bottom, ρinit)
+    _, vecs, info = eigsolve(ρinit, 1, :LM, Lanczos()) do ρ
+        PEPSKit.mps_transfer_right(ρ, top, bottom)
+    end
+    info.converged > 0 || @warn "eigsolve did not converge"
     return first(vecs)
 end
 
@@ -150,7 +229,7 @@ Fix global multiplicative phase of the environment tensors. To that end, the dot
 between all corners and all edges are computed to obtain the global phase which is then
 divided out.
 """
-function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
+function fix_global_phases(envfix::CTMRGEnv, envprev::CTMRGEnv)
     cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
         φ = dot(Cprev, Cfix)
         φ' * Cfix
@@ -168,8 +247,12 @@ end
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
 CTMRG environments are below `atol` and return the maximal difference.
 """
-function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real = 1.0e-6)
-    ΔC = envfinal.corners .- envfix.corners
+function calc_elementwise_convergence(
+        envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; atol::Real = 1.0e-6
+    ) where {C, C′}
+    Cfinal = (C <: DiagonalTensorMap) ? convert.(TensorMap, envfinal.corners) : envfinal.corners
+    Cfix = (C′ <: DiagonalTensorMap) ? convert.(TensorMap, envfix.corners) : envfix.corners
+    ΔC = Cfinal .- Cfix
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
     @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"

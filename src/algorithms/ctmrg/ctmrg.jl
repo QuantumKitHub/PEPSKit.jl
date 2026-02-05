@@ -19,7 +19,7 @@ function CTMRGAlgorithm(;
         maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
         verbosity = Defaults.ctmrg_verbosity,
         trunc = (; alg = Defaults.trunc),
-        svd_alg = (;),
+        decomposition_alg = (;),
         projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
     )
     # replace symbol with projector alg type
@@ -27,9 +27,11 @@ function CTMRGAlgorithm(;
     alg_type = CTMRG_SYMBOLS[alg]
 
     # parse CTMRG projector algorithm
-
+    if alg == :c4v && projector_alg == Defaults.projector_alg
+        projector_alg = Defaults.projector_alg_c4v
+    end
     projector_algorithm = ProjectorAlgorithm(;
-        alg = projector_alg, svd_alg, trunc, verbosity
+        alg = projector_alg, decomposition_alg, trunc, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
@@ -64,8 +66,9 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     3. Iteration info
     4. Debug info
 * `alg::Symbol=:$(Defaults.ctmrg_alg)` : Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
-    - `:simultaneous`: Simultaneous expansion and renormalization of all sides.
-    - `:sequential`: Sequential application of left moves and rotations.
+    - `:simultaneous` : Simultaneous expansion and renormalization of all sides.
+    - `:sequential` : Sequential application of left moves and rotations.
+    - `:c4v` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
 
 ### Projector algorithm
 
@@ -76,10 +79,11 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `svd_alg::Union{<:SVDAdjoint,NamedTuple}` : SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
+* `decomposition_alg` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner.
 
 ## Return values
 
@@ -101,6 +105,8 @@ set of vectors and values will be returned as well:
 * `U_full` : Last unit cell of all left singular vectors.
 * `S_full` : Last unit cell of all singular values.
 * `V_full` : Last unit cell of all right singular vectors.
+
+For `C4vCTMRG` instead the last eigendecomposition `V` and `D` (and `V_full`, `D_full`) will be returned.
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)

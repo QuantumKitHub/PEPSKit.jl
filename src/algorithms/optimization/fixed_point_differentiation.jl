@@ -217,13 +217,14 @@ function _rrule(
     )
     env, info = leading_boundary(envinit, state, alg)
     alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_gauge = ScramblingEnvGauge() # TODO: make this a field in GradMode?
 
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
         # find partial gradients of gauge-fixed single CTMRG iteration
         function f(A, x)
-            return gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1])[1]
+            return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x, alg_gauge)[1]
         end
         _, env_vjp = rrule_via_ad(config, f, state, env)
 
@@ -249,20 +250,19 @@ function _rrule(
     )
     env, = leading_boundary(envinit, state, alg)
     alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_gauge = ScramblingEnvGauge()
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    env_fixed, signs = gauge_fix(env, env_conv)
+    env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
 
     # Fix SVD
-    svd_alg_fixed = _fix_svd_algorithm(alg.projector_alg.svd_alg, signs, info)
-    alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
-    alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
+    alg_fixed = gauge_fix(alg, signs, info)
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
         function f(A, x)
             return fix_global_phases(
-                x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
+                ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x
             )
         end
         _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
@@ -278,7 +278,7 @@ function _rrule(
     return (env_fixed, info), leading_boundary_fixed_pullback
 end
 
-function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
+function gauge_fix(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
     rowsize, colsize = size(signs, 2), size(signs, 3)
     signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, r, c)
@@ -311,13 +311,77 @@ function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
         rrule_alg = alg.rrule_alg,
     )
 end
-function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
+function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     # fix kept U and V only since iterative SVD doesn't have access to full spectrum
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     return SVDAdjoint(;
         fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
         rrule_alg = alg.rrule_alg,
     )
+end
+function gauge_fix(alg::EighAdjoint, signs, info)
+    # embed gauge signs in larger space to fix gauge of full V on truncated subspace
+    σ = signs[1]
+    extended_σ = zeros(scalartype(σ), space(info.D_full))
+    for (c, b) in blocks(extended_σ)
+        σc = block(σ, c)
+        kept_dim = size(σc, 1)
+        b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
+        b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+    end
+
+    # fix kept and full V
+    V_fixed = info.V * σ'
+    V_full_fixed = info.V_full * extended_σ'
+    return EighAdjoint(;
+        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEigh}
+    # fix kept V only since iterative decomposition doesn't have access to full spectrum
+    V_fixed = info.V * signs[1]'
+    return EighAdjoint(;
+        fwd_alg = FixedEig(info.D, V_fixed, nothing, nothing),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+
+# nested fixed-point gradient evaluation for C4v CTMRG
+function _rrule(
+        gradmode::GradMode{:fixed},
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        env₀,
+        state,
+        alg::C4vCTMRG,
+    )
+    env, = leading_boundary(env₀, state, alg)
+    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_gauge = ScramblingEnvGaugeC4v()
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    _, signs = gauge_fix(env_conv, env, alg_gauge)
+
+    # Fix eigendecomposition
+    alg_fixed = gauge_fix(alg, signs, info)
+
+    function leading_boundary_fixed_pullback((Δenv′, Δinfo))
+        Δenv = unthunk(Δenv′)
+
+        f(A, x) = ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
+        _, env_vjp = rrule_via_ad(config, f, state, env)
+
+        # evaluate the geometric sum
+        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+        # ∂f∂x(x)::typeof(env) = env_vjp(x)[3] # TODO: why is this derivative type-instable? The corner gradient is a complex DiagonalTensorMap
+        ∂f∂x(x) = env_vjp(x)[3]
+        ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
+
+        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
+    end
+
+    # TODO: also return env (instead of `env_fixed`) for general :fixed mode CTMRG in PEPSKit
+    return (env, info), leading_boundary_fixed_pullback
 end
 
 @doc """

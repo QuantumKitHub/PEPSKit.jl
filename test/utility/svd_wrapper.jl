@@ -13,8 +13,8 @@ function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
     return real(dot(R, U * V)) + dot(S, S)  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
 end
 
-m, n = 20, 30
 dtype = ComplexF64
+m, n = 20, 30
 χ = 12
 trunc = truncspace(ℂ^χ)
 rtol = 1.0e-9
@@ -25,7 +25,7 @@ R = randn(space(r))
 full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, broadening = 0))
 iter_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative))
 
-@testset "Non-truncacted SVD" begin
+@testset "Non-truncated SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
     l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R), r)
 
