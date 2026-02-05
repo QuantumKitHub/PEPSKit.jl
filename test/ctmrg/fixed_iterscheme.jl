@@ -79,7 +79,9 @@ c4v_algs = [
     # do extra iteration to get SVD
     env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
     env_fix, signs = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
-    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
+    env_diff = calc_elementwise_convergence(env_conv1, env_fix)
+    @info "Diff between iters = $(env_diff)"
+    @test env_diff ≈ 0 atol = atol
 
     if projector_alg == :c4v_eigh
         # fix gauge of SVD

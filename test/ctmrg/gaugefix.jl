@@ -72,7 +72,9 @@ end
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
     env_fixed, = gauge_fix(env′, env, gauge_alg)
-    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
+    env_diff = calc_elementwise_convergence(env, env_fixed)
+    @info "Diff between iters = $(env_diff)"
+    @test env_diff ≈ 0 atol = atol
 end
 
 # C4v CTMRG
@@ -87,5 +89,7 @@ end
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
     env_fixed, = gauge_fix(env′, env, gauge_alg)
-    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
+    env_diff = calc_elementwise_convergence(env, env_fixed)
+    @info "Diff between iters = $(env_diff)"
+    @test env_diff ≈ 0 atol = atol
 end
