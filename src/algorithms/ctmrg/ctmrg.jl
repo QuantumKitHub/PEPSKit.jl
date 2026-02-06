@@ -164,31 +164,31 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-# TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
 """
-    _singular_value_distance((S₁, S₂))
+    _singular_value_distance(S₁, S₂)
 
 Compute the singular value distance as an error measure, e.g. for CTMRG iterations.
 To that end, the singular values of the current iteration `S₁` are compared with the
 previous one `S₂`. When the virtual spaces change, this comparison is not directly possible
 such that both tensors are projected into the smaller space and then subtracted.
 """
-function _singular_value_distance((S₁, S₂))
+function _singular_value_distance(S₁::SV, S₂::SV) where {SV <: TensorKit.SectorVector}
     # allocate vector for difference - possibly grow
-    T = VI.promote_add(scalartype(S₁), scalartype(S₂), Int)
     V₁ = Vect[sectortype(S₁)](c => length(v) for (c, v) in blocks(S₁))
     V₂ = Vect[sectortype(S₂)](c => length(v) for (c, v) in blocks(S₂))
-    diff = zerovector!(similar(S₁, T, supremum(V₁, V₂)))
+    diff = zerovector!(SV(undef, supremum(V₁, V₂)))
 
-    for (c, b) in S₁
+    for (c, b) in blocks(S₁)
         diff[c][1:length(b)] .= b
     end
-    for (c, b) in S₂
+    for (c, b) in blocks(S₂)
         diff[c][1:length(b)] .-= b
     end
 
     return norm(diff)
 end
+_singular_value_distance(S₁::DiagonalTensorMap, S₂::DiagonalTensorMap) =
+    _singular_value_distance(diagview(S₁), diagview(S₂))
 
 """
     calc_convergence(env, CS_old, TS_old)
@@ -200,10 +200,10 @@ This determined either from the previous corner and edge singular values
 """
 function calc_convergence(env, CS_old, TS_old)
     CS_new = map(svd_vals, env.corners)
-    ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
+    ΔCS = maximum(splat(_singular_value_distance), zip(CS_old, CS_new))
 
     TS_new = map(svd_vals, env.edges)
-    ΔTS = maximum(_singular_value_distance, zip(TS_old, TS_new))
+    ΔTS = maximum(splat(_singular_value_distance), zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
 

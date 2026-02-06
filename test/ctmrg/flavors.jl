@@ -33,12 +33,12 @@ eigh_algs = [:qriteration, :lanczos]
     # compare singular values
     CS_sequential = sv_to_dtm.(map(svd_vals, env_sequential.corners))
     CS_simultaneous = sv_to_dtm.(map(svd_vals, env_simultaneous.corners))
-    ΔCS = maximum(PEPSKit._singular_value_distance, zip(CS_sequential, CS_simultaneous))
+    ΔCS = maximum(splat(PEPSKit._singular_value_distance), zip(CS_sequential, CS_simultaneous))
     @test ΔCS < 1.0e-2
 
     TS_sequential = sv_to_dtm.(map(svd_vals, env_sequential.edges))
     TS_simultaneous = sv_to_dtm.(map(svd_vals, env_simultaneous.edges))
-    ΔTS = maximum(PEPSKit._singular_value_distance, zip(TS_sequential, TS_simultaneous))
+    ΔTS = maximum(splat(PEPSKit._singular_value_distance), zip(TS_sequential, TS_simultaneous))
     @test ΔTS < 1.0e-2
 
     # compare Heisenberg energies
