@@ -14,7 +14,7 @@ Contract the half-enlarged northwest corner of the CTMRG environment.
 """
 function column_enlarge_northwest_corner(
         C_northwest::CTMRGCornerTensor, edge::CTMRGEdgeTensor
-    ) where {T, S}
+    )
     pC = (codomainind(C_northwest), domainind(C_northwest))
     pE = ((codomainind(edge)[1],), (codomainind(edge)[2:end]..., domainind(edge)...))
     pCE = (codomainind(edge), domainind(edge))
