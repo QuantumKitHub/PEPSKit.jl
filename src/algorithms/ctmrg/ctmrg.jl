@@ -115,6 +115,11 @@ end
 function leading_boundary(
         env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
+    # TODO: check_symmetry for C4v algorithms
+    if isa(alg, C4vCTMRG)
+        BraidingStyle(sectortype(spacetype(network))) != Bosonic() &&
+            error("C4v CTMRG is currently only implemented for bosonic networks.")
+    end
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)

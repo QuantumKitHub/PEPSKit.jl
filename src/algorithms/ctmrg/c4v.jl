@@ -196,6 +196,7 @@ Renormalize the single edge tensor.
                 |
 ```
 """
+# TODO: possible missing twists for fermions
 function c4v_renormalize_edge(network, env, projector)
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
     # additional Hermitian projection step for numerical stability
@@ -232,6 +233,7 @@ we rewrite the renormalized corner as
 which reuses the renormalized edge `E′` (`new_edge`).
 (Credit: https://github.com/qiyang-ustc/QRCTM/blob/dd160116c3d7b02076691ceaf0a9833511ae532d/heisenberg.py#L80)
 """
+# TODO: possible missing twists for fermions
 function c4v_qr_renormalize_corner(new_edge::CTMRG_PEPS_EdgeTensor, projector, R)
     @tensor new_corner[χ; χ′] :=
         physical_flip(new_edge)[χ Dt Db; χ1] * R[χ1; χ2] * projector[χ2 Dt Db; χ′]
@@ -260,6 +262,8 @@ end
 ## utility
 #
 
+# TODO: re-examine these for fermions
+
 # Adjoint of an edge tensor, but permutes the physical spaces back into the codomain.
 # Intuitively, this conjugates a tensor and then reinterprets its 'direction' as an edge tensor.
 function _dag(A::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
@@ -280,7 +284,7 @@ function _project_hermitian(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
     return C´
 end
 
-# should perform this check at the beginning of `leading_boundary` really...
+# TODO: check symmetry directly on InfiniteSquareNetwork
 function check_symmetry(state, ::RotateReflect; atol = 1.0e-10)
     @assert length(state) == 1 "check_symmetry only works for single site unit cells"
     @assert norm(state[1] - _fit_spaces(rotl90(state[1]), state[1])) /
