@@ -89,14 +89,11 @@ $(TYPEDFIELDS)
 Construct the C₄ᵥ `qr`-based projector algorithm
 based on the following keyword arguments:
 
-* `decomposition_alg::Union{<:QRAdjoint,NamedTuple}=QRAdjoint()` : `qr` algorithm including the reverse rule. See [`QRAdjoint`](@ref).
+* `decomposition_alg=QRAdjoint()` : `left_orth` algorithm including the reverse rule. See [`QRAdjoint`](@ref).
 """
-struct C4vQRProjector{S, T} <: ProjectorAlgorithm
+struct C4vQRProjector{S} <: ProjectorAlgorithm
     # TODO: support all `left_orth` algorithms
     decomposition_alg::S
-    # TODO: remove unused attributes
-    trunc::T
-    verbosity::Int
 end
 function C4vQRProjector(; kwargs...)
     return ProjectorAlgorithm(; alg = :c4v_qr, kwargs...)
