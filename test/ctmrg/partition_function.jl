@@ -105,7 +105,7 @@ env₀_c4v = initialize_random_c4v_env(Z, Venv)
 args = [
     (:sequential, :halfinfinite), (:sequential, :fullinfinite),
     (:simultaneous, :halfinfinite), (:simultaneous, :fullinfinite),
-    (:c4v, :c4v_eigh), #(:c4v, :c4v_qr)
+    (:c4v, :c4v_eigh), (:c4v, :c4v_qr),
 ]
 
 # Basic properties
@@ -132,6 +132,7 @@ args = [
     m = expectation_value(Z, (1, 1) => M, env)
     e = expectation_value(Z, (1, 1) => E, env)
     f_exact, m_exact, e_exact = classical_ising_exact(; beta)
+    @info "Exact energy = $(e_exact)."
 
     # should be real-ish
     @test abs(imag(λ)) < 1.0e-4
@@ -141,5 +142,6 @@ args = [
     # should match exact solution
     @test -log(λ) / beta ≈ f_exact rtol = 1.0e-4
     @test abs(m) ≈ abs(m_exact) rtol = 1.0e-4
+    @info "Evaluated energy = $(e)."
     @test e ≈ e_exact rtol = 1.0e-1 # accuracy limited by bond dimension and maxiter
 end

@@ -11,9 +11,11 @@ D = 2
 χ = 16
 unitcells = [(1, 1), (3, 4)]
 projector_algs_asymm = [:halfinfinite, :fullinfinite]
-projector_algs_c4v = [:c4v_eigh] # :c4v_qr]
+projector_algs_c4v = [
+    (:c4v_qr, :qr),
+    (:c4v_eigh, :qriteration), (:c4v_eigh, :lanczos),
+]
 Ts = [Float64, ComplexF64]
-eigh_algs = [:qriteration, :lanczos]
 
 @testset "$(unitcell) unit cell with $projector_alg" for (unitcell, projector_alg) in
     Iterators.product(unitcells, projector_algs_asymm)
@@ -72,8 +74,8 @@ end
     @test all(space.(env.edges) .== space.(env2.edges))
 end
 
-@testset "C4v with ($T) - ($projector_alg) - ($eigh_alg)" for (projector_alg, T, eigh_alg) in
-    Iterators.product(projector_algs_c4v, Ts, eigh_algs)
+@testset "C4v with ($T) - ($projector_alg, $decomp_alg)" for (T, (projector_alg, decomp_alg)) in
+    Iterators.product(Ts, projector_algs_c4v)
 
     Random.seed!(29358293829382)
     symm = RotateReflect()
@@ -87,7 +89,7 @@ end
     env₀ = initialize_random_c4v_env(peps, Venv)
     env, = leading_boundary(
         env₀, peps; alg = :c4v, projector_alg,
-        decomposition_alg = (; fwd_alg = (; alg = eigh_alg))
+        decomposition_alg = (; fwd_alg = (; alg = decomp_alg))
     )
     @test env isa CTMRGEnv
 end
