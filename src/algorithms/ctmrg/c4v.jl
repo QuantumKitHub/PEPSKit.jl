@@ -234,19 +234,18 @@ which reuses the renormalized edge `E′` (`new_edge`).
 (Credit: https://github.com/qiyang-ustc/QRCTM/blob/dd160116c3d7b02076691ceaf0a9833511ae532d/heisenberg.py#L80)
 """
 # TODO: possible missing twists for fermions
-function c4v_qr_renormalize_corner(new_edge::CTMRG_PEPS_EdgeTensor, projector, R)
-    @tensor new_corner[χ; χ′] :=
-        physical_flip(new_edge)[χ Dt Db; χ1] * R[χ1; χ2] * projector[χ2 Dt Db; χ′]
+function c4v_qr_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, R)
+    # contract edge and R
+    edge′ = physical_flip(new_edge)
+    ER = edge′ * twistdual(R, 1)
+    # contract (edge, R) with projector
+    pER = ((1,), Tuple(2:numind(ER)))
+    pP = ((codomainind(projector)[2:end]..., 1), domainind(projector))
+    pERP = ((1,), (2,))
+    new_corner = tensorcontract(ER, pER, false, projector, pP, false, pERP)
     new_corner = _project_hermitian(new_corner)
     return new_corner / norm(new_corner)
 end
-function c4v_qr_renormalize_corner(new_edge::CTMRG_PF_EdgeTensor, projector, R)
-    @tensor new_corner[χ; χ′] :=
-        physical_flip(new_edge)[χ D; χ1] * R[χ1; χ2] * projector[χ2 D; χ′]
-    new_corner = _project_hermitian(new_corner)
-    return new_corner / norm(new_corner)
-end
-# TODO: PEPS-PEPO-PEPS sandwich
 
 # TODO: this should eventually be the constructor for a new C4vCTMRGEnv type
 function CTMRGEnv(
