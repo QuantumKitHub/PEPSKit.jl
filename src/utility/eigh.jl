@@ -153,7 +153,8 @@ function _eigh_trunc!(
         trunc::TruncationStrategy,
     )
     D, V = eigh_full!(t; alg)
-    D̃, Ṽ, truncerror = _truncate_eigh((D, V), trunc)
+    (D̃, Ṽ), ind = truncate(eigh_trunc!, (D, V), trunc)
+    truncerror = truncation_error(diagview(D), ind)
 
     # construct info NamedTuple
     condnum = cond(D)
@@ -161,18 +162,6 @@ function _eigh_trunc!(
         truncation_error = truncerror, condition_number = condnum, D_full = D, V_full = V,
     )
     return D̃, Ṽ, info
-end
-
-# hacky way of computing the truncation error for current version of eigh_trunc!
-# TODO: replace once TensorKit updates to new MatrixAlgebraKit which returns truncation error as well
-function _truncate_eigh((D, V), trunc::TruncationStrategy)
-    if !(trunc isa NoTruncation) && !isempty(blocksectors(D))
-        D̃, Ṽ = truncate(eigh_trunc!, (D, V), trunc)[1]
-        truncerror = sqrt(abs(norm(D)^2 - norm(D̃)^2))
-        return D̃, Ṽ, truncerror
-    else
-        return D, V, zero(real(scalartype(D)))
-    end
 end
 
 """

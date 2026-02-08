@@ -226,11 +226,7 @@ function _apply_gate(
     else
         trunc
     end
-
-    # TODO: replace this with actual truncation error once TensorKit is updated
-    ac, sc, bc = svd_compact!(a2b2; alg = LAPACK_QRIteration())
-    a, s, b, ϵ = _truncate_compact((ac, sc, bc), trunc)
-
+    a, s, b, ϵ = svd_trunc!(a2b2; trunc, alg = LAPACK_QRIteration())
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)

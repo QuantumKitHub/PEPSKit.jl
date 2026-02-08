@@ -8,9 +8,10 @@ using VectorInterface
 import VectorInterface as VI
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration
-using MatrixAlgebraKit: NoTruncation, LAPACK_EighAlgorithm, truncate
-using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!, findtruncated, diagview
+using MatrixAlgebraKit: LAPACK_DivideAndConquer, LAPACK_QRIteration
+using MatrixAlgebraKit:
+    TruncationStrategy, NoTruncation, truncate, findtruncated, truncation_error, diagview
+using MatrixAlgebraKit: LAPACK_EighAlgorithm, eigh_pullback!, eigh_trunc_pullback!
 
 using TensorKit
 using TensorKit: AdjointTensorMap, SectorDict
