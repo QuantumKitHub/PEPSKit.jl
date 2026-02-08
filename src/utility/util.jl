@@ -206,14 +206,6 @@ macro showtypeofgrad(x)
     )
 end
 
-# convert SectorVector to DiagonalTensorMap
-# TODO: put this in TensorKit
-function sv_to_dtm(s::TensorKit.SectorVector)
-    S = sectortype(s)
-    V = Vect[S](c => length(b) for (c, b) in blocks(s))
-    return DiagonalTensorMap(s.data, V)
-end
-
 """
 Randomly take the dual of `ElementarySpace`s in `Vs` with propability `p`
 """
