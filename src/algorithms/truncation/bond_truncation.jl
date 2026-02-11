@@ -160,8 +160,8 @@ function bond_truncate(
         --- a == b ---   ==>   - Qa ← Ra == Rb ← Qb -
             ↓    ↓               ↓               ↓
     =#
-    Qa, Ra = left_orth(a)
-    Rb, Qb = right_orth(b)
+    Qa, Ra = left_orth(a; positive = true)
+    Rb, Qb = right_orth(b; positive = true)
     @assert !isdual(space(Ra, 1)) && !isdual(space(Qb, 1))
     @tensor b0[-1; -2] := Ra[-1 1] * Rb[1 -2]
     #= initialize bond environment around `Ra Lb`

@@ -115,8 +115,8 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     ρfinal = c4v_transfermatrix_fixedpoint(Tfinal, M, ρinit)
 
     # Decompose and multiply
-    Qprev, = left_orth!(ρprev)
-    Qfinal, = left_orth!(ρfinal)
+    Qprev, = left_orth!(ρprev; positive = true)
+    Qfinal, = left_orth!(ρfinal; positive = true)
 
     σ = Qprev * Qfinal'
 
