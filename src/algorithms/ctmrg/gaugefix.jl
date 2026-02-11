@@ -111,8 +111,8 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     ρinit = randn(
         scalartype(T), MPSKit._lastspace(Tfinal)' ← MPSKit._lastspace(M)'
     )
-    ρprev = c4v_transfermatrix_fixedpoint(Tprev, M, ρinit)
-    ρfinal = c4v_transfermatrix_fixedpoint(Tfinal, M, ρinit)
+    ρprev = transfermatrix_fixedpoint([Tprev], [M], ρinit)
+    ρfinal = transfermatrix_fixedpoint([Tfinal], [M], ρinit)
 
     # Decompose and multiply
     Qprev, = left_orth!(ρprev)
@@ -152,13 +152,6 @@ function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     ignore_derivatives() do
         info.converged > 0 || @warn "eigsolve did not converge"
     end
-    return first(vecs)
-end
-function c4v_transfermatrix_fixedpoint(top, bottom, ρinit)
-    _, vecs, info = eigsolve(ρinit, 1, :LM, Lanczos()) do ρ
-        PEPSKit.mps_transfer_right(ρ, top, bottom)
-    end
-    info.converged > 0 || @warn "eigsolve did not converge"
     return first(vecs)
 end
 

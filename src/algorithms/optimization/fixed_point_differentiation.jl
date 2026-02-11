@@ -207,6 +207,9 @@ Evaluating the gradient of the cost function for CTMRG:
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
 
+_scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
+_scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
+
 function _rrule(
         gradmode::GradMode{:diffgauge},
         config::RuleConfig,
@@ -217,20 +220,22 @@ function _rrule(
     )
     env, info = leading_boundary(envinit, state, alg)
     alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
-    alg_gauge = ScramblingEnvGauge() # TODO: make this a field in GradMode?
+    alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
+
+    # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
+    function f(A, x)
+        return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x, alg_gauge)[1]
+    end
+    # compute its pullback
+    _, env_vjp = rrule_via_ad(config, f, state, env)
+    # split off state and environment parts
+    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
 
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        # find partial gradients of gauge-fixed single CTMRG iteration
-        function f(A, x)
-            return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x, alg_gauge)[1]
-        end
-        _, env_vjp = rrule_via_ad(config, f, state, env)
-
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
         ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
@@ -254,22 +259,25 @@ function _rrule(
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
 
-    # Fix SVD
+    # fix decomposition
     alg_fixed = gauge_fix(alg, signs, info)
+
+    # prepare iterating function corresponding to a single CTMRG iteration with a gauge-fixed projector
+    function f(A, x)
+        return fix_global_phases(
+            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x,
+        )
+    end
+    # prepare its pullback
+    _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
+    # split off state and environment parts
+    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        function f(A, x)
-            return fix_global_phases(
-                ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x
-            )
-        end
-        _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
-
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
         ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
@@ -362,19 +370,22 @@ function _rrule(
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     _, signs = gauge_fix(env_conv, env, alg_gauge)
 
-    # Fix eigendecomposition
+    # fix eigendecomposition
     alg_fixed = gauge_fix(alg, signs, info)
+
+    # prepare iterating function corresponding to a single CTMRG iteration with a gauge-fixed projector
+    f(A, x) = ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
+    # compute its pullback
+    _, env_vjp = rrule_via_ad(config, f, state, env)
+    # split off state and environment parts
+    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+    # ∂f∂x(x)::typeof(env) = env_vjp(x)[3] # TODO: why is this derivative type-instable? The corner gradient is a complex DiagonalTensorMap
+    ∂f∂x(x) = env_vjp(x)[3]
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        f(A, x) = ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
-        _, env_vjp = rrule_via_ad(config, f, state, env)
-
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        # ∂f∂x(x)::typeof(env) = env_vjp(x)[3] # TODO: why is this derivative type-instable? The corner gradient is a complex DiagonalTensorMap
-        ∂f∂x(x) = env_vjp(x)[3]
         ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
@@ -460,7 +471,7 @@ end
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
     function f(X)
         y = ∂f∂x(X[1])
-        return (y + X[2] * ∂F∂x, X[2])
+        return (add(y, ∂F∂x, X[2]), X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
     _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
@@ -482,7 +493,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         )
         return fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, backup_ls_alg)
     else
-        y = scale(vecs[1][1], 1 / vecs[1][2])
+        y = scale(vecs[1][1], inv(vecs[1][2]))
     end
 
     return ∂f∂A(y)
