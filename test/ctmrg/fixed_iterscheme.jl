@@ -76,17 +76,17 @@ c4v_algs = [
     env₀ = initialize_random_c4v_env(psi, ComplexSpace(χ))
     env_conv1, = leading_boundary(env₀, psi, ctm_alg)
 
-    # do extra iteration to get SVD
-    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    # do extra iteration to check gauge fixing
+    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
     env_fix, signs = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
     env_diff = calc_elementwise_convergence(env_conv1, env_fix)
     @info "Diff between iters = $(env_diff)"
     @test env_diff ≈ 0 atol = atol
 
-    if projector_alg == :c4v_eigh
-        # fix gauge of SVD
+    if projector_alg == :c4v_eigh # TODO: enable this for :c4v_qr projector
+        # fix gauge of decomposition
         ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
-        # do iteration with FixedSVD
+        # do iteration with decomposition
         env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
         env_fixedsvd = fix_global_phases(env_fixedsvd, env_conv1)
         @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
