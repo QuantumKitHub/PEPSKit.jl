@@ -471,7 +471,7 @@ end
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
     function f(X)
         y = ∂f∂x(X[1])
-        return (add(y, ∂F∂x, X[2]), X[2])
+        return (add!!(y, ∂F∂x, X[2]), X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
     _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
@@ -493,7 +493,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         )
         return fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, backup_ls_alg)
     else
-        y = scale(vecs[1][1], inv(vecs[1][2]))
+        y = scale!!(vecs[1][1], inv(vecs[1][2]))
     end
 
     return ∂f∂A(y)
