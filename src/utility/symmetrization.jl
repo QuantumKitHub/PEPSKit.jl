@@ -31,13 +31,6 @@ struct RotateReflect <: SymmetrizationStyle end
 
 # some rather shady definitions for 'hermitian conjugate' at the level of a single tensor
 
-function herm_depth(x::PEPSTensor)
-    return permute(x', ((5,), (3, 2, 1, 4)))
-end
-function herm_depth(x::PEPOTensor)
-    return permute(x', ((5, 6), (3, 2, 1, 4)))
-end
-
 function herm_width(x::PEPSTensor)
     return permute(x', ((5,), (1, 4, 3, 2)))
 end

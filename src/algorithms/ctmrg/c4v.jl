@@ -100,6 +100,32 @@ function C4vQRProjector(; kwargs...)
 end
 PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
 
+function check_input(
+        network::InfiniteSquareNetwork, env::CTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10
+    )
+    # check unit cell size
+    length(network) == 1 || throw(ArgumentError("C4v CTMRG is only compatible with single-site unit cells."))
+    O = network[1, 1]
+    # check for fermionic braiding statistics
+    BraidingStyle(sectortype(spacetype(network))) != Bosonic() &&
+        throw(ArgumentError("C4v CTMRG is currently only implemented for networks consisting of tensors with bosonic braiding."))
+    # check sufficient condition for equality and duality of spaces that we assume
+    west_virtualspace(O) == _elementwise_dual(north_virtualspace(O)) ||
+        throw(ArgumentError("C4v CTMRG requires south and west virtual space to be the dual of north and east virtual space."))
+    # check rotation invariance of the local tensors, with the exact spaceflips we assume
+    _isapprox_localsandwich(O, flip_virtualspace(_rotl90_localsandwich(O), [EAST, WEST]); atol = atol) ||
+        throw(ArgumentError("C4v CTMRG requires the local tensors to be invariant under 90° rotation."))
+    # check the hermitian reflection invariance of the local tensors, with the exact spaceflips we assume
+    _isapprox_localsandwich(
+        O,
+        flip_physicalspace(flip_virtualspace(herm_depth(O), [EAST, WEST]));
+        atol = atol
+    ) ||
+        throw(ArgumentError("C4v CTMRG requires the local tensors to be invariant under hermitian reflection."))
+    # TODO: check compatibility of network and environment spaces in general?
+    return nothing
+end
+
 #
 ## C4v-symmetric CTMRG iteration (called through `leading_boundary`)
 #
@@ -280,15 +306,6 @@ function _project_hermitian(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
     return C´
 end
 
-# TODO: check symmetry directly on InfiniteSquareNetwork
-function check_symmetry(state, ::RotateReflect; atol = 1.0e-10)
-    @assert length(state) == 1 "check_symmetry only works for single site unit cells"
-    @assert norm(state[1] - _fit_spaces(rotl90(state[1]), state[1])) /
-        norm(state[1]) < atol "not rotation invariant"
-    @assert norm(state[1] - _fit_spaces(herm_depth(state[1]), state[1])) /
-        norm(state[1]) < atol "not hermitian-reflection invariant"
-    return nothing
-end
 
 #
 ## environment initialization

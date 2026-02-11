@@ -57,6 +57,11 @@ function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
 
+flip_virtualspace(O::PEPSSandwich, dir) = flip_virtualspace.(O, Ref(dir))
+flip_physicalspace(O::PEPSSandwich) = flip_physicalspace.(O)
+
+herm_depth(O::PEPSSandwich) = herm_depth.(O)
+
 TensorKit.spacetype(::Type{P}) where {P <: PEPSSandwich} = spacetype(eltype(P))
 
 # not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
@@ -110,5 +115,10 @@ function virtualspace(O::PEPOSandwich, dir)
         ]
     )
 end
+
+flip_virtualspace(O::PEPOSandwich, dir) = flip_virtualspace.(O, Ref(dir))
+flip_physicalspace(O::PEPOSandwich) = flip_physicalspace.(O)
+
+herm_depth(O::PEPOSandwich) = herm_depth.(O)
 
 TensorKit.spacetype(::Type{P}) where {P <: PEPOSandwich} = spacetype(eltype(P))

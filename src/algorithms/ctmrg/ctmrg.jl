@@ -45,6 +45,13 @@ Perform a single CTMRG iteration in which all directions are being grown and ren
 function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
+    check_input(network, env, alg::CTMRGAlgorithm)
+
+Check compatibility of a given network and environment with a specified CTMRG algorithm.
+"""
+function check_input(network, env, alg::CTMRGAlgorithm) end
+
+"""
     leading_boundary(env₀, network; kwargs...) -> env, info
     # expert version:
     leading_boundary(env₀, network, alg::CTMRGAlgorithm)
@@ -115,11 +122,7 @@ end
 function leading_boundary(
         env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
-    # TODO: check_symmetry for C4v algorithms
-    if isa(alg, C4vCTMRG)
-        BraidingStyle(sectortype(spacetype(network))) != Bosonic() &&
-            error("C4v CTMRG is currently only implemented for bosonic networks.")
-    end
+    check_input(network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)

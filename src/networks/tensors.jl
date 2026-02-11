@@ -45,6 +45,14 @@ function virtualspace(t::PFTensor, dir)
     return space(t, invp[dir])
 end
 
+function flip_virtualspace(t::PFTensor, dir)
+    invp = (3, 4, 2, 1)
+    return flip(t, invp[collect(dir)])
+end
+
+herm_depth(x::PFTensor) = permute(x', ((3, 1), (4, 2)))
+
+
 #
 # PEPS
 #
@@ -91,6 +99,11 @@ Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))
 physicalspace(t::PEPSTensor) = space(t, 1)
 virtualspace(t::PEPSTensor, dir) = space(t, dir + 1)
 
+flip_virtualspace(t::PEPSTensor, dir) = flip(t, collect(dir) .+ 1)
+flip_physicalspace(t::PEPSTensor) = flip(t, 1)
+
+herm_depth(x::PEPSTensor) = permute(x', ((5,), (3, 2, 1, 4)))
+
 #
 # PEPO
 #
@@ -129,6 +142,11 @@ function physicalspace(t::PEPOTensor)
     return codomain_physicalspace(t)
 end
 virtualspace(t::PEPOTensor, dir) = space(t, dir + 2)
+
+flip_virtualspace(t::PEPOTensor, dir) = flip(t, collect(dir) .+ 2)
+flip_physicalspace(t::PEPOTensor) = flip(t, 1:2)
+
+herm_depth(t::PEPOTensor) = permute(t', ((5, 6), (3, 2, 1, 4)))
 
 """
     $(SIGNATURES)
