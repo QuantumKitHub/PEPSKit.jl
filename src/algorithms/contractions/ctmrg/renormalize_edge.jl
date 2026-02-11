@@ -91,7 +91,7 @@ function renormalize_east_edge(
     )
     return renormalize_east_edge(
         env.edges[EAST, row, _next(col, end)],
-        P_left[EAST, row, col, end],
+        P_left[EAST, row, col],
         P_right[EAST, _prev(row, end), col],
         network[row, col],
     )

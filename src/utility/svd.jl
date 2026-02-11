@@ -142,7 +142,8 @@ function _svd_trunc!(
         trunc::TruncationStrategy,
     )
     U, S, V⁺ = svd_compact!(t; alg)
-    Ũ, S̃, Ṽ⁺, truncerror = _truncate_compact((U, S, V⁺), trunc)
+    (Ũ, S̃, Ṽ⁺), ind = truncate(svd_trunc!, (U, S, V⁺), trunc)
+    truncerror = truncation_error(diagview(S), ind)
 
     # construct info NamedTuple
     condnum = cond(S)
@@ -150,18 +151,6 @@ function _svd_trunc!(
         truncation_error = truncerror, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
     )
     return Ũ, S̃, Ṽ⁺, info
-end
-
-# hacky way of computing the truncation error for current version of svd_trunc!
-# TODO: replace once TensorKit updates to new MatrixAlgebraKit which returns truncation error as well
-function _truncate_compact((U, S, V⁺), trunc::TruncationStrategy)
-    if !(trunc isa NoTruncation) && !isempty(blocksectors(S))
-        Ũ, S̃, Ṽ⁺ = truncate(svd_trunc!, (U, S, V⁺), trunc)[1]
-        truncerror = sqrt(norm(S)^2 - norm(S̃)^2)
-        return Ũ, S̃, Ṽ⁺, truncerror
-    else
-        return U, S, V⁺, zero(real(scalartype(S)))
-    end
 end
 
 """
