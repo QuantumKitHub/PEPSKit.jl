@@ -125,7 +125,7 @@ function qr_through(
     @assert !isdual(codomain(R0, 1))
     @assert !isdual(domain(M, 1)) && !isdual(codomain(M, 1))
     @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
-    _, r = left_orth!(A)
+    _, r = left_orth!(A; positive = true)
     normalize && normalize!(r, Inf)
     return r
 end
@@ -134,7 +134,7 @@ function qr_through(
         ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
     ) where {S <: ElementarySpace}
     @assert !isdual(domain(M, 1))
-    _, r = left_orth(M)
+    _, r = left_orth(M; positive = true)
     normalize && normalize!(r, Inf)
     return r
 end
@@ -153,7 +153,7 @@ function lq_through(
     @assert !isdual(domain(L1, 1))
     @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
     @tensor A[-1; -2 -3 -4 -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
-    l, _ = right_orth!(A)
+    l, _ = right_orth!(A; positive = true)
     normalize && normalize!(l, Inf)
     return l
 end
@@ -163,7 +163,7 @@ function lq_through(
     ) where {S <: ElementarySpace}
     @assert !isdual(codomain(M, 1))
     A = permute(M, ((1,), (2, 3, 4, 5)))
-    l, _ = right_orth!(A)
+    l, _ = right_orth!(A; positive = true)
     normalize && normalize!(l, Inf)
     return l
 end
@@ -207,11 +207,7 @@ function _proj_from_RL(
     @assert isdual(domain(r, 1)) == isdual(codomain(r, 1)) == false
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1)) == false
     rl = r * l
-
-    # TODO: replace this with actual truncation error once TensorKit is updated
-    uc, sc, vhc = svd_compact!(rl)
-    u, s, vh, ϵ = _truncate_compact((uc, sc, vhc), trunc)
-
+    u, s, vh, ϵ = svd_trunc!(rl; trunc)
     sinv = sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     return Pa, s, Pb, ϵ

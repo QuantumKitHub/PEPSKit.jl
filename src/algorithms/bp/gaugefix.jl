@@ -117,7 +117,7 @@ function SUWeight(env::BPEnv)
     wts = map(Iterators.product(1:2, axes(env, 2), axes(env, 3))) do (dir′, row, col)
         I = CartesianIndex(mod1(dir′ + 1, 2), row, col)
         sqrtM12, _, sqrtM21, _ = _sqrt_bp_messages(I, env)
-        Λ = svd_vals!(sqrtM12 * sqrtM21)
+        Λ = DiagonalTensorMap(svd_vals!(sqrtM12 * sqrtM21))
         return isdual(space(sqrtM12, 1)) ? _fliptwist_s(Λ) : Λ
     end
     return SUWeight(wts)
