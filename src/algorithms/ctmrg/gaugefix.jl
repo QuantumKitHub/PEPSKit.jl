@@ -73,11 +73,9 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
         end
 
         # Find right fixed points of mixed transfer matrices
-        ρinit = randn(
-            scalartype(T), space(Tsfinal[end], numind(Tsfinal[end]))' ← space(M[end], numind(M[end]))'
-        )
-        ρprev = transfermatrix_fixedpoint(Tsprev, M, ρinit)
-        ρfinal = transfermatrix_fixedpoint(Tsfinal, M, ρinit)
+        eigsolve_alg = Arnoldi()
+        ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg)
+        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg)
 
         # Decompose and multiply
         Qprev, = left_orth!(ρprev; positive = true)
@@ -108,11 +106,9 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     M = _project_hermitian(randn(scalartype(Tfinal), space(Tfinal)))
 
     # Find right fixed points of mixed transfer matrices
-    ρinit = randn(
-        scalartype(T), MPSKit._lastspace(Tfinal)' ← MPSKit._lastspace(M)'
-    )
-    ρprev = c4v_transfermatrix_fixedpoint(Tprev, M, ρinit)
-    ρfinal = c4v_transfermatrix_fixedpoint(Tfinal, M, ρinit)
+    eigsolve_alg = Lanczos() # real eigenvalues
+    ρprev = right_transfermatrix_fixedpoint([Tprev], [M], eigsolve_alg)
+    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg)
 
     # Decompose and multiply
     Qprev, = left_orth!(ρprev; positive = true)
@@ -143,8 +139,18 @@ end
         @__MODULE__, :(return @tensor $t_out := $t_top * conj($t_bot) * $t_in)
     )
 end
-function transfermatrix_fixedpoint(tops, bottoms, ρinit)
-    _, vecs, info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
+
+function initialize_right_fixedpoint(tops, bottoms)
+    ρ0 = randn(
+        scalartype(tops), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
+    )
+    return ρ0
+end
+function right_transfermatrix_fixedpoint(
+        tops, bottoms, alg = Arnoldi(),
+        ρ0 = initialize_right_fixedpoint(tops, bottoms),
+    )
+    _, vecs, info = eigsolve(ρ0, 1, :LM, alg) do ρ
         return foldr(zip(tops, bottoms); init = ρ) do (top, bottom), ρ
             return mps_transfer_right(ρ, top, bottom)
         end
@@ -152,13 +158,6 @@ function transfermatrix_fixedpoint(tops, bottoms, ρinit)
     ignore_derivatives() do
         info.converged > 0 || @warn "eigsolve did not converge"
     end
-    return first(vecs)
-end
-function c4v_transfermatrix_fixedpoint(top, bottom, ρinit)
-    _, vecs, info = eigsolve(ρinit, 1, :LM, Lanczos()) do ρ
-        PEPSKit.mps_transfer_right(ρ, top, bottom)
-    end
-    info.converged > 0 || @warn "eigsolve did not converge"
     return first(vecs)
 end
 
