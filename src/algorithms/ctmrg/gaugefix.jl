@@ -11,7 +11,7 @@ end
 function gauge_fix(alg::ProjectorAlgorithm, signs, info)
     decomposition_alg_fixed = gauge_fix(decomposition_algorithm(alg), signs, info)
     alg_fixed = @set alg.decomposition_alg = decomposition_alg_fixed # every ProjectorAlgorithm needs an `decomposition_alg` field?
-    alg_fixed = @set alg_fixed.trunc = notrunc()
+    alg_fixed = _set_truncation(alg_fixed, notrunc()) # potentially set no truncation
     return alg_fixed
 end
 

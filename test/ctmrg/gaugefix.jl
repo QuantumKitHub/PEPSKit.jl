@@ -12,7 +12,7 @@ scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 ctmrg_algs_asymm = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs_asymm = [:halfinfinite, :fullinfinite]
-projector_algs_c4v = [:c4v_eigh] #, :c4v_qr]
+projector_algs_c4v = [:c4v_eigh, :c4v_qr]
 gauge_algs_asymm = [ScramblingEnvGauge()]
 gauge_algs_c4v = [ScramblingEnvGaugeC4v()]
 tol = 1.0e-6  # large tol due to χ=6
@@ -72,7 +72,9 @@ end
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
     env_fixed, = gauge_fix(env′, env, gauge_alg)
-    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
+    env_diff = calc_elementwise_convergence(env, env_fixed)
+    @info "Diff between iters = $(env_diff)"
+    @test env_diff ≈ 0 atol = atol
 end
 
 # C4v CTMRG
@@ -87,5 +89,7 @@ end
     env, = leading_boundary(env_pre, psi, alg)
     env′, = ctmrg_iteration(n, env, alg)
     env_fixed, = gauge_fix(env′, env, gauge_alg)
-    @test calc_elementwise_convergence(env, env_fixed) ≈ 0 atol = atol
+    env_diff = calc_elementwise_convergence(env, env_fixed)
+    @info "Diff between iters = $(env_diff)"
+    @test env_diff ≈ 0 atol = atol
 end

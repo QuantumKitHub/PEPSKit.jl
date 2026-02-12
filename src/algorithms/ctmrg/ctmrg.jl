@@ -45,6 +45,14 @@ Perform a single CTMRG iteration in which all directions are being grown and ren
 function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
+    check_input(network, env, alg::CTMRGAlgorithm)
+
+Check compatibility of a given network and environment with a specified CTMRG algorithm.
+"""
+function check_input(network, env, alg::CTMRGAlgorithm) end
+@non_differentiable check_input(args...)
+
+"""
     leading_boundary(env₀, network; kwargs...) -> env, info
     # expert version:
     leading_boundary(env₀, network, alg::CTMRGAlgorithm)
@@ -115,6 +123,7 @@ end
 function leading_boundary(
         env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
+    check_input(network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)

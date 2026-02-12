@@ -33,6 +33,11 @@ function ProjectorAlgorithm(;
         _alg_or_nt(QRAdjoint, decomposition_alg)
     end # TODO: how do we solve this in a proper way?
 
+    # qr-ctmrg does not need truncation or degeneracy checks
+    if alg in [:c4v_qr]
+        return alg_type(decomposition_algorithm)
+    end
+
     # parse truncation scheme
     truncation_strategy = if trunc isa TruncationStrategy
         trunc
@@ -82,6 +87,17 @@ function truncation_strategy(alg::ProjectorAlgorithm, edge)
     else
         return alg.trunc
     end
+end
+
+"""
+    _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+
+Update the truncation strategy of a given projector algorithm, keeping all other settings
+the same.
+"""
+function _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+    alg´ = @set alg.trunc = trunc
+    return alg´
 end
 
 """

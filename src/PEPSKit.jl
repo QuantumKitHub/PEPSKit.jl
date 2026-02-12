@@ -42,6 +42,7 @@ include("utility/util.jl")
 include("utility/diffable_threads.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
+include("utility/qr.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
@@ -70,6 +71,7 @@ include("environments/bp_environments.jl")
 include("algorithms/contractions/ctmrg/types.jl")
 include("algorithms/contractions/ctmrg/expr.jl")
 include("algorithms/contractions/ctmrg/enlarge_corner.jl")
+include("algorithms/contractions/ctmrg/enlarge_corner_column.jl")
 include("algorithms/contractions/ctmrg/projector.jl")
 include("algorithms/contractions/ctmrg/halfinf_env.jl")
 include("algorithms/contractions/ctmrg/fullinf_env.jl")
@@ -125,7 +127,7 @@ export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
-export EighAdjoint, IterEigh, C4vCTMRG, C4vEighProjector, C4vQRProjector
+export EighAdjoint, IterEigh, QRAdjoint, C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace
 export product_peps

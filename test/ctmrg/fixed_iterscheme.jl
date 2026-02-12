@@ -14,14 +14,13 @@ using PEPSKit:
     peps_normalize,
     ScramblingEnvGauge,
     ScramblingEnvGaugeC4v
+using PEPSKit.Defaults: ctmrg_tol
 
 # initialize parameters
 D = 2
 χ = 16
 svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :sdd)), SVDAdjoint(; fwd_alg = (; alg = :iterative))]
-eigh_algs = [EighAdjoint(; fwd_alg = (; alg = :qriteration)), EighAdjoint(; fwd_alg = (; alg = :lanczos))]
 projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
-projector_algs_c4v = [:c4v_eigh] # :c4v_qr]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
@@ -55,11 +54,19 @@ atol = 1.0e-5
 end
 
 # test same thing for C4v CTMRG
-@testset "$(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for (decomposition_alg, projector_alg) in
-    Iterators.product(eigh_algs, projector_algs_c4v)
+c4v_algs = [
+    (:c4v_qr, QRAdjoint(; fwd_alg = (; alg = :qr))),
+    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :qriteration))),
+    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :lanczos))),
+]
+@testset "$(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for
+    (projector_alg, decomposition_alg) in c4v_algs
     # initialize states
     Random.seed!(2394823842)
-    ctm_alg = C4vCTMRG(; projector_alg, decomposition_alg)
+    ctm_alg = C4vCTMRG(;
+        projector_alg, decomposition_alg, maxiter = 200,
+        tol = (projector_alg == :c4v_qr ? 1.0e-12 : ctmrg_tol)
+    )
     symm = RotateReflect()
 
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D))
@@ -69,18 +76,21 @@ end
     env₀ = initialize_random_c4v_env(psi, ComplexSpace(χ))
     env_conv1, = leading_boundary(env₀, psi, ctm_alg)
 
-    # do extra iteration to get SVD
-    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    # do extra iteration to check gauge fixing
+    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
     env_fix, signs = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
-    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
+    env_diff = calc_elementwise_convergence(env_conv1, env_fix)
+    @info "Diff between iters = $(env_diff)"
+    @test env_diff ≈ 0 atol = atol
 
-    # fix gauge of SVD
-    ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
-
-    # do iteration with FixedSVD
-    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
-    env_fixedsvd = fix_global_phases(env_fixedsvd, env_conv1)
-    @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
+    if projector_alg == :c4v_eigh # TODO: enable this for :c4v_qr projector
+        # fix gauge of decomposition
+        ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
+        # do iteration with decomposition
+        env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
+        env_fixedsvd = fix_global_phases(env_fixedsvd, env_conv1)
+        @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
+    end
 end
 
 @testset "Element-wise consistency of :sdd and :iterative" begin
