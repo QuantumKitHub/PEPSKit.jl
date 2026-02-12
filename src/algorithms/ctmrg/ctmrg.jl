@@ -50,6 +50,7 @@ function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 Check compatibility of a given network and environment with a specified CTMRG algorithm.
 """
 function check_input(network, env, alg::CTMRGAlgorithm) end
+@non_differentiable check_input(args...)
 
 """
     leading_boundary(env₀, network; kwargs...) -> env, info

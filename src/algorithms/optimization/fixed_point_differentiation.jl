@@ -210,6 +210,11 @@ Evaluating the gradient of the cost function for CTMRG:
 _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
 _scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
 
+function _set_fixed_truncation(alg::CTMRGAlgorithm)
+    alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    return alg_fixed
+end
+
 function _rrule(
         gradmode::GradMode{:diffgauge},
         config::RuleConfig,
@@ -219,7 +224,7 @@ function _rrule(
         alg::CTMRGAlgorithm,
     )
     env, info = leading_boundary(envinit, state, alg)
-    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
@@ -254,7 +259,7 @@ function _rrule(
         alg::SimultaneousCTMRG,
     )
     env, = leading_boundary(envinit, state, alg)
-    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = ScramblingEnvGauge()
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
@@ -354,6 +359,14 @@ function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEigh}
         rrule_alg = alg.rrule_alg,
     )
 end
+function gauge_fix(alg::QRAdjoint, signs, info)
+    Q_fixed = info.Q * signs[1]'
+    R_fixed = signs[1] * info.R
+    return QRAdjoint(;
+        fwd_alg = FixedQR(Q_fixed, R_fixed),
+        rrule_alg = alg.rrule_alg,
+    )
+end
 
 # nested fixed-point gradient evaluation for C4v CTMRG
 function _rrule(
@@ -365,7 +378,7 @@ function _rrule(
         alg::C4vCTMRG,
     )
     env, = leading_boundary(env₀, state, alg)
-    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = ScramblingEnvGaugeC4v()
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     _, signs = gauge_fix(env_conv, env, alg_gauge)

@@ -108,7 +108,9 @@ const eigh_rrule_verbosity = 0
 
 # QR forward & reverse
 const qr_fwd_alg = :qr
+const qr_fwd_positive = true
 const qr_rrule_alg = :qr
+const qr_rrule_verbosity = 0
 
 # Projectors
 const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}

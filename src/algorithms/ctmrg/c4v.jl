@@ -100,6 +100,9 @@ function C4vQRProjector(; kwargs...)
 end
 PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
 
+# no truncation
+_set_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
+
 function check_input(
         network::InfiniteSquareNetwork, env::CTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10
     )
@@ -206,9 +209,8 @@ Compute the C₄ᵥ projector by decomposing the column-enlarged corner with `le
     ↓   |        ↓   |
 ```
 """
-function c4v_projector!(enlarged_corner, ::C4vQRProjector)
-    # TODO: support all `left_orth` algorithms
-    Q, R = left_orth!(enlarged_corner)
+function c4v_projector!(enlarged_corner, alg::C4vQRProjector)
+    Q, R = left_orth!(enlarged_corner, decomposition_algorithm(alg))
     return Q, (; Q, R)
 end
 

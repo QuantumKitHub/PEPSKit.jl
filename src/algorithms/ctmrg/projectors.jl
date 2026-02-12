@@ -90,6 +90,17 @@ function truncation_strategy(alg::ProjectorAlgorithm, edge)
 end
 
 """
+    _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+
+Update the truncation strategy of a given projector algorithm, keeping all other settings
+the same.
+"""
+function _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+    alg´ = @set alg.trunc = trunc
+    return alg´
+end
+
+"""
 $(TYPEDEF)
 
 Projector algorithm implementing projectors from SVDing the half-infinite CTMRG environment.
