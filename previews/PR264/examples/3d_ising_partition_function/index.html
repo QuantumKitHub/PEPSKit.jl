@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>The 3D classical Ising model · PEPSKit.jl</title><meta name="title" content="The 3D classical Ising model · PEPSKit.jl"/><meta property="og:title" content="The 3D classical Ising model · PEPSKit.jl"/><meta property="twitter:title" content="The 3D classical Ising model · PEPSKit.jl"/><meta name="description" content="Documentation for PEPSKit.jl."/><meta property="og:description" content="Documentation for PEPSKit.jl."/><meta property="twitter:description" content="Documentation for PEPSKit.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="PEPSKit.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PEPSKit.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../man/models/">Models</a></li><li><a class="tocitem" href="../../man/multithreading/">Multithreading</a></li><li><a class="tocitem" href="../../man/precompilation/">Precompilation using PrecompileTools.jl</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><input class="collapse-toggle" id="menuitem-3-2" type="checkbox"/><label class="tocitem" for="menuitem-3-2"><span class="docs-label">Optimization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg/">Optimizing the 2D Heisenberg model</a></li><li><a class="tocitem" href="../bose_hubbard/">Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a></li><li><a class="tocitem" href="../xxz/">Néel order in the <span>$U(1)$</span>-symmetric XXZ model</a></li><li><a class="tocitem" href="../fermi_hubbard/">Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-3" type="checkbox"/><label class="tocitem" for="menuitem-3-3"><span class="docs-label">Time Evolution</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg_su/">Simple update for the Heisenberg model</a></li><li><a class="tocitem" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling</a></li><li><a class="tocitem" href="../j1j2_su/">Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-4" type="checkbox" checked/><label class="tocitem" for="menuitem-3-4"><span class="docs-label">Partition Functions</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG</a></li><li class="is-active"><a class="tocitem" href>The 3D classical Ising model</a><ul class="internal"><li><a class="tocitem" href="#Defining-the-partition-function"><span>Defining the partition function</span></a></li><li><a class="tocitem" href="#Contracting-the-partition-function"><span>Contracting the partition function</span></a></li></ul></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-5" type="checkbox"/><label class="tocitem" for="menuitem-3-5"><span class="docs-label">Boundary MPS</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../boundary_mps/">Boundary MPS contractions of 2D networks</a></li></ul></li></ul></li><li><a class="tocitem" href="../../lib/lib/">Library</a></li><li><a class="tocitem" href="../../changelog/">Changelog</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Partition Functions</a></li><li class="is-active"><a href>The 3D classical Ising model</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>The 3D classical Ising model</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/examples/3d_ising_partition_function/main.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p><a href="https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/3d_ising_partition_function/main.ipynb"><img src="https://mybinder.org/badge_logo.svg" alt/></a> <a href="https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/3d_ising_partition_function/main.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a> <a href="https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/3d_ising_partition_function"><img src="https://img.shields.io/badge/download-project-orange" alt/></a></p><h1 id="e_3d_ising"><a class="docs-heading-anchor" href="#e_3d_ising">The 3D classical Ising model</a><a id="e_3d_ising-1"></a><a class="docs-heading-anchor-permalink" href="#e_3d_ising" title="Permalink"></a></h1><p>In this example, we will showcase how one can use PEPSKit to study 3D classical statistical mechanics models. In particular, we will consider a specific case of the 3D classical Ising model, but the same techniques can be applied to other 3D classical models as well.</p><p>As compared to simulations of <a href="../2d_ising_partition_function/#e_2d_ising">2D partition functions</a>, the workflow presented in this example is a bit more experimental and less &#39;black-box&#39;. Therefore, it also serves as a demonstration of some of the more internal functionality of PEPSKit, and how one can adapt it to less &#39;standard&#39; kinds of problems.</p><p>Let us consider the partition function of the classical Ising model,</p><p class="math-container">\[\mathcal{Z}(\beta) = \sum_{\{s\}} \exp(-\beta H(s)) \text{ with } H(s) = -J \sum_{\langle i, j \rangle} s_i s_j .\]</p><p>where the classical spins <span>$s_i \in \{+1, -1\}$</span> are located on the vertices <span>$i$</span> of a 3D cubic lattice. The partition function of this model can be represented as a 3D tensor network with a rank-6 tensor at each vertex of the lattice. Such a network can be contracted by finding the fixed point of the corresponding transfer operator, in exactly the same spirit as the <a href="../boundary_mps/#e_boundary_mps">boundary MPS methods</a> demonstrated in another example.</p><p>Let&#39;s start by making the example deterministic and importing the required packages:</p><pre><code class="language-julia hljs">using Random
+using LinearAlgebra
+using PEPSKit, TensorKit
+using KrylovKit, OptimKit, Zygote
+
+Random.seed!(81812781144);</code></pre><h2 id="Defining-the-partition-function"><a class="docs-heading-anchor" href="#Defining-the-partition-function">Defining the partition function</a><a id="Defining-the-partition-function-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-partition-function" title="Permalink"></a></h2><p>Just as in the 2D case, the first step is to define the partition function as a tensor network. The procedure is exactly the same as before, the only difference being that now every spin participates in interactions associated to six links adjacent to that site. This means that the partition function can be written as an infinite 3D network with a single constituent rank-6 <a href="../../lib/lib/#PEPSKit.PEPOTensor"><code>PEPSKit.PEPOTensor</code></a> <code>O</code> located at each site of the cubic lattice. To verify our example we will check the magnetization and energy, so we also define the corresponding rank-6 tensors <code>M</code> and <code>E</code> while we&#39;re at it.</p><pre><code class="language-julia hljs">function three_dimensional_classical_ising(; beta, J = 1.0)
+    K = beta * J
+
+    # Boltzmann weights
+    t = ComplexF64[exp(K) exp(-K); exp(-K) exp(K)]
+    r = eigen(t)
+    q = r.vectors * sqrt(LinearAlgebra.Diagonal(r.values)) * r.vectors
+
+    # local partition function tensor
+    O = zeros(2, 2, 2, 2, 2, 2)
+    O[1, 1, 1, 1, 1, 1] = 1
+    O[2, 2, 2, 2, 2, 2] = 1
+    @tensor o[-1 -2; -3 -4 -5 -6] :=
+        O[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
+
+    # magnetization tensor
+    M = copy(O)
+    M[2, 2, 2, 2, 2, 2] *= -1
+    @tensor m[-1 -2; -3 -4 -5 -6] :=
+        M[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
+
+    # bond interaction tensor and energy-per-site tensor
+    e = ComplexF64[-J J; J -J] .* q
+    @tensor e_x[-1 -2; -3 -4 -5 -6] :=
+        O[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * q[-3; 3] * e[-4; 4] * q[-5; 5] * q[-6; 6]
+    @tensor e_y[-1 -2; -3 -4 -5 -6] :=
+        O[1 2; 3 4 5 6] * q[-1; 1] * q[-2; 2] * e[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
+    @tensor e_z[-1 -2; -3 -4 -5 -6] :=
+        O[1 2; 3 4 5 6] * e[-1; 1] * q[-2; 2] * q[-3; 3] * q[-4; 4] * q[-5; 5] * q[-6; 6]
+    e = e_x + e_y + e_z
+
+    # fixed tensor map space for all three
+    TMS = ℂ^2 ⊗ (ℂ^2)&#39; ← ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)&#39; ⊗ (ℂ^2)&#39;
+
+    return TensorMap(o, TMS), TensorMap(m, TMS), TensorMap(e, TMS)
+end;</code></pre><p>Let&#39;s initialize these tensors at inverse temperature <span>$\beta=0.2391$</span>, which corresponds to a slightly lower temperature than the critical value <span>$\beta_c=0.2216544…$</span></p><pre><code class="language-julia hljs">beta = 0.2391
+O, M, E = three_dimensional_classical_ising(; beta)
+O isa PEPSKit.PEPOTensor</code></pre><pre><code class="nohighlight hljs">true</code></pre><h2 id="Contracting-the-partition-function"><a class="docs-heading-anchor" href="#Contracting-the-partition-function">Contracting the partition function</a><a id="Contracting-the-partition-function-1"></a><a class="docs-heading-anchor-permalink" href="#Contracting-the-partition-function" title="Permalink"></a></h2><p>To contract our infinite 3D partition function, we first reinterpret it as an infinite power of a slice-to-slice transfer operator <span>$\mathbb{T}$</span>, where <span>$\mathbb{T}$</span> can be seen as an infinite 2D projected entangled-pair operator (PEPO) which consists of the rank-6 tensor <code>O</code> at each site of an infinite 2D square lattice,</p><center>
+<img src="../../assets/figures/pepo.svg" alt="pepo" class="color-invertible" style="zoom: 180%"/>
+</center><p>To contract the original infinite network, all we need to do is to find the leading eigenvector of the PEPO <span>$\mathbb{T}$</span>, The fixed point of such a PEPO can be parametrized as a PEPS <span>$\psi$</span>, which should then satisfy the eigenvalue equation <span>$\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle$</span>, or diagrammatically:</p><center>
+<img src="../../assets/figures/pepo_fixedpoint_equation.svg" alt="pepo fixedpoint equation" class="color-invertible" style="zoom: 180%"/>
+</center><p>For a Hermitian transfer operator <span>$\mathbb{T}$</span> we can characterize the fixed point PEPS <span>$|\psi\rangle$</span> which satisfies the eigenvalue equation <span>$\mathbb{T} |\psi\rangle = \Lambda |\psi\rangle$</span> corresponding to the largest magnitude eigenvalue <span>$\Lambda$</span> as the solution of a variational problem</p><p class="math-container">\[|\psi\rangle = \text{argmin}_{|\psi\rangle} \left ( \lim_{N \to ∞} - \frac{1}{N} \log \left( \frac{\langle \psi | \mathbb{T} | \psi \rangle}{\langle \psi | \psi \rangle} \right) \right ) ,\]</p><p>where <span>$N$</span> is the diverging number of sites of the 2D transfer operator <span>$\mathbb{T}$</span>. The function minimized in this expression is exactly the free energy per site of the partition function. This means we can directly find the fixed-point PEPS by <a href="../../references/#vanderstraeten_residual_2018">variationally minimizing the free energy</a>.</p><h3 id="Defining-the-cost-function"><a class="docs-heading-anchor" href="#Defining-the-cost-function">Defining the cost function</a><a id="Defining-the-cost-function-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-cost-function" title="Permalink"></a></h3><p>Using PEPSKit.jl, this cost function and its gradient can be computed, after which we can use <a href="https://github.com/Jutho/OptimKit.jl">OptimKit.jl</a> to actually optimize it. We can immediately recognize the denominator <span>$\langle \psi | \psi \rangle$</span> as the familiar PEPS norm, where we can compute the norm per site as the <a href="../../lib/lib/#PEPSKit.network_value-Tuple{InfiniteSquareNetwork, CTMRGEnv}"><code>network_value</code></a> of the corresponding <a href="../../lib/lib/#PEPSKit.InfiniteSquareNetwork"><code>InfiniteSquareNetwork</code></a> by contracting it with the CTMRG algorithm. Similarly, the numerator <span>$\langle \psi | \mathbb{T} | \psi \rangle$</span> is nothing more than an <code>InfiniteSquareNetwork</code> consisting of three layers corresponding to the ket, transfer operator and bra objects. This object can also be constructed and contracted in a straightforward way, so we can again compute its <code>network_value</code>.</p><p>To define our cost function, we then need to construct the transfer operator as an <a href="../../lib/lib/#PEPSKit.InfinitePEPO"><code>InfinitePEPO</code></a>, construct the two infinite 2D contractible networks for the numerator and denominator from the current PEPS and this transfer operator, and specify a contraction algorithm we can use to compute the values of these two networks. In addition, we&#39;ll specify the specific reverse rule algorithm that will be used to compute the gradient of this cost function.</p><pre><code class="language-julia hljs">boundary_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 1)
+rrule_alg = EigSolver(;
+    solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true), iterscheme = :diffgauge
+)
+T = InfinitePEPO(O)
+
+function pepo_costfun((peps, env_double_layer, env_triple_layer))
+    # use Zygote to compute the gradient automatically
+    E, gs = withgradient(peps) do ψ
+        # construct the PEPS norm network
+        n_double_layer = InfiniteSquareNetwork(ψ)
+        # contract this network
+        env_double_layer′, info = PEPSKit.hook_pullback(
+            leading_boundary,
+            env_double_layer,
+            n_double_layer,
+            boundary_alg;
+            alg_rrule = rrule_alg,
+        )
+        # construct the PEPS-PEPO-PEPS overlap network
+        n_triple_layer = InfiniteSquareNetwork(ψ, T)
+        # contract this network
+        env_triple_layer′, info = PEPSKit.hook_pullback(
+            leading_boundary,
+            env_triple_layer,
+            n_triple_layer,
+            boundary_alg;
+            alg_rrule = rrule_alg,
+        )
+        # update the environments for reuse
+        PEPSKit.ignore_derivatives() do
+            PEPSKit.update!(env_double_layer, env_double_layer′)
+            PEPSKit.update!(env_triple_layer, env_triple_layer′)
+        end
+        # compute the network values per site
+        λ3 = network_value(n_triple_layer, env_triple_layer)
+        λ2 = network_value(n_double_layer, env_double_layer)
+        # use this to compute the actual cost function
+        return -log(real(λ3 / λ2))
+    end
+    g = only(gs)
+    return E, g
+end;</code></pre><p>There are a few things to note about this cost function definition. Since we will pass it to the <code>OptimKit.optimize</code>, we require it to return both our cost function and the corresponding gradient. To do this, we simply use the <code>withgradient</code> method from Zygote.jl to automatically compute the gradient of the cost function straight from the primal computation. Since our cost function involves contractions using <code>leading_boundary</code>, we also have to specify exactly how Zygote should handle the backpropagation of the gradient through this function. This can be done using the <a href="../../lib/lib/#PEPSKit.hook_pullback-Tuple{Any, Vararg{Any}}"><code>PEPSKit.hook_pullback</code></a> function from PEPSKit.jl, which allows to hook into the pullback of a given function by specifying a specific algorithm for the pullback computation. Here, we opted to use an Arnoldi method to solve the linear problem defining the gradient of the network contraction at its fixed point. This is exactly the workflow that internally underlies <a href="../../lib/lib/#PEPSKit.fixedpoint-Tuple{Any, InfinitePEPS, CTMRGEnv}"><code>PEPSKit.fixedpoint</code></a>, and more info on particular gradient algorithms can be found in the corresponding docstrings.</p><h3 id="Characterizing-the-optimization-manifold"><a class="docs-heading-anchor" href="#Characterizing-the-optimization-manifold">Characterizing the optimization manifold</a><a id="Characterizing-the-optimization-manifold-1"></a><a class="docs-heading-anchor-permalink" href="#Characterizing-the-optimization-manifold" title="Permalink"></a></h3><p>In order to make the best use of OptimKit.jl, we should specify some properties of the manifold on which we are optimizing. Looking at our cost function defined above, a point on our optimization manifold corresponds to a <code>Tuple</code> of three objects. The first is an <code>InfinitePEPS</code> encoding the fixed point we are actually optimizing, while the second and third are <code>CTMRGEnv</code> objects corresponding to the environments of the double and triple layer networks <span>$\langle \psi | \psi \rangle$</span> and <span>$\langle \psi | T | \psi \rangle$</span> respectively. While the environments are just there so we can reuse them between subsequent contractions and we don&#39;t need to think about them much, optimizing over the manifold of <code>InfinitePEPS</code> requires a bit more care.</p><p>In particular, we need to define two kinds of operations on this manifold: a retraction and a transport. The retraction, corresponding to the <code>retract</code> keyword argument of <code>OptimKit.optimize</code>, specifies how to move from a point on a manifold along a given descent direction to obtain a new manifold point. The transport, corresponding to the <code>transport!</code> keyword argument of <code>OptimKit.optimize</code>, specifies how to transport a descent direction at a given manifold point to a valid descent direction at a different manifold point according to the appropriate metric. For a more detailed explanation we refer to the <a href="https://github.com/Jutho/OptimKit.jl">OptimKit.jl README</a>. In PEPSKit.jl, these two procedures are defined through the <a href="../../lib/lib/#PEPSKit.peps_retract-Tuple{Any, Any, Any}"><code>PEPSKit.peps_retract</code></a> and <a href="../../lib/lib/#PEPSKit.peps_transport!-NTuple{5, Any}"><code>PEPSKit.peps_transport!</code></a> methods. While it is instructive to read the corresponding docstrings in order to understand what these actually do, here we can just blindly reuse them where the only difference is that we have to pass along an extra environment since our cost function requires two distinct contractions as opposed to the setting of Hamiltonian PEPS optimization which only requires a double-layer contraction.</p><pre><code class="language-julia hljs">function pepo_retract((peps, env_double_layer, env_triple_layer), η, α)
+    (peps´, env_double_layer´), ξ = PEPSKit.peps_retract((peps, env_double_layer), η, α)
+    env_triple_layer´ = deepcopy(env_triple_layer)
+    return (peps´, env_double_layer´, env_triple_layer´), ξ
+end
+function pepo_transport!(
+        ξ,
+        (peps, env_double_layer, env_triple_layer),
+        η,
+        α,
+        (peps´, env_double_layer´, env_triple_layer´),
+    )
+    return PEPSKit.peps_transport!(
+        ξ, (peps, env_double_layer), η, α, (peps´, env_double_layer´)
+    )
+end;</code></pre><h3 id="Finding-the-fixed-point"><a class="docs-heading-anchor" href="#Finding-the-fixed-point">Finding the fixed point</a><a id="Finding-the-fixed-point-1"></a><a class="docs-heading-anchor-permalink" href="#Finding-the-fixed-point" title="Permalink"></a></h3><p>All that is left then is to specify the virtual spaces of the PEPS and the two environments, initialize them in the appropriate way, choose an optimization algortithm and call the <code>optimize</code> function from OptimKit.jl to get our desired PEPS fixed point.</p><pre><code class="language-julia hljs">Vpeps = ℂ^2
+Venv = ℂ^12
+
+psi0 = initializePEPS(T, Vpeps)
+env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), Venv)
+env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), Venv)
+
+optimizer_alg = LBFGS(32; maxiter = 100, gradtol = 1.0e-5, verbosity = 3)
+
+(psi_final, env2_final, env3_final), f, = optimize(
+    pepo_costfun,
+    (psi0, env2_0, env3_0),
+    optimizer_alg;
+    inner = PEPSKit.real_inner,
+    retract = pepo_retract,
+    (transport!) = (pepo_transport!),
+);</code></pre><pre><code class="nohighlight hljs">[ Info: LBFGS: initializing with f = -0.554073395182, ‖∇f‖ = 7.7844e-01
+┌ Warning: CTMRG cancel 150:	obj = +1.702942228759e+01 +1.443123606306e-07im	err = 2.4386740905e-05	time = 2.49 sec
+└ @ PEPSKit ~/PEPSKit.jl/src/algorithms/ctmrg/ctmrg.jl:152
+[ Info: LBFGS: iter    1, time  154.68 s: f = -0.777080930369, ‖∇f‖ = 3.1305e-02, α = 7.10e+02, m = 0, nfg = 7
+[ Info: LBFGS: iter    2, time  156.09 s: f = -0.784111515961, ‖∇f‖ = 2.0103e-02, α = 1.00e+00, m = 1, nfg = 1
+[ Info: LBFGS: iter    3, time  156.40 s: f = -0.792705733484, ‖∇f‖ = 2.3327e-02, α = 1.00e+00, m = 2, nfg = 1
+[ Info: LBFGS: iter    4, time  156.65 s: f = -0.796289732476, ‖∇f‖ = 2.2475e-02, α = 1.00e+00, m = 3, nfg = 1
+[ Info: LBFGS: iter    5, time  156.86 s: f = -0.799674902374, ‖∇f‖ = 7.0288e-03, α = 1.00e+00, m = 4, nfg = 1
+[ Info: LBFGS: iter    6, time  157.05 s: f = -0.800082100121, ‖∇f‖ = 1.2717e-03, α = 1.00e+00, m = 5, nfg = 1
+[ Info: LBFGS: iter    7, time  157.27 s: f = -0.800110603125, ‖∇f‖ = 1.3384e-03, α = 1.00e+00, m = 6, nfg = 1
+[ Info: LBFGS: iter    8, time  157.45 s: f = -0.800262201996, ‖∇f‖ = 2.4945e-03, α = 1.00e+00, m = 7, nfg = 1
+[ Info: LBFGS: iter    9, time  157.64 s: f = -0.800450505448, ‖∇f‖ = 2.9259e-03, α = 1.00e+00, m = 8, nfg = 1
+[ Info: LBFGS: iter   10, time  157.85 s: f = -0.800764917087, ‖∇f‖ = 1.7221e-03, α = 1.00e+00, m = 9, nfg = 1
+[ Info: LBFGS: iter   11, time  158.07 s: f = -0.800876048838, ‖∇f‖ = 2.2475e-03, α = 1.00e+00, m = 10, nfg = 1
+[ Info: LBFGS: iter   12, time  158.26 s: f = -0.801100867467, ‖∇f‖ = 1.5561e-03, α = 1.00e+00, m = 11, nfg = 1
+[ Info: LBFGS: iter   13, time  158.48 s: f = -0.801317048856, ‖∇f‖ = 1.1561e-03, α = 1.00e+00, m = 12, nfg = 1
+[ Info: LBFGS: iter   14, time  158.69 s: f = -0.801373050545, ‖∇f‖ = 7.1300e-04, α = 1.00e+00, m = 13, nfg = 1
+[ Info: LBFGS: iter   15, time  158.89 s: f = -0.801388615264, ‖∇f‖ = 2.8462e-04, α = 1.00e+00, m = 14, nfg = 1
+[ Info: LBFGS: iter   16, time  159.10 s: f = -0.801394633333, ‖∇f‖ = 2.7607e-04, α = 1.00e+00, m = 15, nfg = 1
+[ Info: LBFGS: iter   17, time  159.28 s: f = -0.801408061564, ‖∇f‖ = 3.6096e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   18, time  159.53 s: f = -0.801509542169, ‖∇f‖ = 1.9822e-03, α = 1.00e+00, m = 17, nfg = 1
+[ Info: LBFGS: iter   19, time  159.77 s: f = -0.801578405251, ‖∇f‖ = 1.8040e-03, α = 1.00e+00, m = 18, nfg = 1
+[ Info: LBFGS: iter   20, time  160.69 s: f = -0.801694524424, ‖∇f‖ = 2.9356e-03, α = 5.48e-01, m = 19, nfg = 3
+[ Info: LBFGS: iter   21, time  161.31 s: f = -0.801761920683, ‖∇f‖ = 1.1993e-03, α = 3.82e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   22, time  161.60 s: f = -0.801797785494, ‖∇f‖ = 6.0337e-04, α = 1.00e+00, m = 21, nfg = 1
+[ Info: LBFGS: iter   23, time  162.21 s: f = -0.801808747834, ‖∇f‖ = 3.7053e-04, α = 5.24e-01, m = 22, nfg = 2
+[ Info: LBFGS: iter   24, time  162.50 s: f = -0.801812729173, ‖∇f‖ = 3.0781e-04, α = 1.00e+00, m = 23, nfg = 1
+[ Info: LBFGS: iter   25, time  162.80 s: f = -0.801816445211, ‖∇f‖ = 2.9994e-04, α = 1.00e+00, m = 24, nfg = 1
+[ Info: LBFGS: iter   26, time  163.09 s: f = -0.801824713130, ‖∇f‖ = 3.6496e-04, α = 1.00e+00, m = 25, nfg = 1
+[ Info: LBFGS: iter   27, time  163.41 s: f = -0.801839673823, ‖∇f‖ = 5.4222e-04, α = 1.00e+00, m = 26, nfg = 1
+[ Info: LBFGS: iter   28, time  163.74 s: f = -0.801857478904, ‖∇f‖ = 2.7917e-04, α = 1.00e+00, m = 27, nfg = 1
+[ Info: LBFGS: iter   29, time  164.06 s: f = -0.801864555224, ‖∇f‖ = 1.2319e-04, α = 1.00e+00, m = 28, nfg = 1
+[ Info: LBFGS: iter   30, time  164.37 s: f = -0.801865598736, ‖∇f‖ = 8.6048e-05, α = 1.00e+00, m = 29, nfg = 1
+[ Info: LBFGS: iter   31, time  164.68 s: f = -0.801867571755, ‖∇f‖ = 8.8636e-05, α = 1.00e+00, m = 30, nfg = 1
+[ Info: LBFGS: iter   32, time  165.00 s: f = -0.801870393528, ‖∇f‖ = 2.6554e-04, α = 1.00e+00, m = 31, nfg = 1
+[ Info: LBFGS: iter   33, time  165.35 s: f = -0.801874797039, ‖∇f‖ = 2.7841e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   34, time  165.70 s: f = -0.801877566644, ‖∇f‖ = 1.8523e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   35, time  166.02 s: f = -0.801878506245, ‖∇f‖ = 2.0638e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   36, time  166.33 s: f = -0.801878995097, ‖∇f‖ = 5.6081e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   37, time  166.64 s: f = -0.801879153573, ‖∇f‖ = 6.2356e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   38, time  166.94 s: f = -0.801879355075, ‖∇f‖ = 6.0528e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   39, time  167.25 s: f = -0.801880115100, ‖∇f‖ = 6.2768e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   40, time  167.60 s: f = -0.801881475065, ‖∇f‖ = 6.2301e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   41, time  167.96 s: f = -0.801882272425, ‖∇f‖ = 9.5267e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   42, time  168.29 s: f = -0.801882600033, ‖∇f‖ = 5.1283e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   43, time  168.61 s: f = -0.801882711875, ‖∇f‖ = 2.6091e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   44, time  168.92 s: f = -0.801882805828, ‖∇f‖ = 2.9316e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   45, time  169.21 s: f = -0.801883027060, ‖∇f‖ = 2.7982e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   46, time  169.52 s: f = -0.801883402178, ‖∇f‖ = 3.8102e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   47, time  169.85 s: f = -0.801883718321, ‖∇f‖ = 5.3658e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   48, time  170.17 s: f = -0.801883962887, ‖∇f‖ = 2.8728e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   49, time  170.51 s: f = -0.801884158085, ‖∇f‖ = 3.0680e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   50, time  170.84 s: f = -0.801884385940, ‖∇f‖ = 4.1973e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   51, time  171.20 s: f = -0.801884810459, ‖∇f‖ = 6.8881e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   52, time  171.54 s: f = -0.801885011014, ‖∇f‖ = 3.8651e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   53, time  171.87 s: f = -0.801885126625, ‖∇f‖ = 1.9013e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   54, time  172.21 s: f = -0.801885186489, ‖∇f‖ = 3.2919e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   55, time  172.56 s: f = -0.801885309713, ‖∇f‖ = 4.8521e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   56, time  172.91 s: f = -0.801885491631, ‖∇f‖ = 1.1478e-04, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   57, time  173.29 s: f = -0.801885912857, ‖∇f‖ = 7.7221e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   58, time  173.66 s: f = -0.801886451980, ‖∇f‖ = 6.5316e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   59, time  174.01 s: f = -0.801886639803, ‖∇f‖ = 5.1567e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   60, time  174.69 s: f = -0.801886699372, ‖∇f‖ = 4.5540e-05, α = 3.68e-01, m = 32, nfg = 2
+[ Info: LBFGS: iter   61, time  174.99 s: f = -0.801886723992, ‖∇f‖ = 2.1992e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   62, time  175.28 s: f = -0.801886735202, ‖∇f‖ = 1.8064e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   63, time  175.61 s: f = -0.801886771395, ‖∇f‖ = 3.8651e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   64, time  175.93 s: f = -0.801886801952, ‖∇f‖ = 4.2630e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   65, time  176.24 s: f = -0.801886837856, ‖∇f‖ = 3.9318e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   66, time  176.55 s: f = -0.801886916783, ‖∇f‖ = 3.8747e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   67, time  176.88 s: f = -0.801887030054, ‖∇f‖ = 3.7140e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   68, time  177.23 s: f = -0.801887141197, ‖∇f‖ = 5.7017e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   69, time  177.94 s: f = -0.801887199203, ‖∇f‖ = 3.0700e-05, α = 5.24e-01, m = 32, nfg = 2
+[ Info: LBFGS: iter   70, time  178.28 s: f = -0.801887246612, ‖∇f‖ = 1.3885e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   71, time  178.61 s: f = -0.801887263715, ‖∇f‖ = 1.5769e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   72, time  178.95 s: f = -0.801887319463, ‖∇f‖ = 2.1423e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   73, time  179.30 s: f = -0.801887406143, ‖∇f‖ = 1.9895e-05, α = 1.00e+00, m = 32, nfg = 1
+[ Info: LBFGS: iter   74, time  180.00 s: f = -0.801887467460, ‖∇f‖ = 1.9799e-05, α = 3.61e-01, m = 32, nfg = 2
+[ Info: LBFGS: converged after 75 iterations and time 180.33 s: f = -0.801887535670, ‖∇f‖ = 9.9342e-06
+</code></pre><h3 id="Verifying-the-result"><a class="docs-heading-anchor" href="#Verifying-the-result">Verifying the result</a><a id="Verifying-the-result-1"></a><a class="docs-heading-anchor-permalink" href="#Verifying-the-result" title="Permalink"></a></h3><p>Having found the fixed point, we have essentially contracted the entire partition function and we can start computing observables. The free energy per site for example is just given by the final value of the cost function we have just optimized.</p><pre><code class="language-julia hljs">@show f</code></pre><pre><code class="nohighlight hljs">-0.8018875356702571</code></pre><p>As another check, we can compute the magnetization per site and compare it to a <a href="../../references/#hasenbusch_monte_2001">reference value obtaind through Monte-Carlo simulations</a>.</p><pre><code class="language-julia hljs">n3_final = InfiniteSquareNetwork(psi_final, T)
+num = PEPSKit.contract_local_tensor((1, 1, 1), M, n3_final, env3_final)
+denom = PEPSKit._contract_site((1, 1), n3_final, env3_final)
+m = abs(num / denom)
+
+m_ref = 0.667162
+
+@show abs(m - m_ref)</code></pre><pre><code class="nohighlight hljs">0.00011315585491944447</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../2d_ising_partition_function/">« The 2D classical Ising model using CTMRG</a><a class="docs-footer-nextpage" href="../boundary_mps/">Boundary MPS contractions of 2D networks »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Thursday 29 January 2026 12:42">Thursday 29 January 2026</span>. Using Julia version 1.12.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
