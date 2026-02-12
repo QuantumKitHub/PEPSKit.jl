@@ -49,6 +49,7 @@ function flip_virtualspace(t::PFTensor, dir)
     invp = (3, 4, 2, 1)
     return flip(t, invp[collect(dir)])
 end
+flip_physicalspace(t::PFTensor) = t
 
 herm_depth(x::PFTensor) = permute(x', ((3, 1), (4, 2)))
 
