@@ -43,24 +43,6 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
-# mark the broken configurations as broken explicitly
-broken_gradients = Dict(
-    "decomposition_rrule_alg" => Set([:full]),
-    "gradient_iterscheme" => Set([:diffgauge]), # only
-)
-function _check_broken(
-        ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
-    )
-    # naive gradients should always work
-    isnothing(gradient_alg) && return false
-    # evaluate brokenness
-    decomposition_rrule_alg in broken_gradients["decomposition_rrule_alg"] && return true
-    if projector_alg == :c4v_eigh
-        gradient_iterscheme in broken_gradients["gradient_iterscheme"] && return true
-    end
-    return false
-end
-
 
 ## Tests
 # ------
@@ -135,12 +117,6 @@ end
             symmetrize!(g, symmetry)
             return E, g
         end
-        if _check_broken(
-                ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
-            )
-            @test_broken dfs1 ≈ dfs2 atol = 1.0e-2
-        else
-            @test dfs1 ≈ dfs2 atol = 1.0e-2
-        end
+        @test dfs1 ≈ dfs2 atol = 1.0e-2
     end
 end
