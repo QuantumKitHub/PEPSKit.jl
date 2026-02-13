@@ -341,7 +341,7 @@ function gauge_fix(alg::EighAdjoint, signs, info)
     for (c, b) in blocks(σ)
         I = get(inds, c, nothing)
         @assert !isnothing(I)
-        view(block(extended_σ, c), I, I) .= b
+        block(extended_σ, c)[I, I] = b
     end
 
     # fix kept and full V
