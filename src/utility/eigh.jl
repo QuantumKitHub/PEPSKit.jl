@@ -159,7 +159,11 @@ function _eigh_trunc!(
     # construct info NamedTuple
     condnum = cond(D)
     info = (;
-        truncation_error = truncerror, condition_number = condnum, D_full = D, V_full = V,
+        truncation_error = truncerror,
+        condition_number = condnum,
+        D_full = D,
+        V_full = V,
+        truncation_indices = ind,
     )
     return D̃, Ṽ, info
 end

@@ -333,14 +333,15 @@ function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     )
 end
 function gauge_fix(alg::EighAdjoint, signs, info)
-    # embed gauge signs in larger space to fix gauge of full V on truncated subspace
     σ = signs[1]
-    extended_σ = zeros(scalartype(σ), space(info.D_full))
-    for (c, b) in blocks(extended_σ)
-        σc = block(σ, c)
-        kept_dim = size(σc, 1)
-        b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
-        b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+    inds = info.truncation_indices
+
+    # embed gauge signs in larger space to fix gauge of full V on truncated subspace
+    extended_σ = id(scalartype(σ), domain(info.D_full))
+    for (c, b) in blocks(σ)
+        I = get(inds, c, nothing)
+        @assert !isnothing(I)
+        view(block(extended_σ, c), I, I) .= b
     end
 
     # fix kept and full V
