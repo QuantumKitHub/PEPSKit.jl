@@ -341,12 +341,7 @@ function ChainRulesCore.rrule(
         trunc::TruncationStrategy = notrunc(),
     ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig}, R <: FullEighPullback}
     D̃, Ṽ, info = eigh_trunc(t, alg; trunc)
-    D, V = info.D_full, info.V_full # untruncated decomposition
-    inds = if space(D) == space(D̃)
-        _notrunc_ind(t)
-    else # only shuffle indices when `eigh` truncates
-        findtruncated(diagview(D), truncspace(only(domain(D̃))))
-    end
+    D, V, inds = info.D_full, info.V_full, info.truncation_indices # untruncated decomposition
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function eigh_trunc!_full_pullback(ΔDV)
