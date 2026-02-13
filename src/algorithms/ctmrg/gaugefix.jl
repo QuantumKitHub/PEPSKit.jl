@@ -119,7 +119,7 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     # TODO: gauge signs should always commute with corner,
     # so we really shouldn't have to fix them explicitly
     # NOTE: have to preserve diagonal corners to make the reverse pass work
-    cornerfix = ProjectTo(envfinal.corners[1])(σ * envfinal.corners[1] * σ', C)
+    cornerfix = ProjectTo(envfinal.corners[1])(σ * envfinal.corners[1] * σ')
     @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
         σ[χ_in; χ1] * envfinal.edges[1][χ1 D_in_above D_in_below; χ2] * conj(σ[χ_out; χ2])
 
