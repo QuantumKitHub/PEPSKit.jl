@@ -88,6 +88,9 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     return fix_global_phases(CTMRGEnv(cornersfix, edgesfix), envprev), signs
 end
 
+_similar_tensortype(t::AbstractTensorMap, ::Type{<:AbstractTensorMap}) = t
+_similar_tensortype(t::AbstractTensorMap, ::Type{<:DiagonalTensorMap}) = DiagonalTensorMap(t)
+
 # C4v specialized gauge fixing routine with Hermitian transfer matrix
 function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}
     # Check if spaces in envprev and envfinal are the same
@@ -115,11 +118,10 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     Qfinal, = left_orth!(ρfinal; positive = true)
 
     σ = Qprev * Qfinal'
+    # NOTE: have to preserve diagonality here if the corner is diagonal to make the reverse pass work
+    σ = _similar_tensortype(σ, C)
 
-    # TODO: gauge signs should always commute with corner,
-    # so we really shouldn't have to fix them explicitly
-    # NOTE: have to preserve diagonal corners to make the reverse pass work
-    cornerfix = ProjectTo(envfinal.corners[1])(σ * envfinal.corners[1] * σ')
+    cornerfix = σ * envfinal.corners[1] * σ'
     @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
         σ[χ_in; χ1] * envfinal.edges[1][χ1 D_in_above D_in_below; χ2] * conj(σ[χ_out; χ2])
 
