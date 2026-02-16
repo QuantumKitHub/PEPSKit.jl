@@ -260,9 +260,9 @@ function _rrule(
     )
     env, = leading_boundary(envinit, state, alg)
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    alg_gauge = ScramblingEnvGauge()
+    alg_gauge = _scrambling_env_gauge(alg)
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
+    _, signs = gauge_fix(env_conv, env, alg_gauge)
 
     # fix decomposition
     alg_fixed = gauge_fix(alg, signs, info)
@@ -274,7 +274,7 @@ function _rrule(
         )
     end
     # prepare its pullback
-    _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
+    _, env_vjp = rrule_via_ad(config, f, state, env)
     # split off state and environment parts
     ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
     ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
@@ -288,7 +288,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
 
-    return (env_fixed, info), leading_boundary_fixed_pullback
+    return (env, info), leading_boundary_fixed_pullback
 end
 
 function gauge_fix(alg::SVDAdjoint, signs, info)
@@ -333,21 +333,22 @@ function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     )
 end
 function gauge_fix(alg::EighAdjoint, signs, info)
-    # embed gauge signs in larger space to fix gauge of full V on truncated subspace
     σ = signs[1]
-    extended_σ = zeros(scalartype(σ), space(info.D_full))
-    for (c, b) in blocks(extended_σ)
-        σc = block(σ, c)
-        kept_dim = size(σc, 1)
-        b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
-        b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+    inds = info.truncation_indices
+
+    # embed gauge signs in larger space to fix gauge of full V on truncated subspace
+    extended_σ = id(scalartype(σ), domain(info.D_full))
+    for (c, b) in blocks(σ)
+        I = get(inds, c, nothing)
+        @assert !isnothing(I)
+        block(extended_σ, c)[I, I] = b
     end
 
     # fix kept and full V
     V_fixed = info.V * σ'
     V_full_fixed = info.V_full * extended_σ'
     return EighAdjoint(;
-        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed),
+        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed, info.truncation_indices),
         rrule_alg = alg.rrule_alg,
     )
 end
@@ -355,7 +356,7 @@ function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEigh}
     # fix kept V only since iterative decomposition doesn't have access to full spectrum
     V_fixed = info.V * signs[1]'
     return EighAdjoint(;
-        fwd_alg = FixedEig(info.D, V_fixed, nothing, nothing),
+        fwd_alg = FixedEig(info.D, V_fixed, nothing, nothing, nothing),
         rrule_alg = alg.rrule_alg,
     )
 end
