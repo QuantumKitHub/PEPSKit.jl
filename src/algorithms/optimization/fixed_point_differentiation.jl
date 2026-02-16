@@ -348,7 +348,7 @@ function gauge_fix(alg::EighAdjoint, signs, info)
     V_fixed = info.V * σ'
     V_full_fixed = info.V_full * extended_σ'
     return EighAdjoint(;
-        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed),
+        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed, info.truncation_indices),
         rrule_alg = alg.rrule_alg,
     )
 end
@@ -356,7 +356,7 @@ function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEigh}
     # fix kept V only since iterative decomposition doesn't have access to full spectrum
     V_fixed = info.V * signs[1]'
     return EighAdjoint(;
-        fwd_alg = FixedEig(info.D, V_fixed, nothing, nothing),
+        fwd_alg = FixedEig(info.D, V_fixed, nothing, nothing, nothing),
         rrule_alg = alg.rrule_alg,
     )
 end

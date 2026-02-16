@@ -171,25 +171,26 @@ end
 """
 $(TYPEDEF)
 
-Eigenvalue decomposition struct containing a pre-computed decomposition or even multiple ones.
-Additionally, it can contain the untruncated full decomposition as well. The call to
-`eigh_trunc`/`eig_trunc` just returns the pre-computed D and V. In the reverse pass,
-the adjoint is computed with these exact D and V and, potentially, the full decompositions
-if the adjoints needs access to them.
+Eigenvalue decomposition struct containing a pre-computed decomposition or even multiple
+ones. Additionally, it can contain the full untruncated decomposition and the corresponding
+truncation indices as well. The call to `eigh_trunc`/`eig_trunc` just returns the
+pre-computed D and V. In the reverse pass, the adjoint is computed with these exact D and V
+and, potentially, the full decompositions if the adjoints require access to them.
 
 ## Fields
 
 $(TYPEDFIELDS)
 """
-struct FixedEig{Dt, Vt, Dtf, Vtf}
+struct FixedEig{Dt, Vt, Dtf, Vtf, It}
     D::Dt
     V::Vt
     D_full::Dtf
     V_full::Vtf
+    truncation_indices::It
 end
 
 # check whether the full D and V are supplied
-isfulleig(alg::FixedEig) = !isnothing(alg.D_full) && !isnothing(alg.V_full)
+isfulleig(alg::FixedEig) = !isnothing(alg.D_full) && !isnothing(alg.V_full) && !isnothing(alg.truncation_indices)
 
 # Return pre-computed decomposition
 function _eigh_trunc!(_, alg::FixedEig, ::TruncationStrategy)
@@ -198,6 +199,7 @@ function _eigh_trunc!(_, alg::FixedEig, ::TruncationStrategy)
         condition_number = cond(alg.D),
         D_full = alg.D_full,
         V_full = alg.V_full,
+        truncation_indices = alg.truncation_indices,
     )
     return alg.D, alg.V, info
 end
