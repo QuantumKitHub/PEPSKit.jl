@@ -260,9 +260,9 @@ function _rrule(
     )
     env, = leading_boundary(envinit, state, alg)
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    alg_gauge = ScramblingEnvGauge()
+    alg_gauge = _scrambling_env_gauge(alg)
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
+    _, signs = gauge_fix(env_conv, env, alg_gauge)
 
     # fix decomposition
     alg_fixed = gauge_fix(alg, signs, info)
@@ -274,7 +274,7 @@ function _rrule(
         )
     end
     # prepare its pullback
-    _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
+    _, env_vjp = rrule_via_ad(config, f, state, env)
     # split off state and environment parts
     ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
     ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
@@ -288,7 +288,7 @@ function _rrule(
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
 
-    return (env_fixed, info), leading_boundary_fixed_pullback
+    return (env, info), leading_boundary_fixed_pullback
 end
 
 function gauge_fix(alg::SVDAdjoint, signs, info)
