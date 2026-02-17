@@ -328,7 +328,7 @@ function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     # fix kept U and V only since iterative SVD doesn't have access to full spectrum
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     return SVDAdjoint(;
-        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing, nothing),
         rrule_alg = alg.rrule_alg,
     )
 end

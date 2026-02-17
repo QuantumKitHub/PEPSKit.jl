@@ -19,7 +19,7 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :sdd)), SVDAdjoint(; fwd_alg = (; alg = :iterative))]
+svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :divideandconquer)), SVDAdjoint(; fwd_alg = (; alg = :gkl))]
 projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
@@ -93,12 +93,12 @@ c4v_algs = [
     end
 end
 
-@testset "Element-wise consistency of :sdd and :iterative" begin
+@testset "Element-wise consistency of :divideandconquer and :gkl" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative, krylovdim = χ + 10)),
+        decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :gkl, krylovdim = χ + 10)),
     )
-    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :sdd)))
+    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :divideandconquer)))
 
     # initialize states
     Random.seed!(91283219347)

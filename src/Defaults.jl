@@ -9,8 +9,8 @@ Module containing default algorithm parameter values and arguments.
 * `ctmrg_maxiter=$(Defaults.ctmrg_maxiter)` : Maximal number of CTMRG iterations per run.
 * `ctmrg_miniter=$(Defaults.ctmrg_miniter)` : Minimal number of CTMRG carried out.
 * `ctmrg_alg=:$(Defaults.ctmrg_alg)` : Default CTMRG algorithm variant.
-    - `:simultaneous`: Simultaneous expansion and renormalization of all sides.
-    - `:sequential`: Sequential application of left moves and rotations.
+    - `:simultaneous` : Simultaneous expansion and renormalization of all sides.
+    - `:sequential` : Sequential application of left moves and rotations.
 * `ctmrg_verbosity=$(Defaults.ctmrg_verbosity)` : CTMRG output information verbosity
 
 ## SVD forward & reverse
@@ -22,25 +22,33 @@ Module containing default algorithm parameter values and arguments.
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `rrule_degeneracy_tol=$(Defaults.rrule_degeneracy_tol)` : Broadening amplitude which smoothens the divergent term in the retained contributions of an SVD or eigh pullback, in case of (pseudo) degenerate singular values
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
-    - `:sdd`: MatrixAlgebraKit's `LAPACK_DivideAndConquer`
-    - `:svd`: MatrixAlgebraKit's `LAPACK_QRIteration`
-    - `:iterative`: Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
+    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
+    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`
+    - `:gkl` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
-    - `:full`: Uses a modified version of MatrixAlgebraKit's reverse-rule for `svd_compact` which doesn't solve any linear problem and instead requires access to the full SVD, see [`PEPSKit.FullSVDReverseRule`](@ref).
-    - `:gmres`: GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab`: BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
-    - `:arnoldi`: Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
-* `svd_rrule_broadening=$(Defaults.svd_rrule_broadening)` : Lorentzian broadening amplitude which smoothens the divergent term in the SVD adjoint in case of (pseudo) degenerate singular values
+    - `:full` : Uses a modified version of MatrixAlgebraKit's reverse-rule for `svd_compact` which doesn't solve any linear problem and instead requires access to the full SVD, see [`PEPSKit.FullSVDPullback`](@ref).
+    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
+    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
+    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+
+## Eigh forward & reverse
+
+* `eigh_fwd_alg=:$(Defaults.eigh_fwd_alg)` : # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
+* `eigh_rrule_alg=:$(Defaults.eigh_rrule_alg)` :
+    - `:full` : Full pullback algorithm for eigendecompositions, see [`PEPSKit.FullEighPullback`](@ref).
+    - `:trunc` : Truncated reverse-mode algorithm for eigendecompositions, see [`PEPSKit.TruncEighPullback`](@ref).
+* `eigh_rrule_verbosity=$(Defaults.eigh_rrule_verbosity)` : eigh gradient output verbosity.
 
 ## Projectors
 
 * `projector_alg=:$(Defaults.projector_alg)` : Default variant of the CTMRG projector algorithm.
-    - `:halfinfinite`: Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
-    - `:fullinfinite`: Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
 * `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
 
 ## Fixed-point gradient
@@ -93,17 +101,17 @@ const sparse = false # TODO: implement sparse CTMRG
 
 # SVD forward & reverse
 const trunc = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
-const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :iterative}
+const rrule_degeneracy_tol = 1.0e-13
+const svd_fwd_alg = :divideandconquer # ∈ {:divideandconquer, :qriteration, :bisection, :jacobi, :gkl}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
-const svd_rrule_alg = :full # ∈ {:full, :gmres, :bicgstab, :arnoldi}
-const svd_rrule_broadening = 1.0e-13
+const svd_rrule_alg = :full # ∈ {:full, :trunc, :gmres, :bicgstab, :arnoldi}
 const krylovdim_factor = 1.4
 
 # eigh forward & reverse
 const eigh_fwd_alg = :qriteration # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
-const eigh_rrule_alg = :trunc # ∈ {:trunc, :full}
+const eigh_rrule_alg = :full # ∈ {:full, :trunc}
 const eigh_rrule_verbosity = 0
 
 # QR forward & reverse

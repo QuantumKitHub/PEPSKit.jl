@@ -22,8 +22,8 @@ Random.seed!(123456789)
 r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
-full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, broadening = 0))
-iter_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative))
+full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_tol = 0))
+iter_alg = SVDAdjoint(; fwd_alg = (; alg = :gkl))
 
 @testset "Non-truncated SVD" begin
     l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
@@ -46,8 +46,8 @@ end
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     r_degen = u * s * v
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-13
+    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-30
+    small_broadening_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, full_alg, R, trunc), r_degen
@@ -56,14 +56,14 @@ end
         A -> lossfun(A, no_broadening_no_cutoff_alg, R, trunc),
         r_degen,
     )
-    l_small_broadening, g_small_broadening = withgradient( # Lorentzian broadening smoothens divergent contributions
+    l_small_broadening, g_small_broadening = withgradient( # broadening smoothens divergent contributions
         A -> lossfun(A, small_broadening_alg, R, trunc),
         r_degen,
     )
 
     @test l_only_cutoff ≈ l_no_broadening_no_cutoff ≈ l_small_broadening
     @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-2 # divergences mess up the gradient
-    @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and Lorentzian broadening have similar effect
+    @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and broadening have similar effect
 end
 
 symm_m, symm_n = 18, 24
@@ -100,8 +100,8 @@ end
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     symm_r_degen = u * s * v
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-13
+    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-30
+    small_broadening_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r_degen
@@ -110,14 +110,14 @@ end
         A -> lossfun(A, no_broadening_no_cutoff_alg, symm_R, symm_trspace),
         symm_r_degen,
     )
-    l_small_broadening, g_small_broadening = withgradient( # Lorentzian broadening smoothens divergent contributions
+    l_small_broadening, g_small_broadening = withgradient( # broadening smoothens divergent contributions
         A -> lossfun(A, small_broadening_alg, symm_R, symm_trspace),
         symm_r_degen,
     )
 
     @test l_only_cutoff ≈ l_no_broadening_no_cutoff ≈ l_small_broadening
     @test norm(g_no_broadening_no_cutoff[1] - g_small_broadening[1]) > 1.0e-2 # divergences mess up the gradient
-    @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and Lorentzian broadening have similar effect
+    @test g_only_cutoff[1] ≈ g_small_broadening[1] rtol = rtol # cutoff and broadening have similar effect
 end
 
 # TODO: Add when IterSVD is implemented for HalfInfiniteEnv

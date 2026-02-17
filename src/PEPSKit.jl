@@ -123,11 +123,11 @@ include("algorithms/select_algorithm.jl")
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export SVDAdjoint, FullSVDReverseRule, IterSVD
+export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
-export EighAdjoint, IterEigh, QRAdjoint, C4vCTMRG, C4vEighProjector, C4vQRProjector
+export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace
 export product_peps
