@@ -43,6 +43,13 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
+# :diffgauge iterscheme is incompatible with :c4v_eigh projector algorithm
+function _check_disallowed_combination(
+        ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
+    )
+    projector_alg == :c4v_eigh && gradient_iterscheme == :diffgauge && return true
+    return false
+end
 
 ## Tests
 # ------
@@ -63,6 +70,18 @@ naive_gradient_done = Set()
         ) in Iterators.product(
             calgs, palgs, dalgs, galgs, gischemes
         )
+
+        # filter disallowed algorithm combinations
+        if _check_disallowed_combination(
+                ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
+            )
+            # but verify that its use would throw an error
+            @test_throws ArgumentError PEPSOptimize(;
+                boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = decomposition_rrule_alg))),
+                gradient_alg = (; alg = gradient_alg, iterscheme = gradient_iterscheme, tol = gradtol),
+            )
+            continue
+        end
 
         # check for allowed algorithm combinations when testing naive gradient
         if isnothing(gradient_alg)

@@ -31,14 +31,7 @@ struct PEPSOptimize{G}
             boundary_alg::CTMRGAlgorithm, gradient_alg::G, optimizer_alg,
             reuse_env, symmetrization,
         ) where {G}
-        if gradient_alg isa GradMode
-            if boundary_alg isa SequentialCTMRG && iterscheme(gradient_alg) === :fixed
-                msg = ":fixed was converted to :diffgauge since SequentialCTMRG does not \
-                      support :fixed differentiation mode due to sequential application of \
-                      SVDs; select SimultaneousCTMRG instead to use :fixed mode"
-                throw(ArgumentError(msg))
-            end
-        end
+        _check_algorithm_combination(boundary_alg, gradient_alg)
         return new{G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
     end
 end
