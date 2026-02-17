@@ -278,6 +278,7 @@ function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
     condition_number = cond(S)
     info = (;
         truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
+        truncation_indices = nothing,
     )
 
     return U, S, V, info
