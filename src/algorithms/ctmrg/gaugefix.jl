@@ -84,12 +84,11 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
         return Qprev * Qfinal'
     end
 
-    cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
-    return fix_global_phases(CTMRGEnv(cornersfix, edgesfix), envprev), signs
-end
+    env_fixed_relative = fix_relative_phases(envfinal, signs)
+    env_fixed_full = fix_global_phases(env_fixed_relative, envprev)
 
-_similar_tensortype(t::AbstractTensorMap, ::Type{<:AbstractTensorMap}) = t
-_similar_tensortype(t::AbstractTensorMap, ::Type{<:DiagonalTensorMap}) = DiagonalTensorMap(t)
+    return env_fixed_full, signs
+end
 
 # C4v specialized gauge fixing routine with Hermitian transfer matrix
 function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}
@@ -118,8 +117,6 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     Qfinal, = left_orth!(ρfinal; positive = true)
 
     σ = Qprev * Qfinal'
-    # NOTE: have to preserve diagonality here if the corner is diagonal to make the reverse pass work
-    σ = _similar_tensortype(σ, C)
 
     cornerfix = σ * envfinal.corners[1] * σ'
     @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
@@ -193,13 +190,13 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
         end
     end
 
-    return corners_fixed, edges_fixed
+    return CTMRGEnv(corners_fixed, edges_fixed)
 end
 function fix_relative_phases(
         U::Array{Ut, 3}, V::Array{Vt, 3}, signs
     ) where {Ut <: AbstractTensorMap, Vt <: AbstractTensorMap}
-    U_fixed = map(CartesianIndices(U)) do I
-        dir, r, c = I.I
+    U_fixed = map(eachindex(IndexCartesian(), U)) do I
+        dir, r, c = Tuple(I)
         if dir == NORTHWEST
             fix_gauge_north_left_vecs((r, c), U, signs)
         elseif dir == NORTHEAST
@@ -211,8 +208,8 @@ function fix_relative_phases(
         end
     end
 
-    V_fixed = map(CartesianIndices(V)) do I
-        dir, r, c = I.I
+    V_fixed = map(eachindex(IndexCartesian(), V)) do I
+        dir, r, c = Tuple(I)
         if dir == NORTHWEST
             fix_gauge_north_right_vecs((r, c), V, signs)
         elseif dir == NORTHEAST
@@ -236,12 +233,10 @@ divided out.
 """
 function fix_global_phases(envfix::CTMRGEnv, envprev::CTMRGEnv)
     cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
-        φ = dot(Cprev, Cfix)
-        φ' * Cfix
+        return Cfix * inv(dot(Cprev, Cfix))
     end
     edgesgfix = map(zip(envprev.edges, envfix.edges)) do (Tprev, Tfix)
-        φ = dot(Tprev, Tfix)
-        φ' * Tfix
+        return Tfix * inv(dot(Tprev, Tfix))
     end
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
@@ -268,8 +263,8 @@ function calc_elementwise_convergence(
     @debug "maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean"
 
     # Check differences for all tensors in unit cell to debug properly
-    for I in CartesianIndices(ΔT)
-        dir, r, c = I.I
+    for I in eachindex(IndexCartesian(), ΔT)
+        dir, r, c = Tuple(I)
         @debug(
             "$((dir, r, c)): all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ",
             all(x -> abs(x) < atol, convert(Array, ΔC[dir, r, c])),

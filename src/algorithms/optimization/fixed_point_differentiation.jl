@@ -200,6 +200,27 @@ EigSolver(; kwargs...) = GradMode(; alg = :eigsolver, kwargs...)
 
 GRADIENT_MODE_SYMBOLS[:eigsolver] = EigSolver
 
+"""
+    _check_algorithm_combination(boundary_alg, gradient_alg)
+
+Check for allowed combinations of gradient algorithm and boundary algorithm to be used for
+computing the gradient of a `leading_boundary` call. Throws an error containing a
+recommended fix if the combination is not allowed or broken.
+"""
+function _check_algorithm_combination(boundary_alg, gradient_alg) end
+function _check_algorithm_combination(::SequentialCTMRG, ::GradMode{:fixed})
+    msg = "`:fixed` mode is not compatible with `SequentialCTMRG` since the sequential \
+          application of SVDs does not allow to differentiate through a fixed set of \
+          gauges; select SimultaneousCTMRG instead to use :fixed mode"
+    throw(ArgumentError(msg))
+end
+function _check_algorithm_combination(::C4vCTMRG{<:C4vEighProjector}, ::GradMode{:diffgauge})
+    msg = "`:diffgauge` mode is currently not compatible with eigh-based C4v CTMRG; \
+          either switch to a different projector algorithm (e.g. `c4v_qr`), or use :fixed \
+          mode for differentiation instead."
+    throw(ArgumentError(msg))
+end
+
 #=
 Evaluating the gradient of the cost function for CTMRG:
 - The gradient of the cost function for CTMRG can be computed using automatic differentiation (AD) or explicit evaluation of the geometric sum.
@@ -223,6 +244,8 @@ function _rrule(
         state,
         alg::CTMRGAlgorithm,
     )
+    _check_algorithm_combination(alg, gradmode)
+
     env, info = leading_boundary(envinit, state, alg)
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
@@ -256,18 +279,21 @@ function _rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit,
         state,
-        alg::SimultaneousCTMRG,
+        alg::CTMRGAlgorithm,
     )
+    _check_algorithm_combination(alg, gradmode)
+
     env, = leading_boundary(envinit, state, alg)
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    alg_gauge = _scrambling_env_gauge(alg)
+    alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     _, signs = gauge_fix(env_conv, env, alg_gauge)
 
     # fix decomposition
     alg_fixed = gauge_fix(alg, signs, info)
 
-    # prepare iterating function corresponding to a single CTMRG iteration with a gauge-fixed projector
+    # prepare iterating function corresponding to a single CTMRG iteration with a
+    # gauge-fixed projector
     function f(A, x)
         return fix_global_phases(
             ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x,
@@ -367,46 +393,6 @@ function gauge_fix(alg::QRAdjoint, signs, info)
         fwd_alg = FixedQR(Q_fixed, R_fixed),
         rrule_alg = alg.rrule_alg,
     )
-end
-
-# nested fixed-point gradient evaluation for C4v CTMRG
-function _rrule(
-        gradmode::GradMode{:fixed},
-        config::RuleConfig,
-        ::typeof(MPSKit.leading_boundary),
-        env₀,
-        state,
-        alg::C4vCTMRG,
-    )
-    env, = leading_boundary(env₀, state, alg)
-    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    alg_gauge = ScramblingEnvGaugeC4v()
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    _, signs = gauge_fix(env_conv, env, alg_gauge)
-
-    # fix eigendecomposition
-    alg_fixed = gauge_fix(alg, signs, info)
-
-    # prepare iterating function corresponding to a single CTMRG iteration with a gauge-fixed projector
-    f(A, x) = ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
-    # compute its pullback
-    _, env_vjp = rrule_via_ad(config, f, state, env)
-    # split off state and environment parts
-    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-    # ∂f∂x(x)::typeof(env) = env_vjp(x)[3] # TODO: why is this derivative type-instable? The corner gradient is a complex DiagonalTensorMap
-    ∂f∂x(x) = env_vjp(x)[3]
-
-    function leading_boundary_fixed_pullback((Δenv′, Δinfo))
-        Δenv = unthunk(Δenv′)
-
-        # evaluate the geometric sum
-        ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
-
-        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
-    end
-
-    # TODO: also return env (instead of `env_fixed`) for general :fixed mode CTMRG in PEPSKit
-    return (env, info), leading_boundary_fixed_pullback
 end
 
 @doc """

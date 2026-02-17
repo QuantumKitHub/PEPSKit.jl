@@ -134,7 +134,7 @@ function leading_boundary(
         ctmrg_loginit!(log, η, network, env₀)
         local info
         for iter in 1:(alg.maxiter)
-            env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
+            env, info = ctmrg_iteration(network, env, alg)
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
