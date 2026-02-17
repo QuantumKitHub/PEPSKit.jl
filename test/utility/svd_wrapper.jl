@@ -22,7 +22,7 @@ Random.seed!(123456789)
 r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
-full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_tol = 0))
+full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_tol = 1e-13))
 iter_alg = SVDAdjoint(; fwd_alg = (; alg = :gkl))
 
 @testset "Non-truncated SVD" begin

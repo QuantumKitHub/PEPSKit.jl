@@ -367,14 +367,15 @@ function ChainRulesCore.rrule(
     U, S, V⁺, inds = info.U_full, info.S_full, info.V_full, info.truncation_indices # untruncated decomposition
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
-    function svd_trunc!_full_pullback(ΔUSV)
+    function svd_trunc!_full_pullback(ΔUSV′)
+        ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
             zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
+            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
         )
         return NoTangent(), Δt, NoTangent()
     end
-    function svd_trunc!_full_pullback(::Tuple{ZeroTangent, ZeroTangent})
+    function svd_trunc!_full_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
@@ -391,14 +392,15 @@ function ChainRulesCore.rrule(
     U, S, V⁺, info = svd_trunc(t, alg; trunc)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
-    function svd_trunc!_trunc_pullback(ΔUSV)
+    function svd_trunc!_trunc_pullback(ΔUSV′)
+        ΔUSV = unthunk.(ΔUSV′)
         Δf = svd_trunc_pullback!(
             zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
         )
         return NoTangent(), Δf, NoTangent()
     end
-    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent})
+    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
