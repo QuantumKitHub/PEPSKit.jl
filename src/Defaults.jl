@@ -36,10 +36,16 @@ Module containing default algorithm parameter values and arguments.
     - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
 
-## Eigh forward & reverse
+## `eigh` forward & reverse
 
-* `eigh_fwd_alg=:$(Defaults.eigh_fwd_alg)` : # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
-* `eigh_rrule_alg=:$(Defaults.eigh_rrule_alg)` :
+* `eigh_fwd_alg=:$(Defaults.eigh_fwd_alg)` : `eigh` algorithm that is used in the forward pass.
+    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`.
+    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`.
+    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`.
+    - `:multiple` : MatrixAlgebraKit's `LAPACK_MultipleRelativelyRobustRepresentations`. 
+    - `:lanczos` : Lanczos algorithm, see [`KrylovKit.Lanczos`](@extref) for details.
+    - `:blocklanczos` : Block Lanczos algorithm, see [`KrylovKit.BlockLanczos`](@extref) for details.
+* `eigh_rrule_alg=:$(Defaults.eigh_rrule_alg)` : Reverse-rule algorithm for the `eigh` gradient.
     - `:full` : Full pullback algorithm for eigendecompositions, see [`PEPSKit.FullEighPullback`](@ref).
     - `:trunc` : Truncated reverse-mode algorithm for eigendecompositions, see [`PEPSKit.TruncEighPullback`](@ref).
 * `eigh_rrule_verbosity=$(Defaults.eigh_rrule_verbosity)` : eigh gradient output verbosity.
