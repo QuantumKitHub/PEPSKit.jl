@@ -64,8 +64,8 @@ Construct a `EighAdjoint` algorithm struct based on the following keyword argume
     - `:lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Lanczos)
     - `:blocklanczos` : Block version of `:lanczos` for repeated extremal eigenvalues, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BlockLanczos)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:trunc` : MatrixAlgebraKit's `eigh_trunc_pullback` solving a Sylvester equation on the truncated subspace
-    - `:full` : MatrixAlgebraKit's `eigh_pullback` that requires access to the full spectrum
+    - `:full` : MatrixAlgebraKit's `eigh_pullback!` that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's `eigh_trunc_pullback!` solving a Sylvester equation on the truncated subspace
 """
 struct EighAdjoint{F, R}
     fwd_alg::F
@@ -77,12 +77,8 @@ const EIGH_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :bisection => LAPACK_Bisection,
     :divideandconquer => LAPACK_DivideAndConquer,
     :multiple => LAPACK_MultipleRelativelyRobustRepresentations,
-    :lanczos =>
-        (; tol = 1.0e-14, krylovdim = 30, kwargs...) ->
-    IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
-    :blocklanczos =>
-        (; tol = 1.0e-14, krylovdim = 30, kwargs...) ->
-    IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
+    :lanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
+    :blocklanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
 )
 const EIGH_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullEighPullback, :trunc => TruncEighPullback,
@@ -249,7 +245,10 @@ function _eigh_trunc!(f, alg::IterEigh, trunc::TruncationStrategy)
     truncation_error =
         trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(V * D * V' - f)
     condition_number = cond(D)
-    info = (; truncation_error, condition_number, D_full = nothing, V_full = nothing)
+    info = (;
+        truncation_error, condition_number, D_full = nothing, V_full = nothing,
+        truncation_indices = nothing,
+    )
 
     return D, V, info
 end
@@ -329,7 +328,7 @@ function _get_pullback_gauge_tol(verbosity::Int)
     if verbosity ≤ 0 # never print gauge sensitivity
         return (_) -> Inf
     elseif verbosity == 1 # print gauge sensitivity above default atol
-        MatrixAlgebraKit.default_pullback_gaugetol
+        MatrixAlgebraKit.default_pullback_gauge_atol
     else # always print gauge sensitivity
         return (_) -> 0.0
     end
@@ -349,7 +348,7 @@ function ChainRulesCore.rrule(
     function eigh_trunc!_full_pullback(ΔDV)
         Δt = eigh_pullback!(
             zeros(scalartype(t), space(t)), t, (D, V), ΔDV, inds;
-            gauge_atol = gtol(ΔDV)
+            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -373,7 +372,7 @@ function ChainRulesCore.rrule(
     function eigh_trunc!_trunc_pullback(ΔDV)
         Δf = eigh_trunc_pullback!(
             zeros(scalartype(t), space(t)), t, (D, V), ΔDV;
-            gauge_atol = gtol(ΔDV)
+            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
         )
         return NoTangent(), Δf, NoTangent()
     end
