@@ -213,14 +213,12 @@ function _check_algorithm_combination(::SequentialCTMRG, ::GradMode{:fixed})
           application of SVDs does not allow to differentiate through a fixed set of \
           gauges; select SimultaneousCTMRG instead to use :fixed mode"
     throw(ArgumentError(msg))
-    return nothing
 end
 function _check_algorithm_combination(::C4vCTMRG{<:C4vEighProjector}, ::GradMode{:diffgauge})
     msg = "`:diffgauge` mode is currently not compatible with eigh-based C4v CTMRG; \
           either switch to a different projector algorithm (e.g. `c4v_qr`), or use :fixed \
           mode for differentiation instead."
     throw(ArgumentError(msg))
-    return nothing
 end
 
 #=
