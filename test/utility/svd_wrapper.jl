@@ -53,12 +53,10 @@ end
         A -> lossfun(A, full_alg, R, trunc), r_degen
     ) # cutoff sets degenerate difference to zero
     l_no_broadening_no_cutoff, g_no_broadening_no_cutoff = withgradient( # degenerate singular value differences lead to divergent contributions
-        A -> lossfun(A, no_broadening_no_cutoff_alg, R, trunc),
-        r_degen,
+        A -> lossfun(A, no_broadening_no_cutoff_alg, R, trunc), r_degen,
     )
     l_small_broadening, g_small_broadening = withgradient( # broadening smoothens divergent contributions
-        A -> lossfun(A, small_broadening_alg, R, trunc),
-        r_degen,
+        A -> lossfun(A, small_broadening_alg, R, trunc), r_degen,
     )
 
     @test l_only_cutoff ≈ l_no_broadening_no_cutoff ≈ l_small_broadening
