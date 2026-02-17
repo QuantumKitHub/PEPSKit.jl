@@ -56,7 +56,7 @@ end
 
 Return the tensor decomposition algorithm of the `alg` projector algorithm.
 Additionally, the multi-index `(dir, r, c)` can be supplied which will return the
-decomposition performed at that index, e.g. when using `FixedEig` or `FixedSVD`.
+decomposition performed at that index, e.g. when using [`FixedEig`](@ref) or [`FixedSVD`](@ref).
 """
 decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
 function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
