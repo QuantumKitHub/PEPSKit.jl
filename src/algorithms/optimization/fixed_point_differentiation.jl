@@ -295,21 +295,22 @@ function gauge_fix(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
     rowsize, colsize = size(signs, 2), size(signs, 3)
     inds = info.truncation_indices
-    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, r, c)
-        σ = signs[dir, r, c]
-        r_sign, c_sign = if dir == NORTH # take unit cell interdependency of signs into account
-            r, _prev(c, colsize)
+    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, row, col)
+        σ = signs[dir, row, col]
+        row_sign, col_sign = if dir == NORTH # take unit cell interdependency of signs into account
+            row, _prev(col, colsize)
         elseif dir == EAST
-            _prev(r, rowsize), c
+            _prev(row, rowsize), col
         elseif dir == SOUTH
-            r, _next(c, colsize)
+            row, _next(col, colsize)
         elseif dir == WEST
-            _next(r, rowsize), c
+            _next(row, rowsize), col
         end
-        extended_space = domain(info.U_full[dir, r_sign, c_sign]) ← codomain(info.V_full[dir, r_sign, c_sign])
-        extended_σ = zeros(scalartype(σ), extended_space)
-        for (c, b) in blocks(extended_σ)
-            I = get(inds, c, nothing)
+
+        ind = inds[dir, row_sign, col_sign]
+        extended_σ = id(scalartype(σ), domain(info.S_full[dir, row_sign, col_sign]))
+        for (c, b) in blocks(σ)
+            I = get(ind, c, nothing)
             @assert !isnothing(I)
             block(extended_σ, c)[I, I] = b
         end
