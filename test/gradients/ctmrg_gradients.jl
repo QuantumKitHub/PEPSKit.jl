@@ -106,3 +106,42 @@ naive_gradient_done = Set()
         @test dfs1 ≈ dfs2 atol = 1.0e-2
     end
 end
+
+## Regression test for gradient accuracy (https://github.com/QuantumKitHub/PEPSKit.jl/pull/276)
+@testset "AD CTMRG energy gradient accuracy regression test (#276)" begin
+    Random.seed!(1234)
+
+    boundary_alg = PEPSKit.CTMRGAlgorithm(; tol = 1.0e-10)
+    gradient_alg = PEPSKit.GradMode(; alg = :linsolver, tol = 5.0e-8, iterscheme = :fixed)
+
+    function fg((peps, env))
+        E, g = Zygote.withgradient(peps) do ψ
+            env2, = PEPSKit.hook_pullback(
+                leading_boundary,
+                env,
+                ψ,
+                boundary_alg;
+                alg_rrule = gradient_alg,
+            )
+            return cost_function(ψ, env2, H)
+        end
+        return E, only(g)
+    end
+
+    # initialize randomly
+    H = heisenberg_XYZ(InfiniteSquare(1, 1))
+    peps = PEPSKit.peps_normalize(InfinitePEPS(randn, ComplexF64, physicalspace(H)[1], ComplexSpace(3)))
+    env0 = CTMRGEnv(randn, ComplexF64, peps, ComplexSpace(20))
+
+    # test gradient against finite-difference
+    Δx = 1.0e-5
+    _, _, dfs1, dfs2 = OptimKit.optimtest(
+        fg, (peps, env0);
+        alpha = LinRange(-Δx, Δx, 2),
+        retract = PEPSKit.peps_retract,
+        inner = PEPSKit.real_inner,
+    )
+
+    # verify high gradient accuracy for small finite-difference step size
+    @test dfs1 ≈ dfs2 rtol = 1.0e-2 * Δx
+end
