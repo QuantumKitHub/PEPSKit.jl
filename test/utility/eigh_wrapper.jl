@@ -49,16 +49,16 @@ end
     @test g_trunc[1] ≈ g_iter[1] rtol = rtol
 end
 
-@testset "Truncated eigh broadening" begin
+@testset "Truncated eigh broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
     d, v = eigh_full(r)
     d.data[1:2:n] .= d.data[2:2:n] # make every eigenvalue two-fold degenerate
     r_degen = v * d * v'
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-13
+    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-30
+    small_broadening_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
-        A -> lossfun(A, full_alg, R, trunc), r_degen
+        A -> lossfun(A, alg, R, trunc), r_degen
     ) # cutoff sets degenerate difference to zero
     l_no_broadening_no_cutoff, g_no_broadening_no_cutoff = withgradient( # degenerate singular value differences lead to divergent contributions
         A -> lossfun(A, no_broadening_no_cutoff_alg, R, trunc), r_degen,
@@ -98,7 +98,7 @@ symm_R = 0.5 * (symm_R + symm_R')
     l_iter_tr, g_iter_tr = withgradient(
         A -> lossfun(A, iter_alg, symm_R, symm_trspace), symm_r
     )
-    @test l_full_tr ≈ l_trunc_tr ≈ l_full_tr
+    @test l_full_tr ≈ l_trunc_tr ≈ l_iter_tr
     @test g_full_tr[1] ≈ g_trunc_tr[1] rtol = rtol
     @test g_full_tr[1] ≈ g_iter_tr[1] rtol = rtol
     @test g_trunc_tr[1] ≈ g_iter_tr[1] rtol = rtol
@@ -112,16 +112,16 @@ symm_R = 0.5 * (symm_R + symm_R')
     @test g_trunc_tr[1] ≈ g_iter_fb[1] rtol = rtol
 end
 
-@testset "Truncated symmetric eigh broadening" begin
+@testset "Truncated symmetric eigh broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
     d, v = eigh_full(symm_r)
     d.data[1:2:symm_m] .= d.data[2:2:symm_m] # make every eigenvalue two-fold degenerate
     symm_r_degen = v * d * v'
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-13
+    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-30
+    small_broadening_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
-        A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r_degen
+        A -> lossfun(A, alg, symm_R, symm_trspace), symm_r_degen
     ) # cutoff sets degenerate difference to zero
     l_no_broadening_no_cutoff, g_no_broadening_no_cutoff = withgradient( # degenerate singular value differences lead to divergent contributions
         A -> lossfun(A, no_broadening_no_cutoff_alg, symm_R, symm_trspace),

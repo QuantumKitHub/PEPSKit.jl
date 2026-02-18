@@ -23,25 +23,37 @@ r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
 full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_tol = 1.0e-13))
+trunc_alg = SVDAdjoint(; rrule_alg = (; alg = :trunc, degeneracy_tol = 1.0e-13))
 iter_alg = SVDAdjoint(; fwd_alg = (; alg = :gkl))
 
 @testset "Non-truncated SVD" begin
-    l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
-    l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R), r)
+    # l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
+    # l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R), r)
 
-    @test l_itersvd ≈ l_fullsvd
-    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
+    # @test l_itersvd ≈ l_fullsvd
+    # @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
+    l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)
+    l_trunc, g_trunc = withgradient(A -> lossfun(A, trunc_alg, R), r)
+    l_iter, g_iter = withgradient(A -> lossfun(A, iter_alg, R), r)
+
+    @test l_full ≈ l_trunc ≈ l_iter
+    @test g_full[1] ≈ g_trunc[1] rtol = rtol
+    @test g_full[1] ≈ g_iter[1] rtol = rtol
+    @test g_trunc[1] ≈ g_iter[1] rtol = rtol
 end
 
 @testset "Truncated SVD with χ=$χ" begin
-    l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R, trunc), r)
-    l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R, trunc), r)
+    l_full, g_full = withgradient(A -> lossfun(A, full_alg, R, trunc), r)
+    l_trunc, g_trunc = withgradient(A -> lossfun(A, trunc_alg, R, trunc), r)
+    l_iter, g_iter = withgradient(A -> lossfun(A, iter_alg, R, trunc), r)
 
-    @test l_itersvd ≈ l_fullsvd
-    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
+    @test l_full ≈ l_trunc ≈ l_iter
+    @test g_full[1] ≈ g_trunc[1] rtol = rtol
+    @test g_full[1] ≈ g_iter[1] rtol = rtol
+    @test g_trunc[1] ≈ g_iter[1] rtol = rtol
 end
 
-@testset "Truncated SVD broadening" begin
+@testset "Truncated SVD broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
     u, s, v, = svd_compact(r)
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     r_degen = u * s * v
@@ -71,38 +83,47 @@ symm_r = randn(dtype, symm_space, symm_space)
 symm_R = randn(dtype, space(symm_r))
 
 @testset "IterSVD of symmetric tensors" begin
-    l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, symm_R), symm_r)
-    l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, symm_R), symm_r)
-    @test l_itersvd ≈ l_fullsvd
-    @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
+    l_full, g_full = withgradient(A -> lossfun(A, full_alg, symm_R), symm_r)
+    l_trunc, g_trunc = withgradient(A -> lossfun(A, trunc_alg, symm_R), symm_r)
+    l_iter, g_iter = withgradient(A -> lossfun(A, iter_alg, symm_R), symm_r)
+    @test l_full ≈ l_trunc ≈ l_iter
+    @test g_full[1] ≈ g_trunc[1] rtol = rtol
+    @test g_full[1] ≈ g_iter[1] rtol = rtol
+    @test g_trunc[1] ≈ g_iter[1] rtol = rtol
 
-    l_fullsvd_tr, g_fullsvd_tr = withgradient(
+    l_full_tr, g_full_tr = withgradient(
         A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r
     )
-    l_itersvd_tr, g_itersvd_tr = withgradient(
+    l_trunc_tr, g_trunc_tr = withgradient(
+        A -> lossfun(A, trunc_alg, symm_R, symm_trspace), symm_r
+    )
+    l_iter_tr, g_iter_tr = withgradient(
         A -> lossfun(A, iter_alg, symm_R, symm_trspace), symm_r
     )
-    @test l_itersvd_tr ≈ l_fullsvd_tr
-    @test g_fullsvd_tr[1] ≈ g_itersvd_tr[1] rtol = rtol
+    @test l_full_tr ≈ l_trunc_tr ≈ l_iter_tr
+    @test g_full_tr[1] ≈ g_trunc_tr[1] rtol = rtol
+    @test g_full_tr[1] ≈ g_iter_tr[1] rtol = rtol
+    @test g_trunc_tr[1] ≈ g_iter_tr[1] rtol = rtol
 
-    iter_alg_fallback = @set iter_alg.fwd_alg.fallback_threshold = 0.4  # Do dense SVD in one block, sparse SVD in the other
-    l_itersvd_fb, g_itersvd_fb = withgradient(
+    iter_alg_fallback = @set iter_alg.fwd_alg.fallback_threshold = 0.4  # Do dense decomposition in one block, sparse one in the other
+    l_iter_fb, g_iter_fb = withgradient(
         A -> lossfun(A, iter_alg_fallback, symm_R, symm_trspace), symm_r
     )
-    @test l_itersvd_fb ≈ l_fullsvd_tr
-    @test g_fullsvd_tr[1] ≈ g_itersvd_fb[1] rtol = rtol
+    @test l_iter_fb ≈ l_trunc_tr ≈ l_full_tr
+    @test g_full_tr[1] ≈ g_iter_fb[1] rtol = rtol
+    @test g_trunc_tr[1] ≈ g_iter_fb[1] rtol = rtol
 end
 
-@testset "Truncated symmetric SVD broadening" begin
+@testset "Truncated symmetric SVD broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
     u, s, v, = svd_compact(symm_r)
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     symm_r_degen = u * s * v
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-13
+    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-30
+    small_broadening_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
-        A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r_degen
+        A -> lossfun(A, alg, symm_R, symm_trspace), symm_r_degen
     ) # cutoff sets degenerate difference to zero
     l_no_broadening_no_cutoff, g_no_broadening_no_cutoff = withgradient( # degenerate singular value differences lead to divergent contributions
         A -> lossfun(A, no_broadening_no_cutoff_alg, symm_R, symm_trspace),
