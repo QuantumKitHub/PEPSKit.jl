@@ -47,7 +47,7 @@ end
     r_degen = u * s * v
 
     no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-13
+    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-10
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, full_alg, R, trunc), r_degen
@@ -101,7 +101,7 @@ end
     symm_r_degen = u * s * v
 
     no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.broadening = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-13
+    small_broadening_alg = @set full_alg.rrule_alg.broadening = 1.0e-10
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, full_alg, symm_R, symm_trspace), symm_r_degen
