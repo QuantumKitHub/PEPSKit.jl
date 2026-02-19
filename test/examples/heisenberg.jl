@@ -50,12 +50,13 @@ end
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
-@testset "C4v AD optimization" begin
+@testset "C4v AD optimization with scalartype T = $T" for T in [Float64, ComplexF64]
     # initialize symmetric states
     Random.seed!(123)
     symm = RotateReflect()
-    H = heisenberg_XYZ_c4v(InfiniteSquare())
-    peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
+    H′ = heisenberg_XYZ_c4v(InfiniteSquare())
+    H = T <: Real ? real(H′) : H′
+    peps₀ = InfinitePEPS(randn, T, ComplexSpace(2), ComplexSpace(Dbond))
     peps₀ = peps_normalize(symmetrize!(peps₀, symm))
     e₀ = initialize_random_c4v_env(peps₀, ComplexSpace(χenv))
     env₀, = leading_boundary(e₀, peps₀; alg = :c4v)
