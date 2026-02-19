@@ -63,8 +63,8 @@ $(TYPEDFIELDS)
 Construct a `SVDAdjoint` algorithm struct based on the following keyword arguments:
 
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
-    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`
+    - `:sdd` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
+    - `:svd` : MatrixAlgebraKit's `LAPACK_QRIteration`
     - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`
     - `:jacobi` : MatrixAlgebraKit's `LAPACK_Jacobi`
     - `:gkl` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
@@ -81,8 +81,8 @@ struct SVDAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :divideandconquer => LAPACK_DivideAndConquer,
-    :qriteration => LAPACK_QRIteration,
+    :sdd => LAPACK_DivideAndConquer,
+    :svd => LAPACK_QRIteration,
     :bisection => LAPACK_Bisection,
     :jacobi => LAPACK_Jacobi,
     :gkl => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
