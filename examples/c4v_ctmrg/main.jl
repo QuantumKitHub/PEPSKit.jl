@@ -58,7 +58,7 @@ md"""
 ## Initializing C₄ᵥ-invariant PEPSs and environments
 
 In order to use $C_{4v}$-symmetric algorithms, it is of course crucial to use initial guesses
-that are exhibit $C_{4v}$ symmetry. First, we create a real-valued random PEPS that we explicitly
+with $C_{4v}$ symmetry. First, we create a real-valued random PEPS that we explicitly
 symmetrize using [`symmetrize!`](@ref) and the $C_{4v}$ symmetry [`RotateReflect`](@ref):
 """
 
@@ -80,7 +80,7 @@ env_random_c4v = initialize_random_c4v_env(peps₀, ComplexSpace(χ));
 
 md"""
 Then contracting the PEPS using $C_{4v}$ CTMRG is as easy as just calling [`leading_boundary`](@ref)
-but passing the invariant initial PEPS and environment as well as the `alg = :c4v` keyword argument:
+but passing the initial PEPS and environment as well as the `alg = :c4v` keyword argument:
 """
 
 env₀, = leading_boundary(env_random_c4v, peps₀; alg = :c4v, tol = 1.0e-10);
@@ -88,9 +88,9 @@ env₀, = leading_boundary(env_random_c4v, peps₀; alg = :c4v, tol = 1.0e-10);
 md"""
 ## C₄ᵥ-symmetric optimization
 
-We now take the invariant `peps₀` and `env₀` as a starting point for a gradient-based energy
+We now take `peps₀` and `env₀` as a starting point for a gradient-based energy
 minimization where we contract using $C_{4v}$ CTMRG such that the energy gradient will also
-exhibit rotation and reflection symmetry. For that, we call `fixedpoint` and specify `alg = :c4v`
+exhibit $C_{4v}$-symmetry. For that, we call `fixedpoint` and specify `alg = :c4v`
 as the boundary contraction algorithm:
 """
 
@@ -103,7 +103,7 @@ md"""
 We note that this energy is slightly higher than the one obtained from an
 [optimization using asymmetric CTMRG](@ref examples_heisenberg) with equivalent settings.
 Indeed, this is what one would expect since the $C_{4v}$ symmetry restricts the PEPS ansatz
-leading to less free parameters, i.e. an ansatz with a reduced expressivity.
+leading to fewer free parameters, i.e. an ansatz with reduced expressivity.
 Comparing against Juraj Hasik's data from $J_1\text{-}J_2$
 [PEPS simulations](https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat),
 we find very good agreement:
