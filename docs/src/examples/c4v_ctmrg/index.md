@@ -141,14 +141,14 @@ peps, env, E, = fixedpoint(
 
 We note that this energy is slightly higher than the one obtained from an
 [optimization using asymmetric CTMRG](@ref examples_heisenberg) with equivalent settings.
-Indeed, this is what one would expect since the $C_{4v}$ symmtry restricts the PEPS ansatz
+Indeed, this is what one would expect since the $C_{4v}$ symmetry restricts the PEPS ansatz
 leading to less free parameters, i.e. an ansatz with a reduced expressivity.
 Comparing against Juraj Hasik's data from $J_1\text{-}J_2$
 [PEPS simulations](https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat),
 we find very good agreement:
 
 ````julia
-E_ref = -0.6602310934799577 # Juraj's energy at D=2, χ=32 with C4v symmetry
+E_ref = -0.6602310934799577 # Juraj's energy at D=2, χ=16 with C4v symmetry
 @show (E - E_ref) / E_ref;
 ````
 
@@ -178,7 +178,7 @@ the enlarged corner $A = V D V^\dagger$, taking the diagonal eigenvalue tensor a
 corner $C' = D$ and then renormalizing the edge using the isometry $V$. There exist modifications
 to this standard algorithm, most notably *QR-CTMRG* as presented in a recent publication by
 [Zhang, Yang and Corboz](@cite zhang_accelerating_2025). There the idea is to replace the
-eigendecomposition by a QR decomposition on a lower-rank approximation of the enlarged corner.
+eigendecomposition by a QR decomposition of a lower-rank approximation of the enlarged corner.
 While less accurate in some ways, the QR-CTMRG approach substantially accelerates contraction
 and optimization times, and also has vastly improved GPU performance. Notably, it is found
 that QR-CTMRG converges to the same fixed point as regular $C_{4v}$ CTMRG.
@@ -208,7 +208,8 @@ type (only regular `eigh`-based $C_{4v}$ CTMRG produces diagonal corners):
 
 ````julia
 peps_qr, env_qr, E_qr, = fixedpoint(
-    H, peps₀, env_qr₀; optimizer_alg = (; tol = 1.0e-4),
+    H, peps₀, env_qr₀;
+    optimizer_alg = (; tol = 1.0e-4),
     boundary_alg = (; alg = :c4v, projector_alg = :c4v_qr, maxiter = 500),
     gradient_alg = (; alg = :linsolver)
 );
