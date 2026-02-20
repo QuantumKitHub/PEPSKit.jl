@@ -16,7 +16,7 @@ Construct a `FullEighPullback` algorithm struct from the following keyword argum
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct FullEighPullback
-    degeneracy_tol::Real = Defaults.rrule_degeneracy_tol
+    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -38,7 +38,7 @@ Construct a `TruncEighPullback` algorithm struct from the following keyword argu
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct TruncEighPullback
-    degeneracy_tol::Real = Defaults.rrule_degeneracy_tol
+    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -103,7 +103,7 @@ function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
     rrule_algorithm = if rrule_alg isa NamedTuple
         rrule_kwargs = (;
             alg = Defaults.eigh_rrule_alg,
-            degeneracy_tol = Defaults.rrule_degeneracy_tol,
+            degeneracy_atol = Defaults.rrule_degeneracy_atol,
             verbosity = Defaults.eigh_rrule_verbosity,
             rrule_alg...,
         ) # overwrite with specified kwargs
@@ -112,7 +112,7 @@ function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
             throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
         rrule_type = EIGH_RRULE_SYMBOLS[rrule_kwargs.alg]
         if rrule_type <: Union{FullEighPullback, TruncEighPullback}
-            rrule_kwargs = (; rrule_kwargs.degeneracy_tol, rrule_kwargs.verbosity)
+            rrule_kwargs = (; rrule_kwargs.degeneracy_atol, rrule_kwargs.verbosity)
         end
 
         rrule_type(; rrule_kwargs...)
@@ -351,7 +351,7 @@ function ChainRulesCore.rrule(
     function eigh_trunc!_full_pullback(ΔDV)
         Δt = eigh_pullback!(
             zeros(scalartype(t), space(t)), t, (D, V), ΔDV, inds;
-            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
+            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -375,7 +375,7 @@ function ChainRulesCore.rrule(
     function eigh_trunc!_trunc_pullback(ΔDV)
         Δf = eigh_trunc_pullback!(
             zeros(scalartype(t), space(t)), t, (D, V), ΔDV;
-            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
+            gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
     end

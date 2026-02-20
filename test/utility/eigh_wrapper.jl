@@ -54,8 +54,8 @@ end
     d.data[1:2:n] .= d.data[2:2:n] # make every eigenvalue two-fold degenerate
     r_degen = v * d * v'
 
-    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-30
-    small_broadening_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-13
+    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-30
+    small_broadening_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, alg, R, trunc), r_degen
@@ -117,8 +117,8 @@ end
     d.data[1:2:symm_m] .= d.data[2:2:symm_m] # make every eigenvalue two-fold degenerate
     symm_r_degen = v * d * v'
 
-    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-30
-    small_broadening_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-13
+    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-30
+    small_broadening_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, alg, symm_R, symm_trspace), symm_r_degen

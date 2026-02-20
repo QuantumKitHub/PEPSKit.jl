@@ -22,16 +22,11 @@ Random.seed!(123456789)
 r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
-full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_tol = 1.0e-13))
-trunc_alg = SVDAdjoint(; rrule_alg = (; alg = :trunc, degeneracy_tol = 1.0e-13))
-iter_alg = SVDAdjoint(; fwd_alg = (; alg = :gkl))
+full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_atol = 1.0e-13))
+trunc_alg = SVDAdjoint(; rrule_alg = (; alg = :trunc, degeneracy_atol = 1.0e-13))
+iter_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative))
 
 @testset "Non-truncated SVD" begin
-    # l_fullsvd, g_fullsvd = withgradient(A -> lossfun(A, full_alg, R), r)
-    # l_itersvd, g_itersvd = withgradient(A -> lossfun(A, iter_alg, R), r)
-
-    # @test l_itersvd ≈ l_fullsvd
-    # @test g_fullsvd[1] ≈ g_itersvd[1] rtol = rtol
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)
     l_trunc, g_trunc = withgradient(A -> lossfun(A, trunc_alg, R), r)
     l_iter, g_iter = withgradient(A -> lossfun(A, iter_alg, R), r)
@@ -58,8 +53,8 @@ end
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     r_degen = u * s * v
 
-    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-30
-    small_broadening_alg = @set full_alg.rrule_alg.degeneracy_tol = 1.0e-13
+    no_broadening_no_cutoff_alg = @set full_alg.rrule_alg.degeneracy_atol = 1.0e-30
+    small_broadening_alg = @set full_alg.rrule_alg.degeneracy_atol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, full_alg, R, trunc), r_degen
@@ -119,8 +114,8 @@ end
     s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
     symm_r_degen = u * s * v
 
-    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-30
-    small_broadening_alg = @set alg.rrule_alg.degeneracy_tol = 1.0e-13
+    no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-30
+    small_broadening_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-13
 
     l_only_cutoff, g_only_cutoff = withgradient(
         A -> lossfun(A, alg, symm_R, symm_trspace), symm_r_degen

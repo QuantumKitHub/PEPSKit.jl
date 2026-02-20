@@ -19,7 +19,7 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :sdd)), SVDAdjoint(; fwd_alg = (; alg = :gkl))]
+svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :sdd)), SVDAdjoint(; fwd_alg = (; alg = :iterative))]
 projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
@@ -93,10 +93,10 @@ c4v_algs = [
     end
 end
 
-@testset "Element-wise consistency of :sdd and :gkl" begin
+@testset "Element-wise consistency of :sdd and :iterative" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :gkl, krylovdim = χ + 10)),
+        decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative, krylovdim = χ + 10)),
     )
     ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :sdd)))
 

@@ -22,11 +22,11 @@ Module containing default algorithm parameter values and arguments.
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `rrule_degeneracy_tol=$(Defaults.rrule_degeneracy_tol)` : Broadening amplitude which smoothens the divergent term in the retained contributions of an SVD or eigh pullback, in case of (pseudo) degenerate singular values
+* `rrule_degeneracy_atol=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude which smoothens the divergent term in the retained contributions of an SVD or eigh pullback, in case of (pseudo) degenerate singular values
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
     - `:sdd` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
     - `:svd` : MatrixAlgebraKit's `LAPACK_QRIteration`
-    - `:gkl` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
+    - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
@@ -108,8 +108,8 @@ const sparse = false # TODO: implement sparse CTMRG
 
 # SVD forward & reverse
 const trunc = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
-const rrule_degeneracy_tol = 1.0e-13
-const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :bisection, :jacobi, :gkl}
+const rrule_degeneracy_atol = 1.0e-13
+const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :bisection, :jacobi, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1

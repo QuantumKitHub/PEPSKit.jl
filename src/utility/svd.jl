@@ -15,11 +15,11 @@ $(TYPEDFIELDS)
 
 Construct a `FullSVDPullback` algorithm struct from the following keyword arguments:
 
-* `degeneracy_tol::Real=$(Defaults.rrule_degeneracy_tol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
+* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct FullSVDPullback
-    degeneracy_tol::Real = Defaults.rrule_degeneracy_tol
+    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -38,11 +38,11 @@ $(TYPEDFIELDS)
 
 Construct a `TruncSVDPullback` algorithm struct from the following keyword arguments:
 
-* `degeneracy_tol::Real=$(Defaults.rrule_degeneracy_tol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
+* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
 @kwdef struct TruncSVDPullback
-    degeneracy_tol::Real = Defaults.rrule_degeneracy_tol
+    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -67,7 +67,7 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
     - `:svd` : MatrixAlgebraKit's `LAPACK_QRIteration`
     - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`
     - `:jacobi` : MatrixAlgebraKit's `LAPACK_Jacobi`
-    - `:gkl` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
+    - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:full` : MatrixAlgebraKit's `svd_pullback!` that requires access to the full spectrum
     - `:trunc` : MatrixAlgebraKit's `svd_trunc_pullback!` solving a Sylvester equation on the truncated subspace
@@ -85,7 +85,7 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :svd => LAPACK_QRIteration,
     :bisection => LAPACK_Bisection,
     :jacobi => LAPACK_Jacobi,
-    :gkl => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
+    :iterative => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullSVDPullback, :trunc => TruncSVDPullback,
@@ -111,7 +111,7 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
             alg = Defaults.svd_rrule_alg,
             tol = Defaults.svd_rrule_tol,
             krylovdim = Defaults.svd_rrule_min_krylovdim,
-            degeneracy_tol = Defaults.rrule_degeneracy_tol,
+            degeneracy_atol = Defaults.rrule_degeneracy_atol,
             verbosity = Defaults.svd_rrule_verbosity,
             rrule_alg...,
         ) # overwrite with specified kwargs
@@ -128,7 +128,7 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         if rrule_type <: Union{FullSVDPullback, TruncSVDPullback}
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, tol = 0.0, krylovdim = 0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
         else
-            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, degeneracy_tol = 0.0)) # remove `alg` and `degeneracy_tol` keyword arguments
+            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, degeneracy_atol = 0.0)) # remove `alg` and `degeneracy_atol` keyword arguments
             rrule_type <: BiCGStab &&
                 (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim = nothing))) # BiCGStab doesn't take `krylovdim`
         end
@@ -372,7 +372,7 @@ function ChainRulesCore.rrule(
         ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
             zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
+            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -397,7 +397,7 @@ function ChainRulesCore.rrule(
         ΔUSV = unthunk.(ΔUSV′)
         Δf = svd_trunc_pullback!(
             zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_tol,
+            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
     end
