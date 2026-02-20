@@ -90,7 +90,7 @@ md"""
 
 We now take `peps₀` and `env₀` as a starting point for a gradient-based energy
 minimization where we contract using $C_{4v}$ CTMRG such that the energy gradient will also
-exhibit $C_{4v}$-symmetry. For that, we call `fixedpoint` and specify `alg = :c4v`
+exhibit $C_{4v}$ symmetry. For that, we call `fixedpoint` and specify `alg = :c4v`
 as the boundary contraction algorithm:
 """
 
