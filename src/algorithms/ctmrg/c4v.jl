@@ -211,7 +211,8 @@ Compute the C₄ᵥ projector by decomposing the column-enlarged corner with `le
 """
 function c4v_projector!(enlarged_corner, alg::C4vQRProjector)
     Q, R = left_orth!(enlarged_corner, decomposition_algorithm(alg))
-    return Q, (; Q, R)
+    # TODO: what's a meaningful way to compute a truncation error/condition number in this scheme?
+    return Q, (; Q, R, truncation_error = zero(scalartype(Q)), condition_number = 0)
 end
 
 """
