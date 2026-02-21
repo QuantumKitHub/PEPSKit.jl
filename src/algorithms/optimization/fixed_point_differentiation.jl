@@ -320,24 +320,25 @@ end
 function gauge_fix(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
     rowsize, colsize = size(signs, 2), size(signs, 3)
-    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, r, c)
-        σ = signs[dir, r, c]
-        r_sign, c_sign = if dir == NORTH # take unit cell interdependency of signs into account
-            r, _prev(c, colsize)
+    inds = info.truncation_indices
+    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, row, col)
+        σ = signs[dir, row, col]
+        row_sign, col_sign = if dir == NORTH # take unit cell interdependency of signs into account
+            row, _prev(col, colsize)
         elseif dir == EAST
-            _prev(r, rowsize), c
+            _prev(row, rowsize), col
         elseif dir == SOUTH
-            r, _next(c, colsize)
+            row, _next(col, colsize)
         elseif dir == WEST
-            _next(r, rowsize), c
+            _next(row, rowsize), col
         end
-        extended_space = domain(info.U_full[dir, r_sign, c_sign]) ← codomain(info.V_full[dir, r_sign, c_sign])
-        extended_σ = zeros(scalartype(σ), extended_space)
-        for (c, b) in blocks(extended_σ)
-            σc = block(σ, c)
-            kept_dim = size(σc, 1)
-            b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
-            b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+
+        ind = inds[dir, row_sign, col_sign]
+        extended_σ = id(scalartype(σ), domain(info.S_full[dir, row_sign, col_sign]))
+        for (c, b) in blocks(σ)
+            I = get(ind, c, nothing)
+            @assert !isnothing(I)
+            block(extended_σ, c)[I, I] = b
         end
         return extended_σ
     end
@@ -346,7 +347,7 @@ function gauge_fix(alg::SVDAdjoint, signs, info)
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     U_full_fixed, V_full_fixed = fix_relative_phases(info.U_full, info.V_full, signs_full)
     return SVDAdjoint(;
-        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed, inds),
         rrule_alg = alg.rrule_alg,
     )
 end
@@ -354,7 +355,7 @@ function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     # fix kept U and V only since iterative SVD doesn't have access to full spectrum
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     return SVDAdjoint(;
-        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing, nothing),
         rrule_alg = alg.rrule_alg,
     )
 end
@@ -374,7 +375,7 @@ function gauge_fix(alg::EighAdjoint, signs, info)
     V_fixed = info.V * σ'
     V_full_fixed = info.V_full * extended_σ'
     return EighAdjoint(;
-        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed, info.truncation_indices),
+        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed, inds),
         rrule_alg = alg.rrule_alg,
     )
 end

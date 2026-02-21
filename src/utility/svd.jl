@@ -3,8 +3,7 @@ const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreEx
 """
 $(TYPEDEF)
 
-SVD reverse-rule algorithm which uses a modified version of TensorKit's `tsvd!` reverse-rule
-allowing for Lorentzian broadening and output verbosity control.
+SVD reverse-rule algorithm which wraps MatrixAlgebraKit's `svd_pullback!`.
 
 ## Fields
 
@@ -12,15 +11,38 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    FullSVDReverseRule(; kwargs...)
+    FullSVDPullback(; kwargs...)
 
-Construct a `FullSVDReverseRule` algorithm struct from the following keyword arguments:
+Construct a `FullSVDPullback` algorithm struct from the following keyword arguments:
 
-* `broadening::Float64=$(Defaults.svd_rrule_broadening)` : Lorentzian broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
+* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
-@kwdef struct FullSVDReverseRule
-    broadening::Float64 = Defaults.svd_rrule_broadening
+@kwdef struct FullSVDPullback
+    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
+    verbosity::Int = 0
+end
+
+"""
+$(TYPEDEF)
+
+SVD reverse-rule algorithm which wraps MatrixAlgebraKit's `svd_trunc_pullback!`.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    TruncSVDPullback(; kwargs...)
+
+Construct a `TruncSVDPullback` algorithm struct from the following keyword arguments:
+
+* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
+* `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
+"""
+@kwdef struct TruncSVDPullback
+    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
 
@@ -43,9 +65,12 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
     - `:sdd` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
     - `:svd` : MatrixAlgebraKit's `LAPACK_QRIteration`
+    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`
+    - `:jacobi` : MatrixAlgebraKit's `LAPACK_Jacobi`
     - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:full` : Uses a modified version of TensorKit's reverse-rule for `tsvd` which doesn't solve any linear problem and instead requires access to the full SVD, see [`FullSVDReverseRule`](@ref).
+    - `:full` : MatrixAlgebraKit's `svd_pullback!` that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's `svd_trunc_pullback!` solving a Sylvester equation on the truncated subspace
     - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
     - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
     - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
@@ -58,12 +83,13 @@ end  # Keep truncation algorithm separate to be able to specify CTMRG dependent 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :sdd => LAPACK_DivideAndConquer,
     :svd => LAPACK_QRIteration,
-    :iterative =>
-        (; tol = 1.0e-14, krylovdim = 25, kwargs...) ->
-    IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
+    :bisection => LAPACK_Bisection,
+    :jacobi => LAPACK_Jacobi,
+    :iterative => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :full => FullSVDReverseRule, :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+    :full => FullSVDPullback, :trunc => TruncSVDPullback,
+    :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
 )
 
 function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
@@ -85,7 +111,7 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
             alg = Defaults.svd_rrule_alg,
             tol = Defaults.svd_rrule_tol,
             krylovdim = Defaults.svd_rrule_min_krylovdim,
-            broadening = Defaults.svd_rrule_broadening,
+            degeneracy_atol = Defaults.rrule_degeneracy_atol,
             verbosity = Defaults.svd_rrule_verbosity,
             rrule_alg...,
         ) # overwrite with specified kwargs
@@ -95,14 +121,14 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
 
         # IterSVD is incompatible with tsvd rrule -> default to Arnoldi
-        if rrule_type <: FullSVDReverseRule && fwd_algorithm isa IterSVD
+        if rrule_type <: FullSVDPullback && fwd_algorithm isa IterSVD
             rrule_type = Arnoldi
         end
 
-        if rrule_type <: FullSVDReverseRule
+        if rrule_type <: Union{FullSVDPullback, TruncSVDPullback}
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, tol = 0.0, krylovdim = 0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
         else
-            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, broadening = 0.0)) # remove `alg` and `broadening` keyword arguments
+            rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, degeneracy_atol = 0.0)) # remove `alg` and `degeneracy_atol` keyword arguments
             rrule_type <: BiCGStab &&
                 (rrule_kwargs = Base.structdiff(rrule_kwargs, (; krylovdim = nothing))) # BiCGStab doesn't take `krylovdim`
         end
@@ -133,7 +159,9 @@ function MatrixAlgebraKit.svd_trunc!(
     return adjoint(vt), adjoint(s), adjoint(u), info
 end
 
+#
 ## Forward algorithms
+#
 
 # Truncated SVD but also return full U, S and V to make it compatible with :fixed mode
 function _svd_trunc!(
@@ -148,7 +176,9 @@ function _svd_trunc!(
     # construct info NamedTuple
     condnum = cond(S)
     info = (;
-        truncation_error = truncerror, condition_number = condnum, U_full = U, S_full = S, V_full = V⁺,
+        truncation_error = truncerror, condition_number = condnum,
+        U_full = U, S_full = S, V_full = V⁺,
+        truncation_indices = ind,
     )
     return Ũ, S̃, Ṽ⁺, info
 end
@@ -165,18 +195,19 @@ U, S, and V and, potentially, the full decompositions if the adjoints needs acce
 
 $(TYPEDFIELDS)
 """
-struct FixedSVD{Ut, St, Vt, Utf, Stf, Vtf}
+struct FixedSVD{Ut, St, Vt, Utf, Stf, Vtf, It}
     U::Ut
     S::St
     V::Vt
     U_full::Utf
     S_full::Stf
     V_full::Vtf
+    truncation_indices::It
 end
 
 # check whether the full U, S and V are supplied
 function isfullsvd(alg::FixedSVD)
-    if isnothing(alg.U_full) || isnothing(alg.S_full) || isnothing(alg.V_full)
+    if isnothing(alg.U_full) || isnothing(alg.S_full) || isnothing(alg.V_full) || isnothing(alg.truncation_indices)
         return false
     else
         return true
@@ -191,6 +222,7 @@ function _svd_trunc!(_, alg::FixedSVD, ::TruncationStrategy)
         U_full = alg.U_full,
         S_full = alg.S_full,
         V_full = alg.V_full,
+        truncation_indices = alg.truncation_indices,
     )
     return alg.U, alg.S, alg.V, info
 end
@@ -246,6 +278,7 @@ function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
     condition_number = cond(S)
     info = (;
         truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
+        truncation_indices = nothing,
     )
 
     return U, S, V, info
@@ -318,45 +351,29 @@ function _compute_svddata!(
     return SVDdata, dims
 end
 
+#
 ## Reverse-rule algorithms
+#
 
-# TensorKit.tsvd! rrule with info NamedTuple return value
+# svd_trunc! rrule wrapping MatrixAlgebraKit's svd_pullback!
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R};
         trunc::TruncationStrategy = notrunc(),
-    ) where {F, R <: FullSVDReverseRule}
-    @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with full SVD reverse-rule"
+    ) where {F, R <: FullSVDPullback}
+    @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with FullSVDPullback"
+
     Ũ, S̃, Ṽ⁺, info = svd_trunc(t, alg; trunc)
-    U, S, V⁺ = info.U_full, info.S_full, info.V_full # untruncated SVD decomposition
+    U, S, V⁺, inds = info.U_full, info.S_full, info.V_full, info.truncation_indices # untruncated decomposition
+    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
-    smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S̃))
-    pullback_tol = clamp(
-        smallest_sval, eps(scalartype(S̃))^(3 / 4), eps(scalartype(S̃))^(1 / 2)
-    )
-
-    function svd_trunc!_full_pullback(ΔUSVi)
-        ΔU, ΔS, ΔV⁺, = unthunk.(ΔUSVi)
-        Δt = similar(t)
-        for (c, b) in blocks(Δt)
-            Uc, Sc, V⁺c = block(U, c), block(S, c), block(V⁺, c)
-            ΔUc, ΔSc, ΔV⁺c = block(ΔU, c), block(ΔS, c), block(ΔV⁺, c)
-            Sdc = view(Sc, diagind(Sc))
-            ΔSdc = (ΔSc isa AbstractZero) ? ΔSc : view(ΔSc, diagind(ΔSc))
-            svd_pullback!(
-                b,
-                Uc,
-                Sdc,
-                V⁺c,
-                ΔUc,
-                ΔSdc,
-                ΔV⁺c;
-                tol = pullback_tol,
-                broadening = alg.rrule_alg.broadening,
-                verbosity = alg.rrule_alg.verbosity,
-            )
-        end
+    function svd_trunc!_full_pullback(ΔUSV′)
+        ΔUSV = unthunk.(ΔUSV′)
+        Δt = svd_pullback!(
+            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
+            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+        )
         return NoTangent(), Δt, NoTangent()
     end
     function svd_trunc!_full_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
@@ -364,6 +381,31 @@ function ChainRulesCore.rrule(
     end
 
     return (Ũ, S̃, Ṽ⁺, info), svd_trunc!_full_pullback
+end
+
+# svd_trunc! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
+function ChainRulesCore.rrule(
+        ::typeof(svd_trunc!),
+        t,
+        alg::SVDAdjoint{F, R};
+        trunc::TruncationStrategy = notrunc(),
+    ) where {F, R <: TruncSVDPullback}
+    U, S, V⁺, info = svd_trunc(t, alg; trunc)
+    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+
+    function svd_trunc!_trunc_pullback(ΔUSV′)
+        ΔUSV = unthunk.(ΔUSV′)
+        Δf = svd_trunc_pullback!(
+            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
+            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+        )
+        return NoTangent(), Δf, NoTangent()
+    end
+    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
+    end
+
+    return (U, S, V⁺, info), svd_trunc!_trunc_pullback
 end
 
 # KrylovKit rrule compatible with TensorMaps & function handles
@@ -434,183 +476,4 @@ function ChainRulesCore.rrule(
     end
 
     return (U, S, V, info), svd_trunc!_itersvd_pullback
-end
-
-# scalar inverses with a cutoff tolerance
-_safe_inv(x, tol) = abs(x) < tol ? zero(x) : inv(x)
-
-# compute inverse singular value difference contribution to SVD gradient with broadening ε
-function _broadened_inv_S(S::AbstractVector{T}, tol, ε = 0) where {T}
-    F = similar(S, (axes(S, 1), axes(S, 1)))
-    @inbounds for j in axes(F, 2), i in axes(F, 1)
-        F[i, j] = if i == j
-            zero(T)
-        else
-            Δsᵢⱼ = S[j] - S[i]
-            ε > 0 ? _lorentz_broaden(Δsᵢⱼ, ε) : _safe_inv(Δsᵢⱼ, tol)
-        end
-    end
-    return F
-end
-
-# Lorentzian broadening for divergent term in SVD rrule, see
-# https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.7.013237
-function _lorentz_broaden(x, ε = eps(real(scalartype(x)))^(3 / 4))
-    return x / (x^2 + ε)
-end
-
-function _default_pullback_gaugetol(x)
-    n = norm(x, Inf)
-    return eps(eltype(n))^(3 / 4) * max(n, one(n))
-end
-
-# SVD_pullback: pullback implementation for general (possibly truncated) SVD
-#
-# This is a modified version of TensorKit's pullback
-# https://github.com/Jutho/TensorKit.jl/blob/fa1551472ac74d7f2a61bdb2135cf418c8c53378/ext/TensorKitChainRulesCoreExt/factorizations.jl#L190)
-# with support for Lorentzian broadening and improved verbosity control
-#
-# Arguments are U, S and Vd of full (non-truncated, but still thin) SVD, as well as
-# cotangent ΔU, ΔS, ΔVd variables of truncated SVD
-#
-# Checks whether the cotangent variables are such that they would couple to gauge-dependent
-# degrees of freedom (phases of singular vectors), and prints a warning if this is the case
-#
-# An implementation that only uses U, S, and Vd from truncated SVD is also possible, but
-# requires solving a Sylvester equation, which does not seem to be supported on GPUs.
-#
-# Other implementation considerations for GPU compatibility:
-# no scalar indexing, lots of broadcasting and views
-#
-function svd_pullback!(
-        ΔA::AbstractMatrix,
-        U::AbstractMatrix,
-        S::AbstractVector,
-        Vd::AbstractMatrix,
-        ΔU,
-        ΔS,
-        ΔVd;
-        tol::Real = _default_pullback_gaugetol(S),
-        broadening::Real = 0,
-        verbosity = 1,
-    )
-
-    # Basic size checks and determination
-    m, n = size(U, 1), size(Vd, 2)
-    size(U, 2) == size(Vd, 1) == length(S) == min(m, n) || throw(DimensionMismatch())
-    p = -1
-    if !(ΔU isa AbstractZero)
-        m == size(ΔU, 1) || throw(DimensionMismatch())
-        p = size(ΔU, 2)
-    end
-    if !(ΔVd isa AbstractZero)
-        n == size(ΔVd, 2) || throw(DimensionMismatch())
-        if p == -1
-            p = size(ΔVd, 1)
-        else
-            p == size(ΔVd, 1) || throw(DimensionMismatch())
-        end
-    end
-    if !(ΔS isa AbstractZero)
-        if p == -1
-            p = length(ΔS)
-        else
-            p == length(ΔS) || throw(DimensionMismatch())
-        end
-    end
-    Up = view(U, :, 1:p)
-    Vp = view(Vd, 1:p, :)'
-    Sp = view(S, 1:p)
-
-    # rank
-    r = searchsortedlast(S, tol; rev = true)
-
-    # compute antihermitian part of projection of ΔU and ΔV onto U and V
-    # also already subtract this projection from ΔU and ΔV
-    if !(ΔU isa AbstractZero)
-        UΔU = Up' * ΔU
-        aUΔU = rmul!(UΔU - UΔU', 1 / 2)
-        if m > p
-            ΔU -= Up * UΔU
-        end
-    else
-        aUΔU = fill!(similar(U, (p, p)), 0)
-    end
-    if !(ΔVd isa AbstractZero)
-        VΔV = Vp' * ΔVd'
-        aVΔV = rmul!(VΔV - VΔV', 1 / 2)
-        if n > p
-            ΔVd -= VΔV' * Vp'
-        end
-    else
-        aVΔV = fill!(similar(Vd, (p, p)), 0)
-    end
-
-    # check whether cotangents arise from gauge-invariance objective function
-    mask = abs.(Sp' .- Sp) .< tol
-    Δgauge = norm(view(aUΔU, mask) + view(aVΔV, mask), Inf)
-    if p > r
-        rprange = (r + 1):p
-        Δgauge = max(Δgauge, norm(view(aUΔU, rprange, rprange), Inf))
-        Δgauge = max(Δgauge, norm(view(aVΔV, rprange, rprange), Inf))
-    end
-    if verbosity == 1 && Δgauge > tol # warn if verbosity is 1
-        @warn "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    elseif verbosity ≥ 2 # always info for debugging purposes
-        @info "`svd` cotangents sensitive to gauge choice: (|Δgauge| = $Δgauge)"
-    end
-
-    inv_S_minus = _broadened_inv_S(Sp, tol, broadening) # possibly divergent/broadened contribution
-    UdΔAV = @. (aUΔU + aVΔV) * inv_S_minus + (aUΔU - aVΔV) * _safe_inv(Sp' .+ Sp, tol)
-    if !(ΔS isa ZeroTangent)
-        UdΔAV[diagind(UdΔAV)] .+= real.(ΔS)
-        # in principle, ΔS is real, but maybe not if coming from an anyonic tensor
-    end
-    mul!(ΔA, Up, UdΔAV * Vp')
-
-    if r > p # contribution from truncation
-        Ur = view(U, :, (p + 1):r)
-        Vr = view(Vd, (p + 1):r, :)'
-        Sr = view(S, (p + 1):r)
-
-        if !(ΔU isa AbstractZero)
-            UrΔU = Ur' * ΔU
-            if m > r
-                ΔU -= Ur * UrΔU # subtract this part from ΔU
-            end
-        else
-            UrΔU = fill!(similar(U, (r - p, p)), 0)
-        end
-        if !(ΔVd isa AbstractZero)
-            VrΔV = Vr' * ΔVd'
-            if n > r
-                ΔVd -= VrΔV' * Vr' # subtract this part from ΔV
-            end
-        else
-            VrΔV = fill!(similar(Vd, (r - p, p)), 0)
-        end
-
-        X = @. (1 // 2) * (
-            (UrΔU + VrΔV) * _safe_inv(Sp' - Sr, tol) +
-                (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
-        )
-        Y = @. (1 // 2) * (
-            (UrΔU + VrΔV) * _safe_inv(Sp' - Sr, tol) -
-                (UrΔU - VrΔV) * _safe_inv(Sp' + Sr, tol)
-        )
-
-        # ΔA += Ur * X * Vp' + Up * Y' * Vr'
-        mul!(ΔA, Ur, X * Vp', 1, 1)
-        mul!(ΔA, Up * Y', Vr', 1, 1)
-    end
-
-    if m > max(r, p) && !(ΔU isa AbstractZero) # remaining ΔU is already orthogonal to U[:,1:max(p,r)]
-        # ΔA += (ΔU .* _safe_inv.(Sp', tol)) * Vp'
-        mul!(ΔA, ΔU .* _safe_inv.(Sp', tol), Vp', 1, 1)
-    end
-    if n > max(r, p) && !(ΔVd isa AbstractZero) # remaining ΔV is already orthogonal to V[:,1:max(p,r)]
-        # ΔA += U * (_safe_inv.(Sp, tol) .* ΔVd)
-        mul!(ΔA, Up, _safe_inv.(Sp, tol) .* ΔVd, 1, 1)
-    end
-    return ΔA
 end
