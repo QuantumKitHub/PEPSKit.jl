@@ -21,7 +21,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
-* `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
+* `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
 struct SequentialCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
@@ -86,10 +86,7 @@ function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorA
     )
     proj_and_info = similar(coordinates, T_dst)
     proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
-        trunc = truncation_strategy(alg, env.edges[WEST, _prev(r, size(env, 2)), c])
-        proj, info = sequential_projectors(
-            (WEST, r, c), network, env, @set(alg.trunc = trunc)
-        )
+        proj, info = sequential_projectors((WEST, r, c), network, env, alg)
         return proj, info
     end
     return _split_proj_and_info(proj_and_info′)
@@ -99,9 +96,11 @@ function sequential_projectors(
     )
     _, r, c = coordinate
     r′ = _prev(r, size(env, 2))
+    trunc = truncation_strategy(alg, env.edges[WEST, r′, c])
+    alg′ = @set alg.trunc = trunc
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
-    return compute_projector((Q1, Q2), coordinate, alg)
+    return compute_projector((Q1, Q2), coordinate, alg′)
 end
 function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
@@ -110,13 +109,15 @@ function sequential_projectors(
     coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
+    trunc = truncation_strategy(alg, env.edges[WEST, coordinate_nw[2:3]...])
+    alg′ = @set alg.trunc = trunc
     ec = (
         TensorMap(EnlargedCorner(network, env, coordinate_se)),
         TensorMap(EnlargedCorner(network, env, coordinate)),
         TensorMap(EnlargedCorner(network, env, coordinate_nw)),
         TensorMap(EnlargedCorner(network, env, coordinate_ne)),
     )
-    return compute_projector(ec, coordinate, alg)
+    return compute_projector(ec, coordinate, alg′)
 end
 
 """
@@ -139,10 +140,10 @@ function renormalize_sequentially(col::Int, projectors, network, env)
 
     # Apply projectors to renormalize corners and edge
     for row in axes(env.corners, 2)
-        C_southwest = renormalize_bottom_corner((row, col), env, projectors)
+        C_southwest = renormalize_southwest_corner((row, col), env, projectors)
         corners[SOUTHWEST, row, col] = C_southwest / norm(C_southwest)
 
-        C_northwest = renormalize_top_corner((row, col), env, projectors)
+        C_northwest = renormalize_northwest_corner((row, col), env, projectors)
         corners[NORTHWEST, row, col] = C_northwest / norm(C_northwest)
 
         E_west = renormalize_west_edge((row, col), env, projectors, network)

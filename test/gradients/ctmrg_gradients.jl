@@ -35,6 +35,15 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
+# :fixed iterscheme is incompatible with sequential CTMRG
+function _check_disallowed_combination(
+        ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
+    )
+    ctmrg_alg == :sequential && gradient_iterscheme == :fixed && return true
+    return false
+end
+
+
 ## Tests
 # ------
 @testset "AD CTMRG energy gradients for $(names[i]) model" verbose = true for i in
@@ -54,8 +63,18 @@ naive_gradient_done = Set()
         ) in Iterators.product(
             calgs, palgs, salgs, galgs, gischemes
         )
-        # filter all disallowed combinations
-        (ctmrg_alg == :sequential && gradient_iterscheme == :fixed) && continue
+
+        # filter disallowed algorithm combinations
+        if _check_disallowed_combination(
+                ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_iterscheme
+            )
+            # but verify that its use would throw an error
+            @test_throws ArgumentError PEPSOptimize(;
+                boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg))),
+                gradient_alg = (; alg = gradient_alg, iterscheme = gradient_iterscheme, tol = gradtol),
+            )
+            continue
+        end
 
         # check for allowed algorithm combinations when testing naive gradient
         if isnothing(gradient_alg)
@@ -74,7 +93,7 @@ naive_gradient_done = Set()
             alg = ctmrg_alg,
             verbosity = ctmrg_verbosity,
             projector_alg = projector_alg,
-            svd_alg = (; rrule_alg = (; alg = svd_rrule_alg)),
+            decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg)),
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
@@ -105,4 +124,43 @@ naive_gradient_done = Set()
         end
         @test dfs1 ≈ dfs2 atol = 1.0e-2
     end
+end
+
+## Regression test for gradient accuracy (https://github.com/QuantumKitHub/PEPSKit.jl/pull/276)
+@testset "AD CTMRG energy gradient accuracy regression test (#276)" begin
+    Random.seed!(1234)
+
+    boundary_alg = PEPSKit.CTMRGAlgorithm(; tol = 1.0e-10)
+    gradient_alg = PEPSKit.GradMode(; alg = :linsolver, tol = 5.0e-8, iterscheme = :fixed)
+
+    function fg((peps, env))
+        E, g = Zygote.withgradient(peps) do ψ
+            env2, = PEPSKit.hook_pullback(
+                leading_boundary,
+                env,
+                ψ,
+                boundary_alg;
+                alg_rrule = gradient_alg,
+            )
+            return cost_function(ψ, env2, H)
+        end
+        return E, only(g)
+    end
+
+    # initialize randomly
+    H = heisenberg_XYZ(InfiniteSquare(1, 1))
+    peps = PEPSKit.peps_normalize(InfinitePEPS(randn, ComplexF64, physicalspace(H)[1], ComplexSpace(3)))
+    env0 = CTMRGEnv(randn, ComplexF64, peps, ComplexSpace(20))
+
+    # test gradient against finite-difference
+    Δx = 1.0e-5
+    _, _, dfs1, dfs2 = OptimKit.optimtest(
+        fg, (peps, env0);
+        alpha = LinRange(-Δx, Δx, 2),
+        retract = PEPSKit.peps_retract,
+        inner = PEPSKit.real_inner,
+    )
+
+    # verify high gradient accuracy for small finite-difference step size
+    @test dfs1 ≈ dfs2 rtol = 1.0e-2 * Δx
 end

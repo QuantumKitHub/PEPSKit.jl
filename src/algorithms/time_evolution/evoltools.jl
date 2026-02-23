@@ -143,8 +143,8 @@ function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor,
             ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
         end
     end
-    X, a = left_orth(permute(A, permA))
-    Y, b = left_orth(permute(B, permB))
+    X, a = left_orth(permute(A, permA); positive = true)
+    Y, b = left_orth(permute(B, permB); positive = true)
     # no longer needed after TensorKit 0.15
     # @assert !isdual(space(a, 1))
     # @assert !isdual(space(b, 1))
@@ -226,11 +226,7 @@ function _apply_gate(
     else
         trunc
     end
-
-    # TODO: replace this with actual truncation error once TensorKit is updated
-    ac, sc, bc = svd_compact!(a2b2; alg = LAPACK_QRIteration())
-    a, s, b, ϵ = _truncate_compact((ac, sc, bc), trunc)
-
+    a, s, b, ϵ = svd_trunc!(a2b2; trunc, alg = LAPACK_QRIteration())
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)

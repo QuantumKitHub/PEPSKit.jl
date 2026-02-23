@@ -233,7 +233,9 @@ end
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
-function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
+function ChainRulesCore.rrule(
+        ::Type{CTMRGEnv}, corners::Array{C, 3}, edges::Array{T, 3}
+    ) where {C, T}
     ctmrgenv_pullback(ē) = NoTangent(), ē.corners, ē.edges
     return CTMRGEnv(corners, edges), ctmrgenv_pullback
 end

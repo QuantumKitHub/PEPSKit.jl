@@ -7,6 +7,16 @@ Algorithm for gauging PEPS with belief propagation fixed point messages.
     # TODO: add options
 end
 
+function _bpenv_bipartite_check(env::BPEnv)
+    for (r, c) in Iterators.product(1:2, 1:2)
+        r′, c′ = _next(r, 2), _next(c, 2)
+        if !all(env[:, r, c] .== env[:, r′, c′])
+            return false
+        end
+    end
+    return true
+end
+
 """
     gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::BPGauge, env::BPEnv)
 
@@ -15,10 +25,18 @@ an [`InfinitePEPO`](@ref) interpreted as purified state with two physical legs)
 using fixed point environment `env` of belief propagation.
 """
 function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
+    bipartite = _state_bipartite_check(psi) && _bpenv_bipartite_check(env)
     psi′ = copy(psi)
     XXinv = map(eachcoordinate(psi, 1:2)) do I
         _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env)
         return X, Xinv
+    end
+    if bipartite
+        # copy 1st column to 2nd column to eliminate differences
+        # caused by order of applying gauge transformations
+        for r in 1:2
+            psi′[_next(r, 2), 2] = copy(psi′[r, 1])
+        end
     end
     return psi′, XXinv
 end
@@ -99,7 +117,7 @@ function SUWeight(env::BPEnv)
     wts = map(Iterators.product(1:2, axes(env, 2), axes(env, 3))) do (dir′, row, col)
         I = CartesianIndex(mod1(dir′ + 1, 2), row, col)
         sqrtM12, _, sqrtM21, _ = _sqrt_bp_messages(I, env)
-        Λ = svd_vals!(sqrtM12 * sqrtM21)
+        Λ = DiagonalTensorMap(svd_vals!(sqrtM12 * sqrtM21))
         return isdual(space(sqrtM12, 1)) ? _fliptwist_s(Λ) : Λ
     end
     return SUWeight(wts)

@@ -200,12 +200,41 @@ EigSolver(; kwargs...) = GradMode(; alg = :eigsolver, kwargs...)
 
 GRADIENT_MODE_SYMBOLS[:eigsolver] = EigSolver
 
+"""
+    _check_algorithm_combination(boundary_alg, gradient_alg)
+
+Check for allowed combinations of gradient algorithm and boundary algorithm to be used for
+computing the gradient of a `leading_boundary` call. Throws an error containing a
+recommended fix if the combination is not allowed or broken.
+"""
+function _check_algorithm_combination(boundary_alg, gradient_alg) end
+function _check_algorithm_combination(::SequentialCTMRG, ::GradMode{:fixed})
+    msg = "`:fixed` mode is not compatible with `SequentialCTMRG` since the sequential \
+          application of SVDs does not allow to differentiate through a fixed set of \
+          gauges; select SimultaneousCTMRG instead to use :fixed mode"
+    throw(ArgumentError(msg))
+end
+function _check_algorithm_combination(::C4vCTMRG{<:C4vEighProjector}, ::GradMode{:diffgauge})
+    msg = "`:diffgauge` mode is currently not compatible with eigh-based C4v CTMRG; \
+          either switch to a different projector algorithm (e.g. `c4v_qr`), or use :fixed \
+          mode for differentiation instead."
+    throw(ArgumentError(msg))
+end
+
 #=
 Evaluating the gradient of the cost function for CTMRG:
 - The gradient of the cost function for CTMRG can be computed using automatic differentiation (AD) or explicit evaluation of the geometric sum.
 - With AD, the gradient is computed by differentiating the cost function with respect to the PEPS tensors, including computing the environment tensors.
 - With explicit evaluation of the geometric sum, the gradient is computed by differentiating the cost function with the environment kept fixed, and then manually adding the gradient contributions from the environments.
 =#
+
+_scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
+_scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
+
+function _set_fixed_truncation(alg::CTMRGAlgorithm)
+    alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    return alg_fixed
+end
 
 function _rrule(
         gradmode::GradMode{:diffgauge},
@@ -215,21 +244,26 @@ function _rrule(
         state,
         alg::Union{CTMRGAlgorithm,CTMRGAlgorithmTriangular},
     )
+    _check_algorithm_combination(alg, gradmode)
+
     env, info = leading_boundary(envinit, state, alg)
-    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
+
+    # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
+    function f(A, x)
+        return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x, alg_gauge)[1]
+    end
+    # compute its pullback
+    _, env_vjp = rrule_via_ad(config, f, state, env)
+    # split off state and environment parts
+    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
 
     function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        # find partial gradients of gauge-fixed single CTMRG iteration
-        function f(A, x)
-            return gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1])[1]
-        end
-        _, env_vjp = rrule_via_ad(config, f, state, env)
-
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
         ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
@@ -245,37 +279,42 @@ function _rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit,
         state,
-        alg::SimultaneousCTMRG,
+        alg::CTMRGAlgorithm,
     )
-    env, = leading_boundary(envinit, state, alg)
-    alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    env_fixed, signs = gauge_fix(env, env_conv)
+    _check_algorithm_combination(alg, gradmode)
 
-    # Fix SVD
-    svd_alg_fixed = _fix_svd_algorithm(alg.projector_alg.svd_alg, signs, info)
-    alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
-    alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
+    env, = leading_boundary(envinit, state, alg)
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    _, signs = gauge_fix(env_conv, env, alg_gauge)
+
+    # fix decomposition
+    alg_fixed = gauge_fix(alg, signs, info)
+
+    # prepare iterating function corresponding to a single CTMRG iteration with a
+    # gauge-fixed projector
+    function f(A, x)
+        return fix_global_phases(
+            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x,
+        )
+    end
+    # prepare its pullback
+    _, env_vjp = rrule_via_ad(config, f, state, env)
+    # split off state and environment parts
+    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        function f(A, x)
-            return fix_global_phases(
-                x, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
-            )
-        end
-        _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
-
         # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
         ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
 
-    return (env_fixed, info), leading_boundary_fixed_pullback
+    return (env, info), leading_boundary_fixed_pullback
 end
 
 function _rrule(
@@ -317,27 +356,28 @@ function _rrule(
     return (env_fixed, info), leading_boundary_fixed_pullback
 end
 
-function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
+function gauge_fix(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
     rowsize, colsize = size(signs, 2), size(signs, 3)
-    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, r, c)
-        σ = signs[dir, r, c]
-        r_sign, c_sign = if dir == NORTH # take unit cell interdependency of signs into account
-            r, _prev(c, colsize)
+    inds = info.truncation_indices
+    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, row, col)
+        σ = signs[dir, row, col]
+        row_sign, col_sign = if dir == NORTH # take unit cell interdependency of signs into account
+            row, _prev(col, colsize)
         elseif dir == EAST
-            _prev(r, rowsize), c
+            _prev(row, rowsize), col
         elseif dir == SOUTH
-            r, _next(c, colsize)
+            row, _next(col, colsize)
         elseif dir == WEST
-            _next(r, rowsize), c
+            _next(row, rowsize), col
         end
-        extended_space = domain(info.U_full[dir, r_sign, c_sign]) ← codomain(info.V_full[dir, r_sign, c_sign])
-        extended_σ = zeros(scalartype(σ), extended_space)
-        for (c, b) in blocks(extended_σ)
-            σc = block(σ, c)
-            kept_dim = size(σc, 1)
-            b[diagind(b)] .= one(scalartype(σ)) # put ones on the diagonal
-            b[1:kept_dim, 1:kept_dim] .= σc # set to σ on kept subspace
+
+        ind = inds[dir, row_sign, col_sign]
+        extended_σ = id(scalartype(σ), domain(info.S_full[dir, row_sign, col_sign]))
+        for (c, b) in blocks(σ)
+            I = get(ind, c, nothing)
+            @assert !isnothing(I)
+            block(extended_σ, c)[I, I] = b
         end
         return extended_σ
     end
@@ -346,15 +386,51 @@ function _fix_svd_algorithm(alg::SVDAdjoint, signs, info)
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     U_full_fixed, V_full_fixed = fix_relative_phases(info.U_full, info.V_full, signs_full)
     return SVDAdjoint(;
-        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed),
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed, inds),
         rrule_alg = alg.rrule_alg,
     )
 end
-function _fix_svd_algorithm(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
+function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
     # fix kept U and V only since iterative SVD doesn't have access to full spectrum
     U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
     return SVDAdjoint(;
-        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing),
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing, nothing),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::EighAdjoint, signs, info)
+    σ = signs[1]
+    inds = info.truncation_indices
+
+    # embed gauge signs in larger space to fix gauge of full V on truncated subspace
+    extended_σ = id(scalartype(σ), domain(info.D_full))
+    for (c, b) in blocks(σ)
+        I = get(inds, c, nothing)
+        @assert !isnothing(I)
+        block(extended_σ, c)[I, I] = b
+    end
+
+    # fix kept and full V
+    V_fixed = info.V * σ'
+    V_full_fixed = info.V_full * extended_σ'
+    return EighAdjoint(;
+        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed, inds),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEigh}
+    # fix kept V only since iterative decomposition doesn't have access to full spectrum
+    V_fixed = info.V * signs[1]'
+    return EighAdjoint(;
+        fwd_alg = FixedEig(info.D, V_fixed, nothing, nothing, nothing),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::QRAdjoint, signs, info)
+    Q_fixed = info.Q * signs[1]'
+    R_fixed = signs[1] * info.R
+    return QRAdjoint(;
+        fwd_alg = FixedQR(Q_fixed, R_fixed),
         rrule_alg = alg.rrule_alg,
     )
 end
@@ -435,7 +511,7 @@ end
 function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
     function f(X)
         y = ∂f∂x(X[1])
-        return (y + X[2] * ∂F∂x, X[2])
+        return (VI.add!!(y, ∂F∂x, X[2]), X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
     _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg.solver_alg)
@@ -457,7 +533,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         )
         return fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, backup_ls_alg)
     else
-        y = scale(vecs[1][1], 1 / vecs[1][2])
+        y = VI.scale!!(vecs[1][1], inv(vecs[1][2]))
     end
 
     return ∂f∂A(y)

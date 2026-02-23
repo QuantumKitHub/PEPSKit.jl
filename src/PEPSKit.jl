@@ -8,15 +8,27 @@ using VectorInterface
 import VectorInterface as VI
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: TruncationStrategy, LAPACK_DivideAndConquer, LAPACK_QRIteration
-using TensorKit
+using MatrixAlgebraKit: LAPACK_DivideAndConquer, LAPACK_QRIteration
+using MatrixAlgebraKit:
+    TruncationStrategy, NoTruncation, truncate, findtruncated, truncation_error, diagview
+using MatrixAlgebraKit: LAPACK_EighAlgorithm, eigh_pullback!, eigh_trunc_pullback!
+using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 
-using KrylovKit, OptimKit, TensorOperations
+using TensorKit
+using TensorKit: AdjointTensorMap, SectorDict
+using TensorKit: throw_invalid_innerproduct, similarstoragetype
+using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
+
+using KrylovKit
+using KrylovKit: Lanczos, BlockLanczos
+
+using TensorOperations, OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
+using MPSKit: InfiniteEnvironments
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
@@ -29,7 +41,9 @@ include("Defaults.jl")  # Include first to allow for docstring interpolation wit
 
 include("utility/util.jl")
 include("utility/diffable_threads.jl")
+include("utility/eigh.jl")
 include("utility/svd.jl")
+include("utility/qr.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
@@ -46,6 +60,8 @@ include("states/infinitepeps.jl")
 include("states/infinitepepstriangular.jl")
 include("states/infinitepartitionfunction.jl")
 
+include("utility/symmetrization.jl")
+
 include("operators/infinitepepo.jl")
 include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
@@ -58,7 +74,18 @@ include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
 
-include("algorithms/contractions/ctmrg_contractions.jl")
+include("algorithms/contractions/ctmrg/types.jl")
+include("algorithms/contractions/ctmrg/expr.jl")
+include("algorithms/contractions/ctmrg/enlarge_corner.jl")
+include("algorithms/contractions/ctmrg/enlarge_corner_column.jl")
+include("algorithms/contractions/ctmrg/projector.jl")
+include("algorithms/contractions/ctmrg/halfinf_env.jl")
+include("algorithms/contractions/ctmrg/fullinf_env.jl")
+include("algorithms/contractions/ctmrg/renormalize_corner.jl")
+include("algorithms/contractions/ctmrg/renormalize_edge.jl")
+include("algorithms/contractions/ctmrg/contract_site.jl")
+include("algorithms/contractions/ctmrg/gaugefix.jl")
+
 include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
@@ -76,6 +103,7 @@ include("algorithms/ctmrg/projectors.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
+include("algorithms/ctmrg/c4v.jl")
 
 include("algorithms/contractions/ctmrg_contractions_triangular.jl")
 include("algorithms/ctmrg_triangular/ctmrg.jl")
@@ -100,8 +128,6 @@ include("algorithms/toolbox.jl")
 include("algorithms/toolbox_triangular.jl")
 include("algorithms/correlators.jl")
 
-include("utility/symmetrization.jl")
-
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
 
@@ -109,11 +135,13 @@ include("algorithms/select_algorithm.jl")
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export SVDAdjoint, FullSVDReverseRule, IterSVD
+export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export CTMRGEnvTriangular, SimultaneousCTMRGTriangular # CTMRGTriaEnv, SimultaneousCTMRGTria
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
+export C4vCTMRG, C4vEighProjector, C4vQRProjector
+export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace
 export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function
