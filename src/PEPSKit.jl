@@ -38,11 +38,12 @@ include("utility/retractions.jl")
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
-include("networks/tensors_tria.jl")
+include("networks/tensors_triangular.jl")
 include("networks/local_triangular_sandwich.jl")
 include("networks/infinitetriangularnetwork.jl")
 
 include("states/infinitepeps.jl")
+include("states/infinitepepstriangular.jl")
 include("states/infinitepartitionfunction.jl")
 
 include("operators/infinitepepo.jl")
@@ -52,7 +53,7 @@ include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
-include("environments/ctmrg_tria_environments.jl")
+include("environments/ctmrg_environments_triangular.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
@@ -76,9 +77,10 @@ include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 
-include("algorithms/triangular_ctmrg/ctmrg.jl")
-include("algorithms/triangular_ctmrg/utility.jl")
-include("algorithms/triangular_ctmrg/simultaneous.jl")
+include("algorithms/contractions/ctmrg_contractions_triangular.jl")
+include("algorithms/ctmrg_triangular/ctmrg.jl")
+include("algorithms/ctmrg_triangular/utility.jl")
+include("algorithms/ctmrg_triangular/simultaneous.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
@@ -95,6 +97,7 @@ include("algorithms/bp/gaugefix.jl")
 
 include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
+include("algorithms/toolbox_triangular.jl")
 include("algorithms/correlators.jl")
 
 include("utility/symmetrization.jl")
@@ -108,7 +111,7 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export SVDAdjoint, FullSVDReverseRule, IterSVD
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
-export CTMRGTriaEnv, SimultaneousCTMRGTria
+export CTMRGEnvTriangular, SimultaneousCTMRGTriangular # CTMRGTriaEnv, SimultaneousCTMRGTria
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export LocalOperator, physicalspace
@@ -127,6 +130,7 @@ export TimeEvolver, timestep, time_evolve
 export InfiniteSquareNetwork, InfiniteTriangularNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
+export InfinitePEPSTriangular
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
 

@@ -1,5 +1,5 @@
 #TODO: Add docs and figure
-struct CTMRGTriaEnv{T}
+struct CTMRGEnvTriangular{T}
     "6 x rows x cols array of corner C tensors, where the first dimension specifies the spatial direction"
     C::Array{T, 3}
     "6 x rows x cols array of edge Ta tensors, where the first dimension specifies the spatial direction"
@@ -7,9 +7,9 @@ struct CTMRGTriaEnv{T}
     "6 x rows x cols array of edge Ta tensors, where the first dimension specifies the spatial direction"
     Eb::Array{T, 3}
 end
-# function CTMRGTriaEnv(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
+# function CTMRGEnvTriangular(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
 #     foreach(check_environment_virtualspace, edges)
-#     return CTMRGTriaEnv{C, T}(corners, edges)
+#     return CTMRGEnvTriangular{C, T}(corners, edges)
 # end
 
 # """
@@ -42,7 +42,7 @@ function get_Ds(D::A) where {A <: ElementarySpace}
     return [dir > 3 ? D' : D for dir in 1:6]
 end
 
-function CTMRGTriaEnv(
+function CTMRGEnvTriangular(
         f, T, D::Union{A, B}, chis::B; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {
         A <: ProductSpace, B <: ElementarySpace,
@@ -73,5 +73,5 @@ function CTMRGTriaEnv(
         Eas[dir, r, c] = Ea
         Ebs[dir, r, c] = Eb
     end
-    return CTMRGTriaEnv(Cs, Eas, Ebs)
+    return CTMRGEnvTriangular(Cs, Eas, Ebs)
 end
