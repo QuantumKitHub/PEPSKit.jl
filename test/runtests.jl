@@ -90,6 +90,9 @@ end
         @time @safetestset "Full update bond environment" begin
             include("bondenv/benv_fu.jl")
         end
+        @time @safetestset "Bond environments for NTU" begin
+            include("bondenv/benv_ntu.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
         @time @safetestset "`timestep` function" begin
