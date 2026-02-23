@@ -1,4 +1,4 @@
-const PEPSTriaTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 1, 6}
+const PEPSTensorTriangular{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 1, 6}
 
 """
 $(TYPEDEF)

@@ -1,11 +1,11 @@
-abstract type CTMRGTriaAlgorithm end
+abstract type CTMRGAlgorithmTriangular end
 
-function leading_boundary(env₀::CTMRGTriaEnv, network::InfiniteTriangularNetwork; kwargs...)
+function leading_boundary(env₀::CTMRGEnvTriangular, network::InfiniteTriangularNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
     return leading_boundary(env₀, network, alg)
 end
 function leading_boundary(
-        env₀::CTMRGTriaEnv, network::InfiniteTriangularNetwork, alg::CTMRGTriaAlgorithm
+        env₀::CTMRGEnvTriangular, network::InfiniteTriangularNetwork, alg::CTMRGAlgorithmTriangular
     )
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -33,7 +33,7 @@ function leading_boundary(
         return env, info
     end
 end
-function leading_boundary(env₀::CTMRGTriaEnv, state, args...; kwargs...)
+function leading_boundary(env₀::CTMRGEnvTriangular, state, args...; kwargs...)
     return leading_boundary(env₀, InfiniteTriangularNetwork(state), args...; kwargs...)
 end
 

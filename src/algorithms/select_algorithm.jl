@@ -161,7 +161,7 @@ end
 
 function select_algorithm(
         ::typeof(leading_boundary),
-        env₀::CTMRGTriaEnv
+        env₀::CTMRGEnvTriangular
     )
     return SimultaneousCTMRGTria()
 end
