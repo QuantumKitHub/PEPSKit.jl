@@ -104,7 +104,7 @@ PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
 _set_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
 
 function check_input(
-        network::InfiniteSquareNetwork, env::CTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10
+        ::typeof(leading_boundary), network::InfiniteSquareNetwork, env::CTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10
     )
     # check unit cell size
     length(network) == 1 || throw(ArgumentError("C4v CTMRG is only compatible with single-site unit cells."))
@@ -144,6 +144,10 @@ function ctmrg_iteration(
     enlarged_corner = c4v_enlarge(network, env, alg.projector_alg)
     corner′, projector, info = c4v_projector!(enlarged_corner, alg.projector_alg)
     edge′ = c4v_renormalize_edge(network, env, projector)
+    info = (;
+        contraction_metrics = (; info.truncation_error, info.condition_number),
+        info.D, info.V, info.D_full, info.V_full, info.truncation_indices,
+    )
     return CTMRGEnv(corner′, edge′), info
 end
 function ctmrg_iteration(
@@ -155,6 +159,7 @@ function ctmrg_iteration(
     projector, info = c4v_projector!(enlarged_corner, alg.projector_alg)
     edge′ = c4v_renormalize_edge(network, env, projector)
     corner′ = c4v_qr_renormalize_corner(edge′, projector, info.R)
+    info = (; contraction_metrics = (;), info.Q, info.R)
     return CTMRGEnv(corner′, edge′), info
 end
 
