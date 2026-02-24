@@ -86,8 +86,7 @@ $(TYPEDFIELDS)
 
     C4vQRProjector(; kwargs...)
 
-Construct the C₄ᵥ `qr`-based projector algorithm
-based on the following keyword arguments:
+Construct the C₄ᵥ `qr`-based projector algorithm based on the following keyword arguments:
 
 * `decomposition_alg=QRAdjoint()` : `left_orth` algorithm including the reverse rule. See [`QRAdjoint`](@ref).
 """

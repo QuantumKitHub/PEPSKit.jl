@@ -180,7 +180,7 @@ function fixedpoint(
     )
     # validate inputs
     check_input(fixedpoint, peps₀, env₀, alg)
-    
+
     # setup retract and finalize! for symmetrization
     if isnothing(alg.symmetrization)
         retract = peps_retract
@@ -242,7 +242,7 @@ Check compatibility of an initial PEPS and environment with a specified PEPS opt
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) end
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG})
     # :fixed mode compatibility
-    if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed
+    return if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed
         if scalartype(env₀) <: Real # incompatible with real environments
             msg = "the provided real environment is in compatible with :fixed mode \
             since :fixed mode generally produces complex gauges; use :diffgauge mode \

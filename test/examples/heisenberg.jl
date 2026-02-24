@@ -128,11 +128,12 @@ end
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol = 1.0e-3)
 
+    # test if :fixed mode on real tensors errors
+    @test_throws ArgumentError fixedpoint(ham, peps, env)
+
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
-        ham,
-        peps,
-        env;
+        ham, peps, complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
         gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),
