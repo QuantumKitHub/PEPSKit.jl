@@ -45,9 +45,9 @@ function heisenberg_XYZ_c4v(
     )
     @assert size(lattice) == (1, 1) "only trivial unit cells supported by C4v-symmetric Hamiltonians"
     term =
-        rmul!(S_xx(T, S; spin = spin), Jx) +
-        rmul!(S_yy(T, S; spin = spin), Jy) +
-        rmul!(S_zz(T, S; spin = spin), Jz)
+        S_xx(T, S; spin = spin) * Jx +
+        S_yy(T, S; spin = spin) * Jy +
+        S_zz(T, S; spin = spin) * Jz
     spaces = fill(domain(term)[1], (1, 1))
     return LocalOperator( # horizontal and vertical contributions are identical
         spaces, (CartesianIndex(1, 1), CartesianIndex(1, 2)) => 2 * term
