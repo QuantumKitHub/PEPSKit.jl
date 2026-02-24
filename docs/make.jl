@@ -42,7 +42,7 @@ mathengine = MathJax3(
 
 # examples pages
 examples_optimization = joinpath.(
-    ["heisenberg", "bose_hubbard", "xxz", "fermi_hubbard"], Ref("index.md")
+    ["heisenberg", "bose_hubbard", "xxz", "fermi_hubbard", "c4v_ctmrg"], Ref("index.md")
 )
 examples_time_evolution = joinpath.(
     ["heisenberg_su", "hubbard_su", "j1j2_su"], Ref("index.md")

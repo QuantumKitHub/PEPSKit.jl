@@ -190,8 +190,8 @@ function fixedpoint(
         )
     end
 
-    # :fixed mode compatibility
-    if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed
+    # :fixed mode compatibility (C4v CTMRG with real numbers supports :fixed mode)
+    if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed && !(alg.boundary_alg isa C4vCTMRG)
         if scalartype(env₀) <: Real # incompatible with real environments
             env₀ = complex(env₀)
             @warn "the provided real environment was converted to a complex environment \
