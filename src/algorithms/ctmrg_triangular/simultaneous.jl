@@ -190,7 +190,7 @@ function renormalize_edges(env::CTMRGEnvTriangular, Ẽas::Array{T1, 3}, Ẽbs::
     new_edges′ = similar(env.Ea, T_proj)
     new_edges = dtmap!!(new_edges′, coordinates) do (dir, r, c)
         Eb_new = Ẽbs[dir, r, c] * Qbs[dir, r, c]
-        Ea_new = permute(Qas[dir, r, c] * permute(Ẽas[dir, r, c], ((1,),(2,3,4))), ((1,2,3),(4,)))
+        Ea_new = permute(Qas[dir, r, c] * permute(Ẽas[dir, r, c], ((1,), (2, 3, 4))), ((1, 2, 3), (4,)))
         return Ea_new, Eb_new
     end
     return CTMRGEnvTriangular(env.C, getindex.(new_edges, 1), getindex.(new_edges, 2))
@@ -202,7 +202,7 @@ function renormalize_edges(env::CTMRGEnvTriangular, Ẽas::Array{T1, 3}, Ẽbs::
     new_edges′ = similar(env.Ea, T_proj)
     new_edges = dtmap!!(new_edges′, coordinates) do (dir, r, c)
         Eb_new = Ẽbs[dir, r, c] * Qbs[dir, r, c]
-        Ea_new = permute(Qas[dir, r, c] * permute(Ẽas[dir, r, c], ((1,),(2,3))), ((1,2),(3,)))
+        Ea_new = permute(Qas[dir, r, c] * permute(Ẽas[dir, r, c], ((1,), (2, 3))), ((1, 2), (3,)))
         return Ea_new, Eb_new
     end
     return CTMRGEnvTriangular(env.C, getindex.(new_edges, 1), getindex.(new_edges, 2))
@@ -219,10 +219,10 @@ function normalize_corners!(env)
 end
 
 function normalize_edges!(env)
-    (r, c) = (1,1)
+    (r, c) = (1, 1)
     for dir in 1:6
-        env.Ea[dir,r,c] /= norm(env.Ea[dir,r,c])
-        env.Eb[dir,r,c] /= norm(env.Eb[dir,r,c])
+        env.Ea[dir, r, c] /= norm(env.Ea[dir, r, c])
+        env.Eb[dir, r, c] /= norm(env.Eb[dir, r, c])
     end
     return env
 end
