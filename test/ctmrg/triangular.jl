@@ -48,7 +48,7 @@ end
             unitcell = (2, 2)
 
             for (sandwich, vspace) in zip(sandwiches, [vspace, vspace ⊗ vspace'])
-            # for (sandwich, vspace) in zip(sandwiches, [vspace ⊗ vspace', vspace])
+                # for (sandwich, vspace) in zip(sandwiches, [vspace ⊗ vspace', vspace])
                 network = InfiniteTriangularNetwork(fill(sandwich, unitcell))
                 env₀ = CTMRGEnvTriangular(randn, eltype, vspace, envspace; unitcell)
                 env, info = leading_boundary(env₀, network, alg)
@@ -97,7 +97,7 @@ end
 
 #             ZZ = rmul!(PEPSKit.σᶻᶻ(T, S), -J)
 #             X = rmul!(PEPSKit.σˣ(T, S), g * -J)
-        
+
 #             vspace = ℂ^3
 #             envspace = ℂ^χ
 #             ket = randn(T, pspace, vspace ⊗ vspace ⊗ vspace ⊗ vspace' ⊗ vspace' ⊗ vspace')

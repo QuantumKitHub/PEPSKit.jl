@@ -46,13 +46,13 @@ end
 
 function renormalize_corner_triangular((dir, r, c), network::InfiniteTriangularNetwork{P}, env, Pas, Pbs) where {P <: PFTensorTriangular}
     @tensor opt = true env_C_new[-1 -2; -3] := env.C[_coordinates(dir, 0, r, c, size(network))...][1 3; 6] * env.Ea[_coordinates(dir - 1, 0, r, c, size(network))...][4 2; 1] * env.Eb[_coordinates(dir, 1, r, c, size(network))...][6 7; 8] *
-    rotl60(network[r, c], mod(dir - 1, 6))[2 5 -2; 3 7 9] * Pas[mod1(dir - 1, 6), r, c][-1; 4 5] * Pbs[dir, r, c][8 9; -3]
+        rotl60(network[r, c], mod(dir - 1, 6))[2 5 -2; 3 7 9] * Pas[mod1(dir - 1, 6), r, c][-1; 4 5] * Pbs[dir, r, c][8 9; -3]
     return env_C_new
 end
 
 function renormalize_corner_triangular((dir, r, c), network::InfiniteTriangularNetwork{P}, env, Pas, Pbs) where {P <: PEPSSandwichTriangular}
     @tensor opt = true env_C_new[-1 -2 -3; -4] := env.C[_coordinates(dir, 0, r, c, size(network))...][1 3 10; 6] * env.Ea[_coordinates(dir - 1, 0, r, c, size(network))...][4 2 11; 1] * env.Eb[_coordinates(dir, 1, r, c, size(network))...][6 7 12; 8] *
-    rotl60(ket(network[r, c]), mod(dir - 1, 6))[15; 3 7 9 -2 5 2] * conj(rotl60(bra(network[r, c]), mod(dir - 1, 6))[15; 10 12 14 -3 13 11]) *
-    Pas[mod1(dir - 1, 6), r, c][-1; 4 5 13] * Pbs[dir, r, c][8 9 14; -4]
+        rotl60(ket(network[r, c]), mod(dir - 1, 6))[15; 3 7 9 -2 5 2] * conj(rotl60(bra(network[r, c]), mod(dir - 1, 6))[15; 10 12 14 -3 13 11]) *
+        Pas[mod1(dir - 1, 6), r, c][-1; 4 5 13] * Pbs[dir, r, c][8 9 14; -4]
     return env_C_new
 end

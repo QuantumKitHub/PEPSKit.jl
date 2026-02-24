@@ -213,7 +213,7 @@ function _rrule(
         ::typeof(leading_boundary),
         envinit,
         state,
-        alg::Union{CTMRGAlgorithm,CTMRGAlgorithmTriangular},
+        alg::Union{CTMRGAlgorithm, CTMRGAlgorithmTriangular},
     )
     env, info = leading_boundary(envinit, state, alg)
     alg_fixed = @set alg.projector_alg.trunc = FixedSpaceTruncation() # fix spaces during differentiation
@@ -279,12 +279,12 @@ function _rrule(
 end
 
 function _rrule(
-    gradmode::GradMode{:fixed},
-    config::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
-    envinit,
-    state,
-    alg::SimultaneousCTMRGTriangular,
+        gradmode::GradMode{:fixed},
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit,
+        state,
+        alg::SimultaneousCTMRGTriangular,
     )
     env, = leading_boundary(envinit, state, alg)
     alg_fixed = @set alg.trunctype = :FixedSpaceTruncation # fix spaces during differentiation
