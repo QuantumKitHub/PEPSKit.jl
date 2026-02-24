@@ -116,7 +116,7 @@ end
 function rotr60(n::InfiniteTriangularNetwork)
     return InfiniteTriangularNetwork(rotr60(_rotr60_localsandwich.(unitcell(n))))
 end
-function rot180(n::InfiniteTriangularNetwork)
+function Base.rot180(n::InfiniteTriangularNetwork)
     return InfiniteTriangularNetwork(rot180(_rot180_localsandwich.(unitcell(n))))
 end
 
