@@ -45,14 +45,6 @@ Perform a single CTMRG iteration in which all directions are being grown and ren
 function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 """
-    check_input(network, env, alg::CTMRGAlgorithm)
-
-Check compatibility of a given network and environment with a specified CTMRG algorithm.
-"""
-function check_input(network, env, alg::CTMRGAlgorithm) end
-@non_differentiable check_input(args...)
-
-"""
     leading_boundary(env₀, network; kwargs...) -> env, info
     # expert version:
     leading_boundary(env₀, network, alg::CTMRGAlgorithm)
@@ -91,30 +83,15 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
-    - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner.
+    - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
+    - `:c4v_qr` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
 
 ## Return values
 
-The CTMRG routine returns the final CTMRG environment as well as an information `NamedTuple`
-containing the following fields:
-
-* `truncation_error` : Last (maximal) SVD truncation error of the CTMRG projectors.
-* `condition_number` : Last (maximal) condition number of the enlarged CTMRG environment.
-
-In case the `alg` is a `SimultaneousCTMRG`, the last SVD will also be returned:
-
-* `U` : Last unit cell of left singular vectors.
-* `S` : Last unit cell of singular values.
-* `V` : Last unit cell of right singular vectors.
-
-If, in addition, the specified SVD algorithm computes the full, untruncated SVD, the full
-set of vectors and values will be returned as well:
-
-* `U_full` : Last unit cell of all left singular vectors.
-* `S_full` : Last unit cell of all singular values.
-* `V_full` : Last unit cell of all right singular vectors.
-
-For `C4vCTMRG` instead the last eigendecomposition `V` and `D` (and `V_full`, `D_full`) will be returned.
+The `leading_boundary` routine returns the final environment as well as an information `NamedTuple`
+that generally contains a `contraction_metrics` `NamedTuple` storing different contents depending
+on the chosen `alg`. Depending on the contraction method, the information tuple may also contain
+the final tensor decomposition (used in the projectors) including its truncation indices.
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
@@ -123,7 +100,7 @@ end
 function leading_boundary(
         env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
-    check_input(network, env₀, alg)
+    check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
@@ -153,6 +130,14 @@ end
 function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
     return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
+
+"""
+    check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorithm)
+
+Check compatibility of a given network and environment with a specified CTMRG algorithm.
+"""
+function check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorithm) end
+@non_differentiable check_input(args...)
 
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env)
