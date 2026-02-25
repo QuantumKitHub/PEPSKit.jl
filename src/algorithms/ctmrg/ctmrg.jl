@@ -89,7 +89,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 ## Return values
 
 The `leading_boundary` routine returns the final environment as well as an information `NamedTuple`
-that generally contains a `convergence_metrics` `NamedTuple` storing different contents depending
+that generally contains a `contraction_metrics` `NamedTuple` storing different contents depending
 on the chosen `alg`. Depending on the contraction method, the information tuple may also contain
 the final tensor decomposition (used in the projectors) including its truncation indices.
 """

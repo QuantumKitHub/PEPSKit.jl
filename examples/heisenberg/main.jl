@@ -102,14 +102,14 @@ env₀, info_ctmrg = leading_boundary(env_random, peps₀; boundary_alg...);
 
 md"""
 Besides the converged environment, `leading_boundary` also returns a `NamedTuple` of
-informational quantities which contains, among other things, a `convergence_metric` tuple.
+informational quantities which contains, among other things, a `contraction_metric` tuple.
 This may contain different quantities depending on the method of contraction, and for this
 CTMRG variant we return the last maximal truncation error (the SVD approximation
 error maximized over all spatial directions and unit cell entries) as well as the condition
 number of the decomposition (the ratio of largest to smallest singular value):
 """
 
-@show info_ctmrg.convergence_metrics;
+@show info_ctmrg.contraction_metrics;
 
 md"""
 ## Ground state search
