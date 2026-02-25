@@ -25,6 +25,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Changed
 
 - Bump OptimKit.jl compatibility to v0.4
+- Move `info.truncation_error` and `info.condition_number` into the `info.convergence_metrics` named tuple for `leading_boundary` and `fixedpoint`
 
 ### Deprecated
 
