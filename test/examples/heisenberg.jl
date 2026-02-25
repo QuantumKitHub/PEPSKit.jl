@@ -53,7 +53,7 @@ end
 @testset "C4v AD optimization with scalartype T=$T and projector_alg=$projector_alg" for (T, projector_alg) in
     Iterators.product([Float64, ComplexF64], [:c4v_eigh, :c4v_qr])
     # initialize symmetric states
-    Random.seed!(23023952)
+    Random.seed!(123)
     symm = RotateReflect()
     H′ = heisenberg_XYZ_c4v(InfiniteSquare())
     H = T <: Real ? real(H′) : H′
