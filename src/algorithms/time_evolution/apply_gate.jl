@@ -41,9 +41,6 @@ function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor,
     end
     X, a = left_orth(permute(A, permA); positive = true)
     Y, b = left_orth(permute(B, permB); positive = true)
-    # no longer needed after TensorKit 0.15
-    # @assert !isdual(space(a, 1))
-    # @assert !isdual(space(b, 1))
     X, Y = permute(X, permX), permute(Y, permY)
     b = permute(b, ((3, 2), (1,)))
     return X, a, b, Y

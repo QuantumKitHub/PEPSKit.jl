@@ -2,7 +2,7 @@
     get_expham(H::LocalOperator, dt::Number)
 
 Compute `exp(-dt * op)` for each term `op` in `H`,
-and combine them into a new LocalOperator.
+and combine them into a new `LocalOperator`.
 Each `op` in `H` must be a single `TensorMap`.
 """
 function get_expham(H::LocalOperator, dt::Number)
