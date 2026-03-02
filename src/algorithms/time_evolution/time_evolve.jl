@@ -61,7 +61,7 @@ function _get_dt(
     end
     if !imaginary_time
         @assert (state isa InfinitePEPS) "Real time evolution of InfinitePEPO (Heisenberg picture) is not implemented."
-        dt′ = 1.0im * dt′
+        dt′ = complex(zero(dt′), dt′)
     end
     return dt′
 end

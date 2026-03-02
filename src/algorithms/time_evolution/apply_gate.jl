@@ -39,8 +39,8 @@ function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor,
             ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
         end
     end
-    X, a = left_orth(permute(A, permA); positive = true)
-    Y, b = left_orth(permute(B, permB); positive = true)
+    X, a = left_orth!(permute(A, permA; copy = true); positive = true)
+    Y, b = left_orth!(permute(B, permB; copy = true); positive = true)
     X, Y = permute(X, permX), permute(Y, permY)
     b = permute(b, ((3, 2), (1,)))
     return X, a, b, Y
