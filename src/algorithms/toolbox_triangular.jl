@@ -54,8 +54,10 @@ end
 ### For
 
 function _contract_edges_0((r, c)::Tuple{Int, Int}, network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular) where {P <: PEPSSandwichTriangular}
-    return @tensor opt = true ket(network[r, c])[dL; DLt120 DLt60 DLt0 DLt300 DLt240 DLt180] * ket(network[r, _next(c, end)])[dR; DRt120 DRt60 DRt0 DRt300 DRt240 DLt0] *
-        conj(bra(network[r, c])[dL; DLb120 DLb60 DLb0 DLb300 DLb240 DLb180]) * conj(bra(network[r, _next(c, end)])[dR; DRb120 DRb60 DRb0 DRb300 DRb240 DLb0]) *
+    O_r_c = network[r, c]
+    O_r_cn = network[r, _next(c, end)]
+    return @tensor opt = true ket(O_r_c)[dL; DLt120 DLt60 DLt0 DLt300 DLt240 DLt180] * ket(O_r_cn)[dR; DRt120 DRt60 DRt0 DRt300 DRt240 DLt0] *
+        conj(bra(O_r_c)[dL; DLb120 DLb60 DLb0 DLb300 DLb240 DLb180]) * conj(bra(O_r_cn)[dR; DRb120 DRb60 DRb0 DRb300 DRb240 DLb0]) *
         env.C[1, _prev(r, end), c][χNW DLt120 DLb120; χNa] * env.C[2, _prev(r, end), _next(c + 1, end)][χNb DRt60 DRb60; χNE] * env.C[3, r, _next(c + 1, end)][χNE DRt0 DRb0; χSE] *
         env.C[4, _next(r, end), _next(c, end)][χSE DRt300 DRb300; χSa] * env.C[5, _next(r, end), _prev(c, end)][χSb DLt240 DLb240; χSW] * env.C[6, r, _prev(c, end)][χSW DLt180 DLb180; χNW] *
         env.Eb[1, _prev(r, end), _next(c, end)][χNa DLt60 DLb60; χNC] * env.Ea[1, _prev(r, end), _next(c, end)][χNC DRt120 DRb120; χNb] *
@@ -63,8 +65,10 @@ function _contract_edges_0((r, c)::Tuple{Int, Int}, network::InfiniteTriangularN
 end
 
 function _contract_edges_0((r, c)::Tuple{Int, Int}, network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular, op::AbstractTensorMap{E, S, 2, 2}) where {P <: PEPSSandwichTriangular, E, S}
-    return @tensor opt = true ket(network[r, c])[dLt; DLt120 DLt60 DLt0 DLt300 DLt240 DLt180] * ket(network[r, _next(c, end)])[dRt; DRt120 DRt60 DRt0 DRt300 DRt240 DLt0] *
-        conj(bra(network[r, c])[dLb; DLb120 DLb60 DLb0 DLb300 DLb240 DLb180]) * conj(bra(network[r, _next(c, end)])[dRb; DRb120 DRb60 DRb0 DRb300 DRb240 DLb0]) *
+    O_r_c = network[r, c]
+    O_r_cn = network[r, _next(c, end)]
+    return @tensor opt = true ket(O_r_c)[dLt; DLt120 DLt60 DLt0 DLt300 DLt240 DLt180] * ket(O_r_cn)[dRt; DRt120 DRt60 DRt0 DRt300 DRt240 DLt0] *
+        conj(bra(O_r_c)[dLb; DLb120 DLb60 DLb0 DLb300 DLb240 DLb180]) * conj(bra(O_r_cn)[dRb; DRb120 DRb60 DRb0 DRb300 DRb240 DLb0]) *
         env.C[1, _prev(r, end), c][χNW DLt120 DLb120; χNa] * env.C[2, _prev(r, end), _next(c + 1, end)][χNb DRt60 DRb60; χNE] * env.C[3, r, _next(c + 1, end)][χNE DRt0 DRb0; χSE] *
         env.C[4, _next(r, end), _next(c, end)][χSE DRt300 DRb300; χSa] * env.C[5, _next(r, end), _prev(c, end)][χSb DLt240 DLb240; χSW] * env.C[6, r, _prev(c, end)][χSW DLt180 DLb180; χNW] *
         env.Eb[1, _prev(r, end), _next(c, end)][χNa DLt60 DLb60; χNC] * env.Ea[1, _prev(r, end), _next(c, end)][χNC DRt120 DRb120; χNb] *
@@ -73,8 +77,10 @@ function _contract_edges_0((r, c)::Tuple{Int, Int}, network::InfiniteTriangularN
 end
 
 function _contract_edges_60((r, c)::Tuple{Int, Int}, network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular) where {P <: PEPSSandwichTriangular}
-    return @tensor opt = true ket(network[r, c])[dTR; DTRt120 DTRt60 DTRt0 DTRt300 DBLt60 DTRt180] * ket(network[_next(r, end), _prev(c, end)])[dBL; DBLt120 DBLt60 DBLt0 DBLt300 DBLt240 DBLt180] *
-        conj(bra(network[r, c])[dTR; DTRb120 DTRb60 DTRb0 DTRb300 DBLb60 DTRb180]) * conj(bra(network[_next(r, end), _prev(c, end)])[dBL; DBLb120 DBLb60 DBLb0 DBLb300 DBLb240 DBLb180]) *
+    O_r_c = network[r, c]
+    O_rn_cn = network[_next(r, end), _next(c, end)]
+    return @tensor opt = true ket(O_r_c)[dTR; DTRt120 DTRt60 DTRt0 DTRt300 DBLt60 DTRt180] * ket(O_rn_cn)[dBL; DBLt120 DBLt60 DBLt0 DBLt300 DBLt240 DBLt180] *
+        conj(bra(O_r_c)[dTR; DTRb120 DTRb60 DTRb0 DTRb300 DBLb60 DTRb180]) * conj(bra(O_rn_cn)[dBL; DBLb120 DBLb60 DBLb0 DBLb300 DBLb240 DBLb180]) *
         env.C[1, _prev(r, end), c][χNWb DTRt120 DTRb120; χN] * env.C[2, _prev(r, end), _next(c, end)][χN DTRt60 DTRb60; χNE] * env.C[3, r, _next(c, end)][χNE DTRt0 DTRb0; χSEa] *
         env.C[4, _next(r + 1, end), _prev(c, end)][χSEb DBLt300 DBLb300; χS] * env.C[5, _next(r + 1, end), _prev(c - 1, end)][χS DBLt240 DBLb240; χSW] * env.C[6, _next(r, end), _prev(c - 1, end)][χSW DBLt180 DBLb180; χNWa] *
         env.Eb[3, _next(r, end), c][χSEa DTRt300 DTRb300; χSEC] * env.Ea[3, _next(r, end), c][χSEC DBLt0 DBLb0; χSEb] *
@@ -82,8 +88,10 @@ function _contract_edges_60((r, c)::Tuple{Int, Int}, network::InfiniteTriangular
 end
 
 function _contract_edges_120((r, c)::Tuple{Int, Int}, network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular) where {P <: PEPSSandwichTriangular}
-    return @tensor opt = true ket(network[r, c])[dTL; DTLt120 DTLt60 DTLt0 DTLt300 DTLt240 DTLt180] * ket(network[_next(r, end), c])[dBR; DTLt300 DBRt60 DBRt0 DBRt300 DBRt240 DBRt180] *
-        conj(bra(network[r, c])[dTL; DTLb120 DTLb60 DTLb0 DTLb300 DTLb240 DTLb180]) * conj(bra(network[_next(r, end), c])[dBR; DTLb300 DBRb60 DBRb0 DBRb300 DBRb240 DBRb180]) *
+    O_r_c = network[r, c]
+    O_rn_c = network[_next(r, end), c]
+    return @tensor opt = true ket(O_r_c)[dTL; DTLt120 DTLt60 DTLt0 DTLt300 DTLt240 DTLt180] * ket(O_rn_c)[dBR; DTLt300 DBRt60 DBRt0 DBRt300 DBRt240 DBRt180] *
+        conj(bra(O_r_c)[dTL; DTLb120 DTLb60 DTLb0 DTLb300 DTLb240 DTLb180]) * conj(bra(O_rn_c)[dBR; DTLb300 DBRb60 DBRb0 DBRb300 DBRb240 DBRb180]) *
         env.C[1, _prev(r, end), c][χNW DTLt120 DTLb120; χN] * env.C[2, _prev(r, end), _next(c, end)][χN DTLt60 DTLb60; χNEa] * env.C[3, _next(r, end), _next(c, end)][χNEb DBRt0 DBRb0; χSE] *
         env.C[4, _next(r + 1, end), c][χSE DBRt300 DBRb300; χS] * env.C[5, _next(r + 1, end), _prev(c, end)][χS DBRt240 DBRb240; χSWa] * env.C[6, r, _prev(c, end)][χSWb DTLt180 DTLb180; χNW] *
         env.Eb[2, r, _next(c, end)][χNEa DTLt0 DTLb0; χNEC] * env.Ea[2, r, _next(c, end)][χNEC DBRt60 DBRb60; χNEb] *
@@ -91,12 +99,19 @@ function _contract_edges_120((r, c)::Tuple{Int, Int}, network::InfiniteTriangula
 end
 
 function _contract_site_large((r, c)::Tuple{Int, Int}, network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular) where {P <: PEPSSandwichTriangular}
-    return @tensor opt = true ket(network[_prev(r, end), c])[dNW; DNWt120 DNWt60 DNWt0 DNWt300 DWt60 DNWt180] * ket(network[_prev(r, end), _next(c, end)])[dNE; DNEt120 DNEt60 DNEt0 DNEt300 DNEt240 DNWt0] *
-        ket(network[r, _next(c, end)])[dE; DNEt300 DEt60 DEt0 DEt300 DEt240 DEt180] * ket(network[_next(r, end), c])[dSE; DSEt120 DEt240 DSEt0 DSEt300 DSEt240 DSEt180] * ket(network[_next(r, end), _prev(c, end)])[dSW; DSWt120 DSWt60 DSEt180 DSWt300 DSWt240 DSWt180] *
-        ket(network[r, _prev(c, end)])[dW; DWt120 DWt60 DWt0 DSWt120 DWt240 DWt180] * ket(network[r, c])[dCenter; DNWt300 DNEt240 DEt180 DSEt120 DSWt60 DWt0] *
-        conj(bra(network[_prev(r, end), c])[dNW; DNWb120 DNWb60 DNWb0 DNWb300 DWb60 DNWb180]) * conj(bra(network[_prev(r, end), _next(c, end)])[dNE; DNEb120 DNEb60 DNEb0 DNEb300 DNEb240 DNWb0]) *
-        conj(bra(network[r, _next(c, end)])[dE; DNEb300 DEb60 DEb0 DEb300 DEb240 DEb180]) * conj(bra(network[_next(r, end), c])[dSE; DSEb120 DEb240 DSEb0 DSEb300 DSEb240 DSEb180]) * conj(bra(network[_next(r, end), _prev(c, end)])[dSW; DSWb120 DSWb60 DSEb180 DSWb300 DSWb240 DSWb180]) *
-        conj(bra(network[r, _prev(c, end)])[dW; DWb120 DWb60 DWb0 DSWb120 DWb240 DWb180]) * conj(bra(network[r, c])[dCenter; DNWb300 DNEb240 DEb180 DSEb120 DSWb60 DWb0]) *
+    O_r_c = network[r, c]
+    O_rp_c = network[_prev(r, end), c]
+    O_rp_cn = network[_prev(r, end), _next(c, end)]
+    O_rn_cp = network[_next(r, end), _prev(c, end)]
+    O_rn_c = network[_next(r, end), c]
+    O_r_cn = network[r, _next(c, end)]
+    O_r_cp = network[r, _prev(c, end)]
+    return @tensor opt = true ket(O_rp_c)[dNW; DNWt120 DNWt60 DNWt0 DNWt300 DWt60 DNWt180] * ket(O_rp_cn)[dNE; DNEt120 DNEt60 DNEt0 DNEt300 DNEt240 DNWt0] *
+        ket(O_r_cn)[dE; DNEt300 DEt60 DEt0 DEt300 DEt240 DEt180] * ket(O_rn_c)[dSE; DSEt120 DEt240 DSEt0 DSEt300 DSEt240 DSEt180] * ket(O_rn_cp)[dSW; DSWt120 DSWt60 DSEt180 DSWt300 DSWt240 DSWt180] *
+        ket(O_r_cp)[dW; DWt120 DWt60 DWt0 DSWt120 DWt240 DWt180] * ket(O_r_c)[dCenter; DNWt300 DNEt240 DEt180 DSEt120 DSWt60 DWt0] *
+        conj(bra(O_rp_c)[dNW; DNWb120 DNWb60 DNWb0 DNWb300 DWb60 DNWb180]) * conj(bra(O_rp_cn)[dNE; DNEb120 DNEb60 DNEb0 DNEb300 DNEb240 DNWb0]) *
+        conj(bra(O_r_cn)[dE; DNEb300 DEb60 DEb0 DEb300 DEb240 DEb180]) * conj(bra(O_rn_c)[dSE; DSEb120 DEb240 DSEb0 DSEb300 DSEb240 DSEb180]) * conj(bra(O_rn_cp)[dSW; DSWb120 DSWb60 DSEb180 DSWb300 DSWb240 DSWb180]) *
+        conj(bra(O_r_cp)[dW; DWb120 DWb60 DWb0 DSWb120 DWb240 DWb180]) * conj(bra(O_r_c)[dCenter; DNWb300 DNEb240 DEb180 DSEb120 DSWb60 DWb0]) *
         env.C[1, _prev(r - 1, end), c][χNWa DNWt120 DNWb120; χNb] * env.Eb[1, _prev(r - 1, end), _next(c, end)][χNb DNWt60 DNWb60; χNC] * env.Ea[1, _prev(r - 1, end), _next(c, end)][χNC DNEt120 DNEb120; χNa] *
         env.C[2, _prev(r - 1, end), _next(c + 1, end)][χNa DNEt60 DNEb60; χNEb] * env.Eb[2, _prev(r, end), _next(c + 1, end)][χNEb DNEt0 DNEb0; χNEC] * env.Ea[2, _prev(r, end), _next(c + 1, end)][χNEC DEt60 DEb60; χNEa] *
         env.C[3, r, _next(c + 1, end)][χNEa DEt0 DEb0; χSEb] * env.Eb[3, _next(r, end), _next(c, end)][χSEb DEt300 DEb300; χSEC] * env.Ea[3, _next(r, end), _next(c, end)][χSEC DSEt0 DSEb0; χSEa] *
@@ -106,21 +121,33 @@ function _contract_site_large((r, c)::Tuple{Int, Int}, network::InfiniteTriangul
 end
 
 function _contract_corners((r, c)::Tuple{Int, Int}, network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular) where {P <: PEPSSandwichTriangular}
+    O_r_c = network[r, c]
     return @tensor opt = true env.C[1, _prev(r, end), c][χNW Dt120 Db120; χN] * env.C[2, _prev(r, end), _next(c, end)][χN Dt60 Db60; χNE] * env.C[3, r, _next(c, end)][χNE Dt0 Db0; χSE] *
         env.C[4, _next(r, end), c][χSE Dt300 Db300; χS] * env.C[5, _next(r, end), _prev(c, end)][χS Dt240 Db240; χSW] * env.C[6, r, _prev(c, end)][χSW Dt180 Db180; χNW] *
-        ket(network[r, c])[d; Dt120 Dt60 Dt0 Dt300 Dt240 Dt180] * conj(bra(network[r, c])[d; Db120 Db60 Db0 Db300 Db240 Db180])
+        ket(O_r_c)[d; Dt120 Dt60 Dt0 Dt300 Dt240 Dt180] * conj(bra(O_r_c)[d; Db120 Db60 Db0 Db300 Db240 Db180])
 end
 
 function _contract_corners((r, c)::Tuple{Int, Int}, network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular, op::AbstractTensorMap{E, S, 1, 1}) where {P <: PEPSSandwichTriangular, E, S}
+    O_r_c = network[r, c]
     return @tensor opt = true env.C[1, _prev(r, end), c][χNW Dt120 Db120; χN] * env.C[2, _prev(r, end), _next(c, end)][χN Dt60 Db60; χNE] * env.C[3, r, _next(c, end)][χNE Dt0 Db0; χSE] *
         env.C[4, _next(r, end), c][χSE Dt300 Db300; χS] * env.C[5, _next(r, end), _prev(c, end)][χS Dt240 Db240; χSW] * env.C[6, r, _prev(c, end)][χSW Dt180 Db180; χNW] *
-        ket(network[r, c])[dt; Dt120 Dt60 Dt0 Dt300 Dt240 Dt180] * conj(bra(network[r, c])[db; Db120 Db60 Db0 Db300 Db240 Db180]) * op[db; dt]
+        ket(O_r_c)[dt; Dt120 Dt60 Dt0 Dt300 Dt240 Dt180] * conj(bra(O_r_c)[db; Db120 Db60 Db0 Db300 Db240 Db180]) * op[db; dt]
 end
 
 function energy(network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular, onesite_op, twosite_op) where {P <: PEPSSandwichTriangular}
-    return sum(Iterators.product(axes(network)...)) do (r, c)
+    E = sum(Iterators.product(axes(network)...)) do (r, c)
         expval_onesite = _contract_corners((r, c), network, env, onesite_op) / _contract_corners((r, c), network, env)
         expval_twosite = _contract_edges_0((r, c), network, env, twosite_op) / _contract_edges_0((r, c), network, env)
         return expval_onesite + expval_twosite
     end
+    ignore_derivatives() do
+        isapprox(imag(E), 0; atol = sqrt(eps(real(E)))) ||
+            @warn "Expectation value is not real: $E."
+    end
+    return real(E)
 end
+function energy(state::InfinitePEPSTriangular, env::CTMRGEnvTriangular, args...)
+    return energy(InfiniteTriangularNetwork(state), env, args...)
+end
+
+# TODO: write a proper cost_function that works on an InfinitePEPSTriangular and a LocalOperator, and use it in the optimization loop. For now, we just compute the energy using the network contraction functions above.

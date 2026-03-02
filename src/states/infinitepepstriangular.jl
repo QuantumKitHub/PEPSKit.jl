@@ -12,17 +12,7 @@ struct InfinitePEPSTriangular{T <: PEPSTensorTriangular}
     InfinitePEPSTriangular{T}(A::Matrix{T}) where {T <: PEPSTensorTriangular} = new{T}(A)
     function InfinitePEPSTriangular(A::Array{T, 2}) where {T <: PEPSTensorTriangular}
         bosonic_braiding = BraidingStyle(sectortype(T)) === Bosonic()
-        # for (d, w) in Tuple.(CartesianIndices(A))
-        #     (bosonic_braiding || !isdual(physicalspace(A[d, w]))) ||
-        #         throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are not allowed (for now)."))
-        #     north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
-        #         throw(
-        #         SpaceMismatch("North virtual space at site $((d, w)) does not match.")
-        #     )
-        #     east_virtualspace(A[d, w]) == west_virtualspace(A[d, _next(w, end)])' ||
-        #         throw(SpaceMismatch("East virtual space at site $((d, w)) does not match."))
-        #     dim(space(A[d, w])) > 0 || @warn "no fusion channels at site ($d, $w)"
-        # end
+        # TODO: check braiding and spaces
         return new{T}(A)
     end
 end
@@ -55,7 +45,7 @@ function InfinitePEPSTriangular(
     SWspaces = adjoint.(NEspaces)
     Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
-    A = map(Pspaces, NWspaces, NEspaces, Espaces, SEspaces, SWspaces, Wspaces) do NW, NE, E, SE, SW, W
+    A = map(Pspaces, NWspaces, NEspaces, Espaces, SEspaces, SWspaces, Wspaces) do P, NW, NE, E, SE, SW, W
         return PEPSTensorTriangular(f, T, P, NW, NE, E, SE, SW, W)
     end
 
@@ -76,13 +66,7 @@ The unit cell is labeled as a matrix which means that any tensor in the unit cel
 regardless if PEPS tensor or environment tensor, is obtained by shifting the row
 and column index `[r, c]` by one, respectively:
 ```
-   |            |          |
----C[r-1,c-1]---T[r-1,c]---T[r-1,c+1]---
-   |            ||         ||
----T[r,c-1]=====AA[r,c]====AA[r,c+1]====
-   |            ||         ||
----T[r+1,c-1]===AA[r+1,c]==AA[r+1,c+1]==
-   |            ||         ||
+TODO: diagram
 ```
 The unit cell has periodic boundary conditions, so `[r, c]` is indexed modulo the
 size of the unit cell.
@@ -217,27 +201,6 @@ function Base.isapprox(A₁::InfinitePEPSTriangular, A₂::InfinitePEPSTriangula
     end
 end
 
-## Rotations
-
-# rotl60(A::InfinitePEPSTriangular) = InfinitePEPSTriangular(rotl60(_rotl60_localsandwich.(unitcell(A))))
-# rotr60(A::InfinitePEPSTriangular) = InfinitePEPSTriangular(rotr60(_rotl60_localsandwich.(unitcell(A))))
-# Base.rot180(A::InfinitePEPSTriangular) = InfinitePEPSTriangular(rot180(rot180.(unitcell(A))))
-
-## FiniteDifferences vectorization
-
-"""
-    to_vec(A::InfinitePEPSTriangular) -> vec, state_from_vec
-
-Vectorize an `InfinitePEPSTriangular` into a vector of real numbers. A vectorized infinite PEPS can
-retrieved again as an `InfinitePEPSTriangular` by application of the `state_from_vec` map.
-"""
-function FiniteDifferences.to_vec(A::InfinitePEPSTriangular)
-    vec, back = FiniteDifferences.to_vec(unitcell(A))
-    function state_from_vec(vec)
-        return NWType(back(vec))
-    end
-    return vec, state_from_vec
-end
 
 ## Chainrules
 

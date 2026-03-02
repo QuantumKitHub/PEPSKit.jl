@@ -105,14 +105,14 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/ctmrg/c4v.jl")
 
+include("algorithms/truncation/truncationschemes.jl")
+include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_truncation.jl")
+
 include("algorithms/contractions/ctmrg_contractions_triangular.jl")
 include("algorithms/ctmrg_triangular/ctmrg.jl")
 include("algorithms/ctmrg_triangular/utility.jl")
 include("algorithms/ctmrg_triangular/simultaneous.jl")
-
-include("algorithms/truncation/truncationschemes.jl")
-include("algorithms/truncation/fullenv_truncation.jl")
-include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/time_evolution/evoltools.jl")
 include("algorithms/time_evolution/time_evolve.jl")

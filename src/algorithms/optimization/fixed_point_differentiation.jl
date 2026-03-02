@@ -242,7 +242,7 @@ function _rrule(
         ::typeof(leading_boundary),
         envinit,
         state,
-        alg::Union{CTMRGAlgorithm, CTMRGAlgorithmTriangular},
+        alg::CTMRGAlgorithm,
     )
     _check_algorithm_combination(alg, gradmode)
 
@@ -318,42 +318,16 @@ function _rrule(
 end
 
 function _rrule(
-        gradmode::GradMode{:fixed},
+        gradmode::GradMode,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
         envinit,
         state,
-        alg::SimultaneousCTMRGTriangular,
+        alg::CTMRGAlgorithmTriangular,
     )
-    env, = leading_boundary(envinit, state, alg)
-    alg_fixed = @set alg.trunctype = :FixedSpaceTruncation # fix spaces during differentiation
-    env_conv, info = ctmrg_iteration(InfiniteTriangularNetwork(state), env, alg_fixed)
-    env_fixed, signs = gauge_fix(env, env_conv)
-
-    # Fix SVD
-    svd_alg_fixed = _fix_svd_algorithm(alg.projector_alg.svd_alg, signs, info)
-    alg_fixed = @set alg.projector_alg.svd_alg = svd_alg_fixed
-    alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
-
-    function leading_boundary_fixed_pullback((Δenv′, Δinfo))
-        Δenv = unthunk(Δenv′)
-
-        function f(A, x)
-            return fix_global_phases(
-                x, ctmrg_iteration(InfiniteTriangularNetwork(A), x, alg_fixed)[1]
-            )
-        end
-        _, env_vjp = rrule_via_ad(config, f, state, env_fixed)
-
-        # evaluate the geometric sum
-        ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-        ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
-        ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
-
-        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
-    end
-
-    return (env_fixed, info), leading_boundary_fixed_pullback
+    msg = "Fixed-point differentiation is not available for `CTMRGAlgorithmTriangular`, \
+            since gauge fixing for triangular CTMRG is currently not implemented."
+    throw(ArgumentError(msg))
 end
 
 function gauge_fix(alg::SVDAdjoint, signs, info)
