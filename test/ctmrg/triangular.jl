@@ -103,8 +103,8 @@ end
 # ------------------------------------
 
 Pspaces = [ComplexSpace(2)]
-Vspaces = [ComplexSpace(χbond)]
-Espaces = [ComplexSpace(χenv)]
+Vspaces = [ComplexSpace(D)]
+Espaces = [ComplexSpace(χ)]
 # TODO: actually add triangular lattice models...
 models = [transverse_field_ising(InfiniteSquare(); J = 1.0, g = 1.0)]
 names = ["Heisenberg"]
