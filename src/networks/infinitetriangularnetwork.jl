@@ -154,21 +154,3 @@ function ChainRulesCore.rrule(
     end
     return O, getindex_pullback
 end
-
-# function ChainRulesCore.rrule(::typeof(rotl90), network::InfiniteTriangularNetwork)
-#     network´ = rotl90(network)
-#     function rotl90_pullback(Δnetwork_)
-#         Δnetwork = unthunk(Δnetwork_)
-#         return NoTangent(), rotr90(Δnetwork)
-#     end
-#     return network´, rotl90_pullback
-# end
-
-# function ChainRulesCore.rrule(::typeof(rotr90), network::InfiniteTriangularNetwork)
-#     network´ = rotr90(network)
-#     function rotr90_pullback(Δnetwork)
-#         Δnetwork = unthunk(Δnetwork)
-#         return NoTangent(), rotl90(Δnetwork)
-#     end
-#     return network´, rotr90_pullback
-# end

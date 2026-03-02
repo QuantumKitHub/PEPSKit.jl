@@ -144,6 +144,10 @@ include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/ctmrg/c4v.jl")
 include("algorithms/ctmrg/initialization.jl")
 
+include("algorithms/truncation/truncationschemes.jl")
+include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_truncation.jl")
+
 include("algorithms/contractions/ctmrg_contractions_triangular.jl")
 include("algorithms/ctmrg_triangular/ctmrg.jl")
 include("algorithms/ctmrg_triangular/utility.jl")
