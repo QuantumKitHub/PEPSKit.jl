@@ -1,4 +1,48 @@
 """
+$(TYPEDEF)
+
+Abstract super type for the collection of
+Trotter evolution MPOs acting on 3 or more sites.
+"""
+abstract type TrotterMPOs end
+
+Base.getindex(gate::TrotterMPOs, args...) = Base.getindex(gate.mpos, args...)
+
+"""
+    struct TrotterMPOs2ndNeighbor{T}
+
+Collection of all Trotter evolution MPOs obtained from a Hamiltonian
+containing up to 2nd nearest neighbor terms.
+
+Before exponentiating, terms in the Hamiltonian are organized as
+```
+    H = ∑ᵢⱼ(┘ᵢⱼ + ┐ᵢⱼ + ┌ᵢⱼ + └ᵢⱼ)
+```
+where `┘`, `┐`, `┌`, `└` refer to the following 3-site clusters 
+```
+        3   3---2   2---1   1
+        |       |   |       |
+    1---2       1   3       2---3
+```
+Then each Trotter MPO is `exp(-dt * ┘ᵢⱼ)`, etc.
+"""
+struct TrotterMPOs2ndNeighbor{T} <: TrotterMPOs
+    mpos::T
+end
+
+function TrotterMPOs2ndNeighbor(H::LocalOperator, dt::Number)
+    mpos = stack(
+        [
+            _get_gatempos_se(H, dt),
+            _get_gatempos_se(rotl90(H), dt),
+            _get_gatempos_se(rot180(H), dt),
+            _get_gatempos_se(rotr90(H), dt),
+        ]; dims = 1
+    )
+    return TrotterMPOs2ndNeighbor(mpos)
+end
+
+"""
 Convert a 3-site gate to MPO form by SVD, 
 in which the axes are ordered as
 ```
@@ -30,30 +74,8 @@ Obtain the 3-site gate MPO on the southeast cluster at position `[row, col]`
 ```
 """
 function _get_gatempo_se(ham::LocalOperator, dt::Number, row::Int, col::Int)
-    Nr, Nc = size(ham)
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
-    sites = [
-        CartesianIndex(row, col),
-        CartesianIndex(row, col + 1),
-        CartesianIndex(row - 1, col + 1),
-    ]
-    nb1x = get_gateterm(ham, (sites[1], sites[2]))
-    nb1y = get_gateterm(ham, (sites[2], sites[3]))
-    nb2 = get_gateterm(ham, (sites[1], sites[3]))
-    # identity operator at each site
-    units = map(sites) do site
-        site_ = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
-        return id(physicalspace(ham)[site_])
-    end
-    # when iterating through ┘, └, ┌, ┐ clusters in the unit cell,
-    # NN / NNN bonds are counted 4 / 2 times, respectively.
-    @tensor Odt[i' j' k'; i j k] :=
-        -dt * (
-        (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4 +
-            (nb2[i' k'; i k] * units[2][j'; j]) / 2
-    )
-    op = exp(Odt)
-    return gate_to_mpo3(op)
+    term = _get_se3site_term(ham, row, col)
+    return gate_to_mpo3(exp(-dt * term))
 end
 
 """

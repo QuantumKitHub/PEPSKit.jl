@@ -55,22 +55,11 @@ function TimeEvolver(
     )
     # sanity checks
     _timeevol_sanity_check(psi0, physicalspace(H), alg)
-    # create Trotter gates
-    nnonly = is_nearest_neighbour(H)
-    use_3site = alg.force_3site || !nnonly
-    if alg.bipartite
-        @assert !use_3site "3-site simple update is incompatible with bipartite lattice."
-    end
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
-    gate = if use_3site
-        [
-            _get_gatempos_se(H, dt′),
-            _get_gatempos_se(rotl90(H), dt′),
-            _get_gatempos_se(rot180(H), dt′),
-            _get_gatempos_se(rotr90(H), dt′),
-        ]
-    else
-        get_expham(H, dt′)
+    # create Trotter gates
+    gate = trotterize(H, dt′; force_3site = alg.force_3site)
+    if isa(gate, TrotterMPOs)
+        @assert !alg.bipartite "Trotter MPOs are incompatible with bipartite lattice structure."
     end
     state = SUState(0, t0, psi0, env0)
     return TimeEvolver(alg, dt, nstep, gate, state)
@@ -166,7 +155,7 @@ function su_iter(
     for r in 1:Nr, c in 1:Nc
         (alg.bipartite && r > 1) && continue
         # update x-bonds
-        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
+        term = _get_bond_term(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
             ϵ′ = _su_xbond!(state2, term, env2, r, c, trunc; gate_ax)
@@ -179,7 +168,7 @@ function su_iter(
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
         # update y-bonds
-        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
+        term = _get_bond_term(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs
             ϵ′ = _su_ybond!(state2, term, env2, r, c, trunc; gate_ax)

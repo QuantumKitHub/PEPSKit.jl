@@ -39,27 +39,26 @@ function is_equivalent_bond(
 end
 
 """
-    get_gateterm(gate::LocalOperator, bond::NTuple{2,CartesianIndex{2}})
+    _get_bond_term(ham::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
 
-Get the term of a 2-site gate acting on a certain bond.
-Input `gate` should only include one term for each nearest neighbor bond.
+Get the 2-site term on `bond` in `ham`.
 """
-function get_gateterm(gate::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
-    bonds = findall(p -> is_equivalent_bond(p.first, bond, size(gate.lattice)), gate.terms)
+function _get_bond_term(ham::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
+    bonds = findall(p -> is_equivalent_bond(p.first, bond, size(ham.lattice)), ham.terms)
     if length(bonds) == 0
         # try reversed site order
         bonds = findall(
-            p -> is_equivalent_bond(p.first, reverse(bond), size(gate.lattice)), gate.terms
+            p -> is_equivalent_bond(p.first, reverse(bond), size(ham.lattice)), ham.terms
         )
         if length(bonds) == 1
-            return permute(gate.terms[bonds[1]].second, ((2, 1), (4, 3)))
+            return permute(ham.terms[bonds[1]].second, ((2, 1), (4, 3)))
         elseif length(bonds) == 0
             # if term not found, return the zero operator on this bond
-            dtype = scalartype(gate)
-            r1, c1 = (mod1(bond[1][i], n) for (i, n) in zip(1:2, size(gate)))
-            r2, c2 = (mod1(bond[2][i], n) for (i, n) in zip(1:2, size(gate)))
-            V1 = physicalspace(gate)[r1, c1]
-            V2 = physicalspace(gate)[r2, c2]
+            dtype = scalartype(ham)
+            r1, c1 = (mod1(bond[1][i], n) for (i, n) in zip(1:2, size(ham)))
+            r2, c2 = (mod1(bond[2][i], n) for (i, n) in zip(1:2, size(ham)))
+            V1 = physicalspace(ham)[r1, c1]
+            V2 = physicalspace(ham)[r2, c2]
             return zeros(dtype, V1 ⊗ V2 ← V1 ⊗ V2)
         else
             error("There are multiple terms in `gate` corresponding to the bond $(bond).")
@@ -67,6 +66,42 @@ function get_gateterm(gate::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
     else
         (length(bonds) == 1) ||
             error("There are multiple terms in `gate` corresponding to the bond $(bond).")
-        return gate.terms[bonds[1]].second
+        return ham.terms[bonds[1]].second
     end
+end
+
+"""
+    _get_se3site_term(ham::LocalOperator, row::Int, col::Int)
+
+Construct the term acting on the southeast 3-site cluster in `ham`.
+```
+    r-1        g3
+                |
+                ↓
+    r   g1 -←- g2
+        c      c+1
+```
+"""
+function _get_se3site_term(ham::LocalOperator, row::Int, col::Int)
+    Nr, Nc = size(ham)
+    @assert 1 <= row <= Nr && 1 <= col <= Nc
+    sites = [
+        CartesianIndex(row, col),
+        CartesianIndex(row, col + 1),
+        CartesianIndex(row - 1, col + 1),
+    ]
+    nb1x = _get_bond_term(ham, (sites[1], sites[2]))
+    nb1y = _get_bond_term(ham, (sites[2], sites[3]))
+    nb2 = _get_bond_term(ham, (sites[1], sites[3]))
+    # identity operator at each site
+    units = map(sites) do site
+        site_ = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
+        return id(physicalspace(ham)[site_])
+    end
+    # when iterating through ┘, └, ┌, ┐ clusters in the unit cell,
+    # NN / NNN bonds are counted 4 / 2 times, respectively.
+    @tensor term[i' j' k'; i j k] :=
+        (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4 +
+        (nb2[i' k'; i k] * units[2][j'; j]) / 2
+    return term
 end

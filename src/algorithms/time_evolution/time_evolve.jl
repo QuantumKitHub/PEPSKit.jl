@@ -91,3 +91,14 @@ function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
     end
     return InfinitePEPO(cat(A; dims = 3))
 end
+
+function trotterize(H::LocalOperator, dt::Number; force_3site::Bool = false)
+    nnonly = is_nearest_neighbour(H)
+    use_3site = force_3site || !nnonly
+    gate = if use_3site
+        TrotterMPOs2ndNeighbor(H, dt)
+    else
+        get_expham(H, dt)
+    end
+    return gate
+end
