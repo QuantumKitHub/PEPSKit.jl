@@ -31,7 +31,7 @@ struct PEPSOptimize{B, G}
             boundary_alg::B, gradient_alg::G, optimizer_alg,
             reuse_env, symmetrization,
         ) where {B, G}
-        _check_algorithm_combination(boundary_alg, gradient_alg)
+        _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization)
         return new{B, G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
     end
 end

@@ -201,13 +201,19 @@ EigSolver(; kwargs...) = GradMode(; alg = :eigsolver, kwargs...)
 GRADIENT_MODE_SYMBOLS[:eigsolver] = EigSolver
 
 """
-    _check_algorithm_combination(boundary_alg, gradient_alg)
+    _check_algorithm_combination(boundary_alg, gradient_alg_or_symmetrization)
+    _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization)
 
 Check for allowed combinations of gradient algorithm and boundary algorithm to be used for
 computing the gradient of a `leading_boundary` call. Throws an error containing a
 recommended fix if the combination is not allowed or broken.
 """
-function _check_algorithm_combination(boundary_alg, gradient_alg) end
+function _check_algorithm_combination(boundary_alg, gradient_alg_or_symmetrization) end
+function _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization)
+    _check_algorithm_combination(boundary_alg, gradient_alg)
+    _check_algorithm_combination(boundary_alg, symmetrization)
+    return nothing
+end
 function _check_algorithm_combination(::SequentialCTMRG, ::GradMode{:fixed})
     msg = "`:fixed` mode is not compatible with `SequentialCTMRG` since the sequential \
           application of SVDs does not allow to differentiate through a fixed set of \
@@ -216,9 +222,17 @@ function _check_algorithm_combination(::SequentialCTMRG, ::GradMode{:fixed})
 end
 function _check_algorithm_combination(::C4vCTMRG{<:C4vEighProjector}, ::GradMode{:diffgauge})
     msg = "`:diffgauge` mode is currently not compatible with eigh-based C4v CTMRG; \
-          either switch to a different projector algorithm (e.g. `c4v_qr`), or use :fixed \
-          mode for differentiation instead."
+        either switch to a different projector algorithm (e.g. `c4v_qr`), or use :fixed \
+        mode for differentiation instead."
     throw(ArgumentError(msg))
+end
+function _check_algorithm_combination(::C4vCTMRG, symm::Union{Nothing, <:SymmetrizationStyle})
+    if !(symm isa RotateReflect)
+        msg = "C4vCTMRG optimization is compatible only with RotateReflect symmetrization. \
+            Make sure to set `symmetrization = RotateReflect()`."
+        throw(ArgumentError(msg))
+    end
+    return nothing
 end
 
 #=
