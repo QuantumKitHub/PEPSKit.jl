@@ -114,7 +114,7 @@ function su_iter(
     for i in 1:4
         Nr, Nc = size(state2)[1:2]
         for r in 1:Nr, c in 1:Nc
-            gs = gatempos[i, r, c]
+            gs = gatempos[i][r, c]
             truncs = [
                 truncation_strategy(trunc, 1, r, c)
                 truncation_strategy(trunc, 2, r, _next(c, Nc))

@@ -31,14 +31,12 @@ struct TrotterMPOs2ndNeighbor{T} <: TrotterMPOs
 end
 
 function TrotterMPOs2ndNeighbor(H::LocalOperator, dt::Number)
-    mpos = stack(
-        [
-            _get_gatempos_se(H, dt),
-            _get_gatempos_se(rotl90(H), dt),
-            _get_gatempos_se(rot180(H), dt),
-            _get_gatempos_se(rotr90(H), dt),
-        ]; dims = 1
-    )
+    mpos = [
+        _get_gatempos_se(H, dt),
+        _get_gatempos_se(rotl90(H), dt),
+        _get_gatempos_se(rot180(H), dt),
+        _get_gatempos_se(rotr90(H), dt)
+    ]
     return TrotterMPOs2ndNeighbor(mpos)
 end
 
