@@ -9,17 +9,6 @@ using PEPSKit
 bm_β = [0.5632, 0.0]
 bm_2β = [0.5297, 0.8265]
 
-# only contains 2-site gates, convenient for time evolution
-function tfising_model(T::Type{<:Number}, lattice::InfiniteSquare; J = 1.0, g = 1.0)
-    pspace, S = ℂ^2, Trivial
-    ZZ = rmul!(σᶻ(T, S) ⊗ σᶻ(T, S), -J)
-    X = rmul!(σˣ(T, S), g * -J)
-    unit = TensorKit.id(pspace)
-    spaces = fill(pspace, (lattice.Nrows, lattice.Ncols))
-    gate = ZZ + (unit ⊗ X + X ⊗ unit) / 4
-    return PEPSKit.nearest_neighbour_hamiltonian(spaces, gate)
-end
-
 function converge_env(state, χ::Int)
     trunc1 = truncrank(4) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(ones, Float64, state, ℂ^1)
@@ -45,7 +34,7 @@ function measure_mag(pepo::InfinitePEPO, env::CTMRGEnv; purified::Bool = false)
 end
 
 Nr, Nc = 2, 2
-ham = tfising_model(Float64, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
+ham = transverse_field_ising(Float64, Trivial, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0)
 pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 

@@ -92,11 +92,41 @@ function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
     return InfinitePEPO(cat(A; dims = 3))
 end
 
+"""
+    _check_hamiltonian_for_trotter(H::LocalOperator)
+
+Assert that operator `H` contains only one-site and two-site terms,
+so that it is suited for Trotter time evolution algorithms.
+Returns the maximum squared distance covered by a two-site term in `H`.
+On the square lattice, the neighbor distances are
+```
+    1st nb.     2nd nb.     3rd nb.
+
+                    o
+                    |
+    o---o       o---o       o---o---o
+
+    dist² = 1   dist² = 2   dist² = 4
+```
+"""
+function _check_hamiltonian_for_trotter(H::LocalOperator)
+    dist = 0
+    for (sites, op) in H.terms
+        @assert numin(op) <= 2 "Hamiltonians containing multi-site (> 2) terms are not supported."
+        if numin(op) == 2
+            dist = max(dist, sum(Tuple(sites[1] - sites[2]) .^ 2))
+        end
+    end
+    @assert dist > 0 "Hamiltonians with only one-site terms are not suited for current implementation of Trotter time evolution focusing on 2-site gates."
+    @assert dist <= 2 "Hamiltonians with 2-site terms on beyond 2nd-neighbor bonds are not supported."
+    return dist
+end
+
 function trotterize(H::LocalOperator, dt::Number)
-    nnonly = is_nearest_neighbour(H)
-    gate = if nnonly
+    dist = _check_hamiltonian_for_trotter(H)
+    gate = if dist == 1
         TrotterGates1stNeighbor(H, dt)
-    else
+    elseif dist == 2
         TrotterMPOs2ndNeighbor(H, dt)
     end
     return gate
