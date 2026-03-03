@@ -26,7 +26,7 @@ function TrotterGates1stNeighbor(H::LocalOperator, dt::Number)
     gates = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         # d = 1: horizontal bond; d = 2: vertical bond
         site1 = CartesianIndex(r, c)
-        site2 = (d == 1) ?  CartesianIndex(r, c + 1) : CartesianIndex(r - 1, c)
+        site2 = (d == 1) ? CartesianIndex(r, c + 1) : CartesianIndex(r - 1, c)
         term = _get_bond_term(H, (site1, site2))
         return exp(-dt * term)
     end
@@ -45,7 +45,45 @@ function is_nearest_neighbour(H::LocalOperator)
 end
 
 """
-    is_equivalent_bond(bond1::NTuple{2,CartesianIndex{2}}, bond2::NTuple{2,CartesianIndex{2}}, (Nrow, Ncol)::NTuple{2,Int})
+    is_equivalent_site(
+        site1::CartesianIndex{2}, site2::CartesianIndex{2},
+        (Nrow, Ncol)::NTuple{2, Int}
+    )
+
+Check if two lattice sites are related by a (periodic) lattice translation.
+"""
+function is_equivalent_site(
+        site1::CartesianIndex{2}, site2::CartesianIndex{2},
+        (Nrow, Ncol)::NTuple{2, Int}
+    )
+    shift = site1 - site2
+    return mod(shift[1], Nrow) == 0 && mod(shift[2], Ncol) == 0
+end
+
+"""
+    _get_site_term(ham::LocalOperator, site::CartesianIndex{2})
+
+Get the sum of all 1-site terms at `site` in `ham`.
+If there are no such terms, return the zero operator at `site`.
+"""
+function _get_site_term(ham::LocalOperator, site::CartesianIndex{2})
+    r, c = mod1.(Tuple(site), size(ham))
+    V = physicalspace(ham)[r, c]
+    term = zeros(scalartype(ham), V ← V)
+    for (sites, op) in ham.terms
+        length(sites) != 1 && continue
+        if is_equivalent_site(sites[1], site, size(ham))
+            term = term + op
+        end
+    end
+    return term
+end
+
+"""
+    is_equivalent_bond(
+        bond1::NTuple{2, CartesianIndex{2}}, bond2::NTuple{2, CartesianIndex{2}},
+        (Nrow, Ncol)::NTuple{2, Int},
+    )
 
 Check if two 2-site bonds are related by a (periodic) lattice translation.
 """
@@ -63,33 +101,26 @@ end
 """
     _get_bond_term(ham::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
 
-Get the 2-site term on `bond` in `ham`.
+Get the sum of all 2-site terms on `bond` in `ham`.
+If there are no such terms, return the zero operator on `bond`.
 """
 function _get_bond_term(ham::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
-    bonds = findall(p -> is_equivalent_bond(p.first, bond, size(ham.lattice)), ham.terms)
-    if length(bonds) == 0
-        # try reversed site order
-        bonds = findall(
-            p -> is_equivalent_bond(p.first, reverse(bond), size(ham.lattice)), ham.terms
-        )
-        if length(bonds) == 1
-            return permute(ham.terms[bonds[1]].second, ((2, 1), (4, 3)))
-        elseif length(bonds) == 0
-            # if term not found, return the zero operator on this bond
-            dtype = scalartype(ham)
-            r1, c1 = (mod1(bond[1][i], n) for (i, n) in zip(1:2, size(ham)))
-            r2, c2 = (mod1(bond[2][i], n) for (i, n) in zip(1:2, size(ham)))
-            V1 = physicalspace(ham)[r1, c1]
-            V2 = physicalspace(ham)[r2, c2]
-            return zeros(dtype, V1 ⊗ V2 ← V1 ⊗ V2)
-        else
-            error("There are multiple terms in `gate` corresponding to the bond $(bond).")
+    # create zero operator
+    r1, c1 = mod1.(Tuple(bond[1]), size(ham))
+    r2, c2 = mod1.(Tuple(bond[2]), size(ham))
+    V1 = physicalspace(ham)[r1, c1]
+    V2 = physicalspace(ham)[r2, c2]
+    term = zeros(scalartype(ham), V1 ⊗ V2 ← V1 ⊗ V2)
+    for (sites, op) in ham.terms
+        length(sites) != 2 && continue
+        if is_equivalent_bond(sites, bond, size(ham))
+            term += op
+        elseif is_equivalent_bond(sites, reverse(bond), size(ham))
+            op′ = permute(op, ((2, 1), (4, 3)); copy = true)
+            term += op′
         end
-    else
-        (length(bonds) == 1) ||
-            error("There are multiple terms in `gate` corresponding to the bond $(bond).")
-        return ham.terms[bonds[1]].second
     end
+    return term
 end
 
 """
