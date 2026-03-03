@@ -8,6 +8,8 @@ using Zygote
 using LinearAlgebra
 using KrylovKit
 
+using PEPSKit: unitcell, norm_preserving_retract
+
 sd = 123456
 Random.seed!(sd)
 
