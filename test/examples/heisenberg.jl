@@ -53,7 +53,7 @@ end
 @testset "C4v AD optimization with scalartype T=$T and projector_alg=$projector_alg" for (T, projector_alg) in
     Iterators.product([Float64, ComplexF64], [:c4v_eigh, :c4v_qr])
     # initialize symmetric states
-    Random.seed!(23023952)
+    Random.seed!(12345)
     symm = RotateReflect()
     H′ = heisenberg_XYZ_c4v(InfiniteSquare())
     H = T <: Real ? real(H′) : H′
@@ -128,11 +128,12 @@ end
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol = 1.0e-3)
 
+    # test if :fixed mode on real tensors errors
+    @test_throws ArgumentError fixedpoint(ham, peps, env)
+
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
-        ham,
-        peps,
-        env;
+        ham, peps, complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
         gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),

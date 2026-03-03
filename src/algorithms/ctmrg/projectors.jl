@@ -56,7 +56,7 @@ end
 
 Return the tensor decomposition algorithm of the `alg` projector algorithm.
 Additionally, the multi-index `(dir, r, c)` can be supplied which will return the
-decomposition performed at that index, e.g. when using `FixedEigh` or `FixedSVD`.
+decomposition performed at that index, e.g. when using [`FixedEig`](@ref) or [`FixedSVD`](@ref).
 """
 decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
 function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
@@ -67,11 +67,12 @@ function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
             FixedSVD(
                 fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
                 fwd_alg.U_full[dir, r, c], fwd_alg.S_full[dir, r, c], fwd_alg.V_full[dir, r, c],
+                fwd_alg.truncation_indices[dir, r, c],
             )
         else
             FixedSVD(
                 fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
-                nothing, nothing, nothing,
+                nothing, nothing, nothing, nothing,
             )
         end
         return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = decomposition_alg.rrule_alg)

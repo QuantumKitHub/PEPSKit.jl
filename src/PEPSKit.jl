@@ -12,6 +12,7 @@ using MatrixAlgebraKit: LAPACK_DivideAndConquer, LAPACK_QRIteration
 using MatrixAlgebraKit:
     TruncationStrategy, NoTruncation, truncate, findtruncated, truncation_error, diagview
 using MatrixAlgebraKit: LAPACK_EighAlgorithm, eigh_pullback!, eigh_trunc_pullback!
+using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 
 using TensorKit
 using TensorKit: AdjointTensorMap, SectorDict
@@ -103,7 +104,10 @@ include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
-include("algorithms/time_evolution/evoltools.jl")
+include("algorithms/time_evolution/trotter_gate.jl")
+include("algorithms/time_evolution/trotter_mpo.jl")
+include("algorithms/time_evolution/apply_gate.jl")
+include("algorithms/time_evolution/apply_mpo.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
@@ -123,11 +127,11 @@ include("algorithms/select_algorithm.jl")
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export SVDAdjoint, FullSVDReverseRule, IterSVD
+export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
-export EighAdjoint, IterEigh, QRAdjoint, C4vCTMRG, C4vEighProjector, C4vQRProjector
+export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace
 export product_peps
