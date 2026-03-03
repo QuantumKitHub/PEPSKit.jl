@@ -95,7 +95,7 @@ end
 function trotterize(H::LocalOperator, dt::Number)
     nnonly = is_nearest_neighbour(H)
     gate = if nnonly
-        get_expham(H, dt)
+        TrotterGates1stNeighbor(H, dt)
     else
         TrotterMPOs2ndNeighbor(H, dt)
     end

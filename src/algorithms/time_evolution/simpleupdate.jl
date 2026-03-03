@@ -145,7 +145,8 @@ end
 One iteration of simple update
 """
 function su_iter(
-        state::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight
+        state::InfiniteState, gate::TrotterGates1stNeighbor,
+        alg::SimpleUpdate, env::SUWeight
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
@@ -153,10 +154,9 @@ function su_iter(
     for r in 1:Nr, c in 1:Nc
         (alg.bipartite && r > 1) && continue
         # update x-bonds
-        term = _get_bond_term(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
         trunc = truncation_strategy(alg.trunc, 1, r, c)
         for gate_ax in gate_axs
-            ϵ′ = _su_xbond!(state2, term, env2, r, c, trunc; gate_ax)
+            ϵ′ = _su_xbond!(state2, gate[1, r, c], env2, r, c, trunc; gate_ax)
             ϵ = max(ϵ, ϵ′)
         end
         if alg.bipartite
@@ -166,10 +166,9 @@ function su_iter(
             env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
         end
         # update y-bonds
-        term = _get_bond_term(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
         trunc = truncation_strategy(alg.trunc, 2, r, c)
         for gate_ax in gate_axs
-            ϵ′ = _su_ybond!(state2, term, env2, r, c, trunc; gate_ax)
+            ϵ′ = _su_ybond!(state2, gate[2, r, c], env2, r, c, trunc; gate_ax)
             ϵ = max(ϵ, ϵ′)
         end
         if alg.bipartite

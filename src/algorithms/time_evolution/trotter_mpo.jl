@@ -11,10 +11,8 @@ Base.getindex(gate::TrotterMPOs, args...) = Base.getindex(gate.mpos, args...)
 """
     struct TrotterMPOs2ndNeighbor{T}
 
-Collection of all Trotter evolution MPOs obtained from a Hamiltonian
-containing up to 2nd nearest neighbor terms.
-
-Before exponentiating, terms in the Hamiltonian are organized as
+Collection of all Trotter evolution MPOs obtained from
+a Hamiltonian containing up to 2nd neighbor terms
 ```
     H = ∑ᵢⱼ(┘ᵢⱼ + ┐ᵢⱼ + ┌ᵢⱼ + └ᵢⱼ)
 ```
@@ -24,7 +22,8 @@ where `┘`, `┐`, `┌`, `└` refer to the following 3-site clusters
         |       |   |       |
     1---2       1   3       2---3
 ```
-Then each Trotter MPO is `exp(-dt * ┘ᵢⱼ)`, etc.
+`mpos[d][i, j]` is the `┘ᵢⱼ` MPO acting on the `[i, j]` southeast
+cluster after the network is left-rotated by `90 x (d - 1)` degrees.
 """
 struct TrotterMPOs2ndNeighbor{T} <: TrotterMPOs
     mpos::T

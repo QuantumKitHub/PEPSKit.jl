@@ -1,14 +1,36 @@
 """
-    get_expham(H::LocalOperator, dt::Number)
+$(TYPEDEF)
 
-Compute `exp(-dt * op)` for each term `op` in `H`,
-and combine them into a new `LocalOperator`.
-Each `op` in `H` must be a single `TensorMap`.
+Abstract super type for the collection of 2-body Trotter evolution gates.
 """
-function get_expham(H::LocalOperator, dt::Number)
-    return LocalOperator(
-        physicalspace(H), (sites => exp(-dt * op) for (sites, op) in H.terms)...
-    )
+abstract type TrotterGates end
+
+Base.getindex(gates::TrotterGates, args...) = Base.getindex(gates.gates, args...)
+
+"""
+Collection of 1st (nearest) neighbor 2-body Trotter gates.
+
+Before exponentiating, terms in the Hamiltonian are organized as
+```
+    H = ∑ᵢⱼ (Xᵢⱼ + Yᵢⱼ)
+```
+where each `Xᵢⱼ` (or `Yᵢⱼ`) acts on a horizontal (or vertical) bond.
+The Trotter gates are `exp(-dt * Xᵢⱼ)`, `exp(-dt * Yᵢⱼ)`.
+"""
+struct TrotterGates1stNeighbor{G} <: TrotterGates
+    gates::G
+end
+
+function TrotterGates1stNeighbor(H::LocalOperator, dt::Number)
+    Nr, Nc = size(H)
+    gates = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+        # d = 1: horizontal bond; d = 2: vertical bond
+        site1 = CartesianIndex(r, c)
+        site2 = (d == 1) ?  CartesianIndex(r, c + 1) : CartesianIndex(r - 1, c)
+        term = _get_bond_term(H, (site1, site2))
+        return exp(-dt * term)
+    end
+    return TrotterGates1stNeighbor(gates)
 end
 
 """
