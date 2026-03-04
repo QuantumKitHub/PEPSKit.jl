@@ -122,13 +122,13 @@ function _check_hamiltonian_for_trotter(H::LocalOperator)
     return dist
 end
 
-function trotterize(H::LocalOperator, dt::Number)
+function trotterize(H::LocalOperator, dt::Number; force_mpo::Bool = false)
     dist = _check_hamiltonian_for_trotter(H)
     # For nearest neighbor Hamiltonian, convert to 2-site Trotter gates.
     # For all other cases, convert to multi-site Trotter MPOs.
-    gate = if dist == 1
+    gate = if dist == 1 && !force_mpo
         TrotterNNGates(H, dt)
-    elseif dist == 2
+    elseif (dist == 1 && force_mpo) || dist == 2
         TrotterMPOs2ndNeighbor(H, dt)
     end
     return gate
