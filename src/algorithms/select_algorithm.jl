@@ -57,7 +57,6 @@ function select_algorithm(
         optimizer_alg = merge(defaults, optimizer_alg)
     end
 
-
     return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, symmetrization, kwargs...)
 end
 
