@@ -145,7 +145,7 @@ end
 One iteration of simple update
 """
 function su_iter(
-        state::InfiniteState, gate::TrotterGates1stNeighbor,
+        state::InfiniteState, gate::TrotterNNGates,
         alg::SimpleUpdate, env::SUWeight
     )
     Nr, Nc, = size(state)

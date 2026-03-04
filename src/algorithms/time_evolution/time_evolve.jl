@@ -112,20 +112,22 @@ On the square lattice, the neighbor distances are
 function _check_hamiltonian_for_trotter(H::LocalOperator)
     dist = 0
     for (sites, op) in H.terms
-        @assert numin(op) <= 2 "Hamiltonians containing multi-site (> 2) terms are not supported."
+        @assert numin(op) <= 2 "Hamiltonians containing multi-site (> 2) terms are not currently supported."
         if numin(op) == 2
             dist = max(dist, sum(Tuple(sites[1] - sites[2]) .^ 2))
         end
     end
-    @assert dist > 0 "Hamiltonians with only one-site terms are not suited for current implementation of Trotter time evolution focusing on 2-site gates."
-    @assert dist <= 2 "Hamiltonians with 2-site terms on beyond 2nd-neighbor bonds are not supported."
+    @assert dist > 0 "Hamiltonians with only one-site terms are not suited for current implementation of Trotter time evolution."
+    @assert dist <= 2 "Hamiltonians with 2-site terms on beyond 2nd-neighbor bonds are not currently supported."
     return dist
 end
 
 function trotterize(H::LocalOperator, dt::Number)
     dist = _check_hamiltonian_for_trotter(H)
+    # For nearest neighbor Hamiltonian, convert to 2-site Trotter gates.
+    # For all other cases, convert to multi-site Trotter MPOs.
     gate = if dist == 1
-        TrotterGates1stNeighbor(H, dt)
+        TrotterNNGates(H, dt)
     elseif dist == 2
         TrotterMPOs2ndNeighbor(H, dt)
     end
