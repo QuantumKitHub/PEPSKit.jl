@@ -41,24 +41,30 @@ function TrotterMPOs2ndNeighbor(H::LocalOperator, dt::Number)
 end
 
 """
-Convert a 3-site gate to MPO form by SVD, 
+Convert an N-site gate to MPO form by SVD, 
 in which the axes are ordered as
 ```
+    site 1      mid sites      site N
     2               3               3
     ↓               ↓               ↓
-    g1 ←- 3    1 ←- g2 ←- 4    1 ←- g3
+    g1 ←- 3    1 ←- g ←- 4    1 ←- gN
     ↓               ↓               ↓
     1               2               2
 ```
 """
-function gate_to_mpo3(
-        gate::AbstractTensorMap{T, S, 3, 3}, trunc = trunctol(; atol = MPSKit.Defaults.tol)
-    ) where {T <: Number, S <: ElementarySpace}
+function gate_to_mpo(
+        gate::AbstractTensorMap{T, S, N, N}, trunc = trunctol(; atol = MPSKit.Defaults.tol)
+    ) where {T <: Number, S <: ElementarySpace, N}
     Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
-    g1 = removeunit(Os[1], 1)
-    g2 = Os[2]
-    g3 = removeunit(Os[3], 4)
-    return [g1, g2, g3]
+    return map(1:N) do i
+        if i == 1
+            return removeunit(Os[1], 1)
+        elseif i == N
+            return removeunit(Os[N], 4)
+        else
+            return Os[i]
+        end
+    end
 end
 
 """
@@ -120,6 +126,6 @@ function _get_gatempos_se(ham::LocalOperator, dt::Number)
     Nr, Nc = size(ham.lattice)
     return map(Iterators.product(1:Nr, 1:Nc)) do (row, col)
         term = _get_se3site_term(ham, row, col)
-        return gate_to_mpo3(exp(-dt * term))
+        return gate_to_mpo(exp(-dt * term))
     end
 end

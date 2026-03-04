@@ -70,7 +70,7 @@ end
         flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
-        gs = PEPSKit.gate_to_mpo3(gate)
+        gs = PEPSKit.gate_to_mpo(gate)
         @test mpo_to_gate3(gs) ≈ gate
         Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
         PEPSKit._apply_gatempo!(Ms2, gs)
@@ -87,7 +87,7 @@ end
         flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
-        gs = PEPSKit.gate_to_mpo3(gate)
+        gs = PEPSKit.gate_to_mpo(gate)
         @test mpo_to_gate3(gs) ≈ gate
         for gate_ax in 1:2
             Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
@@ -140,7 +140,7 @@ end
     dts = [1.0e-2]
     tols = [1.0e-8]
     trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
-    alg = SimpleUpdate(; trunc, force_3site = true)
+    alg = SimpleUpdate(; trunc, force_mpo = true)
     for (n, (dt, tol)) in enumerate(zip(dts, tols))
         peps, wts, = time_evolve(peps, ham, dt, 5000, alg, wts; tol, check_interval = 1000)
     end

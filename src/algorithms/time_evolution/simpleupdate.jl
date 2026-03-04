@@ -12,8 +12,8 @@ $(TYPEDFIELDS)
     trunc::TruncationStrategy
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
-    "When true, force the usage of 3-site simple update"
-    force_3site::Bool = false
+    "When true, force the usage of MPO simple update for nearest neighbor Hamiltonians."
+    force_mpo::Bool = false
     "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
     "(Only applicable to InfinitePEPO) 
@@ -57,7 +57,7 @@ function TimeEvolver(
     _timeevol_sanity_check(psi0, physicalspace(H), alg)
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     # create Trotter gates
-    gate = trotterize(H, dt′; force_mpo = alg.force_3site)
+    gate = trotterize(H, dt′; force_mpo = alg.force_mpo)
     if isa(gate, TrotterMPOs)
         @assert !alg.bipartite "Trotter MPOs are incompatible with bipartite lattice structure."
     end
