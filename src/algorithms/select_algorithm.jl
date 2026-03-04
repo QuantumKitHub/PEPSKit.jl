@@ -32,6 +32,18 @@ function select_algorithm(
         boundary_alg = select_algorithm(leading_boundary, env₀; boundary_kwargs...)
     end
 
+    # C4vCTMRG-specific defaults
+    if boundary_alg isa C4vCTMRG
+        # use :linsolver GradMode since :eigsolver tends to have hiccups
+        if gradient_alg isa NamedTuple
+            haskey(gradient_alg, :alg) || (gradient_alg = merge((; alg = :linsolver), gradient_alg))
+        end
+        # symmetrize state and gradient
+        if isnothing(symmetrization)
+            symmetrization = RotateReflect()
+        end
+    end
+
     # adjust gradient verbosity
     if gradient_alg isa NamedTuple
         # TODO: check this:
@@ -45,10 +57,6 @@ function select_algorithm(
         optimizer_alg = merge(defaults, optimizer_alg)
     end
 
-    # symmetrize state and gradient when doing C4v optimization
-    if boundary_alg isa C4vCTMRG && isnothing(symmetrization)
-        symmetrization = RotateReflect()
-    end
 
     return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, symmetrization, kwargs...)
 end

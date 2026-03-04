@@ -50,21 +50,23 @@ end
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
-@testset "C4v AD optimization" begin
+@testset "C4v AD optimization with scalartype T=$T and projector_alg=$projector_alg" for (T, projector_alg) in
+    Iterators.product([Float64, ComplexF64], [:c4v_eigh, :c4v_qr])
     # initialize symmetric states
-    Random.seed!(123)
+    Random.seed!(12345)
     symm = RotateReflect()
-    H = heisenberg_XYZ_c4v(InfiniteSquare())
-    peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
+    H′ = heisenberg_XYZ_c4v(InfiniteSquare())
+    H = T <: Real ? real(H′) : H′
+    peps₀ = InfinitePEPS(randn, T, ComplexSpace(2), ComplexSpace(Dbond))
     peps₀ = peps_normalize(symmetrize!(peps₀, symm))
     e₀ = initialize_random_c4v_env(peps₀, ComplexSpace(χenv))
-    env₀, = leading_boundary(e₀, peps₀; alg = :c4v)
+    env₀, = leading_boundary(e₀, peps₀; alg = :c4v, projector_alg)
 
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(
         H, peps₀, env₀;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
-        boundary_alg = (; alg = :c4v),
+        boundary_alg = (; alg = :c4v, projector_alg, maxiter = 500),
     )
     ξ_h, ξ_v, = correlation_length(peps, env)
 
@@ -126,11 +128,12 @@ end
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol = 1.0e-3)
 
+    # test if :fixed mode on real tensors errors
+    @test_throws ArgumentError fixedpoint(ham, peps, env)
+
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
-        ham,
-        peps,
-        env;
+        ham, peps, complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
         gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),
