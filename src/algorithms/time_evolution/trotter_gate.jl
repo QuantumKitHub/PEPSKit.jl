@@ -8,7 +8,7 @@ Before exponentiating, terms in the Hamiltonian are organized as
 where each `Xᵢⱼ` (or `Yᵢⱼ`) acts on a horizontal (or vertical) bond.
 The Trotter gates are `exp(-dt * Xᵢⱼ)`, `exp(-dt * Yᵢⱼ)`.
 """
-struct TrotterNNGates{G} <: TrotterNNGates
+struct TrotterNNGates{G}
     gates::G
 end
 Base.getindex(gates::TrotterNNGates, args...) = Base.getindex(gates.gates, args...)
