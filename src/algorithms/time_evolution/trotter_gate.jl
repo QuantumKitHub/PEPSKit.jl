@@ -13,6 +13,8 @@ struct TrotterNNGates{G}
 end
 Base.getindex(gates::TrotterNNGates, args...) = Base.getindex(gates.gates, args...)
 
+const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
+
 function TrotterNNGates(H::LocalOperator, dt::Number)
     Nr, Nc = size(H)
     T = scalartype(H)

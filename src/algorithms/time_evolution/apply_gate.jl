@@ -126,3 +126,33 @@ function _apply_gate(
     end
     return a, s, b, ϵ
 end
+
+"""
+$(SIGNATURES)
+
+Apply a trivial gate (indicated by `nothing`) on the reduced matrices `a`, `b`
+```
+    -1← a --- 3 --- b ← -4          -2         -3
+        ↓           ↓               ↓           ↓
+        -2         -3           -1← a --- 3 --- b ← -4
+```
+"""
+function _apply_gate(
+        a::AbstractTensorMap, b::AbstractTensorMap,
+        ::Nothing, trunc::TruncationStrategy
+    )
+    V = space(b, 1)
+    need_flip = isdual(V)
+    @tensor a2b2[-1 -2; -3 -4] := a[-1 -2 3] * b[3 -3 -4]
+    trunc = if trunc isa FixedSpaceTruncation
+        need_flip ? truncspace(flip(V)) : truncspace(V)
+    else
+        trunc
+    end
+    a, s, b, ϵ = svd_trunc!(a2b2; trunc, alg = LAPACK_QRIteration())
+    a, b = absorb_s(a, s, b)
+    if need_flip
+        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
+    end
+    return a, s, b, ϵ
+end

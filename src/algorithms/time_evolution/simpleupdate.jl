@@ -76,9 +76,9 @@ When `gate_ax = 1` (or `2`), the gate will be applied to
 the codomain (or domain) physicsl legs of `state`.
 """
 function _su_xbond!(
-        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
         row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
-    ) where {T <: Number, S <: ElementarySpace}
+    )
     Nr, Nc, = size(state)
     cp1 = _next(col, Nc)
     # absorb environment weights
@@ -116,9 +116,9 @@ When `gate_ax = 1` (or `2`), the gate will be applied to
 the codomain (or domain) physicsl legs of `state`.
 """
 function _su_ybond!(
-        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
+        state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
         row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
-    ) where {T <: Number, S <: ElementarySpace}
+    )
     Nr, Nc, = size(state)
     rm1 = _prev(row, Nr)
     # absorb environment weights

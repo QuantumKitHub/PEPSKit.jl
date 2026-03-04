@@ -18,30 +18,13 @@ $(TYPEDFIELDS)
 end
 
 """
-A LocalOperator consisting of identity gates on all nearest neighbor bonds.
-"""
-function _trivial_gates(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: ElementarySpace}
-    terms = []
-    for site1 in CartesianIndices(lattice)
-        r1, c1 = mod1.(Tuple(site1), size(lattice))
-        for d in (CartesianIndex(1, 0), CartesianIndex(0, 1))
-            site2 = site1 + d
-            r2, c2 = mod1.(Tuple(site2), size(lattice))
-            V1, V2 = lattice[r1, c1], lattice[r2, c2]
-            h = TensorKit.id(elt, V1 ⊗ V2)
-            push!(terms, (site1, site2) => h)
-        end
-    end
-    return LocalOperator(lattice, terms...)
-end
-
-"""
     gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::SUGauge)
 
 Fix the gauge of `psi` using trivial simple update.
 """
 function gauge_fix(psi::InfiniteState, alg::SUGauge)
-    gates = _trivial_gates(scalartype(psi), physicalspace(psi))
+    Nr, Nc = size(psi)
+    gates = TrotterNNGates(fill(nothing, (2, Nr, Nc)))
     su_alg = SimpleUpdate(; trunc = FixedSpaceTruncation(), bipartite = _state_bipartite_check(psi))
     wts0 = SUWeight(psi)
     # use default constructor to avoid calculation of exp(-H * 0)
