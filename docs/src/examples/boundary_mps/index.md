@@ -160,7 +160,7 @@ mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol = 1.0e-6, verbosity = 2))
 
 ````
 [ Info: VUMPS init:	obj = +1.674563752306e+00 +3.035692829590e+00im	err = 7.5576e-01
-[ Info: VUMPS conv 120:	obj = +6.831610878310e+00 -9.694384440741e-09im	err = 9.5145748817e-07	time = 7.86 sec
+[ Info: VUMPS conv 120:	obj = +6.831610878310e+00 -9.694384440741e-09im	err = 9.5145748817e-07	time = 7.91 sec
 
 ````
 
@@ -186,7 +186,7 @@ norm_ctmrg = abs(norm(ψ, env_ctmrg))
 
 ````
 [ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579630e-01im	err = 1.0000e+00
-[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595352e-07	time = 6.44 sec
+[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595352e-07	time = 6.40 sec
 abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674852567312514e-6
 
 ````
@@ -227,10 +227,10 @@ norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
 ````
 [ Info: VUMPS init:	obj = +8.149302834396e+02 -8.860408249120e+01im	err = 8.6172e-01
-┌ Warning: VUMPS cancel 200:	obj = +1.041128719531e+05 -2.947417781828e+02im	err = 4.9289102276e-02	time = 20.80 sec
+┌ Warning: VUMPS cancel 200:	obj = +1.041128719531e+05 -2.947417781828e+02im	err = 4.9289102276e-02	time = 17.71 sec
 └ @ MPSKit ~/.julia/packages/MPSKit/hiGZg/src/algorithms/groundstate/vumps.jl:76
 [ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510263e+01im	err = 1.0000e+00
-[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6994291389e-07	time = 3.07 sec
+[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6994291389e-07	time = 2.16 sec
 abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.005283497739358622
 
 ````
@@ -292,7 +292,7 @@ norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 
 ````
 [ Info: VUMPS init:	obj = +2.655321432467e+01 +3.760603778362e-01im	err = 8.9759e-01
-┌ Warning: VUMPS cancel 200:	obj = +9.094977761227e+01 -6.006566625488e+00im	err = 3.5527156917e-01	time = 50.63 sec
+┌ Warning: VUMPS cancel 200:	obj = +9.094977761227e+01 -6.006566625488e+00im	err = 3.5527156917e-01	time = 53.96 sec
 └ @ MPSKit ~/.julia/packages/MPSKit/hiGZg/src/algorithms/groundstate/vumps.jl:76
 norm_pepo = 91.14790667014051
 
