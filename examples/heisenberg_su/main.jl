@@ -39,9 +39,10 @@ H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx = 1, Jy = 1
 md"""
 ## Simple updating
 
-We proceed by initializing a random PEPS that will be evolved. 
-The weights used for simple update are initialized as identity matrices.
-First though, we need to define the appropriate (symmetric) spaces:
+We proceed by initializing a random PEPS that will be evolved. Since we want to make use of
+the bipartite structure of the Heisenberg ground state when we run the simple update routine,
+we will make the initial PEPS bipartite explicitly. The weights used for simple update are
+initialized as identity matrices. First though, we need to define the appropriate (symmetric) spaces:
 """
 
 Dbond = 4
@@ -59,13 +60,17 @@ else
 end
 
 peps = InfinitePEPS(rand, Float64, physical_space, bond_space; unitcell = (Nr, Nc));
+peps.A[2, 2] = copy(peps.A[1, 1]) ## make initial random state bipartite
+peps.A[2, 1] = copy(peps.A[1, 2])
 wts = SUWeight(peps);
 
 md"""
 Next, we can start the `SimpleUpdate` routine, successively decreasing the time intervals
-and singular value convergence tolerances. Note that TensorKit allows to combine SVD
-truncation schemes, which we use here to set a maximal bond dimension and at the same time
-fix a truncation error (if that can be reached by remaining below `Dbond`):
+and singular value convergence tolerances. Here we set `bipartite = true` to exploit the
+underlying bipartite lattice which requires that we input a bipartite PEPS where the diagonal
+and off-diagonal unit cell entries are equivalent. Note that TensorKit allows us to combine SVD
+truncation schemes, which we use here to set a maximal bond dimension and at the same time fix
+a truncation error (if that can be reached by remaining below `Dbond`):
 """
 
 dts = [1.0e-2, 1.0e-3, 4.0e-4]
