@@ -1,43 +1,11 @@
 """
-$(TYPEDEF)
+    struct TrotterMPOs{T <: Vector}
 
-Abstract super type for the collection of
-Trotter evolution MPOs acting on 3 or more sites.
+Collection of Trotter evolution MPOs obtained from
+a Hamiltonian containing long-range or multi-site terms
 """
-abstract type TrotterMPOs end
-
-Base.getindex(gate::TrotterMPOs, args...) = Base.getindex(gate.data, args...)
-
-"""
-    struct TrotterMPOs2ndNeighbor{T}
-
-Collection of all Trotter evolution MPOs obtained from
-a Hamiltonian containing up to 2nd neighbor terms
-```
-    H = ∑ᵢⱼ(┘ᵢⱼ + ┐ᵢⱼ + ┌ᵢⱼ + └ᵢⱼ)
-```
-where `┘`, `┐`, `┌`, `└` refer to the following 3-site clusters 
-```
-        3   3---2   2---1   1
-        |       |   |       |
-    1---2       1   3       2---3
-```
-`data[d][i, j]` is the `┘ᵢⱼ` MPO acting on the `[i, j]` southeast
-cluster after the network is left-rotated by `90 x (d - 1)` degrees.
-"""
-struct TrotterMPOs2ndNeighbor{T} <: TrotterMPOs
+struct TrotterMPOs{T <: Vector}
     data::T
-end
-
-function TrotterMPOs2ndNeighbor(H::LocalOperator, dt::Number)
-    return TrotterMPOs2ndNeighbor(
-        [
-            _get_gatempos_se(H, dt),
-            _get_gatempos_se(rotl90(H), dt),
-            _get_gatempos_se(rot180(H), dt),
-            _get_gatempos_se(rotr90(H), dt),
-        ]
-    )
 end
 
 """
@@ -67,26 +35,84 @@ function gate_to_mpo(
     end
 end
 
-"""
-    _get_se3site_term(ham::LocalOperator, row::Int, col::Int)
+# Specialized functions to trotterize Hamiltonians
+# with long-range/multi-site terms
 
-Construct the term acting on the southeast 3-site cluster in `ham`.
-```
-    r-1     3
-            ↓
-    r   1-←-2
-        c   c+1
-```
+## Next-nearest neighbor H
+
 """
-function _get_se3site_term(ham::LocalOperator, row::Int, col::Int)
+Trotterize a Hamiltonian containing up to 2nd neighbor terms.
+```
+    H = ∑ᵢⱼ(Γᵢⱼ + ⅂ᵢⱼ + ⅃ᵢⱼ + Lᵢⱼ)
+```
+where `Γ`, `⅂`, `⅃`, `L` refer to the following 3-site clusters 
+```
+    NORTHWEST   NORTHEAST
+        2---1   3---2
+        |           |
+        3           1
+
+        1           3
+        |           |
+        2---3   1---2
+    SOUTHWEST   SOUTHEAST
+```
+acting on the the elemental square plaquette
+with southwest corner at `[i, j]`.
+"""
+function trotterize_nnn(H::LocalOperator, dt::Number)
+    Nr, Nc = size(H)
+    # iterate through corner `d` in outermost loop
+    terms = map(Iterators.product(1:Nr, 1:Nc, 1:4)) do (r, c, d)
+        return _get_nnn_mpo(H, dt, d, r, c)
+    end
+    return TrotterMPOs(vec(terms))
+end
+
+"""
+Get coordinates of sites in the 3-site triangular cluster
+used in Trotter evolution with next-nearest neighbor gates,
+with southwest corner at `[row, col]`.
+"""
+function _nnn_cluster_sites(dir::Int, row::Int, col::Int)
+    @assert 1 <= dir <= 4
+    return if dir == NORTHWEST
+        [
+            CartesianIndex(row - 1, col + 1),
+            CartesianIndex(row - 1, col),
+            CartesianIndex(row, col),
+        ]
+    elseif dir == NORTHEAST
+        [
+            CartesianIndex(row, col + 1),
+            CartesianIndex(row - 1, col + 1),
+            CartesianIndex(row - 1, col),
+        ]
+    elseif dir == SOUTHEAST
+        [
+            CartesianIndex(row, col),
+            CartesianIndex(row, col + 1),
+            CartesianIndex(row - 1, col + 1),
+        ]
+    else # dir == SOUTHWEST
+        [
+            CartesianIndex(row - 1, col),
+            CartesianIndex(row, col),
+            CartesianIndex(row, col + 1),
+        ]
+    end
+end
+
+"""
+Construct the evolution MPO acting on the 3-site triangular cluster
+in the square plaquette whose southwest corner is at `[row, col]`.
+`dir` takes values between 1 (`NORTHWEST`) and 4 (`SOUTHWEST`).
+"""
+function _get_nnn_mpo(ham::LocalOperator, dt::Number, dir::Int, row::Int, col::Int)
     Nr, Nc = size(ham)
     T = scalartype(ham)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    sites = [
-        CartesianIndex(row, col),
-        CartesianIndex(row, col + 1),
-        CartesianIndex(row - 1, col + 1),
-    ]
+    sites = _nnn_cluster_sites(dir, row, col)
     ss = map(sites) do site
         _get_site_term(ham, site)
     end
@@ -98,7 +124,7 @@ function _get_se3site_term(ham::LocalOperator, row::Int, col::Int)
         site_ = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
         return id(T, physicalspace(ham)[site_])
     end
-    # When iterating through ┘, └, ┌, ┐ clusters in the unit cell,
+    # When iterating through all triangular clusters in the unit cell,
     # each site / NN-bond / NNN-bond is counted 12 / 4 / 2 times, respectively.
     term_site = (
         ss[1] ⊗ units[2] ⊗ units[3] +
@@ -108,24 +134,6 @@ function _get_se3site_term(ham::LocalOperator, row::Int, col::Int)
     @tensor term_nb1[i' j' k'; i j k] :=
         (nb1x[i' j'; i j] * units[3][k' k] + units[1][i'; i] * nb1y[j' k'; j k]) / 4
     @tensor term_nb2[i' j' k'; i j k] := (nb2[i' k'; i k] * units[2][j'; j]) / 2
-    return term_site + term_nb1 + term_nb2
-end
-
-
-"""
-Obtain 3-site gate MPOs on southeast cluster at all positions `[row, col]`
-```
-    r-1        g3
-                |
-                ↓
-    r   g1 -←- g2
-        c      c+1
-```
-"""
-function _get_gatempos_se(ham::LocalOperator, dt::Number)
-    Nr, Nc = size(ham.lattice)
-    return map(Iterators.product(1:Nr, 1:Nc)) do (row, col)
-        term = _get_se3site_term(ham, row, col)
-        return gate_to_mpo(exp(-dt * term))
-    end
+    term = term_site + term_nb1 + term_nb2
+    return sites => gate_to_mpo(exp(-dt * term))
 end

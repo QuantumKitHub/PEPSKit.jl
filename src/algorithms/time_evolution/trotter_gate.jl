@@ -15,7 +15,7 @@ Base.getindex(gates::TrotterNNGates, args...) = Base.getindex(gates.gates, args.
 
 const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
 
-function TrotterNNGates(H::LocalOperator, dt::Number)
+function trotterize_nn(H::LocalOperator, dt::Number)
     Nr, Nc = size(H)
     T = scalartype(H)
     gates = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)

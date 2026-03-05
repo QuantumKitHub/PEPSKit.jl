@@ -13,62 +13,153 @@ function _unfuse_physicalspace(
     return O_unfused, F
 end
 
-const openaxs_se = [(NORTH, SOUTH, WEST), (EAST, SOUTH), (NORTH, EAST, WEST)]
-const invperms_se_peps = [((2,), (3, 5, 4, 1)), ((2,), (5, 3, 4, 1)), ((2,), (5, 3, 1, 4))]
-const perms_se_peps = map(invperms_se_peps) do (p1, p2)
-    p = invperm((p1..., p2...))
-    return (p[1:(end - 1)], (p[end],))
-end
-const invperms_se_pepo = [((2, 3), (4, 6, 5, 1)), ((2, 3), (6, 4, 5, 1)), ((2, 3), (6, 4, 1, 5))]
-const perms_se_pepo = map(invperms_se_pepo) do (p1, p2)
-    p = invperm((p1..., p2...))
-    return (p[1:(end - 1)], (p[end],))
-end
 """
-Obtain the 3-site cluster in the "southeast corner" of a square plaquette.
-``` 
-    r-1         M3
-                |
-                ↓
-    r   M1 -←- M2
-        c      c+1
+Convert nearest neighbor vector `nn_vec` to direction labels.
+```
+                NORTH
+                (-1,0)
+                  ↑
+    WEST (0,-1)-←-∘-→-(0,+1) EAST
+                  ↓
+                (+1,0)
+                SOUTH
 ```
 """
-function get_3site_se(state::InfiniteState, env::SUWeight, row::Int, col::Int)
-    Nr, Nc = size(state)
-    rm1, cp1 = _prev(row, Nr), _next(col, Nc)
-    coords_se = [(row, col), (row, cp1), (rm1, cp1)]
-    perms_se = isa(state, InfinitePEPS) ? perms_se_peps : perms_se_pepo
-    Ms = map(zip(coords_se, perms_se, openaxs_se)) do (coord, perm, openaxs)
-        M = absorb_weight(state.A[CartesianIndex(coord)], env, coord[1], coord[2], openaxs)
-        # permute to MPS axes order
-        return permute(M, perm)
+function _nn_vec_direction(nn_vec::CartesianIndex{2})
+    if nn_vec == CartesianIndex(-1, 0)
+        return NORTH
+    elseif nn_vec == CartesianIndex(0, 1)
+        return EAST
+    elseif nn_vec == CartesianIndex(1, 0)
+        return SOUTH
+    elseif nn_vec == CartesianIndex(0, -1)
+        return WEST
+    else
+        error("Input is not a nearest neighbor vector")
     end
-    return Ms
 end
 
-function _su3site_se!(
+"""
+Find the permutation to permute `out_ax`, `in_ax` legs to
+the first and the last position of a tensor with `Nax` legs,
+then assign the last leg to domain, and the others to codomain.
+"""
+function _get_mpo_perm(out_ax::Int, in_ax::Int, Nax::Int)
+    perm = collect(1:Nax)
+    filter!(x -> x != out_ax && x != in_ax, perm)
+    pushfirst!(perm, out_ax)
+    push!(perm, in_ax)
+    return (Tuple(perm[1:(end - 1)]), (perm[end],))
+end
+
+"""
+Obtain the cluster `Ms` along the (open and non-self-intersecting) path
+given by `sites` in `state`.
+
+Also returns:
+- `open_vaxs`: Open virtual axes (1 to 4) of each cluster tensor before permutation.
+- `bond_revs`: Position of the cluster bonds in the state, and whether the cluster path follows the "canonical" orientation of the bond (leftwards or downwards).
+- `invperms`: Permutations to restore the axes order of each cluster tensor.
+
+In the cluster, each tensor use the MPS axes order
+```
+    PEPS:           PEPO:
+           3             3  4
+          ╱              | ╱
+    o -- M -- i     o -- M -- i
+       ╱ |             ╱ |
+      4  2            5  2
+    M[o 2 3 4; i]  M[o 2 3 4 5; i]
+```
+where `o` (`i`) connects to the previous (next) tensor.
+"""
+function _get_cluster(
+        state::InfiniteState, sites::Vector{CartesianIndex{2}},
+        env::Union{SUWeight, Nothing}
+    )
+    Nr, Nc = size(state)
+    # number of sites
+    Ns = length(sites)
+    # number of physical axes
+    Np = isa(state, InfinitePEPS) ? 1 : 2
+    # number of axes of each state tensor
+    Nax = 4 + Np
+    out_axs = map(2:Ns) do i
+        return _nn_vec_direction(sites[i - 1] - sites[i])
+    end
+    in_axs = map(1:(Ns - 1)) do i
+        return _nn_vec_direction(sites[i + 1] - sites[i])
+    end
+    all_vaxs = Tuple(1:4)
+    open_vaxs = map(1:Ns) do i
+        return if i == 1
+            filter(x -> x != in_axs[i], all_vaxs)
+        elseif i == Ns
+            filter(x -> x != out_axs[i - 1], all_vaxs)
+        else
+            filter(x -> x != out_axs[i - 1] && x != in_axs[i], all_vaxs)
+        end
+    end
+    bond_revs = map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
+        diff = site1 - site2
+        if diff == CartesianIndex(0, -1)
+            r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
+            return (1, r, c), false
+        elseif diff == CartesianIndex(0, 1)
+            r, c = mod1(site2[1], Nr), mod1(site2[2], Nc)
+            return (1, r, c), true
+        elseif diff == CartesianIndex(1, 0)
+            r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
+            return (2, r, c), false
+        else # diff == CartesianIndex(-1, 0)
+            r, c = mod1(site2[1], Nr), mod1(site2[2], Nc)
+            return (2, r, c), true
+        end
+    end
+    perms = map(1:Ns) do i
+        out_ax, in_ax = if i == 1
+            # use direction opposite to `in` as `out`
+            mod1(2 + in_axs[i], 4), in_axs[i]
+        elseif i == Ns
+            # use direction opposite to `out` as `in`
+            out_axs[i - 1], mod1(2 + out_axs[i - 1], 4)
+        else
+            out_axs[i - 1], in_axs[i]
+        end
+        return _get_mpo_perm(out_ax + Np, in_ax + Np, Nax)
+    end
+    invperms = map(perms) do (p1, p2)
+        p = invperm((p1..., p2...))
+        return (p[1:Np], p[(Np + 1):end])
+    end
+    Ms = map(zip(sites, open_vaxs, perms)) do (site, vaxs, perm)
+        s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
+        M = if env === nothing
+            state.A[s]
+        else
+            absorb_weight(state.A[s], env, s[1], s[2], vaxs)
+        end
+        return permute(M, perm)
+    end
+    return Ms, open_vaxs, bond_revs, invperms
+end
+
+function _su_cluster!(
         state::InfiniteState, gs::Vector{T}, env::SUWeight,
-        row::Int, col::Int, truncs::Vector{E};
+        sites::Vector{CartesianIndex{2}}, truncs::Vector{E};
         purified::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
-    rm1, cp1 = _prev(row, Nr), _next(col, Nc)
     # southwest 3-site cluster and arrow direction within it
-    Ms = get_3site_se(state, env, row, col)
+    Ms, open_vaxs, bond_revs, invperms = _get_cluster(state, sites, env)
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
     # flip virtual arrows in `Ms` to ←
     _flip_virtuals!(Ms, flips)
-    # sites in the cluster
-    coords = ((row, col), (row, cp1), (rm1, cp1))
-    # weights in the cluster
-    wt_idxs = ((1, row, col), (2, row, cp1))
     # apply gate MPOs and truncate
     gate_axs = purified ? (1:1) : (1:2)
-    ϵs = nothing
+    wts, ϵs = nothing, nothing
     for gate_ax in gate_axs
         _apply_gatempo!(Ms, gs; gate_ax)
         if isa(state, InfinitePEPO)
@@ -78,51 +169,65 @@ function _su3site_se!(
         if isa(state, InfinitePEPO)
             Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
         end
-        for (wt, wt_idx, flip) in zip(wts, wt_idxs, flips)
-            env[CartesianIndex(wt_idx)] = normalize(flip ? _fliptwist_s(wt) : wt, Inf)
-        end
     end
     # restore virtual arrows in `Ms`
     _flip_virtuals!(Ms, flips)
-    # update `state` from `Ms`
-    invperms_se = isa(state, InfinitePEPS) ? invperms_se_peps : invperms_se_pepo
-    for (M, coord, invperm, openaxs, Vphy) in zip(Ms, coords, invperms_se, openaxs_se, Vphys)
+    # update env weights
+    for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
+        wt_new = flip ? _fliptwist_s(wt) : wt
+        wt_new = rev ? transpose(wt_new) : wt_new
+        @assert all(wt_new.data .>= 0)
+        env[CartesianIndex(bond)] = normalize(wt_new, Inf)
+    end
+    for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
+        s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order
         M = permute(M, invperm)
         # remove weights on open axes of the cluster
-        M = absorb_weight(M, env, coord[1], coord[2], openaxs; inv = true)
-        state.A[CartesianIndex(coord)] = normalize(M, Inf)
+        M = absorb_weight(M, env, s′[1], s′[2], vaxs; inv = true)
+        # update state tensors
+        state.A[s′] = normalize(M, Inf)
     end
     return maximum(ϵs)
 end
 
+"""
+Get the `TruncationStrategy` for each bond in the cluster
+updated by the Trotter evolution MPO.
+"""
+function _get_cluster_trunc(
+        trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}},
+        (Nrow, Ncol)::NTuple{2, Int}
+    )
+    return map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
+        diff = site2 - site1
+        if diff == CartesianIndex(0, 1)
+            r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
+            return truncation_strategy(trunc, 1, r, c)
+        elseif diff == CartesianIndex(0, -1)
+            r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
+            return truncation_strategy(trunc, 1, r, c)
+        elseif diff == CartesianIndex(1, 0)
+            r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
+            return truncation_strategy(trunc, 2, r, c)
+        elseif diff == CartesianIndex(-1, 0)
+            r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
+            return truncation_strategy(trunc, 2, r, c)
+        else
+            error("The path `sites` contains a long-range bond.")
+        end
+    end
+end
+
 function su_iter(
-        state::InfiniteState, gatempos::TrotterMPOs2ndNeighbor,
+        state::InfiniteState, gatempos::TrotterMPOs,
         alg::SimpleUpdate, env::SUWeight
     )
-    if state isa InfinitePEPO
-        @assert size(state, 3) == 1
-    end
-    Nr, Nc = size(state)[1:2]
-    (Nr >= 2 && Nc >= 2) || throw(
-        ArgumentError(
-            "iPEPS unit cell size for simple update should be no smaller than (2, 2)."
-        ),
-    )
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    trunc = alg.trunc
-    for i in 1:4
-        Nr, Nc = size(state2)[1:2]
-        for r in 1:Nr, c in 1:Nc
-            gs = gatempos[i][r, c]
-            truncs = [
-                truncation_strategy(trunc, 1, r, c)
-                truncation_strategy(trunc, 2, r, _next(c, Nc))
-            ]
-            ϵ = _su3site_se!(state2, gs, env2, r, c, truncs; alg.purified)
-        end
-        state2, env2 = rotl90(state2), rotl90(env2)
-        trunc = rotl90(trunc)
+    for (sites, gs) in gatempos.data
+        truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
+        ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; alg.purified)
+        ϵ = max(ϵ, ϵ′)
     end
     return state2, env2, ϵ
 end
