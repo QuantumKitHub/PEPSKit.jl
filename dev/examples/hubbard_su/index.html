@@ -18,41 +18,41 @@ for (dt, tol, Dbond) in zip(dts, tols, Ds)
     alg = SimpleUpdate(; trunc, bipartite = false)
     global peps, wts, = time_evolve(peps, H, dt, maxiter, alg, wts; tol, check_interval = 2000)
 end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 2, 1 =&gt; 2)
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.316e+00. Time = 21.601 s/it
+[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.316e+00. Time = 20.354 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 2, 1 =&gt; 2)
-[ Info: SU iter 1045   : dt = 0.01, |Δλ| = 9.843e-08. Time = 0.012 s/it
+[ Info: SU iter 1045   : dt = 0.01, |Δλ| = 9.843e-08. Time = 0.006 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 35.64 s
+[ Info: Simple update finished. Total time elapsed: 27.82 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 6, 1 =&gt; 6)
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 6.459e-06. Time = 0.134 s/it
+[ Info: SU iter 1      : dt = 0.01, |Δλ| = 2.047e-03. Time = 0.021 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 6, 1 =&gt; 6)
-[ Info: SU iter 584    : dt = 0.01, |Δλ| = 9.946e-08. Time = 0.114 s/it
+[ Info: SU iter 584    : dt = 0.01, |Δλ| = 9.946e-08. Time = 0.047 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 71.51 s
+[ Info: Simple update finished. Total time elapsed: 40.96 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 1      : dt = 0.001, |Δλ| = 5.245e-03. Time = 0.373 s/it
+[ Info: SU iter 1      : dt = 0.001, |Δλ| = 1.720e-02. Time = 0.043 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.418e-07. Time = 0.037 s/it
+[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.418e-07. Time = 0.049 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 3791   : dt = 0.001, |Δλ| = 9.990e-09. Time = 0.037 s/it
+[ Info: SU iter 3791   : dt = 0.001, |Δλ| = 9.990e-09. Time = 0.016 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 131.97 s
+[ Info: Simple update finished. Total time elapsed: 96.28 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 3.256e-04. Time = 0.037 s/it
+[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 3.256e-04. Time = 0.052 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.888e-08. Time = 0.037 s/it
+[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.888e-08. Time = 0.016 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 3034   : dt = 0.0004, |Δλ| = 9.997e-09. Time = 0.037 s/it
+[ Info: SU iter 3034   : dt = 0.0004, |Δλ| = 9.997e-09. Time = 0.015 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 105.93 s
+[ Info: Simple update finished. Total time elapsed: 77.28 s
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 1      : dt = 0.0001, |Δλ| = 1.627e-04. Time = 0.037 s/it
+[ Info: SU iter 1      : dt = 0.0001, |Δλ| = 1.627e-04. Time = 0.015 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 2000   : dt = 0.0001, |Δλ| = 1.532e-08. Time = 0.037 s/it
+[ Info: SU iter 2000   : dt = 0.0001, |Δλ| = 1.532e-08. Time = 0.016 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 =&gt; 3, 1 =&gt; 5)
-[ Info: SU iter 2916   : dt = 0.0001, |Δλ| = 9.997e-09. Time = 0.037 s/it
+[ Info: SU iter 2916   : dt = 0.0001, |Δλ| = 9.997e-09. Time = 0.052 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 100.89 s
+[ Info: Simple update finished. Total time elapsed: 74.92 s
 </code></pre><h2 id="Computing-the-ground-state-energy"><a class="docs-heading-anchor" href="#Computing-the-ground-state-energy">Computing the ground-state energy</a><a id="Computing-the-ground-state-energy-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-the-ground-state-energy" title="Permalink"></a></h2><p>In order to compute the energy expectation value with evolved PEPS, we need to converge a CTMRG environment on it. We first converge an environment with a small enviroment dimension, which is initialized using the simple update bond weights. Next we use it to initialize another run with bigger environment dimension. The dynamic adjustment of environment dimension is achieved by using <code>trunc=truncrank(χ)</code> with different <code>χ</code>s in the CTMRG runs:</p><pre><code class="language-julia hljs">χenv₀, χenv = 6, 16
 env_space = Vect[fℤ₂](0 =&gt; χenv₀ / 2, 1 =&gt; χenv₀ / 2)
 normalize!.(peps.A, Inf)
@@ -61,13 +61,13 @@ for χ in [χenv₀, χenv]
     global env, = leading_boundary(
         env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trunc = truncrank(χ)
     )
-end</code></pre><pre><code class="nohighlight hljs">[ Info: CTMRG init:	obj = +3.208695223790e-01	err = 1.0000e+00
-[ Info: CTMRG conv 7:	obj = +1.777694992786e+00	err = 2.2836831592e-09	time = 8.64 sec
-[ Info: CTMRG init:	obj = +1.777694992786e+00	err = 1.0000e+00
-[ Info: CTMRG conv 7:	obj = +1.781063096355e+00	err = 3.5793721430e-10	time = 37.81 sec
+end</code></pre><pre><code class="nohighlight hljs">[ Info: CTMRG init:	obj = +2.003400419801e+00	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.777694992788e+00	err = 2.1568099508e-09	time = 3.31 sec
+[ Info: CTMRG init:	obj = +1.777694992788e+00	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.781063096357e+00	err = 3.5793677599e-10	time = 16.01 sec
 </code></pre><p>We measure the energy by computing the <code>H</code> expectation value, where we have to make sure to normalize with respect to the unit cell to obtain the energy per site:</p><pre><code class="language-julia hljs">E = expectation_value(peps, H, env) / (Nr * Nc)
-@show E;</code></pre><pre><code class="nohighlight hljs">E = -3.652497562261351
+@show E;</code></pre><pre><code class="nohighlight hljs">E = -3.652497562261339
 </code></pre><p>Finally, we can compare the obtained ground-state energy against the literature, namely the QMC estimates from <a href="../../references/#qin_benchmark_2016">Qin et al.</a>. We find that the results generally agree:</p><pre><code class="language-julia hljs">Es_exact = Dict(0 =&gt; -1.62, 2 =&gt; -0.176, 4 =&gt; 0.8603, 6 =&gt; -0.6567, 8 =&gt; -0.5243)
 E_exact = Es_exact[U] - U / 2
-@show (E - E_exact) / abs(E_exact);</code></pre><pre><code class="nohighlight hljs">(E - E_exact) / abs(E_exact) = 0.001149243235334783
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../heisenberg_su/">« Simple update for the Heisenberg model</a><a class="docs-footer-nextpage" href="../j1j2_su/">Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 4 March 2026 15:03">Wednesday 4 March 2026</span>. Using Julia version 1.12.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show (E - E_exact) / abs(E_exact);</code></pre><pre><code class="nohighlight hljs">(E - E_exact) / abs(E_exact) = 0.001149243235338062
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../heisenberg_su/">« Simple update for the Heisenberg model</a><a class="docs-footer-nextpage" href="../j1j2_su/">Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 6 March 2026 18:01">Friday 6 March 2026</span>. Using Julia version 1.12.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
