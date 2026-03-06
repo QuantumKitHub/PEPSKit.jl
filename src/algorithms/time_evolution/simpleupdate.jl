@@ -169,7 +169,7 @@ function su_iter(
             for gate_ax in gate_axs
                 state2.A[r, c] = _apply_site(state2.A[r, c], gs; gate_ax)
             end
-        elseif length(sites) == 2 && isa(gs, NNGate)
+        elseif length(sites) == 2 && (isa(gs, NNGate) || gs === nothing)
             # 2-site gate not decomposed to MPO
             site1, site2 = sites
             r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
