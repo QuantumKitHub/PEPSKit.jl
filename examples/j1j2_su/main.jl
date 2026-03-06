@@ -115,7 +115,8 @@ using MPSKit: randomize!
 noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
 peps₀ = peps + 1.0e-1noise_peps
 peps_opt, env_opt, E_opt, = fixedpoint(
-    H, peps₀, env; optimizer_alg = (; tol = 1.0e-4, maxiter = 80)
+    H, peps₀, env;
+    optimizer_alg = (; tol = 1.0e-4, maxiter = 80), gradient_alg = (; iterscheme = :diffgauge)
 );
 
 md"""
