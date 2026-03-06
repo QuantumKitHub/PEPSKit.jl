@@ -52,6 +52,9 @@ end
         @time @safetestset "correlation length" begin
             include("ctmrg/correlation_length.jl")
         end
+        @time @safetestset "Triangular" begin
+            include("ctmrg/triangular.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "BP"
         @time @safetestset "Unit cell bond matching" begin
