@@ -135,8 +135,9 @@ end
     env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env0)
     env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env)
     e_site = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "2-site simple update energy = $e_site"
-    # continue with 3-site simple update; energy should not change much
+    @info "2-site gate simple update energy = $e_site"
+    @test e_site ≈ -0.75 atol = 0.1
+    # continue with MPO simple update; energy should not change much
     dts = [1.0e-2]
     tols = [1.0e-8]
     trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
@@ -147,6 +148,6 @@ end
     normalize!.(peps.A, Inf)
     env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env)
     e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "3-site simple update energy = $e_site2"
+    @info "2-site MPO simple update energy = $e_site2"
     @test e_site ≈ e_site2 atol = 5.0e-4
 end

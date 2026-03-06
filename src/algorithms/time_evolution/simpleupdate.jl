@@ -58,10 +58,8 @@ function TimeEvolver(
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     # create Trotter gates
     gate = trotterize(H, dt′; force_mpo = alg.force_mpo)
-    if isa(gate, TrotterMPOs)
-        @assert !alg.bipartite "Trotter MPOs are incompatible with bipartite lattice structure."
-    end
     state = SUState(0, t0, psi0, env0)
+    # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
 
@@ -77,9 +75,10 @@ the codomain (or domain) physicsl legs of `state`.
 """
 function _su_xbond!(
         state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
-        row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
+        row::Int, col::Int, trunc::TruncationStrategy; purified::Bool = true
     )
     Nr, Nc, = size(state)
+    gate_axs = purified ? (1:1) : (1:2)
     cp1 = _next(col, Nc)
     # absorb environment weights
     A, B = state.A[row, col], state.A[row, cp1]
@@ -88,9 +87,13 @@ function _su_xbond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
-    X, a, b, Y = _qr_bond(A, B; gate_ax)
-    a, s, b, ϵ = _apply_gate(a, b, gate, trunc)
-    A, B = _qr_bond_undo(X, a, b, Y)
+    ϵ, s = 0.0, nothing
+    for gate_ax in gate_axs
+        X, a, b, Y = _qr_bond(A, B; gate_ax)
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
+        ϵ = max(ϵ, ϵ′)
+        A, B = _qr_bond_undo(X, a, b, Y)
+    end
     # remove environment weights
     A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = true)
     B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = true)
@@ -117,9 +120,10 @@ the codomain (or domain) physicsl legs of `state`.
 """
 function _su_ybond!(
         state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
-        row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
+        row::Int, col::Int, trunc::TruncationStrategy; purified::Bool = true
     )
     Nr, Nc, = size(state)
+    gate_axs = purified ? (1:1) : (1:2)
     rm1 = _prev(row, Nr)
     # absorb environment weights
     A, B = state.A[row, col], state.A[rm1, col]
@@ -128,9 +132,13 @@ function _su_ybond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
-    X, a, b, Y = _qr_bond(rotr90(A), rotr90(B); gate_ax)
-    a, s, b, ϵ = _apply_gate(a, b, gate, trunc)
-    A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
+    ϵ, s = 0.0, nothing
+    for gate_ax in gate_axs
+        X, a, b, Y = _qr_bond(rotr90(A), rotr90(B); gate_ax)
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
+        A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
+        ϵ = max(ϵ, ϵ′)
+    end
     # remove environment weights
     A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = true)
     B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = true)
@@ -147,37 +155,54 @@ end
 One iteration of simple update
 """
 function su_iter(
-        state::InfiniteState, gate::TrotterNNGates,
+        state::InfiniteState, gates::TrotterGates,
         alg::SimpleUpdate, env::SUWeight
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    gate_axs = alg.purified ? (1:1) : (1:2)
-    for r in 1:Nr, c in 1:Nc
-        (alg.bipartite && r > 1) && continue
-        # update x-bonds
-        trunc = truncation_strategy(alg.trunc, 1, r, c)
-        for gate_ax in gate_axs
-            ϵ′ = _su_xbond!(state2, gate[1, r, c], env2, r, c, trunc; gate_ax)
+    for (sites, gs) in gates.data
+        if length(sites) == 1
+            # 1-site gate
+            site = sites[1]
+            r, c = mod1(site[1], Nr), mod1(site[2], Nc)
+            gate_axs = alg.purified ? (1:1) : (1:2)
+            for gate_ax in gate_axs
+                state2.A[r, c] = _apply_site(state2.A[r, c], gs; gate_ax)
+            end
+        elseif length(sites) == 2 && isa(gs, NNGate)
+            # 2-site gate not decomposed to MPO
+            site1, site2 = sites
+            r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
+            (alg.bipartite && r > 1) && continue
+            if site1 - site2 == CartesianIndex(0, -1) # x-bonds (leftwards)
+                trunc = truncation_strategy(alg.trunc, 1, r, c)
+                ϵ′ = _su_xbond!(state2, gs, env2, r, c, trunc; purified = alg.purified)
+                ϵ = max(ϵ, ϵ′)
+                if alg.bipartite
+                    rp1, cp1 = _next(r, Nr), _next(c, Nc)
+                    state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
+                    state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
+                    env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
+                end
+            elseif site1 - site2 == CartesianIndex(1, 0) # y-bonds (downwards)
+                trunc = truncation_strategy(alg.trunc, 2, r, c)
+                ϵ′ = _su_ybond!(state2, gs, env2, r, c, trunc; purified = alg.purified)
+                ϵ = max(ϵ, ϵ′)
+                if alg.bipartite
+                    rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
+                    state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
+                    state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
+                    env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
+                end
+            else
+                error("Non-standard direction of NN bonds for 2-site Trotter gates.")
+            end
+        else
+            # N-site MPO gate (N ≥ 2)
+            alg.bipartite && error("MPO gates are not compatible with bipartite states.")
+            truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
+            ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; purified = alg.purified)
             ϵ = max(ϵ, ϵ′)
-        end
-        if alg.bipartite
-            rp1, cp1 = _next(r, Nr), _next(c, Nc)
-            state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
-            state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
-            env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
-        end
-        # update y-bonds
-        trunc = truncation_strategy(alg.trunc, 2, r, c)
-        for gate_ax in gate_axs
-            ϵ′ = _su_ybond!(state2, gate[2, r, c], env2, r, c, trunc; gate_ax)
-            ϵ = max(ϵ, ϵ′)
-        end
-        if alg.bipartite
-            rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-            state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
-            state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
-            env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
         end
     end
     return state2, env2, ϵ

@@ -218,16 +218,3 @@ function _get_cluster_trunc(
         end
     end
 end
-
-function su_iter(
-        state::InfiniteState, gatempos::TrotterMPOs,
-        alg::SimpleUpdate, env::SUWeight
-    )
-    state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    for (sites, gs) in gatempos.data
-        truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
-        ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; alg.purified)
-        ϵ = max(ϵ, ϵ′)
-    end
-    return state2, env2, ϵ
-end

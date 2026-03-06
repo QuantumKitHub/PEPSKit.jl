@@ -1,39 +1,14 @@
 """
-Collection of nearest neighbor 2-body Trotter gates.
+    struct TrotterGates{T <: Vector}
 
-Before exponentiating, terms in the Hamiltonian are organized as
-```
-    H = ∑ᵢⱼ (Xᵢⱼ + Yᵢⱼ)
-```
-where each `Xᵢⱼ` (or `Yᵢⱼ`) acts on a horizontal (or vertical) bond.
-The Trotter gates are `exp(-dt * Xᵢⱼ)`, `exp(-dt * Yᵢⱼ)`.
+Collection of Trotter evolution MPOs obtained from
+a Hamiltonian containing long-range or multi-site terms
 """
-struct TrotterNNGates{G}
-    gates::G
+struct TrotterGates{T <: Vector}
+    data::T
 end
-Base.getindex(gates::TrotterNNGates, args...) = Base.getindex(gates.gates, args...)
 
 const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
-
-function trotterize_nn(H::LocalOperator, dt::Number)
-    Nr, Nc = size(H)
-    T = scalartype(H)
-    gates = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
-        # d = 1: horizontal bond; d = 2: vertical bond
-        site1 = CartesianIndex(r, c)
-        site2 = (d == 1) ? CartesianIndex(r, c + 1) : CartesianIndex(r - 1, c)
-        s1term = _get_site_term(H, site1)
-        unit1 = TensorKit.id(T, space(s1term, 1))
-        s2term = _get_site_term(H, site2)
-        unit2 = TensorKit.id(T, space(s2term, 1))
-        b_term = _get_bond_term(H, (site1, site2))
-        # When iterating through horizontal and vertical bonds in the unit cell,
-        # each site / NN-bond is counted 4 / 1 times, respectively.
-        term = b_term + (s1term ⊗ unit2 + unit1 ⊗ s2term) / 4
-        return exp(-dt * term)
-    end
-    return TrotterNNGates(gates)
-end
 
 """
     is_equivalent_site(
@@ -112,4 +87,171 @@ function _get_bond_term(ham::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
         end
     end
     return term
+end
+
+"""
+Get coordinates of sites in the 3-site triangular cluster
+used in Trotter evolution with next-nearest neighbor gates,
+with southwest corner at `[row, col]`.
+```
+    NORTHWEST   NORTHEAST
+        2---1   3---2
+        |           |
+        3           1
+
+        1           3
+        |           |
+        2---3   1---2
+    SOUTHWEST   SOUTHEAST
+```
+"""
+function _nnn_cluster_sites(dir::Int, row::Int, col::Int)
+    @assert 1 <= dir <= 4
+    return if dir == NORTHWEST
+        map(CartesianIndex, [(row - 1, col + 1), (row - 1, col), (row, col)])
+    elseif dir == NORTHEAST
+        map(CartesianIndex, [(row, col + 1), (row - 1, col + 1), (row - 1, col)])
+    elseif dir == SOUTHEAST
+        map(CartesianIndex, [(row, col), (row, col + 1), (row - 1, col + 1)])
+    else # dir == SOUTHWEST
+        map(CartesianIndex, [(row - 1, col), (row, col), (row, col + 1)])
+    end
+end
+
+"""
+Convert an N-site gate to MPO form by SVD, 
+in which the axes are ordered as
+```
+    site 1      mid sites      site N
+    2               3               3
+    ↓               ↓               ↓
+    g1 ←- 3    1 ←- g ←- 4    1 ←- gN
+    ↓               ↓               ↓
+    1               2               2
+```
+"""
+function gate_to_mpo(
+        gate::AbstractTensorMap{T, S, N, N}, trunc = trunctol(; atol = MPSKit.Defaults.tol)
+    ) where {T <: Number, S <: ElementarySpace, N}
+    Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
+    return map(1:N) do i
+        if i == 1
+            return removeunit(Os[1], 1)
+        elseif i == N
+            return removeunit(Os[N], 4)
+        else
+            return Os[i]
+        end
+    end
+end
+
+"""
+    _check_hamiltonian_for_trotter(H::LocalOperator)
+
+Assert that operator `H` contains only one-site and two-site terms.
+Returns the maximum squared distance covered by a two-site term in `H`.
+On the square lattice, the neighbor distances are
+```
+    1st nb.     2nd nb.     3rd nb.
+
+                    o
+                    |
+    o---o       o---o       o---o---o
+
+    dist² = 1   dist² = 2   dist² = 4
+```
+"""
+function _check_hamiltonian_for_trotter(H::LocalOperator)
+    dist = 0
+    for (sites, op) in H.terms
+        @assert numin(op) <= 2 "Hamiltonians containing multi-site (> 2) terms are not currently supported."
+        if numin(op) == 2
+            dist = max(dist, sum(Tuple(sites[1] - sites[2]) .^ 2))
+        end
+    end
+    @assert dist <= 2 "Hamiltonians with 2-site terms on beyond 2nd-neighbor bonds are not currently supported."
+    return dist
+end
+
+function _trotterize_1site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real)
+    for site in CartesianIndices(size(H))
+        gate = _get_site_term(H, site)
+        (norm(gate) <= atol) && continue
+        push!(gates, [site] => exp(-dt * gate))
+    end
+    return gates
+end
+
+function _trotterize_nn2site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real, force_mpo::Bool = false)
+    Nr, Nc = size(H)
+    T = scalartype(H)
+    for (d, c, r) in Iterators.product(1:2, 1:Nc, 1:Nr)
+        site1 = CartesianIndex(r, c)
+        site2 = (d == 1) ? CartesianIndex(r, c + 1) : CartesianIndex(r - 1, c)
+        # group with 1-site terms
+        s1term = _get_site_term(H, site1)
+        unit1 = TensorKit.id(T, space(s1term, 1))
+        s2term = _get_site_term(H, site2)
+        unit2 = TensorKit.id(T, space(s2term, 1))
+        gate = _get_bond_term(H, (site1, site2))
+        gate = gate + (s1term ⊗ unit2 + unit1 ⊗ s2term) / 4
+        (norm(gate) <= atol) && continue
+        gate = exp(-dt * gate)
+        force_mpo && (gate = gate_to_mpo(gate))
+        push!(gates, [site1, site2] => gate)
+    end
+    return gates
+end
+
+function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real)
+    Nr, Nc = size(H)
+    T = scalartype(H)
+    for (c, r, d) in Iterators.product(1:Nc, 1:Nr, 1:4)
+        sites = _nnn_cluster_sites(d, r, c)
+        gate = _get_bond_term(H, (sites[1], sites[3]))
+        (norm(gate) <= atol) && continue
+        gate = exp(-(dt / 2) * gate) # account for double counting
+        # combine with identity at sites[2]
+        r2, c2 = mod1(sites[2][1], Nr), mod1(sites[2][2], Nc)
+        id_ = TensorKit.id(T, physicalspace(H)[r2, c2])
+        gate = permute(gate ⊗ id_, ((1, 3, 2), (4, 6, 5)))
+        push!(gates, sites => gate_to_mpo(gate))
+    end
+    return gates
+end
+
+"""
+Trotterize the evolution operator `exp(-H * dt)`.
+Currently, `H` can only contain the following terms:
+
+- 1-site terms
+- 2-site nearest neighbor (NN) terms
+- 2-site next-nearest neighbor (NNN) terms
+
+If `force_mpo = true`, 2-site nearest-neighbor gates are also decomposed to MPOs.
+"""
+function trotterize(H::LocalOperator, dt::Number; force_mpo::Bool = false)
+    Nr, Nc = size(H)
+    T = scalartype(H)
+    dist = _check_hamiltonian_for_trotter(H)
+    atol = eps(real(T))^(3 / 4)
+    gates = Vector{Pair{Any, Any}}()
+
+    # TODO: order of gates is fixed for more tight control.
+    # Consider directly iterating over H.terms in the future.
+
+    # 1-site gates are only constructed when H only has 1-site terms
+    dist == 0 && _trotterize_1site!(gates, H, dt; atol)
+    #= 
+    2-site NN gates on bonds [d, r, c], grouped with 1-site terms
+    - d = 1: horizontal bond ((r, c), (r, c+1))
+    - d = 2:   vertical bond ((r, c), (r-1, c))
+    =#
+    dist >= 1 && _trotterize_nn2site!(gates, H, dt; atol, force_mpo)
+    #= 
+    2-site NNN gates converted to 3-site MPOs on triangular clusters [d, r, c]
+    - d = 1 (NORTHWEST), ..., 4 (SOUTHWEST)
+    =#
+    dist >= 2 && _trotterize_nnn2site!(gates, H, dt; atol)
+    return TrotterGates(gates)
 end

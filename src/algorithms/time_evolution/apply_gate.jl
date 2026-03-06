@@ -1,4 +1,27 @@
 """
+Apply 1-site `gate` on the PEPS or PEPO tensor `a`.
+"""
+function _apply_site(
+        a::PEPSTensor, gate::AbstractTensorMap{T, S, 1, 1};
+        gate_ax::Int = 1
+    ) where {T, S}
+    @assert gate_ax == 1
+    return gate * a
+end
+
+function _apply_site(
+        a::PEPOTensor, gate::AbstractTensorMap{T, S, 1, 1};
+        gate_ax::Int = 1
+    ) where {T, S}
+    @assert gate_ax <= 2
+    if gate_ax == 1
+        return @plansor a′[p1 p2; n e s w] := gate[p1; p] * a[p p2; n e s w]
+    else
+        return @plansor a′[p1 p2; n e s w] := a[p1 p; n e s w] * gate[p; p2]
+    end
+end
+
+"""
 $(SIGNATURES)
 
 Use QR decomposition on two tensors `A`, `B` connected by a bond to get the reduced tensors.
