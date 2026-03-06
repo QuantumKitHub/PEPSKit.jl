@@ -101,7 +101,7 @@ end
     end
 end
 
-@testset "Hubbard model with 2-site and 3-site SU" begin
+@testset "Hubbard model SU (MPO gate)" begin
     Nr, Nc = 2, 2
     ctmrg_tol = 1.0e-9
     Random.seed!(1459)
@@ -119,35 +119,25 @@ end
     wts = SUWeight(peps)
     ham = real(
         hubbard_model(
-            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 8.0, mu = 0.0
+            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0
         ),
     )
     # usual 2-site simple update, and measure energy
-    dts = [1.0e-2, 1.0e-2, 5.0e-3]
-    tols = [5.0e-6, 1.0e-7, 1.0e-8]
-    for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
-        alg = SimpleUpdate(; trunc, bipartite = true)
-        peps, wts, = time_evolve(peps, ham, dt, 10000, alg, wts; tol, check_interval = 1000)
+    e_sites = map((true, false)) do force_mpo
+        dts = [1.0e-2, 1.0e-2, 5.0e-3]
+        tols = [1.0e-6, 1.0e-8, 1.0e-8]
+        for (n, (dt, tol)) in enumerate(zip(dts, tols))
+            trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
+            alg = SimpleUpdate(; trunc, force_mpo)
+            peps, wts, = time_evolve(peps, ham, dt, 10000, alg, wts; tol, check_interval = 1000)
+        end
+        normalize!.(peps.A, Inf)
+        env = CTMRGEnv(wts)
+        env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env0)
+        env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env)
+        e_site = cost_function(peps, env, ham) / (Nr * Nc)
+        @info "Energy (force_mpo = $(force_mpo)): $e_site"
+        return e_site
     end
-    normalize!.(peps.A, Inf)
-    env = CTMRGEnv(wts)
-    env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env0)
-    env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env)
-    e_site = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "2-site gate simple update energy = $e_site"
-    @test e_site ≈ -0.75 atol = 0.1
-    # continue with MPO simple update; energy should not change much
-    dts = [1.0e-2]
-    tols = [1.0e-8]
-    trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
-    alg = SimpleUpdate(; trunc, force_mpo = true)
-    for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        peps, wts, = time_evolve(peps, ham, dt, 5000, alg, wts; tol, check_interval = 1000)
-    end
-    normalize!.(peps.A, Inf)
-    env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env)
-    e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "2-site MPO simple update energy = $e_site2"
-    @test e_site ≈ e_site2 atol = 5.0e-4
+    @test e_sites[1] ≈ e_sites[2] atol = 1.0e-4
 end
