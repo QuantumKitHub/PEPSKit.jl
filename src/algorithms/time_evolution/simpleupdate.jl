@@ -12,8 +12,8 @@ $(TYPEDFIELDS)
     trunc::TruncationStrategy
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
-    "When true, force the usage of 3-site simple update"
-    force_3site::Bool = false
+    "When true, force the usage of MPO simple update for nearest neighbor Hamiltonians."
+    force_mpo::Bool = false
     "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
     "(Only applicable to InfinitePEPO) 
@@ -44,35 +44,24 @@ end
         alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0
     )
 
-Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
-starting from the initial state `psi0` and SUWeight environment `env0`.
+Initialize a `TimeEvolver` with Hamiltonian `H` and simple update `alg`, 
+starting from the initial state `psi0` and `SUWeight` environment `env0`.
 
 - The initial time is specified by `t0`.
+- Use `symmetrize_gates = true` for second-order Trotter decomposition.
 """
 function TimeEvolver(
         psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0
+        alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0,
+        symmetrize_gates::Bool = false
     )
     # sanity checks
     _timeevol_sanity_check(psi0, physicalspace(H), alg)
-    # create Trotter gates
-    nnonly = is_nearest_neighbour(H)
-    use_3site = alg.force_3site || !nnonly
-    if alg.bipartite
-        @assert !use_3site "3-site simple update is incompatible with bipartite lattice."
-    end
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
-    gate = if use_3site
-        [
-            _get_gatempos_se(H, dt′),
-            _get_gatempos_se(rotl90(H), dt′),
-            _get_gatempos_se(rot180(H), dt′),
-            _get_gatempos_se(rotr90(H), dt′),
-        ]
-    else
-        get_expham(H, dt′)
-    end
+    # create Trotter gates
+    gate = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
+    # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
 
@@ -87,10 +76,11 @@ When `gate_ax = 1` (or `2`), the gate will be applied to
 the codomain (or domain) physicsl legs of `state`.
 """
 function _su_xbond!(
-        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
-        row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
-    ) where {T <: Number, S <: ElementarySpace}
+        state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
+        row::Int, col::Int, trunc::TruncationStrategy; purified::Bool = true
+    )
     Nr, Nc, = size(state)
+    gate_axs = purified ? (1:1) : (1:2)
     cp1 = _next(col, Nc)
     # absorb environment weights
     A, B = state.A[row, col], state.A[row, cp1]
@@ -99,9 +89,13 @@ function _su_xbond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
-    X, a, b, Y = _qr_bond(A, B; gate_ax)
-    a, s, b, ϵ = _apply_gate(a, b, gate, trunc)
-    A, B = _qr_bond_undo(X, a, b, Y)
+    ϵ, s = 0.0, nothing
+    for gate_ax in gate_axs
+        X, a, b, Y = _qr_bond(A, B; gate_ax)
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
+        ϵ = max(ϵ, ϵ′)
+        A, B = _qr_bond_undo(X, a, b, Y)
+    end
     # remove environment weights
     A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = true)
     B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = true)
@@ -127,10 +121,11 @@ When `gate_ax = 1` (or `2`), the gate will be applied to
 the codomain (or domain) physicsl legs of `state`.
 """
 function _su_ybond!(
-        state::InfiniteState, gate::AbstractTensorMap{T, S, 2, 2}, env::SUWeight,
-        row::Int, col::Int, trunc::TruncationStrategy; gate_ax::Int = 1
-    ) where {T <: Number, S <: ElementarySpace}
+        state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
+        row::Int, col::Int, trunc::TruncationStrategy; purified::Bool = true
+    )
     Nr, Nc, = size(state)
+    gate_axs = purified ? (1:1) : (1:2)
     rm1 = _prev(row, Nr)
     # absorb environment weights
     A, B = state.A[row, col], state.A[rm1, col]
@@ -139,9 +134,13 @@ function _su_ybond!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
-    X, a, b, Y = _qr_bond(rotr90(A), rotr90(B); gate_ax)
-    a, s, b, ϵ = _apply_gate(a, b, gate, trunc)
-    A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
+    ϵ, s = 0.0, nothing
+    for gate_ax in gate_axs
+        X, a, b, Y = _qr_bond(rotr90(A), rotr90(B); gate_ax)
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
+        A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
+        ϵ = max(ϵ, ϵ′)
+    end
     # remove environment weights
     A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = true)
     B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = true)
@@ -158,38 +157,55 @@ end
 One iteration of simple update
 """
 function su_iter(
-        state::InfiniteState, gate::LocalOperator, alg::SimpleUpdate, env::SUWeight
+        state::InfiniteState, gates::TrotterGates,
+        alg::SimpleUpdate, env::SUWeight
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    gate_axs = alg.purified ? (1:1) : (1:2)
-    for r in 1:Nr, c in 1:Nc
-        (alg.bipartite && r > 1) && continue
-        # update x-bonds
-        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r, c + 1)))
-        trunc = truncation_strategy(alg.trunc, 1, r, c)
-        for gate_ax in gate_axs
-            ϵ′ = _su_xbond!(state2, term, env2, r, c, trunc; gate_ax)
+    purified = alg.purified
+    for (sites, gs) in gates.data
+        if length(sites) == 1
+            # 1-site gate
+            site = sites[1]
+            r, c = mod1(site[1], Nr), mod1(site[2], Nc)
+            gate_axs = purified ? (1:1) : (1:2)
+            for gate_ax in gate_axs
+                state2.A[r, c] = _apply_site(state2.A[r, c], gs; gate_ax)
+            end
+        elseif length(sites) == 2 && (isa(gs, NNGate) || gs === nothing)
+            # 2-site gate not decomposed to MPO
+            site1, site2 = sites
+            r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
+            (alg.bipartite && r > 1) && continue
+            if site1 - site2 == CartesianIndex(0, -1) # x-bonds (leftwards)
+                trunc = truncation_strategy(alg.trunc, 1, r, c)
+                ϵ′ = _su_xbond!(state2, gs, env2, r, c, trunc; purified)
+                ϵ = max(ϵ, ϵ′)
+                if alg.bipartite
+                    rp1, cp1 = _next(r, Nr), _next(c, Nc)
+                    state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
+                    state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
+                    env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
+                end
+            elseif site1 - site2 == CartesianIndex(1, 0) # y-bonds (downwards)
+                trunc = truncation_strategy(alg.trunc, 2, r, c)
+                ϵ′ = _su_ybond!(state2, gs, env2, r, c, trunc; purified)
+                ϵ = max(ϵ, ϵ′)
+                if alg.bipartite
+                    rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
+                    state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
+                    state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
+                    env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
+                end
+            else
+                error("Non-standard direction of NN bonds for 2-site Trotter gates.")
+            end
+        else
+            # N-site MPO gate (N ≥ 2)
+            alg.bipartite && error("MPO gates are not compatible with bipartite states.")
+            truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
+            ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; purified)
             ϵ = max(ϵ, ϵ′)
-        end
-        if alg.bipartite
-            rp1, cp1 = _next(r, Nr), _next(c, Nc)
-            state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
-            state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
-            env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
-        end
-        # update y-bonds
-        term = get_gateterm(gate, (CartesianIndex(r, c), CartesianIndex(r - 1, c)))
-        trunc = truncation_strategy(alg.trunc, 2, r, c)
-        for gate_ax in gate_axs
-            ϵ′ = _su_ybond!(state2, term, env2, r, c, trunc; gate_ax)
-            ϵ = max(ϵ, ϵ′)
-        end
-        if alg.bipartite
-            rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-            state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
-            state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
-            env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
         end
     end
     return state2, env2, ϵ
@@ -212,7 +228,7 @@ end
         it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight
     ) -> (psi, env, info)
 
-Given the TimeEvolver iterator `it`, perform one step of time evolution
+Given the `TimeEvolver` iterator `it`, perform one step of time evolution
 on the input state `psi` and its environment `env`.
 """
 function MPSKit.timestep(
@@ -235,8 +251,8 @@ end
         tol::Float64 = 0.0, check_interval::Int = 500
     ) -> (psi, env, info)
 
-Perform time evolution to the end of TimeEvolver iterator `it`,
-or until convergence of SUWeight set by a positive `tol`.
+Perform time evolution to the end of `TimeEvolver` iterator `it`,
+or until convergence of `SUWeight` set by a positive `tol`.
 
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
@@ -248,6 +264,7 @@ function MPSKit.time_evolve(
     )
     time_start = time()
     check_convergence = (tol > 0)
+    @info "--- Time evolution (simple update), dt = $(it.dt) ---"
     if check_convergence
         @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     end
@@ -261,11 +278,7 @@ function MPSKit.time_evolve(
         time1 = time()
         if showinfo
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-            @info @sprintf(
-                "SU iter %-7d: dt = %s, |Δλ| = %.3e. Time = %.3f s/it",
-                # using `string` since `dt` can be complex
-                iter, string(it.dt), diff, time1 - time0
-            )
+            @info @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, diff, time1 - time0)
         end
         if check_convergence
             if (iter == it.nstep) && (diff >= tol)
@@ -277,7 +290,7 @@ function MPSKit.time_evolve(
         end
         if stop
             time_end = time()
-            @info @sprintf("Simple update finished. Total time elapsed: %.2f s", time_end - time_start)
+            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
             return psi, env, info
         else
             env0 = env
@@ -289,15 +302,16 @@ end
 
 """
     time_evolve(
-        psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
-        dt::Number, nstep::Int, alg::SimpleUpdate, env0::SUWeight;
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
         tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     ) -> (psi, env, info)
 
 Perform time evolution on the initial state `psi0` and initial environment `env0`
-with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for 
+with Hamiltonian `H`, using `SimpleUpdate` algorithm `alg`, time step `dt` for 
 `nstep` number of steps. 
 
+- Use `symmetrize_gates = true` for second-order Trotter decomposition.
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
 - Use `t0` to specify the initial time of the evolution.
@@ -307,9 +321,9 @@ with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for
 """
 function MPSKit.time_evolve(
         psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env0::SUWeight;
+        alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
         tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     )
-    it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0)
+    it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0, symmetrize_gates)
     return time_evolve(it; tol, check_interval)
 end

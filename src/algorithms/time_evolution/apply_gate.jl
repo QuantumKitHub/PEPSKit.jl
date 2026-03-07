@@ -1,4 +1,27 @@
 """
+Apply 1-site `gate` on the PEPS or PEPO tensor `a`.
+"""
+function _apply_site(
+        a::PEPSTensor, gate::AbstractTensorMap{T, S, 1, 1};
+        gate_ax::Int = 1
+    ) where {T, S}
+    @assert gate_ax == 1
+    return gate * a
+end
+
+function _apply_site(
+        a::PEPOTensor, gate::AbstractTensorMap{T, S, 1, 1};
+        gate_ax::Int = 1
+    ) where {T, S}
+    @assert gate_ax <= 2
+    if gate_ax == 1
+        return @plansor a′[p1 p2; n e s w] := gate[p1; p] * a[p p2; n e s w]
+    else
+        return @plansor a′[p1 p2; n e s w] := a[p1 p; n e s w] * gate[p; p2]
+    end
+end
+
+"""
 $(SIGNATURES)
 
 Use QR decomposition on two tensors `A`, `B` connected by a bond to get the reduced tensors.
@@ -114,6 +137,36 @@ function _apply_gate(
     else
         @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
+    trunc = if trunc isa FixedSpaceTruncation
+        need_flip ? truncspace(flip(V)) : truncspace(V)
+    else
+        trunc
+    end
+    a, s, b, ϵ = svd_trunc!(a2b2; trunc, alg = LAPACK_QRIteration())
+    a, b = absorb_s(a, s, b)
+    if need_flip
+        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
+    end
+    return a, s, b, ϵ
+end
+
+"""
+$(SIGNATURES)
+
+Apply a trivial gate (indicated by `nothing`) on the reduced matrices `a`, `b`
+```
+    -1← a --- 3 --- b ← -4          -2         -3
+        ↓           ↓               ↓           ↓
+        -2         -3           -1← a --- 3 --- b ← -4
+```
+"""
+function _apply_gate(
+        a::AbstractTensorMap, b::AbstractTensorMap,
+        ::Nothing, trunc::TruncationStrategy
+    )
+    V = space(b, 1)
+    need_flip = isdual(V)
+    @tensor a2b2[-1 -2; -3 -4] := a[-1 -2 3] * b[3 -3 -4]
     trunc = if trunc isa FixedSpaceTruncation
         need_flip ? truncspace(flip(V)) : truncspace(V)
     else

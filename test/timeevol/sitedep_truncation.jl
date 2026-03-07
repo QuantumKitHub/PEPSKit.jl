@@ -48,7 +48,6 @@ end
 
 @testset "Simple update: generic 2-site and 3-site" begin
     Nr, Nc = 3, 4
-    ham = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
     Random.seed!(100)
     peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
     normalize!.(peps0.A, Inf)
@@ -57,13 +56,14 @@ end
     bonddims = rand(2:8, 2, Nr, Nc)
     @show bonddims
     trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
-    # 2-site SU
     alg = SimpleUpdate(; trunc)
+    # 2-site SU
+    ham = j1_j2_model(Float64, Trivial, InfiniteSquare(Nr, Nc); J2 = 0.0, sublattice = false)
     peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims
     # 3-site SU
-    alg = SimpleUpdate(; trunc, force_3site = true)
+    ham = j1_j2_model(Float64, Trivial, InfiniteSquare(Nr, Nc); J2 = 0.2, sublattice = false)
     peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
     @test get_bonddims(peps) == bonddims
     @test get_bonddims(env) == bonddims

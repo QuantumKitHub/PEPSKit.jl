@@ -79,15 +79,18 @@ function MPSKitModels.hubbard_model(
     # TODO: just add this
     @assert n == 0 "Currently no support for imposing a fixed particle number"
     N = MPSKitModels.e_number(T, particle_symmetry, spin_symmetry)
-    pspace = space(N, 1)
-    unit = TensorKit.id(pspace)
-    hopping =
+    spaces = fill(space(N, 1), (lattice.Nrows, lattice.Ncols))
+    hopping = (-t) * (
         MPSKitModels.e⁺e⁻(T, particle_symmetry, spin_symmetry) +
-        MPSKitModels.e⁻e⁺(T, particle_symmetry, spin_symmetry)
+            MPSKitModels.e⁻e⁺(T, particle_symmetry, spin_symmetry)
+    )
     interaction_term = MPSKitModels.nꜛnꜜ(T, particle_symmetry, spin_symmetry)
     site_term = U * interaction_term - mu * N
-    h = (-t) * hopping + (1 / 4) * (site_term ⊗ unit + unit ⊗ site_term)
-    return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
+    return LocalOperator(
+        spaces,
+        (neighbor => hopping for neighbor in nearest_neighbours(lattice))...,
+        ((idx,) => site_term for idx in vertices(lattice))...,
+    )
 end
 
 function MPSKitModels.bose_hubbard_model(
