@@ -112,16 +112,12 @@ end
     trunc_env0 = truncerror(; atol = 1.0e-10) & truncrank(8)
     trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
     peps = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
-    # make state bipartite
+    # make initial state bipartite
     for r in 1:2
         peps.A[_next(r, 2), 2] = copy(peps.A[r, 1])
     end
     wts = SUWeight(peps)
-    ham = real(
-        hubbard_model(
-            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0
-        ),
-    )
+    ham = hubbard_model(Float64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0)
     # usual 2-site simple update, and measure energy
     e_sites = map((true, false)) do force_mpo
         dts = [1.0e-2, 1.0e-2, 5.0e-3]
@@ -129,12 +125,15 @@ end
         for (n, (dt, tol)) in enumerate(zip(dts, tols))
             trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
             alg = SimpleUpdate(; trunc, force_mpo)
-            peps, wts, = time_evolve(peps, ham, dt, 10000, alg, wts; tol, check_interval = 1000)
+            peps, wts, = time_evolve(
+                peps, ham, dt, 10000, alg, wts;
+                tol, symmetrize_gates = false, check_interval = 1000
+            )
         end
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
-        env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env0)
-        env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc = trunc_env)
+        env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env0)
+        env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
         e_site = cost_function(peps, env, ham) / (Nr * Nc)
         @info "Energy (force_mpo = $(force_mpo)): $e_site"
         return e_site
