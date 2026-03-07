@@ -109,31 +109,33 @@ end
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
-    trunc_env0 = truncerror(; atol = 1.0e-10) & truncrank(8)
-    trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
-    peps = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
+    truncs_env = collect(truncerror(; atol = 1.0e-12) & truncrank(χ) for χ in [8, 16])
+    peps0 = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
     # make initial state bipartite
     for r in 1:2
-        peps.A[_next(r, 2), 2] = copy(peps.A[r, 1])
+        peps0.A[_next(r, 2), 2] = copy(peps0.A[r, 1])
     end
-    wts = SUWeight(peps)
+    wts0 = SUWeight(peps0)
     ham = hubbard_model(Float64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0)
-    # usual 2-site simple update, and measure energy
+    # applying 2-site gates decomposed to MPO or not,
+    # resulting energy should be almost the same
     e_sites = map((true, false)) do force_mpo
-        dts = [1.0e-2, 1.0e-2, 5.0e-3]
-        tols = [1.0e-6, 1.0e-8, 1.0e-8]
+        dts = [1.0e-2, 1.0e-2]
+        tols = [1.0e-6, 1.0e-8]
+        peps, wts = deepcopy(peps0), deepcopy(wts0)
         for (n, (dt, tol)) in enumerate(zip(dts, tols))
             trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
             alg = SimpleUpdate(; trunc, force_mpo)
             peps, wts, = time_evolve(
                 peps, ham, dt, 10000, alg, wts;
-                tol, symmetrize_gates = false, check_interval = 1000
+                tol, symmetrize_gates = true, check_interval = 1000
             )
         end
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
-        env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env0)
-        env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
+        for trunc in truncs_env
+            env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc)
+        end
         e_site = cost_function(peps, env, ham) / (Nr * Nc)
         @info "Energy (force_mpo = $(force_mpo)): $e_site"
         return e_site
