@@ -44,8 +44,8 @@ end
         alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0
     )
 
-Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`, 
-starting from the initial state `psi0` and SUWeight environment `env0`.
+Initialize a `TimeEvolver` with Hamiltonian `H` and simple update `alg`, 
+starting from the initial state `psi0` and `SUWeight` environment `env0`.
 
 - The initial time is specified by `t0`.
 - Use `symmetrize_gates = true` for second-order Trotter decomposition.
@@ -227,7 +227,7 @@ end
         it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight
     ) -> (psi, env, info)
 
-Given the TimeEvolver iterator `it`, perform one step of time evolution
+Given the `TimeEvolver` iterator `it`, perform one step of time evolution
 on the input state `psi` and its environment `env`.
 """
 function MPSKit.timestep(
@@ -250,8 +250,8 @@ end
         tol::Float64 = 0.0, check_interval::Int = 500
     ) -> (psi, env, info)
 
-Perform time evolution to the end of TimeEvolver iterator `it`,
-or until convergence of SUWeight set by a positive `tol`.
+Perform time evolution to the end of `TimeEvolver` iterator `it`,
+or until convergence of `SUWeight` set by a positive `tol`.
 
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
@@ -263,6 +263,7 @@ function MPSKit.time_evolve(
     )
     time_start = time()
     check_convergence = (tol > 0)
+    @info "--- Time evolution (simple update), dt = $(it.dt) ---"
     if check_convergence
         @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     end
@@ -276,11 +277,7 @@ function MPSKit.time_evolve(
         time1 = time()
         if showinfo
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-            @info @sprintf(
-                "SU iter %-7d: dt = %s, |Δλ| = %.3e. Time = %.3f s/it",
-                # using `string` since `dt` can be complex
-                iter, string(it.dt), diff, time1 - time0
-            )
+            @info @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, diff, time1 - time0)
         end
         if check_convergence
             if (iter == it.nstep) && (diff >= tol)
@@ -292,7 +289,7 @@ function MPSKit.time_evolve(
         end
         if stop
             time_end = time()
-            @info @sprintf("Simple update finished. Total time elapsed: %.2f s", time_end - time_start)
+            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
             return psi, env, info
         else
             env0 = env
@@ -310,7 +307,7 @@ end
     ) -> (psi, env, info)
 
 Perform time evolution on the initial state `psi0` and initial environment `env0`
-with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for 
+with Hamiltonian `H`, using `SimpleUpdate` algorithm `alg`, time step `dt` for 
 `nstep` number of steps. 
 
 - Use `symmetrize_gates = true` for second-order Trotter decomposition.

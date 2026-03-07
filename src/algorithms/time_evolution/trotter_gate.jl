@@ -1,8 +1,11 @@
 """
     struct TrotterGates{T <: Vector}
 
-Collection of Trotter evolution MPOs obtained from
-a Hamiltonian containing long-range or multi-site terms
+Collection of Trotter evolution gates and MPOs obtained from
+a Hamiltonian containing long-range or multi-site terms.
+Each item in `data` is a pair `sites => gate`, where `sites` is a
+vector of `CartesianIndex`s storing the sites on which the
+Trotter `gate` acts.
 """
 struct TrotterGates{T <: Vector}
     data::T
