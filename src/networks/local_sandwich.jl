@@ -13,6 +13,7 @@ east_virtualspace(O, args...) = virtualspace(O, args..., EAST)
 south_virtualspace(O, args...) = virtualspace(O, args..., SOUTH)
 west_virtualspace(O, args...) = virtualspace(O, args..., WEST)
 
+# MPSKit interface
 MPSKit.left_virtualspace(O, args...) = west_virtualspace(O, args...)
 function MPSKit.right_virtualspace(O, args...)
     return _elementwise_dual(east_virtualspace(O, args...))
@@ -56,6 +57,9 @@ bra(O::PEPSSandwich) = O[2]
 function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
+
+# MPSKit interface
+physicalspace(O::PEPSSandwich) = south_virtualspace(O)
 
 flip_virtualspace(O::PEPSSandwich, dir) = flip_virtualspace.(O, Ref(dir))
 flip_physicalspace(O::PEPSSandwich) = flip_physicalspace.(O)
@@ -115,6 +119,9 @@ function virtualspace(O::PEPOSandwich, dir)
         ]
     )
 end
+
+# MPSKit interface
+physicalspace(O::PEPOSandwich) = south_virtualspace(O)
 
 flip_virtualspace(O::PEPOSandwich, dir) = flip_virtualspace.(O, Ref(dir))
 flip_physicalspace(O::PEPOSandwich) = flip_physicalspace.(O)
