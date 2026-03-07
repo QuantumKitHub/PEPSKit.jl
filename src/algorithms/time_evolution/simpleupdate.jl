@@ -162,12 +162,13 @@ function su_iter(
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
+    purified = alg.purified
     for (sites, gs) in gates.data
         if length(sites) == 1
             # 1-site gate
             site = sites[1]
             r, c = mod1(site[1], Nr), mod1(site[2], Nc)
-            gate_axs = alg.purified ? (1:1) : (1:2)
+            gate_axs = purified ? (1:1) : (1:2)
             for gate_ax in gate_axs
                 state2.A[r, c] = _apply_site(state2.A[r, c], gs; gate_ax)
             end
@@ -178,7 +179,7 @@ function su_iter(
             (alg.bipartite && r > 1) && continue
             if site1 - site2 == CartesianIndex(0, -1) # x-bonds (leftwards)
                 trunc = truncation_strategy(alg.trunc, 1, r, c)
-                ϵ′ = _su_xbond!(state2, gs, env2, r, c, trunc; purified = alg.purified)
+                ϵ′ = _su_xbond!(state2, gs, env2, r, c, trunc; purified)
                 ϵ = max(ϵ, ϵ′)
                 if alg.bipartite
                     rp1, cp1 = _next(r, Nr), _next(c, Nc)
@@ -188,7 +189,7 @@ function su_iter(
                 end
             elseif site1 - site2 == CartesianIndex(1, 0) # y-bonds (downwards)
                 trunc = truncation_strategy(alg.trunc, 2, r, c)
-                ϵ′ = _su_ybond!(state2, gs, env2, r, c, trunc; purified = alg.purified)
+                ϵ′ = _su_ybond!(state2, gs, env2, r, c, trunc; purified)
                 ϵ = max(ϵ, ϵ′)
                 if alg.bipartite
                     rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
@@ -203,7 +204,7 @@ function su_iter(
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("MPO gates are not compatible with bipartite states.")
             truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
-            ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; purified = alg.purified)
+            ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; purified)
             ϵ = max(ϵ, ϵ′)
         end
     end
