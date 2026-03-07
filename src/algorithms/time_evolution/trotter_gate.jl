@@ -228,30 +228,38 @@ Currently, `H` can only contain the following terms:
 - 2-site nearest neighbor (NN) terms
 - 2-site next-nearest neighbor (NNN) terms
 
-If `force_mpo = true`, 2-site nearest-neighbor gates are also decomposed to MPOs.
+## Keyword arguments
+
+- `symmetrize_gates::Bool`: if true, use second-order Trotter decomposition.
+- `force_mpo::Bool`: if true, 2-site nearest-neighbor gates are also decomposed to MPOs.
 """
-function trotterize(H::LocalOperator, dt::Number; force_mpo::Bool = false)
-    Nr, Nc = size(H)
-    T = scalartype(H)
+function trotterize(
+        H::LocalOperator, dt::Number;
+        symmetrize_gates::Bool = false, force_mpo::Bool = false
+    )
     dist = _check_hamiltonian_for_trotter(H)
+    T = scalartype(H)
     atol = eps(real(T))^(3 / 4)
+    dt′ = symmetrize_gates ? (dt / 2) : dt
     gates = Vector{Pair{Any, Any}}()
 
     # TODO: order of gates is fixed for more tight control.
     # Consider directly iterating over H.terms in the future.
 
     # 1-site gates are only constructed when H only has 1-site terms
-    dist == 0 && _trotterize_1site!(gates, H, dt; atol)
+    dist == 0 && _trotterize_1site!(gates, H, dt′; atol)
     #= 
     2-site NN gates on bonds [d, r, c], grouped with 1-site terms
     - d = 1: horizontal bond ((r, c), (r, c+1))
     - d = 2:   vertical bond ((r, c), (r-1, c))
     =#
-    dist >= 1 && _trotterize_nn2site!(gates, H, dt; atol, force_mpo)
+    dist >= 1 && _trotterize_nn2site!(gates, H, dt′; atol, force_mpo)
     #= 
     2-site NNN gates converted to 3-site MPOs on triangular clusters [d, r, c]
     - d = 1 (NORTHWEST), ..., 4 (SOUTHWEST)
     =#
-    dist >= 2 && _trotterize_nnn2site!(gates, H, dt; atol)
+    dist >= 2 && _trotterize_nnn2site!(gates, H, dt′; atol)
+
+    symmetrize_gates && push!(gates, reverse(gates)...)
     return TrotterGates(gates)
 end

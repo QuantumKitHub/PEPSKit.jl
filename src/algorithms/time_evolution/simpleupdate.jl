@@ -48,16 +48,18 @@ Initialize a TimeEvolver with Hamiltonian `H` and simple update `alg`,
 starting from the initial state `psi0` and SUWeight environment `env0`.
 
 - The initial time is specified by `t0`.
+- Use `symmetrize_gates = true` for second-order Trotter decomposition.
 """
 function TimeEvolver(
         psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0
+        alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0,
+        symmetrize_gates::Bool = false
     )
     # sanity checks
     _timeevol_sanity_check(psi0, physicalspace(H), alg)
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     # create Trotter gates
-    gate = trotterize(H, dt′; force_mpo = alg.force_mpo)
+    gate = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
     # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, gate, state)
@@ -302,8 +304,8 @@ end
 
 """
     time_evolve(
-        psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
-        dt::Number, nstep::Int, alg::SimpleUpdate, env0::SUWeight;
+        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
         tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     ) -> (psi, env, info)
 
@@ -311,6 +313,7 @@ Perform time evolution on the initial state `psi0` and initial environment `env0
 with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for 
 `nstep` number of steps. 
 
+- Use `symmetrize_gates = true` for second-order Trotter decomposition.
 - Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
     For other usages it should not be changed.
 - Use `t0` to specify the initial time of the evolution.
@@ -320,9 +323,9 @@ with Hamiltonian `H`, using SimpleUpdate algorithm `alg`, time step `dt` for
 """
 function MPSKit.time_evolve(
         psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env0::SUWeight;
+        alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
         tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     )
-    it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0)
+    it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0, symmetrize_gates)
     return time_evolve(it; tol, check_interval)
 end
