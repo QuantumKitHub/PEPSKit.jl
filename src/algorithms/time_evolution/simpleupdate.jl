@@ -40,8 +40,9 @@ end
 
 """
     TimeEvolver(
-        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
-        alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0
+        psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, dt::Number,
+        nstep::Int, alg::SimpleUpdate, env0::SUWeight; t0::Number = 0.0,
+        symmetrize_gates::Bool = false
     )
 
 Initialize a `TimeEvolver` with Hamiltonian `H` and simple update `alg`, 
@@ -66,90 +67,54 @@ function TimeEvolver(
 end
 
 """
-Simple update of the x-bond between `[r,c]` and `[r,c+1]`.
-```
-        |           |
-    -- T[r,c] -- T[r,c+1] --
-        |           |
-```
-When `gate_ax = 1` (or `2`), the gate will be applied to 
-the codomain (or domain) physicsl legs of `state`.
+Optimized simple update of nearest neighbor bonds utilizing
+reduced bond tensors without decomposing the gate into a 2-site MPO.
+
+When `purified = true`, `gate` acts on the codomain physical legs of `state`.
+Otherwise, `gate` acts on both the codomain and the domain physical legs of `state`.
 """
-function _su_xbond!(
+function _su_nnbond!(
         state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
-        row::Int, col::Int, trunc::TruncationStrategy; purified::Bool = true
+        dir::Int, row::Int, col::Int, trunc::TruncationStrategy;
+        purified::Bool = true
     )
     Nr, Nc, = size(state)
-    gate_axs = purified ? (1:1) : (1:2)
-    cp1 = _next(col, Nc)
+    @assert dir == 1 || dir == 2
+    # position of bond tensors
+    siteA = CartesianIndex(row, col)
+    siteB = CartesianIndex((dir == 1) ? (row, _next(col, Nc)) : (_prev(row, Nr), col))
+    A, B = state.A[siteA], state.A[siteB]
     # absorb environment weights
-    A, B = state.A[row, col], state.A[row, cp1]
-    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = false)
-    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = false)
+    openaxsA = (dir == 1) ? (NORTH, SOUTH, WEST) : (EAST, SOUTH, WEST)
+    openaxsB = (dir == 1) ? (NORTH, SOUTH, EAST) : (NORTH, EAST, WEST)
+    A = absorb_weight(A, env, siteA[1], siteA[2], openaxsA; inv = false)
+    B = absorb_weight(B, env, siteB[1], siteB[2], openaxsB; inv = false)
     normalize!(A, Inf)
     normalize!(B, Inf)
     # apply gate
     ϵ, s = 0.0, nothing
+    if dir == 2
+        A, B = rotr90(A), rotr90(B)
+    end
+    gate_axs = purified ? (1:1) : (1:2)
     for gate_ax in gate_axs
         X, a, b, Y = _qr_bond(A, B; gate_ax)
         a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)
         A, B = _qr_bond_undo(X, a, b, Y)
     end
-    # remove environment weights
-    A = absorb_weight(A, env, row, col, (NORTH, SOUTH, WEST); inv = true)
-    B = absorb_weight(B, env, row, cp1, (NORTH, SOUTH, EAST); inv = true)
-    normalize!(A, Inf)
-    normalize!(B, Inf)
-    normalize!(s, Inf)
-    # update tensor dict and weight on current bond
-    state.A[row, col], state.A[row, cp1] = A, B
-    env.data[1, row, col] = s
-    return ϵ
-end
-
-"""
-Simple update of the y-bond between `[r,c]` and `[r-1,c]`.
-```
-        |
-    --T[r-1,c] --
-        |
-    -- T[r,c] ---
-        |
-```
-When `gate_ax = 1` (or `2`), the gate will be applied to 
-the codomain (or domain) physicsl legs of `state`.
-"""
-function _su_ybond!(
-        state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
-        row::Int, col::Int, trunc::TruncationStrategy; purified::Bool = true
-    )
-    Nr, Nc, = size(state)
-    gate_axs = purified ? (1:1) : (1:2)
-    rm1 = _prev(row, Nr)
-    # absorb environment weights
-    A, B = state.A[row, col], state.A[rm1, col]
-    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = false)
-    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = false)
-    normalize!(A, Inf)
-    normalize!(B, Inf)
-    # apply gate
-    ϵ, s = 0.0, nothing
-    for gate_ax in gate_axs
-        X, a, b, Y = _qr_bond(rotr90(A), rotr90(B); gate_ax)
-        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
-        A, B = rotl90.(_qr_bond_undo(X, a, b, Y))
-        ϵ = max(ϵ, ϵ′)
+    if dir == 2
+        A, B = rotl90(A), rotl90(B)
     end
     # remove environment weights
-    A = absorb_weight(A, env, row, col, (EAST, SOUTH, WEST); inv = true)
-    B = absorb_weight(B, env, rm1, col, (NORTH, EAST, WEST); inv = true)
-    # update tensor dict and weight on current bond
+    A = absorb_weight(A, env, siteA[1], siteA[2], openaxsA; inv = true)
+    B = absorb_weight(B, env, siteB[1], siteB[2], openaxsB; inv = true)
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    state.A[row, col], state.A[rm1, col] = A, B
-    env.data[2, row, col] = s
+    # update tensor dict and weight on current bond
+    state.A[siteA], state.A[siteB] = A, B
+    env.data[dir, row, col] = s
     return ϵ
 end
 
@@ -166,43 +131,40 @@ function su_iter(
     for (sites, gs) in gates.data
         if length(sites) == 1
             # 1-site gate
+            # TODO: special treatment for bipartite state
             site = sites[1]
             r, c = mod1(site[1], Nr), mod1(site[2], Nc)
-            gate_axs = purified ? (1:1) : (1:2)
-            for gate_ax in gate_axs
-                state2.A[r, c] = _apply_site(state2.A[r, c], gs; gate_ax)
-            end
+            state2.A[r, c] = _apply_sitegate(state2.A[r, c], gs; purified)
         elseif length(sites) == 2 && (isa(gs, NNGate) || gs === nothing)
             # 2-site gate not decomposed to MPO
             site1, site2 = sites
             r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
             (alg.bipartite && r > 1) && continue
-            if site1 - site2 == CartesianIndex(0, -1) # x-bonds (leftwards)
-                trunc = truncation_strategy(alg.trunc, 1, r, c)
-                ϵ′ = _su_xbond!(state2, gs, env2, r, c, trunc; purified)
-                ϵ = max(ϵ, ϵ′)
-                if alg.bipartite
-                    rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                    state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
-                    state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
-                    env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
-                end
-            elseif site1 - site2 == CartesianIndex(1, 0) # y-bonds (downwards)
-                trunc = truncation_strategy(alg.trunc, 2, r, c)
-                ϵ′ = _su_ybond!(state2, gs, env2, r, c, trunc; purified)
-                ϵ = max(ϵ, ϵ′)
-                if alg.bipartite
-                    rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                    state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
-                    state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
-                    env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
-                end
+            d = if site1 - site2 == CartesianIndex(0, -1)
+                1 # x-bonds (leftwards)
+            elseif site1 - site2 == CartesianIndex(1, 0)
+                2 # y-bonds (downwards)
             else
                 error("Non-standard direction of NN bonds for 2-site Trotter gates.")
             end
+            trunc = truncation_strategy(alg.trunc, d, r, c)
+            ϵ′ = _su_nnbond!(state2, gs, env2, d, r, c, trunc; purified)
+            ϵ = max(ϵ, ϵ′)
+            (!alg.bipartite) && continue
+            if d == 1
+                rp1, cp1 = _next(r, Nr), _next(c, Nc)
+                state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
+                state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
+                env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
+            else
+                rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
+                state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
+                state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
+                env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
+            end
         else
             # N-site MPO gate (N ≥ 2)
-            alg.bipartite && error("MPO gates are not compatible with bipartite states.")
+            alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
             truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
             ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; purified)
             ϵ = max(ϵ, ϵ′)
@@ -302,17 +264,17 @@ end
 
 """
     time_evolve(
-        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
+        psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, dt::Number, nstep::Int,
         alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
         tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     ) -> (psi, env, info)
 
-Perform time evolution on the initial state `psi0` and initial environment `env0`
-with Hamiltonian `H`, using `SimpleUpdate` algorithm `alg`, time step `dt` for 
-`nstep` number of steps. 
+Perform time evolution on the initial iPEPS or iPEPO `psi0` and
+initial environment `env0` with Hamiltonian `H`, using `SimpleUpdate`
+algorithm `alg`, time step `dt` for `nstep` number of steps. 
 
-- Use `symmetrize_gates = true` for second-order Trotter decomposition.
-- Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
+- Set `symmetrize_gates = true` for second-order Trotter decomposition.
+- Set `tol > 0` to enable convergence check (for imaginary time evolution of iPEPS only).
     For other usages it should not be changed.
 - Use `t0` to specify the initial time of the evolution.
 - `check_interval` sets the interval to output information. Output during the evolution can be turned off by setting `check_interval <= 0`.

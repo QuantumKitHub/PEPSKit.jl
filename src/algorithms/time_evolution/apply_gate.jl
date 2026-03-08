@@ -1,24 +1,21 @@
 """
 Apply 1-site `gate` on the PEPS or PEPO tensor `a`.
 """
-function _apply_site(
-        a::PEPSTensor, gate::AbstractTensorMap{T, S, 1, 1};
-        gate_ax::Int = 1
+function _apply_sitegate(
+        a::PEPSTensor, gate::AbstractTensorMap{T, S, 1, 1}; purified::Bool = true
     ) where {T, S}
-    @assert gate_ax == 1
+    @assert purified
     return gate * a
 end
 
-function _apply_site(
-        a::PEPOTensor, gate::AbstractTensorMap{T, S, 1, 1};
-        gate_ax::Int = 1
+function _apply_sitegate(
+        a::PEPOTensor, gate::AbstractTensorMap{T, S, 1, 1}; purified::Bool = true
     ) where {T, S}
-    @assert gate_ax <= 2
-    if gate_ax == 1
-        return @plansor a′[p1 p2; n e s w] := gate[p1; p] * a[p p2; n e s w]
-    else
-        return @plansor a′[p1 p2; n e s w] := a[p1 p; n e s w] * gate[p; p2]
+    @plansor a′[p1 p2; n e s w] := gate[p1; p] * a[p p2; n e s w]
+    if !purified
+        @plansor a′[p1 p2; n e s w] := a′[p1 p; n e s w] * gate[p; p2]
     end
+    return a′
 end
 
 """
