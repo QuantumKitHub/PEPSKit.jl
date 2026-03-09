@@ -73,48 +73,55 @@ reduced bond tensors without decomposing the gate into a 2-site MPO.
 When `purified = true`, `gate` acts on the codomain physical legs of `state`.
 Otherwise, `gate` acts on both the codomain and the domain physical legs of `state`.
 """
-function _su_nnbond!(
+function _su_iter!(
         state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
-        dir::Int, row::Int, col::Int, trunc::TruncationStrategy;
+        sites::Vector{CartesianIndex{2}}, truncs::Vector{E};
         purified::Bool = true
-    )
-    Nr, Nc, = size(state)
-    @assert dir == 1 || dir == 2
-    # position of bond tensors
-    siteA = CartesianIndex(row, col)
-    siteB = CartesianIndex((dir == 1) ? (row, _next(col, Nc)) : (_prev(row, Nr), col))
-    A, B = state.A[siteA], state.A[siteB]
-    # absorb environment weights
-    openaxsA = (dir == 1) ? (NORTH, SOUTH, WEST) : (EAST, SOUTH, WEST)
-    openaxsB = (dir == 1) ? (NORTH, SOUTH, EAST) : (NORTH, EAST, WEST)
-    A = absorb_weight(A, env, siteA[1], siteA[2], openaxsA; inv = false)
-    B = absorb_weight(B, env, siteB[1], siteB[2], openaxsB; inv = false)
-    normalize!(A, Inf)
-    normalize!(B, Inf)
+    ) where {E <: TruncationStrategy}
+    Nr, Nc = size(state)
+    @assert length(sites) == 2 && length(truncs) == 1
+    Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
+    normalize!.(Ms, Inf)
+    # rotate
+    bond, rev = _nn_bondrev(sites..., (Nr, Nc))
+    A, B = if bond[1] == 1 # x-bond
+        rev ? map(rot180, Ms) : Ms
+    else # y-bond
+        rev ? map(rotl90, Ms) : map(rotr90, Ms)
+    end
     # apply gate
     ϵ, s = 0.0, nothing
-    if dir == 2
-        A, B = rotr90(A), rotr90(B)
-    end
     gate_axs = purified ? (1:1) : (1:2)
     for gate_ax in gate_axs
         X, a, b, Y = _qr_bond(A, B; gate_ax)
-        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, truncs[1])
         ϵ = max(ϵ, ϵ′)
         A, B = _qr_bond_undo(X, a, b, Y)
     end
-    if dir == 2
-        A, B = rotl90(A), rotl90(B)
+    # rotate back
+    if bond[1] == 1 # x-bond
+        if rev
+            A, B = rot180(A), rot180(B)
+        end
+    else # y-bond
+        if rev
+            A, B = rotr90(A), rotr90(B)
+        else
+            A, B = rotl90(A), rotl90(B)
+        end
     end
     # remove environment weights
-    A = absorb_weight(A, env, siteA[1], siteA[2], openaxsA; inv = true)
-    B = absorb_weight(B, env, siteB[1], siteB[2], openaxsB; inv = true)
+    siteA, siteB = map(sites) do site
+        return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
+    end
+    A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs[1]; inv = true)
+    B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs[2]; inv = true)
+    # update tensor dict and weight on current bond
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    # update tensor dict and weight on current bond
     state.A[siteA], state.A[siteB] = A, B
-    env.data[dir, row, col] = s
+    env.data[bond...] = s
     return ϵ
 end
 
@@ -128,27 +135,21 @@ function su_iter(
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     purified = alg.purified
-    for (sites, gs) in gates.data
+    for (sites, gate) in gates.data
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state
             site = sites[1]
             r, c = mod1(site[1], Nr), mod1(site[2], Nc)
-            state2.A[r, c] = _apply_sitegate(state2.A[r, c], gs; purified)
-        elseif length(sites) == 2 && (isa(gs, NNGate) || gs === nothing)
-            # 2-site gate not decomposed to MPO
-            site1, site2 = sites
-            r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
-            (alg.bipartite && r > 1) && continue
-            d = if site1 - site2 == CartesianIndex(0, -1)
-                1 # x-bonds (leftwards)
-            elseif site1 - site2 == CartesianIndex(1, 0)
-                2 # y-bonds (downwards)
-            else
-                error("Non-standard direction of NN bonds for 2-site Trotter gates.")
+            state2.A[r, c] = _apply_sitegate(state2.A[r, c], gate; purified)
+        elseif length(sites) == 2
+            (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
+            if alg.bipartite
+                length(sites) > 2 && error("Multi-site MPO gates are not compatible with bipartite states.")
+                r > 1 && continue
             end
-            trunc = truncation_strategy(alg.trunc, d, r, c)
-            ϵ′ = _su_nnbond!(state2, gs, env2, d, r, c, trunc; purified)
+            truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
+            ϵ′ = _su_iter!(state2, gate, env2, sites, truncs; purified)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue
             if d == 1
@@ -166,7 +167,7 @@ function su_iter(
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
             truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
-            ϵ′ = _su_cluster!(state2, gs, env2, sites, truncs; purified)
+            ϵ′ = _su_iter!(state2, gate, env2, sites, truncs; purified)
             ϵ = max(ϵ, ϵ′)
         end
     end

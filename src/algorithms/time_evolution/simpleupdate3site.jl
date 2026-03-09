@@ -40,6 +40,30 @@ function _nn_vec_direction(nn_vec::CartesianIndex{2})
 end
 
 """
+Given `site1`, `site2` connected by a nearest neighbor bond,
+return the bond index and whether it is reversed from the
+standard orientation (`site1` on the west/south of `site2`).
+"""
+function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2, Int})
+    diff = site1 - site2
+    if diff == CartesianIndex(0, -1)
+        r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
+        return (1, r, c), false
+    elseif diff == CartesianIndex(0, 1)
+        r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
+        return (1, r, c), true
+    elseif diff == CartesianIndex(1, 0)
+        r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
+        return (2, r, c), false
+    elseif diff == CartesianIndex(-1, 0)
+        r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
+        return (2, r, c), true
+    else
+        error("`site1` and `site2` are not nearest neighbors.")
+    end
+end
+
+"""
 Find the permutation to permute `out_ax`, `in_ax` legs to
 the first and the last position of a tensor with `Nax` legs,
 then assign the last leg to domain, and the others to codomain.
@@ -53,15 +77,12 @@ function _get_mpo_perm(out_ax::Int, in_ax::Int, Nax::Int)
 end
 
 """
-Obtain the cluster `Ms` along the (open and non-self-intersecting) path
-given by `sites` in `state`.
+Obtain the cluster `Ms` along the (open) path `sites` in `state`. 
 
-Also returns:
-- `open_vaxs`: Open virtual axes (1 to 4) of each cluster tensor before permutation.
-- `bond_revs`: Position of the cluster bonds in the state, and whether the cluster path follows the "canonical" orientation of the bond (leftwards or downwards).
-- `invperms`: Permutations to restore the axes order of each cluster tensor.
+When the `SUWeight` environment `env` is provided,
+it will be absorbed into tensors of `Ms`.
 
-In the cluster, each tensor use the MPS axes order
+When `permute = true`, permute tensors in `Ms` to MPS axis order
 ```
     PEPS:           PEPO:
            3             3  4
@@ -72,10 +93,20 @@ In the cluster, each tensor use the MPS axes order
     M[o 2 3 4; i]  M[o 2 3 4 5; i]
 ```
 where `o` (`i`) connects to the previous (next) tensor.
+Otherwise, axes order of each tensor in `Ms` are preserved.
+
+## Returns
+
+- `Ms`: Tensors in the cluster.
+- `open_vaxs`: Open virtual axes (1 to 4) of each cluster tensor before permutation.
+- `invperms`: Permutations to restore the axes order of each cluster tensor.
 """
+function _get_cluster(state, sites; permute::Bool = true)
+    return _get_cluster(state, sites, nothing; permute)
+end
 function _get_cluster(
         state::InfiniteState, sites::Vector{CartesianIndex{2}},
-        env::Union{SUWeight, Nothing}
+        env::Union{SUWeight, Nothing}; permute::Bool = true
     )
     Nr, Nc = size(state)
     # number of sites
@@ -98,22 +129,6 @@ function _get_cluster(
             filter(x -> x != out_axs[i - 1], all_vaxs)
         else
             filter(x -> x != out_axs[i - 1] && x != in_axs[i], all_vaxs)
-        end
-    end
-    bond_revs = map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
-        diff = site1 - site2
-        if diff == CartesianIndex(0, -1)
-            r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
-            return (1, r, c), false
-        elseif diff == CartesianIndex(0, 1)
-            r, c = mod1(site2[1], Nr), mod1(site2[2], Nc)
-            return (1, r, c), true
-        elseif diff == CartesianIndex(1, 0)
-            r, c = mod1(site1[1], Nr), mod1(site1[2], Nc)
-            return (2, r, c), false
-        else # diff == CartesianIndex(-1, 0)
-            r, c = mod1(site2[1], Nr), mod1(site2[2], Nc)
-            return (2, r, c), true
         end
     end
     perms = map(1:Ns) do i
@@ -139,19 +154,21 @@ function _get_cluster(
         else
             absorb_weight(state.A[s], env, s[1], s[2], vaxs)
         end
-        return permute(M, perm)
+        return permute ? TensorKit.permute(M, perm) : M
     end
-    return Ms, open_vaxs, bond_revs, invperms
+    return Ms, open_vaxs, invperms
 end
 
-function _su_cluster!(
-        state::InfiniteState, gs::Vector{T}, env::SUWeight,
+"""
+Simple update with an N-site MPO `gate` (N ≥ 2).
+"""
+function _su_iter!(
+        state::InfiniteState, gate::Vector{T}, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, truncs::Vector{E};
         purified::Bool = true
     ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
     Nr, Nc = size(state)
-    # southwest 3-site cluster and arrow direction within it
-    Ms, open_vaxs, bond_revs, invperms = _get_cluster(state, sites, env)
+    Ms, open_vaxs, invperms = _get_cluster(state, sites, env)
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
@@ -161,7 +178,7 @@ function _su_cluster!(
     gate_axs = purified ? (1:1) : (1:2)
     wts, ϵs = nothing, nothing
     for gate_ax in gate_axs
-        _apply_gatempo!(Ms, gs; gate_ax)
+        _apply_gatempo!(Ms, gate; gate_ax)
         if isa(state, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
@@ -173,6 +190,9 @@ function _su_cluster!(
     # restore virtual arrows in `Ms`
     _flip_virtuals!(Ms, flips)
     # update env weights
+    bond_revs = map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
+        _nn_bondrev(site1, site2, (Nr, Nc))
+    end
     for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
         wt_new = flip ? _fliptwist_s(wt) : wt
         wt_new = rev ? transpose(wt_new) : wt_new
