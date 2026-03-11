@@ -74,7 +74,7 @@ When `purified = true`, `gate` acts on the codomain physical legs of `state`.
 Otherwise, `gate` acts on both the codomain and the domain physical legs of `state`.
 """
 function _su_iter!(
-        state::InfiniteState, gate::Union{NNGate, Nothing}, env::SUWeight,
+        state::InfiniteState, gate::NNGate, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, truncs::Vector{E};
         purified::Bool = true
     ) where {E <: TruncationStrategy}

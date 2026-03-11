@@ -17,13 +17,18 @@ $(TYPEDFIELDS)
     maxiter::Int = 100
 end
 
-function _trivial_gates(Nrow::Int, Ncol::Int)
-    gates = map(Iterators.product(1:2, 1:Ncol, 1:Nrow)) do (d, c, r)
+function _trivial_gates(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: ElementarySpace}
+    Nr, Nc = size(lattice)
+    gates = map(Iterators.product(1:2, 1:Nc, 1:Nr)) do (d, c, r)
         site1 = CartesianIndex(r, c)
         site2 = (d == 1) ? CartesianIndex(r, c + 1) : CartesianIndex(r - 1, c)
-        return [site1, site2] => nothing
+        r1, c1 = mod1.(Tuple(site1), size(lattice))
+        r2, c2 = mod1.(Tuple(site2), size(lattice))
+        V1, V2 = lattice[r1, c1], lattice[r2, c2]
+        h = TensorKit.id(elt, V1 ⊗ V2)
+        return [site1, site2] => h
     end
-    return TrotterGates(vec(gates))
+    return TrotterGates(lattice, vec(gates))
 end
 
 """
@@ -32,8 +37,7 @@ end
 Fix the gauge of `psi` using trivial simple update.
 """
 function gauge_fix(psi::InfiniteState, alg::SUGauge)
-    Nr, Nc, = size(psi)
-    gates = _trivial_gates(Nr, Nc)
+    gates = _trivial_gates(scalartype(psi), physicalspace(psi))
     su_alg = SimpleUpdate(; trunc = FixedSpaceTruncation(), bipartite = _state_bipartite_check(psi))
     wts0 = SUWeight(psi)
     # use default constructor to avoid calculation of exp(-H * 0)
