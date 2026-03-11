@@ -12,7 +12,7 @@ $(TYPEDFIELDS)
     trunc::TruncationStrategy
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
-    "When true, force the usage of MPO simple update for nearest neighbor Hamiltonians."
+    "When true, force decomposition of nearest neighbor gates to MPOs."
     force_mpo::Bool = false
     "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
@@ -135,7 +135,7 @@ function su_iter(
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     purified = alg.purified
-    for (sites, gate) in gates.data
+    for (sites, gate) in gates.terms
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state

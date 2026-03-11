@@ -3,13 +3,26 @@
 
 Collection of Trotter evolution gates and MPOs obtained from
 a Hamiltonian containing long-range or multi-site terms.
-Each item in `data` is a pair `sites => gate`, where `sites` is a
-vector of `CartesianIndex`s storing the sites on which the
-Trotter `gate` acts.
+
+## Fields
+
+- `lattice::Matrix{S}`: The lattice on which the gates acts.
+- `terms::T`: The vector of `sites => gate` pairs, where `sites` is a
+vector of `CartesianIndex`s storing the sites on which the `gate` acts.
 """
-struct TrotterGates{T <: Vector}
-    data::T
+struct TrotterGates{T <: Vector, S}
+    lattice::Matrix{S}
+    terms::T
+    # TODO: check physical spaces of terms match `lattice`
 end
+
+"""
+    physicalspace(gates::TrotterGates)
+
+Return lattice of physical spaces on which the `TrotterGates` is defined.
+"""
+physicalspace(gates::TrotterGates) = gates.lattice
+Base.size(gates::TrotterGates) = size(physicalspace(gates))
 
 const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
 
@@ -260,9 +273,12 @@ function trotterize(
     #= 
     2-site NNN gates converted to 3-site MPOs on triangular clusters [d, r, c]
     - d = 1 (NORTHWEST), ..., 4 (SOUTHWEST)
+
+    TODO: when all plaquettes have NNN gates, group with
+    NN gates and 1-site gates to reduce number of gates
     =#
     dist >= 2 && _trotterize_nnn2site!(gates, H, dt′; atol)
 
     symmetrize_gates && push!(gates, reverse(gates)...)
-    return TrotterGates(gates)
+    return TrotterGates(physicalspace(H), gates)
 end
