@@ -25,7 +25,7 @@ function ProjectorAlgorithm(;
 
     # parse SVD forward & rrule algorithm
 
-    decomposition_algorithm = if alg in [:halfinfinite, :fullinfinite]
+    decomposition_algorithm = if alg in [:halfinfinite, :fullinfinite, :randomized]
         _alg_or_nt(SVDAdjoint, decomposition_alg)
     elseif alg in [:c4v_eigh]
         _alg_or_nt(EighAdjoint, decomposition_alg)
@@ -226,7 +226,7 @@ end
 # ==========================================================================================
 # TBD: compute ncv vectors proj.ncv_ratio * old_nvectors?
 struct RandomizedProjector{S, T, R} <: ProjectorAlgorithm
-    svd_alg::S
+    decomposition_alg::S
     trunc::T
     rng::R
     oversampling::Int
@@ -237,16 +237,16 @@ end
 
 PROJECTOR_SYMBOLS[:randomized] = RandomizedProjector
 
-svd_algorithm(alg::RandomizedProjector) = alg.svd_alg
+decomposition_algorithm(alg::RandomizedProjector) = alg.decomposition_alg
 
 _default_randomized_oversampling = 10
 _default_randomized_max_full = 100
 _default_n_subspace_iter = 2
 
 # needed as default interface in PEPSKit.ProjectorAlgorithm
-function RandomizedProjector(svd_algorithm, trunc, verbosity)
+function RandomizedProjector(decomposition_alg, trunc, verbosity)
     return RandomizedProjector(
-        svd_algorithm, trunc, Random.default_rng(), _default_randomized_oversampling,
+        decomposition_alg, trunc, Random.default_rng(), _default_randomized_oversampling,
         _default_randomized_max_full, _default_n_subspace_iter, verbosity
     )
 end
@@ -294,8 +294,8 @@ function compute_projector(fq, coordinate, last_space, alg::RandomizedProjector)
     B = Q' * fq
     normalize!(B)  # TODO better way?
 
-    svd_alg = svd_algorithm(alg, coordinate)
-    U′, S, V, info = svd_trunc!(B, svd_alg; trunc = alg.trunc)
+    decomposition_alg = decomposition_algorithm(alg, coordinate)
+    U′, S, V, info = svd_trunc!(B, decomposition_alg; trunc = alg.trunc)
     U = Q * U′
     foreach(blocks(S)) do (s, b)
         if size(b, 1) == dim(randomized_space, s) && size(b, 1) < dim(full_space, s)
