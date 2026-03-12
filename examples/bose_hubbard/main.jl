@@ -88,7 +88,7 @@ algorithms and their tolerances:
 """
 
 boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
-gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :eigsolver, iterscheme = :diffgauge)
+gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :linsolver, iterscheme = :fixed)
 optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 150, ls_maxiter = 2, ls_maxfg = 2);
 
 md"""

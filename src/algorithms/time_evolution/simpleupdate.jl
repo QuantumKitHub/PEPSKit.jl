@@ -14,7 +14,7 @@ $(TYPEDFIELDS)
     imaginary_time::Bool = true
     "When true, force the usage of 3-site simple update"
     force_3site::Bool = false
-    "(Only applicable to InfinitePEPS) When true, assume bipartite unit cell structure"
+    "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
     "(Only applicable to InfinitePEPO) 
     When true, the PEPO is regarded as a purified PEPS, and updated as

@@ -182,6 +182,10 @@ function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::Infini
     )
 end
 
+function InfiniteSquareNetwork(top::InfinitePEPO, bot::InfinitePEPO = top)
+    return InfiniteSquareNetwork(InfinitePEPS(top), InfinitePEPS(bot))
+end
+
 ## Conversion to states
 
 function InfinitePartitionFunction(ρ::InfinitePEPO)

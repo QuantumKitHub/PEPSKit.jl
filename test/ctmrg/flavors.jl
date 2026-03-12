@@ -4,23 +4,29 @@ using MatrixAlgebraKit
 using TensorKit
 using MPSKit
 using PEPSKit
+using PEPSKit: peps_normalize
 
 # initialize parameters
-χbond = 2
-χenv = 16
+D = 2
+χ = 16
 unitcells = [(1, 1), (3, 4)]
-projector_algs = [:halfinfinite, :fullinfinite]
+projector_algs_asymm = [:halfinfinite, :fullinfinite]
+projector_algs_c4v = [
+    (:c4v_qr, :qr),
+    (:c4v_eigh, :qriteration), (:c4v_eigh, :lanczos),
+]
+Ts = [Float64, ComplexF64]
 
 @testset "$(unitcell) unit cell with $projector_alg" for (unitcell, projector_alg) in
-    Iterators.product(unitcells, projector_algs)
+    Iterators.product(unitcells, projector_algs_asymm)
     # compute environments
     Random.seed!(32350283290358)
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(χbond); unitcell)
+    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D); unitcell)
     env_sequential, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg = :sequential, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :sequential, projector_alg
     )
     env_simultaneous, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χenv)), psi; alg = :simultaneous, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :simultaneous, projector_alg
     )
 
     # compare norms
@@ -29,20 +35,12 @@ projector_algs = [:halfinfinite, :fullinfinite]
     # compare singular values
     CS_sequential = map(svd_vals, env_sequential.corners)
     CS_simultaneous = map(svd_vals, env_simultaneous.corners)
-    ΔCS = maximum(zip(CS_sequential, CS_simultaneous)) do (c_lm, c_as)
-        smallest = infimum(MPSKit._firstspace(c_lm), MPSKit._firstspace(c_as))
-        e_old = isometry(MPSKit._firstspace(c_lm), smallest)
-        e_new = isometry(MPSKit._firstspace(c_as), smallest)
-        return norm(e_new' * c_as * e_new - e_old' * c_lm * e_old)
-    end
+    ΔCS = maximum(splat(PEPSKit._singular_value_distance), zip(CS_sequential, CS_simultaneous))
     @test ΔCS < 1.0e-2
 
     TS_sequential = map(svd_vals, env_sequential.edges)
     TS_simultaneous = map(svd_vals, env_simultaneous.edges)
-    ΔTS = maximum(zip(TS_sequential, TS_simultaneous)) do (t_lm, t_as)
-        MPSKit._firstspace(t_lm) == MPSKit._firstspace(t_as) || return scalartype(t_lm)(Inf)
-        return norm(t_as - t_lm)
-    end
+    ΔTS = maximum(splat(PEPSKit._singular_value_distance), zip(TS_sequential, TS_simultaneous))
     @test ΔTS < 1.0e-2
 
     # compare Heisenberg energies
@@ -54,7 +52,7 @@ end
 
 # test fixedspace actually fixes space
 @testset "Fixedspace truncation using $alg and $projector_alg" for (alg, projector_alg) in
-    Iterators.product([:sequential, :simultaneous], projector_algs)
+    Iterators.product([:sequential, :simultaneous], projector_algs_asymm)
     Ds = ComplexSpace.(fill(2, 3, 3))
     χs = ComplexSpace.([16 17 18; 15 20 21; 14 19 22])
     psi = InfinitePEPS(Ds, Ds, Ds)
@@ -66,4 +64,24 @@ end
     # check that the space is fixed
     @test all(space.(env.corners) .== space.(env2.corners))
     @test all(space.(env.edges) .== space.(env2.edges))
+end
+
+@testset "C4v with ($T) - ($projector_alg, $decomp_alg)" for (T, (projector_alg, decomp_alg)) in
+    Iterators.product(Ts, projector_algs_c4v)
+
+    Random.seed!(29358293829382)
+    symm = RotateReflect()
+    Vphys = ComplexSpace(2)
+    Vpeps = ComplexSpace(D)
+    Venv = ComplexSpace(χ)
+
+    peps = InfinitePEPS(randn, T, Vphys, Vpeps, Vpeps)
+    peps = peps_normalize(symmetrize!(peps, symm))
+
+    env₀ = initialize_random_c4v_env(peps, Venv)
+    env, = leading_boundary(
+        env₀, peps; alg = :c4v, projector_alg,
+        decomposition_alg = (; fwd_alg = (; alg = decomp_alg))
+    )
+    @test env isa CTMRGEnv
 end

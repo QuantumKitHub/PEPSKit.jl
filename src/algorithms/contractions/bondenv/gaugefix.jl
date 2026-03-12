@@ -61,8 +61,8 @@ function fixgauge_benv(
                             ↓
                             2
     =#
-    QL, L = left_orth(permute(Z, ((2, 1), (3,))))
-    QR, R = left_orth(permute(Z, ((3, 1), (2,))))
+    QL, L = left_orth!(permute(Z, ((2, 1), (3,)); copy = true); positive = true)
+    QR, R = left_orth!(permute(Z, ((3, 1), (2,)); copy = true); positive = true)
     @debug "cond(L) = $(LinearAlgebra.cond(L)); cond(R) = $(LinearAlgebra.cond(R))"
     # TODO: find a better way to fix gauge that avoids `inv`
     Linv, Rinv = inv(L), inv(R)

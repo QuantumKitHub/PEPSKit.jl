@@ -256,7 +256,7 @@ function fullenv_truncate(
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
         # determine convergence
         s_nrm = norm(s0, Inf)
-        Δs = ((space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN) / s_nrm
+        Δs = _singular_value_distance(s, s0) / s_nrm
         Δfid = fid - fid0
         s0 = deepcopy(s)
         fid0 = fid
