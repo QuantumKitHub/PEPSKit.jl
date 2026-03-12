@@ -112,7 +112,7 @@ function simultaneous_projectors(
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
     coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
-    last_space = space(env.edges[coordinate[1], coordinate′[2:3]...], 1)
+    last_space = space(env.edges[coordinate[1], coordinate[2:3]...], 1)
     trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate2[2:3]...])
     alg′ = @set alg.trunc = trunc
     ec = (
