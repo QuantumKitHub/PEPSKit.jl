@@ -4,7 +4,7 @@ using PEPSKit
 using LinearAlgebra
 using Random
 import MPSKitModels: hubbard_space
-using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
+using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!, _next
 using MPSKit: GenericMPSTensor, MPSBondTensor
 include("cluster_tools.jl")
 
@@ -111,7 +111,11 @@ end
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
     trunc_env0 = truncerror(; atol = 1.0e-12) & truncrank(4)
     trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
-    peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
+    peps = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
+    # make state bipartite
+    for r in 1:2
+        peps.A[_next(r, 2), 2] = copy(peps.A[r, 1])
+    end
     wts = SUWeight(peps)
     ham = real(
         hubbard_model(
@@ -127,7 +131,7 @@ end
         peps, wts, = time_evolve(peps, ham, dt, 10000, alg, wts; tol, check_interval = 1000)
     end
     normalize!.(peps.A, Inf)
-    env = CTMRGEnv(wts, peps)
+    env = CTMRGEnv(wts)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env0)
     env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
     e_site = cost_function(peps, env, ham) / (Nr * Nc)

@@ -20,7 +20,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
-* `svd_alg::Union{<:SVDAdjoint,NamedTuple}`
+* `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)`
 """
 struct SimultaneousCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
@@ -48,6 +48,10 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     end  # expand environment
     projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)  # renormalize enlarged corners
+    info = (;
+        contraction_metrics = (; info.truncation_error, info.condition_number),
+        info.U, info.S, info.V, info.U_full, info.S_full, info.V_full, info.truncation_indices,
+    )
     return env′, info
 end
 
@@ -64,7 +68,8 @@ function _split_proj_and_info(proj_and_info)
     U_full = map(x -> x[2].U_full, proj_and_info)
     S_full = map(x -> x[2].S_full, proj_and_info)
     V_full = map(x -> x[2].V_full, proj_and_info)
-    info = (; truncation_error, condition_number, U, S, V, U_full, S_full, V_full)
+    truncation_indices = map(x -> x[2].truncation_indices, proj_and_info)
+    info = (; truncation_error, condition_number, U, S, V, U_full, S_full, V_full, truncation_indices)
     return (P_left, P_right), info
 end
 
@@ -102,13 +107,12 @@ end
 function simultaneous_projectors(
         coordinate, enlarged_corners::Array{E, 3}, env, alg::FullInfiniteProjector
     ) where {E}
-    coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
-    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
-    alg′ = @set alg.trunc = trunc
-    rowsize, colsize = size(enlarged_corners)[2:3]
+    rowsize, colsize = size(env)[2:3]
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
     coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate2[2:3]...])
+    alg′ = @set alg.trunc = trunc
     ec = (
         enlarged_corners[coordinate4...],
         enlarged_corners[coordinate...],

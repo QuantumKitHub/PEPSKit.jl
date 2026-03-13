@@ -112,7 +112,7 @@ function bond_truncate(
         _, s, _ = svd_trunc!(permute(ab, perm_ab); trunc = alg.trunc)
         # fidelity, cost and normalized bond-s change
         s_nrm = norm(s0, Inf)
-        Δs = ((space(s) == space(s0)) ? _singular_value_distance((s, s0)) : NaN) / s_nrm
+        Δs = _singular_value_distance(s, s0) / s_nrm
         Δcost = abs(cost - cost0) / cost00
         Δfid = abs(fid - fid0)
         cost0, fid0, s0 = cost, fid, s
@@ -139,7 +139,7 @@ function bond_truncate(
     a, s, b = svd_trunc!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
-        a, s, b = flip_svd(a, s, b)
+        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end
     return a, s, b, (; fid, Δfid, Δs)
 end
@@ -160,8 +160,8 @@ function bond_truncate(
         --- a == b ---   ==>   - Qa ← Ra == Rb ← Qb -
             ↓    ↓               ↓               ↓
     =#
-    Qa, Ra = left_orth(a)
-    Rb, Qb = right_orth(b)
+    Qa, Ra = left_orth(a; positive = true)
+    Rb, Qb = right_orth(b; positive = true)
     @assert !isdual(space(Ra, 1)) && !isdual(space(Qb, 1))
     @tensor b0[-1; -2] := Ra[-1 1] * Rb[1 -2]
     #= initialize bond environment around `Ra Lb`
@@ -186,7 +186,7 @@ function bond_truncate(
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
     @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
     if need_flip
-        a, s, b = flip_svd(a, s, b)
+        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end
     return a, s, b, info
 end

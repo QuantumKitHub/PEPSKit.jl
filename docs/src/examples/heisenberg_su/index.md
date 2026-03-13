@@ -46,9 +46,10 @@ H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx = 1, Jy = 1
 
 ## Simple updating
 
-We proceed by initializing a random PEPS that will be evolved.
-The weights used for simple update are initialized as identity matrices.
-First though, we need to define the appropriate (symmetric) spaces:
+We proceed by initializing a random PEPS that will be evolved. Since we want to make use of
+the bipartite structure of the Heisenberg ground state when we run the simple update routine,
+we will make the initial PEPS bipartite explicitly. The weights used for simple update are
+initialized as identity matrices. First though, we need to define the appropriate (symmetric) spaces:
 
 ````julia
 Dbond = 4
@@ -66,13 +67,17 @@ else
 end
 
 peps = InfinitePEPS(rand, Float64, physical_space, bond_space; unitcell = (Nr, Nc));
+peps.A[2, 2] = copy(peps.A[1, 1]) ## make initial random state bipartite
+peps.A[2, 1] = copy(peps.A[1, 2])
 wts = SUWeight(peps);
 ````
 
 Next, we can start the `SimpleUpdate` routine, successively decreasing the time intervals
-and singular value convergence tolerances. Note that TensorKit allows to combine SVD
-truncation schemes, which we use here to set a maximal bond dimension and at the same time
-fix a truncation error (if that can be reached by remaining below `Dbond`):
+and singular value convergence tolerances. Here we set `bipartite = true` to exploit the
+underlying bipartite lattice which requires that we input a bipartite PEPS where the diagonal
+and off-diagonal unit cell entries are equivalent. Note that TensorKit allows us to combine SVD
+truncation schemes, which we use here to set a maximal bond dimension and at the same time fix
+a truncation error (if that can be reached by remaining below `Dbond`):
 
 ````julia
 dts = [1.0e-2, 1.0e-3, 4.0e-4]
@@ -87,41 +92,41 @@ end
 
 ````
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.683e+00. Time = 16.029 s/it
+[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.683e+00. Time = 18.251 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.01, |Δλ| = 3.917e-06. Time = 0.003 s/it
+[ Info: SU iter 500    : dt = 0.01, |Δλ| = 3.917e-06. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.003 s/it
+[ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.002 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 18.10 s
+[ Info: Simple update finished. Total time elapsed: 19.73 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.003 s/it
+[ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.001, |Δλ| = 9.631e-07. Time = 0.003 s/it
+[ Info: SU iter 500    : dt = 0.001, |Δλ| = 9.631e-07. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   : dt = 0.001, |Δλ| = 2.415e-07. Time = 0.003 s/it
+[ Info: SU iter 1000   : dt = 0.001, |Δλ| = 2.415e-07. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   : dt = 0.001, |Δλ| = 6.291e-08. Time = 0.003 s/it
+[ Info: SU iter 1500   : dt = 0.001, |Δλ| = 6.291e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.683e-08. Time = 0.003 s/it
+[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.683e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.003 s/it
+[ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.002 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 7.01 s
+[ Info: Simple update finished. Total time elapsed: 5.31 s
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.003 s/it
+[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.0004, |Δλ| = 6.377e-08. Time = 0.003 s/it
+[ Info: SU iter 500    : dt = 0.0004, |Δλ| = 6.377e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   : dt = 0.0004, |Δλ| = 3.544e-08. Time = 0.003 s/it
+[ Info: SU iter 1000   : dt = 0.0004, |Δλ| = 3.544e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   : dt = 0.0004, |Δλ| = 2.013e-08. Time = 0.003 s/it
+[ Info: SU iter 1500   : dt = 0.0004, |Δλ| = 2.013e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.157e-08. Time = 0.003 s/it
+[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.157e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.003 s/it
+[ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.002 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elasped: 6.74 s
+[ Info: Simple update finished. Total time elapsed: 5.05 s
 
 ````
 
@@ -145,8 +150,8 @@ env, = leading_boundary(
 ````
 
 ````
-[ Info: CTMRG init:	obj = +1.852686271621e-15	err = 1.0000e+00
-[ Info: CTMRG conv 14:	obj = +1.297823093603e+00	err = 4.2791045109e-11	time = 7.73 sec
+[ Info: CTMRG init:	obj = +1.852686271623e-15	err = 1.0000e+00
+[ Info: CTMRG conv 14:	obj = +1.297823093604e+00	err = 5.1362926971e-11	time = 5.06 sec
 
 ````
 
@@ -180,9 +185,9 @@ M_norms = map(
 ````
 
 ````
-E = -0.667468537043687
-Ms = [0.02728716257542508 -0.025087419805416306; -0.025087419894948337 0.027287162545045957;;; -2.3992008033046908e-11 2.6495396154846418e-11; -4.827289089293085e-11 4.5508758220180745e-11;;; 0.37596759542523767 -0.3761207830204173; -0.37612078301296753 0.37596759542925773]
-M_norms = [0.37695652541274954 0.3769565254142512; 0.3769565254127766 0.37695652541455993]
+E = -0.6674685370436856
+Ms = [0.027287162575913397 -0.02508741980582664; -0.025087419895358266 0.027287162545533143;;; -2.398913533097069e-11 2.64958523871206e-11; -4.82742162216665e-11 4.5509172819091503e-11;;; 0.37596759542522507 -0.37612078302041296; -0.37612078301296187 0.37596759542924413]
+M_norms = [0.3769565254127723 0.3769565254142742; 0.37695652541279817 0.37695652541458163]
 
 ````
 
@@ -201,8 +206,8 @@ M_ref = 0.3767
 ````
 
 ````
-(E - E_ref) / abs(E_ref) = 4.7135515075588574e-5
-(mean(M_norms) - M_ref) / M_ref = 0.0006809806572453966
+(E - E_ref) / abs(E_ref) = 4.7135515077750805e-5
+(mean(M_norms) - M_ref) / M_ref = 0.0006809806573044887
 
 ````
 

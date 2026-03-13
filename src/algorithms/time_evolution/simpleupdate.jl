@@ -14,7 +14,7 @@ $(TYPEDFIELDS)
     imaginary_time::Bool = true
     "When true, force the usage of 3-site simple update"
     force_3site::Bool = false
-    "(Only applicable to InfinitePEPS) When true, assume bipartite unit cell structure"
+    "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
     "(Only applicable to InfinitePEPO) 
     When true, the PEPO is regarded as a purified PEPS, and updated as
@@ -277,7 +277,7 @@ function MPSKit.time_evolve(
         end
         if stop
             time_end = time()
-            @info @sprintf("Simple update finished. Total time elasped: %.2f s", time_end - time_start)
+            @info @sprintf("Simple update finished. Total time elapsed: %.2f s", time_end - time_start)
             return psi, env, info
         else
             env0 = env

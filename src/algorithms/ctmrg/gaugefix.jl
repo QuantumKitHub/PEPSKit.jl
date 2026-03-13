@@ -1,4 +1,41 @@
 """
+    gauge_fix(alg::CTMRGAlgorithm, signs, info)
+    gauge_fix(alg::ProjectorAlgorithm, signs, info)
+
+Fix the free gauges of the tensor decompositions associated with `alg`.
+"""
+function gauge_fix(alg::CTMRGAlgorithm, signs, info)
+    alg_fixed = @set alg.projector_alg = gauge_fix(alg.projector_alg, signs, info)
+    return alg_fixed
+end
+function gauge_fix(alg::ProjectorAlgorithm, signs, info)
+    decomposition_alg_fixed = gauge_fix(decomposition_algorithm(alg), signs, info)
+    alg_fixed = @set alg.decomposition_alg = decomposition_alg_fixed # every ProjectorAlgorithm needs an `decomposition_alg` field?
+    alg_fixed = _set_truncation(alg_fixed, notrunc()) # potentially set no truncation
+    return alg_fixed
+end
+
+# TODO: add eigensolver algorithm, verbosity to gauge algorithm structs
+"""
+$(TYPEDEF)
+
+CTMRG environment gauge fixing algorithm implementing the "general" technique from
+https://arxiv.org/abs/2311.11894. This works by constructing a transfer matrix consisting
+of an edge tensor and a random MPS, thus scrambling potential degeneracies, and then
+performing a QR decomposition to extract the gauge signs. This is adapted accordingly for
+asymmetric CTMRG algorithms using multi-site unit cell transfer matrices.
+"""
+struct ScramblingEnvGauge end
+
+"""
+$(TYPEDEF)
+
+C4v-symmetric equivalent of the [ScramblingEnvGauge`](@ref) environment gauge fixing
+algorithm.
+"""
+struct ScramblingEnvGaugeC4v end
+
+"""
 $(SIGNATURES)
 
 Fix the gauge of `envfinal` based on the previous environment `envprev`.
@@ -6,7 +43,7 @@ This assumes that the `envfinal` is the result of one CTMRG iteration on `envpre
 Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
-function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, T}
+function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGauge) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -14,7 +51,6 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
     end
     @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
 
-    # Try the "general" algorithm from https://arxiv.org/abs/2311.11894
     signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
@@ -37,21 +73,56 @@ function gauge_fix(envprev::CTMRGEnv{C, T}, envfinal::CTMRGEnv{C, T}) where {C, 
         end
 
         # Find right fixed points of mixed transfer matrices
-        ρinit = randn(
-            scalartype(T), space(Tsfinal[end], numind(Tsfinal[end]))' ← space(M[end], numind(M[end]))'
-        )
-        ρprev = transfermatrix_fixedpoint(Tsprev, M, ρinit)
-        ρfinal = transfermatrix_fixedpoint(Tsfinal, M, ρinit)
+        eigsolve_alg = Arnoldi()
+        ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg)
+        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg)
 
         # Decompose and multiply
-        Qprev, = left_orth!(ρprev)
-        Qfinal, = left_orth!(ρfinal)
+        Qprev, = left_orth!(ρprev; positive = true)
+        Qfinal, = left_orth!(ρfinal; positive = true)
 
         return Qprev * Qfinal'
     end
 
-    cornersfix, edgesfix = fix_relative_phases(envfinal, signs)
-    return fix_global_phases(envprev, CTMRGEnv(cornersfix, edgesfix)), signs
+    env_fixed_relative = fix_relative_phases(envfinal, signs)
+    env_fixed_full = fix_global_phases(env_fixed_relative, envprev)
+
+    return env_fixed_full, signs
+end
+
+# C4v specialized gauge fixing routine with Hermitian transfer matrix
+function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}
+    # Check if spaces in envprev and envfinal are the same
+    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
+            space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
+    end
+    @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
+
+    # "general" algorithm from https://arxiv.org/abs/2311.11894
+    Tprev = envprev.edges[1, 1, 1]
+    Tfinal = envfinal.edges[1, 1, 1]
+
+    # Random Hermitian MPS of same bond dimension
+    # (make Hermitian such that T-M transfer matrix has real eigenvalues)
+    M = _project_hermitian(randn(scalartype(Tfinal), space(Tfinal)))
+
+    # Find right fixed points of mixed transfer matrices
+    eigsolve_alg = Lanczos() # real eigenvalues
+    ρprev = right_transfermatrix_fixedpoint([Tprev], [M], eigsolve_alg)
+    ρfinal = right_transfermatrix_fixedpoint([Tfinal], [M], eigsolve_alg)
+
+    # Decompose and multiply
+    Qprev, = left_orth!(ρprev; positive = true)
+    Qfinal, = left_orth!(ρfinal; positive = true)
+
+    σ = Qprev * Qfinal'
+
+    cornerfix = σ * envfinal.corners[1] * σ'
+    @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
+        σ[χ_in; χ1] * envfinal.edges[1][χ1 D_in_above D_in_below; χ2] * conj(σ[χ_out; χ2])
+
+    return CTMRGEnv(cornerfix, edgefix), fill(σ, (4, 1, 1))
 end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
@@ -71,8 +142,18 @@ end
         @__MODULE__, :(return @tensor $t_out := $t_top * conj($t_bot) * $t_in)
     )
 end
-function transfermatrix_fixedpoint(tops, bottoms, ρinit)
-    _, vecs, info = eigsolve(ρinit, 1, :LM, Arnoldi()) do ρ
+
+function initialize_right_fixedpoint(tops, bottoms)
+    ρ0 = randn(
+        scalartype(tops), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
+    )
+    return ρ0
+end
+function right_transfermatrix_fixedpoint(
+        tops, bottoms, alg = Arnoldi(),
+        ρ0 = initialize_right_fixedpoint(tops, bottoms),
+    )
+    _, vecs, info = eigsolve(ρ0, 1, :LM, alg) do ρ
         return foldr(zip(tops, bottoms); init = ρ) do (top, bottom), ρ
             return mps_transfer_right(ρ, top, bottom)
         end
@@ -109,13 +190,13 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
         end
     end
 
-    return corners_fixed, edges_fixed
+    return CTMRGEnv(corners_fixed, edges_fixed)
 end
 function fix_relative_phases(
         U::Array{Ut, 3}, V::Array{Vt, 3}, signs
     ) where {Ut <: AbstractTensorMap, Vt <: AbstractTensorMap}
-    U_fixed = map(CartesianIndices(U)) do I
-        dir, r, c = I.I
+    U_fixed = map(eachindex(IndexCartesian(), U)) do I
+        dir, r, c = Tuple(I)
         if dir == NORTHWEST
             fix_gauge_north_left_vecs((r, c), U, signs)
         elseif dir == NORTHEAST
@@ -127,8 +208,8 @@ function fix_relative_phases(
         end
     end
 
-    V_fixed = map(CartesianIndices(V)) do I
-        dir, r, c = I.I
+    V_fixed = map(eachindex(IndexCartesian(), V)) do I
+        dir, r, c = Tuple(I)
         if dir == NORTHWEST
             fix_gauge_north_right_vecs((r, c), V, signs)
         elseif dir == NORTHEAST
@@ -150,14 +231,12 @@ Fix global multiplicative phase of the environment tensors. To that end, the dot
 between all corners and all edges are computed to obtain the global phase which is then
 divided out.
 """
-function fix_global_phases(envprev::CTMRGEnv, envfix::CTMRGEnv)
+function fix_global_phases(envfix::CTMRGEnv, envprev::CTMRGEnv)
     cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
-        φ = dot(Cprev, Cfix)
-        φ' * Cfix
+        return Cfix * inv(dot(Cprev, Cfix))
     end
     edgesgfix = map(zip(envprev.edges, envfix.edges)) do (Tprev, Tfix)
-        φ = dot(Tprev, Tfix)
-        φ' * Tfix
+        return Tfix * inv(dot(Tprev, Tfix))
     end
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
@@ -168,8 +247,12 @@ end
 Check if the element-wise difference of the corner and edge tensors of the final and fixed
 CTMRG environments are below `atol` and return the maximal difference.
 """
-function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol::Real = 1.0e-6)
-    ΔC = envfinal.corners .- envfix.corners
+function calc_elementwise_convergence(
+        envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; atol::Real = 1.0e-6
+    ) where {C, C′}
+    Cfinal = (C <: DiagonalTensorMap) ? convert.(TensorMap, envfinal.corners) : envfinal.corners
+    Cfix = (C′ <: DiagonalTensorMap) ? convert.(TensorMap, envfix.corners) : envfix.corners
+    ΔC = Cfinal .- Cfix
     ΔCmax = norm(ΔC, Inf)
     ΔCmean = norm(ΔC)
     @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"
@@ -180,8 +263,8 @@ function calc_elementwise_convergence(envfinal::CTMRGEnv, envfix::CTMRGEnv; atol
     @debug "maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean"
 
     # Check differences for all tensors in unit cell to debug properly
-    for I in CartesianIndices(ΔT)
-        dir, r, c = I.I
+    for I in eachindex(IndexCartesian(), ΔT)
+        dir, r, c = Tuple(I)
         @debug(
             "$((dir, r, c)): all |Cⁿ⁺¹ - Cⁿ|ᵢⱼ < ϵ: ",
             all(x -> abs(x) < atol, convert(Array, ΔC[dir, r, c])),

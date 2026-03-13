@@ -233,7 +233,9 @@ end
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
-function ChainRulesCore.rrule(::Type{CTMRGEnv}, corners, edges)
+function ChainRulesCore.rrule(
+        ::Type{CTMRGEnv}, corners::Array{C, 3}, edges::Array{T, 3}
+    ) where {C, T}
     ctmrgenv_pullback(ē) = NoTangent(), ē.corners, ē.edges
     return CTMRGEnv(corners, edges), ctmrgenv_pullback
 end
@@ -340,6 +342,17 @@ end
 
 Base.:*(α::Number, e::CTMRGEnv) = CTMRGEnv(α * e.corners, α * e.edges)
 Base.similar(e::CTMRGEnv) = CTMRGEnv(similar(e.corners), similar(e.edges))
+
+# (approximate) equality
+function Base.isapprox(env1::CTMRGEnv, env2::CTMRGEnv; kwargs...)
+    for (c1, c2) in zip(env1.corners, env2.corners)
+        !isapprox(c1, c2; kwargs...) && return false
+    end
+    for (e1, e2) in zip(env1.edges, env2.edges)
+        !isapprox(e1, e2; kwargs...) && return false
+    end
+    return true
+end
 
 # VectorInterface
 # ---------------

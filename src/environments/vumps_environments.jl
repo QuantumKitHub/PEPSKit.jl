@@ -1,5 +1,3 @@
-using MPSKit: InfiniteEnvironments
-
 # overloads required purely because of the fact that left and right virtual spaces are now
 # ProductSpace instances
 
