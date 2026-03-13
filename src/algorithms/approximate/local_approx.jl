@@ -16,16 +16,15 @@ Calculate the QR decomposition of 2-layer PEPO tensor
 Only `R` is calculated and returned.
 """
 function qr_twolayer(A1::PEPOTensor, A2::PEPOTensor)
-    @assert isdual(space(A1, 4)) && isdual(space(A2, 4))
+    @assert isdual(virtualspace(A1, EAST)) && isdual(virtualspace(A2, EAST))
     A2′ = twistdual(A2, [2, 3, 5, 6])
     A1′ = twistdual(A1, [1, 3, 5, 6])
     @tensoropt MdagM[x2 z z′ x2′] :=
         conj(A2[z z2; Y2 x2 y2 X2]) * A2′[z′ z2; Y2 x2′ y2 X2]
     @tensoropt MdagM[x1 x2; x1′ x2′] := MdagM[x2 z z′ x2′] *
         conj(A1[z1 z; Y1 x1 y1 X1]) * A1′[z1 z′; Y1 x1′ y1 X1]
-    # TODO: switch to eigh
-    _, s, R = svd_compact!(MdagM)
-    R = sdiag_pow(s, 0.5) * R
+    D, R = eigh_full!(MdagM)
+    R = sdiag_pow(D, 0.5) * R'
     return R
 end
 
@@ -43,16 +42,15 @@ Calculate the LQ decomposition of 2-layer PEPO tensor
 Only `L` is calculated and returned.
 """
 function lq_twolayer(A1::PEPOTensor, A2::PEPOTensor)
-    @assert !isdual(space(A1, 6)) && !isdual(space(A2, 6))
+    @assert !isdual(virtualspace(A1, WEST)) && !isdual(virtualspace(A2, WEST))
     A2′ = twistdual(A2, [2, 3, 4, 5])
     A1′ = twistdual(A1, [1, 3, 4, 5])
     @tensoropt MMdag[x2 z z′ x2′] :=
         A2[z z2; Y2 X2 y2 x2] * conj(A2′[z′ z2; Y2 X2 y2 x2′])
     @tensoropt MMdag[x1 x2; x1′ x2′] := MMdag[x2 z z′ x2′] *
         A1[z1 z; Y1 X1 y1 x1] * conj(A1′[z1 z′; Y1 X1 y1 x1′])
-    # TODO: switch to eigh
-    L, s, _ = svd_compact!(MMdag)
-    L = L * sdiag_pow(s, 0.5)
+    D, L = eigh_full!(MMdag)
+    L = L * sdiag_pow(D, 0.5)
     return L
 end
 
