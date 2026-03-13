@@ -70,7 +70,7 @@ end
         flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
-        gs = PEPSKit.gate_to_mpo3(gate)
+        gs = PEPSKit.gate_to_mpo(gate)
         @test mpo_to_gate3(gs) ≈ gate
         Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
         PEPSKit._apply_gatempo!(Ms2, gs)
@@ -87,7 +87,7 @@ end
         flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
-        gs = PEPSKit.gate_to_mpo3(gate)
+        gs = PEPSKit.gate_to_mpo(gate)
         @test mpo_to_gate3(gs) ≈ gate
         for gate_ax in 1:2
             Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
@@ -101,7 +101,7 @@ end
     end
 end
 
-@testset "Hubbard model with 2-site and 3-site SU" begin
+@testset "Hubbard model SU (MPO gate)" begin
     Nr, Nc = 2, 2
     ctmrg_tol = 1.0e-9
     Random.seed!(1459)
@@ -109,44 +109,36 @@ end
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
-    trunc_env0 = truncerror(; atol = 1.0e-12) & truncrank(4)
-    trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
-    peps = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
-    # make state bipartite
+    truncs_env = collect(truncerror(; atol = 1.0e-12) & truncrank(χ) for χ in [8, 16])
+    peps0 = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
+    # make initial state bipartite
     for r in 1:2
-        peps.A[_next(r, 2), 2] = copy(peps.A[r, 1])
+        peps0.A[_next(r, 2), 2] = copy(peps0.A[r, 1])
     end
-    wts = SUWeight(peps)
-    ham = real(
-        hubbard_model(
-            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 8.0, mu = 0.0
-        ),
-    )
-    # usual 2-site simple update, and measure energy
-    dts = [1.0e-2, 1.0e-2]
-    tols = [1.0e-8, 1.0e-8]
-    for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
-        alg = SimpleUpdate(; trunc, bipartite = true)
-        peps, wts, = time_evolve(peps, ham, dt, 10000, alg, wts; tol, check_interval = 1000)
+    wts0 = SUWeight(peps0)
+    ham = hubbard_model(Float64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0)
+    # applying 2-site gates decomposed to MPO or not,
+    # resulting energy should be almost the same
+    e_sites = map((true, false)) do force_mpo
+        dts = [1.0e-2, 1.0e-2]
+        tols = [1.0e-6, 1.0e-8]
+        peps, wts = deepcopy(peps0), deepcopy(wts0)
+        for (n, (dt, tol)) in enumerate(zip(dts, tols))
+            trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
+            alg = SimpleUpdate(; trunc, force_mpo)
+            peps, wts, = time_evolve(
+                peps, ham, dt, 10000, alg, wts;
+                tol, symmetrize_gates = true, check_interval = 1000
+            )
+        end
+        normalize!.(peps.A, Inf)
+        env = CTMRGEnv(wts)
+        for trunc in truncs_env
+            env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc)
+        end
+        e_site = cost_function(peps, env, ham) / (Nr * Nc)
+        @info "Energy (force_mpo = $(force_mpo)): $e_site"
+        return e_site
     end
-    normalize!.(peps.A, Inf)
-    env = CTMRGEnv(wts)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env0)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
-    e_site = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "2-site simple update energy = $e_site"
-    # continue with 3-site simple update; energy should not change much
-    dts = [1.0e-2]
-    tols = [1.0e-8]
-    trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
-    alg = SimpleUpdate(; trunc, force_3site = true)
-    for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        peps, wts, = time_evolve(peps, ham, dt, 5000, alg, wts; tol, check_interval = 1000)
-    end
-    normalize!.(peps.A, Inf)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
-    e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "3-site simple update energy = $e_site2"
-    @test e_site ≈ e_site2 atol = 5.0e-4
+    @test e_sites[1] ≈ e_sites[2] atol = 1.0e-4
 end

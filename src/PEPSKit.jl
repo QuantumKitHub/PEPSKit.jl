@@ -108,7 +108,6 @@ include("algorithms/approximate/approx_tools.jl")
 include("algorithms/approximate/local_approx.jl")
 
 include("algorithms/time_evolution/trotter_gate.jl")
-include("algorithms/time_evolution/trotter_mpo.jl")
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
 include("algorithms/time_evolution/time_evolve.jl")
