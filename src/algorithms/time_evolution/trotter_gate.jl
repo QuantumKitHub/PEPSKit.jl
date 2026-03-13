@@ -189,6 +189,9 @@ function _check_hamiltonian_for_trotter(H::LocalOperator)
     return dist
 end
 
+"""
+Trotterize a trivial Hamiltonian `H` containing only 1-site terms.
+"""
 function _trotterize_1site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real)
     for site in CartesianIndices(size(H))
         gate = _get_site_term(H, site)
@@ -198,6 +201,14 @@ function _trotterize_1site!(gates::Vector, H::LocalOperator, dt::Number; atol::R
     return gates
 end
 
+"""
+Trotterize nearest neighbor terms (grouped with 1-site terms)
+in the Hamiltonian `H`.
+
+Gate order: `(d, c, r)`
+- d = 1: horizontal bond ((r, c), (r, c+1))
+- d = 2:   vertical bond ((r, c), (r-1, c))
+"""
 function _trotterize_nn2site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real, force_mpo::Bool = false)
     Nr, Nc = size(H)
     T = scalartype(H)
@@ -219,6 +230,12 @@ function _trotterize_nn2site!(gates::Vector, H::LocalOperator, dt::Number; atol:
     return gates
 end
 
+"""
+Trotterize a next-nearest neighbor terms in a Hamiltonian.
+
+Gate order: `(c, r, d)`
+- d = 1 (NORTHWEST), ..., 4 (SOUTHWEST) labels the triangular 3-site clusters.
+"""
 function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real)
     Nr, Nc = size(H)
     T = scalartype(H)
@@ -264,19 +281,9 @@ function trotterize(
 
     # 1-site gates are only constructed when H only has 1-site terms
     dist == 0 && _trotterize_1site!(gates, H, dt′; atol)
-    #= 
-    2-site NN gates on bonds [d, r, c], grouped with 1-site terms
-    - d = 1: horizontal bond ((r, c), (r, c+1))
-    - d = 2:   vertical bond ((r, c), (r-1, c))
-    =#
+    # 2-site NN gates grouped with 1-site terms
     dist >= 1 && _trotterize_nn2site!(gates, H, dt′; atol, force_mpo)
-    #= 
-    2-site NNN gates converted to 3-site MPOs on triangular clusters [d, r, c]
-    - d = 1 (NORTHWEST), ..., 4 (SOUTHWEST)
-
-    TODO: when all plaquettes have NNN gates, group with
-    NN gates and 1-site gates to reduce number of gates
-    =#
+    # 3-site NNN gate MPOs
     dist >= 2 && _trotterize_nnn2site!(gates, H, dt′; atol)
 
     symmetrize_gates && push!(gates, reverse(gates)...)
