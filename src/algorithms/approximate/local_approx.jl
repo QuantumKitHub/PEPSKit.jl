@@ -76,8 +76,7 @@ function localapprox_projector(
     )
     R1 = qr_twolayer(A1, A2)
     R2 = lq_twolayer(B1, B2)
-    u, s, vh = svd_compact!(R1 * R2)
-    u, s, vh, ϵ = _truncate_compact((u, s, vh), trunc)
+    u, s, vh, ϵ = svd_trunc!(R1 * R2; trunc)
     sinv_sqrt = sdiag_pow(s, -0.5)
     P1 = R2 * vh' * sinv_sqrt
     P2 = sinv_sqrt * u' * R1
