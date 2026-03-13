@@ -17,22 +17,23 @@ specified by `inds`. The `peps` is contracted with `O` from above and below, and
 sandwich is surrounded with the appropriate environment tensors.
 """
 function contract_local_operator(
-        inds::NTuple{N, CartesianIndex{2}},
-        O::AbstractTensorMap{T, S, N, N},
-        ket::InfinitePEPS, bra::InfinitePEPS,
-        env::CTMRGEnv,
-    ) where {T, S, N}
-    static_inds = Val.(inds)
+        inds::Vector{CartesianIndex{2}}, O::AbstractTensorMap,
+        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+    )
+    static_inds = Tuple(Val.(inds))
     return _contract_local_operator(static_inds, O, (ket, bra), env)
 end
 function contract_local_operator(
-        inds::NTuple{N, Tuple{Int, Int}},
-        O::AbstractTensorMap{T, S, N, N},
-        ket::InfinitePEPS, bra::InfinitePEPS,
-        env::CTMRGEnv,
-    ) where {T, S, N}
+        inds::Vector{Tuple{Int, Int}}, O::AbstractTensorMap,
+        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+    )
     return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
 end
+
+Base.@deprecate(
+    contract_local_operator(inds::NTuple, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv),
+    contract_local_operator(collect(inds), ket, bra, env)
+)
 
 # This implements the contraction of an operator acting on sites `inds`.
 # The generated function ensures that we can use @tensor to write dynamic contractions (and maximize performance).
@@ -264,14 +265,14 @@ on a rectangular patch based on `inds` but replacing the operator with an identi
 that the PEPS norm is computed. (Note that this is not the physical norm of the state.)
 """
 function contract_local_norm(
-        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    ) where {N}
-    static_inds = Val.(inds)
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    )
+    static_inds = Tuple(Val.(inds))
     return _contract_local_norm(static_inds, (ket, bra), env)
 end
 function contract_local_norm(
-        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    ) where {N}
+        inds::Vector{Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    )
     return contract_local_norm(CartesianIndex.(inds), ket, bra, env)
 end
 @generated function _contract_local_norm(
@@ -299,6 +300,11 @@ end
     return macroexpand(@__MODULE__, returnex)
 end
 
+Base.@deprecate(
+    contract_local_norm(inds::NTuple, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv),
+    contract_local_norm(collect(inds), ket, bra, env)
+)
+
 @doc """
 $(SIGNATURES)
 
@@ -310,52 +316,84 @@ specified by `inds`. The result is normalized such that `tr(ρ) = 1`.
 """ reduced_densitymatrix
 
 function reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    ) where {N}
-    static_inds = Val.(inds)
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    )
+    length(inds) == 1 && return reduced_densitymatrix1x1(only(inds), ket, bra, env)
+
+    if length(inds) == 2
+        if inds[2] - inds[1] == CartesianIndex(1, 0)
+            return reduced_densitymatrix2x1(inds[1], ket, bra, env)
+        elseif inds[2] - inds[1] == CartesianIndex(0, 1)
+            return reduced_densitymatrix1x2(inds[1], ket, bra, env)
+        end
+    end
+
+    static_inds = Tuple(Val.(inds))
     return _contract_densitymatrix(static_inds, (ket, bra), env)
 end
 function reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, state::InfinitePEPO, env::CTMRGEnv
-    ) where {N}
+        inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env::CTMRGEnv
+    )
     size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
-    static_inds = Val.(inds)
+    static_inds = Tuple(Val.(inds))
     return _contract_densitymatrix(static_inds, (state,), env)
 end
 function reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
-    ) where {N}
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
+    )
     size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
     size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
-    static_inds = Val.(inds)
+    static_inds = Tuple(Val.(inds))
     return _contract_densitymatrix(static_inds, (ket, bra), env)
 end
-function reduced_densitymatrix(
+reduced_densitymatrix(inds, ket::InfinitePEPS, env::CTMRGEnv) =
+    reduced_densitymatrix(inds, ket, ket, env)
+
+Base.@deprecate(
+    reduced_densitymatrix(
+        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    ) where {N},
+    reduced_densitymatrix(collect(inds), ket, bra, env)
+)
+Base.@deprecate(
+    reduced_densitymatrix(
+        inds::NTuple{N, CartesianIndex{2}}, state::InfinitePEPO, env::CTMRGEnv
+    ) where {N},
+    reduced_densitymatrix(collect(inds), state, env)
+)
+Base.@deprecate(
+    reduced_densitymatrix(
+        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
+    ) where {N},
+    reduced_densitymatrix(collect(inds), ket, bra, env)
+)
+
+Base.@deprecate(
+    reduced_densitymatrix(
         inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    ) where {N}
-    return reduced_densitymatrix(CartesianIndex.(inds), ket, bra, env)
-end
-function reduced_densitymatrix(
+    ) where {N},
+    reduced_densitymatrix(collect(CartesianIndex.(inds)), ket, bra, env)
+)
+Base.@deprecate(
+    reduced_densitymatrix(
         inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
-    ) where {N}
-    return reduced_densitymatrix(CartesianIndex.(inds), ket, bra, env)
-end
-function reduced_densitymatrix(inds, ket::InfinitePEPS, env::CTMRGEnv)
-    return reduced_densitymatrix(inds, ket, ket, env)
-end
-function reduced_densitymatrix(
+    ) where {N},
+    reduced_densitymatrix(collect(CartesianIndex.(inds)), ket, bra, env)
+)
+Base.@deprecate(
+    reduced_densitymatrix(
         inds::NTuple{N, Tuple{Int, Int}}, state::InfinitePEPO, env::CTMRGEnv
-    ) where {N}
-    return reduced_densitymatrix(CartesianIndex.(inds), state, env)
-end
+    ) where {N},
+    reduced_densitymatrix(collect(CartesianIndex.(inds)), state, env)
+)
 
 # Special case 1x1 density matrix:
 # Keep contraction order but try to optimize intermediate permutations:
 # EE_SWA is largest object so keep largest legs to the front there
-function reduced_densitymatrix(
-        inds::Tuple{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+function reduced_densitymatrix1x1(
+        inds::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
     )
-    row, col = Tuple(inds[1])
+    row, col = Tuple(inds)
 
     # Unpack variables and absorb corners
     A = ket[mod1(row, end), mod1(col, end)]
