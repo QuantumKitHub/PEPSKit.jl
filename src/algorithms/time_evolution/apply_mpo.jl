@@ -283,17 +283,6 @@ e.g. Cluster in PEPS with `gate_ax = 1`:
         g1 -←-- g2 -←-- g3
         ↓       ↓       ↓
 ```
-
-In the cluster, the axes of each tensor use the MPS order
-```
-    PEPS:           PEPO:
-           3             3  4
-          ╱              | ╱
-    1 -- M -- 5     1 -- M -- 6
-       ╱ |             ╱ |
-      4  2            5  2
-    M[1 2 3 4; 5]  M[1 2 3 4 5; 6]
-```
 """
 function _apply_gatempo!(
         Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
