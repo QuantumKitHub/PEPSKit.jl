@@ -23,7 +23,8 @@ function qr_twolayer(A1::PEPOTensor, A2::PEPOTensor)
         conj(A2[z z2; Y2 x2 y2 X2]) * A2′[z′ z2; Y2 x2′ y2 X2]
     @tensoropt MdagM[x1 x2; x1′ x2′] := MdagM[x2 z z′ x2′] *
         conj(A1[z1 z; Y1 x1 y1 X1]) * A1′[z1 z′; Y1 x1′ y1 X1]
-    D, R = eigh_full!(MdagM)
+    # avoid small negative eigenvalues due to numerical errors
+    D, R = eigh_trunc!(MdagM; trunc = trunctol(; atol = 1.0e-16))
     R = sdiag_pow(D, 0.5) * R'
     return R
 end
@@ -49,7 +50,8 @@ function lq_twolayer(A1::PEPOTensor, A2::PEPOTensor)
         A2[z z2; Y2 X2 y2 x2] * conj(A2′[z′ z2; Y2 X2 y2 x2′])
     @tensoropt MMdag[x1 x2; x1′ x2′] := MMdag[x2 z z′ x2′] *
         A1[z1 z; Y1 X1 y1 x1] * conj(A1′[z1 z′; Y1 X1 y1 x1′])
-    D, L = eigh_full!(MMdag)
+    # avoid small negative eigenvalues due to numerical errors
+    D, L = eigh_trunc!(MMdag; trunc = trunctol(; atol = 1.0e-16))
     L = L * sdiag_pow(D, 0.5)
     return L
 end
