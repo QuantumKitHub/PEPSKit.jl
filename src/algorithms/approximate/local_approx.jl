@@ -44,8 +44,8 @@ Only `L` is calculated and returned.
 """
 function lq_twolayer(A1::PEPOTensor, A2::PEPOTensor)
     @assert !isdual(virtualspace(A1, WEST)) && !isdual(virtualspace(A2, WEST))
-    A2′ = twistdual(A2, [2, 3, 4, 5])
-    A1′ = twistdual(A1, [1, 3, 4, 5])
+    A2′ = twistnondual(A2, [2, 3, 4, 5])
+    A1′ = twistnondual(A1, [1, 3, 4, 5])
     @tensoropt MMdag[x2 z z′ x2′] :=
         A2[z z2; Y2 X2 y2 x2] * conj(A2′[z′ z2; Y2 X2 y2 x2′])
     @tensoropt MMdag[x1 x2; x1′ x2′] := MMdag[x2 z z′ x2′] *

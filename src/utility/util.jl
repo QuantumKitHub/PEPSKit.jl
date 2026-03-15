@@ -119,6 +119,22 @@ end
 twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
 
 """
+    twistnondual(t::AbstractTensorMap, i)
+    twistnondual!(t::AbstractTensorMap, i)
+
+Twist the i-th leg of a tensor `t` if it represents a non-dual space.
+"""
+function twistnondual!(t::AbstractTensorMap, i::Int)
+    !isdual(space(t, i)) || return t
+    return twist!(t, i)
+end
+function twistnondual!(t::AbstractTensorMap, is)
+    is′ = filter(i -> !isdual(space(t, i)), is)
+    return twist!(t, is′)
+end
+twistnondual(t::AbstractTensorMap, is) = twistnondual!(copy(t), is)
+
+"""
     str(t)
 
 Fermionic supertrace by using `@tensor`.
