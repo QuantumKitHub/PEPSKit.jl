@@ -99,7 +99,7 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
             ρ1[r, c], ρ2[r, c], ρ1[r, _next(c, Nc)], ρ2[r, _next(c, Nc)];
             trunc = alg.trunc
         )
-        return (P1, P2)
+        return (P1, P2, ϵ)
     end
     # y-bond projectors: [r, c] on bond [r, c]--[r-1, c]
     Pys = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
@@ -109,7 +109,7 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
             rotr90(ρ1[_prev(r, Nr), c]), rotr90(ρ2[_prev(r, Nr), c]);
             trunc = alg.trunc
         )
-        return (P1, P2)
+        return (P1, P2, ϵ)
     end
     # apply projectors
     As = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
@@ -120,5 +120,8 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
             Pn[n1 n2; n] * Pe[e1 e2; e] * Ps[s; s1 s2] * Pw[w; w1 w2]
         return A
     end
-    return InfinitePEPO(cat(As; dims = 3))
+    ϵx = map(Base.Fix2(getindex, 3), Pxs)
+    ϵy = map(Base.Fix2(getindex, 3), Pys)
+    info = (; ϵ = max(ϵx, ϵy))
+    return InfinitePEPO(cat(As; dims = 3)), info
 end
