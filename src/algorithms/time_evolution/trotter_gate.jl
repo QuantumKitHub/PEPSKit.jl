@@ -1,28 +1,92 @@
 """
-    struct TrotterGates{T <: Vector}
+$(TYPEDEF)
 
 Collection of Trotter evolution gates and MPOs obtained from
 a Hamiltonian containing long-range or multi-site terms.
 
 ## Fields
 
-- `lattice::Matrix{S}`: The lattice on which the gates acts.
-- `terms::T`: The vector of `sites => gate` pairs, where `sites` is a
-vector of `CartesianIndex`s storing the sites on which the `gate` acts.
+$(TYPEDFIELDS)
 """
-struct TrotterGates{T <: Vector, S}
+struct LocalCircuit{O, S}
+    "lattice of physical spaces on which the gates act"
     lattice::Matrix{S}
-    terms::T
-    # TODO: check physical spaces of terms match `lattice`
+
+    "list of `sites => gate` pairs that make up the circuit"
+    gates::Vector{Pair{Vector{CartesianIndex{2}}, O}}
+
+    LocalCircuit{O, S}(lattice::Matrix{S}) where {O, S} =
+        new{O, S}(lattice, Vector{Pair{Vector{CartesianIndex{2}}, O}}())
+end
+
+LocalCircuit{O}(lattice::Matrix{<:ElementarySpace}) where {O} =
+    LocalCircuit{O, eltype(lattice)}(lattice)
+LocalCircuit{O}(lattice, gates::Pair...) where {O} = LocalCircuit{O}(lattice, gates)
+
+function LocalCircuit{O}(lattice, terms) where {O}
+    operator = LocalCircuit{O}(lattice)
+    for (inds, term) in terms
+        add_factor!(operator, inds, term)
+    end
+    return operator
+end
+
+# Default to Any for eltype: needs to be abstract anyways so not that much to gain
+LocalCircuit(lattice, terms) = LocalCircuit{Any}(lattice, terms)
+LocalCircuit(lattice, terms::Pair...) = LocalCircuit(lattice, terms)
+
+add_factor!(operator::LocalCircuit, inds::Tuple, term::AbstractTensorMap) = add_factor!(operator, collect(inds), term)
+add_factor!(operator::LocalCircuit, inds::Vector, term::AbstractTensorMap) = add_factor!(operator, map(CartesianIndex{2}, inds), term)
+function add_factor!(operator::LocalCircuit, inds::Vector{CartesianIndex{2}}, term::AbstractTensorMap)
+    # input checks
+    length(inds) == numin(term) == numout(term) || throw(ArgumentError("Incompatible number of indices and tensor legs"))
+    for (i, ind) in enumerate(inds)
+        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
+        physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
+            throw(SpaceMismatch("Incompatible physical spaces"))
+    end
+
+    # permute input
+    if !issorted(inds)
+        I = sortperm(inds)
+        inds = inds[I]
+        term = permute(term, (Tuple(I), Tuple(I) .+ numout(term)))
+    end
+
+    # translate coordinates
+    I1 = first(inds)
+    I1_mod = CartesianIndex(mod1.(Tuple(I1), size(operator)))
+    inds .-= (I1 - I1_mod)
+
+    push!(operator.gates, inds => term)
+
+    return operator
+end
+
+function checklattice(::Type{Bool}, H1::LocalCircuit, H2::LocalCircuit)
+    return physicalspace(H1) == physicalspace(H2)
+end
+function checklattice(::Type{Bool}, peps::InfinitePEPS, O::LocalCircuit)
+    return physicalspace(peps) == physicalspace(O)
+end
+function checklattice(::Type{Bool}, H::LocalCircuit, peps::InfinitePEPS)
+    return checklattice(Bool, peps, H)
+end
+function checklattice(::Type{Bool}, pepo::InfinitePEPO, O::LocalCircuit)
+    return size(pepo, 3) == 1 && physicalspace(pepo) == physicalspace(O)
+end
+function checklattice(::Type{Bool}, O::LocalCircuit, pepo::InfinitePEPO)
+    return checklattice(Bool, pepo, O)
 end
 
 """
-    physicalspace(gates::TrotterGates)
+    physicalspace(gates::LocalCircuit)
 
-Return lattice of physical spaces on which the `TrotterGates` is defined.
+Return lattice of physical spaces on which the `LocalCircuit` is defined.
 """
-physicalspace(gates::TrotterGates) = gates.lattice
-Base.size(gates::TrotterGates) = size(physicalspace(gates))
+physicalspace(gates::LocalCircuit) = gates.lattice
+physicalspace(gates::LocalCircuit, args...) = physicalspace(gates)[args...]
+Base.size(gates::LocalCircuit) = size(physicalspace(gates))
 
 const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
 
@@ -287,5 +351,5 @@ function trotterize(
     dist >= 2 && _trotterize_nnn2site!(gates, H, dt′; atol)
 
     symmetrize_gates && push!(gates, reverse(gates)...)
-    return TrotterGates(physicalspace(H), gates)
+    return LocalCircuit(physicalspace(H), gates)
 end

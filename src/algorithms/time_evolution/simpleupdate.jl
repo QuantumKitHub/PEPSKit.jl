@@ -127,12 +127,12 @@ end
 One iteration of simple update
 """
 function su_iter(
-        state::InfiniteState, gates::TrotterGates,
+        state::InfiniteState, circuit::LocalCircuit,
         alg::SimpleUpdate, env::SUWeight
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    for (sites, gate) in gates.terms
+    for (sites, gate) in circuit.gates
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state
