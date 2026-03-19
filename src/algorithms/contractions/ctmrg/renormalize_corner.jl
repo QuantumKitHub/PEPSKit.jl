@@ -345,7 +345,7 @@ end
 function renormalize_southwest_corner(
         quadrant::AbstractTensorMap{T, S, N, N}, P_left, P_right
     ) where {T, S, N}
-    return renormalize_southwest_corner(quadrant, P_left, P_right)
+    return renormalize_corner(quadrant, P_left, P_right)
 end
 function renormalize_southwest_corner(
         E_south, C_southwest, E_west, P_left, P_right, A::PEPSSandwich
