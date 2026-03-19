@@ -66,50 +66,44 @@ function TimeEvolver(
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
 
-"""
-Optimized simple update of nearest neighbor bonds utilizing
-reduced bond tensors without decomposing the gate into a 2-site MPO.
+function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
+    return if bonddir == 1 # x-bond
+        rev ? rot180(x) : x
+    elseif bonddir == 2 # y-bond
+        rev ? (inv ? rotr90(x) : rotl90(x)) : (inv ? rotl90(x) : rotr90(x))
+    else
+        error("`bonddir` must be 1 (for x-bonds) or 2 (for y-bonds).")
+    end
+end
 
-When `purified = true`, `gate` acts on the codomain physical legs of `state`.
-Otherwise, `gate` acts on both the codomain and the domain physical legs of `state`.
+"""
+Simple update optimized for nearest neighbor gates
+utilizing reduced bond tensors with the physical leg.
 """
 function _su_iter!(
         state::InfiniteState, gate::NNGate, env::SUWeight,
-        sites::Vector{CartesianIndex{2}}, truncs::Vector{E};
-        purified::Bool = true
-    ) where {E <: TruncationStrategy}
+        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
+    )
     Nr, Nc = size(state)
+    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
     @assert length(sites) == 2 && length(truncs) == 1
     Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
     normalize!.(Ms, Inf)
     # rotate
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
-    A, B = if bond[1] == 1 # x-bond
-        rev ? map(rot180, Ms) : Ms
-    else # y-bond
-        rev ? map(rotl90, Ms) : map(rotr90, Ms)
-    end
+    A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
     # apply gate
     ϵ, s = 0.0, nothing
-    gate_axs = purified ? (1:1) : (1:2)
+    gate_axs = alg.purified ? (1:1) : (1:2)
     for gate_ax in gate_axs
-        X, a, b, Y = _qr_bond(A, B; gate_ax)
+        X, a, b, Y = _qr_bond(A, B; gate_ax, positive = true)
         a, s, b, ϵ′ = _apply_gate(a, b, gate, truncs[1])
         ϵ = max(ϵ, ϵ′)
         A, B = _qr_bond_undo(X, a, b, Y)
     end
     # rotate back
-    if bond[1] == 1 # x-bond
-        if rev
-            A, B = rot180(A), rot180(B)
-        end
-    else # y-bond
-        if rev
-            A, B = rotr90(A), rotr90(B)
-        else
-            A, B = rotl90(A), rotl90(B)
-        end
-    end
+    A = _bond_rotation(A, bond[1], rev; inv = true)
+    B = _bond_rotation(B, bond[1], rev; inv = true)
     # remove environment weights
     siteA, siteB = map(sites) do site
         return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
@@ -120,8 +114,8 @@ function _su_iter!(
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
-    state.A[siteA], state.A[siteB] = A, B
-    env.data[bond...] = s
+    state[siteA], state[siteB] = A, B
+    env[bond...] = s
     return ϵ
 end
 
@@ -134,40 +128,37 @@ function su_iter(
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    purified = alg.purified
     for (sites, gate) in gates.terms
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state
             site = sites[1]
             r, c = mod1(site[1], Nr), mod1(site[2], Nc)
-            state2.A[r, c] = _apply_sitegate(state2.A[r, c], gate; purified)
+            state2[r, c] = _apply_sitegate(state2[r, c], gate; alg.purified)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
             if alg.bipartite
                 length(sites) > 2 && error("Multi-site MPO gates are not compatible with bipartite states.")
                 r > 1 && continue
             end
-            truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
-            ϵ′ = _su_iter!(state2, gate, env2, sites, truncs; purified)
+            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue
             if d == 1
                 rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                state2.A[rp1, cp1] = deepcopy(state2.A[r, c])
-                state2.A[rp1, c] = deepcopy(state2.A[r, cp1])
-                env2.data[1, rp1, cp1] = deepcopy(env2.data[1, r, c])
+                state2[rp1, cp1] = deepcopy(state2[r, c])
+                state2[rp1, c] = deepcopy(state2[r, cp1])
+                env2[1, rp1, cp1] = deepcopy(env2[1, r, c])
             else
                 rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                state2.A[rm1, cm1] = deepcopy(state2.A[r, c])
-                state2.A[r, cm1] = deepcopy(state2.A[rm1, c])
-                env2.data[2, rm1, cm1] = deepcopy(env2.data[2, r, c])
+                state2[rm1, cm1] = deepcopy(state2[r, c])
+                state2[r, cm1] = deepcopy(state2[rm1, c])
+                env2[2, rm1, cm1] = deepcopy(env2[2, r, c])
             end
         else
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
-            truncs = _get_cluster_trunc(alg.trunc, sites, size(state)[1:2])
-            ϵ′ = _su_iter!(state2, gate, env2, sites, truncs; purified)
+            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
         end
     end

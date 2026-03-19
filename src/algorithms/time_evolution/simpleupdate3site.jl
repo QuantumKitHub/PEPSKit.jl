@@ -150,9 +150,9 @@ function _get_cluster(
     Ms = map(zip(sites, open_vaxs, perms)) do (site, vaxs, perm)
         s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
         M = if env === nothing
-            state.A[s]
+            state[s]
         else
-            absorb_weight(state.A[s], env, s[1], s[2], vaxs)
+            absorb_weight(state[s], env, s[1], s[2], vaxs)
         end
         return permute ? TensorKit.permute(M, perm) : M
     end
@@ -164,10 +164,10 @@ Simple update with an N-site MPO `gate` (N ≥ 2).
 """
 function _su_iter!(
         state::InfiniteState, gate::Vector{T}, env::SUWeight,
-        sites::Vector{CartesianIndex{2}}, truncs::Vector{E};
-        purified::Bool = true
-    ) where {T <: AbstractTensorMap, E <: TruncationStrategy}
+        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
+    ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
+    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
     Ms, open_vaxs, invperms = _get_cluster(state, sites, env)
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
@@ -175,7 +175,7 @@ function _su_iter!(
     # flip virtual arrows in `Ms` to ←
     _flip_virtuals!(Ms, flips)
     # apply gate MPOs and truncate
-    gate_axs = purified ? (1:1) : (1:2)
+    gate_axs = alg.purified ? (1:1) : (1:2)
     wts, ϵs = nothing, nothing
     for gate_ax in gate_axs
         _apply_gatempo!(Ms, gate; gate_ax)
@@ -206,7 +206,7 @@ function _su_iter!(
         # remove weights on open axes of the cluster
         M = absorb_weight(M, env, s′[1], s′[2], vaxs; inv = true)
         # update state tensors
-        state.A[s′] = normalize(M, Inf)
+        state[s′] = normalize(M, Inf)
     end
     return maximum(ϵs)
 end
