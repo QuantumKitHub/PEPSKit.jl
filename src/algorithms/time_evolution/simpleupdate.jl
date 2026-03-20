@@ -70,7 +70,11 @@ function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
     return if bonddir == 1 # x-bond
         rev ? rot180(x) : x
     elseif bonddir == 2 # y-bond
-        rev ? (inv ? rotr90(x) : rotl90(x)) : (inv ? rotl90(x) : rotr90(x))
+        if rev
+            inv ? rotr90(x) : rotl90(x)
+        else
+            inv ? rotl90(x) : rotr90(x)
+        end
     else
         error("`bonddir` must be 1 (for x-bonds) or 2 (for y-bonds).")
     end
