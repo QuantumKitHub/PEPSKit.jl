@@ -1,4 +1,24 @@
 """
+Apply 1-site `gate` on the PEPS or PEPO tensor `a`.
+"""
+function _apply_sitegate(
+        a::PEPSTensor, gate::AbstractTensorMap{T, S, 1, 1}; purified::Bool = true
+    ) where {T, S}
+    @assert purified
+    return gate * a
+end
+
+function _apply_sitegate(
+        a::PEPOTensor, gate::AbstractTensorMap{T, S, 1, 1}; purified::Bool = true
+    ) where {T, S}
+    @plansor a′[p1 p2; n e s w] := gate[p1; p] * a[p p2; n e s w]
+    if !purified
+        @plansor a′[p1 p2; n e s w] := a′[p1 p; n e s w] * gate[p; p2]
+    end
+    return a′
+end
+
+"""
 $(SIGNATURES)
 
 Use QR decomposition on two tensors `A`, `B` connected by a bond to get the reduced tensors.
@@ -28,7 +48,7 @@ When `A`, `B` are PEPOTensors,
         5   1               4  1                                4  1
 ```
 """
-function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor, PEPOTensor}}
+function _qr_bond(A::PT, B::PT; gate_ax::Int = 1, kwargs...) where {PT <: Union{PEPSTensor, PEPOTensor}}
     @assert 1 <= gate_ax <= numout(A)
     permA, permB, permX, permY = if A isa PEPSTensor
         ((2, 4, 5), (1, 3)), ((2, 3, 4), (1, 5)), (1, 4, 2, 3), Tuple(1:4)
@@ -39,8 +59,8 @@ function _qr_bond(A::PT, B::PT; gate_ax::Int = 1) where {PT <: Union{PEPSTensor,
             ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
         end
     end
-    X, a = left_orth!(permute(A, permA; copy = true); positive = true)
-    Y, b = left_orth!(permute(B, permB; copy = true); positive = true)
+    X, a = left_orth!(permute(A, permA; copy = true); kwargs...)
+    Y, b = left_orth!(permute(B, permB; copy = true); kwargs...)
     X, Y = permute(X, permX), permute(Y, permY)
     b = permute(b, ((3, 2), (1,)))
     return X, a, b, Y

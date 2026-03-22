@@ -70,7 +70,10 @@ function _timeevol_sanity_check(
         ψ₀::InfiniteState, Pspaces::M, alg::A
     ) where {A <: TimeEvolution, M <: AbstractMatrix{<:ElementarySpace}}
     Nr, Nc, = size(ψ₀)
-    @assert (Nr >= 2 && Nc >= 2) "Unit cell size for simple update should be no smaller than (2, 2)."
+    @assert (Nr >= 2 && Nc >= 2) "Unit cell size for time evolution should be no smaller than (2, 2)."
+    if ψ₀ isa InfinitePEPO
+        @assert size(ψ₀, 3) == 1 "PEPO to be time evolved should have only one layer."
+    end
     @assert Pspaces == physicalspace(ψ₀) "Physical spaces of `ψ₀` do not match `Pspaces`."
     if hasfield(typeof(alg), :purified) && !alg.purified
         @assert ψ₀ isa InfinitePEPO "alg.purified = false is only applicable to PEPO."
