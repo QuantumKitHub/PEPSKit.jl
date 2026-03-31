@@ -91,114 +91,6 @@ Base.size(gates::LocalCircuit) = size(physicalspace(gates))
 const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
 
 """
-    is_equivalent_site(
-        site1::CartesianIndex{2}, site2::CartesianIndex{2},
-        (Nrow, Ncol)::NTuple{2, Int}
-    )
-
-Check if two lattice sites are related by a (periodic) lattice translation.
-"""
-function is_equivalent_site(
-        site1::CartesianIndex{2}, site2::CartesianIndex{2},
-        (Nrow, Ncol)::NTuple{2, Int}
-    )
-    shift = site1 - site2
-    return mod(shift[1], Nrow) == 0 && mod(shift[2], Ncol) == 0
-end
-
-"""
-    _get_site_term(ham::LocalOperator, site::CartesianIndex{2})
-
-Get the sum of all 1-site terms at `site` in `ham`.
-If there are no such terms, return the zero operator at `site`.
-"""
-function _get_site_term(ham::LocalOperator, site::CartesianIndex{2})
-    r, c = mod1.(Tuple(site), size(ham))
-    V = physicalspace(ham)[r, c]
-    term = zeros(scalartype(ham), V ← V)
-    for (sites, op) in ham.terms
-        length(sites) != 1 && continue
-        if is_equivalent_site(sites[1], site, size(ham))
-            term = term + op
-        end
-    end
-    return term
-end
-
-"""
-    is_equivalent_bond(
-        bond1::NTuple{2, CartesianIndex{2}}, bond2::NTuple{2, CartesianIndex{2}},
-        (Nrow, Ncol)::NTuple{2, Int},
-    )
-
-Check if two 2-site bonds are related by a (periodic) lattice translation.
-"""
-function is_equivalent_bond(
-        bond1::NTuple{2, CartesianIndex{2}}, bond2::NTuple{2, CartesianIndex{2}},
-        (Nrow, Ncol)::NTuple{2, Int},
-    )
-    r1 = bond1[1] - bond1[2]
-    r2 = bond2[1] - bond2[2]
-    shift_row = bond1[1][1] - bond2[1][1]
-    shift_col = bond1[1][2] - bond2[1][2]
-    return r1 == r2 && mod(shift_row, Nrow) == 0 && mod(shift_col, Ncol) == 0
-end
-
-"""
-    _get_bond_term(ham::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
-
-Get the sum of all 2-site terms on `bond` in `ham`.
-If there are no such terms, return the zero operator on `bond`.
-"""
-function _get_bond_term(ham::LocalOperator, bond::NTuple{2, CartesianIndex{2}})
-    # create zero operator
-    r1, c1 = mod1.(Tuple(bond[1]), size(ham))
-    r2, c2 = mod1.(Tuple(bond[2]), size(ham))
-    V1 = physicalspace(ham)[r1, c1]
-    V2 = physicalspace(ham)[r2, c2]
-    term = zeros(scalartype(ham), V1 ⊗ V2 ← V1 ⊗ V2)
-    for (sites, op) in ham.terms
-        length(sites) != 2 && continue
-        if is_equivalent_bond(sites, bond, size(ham))
-            term += op
-        elseif is_equivalent_bond(sites, reverse(bond), size(ham))
-            op′ = permute(op, ((2, 1), (4, 3)); copy = true)
-            term += op′
-        end
-    end
-    return term
-end
-
-"""
-Get coordinates of sites in the 3-site triangular cluster
-used in Trotter evolution with next-nearest neighbor gates,
-with southwest corner at `[row, col]`.
-```
-    NORTHWEST   NORTHEAST
-        2---1   3---2
-        |           |
-        3           1
-
-        1           3
-        |           |
-        2---3   1---2
-    SOUTHWEST   SOUTHEAST
-```
-"""
-function _nnn_cluster_sites(dir::Int, row::Int, col::Int)
-    @assert 1 <= dir <= 4
-    return if dir == NORTHWEST
-        map(CartesianIndex, [(row - 1, col + 1), (row - 1, col), (row, col)])
-    elseif dir == NORTHEAST
-        map(CartesianIndex, [(row, col + 1), (row - 1, col + 1), (row - 1, col)])
-    elseif dir == SOUTHEAST
-        map(CartesianIndex, [(row, col), (row, col + 1), (row - 1, col + 1)])
-    else # dir == SOUTHWEST
-        map(CartesianIndex, [(row - 1, col), (row, col), (row, col + 1)])
-    end
-end
-
-"""
 Convert an N-site gate to MPO form by SVD, 
 in which the axes are ordered as
 ```
@@ -211,8 +103,10 @@ in which the axes are ordered as
 ```
 """
 function gate_to_mpo(
-        gate::AbstractTensorMap{T, S, N, N}, trunc = trunctol(; atol = MPSKit.Defaults.tol)
-    ) where {T <: Number, S <: ElementarySpace, N}
+        gate::AbstractTensorMap{<:Any, <:Any, N, N};
+        trunc = trunctol(; atol = MPSKit.Defaults.tol)
+    ) where {N}
+    N == 1 && return gate
     Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
     return map(1:N) do i
         if i == 1
@@ -224,6 +118,7 @@ function gate_to_mpo(
         end
     end
 end
+gate_to_mpo(x; kwargs...) = x
 
 """
     _check_hamiltonian_for_trotter(H::LocalOperator)
@@ -256,11 +151,13 @@ end
 """
 Trotterize a trivial Hamiltonian `H` containing only 1-site terms.
 """
-function _trotterize_1site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real)
-    for site in CartesianIndices(size(H))
-        gate = _get_site_term(H, site)
-        (norm(gate) <= atol) && continue
-        push!(gates, [site] => exp(-dt * gate))
+function _trotterize_1site!(gates::Vector, H::LocalOperator, dt::Number)
+    for x in CartesianIndices(size(H))
+        coord = [x]
+        haskey(H.terms, coord) || continue
+        gate = exp(H.terms[coord] * -dt)
+        push!(gates, coord => gate)
+        used_terms += 1
     end
     return gates
 end
@@ -273,24 +170,25 @@ Gate order: `(d, c, r)`
 - d = 1: horizontal bond ((r, c), (r, c+1))
 - d = 2:   vertical bond ((r, c), (r-1, c))
 """
-function _trotterize_nn2site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real, force_mpo::Bool = false)
-    Nr, Nc = size(H)
-    T = scalartype(H)
-    for (d, c, r) in Iterators.product(1:2, 1:Nc, 1:Nr)
-        site1 = CartesianIndex(r, c)
-        site2 = (d == 1) ? CartesianIndex(r, c + 1) : CartesianIndex(r - 1, c)
-        # group with 1-site terms
-        s1term = _get_site_term(H, site1)
-        unit1 = TensorKit.id(T, space(s1term, 1))
-        s2term = _get_site_term(H, site2)
-        unit2 = TensorKit.id(T, space(s2term, 1))
-        gate = _get_bond_term(H, (site1, site2))
-        gate = gate + (s1term ⊗ unit2 + unit1 ⊗ s2term) / 4
-        (norm(gate) <= atol) && continue
-        gate = exp(-dt * gate)
-        force_mpo && (gate = gate_to_mpo(gate))
-        push!(gates, [site1, site2] => gate)
+function _trotterize_nn2site!(gates::Vector, H::LocalOperator, dt::Number)
+    # 2-site gates: horizontal nearest-neighbour
+    for x in CartesianIndices(size(H))
+        y = x + CartesianIndex(0, 1)
+        coord = [x, y]
+        haskey(H.terms, coord) || continue
+        gate = exp(H.terms[coord] * -dt)
+        push!(gates, coord => gate)
     end
+
+    # 2-site gates: vertical nearest-neighbour
+    for x in CartesianIndices(size(H))
+        y = x + CartesianIndex(1, 0)
+        coord = [x, y]
+        haskey(H.terms, coord) || continue
+        gate = exp(H.terms[coord] * -dt)
+        push!(gates, coord => gate)
+    end
+
     return gates
 end
 
@@ -300,20 +198,60 @@ Trotterize a next-nearest neighbor terms in a Hamiltonian.
 Gate order: `(c, r, d)`
 - d = 1 (NORTHWEST), ..., 4 (SOUTHWEST) labels the triangular 3-site clusters.
 """
-function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number; atol::Real)
-    Nr, Nc = size(H)
-    T = scalartype(H)
-    for (c, r, d) in Iterators.product(1:Nc, 1:Nr, 1:4)
-        sites = _nnn_cluster_sites(d, r, c)
-        gate = _get_bond_term(H, (sites[1], sites[3]))
-        (norm(gate) <= atol) && continue
-        gate = exp(-(dt / 2) * gate) # account for double counting
-        # combine with identity at sites[2]
-        r2, c2 = mod1(sites[2][1], Nr), mod1(sites[2][2], Nc)
-        id_ = TensorKit.id(T, physicalspace(H)[r2, c2])
-        gate = permute(gate ⊗ id_, ((1, 3, 2), (4, 6, 5)))
-        push!(gates, sites => gate_to_mpo(gate))
+function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
+    T = eltype(H)
+    # 2-site gates: ⌞ next-nearest-neighbour
+    for x in CartesianIndices(size(H))
+        y = x + CartesianIndex(1, 1)
+        coord = [x, y]
+        haskey(H.terms, coord) || continue
+        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        b = TensorKit.BraidingTensor{T}(
+            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(1, 0))
+        )
+        insert!(gate_mpo, 2, TensorMap(b))
+        push!(gates, coord => gate)
     end
+
+    # 2-site gates: ⌜ next-nearest-neighbour
+    for x in CartesianIndices(size(H))
+        y = x + CartesianIndex(-1, 1)
+        coord = [x, y]
+        haskey(H.terms, coord) || continue
+        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        b = TensorKit.BraidingTensor{T}(
+            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(-1, 0))
+        )
+        insert!(gate_mpo, 2, TensorMap(b))
+        push!(gates, coord => gate_mpo)
+    end
+
+    # 2-site gates: ⌝ next-nearest-neighbour
+    for x in CartesianIndices(size(H))
+        y = x + CartesianIndex(1, 1)
+        coord = [x, y]
+        haskey(H.terms, coord) || continue
+        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        b = TensorKit.BraidingTensor{T}(
+            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(0, 1))
+        )
+        insert!(gate_mpo, 2, TensorMap(b))
+        push!(gates, coord => gate)
+    end
+
+    # 2-site gates: ⌟ next-nearest-neighbour
+    for x in CartesianIndices(size(H))
+        y = x + CartesianIndex(-1, 1)
+        coord = [x, y]
+        haskey(H.terms, coord) || continue
+        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        b = TensorKit.BraidingTensor{T}(
+            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(0, 1))
+        )
+        insert!(gate_mpo, 2, TensorMap(b))
+        push!(gates, coord => gate_mpo)
+    end
+
     return gates
 end
 
@@ -334,22 +272,28 @@ function trotterize(
         H::LocalOperator, dt::Number;
         symmetrize_gates::Bool = false, force_mpo::Bool = false
     )
-    dist = _check_hamiltonian_for_trotter(H)
-    T = scalartype(H)
-    atol = eps(real(T))^(3 / 4)
+    for coords in keys(H.terms)
+        @assert length(coords) <= 2 "Hamiltonians containing multi-site (>2) terms are not yet supported"
+        @assert (length(coords) == 1 || max(abs.(Tuple(coords[1] - coords[2]))...) == 1) "Hamiltonians containing beyond next-nearest neighbour terms are not yet supported"
+    end
+
     dt′ = symmetrize_gates ? (dt / 2) : dt
-    gates = Vector{Pair{Any, Any}}()
 
-    # TODO: order of gates is fixed for more tight control.
-    # Consider directly iterating over H.terms in the future.
+    gates = Vector{Pair{Vector{CartesianIndex{2}}, Any}}()
 
-    # 1-site gates are only constructed when H only has 1-site terms
-    dist == 0 && _trotterize_1site!(gates, H, dt′; atol)
-    # 2-site NN gates grouped with 1-site terms
-    dist >= 1 && _trotterize_nn2site!(gates, H, dt′; atol, force_mpo)
-    # 3-site NNN gate MPOs
-    dist >= 2 && _trotterize_nnn2site!(gates, H, dt′; atol)
+    _trotterize_1site!(gates, H, dt′)
+    _trotterize_nn2site!(gates, H, dt′)
+    _trotterize_nnn2site!(gates, H, dt′)
 
-    symmetrize_gates && push!(gates, reverse(gates)...)
+    if force_mpo
+        gates = map(gates) do (coords, gate)
+            return coords => gate_to_mpo(gate)
+        end
+    end
+
+    @assert length(H.terms) == length(gates) "Not all terms were handled"
+
+    symmetrize_gates && append!(gates, reverse(gates))
+
     return LocalCircuit(physicalspace(H), gates)
 end
