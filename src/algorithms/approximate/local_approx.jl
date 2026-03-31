@@ -122,6 +122,6 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
     end
     ϵx = maximum(map(Base.Fix2(getindex, 3), Pxs))
     ϵy = maximum(map(Base.Fix2(getindex, 3), Pys))
-    info = (; ϵ = max(ϵx, ϵy))
+    info = (; Pxs, Pys, ϵ = max(ϵx, ϵy))
     return InfinitePEPO(cat(As; dims = 3)), info
 end
