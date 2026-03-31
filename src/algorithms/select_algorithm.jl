@@ -19,7 +19,7 @@ function select_algorithm end
 
 function select_algorithm(
         ::typeof(fixedpoint),
-        env₀::CTMRGEnv;
+        env₀;
         tol = Defaults.optimizer_tol, # top-level tolerance
         verbosity = 3, # top-level verbosity
         boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
