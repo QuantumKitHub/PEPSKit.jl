@@ -53,7 +53,10 @@ LocalOperator(lattice, terms::Pair...) = LocalOperator(lattice, terms)
 
 add_term!(operator::LocalOperator, inds::Tuple, term::AbstractTensorMap) = add_term!(operator, collect(inds), term)
 add_term!(operator::LocalOperator, inds::Vector, term::AbstractTensorMap) = add_term!(operator, map(CartesianIndex{2}, inds), term)
-function add_term!(operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::AbstractTensorMap)
+function add_term!(
+        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::AbstractTensorMap;
+        atol = zero(real(scalartype(term))),
+    )
     # input checks
     length(inds) == numin(term) == numout(term) || throw(ArgumentError("Incompatible number of indices and tensor legs"))
     for (i, ind) in enumerate(inds)
@@ -61,6 +64,7 @@ function add_term!(operator::LocalOperator, inds::Vector{CartesianIndex{2}}, ter
         physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
             throw(SpaceMismatch("Incompatible physical spaces"))
     end
+    norm(term) <= atol && return operator # skip adding negligible terms
 
     # permute input
     if !issorted(inds)
