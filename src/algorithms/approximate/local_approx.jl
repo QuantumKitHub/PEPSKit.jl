@@ -80,7 +80,7 @@ function localapprox_projector(
     sinv_sqrt = sdiag_pow(s, -0.5)
     P1 = R2 * vh' * sinv_sqrt
     P2 = sinv_sqrt * u' * R1
-    return P1, s, P2, ϵ
+    return P1, P2, s, ϵ
 end
 
 """
@@ -95,7 +95,7 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
     ρ2 = standardize_virtual_spaces(ρ2)
     # x-bond projectors: [r, c] on bond [r, c]--[r, c+1]
     Pxs = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
-        P1, s, P2, ϵ = localapprox_projector(
+        P1, P2, s, ϵ = localapprox_projector(
             ρ1[r, c], ρ2[r, c], ρ1[r, _next(c, Nc)], ρ2[r, _next(c, Nc)];
             trunc = alg.trunc
         )
@@ -104,7 +104,7 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
     # y-bond projectors: [r, c] on bond [r, c]--[r-1, c]
     Pys = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
         # TODO: reduce repeated rotations
-        P1, s, P2, ϵ = localapprox_projector(
+        P1, P2, s, ϵ = localapprox_projector(
             rotr90(ρ1[r, c]), rotr90(ρ2[r, c]),
             rotr90(ρ1[_prev(r, Nr), c]), rotr90(ρ2[_prev(r, Nr), c]);
             trunc = alg.trunc

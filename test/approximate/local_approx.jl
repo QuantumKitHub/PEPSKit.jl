@@ -34,14 +34,24 @@ end
     B1 = normalize(randn(Vphy ⊗ Vphy' ← Vaux ⊗ Vaux ⊗ Vaux' ⊗ V'), Inf)
     B2 = normalize(randn(Vphy ⊗ Vphy' ← Vaux ⊗ Vaux ⊗ Vaux' ⊗ V'), Inf)
 
-    P1, s, P2, ϵ = localapprox_projector(A1, A2, B1, B2; trunc = notrunc())
+    P1, P2, s, ϵ = localapprox_projector(A1, A2, B1, B2; trunc = notrunc())
     @test P1 * P2 ≈ TensorKit.id(domain(P2))
 
-    P1, sc, P2, ϵ = localapprox_projector(A1, A2, B1, B2; trunc = truncrank(8))
+    P1, P2, sc, ϵ = localapprox_projector(A1, A2, B1, B2; trunc = truncrank(8))
     A1 = removeunit(removeunit(removeunit(A1, 6), 5), 3)
     A2 = removeunit(removeunit(removeunit(A2, 6), 5), 3)
     B1 = removeunit(removeunit(removeunit(B1, 5), 4), 3)
     B2 = removeunit(removeunit(removeunit(B2, 5), 4), 3)
     @info "Truncation error = $(ϵ)."
     @test ϵ ≈ localapprox_cost(A1, A2, B1, B2, P1, P2)
+end
+
+@testset "Virtual space matching" begin
+    Vps = ComplexSpace.([2 2; 2 2])
+    Vns = ComplexSpace.([2 4; 5 3])
+    Ves = ComplexSpace.([3 5; 4 2])
+    ρ = InfinitePEPO(randn, ComplexF64, Vps, Vns, Ves)
+    alg = LocalApprox(truncrank(2))
+    ρ2, = approximate(ρ, ρ, alg)
+    @test ρ2 isa InfinitePEPO
 end
