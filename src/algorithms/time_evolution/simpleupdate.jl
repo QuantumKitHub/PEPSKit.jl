@@ -108,6 +108,7 @@ function _su_iter!(
     # rotate back
     A = _bond_rotation(A, bond[1], rev; inv = true)
     B = _bond_rotation(B, bond[1], rev; inv = true)
+    rev && (s = transpose(s))
     # remove environment weights
     siteA, siteB = map(sites) do site
         return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
