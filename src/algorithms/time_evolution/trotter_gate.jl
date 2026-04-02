@@ -189,13 +189,16 @@ Gate order: `(d, c, r)`
 - d = 1: horizontal bond ((r, c), (r, c+1))
 - d = 2:   vertical bond ((r, c), (r-1, c))
 """
-function _trotterize_nn2site!(gates::Vector, H::LocalOperator, dt::Number)
+function _trotterize_nn2site!(
+        gates::Vector, H::LocalOperator, dt::Number; force_mpo::Bool = false
+    )
     # 2-site gates: horizontal nearest-neighbour
     for x in CartesianIndices(size(H))
         y = x + CartesianIndex(0, 1)
         coord = [x, y]
         haskey(H.terms, coord) || continue
         gate = exp(H.terms[coord] * -dt)
+        force_mpo && (gate = gate_to_mpo(gate))
         push!(gates, coord => gate)
     end
 
@@ -205,6 +208,7 @@ function _trotterize_nn2site!(gates::Vector, H::LocalOperator, dt::Number)
         coord = [x, y]
         haskey(H.terms, coord) || continue
         gate = exp(H.terms[coord] * -dt)
+        force_mpo && (gate = gate_to_mpo(gate))
         push!(gates, coord => gate)
     end
 
@@ -309,14 +313,8 @@ function trotterize(
     gates = Vector{Pair{Vector{CartesianIndex{2}}, Any}}()
 
     _trotterize_1site!(gates, H, dt′)
-    _trotterize_nn2site!(gates, H, dt′)
+    _trotterize_nn2site!(gates, H, dt′; force_mpo)
     _trotterize_nnn2site!(gates, H, dt′)
-
-    if force_mpo
-        gates = map(gates) do (coords, gate)
-            return coords => gate_to_mpo(gate)
-        end
-    end
 
     symmetrize_gates && append!(gates, reverse(gates))
 

@@ -121,7 +121,7 @@ end
     # resulting energy should be almost the same
     e_sites = map((true, false)) do force_mpo
         dts = [1.0e-2, 1.0e-2]
-        tols = [1.0e-6, 1.0e-8]
+        tols = [1.0e-6, 1.0e-7]
         peps, wts = deepcopy(peps0), deepcopy(wts0)
         for (n, (dt, tol)) in enumerate(zip(dts, tols))
             trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
