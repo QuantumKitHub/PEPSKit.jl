@@ -199,57 +199,65 @@ Gate order: `(c, r, d)`
 - d = 1 (NORTHWEST), ..., 4 (SOUTHWEST) labels the triangular 3-site clusters.
 """
 function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
-    T = eltype(H)
+    T = scalartype(H)
     # 2-site gates: ⌞ next-nearest-neighbour
-    for x in CartesianIndices(size(H))
-        y = x + CartesianIndex(1, 1)
-        coord = [x, y]
+    for x1 in CartesianIndices(size(H))
+        x2 = x1 + CartesianIndex(1, 0)
+        x3 = x1 + CartesianIndex(1, 1)
+        coord = [x1, x3]
         haskey(H.terms, coord) || continue
-        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
+        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(1, 0))
+            left_virtualspace(gate[2])', physicalspace(H, x2′)
         )
-        insert!(gate_mpo, 2, TensorMap(b))
-        push!(gates, coord => gate)
+        insert!(gate, 2, TensorMap(b))
+        push!(gates, [x1, x2, x3] => gate)
     end
 
     # 2-site gates: ⌜ next-nearest-neighbour
-    for x in CartesianIndices(size(H))
-        y = x + CartesianIndex(-1, 1)
-        coord = [x, y]
+    for x1 in CartesianIndices(size(H))
+        x2 = x1 + CartesianIndex(-1, 0)
+        x3 = x1 + CartesianIndex(-1, 1)
+        coord = [x1, x3]
         haskey(H.terms, coord) || continue
-        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
+        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(-1, 0))
+            left_virtualspace(gate[2])', physicalspace(H, x2′)
         )
-        insert!(gate_mpo, 2, TensorMap(b))
-        push!(gates, coord => gate_mpo)
+        insert!(gate, 2, TensorMap(b))
+        push!(gates, [x1, x2, x3] => gate)
     end
 
     # 2-site gates: ⌝ next-nearest-neighbour
-    for x in CartesianIndices(size(H))
-        y = x + CartesianIndex(1, 1)
-        coord = [x, y]
+    for x1 in CartesianIndices(size(H))
+        x2 = x1 + CartesianIndex(0, 1)
+        x3 = x1 + CartesianIndex(1, 1)
+        coord = [x1, x3]
         haskey(H.terms, coord) || continue
-        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
+        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(0, 1))
+            left_virtualspace(gate[2])', physicalspace(H, x2′)
         )
-        insert!(gate_mpo, 2, TensorMap(b))
-        push!(gates, coord => gate)
+        insert!(gate, 2, TensorMap(b))
+        push!(gates, [x1, x2, x3] => gate)
     end
 
     # 2-site gates: ⌟ next-nearest-neighbour
-    for x in CartesianIndices(size(H))
-        y = x + CartesianIndex(-1, 1)
-        coord = [x, y]
+    for x1 in CartesianIndices(size(H))
+        x2 = x1 + CartesianIndex(0, 1)
+        x3 = x1 + CartesianIndex(-1, 1)
+        coord = [x1, x3]
         haskey(H.terms, coord) || continue
-        gate_mpo = gate_to_mpo(exp(H.terms[coord] * -dt))
+        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
+        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate_mpo[2])', physicalspace(H, x + CartesianIndex(0, 1))
+            left_virtualspace(gate[2])', physicalspace(H, x2′)
         )
-        insert!(gate_mpo, 2, TensorMap(b))
-        push!(gates, coord => gate_mpo)
+        insert!(gate, 2, TensorMap(b))
+        push!(gates, [x1, x2, x3] => gate)
     end
 
     return gates
@@ -290,8 +298,6 @@ function trotterize(
             return coords => gate_to_mpo(gate)
         end
     end
-
-    @assert length(H.terms) == length(gates) "Not all terms were handled"
 
     symmetrize_gates && append!(gates, reverse(gates))
 
