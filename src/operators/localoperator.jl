@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
 
 ```julia
 lattice = fill(ℂ^2, 1, 1) # single-site unitcell
-O1 = LocalOperator(lattice, ((1, 1),) => σx, ((1, 1), (1, 2)) => σx ⊗ σx, ((1, 1), (2, 1)) => σx ⊗ σx)
+O1 = LocalOperator(lattice, [(1, 1),] => σx, [(1, 1), (1, 2)] => σx ⊗ σx, [(1, 1), (2, 1)] => σx ⊗ σx)
 ```
 """
 struct LocalOperator{O, S}
