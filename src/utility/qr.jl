@@ -35,7 +35,7 @@ struct QRAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const QR_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :qr => HouseHolder
+    :qr => Householder
 )
 const QR_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :qr => QRPullback
