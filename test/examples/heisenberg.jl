@@ -31,7 +31,7 @@ function heisenberg_XYZ_c4v(
         rmul!(S_zz(T, S; spin = spin), Jz)
     spaces = fill(domain(term)[1], (1, 1))
     return LocalOperator( # horizontal and vertical contributions are identical
-        spaces, (CartesianIndex(1, 1), CartesianIndex(1, 2)) => 2 * term
+        spaces, [CartesianIndex(1, 1), CartesianIndex(1, 2)] => 2 * term
     )
 end
 
@@ -45,8 +45,10 @@ end
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(H, peps₀, env₀; optimizer_alg = (; tol = gradtol, maxiter = 25))
     ξ_h, ξ_v, = correlation_length(peps, env)
-
+    @info "Optimized energy = $E."
     @test E ≈ E_ref atol = 1.0e-2
+    @info "ξₕ = $(ξ_h)."
+    @info "ξᵥ = $(ξ_v)."
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
@@ -69,8 +71,10 @@ end
         boundary_alg = (; alg = :c4v, projector_alg, maxiter = 500),
     )
     ξ_h, ξ_v, = correlation_length(peps, env)
-
+    @info "Optimized energy = $E."
     @test E ≈ E_ref atol = 1.0e-2
+    @info "ξₕ = $(ξ_h)."
+    @info "ξᵥ = $(ξ_v)."
     @test only(ξ_h) ≈ only(ξ_v)
 end
 
@@ -85,8 +89,10 @@ end
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(H, peps₀, env₀; optimizer_alg = (; tol = gradtol, maxiter = 25))
     ξ_h, ξ_v, = correlation_length(peps, env)
-
+    @info "Optimized energy = $E."
     @test E ≈ 2 * E_ref atol = 1.0e-2
+    @info "ξₕ = $(ξ_h)."
+    @info "ξᵥ = $(ξ_v)."
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
