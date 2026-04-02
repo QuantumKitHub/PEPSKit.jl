@@ -50,7 +50,8 @@ end
 # Default to Any for eltype: needs to be abstract anyways so not that much to gain
 LocalOperator(lattice, terms) = LocalOperator{Any}(lattice, terms)
 LocalOperator(lattice, terms::Pair...) = LocalOperator(lattice, terms)
-
+# TODO: add terms beyond AbstractTensorMap
+# e.g. tensor product of 1-site operators, MPOs
 add_term!(operator::LocalOperator, inds::Tuple, term::AbstractTensorMap) = add_term!(operator, collect(inds), term)
 add_term!(operator::LocalOperator, inds::Vector, term::AbstractTensorMap) = add_term!(operator, map(CartesianIndex{2}, inds), term)
 function add_term!(
@@ -59,6 +60,7 @@ function add_term!(
     )
     # input checks
     length(inds) == numin(term) == numout(term) || throw(ArgumentError("Incompatible number of indices and tensor legs"))
+    allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
     for (i, ind) in enumerate(inds)
         ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
         physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||

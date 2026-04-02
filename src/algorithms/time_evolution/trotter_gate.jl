@@ -69,14 +69,19 @@ function add_factor!(
     # input checks
     length(inds) >= 2 || throw(ArgumentError("Gate MPO must act on 2 or more sites."))
     length(inds) == length(term) || throw(ArgumentError("Incompatible number of indices and length of gate MPO."))
+    allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
     for (i, (ind, t)) in enumerate(zip(inds, term))
         ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
         out_ax = (i == 1) ? 1 : 2
         in_ax = (i == 1) ? 2 : 3
         physicalspace(operator, ind_translated) == space(t, out_ax) == space(t, in_ax)' ||
             throw(SpaceMismatch("Incompatible physical spaces at $(ind)."))
+        if i >= 2
+            ind_prev = inds[i - 1]
+            sum(Tuple(ind - ind_prev) .^ 2) == 1 || throw(ArgumentError("Two consecutive sites in `inds` must be nearest neighbours for MPO terms."))
+        end
     end
-    # for MPO term, `inds` can be in any order, and do not need to be sorted
+    # for MPO term, `inds` should not be sorted
     push!(operator.gates, inds => term)
     return operator
 end
@@ -109,7 +114,7 @@ Base.size(gates::LocalCircuit) = size(physicalspace(gates))
 const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
 
 """
-Convert an N-site gate to MPO form by SVD, 
+Convert an N-site gate (N ≥ 2) to MPO by SVD, 
 in which the axes are ordered as
 ```
     site 1      mid sites      site N
@@ -124,7 +129,7 @@ function gate_to_mpo(
         gate::AbstractTensorMap{<:Any, <:Any, N, N};
         trunc = trunctol(; atol = MPSKit.Defaults.tol)
     ) where {N}
-    N == 1 && return gate
+    @assert N >= 2
     Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
     return map(1:N) do i
         if i == 1
@@ -136,7 +141,6 @@ function gate_to_mpo(
         end
     end
 end
-gate_to_mpo(x; kwargs...) = x
 
 """
     _check_hamiltonian_for_trotter(H::LocalOperator)
@@ -182,49 +186,50 @@ end
 """
 Trotterize nearest neighbor terms (grouped with 1-site terms)
 in the Hamiltonian `H`.
-
-Gate order: `(d, c, r)`
-- d = 1: horizontal bond ((r, c), (r, c+1))
-- d = 2:   vertical bond ((r, c), (r-1, c))
 """
 function _trotterize_nn2site!(
         gates::Vector, H::LocalOperator, dt::Number; force_mpo::Bool = false
     )
-    # 2-site gates: horizontal nearest-neighbour
-    for x in CartesianIndices(size(H))
-        y = x + CartesianIndex(0, 1)
+    vs = [CartesianIndex(0, 1), CartesianIndex(1, 0)]
+    for x in CartesianIndices(size(H)), v in vs
+        y = x + v
         coord = [x, y]
         haskey(H.terms, coord) || continue
         gate = exp(H.terms[coord] * -dt)
         force_mpo && (gate = gate_to_mpo(gate))
         push!(gates, coord => gate)
     end
-
-    # 2-site gates: vertical nearest-neighbour
-    for x in CartesianIndices(size(H))
-        y = x + CartesianIndex(1, 0)
-        coord = [x, y]
-        haskey(H.terms, coord) || continue
-        gate = exp(H.terms[coord] * -dt)
-        force_mpo && (gate = gate_to_mpo(gate))
-        push!(gates, coord => gate)
-    end
-
     return gates
 end
 
 """
-Trotterize a next-nearest neighbor terms in a Hamiltonian.
+Trotterize next-nearest neighbor terms in a Hamiltonian,
+converting them to 3-site MPO gates. 
+For each gate, the order of sites is
+```
+    2---3   1---2
+    |           |
+    1           3
 
-Gate order: `(c, r, d)`
-- d = 1 (NORTHWEST), ..., 4 (SOUTHWEST) labels the triangular 3-site clusters.
+    1           3
+    |           |
+    2---3   1---2
+```
 """
 function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
     T = scalartype(H)
-    # 2-site gates: ⌞ next-nearest-neighbour
-    for x1 in CartesianIndices(size(H))
-        x2 = x1 + CartesianIndex(1, 0)
-        x3 = x1 + CartesianIndex(1, 1)
+    vs = [
+        # ⌞ next-nearest-neighbour
+        (CartesianIndex(1, 0), CartesianIndex(1, 1)),
+        # ⌜ next-nearest-neighbour
+        (CartesianIndex(-1, 0), CartesianIndex(-1, 1)),
+        # ⌝ next-nearest-neighbour
+        (CartesianIndex(0, 1), CartesianIndex(1, 1)),
+        # ⌟ next-nearest-neighbour
+        (CartesianIndex(0, 1), CartesianIndex(-1, 1)),
+    ]
+    for x1 in CartesianIndices(size(H)), v in vs
+        x2, x3 = x1 + v[1], x1 + v[2]
         coord = [x1, x3]
         haskey(H.terms, coord) || continue
         gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
@@ -235,52 +240,6 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
     end
-
-    # 2-site gates: ⌜ next-nearest-neighbour
-    for x1 in CartesianIndices(size(H))
-        x2 = x1 + CartesianIndex(-1, 0)
-        x3 = x1 + CartesianIndex(-1, 1)
-        coord = [x1, x3]
-        haskey(H.terms, coord) || continue
-        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
-        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
-        b = TensorKit.BraidingTensor{T}(
-            physicalspace(H, x2′), left_virtualspace(gate[2])
-        )
-        insert!(gate, 2, TensorMap(b))
-        push!(gates, [x1, x2, x3] => gate)
-    end
-
-    # 2-site gates: ⌝ next-nearest-neighbour
-    for x1 in CartesianIndices(size(H))
-        x2 = x1 + CartesianIndex(0, 1)
-        x3 = x1 + CartesianIndex(1, 1)
-        coord = [x1, x3]
-        haskey(H.terms, coord) || continue
-        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
-        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
-        b = TensorKit.BraidingTensor{T}(
-            physicalspace(H, x2′), left_virtualspace(gate[2])
-        )
-        insert!(gate, 2, TensorMap(b))
-        push!(gates, [x1, x2, x3] => gate)
-    end
-
-    # 2-site gates: ⌟ next-nearest-neighbour
-    for x1 in CartesianIndices(size(H))
-        x2 = x1 + CartesianIndex(0, 1)
-        x3 = x1 + CartesianIndex(-1, 1)
-        coord = [x1, x3]
-        haskey(H.terms, coord) || continue
-        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
-        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
-        b = TensorKit.BraidingTensor{T}(
-            physicalspace(H, x2′), left_virtualspace(gate[2])
-        )
-        insert!(gate, 2, TensorMap(b))
-        push!(gates, [x1, x2, x3] => gate)
-    end
-
     return gates
 end
 
@@ -301,18 +260,15 @@ function trotterize(
         H::LocalOperator, dt::Number;
         symmetrize_gates::Bool = false, force_mpo::Bool = false
     )
-    for coords in keys(H.terms)
-        @assert length(coords) <= 2 "Hamiltonians containing multi-site (>2) terms are not yet supported"
-        @assert (length(coords) == 1 || max(abs.(Tuple(coords[1] - coords[2]))...) == 1) "Hamiltonians containing beyond next-nearest neighbour terms are not yet supported"
-    end
+    dist = _check_hamiltonian_for_trotter(H)
 
     dt′ = symmetrize_gates ? (dt / 2) : dt
 
     gates = Vector{Pair{Vector{CartesianIndex{2}}, Any}}()
 
-    _trotterize_1site!(gates, H, dt′)
-    _trotterize_nn2site!(gates, H, dt′; force_mpo)
-    _trotterize_nnn2site!(gates, H, dt′)
+    dist >= 0 && _trotterize_1site!(gates, H, dt′)
+    dist >= 1 && _trotterize_nn2site!(gates, H, dt′; force_mpo)
+    dist >= 2 && _trotterize_nnn2site!(gates, H, dt′)
 
     symmetrize_gates && append!(gates, reverse(gates))
 
