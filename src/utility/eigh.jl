@@ -75,10 +75,12 @@ struct EighAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const EIGH_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :qriteration => LAPACK_QRIteration,
-    :bisection => LAPACK_Bisection,
-    :divideandconquer => LAPACK_DivideAndConquer,
-    :multiple => LAPACK_MultipleRelativelyRobustRepresentations,
+    :dense => DefaultAlgorithm,
+    :QRIteration => QRIteration,
+    :Bisection => Bisection,
+    :DivideAndConquer => DivideAndConquer,
+    :Jacobi => Jacobi,
+    :RobustRepresentations => RobustRepresentations,
     :lanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
     :blocklanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
 )
@@ -148,7 +150,7 @@ end
 # Truncated eigh but also return full D and V to make it compatible with :fixed mode
 function _eigh_trunc!(
         t::TensorMap,
-        alg::LAPACK_EighAlgorithm,
+        alg::MatrixAlgebraKit.Algorithm,
         trunc::TruncationStrategy,
     )
     D, V = eigh_full!(t; alg)
@@ -238,7 +240,7 @@ function _eigh_trunc!(f, alg::IterEigh, trunc::TruncationStrategy)
     D, V = if isempty(blocksectors(f))
         # early return
         truncation_error = zero(real(scalartype(f)))
-        MatrixAlgebraKit.initialize_output(eigh_full!, f, LAPACK_QRIteration()) # specified algorithm doesn't matter here
+        MatrixAlgebraKit.initialize_output(eigh_full!, f, QRIteration()) # specified algorithm doesn't matter here
     else
         eighdata, dims = _compute_eighdata!(f, alg, trunc)
         _create_eightensors(f, eighdata, dims)
@@ -272,7 +274,7 @@ function _compute_eighdata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense decomposition for small blocks
-            D, V = eigh_full!(b, LAPACK_QRIteration())
+            D, V = eigh_full!(b, QRIteration())
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
             V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
@@ -285,7 +287,7 @@ function _compute_eighdata!(
             D, lvecs, info = eigsolve(b, x₀, howmany, :LM, eig_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative eigendecomposition did not converge for block $c, falling back to eigh_full"
-                D, V = eigh_full!(b, LAPACK_QRIteration())
+                D, V = eigh_full!(b, QRIteration())
                 lm_ordering = sortperm(abs.(D.diag); rev = true)
                 D = D.diag[lm_ordering]
                 V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
@@ -343,7 +345,7 @@ function ChainRulesCore.rrule(
         t::AbstractTensorMap,
         alg::EighAdjoint{F, R};
         trunc::TruncationStrategy = notrunc(),
-    ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig}, R <: FullEighPullback}
+    ) where {F <: Union{<:MatrixAlgebraKit.Algorithm, <:FixedEig}, R <: FullEighPullback}
     D̃, Ṽ, info = eigh_trunc(t, alg; trunc)
     D, V, inds = info.D_full, info.V_full, info.truncation_indices # untruncated decomposition
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
@@ -368,7 +370,7 @@ function ChainRulesCore.rrule(
         t,
         alg::EighAdjoint{F, R};
         trunc::TruncationStrategy = notrunc(),
-    ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig, IterEigh}, R <: TruncEighPullback}
+    ) where {F <: Union{<:MatrixAlgebraKit.Algorithm, <:FixedEig, IterEigh}, R <: TruncEighPullback}
     D, V, info = eigh_trunc(t, alg; trunc)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 

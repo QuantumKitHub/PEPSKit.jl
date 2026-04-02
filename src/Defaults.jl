@@ -109,7 +109,7 @@ const sparse = false # TODO: implement sparse CTMRG
 # SVD forward & reverse
 const trunc = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
 const rrule_degeneracy_atol = 1.0e-13
-const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :bisection, :jacobi, :iterative}
+const svd_fwd_alg = :dense # ∈ {:sdd, :svd, :bisection, :jacobi, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
@@ -117,12 +117,12 @@ const svd_rrule_alg = :full # ∈ {:full, :trunc, :gmres, :bicgstab, :arnoldi}
 const krylovdim_factor = 1.4
 
 # eigh forward & reverse
-const eigh_fwd_alg = :qriteration # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
+const eigh_fwd_alg = :dense # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
 const eigh_rrule_alg = :full # ∈ {:full, :trunc}
 const eigh_rrule_verbosity = 0
 
 # QR forward & reverse
-const qr_fwd_alg = :qr
+const qr_fwd_alg = :DefaultAlgorithm
 const qr_fwd_positive = true
 const qr_rrule_alg = :qr
 const qr_rrule_verbosity = 0

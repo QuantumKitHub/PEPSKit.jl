@@ -63,10 +63,15 @@ $(TYPEDFIELDS)
 Construct a `SVDAdjoint` algorithm struct based on the following keyword arguments:
 
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:sdd` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
-    - `:svd` : MatrixAlgebraKit's `LAPACK_QRIteration`
-    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`
-    - `:jacobi` : MatrixAlgebraKit's `LAPACK_Jacobi`
+    - `:dense` : Truncated SVD computed via truncation of a dense [`MatrixAlgebraKit.svd_compact!`](@extref) decomposition.
+      This uses MatrixAlgebraKit's default algorithm behavior through [`DefaultAlgorithm`](@extref).
+      Alternatively, a specific MatrixAlgebraKit algorithm can be specified by passing one of the following symbols:
+        - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref)
+        - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref)
+        - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref)
+        - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref)
+        - `:SVDViaPolar` : MatrixAlgebraKit's [`SVDViaPolar`](@extref)
+        - `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref)
     - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:full` : MatrixAlgebraKit's `svd_pullback!` that requires access to the full spectrum
@@ -81,10 +86,13 @@ struct SVDAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :sdd => LAPACK_DivideAndConquer,
-    :svd => LAPACK_QRIteration,
-    :bisection => LAPACK_Bisection,
-    :jacobi => LAPACK_Jacobi,
+    :dense => DefaultAlgorithm,
+    :DivideAndConquer => DivideAndConquer,
+    :QRIteration => QRIteration,
+    :Bisection => Bisection,
+    :Jacobi => Jacobi,
+    :SVDViaPolar => SVDViaPolar,
+    :SafeDivideAndConquer => SafeDivideAndConquer,
     :iterative => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
@@ -166,7 +174,7 @@ end
 # Truncated SVD but also return full U, S and V to make it compatible with :fixed mode
 function _svd_trunc!(
         t::TensorMap,
-        alg::Union{LAPACK_DivideAndConquer, LAPACK_QRIteration},
+        alg::MatrixAlgebraKit.Algorithm,
         trunc::TruncationStrategy,
     )
     U, S, V⁺ = svd_compact!(t; alg)
@@ -266,7 +274,7 @@ function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
     U, S, V = if isempty(blocksectors(f))
         # early return
         truncation_error = zero(real(scalartype(f)))
-        MatrixAlgebraKit.initialize_output(svd_compact!, f, LAPACK_QRIteration()) # specified algorithm doesn't matter here
+        MatrixAlgebraKit.initialize_output(svd_compact!, f, QRIteration()) # specified algorithm doesn't matter here
     else
         SVDdata, dims = _compute_svddata!(f, alg, trunc)
         _create_svdtensors(f, SVDdata, dims)
@@ -319,7 +327,7 @@ function _compute_svddata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense SVD for small blocks
-            U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
+            U, S, V = svd_compact!(b; alg = Defaults.svd_fwd_alg)
             S = S.diag # extracts diagonal as Vector instead of Diagonal to make compatible with S of svdsolve
             U = U[:, 1:howmany]
             V = V[1:howmany, :]
@@ -332,7 +340,7 @@ function _compute_svddata!(
             S, lvecs, rvecs, info = svdsolve(b, x₀, howmany, :LR, svd_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative SVD did not converge for block $c, falling back to dense SVD"
-                U, S, V = svd_compact!(b, LAPACK_DivideAndConquer())
+                U, S, V = svd_compact!(b; alg = Defaults.svd_fwd_alg)
                 S = S.diag
                 U = U[:, 1:howmany]
                 V = V[1:howmany, :]

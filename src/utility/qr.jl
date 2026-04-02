@@ -24,7 +24,7 @@ $(TYPEDFIELDS)
 Construct a `QRAdjoint` algorithm struct based on the following keyword arguments:
 
 * `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_fwd_alg))`: Eig algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:qr` : MatrixAlgebraKit's `LAPACK_HouseholderQR`
+    - `:qr` : MatrixAlgebraKit's [`Householder`](@extref)
 
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:qr` : MatrixAlgebraKit's `qr_pullback`
@@ -35,7 +35,7 @@ struct QRAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const QR_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :qr => LAPACK_HouseholderQR
+    :qr => HouseHolder
 )
 const QR_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :qr => QRPullback
@@ -86,7 +86,7 @@ This is needed since a custom adjoint may be defined, depending on the `alg`.
 """
 MatrixAlgebraKit.left_orth(t, alg::QRAdjoint) = left_orth!(copy(t), alg)
 MatrixAlgebraKit.left_orth!(t, alg::QRAdjoint) = _left_orth!(t, alg.fwd_alg)
-_left_orth!(t, alg::LAPACK_HouseholderQR) = left_orth!(t; alg)
+_left_orth!(t, alg::MatrixAlgebraKit.Algorithm) = left_orth!(t; alg)
 
 """
 $(TYPEDEF)
@@ -111,7 +111,7 @@ function ChainRulesCore.rrule(
         ::typeof(left_orth!),
         t::AbstractTensorMap,
         alg::QRAdjoint{F, R},
-    ) where {F <: Union{LAPACK_HouseholderQR, FixedQR}, R <: QRPullback}
+    ) where {F <: Union{MatrixAlgebraKit.Algorithm, FixedQR}, R <: QRPullback}
     QR = left_orth(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
