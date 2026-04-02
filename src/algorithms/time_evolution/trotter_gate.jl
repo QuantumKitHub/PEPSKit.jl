@@ -1,8 +1,7 @@
 """
 $(TYPEDEF)
 
-Collection of Trotter evolution gates and MPOs obtained from
-a Hamiltonian containing long-range or multi-site terms.
+Circuit consisting of local gates and MPOs.
 
 ## Fields
 
@@ -176,7 +175,6 @@ function _trotterize_1site!(gates::Vector, H::LocalOperator, dt::Number)
         haskey(H.terms, coord) || continue
         gate = exp(H.terms[coord] * -dt)
         push!(gates, coord => gate)
-        used_terms += 1
     end
     return gates
 end
