@@ -43,7 +43,7 @@ function add_factor!(operator::LocalCircuit, inds::Vector{CartesianIndex{2}}, te
     for (i, ind) in enumerate(inds)
         ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
         physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
-            throw(SpaceMismatch("Incompatible physical spaces"))
+            throw(SpaceMismatch("Incompatible physical spaces at $(ind)."))
     end
 
     # permute input
@@ -60,6 +60,25 @@ function add_factor!(operator::LocalCircuit, inds::Vector{CartesianIndex{2}}, te
 
     push!(operator.gates, inds => term)
 
+    return operator
+end
+# for MPO term
+# TODO: consider directly use MPSKit.FiniteMPO
+function add_factor!(
+        operator::LocalCircuit, inds::Vector{CartesianIndex{2}}, term::Vector{M}
+    ) where {M <: AbstractTensorMap}
+    # input checks
+    length(inds) >= 2 || throw(ArgumentError("Gate MPO must act on 2 or more sites."))
+    length(inds) == length(term) || throw(ArgumentError("Incompatible number of indices and length of gate MPO."))
+    for (i, (ind, t)) in enumerate(zip(inds, term))
+        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
+        out_ax = (i == 1) ? 1 : 2
+        in_ax = (i == 1) ? 2 : 3
+        physicalspace(operator, ind_translated) == space(t, out_ax) == space(t, in_ax)' ||
+            throw(SpaceMismatch("Incompatible physical spaces at $(ind)."))
+    end
+    # for MPO term, `inds` can be in any order, and do not need to be sorted
+    push!(operator.gates, inds => term)
     return operator
 end
 
@@ -209,7 +228,7 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
         gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
         x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate[2])', physicalspace(H, x2′)
+            physicalspace(H, x2′), left_virtualspace(gate[2])
         )
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
@@ -224,7 +243,7 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
         gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
         x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate[2])', physicalspace(H, x2′)
+            physicalspace(H, x2′), left_virtualspace(gate[2])
         )
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
@@ -239,7 +258,7 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
         gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
         x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate[2])', physicalspace(H, x2′)
+            physicalspace(H, x2′), left_virtualspace(gate[2])
         )
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
@@ -254,7 +273,7 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
         gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
         x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
         b = TensorKit.BraidingTensor{T}(
-            left_virtualspace(gate[2])', physicalspace(H, x2′)
+            physicalspace(H, x2′), left_virtualspace(gate[2])
         )
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
