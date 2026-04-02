@@ -180,12 +180,8 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # ---------------
 
 # Since we allow abstract types in T, value and type domain might not match
-VI.scalartype(::Type{<:LocalOperator{T}}) where {T} = scalartype(T)
 function VI.scalartype(operator::LocalOperator)
-    return mapreduce(
-        scalartype, VectorInterface.promote_add, values(operator.terms);
-        init = scalartype(typeof(operator))
-    )
+    return promote_type((scalartype(term[2]) for term in operator.terms)...)
 end
 
 
