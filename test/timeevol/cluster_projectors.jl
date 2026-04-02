@@ -91,7 +91,7 @@ end
         @test mpo_to_gate3(gs) ≈ gate
         for gate_ax in 1:2
             Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
-            PEPSKit._apply_gatempo!(Ms2, gs)
+            PEPSKit._apply_gatempo!(Ms2, gs; gate_ax)
             fid = fidelity_cluster(
                 [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms1],
                 [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms2]
@@ -120,17 +120,12 @@ end
     # applying 2-site gates decomposed to MPO or not,
     # resulting energy should be almost the same
     e_sites = map((true, false)) do force_mpo
-        dts = [1.0e-2, 1.0e-2]
-        tols = [1.0e-6, 1.0e-7]
         peps, wts = deepcopy(peps0), deepcopy(wts0)
-        for (n, (dt, tol)) in enumerate(zip(dts, tols))
-            trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
-            alg = SimpleUpdate(; trunc, force_mpo)
-            peps, wts, = time_evolve(
-                peps, ham, dt, 10000, alg, wts;
-                tol, symmetrize_gates = true, check_interval = 1000
-            )
-        end
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(4)
+        alg = SimpleUpdate(; trunc, force_mpo)
+        peps, wts, = time_evolve(
+            peps, ham, 0.01, 10000, alg, wts; tol = 1.0e-6, check_interval = 1000
+        )
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
         for trunc in truncs_env
