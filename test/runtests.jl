@@ -23,6 +23,9 @@ end
         @time @safetestset "LocalOperator" begin
             include("types/localoperator.jl")
         end
+        @time @safetestset "LocalCircuit" begin
+            include("types/localcircuit.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "CTMRG"
         @time @safetestset "Gauge Fixing" begin
