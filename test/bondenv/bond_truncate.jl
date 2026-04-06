@@ -5,6 +5,7 @@ using TensorKit
 using PEPSKit
 using LinearAlgebra
 using KrylovKit
+using PEPSKit: cost_function_als
 
 Random.seed!(0)
 maxiter = 600
@@ -19,6 +20,7 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
     # random positive-definite environment
     Z = randn(Float64, Vext ← Vbond)
     benv = Z' * Z
+    normalize!(benv, Inf)
     # untruncated bond tensor
     a2b2 = randn(Float64, Vbondl ⊗ Vbondr ← Vphy' ⊗ Vphy')
     a2, s, b2 = svd_compact(permute(a2b2, perm_ab))
@@ -26,7 +28,7 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
     # bond tensor (truncated SVD initialization)
     a0, s, b0 = svd_trunc(permute(a2b2, perm_ab); trunc = trunc)
     a0, b0 = PEPSKit.absorb_s(a0, s, b0)
-    fid0 = PEPSKit.fidelity(benv, PEPSKit._combine_ab(a0, b0), a2b2)
+    fid0 = cost_function_als(benv, PEPSKit._combine_ab(a0, b0), a2b2)[2]
     @info "Fidelity of simple SVD truncation = $fid0.\n"
     ss = Dict{String, DiagonalTensorMap}()
     for (label, alg) in (
@@ -36,7 +38,7 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
         a1, ss[label], b1, info = PEPSKit.bond_truncate(a2, b2, benv, alg)
         @info "$label improved fidelity = $(info.fid)."
         # display(ss[label])
-        @test info.fid ≈ PEPSKit.fidelity(benv, PEPSKit._combine_ab(a1, b1), a2b2)
+        @test info.fid ≈ cost_function_als(benv, PEPSKit._combine_ab(a1, b1), a2b2)[2]
         @test info.fid > fid0
     end
     @test isapprox(ss["ALS"], ss["FET"], atol = 1.0e-3)

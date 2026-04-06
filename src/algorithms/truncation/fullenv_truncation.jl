@@ -49,24 +49,7 @@ between two states specified by the bond matrices `b1`, `b2`
 function inner_prod(
         benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
     ) where {T <: Number, S <: ElementarySpace}
-    val = @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
-    return val
-end
-
-"""
-$(SIGNATURES)
-
-Given the bond environment `benv`, calculate the fidelity
-between two states specified by the bond matrices `b1`, `b2`
-```
-    F(b1, b2) = (⟨b1|b2⟩ ⟨b2|b1⟩) / (⟨b1|b1⟩ ⟨b2|b2⟩)
-```
-"""
-function fidelity(
-        benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
-    ) where {T <: Number, S <: ElementarySpace}
-    return abs2(inner_prod(benv, b1, b2)) /
-        real(inner_prod(benv, b1, b1) * inner_prod(benv, b2, b2))
+    return @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
 end
 
 """
@@ -252,7 +235,7 @@ function fullenv_truncate(
         l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
         @debug "Bond truncation info" info_l info_r
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
-        fid = fidelity(benv, b0, b1)
+        _, fid = cost_function_als(benv, b0, b1)
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
         # determine convergence
         s_nrm = norm(s0, Inf)

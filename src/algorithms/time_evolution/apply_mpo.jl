@@ -112,7 +112,7 @@ Then the fidelity is just
 ```
 =#
 """
-Perform QR decomposition through a PEPS tensor
+Perform QR decomposition through a `GenericMPSTensor`
 ```
              ╱            ╱
     -←-R0-←-M-←-  =>  ---Q-←-R1-←-
@@ -120,19 +120,22 @@ Perform QR decomposition through a PEPS tensor
 ```
 """
 function qr_through(
-        R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        R0::MPSBondTensor, M::GenericMPSTensor{S, N}; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(codomain(R0, 1))
     @assert !isdual(domain(M, 1)) && !isdual(codomain(M, 1))
-    @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
+    pR = (codomainind(R0), domainind(R0))
+    pM = ((1,), Tuple(2:(N + 1)))
+    pRM = (codomainind(M), domainind(M))
+    A = tensorcontract(R0, pR, false, M, pM, false, pRM)
     _, r = left_orth!(A; positive = true)
     normalize && normalize!(r, Inf)
     return r
 end
 # for `M` at the left end of the MPS
 function qr_through(
-        ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        ::Nothing, M::GenericMPSTensor{S, N}; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(domain(M, 1))
     _, r = left_orth(M; positive = true)
     normalize && normalize!(r, Inf)
@@ -140,7 +143,7 @@ function qr_through(
 end
 
 """
-Perform LQ decomposition through a tensor
+Perform LQ decomposition through a `GenericMPSTensor`
 ```
              ╱            ╱
     -←-L0-←-Q-←-  <=  -←-M-←-L1-←-
@@ -148,21 +151,24 @@ Perform LQ decomposition through a tensor
 ```
 """
 function lq_through(
-        M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        M::GenericMPSTensor{S, N}, L1::MPSBondTensor; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(domain(L1, 1))
     @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
-    @tensor A[-1; -2 -3 -4 -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
+    pM = (codomainind(M), domainind(M))
+    pL = (codomainind(L1), domainind(L1))
+    pML = ((1,), Tuple(2:(N + 1)))
+    A = tensorcontract(M, pM, false, L1, pL, false, pML)
     l, _ = right_orth!(A; positive = true)
     normalize && normalize!(l, Inf)
     return l
 end
 # for `M` at the right end of the MPS
 function lq_through(
-        M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        M::GenericMPSTensor{S, N}, ::Nothing; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(codomain(M, 1))
-    A = permute(M, ((1,), (2, 3, 4, 5)))
+    A = permute(M, ((1,), Tuple(2:(N + 1))); copy = true)
     l, _ = right_orth!(A; positive = true)
     normalize && normalize!(l, Inf)
     return l
@@ -171,7 +177,7 @@ end
 """
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 """
-function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpace, 4}}
+function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     # get the first R and the last L
@@ -214,11 +220,14 @@ function _proj_from_RL(
 end
 
 """
-Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
-find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
+Given a cluster `Ms`, find all projectors `Pa`, `Pb`
+and Schmidt weights `wts` on internal bonds.
 """
-function _get_allprojs(Ms, Rs, Ls, truncs::Vector{E}) where {E <: TruncationStrategy}
+function _get_allprojs(
+        Ms::Vector{T}, truncs::Vector{E}
+    ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
     N = length(Ms)
+    Rs, Ls = _get_allRLs(Ms)
     @assert length(truncs) == N - 1
     projs_errs = map(1:(N - 1)) do i
         trunc = if isa(truncs[i], FixedSpaceTruncation)
@@ -258,14 +267,16 @@ Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
         Ms::Vector{T}, truncs::Vector{E}
-    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
-    Rs, Ls = _get_allRLs(Ms)
-    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, truncs)
+    ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, truncs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        @tensor (Ms[i])[-1 -2 -3 -4; -5] := (Ms[i])[-1 -2 -3 -4; 1] * Pa[1; -5]
-        @tensor (Ms[i + 1])[-1 -2 -3 -4; -5] := Pb[-1; 1] * (Ms[i + 1])[1 -2 -3 -4; -5]
+        Ms[i] = Ms[i] * twistdual(Pa, 1)
+        pP = ((1,), (2,))
+        pM = ((1,), Tuple(2:numind(Ms[i + 1])))
+        pPM = (codomainind(Ms[i + 1]), domainind(Ms[i + 1]))
+        Ms[i + 1] = tensorcontract(Pb, pP, false, Ms[i + 1], pM, false, pPM)
     end
     return wts, ϵs, Pas, Pbs
 end
