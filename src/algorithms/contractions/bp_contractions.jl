@@ -60,13 +60,51 @@ function MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::BPE
 end
 
 function contract_local_operator(
-        inds::NTuple{1, CartesianIndex{2}},
+        inds::Vector{CartesianIndex{2}},
+        O::AbstractTensorMap,
+        ket::InfinitePEPS,
+        bra::InfinitePEPS,
+        env::BPEnv,
+    )
+    length(inds) == 1 && return contract_local_operator1x1(only(inds), O, ket, bra, env)
+
+    if length(inds) == 2
+        ind_relative = inds[2] - inds[1]
+        if ind_relative == CartesianIndex(1, 0)
+            return contract_local_operator2x1(inds[1], O, ket, bra, env)
+        elseif ind_relative == CartesianIndex(0, 1)
+            return contract_local_operator1x2(inds[1], O, ket, bra, env)
+        end
+    end
+    error("No implementation for contractions for BP environments with $inds")
+end
+function contract_local_norm(
+        inds::Vector{CartesianIndex{2}},
+        ket::InfinitePEPS,
+        bra::InfinitePEPS,
+        env::BPEnv,
+    )
+    length(inds) == 1 && return contract_local_norm1x1(only(inds), ket, bra, env)
+
+    if length(inds) == 2
+        ind_relative = inds[2] - inds[1]
+        if ind_relative == CartesianIndex(1, 0)
+            return contract_local_norm2x1(inds[1], ket, bra, env)
+        elseif ind_relative == CartesianIndex(0, 1)
+            return contract_local_norm1x2(inds[1], ket, bra, env)
+        end
+    end
+    error("No implementation for contractions for BP environments with $inds")
+end
+
+function contract_local_operator1x1(
+        ind::CartesianIndex{2},
         O::AbstractTensorMap{<:Any, <:Any, 1, 1},
         ket::InfinitePEPS,
         bra::InfinitePEPS,
         env::BPEnv,
     )
-    row, col = Tuple(only(inds))
+    row, col = Tuple(ind)
     M_north = env.messages[NORTH, _prev(row, end), mod1(col, end)]
     M_east = env.messages[EAST, mod1(row, end), _next(col, end)]
     M_south = env.messages[SOUTH, _next(row, end), mod1(col, end)]
@@ -83,10 +121,10 @@ function contract_local_operator(
     end
 end
 
-function contract_local_norm(
-        inds::NTuple{1, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
+function contract_local_norm1x1(
+        ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
     )
-    row, col = Tuple(only(inds))
+    row, col = Tuple(ind)
     M_north = env.messages[NORTH, _prev(row, end), mod1(col, end)]
     M_east = env.messages[EAST, mod1(row, end), _next(col, end)]
     M_south = env.messages[SOUTH, _next(row, end), mod1(col, end)]
@@ -102,24 +140,7 @@ function contract_local_norm(
     end
 end
 
-function contract_local_operator(
-        inds::NTuple{2, CartesianIndex{2}},
-        O::AbstractTensorMap{<:Any, <:Any, 2, 2},
-        ket::InfinitePEPS,
-        bra::InfinitePEPS,
-        env::BPEnv,
-    )
-    ind_relative = inds[2] - inds[1]
-    return if ind_relative == CartesianIndex(1, 0)
-        contract_vertical_operator(inds[1], O, ket, bra, env)
-    elseif ind_relative == CartesianIndex(0, 1)
-        contract_horizontal_operator(inds[1], O, ket, bra, env)
-    else
-        error("Only contractions for nearest neighbor bonds are implemented.")
-    end
-end
-
-function contract_vertical_operator(
+function contract_local_operator2x1(
         coord::CartesianIndex{2},
         O::AbstractTensorMap{<:Any, <:Any, 2, 2},
         ket::InfinitePEPS,
@@ -147,7 +168,7 @@ function contract_vertical_operator(
         O[dNb dSb; dNt dSt]
 end
 
-function contract_horizontal_operator(
+function contract_local_operator1x2(
         coord::CartesianIndex{2},
         O::AbstractTensorMap{<:Any, <:Any, 2, 2},
         ket::InfinitePEPS,
@@ -181,20 +202,7 @@ function contract_horizontal_operator(
     end
 end
 
-function contract_local_norm(
-        inds::NTuple{2, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
-    )
-    ind_relative = inds[2] - inds[1]
-    return if ind_relative == CartesianIndex(1, 0)
-        contract_vertical_norm(inds[1], ket, bra, env)
-    elseif ind_relative == CartesianIndex(0, 1)
-        contract_horizontal_norm(inds[1], ket, bra, env)
-    else
-        error("Only contractions for nearest neighbor bonds are implemented.")
-    end
-end
-
-function contract_vertical_norm(
+function contract_local_norm2x1(
         coord::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
     )
     row, col = Tuple(coord)
@@ -217,7 +225,7 @@ function contract_vertical_norm(
         M_northwest[DNWb; DNWt]
 end
 
-function contract_horizontal_norm(
+function contract_local_norm1x2(
         coord::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
     )
     row, col = Tuple(coord)

@@ -28,7 +28,7 @@ function _trivial_gates(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: Ele
         h = TensorKit.id(elt, V1 ⊗ V2)
         return [site1, site2] => h
     end
-    return TrotterGates(lattice, vec(gates))
+    return LocalCircuit(lattice, vec(gates))
 end
 
 """
