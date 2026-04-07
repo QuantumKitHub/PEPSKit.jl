@@ -19,7 +19,7 @@ function CTMRGAlgorithm(;
         maxiter = Defaults.ctmrg_maxiter, miniter = Defaults.ctmrg_miniter,
         verbosity = Defaults.ctmrg_verbosity,
         trunc = (; alg = Defaults.trunc),
-        svd_alg = (;),
+        decomposition_alg = (;),
         projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
     )
     # replace symbol with projector alg type
@@ -27,9 +27,11 @@ function CTMRGAlgorithm(;
     alg_type = CTMRG_SYMBOLS[alg]
 
     # parse CTMRG projector algorithm
-
+    if alg == :c4v && projector_alg == Defaults.projector_alg
+        projector_alg = Defaults.projector_alg_c4v
+    end
     projector_algorithm = ProjectorAlgorithm(;
-        alg = projector_alg, svd_alg, trunc, verbosity
+        alg = projector_alg, decomposition_alg, trunc, verbosity
     )
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
@@ -64,8 +66,9 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     3. Iteration info
     4. Debug info
 * `alg::Symbol=:$(Defaults.ctmrg_alg)` : Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
-    - `:simultaneous`: Simultaneous expansion and renormalization of all sides.
-    - `:sequential`: Sequential application of left moves and rotations.
+    - `:simultaneous` : Simultaneous expansion and renormalization of all sides.
+    - `:sequential` : Sequential application of left moves and rotations.
+    - `:c4v` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
 
 ### Projector algorithm
 
@@ -76,32 +79,19 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `svd_alg::Union{<:SVDAdjoint,NamedTuple}` : SVD algorithm for computing projectors. See also [`SVDAdjoint`](@ref). By default, a reverse-rule tolerance of `tol=1e1tol` where the `krylovdim` is adapted to the `env₀` environment dimension.
+* `decomposition_alg` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
+    - `:c4v_qr` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
 
 ## Return values
 
-The CTMRG routine returns the final CTMRG environment as well as an information `NamedTuple`
-containing the following fields:
-
-* `truncation_error` : Last (maximal) SVD truncation error of the CTMRG projectors.
-* `condition_number` : Last (maximal) condition number of the enlarged CTMRG environment.
-* `convergence_error` : Convergence error of the CTMRG algorithm at termination.
-
-In case the `alg` is a `SimultaneousCTMRG`, the last SVD will also be returned:
-
-* `U` : Last unit cell of left singular vectors.
-* `S` : Last unit cell of singular values.
-* `V` : Last unit cell of right singular vectors.
-
-If, in addition, the specified SVD algorithm computes the full, untruncated SVD, the full
-set of vectors and values will be returned as well:
-
-* `U_full` : Last unit cell of all left singular vectors.
-* `S_full` : Last unit cell of all singular values.
-* `V_full` : Last unit cell of all right singular vectors.
+The `leading_boundary` routine returns the final environment as well as an information `NamedTuple`
+that generally contains a `contraction_metrics` `NamedTuple` storing different contents depending
+on the chosen `alg`. Depending on the contraction method, the information tuple may also contain
+the final tensor decomposition (used in the projectors) including its truncation indices.
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
@@ -110,6 +100,7 @@ end
 function leading_boundary(
         env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
+    check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
@@ -120,7 +111,7 @@ function leading_boundary(
         ctmrg_loginit!(log, η, network, env₀)
         local info
         for iter in 1:(alg.maxiter)
-            env, info = ctmrg_iteration(network, env, alg)  # Grow and renormalize in all 4 directions
+            env, info = ctmrg_iteration(network, env, alg)
             η, CS, TS = calc_convergence(env, CS, TS)
             info = @insert info.convergence_error = η
 
@@ -141,6 +132,14 @@ function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
     return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
+"""
+    check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorithm)
+
+Check compatibility of a given network and environment with a specified CTMRG algorithm.
+"""
+function check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorithm) end
+@non_differentiable check_input(args...)
+
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env)
     return @infov 2 loginit!(log, η, network_value(network, env))
@@ -160,27 +159,31 @@ end
 @non_differentiable ctmrg_logfinish!(args...)
 @non_differentiable ctmrg_logcancel!(args...)
 
-# TODO: we might want to consider embedding the smaller tensor into the larger space and then compute the difference
 """
-    _singular_value_distance((S₁, S₂))
+    _singular_value_distance(S₁, S₂)
 
 Compute the singular value distance as an error measure, e.g. for CTMRG iterations.
 To that end, the singular values of the current iteration `S₁` are compared with the
 previous one `S₂`. When the virtual spaces change, this comparison is not directly possible
 such that both tensors are projected into the smaller space and then subtracted.
 """
-function _singular_value_distance((S₁, S₂))
-    V₁ = space(S₁, 1)
-    V₂ = space(S₂, 1)
-    if V₁ == V₂
-        return norm(S₁ - S₂)
-    else
-        V = infimum(V₁, V₂)
-        e1 = isometry(V₁, V)
-        e2 = isometry(V₂, V)
-        return norm(e1' * S₁ * e1 - e2' * S₂ * e2)
+function _singular_value_distance(S₁::SV, S₂::SV) where {SV <: TensorKit.SectorVector}
+    # allocate vector for difference - possibly grow
+    V₁ = Vect[sectortype(S₁)](c => length(v) for (c, v) in blocks(S₁))
+    V₂ = Vect[sectortype(S₂)](c => length(v) for (c, v) in blocks(S₂))
+    diff = zerovector!(SV(undef, supremum(V₁, V₂)))
+
+    for (c, b) in blocks(S₁)
+        diff[c][1:length(b)] .= b
     end
+    for (c, b) in blocks(S₂)
+        diff[c][1:length(b)] .-= b
+    end
+
+    return norm(diff)
 end
+_singular_value_distance(S₁::DiagonalTensorMap, S₂::DiagonalTensorMap) =
+    _singular_value_distance(diagview(S₁), diagview(S₂))
 
 """
     calc_convergence(env, CS_old, TS_old)
@@ -192,10 +195,10 @@ This determined either from the previous corner and edge singular values
 """
 function calc_convergence(env, CS_old, TS_old)
     CS_new = map(svd_vals, env.corners)
-    ΔCS = maximum(_singular_value_distance, zip(CS_old, CS_new))
+    ΔCS = maximum(splat(_singular_value_distance), zip(CS_old, CS_new))
 
     TS_new = map(svd_vals, env.edges)
-    ΔTS = maximum(_singular_value_distance, zip(TS_old, TS_new))
+    ΔTS = maximum(splat(_singular_value_distance), zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
 

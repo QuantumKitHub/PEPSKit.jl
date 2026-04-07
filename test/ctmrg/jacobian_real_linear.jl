@@ -4,7 +4,7 @@ using Accessors
 using Zygote
 using TensorKit, KrylovKit, PEPSKit
 using PEPSKit:
-    ctmrg_iteration, fix_relative_phases, fix_global_phases, _fix_svd_algorithm
+    ctmrg_iteration, fix_relative_phases, fix_global_phases, ScramblingEnvGauge
 
 algs = [
     (:fixed, SimultaneousCTMRG(; projector_alg = :halfinfinite)),
@@ -16,6 +16,7 @@ algs = [
     # (:diffgauge, SimultaneousCTMRG(; projector_alg=FullInfiniteProjector)),
 ]
 Dbond, χenv = 2, 16
+alg_gauge = ScramblingEnvGauge()
 
 @testset "$iterscheme and $ctm_alg" for (iterscheme, ctm_alg) in algs
     Random.seed!(123521938519)
@@ -25,18 +26,16 @@ Dbond, χenv = 2, 16
     # follow code of _rrule
     if iterscheme == :fixed
         env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
-        env_fixed, signs = gauge_fix(env, env_conv)
-        svd_alg_fixed = _fix_svd_algorithm(ctm_alg.projector_alg.svd_alg, signs, info)
-        alg_fixed = @set ctm_alg.projector_alg.svd_alg = svd_alg_fixed
-        alg_fixed = @set alg_fixed.projector_alg.trunc = notrunc()
+        env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
+        alg_fixed = gauge_fix(ctm_alg, signs, info)
 
         _, env_vjp = pullback(state, env_fixed) do A, x
             e, = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)
-            return PEPSKit.fix_global_phases(x, e)
+            return PEPSKit.fix_global_phases(e, x)
         end
     elseif iterscheme == :diffgauge
         _, env_vjp = pullback(state, env) do A, x
-            return gauge_fix(x, ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)[1])[1]
+            return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)[1], x, alg_gauge)[1]
         end
     end
 

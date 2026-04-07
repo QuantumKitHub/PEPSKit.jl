@@ -74,6 +74,9 @@ end
         @time @safetestset "CTMRG gradients" begin
             include("gradients/ctmrg_gradients.jl")
         end
+        @time @safetestset "C4v CTMRG gradients" begin
+            include("gradients/c4v_ctmrg_gradients.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "BOUNDARYMPS"
         @time @safetestset "VUMPS" begin
@@ -88,7 +91,7 @@ end
             include("bondenv/benv_gaugefix.jl")
         end
         @time @safetestset "Full update bond environment" begin
-            include("bondenv/benv_fu.jl")
+            include("bondenv/benv_ctm.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "TIMEEVOL"
@@ -114,6 +117,9 @@ end
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
+        @time @safetestset "Eigh wrapper" begin
+            include("utility/eigh_wrapper.jl")
+        end
         @time @safetestset "SVD wrapper" begin
             include("utility/svd_wrapper.jl")
         end

@@ -31,13 +31,6 @@ struct RotateReflect <: SymmetrizationStyle end
 
 # some rather shady definitions for 'hermitian conjugate' at the level of a single tensor
 
-function herm_depth(x::PEPSTensor)
-    return permute(x', ((5,), (3, 2, 1, 4)))
-end
-function herm_depth(x::PEPOTensor)
-    return permute(x', ((5, 6), (3, 2, 1, 4)))
-end
-
 function herm_width(x::PEPSTensor)
     return permute(x', ((5,), (1, 4, 3, 2)))
 end
@@ -103,6 +96,8 @@ Symmetrize a PEPS using the given `SymmetrizationStyle` in-place.
 symmetrize!(peps::InfinitePEPS, ::Nothing) = peps
 
 function symmetrize!(peps::InfinitePEPS, ::ReflectDepth)
+    BraidingStyle(sectortype(peps)) != Bosonic() &&
+        error("Spatial symmetrization of PEPS is currently only implemented for bosonic sectors.")
     depth, width = size(peps)
     if mod(depth, 2) == 1
         for w in 1:width
@@ -120,6 +115,8 @@ function symmetrize!(peps::InfinitePEPS, ::ReflectDepth)
 end
 
 function symmetrize!(peps::InfinitePEPS, ::ReflectWidth)
+    BraidingStyle(sectortype(peps)) != Bosonic() &&
+        error("Spatial symmetrization of PEPS is currently only implemented for bosonic sectors.")
     depth, width = size(peps)
     if mod(width, 2) == 1
         for d in 1:depth
@@ -137,6 +134,8 @@ function symmetrize!(peps::InfinitePEPS, ::ReflectWidth)
 end
 
 function symmetrize!(peps::InfinitePEPS, symm::Rotate)
+    BraidingStyle(sectortype(peps)) != Bosonic() &&
+        error("Spatial symmetrization of PEPS is currently only implemented for bosonic sectors.")
     if !isequal(size(peps)...)
         throw(ArgumentError("$symm can only be applied to square unit cells"))
     end
@@ -148,6 +147,8 @@ function symmetrize!(peps::InfinitePEPS, symm::Rotate)
 end
 
 function symmetrize!(peps::InfinitePEPS, symm::RotateReflect)
+    BraidingStyle(sectortype(peps)) != Bosonic() &&
+        error("Spatial symmetrization of PEPS is currently only implemented for bosonic sectors.")
     # TODO: clean up this mess...
 
     # some auxiliary transformations
