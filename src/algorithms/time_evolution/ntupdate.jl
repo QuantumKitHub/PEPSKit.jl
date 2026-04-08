@@ -91,10 +91,7 @@ function ntu_iter(
             info′ = (; fid = 1.0)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
-            if alg.bipartite
-                length(sites) > 2 && error("Multi-site MPO gates are not compatible with bipartite states.")
-                r > 1 && continue
-            end
+            alg.bipartite && r > 1 && continue
             state2, wts, info′ = _ntu_iter(state2, gate, wts, sites, alg)
             (!alg.bipartite) && continue
             if d == 1
