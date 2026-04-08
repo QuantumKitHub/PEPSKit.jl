@@ -109,6 +109,7 @@ function benv_tensor(
             indexlist[1][ax] = indexlist[2][ax] = ax
         end
     end
+    twistdual!(ket2, 1)
     return ncon([bra, ket2], indexlist, [true, false])
 end
 
