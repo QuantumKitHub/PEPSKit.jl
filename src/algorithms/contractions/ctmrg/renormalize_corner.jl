@@ -336,7 +336,7 @@ Alternatively, provide the constituent tensors and perform the complete contract
 ```
 """
 function renormalize_southwest_corner((row, col), enlarged_env, P_left, P_right)
-    return renormalize_corner(
+    return renormalize_southwest_corner(
         enlarged_env[SOUTHWEST, row, col],
         P_left[WEST, row, col],
         P_right[SOUTH, row, _next(col, end)],
