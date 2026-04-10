@@ -331,6 +331,19 @@ function _rrule(
     return (env, info), leading_boundary_fixed_pullback
 end
 
+function _rrule(
+        gradmode::GradMode,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit,
+        state,
+        alg::CTMRGAlgorithmTriangular,
+    )
+    msg = "Fixed-point differentiation is not available for `CTMRGAlgorithmTriangular`, \
+            since gauge fixing for triangular CTMRG is currently not implemented."
+    throw(ArgumentError(msg))
+end
+
 function gauge_fix(alg::SVDAdjoint, signs, info)
     # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
     rowsize, colsize = size(signs, 2), size(signs, 3)
