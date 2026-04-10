@@ -34,6 +34,13 @@ with the east virtual legs transferred to the R tensor
 Only `R` is calculated and returned.
 """
 function qr_twolayer(A1::PEPOTensor, A2::PEPOTensor)
+    MdagM = _get_MdagM(A1, A2)
+    D, R = eigh_full!(MdagM)
+    # TODO: set small negative eigenvalues due to numerical errors to 0
+    R = sdiag_pow(D, 0.5) * R'
+    return R
+end
+function _get_MdagM(A1::PEPOTensor, A2::PEPOTensor)
     @assert isdual(virtualspace(A1, EAST)) && isdual(virtualspace(A2, EAST))
     A2′ = twistdual(A2, [2, 3, 5, 6])
     A1′ = twistdual(A1, [1, 3, 5, 6])
@@ -41,10 +48,8 @@ function qr_twolayer(A1::PEPOTensor, A2::PEPOTensor)
         conj(A2[z z2; Y2 x2 y2 X2]) * A2′[z′ z2; Y2 x2′ y2 X2]
     @tensoropt MdagM[x1 x2; x1′ x2′] := MdagM[x2 z z′ x2′] *
         conj(A1[z1 z; Y1 x1 y1 X1]) * A1′[z1 z′; Y1 x1′ y1 X1]
-    # avoid small negative eigenvalues due to numerical errors
-    D, R = eigh_trunc!(MdagM; trunc = trunctol(; atol = 1.0e-16))
-    R = sdiag_pow(D, 0.5) * R'
-    return R
+    project_hermitian!(MdagM)
+    return MdagM
 end
 
 """
@@ -62,17 +67,22 @@ with the west virtual legs transferred to the L tensor
 Only `L` is calculated and returned.
 """
 function lq_twolayer(A1::PEPOTensor, A2::PEPOTensor)
+    MMdag = _get_MMdag(A1, A2)
+    D, L = eigh_full!(MMdag)
+    # TODO: set small negative eigenvalues due to numerical errors to 0
+    L = L * sdiag_pow(D, 0.5)
+    return L
+end
+function _get_MMdag(A1::PEPOTensor, A2::PEPOTensor)
     @assert !isdual(virtualspace(A1, WEST)) && !isdual(virtualspace(A2, WEST))
     A2′ = twistnondual(A2, [2, 3, 4, 5])
     A1′ = twistnondual(A1, [1, 3, 4, 5])
     @tensoropt MMdag[x2 z z′ x2′] :=
-        A2[z z2; Y2 X2 y2 x2] * conj(A2′[z′ z2; Y2 X2 y2 x2′])
+        A2′[z z2; Y2 X2 y2 x2] * conj(A2[z′ z2; Y2 X2 y2 x2′])
     @tensoropt MMdag[x1 x2; x1′ x2′] := MMdag[x2 z z′ x2′] *
-        A1[z1 z; Y1 X1 y1 x1] * conj(A1′[z1 z′; Y1 X1 y1 x1′])
-    # avoid small negative eigenvalues due to numerical errors
-    D, L = eigh_trunc!(MMdag; trunc = trunctol(; atol = 1.0e-16))
-    L = L * sdiag_pow(D, 0.5)
-    return L
+        A1′[z1 z; Y1 X1 y1 x1] * conj(A1[z1 z′; Y1 X1 y1 x1′])
+    project_hermitian!(MMdag)
+    return MMdag
 end
 
 """

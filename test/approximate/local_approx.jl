@@ -37,6 +37,19 @@ end
     @test ϵ ≈ localapprox_cost(A1, A2, B1, B2, P1, P2)
 end
 
+@testset "Fermionic twists for qr/lq_twolayer" begin
+    Vphy = Vect[FermionParity](0 => 2, 1 => 2)
+    Vvir = Vect[FermionParity](0 => 2, 1 => 2)
+    for _ in 1:4 # multiple trials without setting seed
+        Aspace = (Vphy ⊗ Vphy' ← Vvir ⊗ Vvir ⊗ Vvir' ⊗ Vvir')
+        A1 = randn(ComplexF64, Aspace)
+        A2 = randn(ComplexF64, Aspace)
+        for MM in [PEPSKit._get_MMdag(A1, A2), PEPSKit._get_MdagM(A1, A2)]
+            @test isposdef(MM)
+        end
+    end
+end
+
 @testset "Virtual space matching" begin
     Vps = ComplexSpace.([2 2; 2 2])
     Vns = ComplexSpace.([2 4; 5 3])
