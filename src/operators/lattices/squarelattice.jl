@@ -29,19 +29,19 @@ function vertices(lattice::InfiniteSquare)
 end
 
 function nearest_neighbours(lattice::InfiniteSquare)
-    neighbors = Tuple{CartesianIndex, CartesianIndex}[]
+    neighbors = Vector{CartesianIndex{2}}[]
     for idx in vertices(lattice)
-        push!(neighbors, (idx, idx + CartesianIndex(0, 1)))
-        push!(neighbors, (idx, idx + CartesianIndex(1, 0)))
+        push!(neighbors, [idx, idx + CartesianIndex(0, 1)])
+        push!(neighbors, [idx, idx + CartesianIndex(1, 0)])
     end
     return neighbors
 end
 
 function next_nearest_neighbours(lattice::InfiniteSquare)
-    neighbors = Tuple{CartesianIndex, CartesianIndex}[]
+    neighbors = Vector{CartesianIndex{2}}[]
     for idx in vertices(lattice)
-        push!(neighbors, (idx, idx + CartesianIndex(1, 1)))
-        push!(neighbors, (idx + CartesianIndex(0, 1), idx + CartesianIndex(1, 0)))
+        push!(neighbors, [idx, idx + CartesianIndex(1, 1)])
+        push!(neighbors, [idx + CartesianIndex(0, 1), idx + CartesianIndex(1, 0)])
     end
     return neighbors
 end
