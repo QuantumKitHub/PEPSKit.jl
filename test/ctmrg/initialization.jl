@@ -14,7 +14,7 @@ symmetries = [Z2Irrep, Trivial]
 tol = 1.0e-4
 maxiter = 1000
 verbosity = 2
-trunc = FixedSpaceTruncation()
+trunc = truncrank(χ)
 boundary_alg = (;
     alg = :simultaneous,
     tol,
@@ -33,19 +33,19 @@ boundary_alg = (;
 
     # random, doesn't converge
     Random.seed!(sd)
-    env0_rand = initialize_environment(n, RandomInitialization(), Venv)
+    env0_rand = initialize_ctmrg_environment(n, RandomInitialization(), Venv)
     env_rand, info = leading_boundary(env0_rand, n; boundary_alg...)
     @test_broken info.convergence_error ≤ tol
 
     # embedded product state, converges
     Random.seed!(sd)
-    env0_prod = initialize_environment(n, ProductStateInitialization(), Venv)
+    env0_prod = initialize_ctmrg_environment(n, ProductStateInitialization())
     env_prod, info = leading_boundary(env0_prod, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 
     # grown product state, converges
     Random.seed!(sd)
-    env0_appl = initialize_environment(InfiniteSquareNetwork(n), ApplicationInitialization(), truncdim(χ))
+    env0_appl = initialize_ctmrg_environment(n, ApplicationInitialization())
     env_appl, info = leading_boundary(env0_appl, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 end

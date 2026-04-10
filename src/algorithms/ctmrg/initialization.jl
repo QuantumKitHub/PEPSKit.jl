@@ -1,12 +1,19 @@
 abstract type InitializationStyle end
-struct ProductStateInitialization <: InitializationStyle end
+struct ProductStateInitialization{F} <: InitializationStyle
+    f::F
+    ProductStateInitialization(f::F = ones) where {F} = new{F}(f)
+end
 struct RandomInitialization{F} <: InitializationStyle
     f::F
     RandomInitialization(f::F = randn) where {F} = new{F}(f)
 end
-struct ApplicationInitialization <: InitializationStyle end
+struct ApplicationInitialization{F} <: InitializationStyle
+    f::F
+    ApplicationInitialization(f::F = ones) where {F} = new{F}(f)
+end
 
-function initialize_environment(
+# initialize randomly, using same virtual space specification as the CTMRGEnv constructor
+function initialize_ctmrg_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
         alg::RandomInitialization,
@@ -15,45 +22,35 @@ function initialize_environment(
     return CTMRGEnv(alg.f, elt, n, virtual_spaces...)
 end
 
-function initialize_environment(
+function initialize_ctmrg_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
-        ::ProductStateInitialization,
-        virtual_spaces... = oneunit(spacetype(n)),
+        alg::ProductStateInitialization,
     )
-    i = one(sectortype(n))
-    env = CTMRGEnv(ones, elt, n, virtual_spaces...)
-    for (dir, r, c) in Iterators.product(axes(env)...)
-        @assert i in blocksectors(env.corners[dir, r, c])
-        for (c, b) in blocks(env.corners[dir, r, c])
-            b .= 0
-            c == i && (b[1, 1] = 1)
-        end
-    end
+    env = CTMRGEnv(ProductStateEnv(alg.f, elt, n))
     return env
 end
 
-function initialize_environment(
+function initialize_ctmrg_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
-        ::ApplicationInitialization,
-        trunc::TruncationStrategy;
-        boundary_alg = (;
-            alg = :sequential, tol = 1.0e-5, maxiter = 10, verbosity = -1,
-        )
+        alg::ApplicationInitialization,
+        env0::ProductStateEnv = ProductStateEnv(alg.f, elt, n)
     )
-    boundary_alg = (; boundary_alg..., trunc) # merge trunc with optional alg definition
-    env = initialize_environment(elt, n, ProductStateInitialization())
-    env, = leading_boundary(env, n; boundary_alg...)
+    dummy_alg = CTMRGAlgorithm(; alg = :simultaneous, trunc = (; alg = :notrunc))
+    env, = ctmrg_iteration(n, CTMRGEnv(env0), dummy_alg)
     return env
 end
 
-function initialize_environment(n::InfiniteSquareNetwork, args...; kwargs...)
-    return initialize_environment(scalartype(n), n, args...; kwargs...)
+function initialize_ctmrg_environment(
+        A::Union{InfiniteSquareNetwork, InfinitePEPS, InfinitePartitionFunction}, args...;
+        kwargs...
+    )
+    return initialize_ctmrg_environment(scalartype(A), A, args...; kwargs...)
 end
-function initialize_environment(A::Union{InfinitePEPS, InfinitePartitionFunction}, args...; kwargs...)
-    return initialize_environment(scalartype(A), A, args...; kwargs...)
-end
-function initialize_environment(elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...; kwargs...)
-    return initialize_environment(elt, InfiniteSquareNetwork(A), args...; kwargs...)
+function initialize_ctmrg_environment(
+        elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
+        kwargs...
+    )
+    return initialize_ctmrg_environment(elt, InfiniteSquareNetwork(A), args...; kwargs...)
 end

@@ -68,6 +68,7 @@ include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
+include("environments/product_state_environments.jl")
 
 include("algorithms/contractions/ctmrg/types.jl")
 include("algorithms/contractions/ctmrg/expr.jl")
@@ -129,7 +130,7 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
-export initialize_environment,
+export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
