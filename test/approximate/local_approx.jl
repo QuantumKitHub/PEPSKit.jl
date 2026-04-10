@@ -6,16 +6,7 @@ using PEPSKit
 using PEPSKit: localapprox_projector
 
 """
-Cost function of LocalApprox
-```
-        ↓ ╱      ↓ ╱            ↓ ╱                 ↓ ╱
-    ----A2---←---B2---      ----A2-←-|╲       ╱|--←-B2---
-      ╱ |      ╱ |            ╱ |    | ╲     ╱ |  ╱ |
-        ↓        ↓       -      ↓    |P1├-←-┤P2|    ↓
-        | ╱      | ╱            | ╱  | ╱     ╲ |    | ╱
-    ----A1---←---B1---      ----A1-←-|╱       ╲|--←-B1---
-      ╱ ↓      ╱ ↓            ╱ ↓                 ╱ ↓
-```
+Cost function of LocalApproximation.
 For test convenience, open virtual indices are made trivial and removed.
 """
 function localapprox_cost(A1, A2, B1, B2, P1, P2)
@@ -26,7 +17,7 @@ function localapprox_cost(A1, A2, B1, B2, P1, P2)
     return norm(net1 - net2)
 end
 
-@testset "Cost function of LocalApprox" begin
+@testset "Cost function of LocalApproximation" begin
     Random.seed!(0)
     Vaux, Vphy, V = ℂ^1, ℂ^10, ℂ^4
     A1 = normalize(randn(Vphy ⊗ Vphy' ← Vaux ⊗ V ⊗ Vaux' ⊗ Vaux'), Inf)
@@ -51,7 +42,7 @@ end
     Vns = ComplexSpace.([2 4; 5 3])
     Ves = ComplexSpace.([3 5; 4 2])
     ρ = InfinitePEPO(randn, ComplexF64, Vps, Vns, Ves)
-    alg = LocalApprox(truncrank(2))
+    alg = LocalApproximation(truncrank(2))
     ρ2, = approximate(ρ, ρ, alg)
     @test ρ2 isa InfinitePEPO
 end

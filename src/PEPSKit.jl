@@ -144,7 +144,7 @@ export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
 
-export LocalApprox
+export LocalApproximation
 export approximate
 
 export absorb_weight

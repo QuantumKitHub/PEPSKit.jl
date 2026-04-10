@@ -1,9 +1,27 @@
-struct LocalApprox <: ApproximateAlgorithm
+"""
+$(TYPEDEF)
+
+Algorithm to approximate a two-layer network by truncating each pair
+of virtual spaces with projectors that minimizes the local cost function,
+which is the 2-norm of (e.g. for two layers of iPEPO)
+```
+        ↓ ╱      ↓ ╱            ↓ ╱                 ↓ ╱
+    ----A2---←---B2---      ----A2-←-|╲       ╱|--←-B2---
+      ╱ |      ╱ |            ╱ |    | ╲     ╱ |  ╱ |
+        ↓        ↓       -      ↓    |P1├-←-┤P2|    ↓
+        | ╱      | ╱            | ╱  | ╱     ╲ |    | ╱
+    ----A1---←---B1---      ----A1-←-|╱       ╲|--←-B1---
+      ╱ ↓      ╱ ↓            ╱ ↓                 ╱ ↓
+```
+on each bond of the network.
+"""
+struct LocalApproximation <: ApproximateAlgorithm
     trunc::TruncationStrategy
 end
 
 """
 Calculate the QR decomposition of 2-layer PEPO tensor
+with the east virtual legs transferred to the R tensor
 ```
         ↓ ╱
     ----A2-←-           ┌-←-
@@ -31,6 +49,7 @@ end
 
 """
 Calculate the LQ decomposition of 2-layer PEPO tensor
+with the west virtual legs transferred to the L tensor
 ```
         ↓ ╱  
     --←-A2---    -←-┐
@@ -85,16 +104,18 @@ end
 
 """
 Compute an approximation to the product of two 1-layer InfinitePEPOs `ρ1`, `ρ2`
-with virtual bond truncated with `LocalApprox`.
+with virtual bond truncated with `LocalApproximation`.
 """
-function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalApprox)
-    @assert size(ρ1) == size(ρ2)
-    @assert size(ρ1, 3) == size(ρ2, 3) == 1
-    Nr, Nc, = size(ρ1)
-    ρ1 = standardize_virtual_spaces(ρ1)
-    ρ2 = standardize_virtual_spaces(ρ2)
+function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalApproximation)
+    # sanity checks
+    (size(ρ1) == size(ρ2)) || error("Input PEPOs have different unit cell sizes.")
+    (size(ρ1, 3) == 1) || error("ρ1 should have only one layer.")
+    (size(ρ2, 3) == 1) || error("ρ2 should have only one layer.")
+    all(all.(_check_virtual_dualness(ρ1))) || error("East and north virtual spaces in ρ1 should be dual spaces.")
+    all(all.(_check_virtual_dualness(ρ2))) || error("East and north virtual spaces in ρ2 should be dual spaces.")
     # x-bond projectors: [r, c] on bond [r, c]--[r, c+1]
-    Pxs = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
+    Nr, Nc, = size(ρ1)
+    Px_errs = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
         P1, P2, s, ϵ = localapprox_projector(
             ρ1[r, c], ρ2[r, c], ρ1[r, _next(c, Nc)], ρ2[r, _next(c, Nc)];
             trunc = alg.trunc
@@ -102,7 +123,7 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
         return (P1, P2, ϵ)
     end
     # y-bond projectors: [r, c] on bond [r, c]--[r-1, c]
-    Pys = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
+    Py_errs = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
         # TODO: reduce repeated rotations
         P1, P2, s, ϵ = localapprox_projector(
             rotr90(ρ1[r, c]), rotr90(ρ2[r, c]),
@@ -113,15 +134,13 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
     end
     # apply projectors
     As = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
-        Pw, Pe = Pxs[r, _prev(c, Nc)][2], Pxs[r, c][1]
-        Pn, Ps = Pys[r, c][1], Pys[_next(r, Nr), c][2]
+        Pw, Pe = Px_errs[r, _prev(c, Nc)][2], Px_errs[r, c][1]
+        Pn, Ps = Py_errs[r, c][1], Py_errs[_next(r, Nr), c][2]
         @tensoropt A[p1 p2; n e s w] :=
             (ρ1[r, c])[p1 p; n1 e1 s1 w1] * (ρ2[r, c])[p p2; n2 e2 s2 w2] *
             Pn[n1 n2; n] * Pe[e1 e2; e] * Ps[s; s1 s2] * Pw[w; w1 w2]
         return A
     end
-    ϵx = maximum(map(Base.Fix2(getindex, 3), Pxs))
-    ϵy = maximum(map(Base.Fix2(getindex, 3), Pys))
-    info = (; Pxs, Pys, ϵ = max(ϵx, ϵy))
+    info = (; Px_errs, Py_errs)
     return InfinitePEPO(cat(As; dims = 3)), info
 end
