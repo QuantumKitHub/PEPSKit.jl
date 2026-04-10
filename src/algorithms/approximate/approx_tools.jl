@@ -33,7 +33,7 @@ function _flip_virtual_spaces!(
                 flip_ys[_next(r, Nr), c], flip_xs[r, _prev(c, Nc)],
             ]
         ) .+ (isa(state, InfinitePEPS) ? 1 : 2)
-        state.A[r, c] = flip(state.A[r, c], inds; inv)
+        state[r, c] = flip(state[r, c], inds; inv)
     end
     return state
 end
