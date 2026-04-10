@@ -74,17 +74,11 @@ function bond_truncate(
     perm_ab = ((1, 3), (4, 2))
     a, s0, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trunc)
     a, b = absorb_s(a, s0, b)
-    #= temporarily reorder axes of a and b to
-        1 -a/b- 2
-            ↓
-            3
-    =#
-    perm = ((1, 3), (2,))
-    a, b = permute(a, perm), permute(b, perm)
+    # put b in MPS axis order
+    b = permute(b, ((1, 2), (3,)))
     ab = _combine_ab(a, b)
     # cost function will be normalized by initial value
-    cost00 = cost_function_als(benv, ab, a2b2)
-    fid = fidelity(benv, ab, a2b2)
+    cost00, fid = cost_function_als(benv, ab, a2b2)
     cost0, fid0, Δcost, Δfid, Δs = cost00, fid, NaN, NaN, NaN
     verbose && @info "ALS init" * _als_message(0, cost0, fid, Δcost, Δfid, Δs, 0.0)
     for iter in 1:(alg.maxiter)
@@ -99,15 +93,14 @@ function bond_truncate(
         =#
         Ra = _tensor_Ra(benv, b)
         Sa = _tensor_Sa(benv, b, a2b2)
-        a, info_a = _solve_ab(Ra, Sa, a)
+        a, info_a = _solve_als(Ra, Sa, a)
         # Fixing `a`, solve for `b` from `Rb b = Sb`
         Rb = _tensor_Rb(benv, a)
         Sb = _tensor_Sb(benv, a, a2b2)
-        b, info_b = _solve_ab(Rb, Sb, b)
+        b, info_b = _solve_als(Rb, Sb, b)
         @debug "Bond truncation info" info_a info_b
         ab = _combine_ab(a, b)
-        cost = cost_function_als(benv, ab, a2b2)
-        fid = fidelity(benv, ab, a2b2)
+        cost, fid = cost_function_als(benv, ab, a2b2)
         # TODO: replace with truncated svdvals (without calculating u, vh)
         _, s, _ = svd_trunc!(permute(ab, perm_ab); trunc = alg.trunc)
         # fidelity, cost and normalized bond-s change

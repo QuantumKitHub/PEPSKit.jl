@@ -108,6 +108,7 @@ function _su_iter!(
     # rotate back
     A = _bond_rotation(A, bond[1], rev; inv = true)
     B = _bond_rotation(B, bond[1], rev; inv = true)
+    rev && (s = transpose(s))
     # remove environment weights
     siteA, siteB = map(sites) do site
         return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
@@ -127,12 +128,12 @@ end
 One iteration of simple update
 """
 function su_iter(
-        state::InfiniteState, gates::TrotterGates,
+        state::InfiniteState, circuit::LocalCircuit,
         alg::SimpleUpdate, env::SUWeight
     )
     Nr, Nc, = size(state)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
-    for (sites, gate) in gates.terms
+    for (sites, gate) in circuit.gates
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state
@@ -141,10 +142,7 @@ function su_iter(
             state2[r, c] = _apply_sitegate(state2[r, c], gate; alg.purified)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
-            if alg.bipartite
-                length(sites) > 2 && error("Multi-site MPO gates are not compatible with bipartite states.")
-                r > 1 && continue
-            end
+            alg.bipartite && r > 1 && continue
             ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue

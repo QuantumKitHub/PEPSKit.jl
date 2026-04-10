@@ -1,5 +1,5 @@
 """
-Replace bond environment `benv` by its positive approximant `Z† Z`
+Find positive approximant `Z† Z` of a norm tensor `benv`
 (returns the "half environment" `Z`)
 ```
     ┌-----------------┐     ┌---------------┐
@@ -11,9 +11,9 @@ Replace bond environment `benv` by its positive approximant `Z† Z`
     └-----------------┘     └---------------┘
 ```
 """
-function positive_approx(benv::BondEnv)
+function positive_approx(benv::AbstractTensorMap{T, S, N, N}) where {T, S, N}
     # eigen-decomposition: benv = U D U'
-    D, U = eigh_full((benv + benv') / 2)
+    D, U = eigh_full!(project_hermitian(benv))
     # determine if `env` is (mostly) positive or negative
     sgn = sign(sum(D.data))
     # When optimizing the truncation of a bond,

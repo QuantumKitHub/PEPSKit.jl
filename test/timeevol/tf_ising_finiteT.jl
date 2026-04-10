@@ -44,12 +44,13 @@ dt, nstep = 1.0e-3, 400
 β = dt * nstep
 
 # when g = 2, β = 0.4 and 2β = 0.8 belong to two phases (without and with nonzero σᶻ)
-@testset "Finite-T SU (bipartite = $(bipartite))" for bipartite in (true, false)
+@testset "Finite-T SU (force_mpo = $(force_mpo))" for force_mpo in (false, true)
     # use second order Trotter decomposition
     symmetrize_gates = true
+    bipartite = true
 
     # PEPO approach: results at β, or T = 2.5
-    alg = SimpleUpdate(; trunc = trunc_pepo, purified = false, bipartite)
+    alg = SimpleUpdate(; trunc = trunc_pepo, purified = false, bipartite, force_mpo)
     pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0; symmetrize_gates)
 
     ## BP gauge fixing
@@ -80,7 +81,7 @@ dt, nstep = 1.0e-3, 400
     @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
 
     # Purification approach: results at 2β, or T = 1.25
-    alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite)
+    alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite, force_mpo)
     pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0; symmetrize_gates)
     env = converge_env(InfinitePEPS(pepo), 8)
     result_2β′ = measure_mag(pepo, env; purified = true)
