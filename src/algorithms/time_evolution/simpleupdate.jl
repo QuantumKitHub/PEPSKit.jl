@@ -142,10 +142,7 @@ function su_iter(
             state2[r, c] = _apply_sitegate(state2[r, c], gate; alg.purified)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
-            if alg.bipartite
-                length(sites) > 2 && error("Multi-site MPO gates are not compatible with bipartite states.")
-                r > 1 && continue
-            end
+            alg.bipartite && r > 1 && continue
             ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue
