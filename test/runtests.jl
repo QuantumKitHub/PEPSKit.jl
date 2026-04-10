@@ -93,6 +93,9 @@ end
         @time @safetestset "Gauge fixing" begin
             include("bondenv/benv_gaugefix.jl")
         end
+        @time @safetestset "Exact NTU bond environments" begin
+            include("bondenv/benv_ntu.jl")
+        end
         @time @safetestset "Full update bond environment" begin
             include("bondenv/benv_ctm.jl")
         end
@@ -112,6 +115,9 @@ end
         end
         @time @safetestset "J1-J2 model at finite temperature" begin
             include("timeevol/j1j2_finiteT.jl")
+        end
+        @time @safetestset "Transverse Field Ising model real-time evolution" begin
+            include("timeevol/tf_ising_realtime.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "TOOLBOX"
