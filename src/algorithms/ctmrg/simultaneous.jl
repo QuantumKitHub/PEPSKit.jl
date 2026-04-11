@@ -102,7 +102,8 @@ function simultaneous_projectors(
     trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
     alg′ = @set alg.trunc = trunc
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
-    return compute_projector(ec, coordinate, alg′)
+    last_space = space(env.edges[coordinate[1], coordinate′[2:3]...], 1)
+    return compute_projector(ec, coordinate, last_space, alg′)
 end
 function simultaneous_projectors(
         coordinate, enlarged_corners::Array{E, 3}, env, alg::FullInfiniteProjector
@@ -111,6 +112,7 @@ function simultaneous_projectors(
     coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
     coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
     coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
+    last_space = space(env.edges[coordinate[1], coordinate[2:3]...], 1)
     trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate2[2:3]...])
     alg′ = @set alg.trunc = trunc
     ec = (
@@ -119,7 +121,28 @@ function simultaneous_projectors(
         enlarged_corners[coordinate2...],
         enlarged_corners[coordinate3...],
     )
-    return compute_projector(ec, coordinate, alg′)
+    return compute_projector(ec, coordinate, last_space, alg′)
+end
+
+# TBD share code with FullInfiniteProjector?
+function simultaneous_projectors(
+        coordinate, enlarged_corners::Array{E, 3}, env, alg::RandomizedProjector
+    ) where {E}
+    coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    alg′ = @set alg.trunc = trunc
+    rowsize, colsize = size(enlarged_corners)[2:3]
+    coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
+    coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
+    coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
+    fq = FourQuadrants(
+        enlarged_corners[coordinate4...],
+        enlarged_corners[coordinate...],
+        enlarged_corners[coordinate2...],
+        enlarged_corners[coordinate3...],
+    )
+    last_space = space(env.edges[coordinate[1], coordinate′[2:3]...], 1)
+    return compute_projector(fq, coordinate, last_space, alg′)
 end
 
 """

@@ -78,3 +78,14 @@ function contract_projectors(U, S, V, Q, Q_next)
     P_right = isqS * U' * Q
     return P_left, P_right
 end
+
+function contract_projectors(U, S, V, fq::FourQuadrants)
+    isqS = sdiag_pow(S, -0.5)
+    # use * to respect fermionic case
+    p1 = (codomainind(fq), domainind(fq))
+    p2 = (codomainind(fq), (numout(fq) + 1,))
+    P_left = tensorcontract(fq.Q3, p1, false, fq.Q4 * V' * isqS, p2, false, p2)
+    p3 = ((1,), codomainind(fq) .+ 1)
+    P_right = tensorcontract(isqS * U' * fq.Q1, p3, false, fq.Q2, p1, false, p3)
+    return P_left, P_right
+end
