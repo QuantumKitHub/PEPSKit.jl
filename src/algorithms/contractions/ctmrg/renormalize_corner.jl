@@ -336,7 +336,7 @@ Alternatively, provide the constituent tensors and perform the complete contract
 ```
 """
 function renormalize_southwest_corner((row, col), enlarged_env, P_left, P_right)
-    return renormalize_corner(
+    return renormalize_southwest_corner(
         enlarged_env[SOUTHWEST, row, col],
         P_left[WEST, row, col],
         P_right[SOUTH, row, _next(col, end)],
@@ -345,7 +345,7 @@ end
 function renormalize_southwest_corner(
         quadrant::AbstractTensorMap{T, S, N, N}, P_left, P_right
     ) where {T, S, N}
-    return renormalize_southwest_corner(quadrant, P_left, P_right)
+    return renormalize_corner(quadrant, P_left, P_right)
 end
 function renormalize_southwest_corner(
         E_south, C_southwest, E_west, P_left, P_right, A::PEPSSandwich

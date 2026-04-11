@@ -23,6 +23,9 @@ end
         @time @safetestset "LocalOperator" begin
             include("types/localoperator.jl")
         end
+        @time @safetestset "LocalCircuit" begin
+            include("types/localcircuit.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "CTMRG"
         @time @safetestset "Gauge Fixing" begin
@@ -51,6 +54,9 @@ end
         end
         @time @safetestset "correlation length" begin
             include("ctmrg/correlation_length.jl")
+        end
+        @time @safetestset "Contractions" begin
+            include("ctmrg/contractions.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "BP"
