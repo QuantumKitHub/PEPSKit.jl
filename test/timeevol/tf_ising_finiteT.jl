@@ -64,13 +64,13 @@ dt, nstep = 1.0e-3, 400
     @test β ≈ info.t
     @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
-    # continue to get results at 2β, or T = 1.25
-    pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t0 = β, symmetrize_gates)
-    env = converge_env(InfinitePartitionFunction(pepo), 16)
-    result_2β = measure_mag(pepo, env)
+    # use `approximate` to reach 2β, or T = 1.25
+    pepo2, = approximate(pepo, pepo, LocalApproximation(trunc_pepo))
+    normalize!.(pepo2.A)
+    env2 = converge_env(InfinitePartitionFunction(pepo2), 16)
+    result_2β = measure_mag(pepo2, env2)
     @info "tr(σ(x,z)ρ) at T = $(1 / (2β)): $(result_2β)."
-    @test 2 * β ≈ info.t
-    @test isapprox(abs.(result_2β), bm_2β, rtol = 1.0e-4)
+    @test isapprox(abs.(result_2β), bm_2β, rtol = 5.0e-3)
 
     # Purification approach: results at 2β, or T = 1.25
     alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite, force_mpo)

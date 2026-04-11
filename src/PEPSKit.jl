@@ -105,6 +105,9 @@ include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
+include("algorithms/approximate/approx_tools.jl")
+include("algorithms/approximate/local_approx.jl")
+
 include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
@@ -140,6 +143,9 @@ export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
+
+export LocalApproximation
+export approximate
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation

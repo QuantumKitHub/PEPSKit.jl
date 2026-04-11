@@ -35,6 +35,7 @@ jobs:
           - utility
           - bondenv
           - timeevol
+          - approx
           - toolbox
         os:
           - ubuntu-latest
