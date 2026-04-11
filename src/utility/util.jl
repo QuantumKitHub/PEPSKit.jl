@@ -87,6 +87,16 @@ function ChainRulesCore.rrule(
 end
 
 """
+Given the eigenvalue spectrum of `D` expected from a
+positive-semi-definite (PSD) map, sets small negative
+eigenvalues that may arise from numerical errors to 0.
+"""
+function project_psd!(D::DiagonalTensorMap{T, S}) where {T, S}
+    D.data .= max.(zero(T), D.data)
+    return D
+end
+
+"""
     absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorMap)
 
 Given SVD result `U`, `S` and `V`, absorb singular values `S` into `U` and `V` by:

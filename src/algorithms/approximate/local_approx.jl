@@ -36,7 +36,7 @@ Only `R` is calculated and returned.
 function qr_twolayer(A1::PEPOTensor, A2::PEPOTensor)
     MdagM = _get_MdagM(A1, A2)
     D, R = eigh_full!(MdagM)
-    # TODO: set small negative eigenvalues due to numerical errors to 0
+    project_psd!(D)
     R = sdiag_pow(D, 0.5) * R'
     return R
 end
@@ -69,7 +69,7 @@ Only `L` is calculated and returned.
 function lq_twolayer(A1::PEPOTensor, A2::PEPOTensor)
     MMdag = _get_MMdag(A1, A2)
     D, L = eigh_full!(MMdag)
-    # TODO: set small negative eigenvalues due to numerical errors to 0
+    project_psd!(D)
     L = L * sdiag_pow(D, 0.5)
     return L
 end
