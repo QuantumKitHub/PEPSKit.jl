@@ -134,10 +134,10 @@ function _get_cluster(
         return _get_mpo_perm(out_axs[i - 1] + n_physical_axes, in_axs[i] + n_physical_axes, Nax)
     end
 
-    open_vaxs::Vector{Tuple{Vararg{Int}}} = [first_open_vaxs, mid_vaxs..., last_open_vaxs]
+    open_vaxs = [first_open_vaxs, mid_vaxs..., last_open_vaxs]
     perms = [first_perm, mid_perms..., last_perm]
     invperms = invbiperm.(perms, Val(n_physical_axes))
-    vertices::Vector{TensorMap{scalartype(state), spacetype(env), <:Any, <:Any, storagetype(eltype(unitcell(state)))}} = map(
+    vertices = map(
         zip(sites, open_vaxs, perms)
     ) do (site, vaxs, perm)
         s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
@@ -173,7 +173,7 @@ function _su_iter_mpo!(
     gate_axs = alg.purified ? (1:1) : (1:2)
     global wts, ϵs
     for gate_ax in gate_axs
-        _apply_gatempo!(Ms, gate; gate_ax)
+        _apply_gatempo!(Ms, gates; gate_ax)
         if isa(state, InfinitePEPO)
             Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
         end
