@@ -64,13 +64,22 @@ function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2}, (Nrow, 
 end
 
 """
+Return a size N-k tuple with values 1 to N but the missing ones. Accept k=1 and k=2.
+"""
+function _filtered_oneto(i, ::Val{N}) where {N}
+    return ntuple(k -> k < i ? k : k + 1, N - 1)
+end
+function _filtered_oneto(i, j, ::Val{N}) where {N}
+    lo, hi = minmax(i, j)
+    return ntuple(k -> k < lo ? k : k < hi - 1 ? k + 1 : k + 2, N - 2)
+end
+"""
 Find the permutation to permute `out_ax`, `in_ax` legs to
 the first and the last position of a tensor with `Nax` legs,
 then assign the last leg to domain, and the others to codomain.
 """
 function _get_mpo_perm(out_ax::Integer, in_ax::Integer, ::Val{Nax}) where {Nax}
-    lo, hi = minmax(out_ax, in_ax)
-    perm = ntuple(k -> k < lo ? k : k < hi - 1 ? k + 1 : k + 2,  Nax - 2)
+    perm = _filtered_oneto(out_ax, in_ax, Val(Nax))
     return (out_ax, perm...), (in_ax,)
 end
 
@@ -95,68 +104,61 @@ Otherwise, axes order of each tensor in `Ms` are preserved.
 
 ## Returns
 
-- `Ms`: Tensors in the cluster.
+- `vertices`: Tensors in the cluster.
 - `open_vaxs`: Open virtual axes (1 to 4) of each cluster tensor before permutation.
 - `invperms`: Permutations to restore the axes order of each cluster tensor.
 """
 function _get_cluster(
         state::InfiniteState, sites::Vector{CartesianIndex{2}},
-        env::Union{SUWeight, Nothing}; permute::Bool = true
+        env::SUWeight; permute::Bool = true
     )
     Nr, Nc = size(state)
     n_sites = length(sites)
     n_physical_axes = numout(eltype(unitcell(state)))
     # number of axes of each state tensor
-    Nax = 4 + n_physical_axes
+    Nax = Val(4 + n_physical_axes)
     out_axs = map(2:n_sites) do i
         return _nn_vec_direction(sites[i - 1] - sites[i])
     end
     in_axs = map(1:(n_sites - 1)) do i
         return _nn_vec_direction(sites[i + 1] - sites[i])
     end
-    all_vaxs = (1, 2, 3, 4)
-    open_vaxs = map(1:n_sites) do i
-        return if i == 1
-            filter(x -> x != in_axs[i], all_vaxs)
-        elseif i == n_sites
-            filter(x -> x != out_axs[i - 1], all_vaxs)
-        else
-            filter(x -> x != out_axs[i - 1] && x != in_axs[i], all_vaxs)
-        end
+    first_open_vaxs = _filtered_oneto(in_axs[1], Val(4))
+    last_open_vaxs = _filtered_oneto(out_axs[n_sites - 1], Val(4))
+    mid_vaxs = map(i -> _filtered_oneto(out_axs[i - 1], in_axs[i], Val(4)), 2:(n_sites - 1))
+    # use direction opposite to `in` as `out`
+    first_perm = _get_mpo_perm(mod1(2 + in_axs[1], 4) + n_physical_axes, in_axs[1] + n_physical_axes, Nax)
+    # use direction opposite to `out` as `in`
+    last_perm = _get_mpo_perm(out_axs[n_sites - 1] + n_physical_axes, mod1(2 + out_axs[n_sites - 1], 4) + n_physical_axes, Nax)
+    mid_perms = map(2:(n_sites - 1)) do i
+        return _get_mpo_perm(out_axs[i - 1] + n_physical_axes, in_axs[i] + n_physical_axes, Nax)
     end
-    perms = map(1:n_sites) do i
-        out_ax, in_ax = if i == 1  # first perm
-            # use direction opposite to `in` as `out`
-            mod1(2 + in_axs[i], 4), in_axs[i]
-        elseif i == n_sites  # last perm
-            # use direction opposite to `out` as `in`
-            out_axs[i - 1], mod1(2 + out_axs[i - 1], 4)
-        else
-            out_axs[i - 1], in_axs[i]   # mid perm
-        end
-        return _get_mpo_perm(out_ax + n_physical_axes, in_ax + n_physical_axes, Val(Nax))
-    end
-    invperms = map(perms) do (p1, p2)
-        p = invperm((p1..., p2...))
-        return (p[begin:n_physical_axes], p[(n_physical_axes + 1):end])
-    end
-    Ms = map(zip(sites, open_vaxs, perms)) do (site, vaxs, perm)
+
+    open_vaxs::Vector{Tuple{Vararg{Int}}} = [first_open_vaxs, mid_vaxs..., last_open_vaxs]
+    perms = [first_perm, mid_perms..., last_perm]
+    invperms = invbiperm.(perms, Val(n_physical_axes))
+    vertices::Vector{TensorMap{scalartype(state), spacetype(env), <:Any, <:Any, storagetype(eltype(unitcell(state)))}} = map(
+        zip(sites, open_vaxs, perms)
+    ) do (site, vaxs, perm)
         s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
-        M = if env === nothing
-            state[s]
-        else
-            absorb_weight(state[s], env, s[1], s[2], vaxs)
-        end
-        return permute ? TensorKit.permute(M, perm) : M
+        t = absorb_weight(state[s], env, s[1], s[2], vaxs)
+        return permute ? TensorKit.permute(t, perm) : t
     end
-    return Ms, open_vaxs, invperms
+    return vertices, open_vaxs, invperms
 end
 
+function invbiperm(bituple::Tuple{Tuple, Tuple}, ::Val{N}) where {N}
+    return invbiperm((first(bituple)..., last(bituple)...), Val(N))
+end
+function invbiperm(t::Tuple, ::Val{N}) where {N}
+    p = invperm(t)
+    return p[begin:N], p[(N + 1):end]
+end
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
 """
-function _su_iter!(
-        state::InfiniteState, gate::Vector{T}, env::SUWeight,
+function _su_iter_mpo!(
+        state::InfiniteState, gates::Vector{T}, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
