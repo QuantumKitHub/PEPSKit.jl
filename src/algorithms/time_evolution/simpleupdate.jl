@@ -266,7 +266,7 @@ function MPSKit.time_evolve(
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             @info @sprintf(
                 "SU iter %-7d: E ≈ %.5f, |Δλ| = %.3e. Time = %.3f s/it",
-                iter, energy, diff, time1 - time0
+                iter, real(energy), diff, time1 - time0
             )
             if !isempty(observables)
                 expvals = [expectation_value(psi, obs, ctmenv) for obs in observables]
