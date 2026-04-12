@@ -79,7 +79,7 @@ function ntu_iter(
         state::InfiniteState, circuit::LocalCircuit, alg::NeighbourUpdate
     )
     Nr, Nc, = size(state)
-    state2, wts = deepcopy(state), SUWeight(state)
+    state2, wts = copy(state), SUWeight(state)
     info = (; fid = 1.0)
     for (sites, gate) in circuit.gates
         if length(sites) == 1
@@ -96,14 +96,14 @@ function ntu_iter(
             (!alg.bipartite) && continue
             if d == 1
                 rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                state2[rp1, cp1] = deepcopy(state2[r, c])
-                state2[rp1, c] = deepcopy(state2[r, cp1])
-                wts[1, rp1, cp1] = deepcopy(wts[1, r, c])
+                state2[rp1, cp1] = copy(state2[r, c])
+                state2[rp1, c] = copy(state2[r, cp1])
+                wts[1, rp1, cp1] = copy(wts[1, r, c])
             else
                 rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                state2[rm1, cm1] = deepcopy(state2[r, c])
-                state2[r, cm1] = deepcopy(state2[rm1, c])
-                wts[2, rm1, cm1] = deepcopy(wts[2, r, c])
+                state2[rm1, cm1] = copy(state2[r, c])
+                state2[r, cm1] = copy(state2[rm1, c])
+                wts[2, rm1, cm1] = copy(wts[2, r, c])
             end
         else
             # N-site MPO gate (N ≥ 2)
@@ -156,14 +156,91 @@ end
 
 """
     time_evolve(
-        it::TimeEvolver{<:NeighbourUpdate}; check_interval::Int = 500
+        it::TimeEvolver{<:NeighbourUpdate},
+        [H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm];
+        tol::Float64 = 1.0e-7, check_interval::Int = 10
     ) -> (psi, info)
 
-Perform time evolution to the end of `TimeEvolver` iterator `it`.
+Perform time evolution to the end of `NeighbourUpdate` TimeEvolver `it`,
+or until convergence of energy set by a positive `tol`.
 
-- `check_interval` sets the number of iterations between outputs of information.
+To enable convergence check (for imaginary time evolution of InfinitePEPS only),
+provide the Hamiltonian `H`, CTMRG environment `env`, CTMRG algorithm `ctm_alg`
+and setting `tol > 0`.
+
+`check_interval` sets the number of iterations between energy checks
+(for ground state search) and outputs of information.
 """
-function MPSKit.time_evolve(it::TimeEvolver{<:NeighbourUpdate}; check_interval::Int = 500)
+function MPSKit.time_evolve(
+        it::TimeEvolver{<:NeighbourUpdate},
+        H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm;
+        tol::Float64 = 1.0e-7, check_interval::Int = 10
+    )
+    @info "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
+    time_start = time0 = time()
+    psi0 = copy(it.state.psi)
+    @assert (psi0 isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+    # initial energy
+    env, = leading_boundary(env, psi0, ctm_alg)
+    energy = expectation_value(psi0, H, env) / prod(size(psi0))
+    @info @sprintf("NTU iter 0: E = %.4e", energy)
+    info0 = (; energy, env)
+    # start evolving
+    energy0, ΔE = energy, 0.0
+    iter0, t0 = it.state.iter, it.state.t
+    for (psi, info) in it
+        iter = it.state.iter
+        showinfo = (iter == 1) || (iter % check_interval == 0) || (iter == it.nstep)
+        !showinfo && continue
+        # bond weight change
+        Δλ = hasproperty(info0, :wts) ? compare_weights(info.wts, info0.wts) : NaN
+        # reconverge environment
+        if all(space(t) == space(t0) for (t, t0) in zip(psi.A, psi0.A))
+            # recreate `env` from bond weights if psi virtual space changed
+            env = CTMRGEnv(info.wts)
+        end
+        env, = leading_boundary(env, psi, ctm_alg)
+        # measure energy
+        energy = expectation_value(psi, H, env) / prod(size(psi))
+        ΔE = energy - energy0
+        info = @insert info.energy = energy
+        info = @insert info.env = env
+        # show information
+        time1 = time()
+        @info @sprintf(
+            "NTU iter %-6d: E = %.5f, ΔE = %.3e, |Δλ| = %.3e. Time: %.2f s",
+            it.state.iter, energy, ΔE, Δλ, time1 - time0
+        )
+        # determine whether to stop evolution
+        stop = false
+        if (ΔE <= 0 && abs(ΔE) < tol)
+            stop = true
+            @info "NTU: energy has converged."
+        end
+        if ΔE > 0
+            stop = true
+            @warn "NTU: energy has increased. Abort evolution and return results from last check."
+            psi, info, energy = psi0, info0, energy0
+            it.state = NTUState(iter0, t0, psi0)
+        end
+        if iter == it.nstep
+            stop = true
+            @info "NTU: reached maximum iteration."
+        end
+        if stop
+            time_end = time()
+            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+            return psi, info
+        else
+            iter0, t0 = it.state.iter, it.state.t
+            psi0, energy0, info0 = psi, energy, info
+        end
+        time0 = time()
+    end
+    return
+end
+
+function MPSKit.time_evolve(it::TimeEvolver{<:NeighbourUpdate}; check_interval::Int = 50)
     time_start = time0 = time()
     @info "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
     info0 = nothing
@@ -197,11 +274,10 @@ end
         check_interval::Int = 10
     ) -> (psi, info)
 
-Perform time evolution on the initial state `psi0` and initial environment `env0`
-with Hamiltonian `H`, using `NeighbourUpdate` algorithm `alg`, time step `dt` for 
+Perform time evolution on the initial state `psi0` with Hamiltonian `H`,
+using `NeighbourUpdate` algorithm `alg`, time step `dt` for 
 `nstep` number of steps. 
 
-- Convergence check for ground state search is not supported.
 - Set `symmetrize_gates = true` for second-order Trotter decomposition.
 - Use `t0` to specify the initial time of `psi0`.
 - `check_interval` sets the interval to output information (and check convergence). 
