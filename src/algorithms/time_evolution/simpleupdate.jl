@@ -148,14 +148,14 @@ function su_iter(
             (!alg.bipartite) && continue
             if d == 1
                 rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                state2[rp1, cp1] = deepcopy(state2[r, c])
-                state2[rp1, c] = deepcopy(state2[r, cp1])
-                env2[1, rp1, cp1] = deepcopy(env2[1, r, c])
+                state2[rp1, cp1] = copy(state2[r, c])
+                state2[rp1, c] = copy(state2[r, cp1])
+                env2[1, rp1, cp1] = copy(env2[1, r, c])
             else
                 rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                state2[rm1, cm1] = deepcopy(state2[r, c])
-                state2[r, cm1] = deepcopy(state2[rm1, c])
-                env2[2, rm1, cm1] = deepcopy(env2[2, r, c])
+                state2[rm1, cm1] = copy(state2[r, c])
+                state2[r, cm1] = copy(state2[rm1, c])
+                env2[2, rm1, cm1] = copy(env2[2, r, c])
             end
         else
             # N-site MPO gate (N ≥ 2)
@@ -215,34 +215,21 @@ or until convergence of `SUWeight` set by a positive `tol`.
 - `check_interval` sets the number of iterations between outputs of information.
 """
 function MPSKit.time_evolve(
-        it::TimeEvolver{<:SimpleUpdate};
-        tol::Float64 = 0.0, check_interval::Int = 500
+        it::TimeEvolver{<:SimpleUpdate}; check_interval::Int = 500
     )
     time_start = time()
-    check_convergence = (tol > 0)
     @info "--- Time evolution (simple update), dt = $(it.dt) ---"
-    if check_convergence
-        @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
-    end
     env0, time0 = it.state.env, time()
     for (psi, env, info) in it
         iter = it.state.iter
         diff = compare_weights(env0, env)
-        stop = (iter == it.nstep) || (diff < tol)
+        stop = (iter == it.nstep)
         showinfo = (check_interval > 0) &&
             ((iter % check_interval == 0) || (iter == 1) || stop)
         time1 = time()
         if showinfo
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             @info @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, diff, time1 - time0)
-        end
-        if check_convergence
-            if (iter == it.nstep) && (diff >= tol)
-                @warn "SU: bond weights have not converged."
-            end
-            if diff < tol
-                @info "SU: bond weights have converged."
-            end
         end
         if stop
             time_end = time()
@@ -256,30 +243,50 @@ function MPSKit.time_evolve(
     return
 end
 
-"""
-    time_evolve(
-        psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
-        tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
-    ) -> (psi, env, info)
-
-Perform time evolution on the initial iPEPS or iPEPO `psi0` and
-initial environment `env0` with Hamiltonian `H`, using `SimpleUpdate`
-algorithm `alg`, time step `dt` for `nstep` number of steps. 
-
-- Set `symmetrize_gates = true` for second-order Trotter decomposition.
-- Set `tol > 0` to enable convergence check (for imaginary time evolution of iPEPS only).
-    For other usages it should not be changed.
-- Use `t0` to specify the initial time of the evolution.
-- `check_interval` sets the interval to output information. Output during the evolution can be turned off by setting `check_interval <= 0`.
-- `info` is a NamedTuple containing information of the evolution, 
-    including the time `info.t` evolved since `psi0`.
-"""
 function MPSKit.time_evolve(
-        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
-        tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
+        it::TimeEvolver{<:SimpleUpdate}, H::LocalOperator;
+        tol::Float64 = 1.0e-8, check_interval::Int = 500,
+        observables::Vector{<:LocalOperator} = LocalOperator[]
     )
-    it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0, symmetrize_gates)
-    return time_evolve(it; tol, check_interval)
+    time_start = time()
+    @info "--- Time evolution (simple update), dt = $(it.dt) ---"
+    @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+    env0, time0 = it.state.env, time()
+    for (psi, env, info) in it
+        iter = it.state.iter
+        diff = compare_weights(env0, env)
+        stop = (iter == it.nstep) || (diff < tol)
+        showinfo = (check_interval > 0) &&
+            ((iter % check_interval == 0) || (iter == 1) || stop)
+        time1 = time()
+        if showinfo
+            # TODO: convert to BPEnv instead
+            ctmenv = CTMRGEnv(env)
+            energy = expectation_value(psi, H, ctmenv) / prod(size(psi))
+            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
+            @info @sprintf(
+                "SU iter %-7d: E ≈ %.5f, |Δλ| = %.3e. Time = %.3f s/it",
+                iter, real(energy), diff, time1 - time0
+            )
+            if !isempty(observables)
+                expvals = [expectation_value(psi, obs, ctmenv) for obs in observables]
+                @info "Observables ≈ $(expvals)."
+            end
+        end
+        if (iter == it.nstep) && (diff >= tol)
+            @warn "SU: bond weights have not converged."
+        end
+        if diff < tol
+            @info "SU: bond weights have converged."
+        end
+        if stop
+            time_end = time()
+            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+            return psi, env, info
+        else
+            env0 = env
+        end
+        time0 = time()
+    end
+    return
 end

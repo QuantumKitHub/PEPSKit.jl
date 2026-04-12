@@ -123,7 +123,8 @@ end
         Dbond2 = (n == 2) ? Dbond + 2 : Dbond
         trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond2)
         alg = SimpleUpdate(; trunc, bipartite = false)
-        peps, wts, = time_evolve(peps, ham, dt, nstep, alg, wts; tol)
+        evolver = TimeEvolver(peps, ham, dt, nstep, alg, wts)
+        peps, wts, = time_evolve(evolver, ham; tol)
     end
 
     # measure physical quantities with CTMRG

@@ -51,7 +51,8 @@ dt, nstep = 1.0e-3, 400
 
     # PEPO approach: results at β, or T = 2.5
     alg = SimpleUpdate(; trunc = trunc_pepo, purified = false, bipartite, force_mpo)
-    pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0; symmetrize_gates)
+    evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0; symmetrize_gates)
+    pepo, wts, info = time_evolve(evolver)
 
     ## BP gauge fixing
     bp_alg = BeliefPropagation(; maxiter = 100, tol = 1.0e-9, bipartite)
@@ -65,7 +66,8 @@ dt, nstep = 1.0e-3, 400
     @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
     # continue to get results at 2β, or T = 1.25
-    pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t0 = β, symmetrize_gates)
+    evolver = TimeEvolver(pepo, ham, dt, nstep, alg, wts; t0 = β, symmetrize_gates)
+    pepo, wts, info = time_evolve(evolver)
     env = converge_env(InfinitePartitionFunction(pepo), 16)
     result_2β = measure_mag(pepo, env)
     @info "tr(σ(x,z)ρ) at T = $(1 / (2β)): $(result_2β)."
@@ -74,7 +76,8 @@ dt, nstep = 1.0e-3, 400
 
     # Purification approach: results at 2β, or T = 1.25
     alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite, force_mpo)
-    pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0; symmetrize_gates)
+    evolver = TimeEvolver(pepo0, ham, dt, 2 * nstep, alg, wts0; symmetrize_gates)
+    pepo, wts, info = time_evolve(evolver)
     env = converge_env(InfinitePEPS(pepo), 8)
     result_2β′ = measure_mag(pepo, env; purified = true)
     @info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)): $(result_2β′)."
