@@ -7,19 +7,19 @@ Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 
 $(TYPEDFIELDS)
 """
-@kwdef struct SimpleUpdate <: TimeEvolution
+@kwdef struct SimpleUpdate{T <: TruncationStrategy} <: TimeEvolution
     "Truncation strategy for bonds updated by Trotter gates"
-    trunc::TruncationStrategy
+    trunc::T
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
     "When true, force decomposition of nearest neighbor gates to MPOs."
     force_mpo::Bool = false
     "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
-    "(Only applicable to InfinitePEPO) 
+    "(Only applicable to InfinitePEPO)
     When true, the PEPO is regarded as a purified PEPS, and updated as
     `|ρ(t + dt)⟩ = exp(-H dt/2) |ρ(t)⟩`.
-    When false, the PEPO is updated as 
+    When false, the PEPO is updated as
     `ρ(t + dt) = exp(-H dt/2) ρ(t) exp(-H dt/2)`."
     purified::Bool = true
 end
@@ -97,7 +97,8 @@ function _su_iter!(
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
     A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
     # apply gate
-    ϵ, s = 0.0, nothing
+    ϵ = 0.0
+    s = nothing
     gate_axs = alg.purified ? (1:1) : (1:2)
     for gate_ax in gate_axs
         X, a, b, Y = _qr_bond(A, B; gate_ax, positive = true)

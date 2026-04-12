@@ -176,7 +176,7 @@ function _su_iter!(
     _flip_virtuals!(Ms, flips)
     # apply gate MPOs and truncate
     gate_axs = alg.purified ? (1:1) : (1:2)
-    wts, ϵs = nothing, nothing
+    global wts, ϵs
     for gate_ax in gate_axs
         _apply_gatempo!(Ms, gate; gate_ax)
         if isa(state, InfinitePEPO)
