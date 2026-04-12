@@ -18,6 +18,15 @@ function _apply_sitegate(
     return a′
 end
 
+function _get_biperms(::PEPSTensor, ::Integer)
+    return ((2, 4, 5), (1, 3)), ((2, 3, 4), (1, 5)), (1, 4, 2, 3), ntuple(identity, 4)
+end
+function _get_biperms(::PEPOTensor, gate_ax::Integer)
+    if gate_ax == 1
+        return ((2, 3, 5, 6), (1, 4)), ((2, 3, 4, 5), (1, 6)), (1, 2, 5, 3, 4), ntuple(identity, 5)
+    end
+    return ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), ntuple(identity, 5)
+end
 """
 $(SIGNATURES)
 
@@ -48,17 +57,10 @@ When `A`, `B` are PEPOTensors,
         5   1               4  1                                4  1
 ```
 """
-function _qr_bond(A::PT, B::PT; gate_ax::Int = 1, kwargs...) where {PT <: Union{PEPSTensor, PEPOTensor}}
+function _qr_bond(A::PT, B::PT; gate_ax::Integer = 1, kwargs...) where {PT <: Union{PEPSTensor, PEPOTensor}}
     @assert 1 <= gate_ax <= numout(A)
-    permA, permB, permX, permY = if A isa PEPSTensor
-        ((2, 4, 5), (1, 3)), ((2, 3, 4), (1, 5)), (1, 4, 2, 3), Tuple(1:4)
-    else
-        if gate_ax == 1
-            ((2, 3, 5, 6), (1, 4)), ((2, 3, 4, 5), (1, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
-        else
-            ((1, 3, 5, 6), (2, 4)), ((1, 3, 4, 5), (2, 6)), (1, 2, 5, 3, 4), Tuple(1:5)
-        end
-    end
+    permA, permB, permX, permY = _get_biperms(A, gate_ax)
+
     X, a = left_orth!(permute(A, permA; copy = true); kwargs...)
     Y, b = left_orth!(permute(B, permB; copy = true); kwargs...)
     X, Y = permute(X, permX), permute(Y, permY)

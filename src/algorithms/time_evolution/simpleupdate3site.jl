@@ -68,12 +68,10 @@ Find the permutation to permute `out_ax`, `in_ax` legs to
 the first and the last position of a tensor with `Nax` legs,
 then assign the last leg to domain, and the others to codomain.
 """
-function _get_mpo_perm(out_ax::Int, in_ax::Int, Nax::Int)
-    perm = collect(1:Nax)
-    filter!(x -> x != out_ax && x != in_ax, perm)
-    pushfirst!(perm, out_ax)
-    push!(perm, in_ax)
-    return (Tuple(perm[1:(end - 1)]), (perm[end],))
+function _get_mpo_perm(out_ax::Integer, in_ax::Integer, ::Val{Nax}) where {Nax}
+    lo, hi = minmax(out_ax, in_ax)
+    perm = ntuple(k -> k < lo ? k : k < hi - 1 ? k + 1 : k + 2,  Nax - 2)
+    return (out_ax, perm...), (in_ax,)
 end
 
 """
@@ -101,51 +99,46 @@ Otherwise, axes order of each tensor in `Ms` are preserved.
 - `open_vaxs`: Open virtual axes (1 to 4) of each cluster tensor before permutation.
 - `invperms`: Permutations to restore the axes order of each cluster tensor.
 """
-function _get_cluster(state, sites; permute::Bool = true)
-    return _get_cluster(state, sites, nothing; permute)
-end
 function _get_cluster(
         state::InfiniteState, sites::Vector{CartesianIndex{2}},
         env::Union{SUWeight, Nothing}; permute::Bool = true
     )
     Nr, Nc = size(state)
-    # number of sites
-    Ns = length(sites)
-    # number of physical axes
-    Np = isa(state, InfinitePEPS) ? 1 : 2
+    n_sites = length(sites)
+    n_physical_axes = numout(eltype(unitcell(state)))
     # number of axes of each state tensor
-    Nax = 4 + Np
-    out_axs = map(2:Ns) do i
+    Nax = 4 + n_physical_axes
+    out_axs = map(2:n_sites) do i
         return _nn_vec_direction(sites[i - 1] - sites[i])
     end
-    in_axs = map(1:(Ns - 1)) do i
+    in_axs = map(1:(n_sites - 1)) do i
         return _nn_vec_direction(sites[i + 1] - sites[i])
     end
-    all_vaxs = Tuple(1:4)
-    open_vaxs = map(1:Ns) do i
+    all_vaxs = (1, 2, 3, 4)
+    open_vaxs = map(1:n_sites) do i
         return if i == 1
             filter(x -> x != in_axs[i], all_vaxs)
-        elseif i == Ns
+        elseif i == n_sites
             filter(x -> x != out_axs[i - 1], all_vaxs)
         else
             filter(x -> x != out_axs[i - 1] && x != in_axs[i], all_vaxs)
         end
     end
-    perms = map(1:Ns) do i
-        out_ax, in_ax = if i == 1
+    perms = map(1:n_sites) do i
+        out_ax, in_ax = if i == 1  # first perm
             # use direction opposite to `in` as `out`
             mod1(2 + in_axs[i], 4), in_axs[i]
-        elseif i == Ns
+        elseif i == n_sites  # last perm
             # use direction opposite to `out` as `in`
             out_axs[i - 1], mod1(2 + out_axs[i - 1], 4)
         else
-            out_axs[i - 1], in_axs[i]
+            out_axs[i - 1], in_axs[i]   # mid perm
         end
-        return _get_mpo_perm(out_ax + Np, in_ax + Np, Nax)
+        return _get_mpo_perm(out_ax + n_physical_axes, in_ax + n_physical_axes, Val(Nax))
     end
     invperms = map(perms) do (p1, p2)
         p = invperm((p1..., p2...))
-        return (p[1:Np], p[(Np + 1):end])
+        return (p[begin:n_physical_axes], p[(n_physical_axes + 1):end])
     end
     Ms = map(zip(sites, open_vaxs, perms)) do (site, vaxs, perm)
         s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))

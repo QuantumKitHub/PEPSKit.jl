@@ -84,7 +84,7 @@ end
 Simple update optimized for nearest neighbor gates
 utilizing reduced bond tensors with the physical leg.
 """
-function _su_iter!(
+function _su_iter_gate!(
         state::InfiniteState, gate::NNGate, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     )
@@ -92,7 +92,6 @@ function _su_iter!(
     truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
     @assert length(sites) == 2 && length(truncs) == 1
     Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
-    normalize!.(Ms, Inf)
     # rotate
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
     A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
@@ -144,24 +143,25 @@ function su_iter(
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
             alg.bipartite && r > 1 && continue
-            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter_gate!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
-            (!alg.bipartite) && continue
-            if d == 1
-                rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                state2[rp1, cp1] = deepcopy(state2[r, c])
-                state2[rp1, c] = deepcopy(state2[r, cp1])
-                env2[1, rp1, cp1] = deepcopy(env2[1, r, c])
-            else
-                rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                state2[rm1, cm1] = deepcopy(state2[r, c])
-                state2[r, cm1] = deepcopy(state2[rm1, c])
-                env2[2, rm1, cm1] = deepcopy(env2[2, r, c])
+            if alg.bipartite
+                if d == 1
+                    rp1, cp1 = _next(r, Nr), _next(c, Nc)
+                    state2[rp1, cp1] = deepcopy(state2[r, c])
+                    state2[rp1, c] = deepcopy(state2[r, cp1])
+                    env2[1, rp1, cp1] = deepcopy(env2[1, r, c])
+                else
+                    rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
+                    state2[rm1, cm1] = deepcopy(state2[r, c])
+                    state2[r, cm1] = deepcopy(state2[rm1, c])
+                    env2[2, rm1, cm1] = deepcopy(env2[2, r, c])
+                end
             end
         else
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
-            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter_mpo!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
         end
     end
