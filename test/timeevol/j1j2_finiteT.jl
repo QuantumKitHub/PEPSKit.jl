@@ -31,8 +31,8 @@ dt, nstep, check_interval = 5.0e-3, 40, 40
     pepo, wts = deepcopy(pepo0), deepcopy(wts0)
     for (β, bme) in zip(βs, bm)
         t0 = β - βs[1]
-        evolver = TimeEvolver(pepo, ham, dt, nstep, alg, wts)
-        pepo, wts, info = time_evolve(evolver; t0, check_interval)
+        evolver = TimeEvolver(pepo, ham, dt, nstep, alg, wts; t0)
+        pepo, wts, info = time_evolve(evolver; check_interval)
         # measure energy
         env = converge_env(InfinitePEPS(pepo), 16)
         energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
