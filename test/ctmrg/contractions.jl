@@ -12,13 +12,39 @@ Random.seed!(91283219347)
 stype = ComplexF64
 ctm_alg = SimultaneousCTMRG(; projector_alg = :halfinfinite)
 
-function test_contractions(
+function test_peps_contractions(
         Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
     )
     peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
     n = InfiniteSquareNetwork(peps)
+
+    return test_contractions(n, env)
+end
+
+function test_pf_contractions(
+        Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
+    pf = InfinitePartitionFunction(randn, stype, Nspaces, Espaces)
+    env = CTMRGEnv(randn, stype, pf, chis_north, chis_east, chis_south, chis_west)
+    n = InfiniteSquareNetwork(pf)
+
+    return test_contractions(n, env)
+end
+
+function test_pepo_contractions(
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
+    pepo = InfinitePEPO(randn, stype, Pspaces, Pspaces, Pspaces)
+    peps = InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces)
+    n = InfiniteSquareNetwork(peps, pepo)
+    env = CTMRGEnv(randn, stype, n, chis_north, chis_east, chis_south, chis_west)
+
+    return test_contractions(n, env)
+end
+
+function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
     coordinates = eachcoordinate(n)
     dirs_and_coordinates = eachcoordinate(n, 1:4)
 
@@ -59,7 +85,13 @@ end
     chis_south = ComplexSpace.(rand(5:10, unitcell...))
     chis_west = ComplexSpace.(rand(5:10, unitcell...))
 
-    test_contractions(
+    test_peps_contractions(
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
+    test_pf_contractions(
+        Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
+    test_pepo_contractions(
         Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
     )
 end
@@ -76,7 +108,9 @@ end
     Nspaces = [Vpeps Vpeps'; Vpeps' Vpeps]
     chis = [Venv Venv; Venv Venv]
 
-    test_contractions(Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
+    test_peps_contractions(Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
+    test_pf_contractions(Nspaces, Nspaces, chis, chis, chis, chis)
+    test_pepo_contractions(Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
 
     # 4x4 unit cell with all 32 inequivalent bonds
     #
@@ -119,5 +153,41 @@ end
     Pspaces = fill(phys_space, (4, 4))
     chis = fill(corner_space, (4, 4))
 
-    test_contractions(Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
+    test_peps_contractions(Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
+    test_pf_contractions(Nspaces, Nspaces, chis, chis, chis, chis)
+    test_pepo_contractions(Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
+end
+
+@testset "Random fermionic spaces" begin
+    unitcell = (3, 3)
+
+    S = Vect[FermionParity]
+    pdims = rand(2:3, unitcell..., 2)
+    vdims = rand(2:4, unitcell..., 2)
+    edims = rand(5:10, unitcell..., 2)
+
+    function _construct_space(ds::Array{<:Int, 3})
+        V = map(Iterators.product(axes(ds)[1:2]...)) do (r, c)
+            return S(0 => ds[r, c, 1], 1 => ds[r, c, 2])
+        end
+        return V
+    end
+
+    Pspaces = _construct_space(pdims)
+    Nspaces = _construct_space(vdims)
+    Espaces = _construct_space(vdims)
+    chis_north = _construct_space(edims)
+    chis_east = _construct_space(edims)
+    chis_south = _construct_space(edims)
+    chis_west = _construct_space(edims)
+
+    test_peps_contractions(
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
+    test_pf_contractions(
+        Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
+    test_pepo_contractions(
+        Pspaces, Nspaces, Espaces, chis_north, chis_east, chis_south, chis_west,
+    )
 end
