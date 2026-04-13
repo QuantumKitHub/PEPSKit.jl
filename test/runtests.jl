@@ -70,7 +70,7 @@ end
             include("toolbox/densitymatrices.jl")
         end
         @time @safetestset "Fidelity initialization" begin
-            include("toolbox/fidelity_initialize.jl")
+            include("toolbox/approximate.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"

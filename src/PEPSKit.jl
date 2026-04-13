@@ -75,12 +75,12 @@ include("algorithms/time_evolution/simpleupdate3site.jl")
 
 include("algorithms/toolbox.jl")
 include("algorithms/correlators.jl")
+include("algorithms/approximate.jl")
 
 include("utility/symmetrization.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
-include("algorithms/optimization/fidelity_initialize.jl")
 
 include("algorithms/select_algorithm.jl")
 

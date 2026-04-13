@@ -59,43 +59,6 @@ function ApproximateAlgorithm(;
     return alg_type(tol, maxiter, miniter, verbosity, boundary_algorithm)
 end
 
-"""
-    single_site_fidelity_initialize(
-        peps::InfinitePEPS, [bondspace = _maxspace(peps₀)]; kwargs...
-    )
-
-Generate a single-site unit cell PEPS from a (possibly) multi-site `peps` by approximating
-the respective entries using [`approximate!`](@ref). By default, the maximal bond space of
-`peps₀` is used for all virtual legs of the single-site PEPS.
-
-## Keyword arguments
-
-* `noise_amp=1.0-1` : Gaussian noise amplitude of initial single-site PEPS
-
-All additional keyword arguments will be passed to the [`approximate!`](@ref) call.
-"""
-function single_site_fidelity_initialize(
-        peps::InfinitePEPS, bondspace = _spacemax(peps);
-        noise_amp = 1.0e-1, kwargs...
-    )
-    @assert allequal(map(p -> space(p, 1), unitcell(peps))) "PEPS must have uniform physical spaces"
-
-    physspace = space(unitcell(peps)[1], 1)
-    peps_single = noise_amp * InfinitePEPS(randn, scalartype(peps), physspace, bondspace) # single-site unit cell with random noise
-
-    # absorb peps₀ tensors into single-site tensors in-place
-    peps_uc = InfinitePEPS(fill(only(unitcell(peps_single)), size(peps))) # fill unit cell with peps_single tensors
-    absorb!(peps_uc[1], peps[1]) # absorb (1, 1) tensor of peps₀ (applies to all peps_uc entries since absorb! is mutating)
-    peps_single, = approximate(peps_uc, peps; kwargs...)
-
-    return InfinitePEPS([peps_single[1];;])
-end
-
-# maximal virtual space over unit cell
-function _spacemax(peps::InfinitePEPS)
-    return reduce(supremum, map(p -> supremum(domain(p)[1], domain(p)[2]), unitcell(peps)))
-end
-
 @doc """
     approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS; kwargs...)
     # expert version
