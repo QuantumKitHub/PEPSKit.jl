@@ -356,7 +356,7 @@ end
 #
 
 _get_pullback_rank_atol(::Any) = MatrixAlgebraKit.default_pullback_rank_atol
-_get_pullback_rank_atol(::Union{<:FixedSVD, IterSVD}) = A -> zero(scalartype(A)) # truncated SVDs shouldn't change rank in pullback
+_get_pullback_rank_atol(::Union{<:FixedSVD, IterSVD}) = A -> real(zero(scalartype(A))) # truncated SVDs shouldn't change rank in pullback
 
 # svd_trunc! rrule wrapping MatrixAlgebraKit's svd_pullback!
 function ChainRulesCore.rrule(
