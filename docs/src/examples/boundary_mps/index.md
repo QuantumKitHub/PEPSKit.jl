@@ -7,7 +7,7 @@ EditURL = "../../../../examples/boundary_mps/main.jl"
 [![](https://img.shields.io/badge/download-project-orange)](https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/boundary_mps)
 
 
-# [Boundary MPS contractions of 2D networks] (@id e_boundary_mps)
+# [Boundary MPS contractions of 2D networks](@id e_boundary_mps)
 
 Instead of using CTMRG to contract the network encoding the norm of an infinite PEPS, one
 can also use so-called [boundary MPS methods](@cite haegeman_diagonalizing_2017) to contract
@@ -40,39 +40,7 @@ entries using `randn`:
 ````
 
 ````
-InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}[TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')):
-[:, :, 1, 1, 1] =
- -0.5524390176345264 - 0.07357188568178248im  0.34014501646081047 - 0.7552574870030472im
- -0.5455245317233405 + 0.8946618856309984im     1.249282911658007 + 0.45352274131986825im
-
-[:, :, 2, 1, 1] =
-    0.33621043661988675 + 0.4400876608299719im   -0.9866664087107284 - 0.28688827761325675im
- -0.0077250067072679235 + 1.7380910495900947im  -0.19071062901939098 - 1.1367500834118434im
-
-[:, :, 1, 2, 1] =
- -0.09149850722392933 + 0.3560942836258964im      1.6255618447281441 - 0.5689426732891244im
- -0.19309251474097275 - 0.32363899914302613im  -0.025356816648697236 + 0.5632279168368712im
-
-[:, :, 2, 2, 1] =
- 0.07675114584269166 - 0.011479824536308164im  -0.17779977372973318 + 1.1379201927122535im
- -1.0116302866282385 - 0.9253070687198848im      1.1649047337212566 + 0.9936369101208083im
-
-[:, :, 1, 1, 2] =
-  0.2510676919806213 - 0.182052326055189im   -0.5792402993550532 - 0.4309109406268341im
- 0.04501645227038913 - 0.8140971172854408im  -0.5608346802110794 + 0.21262550530307248im
-
-[:, :, 2, 1, 2] =
-  1.5061767210554262 + 0.17190948125245623im  -0.8001234458239143 + 0.6764943808639017im
- -0.8176938467062373 - 0.40919675695722396im  -0.6692181340575689 + 0.6923370271564298im
-
-[:, :, 1, 2, 2] =
- -0.16556382071485704 + 0.2540132491548349im   0.05546115732751907 + 0.3723175507964387im
- -0.29883021417599165 - 0.07229462525164528im   -1.200173153698329 - 0.45509299328832953im
-
-[:, :, 2, 2, 2] =
-  0.289873563752043 + 0.44718981087960125im  0.018357838612906643 + 0.9634127683557584im
- 0.5128282969211142 - 0.2865462937979091im   -0.44278618042821827 + 0.2612084385439659im
-;;])
+InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}[TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}(ComplexF64[-0.5524390176345264 - 0.07357188568178248im, -0.5455245317233405 + 0.8946618856309984im, 0.34014501646081047 - 0.7552574870030472im, 1.249282911658007 + 0.45352274131986825im, 0.33621043661988675 + 0.4400876608299719im, -0.0077250067072679235 + 1.7380910495900947im, -0.9866664087107284 - 0.28688827761325675im, -0.19071062901939098 - 1.1367500834118434im, -0.09149850722392933 + 0.3560942836258964im, -0.19309251474097275 - 0.32363899914302613im, 1.6255618447281441 - 0.5689426732891244im, -0.025356816648697236 + 0.5632279168368712im, 0.07675114584269166 - 0.011479824536308164im, -1.0116302866282385 - 0.9253070687198848im, -0.17779977372973318 + 1.1379201927122535im, 1.1649047337212566 + 0.9936369101208083im, 0.2510676919806213 - 0.182052326055189im, 0.04501645227038913 - 0.8140971172854408im, -0.5792402993550532 - 0.4309109406268341im, -0.5608346802110794 + 0.21262550530307248im, 1.5061767210554262 + 0.17190948125245623im, -0.8176938467062373 - 0.40919675695722396im, -0.8001234458239143 + 0.6764943808639017im, -0.6692181340575689 + 0.6923370271564298im, -0.16556382071485704 + 0.2540132491548349im, -0.29883021417599165 - 0.07229462525164528im, 0.05546115732751907 + 0.3723175507964387im, -1.200173153698329 - 0.45509299328832953im, 0.289873563752043 + 0.44718981087960125im, 0.5128282969211142 - 0.2865462937979091im, 0.018357838612906643 + 0.9634127683557584im, -0.44278618042821827 + 0.2612084385439659im], ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)'));;])
 ````
 
 To compute its norm, we have to contract a double-layer network which encodes the bra-ket
@@ -154,10 +122,12 @@ T = InfiniteTransferPEPS(ψ, dir, row)
 ````
 
 ````
-single site MPSKit.InfiniteMPO{Tuple{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}}:
-╷  ⋮
-┼ O[1]: (TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')))
-╵  ⋮
+1-site InfiniteMPO(ComplexF64, TensorKit.ComplexSpace) with maximal dimension 4:
+| ⋮
+| (ℂ^2 ⊗ (ℂ^2)')
+┼─[1]─ (ℂ^2 ⊗ (ℂ^2)')
+│ (ℂ^2 ⊗ (ℂ^2)')
+| ⋮
 
 ````
 
@@ -172,11 +142,12 @@ mps₀ = initialize_mps(T, [ComplexSpace(20)])
 ````
 
 ````
-single site InfiniteMPS:
-│   ⋮
-│ C[1]: TensorMap(ℂ^20 ← ℂ^20)
-├── AL[1]: TensorMap((ℂ^20 ⊗ ℂ^2 ⊗ (ℂ^2)') ← ℂ^20)
-│   ⋮
+1-site InfiniteMPS(ComplexF64, TensorKit.ComplexSpace) with maximal dimension 20:
+| ⋮
+| ℂ^20
+├─[1]─ (ℂ^2 ⊗ (ℂ^2)')
+│ ℂ^20
+| ⋮
 
 ````
 
@@ -192,7 +163,7 @@ mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol = 1.0e-6, verbosity = 2))
 
 ````
 [ Info: VUMPS init:	obj = +1.674563752306e+00 +3.035692829590e+00im	err = 7.5576e-01
-[ Info: VUMPS conv 120:	obj = +6.831610878310e+00 -9.694385865125e-09im	err = 9.5145748821e-07	time = 7.42 sec
+[ Info: VUMPS conv 120:	obj = +6.831610878219e+00 -9.723041888467e-09im	err = 9.5233523833e-07	time = 6.10 sec
 
 ````
 
@@ -204,7 +175,7 @@ norm_vumps = abs(prod(expectation_value(mps, T)))
 ````
 
 ````
-6.831610878309698
+6.83161087821908
 ````
 
 This can be compared to the result obtained using CTMRG, where we see that the results
@@ -217,9 +188,9 @@ norm_ctmrg = abs(norm(ψ, env_ctmrg))
 ````
 
 ````
-[ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579631e-01im	err = 1.0000e+00
-[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595139e-07	time = 0.40 sec
-abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674852575113105e-6
+[ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579630e-01im	err = 1.0000e+00
+[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595115e-07	time = 0.20 sec
+abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674719949350553e-6
 
 ````
 
@@ -259,11 +230,11 @@ norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
 ````
 [ Info: VUMPS init:	obj = +8.149302834396e+02 -8.860408249120e+01im	err = 8.6172e-01
-┌ Warning: VUMPS cancel 200:	obj = +1.046992011815e+05 -2.212181695361e+00im	err = 6.9503579749e-03	time = 13.67 sec
-└ @ MPSKit ~/.julia/packages/MPSKit/cKwp2/src/algorithms/groundstate/vumps.jl:76
-[ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510263e+01im	err = 1.0000e+00
-[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6991268013e-07	time = 1.84 sec
-abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.00034221579358038244
+┌ Warning: VUMPS cancel 200:	obj = +1.046766793317e+05 -1.493448261103e+02im	err = 3.7375841028e-02	time = 11.59 sec
+└ @ MPSKit ~/.julia/packages/MPSKit/9ITGf/src/algorithms/groundstate/vumps.jl:76
+[ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510262e+01im	err = 1.0000e+00
+[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6993512829e-07	time = 0.76 sec
+abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.00012815051487696121
 
 ````
 
@@ -306,10 +277,12 @@ transfer_pepo = InfiniteTransferPEPO(ψ, T, 1, 1)
 ````
 
 ````
-single site MPSKit.InfiniteMPO{Tuple{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 4, Vector{ComplexF64}}}}:
-╷  ⋮
-┼ O[1]: (TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')), TensorMap((ℂ^2 ⊗ (ℂ^2)') ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)' ⊗ (ℂ^2)')))
-╵  ⋮
+1-site InfiniteMPO(ComplexF64, TensorKit.ComplexSpace) with maximal dimension 8:
+| ⋮
+| (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)')
+┼─[1]─ (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)')
+│ (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)')
+| ⋮
 
 ````
 
@@ -324,9 +297,9 @@ norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 
 ````
 [ Info: VUMPS init:	obj = +2.655321432467e+01 +3.760603778362e-01im	err = 8.9759e-01
-┌ Warning: VUMPS cancel 200:	obj = +7.226394646816e+01 +6.223361199138e+00im	err = 5.7986634490e-01	time = 37.47 sec
-└ @ MPSKit ~/.julia/packages/MPSKit/cKwp2/src/algorithms/groundstate/vumps.jl:76
-norm_pepo = 72.5314289378628
+┌ Warning: VUMPS cancel 200:	obj = +9.515362005489e+01 -2.503860489548e+00im	err = 2.3598739398e-01	time = 33.35 sec
+└ @ MPSKit ~/.julia/packages/MPSKit/9ITGf/src/algorithms/groundstate/vumps.jl:76
+norm_pepo = 95.18655749054498
 
 ````
 

@@ -3,66 +3,92 @@
 """
 $(TYPEDEF)
 
-A sum of local operators acting on a lattice. The lattice is stored as a matrix of vector spaces,
-and the terms are stored as a tuple of pairs of indices and operators.
+A sum of local operators acting on a lattice.
+The lattice is stored as a matrix of vector spaces, and the terms are stored as a `Dict` of indices mapping to operators.
 
 ## Fields
 
+$(TYPEDFIELDS)
 - `lattice::Matrix{S}`: The lattice on which the operator acts.
-- `terms::T`: The terms of the operator, stored as a tuple of pairs of indices and operators.
+- `terms::Dict{Vector{CartesianIndex{2}}, O}`: The terms of the operator, mapping coordinates to operators
 
 ## Constructors
 
     LocalOperator(lattice::Matrix{S}, terms::Pair...)
-    LocalOperator{T,S}(lattice::Matrix{S}, terms::T) where {T,S}
+    LocalOperator{T, S}(lattice::Matrix{S}, terms::T) where {T,S}
 
 ## Examples
 
 ```julia
 lattice = fill(ℂ^2, 1, 1) # single-site unitcell
-O1 = LocalOperator(lattice, ((1, 1),) => σx, ((1, 1), (1, 2)) => σx ⊗ σx, ((1, 1), (2, 1)) => σx ⊗ σx)
+O1 = LocalOperator(lattice, [(1, 1),] => σx, [(1, 1), (1, 2)] => σx ⊗ σx, [(1, 1), (2, 1)] => σx ⊗ σx)
 ```
 """
-struct LocalOperator{T <: Tuple, S}
+struct LocalOperator{O, S}
+    "lattice of physical spaces on which the gates act"
     lattice::Matrix{S}
-    terms::T
-    function LocalOperator{T, S}(lattice::Matrix{S}, terms::T) where {T, S}
-        plattice = PeriodicArray(lattice)
-        # Check if the indices of the operator are valid with themselves and the lattice
-        for (inds, operator) in terms
-            @assert operator isa AbstractTensorMap
-            @assert eltype(inds) <: CartesianIndex
-            @assert numout(operator) == numin(operator) == length(inds)
-            @assert spacetype(operator) == S
 
-            for i in 1:length(inds)
-                @assert space(operator, i) == plattice[inds[i]]
-            end
-        end
-        return new{T, S}(lattice, terms)
-    end
+    "list of `sites => term` pairs that make up the operator"
+    terms::Dict{Vector{CartesianIndex{2}}, O}
+
+    LocalOperator{O, S}(lattice::Matrix{S}) where {O, S} =
+        new{O, S}(lattice, Dict{Vector{CartesianIndex{2}}, O}())
 end
-function LocalOperator(
-        lattice::Matrix, terms::Pair...;
-        atol = maximum(x -> eps(real(scalartype(x[2])))^(3 / 4), terms),
+
+LocalOperator{O}(lattice::Matrix{<:ElementarySpace}) where {O} =
+    LocalOperator{O, eltype(lattice)}(lattice)
+LocalOperator{O}(lattice, terms::Pair...) where {O} = LocalOperator{O}(lattice, terms)
+
+function LocalOperator{O}(lattice, terms) where {O}
+    operator = LocalOperator{O}(lattice)
+    for (inds, term) in terms
+        add_term!(operator, inds, term)
+    end
+    return operator
+end
+
+# Default to Any for eltype: needs to be abstract anyways so not that much to gain
+LocalOperator(lattice, terms) = LocalOperator{Any}(lattice, terms)
+LocalOperator(lattice, terms::Pair...) = LocalOperator(lattice, terms)
+# TODO: add terms beyond AbstractTensorMap
+# e.g. tensor product of 1-site operators, MPOs
+add_term!(operator::LocalOperator, inds::Tuple, term::AbstractTensorMap) = add_term!(operator, collect(inds), term)
+add_term!(operator::LocalOperator, inds::Vector, term::AbstractTensorMap) = add_term!(operator, map(CartesianIndex{2}, inds), term)
+function add_term!(
+        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::AbstractTensorMap;
+        atol = zero(real(scalartype(term))),
     )
-    allinds = getindex.(terms, 1)
-    alloperators = getindex.(terms, 2)
+    # input checks
+    length(inds) == numin(term) == numout(term) || throw(ArgumentError("Incompatible number of indices and tensor legs"))
+    allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
+    for (i, ind) in enumerate(inds)
+        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
+        physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
+            throw(SpaceMismatch("Incompatible physical spaces"))
+    end
+    norm(term) <= atol && return operator # skip adding negligible terms
 
-    relevant_terms = []
-    for inds in unique(allinds)
-        operator = sum(alloperators[findall(==(inds), allinds)])
-        cinds = if !(eltype(inds) <: CartesianIndex) # force indices to be CartesianIndices
-            map(CartesianIndex, inds)
-        else
-            inds
-        end
-        norm(operator) > atol && push!(relevant_terms, cinds => operator)
+    # permute input
+    if !issorted(inds)
+        I = sortperm(inds)
+        inds = inds[I]
+        term = permute(term, (Tuple(I), Tuple(I) .+ numout(term)))
     end
 
-    terms_tuple = Tuple(relevant_terms)
-    return LocalOperator{typeof(terms_tuple), eltype(lattice)}(lattice, terms_tuple)
+    # translate coordinates
+    I1 = first(inds)
+    I1_mod = CartesianIndex(mod1.(Tuple(I1), size(operator)))
+    inds .-= (I1 - I1_mod)
+
+    if haskey(operator.terms, inds)
+        operator.terms[inds] = VI.add!!(operator.terms[inds], term)
+    else
+        operator.terms[inds] = term
+    end
+
+    return operator
 end
+
 
 """
     checklattice(Bool, args...)
@@ -95,14 +121,24 @@ function checklattice(::Type{Bool}, O::LocalOperator, pepo::InfinitePEPO)
 end
 @non_differentiable checklattice(args...)
 
-function Base.repeat(O::LocalOperator, m::Int, n::Int)
-    lattice = repeat(O.lattice, m, n)
-    terms = []
-    for (inds, operator) in O.terms, i in 1:m, j in 1:n
-        offset = CartesianIndex((i - 1) * size(O.lattice, 1), (j - 1) * size(O.lattice, 2))
-        push!(terms, (inds .+ Ref(offset)) => operator)
+function Base.similar(operator::LocalOperator, lattice::Matrix{<:ElementarySpace})
+    return similar(operator, eltype(operator), lattice)
+end
+function Base.similar(
+        operator::LocalOperator, ::Type{O} = eltype(operator), lattice::Matrix{<:ElementarySpace} = physicalspace(operator)
+    ) where {O}
+    return LocalOperator{O}(lattice)
+end
+
+function Base.repeat(operator::LocalOperator, m::Int, n::Int)
+    operator_repeated = similar(operator, repeat(physicalspace(operator), m, n))
+    for i in 1:m, j in 1:n
+        offset = CartesianIndex((i - 1) * size(operator, 1), (j - 1) * size(operator, 2))
+        for (inds, term) in operator.terms
+            add_term!(operator_repeated, inds .+ offset, term)
+        end
     end
-    return LocalOperator(lattice, terms...)
+    return operator_repeated
 end
 
 """
@@ -110,11 +146,11 @@ end
 
 Return lattice of physical spaces on which the `LocalOperator` is defined.
 """
-function physicalspace(O::LocalOperator)
-    return O.lattice
-end
+physicalspace(O::LocalOperator) = O.lattice
+physicalspace(O::LocalOperator, args...) = physicalspace(O)[args...]
 
-Base.size(O::LocalOperator) = size(physicalspace(O))
+Base.size(O::LocalOperator, args...) = size(physicalspace(O), args...)
+Base.eltype(::Type{LocalOperator{O, S}}) where {O, S} = O
 
 # Real and imaginary part
 # -----------------------
@@ -127,10 +163,8 @@ end
 
 # Linear Algebra
 # --------------
-function Base.:*(α::Number, O::LocalOperator)
-    scaled_terms = map(((inds, operator),) -> (inds => α * operator), O.terms)
-    return LocalOperator{typeof(scaled_terms), eltype(O.lattice)}(O.lattice, scaled_terms)
-end
+Base.:*(α::Number, O::LocalOperator) =
+    LocalOperator(physicalspace(O), inds => α * operator for (inds, operator) in O.terms)
 Base.:*(O::LocalOperator, α::Number) = α * O
 
 Base.:/(O::LocalOperator, α::Number) = O * inv(α)
@@ -138,7 +172,7 @@ Base.:\(α::Number, O::LocalOperator) = inv(α) * O
 
 function Base.:+(O1::LocalOperator, O2::LocalOperator)
     checklattice(O1, O2)
-    return LocalOperator(O1.lattice, O1.terms..., O2.terms...)
+    return LocalOperator(physicalspace(O1), mergewith(VI.add, O1.terms, O2.terms))
 end
 
 Base.:-(O::LocalOperator) = -1 * O
@@ -147,40 +181,55 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # VectorInterface
 # ---------------
 
-function VI.scalartype(::Type{<:LocalOperator{T}}) where {T}
-    return promote_type((scalartype(last(fieldtypes(p))) for p in fieldtypes(T))...)
+# Since we allow abstract types in T, value and type domain might not match
+function VI.scalartype(operator::LocalOperator)
+    return promote_type((scalartype(term[2]) for term in operator.terms)...)
 end
+
+
+# Equivalence
+# -----------
+
+Base.:(==)(O₁::LocalOperator, O₂::LocalOperator) =
+    physicalspace(O₁) == physicalspace(O₂) && O₁.terms == O₂.terms
 
 # Rotation
 # ----------------------
 
 # rotation of a lattice site
-# TODO: type piracy
-Base.rotl90(site::CartesianIndex{2}) = CartesianIndex(2 - site[2], site[1])
-Base.rotr90(site::CartesianIndex{2}) = CartesianIndex(site[2], 2 - site[1])
-Base.rot180(site::CartesianIndex{2}) = CartesianIndex(2 - site[1], 2 - site[2])
+# (copy logic from Base.rotl90, Base.rotr90, Base.rot180)
+function siterotl90(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(unitcell[2] + 1 - site[2], site[1])
+end
+function siterotr90(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(site[2], unitcell[1] + 1 - site[1])
+end
+function siterot180(site::CartesianIndex{2}, unitcell::NTuple{2, Int})
+    return CartesianIndex(unitcell[1] + 1 - site[1], unitcell[2] + 1 - site[2])
+end
 
 function Base.rotr90(H::LocalOperator)
-    lattice2 = rotr90(H.lattice)
-    terms2 = ((Tuple(rotr90(site) for site in sites) => op) for (sites, op) in H.terms)
-    return LocalOperator(lattice2, terms2...)
+    Hsize = size(H)
+    lattice2 = rotr90(physicalspace(H))
+    terms2 = (siterotr90.(inds, Ref(Hsize)) => term for (inds, term) in H.terms)
+    return LocalOperator(lattice2, terms2)
 end
-
 function Base.rotl90(H::LocalOperator)
-    lattice2 = rotl90(H.lattice)
-    terms2 = ((Tuple(rotl90(site) for site in sites) => op) for (sites, op) in H.terms)
-    return LocalOperator(lattice2, terms2...)
+    Hsize = size(H)
+    lattice2 = rotl90(physicalspace(H))
+    terms2 = (siterotl90.(inds, Ref(Hsize)) => term for (inds, term) in H.terms)
+    return LocalOperator(lattice2, terms2)
 end
-
 function Base.rot180(H::LocalOperator)
-    lattice2 = rot180(H.lattice)
-    terms2 = ((Tuple(rot180(site) for site in sites) => op) for (sites, op) in H.terms)
-    return LocalOperator(lattice2, terms2...)
+    Hsize = size(H)
+    lattice2 = rot180(physicalspace(H))
+    terms2 = (siterot180.(inds, Ref(Hsize)) => term for (inds, term) in H.terms)
+    return LocalOperator(lattice2, terms2)
 end
 
 # Charge shifting
 # ---------------
-TensorKit.spacetype(::Type{T}) where {S, T <: LocalOperator{<:Any, S}} = S
+TensorKit.spacetype(::Type{<:LocalOperator{<:Any, S}}) where {S} = S
 
 @generated function _fuse_isomorphisms(
         op::AbstractTensorMap{<:Any, S, N, N}, fs::Vector{<:AbstractTensorMap{<:Any, S, 1, 2}}
@@ -226,7 +275,7 @@ Change the spaces of a `LocalOperator` by fusing in an auxiliary charge into the
 the operator on every site, according to a given matrix of 'auxiliary' physical charges.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
-    size(physicalspace(H)) == size(charges) ||
+    size(H) == size(charges) ||
         throw(ArgumentError("Incompatible lattice and auxiliary charge sizes"))
     sectortype(H) === eltype(charges) ||
         throw(SectorMismatch("Incompatible lattice and auxiliary charge sizes"))
@@ -234,16 +283,13 @@ function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:
     # auxiliary spaces will be fused into codomain, so need to dualize the space to fuse
     # the charge into the domain as desired
     # also, make indexing periodic for convenience
-    Paux = PeriodicArray(map(c -> Vect[typeof(c)](c => 1)', charges))
+    Paux = PeriodicArray(map(c -> spacetype(H)(c => 1)', charges))
 
     # new physical spaces
     Pspaces = map(fuse, physicalspace(H), Paux)
 
-    new_terms = map(H.terms) do (sites, op)
-        Paux_slice = map(Base.Fix1(getindex, Paux), sites)
-        return sites => _fuse_ids(op, Paux_slice)
-    end
-    H´ = LocalOperator(Pspaces, new_terms...)
-
-    return H´
+    return LocalOperator(
+        Pspaces,
+        inds => _fuse_ids(op, Tuple(map(Base.Fix1(getindex, Paux), inds))) for (inds, op) in H.terms
+    )
 end

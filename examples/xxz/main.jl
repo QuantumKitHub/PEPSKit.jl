@@ -71,7 +71,7 @@ From this point onwards it's business as usual: Create an initial PEPS and envir
 (using the symmetric spaces), specify the algorithmic parameters and optimize:
 """
 
-boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trscheme = (; alg = :fixedspace))
+boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
 gradient_alg = (; tol = 1.0e-6, alg = :eigsolver, maxiter = 10, iterscheme = :diffgauge)
 optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 85, ls_maxiter = 3, ls_maxfg = 3)
 
@@ -79,21 +79,23 @@ peps₀ = InfinitePEPS(randn, ComplexF64, physical_spaces, virtual_spaces)
 env₀, = leading_boundary(CTMRGEnv(peps₀, V_env), peps₀; boundary_alg...);
 
 md"""
-Finally, we can optimize the PEPS with respect to the XXZ Hamiltonian. Note that the
+Finally, we can optimize the PEPS with respect to the XXZ Hamiltonian and check the
+resulting ground state energy per site using our $(2 \times 2)$ unit cell. Note that the
 optimization might take a while since precompilation of symmetric AD code takes longer and
-because symmetric tensors do create a bit of overhead (which does pay off at larger bond
-and environment dimensions):
+because symmetric tensors do create a bit of overhead (which does pay off at larger bond and
+environment dimensions):
 """
 
 peps, env, E, info = fixedpoint(
     H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity = 3
 )
-@show E;
+@show E / prod(size(lattice));
 
 md"""
-Note that for the specified parameters $J = \Delta = 1$, we simulated the same Hamiltonian as
-in the [Heisenberg example](@ref examples_heisenberg). In that example, with a non-symmetric
-$D=2$ PEPS simulation, we reached a ground-state energy of around $E_\text{D=2} = -0.6625\dots$.
-Again comparing against [Sandvik's](@cite sandvik_computational_2011) accurate QMC estimate
-``E_{\text{ref}}=−0.6694421``, we see that we already got closer to the reference energy.
+Note that for the specified parameters $J = \Delta = 1$, we simulated the same Hamiltonian
+as in the [Heisenberg example](@ref examples_heisenberg). In that example, with a
+non-symmetric $D=2$ PEPS simulation, we reached a ground-state energy per site of around
+$E_\text{D=2} = -0.6625\dots$. Again comparing against [Sandvik's](@cite
+sandvik_computational_2011) accurate QMC estimate ``E_{\text{ref}}=−0.6694421``, we see that
+we already got closer to the reference energy.
 """

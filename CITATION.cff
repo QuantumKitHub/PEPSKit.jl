@@ -14,7 +14,7 @@ authors:
     given-names: "Lukas"
     orcid: "https://orcid.org/0000-0002-0256-4200"
 title: "PEPSKit"
-version: 0.6.1
+version: 0.7.0
 identifiers:
   - type: doi
     value: 10.5281/zenodo.13938737

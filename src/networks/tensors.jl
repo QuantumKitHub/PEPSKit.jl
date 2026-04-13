@@ -22,6 +22,20 @@ and west spaces, respectively.
 const PartitionFunctionTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 2, 2}
 const PFTensor = PartitionFunctionTensor
 
+"""
+    PartitionFunctionTensor(f, ::Type{T}, Pspace::S, Nspace::S,
+               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
+                
+Construct a PartitionFunctionTensor tensor based on the north, east, west and south spaces.
+The tensor elements are generated based on `f` and the element type is specified in `T`.
+"""
+function PartitionFunctionTensor(
+        f, ::Type{T},
+        Nspace::S, Espace::S = Nspace, Sspace::S = Nspace, Wspace::S = Espace,
+    ) where {T, S <: ElementarySpace}
+    return f(T, Wspace ⊗ Sspace ← Nspace ⊗ Espace)
+end
+
 Base.rotl90(t::PFTensor) = permute(t, ((3, 1), (4, 2)))
 Base.rotr90(t::PFTensor) = permute(t, ((2, 4), (1, 3)))
 Base.rot180(t::PFTensor) = permute(t, ((4, 3), (2, 1)))
@@ -30,6 +44,15 @@ function virtualspace(t::PFTensor, dir)
     invp = (3, 4, 2, 1) # internally, virtual directions are ordered as N, E, S, W...
     return space(t, invp[dir])
 end
+
+function flip_virtualspace(t::PFTensor, dir)
+    invp = (3, 4, 2, 1)
+    return flip(t, invp[collect(dir)])
+end
+flip_physicalspace(t::PFTensor) = t
+
+herm_depth(x::PFTensor) = permute(x', ((3, 1), (4, 2)))
+
 
 #
 # PEPS
@@ -59,8 +82,7 @@ const PEPSTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 1, 4}
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
                [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
                 
-Construct a PEPS tensor based on the physical, north, east, west and south spaces.
-Alternatively, only the space dimensions can be provided and ℂ is assumed as the field.
+Construct a PEPS tensor based on the physical, north, east, south and west spaces.
 The tensor elements are generated based on `f` and the element type is specified in `T`.
 """
 function PEPSTensor(
@@ -70,13 +92,6 @@ function PEPSTensor(
     ) where {T, S <: ElementarySpace}
     return f(T, Pspace ← Nspace ⊗ Espace ⊗ Sspace ⊗ Wspace)
 end
-function PEPSTensor(
-        f, ::Type{T},
-        Pspace::Int,
-        Nspace::Int, Espace::Int = Nspace, Sspace::Int = Nspace, Wspace::Int = Espace,
-    ) where {T}
-    return f(T, ℂ^Pspace ← ℂ^Nspace ⊗ ℂ^Espace ⊗ (ℂ^Sspace)' ⊗ (ℂ^Wspace)')
-end
 
 Base.rotl90(t::PEPSTensor) = permute(t, ((1,), (3, 4, 5, 2)))
 Base.rotr90(t::PEPSTensor) = permute(t, ((1,), (5, 2, 3, 4)))
@@ -84,6 +99,11 @@ Base.rot180(t::PEPSTensor) = permute(t, ((1,), (4, 5, 2, 3)))
 
 physicalspace(t::PEPSTensor) = space(t, 1)
 virtualspace(t::PEPSTensor, dir) = space(t, dir + 1)
+
+flip_virtualspace(t::PEPSTensor, dir) = flip(t, collect(dir) .+ 1)
+flip_physicalspace(t::PEPSTensor) = flip(t, 1)
+
+herm_depth(x::PEPSTensor) = permute(x', ((5,), (3, 2, 1, 4)))
 
 #
 # PEPO
@@ -123,6 +143,11 @@ function physicalspace(t::PEPOTensor)
     return codomain_physicalspace(t)
 end
 virtualspace(t::PEPOTensor, dir) = space(t, dir + 2)
+
+flip_virtualspace(t::PEPOTensor, dir) = flip(t, collect(dir) .+ 2)
+flip_physicalspace(t::PEPOTensor) = flip(t, 1:2)
+
+herm_depth(t::PEPOTensor) = permute(t', ((5, 6), (3, 2, 1, 4)))
 
 """
     $(SIGNATURES)

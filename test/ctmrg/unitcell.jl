@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iteration, gauge_fix, _fix_svd_algorithm
+using PEPSKit: _prev, _next, ctmrg_iteration, ScramblingEnvGauge
 using TensorKit
 
 # settings
@@ -39,32 +39,26 @@ function test_unitcell(
     @test expectation_value(peps, random_op, env′) isa Number
 
     # test if gauge fixing routines run through
-    _, signs = gauge_fix(env′, env″)
+    _, signs = gauge_fix(env″, env′, ScramblingEnvGauge())
     @test signs isa Array
     return if ctm_alg isa SimultaneousCTMRG # also test :fixed mode gauge fixing for simultaneous CTMRG
-        svd_alg_fixed_full = _fix_svd_algorithm(SVDAdjoint(; fwd_alg = (; alg = :sdd)), signs, info)
-        svd_alg_fixed_iter = _fix_svd_algorithm(SVDAdjoint(; fwd_alg = (; alg = :iterative)), signs, info)
+        svd_alg_fixed_full = gauge_fix(SVDAdjoint(; fwd_alg = (; alg = :sdd)), signs, info)
+        svd_alg_fixed_iter = gauge_fix(SVDAdjoint(; fwd_alg = (; alg = :iterative)), signs, info)
         @test svd_alg_fixed_full isa SVDAdjoint
         @test svd_alg_fixed_iter isa SVDAdjoint
     end
 end
 
-function random_dualize!(M::AbstractMatrix{<:ElementarySpace})
-    mask = rand([true, false], size(M))
-    M[mask] .= adjoint.(M[mask])
-    return M
-end
-
 @testset "Random Cartesian spaces with $ctm_alg" for ctm_alg in ctm_algs
     unitcell = (3, 3)
 
-    Pspaces = random_dualize!(ComplexSpace.(rand(2:3, unitcell...)))
-    Nspaces = random_dualize!(ComplexSpace.(rand(2:4, unitcell...)))
-    Espaces = random_dualize!(ComplexSpace.(rand(2:4, unitcell...)))
-    chis_north = random_dualize!(ComplexSpace.(rand(5:10, unitcell...)))
-    chis_east = random_dualize!(ComplexSpace.(rand(5:10, unitcell...)))
-    chis_south = random_dualize!(ComplexSpace.(rand(5:10, unitcell...)))
-    chis_west = random_dualize!(ComplexSpace.(rand(5:10, unitcell...)))
+    Pspaces = ComplexSpace.(rand(2:3, unitcell...))
+    Nspaces = ComplexSpace.(rand(2:4, unitcell...))
+    Espaces = ComplexSpace.(rand(2:4, unitcell...))
+    chis_north = ComplexSpace.(rand(5:10, unitcell...))
+    chis_east = ComplexSpace.(rand(5:10, unitcell...))
+    chis_south = ComplexSpace.(rand(5:10, unitcell...))
+    chis_west = ComplexSpace.(rand(5:10, unitcell...))
 
     test_unitcell(
         ctm_alg, unitcell,

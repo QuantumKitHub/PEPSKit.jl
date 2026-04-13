@@ -2,7 +2,12 @@
 
 # PEPSKit.jl
 
-[![docs][docs-dev-img]][docs-dev-url] ![CI][ci-url] [![codecov][codecov-img]][codecov-url] [![DOI][doi-img]][doi-url]
+| **Documentation** | **Build Status** | **Coverage** | **Digital Object Identifier** |
+|:-----------------:|:----------------:|:------------:|:-----------------------------:|
+| [![][docs-stable-img]][docs-stable-url] [![][docs-dev-img]][docs-dev-url] | [![CI][ci-img]][ci-url] | [![codecov][codecov-img]][codecov-url] | [![DOI][doi-img]][doi-url] |
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://QuantumKitHub.github.io/PEPSKit.jl/stable/
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
 [docs-dev-url]: https://QuantumKitHub.github.io/PEPSKit.jl/dev/
@@ -10,7 +15,8 @@
 [codecov-img]: https://codecov.io/gh/QuantumKitHub/PEPSKit.jl/graph/badge.svg?token=1OBDY03SUP
 [codecov-url]: https://codecov.io/gh/QuantumKitHub/PEPSKit.jl
 
-[ci-url]: https://github.com/QuantumKitHub/PEPSKit.jl/workflows/CI/badge.svg
+[ci-img]: https://github.com/QuantumKitHub/PEPSKit.jl/actions/workflows/Tests.yml/badge.svg
+[ci-url]: https://github.com/QuantumKitHub/PEPSKit.jl/actions/workflows/Tests.yml
 
 [doi-url]: https://doi.org/10.5281/zenodo.13938736
 [doi-img]: https://zenodo.org/badge/DOI/10.5281/zenodo.13938737.svg

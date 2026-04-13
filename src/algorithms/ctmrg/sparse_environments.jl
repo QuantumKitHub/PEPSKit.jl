@@ -293,3 +293,64 @@ end
 function random_start_vector(env::FullInfiniteEnv)
     return randn(domain(env))
 end
+
+# -----------------------------
+# Sparse column-enlarged corner
+# -----------------------------
+
+"""
+$(TYPEDEF)
+
+Column-enlarged CTMRG corner tensor storage.
+
+## Constructors
+
+    ColumnEnlargedCorner(env, coordinates)
+
+Construct a column-enlarged corner with the correct row and column indices 
+based on the given `coordinates` which are of the form `(dir, row, col)`.
+
+```
+    [NORTHWEST,r,c]         [NORTHEAST,r,c]
+
+        c-1    c                 c     c+1
+    r   C₁--←--E₁--←--      --←--E₂--←--C₂  r
+        ↓      |                 |      ↑
+
+        ↓      |                 |      ↑
+    r   C₄--→--E₃--→--      --→--E₃--→--C₃  r
+        c-1    c                 c     c+1
+
+    [SOUTHWEST,r,c]         [SOUTHEAST,r,c]
+```
+"""
+struct ColumnEnlargedCorner{TC, TE}
+    C::TC
+    E::TE
+    dir::Int
+end
+function ColumnEnlargedCorner(env::CTMRGEnv, coordinates)
+    dir, row, col = coordinates
+    Nc = size(env, 3)
+    if dir == NORTHWEST
+        cm1 = _prev(col, Nc)
+        return ColumnEnlargedCorner(
+            env.corners[dir, row, cm1], env.edges[NORTH, row, col], dir
+        )
+    else
+        error("Not implemented.")
+    end
+end
+
+"""
+    TensorMap(Q::ColumnEnlargedCorner)
+
+Instantiate column-enlarged corner as a `TensorMap`.
+"""
+function TensorKit.TensorMap(Q::ColumnEnlargedCorner)
+    if Q.dir == NORTHWEST
+        return column_enlarge_northwest_corner(Q.C, Q.E)
+    else
+        error("Not implemented.")
+    end
+end
