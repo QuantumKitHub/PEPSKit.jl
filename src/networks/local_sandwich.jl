@@ -5,7 +5,7 @@
 ## Space utils
 
 _elementwise_dual(S::ElementarySpace) = dual(S)
-_elementwise_dual(P::ProductSpace) = ProductSpace(dual.(P)...)
+_elementwise_dual(P::ProductSpace{S, N}) where {S, N} = ProductSpace{S, N}(dual.(P)...)
 
 # route all virtualspace getters through a single method for convenience
 north_virtualspace(O, args...) = virtualspace(O, args..., NORTH)
@@ -13,6 +13,7 @@ east_virtualspace(O, args...) = virtualspace(O, args..., EAST)
 south_virtualspace(O, args...) = virtualspace(O, args..., SOUTH)
 west_virtualspace(O, args...) = virtualspace(O, args..., WEST)
 
+# MPSKit interface
 MPSKit.left_virtualspace(O, args...) = west_virtualspace(O, args...)
 function MPSKit.right_virtualspace(O, args...)
     return _elementwise_dual(east_virtualspace(O, args...))
@@ -31,6 +32,7 @@ _rot180_localsandwich(O) = rot180.(O)
 _add_localsandwich(O1, O2) = O1 .+ O2
 _subtract_localsandwich(O1, O2) = O1 .- O2
 _mul_localsandwich(α::Number, O) = α .* O
+_isapprox_localsandwich(O1, O2; kwargs...) = all(isapprox.(O1, O2; kwargs...))
 
 ## PartitionFunction
 
@@ -43,6 +45,7 @@ _rot180_localsandwich(O::PFTensor) = rot180(O)
 _add_localsandwich(O1::PFTensor, O2::PFTensor) = O1 + O2
 _subtract_localsandwich(O1::PFTensor, O2::PFTensor) = O1 - O2
 _mul_localsandwich(α::Number, O::PFTensor) = α * O
+_isapprox_localsandwich(O1::PFTensor, O2::PFTensor; kwargs...) = isapprox(O1, O2; kwargs...)
 
 ## PEPS
 
@@ -54,6 +57,16 @@ bra(O::PEPSSandwich) = O[2]
 function virtualspace(O::PEPSSandwich, dir)
     return virtualspace(ket(O), dir) ⊗ virtualspace(bra(O), dir)'
 end
+
+# MPSKit interface
+physicalspace(O::PEPSSandwich) = south_virtualspace(O)
+
+flip_virtualspace(O::PEPSSandwich, dir) = flip_virtualspace.(O, Ref(dir))
+flip_physicalspace(O::PEPSSandwich) = flip_physicalspace.(O)
+
+herm_depth(O::PEPSSandwich) = herm_depth.(O)
+
+TensorKit.spacetype(::Type{P}) where {P <: PEPSSandwich} = spacetype(eltype(P))
 
 # not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
 # ie type piracy
@@ -106,3 +119,13 @@ function virtualspace(O::PEPOSandwich, dir)
         ]
     )
 end
+
+# MPSKit interface
+physicalspace(O::PEPOSandwich) = south_virtualspace(O)
+
+flip_virtualspace(O::PEPOSandwich, dir) = flip_virtualspace.(O, Ref(dir))
+flip_physicalspace(O::PEPOSandwich) = flip_physicalspace.(O)
+
+herm_depth(O::PEPOSandwich) = herm_depth.(O)
+
+TensorKit.spacetype(::Type{P}) where {P <: PEPOSandwich} = spacetype(eltype(P))

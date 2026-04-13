@@ -20,13 +20,13 @@ jobs:
     strategy:
       matrix:
         version:
-          - '1' # automatically expands to the latest stable 1.x release of Julia
+          - '1'
         os:
           - ubuntu-latest
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}

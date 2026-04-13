@@ -19,17 +19,29 @@ function select_algorithm end
 
 function select_algorithm(
         ::typeof(fixedpoint),
-        env₀::CTMRGEnv;
+        env₀;
         tol = Defaults.optimizer_tol, # top-level tolerance
         verbosity = 3, # top-level verbosity
         boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
-        kwargs...,
+        symmetrization = nothing, kwargs...,
     )
     # adjust CTMRG tols and verbosity
     if boundary_alg isa NamedTuple
         defaults = (; verbosity = verbosity ≤ 3 ? -1 : 3, tol = 1.0e-4tol)
         boundary_kwargs = merge(defaults, boundary_alg)
         boundary_alg = select_algorithm(leading_boundary, env₀; boundary_kwargs...)
+    end
+
+    # C4vCTMRG-specific defaults
+    if boundary_alg isa C4vCTMRG
+        # use :linsolver GradMode since :eigsolver tends to have hiccups
+        if gradient_alg isa NamedTuple
+            haskey(gradient_alg, :alg) || (gradient_alg = merge((; alg = :linsolver), gradient_alg))
+        end
+        # symmetrize state and gradient
+        if isnothing(symmetrization)
+            symmetrization = RotateReflect()
+        end
     end
 
     # adjust gradient verbosity
@@ -45,7 +57,7 @@ function select_algorithm(
         optimizer_alg = merge(defaults, optimizer_alg)
     end
 
-    return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, kwargs...)
+    return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, symmetrization, kwargs...)
 end
 
 function select_algorithm(
@@ -54,13 +66,13 @@ function select_algorithm(
         alg = Defaults.ctmrg_alg,
         tol = Defaults.ctmrg_tol,
         verbosity = Defaults.ctmrg_verbosity,
-        svd_alg = (;),
+        decomposition_alg = (;),
         kwargs...,
     )
     # adjust SVD rrule settings to CTMRG tolerance, verbosity and environment dimension
-    if svd_alg isa NamedTuple &&
-            haskey(svd_alg, :rrule_alg) &&
-            svd_alg.rrule_alg isa NamedTuple
+    if decomposition_alg isa NamedTuple &&
+            haskey(decomposition_alg, :rrule_alg) &&
+            decomposition_alg.rrule_alg isa NamedTuple
         χenv = maximum(env₀.corners) do corner
             return dim(space(corner, 1))
         end
@@ -68,10 +80,9 @@ function select_algorithm(
         krylovdim = max(
             Defaults.svd_rrule_min_krylovdim, round(Int, Defaults.krylovdim_factor * χenv)
         )
-        rrule_alg = (; tol = 1.0e1tol, verbosity = verbosity - 2, krylovdim, svd_alg.rrule_alg...)
-        svd_alg = (; rrule_alg, svd_alg...)
+        rrule_alg = (; tol = 1.0e1tol, verbosity = verbosity - 2, krylovdim, decomposition_alg.rrule_alg...)
+        decomposition_alg = (; rrule_alg, decomposition_alg...)
     end
-    svd_algorithm = SVDAdjoint(; svd_alg...)
 
-    return CTMRGAlgorithm(; alg, tol, verbosity, svd_alg = svd_algorithm, kwargs...)
+    return CTMRGAlgorithm(; alg, tol, verbosity, decomposition_alg, kwargs...)
 end

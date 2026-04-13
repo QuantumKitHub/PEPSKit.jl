@@ -63,7 +63,7 @@ arguments. To see a description of all arguments, see the docstring of
 specific tolerance and during the CTMRG run keep all index dimensions fixed:
 """
 
-boundary_alg = (; tol = 1.0e-10, trscheme = (; alg = :fixedspace));
+boundary_alg = (; tol = 1.0e-10, trunc = (; alg = :fixedspace));
 
 md"""
 Let us also configure the optimizer algorithm. We are going to optimize the PEPS using the
@@ -89,7 +89,7 @@ optimization. To get a PEPS with physical dimension 2 (since we have a spin-1/2 
 with complex-valued random Gaussian entries, we set:
 """
 
-peps₀ = InfinitePEPS(randn, ComplexF64, 2, Dbond)
+peps₀ = InfinitePEPS(randn, ComplexF64, ℂ^2, ℂ^Dbond)
 
 md"""
 The last thing we need before we can start the optimization is an initial CTMRG environment.
@@ -102,12 +102,14 @@ env₀, info_ctmrg = leading_boundary(env_random, peps₀; boundary_alg...);
 
 md"""
 Besides the converged environment, `leading_boundary` also returns a `NamedTuple` of
-informational quantities such as the last maximal truncation error - that is, the SVD
-approximation error incurred in the last CTMRG iteration, maximized over all spatial
-directions and unit cell entries:
+informational quantities which contains, among other things, a `contraction_metric` tuple.
+This may contain different quantities depending on the method of contraction, and for this
+CTMRG variant we return the last maximal truncation error (the SVD approximation
+error maximized over all spatial directions and unit cell entries) as well as the condition
+number of the decomposition (the ratio of largest to smallest singular value):
 """
 
-@show info_ctmrg.truncation_error;
+@show info_ctmrg.contraction_metrics;
 
 md"""
 ## Ground state search

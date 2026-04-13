@@ -15,8 +15,8 @@ function nearest_neighbour_hamiltonian(
     for I in eachindex(IndexCartesian(), lattice)
         J1 = I + CartesianIndex(1, 0)
         J2 = I + CartesianIndex(0, 1)
-        push!(terms, (I, J1) => h)
-        push!(terms, (I, J2) => h)
+        push!(terms, [I, J1] => h)
+        push!(terms, [I, J2] => h)
     end
     return LocalOperator(lattice, terms...)
 end
@@ -35,7 +35,7 @@ function MPSKitModels.transverse_field_ising(
     return LocalOperator(
         spaces,
         (neighbor => ZZ for neighbor in nearest_neighbours(lattice))...,
-        ((idx,) => X for idx in vertices(lattice))...,
+        ([idx] => X for idx in vertices(lattice))...,
     )
 end
 
@@ -65,7 +65,6 @@ function MPSKitModels.heisenberg_XXZ(
         (S_plusmin(T, S; spin = spin) + S_minplus(T, S; spin = spin)) / 2 +
             Delta * S_zz(T, S; spin = spin)
     )
-    rmul!(h, 1 / 4)
     spaces = fill(domain(h)[1], (lattice.Nrows, lattice.Ncols))
     return LocalOperator(
         spaces, (neighbor => h for neighbor in nearest_neighbours(lattice))...
@@ -105,7 +104,7 @@ function MPSKitModels.bose_hubbard_model(
     H = LocalOperator(
         spaces,
         (neighbor => -t * hopping_term for neighbor in nearest_neighbours(lattice))...,
-        ((idx,) => U / 2 * interaction_term - mu * N for idx in vertices(lattice))...,
+        ([idx] => U / 2 * interaction_term - mu * N for idx in vertices(lattice))...,
     )
 
     if symmetry === Trivial
@@ -224,7 +223,7 @@ function pwave_superconductor(
     y_neighbors = filter(n -> n[2].I[1] > n[1].I[1], nearest_neighbours(lattice))
     return LocalOperator(
         spaces,
-        ((idx,) => h0 for idx in vertices(lattice))...,
+        ([idx] => h0 for idx in vertices(lattice))...,
         (neighbor => hx for neighbor in x_neighbors)...,
         (neighbor => hy for neighbor in y_neighbors)...,
     )

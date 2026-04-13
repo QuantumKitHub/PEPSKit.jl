@@ -55,10 +55,10 @@ function InfinitePartitionFunction(
     size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
-    Sspaces = adjoint.(circshift(Nspaces, (-1, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, 1)))
+    Sspaces = circshift(Nspaces, (-1, 0))
+    Wspaces = circshift(Espaces, (0, 1))
 
-    A = map(Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
+    A = map(Nspaces, Espaces, Sspaces, Wspaces) do N, E, S, W
         return PartitionFunctionTensor(f, T, N, E, S, W)
     end
 
@@ -139,7 +139,10 @@ end
 ## Spaces
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePartitionFunction} = spacetype(eltype(T))
-virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+function virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir)
+    Nr, Nc = size(n)
+    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
+end
 
 ## InfiniteSquareNetwork interface
 

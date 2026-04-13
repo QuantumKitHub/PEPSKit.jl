@@ -39,9 +39,10 @@ H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx = 1, Jy = 1
 md"""
 ## Simple updating
 
-We proceed by initializing a random PEPS that will be evolved. 
-The weights used for simple update are initialized as identity matrices.
-First though, we need to define the appropriate (symmetric) spaces:
+We proceed by initializing a random PEPS that will be evolved. Since we want to make use of
+the bipartite structure of the Heisenberg ground state when we run the simple update routine,
+we will make the initial PEPS bipartite explicitly. The weights used for simple update are
+initialized as identity matrices. First though, we need to define the appropriate (symmetric) spaces:
 """
 
 Dbond = 4
@@ -59,23 +60,26 @@ else
 end
 
 peps = InfinitePEPS(rand, Float64, physical_space, bond_space; unitcell = (Nr, Nc));
+peps.A[2, 2] = copy(peps.A[1, 1]) ## make initial random state bipartite
+peps.A[2, 1] = copy(peps.A[1, 2])
 wts = SUWeight(peps);
 
 md"""
 Next, we can start the `SimpleUpdate` routine, successively decreasing the time intervals
-and singular value convergence tolerances. Note that TensorKit allows to combine SVD
-truncation schemes, which we use here to set a maximal bond dimension and at the same time
-fix a truncation error (if that can be reached by remaining below `Dbond`):
+and singular value convergence tolerances. Here we set `bipartite = true` to exploit the
+underlying bipartite lattice which requires that we input a bipartite PEPS where the diagonal
+and off-diagonal unit cell entries are equivalent. Note that TensorKit allows us to combine SVD
+truncation schemes, which we use here to set a maximal bond dimension and at the same time fix
+a truncation error (if that can be reached by remaining below `Dbond`):
 """
 
 dts = [1.0e-2, 1.0e-3, 4.0e-4]
 tols = [1.0e-6, 1.0e-8, 1.0e-8]
-maxiter = 10000
-trscheme_peps = truncerr(1.0e-10) & truncdim(Dbond)
-
+nstep = 10000
+trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
+alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true)
 for (dt, tol) in zip(dts, tols)
-    alg = SimpleUpdate(dt, tol, maxiter, trscheme_peps)
-    global peps, wts, = simpleupdate(peps, H, alg, wts; bipartite = true)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval = 500)
 end
 
 md"""
@@ -86,14 +90,14 @@ on the evolved PEPS. Let's do so:
 """
 normalize!.(peps.A, Inf)
 env₀ = CTMRGEnv(rand, Float64, peps, env_space)
-trscheme_env = truncerr(1.0e-10) & truncdim(χenv)
+trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 env, = leading_boundary(
     env₀,
     peps;
     alg = :sequential,
     projector_alg = :fullinfinite,
     tol = 1.0e-10,
-    trscheme = trscheme_env,
+    trunc = trunc_env,
 );
 
 md"""

@@ -12,15 +12,17 @@ const vumps_alg = VUMPS(;
 )
 
 @testset "(1, 1) PEPS" begin
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2))
+    Vpeps = ComplexSpace(2)
+    psi = InfinitePEPS(Vpeps, Vpeps)
 
     T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
+    foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T))
     mps = initialize_mps(T, [ComplexSpace(20)])
 
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(sum(expectation_value(mps, T)))
 
-    mps2, = changebonds(mps, T, OptimalExpand(; trscheme = truncdim(30)))
+    mps2, = changebonds(mps, T, OptimalExpand(; trscheme = truncrank(30))) # TODO: update `trscheme` to `trunc` once MPSKit does
     mps2, env2, ϵ = leading_boundary(mps2, T, vumps_alg)
     N2 = abs(sum(expectation_value(mps2, T)))
     @test N ≈ N2 rtol = 1.0e-2
@@ -32,9 +34,10 @@ const vumps_alg = VUMPS(;
 end
 
 @testset "(2, 2) PEPS" begin
-    psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(2); unitcell = (2, 2))
+    Vpeps = ComplexSpace(2)
+    psi = InfinitePEPS(Vpeps, Vpeps; unitcell = (2, 2))
     T = PEPSKit.MultilineTransferPEPS(psi, 1)
-
+    # foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T)) # TODO: MPSKit.physicalspace(::MultilineMPO) isn't implemented...
     mps = initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2))
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(prod(expectation_value(mps, T)))
@@ -53,6 +56,7 @@ end
     psi = InfinitePEPS(D, d; unitcell = (1, 1))
     n = InfiniteSquareNetwork(psi)
     T = InfiniteTransferPEPS(psi, 1, 1)
+    foreach(V -> (@test V == D ⊗ D'), physicalspace(T))
 
     # compare boundary MPS contraction to CTMRG contraction
     mps = initialize_mps(T, [χ])
@@ -67,6 +71,7 @@ end
     # and again after blocking the local sandwiches
     n´ = InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(n)))
     T´ = InfiniteMPO(map(PEPSKit.mpotensor, T.O))
+    foreach(V -> (@test V == fuse(D, D')), physicalspace(T´))
 
     mps´ = InfiniteMPS(randn, ComplexF64, [physicalspace(T´, 1)], [χ])
     mps´, env´, ϵ = leading_boundary(mps´, T´, vumps_alg)
@@ -96,10 +101,14 @@ end
         return InfinitePEPO(O; unitcell)
     end
 
+    Vpepo = ComplexSpace(2)
+    Vpeps = ComplexSpace(2)
+
     # single-layer PEPO
     O = ising_pepo(1)
-    psi = PEPSKit.initializePEPS(O, ComplexSpace(2))
+    psi = PEPSKit.initializePEPS(O, Vpeps)
     T = InfiniteTransferPEPO(psi, O, 1, 1)
+    foreach(V -> (@test V == Vpeps ⊗ Vpepo ⊗ Vpeps'), physicalspace(T))
 
     mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(10)])
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
@@ -107,10 +116,11 @@ end
 
     # double-layer PEPO
     O2 = repeat(O, 1, 1, 2)
-    psi2 = initializePEPS(O, ComplexSpace(2))
-    T = InfiniteTransferPEPO(psi, O, 1, 1)
+    psi2 = initializePEPS(O2, Vpeps)
+    T2 = InfiniteTransferPEPO(psi, O2, 1, 1)
+    foreach(V -> (@test V == Vpeps ⊗ Vpepo ⊗ Vpepo ⊗ Vpeps'), physicalspace(T2))
 
-    mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(8)])
-    mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
-    f = abs(prod(expectation_value(mps, T)))
+    mps2 = initialize_mps(rand, scalartype(T2), T2, [ComplexSpace(8)])
+    mps2, env2, ϵ = leading_boundary(mps2, T2, vumps_alg)
+    f = abs(prod(expectation_value(mps2, T2)))
 end

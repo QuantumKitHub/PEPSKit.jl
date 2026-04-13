@@ -1,6 +1,6 @@
 using Markdown #hide
 md"""
-# [Boundary MPS contractions of 2D networks] (@id e_boundary_mps)
+# [Boundary MPS contractions of 2D networks](@id e_boundary_mps)
 
 Instead of using CTMRG to contract the network encoding the norm of an infinite PEPS, one
 can also use so-called [boundary MPS methods](@cite haegeman_diagonalizing_2017) to contract

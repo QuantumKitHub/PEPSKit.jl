@@ -11,7 +11,10 @@ struct InfinitePEPS{T <: PEPSTensor}
     A::Matrix{T}
     InfinitePEPS{T}(A::Matrix{T}) where {T <: PEPSTensor} = new{T}(A)
     function InfinitePEPS(A::Array{T, 2}) where {T <: PEPSTensor}
+        bosonic_braiding = BraidingStyle(sectortype(T)) === Bosonic()
         for (d, w) in Tuple.(CartesianIndices(A))
+            (bosonic_braiding || !isdual(physicalspace(A[d, w]))) ||
+                throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are not allowed (for now)."))
             north_virtualspace(A[d, w]) == south_virtualspace(A[_prev(d, end), w])' ||
                 throw(
                 SpaceMismatch("North virtual space at site $((d, w)) does not match.")
@@ -140,9 +143,15 @@ end
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePEPS} = spacetype(eltype(T))
 virtualspace(n::InfinitePEPS, dir) = virtualspace.(unitcell(n), dir)
-virtualspace(n::InfinitePEPS, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
+function virtualspace(n::InfinitePEPS, r::Int, c::Int, dir)
+    Nr, Nc = size(n)
+    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
+end
 physicalspace(n::InfinitePEPS) = physicalspace.(unitcell(n))
-physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
+function physicalspace(n::InfinitePEPS, r::Int, c::Int)
+    Nr, Nc = size(n)
+    return physicalspace(n[mod1(r, Nr), mod1(c, Nc)])
+end
 
 ## InfiniteSquareNetwork interface
 
@@ -217,17 +226,6 @@ end
 Base.rotl90(A::InfinitePEPS) = InfinitePEPS(rotl90(rotl90.(unitcell(A))))
 Base.rotr90(A::InfinitePEPS) = InfinitePEPS(rotr90(rotr90.(unitcell(A))))
 Base.rot180(A::InfinitePEPS) = InfinitePEPS(rot180(rot180.(unitcell(A))))
-
-## OptimKit optimization backwards compatibility (v0.4 uses VectorInterface)
-
-function LinearAlgebra.rmul!(A::InfinitePEPS, α::Number) # Used in _scale during OptimKit.optimize
-    rmul!.(unitcell(A), α)
-    return A
-end
-function LinearAlgebra.axpy!(α::Number, A₁::InfinitePEPS, A₂::InfinitePEPS) # Used in _add during OptimKit.optimize
-    axpy!.(α, unitcell(A₁), unitcell(A₂))
-    return A₂
-end
 
 ## FiniteDifferences vectorization
 
