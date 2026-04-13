@@ -113,7 +113,7 @@ function ChainRulesCore.rrule(
         alg::QRAdjoint{F, R},
     ) where {F <: Union{LAPACK_HouseholderQR, FixedQR}, R <: QRPullback}
     QR = left_orth(t, alg)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    gtol = _get_pullback_gauge_atol(alg.rrule_alg.verbosity)
 
     function left_orth!_pullback(ΔQR)
         Δt = zeros(scalartype(t), space(t))

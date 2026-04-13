@@ -355,6 +355,9 @@ end
 ## Reverse-rule algorithms
 #
 
+_get_pullback_rank_atol() = MatrixAlgebraKit.default_pullback_rank_atol
+_get_pullback_rank_atol(::Union{<:FixedSVD, IterSVD}) = A -> zero(scalartype(A)) # truncated SVDs shouldn't change rank in pullback
+
 # svd_trunc! rrule wrapping MatrixAlgebraKit's svd_pullback!
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
@@ -366,13 +369,14 @@ function ChainRulesCore.rrule(
 
     Ũ, S̃, Ṽ⁺, info = svd_trunc(t, alg; trunc)
     U, S, V⁺, inds = info.U_full, info.S_full, info.V_full, info.truncation_indices # untruncated decomposition
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    rtol = _get_pullback_rank_atol(alg.fwd_alg)
+    gtol = _get_pullback_gauge_atol(alg.rrule_alg.verbosity)
 
     function svd_trunc!_full_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
             zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            rank_atol = rtol(t), gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
     end
@@ -391,13 +395,14 @@ function ChainRulesCore.rrule(
         trunc::TruncationStrategy = notrunc(),
     ) where {F, R <: TruncSVDPullback}
     U, S, V⁺, info = svd_trunc(t, alg; trunc)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    rtol = _get_pullback_rank_atol(alg.fwd_alg)
+    gtol = _get_pullback_gauge_atol(alg.rrule_alg.verbosity)
 
     function svd_trunc!_trunc_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δf = svd_trunc_pullback!(
             zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
-            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+            rank_atol = rtol(t), gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
     end
