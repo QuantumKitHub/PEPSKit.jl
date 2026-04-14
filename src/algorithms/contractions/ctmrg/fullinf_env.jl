@@ -165,12 +165,6 @@ function full_infinite_environment(
     return half_infinite_environment(env, x)
 end
 function full_infinite_environment(
-        henv1::AbstractTensorMap{T, S, N, N}, henv2::AbstractTensorMap{T, S, N, N},
-        x::AbstractTensor{T, S, N}
-    ) where {T, S, N}
-    return half_infinite_environment(henv1, henv2, x)
-end
-function full_infinite_environment(
         C_1, C_2, C_3, C_4,
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
         x::AbstractTensor{T, S, 3},
@@ -230,12 +224,6 @@ function full_infinite_environment(
         x::AbstractTensor{T, S, N}, env::AbstractTensorMap{T, S, N, N},
     ) where {T, S, N}
     return half_infinite_environment(x, env)
-end
-function full_infinite_environment(
-        x::AbstractTensor{T, S, N},
-        henv1::AbstractTensorMap{T, S, N, N}, henv2::AbstractTensorMap{T, S, N, N},
-    ) where {T, S, N}
-    return half_infinite_environment(x, henv1, henv2)
 end
 function full_infinite_environment(
         x::AbstractTensor{T, S, 3},

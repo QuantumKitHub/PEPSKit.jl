@@ -82,16 +82,6 @@ function half_infinite_environment(
     return tensorcontract(env, envi, false, x, xi, false, xi)
 end
 function half_infinite_environment(
-        quadrant1::AbstractTensorMap{T, S, N, N}, quadrant2::AbstractTensorMap{T, S, N, N},
-        x::AbstractTensor{T, S, N}
-    ) where {T, S, N}
-    qi = (codomainind(quadrant1), domainind(quadrant1))
-    xi = (codomainind(x), domainind(x))
-    q2x = tensorcontract(quadrant2, qi, false, x, xi, false, xi)
-    q1q2x = tensorcontract(quadrant1, qi, false, q2x, xi, false, xi)
-    return q1q2x
-end
-function half_infinite_environment(
         C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{T, S, 3}, A_1::P, A_2::P
     ) where {T, S, P <: PEPSSandwich}
     return @autoopt @tensor env_x[χ_out D_outabove D_outbelow] :=
@@ -141,16 +131,6 @@ function half_infinite_environment(
     envi = (domainind(env), codomainind(env))
     xi = (codomainind(x), domainind(x))
     return tensorcontract(env, envi, true, x, xi, false, xi)
-end
-function half_infinite_environment(
-        x::AbstractTensor{T, S, N},
-        quadrant1::AbstractTensorMap{T, S, N, N}, quadrant2::AbstractTensorMap{T, S, N, N},
-    ) where {T, S, N}
-    qi = (domainind(quadrant1), codomainind(quadrant1))
-    xi = (codomainind(x), domainind(x))
-    xq1 = tensorcontract(quadrant1, qi, true, x, xi, false, xi)
-    xq1q2 = tensorcontract(quadrant2, qi, true, xq1, xi, false, xi)
-    return xq1q2
 end
 function half_infinite_environment(
         x::AbstractTensor{T, S, 3}, C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P
