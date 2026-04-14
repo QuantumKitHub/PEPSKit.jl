@@ -130,8 +130,8 @@ function _su_iter_mpo!(
     right_M, right_vaxs, = _get_right(state, sites[end], out_axs[end], env)
     left_perm = _get_mpo_perm(mod1(2 + in_axs[1], 4) + n_physical_axes, in_axs[1] + n_physical_axes, Nax)
     right_perm = _get_mpo_perm(out_axs[end] + n_physical_axes, mod1(2 + out_axs[end], 4) + n_physical_axes, Nax)
-    left_M = TensorKit.permute(left_M, left_perm)
-    right_M = TensorKit.permute(right_M, right_perm)
+    left_M = permute(left_M, left_perm)
+    right_M = permute(right_M, right_perm)
     left_invperm = invbiperm(left_perm, Val(n_physical_axes))
     right_invperm = invbiperm(right_perm, Val(n_physical_axes))
     # middle tensors: permuted to MPS form in _get_mid
@@ -141,7 +141,6 @@ function _su_iter_mpo!(
     invperms = [left_invperm, getindex.(mids, 3)..., right_invperm]
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
-    normalize!.(Ms, Inf)
     # flip virtual arrows in `Ms` to ←
     _flip_virtuals!(Ms, flips)
     # apply gate MPOs and truncate

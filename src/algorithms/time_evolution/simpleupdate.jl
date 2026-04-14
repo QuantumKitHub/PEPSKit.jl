@@ -93,7 +93,7 @@ function _get_left(
     open_vaxs = _filtered_oneto(in_ax, Val(4))
     s = mod1(site[1], Nr), mod1(site[2], Nc)
     t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
-    Nax = 4 + numout(t)
+    Nax = 4 + numout(eltype(state))
     invperm = (ntuple(identity, Nax - 1), (Nax,))
     return t, open_vaxs, invperm
 end
@@ -111,7 +111,7 @@ function _get_right(
     open_vaxs = _filtered_oneto(out_ax, Val(4))
     s = mod1(site[1], Nr), mod1(site[2], Nc)
     t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
-    Nax = 4 + numout(t)
+    Nax = 4 + numout(eltype(state))
     invperm = (ntuple(identity, Nax - 1), (Nax,))
     return t, open_vaxs, invperm
 end
@@ -122,41 +122,36 @@ utilizing reduced bond tensors with the physical leg.
 """
 function _su_iter_gate!(
         state::InfiniteState, gate::NNGate, env::SUWeight,
-        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
+        siteA::CartesianIndex{2}, siteB::CartesianIndex{2}, alg::SimpleUpdate
     )
     Nr, Nc = size(state)
-    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
-    @assert length(sites) == 2 && length(truncs) == 1
-    in_ax = _nn_vec_direction(sites[2] - sites[1])
-    out_ax = _nn_vec_direction(sites[1] - sites[2])
-    A, open_vaxs_A, = _get_left(state, sites[1], in_ax, env)
-    B, open_vaxs_B, = _get_right(state, sites[2], out_ax, env)
+    trunc = only(_get_cluster_trunc(alg.trunc, [siteA, siteB], (Nr, Nc)))
+    in_ax = _nn_vec_direction(siteB - siteA)
+    out_ax = mod1(in_ax + 2, 4)
+    A0, open_vaxs_A, = _get_left(state, siteA, in_ax, env)
+    B0, open_vaxs_B, = _get_right(state, siteB, out_ax, env)
     # rotate
-    bond, rev = _nn_bondrev(sites..., (Nr, Nc))
-    A = _bond_rotation(A, bond[1], rev; inv = false)
-    B = _bond_rotation(B, bond[1], rev; inv = false)
+    bond, rev = _nn_bondrev(siteA, siteB, (Nr, Nc))
+    dir = first(bond)
+    A = _bond_rotation(A0, dir, rev; inv = false)
+    B = _bond_rotation(B0, dir, rev; inv = false)
     # apply gate
     ϵ = 0.0
-    s = nothing
+    local s
     gate_axs = alg.purified ? (1:1) : (1:2)
     for gate_ax in gate_axs
         X, a, b, Y = _qr_bond(A, B; gate_ax, positive = true)
-        a, s, b, ϵ′ = _apply_gate(a, b, gate, truncs[1])
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)
         A, B = _qr_bond_undo(X, a, b, Y)
     end
-    # rotate back
-    A = _bond_rotation(A, bond[1], rev; inv = true)
-    B = _bond_rotation(B, bond[1], rev; inv = true)
     rev && (s = transpose(s))
-    # remove environment weights
-    siteA, siteB = map(sites) do site
-        return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
+    # rotate back & remove environment weights
+    for (site, vertex, open_vaxs) in ((siteA, A, open_vaxs_A), (siteB, B, open_vaxs_B))
+        s′ = (mod1(site[1], Nr), mod1(site[2], Nc))
+        rotated = _bond_rotation(vertex, dir, rev; inv = true)
+        state[s′...] = absorb_weight(rotated, env, s′..., open_vaxs; inv = true)
     end
-    A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs_A; inv = true)
-    B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs_B; inv = true)
-    # update tensor dict and weight on current bond
-    state[siteA], state[siteB] = A, B
     env[bond...] = normalize!(s, Inf)
     return ϵ
 end
@@ -180,7 +175,7 @@ function su_iter(
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
             alg.bipartite && r > 1 && continue
-            ϵ′ = _su_iter_gate!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter_gate!(state2, gate, env2, sites[1], sites[2], alg)
             ϵ = max(ϵ, ϵ′)
             if alg.bipartite
                 if d == 1
