@@ -119,6 +119,7 @@ include("algorithms/bp/gaugefix.jl")
 include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/correlators.jl")
+include("algorithms/approximate.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
@@ -140,6 +141,7 @@ export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
+export FidelityMaxCrude, approximate
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation

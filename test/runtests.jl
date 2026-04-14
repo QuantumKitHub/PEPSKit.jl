@@ -118,6 +118,9 @@ end
         @time @safetestset "Density matrix from double-layer PEPO" begin
             include("toolbox/densitymatrices.jl")
         end
+        @time @safetestset "Fidelity initialization" begin
+            include("toolbox/approximate.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "UTILITY"
         @time @safetestset "Eigh wrapper" begin
