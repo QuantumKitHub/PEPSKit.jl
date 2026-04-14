@@ -119,7 +119,7 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
 
     # check projector computation for both types of environments,
     # comparing dense and sparse implementations
-    return foreach(dirs_and_coordinates) do co
+    foreach(dirs_and_coordinates) do co
         dir, r, c = co
 
         co2 = _next_coordinate(co, size(env)[2:3]...)
@@ -185,19 +185,21 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
         @test P_right_sparse ≈ P_right_full[dir, r, c]
     end
 
-    return foreach(dirs_and_coordinates) do co
+    foreach(dirs_and_coordinates) do co
         dir, r, c = co
 
         ## Corner renormalization
 
         C_sparse = renormalize_corner_fns[dir](
-            (r, c), sparse_enlarged_corners, P_left, P_right
+            (r, c), sparse_enlarged_corners, P_left_half, P_right_half
         )
         C_dense = renormalize_corner_fns[dir](
-            (r, c), dense_enlarged_corners, P_left, P_right
+            (r, c), dense_enlarged_corners, P_left_half, P_right_half
         )
         @test C_sparse ≈ C_dense
     end
+
+    return nothing
 end
 
 @testset "Random Cartesian spaces" begin
