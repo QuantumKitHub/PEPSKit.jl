@@ -81,6 +81,42 @@ function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
 end
 
 """
+Obtain the left (first) cluster tensor from `state` at `site`,
+where `in_ax` is the virtual axis connecting to the next tensor.
+The tensor is not permuted; the returned `invperm` is the identity.
+"""
+function _get_left(
+        state::InfiniteState, site::CartesianIndex{2}, in_ax::Int,
+        env::SUWeight
+    )
+    Nr, Nc = size(state)
+    open_vaxs = _filtered_oneto(in_ax, Val(4))
+    s = mod1(site[1], Nr), mod1(site[2], Nc)
+    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
+    Nax = 4 + numout(t)
+    invperm = (ntuple(identity, Nax - 1), (Nax,))
+    return t, open_vaxs, invperm
+end
+
+"""
+Obtain the right (last) cluster tensor from `state` at `site`,
+where `out_ax` is the virtual axis connecting to the previous tensor.
+The tensor is not permuted; the returned `invperm` is the identity.
+"""
+function _get_right(
+        state::InfiniteState, site::CartesianIndex{2}, out_ax::Int,
+        env::SUWeight
+    )
+    Nr, Nc = size(state)
+    open_vaxs = _filtered_oneto(out_ax, Val(4))
+    s = mod1(site[1], Nr), mod1(site[2], Nc)
+    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
+    Nax = 4 + numout(t)
+    invperm = (ntuple(identity, Nax - 1), (Nax,))
+    return t, open_vaxs, invperm
+end
+
+"""
 Simple update optimized for nearest neighbor gates
 utilizing reduced bond tensors with the physical leg.
 """
@@ -91,10 +127,14 @@ function _su_iter_gate!(
     Nr, Nc = size(state)
     truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
     @assert length(sites) == 2 && length(truncs) == 1
-    Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
+    in_ax = _nn_vec_direction(sites[2] - sites[1])
+    out_ax = _nn_vec_direction(sites[1] - sites[2])
+    A, open_vaxs_A, = _get_left(state, sites[1], in_ax, env)
+    B, open_vaxs_B, = _get_right(state, sites[2], out_ax, env)
     # rotate
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
-    A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
+    A = _bond_rotation(A, bond[1], rev; inv = false)
+    B = _bond_rotation(B, bond[1], rev; inv = false)
     # apply gate
     ϵ = 0.0
     s = nothing
@@ -113,14 +153,11 @@ function _su_iter_gate!(
     siteA, siteB = map(sites) do site
         return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
     end
-    A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs[1]; inv = true)
-    B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs[2]; inv = true)
+    A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs_A; inv = true)
+    B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs_B; inv = true)
     # update tensor dict and weight on current bond
-    normalize!(A, Inf)
-    normalize!(B, Inf)
-    normalize!(s, Inf)
     state[siteA], state[siteB] = A, B
-    env[bond...] = s
+    env[bond...] = normalize!(s, Inf)
     return ϵ
 end
 

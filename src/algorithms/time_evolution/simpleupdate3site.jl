@@ -84,68 +84,25 @@ function _get_mpo_perm(out_ax::Integer, in_ax::Integer, ::Val{Nax}) where {Nax}
 end
 
 """
-Obtain the cluster `Ms` along the (open) path `sites` in `state`. 
-
-When the `SUWeight` environment `env` is provided,
-it will be absorbed into tensors of `Ms`.
-
-When `permute = true`, permute tensors in `Ms` to MPS axis order
-```
-    PEPS:           PEPO:
-           3             3  4
-          ╱              | ╱
-    o -- M -- i     o -- M -- i
-       ╱ |             ╱ |
-      4  2            5  2
-    M[o 2 3 4; i]  M[o 2 3 4 5; i]
-```
-where `o` (`i`) connects to the previous (next) tensor.
-Otherwise, axes order of each tensor in `Ms` are preserved.
-
-## Returns
-
-- `vertices`: Tensors in the cluster.
-- `open_vaxs`: Open virtual axes (1 to 4) of each cluster tensor before permutation.
-- `invperms`: Permutations to restore the axes order of each cluster tensor.
+Obtain a middle cluster tensor from `state` at `site`,
+where `out_ax` (`in_ax`) is the virtual axis connecting to the previous (next) tensor.
+The tensor is permuted to MPS axis order.
 """
-function _get_cluster(
-        state::InfiniteState, sites::Vector{CartesianIndex{2}},
-        env::SUWeight; permute::Bool = true
+function _get_mid(
+        state::InfiniteState, site::CartesianIndex{2}, out_ax::Int, in_ax::Int,
+        env::SUWeight
     )
     Nr, Nc = size(state)
-    n_sites = length(sites)
     n_physical_axes = numout(eltype(unitcell(state)))
-    # number of axes of each state tensor
     Nax = Val(4 + n_physical_axes)
-    out_axs = map(2:n_sites) do i
-        return _nn_vec_direction(sites[i - 1] - sites[i])
-    end
-    in_axs = map(1:(n_sites - 1)) do i
-        return _nn_vec_direction(sites[i + 1] - sites[i])
-    end
-    first_open_vaxs = _filtered_oneto(in_axs[1], Val(4))
-    last_open_vaxs = _filtered_oneto(out_axs[n_sites - 1], Val(4))
-    mid_vaxs = map(i -> _filtered_oneto(out_axs[i - 1], in_axs[i], Val(4)), 2:(n_sites - 1))
-    # use direction opposite to `in` as `out`
-    first_perm = _get_mpo_perm(mod1(2 + in_axs[1], 4) + n_physical_axes, in_axs[1] + n_physical_axes, Nax)
-    # use direction opposite to `out` as `in`
-    last_perm = _get_mpo_perm(out_axs[n_sites - 1] + n_physical_axes, mod1(2 + out_axs[n_sites - 1], 4) + n_physical_axes, Nax)
-    mid_perms = map(2:(n_sites - 1)) do i
-        return _get_mpo_perm(out_axs[i - 1] + n_physical_axes, in_axs[i] + n_physical_axes, Nax)
-    end
-
-    open_vaxs = [first_open_vaxs, mid_vaxs..., last_open_vaxs]
-    perms = [first_perm, mid_perms..., last_perm]
-    invperms = invbiperm.(perms, Val(n_physical_axes))
-    vertices = map(
-        zip(sites, open_vaxs, perms)
-    ) do (site, vaxs, perm)
-        s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
-        t = absorb_weight(state[s], env, s[1], s[2], vaxs)
-        return permute ? TensorKit.permute(t, perm) : t
-    end
-    return vertices, open_vaxs, invperms
+    open_vaxs = _filtered_oneto(out_ax, in_ax, Val(4))
+    perm = _get_mpo_perm(out_ax + n_physical_axes, in_ax + n_physical_axes, Nax)
+    invperm = invbiperm(perm, Val(n_physical_axes))
+    s = mod1(site[1], Nr), mod1(site[2], Nc)
+    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
+    return permute(t, perm), open_vaxs, invperm
 end
+
 
 function invbiperm(bituple::Tuple{Tuple, Tuple}, ::Val{N}) where {N}
     return invbiperm((first(bituple)..., last(bituple)...), Val(N))
@@ -162,8 +119,26 @@ function _su_iter_mpo!(
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
+    n_physical_axes = numout(eltype(unitcell(state)))
+    Nax = Val(4 + n_physical_axes)
+    n_sites = length(sites)
     truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
-    Ms, open_vaxs, invperms = _get_cluster(state, sites, env)
+    out_axs = map(i -> _nn_vec_direction(sites[i - 1] - sites[i]), 2:n_sites)
+    in_axs = map(i -> _nn_vec_direction(sites[i + 1] - sites[i]), 1:(n_sites - 1))
+    # left and right: get tensor without permutation, then permute to MPS form
+    left_M, left_vaxs, = _get_left(state, sites[1], in_axs[1], env)
+    right_M, right_vaxs, = _get_right(state, sites[end], out_axs[end], env)
+    left_perm = _get_mpo_perm(mod1(2 + in_axs[1], 4) + n_physical_axes, in_axs[1] + n_physical_axes, Nax)
+    right_perm = _get_mpo_perm(out_axs[end] + n_physical_axes, mod1(2 + out_axs[end], 4) + n_physical_axes, Nax)
+    left_M = TensorKit.permute(left_M, left_perm)
+    right_M = TensorKit.permute(right_M, right_perm)
+    left_invperm = invbiperm(left_perm, Val(n_physical_axes))
+    right_invperm = invbiperm(right_perm, Val(n_physical_axes))
+    # middle tensors: permuted to MPS form in _get_mid
+    mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
+    Ms = [left_M, getindex.(mids, 1)..., right_M]
+    open_vaxs = [left_vaxs, getindex.(mids, 2)..., right_vaxs]
+    invperms = [left_invperm, getindex.(mids, 3)..., right_invperm]
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
