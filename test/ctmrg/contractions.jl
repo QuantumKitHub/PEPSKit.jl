@@ -13,7 +13,7 @@ using PEPSKit: renormalize_northwest_corner, renormalize_northeast_corner,
 using PEPSKit: random_start_vector
 
 # settings
-Random.seed!(91283219347)
+Random.seed!(91283219348)
 stype = ComplexF64
 
 renormalize_corner_fns = (
