@@ -118,6 +118,53 @@ function twistdual!(t::AbstractTensorMap, is)
 end
 twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
 
+# lifted from #311, to be removed once that's merged
+"""
+    twistnondual(t::AbstractTensorMap, i)
+    twistnondual!(t::AbstractTensorMap, i)
+
+Twist the i-th leg of a tensor `t` if it represents a non-dual space.
+"""
+function twistnondual!(t::AbstractTensorMap, i::Int)
+    !isdual(space(t, i)) || return t
+    return twist!(t, i)
+end
+function twistnondual!(t::AbstractTensorMap, is)
+    is′ = filter(i -> !isdual(space(t, i)), is)
+    return twist!(t, is′)
+end
+twistnondual(t::AbstractTensorMap, is) = twistnondual!(copy(t), is)
+
+# make twistdual and twistnondual differentiable via dummy out-of-place functions
+function _twistdual(t::AbstractTensorMap, i::Int)
+    isdual(space(t, i)) || return t
+    return twist(t, i)
+end
+function _twistdual(t::AbstractTensorMap, is)
+    is′ = filter(i -> isdual(space(t, i)), is)
+    return twist(t, is′)
+end
+function ChainRulesCore.rrule(
+        config::RuleConfig, ::typeof(twistdual), t::AbstractTensorMap, i
+    )
+    tout, twistdual_pullback = rrule_via_ad(config, _twistdual, t, i)
+    return tout, twistdual_pullback
+end
+function _twistnondual(t::AbstractTensorMap, i::Int)
+    !isdual(space(t, i)) || return t
+    return twist(t, i)
+end
+function _twistnondual(t::AbstractTensorMap, is)
+    is′ = filter(i -> !isdual(space(t, i)), is)
+    return twist(t, is′)
+end
+function ChainRulesCore.rrule(
+        config::RuleConfig, ::typeof(twistnondual), t::AbstractTensorMap, i
+    )
+    tout, twistnondual_pullback = rrule_via_ad(config, _twistnondual, t, i)
+    return tout, twistnondual_pullback
+end
+
 """
     str(t)
 

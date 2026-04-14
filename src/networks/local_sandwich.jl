@@ -26,6 +26,10 @@ _rotl90_localsandwich(O) = rotl90.(O)
 _rotr90_localsandwich(O) = rotr90.(O)
 _rot180_localsandwich(O) = rot180.(O)
 
+function _rotate_north_localsandwich(t, dir)
+    return mod1(dir, 4) == NORTH ? t : _rotate_north_localsandwich(_rotl90_localsandwich(t), dir - 1)
+end
+
 ## Math (for Zygote accumulation)
 
 # generic local interface
@@ -67,6 +71,7 @@ flip_physicalspace(O::PEPSSandwich) = flip_physicalspace.(O)
 herm_depth(O::PEPSSandwich) = herm_depth.(O)
 
 TensorKit.spacetype(::Type{P}) where {P <: PEPSSandwich} = spacetype(eltype(P))
+TensorKit.storagetype(::Type{P}) where {P <: PEPSSandwich} = storagetype(eltype(P))
 
 # not overloading MPOTensor because that defines AbstractTensorMap{<:Any,S,2,2}(::PEPSTensor, ::PEPSTensor)
 # ie type piracy
@@ -129,3 +134,6 @@ flip_physicalspace(O::PEPOSandwich) = flip_physicalspace.(O)
 herm_depth(O::PEPOSandwich) = herm_depth.(O)
 
 TensorKit.spacetype(::Type{P}) where {P <: PEPOSandwich} = spacetype(eltype(P))
+function TensorKit.storagetype(::Type{PEPOSandwich{N, T, P}}) where {N, T, P}
+    return TensorKit.promote_storagetype(T, P)
+end

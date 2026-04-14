@@ -73,12 +73,12 @@ function _pepo_edge_expr(edgename, codom_label, dom_label, dir, H::Int, args...)
     return tensorexpr(
         edgename,
         (
-            envlabel(codom_label, args...),
+            envlabel(codom_label),
             virtuallabel(dir, :top, args...),
             ntuple(i -> virtuallabel(dir, :mid, i, args...), H)...,
             virtuallabel(dir, :bot, args...),
         ),
-        (envlabel(dom_label, args...),),
+        (envlabel(dom_label),),
     )
 end
 
@@ -146,9 +146,9 @@ function _pepo_codomain_projector_expr(
     )
     return tensorexpr(
         projname,
-        (envlabel(codom_label, args...),),
+        (envlabel(codom_label),),
         (
-            envlabel(dom_label, args...),
+            envlabel(dom_label),
             virtuallabel(dom_dir, :top, args...),
             ntuple(i -> virtuallabel(dom_dir, :mid, i, args...), H)...,
             virtuallabel(dom_dir, :bot, args...),
@@ -162,11 +162,158 @@ function _pepo_domain_projector_expr(
     return tensorexpr(
         projname,
         (
-            envlabel(codom_label, args...),
+            envlabel(codom_label),
             virtuallabel(codom_dir, :top, args...),
             ntuple(i -> virtuallabel(codom_dir, :mid, i, args...), H)...,
             virtuallabel(codom_dir, :bot, args...),
         ),
-        (envlabel(dom_label, args...),),
+        (envlabel(dom_label),),
     )
+end
+
+## HalfInfiniteEnv expressions
+
+function _half_infinite_environment_expr_parts(H)
+    # site 1 (codomain)
+    C1_e = _corner_expr(:C_1, :WNW, :NNW)
+    E1_e = _pepo_edge_expr(:E_1, :SW, :WNW, :W, H, 1)
+    E2_e = _pepo_edge_expr(:E_2, :NNW, :NC, :N, H, 1)
+    ket1_e, bra1_e, pepo1_es = _pepo_sandwich_expr(:A_1, H, 1; contract_east = :NC)
+
+    # site 2 (domain)
+    C2_e = _corner_expr(:C_2, :NNE, :ENE)
+    E3_e = _pepo_edge_expr(:E_3, :NC, :NNE, :N, H, 2)
+    E4_e = _pepo_edge_expr(:E_4, :ENE, :SE, :E, H, 2)
+    ket2_e, bra2_e, pepo2_es = _pepo_sandwich_expr(:A_2, H, 2; contract_west = :NC)
+
+    return C1_e, E1_e, E2_e, ket1_e, bra1_e, pepo1_es, C2_e, E3_e, E4_e, ket2_e, bra2_e, pepo2_es
+end
+
+function _half_infinite_environment_expr(H)
+
+    C1_e, E1_e, E2_e, ket1_e, bra1_e, pepo1_es, C2_e, E3_e, E4_e, ket2_e, bra2_e, pepo2_es =
+        _half_infinite_environment_expr_parts(H)
+
+    partial_expr = Expr(
+        :call, :*,
+        E1_e, C1_e, E2_e,
+        ket1_e, Expr(:call, :conj, bra1_e), pepo1_es...,
+        E3_e, C2_e, E4_e,
+        ket2_e, Expr(:call, :conj, bra2_e), pepo2_es...,
+    )
+
+    return partial_expr
+end
+
+function _half_infinite_environment_conj_expr(H)
+
+    C1_e, E1_e, E2_e, ket1_e, bra1_e, pepo1_es, C2_e, E3_e, E4_e, ket2_e, bra2_e, pepo2_es =
+        _half_infinite_environment_expr_parts(H)
+
+    partial_expr = Expr(
+        :call, :*,
+        Expr(:call, :conj, E1_e), Expr(:call, :conj, C1_e), Expr(:call, :conj, E2_e),
+        Expr(:call, :conj, ket1_e), bra1_e, map(x -> Expr(:call, :conj, x), pepo1_es)...,
+        Expr(:call, :conj, E3_e), Expr(:call, :conj, C2_e), Expr(:call, :conj, E4_e),
+        Expr(:call, :conj, ket2_e), bra2_e, map(x -> Expr(:call, :conj, x), pepo2_es)...,
+    )
+
+    return partial_expr
+end
+
+## FullInfiniteEnv expressions
+
+function _full_infinite_environment_expr_parts(H)
+    # site 1 (codomain)
+    C1_e = _corner_expr(:C_1, :WNW, :NNW)
+    E1_e = _pepo_edge_expr(:E_1, :SW, :WNW, :W, H, 1)
+    E2_e = _pepo_edge_expr(:E_2, :NNW, :NC, :N, H, 1)
+    ket1_e, bra1_e, pepo1_es = _pepo_sandwich_expr(:A_1, H, 1; contract_east = :NC)
+
+    # site 2
+    C2_e = _corner_expr(:C_2, :NNE, :ENE)
+    E3_e = _pepo_edge_expr(:E_3, :NC, :NNE, :N, H, 2)
+    E4_e = _pepo_edge_expr(:E_4, :ENE, :EC, :E, H, 2)
+    ket2_e, bra2_e, pepo2_es = _pepo_sandwich_expr(
+        :A_2, H, 2; contract_west = :NC, contract_south = :EC
+    )
+
+    # site 3
+    C3_e = _corner_expr(:C_3, :ESE, :SSE)
+    E5_e = _pepo_edge_expr(:E_5, :EC, :ESE, :E, H, 3)
+    E6_e = _pepo_edge_expr(:E_6, :SSE, :SC, :S, H, 3)
+    ket3_e, bra3_e, pepo3_es = _pepo_sandwich_expr(
+        :A_3, H, 3; contract_north = :EC, contract_west = :SC
+    )
+
+    # site 4 (domain)
+    C4_e = _corner_expr(:C_4, :SSW, :WSW)
+    E7_e = _pepo_edge_expr(:E_7, :SC, :SSW, :S, H, 4)
+    E8_e = _pepo_edge_expr(:E_8, :WSW, :NW, :W, H, 4)
+    ket4_e, bra4_e, pepo4_es = _pepo_sandwich_expr(:A_4, H, 4; contract_east = :SC)
+
+    return (
+        E1_e, C1_e, E2_e,
+        ket1_e, bra1_e, pepo1_es,
+        E3_e, C2_e, E4_e,
+        ket2_e, bra2_e, pepo2_es,
+        E5_e, C3_e, E6_e,
+        ket3_e, bra3_e, pepo3_es,
+        E7_e, C4_e, E8_e,
+        ket4_e, bra4_e, pepo4_es,
+    )
+end
+
+function _full_infinite_environment_expr(H)
+    (
+        E1_e, C1_e, E2_e,
+        ket1_e, bra1_e, pepo1_es,
+        E3_e, C2_e, E4_e,
+        ket2_e, bra2_e, pepo2_es,
+        E5_e, C3_e, E6_e,
+        ket3_e, bra3_e, pepo3_es,
+        E7_e, C4_e, E8_e,
+        ket4_e, bra4_e, pepo4_es,
+    ) = _full_infinite_environment_expr_parts(H)
+
+    partial_expr = Expr(
+        :call, :*,
+        E1_e, C1_e, E2_e,
+        ket1_e, Expr(:call, :conj, bra1_e), pepo1_es...,
+        E3_e, C2_e, E4_e,
+        ket2_e, Expr(:call, :conj, bra2_e), pepo2_es...,
+        E5_e, C3_e, E6_e,
+        ket3_e, Expr(:call, :conj, bra3_e), pepo3_es...,
+        E7_e, C4_e, E8_e,
+        ket4_e, Expr(:call, :conj, bra4_e), pepo4_es...,
+    )
+
+    return partial_expr
+end
+
+function _full_infinite_environment_conj_expr(H)
+    (
+        E1_e, C1_e, E2_e,
+        ket1_e, bra1_e, pepo1_es,
+        E3_e, C2_e, E4_e,
+        ket2_e, bra2_e, pepo2_es,
+        E5_e, C3_e, E6_e,
+        ket3_e, bra3_e, pepo3_es,
+        E7_e, C4_e, E8_e,
+        ket4_e, bra4_e, pepo4_es,
+    ) = _full_infinite_environment_expr_parts(H)
+
+    partial_expr = Expr(
+        :call, :*,
+        Expr(:call, :conj, E1_e), Expr(:call, :conj, C1_e), Expr(:call, :conj, E2_e),
+        Expr(:call, :conj, ket1_e), bra1_e, map(x -> Expr(:call, :conj, x), pepo1_es)...,
+        Expr(:call, :conj, E3_e), Expr(:call, :conj, C2_e), Expr(:call, :conj, E4_e),
+        Expr(:call, :conj, ket2_e), bra2_e, map(x -> Expr(:call, :conj, x), pepo2_es)...,
+        Expr(:call, :conj, E5_e), Expr(:call, :conj, C3_e), Expr(:call, :conj, E6_e),
+        Expr(:call, :conj, ket3_e), bra3_e, map(x -> Expr(:call, :conj, x), pepo3_es)...,
+        Expr(:call, :conj, E7_e), Expr(:call, :conj, C4_e), Expr(:call, :conj, E8_e),
+        Expr(:call, :conj, ket4_e), bra4_e, map(x -> Expr(:call, :conj, x), pepo4_es)...,
+    )
+
+    return partial_expr
 end
