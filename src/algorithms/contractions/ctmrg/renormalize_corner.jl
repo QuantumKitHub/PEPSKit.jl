@@ -285,7 +285,7 @@ end
     C_out_e = _corner_expr(:corner, :out, :in)
 
     P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :N, :N, H)
-    E_east_e = _pepo_edge_expr(:E_east, :N, :EWE, :E, H)
+    E_east_e = _pepo_edge_expr(:E_east, :N, :ESE, :E, H)
     C_southeast_e = _corner_expr(:C_southeast, :ESE, :SSE)
     E_south_e = _pepo_edge_expr(:E_south, :SSE, :W, :S, H)
     ket_e, bra_e, pepo_es = _pepo_sandwich_expr(:A, H)
