@@ -10,9 +10,9 @@ using PEPSKit
 bm = [-0.1235, -0.213]
 
 function converge_env(state, χ::Int)
-    trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
-    env0 = CTMRGEnv(ones, Float64, state, Vect[SU2Irrep](0 => 1))
-    env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
+    env0 = initialize_ctmrg_environment(state, ProductStateInitialization())
+    trunc = truncrank(χ) & truncerror(; atol = 1.0e-12)
+    env, = leading_boundary(env0, state; alg = :sequential, trunc, tol = 1.0e-10)
     return env
 end
 

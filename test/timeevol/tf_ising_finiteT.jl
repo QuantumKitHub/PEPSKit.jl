@@ -10,11 +10,9 @@ bm_β = [0.5632, 0.0]
 bm_2β = [0.5297, 0.8265]
 
 function converge_env(state, χ::Int)
-    trunc1 = truncrank(4) & truncerror(; atol = 1.0e-12)
-    env0 = CTMRGEnv(rand, Float64, state, ℂ^2)
-    env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
-    trunc2 = truncrank(χ) & truncerror(; atol = 1.0e-12)
-    env, = leading_boundary(env, state; alg = :sequential, trunc = trunc2, tol = 1.0e-10)
+    env0 = initialize_ctmrg_environment(state, ProductStateInitialization())
+    trunc = truncrank(χ) & truncerror(; atol = 1.0e-12)
+    env, = leading_boundary(env0, state; alg = :sequential, trunc, tol = 1.0e-10)
     return env
 end
 
