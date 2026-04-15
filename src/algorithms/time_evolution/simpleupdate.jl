@@ -180,9 +180,7 @@ function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
 end
 
 """
-    timestep(
-        it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight
-    ) -> (psi, env, info)
+$(SIGNATURES)
 
 Given the `TimeEvolver` iterator `it`, perform one step of time evolution
 on the input state `psi` and its environment `env`.
@@ -202,17 +200,10 @@ function MPSKit.timestep(
 end
 
 """
-    time_evolve(
-        it::TimeEvolver{<:SimpleUpdate}; 
-        tol::Float64 = 0.0, check_interval::Int = 500
-    ) -> (psi, env, info)
+$(SIGNATURES)
 
 Perform time evolution to the end of `TimeEvolver` iterator `it`,
-or until convergence of `SUWeight` set by a positive `tol`.
-
-- Setting `tol > 0` enables convergence check (for imaginary time evolution of InfinitePEPS only).
-    For other usages it should not be changed.
-- `check_interval` sets the number of iterations between outputs of information.
+`check_interval` sets the number of iterations between outputs of information.
 """
 function MPSKit.time_evolve(
         it::TimeEvolver{<:SimpleUpdate}; check_interval::Int = 500
@@ -243,13 +234,20 @@ function MPSKit.time_evolve(
     return
 end
 
+"""
+$(SIGNATURES)
+
+Perform time evolution until convergence of `TimeEvolver` iterator `it`.
+For `SimpleUpdate`, convergence is determined by the change of `SUWeight`
+between two iterations being smaller than `tol`.
+"""
 function MPSKit.time_evolve(
-        it::TimeEvolver{<:SimpleUpdate}, H::LocalOperator;
+        it::TimeEvolver{<:SimpleUpdate, G, S}, H::LocalOperator;
         tol::Float64 = 1.0e-8, check_interval::Int = 500
-    )
+    ) where {G, S <: SUState{<:InfinitePEPS}}
     time_start = time()
     @info "--- Time evolution (simple update), dt = $(it.dt) ---"
-    @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+    @assert it.alg.imaginary_time "Only imaginary time evolution allows convergence checking."
     env0, time0 = it.state.env, time()
     for (psi, env, info) in it
         iter = it.state.iter
