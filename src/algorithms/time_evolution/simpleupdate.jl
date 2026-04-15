@@ -245,8 +245,7 @@ end
 
 function MPSKit.time_evolve(
         it::TimeEvolver{<:SimpleUpdate}, H::LocalOperator;
-        tol::Float64 = 1.0e-8, check_interval::Int = 500,
-        observables::Vector{<:LocalOperator} = LocalOperator[]
+        tol::Float64 = 1.0e-8, check_interval::Int = 500
     )
     time_start = time()
     @info "--- Time evolution (simple update), dt = $(it.dt) ---"
@@ -268,10 +267,6 @@ function MPSKit.time_evolve(
                 "SU iter %-7d: E ≈ %.5f, |Δλ| = %.3e. Time = %.3f s/it",
                 iter, real(energy), diff, time1 - time0
             )
-            if !isempty(observables)
-                expvals = [expectation_value(psi, obs, ctmenv) for obs in observables]
-                @info "Observables ≈ $(expvals)."
-            end
         end
         if (iter == it.nstep) && (diff >= tol)
             @warn "SU: bond weights have not converged."

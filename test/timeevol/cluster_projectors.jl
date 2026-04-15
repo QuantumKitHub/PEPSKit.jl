@@ -117,9 +117,6 @@ end
     end
     wts0 = SUWeight(peps0)
     ham = hubbard_model(Float64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0)
-    observables = [
-        LocalOperator(physicalspace(ham), [(1, 1)] => e_number(Float64, Trivial, U1Irrep)),
-    ]
     # applying 2-site gates decomposed to MPO or not,
     # resulting energy should be almost the same
     e_sites = map((true, false)) do force_mpo
@@ -127,7 +124,7 @@ end
         trunc = truncerror(; atol = 1.0e-10) & truncrank(4)
         alg = SimpleUpdate(; trunc, force_mpo)
         evolver = TimeEvolver(peps, ham, 0.01, 10000, alg, wts)
-        peps, wts, = time_evolve(evolver, ham; tol = 1.0e-6, observables, check_interval = 1000)
+        peps, wts, = time_evolve(evolver, ham; tol = 1.0e-6, check_interval = 1000)
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
         for trunc in truncs_env
