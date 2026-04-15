@@ -2,7 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: str, twistdual, _prev, _next
+using PEPSKit: str, twistdual, _prev, _next, unitcell
 
 Vps = Dict(
     Z2Irrep => Vect[Z2Irrep](0 => 1, 1 => 2),
@@ -43,12 +43,13 @@ end
         normalize!.(wts.data, Inf)
     end
     env = CTMRGEnv(wts)
-    for (r, c) in Tuple.(CartesianIndices(peps.A))
+    for idx in CartesianIndices(unitcell(peps))
+        r, c = Tuple(idx)
         ρ1 = su_rdm_1x1(r, c, peps, wts)
         if init == :trivial
             @test ρ1 ≈ su_rdm_1x1(r, c, peps, nothing)
         end
-        ρ2 = reduced_densitymatrix(((r, c),), peps, env)
+        ρ2 = reduced_densitymatrix([idx], peps, env)
         @test ρ1 ≈ ρ2
     end
 end
