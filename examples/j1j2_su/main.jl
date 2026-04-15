@@ -57,7 +57,8 @@ for J2 in 0.1:0.1:0.5
     H = real(
         j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
     )
-    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval)
+    evolver = TimeEvolver(peps, H, dt, nstep, alg, wts)
+    global peps, wts, = time_evolve(evolver, H; tol, check_interval)
 end
 
 md"""
@@ -70,7 +71,8 @@ tols = [1.0e-9, 1.0e-9]
 J2 = 0.5
 H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false))
 for (dt, tol) in zip(dts, tols)
-    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol)
+    evolver = TimeEvolver(peps, H, dt, nstep, alg, wts)
+    global peps, wts, = time_evolve(evolver, H; tol)
 end
 
 md"""

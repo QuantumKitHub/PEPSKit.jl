@@ -67,7 +67,8 @@ maxiter = 20000
 for (dt, tol, Dbond) in zip(dts, tols, Ds)
     trunc = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
     alg = SimpleUpdate(; trunc, bipartite = false)
-    global peps, wts, = time_evolve(peps, H, dt, maxiter, alg, wts; tol, check_interval = 2000)
+    evolver = TimeEvolver(peps, H, dt, maxiter, alg, wts)
+    global peps, wts, = time_evolve(evolver, H; tol, check_interval = 2000)
 end
 
 md"""

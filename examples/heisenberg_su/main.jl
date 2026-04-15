@@ -79,7 +79,8 @@ nstep = 10000
 trunc_peps = truncerror(; atol = 1.0e-10) & truncrank(Dbond)
 alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true)
 for (dt, tol) in zip(dts, tols)
-    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval = 500)
+    evolver = TimeEvolver(peps, H, dt, nstep, alg, wts)
+    global peps, wts, = time_evolve(evolver, H; tol, check_interval = 500)
 end
 
 md"""
