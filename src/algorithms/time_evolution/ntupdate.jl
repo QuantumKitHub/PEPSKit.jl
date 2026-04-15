@@ -155,34 +155,56 @@ function MPSKit.timestep(
 end
 
 """
-    time_evolve(
-        it::TimeEvolver{<:NeighbourUpdate},
-        [H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm];
-        tol::Float64 = 1.0e-7, check_interval::Int = 10
-    ) -> (psi, info)
+$(SIGNATURES)
 
-Perform time evolution to the end of `NeighbourUpdate` TimeEvolver `it`,
-or until convergence of energy set by a positive `tol`.
+Perform time evolution to the end of `NeighbourUpdate` TimeEvolver `it`.
+`check_interval` sets the number of iterations between outputs of information.
+"""
+function MPSKit.time_evolve(it::TimeEvolver{<:NeighbourUpdate}; check_interval::Int = 50)
+    time_start = time0 = time()
+    @info "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
+    info0 = nothing
+    for (psi, info) in it
+        iter = it.state.iter
+        stop = (iter == it.nstep)
+        showinfo = (iter == 1) || (iter % check_interval == 0) || stop
+        time1 = time()
+        if showinfo
+            Δλ = (info0 === nothing) ? NaN : compare_weights(info.wts, info0.wts)
+            @info @sprintf(
+                "NTU iter %d: t = %.2e, |Δλ| = %.3e. Time: %.2f s",
+                it.state.iter, it.state.t, Δλ, time1 - time0
+            )
+        end
+        if stop
+            time_end = time()
+            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+            return psi, info
+        end
+        info0, time0 = info, time()
+    end
+    return
+end
 
-To enable convergence check (for imaginary time evolution of InfinitePEPS only),
-provide the Hamiltonian `H`, CTMRG environment `env`, CTMRG algorithm `ctm_alg`
-and setting `tol > 0`.
+"""
+$(SIGNATURES)
 
-`check_interval` sets the number of iterations between energy checks
-(for ground state search) and outputs of information.
+Perform time evolution until convergence of `TimeEvolver` iterator `it`.
+For `NeighbourUpdate`, convergence is determined by the change of energy
+between two checks being smaller than `tol`.
 """
 function MPSKit.time_evolve(
-        it::TimeEvolver{<:NeighbourUpdate},
+        it::TimeEvolver{<:NeighbourUpdate, G, S},
         H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm;
         tol::Float64 = 1.0e-7, check_interval::Int = 10
-    )
+    ) where {G, S <: NTUState{<:InfinitePEPS}}
     @info "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
     time_start = time0 = time()
     psi0 = copy(it.state.psi)
-    @assert (psi0 isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+    @assert it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     # initial energy
     env, = leading_boundary(env, psi0, ctm_alg)
-    energy = expectation_value(psi0, H, env) / prod(size(psi0))
+    energy = real(expectation_value(psi0, H, env)) / prod(size(psi0))
     @info @sprintf("NTU iter 0: E = %.4e", energy)
     info0 = (; energy, env)
     # start evolving
@@ -201,7 +223,7 @@ function MPSKit.time_evolve(
         end
         env, = leading_boundary(env, psi, ctm_alg)
         # measure energy
-        energy = expectation_value(psi, H, env) / prod(size(psi))
+        energy = real(expectation_value(psi, H, env)) / prod(size(psi))
         ΔE = energy - energy0
         info = @insert info.energy = energy
         info = @insert info.env = env
@@ -238,58 +260,4 @@ function MPSKit.time_evolve(
         time0 = time()
     end
     return
-end
-
-function MPSKit.time_evolve(it::TimeEvolver{<:NeighbourUpdate}; check_interval::Int = 50)
-    time_start = time0 = time()
-    @info "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
-    info0 = nothing
-    for (psi, info) in it
-        iter = it.state.iter
-        stop = (iter == it.nstep)
-        showinfo = (iter == 1) || (iter % check_interval == 0) || stop
-        time1 = time()
-        if showinfo
-            Δλ = (info0 === nothing) ? NaN : compare_weights(info.wts, info0.wts)
-            @info @sprintf(
-                "NTU iter %d: t = %.2e, |Δλ| = %.3e. Time: %.2f s",
-                it.state.iter, it.state.t, Δλ, time1 - time0
-            )
-        end
-        if stop
-            time_end = time()
-            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
-            return psi, info
-        end
-        info0, time0 = info, time()
-    end
-    return
-end
-
-"""
-    time_evolve(
-        psi0::Union{InfinitePEPS, InfinitePEPO}, H::LocalOperator, 
-        dt::Number, nstep::Int, alg::NeighbourUpdate; 
-        t0::Number = 0.0, symmetrize_gates::Bool = false,
-        check_interval::Int = 10
-    ) -> (psi, info)
-
-Perform time evolution on the initial state `psi0` with Hamiltonian `H`,
-using `NeighbourUpdate` algorithm `alg`, time step `dt` for 
-`nstep` number of steps. 
-
-- Set `symmetrize_gates = true` for second-order Trotter decomposition.
-- Use `t0` to specify the initial time of `psi0`.
-- `check_interval` sets the interval to output information (and check convergence). 
-    Output during the evolution can be turned off by setting `check_interval <= 0`.
-- `info` is a NamedTuple containing information of the evolution, 
-    including the time `info.t` evolved since `psi0`.
-"""
-function MPSKit.time_evolve(
-        psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
-        alg::NeighbourUpdate; symmetrize_gates::Bool = false,
-        t0::Number = 0.0, check_interval::Int = 10
-    )
-    it = TimeEvolver(psi0, H, dt, nstep, alg; t0, symmetrize_gates)
-    return time_evolve(it; check_interval)
 end
