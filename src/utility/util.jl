@@ -135,36 +135,6 @@ function twistnondual!(t::AbstractTensorMap, is)
 end
 twistnondual(t::AbstractTensorMap, is) = twistnondual!(copy(t), is)
 
-# make twistdual and twistnondual differentiable via dummy out-of-place functions
-function _twistdual(t::AbstractTensorMap, i::Int)
-    isdual(space(t, i)) || return t
-    return twist(t, i)
-end
-function _twistdual(t::AbstractTensorMap, is)
-    is′ = filter(i -> isdual(space(t, i)), is)
-    return twist(t, is′)
-end
-function ChainRulesCore.rrule(
-        config::RuleConfig, ::typeof(twistdual), t::AbstractTensorMap, i
-    )
-    tout, twistdual_pullback = rrule_via_ad(config, _twistdual, t, i)
-    return tout, twistdual_pullback
-end
-function _twistnondual(t::AbstractTensorMap, i::Int)
-    !isdual(space(t, i)) || return t
-    return twist(t, i)
-end
-function _twistnondual(t::AbstractTensorMap, is)
-    is′ = filter(i -> !isdual(space(t, i)), is)
-    return twist(t, is′)
-end
-function ChainRulesCore.rrule(
-        config::RuleConfig, ::typeof(twistnondual), t::AbstractTensorMap, i
-    )
-    tout, twistnondual_pullback = rrule_via_ad(config, _twistnondual, t, i)
-    return tout, twistnondual_pullback
-end
-
 """
     str(t)
 
