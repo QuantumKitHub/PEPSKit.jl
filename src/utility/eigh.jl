@@ -327,7 +327,7 @@ end
 ## Reverse-rule algorithms
 #
 
-function _get_pullback_gauge_tol(verbosity::Int)
+function _get_pullback_gauge_atol(verbosity::Int)
     if verbosity ≤ 0 # never print gauge sensitivity
         return (_) -> Inf
     elseif verbosity == 1 # print gauge sensitivity above default atol
@@ -346,7 +346,7 @@ function ChainRulesCore.rrule(
     ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig}, R <: FullEighPullback}
     D̃, Ṽ, info = eigh_trunc(t, alg; trunc)
     D, V, inds = info.D_full, info.V_full, info.truncation_indices # untruncated decomposition
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    gtol = _get_pullback_gauge_atol(alg.rrule_alg.verbosity)
 
     function eigh_trunc!_full_pullback(ΔDV)
         Δt = eigh_pullback!(
@@ -370,7 +370,7 @@ function ChainRulesCore.rrule(
         trunc::TruncationStrategy = notrunc(),
     ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig, IterEigh}, R <: TruncEighPullback}
     D, V, info = eigh_trunc(t, alg; trunc)
-    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    gtol = _get_pullback_gauge_atol(alg.rrule_alg.verbosity)
 
     function eigh_trunc!_trunc_pullback(ΔDV)
         Δf = eigh_trunc_pullback!(
