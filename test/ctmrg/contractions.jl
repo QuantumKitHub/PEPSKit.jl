@@ -136,8 +136,8 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
         # application
         xr = random_start_vector(shenv)
         xl = randn(storagetype(shenv), codomain(shenv))
-        @test shenv(xr, Val(false)) ≈ half_infinite_environment(dhenv, xr)
-        @test shenv(xl, Val(true)) ≈ half_infinite_environment(xl, dhenv)
+        @test shenv(xr, Val(false)) ≈ dhenv * xr
+        @test shenv(xl, Val(true)) ≈ dhenv' * xl
 
         # projector computation
         P_left_sparse, P_right_sparse = contract_projectors(
@@ -163,8 +163,8 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
         # application
         xl = randn(storagetype(sfenv), codomain(sfenv))
         xr = random_start_vector(sfenv)
-        @test sfenv(xr, Val(false)) ≈ full_infinite_environment(dfenv, xr)
-        @test sfenv(xl, Val(true)) ≈ full_infinite_environment(xl, dfenv)
+        @test sfenv(xr, Val(false)) ≈ dfenv * xr
+        @test sfenv(xl, Val(true)) ≈ dfenv' * xl
 
         # projector computation
         P_left_sparse, P_right_sparse = contract_projectors(

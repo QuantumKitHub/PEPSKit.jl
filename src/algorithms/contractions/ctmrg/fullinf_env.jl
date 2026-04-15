@@ -157,14 +157,24 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $env_e := $proj_expr))
 end
 
-# right linear map action: tensorcontract(env, x)
-# TODO: if we want multiplication action env * x, we need additional twists
+# right linear map action: env * x
 function full_infinite_environment(
         env::AbstractTensorMap{T, S, N, N}, x::AbstractTensor{T, S, N}
     ) where {T, S, N}
     return half_infinite_environment(env, x)
 end
 function full_infinite_environment(
+        C_1, C_2, C_3, C_4,
+        E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
+        x::AbstractTensor{T, S, N},
+        A_1, A_2, A_3, A_4,
+    ) where {T, S, N}
+    xt = twistdual(x, 1:N)
+    return _full_infinite_environment(
+        C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8, xt, A_1, A_2, A_3, A_4
+    )
+end
+function _full_infinite_environment(
         C_1, C_2, C_3, C_4,
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
         x::AbstractTensor{T, S, 3},
@@ -181,7 +191,7 @@ function full_infinite_environment(
         E_7[χ9 D19 D20; χ10] * C_4[χ10; χ11] * E_8[χ11 D21 D22; χ_x] *
         x[χ_x D_xabove D_xbelow]
 end
-function full_infinite_environment(
+function _full_infinite_environment(
         C_1, C_2, C_3, C_4,
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
         x::AbstractTensor{T, S, 2},
@@ -198,7 +208,7 @@ function full_infinite_environment(
         E_7[χ9 D19; χ10] * C_4[χ10; χ11] * E_8[χ11 D21; χ_x] *
         x[χ_x D_x]
 end
-@generated function full_infinite_environment(
+@generated function _full_infinite_environment(
         C_1, C_2, C_3, C_4,
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
         x::AbstractTensor{T, S, N},
@@ -218,14 +228,24 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $env_x_e := $proj_expr * $x_e))
 end
 
-# left linear map action via adjoint: tensorcontract(env', x) (kind of...)
-# TODO: if we want multiplication action env' * x, we need additional twists
+# left linear map action via adjoint: env' * x
 function full_infinite_environment(
         x::AbstractTensor{T, S, N}, env::AbstractTensorMap{T, S, N, N},
     ) where {T, S, N}
     return half_infinite_environment(x, env)
 end
 function full_infinite_environment(
+        x::AbstractTensor{T, S, N},
+        C_1, C_2, C_3, C_4,
+        E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
+        A_1, A_2, A_3, A_4,
+    ) where {T, S, N}
+    xt = twistdual(x, 1:N)
+    return _full_infinite_environment(
+        xt, C_1, C_2, C_3, C_4, E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8, A_1, A_2, A_3, A_4
+    )
+end
+function _full_infinite_environment(
         x::AbstractTensor{T, S, 3},
         C_1, C_2, C_3, C_4,
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
@@ -242,7 +262,7 @@ function full_infinite_environment(
         conj(ket(A_4)[d4; D_inabove D17 D19 D21]) * bra(A_4)[d4; D_inbelow D18 D20 D22] *
         conj(E_7[χ9 D19 D20; χ10]) * conj(C_4[χ10; χ11]) * conj(E_8[χ11 D21 D22; χ_in])
 end
-function full_infinite_environment(
+function _full_infinite_environment(
         x::AbstractTensor{T, S, 2},
         C_1, C_2, C_3, C_4,
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
@@ -259,7 +279,7 @@ function full_infinite_environment(
         conj(A_4[D21 D19; D_in D17]) *
         conj(E_7[χ9 D19; χ10]) * conj(C_4[χ10; χ11]) * conj(E_8[χ11 D21; χ_in])
 end
-@generated function full_infinite_environment(
+@generated function _full_infinite_environment(
         x::AbstractTensor{T, S, N},
         C_1, C_2, C_3, C_4,
         E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,

@@ -72,16 +72,19 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $env_e := $proj_expr))
 end
 
-# right linear map action: tensorcontract(env, x)
-# TODO: if we want multiplication action env * x, we need additional twists
+# right linear map action: env * x
 function half_infinite_environment(
         env::AbstractTensorMap{T, S, N, N}, x::AbstractTensor{T, S, N}
     ) where {T, S, N}
-    envi = (codomainind(env), domainind(env))
-    xi = (codomainind(x), domainind(x))
-    return tensorcontract(env, envi, false, x, xi, false, xi)
+    return env * x
 end
 function half_infinite_environment(
+        C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{T, S, N}, A_1, A_2
+    ) where {T, S, N}
+    xt = twistdual(x, 1:N)
+    return _half_infinite_environment(C_1, C_2, E_1, E_2, E_3, E_4, xt, A_1, A_2)
+end
+function _half_infinite_environment(
         C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{T, S, 3}, A_1::P, A_2::P
     ) where {T, S, P <: PEPSSandwich}
     return @autoopt @tensor env_x[χ_out D_outabove D_outbelow] :=
@@ -91,7 +94,7 @@ function half_infinite_environment(
         E_3[χ3 D5 D6; χ4] * C_2[χ4; χ5] * E_4[χ5 D7 D8; χ6] *
         x[χ6 D11 D12]
 end
-function half_infinite_environment(
+function _half_infinite_environment(
         C_1, C_2, E_1, E_2, E_3, E_4, x::AbstractTensor{T, S, 2}, A_1::P, A_2::P
     ) where {T, S, P <: PFTensor}
     return @autoopt @tensor env_x[χ_out D_out] :=
@@ -101,7 +104,7 @@ function half_infinite_environment(
         E_3[χ3 D5; χ4] * C_2[χ4; χ5] * E_4[χ5 D7; χ6] *
         x[χ6 D11]
 end
-@generated function half_infinite_environment(
+@generated function _half_infinite_environment(
         C_1, C_2,
         E_1, E_2, E_3, E_4,
         x::AbstractTensor{T, S, N},
@@ -123,16 +126,19 @@ end
     )
 end
 
-# left linear map action via adjoint: tensorcontract(env', x) (kind of...)
-# TODO: if we want multiplication action env' * x, we need additional twists
+# left linear map action via adjoint: env' * x
 function half_infinite_environment(
         x::AbstractTensor{T, S, N}, env::AbstractTensorMap{T, S, N, N},
     ) where {T, S, N}
-    envi = (domainind(env), codomainind(env))
-    xi = (codomainind(x), domainind(x))
-    return tensorcontract(env, envi, true, x, xi, false, xi)
+    return env' * x
 end
 function half_infinite_environment(
+        x::AbstractTensor{T, S, N}, C_1, C_2, E_1, E_2, E_3, E_4, A_1, A_2
+    ) where {T, S, N}
+    xt = twistdual(x, 1:N)
+    return _half_infinite_environment(xt, C_1, C_2, E_1, E_2, E_3, E_4, A_1, A_2)
+end
+function _half_infinite_environment(
         x::AbstractTensor{T, S, 3}, C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P
     ) where {T, S, P <: PEPSSandwich}
     return @autoopt @tensor x_env[χ_in D_inabove D_inbelow] :=
@@ -142,7 +148,7 @@ function half_infinite_environment(
         conj(ket(A_2)[d2; D7 D9 D_inabove D11]) * bra(A_2)[d2; D8 D10 D_inbelow D12] *
         conj(E_3[χ4 D7 D8; χ5]) * conj(C_2[χ5; χ6]) * conj(E_4[χ6 D9 D10; χ_in])
 end
-function half_infinite_environment(
+function _half_infinite_environment(
         x::AbstractTensor{T, S, 2}, C_1, C_2, E_1, E_2, E_3, E_4, A_1::P, A_2::P
     ) where {T, S, P <: PFTensor}
     return @autoopt @tensor env_x[χ_in D_in] :=
@@ -152,7 +158,7 @@ function half_infinite_environment(
         conj(A_2[D_C D_in; D_N2 D_E2]) *
         conj(E_3[χ_N D_N2; χ_NNE]) * conj(C_2[χ_NNE; χ_ENE]) * conj(E_4[χ_ENE D_E2; χ_in])
 end
-@generated function half_infinite_environment(
+@generated function _half_infinite_environment(
         x::AbstractTensor{T, S, N},
         C_1, C_2,
         E_1, E_2, E_3, E_4,
