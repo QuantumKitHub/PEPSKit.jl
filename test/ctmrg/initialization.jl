@@ -15,13 +15,7 @@ tol = 1.0e-4
 maxiter = 1000
 verbosity = 2
 trunc = truncrank(χ)
-boundary_alg = (;
-    alg = :simultaneous,
-    tol,
-    verbosity,
-    trunc,
-    maxiter,
-)
+boundary_alg = (; alg = :simultaneous, tol, verbosity, trunc, maxiter)
 
 @testset "CTMRG environment initialization for critical ising with $S symmetry (#255)" for S in symmetries
     # initialize
