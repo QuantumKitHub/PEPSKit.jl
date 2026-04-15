@@ -209,10 +209,9 @@ function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
         row::Int, col::Int, ax::Int; inv::Bool = false
     )
-    Nr, Nc = size(weights)[2:end]
-    nin, nout, ntol = numin(t), numout(t), numind(t)
+    _, Nr, Nc = size(weights)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert 1 <= ax <= nin
+    @assert 1 <= ax <= numin(t)
     pow = inv ? -1 / 2 : 1 / 2
     wt = sdiag_pow(
         if ax == NORTH
@@ -226,18 +225,23 @@ function absorb_weight(
         end,
         pow,
     )
-    t_idx = [(n - nout == ax) ? 1 : -n for n in 1:ntol]
-    ax′ = ax + nout
-    wt_idx = (ax == NORTH || ax == EAST) ? [1, -ax′] : [-ax′, 1]
+    ax′ = ax + numout(t)
     # make absorption/removal twist-free
     twistdual!(wt, 1)
-    return permute(ncon((t, wt), (t_idx, wt_idx)), (Tuple(1:nout), Tuple((nout + 1):ntol)))
+    if ax == SOUTH || ax == WEST
+        wt = transpose(wt)  # not sure this can be factorized due to twistdual
+    end
+    biperm = (_filtered_oneto(ax′, Val(numind(t))), (ax′,))
+    contracted = permute(t, biperm) * wt
+    invbp = invbiperm(biperm, Val(numout(t)))
+    return permute(contracted, invbp)
 end
 function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
         row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false
     ) where {N}
-    t2 = copy(t)
+    t2 = t
+    # should not permute back and forth
     for a in ax
         t2 = absorb_weight(t2, weights, row, col, a; inv)
     end
