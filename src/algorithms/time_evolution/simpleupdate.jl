@@ -139,7 +139,7 @@ function _su_iter_gate!(
     ϵ = 0.0
     local s
     gate_axs = alg.purified ? (1:1) : (1:2)
-    for gate_ax in gate_axs
+    for gate_ax in gate_axs  # TODO try to use type stable helper function
         X, a, b, Y = _qr_bond(A, B; gate_ax, positive = true)
         a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)

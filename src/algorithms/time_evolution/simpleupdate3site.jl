@@ -126,21 +126,21 @@ function _su_iter_mpo!(
     out_axs = map(i -> _nn_vec_direction(sites[i - 1] - sites[i]), 2:n_sites)
     in_axs = map(i -> _nn_vec_direction(sites[i + 1] - sites[i]), 1:(n_sites - 1))
     # left and right: get tensor without permutation, then permute to MPS form
-    left_M, left_vaxs, = _get_left(state, sites[1], in_axs[1], env)
-    right_M, right_vaxs, = _get_right(state, sites[end], out_axs[end], env)
+    left_M0, left_vaxs, = _get_left(state, sites[1], in_axs[1], env)
+    right_M0, right_vaxs, = _get_right(state, sites[end], out_axs[end], env)
     left_perm = _get_mpo_perm(mod1(2 + in_axs[1], 4) + n_physical_axes, in_axs[1] + n_physical_axes, Nax)
     right_perm = _get_mpo_perm(out_axs[end] + n_physical_axes, mod1(2 + out_axs[end], 4) + n_physical_axes, Nax)
-    left_M = permute(left_M, left_perm)
-    right_M = permute(right_M, right_perm)
+    left_M = permute(left_M0, left_perm)
+    right_M = permute(right_M0, right_perm)
     left_invperm = invbiperm(left_perm, Val(n_physical_axes))
     right_invperm = invbiperm(right_perm, Val(n_physical_axes))
     # middle tensors: permuted to MPS form in _get_mid
     mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
-    Ms = [left_M, getindex.(mids, 1)..., right_M]
-    open_vaxs = [left_vaxs, getindex.(mids, 2)..., right_vaxs]
+    Ms = [left_M, getindex.(mids, 1)..., right_M]  # TODO remove
+    open_vaxs = [left_vaxs, getindex.(mids, 2)..., right_vaxs] # TODO removve
     invperms = [left_invperm, getindex.(mids, 3)..., right_invperm]
-    flips = [isdual(space(M, 1)) for M in Ms[2:end]]
-    Vphys = [codomain(M, 2) for M in Ms]
+    flips = push!([isdual(space(first(x), 1)) for x in mids], isdual(space(right_M, 1)))
+    Vphys = [codomain(left_M, 2), map(x -> codomain(first(x), 2), mids)..., codomain(right_M, 2)]
     # flip virtual arrows in `Ms` to ←
     _flip_virtuals!(Ms, flips)
     # apply gate MPOs and truncate
