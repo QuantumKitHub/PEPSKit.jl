@@ -89,19 +89,23 @@ function _su_iter!(
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     )
     Nr, Nc = size(state)
-    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
-    @assert length(sites) == 2 && length(truncs) == 1
+    trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
+    @assert length(sites) == 2
     Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
     normalize!.(Ms, Inf)
     # rotate
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
     A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
+    if trunc isa FixedSpaceTruncation
+        V = west_virtualspace(B)
+        trunc = truncspace(isdual(V) ? flip(V) : V)
+    end
     # apply gate
     ϵ, s = 0.0, nothing
     gate_axs = alg.purified ? (1:1) : (1:2)
     for gate_ax in gate_axs
         X, a, b, Y = _qr_bond(A, B; gate_ax, positive = true)
-        a, s, b, ϵ′ = _apply_gate(a, b, gate, truncs[1])
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)
         A, B = _qr_bond_undo(X, a, b, Y)
     end
@@ -202,10 +206,8 @@ function MPSKit.timestep(
 end
 
 """
-    time_evolve(
-        it::TimeEvolver{<:SimpleUpdate}; 
-        tol::Float64 = 0.0, check_interval::Int = 500
-    ) -> (psi, env, info)
+    time_evolve(it; check_interval = 500) -> (psi, env, info)
+    time_evolve(it, H; tol = 1.0e-8, check_interval = 500) -> (psi, env, info)
 
 Perform time evolution to the end of `TimeEvolver` iterator `it`,
 or until convergence of `SUWeight` set by a positive `tol`.
@@ -215,15 +217,41 @@ or until convergence of `SUWeight` set by a positive `tol`.
 - `check_interval` sets the number of iterations between outputs of information.
 """
 function MPSKit.time_evolve(
-        it::TimeEvolver{<:SimpleUpdate};
-        tol::Float64 = 0.0, check_interval::Int = 500
+        it::TimeEvolver{<:SimpleUpdate}; check_interval::Int = 500
     )
     time_start = time()
-    check_convergence = (tol > 0)
     @info "--- Time evolution (simple update), dt = $(it.dt) ---"
-    if check_convergence
-        @assert (it.state.psi isa InfinitePEPS) && it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+    env0, time0 = it.state.env, time()
+    for (psi, env, info) in it
+        iter = it.state.iter
+        diff = compare_weights(env0, env)
+        stop = (iter == it.nstep)
+        showinfo = (check_interval > 0) &&
+            ((iter % check_interval == 0) || (iter == 1) || stop)
+        time1 = time()
+        if showinfo
+            @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
+            @info @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, diff, time1 - time0)
+        end
+        if stop
+            time_end = time()
+            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+            return psi, env, info
+        else
+            env0 = env
+        end
+        time0 = time()
     end
+    return
+end
+
+function MPSKit.time_evolve(
+        it::TimeEvolver{<:SimpleUpdate, G, S}, H::LocalOperator;
+        tol::Float64 = 1.0e-8, check_interval::Int = 500
+    ) where {G, S <: SUState{<:InfinitePEPS}}
+    time_start = time()
+    @info "--- Time evolution (simple update), dt = $(it.dt) ---"
+    @assert it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
     env0, time0 = it.state.env, time()
     for (psi, env, info) in it
         iter = it.state.iter
@@ -233,16 +261,20 @@ function MPSKit.time_evolve(
             ((iter % check_interval == 0) || (iter == 1) || stop)
         time1 = time()
         if showinfo
+            # TODO: convert to BPEnv instead
+            ctmenv = CTMRGEnv(env)
+            energy = expectation_value(psi, H, ctmenv) / prod(size(psi))
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-            @info @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, diff, time1 - time0)
+            @info @sprintf(
+                "SU iter %-7d: E ≈ %.5f, |Δλ| = %.3e. Time = %.3f s/it",
+                iter, energy, diff, time1 - time0
+            )
         end
-        if check_convergence
-            if (iter == it.nstep) && (diff >= tol)
-                @warn "SU: bond weights have not converged."
-            end
-            if diff < tol
-                @info "SU: bond weights have converged."
-            end
+        if (iter == it.nstep) && (diff >= tol)
+            @warn "SU: bond weights have not converged."
+        end
+        if diff < tol
+            @info "SU: bond weights have converged."
         end
         if stop
             time_end = time()
@@ -269,7 +301,6 @@ algorithm `alg`, time step `dt` for `nstep` number of steps.
 
 - Set `symmetrize_gates = true` for second-order Trotter decomposition.
 - Set `tol > 0` to enable convergence check (for imaginary time evolution of iPEPS only).
-    For other usages it should not be changed.
 - Use `t0` to specify the initial time of the evolution.
 - `check_interval` sets the interval to output information. Output during the evolution can be turned off by setting `check_interval <= 0`.
 - `info` is a NamedTuple containing information of the evolution, 
@@ -281,5 +312,9 @@ function MPSKit.time_evolve(
         tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     )
     it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0, symmetrize_gates)
-    return time_evolve(it; tol, check_interval)
+    return if tol == 0
+        time_evolve(it; check_interval)
+    else
+        time_evolve(it, H; tol, check_interval)
+    end
 end

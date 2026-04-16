@@ -107,6 +107,9 @@ end
         @time @safetestset "Time evolution with site-dependent truncation" begin
             include("timeevol/sitedep_truncation.jl")
         end
+        @time @safetestset "Time evolution with FixedSpaceTruncation" begin
+            include("timeevol/fixedspacetruncation.jl")
+        end
         @time @safetestset "Transverse field Ising model at finite temperature" begin
             include("timeevol/tf_ising_finiteT.jl")
         end
