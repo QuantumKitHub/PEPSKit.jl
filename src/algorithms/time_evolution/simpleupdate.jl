@@ -263,7 +263,7 @@ function MPSKit.time_evolve(
         if showinfo
             # TODO: convert to BPEnv instead
             ctmenv = CTMRGEnv(env)
-            energy = expectation_value(psi, H, ctmenv) / prod(size(psi))
+            energy = real(expectation_value(psi, H, ctmenv)) / prod(size(psi))
             @info "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
             @info @sprintf(
                 "SU iter %-7d: E ≈ %.5f, |Δλ| = %.3e. Time = %.3f s/it",
