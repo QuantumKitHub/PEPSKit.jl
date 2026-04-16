@@ -58,16 +58,29 @@ $(TYPEDFIELDS)
 
 Construct a `EighAdjoint` algorithm struct based on the following keyword arguments:
 
-* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_fwd_alg))`: Eig algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`
-    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`
-    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
-    - `:multiple` : MatrixAlgebraKit's `LAPACK_MultipleRelativelyRobustRepresentations`
-    - `:lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Lanczos)
-    - `:blocklanczos` : Block version of `:lanczos` for repeated extremal eigenvalues, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BlockLanczos)
-* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:full` : MatrixAlgebraKit's `eigh_pullback!` that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's `eigh_trunc_pullback!` solving a Sylvester equation on the truncated subspace
+* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_fwd_alg))`: Eigh
+  algorithm of the forward pass which can either be passed as an `Algorithm` instance or a
+  `NamedTuple` where the algorithm is specified by the `alg` keyword.
+  The available Eigh algorithms can be divided into two categories:
+    - "Dense" Eigh algorithms which compute a truncated Eigh through the truncation of a full
+      [`MatrixAlgebraKit.eigh_compact!`](@extref) decomposition.
+      Available algorithms are:
+        - `:DefaultAlgorithm` : MatrixAlgebraKit's default Eigh algorithm for a given matrix type.
+        - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref)
+        - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref)
+        - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref)
+        - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref)
+        - `:RobustRepresentations` : MatrixAlgebraKit's [`RobustRepresentations`](@extref)
+    - "Sparse" Eigh algorithms which directly compute a truncated Eigh without access to the
+      full decomposition. Available algorithms are:
+        - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
+        - `:BlockLanczos` : Block version of `:Lanczos` for repeated extremal eigenvalues, see [`KrylovKit.BlockLanczos`](@extref)
+* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_rrule_alg))`:
+  Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied
+  by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the
+  following:
+    - `:full` : MatrixAlgebraKit's [`eigh_pullback!`](@extref) that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref) solving a Sylvester equation on the truncated subspace
 """
 struct EighAdjoint{F, R}
     fwd_alg::F
@@ -75,14 +88,14 @@ struct EighAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const EIGH_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :dense => DefaultAlgorithm,
+    :DefaultAlgorithm => DefaultAlgorithm,
     :QRIteration => QRIteration,
     :Bisection => Bisection,
     :DivideAndConquer => DivideAndConquer,
     :Jacobi => Jacobi,
     :RobustRepresentations => RobustRepresentations,
-    :lanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
-    :blocklanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
+    :Lanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
+    :BlockLanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
 )
 const EIGH_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullEighPullback, :trunc => TruncEighPullback,

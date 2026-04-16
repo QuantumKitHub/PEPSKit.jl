@@ -19,7 +19,7 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :sdd)), SVDAdjoint(; fwd_alg = (; alg = :iterative))]
+svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :DivideAndConquer)), SVDAdjoint(; fwd_alg = (; alg = :iterative))]
 projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
@@ -55,9 +55,9 @@ end
 
 # test same thing for C4v CTMRG
 c4v_algs = [
-    (:c4v_qr, QRAdjoint(; fwd_alg = (; alg = :qr))),
-    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :qriteration))),
-    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :lanczos))),
+    (:c4v_qr, QRAdjoint(; fwd_alg = (; alg = :Householder))),
+    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :QRIteration))),
+    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :Lanczos))),
 ]
 @testset "$(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for
     (projector_alg, decomposition_alg) in c4v_algs
@@ -93,12 +93,12 @@ c4v_algs = [
     end
 end
 
-@testset "Element-wise consistency of :sdd and :iterative" begin
+@testset "Element-wise consistency of :DivideAndConquer and :iterative" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
         decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative, krylovdim = χ + 10)),
     )
-    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :sdd)))
+    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :DivideAndConquer)))
 
     # initialize states
     Random.seed!(91283219347)

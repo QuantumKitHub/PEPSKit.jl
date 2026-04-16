@@ -24,28 +24,36 @@ Module containing default algorithm parameter values and arguments.
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `rrule_degeneracy_atol=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude which smoothens the divergent term in the retained contributions of an SVD or eigh pullback, in case of (pseudo) degenerate singular values
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
-    - `:sdd` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
-    - `:svd` : MatrixAlgebraKit's `LAPACK_QRIteration`
-    - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
+    - `:DefaultAlgorithm` : MatrixAlgebraKit's default SVD algorithm for a given matrix type.
+    - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref)
+    - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref)
+    - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref)
+    - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref)
+    - `:SVDViaPolar` : MatrixAlgebraKit's [`SVDViaPolar`](@extref)
+    - `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref)
+    - `:iterative` : Iterative Krylov-based SVD only computing the specifed number of
+        singular values and vectors, see [`IterSVD`](@ref)
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
-    - `:full` : Uses a modified version of MatrixAlgebraKit's reverse-rule for `svd_compact` which doesn't solve any linear problem and instead requires access to the full SVD, see [`PEPSKit.FullSVDPullback`](@ref).
-    - `:trunc` : MatrixAlgebraKit's `svd_trunc_pullback!` solving a Sylvester equation on the truncated subspace and therefore only requires access to the truncated SVD.
-    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
-    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+    - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref) that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref) solving a Sylvester equation on the truncated subspace
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
+    - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref)
 
 ## `eigh` forward & reverse
 
 * `eigh_fwd_alg=:$(Defaults.eigh_fwd_alg)` : `eigh` algorithm that is used in the forward pass.
-    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`.
-    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`.
-    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`.
-    - `:multiple` : MatrixAlgebraKit's `LAPACK_MultipleRelativelyRobustRepresentations`. 
-    - `:lanczos` : Lanczos algorithm, see [`KrylovKit.Lanczos`](@extref) for details.
-    - `:blocklanczos` : Block Lanczos algorithm, see [`KrylovKit.BlockLanczos`](@extref) for details.
+    - `:DefaultAlgorithm` : MatrixAlgebraKit's default Eigh algorithm for a given matrix type.
+    - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref)
+    - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref)
+    - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref)
+    - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref)
+    - `:RobustRepresentations` : MatrixAlgebraKit's [`RobustRepresentations`](@extref)
+    - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
+    - `:BlockLanczos` : Block version of `:Lanczos` for repeated extremal eigenvalues, see [`KrylovKit.BlockLanczos`](@extref)
 * `eigh_rrule_alg=:$(Defaults.eigh_rrule_alg)` : Reverse-rule algorithm for the `eigh` gradient.
     - `:full` : Full pullback algorithm for eigendecompositions, see [`PEPSKit.FullEighPullback`](@ref).
     - `:trunc` : Truncated reverse-mode algorithm for eigendecompositions, see [`PEPSKit.TruncEighPullback`](@ref).
@@ -57,6 +65,9 @@ Module containing default algorithm parameter values and arguments.
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
 * `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
+* `projector_alg_c4v=:$(Defaults.projector_alg_c4v)` : Default variant of the C4v CTMRG projector algorithm.
+    - `:c4v_eigh` : Projection via truncated Eigh of an enlarged corner.
+    - `:c4v_qr` : Projection via QR decomposition of a column-enlarged corne.
 
 ## Fixed-point gradient
 
@@ -109,15 +120,15 @@ const sparse = false # TODO: implement sparse CTMRG
 # SVD forward & reverse
 const trunc = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
 const rrule_degeneracy_atol = 1.0e-13
-const svd_fwd_alg = :dense # ∈ {:sdd, :svd, :bisection, :jacobi, :iterative}
+const svd_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.SVDAlgorithms>, :iterative}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
-const svd_rrule_alg = :full # ∈ {:full, :trunc, :gmres, :bicgstab, :arnoldi}
+const svd_rrule_alg = :full # ∈ {:full, :trunc, :GMRES, :BiCGStab, :Arnoldi}
 const krylovdim_factor = 1.4
 
 # eigh forward & reverse
-const eigh_fwd_alg = :dense # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
+const eigh_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.EighAlgorithms>, :Lanczos, :BlockLanczos}
 const eigh_rrule_alg = :full # ∈ {:full, :trunc}
 const eigh_rrule_verbosity = 0
 
@@ -130,7 +141,7 @@ const qr_rrule_verbosity = 0
 # Projectors
 const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
 const projector_verbosity = 0
-const projector_alg_c4v = :c4v_eigh # ∈ {:c4v_eigh, :c4v_qr (TODO)}
+const projector_alg_c4v = :c4v_eigh # ∈ {:c4v_eigh, :c4v_qr}
 
 # Fixed-point gradient
 const gradient_tol = 1.0e-6

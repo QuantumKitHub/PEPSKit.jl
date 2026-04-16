@@ -62,23 +62,32 @@ $(TYPEDFIELDS)
 
 Construct a `SVDAdjoint` algorithm struct based on the following keyword arguments:
 
-* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:dense` : Truncated SVD computed via truncation of a dense [`MatrixAlgebraKit.svd_compact!`](@extref) decomposition.
-      This uses MatrixAlgebraKit's default algorithm behavior through [`DefaultAlgorithm`](@extref).
-      Alternatively, a specific MatrixAlgebraKit algorithm can be specified by passing one of the following symbols:
+* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_fwd_alg))`: SVD
+  algorithm of the forward pass which can either be passed as an `Algorithm` instance or a
+  `NamedTuple` where the algorithm is specified by the `alg` keyword.
+  The available SVD algorithms can be divided into two categories:
+    - "Dense" SVD algorithms which compute a truncated SVD through the truncation of a full
+      [`MatrixAlgebraKit.svd_compact!`](@extref) decomposition.
+      Available algorithms are:
+        - `:DefaultAlgorithm` : MatrixAlgebraKit's default SVD algorithm for a given matrix type.
         - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref)
         - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref)
         - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref)
         - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref)
         - `:SVDViaPolar` : MatrixAlgebraKit's [`SVDViaPolar`](@extref)
         - `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref)
-    - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref)
-* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`: Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:full` : MatrixAlgebraKit's `svd_pullback!` that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's `svd_trunc_pullback!` solving a Sylvester equation on the truncated subspace
-    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
-    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+    - "Sparse" SVD algorithms which directly compute a truncated SVD without access to the
+      full decomposition. Available algorithms are:
+        - `:iterative` : Iterative Krylov-based SVD only computing the specifed number of
+          singular values and vectors, see [`IterSVD`](@ref)
+* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`:
+  Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm`
+  instance directly or as a `NamedTuple` where `alg` is one of the following:
+    - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref) that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref) solving a Sylvester equation on the truncated subspace
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
+    - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref)
 """
 struct SVDAdjoint{F, R}
     fwd_alg::F
@@ -86,7 +95,7 @@ struct SVDAdjoint{F, R}
 end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :dense => DefaultAlgorithm,
+    :DefaultAlgorithm => DefaultAlgorithm,
     :DivideAndConquer => DivideAndConquer,
     :QRIteration => QRIteration,
     :Bisection => Bisection,
@@ -97,7 +106,7 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullSVDPullback, :trunc => TruncSVDPullback,
-    :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+    :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi
 )
 
 function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
