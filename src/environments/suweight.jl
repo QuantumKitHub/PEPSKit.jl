@@ -205,13 +205,11 @@ absorb_weight(t, weights, 2, 3, 1)
 absorb_weight(t, weights, 2, 3, 2; inv=true)
 ```
 """
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::Int; inv::Bool = false
+function weight_to_absorb(
+        weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
     )
     _, Nr, Nc = size(weights)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert 1 <= ax <= numin(t)
     pow = inv ? -1 / 2 : 1 / 2
     wt = sdiag_pow(
         if ax == NORTH
@@ -225,27 +223,43 @@ function absorb_weight(
         end,
         pow,
     )
-    ax′ = ax + numout(t)
     # make absorption/removal twist-free
     twistdual!(wt, 1)
-    if ax == SOUTH || ax == WEST
-        wt = transpose(wt)  # not sure this can be factorized due to twistdual
-    end
-    biperm = (_filtered_oneto(ax′, Val(numind(t))), (ax′,))
-    contracted = permute(t, biperm) * wt
-    invbp = invbiperm(biperm, Val(numout(t)))
-    return permute(contracted, invbp)
+    (ax == SOUTH || ax == WEST) && return transpose(wt)  # not sure this can be factorized due to twistdual
+    return wt
 end
+
+function biperm_absorb_weight(legs::NTuple{N, Int}, vax::Int) where {N}
+    @assert N == 5 || N == 6
+    nin = N - 4
+    a = vax + nin
+    codomain_axes = _filtered_oneto(a, Val(N))
+    biperm = (map(i -> findfirst(==(i), legs)::Int, codomain_axes), (findfirst(==(a), legs)::Int,))
+    new_legs = (ntuple(i -> legs[biperm[1][i]], N - 1)..., a)
+    return new_legs, biperm
+end
+
+function absorb_first_weight(t::Union{PEPSTensor, PEPOTensor}, wt, vax)
+    legs = ntuple(identity, numind(t))
+    new_legs, biperm = biperm_absorb_weight(legs, vax)
+    t2 = permute(t, biperm) * wt
+    return new_legs, t2
+end
+
 function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false
+        row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
-    t2 = t
-    # should not permute back and forth
-    for a in ax
-        t2 = absorb_weight(t2, weights, row, col, a; inv)
+    vax = first(virt_axes)
+    weight_vax = weight_to_absorb(weights, row, col, vax; inv)
+    legs, t2 = absorb_first_weight(t, weight_vax, vax)
+    for vax in virt_axes[(begin + 1):end]
+        legs, biperm = biperm_absorb_weight(legs, vax)
+        weight_vax = weight_to_absorb(weights, row, col, vax; inv)
+        t2 = permute(t2, biperm) * weight_vax
     end
-    return t2
+    perm_back = invperm(legs)
+    return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
 end
 
 #= Rotation of SUWeight. Example: 3 x 3 network
