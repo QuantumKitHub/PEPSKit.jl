@@ -43,7 +43,8 @@ end
         ψ1, info1 = timestep(evolver, ψ1)
     end
     # time_evolve
-    ψ2, info2 = time_evolve(ψ0, H, dt, nstep, alg)
+    evolver = TimeEvolver(ψ0, H, dt, nstep, alg)
+    ψ2, info2 = time_evolve(evolver)
     # for-loop syntax
     ## manually reset internal state of evolver
     evolver.state = PEPSKit.NTUState(0, 0.0, ψ0)
