@@ -7,19 +7,19 @@ Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 
 $(TYPEDFIELDS)
 """
-@kwdef struct SimpleUpdate <: TimeEvolution
+@kwdef struct SimpleUpdate{T <: TruncationStrategy} <: TimeEvolution
     "Truncation strategy for bonds updated by Trotter gates"
-    trunc::TruncationStrategy
+    trunc::T
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
     "When true, force decomposition of nearest neighbor gates to MPOs."
     force_mpo::Bool = false
     "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
-    "(Only applicable to InfinitePEPO) 
+    "(Only applicable to InfinitePEPO)
     When true, the PEPO is regarded as a purified PEPS, and updated as
     `|ρ(t + dt)⟩ = exp(-H dt/2) |ρ(t)⟩`.
-    When false, the PEPO is updated as 
+    When false, the PEPO is updated as
     `ρ(t + dt) = exp(-H dt/2) ρ(t) exp(-H dt/2)`."
     purified::Bool = true
 end
@@ -81,46 +81,78 @@ function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
 end
 
 """
+Obtain the left (first) cluster tensor from `state` at `site`,
+where `in_ax` is the virtual axis connecting to the next tensor.
+The tensor is not permuted; the returned `invperm` is the identity.
+"""
+function _get_left(
+        state::InfiniteState, site::CartesianIndex{2}, in_ax::Int,
+        env::SUWeight
+    )
+    Nr, Nc = size(state)
+    open_vaxs = _filtered_oneto(in_ax, Val(4))
+    s = mod1(site[1], Nr), mod1(site[2], Nc)
+    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
+    Nax = 4 + numout(eltype(state))
+    invperm = (ntuple(identity, Nax - 1), (Nax,))
+    return t, open_vaxs, invperm
+end
+
+"""
+Obtain the right (last) cluster tensor from `state` at `site`,
+where `out_ax` is the virtual axis connecting to the previous tensor.
+The tensor is not permuted; the returned `invperm` is the identity.
+"""
+function _get_right(
+        state::InfiniteState, site::CartesianIndex{2}, out_ax::Int,
+        env::SUWeight
+    )
+    Nr, Nc = size(state)
+    open_vaxs = _filtered_oneto(out_ax, Val(4))
+    s = mod1(site[1], Nr), mod1(site[2], Nc)
+    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
+    Nax = 4 + numout(eltype(state))
+    invperm = (ntuple(identity, Nax - 1), (Nax,))
+    return t, open_vaxs, invperm
+end
+
+"""
 Simple update optimized for nearest neighbor gates
 utilizing reduced bond tensors with the physical leg.
 """
-function _su_iter!(
+function _su_iter_gate!(
         state::InfiniteState, gate::NNGate, env::SUWeight,
-        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
+        siteA::CartesianIndex{2}, siteB::CartesianIndex{2}, alg::SimpleUpdate
     )
     Nr, Nc = size(state)
-    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
-    @assert length(sites) == 2 && length(truncs) == 1
-    Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
-    normalize!.(Ms, Inf)
+    trunc = only(_get_cluster_trunc(alg.trunc, [siteA, siteB], (Nr, Nc)))
+    in_ax = _nn_vec_direction(siteB - siteA)
+    out_ax = mod1(in_ax + 2, 4)
+    A0, open_vaxs_A, = _get_left(state, siteA, in_ax, env)
+    B0, open_vaxs_B, = _get_right(state, siteB, out_ax, env)
     # rotate
-    bond, rev = _nn_bondrev(sites..., (Nr, Nc))
-    A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
+    bond, rev = _nn_bondrev(siteA, siteB, (Nr, Nc))
+    dir = first(bond)
+    A = _bond_rotation(A0, dir, rev; inv = false)
+    B = _bond_rotation(B0, dir, rev; inv = false)
     # apply gate
-    ϵ, s = 0.0, nothing
+    ϵ = 0.0
+    local s
     gate_axs = alg.purified ? (1:1) : (1:2)
-    for gate_ax in gate_axs
+    for gate_ax in gate_axs  # TODO try to use type stable helper function
         X, a, b, Y = _qr_bond(A, B; gate_ax, positive = true)
-        a, s, b, ϵ′ = _apply_gate(a, b, gate, truncs[1])
+        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)
         A, B = _qr_bond_undo(X, a, b, Y)
     end
-    # rotate back
-    A = _bond_rotation(A, bond[1], rev; inv = true)
-    B = _bond_rotation(B, bond[1], rev; inv = true)
     rev && (s = transpose(s))
-    # remove environment weights
-    siteA, siteB = map(sites) do site
-        return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
+    # rotate back & remove environment weights
+    for (site, vertex, open_vaxs) in ((siteA, A, open_vaxs_A), (siteB, B, open_vaxs_B))
+        s′ = (mod1(site[1], Nr), mod1(site[2], Nc))
+        rotated = _bond_rotation(vertex, dir, rev; inv = true)
+        state[s′...] = absorb_weight(rotated, env, s′..., open_vaxs; inv = true)
     end
-    A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs[1]; inv = true)
-    B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs[2]; inv = true)
-    # update tensor dict and weight on current bond
-    normalize!(A, Inf)
-    normalize!(B, Inf)
-    normalize!(s, Inf)
-    state[siteA], state[siteB] = A, B
-    env[bond...] = s
+    env[bond...] = normalize!(s, Inf)
     return ϵ
 end
 
@@ -143,24 +175,24 @@ function su_iter(
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
             alg.bipartite && r > 1 && continue
-            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter_gate!(state2, gate, env2, sites[1], sites[2], alg)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue
             if d == 1
                 rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                state2[rp1, cp1] = deepcopy(state2[r, c])
-                state2[rp1, c] = deepcopy(state2[r, cp1])
-                env2[1, rp1, cp1] = deepcopy(env2[1, r, c])
+                state2[rp1, cp1] = copy(state2[r, c])
+                state2[rp1, c] = copy(state2[r, cp1])
+                env2[1, rp1, cp1] = copy(env2[1, r, c])
             else
                 rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                state2[rm1, cm1] = deepcopy(state2[r, c])
-                state2[r, cm1] = deepcopy(state2[rm1, c])
-                env2[2, rm1, cm1] = deepcopy(env2[2, r, c])
+                state2[rm1, cm1] = copy(state2[r, c])
+                state2[r, cm1] = copy(state2[rm1, c])
+                env2[2, rm1, cm1] = copy(env2[2, r, c])
             end
         else
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
-            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter_mpo!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
         end
     end

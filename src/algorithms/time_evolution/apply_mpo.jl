@@ -238,11 +238,11 @@ function _get_allprojs(
         end
         return _proj_from_RL(Rs[i], Ls[i]; trunc)
     end
-    Pas = map(Base.Fix2(getindex, 1), projs_errs)
-    wts = map(Base.Fix2(getindex, 2), projs_errs)
-    Pbs = map(Base.Fix2(getindex, 3), projs_errs)
+    Pas = getindex.(projs_errs, 1)
+    wts = getindex.(projs_errs, 2)
+    Pbs = getindex.(projs_errs, 3)
     # local truncation error on each bond
-    ϵs = map(Base.Fix2(getindex, 4), projs_errs)
+    ϵs = getindex.(projs_errs, 4)
     return Pas, Pbs, wts, ϵs
 end
 
