@@ -177,18 +177,17 @@ function su_iter(
             alg.bipartite && r > 1 && continue
             ϵ′ = _su_iter_gate!(state2, gate, env2, sites[1], sites[2], alg)
             ϵ = max(ϵ, ϵ′)
-            if alg.bipartite
-                if d == 1
-                    rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                    state2[rp1, cp1] = deepcopy(state2[r, c])
-                    state2[rp1, c] = deepcopy(state2[r, cp1])
-                    env2[1, rp1, cp1] = deepcopy(env2[1, r, c])
-                else
-                    rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                    state2[rm1, cm1] = deepcopy(state2[r, c])
-                    state2[r, cm1] = deepcopy(state2[rm1, c])
-                    env2[2, rm1, cm1] = deepcopy(env2[2, r, c])
-                end
+            (!alg.bipartite) && continue
+            if d == 1
+                rp1, cp1 = _next(r, Nr), _next(c, Nc)
+                state2[rp1, cp1] = copy(state2[r, c])
+                state2[rp1, c] = copy(state2[r, cp1])
+                env2[1, rp1, cp1] = copy(env2[1, r, c])
+            else
+                rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
+                state2[rm1, cm1] = copy(state2[r, c])
+                state2[r, cm1] = copy(state2[rm1, c])
+                env2[2, rm1, cm1] = copy(env2[2, r, c])
             end
         else
             # N-site MPO gate (N ≥ 2)
