@@ -35,7 +35,8 @@ Vspaces = [
         flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
         # no truncation
         Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
-        wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N - 1))
+        truncs = [truncrank(dim(space(M, 1))) for M in Ms2[2:end]]
+        wts2, ϵs, = _cluster_truncate!(Ms2, truncs)
         @test all((ϵ == 0) for ϵ in ϵs)
         normalize!.(Ms2, Inf)
         @test fidelity_cluster(Ms1, Ms2) ≈ 1.0
