@@ -79,6 +79,13 @@ function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
         error("`bonddir` must be 1 (for x-bonds) or 2 (for y-bonds).")
     end
 end
+function _bond_rotation(x::CartesianIndex{2}, bonddir::Int, rev::Bool, unitcell::NTuple{2, Int})
+    return if bonddir == 1
+        rev ? siterot180(x, unitcell) : x
+    else
+        rev ? siterotl90(x, unitcell) : siterotr90(x, unitcell)
+    end
+end
 
 """
 Simple update optimized for nearest neighbor gates

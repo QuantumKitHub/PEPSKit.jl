@@ -155,10 +155,21 @@ function MPSKit.timestep(
 end
 
 """
-$(SIGNATURES)
+    time_evolve(
+        it::TimeEvolver{<:NeighbourUpdate},
+        [H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm];
+        tol::Float64 = 1.0e-7, check_interval::Int = 10
+    ) -> (psi, info)
 
-Perform time evolution to the end of `NeighbourUpdate` TimeEvolver `it`.
-`check_interval` sets the number of iterations between outputs of information.
+Perform time evolution to the end of `NeighbourUpdate` TimeEvolver `it`,
+or until convergence of energy set by a positive `tol`.
+
+To enable convergence check (for imaginary time evolution of InfinitePEPS only),
+provide the Hamiltonian `H`, CTMRG environment `env`, CTMRG algorithm `ctm_alg`
+and setting `tol > 0`.
+
+`check_interval` sets the number of iterations between energy checks
+(for ground state search) and outputs of information.
 """
 function MPSKit.time_evolve(it::TimeEvolver{<:NeighbourUpdate}; check_interval::Int = 50)
     time_start = time0 = time()
@@ -186,13 +197,6 @@ function MPSKit.time_evolve(it::TimeEvolver{<:NeighbourUpdate}; check_interval::
     return
 end
 
-"""
-$(SIGNATURES)
-
-Perform time evolution until convergence of `TimeEvolver` iterator `it`.
-For `NeighbourUpdate`, convergence is determined by the change of energy
-between two checks being smaller than `tol`.
-"""
 function MPSKit.time_evolve(
         it::TimeEvolver{<:NeighbourUpdate, G, S},
         H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm;

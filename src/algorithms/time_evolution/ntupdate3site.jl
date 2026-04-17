@@ -6,27 +6,37 @@ function _ntu_iter(
         sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate
     ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
+    state, wts = copy(state), deepcopy(wts)
 
-    # apply gate MPO without truncation
     Ms, _, invperms = _get_cluster(state, sites)
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     _flip_virtuals!(Ms, flips) # flip virtual arrows in `Ms` to ←
+    truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites, (Nr, Nc))
+    truncs = map(enumerate(truncs)) do (i, trunc)
+        return if trunc isa FixedSpaceTruncation
+            truncspace(space(Ms[i + 1], 1))
+        else
+            trunc
+        end
+    end
+
+    # apply gate MPO without truncation
     _apply_gatempo!(Ms, gate)
     _flip_virtuals!(Ms, flips) # restore virtual arrows in `Ms`
-    state2, wts2 = deepcopy(state), deepcopy(wts)
     for (M, s, invperm) in zip(Ms, sites, invperms)
         s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
-        state2[s′] = permute(M, invperm)
+        state[s′] = permute(M, invperm)
     end
 
     # truncate each bond sequentially along the path
     info = (; fid = 1.0)
-    for bondsites in zip(sites, Iterators.drop(sites, 1))
-        state2, wts2, info′ = _bond_truncate(state2, wts2, bondsites, alg)
+    for (bondsites, trunc) in zip(zip(sites, Iterators.drop(sites, 1)), truncs)
+        alg′ = (@set alg.opt_alg.trunc = trunc)
+        state, wts, info′ = _bond_truncate(state, wts, bondsites, alg′)
         # record the worst fidelity
         (info′.fid < info.fid) && (info = info′)
     end
-    return state2, wts2, info
+    return state, wts, info
 end
 
 """
@@ -45,11 +55,7 @@ function _bond_truncate(
     wts2 = _bond_rotation(wts, bond[1], rev; inv = false)
 
     # rotated bond tensors
-    siteA = if bond[1] == 1
-        rev ? siterot180(site1, ucell) : site1
-    else
-        rev ? siterotl90(site1, ucell) : siterotr90(site1, ucell)
-    end
+    siteA = _bond_rotation(site1, bond[1], rev, ucell)
     row, col = mod1.(Tuple(siteA), size(state2)[1:2])
     cp1 = _next(col, size(state2, 2))
     A, B = state2[row, col], state2[row, cp1]
@@ -68,14 +74,22 @@ function _bond_truncate(
     end
 
     # (optional) apply the NN gate
+    opt_alg = alg.opt_alg
     if !(gate === nothing)
+        trunc = if alg.opt_alg.trunc isa FixedSpaceTruncation
+            V = space(b, 1)
+            truncspace(isdual(V) ? flip(V) : V)
+        else
+            alg.opt_alg.trunc
+        end
+        @reset opt_alg.trunc = trunc
         a, s, b, = _apply_gate(a, b, gate, truncerror(; atol = 1.0e-15))
     else
         a = permute(a, ((1, 2), (3,)))
         b = permute(b, ((1,), (2, 3)))
     end
 
-    a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
+    a, s, b, info = bond_truncate(a, b, benv, opt_alg)
     A, B = _qr_bond_undo(X, a, b, Y)
     normalize!(A, Inf)
     normalize!(B, Inf)

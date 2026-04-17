@@ -30,3 +30,13 @@ states = [
         @test space(t) == space(t0)
     end
 end
+
+@testset "Neighborhood tensor update on $(typeof(state0).name.wrapper)" for state0 in states
+    opt_alg = ALSTruncation(; trunc = FixedSpaceTruncation())
+    alg = NeighbourUpdate(; opt_alg, bondenv_alg = NNEnv())
+    evolver = TimeEvolver(state0, ham, 0.1, 1, alg)
+    state, = time_evolve(evolver)
+    for (t, t0) in zip(state.A, state0.A)
+        @test space(t) == space(t0)
+    end
+end
