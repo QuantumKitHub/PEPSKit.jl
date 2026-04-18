@@ -13,13 +13,11 @@ $(TYPEDFIELDS)
 
 The truncation algorithm can be constructed from the following keyword arguments:
 
-* `trunc::TruncationStrategy`: SVD truncation strategy when initilizing the truncated tensors connected by the bond.
 * `maxiter::Int=50` : Maximal number of ALS iterations.
 * `tol::Float64=1e-9` : ALS converges when the relative change in bond SVD spectrum between two iterations is smaller than `tol`.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation
-    trunc::TruncationStrategy
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
     check_interval::Int = 0
@@ -35,7 +33,10 @@ function _als_message(
 end
 
 """
-    bond_truncate(a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}, benv::BondEnv{T,S}, alg) -> U, S, V, info
+    bond_truncate(
+        a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2},
+        benv::BondEnv{T,S}, trunc::TruncationStrategy, alg
+    ) -> U, S, V, info
 
 After time-evolving the reduced tensors `a` and `b` connected by a bond, 
 truncate the bond dimension using the bond environment tensor `benv`.
@@ -60,7 +61,7 @@ function bond_truncate(
         a::AbstractTensorMap{T, S, 2, 1},
         b::AbstractTensorMap{T, S, 1, 2},
         benv::BondEnv{T, S},
-        alg::ALSTruncation,
+        trunc::TruncationStrategy, alg::ALSTruncation,
     ) where {T <: Number, S <: ElementarySpace}
     # dual check of physical index
     @assert !isdual(space(a, 2))
@@ -72,7 +73,7 @@ function bond_truncate(
     a2b2 = _combine_ab(a, b)
     # initialize truncated a, b
     perm_ab = ((1, 3), (4, 2))
-    a, s0, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trunc)
+    a, s0, b = svd_trunc(permute(a2b2, perm_ab); trunc)
     a, b = absorb_s(a, s0, b)
     # put b in MPS axis order
     b = permute(b, ((1, 2), (3,)))
@@ -102,7 +103,7 @@ function bond_truncate(
         ab = _combine_ab(a, b)
         cost, fid = cost_function_als(benv, ab, a2b2)
         # TODO: replace with truncated svdvals (without calculating u, vh)
-        _, s, _ = svd_trunc!(permute(ab, perm_ab); trunc = alg.trunc)
+        _, s, _ = svd_trunc!(permute(ab, perm_ab); trunc)
         # fidelity, cost and normalized bond-s change
         s_nrm = norm(s0, Inf)
         Δs = _singular_value_distance(s, s0) / s_nrm
@@ -129,7 +130,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = svd_trunc!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trunc)
+    a, s, b = svd_trunc!(permute(_combine_ab(a, b), perm_ab); trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
@@ -141,7 +142,7 @@ function bond_truncate(
         a::AbstractTensorMap{T, S, 2, 1},
         b::AbstractTensorMap{T, S, 1, 2},
         benv::BondEnv{T, S},
-        alg::FullEnvTruncation,
+        trunc::TruncationStrategy, alg::FullEnvTruncation,
     ) where {T <: Number, S <: ElementarySpace}
     # dual check of physical index
     @assert !isdual(space(a, 2))
@@ -173,7 +174,7 @@ function bond_truncate(
         benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
     )
     # optimize bond matrix
-    u, s, vh, info = fullenv_truncate(b0, benv2, alg)
+    u, s, vh, info = fullenv_truncate(b0, benv2, trunc, alg)
     u, vh = absorb_s(u, s, vh)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
