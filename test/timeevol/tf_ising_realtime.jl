@@ -53,7 +53,7 @@ ntu_alg = NeighbourUpdate(;
 )
 
 # do one step of NTU to match benchmark data
-peps0, = time_evolve(peps0, ham, 0.01, 6, ntu_alg)
+peps0, = time_evolve(TimeEvolver(peps0, ham, 0.01, 6, ntu_alg))
 @info "Space of `peps0[1, 1]` = $(space(peps0[1, 1]))."
 env0 = CTMRGEnv(ones, ComplexF64, peps0, ℂ^1)
 env0, = leading_boundary(env0, peps0, ctm_alg)
