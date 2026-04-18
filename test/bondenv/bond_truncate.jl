@@ -26,16 +26,16 @@ for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
     a2, s, b2 = svd_compact(permute(a2b2, perm_ab))
     a2, b2 = PEPSKit.absorb_s(a2, s, b2)
     # bond tensor (truncated SVD initialization)
-    a0, s, b0 = svd_trunc(permute(a2b2, perm_ab); trunc = trunc)
+    a0, s, b0 = svd_trunc(permute(a2b2, perm_ab); trunc)
     a0, b0 = PEPSKit.absorb_s(a0, s, b0)
     fid0 = cost_function_als(benv, PEPSKit._combine_ab(a0, b0), a2b2)[2]
     @info "Fidelity of simple SVD truncation = $fid0.\n"
     ss = Dict{String, DiagonalTensorMap}()
     for (label, alg) in (
-            ("ALS", ALSTruncation(; trunc, maxiter, check_interval)),
-            ("FET", FullEnvTruncation(; trunc, maxiter, check_interval, trunc_init = false)),
+            ("ALS", ALSTruncation(; maxiter, check_interval)),
+            ("FET", FullEnvTruncation(; maxiter, check_interval, trunc_init = false)),
         )
-        a1, ss[label], b1, info = PEPSKit.bond_truncate(a2, b2, benv, alg)
+        a1, ss[label], b1, info = PEPSKit.bond_truncate(a2, b2, benv, trunc, alg)
         @info "$label improved fidelity = $(info.fid)."
         # display(ss[label])
         @test info.fid ≈ cost_function_als(benv, PEPSKit._combine_ab(a1, b1), a2b2)[2]

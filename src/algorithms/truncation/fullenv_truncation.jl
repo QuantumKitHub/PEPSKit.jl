@@ -13,7 +13,6 @@ $(TYPEDFIELDS)
 
 The truncation algorithm can be constructed from the following keyword arguments:
 
-* `trunc::TruncationStrategy` : SVD truncation strategy when optimizing the new bond matrix.
 * `maxiter::Int=50` : Maximal number of FET iterations.
 * `tol::Float64=1e-9` : FET converges when the relative change in bond SVD spectrum between two FET iterations is smaller than `tol`.
 * `trunc_init::Bool=true` : Controls whether the initialization of the new bond matrix is obtained from truncated SVD of the old bond matrix. 
@@ -24,7 +23,6 @@ The truncation algorithm can be constructed from the following keyword arguments
 * [Glen Evenbly, Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018). 
 """
 @kwdef struct FullEnvTruncation
-    trunc::TruncationStrategy
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
     trunc_init::Bool = true
@@ -75,7 +73,10 @@ function _fet_message(
 end
 
 """
-    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) -> U, S, V, info
+    fullenv_truncate(
+        benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1},
+        trunc::TruncationStrategy, alg::FullEnvTruncation
+    ) -> U, S, V, info
 
 Perform full environment truncation algorithm from
 [Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018) on `benv`.
@@ -204,14 +205,15 @@ Returns the SVD result of the new bond matrix `U`, `S`, `V`, as well as an infor
 * `Δs` : Last singular value difference.
 """
 function fullenv_truncate(
-        b0::AbstractTensorMap{T, S, 1, 1}, benv::BondEnv{T, S}, alg::FullEnvTruncation
+        b0::AbstractTensorMap{T, S, 1, 1}, benv::BondEnv{T, S},
+        trunc::TruncationStrategy, alg::FullEnvTruncation
     ) where {T <: Number, S <: ElementarySpace}
     verbose = (alg.check_interval > 0)
     # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
     @assert codomain(benv) == domain(benv)
     time00 = time()
     # initialize u, s, vh with truncated or untruncated SVD
-    u, s, vh = svd_trunc(b0; trunc = (alg.trunc_init ? alg.trunc : notrunc()))
+    u, s, vh = svd_trunc(b0; trunc = (alg.trunc_init ? trunc : notrunc()))
     b1 = similar(b0)
     s0 = deepcopy(s)
     Δfid, Δs, fid, fid0 = NaN, NaN, 0.0, 0.0
@@ -225,7 +227,7 @@ function fullenv_truncate(
         _linearmap_twist!(B)
         r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
         @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
-        u, s, vh = svd_trunc(b1; trunc = alg.trunc)
+        u, s, vh = svd_trunc(b1; trunc)
         # update `- l ←  =  - u ← s ←`
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
         @tensor p[-1 -2] := conj(vh[-2; 2]) * benv[-1 2; 3 4] * b0[3; 4]
@@ -236,7 +238,7 @@ function fullenv_truncate(
         @debug "Bond truncation info" info_l info_r
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
         _, fid = cost_function_als(benv, b0, b1)
-        u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
+        u, s, vh = svd_trunc!(b1; trunc)
         # determine convergence
         s_nrm = norm(s0, Inf)
         Δs = _singular_value_distance(s, s0) / s_nrm
