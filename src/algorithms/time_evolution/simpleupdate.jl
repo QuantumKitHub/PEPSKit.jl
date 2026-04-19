@@ -63,8 +63,10 @@ function TimeEvolver(
     gate = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
     # convert FixedSpaceTruncation to site-dependent `truncspace`s
-    trunc = _parse_fixedspacetrunc(psi0)
-    @reset alg.trunc = trunc
+    if alg.trunc isa FixedSpaceTruncation
+        trunc = _get_fixedspacetrunc(psi0)
+        @reset alg.trunc = trunc
+    end
     # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, gate, state)
 end

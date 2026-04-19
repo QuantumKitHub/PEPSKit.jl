@@ -96,11 +96,10 @@ function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
 end
 
 """
-Convert `FixedSpaceTruncation` to `SiteDependentTruncation`
-for each nearest neighbor bonds of `state`, to be used by
-time evolution.
+Get the `SiteDependentTruncation` used by time evolution
+that preserves virtual spaces of `state`.
 """
-function _parse_fixedspacetrunc(state::InfiniteState)
+function _get_fixedspacetrunc(state::InfiniteState)
     if state isa InfinitePEPO
         size(state, 3) != 1 && error("Input InfinitePEPO is expect to have only one layer.")
     end

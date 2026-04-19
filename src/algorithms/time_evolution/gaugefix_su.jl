@@ -38,7 +38,7 @@ Fix the gauge of `psi` using trivial simple update.
 """
 function gauge_fix(psi::InfiniteState, alg::SUGauge)
     gates = _trivial_gates(scalartype(psi), physicalspace(psi))
-    trunc = _parse_fixedspacetrunc(psi)
+    trunc = _get_fixedspacetrunc(psi)
     su_alg = SimpleUpdate(; trunc, bipartite = _state_bipartite_check(psi))
     wts0 = SUWeight(psi)
     # use default constructor to avoid calculation of exp(-H * 0)
