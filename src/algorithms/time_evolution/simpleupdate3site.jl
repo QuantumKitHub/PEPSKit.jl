@@ -167,20 +167,13 @@ function _su_iter!(
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
+    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
     Ms, open_vaxs, invperms = _get_cluster(state, sites, env)
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     Vphys = [codomain(M, 2) for M in Ms]
     normalize!.(Ms, Inf)
     # flip virtual arrows in `Ms` to ←
     _flip_virtuals!(Ms, flips)
-    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
-    truncs = map(enumerate(truncs)) do (i, trunc)
-        return if trunc isa FixedSpaceTruncation
-            truncspace(space(Ms[i + 1], 1))
-        else
-            trunc
-        end
-    end
     # apply gate MPOs and truncate
     gate_axs = alg.purified ? (1:1) : (1:2)
     wts, ϵs = nothing, nothing
@@ -224,24 +217,14 @@ updated by the Trotter evolution MPO.
 """
 function _get_cluster_trunc(
         trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}},
-        (Nrow, Ncol)::NTuple{2, Int}
+        unitcell::NTuple{2, Int}
     )
     return map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
-        diff = site2 - site1
-        if diff == CartesianIndex(0, 1)
-            r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
-            return truncation_strategy(trunc, 1, r, c)
-        elseif diff == CartesianIndex(0, -1)
-            r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
-            return truncation_strategy(trunc, 1, r, c)
-        elseif diff == CartesianIndex(1, 0)
-            r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
-            return truncation_strategy(trunc, 2, r, c)
-        elseif diff == CartesianIndex(-1, 0)
-            r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
-            return truncation_strategy(trunc, 2, r, c)
-        else
-            error("The path `sites` contains a long-range bond.")
+        (d, r, c), rev = _nn_bondrev(site1, site2, unitcell)
+        t = truncation_strategy(trunc, d, r, c)
+        if rev && isa(t, TruncationSpace)
+            t = truncspace(flip(t.space)')
         end
+        return t
     end
 end

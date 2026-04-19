@@ -16,10 +16,10 @@ $(TYPEDFIELDS)
     force_mpo::Bool = false
     "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
-    "(Only applicable to InfinitePEPO) 
+    "(Only applicable to InfinitePEPO)
     When true, the PEPO is regarded as a purified PEPS, and updated as
     `|ρ(t + dt)⟩ = exp(-H dt/2) |ρ(t)⟩`.
-    When false, the PEPO is updated as 
+    When false, the PEPO is updated as
     `ρ(t + dt) = exp(-H dt/2) ρ(t) exp(-H dt/2)`."
     purified::Bool = true
 end
@@ -62,6 +62,9 @@ function TimeEvolver(
     # create Trotter gates
     gate = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
+    # convert FixedSpaceTruncation to site-dependent `truncspace`s
+    trunc = _parse_fixedspacetrunc(psi0)
+    @reset alg.trunc = trunc
     # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
@@ -89,17 +92,13 @@ function _su_iter!(
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     )
     Nr, Nc = size(state)
-    trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
     @assert length(sites) == 2
+    trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
     Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
     normalize!.(Ms, Inf)
     # rotate
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
     A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
-    if trunc isa FixedSpaceTruncation
-        V = west_virtualspace(B)
-        trunc = truncspace(isdual(V) ? flip(V) : V)
-    end
     # apply gate
     ϵ, s = 0.0, nothing
     gate_axs = alg.purified ? (1:1) : (1:2)
