@@ -229,14 +229,8 @@ function _get_allprojs(
     N = length(Ms)
     Rs, Ls = _get_allRLs(Ms)
     @assert length(truncs) == N - 1
-    projs_errs = map(1:(N - 1)) do i
-        trunc = if isa(truncs[i], FixedSpaceTruncation)
-            tspace = space(Ms[i + 1], 1)
-            isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
-        else
-            truncs[i]
-        end
-        return _proj_from_RL(Rs[i], Ls[i]; trunc)
+    projs_errs = map(zip(Rs, Ls, truncs)) do (R, L, trunc)
+        return _proj_from_RL(R, L; trunc)
     end
     Pas = map(Base.Fix2(getindex, 1), projs_errs)
     wts = map(Base.Fix2(getindex, 2), projs_errs)

@@ -94,3 +94,21 @@ function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
     end
     return InfinitePEPO(cat(A; dims = 3))
 end
+
+"""
+Get the `SiteDependentTruncation` used by time evolution
+that preserves virtual spaces of `state`.
+"""
+function _get_fixedspacetrunc(state::InfiniteState)
+    if state isa InfinitePEPO
+        size(state, 3) != 1 && error("Input InfinitePEPO is expect to have only one layer.")
+    end
+    Nr, Nc = size(state)
+    return SiteDependentTruncation(
+        map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+            V = domain(state[r, c], (d == 1) ? EAST : NORTH)
+            isdual(V) && (V = flip(V))
+            return truncspace(V)
+        end
+    )
+end
