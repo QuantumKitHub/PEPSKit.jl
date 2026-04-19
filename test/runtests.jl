@@ -114,9 +114,9 @@ end
             include("timeevol/j1j2_finiteT.jl")
         end
     end
-    if GROUP == "ALL" || GROUP == "APPROX"
-        @time @safetestset "Local approximation" begin
-            include("approximate/local_approx.jl")
+    if GROUP == "ALL" || GROUP == "CHANGEBONDS"
+        @time @safetestset "Local truncation" begin
+            include("changebonds/local.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "TOOLBOX"

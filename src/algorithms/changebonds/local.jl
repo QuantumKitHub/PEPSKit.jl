@@ -1,8 +1,16 @@
 """
 $(TYPEDEF)
 
-Algorithm to approximate a two-layer network by truncating each pair
-of virtual spaces with projectors that minimizes the local cost function,
+Abstract super type for algorithms to change virtual bonds
+in two-dimensional tensor networks
+"""
+abstract type BondChangeAlgorithm end
+
+"""
+$(TYPEDEF)
+
+Algorithm to truncate virtual bonds of a two-layer network 
+with projectors that minimizes the local cost function,
 which is the 2-norm of (e.g. for two layers of iPEPO)
 ```
         ↓ ╱      ↓ ╱            ↓ ╱                 ↓ ╱
@@ -15,7 +23,7 @@ which is the 2-norm of (e.g. for two layers of iPEPO)
 ```
 on each bond of the network.
 """
-struct LocalApproximation <: ApproximateAlgorithm
+struct LocalTruncation <: BondChangeAlgorithm
     trunc::TruncationStrategy
 end
 
@@ -99,7 +107,7 @@ following truncation of two layers of InfinitePEPO
 ```
 Reference: Physical Review B 100, 035449 (2019)
 """
-function localapprox_projector(
+function virtual_projector(
         A1::PEPOTensor, A2::PEPOTensor, B1::PEPOTensor, B2::PEPOTensor;
         trunc::TruncationStrategy
     )
@@ -109,14 +117,14 @@ function localapprox_projector(
     sinv_sqrt = sdiag_pow(s, -0.5)
     P1 = R2 * vh' * sinv_sqrt
     P2 = sinv_sqrt * u' * R1
-    return P1, P2, s, ϵ
+    return P1, P2, (; s, ϵ)
 end
 
 """
-Compute an approximation to the product of two 1-layer InfinitePEPOs `ρ1`, `ρ2`
-with virtual bond truncated with `LocalApproximation`.
+Truncate virtual bonds of the product of two 1-layer
+InfinitePEPOs `ρ1`, `ρ2` with `LocalTruncation`.
 """
-function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalApproximation)
+function MPSKit.changebonds(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalTruncation)
     # sanity checks
     (size(ρ1) == size(ρ2)) || error("Input PEPOs have different unit cell sizes.")
     (size(ρ1, 3) == 1) || error("ρ1 should have only one layer.")
@@ -125,32 +133,31 @@ function MPSKit.approximate(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalAppr
     all(all.(_check_virtual_dualness(ρ2))) || error("East and north virtual spaces in ρ2 should be dual spaces.")
     # x-bond projectors: [r, c] on bond [r, c]--[r, c+1]
     Nr, Nc, = size(ρ1)
-    Px_errs = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
-        P1, P2, s, ϵ = localapprox_projector(
+    Pxs_info = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
+        # TODO: support SiteDependentTruncation
+        return virtual_projector(
             ρ1[r, c], ρ2[r, c], ρ1[r, _next(c, Nc)], ρ2[r, _next(c, Nc)];
             trunc = alg.trunc
         )
-        return (P1, P2, ϵ)
     end
     # y-bond projectors: [r, c] on bond [r, c]--[r-1, c]
-    Py_errs = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
+    Pys_info = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
         # TODO: reduce repeated rotations
-        P1, P2, s, ϵ = localapprox_projector(
+        return virtual_projector(
             rotr90(ρ1[r, c]), rotr90(ρ2[r, c]),
             rotr90(ρ1[_prev(r, Nr), c]), rotr90(ρ2[_prev(r, Nr), c]);
             trunc = alg.trunc
         )
-        return (P1, P2, ϵ)
     end
     # apply projectors
     As = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
-        Pw, Pe = Px_errs[r, _prev(c, Nc)][2], Px_errs[r, c][1]
-        Pn, Ps = Py_errs[r, c][1], Py_errs[_next(r, Nr), c][2]
+        Pw, Pe = Pxs_info[r, _prev(c, Nc)][2], Pxs_info[r, c][1]
+        Pn, Ps = Pys_info[r, c][1], Pys_info[_next(r, Nr), c][2]
         @tensoropt A[p1 p2; n e s w] :=
             (ρ1[r, c])[p1 p; n1 e1 s1 w1] * (ρ2[r, c])[p p2; n2 e2 s2 w2] *
             Pn[n1 n2; n] * Pe[e1 e2; e] * Ps[s; s1 s2] * Pw[w; w1 w2]
         return A
     end
-    info = (; Px_errs, Py_errs)
+    info = (; Pxs_info, Pys_info)
     return InfinitePEPO(cat(As; dims = 3)), info
 end

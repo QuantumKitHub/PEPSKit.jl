@@ -3,13 +3,13 @@ using Random
 using LinearAlgebra
 using TensorKit
 using PEPSKit
-using PEPSKit: localapprox_projector
+using PEPSKit: virtual_projector
 
 """
-Cost function of LocalApproximation.
+Cost function of LocalTruncation.
 For test convenience, open virtual indices are made trivial and removed.
 """
-function localapprox_cost(A1, A2, B1, B2, P1, P2)
+function localcompress_cost(A1, A2, B1, B2, P1, P2)
     @tensor net1[pa1 pb1; pa2′ pb2′] :=
         A1[pa1 pa; D1] * A2[pa pa2′; D2] * B1[pb1 pb; D1] * B2[pb pb2′; D2]
     @tensor net2[pa1 pb1; pa2′ pb2′] := P1[Da1 Da2; D] * P2[D; Db1 Db2] *
@@ -17,7 +17,7 @@ function localapprox_cost(A1, A2, B1, B2, P1, P2)
     return norm(net1 - net2)
 end
 
-@testset "Cost function of LocalApproximation" begin
+@testset "Cost function of LocalTruncation" begin
     Random.seed!(0)
     Vaux, Vphy, V = ℂ^1, ℂ^10, ℂ^4
     A1 = normalize(randn(Vphy ⊗ Vphy' ← Vaux ⊗ V ⊗ Vaux' ⊗ Vaux'), Inf)
@@ -25,16 +25,16 @@ end
     B1 = normalize(randn(Vphy ⊗ Vphy' ← Vaux ⊗ Vaux ⊗ Vaux' ⊗ V'), Inf)
     B2 = normalize(randn(Vphy ⊗ Vphy' ← Vaux ⊗ Vaux ⊗ Vaux' ⊗ V'), Inf)
 
-    P1, P2, s, ϵ = localapprox_projector(A1, A2, B1, B2; trunc = notrunc())
+    P1, P2, info = virtual_projector(A1, A2, B1, B2; trunc = notrunc())
     @test P1 * P2 ≈ TensorKit.id(domain(P2))
 
-    P1, P2, sc, ϵ = localapprox_projector(A1, A2, B1, B2; trunc = truncrank(8))
+    P1, P2, info = virtual_projector(A1, A2, B1, B2; trunc = truncrank(8))
     A1 = removeunit(removeunit(removeunit(A1, 6), 5), 3)
     A2 = removeunit(removeunit(removeunit(A2, 6), 5), 3)
     B1 = removeunit(removeunit(removeunit(B1, 5), 4), 3)
     B2 = removeunit(removeunit(removeunit(B2, 5), 4), 3)
-    @info "Truncation error = $(ϵ)."
-    @test ϵ ≈ localapprox_cost(A1, A2, B1, B2, P1, P2)
+    @info "Truncation error = $(info.ϵ)."
+    @test info.ϵ ≈ localcompress_cost(A1, A2, B1, B2, P1, P2)
 end
 
 @testset "Fermionic twists for qr/lq_twolayer" begin
@@ -55,7 +55,7 @@ end
     Vns = ComplexSpace.([2 4; 5 3])
     Ves = ComplexSpace.([3 5; 4 2])
     ρ = InfinitePEPO(randn, ComplexF64, Vps, Vns, Ves)
-    alg = LocalApproximation(truncrank(2))
-    ρ2, = approximate(ρ, ρ, alg)
+    alg = LocalTruncation(truncrank(2))
+    ρ2, = changebonds(ρ, ρ, alg)
     @test ρ2 isa InfinitePEPO
 end
