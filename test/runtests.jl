@@ -104,11 +104,8 @@ end
         @time @safetestset "Cluster truncation with projectors" begin
             include("timeevol/cluster_projectors.jl")
         end
-        @time @safetestset "Time evolution with site-dependent truncation" begin
+        @time @safetestset "Fixed-space / site-dependent truncation" begin
             include("timeevol/sitedep_truncation.jl")
-        end
-        @time @safetestset "Time evolution with FixedSpaceTruncation" begin
-            include("timeevol/fixedspacetruncation.jl")
         end
         @time @safetestset "Transverse field Ising model at finite temperature" begin
             include("timeevol/tf_ising_finiteT.jl")
