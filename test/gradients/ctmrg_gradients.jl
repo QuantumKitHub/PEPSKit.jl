@@ -20,7 +20,7 @@ gradtol = 1.0e-4
 ctmrg_verbosity = 0
 ctmrg_algs = [[:sequential, :simultaneous], [:sequential, :simultaneous]]
 projector_algs = [[:halfinfinite, :fullinfinite], [:halfinfinite, :fullinfinite]]
-svd_rrule_algs = [[:full, :arnoldi], [:full, :arnoldi]]
+svd_rrule_algs = [[:full, :trunc, :Arnoldi], [:full, :Arnoldi]]
 gradient_algs = [
     [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
     [:geomsum, :manualiter, :linsolver, :eigsolver],
@@ -28,12 +28,22 @@ gradient_algs = [
 gradient_iterschemes = [[:fixed, :diffgauge], [:fixed, :diffgauge]]
 steps = -0.01:0.005:0.01
 
+# don't check naive AD gradients for all algorithm combinations, since it's slow
 naive_gradient_combinations = [
     (:simultaneous, :halfinfinite, :full),
     (:simultaneous, :fullinfinite, :full),
     (:sequential, :halfinfinite, :full),
 ]
 naive_gradient_done = Set()
+
+# don't check :diffgauge gradients for all algorithm combinations, since it's slow
+diffgauge_gradient_combinations = [
+    (:simultaneous, :halfinfinite, :full),
+    (:sequential, :halfinfinite, :full),
+    (:simultaneous, :fullinfinite, :full),
+    (:sequential, :fullinfinite, :full),
+]
+diffgauge_gradient_done = Set()
 
 # :fixed iterscheme is incompatible with sequential CTMRG
 function _check_disallowed_combination(
@@ -84,6 +94,14 @@ end
             push!(naive_gradient_done, combo)
         end
 
+        # check for allowed algorithm combinations when testing :diffgauge gradient
+        if gradient_iterscheme == :diffgauge
+            combo = (ctmrg_alg, projector_alg, svd_rrule_alg)
+            combo in diffgauge_gradient_combinations || continue
+            combo in diffgauge_gradient_done && continue
+            push!(diffgauge_gradient_done, combo)
+        end
+
         @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=:$gradient_alg and gradient_iterscheme=:$gradient_iterscheme on $(names[i])"
         Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace)
@@ -93,7 +111,7 @@ end
             alg = ctmrg_alg,
             verbosity = ctmrg_verbosity,
             projector_alg = projector_alg,
-            decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg)),
+            decomposition_alg = SVDAdjoint(; rrule_alg = (; alg = svd_rrule_alg)),
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)

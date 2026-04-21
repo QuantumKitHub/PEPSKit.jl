@@ -50,7 +50,6 @@ end
 $(TYPEDEF)
 
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
-If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
 
 ## Fields
 
@@ -69,7 +68,7 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
     - "Dense" SVD algorithms which compute a truncated SVD through the truncation of a full
       [`MatrixAlgebraKit.svd_compact!`](@extref) decomposition.
       Available algorithms are:
-        - `:DefaultAlgorithm` : MatrixAlgebraKit's default SVD algorithm for a given matrix type.
+        - `:DefaultAlgorithm` : MatrixAlgebraKit's [default SVD algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
         - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref)
         - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref)
         - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref)
@@ -80,7 +79,13 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
       full decomposition. Available algorithms are:
         - `:iterative` : Iterative Krylov-based SVD only computing the specifed number of
           singular values and vectors, see [`IterSVD`](@ref)
-* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.svd_rrule_alg))`:
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:notrunc)` : Truncation strategy for the truncated SVD, which controls the spaces of the output. Here, `alg` can be one of the following:
+    - `:notrunc` : No singular values are truncated and the performed SVDs are exact
+    - `:truncerror` : Additionally supply error threshold `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
+* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.svd_rrule_alg))`:
   Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm`
   instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref) that requires access to the full spectrum
@@ -88,11 +93,16 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
     - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref)
+
+!!! note
+    Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
+    For all regular use cases, the default reverse rule algorithms, automatically chosen based on the forward algorithm, should be sufficient.
 """
-struct SVDAdjoint{F, R}
+struct SVDAdjoint{F, R, T}
     fwd_alg::F
     rrule_alg::R
-end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
+    trunc::T
+end
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :DefaultAlgorithm => DefaultAlgorithm,
@@ -109,7 +119,9 @@ const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi
 )
 
-function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
+_default_svd_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full
+
+function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;), trunc = (; alg = :notrunc))
     # parse forward SVD algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (; alg = Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
@@ -125,7 +137,7 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse reverse-rule SVD algorithm
     rrule_algorithm = if rrule_alg isa NamedTuple
         rrule_kwargs = (;
-            alg = Defaults.svd_rrule_alg,
+            alg = _default_svd_rrule_alg(fwd_algorithm), # default rrule depends on forward algorithm
             tol = Defaults.svd_rrule_tol,
             krylovdim = Defaults.svd_rrule_min_krylovdim,
             degeneracy_atol = Defaults.rrule_degeneracy_atol,
@@ -154,7 +166,16 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         rrule_alg
     end
 
-    return SVDAdjoint(fwd_algorithm, rrule_algorithm)
+    # parse truncation scheme
+    truncation_strategy = if trunc isa TruncationStrategy
+        trunc
+    elseif trunc isa NamedTuple
+        _TruncationStrategy(; trunc...)
+    else
+        throw(ArgumentError("unknown trunc $trunc"))
+    end
+
+    return SVDAdjoint(fwd_algorithm, rrule_algorithm, truncation_strategy)
 end
 
 """
@@ -165,84 +186,18 @@ Wrapper around `svd_trunc(!)` which dispatches on the `SVDAdjoint` algorithm.
 This is needed since a custom adjoint may be defined, depending on the `alg`.
 E.g., for `IterSVD` the adjoint for a truncated SVD from `KrylovKit.svdsolve` is used.
 """
-MatrixAlgebraKit.svd_trunc(t, alg::SVDAdjoint; kwargs...) = svd_trunc!(copy(t), alg; kwargs...)
-function MatrixAlgebraKit.svd_trunc!(t, alg::SVDAdjoint; trunc = notrunc())
-    return _svd_trunc!(t, alg.fwd_alg, trunc)
+MatrixAlgebraKit.svd_trunc(t, alg::SVDAdjoint) = svd_trunc!(copy(t), alg)
+function MatrixAlgebraKit.svd_trunc!(t, alg::SVDAdjoint)
+    return svd_trunc!(t, TruncatedAlgorithm(alg.fwd_alg, alg.trunc))
 end
-function MatrixAlgebraKit.svd_trunc!(
-        t::AdjointTensorMap, alg::SVDAdjoint; trunc = notrunc()
-    )
-    u, s, vt, info = svd_trunc!(adjoint(t), alg; trunc)
-    return adjoint(vt), adjoint(s), adjoint(u), info
+function MatrixAlgebraKit.svd_trunc!(t::AdjointTensorMap, alg::SVDAdjoint)
+    u, s, vt, ϵ = svd_trunc!(adjoint(t), alg)
+    return adjoint(vt), adjoint(s), adjoint(u), ϵ
 end
 
 #
 ## Forward algorithms
 #
-
-# Truncated SVD but also return full U, S and V to make it compatible with :fixed mode
-function _svd_trunc!(
-        t::TensorMap,
-        alg::MatrixAlgebraKit.Algorithm,
-        trunc::TruncationStrategy,
-    )
-    U, S, V⁺ = svd_compact!(t; alg)
-    (Ũ, S̃, Ṽ⁺), ind = truncate(svd_trunc!, (U, S, V⁺), trunc)
-    truncerror = truncation_error(diagview(S), ind)
-
-    # construct info NamedTuple
-    condnum = cond(S)
-    info = (;
-        truncation_error = truncerror, condition_number = condnum,
-        U_full = U, S_full = S, V_full = V⁺,
-        truncation_indices = ind,
-    )
-    return Ũ, S̃, Ṽ⁺, info
-end
-
-"""
-$(TYPEDEF)
-
-SVD struct containing a pre-computed decomposition or even multiple ones. Additionally, it
-can contain the untruncated full decomposition as well. The call to `svd_trunc` just returns the
-pre-computed U, S and V. In the reverse pass, the SVD adjoint is computed with these exact
-U, S, and V and, potentially, the full decompositions if the adjoints needs access to them.
-
-## Fields
-
-$(TYPEDFIELDS)
-"""
-struct FixedSVD{Ut, St, Vt, Utf, Stf, Vtf, It}
-    U::Ut
-    S::St
-    V::Vt
-    U_full::Utf
-    S_full::Stf
-    V_full::Vtf
-    truncation_indices::It
-end
-
-# check whether the full U, S and V are supplied
-function isfullsvd(alg::FixedSVD)
-    if isnothing(alg.U_full) || isnothing(alg.S_full) || isnothing(alg.V_full) || isnothing(alg.truncation_indices)
-        return false
-    else
-        return true
-    end
-end
-
-# Return pre-computed SVD
-function _svd_trunc!(_, alg::FixedSVD, ::TruncationStrategy)
-    info = (;
-        truncation_error = zero(real(scalartype(alg.S))),
-        condition_number = cond(alg.S),
-        U_full = alg.U_full,
-        S_full = alg.S_full,
-        V_full = alg.V_full,
-        truncation_indices = alg.truncation_indices,
-    )
-    return alg.U, alg.S, alg.V, info
-end
 
 """
 $(TYPEDEF)
@@ -265,40 +220,36 @@ Construct an `IterSVD` algorithm struct based on the following keyword arguments
 
 * `alg::KrylovKit.GKL=KrylovKit.GKL(; tol=1e-14, krylovdim=25)` : GKL algorithm struct for block-wise iterative SVD.
 * `fallback_threshold::Float64=Inf` : Threshold for `howmany / minimum(size(block))` above which (if the block is too small) the algorithm falls back to TensorKit's dense SVD.
-* `start_vector=random_start_vector` : Function providing the initial vector for the iterative SVD algorithm.
+* `start_vector=deterministic_start_vector` : Function providing the initial vector for the iterative SVD algorithm.
 """
 @kwdef struct IterSVD
     alg::KrylovKit.GKL = KrylovKit.GKL(; tol = 1.0e-14, krylovdim = 25)
     fallback_threshold::Float64 = Inf
-    start_vector = random_start_vector
+    start_vector = deterministic_start_vector
 end
+_default_svd_rrule_alg(::IterSVD) = :trunc
 
-function random_start_vector(t::AbstractMatrix)
-    return randn(scalartype(t), size(t, 1))
-end
+random_start_vector(t::AbstractMatrix) = randn(scalartype(t), size(t, 1))
+deterministic_start_vector(t::AbstractMatrix) = ones(scalartype(t), size(t, 1))
 
 # Compute SVD data block-wise using KrylovKit algorithm
 # TODO: redefine _empty_svdtensors, _create_svdtensors
-function _svd_trunc!(f, alg::IterSVD, trunc::TruncationStrategy)
+function MatrixAlgebraKit.svd_trunc!(f, alg::TruncatedAlgorithm{<:IterSVD})
+    fwd_alg = alg.alg
+    trunc = alg.trunc
     U, S, V = if isempty(blocksectors(f))
         # early return
         truncation_error = zero(real(scalartype(f)))
         MatrixAlgebraKit.initialize_output(svd_compact!, f, QRIteration()) # specified algorithm doesn't matter here
     else
-        SVDdata, dims = _compute_svddata!(f, alg, trunc)
+        SVDdata, dims = _compute_svddata!(f, fwd_alg, trunc)
         _create_svdtensors(f, SVDdata, dims)
     end
 
-    # construct info NamedTuple
     truncation_error =
         trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f)
-    condition_number = cond(S)
-    info = (;
-        truncation_error, condition_number, U_full = nothing, S_full = nothing, V_full = nothing,
-        truncation_indices = nothing,
-    )
 
-    return U, S, V, info
+    return U, S, V, truncation_error
 end
 
 # Copy from TensorKit v0.14 internal functions
@@ -359,6 +310,9 @@ function _compute_svddata!(
             end
         end
 
+        # make it deterministic-ish
+        MatrixAlgebraKit.gaugefix!(svd_trunc!, U, V)
+
         resize!(S, howmany)
         dims[c] = length(S)
         return c => (U, S, V)
@@ -373,16 +327,19 @@ end
 #
 
 # svd_trunc! rrule wrapping MatrixAlgebraKit's svd_pullback!
+# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L33
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t::AbstractTensorMap,
-        alg::SVDAdjoint{F, R};
-        trunc::TruncationStrategy = notrunc(),
-    ) where {F, R <: FullSVDPullback}
-    @assert !(alg.fwd_alg isa IterSVD) "IterSVD is not compatible with FullSVDPullback"
+        alg::SVDAdjoint{F, R}
+    ) where {F <: MatrixAlgebraKit.Algorithm, R <: FullSVDPullback}
+    # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
 
-    Ũ, S̃, Ṽ⁺, info = svd_trunc(t, alg; trunc)
-    U, S, V⁺, inds = info.U_full, info.S_full, info.V_full, info.truncation_indices # untruncated decomposition
+    # requires access to the full decomposition
+    U, S, V⁺ = svd_compact!(t, alg.fwd_alg)
+    (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.trunc)
+    truncerror = truncation_error(diagview(S), inds)
+
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function svd_trunc!_full_pullback(ΔUSV′)
@@ -397,17 +354,17 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (Ũ, S̃, Ṽ⁺, info), svd_trunc!_full_pullback
+    return (Ũ, S̃, Ṽ⁺, truncerror), svd_trunc!_full_pullback
 end
 
 # svd_trunc! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
+# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L143
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t,
-        alg::SVDAdjoint{F, R};
-        trunc::TruncationStrategy = notrunc(),
+        alg::SVDAdjoint{F, R},
     ) where {F, R <: TruncSVDPullback}
-    U, S, V⁺, info = svd_trunc(t, alg; trunc)
+    U, S, V⁺, ϵ = svd_trunc(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function svd_trunc!_trunc_pullback(ΔUSV′)
@@ -422,17 +379,16 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V⁺, info), svd_trunc!_trunc_pullback
+    return (U, S, V⁺, ϵ), svd_trunc!_trunc_pullback
 end
 
 # KrylovKit rrule compatible with TensorMaps & function handles
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         f,
-        alg::SVDAdjoint{F, R};
-        trunc::TruncationStrategy = notrunc(),
+        alg::SVDAdjoint{F, R}
     ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
-    U, S, V, info = svd_trunc(f, alg; trunc)
+    U, S, V, ϵ = svd_trunc(f, alg)
 
     # update rrule_alg tolerance to be compatible with smallest singular value
     rrule_alg = alg.rrule_alg
@@ -492,5 +448,5 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (U, S, V, info), svd_trunc!_itersvd_pullback
+    return (U, S, V, ϵ), svd_trunc!_itersvd_pullback
 end

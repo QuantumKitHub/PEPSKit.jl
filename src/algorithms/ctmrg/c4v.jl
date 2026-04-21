@@ -21,7 +21,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
-* `decomposition_alg::Union{<:EighAdjoint,NamedTuple}`
+* `decomposition_alg::Union{NamedTuple,<:EighAdjoint,<:QRAdjoint}=(;)`
 * `projector_alg::Symbol=:$(Defaults.projector_alg_c4v)`
 """
 struct C4vCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
@@ -99,6 +99,8 @@ function C4vQRProjector(; kwargs...)
 end
 PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
 
+decomposition_algorithm(alg::C4vQRProjector) = alg.decomposition_alg
+
 # no truncation
 _set_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
 
@@ -145,7 +147,7 @@ function ctmrg_iteration(
     edge′ = c4v_renormalize_edge(network, env, projector)
     info = (;
         contraction_metrics = (; info.truncation_error, info.condition_number),
-        info.D, info.V, info.D_full, info.V_full, info.truncation_indices,
+        info.D, info.V,
     )
     return CTMRGEnv(corner′, edge′), info
 end
@@ -189,8 +191,15 @@ Compute the C₄ᵥ projector from `eigh` decomposing the Hermitian `enlarged_co
 Also return the normalized eigenvalues as the new corner tensor.
 """
 function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
-    trunc = truncation_strategy(alg, enlarged_corner)
-    D, V, info = eigh_trunc!(enlarged_corner, decomposition_algorithm(alg); trunc)
+    alg = @set alg.trunc = truncation_strategy(alg, enlarged_corner)
+    eigh_alg = decomposition_algorithm(alg)
+
+    D, V, truncation_error = eigh_trunc!(enlarged_corner, eigh_alg)
+
+    # get some decomposition info
+    condition_number = ignore_derivatives() do
+        return cond(D)
+    end
 
     # Check for degenerate eigenvalues
     Zygote.isderiving() && ignore_derivatives() do
@@ -200,7 +209,7 @@ function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
         end
     end
 
-    return D / norm(D), V, (; D, V, info...)
+    return D / norm(D), V, (; D, V, truncation_error, condition_number)
 end
 """
     c4v_projector!(enlarged_corner, alg::C4vQRProjector)

@@ -26,12 +26,11 @@ alg_gauge = ScramblingEnvGauge()
     # follow code of _rrule
     if iterscheme == :fixed
         env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
-        env_fixed, signs = gauge_fix(env_conv, env, alg_gauge)
-        alg_fixed = gauge_fix(ctm_alg, signs, info)
+        _, signs, corner_phases, edge_phases = gauge_fix(env_conv, env, alg_gauge)
 
-        _, env_vjp = pullback(state, env_fixed) do A, x
-            e, = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)
-            return PEPSKit.fix_global_phases(e, x)
+        _, env_vjp = pullback(state, env_conv) do A, x
+            e, = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)
+            return PEPSKit.fix_phases(e, signs, corner_phases, edge_phases)
         end
     elseif iterscheme == :diffgauge
         _, env_vjp = pullback(state, env) do A, x

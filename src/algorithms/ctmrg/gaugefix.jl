@@ -1,20 +1,3 @@
-"""
-    gauge_fix(alg::CTMRGAlgorithm, signs, info)
-    gauge_fix(alg::ProjectorAlgorithm, signs, info)
-
-Fix the free gauges of the tensor decompositions associated with `alg`.
-"""
-function gauge_fix(alg::CTMRGAlgorithm, signs, info)
-    alg_fixed = @set alg.projector_alg = gauge_fix(alg.projector_alg, signs, info)
-    return alg_fixed
-end
-function gauge_fix(alg::ProjectorAlgorithm, signs, info)
-    decomposition_alg_fixed = gauge_fix(decomposition_algorithm(alg), signs, info)
-    alg_fixed = @set alg.decomposition_alg = decomposition_alg_fixed # every ProjectorAlgorithm needs an `decomposition_alg` field?
-    alg_fixed = _set_truncation(alg_fixed, notrunc()) # potentially set no truncation
-    return alg_fixed
-end
-
 # TODO: add eigensolver algorithm, verbosity to gauge algorithm structs
 """
 $(TYPEDEF)
@@ -51,6 +34,7 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     end
     @assert all(same_spaces) "Spaces of envprev and envfinal are not the same"
 
+    # find relative phases
     signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
@@ -85,9 +69,11 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
     end
 
     env_fixed_relative = fix_relative_phases(envfinal, signs)
-    env_fixed_full = fix_global_phases(env_fixed_relative, envprev)
 
-    return env_fixed_full, signs
+    # find additional global phases
+    env_fixed_full, corner_phases, edge_phases = fix_global_phases(env_fixed_relative, envprev)
+
+    return env_fixed_full, signs, corner_phases, edge_phases
 end
 
 # C4v specialized gauge fixing routine with Hermitian transfer matrix
@@ -118,11 +104,18 @@ function gauge_fix(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::Scrambli
 
     σ = Qprev * Qfinal'
 
+    # fix relative phases
     cornerfix = σ * envfinal.corners[1] * σ'
     @tensor edgefix[χ_in D_in_above D_in_below; χ_out] :=
         σ[χ_in; χ1] * envfinal.edges[1][χ1 D_in_above D_in_below; χ2] * conj(σ[χ_out; χ2])
+    env_fixed_relative = CTMRGEnv(cornerfix, edgefix)
 
-    return CTMRGEnv(cornerfix, edgefix), fill(σ, (4, 1, 1))
+    signs = fill(σ, (4, 1, 1))
+
+    # find additional global phases
+    env_fixed_full, corner_phases, edge_phases = fix_global_phases(env_fixed_relative, envprev)
+
+    return env_fixed_full, signs, corner_phases, edge_phases
 end
 
 # this is a bit of a hack to get the fixed point of the mixed transfer matrix
@@ -167,27 +160,29 @@ end
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
 function fix_relative_phases(envfinal::CTMRGEnv, signs)
     corners_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        if dir == NORTHWEST
+        Cf = if dir == NORTHWEST
             fix_gauge_northwest_corner((r, c), envfinal, signs)
         elseif dir == NORTHEAST
             fix_gauge_northeast_corner((r, c), envfinal, signs)
         elseif dir == SOUTHEAST
             fix_gauge_southeast_corner((r, c), envfinal, signs)
-        elseif dir == SOUTHWEST
+        else # dir == SOUTHWEST
             fix_gauge_southwest_corner((r, c), envfinal, signs)
         end
+        return Cf
     end
 
     edges_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        if dir == NORTHWEST
+        Ef = if dir == NORTHWEST
             fix_gauge_north_edge((r, c), envfinal, signs)
         elseif dir == NORTHEAST
             fix_gauge_east_edge((r, c), envfinal, signs)
         elseif dir == SOUTHEAST
             fix_gauge_south_edge((r, c), envfinal, signs)
-        elseif dir == SOUTHWEST
+        else # dir == SOUTHWEST
             fix_gauge_west_edge((r, c), envfinal, signs)
         end
+        return Ef
     end
 
     return CTMRGEnv(corners_fixed, edges_fixed)
@@ -197,31 +192,39 @@ function fix_relative_phases(
     ) where {Ut <: AbstractTensorMap, Vt <: AbstractTensorMap}
     U_fixed = map(eachindex(IndexCartesian(), U)) do I
         dir, r, c = Tuple(I)
-        if dir == NORTHWEST
+        Uf = if dir == NORTHWEST
             fix_gauge_north_left_vecs((r, c), U, signs)
         elseif dir == NORTHEAST
             fix_gauge_east_left_vecs((r, c), U, signs)
         elseif dir == SOUTHEAST
             fix_gauge_south_left_vecs((r, c), U, signs)
-        elseif dir == SOUTHWEST
+        else # dir == SOUTHWEST
             fix_gauge_west_left_vecs((r, c), U, signs)
         end
+        return Uf
     end
 
     V_fixed = map(eachindex(IndexCartesian(), V)) do I
         dir, r, c = Tuple(I)
-        if dir == NORTHWEST
+        Vf = if dir == NORTHWEST
             fix_gauge_north_right_vecs((r, c), V, signs)
         elseif dir == NORTHEAST
             fix_gauge_east_right_vecs((r, c), V, signs)
         elseif dir == SOUTHEAST
             fix_gauge_south_right_vecs((r, c), V, signs)
-        elseif dir == SOUTHWEST
+        else # dir == SOUTHWEST
             fix_gauge_west_right_vecs((r, c), V, signs)
         end
+        return Vf
     end
 
     return U_fixed, V_fixed
+end
+
+function fix_phases(env::CTMRGEnv, signs, corner_phases, edge_phases)
+    env_fixed_relative = fix_relative_phases(env, signs)
+    env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases)
+    return env_fixed_global
 end
 
 """
@@ -232,12 +235,14 @@ between all corners and all edges are computed to obtain the global phase which 
 divided out.
 """
 function fix_global_phases(envfix::CTMRGEnv, envprev::CTMRGEnv)
-    cornersgfix = map(zip(envprev.corners, envfix.corners)) do (Cprev, Cfix)
-        return Cfix * inv(dot(Cprev, Cfix))
-    end
-    edgesgfix = map(zip(envprev.edges, envfix.edges)) do (Tprev, Tfix)
-        return Tfix * inv(dot(Tprev, Tfix))
-    end
+    corner_phases = dot.(envprev.corners, envfix.corners)
+    edge_phases = dot.(envprev.edges, envfix.edges)
+    envfix = fix_global_phases(envfix, corner_phases, edge_phases)
+    return envfix, corner_phases, edge_phases
+end
+function fix_global_phases(env::CTMRGEnv, corner_phases, edge_phases)
+    cornersgfix = env.corners .* inv.(corner_phases)
+    edgesgfix = env.edges .* inv.(edge_phases)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
 

@@ -10,7 +10,8 @@ import VectorInterface as VI
 using MatrixAlgebraKit
 using MatrixAlgebraKit:
     TruncationStrategy, NoTruncation, truncate, findtruncated, truncation_error, diagview
-using MatrixAlgebraKit: EighAlgorithms, eigh_pullback!, eigh_trunc_pullback!
+using MatrixAlgebraKit: TruncatedAlgorithm
+using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 
 using TensorKit
