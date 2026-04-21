@@ -13,6 +13,13 @@ $(TYPEDEF)
 PEPS approximation algorithm maximizing the fidelity by successively applying the fidelity
 derivative with respect to the approximator PEPS.
 
+Starting from an initial guess, the algorithm first computes the CTMRG environment of the ⟨ψᵢ|ψᵢ₊₁⟩
+network. From that, the fidelity derivative ∂F/∂ψᵢ₊₁ is computed for each PEPS tensor in the unit cell,
+corresponding to the norm network of ψᵢ where the respective bra PEPS tensor is missing. Then we update
+ψᵢ = ψᵢ₊₁ and ψᵢ₊₁ = ∂F/∂ψᵢ₊₁, and compute the fidelity |⟨ψᵢ|ψᵢ₊₁⟩|². This is iterated until the
+fidelity approaches 1 within the specified tolerance. Throughout the iteration, the PEPS tensors are
+normalized appropriately where each normalization step requires a CTMRG contraction run.
+
 ## Constructors
 
     FidelityMaxCrude(; kwargs...)
@@ -95,10 +102,10 @@ function MPSKit.approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::Fidelity
     log = MPSKit.IterLog("Approximate")
     return LoggingExtras.withlevel(; alg.verbosity) do
         # normalize reference PEPS
-        peps_init = ψ # smaller bond spaces
+        peps₀ = ψ
         envspace = domain(ψ₀[1])[1]
-        env₀, = leading_boundary(CTMRGEnv(peps_init, envspace), peps_init, alg.boundary_alg)
-        peps_init /= sqrt(abs(_local_norm(peps_init, peps_init, env₀))) # normalize to ensure that fidelity is bounded by 1
+        env₀, = leading_boundary(CTMRGEnv(peps₀, envspace), peps₀, alg.boundary_alg)
+        peps₀ /= sqrt(abs(_local_norm(peps₀, peps₀, env₀))) # normalize to ensure that fidelity is bounded by 1
 
         # normalize maximizer PEPS
         peps = ψ₀
@@ -106,9 +113,9 @@ function MPSKit.approximate(ψ₀::InfinitePEPS, ψ::InfinitePEPS, alg::Fidelity
         peps /= sqrt(abs(_local_norm(peps, peps, env)))
 
         approximate_loginit!(log, one(real(scalartype(peps))), zero(real(scalartype(peps))))
-        nw₀ = InfiniteSquareNetwork(peps_init, peps) # peps₀ has different virtual spaces than peps
+        nw₀ = InfiniteSquareNetwork(peps₀, peps) # peps₀ has different virtual spaces than peps
         envnw, = leading_boundary(CTMRGEnv(nw₀, envspace), nw₀, alg.boundary_alg)
-        peps′ = _∂local_norm(peps_init, envnw)
+        peps′ = _∂local_norm(peps₀, envnw)
         for iter in 1:(alg.maxiter)
             # compute fidelity from ∂norm
             fid = abs2(_local_norm(peps, peps′))
