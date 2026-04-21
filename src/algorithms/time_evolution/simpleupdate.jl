@@ -7,9 +7,9 @@ Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 
 $(TYPEDFIELDS)
 """
-@kwdef struct SimpleUpdate <: TimeEvolution
+@kwdef struct SimpleUpdate{T <: TruncationStrategy} <: TimeEvolution
     "Truncation strategy for bonds updated by Trotter gates"
-    trunc::TruncationStrategy
+    trunc::T
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
     "When true, force decomposition of nearest neighbor gates to MPOs."
@@ -67,6 +67,7 @@ function TimeEvolver(
         trunc = _get_fixedspacetrunc(psi0)
         @reset alg.trunc = trunc
     end
+    # TODO: bipartite check for alg.trunc after equality is defined for all kinds of truncation strategies
     # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, gate, state)
 end

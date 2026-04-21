@@ -32,6 +32,10 @@ struct SiteDependentTruncation{T <: TruncationStrategy} <: TruncationStrategy
     end
 end
 
+Base.getindex(trunc::SiteDependentTruncation, args...) = Base.getindex(trunc.truncs, args...)
+
+# TODO: _is_bipartite(trunc::SiteDependentTruncation)
+
 const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
     :notrunc => MatrixAlgebraKit.NoTruncation,
     :truncerror => MatrixAlgebraKit.TruncationByError,
@@ -61,5 +65,5 @@ end
 function truncation_strategy(
         trunc::SiteDependentTruncation, direction::Int, row::Int, col::Int
     )
-    return trunc.truncs[direction, row, col]
+    return trunc[direction, row, col]
 end
