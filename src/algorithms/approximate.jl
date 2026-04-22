@@ -14,11 +14,18 @@ PEPS approximation algorithm maximizing the fidelity by successively applying th
 derivative with respect to the approximator PEPS.
 
 Starting from an initial guess, the algorithm first computes the CTMRG environment of the ⟨ψᵢ|ψᵢ₊₁⟩
-network. From that, the derivative ∂norm = ∂⟨ψᵢ|ψᵢ₊₁⟩/∂ψᵢ₊₁ is computed for each PEPS tensor in the
-unit cell, corresponding to the norm network of ψᵢ where the respective bra PEPS tensor is missing.
-Then we update ψᵢ = ψᵢ₊₁ and ψᵢ₊₁ = ∂norm, and compute the fidelity |⟨ψᵢ|ψᵢ₊₁⟩|². This is iterated
-until the fidelity approaches 1 within the specified tolerance. Throughout the iteration, the PEPS
-tensors are normalized appropriately where each normalization step requires a CTMRG contraction run.
+network. From that, the approximate derivative ∂norm = ∂⟨ψᵢ|ψᵢ₊₁⟩/∂ψᵢ₊₁ is computed for each PEPS
+tensor in the unit cell, corresponding to the norm network of ψᵢ where the respective bra PEPS
+tensor is missing. Then we update ψᵢ = ψᵢ₊₁ and ψᵢ₊₁ = ∂norm, and compute the fidelity |⟨ψᵢ|ψᵢ₊₁⟩|².
+This is iterated until the fidelity approaches 1 within the specified tolerance. Throughout the
+iteration, the PEPS tensors are normalized appropriately where each normalization step requires a
+CTMRG contraction run.
+
+We note that this algorithm only produces a very crude approximation, where the derivative of
+⟨ψᵢ|ψᵢ₊₁⟩ w.r.t. the PEPS tensors does not differentiate through the CTMRG contraction.
+In order to converge the fidelity properly one would need a more expensive fidelity optimization 
+procedure, where one could e.g. automatically differentiate through the fidelity derivative to
+obtain an accurate gradient.
 
 ## Constructors
 
