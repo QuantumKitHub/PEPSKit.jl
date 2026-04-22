@@ -10,23 +10,29 @@ using PEPSKit: cost_function_als
 Random.seed!(0)
 maxiter = 600
 check_interval = 20
-trunc = truncerror(; atol = 1.0e-10) & truncrank(8)
-Vext = Vect[FermionParity](0 => 100, 1 => 100)
-Vint = Vect[FermionParity](0 => 6, 1 => 6)
-Vphy = Vect[FermionParity](0 => 1, 1 => 2)
-perm_ab = ((1, 3), (4, 2))
-for Vbondl in (Vint, Vint'), Vbondr in (Vint, Vint')
-    Vbond = Vbondl ⊗ Vbondr
+elt = Float64
+d, D = 4, 4
+trunc = truncerror(; atol = 1.0e-10) & truncrank(D)
+Vphy = Vect[FermionParity](0 => div(d, 2), 1 => div(d, 2))
+dD = d * D
+Vqro = Vect[FermionParity](0 => div(dD, 2), 1 => div(dD, 2))
+d2D = d^2 * D
+Vint = Vect[FermionParity](0 => div(d2D, 2), 1 => div(d2D, 2))
+for Vl in (Vqro, Vqro'), Vr in (Vqro, Vqro')
     # random positive-definite environment
-    Z = randn(Float64, Vext ← Vbond)
+    Vbond = Vl ⊗ Vr
+    Dext = dim(Vbond)
+    Vext = Vect[FermionParity](0 => div(Dext, 2) + 1, 1 => div(Dext, 2) + 1)
+    @info dim(Vext)
+    Z = randn(elt, Vext ← Vbond)
+    normalize!(Z, Inf)
     benv = Z' * Z
-    normalize!(benv, Inf)
-    # untruncated bond tensor
-    a2b2 = randn(Float64, Vbondl ⊗ Vbondr ← Vphy' ⊗ Vphy')
-    a2, s, b2 = svd_compact(permute(a2b2, perm_ab))
-    a2, b2 = PEPSKit.absorb_s(a2, s, b2)
+    # untruncated bond tensors
+    a2 = randn(elt, Vl ⊗ Vphy ← Vint)
+    b2 = randn(elt, Vint ← Vphy' ⊗ Vr')
     # bond tensor (truncated SVD initialization)
-    a0, s, b0 = svd_trunc(permute(a2b2, perm_ab); trunc = trunc)
+    a2b2 = PEPSKit._combine_ab(a2, b2)
+    a0, s, b0 = svd_trunc(permute(a2b2, ((1, 3), (4, 2))); trunc = trunc)
     a0, b0 = PEPSKit.absorb_s(a0, s, b0)
     fid0 = cost_function_als(benv, PEPSKit._combine_ab(a0, b0), a2b2)[2]
     @info "Fidelity of simple SVD truncation = $fid0.\n"
