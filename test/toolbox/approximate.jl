@@ -39,6 +39,7 @@ end
     Random.seed!(sd)
     peps_approx2, env2 = approximate(
         peps1, peps2, FidelityMaxCrude(;
+            tol = 1.0e-5,
             maxiter = maxiter_approx,
             boundary_alg = (; maxiter = maxiter_boundary, trunc = truncrank(χ), verbosity = 1)
         )
