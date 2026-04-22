@@ -23,8 +23,8 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * [Glen Evenbly, Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018). 
 """
-@kwdef struct FullEnvTruncation
-    trunc::TruncationStrategy
+@kwdef struct FullEnvTruncation{T <: TruncationStrategy}
+    trunc::T
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
     trunc_init::Bool = true

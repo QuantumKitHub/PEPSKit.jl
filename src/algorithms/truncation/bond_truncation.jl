@@ -18,8 +18,8 @@ The truncation algorithm can be constructed from the following keyword arguments
 * `tol::Float64=1e-9` : ALS converges when the relative change in bond SVD spectrum between two iterations is smaller than `tol`.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
-@kwdef struct ALSTruncation
-    trunc::TruncationStrategy
+@kwdef struct ALSTruncation{T <: TruncationStrategy}
+    trunc::T
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
     check_interval::Int = 0
