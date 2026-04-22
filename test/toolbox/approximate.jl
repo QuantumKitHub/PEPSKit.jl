@@ -57,5 +57,5 @@ end
     envnw, = leading_boundary(env1, InfiniteSquareNetwork(peps_approx1, peps_approx3); maxiter = maxiter_boundary)
     ∂norm = _∂local_norm(peps_approx1, envnw)
     fid = abs2(_local_norm(peps_approx3, ∂norm))
-    @test fid ≈ 1 atol = 0.9 # judging from different seeds, one generally can't expect much more than 10⁻¹ fidelity
+    @test fid > 0.1 # judging from different seeds, one generally can't expect much more than 10⁻¹ fidelity
 end
