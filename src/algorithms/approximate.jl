@@ -14,11 +14,11 @@ PEPS approximation algorithm maximizing the fidelity by successively applying th
 derivative with respect to the approximator PEPS.
 
 Starting from an initial guess, the algorithm first computes the CTMRG environment of the ⟨ψᵢ|ψᵢ₊₁⟩
-network. From that, the fidelity derivative ∂F/∂ψᵢ₊₁ is computed for each PEPS tensor in the unit cell,
-corresponding to the norm network of ψᵢ where the respective bra PEPS tensor is missing. Then we update
-ψᵢ = ψᵢ₊₁ and ψᵢ₊₁ = ∂F/∂ψᵢ₊₁, and compute the fidelity |⟨ψᵢ|ψᵢ₊₁⟩|². This is iterated until the
-fidelity approaches 1 within the specified tolerance. Throughout the iteration, the PEPS tensors are
-normalized appropriately where each normalization step requires a CTMRG contraction run.
+network. From that, the derivative ∂norm = ∂⟨ψᵢ|ψᵢ₊₁⟩/∂ψᵢ₊₁ is computed for each PEPS tensor in the
+unit cell, corresponding to the norm network of ψᵢ where the respective bra PEPS tensor is missing.
+Then we update ψᵢ = ψᵢ₊₁ and ψᵢ₊₁ = ∂norm, and compute the fidelity |⟨ψᵢ|ψᵢ₊₁⟩|². This is iterated
+until the fidelity approaches 1 within the specified tolerance. Throughout the iteration, the PEPS
+tensors are normalized appropriately where each normalization step requires a CTMRG contraction run.
 
 ## Constructors
 
@@ -171,9 +171,9 @@ Sum over `contract_local_norm` values of all unit cell entries.
 function _local_norm(ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv)
     return sum(ind -> contract_local_norm((ind,), ket, bra, env), eachcoordinate(ket))
 end
-function _local_norm(peps::InfinitePEPS, ∂norm::InfinitePEPS)
-    return sum(eachcoordinate(peps)) do (r, c)
-        @tensor conj(peps[r, c][d; D_N D_E D_S D_W]) * ∂norm[r, c][d; D_N D_E D_S D_W]
+function _local_norm(bra::InfinitePEPS, ∂norm::InfinitePEPS)
+    return sum(eachcoordinate(bra)) do (r, c)
+        @tensor conj(bra[r, c][d; D_N D_E D_S D_W]) * ∂norm[r, c][d; D_N D_E D_S D_W]
     end
 end
 
@@ -183,12 +183,12 @@ $(SIGNATURES)
 
 Compute the `InfinitePEPS` resulting from removing the bra PEPS tensors in `_local_norm`.
 """
-function _∂local_norm(peps::InfinitePEPS, env::CTMRGEnv)
-    return InfinitePEPS(map(ind -> _∂contract_site(ind, peps, env), eachcoordinate(peps)))
+function _∂local_norm(ket::InfinitePEPS, env::CTMRGEnv)
+    return InfinitePEPS(map(ind -> _∂contract_site(ind, ket, env), eachcoordinate(ket)))
 end
 
 # contract CTMRG environment leaving open the bra-PEPS virtual and physical bonds
-function _∂contract_site(ind::Tuple{Int, Int}, peps::InfinitePEPS, env::CTMRGEnv)
+function _∂contract_site(ind::Tuple{Int, Int}, ket::InfinitePEPS, env::CTMRGEnv)
     r, c = ind
     return _∂contract_site(
         env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
@@ -197,7 +197,7 @@ function _∂contract_site(ind::Tuple{Int, Int}, peps::InfinitePEPS, env::CTMRGE
         env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
         env.edges[NORTH, _prev(r, end), c], env.edges[EAST, r, _next(c, end)],
         env.edges[SOUTH, _next(r, end), c], env.edges[WEST, r, _prev(c, end)],
-        peps[r, c],
+        ket[r, c],
     )
 end
 function _∂contract_site(
