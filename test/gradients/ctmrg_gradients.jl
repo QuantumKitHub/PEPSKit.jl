@@ -20,7 +20,7 @@ gradtol = 1.0e-4
 ctmrg_verbosity = 0
 ctmrg_algs = [[:sequential, :simultaneous], [:sequential, :simultaneous]]
 projector_algs = [[:halfinfinite, :fullinfinite], [:halfinfinite, :fullinfinite]]
-svd_rrule_algs = [[:full, :trunc, :Arnoldi], [:full, :Arnoldi]]
+svd_rrule_algs = [[:full, :trunc, :arnoldi], [:full, :arnoldi]]
 gradient_algs = [
     [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
     [:geomsum, :manualiter, :linsolver, :eigsolver],

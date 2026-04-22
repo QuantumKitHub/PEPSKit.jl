@@ -27,9 +27,9 @@ Construct a `QRAdjoint` algorithm struct based on the following keyword argument
   `NamedTuple` where the algorithm is specified by the `alg` keyword.
   The available algorithms are provided through MatrixAlgebraKit and include:
     - `:DefaultAlgorithm` : MatrixAlgebraKit's [default QR algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
-    - `:Householder` : MatrixAlgebraKit's [`Householder`](@extref)
+    - `:Householder` : MatrixAlgebraKit's [`Householder`](@extref MatrixAlgebraKit.Householder)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:qr` : MatrixAlgebraKit's [`qr_pullback!`](@extref)
+    - `:qr` : MatrixAlgebraKit's [`qr_pullback!`](@extref MatrixAlgebraKit.qr_pullback!)
 
 !!! note
     Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.

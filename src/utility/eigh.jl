@@ -62,14 +62,14 @@ Construct a `EighAdjoint` algorithm struct based on the following keyword argume
   `NamedTuple` where the algorithm is specified by the `alg` keyword.
   The available Eigh algorithms can be divided into two categories:
     - "Dense" Eigh algorithms which compute a truncated Eigh through the truncation of a full
-      [`MatrixAlgebraKit.eigh_compact!`](@extref) decomposition.
+      [`MatrixAlgebraKit.eigh_full!`](@extref) decomposition.
       Available algorithms are:
-        - `:DefaultAlgorithm` : MatrixAlgebraKit's default Eigh algorithm for a given matrix type.
-        - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref)
-        - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref)
-        - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref)
-        - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref)
-        - `:RobustRepresentations` : MatrixAlgebraKit's [`RobustRepresentations`](@extref)
+        - `:DefaultAlgorithm` : MatrixAlgebraKit's [default Eigh algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
+        - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
+        - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref MatrixAlgebraKit.QRIteration)
+        - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref MatrixAlgebraKit.Bisection)
+        - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref MatrixAlgebraKit.Jacobi)
+        - `:RobustRepresentations` : MatrixAlgebraKit's [`RobustRepresentations`](@extref MatrixAlgebraKit.RobustRepresentations)
     - "Sparse" Eigh algorithms which directly compute a truncated Eigh without access to the
       full decomposition. Available algorithms are:
         - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
@@ -84,8 +84,8 @@ Construct a `EighAdjoint` algorithm struct based on the following keyword argume
   Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied
   by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the
   following:
-    - `:full` : MatrixAlgebraKit's [`eigh_pullback!`](@extref) that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref) solving a Sylvester equation on the truncated subspace
+    - `:full` : MatrixAlgebraKit's [`eigh_pullback!`](@extref MatrixAlgebraKit.eigh_pullback!) that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) solving a Sylvester equation on the truncated subspace
 
 !!! note
     Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
