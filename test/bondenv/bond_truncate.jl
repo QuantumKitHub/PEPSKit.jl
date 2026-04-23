@@ -10,11 +10,11 @@ using PEPSKit: _combine_ab, _combine_ab_for_svd
 
 Random.seed!(0)
 maxiter = 600
-check_interval = 40
+check_interval = 30
 elt = Float64
 # simulating the situation of applying a 2-site gate
 # to a bond with virtual dimension D, physical dimension d.
-d, D = 4, 4
+d, D = 2, 4
 trunc = truncerror(; atol = 1.0e-10) & truncrank(D)
 Vphy = Vect[FermionParity](0 => div(d, 2), 1 => div(d, 2))
 Vqro = Vect[FermionParity](0 => div(d * D, 2), 1 => div(d * D, 2))
