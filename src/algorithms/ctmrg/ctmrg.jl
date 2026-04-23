@@ -88,10 +88,11 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 
 ## Return values
 
-The `leading_boundary` routine returns the final environment as well as an information `NamedTuple`
-that generally contains a `contraction_metrics` `NamedTuple` storing different contents depending
-on the chosen `alg`. Depending on the contraction method, the information tuple may also contain
-the final tensor decomposition (used in the projectors) including its truncation indices.
+* `env` : The final environment.
+* `info` : A `NamedTuple` containing information about the `leading_boundary` convergence, which has the following fields:
+    - `info.converged::Bool` : Convergence flag indicating whether the contraction converged within `maxiter` and `tol`.
+    - `info.convergence_error::Real` : The final convergence error at the end of the contraction procedure.
+    - `info.contraction_metrics::NamedTuple` : A `NamedTuple` containing metrics which characterize the contraction. The precise contents depend on `alg`.
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
@@ -109,13 +110,15 @@ function leading_boundary(
         end
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
-        local info
+        local info_iter
+        converged = false
         for iter in 1:(alg.maxiter)
-            env, info = ctmrg_iteration(network, env, alg)
+            env, info_iter = ctmrg_iteration(network, env, alg)
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
                 ctmrg_logfinish!(log, iter, η, network, env)
+                converged = true
                 break
             end
             if iter == alg.maxiter
@@ -124,6 +127,11 @@ function leading_boundary(
                 ctmrg_logiter!(log, iter, η, network, env)
             end
         end
+        info = (;
+            converged,
+            convergence_error = η,
+            contraction_metrics = info_iter.contraction_metrics,
+        )
         return env, info
     end
 end
