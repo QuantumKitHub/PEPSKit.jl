@@ -50,7 +50,7 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)  # renormalize enlarged corners
     info = (;
         contraction_metrics = (; info.truncation_error, info.condition_number),
-        info.U, info.S, info.V, info.U_full, info.S_full, info.V_full, info.truncation_indices,
+        info.U, info.S, info.V,
     )
     return env′, info
 end
@@ -65,11 +65,7 @@ function _split_proj_and_info(proj_and_info)
     U = map(x -> x[2].U, proj_and_info)
     S = map(x -> x[2].S, proj_and_info)
     V = map(x -> x[2].V, proj_and_info)
-    U_full = map(x -> x[2].U_full, proj_and_info)
-    S_full = map(x -> x[2].S_full, proj_and_info)
-    V_full = map(x -> x[2].V_full, proj_and_info)
-    truncation_indices = map(x -> x[2].truncation_indices, proj_and_info)
-    info = (; truncation_error, condition_number, U, S, V, U_full, S_full, V_full, truncation_indices)
+    info = (; truncation_error, condition_number, U, S, V)
     return (P_left, P_right), info
 end
 
@@ -102,7 +98,7 @@ function simultaneous_projectors(
     trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
     alg′ = @set alg.trunc = trunc
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
-    return compute_projector(ec, coordinate, alg′)
+    return compute_projector(ec, alg′)
 end
 function simultaneous_projectors(
         coordinate, enlarged_corners::Array{E, 3}, env, alg::FullInfiniteProjector
@@ -119,7 +115,7 @@ function simultaneous_projectors(
         enlarged_corners[coordinate2...],
         enlarged_corners[coordinate3...],
     )
-    return compute_projector(ec, coordinate, alg′)
+    return compute_projector(ec, alg′)
 end
 
 """

@@ -8,6 +8,7 @@ abstract type CTMRGAlgorithm end
 
 const CTMRG_SYMBOLS = IdDict{Symbol, Type{<:CTMRGAlgorithm}}()
 
+
 """
     CTMRGAlgorithm(; kwargs...)
 
@@ -29,6 +30,10 @@ function CTMRGAlgorithm(;
     # parse CTMRG projector algorithm
     if alg == :c4v && projector_alg == Defaults.projector_alg
         projector_alg = Defaults.projector_alg_c4v
+    end
+    # check for full decomposition algorithm specification, otherwise interpret as forward alg
+    if decomposition_alg isa NamedTuple
+        decomposition_alg = (; fwd_alg = decomposition_alg)
     end
     projector_algorithm = ProjectorAlgorithm(;
         alg = projector_alg, decomposition_alg, trunc, verbosity
@@ -79,12 +84,16 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `decomposition_alg` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
     - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
     - `:c4v_qr` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
+* `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:QRAdjoint}` : Tensor
+  decomposition algorithm used for computing projectors. When specified as a `NamedTuple`,
+  the settings are passed a the forward algorithm to the appropriate decomposition
+  for the given projector algorithm. For information on which forward algorithms are
+  available, and how to specify them, see [`SVDAdjoint`](@ref), [`EighAdjoint`](@ref) and [`QRAdjoint`](@ref).
 
 ## Return values
 

@@ -11,7 +11,6 @@ end
 $(TYPEDEF)
 
 Wrapper for a QR decomposition algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
-If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
 
 ## Fields
 
@@ -23,19 +22,27 @@ $(TYPEDFIELDS)
 
 Construct a `QRAdjoint` algorithm struct based on the following keyword arguments:
 
-* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_fwd_alg))`: Eig algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:qr` : MatrixAlgebraKit's `LAPACK_HouseholderQR`
-
+* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_fwd_alg))`: QR
+  algorithm of the forward pass which can either be passed as an `Algorithm` instance or a
+  `NamedTuple` where the algorithm is specified by the `alg` keyword.
+  The available algorithms are provided through MatrixAlgebraKit and include:
+    - `:DefaultAlgorithm` : MatrixAlgebraKit's [default QR algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
+    - `:Householder` : MatrixAlgebraKit's [`Householder`](@extref MatrixAlgebraKit.Householder)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:qr` : MatrixAlgebraKit's `qr_pullback`
+    - `:qr` : MatrixAlgebraKit's [`qr_pullback!`](@extref MatrixAlgebraKit.qr_pullback!)
+
+!!! note
+    Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
+    For all regular use cases, the default reverse rule algorithms, automatically chosen based on the forward algorithm, should be sufficient.
 """
 struct QRAdjoint{F, R}
     fwd_alg::F
     rrule_alg::R
-end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
+end
 
 const QR_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :qr => LAPACK_HouseholderQR
+    # :DefaultAlgorithm => DefaultAlgorithm, # TODO: broken, needs to be fixed
+    :Householder => Householder,
 )
 const QR_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :qr => QRPullback
@@ -85,33 +92,15 @@ Wrapper around `left_orth(!)` which dispatches on the `QRAdjoint` algorithm.
 This is needed since a custom adjoint may be defined, depending on the `alg`.
 """
 MatrixAlgebraKit.left_orth(t, alg::QRAdjoint) = left_orth!(copy(t), alg)
-MatrixAlgebraKit.left_orth!(t, alg::QRAdjoint) = _left_orth!(t, alg.fwd_alg)
-_left_orth!(t, alg::LAPACK_HouseholderQR) = left_orth!(t; alg)
-
-"""
-$(TYPEDEF)
-
-QR decomposition struct containing a pre-computed decomposition. Th call to `left_orth(!)`
-just returns the precomputed `Q` and `R`. In the reverse pass, the adjoint is computed with
-these exact `D` and `R`.
-
-## Fields
-
-$(TYPEDFIELDS)
-"""
-struct FixedQR{Qt, Rt}
-    Q::Qt
-    R::Rt
-end
-
-_left_orth!(_, alg::FixedQR) = alg.Q, alg.R
+MatrixAlgebraKit.left_orth!(t, alg::QRAdjoint) = left_orth!(t, alg.fwd_alg)
 
 # left_orth! rrule wrapping MatrixAlgebraKit's qr_pullback!
+# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/qr.jl#L49
 function ChainRulesCore.rrule(
         ::typeof(left_orth!),
         t::AbstractTensorMap,
         alg::QRAdjoint{F, R},
-    ) where {F <: Union{LAPACK_HouseholderQR, FixedQR}, R <: QRPullback}
+    ) where {F <: MatrixAlgebraKit.Algorithm, R <: QRPullback}
     QR = left_orth(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 

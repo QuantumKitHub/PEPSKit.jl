@@ -46,7 +46,6 @@ end
 $(TYPEDEF)
 
 Wrapper for a eigenvalue decomposition algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
-If `isnothing(rrule_alg)`, Zygote differentiates the forward call automatically.
 
 ## Fields
 
@@ -58,35 +57,63 @@ $(TYPEDFIELDS)
 
 Construct a `EighAdjoint` algorithm struct based on the following keyword arguments:
 
-* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_fwd_alg))`: Eig algorithm of the forward pass which can either be passed as an `Algorithm` instance or a `NamedTuple` where `alg` is one of the following:
-    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`
-    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`
-    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
-    - `:multiple` : MatrixAlgebraKit's `LAPACK_MultipleRelativelyRobustRepresentations`
-    - `:lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Lanczos)
-    - `:blocklanczos` : Block version of `:lanczos` for repeated extremal eigenvalues, see [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BlockLanczos)
-* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:full` : MatrixAlgebraKit's `eigh_pullback!` that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's `eigh_trunc_pullback!` solving a Sylvester equation on the truncated subspace
+* `fwd_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_fwd_alg))`: Eigh
+  algorithm of the forward pass which can either be passed as an `Algorithm` instance or a
+  `NamedTuple` where the algorithm is specified by the `alg` keyword.
+  The available Eigh algorithms can be divided into two categories:
+    - "Dense" Eigh algorithms which compute a truncated Eigh through the truncation of a full
+      [`MatrixAlgebraKit.eigh_full!`](@extref) decomposition.
+      Available algorithms are:
+        - `:DefaultAlgorithm` : MatrixAlgebraKit's [default Eigh algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
+        - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
+        - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref MatrixAlgebraKit.QRIteration)
+        - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref MatrixAlgebraKit.Bisection)
+        - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref MatrixAlgebraKit.Jacobi)
+        - `:RobustRepresentations` : MatrixAlgebraKit's [`RobustRepresentations`](@extref MatrixAlgebraKit.RobustRepresentations)
+    - "Sparse" Eigh algorithms which directly compute a truncated Eigh without access to the
+      full decomposition. Available algorithms are:
+        - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
+        - `:BlockLanczos` : Block version of `:Lanczos` for repeated extremal eigenvalues, see [`KrylovKit.BlockLanczos`](@extref)
+* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:notrunc)` : Truncation strategy for the truncated eigh, which controls the spaces of the output. Here, `alg` can be one of the following:
+    - `:notrunc` : No eigenvalues are truncated.
+    - `:truncerror` : Additionally supply error threshold `η`; truncate such that the 2-norm of the truncated eigenvalues is smaller than `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate to the maximal virtual dimension of `η`
+    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
+    - `:trunctol` : Additionally supply eigenvalue magnitude cutoff `η`; truncate such that the magnitude of every retained eigenvalue is larger than `η`
+* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_rrule_alg))`:
+  Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied
+  by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the
+  following:
+    - `:full` : MatrixAlgebraKit's [`eigh_pullback!`](@extref MatrixAlgebraKit.eigh_pullback!) that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) solving a Sylvester equation on the truncated subspace
+
+!!! note
+    Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
+    For all regular use cases, the default reverse rule algorithms, automatically chosen based on the forward algorithm, should be sufficient.
 """
-struct EighAdjoint{F, R}
+struct EighAdjoint{F, R, T}
     fwd_alg::F
     rrule_alg::R
-end  # Keep truncation algorithm separate to be able to specify CTMRG dependent information
+    trunc::T
+end
 
 const EIGH_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    :qriteration => LAPACK_QRIteration,
-    :bisection => LAPACK_Bisection,
-    :divideandconquer => LAPACK_DivideAndConquer,
-    :multiple => LAPACK_MultipleRelativelyRobustRepresentations,
-    :lanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
-    :blocklanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
+    :DefaultAlgorithm => DefaultAlgorithm,
+    :QRIteration => QRIteration,
+    :Bisection => Bisection,
+    :DivideAndConquer => DivideAndConquer,
+    :Jacobi => Jacobi,
+    :RobustRepresentations => RobustRepresentations,
+    :Lanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = Lanczos(; tol, krylovdim), kwargs...),
+    :BlockLanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
 )
 const EIGH_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullEighPullback, :trunc => TruncEighPullback,
 )
 
-function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
+_default_eigh_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full
+
+function EighAdjoint(; fwd_alg = (;), rrule_alg = (;), trunc = (; alg = :notrunc))
     # parse forward algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (; alg = Defaults.eigh_fwd_alg, fwd_alg...) # overwrite with specified kwargs
@@ -102,7 +129,7 @@ function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse reverse-rule algorithm
     rrule_algorithm = if rrule_alg isa NamedTuple
         rrule_kwargs = (;
-            alg = Defaults.eigh_rrule_alg,
+            alg = _default_eigh_rrule_alg(fwd_algorithm),
             degeneracy_atol = Defaults.rrule_degeneracy_atol,
             verbosity = Defaults.eigh_rrule_verbosity,
             rrule_alg...,
@@ -120,7 +147,16 @@ function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
         rrule_alg
     end
 
-    return EighAdjoint(fwd_algorithm, rrule_algorithm)
+    # parse truncation scheme
+    truncation_strategy = if trunc isa TruncationStrategy
+        trunc
+    elseif trunc isa NamedTuple
+        _TruncationStrategy(; trunc...)
+    else
+        throw(ArgumentError("unknown trunc $trunc"))
+    end
+
+    return EighAdjoint(fwd_algorithm, rrule_algorithm, truncation_strategy)
 end
 
 """
@@ -130,79 +166,18 @@ end
 Wrapper around `eigh_trunc(!)` which dispatches on the `EighAdjoint` algorithm.
 This is needed since a custom adjoint may be defined, depending on the `alg`.
 """
-MatrixAlgebraKit.eigh_trunc(t, alg::EighAdjoint; kwargs...) = eigh_trunc!(copy(t), alg; kwargs...)
-function MatrixAlgebraKit.eigh_trunc!(t, alg::EighAdjoint; trunc = notrunc())
-    return _eigh_trunc!(t, alg.fwd_alg, trunc)
+MatrixAlgebraKit.eigh_trunc(t, alg::EighAdjoint) = eigh_trunc!(copy(t), alg)
+function MatrixAlgebraKit.eigh_trunc!(t, alg::EighAdjoint)
+    return eigh_trunc!(t, TruncatedAlgorithm(alg.fwd_alg, alg.trunc))
 end
-function MatrixAlgebraKit.eigh_trunc!(
-        t::AdjointTensorMap, alg::EighAdjoint; trunc = notrunc()
-    )
-    D, V, info = eigh_trunc!(adjoint(t), alg; trunc)
-    return adjoint(D), adjoint(V), info
+function MatrixAlgebraKit.eigh_trunc!(t::AdjointTensorMap, alg::EighAdjoint)
+    D, V, ϵ = eigh_trunc!(adjoint(t), alg; trunc)
+    return adjoint(D), adjoint(V), ϵ
 end
 
 #
 ## Forward algorithms
 #
-
-# Truncated eigh but also return full D and V to make it compatible with :fixed mode
-function _eigh_trunc!(
-        t::TensorMap,
-        alg::LAPACK_EighAlgorithm,
-        trunc::TruncationStrategy,
-    )
-    D, V = eigh_full!(t; alg)
-    (D̃, Ṽ), ind = truncate(eigh_trunc!, (D, V), trunc)
-    truncerror = truncation_error(diagview(D), ind)
-
-    # construct info NamedTuple
-    condnum = cond(D)
-    info = (;
-        truncation_error = truncerror,
-        condition_number = condnum,
-        D_full = D,
-        V_full = V,
-        truncation_indices = ind,
-    )
-    return D̃, Ṽ, info
-end
-
-"""
-$(TYPEDEF)
-
-Eigenvalue decomposition struct containing a pre-computed decomposition or even multiple
-ones. Additionally, it can contain the full untruncated decomposition and the corresponding
-truncation indices as well. The call to `eigh_trunc`/`eig_trunc` just returns the
-pre-computed D and V. In the reverse pass, the adjoint is computed with these exact D and V
-and, potentially, the full decompositions if the adjoints require access to them.
-
-## Fields
-
-$(TYPEDFIELDS)
-"""
-struct FixedEig{Dt, Vt, Dtf, Vtf, It}
-    D::Dt
-    V::Vt
-    D_full::Dtf
-    V_full::Vtf
-    truncation_indices::It
-end
-
-# check whether the full D and V are supplied
-isfulleig(alg::FixedEig) = !isnothing(alg.D_full) && !isnothing(alg.V_full) && !isnothing(alg.truncation_indices)
-
-# Return pre-computed decomposition
-function _eigh_trunc!(_, alg::FixedEig, ::TruncationStrategy)
-    info = (;
-        truncation_error = zero(real(scalartype(alg.D))),
-        condition_number = cond(alg.D),
-        D_full = alg.D_full,
-        V_full = alg.V_full,
-        truncation_indices = alg.truncation_indices,
-    )
-    return alg.D, alg.V, info
-end
-
 
 """
 $(TYPEDEF)
@@ -225,35 +200,31 @@ Construct an `IterEigh` algorithm struct based on the following keyword argument
 
 * `alg=KrylovKit.Lanczos(; tol=1e-14, krylovdim=25)` : KrylovKit algorithm struct for iterative eigenvalue decomposition.
 * `fallback_threshold::Float64=Inf` : Threshold for `howmany / minimum(size(block))` above which (if the block is too small) the algorithm falls back to a dense decomposition.
-* `start_vector=random_start_vector` : Function providing the initial vector for the iterative algorithm.
+* `start_vector=deterministic_start_vector` : Function providing the initial vector for the iterative algorithm.
 """
 @kwdef struct IterEigh
     alg = KrylovKit.Lanczos(; tol = 1.0e-14, krylovdim = 25)
     fallback_threshold::Float64 = Inf
-    start_vector = random_start_vector
+    start_vector = deterministic_start_vector
 end
+_default_eigh_rrule_alg(::IterEigh) = :trunc
 
 # Compute eigh data block-wise using KrylovKit algorithm
-function _eigh_trunc!(f, alg::IterEigh, trunc::TruncationStrategy)
+function MatrixAlgebraKit.eigh_trunc!(f, alg::TruncatedAlgorithm{<:IterEigh})
     D, V = if isempty(blocksectors(f))
         # early return
         truncation_error = zero(real(scalartype(f)))
-        MatrixAlgebraKit.initialize_output(eigh_full!, f, LAPACK_QRIteration()) # specified algorithm doesn't matter here
+        MatrixAlgebraKit.initialize_output(eigh_full!, f, QRIteration()) # specified algorithm doesn't matter here
     else
-        eighdata, dims = _compute_eighdata!(f, alg, trunc)
+        eighdata, dims = _compute_eighdata!(f, alg.alg, alg.trunc)
         _create_eightensors(f, eighdata, dims)
     end
 
     # construct info NamedTuple
     truncation_error =
-        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(V * D * V' - f)
-    condition_number = cond(D)
-    info = (;
-        truncation_error, condition_number, D_full = nothing, V_full = nothing,
-        truncation_indices = nothing,
-    )
+        alg.trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(V * D * V' - f)
 
-    return D, V, info
+    return D, V, truncation_error
 end
 
 # Obtain sparse decomposition from block-wise eigsolve calls
@@ -272,7 +243,7 @@ function _compute_eighdata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense decomposition for small blocks
-            D, V = eigh_full!(b, LAPACK_QRIteration())
+            D, V = eigh_full!(b, QRIteration())
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
             V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
@@ -285,7 +256,7 @@ function _compute_eighdata!(
             D, lvecs, info = eigsolve(b, x₀, howmany, :LM, eig_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative eigendecomposition did not converge for block $c, falling back to eigh_full"
-                D, V = eigh_full!(b, LAPACK_QRIteration())
+                D, V = eigh_full!(b, QRIteration())
                 lm_ordering = sortperm(abs.(D.diag); rev = true)
                 D = D.diag[lm_ordering]
                 V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
@@ -293,6 +264,9 @@ function _compute_eighdata!(
                 V = stack(view(lvecs, 1:howmany))
             end
         end
+
+        # make it deterministic-ish
+        MatrixAlgebraKit.gaugefix!(eigh_full!, V)
 
         resize!(D, howmany)
         dims[c] = length(D)
@@ -338,14 +312,17 @@ function _get_pullback_gauge_tol(verbosity::Int)
 end
 
 # eigh_trunc! rrule wrapping MatrixAlgebraKit's eigh_pullback!
+# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/eigh.jl#L34
 function ChainRulesCore.rrule(
         ::typeof(eigh_trunc!),
         t::AbstractTensorMap,
-        alg::EighAdjoint{F, R};
-        trunc::TruncationStrategy = notrunc(),
-    ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig}, R <: FullEighPullback}
-    D̃, Ṽ, info = eigh_trunc(t, alg; trunc)
-    D, V, inds = info.D_full, info.V_full, info.truncation_indices # untruncated decomposition
+        alg::EighAdjoint{<:MatrixAlgebraKit.Algorithm, <:FullEighPullback}
+    )
+
+    D, V = eigh_full!(t; alg.fwd_alg)
+    (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.trunc)
+    truncerror = truncation_error(diagview(D), inds)
+
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function eigh_trunc!_full_pullback(ΔDV)
@@ -359,17 +336,17 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (D̃, Ṽ, info), eigh_trunc!_full_pullback
+    return (D̃, Ṽ, truncerror), eigh_trunc!_full_pullback
 end
 
 # eigh_trunc! rrule wrapping MatrixAlgebraKit's eigh_trunc_pullback! (also works for IterEigh)
+# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/eigh.jl#L113
 function ChainRulesCore.rrule(
         ::typeof(eigh_trunc!),
         t,
-        alg::EighAdjoint{F, R};
-        trunc::TruncationStrategy = notrunc(),
-    ) where {F <: Union{<:LAPACK_EighAlgorithm, <:FixedEig, IterEigh}, R <: TruncEighPullback}
-    D, V, info = eigh_trunc(t, alg; trunc)
+        alg::EighAdjoint{<:Any, <:TruncEighPullback}
+    )
+    D, V, truncerror = eigh_trunc(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function eigh_trunc!_trunc_pullback(ΔDV)
@@ -383,5 +360,5 @@ function ChainRulesCore.rrule(
         return NoTangent(), ZeroTangent(), NoTangent()
     end
 
-    return (D, V, info), eigh_trunc!_trunc_pullback
+    return (D, V, truncerror), eigh_trunc!_trunc_pullback
 end

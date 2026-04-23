@@ -8,7 +8,8 @@ using PEPSKit
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
-    D, V, = eigh_trunc(A, alg; trunc)
+    alg = @set alg.trunc = trunc
+    D, V, = eigh_trunc(A, alg)
     return real(dot(R, V * V')) + dot(D, D)  # Overlap with random tensor R is gauge-invariant and differentiable
 end
 
@@ -23,9 +24,9 @@ r = 0.5 * (r + r') # make r Hermitian
 R = randn(space(r))
 R = 0.5 * (R + R')
 
-full_alg = EighAdjoint(; fwd_alg = (; alg = :qriteration), rrule_alg = (; alg = :full))
-trunc_alg = EighAdjoint(; fwd_alg = (; alg = :qriteration), rrule_alg = (; alg = :trunc))
-iter_alg = EighAdjoint(; fwd_alg = (; alg = :lanczos), rrule_alg = (; alg = :trunc))
+full_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :full))
+trunc_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :trunc))
+iter_alg = EighAdjoint(; fwd_alg = (; alg = :Lanczos), rrule_alg = (; alg = :trunc))
 
 @testset "Non-truncated eigh" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)

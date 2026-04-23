@@ -6,8 +6,8 @@ using LinearAlgebra
 using TensorKit, KrylovKit
 using PEPSKit
 using PEPSKit:
-    FixedSVD,
     ctmrg_iteration,
+    fix_phases,
     fix_relative_phases,
     fix_global_phases,
     calc_elementwise_convergence,
@@ -19,13 +19,13 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [SVDAdjoint(; fwd_alg = (; alg = :sdd)), SVDAdjoint(; fwd_alg = (; alg = :iterative))]
+svd_algs = [(; alg = :DivideAndConquer), (; alg = :iterative)]
 projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
 # test for element-wise convergence after application of fixed step
-@testset "$unitcell unit cell with $(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for (
+@testset "$unitcell unit cell with $(decomposition_alg.alg) and $projector_alg" for (
         unitcell, decomposition_alg, projector_alg,
     ) in Iterators.product(
         unitcells, svd_algs, projector_algs_asymm
@@ -41,25 +41,27 @@ atol = 1.0e-5
 
     # do extra iteration to get SVD
     env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-    env_fix, signs = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
-    @test calc_elementwise_convergence(env_conv1, env_fix) ≈ 0 atol = atol
+    env_fixed, signs, corner_phases, edge_phases = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
+    @test calc_elementwise_convergence(env_conv1, env_fixed) ≈ 0 atol = atol
 
-    # fix gauge of SVD
-    ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
+    # fix gauge of single iteration
+    gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
+        ctmrg_iteration(n, env, ctm_alg)[1],
+        signs, corner_phases, edge_phases,
+    )
 
-    # do iteration with FixedSVD
-    env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
-    env_fixedsvd = fix_global_phases(env_fixedsvd, env_conv1)
-    @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
+    # do gauge-fixed iteration
+    env_fixed2 = @constinferred gauge_fixed_iteration(env_conv1)
+    @test calc_elementwise_convergence(env_conv1, env_fixed2) ≈ 0 atol = atol
 end
 
 # test same thing for C4v CTMRG
 c4v_algs = [
-    (:c4v_qr, QRAdjoint(; fwd_alg = (; alg = :qr))),
-    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :qriteration))),
-    (:c4v_eigh, EighAdjoint(; fwd_alg = (; alg = :lanczos))),
+    (:c4v_qr, (; alg = :Householder)),
+    (:c4v_eigh, (; alg = :QRIteration)),
+    (:c4v_eigh, (; alg = :Lanczos)),
 ]
-@testset "$(typeof(decomposition_alg.fwd_alg)) and $projector_alg" for
+@testset "$(decomposition_alg.alg) and $projector_alg" for
     (projector_alg, decomposition_alg) in c4v_algs
     # initialize states
     Random.seed!(2394823842)
@@ -74,31 +76,33 @@ c4v_algs = [
     n = InfiniteSquareNetwork(psi)
 
     env₀ = initialize_random_c4v_env(psi, ComplexSpace(χ))
-    env_conv1, = leading_boundary(env₀, psi, ctm_alg)
+    env_conv1, info = leading_boundary(env₀, psi, ctm_alg)
 
     # do extra iteration to check gauge fixing
     env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
-    env_fix, signs = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
-    env_diff = calc_elementwise_convergence(env_conv1, env_fix)
+    env_fixed, signs, corner_phases, edge_phases =
+        gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
+    env_diff = calc_elementwise_convergence(env_conv1, env_fixed)
     @info "Diff between iters = $(env_diff)"
     @test env_diff ≈ 0 atol = atol
 
-    if projector_alg == :c4v_eigh # TODO: enable this for :c4v_qr projector
-        # fix gauge of decomposition
-        ctm_alg_fix = gauge_fix(ctm_alg, signs, info)
-        # do iteration with decomposition
-        env_fixedsvd, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_fix)
-        env_fixedsvd = fix_global_phases(env_fixedsvd, env_conv1)
-        @test calc_elementwise_convergence(env_conv1, env_fixedsvd) ≈ 0 atol = atol
-    end
+    # fix gauge of single iteration
+    gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
+        ctmrg_iteration(n, env, ctm_alg)[1],
+        signs, corner_phases, edge_phases,
+    )
+
+    # do gauge-fixed iteration
+    env_fixed2 = @constinferred gauge_fixed_iteration(env_conv1)
+    @test calc_elementwise_convergence(env_conv1, env_fixed2) ≈ 0 atol = atol
 end
 
-@testset "Element-wise consistency of :sdd and :iterative" begin
+@testset "Element-wise consistency of :DivideAndConquer and :iterative" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative, krylovdim = χ + 10)),
+        decomposition_alg = (; alg = :iterative, krylovdim = χ + 10),
     )
-    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = SVDAdjoint(; fwd_alg = (; alg = :sdd)))
+    ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = (; alg = :DivideAndConquer))
 
     # initialize states
     Random.seed!(91283219347)
@@ -107,26 +111,32 @@ end
     env₀ = CTMRGEnv(psi, ComplexSpace(χ))
     env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
 
-    # do extra iteration to get SVD
-    env_conv2_iter, info_iter = ctmrg_iteration(n, env_conv1, ctm_alg_iter)
-    env_fix_iter, signs_iter = gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge())
+    # do extra iteration to get gauge fixing
+    env_conv2_iter, info_iter = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_iter)
+    env_fix_iter, signs_iter, corner_phases_iter, edge_phases_iter =
+        gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
-    env_conv2_full, info_full = ctmrg_iteration(n, env_conv1, ctm_alg_full)
-    env_fix_full, signs_full = gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge())
+    env_conv2_full, info_full = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_full)
+    env_fix_full, signs_full, corner_phases_full, edge_phases_full =
+        gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
-    # fix gauge of SVD
-    ctm_alg_fix_iter = gauge_fix(ctm_alg_iter, signs_iter, info_iter)
-    ctm_alg_fix_full = gauge_fix(ctm_alg_full, signs_full, info_full)
+    # fix gauge of single iteration
+    gauge_fixed_iteration_iter(env::CTMRGEnv) = fix_phases(
+        ctmrg_iteration(n, env, ctm_alg_iter)[1],
+        signs_iter, corner_phases_iter, edge_phases_iter,
+    )
+    gauge_fixed_iteration_full(env::CTMRGEnv) = fix_phases(
+        ctmrg_iteration(n, env, ctm_alg_full)[1],
+        signs_full, corner_phases_full, edge_phases_full,
+    )
 
-    # do iteration with FixedSVD
-    env_fixedsvd_iter, = ctmrg_iteration(n, env_conv1, ctm_alg_fix_iter)
-    env_fixedsvd_iter = fix_global_phases(env_fixedsvd_iter, env_conv1)
+    # do gauge-fixed iteration
+    env_fixedsvd_iter = @constinferred gauge_fixed_iteration_iter(env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_iter) ≈ 0 atol = atol  # This doesn't work for x₀ = rand(size(b, 1))?
 
-    env_fixedsvd_full, = ctmrg_iteration(n, env_conv1, ctm_alg_fix_full)
-    env_fixedsvd_full = fix_global_phases(env_fixedsvd_full, env_conv1)
+    env_fixedsvd_full = @constinferred gauge_fixed_iteration_full(env_conv1)
     @test calc_elementwise_convergence(env_conv1, env_fixedsvd_full) ≈ 0 atol = atol
 
     # check matching decompositions
@@ -145,11 +155,13 @@ end
     end
     @test svalues_check
 
+    # gauge-fix the isometries using computed relative signs
+    U_iter_fix, V_iter_fix = fix_relative_phases(info_iter.U, info_iter.V, signs_iter)
+    U_full_fix, V_full_fix = fix_relative_phases(info_full.U, info_full.V, signs_full)
+
     # check normalization of U's and V's
-    salg_fix_iter = ctm_alg_fix_iter.projector_alg.decomposition_alg.fwd_alg
-    salg_fix_full = ctm_alg_fix_full.projector_alg.decomposition_alg.fwd_alg
-    Us = [info_iter.U, salg_fix_iter.U, info_full.U, salg_fix_full.U]
-    Vs = [info_iter.V, salg_fix_iter.V, info_full.V, salg_fix_full.V]
+    Us = [info_iter.U, U_iter_fix, info_full.U, U_full_fix]
+    Vs = [info_iter.V, V_iter_fix, info_full.V, V_full_fix]
     for (U, V) in zip(Us, Vs)
         U_check = all(U) do u
             uu = u' * u

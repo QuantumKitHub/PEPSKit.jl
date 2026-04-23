@@ -26,6 +26,7 @@ links = InterLinks(
     "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/dev/",
     # "Zygote" => "https://fluxml.ai/Zygote.jl/stable/",
     "ChainRulesCore" => "https://juliadiff.org/ChainRulesCore.jl/stable/",
+    "MatrixAlgebraKit" => "https://quantumkithub.github.io/MatrixAlgebraKit.jl/stable/",
 )
 
 # explicitly set math engine
