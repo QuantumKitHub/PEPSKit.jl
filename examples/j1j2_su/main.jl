@@ -20,7 +20,7 @@ We first import all required modules and seed the RNG:
 
 using Random
 using TensorKit, PEPSKit
-Random.seed!(29385293);
+Random.seed!(29385294);
 
 md"""
 ## Simple updating a challenging phase
