@@ -58,6 +58,9 @@ end
         @time @safetestset "Contractions" begin
             include("ctmrg/contractions.jl")
         end
+        @time @safetestset "initialization" begin
+            include("ctmrg/initialization.jl")
+        end
     end
     if GROUP == "ALL" || GROUP == "BP"
         @time @safetestset "Unit cell bond matching" begin

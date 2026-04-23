@@ -113,6 +113,7 @@ function leading_boundary(
         for iter in 1:(alg.maxiter)
             env, info = ctmrg_iteration(network, env, alg)
             η, CS, TS = calc_convergence(env, CS, TS)
+            info = @insert info.convergence_error = η
 
             if η ≤ alg.tol && iter ≥ alg.miniter
                 ctmrg_logfinish!(log, iter, η, network, env)
