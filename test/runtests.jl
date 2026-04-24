@@ -114,6 +114,11 @@ end
             include("timeevol/j1j2_finiteT.jl")
         end
     end
+    if GROUP == "ALL" || GROUP == "CHANGEBONDS"
+        @time @safetestset "Local truncation" begin
+            include("changebonds/local.jl")
+        end
+    end
     if GROUP == "ALL" || GROUP == "TOOLBOX"
         @time @safetestset "Density matrix from double-layer PEPO" begin
             include("toolbox/densitymatrices.jl")
