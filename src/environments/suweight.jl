@@ -77,7 +77,7 @@ end
 """
     SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
-Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east) 
+Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
 as `ElementarySpace`s) and unit cell size.
 """
 function SUWeight(
@@ -170,7 +170,7 @@ end
     absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false)
     absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false)
 
-Absorb or remove (in a twist-free way) the square root of environment weight 
+Absorb or remove (in a twist-free way) the square root of environment weight
 on an axis of the PEPS/PEPO tensor `t` known to be at position (`row`, `col`)
 in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
 ```
@@ -244,6 +244,13 @@ function absorb_first_weight(t::Union{PEPSTensor, PEPOTensor}, wt, vax)
     new_legs, biperm = biperm_absorb_weight(legs, vax)
     t2 = permute(t, biperm) * wt
     return new_legs, t2
+end
+
+function absorb_weight(
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        rowcol::CartesianIndex{2}, virt_axes::NTuple{N, Int}; inv::Bool = false
+    ) where {N}
+    return absorb_weight(t, weights, rowcol[1], rowcol[2], virt_axes; inv)
 end
 
 function absorb_weight(
@@ -407,7 +414,7 @@ end
 """
     CTMRGEnv(wts::SUWeight)
 
-Construct a CTMRG environment with a trivial environment space 
+Construct a CTMRG environment with a trivial environment space
 (bond dimension χ = 1) from SUWeight `wts`,
 which has the same real scalartype as ``wts`.
 """

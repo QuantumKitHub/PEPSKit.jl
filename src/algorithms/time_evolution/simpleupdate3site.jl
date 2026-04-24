@@ -119,9 +119,9 @@ function cluster_truncate!(vertices, truncs, ::InfinitePEPO)
     return new_vertices, wts, ϵs
 end
 
-function cluster_truncate!(Ms, truncs, ::InfinitePEPS)
-    wts, ϵs, = _cluster_truncate!(Ms2, truncs)
-    return Ms, wts, ϵs
+function cluster_truncate!(vertices, truncs, ::InfinitePEPS)
+    wts, ϵs, = _cluster_truncate!(vertices, truncs)
+    return vertices, wts, ϵs
 end
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
@@ -148,12 +148,9 @@ function _su_iter_mpo!(
     right_invperm = invbiperm(right_perm, Val(n_physical_axes))
     # middle tensors: permuted to MPS form in _get_mid
     mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
-    vertices = [left_M, getindex.(mids, 1)..., right_M]  # TODO remove
-    # Ms has well defined eltype Here
+    vertices = [left_M, first.(mids)..., right_M]  # TODO remove
+    #vertices has well defined eltype here
     # issue it is redefined later with Any eltype
-    open_vaxs = [left_vaxs, getindex.(mids, 2)..., right_vaxs] # TODO removve
-    # open_vaxs however cannot be stable
-    invperms = [left_invperm, getindex.(mids, 3)..., right_invperm]
     flips = push!([isdual(space(first(x), 1)) for x in mids], isdual(space(right_M, 1)))
     # flip virtual arrows in `vertices` to ←
     _flip_virtuals!(vertices, flips)
@@ -175,15 +172,25 @@ function _su_iter_mpo!(
     for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
         wt_new = flip ? _fliptwist_s(wt) : wt
         wt_new = rev ? transpose(wt_new) : wt_new
-        @assert all(wt_new.data .>= 0)
         env[CartesianIndex(bond)] = normalize!(wt_new, Inf)
     end
-    for (vertex, s, invperm, vaxs) in zip(new_vertices, sites, invperms, open_vaxs)
+
+    # left
+    s′ = CartesianIndex(mod1(first(sites)[1], Nr), mod1(first(sites)[2], Nc))
+    leftpermuted = permute(first(new_vertices), left_invperm)
+    state[s′] = absorb_weight(leftpermuted, env, s′, left_vaxs; inv = true)
+
+    # right
+    s′ = CartesianIndex(mod1(last(sites)[1], Nr), mod1(last(sites)[2], Nc))
+    rightpermuted = permute(last(new_vertices), right_invperm)
+    state[s′] = absorb_weight(rightpermuted, env, s′, right_vaxs; inv = true)
+
+    for (vertex, s, invperm, vaxs) in zip(new_vertices[(begin + 1):(end - 1)], sites[(begin + 1):(end - 1)], map(t -> t[3], mids),  map(t -> t[2], mids))
         s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order
         permuted = permute(vertex, invperm)
         # remove weights on open axes of the cluster and update state
-        state[s′] = absorb_weight(permuted, env, s′[1], s′[2], vaxs; inv = true)
+        state[s′] = absorb_weight(permuted, env, s′, vaxs; inv = true)
     end
     return maximum(ϵs)
 end
