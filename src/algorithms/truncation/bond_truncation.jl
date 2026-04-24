@@ -35,21 +35,17 @@ function _als_message(
 end
 
 """
-Prepare cache variables needed by ALS bond_truncate
+Initialize truncated bond tensors for 2-site ALS
 """
-function _prepare_als2_cache(
-        benv::BondEnv, benv_ab2::AbstractTensorMap{T, S, 2, 2},
-        a2b2::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
+function _als_init_truncate(
+        ket2::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
     ) where {T, S}
-    a, s0, b = svd_trunc!(permute(a2b2, ((1, 3), (4, 2)); copy = true); trunc)
+    a, s0, b = svd_trunc!(permute(ket2, ((1, 3), (4, 2)); copy = true); trunc)
     a, b = absorb_s(a, s0, b)
     # put b in MPS axis order
     b = permute(b, ((1, 2), (3,)))
     xs = [a, b]
-    # cache of ALS tensors R, S
-    Rs = [_als_tensor_R(benv, xs, i) for i in 1:2]
-    Ss = [_als_tensor_S(benv_ab2, xs, i) for i in 1:2]
-    return xs, Rs, Ss, s0
+    return xs, s0
 end
 
 """
@@ -89,33 +85,37 @@ function bond_truncate(
     verbose = (alg.check_interval > 0)
 
     # untruncated things
-    a2b2 = _combine_ab(a, b)
-    benv_ab2 = _benv_ab(benv, a2b2)
-    b22 = _als2_norm(a2b2, benv_ab2)
+    ket2 = _combine_ket(a, b)
+    benv_ket2 = _benv_ket(benv, ket2)
+    b22 = _als_norm(ket2, benv_ket2)
 
-    # initialize truncated bond tensors and ALS cache
-    xs, Rs, Ss, s0 = _prepare_als2_cache(benv, benv_ab2, a2b2, alg.trunc)
+    # initialize truncated bond tensors and bond weight
+    xs, s0 = _als_init_truncate(ket2, alg.trunc)
+
+    # initialize ALS cache
+    Rs = [_als_tensor_R(benv, xs, i) for i in 1:2]
+    Ss = [_als_tensor_S(benv_ket2, xs, i) for i in 1:2]
 
     # cost function will be normalized by initial value
-    cost00, fid = cost_function_als2(Rs[1], Ss[1], xs[1], b22)
+    cost00, fid = cost_function_als(Rs[1], Ss[1], xs[1], b22)
     cost0, fid0, Δcost, Δfid, Δs = cost00, fid, NaN, NaN, NaN
     verbose && @info "ALS init" * _als_message(0, cost0, fid, Δcost, Δfid, Δs, 0.0)
 
     for iter in 1:(alg.maxiter)
         time0 = time()
-        for (i, (R, S_, x)) in enumerate(zip(Rs, Ss, xs))
+        for (i, (Rx, Sx, x)) in enumerate(zip(Rs, Ss, xs))
             # TODO: option to use pinv
-            xs[i], info_x = _solve_als(R, S_, x)
+            xs[i], info_x = _solve_als(Rx, Sx, x)
             @debug "Bond truncation info $(i):" info_x
             # update R, S for the next site
             i_next = _next(i, 2)
             Rs[i_next] = _als_tensor_R(benv, xs, i_next)
-            Ss[i_next] = _als_tensor_S(benv_ab2, xs, i_next)
+            Ss[i_next] = _als_tensor_S(benv_ket2, xs, i_next)
         end
         # cost function and local fidelity
-        cost, fid = cost_function_als2(Rs[1], Ss[1], xs[1], b22)
+        cost, fid = cost_function_als(Rs[1], Ss[1], xs[1], b22)
         # TODO: replace with truncated svdvals (without calculating u, vh)
-        _, s, _ = svd_trunc!(_combine_ab_for_svd(xs...); trunc = alg.trunc)
+        _, s, _ = svd_trunc!(_combine_ket_for_svd(xs...); trunc = alg.trunc)
         # fidelity, cost and normalized bond-s change
         s_nrm = norm(s0, Inf)
         Δs = _singular_value_distance(s, s0) / s_nrm
@@ -142,7 +142,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = svd_trunc!(_combine_ab_for_svd(xs...); trunc = alg.trunc)
+    a, s, b = svd_trunc!(_combine_ket_for_svd(xs...); trunc = alg.trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
