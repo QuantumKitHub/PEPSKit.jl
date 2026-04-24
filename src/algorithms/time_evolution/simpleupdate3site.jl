@@ -111,6 +111,18 @@ function invbiperm(t::Tuple, ::Val{N}) where {N}
     p = invperm(t)
     return p[begin:N], p[(N + 1):end]
 end
+function cluster_truncate!(vertices, truncs, ::InfinitePEPO)
+    Vphys = codomain.(vertices, 2)
+    fused_vertices = [first(_fuse_physicalspaces(v)) for v in vertices]
+    wts, ϵs, = _cluster_truncate!(fused_vertices, truncs)
+    new_vertices = [first(_unfuse_physicalspace(v, Vphy)) for (v, Vphy) in zip(fused_vertices, Vphys)]
+    return new_vertices, wts, ϵs
+end
+
+function cluster_truncate!(Ms, truncs, ::InfinitePEPS)
+    wts, ϵs, = _cluster_truncate!(Ms2, truncs)
+    return Ms, wts, ϵs
+end
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
 """
@@ -136,28 +148,26 @@ function _su_iter_mpo!(
     right_invperm = invbiperm(right_perm, Val(n_physical_axes))
     # middle tensors: permuted to MPS form in _get_mid
     mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
-    Ms = [left_M, getindex.(mids, 1)..., right_M]  # TODO remove
+    vertices = [left_M, getindex.(mids, 1)..., right_M]  # TODO remove
+    # Ms has well defined eltype Here
+    # issue it is redefined later with Any eltype
     open_vaxs = [left_vaxs, getindex.(mids, 2)..., right_vaxs] # TODO removve
+    # open_vaxs however cannot be stable
     invperms = [left_invperm, getindex.(mids, 3)..., right_invperm]
     flips = push!([isdual(space(first(x), 1)) for x in mids], isdual(space(right_M, 1)))
-    Vphys = [codomain(left_M, 2), map(x -> codomain(first(x), 2), mids)..., codomain(right_M, 2)]
-    # flip virtual arrows in `Ms` to ←
-    _flip_virtuals!(Ms, flips)
+    # flip virtual arrows in `vertices` to ←
+    _flip_virtuals!(vertices, flips)
+
     # apply gate MPOs and truncate
-    gate_axs = alg.purified ? (1:1) : (1:2)
-    global wts, ϵs
-    for gate_ax in gate_axs
-        _apply_gatempo!(Ms, gates; gate_ax)
-        if isa(state, InfinitePEPO)
-            Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
-        end
-        wts, ϵs, = _cluster_truncate!(Ms, truncs)
-        if isa(state, InfinitePEPO)
-            Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
-        end
+    _apply_gatempo!(vertices, gates; gate_ax = 1)
+    new_vertices, wts, ϵs = cluster_truncate!(vertices, truncs, state)
+    if !alg.purified
+        _apply_gatempo!(new_vertices, gates; gate_ax = 2)
+        new_vertices, wts, ϵs = cluster_truncate!(new_vertices, truncs, state)
     end
-    # restore virtual arrows in `Ms`
-    _flip_virtuals!(Ms, flips)
+
+    # restore virtual arrows in `new_vertices`
+    _flip_virtuals!(new_vertices, flips)
     # update env weights
     bond_revs = map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
         _nn_bondrev(site1, site2, (Nr, Nc))
@@ -166,16 +176,14 @@ function _su_iter_mpo!(
         wt_new = flip ? _fliptwist_s(wt) : wt
         wt_new = rev ? transpose(wt_new) : wt_new
         @assert all(wt_new.data .>= 0)
-        env[CartesianIndex(bond)] = normalize(wt_new, Inf)
+        env[CartesianIndex(bond)] = normalize!(wt_new, Inf)
     end
-    for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
+    for (vertex, s, invperm, vaxs) in zip(new_vertices, sites, invperms, open_vaxs)
         s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order
-        M = permute(M, invperm)
-        # remove weights on open axes of the cluster
-        M = absorb_weight(M, env, s′[1], s′[2], vaxs; inv = true)
-        # update state tensors
-        state[s′] = normalize(M, Inf)
+        permuted = permute(vertex, invperm)
+        # remove weights on open axes of the cluster and update state
+        state[s′] = absorb_weight(permuted, env, s′[1], s′[2], vaxs; inv = true)
     end
     return maximum(ϵs)
 end
