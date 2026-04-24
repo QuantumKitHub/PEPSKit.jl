@@ -77,7 +77,7 @@ end
 """
     SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
-Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east) 
+Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
 as `ElementarySpace`s) and unit cell size.
 """
 function SUWeight(
@@ -170,7 +170,7 @@ end
     absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false)
     absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false)
 
-Absorb or remove (in a twist-free way) the square root of environment weight 
+Absorb or remove (in a twist-free way) the square root of environment weight
 on an axis of the PEPS/PEPO tensor `t` known to be at position (`row`, `col`)
 in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
 ```
@@ -205,14 +205,11 @@ absorb_weight(t, weights, 2, 3, 1)
 absorb_weight(t, weights, 2, 3, 2; inv=true)
 ```
 """
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::Int; inv::Bool = false
+function weight_to_absorb(
+        weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
     )
-    Nr, Nc = size(weights)[2:end]
-    nin, nout, ntol = numin(t), numout(t), numind(t)
+    _, Nr, Nc = size(weights)
     @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert 1 <= ax <= nin
     pow = inv ? -1 / 2 : 1 / 2
     wt = sdiag_pow(
         if ax == NORTH
@@ -226,22 +223,50 @@ function absorb_weight(
         end,
         pow,
     )
-    t_idx = [(n - nout == ax) ? 1 : -n for n in 1:ntol]
-    ax′ = ax + nout
-    wt_idx = (ax == NORTH || ax == EAST) ? [1, -ax′] : [-ax′, 1]
     # make absorption/removal twist-free
     twistdual!(wt, 1)
-    return permute(ncon((t, wt), (t_idx, wt_idx)), (Tuple(1:nout), Tuple((nout + 1):ntol)))
+    (ax == SOUTH || ax == WEST) && return transpose(wt)  # not sure this can be factorized due to twistdual
+    return wt
 end
+
+function biperm_absorb_weight(legs::NTuple{N, Int}, vax::Int) where {N}
+    @assert N == 5 || N == 6
+    nin = N - 4
+    a = vax + nin
+    codomain_axes = _filtered_oneto(a, Val(N))
+    biperm = (map(i -> findfirst(==(i), legs)::Int, codomain_axes), (findfirst(==(a), legs)::Int,))
+    new_legs = (ntuple(i -> legs[biperm[1][i]], N - 1)..., a)
+    return new_legs, biperm
+end
+
+function absorb_first_weight(t::Union{PEPSTensor, PEPOTensor}, wt, vax)
+    legs = ntuple(identity, numind(t))
+    new_legs, biperm = biperm_absorb_weight(legs, vax)
+    t2 = permute(t, biperm) * wt
+    return new_legs, t2
+end
+
 function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false
+        rowcol::CartesianIndex{2}, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
-    t2 = copy(t)
-    for a in ax
-        t2 = absorb_weight(t2, weights, row, col, a; inv)
+    return absorb_weight(t, weights, rowcol[1], rowcol[2], virt_axes; inv)
+end
+
+function absorb_weight(
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
+    ) where {N}
+    vax = first(virt_axes)
+    weight_vax = weight_to_absorb(weights, row, col, vax; inv)
+    legs, t2 = absorb_first_weight(t, weight_vax, vax)
+    for vax in virt_axes[(begin + 1):end]
+        legs, biperm = biperm_absorb_weight(legs, vax)
+        weight_vax = weight_to_absorb(weights, row, col, vax; inv)
+        t2 = permute(t2, biperm) * weight_vax
     end
-    return t2
+    perm_back = invperm(legs)
+    return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
 end
 
 #= Rotation of SUWeight. Example: 3 x 3 network
@@ -389,7 +414,7 @@ end
 """
     CTMRGEnv(wts::SUWeight)
 
-Construct a CTMRG environment with a trivial environment space 
+Construct a CTMRG environment with a trivial environment space
 (bond dimension χ = 1) from SUWeight `wts`,
 which has the same real scalartype as ``wts`.
 """

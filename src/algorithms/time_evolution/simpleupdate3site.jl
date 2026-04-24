@@ -64,131 +64,105 @@ function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2}, (Nrow, 
 end
 
 """
+Return a size N-k tuple with values 1 to N but the missing ones. Accept k=1 and k=2.
+"""
+function _filtered_oneto(i, ::Val{N}) where {N}
+    return ntuple(k -> k < i ? k : k + 1, N - 1)
+end
+function _filtered_oneto(i, j, ::Val{N}) where {N}
+    lo, hi = minmax(i, j)
+    return ntuple(k -> k < lo ? k : k < hi - 1 ? k + 1 : k + 2, N - 2)
+end
+"""
 Find the permutation to permute `out_ax`, `in_ax` legs to
 the first and the last position of a tensor with `Nax` legs,
 then assign the last leg to domain, and the others to codomain.
 """
-function _get_mpo_perm(out_ax::Int, in_ax::Int, Nax::Int)
-    perm = collect(1:Nax)
-    filter!(x -> x != out_ax && x != in_ax, perm)
-    pushfirst!(perm, out_ax)
-    push!(perm, in_ax)
-    return (Tuple(perm[1:(end - 1)]), (perm[end],))
+function _get_mpo_perm(out_ax::Integer, in_ax::Integer, ::Val{Nax}) where {Nax}
+    perm = _filtered_oneto(out_ax, in_ax, Val(Nax))
+    return (out_ax, perm...), (in_ax,)
 end
 
 """
-Obtain the cluster `Ms` along the (open) path `sites` in `state`. 
-
-When the `SUWeight` environment `env` is provided,
-it will be absorbed into tensors of `Ms`.
-
-When `permute = true`, permute tensors in `Ms` to MPS axis order
-```
-    PEPS:           PEPO:
-           3             3  4
-          ╱              | ╱
-    o -- M -- i     o -- M -- i
-       ╱ |             ╱ |
-      4  2            5  2
-    M[o 2 3 4; i]  M[o 2 3 4 5; i]
-```
-where `o` (`i`) connects to the previous (next) tensor.
-Otherwise, axes order of each tensor in `Ms` are preserved.
-
-## Returns
-
-- `Ms`: Tensors in the cluster.
-- `open_vaxs`: Open virtual axes (1 to 4) of each cluster tensor before permutation.
-- `invperms`: Permutations to restore the axes order of each cluster tensor.
+Obtain a middle cluster tensor from `state` at `site`,
+where `out_ax` (`in_ax`) is the virtual axis connecting to the previous (next) tensor.
+The tensor is permuted to MPS axis order.
 """
-function _get_cluster(state, sites; permute::Bool = true)
-    return _get_cluster(state, sites, nothing; permute)
-end
-function _get_cluster(
-        state::InfiniteState, sites::Vector{CartesianIndex{2}},
-        env::Union{SUWeight, Nothing}; permute::Bool = true
+function _get_mid(
+        state::InfiniteState, site::CartesianIndex{2}, out_ax::Int, in_ax::Int,
+        env::SUWeight
     )
     Nr, Nc = size(state)
-    # number of sites
-    Ns = length(sites)
-    # number of physical axes
-    Np = isa(state, InfinitePEPS) ? 1 : 2
-    # number of axes of each state tensor
-    Nax = 4 + Np
-    out_axs = map(2:Ns) do i
-        return _nn_vec_direction(sites[i - 1] - sites[i])
-    end
-    in_axs = map(1:(Ns - 1)) do i
-        return _nn_vec_direction(sites[i + 1] - sites[i])
-    end
-    all_vaxs = Tuple(1:4)
-    open_vaxs = map(1:Ns) do i
-        return if i == 1
-            filter(x -> x != in_axs[i], all_vaxs)
-        elseif i == Ns
-            filter(x -> x != out_axs[i - 1], all_vaxs)
-        else
-            filter(x -> x != out_axs[i - 1] && x != in_axs[i], all_vaxs)
-        end
-    end
-    perms = map(1:Ns) do i
-        out_ax, in_ax = if i == 1
-            # use direction opposite to `in` as `out`
-            mod1(2 + in_axs[i], 4), in_axs[i]
-        elseif i == Ns
-            # use direction opposite to `out` as `in`
-            out_axs[i - 1], mod1(2 + out_axs[i - 1], 4)
-        else
-            out_axs[i - 1], in_axs[i]
-        end
-        return _get_mpo_perm(out_ax + Np, in_ax + Np, Nax)
-    end
-    invperms = map(perms) do (p1, p2)
-        p = invperm((p1..., p2...))
-        return (p[1:Np], p[(Np + 1):end])
-    end
-    Ms = map(zip(sites, open_vaxs, perms)) do (site, vaxs, perm)
-        s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
-        M = if env === nothing
-            state[s]
-        else
-            absorb_weight(state[s], env, s[1], s[2], vaxs)
-        end
-        return permute ? TensorKit.permute(M, perm) : M
-    end
-    return Ms, open_vaxs, invperms
+    n_physical_axes = numout(eltype(unitcell(state)))
+    Nax = Val(4 + n_physical_axes)
+    open_vaxs = _filtered_oneto(out_ax, in_ax, Val(4))
+    perm = _get_mpo_perm(out_ax + n_physical_axes, in_ax + n_physical_axes, Nax)
+    invperm = invbiperm(perm, Val(n_physical_axes))
+    s = mod1(site[1], Nr), mod1(site[2], Nc)
+    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
+    return permute(t, perm), open_vaxs, invperm
 end
 
+
+function invbiperm(bituple::Tuple{Tuple, Tuple}, ::Val{N}) where {N}
+    return invbiperm((first(bituple)..., last(bituple)...), Val(N))
+end
+function invbiperm(t::Tuple, ::Val{N}) where {N}
+    p = invperm(t)
+    return p[begin:N], p[(N + 1):end]
+end
+function cluster_truncate!(vertices, truncs, ::InfinitePEPO)
+    Vphys = codomain.(vertices, 2)
+    fused_vertices = [first(_fuse_physicalspaces(v)) for v in vertices]
+    wts, ϵs, = _cluster_truncate!(fused_vertices, truncs)
+    new_vertices = [first(_unfuse_physicalspace(v, Vphy)) for (v, Vphy) in zip(fused_vertices, Vphys)]
+    return new_vertices, wts, ϵs
+end
+
+function cluster_truncate!(vertices, truncs, ::InfinitePEPS)
+    wts, ϵs, = _cluster_truncate!(vertices, truncs)
+    return vertices, wts, ϵs
+end
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
 """
-function _su_iter!(
-        state::InfiniteState, gate::Vector{T}, env::SUWeight,
+function _su_iter_mpo!(
+        state::InfiniteState, gates::Vector{T}, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
+    n_physical_axes = numout(eltype(unitcell(state)))
+    Nax = Val(4 + n_physical_axes)
+    n_sites = length(sites)
     truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
-    Ms, open_vaxs, invperms = _get_cluster(state, sites, env)
-    flips = [isdual(space(M, 1)) for M in Ms[2:end]]
-    Vphys = [codomain(M, 2) for M in Ms]
-    normalize!.(Ms, Inf)
-    # flip virtual arrows in `Ms` to ←
-    _flip_virtuals!(Ms, flips)
+    out_axs = map(i -> _nn_vec_direction(sites[i - 1] - sites[i]), 2:n_sites)
+    in_axs = map(i -> _nn_vec_direction(sites[i + 1] - sites[i]), 1:(n_sites - 1))
+    # left and right: get tensor without permutation, then permute to MPS form
+    left_M0, left_vaxs, = _get_left(state, sites[1], in_axs[1], env)
+    right_M0, right_vaxs, = _get_right(state, sites[end], out_axs[end], env)
+    left_perm = _get_mpo_perm(mod1(2 + in_axs[1], 4) + n_physical_axes, in_axs[1] + n_physical_axes, Nax)
+    right_perm = _get_mpo_perm(out_axs[end] + n_physical_axes, mod1(2 + out_axs[end], 4) + n_physical_axes, Nax)
+    left_M = permute(left_M0, left_perm)
+    right_M = permute(right_M0, right_perm)
+    left_invperm = invbiperm(left_perm, Val(n_physical_axes))
+    right_invperm = invbiperm(right_perm, Val(n_physical_axes))
+    # middle tensors: permuted to MPS form in _get_mid
+    mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
+    vertices = [left_M, first.(mids)..., right_M]  # TODO remove
+    flips = push!([isdual(space(first(x), 1)) for x in mids], isdual(space(right_M, 1)))
+    # flip virtual arrows in `vertices` to ←
+    _flip_virtuals!(vertices, flips)
+
     # apply gate MPOs and truncate
-    gate_axs = alg.purified ? (1:1) : (1:2)
-    wts, ϵs = nothing, nothing
-    for gate_ax in gate_axs
-        _apply_gatempo!(Ms, gate; gate_ax)
-        if isa(state, InfinitePEPO)
-            Ms = [first(_fuse_physicalspaces(M)) for M in Ms]
-        end
-        wts, ϵs, = _cluster_truncate!(Ms, truncs)
-        if isa(state, InfinitePEPO)
-            Ms = [first(_unfuse_physicalspace(M, Vphy)) for (M, Vphy) in zip(Ms, Vphys)]
-        end
+    _apply_gatempo!(vertices, gates; gate_ax = 1)
+    new_vertices, wts, ϵs = cluster_truncate!(vertices, truncs, state)
+    if !alg.purified
+        _apply_gatempo!(new_vertices, gates; gate_ax = 2)
+        new_vertices, wts, ϵs = cluster_truncate!(new_vertices, truncs, state)
     end
-    # restore virtual arrows in `Ms`
-    _flip_virtuals!(Ms, flips)
+
+    # restore virtual arrows in `new_vertices`
+    _flip_virtuals!(new_vertices, flips)
     # update env weights
     bond_revs = map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
         _nn_bondrev(site1, site2, (Nr, Nc))
@@ -196,17 +170,25 @@ function _su_iter!(
     for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
         wt_new = flip ? _fliptwist_s(wt) : wt
         wt_new = rev ? transpose(wt_new) : wt_new
-        @assert all(wt_new.data .>= 0)
-        env[CartesianIndex(bond)] = normalize(wt_new, Inf)
+        env[CartesianIndex(bond)] = normalize!(wt_new, Inf)
     end
-    for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
+
+    # left
+    s′ = CartesianIndex(mod1(first(sites)[1], Nr), mod1(first(sites)[2], Nc))
+    leftpermuted = permute(first(new_vertices), left_invperm)
+    state[s′] = absorb_weight(leftpermuted, env, s′, left_vaxs; inv = true)
+
+    # right
+    s′ = CartesianIndex(mod1(last(sites)[1], Nr), mod1(last(sites)[2], Nc))
+    rightpermuted = permute(last(new_vertices), right_invperm)
+    state[s′] = absorb_weight(rightpermuted, env, s′, right_vaxs; inv = true)
+
+    for (vertex, s, invperm, vaxs) in zip(new_vertices[(begin + 1):(end - 1)], sites[(begin + 1):(end - 1)], map(t -> t[3], mids), map(t -> t[2], mids))
         s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order
-        M = permute(M, invperm)
-        # remove weights on open axes of the cluster
-        M = absorb_weight(M, env, s′[1], s′[2], vaxs; inv = true)
-        # update state tensors
-        state[s′] = normalize(M, Inf)
+        permuted = permute(vertex, invperm)
+        # remove weights on open axes of the cluster and update state
+        state[s′] = absorb_weight(permuted, env, s′, vaxs; inv = true)
     end
     return maximum(ϵs)
 end
