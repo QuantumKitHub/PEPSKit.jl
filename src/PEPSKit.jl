@@ -104,6 +104,7 @@ include("algorithms/ctmrg/c4v.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/time_evolution/apply_gate.jl")
