@@ -149,8 +149,6 @@ function _su_iter_mpo!(
     # middle tensors: permuted to MPS form in _get_mid
     mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
     vertices = [left_M, first.(mids)..., right_M]  # TODO remove
-    #vertices has well defined eltype here
-    # issue it is redefined later with Any eltype
     flips = push!([isdual(space(first(x), 1)) for x in mids], isdual(space(right_M, 1)))
     # flip virtual arrows in `vertices` to ←
     _flip_virtuals!(vertices, flips)
@@ -185,7 +183,7 @@ function _su_iter_mpo!(
     rightpermuted = permute(last(new_vertices), right_invperm)
     state[s′] = absorb_weight(rightpermuted, env, s′, right_vaxs; inv = true)
 
-    for (vertex, s, invperm, vaxs) in zip(new_vertices[(begin + 1):(end - 1)], sites[(begin + 1):(end - 1)], map(t -> t[3], mids),  map(t -> t[2], mids))
+    for (vertex, s, invperm, vaxs) in zip(new_vertices[(begin + 1):(end - 1)], sites[(begin + 1):(end - 1)], map(t -> t[3], mids), map(t -> t[2], mids))
         s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order
         permuted = permute(vertex, invperm)
