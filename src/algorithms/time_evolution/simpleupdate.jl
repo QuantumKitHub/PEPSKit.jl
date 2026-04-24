@@ -7,19 +7,19 @@ Algorithm struct for simple update (SU) of InfinitePEPS or InfinitePEPO.
 
 $(TYPEDFIELDS)
 """
-@kwdef struct SimpleUpdate <: TimeEvolution
+@kwdef struct SimpleUpdate{T <: TruncationStrategy} <: TimeEvolution
     "Truncation strategy for bonds updated by Trotter gates"
-    trunc::TruncationStrategy
+    trunc::T
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
     "When true, force decomposition of nearest neighbor gates to MPOs."
     force_mpo::Bool = false
     "When true, assume bipartite unit cell structure"
     bipartite::Bool = false
-    "(Only applicable to InfinitePEPO) 
+    "(Only applicable to InfinitePEPO)
     When true, the PEPO is regarded as a purified PEPS, and updated as
     `|ρ(t + dt)⟩ = exp(-H dt/2) |ρ(t)⟩`.
-    When false, the PEPO is updated as 
+    When false, the PEPO is updated as
     `ρ(t + dt) = exp(-H dt/2) ρ(t) exp(-H dt/2)`."
     purified::Bool = true
 end
@@ -62,6 +62,12 @@ function TimeEvolver(
     # create Trotter gates
     gate = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
+    # convert FixedSpaceTruncation to site-dependent `truncspace`s
+    if alg.trunc isa FixedSpaceTruncation
+        trunc = _get_fixedspacetrunc(psi0)
+        @reset alg.trunc = trunc
+    end
+    # TODO: bipartite check for alg.trunc after equality is defined for all kinds of truncation strategies
     # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
@@ -96,8 +102,8 @@ function _su_iter!(
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     )
     Nr, Nc = size(state)
-    trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
     @assert length(sites) == 2
+    trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
     Ms, open_vaxs, = _get_cluster(state, sites, env; permute = false)
     normalize!.(Ms, Inf)
     # rotate
@@ -159,14 +165,14 @@ function su_iter(
             (!alg.bipartite) && continue
             if d == 1
                 rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                state2[rp1, cp1] = deepcopy(state2[r, c])
-                state2[rp1, c] = deepcopy(state2[r, cp1])
-                env2[1, rp1, cp1] = deepcopy(env2[1, r, c])
+                state2[rp1, cp1] = copy(state2[r, c])
+                state2[rp1, c] = copy(state2[r, cp1])
+                env2[1, rp1, cp1] = copy(env2[1, r, c])
             else
                 rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                state2[rm1, cm1] = deepcopy(state2[r, c])
-                state2[r, cm1] = deepcopy(state2[rm1, c])
-                env2[2, rm1, cm1] = deepcopy(env2[2, r, c])
+                state2[rm1, cm1] = copy(state2[r, c])
+                state2[r, cm1] = copy(state2[rm1, c])
+                env2[2, rm1, cm1] = copy(env2[2, r, c])
             end
         else
             # N-site MPO gate (N ≥ 2)

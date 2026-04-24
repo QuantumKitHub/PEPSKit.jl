@@ -1,15 +1,40 @@
 """
 $(TYPEDEF)
 
-CTMRG specific truncation strategy for `svd_trunc` which keeps the bond space on which the SVD
-is performed fixed. Since different environment directions and unit cell entries might
-have different spaces, this truncation style is different from `TruncationSpace`.
+SVD truncation strategy which preserves the `CTMRGEnv` environment virtual spaces,
+or `InfinitePEPS`, `InfinitePEPO` virtual spaces.
 """
 struct FixedSpaceTruncation <: TruncationStrategy end
 
+"""
+$(TYPEDEF)
+
+SVD truncation strategy specified for each nearest neighbor bond 
+in `InfinitePEPS`, `InfinitePEPO`:
+- `trunc[1, r, c]` applies to the x-bond between `[r, c]` and `[r, c+1]`.
+    If it is a `TruncationSpace`, the space refers to the east domain of
+    `[r, c]` or its `flip`, whichever is non-dual.
+- `trunc[2, r, c]` applies to the y-bond between `[r, c]` and `[r-1, c]`.
+    If it is a `TruncationSpace`, the space refers to the north domain of
+    `[r, c]` or its `flip`, whichever is non-dual.
+"""
 struct SiteDependentTruncation{T <: TruncationStrategy} <: TruncationStrategy
     truncs::Array{T, 3}
+
+    function SiteDependentTruncation(truncs::Array{T, 3}) where {T}
+        # TODO: generalize it to CTMRGEnv
+        size(truncs, 1) != 2 && throw(
+            DimensionMismatch(
+                "The first dimension of `truncs` must have a size of 2. Got $(size(truncs, 1))."
+            )
+        )
+        return new{T}(truncs)
+    end
 end
+
+Base.getindex(trunc::SiteDependentTruncation, args...) = Base.getindex(trunc.truncs, args...)
+
+# TODO: _is_bipartite(trunc::SiteDependentTruncation)
 
 const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
     :notrunc => MatrixAlgebraKit.NoTruncation,
@@ -40,28 +65,5 @@ end
 function truncation_strategy(
         trunc::SiteDependentTruncation, direction::Int, row::Int, col::Int
     )
-    return trunc.truncs[direction, row, col]
-end
-
-# TODO: type piracy
-Base.rotl90(trunc::TruncationStrategy) = trunc
-
-function Base.rotl90(trunc::SiteDependentTruncation)
-    directions, rows, cols = size(trunc.truncs)
-    truncs_rotated = similar(trunc.truncs, directions, cols, rows)
-
-    if directions == 2
-        truncs_rotated[NORTH, :, :] = circshift(
-            rotl90(trunc.truncs[EAST, :, :]), (0, -1)
-        )
-        truncs_rotated[EAST, :, :] = rotl90(trunc.truncs[NORTH, :, :])
-    elseif directions == 4
-        for dir in 1:4
-            dir′ = _prev(dir, 4)
-            truncs_rotated[dir′, :, :] = rotl90(trunc.truncs[dir, :, :])
-        end
-    else
-        throw(ArgumentError("Unsupported number of directions for rotl90: $directions"))
-    end
-    return SiteDependentTruncation(truncs_rotated)
+    return trunc[direction, row, col]
 end

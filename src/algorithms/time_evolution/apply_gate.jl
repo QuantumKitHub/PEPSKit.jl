@@ -1,3 +1,5 @@
+const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
+
 """
 Apply 1-site `gate` on the PEPS or PEPO tensor `a`.
 """
@@ -125,8 +127,8 @@ Apply 2-site `gate` on the reduced matrices `a`, `b`
 """
 function _apply_gate(
         a::AbstractTensorMap, b::AbstractTensorMap,
-        gate::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
-    ) where {T <: Number, S <: ElementarySpace}
+        gate::NNGate, trunc::TruncationStrategy
+    )
     V = space(b, 1)
     need_flip = isdual(V)
     if isdual(space(a, 2))
