@@ -11,14 +11,16 @@ Reference:
 - Physical Review B 104, 094411 (2021)
 - Physical Review B 106, 195105 (2022)
 """
-@kwdef struct NeighbourUpdate <: TimeEvolution
+@kwdef struct NeighbourUpdate{
+        TR <: Union{ALSTruncation, FullEnvTruncation},
+        BE <: NeighbourEnv,
+    } <: TimeEvolution
     "Bond truncation algorithm after applying time evolution gate"
-    opt_alg::Union{ALSTruncation, FullEnvTruncation} =
-        ALSTruncation(; trunc = truncerror(; atol = 1.0e-10))
+    opt_alg::TR = ALSTruncation(; trunc = truncerror(; atol = 1.0e-10))
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
     "Algorithm to construct NTU bond environment."
-    bondenv_alg::NeighbourEnv = NNEnv()
+    bondenv_alg::BE = NNEnv()
     "When true, fix gauge of bond environment"
     fixgauge::Bool = true
     "When true, assume bipartite unit cell structure"
