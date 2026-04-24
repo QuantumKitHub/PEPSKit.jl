@@ -18,8 +18,8 @@ The truncation algorithm can be constructed from the following keyword arguments
 * `tol::Float64=1e-9` : ALS converges when the relative change in bond SVD spectrum between two iterations is smaller than `tol`.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
-@kwdef struct ALSTruncation
-    trunc::TruncationStrategy
+@kwdef struct ALSTruncation{T <: TruncationStrategy}
+    trunc::T
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
     check_interval::Int = 0
@@ -32,6 +32,20 @@ function _als_message(
     return @sprintf(
         "%5d, fid = %.8e, Δfid = %.8e, time = %.4f s\n", iter, fid, Δfid, time_elapsed
     ) * @sprintf("      cost = %.3e, Δcost/cost0 = %.3e, |Δs| = %.4e.", cost, Δcost, Δs)
+end
+
+"""
+Initialize truncated bond tensors for 2-site ALS
+"""
+function _als_init_truncate(
+        ket2::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
+    ) where {T, S}
+    a, s0, b = svd_trunc!(permute(ket2, ((1, 3), (4, 2)); copy = true); trunc)
+    a, b = absorb_s(a, s0, b)
+    # put b in MPS axis order
+    b = permute(b, ((1, 2), (3,)))
+    xs = [a, b]
+    return xs, s0
 end
 
 """
@@ -69,40 +83,39 @@ function bond_truncate(
     need_flip = isdual(space(b, 1))
     time00 = time()
     verbose = (alg.check_interval > 0)
-    a2b2 = _combine_ab(a, b)
-    # initialize truncated a, b
-    perm_ab = ((1, 3), (4, 2))
-    a, s0, b = svd_trunc(permute(a2b2, perm_ab); trunc = alg.trunc)
-    a, b = absorb_s(a, s0, b)
-    # put b in MPS axis order
-    b = permute(b, ((1, 2), (3,)))
-    ab = _combine_ab(a, b)
+
+    # untruncated things
+    ket2 = _combine_ket(a, b)
+    benv_ket2 = _benv_ket(benv, ket2)
+    b22 = _als_norm(ket2, benv_ket2)
+
+    # initialize truncated bond tensors and bond weight
+    xs, s0 = _als_init_truncate(ket2, alg.trunc)
+
+    # initialize ALS cache
+    Rs = [_als_tensor_R(benv, xs, i) for i in 1:2]
+    Ss = [_als_tensor_S(benv_ket2, xs, i) for i in 1:2]
+
     # cost function will be normalized by initial value
-    cost00, fid = cost_function_als(benv, ab, a2b2)
+    cost00, fid = cost_function_als(Rs[1], Ss[1], xs[1], b22)
     cost0, fid0, Δcost, Δfid, Δs = cost00, fid, NaN, NaN, NaN
     verbose && @info "ALS init" * _als_message(0, cost0, fid, Δcost, Δfid, Δs, 0.0)
+
     for iter in 1:(alg.maxiter)
         time0 = time()
-        #= 
-        Fixing `b`, the cost function can be expressed in the R, S tensors as
-        ```
-            f(a†,a) = a† Ra a - a† Sa - Sa† a + const
-        ```
-        `f` is minimized when
-            ∂f/∂ā = Ra a - Sa = 0
-        =#
-        Ra = _tensor_Ra(benv, b)
-        Sa = _tensor_Sa(benv, b, a2b2)
-        a, info_a = _solve_als(Ra, Sa, a)
-        # Fixing `a`, solve for `b` from `Rb b = Sb`
-        Rb = _tensor_Rb(benv, a)
-        Sb = _tensor_Sb(benv, a, a2b2)
-        b, info_b = _solve_als(Rb, Sb, b)
-        @debug "Bond truncation info" info_a info_b
-        ab = _combine_ab(a, b)
-        cost, fid = cost_function_als(benv, ab, a2b2)
+        for (i, (Rx, Sx, x)) in enumerate(zip(Rs, Ss, xs))
+            # TODO: option to use pinv
+            xs[i], info_x = _solve_als(Rx, Sx, x)
+            @debug "Bond truncation info $(i):" info_x
+            # update R, S for the next site
+            i_next = _next(i, 2)
+            Rs[i_next] = _als_tensor_R(benv, xs, i_next)
+            Ss[i_next] = _als_tensor_S(benv_ket2, xs, i_next)
+        end
+        # cost function and local fidelity
+        cost, fid = cost_function_als(Rs[1], Ss[1], xs[1], b22)
         # TODO: replace with truncated svdvals (without calculating u, vh)
-        _, s, _ = svd_trunc!(permute(ab, perm_ab); trunc = alg.trunc)
+        _, s, _ = svd_trunc!(_combine_ket_for_svd(xs...); trunc = alg.trunc)
         # fidelity, cost and normalized bond-s change
         s_nrm = norm(s0, Inf)
         Δs = _singular_value_distance(s, s0) / s_nrm
@@ -129,7 +142,7 @@ function bond_truncate(
         end
         converge && break
     end
-    a, s, b = svd_trunc!(permute(_combine_ab(a, b), perm_ab); trunc = alg.trunc)
+    a, s, b = svd_trunc!(_combine_ket_for_svd(xs...); trunc = alg.trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
