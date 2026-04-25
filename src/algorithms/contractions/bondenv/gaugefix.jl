@@ -44,9 +44,7 @@ Reference:
 - Physical Review B 92, 035142 (2015)
 """
 function fixgauge_benv(
-        Z::AbstractTensorMap{T, S, 1, 2},
-        a::AbstractTensorMap{T, S, 1, 2},
-        b::AbstractTensorMap{T, S, 2, 1},
+        Z::AbstractTensorMap{T, S, 1, 2}, a::MPSTensor, b::MPSTensor
     ) where {T <: Number, S <: ElementarySpace}
     @assert !isdual(space(Z, 1))
     @assert !isdual(space(a, 2))
@@ -83,7 +81,7 @@ function fixgauge_benv(
             ↓
             -1
     =#
-    @plansor a[-1; -2 -3] := R[-1; 1] * a[1; -2 -3]
+    @plansor a[-1 -2; -3] := R[-1; 1] * a[1 -2; -3]
     @plansor b[-1 -2; -3] := b[-1 -2; 1] * L[-3; 1]
     @plansor Z[-1; -2 -3] := Z[-1; 1 2] * Rinv[1; -2] * Linv[2; -3]
     (isdual(space(R, 1)) == isdual(space(R, 2))) && twist!(a, 1)

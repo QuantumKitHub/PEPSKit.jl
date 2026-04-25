@@ -54,7 +54,8 @@ function _bond_truncate(
     A, B = state2[row, col], state2[row, cp1]
 
     # create bond environment
-    X, a, b, Y = _qr_bond(A, B; trunc = trunctol(; rtol = 1.0e-12))
+    X, a = bond_tensor_first(A; trunc = trunctol(; rtol = 1.0e-12))
+    Y, b = bond_tensor_last(B; trunc = trunctol(; rtol = 1.0e-12))
     benv = bondenv_ntu(row, col, X, Y, state2, alg.bondenv_alg)
     @debug "cond(benv) before gauge fix: $(LinearAlgebra.cond(benv))"
     if alg.fixgauge
@@ -75,7 +76,8 @@ function _bond_truncate(
     end
 
     a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
-    A, B = _qr_bond_undo(X, a, b, Y)
+    A = undo_bond_tensor_first(X, a)
+    B = undo_bond_tensor_last(Y, b)
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)

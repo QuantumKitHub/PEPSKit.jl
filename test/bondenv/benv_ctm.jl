@@ -42,7 +42,8 @@ function test_benv_ctm(state::Union{InfinitePEPS, InfinitePEPO})
     for row in 1:Nr, col in 1:Nc
         cp1 = PEPSKit._next(col, Nc)
         A, B = state.A[row, col], state.A[row, cp1]
-        X, a, b, Y = PEPSKit._qr_bond(A, B)
+        X, a = PEPSKit.bond_tensor_first(A)
+        Y, b = PEPSKit.bond_tensor_last(B)
         benv = PEPSKit.bondenv_ctm(row, col, X, Y, env)
         Z = PEPSKit.positive_approx(benv)
         # verify that gauge fixing can greatly reduce

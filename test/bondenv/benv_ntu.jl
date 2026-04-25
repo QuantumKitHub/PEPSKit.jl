@@ -15,10 +15,11 @@ function test_ntu_env(
     for row in 1:Nr, col in 1:Nc
         cp1 = PEPSKit._next(col, Nc)
         A, B = state.A[row, col], state.A[row, cp1]
-        X, a, b, Y = PEPSKit._qr_bond(A, B)
+        X, a = PEPSKit.bond_tensor_first(A)
+        Y, b = PEPSKit.bond_tensor_last(B)
         @tensor ab[DX DY; da db] := a[DX da D] * b[D db DY]
         benv = PEPSKit.bondenv_ntu(row, col, X, Y, state, env_alg)
-        # this is a result of `_qr_bond`
+        # this is a result of `bond_tensor_...`
         @assert [isdual(space(benv, ax)) for ax in 1:numind(benv)] == [0, 0, 1, 1]
         # NTU bond environments are exact and should be positive definite
         @test benv' ≈ benv

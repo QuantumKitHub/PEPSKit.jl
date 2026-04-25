@@ -34,10 +34,7 @@ Apply 2-site `gate` on the reduced bond tensors `a`, `b`
         -2         -3           -1← a --- 3 --- b ← -4
 ```
 """
-function _apply_gate(
-        a::AbstractTensorMap, b::AbstractTensorMap,
-        gate::NNGate, trunc::TruncationStrategy
-    )
+function _apply_gate(a::MPSTensor, b::MPSTensor, gate::NNGate, trunc::TruncationStrategy)
     V = space(b, 1)
     need_flip = isdual(V)
     if isdual(space(a, 2))
@@ -50,5 +47,6 @@ function _apply_gate(
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end
+    b = permute(b, ((1, 2), (3,)))
     return a, s, b, ϵ
 end
