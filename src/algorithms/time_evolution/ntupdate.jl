@@ -58,6 +58,11 @@ function TimeEvolver(
     _timeevol_sanity_check(psi0, physicalspace(H), alg)
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     gate = trotterize(H, dt′; symmetrize_gates)
+    # convert FixedSpaceTruncation to site-dependent `truncspace`s
+    if alg.opt_alg.trunc isa FixedSpaceTruncation
+        trunc = _get_fixedspacetrunc(psi0)
+        @reset alg.opt_alg.trunc = trunc
+    end
     state = NTUState(0, t0, psi0)
     return TimeEvolver(alg, dt, nstep, gate, state)
 end
@@ -71,7 +76,10 @@ function _ntu_iter(
         sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate
     )
     @assert length(sites) == 2
-    return _bond_truncate(state, wts, Tuple(sites), alg; gate)
+    Nr, Nc = size(state)
+    trunc = only(_get_cluster_trunc(alg.opt_alg.trunc, sites, (Nr, Nc)))
+    alg′ = (@set alg.opt_alg.trunc = trunc)
+    return _bond_truncate(state, wts, Tuple(sites), alg′; gate)
 end
 
 """

@@ -6,19 +6,12 @@ function _ntu_iter(
         sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate
     ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
+    truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites, (Nr, Nc))
     state, wts = copy(state), deepcopy(wts)
 
     Ms, _, invperms = _get_cluster(state, sites)
     flips = [isdual(space(M, 1)) for M in Ms[2:end]]
     _flip_virtuals!(Ms, flips) # flip virtual arrows in `Ms` to ←
-    truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites, (Nr, Nc))
-    truncs = map(enumerate(truncs)) do (i, trunc)
-        return if trunc isa FixedSpaceTruncation
-            truncspace(space(Ms[i + 1], 1))
-        else
-            trunc
-        end
-    end
 
     # apply gate MPO without truncation
     _apply_gatempo!(Ms, gate)
@@ -73,23 +66,15 @@ function _bond_truncate(
         @debug "cond(benv) after gauge fix: $(LinearAlgebra.cond(benv))"
     end
 
-    # (optional) apply the NN gate
-    opt_alg = alg.opt_alg
+    # (optional) apply the NN gate without truncation
     if !(gate === nothing)
-        trunc = if alg.opt_alg.trunc isa FixedSpaceTruncation
-            V = space(b, 1)
-            truncspace(isdual(V) ? flip(V) : V)
-        else
-            alg.opt_alg.trunc
-        end
-        @reset opt_alg.trunc = trunc
         a, s, b, = _apply_gate(a, b, gate, truncerror(; atol = 1.0e-15))
     else
         a = permute(a, ((1, 2), (3,)))
         b = permute(b, ((1,), (2, 3)))
     end
 
-    a, s, b, info = bond_truncate(a, b, benv, opt_alg)
+    a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
     A, B = _qr_bond_undo(X, a, b, Y)
     normalize!(A, Inf)
     normalize!(B, Inf)

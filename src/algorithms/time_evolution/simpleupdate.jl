@@ -109,10 +109,6 @@ function _su_iter!(
     # rotate
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
     A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
-    if trunc isa FixedSpaceTruncation
-        V = west_virtualspace(B)
-        trunc = truncspace(isdual(V) ? flip(V) : V)
-    end
     # apply gate
     ϵ, s = 0.0, nothing
     gate_axs = alg.purified ? (1:1) : (1:2)
