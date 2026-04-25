@@ -101,7 +101,8 @@ end
 """
 Undo the decomposition in `bond_tensor_last`.
 """
-function undo_bond_tensor_last(Y::PEPSOrth, b::MPSTensor)
+function undo_bond_tensor_last(Y::PEPSOrth, b::MPSTensor; gate_ax::Integer = 1)
+    @assert gate_ax == 1
     return @tensor A[-1; -2 -3 -4 -5] := b[-5 -1 1] * Y[-2 -3 -4 1]
 end
 function undo_bond_tensor_last(Y::PEPOOrth, b::MPSTensor; gate_ax::Integer = 1)
