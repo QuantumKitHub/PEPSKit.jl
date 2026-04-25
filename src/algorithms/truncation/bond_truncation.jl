@@ -49,7 +49,7 @@ function _als_init_truncate(
 end
 
 """
-    bond_truncate(a::AbstractTensorMap{T,S,2,1}, b::AbstractTensorMap{T,S,1,2}, benv::BondEnv{T,S}, alg) -> U, S, V, info
+    bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg) -> U, S, V, info
 
 After time-evolving the reduced tensors `a` and `b` connected by a bond, 
 truncate the bond dimension using the bond environment tensor `benv`.
@@ -63,19 +63,14 @@ truncate the bond dimension using the bond environment tensor `benv`.
     └-----------------------┘
 ```
 The truncation algorithm `alg` can be either `FullEnvTruncation` or `ALSTruncation`. 
-The index order of `a` or `b` is
+The index order of `a` or `b` follows `MPSTensor` convention.
 ```
     1 -a/b- 3
-        ↓       a[1 2; 3]
-        2       b[1; 2 3]
+        ↓       [1 2; 3]
+        2
 ```
 """
-function bond_truncate(
-        a::AbstractTensorMap{T, S, 2, 1},
-        b::AbstractTensorMap{T, S, 1, 2},
-        benv::BondEnv{T, S},
-        alg::ALSTruncation,
-    ) where {T <: Number, S <: ElementarySpace}
+function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::ALSTruncation)
     # dual check of physical index
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
@@ -144,18 +139,14 @@ function bond_truncate(
     end
     a, s, b = svd_trunc!(_combine_ket_for_svd(xs...); trunc = alg.trunc)
     a, b = absorb_s(a, s, b)
+    b = permute(b, ((1, 2), (3,)))
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end
     return a, s, b, (; fid, Δfid, Δs)
 end
 
-function bond_truncate(
-        a::AbstractTensorMap{T, S, 2, 1},
-        b::AbstractTensorMap{T, S, 1, 2},
-        benv::BondEnv{T, S},
-        alg::FullEnvTruncation,
-    ) where {T <: Number, S <: ElementarySpace}
+function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::FullEnvTruncation)
     # dual check of physical index
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
@@ -163,14 +154,14 @@ function bond_truncate(
     need_flip = isdual(space(b, 1))
     #= initialize bond matrix using QR as `Ra Lb`
 
-        --- a == b ---   ==>   - Qa ← Ra == Rb ← Qb -
+        --- a == b ---   ==>   - Qa ← Ra == Rb → Qb -
             ↓    ↓               ↓               ↓
     =#
     Qa, Ra = left_orth(a; positive = true)
-    Rb, Qb = right_orth(b; positive = true)
-    @assert !isdual(space(Ra, 1)) && !isdual(space(Qb, 1))
-    @tensor b0[-1; -2] := Ra[-1 1] * Rb[1 -2]
-    #= initialize bond environment around `Ra Lb`
+    b = permute(b, ((3, 2), (1,)); copy = true)
+    Qb, Rb = left_orth!(b; positive = true)
+    @tensor b0[-1; -2] := Ra[-1 1] * Rb[-2 1]
+    #= initialize bond environment around `Ra Rb`
 
         ┌--------------------------------------┐
         |   ┌----┐                             |
@@ -182,15 +173,14 @@ function bond_truncate(
         |   └----┘                             |
         └--------------------------------------┘
     =#
-    @tensor benv2[-1 -2; -3 -4] := (
-        benv[1 2; 3 4] * conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
-    )
+    @tensor benv2[-1 -2; -3 -4] := benv[1 2; 3 4] *
+        conj(Qa[1 5 -1]) * conj(Qb[2 6 -2]) * Qa[3 5 -3] * Qb[4 6 -4]
     # optimize bond matrix
     u, s, vh, info = fullenv_truncate(b0, benv2, alg)
     u, vh = absorb_s(u, s, vh)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
-    @tensor b[-1; -2 -3] := vh[-1 1] * Qb[1 -2 -3]
+    @tensor b[-1 -2; -3] := vh[-1 1] * Qb[-3 -2 1]
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end

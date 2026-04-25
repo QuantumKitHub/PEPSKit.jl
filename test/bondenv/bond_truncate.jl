@@ -31,11 +31,12 @@ for Vl in (Vqro, Vqro'), Vr in (Vqro, Vqro')
     @info "Dimension of benv = $(Dext)"
     # untruncated bond tensors
     a2 = randn(elt, Vl ⊗ Vphy ← Vint)
-    b2 = randn(elt, Vint ← Vphy' ⊗ Vr')
+    b2 = randn(elt, Vint ⊗ Vphy ← Vr')
     # bond tensor (truncated SVD initialization)
     a2b2 = _combine_ket(a2, b2)
     a0, s, b0 = svd_trunc(permute(a2b2, ((1, 3), (4, 2))); trunc = trunc)
     a0, b0 = PEPSKit.absorb_s(a0, s, b0)
+    b0 = permute(b0, ((1, 2), (3,)))
     fid0 = cost_function_als(benv, _combine_ket(a0, b0), a2b2)[2]
     @info "Fidelity of simple SVD truncation = $fid0.\n"
     ss = Dict{String, DiagonalTensorMap}()

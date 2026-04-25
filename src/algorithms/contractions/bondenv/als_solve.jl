@@ -10,9 +10,6 @@ Contract the virtual legs between
             da      db
 ```
 """
-function _combine_ket(a::MPSTensor, b::AbstractTensorMap{T, S, 1, 2}) where {T, S}
-    return @tensor ket[DX DY; da db] := a[DX da; D] * b[D; db DY]
-end
 function _combine_ket(a::MPSTensor, b::MPSTensor)
     return @tensor ket[DX DY; da db] := a[DX da; D] * b[D db; DY]
 end
