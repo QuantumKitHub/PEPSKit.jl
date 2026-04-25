@@ -113,12 +113,12 @@ function _su_iter!(
     ϵ, s = 0.0, nothing
     gate_axs = alg.purified ? (1:1) : (1:2)
     for gate_ax in gate_axs
-        X, a = bond_tensor_first(A; gate_ax, positive = true)
-        Y, b = bond_tensor_last(B; gate_ax, positive = true)
+        a, X = bond_tensor_first(A; gate_ax, positive = true)
+        b, Y = bond_tensor_last(B; gate_ax, positive = true)
         a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)
-        A = undo_bond_tensor_first(X, a; gate_ax)
-        B = undo_bond_tensor_last(Y, b; gate_ax)
+        A = undo_bond_tensor_first(a, X; gate_ax)
+        B = undo_bond_tensor_last(b, Y; gate_ax)
     end
     # rotate back
     A = _bond_rotation(A, bond[1], rev; inv = true)

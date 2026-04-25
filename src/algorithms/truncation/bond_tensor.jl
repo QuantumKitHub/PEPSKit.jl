@@ -14,11 +14,11 @@ For PEPOTensor,
 ```
     gate_ax = 1                 gate_ax = 2
 
-     1  2                           2         2      
-      ↘ |                           |          ↘     
+    1   2                           2         2
+      ↘ |                           |          ↘
     5 - X ← 3   1 ← a - 3       5 - X ← 3   1 ← a - 3
-        |            ↘              | ↘              
-        4             2             4  1             
+        |            ↘              | ↘
+        4             2             4   1
 ```
 """
 function bond_tensor_first(A::PEPSTensor; gate_ax::Integer = 1, kwargs...)
@@ -26,7 +26,7 @@ function bond_tensor_first(A::PEPSTensor; gate_ax::Integer = 1, kwargs...)
     X, a = left_orth!(permute(A, ((2, 4, 5), (1, 3)); copy = true); kwargs...)
     X = permute(X, (1, 4, 2, 3))
     a = permute(a, ((1, 2), (3,)))
-    return X, a
+    return a, X
 end
 function bond_tensor_first(A::PEPOTensor; gate_ax::Integer = 1, kwargs...)
     @assert 1 <= gate_ax <= 2
@@ -37,17 +37,17 @@ function bond_tensor_first(A::PEPOTensor; gate_ax::Integer = 1, kwargs...)
     end
     X = permute(X, (1, 2, 5, 3, 4))
     a = permute(a, ((1, 2), (3,)))
-    return X, a
+    return a, X
 end
 
 """
 Undo the decomposition in `bond_tensor_first`.
 """
-function undo_bond_tensor_first(X::PEPSOrth, a::MPSTensor; gate_ax::Integer = 1)
+function undo_bond_tensor_first(a::MPSTensor, X::PEPSOrth; gate_ax::Integer = 1)
     @assert gate_ax == 1
     return @tensor A[-1; -2 -3 -4 -5] := X[-2 1 -4 -5] * a[1 -1 -3]
 end
-function undo_bond_tensor_first(X::PEPOOrth, a::MPSTensor; gate_ax::Integer = 1)
+function undo_bond_tensor_first(a::MPSTensor, X::PEPOOrth; gate_ax::Integer = 1)
     @assert 1 <= gate_ax <= 2
     if gate_ax == 1
         return @tensor A[-1 -2; -3 -4 -5 -6] := X[-2 -3 1 -5 -6] * a[1 -1 -4]
@@ -84,7 +84,7 @@ function bond_tensor_last(A::PEPSTensor; gate_ax::Integer = 1, kwargs...)
     Y, b = left_orth!(permute(A, ((2, 3, 4), (1, 5)); copy = true); kwargs...)
     Y = permute(Y, (1, 2, 3, 4))
     b = permute(b, ((3, 2), (1,)))
-    return Y, b
+    return b, Y
 end
 function bond_tensor_last(A::PEPOTensor; gate_ax::Integer = 1, kwargs...)
     @assert 1 <= gate_ax <= 2
@@ -95,17 +95,17 @@ function bond_tensor_last(A::PEPOTensor; gate_ax::Integer = 1, kwargs...)
     end
     Y = permute(Y, (1, 2, 3, 4, 5))
     b = permute(b, ((3, 2), (1,)))
-    return Y, b
+    return b, Y
 end
 
 """
 Undo the decomposition in `bond_tensor_last`.
 """
-function undo_bond_tensor_last(Y::PEPSOrth, b::MPSTensor; gate_ax::Integer = 1)
+function undo_bond_tensor_last(b::MPSTensor, Y::PEPSOrth; gate_ax::Integer = 1)
     @assert gate_ax == 1
     return @tensor A[-1; -2 -3 -4 -5] := b[-5 -1 1] * Y[-2 -3 -4 1]
 end
-function undo_bond_tensor_last(Y::PEPOOrth, b::MPSTensor; gate_ax::Integer = 1)
+function undo_bond_tensor_last(b::MPSTensor, Y::PEPOOrth; gate_ax::Integer = 1)
     @assert 1 <= gate_ax <= 2
     if gate_ax == 1
         return @tensor A[-1 -2; -3 -4 -5 -6] := b[-6 -1 1] * Y[-2 -3 -4 -5 1]

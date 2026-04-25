@@ -15,8 +15,8 @@ function test_ntu_env(
     for row in 1:Nr, col in 1:Nc
         cp1 = PEPSKit._next(col, Nc)
         A, B = state.A[row, col], state.A[row, cp1]
-        X, a = PEPSKit.bond_tensor_first(A)
-        Y, b = PEPSKit.bond_tensor_last(B)
+        a, X = PEPSKit.bond_tensor_first(A)
+        b, Y = PEPSKit.bond_tensor_last(B)
         @tensor ab[DX DY; da db] := a[DX da D] * b[D db DY]
         benv = PEPSKit.bondenv_ntu(row, col, X, Y, state, env_alg)
         # this is a result of `bond_tensor_...`

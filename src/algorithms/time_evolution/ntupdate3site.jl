@@ -54,8 +54,8 @@ function _bond_truncate(
     A, B = state2[row, col], state2[row, cp1]
 
     # create bond environment
-    X, a = bond_tensor_first(A; trunc = trunctol(; rtol = 1.0e-12))
-    Y, b = bond_tensor_last(B; trunc = trunctol(; rtol = 1.0e-12))
+    a, X = bond_tensor_first(A; trunc = trunctol(; rtol = 1.0e-12))
+    b, Y = bond_tensor_last(B; trunc = trunctol(; rtol = 1.0e-12))
     benv = bondenv_ntu(row, col, X, Y, state2, alg.bondenv_alg)
     @debug "cond(benv) before gauge fix: $(LinearAlgebra.cond(benv))"
     if alg.fixgauge
@@ -76,8 +76,8 @@ function _bond_truncate(
     end
 
     a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
-    A = undo_bond_tensor_first(X, a)
-    B = undo_bond_tensor_last(Y, b)
+    A = undo_bond_tensor_first(a, X)
+    B = undo_bond_tensor_last(b, Y)
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)
