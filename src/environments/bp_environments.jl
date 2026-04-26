@@ -158,6 +158,15 @@ function eachcoordinate(x::BPEnv, dirs)
     return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
 end
 
+## Bipartite check
+function _is_bipartite(env::BPEnv)
+    (size(env, 2) == size(env, 3) == 2) || (return false)
+    for (d, c) in Iterators.product(axes(env, 1), axes(env, 3))
+        (env[d, 1, c] == env[d, 2, _next(c, 2)]) || (return false)
+    end
+    return true
+end
+
 # conversion to CTMRGEnv
 """
     CTMRGEnv(bp_env::BPEnv)

@@ -1,70 +1,73 @@
 using Test
-using LinearAlgebra
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: NORTH, EAST, _next
+using PEPSKit: _is_bipartite
 
-function get_bonddims(peps::InfinitePEPS)
-    xdims = collect(dim(domain(t, EAST)) for t in peps.A)
-    ydims = collect(dim(domain(t, NORTH)) for t in peps.A)
-    return stack([xdims, ydims]; dims = 1)
-end
+elt = Float64
+Nr, Nc = 2, 2
+Vps = fill(U1Space(1 / 2 => 1, -1 / 2 => 1), (Nr, Nc))
+Vns = [
+    U1Space(0 => 1, 1 => 2, -1 => 1) U1Space(0 => 1, 1 => 2, -1 => 1)';
+    U1Space(0 => 1, 1 => 2, -1 => 1)' U1Space(0 => 1, 1 => 2, -1 => 1)
+]
+Ves1 = [
+    U1Space(1 / 2 => 1, -1 / 2 => 2, -3 / 2 => 1)' U1Space(0 => 1, 1 => 1, -1 => 2);
+    U1Space(0 => 1, 1 => 1, -1 => 2) U1Space(1 / 2 => 1, -1 / 2 => 2, -3 / 2 => 1)'
+]
+Ves2 = [
+    U1Space(0 => 1, 1 => 2, -1 => 1)' U1Space(0 => 1, 1 => 1, -1 => 2);
+    U1Space(0 => 1, 1 => 1, -1 => 2) U1Space(0 => 1, 1 => 2, -1 => 1)'
+]
+Venv = U1Space(0 => 2, 1 => 1, -1 => 1)
+states = (
+    InfinitePEPS(randn, elt, Vps, Vns, Ves1),
+    InfinitePEPO(randn, elt, Vps, Vns, Ves2),
+)
 
-function get_bonddims(wts::SUWeight)
-    xdims = collect(dim(space(wt, 1)) for wt in wts[1, :, :])
-    ydims = collect(dim(space(wt, 1)) for wt in wts[2, :, :])
-    return stack([xdims, ydims]; dims = 1)
-end
-
-@testset "Simple update: bipartite 2-site" begin
-    Nr, Nc = 2, 2
-    ham = real(heisenberg_XYZ(InfiniteSquare(Nr, Nc); Jx = 1.0, Jy = 1.0, Jz = 1.0))
-    Random.seed!(100)
-    peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
-    # make state bipartite
-    for r in 1:2
-        peps0.A[_next(r, 2), 2] = copy(peps0.A[r, 1])
+@testset "Simple update on $(typeof(state0).name.wrapper), bipartite = $(bipartite)" for
+    (state0, bipartite) in Iterators.product(states, (true, false))
+    J2 = 0.5
+    if bipartite
+        state0[2, 1] = copy(state0[1, 2])
+        state0[2, 2] = copy(state0[1, 1])
+        J2 = 0.0
     end
-    env0 = SUWeight(peps0)
-    normalize!.(peps0.A, Inf)
-    # set trunc to be compatible with bipartite structure
-    bonddims = stack([[6 4; 4 6], [5 7; 7 5]]; dims = 1)
-    trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
-    alg = SimpleUpdate(; trunc, bipartite = true)
-    peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
-    @test get_bonddims(peps) == bonddims
-    @test get_bonddims(env) == bonddims
-    # check bipartite structure is preserved
-    for col in 1:2
-        cp1 = PEPSKit._next(col, 2)
-        @test (
-            peps.A[1, col] == peps.A[2, cp1] &&
-                env[1, 1, col] == env[1, 2, cp1] &&
-                env[2, 1, col] == env[2, 2, cp1]
-        )
+    ham = j1_j2_model(elt, U1Irrep, InfiniteSquare(Nr, Nc); J1 = 1.0, J2, sublattice = false)
+    # converted internally to SiteDependentTruncation
+    alg = SimpleUpdate(; trunc = FixedSpaceTruncation(), bipartite)
+    wts0 = SUWeight(state0)
+    state, wts, = time_evolve(state0, ham, 0.1, 1, alg, wts0)
+    for (t, t0) in zip(state.A, state0.A)
+        @test space(t) == space(t0)
+    end
+    for (wt, wt0) in zip(wts.data, wts0.data)
+        @test space(wt) == space(wt0)
+    end
+    if bipartite
+        @test _is_bipartite(state)
+        @test _is_bipartite(wts)
     end
 end
 
-@testset "Simple update: generic 2-site and 3-site" begin
-    Nr, Nc = 3, 4
-    Random.seed!(100)
-    peps0 = InfinitePEPS(rand, Float64, ℂ^2, ℂ^10; unitcell = (Nr, Nc))
-    normalize!.(peps0.A, Inf)
-    env0 = SUWeight(peps0)
-    # Site dependent truncation
-    bonddims = rand(2:8, 2, Nr, Nc)
-    @show bonddims
-    trunc = SiteDependentTruncation(collect(truncrank(d) for d in bonddims))
-    alg = SimpleUpdate(; trunc)
-    # 2-site SU
-    ham = j1_j2_model(Float64, Trivial, InfiniteSquare(Nr, Nc); J2 = 0.0, sublattice = false)
-    peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
-    @test get_bonddims(peps) == bonddims
-    @test get_bonddims(env) == bonddims
-    # 3-site SU
-    ham = j1_j2_model(Float64, Trivial, InfiniteSquare(Nr, Nc); J2 = 0.2, sublattice = false)
-    peps, env, = time_evolve(peps0, ham, 1.0e-2, 4, alg, env0)
-    @test get_bonddims(peps) == bonddims
-    @test get_bonddims(env) == bonddims
+@testset "NTU on $(typeof(state0).name.wrapper), bipartite = $(bipartite)" for
+    (state0, bipartite) in Iterators.product(states, (true, false))
+    J2 = 0.5
+    if bipartite
+        state0[2, 1] = copy(state0[1, 2])
+        state0[2, 2] = copy(state0[1, 1])
+        J2 = 0.0
+    end
+    ham = j1_j2_model(elt, U1Irrep, InfiniteSquare(Nr, Nc); J1 = 1.0, J2, sublattice = false)
+    # converted internally to SiteDependentTruncation
+    opt_alg = ALSTruncation(; trunc = FixedSpaceTruncation())
+    alg = NeighbourUpdate(; opt_alg, bondenv_alg = NNEnv(), bipartite)
+    state, info = time_evolve(TimeEvolver(state0, ham, 0.1, 1, alg))
+    for (t, t0) in zip(state.A, state0.A)
+        @test space(t) == space(t0)
+    end
+    if bipartite
+        @test _is_bipartite(state)
+        @test _is_bipartite(info.wts)
+    end
 end

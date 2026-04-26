@@ -93,6 +93,9 @@ end
         @time @safetestset "Gauge fixing" begin
             include("bondenv/benv_gaugefix.jl")
         end
+        @time @safetestset "Exact NTU bond environments" begin
+            include("bondenv/benv_ntu.jl")
+        end
         @time @safetestset "Full update bond environment" begin
             include("bondenv/benv_ctm.jl")
         end
@@ -104,7 +107,7 @@ end
         @time @safetestset "Cluster truncation with projectors" begin
             include("timeevol/cluster_projectors.jl")
         end
-        @time @safetestset "Time evolution with site-dependent truncation" begin
+        @time @safetestset "Fixed-space and site-dependent truncation" begin
             include("timeevol/sitedep_truncation.jl")
         end
         @time @safetestset "Transverse field Ising model at finite temperature" begin
@@ -112,6 +115,9 @@ end
         end
         @time @safetestset "J1-J2 model at finite temperature" begin
             include("timeevol/j1j2_finiteT.jl")
+        end
+        @time @safetestset "Transverse Field Ising model real-time evolution" begin
+            include("timeevol/tf_ising_realtime.jl")
         end
     end
     if GROUP == "ALL" || GROUP == "TOOLBOX"

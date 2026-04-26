@@ -3,7 +3,7 @@ module PEPSKit
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Random
 using Compat
-using Accessors: @set, @reset
+using Accessors: @set, @reset, @insert
 using VectorInterface
 import VectorInterface as VI
 
@@ -89,6 +89,7 @@ include("algorithms/contractions/bp_contractions.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
+include("algorithms/contractions/bondenv/benv_ntu.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
 include("algorithms/contractions/correlator/peps.jl")
 include("algorithms/contractions/correlator/pepo_1layer.jl")
@@ -103,14 +104,17 @@ include("algorithms/ctmrg/c4v.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
-include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
+include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
+include("algorithms/time_evolution/ntupdate.jl")
+include("algorithms/time_evolution/ntupdate3site.jl")
 include("algorithms/time_evolution/gaugefix_su.jl")
 
 include("algorithms/bp/beliefpropagation.jl")
@@ -143,7 +147,8 @@ export fixedpoint
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
-export SimpleUpdate
+export NNEnv, NNpEnv, NNNEnv
+export SimpleUpdate, NeighbourUpdate
 export TimeEvolver, timestep, time_evolve
 
 export InfiniteSquareNetwork
@@ -151,6 +156,7 @@ export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
+export infinite_temperature_density_matrix
 
 export BPEnv, BeliefPropagation
 export BPGauge, SUGauge

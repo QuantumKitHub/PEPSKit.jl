@@ -19,7 +19,7 @@ function get_hubbard_peps(t::Float64 = 1.0, U::Float64 = 8.0)
     wts = SUWeight(peps)
     alg = SimpleUpdate(; trunc = truncerror(; atol = 1.0e-10) & truncrank(4))
     evolver = TimeEvolver(peps, H, 1.0e-2, 10000, alg, wts)
-    peps, = time_evolve(evolver; tol = 1.0e-8, check_interval = 2000)
+    peps, = time_evolve(evolver, H; tol = 1.0e-8, check_interval = 2000)
     normalize!.(peps.A, Inf)
     return peps
 end
@@ -42,7 +42,8 @@ function test_benv_ctm(state::Union{InfinitePEPS, InfinitePEPO})
     for row in 1:Nr, col in 1:Nc
         cp1 = PEPSKit._next(col, Nc)
         A, B = state.A[row, col], state.A[row, cp1]
-        X, a, b, Y = PEPSKit._qr_bond(A, B)
+        a, X = PEPSKit.bond_tensor_first(A)
+        b, Y = PEPSKit.bond_tensor_last(B)
         benv = PEPSKit.bondenv_ctm(row, col, X, Y, env)
         Z = PEPSKit.positive_approx(benv)
         # verify that gauge fixing can greatly reduce

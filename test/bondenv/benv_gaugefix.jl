@@ -30,14 +30,15 @@ for V1 in Vs, V2 in Vs, V3 in Vs
             ↓       ↓       ↓
             -1      -2      -3
     =#
-    a = randn(ComplexF64, V1 ← Vphy' ⊗ V2)
+    a = randn(ComplexF64, V1 ⊗ Vphy ← V2)
     b = randn(ComplexF64, V2 ⊗ Vphy ← V3)
-    @tensor half[:] := Z[-1; 1 3] * a[1; -2 2] * b[2 -3; 3]
+    @tensor half[:] := Z[-1; 1 3] * a[1 -2; 2] * b[2 -3; 3]
     Z2, a2, b2, (Linv, Rinv) = PEPSKit.fixgauge_benv(Z, a, b)
-    @tensor half2[:] := Z2[-1; 1 3] * a2[1; -2 2] * b2[2 -3; 3]
+    @tensor half2[:] := Z2[-1; 1 3] * a2[1 -2; 2] * b2[2 -3; 3]
     @test half ≈ half2
     # test gauge transformation of X, Y
-    X2, Y2 = PEPSKit._fixgauge_benvXY(X, Y, Linv, Rinv)
+    X2 = PEPSKit._fixgauge_benvX(X, Rinv)
+    Y2 = PEPSKit._fixgauge_benvY(Y, Linv)
     @tensor Z2_[p; Xe Yw] := Z0[p; Xn Xs Xw Yn Ye Ys] * X2[Xn Xe Xs Xw] * Y2[Yn Ye Ys Yw]
     @test Z2 ≈ Z2_
 end
