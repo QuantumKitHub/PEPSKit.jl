@@ -41,8 +41,8 @@ function test_ntu_env(
         # verify gauge transformation of X, Y
         @tensor a2b2[DX DY; da db] := a2[DX da D] * b2[D db DY]
         nrm2 = PEPSKit.inner_prod(benv2, a2b2, a2b2)
-        X2 = _fixgauge_benvX(X, Rinv)
-        Y2 = _fixgauge_benvY(Y, Linv)
+        X2 = PEPSKit._fixgauge_benvX(X, Rinv)
+        Y2 = PEPSKit._fixgauge_benvY(Y, Linv)
         benv3 = PEPSKit.bondenv_ntu(row, col, X2, Y2, state, env_alg)
         benv3 *= norm(benv2, Inf)
         nrm3 = PEPSKit.inner_prod(benv3, a2b2, a2b2)
