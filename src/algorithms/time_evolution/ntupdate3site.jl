@@ -23,9 +23,13 @@ function _ntu_iter(
 
     # truncate each bond sequentially along the path
     info = (; fid = 1.0)
-    for (bondsites, trunc) in zip(zip(sites, Iterators.drop(sites, 1)), truncs)
+    nbond = length(sites) - 1
+    for (i, bondsites) in enumerate(zip(sites, Iterators.drop(sites, 1)))
+        trunc = truncs[i]
         alg′ = (@set alg.opt_alg.trunc = trunc)
-        state, wts, info′ = _bond_truncate(state, wts, bondsites, alg′)
+        stype1 = (i == 1) ? :first : :middle
+        stype2 = (i == nbond) ? :last : :middle
+        state, wts, info′ = _bond_truncate(state, wts, bondsites, (stype1, stype2), alg′)
         # record the worst fidelity
         (info′.fid < info.fid) && (info = info′)
     end
@@ -35,10 +39,14 @@ end
 """
 Truncate a nearest neighbor bond between `site1` and `site2`
 after rotating the bond to standard x direction `A ← B`.
+
+`bondtype` takes values in (1, 2, 3), meaning that the current bond is
+(the first, a middle, the last) bond in the updated cluster.
 """
 function _bond_truncate(
         state::InfiniteState, wts::SUWeight,
         (site1, site2)::NTuple{2, CartesianIndex{2}},
+        (stype1, stype2)::NTuple{2, Symbol},
         alg::NeighbourUpdate; gate::Union{NNGate, Nothing} = nothing
     )
     # rotate bond to standard x direction `A ← B`
@@ -54,14 +62,26 @@ function _bond_truncate(
     A, B = state2[row, col], state2[row, cp1]
 
     # create bond environment
-    a, X = bond_tensor_first(A; trunc = trunctol(; rtol = 1.0e-12))
-    b, Y = bond_tensor_last(B; trunc = trunctol(; rtol = 1.0e-12))
+    qrtrunc = trunctol(; rtol = 1.0e-12)
+    a, X = if stype1 == :first
+        bond_tensor_first(A; trunc = qrtrunc)
+    else
+        @assert stype1 == :middle
+        bond_tensor_midnext(A; trunc = qrtrunc)
+    end
+    b, Y = if stype2 == :last
+        bond_tensor_last(B; trunc = qrtrunc)
+    else
+        @assert stype2 == :middle
+        bond_tensor_midprev(B; trunc = qrtrunc)
+    end
     benv = bondenv_ntu(row, col, X, Y, state2, alg.bondenv_alg)
     @debug "cond(benv) before gauge fix: $(LinearAlgebra.cond(benv))"
     if alg.fixgauge
         Z = positive_approx(benv)
         Z, a, b, (Linv, Rinv) = fixgauge_benv(Z, a, b)
-        X, Y = _fixgauge_benvXY(X, Y, Linv, Rinv)
+        X = _fixgauge_benvX(X, Rinv)
+        Y = _fixgauge_benvY(Y, Linv)
         benv = Z' * Z
         @debug "cond(L) = $(LinearAlgebra.cond(Linv)); cond(R): $(LinearAlgebra.cond(Rinv))"
         @debug "cond(benv) after gauge fix: $(LinearAlgebra.cond(benv))"
@@ -70,14 +90,20 @@ function _bond_truncate(
     # (optional) apply the NN gate without truncation
     if !(gate === nothing)
         a, s, b, = _apply_gate(a, b, gate, truncerror(; atol = 1.0e-15))
+    end
+    a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
+
+    A = if stype1 == :first
+        undo_bond_tensor_first(a, X)
     else
-        a = permute(a, ((1, 2), (3,)))
-        b = permute(b, ((1,), (2, 3)))
+        undo_bond_tensor_midnext(a, X)
+    end
+    B = if stype2 == :last
+        undo_bond_tensor_last(b, Y)
+    else
+        undo_bond_tensor_midprev(b, Y)
     end
 
-    a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
-    A = undo_bond_tensor_first(a, X)
-    B = undo_bond_tensor_last(b, Y)
     normalize!(A, Inf)
     normalize!(B, Inf)
     normalize!(s, Inf)

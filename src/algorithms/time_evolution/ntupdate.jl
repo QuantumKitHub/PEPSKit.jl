@@ -79,7 +79,7 @@ function _ntu_iter(
     Nr, Nc = size(state)
     trunc = only(_get_cluster_trunc(alg.opt_alg.trunc, sites, (Nr, Nc)))
     alg′ = (@set alg.opt_alg.trunc = trunc)
-    return _bond_truncate(state, wts, Tuple(sites), alg′; gate)
+    return _bond_truncate(state, wts, Tuple(sites), (:first, :last), alg′; gate)
 end
 
 """
