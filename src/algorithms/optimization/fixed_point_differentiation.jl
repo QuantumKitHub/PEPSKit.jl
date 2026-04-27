@@ -266,7 +266,7 @@ function _rrule(
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     function gauge_fixed_iteration(A, x)
-        return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x, alg_gauge)[1]
+        return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x, alg_gauge)
     end
     # compute its pullback
     _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
@@ -301,7 +301,7 @@ function _rrule(
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    _, signs, corner_phases, edge_phases = gauge_fix(env_conv, env, alg_gauge)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
 
     # prepare iterating function corresponding to a single CTMRG iteration with a
     # gauge-fixed projector
