@@ -19,7 +19,7 @@ m, n = 20, 30
 χ = 12
 trunc = truncspace(ℂ^χ)
 rtol = 1.0e-9
-Random.seed!(123456789)
+Random.seed!(12345678)
 r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
