@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iteration, ScramblingEnvGauge
+using PEPSKit: _prev, _next, ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
 using TensorKit
 
 # settings
@@ -39,8 +39,10 @@ function test_unitcell(
     @test expectation_value(peps, random_op, env′) isa Number
 
     # test if gauge fixing routines run through
-    _, signs = gauge_fix(env″, env′, ScramblingEnvGauge())
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env″, env′, ScramblingEnvGauge())
     @test signs isa Array
+    @test corner_phases isa Array
+    @test edge_phases isa Array
     return nothing
 end
 

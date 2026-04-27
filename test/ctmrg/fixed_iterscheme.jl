@@ -7,9 +7,9 @@ using TensorKit, KrylovKit
 using PEPSKit
 using PEPSKit:
     ctmrg_iteration,
+    compute_gauge_fix_gauge,
     fix_phases,
     fix_relative_phases,
-    fix_global_phases,
     calc_elementwise_convergence,
     peps_normalize,
     ScramblingEnvGauge,
@@ -39,12 +39,14 @@ atol = 1.0e-5
 
     env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
 
-    # do extra iteration to get SVD
-    env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-    env_fixed, signs, corner_phases, edge_phases = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
+    # do extra iteration and gauge fix
+    env_conv2, = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg)
+    env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fixed) ≈ 0 atol = atol
 
     # fix gauge of single iteration
+    signs, corner_phases, edge_phases =
+        compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge())
     gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
         ctmrg_iteration(n, env, ctm_alg)[1],
         signs, corner_phases, edge_phases,
@@ -80,13 +82,15 @@ c4v_algs = [
 
     # do extra iteration to check gauge fixing
     env_conv2, info = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
-    env_fixed, signs, corner_phases, edge_phases =
-        gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
+
+    env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
     env_diff = calc_elementwise_convergence(env_conv1, env_fixed)
     @info "Diff between iters = $(env_diff)"
     @test env_diff ≈ 0 atol = atol
 
     # fix gauge of single iteration
+    signs, corner_phases, edge_phases =
+        compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
     gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
         ctmrg_iteration(n, env, ctm_alg)[1],
         signs, corner_phases, edge_phases,
@@ -113,20 +117,22 @@ end
 
     # do extra iteration to get gauge fixing
     env_conv2_iter, info_iter = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_iter)
-    env_fix_iter, signs_iter, corner_phases_iter, edge_phases_iter =
-        gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge())
+    env_fix_iter = gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
     env_conv2_full, info_full = @constinferred ctmrg_iteration(n, env_conv1, ctm_alg_full)
-    env_fix_full, signs_full, corner_phases_full, edge_phases_full =
-        gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge())
+    env_fix_full = gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge())
     @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
     # fix gauge of single iteration
+    signs_iter, corner_phases_iter, edge_phases_iter =
+        compute_gauge_fix_gauge(env_conv2_iter, env_conv1, ScramblingEnvGauge())
     gauge_fixed_iteration_iter(env::CTMRGEnv) = fix_phases(
         ctmrg_iteration(n, env, ctm_alg_iter)[1],
         signs_iter, corner_phases_iter, edge_phases_iter,
     )
+    signs_full, corner_phases_full, edge_phases_full =
+        compute_gauge_fix_gauge(env_conv2_full, env_conv1, ScramblingEnvGauge())
     gauge_fixed_iteration_full(env::CTMRGEnv) = fix_phases(
         ctmrg_iteration(n, env, ctm_alg_full)[1],
         signs_full, corner_phases_full, edge_phases_full,
