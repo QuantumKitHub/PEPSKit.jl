@@ -87,7 +87,7 @@ function bond_truncate(
     # untruncated things
     ket2 = _combine_ket(a, b)
     benv_ket2 = _benv_ket(benv, ket2)
-    b22 = _als_norm(ket2, benv_ket2)
+    b22 = real(_als_norm(ket2, benv_ket2))
 
     # initialize truncated bond tensors and bond weight
     xs, s0 = _als_init_truncate(ket2, alg.trunc)
