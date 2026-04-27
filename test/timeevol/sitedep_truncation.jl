@@ -20,6 +20,7 @@ Ves2 = [
     U1Space(0 => 1, 1 => 1, -1 => 2) U1Space(0 => 1, 1 => 2, -1 => 1)'
 ]
 Venv = U1Space(0 => 2, 1 => 1, -1 => 1)
+Random.seed!(48736)
 states = (
     InfinitePEPS(randn, elt, Vps, Vns, Ves1),
     InfinitePEPO(randn, elt, Vps, Vns, Ves2),
