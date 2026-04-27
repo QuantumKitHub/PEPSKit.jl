@@ -146,7 +146,7 @@ function ctmrg_iteration(
     corner′, projector, info = c4v_projector!(enlarged_corner, alg.projector_alg)
     edge′ = c4v_renormalize_edge(network, env, projector)
     info = (;
-        contraction_metrics = (; info.truncation_error, info.condition_number),
+        contraction_metrics = (; info.truncation_error),
         info.D, info.V,
     )
     return CTMRGEnv(corner′, edge′), info
@@ -196,11 +196,6 @@ function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
 
     D, V, truncation_error = eigh_trunc!(enlarged_corner, eigh_alg)
 
-    # get some decomposition info
-    condition_number = ignore_derivatives() do
-        return cond(D)
-    end
-
     # Check for degenerate eigenvalues
     Zygote.isderiving() && ignore_derivatives() do
         if alg.verbosity > 0 && is_degenerate_spectrum(D)
@@ -209,7 +204,7 @@ function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
         end
     end
 
-    return D / norm(D), V, (; D, V, truncation_error, condition_number)
+    return D / norm(D), V, (; D, V, truncation_error)
 end
 """
     c4v_projector!(enlarged_corner, alg::C4vQRProjector)
@@ -225,7 +220,7 @@ Compute the C₄ᵥ projector by decomposing the column-enlarged corner with `le
 function c4v_projector!(enlarged_corner, alg::C4vQRProjector)
     Q, R = left_orth!(enlarged_corner, decomposition_algorithm(alg))
     # TODO: what's a meaningful way to compute a truncation error/condition number in this scheme?
-    return Q, (; Q, R, truncation_error = zero(scalartype(Q)), condition_number = 0)
+    return Q, (; Q, R, truncation_error = zero(scalartype(Q)))
 end
 
 """

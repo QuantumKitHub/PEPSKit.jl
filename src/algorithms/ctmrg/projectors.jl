@@ -171,9 +171,6 @@ function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
 
     # get some decomposition info
     truncation_error = truncation_error / norm(S) # normalize truncation error
-    condition_number = ignore_derivatives() do
-        return cond(S)
-    end
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -184,7 +181,7 @@ function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
     end
 
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
-    return (P_left, P_right), (; U, S, V, truncation_error, condition_number)
+    return (P_left, P_right), (; U, S, V, truncation_error)
 end
 function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
@@ -197,9 +194,6 @@ function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
 
     # get some decomposition info
     truncation_error = truncation_error / norm(S) # normalize truncation error
-    condition_number = ignore_derivatives() do
-        return cond(S)
-    end
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -210,5 +204,5 @@ function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
     end
 
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
-    return (P_left, P_right), (; U, S, V, truncation_error, condition_number)
+    return (P_left, P_right), (; U, S, V, truncation_error)
 end
