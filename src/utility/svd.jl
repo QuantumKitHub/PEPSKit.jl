@@ -240,7 +240,7 @@ function MatrixAlgebraKit.svd_trunc!(f, alg::TruncatedAlgorithm{<:IterSVD})
     U, S, V = if isempty(blocksectors(f))
         # early return
         truncation_error = zero(real(scalartype(f)))
-        MatrixAlgebraKit.initialize_output(svd_compact!, f, QRIteration()) # specified algorithm doesn't matter here
+        MatrixAlgebraKit.initialize_output(svd_compact!, f, DefaultAlgorithm()) # specified algorithm doesn't matter here
     else
         SVDdata, dims = _compute_svddata!(f, fwd_alg, trunc)
         _create_svdtensors(f, SVDdata, dims)

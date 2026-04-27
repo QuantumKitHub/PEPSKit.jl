@@ -243,7 +243,7 @@ function _compute_eighdata!(
         howmany = trunc isa NoTruncation ? minimum(size(b)) : blockdim(trunc.space, c)
 
         if howmany / minimum(size(b)) > alg.fallback_threshold  # Use dense decomposition for small blocks
-            D, V = eigh_full!(b, QRIteration())
+            D, V = eigh_full!(b)
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
             V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
@@ -256,7 +256,7 @@ function _compute_eighdata!(
             D, lvecs, info = eigsolve(b, x₀, howmany, :LM, eig_alg)
             if info.converged < howmany  # Fall back to dense SVD if not properly converged
                 @warn "Iterative eigendecomposition did not converge for block $c, falling back to eigh_full"
-                D, V = eigh_full!(b, QRIteration())
+                D, V = eigh_full!(b)
                 lm_ordering = sortperm(abs.(D.diag); rev = true)
                 D = D.diag[lm_ordering]
                 V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
