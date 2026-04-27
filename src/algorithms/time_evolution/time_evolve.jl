@@ -85,7 +85,7 @@ that preserves virtual spaces of `state`.
 """
 function _get_fixedspacetrunc(state::InfiniteState)
     if state isa InfinitePEPO
-        size(state, 3) != 1 && error("Input InfinitePEPO is expect to have only one layer.")
+        size(state, 3) != 1 && error("Input InfinitePEPO is expected to have only one layer.")
     end
     Nr, Nc = size(state)
     return SiteDependentTruncation(
