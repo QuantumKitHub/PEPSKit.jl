@@ -95,10 +95,10 @@ function sequential_projectors(
     _, r, c = coordinate
     r′ = _prev(r, size(env, 2))
     trunc = truncation_strategy(alg, env.edges[WEST, r′, c])
-    alg′ = @set alg.trunc = trunc
+    alg´ = _set_truncation(alg, trunc)
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
-    return compute_projector((Q1, Q2), alg′)
+    return compute_projector((Q1, Q2), alg´)
 end
 function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
@@ -108,14 +108,14 @@ function sequential_projectors(
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
     trunc = truncation_strategy(alg, env.edges[WEST, coordinate_nw[2:3]...])
-    alg′ = @set alg.trunc = trunc
+    alg´ = _set_truncation(alg, trunc)
     ec = (
         TensorMap(EnlargedCorner(network, env, coordinate_se)),
         TensorMap(EnlargedCorner(network, env, coordinate)),
         TensorMap(EnlargedCorner(network, env, coordinate_nw)),
         TensorMap(EnlargedCorner(network, env, coordinate_ne)),
     )
-    return compute_projector(ec, alg′)
+    return compute_projector(ec, alg´)
 end
 
 """

@@ -191,7 +191,7 @@ Compute the C₄ᵥ projector from `eigh` decomposing the Hermitian `enlarged_co
 Also return the normalized eigenvalues as the new corner tensor.
 """
 function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
-    alg = @set alg.trunc = truncation_strategy(alg, enlarged_corner)
+    alg = _set_truncation(alg, truncation_strategy(alg, enlarged_corner))
     eigh_alg = decomposition_algorithm(alg)
 
     D, V, truncation_error = eigh_trunc!(enlarged_corner, eigh_alg)

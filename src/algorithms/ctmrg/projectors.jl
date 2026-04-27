@@ -55,11 +55,7 @@ end
 
 Return the tensor decomposition algorithm of the `alg` projector algorithm.
 """
-function decomposition_algorithm(alg::ProjectorAlgorithm)
-    decomposition_alg = alg.decomposition_alg
-    decomposition_alg = @set decomposition_alg.trunc = alg.trunc
-    return decomposition_alg
-end
+decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
 
 function truncation_strategy(alg::ProjectorAlgorithm, edge)
     if alg.trunc isa FixedSpaceTruncation
@@ -77,7 +73,7 @@ Update the truncation strategy of a given projector algorithm, keeping all other
 the same.
 """
 function _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
-    alg´ = @set alg.trunc = trunc
+    alg´ = @set alg.decomposition_alg.trunc = trunc
     return alg´
 end
 
