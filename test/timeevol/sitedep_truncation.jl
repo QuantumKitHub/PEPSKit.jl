@@ -2,7 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: _is_bipartite
+using PEPSKit: _is_bipartite, _get_fixedspacetrunc
 
 elt = Float64
 Nr, Nc = 2, 2
@@ -24,6 +24,17 @@ states = (
     InfinitePEPS(randn, elt, Vps, Vns, Ves1),
     InfinitePEPO(randn, elt, Vps, Vns, Ves2),
 )
+
+@testset "Rotation of SiteDependentTruncation" begin
+    state = states[1]
+    for f in (rotl90, rotr90, rot180)
+        trunc1 = f(_get_fixedspacetrunc(state))
+        trunc2 = _get_fixedspacetrunc(f(state))
+        @test all(
+            t1.space == t2.space for (t1, t2) in zip(trunc1.truncs, trunc2.truncs)
+        )
+    end
+end
 
 @testset "Simple update on $(typeof(state0).name.wrapper), bipartite = $(bipartite)" for
     (state0, bipartite) in Iterators.product(states, (true, false))
