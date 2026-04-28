@@ -74,7 +74,7 @@ end
 
 symm_m, symm_n = 18, 24
 symm_space = Z2Space(0 => symm_m, 1 => symm_n)
-symm_trspace = truncspace(Z2Space(0 => symm_m ÷ 2, 1 => symm_n ÷ 3))
+symm_trspace = truncspace(Z2Space(0 => symm_m ÷ 2, 1 => symm_n ÷ 2))
 symm_r = randn(dtype, symm_space, symm_space)
 symm_R = randn(dtype, space(symm_r))
 
