@@ -233,7 +233,7 @@ function biperm_absorb_weight(legs::NTuple{N, Int}, vax::Int) where {N}
     @assert N == 5 || N == 6
     nin = N - 4
     a = vax + nin
-    codomain_axes = _filtered_oneto(a, Val(N))
+    codomain_axes = TupleTools.deleteat(ntuple(identity, N), a)
     biperm = (map(i -> findfirst(==(i), legs)::Int, codomain_axes), (findfirst(==(a), legs)::Int,))
     new_legs = (ntuple(i -> legs[biperm[1][i]], N - 1)..., a)
     return new_legs, biperm

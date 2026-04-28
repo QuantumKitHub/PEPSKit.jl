@@ -90,7 +90,7 @@ function _get_left(
         env::SUWeight
     )
     Nr, Nc = size(state)
-    open_vaxs = _filtered_oneto(in_ax, Val(4))
+    open_vaxs = TupleTools.deleteat((1, 2, 3, 4), in_ax)
     s = mod1(site[1], Nr), mod1(site[2], Nc)
     t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
     Nax = 4 + numout(eltype(state))
@@ -108,7 +108,7 @@ function _get_right(
         env::SUWeight
     )
     Nr, Nc = size(state)
-    open_vaxs = _filtered_oneto(out_ax, Val(4))
+    open_vaxs = TupleTools.deleteat((1, 2, 3, 4), out_ax)
     s = mod1(site[1], Nr), mod1(site[2], Nc)
     t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
     Nax = 4 + numout(eltype(state))

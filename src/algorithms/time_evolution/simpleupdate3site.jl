@@ -64,22 +64,12 @@ function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2}, (Nrow, 
 end
 
 """
-Return a size N-k tuple with values 1 to N but the missing ones. Accept k=1 and k=2.
-"""
-function _filtered_oneto(i, ::Val{N}) where {N}
-    return ntuple(k -> k < i ? k : k + 1, N - 1)
-end
-function _filtered_oneto(i, j, ::Val{N}) where {N}
-    lo, hi = minmax(i, j)
-    return ntuple(k -> k < lo ? k : k < hi - 1 ? k + 1 : k + 2, N - 2)
-end
-"""
 Find the permutation to permute `out_ax`, `in_ax` legs to
 the first and the last position of a tensor with `Nax` legs,
 then assign the last leg to domain, and the others to codomain.
 """
 function _get_mpo_perm(out_ax::Integer, in_ax::Integer, ::Val{Nax}) where {Nax}
-    perm = _filtered_oneto(out_ax, in_ax, Val(Nax))
+    perm = TupleTools.deleteat(ntuple(identity, Nax), (out_ax, in_ax))
     return (out_ax, perm...), (in_ax,)
 end
 
@@ -95,7 +85,7 @@ function _get_mid(
     Nr, Nc = size(state)
     n_physical_axes = numout(eltype(unitcell(state)))
     Nax = Val(4 + n_physical_axes)
-    open_vaxs = _filtered_oneto(out_ax, in_ax, Val(4))
+    open_vaxs = TupleTools.deleteat((1, 2, 3, 4), (out_ax, in_ax))
     perm = _get_mpo_perm(out_ax + n_physical_axes, in_ax + n_physical_axes, Nax)
     invperm = invbiperm(perm, Val(n_physical_axes))
     s = mod1(site[1], Nr), mod1(site[2], Nc)
