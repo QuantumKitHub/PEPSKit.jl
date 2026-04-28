@@ -83,6 +83,7 @@ include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/contract_site.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
 
+include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
