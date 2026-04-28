@@ -25,7 +25,7 @@ pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 wts0 = SUWeight(pepo0)
 # 7 = 1 (spin-0) + 2 x 3 (spin-1)
 trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
-check_interval = 2^32
+check_interval = 100
 dt, nstep = 1.0e-3, 600
 
 # PEPO approach
