@@ -181,13 +181,16 @@ function _get_allRLs(vertices::Vector{T}) where {T <: GenericMPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(vertices)
     # get the first R and the last L
-    Rs = [qr_through(nothing, first(vertices); normalize = true)]
-    Ls = [lq_through(last(vertices), nothing; normalize = true)]
-
+    R_first = qr_through(nothing, first(vertices); normalize = true)
+    L_last = lq_through(last(vertices), nothing; normalize = true)
+    Rs = Vector{typeof(R_first)}(undef, N - 1)
+    Ls = Vector{typeof(L_last)}(undef, N - 1)
+    Rs[1], Ls[end] = R_first, L_last
     # get remaining R, L matrices
     for n in 2:(N - 1)
-        push!(Rs, qr_through(last(Rs), vertices[n]; normalize = true))
-        pushfirst!(Ls, lq_through(vertices[N - n + 1], first(Ls); normalize = true))
+        m = N - n + 1
+        Rs[n] = qr_through(Rs[n - 1], vertices[n]; normalize = true)
+        Ls[m - 1] = lq_through(vertices[m], Ls[m]; normalize = true)
     end
     return Rs, Ls
 end
@@ -222,7 +225,7 @@ function get_proj_trunc(::FixedSpaceTruncation, v::ElementarySpace)
     return isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
 end
 """
-Given a cluster `Ms`, find all projectors `Pa`, `Pb`
+Given a cluster `vertices`, find all projectors `Pa`, `Pb`
 and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
