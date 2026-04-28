@@ -5,6 +5,7 @@ using TensorKit
 using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
+using MatrixAlgebraKit: diagview
 # using PEPSKit: HalfInfiniteEnv
 
 # Gauge-invariant loss function
