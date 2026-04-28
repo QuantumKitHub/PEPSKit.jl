@@ -238,11 +238,11 @@ function _get_allprojs(
         trunc = get_proj_trunc(truncs[i], space(vertices[i + 1], 1))
         return _proj_from_RL(Rs[i], Ls[i]; trunc)
     end
-    Pas = first.(projs_errs)
+    Pas = map(t -> t[1], projs_errs)
     wts = map(t -> t[2], projs_errs)
     Pbs = map(t -> t[3], projs_errs)
     # local truncation error on each bond
-    ϵs = last.(projs_errs)
+    ϵs = map(t -> t[4], projs_errs)
     return Pas, Pbs, wts, ϵs
 end
 
