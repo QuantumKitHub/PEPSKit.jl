@@ -6,6 +6,8 @@ using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
 
+using MatrixAlgebraKit: TruncatedAlgorithm
+
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
     alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
