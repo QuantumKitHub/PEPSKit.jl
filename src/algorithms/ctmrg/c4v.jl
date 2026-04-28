@@ -103,6 +103,7 @@ decomposition_algorithm(alg::C4vQRProjector) = alg.decomposition_alg
 
 # no truncation
 _set_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
+_set_decomposition_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
 
 function check_input(
         ::typeof(leading_boundary), network::InfiniteSquareNetwork, env::CTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10

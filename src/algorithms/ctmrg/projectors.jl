@@ -73,8 +73,20 @@ Update the truncation strategy of a given projector algorithm, keeping all other
 the same.
 """
 function _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
-    decomp_alg = alg.decomposition_alg
-    decomp_alg = @set decomp_alg.trunc = trunc
+    alg = @set alg.trunc = trunc
+    return alg
+end
+
+"""
+    _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+
+Set the truncation strategy of the decomposition algorithm within a given projector
+algorithm, keeping all other settings the same.
+"""
+function _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+    decomp_alg = decomposition_algorithm(alg)
+    truncated_fwd_alg = TruncatedAlgorithm(decomp_alg.fwd_alg, trunc)
+    decomp_alg = @set decomp_alg.fwd_alg = truncated_fwd_alg
     alg = @set alg.decomposition_alg = decomp_alg
     return alg
 end

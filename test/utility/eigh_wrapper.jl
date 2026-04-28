@@ -8,7 +8,7 @@ using PEPSKit
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
-    alg = @set alg.trunc = trunc
+    alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
     D, V, = eigh_trunc(A, alg)
     return real(dot(R, V * V')) + dot(D, D)  # Overlap with random tensor R is gauge-invariant and differentiable
 end

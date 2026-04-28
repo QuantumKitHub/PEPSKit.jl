@@ -79,12 +79,6 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
       full decomposition. Available algorithms are:
         - `:iterative` : Iterative Krylov-based SVD only computing the specifed number of
           singular values and vectors, see [`IterSVD`](@ref)
-* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:notrunc)` : Truncation strategy for the truncated SVD, which controls the spaces of the output. Here, `alg` can be one of the following:
-    - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerror` : Additionally supply error threshold `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
-    - `:truncrank` : Additionally supply truncation dimension `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.svd_rrule_alg))`:
   Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm`
   instance directly or as a `NamedTuple` where `alg` is one of the following:
@@ -98,10 +92,9 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
     Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
     For all regular use cases, the default reverse rule algorithms, automatically chosen based on the forward algorithm, should be sufficient.
 """
-struct SVDAdjoint{F, R, T}
+struct SVDAdjoint{F, R}
     fwd_alg::F
     rrule_alg::R
-    trunc::T
 end
 
 const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
@@ -121,7 +114,7 @@ const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
 
 _default_svd_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full
 
-function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;), trunc = (; alg = :notrunc))
+function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse forward SVD algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (; alg = Defaults.svd_fwd_alg, fwd_alg...) # overwrite with specified kwargs
@@ -166,21 +159,12 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;), trunc = (; alg = :notrunc)
         rrule_alg
     end
 
-    # parse truncation scheme
-    truncation_strategy = if trunc isa TruncationStrategy
-        trunc
-    elseif trunc isa NamedTuple
-        _TruncationStrategy(; trunc...)
-    else
-        throw(ArgumentError("unknown trunc $trunc"))
-    end
-
-    return SVDAdjoint(fwd_algorithm, rrule_algorithm, truncation_strategy)
+    return SVDAdjoint(fwd_algorithm, rrule_algorithm)
 end
 
 """
-    svd_trunc(t, alg::SVDAdjoint; trunc=notrunc())
-    svd_trunc!(t, alg::SVDAdjoint; trunc=notrunc())
+    svd_trunc(t, alg::SVDAdjoint)
+    svd_trunc!(t, alg::SVDAdjoint)
 
 Wrapper around `svd_trunc(!)` which dispatches on the `SVDAdjoint` algorithm.
 This is needed since a custom adjoint may be defined, depending on the `alg`.
@@ -188,7 +172,7 @@ E.g., for `IterSVD` the adjoint for a truncated SVD from `KrylovKit.svdsolve` is
 """
 MatrixAlgebraKit.svd_trunc(t, alg::SVDAdjoint) = svd_trunc!(copy(t), alg)
 function MatrixAlgebraKit.svd_trunc!(t, alg::SVDAdjoint)
-    return svd_trunc!(t, TruncatedAlgorithm(alg.fwd_alg, alg.trunc))
+    return svd_trunc!(t, alg.fwd_alg)
 end
 function MatrixAlgebraKit.svd_trunc!(t::AdjointTensorMap, alg::SVDAdjoint)
     u, s, vt, ϵ = svd_trunc!(adjoint(t), alg)
@@ -332,12 +316,12 @@ function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R}
-    ) where {F <: MatrixAlgebraKit.Algorithm, R <: FullSVDPullback}
+    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullSVDPullback}
     # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
 
     # requires access to the full decomposition
-    U, S, V⁺ = svd_compact!(t, alg.fwd_alg)
-    (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.trunc)
+    U, S, V⁺ = svd_compact!(t, alg.fwd_alg.alg)
+    (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.fwd_alg.trunc)
     truncerror = truncation_error(diagview(S), inds)
 
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)

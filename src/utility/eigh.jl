@@ -74,12 +74,6 @@ Construct a `EighAdjoint` algorithm struct based on the following keyword argume
       full decomposition. Available algorithms are:
         - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
         - `:BlockLanczos` : Block version of `:Lanczos` for repeated extremal eigenvalues, see [`KrylovKit.BlockLanczos`](@extref)
-* `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:notrunc)` : Truncation strategy for the truncated eigh, which controls the spaces of the output. Here, `alg` can be one of the following:
-    - `:notrunc` : No eigenvalues are truncated.
-    - `:truncerror` : Additionally supply error threshold `η`; truncate such that the 2-norm of the truncated eigenvalues is smaller than `η`
-    - `:truncrank` : Additionally supply truncation dimension `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
-    - `:trunctol` : Additionally supply eigenvalue magnitude cutoff `η`; truncate such that the magnitude of every retained eigenvalue is larger than `η`
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.eigh_rrule_alg))`:
   Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied
   by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the
@@ -91,10 +85,9 @@ Construct a `EighAdjoint` algorithm struct based on the following keyword argume
     Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
     For all regular use cases, the default reverse rule algorithms, automatically chosen based on the forward algorithm, should be sufficient.
 """
-struct EighAdjoint{F, R, T}
+struct EighAdjoint{F, R}
     fwd_alg::F
     rrule_alg::R
-    trunc::T
 end
 
 const EIGH_FWD_SYMBOLS = IdDict{Symbol, Any}(
@@ -113,7 +106,7 @@ const EIGH_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
 
 _default_eigh_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full
 
-function EighAdjoint(; fwd_alg = (;), rrule_alg = (;), trunc = (; alg = :notrunc))
+function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse forward algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (; alg = Defaults.eigh_fwd_alg, fwd_alg...) # overwrite with specified kwargs
@@ -147,31 +140,22 @@ function EighAdjoint(; fwd_alg = (;), rrule_alg = (;), trunc = (; alg = :notrunc
         rrule_alg
     end
 
-    # parse truncation scheme
-    truncation_strategy = if trunc isa TruncationStrategy
-        trunc
-    elseif trunc isa NamedTuple
-        _TruncationStrategy(; trunc...)
-    else
-        throw(ArgumentError("unknown trunc $trunc"))
-    end
-
-    return EighAdjoint(fwd_algorithm, rrule_algorithm, truncation_strategy)
+    return EighAdjoint(fwd_algorithm, rrule_algorithm)
 end
 
 """
-    eigh_trunc(t, alg::EighAdjoint; trunc=notrunc())
-    eigh_trunc!(t, alg::EighAdjoint; trunc=notrunc())
+    eigh_trunc(t, alg::EighAdjoint)
+    eigh_trunc!(t, alg::EighAdjoint)
 
 Wrapper around `eigh_trunc(!)` which dispatches on the `EighAdjoint` algorithm.
 This is needed since a custom adjoint may be defined, depending on the `alg`.
 """
 MatrixAlgebraKit.eigh_trunc(t, alg::EighAdjoint) = eigh_trunc!(copy(t), alg)
 function MatrixAlgebraKit.eigh_trunc!(t, alg::EighAdjoint)
-    return eigh_trunc!(t, TruncatedAlgorithm(alg.fwd_alg, alg.trunc))
+    return eigh_trunc!(t, alg.fwd_alg)
 end
 function MatrixAlgebraKit.eigh_trunc!(t::AdjointTensorMap, alg::EighAdjoint)
-    D, V, ϵ = eigh_trunc!(adjoint(t), alg; trunc)
+    D, V, ϵ = eigh_trunc!(adjoint(t), alg)
     return adjoint(D), adjoint(V), ϵ
 end
 
@@ -316,11 +300,11 @@ end
 function ChainRulesCore.rrule(
         ::typeof(eigh_trunc!),
         t::AbstractTensorMap,
-        alg::EighAdjoint{<:MatrixAlgebraKit.Algorithm, <:FullEighPullback}
+        alg::EighAdjoint{<:TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, <:FullEighPullback}
     )
 
-    D, V = eigh_full!(t; alg.fwd_alg)
-    (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.trunc)
+    D, V = eigh_full!(t; alg.fwd_alg.alg)
+    (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.fwd_alg.trunc)
     truncerror = truncation_error(diagview(D), inds)
 
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
@@ -344,8 +328,8 @@ end
 function ChainRulesCore.rrule(
         ::typeof(eigh_trunc!),
         t,
-        alg::EighAdjoint{<:Any, <:TruncEighPullback}
-    )
+        alg::EighAdjoint{F, R}
+    ) where {F, R <: TruncEighPullback}
     D, V, truncerror = eigh_trunc(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
