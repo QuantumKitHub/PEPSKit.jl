@@ -60,10 +60,10 @@ function TimeEvolver(
     _timeevol_sanity_check(psi0, physicalspace(H), alg)
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     # create Trotter gates
-    gate = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
+    circ = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
     # TODO: check gates for bipartite case
-    return TimeEvolver(alg, dt, nstep, gate, state)
+    return TimeEvolver(alg, dt, nstep, circ, state)
 end
 
 function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
@@ -202,7 +202,7 @@ end
 function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    psi, env, ϵ = su_iter(state.psi, it.gate, it.alg, state.env)
+    psi, env, ϵ = su_iter(state.psi, it.circuit, it.alg, state.env)
     # update internal state
     iter += 1
     t += it.dt
