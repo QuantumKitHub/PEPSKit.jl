@@ -6,7 +6,7 @@ using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
 
-using MatrixAlgebraKit: TruncatedAlgorithm
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
