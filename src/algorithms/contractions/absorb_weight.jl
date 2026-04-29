@@ -1,13 +1,13 @@
 """
-    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false)
-    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false)
+    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, rowcol::CartesianIndex{2}, virt_axes::NTuple{N, Int}; inv::Bool = false)
+    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false)
 
 Absorb or remove (in a twist-free way) the square root of environment weight
 on an axis of the PEPS/PEPO tensor `t` known to be at position (`row`, `col`)
 in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
 ```
                     |
-                [2,r,c]
+                 [2,r,c]
                     |
     - [1,r,c-1] - T[r,c] - [1,r,c] -
                     |
@@ -21,7 +21,7 @@ in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
 - `weights::SUWeight` : All simple update weights.
 - `row::Int` : The row index specifying the position in the tensor network.
 - `col::Int` : The column index specifying the position in the tensor network.
-- `ax::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
+- `virt_axes::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
 
 ## Keyword arguments
 
@@ -31,12 +31,35 @@ in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
 
 ```julia
 # Absorb the weight into the north axis of tensor at position (2, 3)
-absorb_weight(t, weights, 2, 3, 1)
+absorb_weight(t, weights, 2, 3, (1,))
 
 # Absorb the inverse of (i.e. remove) the weight into the east axis
-absorb_weight(t, weights, 2, 3, 2; inv=true)
+absorb_weight(t, weights, 2, 3, (2,); inv=true)
 ```
 """
+function absorb_weight(
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        rowcol::CartesianIndex{2}, virt_axes::NTuple{N, Int}; inv::Bool = false
+    ) where {N}
+    return absorb_weight(t, weights, rowcol[1], rowcol[2], virt_axes; inv)
+end
+
+function absorb_weight(
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
+    ) where {N}
+    vax = first(virt_axes)
+    weight_vax = weight_to_absorb(weights, row, col, vax; inv)
+    legs, t2 = absorb_first_weight(t, weight_vax, vax)
+    for vax in Base.tail(virt_axes)
+        legs, biperm = biperm_absorb_weight(legs, vax)
+        weight_vax = weight_to_absorb(weights, row, col, vax; inv)
+        t2 = permute(t2, biperm) * weight_vax
+    end
+    perm_back = invperm(legs)
+    return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
+end
+
 function weight_to_absorb(
         weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
     )
@@ -79,25 +102,3 @@ function absorb_first_weight(t::Union{PEPSTensor, PEPOTensor}, wt, vax)
     return new_legs, t2
 end
 
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        rowcol::CartesianIndex{2}, virt_axes::NTuple{N, Int}; inv::Bool = false
-    ) where {N}
-    return absorb_weight(t, weights, rowcol[1], rowcol[2], virt_axes; inv)
-end
-
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
-    ) where {N}
-    vax = first(virt_axes)
-    weight_vax = weight_to_absorb(weights, row, col, vax; inv)
-    legs, t2 = absorb_first_weight(t, weight_vax, vax)
-    for vax in virt_axes[(begin + 1):end]
-        legs, biperm = biperm_absorb_weight(legs, vax)
-        weight_vax = weight_to_absorb(weights, row, col, vax; inv)
-        t2 = permute(t2, biperm) * weight_vax
-    end
-    perm_back = invperm(legs)
-    return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
-end
