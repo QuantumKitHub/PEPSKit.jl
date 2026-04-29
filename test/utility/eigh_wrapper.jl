@@ -117,7 +117,13 @@ end
 
 @testset "Truncated symmetric eigh broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
     d, v = eigh_full(symm_r)
-    d.data[1:2:symm_m] .= d.data[2:2:symm_m] # make every eigenvalue two-fold degenerate
+    # make every singular value in the 0-sector three-fold degenerate
+    b0 = diagview(block(d, Z2Irrep(0)))
+    b0[1:3:symm_m] .= b0[3:3:symm_m]
+    b0[2:3:symm_m] .= b0[3:3:symm_m]
+    # make every singular value in the 1-sector two-fold degenerate
+    b1 = diagview(block(d, Z2Irrep(1)))
+    b1[1:2:symm_n] .= b1[2:2:symm_n]
     symm_r_degen = v * d * v'
 
     no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-30
