@@ -11,7 +11,7 @@ in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
                     |
     - [1,r,c-1] - T[r,c] - [1,r,c] -
                     |
-                [1,r+1,c]
+                [2,r+1,c]
                     |
 ```
 
