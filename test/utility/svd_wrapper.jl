@@ -5,12 +5,12 @@ using TensorKit
 using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
-using MatrixAlgebraKit: diagview
-# using PEPSKit: HalfInfiniteEnv
+
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
-    alg = @set alg.trunc = trunc
+    alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
     U, S, V, = svd_trunc(A, alg)
     return real(dot(R, U * V)) + dot(S, S)  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
 end
