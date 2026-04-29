@@ -139,7 +139,7 @@ function _apply_gate(
     else
         trunc
     end
-    a, s, b, ϵ = svd_trunc!(a2b2; trunc, alg = LAPACK_QRIteration())
+    a, s, b, ϵ = svd_trunc!(a2b2; trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)

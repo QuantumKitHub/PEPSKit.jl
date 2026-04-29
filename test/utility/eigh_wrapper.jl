@@ -6,9 +6,12 @@ using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
 
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview
+
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
-    D, V, = eigh_trunc(A, alg; trunc)
+    alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
+    D, V, = eigh_trunc(A, alg)
     return real(dot(R, V * V')) + dot(D, D)  # Overlap with random tensor R is gauge-invariant and differentiable
 end
 
@@ -23,9 +26,9 @@ r = 0.5 * (r + r') # make r Hermitian
 R = randn(space(r))
 R = 0.5 * (R + R')
 
-full_alg = EighAdjoint(; fwd_alg = (; alg = :qriteration), rrule_alg = (; alg = :full))
-trunc_alg = EighAdjoint(; fwd_alg = (; alg = :qriteration), rrule_alg = (; alg = :trunc))
-iter_alg = EighAdjoint(; fwd_alg = (; alg = :lanczos), rrule_alg = (; alg = :trunc))
+full_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :full))
+trunc_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :trunc))
+iter_alg = EighAdjoint(; fwd_alg = (; alg = :Lanczos), rrule_alg = (; alg = :trunc))
 
 @testset "Non-truncated eigh" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)
@@ -114,7 +117,13 @@ end
 
 @testset "Truncated symmetric eigh broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
     d, v = eigh_full(symm_r)
-    d.data[1:2:symm_m] .= d.data[2:2:symm_m] # make every eigenvalue two-fold degenerate
+    # make every singular value in the 0-sector three-fold degenerate
+    b0 = diagview(block(d, Z2Irrep(0)))
+    b0[1:3:symm_m] .= b0[3:3:symm_m]
+    b0[2:3:symm_m] .= b0[3:3:symm_m]
+    # make every singular value in the 1-sector two-fold degenerate
+    b1 = diagview(block(d, Z2Irrep(1)))
+    b1[1:2:symm_n] .= b1[2:2:symm_n]
     symm_r_degen = v * d * v'
 
     no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-30
