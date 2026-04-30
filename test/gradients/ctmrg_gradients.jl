@@ -37,9 +37,9 @@ naive_gradient_done = Set()
 
 # :fixed iterscheme is incompatible with sequential CTMRG
 function _check_disallowed_combination(
-        ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
+        ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
-    ctmrg_alg == :sequential && gradient_iterscheme == :fixed && return true
+    ctmrg_alg == :sequential && !isnothing(gradient_alg) && return true
     return false
 end
 
@@ -70,7 +70,7 @@ end
             # but verify that its use would throw an error
             @test_throws ArgumentError PEPSOptimize(;
                 boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg))),
-                gradient_alg = (; alg = gradient_alg, tol = gradtol),
+                gradient_alg = (; alg = gradient_alg, tol = gradtol, iterscheme = :fixed),
             )
             continue
         end
