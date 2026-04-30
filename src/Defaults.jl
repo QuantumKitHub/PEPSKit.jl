@@ -84,7 +84,6 @@ Module containing default algorithm parameter values and arguments.
 * `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
 * `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 * `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the gradient fixed-point.
 
 ## Optimization
@@ -152,7 +151,7 @@ const gradient_verbosity = -1
 const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
 const gradient_eigsolver = :arnoldi
 const gradient_eigsolver_eager = true
-const gradient_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
+const gradient_iterscheme = :fixed
 const gradient_alg = :eigsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
 
 # Optimization

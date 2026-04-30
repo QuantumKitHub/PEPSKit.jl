@@ -88,7 +88,7 @@ algorithms and their tolerances:
 """
 
 boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
-gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :linsolver, iterscheme = :fixed)
+gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :linsolver)
 optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 150, ls_maxiter = 2, ls_maxfg = 2);
 
 md"""
@@ -99,11 +99,9 @@ md"""
     general-purpose set of settings which will always work, so instead one has to adjust
     the simulation settings for each specific application. For example, it might help to
     switch between the CTMRG flavors `alg=:simultaneous` and `alg=:sequential` to
-    improve convergence. The evaluation of the CTMRG gradient can be instable, so there it
-    is advised to try the different `iterscheme=:diffgauge` and `iterscheme=:fixed` schemes
-    as well as different `alg` keywords. Of course the tolerances of the algorithms and
-    their subalgorithms also have to be compatible. For more details on the available
-    options, see the [`fixedpoint`](@ref) docstring.
+    improve convergence. Of course the tolerances of the algorithms and their subalgorithms
+    also have to be compatible. For more details on the available options, see the
+    [`fixedpoint`](@ref) docstring.
 
 Keep in mind that the PEPS is constructed from a unit cell of spaces, so we have to make a
 matrix of `V_peps` spaces:

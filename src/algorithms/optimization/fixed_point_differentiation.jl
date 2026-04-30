@@ -90,7 +90,6 @@ Construct the `GeomSum` algorithm struct based on the following keyword argument
     2. Information at each gradient iteration
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 """
 struct GeomSum{F} <: GradMode{F}
     tol::Real
@@ -124,7 +123,6 @@ Construct the `ManualIter` algorithm struct based on the following keyword argum
     2. Information at each gradient iteration
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 """
 struct ManualIter{F} <: GradMode{F}
     tol::Real
@@ -156,7 +154,6 @@ Construct the `LinSolver` algorithm struct based on the following keyword argume
 * `verbosity::Int=$(Defaults.gradient_verbosity)` : Output information verbosity of the linear solver.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 * `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_linsolver)` : Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
     - `:gmres` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:bicgstab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
@@ -189,7 +186,6 @@ Construct the `EigSolver` algorithm struct based on the following keyword argume
 * `verbosity::Int=$(Defaults.gradient_verbosity)` : Output information verbosity of the linear solver.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 * `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)` : Eigen solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
     - `:arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
 """
@@ -220,12 +216,6 @@ function _check_algorithm_combination(::SequentialCTMRG, ::GradMode{:fixed})
           gauges; select SimultaneousCTMRG instead to use :fixed mode"
     throw(ArgumentError(msg))
 end
-function _check_algorithm_combination(::C4vCTMRG{<:C4vEighProjector}, ::GradMode{:diffgauge})
-    msg = "`:diffgauge` mode is currently not compatible with eigh-based C4v CTMRG; \
-        either switch to a different projector algorithm (e.g. `c4v_qr`), or use :fixed \
-        mode for differentiation instead."
-    throw(ArgumentError(msg))
-end
 function _check_algorithm_combination(::C4vCTMRG, symm::Union{Nothing, <:SymmetrizationStyle})
     if !(symm isa RotateReflect)
         msg = "C4vCTMRG optimization is compatible only with RotateReflect symmetrization. \
@@ -248,42 +238,6 @@ _scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
     alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
     return alg_fixed
-end
-
-function _rrule(
-        gradmode::GradMode{:diffgauge},
-        config::RuleConfig,
-        ::typeof(leading_boundary),
-        envinit,
-        state,
-        alg::CTMRGAlgorithm,
-    )
-    _check_algorithm_combination(alg, gradmode)
-
-    env, info = leading_boundary(envinit, state, alg)
-    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
-
-    # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
-    function gauge_fixed_iteration(A, x)
-        return gauge_fix(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], x, alg_gauge)
-    end
-    # compute its pullback
-    _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
-    # split off state and environment parts
-    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
-
-    function leading_boundary_diffgauge_pullback((Δenv′, Δinfo))
-        Δenv = unthunk(Δenv′)
-
-        # evaluate the geometric sum
-        ∂F∂env = fpgrad(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode)
-
-        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
-    end
-
-    return (env, info), leading_boundary_diffgauge_pullback
 end
 
 # Here f is differentiated from an pre-computed SVD with fixed U, S and V
