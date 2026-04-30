@@ -147,7 +147,7 @@ function _get_cluster(
         p = invperm((p1..., p2...))
         return (p[1:Np], p[(Np + 1):end])
     end
-    Ms = map(zip(sites, open_vaxs, perms)) do (site, vaxs, perm)
+    Ms = map(sites, open_vaxs, perms) do site, vaxs, perm
         s = CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
         M = if env === nothing
             state[s]
@@ -190,7 +190,7 @@ function _su_iter!(
     # restore virtual arrows in `Ms`
     _flip_virtuals!(Ms, flips)
     # update env weights
-    bond_revs = map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
+    bond_revs = map(sites, Iterators.drop(sites, 1)) do site1, site2
         _nn_bondrev(site1, site2, (Nr, Nc))
     end
     for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
@@ -219,7 +219,7 @@ function _get_cluster_trunc(
         trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}},
         unitcell::NTuple{2, Int}
     )
-    return map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
+    return map(sites, Iterators.drop(sites, 1)) do site1, site2
         (d, r, c), rev = _nn_bondrev(site1, site2, unitcell)
         t = truncation_strategy(trunc, d, r, c)
         if rev && isa(t, TruncationSpace)

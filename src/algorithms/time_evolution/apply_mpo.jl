@@ -229,7 +229,7 @@ function _get_allprojs(
     N = length(Ms)
     Rs, Ls = _get_allRLs(Ms)
     @assert length(truncs) == N - 1
-    projs_errs = map(zip(Rs, Ls, truncs)) do (R, L, trunc)
+    projs_errs = map(Rs, Ls, truncs) do R, L, trunc
         return _proj_from_RL(R, L; trunc)
     end
     Pas = map(Base.Fix2(getindex, 1), projs_errs)

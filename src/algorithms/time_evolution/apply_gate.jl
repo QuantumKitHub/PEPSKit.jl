@@ -136,11 +136,6 @@ function _apply_gate(
     else
         @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
-    trunc = if trunc isa FixedSpaceTruncation
-        need_flip ? truncspace(flip(V)) : truncspace(V)
-    else
-        trunc
-    end
     a, s, b, ϵ = svd_trunc!(a2b2; trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
