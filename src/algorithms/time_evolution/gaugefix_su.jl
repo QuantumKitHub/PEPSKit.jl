@@ -37,22 +37,24 @@ end
 Fix the gauge of `psi` using trivial simple update.
 """
 function gauge_fix(psi::InfiniteState, alg::SUGauge)
+    time0 = time()
     gates = _trivial_gates(scalartype(psi), physicalspace(psi))
-    su_alg = SimpleUpdate(; trunc = FixedSpaceTruncation(), bipartite = _state_bipartite_check(psi))
+    trunc = _get_fixedspacetrunc(psi)
+    su_alg = SimpleUpdate(; trunc, bipartite = _is_bipartite(psi))
     wts0 = SUWeight(psi)
     # use default constructor to avoid calculation of exp(-H * 0)
     evolver = TimeEvolver(su_alg, 0.0, alg.maxiter, gates, SUState(0, 0.0, psi, wts0))
     for (i, (psi′, wts, info)) in enumerate(evolver)
         ϵ = compare_weights(wts, wts0)
         if i >= alg.miniter && ϵ < alg.tol
-            @info "Trivial SU conv $i: |Δλ| = $ϵ."
+            @info "Trivial SU conv $i: |Δλ| = $ϵ, time = $(time() - time0) s"
             return psi′, wts, ϵ
         end
         if i == alg.maxiter
-            @warn "Trivial SU cancel $i: |Δλ| = $ϵ."
+            @warn "Trivial SU cancel $i: |Δλ| = $ϵ, time = $(time() - time0) s"
             return psi′, wts, ϵ
         end
-        wts0 = deepcopy(wts)
+        wts0 = wts
     end
     return
 end

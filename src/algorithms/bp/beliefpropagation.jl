@@ -59,7 +59,7 @@ function leading_boundary(env₀::BPEnv, network::InfiniteSquareNetwork, alg::Be
 end
 function leading_boundary(env₀::BPEnv, state::InfiniteState, alg::BeliefPropagation)
     if alg.bipartite
-        @assert _state_bipartite_check(state)
+        _is_bipartite(state) || error("Input state is not bipartite")
     end
     return leading_boundary(env₀, InfiniteSquareNetwork(state), alg)
 end
