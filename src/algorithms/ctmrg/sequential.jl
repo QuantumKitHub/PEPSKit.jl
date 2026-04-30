@@ -59,17 +59,15 @@ end
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(network)))
-    condition_number = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
             env, info = ctmrg_leftmove(col, network, env, alg)
             truncation_error = max(truncation_error, info.truncation_error)
-            condition_number = max(condition_number, info.condition_number)
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
     end
-    return env, (; contraction_metrics = (; truncation_error, condition_number))
+    return env, (; contraction_metrics = (; truncation_error))
 end
 
 """
@@ -97,10 +95,10 @@ function sequential_projectors(
     _, r, c = coordinate
     r′ = _prev(r, size(env, 2))
     trunc = truncation_strategy(alg, env.edges[WEST, r′, c])
-    alg′ = @set alg.trunc = trunc
+    alg´ = _set_decomposition_truncation(alg, trunc)
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
-    return compute_projector((Q1, Q2), coordinate, alg′)
+    return compute_projector((Q1, Q2), alg´)
 end
 function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
@@ -110,14 +108,14 @@ function sequential_projectors(
     coordinate_ne = _next_coordinate(coordinate_nw, rowsize, colsize)
     coordinate_se = _next_coordinate(coordinate_ne, rowsize, colsize)
     trunc = truncation_strategy(alg, env.edges[WEST, coordinate_nw[2:3]...])
-    alg′ = @set alg.trunc = trunc
+    alg´ = _set_decomposition_truncation(alg, trunc)
     ec = (
         TensorMap(EnlargedCorner(network, env, coordinate_se)),
         TensorMap(EnlargedCorner(network, env, coordinate)),
         TensorMap(EnlargedCorner(network, env, coordinate_nw)),
         TensorMap(EnlargedCorner(network, env, coordinate_ne)),
     )
-    return compute_projector(ec, coordinate, alg′)
+    return compute_projector(ec, alg´)
 end
 
 """

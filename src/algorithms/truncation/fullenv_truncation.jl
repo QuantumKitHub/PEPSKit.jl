@@ -23,8 +23,8 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * [Glen Evenbly, Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018). 
 """
-@kwdef struct FullEnvTruncation
-    trunc::TruncationStrategy
+@kwdef struct FullEnvTruncation{T <: TruncationStrategy}
+    trunc::T
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
     trunc_init::Bool = true
@@ -75,13 +75,13 @@ function _fet_message(
 end
 
 """
-    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) -> U, S, V, info
+    fullenv_truncate(b0, benv::BondEnv, alg::FullEnvTruncation) -> U, S, V, info
 
 Perform full environment truncation algorithm from
 [Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018) on `benv`.
 
-Given a fixed state `|b0⟩` with bond matrix `b0`
-and the corresponding positive-definite bond environment `benv`, 
+Given a fixed state `|b0⟩` with bond matrix `b0` and the
+corresponding positive-definite bond environment `benv`, 
 find the state `|b⟩` with truncated bond matrix `b = u s v†`
 that maximizes the fidelity (not normalized by `⟨b0|b0⟩`)
 ```
@@ -215,11 +215,12 @@ function fullenv_truncate(
     b1 = similar(b0)
     s0 = deepcopy(s)
     Δfid, Δs, fid, fid0 = NaN, NaN, 0.0, 0.0
+    @tensor benv_b0[-1 -2] := benv[-1 -2; 3 4] * b0[3; 4]
     for iter in 1:(alg.maxiter)
         time0 = time()
         # update `← r -  =  ← s ← v† -`
         @tensor r[-1 -2] := s[-1; 1] * vh[1; -2]
-        @tensor p[-1 -2] := conj(u[1; -1]) * benv[1 -2; 3 4] * b0[3; 4]
+        @tensor p[-1 -2] := conj(u[1; -1]) * benv_b0[1 -2]
         @tensor B[-1 -2; -3 -4] := conj(u[1; -1]) * benv[1 -2; 3 -4] * u[3; -3]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
@@ -228,7 +229,7 @@ function fullenv_truncate(
         u, s, vh = svd_trunc(b1; trunc = alg.trunc)
         # update `- l ←  =  - u ← s ←`
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
-        @tensor p[-1 -2] := conj(vh[-2; 2]) * benv[-1 2; 3 4] * b0[3; 4]
+        @tensor p[-1 -2] := conj(vh[-2; 2]) * benv_b0[-1 2]
         @tensor B[-1 -2; -3 -4] := conj(vh[-2; 2]) * benv[-1 2; -3 4] * vh[-4; 4]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
