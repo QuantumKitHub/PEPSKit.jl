@@ -135,6 +135,15 @@ Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 ## spaces
 TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 
+## Bipartite check
+function _is_bipartite(wts::SUWeight)
+    (size(wts, 2) == size(wts, 3) == 2) || (return false)
+    for (d, c) in Iterators.product(1:2, 1:2)
+        (wts[d, 1, c] == wts[d, 2, _next(c, 2)]) || (return false)
+    end
+    return true
+end
+
 ## (Approximate) equality
 function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
     return wts1.data == wts2.data

@@ -1,5 +1,3 @@
-const NNGate{T, S} = AbstractTensorMap{T, S, 2, 2}
-
 """
 Convert an N-site gate (N ≥ 2) to MPO by SVD, 
 in which the axes are ordered as

@@ -357,7 +357,7 @@ function product_peps(peps_args...; unitcell = (1, 1), noise_amp = 1.0e-2, state
         all(dim.(space.(noise_peps.A, 1)) .== length.(state_vector)) ||
             throw(ArgumentError("state vectors must match the physical dimension"))
     end
-    prod_tensors = map(zip(noise_peps.A, state_vector)) do (t, v)
+    prod_tensors = map(noise_peps.A, state_vector) do t, v
         pt = zero(t)
         pt[][:, 1, 1, 1, 1] .= v
         return pt

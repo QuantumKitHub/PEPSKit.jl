@@ -202,6 +202,14 @@ function InfinitePEPS(ρ::InfinitePEPO)
     )
 end
 
+## Bipartite check for PEPS/PEPO
+function _is_bipartite(psi::InfiniteState)
+    (size(psi, 1) == size(psi, 2) == 2) || (return false)
+    for (c, h) in Iterators.product(1:2, 1:size(psi, 3))
+        (psi[1, c, h] == psi[2, _next(c, 2), h]) || (return false)
+    end
+    return true
+end
 
 ## Vector interface
 

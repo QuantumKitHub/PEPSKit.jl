@@ -62,6 +62,12 @@ function TimeEvolver(
     # create Trotter gates
     circ = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
+    # convert FixedSpaceTruncation to site-dependent `truncspace`s
+    if alg.trunc isa FixedSpaceTruncation
+        trunc = _get_fixedspacetrunc(psi0)
+        @reset alg.trunc = trunc
+    end
+    # TODO: bipartite check for alg.trunc after equality is defined for all kinds of truncation strategies
     # TODO: check gates for bipartite case
     return TimeEvolver(alg, dt, nstep, circ, state)
 end
@@ -303,7 +309,6 @@ algorithm `alg`, time step `dt` for `nstep` number of steps.
 
 - Set `symmetrize_gates = true` for second-order Trotter decomposition.
 - Set `tol > 0` to enable convergence check (for imaginary time evolution of iPEPS only).
-    For other usages it should not be changed.
 - Use `t0` to specify the initial time of the evolution.
 - `check_interval` sets the interval to output information. Output during the evolution can be turned off by setting `check_interval <= 0`.
 - `info` is a NamedTuple containing information of the evolution,
@@ -315,5 +320,9 @@ function MPSKit.time_evolve(
         tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
     )
     it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0, symmetrize_gates)
-    return time_evolve(it; tol, check_interval)
+    return if tol == 0
+        time_evolve(it; check_interval)
+    else
+        time_evolve(it, H; tol, check_interval)
+    end
 end

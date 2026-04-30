@@ -234,9 +234,8 @@ function _get_allprojs(
     N = length(vertices)
     Rs, Ls = _get_allRLs(vertices)
     @assert length(truncs) == N - 1
-    projs_errs = map(1:(N - 1)) do i
-        trunc = get_proj_trunc(truncs[i], space(vertices[i + 1], 1))
-        return _proj_from_RL(Rs[i], Ls[i]; trunc)
+    projs_errs = map(Rs, Ls, truncs) do R, L, trunc
+        return _proj_from_RL(R, L; trunc)
     end
     Pas = map(t -> t[1], projs_errs)
     wts = map(t -> t[2], projs_errs)

@@ -154,7 +154,7 @@ function _su_iter_mpo!(
     # restore virtual arrows in `new_vertices`
     _flip_virtuals!(new_vertices, flips)
     # update env weights
-    bond_revs = map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
+    bond_revs = map(sites, Iterators.drop(sites, 1)) do site1, site2
         _nn_bondrev(site1, site2, (Nr, Nc))
     end
     for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
@@ -189,24 +189,14 @@ updated by the Trotter evolution MPO.
 """
 function _get_cluster_trunc(
         trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}},
-        (Nrow, Ncol)::NTuple{2, Int}
+        unitcell::NTuple{2, Int}
     )
-    return map(zip(sites, Iterators.drop(sites, 1))) do (site1, site2)
-        diff = site2 - site1
-        if diff == CartesianIndex(0, 1)
-            r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
-            return truncation_strategy(trunc, 1, r, c)
-        elseif diff == CartesianIndex(0, -1)
-            r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
-            return truncation_strategy(trunc, 1, r, c)
-        elseif diff == CartesianIndex(1, 0)
-            r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
-            return truncation_strategy(trunc, 2, r, c)
-        elseif diff == CartesianIndex(-1, 0)
-            r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
-            return truncation_strategy(trunc, 2, r, c)
-        else
-            error("The path `sites` contains a long-range bond.")
+    return map(sites, Iterators.drop(sites, 1)) do site1, site2
+        (d, r, c), rev = _nn_bondrev(site1, site2, unitcell)
+        t = truncation_strategy(trunc, d, r, c)
+        if rev && isa(t, TruncationSpace)
+            t = truncspace(flip(t.space)')
         end
+        return t
     end
 end
