@@ -255,7 +255,6 @@ or until convergence of `SUWeight` set by a positive `tol`.
 function MPSKit.time_evolve(
         it::TimeEvolver{<:SimpleUpdate}; check_interval::Int = 500
     )
-    return LoggingExtras.withlevel()
     time_start = time()
     @info "--- Time evolution (simple update), dt = $(it.dt) ---"
     env0, time0 = it.state.env, time()
