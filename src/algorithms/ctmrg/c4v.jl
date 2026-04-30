@@ -21,7 +21,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `miniter::Int=$(Defaults.ctmrg_miniter)`
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
-* `decomposition_alg::Union{<:EighAdjoint,NamedTuple}`
+* `decomposition_alg::Union{NamedTuple,<:EighAdjoint,<:QRAdjoint}=(;)`
 * `projector_alg::Symbol=:$(Defaults.projector_alg_c4v)`
 """
 struct C4vCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
@@ -99,8 +99,11 @@ function C4vQRProjector(; kwargs...)
 end
 PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
 
+decomposition_algorithm(alg::C4vQRProjector) = alg.decomposition_alg
+
 # no truncation
 _set_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
+_set_decomposition_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
 
 function check_input(
         ::typeof(leading_boundary), network::InfiniteSquareNetwork, env::CTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10
@@ -144,8 +147,8 @@ function ctmrg_iteration(
     corner′, projector, info = c4v_projector!(enlarged_corner, alg.projector_alg)
     edge′ = c4v_renormalize_edge(network, env, projector)
     info = (;
-        contraction_metrics = (; info.truncation_error, info.condition_number),
-        info.D, info.V, info.D_full, info.V_full, info.truncation_indices,
+        contraction_metrics = (; info.truncation_error),
+        info.D, info.V,
     )
     return CTMRGEnv(corner′, edge′), info
 end
@@ -189,8 +192,10 @@ Compute the C₄ᵥ projector from `eigh` decomposing the Hermitian `enlarged_co
 Also return the normalized eigenvalues as the new corner tensor.
 """
 function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
-    trunc = truncation_strategy(alg, enlarged_corner)
-    D, V, info = eigh_trunc!(enlarged_corner, decomposition_algorithm(alg); trunc)
+    alg = _set_decomposition_truncation(alg, truncation_strategy(alg, enlarged_corner))
+    eigh_alg = decomposition_algorithm(alg)
+
+    D, V, truncation_error = eigh_trunc!(enlarged_corner, eigh_alg)
 
     # Check for degenerate eigenvalues
     Zygote.isderiving() && ignore_derivatives() do
@@ -200,7 +205,7 @@ function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
         end
     end
 
-    return D / norm(D), V, (; D, V, info...)
+    return D / norm(D), V, (; D, V, truncation_error)
 end
 """
     c4v_projector!(enlarged_corner, alg::C4vQRProjector)
@@ -216,7 +221,7 @@ Compute the C₄ᵥ projector by decomposing the column-enlarged corner with `le
 function c4v_projector!(enlarged_corner, alg::C4vQRProjector)
     Q, R = left_orth!(enlarged_corner, decomposition_algorithm(alg))
     # TODO: what's a meaningful way to compute a truncation error/condition number in this scheme?
-    return Q, (; Q, R, truncation_error = zero(scalartype(Q)), condition_number = 0)
+    return Q, (; Q, R, truncation_error = zero(scalartype(Q)))
 end
 
 """

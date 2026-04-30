@@ -12,8 +12,8 @@ D = 2
 unitcells = [(1, 1), (3, 4)]
 projector_algs_asymm = [:halfinfinite, :fullinfinite]
 projector_algs_c4v = [
-    (:c4v_qr, :qr),
-    (:c4v_eigh, :qriteration), (:c4v_eigh, :lanczos),
+    (:c4v_qr, :Householder),
+    (:c4v_eigh, :QRIteration), (:c4v_eigh, :Lanczos),
 ]
 Ts = [Float64, ComplexF64]
 
@@ -81,7 +81,7 @@ end
     env₀ = initialize_random_c4v_env(peps, Venv)
     env, = leading_boundary(
         env₀, peps; alg = :c4v, projector_alg,
-        decomposition_alg = (; fwd_alg = (; alg = decomp_alg))
+        decomposition_alg = (; alg = decomp_alg)
     )
     @test env isa CTMRGEnv
 end

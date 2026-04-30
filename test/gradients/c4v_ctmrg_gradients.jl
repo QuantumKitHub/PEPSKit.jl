@@ -94,6 +94,15 @@ end
         # check for allowed combinations of projector alg and decomposition rrule alg
         decomposition_rrule_alg in allowed_rrule_algs[projector_alg] || continue
 
+        # construct appropriate decomposition struct to pass custom rrule alg
+        decomposition_alg = if projector_alg == :c4v_eigh
+            EighAdjoint(; rrule_alg = (; alg = decomposition_rrule_alg))
+        elseif projector_alg == :c4v_qr
+            QRAdjoint(; rrule_alg = (; alg = decomposition_rrule_alg))
+        else
+            error("unknown projector alg: $projector_alg")
+        end
+
         @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg, gradient_alg=:$gradient_alg and gradient_iterscheme=:$gradient_iterscheme on $(names[i])"
         Random.seed!(sd)
         dir = InfinitePEPS(Pspace, Vspace)
@@ -105,7 +114,7 @@ end
             alg = ctmrg_alg,
             verbosity = ctmrg_verbosity,
             projector_alg = projector_alg,
-            decomposition_alg = (; rrule_alg = (; alg = decomposition_rrule_alg)),
+            decomposition_alg,
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
