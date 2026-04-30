@@ -101,4 +101,3 @@ function absorb_first_weight(t::Union{PEPSTensor, PEPOTensor}, wt, vax)
     t2 = permute(t, biperm) * wt
     return new_legs, t2
 end
-

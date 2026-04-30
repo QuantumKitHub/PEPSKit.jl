@@ -9,8 +9,8 @@ Construct the environment (norm) tensor
         -1   0          1    2
 ```
 with `X` at position `[row, col]`.
-`X, Y` are unitary tensors produced when finding the reduced site tensors 
-with `_qr_bond`; and `XX = X' X` and `YY = Y' Y` (stacked together).
+`X, Y` are unitary tensors produced when finding the reduced site tensors,
+and `XX = X' X` and `YY = Y' Y` (stacked together).
 
 Axis order: `[DX1 DY1; DX0 DY0]`, as in
 ```
@@ -24,8 +24,8 @@ Axis order: `[DX1 DY1; DX0 DY0]`, as in
 ```
 """
 function bondenv_ctm(
-        row::Int, col::Int, X::T, Y::T, env::CTMRGEnv
-    ) where {T}
+        row::Int, col::Int, X::TX, Y::TY, env::CTMRGEnv
+    ) where {TX, TY}
     Nr, Nc = size(env.corners)[[2, 3]]
     cm1 = _prev(col, Nc)
     cp1 = _next(col, Nc)

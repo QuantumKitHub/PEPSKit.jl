@@ -219,11 +219,6 @@ function _proj_from_RL(
     return Pa, s, Pb, ϵ
 end
 
-
-get_proj_trunc(t::TruncationStrategy, ::ElementarySpace) = t
-function get_proj_trunc(::FixedSpaceTruncation, v::ElementarySpace)
-    return isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
-end
 """
 Given a cluster `vertices`, find all projectors `Pa`, `Pb`
 and Schmidt weights `wts` on internal bonds.

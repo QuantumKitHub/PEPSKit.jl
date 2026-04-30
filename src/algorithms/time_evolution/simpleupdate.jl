@@ -146,10 +146,12 @@ function _su_iter_gate!(
     local s
     gate_axs = alg.purified ? (1:1) : (1:2)
     for gate_ax in gate_axs  # TODO try to use type stable helper function
-        X, a, b, Y = _qr_bond(A, B; gate_ax, positive = true)
+        a, X = bond_tensor_first(A; gate_ax, positive = true)
+        b, Y = bond_tensor_last(B; gate_ax, positive = true)
         a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)
-        A, B = _qr_bond_undo(X, a, b, Y)
+        A = undo_bond_tensor_first(a, X; gate_ax)
+        B = undo_bond_tensor_last(b, Y; gate_ax)
     end
     rev && (s = transpose(s))
     # rotate back & remove environment weights
@@ -254,7 +256,8 @@ or until convergence of `SUWeight` set by a positive `tol`.
 """
 function MPSKit.time_evolve(
         it::TimeEvolver{<:SimpleUpdate};
-        tol::Float64 = 0.0, check_interval::Int = 500, verbosity::Int = 0
+        tol::Float64 = 0.0, check_interval::Int = 500,
+        verbosity::Int = 2
     )
     return LoggingExtras.withlevel(; verbosity) do
         time_start = time()
@@ -317,12 +320,13 @@ algorithm `alg`, time step `dt` for `nstep` number of steps.
 function MPSKit.time_evolve(
         psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
         alg::SimpleUpdate, env0::SUWeight; symmetrize_gates::Bool = false,
-        tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500
+        tol::Float64 = 0.0, t0::Number = 0.0, check_interval::Int = 500,
+        verbosity::Int = 2
     )
     it = TimeEvolver(psi0, H, dt, nstep, alg, env0; t0, symmetrize_gates)
     return if tol == 0
-        time_evolve(it; check_interval)
+        time_evolve(it; check_interval, verbosity)
     else
-        time_evolve(it, H; tol, check_interval)
+        time_evolve(it, H; tol, check_interval, verbosity)
     end
 end
