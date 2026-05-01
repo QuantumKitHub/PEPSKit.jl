@@ -70,17 +70,17 @@ function weight_to_absorb(
         weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
     )
     _, Nr, Nc = size(weights)
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
+    r, c = mod1(row, Nr), mod1(col, Nc)
     pow = inv ? -1 / 2 : 1 / 2
     wt = sdiag_pow(
         if ax == NORTH
-            weights[2, row, col]
+            weights[2, r, c]
         elseif ax == EAST
-            weights[1, row, col]
+            weights[1, r, c]
         elseif ax == SOUTH
-            weights[2, _next(row, Nr), col]
+            weights[2, _next(r, Nr), c]
         else # WEST
-            weights[1, row, _prev(col, Nc)]
+            weights[1, r, _prev(c, Nc)]
         end,
         pow,
     )
