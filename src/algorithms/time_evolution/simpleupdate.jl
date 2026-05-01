@@ -60,7 +60,7 @@ function TimeEvolver(
     _timeevol_sanity_check(psi0, physicalspace(H), alg)
     dt′ = _get_dt(psi0, dt, alg.imaginary_time)
     # create Trotter gates
-    circ = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
+    circuit = trotterize(H, dt′; symmetrize_gates, force_mpo = alg.force_mpo)
     state = SUState(0, t0, psi0, env0)
     # convert FixedSpaceTruncation to site-dependent `truncspace`s
     if alg.trunc isa FixedSpaceTruncation
@@ -69,7 +69,7 @@ function TimeEvolver(
     end
     # TODO: bipartite check for alg.trunc after equality is defined for all kinds of truncation strategies
     # TODO: check gates for bipartite case
-    return TimeEvolver(alg, dt, nstep, circ, state)
+    return TimeEvolver(alg, dt, nstep, circuit, state)
 end
 
 function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
@@ -144,14 +144,14 @@ function _su_iter_gate!(
     # apply gate
     ϵ = 0.0
     local s
-    gate_axs = alg.purified ? (1:1) : (1:2)
-    for gate_ax in gate_axs  # TODO try to use type stable helper function
+    for gate_ax in 1:2
         a, X = bond_tensor_first(A; gate_ax, positive = true)
         b, Y = bond_tensor_last(B; gate_ax, positive = true)
         a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
         ϵ = max(ϵ, ϵ′)
         A = undo_bond_tensor_first(a, X; gate_ax)
         B = undo_bond_tensor_last(b, Y; gate_ax)
+        alg.purified && break # only apply gate to 1st physical leg
     end
     rev && (s = transpose(s))
     # rotate back & remove environment weights

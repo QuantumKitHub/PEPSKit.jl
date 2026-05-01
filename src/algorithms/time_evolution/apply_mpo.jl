@@ -177,20 +177,20 @@ end
 """
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 """
-function _get_allRLs(vertices::Vector{T}) where {T <: GenericMPSTensor}
+function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
-    N = length(vertices)
+    N = length(Ms)
     # get the first R and the last L
-    R_first = qr_through(nothing, first(vertices); normalize = true)
-    L_last = lq_through(last(vertices), nothing; normalize = true)
+    R_first = qr_through(nothing, first(Ms); normalize = true)
+    L_last = lq_through(last(Ms), nothing; normalize = true)
     Rs = Vector{typeof(R_first)}(undef, N - 1)
     Ls = Vector{typeof(L_last)}(undef, N - 1)
     Rs[1], Ls[end] = R_first, L_last
     # get remaining R, L matrices
     for n in 2:(N - 1)
         m = N - n + 1
-        Rs[n] = qr_through(Rs[n - 1], vertices[n]; normalize = true)
-        Ls[m - 1] = lq_through(vertices[m], Ls[m]; normalize = true)
+        Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true)
+        Ls[m - 1] = lq_through(Ms[m], Ls[m]; normalize = true)
     end
     return Rs, Ls
 end
@@ -220,23 +220,23 @@ function _proj_from_RL(
 end
 
 """
-Given a cluster `vertices`, find all projectors `Pa`, `Pb`
+Given a cluster `Ms`, find all projectors `Pa`, `Pb`
 and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
-        vertices::Vector{T}, truncs::Vector{E}
+        Ms::Vector{T}, truncs::Vector{E}
     ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
-    N = length(vertices)
-    Rs, Ls = _get_allRLs(vertices)
+    N = length(Ms)
+    Rs, Ls = _get_allRLs(Ms)
     @assert length(truncs) == N - 1
     projs_errs = map(Rs, Ls, truncs) do R, L, trunc
         return _proj_from_RL(R, L; trunc)
     end
-    Pas = map(t -> t[1], projs_errs)
-    wts = map(t -> t[2], projs_errs)
-    Pbs = map(t -> t[3], projs_errs)
+    Pas = map(Base.Fix2(getindex, 1), projs_errs)
+    wts = map(Base.Fix2(getindex, 2), projs_errs)
+    Pbs = map(Base.Fix2(getindex, 3), projs_errs)
     # local truncation error on each bond
-    ϵs = map(t -> t[4], projs_errs)
+    ϵs = map(Base.Fix2(getindex, 4), projs_errs)
     return Pas, Pbs, wts, ϵs
 end
 
@@ -260,17 +260,17 @@ end
 Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
-        vertices::Vector{T}, truncs::Vector{E}
+        Ms::Vector{T}, truncs::Vector{E}
     ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
-    Pas, Pbs, wts, ϵs = _get_allprojs(vertices, truncs)
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, truncs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        vertices[i] = vertices[i] * twistdual(Pa, 1)
+        Ms[i] = Ms[i] * twistdual(Pa, 1)
         pP = ((1,), (2,))
-        pM = ((1,), ntuple(i -> i + 1, numind(eltype(vertices)) - 1))
-        pPM = (codomainind(vertices[i + 1]), domainind(vertices[i + 1]))
-        vertices[i + 1] = tensorcontract(Pb, pP, false, vertices[i + 1], pM, false, pPM)
+        pM = ((1,), ntuple(i -> i + 1, numind(eltype(Ms)) - 1))
+        pPM = (codomainind(Ms[i + 1]), domainind(Ms[i + 1]))
+        Ms[i + 1] = tensorcontract(Pb, pP, false, Ms[i + 1], pM, false, pPM)
     end
     return wts, ϵs, Pas, Pbs
 end

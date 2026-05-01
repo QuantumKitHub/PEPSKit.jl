@@ -133,7 +133,10 @@ Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
 ## spaces
+TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
 TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
+TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
+TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
 
 ## Bipartite check
 function _is_bipartite(wts::SUWeight)

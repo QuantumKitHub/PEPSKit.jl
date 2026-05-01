@@ -6,7 +6,7 @@ Abstract super type for time evolution algorithms of InfinitePEPS or InfinitePEP
 abstract type TimeEvolution end
 
 """
-    mutable struct TimeEvolver{TE <: TimeEvolution, G, S, N <: Number}
+    mutable struct TimeEvolver{TE <: TimeEvolution, C, S, N <: Number}
 
 Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 
