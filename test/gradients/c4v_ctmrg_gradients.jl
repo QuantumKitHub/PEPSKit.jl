@@ -24,8 +24,7 @@ ctmrg_verbosity = 1
 ctmrg_algs = [[:c4v]]
 projector_algs = [[:c4v_eigh, :c4v_qr]]
 decomposition_rrule_algs = [[:full, :trunc, :qr]]
-gradient_algs = [[nothing, :geomsum, :manualiter, :linsolver, :eigsolver]]
-gradient_iterschemes = [[:fixed, :diffgauge]]
+gradient_algs = [[nothing, :geomsum, :manualiter, :linsolver, :eigsolver]] # they all use :fixed mode by default (except for nothing)
 steps = -0.01:0.005:0.01
 
 # record which rrule alg is compatible with which projector alg
@@ -35,21 +34,8 @@ allowed_rrule_algs = Dict(
 )
 
 # be selective on which configurations to test the naive gradient for
-naive_gradient_combinations = [
-    (:c4v, :c4v_eigh, :full, :fixed),
-    (:c4v, :c4v_eigh, :full, :diffgauge),
-    (:c4v, :c4v_qr, :qr, :fixed),
-    (:c4v, :c4v_qr, :qr, :diffgauge),
-]
+naive_gradient_combinations = [(:c4v, :c4v_eigh, :full), (:c4v, :c4v_qr, :qr)]
 naive_gradient_done = Set()
-
-# :diffgauge iterscheme is incompatible with :c4v_eigh projector algorithm
-function _check_disallowed_combination(
-        ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
-    )
-    projector_alg == :c4v_eigh && gradient_iterscheme == :diffgauge && return true
-    return false
-end
 
 ## Tests
 # ------
@@ -64,28 +50,15 @@ end
     palgs = projector_algs[i]
     dalgs = decomposition_rrule_algs[i]
     galgs = gradient_algs[i]
-    gischemes = gradient_iterschemes[i]
-    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg, gradient_alg=:$gradient_alg, gradient_iterscheme=:$gradient_iterscheme" for (
-            ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme,
+    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=:$gradient_alg" for (
+            ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg,
         ) in Iterators.product(
-            calgs, palgs, dalgs, galgs, gischemes
+            calgs, palgs, dalgs, galgs
         )
-
-        # filter disallowed algorithm combinations
-        if _check_disallowed_combination(
-                ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_iterscheme
-            )
-            # but verify that its use would throw an error
-            @test_throws ArgumentError PEPSOptimize(;
-                boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = decomposition_rrule_alg))),
-                gradient_alg = (; alg = gradient_alg, iterscheme = gradient_iterscheme, tol = gradtol),
-            )
-            continue
-        end
 
         # check for allowed algorithm combinations when testing naive gradient
         if isnothing(gradient_alg)
-            combo = (ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_iterscheme)
+            combo = (ctmrg_alg, projector_alg, decomposition_rrule_alg)
             combo in naive_gradient_combinations || continue
             combo in naive_gradient_done && continue
             push!(naive_gradient_done, combo)
@@ -103,7 +76,7 @@ end
             error("unknown projector alg: $projector_alg")
         end
 
-        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg, gradient_alg=:$gradient_alg and gradient_iterscheme=:$gradient_iterscheme on $(names[i])"
+        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=:$gradient_alg on $(names[i])"
         Random.seed!(sd)
         dir = InfinitePEPS(Pspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace)
@@ -120,7 +93,7 @@ end
         concrete_gradient_alg = if isnothing(gradient_alg)
             nothing # TODO: add this to the PEPSKit.GradMode selector?
         else
-            PEPSKit.GradMode(; alg = gradient_alg, tol = gradtol, iterscheme = gradient_iterscheme)
+            PEPSKit.GradMode(; alg = gradient_alg, tol = gradtol)
         end
         env0 = PEPSKit.initialize_random_c4v_env(psi, Espace)
         env, = leading_boundary(env0, psi, contrete_ctmrg_alg)
