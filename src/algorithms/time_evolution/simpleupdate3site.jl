@@ -101,19 +101,6 @@ function invbiperm(t::Tuple, ::Val{N}) where {N}
     return p[begin:N], p[(N + 1):end]
 end
 
-function cluster_truncate!(vertices, truncs, ::InfinitePEPO)
-    Vphys = codomain.(vertices, 2)
-    fused_vertices = [first(_fuse_physicalspaces(v)) for v in vertices]
-    wts, ϵs, = _cluster_truncate!(fused_vertices, truncs)
-    new_vertices = [first(_unfuse_physicalspace(v, Vphy)) for (v, Vphy) in zip(fused_vertices, Vphys)]
-    return new_vertices, wts, ϵs
-end
-
-function cluster_truncate!(vertices, truncs, ::InfinitePEPS)
-    wts, ϵs, = _cluster_truncate!(vertices, truncs)
-    return vertices, wts, ϵs
-end
-
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
 """
@@ -142,21 +129,23 @@ function _su_iter!(
 
     # middle tensors: permuted to MPS form in _get_mid
     mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
-    vertices = [left_M, first.(mids)..., right_M]  # TODO remove
+    Ms = [left_M, first.(mids)..., right_M]  # TODO remove
     flips = push!([isdual(space(first(x), 1)) for x in mids], isdual(space(right_M, 1)))
     # flip virtual arrows in `vertices` to ←
-    _flip_virtuals!(vertices, flips)
+    _flip_virtuals!(Ms, flips)
 
     # apply gate MPOs and truncate
-    _apply_gatempo!(vertices, gates; gate_ax = 1)
-    new_vertices, wts, ϵs = cluster_truncate!(vertices, truncs, state)
-    if !alg.purified
-        _apply_gatempo!(new_vertices, gates; gate_ax = 2)
-        new_vertices, wts, ϵs = cluster_truncate!(new_vertices, truncs, state)
+    ϵ = 0.0
+    local wts
+    for gate_ax in 1:2
+        _apply_gatempo!(Ms, gates; gate_ax)
+        wts, ϵs = _cluster_truncate!(Ms, truncs)
+        ϵ = max(ϵ, maximum(ϵs))
+        alg.purified && break
     end
 
     # restore virtual arrows in `new_vertices`
-    _flip_virtuals!(new_vertices, flips)
+    _flip_virtuals!(Ms, flips)
     # update env weights
     bond_revs = map(sites, Iterators.drop(sites, 1)) do site1, site2
         _nn_bondrev(site1, site2, (Nr, Nc))
@@ -169,22 +158,23 @@ function _su_iter!(
 
     # left
     s′ = CartesianIndex(mod1(first(sites)[1], Nr), mod1(first(sites)[2], Nc))
-    leftpermuted = permute(first(new_vertices), left_invperm)
+    leftpermuted = permute(first(Ms), left_invperm)
     state[s′] = absorb_weight(leftpermuted, env, s′, left_vaxs; inv = true)
 
     # right
     s′ = CartesianIndex(mod1(last(sites)[1], Nr), mod1(last(sites)[2], Nc))
-    rightpermuted = permute(last(new_vertices), right_invperm)
+    rightpermuted = permute(last(Ms), right_invperm)
     state[s′] = absorb_weight(rightpermuted, env, s′, right_vaxs; inv = true)
 
-    for (vertex, s, invperm, vaxs) in zip(new_vertices[(begin + 1):(end - 1)], sites[(begin + 1):(end - 1)], map(t -> t[3], mids), map(t -> t[2], mids))
+    for (vertex, s, invperm, vaxs) in zip(Ms[(begin + 1):(end - 1)], sites[(begin + 1):(end - 1)], map(t -> t[3], mids), map(t -> t[2], mids))
         s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order
         permuted = permute(vertex, invperm)
         # remove weights on open axes of the cluster and update state
-        state[s′] = absorb_weight(permuted, env, s′, vaxs; inv = true)
+        t = absorb_weight(permuted, env, s′, vaxs; inv = true)
+        state[s′] = normalize!(t, Inf)
     end
-    return maximum(ϵs)
+    return ϵ
 end
 
 """
