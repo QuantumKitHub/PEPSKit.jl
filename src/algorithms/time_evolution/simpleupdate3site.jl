@@ -93,7 +93,6 @@ function _get_mid(
     return permute(t, perm), open_vaxs, invperm
 end
 
-
 function invbiperm(bituple::Tuple{Tuple, Tuple}, ::Val{N}) where {N}
     return invbiperm((first(bituple)..., last(bituple)...), Val(N))
 end
@@ -101,6 +100,7 @@ function invbiperm(t::Tuple, ::Val{N}) where {N}
     p = invperm(t)
     return p[begin:N], p[(N + 1):end]
 end
+
 function cluster_truncate!(vertices, truncs, ::InfinitePEPO)
     Vphys = codomain.(vertices, 2)
     fused_vertices = [first(_fuse_physicalspaces(v)) for v in vertices]
@@ -113,10 +113,11 @@ function cluster_truncate!(vertices, truncs, ::InfinitePEPS)
     wts, ϵs, = _cluster_truncate!(vertices, truncs)
     return vertices, wts, ϵs
 end
+
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
 """
-function _su_iter_mpo!(
+function _su_iter!(
         state::InfiniteState, gates::Vector{T}, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     ) where {T <: AbstractTensorMap}
@@ -125,8 +126,10 @@ function _su_iter_mpo!(
     Nax = Val(4 + n_physical_axes)
     n_sites = length(sites)
     truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
+
     out_axs = map(i -> _nn_vec_direction(sites[i - 1] - sites[i]), 2:n_sites)
     in_axs = map(i -> _nn_vec_direction(sites[i + 1] - sites[i]), 1:(n_sites - 1))
+
     # left and right: get tensor without permutation, then permute to MPS form
     left_M0, left_vaxs, = _get_left(state, sites[1], in_axs[1], env)
     right_M0, right_vaxs, = _get_right(state, sites[end], out_axs[end], env)
@@ -136,6 +139,7 @@ function _su_iter_mpo!(
     right_M = permute(right_M0, right_perm)
     left_invperm = invbiperm(left_perm, Val(n_physical_axes))
     right_invperm = invbiperm(right_perm, Val(n_physical_axes))
+
     # middle tensors: permuted to MPS form in _get_mid
     mids = map(i -> _get_mid(state, sites[i], out_axs[i - 1], in_axs[i], env), 2:(n_sites - 1))
     vertices = [left_M, first.(mids)..., right_M]  # TODO remove

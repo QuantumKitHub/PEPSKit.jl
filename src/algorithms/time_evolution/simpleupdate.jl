@@ -126,12 +126,14 @@ end
 Simple update optimized for nearest neighbor gates
 utilizing reduced bond tensors with the physical leg.
 """
-function _su_iter_gate!(
+function _su_iter!(
         state::InfiniteState, gate::NNGate, env::SUWeight,
-        siteA::CartesianIndex{2}, siteB::CartesianIndex{2}, alg::SimpleUpdate
+        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     )
     Nr, Nc = size(state)
-    trunc = only(_get_cluster_trunc(alg.trunc, [siteA, siteB], (Nr, Nc)))
+    @assert length(sites) == 2
+    trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
+    siteA, siteB = first(sites, 2)
     in_ax = _nn_vec_direction(siteB - siteA)
     out_ax = mod1(in_ax + 2, 4)
     A0, open_vaxs_A, = _get_left(state, siteA, in_ax, env)
@@ -153,12 +155,14 @@ function _su_iter_gate!(
         B = undo_bond_tensor_last(b, Y; gate_ax)
         alg.purified && break # only apply gate to 1st physical leg
     end
-    rev && (s = transpose(s))
     # rotate back & remove environment weights
+    rev && (s = transpose(s))
     for (site, vertex, open_vaxs) in ((siteA, A, open_vaxs_A), (siteB, B, open_vaxs_B))
         s′ = (mod1(site[1], Nr), mod1(site[2], Nc))
         rotated = _bond_rotation(vertex, dir, rev; inv = true)
-        state[s′...] = absorb_weight(rotated, env, s′..., open_vaxs; inv = true)
+        t = absorb_weight(rotated, env, s′..., open_vaxs; inv = true)
+        # TODO: 2-norm works just as fine
+        state[s′...] = normalize!(t, Inf)
     end
     env[bond...] = normalize!(s, Inf)
     return ϵ
@@ -183,7 +187,7 @@ function su_iter(
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
             alg.bipartite && r > 1 && continue
-            ϵ′ = _su_iter_gate!(state2, gate, env2, sites[1], sites[2], alg)
+            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue
             if d == 1
@@ -200,7 +204,7 @@ function su_iter(
         else
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
-            ϵ′ = _su_iter_mpo!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
         end
     end
