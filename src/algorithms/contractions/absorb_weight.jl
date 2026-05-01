@@ -49,17 +49,23 @@ function absorb_weight(
         row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
     vax = first(virt_axes)
-    weight_vax = weight_to_absorb(weights, row, col, vax; inv)
-    legs, t2 = absorb_first_weight(t, weight_vax, vax)
+    wt = weight_to_absorb(weights, row, col, vax; inv)
+    legs, t2 = absorb_first_weight(t, wt, vax)
     for vax in Base.tail(virt_axes)
         legs, biperm = biperm_absorb_weight(legs, vax)
-        weight_vax = weight_to_absorb(weights, row, col, vax; inv)
-        t2 = permute(t2, biperm) * weight_vax
+        wt = weight_to_absorb(weights, row, col, vax; inv)
+        # use `*` to make absorption/removal twist-free
+        t2 = permute(t2, biperm) * wt
     end
     perm_back = invperm(legs)
     return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
 end
 
+"""
+Pick out the weight to be absorbed to the `ax`th domain
+of the tensor at position `[row, col]`, and take its
+square root (or inverse square root if `inv = true`).
+"""
 function weight_to_absorb(
         weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
     )
@@ -78,9 +84,7 @@ function weight_to_absorb(
         end,
         pow,
     )
-    # make absorption/removal twist-free
-    twistdual!(wt, 1)
-    (ax == SOUTH || ax == WEST) && return transpose(wt)  # not sure this can be factorized due to twistdual
+    (ax == SOUTH || ax == WEST) && return transpose(wt)
     return wt
 end
 
@@ -98,6 +102,7 @@ end
 function absorb_first_weight(t::Union{PEPSTensor, PEPOTensor}, wt, vax)
     legs = ntuple(identity, numind(t))
     new_legs, biperm = biperm_absorb_weight(legs, vax)
+    # use `*` to make absorption/removal twist-free
     t2 = permute(t, biperm) * wt
     return new_legs, t2
 end
