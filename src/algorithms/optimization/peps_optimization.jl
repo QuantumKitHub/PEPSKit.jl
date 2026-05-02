@@ -136,7 +136,6 @@ keyword arguments are:
 * `verbosity::Int` : Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : CTMRG iteration scheme determining mode of differentiation. This can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 
 ### Optimizer settings
 
@@ -243,9 +242,7 @@ function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) e
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:GradMode{:fixed}})
     if scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
-        since :fixed mode generally produces complex gauges; use :diffgauge mode \
-        instead by passing gradient_alg=(; iterscheme=:diffgauge) to the fixedpoint \
-        keyword arguments to work with purely real environments and asymmetric CTMRG"
+        since :fixed mode generally produces complex gauges"
         throw(ArgumentError(msg))
     end
     return nothing
