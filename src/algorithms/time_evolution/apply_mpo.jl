@@ -294,12 +294,11 @@ function _apply_gatempo!(
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1
-    @assert all(!isdual(space(g, 1)) for g in gs[2:end])
-    @assert all(!isdual(space(M, 1)) for M in Ms[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
-    fusers = map(@view(Ms[2:end]), @view(gs[2:end])) do M, g
+    fusers = map(Iterators.drop(Ms, 1), Iterators.drop(gs, 1)) do M, g
         V1, V2 = space(M, 1), space(g, 1)
+        @assert !isdual(V1) && !isdual(V2)
         return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPS
@@ -332,12 +331,11 @@ function _apply_gatempo!(
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 5}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1 || gate_ax == 2
-    @assert all(!isdual(space(g, 1)) for g in gs[2:end])
-    @assert all(!isdual(space(M, 1)) for M in Ms[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
-    fusers = map(@view(Ms[2:end]), @view(gs[2:end])) do M, g
+    fusers = map(Iterators.drop(Ms, 1), Iterators.drop(gs, 1)) do M, g
         V1, V2 = space(M, 1), space(g, 1)
+        @assert !isdual(V1) && !isdual(V2)
         return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPO (gate_ax = 1)
@@ -361,7 +359,7 @@ function _apply_gatempo!(
      -5 -2                      -5 -2                       -5 -2
     =#
     for (i, (g, M)) in enumerate(zip(gs, Ms))
-        @assert !isdual(space(M, 2))
+        @assert !isdual(space(M, 2)) && isdual(space(M, 3))
         if i == 1
             fr = fusers[i]
             if gate_ax == 1

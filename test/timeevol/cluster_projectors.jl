@@ -32,10 +32,10 @@ Vspaces = [
             return rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve)
         end
         normalize!.(Ms1, Inf)
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         # no truncation
         Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
-        truncs = [truncrank(dim(space(M, 1))) for M in Ms2[2:end]]
+        truncs = [truncrank(dim(space(M, 1))) for M in Iterators.drop(Ms2, 1)]
         wts2, ϵs, = _cluster_truncate!(Ms2, truncs)
         @test all((ϵ == 0) for ϵ in ϵs)
         normalize!.(Ms2, Inf)
@@ -68,7 +68,7 @@ end
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
             return normalize(rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve), Inf)
         end
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
         gs = PEPSKit.gate_to_mpo(gate)
@@ -85,7 +85,7 @@ end
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
             return normalize(rand(Vw ⊗ Vphy ⊗ Vphy' ⊗ Vns' ⊗ Vns ← Ve), Inf)
         end
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
         gs = PEPSKit.gate_to_mpo(gate)
