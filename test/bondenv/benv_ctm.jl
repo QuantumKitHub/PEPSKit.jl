@@ -54,8 +54,8 @@ function test_benv_ctm(state::Union{InfinitePEPS, InfinitePEPO})
         @test 1 <= cond2 < cond1
         @info "benv cond number: (gauge-fixed) $(cond2) ≤ $(cond1) (initial)"
         # verify gauge fixing is done correctly
-        @tensor half[:] := Z[-1; 1 3] * a[1; -2 2] * b[2 -3; 3]
-        @tensor half2[:] := Z2[-1; 1 3] * a2[1; -2 2] * b2[2 -3; 3]
+        @tensor half[:] := Z[-1; 1 3] * a[1 -2; 2] * b[2 -3; 3]
+        @tensor half2[:] := Z2[-1; 1 3] * a2[1 -2; 2] * b2[2 -3; 3]
         @test half ≈ half2
     end
     return

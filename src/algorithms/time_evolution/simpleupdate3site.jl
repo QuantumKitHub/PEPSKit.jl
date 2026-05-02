@@ -14,8 +14,8 @@ function _unfuse_physicalspace(
 end
 
 function _get_cluster_with_weights(
-    state::InfiniteState, sites::Vector{CartesianIndex{2}}, env::SUWeight
-)
+        state::InfiniteState, sites::Vector{CartesianIndex{2}}, env::SUWeight
+    )
     Ms, open_vaxs, perms = _get_cluster(state, sites)
     _absorb_weight!(Ms, sites, open_vaxs, env; inv = false)
     Np = (state isa InfinitePEPS) ? Val(1) : Val(2)
