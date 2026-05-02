@@ -88,7 +88,8 @@ function _su_iter!(
     _absorb_weight!(Ms, sites, open_vaxs, env)
     # rotate
     bond, rev = _nn_bondrev(sites..., (Nr, Nc))
-    A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
+    dir = first(bond)
+    A, B = _bond_rotation.(Ms, dir, rev; inv = false)
     # apply gate
     ϵ = 0.0
     local s
@@ -102,8 +103,8 @@ function _su_iter!(
         alg.purified && break # only apply gate to 1st physical leg
     end
     # rotate back
-    A = _bond_rotation(A, bond[1], rev; inv = true)
-    B = _bond_rotation(B, bond[1], rev; inv = true)
+    A = _bond_rotation(A, dir, rev; inv = true)
+    B = _bond_rotation(B, dir, rev; inv = true)
     rev && (s = transpose(s))
     # remove environment weights
     siteA, siteB = map(sites) do site
