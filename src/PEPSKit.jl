@@ -110,6 +110,7 @@ include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
+include("algorithms/time_evolution/get_cluster.jl")
 include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")

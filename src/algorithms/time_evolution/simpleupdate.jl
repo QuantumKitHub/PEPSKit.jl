@@ -72,55 +72,6 @@ function TimeEvolver(
     return TimeEvolver(alg, dt, nstep, circuit, state)
 end
 
-function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
-    return if bonddir == 1 # x-bond
-        rev ? rot180(x) : x
-    elseif bonddir == 2 # y-bond
-        if rev
-            inv ? rotr90(x) : rotl90(x)
-        else
-            inv ? rotl90(x) : rotr90(x)
-        end
-    else
-        error("`bonddir` must be 1 (for x-bonds) or 2 (for y-bonds).")
-    end
-end
-
-"""
-Obtain the left (first) cluster tensor from `state` at `site`,
-where `in_ax` is the virtual axis connecting to the next tensor.
-The tensor is not permuted; the returned `invperm` is the identity.
-"""
-function _get_left(
-        state::InfiniteState, site::CartesianIndex{2}, in_ax::Int,
-        env::SUWeight
-    )
-    Nr, Nc = size(state)
-    open_vaxs = TupleTools.deleteat((1, 2, 3, 4), in_ax)
-    s = mod1(site[1], Nr), mod1(site[2], Nc)
-    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
-    Nax = 4 + numout(eltype(state))
-    invperm = (ntuple(identity, Nax - 1), (Nax,))
-    return t, open_vaxs, invperm
-end
-
-"""
-Obtain the right (last) cluster tensor from `state` at `site`,
-where `out_ax` is the virtual axis connecting to the previous tensor.
-The tensor is not permuted; the returned `invperm` is the identity.
-"""
-function _get_right(
-        state::InfiniteState, site::CartesianIndex{2}, out_ax::Int,
-        env::SUWeight
-    )
-    Nr, Nc = size(state)
-    open_vaxs = TupleTools.deleteat((1, 2, 3, 4), out_ax)
-    s = mod1(site[1], Nr), mod1(site[2], Nc)
-    t = absorb_weight(state[s...], env, s[1], s[2], open_vaxs)
-    Nax = 4 + numout(eltype(state))
-    invperm = (ntuple(identity, Nax - 1), (Nax,))
-    return t, open_vaxs, invperm
-end
 
 """
 Simple update optimized for nearest neighbor gates
@@ -133,16 +84,11 @@ function _su_iter!(
     Nr, Nc = size(state)
     @assert length(sites) == 2
     trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
-    siteA, siteB = first(sites, 2)
-    in_ax = _nn_vec_direction(siteB - siteA)
-    out_ax = mod1(in_ax + 2, 4)
-    A0, open_vaxs_A, = _get_left(state, siteA, in_ax, env)
-    B0, open_vaxs_B, = _get_right(state, siteB, out_ax, env)
+    Ms, open_vaxs, = _get_cluster(state, sites)
+    _absorb_weight!(Ms, sites, open_vaxs, env)
     # rotate
-    bond, rev = _nn_bondrev(siteA, siteB, (Nr, Nc))
-    dir = first(bond)
-    A = _bond_rotation(A0, dir, rev; inv = false)
-    B = _bond_rotation(B0, dir, rev; inv = false)
+    bond, rev = _nn_bondrev(sites..., (Nr, Nc))
+    A, B = _bond_rotation.(Ms, bond[1], rev; inv = false)
     # apply gate
     ϵ = 0.0
     local s
@@ -155,15 +101,19 @@ function _su_iter!(
         B = undo_bond_tensor_last(b, Y; gate_ax)
         alg.purified && break # only apply gate to 1st physical leg
     end
-    # rotate back & remove environment weights
+    # rotate back
+    A = _bond_rotation(A, bond[1], rev; inv = true)
+    B = _bond_rotation(B, bond[1], rev; inv = true)
     rev && (s = transpose(s))
-    for (site, vertex, open_vaxs) in ((siteA, A, open_vaxs_A), (siteB, B, open_vaxs_B))
-        s′ = (mod1(site[1], Nr), mod1(site[2], Nc))
-        rotated = _bond_rotation(vertex, dir, rev; inv = true)
-        t = absorb_weight(rotated, env, s′..., open_vaxs; inv = true)
-        # TODO: 2-norm works just as fine
-        state[s′...] = normalize!(t, Inf)
+    # remove environment weights
+    siteA, siteB = map(sites) do site
+        return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
     end
+    A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs[1]; inv = true)
+    B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs[2]; inv = true)
+    # update tensor dict and weight on current bond
+    state[siteA] = normalize!(A, Inf)
+    state[siteB] = normalize!(B, Inf)
     env[bond...] = normalize!(s, Inf)
     return ϵ
 end
