@@ -145,11 +145,35 @@ end
 
 Base.eltype(::Type{BPEnv{T}}) where {T} = T
 Base.size(env::BPEnv, args...) = size(env.messages, args...)
+function Base.getindex(env::BPEnv, dir::Int, row::Int, col::Int)
+    return env.messages[dir, mod1(row, size(env, 2)), mod1(col, size(env, 3))]
+end
+Base.getindex(env::BPEnv, dir::Int, idx::CartesianIndex{2}) = env[dir, idx[1], idx[2]]
+Base.getindex(env::BPEnv, idx::CartesianIndex{3}) = env[idx[1], idx[2], idx[3]]
 Base.getindex(env::BPEnv, args...) = Base.getindex(env.messages, args...)
+
+function Base.setindex!(env::BPEnv, val, dir::Int, row::Int, col::Int)
+    env.messages[dir, mod1(row, size(env, 2)), mod1(col, size(env, 3))] = val
+    return env
+end
+function Base.setindex!(env::BPEnv, val, dir::Int, idx::CartesianIndex{2})
+    env[dir, idx[1], idx[2]] = val
+    return env
+end
+function Base.setindex!(env::BPEnv, val, idx::CartesianIndex{3})
+    env[idx[1], idx[2], idx[3]] = val
+    return env
+end
+function Base.setindex!(env::BPEnv, val, args...)
+    Base.setindex!(env.messages, val, args...)
+    return env
+end
 Base.axes(env::BPEnv, args...) = Base.axes(env.messages, args...)
 Base.eachindex(env::BPEnv) = eachindex(IndexCartesian(), env.messages)
 VectorInterface.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
 TensorKit.spacetype(::Type{BPEnv{T}}) where {T} = spacetype(T)
+
+Base.copy(x::BPEnv) = BPEnv(copy.(x.messages))
 
 function eachcoordinate(x::BPEnv)
     return collect(Iterators.product(axes(x, 2), axes(x, 3)))
