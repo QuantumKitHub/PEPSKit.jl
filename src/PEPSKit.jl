@@ -25,6 +25,7 @@ using KrylovKit: Lanczos, BlockLanczos
 using TensorOperations, OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
+import TupleTools
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix

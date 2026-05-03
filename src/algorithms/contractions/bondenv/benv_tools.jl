@@ -1,5 +1,5 @@
-#= 
-The construction of bond environment for Neighborhood Tensor Update (NTU) 
+#=
+The construction of bond environment for Neighborhood Tensor Update (NTU)
 is adapted from YASTN (https://github.com/yastn/yastn).
 Copyright 2024 The YASTN Authors. All Rights Reserved.
 Licensed under the Apache License, Version 2.0
@@ -34,15 +34,16 @@ function collect_neighbors(
 end
 
 """
-    benv_tensor(ket::PEPSTensor, bra::PEPSTensor, open_axs::Vector{Int})
-    benv_tensor(ket::PEPSTensor, bra::PEPSTensor, open_axs::Vector{Int}, hairs::Vector{H}) where {T, H <: Union{Nothing, Hair}}
+    benv_tensor(ket::PEPSTensor, bra::PEPSTensor, open_axs::NTuple{N, Int}) where {N}
+    benv_tensor(ket::PEPSTensor, bra::PEPSTensor, open_axs::NTuple{N, Int}, hairs::NTuple{Nh, H}) where {N, Nh, H <: Union{Nothing, Hair}}
 
-Contract the physical axes and the virtual axes of `ket` with `bra` to obtain the tensor on the boundary of the bond environment. 
-Virtual axes specified by `open_axs` (in ascending order) are not contracted. 
+Contract the physical axes and the virtual axes of `ket` with `bra` to obtain the tensor on the boundary of the bond environment.
+Virtual axes specified by `open_axs` (in ascending order) are not contracted.
+Hair tensors can be inserted on contracted legs between `ket` and `bra`.
 
 # Examples
 
-- West "hair" tensor (`open_axs = [EAST]`) 
+- West "hair" tensor (`open_axs = (EAST,)`)
     ```
                  ╱|
         ┌-----ket----- 2
@@ -52,7 +53,7 @@ Virtual axes specified by `open_axs` (in ascending order) are not contracted.
         └---|-bra----- 1
             |╱
     ```
-- Northwest corner tensor (`open_axs = [EAST, SOUTH]`, `hairs = [h, nothing]`)
+- Northwest corner tensor (`open_axs = (EAST, SOUTH)`, `hairs = (h, nothing)`)
     ```
                  ╱|
         ┌-----ket----- 2
@@ -64,7 +65,7 @@ Virtual axes specified by `open_axs` (in ascending order) are not contracted.
              ╱
             3
     ```
-- West edge tensor (`open_axs = [1, 2, 3]`)
+- West edge tensor (`open_axs = (NORTH, EAST, SOUTH)`)
     ```
                    2
                  ╱
@@ -78,39 +79,35 @@ Virtual axes specified by `open_axs` (in ascending order) are not contracted.
     ```
 """
 function benv_tensor(
-        ket::PEPSTensor, bra::PEPSTensor, open_axs::Vector{Int}
-    )
+        ket::PEPSTensor, bra::PEPSTensor, open_axs::NTuple{N, Int}
+    ) where {N}
     # no hair tensors to be attached to virtual legs
-    return benv_tensor(ket, bra, open_axs, fill(nothing, 4 - length(open_axs)))
+    return benv_tensor(ket, bra, open_axs, ntuple(Returns(nothing), 4 - N))
 end
 function benv_tensor(
-        ket::PEPSTensor, bra::PEPSTensor, open_axs::Vector{Int}, hairs::Vector{H}
-    ) where {H <: Union{Nothing, Hair}}
-    @assert length(hairs) == 4 - length(open_axs)
-    ket2, nax = copy(ket), numind(ket)
-    axs, open_axs2 = (2:5), open_axs .+ 1
-    # contract with hair tensors
-    hair_axs = Tuple(ax for ax in axs if ax ∉ open_axs2)
+        ket::PEPSTensor, bra::PEPSTensor,
+        open_vaxs::NTuple{N, Int}, hairs::NTuple{Nh, H}
+    ) where {N, Nh, H <: Union{Nothing, Hair}}
+    @assert 1 <= N <= 3 && Nh == 4 - N
+    # axes to be contracted
+    open_axs = open_vaxs .+ 1
+    hair_axs = Tuple(ax for ax in 2:5 if ax ∉ open_axs)
+    # attach hairs to ket
+    axes, ket2 = ntuple(identity, Val(5)), twistdual(ket, 1)
     for (h, ax) in zip(hairs, hair_axs)
-        if h === nothing
-            twistdual!(ket2, ax)
-            continue
-        end
-        # ensure the hair doesn't change the virtual spaces
-        @assert space(h, 1) == space(h, 2)'
-        ket_indices = collect(-1:-1:-nax)
-        ket_indices[ax] = 1
-        ket2 = ncon([h, ket2], [[-ax, 1], ket_indices])
+        twistdual!(ket2, ax)
+        h === nothing && continue
+        axes, biperm = _permute_to_first(axes, ax)
+        ket2 = permute(h, ((1,), (2,))) * permute(ket2, biperm)
     end
+    perm_back = invperm(axes)
+    ket2 = permute(ket2, perm_back)
     # combine bra and ket
-    indexlist = [-collect(1:2:(2 * nax)), -collect(2:2:(2 * nax))]
-    for ax in 1:nax
-        if ax ∉ open_axs2
-            indexlist[1][ax] = indexlist[2][ax] = ax
-        end
-    end
-    twistdual!(ket2, 1)
-    return ncon([bra, ket2], indexlist, [true, false])
+    cont_axs = (1, hair_axs...)
+    pbra = (open_axs, cont_axs)
+    pket = (cont_axs, open_axs)
+    pbraket = (ntuple(j -> isodd(j) ? (j + 1) ÷ 2 : (j ÷ 2) + N, 2N), ())
+    return tensorcontract(bra, pbra, true, ket2, pket, false, pbraket)
 end
 
 #= Free axes of different boundary tensors
@@ -132,15 +129,15 @@ end
                         |
                        H_s
 =#
-const open_axs_hair = Dict(:n => [SOUTH], :e => [WEST], :s => [NORTH], :w => [EAST])
+const open_axs_hair = Dict(:n => (SOUTH,), :e => (WEST,), :s => (NORTH,), :w => (EAST,))
 const open_axs_cor = Dict(
-    :nw => [EAST, SOUTH], :ne => [SOUTH, WEST], :se => [NORTH, WEST], :sw => [NORTH, EAST]
+    :nw => (EAST, SOUTH), :ne => (SOUTH, WEST), :se => (NORTH, WEST), :sw => (NORTH, EAST)
 )
 const open_axs_edge = Dict(
-    :n => [EAST, SOUTH, WEST],
-    :e => [NORTH, SOUTH, WEST],
-    :s => [NORTH, EAST, WEST],
-    :w => [NORTH, EAST, SOUTH],
+    :n => (EAST, SOUTH, WEST),
+    :e => (NORTH, SOUTH, WEST),
+    :s => (NORTH, EAST, WEST),
+    :w => (NORTH, EAST, SOUTH),
 )
 
 # construction of hairs
@@ -148,7 +145,7 @@ for (dir, open_axs) in open_axs_hair
     fname = Symbol("hair_", dir)
     @eval begin
         $(fname)(ket) = benv_tensor(ket, ket, $open_axs)
-        $(fname)(ket, h1, h2, h3) = benv_tensor(ket, ket, $open_axs, [h1, h2, h3])
+        $(fname)(ket, h1, h2, h3) = benv_tensor(ket, ket, $open_axs, (h1, h2, h3))
     end
 end
 
@@ -157,7 +154,7 @@ for (dir, open_axs) in open_axs_cor
     fname = Symbol("cor_", dir)
     @eval begin
         $(fname)(ket) = benv_tensor(ket, ket, $open_axs)
-        $(fname)(ket, h1, h2) = benv_tensor(ket, ket, $open_axs, [h1, h2])
+        $(fname)(ket, h1, h2) = benv_tensor(ket, ket, $open_axs, (h1, h2))
     end
 end
 
@@ -166,7 +163,7 @@ for (dir, open_axs) in open_axs_edge
     fname = Symbol("edge_", dir)
     @eval begin
         $(fname)(ket) = benv_tensor(ket, ket, $open_axs)
-        $(fname)(ket, h) = benv_tensor(ket, ket, $open_axs, [h])
+        $(fname)(ket, h) = benv_tensor(ket, ket, $open_axs, (h,))
     end
 end
 
@@ -200,7 +197,7 @@ Enlarge the southeast corner
     -5/-6 ═════ Y ══ D1 ═══ er
                 ║           ║
                 D2          D3
-                ║           ║     
+                ║           ║
     -7/-8 ═════ eb ═ D4 ══ cbr
 ```
 """

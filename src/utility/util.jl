@@ -215,3 +215,17 @@ function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpac
     end
     return Vs
 end
+
+"""
+    _permute_to_first(axes::NTuple{N, Int}, ax::Int) where {N}
+
+Returns `(1, 2, ..., N)` but with `ax` moved to the front,
+and the corresponding permutation for `axes` (with `ax` as the only codomain index).
+"""
+function _permute_to_first(axes::NTuple{N, Int}, ax::Int) where {N}
+    domain_axes = TupleTools.deleteat(ntuple(identity, N), ax)
+    q = invperm(axes)
+    biperm = ((q[ax],), map(i -> q[i], domain_axes))
+    new_axes = (ax, ntuple(i -> axes[biperm[2][i]], N - 1)...)
+    return new_axes, biperm
+end
