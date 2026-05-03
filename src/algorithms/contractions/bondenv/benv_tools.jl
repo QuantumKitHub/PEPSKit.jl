@@ -86,28 +86,31 @@ function benv_tensor(
 end
 function benv_tensor(
         ket::PEPSTensor, bra::PEPSTensor,
-        open_vaxs::NTuple{N, Int}, hairs::NTuple{Nh, H}
-    ) where {N, Nh, H <: Union{Nothing, Hair}}
+        open_vaxs::NTuple{N, Int}, hairs::NTuple{Nh, Union{Nothing, H}}
+    ) where {N, Nh, H <: Hair}
     @assert 1 <= N <= 3 && Nh == 4 - N
-    # axes to be contracted
     open_axs = open_vaxs .+ 1
+    # axes to be contracted
     hair_axs = Tuple(ax for ax in 2:5 if ax ∉ open_axs)
     # attach hairs to ket
-    axes, ket2 = ntuple(identity, Val(5)), twistdual(ket, 1)
+    ket = twistdual(ket, 1)
+    axes = ntuple(identity, Val(5))
     for (h, ax) in zip(hairs, hair_axs)
-        twistdual!(ket2, ax)
+        twistdual!(ket, ax)
         h === nothing && continue
         axes, biperm = _permute_to_first(axes, ax)
-        ket2 = permute(h, ((1,), (2,))) * permute(ket2, biperm)
+        ket = permute(h, ((1,), (2,))) * permute(ket, biperm)
     end
     perm_back = invperm(axes)
-    ket2 = permute(ket2, perm_back)
     # combine bra and ket
     cont_axs = (1, hair_axs...)
     pbra = (open_axs, cont_axs)
-    pket = (cont_axs, open_axs)
+    pket = (
+        map(p -> perm_back[p], cont_axs),
+        map(p -> perm_back[p], open_axs),
+    )
     pbraket = (ntuple(j -> isodd(j) ? (j + 1) ÷ 2 : (j ÷ 2) + N, 2N), ())
-    return tensorcontract(bra, pbra, true, ket2, pket, false, pbraket)
+    return tensorcontract(bra, pbra, true, ket, pket, false, pbraket)
 end
 
 #= Free axes of different boundary tensors
