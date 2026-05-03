@@ -48,16 +48,17 @@ function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
         row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
+    Np = numout(t)
     vax = first(virt_axes)
     wt = weight_to_absorb(weights, row, col, vax; inv)
-    legs, t2 = absorb_first_weight(t, wt, vax)
+    axes, t2 = absorb_first_weight(t, wt, vax)
     for vax in Base.tail(virt_axes)
-        legs, biperm = biperm_absorb_weight(legs, vax)
+        axes, biperm = _permute_to_last(axes, vax + Np)
         wt = weight_to_absorb(weights, row, col, vax; inv)
         # use `*` to make absorption/removal twist-free
         t2 = permute(t2, biperm) * wt
     end
-    perm_back = invperm(legs)
+    perm_back = invperm(axes)
     return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
 end
 
@@ -88,21 +89,12 @@ function weight_to_absorb(
     return wt
 end
 
-function biperm_absorb_weight(legs::NTuple{N, Int}, vax::Int) where {N}
-    @assert N == 5 || N == 6
-    nin = N - 4
-    a = vax + nin
-    codomain_axes = TupleTools.deleteat(ntuple(identity, N), a)
-    q = invperm(legs)
-    biperm = (map(i -> q[i], codomain_axes), (q[a],))
-    new_legs = (ntuple(i -> legs[biperm[1][i]], N - 1)..., a)
-    return new_legs, biperm
-end
-
-function absorb_first_weight(t::Union{PEPSTensor, PEPOTensor}, wt, vax)
-    legs = ntuple(identity, numind(t))
-    new_legs, biperm = biperm_absorb_weight(legs, vax)
+function absorb_first_weight(
+        t::Union{PEPSTensor, PEPOTensor}, wt::DiagonalTensorMap, vax::Int
+    )
+    Np = numout(t)
+    axes, biperm = _permute_to_last(ntuple(identity, numind(t)), vax + Np)
     # use `*` to make absorption/removal twist-free
     t2 = permute(t, biperm) * wt
-    return new_legs, t2
+    return axes, t2
 end

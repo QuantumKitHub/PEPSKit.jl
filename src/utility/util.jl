@@ -232,3 +232,17 @@ function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpac
     end
     return Vs
 end
+
+"""
+    _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
+
+Returns `(1, 2, ..., N)` but with `ax` moved to the end,
+and the corresponding permutation for `axes` (with `ax` as the only domain index).
+"""
+function _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
+    codomain_axes = TupleTools.deleteat(ntuple(identity, N), ax)
+    q = invperm(axes)
+    biperm = (map(i -> q[i], codomain_axes), (q[ax],))
+    new_axes = (ntuple(i -> axes[biperm[1][i]], N - 1)..., ax)
+    return new_axes, biperm
+end
