@@ -115,6 +115,7 @@ include("algorithms/time_evolution/gaugefix_su.jl")
 
 include("algorithms/bp/beliefpropagation.jl")
 include("algorithms/bp/gaugefix.jl")
+include("algorithms/bp/simpleupdate.jl")
 
 include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
