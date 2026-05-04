@@ -107,8 +107,6 @@ include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/changebonds/local.jl")
 
-include("algorithms/changebonds/local.jl")
-
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
 include("algorithms/time_evolution/trotter_gate.jl")
