@@ -74,19 +74,32 @@ function apply_gate_1x2!(
         throw(ArgumentError("invalid sites: $sites"))
     end
 
-    # extract tensors and square roots of the messages
-    siteL, siteR = sites
-    A_L = state[mod1.(Tuple(siteL), size(state))...]
-    A_R = state[mod1.(Tuple(siteR), size(state))...]
-    sqrtMN_L, isqrtMN_L = sqrt_invsqrt(messages[NORTH, siteL - CartesianIndex(1, 0)])
-    sqrtMN_R, isqrtMN_R = sqrt_invsqrt(messages[NORTH, siteR - CartesianIndex(1, 0)])
-    sqrtME, isqrtME = sqrt_invsqrt(messages[EAST, siteR + CartesianIndex(0, 1)])
-    sqrtMS_L, isqrtMS_L = sqrt_invsqrt(messages[SOUTH, siteL + CartesianIndex(1, 0)])
-    sqrtMS_R, isqrtMS_R = sqrt_invsqrt(messages[SOUTH, siteR + CartesianIndex(1, 0)])
-    sqrtMW, isqrtMW = sqrt_invsqrt(messages[WEST, siteL - CartesianIndex(0, 1)])
+    # extract tensors and messages
+    siteL = CartesianIndex(mod1.(Tuple(sites[1]), (size(state, 1), size(state, 2)))...)
+    siteR = CartesianIndex(mod1.(Tuple(sites[2]), (size(state, 1), size(state, 2)))...)
+    A_L = state[siteL]
+    A_R = state[siteR]
+    MN_L = messages[NORTH, siteL - CartesianIndex(1, 0)]
+    MN_R = messages[NORTH, siteR - CartesianIndex(1, 0)]
+    ME = messages[EAST, siteR + CartesianIndex(0, 1)]
+    MS_L = messages[SOUTH, siteL + CartesianIndex(1, 0)]
+    MS_R = messages[SOUTH, siteR + CartesianIndex(1, 0)]
+    MW = messages[WEST, siteL - CartesianIndex(0, 1)]
 
     # settings
     trunc = only(_get_cluster_trunc(alg.trunc, sites, size(state)))
+
+    state[siteL], state[siteR], messages[EAST, siteR], ϵ =
+        _apply_gate_1x2((A_L, A_R), gate, (MN_L, MN_R, ME, MS_L, MS_R, MW); trunc)
+
+    return state, messages, ϵ
+end
+
+function _apply_gate_1x2((A_L, A_R)::NTuple{2, PEPSTensor}, gate, (MN_L, MN_R, ME, MS_L, MS_R, MW); trunc)
+    # compute square roots
+    (sqrtMN_L, isqrtMN_L), (sqrtMN_R, isqrtMN_R), (sqrtME, isqrtME),
+        (sqrtMS_L, isqrtMS_L), (sqrtMS_R, isqrtMS_R), (sqrtMW, isqrtMW) =
+        sqrt_invsqrt.((MN_L, MN_R, ME, MS_L, MS_R, MW))
 
     # absorb message tensors
     @tensor T_L[N W S; E P] := A_L[P; N' E S' W'] * sqrtMN_L[N'; N] *
@@ -112,12 +125,65 @@ function apply_gate_1x2!(
     @tensor A_R′[P; N E S W] := Q_R[D; N' E' S'] * Vᴴ′[W; D P] *
         isqrtMN_R[N'; N] * isqrtMS_R[S; S'] * isqrtME[E'; E]
 
-    # insert tensors
-    state[mod1.(Tuple(siteL), size(state))...] = A_L′
-    state[mod1.(Tuple(siteR), size(state))...] = A_R′
-    messages[EAST, siteR] = messages[WEST, siteL] = S
+    return A_L′, A_R′, S, ϵ
+end
+function _apply_gate_1x2((A_L, A_R)::NTuple{2, PEPOTensor}, gate, (MN_L, MN_R, ME, MS_L, MS_R, MW); trunc, purified::Bool = false)
+    # compute square roots
+    (sqrtMN_L, isqrtMN_L), (sqrtMN_R, isqrtMN_R), (sqrtME, isqrtME),
+        (sqrtMS_L, isqrtMS_L), (sqrtMS_R, isqrtMS_R), (sqrtMW, isqrtMW) =
+        sqrt_invsqrt.((MN_L, MN_R, ME, MS_L, MS_R, MW))
 
-    return state, messages, ϵ
+    # Stage 1: act on the ket leg (P1).
+    # Absorb outer messages and place P_bra (P2) on the Q-side, P_ket (P1) on the gate-side.
+    # separate off the ket indices for efficiency
+    @tensor T_L[N W S P2; E P1] := A_L[P1 P2; N' E S' W'] * sqrtMN_L[N'; N] *
+        sqrtMS_L[S; S'] * sqrtMW[W; W']
+    Q_L, RQ_L = left_orth!(T_L; positive = true)
+    @tensor T_R[W P1; N E S P2] := A_R[P1 P2; N' E' S' W] * sqrtMN_R[N'; N] *
+        sqrtMS_R[S; S'] * sqrtME[E'; E]
+    LQ_R, Q_R = right_orth!(T_R; positive = true)
+
+    # apply gate
+    @tensor gated[-1 -2; -3 -4] := RQ_L[-1; 1 2] * gate[-2 -4; 2 3] * LQ_R[1 3; -3]
+    U, S, Vᴴ, ϵ = svd_trunc!(gated; trunc)
+
+    sqrtS = sqrt(S)
+    U′ = rmul!(U, sqrtS)
+    Vᴴ′ = lmul!(sqrtS, Vᴴ)
+
+    if alg.purified
+        # extract new PEPO tensors
+        @tensor A_L′[P1 P2; N E S W] := Q_L[N' W' S' P2; D] * U′[D P1; E] *
+            isqrtMN_L[N'; N] * isqrtMS_L[S; S'] * isqrtMW[W; W']
+        @tensor A_R′[P1 P2; N E S W] := Q_R[D; N' E' S' P2] * Vᴴ′[W; D P1] *
+            isqrtMN_R[N'; N] * isqrtMS_R[S; S'] * isqrtME[E'; E]
+        return A_L′, A_R′, S, ϵ
+    end
+
+    # Stage 2: act on the bra leg (P2)
+    # No need to reabsorb messages
+    # separate off the bra indices for efficiency
+    @tensor T_L[N W S P1; E P2] := Q_L[N W S P2; D] * U′[D P1; E]
+    Q_L, RQ_L = left_orth!(T_L; positive = true)
+    @tensor T_R[W P2; N E S P1] := Vᴴ′[W; D P1] * Q_R[D; N E S P2]
+    LQ_R, Q_R = right_orth!(T_R; positive = true)
+
+    # apply gate
+    @tensor gated[-1 -2; -3 -4] := RQ_L[-1; 1 2] * gate'[2 3; -2 -4] * LQ_R[1 3; -3]
+    U, S, Vᴴ, ϵ₂ = svd_trunc!(gated; trunc)
+    ϵ = max(ϵ, ϵ₂)
+
+    sqrtS = sqrt(S)
+    U′ = rmul!(U, sqrtS)
+    Vᴴ′ = lmul!(sqrtS, Vᴴ)
+
+    # extract new PEPS tensors
+    @tensor A_L′[P1 P2; N E S W] := Q_L[N' W' S' P1; D] * U′[D P2; E] *
+        isqrtMN_L[N'; N] * isqrtMS_L[S; S'] * isqrtMW[W; W']
+    @tensor A_R′[P1 P2; N E S W] := Q_R[D; N' E' S' P1] * Vᴴ′[W; D P2] *
+        isqrtMN_R[N'; N] * isqrtMS_R[S; S'] * isqrtME[E'; E]
+
+    return A_L′, A_R′, S, ϵ
 end
 
 function apply_gate_2x1!(
