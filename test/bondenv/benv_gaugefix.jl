@@ -2,7 +2,6 @@ using Test
 using TensorKit
 using PEPSKit
 using LinearAlgebra
-using KrylovKit
 using Random
 
 Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1) => 1, (1, -1) => 2)
