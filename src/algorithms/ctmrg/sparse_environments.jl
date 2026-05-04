@@ -99,10 +99,12 @@ function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
 end
 
 # Compute left and right projectors sparsely without constructing enlarged corners explicitly
-function left_and_right_projector(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
+function contract_projectors(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
+    Ar = _rotate_north_localsandwich(Q.A, _prev(Q.dir, 4))
+    Ar_next = _rotate_north_localsandwich(Q_next.A, Q_next.dir)
     isqS = sdiag_pow(S, -0.5)
-    P_left = left_projector(Q.E_1, Q.C, Q.E_2, V, isqS, Q.A)
-    P_right = right_projector(Q_next.E_1, Q_next.C, Q_next.E_2, U, isqS, Q_next.A)
+    P_left = left_projector(Q_next.E_1, Q_next.C, Q_next.E_2, V, isqS, Ar_next)
+    P_right = right_projector(Q.E_1, Q.C, Q.E_2, U, isqS, Ar)
     return P_left, P_right
 end
 
@@ -134,12 +136,23 @@ struct HalfInfiniteEnv{TC, TE, TA}  # TODO: subtype as AbstractTensorMap once Te
     E_4::TE
     A_1::TA
     A_2::TA
+    A_1r::TA # prerotate
+    A_2r::TA
+    dir::Int
+    function HalfInfiniteEnv(
+            C_1::TC, C_2::TC, E_1::TE, E_2::TE, E_3::TE, E_4::TE, A_1::TA, A_2::TA, dir::Int
+        ) where {TC, TE, TA}
+        A_1r = _rotate_north_localsandwich(A_1, dir)
+        A_2r = _rotate_north_localsandwich(A_2, dir)
+        return new{TC, TE, TA}(C_1, C_2, E_1, E_2, E_3, E_4, A_1, A_2, A_1r, A_2r, dir)
+    end
 end
 function HalfInfiniteEnv(quadrant1::EnlargedCorner, quadrant2::EnlargedCorner)
     return HalfInfiniteEnv(
         quadrant1.C, quadrant2.C,
         quadrant1.E_1, quadrant1.E_2, quadrant2.E_1, quadrant2.E_2,
-        quadrant1.A_1, quadrant2.A_2,
+        quadrant1.A, quadrant2.A,
+        quadrant1.dir,
     )
 end
 
@@ -150,7 +163,7 @@ Instantiate half-infinite environment as `TensorMap` explicitly.
 """
 function TensorKit.TensorMap(env::HalfInfiniteEnv)  # Dense operator
     return half_infinite_environment(
-        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1, env.A_2
+        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1r, env.A_2r
     )
 end
 
@@ -163,29 +176,58 @@ linear map or adjoint linear map on `x` if `Val(true)` or `Val(false)` is passed
 """
 function (env::HalfInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
     return half_infinite_environment(
-        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, x, env.A_1, env.A_2
+        env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, x, env.A_1r, env.A_2r
     )
 end
 function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
     return half_infinite_environment(
-        x, env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1, env.A_2
+        x, env.C_1, env.C_2, env.E_1, env.E_2, env.E_3, env.E_4, env.A_1r, env.A_2r
     )
+end
+
+function contract_projectors(U, S, V, env::HalfInfiniteEnv)
+    Q = EnlargedCorner(env.C_1, env.E_1, env.E_2, env.A_1, env.dir)
+    Q_next = EnlargedCorner(env.C_2, env.E_3, env.E_4, env.A_2, _next(env.dir, 4))
+    return contract_projectors(U, S, V, Q, Q_next)
+end
+
+function contract_projectors(U, S, V, henv::HalfInfiniteEnv, henv_next::HalfInfiniteEnv)
+    isqS = sdiag_pow(S, -0.5)
+    P_left = left_projector(
+        henv_next.E_1, henv_next.C_1, henv_next.E_2, henv_next.E_3, henv_next.C_2, henv_next.E_4,
+        V, isqS,
+        henv_next.A_1r, henv_next.A_2r
+    )
+    P_right = right_projector(
+        henv.E_1, henv.C_1, henv.E_2, henv.E_3, henv.C_2, henv.E_4,
+        U, isqS,
+        henv.A_1r, henv.A_2r
+    )
+    return P_left, P_right
 end
 
 # -----------------------------------------------------
 # AbstractTensorMap subtyping and IterSVD compatibility
 # -----------------------------------------------------
 
+function TensorKit.storagetype(::Type{HalfInfiniteEnv{TC, TE, TA}}) where {TC, TE, TA}
+    return TensorKit.promote_storagetype(TC, TE, storagetype(TA))
+end
+
+function TensorKit.spacetype(::Type{HalfInfiniteEnv{TC, TE, TA}}) where {TC, TE, TA}
+    return spacetype(TC)
+end
+
 function TensorKit.domain(env::HalfInfiniteEnv)
-    return domain(env.E_4) * _elementwise_dual(south_virtualspace(env.A_2))
+    return domain(env.E_4) * _elementwise_dual(south_virtualspace(env.A_2r))
 end
 
 function TensorKit.codomain(env::HalfInfiniteEnv)
-    return first(codomain(env.E_1)) * south_virtualspace(env.A_1)
+    return first(codomain(env.E_1)) * south_virtualspace(env.A_1r)
 end
 
 function random_start_vector(env::HalfInfiniteEnv)
-    return randn(domain(env))
+    return randn(storagetype(env), domain(env))
 end
 
 # --------------------------------
@@ -225,6 +267,28 @@ struct FullInfiniteEnv{TC, TE, TA}  # TODO: subtype as AbstractTensorMap once Te
     A_2::TA
     A_3::TA
     A_4::TA
+    A_1r::TA
+    A_2r::TA
+    A_3r::TA
+    A_4r::TA
+    dir::Int
+    function FullInfiniteEnv(
+            C_1::TC, C_2::TC, C_3::TC, C_4::TC,
+            E_1::TE, E_2::TE, E_3::TE, E_4::TE, E_5::TE, E_6::TE, E_7::TE, E_8::TE,
+            A_1::TA, A_2::TA, A_3::TA, A_4::TA, dir::Int
+        ) where {TC, TE, TA}
+        A_1r = _rotate_north_localsandwich(A_1, dir)
+        A_2r = _rotate_north_localsandwich(A_2, dir)
+        A_3r = _rotate_north_localsandwich(A_3, dir)
+        A_4r = _rotate_north_localsandwich(A_4, dir)
+        return new{TC, TE, TA}(
+            C_1, C_2, C_3, C_4,
+            E_1, E_2, E_3, E_4, E_5, E_6, E_7, E_8,
+            A_1, A_2, A_3, A_4,
+            A_1r, A_2r, A_3r, A_4r,
+            dir,
+        )
+    end
 end
 function FullInfiniteEnv(
         quadrant1::E, quadrant2::E, quadrant3::E, quadrant4::E
@@ -234,6 +298,7 @@ function FullInfiniteEnv(
         quadrant1.E_1, quadrant1.E_2, quadrant2.E_1, quadrant2.E_2,
         quadrant3.E_1, quadrant3.E_2, quadrant4.E_1, quadrant4.E_2,
         quadrant1.A, quadrant2.A, quadrant3.A, quadrant4.A,
+        quadrant1.dir,
     )
 end
 
@@ -245,8 +310,8 @@ Instantiate full-infinite environment as `TensorMap` explicitly.
 function TensorKit.TensorMap(env::FullInfiniteEnv)  # Dense operator
     return full_infinite_environment(
         env.C_1, env.C_2, env.C_3, env.C_4,
-        env.E_1, env.E_2, env.E_3, env.E_4, env.E_2, env.E_3, env.E_4, env.E_5,
-        env.A_1, env.A_2, env.A_3, env.A_4,
+        env.E_1, env.E_2, env.E_3, env.E_4, env.E_5, env.E_6, env.E_7, env.E_8,
+        env.A_1r, env.A_2r, env.A_3r, env.A_4r,
     )
 end
 
@@ -262,7 +327,7 @@ function (env::FullInfiniteEnv)(x, ::Val{false})  # Linear map: env() * x
         env.C_1, env.C_2, env.C_3, env.C_4,
         env.E_1, env.E_2, env.E_3, env.E_4, env.E_5, env.E_6, env.E_7, env.E_8,
         x,
-        env.A_1, env.A_2, env.A_3, env.A_4,
+        env.A_1r, env.A_2r, env.A_3r, env.A_4r,
     )
 end
 function (env::FullInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * x
@@ -270,7 +335,7 @@ function (env::FullInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
         x,
         env.C_1, env.C_2, env.C_3, env.C_4,
         env.E_1, env.E_2, env.E_3, env.E_4, env.E_5, env.E_6, env.E_7, env.E_8,
-        env.A_1, env.A_2, env.A_3, env.A_4,
+        env.A_1r, env.A_2r, env.A_3r, env.A_4r,
     )
 end
 
@@ -281,17 +346,45 @@ function full_infinite_environment(
     return FullInfiniteEnv(ec_1, ec_2, ec_3, ec_4)
 end
 
+function contract_projectors(U, S, V, env::FullInfiniteEnv)
+    ndir = _next(env.dir, 4)
+    nndir = _next(ndir, 4)
+    henv = HalfInfiniteEnv(
+        env.C_1, env.C_2,
+        env.E_1, env.E_2, env.E_3, env.E_4,
+        env.A_1, env.A_2, env.dir,
+    )
+    henv_next = HalfInfiniteEnv(
+        env.C_3, env.C_4,
+        env.E_5, env.E_6, env.E_7, env.E_8,
+        env.A_3, env.A_4, nndir,
+    )
+    return contract_projectors(U, S, V, henv, henv_next)
+end
+
+
+# -----------------------------------------------------
 # AbstractTensorMap subtyping and IterSVD compatibility
+# -----------------------------------------------------
+
+function TensorKit.storagetype(::Type{FullInfiniteEnv{TC, TE, TA}}) where {TC, TE, TA}
+    return TensorKit.promote_storagetype(TC, TE, storagetype(TA))
+end
+
+function TensorKit.spacetype(::Type{FullInfiniteEnv{TC, TE, TA}}) where {TC, TE, TA}
+    return spacetype(TC)
+end
+
 function TensorKit.domain(env::FullInfiniteEnv)
-    return domain(env.E_8) * _elementwise_dual(north_virtualspace(env.A_4))
+    return domain(env.E_8) * _elementwise_dual(north_virtualspace(env.A_4r))
 end
 
 function TensorKit.codomain(env::FullInfiniteEnv)
-    return first(codomain(env.E_1)) * south_virtualspace(env.A_1)
+    return first(codomain(env.E_1)) * south_virtualspace(env.A_1r)
 end
 
 function random_start_vector(env::FullInfiniteEnv)
-    return randn(domain(env))
+    return randn(storagetype(env), domain(env))
 end
 
 # -----------------------------

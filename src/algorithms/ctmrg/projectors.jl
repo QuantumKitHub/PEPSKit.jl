@@ -52,34 +52,10 @@ end
 
 """
     decomposition_algorithm(alg::ProjectorAlgorithm)
-    decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
 
 Return the tensor decomposition algorithm of the `alg` projector algorithm.
-Additionally, the multi-index `(dir, r, c)` can be supplied which will return the
-decomposition performed at that index, e.g. when using [`FixedEig`](@ref) or [`FixedSVD`](@ref).
 """
 decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
-function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
-    decomposition_alg = decomposition_algorithm(alg)
-    if decomposition_alg isa SVDAdjoint{<:FixedSVD}
-        fwd_alg = decomposition_alg.fwd_alg
-        fix_svd = if isfullsvd(decomposition_alg.fwd_alg)
-            FixedSVD(
-                fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
-                fwd_alg.U_full[dir, r, c], fwd_alg.S_full[dir, r, c], fwd_alg.V_full[dir, r, c],
-                fwd_alg.truncation_indices[dir, r, c],
-            )
-        else
-            FixedSVD(
-                fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
-                nothing, nothing, nothing, nothing,
-            )
-        end
-        return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = decomposition_alg.rrule_alg)
-    else
-        return decomposition_alg
-    end
-end
 
 function truncation_strategy(alg::ProjectorAlgorithm, edge)
     if alg.trunc isa FixedSpaceTruncation
@@ -97,8 +73,22 @@ Update the truncation strategy of a given projector algorithm, keeping all other
 the same.
 """
 function _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
-    alg´ = @set alg.trunc = trunc
-    return alg´
+    alg = @set alg.trunc = trunc
+    return alg
+end
+
+"""
+    _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+
+Set the truncation strategy of the decomposition algorithm within a given projector
+algorithm, keeping all other settings the same.
+"""
+function _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+    decomp_alg = decomposition_algorithm(alg)
+    truncated_fwd_alg = TruncatedAlgorithm(decomp_alg.fwd_alg, trunc)
+    decomp_alg = @set decomp_alg.fwd_alg = truncated_fwd_alg
+    alg = @set alg.decomposition_alg = decomp_alg
+    return alg
 end
 
 """
@@ -178,16 +168,19 @@ end
 PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
 
 """
-    compute_projector(enlarged_corners, coordinate, alg::ProjectorAlgorithm)
+    compute_projector(enlarged_corners, alg::ProjectorAlgorithm)
 
 Determine left and right projectors at the bond given determined by the enlarged corners
-and the given coordinate using the specified `alg`.
+using the specified `alg`.
 """
-function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjector)
+function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
-    svd_alg = decomposition_algorithm(alg, coordinate)
-    U, S, V, info = svd_trunc!(halfinf / norm(halfinf), svd_alg; trunc = alg.trunc)
+    svd_alg = decomposition_algorithm(alg)
+    U, S, V, truncation_error = svd_trunc!(halfinf / norm(halfinf), svd_alg)
+
+    # get some decomposition info
+    truncation_error = truncation_error / norm(S) # normalize truncation error
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -197,18 +190,20 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
         end
     end
 
-    @reset info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
-    return (P_left, P_right), (; U, S, V, info...)
+    return (P_left, P_right), (; U, S, V, truncation_error)
 end
-function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
+function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
     halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
 
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
-    svd_alg = decomposition_algorithm(alg, coordinate)
-    U, S, V, info = svd_trunc!(fullinf / norm(fullinf), svd_alg; trunc = alg.trunc)
+    svd_alg = decomposition_algorithm(alg)
+    U, S, V, truncation_error = svd_trunc!(fullinf / norm(fullinf), svd_alg)
+
+    # get some decomposition info
+    truncation_error = truncation_error / norm(S) # normalize truncation error
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -218,7 +213,6 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
         end
     end
 
-    @reset info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
-    return (P_left, P_right), (; U, S, V, info...)
+    return (P_left, P_right), (; U, S, V, truncation_error)
 end

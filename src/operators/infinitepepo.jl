@@ -56,9 +56,9 @@ function InfinitePEPO(
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
-    Sspaces = adjoint.(circshift(Nspaces, (1, 0, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, -1, 0)))
-    Ppspaces = adjoint.(circshift(Pspaces, (0, 0, -1)))
+    Sspaces = adjoint.(circshift(Nspaces, (-1, 0, 0)))
+    Wspaces = adjoint.(circshift(Espaces, (0, 1, 0)))
+    Ppspaces = adjoint.(circshift(Pspaces, (0, 0, 1)))
 
     P = map(Pspaces, Ppspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, Pp, N, E, S, W
         return f(T, P * Pp ← N * E * S * W)
@@ -202,6 +202,14 @@ function InfinitePEPS(ρ::InfinitePEPO)
     )
 end
 
+## Bipartite check for PEPS/PEPO
+function _is_bipartite(psi::InfiniteState)
+    (size(psi, 1) == size(psi, 2) == 2) || (return false)
+    for (c, h) in Iterators.product(1:2, 1:size(psi, 3))
+        (psi[1, c, h] == psi[2, _next(c, 2), h]) || (return false)
+    end
+    return true
+end
 
 ## Vector interface
 

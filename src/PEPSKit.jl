@@ -8,10 +8,10 @@ using VectorInterface
 import VectorInterface as VI
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: LAPACK_DivideAndConquer, LAPACK_QRIteration
 using MatrixAlgebraKit:
     TruncationStrategy, NoTruncation, truncate, findtruncated, truncation_error, diagview
-using MatrixAlgebraKit: LAPACK_EighAlgorithm, eigh_pullback!, eigh_trunc_pullback!
+using MatrixAlgebraKit: TruncatedAlgorithm
+using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 
 using TensorKit
@@ -107,9 +107,11 @@ include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/changebonds/local.jl")
 
-include("algorithms/time_evolution/trotter_gate.jl")
+include("algorithms/changebonds/local.jl")
+
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
+include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")

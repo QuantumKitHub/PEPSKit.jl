@@ -27,7 +27,7 @@ We first import all required modules and seed the RNG:
 ````julia
 using Random
 using TensorKit, PEPSKit
-Random.seed!(29385293);
+Random.seed!(29385294);
 ````
 
 ## Simple updating a challenging phase
@@ -69,36 +69,41 @@ end
 ````
 
 ````
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1/2 => 1, -1/2 => 1)
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.189e+00. Time = 0.034 s/it
+[ Info: SU iter 1      : |Δλ| = 1.190e+00. Time = 118.568 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1833   : dt = 0.01, |Δλ| = 9.859e-09. Time = 0.037 s/it
+[ Info: SU iter 1373   : |Δλ| = 9.898e-09. Time = 0.069 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 70.90 s
+[ Info: Time evolution finished in 225.44 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.401e-04. Time = 0.037 s/it
+[ Info: SU iter 1      : |Δλ| = 2.985e-04. Time = 0.089 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 523    : dt = 0.01, |Δλ| = 9.965e-09. Time = 0.037 s/it
+[ Info: SU iter 523    : |Δλ| = 9.955e-09. Time = 0.070 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 21.18 s
+[ Info: Time evolution finished in 38.09 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.526e-04. Time = 0.038 s/it
+[ Info: SU iter 1      : |Δλ| = 3.001e-04. Time = 0.085 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 611    : dt = 0.01, |Δλ| = 9.848e-09. Time = 0.037 s/it
+[ Info: SU iter 610    : |Δλ| = 9.971e-09. Time = 0.070 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 24.83 s
+[ Info: Time evolution finished in 44.48 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.664e-04. Time = 0.037 s/it
+[ Info: SU iter 1      : |Δλ| = 3.021e-04. Time = 0.084 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 735    : dt = 0.01, |Δλ| = 9.963e-09. Time = 0.092 s/it
+[ Info: SU iter 740    : |Δλ| = 9.953e-09. Time = 0.070 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 29.87 s
+[ Info: Time evolution finished in 53.86 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 3.828e-04. Time = 0.037 s/it
+[ Info: SU iter 1      : |Δλ| = 3.089e-04. Time = 0.069 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 901    : dt = 0.01, |Δλ| = 9.995e-09. Time = 0.037 s/it
+[ Info: SU iter 1140   : |Δλ| = 1.000e-08. Time = 0.070 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 36.57 s
+[ Info: Time evolution finished in 83.30 s
 
 ````
 
@@ -116,32 +121,185 @@ end
 ````
 
 ````
+[ Info: --- Time evolution (simple update), dt = 0.001 ---
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1      : dt = 0.001, |Δλ| = 4.477e-04. Time = 0.037 s/it
+[ Info: SU iter 1      : |Δλ| = 7.604e-04. Time = 0.138 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 500    : dt = 0.001, |Δλ| = 2.767e-08. Time = 0.037 s/it
+[ Info: SU iter 500    : |Δλ| = 1.692e-06. Time = 0.085 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1000   : dt = 0.001, |Δλ| = 9.954e-09. Time = 0.037 s/it
+[ Info: SU iter 1000   : |Δλ| = 1.002e-06. Time = 0.069 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1500   : dt = 0.001, |Δλ| = 5.019e-09. Time = 0.038 s/it
+[ Info: SU iter 1500   : |Δλ| = 6.304e-07. Time = 0.070 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 3.015e-09. Time = 0.039 s/it
+[ Info: SU iter 2000   : |Δλ| = 4.078e-07. Time = 0.069 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 2500   : dt = 0.001, |Δλ| = 1.935e-09. Time = 0.090 s/it
+[ Info: SU iter 2500   : |Δλ| = 2.688e-07. Time = 0.070 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 3000   : dt = 0.001, |Δλ| = 1.273e-09. Time = 0.037 s/it
+[ Info: SU iter 3000   : |Δλ| = 1.797e-07. Time = 0.070 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 3295   : dt = 0.001, |Δλ| = 9.994e-10. Time = 0.036 s/it
+[ Info: SU iter 3500   : |Δλ| = 1.217e-07. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 4000   : |Δλ| = 8.352e-08. Time = 0.084 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 4500   : |Δλ| = 5.817e-08. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 5000   : |Δλ| = 4.132e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 5500   : |Δλ| = 3.002e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 6000   : |Δλ| = 2.216e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 6500   : |Δλ| = 1.651e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 7000   : |Δλ| = 1.235e-08. Time = 0.084 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 7500   : |Δλ| = 9.271e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 8000   : |Δλ| = 6.980e-09. Time = 0.086 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 8500   : |Δλ| = 5.278e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 9000   : |Δλ| = 4.021e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 9500   : |Δλ| = 3.090e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 10000  : |Δλ| = 2.394e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 10500  : |Δλ| = 1.878e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 11000  : |Δλ| = 1.498e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 11500  : |Δλ| = 1.209e-09. Time = 0.071 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 11962  : |Δλ| = 9.999e-10. Time = 0.070 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 132.66 s
+[ Info: Time evolution finished in 870.98 s
+[ Info: --- Time evolution (simple update), dt = 0.0001 ---
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 1      : dt = 0.0001, |Δλ| = 4.467e-05. Time = 0.036 s/it
+[ Info: SU iter 1      : |Δλ| = 7.683e-05. Time = 0.070 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 500    : dt = 0.0001, |Δλ| = 1.150e-09. Time = 0.035 s/it
+[ Info: SU iter 500    : |Δλ| = 3.277e-08. Time = 0.069 s/it
 [ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
-[ Info: SU iter 873    : dt = 0.0001, |Δλ| = 9.998e-10. Time = 0.037 s/it
-[ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 34.62 s
+[ Info: SU iter 1000   : |Δλ| = 2.995e-08. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 1500   : |Δλ| = 2.752e-08. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 2000   : |Δλ| = 2.540e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 2500   : |Δλ| = 2.355e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 3000   : |Δλ| = 2.193e-08. Time = 0.071 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 3500   : |Δλ| = 2.049e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 4000   : |Δλ| = 1.920e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 4500   : |Δλ| = 1.805e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 5000   : |Δλ| = 1.700e-08. Time = 0.071 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 5500   : |Δλ| = 1.605e-08. Time = 0.087 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 6000   : |Δλ| = 1.518e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 6500   : |Δλ| = 1.438e-08. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 7000   : |Δλ| = 1.363e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 7500   : |Δλ| = 1.294e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 8000   : |Δλ| = 1.230e-08. Time = 0.073 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 8500   : |Δλ| = 1.170e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 9000   : |Δλ| = 1.114e-08. Time = 0.084 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 9500   : |Δλ| = 1.060e-08. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 10000  : |Δλ| = 1.011e-08. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 10500  : |Δλ| = 9.635e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 11000  : |Δλ| = 9.190e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 11500  : |Δλ| = 8.770e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 12000  : |Δλ| = 8.372e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 12500  : |Δλ| = 7.995e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 13000  : |Δλ| = 7.637e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 13500  : |Δλ| = 7.298e-09. Time = 0.093 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 14000  : |Δλ| = 6.976e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 14500  : |Δλ| = 6.670e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 15000  : |Δλ| = 6.379e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 15500  : |Δλ| = 6.102e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 16000  : |Δλ| = 5.839e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 16500  : |Δλ| = 5.588e-09. Time = 0.071 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 17000  : |Δλ| = 5.349e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 17500  : |Δλ| = 5.122e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 18000  : |Δλ| = 4.905e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 18500  : |Δλ| = 4.699e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 19000  : |Δλ| = 4.502e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 19500  : |Δλ| = 4.314e-09. Time = 0.086 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 20000  : |Δλ| = 4.134e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 20500  : |Δλ| = 3.963e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 21000  : |Δλ| = 3.800e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 21500  : |Δλ| = 3.644e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 22000  : |Δλ| = 3.494e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 22500  : |Δλ| = 3.352e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 23000  : |Δλ| = 3.216e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 23500  : |Δλ| = 3.085e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 24000  : |Δλ| = 2.961e-09. Time = 0.086 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 24500  : |Δλ| = 2.842e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 25000  : |Δλ| = 2.728e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 25500  : |Δλ| = 2.619e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 26000  : |Δλ| = 2.515e-09. Time = 0.085 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 26500  : |Δλ| = 2.415e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 27000  : |Δλ| = 2.319e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 27500  : |Δλ| = 2.228e-09. Time = 0.084 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 28000  : |Δλ| = 2.140e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 28500  : |Δλ| = 2.056e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 29000  : |Δλ| = 1.976e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 29500  : |Δλ| = 1.899e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 => 2, 1 => 1, -1 => 1)
+[ Info: SU iter 30000  : |Δλ| = 1.825e-09. Time = 0.069 s/it
+┌ Warning: SU: bond weights have not converged.
+└ @ PEPSKit ~/git/PEPSKit.jl/src/algorithms/time_evolution/simpleupdate.jl:241
+[ Info: Time evolution finished in 2182.89 s
 
 ````
 
@@ -161,7 +319,7 @@ E = expectation_value(peps, H, env) / (Nr * Nc)
 ````
 
 ````
--0.4908483447932438
+-0.4908450911219574
 ````
 
 Let us compare that estimate with benchmark data obtained from the
@@ -174,7 +332,7 @@ E_ref = -0.49425
 ````
 
 ````
-(E - E_ref) / abs(E_ref) = 0.006882458688429391
+(E - E_ref) / abs(E_ref) = 0.006889041736049819
 
 ````
 
@@ -189,99 +347,105 @@ In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit o
 This is conviently done using MPSKit's `randomize!` function.
 (Breaking some of the spatial symmetry can be advantageous for obtaining lower energies.)
 
+In our optimization, we will use a fixed-point differentiation scheme which requires a
+gauge fixing of the contraction environment
+(specified by the `gradient_alg = (; iterscheme = :fixed)` setting).
+Since this gauge fixing involves potentially complex phases, we have to convert our
+real-valued contraction environment to complex numbers before the optimization.
+
 ````julia
 using MPSKit: randomize!
 
 noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
 peps₀ = peps + 1.0e-1noise_peps
 peps_opt, env_opt, E_opt, = fixedpoint(
-    H, peps₀, env;
-    optimizer_alg = (; tol = 1.0e-4, maxiter = 80), gradient_alg = (; iterscheme = :diffgauge)
+    H, peps₀, complex(env);
+    optimizer_alg = (; tol = 1.0e-4, maxiter = 80), gradient_alg = (; iterscheme = :fixed)
 );
 ````
 
 ````
-[ Info: LBFGS: initializing with f = -1.917915769323e+00, ‖∇f‖ = 4.2598e-01
-[ Info: LBFGS: iter    1, Δt 16.45 s: f = -1.921875846208e+00, ‖∇f‖ = 3.6931e-01, α = 1.00e+00, m = 0, nfg = 1
-[ Info: LBFGS: iter    2, Δt 12.76 s: f = -1.942022618990e+00, ‖∇f‖ = 2.0804e-01, α = 1.00e+00, m = 1, nfg = 1
-[ Info: LBFGS: iter    3, Δt 12.69 s: f = -1.948412125614e+00, ‖∇f‖ = 1.4224e-01, α = 1.00e+00, m = 2, nfg = 1
-[ Info: LBFGS: iter    4, Δt 11.25 s: f = -1.954734282994e+00, ‖∇f‖ = 1.6428e-01, α = 1.00e+00, m = 3, nfg = 1
-[ Info: LBFGS: iter    5, Δt 12.79 s: f = -1.957501635760e+00, ‖∇f‖ = 1.8493e-01, α = 1.00e+00, m = 4, nfg = 1
-[ Info: LBFGS: iter    6, Δt 12.20 s: f = -1.959162742352e+00, ‖∇f‖ = 1.0888e-01, α = 1.00e+00, m = 5, nfg = 1
-[ Info: LBFGS: iter    7, Δt 12.06 s: f = -1.961758227820e+00, ‖∇f‖ = 9.0418e-02, α = 1.00e+00, m = 6, nfg = 1
-[ Info: LBFGS: iter    8, Δt 12.57 s: f = -1.963102797068e+00, ‖∇f‖ = 7.7890e-02, α = 1.00e+00, m = 7, nfg = 1
-[ Info: LBFGS: iter    9, Δt 12.02 s: f = -1.965635307562e+00, ‖∇f‖ = 5.7454e-02, α = 1.00e+00, m = 8, nfg = 1
-[ Info: LBFGS: iter   10, Δt 12.22 s: f = -1.967012786653e+00, ‖∇f‖ = 1.0695e-01, α = 1.00e+00, m = 9, nfg = 1
-[ Info: LBFGS: iter   11, Δt 12.75 s: f = -1.968331989207e+00, ‖∇f‖ = 4.7357e-02, α = 1.00e+00, m = 10, nfg = 1
-[ Info: LBFGS: iter   12, Δt 12.52 s: f = -1.968984356192e+00, ‖∇f‖ = 3.6819e-02, α = 1.00e+00, m = 11, nfg = 1
-[ Info: LBFGS: iter   13, Δt 13.08 s: f = -1.969738509271e+00, ‖∇f‖ = 3.8320e-02, α = 1.00e+00, m = 12, nfg = 1
-[ Info: LBFGS: iter   14, Δt 13.97 s: f = -1.970765612340e+00, ‖∇f‖ = 4.1807e-02, α = 1.00e+00, m = 13, nfg = 1
-[ Info: LBFGS: iter   15, Δt 13.32 s: f = -1.971316317211e+00, ‖∇f‖ = 4.5580e-02, α = 1.00e+00, m = 14, nfg = 1
-[ Info: LBFGS: iter   16, Δt 13.46 s: f = -1.971822370984e+00, ‖∇f‖ = 2.4262e-02, α = 1.00e+00, m = 15, nfg = 1
-[ Info: LBFGS: iter   17, Δt 12.99 s: f = -1.972203923570e+00, ‖∇f‖ = 2.4564e-02, α = 1.00e+00, m = 16, nfg = 1
-[ Info: LBFGS: iter   18, Δt 12.95 s: f = -1.972802900923e+00, ‖∇f‖ = 2.8491e-02, α = 1.00e+00, m = 17, nfg = 1
-[ Info: LBFGS: iter   19, Δt 13.74 s: f = -1.973589666789e+00, ‖∇f‖ = 3.2039e-02, α = 1.00e+00, m = 18, nfg = 1
-[ Info: LBFGS: iter   20, Δt 13.18 s: f = -1.973913379566e+00, ‖∇f‖ = 5.1316e-02, α = 1.00e+00, m = 19, nfg = 1
-[ Info: LBFGS: iter   21, Δt 13.55 s: f = -1.974416985201e+00, ‖∇f‖ = 1.8951e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   22, Δt 13.47 s: f = -1.974639779350e+00, ‖∇f‖ = 1.8591e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   23, Δt 13.23 s: f = -1.974980106926e+00, ‖∇f‖ = 1.9583e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   24, Δt 14.00 s: f = -1.975202056049e+00, ‖∇f‖ = 3.9045e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   25, Δt 13.33 s: f = -1.975442229571e+00, ‖∇f‖ = 1.8554e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   26, Δt 13.95 s: f = -1.975560352122e+00, ‖∇f‖ = 1.5857e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   27, Δt 13.25 s: f = -1.975643058810e+00, ‖∇f‖ = 1.2993e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   28, Δt 13.13 s: f = -1.975704724372e+00, ‖∇f‖ = 1.9944e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   29, Δt 14.12 s: f = -1.975779000149e+00, ‖∇f‖ = 1.1828e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   30, Δt 13.48 s: f = -1.975862495962e+00, ‖∇f‖ = 1.0766e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   31, Δt 13.36 s: f = -1.975947783240e+00, ‖∇f‖ = 9.5066e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   32, Δt 13.70 s: f = -1.976052804517e+00, ‖∇f‖ = 1.5333e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   33, Δt 13.19 s: f = -1.976106986012e+00, ‖∇f‖ = 2.1883e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   34, Δt 13.41 s: f = -1.976164433529e+00, ‖∇f‖ = 7.9599e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   35, Δt 14.17 s: f = -1.976190058936e+00, ‖∇f‖ = 6.7778e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   36, Δt 13.45 s: f = -1.976224201954e+00, ‖∇f‖ = 7.6168e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   37, Δt 13.73 s: f = -1.976267854501e+00, ‖∇f‖ = 1.7393e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   38, Δt 13.84 s: f = -1.976315102216e+00, ‖∇f‖ = 8.0912e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   39, Δt 13.22 s: f = -1.976342354040e+00, ‖∇f‖ = 6.1351e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   40, Δt 13.44 s: f = -1.976371404915e+00, ‖∇f‖ = 6.6216e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   41, Δt 13.71 s: f = -1.976421353914e+00, ‖∇f‖ = 8.2468e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   42, Δt 13.47 s: f = -1.976466860391e+00, ‖∇f‖ = 9.9248e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   43, Δt 13.64 s: f = -1.976507540729e+00, ‖∇f‖ = 6.9877e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   44, Δt 14.04 s: f = -1.976535673591e+00, ‖∇f‖ = 5.6235e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   45, Δt 13.18 s: f = -1.976573549708e+00, ‖∇f‖ = 7.4445e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   46, Δt 13.51 s: f = -1.976590425955e+00, ‖∇f‖ = 1.5662e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   47, Δt 13.88 s: f = -1.976621753066e+00, ‖∇f‖ = 6.2307e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   48, Δt 13.08 s: f = -1.976639047822e+00, ‖∇f‖ = 5.1405e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   49, Δt 13.33 s: f = -1.976657938685e+00, ‖∇f‖ = 1.1028e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   50, Δt 13.74 s: f = -1.976676808863e+00, ‖∇f‖ = 9.7274e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   51, Δt 13.29 s: f = -1.976691906282e+00, ‖∇f‖ = 5.8050e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   52, Δt 13.20 s: f = -1.976710655182e+00, ‖∇f‖ = 5.7333e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   53, Δt 13.66 s: f = -1.976732623549e+00, ‖∇f‖ = 5.2887e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   54, Δt 13.26 s: f = -1.976766233304e+00, ‖∇f‖ = 8.5088e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   55, Δt 13.39 s: f = -1.976781456137e+00, ‖∇f‖ = 1.1582e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   56, Δt 24.51 s: f = -1.976799996356e+00, ‖∇f‖ = 5.1443e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   57, Δt 13.08 s: f = -1.976812132182e+00, ‖∇f‖ = 3.9200e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   58, Δt 13.75 s: f = -1.976828056507e+00, ‖∇f‖ = 6.6193e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   59, Δt 13.05 s: f = -1.976851081866e+00, ‖∇f‖ = 6.9020e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   60, Δt 13.15 s: f = -1.976872354754e+00, ‖∇f‖ = 5.8100e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   61, Δt 13.76 s: f = -1.976887353263e+00, ‖∇f‖ = 1.5507e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   62, Δt 13.33 s: f = -1.976913441456e+00, ‖∇f‖ = 5.4576e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   63, Δt 13.19 s: f = -1.976925022985e+00, ‖∇f‖ = 4.5942e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   64, Δt 13.90 s: f = -1.976945457629e+00, ‖∇f‖ = 6.1499e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   65, Δt 13.54 s: f = -1.976948121976e+00, ‖∇f‖ = 1.2404e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   66, Δt 13.37 s: f = -1.976990622832e+00, ‖∇f‖ = 1.0997e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   67, Δt 13.89 s: f = -1.977019727681e+00, ‖∇f‖ = 5.3064e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   68, Δt 13.40 s: f = -1.977038041468e+00, ‖∇f‖ = 3.9154e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   69, Δt 13.22 s: f = -1.977061135927e+00, ‖∇f‖ = 5.5351e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   70, Δt 25.93 s: f = -1.977069437407e+00, ‖∇f‖ = 9.1542e-03, α = 2.16e-01, m = 20, nfg = 2
-[ Info: LBFGS: iter   71, Δt 11.98 s: f = -1.977082632066e+00, ‖∇f‖ = 7.0584e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   72, Δt 12.86 s: f = -1.977109455547e+00, ‖∇f‖ = 6.5585e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   73, Δt 12.26 s: f = -1.977124023586e+00, ‖∇f‖ = 1.0470e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   74, Δt 12.29 s: f = -1.977136222448e+00, ‖∇f‖ = 9.2794e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   75, Δt 12.79 s: f = -1.977174289195e+00, ‖∇f‖ = 6.4735e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   76, Δt 12.52 s: f = -1.977220054869e+00, ‖∇f‖ = 6.4042e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   77, Δt 12.26 s: f = -1.977245223602e+00, ‖∇f‖ = 6.9440e-03, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   78, Δt 12.87 s: f = -1.977264616541e+00, ‖∇f‖ = 1.5115e-02, α = 1.00e+00, m = 20, nfg = 1
-[ Info: LBFGS: iter   79, Δt 12.17 s: f = -1.977292459833e+00, ‖∇f‖ = 6.6226e-03, α = 1.00e+00, m = 20, nfg = 1
-┌ Warning: LBFGS: not converged to requested tol after 80 iterations and time 25.05 m: f = -1.977304651029e+00, ‖∇f‖ = 4.5558e-03
+[ Info: LBFGS: initializing with f = -1.887578587634e+00, ‖∇f‖ = 7.8780e-01
+[ Info: LBFGS: iter    1, Δt  2.11 m: f = -1.926388092775e+00, ‖∇f‖ = 4.7092e-01, α = 1.19e+01, m = 0, nfg = 4
+[ Info: LBFGS: iter    2, Δt 30.68 s: f = -1.936546032899e+00, ‖∇f‖ = 2.1792e-01, α = 1.00e+00, m = 1, nfg = 1
+[ Info: LBFGS: iter    3, Δt 29.68 s: f = -1.942713411326e+00, ‖∇f‖ = 2.0267e-01, α = 1.00e+00, m = 2, nfg = 1
+[ Info: LBFGS: iter    4, Δt 29.00 s: f = -1.952873152491e+00, ‖∇f‖ = 1.6713e-01, α = 1.00e+00, m = 3, nfg = 1
+[ Info: LBFGS: iter    5, Δt 26.25 s: f = -1.958619448466e+00, ‖∇f‖ = 1.5871e-01, α = 1.00e+00, m = 4, nfg = 1
+[ Info: LBFGS: iter    6, Δt 27.27 s: f = -1.961555293087e+00, ‖∇f‖ = 9.2861e-02, α = 1.00e+00, m = 5, nfg = 1
+[ Info: LBFGS: iter    7, Δt 25.52 s: f = -1.962811912498e+00, ‖∇f‖ = 6.7900e-02, α = 1.00e+00, m = 6, nfg = 1
+[ Info: LBFGS: iter    8, Δt 27.71 s: f = -1.965000830793e+00, ‖∇f‖ = 5.5994e-02, α = 1.00e+00, m = 7, nfg = 1
+[ Info: LBFGS: iter    9, Δt 26.97 s: f = -1.966386885688e+00, ‖∇f‖ = 5.8303e-02, α = 1.00e+00, m = 8, nfg = 1
+[ Info: LBFGS: iter   10, Δt 27.50 s: f = -1.967582741430e+00, ‖∇f‖ = 1.1340e-01, α = 1.00e+00, m = 9, nfg = 1
+[ Info: LBFGS: iter   11, Δt 24.91 s: f = -1.968967360870e+00, ‖∇f‖ = 4.1612e-02, α = 1.00e+00, m = 10, nfg = 1
+[ Info: LBFGS: iter   12, Δt 24.17 s: f = -1.969387768033e+00, ‖∇f‖ = 3.6625e-02, α = 1.00e+00, m = 11, nfg = 1
+[ Info: LBFGS: iter   13, Δt 22.91 s: f = -1.970335449656e+00, ‖∇f‖ = 3.8759e-02, α = 1.00e+00, m = 12, nfg = 1
+[ Info: LBFGS: iter   14, Δt 27.81 s: f = -1.971409090676e+00, ‖∇f‖ = 4.5864e-02, α = 1.00e+00, m = 13, nfg = 1
+[ Info: LBFGS: iter   15, Δt 28.11 s: f = -1.972264675328e+00, ‖∇f‖ = 3.3125e-02, α = 1.00e+00, m = 14, nfg = 1
+[ Info: LBFGS: iter   16, Δt 30.00 s: f = -1.972963700423e+00, ‖∇f‖ = 3.8311e-02, α = 1.00e+00, m = 15, nfg = 1
+[ Info: LBFGS: iter   17, Δt 27.60 s: f = -1.973393808483e+00, ‖∇f‖ = 3.4025e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   18, Δt 26.40 s: f = -1.973719445599e+00, ‖∇f‖ = 2.4697e-02, α = 1.00e+00, m = 17, nfg = 1
+[ Info: LBFGS: iter   19, Δt 28.38 s: f = -1.974117003995e+00, ‖∇f‖ = 2.3402e-02, α = 1.00e+00, m = 18, nfg = 1
+[ Info: LBFGS: iter   20, Δt 27.75 s: f = -1.974537198653e+00, ‖∇f‖ = 2.3338e-02, α = 1.00e+00, m = 19, nfg = 1
+[ Info: LBFGS: iter   21, Δt 27.06 s: f = -1.975099516920e+00, ‖∇f‖ = 2.6565e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   22, Δt 26.82 s: f = -1.975286936081e+00, ‖∇f‖ = 4.4455e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   23, Δt 25.91 s: f = -1.975701217338e+00, ‖∇f‖ = 1.5220e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   24, Δt 28.52 s: f = -1.975821697001e+00, ‖∇f‖ = 1.8130e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   25, Δt 26.42 s: f = -1.975915354964e+00, ‖∇f‖ = 2.1138e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   26, Δt 24.35 s: f = -1.975998069768e+00, ‖∇f‖ = 1.3443e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   27, Δt 24.80 s: f = -1.976153039607e+00, ‖∇f‖ = 1.4680e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   28, Δt 23.66 s: f = -1.976260274804e+00, ‖∇f‖ = 1.7700e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   29, Δt 24.93 s: f = -1.976336675890e+00, ‖∇f‖ = 3.6212e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   30, Δt 22.98 s: f = -1.976481030702e+00, ‖∇f‖ = 1.2667e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   31, Δt 23.03 s: f = -1.976539819784e+00, ‖∇f‖ = 1.2939e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   32, Δt 23.95 s: f = -1.976636245246e+00, ‖∇f‖ = 1.3135e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   33, Δt 48.36 s: f = -1.976684971058e+00, ‖∇f‖ = 1.9116e-02, α = 4.62e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   34, Δt 23.65 s: f = -1.976743262496e+00, ‖∇f‖ = 1.1658e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   35, Δt 23.80 s: f = -1.976804909822e+00, ‖∇f‖ = 9.8461e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   36, Δt 23.74 s: f = -1.976867380046e+00, ‖∇f‖ = 1.1271e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   37, Δt 24.66 s: f = -1.976958913613e+00, ‖∇f‖ = 1.1353e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   38, Δt 24.14 s: f = -1.977004149888e+00, ‖∇f‖ = 3.0196e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   39, Δt 24.29 s: f = -1.977132482812e+00, ‖∇f‖ = 8.3199e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   40, Δt 23.70 s: f = -1.977168854066e+00, ‖∇f‖ = 6.5281e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   41, Δt 24.26 s: f = -1.977230989059e+00, ‖∇f‖ = 9.2541e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   42, Δt 24.18 s: f = -1.977285220461e+00, ‖∇f‖ = 1.3935e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   43, Δt 23.53 s: f = -1.977362590244e+00, ‖∇f‖ = 1.0743e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   44, Δt 23.86 s: f = -1.977429195025e+00, ‖∇f‖ = 8.6810e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   45, Δt 25.41 s: f = -1.977458751818e+00, ‖∇f‖ = 2.5717e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   46, Δt 22.06 s: f = -1.977509209358e+00, ‖∇f‖ = 1.3339e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   47, Δt 22.96 s: f = -1.977531778536e+00, ‖∇f‖ = 1.0403e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   48, Δt 22.65 s: f = -1.977584620950e+00, ‖∇f‖ = 1.0581e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   49, Δt 23.16 s: f = -1.977638977445e+00, ‖∇f‖ = 1.1478e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   50, Δt 24.26 s: f = -1.977695226616e+00, ‖∇f‖ = 1.1637e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   51, Δt 22.61 s: f = -1.977738682348e+00, ‖∇f‖ = 1.8362e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   52, Δt 21.76 s: f = -1.977786348227e+00, ‖∇f‖ = 8.4144e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   53, Δt 23.05 s: f = -1.977834226107e+00, ‖∇f‖ = 9.5424e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   54, Δt 24.76 s: f = -1.977872709228e+00, ‖∇f‖ = 1.0069e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   55, Δt 23.20 s: f = -1.977896046364e+00, ‖∇f‖ = 1.1177e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   56, Δt 22.34 s: f = -1.977948855869e+00, ‖∇f‖ = 1.5958e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   57, Δt 22.56 s: f = -1.977994579851e+00, ‖∇f‖ = 8.9051e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   58, Δt 22.35 s: f = -1.978026072493e+00, ‖∇f‖ = 6.8546e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   59, Δt 24.53 s: f = -1.978061626606e+00, ‖∇f‖ = 9.8392e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   60, Δt 24.11 s: f = -1.978102554569e+00, ‖∇f‖ = 9.4732e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   61, Δt 22.77 s: f = -1.978139870452e+00, ‖∇f‖ = 9.1003e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   62, Δt 23.50 s: f = -1.978176133536e+00, ‖∇f‖ = 6.4191e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   63, Δt 23.05 s: f = -1.978213215021e+00, ‖∇f‖ = 6.9446e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   64, Δt 24.10 s: f = -1.978234971062e+00, ‖∇f‖ = 1.5980e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   65, Δt 25.47 s: f = -1.978268225326e+00, ‖∇f‖ = 8.5546e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   66, Δt 22.02 s: f = -1.978286888113e+00, ‖∇f‖ = 6.4777e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   67, Δt 23.79 s: f = -1.978300997146e+00, ‖∇f‖ = 8.0692e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   68, Δt 22.57 s: f = -1.978300528984e+00, ‖∇f‖ = 5.5147e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   69, Δt 23.63 s: f = -1.978328958743e+00, ‖∇f‖ = 6.3994e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   70, Δt 24.58 s: f = -1.978331153308e+00, ‖∇f‖ = 6.5489e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   71, Δt 24.48 s: f = -1.978363716954e+00, ‖∇f‖ = 5.9050e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   72, Δt 24.34 s: f = -1.978377069104e+00, ‖∇f‖ = 1.1874e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   73, Δt 23.47 s: f = -1.978401095295e+00, ‖∇f‖ = 5.3880e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   74, Δt 23.53 s: f = -1.978411402203e+00, ‖∇f‖ = 3.9472e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   75, Δt 23.03 s: f = -1.978423812150e+00, ‖∇f‖ = 5.1734e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   76, Δt 23.97 s: f = -1.978437405148e+00, ‖∇f‖ = 7.4640e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   77, Δt 23.49 s: f = -1.978449959375e+00, ‖∇f‖ = 4.6023e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   78, Δt 23.47 s: f = -1.978465209487e+00, ‖∇f‖ = 4.0286e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   79, Δt 23.17 s: f = -1.978478118790e+00, ‖∇f‖ = 6.5526e-03, α = 1.00e+00, m = 20, nfg = 1
+┌ Warning: LBFGS: not converged to requested tol after 80 iterations and time 52.05 m: f = -1.978491610275e+00, ‖∇f‖ = 7.4246e-03
 └ @ OptimKit ~/.julia/packages/OptimKit/OEwMx/src/lbfgs.jl:199
 
 ````
@@ -297,8 +461,8 @@ E_opt /= (Nr * Nc)
 ````
 
 ````
-E_opt = -0.49432616275726
-(E_opt - E_ref) / abs(E_ref) = -0.0001540976373494541
+E_opt = -0.4946229025687655
+(E_opt - E_ref) / abs(E_ref) = -0.0007544816768143398
 
 ````
 

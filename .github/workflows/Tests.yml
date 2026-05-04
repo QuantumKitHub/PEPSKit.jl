@@ -1,52 +1,26 @@
-name: Tests
+name: CI
+
 on:
   push:
     branches:
-      - 'master'
       - 'main'
-      - 'release-'
     tags: '*'
     paths-ignore:
       - 'docs/**'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Cancel intermediate builds: only if it is a pull request build.
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
   tests:
     name: "Tests"
-    strategy:
-      fail-fast: false
-      matrix:
-        version:
-          - 'lts' # minimal supported version
-          - '1'
-        group:
-          - bp
-          - types
-          - ctmrg
-          - boundarymps
-          - gradients
-          - examples
-          - utility
-          - bondenv
-          - timeevol
-          - changebonds
-          - toolbox
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
-    uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/Tests.yml@main"
+    uses: "QuantumKitHub/QuantumKitHubActions/.github/workflows/TestGroups.yml@main"
     with:
-      group: "${{ matrix.group }}"
-      julia-version: "${{ matrix.version }}"
-      os: "${{ matrix.os }}"
+      fast: "${{ github.event.pull_request.draft == true }}"
       timeout-minutes: 120
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
