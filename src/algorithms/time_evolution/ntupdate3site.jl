@@ -1,6 +1,6 @@
 function _get_cluster_permute(
-    state::InfiniteState, sites::Vector{CartesianIndex{2}}
-)
+        state::InfiniteState, sites::Vector{CartesianIndex{2}}
+    )
     Ms, _, perms = _get_cluster(state, sites)
     Np = (state isa InfinitePEPS) ? Val(1) : Val(2)
     invperms = map(p -> _inv_mpo_perm(p, Np), perms)
