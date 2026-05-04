@@ -2,7 +2,6 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using TensorOperations: tensorcontract
 
 using PEPSKit: eachcoordinate, _next_coordinate
 using PEPSKit: EnlargedCorner, HalfInfiniteEnv, FullInfiniteEnv
