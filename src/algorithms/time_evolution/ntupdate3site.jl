@@ -1,3 +1,12 @@
+function _get_cluster_permute(
+    state::InfiniteState, sites::Vector{CartesianIndex{2}}
+)
+    Ms, _, perms = _get_cluster(state, sites)
+    Np = (state isa InfinitePEPS) ? Val(1) : Val(2)
+    invperms = map(p -> _inv_mpo_perm(p, Np), perms)
+    return _permute_cluster(Ms, perms), invperms
+end
+
 """
 Neighbourhood tensor update with N-site MPO `gate` (N ≥ 2).
 """
@@ -9,8 +18,8 @@ function _ntu_iter(
     truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites, (Nr, Nc))
     state, wts = copy(state), deepcopy(wts)
 
-    Ms, _, invperms = _get_cluster(state, sites)
-    flips = [isdual(space(M, 1)) for M in Ms[2:end]]
+    Ms, invperms = _get_cluster_permute(state, sites)
+    flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)]
     _flip_virtuals!(Ms, flips) # flip virtual arrows in `Ms` to ←
 
     # apply gate MPO without truncation

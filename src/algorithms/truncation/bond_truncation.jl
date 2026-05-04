@@ -82,7 +82,7 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::ALSTrunca
     # untruncated things
     ket2 = _combine_ket(a, b)
     benv_ket2 = _benv_ket(benv, ket2)
-    b22 = _als_norm(ket2, benv_ket2)
+    b22 = real(_als_norm(ket2, benv_ket2))
 
     # initialize truncated bond tensors and bond weight
     xs, s0 = _als_init_truncate(ket2, alg.trunc)
@@ -158,9 +158,9 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::FullEnvTr
             ↓    ↓               ↓               ↓
     =#
     Qa, Ra = left_orth(a; positive = true)
-    b = permute(b, ((3, 2), (1,)); copy = true)
-    Qb, Rb = left_orth!(b; positive = true)
-    @tensor b0[-1; -2] := Ra[-1 1] * Rb[-2 1]
+    b = permute(b, ((1,), (2, 3)); copy = true)
+    Rb, Qb = right_orth!(b; positive = true)
+    @tensor b0[-1; -2] := Ra[-1 1] * Rb[1 -2]
     #= initialize bond environment around `Ra Rb`
 
         ┌--------------------------------------┐
@@ -174,13 +174,13 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::FullEnvTr
         └--------------------------------------┘
     =#
     @tensor benv2[-1 -2; -3 -4] := benv[1 2; 3 4] *
-        conj(Qa[1 5 -1]) * conj(Qb[2 6 -2]) * Qa[3 5 -3] * Qb[4 6 -4]
+        conj(Qa[1 5 -1]) * conj(Qb[-2 6 2]) * Qa[3 5 -3] * Qb[-4 6 4]
     # optimize bond matrix
     u, s, vh, info = fullenv_truncate(b0, benv2, alg)
     u, vh = absorb_s(u, s, vh)
     # truncate a, b tensors with u, s, vh
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
-    @tensor b[-1 -2; -3] := vh[-1 1] * Qb[-3 -2 1]
+    @tensor b[-1 -2; -3] := vh[-1 1] * Qb[1 -2 -3]
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
     end

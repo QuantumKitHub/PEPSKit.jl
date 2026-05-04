@@ -62,9 +62,8 @@ using PrecompileTools
         SequentialCTMRG(; maxiter, projector_alg=:halfinfinite, verbosity),
     ]
     gradient_algs = [
-        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:fixed),
-        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
-        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol)),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true)),
     ]
 
     # Initialize OhMyThreads scheduler (precompilation occurs before __init__ call)

@@ -67,3 +67,66 @@ function truncation_strategy(
     )
     return trunc[direction, row, col]
 end
+
+# rotation of SiteDependentTruncation
+# (similar to rotation of SUWeight)
+function _rotl90_trunc_x(trunc_x::AbstractMatrix{<:TruncationStrategy})
+    trunc_y = rotl90(trunc_x)
+    return trunc_y
+end
+function _rotr90_trunc_x(trunc_x::AbstractMatrix{<:TruncationStrategy})
+    trunc_y = circshift(rotr90(trunc_x), (1, 0))
+    for (i, t) in enumerate(trunc_y)
+        if t isa TruncationSpace
+            trunc_y[i] = truncspace(flip(t.space)')
+        end
+    end
+    return trunc_y
+end
+function _rot180_trunc_x(trunc_x::AbstractMatrix{<:TruncationStrategy})
+    trunc_x_ = circshift(rot180(trunc_x), (0, -1))
+    for (i, t) in enumerate(trunc_x_)
+        trunc_x_[i] = truncspace(flip(t.space)')
+    end
+    return trunc_x_
+end
+
+function _rotl90_trunc_y(trunc_y::AbstractMatrix{<:TruncationStrategy})
+    trunc_x = circshift(rotl90(trunc_y), (0, -1))
+    for (i, t) in enumerate(trunc_x)
+        if t isa TruncationSpace
+            trunc_x[i] = truncspace(flip(t.space)')
+        end
+    end
+    return trunc_x
+end
+function _rotr90_trunc_y(trunc_y::AbstractMatrix{<:TruncationStrategy})
+    trunc_x = rotr90(trunc_y)
+    return trunc_x
+end
+function _rot180_trunc_y(trunc_y::AbstractMatrix{<:TruncationStrategy})
+    trunc_y_ = circshift(rot180(trunc_y), (1, 0))
+    for (i, t) in enumerate(trunc_y_)
+        trunc_y_[i] = truncspace(flip(t.space)')
+    end
+    return trunc_y_
+end
+
+function Base.rotl90(trunc::SiteDependentTruncation)
+    trunc_y = _rotl90_trunc_x(trunc[1, :, :])
+    trunc_x = _rotl90_trunc_y(trunc[2, :, :])
+    trunc = stack((trunc_x, trunc_y); dims = 1)
+    return SiteDependentTruncation(trunc)
+end
+function Base.rotr90(trunc::SiteDependentTruncation)
+    trunc_y = _rotr90_trunc_x(trunc[1, :, :])
+    trunc_x = _rotr90_trunc_y(trunc[2, :, :])
+    trunc = stack((trunc_x, trunc_y); dims = 1)
+    return SiteDependentTruncation(trunc)
+end
+function Base.rot180(trunc::SiteDependentTruncation)
+    trunc_x = _rot180_trunc_x(trunc[1, :, :])
+    trunc_y = _rot180_trunc_y(trunc[2, :, :])
+    trunc = stack((trunc_x, trunc_y); dims = 1)
+    return SiteDependentTruncation(trunc)
+end

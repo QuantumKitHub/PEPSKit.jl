@@ -118,6 +118,23 @@ function twistdual!(t::AbstractTensorMap, is)
 end
 twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
 
+# lifted from #311, to be removed once that's merged
+"""
+    twistnondual(t::AbstractTensorMap, i)
+    twistnondual!(t::AbstractTensorMap, i)
+
+Twist the i-th leg of a tensor `t` if it represents a non-dual space.
+"""
+function twistnondual!(t::AbstractTensorMap, i::Int)
+    !isdual(space(t, i)) || return t
+    return twist!(t, i)
+end
+function twistnondual!(t::AbstractTensorMap, is)
+    is′ = filter(i -> !isdual(space(t, i)), is)
+    return twist!(t, is′)
+end
+twistnondual(t::AbstractTensorMap, is) = twistnondual!(copy(t), is)
+
 """
     str(t)
 
@@ -214,6 +231,20 @@ function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpac
         (rand() < p) && (Vs[i] = V')
     end
     return Vs
+end
+
+"""
+    _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
+
+Returns `(1, 2, ..., N)` but with `ax` moved to the end,
+and the corresponding permutation for `axes` (with `ax` as the only domain index).
+"""
+function _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
+    codomain_axes = TupleTools.deleteat(ntuple(identity, N), ax)
+    q = invperm(axes)
+    biperm = (map(i -> q[i], codomain_axes), (q[ax],))
+    new_axes = (ntuple(i -> axes[biperm[1][i]], N - 1)..., ax)
+    return new_axes, biperm
 end
 
 """

@@ -56,9 +56,9 @@ function InfinitePEPO(
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
-    Sspaces = adjoint.(circshift(Nspaces, (1, 0, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, -1, 0)))
-    Ppspaces = adjoint.(circshift(Pspaces, (0, 0, -1)))
+    Sspaces = adjoint.(circshift(Nspaces, (-1, 0, 0)))
+    Wspaces = adjoint.(circshift(Espaces, (0, 1, 0)))
+    Ppspaces = adjoint.(circshift(Pspaces, (0, 0, 1)))
 
     P = map(Pspaces, Ppspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, Pp, N, E, S, W
         return f(T, P * Pp ← N * E * S * W)

@@ -42,7 +42,7 @@ function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
     Fs = map(Base.Fix2(getindex, 2), psi_Fs)
     psi′, XXinv = gauge_fix(InfinitePEPS(psi′), alg, env)
     # convert back to iPEPO
-    psi′ = map(zip(psi′.A, Fs)) do (t, F)
+    psi′ = map(psi′.A, Fs) do t, F
         return F' * t
     end
     psi′ = reshape(psi′, (Nr, Nc, 1))

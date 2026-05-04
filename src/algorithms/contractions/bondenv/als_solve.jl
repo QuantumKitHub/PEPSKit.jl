@@ -46,14 +46,22 @@ in two-site ALS optimization.
     └-----------┘   └-----------┘
 ```
 """
-_als_tensor_R(benv, xs, i::Int) = _als_tensor_R(benv, xs, Val(i))
-function _als_tensor_R(benv::BondEnv, xs::Vector{<:MPSTensor}, ::Val{1})
-    return @tensor Ra[DX1 D1; DX0 D0] :=
-        benv[DX1 DY1; DX0 DY0] * xs[2][D0 db; DY0] * conj(xs[2][D1 db; DY1])
+function _als_tensor_R(benv::BondEnv, xs::Vector{<:MPSTensor}, i::Int)
+    @assert 1 <= i <= 2
+    return if i == 1
+        _als_tensor_Ra(benv, xs[2])
+    else
+        _als_tensor_Rb(benv, xs[1])
+    end
 end
-function _als_tensor_R(benv::BondEnv, xs::Vector{<:MPSTensor}, ::Val{2})
+
+function _als_tensor_Ra(benv::BondEnv, b::MPSTensor)
+    return @tensor Ra[DX1 D1; DX0 D0] :=
+        benv[DX1 DY1; DX0 DY0] * b[D0 db; DY0] * conj(b[D1 db; DY1])
+end
+function _als_tensor_Rb(benv::BondEnv, a::MPSTensor)
     return @tensor Rb[D1 DY1; D0 DY0] :=
-        benv[DX1 DY1; DX0 DY0] * xs[1][DX0 da; D0] * conj(xs[1][DX1 da; D1])
+        benv[DX1 DY1; DX0 DY0] * a[DX0 da; D0] * conj(a[DX1 da; D1])
 end
 
 """
@@ -93,20 +101,29 @@ Construct the overlap but with one of the bra bond tensor removed.
 ```
 The ket part is provided by the partial contraction `benv_ket`.
 """
-_als_tensor_S(benv_ket, xs, i::Int) = _als_tensor_S(benv_ket, xs, Val(i))
 function _als_tensor_S(
         benv_ket::AbstractTensorMap{T, S, 2, 2},
-        xs::Vector{<:MPSTensor}, ::Val{1}
+        xs::Vector{<:MPSTensor}, i::Int
+    ) where {T <: Number, S <: ElementarySpace}
+    @assert 1 <= i <= 2
+    return if i == 1
+        _als_tensor_Sa(benv_ket, xs[2])
+    else
+        _als_tensor_Sb(benv_ket, xs[1])
+    end
+end
+
+function _als_tensor_Sa(
+        benv_ket::AbstractTensorMap{T, S, 2, 2}, b::MPSTensor
     ) where {T <: Number, S <: ElementarySpace}
     return @tensor Sa[DX1 da; D1] :=
-        benv_ket[DX1 DY1; da db] * conj(xs[2][D1 db; DY1])
+        benv_ket[DX1 DY1; da db] * conj(b[D1 db; DY1])
 end
-function _als_tensor_S(
-        benv_ket::AbstractTensorMap{T, S, 2, 2},
-        xs::Vector{<:MPSTensor}, ::Val{2}
+function _als_tensor_Sb(
+        benv_ket::AbstractTensorMap{T, S, 2, 2}, a::MPSTensor
     ) where {T <: Number, S <: ElementarySpace}
-    return @tensor contractcheck = true Sb[D1 db; DY1] :=
-        benv_ket[DX1 DY1; da db] * conj(xs[1][DX1 da; D1])
+    return @tensor Sb[D1 db; DY1] :=
+        benv_ket[DX1 DY1; da db] * conj(a[DX1 da; D1])
 end
 
 """

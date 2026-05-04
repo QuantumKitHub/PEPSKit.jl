@@ -1,5 +1,4 @@
 using Random
-using Printf
 using Test
 using TensorKit
 using PEPSKit
@@ -11,7 +10,7 @@ using PEPSKit: _combine_ket, _combine_ket_for_svd
 Random.seed!(0)
 maxiter = 600
 check_interval = 30
-elt = Float64
+elt = ComplexF64
 # simulating the situation of applying a 2-site gate
 # to a bond with virtual dimension D, physical dimension d.
 d, D = 2, 4

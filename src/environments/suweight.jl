@@ -77,7 +77,7 @@ end
 """
     SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
-Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east) 
+Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
 as `ElementarySpace`s) and unit cell size.
 """
 function SUWeight(
@@ -173,84 +173,6 @@ function Base.show(io::IO, ::MIME"text/plain", wts::SUWeight)
         end
     end
     return nothing
-end
-
-"""
-    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false)
-    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false)
-
-Absorb or remove (in a twist-free way) the square root of environment weight 
-on an axis of the PEPS/PEPO tensor `t` known to be at position (`row`, `col`)
-in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
-```
-                    |
-                [2,r,c]
-                    |
-    - [1,r,c-1] - T[r,c] - [1,r,c] -
-                    |
-                [1,r+1,c]
-                    |
-```
-
-## Arguments
-
-- `t::Union{PEPSTensor, PEPOTensor}` : PEPSTensor or PEPOTensor to which the weight will be absorbed.
-- `weights::SUWeight` : All simple update weights.
-- `row::Int` : The row index specifying the position in the tensor network.
-- `col::Int` : The column index specifying the position in the tensor network.
-- `ax::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
-
-## Keyword arguments
-
-- `inv::Bool=false` : If `true`, the inverse square root of the weight is absorbed.
-
-## Examples
-
-```julia
-# Absorb the weight into the north axis of tensor at position (2, 3)
-absorb_weight(t, weights, 2, 3, 1)
-
-# Absorb the inverse of (i.e. remove) the weight into the east axis
-absorb_weight(t, weights, 2, 3, 2; inv=true)
-```
-"""
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::Int; inv::Bool = false
-    )
-    Nr, Nc = size(weights)[2:end]
-    nin, nout, ntol = numin(t), numout(t), numind(t)
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert 1 <= ax <= nin
-    pow = inv ? -1 / 2 : 1 / 2
-    wt = sdiag_pow(
-        if ax == NORTH
-            weights[2, row, col]
-        elseif ax == EAST
-            weights[1, row, col]
-        elseif ax == SOUTH
-            weights[2, _next(row, Nr), col]
-        else # WEST
-            weights[1, row, _prev(col, Nc)]
-        end,
-        pow,
-    )
-    t_idx = [(n - nout == ax) ? 1 : -n for n in 1:ntol]
-    ax′ = ax + nout
-    wt_idx = (ax == NORTH || ax == EAST) ? [1, -ax′] : [-ax′, 1]
-    # make absorption/removal twist-free
-    twistdual!(wt, 1)
-    return permute(ncon((t, wt), (t_idx, wt_idx)), (Tuple(1:nout), Tuple((nout + 1):ntol)))
-end
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false
-    ) where {N}
-    t2 = copy(t)
-    for a in ax
-        t2 = absorb_weight(t2, weights, row, col, a; inv)
-    end
-    return t2
 end
 
 #= Rotation of SUWeight. Example: 3 x 3 network
@@ -398,7 +320,7 @@ end
 """
     CTMRGEnv(wts::SUWeight)
 
-Construct a CTMRG environment with a trivial environment space 
+Construct a CTMRG environment with a trivial environment space
 (bond dimension χ = 1) from SUWeight `wts`,
 which has the same real scalartype as ``wts`.
 """

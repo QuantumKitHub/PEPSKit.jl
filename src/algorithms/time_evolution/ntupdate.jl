@@ -129,7 +129,7 @@ end
 function Base.iterate(it::TimeEvolver{<:NeighbourUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    psi, wts, info = ntu_iter(state.psi, it.gate, it.alg)
+    psi, wts, info = ntu_iter(state.psi, it.circuit, it.alg)
     iter, t = iter + 1, t + it.dt
     # update internal state
     it.state = NTUState(iter, t, psi)

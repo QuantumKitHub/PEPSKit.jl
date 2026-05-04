@@ -14,23 +14,23 @@ using PEPSKit: _next, _is_bipartite
     maxiter, tol = 100, 1.0e-9
     Random.seed!(52840679)
     Pspaces, Nspaces, Espaces = if S == U1Irrep
-        map(zip(rand(1:2, unitcell), rand(1:2, unitcell), rand(1:2, unitcell))) do (d0, d1, d2)
+        map(rand(1:2, unitcell), rand(1:2, unitcell), rand(1:2, unitcell)) do d0, d1, d2
                 Vect[S](0 => d0, 1 => d1, -1 => d2)
         end,
-            map(zip(rand(2:4, unitcell), rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1, d2)
+            map(rand(2:4, unitcell), rand(2:4, unitcell), rand(2:4, unitcell)) do d0, d1, d2
                 Vect[S](0 => d0, 1 => d1, -1 => d2)
         end,
-            map(zip(rand(2:4, unitcell), rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1, d2)
+            map(rand(2:4, unitcell), rand(2:4, unitcell), rand(2:4, unitcell)) do d0, d1, d2
                 Vect[S](0 => d0, 1 => d1, -1 => d2)
         end
     else
-        map(zip(rand(2:3, unitcell), rand(2:3, unitcell))) do (d0, d1)
+        map(rand(2:3, unitcell), rand(2:3, unitcell)) do d0, d1
                 Vect[S](0 => d0, 1 => d1)
         end,
-            map(zip(rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1)
+            map(rand(2:4, unitcell), rand(2:4, unitcell)) do d0, d1
                 Vect[S](0 => d0, 1 => d1)
         end,
-            map(zip(rand(2:4, unitcell), rand(2:4, unitcell))) do (d0, d1)
+            map(rand(2:4, unitcell), rand(2:4, unitcell)) do d0, d1
                 Vect[S](0 => d0, 1 => d1)
         end
     end

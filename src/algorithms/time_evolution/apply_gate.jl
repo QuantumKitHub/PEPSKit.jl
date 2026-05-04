@@ -42,7 +42,7 @@ function _apply_gate(a::MPSTensor, b::MPSTensor, gate::NNGate, trunc::Truncation
     else
         @tensor a2b2[-1 -2; -3 -4] := gate[-2 -3; 1 2] * a[-1 1 3] * b[3 2 -4]
     end
-    a, s, b, ϵ = svd_trunc!(a2b2; trunc, alg = LAPACK_QRIteration())
+    a, s, b, ϵ = svd_trunc!(a2b2; trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
         a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
