@@ -23,9 +23,7 @@ Axis order: `[DX1 DY1; DX0 DY0]`, as in
     └---------------------┘
 ```
 """
-function bondenv_ctm(
-        row::Int, col::Int, X::TX, Y::TY, env::CTMRGEnv
-    ) where {TX, TY}
+function bondenv_ctm(row::Int, col::Int, X, Y, env::CTMRGEnv)
     Nr, Nc = size(env.corners)[[2, 3]]
     cm1 = _prev(col, Nc)
     cp1 = _next(col, Nc)
