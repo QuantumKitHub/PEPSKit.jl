@@ -25,6 +25,7 @@ using KrylovKit: Lanczos, BlockLanczos
 using TensorOperations, OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
+import TupleTools
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
@@ -82,6 +83,7 @@ include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/contract_site.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
 
+include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
@@ -103,10 +105,12 @@ include("algorithms/ctmrg/c4v.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
+include("algorithms/time_evolution/get_cluster.jl")
 include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
