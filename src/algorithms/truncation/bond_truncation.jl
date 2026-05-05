@@ -154,7 +154,7 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::FullEnvTr
     need_flip = isdual(space(b, 1))
     #= initialize bond matrix using QR as `Ra Lb`
 
-        --- a == b ---   ==>   - Qa ← Ra == Rb → Qb -
+        --- a == b ---   ==>   - Qa ← Ra == Rb ← Qb -
             ↓    ↓               ↓               ↓
     =#
     Qa, Ra = left_orth(a; positive = true)
