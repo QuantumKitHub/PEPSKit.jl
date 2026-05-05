@@ -3,7 +3,6 @@ using Test
 using TensorKit
 using PEPSKit
 using LinearAlgebra
-using KrylovKit
 using PEPSKit: bond_truncate, cost_function_als
 using PEPSKit: _combine_ket, _combine_ket_for_svd
 

@@ -2,7 +2,6 @@ using Test
 using TensorKit
 using PEPSKit
 using LinearAlgebra
-using KrylovKit
 using Random
 
 Random.seed!(100)
