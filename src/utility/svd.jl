@@ -77,7 +77,7 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
         - `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref MatrixAlgebraKit.SafeDivideAndConquer)
     - "Sparse" SVD algorithms which directly compute a truncated SVD without access to the
       full decomposition. Available algorithms are:
-        - `:iterative` : Iterative Krylov-based SVD only computing the specifed number of
+        - `:GKL` : Iterative Krylov-based SVD only computing the specifed number of
           singular values and vectors, see [`IterSVD`](@ref)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.svd_rrule_alg))`:
   Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm`
@@ -105,7 +105,7 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :Jacobi => Jacobi,
     :SVDViaPolar => SVDViaPolar,
     :SafeDivideAndConquer => SafeDivideAndConquer,
-    :iterative => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
+    :GKL => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullSVDPullback, :trunc => TruncSVDPullback,

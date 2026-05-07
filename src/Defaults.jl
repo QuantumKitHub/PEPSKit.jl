@@ -34,7 +34,7 @@ Module containing default algorithm parameter values and arguments.
     - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref MatrixAlgebraKit.Jacobi)
     - `:SVDViaPolar` : MatrixAlgebraKit's [`SVDViaPolar`](@extref MatrixAlgebraKit.SVDViaPolar)
     - `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref MatrixAlgebraKit.SafeDivideAndConquer)
-    - `:iterative` : Iterative Krylov-based SVD only computing the specifed number of
+    - `:GKL` : Iterative Krylov-based SVD only computing the specifed number of
         singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD) for details.
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
@@ -122,7 +122,7 @@ const sparse = false # TODO: implement sparse CTMRG
 # SVD forward & reverse
 const trunc = :FixedSpaceTruncation # ∈ {:FixedSpaceTruncation, :notrunc, :truncerror, :truncspace, :trunctol}
 const rrule_degeneracy_atol = 1.0e-13
-const svd_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.SVDAlgorithms>, :iterative}
+const svd_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.SVDAlgorithms>, :GKL}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1

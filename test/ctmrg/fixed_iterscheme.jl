@@ -19,7 +19,7 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [(; alg = :DivideAndConquer), (; alg = :iterative)]
+svd_algs = [(; alg = :DivideAndConquer), (; alg = :GKL)]
 projector_algs_asymm = [:HalfInfiniteProjector] #, :FullInfiniteProjector]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
@@ -101,10 +101,10 @@ c4v_algs = [
     @test calc_elementwise_convergence(env_conv1, env_fixed2) ≈ 0 atol = atol
 end
 
-@testset "Element-wise consistency of :DivideAndConquer and :iterative" begin
+@testset "Element-wise consistency of :DivideAndConquer and :GKL" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomposition_alg = (; alg = :iterative, krylovdim = χ + 10),
+        decomposition_alg = (; alg = :GKL, krylovdim = χ + 10),
     )
     ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = (; alg = :DivideAndConquer))
 
