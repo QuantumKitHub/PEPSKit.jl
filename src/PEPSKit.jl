@@ -159,7 +159,6 @@ export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
-export infinite_temperature_density_matrix
 
 export BPEnv, BeliefPropagation
 export BPGauge, SUGauge
