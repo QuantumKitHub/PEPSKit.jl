@@ -165,11 +165,8 @@ function MPSKit.timestep(
 end
 
 """
-    time_evolve(
-        it::TimeEvolver{<:NeighbourUpdate},
-        [H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm];
-        tol::Float64 = 1.0e-7, check_interval::Int = 10
-    ) -> (psi, info)
+    time_evolve(it; verbosity = 2, check_interval = 10) -> (psi, info)
+    time_evolve(it, H, env, ctm_alg; tol = 1.0e-7, verbosity = 2, check_interval = 10) -> (psi, info)
 
 Perform time evolution to the end of `NeighbourUpdate` TimeEvolver `it`,
 or until convergence of energy set by a positive `tol`.
@@ -181,97 +178,102 @@ and setting `tol > 0`.
 `check_interval` sets the number of iterations between energy checks
 (for ground state search) and outputs of information.
 """
-function MPSKit.time_evolve(it::TimeEvolver{<:NeighbourUpdate}; check_interval::Int = 50)
-    time_start = time0 = time()
-    @info "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
-    info0 = nothing
-    for (psi, info) in it
-        iter = it.state.iter
-        stop = (iter == it.nstep)
-        showinfo = (iter == 1) || (iter % check_interval == 0) || stop
-        time1 = time()
-        if showinfo
-            Δλ = (info0 === nothing) ? NaN : compare_weights(info.wts, info0.wts)
-            @info @sprintf(
-                "NTU iter %d: t = %.2e, |Δλ| = %.3e. Time: %.2f s",
-                it.state.iter, it.state.t, Δλ, time1 - time0
-            )
+function MPSKit.time_evolve(
+        it::TimeEvolver{<:NeighbourUpdate};
+        verbosity::Int = 2, check_interval::Int = 10
+    )
+    return LoggingExtras.withlevel(; verbosity) do
+        time_start = time0 = time()
+        @infov 1 "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
+        info0 = nothing
+        for (psi, info) in it
+            iter = it.state.iter
+            stop = (iter == it.nstep)
+            showinfo = (iter == 1) || (iter % check_interval == 0) || stop
+            time1 = time()
+            if showinfo
+                Δλ = (info0 === nothing) ? NaN : compare_weights(info.wts, info0.wts)
+                @infov 2 @sprintf(
+                    "NTU iter %d: t = %.2e, |Δλ| = %.3e. Time: %.2f s",
+                    it.state.iter, it.state.t, Δλ, time1 - time0
+                )
+            end
+            if stop
+                time_end = time()
+                @infov 1 @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+                return psi, info
+            end
+            info0, time0 = info, time()
         end
-        if stop
-            time_end = time()
-            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
-            return psi, info
-        end
-        info0, time0 = info, time()
     end
-    return
 end
 
 function MPSKit.time_evolve(
         it::TimeEvolver{<:NeighbourUpdate, G, S},
         H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm;
-        tol::Float64 = 1.0e-7, check_interval::Int = 10
+        tol::Float64 = 1.0e-7, verbosity::Int = 2, check_interval::Int = 10
     ) where {G, S <: NTUState{<:InfinitePEPS}}
-    @info "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
-    time_start = time0 = time()
-    psi0 = copy(it.state.psi)
-    @assert it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
-    # initial energy
-    env, = leading_boundary(env, psi0, ctm_alg)
-    energy = real(expectation_value(psi0, H, env)) / prod(size(psi0))
-    @info @sprintf("NTU iter 0: E = %.4e", energy)
-    info0 = (; energy, env)
-    # start evolving
-    energy0, ΔE = energy, 0.0
-    iter0, t0 = it.state.iter, it.state.t
-    for (psi, info) in it
-        iter = it.state.iter
-        showinfo = (iter == 1) || (iter % check_interval == 0) || (iter == it.nstep)
-        !showinfo && continue
-        # bond weight change
-        Δλ = hasproperty(info0, :wts) ? compare_weights(info.wts, info0.wts) : NaN
-        # reconverge environment
-        if all(space(t) == space(t0) for (t, t0) in zip(psi.A, psi0.A))
-            # recreate `env` from bond weights if psi virtual space changed
-            env = CTMRGEnv(info.wts)
+    return LoggingExtras.withlevel(; verbosity) do
+        @infov 1 "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
+        time_start = time0 = time()
+        psi0 = copy(it.state.psi)
+        @assert it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
+        # initial energy
+        env, = leading_boundary(env, psi0, ctm_alg)
+        energy = real(expectation_value(psi0, H, env)) / prod(size(psi0))
+        @infov 2 @sprintf("NTU iter 0: E = %.4e", energy)
+        info0 = (; energy, env)
+        # start evolving
+        energy0, ΔE = energy, 0.0
+        iter0, t0 = it.state.iter, it.state.t
+        for (psi, info) in it
+            iter = it.state.iter
+            showinfo = (iter == 1) || (iter % check_interval == 0) || (iter == it.nstep)
+            !showinfo && continue
+            # bond weight change
+            Δλ = hasproperty(info0, :wts) ? compare_weights(info.wts, info0.wts) : NaN
+            # reconverge environment
+            if all(space(t) == space(t0) for (t, t0) in zip(psi.A, psi0.A))
+                # recreate `env` from bond weights if psi virtual space changed
+                env = CTMRGEnv(info.wts)
+            end
+            env, = leading_boundary(env, psi, ctm_alg)
+            # measure energy
+            energy = real(expectation_value(psi, H, env)) / prod(size(psi))
+            ΔE = energy - energy0
+            info = @insert info.energy = energy
+            info = @insert info.env = env
+            # show information
+            time1 = time()
+            @infov 2 @sprintf(
+                "NTU iter %-6d: E = %.5f, ΔE = %.3e, |Δλ| = %.3e. Time: %.2f s",
+                it.state.iter, energy, ΔE, Δλ, time1 - time0
+            )
+            # determine whether to stop evolution
+            stop = false
+            if (ΔE <= 0 && abs(ΔE) < tol)
+                stop = true
+                @infov 2 "NTU: energy has converged."
+            end
+            if ΔE > 0
+                stop = true
+                @warn "NTU: energy has increased. Abort evolution and return results from last check."
+                psi, info, energy = psi0, info0, energy0
+                it.state = NTUState(iter0, t0, psi0)
+            end
+            if iter == it.nstep
+                stop = true
+                @warn "NTU: reached maximum iteration."
+            end
+            if stop
+                time_end = time()
+                @infov 1 @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+                return psi, info
+            else
+                iter0, t0 = it.state.iter, it.state.t
+                psi0, energy0, info0 = psi, energy, info
+            end
+            time0 = time()
         end
-        env, = leading_boundary(env, psi, ctm_alg)
-        # measure energy
-        energy = real(expectation_value(psi, H, env)) / prod(size(psi))
-        ΔE = energy - energy0
-        info = @insert info.energy = energy
-        info = @insert info.env = env
-        # show information
-        time1 = time()
-        @info @sprintf(
-            "NTU iter %-6d: E = %.5f, ΔE = %.3e, |Δλ| = %.3e. Time: %.2f s",
-            it.state.iter, energy, ΔE, Δλ, time1 - time0
-        )
-        # determine whether to stop evolution
-        stop = false
-        if (ΔE <= 0 && abs(ΔE) < tol)
-            stop = true
-            @info "NTU: energy has converged."
-        end
-        if ΔE > 0
-            stop = true
-            @warn "NTU: energy has increased. Abort evolution and return results from last check."
-            psi, info, energy = psi0, info0, energy0
-            it.state = NTUState(iter0, t0, psi0)
-        end
-        if iter == it.nstep
-            stop = true
-            @info "NTU: reached maximum iteration."
-        end
-        if stop
-            time_end = time()
-            @info @sprintf("Time evolution finished in %.2f s", time_end - time_start)
-            return psi, info
-        else
-            iter0, t0 = it.state.iter, it.state.t
-            psi0, energy0, info0 = psi, energy, info
-        end
-        time0 = time()
     end
-    return
 end
