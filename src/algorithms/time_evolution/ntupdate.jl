@@ -16,7 +16,7 @@ Reference:
         BE <: NeighbourEnv,
     } <: TimeEvolution
     "Bond truncation algorithm after applying time evolution gate"
-    opt_alg::TR = ALSTruncation(; trunc = truncerror(; atol = 1.0e-10))
+    opt_alg::TR = ALSTruncation(; trunc = FixedSpaceTruncation())
     "When true (or false), the Trotter gate is `exp(-H dt)` (or `exp(-iH dt)`)"
     imaginary_time::Bool = true
     "Algorithm to construct NTU bond environment."
