@@ -43,10 +43,10 @@ function Base.repeat(n::InfiniteSquareNetwork, counts...)
 end
 
 ## Indexing
-Base.getindex(n::InfiniteSquareNetwork, args...) = Base.getindex(unitcell(n), args...)
-function Base.setindex!(n::InfiniteSquareNetwork, args...)
-    return (Base.setindex!(unitcell(n), args...); n)
-end
+Base.@propagate_inbounds Base.getindex(n::InfiniteSquareNetwork, I...) =
+    periodic_getindex(n, unitcell(n), I)
+Base.@propagate_inbounds Base.setindex!(n::InfiniteSquareNetwork, v, I...) =
+    periodic_setindex!(n, unitcell(n), v, I)
 Base.axes(n::InfiniteSquareNetwork, args...) = axes(unitcell(n), args...)
 eachcoordinate(n::InfiniteSquareNetwork) = collect(Iterators.product(axes(n)...))
 function eachcoordinate(n::InfiniteSquareNetwork, dirs)
@@ -56,10 +56,7 @@ end
 ## Spaces
 
 TensorKit.spacetype(::Type{T}) where {T <: InfiniteSquareNetwork} = spacetype(eltype(T))
-function virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir)
-    Nr, Nc = size(n)
-    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
-end
+virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## Vector interface
 

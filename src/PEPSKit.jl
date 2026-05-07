@@ -133,6 +133,7 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector

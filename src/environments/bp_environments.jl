@@ -145,7 +145,10 @@ end
 
 Base.eltype(::Type{BPEnv{T}}) where {T} = T
 Base.size(env::BPEnv, args...) = size(env.messages, args...)
-Base.getindex(env::BPEnv, args...) = Base.getindex(env.messages, args...)
+Base.@propagate_inbounds Base.getindex(env::BPEnv, I...) =
+    periodic_getindex(env, env.messages, I)
+Base.@propagate_inbounds Base.setindex!(env::BPEnv, v, I...) =
+    periodic_setindex!(env, env.messages, v, I)
 Base.axes(env::BPEnv, args...) = Base.axes(env.messages, args...)
 Base.eachindex(env::BPEnv) = eachindex(IndexCartesian(), env.messages)
 VectorInterface.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)

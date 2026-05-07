@@ -263,6 +263,46 @@ end
 
 Base.size(env::CTMRGEnv, args...) = size(env.corners, args...)
 Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
+
+"""
+    corner(env::CTMRGEnv, dir, i, j)
+
+Return the corner tensor of `env` at direction `dir` and unit-cell coordinates
+`(i, j)`. The coordinates are wrapped periodically (`mod1`); the direction is
+passed through unchanged. Mixed `Int`/`CartesianIndex` arguments are supported via
+`Base.to_indices`, e.g. `corner(env, NORTHWEST, CartesianIndex(r, c))`.
+"""
+Base.@propagate_inbounds corner(env::CTMRGEnv, I...) =
+    periodic_getindex(env, env.corners, I)
+
+"""
+    edge(env::CTMRGEnv, dir, i, j)
+
+Return the edge tensor of `env` at direction `dir` and unit-cell coordinates
+`(i, j)`. The coordinates are wrapped periodically (`mod1`); the direction is
+passed through unchanged. Mixed `Int`/`CartesianIndex` arguments are supported via
+`Base.to_indices`.
+"""
+Base.@propagate_inbounds edge(env::CTMRGEnv, I...) =
+    periodic_getindex(env, env.edges, I)
+
+"""
+    setcorner!(env::CTMRGEnv, value, dir, i, j) -> value
+
+Store `value` as the corner tensor of `env` at direction `dir` and unit-cell
+coordinates `(i, j)`, with periodic wrapping on `(i, j)`. Returns `value`.
+"""
+Base.@propagate_inbounds setcorner!(env::CTMRGEnv, v, I...) =
+    periodic_setindex!(env, env.corners, v, I)
+
+"""
+    setedge!(env::CTMRGEnv, value, dir, i, j) -> value
+
+Store `value` as the edge tensor of `env` at direction `dir` and unit-cell
+coordinates `(i, j)`, with periodic wrapping on `(i, j)`. Returns `value`.
+"""
+Base.@propagate_inbounds setedge!(env::CTMRGEnv, v, I...) =
+    periodic_setindex!(env, env.edges, v, I)
 function eachcoordinate(x::CTMRGEnv)
     return collect(Iterators.product(axes(x, 2), axes(x, 3)))
 end

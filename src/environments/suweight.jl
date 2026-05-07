@@ -127,8 +127,10 @@ Base.eltype(W::SUWeight) = eltype(typeof(W))
 Base.eltype(::Type{SUWeight{E}}) where {E} = E
 VI.scalartype(::Type{T}) where {T <: SUWeight} = scalartype(eltype(T))
 
-Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
-Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
+Base.@propagate_inbounds Base.getindex(W::SUWeight, I...) =
+    periodic_getindex(W, W.data, I)
+Base.@propagate_inbounds Base.setindex!(W::SUWeight, v, I...) =
+    periodic_setindex!(W, W.data, v, I)
 Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
