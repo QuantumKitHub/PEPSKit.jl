@@ -58,8 +58,8 @@ using PrecompileTools
 
     # Algorithmic settings
     ctmrg_algs = [
-        SimultaneousCTMRG(; maxiter, projector_alg=:halfinfinite, verbosity),
-        SequentialCTMRG(; maxiter, projector_alg=:halfinfinite, verbosity),
+        SimultaneousCTMRG(; maxiter, projector_alg=:HalfInfiniteProjector, verbosity),
+        SequentialCTMRG(; maxiter, projector_alg=:HalfInfiniteProjector, verbosity),
     ]
     gradient_algs = [
         LinSolver(; solver_alg=BiCGStab(; tol=gradtol)),

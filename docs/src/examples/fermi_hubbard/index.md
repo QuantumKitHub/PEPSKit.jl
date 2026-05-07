@@ -81,13 +81,13 @@ Again, the procedure of ground state optimization is very similar to before. Fir
 define all algorithmic parameters:
 
 ````julia
-boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
-gradient_alg = (; tol = 1.0e-6, alg = :eigsolver, maxiter = 10, iterscheme = :fixed)
-optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 80, ls_maxiter = 3, ls_maxfg = 3)
+boundary_alg = (; tol = 1.0e-8, alg = :SimultaneousCTMRG, trunc = (; alg = :FixedSpaceTruncation))
+gradient_alg = (; tol = 1.0e-6, alg = :EigSolver, maxiter = 10, iterscheme = :fixed)
+optimizer_alg = (; tol = 1.0e-4, alg = :LBFGS, maxiter = 80, ls_maxiter = 3, ls_maxfg = 3)
 ````
 
 ````
-(tol = 0.0001, alg = :lbfgs, maxiter = 80, ls_maxiter = 3, ls_maxfg = 3)
+(tol = 0.0001, alg = :LBFGS, maxiter = 80, ls_maxiter = 3, ls_maxfg = 3)
 ````
 
 Second, we initialize a PEPS state and environment (which we converge) constructed from

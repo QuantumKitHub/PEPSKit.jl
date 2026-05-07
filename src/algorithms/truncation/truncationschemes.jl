@@ -42,8 +42,8 @@ const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
     :truncrank => MatrixAlgebraKit.TruncationByOrder,
     :trunctol => MatrixAlgebraKit.TruncationByValue,
     :truncspace => TruncationSpace,
-    :fixedspace => FixedSpaceTruncation,
-    :sitedependent => SiteDependentTruncation,
+    :FixedSpaceTruncation => FixedSpaceTruncation,
+    :SiteDependentTruncation => SiteDependentTruncation,
 )
 
 # Should be TruncationStrategy but rename to avoid type piracy

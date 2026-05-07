@@ -20,7 +20,7 @@ using PEPSKit.Defaults: ctmrg_tol
 D = 2
 χ = 16
 svd_algs = [(; alg = :DivideAndConquer), (; alg = :iterative)]
-projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
+projector_algs_asymm = [:HalfInfiniteProjector] #, :FullInfiniteProjector]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
@@ -59,9 +59,9 @@ end
 
 # test same thing for C4v CTMRG
 c4v_algs = [
-    (:c4v_qr, (; alg = :Householder)),
-    (:c4v_eigh, (; alg = :QRIteration)),
-    (:c4v_eigh, (; alg = :Lanczos)),
+    (:C4vQRProjector, (; alg = :Householder)),
+    (:C4vEighProjector, (; alg = :QRIteration)),
+    (:C4vEighProjector, (; alg = :Lanczos)),
 ]
 @testset "$(decomposition_alg.alg) and $projector_alg" for
     (projector_alg, decomposition_alg) in c4v_algs
@@ -69,7 +69,7 @@ c4v_algs = [
     Random.seed!(2394823842)
     ctm_alg = C4vCTMRG(;
         projector_alg, decomposition_alg, maxiter = 200,
-        tol = (projector_alg == :c4v_qr ? 1.0e-12 : ctmrg_tol)
+        tol = (projector_alg == :C4vQRProjector ? 1.0e-12 : ctmrg_tol)
     )
     symm = RotateReflect()
 

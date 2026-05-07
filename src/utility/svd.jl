@@ -84,9 +84,9 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
   instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
     - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
-    - `:gmres` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
-    - `:bicgstab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
-    - `:arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref KrylovKit.Arnoldi)
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
+    - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref KrylovKit.Arnoldi)
 
 !!! note
     Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
@@ -109,7 +109,7 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :full => FullSVDPullback, :trunc => TruncSVDPullback,
-    :gmres => GMRES, :bicgstab => BiCGStab, :arnoldi => Arnoldi
+    :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi
 )
 
 _default_svd_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full

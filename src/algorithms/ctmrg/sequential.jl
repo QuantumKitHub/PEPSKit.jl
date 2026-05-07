@@ -32,10 +32,10 @@ struct SequentialCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     projector_alg::P
 end
 function SequentialCTMRG(; kwargs...)
-    return CTMRGAlgorithm(; alg = :sequential, kwargs...)
+    return CTMRGAlgorithm(; alg = :SequentialCTMRG, kwargs...)
 end
 
-CTMRG_SYMBOLS[:sequential] = SequentialCTMRG
+CTMRG_SYMBOLS[:SequentialCTMRG] = SequentialCTMRG
 
 """
     ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
@@ -74,8 +74,8 @@ end
     sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     sequential_projectors(coordinate::NTuple{3,Int}, network::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm)
 
-Compute CTMRG projectors in the `:sequential` scheme either for an entire column `col` or
-for a specific `coordinate` (where `dir=WEST` is already implied in the `:sequential` scheme).
+Compute CTMRG projectors in the `:SequentialCTMRG` scheme either for an entire column `col` or
+for a specific `coordinate` (where `dir=WEST` is already implied in the `:SequentialCTMRG` scheme).
 """
 function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
     coordinates = eachcoordinate(env)[:, col]
