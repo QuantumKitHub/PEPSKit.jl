@@ -304,18 +304,18 @@ function _rot180_wts_y(wts_y::AbstractMatrix{<:PEPSWeight})
 end
 
 function Base.rotl90(wts::SUWeight)
-    wts_y = _rotl90_wts_x(wts[1, :, :])
-    wts_x = _rotl90_wts_y(wts[2, :, :])
+    wts_y = _rotl90_wts_x(wts.data[1, :, :])
+    wts_x = _rotl90_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rotr90(wts::SUWeight)
-    wts_y = _rotr90_wts_x(wts[1, :, :])
-    wts_x = _rotr90_wts_y(wts[2, :, :])
+    wts_y = _rotr90_wts_x(wts.data[1, :, :])
+    wts_x = _rotr90_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rot180(wts::SUWeight)
-    wts_x = _rot180_wts_x(wts[1, :, :])
-    wts_y = _rot180_wts_y(wts[2, :, :])
+    wts_x = _rot180_wts_x(wts.data[1, :, :])
+    wts_y = _rot180_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 
