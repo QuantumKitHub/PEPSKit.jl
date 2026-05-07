@@ -99,7 +99,6 @@ Obtain the cluster `Ms` along the (open) path `sites` in `state`.
 function _get_cluster(
         state::InfiniteState, sites::Vector{CartesianIndex{2}}
     )
-    Nr, Nc = size(state)
     # number of sites
     Ns = length(sites)
     # number of physical axes
@@ -133,9 +132,7 @@ function _get_cluster(
         end
         return _mpo_perm(out_ax + Np, in_ax + Np, Nax)
     end
-    Ms = map(sites) do site
-        return state[CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))]
-    end
+    Ms = map(site -> state[site], sites)
     return Ms, open_vaxs, perms
 end
 

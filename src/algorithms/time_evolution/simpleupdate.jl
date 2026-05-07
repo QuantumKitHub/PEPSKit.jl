@@ -107,9 +107,7 @@ function _su_iter!(
     B = _bond_rotation(B, dir, rev; inv = true)
     rev && (s = transpose(s))
     # remove environment weights
-    siteA, siteB = map(sites) do site
-        return CartesianIndex(mod1(site[1], Nr), mod1(site[2], Nc))
-    end
+    siteA, siteB = sites
     A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs[1]; inv = true)
     B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs[2]; inv = true)
     # update tensor dict and weight on current bond
@@ -133,8 +131,7 @@ function su_iter(
             # 1-site gate
             # TODO: special treatment for bipartite state
             site = sites[1]
-            r, c = mod1(site[1], Nr), mod1(site[2], Nc)
-            state2[r, c] = _apply_sitegate(state2[r, c], gate; alg.purified)
+            state2[site] = _apply_sitegate(state2[site], gate; alg.purified)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
             alg.bipartite && r > 1 && continue
@@ -142,15 +139,13 @@ function su_iter(
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue
             if d == 1
-                rp1, cp1 = _next(r, Nr), _next(c, Nc)
-                state2[rp1, cp1] = copy(state2[r, c])
-                state2[rp1, c] = copy(state2[r, cp1])
-                env2[1, rp1, cp1] = copy(env2[1, r, c])
+                state2[r + 1, c + 1] = copy(state2[r, c])
+                state2[r + 1, c] = copy(state2[r, c + 1])
+                env2[1, r + 1, c + 1] = copy(env2[1, r, c])
             else
-                rm1, cm1 = _prev(r, Nr), _prev(c, Nc)
-                state2[rm1, cm1] = copy(state2[r, c])
-                state2[r, cm1] = copy(state2[rm1, c])
-                env2[2, rm1, cm1] = copy(env2[2, r, c])
+                state2[r - 1, c - 1] = copy(state2[r, c])
+                state2[r, c - 1] = copy(state2[r - 1, c])
+                env2[2, r - 1, c - 1] = copy(env2[2, r, c])
             end
         else
             # N-site MPO gate (N ≥ 2)

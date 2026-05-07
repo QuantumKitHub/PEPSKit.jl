@@ -26,33 +26,33 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
     dir, r, c = coordinates
     if dir == NORTHWEST
         return EnlargedCorner(
-            env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-            env.edges[WEST, r, _prev(c, end)],
-            env.edges[NORTH, _prev(r, end), c],
+            corner(env, NORTHWEST, r - 1, c - 1),
+            edge(env, WEST, r, c - 1),
+            edge(env, NORTH, r - 1, c),
             network[r, c],
             dir,
         )
     elseif dir == NORTHEAST
         return EnlargedCorner(
-            env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-            env.edges[NORTH, _prev(r, end), c],
-            env.edges[EAST, r, _next(c, end)],
+            corner(env, NORTHEAST, r - 1, c + 1),
+            edge(env, NORTH, r - 1, c),
+            edge(env, EAST, r, c + 1),
             network[r, c],
             dir,
         )
     elseif dir == SOUTHEAST
         return EnlargedCorner(
-            env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-            env.edges[EAST, r, _next(c, end)],
-            env.edges[SOUTH, _next(r, end), c],
+            corner(env, SOUTHEAST, r + 1, c + 1),
+            edge(env, EAST, r, c + 1),
+            edge(env, SOUTH, r + 1, c),
             network[r, c],
             dir,
         )
     elseif dir == SOUTHWEST
         return EnlargedCorner(
-            env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-            env.edges[SOUTH, _next(r, end), c],
-            env.edges[WEST, r, _prev(c, end)],
+            corner(env, SOUTHWEST, r + 1, c - 1),
+            edge(env, SOUTH, r + 1, c),
+            edge(env, WEST, r, c - 1),
             network[r, c],
             dir,
         )
@@ -424,11 +424,9 @@ struct ColumnEnlargedCorner{TC, TE}
 end
 function ColumnEnlargedCorner(env::CTMRGEnv, coordinates)
     dir, row, col = coordinates
-    Nc = size(env, 3)
     if dir == NORTHWEST
-        cm1 = _prev(col, Nc)
         return ColumnEnlargedCorner(
-            env.corners[dir, row, cm1], env.edges[NORTH, row, col], dir
+            corner(env, dir, row, col - 1), edge(env, NORTH, row, col), dir
         )
     else
         error("Not implemented.")

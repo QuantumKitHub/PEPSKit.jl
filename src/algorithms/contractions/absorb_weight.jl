@@ -70,18 +70,16 @@ square root (or inverse square root if `inv = true`).
 function weight_to_absorb(
         weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false
     )
-    _, Nr, Nc = size(weights)
-    r, c = mod1(row, Nr), mod1(col, Nc)
     pow = inv ? -1 / 2 : 1 / 2
     wt = sdiag_pow(
         if ax == NORTH
-            weights[2, r, c]
+            weights[2, row, col]
         elseif ax == EAST
-            weights[1, r, c]
+            weights[1, row, col]
         elseif ax == SOUTH
-            weights[2, _next(r, Nr), c]
+            weights[2, row + 1, col]
         else # WEST
-            weights[1, r, _prev(c, Nc)]
+            weights[1, row, col - 1]
         end,
         pow,
     )

@@ -58,10 +58,9 @@ function _su_iter!(
     end
     # update state tensors
     for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
-        s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order and remove weights on open axes of the cluster
-        M′ = absorb_weight(permute(M, invperm), env, s′, vaxs; inv = true)
-        state[s′] = normalize!(M′, Inf)
+        M′ = absorb_weight(permute(M, invperm), env, s, vaxs; inv = true)
+        state[s] = normalize!(M′, Inf)
     end
     return ϵ
 end

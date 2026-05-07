@@ -407,8 +407,8 @@ Apply left projector to southwest corner and south edge.
 ```
 """
 function renormalize_southwest_corner((row, col), env::CTMRGEnv, projectors)
-    C_southwest = env.corners[SOUTHWEST, row, _prev(col, end)]
-    E_south = env.edges[SOUTH, row, col]
+    C_southwest = corner(env, SOUTHWEST, row, col - 1)
+    E_south = edge(env, SOUTH, row, col)
     P_left = projectors[1][row]
     return renormalize_southwest_corner(C_southwest, E_south, P_left)
 end
@@ -449,8 +449,8 @@ Apply right projector to northwest corner and north edge.
 ```
 """
 function renormalize_northwest_corner((row, col), env::CTMRGEnv, projectors)
-    C_northwest = env.corners[NORTHWEST, row, _prev(col, end)]
-    E_north = env.edges[NORTH, row, col]
+    C_northwest = corner(env, NORTHWEST, row, col - 1)
+    E_north = edge(env, NORTH, row, col)
     P_right = projectors[2][_next(row, end)]
     return renormalize_northwest_corner(C_northwest, E_north, P_right)
 end
