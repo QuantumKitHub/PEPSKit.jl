@@ -118,10 +118,7 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
         coord = [x1, x3]
         haskey(H.terms, coord) || continue
         gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
-        x2′ = CartesianIndex(mod1.(Tuple(x2), size(H)))
-        b = TensorKit.BraidingTensor{T}(
-            physicalspace(H, x2′), left_virtualspace(gate[2])
-        )
+        b = TensorKit.BraidingTensor{T}(physicalspace(H, x2), left_virtualspace(gate[2]))
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
     end

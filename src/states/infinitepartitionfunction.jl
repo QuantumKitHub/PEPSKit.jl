@@ -126,10 +126,10 @@ function Base.repeat(A::InfinitePartitionFunction, counts...)
     return InfinitePartitionFunction(repeat(unitcell(A), counts...))
 end
 
-Base.getindex(A::InfinitePartitionFunction, args...) = Base.getindex(unitcell(A), args...)
-function Base.setindex!(A::InfinitePartitionFunction, args...)
-    return (Base.setindex!(unitcell(A), args...); A)
-end
+Base.@propagate_inbounds Base.getindex(A::InfinitePartitionFunction, I...) =
+    periodic_getindex(A, unitcell(A), I)
+Base.@propagate_inbounds Base.setindex!(A::InfinitePartitionFunction, v, I...) =
+    periodic_setindex!(A, unitcell(A), v, I)
 Base.axes(A::InfinitePartitionFunction, args...) = axes(unitcell(A), args...)
 eachcoordinate(A::InfinitePartitionFunction) = collect(Iterators.product(axes(A)...))
 function eachcoordinate(A::InfinitePartitionFunction, dirs)
@@ -139,10 +139,7 @@ end
 ## Spaces
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePartitionFunction} = spacetype(eltype(T))
-function virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir)
-    Nr, Nc = size(n)
-    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
-end
+virtualspace(n::InfinitePartitionFunction, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 
 ## InfiniteSquareNetwork interface
 

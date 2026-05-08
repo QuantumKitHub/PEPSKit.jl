@@ -93,8 +93,8 @@ function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
     )
     _, r, c = coordinate
-    r′ = _prev(r, size(env, 2))
-    trunc = truncation_strategy(alg, env.edges[WEST, r′, c])
+    r′ = r - 1
+    trunc = truncation_strategy(alg, edge(env, WEST, r′, c))
     alg´ = _set_decomposition_truncation(alg, trunc)
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
@@ -129,11 +129,11 @@ function renormalize_sequentially(col::Int, projectors, network, env)
 
     for (dir, r, c) in eachcoordinate(network, 1:4)
         (c == col && dir in [SOUTHWEST, NORTHWEST]) && continue
-        corners[dir, r, c] = env.corners[dir, r, c]
+        corners[dir, r, c] = corner(env, dir, r, c)
     end
     for (dir, r, c) in eachcoordinate(network, 1:4)
         (c == col && dir == WEST) && continue
-        edges[dir, r, c] = env.edges[dir, r, c]
+        edges[dir, r, c] = edge(env, dir, r, c)
     end
 
     # Apply projectors to renormalize corners and edge

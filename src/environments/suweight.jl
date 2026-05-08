@@ -127,8 +127,10 @@ Base.eltype(W::SUWeight) = eltype(typeof(W))
 Base.eltype(::Type{SUWeight{E}}) where {E} = E
 VI.scalartype(::Type{T}) where {T <: SUWeight} = scalartype(eltype(T))
 
-Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
-Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
+Base.@propagate_inbounds Base.getindex(W::SUWeight, I...) =
+    periodic_getindex(W, W.data, I)
+Base.@propagate_inbounds Base.setindex!(W::SUWeight, v, I...) =
+    periodic_setindex!(W, W.data, v, I)
 Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
@@ -142,7 +144,7 @@ TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
 function _is_bipartite(wts::SUWeight)
     (size(wts, 2) == size(wts, 3) == 2) || (return false)
     for (d, c) in Iterators.product(1:2, 1:2)
-        (wts[d, 1, c] == wts[d, 2, _next(c, 2)]) || (return false)
+        (wts[d, 1, c] == wts[d, 2, c + 1]) || (return false)
     end
     return true
 end
@@ -302,18 +304,18 @@ function _rot180_wts_y(wts_y::AbstractMatrix{<:PEPSWeight})
 end
 
 function Base.rotl90(wts::SUWeight)
-    wts_y = _rotl90_wts_x(wts[1, :, :])
-    wts_x = _rotl90_wts_y(wts[2, :, :])
+    wts_y = _rotl90_wts_x(wts.data[1, :, :])
+    wts_x = _rotl90_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rotr90(wts::SUWeight)
-    wts_y = _rotr90_wts_x(wts[1, :, :])
-    wts_x = _rotr90_wts_y(wts[2, :, :])
+    wts_y = _rotr90_wts_x(wts.data[1, :, :])
+    wts_x = _rotr90_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rot180(wts::SUWeight)
-    wts_x = _rot180_wts_x(wts[1, :, :])
-    wts_y = _rot180_wts_y(wts[2, :, :])
+    wts_x = _rot180_wts_x(wts.data[1, :, :])
+    wts_y = _rot180_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 
@@ -330,9 +332,9 @@ function CTMRGEnv(wts::SUWeight)
     V_env = oneunit(spacetype(wts))
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH
-            CartesianIndex(2, _next(r, Nr), c)
+            CartesianIndex(2, r + 1, c)
         elseif d == EAST
-            CartesianIndex(1, r, _prev(c, Nc))
+            CartesianIndex(1, r, c - 1)
         elseif d == SOUTH
             CartesianIndex(2, r, c)
         else # WEST
