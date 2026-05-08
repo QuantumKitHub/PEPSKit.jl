@@ -23,7 +23,7 @@ ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trunc = truncerror(; a
 # prepare simple update state
 su_alg = SimpleUpdate(; trunc)
 evolver = TimeEvolver(ψ0, H, 0.01, 5000, su_alg, SUWeight(ψ0))
-ψ0, = time_evolve(evolver, H; tol = 1.0e-8, check_interval = 200)
+ψ0, = time_evolve(evolver, H; tol = 1.0e-8, check_interval = 500)
 env0 = converge_env(ψ0, ctm_alg)
 e0 = expectation_value(ψ0, H, env0) / (Nr * Nc)
 @info "Simple update energy = $(e0)."
