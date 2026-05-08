@@ -52,7 +52,7 @@ end
 function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv)
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
-    M12 = env[dir, dir == NORTH ? _prev(row, end) : row, dir == EAST ? _next(col, end) : col]
+    M12 = env[dir, dir == NORTH ? row - 1 : row, dir == EAST ? col + 1 : col]
     sqrtM12, isqrtM12 = sqrt_invsqrt(twist(M12, 1))
     M21 = env[dir + 2, row, col]
     sqrtM21, isqrtM21 = sqrt_invsqrt(M21)
