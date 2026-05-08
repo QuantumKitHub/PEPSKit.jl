@@ -314,7 +314,7 @@ normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
 trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
-env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trunc = trunc_env);
+env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :SequentialCTMRG, trunc = trunc_env);
 E = expectation_value(peps, H, env) / (Nr * Nc)
 ````
 

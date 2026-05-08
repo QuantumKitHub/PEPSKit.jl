@@ -105,7 +105,9 @@ end
 Return lattice of physical spaces on which the `LocalCircuit` is defined.
 """
 physicalspace(gates::LocalCircuit) = gates.lattice
-physicalspace(gates::LocalCircuit, args...) = physicalspace(gates)[args...]
+Base.@propagate_inbounds physicalspace(gate::LocalCircuit, I...) =
+    periodic_getindex(gate, gate.lattice, I)
+
 Base.size(gates::LocalCircuit) = size(physicalspace(gates))
 
 # Equality

@@ -147,7 +147,8 @@ end
 Return lattice of physical spaces on which the `LocalOperator` is defined.
 """
 physicalspace(O::LocalOperator) = O.lattice
-physicalspace(O::LocalOperator, args...) = physicalspace(O)[args...]
+Base.@propagate_inbounds physicalspace(O::LocalOperator, I...) =
+    periodic_getindex(O, O.lattice, I)
 
 Base.size(O::LocalOperator, args...) = size(physicalspace(O), args...)
 Base.eltype(::Type{LocalOperator{O, S}}) where {O, S} = O

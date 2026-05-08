@@ -26,7 +26,7 @@ R = randn(space(r))
 
 full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_atol = 1.0e-13))
 trunc_alg = SVDAdjoint(; rrule_alg = (; alg = :trunc, degeneracy_atol = 1.0e-13))
-iter_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative))
+iter_alg = SVDAdjoint(; fwd_alg = (; alg = :GKL))
 
 @testset "Non-truncated SVD" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)

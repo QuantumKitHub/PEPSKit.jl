@@ -5,12 +5,12 @@ function start_correlator(
     (size(ρ, 3) == 1) ||
         throw(ArgumentError("The input PEPO ρ must have only one layer."))
     r, c = Tuple(i)
-    E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
-    E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
-    E_west = env.edges[WEST, mod1(r, end), _prev(c, end)]
-    C_northwest = env.corners[NORTHWEST, _prev(r, end), _prev(c, end)]
-    C_southwest = env.corners[SOUTHWEST, _next(r, end), _prev(c, end)]
-    t = twistdual(ρ[mod1(r, end), mod1(c, end)], 1:2)
+    E_north = edge(env, NORTH, r - 1, c)
+    E_south = edge(env, SOUTH, r + 1, c)
+    E_west = edge(env, WEST, r, c - 1)
+    C_northwest = corner(env, NORTHWEST, r - 1, c - 1)
+    C_southwest = corner(env, SOUTHWEST, r + 1, c - 1)
+    t = twistdual(ρ[r, c], 1:2)
     # TODO: part of these contractions is duplicated between the two output tensors,
     # so could be optimized further
     @autoopt @tensor Vn[χSE De; χNE] :=
@@ -32,12 +32,12 @@ function end_correlator_numerator(
     (size(ρ, 3) == 1) ||
         throw(ArgumentError("The input PEPO ρ must have only one layer."))
     r, c = Tuple(j)
-    E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
-    E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
-    E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
-    C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
-    C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
-    t = twistdual(ρ[mod1(r, end), mod1(c, end)], 1:2)
+    E_north = edge(env, NORTH, r - 1, c)
+    E_east = edge(env, EAST, r, c + 1)
+    E_south = edge(env, SOUTH, r + 1, c)
+    C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
+    C_southeast = corner(env, SOUTHEAST, r + 1, c + 1)
+    t = twistdual(ρ[r, c], 1:2)
     return @autoopt @tensor V[χSW DW dstring; χNW] *
         E_south[χSSE DS; χSW] * E_east[χNEE DE; χSEE] * E_north[χNW DN; χNNE] *
         C_northeast[χNNE; χNEE] * C_southeast[χSEE; χSSE] *
@@ -48,9 +48,9 @@ function end_correlator_denominator(
         j::CartesianIndex{2}, V::CTMRGEdgeTensor{T, S, 2}, env::CTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
-    C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
-    E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
-    C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
+    C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
+    E_east = edge(env, EAST, r, c + 1)
+    C_southeast = corner(env, SOUTHEAST, r + 1, c + 1)
     return @autoopt @tensor V[χS DE; χN] * C_northeast[χN; χNE] *
         E_east[χNE DE; χSE] * C_southeast[χSE; χS]
 end

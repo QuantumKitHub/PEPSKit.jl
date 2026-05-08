@@ -6,12 +6,12 @@ function start_correlator(
         env::CTMRGEnv,
     )
     r, c = Tuple(i)
-    E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
-    E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
-    E_west = env.edges[WEST, mod1(r, end), _prev(c, end)]
-    C_northwest = env.corners[NORTHWEST, _prev(r, end), _prev(c, end)]
-    C_southwest = env.corners[SOUTHWEST, _next(r, end), _prev(c, end)]
-    sandwich = (below[mod1(r, end), mod1(c, end)], above[mod1(r, end), mod1(c, end)])
+    E_north = edge(env, NORTH, r - 1, c)
+    E_south = edge(env, SOUTH, r + 1, c)
+    E_west = edge(env, WEST, r, c - 1)
+    C_northwest = corner(env, NORTHWEST, r - 1, c - 1)
+    C_southwest = corner(env, SOUTHWEST, r + 1, c - 1)
+    sandwich = (below[r, c], above[r, c])
 
     # TODO: part of these contractions is duplicated between the two output tensors,
     # so could be optimized further
@@ -46,12 +46,12 @@ function end_correlator_numerator(
         env::CTMRGEnv,
     ) where {T, S}
     r, c = Tuple(j)
-    E_north = env.edges[NORTH, _prev(r, end), mod1(c, end)]
-    E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
-    E_south = env.edges[SOUTH, _next(r, end), mod1(c, end)]
-    C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
-    C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
-    sandwich = (above[mod1(r, end), mod1(c, end)], below[mod1(r, end), mod1(c, end)])
+    E_north = edge(env, NORTH, r - 1, c)
+    E_east = edge(env, EAST, r, c + 1)
+    E_south = edge(env, SOUTH, r + 1, c)
+    C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
+    C_southeast = corner(env, SOUTHEAST, r + 1, c + 1)
+    sandwich = (above[r, c], below[r, c])
 
     return @autoopt @tensor V[χSW DWt dstring DWb; χNW] *
         E_south[χSSE DSt DSb; χSW] *
@@ -69,9 +69,9 @@ function end_correlator_denominator(
         env::CTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
-    C_northeast = env.corners[NORTHEAST, _prev(r, end), _next(c, end)]
-    E_east = env.edges[EAST, mod1(r, end), _next(c, end)]
-    C_southeast = env.corners[SOUTHEAST, _next(r, end), _next(c, end)]
+    C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
+    E_east = edge(env, EAST, r, c + 1)
+    C_southeast = corner(env, SOUTHEAST, r + 1, c + 1)
 
     return @autoopt @tensor V[χS DEt DEb; χN] *
         C_northeast[χN; χNE] *

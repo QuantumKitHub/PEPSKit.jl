@@ -30,8 +30,8 @@ function correlator_horizontal(
     for (k, j) in enumerate(js)
         # transfer until left of site j
         while j > i
-            Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-            Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+            Etop = edge(env, NORTH, i[1] - 1, i[2])
+            Ebot = edge(env, SOUTH, i[1] + 1, i[2])
             sandwich = (
                 ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
             )
@@ -43,11 +43,9 @@ function correlator_horizontal(
         # compute overlap with operator
         numerator = end_correlator_numerator(j, Vo, bra, O[2], ket, env)
         # transfer right of site j
-        Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-        Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
-        sandwich = (
-            ket[mod1(i[1], end), mod1(i[2], end)], bra[mod1(i[1], end), mod1(i[2], end)],
-        )
+        Etop = edge(env, NORTH, i[1] - 1, i[2])
+        Ebot = edge(env, SOUTH, i[1] + 1, i[2])
+        sandwich = (ket[i[1], i[2]], bra[i[1], i[2]])
         T = edge_transfermatrix(Etop, sandwich, Ebot)
         if k < length(js)
             Vo = Vo * T
@@ -137,9 +135,9 @@ function correlator_horizontal(
     for (k, j) in enumerate(js)
         # transfer until left of site j
         while j > i
-            Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
-            Omid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
-            Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+            Etop = edge(env, NORTH, i[1] - 1, i[2])
+            Omid = trace_physicalspaces(ρ[i[1], i[2]])
+            Ebot = edge(env, SOUTH, i[1] + 1, i[2])
             T = edge_transfermatrix(Etop, Omid, Ebot)
             Vo = Vo * T
             Vn = Vn * T
@@ -148,9 +146,9 @@ function correlator_horizontal(
         # compute overlap with operator
         numerator = end_correlator_numerator(j, Vo, ρ, O[2], env)
         # transfer right of site j
-        Etop = env.edges[NORTH, _prev(i[1], end), mod1(i[2], end)]
+        Etop = edge(env, NORTH, i[1] - 1, i[2])
         Omid = trace_physicalspaces(ρ[mod1(i[1], end), mod1(i[2], end)])
-        Ebot = env.edges[SOUTH, _next(i[1], end), mod1(i[2], end)]
+        Ebot = edge(env, SOUTH, i[1] + 1, i[2])
         T = edge_transfermatrix(Etop, Omid, Ebot)
         if k < length(js)
             Vo = Vo * T

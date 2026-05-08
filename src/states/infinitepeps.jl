@@ -131,8 +131,10 @@ function Base.similar(A::InfinitePEPS, T::Type{TorA} = scalartype(A)) where {Tor
 end
 Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
 
-Base.getindex(A::InfinitePEPS, args...) = Base.getindex(unitcell(A), args...)
-Base.setindex!(A::InfinitePEPS, args...) = (Base.setindex!(unitcell(A), args...); A)
+Base.@propagate_inbounds Base.getindex(A::InfinitePEPS, I...) =
+    periodic_getindex(A, unitcell(A), I)
+Base.@propagate_inbounds Base.setindex!(A::InfinitePEPS, v, I...) =
+    periodic_setindex!(A, unitcell(A), v, I)
 Base.axes(A::InfinitePEPS, args...) = axes(unitcell(A), args...)
 eachcoordinate(A::InfinitePEPS) = collect(Iterators.product(axes(A)...))
 function eachcoordinate(A::InfinitePEPS, dirs)
@@ -143,15 +145,9 @@ end
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePEPS} = spacetype(eltype(T))
 virtualspace(n::InfinitePEPS, dir) = virtualspace.(unitcell(n), dir)
-function virtualspace(n::InfinitePEPS, r::Int, c::Int, dir)
-    Nr, Nc = size(n)
-    return virtualspace(n[mod1(r, Nr), mod1(c, Nc)], dir)
-end
+virtualspace(n::InfinitePEPS, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 physicalspace(n::InfinitePEPS) = physicalspace.(unitcell(n))
-function physicalspace(n::InfinitePEPS, r::Int, c::Int)
-    Nr, Nc = size(n)
-    return physicalspace(n[mod1(r, Nr), mod1(c, Nc)])
-end
+physicalspace(n::InfinitePEPS, r::Int, c::Int) = physicalspace(n[r, c])
 
 ## InfiniteSquareNetwork interface
 

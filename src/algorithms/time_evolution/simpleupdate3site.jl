@@ -30,8 +30,7 @@ function _su_iter!(
         state::InfiniteState, gate::Vector{T}, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     ) where {T <: AbstractTensorMap}
-    Nr, Nc = size(state)
-    truncs = _get_cluster_trunc(alg.trunc, sites, (Nr, Nc))
+    truncs = _get_cluster_trunc(alg.trunc, sites)
     Ms, open_vaxs, invperms = _get_cluster_with_weights(state, sites, env)
     # flip virtual arrows in `Ms` to ←
     flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)]
@@ -49,7 +48,7 @@ function _su_iter!(
     _flip_virtuals!(Ms, flips)
     # update env weights
     bond_revs = map(sites, Iterators.drop(sites, 1)) do site1, site2
-        _nn_bondrev(site1, site2, (Nr, Nc))
+        _nn_bondrev(site1, site2)
     end
     for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
         wt_new = flip ? _fliptwist_s(wt) : wt
@@ -58,10 +57,9 @@ function _su_iter!(
     end
     # update state tensors
     for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
-        s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
         # restore original axes order and remove weights on open axes of the cluster
-        M′ = absorb_weight(permute(M, invperm), env, s′, vaxs; inv = true)
-        state[s′] = normalize!(M′, Inf)
+        M′ = absorb_weight(permute(M, invperm), env, s, vaxs; inv = true)
+        state[s] = normalize!(M′, Inf)
     end
     return ϵ
 end
@@ -71,11 +69,10 @@ Get the `TruncationStrategy` for each bond in the cluster
 updated by the Trotter evolution MPO.
 """
 function _get_cluster_trunc(
-        trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}},
-        unitcell::NTuple{2, Int}
+        trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}}
     )
     return map(sites, Iterators.drop(sites, 1)) do site1, site2
-        (d, r, c), rev = _nn_bondrev(site1, site2, unitcell)
+        (d, r, c), rev = _nn_bondrev(site1, site2)
         t = truncation_strategy(trunc, d, r, c)
         if rev && isa(t, TruncationSpace)
             t = truncspace(flip(t.space)')

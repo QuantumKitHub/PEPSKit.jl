@@ -4,7 +4,7 @@ using PEPSKit
 using LinearAlgebra
 using Random
 import MPSKitModels: hubbard_space
-using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!, _next
+using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
 using MPSKit: GenericMPSTensor, MPSBondTensor
 
 # Utility setup
@@ -230,7 +230,7 @@ end
     peps0 = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
     # make initial state bipartite
     for r in 1:2
-        peps0.A[_next(r, 2), 2] = copy(peps0.A[r, 1])
+        peps0[r + 1, 2] = copy(peps0[r, 1])
     end
     wts0 = SUWeight(peps0)
     ham = hubbard_model(Float64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0)
@@ -246,7 +246,7 @@ end
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
         for trunc in truncs_env
-            env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc)
+            env, = leading_boundary(env, peps; alg = :SequentialCTMRG, tol = ctmrg_tol, trunc)
         end
         e_site = cost_function(peps, env, ham) / (Nr * Nc)
         @info "Energy (force_mpo = $(force_mpo)): $e_site"

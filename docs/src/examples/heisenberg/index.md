@@ -74,7 +74,7 @@ arguments. To see a description of all arguments, see the docstring of
 specific tolerance and during the CTMRG run keep all index dimensions fixed:
 
 ````julia
-boundary_alg = (; tol = 1.0e-10, trunc = (; alg = :fixedspace));
+boundary_alg = (; tol = 1.0e-10, trunc = (; alg = :FixedSpaceTruncation));
 ````
 
 Let us also configure the optimizer algorithm. We are going to optimize the PEPS using the
@@ -83,7 +83,7 @@ the convergence tolerance (for the gradient norm) as well as the maximal number 
 and the BFGS memory size (which is used to approximate the Hessian):
 
 ````julia
-optimizer_alg = (; alg = :lbfgs, tol = 1.0e-4, maxiter = 100, lbfgs_memory = 16);
+optimizer_alg = (; alg = :LBFGS, tol = 1.0e-4, maxiter = 100, lbfgs_memory = 16);
 ````
 
 Additionally, during optimization, we want to reuse the previous CTMRG environment to

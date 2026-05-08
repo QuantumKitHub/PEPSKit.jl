@@ -41,6 +41,7 @@ using DocStringExtensions
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
 include("utility/util.jl")
+include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
@@ -136,6 +137,7 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector

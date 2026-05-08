@@ -15,7 +15,7 @@ function _ntu_iter(
         sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate
     ) where {T <: AbstractTensorMap}
     Nr, Nc = size(state)
-    truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites, (Nr, Nc))
+    truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites)
     state, wts = copy(state), deepcopy(wts)
 
     Ms, invperms = _get_cluster_permute(state, sites)
@@ -60,7 +60,7 @@ function _bond_truncate(
     )
     # rotate bond to standard x direction `A ← B`
     ucell = size(state)[1:2]
-    bond, rev = _nn_bondrev(site1, site2, ucell)
+    bond, rev = _nn_bondrev(site1, site2)
     state2 = _bond_rotation(state, bond[1], rev; inv = false)
     wts2 = _bond_rotation(wts, bond[1], rev; inv = false)
 
