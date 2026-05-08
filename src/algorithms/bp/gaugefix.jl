@@ -25,7 +25,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
         # copy 1st column to 2nd column to eliminate differences
         # caused by order of applying gauge transformations
         for r in 1:2
-            psi′[_next(r, 2), 2] = copy(psi′[r, 1])
+            psi′[r + 1, 2] = copy(psi′[r, 1])
         end
     end
     return psi′, XXinv
@@ -90,10 +90,10 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv)
     end
     if dir == NORTH
         psi[row, col] = absorb_north_message(psi[row, col], X)
-        psi[_prev(row, end), col] = absorb_south_message(psi[_prev(row, end), col], invX)
+        psi[row - 1, col] = absorb_south_message(psi[row - 1, col], invX)
     elseif dir == EAST
         psi[row, col] = absorb_east_message(psi[row, col], X)
-        psi[row, _next(col, end)] = absorb_west_message(psi[row, _next(col, end)], invX)
+        psi[row, col + 1] = absorb_west_message(psi[row, col + 1], invX)
     end
     return psi, X, invX
 end
@@ -122,9 +122,9 @@ to a belief propagation environment.
 function BPEnv(wts::SUWeight)
     messages = map(Iterators.product(1:4, axes(wts, 2), axes(wts, 3))) do (d, r, c)
         wt = if d == NORTH
-            twist(wts[2, _next(r, end), c], 1)
+            twist(wts[2, r + 1, c], 1)
         elseif d == EAST
-            twist(wts[1, r, _prev(c, end)], 1)
+            twist(wts[1, r, c - 1], 1)
         elseif d == SOUTH
             copy(wts[2, r, c])
         else # WEST

@@ -123,7 +123,6 @@ function su_iter(
         state::InfiniteState, circuit::LocalCircuit,
         alg::SimpleUpdate, env::SUWeight
     )
-    Nr = size(state, 2)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     for (sites, gate) in circuit.gates
         if length(sites) == 1
@@ -133,7 +132,7 @@ function su_iter(
             state2[site] = _apply_sitegate(state2[site], gate; alg.purified)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites...)
-            alg.bipartite && mod1(r, Nr) > 1 && continue
+            alg.bipartite && iseven(r) && continue
             ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue

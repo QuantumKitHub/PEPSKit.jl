@@ -60,8 +60,8 @@ else
 end
 
 peps = InfinitePEPS(rand, Float64, physical_space, bond_space; unitcell = (Nr, Nc));
-peps.A[2, 2] = copy(peps.A[1, 1]) ## make initial random state bipartite
-peps.A[2, 1] = copy(peps.A[1, 2])
+peps[2, 2] = copy(peps[1, 1]) ## make initial random state bipartite
+peps[2, 1] = copy(peps[1, 2])
 wts = SUWeight(peps);
 
 md"""
