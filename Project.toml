@@ -1,6 +1,6 @@
 name = "PEPSKit"
 uuid = "52969e89-939e-4361-9b68-9bc7cde4bdeb"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Paul Brehmer", "Lander Burgelman", "Zhengyuan Yue", "Lukas Devos <ldevos98@gmail.com>"]
 
 [workspace]
