@@ -128,7 +128,7 @@ function su_iter(
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state
-            site = sites[1]
+            site = only(sites)
             state2[site] = _apply_sitegate(state2[site], gate; alg.purified)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites...)

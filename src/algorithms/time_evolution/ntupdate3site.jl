@@ -14,7 +14,6 @@ function _ntu_iter(
         state::InfiniteState, gate::Vector{T}, wts::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate
     ) where {T <: AbstractTensorMap}
-    Nr, Nc = size(state)
     truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites)
     state, wts = copy(state), deepcopy(wts)
 
@@ -26,8 +25,7 @@ function _ntu_iter(
     _apply_gatempo!(Ms, gate)
     _flip_virtuals!(Ms, flips) # restore virtual arrows in `Ms`
     for (M, s, invperm) in zip(Ms, sites, invperms)
-        s′ = CartesianIndex(mod1(s[1], Nr), mod1(s[2], Nc))
-        state[s′] = permute(M, invperm)
+        state[s] = permute(M, invperm)
     end
 
     # truncate each bond sequentially along the path
@@ -61,14 +59,14 @@ function _bond_truncate(
     # rotate bond to standard x direction `A ← B`
     ucell = size(state)[1:2]
     bond, rev = _nn_bondrev(site1, site2)
-    state2 = _bond_rotation(state, bond[1], rev; inv = false)
-    wts2 = _bond_rotation(wts, bond[1], rev; inv = false)
+    dir = first(bond)
+    state2 = _bond_rotation(state, dir, rev; inv = false)
+    wts2 = _bond_rotation(wts, dir, rev; inv = false)
 
     # rotated bond tensors
-    siteA = _bond_rotation(site1, bond[1], rev, ucell)
-    row, col = mod1.(Tuple(siteA), size(state2)[1:2])
-    cp1 = _next(col, size(state2, 2))
-    A, B = state2[row, col], state2[row, cp1]
+    siteA = _bond_rotation(site1, dir, rev, ucell)
+    row, col = siteA[1], siteA[2]
+    A, B = state2[row, col], state2[row, col + 1]
 
     # create bond environment
     qrtrunc = trunctol(; rtol = 1.0e-12)
@@ -113,13 +111,12 @@ function _bond_truncate(
         undo_bond_tensor_midprev(b, Y)
     end
 
-    normalize!(A, Inf)
-    normalize!(B, Inf)
-    normalize!(s, Inf)
-    state2[row, col], state2[row, cp1], wts2[1, row, col] = A, B, s
+    state2[row, col] = normalize!(A, Inf)
+    state2[row, col + 1] = normalize!(B, Inf)
+    wts2[1, row, col] = normalize!(s, Inf)
 
     # rotate back tensors and bond weight
-    state2 = _bond_rotation(state2, bond[1], rev; inv = true)
-    wts2 = _bond_rotation(wts2, bond[1], rev; inv = true)
+    state2 = _bond_rotation(state2, dir, rev; inv = true)
+    wts2 = _bond_rotation(wts2, dir, rev; inv = true)
     return state2, wts2, info
 end

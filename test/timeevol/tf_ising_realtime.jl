@@ -33,7 +33,7 @@ end
 lattice = collect(space(t, 1) for t in peps0.A)
 
 # Hamiltonian
-op = LocalOperator(lattice, ((1, 1),) => σˣ())
+op = LocalOperator(lattice, [(1, 1)] => σˣ())
 ham = transverse_field_ising(ComplexF64, Trivial, InfiniteSquare(2, 2); J = 1.0, g = hc)
 
 # truncation strategy
@@ -43,7 +43,7 @@ trunc_env = truncerror(; atol = 1.0e-10) & truncrank(chi)
 
 ctm_alg = SequentialCTMRG(;
     tol = 1.0e-8, maxiter = 50, verbosity = 2,
-    trunc = trunc_env, projector_alg = :fullinfinite
+    trunc = trunc_env, projector_alg = :FullInfiniteProjector
 )
 
 interval = 5

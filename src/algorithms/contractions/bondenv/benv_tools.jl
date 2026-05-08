@@ -26,9 +26,8 @@ at positions `neighbors` relative to `(row, col)`
 function collect_neighbors(
         state::InfiniteState, row::Int, col::Int, neighbors::Vector{Tuple{Int, Int}}
     )
-    Nr, Nc = size(state)
     return Dict(
-        nb => _prepare_site_tensor(state[mod1(row + nb[1], Nr), mod1(col + nb[2], Nc)])
+        nb => _prepare_site_tensor(state[row + nb[1], col + nb[2]])
             for nb in neighbors
     )
 end

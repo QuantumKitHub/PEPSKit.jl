@@ -93,8 +93,8 @@ function ntu_iter(
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state
-            site = sites[1]
-            state2[r, c] = _apply_sitegate(state2[r, c], gate)
+            site = only(sites)
+            state2[site] = _apply_sitegate(state2[site], gate)
             info′ = (; fid = 1.0)
         elseif length(sites) == 2
             (d, r, c), = _nn_bondrev(sites...)

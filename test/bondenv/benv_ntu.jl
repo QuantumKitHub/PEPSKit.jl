@@ -13,8 +13,7 @@ function test_ntu_env(
     ) where {Alg <: PEPSKit.NeighbourEnv}
     @info "Testing $(typeof(env_alg))"
     for row in 1:Nr, col in 1:Nc
-        cp1 = PEPSKit._next(col, Nc)
-        A, B = state.A[row, col], state.A[row, cp1]
+        A, B = state[row, col], state[row, col + 1]
         a, X = PEPSKit.bond_tensor_first(A)
         b, Y = PEPSKit.bond_tensor_last(B)
         @tensor ab[DX DY; da db] := a[DX da D] * b[D db DY]

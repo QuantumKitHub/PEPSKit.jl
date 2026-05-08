@@ -10,8 +10,8 @@ const bm = [-0.08624893, -0.15688984, -0.21300888]
 
 function converge_env(state, χ::Int)
     trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
-    env0 = CTMRGEnv(ones, Float64, state, oneunit(spacetype(state)))
-    env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
+    env0 = CTMRGEnv(ones, scalartype(state), state, oneunit(spacetype(state)))
+    env, = leading_boundary(env0, state; alg = :SequentialCTMRG, trunc = trunc1, tol = 1.0e-10)
     return env
 end
 
