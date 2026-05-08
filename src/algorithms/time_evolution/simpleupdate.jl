@@ -81,13 +81,12 @@ function _su_iter!(
         state::InfiniteState, gate::NNGate, env::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
     )
-    Nr, Nc = size(state)
     @assert length(sites) == 2
-    trunc = only(_get_cluster_trunc(alg.trunc, sites, (Nr, Nc)))
+    trunc = only(_get_cluster_trunc(alg.trunc, sites))
     Ms, open_vaxs, = _get_cluster(state, sites)
     _absorb_weight!(Ms, sites, open_vaxs, env)
     # rotate
-    bond, rev = _nn_bondrev(sites..., (Nr, Nc))
+    bond, rev = _nn_bondrev(sites...)
     dir = first(bond)
     A, B = _bond_rotation.(Ms, dir, rev; inv = false)
     # apply gate
@@ -124,7 +123,7 @@ function su_iter(
         state::InfiniteState, circuit::LocalCircuit,
         alg::SimpleUpdate, env::SUWeight
     )
-    Nr, Nc, = size(state)
+    Nr = size(state, 2)
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     for (sites, gate) in circuit.gates
         if length(sites) == 1
@@ -133,8 +132,8 @@ function su_iter(
             site = sites[1]
             state2[site] = _apply_sitegate(state2[site], gate; alg.purified)
         elseif length(sites) == 2
-            (d, r, c), = _nn_bondrev(sites..., (Nr, Nc))
-            alg.bipartite && r > 1 && continue
+            (d, r, c), = _nn_bondrev(sites...)
+            alg.bipartite && mod1(r, Nr) > 1 && continue
             ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue

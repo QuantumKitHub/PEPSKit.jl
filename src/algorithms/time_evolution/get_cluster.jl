@@ -54,19 +54,19 @@ Given `site1`, `site2` connected by a nearest neighbor bond,
 return the bond index and whether it is reversed from the
 standard orientation (`site1` on the west/south of `site2`).
 """
-function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2}, (Nrow, Ncol)::NTuple{2, Int})
+function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2})
     diff = site1 - site2
     if diff == CartesianIndex(0, -1)
-        r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
+        r, c = site1[1], site1[2]
         return (1, r, c), false
     elseif diff == CartesianIndex(0, 1)
-        r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
+        r, c = site2[1], site2[2]
         return (1, r, c), true
     elseif diff == CartesianIndex(1, 0)
-        r, c = mod1(site1[1], Nrow), mod1(site1[2], Ncol)
+        r, c = site1[1], site1[2]
         return (2, r, c), false
     elseif diff == CartesianIndex(-1, 0)
-        r, c = mod1(site2[1], Nrow), mod1(site2[2], Ncol)
+        r, c = site2[1], site2[2]
         return (2, r, c), true
     else
         error("`site1` and `site2` are not nearest neighbors.")

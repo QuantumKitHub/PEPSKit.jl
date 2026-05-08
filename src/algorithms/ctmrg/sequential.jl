@@ -93,7 +93,7 @@ function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
     )
     _, r, c = coordinate
-    r′ = _prev(r, size(env, 2))
+    r′ = r - 1
     trunc = truncation_strategy(alg, edge(env, WEST, r′, c))
     alg´ = _set_decomposition_truncation(alg, trunc)
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
