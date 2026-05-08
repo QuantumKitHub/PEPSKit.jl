@@ -10,10 +10,10 @@ using PEPSKit: peps_normalize
 D = 2
 χ = 16
 unitcells = [(1, 1), (3, 4)]
-projector_algs_asymm = [:halfinfinite, :fullinfinite]
+projector_algs_asymm = [:HalfInfiniteProjector, :FullInfiniteProjector]
 projector_algs_c4v = [
-    (:c4v_qr, :Householder),
-    (:c4v_eigh, :QRIteration), (:c4v_eigh, :Lanczos),
+    (:C4vQRProjector, :Householder),
+    (:C4vEighProjector, :QRIteration), (:C4vEighProjector, :Lanczos),
 ]
 Ts = [Float64, ComplexF64]
 
@@ -23,10 +23,10 @@ Ts = [Float64, ComplexF64]
     Random.seed!(32350283290358)
     psi = InfinitePEPS(ComplexSpace(2), ComplexSpace(D); unitcell)
     env_sequential, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :sequential, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :SequentialCTMRG, projector_alg
     )
     env_simultaneous, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :simultaneous, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :SimultaneousCTMRG, projector_alg
     )
 
     # compare norms
@@ -52,7 +52,7 @@ end
 
 # test fixedspace actually fixes space
 @testset "Fixedspace truncation using $alg and $projector_alg" for (alg, projector_alg) in
-    Iterators.product([:sequential, :simultaneous], projector_algs_asymm)
+    Iterators.product([:SequentialCTMRG, :SimultaneousCTMRG], projector_algs_asymm)
     Ds = ComplexSpace.(fill(2, 3, 3))
     χs = ComplexSpace.([16 17 18; 15 20 21; 14 19 22])
     psi = InfinitePEPS(Ds, Ds, Ds)
@@ -80,7 +80,7 @@ end
 
     env₀ = initialize_random_c4v_env(peps, Venv)
     env, = leading_boundary(
-        env₀, peps; alg = :c4v, projector_alg,
+        env₀, peps; alg = :C4vCTMRG, projector_alg,
         decomposition_alg = (; alg = decomp_alg)
     )
     @test env isa CTMRGEnv

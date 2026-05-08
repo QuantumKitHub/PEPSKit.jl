@@ -55,8 +55,8 @@ O, M, E = three_dimensional_classical_ising(; beta)
 χenv = ℂ^12
 
 # cover all different flavors
-ctm_styles = [:sequential, :simultaneous]
-projector_algs = [:halfinfinite, :fullinfinite]
+ctm_styles = [:SequentialCTMRG, :SimultaneousCTMRG]
+projector_algs = [:HalfInfiniteProjector, :FullInfiniteProjector]
 
 @testset "PEPO CTMRG runthroughs for unitcell=$(unitcell)" for unitcell in
     [(1, 1, 1), (1, 1, 2)]

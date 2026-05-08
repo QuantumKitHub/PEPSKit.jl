@@ -246,7 +246,7 @@ end
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
         for trunc in truncs_env
-            env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc)
+            env, = leading_boundary(env, peps; alg = :SequentialCTMRG, tol = ctmrg_tol, trunc)
         end
         e_site = cost_function(peps, env, ham) / (Nr * Nc)
         @info "Energy (force_mpo = $(force_mpo)): $e_site"

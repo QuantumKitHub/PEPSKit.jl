@@ -19,8 +19,8 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [(; alg = :DivideAndConquer), (; alg = :iterative)]
-projector_algs_asymm = [:halfinfinite] #, :fullinfinite]
+svd_algs = [(; alg = :DivideAndConquer), (; alg = :GKL)]
+projector_algs_asymm = [:HalfInfiniteProjector] #, :FullInfiniteProjector]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
@@ -59,9 +59,9 @@ end
 
 # test same thing for C4v CTMRG
 c4v_algs = [
-    (:c4v_qr, (; alg = :Householder)),
-    (:c4v_eigh, (; alg = :QRIteration)),
-    (:c4v_eigh, (; alg = :Lanczos)),
+    (:C4vQRProjector, (; alg = :Householder)),
+    (:C4vEighProjector, (; alg = :QRIteration)),
+    (:C4vEighProjector, (; alg = :Lanczos)),
 ]
 @testset "$(decomposition_alg.alg) and $projector_alg" for
     (projector_alg, decomposition_alg) in c4v_algs
@@ -69,7 +69,7 @@ c4v_algs = [
     Random.seed!(2394823842)
     ctm_alg = C4vCTMRG(;
         projector_alg, decomposition_alg, maxiter = 200,
-        tol = (projector_alg == :c4v_qr ? 1.0e-12 : ctmrg_tol)
+        tol = (projector_alg == :C4vQRProjector ? 1.0e-12 : ctmrg_tol)
     )
     symm = RotateReflect()
 
@@ -101,10 +101,10 @@ c4v_algs = [
     @test calc_elementwise_convergence(env_conv1, env_fixed2) ≈ 0 atol = atol
 end
 
-@testset "Element-wise consistency of :DivideAndConquer and :iterative" begin
+@testset "Element-wise consistency of :DivideAndConquer and :GKL" begin
     ctm_alg_iter = SimultaneousCTMRG(;
         maxiter = 200,
-        decomposition_alg = (; alg = :iterative, krylovdim = χ + 10),
+        decomposition_alg = (; alg = :GKL, krylovdim = χ + 10),
     )
     ctm_alg_full = SimultaneousCTMRG(; decomposition_alg = (; alg = :DivideAndConquer))
 

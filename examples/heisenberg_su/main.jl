@@ -94,8 +94,8 @@ trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 env, = leading_boundary(
     env₀,
     peps;
-    alg = :sequential,
-    projector_alg = :fullinfinite,
+    alg = :SequentialCTMRG,
+    projector_alg = :FullInfiniteProjector,
     tol = 1.0e-10,
     trunc = trunc_env,
 );

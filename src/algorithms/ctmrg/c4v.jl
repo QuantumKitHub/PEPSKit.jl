@@ -32,9 +32,9 @@ struct C4vCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     projector_alg::P
 end
 function C4vCTMRG(; kwargs...)
-    return CTMRGAlgorithm(; alg = :c4v, kwargs...)
+    return CTMRGAlgorithm(; alg = :C4vCTMRG, kwargs...)
 end
-CTMRG_SYMBOLS[:c4v] = C4vCTMRG
+CTMRG_SYMBOLS[:C4vCTMRG] = C4vCTMRG
 
 """
 $(TYPEDEF)
@@ -53,7 +53,7 @@ Construct the C₄ᵥ `eigh`-based projector algorithm based on the following ke
 
 * `decomposition_alg::Union{<:EighAdjoint,NamedTuple}=EighAdjoint()` : `eigh` algorithm including the reverse rule. See [`EighAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
@@ -69,9 +69,9 @@ struct C4vEighProjector{S <: EighAdjoint, T} <: ProjectorAlgorithm
     verbosity::Int
 end
 function C4vEighProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg = :c4v_eigh, kwargs...)
+    return ProjectorAlgorithm(; alg = :C4vEighProjector, kwargs...)
 end
-PROJECTOR_SYMBOLS[:c4v_eigh] = C4vEighProjector
+PROJECTOR_SYMBOLS[:C4vEighProjector] = C4vEighProjector
 
 """
 $(TYPEDEF)
@@ -95,9 +95,9 @@ struct C4vQRProjector{S} <: ProjectorAlgorithm
     decomposition_alg::S
 end
 function C4vQRProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg = :c4v_qr, kwargs...)
+    return ProjectorAlgorithm(; alg = :C4vQRProjector, kwargs...)
 end
-PROJECTOR_SYMBOLS[:c4v_qr] = C4vQRProjector
+PROJECTOR_SYMBOLS[:C4vQRProjector] = C4vQRProjector
 
 decomposition_algorithm(alg::C4vQRProjector) = alg.decomposition_alg
 
