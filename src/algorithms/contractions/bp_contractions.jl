@@ -105,14 +105,14 @@ function contract_local_operator1x1(
         env::BPEnv,
     )
     row, col = Tuple(ind)
-    M_north = env.messages[NORTH, _prev(row, end), mod1(col, end)]
-    M_east = env.messages[EAST, mod1(row, end), _next(col, end)]
-    M_south = env.messages[SOUTH, _next(row, end), mod1(col, end)]
-    M_west = env.messages[WEST, mod1(row, end), _prev(col, end)]
+    M_north = env[NORTH, row - 1, col]
+    M_east = env[EAST, row, col + 1]
+    M_south = env[SOUTH, row + 1, col]
+    M_west = env[WEST, row, col - 1]
 
     return @autoopt @tensor begin
-        ket[mod1(row, end), mod1(col, end)][dt; DNt DEt DSt DWt] *
-            conj(bra[mod1(row, end), mod1(col, end)][db; DNb DEb DSb DWb]) *
+        ket[row, col][dt; DNt DEt DSt DWt] *
+            conj(bra[row, col][db; DNb DEb DSb DWb]) *
             O[db; dt] *
             M_north[DNt; DNb] *
             M_east[DEt; DEb] *
@@ -125,14 +125,14 @@ function contract_local_norm1x1(
         ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
     )
     row, col = Tuple(ind)
-    M_north = env.messages[NORTH, _prev(row, end), mod1(col, end)]
-    M_east = env.messages[EAST, mod1(row, end), _next(col, end)]
-    M_south = env.messages[SOUTH, _next(row, end), mod1(col, end)]
-    M_west = env.messages[WEST, mod1(row, end), _prev(col, end)]
+    M_north = env[NORTH, row - 1, col]
+    M_east = env[EAST, row, col + 1]
+    M_south = env[SOUTH, row + 1, col]
+    M_west = env[WEST, row, col - 1]
 
     return @autoopt @tensor begin
-        ket[mod1(row, end), mod1(col, end)][d; DNt DEt DSt DWt] *
-            conj(bra[mod1(row, end), mod1(col, end)][d; DNb DEb DSb DWb]) *
+        ket[row, col][d; DNt DEt DSt DWt] *
+            conj(bra[row, col][d; DNb DEb DSb DWb]) *
             M_north[DNt; DNb] *
             M_east[DEt; DEb] *
             M_south[DSb; DSt] *
@@ -148,17 +148,17 @@ function contract_local_operator2x1(
         env::BPEnv,
     )
     row, col = Tuple(coord)
-    M_north = env.messages[NORTH, _prev(row, end), mod1(col, end)]
-    M_northeast = env.messages[EAST, mod1(row, end), _next(col, end)]
-    M_southeast = env.messages[EAST, _next(row, end), _next(col, end)]
-    M_south = env.messages[SOUTH, mod1(row + 2, end), mod1(col, end)]
-    M_southwest = env.messages[WEST, _next(row, end), _prev(col, end)]
-    M_northwest = env.messages[WEST, mod1(row, end), _prev(col, end)]
+    M_north = env[NORTH, row - 1, col]
+    M_northeast = env[EAST, row, col + 1]
+    M_southeast = env[EAST, row + 1, col + 1]
+    M_south = env[SOUTH, row + 2, col]
+    M_southwest = env[WEST, row + 1, col - 1]
+    M_northwest = env[WEST, row, col - 1]
 
-    return @autoopt @tensor ket[mod1(row, end), mod1(col, end)][dNt; DNt DNEt DMt DNWt] *
-        ket[_next(row, end), mod1(col, end)][dSt; DMt DSEt DSt DSWt] *
-        conj(bra[mod1(row, end), mod1(col, end)][dNb; DNb DNEb DMb DNWb]) *
-        conj(bra[_next(row, end), mod1(col, end)][dSb; DMb DSEb DSb DSWb]) *
+    return @autoopt @tensor ket[row, col][dNt; DNt DNEt DMt DNWt] *
+        ket[row + 1, col][dSt; DMt DSEt DSt DSWt] *
+        conj(bra[row, col][dNb; DNb DNEb DMb DNWb]) *
+        conj(bra[row + 1, col][dSb; DMb DSEb DSb DSWb]) *
         M_north[DNt; DNb] *
         M_northeast[DNEt; DNEb] *
         M_southeast[DSEt; DSEb] *
@@ -176,16 +176,16 @@ function contract_local_operator1x2(
         env::BPEnv,
     )
     row, col = Tuple(coord)
-    M_west = env.messages[WEST, mod1(row, end), _prev(col, end)]
-    M_northwest = env.messages[NORTH, _prev(row, end), mod1(col, end)]
-    M_northeast = env.messages[NORTH, _prev(row, end), _next(col, end)]
-    M_east = env.messages[EAST, mod1(row, end), mod1(col + 2, end)]
-    M_southeast = env.messages[SOUTH, _next(row, end), _next(col, end)]
-    M_southwest = env.messages[SOUTH, _next(row, end), mod1(col, end)]
-    A_west = ket[mod1(row, end), mod1(col, end)]
-    Ā_west = bra[mod1(row, end), mod1(col, end)]
-    A_east = ket[mod1(row, end), _next(col, end)]
-    Ā_east = bra[mod1(row, end), _next(col, end)]
+    M_west = env[WEST, row, col - 1]
+    M_northwest = env[NORTH, row - 1, col]
+    M_northeast = env[NORTH, row - 1, col + 1]
+    M_east = env[EAST, row, col + 2]
+    M_southeast = env[SOUTH, row + 1, col + 1]
+    M_southwest = env[SOUTH, row + 1, col]
+    A_west = ket[row, col]
+    Ā_west = bra[row, col]
+    A_east = ket[row, col + 1]
+    Ā_east = bra[row, col + 1]
 
     return @autoopt @tensor begin
         A_west[dWt; DNWt DMt DSWt DWt] *
@@ -206,17 +206,17 @@ function contract_local_norm2x1(
         coord::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
     )
     row, col = Tuple(coord)
-    M_north = env.messages[NORTH, _prev(row, end), mod1(col, end)]
-    M_northeast = env.messages[EAST, mod1(row, end), _next(col, end)]
-    M_southeast = env.messages[EAST, _next(row, end), _next(col, end)]
-    M_south = env.messages[SOUTH, mod1(row + 2, end), mod1(col, end)]
-    M_southwest = env.messages[WEST, _next(row, end), _prev(col, end)]
-    M_northwest = env.messages[WEST, mod1(row, end), _prev(col, end)]
+    M_north = env[NORTH, row - 1, col]
+    M_northeast = env[EAST, row, col + 1]
+    M_southeast = env[EAST, row + 1, col + 1]
+    M_south = env[SOUTH, row + 2, col]
+    M_southwest = env[WEST, row + 1, col - 1]
+    M_northwest = env[WEST, row, col - 1]
 
-    return @autoopt @tensor ket[mod1(row, end), mod1(col, end)][dN; DNt DNEt DMt DNWt] *
-        ket[_next(row, end), mod1(col, end)][dS; DMt DSEt DSt DSWt] *
-        conj(bra[mod1(row, end), mod1(col, end)][dN; DNb DNEb DMb DNWb]) *
-        conj(bra[_next(row, end), mod1(col, end)][dS; DMb DSEb DSb DSWb]) *
+    return @autoopt @tensor ket[row, col][dN; DNt DNEt DMt DNWt] *
+        ket[row + 1, col][dS; DMt DSEt DSt DSWt] *
+        conj(bra[row, col][dN; DNb DNEb DMb DNWb]) *
+        conj(bra[row + 1, col][dS; DMb DSEb DSb DSWb]) *
         M_north[DNt; DNb] *
         M_northeast[DNEt; DNEb] *
         M_southeast[DSEt; DSEb] *
@@ -230,17 +230,17 @@ function contract_local_norm1x2(
     )
     row, col = Tuple(coord)
 
-    M_west = env.messages[WEST, mod1(row, end), _prev(col, end)]
-    M_northwest = env.messages[NORTH, _prev(row, end), mod1(col, end)]
-    M_northeast = env.messages[NORTH, _prev(row, end), _next(col, end)]
-    M_east = env.messages[EAST, mod1(row, end), mod1(col + 2, end)]
-    M_southeast = env.messages[SOUTH, _next(row, end), _next(col, end)]
-    M_southwest = env.messages[SOUTH, _next(row, end), mod1(col, end)]
+    M_west = env[WEST, row, col - 1]
+    M_northwest = env[NORTH, row - 1, col]
+    M_northeast = env[NORTH, row - 1, col + 1]
+    M_east = env[EAST, row, col + 2]
+    M_southeast = env[SOUTH, row + 1, col + 1]
+    M_southwest = env[SOUTH, row + 1, col]
 
-    A_west = ket[mod1(row, end), mod1(col, end)]
-    Ā_west = bra[mod1(row, end), mod1(col, end)]
-    A_east = ket[mod1(row, end), _next(col, end)]
-    Ā_east = bra[mod1(row, end), _next(col, end)]
+    A_west = ket[row, col]
+    Ā_west = bra[row, col]
+    A_east = ket[row, col + 1]
+    Ā_east = bra[row, col + 1]
 
     return @autoopt @tensor begin
         A_west[dW; DNWt DMt DSWt DWt] *

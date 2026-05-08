@@ -32,7 +32,8 @@ struct SiteDependentTruncation{T <: TruncationStrategy} <: TruncationStrategy
     end
 end
 
-Base.getindex(trunc::SiteDependentTruncation, args...) = Base.getindex(trunc.truncs, args...)
+Base.@propagate_inbounds Base.getindex(trunc::SiteDependentTruncation, I...) =
+    periodic_getindex(trunc, trunc.truncs, I)
 
 # TODO: _is_bipartite(trunc::SiteDependentTruncation)
 
@@ -113,20 +114,20 @@ function _rot180_trunc_y(trunc_y::AbstractMatrix{<:TruncationStrategy})
 end
 
 function Base.rotl90(trunc::SiteDependentTruncation)
-    trunc_y = _rotl90_trunc_x(trunc[1, :, :])
-    trunc_x = _rotl90_trunc_y(trunc[2, :, :])
+    trunc_y = _rotl90_trunc_x(trunc.truncs[1, :, :])
+    trunc_x = _rotl90_trunc_y(trunc.truncs[2, :, :])
     trunc = stack((trunc_x, trunc_y); dims = 1)
     return SiteDependentTruncation(trunc)
 end
 function Base.rotr90(trunc::SiteDependentTruncation)
-    trunc_y = _rotr90_trunc_x(trunc[1, :, :])
-    trunc_x = _rotr90_trunc_y(trunc[2, :, :])
+    trunc_y = _rotr90_trunc_x(trunc.truncs[1, :, :])
+    trunc_x = _rotr90_trunc_y(trunc.truncs[2, :, :])
     trunc = stack((trunc_x, trunc_y); dims = 1)
     return SiteDependentTruncation(trunc)
 end
 function Base.rot180(trunc::SiteDependentTruncation)
-    trunc_x = _rot180_trunc_x(trunc[1, :, :])
-    trunc_y = _rot180_trunc_y(trunc[2, :, :])
+    trunc_x = _rot180_trunc_x(trunc.truncs[1, :, :])
+    trunc_y = _rot180_trunc_y(trunc.truncs[2, :, :])
     trunc = stack((trunc_x, trunc_y); dims = 1)
     return SiteDependentTruncation(trunc)
 end

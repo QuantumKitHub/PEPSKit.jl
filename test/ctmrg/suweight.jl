@@ -2,7 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: str, twistdual, _prev, _next, unitcell
+using PEPSKit: str, twistdual, unitcell
 
 Vps = Dict(
     Z2Irrep => Vect[Z2Irrep](0 => 1, 1 => 2),

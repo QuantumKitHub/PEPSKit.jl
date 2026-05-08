@@ -38,8 +38,8 @@ function test_benv_ctm(state::Union{InfinitePEPS, InfinitePEPO})
     network = isa(state, InfinitePEPS) ? state : InfinitePEPS(state)
     env, = leading_boundary(CTMRGEnv(rand, ComplexF64, network, Envspace), network, ctm_alg)
     for row in 1:Nr, col in 1:Nc
-        cp1 = PEPSKit._next(col, Nc)
-        A, B = state.A[row, col], state.A[row, cp1]
+        cp1 = col + 1
+        A, B = state[row, col], state[row, cp1]
         a, X = PEPSKit.bond_tensor_first(A)
         b, Y = PEPSKit.bond_tensor_last(B)
         benv = PEPSKit.bondenv_ctm(row, col, X, Y, env)

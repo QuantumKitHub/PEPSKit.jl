@@ -46,7 +46,7 @@ using PEPSKit: _next, _is_bipartite
     peps0 = InfinitePEPS(randn, elt, Pspaces, Nspaces, Espaces)
     if bipartite
         for c in 1:2
-            peps0[2, c] = copy(peps0[1, _next(c, 2)])
+            peps0[2, c] = copy(peps0[1, c + 1])
         end
     end
 

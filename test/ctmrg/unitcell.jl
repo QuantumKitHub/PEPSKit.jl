@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit
-using PEPSKit: _prev, _next, ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
+using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
 using TensorKit
 
 # settings
