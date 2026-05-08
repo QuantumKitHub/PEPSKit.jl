@@ -332,9 +332,9 @@ function CTMRGEnv(wts::SUWeight)
     V_env = oneunit(spacetype(wts))
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH
-            CartesianIndex(2, _next(r, Nr), c)
+            CartesianIndex(2, r + 1, c)
         elseif d == EAST
-            CartesianIndex(1, r, _prev(c, Nc))
+            CartesianIndex(1, r, c - 1)
         elseif d == SOUTH
             CartesianIndex(2, r, c)
         else # WEST
