@@ -144,7 +144,7 @@ TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
 function _is_bipartite(wts::SUWeight)
     (size(wts, 2) == size(wts, 3) == 2) || (return false)
     for (d, c) in Iterators.product(1:2, 1:2)
-        (wts[d, 1, c] == wts[d, 2, _next(c, 2)]) || (return false)
+        (wts[d, 1, c] == wts[d, 2, c + 1]) || (return false)
     end
     return true
 end
