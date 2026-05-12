@@ -268,7 +268,7 @@ function _cluster_truncate!(
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
         Ms[i] = Ms[i] * twistdual(Pa, 1)
         pP = ((1,), (2,))
-        pM = ((1,), ntuple(i -> i + 1, numind(eltype(Ms)) - 1))
+        pM = ((1,), ntuple(i -> i + 1, numind(Ms[i + 1]) - 1))
         pPM = (codomainind(Ms[i + 1]), domainind(Ms[i + 1]))
         Ms[i + 1] = tensorcontract(Pb, pP, false, Ms[i + 1], pM, false, pPM)
     end
