@@ -126,18 +126,18 @@ const svd_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.SVDAlgorithms>, 
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
-const svd_rrule_alg = :full # ∈ {:full, :trunc, :GMRES, :BiCGStab, :Arnoldi}
+const svd_rrule_alg = :FullPullback # ∈ {:FullPullback, :TruncPullback, :GMRES, :BiCGStab, :Arnoldi}
 const krylovdim_factor = 1.4
 
 # eigh forward & reverse
 const eigh_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.EighAlgorithms>, :Lanczos, :BlockLanczos}
-const eigh_rrule_alg = :full # ∈ {:full, :trunc}
+const eigh_rrule_alg = :FullPullback # ∈ {:FullPullback, :TruncPullback}
 const eigh_rrule_verbosity = 0
 
 # QR forward & reverse
 const qr_fwd_alg = :Householder
 const qr_fwd_positive = true
-const qr_rrule_alg = :qr
+const qr_rrule_alg = :FullPullback
 const qr_rrule_verbosity = 0
 
 # Projectors
