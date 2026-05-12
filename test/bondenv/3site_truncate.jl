@@ -1,5 +1,4 @@
 using Random
-using Printf
 using Test
 using TensorKit
 using PEPSKit
