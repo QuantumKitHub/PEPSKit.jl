@@ -23,7 +23,7 @@ gradtol = 1.0e-4
 ctmrg_verbosity = 1
 ctmrg_algs = [[:C4vCTMRG]]
 projector_algs = [[:C4vEighProjector, :C4vQRProjector]]
-decomposition_rrule_algs = [[:full, :trunc, :qr]]
+decomposition_rrule_algs = [[:FullPullback, :TruncPullback]]
 gradient_algs = [[nothing, :GeomSum, :ManualIter, :LinSolver, :EigSolver]] # they all use :fixed mode by default (except for nothing)
 steps = -0.01:0.005:0.01
 
@@ -34,7 +34,7 @@ allowed_rrule_algs = Dict(
 )
 
 # be selective on which configurations to test the naive gradient for
-naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :full), (:C4vCTMRG, :C4vQRProjector, :qr)]
+naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :FullPullback), (:C4vCTMRG, :C4vQRProjector, :FullPullback)]
 naive_gradient_done = Set()
 
 ## Tests

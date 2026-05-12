@@ -194,7 +194,7 @@ Construct an `IterEigh` algorithm struct based on the following keyword argument
     fallback_threshold::Float64 = Inf
     start_vector = deterministic_start_vector
 end
-_default_eigh_rrule_alg(::IterEigh) = :trunc
+_default_eigh_rrule_alg(::IterEigh) = :TruncPullback
 
 # Compute eigh data block-wise using KrylovKit algorithm
 function MatrixAlgebraKit.eigh_trunc!(f, alg::TruncatedAlgorithm{<:IterEigh})
