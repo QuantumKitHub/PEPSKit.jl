@@ -32,7 +32,7 @@ struct QRAdjoint{F, R}
 end
 
 const QR_FWD_SYMBOLS = IdDict{Symbol, Any}(
-    # :DefaultAlgorithm => DefaultAlgorithm, # TODO: broken, needs to be fixed
+    :DefaultAlgorithm => DefaultAlgorithm,
     :Householder => Householder,
 )
 const QR_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
