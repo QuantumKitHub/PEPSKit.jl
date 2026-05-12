@@ -1,15 +1,6 @@
 """
 $(TYPEDEF)
 
-QR reverse-rule algorithm which wraps MatrixAlgebraKit's `qr_pullback!`.
-"""
-@kwdef struct QRPullback
-    verbosity::Int = 0
-end
-
-"""
-$(TYPEDEF)
-
 Wrapper for a QR decomposition algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 
 ## Fields
@@ -29,7 +20,7 @@ Construct a `QRAdjoint` algorithm struct based on the following keyword argument
     - `:DefaultAlgorithm` : MatrixAlgebraKit's [default QR algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
     - `:Householder` : MatrixAlgebraKit's [`Householder`](@extref MatrixAlgebraKit.Householder)
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:qr` : MatrixAlgebraKit's [`qr_pullback!`](@extref MatrixAlgebraKit.qr_pullback!)
+    - `:FullPullback` : MatrixAlgebraKit's [`qr_pullback!`](@extref MatrixAlgebraKit.qr_pullback!)
 
 !!! note
     Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
@@ -45,7 +36,7 @@ const QR_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :Householder => Householder,
 )
 const QR_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :qr => QRPullback
+    :FullPullback => FullPullback
 )
 
 function QRAdjoint(; fwd_alg = (;), rrule_alg = (;))
@@ -100,7 +91,7 @@ function ChainRulesCore.rrule(
         ::typeof(left_orth!),
         t::AbstractTensorMap,
         alg::QRAdjoint{F, R},
-    ) where {F <: MatrixAlgebraKit.Algorithm, R <: QRPullback}
+    ) where {F <: MatrixAlgebraKit.Algorithm, R <: FullPullback}
     QR = left_orth(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 

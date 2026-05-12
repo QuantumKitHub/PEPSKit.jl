@@ -3,52 +3,6 @@ const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreEx
 """
 $(TYPEDEF)
 
-SVD reverse-rule algorithm which wraps MatrixAlgebraKit's `svd_pullback!`.
-
-## Fields
-
-$(TYPEDFIELDS)
-
-## Constructors
-
-    FullSVDPullback(; kwargs...)
-
-Construct a `FullSVDPullback` algorithm struct from the following keyword arguments:
-
-* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
-* `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
-"""
-@kwdef struct FullSVDPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
-    verbosity::Int = 0
-end
-
-"""
-$(TYPEDEF)
-
-SVD reverse-rule algorithm which wraps MatrixAlgebraKit's `svd_trunc_pullback!`.
-
-## Fields
-
-$(TYPEDFIELDS)
-
-## Constructors
-
-    TruncSVDPullback(; kwargs...)
-
-Construct a `TruncSVDPullback` algorithm struct from the following keyword arguments:
-
-* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
-* `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
-"""
-@kwdef struct TruncSVDPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
-    verbosity::Int = 0
-end
-
-"""
-$(TYPEDEF)
-
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 
 ## Fields
@@ -82,8 +36,8 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.svd_rrule_alg))`:
   Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm`
   instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
+    - `:FullPullback` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
+    - `:TruncPullback` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
     - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref KrylovKit.Arnoldi)
@@ -108,11 +62,11 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :GKL => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :full => FullSVDPullback, :trunc => TruncSVDPullback,
+    :FullPullback => FullSVDPullback, :TruncPullback => TruncSVDPullback,
     :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi
 )
 
-_default_svd_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full
+_default_svd_rrule_alg(::MatrixAlgebraKit.Algorithm) = :FullPullback
 
 function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse forward SVD algorithm
@@ -211,7 +165,7 @@ Construct an `IterSVD` algorithm struct based on the following keyword arguments
     fallback_threshold::Float64 = Inf
     start_vector = deterministic_start_vector
 end
-_default_svd_rrule_alg(::IterSVD) = :trunc
+_default_svd_rrule_alg(::IterSVD) = :TruncPullback
 
 random_start_vector(t::AbstractMatrix) = randn(scalartype(t), size(t, 1))
 deterministic_start_vector(t::AbstractMatrix) = ones(scalartype(t), size(t, 1))
@@ -316,7 +270,7 @@ function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R}
-    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullSVDPullback}
+    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
     # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
 
     # requires access to the full decomposition
@@ -347,7 +301,7 @@ function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t,
         alg::SVDAdjoint{F, R},
-    ) where {F, R <: TruncSVDPullback}
+    ) where {F, R <: TruncPullback}
     U, S, V⁺, ϵ = svd_trunc(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
