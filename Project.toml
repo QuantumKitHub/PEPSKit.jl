@@ -43,8 +43,8 @@ Adapt = "4"
 Accessors = "0.1"
 ChainRulesCore = "1.0"
 Compat = "3.46, 4.2"
-CUDA = "5"
-cuTENSOR = "2"
+CUDA = "6"
+cuTENSOR = "6"
 DocStringExtensions = "0.9.3"
 FiniteDifferences = "0.12"
 KrylovKit = "0.9.5, 0.10"
@@ -58,7 +58,7 @@ OptimKit = "0.4"
 Printf = "1"
 Random = "1"
 Statistics = "1"
-TensorKit = "0.16.2"
+TensorKit = "0.17"
 TensorOperations = "5"
 TupleTools = "1.6.0"
 VectorInterface = "0.4, 0.5"
@@ -66,5 +66,6 @@ Zygote = "0.6, 0.7"
 julia = "1.10"
 
 [sources]
-MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev="main"}
-MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev="main"}
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev="main"}
+MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev="ksh/cu2"}
+MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev="ksh/bump"}
