@@ -26,7 +26,7 @@ end
 $(TYPEDEF)
 
 Truncated reverse-rule algorithm which wraps MatrixAlgebraKit's truncated pullback methods,
-see [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_pullbaeigh_trunc_pullback!ck!) and [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!).
+see [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) and [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!).
 ## Fields
 
 $(TYPEDFIELDS)
