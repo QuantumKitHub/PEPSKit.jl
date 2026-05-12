@@ -40,8 +40,8 @@ Module containing default algorithm parameter values and arguments.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
-    - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
+    - `:FullPullback` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
+    - `:TruncPullback` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
     - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref)
@@ -58,8 +58,8 @@ Module containing default algorithm parameter values and arguments.
     - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
     - `:BlockLanczos` : Block version of `:Lanczos` for repeated extremal eigenvalues, see [`KrylovKit.BlockLanczos`](@extref)
 * `eigh_rrule_alg=:$(Defaults.eigh_rrule_alg)` : Reverse-rule algorithm for the `eigh` gradient.
-    - `:full` : Full pullback algorithm for eigendecompositions, see [`PEPSKit.FullEighPullback`](@ref).
-    - `:trunc` : Truncated reverse-mode algorithm for eigendecompositions, see [`PEPSKit.TruncEighPullback`](@ref).
+    - `:FullPullback` : MatrixAlgebraKit's [`eigh_pullback!`](@extref MatrixAlgebraKit.eigh_pullback!) that requires access to the full spectrum
+    - `:TruncPullback` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) solving a Sylvester equation on the truncated subspace
 * `eigh_rrule_verbosity=$(Defaults.eigh_rrule_verbosity)` : eigh gradient output verbosity.
 
 ## Projectors

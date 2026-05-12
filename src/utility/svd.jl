@@ -62,7 +62,7 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :GKL => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :FullPullback => FullSVDPullback, :TruncPullback => TruncSVDPullback,
+    :FullPullback => FullPullback, :TruncPullback => TruncPullback,
     :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi
 )
 
@@ -97,11 +97,11 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
 
         # IterSVD is incompatible with tsvd rrule -> default to Arnoldi
-        if rrule_type <: FullSVDPullback && fwd_algorithm isa IterSVD
+        if rrule_type <: FullPullback && fwd_algorithm isa IterSVD
             rrule_type = Arnoldi
         end
 
-        if rrule_type <: Union{FullSVDPullback, TruncSVDPullback}
+        if rrule_type <: Union{FullPullback, TruncPullback}
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, tol = 0.0, krylovdim = 0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
         else
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, degeneracy_atol = 0.0)) # remove `alg` and `degeneracy_atol` keyword arguments
