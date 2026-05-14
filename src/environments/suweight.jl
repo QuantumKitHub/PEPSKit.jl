@@ -77,7 +77,7 @@ end
 """
     SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
 
-Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east) 
+Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
 as `ElementarySpace`s) and unit cell size.
 """
 function SUWeight(
@@ -127,8 +127,10 @@ Base.eltype(W::SUWeight) = eltype(typeof(W))
 Base.eltype(::Type{SUWeight{E}}) where {E} = E
 VI.scalartype(::Type{T}) where {T <: SUWeight} = scalartype(eltype(T))
 
-Base.getindex(W::SUWeight, args...) = Base.getindex(W.data, args...)
-Base.setindex!(W::SUWeight, args...) = (Base.setindex!(W.data, args...); W)
+Base.@propagate_inbounds Base.getindex(W::SUWeight, I...) =
+    periodic_getindex(W, W.data, I)
+Base.@propagate_inbounds Base.setindex!(W::SUWeight, v, I...) =
+    periodic_setindex!(W, W.data, v, I)
 Base.axes(W::SUWeight, args...) = axes(W.data, args...)
 Base.iterate(W::SUWeight, args...) = iterate(W.data, args...)
 
@@ -137,6 +139,15 @@ TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
 TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
 TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
+
+## Bipartite check
+function _is_bipartite(wts::SUWeight)
+    (size(wts, 2) == size(wts, 3) == 2) || (return false)
+    for (d, c) in Iterators.product(1:2, 1:2)
+        (wts[d, 1, c] == wts[d, 2, c + 1]) || (return false)
+    end
+    return true
+end
 
 ## (Approximate) equality
 function Base.:(==)(wts1::SUWeight, wts2::SUWeight)
@@ -164,84 +175,6 @@ function Base.show(io::IO, ::MIME"text/plain", wts::SUWeight)
         end
     end
     return nothing
-end
-
-"""
-    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::Int; inv::Bool = false)
-    absorb_weight(t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight, row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false)
-
-Absorb or remove (in a twist-free way) the square root of environment weight 
-on an axis of the PEPS/PEPO tensor `t` known to be at position (`row`, `col`)
-in the unit cell of an InfinitePEPS/InfinitePEPO. The involved weights are
-```
-                    |
-                [2,r,c]
-                    |
-    - [1,r,c-1] - T[r,c] - [1,r,c] -
-                    |
-                [1,r+1,c]
-                    |
-```
-
-## Arguments
-
-- `t::Union{PEPSTensor, PEPOTensor}` : PEPSTensor or PEPOTensor to which the weight will be absorbed.
-- `weights::SUWeight` : All simple update weights.
-- `row::Int` : The row index specifying the position in the tensor network.
-- `col::Int` : The column index specifying the position in the tensor network.
-- `ax::Int` : The axis into which the weight is absorbed, taking values from 1 to 4, standing for north, east, south, west respectively.
-
-## Keyword arguments
-
-- `inv::Bool=false` : If `true`, the inverse square root of the weight is absorbed.
-
-## Examples
-
-```julia
-# Absorb the weight into the north axis of tensor at position (2, 3)
-absorb_weight(t, weights, 2, 3, 1)
-
-# Absorb the inverse of (i.e. remove) the weight into the east axis
-absorb_weight(t, weights, 2, 3, 2; inv=true)
-```
-"""
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::Int; inv::Bool = false
-    )
-    Nr, Nc = size(weights)[2:end]
-    nin, nout, ntol = numin(t), numout(t), numind(t)
-    @assert 1 <= row <= Nr && 1 <= col <= Nc
-    @assert 1 <= ax <= nin
-    pow = inv ? -1 / 2 : 1 / 2
-    wt = sdiag_pow(
-        if ax == NORTH
-            weights[2, row, col]
-        elseif ax == EAST
-            weights[1, row, col]
-        elseif ax == SOUTH
-            weights[2, _next(row, Nr), col]
-        else # WEST
-            weights[1, row, _prev(col, Nc)]
-        end,
-        pow,
-    )
-    t_idx = [(n - nout == ax) ? 1 : -n for n in 1:ntol]
-    ax′ = ax + nout
-    wt_idx = (ax == NORTH || ax == EAST) ? [1, -ax′] : [-ax′, 1]
-    # make absorption/removal twist-free
-    twistdual!(wt, 1)
-    return permute(ncon((t, wt), (t_idx, wt_idx)), (Tuple(1:nout), Tuple((nout + 1):ntol)))
-end
-function absorb_weight(
-        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
-        row::Int, col::Int, ax::NTuple{N, Int}; inv::Bool = false
-    ) where {N}
-    t2 = copy(t)
-    for a in ax
-        t2 = absorb_weight(t2, weights, row, col, a; inv)
-    end
-    return t2
 end
 
 #= Rotation of SUWeight. Example: 3 x 3 network
@@ -371,25 +304,25 @@ function _rot180_wts_y(wts_y::AbstractMatrix{<:PEPSWeight})
 end
 
 function Base.rotl90(wts::SUWeight)
-    wts_y = _rotl90_wts_x(wts[1, :, :])
-    wts_x = _rotl90_wts_y(wts[2, :, :])
+    wts_y = _rotl90_wts_x(wts.data[1, :, :])
+    wts_x = _rotl90_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rotr90(wts::SUWeight)
-    wts_y = _rotr90_wts_x(wts[1, :, :])
-    wts_x = _rotr90_wts_y(wts[2, :, :])
+    wts_y = _rotr90_wts_x(wts.data[1, :, :])
+    wts_x = _rotr90_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 function Base.rot180(wts::SUWeight)
-    wts_x = _rot180_wts_x(wts[1, :, :])
-    wts_y = _rot180_wts_y(wts[2, :, :])
+    wts_x = _rot180_wts_x(wts.data[1, :, :])
+    wts_y = _rot180_wts_y(wts.data[2, :, :])
     return SUWeight(wts_x, wts_y)
 end
 
 """
     CTMRGEnv(wts::SUWeight)
 
-Construct a CTMRG environment with a trivial environment space 
+Construct a CTMRG environment with a trivial environment space
 (bond dimension χ = 1) from SUWeight `wts`,
 which has the same real scalartype as ``wts`.
 """
@@ -399,9 +332,9 @@ function CTMRGEnv(wts::SUWeight)
     V_env = oneunit(spacetype(wts))
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH
-            CartesianIndex(2, _next(r, Nr), c)
+            CartesianIndex(2, r + 1, c)
         elseif d == EAST
-            CartesianIndex(1, r, _prev(c, Nc))
+            CartesianIndex(1, r, c - 1)
         elseif d == SOUTH
             CartesianIndex(2, r, c)
         else # WEST

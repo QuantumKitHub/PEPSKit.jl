@@ -91,23 +91,7 @@ Z = InfinitePartitionFunction(O)
 ````
 
 ````
-InfinitePartitionFunction{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}[TensorMap((ℂ^2 ⊗ ℂ^2) ← (ℂ^2 ⊗ ℂ^2)):
-[:, :, 1, 1] =
-  3.169519816780443 + 0.0im  0.4999999999999995 + 0.0im
- 0.4999999999999995 + 0.0im  0.1505971059561009 + 0.0im
-
-[:, :, 2, 1] =
- 0.4999999999999995 + 0.0im  0.1505971059561009 + 0.0im
- 0.1505971059561009 + 0.0im  0.4999999999999995 + 0.0im
-
-[:, :, 1, 2] =
- 0.4999999999999995 + 0.0im  0.1505971059561009 + 0.0im
- 0.1505971059561009 + 0.0im  0.4999999999999995 + 0.0im
-
-[:, :, 2, 2] =
- 0.1505971059561009 + 0.0im  0.4999999999999995 + 0.0im
- 0.4999999999999995 + 0.0im   3.169519816780443 + 0.0im
-;;])
+InfinitePartitionFunction{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}[TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}(ComplexF64[3.169519816780443 + 0.0im, 0.4999999999999995 + 0.0im, 0.4999999999999995 + 0.0im, 0.1505971059561009 + 0.0im, 0.4999999999999995 + 0.0im, 0.1505971059561009 + 0.0im, 0.1505971059561009 + 0.0im, 0.4999999999999995 + 0.0im, 0.4999999999999995 + 0.0im, 0.1505971059561009 + 0.0im, 0.1505971059561009 + 0.0im, 0.4999999999999995 + 0.0im, 0.1505971059561009 + 0.0im, 0.4999999999999995 + 0.0im, 0.4999999999999995 + 0.0im, 3.169519816780443 + 0.0im], (ℂ^2 ⊗ ℂ^2) ← (ℂ^2 ⊗ ℂ^2));;])
 ````
 
 ## Contracting the partition function
@@ -124,7 +108,7 @@ env, = leading_boundary(env₀, Z; tol = 1.0e-8, maxiter = 500);
 
 ````
 [ Info: CTMRG init:	obj = +1.784252138312e+00 -1.557258880375e+00im	err = 1.0000e+00
-[ Info: CTMRG conv 63:	obj = +3.353928644031e+00	err = 4.6032264022e-09	time = 5.74 sec
+[ Info: CTMRG conv 63:	obj = +3.353928644031e+00	err = 4.6025219721e-09	time = 4.33 sec
 
 ````
 
@@ -159,9 +143,9 @@ e = expectation_value(Z, (1, 1) => E, env)
 ````
 
 ````
-λ = 3.353928644031378 + 7.047583922370844e-16im
-m = 0.9736086674403002 + 0.0im
-e = -1.8637796145082448 + 1.4610281815259345e-16im
+λ = 3.35392864403138 - 7.635344033856476e-16im
+m = 0.9736086674403008 + 0.0im
+e = -1.8637796145082446 - 3.652351409579798e-17im
 
 ````
 
@@ -205,9 +189,9 @@ extrapolation):
 ````
 
 ````
-(-(log(λ)) / beta - f_exact) / f_exact = -8.807417386354037e-16 + 1.736415096112634e-16im
-(abs(m) - abs(m_exact)) / abs(m_exact) = -3.420952570843561e-16
-(e - e_exact) / e_exact = -0.02373206809908996 - 7.653023727290916e-17im
+(-(log(λ)) / beta - f_exact) / f_exact = -2.2018543465885093e-16 - 1.8812300485443252e-16im
+(abs(m) - abs(m_exact)) / abs(m_exact) = 3.420952570843561e-16
+(e - e_exact) / e_exact = -0.02373206809909008 + 1.9131411940819196e-17im
 
 ````
 

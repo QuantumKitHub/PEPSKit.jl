@@ -7,16 +7,6 @@ Algorithm for gauging PEPS with belief propagation fixed point messages.
     # TODO: add options
 end
 
-function _bpenv_bipartite_check(env::BPEnv)
-    for (r, c) in Iterators.product(1:2, 1:2)
-        r′, c′ = _next(r, 2), _next(c, 2)
-        if !all(env[:, r, c] .== env[:, r′, c′])
-            return false
-        end
-    end
-    return true
-end
-
 """
     gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::BPGauge, env::BPEnv)
 
@@ -25,7 +15,7 @@ an [`InfinitePEPO`](@ref) interpreted as purified state with two physical legs)
 using fixed point environment `env` of belief propagation.
 """
 function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
-    bipartite = _state_bipartite_check(psi) && _bpenv_bipartite_check(env)
+    bipartite = _is_bipartite(psi) && _is_bipartite(env)
     psi′ = copy(psi)
     XXinv = map(eachcoordinate(psi, 1:2)) do I
         _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env)
@@ -35,7 +25,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
         # copy 1st column to 2nd column to eliminate differences
         # caused by order of applying gauge transformations
         for r in 1:2
-            psi′[_next(r, 2), 2] = copy(psi′[r, 1])
+            psi′[r + 1, 2] = copy(psi′[r, 1])
         end
     end
     return psi′, XXinv
@@ -52,7 +42,7 @@ function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
     Fs = map(Base.Fix2(getindex, 2), psi_Fs)
     psi′, XXinv = gauge_fix(InfinitePEPS(psi′), alg, env)
     # convert back to iPEPO
-    psi′ = map(zip(psi′.A, Fs)) do (t, F)
+    psi′ = map(psi′.A, Fs) do t, F
         return F' * t
     end
     psi′ = reshape(psi′, (Nr, Nc, 1))
@@ -62,7 +52,7 @@ end
 function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv)
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
-    M12 = env[dir, dir == NORTH ? _prev(row, end) : row, dir == EAST ? _next(col, end) : col]
+    M12 = env[dir, dir == NORTH ? row - 1 : row, dir == EAST ? col + 1 : col]
     sqrtM12, isqrtM12 = sqrt_invsqrt(twist(M12, 1))
     M21 = env[dir + 2, row, col]
     sqrtM21, isqrtM21 = sqrt_invsqrt(M21)
@@ -100,10 +90,10 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv)
     end
     if dir == NORTH
         psi[row, col] = absorb_north_message(psi[row, col], X)
-        psi[_prev(row, end), col] = absorb_south_message(psi[_prev(row, end), col], invX)
+        psi[row - 1, col] = absorb_south_message(psi[row - 1, col], invX)
     elseif dir == EAST
         psi[row, col] = absorb_east_message(psi[row, col], X)
-        psi[row, _next(col, end)] = absorb_west_message(psi[row, _next(col, end)], invX)
+        psi[row, col + 1] = absorb_west_message(psi[row, col + 1], invX)
     end
     return psi, X, invX
 end
@@ -132,9 +122,9 @@ to a belief propagation environment.
 function BPEnv(wts::SUWeight)
     messages = map(Iterators.product(1:4, axes(wts, 2), axes(wts, 3))) do (d, r, c)
         wt = if d == NORTH
-            twist(wts[2, _next(r, end), c], 1)
+            twist(wts[2, r + 1, c], 1)
         elseif d == EAST
-            twist(wts[1, r, _prev(c, end)], 1)
+            twist(wts[1, r, c - 1], 1)
         elseif d == SOUTH
             copy(wts[2, r, c])
         else # WEST

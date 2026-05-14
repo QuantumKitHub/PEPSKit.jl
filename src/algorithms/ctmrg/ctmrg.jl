@@ -8,6 +8,7 @@ abstract type CTMRGAlgorithm end
 
 const CTMRG_SYMBOLS = IdDict{Symbol, Type{<:CTMRGAlgorithm}}()
 
+
 """
     CTMRGAlgorithm(; kwargs...)
 
@@ -27,8 +28,12 @@ function CTMRGAlgorithm(;
     alg_type = CTMRG_SYMBOLS[alg]
 
     # parse CTMRG projector algorithm
-    if alg == :c4v && projector_alg == Defaults.projector_alg
+    if alg == :C4vCTMRG && projector_alg == Defaults.projector_alg
         projector_alg = Defaults.projector_alg_c4v
+    end
+    # check for full decomposition algorithm specification, otherwise interpret as forward alg
+    if decomposition_alg isa NamedTuple
+        decomposition_alg = (; fwd_alg = decomposition_alg)
     end
     projector_algorithm = ProjectorAlgorithm(;
         alg = projector_alg, decomposition_alg, trunc, verbosity
@@ -43,14 +48,6 @@ end
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
 function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
-
-"""
-    check_input(network, env, alg::CTMRGAlgorithm)
-
-Check compatibility of a given network and environment with a specified CTMRG algorithm.
-"""
-function check_input(network, env, alg::CTMRGAlgorithm) end
-@non_differentiable check_input(args...)
 
 """
     leading_boundary(env₀, network; kwargs...) -> env, info
@@ -74,47 +71,37 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     3. Iteration info
     4. Debug info
 * `alg::Symbol=:$(Defaults.ctmrg_alg)` : Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
-    - `:simultaneous` : Simultaneous expansion and renormalization of all sides.
-    - `:sequential` : Sequential application of left moves and rotations.
-    - `:c4v` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
+    - `:SimultaneousCTMRG` : Simultaneous expansion and renormalization of all sides.
+    - `:SequentialCTMRG` : Sequential application of left moves and rotations.
+    - `:C4vCTMRG` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
 
 ### Projector algorithm
 
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `decomposition_alg` : Tensor decomposition algorithm for computing projectors. See e.g. [`SVDAdjoint`](@ref). 
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
-    - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
-    - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
-    - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner.
+    - `:HalfInfiniteProjector` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
+    - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
+* `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:QRAdjoint}` : Tensor
+  decomposition algorithm used for computing projectors. When specified as a `NamedTuple`,
+  the settings are passed a the forward algorithm to the appropriate decomposition
+  for the given projector algorithm. For information on which forward algorithms are
+  available, and how to specify them, see [`SVDAdjoint`](@ref), [`EighAdjoint`](@ref) and [`QRAdjoint`](@ref).
 
 ## Return values
 
-The CTMRG routine returns the final CTMRG environment as well as an information `NamedTuple`
-containing the following fields:
-
-* `truncation_error` : Last (maximal) SVD truncation error of the CTMRG projectors.
-* `condition_number` : Last (maximal) condition number of the enlarged CTMRG environment.
-
-In case the `alg` is a `SimultaneousCTMRG`, the last SVD will also be returned:
-
-* `U` : Last unit cell of left singular vectors.
-* `S` : Last unit cell of singular values.
-* `V` : Last unit cell of right singular vectors.
-
-If, in addition, the specified SVD algorithm computes the full, untruncated SVD, the full
-set of vectors and values will be returned as well:
-
-* `U_full` : Last unit cell of all left singular vectors.
-* `S_full` : Last unit cell of all singular values.
-* `V_full` : Last unit cell of all right singular vectors.
-
-For `C4vCTMRG` instead the last eigendecomposition `V` and `D` (and `V_full`, `D_full`) will be returned.
+* `env` : The final environment.
+* `info` : A `NamedTuple` containing information about the `leading_boundary` convergence, which has the following fields:
+    - `info.converged::Bool` : Convergence flag indicating whether the contraction converged within `maxiter` and `tol`.
+    - `info.convergence_error::Real` : The final convergence error at the end of the contraction procedure.
+    - `info.contraction_metrics::NamedTuple` : A `NamedTuple` containing metrics which characterize the contraction. The precise contents depend on `alg`.
 """
 function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
@@ -123,7 +110,7 @@ end
 function leading_boundary(
         env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
-    check_input(network, env₀, alg)
+    check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
@@ -132,13 +119,15 @@ function leading_boundary(
         end
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
-        local info
+        local info_iter
+        converged = false
         for iter in 1:(alg.maxiter)
-            env, info = ctmrg_iteration(network, env, alg)
+            env, info_iter = ctmrg_iteration(network, env, alg)
             η, CS, TS = calc_convergence(env, CS, TS)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
                 ctmrg_logfinish!(log, iter, η, network, env)
+                converged = true
                 break
             end
             if iter == alg.maxiter
@@ -147,12 +136,25 @@ function leading_boundary(
                 ctmrg_logiter!(log, iter, η, network, env)
             end
         end
+        info = (;
+            converged,
+            convergence_error = η,
+            contraction_metrics = info_iter.contraction_metrics,
+        )
         return env, info
     end
 end
 function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
     return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
+
+"""
+    check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorithm)
+
+Check compatibility of a given network and environment with a specified CTMRG algorithm.
+"""
+function check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorithm) end
+@non_differentiable check_input(args...)
 
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env)

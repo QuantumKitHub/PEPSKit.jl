@@ -9,43 +9,54 @@ Module containing default algorithm parameter values and arguments.
 * `ctmrg_maxiter=$(Defaults.ctmrg_maxiter)` : Maximal number of CTMRG iterations per run.
 * `ctmrg_miniter=$(Defaults.ctmrg_miniter)` : Minimal number of CTMRG carried out.
 * `ctmrg_alg=:$(Defaults.ctmrg_alg)` : Default CTMRG algorithm variant.
-    - `:simultaneous` : Simultaneous expansion and renormalization of all sides.
-    - `:sequential` : Sequential application of left moves and rotations.
+    - `:SimultaneousCTMRG` : Simultaneous expansion and renormalization of all sides.
+    - `:SequentialCTMRG` : Sequential application of left moves and rotations.
 * `ctmrg_verbosity=$(Defaults.ctmrg_verbosity)` : CTMRG output information verbosity
 
 ## SVD forward & reverse
 
 * `trunc=:$(Defaults.trunc)` : Truncation scheme for SVDs and other decompositions.
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `rrule_degeneracy_atol=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude which smoothens the divergent term in the retained contributions of an SVD or eigh pullback, in case of (pseudo) degenerate singular values
+
+* `rrule_degeneracy_atol=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude which
+  smoothens the divergent term in the retained contributions of an SVD or eigh pullback, in
+  case of (pseudo) degenerate singular values
 * `svd_fwd_alg=:$(Defaults.svd_fwd_alg)` : SVD algorithm that is used in the forward pass.
-    - `:sdd` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`
-    - `:svd` : MatrixAlgebraKit's `LAPACK_QRIteration`
-    - `:iterative` : Iterative SVD only computing the specifed number of singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD)
+    - `:DefaultAlgorithm` : MatrixAlgebraKit's default SVD algorithm for a given matrix type.
+    - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
+    - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref MatrixAlgebraKit.QRIteration)
+    - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref MatrixAlgebraKit.Bisection)
+    - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref MatrixAlgebraKit.Jacobi)
+    - `:SVDViaPolar` : MatrixAlgebraKit's [`SVDViaPolar`](@extref MatrixAlgebraKit.SVDViaPolar)
+    - `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref MatrixAlgebraKit.SafeDivideAndConquer)
+    - `:GKL` : Iterative Krylov-based SVD only computing the specifed number of
+        singular values and vectors, see [`IterSVD`](@ref PEPSKit.IterSVD) for details.
 * `svd_rrule_tol=$(Defaults.svd_rrule_tol)` : Accuracy of SVD reverse-rule.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
-    - `:full` : Uses a modified version of MatrixAlgebraKit's reverse-rule for `svd_compact` which doesn't solve any linear problem and instead requires access to the full SVD, see [`PEPSKit.FullSVDPullback`](@ref).
-    - `:trunc` : MatrixAlgebraKit's `svd_trunc_pullback!` solving a Sylvester equation on the truncated subspace and therefore only requires access to the truncated SVD.
-    - `:gmres` : GMRES iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.GMRES) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.BiCGStab) for details
-    - `:arnoldi` : Arnoldi Krylov algorithm, see the [KrylovKit docs](https://jutho.github.io/KrylovKit.jl/stable/man/algorithms/#KrylovKit.Arnoldi) for details
+    - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
+    - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
+    - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref)
 
 ## `eigh` forward & reverse
 
 * `eigh_fwd_alg=:$(Defaults.eigh_fwd_alg)` : `eigh` algorithm that is used in the forward pass.
-    - `:qriteration` : MatrixAlgebraKit's `LAPACK_QRIteration`.
-    - `:bisection` : MatrixAlgebraKit's `LAPACK_Bisection`.
-    - `:divideandconquer` : MatrixAlgebraKit's `LAPACK_DivideAndConquer`.
-    - `:multiple` : MatrixAlgebraKit's `LAPACK_MultipleRelativelyRobustRepresentations`. 
-    - `:lanczos` : Lanczos algorithm, see [`KrylovKit.Lanczos`](@extref) for details.
-    - `:blocklanczos` : Block Lanczos algorithm, see [`KrylovKit.BlockLanczos`](@extref) for details.
+    - `:DefaultAlgorithm` : MatrixAlgebraKit's default Eigh algorithm for a given matrix type.
+    - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
+    - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref MatrixAlgebraKit.QRIteration)
+    - `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref MatrixAlgebraKit.Bisection)
+    - `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref MatrixAlgebraKit.Jacobi)
+    - `:RobustRepresentations` : MatrixAlgebraKit's [`RobustRepresentations`](@extref MatrixAlgebraKit.RobustRepresentations)
+    - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
+    - `:BlockLanczos` : Block version of `:Lanczos` for repeated extremal eigenvalues, see [`KrylovKit.BlockLanczos`](@extref)
 * `eigh_rrule_alg=:$(Defaults.eigh_rrule_alg)` : Reverse-rule algorithm for the `eigh` gradient.
     - `:full` : Full pullback algorithm for eigendecompositions, see [`PEPSKit.FullEighPullback`](@ref).
     - `:trunc` : Truncated reverse-mode algorithm for eigendecompositions, see [`PEPSKit.TruncEighPullback`](@ref).
@@ -54,9 +65,12 @@ Module containing default algorithm parameter values and arguments.
 ## Projectors
 
 * `projector_alg=:$(Defaults.projector_alg)` : Default variant of the CTMRG projector algorithm.
-    - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
-    - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:HalfInfiniteProjector` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
 * `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
+* `projector_alg_c4v=:$(Defaults.projector_alg_c4v)` : Default variant of the C4v CTMRG projector algorithm.
+    - `:C4vEighProjector` : Projection via truncated Eigh of an enlarged corner.
+    - `:C4vQRProjector` : Projection via QR decomposition of a column-enlarged corner.
 
 ## Fixed-point gradient
 
@@ -64,14 +78,13 @@ Module containing default algorithm parameter values and arguments.
 * `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for computing the CTMRG fixed-point gradient.
 * `gradient_verbosity=$(Defaults.gradient_verbosity)` : Gradient output information verbosity.
 * `gradient_linsolver=:$(Defaults.gradient_linsolver)` : Default linear solver for the `LinSolver` gradient algorithm.
-    - `:gmres` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 * `gradient_eigsolver=:$(Defaults.gradient_eigsolver)` : Default eigensolver for the `EigSolver` gradient algorithm.
-    - `:arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
+    - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
 * `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
 * `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 * `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the gradient fixed-point.
 
 ## Optimization
@@ -81,9 +94,9 @@ Module containing default algorithm parameter values and arguments.
 * `optimizer_maxiter=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
 * `optimizer_verbosity=$(Defaults.optimizer_verbosity)` : Optimizer output information verbosity.
 * `optimizer_alg=:$(Defaults.optimizer_alg)` : Default `OptimKit.OptimizerAlgorithm` for PEPS optimization.
-    - `:gradientdescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:conjugategradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:lbfgs` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:GradientDescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:ConjugateGradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:LBFGS` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
 * `ls_maxiter=$(Defaults.ls_maxiter)` : Maximum number of iterations for the line search in each step of the optimization.
 * `ls_maxfg=$(Defaults.ls_maxfg)` : Maximum number of function evaluations for the line search in each step of the optimization.
 * `lbfgs_memory=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
@@ -102,52 +115,52 @@ using OhMyThreads
 const ctmrg_tol = 1.0e-8
 const ctmrg_maxiter = 100
 const ctmrg_miniter = 4
-const ctmrg_alg = :simultaneous # ∈ {:simultaneous, :sequential}
+const ctmrg_alg = :SimultaneousCTMRG # ∈ {:SimultaneousCTMRG, :SequentialCTMRG}
 const ctmrg_verbosity = 2
 const sparse = false # TODO: implement sparse CTMRG
 
 # SVD forward & reverse
-const trunc = :fixedspace # ∈ {:fixedspace, :notrunc, :truncerror, :truncspace, :trunctol}
+const trunc = :FixedSpaceTruncation # ∈ {:FixedSpaceTruncation, :notrunc, :truncerror, :truncspace, :trunctol}
 const rrule_degeneracy_atol = 1.0e-13
-const svd_fwd_alg = :sdd # ∈ {:sdd, :svd, :bisection, :jacobi, :iterative}
+const svd_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.SVDAlgorithms>, :GKL}
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
-const svd_rrule_alg = :full # ∈ {:full, :trunc, :gmres, :bicgstab, :arnoldi}
+const svd_rrule_alg = :full # ∈ {:full, :trunc, :GMRES, :BiCGStab, :Arnoldi}
 const krylovdim_factor = 1.4
 
 # eigh forward & reverse
-const eigh_fwd_alg = :qriteration # ∈ {:qriteration, :bisection, :divideandconquer, :multiple, :lanczos, :blocklanczos}
+const eigh_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.EighAlgorithms>, :Lanczos, :BlockLanczos}
 const eigh_rrule_alg = :full # ∈ {:full, :trunc}
 const eigh_rrule_verbosity = 0
 
 # QR forward & reverse
-const qr_fwd_alg = :qr
+const qr_fwd_alg = :Householder
 const qr_fwd_positive = true
 const qr_rrule_alg = :qr
 const qr_rrule_verbosity = 0
 
 # Projectors
-const projector_alg = :halfinfinite # ∈ {:halfinfinite, :fullinfinite}
+const projector_alg = :HalfInfiniteProjector # ∈ {:HalfInfiniteProjector, :FullInfiniteProjector}
 const projector_verbosity = 0
-const projector_alg_c4v = :c4v_eigh # ∈ {:c4v_eigh, :c4v_qr (TODO)}
+const projector_alg_c4v = :C4vEighProjector # ∈ {:C4vEighProjector, :C4vQRProjector}
 
 # Fixed-point gradient
 const gradient_tol = 1.0e-6
 const gradient_maxiter = 30
 const gradient_verbosity = -1
-const gradient_linsolver = :bicgstab # ∈ {:gmres, :bicgstab}
-const gradient_eigsolver = :arnoldi
+const gradient_linsolver = :BiCGStab # ∈ {:GMRES, :BiCGStab}
+const gradient_eigsolver = :Arnoldi
 const gradient_eigsolver_eager = true
-const gradient_iterscheme = :fixed # ∈ {:fixed, :diffgauge}
-const gradient_alg = :eigsolver # ∈ {:geomsum, :manualiter, :linsolver, :eigsolver}
+const gradient_iterscheme = :fixed
+const gradient_alg = :EigSolver # ∈ {:GeomSum, :ManualIter, :LinSolver, :EigSolver}
 
 # Optimization
 const reuse_env = true
 const optimizer_tol = 1.0e-4
 const optimizer_maxiter = 100
 const optimizer_verbosity = 3
-const optimizer_alg = :lbfgs # ∈ {:gradientdescent, :conjugategradient, :lbfgs}
+const optimizer_alg = :LBFGS # ∈ {:GradientDescent, :ConjugateGradient, :LBFGS}
 const ls_maxiter = 10
 const ls_maxfg = 20
 const lbfgs_memory = 20

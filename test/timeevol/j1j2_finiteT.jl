@@ -12,7 +12,7 @@ bm = [-0.1235, -0.213]
 function converge_env(state, χ::Int)
     trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
     env0 = CTMRGEnv(ones, Float64, state, Vect[SU2Irrep](0 => 1))
-    env, = leading_boundary(env0, state; alg = :sequential, trunc = trunc1, tol = 1.0e-10)
+    env, = leading_boundary(env0, state; alg = :SequentialCTMRG, trunc = trunc1, tol = 1.0e-10)
     return env
 end
 
@@ -26,9 +26,9 @@ wts0 = SUWeight(pepo0)
 # 7 = 1 (spin-0) + 2 x 3 (spin-1)
 trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
 check_interval = 100
+dt, nstep = 1.0e-3, 600
 
 # PEPO approach
-dt, nstep = 1.0e-3, 600
 alg = SimpleUpdate(; trunc = trunc_pepo, purified = false)
 evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
 pepo, wts, info = time_evolve(evolver; check_interval)

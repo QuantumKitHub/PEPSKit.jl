@@ -15,7 +15,7 @@ using Test
     Z = InfinitePartitionFunction([zA zB; zC zD])
     χenv = ℂ^12
     env0 = CTMRGEnv(Z, χenv)
-    env, = leading_boundary(env0, Z; alg = :simultaneous, maxiter = 3, projector_alg = :fullinfinite)
+    env, = leading_boundary(env0, Z; alg = :SimultaneousCTMRG, maxiter = 3, projector_alg = :FullInfiniteProjector)
     @test env isa CTMRGEnv
 end
 
@@ -103,9 +103,9 @@ env₀ = CTMRGEnv(Z, Venv)
 env₀_c4v = initialize_random_c4v_env(Z, Venv)
 # cover all different flavors
 args = [
-    (:sequential, :halfinfinite), (:sequential, :fullinfinite),
-    (:simultaneous, :halfinfinite), (:simultaneous, :fullinfinite),
-    (:c4v, :c4v_eigh), (:c4v, :c4v_qr),
+    (:SequentialCTMRG, :HalfInfiniteProjector), (:SequentialCTMRG, :FullInfiniteProjector),
+    (:SimultaneousCTMRG, :HalfInfiniteProjector), (:SimultaneousCTMRG, :FullInfiniteProjector),
+    (:C4vCTMRG, :C4vEighProjector), (:C4vCTMRG, :C4vQRProjector),
 ]
 
 # Basic properties
@@ -124,7 +124,7 @@ args = [
 @testset "Classical Ising partition function using $alg with $projector_alg" for (
         alg, projector_alg,
     ) in args
-    env₀₀ = alg == :c4v ? env₀_c4v : env₀
+    env₀₀ = alg == :C4vCTMRG ? env₀_c4v : env₀
     env, = leading_boundary(env₀₀, Z; alg, maxiter = 300, projector_alg)
 
     # check observables

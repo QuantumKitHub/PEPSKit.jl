@@ -28,7 +28,7 @@ function MPSKitModels.transverse_field_ising(
     return LocalOperator(
         spaces,
         (neighbor => ZZ for neighbor in nearest_neighbours(lattice))...,
-        ((idx,) => X for idx in vertices(lattice))...,
+        ([idx,] => X for idx in vertices(lattice))...,
     )
 end
 ```

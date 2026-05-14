@@ -59,7 +59,7 @@ function leading_boundary(env₀::BPEnv, network::InfiniteSquareNetwork, alg::Be
 end
 function leading_boundary(env₀::BPEnv, state::InfiniteState, alg::BeliefPropagation)
     if alg.bipartite
-        @assert _state_bipartite_check(state)
+        _is_bipartite(state) || error("Input state is not bipartite")
     end
     return leading_boundary(env₀, InfiniteSquareNetwork(state), alg)
 end
@@ -104,10 +104,10 @@ function update_message(I::CartesianIndex{3}, network::InfiniteSquareNetwork, en
     (1 <= dir <= 4) || throw(ArgumentError("Invalid direction $dir"))
 
     A = network[row, col]
-    dir == SOUTH || (M_north = env[NORTH, _prev(row, end), col])
-    dir == WEST || (M_east = env[EAST, row, _next(col, end)])
-    dir == NORTH || (M_south = env[SOUTH, _next(row, end), col])
-    dir == EAST || (M_west = env[WEST, row, _prev(col, end)])
+    dir == SOUTH || (M_north = env[NORTH, row - 1, col])
+    dir == WEST || (M_east = env[EAST, row, col + 1])
+    dir == NORTH || (M_south = env[SOUTH, row + 1, col])
+    dir == EAST || (M_west = env[WEST, row, col - 1])
 
     return if dir == NORTH
         contract_north_message(A, M_west, M_north, M_east)

@@ -23,8 +23,8 @@ The truncation algorithm can be constructed from the following keyword arguments
 
 * [Glen Evenbly, Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018). 
 """
-@kwdef struct FullEnvTruncation
-    trunc::TruncationStrategy
+@kwdef struct FullEnvTruncation{T <: TruncationStrategy}
+    trunc::T
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
     trunc_init::Bool = true
@@ -49,24 +49,7 @@ between two states specified by the bond matrices `b1`, `b2`
 function inner_prod(
         benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
     ) where {T <: Number, S <: ElementarySpace}
-    val = @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
-    return val
-end
-
-"""
-$(SIGNATURES)
-
-Given the bond environment `benv`, calculate the fidelity
-between two states specified by the bond matrices `b1`, `b2`
-```
-    F(b1, b2) = (⟨b1|b2⟩ ⟨b2|b1⟩) / (⟨b1|b1⟩ ⟨b2|b2⟩)
-```
-"""
-function fidelity(
-        benv::BondEnv{T, S}, b1::AbstractTensorMap{T, S, 1, 1}, b2::AbstractTensorMap{T, S, 1, 1}
-    ) where {T <: Number, S <: ElementarySpace}
-    return abs2(inner_prod(benv, b1, b2)) /
-        real(inner_prod(benv, b1, b1) * inner_prod(benv, b2, b2))
+    return @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
 end
 
 """
@@ -92,13 +75,13 @@ function _fet_message(
 end
 
 """
-    fullenv_truncate(benv::BondEnv{T,S}, b0::AbstractTensorMap{T,S,1,1}, alg::FullEnvTruncation) -> U, S, V, info
+    fullenv_truncate(b0, benv::BondEnv, alg::FullEnvTruncation) -> U, S, V, info
 
 Perform full environment truncation algorithm from
 [Phys. Rev. B 98, 085155 (2018)](@cite evenbly_gauge_2018) on `benv`.
 
-Given a fixed state `|b0⟩` with bond matrix `b0`
-and the corresponding positive-definite bond environment `benv`, 
+Given a fixed state `|b0⟩` with bond matrix `b0` and the
+corresponding positive-definite bond environment `benv`, 
 find the state `|b⟩` with truncated bond matrix `b = u s v†`
 that maximizes the fidelity (not normalized by `⟨b0|b0⟩`)
 ```
@@ -232,11 +215,12 @@ function fullenv_truncate(
     b1 = similar(b0)
     s0 = deepcopy(s)
     Δfid, Δs, fid, fid0 = NaN, NaN, 0.0, 0.0
+    @tensor benv_b0[-1 -2] := benv[-1 -2; 3 4] * b0[3; 4]
     for iter in 1:(alg.maxiter)
         time0 = time()
         # update `← r -  =  ← s ← v† -`
         @tensor r[-1 -2] := s[-1; 1] * vh[1; -2]
-        @tensor p[-1 -2] := conj(u[1; -1]) * benv[1 -2; 3 4] * b0[3; 4]
+        @tensor p[-1 -2] := conj(u[1; -1]) * benv_b0[1 -2]
         @tensor B[-1 -2; -3 -4] := conj(u[1; -1]) * benv[1 -2; 3 -4] * u[3; -3]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
@@ -245,14 +229,14 @@ function fullenv_truncate(
         u, s, vh = svd_trunc(b1; trunc = alg.trunc)
         # update `- l ←  =  - u ← s ←`
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
-        @tensor p[-1 -2] := conj(vh[-2; 2]) * benv[-1 2; 3 4] * b0[3; 4]
+        @tensor p[-1 -2] := conj(vh[-2; 2]) * benv_b0[-1 2]
         @tensor B[-1 -2; -3 -4] := conj(vh[-2; 2]) * benv[-1 2; -3 4] * vh[-4; 4]
         _linearmap_twist!(p)
         _linearmap_twist!(B)
         l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
         @debug "Bond truncation info" info_l info_r
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
-        fid = fidelity(benv, b0, b1)
+        _, fid = cost_function_als(benv, b0, b1)
         u, s, vh = svd_trunc!(b1; trunc = alg.trunc)
         # determine convergence
         s_nrm = norm(s0, Inf)

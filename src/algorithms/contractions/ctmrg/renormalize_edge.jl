@@ -19,7 +19,7 @@ function renormalize_north_edge(
         (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
     )
     return renormalize_north_edge(
-        env.edges[NORTH, _prev(row, end), col],
+        edge(env, NORTH, row - 1, col),
         P_left[NORTH, row, col],
         P_right[NORTH, row, _prev(col, end)],
         network[row, col], # so here it's fine
@@ -90,7 +90,7 @@ function renormalize_east_edge(
         (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
     )
     return renormalize_east_edge(
-        env.edges[EAST, row, _next(col, end)],
+        edge(env, EAST, row, col + 1),
         P_left[EAST, row, col],
         P_right[EAST, _prev(row, end), col],
         network[row, col],
@@ -155,7 +155,7 @@ function renormalize_south_edge(
         (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
     )
     return renormalize_south_edge(
-        env.edges[SOUTH, _next(row, end), col],
+        edge(env, SOUTH, row + 1, col),
         P_left[SOUTH, row, col],
         P_right[SOUTH, row, _next(col, end)],
         network[row, col],
@@ -225,7 +225,7 @@ function renormalize_west_edge(  # For simultaneous CTMRG scheme
         (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork,
     )
     return renormalize_west_edge(
-        env.edges[WEST, row, _prev(col, end)],
+        edge(env, WEST, row, col - 1),
         P_left[WEST, row, col],
         P_right[WEST, _next(row, end), col],
         network[row, col],
@@ -235,7 +235,7 @@ function renormalize_west_edge(  # For sequential CTMRG scheme
         (row, col), env::CTMRGEnv, projectors, network::InfiniteSquareNetwork,
     )
     return renormalize_west_edge(
-        env.edges[WEST, row, _prev(col, end)],
+        edge(env, WEST, row, col - 1),
         projectors[1][row],
         projectors[2][_next(row, end)],
         network[row, col],

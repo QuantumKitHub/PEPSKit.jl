@@ -4,9 +4,125 @@ using PEPSKit
 using LinearAlgebra
 using Random
 import MPSKitModels: hubbard_space
-using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!, _next
+using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
 using MPSKit: GenericMPSTensor, MPSBondTensor
-include("cluster_tools.jl")
+
+# Utility setup
+# -------------
+function _contract_left(
+        M::GenericMPSTensor{S, 4}, sl::DiagonalTensorMap{T, S}
+    ) where {T <: Number, S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
+    M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
+    @tensor sl1[e1; e0] := conj(M[w1; p n s e1]) * sl[w1; w0] * M0[w0; p n s e0]
+    return sl1
+end
+function _contract_left(
+        M::GenericMPSTensor{S, 4}, ::Nothing
+    ) where {S <: ElementarySpace}
+    @assert !isdual(domain(M, 1))
+    M0 = twist(M, filter(ax -> isdual(space(M, ax)), 1:4))
+    @tensor sl1[e1; e0] := conj(M[w; p n s e1]) * M0[w; p n s e0]
+    return sl1
+end
+
+function _contract_right(
+        M::GenericMPSTensor{S, 4}, sr::DiagonalTensorMap{T, S}
+    ) where {T <: Number, S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
+    M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
+    @tensor sr1[w0; w1] := M0[w0; p n s e0] * sr[e0; e1] * conj(M[w1; p n s e1])
+    return sr1
+end
+function _contract_right(
+        M::GenericMPSTensor{S, 4}, ::Nothing
+    ) where {S <: ElementarySpace}
+    @assert !isdual(codomain(M, 1))
+    M0 = twist(M, filter(ax -> !isdual(space(M, ax)), 2:5))
+    @tensor sr1[w0; w1] := M0[w0; p n s e] * conj(M[w1; p n s e])
+    return sr1
+end
+
+"""
+Verify the generalized left/right orthogonal condition
+"""
+function verify_cluster_orth(
+        Ms::Vector{T1}, wts::Vector{T2}
+    ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: DiagonalTensorMap}
+    N = length(Ms)
+    @assert length(wts) == N - 1
+    lorths = fill(false, N - 1)
+    rorths = fill(false, N - 1)
+    # left orthogonal
+    for i in 1:(N - 1)
+        M, sl0 = Ms[i], wts[i]
+        sl1 = _contract_left(M, i == 1 ? nothing : wts[i - 1])
+        lorths[i] = (normalize(TensorMap(sl0)) ≈ normalize(sl1)) # sl0 is DiagonalTensorMap while sl1 is not
+    end
+    # right orthogonal
+    for i in 2:N
+        M, sr0 = Ms[i], wts[i - 1]
+        sr1 = _contract_right(M, i == N ? nothing : wts[i])
+        rorths[i - 1] = (normalize(TensorMap(sr0)) ≈ normalize(sr1))
+    end
+    return lorths, rorths
+end
+
+function inner_prod_cluster(
+        Ms1::Vector{T1}, Ms2::Vector{T2}
+    ) where {
+        T1 <: GenericMPSTensor{<:ElementarySpace, 4},
+        T2 <: GenericMPSTensor{<:ElementarySpace, 4},
+    }
+    N = length(Ms1)
+    @assert length(Ms2) == N
+    # physical spaces are assumed to be non-dual
+    @assert all(!isdual(space(t, 2)) for t in Ms1)
+    @assert all(!isdual(space(t, 2)) for t in Ms2)
+    # not the most efficient implementation
+    M1, M2 = Ms1[1], deepcopy(Ms2[1])
+    for ax in 1:4
+        isdual(space(M2, ax)) && twist!(M2, ax)
+    end
+    @tensor res[-1 -2] := conj(M1[1 2 3 4; -1]) * M2[1 2 3 4; -2]
+    for i in 2:(N - 1)
+        M1, M2 = Ms1[i], deepcopy(Ms2[i])
+        for ax in 2:4
+            isdual(space(M2, ax)) && twist!(M2, ax)
+        end
+        @tensor M[-1 -2; -3 -4] := conj(M1[-1 1 2 3; -3]) * M2[-2 1 2 3; -4]
+        @tensor res[-1 -2] := res[1 2] * M[1 2; -1 -2]
+    end
+    M1, M2 = Ms1[N], deepcopy(Ms2[N])
+    for ax in 2:5
+        isdual(space(M2, ax)) && twist!(M2, ax)
+    end
+    @tensor M[-1 -2] := conj(M1[-1 1 2 3; 4]) * M2[-2 1 2 3; 4]
+    return @tensor res[1 2] * M[1 2]
+end
+
+function fidelity_cluster(
+        Ms1::Vector{T1}, Ms2::Vector{T2}
+    ) where {
+        T1 <: GenericMPSTensor{<:ElementarySpace, 4},
+        T2 <: GenericMPSTensor{<:ElementarySpace, 4},
+    }
+    return abs2(inner_prod_cluster(Ms1, Ms2)) /
+        (inner_prod_cluster(Ms1, Ms1) * inner_prod_cluster(Ms2, Ms2))
+end
+
+function mpo_to_gate3(gs::Vector{T}) where {T <: AbstractTensorMap}
+    #= 
+    -4         -5        -6
+    ↓           ↓         ↓
+    g1 ←- 1 ←- g2 ←- 2 ←- g3
+    ↓           ↓         ↓
+    -1         -2        -3
+    =#
+    @assert length(gs) == 3
+    @tensor gate[-1 -2 -3; -4 -5 -6] := gs[1][-1 -4 1] * gs[2][1 -2 -5 2] * gs[3][2 -3 -6]
+    return gate
+end
 
 Vspaces = [
     (
@@ -32,10 +148,11 @@ Vspaces = [
             return rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve)
         end
         normalize!.(Ms1, Inf)
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         # no truncation
         Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
-        wts2, ϵs, = _cluster_truncate!(Ms2, fill(FixedSpaceTruncation(), N - 1))
+        truncs = [truncrank(dim(space(M, 1))) for M in Iterators.drop(Ms2, 1)]
+        wts2, ϵs, = _cluster_truncate!(Ms2, truncs)
         @test all((ϵ == 0) for ϵ in ϵs)
         normalize!.(Ms2, Inf)
         @test fidelity_cluster(Ms1, Ms2) ≈ 1.0
@@ -67,10 +184,10 @@ end
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
             return normalize(rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve), Inf)
         end
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
-        gs = PEPSKit.gate_to_mpo3(gate)
+        gs = PEPSKit.gate_to_mpo(gate)
         @test mpo_to_gate3(gs) ≈ gate
         Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
         PEPSKit._apply_gatempo!(Ms2, gs)
@@ -84,14 +201,14 @@ end
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
             return normalize(rand(Vw ⊗ Vphy ⊗ Vphy' ⊗ Vns' ⊗ Vns ← Ve), Inf)
         end
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
-        gs = PEPSKit.gate_to_mpo3(gate)
+        gs = PEPSKit.gate_to_mpo(gate)
         @test mpo_to_gate3(gs) ≈ gate
         for gate_ax in 1:2
             Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
-            PEPSKit._apply_gatempo!(Ms2, gs)
+            PEPSKit._apply_gatempo!(Ms2, gs; gate_ax)
             fid = fidelity_cluster(
                 [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms1],
                 [first(PEPSKit._fuse_physicalspaces(M)) for M in Ms2]
@@ -101,7 +218,7 @@ end
     end
 end
 
-@testset "Hubbard model with 2-site and 3-site SU" begin
+@testset "Hubbard model SU (MPO gate)" begin
     Nr, Nc = 2, 2
     ctmrg_tol = 1.0e-9
     Random.seed!(1459)
@@ -109,44 +226,31 @@ end
     Pspace = hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
-    trunc_env0 = truncerror(; atol = 1.0e-12) & truncrank(4)
-    trunc_env = truncerror(; atol = 1.0e-12) & truncrank(16)
-    peps = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
-    # make state bipartite
+    truncs_env = collect(truncerror(; atol = 1.0e-12) & truncrank(χ) for χ in [8, 16])
+    peps0 = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
+    # make initial state bipartite
     for r in 1:2
-        peps.A[_next(r, 2), 2] = copy(peps.A[r, 1])
+        peps0[r + 1, 2] = copy(peps0[r, 1])
     end
-    wts = SUWeight(peps)
-    ham = real(
-        hubbard_model(
-            ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 8.0, mu = 0.0
-        ),
-    )
-    # usual 2-site simple update, and measure energy
-    dts = [1.0e-2, 1.0e-2]
-    tols = [1.0e-8, 1.0e-8]
-    for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        trunc = truncerror(; atol = 1.0e-10) & truncrank(n == 1 ? 4 : 2)
-        alg = SimpleUpdate(; trunc, bipartite = true)
-        peps, wts, = time_evolve(peps, ham, dt, 10000, alg, wts; tol, check_interval = 1000)
+    wts0 = SUWeight(peps0)
+    ham = hubbard_model(Float64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0)
+    # applying 2-site gates decomposed to MPO or not,
+    # resulting energy should be almost the same
+    e_sites = map((true, false)) do force_mpo
+        peps, wts = deepcopy(peps0), deepcopy(wts0)
+        trunc = truncerror(; atol = 1.0e-10) & truncrank(4)
+        alg = SimpleUpdate(; trunc, force_mpo)
+        peps, wts, = time_evolve(
+            peps, ham, 0.01, 10000, alg, wts; tol = 1.0e-6, check_interval = 1000
+        )
+        normalize!.(peps.A, Inf)
+        env = CTMRGEnv(wts)
+        for trunc in truncs_env
+            env, = leading_boundary(env, peps; alg = :SequentialCTMRG, tol = ctmrg_tol, trunc)
+        end
+        e_site = cost_function(peps, env, ham) / (Nr * Nc)
+        @info "Energy (force_mpo = $(force_mpo)): $e_site"
+        return e_site
     end
-    normalize!.(peps.A, Inf)
-    env = CTMRGEnv(wts)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env0)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
-    e_site = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "2-site simple update energy = $e_site"
-    # continue with 3-site simple update; energy should not change much
-    dts = [1.0e-2]
-    tols = [1.0e-8]
-    trunc = truncerror(; atol = 1.0e-10) & truncrank(2)
-    alg = SimpleUpdate(; trunc, force_3site = true)
-    for (n, (dt, tol)) in enumerate(zip(dts, tols))
-        peps, wts, = time_evolve(peps, ham, dt, 5000, alg, wts; tol, check_interval = 1000)
-    end
-    normalize!.(peps.A, Inf)
-    env, = leading_boundary(env, peps; tol = ctmrg_tol, trunc = trunc_env)
-    e_site2 = cost_function(peps, env, ham) / (Nr * Nc)
-    @info "3-site simple update energy = $e_site2"
-    @test e_site ≈ e_site2 atol = 5.0e-4
+    @test e_sites[1] ≈ e_sites[2] atol = 1.0e-4
 end

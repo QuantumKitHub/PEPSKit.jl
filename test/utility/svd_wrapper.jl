@@ -5,11 +5,13 @@ using TensorKit
 using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
-# using PEPSKit: HalfInfiniteEnv
+
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
 # Gauge-invariant loss function
 function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
-    U, S, V, = svd_trunc(A, alg; trunc)
+    alg = @set alg.fwd_alg = TruncatedAlgorithm(alg.fwd_alg, trunc)
+    U, S, V, = svd_trunc(A, alg)
     return real(dot(R, U * V)) + dot(S, S)  # Overlap with random tensor R is gauge-invariant and differentiable, also for m≠n
 end
 
@@ -18,13 +20,13 @@ m, n = 20, 30
 χ = 12
 trunc = truncspace(ℂ^χ)
 rtol = 1.0e-9
-Random.seed!(123456789)
+Random.seed!(12345678)
 r = randn(dtype, ℂ^m, ℂ^n)
 R = randn(space(r))
 
 full_alg = SVDAdjoint(; rrule_alg = (; alg = :full, degeneracy_atol = 1.0e-13))
 trunc_alg = SVDAdjoint(; rrule_alg = (; alg = :trunc, degeneracy_atol = 1.0e-13))
-iter_alg = SVDAdjoint(; fwd_alg = (; alg = :iterative))
+iter_alg = SVDAdjoint(; fwd_alg = (; alg = :GKL))
 
 @testset "Non-truncated SVD" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)
@@ -111,7 +113,13 @@ end
 
 @testset "Truncated symmetric SVD broadening for $(alg.rrule_alg)" for alg in [full_alg, trunc_alg]
     u, s, v, = svd_compact(symm_r)
-    s.data[1:2:m] .= s.data[2:2:m] # make every singular value two-fold degenerate
+    # make every singular value in the 0-sector three-fold degenerate
+    b0 = diagview(block(s, Z2Irrep(0)))
+    b0[1:3:symm_m] .= b0[3:3:symm_m]
+    b0[2:3:symm_m] .= b0[3:3:symm_m]
+    # make every singular value in the 1-sector two-fold degenerate
+    b1 = diagview(block(s, Z2Irrep(1)))
+    b1[1:2:symm_n] .= b1[2:2:symm_n]
     symm_r_degen = u * s * v
 
     no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-30

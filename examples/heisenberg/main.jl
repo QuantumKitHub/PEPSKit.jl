@@ -63,7 +63,7 @@ arguments. To see a description of all arguments, see the docstring of
 specific tolerance and during the CTMRG run keep all index dimensions fixed:
 """
 
-boundary_alg = (; tol = 1.0e-10, trunc = (; alg = :fixedspace));
+boundary_alg = (; tol = 1.0e-10, trunc = (; alg = :FixedSpaceTruncation));
 
 md"""
 Let us also configure the optimizer algorithm. We are going to optimize the PEPS using the
@@ -72,7 +72,7 @@ the convergence tolerance (for the gradient norm) as well as the maximal number 
 and the BFGS memory size (which is used to approximate the Hessian):
 """
 
-optimizer_alg = (; alg = :lbfgs, tol = 1.0e-4, maxiter = 100, lbfgs_memory = 16);
+optimizer_alg = (; alg = :LBFGS, tol = 1.0e-4, maxiter = 100, lbfgs_memory = 16);
 
 md"""
 Additionally, during optimization, we want to reuse the previous CTMRG environment to
@@ -102,12 +102,14 @@ env₀, info_ctmrg = leading_boundary(env_random, peps₀; boundary_alg...);
 
 md"""
 Besides the converged environment, `leading_boundary` also returns a `NamedTuple` of
-informational quantities such as the last maximal truncation error - that is, the SVD
-approximation error incurred in the last CTMRG iteration, maximized over all spatial
-directions and unit cell entries:
+informational quantities which contains, among other things, a `contraction_metric` tuple.
+This may contain different quantities depending on the method of contraction, and for this
+CTMRG variant we return the last maximal truncation error (the SVD approximation
+error maximized over all spatial directions and unit cell entries) as well as the condition
+number of the decomposition (the ratio of largest to smallest singular value):
 """
 
-@show info_ctmrg.truncation_error;
+@show info_ctmrg.contraction_metrics;
 
 md"""
 ## Ground state search

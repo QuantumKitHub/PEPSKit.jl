@@ -31,7 +31,7 @@ function heisenberg_XYZ_c4v(
         rmul!(S_zz(T, S; spin = spin), Jz)
     spaces = fill(domain(term)[1], (1, 1))
     return LocalOperator( # horizontal and vertical contributions are identical
-        spaces, (CartesianIndex(1, 1), CartesianIndex(1, 2)) => 2 * term
+        spaces, [CartesianIndex(1, 1), CartesianIndex(1, 2)] => 2 * term
     )
 end
 
@@ -45,30 +45,36 @@ end
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(H, peps₀, env₀; optimizer_alg = (; tol = gradtol, maxiter = 25))
     ξ_h, ξ_v, = correlation_length(peps, env)
-
+    @info "Optimized energy = $E."
     @test E ≈ E_ref atol = 1.0e-2
+    @info "ξₕ = $(ξ_h)."
+    @info "ξᵥ = $(ξ_v)."
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
-@testset "C4v AD optimization" begin
+@testset "C4v AD optimization with scalartype T=$T and projector_alg=$projector_alg" for (T, projector_alg) in
+    Iterators.product([Float64, ComplexF64], [:C4vEighProjector, :C4vQRProjector])
     # initialize symmetric states
-    Random.seed!(123)
+    Random.seed!(123456789)
     symm = RotateReflect()
-    H = heisenberg_XYZ_c4v(InfiniteSquare())
-    peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
+    H′ = heisenberg_XYZ_c4v(InfiniteSquare())
+    H = T <: Real ? real(H′) : H′
+    peps₀ = InfinitePEPS(randn, T, ComplexSpace(2), ComplexSpace(Dbond))
     peps₀ = peps_normalize(symmetrize!(peps₀, symm))
     e₀ = initialize_random_c4v_env(peps₀, ComplexSpace(χenv))
-    env₀, = leading_boundary(e₀, peps₀; alg = :c4v)
+    env₀, = leading_boundary(e₀, peps₀; alg = :C4vCTMRG, projector_alg)
 
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(
         H, peps₀, env₀;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
-        boundary_alg = (; alg = :c4v),
+        boundary_alg = (; alg = :C4vCTMRG, projector_alg, maxiter = 500),
     )
     ξ_h, ξ_v, = correlation_length(peps, env)
-
+    @info "Optimized energy = $E."
     @test E ≈ E_ref atol = 1.0e-2
+    @info "ξₕ = $(ξ_h)."
+    @info "ξᵥ = $(ξ_v)."
     @test only(ξ_h) ≈ only(ξ_v)
 end
 
@@ -83,8 +89,10 @@ end
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(H, peps₀, env₀; optimizer_alg = (; tol = gradtol, maxiter = 25))
     ξ_h, ξ_v, = correlation_length(peps, env)
-
+    @info "Optimized energy = $E."
     @test E ≈ 2 * E_ref atol = 1.0e-2
+    @info "ξₕ = $(ξ_h)."
+    @info "ξᵥ = $(ξ_v)."
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
@@ -126,14 +134,15 @@ end
     # benchmark data from Phys. Rev. B 94, 035133 (2016)
     @test isapprox(e_site, -0.6594; atol = 1.0e-3)
 
+    # test if :fixed mode on real tensors errors
+    @test_throws ArgumentError fixedpoint(ham, peps, env)
+
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
-        ham,
-        peps,
-        env;
+        ham, peps, complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
-        gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),
+        gradient_alg = (; alg = :LinSolver, solver_alg = (; alg = :GMRES)),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)

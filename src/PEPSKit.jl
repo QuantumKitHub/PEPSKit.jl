@@ -8,10 +8,10 @@ using VectorInterface
 import VectorInterface as VI
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: LAPACK_DivideAndConquer, LAPACK_QRIteration
 using MatrixAlgebraKit:
     TruncationStrategy, NoTruncation, truncate, findtruncated, truncation_error, diagview
-using MatrixAlgebraKit: LAPACK_EighAlgorithm, eigh_pullback!, eigh_trunc_pullback!
+using MatrixAlgebraKit: TruncatedAlgorithm
+using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 
 using TensorKit
@@ -25,6 +25,7 @@ using KrylovKit: Lanczos, BlockLanczos
 using TensorOperations, OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
+import TupleTools
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
@@ -40,6 +41,7 @@ using DocStringExtensions
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
 include("utility/util.jl")
+include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
@@ -65,6 +67,7 @@ include("utility/symmetrization.jl")
 include("operators/infinitepepo.jl")
 include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
+include("operators/localcircuit.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
@@ -86,6 +89,7 @@ include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/contract_site.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
 
+include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
@@ -107,6 +111,7 @@ include("algorithms/ctmrg/c4v.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
 include("algorithms/contractions/ctmrg_contractions_triangular.jl")
@@ -118,6 +123,8 @@ include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/trotter_mpo.jl")
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
+include("algorithms/time_evolution/get_cluster.jl")
+include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
@@ -141,6 +148,7 @@ export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export CTMRGEnvTriangular, SimultaneousCTMRGTriangular # CTMRGTriaEnv, SimultaneousCTMRGTria
+export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector

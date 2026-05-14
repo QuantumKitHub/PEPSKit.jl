@@ -1,13 +1,9 @@
-using SafeTestsets
+using ParallelTestRunner
+using PEPSKit
 
-# check if user supplied args
-pat = r"(?:--group=)(\w+)"
-arg_id = findfirst(contains(pat), ARGS)
-const GROUP = if isnothing(arg_id)
-    uppercase(get(ENV, "GROUP", "ALL"))
-else
-    uppercase(only(match(pat, ARGS[arg_id]).captures))
-end
+# --fast to indicate a smaller set of tests
+args = parse_args(ARGS; custom = ["fast"])
+fast = !isnothing(args.custom["fast"])
 
 @time begin
     if GROUP == "ALL" || GROUP == "TYPES"
@@ -153,4 +149,8 @@ end
             include("examples/bose_hubbard.jl")
         end
     end
+const init_code = quote
+    const fast_tests = $fast
 end
+
+ParallelTestRunner.runtests(PEPSKit, args; init_code)

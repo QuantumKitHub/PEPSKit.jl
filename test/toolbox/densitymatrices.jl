@@ -57,8 +57,8 @@ end
     O_doubled_singlesite = LocalOperator(physicalspace(ρ_peps), (site,) => O_doubled)
     E2 = expectation_value(ρ_peps, O_doubled_singlesite, ρ_peps, env)
     @test E1 ≈ E2
-    val = contract_local_operator((site,), O_doubled, ρ_peps, ρ_peps, env)
-    nrm = contract_local_norm((site,), ρ_peps, ρ_peps, env)
+    val = contract_local_operator([site], O_doubled, ρ_peps, ρ_peps, env)
+    nrm = contract_local_norm([site], ρ_peps, ρ_peps, env)
     @test E1 ≈ val / nrm
 
     # two sites
@@ -71,8 +71,8 @@ end
         O_doubled_twosite = LocalOperator(physicalspace(ρ_peps), inds => O_doubled ⊗ O_doubled)
         E2 = expectation_value(ρ_peps, O_doubled_twosite, ρ_peps, env)
         @test E1 ≈ E2
-        val = contract_local_operator(inds, O_doubled ⊗ O_doubled, ρ_peps, ρ_peps, env)
-        nrm = contract_local_norm(inds, ρ_peps, ρ_peps, env)
+        val = contract_local_operator(collect(inds), O_doubled ⊗ O_doubled, ρ_peps, ρ_peps, env)
+        nrm = contract_local_norm(collect(inds), ρ_peps, ρ_peps, env)
         @test E1 ≈ val / nrm
     end
 end

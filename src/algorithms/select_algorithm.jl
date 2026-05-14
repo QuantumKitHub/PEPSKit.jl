@@ -19,7 +19,7 @@ function select_algorithm end
 
 function select_algorithm(
         ::typeof(fixedpoint),
-        env₀::CTMRGEnv;
+        env₀;
         tol = Defaults.optimizer_tol, # top-level tolerance
         verbosity = 3, # top-level verbosity
         boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
@@ -30,6 +30,18 @@ function select_algorithm(
         defaults = (; verbosity = verbosity ≤ 3 ? -1 : 3, tol = 1.0e-4tol)
         boundary_kwargs = merge(defaults, boundary_alg)
         boundary_alg = select_algorithm(leading_boundary, env₀; boundary_kwargs...)
+    end
+
+    # C4vCTMRG-specific defaults
+    if boundary_alg isa C4vCTMRG
+        # use :LinSolver GradMode since :EigSolver tends to have hiccups
+        if gradient_alg isa NamedTuple
+            haskey(gradient_alg, :alg) || (gradient_alg = merge((; alg = :LinSolver), gradient_alg))
+        end
+        # symmetrize state and gradient
+        if isnothing(symmetrization)
+            symmetrization = RotateReflect()
+        end
     end
 
     # adjust gradient verbosity
@@ -43,11 +55,6 @@ function select_algorithm(
     if optimizer_alg isa NamedTuple
         defaults = (; tol, verbosity)
         optimizer_alg = merge(defaults, optimizer_alg)
-    end
-
-    # symmetrize state and gradient when doing C4v optimization
-    if boundary_alg isa C4vCTMRG && isnothing(symmetrization)
-        symmetrization = RotateReflect()
     end
 
     return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, symmetrization, kwargs...)

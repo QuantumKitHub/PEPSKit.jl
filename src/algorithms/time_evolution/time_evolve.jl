@@ -6,7 +6,7 @@ Abstract super type for time evolution algorithms of InfinitePEPS or InfinitePEP
 abstract type TimeEvolution end
 
 """
-    mutable struct TimeEvolver{TE <: TimeEvolution, G, S, N <: Number}
+    mutable struct TimeEvolver{TE <: TimeEvolution, C, S, N <: Number}
 
 Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 
@@ -14,37 +14,21 @@ Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 
 $(TYPEDFIELDS)
 """
-mutable struct TimeEvolver{TE <: TimeEvolution, G, S, N <: Number}
+mutable struct TimeEvolver{TE <: TimeEvolution, C, S, N <: Number}
     "Time evolution algorithm (currently supported: `SimpleUpdate`)"
     alg::TE
     "Trotter time step"
     dt::N
     "The number of iteration steps"
     nstep::Int
-    "Trotter gates"
-    gate::G
+    "LocalCircuit representing trotterized gates"
+    circuit::C
     "Internal state of the iterator, including the number of
     already performed iterations, evolved time, PEPS/PEPO and its environment"
     state::S
 end
 
 Base.iterate(it::TimeEvolver) = iterate(it, it.state)
-
-function _state_bipartite_check(psi::InfiniteState)
-    if isa(psi, InfinitePEPO)
-        @assert size(psi, 3) == 1 "Input InfinitePEPO is expected to have only one layer."
-    end
-    if !(size(psi, 1) == size(psi, 2) == 2)
-        return false
-    end
-    for (r, c) in Iterators.product(1:2, 1:2)
-        r′, c′ = _next(r, 2), _next(c, 2)
-        if psi[r, c] != psi[r′, c′]
-            return false
-        end
-    end
-    return true
-end
 
 """
 Process the Trotter time step `dt` according to the intended usage.
@@ -70,13 +54,16 @@ function _timeevol_sanity_check(
         ψ₀::InfiniteState, Pspaces::M, alg::A
     ) where {A <: TimeEvolution, M <: AbstractMatrix{<:ElementarySpace}}
     Nr, Nc, = size(ψ₀)
-    @assert (Nr >= 2 && Nc >= 2) "Unit cell size for simple update should be no smaller than (2, 2)."
+    @assert (Nr >= 2 && Nc >= 2) "Unit cell size for time evolution should be no smaller than (2, 2)."
+    if ψ₀ isa InfinitePEPO
+        @assert size(ψ₀, 3) == 1 "PEPO to be time evolved should have only one layer."
+    end
     @assert Pspaces == physicalspace(ψ₀) "Physical spaces of `ψ₀` do not match `Pspaces`."
     if hasfield(typeof(alg), :purified) && !alg.purified
         @assert ψ₀ isa InfinitePEPO "alg.purified = false is only applicable to PEPO."
     end
     if hasfield(typeof(alg), :bipartite) && alg.bipartite
-        @assert _state_bipartite_check(ψ₀) "Input state is not bipartite with 2 x 2 unit cell."
+        @assert _is_bipartite(ψ₀) "Input state is not bipartite with 2 x 2 unit cell."
     end
     return nothing
 end
@@ -90,4 +77,22 @@ function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
         return ψ * virt
     end
     return InfinitePEPO(cat(A; dims = 3))
+end
+
+"""
+Get the `SiteDependentTruncation` used by time evolution
+that preserves virtual spaces of `state`.
+"""
+function _get_fixedspacetrunc(state::InfiniteState)
+    if state isa InfinitePEPO
+        size(state, 3) != 1 && error("Input InfinitePEPO is expected to have only one layer.")
+    end
+    Nr, Nc = size(state)
+    return SiteDependentTruncation(
+        map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
+            V = domain(state[r, c], (d == 1) ? EAST : NORTH)
+            isdual(V) && (V = flip(V))
+            return truncspace(V)
+        end
+    )
 end

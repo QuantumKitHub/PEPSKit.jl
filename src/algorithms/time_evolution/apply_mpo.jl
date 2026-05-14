@@ -1,4 +1,4 @@
-#= 
+#=
 # Mixed canonical form of an open boundary MPS
 ```
     |ψ⟩ =  M[1]-←-...-←-M[N]
@@ -54,7 +54,7 @@ Note that
 Then `M̃[n]` (n = 1, ..., N - 1) satisfies the (generalized) left-orthogonal condition
 ```
     ┌---←--M̃[n]--←-     ┌-←- 2
-    |       |           |       
+    |       |           |
     s[n-1]  ↓       =   s[n]    (s[0] = 1)
     |       |           |
     └---→--M̃†[n]-→-     └-→- 1
@@ -71,16 +71,16 @@ Similarly, we can express M̃ using Qb
 Then `M̃[n]` (n = 2, ..., N) satisfies the (generalized) right-orthogonal condition
 ```
     -←-M̃[n]-←┐         1 -←-┐
-        ↓    |              |       
+        ↓    |              |
         *    s[n]   =     s[n-1]   (s[N] = 1)
         ↓    |              |
     -→M̃†[n]-→┘         2 -→-┘
 ```
-Here `-*-` is the twist on the physical axis. 
+Here `-*-` is the twist on the physical axis.
 
 # Truncation of a bond on OBC-MPS
 
-Suppose we want to truncate the bond between 
+Suppose we want to truncate the bond between
 the n-th and the (n+1)-th sites such that the truncated state
 ```
     |ψ̃⟩  =  M[1]-←-...-←-M̃[n]-←-M̃[n+1]-←-...-←-M[N]
@@ -112,7 +112,7 @@ Then the fidelity is just
 ```
 =#
 """
-Perform QR decomposition through a PEPS tensor
+Perform QR decomposition through a `GenericMPSTensor`
 ```
              ╱            ╱
     -←-R0-←-M-←-  =>  ---Q-←-R1-←-
@@ -120,19 +120,22 @@ Perform QR decomposition through a PEPS tensor
 ```
 """
 function qr_through(
-        R0::MPSBondTensor, M::GenericMPSTensor{S, 4}; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        R0::MPSBondTensor, M::GenericMPSTensor{S, N}; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(codomain(R0, 1))
     @assert !isdual(domain(M, 1)) && !isdual(codomain(M, 1))
-    @tensor A[-1 -2 -3 -4; -5] := R0[-1; 1] * M[1 -2 -3 -4; -5]
+    pR = (codomainind(R0), domainind(R0))
+    pM = ((1,), Tuple(2:(N + 1)))
+    pRM = (codomainind(M), domainind(M))
+    A = tensorcontract(R0, pR, false, M, pM, false, pRM)
     _, r = left_orth!(A; positive = true)
     normalize && normalize!(r, Inf)
     return r
 end
 # for `M` at the left end of the MPS
 function qr_through(
-        ::Nothing, M::GenericMPSTensor{S, 4}; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        ::Nothing, M::GenericMPSTensor{S, N}; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(domain(M, 1))
     _, r = left_orth(M; positive = true)
     normalize && normalize!(r, Inf)
@@ -140,7 +143,7 @@ function qr_through(
 end
 
 """
-Perform LQ decomposition through a tensor
+Perform LQ decomposition through a `GenericMPSTensor`
 ```
              ╱            ╱
     -←-L0-←-Q-←-  <=  -←-M-←-L1-←-
@@ -148,21 +151,24 @@ Perform LQ decomposition through a tensor
 ```
 """
 function lq_through(
-        M::GenericMPSTensor{S, 4}, L1::MPSBondTensor; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        M::GenericMPSTensor{S, N}, L1::MPSBondTensor; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(domain(L1, 1))
     @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
-    @tensor A[-1; -2 -3 -4 -5] := M[-1 -2 -3 -4; 1] * L1[1; -5]
+    pM = (codomainind(M), domainind(M))
+    pL = (codomainind(L1), domainind(L1))
+    pML = ((1,), ntuple(i -> i + 1, N))
+    A = tensorcontract(M, pM, false, L1, pL, false, pML)
     l, _ = right_orth!(A; positive = true)
     normalize && normalize!(l, Inf)
     return l
 end
 # for `M` at the right end of the MPS
 function lq_through(
-        M::GenericMPSTensor{S, 4}, ::Nothing; normalize::Bool = true
-    ) where {S <: ElementarySpace}
+        M::GenericMPSTensor{S, N}, ::Nothing; normalize::Bool = true
+    ) where {S, N}
     @assert !isdual(codomain(M, 1))
-    A = permute(M, ((1,), (2, 3, 4, 5)))
+    A = permute(M, ((1,), ntuple(i -> i + 1, N)); copy = true)
     l, _ = right_orth!(A; positive = true)
     normalize && normalize!(l, Inf)
     return l
@@ -171,12 +177,12 @@ end
 """
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 """
-function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpace, 4}}
+function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     # get the first R and the last L
-    R_first = qr_through(nothing, Ms[1]; normalize = true)
-    L_last = lq_through(Ms[N], nothing; normalize = true)
+    R_first = qr_through(nothing, first(Ms); normalize = true)
+    L_last = lq_through(last(Ms), nothing; normalize = true)
     Rs = Vector{typeof(R_first)}(undef, N - 1)
     Ls = Vector{typeof(L_last)}(undef, N - 1)
     Rs[1], Ls[end] = R_first, L_last
@@ -190,7 +196,7 @@ function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor{<:ElementarySpa
 end
 
 """
-Given the tensors `R`, `L` on a bond, construct 
+Given the tensors `R`, `L` on a bond, construct
 the projectors `Pa`, `Pb` and the new bond weight `s`
 such that the contraction of `Pa`, `s`, `Pb` is identity when `trunc = notrunc`,
 
@@ -214,20 +220,17 @@ function _proj_from_RL(
 end
 
 """
-Given a cluster `Ms` and the pre-calculated `R`, `L` bond matrices,
-find all projectors `Pa`, `Pb` and Schmidt weights `wts` on internal bonds.
+Given a cluster `Ms`, find all projectors `Pa`, `Pb`
+and Schmidt weights `wts` on internal bonds.
 """
-function _get_allprojs(Ms, Rs, Ls, truncs::Vector{E}) where {E <: TruncationStrategy}
+function _get_allprojs(
+        Ms::Vector{T}, truncs::Vector{E}
+    ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
     N = length(Ms)
+    Rs, Ls = _get_allRLs(Ms)
     @assert length(truncs) == N - 1
-    projs_errs = map(1:(N - 1)) do i
-        trunc = if isa(truncs[i], FixedSpaceTruncation)
-            tspace = space(Ms[i + 1], 1)
-            isdual(tspace) ? truncspace(flip(tspace)) : truncspace(tspace)
-        else
-            truncs[i]
-        end
-        return _proj_from_RL(Rs[i], Ls[i]; trunc)
+    projs_errs = map(Rs, Ls, truncs) do R, L, trunc
+        return _proj_from_RL(R, L; trunc)
     end
     Pas = map(Base.Fix2(getindex, 1), projs_errs)
     wts = map(Base.Fix2(getindex, 2), projs_errs)
@@ -258,14 +261,16 @@ Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
         Ms::Vector{T}, truncs::Vector{E}
-    ) where {T <: GenericMPSTensor{<:ElementarySpace, 4}, E <: TruncationStrategy}
-    Rs, Ls = _get_allRLs(Ms)
-    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, Rs, Ls, truncs)
+    ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, truncs)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        @tensor (Ms[i])[-1 -2 -3 -4; -5] := (Ms[i])[-1 -2 -3 -4; 1] * Pa[1; -5]
-        @tensor (Ms[i + 1])[-1 -2 -3 -4; -5] := Pb[-1; 1] * (Ms[i + 1])[1 -2 -3 -4; -5]
+        Ms[i] = Ms[i] * twistdual(Pa, 1)
+        pP = ((1,), (2,))
+        pM = ((1,), ntuple(i -> i + 1, numind(eltype(Ms)) - 1))
+        pPM = (codomainind(Ms[i + 1]), domainind(Ms[i + 1]))
+        Ms[i + 1] = tensorcontract(Pb, pP, false, Ms[i + 1], pM, false, pPM)
     end
     return wts, ϵs, Pas, Pbs
 end
@@ -283,29 +288,17 @@ e.g. Cluster in PEPS with `gate_ax = 1`:
         g1 -←-- g2 -←-- g3
         ↓       ↓       ↓
 ```
-
-In the cluster, the axes of each tensor use the MPS order
-```
-    PEPS:           PEPO:
-           3             3  4
-          ╱              | ╱
-    1 -- M -- 5     1 -- M -- 6
-       ╱ |             ╱ |
-      4  2            5  2
-    M[1 2 3 4; 5]  M[1 2 3 4 5; 6]
-```
 """
 function _apply_gatempo!(
         Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1
-    @assert all(!isdual(space(g, 1)) for g in gs[2:end])
-    @assert all(!isdual(space(M, 1)) for M in Ms[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
-    fusers = map(@view(Ms[2:end]), @view(gs[2:end])) do M, g
+    fusers = map(Iterators.drop(Ms, 1), Iterators.drop(gs, 1)) do M, g
         V1, V2 = space(M, 1), space(g, 1)
+        @assert !isdual(V1) && !isdual(V2)
         return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPS
@@ -338,12 +331,11 @@ function _apply_gatempo!(
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 5}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1 || gate_ax == 2
-    @assert all(!isdual(space(g, 1)) for g in gs[2:end])
-    @assert all(!isdual(space(M, 1)) for M in Ms[2:end])
     # fusers to merge axes on bonds in the gate-cluster product
     # M1 == f1† -- f1 == M2 == f2† -- f2 == M3
-    fusers = map(@view(Ms[2:end]), @view(gs[2:end])) do M, g
+    fusers = map(Iterators.drop(Ms, 1), Iterators.drop(gs, 1)) do M, g
         V1, V2 = space(M, 1), space(g, 1)
+        @assert !isdual(V1) && !isdual(V2)
         return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPO (gate_ax = 1)
@@ -367,7 +359,7 @@ function _apply_gatempo!(
      -5 -2                      -5 -2                       -5 -2
     =#
     for (i, (g, M)) in enumerate(zip(gs, Ms))
-        @assert !isdual(space(M, 2))
+        @assert !isdual(space(M, 2)) && isdual(space(M, 3))
         if i == 1
             fr = fusers[i]
             if gate_ax == 1

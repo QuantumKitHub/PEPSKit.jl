@@ -14,25 +14,25 @@ $(TYPEDFIELDS)
 Construct a PEPS optimization algorithm struct based on keyword arguments.
 For a full description, see [`fixedpoint`](@ref). The supported keywords are:
 
-* `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm}`
+* `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm,...}`
 * `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
 * `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 * `reuse_env::Bool=$(Defaults.reuse_env)`
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing`
 """
-struct PEPSOptimize{G}
-    boundary_alg::CTMRGAlgorithm
+struct PEPSOptimize{B, G}
+    boundary_alg::B
     gradient_alg::G
     optimizer_alg::OptimKit.OptimizationAlgorithm
     reuse_env::Bool
     symmetrization::Union{Nothing, SymmetrizationStyle}
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
-            boundary_alg::CTMRGAlgorithm, gradient_alg::G, optimizer_alg,
+            boundary_alg::B, gradient_alg::G, optimizer_alg,
             reuse_env, symmetrization,
-        ) where {G}
-        _check_algorithm_combination(boundary_alg, gradient_alg)
-        return new{G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
+        ) where {B, G}
+        _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization)
+        return new{B, G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
     end
 end
 
@@ -51,9 +51,9 @@ function PEPSOptimize(;
 end
 
 const OPTIMIZATION_SYMBOLS = IdDict{Symbol, Type{<:OptimKit.OptimizationAlgorithm}}(
-    :gradientdescent => GradientDescent,
-    :conjugategradient => ConjugateGradient,
-    :lbfgs => LBFGS,
+    :GradientDescent => GradientDescent,
+    :ConjugateGradient => ConjugateGradient,
+    :LBFGS => LBFGS,
 )
 
 # Should be OptimizationAlgorithm but piracy
@@ -85,13 +85,13 @@ function _OptimizationAlgorithm(;
 end
 
 """
-    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv; kwargs...) -> peps_final, env_final, cost_final, info
+    fixedpoint(operator, peps₀::InfinitePEPS, env₀; kwargs...) -> peps_final, env_final, cost_final, info
     # expert version:
-    fixedpoint(operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize; finalize!=OptimKit._finalize!)
+    fixedpoint(operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize; finalize!=OptimKit._finalize!)
     
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
 to the supplied optimization parameters. The initial environment `env₀` serves as an
-initial guess for the first CTMRG run. By default, a random initial environment is used.
+initial guess for the first boundary contraction run. By default, a random initial environment is used.
 
 The optimization parameters can be supplied via the keyword arguments or directly as a
 `PEPSOptimize` struct. The following keyword arguments are supported:
@@ -113,8 +113,8 @@ The optimization parameters can be supplied via the keyword arguments or directl
 
 ### Boundary algorithm
 
-Supply boundary algorithm parameters via `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm}`
-using either a `NamedTuple` of keyword arguments or a `CTMRGAlgorithm` directly.
+Supply boundary algorithm parameters via `boundary_alg`
+using either a `NamedTuple` of keyword arguments or a boundary algorithm instance directly.
 See [`leading_boundary`](@ref) for a description of all possible keyword arguments.
 By default, a CTMRG tolerance of `tol=1e-4tol` and is used.
 
@@ -129,14 +129,13 @@ keyword arguments are:
 * `tol::Real=1e-2tol` : Convergence tolerance for the fixed-point gradient iteration.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient problem iterations.
 * `alg::Symbol=:$(Defaults.gradient_alg)` : Gradient algorithm variant, can be one of the following:
-    - `:geomsum` : Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
-    - `:manualiter` : Iterate gradient geometric sum manually, see [`ManualIter`](@ref)
-    - `:linsolver` : Solve fixed-point gradient linear problem using iterative solver, see [`LinSolver`](@ref)
-    - `:eigsolver` : Determine gradient via eigenvalue formulation of its Sylvester equation, see [`EigSolver`](@ref)
+    - `:GeomSum` : Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
+    - `:ManualIter` : Iterate gradient geometric sum manually, see [`ManualIter`](@ref)
+    - `:LinSolver` : Solve fixed-point gradient linear problem using iterative solver, see [`LinSolver`](@ref)
+    - `:EigSolver` : Determine gradient via eigenvalue formulation of its Sylvester equation, see [`EigSolver`](@ref)
 * `verbosity::Int` : Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : CTMRG iteration scheme determining mode of differentiation. This can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
 
 ### Optimizer settings
 
@@ -146,9 +145,9 @@ using either a `NamedTuple` of keyword arguments or a `OptimKit.OptimizationAlgo
 keyword arguments are:
 
 * `alg::Symbol=:$(Defaults.optimizer_alg)` : Optimizer algorithm, can be one of the following:
-    - `:gradientdescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:conjugategradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:lbfgs` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:GradientDescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:ConjugateGradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:LBFGS` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
 * `tol::Real=tol` : Gradient norm tolerance of the optimizer.
 * `maxiter::Int=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
 * `verbosity::Int=$(Defaults.optimizer_verbosity)` : Optimizer output verbosity.
@@ -165,22 +164,22 @@ information `NamedTuple` which contains the following entries:
 * `fg_evaluations` : Number of evaluations of the cost and gradient function.
 * `costs` : History of cost values.
 * `gradnorms` : History of gradient norms.
-* `truncation_errors` : History of maximal truncation errors of the boundary algorithm.
-* `condition_numbers` : History of maximal condition numbers of the CTMRG environments.
+* `contraction_metrics` : History of boundary-algorithm-specific contraction information, e.g. truncation errors and condition numbers.
 * `gradnorms_unitcell` : History of gradient norms for each respective unit cell entry.
 * `times` : History of optimization step execution times.
 """
 function fixedpoint(
-        operator, peps₀::InfinitePEPS, env₀::CTMRGEnv;
-        (finalize!) = OptimKit._finalize!, kwargs...,
+        operator, peps₀::InfinitePEPS, env₀; (finalize!) = OptimKit._finalize!, kwargs...,
     )
     alg = select_algorithm(fixedpoint, env₀; kwargs...)
     return fixedpoint(operator, peps₀, env₀, alg; finalize!)
 end
 function fixedpoint(
-        operator, peps₀::InfinitePEPS, env₀::CTMRGEnv, alg::PEPSOptimize;
-        (finalize!) = OptimKit._finalize!,
+        operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize; (finalize!) = OptimKit._finalize!,
     )
+    # validate inputs
+    check_input(fixedpoint, peps₀, env₀, alg)
+
     # setup retract and finalize! for symmetrization
     if isnothing(alg.symmetrization)
         retract = peps_retract
@@ -190,21 +189,9 @@ function fixedpoint(
         )
     end
 
-    # :fixed mode compatibility
-    if !isnothing(alg.gradient_alg) && iterscheme(alg.gradient_alg) == :fixed
-        if scalartype(env₀) <: Real # incompatible with real environments
-            env₀ = complex(env₀)
-            @warn "the provided real environment was converted to a complex environment \
-            since :fixed mode generally produces complex gauges; use :diffgauge mode \
-            instead by passing gradient_alg=(; iterscheme=:diffgauge) to the fixedpoint \
-            keyword arguments to work with purely real environments"
-        end
-    end
-
     # initialize info collection vectors
     T = promote_type(real(scalartype(peps₀)), real(scalartype(env₀)))
-    truncation_errors = Vector{T}()
-    condition_numbers = Vector{T}()
+    contraction_metrics = Vector{NamedTuple}()
     gradnorms_unitcell = Vector{Matrix{T}}()
     times = Vector{Float64}()
 
@@ -224,8 +211,7 @@ function fixedpoint(
             )
             ignore_derivatives() do
                 alg.reuse_env && update!(env, env′)
-                push!(truncation_errors, info.truncation_error)
-                push!(condition_numbers, info.condition_number)
+                push!(contraction_metrics, info.contraction_metrics)
             end
             return cost_function(ψ, env′, operator)
         end
@@ -240,12 +226,26 @@ function fixedpoint(
         fg_evaluations = numfg,
         costs = convergence_history[:, 1],
         gradnorms = convergence_history[:, 2],
-        truncation_errors,
-        condition_numbers,
+        contraction_metrics,
         gradnorms_unitcell,
         times,
     )
     return peps_final, env_final, cost_final, info
+end
+
+"""
+    check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG})
+
+Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
+"""
+function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) end
+function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:GradMode{:fixed}})
+    if scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
+        msg = "the provided real environment is incompatible with :fixed mode \
+        since :fixed mode generally produces complex gauges"
+        throw(ArgumentError(msg))
+    end
+    return nothing
 end
 
 """

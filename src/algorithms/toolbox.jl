@@ -12,7 +12,7 @@ function MPSKit.expectation_value(
         ket::Union{InfinitePEPS, InfinitePEPO}, env::CTMRGEnv
     )
     checklattice(bra, O, ket)
-    term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+    term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, ket, bra, env)
         return trmul(operator, ρ)
     end
@@ -23,7 +23,7 @@ function MPSKit.expectation_value(
         state::InfinitePEPO, O::LocalOperator, env::CTMRGEnv
     )
     checklattice(state, O)
-    term_vals = dtmap([O.terms...]) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+    term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, state, env)
         return trmul(operator, ρ)
     end
@@ -96,12 +96,12 @@ Contract around a single site `ind` of a square network using a given CTMRG envi
 function _contract_site(ind::Tuple{Int, Int}, network, env::CTMRGEnv)
     r, c = ind
     return _contract_site(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-        env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-        env.edges[NORTH, _prev(r, end), c], env.edges[EAST, r, _next(c, end)],
-        env.edges[SOUTH, _next(r, end), c], env.edges[WEST, r, _prev(c, end)],
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c + 1),
+        corner(env, SOUTHEAST, r + 1, c + 1),
+        corner(env, SOUTHWEST, r + 1, c - 1),
+        edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
+        edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
         network[r, c],
     )
 end
@@ -147,10 +147,10 @@ environment `env`.
 """
 function _contract_corners(ind::Tuple{Int, Int}, env::CTMRGEnv)
     r, c = ind
-    C_NW = env.corners[NORTHWEST, _prev(r, end), _prev(c, end)]
-    C_NE = env.corners[NORTHEAST, _prev(r, end), c]
-    C_SE = env.corners[SOUTHEAST, r, c]
-    C_SW = env.corners[SOUTHWEST, r, _prev(c, end)]
+    C_NW = corner(env, NORTHWEST, r - 1, c - 1)
+    C_NE = corner(env, NORTHEAST, r - 1, c)
+    C_SE = corner(env, SOUTHEAST, r, c)
+    C_SW = corner(env, SOUTHWEST, r, c - 1)
     return @tensor C_NW[1; 2] * C_NE[2; 3] * C_SE[3; 4] * C_SW[4; 1]
 end
 
@@ -163,12 +163,12 @@ CTMRG environment `env`.
 function _contract_vertical_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
     r, c = ind
     return _contract_vertical_edges(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), c],
-        env.corners[SOUTHEAST, _next(r, end), c],
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-        env.edges[EAST, r, c],
-        env.edges[WEST, r, _prev(c, end)],
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c),
+        corner(env, SOUTHEAST, r + 1, c),
+        corner(env, SOUTHWEST, r + 1, c - 1),
+        edge(env, EAST, r, c),
+        edge(env, WEST, r, c - 1),
     )
 end
 @generated function _contract_vertical_edges(
@@ -206,12 +206,12 @@ CTMRG environment `env`.
 function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
     r, c = ind
     return _contract_horizontal_edges(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-        env.corners[SOUTHEAST, r, _next(c, end)],
-        env.corners[SOUTHWEST, r, _prev(c, end)],
-        env.edges[NORTH, _prev(r, end), c],
-        env.edges[SOUTH, r, c],
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c + 1),
+        corner(env, SOUTHEAST, r, c + 1),
+        corner(env, SOUTHWEST, r, c - 1),
+        edge(env, NORTH, r - 1, c),
+        edge(env, SOUTH, r, c),
     )
 end
 @generated function _contract_horizontal_edges(
@@ -357,7 +357,7 @@ function product_peps(peps_args...; unitcell = (1, 1), noise_amp = 1.0e-2, state
         all(dim.(space.(noise_peps.A, 1)) .== length.(state_vector)) ||
             throw(ArgumentError("state vectors must match the physical dimension"))
     end
-    prod_tensors = map(zip(noise_peps.A, state_vector)) do (t, v)
+    prod_tensors = map(noise_peps.A, state_vector) do t, v
         pt = zero(t)
         pt[][:, 1, 1, 1, 1] .= v
         return pt
@@ -380,12 +380,12 @@ function contract_local_tensor(
     ) where {C}
     r, c = inds
     return _contract_site(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-        env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-        env.edges[NORTH, _prev(r, end), c], env.edges[EAST, r, _next(c, end)],
-        env.edges[SOUTH, _next(r, end), c], env.edges[WEST, r, _prev(c, end)],
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c + 1),
+        corner(env, SOUTHEAST, r + 1, c + 1),
+        corner(env, SOUTHWEST, r + 1, c - 1),
+        edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
+        edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
         O,
     )
 end
@@ -405,12 +405,12 @@ function contract_local_tensor(
     r, c, h = ind
     sandwich´ = Base.setindex(network[r, c], O, h + 2)
     return _contract_site(
-        env.corners[NORTHWEST, _prev(r, end), _prev(c, end)],
-        env.corners[NORTHEAST, _prev(r, end), _next(c, end)],
-        env.corners[SOUTHEAST, _next(r, end), _next(c, end)],
-        env.corners[SOUTHWEST, _next(r, end), _prev(c, end)],
-        env.edges[NORTH, _prev(r, end), c], env.edges[EAST, r, _next(c, end)],
-        env.edges[SOUTH, _next(r, end), c], env.edges[WEST, r, _prev(c, end)],
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c + 1),
+        corner(env, SOUTHEAST, r + 1, c + 1),
+        corner(env, SOUTHWEST, r + 1, c - 1),
+        edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
+        edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
         sandwich´,
     )
 end

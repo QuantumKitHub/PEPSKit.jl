@@ -2,165 +2,165 @@
 In the following, the names `Ra`, `Sa` etc comes from 
 the fast full update article Physical Review B 92, 035142 (2015)
 =#
-
 """
-$(SIGNATURES)
-
-Construct the tensor
+Contract the virtual legs between
 ```
-    ┌-----------------------------------┐
-    |   ┌----┐                          |
-    └---|    |- DX0     Db0 - b -- DY0 -┘
-        |    |                ↓
-        |benv|                db
-        |    |                ↓
-    ┌---|    |- DX1     Db1 - b† - DY1 -┐
-    |   └----┘                          |
-    └-----------------------------------┘
-```
-"""
-function _tensor_Ra(
-        benv::BondEnv{T, S}, b::AbstractTensorMap{T, S, 2, 1}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor Ra[DX1 Db1; DX0 Db0] := (
-        benv[DX1 DY1; DX0 DY0] * b[Db0 DY0; db] * conj(b[Db1 DY1; db])
-    )
-end
-
-"""
-$(SIGNATURES)
-
-Construct the tensor
-```
-    ┌-----------------------------------┐
-    |   ┌----┐                          |
-    └---|    |- DX0 -- (a2 b2) -- DY0 --┘
-        |    |         ↓     ↓
-        |benv|         da    db
-        |    |               ↓
-    ┌---|    |- DX1   Db1 -- b† - DY1 --┐
-    |   └----┘                          |
-    └-----------------------------------┘
-```
-"""
-function _tensor_Sa(
-        benv::BondEnv{T, S}, b::AbstractTensorMap{T, S, 2, 1}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor Sa[DX1 Db1; da] := (
-        benv[DX1 DY1; DX0 DY0] * conj(b[Db1 DY1; db]) * a2b2[DX0 DY0; da db]
-    )
-end
-
-"""
-$(SIGNATURES)
-
-Construct the tensor
-```
-    ┌-----------------------------------┐
-    |   ┌----┐                          |
-    └---|    |- DX0 - a -- Da0     DY0 -┘
-        |    |        ↓
-        |benv|        da
-        |    |        ↓
-    ┌---|    |- DX1 - a† - Da1     DY1 -┐
-    |   └----┘                          |
-    └-----------------------------------┘
-```
-"""
-function _tensor_Rb(
-        benv::BondEnv{T, S}, a::AbstractTensorMap{T, S, 2, 1}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor Rb[Da1 DY1; Da0 DY0] := (
-        benv[DX1 DY1; DX0 DY0] * a[DX0 Da0; da] * conj(a[DX1 Da1; da])
-    )
-end
-
-"""
-$(SIGNATURES)
-
-Construct the tensor
-```
-    ┌-----------------------------------┐
-    |   ┌----┐                          |
-    └---|    |- DX0 -- (a2 b2) -- DY0 --┘
-        |    |         ↓     ↓
-        |benv|         da    db
-        |    |         ↓
-    ┌---|    |- DX1 -- a† - Da1   DY1 --┐
-    |   └----┘                          |
-    └-----------------------------------┘
-```
-"""
-function _tensor_Sb(
-        benv::BondEnv{T, S}, a::AbstractTensorMap{T, S, 2, 1}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor Sb[Da1 DY1; db] := (
-        benv[DX1 DY1; DX0 DY0] * conj(a[DX1 Da1; da]) * a2b2[DX0 DY0; da db]
-    )
-end
-
-"""
-$(SIGNATURES)
-
-Calculate the inner product <a1,b1|a2,b2>
-```
-    ┌--------------------------------┐
-    |   ┌----┐                       |
-    └---|    |- DX0 - (a2 b2) - DY0 -┘
-        |    |        ↓    ↓
-        |benv|        da   db
-        |    |        ↓    ↓
-    ┌---|    |- DX1 - (a1 b1)†- DY1 -┐
-    |   └----┘                       |
-    └--------------------------------┘
-```
-"""
-function inner_prod(
-        benv::BondEnv{T, S}, a1b1::AbstractTensorMap{T, S, 2, 2}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @autoopt @tensor benv[DX1 DY1; DX0 DY0] *
-        conj(a1b1[DX1 DY1; da db]) *
-        a2b2[DX0 DY0; da db]
-end
-
-"""
-$(SIGNATURES)
-
-Calculate the fidelity between two evolution steps
-```
-        |⟨a1,b1|a2,b2⟩|^2
-    --------------------------
-    ⟨a1,b1|a1,b1⟩⟨a2,b2|a2,b2⟩
-```
-"""
-function fidelity(
-        benv::BondEnv{T, S}, a1b1::AbstractTensorMap{T, S, 2, 2}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    b12 = inner_prod(benv, a1b1, a2b2)
-    b11 = inner_prod(benv, a1b1, a1b1)
-    b22 = inner_prod(benv, a2b2, a2b2)
-    return abs2(b12) / abs(b11 * b22)
-end
-
-"""
-$(SIGNATURES)
-
-Contract the axis between `a` and `b` tensors
-```
-    -- DX - a - D - b - DY --
+    -- DX --a-- D --b-- DY --
             ↓       ↓
             da      db
 ```
 """
-function _combine_ab(
-        a::AbstractTensorMap{T, S, 2, 1}, b::AbstractTensorMap{T, S, 1, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    return @tensor ab[DX DY; da db] := a[DX da; D] * b[D; db DY]
+function _combine_ket(a::MPSTensor, b::MPSTensor)
+    return @tensor ket[DX DY; da db] := a[DX da; D] * b[D db; DY]
 end
-function _combine_ab(
-        a::AbstractTensorMap{T, S, 2, 1}, b::AbstractTensorMap{T, S, 2, 1}
+
+function _combine_ket_for_svd(a::MPSTensor, b::MPSTensor)
+    return @tensor ket[DX da; db DY] := a[DX da; D] * b[D db; DY]
+end
+
+"""
+Construct the norm with bra bond tensors removed
+```
+    ┌benv-------┐
+    ├---a---b---┤
+    |   ↓   ↓   |
+    ├--       --┤
+    └-----------┘
+```
+"""
+function _benv_ket(benv::BondEnv, ket::AbstractTensorMap{T, S, 2, 2}) where {T, S}
+    return benv * twistdual(ket, 1:2)
+end
+
+"""
+    _als_tensor_R(benv::BondEnv, xs::Vector{<:MPSTensor}, i::Int)
+
+Construct the bond environment around the `i`th bond tensor
+in two-site ALS optimization.
+```
+    i = 1           i = 2
+    ┌benv-------┐   ┌benv-------┐
+    ├--   --b---┤   ├---a--   --┤
+    |       ↓   |   |   ↓       |
+    ├--   --b̄---┤   ├---ā--   --┤
+    └-----------┘   └-----------┘
+```
+"""
+function _als_tensor_R(benv::BondEnv, xs::Vector{<:MPSTensor}, i::Int)
+    @assert 1 <= i <= 2
+    return if i == 1
+        _als_tensor_Ra(benv, xs[2])
+    else
+        _als_tensor_Rb(benv, xs[1])
+    end
+end
+
+function _als_tensor_Ra(benv::BondEnv, b::MPSTensor)
+    return @tensor Ra[DX1 D1; DX0 D0] :=
+        benv[DX1 DY1; DX0 DY0] * b[D0 db; DY0] * conj(b[D1 db; DY1])
+end
+function _als_tensor_Rb(benv::BondEnv, a::MPSTensor)
+    return @tensor Rb[D1 DY1; D0 DY0] :=
+        benv[DX1 DY1; DX0 DY0] * a[DX0 da; D0] * conj(a[DX1 da; D1])
+end
+
+"""
+Calculate the 2-site norm
+```
+    ┌benv-------┐
+    ├---a---b---┤
+    |   ↓   ↓   |
+    ├---ā---b̄---┤
+    └-----------┘
+```
+using pre-calcuated partial contraction results.
+"""
+function _als_norm(
+        ket::AbstractTensorMap{T, S, 2, 2}, benv_ket::AbstractTensorMap{T, S, 2, 2}
+    ) where {T, S}
+    return @tensor benv_ket[DX1 DY1; da db] * conj(ket[DX1 DY1; da db])
+end
+function _als_norm(a::MPSTensor, Ra::BondEnv)
+    return @tensor Ra[DX1 D1; DX0 D0] * a[DX0 da; D0] * conj(a[DX1 da; D1])
+end
+
+"""
+    _als_tensor_S(
+        benv_ket::AbstractTensorMap{T, S, 2, 2},
+        xs::Vector{<:MPSTensor}, i::Int
     ) where {T <: Number, S <: ElementarySpace}
-    return @tensor ab[DX DY; da db] := a[DX D; da] * b[D DY; db]
+
+Construct the overlap but with one of the bra bond tensor removed.
+```
+    i = 1           i = 2
+    ┌benv-------┐   ┌benv-------┐
+    ├---a₂==b₂--┤   ├---a₂==b₂--┤
+    |   ↓   ↓   |   |   ↓   ↓   |
+    ├--   --b̄---┤   ├---ā--   --┤
+    └-----------┘   └-----------┘
+```
+The ket part is provided by the partial contraction `benv_ket`.
+"""
+function _als_tensor_S(
+        benv_ket::AbstractTensorMap{T, S, 2, 2},
+        xs::Vector{<:MPSTensor}, i::Int
+    ) where {T <: Number, S <: ElementarySpace}
+    @assert 1 <= i <= 2
+    return if i == 1
+        _als_tensor_Sa(benv_ket, xs[2])
+    else
+        _als_tensor_Sb(benv_ket, xs[1])
+    end
+end
+
+function _als_tensor_Sa(
+        benv_ket::AbstractTensorMap{T, S, 2, 2}, b::MPSTensor
+    ) where {T <: Number, S <: ElementarySpace}
+    return @tensor Sa[DX1 da; D1] :=
+        benv_ket[DX1 DY1; da db] * conj(b[D1 db; DY1])
+end
+function _als_tensor_Sb(
+        benv_ket::AbstractTensorMap{T, S, 2, 2}, a::MPSTensor
+    ) where {T <: Number, S <: ElementarySpace}
+    return @tensor Sb[D1 db; DY1] :=
+        benv_ket[DX1 DY1; da db] * conj(a[DX1 da; D1])
+end
+
+"""
+Calculate the inner product (overlap)
+```
+    ┌benv-------┐
+    ├---a₂--b₂--┤
+    |   ↓   ↓   |
+    ├---ā---b̄---┤
+    └-----------┘
+```
+using pre-calculated partial contraction results.
+"""
+function _als_overlap(a::MPSTensor, Sa::MPSTensor)
+    # applies to b, Sb as well
+    # @tensor Sb[D1 db; DY1] * conj(b[D1 db; DY1])
+    return @tensor Sa[DX1 da; D1] * conj(a[DX1 da; D1])
+end
+
+"""
+Calculate the 2-site ALS inner product ⟨a₁,b₁|a₂,b₂⟩
+```
+    ┌benv-------┐
+    ├---a₂--b₂--┤
+    |   ↓   ↓   |
+    ├---ā₁--b̄₁--┤
+    └-----------┘
+```
+where `|bra⟩ = |a₁,b₁⟩` and `|ket⟩ = |a₂,b₂⟩`,
+with virtual leg between a, b contracted.
+"""
+function inner_prod(
+        benv::BondEnv, bra::AbstractTensorMap{T, S, 2, 2},
+        ket::AbstractTensorMap{T, S, 2, 2}
+    ) where {T <: Number, S <: ElementarySpace}
+    return @autoopt @tensor benv[DX1 DY1; DX0 DY0] *
+        conj(bra[DX1 DY1; da db]) * ket[DX0 DY0; da db]
 end
 
 """
@@ -168,41 +168,60 @@ $(SIGNATURES)
 
 Calculate the cost function
 ```
-    f(a,b)  = ‖ |a1,b1⟩ - |a2,b2⟩ ‖^2
-    = ⟨a1,b1|a1,b1⟩ - 2 Re⟨a1,b1|a2,b2⟩ + ⟨a2,b2|a2,b2⟩
+    f(a,b) = ‖ |ψ1⟩ - |ψ2⟩ ‖^2
+    = ⟨ψ1|benv|ψ1⟩ - 2 Re⟨ψ1|benv|ψ2⟩ + ⟨ψ2|benv|ψ2⟩
+```
+and the fidelity
+```
+        |⟨ψ1|benv|ψ2⟩|²
+    ------------------------
+    ⟨ψ1|benv|ψ1⟩⟨ψ2|benv|ψ2⟩
 ```
 """
-function cost_function_als(
-        benv::BondEnv{T, S}, a1b1::AbstractTensorMap{T, S, 2, 2}, a2b2::AbstractTensorMap{T, S, 2, 2}
-    ) where {T <: Number, S <: ElementarySpace}
-    t1 = inner_prod(benv, a1b1, a1b1)
-    t2 = inner_prod(benv, a2b2, a2b2)
-    t3 = inner_prod(benv, a1b1, a2b2)
-    return real(t1) + real(t2) - 2 * real(t3)
+function cost_function_als(benv, ψ1, ψ2)
+    b12 = inner_prod(benv, ψ1, ψ2)
+    b11 = inner_prod(benv, ψ1, ψ1)
+    b22 = inner_prod(benv, ψ2, ψ2)
+    cost = real(b11) + real(b22) - 2 * real(b12)
+    fid = abs2(b12) / abs(b11 * b22)
+    return cost, fid
+end
+
+# applies to Rb, Sb, b as well
+# b22 is the pre-calculated untruncated norm
+function cost_function_als(Ra::BondEnv, Sa::MPSTensor, a::MPSTensor, b22::Real)
+    b11 = real(_als_norm(a, Ra))
+    b12 = _als_overlap(a, Sa)
+    cost = b11 + b22 - 2 * real(b12)
+    fid = abs2(b12) / abs(b11 * b22)
+    return cost, fid
 end
 
 """
 $(SIGNATURES)
 
-Solve the equations `Rx x = Sx` (x = a, b) with initial guess `x0`
+Solve the equations `Rx x = Sx` with initial guess `x0`.
+
+In ALS over `a`, `b`, if we fix `b`, the cost function can
+be expressed in the `Ra`, `Sa` tensors as
 ```
-    ┌---------------------------┐
-    |   ┌----┐                  |
-    └---|    |--- 1 -- x -- 2 --┘
-        |    |         ↓
-        | Rx |        -3
-        |    |
-    ┌---|    |--- -1       -2 --┐
-    |   └----┘                  |
-    └---------------------------┘
+    f(a†,a) = a† Ra a - a† Sa - Sa† a + const
+```
+Therefore `f` is minimized when
+```
+    ∂f/∂ā = Ra a - Sa = 0
 ```
 """
-function _solve_ab(
-        Rx::AbstractTensorMap{T, S, 2, 2},
-        Sx::AbstractTensorMap{T, S, 2, 1},
-        x0::AbstractTensorMap{T, S, 2, 1},
-    ) where {T <: Number, S <: ElementarySpace}
-    f(x) = (@tensor Sx2[-1 -2; -3] := Rx[-1 -2; 1 2] * x[1 2; -3])
-    x1, info = linsolve(f, Sx, x0, 0, 1)
+function _solve_als(
+        Rx::AbstractTensorMap{T, S, N, N},
+        Sx::GenericMPSTensor{S, N},
+        x0::GenericMPSTensor{S, N}; kwargs...
+    ) where {T, S, N}
+    @assert N >= 2
+    pR = (codomainind(Rx), domainind(Rx))
+    pX = ((1, (3:(N + 1))...), (2,))
+    pRX = ((1, N + 1, (2:(N - 1))...), (N,))
+    f(x) = tensorcontract(Rx, pR, false, x, pX, false, pRX)
+    x1, info = linsolve(f, Sx, x0, 0, 1; kwargs...)
     return x1, info
 end

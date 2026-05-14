@@ -20,7 +20,7 @@ We first import all required modules and seed the RNG:
 
 using Random
 using TensorKit, PEPSKit
-Random.seed!(29385293);
+Random.seed!(29385294);
 
 md"""
 ## Simple updating a challenging phase
@@ -85,7 +85,7 @@ normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
 trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 Espace = Vect[U1Irrep](0 => χenv ÷ 2, 1 // 2 => χenv ÷ 4, -1 // 2 => χenv ÷ 4)
 env₀ = CTMRGEnv(rand, Float64, peps, Espace)
-env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :sequential, trunc = trunc_env);
+env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :SequentialCTMRG, trunc = trunc_env);
 E = expectation_value(peps, H, env) / (Nr * Nc)
 
 md"""
@@ -108,6 +108,12 @@ the already evolved `peps`, thus giving us a physical initial guess for the opti
 In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit of noise to it.
 This is conviently done using MPSKit's `randomize!` function.
 (Breaking some of the spatial symmetry can be advantageous for obtaining lower energies.)
+
+In our optimization, we will use a fixed-point differentiation scheme which requires a
+gauge fixing of the contraction environment
+(specified by the `gradient_alg = (; iterscheme = :fixed)` setting).
+Since this gauge fixing involves potentially complex phases, we have to convert our
+real-valued contraction environment to complex numbers before the optimization.
 """
 
 using MPSKit: randomize!
@@ -115,7 +121,8 @@ using MPSKit: randomize!
 noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
 peps₀ = peps + 1.0e-1noise_peps
 peps_opt, env_opt, E_opt, = fixedpoint(
-    H, peps₀, env; optimizer_alg = (; tol = 1.0e-4, maxiter = 80)
+    H, peps₀, complex(env);
+    optimizer_alg = (; tol = 1.0e-4, maxiter = 80), gradient_alg = (; iterscheme = :fixed)
 );
 
 md"""
