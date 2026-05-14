@@ -145,7 +145,7 @@ end
 
 function initialize_right_fixedpoint(tops, bottoms)
     ρ0 = randn(
-        scalartype(tops), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
+        TensorKit.promote_storagetype(tops...), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
     )
     return ρ0
 end
