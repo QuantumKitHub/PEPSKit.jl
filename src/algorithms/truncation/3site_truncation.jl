@@ -4,7 +4,7 @@ Initialize truncated bond tensors for 3-site ALS
 function _als3_init_truncate(
         Ms::Vector{T}, trunc::TruncationStrategy
     ) where {T <: GenericMPSTensor}
-    flips = [isdual(space(M, 1)) for M in Ms[2:end]]
+    flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)]
     xs = copy.(Ms)
     _flip_virtuals!(xs, flips)
     wts0, _, Pas, Pbs = _cluster_truncate!(xs, fill(trunc, 2))

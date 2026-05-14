@@ -49,7 +49,7 @@ virtual dimension D, updated with an MPO with bond dimension D′.
     ]
     normalize!.(Ms, Inf)
     # Vidal gauge truncation
-    flips = [isdual(space(M, 1)) for M in Ms[2:end]]
+    flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)]
     xs = copy.(Ms)
     _flip_virtuals!(xs, flips)
     _cluster_truncate!(xs, fill(trunc, 2))

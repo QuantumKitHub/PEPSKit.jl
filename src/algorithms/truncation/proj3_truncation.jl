@@ -22,7 +22,7 @@ function se3site_truncate(
 
     # initialize truncated bond tensors
     Ms = copy.(Ms)
-    _flip_virtuals!(Ms, [isdual(space(M, 1)) for M in Ms[2:end]])
+    _flip_virtuals!(Ms, [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)])
     xs, (q, u), wts0, flips = _als3_init_truncate(Ms, alg.trunc)
 
     # initial cost and fidelity
