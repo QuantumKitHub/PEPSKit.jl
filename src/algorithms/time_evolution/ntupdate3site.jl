@@ -96,7 +96,7 @@ function _bond_truncate(
 
     # (optional) apply the NN gate without truncation
     if !(gate === nothing)
-        a, s, b, = _apply_gate(a, b, gate, truncerror(; atol = 1.0e-15))
+        a, _, b, = _apply_gate(a, b, gate, truncerror(; atol = 1.0e-15))
     end
     a, s, b, info = bond_truncate(a, b, benv, alg.opt_alg)
 

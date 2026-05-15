@@ -41,7 +41,7 @@ dt, nstep, check_interval = 5.0e-3, 40, 40
 end
 
 @testset "Neighbourhood tensor update" begin
-    trunc_pepo = truncrank(4) & truncerror(; atol = 1.0e-12)
+    trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
     opt_alg = ALSTruncation(; trunc = trunc_pepo, tol = 1.0e-10)
     alg = NeighbourUpdate(; opt_alg, bondenv_alg = NNEnv())
     pepo = deepcopy(pepo0)
@@ -53,6 +53,6 @@ end
         env = converge_env(InfinitePEPS(pepo), 16)
         energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
         @info "β = $(info.t): ⟨ρ|H|ρ⟩ = $(energy)"
-        @test energy ≈ bme atol = 2.0e-2
+        @test energy ≈ bme atol = 5.0e-3
     end
 end

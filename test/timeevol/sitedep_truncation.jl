@@ -3,6 +3,7 @@ using Random
 using TensorKit
 using PEPSKit
 using PEPSKit: _is_bipartite, _get_fixedspacetrunc
+using PEPSKit: NORTH, EAST
 
 elt = Float64
 Nr, Nc = 2, 2
@@ -63,7 +64,7 @@ end
 end
 
 @testset "NTU on $(typeof(state0).name.wrapper), bipartite = $(bipartite)" for
-    (state0, bipartite) in Iterators.product(states, (true, false))
+    (state0, bipartite) in Iterators.product(states, (false, true))
     J2 = 0.5
     if bipartite
         state0[2, 1] = copy(state0[1, 2])
@@ -77,6 +78,10 @@ end
     state, info = time_evolve(TimeEvolver(state0, ham, 0.1, 1, alg))
     for (t, t0) in zip(state.A, state0.A)
         @test space(t) == space(t0)
+    end
+    for (r, c) in Iterators.product(1:Nr, 1:Nc)
+        @test space(info.wts[1, r, c], 1) == domain(state[r, c], EAST)
+        @test space(info.wts[2, r, c], 1) == domain(state[r, c], NORTH)
     end
     if bipartite
         @test _is_bipartite(state)
