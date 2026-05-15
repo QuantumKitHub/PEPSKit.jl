@@ -152,7 +152,8 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
 
 export absorb_weight
-export ALSTruncation, ALSProjTruncation, FullEnvTruncation
+export ALSTruncation, FullEnvTruncation
+export ALSProjTruncation, ALS3SiteTruncation
 export SimpleUpdate
 export TimeEvolver, timestep, time_evolve
 

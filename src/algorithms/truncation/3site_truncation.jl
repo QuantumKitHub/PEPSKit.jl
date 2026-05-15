@@ -1,3 +1,11 @@
+@kwdef struct ALS3SiteTruncation{T}
+    trunc::T
+    maxiter::Int = 20
+    inneriter::Int = 3
+    tol::Float64 = 1.0e-8
+    check_interval::Int = 0
+end
+
 """
 Initialize truncated bond tensors for 3-site ALS
 """
@@ -32,7 +40,7 @@ the southeast 3-site cluster.
 Reference: Phys. Rev. B 97, 174408 (2018)
 """
 function se3site_truncate(
-        Ms::Vector{T}, benv::BondEnv3site, alg::ALSTruncation
+        Ms::Vector{T}, benv::BondEnv3site, alg::ALS3SiteTruncation
     ) where {T <: GenericMPSTensor}
     # dual check
     @assert length(Ms) == 3
@@ -47,27 +55,32 @@ function se3site_truncate(
     # initialize truncated bond tensors
     xs, _, wts0, flips = _als3_init_truncate(Ms, alg.trunc)
 
-    # initialize ALS cache
-    Rs = [_als_tensor_R(benv, xs, i) for i in 1:3]
-    Ss = [_als_tensor_S(benv_ket2, xs, i) for i in 1:3]
-
     # initial cost and fidelity
-    cost00, fid = cost_function_als(Rs[1], Ss[1], xs[1], b22)
+    R1 = _als3s_tensor_R1(benv, xs[2], xs[3])
+    S1 = _als3s_tensor_S1(benv_ket2, xs[2], xs[3])
+    cost00, fid = cost_function_als(R1, S1, xs[1], b22)
     cost0, fid0, Δcost, Δfid, Δs = cost00, fid, NaN, NaN, NaN
     verbose && @info "ALS3 init" * _als_message(0, cost0, fid, Δcost, Δfid, Δs, 0.0)
 
     for iter in 1:(alg.maxiter)
         time0 = time()
-        for (i, (Rx, Sx, x)) in enumerate(zip(Rs, Ss, xs))
-            xs[i] = _solve_als_pinv(Rx, Sx)
-            # @debug "Bond truncation info $(i):" info_x
-            # update R, S for the next site
-            i_next = _next(i, 3)
-            Rs[i_next] = _als_tensor_R(benv, xs, i_next)
-            Ss[i_next] = _als_tensor_S(benv_ket2, xs, i_next)
+        # optimize a, b more frequently
+        for _ in 1:alg.inneriter
+            R1 = _als3s_tensor_R1(benv, xs[2], xs[3])
+            S1 = _als3s_tensor_S1(benv_ket2, xs[2], xs[3])
+            xs[1] = _solve_als_pinv(R1, S1)
+            R3 = _als3s_tensor_R3(benv, xs[1], xs[2])
+            S3 = _als3s_tensor_S3(benv_ket2, xs[1], xs[2])
+            xs[3] = _solve_als_pinv(R3, S3)
         end
+        # optimize m
+        R2 = _als3s_tensor_R2(benv, xs[1], xs[3])
+        S2 = _als3s_tensor_S2(benv_ket2, xs[1], xs[3])
+        xs[2] = _solve_als_pinv(R2, S2)
         # compare cost, fidelity, bond weights
-        cost, fid = cost_function_als(Rs[1], Ss[1], xs[1], b22)
+        R1 = _als3s_tensor_R1(benv, xs[2], xs[3])
+        S1 = _als3s_tensor_S1(benv_ket2, xs[2], xs[3])
+        cost, fid = cost_function_als(R1, S1, xs[1], b22)
         wts = _get_allprojs(xs, fill(notrunc(), 2))[3]
         Δcost = abs(cost - cost0) / cost00
         Δfid = abs(fid - fid0)

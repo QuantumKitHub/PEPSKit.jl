@@ -59,7 +59,7 @@ virtual dimension D, updated with an MPO with bond dimension D′.
     # 3-site iterative optimization
     for alg in (
             ALSProjTruncation(; trunc, maxiter, check_interval),
-            ALSTruncation(; trunc, maxiter, check_interval),
+            ALS3SiteTruncation(; trunc, maxiter, check_interval),
         )
         xs, wts, info = PEPSKit.se3site_truncate(Ms, benv, alg)
         @info "Improved fidelity = $(info.fid)."
