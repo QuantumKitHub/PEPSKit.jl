@@ -80,7 +80,7 @@ function se3site_truncate(
         # optimize m
         R2 = _als3s_tensor_R2(benv, xs[1], xs[3])
         S2 = _als3s_tensor_S2(benv_ket2, xs[1], xs[3])
-        xs[2], = _solve_als(R2, S2, xs[2])
+        xs[2] = _solve_als_pinv(R2, S2)
         # optimize a, b more frequently
         for _ in 1:alg.inneriter
             R3 = _als3s_tensor_R3(benv, xs[1], xs[2])
