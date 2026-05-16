@@ -10,12 +10,16 @@ end
 Initialize truncated bond tensors for 3-site ALS
 """
 function _als3_init_truncate(
-        Ms::Vector{T}, trunc::TruncationStrategy
-    ) where {T <: GenericMPSTensor}
+        Ms::Vector{<:GenericMPSTensor}, trunc::TruncationStrategy
+    )
+    return _als3_init_truncate(Ms, fill(trunc, 2))
+end
+function _als3_init_truncate(
+        Ms::Vector{<:GenericMPSTensor}, truncs::Vector{<:TruncationStrategy}
+    )
     flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)]
-    xs = copy.(Ms)
-    _flip_virtuals!(xs, flips)
-    wts0, _, Pas, Pbs = _cluster_truncate!(xs, fill(trunc, 2))
+    xs = _flip_virtuals!(copy.(Ms), flips)
+    wts0, _, Pas, Pbs = _cluster_truncate!(xs, truncs)
     return xs, (Pbs[1], Pas[2]), wts0, flips
 end
 
@@ -110,5 +114,8 @@ function se3site_truncate(
     wts, = _cluster_truncate!(xs, fill(notrunc(), 2))
     # restore virtual arrows
     _flip_virtuals!(xs, flips)
+    for (i, (wt, fl)) in enumerate(zip(wts, flips))
+        fl && (wts[i] = _fliptwist_s(wt))
+    end
     return xs, wts, (; fid, Δfid, Δs)
 end

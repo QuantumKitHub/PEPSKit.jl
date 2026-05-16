@@ -1,4 +1,4 @@
-@kwdef struct ALSProjTruncation{T <: TruncationStrategy}
+@kwdef struct ALSProjTruncation{T}
     trunc::T
     maxiter::Int = 50
     inneriter::Int = 8
@@ -14,6 +14,7 @@ function se3site_truncate(
     time00 = time()
     verbose = (alg.check_interval > 0)
     @assert alg.inneriter > 0
+    flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)]
 
     # untruncated things
     ket2 = _combine_ket(Ms...)
@@ -21,9 +22,8 @@ function se3site_truncate(
     b22 = real(_als_norm(ket2, benv_ket2))
 
     # initialize truncated bond tensors
-    Ms = copy.(Ms)
-    _flip_virtuals!(Ms, [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)])
-    xs, (q, u), wts0, flips = _als3_init_truncate(Ms, alg.trunc)
+    Ms = _flip_virtuals!(copy.(Ms), flips)
+    xs, (q, u), wts0, _ = _als3_init_truncate(Ms, alg.trunc)
 
     # initial cost and fidelity
     cost00, fid = cost_function_als(
@@ -109,5 +109,8 @@ function se3site_truncate(
     wts, = _cluster_truncate!(xs, fill(notrunc(), 2))
     # restore virtual arrows
     _flip_virtuals!(xs, flips)
+    for (i, (wt, fl)) in enumerate(zip(wts, flips))
+        fl && (wts[i] = _fliptwist_s(wt))
+    end
     return xs, wts, (; fid, Δfid, Δs)
 end
