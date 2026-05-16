@@ -2,8 +2,17 @@
     trunc::T
     maxiter::Int = 20
     inneriter::Int = 3
-    tol::Float64 = 1.0e-8
+    fidtol::Float64 = 1.0e-11
     check_interval::Int = 0
+end
+
+function _als3_message(
+        iter::Int, cost::Float64, fid::Float64, Δcost::Float64,
+        Δfid::Float64, time_elapsed::Float64,
+    )
+    return @sprintf(
+        "%5d, fid = %.8e, Δfid = %.8e, time = %.4f s\n", iter, fid, Δfid, time_elapsed
+    ) * @sprintf("      cost = %.3e, Δcost/cost0 = %.3e.", cost, Δcost)
 end
 
 """
@@ -57,14 +66,14 @@ function se3site_truncate(
     b22 = real(_als_norm(ket2, benv_ket2))
 
     # initialize truncated bond tensors
-    xs, _, wts0, flips = _als3_init_truncate(Ms, alg.trunc)
+    xs, _, _, flips = _als3_init_truncate(Ms, alg.trunc)
 
     # initial cost and fidelity
     R1 = _als3s_tensor_R1(benv, xs[2], xs[3])
     S1 = _als3s_tensor_S1(benv_ket2, xs[2], xs[3])
     cost00, fid = cost_function_als(R1, S1, xs[1], b22)
-    cost0, fid0, Δcost, Δfid, Δs = cost00, fid, NaN, NaN, NaN
-    verbose && @info "ALS3 init" * _als_message(0, cost0, fid, Δcost, Δfid, Δs, 0.0)
+    cost0, fid0, Δcost, Δfid = cost00, fid, NaN, NaN
+    verbose && @info "ALS3 init" * _als3_message(0, cost0, fid, Δcost, Δfid, 0.0)
 
     for iter in 1:(alg.maxiter)
         time0 = time()
@@ -83,21 +92,17 @@ function se3site_truncate(
         end
         # compare cost, fidelity, bond weights
         cost, fid = cost_function_als(R1, S1, xs[1], b22)
-        wts = _get_allprojs(xs, fill(notrunc(), 2))[3]
         Δcost = abs(cost - cost0) / cost00
         Δfid = abs(fid - fid0)
-        Δs = mean(
-            _singular_value_distance(s, s0) for (s, s0) in zip(wts, wts0)
-        ) / norm(wts0[1], Inf)
-        cost0, fid0, wts0 = cost, fid, wts
+        cost0, fid0 = cost, fid
         time1 = time()
-        converge = (Δs < alg.tol)
+        converge = (Δfid < alg.fidtol)
         cancel = (iter == alg.maxiter)
         showinfo =
             cancel || (verbose && (converge || iter == 1 || iter % alg.check_interval == 0))
         if showinfo
-            message = _als_message(
-                iter, cost, fid, Δcost, Δfid, Δs,
+            message = _als3_message(
+                iter, cost, fid, Δcost, Δfid,
                 time1 - ((cancel || converge) ? time00 : time0),
             )
             if converge
@@ -117,5 +122,5 @@ function se3site_truncate(
     for (i, (wt, fl)) in enumerate(zip(wts, flips))
         fl && (wts[i] = _fliptwist_s(wt))
     end
-    return xs, wts, (; fid, Δfid, Δs)
+    return xs, wts, (; fid, Δfid)
 end
