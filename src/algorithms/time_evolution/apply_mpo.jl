@@ -256,6 +256,17 @@ function _flip_virtuals!(
     return Ms
 end
 
+function _apply_proj_left(Pb::MPSBondTensor, m::GenericMPSTensor{S, N}) where {S, N}
+    pP = ((1,), (2,))
+    pM = ((1,), ntuple(i -> i + 1, N))
+    pPM = (codomainind(m), domainind(m))
+    return tensorcontract(Pb, pP, false, m, pM, false, pPM)
+end
+
+function _apply_proj_right(m::GenericMPSTensor, Pa::MPSBondTensor)
+    return m * twistdual(Pa, 1)
+end
+
 """
 Find projectors to truncate internal bonds of the cluster `Ms`.
 """
@@ -266,11 +277,8 @@ function _cluster_truncate!(
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        Ms[i] = Ms[i] * twistdual(Pa, 1)
-        pP = ((1,), (2,))
-        pM = ((1,), ntuple(i -> i + 1, numind(Ms[i + 1]) - 1))
-        pPM = (codomainind(Ms[i + 1]), domainind(Ms[i + 1]))
-        Ms[i + 1] = tensorcontract(Pb, pP, false, Ms[i + 1], pM, false, pPM)
+        Ms[i] = _apply_proj_right(Ms[i], Pa)
+        Ms[i + 1] = _apply_proj_left(Pb, Ms[i + 1])
     end
     return wts, ϵs, Pas, Pbs
 end

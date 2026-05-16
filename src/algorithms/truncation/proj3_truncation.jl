@@ -1,7 +1,7 @@
 @kwdef struct ALSProjTruncation{T}
     trunc::T
     maxiter::Int = 50
-    inneriter::Int = 8
+    inneriter::Int = 4
     tol::Float64 = 1.0e-9
     check_interval::Int = 0
 end
@@ -40,7 +40,7 @@ function se3site_truncate(
         # optimize on first bond
         benv_b = _benv_b(benv, xs[3])
         benv_ket_b = _benv_ket_b(benv_ket2, xs[3])
-        mu = _apply_proj(Ms[2], u)
+        mu = _apply_proj_right(Ms[2], u)
         for _ in 1:alg.inneriter
             # optimize xs[1]
             R = _als_tensor_Rp(benv_b, xs[2])
@@ -52,13 +52,13 @@ function se3site_truncate(
             R = _als_tensor_Rq(benv_ab, mu)
             S = _als_tensor_Sq(benv_ket_ab, mu)
             q = _solveproj_als_pinv(R, S)
-            xs[2] = _apply_proj(q, mu)
+            xs[2] = _apply_proj_left(q, mu)
         end
 
         # optimize on second bond
         benv_a = _benv_a(benv, xs[1])
         benv_ket_a = _benv_ket_a(benv_ket2, xs[1])
-        qm = _apply_proj(q, Ms[2])
+        qm = _apply_proj_left(q, Ms[2])
         for _ in 1:alg.inneriter
             # optimize u and xs[2]
             benv_ab = _benv_b(benv_a, xs[3])
@@ -66,7 +66,7 @@ function se3site_truncate(
             R = _als_tensor_Ru(benv_ab, qm)
             S = _als_tensor_Su(benv_ket_ab, qm)
             u = _solveproj_als_pinv(R, S)
-            xs[2] = _apply_proj(qm, u)
+            xs[2] = _apply_proj_right(qm, u)
             # optimize xs[3]
             R = _als_tensor_Rv(benv_a, xs[2])
             S = _als_tensor_Sv(benv_ket_a, xs[2])
