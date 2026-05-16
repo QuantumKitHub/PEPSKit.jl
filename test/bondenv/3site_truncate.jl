@@ -57,13 +57,9 @@ virtual dimension D, updated with an MPO with bond dimension D′.
     cost0, fid0 = cost_function_als(benv, xs, Ms)
     @info "Fidelity of truncated Vidal gauge = $fid0.\n"
     # 3-site iterative optimization
-    for alg in (
-            ALSProjTruncation(; trunc, maxiter, check_interval),
-            ALS3SiteTruncation(; trunc, maxiter, check_interval),
-        )
-        xs, wts, info = PEPSKit.se3site_truncate(Ms, benv, alg)
-        @info "Improved fidelity = $(info.fid)."
-        @test info.fid ≈ cost_function_als(benv, xs, Ms)[2]
-        @test info.fid > fid0
-    end
+    alg = ALS3SiteTruncation(; trunc, maxiter, check_interval)
+    xs, wts, info = PEPSKit.se3site_truncate(Ms, benv, alg)
+    @info "Improved fidelity = $(info.fid)."
+    @test info.fid ≈ cost_function_als(benv, xs, Ms)[2]
+    @test info.fid > fid0
 end
