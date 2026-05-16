@@ -64,22 +64,20 @@ function se3site_truncate(
 
     for iter in 1:(alg.maxiter)
         time0 = time()
-        # optimize a, b more frequently
-        for _ in 1:alg.inneriter
-            R1 = _als3s_tensor_R1(benv, xs[2], xs[3])
-            S1 = _als3s_tensor_S1(benv_ket2, xs[2], xs[3])
-            xs[1] = _solve_als_pinv(R1, S1)
-            R3 = _als3s_tensor_R3(benv, xs[1], xs[2])
-            S3 = _als3s_tensor_S3(benv_ket2, xs[1], xs[2])
-            xs[3] = _solve_als_pinv(R3, S3)
-        end
         # optimize m
         R2 = _als3s_tensor_R2(benv, xs[1], xs[3])
         S2 = _als3s_tensor_S2(benv_ket2, xs[1], xs[3])
         xs[2] = _solve_als_pinv(R2, S2)
+        # optimize a, b more frequently
+        for _ in 1:alg.inneriter
+            R3 = _als3s_tensor_R3(benv, xs[1], xs[2])
+            S3 = _als3s_tensor_S3(benv_ket2, xs[1], xs[2])
+            xs[3] = _solve_als_pinv(R3, S3)
+            R1 = _als3s_tensor_R1(benv, xs[2], xs[3])
+            S1 = _als3s_tensor_S1(benv_ket2, xs[2], xs[3])
+            xs[1] = _solve_als_pinv(R1, S1)
+        end
         # compare cost, fidelity, bond weights
-        R1 = _als3s_tensor_R1(benv, xs[2], xs[3])
-        S1 = _als3s_tensor_S1(benv_ket2, xs[2], xs[3])
         cost, fid = cost_function_als(R1, S1, xs[1], b22)
         wts = _get_allprojs(xs, fill(notrunc(), 2))[3]
         Δcost = abs(cost - cost0) / cost00
