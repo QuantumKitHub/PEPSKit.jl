@@ -30,44 +30,55 @@ function _benv_ket(benv::BondEnv3site, ket::AbstractTensorMap{T, S, 4, 3}) where
 end
 
 """
-    _als_tensor_R(benv::BondEnv3site, xs::Vector{<:GenericMPSTensor}, i::Int)
-
-Construct the bond environment around the `i`th tensor
-in three-site ALS optimization.
+Construct the bond environment
 ```
-    i = 1               i = 2               i = 3
-    ┌benv-┬---┬-----┐   ┌benv-┬---┬-----┐   ┌benv-┬---┬-----┐
-    |      ╲ ╱      |   |      ╲ ╱      |   |      ╲ ╱      |
-    ├--   --m---b---┤   ├---a--   --b---┤   ├---a---m--   --┤
-    |       ↓   ↓   |   |   ↓       ↓   |   |   ↓   ↓       |
-    ├--   --m̄---b̄---┤   ├---ā--   --b̄---┤   ├---ā---m̄--   --┤
-    |      ╱ ╲      |   |      ╱ ╲      |   |      ╱ ╲      |
-    └-----┴---┴-----┘   └-----┴---┴-----┘   └-----┴---┴-----┘
+    ┌benv-┬---┬-----┐
+    |      ╲ ╱      |
+    ├--   --m---b---┤
+    |       ↓   ↓   |
+    ├--   --m̄---b̄---┤
+    |      ╱ ╲      |
+    └-----┴---┴-----┘
 ```
 """
-function _als_tensor_R(benv::BondEnv3site, xs::Vector{<:GenericMPSTensor}, i::Int)
-    @assert 1 <= i <= 3
-    return if i == 1
-        _als3s_tensor_R1(benv, xs[2], xs[3])
-    elseif i == 2
-        _als3s_tensor_R2(benv, xs[1], xs[3])
-    else
-        _als3s_tensor_R3(benv, xs[1], xs[2])
-    end
-end
-
 function _als3s_tensor_R1(benv::BondEnv3site, m::GenericMPSTensor{S, 4}, b::MPSTensor) where {S}
     return @tensoropt Ra[Dw1 Dw′1; Dw0 Dw′0] :=
         benv[Dw1 De1 Ds1 Dn1; Dw0 De0 Ds0 Dn0] *
         conj(m[Dw′1 dm De1 Ds1; Dn′1]) * conj(b[Dn′1 db; Dn1]) *
         m[Dw′0 dm De0 Ds0; Dn′0] * b[Dn′0 db; Dn0]
 end
+
+"""
+Construct the bond environment
+```
+    ┌benv-┬---┬-----┐
+    |      ╲ ╱      |
+    ├---a--   --b---┤
+    |   ↓       ↓   |
+    ├---ā--   --b̄---┤
+    |      ╱ ╲      |
+    └-----┴---┴-----┘
+```
+"""
 function _als3s_tensor_R2(benv::BondEnv3site, a::MPSTensor, b::MPSTensor)
     return @tensoropt Rm[Dw′1 De1 Ds1 Dn′1; Dw′0 De0 Ds0 Dn′0] :=
         benv[Dw1 De1 Ds1 Dn1; Dw0 De0 Ds0 Dn0] *
         conj(a[Dw1 da; Dw′1]) * conj(b[Dn′1 db; Dn1]) *
         a[Dw0 da; Dw′0] * b[Dn′0 db; Dn0]
 end
+
+"""
+Construct the bond environment
+```
+    ┌benv-┬---┬-----┐
+    |      ╲ ╱      |
+    ├---a---m--   --┤
+    |   ↓   ↓       |
+    ├---ā---m̄--   --┤
+    |      ╱ ╲      |
+    └-----┴---┴-----┘
+```
+"""
 function _als3s_tensor_R3(benv::BondEnv3site, a::MPSTensor, m::GenericMPSTensor{S, 4}) where {S}
     return @tensoropt Rb[Dn′1 Dn1; Dn′0 Dn0] :=
         benv[Dw1 De1 Ds1 Dn1; Dw0 De0 Ds0 Dn0] *
@@ -96,38 +107,18 @@ function _als_norm(
 end
 
 """
-    _als_tensor_S(
-        benv_ket::AbstractTensorMap{T, S, 4, 3},
-        xs::Vector{<:GenericMPSTensor}, i::Int
-    ) where {T <: Number, S <: ElementarySpace}
-
-Construct the overlap but with one of the bra bond tensor removed.
+Construct the partial overlap
 ```
-    i = 1               i = 2               i = 3
-    ┌benv-┬---┬-----┐   ┌benv-┬---┬-----┐   ┌benv-┬---┬-----┐
-    |      ╲ ╱      |   |      ╲ ╱      |   |      ╲ ╱      |
-    ├---a₂--m₂--b₂--┤   ├---a₂--m₂--b₂--┤   ├---a₂--m₂--b₂--┤
-    |   ↓   ↓   ↓   |   |   ↓   ↓   ↓   |   |   ↓   ↓   ↓   |
-    ├--   --m̄---b̄---┤   ├---ā--   --b̄---┤   ├---ā---m̄--   --┤
-    |      ╱ ╲      |   |      ╱ ╲      |   |      ╱ ╲      |
-    └-----┴---┴-----┘   └-----┴---┴-----┘   └-----┴---┴-----┘
+    ┌benv-┬---┬-----┐
+    |      ╲ ╱      |
+    ├---a₂--m₂--b₂--┤
+    |   ↓   ↓   ↓   |
+    ├--   --m̄---b̄---┤
+    |      ╱ ╲      |
+    └-----┴---┴-----┘
 ```
 The ket part is provided by the partial contraction `benv_ket`.
 """
-function _als_tensor_S(
-        benv_ket::AbstractTensorMap{T, S, 4, 3},
-        xs::Vector{<:GenericMPSTensor}, i::Int
-    ) where {T <: Number, S <: ElementarySpace}
-    @assert 1 <= i <= 3
-    return if i == 1
-        _als3s_tensor_S1(benv_ket, xs[2], xs[3])
-    elseif i == 2
-        _als3s_tensor_S2(benv_ket, xs[1], xs[3])
-    else
-        _als3s_tensor_S3(benv_ket, xs[1], xs[2])
-    end
-end
-
 function _als3s_tensor_S1(
         benv_ket::AbstractTensorMap{T, S, 4, 3},
         m::GenericMPSTensor{S, 4}, b::MPSTensor
@@ -136,6 +127,20 @@ function _als3s_tensor_S1(
         benv_ket[Dw1 De1 Ds1 Dn1; da dm db] *
         conj(m[Dw′1 dm De1 Ds1; Dn′1]) * conj(b[Dn′1 db; Dn1])
 end
+
+"""
+Construct the partial overlap
+```
+    ┌benv-┬---┬-----┐
+    |      ╲ ╱      |
+    ├---a₂--m₂--b₂--┤
+    |   ↓   ↓   ↓   |
+    ├---ā--   --b̄---┤
+    |      ╱ ╲      |
+    └-----┴---┴-----┘
+```
+The ket part is provided by the partial contraction `benv_ket`.
+"""
 function _als3s_tensor_S2(
         benv_ket::AbstractTensorMap{T, S, 4, 3},
         a::MPSTensor, b::MPSTensor
@@ -144,6 +149,20 @@ function _als3s_tensor_S2(
         benv_ket[Dw1 De1 Ds1 Dn1; da dm db] *
         conj(a[Dw1 da; Dw′1]) * conj(b[Dn′1 db; Dn1])
 end
+
+"""
+Construct the partial overlap
+```
+    ┌benv-┬---┬-----┐
+    |      ╲ ╱      |
+    ├---a₂--m₂--b₂--┤
+    |   ↓   ↓   ↓   |
+    ├---ā---m̄--   --┤
+    |      ╱ ╲      |
+    └-----┴---┴-----┘
+```
+The ket part is provided by the partial contraction `benv_ket`.
+"""
 function _als3s_tensor_S3(
         benv_ket::AbstractTensorMap{T, S, 4, 3},
         a::MPSTensor, m::GenericMPSTensor{S, 4}

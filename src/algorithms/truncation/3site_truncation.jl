@@ -1,7 +1,7 @@
 @kwdef struct ALS3SiteTruncation{T}
     trunc::T
     maxiter::Int = 20
-    inneriter::Int = 3
+    inneriter::Int = 2
     fidtol::Float64 = 1.0e-11
     check_interval::Int = 0
 end
