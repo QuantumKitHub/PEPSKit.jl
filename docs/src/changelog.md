@@ -39,23 +39,24 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 - C4v CTMRG support, including QR-CTMRG variant (#321, #329)
 - Belief propagation gauge fixing, with bipartite specialization and support for purified iPEPO (#223, #318, #319)
 - N-site Simple Update (#339)
-- `LocalCircuit` operator type, alongside refactor of operator types (#347)
+- `LocalCircuit` operator type, alongside refactor of `LocalOperator` operator types (#347)
 - Rotation of `LocalCircuit` (#349)
 
 ### Changed
 
 - Bump OptimKit.jl compatibility to v0.4
 - Move `info.truncation_error` and `info.condition_number` into the `info.contraction_metrics` named tuple for `leading_boundary` and `fixedpoint`
+- Return `info.converged` flag and `info.convergence_error` in `leading_boundary` named tuple
 - Rename algorithm symbols (#376)
 - Rename `bondenv_fu` to `bondenv_ctm` (#343)
 - `fixedpoint` improvements; relax `env₀` type restriction in `select_algorithm` (#337, #345)
-- Refactor simple update / reorganize trotter and apply_gate code (#338, #346)
+- Refactor simple update / reorganize trotter and apply_gate code (#338, #346). Each term of the input Hamiltonian `LocalOperator` is now exponentiated individually when constructing the Trotter gates in the resulting `LocalCircuit`.
 - Update decomposition handling (#364)
 - Use MatrixAlgebraKit SVD pullbacks (#335)
 - Bump TensorKit compat to 0.16 (#314)
 - Make `SUWeight` axis order definite (#315)
 - Improve Vidal gauge conversion and CTM bond env for PEPO (#348)
-- Improve bond truncation algorithms (#303)
+- Improve bond truncation algorithms (#303). In particular, the 3-leg reduced bond tensors now follows the leg order convention of an MPS.
 - Periodic indexing improvements (#377)
 
 ### Removed
