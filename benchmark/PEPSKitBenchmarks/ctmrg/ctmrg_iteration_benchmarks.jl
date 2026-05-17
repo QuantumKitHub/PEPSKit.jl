@@ -9,15 +9,14 @@ struct CTMRGSpec{S <: ElementarySpace}
     chi_west::Matrix{S}
 end
 
-_dimtag(spaces) = join(sort!(unique(dim(V) for V in spaces)), "-")
-
 function benchname(spec::CTMRGSpec)
     rows, cols = spec.unitcell
-    Dtag = _dimtag(Iterators.flatten((spec.Nspaces, spec.Espaces)))
-    chitag = _dimtag(
-        Iterators.flatten((spec.chi_north, spec.chi_east, spec.chi_south, spec.chi_west))
+    Dmin = min(minimum(dim, spec.Nspaces), minimum(dim, spec.Espaces))
+    chimin = min(
+        minimum(dim, spec.chi_north), minimum(dim, spec.chi_east),
+        minimum(dim, spec.chi_south), minimum(dim, spec.chi_west)
     )
-    return "$(rows)x$(cols)_D$(Dtag)_chi$(chitag)"
+    return "$(rows)x$(cols)_D$(Dmin)_chi$(chimin)"
 end
 
 function setup_problem(spec::CTMRGSpec; T::Type = ComplexF64)
@@ -57,19 +56,9 @@ function _to_space_matrix(val::AbstractVector, unitcell::Tuple{Int, Int}, key::A
     return [untomlify(VectorSpace, val[r][c]) for r in 1:rows, c in 1:cols]
 end
 
-# Resolve a per-direction matrix by trying `direct_keys` first, then falling back to `fallback_keys`.
-function _resolve_matrix(d, unitcell, direct_keys, fallback_keys, label)
-    for k in direct_keys
-        haskey(d, k) && return _to_space_matrix(d[k], unitcell, k)
-    end
-    for k in fallback_keys
-        haskey(d, k) && return _to_space_matrix(d[k], unitcell, k)
-    end
-    throw(
-        ArgumentError(
-            "Spec is missing `$label`: provide one of $(direct_keys) or a fallback in $(fallback_keys)."
-        )
-    )
+function _get_matrix(d, key, unitcell)
+    haskey(d, key) || throw(ArgumentError("Spec is missing required key `$key`."))
+    return _to_space_matrix(d[key], unitcell, key)
 end
 
 function tomlify(spec::CTMRGSpec)
@@ -91,14 +80,14 @@ _matrix_tomlify(M::AbstractMatrix{<:ElementarySpace}) =
 function untomlify(::Type{CTMRGSpec}, d)
     unitcell = (Int(d["unitcell"][1]), Int(d["unitcell"][2]))
 
-    Pspaces = _resolve_matrix(d, unitcell, ("Pspaces", "Pspace"), (), "physical space")
-    Nspaces = _resolve_matrix(d, unitcell, ("Nspaces", "Dspace"), (), "north virtual space")
-    Espaces = _resolve_matrix(d, unitcell, ("Espaces", "Dspace"), ("Nspaces",), "east virtual space")
+    Pspaces = _get_matrix(d, "Pspaces", unitcell)
+    Nspaces = _get_matrix(d, "Nspaces", unitcell)
+    Espaces = _get_matrix(d, "Espaces", unitcell)
 
-    chi_north = _resolve_matrix(d, unitcell, ("chi_north", "chispace"), (), "north environment space")
-    chi_east = _resolve_matrix(d, unitcell, ("chi_east", "chispace"), ("chi_north",), "east environment space")
-    chi_south = _resolve_matrix(d, unitcell, ("chi_south", "chispace"), ("chi_north",), "south environment space")
-    chi_west = _resolve_matrix(d, unitcell, ("chi_west", "chispace"), ("chi_north",), "west environment space")
+    chi_north = _get_matrix(d, "chi_north", unitcell)
+    chi_east = _get_matrix(d, "chi_east", unitcell)
+    chi_south = _get_matrix(d, "chi_south", unitcell)
+    chi_west = _get_matrix(d, "chi_west", unitcell)
 
     return CTMRGSpec(
         unitcell,

@@ -25,12 +25,12 @@ const CTMRG_ALGS = (
 
 T = ComplexF64
 
-for (alg_name, alg) in CTMRG_ALGS
-    g_alg = addgroup!(SUITE, alg_name)
-    for (scenario, params) in allparams
-        g_scen = addgroup!(g_alg, scenario)
+for (scenario, params) in allparams
+    g_scen = addgroup!(SUITE, scenario)
+    for (alg_name, alg) in CTMRG_ALGS
+        g_alg = addgroup!(g_scen, alg_name)
         for (sym_name, specs) in params
-            g_sym = addgroup!(g_scen, sym_name)
+            g_sym = addgroup!(g_alg, sym_name)
             for spec_dict in specs
                 spec = untomlify(CTMRGSpec, spec_dict)
                 g_sym[benchname(spec)] = ctmrg_iteration_benchmark(spec, alg; T)
