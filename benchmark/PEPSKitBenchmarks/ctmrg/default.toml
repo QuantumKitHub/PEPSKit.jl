@@ -15,3 +15,30 @@ unitcell = [2, 2]
 Pspace = "ℂ^2"
 Dspace = "ℂ^2"
 chispace = "ℂ^8"
+
+# Non-uniform spaces across the unit cell. Each entry mixes scalar (broadcast)
+# and matrix (per-site) fields. See ctmrg_iteration_benchmarks.jl for the
+# fallback resolution rules.
+
+# Mixed virtual bond dimensions across columns; environment uniform.
+[[NonUniform]]
+unitcell = [2, 2]
+Pspace = "ℂ^2"
+Nspaces = [["ℂ^2", "ℂ^3"], ["ℂ^2", "ℂ^3"]]
+chispace = "ℂ^8"
+
+# Anisotropic environment: north/south chi differs from east/west chi.
+[[NonUniform]]
+unitcell = [2, 2]
+Pspace = "ℂ^2"
+Dspace = "ℂ^2"
+chi_north = "ℂ^8"
+chi_east = "ℂ^12"
+
+# Fully heterogeneous 2x1: row-varying D and environment.
+[[NonUniform]]
+unitcell = [2, 1]
+Pspace = "ℂ^2"
+Nspaces = [["ℂ^2"], ["ℂ^3"]]
+Espaces = [["ℂ^2"], ["ℂ^3"]]
+chi_north = [["ℂ^8"], ["ℂ^12"]]
