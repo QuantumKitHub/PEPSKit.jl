@@ -40,7 +40,7 @@ function plot_one(g_scen::BenchmarkGroup, scenario::AbstractString; outdir::Abst
                 meta = parse_benchname(String(bn))
                 isnothing(meta) && continue
                 key = (sym_str, meta.chi)
-                t_ms = minimum(trial).time / 1e6
+                t_ms = minimum(trial).time / 1.0e6
                 pts = get!(series, key, Tuple{Int, Float64}[])
                 push!(pts, (meta.D, t_ms))
             end
@@ -67,7 +67,8 @@ function plot_one(g_scen::BenchmarkGroup, scenario::AbstractString; outdir::Abst
         pts = sort(series[key]; by = first)
         xs = [p[1] for p in pts]
         ys = [p[2] for p in pts]
-        scatterlines!(ax, xs, ys;
+        scatterlines!(
+            ax, xs, ys;
             color = colors[mod1(i, length(colors))],
             label = "$sym, χ=$chi",
             markersize = 12,
@@ -89,4 +90,5 @@ function (@main)(args::AbstractVector{<:AbstractString})
     for scenario in sort!(String.(collect(keys(g_ctmrg))))
         plot_one(g_ctmrg[scenario], scenario; outdir)
     end
+    return
 end
