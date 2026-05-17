@@ -15,6 +15,7 @@ include("ctmrg_iteration_benchmarks.jl")
 
 const allparams = Dict(
     "default" => TOML.parsefile(joinpath(@__DIR__, "default.toml")),
+    "su3_hubbard" => TOML.parsefile(joinpath(@__DIR__, "su3_hubbard.toml")),
 )
 
 const CTMRG_ALGS = (
