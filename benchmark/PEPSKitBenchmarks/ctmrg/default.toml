@@ -1,0 +1,17 @@
+[[Trivial]]
+unitcell = [1, 1]
+Pspace = "ℂ^2"
+Dspace = "ℂ^2"
+chispace = "ℂ^8"
+
+[[Trivial]]
+unitcell = [2, 1]
+Pspace = "ℂ^2"
+Dspace = "ℂ^2"
+chispace = "ℂ^8"
+
+[[Trivial]]
+unitcell = [2, 2]
+Pspace = "ℂ^2"
+Dspace = "ℂ^2"
+chispace = "ℂ^8"
