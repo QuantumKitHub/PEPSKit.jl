@@ -1,5 +1,10 @@
-[[Trivial]]
 unitcell = [1, 1]
+
+[[algorithms]]
+type = "SimultaneousCTMRG"
+projector_alg = "HalfInfiniteProjector"
+
+[[Trivial]]
 Pspaces = "ℂ^2"
 Nspaces = "ℂ^2"
 Espaces = "ℂ^2"
@@ -9,57 +14,37 @@ chi_south = "ℂ^8"
 chi_west = "ℂ^8"
 
 [[Trivial]]
-unitcell = [2, 1]
 Pspaces = "ℂ^2"
 Nspaces = "ℂ^2"
 Espaces = "ℂ^2"
-chi_north = "ℂ^8"
-chi_east = "ℂ^8"
-chi_south = "ℂ^8"
-chi_west = "ℂ^8"
-
-[[Trivial]]
-unitcell = [2, 2]
-Pspaces = "ℂ^2"
-Nspaces = "ℂ^2"
-Espaces = "ℂ^2"
-chi_north = "ℂ^8"
-chi_east = "ℂ^8"
-chi_south = "ℂ^8"
-chi_west = "ℂ^8"
-
-# Non-uniform spaces across the unit cell. Each entry may use either a scalar
-# string (broadcast across the unit cell) or a 2D array of strings (per-site).
-
-# Mixed virtual bond dimensions across columns; environment uniform.
-[[NonUniform]]
-unitcell = [2, 2]
-Pspaces = "ℂ^2"
-Nspaces = [["ℂ^2", "ℂ^3"], ["ℂ^2", "ℂ^3"]]
-Espaces = [["ℂ^2", "ℂ^3"], ["ℂ^2", "ℂ^3"]]
-chi_north = "ℂ^8"
-chi_east = "ℂ^8"
-chi_south = "ℂ^8"
-chi_west = "ℂ^8"
-
-# Anisotropic environment: only the east bond differs.
-[[NonUniform]]
-unitcell = [2, 2]
-Pspaces = "ℂ^2"
-Nspaces = "ℂ^2"
-Espaces = "ℂ^2"
-chi_north = "ℂ^8"
+chi_north = "ℂ^12"
 chi_east = "ℂ^12"
-chi_south = "ℂ^8"
-chi_west = "ℂ^8"
+chi_south = "ℂ^12"
+chi_west = "ℂ^12"
 
-# Fully heterogeneous 2x1: row-varying D and environment.
-[[NonUniform]]
-unitcell = [2, 1]
+[[Trivial]]
 Pspaces = "ℂ^2"
-Nspaces = [["ℂ^2"], ["ℂ^3"]]
-Espaces = [["ℂ^2"], ["ℂ^3"]]
-chi_north = [["ℂ^8"], ["ℂ^12"]]
-chi_east = [["ℂ^8"], ["ℂ^12"]]
-chi_south = [["ℂ^8"], ["ℂ^12"]]
-chi_west = [["ℂ^8"], ["ℂ^12"]]
+Nspaces = "ℂ^3"
+Espaces = "ℂ^3"
+chi_north = "ℂ^12"
+chi_east = "ℂ^12"
+chi_south = "ℂ^12"
+chi_west = "ℂ^12"
+
+[[Trivial]]
+Pspaces = "ℂ^2"
+Nspaces = "ℂ^3"
+Espaces = "ℂ^3"
+chi_north = "ℂ^18"
+chi_east = "ℂ^18"
+chi_south = "ℂ^18"
+chi_west = "ℂ^18"
+
+[[Trivial]]
+Pspaces = "ℂ^2"
+Nspaces = "ℂ^4"
+Espaces = "ℂ^4"
+chi_north = "ℂ^16"
+chi_east = "ℂ^16"
+chi_south = "ℂ^16"
+chi_west = "ℂ^16"

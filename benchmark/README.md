@@ -11,6 +11,8 @@ algorithms, problem scenarios, and symmetry sectors.
 bench/benchmark/
 ├── benchmarks.jl                 # entry point: builds the top-level SUITE
 ├── Project.toml                  # benchmark environment (depends on local PEPSKit)
+├── scripts/
+│   └── plot_ctmrg.jl             # CairoMakie plotting: one PNG per scenario
 └── PEPSKitBenchmarks/
     ├── PEPSKitBenchmarks.jl      # module registry (MODULES), load!, loadall!
     ├── utils/BenchUtils.jl       # TOML <-> VectorSpace conversion helpers
@@ -60,32 +62,70 @@ session) to execute. Available IDs are the keys of `MODULES` in `PEPSKitBenchmar
 module → scenario → algorithm → symmetry → benchname
 ```
 
-- `scenario` is the TOML basename (`default`, `su3_hubbard`).
-- `algorithm` is one of `SequentialCTMRG_HalfInfinite`, `SimultaneousCTMRG_HalfInfinite`.
-- `symmetry` is the top-level table name in the TOML (`Trivial`, `NonUniform`, …).
-- `benchname` is `"<rows>x<cols>_D<Dmin>_chi<chimin>"`, where `Dmin` is the minimum virtual
-  bond dimension and `chimin` is the minimum environment dimension across the unit cell (see
+- `scenario` is the TOML basename (`default`, `su3_hubbard`). The unit cell and the
+  algorithm list are scenario-level (top of the TOML); every spec in a scenario shares
+  them.
+- `algorithm` is `"<CTMRGType>_<ProjectorType>"`, derived from the algorithm's concrete
+  Julia types — e.g. `"SimultaneousCTMRG_HalfInfiniteProjector"`.
+- `symmetry` is the top-level table name in the TOML (`Trivial`, `NonUniform`, `f`, …).
+- `benchname` is `"D<Dmin>_chi<chimin>"`, where `Dmin` is the minimum virtual bond
+  dimension and `chimin` is the minimum environment dimension across the unit cell (see
   `benchname` in `ctmrg/ctmrg_iteration_benchmarks.jl`).
 
 To run a single case interactively:
 
 ```julia
 include("bench/benchmark/benchmarks.jl")
-run(SUITE["ctmrg"]["default"]["SimultaneousCTMRG_HalfInfinite"]["Trivial"]["1x1_D2_chi8"])
+run(SUITE["ctmrg"]["default"]["SimultaneousCTMRG_HalfInfiniteProjector"]["Trivial"]["D2_chi8"])
+```
+
+## Plotting results
+
+Save the trial output from `run(SUITE)` to JSON and feed it to the plotting script under
+`scripts/`. The script uses [CairoMakie](https://docs.makie.org/) and shares the benchmark
+project env.
+
+```julia
+# in the same session as the benchmark run
+using BenchmarkTools
+BenchmarkTools.save("bench/benchmark/data/results.json", results)
+```
+
+```sh
+julia --project=bench/benchmark bench/benchmark/scripts/plot_ctmrg.jl
+```
+
+`plot_ctmrg.jl` reads `bench/benchmark/data/results.json` (override with a positional
+argument) and writes **one PNG per scenario** next to the input. The x-axis is the
+minimal bond dimension D (parsed from the benchname); each `(symmetry, χ)` pair is its
+own colored scatter series. Multiple markers in a series at the same D come from
+differing unit cells and/or CTMRG algorithms. The y-axis is the log-scale minimum time
+per benchmark. To send the PNGs elsewhere:
+
+```sh
+julia --project=bench/benchmark bench/benchmark/scripts/plot_ctmrg.jl path/to/results.json path/to/outdir
 ```
 
 ## Extending the suite
 
 ### Add a scenario
 
-Scenarios are TOML files in `PEPSKitBenchmarks/ctmrg/`, parsed into `CTMRGSpec` values. Each
-top-level table name becomes a symmetry group. Every spec must set exactly these keys:
-`unitcell`, `Pspaces`, `Nspaces`, `Espaces`, `chi_north`, `chi_east`, `chi_south`,
-`chi_west`. A minimal uniform spec is:
+Scenarios are TOML files in `PEPSKitBenchmarks/ctmrg/`. Each file has two scenario-level
+keys at the top — `unitcell` and `[[algorithms]]` — followed by one array-of-tables per
+symmetry group (`[[Trivial]]`, `[[NonUniform]]`, `[[f]]`, …). Every spec under a symmetry
+must set: `Pspaces`, `Nspaces`, `Espaces`, `chi_north`, `chi_east`, `chi_south`,
+`chi_west`. The unit cell from the top is shared across every spec.
+
+A minimal scenario:
 
 ```toml
-[[Trivial]]
 unitcell = [2, 2]
+
+[[algorithms]]
+type = "SimultaneousCTMRG"
+projector_alg = "HalfInfiniteProjector"
+
+[[Trivial]]
 Pspaces = "ℂ^2"
 Nspaces = "ℂ^2"
 Espaces = "ℂ^2"
@@ -95,9 +135,10 @@ chi_south = "ℂ^8"
 chi_west = "ℂ^8"
 ```
 
-Each value may be a scalar string (broadcast across the unit cell) or a `[rows][cols]`
-array of space strings (per-site). See the `NonUniform` entries in `default.toml` for
-worked examples mixing the two forms.
+Each space-field value may be a scalar string (broadcast across the unit cell) or a
+`[rows][cols]` array of space strings (per-site). `[[algorithms]]` is an array of tables,
+so add more to benchmark a scenario across several CTMRG/projector combinations — each
+gets its own `algname(alg)` group under the scenario.
 
 To add a brand-new scenario file, drop it into `ctmrg/` and add it to the `allparams` `Dict`
 in `CTMRGBenchmarks.jl`:

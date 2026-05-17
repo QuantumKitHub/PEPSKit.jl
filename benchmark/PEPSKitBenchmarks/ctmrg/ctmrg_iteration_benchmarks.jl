@@ -1,5 +1,4 @@
 struct CTMRGSpec{S <: ElementarySpace}
-    unitcell::Tuple{Int, Int}
     Pspaces::Matrix{S}
     Nspaces::Matrix{S}
     Espaces::Matrix{S}
@@ -9,15 +8,19 @@ struct CTMRGSpec{S <: ElementarySpace}
     chi_west::Matrix{S}
 end
 
+unitcell(spec::CTMRGSpec) = size(spec.Pspaces)
+
 function benchname(spec::CTMRGSpec)
-    rows, cols = spec.unitcell
     Dmin = min(minimum(dim, spec.Nspaces), minimum(dim, spec.Espaces))
     chimin = min(
         minimum(dim, spec.chi_north), minimum(dim, spec.chi_east),
         minimum(dim, spec.chi_south), minimum(dim, spec.chi_west)
     )
-    return "$(rows)x$(cols)_D$(Dmin)_chi$(chimin)"
+    return "D$(Dmin)_chi$(chimin)"
 end
+
+algname(alg::PEPSKit.CTMRGAlgorithm) =
+    "$(typeof(alg).name.name)_$(typeof(alg.projector_alg).name.name)"
 
 function setup_problem(spec::CTMRGSpec; T::Type = ComplexF64)
     peps = InfinitePEPS(randn, T, spec.Pspaces, spec.Nspaces, spec.Espaces)
@@ -63,7 +66,6 @@ end
 
 function tomlify(spec::CTMRGSpec)
     return Dict(
-        "unitcell" => collect(spec.unitcell),
         "Pspaces" => _matrix_tomlify(spec.Pspaces),
         "Nspaces" => _matrix_tomlify(spec.Nspaces),
         "Espaces" => _matrix_tomlify(spec.Espaces),
@@ -77,9 +79,7 @@ end
 _matrix_tomlify(M::AbstractMatrix{<:ElementarySpace}) =
     [[tomlify(M[r, c]) for c in axes(M, 2)] for r in axes(M, 1)]
 
-function untomlify(::Type{CTMRGSpec}, d)
-    unitcell = (Int(d["unitcell"][1]), Int(d["unitcell"][2]))
-
+function untomlify(::Type{CTMRGSpec}, d; unitcell::Tuple{Int, Int})
     Pspaces = _get_matrix(d, "Pspaces", unitcell)
     Nspaces = _get_matrix(d, "Nspaces", unitcell)
     Espaces = _get_matrix(d, "Espaces", unitcell)
@@ -90,8 +90,35 @@ function untomlify(::Type{CTMRGSpec}, d)
     chi_west = _get_matrix(d, "chi_west", unitcell)
 
     return CTMRGSpec(
-        unitcell,
         Pspaces, Nspaces, Espaces,
         chi_north, chi_east, chi_south, chi_west,
     )
+end
+
+# One tomlify method per concrete CTMRG algorithm settings type. Each produces a
+# uniform two-key Dict that round-trips via `untomlify(PEPSKit.CTMRGAlgorithm, d)`.
+
+function tomlify(alg::SequentialCTMRG)
+    return Dict(
+        "type" => "SequentialCTMRG",
+        "projector_alg" => string(typeof(alg.projector_alg).name.name),
+    )
+end
+
+function tomlify(alg::SimultaneousCTMRG)
+    return Dict(
+        "type" => "SimultaneousCTMRG",
+        "projector_alg" => string(typeof(alg.projector_alg).name.name),
+    )
+end
+
+function untomlify(::Type{<:PEPSKit.CTMRGAlgorithm}, d)
+    t = d["type"]
+    pa = Symbol(d["projector_alg"])
+    if t == "SequentialCTMRG"
+        return SequentialCTMRG(; projector_alg = pa)
+    elseif t == "SimultaneousCTMRG"
+        return SimultaneousCTMRG(; projector_alg = pa)
+    end
+    throw(ArgumentError("Unknown CTMRG algorithm type: $(t)"))
 end
