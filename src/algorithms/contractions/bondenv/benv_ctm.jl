@@ -9,8 +9,8 @@ Construct the environment (norm) tensor
         -1   0          1    2
 ```
 with `X` at position `[row, col]`.
-`X, Y` are unitary tensors produced when finding the reduced site tensors 
-with `_qr_bond`; and `XX = X' X` and `YY = Y' Y` (stacked together).
+`X, Y` are unitary tensors produced when finding the reduced site tensors,
+and `XX = X' X` and `YY = Y' Y` (stacked together).
 
 Axis order: `[DX1 DY1; DX0 DY0]`, as in
 ```
@@ -23,23 +23,15 @@ Axis order: `[DX1 DY1; DX0 DY0]`, as in
     └---------------------┘
 ```
 """
-function bondenv_ctm(
-        row::Int, col::Int, X::T, Y::T, env::CTMRGEnv
-    ) where {T}
-    Nr, Nc = size(env.corners)[[2, 3]]
-    cm1 = _prev(col, Nc)
-    cp1 = _next(col, Nc)
-    cp2 = _next(cp1, Nc)
-    rm1 = _prev(row, Nr)
-    rp1 = _next(row, Nr)
-    c1 = env.corners[1, rm1, cm1]
-    c2 = env.corners[2, rm1, cp2]
-    c3 = env.corners[3, rp1, cp2]
-    c4 = env.corners[4, rp1, cm1]
-    e1X, e1Y = env.edges[1, rm1, col], env.edges[1, rm1, cp1]
-    e2 = env.edges[2, row, cp2]
-    e3X, e3Y = env.edges[3, rp1, col], env.edges[3, rp1, cp1]
-    e4 = env.edges[4, row, cm1]
+function bondenv_ctm(row::Int, col::Int, X, Y, env::CTMRGEnv)
+    c1 = corner(env, 1, row - 1, col - 1)
+    c2 = corner(env, 2, row - 1, col + 2)
+    c3 = corner(env, 3, row + 1, col + 2)
+    c4 = corner(env, 4, row + 1, col - 1)
+    e1X, e1Y = edge(env, 1, row - 1, col), edge(env, 1, row - 1, col + 1)
+    e2 = edge(env, 2, row, col + 2)
+    e3X, e3Y = edge(env, 3, row + 1, col), edge(env, 3, row + 1, col + 1)
+    e4 = edge(env, 4, row, col - 1)
     #= index labels
 
     C1--χ4--E1X---------χ6---------E1Y--χ8---C2     r-1

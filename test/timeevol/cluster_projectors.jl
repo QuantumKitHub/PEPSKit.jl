@@ -4,7 +4,7 @@ using PEPSKit
 using LinearAlgebra
 using Random
 import MPSKitModels: hubbard_space
-using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!, _next
+using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
 using MPSKit: GenericMPSTensor, MPSBondTensor
 
 # Utility setup
@@ -148,10 +148,10 @@ Vspaces = [
             return rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve)
         end
         normalize!.(Ms1, Inf)
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         # no truncation
         Ms2 = _flip_virtuals!(deepcopy(Ms1), flips)
-        truncs = [truncrank(dim(space(M, 1))) for M in Ms2[2:end]]
+        truncs = [truncrank(dim(space(M, 1))) for M in Iterators.drop(Ms2, 1)]
         wts2, ϵs, = _cluster_truncate!(Ms2, truncs)
         @test all((ϵ == 0) for ϵ in ϵs)
         normalize!.(Ms2, Inf)
@@ -184,7 +184,7 @@ end
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
             return normalize(rand(Vw ⊗ Vphy ⊗ Vns' ⊗ Vns ← Ve), Inf)
         end
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
         gs = PEPSKit.gate_to_mpo(gate)
@@ -201,7 +201,7 @@ end
             Vw, Ve = Vvirs[i], Vvirs[i + 1]
             return normalize(rand(Vw ⊗ Vphy ⊗ Vphy' ⊗ Vns' ⊗ Vns ← Ve), Inf)
         end
-        flips = [isdual(space(M, 1)) for M in Ms1[2:end]]
+        flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms1, 1)]
         unit = id(Vphy)
         gate = reduce(⊗, fill(unit, 3))
         gs = PEPSKit.gate_to_mpo(gate)
@@ -230,7 +230,7 @@ end
     peps0 = InfinitePEPS(rand, Float64, Pspace, Vspace, Vspace'; unitcell = (Nr, Nc))
     # make initial state bipartite
     for r in 1:2
-        peps0.A[_next(r, 2), 2] = copy(peps0.A[r, 1])
+        peps0[r + 1, 2] = copy(peps0[r, 1])
     end
     wts0 = SUWeight(peps0)
     ham = hubbard_model(Float64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t = 1.0, U = 6.0, mu = 3.0)
@@ -246,7 +246,7 @@ end
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
         for trunc in truncs_env
-            env, = leading_boundary(env, peps; alg = :sequential, tol = ctmrg_tol, trunc)
+            env, = leading_boundary(env, peps; alg = :SequentialCTMRG, tol = ctmrg_tol, trunc)
         end
         e_site = cost_function(peps, env, ham) / (Nr * Nc)
         @info "Energy (force_mpo = $(force_mpo)): $e_site"

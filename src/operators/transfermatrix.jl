@@ -31,7 +31,7 @@ the direction `dir` faces north, after which its `row`th row from the north is s
 """
 function InfiniteTransferPEPS(T::InfinitePEPS, dir, row)
     T = rotate_north(T, dir)
-    return InfiniteTransferPEPS(PeriodicArray(T[row, :]))
+    return InfiniteTransferPEPS(PeriodicArray(unitcell(T)[mod1(row, end), :]))
 end
 
 """
@@ -90,7 +90,7 @@ north is selected.
 function InfiniteTransferPEPO(T::InfinitePEPS, O::InfinitePEPO, dir, row)
     T = rotate_north(T, dir)
     O = rotate_north(O, dir)
-    return InfiniteTransferPEPO(PeriodicArray(T[row, :]), PeriodicArray(O[row, :, :]))
+    return InfiniteTransferPEPO(PeriodicArray(unitcell(T)[mod1(row, end), :]), PeriodicArray(unitcell(O)[mod1(row, end), :, :]))
 end
 
 """

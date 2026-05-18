@@ -86,7 +86,7 @@ normalize!.(peps.A, Inf)
 env = CTMRGEnv(wts)
 for χ in [χenv₀, χenv]
     global env, = leading_boundary(
-        env, peps; alg = :sequential, tol = 1.0e-8, maxiter = 50, trunc = truncrank(χ)
+        env, peps; alg = :SequentialCTMRG, tol = 1.0e-8, maxiter = 50, trunc = truncrank(χ)
     )
 end
 

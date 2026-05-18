@@ -21,20 +21,20 @@ names = ["Heisenberg"]
 
 gradtol = 1.0e-4
 ctmrg_verbosity = 1
-ctmrg_algs = [[:c4v]]
-projector_algs = [[:c4v_eigh, :c4v_qr]]
+ctmrg_algs = [[:C4vCTMRG]]
+projector_algs = [[:C4vEighProjector, :C4vQRProjector]]
 decomposition_rrule_algs = [[:full, :trunc, :qr]]
-gradient_algs = [[nothing, :geomsum, :manualiter, :linsolver, :eigsolver]] # they all use :fixed mode by default (except for nothing)
+gradient_algs = [[nothing, :GeomSum, :ManualIter, :LinSolver, :EigSolver]] # they all use :fixed mode by default (except for nothing)
 steps = -0.01:0.005:0.01
 
 # record which rrule alg is compatible with which projector alg
 allowed_rrule_algs = Dict(
-    :c4v_eigh => keys(PEPSKit.EIGH_RRULE_SYMBOLS),
-    :c4v_qr => keys(PEPSKit.QR_RRULE_SYMBOLS),
+    :C4vEighProjector => keys(PEPSKit.EIGH_RRULE_SYMBOLS),
+    :C4vQRProjector => keys(PEPSKit.QR_RRULE_SYMBOLS),
 )
 
 # be selective on which configurations to test the naive gradient for
-naive_gradient_combinations = [(:c4v, :c4v_eigh, :full), (:c4v, :c4v_qr, :qr)]
+naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :full), (:C4vCTMRG, :C4vQRProjector, :qr)]
 naive_gradient_done = Set()
 
 ## Tests
@@ -68,9 +68,9 @@ naive_gradient_done = Set()
         decomposition_rrule_alg in allowed_rrule_algs[projector_alg] || continue
 
         # construct appropriate decomposition struct to pass custom rrule alg
-        decomposition_alg = if projector_alg == :c4v_eigh
+        decomposition_alg = if projector_alg == :C4vEighProjector
             EighAdjoint(; rrule_alg = (; alg = decomposition_rrule_alg))
-        elseif projector_alg == :c4v_qr
+        elseif projector_alg == :C4vQRProjector
             QRAdjoint(; rrule_alg = (; alg = decomposition_rrule_alg))
         else
             error("unknown projector alg: $projector_alg")

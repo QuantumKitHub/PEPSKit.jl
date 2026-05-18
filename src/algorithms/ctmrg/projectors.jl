@@ -25,16 +25,16 @@ function ProjectorAlgorithm(;
 
     # parse SVD forward & rrule algorithm
 
-    decomposition_algorithm = if alg in [:halfinfinite, :fullinfinite]
+    decomposition_algorithm = if alg in [:HalfInfiniteProjector, :FullInfiniteProjector]
         _alg_or_nt(SVDAdjoint, decomposition_alg)
-    elseif alg in [:c4v_eigh]
+    elseif alg in [:C4vEighProjector]
         _alg_or_nt(EighAdjoint, decomposition_alg)
-    elseif alg in [:c4v_qr]
+    elseif alg in [:C4vQRProjector]
         _alg_or_nt(QRAdjoint, decomposition_alg)
     end # TODO: how do we solve this in a proper way?
 
     # qr-ctmrg does not need truncation or degeneracy checks
-    if alg in [:c4v_qr]
+    if alg in [:C4vQRProjector]
         return alg_type(decomposition_algorithm)
     end
 
@@ -108,7 +108,7 @@ Construct the half-infinite projector algorithm based on the following keyword a
 
 * `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
@@ -124,10 +124,10 @@ struct HalfInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     verbosity::Int
 end
 function HalfInfiniteProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg = :halfinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg = :HalfInfiniteProjector, kwargs...)
 end
 
-PROJECTOR_SYMBOLS[:halfinfinite] = HalfInfiniteProjector
+PROJECTOR_SYMBOLS[:HalfInfiniteProjector] = HalfInfiniteProjector
 
 """
 $(TYPEDEF)
@@ -146,7 +146,7 @@ Construct the full-infinite projector algorithm based on the following keyword a
 
 * `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
@@ -162,10 +162,10 @@ struct FullInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     verbosity::Int
 end
 function FullInfiniteProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg = :fullinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg = :FullInfiniteProjector, kwargs...)
 end
 
-PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
+PROJECTOR_SYMBOLS[:FullInfiniteProjector] = FullInfiniteProjector
 
 """
     compute_projector(enlarged_corners, alg::ProjectorAlgorithm)

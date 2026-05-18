@@ -18,20 +18,20 @@ names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1.0e-4
 ctmrg_verbosity = 0
-ctmrg_algs = [[:sequential, :simultaneous], [:sequential, :simultaneous]]
-projector_algs = [[:halfinfinite, :fullinfinite], [:halfinfinite, :fullinfinite]]
-svd_rrule_algs = [[:full, :trunc, :arnoldi], [:full, :arnoldi]]
+ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
+projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
+svd_rrule_algs = [[:full, :trunc, :Arnoldi], [:full, :Arnoldi]]
 gradient_algs = [
-    [nothing, :geomsum, :manualiter, :linsolver, :eigsolver],
-    [:geomsum, :manualiter, :linsolver, :eigsolver],
+    [nothing, :GeomSum, :ManualIter, :LinSolver, :EigSolver],
+    [:GeomSum, :ManualIter, :LinSolver, :EigSolver],
 ]
 steps = -0.01:0.005:0.01
 
 # don't check naive AD gradients for all algorithm combinations, since it's slow
 naive_gradient_combinations = [
-    (:simultaneous, :halfinfinite, :full),
-    (:simultaneous, :fullinfinite, :full),
-    (:sequential, :halfinfinite, :full),
+    (:SimultaneousCTMRG, :HalfInfiniteProjector, :full),
+    (:SimultaneousCTMRG, :FullInfiniteProjector, :full),
+    (:SequentialCTMRG, :HalfInfiniteProjector, :full),
 ]
 naive_gradient_done = Set()
 
@@ -39,7 +39,7 @@ naive_gradient_done = Set()
 function _check_disallowed_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
-    ctmrg_alg == :sequential && !isnothing(gradient_alg) && return true
+    ctmrg_alg == :SequentialCTMRG && !isnothing(gradient_alg) && return true
     return false
 end
 
@@ -130,7 +130,7 @@ end
     Random.seed!(1234)
 
     boundary_alg = PEPSKit.CTMRGAlgorithm(; tol = 1.0e-10)
-    gradient_alg = PEPSKit.GradMode(; alg = :linsolver, tol = 5.0e-8)
+    gradient_alg = PEPSKit.GradMode(; alg = :LinSolver, tol = 5.0e-8)
 
     function fg((peps, env))
         E, g = Zygote.withgradient(peps) do ψ

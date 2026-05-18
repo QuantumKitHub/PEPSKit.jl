@@ -2,10 +2,10 @@ abstract type GradMode{F} end
 
 const GRADIENT_MODE_SYMBOLS = IdDict{Symbol, Type{<:GradMode}}()
 const LINSOLVER_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:KrylovKit.LinearSolver}}(
-    :gmres => GMRES, :bicgstab => BiCGStab
+    :GMRES => GMRES, :BiCGStab => BiCGStab
 )
 const EIGSOLVER_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:KrylovKit.KrylovAlgorithm}}(
-    :arnoldi => Arnoldi
+    :Arnoldi => Arnoldi
 )
 
 """
@@ -96,9 +96,9 @@ struct GeomSum{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-GeomSum(; kwargs...) = GradMode(; alg = :geomsum, kwargs...)
+GeomSum(; kwargs...) = GradMode(; alg = :GeomSum, kwargs...)
 
-GRADIENT_MODE_SYMBOLS[:geomsum] = GeomSum
+GRADIENT_MODE_SYMBOLS[:GeomSum] = GeomSum
 
 """
 $(TYPEDEF)
@@ -129,9 +129,9 @@ struct ManualIter{F} <: GradMode{F}
     maxiter::Int
     verbosity::Int
 end
-ManualIter(; kwargs...) = GradMode(; alg = :manualiter, kwargs...)
+ManualIter(; kwargs...) = GradMode(; alg = :ManualIter, kwargs...)
 
-GRADIENT_MODE_SYMBOLS[:manualiter] = ManualIter
+GRADIENT_MODE_SYMBOLS[:ManualIter] = ManualIter
 
 """
 $(TYPEDEF)
@@ -155,15 +155,15 @@ Construct the `LinSolver` algorithm struct based on the following keyword argume
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
 * `solver_alg::Union{KrylovKit.LinearSolver,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_linsolver)` : Linear solver algorithm which, if supplied directly as a `KrylovKit.LinearSolver` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
-    - `:gmres` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
-    - `:bicgstab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 """
 struct LinSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.LinearSolver
 end
-LinSolver(; kwargs...) = GradMode(; alg = :linsolver, kwargs...)
+LinSolver(; kwargs...) = GradMode(; alg = :LinSolver, kwargs...)
 
-GRADIENT_MODE_SYMBOLS[:linsolver] = LinSolver
+GRADIENT_MODE_SYMBOLS[:LinSolver] = LinSolver
 
 """
 $(TYPEDEF)
@@ -187,14 +187,14 @@ Construct the `EigSolver` algorithm struct based on the following keyword argume
 * `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : Style of CTMRG iteration which is being differentiated, which can be:
     - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
 * `solver_alg::Union{KrylovKit.KrylovAlgorithm,NamedTuple}=(; alg=:$(Defaults.gradient_eigsolver)` : Eigen solver algorithm which, if supplied directly as a `KrylovKit.KrylovAlgorithm` overrides the above specified `tol`, `maxiter` and `verbosity`. Alternatively, it can be supplied via a `NamedTuple` where `alg` can be one of the following:
-    - `:arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
+    - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
 """
 struct EigSolver{F} <: GradMode{F}
     solver_alg::KrylovKit.KrylovAlgorithm
 end
-EigSolver(; kwargs...) = GradMode(; alg = :eigsolver, kwargs...)
+EigSolver(; kwargs...) = GradMode(; alg = :EigSolver, kwargs...)
 
-GRADIENT_MODE_SYMBOLS[:eigsolver] = EigSolver
+GRADIENT_MODE_SYMBOLS[:EigSolver] = EigSolver
 
 """
     _check_algorithm_combination(boundary_alg, gradient_alg_or_symmetrization)
@@ -372,7 +372,7 @@ function fpgrad(∂F∂x, ∂f∂x, ∂f∂A, x₀, alg::EigSolver)
         backup_ls_alg = _alg_or_nt(
             GradMode,
             (;
-                alg = :linsolver,
+                alg = :LinSolver,
                 tol = alg.solver_alg.tol,
                 maxiter = alg.solver_alg.maxiter * alg.solver_alg.krylovdim,
                 verbosity = alg.solver_alg.verbosity,

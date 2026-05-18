@@ -28,7 +28,7 @@ function CTMRGAlgorithm(;
     alg_type = CTMRG_SYMBOLS[alg]
 
     # parse CTMRG projector algorithm
-    if alg == :c4v && projector_alg == Defaults.projector_alg
+    if alg == :C4vCTMRG && projector_alg == Defaults.projector_alg
         projector_alg = Defaults.projector_alg_c4v
     end
     # check for full decomposition algorithm specification, otherwise interpret as forward alg
@@ -71,24 +71,24 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     3. Iteration info
     4. Debug info
 * `alg::Symbol=:$(Defaults.ctmrg_alg)` : Variant of the CTMRG algorithm. See also [`CTMRGAlgorithm`](@ref).
-    - `:simultaneous` : Simultaneous expansion and renormalization of all sides.
-    - `:sequential` : Sequential application of left moves and rotations.
-    - `:c4v` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
+    - `:SimultaneousCTMRG` : Simultaneous expansion and renormalization of all sides.
+    - `:SequentialCTMRG` : Sequential application of left moves and rotations.
+    - `:C4vCTMRG` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
 
 ### Projector algorithm
 
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
-    - `:halfinfinite` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
-    - `:fullinfinite` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
-    - `:c4v_eigh` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
-    - `:c4v_qr` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
+    - `:HalfInfiniteProjector` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
+    - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
+    - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
 * `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:QRAdjoint}` : Tensor
   decomposition algorithm used for computing projectors. When specified as a `NamedTuple`,
   the settings are passed a the forward algorithm to the appropriate decomposition

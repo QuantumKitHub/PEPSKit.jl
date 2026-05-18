@@ -7,8 +7,8 @@ using PEPSKit:
     ctmrg_iteration, compute_gauge_fix_gauge, fix_phases, ScramblingEnvGauge
 
 algs = [
-    (:fixed, SimultaneousCTMRG(; projector_alg = :halfinfinite)),
-    (:fixed, SimultaneousCTMRG(; projector_alg = :fullinfinite)), # TODO: why are the errors quite a bit larger for :fullinfinite?
+    (:fixed, SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector)),
+    (:fixed, SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector)), # TODO: why are the errors quite a bit larger for :FullInfiniteProjector?
 ]
 Dbond, χenv = 2, 16
 alg_gauge = ScramblingEnvGauge()

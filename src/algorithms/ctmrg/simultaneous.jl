@@ -31,10 +31,10 @@ struct SimultaneousCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     projector_alg::P
 end
 function SimultaneousCTMRG(; kwargs...)
-    return CTMRGAlgorithm(; alg = :simultaneous, kwargs...)
+    return CTMRGAlgorithm(; alg = :SimultaneousCTMRG, kwargs...)
 end
 
-CTMRG_SYMBOLS[:simultaneous] = SimultaneousCTMRG
+CTMRG_SYMBOLS[:SimultaneousCTMRG] = SimultaneousCTMRG
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     coordinates = eachcoordinate(network, 1:4)
@@ -72,7 +72,7 @@ end
     simultaneous_projectors(enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm)
     simultaneous_projectors(coordinate, enlarged_corners::Array{E,3}, alg::ProjectorAlgorithm)
 
-Compute CTMRG projectors in the `:simultaneous` scheme either for all provided
+Compute CTMRG projectors in the `:SimultaneousCTMRG` scheme either for all provided
 enlarged corners or on a specific `coordinate`.
 """
 function simultaneous_projectors(

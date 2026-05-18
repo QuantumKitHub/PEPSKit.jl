@@ -11,8 +11,8 @@ spacetypes = [ComplexSpace, Z2Space]
 scalartypes = [Float64, ComplexF64]
 unitcells = [(1, 1), (2, 2), (3, 2)]
 ctmrg_algs_asymm = [SequentialCTMRG, SimultaneousCTMRG]
-projector_algs_asymm = [:halfinfinite, :fullinfinite]
-projector_algs_c4v = [:c4v_eigh, :c4v_qr]
+projector_algs_asymm = [:HalfInfiniteProjector, :FullInfiniteProjector]
+projector_algs_c4v = [:C4vEighProjector, :C4vQRProjector]
 gauge_algs_asymm = [ScramblingEnvGauge()]
 gauge_algs_c4v = [ScramblingEnvGaugeC4v()]
 tol = 1.0e-6  # large tol due to χ=6
@@ -25,8 +25,8 @@ function _pre_converge_env(
     ) where {T}
     Random.seed!(seed)  # Seed RNG to make random environment consistent
     psi = InfinitePEPS(rand, T, physical_space, peps_space; unitcell)
-    alg == :c4v && (psi = peps_normalize(symmetrize!(psi, RotateReflect())))
-    env₀ = if alg == :c4v
+    alg == :C4vCTMRG && (psi = peps_normalize(symmetrize!(psi, RotateReflect())))
+    env₀ = if alg == :C4vCTMRG
         initialize_singlet_c4v_env(T, psi, env_space)
     else
         CTMRGEnv(psi, env_space)
@@ -39,10 +39,10 @@ end
 preconv = Dict()
 for (S, T, unitcell) in Iterators.product(spacetypes, scalartypes, unitcells)
     if S == ComplexSpace
-        result = _pre_converge_env(T, :sequential, S(2), S(2), S(χ), unitcell)
+        result = _pre_converge_env(T, :SequentialCTMRG, S(2), S(2), S(χ), unitcell)
     elseif S == Z2Space
         result = _pre_converge_env(
-            T, :sequential, S(0 => 1, 1 => 1), S(0 => 1, 1 => 1),
+            T, :SequentialCTMRG, S(0 => 1, 1 => 1), S(0 => 1, 1 => 1),
             S(0 => χ ÷ 2, 1 => χ ÷ 2), unitcell
         )
     end
@@ -51,10 +51,10 @@ end
 preconv_c4v = Dict()
 for (S, T) in Iterators.product(spacetypes, scalartypes)
     if S == ComplexSpace
-        result = _pre_converge_env(T, :c4v, S(2), S(2), S(χ), (1, 1))
+        result = _pre_converge_env(T, :C4vCTMRG, S(2), S(2), S(χ), (1, 1))
     elseif S == Z2Space
         result = _pre_converge_env(
-            T, :c4v, S(0 => 1, 1 => 1), S(0 => 1, 1 => 1), S(0 => χ ÷ 2, 1 => χ ÷ 2), (1, 1)
+            T, :C4vCTMRG, S(0 => 1, 1 => 1), S(0 => 1, 1 => 1), S(0 => χ ÷ 2, 1 => χ ÷ 2), (1, 1)
         )
     end
     push!(preconv_c4v, (S, T) => result)
