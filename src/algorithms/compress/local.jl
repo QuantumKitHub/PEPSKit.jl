@@ -44,9 +44,10 @@ Only `R` is calculated and returned.
 function qr_twolayer(A1::PEPOTensor, A2::PEPOTensor)
     MdagM = _get_MdagM(A1, A2)
     D, R = eigh_full!(MdagM)
-    project_psd!(D)
-    R = sdiag_pow(D, 0.5) * R'
-    return R
+    # remove small negative eigenvalues due to numerical noises
+    T = eltype(D.data)
+    D.data .= sqrt.(max.(zero(T), D.data))
+    return lmul!(D, R')
 end
 function _get_MdagM(A1::PEPOTensor, A2::PEPOTensor)
     @assert isdual(virtualspace(A1, EAST)) && isdual(virtualspace(A2, EAST))
@@ -76,9 +77,10 @@ Only `L` is calculated and returned.
 function lq_twolayer(A1::PEPOTensor, A2::PEPOTensor)
     MMdag = _get_MMdag(A1, A2)
     D, L = eigh_full!(MMdag)
-    project_psd!(D)
-    L = L * sdiag_pow(D, 0.5)
-    return L
+    # remove small negative eigenvalues due to numerical noises
+    T = eltype(D.data)
+    D.data .= sqrt.(max.(zero(T), D.data))
+    return rmul!(L, D)
 end
 function _get_MMdag(A1::PEPOTensor, A2::PEPOTensor)
     @assert !isdual(virtualspace(A1, WEST)) && !isdual(virtualspace(A2, WEST))
