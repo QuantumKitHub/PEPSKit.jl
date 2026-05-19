@@ -329,7 +329,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_full_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
