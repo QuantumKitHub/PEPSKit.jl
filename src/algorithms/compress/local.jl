@@ -1,10 +1,10 @@
 """
 $(TYPEDEF)
 
-Abstract super type for algorithms to change virtual bonds
-in two-dimensional tensor networks
+Abstract super type for virtual space truncation algorithms when
+compressing two or more layers of two-dimensional tensor networks
 """
-abstract type BondChangeAlgorithm end
+abstract type CompressAlgorithm end
 
 """
 $(TYPEDEF)
@@ -23,7 +23,7 @@ which is the 2-norm of (e.g. for two layers of iPEPO)
 ```
 on each bond of the network.
 """
-struct LocalTruncation <: BondChangeAlgorithm
+struct LocalTruncation <: CompressAlgorithm
     trunc::TruncationStrategy
 end
 
@@ -52,9 +52,8 @@ function _get_MdagM(A1::PEPOTensor, A2::PEPOTensor)
     @assert isdual(virtualspace(A1, EAST)) && isdual(virtualspace(A2, EAST))
     A2′ = twistdual(A2, [2, 3, 5, 6])
     A1′ = twistdual(A1, [1, 3, 5, 6])
-    @tensoropt MdagM[x2 z z′ x2′] :=
-        conj(A2[z z2; Y2 x2 y2 X2]) * A2′[z′ z2; Y2 x2′ y2 X2]
-    @tensoropt MdagM[x1 x2; x1′ x2′] := MdagM[x2 z z′ x2′] *
+    @tensoropt MdagM[x1 x2; x1′ x2′] :=
+        conj(A2[z z2; Y2 x2 y2 X2]) * A2′[z′ z2; Y2 x2′ y2 X2] *
         conj(A1[z1 z; Y1 x1 y1 X1]) * A1′[z1 z′; Y1 x1′ y1 X1]
     project_hermitian!(MdagM)
     return MdagM
@@ -85,9 +84,8 @@ function _get_MMdag(A1::PEPOTensor, A2::PEPOTensor)
     @assert !isdual(virtualspace(A1, WEST)) && !isdual(virtualspace(A2, WEST))
     A2′ = twistnondual(A2, [2, 3, 4, 5])
     A1′ = twistnondual(A1, [1, 3, 4, 5])
-    @tensoropt MMdag[x2 z z′ x2′] :=
-        A2′[z z2; Y2 X2 y2 x2] * conj(A2[z′ z2; Y2 X2 y2 x2′])
-    @tensoropt MMdag[x1 x2; x1′ x2′] := MMdag[x2 z z′ x2′] *
+    @tensoropt MMdag[x1 x2; x1′ x2′] :=
+        A2′[z z2; Y2 X2 y2 x2] * conj(A2[z′ z2; Y2 X2 y2 x2′]) *
         A1′[z1 z; Y1 X1 y1 x1] * conj(A1[z1 z′; Y1 X1 y1 x1′])
     project_hermitian!(MMdag)
     return MMdag
@@ -124,7 +122,7 @@ end
 Truncate virtual bonds of the product of two 1-layer
 InfinitePEPOs `ρ1`, `ρ2` with `LocalTruncation`.
 """
-function MPSKit.changebonds(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalTruncation)
+function compress(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalTruncation)
     # sanity checks
     (size(ρ1) == size(ρ2)) || error("Input PEPOs have different unit cell sizes.")
     (size(ρ1, 3) == 1) || error("ρ1 should have only one layer.")

@@ -109,7 +109,7 @@ include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
-include("algorithms/changebonds/local.jl")
+include("algorithms/compress/local.jl")
 
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
@@ -150,7 +150,7 @@ export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
 export fixedpoint
 
 export LocalTruncation
-export changebonds
+export compress
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation

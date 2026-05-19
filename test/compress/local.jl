@@ -56,6 +56,6 @@ end
     Ves = ComplexSpace.([3 5; 4 2])
     ρ = InfinitePEPO(randn, ComplexF64, Vps, Vns, Ves)
     alg = LocalTruncation(truncrank(2))
-    ρ2, = changebonds(ρ, ρ, alg)
+    ρ2, = compress(ρ, ρ, alg)
     @test ρ2 isa InfinitePEPO
 end
