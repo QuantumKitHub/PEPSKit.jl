@@ -28,7 +28,7 @@ struct LocalTruncation <: CompressAlgorithm
 end
 
 """
-Calculate the QR decomposition of 2-layer PEPO tensor
+Calculate the `left_orth` of 2-layer PEPO tensor
 with the east virtual legs transferred to the R tensor
 ```
         ↓ ╱
@@ -41,7 +41,7 @@ with the east virtual legs transferred to the R tensor
 ```
 Only `R` is calculated and returned.
 """
-function qr_twolayer(A1::PEPOTensor, A2::PEPOTensor)
+function left_orth_twolayer(A1::PEPOTensor, A2::PEPOTensor)
     MdagM = _get_MdagM(A1, A2)
     D, R = eigh_full!(MdagM)
     # remove small negative eigenvalues due to numerical noises
@@ -61,7 +61,7 @@ function _get_MdagM(A1::PEPOTensor, A2::PEPOTensor)
 end
 
 """
-Calculate the LQ decomposition of 2-layer PEPO tensor
+Calculate the `right_orth` of 2-layer PEPO tensor
 with the west virtual legs transferred to the L tensor
 ```
         ↓ ╱  
@@ -74,7 +74,7 @@ with the west virtual legs transferred to the L tensor
 ```
 Only `L` is calculated and returned.
 """
-function lq_twolayer(A1::PEPOTensor, A2::PEPOTensor)
+function right_orth_twolayer(A1::PEPOTensor, A2::PEPOTensor)
     MMdag = _get_MMdag(A1, A2)
     D, L = eigh_full!(MMdag)
     # remove small negative eigenvalues due to numerical noises
@@ -111,8 +111,8 @@ function virtual_projector(
         A1::PEPOTensor, A2::PEPOTensor, B1::PEPOTensor, B2::PEPOTensor;
         trunc::TruncationStrategy
     )
-    R1 = qr_twolayer(A1, A2)
-    R2 = lq_twolayer(B1, B2)
+    R1 = left_orth_twolayer(A1, A2)
+    R2 = right_orth_twolayer(B1, B2)
     u, s, vh, ϵ = svd_trunc!(R1 * R2; trunc)
     sinv_sqrt = sdiag_pow(s, -0.5)
     P1 = R2 * vh' * sinv_sqrt
