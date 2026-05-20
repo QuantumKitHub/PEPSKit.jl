@@ -119,14 +119,14 @@ function check_input(
         throw(ArgumentError("C4v CTMRG requires south and west virtual space to be the dual of north and east virtual space."))
     # check rotation invariance of the local tensors, with the exact spaceflips we assume
     _isapprox_localsandwich(O, flip_virtualspace(_rotl90_localsandwich(O), [EAST, WEST]); atol = atol) ||
-        throw(ArgumentError("C4v CTMRG requires the local tensors to be invariant under 90° rotation."))
+        @warn("The local tensors are not invariant under 90° rotation. In general, C4v CTMRG is not expected to work in this case.")
     # check the hermitian reflection invariance of the local tensors, with the exact spaceflips we assume
     _isapprox_localsandwich(
         O,
         flip_physicalspace(flip_virtualspace(herm_depth(O), [EAST, WEST]));
         atol = atol
     ) ||
-        throw(ArgumentError("C4v CTMRG requires the local tensors to be invariant under hermitian reflection."))
+        @warn("The local tensors are not invariant under hermitian reflection. In general, C4v CTMRG is not expected to work in this case.")
     # TODO: check compatibility of network and environment spaces in general?
     return nothing
 end
