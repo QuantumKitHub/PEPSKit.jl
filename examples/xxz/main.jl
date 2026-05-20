@@ -72,7 +72,7 @@ From this point onwards it's business as usual: Create an initial PEPS and envir
 """
 
 boundary_alg = (; tol = 1.0e-8, alg = :SimultaneousCTMRG, trunc = (; alg = :FixedSpaceTruncation))
-gradient_alg = (; tol = 1.0e-6, alg = :EigSolver, maxiter = 10, iterscheme = :fixed)
+gradient_alg = (; tol = 1.0e-6, alg = :EigSolver, maxiter = 10)
 optimizer_alg = (; tol = 1.0e-4, alg = :LBFGS, maxiter = 85, ls_maxiter = 3, ls_maxfg = 3)
 
 peps₀ = InfinitePEPS(randn, ComplexF64, physical_spaces, virtual_spaces)

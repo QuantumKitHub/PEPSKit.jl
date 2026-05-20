@@ -129,7 +129,7 @@ keyword arguments are:
 * `tol::Real=1e-2tol` : Convergence tolerance for the fixed-point gradient iteration.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient problem iterations.
 * `alg::Symbol=:$(Defaults.gradient_alg)` : Gradient algorithm variant, can be one of the following:
-    - `:GeomSum` : Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
+    - `:FixedPoint Gradient` : Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
     - `:ManualIter` : Iterate gradient geometric sum manually, see [`ManualIter`](@ref)
     - `:LinSolver` : Solve fixed-point gradient linear problem using iterative solver, see [`LinSolver`](@ref)
     - `:EigSolver` : Determine gradient via eigenvalue formulation of its Sylvester equation, see [`EigSolver`](@ref)

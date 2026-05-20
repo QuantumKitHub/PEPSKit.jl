@@ -72,20 +72,19 @@ Module containing default algorithm parameter values and arguments.
     - `:C4vEighProjector` : Projection via truncated Eigh of an enlarged corner.
     - `:C4vQRProjector` : Projection via QR decomposition of a column-enlarged corner.
 
-## Fixed-point gradient
+## Contraction
 
-* `gradient_tol=$(Defaults.gradient_tol)` : Convergence tolerance for the fixed-point gradient iteration.
-* `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for computing the CTMRG fixed-point gradient.
+* `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the implicit gradient of the contraction routine.
+* `gradient_tol=$(Defaults.gradient_tol)` : Convergence tolerance for the gradient algorithm.
+* `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for the gradient computation.
 * `gradient_verbosity=$(Defaults.gradient_verbosity)` : Gradient output information verbosity.
-* `gradient_linsolver=:$(Defaults.gradient_linsolver)` : Default linear solver for the `LinSolver` gradient algorithm.
+* `gradient_fixedpoint_solver_alg=:$(Defaults.gradient_fixedpoint_solver_alg)` : Default solver algorithm for the `FixedPointGradient` gradient algorithm.
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
-* `gradient_eigsolver=:$(Defaults.gradient_eigsolver)` : Default eigensolver for the `EigSolver` gradient algorithm.
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
-* `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
-* `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
-    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-* `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the gradient fixed-point.
+    - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSumGradient`](@ref) for details
+    - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIterGradient`](@ref) for details
+* `gradient_fixedpoint_solver_eager=$(Defaults.gradient_fixedpoint_solver_eager)` : Enables `:Arnoldi` solver algorithm to finish before the full Krylov dimension is reached.
 
 ## Optimization
 
@@ -149,11 +148,9 @@ const projector_alg_c4v = :C4vEighProjector # ∈ {:C4vEighProjector, :C4vQRProj
 const gradient_tol = 1.0e-6
 const gradient_maxiter = 30
 const gradient_verbosity = -1
-const gradient_linsolver = :BiCGStab # ∈ {:GMRES, :BiCGStab}
-const gradient_eigsolver = :Arnoldi
-const gradient_eigsolver_eager = true
-const gradient_iterscheme = :fixed
-const gradient_alg = :EigSolver # ∈ {:GeomSum, :ManualIter, :LinSolver, :EigSolver}
+const gradient_alg = :FixedPointGradient
+const gradient_fixedpoint_solver_alg = :GMRES # ∈ {:GMRES, :BiCGStab, :Arnoldi, :GeomSum, :ManualIter}
+const gradient_fixedpoint_solver_eager = true
 
 # Optimization
 const reuse_env = true

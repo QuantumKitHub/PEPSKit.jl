@@ -100,7 +100,7 @@ algorithms and their tolerances:
 
 ````julia
 boundary_alg = (; tol = 1.0e-8, alg = :SimultaneousCTMRG, trunc = (; alg = :FixedSpaceTruncation))
-gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :LinSolver, iterscheme = :fixed)
+gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :FixedPointGradient)
 optimizer_alg = (; tol = 1.0e-4, alg = :LBFGS, maxiter = 150, ls_maxiter = 2, ls_maxfg = 2);
 ````
 

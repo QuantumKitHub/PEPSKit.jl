@@ -109,9 +109,8 @@ In order to break some of the $C_{4v}$ symmetry of the PEPS, we will add a bit o
 This is conviently done using MPSKit's `randomize!` function.
 (Breaking some of the spatial symmetry can be advantageous for obtaining lower energies.)
 
-In our optimization, we will use a fixed-point differentiation scheme which requires a
-gauge fixing of the contraction environment
-(specified by the `gradient_alg = (; iterscheme = :fixed)` setting).
+In our optimization, we will use the default fixed-point differentiation scheme which
+requires a gauge fixing of the contraction environment.
 Since this gauge fixing involves potentially complex phases, we have to convert our
 real-valued contraction environment to complex numbers before the optimization.
 """
@@ -122,7 +121,7 @@ noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
 peps₀ = peps + 1.0e-1noise_peps
 peps_opt, env_opt, E_opt, = fixedpoint(
     H, peps₀, complex(env);
-    optimizer_alg = (; tol = 1.0e-4, maxiter = 80), gradient_alg = (; iterscheme = :fixed)
+    optimizer_alg = (; tol = 1.0e-4, maxiter = 80),
 );
 
 md"""
