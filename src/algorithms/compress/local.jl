@@ -1,14 +1,6 @@
 """
 $(TYPEDEF)
 
-Abstract super type for virtual space truncation algorithms when
-compressing two or more layers of two-dimensional tensor networks
-"""
-abstract type CompressAlgorithm end
-
-"""
-$(TYPEDEF)
-
 Algorithm to truncate virtual bonds of a two-layer network 
 with projectors that minimizes the local cost function,
 which is the 2-norm of (e.g. for two layers of iPEPO)
@@ -23,7 +15,7 @@ which is the 2-norm of (e.g. for two layers of iPEPO)
 ```
 on each bond of the network.
 """
-struct LocalTruncation <: CompressAlgorithm
+struct LocalTruncation
     trunc::TruncationStrategy
 end
 
