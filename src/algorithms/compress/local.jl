@@ -45,9 +45,9 @@ function _get_MdagM(A1::PEPOTensor, A2::PEPOTensor)
     @assert isdual(virtualspace(A1, EAST)) && isdual(virtualspace(A2, EAST))
     A2′ = twistdual(A2, [2, 3, 5, 6])
     A1′ = twistdual(A1, [1, 3, 5, 6])
-    @tensoropt MdagM[x1 x2; x1′ x2′] :=
-        conj(A2[z z2; Y2 x2 y2 X2]) * A2′[z′ z2; Y2 x2′ y2 X2] *
-        conj(A1[z1 z; Y1 x1 y1 X1]) * A1′[z1 z′; Y1 x1′ y1 X1]
+    @autoopt @tensor MdagM[Dx1 Dx2; Dx1′ Dx2′] :=
+        conj(A2[dz dz2; DY2 Dx2 Dy2 DX2]) * A2′[dz′ dz2; DY2 Dx2′ Dy2 DX2] *
+        conj(A1[dz1 dz; DY1 Dx1 Dy1 DX1]) * A1′[dz1 dz′; DY1 Dx1′ Dy1 DX1]
     project_hermitian!(MdagM)
     return MdagM
 end
@@ -78,9 +78,9 @@ function _get_MMdag(A1::PEPOTensor, A2::PEPOTensor)
     @assert !isdual(virtualspace(A1, WEST)) && !isdual(virtualspace(A2, WEST))
     A2′ = twistnondual(A2, [2, 3, 4, 5])
     A1′ = twistnondual(A1, [1, 3, 4, 5])
-    @tensoropt MMdag[x1 x2; x1′ x2′] :=
-        A2′[z z2; Y2 X2 y2 x2] * conj(A2[z′ z2; Y2 X2 y2 x2′]) *
-        A1′[z1 z; Y1 X1 y1 x1] * conj(A1[z1 z′; Y1 X1 y1 x1′])
+    @autoopt @tensor MMdag[Dx1 Dx2; Dx1′ Dx2′] :=
+        A2′[dz dz2; DY2 DX2 Dy2 Dx2] * conj(A2[dz′ dz2; DY2 DX2 Dy2 Dx2′]) *
+        A1′[dz1 dz; DY1 DX1 Dy1 Dx1] * conj(A1[dz1 dz′; DY1 DX1 Dy1 Dx1′])
     project_hermitian!(MMdag)
     return MMdag
 end
