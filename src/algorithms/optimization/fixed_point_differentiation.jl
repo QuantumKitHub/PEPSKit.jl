@@ -63,8 +63,8 @@ end
 """
 $(TYPEDEF)
 
-CTMRG algorithm where all sides are grown and renormalized at the same time. In particular,
-the projectors are applied to the corners from two sides simultaneously.
+Gradient algorithm for computing the gradient of a fixed-point problem through
+implicit fixed-point differentiation.
 
 ## Fields
 
@@ -75,11 +75,10 @@ $(TYPEDFIELDS)
     FixedPointGradient(; kwargs...)
 
 Construct a fixed-point gradient algorithm struct based on keyword arguments.
-For a full description, see [`leading_boundary`](@ref). The supported keywords are:
+The supported keywords are:
 
 * `tol::Real=$(Defaults.gradient_tol)`
 * `maxiter::Int=$(Defaults.gradient_maxiter)`
-* `miniter::Int=$(Defaults.gradient_miniter)`
 * `verbosity::Int=$(Defaults.gradient_verbosity)`
 * `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_fixedpoint_solver_alg))`: solver algorithm for the `FixedPointGradient` gradient algorithm.
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
