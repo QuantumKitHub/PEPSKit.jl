@@ -1,0 +1,50 @@
+unitcell = [1, 1]
+
+[[algorithms]]
+type = "SimultaneousCTMRG"
+projector_alg = "HalfInfiniteProjector"
+
+[[Trivial]]
+Pspaces = "ℂ^2"
+Nspaces = "ℂ^2"
+Espaces = "ℂ^2"
+chi_north = "ℂ^8"
+chi_east = "ℂ^8"
+chi_south = "ℂ^8"
+chi_west = "ℂ^8"
+
+[[Trivial]]
+Pspaces = "ℂ^2"
+Nspaces = "ℂ^2"
+Espaces = "ℂ^2"
+chi_north = "ℂ^12"
+chi_east = "ℂ^12"
+chi_south = "ℂ^12"
+chi_west = "ℂ^12"
+
+[[Trivial]]
+Pspaces = "ℂ^2"
+Nspaces = "ℂ^3"
+Espaces = "ℂ^3"
+chi_north = "ℂ^12"
+chi_east = "ℂ^12"
+chi_south = "ℂ^12"
+chi_west = "ℂ^12"
+
+[[Trivial]]
+Pspaces = "ℂ^2"
+Nspaces = "ℂ^3"
+Espaces = "ℂ^3"
+chi_north = "ℂ^18"
+chi_east = "ℂ^18"
+chi_south = "ℂ^18"
+chi_west = "ℂ^18"
+
+[[Trivial]]
+Pspaces = "ℂ^2"
+Nspaces = "ℂ^4"
+Espaces = "ℂ^4"
+chi_north = "ℂ^16"
+chi_east = "ℂ^16"
+chi_south = "ℂ^16"
+chi_west = "ℂ^16"
