@@ -118,15 +118,19 @@ function check_input(
     west_virtualspace(O) == _elementwise_dual(north_virtualspace(O)) ||
         throw(ArgumentError("C4v CTMRG requires south and west virtual space to be the dual of north and east virtual space."))
     # check rotation invariance of the local tensors, with the exact spaceflips we assume
-    _isapprox_localsandwich(O, flip_virtualspace(_rotl90_localsandwich(O), [EAST, WEST]); atol = atol) ||
-        @warn("The local tensors are not invariant under 90° rotation. In general, C4v CTMRG is not expected to work in this case.")
+    is_rotation_invariant = try
+        _isapprox_localsandwich(O, flip_virtualspace(_rotl90_localsandwich(O), [EAST, WEST]); atol)
+    catch
+        false # _isapprox_localsandwich errors if the symmetry action changes the spaces (e.g. in case of non self-dual irreps)
+    end
+    is_rotation_invariant || @warn("The local tensors are not invariant under 90° rotation. In general, C4v CTMRG is not expected to work in this case.")
     # check the hermitian reflection invariance of the local tensors, with the exact spaceflips we assume
-    _isapprox_localsandwich(
-        O,
-        flip_physicalspace(flip_virtualspace(herm_depth(O), [EAST, WEST]));
-        atol = atol
-    ) ||
-        @warn("The local tensors are not invariant under hermitian reflection. In general, C4v CTMRG is not expected to work in this case.")
+    is_herm_reflection_invariant = try
+        _isapprox_localsandwich(O, flip_physicalspace(flip_virtualspace(herm_depth(O), [EAST, WEST])); atol)
+    catch
+        false
+    end
+    is_herm_reflection_invariant || @warn("The local tensors are not invariant under hermitian reflection. In general, C4v CTMRG is not expected to work in this case.")
     # TODO: check compatibility of network and environment spaces in general?
     return nothing
 end
