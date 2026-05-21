@@ -82,8 +82,8 @@ Module containing default algorithm parameter values and arguments.
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
-    - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSumGradient`](@ref) for details
-    - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIterGradient`](@ref) for details
+    - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
+    - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
 * `gradient_fixedpoint_solver_eager=$(Defaults.gradient_fixedpoint_solver_eager)` : Enables `:Arnoldi` solver algorithm to finish before the full Krylov dimension is reached.
 
 ## Optimization

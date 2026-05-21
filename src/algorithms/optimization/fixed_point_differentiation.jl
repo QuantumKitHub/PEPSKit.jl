@@ -84,8 +84,8 @@ The supported keywords are:
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
-    - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSumGradient`](@ref) for details
-    - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIterGradient`](@ref) for details
+    - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
+    - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
 """
 struct FixedPointGradient{A} <: GradMode{A}
     solver_alg::A
