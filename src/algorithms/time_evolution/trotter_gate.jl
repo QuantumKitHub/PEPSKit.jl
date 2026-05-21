@@ -69,8 +69,7 @@ function _trotterize_1site!(gates::Vector, H::LocalOperator, dt::Number)
 end
 
 """
-Trotterize nearest neighbor terms (grouped with 1-site terms)
-in the Hamiltonian `H`.
+Trotterize nearest neighbor terms in the Hamiltonian `H`.
 """
 function _trotterize_nn2site!(
         gates::Vector, H::LocalOperator, dt::Number; force_mpo::Bool = false
