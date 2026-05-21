@@ -36,7 +36,7 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
-# :fixed iterscheme is incompatible with sequential CTMRG
+# fixed-point differentiation is incompatible with sequential CTMRG
 function _check_disallowed_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
@@ -59,7 +59,7 @@ end
     salgs = svd_rrule_algs[i]
     galgs = gradient_algs[i]
     gsalgs = gradient_solver_algs[i]
-    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=:$gradient_alg and gradient_solver_alg=:$gradient_solver_alg" for (
+    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg))" for (
             ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_solver_alg,
         ) in Iterators.product(
             calgs, palgs, salgs, galgs, gsalgs
@@ -83,9 +83,10 @@ end
             combo in naive_gradient_combinations || continue
             combo in naive_gradient_done && continue
             push!(naive_gradient_done, combo)
+            gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
         end
 
-        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=:$gradient_alg on $(names[i])"
+        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
         Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace)

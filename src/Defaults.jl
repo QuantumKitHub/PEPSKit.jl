@@ -149,7 +149,7 @@ const gradient_tol = 1.0e-6
 const gradient_maxiter = 30
 const gradient_verbosity = -1
 const gradient_alg = :FixedPointGradient
-const gradient_fixedpoint_solver_alg = :GMRES # ∈ {:GMRES, :BiCGStab, :Arnoldi, :GeomSum, :ManualIter}
+const gradient_fixedpoint_solver_alg = :Arnoldi # ∈ {:GMRES, :BiCGStab, :Arnoldi, :GeomSum, :ManualIter}
 const gradient_fixedpoint_solver_eager = true
 
 # Optimization

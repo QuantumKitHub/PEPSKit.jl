@@ -1,31 +1,15 @@
 abstract type GradMode{A} end
 
-const GRADIENT_MODE_SYMBOLS = IdDict{Symbol, Type{<:GradMode}}(
-    :FixedPointGradient => FixedPointGradient,
-)
+const GRADIENT_MODE_SYMBOLS = IdDict{Symbol, Type{<:GradMode}}()
 
-struct FixedPointGradient{A}
-    solver_alg::A
-end
-
-const FIXEDPOINT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi,
-    :GeomSum => GeomSum, :ManualIter => ManualIter,
-
-)
-
-_default_solver_alg(::Type{<:FixedPointGradient}) = Defaults.gradient_fixedpoint_solver_alg
-_select_solver_alg_symbol(::Type{<:FixedPointGradient}, solver_alg) =
-    FIXEDPOINT_SOLVER_SYMBOLS[solver_alg]
-
+# default solver algorithm for each gradient algorithm type
+_default_solver_alg(::Type{T}) where {T <: GradMode} =
+    throw(ArgumentError("No default solver algorithm defined for gradient algorithm $(T)"))
+# map solver algorithm symbol to solver algorithm type for each gradient algorithm type
+_select_solver_alg_symbol(::Type{T}, solver_alg) where {T <: GradMode} =
+    throw(ArgumentError("No solver algorithm symbols specified for gradient algorithm $(T)"))
+# add algorithm-specific keyword arguments to solver kwargs if needed
 _pad_solver_kwargs(::Type, solver_kwargs) = solver_kwargs
-function _pad_solver_kwargs(::Type{<:KrylovKit.KrylovAlgorithm}, solver_kwargs)
-    solver_kwargs = (;
-        eager = Defaults.gradient_fixedpoint_solver_eager,
-        solver_kwargs...,
-    )
-    return solver_kwargs
-end
 
 """
     GradMode(; kwargs...)
@@ -55,7 +39,7 @@ function GradMode(;
         ) # overwrite with specified kwargs
 
         # parse solver algorithm type
-        solver_alg_type = _select_solver_alg_symbol(alg_type, solver_alg.alg)
+        solver_alg_type = _select_solver_alg_symbol(alg_type, solver_kwargs.alg)
 
         # pad solver_kwargs based on solver type requirements
         solver_kwargs = _pad_solver_kwargs(solver_alg_type, solver_kwargs)
@@ -69,6 +53,60 @@ function GradMode(;
     end
 
     return alg_type(solver)
+end
+
+#
+# Fixed-point gradient computation
+#
+
+
+"""
+$(TYPEDEF)
+
+CTMRG algorithm where all sides are grown and renormalized at the same time. In particular,
+the projectors are applied to the corners from two sides simultaneously.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    FixedPointGradient(; kwargs...)
+
+Construct a fixed-point gradient algorithm struct based on keyword arguments.
+For a full description, see [`leading_boundary`](@ref). The supported keywords are:
+
+* `tol::Real=$(Defaults.gradient_tol)`
+* `maxiter::Int=$(Defaults.gradient_maxiter)`
+* `miniter::Int=$(Defaults.gradient_miniter)`
+* `verbosity::Int=$(Defaults.gradient_verbosity)`
+* `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_fixedpoint_solver_alg))`: solver algorithm for the `FixedPointGradient` gradient algorithm.
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+    - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
+    - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSumGradient`](@ref) for details
+    - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIterGradient`](@ref) for details
+"""
+struct FixedPointGradient{A} <: GradMode{A}
+    solver_alg::A
+end
+FixedPointGradient(; kwargs...) = GradMode(; alg = :FixedPointGradient, kwargs...)
+GRADIENT_MODE_SYMBOLS[:FixedPointGradient] = FixedPointGradient
+
+const FIXEDPOINT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
+    :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi,
+)
+
+_default_solver_alg(::Type{<:FixedPointGradient}) = Defaults.gradient_fixedpoint_solver_alg
+_select_solver_alg_symbol(::Type{<:FixedPointGradient}, solver_alg) =
+    FIXEDPOINT_SOLVER_SYMBOLS[solver_alg]
+function _pad_solver_kwargs(::Type{<:Arnoldi}, solver_kwargs)
+    solver_kwargs = (;
+        eager = Defaults.gradient_fixedpoint_solver_eager,
+        solver_kwargs...,
+    )
+    return solver_kwargs
 end
 
 """
@@ -98,6 +136,7 @@ Construct the `GeomSum` algorithm struct based on the following keyword argument
     maxiter::Int = Defaults.gradient_maxiter
     verbosity::Int = Defaults.gradient_verbosity
 end
+FIXEDPOINT_SOLVER_SYMBOLS[:GeomSum] = GeomSum
 
 """
 $(TYPEDEF)
@@ -126,6 +165,7 @@ Construct the `ManualIter` algorithm struct based on the following keyword argum
     maxiter::Int = Defaults.gradient_maxiter
     verbosity::Int = Defaults.gradient_verbosity
 end
+FIXEDPOINT_SOLVER_SYMBOLS[:ManualIter] = ManualIter
 
 """
     _check_algorithm_combination(boundary_alg, gradient_alg_or_symmetrization)
@@ -213,20 +253,32 @@ function _rrule(
     return (env, info), leading_boundary_fixed_pullback
 end
 
-@doc """
-    fixedpoint_gradient(∂e∂x, ∂f∂x, ∂f∂p, y0, alg)
+@doc raw"""
+    fixedpoint_gradient(x̆, ∂ₓf, ∂ₚf, y₀, alg)
 
-TODO: explain fixed-point differentiation.
+Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
+characterized which satisfies the fixed-point equation ``x = f(x, p)``, given the
+VJP actions ``∂ₓf`` and ``∂ₚf`` of the iterating function ``f``.
 
-Compute the gradient of the CTMRG fixed point by solving the following equation:
+More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
+variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
+``x \equiv x(p)``, the gradient of the cost function is given by
 
-dx = ∑ₙ (∂f∂x)ⁿ ∂f∂A dA = (1 - ∂f∂x)⁻¹ ∂f∂A dA
+```math
+dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
+```
 
-where `∂F∂x` is the gradient of the cost function with respect to the PEPS tensors, `∂f∂x`
-is the partial gradient of the CTMRG iteration with respect to the environment tensors,
-`∂f∂A` is the partial gradient of the CTMRG iteration with respect to the PEPS tensors, and
-`y0` is the initial guess for the fixed-point iteration. The function returns the gradient
-`dx` of the fixed-point iteration.
+Given the fixed-point equation ``x = f(x, p)``, the VJP action of the Jacobian ``∂ₚx``` on
+the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through
+implicit differentiation of the fixed-point condition as
+```math
+x̆ ∂ₚx = x̆ (1 - ∂ₓf)⁻¹ ∂ₚf = ∑ₙ x̆ (∂ₓf)ⁿ ∂ₚf.
+```
+
+This can be used to differentiate contraction routines, where ``p`` are the variational
+parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
+derivative of the cost function with respect to the contraction environment ``x``, and ``f``
+is a single iteration of the contraction algorithm.
 """
 fixedpoint_gradient
 
@@ -281,7 +333,7 @@ end
 
 function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
     y, info = reallinsolve(∂f∂x, ∂E∂x, y₀, alg, 1, -1)
-    if alg.solver_alg.verbosity > 0 && info.converged != 1
+    if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 
@@ -295,7 +347,7 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
     end
     X₀ = (x₀, one(scalartype(x₀)))
     _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg)
-    if alg.solver_alg.verbosity > 0 && info.converged < 1
+    if alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
     if norm(vecs[1][2]) < 1.0e-2 * alg.tol

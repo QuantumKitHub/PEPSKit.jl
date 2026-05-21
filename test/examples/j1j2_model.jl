@@ -19,7 +19,8 @@ env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
 # find fixedpoint
 peps, env, E, = fixedpoint(
     H, peps₀, env₀;
-    tol = 1.0e-3, gradient_alg = (; iterscheme = :fixed), symmetrization = RotateReflect(),
+    tol = 1.0e-3,
+    symmetrization = RotateReflect(),
 )
 ξ_h, ξ_v, = correlation_length(peps, env)
 
