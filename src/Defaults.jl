@@ -72,7 +72,7 @@ Module containing default algorithm parameter values and arguments.
     - `:C4vEighProjector` : Projection via truncated Eigh of an enlarged corner.
     - `:C4vQRProjector` : Projection via QR decomposition of a column-enlarged corner.
 
-## Contraction
+## Fixed-point gradient
 
 * `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the implicit gradient of the contraction routine.
 * `gradient_tol=$(Defaults.gradient_tol)` : Convergence tolerance for the gradient algorithm.
