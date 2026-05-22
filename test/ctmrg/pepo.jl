@@ -115,11 +115,11 @@ end
         E, gs = withgradient(psi) do ψ
             n2 = InfiniteSquareNetwork(ψ)
             env2′, info = PEPSKit.hook_pullback(
-                leading_boundary, env2, n2, ctm_alg; gradient_alg
+                leading_boundary, env2, n2, ctm_alg; alg_rrule = gradient_alg
             )
             n3 = InfiniteSquareNetwork(ψ, T)
             env3′, info = PEPSKit.hook_pullback(
-                leading_boundary, env3, n3, ctm_alg; gradient_alg
+                leading_boundary, env3, n3, ctm_alg; alg_rrule = gradient_alg
             )
             PEPSKit.ignore_derivatives() do
                 PEPSKit.update!(env2, env2′)
