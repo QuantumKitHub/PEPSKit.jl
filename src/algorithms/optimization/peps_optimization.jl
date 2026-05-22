@@ -235,7 +235,7 @@ end
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) end
-function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:GradMode{:fixed}})
+function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:FixedPointGradient})
     if scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
         since :fixed mode generally produces complex gauges"
