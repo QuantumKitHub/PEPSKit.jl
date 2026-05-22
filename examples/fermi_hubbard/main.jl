@@ -71,7 +71,7 @@ define all algorithmic parameters:
 """
 
 boundary_alg = (; tol = 1.0e-8, alg = :SimultaneousCTMRG, trunc = (; alg = :FixedSpaceTruncation))
-gradient_alg = (; tol = 1.0e-6, alg = :EigSolver, maxiter = 10)
+gradient_alg = (; tol = 1.0e-6, maxiter = 10, solver_alg = (; alg = :Arnoldi))
 optimizer_alg = (; tol = 1.0e-4, alg = :LBFGS, maxiter = 80, ls_maxiter = 3, ls_maxfg = 3)
 
 md"""

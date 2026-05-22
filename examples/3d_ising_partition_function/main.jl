@@ -151,9 +151,7 @@ of this cost function.
 """
 
 boundary_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 1)
-rrule_alg = EigSolver(;
-    solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true),
-)
+rrule_alg = FixedPointGradient(; solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true))
 T = InfinitePEPO(O)
 
 function pepo_costfun((peps, env_double_layer, env_triple_layer))

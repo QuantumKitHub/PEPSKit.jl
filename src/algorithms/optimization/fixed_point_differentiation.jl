@@ -1,32 +1,32 @@
-abstract type GradMode{A} end
+abstract type GradientAlgorithm{A} end
 
-const GRADIENT_MODE_SYMBOLS = IdDict{Symbol, Type{<:GradMode}}()
+const GRADIENT_ALGORITHM_SYMBOLS = IdDict{Symbol, Type{<:GradientAlgorithm}}()
 
 # default solver algorithm for each gradient algorithm type
-_default_solver_alg(::Type{T}) where {T <: GradMode} =
+_default_solver_alg(::Type{T}) where {T <: GradientAlgorithm} =
     throw(ArgumentError("No default solver algorithm defined for gradient algorithm $(T)"))
 # map solver algorithm symbol to solver algorithm type for each gradient algorithm type
-_select_solver_alg_symbol(::Type{T}, solver_alg) where {T <: GradMode} =
+_select_solver_alg_symbol(::Type{T}, solver_alg) where {T <: GradientAlgorithm} =
     throw(ArgumentError("No solver algorithm symbols specified for gradient algorithm $(T)"))
 # add algorithm-specific keyword arguments to solver kwargs if needed
 _pad_solver_kwargs(::Type, solver_kwargs) = solver_kwargs
 
 """
-    GradMode(; kwargs...)
+    GradientAlgorithm(; kwargs...)
 
-Keyword argument parser returning the appropriate `GradMode` algorithm struct.
+Keyword argument parser returning the appropriate `GradientAlgorithm` algorithm struct.
 """
-function GradMode(;
+function GradientAlgorithm(;
         alg = Defaults.gradient_alg,
         tol = Defaults.gradient_tol,
         maxiter = Defaults.gradient_maxiter,
         verbosity = Defaults.gradient_verbosity,
         solver_alg = (;),
     )
-    # replace symbol with GradMode alg type
-    haskey(GRADIENT_MODE_SYMBOLS, alg) ||
-        throw(ArgumentError("unknown GradMode algorithm: $alg"))
-    alg_type = GRADIENT_MODE_SYMBOLS[alg]
+    # replace symbol with GradientAlgorithm alg type
+    haskey(GRADIENT_ALGORITHM_SYMBOLS, alg) ||
+        throw(ArgumentError("unknown GradientAlgorithm algorithm: $alg"))
+    alg_type = GRADIENT_ALGORITHM_SYMBOLS[alg]
 
     # parse solver algorithm
     solver = if solver_alg isa NamedTuple # determine linear/eigen solver algorithm
@@ -87,11 +87,11 @@ The supported keywords are:
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
 """
-struct FixedPointGradient{A} <: GradMode{A}
+struct FixedPointGradient{A} <: GradientAlgorithm{A}
     solver_alg::A
 end
-FixedPointGradient(; kwargs...) = GradMode(; alg = :FixedPointGradient, kwargs...)
-GRADIENT_MODE_SYMBOLS[:FixedPointGradient] = FixedPointGradient
+FixedPointGradient(; kwargs...) = GradientAlgorithm(; alg = :FixedPointGradient, kwargs...)
+GRADIENT_ALGORITHM_SYMBOLS[:FixedPointGradient] = FixedPointGradient
 
 const FIXEDPOINT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi,
@@ -225,7 +225,7 @@ function _rrule(
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    alg_gauge = _scrambling_env_gauge(alg) # TODO: make this a field in GradMode?
+    alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
     function gauge_fixed_iteration(A, x)
@@ -256,8 +256,8 @@ end
     fixedpoint_gradient(x̆, ∂ₓf, ∂ₚf, y₀, alg)
 
 Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
-characterized which satisfies the fixed-point equation ``x = f(x, p)``, given the
-VJP actions ``∂ₓf`` and ``∂ₚf`` of the iterating function ``f``.
+which satisfies the fixed-point equation ``x = f(x, p)``, given the VJP actions ``∂ₓf``
+and ``∂ₚf`` of the iterating function ``f``.
 
 More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
 variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,

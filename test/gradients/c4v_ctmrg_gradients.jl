@@ -94,9 +94,11 @@ naive_gradient_done = Set()
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
-            nothing # TODO: add this to the PEPSKit.GradMode selector?
+            nothing # TODO: add this to the PEPSKit.GradientAlgorithm selector?
         else
-            PEPSKit.GradMode(; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol))
+            PEPSKit.GradientAlgorithm(;
+                alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)
+            )
         end
         env0 = PEPSKit.initialize_random_c4v_env(psi, Espace)
         env, = leading_boundary(env0, psi, contrete_ctmrg_alg)

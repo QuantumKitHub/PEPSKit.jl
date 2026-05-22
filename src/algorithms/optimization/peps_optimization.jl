@@ -15,7 +15,7 @@ Construct a PEPS optimization algorithm struct based on keyword arguments.
 For a full description, see [`fixedpoint`](@ref). The supported keywords are:
 
 * `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm,...}`
-* `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
+* `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
 * `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 * `reuse_env::Bool=$(Defaults.reuse_env)`
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing`
@@ -41,7 +41,7 @@ function PEPSOptimize(;
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
-    gradient_algorithm = _alg_or_nt(GradMode, gradient_alg)
+    gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
 
     return PEPSOptimize(
@@ -120,8 +120,8 @@ By default, a CTMRG tolerance of `tol=1e-4tol` and is used.
 
 ### Gradient algorithm
 
-Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
-using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradMode` struct directly.
+Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
+using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradientAlgorithm` struct directly.
 Pass `nothing` to fully differentiate the CTMRG run, meaning that all iterations will be
 taken into account, instead of differentiating the fixed point. The supported `NamedTuple`
 keyword arguments are:

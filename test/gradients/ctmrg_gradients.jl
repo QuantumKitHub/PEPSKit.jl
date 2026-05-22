@@ -99,9 +99,11 @@ end
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
-            nothing # TODO: add this to the PEPSKit.GradMode selector?
+            nothing # TODO: add this to the PEPSKit.GradientAlgorithm selector?
         else
-            PEPSKit.GradMode(; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol))
+            PEPSKit.GradientAlgorithm(;
+                alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)
+            )
         end
         env, = leading_boundary(CTMRGEnv(psi, Espace), psi, contrete_ctmrg_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
@@ -133,7 +135,7 @@ end
     Random.seed!(1234)
 
     boundary_alg = PEPSKit.CTMRGAlgorithm(; tol = 1.0e-10)
-    gradient_alg = PEPSKit.GradMode(; tol = 5.0e-8)
+    gradient_alg = PEPSKit.GradientAlgorithm(; tol = 5.0e-8)
 
     function fg((peps, env))
         E, g = Zygote.withgradient(peps) do ψ
