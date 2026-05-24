@@ -46,10 +46,6 @@ function add_factor!(operator::LocalCircuit, inds::Vector{CartesianIndex{2}}, te
         physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
             throw(SpaceMismatch("Incompatible physical spaces at $(ind)."))
     end
-    # translate coordinates
-    I1 = first(inds)
-    I1_mod = CartesianIndex(mod1.(Tuple(I1), size(operator)))
-    inds .-= (I1 - I1_mod)
     push!(operator.gates, inds => term)
     return operator
 end
