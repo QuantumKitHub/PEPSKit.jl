@@ -87,7 +87,7 @@ function _trotterize_nn2site!(
         gates::Vector, H::LocalOperator, dt::Number; force_mpo::Bool = false
     )
     vs = [CartesianIndex(0, 1), CartesianIndex(1, 0)]
-    for x in CartesianIndices(size(H)), v in vs
+    for v in vs, x in CartesianIndices(size(H))
         y = x + v
         coord = [x, y]
         haskey(H.terms, coord) || continue
