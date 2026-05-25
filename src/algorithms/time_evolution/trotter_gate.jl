@@ -19,14 +19,14 @@ function gate_to_mpo(
     Os = map(MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)) do O
         return permute(O, ((1, 2, 3), (4,)))
     end
+    # convert to Vidal gauge
+    _cluster_truncate!(Os, fill(notrunc(), N - 1))
     # evenly distribute the (Inf) norm
     nrms = norm.(Os, Inf)
     fac = prod(nrms)^(1 / N)
     for (i, nrm) in enumerate(nrms)
         Os[i] *= fac / nrm
     end
-    # convert to Vidal gauge
-    _cluster_truncate!(Os, fill(notrunc(), N - 1))
     # remove trivial legs in first/last tensor, and restore MPO convention
     return map(enumerate(Os)) do (i, O)
         if i == 1
