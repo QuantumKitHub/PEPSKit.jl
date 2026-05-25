@@ -126,7 +126,7 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
         (origin, CartesianIndex(1, 0), CartesianIndex(1, 1))
     ]
     Nr = size(H, 1)
-    for x in CartesianIndices(size(H)), (dir, v) in enumerate(vs)
+    for (dir, v) in enumerate(vs), x in CartesianIndices(size(H))
         x′ = if dir == NORTHEAST || dir == SOUTHWEST
             x
         else
