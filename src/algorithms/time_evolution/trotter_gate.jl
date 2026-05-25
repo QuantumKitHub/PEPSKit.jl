@@ -15,14 +15,26 @@ function gate_to_mpo(
         trunc = trunctol(; atol = MPSKit.Defaults.tol)
     ) where {N}
     @assert N >= 2
-    Os = MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)
-    return map(1:N) do i
+    # use MPS convention of domain/codomain
+    Os = map(MPSKit.decompose_localmpo(MPSKit.add_util_leg(gate), trunc)) do O
+        return permute(O, ((1, 2, 3), (4,)))
+    end
+    # evenly distribute the (Inf) norm
+    nrms = norm.(Os, Inf)
+    fac = prod(nrms)^(1 / N)
+    for (i, nrm) in enumerate(nrms)
+        Os[i] *= fac / nrm
+    end
+    # convert to Vidal gauge
+    _cluster_truncate!(Os, fill(notrunc(), N - 1))
+    # remove trivial legs in first/last tensor, and restore MPO convention
+    return map(enumerate(Os)) do (i, O)
         if i == 1
-            return removeunit(Os[1], 1)
+            return permute(removeunit(O, 1), ((1,), (2, 3)))
         elseif i == N
-            return removeunit(Os[N], 4)
+            return permute(removeunit(O, 4), ((1, 2), (3,)))
         else
-            return Os[i]
+            return permute(O, ((1, 2), (3, 4)))
         end
     end
 end
@@ -89,11 +101,11 @@ end
 """
 Trotterize next-nearest neighbor terms in a Hamiltonian,
 converting them to 3-site MPO gates. 
-For each gate, the order of sites is
+For each gate, the sites are in counter-clockwise order
 ```
-    2---3   1---2
+    2---1   3---2
     |           |
-    1           3
+    3           1
 
     1           3
     |           |
@@ -102,21 +114,34 @@ For each gate, the order of sites is
 """
 function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
     T = scalartype(H)
+    origin = CartesianIndex(0, 0)
     vs = [
-        # ⌞ next-nearest-neighbour
-        (CartesianIndex(1, 0), CartesianIndex(1, 1)),
-        # ⌜ next-nearest-neighbour
-        (CartesianIndex(-1, 0), CartesianIndex(-1, 1)),
-        # ⌝ next-nearest-neighbour
-        (CartesianIndex(0, 1), CartesianIndex(1, 1)),
-        # ⌟ next-nearest-neighbour
-        (CartesianIndex(0, 1), CartesianIndex(-1, 1)),
+        # ⌜ northwest next-nearest-neighbour
+        (CartesianIndex(-1, 1), CartesianIndex(-1, 0), origin)
+        # ⌝ northeast next-nearest-neighbour
+        (CartesianIndex(1, 1), CartesianIndex(0, 1), origin)
+        # ⌟ southeast next-nearest-neighbour
+        (origin, CartesianIndex(0, 1), CartesianIndex(-1, 1))
+        # ⌞ southwest next-nearest-neighbour
+        (origin, CartesianIndex(1, 0), CartesianIndex(1, 1))
     ]
-    for x1 in CartesianIndices(size(H)), v in vs
-        x2, x3 = x1 + v[1], x1 + v[2]
+    Nr = size(H, 1)
+    for x in CartesianIndices(size(H)), (dir, v) in enumerate(vs)
+        x′ = if dir == NORTHEAST || dir == SOUTHWEST
+            x
+        else
+            CartesianIndex(mod1(x[1] + 1, Nr), x[2])
+        end
+        x1, x2, x3 = x′ + v[1], x′ + v[2], x′ + v[3]
         coord = [x1, x3]
-        haskey(H.terms, coord) || continue
-        gate = gate_to_mpo(exp(H.terms[coord] * -dt / 2))
+        rev = !issorted(coord)
+        coord′ = rev ? reverse!(coord) : coord
+        haskey(H.terms, coord′) || continue
+        term = H.terms[coord′]
+        if rev
+            term = permute(term, ((2, 1), (4, 3)))
+        end
+        gate = gate_to_mpo(exp(term * -dt / 2))
         b = TensorKit.BraidingTensor{T}(physicalspace(H, x2), left_virtualspace(gate[2]))
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
