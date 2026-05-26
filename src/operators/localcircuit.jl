@@ -46,6 +46,7 @@ function add_factor!(operator::LocalCircuit, inds::Vector{CartesianIndex{2}}, te
         physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
             throw(SpaceMismatch("Incompatible physical spaces at $(ind)."))
     end
+    _shift_into_unitcell!(inds, size(operator))
     push!(operator.gates, inds => term)
     return operator
 end
@@ -69,6 +70,7 @@ function add_factor!(
             sum(Tuple(ind - ind_prev) .^ 2) == 1 || throw(ArgumentError("Two consecutive sites in `inds` must be nearest neighbours for MPO terms."))
         end
     end
+    _shift_into_unitcell!(inds, size(operator))
     push!(operator.gates, inds => term)
     return operator
 end
