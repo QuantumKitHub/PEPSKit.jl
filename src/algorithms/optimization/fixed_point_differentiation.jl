@@ -283,6 +283,98 @@ function _rrule(
     return (env, info), leading_boundary_fixed_pullback
 end
 
+function _rrule(
+        gradmode::GradMode,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit,
+        state,
+        alg::CTMRGAlgorithmTriangular,
+    )
+    msg = "Fixed-point differentiation is not available for `CTMRGAlgorithmTriangular`, \
+            since gauge fixing for triangular CTMRG is currently not implemented."
+    throw(ArgumentError(msg))
+end
+
+function gauge_fix(alg::SVDAdjoint, signs, info)
+    # embed gauge signs in larger space to fix gauge of full U and V on truncated subspace
+    rowsize, colsize = size(signs, 2), size(signs, 3)
+    inds = info.truncation_indices
+    signs_full = map(Iterators.product(1:4, 1:rowsize, 1:colsize)) do (dir, row, col)
+        σ = signs[dir, row, col]
+        row_sign, col_sign = if dir == NORTH # take unit cell interdependency of signs into account
+            row, _prev(col, colsize)
+        elseif dir == EAST
+            _prev(row, rowsize), col
+        elseif dir == SOUTH
+            row, _next(col, colsize)
+        elseif dir == WEST
+            _next(row, rowsize), col
+        end
+
+        ind = inds[dir, row_sign, col_sign]
+        extended_σ = id(scalartype(σ), domain(info.S_full[dir, row_sign, col_sign]))
+        for (c, b) in blocks(σ)
+            I = get(ind, c, nothing)
+            @assert !isnothing(I)
+            block(extended_σ, c)[I, I] = b
+        end
+        return extended_σ
+    end
+
+    # fix kept and full U and V
+    U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
+    U_full_fixed, V_full_fixed = fix_relative_phases(info.U_full, info.V_full, signs_full)
+    return SVDAdjoint(;
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, U_full_fixed, info.S_full, V_full_fixed, inds),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::SVDAdjoint{F}, signs, info) where {F <: IterSVD}
+    # fix kept U and V only since iterative SVD doesn't have access to full spectrum
+    U_fixed, V_fixed = fix_relative_phases(info.U, info.V, signs)
+    return SVDAdjoint(;
+        fwd_alg = FixedSVD(U_fixed, info.S, V_fixed, nothing, nothing, nothing, nothing),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::EighAdjoint, signs, info)
+    σ = signs[1]
+    inds = info.truncation_indices
+
+    # embed gauge signs in larger space to fix gauge of full V on truncated subspace
+    extended_σ = id(scalartype(σ), domain(info.D_full))
+    for (c, b) in blocks(σ)
+        I = get(inds, c, nothing)
+        @assert !isnothing(I)
+        block(extended_σ, c)[I, I] = b
+    end
+
+    # fix kept and full V
+    V_fixed = info.V * σ'
+    V_full_fixed = info.V_full * extended_σ'
+    return EighAdjoint(;
+        fwd_alg = FixedEig(info.D, V_fixed, info.D_full, V_full_fixed, inds),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::EighAdjoint{F}, signs, info) where {F <: IterEigh}
+    # fix kept V only since iterative decomposition doesn't have access to full spectrum
+    V_fixed = info.V * signs[1]'
+    return EighAdjoint(;
+        fwd_alg = FixedEig(info.D, V_fixed, nothing, nothing, nothing),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+function gauge_fix(alg::QRAdjoint, signs, info)
+    Q_fixed = info.Q * signs[1]'
+    R_fixed = signs[1] * info.R
+    return QRAdjoint(;
+        fwd_alg = FixedQR(Q_fixed, R_fixed),
+        rrule_alg = alg.rrule_alg,
+    )
+end
+
 @doc """
     fpgrad(∂F∂x, ∂f∂x, ∂f∂A, y0, alg)
 

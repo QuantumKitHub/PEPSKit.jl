@@ -54,8 +54,12 @@ include("utility/retractions.jl")
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
+include("networks/tensors_triangular.jl")
+include("networks/local_triangular_sandwich.jl")
+include("networks/infinitetriangularnetwork.jl")
 
 include("states/infinitepeps.jl")
+include("states/infinitepepstriangular.jl")
 include("states/infinitepartitionfunction.jl")
 
 include("utility/symmetrization.jl")
@@ -68,6 +72,7 @@ include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
+include("environments/ctmrg_environments_triangular.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
@@ -109,6 +114,13 @@ include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
+include("algorithms/contractions/ctmrg_contractions_triangular.jl")
+include("algorithms/ctmrg_triangular/ctmrg.jl")
+include("algorithms/ctmrg_triangular/utility.jl")
+include("algorithms/ctmrg_triangular/simultaneous.jl")
+
+include("algorithms/time_evolution/trotter_gate.jl")
+include("algorithms/time_evolution/trotter_mpo.jl")
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
 include("algorithms/time_evolution/get_cluster.jl")
@@ -123,6 +135,7 @@ include("algorithms/bp/gaugefix.jl")
 
 include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
+include("algorithms/toolbox_triangular.jl")
 include("algorithms/correlators.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
@@ -134,6 +147,7 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export CTMRGEnvTriangular, SimultaneousCTMRGTriangular # CTMRGTriaEnv, SimultaneousCTMRGTria
 export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
@@ -152,9 +166,10 @@ export ALSTruncation, FullEnvTruncation
 export SimpleUpdate
 export TimeEvolver, timestep, time_evolve
 
-export InfiniteSquareNetwork
+export InfiniteSquareNetwork, InfiniteTriangularNetwork
 export InfinitePartitionFunction
 export InfinitePEPS, InfiniteTransferPEPS
+export InfinitePEPSTriangular
 export SUWeight
 export InfinitePEPO, InfiniteTransferPEPO
 
