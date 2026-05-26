@@ -76,9 +76,7 @@ function add_term!(
     end
 
     # translate coordinates
-    I1 = first(inds)
-    I1_mod = CartesianIndex(mod1.(Tuple(I1), size(operator)))
-    inds .-= (I1 - I1_mod)
+    _shift_into_unitcell!(inds, size(operator))
 
     if haskey(operator.terms, inds)
         operator.terms[inds] = VI.add!!(operator.terms[inds], term)
