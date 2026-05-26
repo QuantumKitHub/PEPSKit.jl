@@ -24,9 +24,7 @@ function gate_to_mpo(
     # evenly distribute the (Inf) norm
     nrms = norm.(Os, Inf)
     fac = prod(nrms)^(1 / N)
-    for (i, nrm) in enumerate(nrms)
-        Os[i] *= fac / nrm
-    end
+    scale!.(Os, fac ./ nrms)
     # remove trivial legs in first/last tensor, and restore MPO convention
     return map(enumerate(Os)) do (i, O)
         if i == 1
