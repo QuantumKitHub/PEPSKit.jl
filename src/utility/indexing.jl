@@ -2,6 +2,19 @@
 _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
 
+"""
+Shift the first of `inds` into the unit cell
+(with size `unitcell`) by a lattice translation.
+"""
+function _shift_into_unitcell!(
+        inds::Vector{CartesianIndex{N}}, unitcell::NTuple{N, Int}
+    ) where {N}
+    I1 = first(inds)
+    I1_mod = CartesianIndex(mod1.(Tuple(I1), unitcell))
+    inds .-= (I1 - I1_mod)
+    return inds
+end
+
 @inline _periodic_inds(data, J::NTuple{N, Int}) where {N} =
     ntuple(i -> mod1(J[i], size(data, i)), Val(N))
 
