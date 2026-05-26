@@ -57,6 +57,7 @@ On the square lattice, the neighbor distances are
 """
 function _check_hamiltonian_for_trotter(H::LocalOperator)
     dist = 0
+    all(size(H) .>= 2) || error("Unit cell size of the Hamiltonian cannot be smaller than (2, 2).")
     for (sites, op) in H.terms
         @assert numin(op) <= 2 "Hamiltonians containing multi-site (> 2) terms are not currently supported."
         if numin(op) == 2
@@ -86,10 +87,26 @@ Trotterize nearest neighbor terms in the Hamiltonian `H`.
 function _trotterize_nn2site!(
         gates::Vector, H::LocalOperator, dt::Number; force_mpo::Bool = false
     )
-    vs = [CartesianIndex(0, 1), CartesianIndex(1, 0)]
-    for v in vs, x in CartesianIndices(size(H))
-        y = x + v
-        coord = [x, y]
+    Nr, Nc = size(H)
+    # horizontal bonds, column by column
+    # within group `g`, all gates commute
+    period = iseven(Nc) ? 2 : 3
+    for g in 1:period, c in 1:Nc, r in 1:Nr
+        mod1(c, period) == g || continue
+        x = CartesianIndex(r, c)
+        coord = [x, x + CartesianIndex(0, 1)]
+        haskey(H.terms, coord) || continue
+        gate = exp(H.terms[coord] * -dt)
+        force_mpo && (gate = gate_to_mpo(gate))
+        push!(gates, coord => gate)
+    end
+    # vertical bonds, row by row
+    # within group `g`, all gates commute
+    period = iseven(Nr) ? 2 : 3
+    for g in 1:period, r in 1:Nr, c in 1:Nc
+        mod1(r, period) == g || continue
+        x = CartesianIndex(r, c)
+        coord = [x, x + CartesianIndex(1, 0)]
         haskey(H.terms, coord) || continue
         gate = exp(H.terms[coord] * -dt)
         force_mpo && (gate = gate_to_mpo(gate))
@@ -115,16 +132,16 @@ For each gate, the sites are in counter-clockwise order
 function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
     T = scalartype(H)
     origin = CartesianIndex(0, 0)
-    vs = [
+    vs = (
         # ⌜ northwest next-nearest-neighbour
-        (CartesianIndex(-1, 1), CartesianIndex(-1, 0), origin)
+        (CartesianIndex(-1, 1), CartesianIndex(-1, 0), origin),
         # ⌝ northeast next-nearest-neighbour
-        (CartesianIndex(1, 1), CartesianIndex(0, 1), origin)
+        (CartesianIndex(1, 1), CartesianIndex(0, 1), origin),
         # ⌟ southeast next-nearest-neighbour
-        (origin, CartesianIndex(0, 1), CartesianIndex(-1, 1))
+        (origin, CartesianIndex(0, 1), CartesianIndex(-1, 1)),
         # ⌞ southwest next-nearest-neighbour
-        (origin, CartesianIndex(1, 0), CartesianIndex(1, 1))
-    ]
+        (origin, CartesianIndex(1, 0), CartesianIndex(1, 1)),
+    )
     Nr = size(H, 1)
     for (dir, v) in enumerate(vs), x in CartesianIndices(size(H))
         x′ = if dir == NORTHEAST || dir == SOUTHWEST
