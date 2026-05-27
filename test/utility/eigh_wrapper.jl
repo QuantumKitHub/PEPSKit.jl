@@ -26,9 +26,9 @@ r = 0.5 * (r + r') # make r Hermitian
 R = randn(space(r))
 R = 0.5 * (R + R')
 
-full_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :full))
-trunc_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :trunc))
-iter_alg = EighAdjoint(; fwd_alg = (; alg = :Lanczos), rrule_alg = (; alg = :trunc))
+full_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :FullPullback))
+trunc_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :TruncPullback))
+iter_alg = EighAdjoint(; fwd_alg = (; alg = :Lanczos), rrule_alg = (; alg = :TruncPullback))
 
 @testset "Non-truncated eigh" begin
     l_full, g_full = withgradient(A -> lossfun(A, full_alg, R), r)
