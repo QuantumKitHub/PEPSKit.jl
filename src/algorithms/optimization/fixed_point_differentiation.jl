@@ -188,9 +188,9 @@ function _check_algorithm_combination(::SequentialCTMRG, ::FixedPointGradient)
 end
 function _check_algorithm_combination(::C4vCTMRG, symm::Union{Nothing, <:SymmetrizationStyle})
     if !(symm isa RotateReflect)
-        msg = "C4vCTMRG optimization is compatible only with RotateReflect symmetrization. \
-            Make sure to set `symmetrization = RotateReflect()`."
-        throw(ArgumentError(msg))
+        msg = "C4vCTMRG optimization is compatible only with combined Hermitian reflection and rotation symmetrization. \
+            Make sure to set `symmetrization = RotateReflect()` or implement an equivalent custom symmetrization scheme."
+        @warn msg
     end
     return nothing
 end
