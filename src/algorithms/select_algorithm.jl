@@ -34,10 +34,6 @@ function select_algorithm(
 
     # C4vCTMRG-specific defaults
     if boundary_alg isa C4vCTMRG
-        # use :LinSolver GradMode since :EigSolver tends to have hiccups
-        if gradient_alg isa NamedTuple
-            haskey(gradient_alg, :alg) || (gradient_alg = merge((; alg = :LinSolver), gradient_alg))
-        end
         # symmetrize state and gradient
         if isnothing(symmetrization)
             symmetrization = RotateReflect()
