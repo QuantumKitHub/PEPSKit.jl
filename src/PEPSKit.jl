@@ -144,7 +144,7 @@ export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
-export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
+export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter
 export fixedpoint
 
 export absorb_weight

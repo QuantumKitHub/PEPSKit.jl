@@ -15,7 +15,7 @@ Construct a PEPS optimization algorithm struct based on keyword arguments.
 For a full description, see [`fixedpoint`](@ref). The supported keywords are:
 
 * `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm,...}`
-* `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
+* `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
 * `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 * `reuse_env::Bool=$(Defaults.reuse_env)`
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing`
@@ -41,7 +41,7 @@ function PEPSOptimize(;
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
-    gradient_algorithm = _alg_or_nt(GradMode, gradient_alg)
+    gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
 
     return PEPSOptimize(
@@ -120,22 +120,18 @@ By default, a CTMRG tolerance of `tol=1e-4tol` and is used.
 
 ### Gradient algorithm
 
-Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
-using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradMode` struct directly.
+Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
+using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradientAlgorithm` struct directly.
 Pass `nothing` to fully differentiate the CTMRG run, meaning that all iterations will be
 taken into account, instead of differentiating the fixed point. The supported `NamedTuple`
 keyword arguments are:
 
 * `tol::Real=1e-2tol` : Convergence tolerance for the fixed-point gradient iteration.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient problem iterations.
-* `alg::Symbol=:$(Defaults.gradient_alg)` : Gradient algorithm variant, can be one of the following:
-    - `:GeomSum` : Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
-    - `:ManualIter` : Iterate gradient geometric sum manually, see [`ManualIter`](@ref)
-    - `:LinSolver` : Solve fixed-point gradient linear problem using iterative solver, see [`LinSolver`](@ref)
-    - `:EigSolver` : Determine gradient via eigenvalue formulation of its Sylvester equation, see [`EigSolver`](@ref)
 * `verbosity::Int` : Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
-* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : CTMRG iteration scheme determining mode of differentiation. This can be:
-    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
+* `alg::Symbol=:$(Defaults.gradient_alg)` : Implicit gradient algorithm variant, can be one of the following:
+    - `:FixedPointGradient` : Compute the gradient via fixed-point differentiation, see [`FixedPointGradient`](@ref)
+* `solver_alg::`Union{Algorithm,NamedTuple}`: Solver algorithm for computing the implicit gradient; see [`FixedPointGradient`](@ref) for supported algorithms.
 
 ### Optimizer settings
 
@@ -239,7 +235,7 @@ end
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) end
-function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:GradMode{:fixed}})
+function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:FixedPointGradient})
     if scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
         since :fixed mode generally produces complex gauges"
