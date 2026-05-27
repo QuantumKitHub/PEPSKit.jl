@@ -7,27 +7,25 @@ using PEPSKit:
     ctmrg_iteration, compute_gauge_fix_gauge, fix_phases, ScramblingEnvGauge
 
 algs = [
-    (:fixed, SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector)),
-    (:fixed, SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector)), # TODO: why are the errors quite a bit larger for :FullInfiniteProjector?
+    SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector),
+    SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector), # TODO: why are the errors quite a bit larger for :FullInfiniteProjector?
 ]
 Dbond, χenv = 2, 16
 alg_gauge = ScramblingEnvGauge()
 errtol = 1.0e-3
 
-@testset "$iterscheme and $ctm_alg" for (iterscheme, ctm_alg) in algs
+@testset "$ctm_alg" for ctm_alg in algs
     Random.seed!(123521938519)
     state = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
     env, = leading_boundary(CTMRGEnv(state, ComplexSpace(χenv)), state, ctm_alg)
 
     # follow code of _rrule
-    if iterscheme == :fixed
-        env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
-        signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
 
-        _, env_vjp = pullback(state, env_conv) do A, x
-            e, = ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)
-            return fix_phases(e, signs, corner_phases, edge_phases)
-        end
+    _, env_vjp = pullback(state, env_conv) do A, x
+        e, = ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)
+        return fix_phases(e, signs, corner_phases, edge_phases)
     end
 
     # get Jacobians of single iteration

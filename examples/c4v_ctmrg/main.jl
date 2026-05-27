@@ -154,6 +154,6 @@ peps_qr, env_qr, E_qr, = fixedpoint(
     H, peps₀, env_qr₀;
     optimizer_alg = (; tol = 1.0e-4),
     boundary_alg = (; alg = :C4vCTMRG, projector_alg = :C4vQRProjector, maxiter = 500),
-    gradient_alg = (; alg = :LinSolver)
+    gradient_alg = (; solver_alg = (; alg = :GMRES))
 );
 @show (E_qr - E_ref) / E_ref;

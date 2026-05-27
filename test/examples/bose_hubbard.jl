@@ -27,7 +27,7 @@ Venv = U1Space(0 => 6, 1 => 4, -1 => 4, 2 => 2, -2 => 2)
 
 # algorithms
 boundary_alg = (; tol = 1.0e-8, alg = :SimultaneousCTMRG, verbosity = 2, trunc = (; alg = :FixedSpaceTruncation))
-gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :EigSolver, iterscheme = :fixed)
+gradient_alg = (; tol = 1.0e-6, maxiter = 10)
 optimizer_alg = (; tol = 1.0e-4, alg = :LBFGS, verbosity = 3, maxiter = 25, ls_maxiter = 2, ls_maxfg = 2)
 reuse_env = true
 
