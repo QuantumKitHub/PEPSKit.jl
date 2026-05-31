@@ -207,8 +207,7 @@ function fullenv_truncate(
         b0::AbstractTensorMap{T, S, 1, 1}, benv::BondEnv{T, S}, alg::FullEnvTruncation
     ) where {T <: Number, S <: ElementarySpace}
     verbose = (alg.check_interval > 0)
-    # `benv` is assumed to be positive; here we only check codomain(benv) == domain(benv).
-    @assert codomain(benv) == domain(benv)
+    isposdef(benv) || error("Bond environment `benv` must be positive definite.")
     time00 = time()
     # initialize u, s, vh with truncated or untruncated SVD
     u, s, vh = svd_trunc(b0; trunc = (alg.trunc_init ? alg.trunc : notrunc()))

@@ -16,12 +16,14 @@ The truncation algorithm can be constructed from the following keyword arguments
 * `trunc::TruncationStrategy`: SVD truncation strategy when initilizing the truncated tensors connected by the bond.
 * `maxiter::Int=50` : Maximal number of ALS iterations.
 * `tol::Float64=1e-9` : ALS converges when the relative change in bond SVD spectrum between two iterations is smaller than `tol`.
+* `init::Symbol=:svd` : Method to perform initial truncation. Allowed values are `:svd`, `:eat`.
 * `check_interval::Int=0` : Set number of iterations to print information. Output is suppressed when `check_interval <= 0`. 
 """
 @kwdef struct ALSTruncation{T <: TruncationStrategy}
     trunc::T
     maxiter::Int = 50
     tol::Float64 = 1.0e-9
+    init::Symbol = :svd
     check_interval::Int = 0
 end
 
@@ -35,17 +37,59 @@ function _als_message(
 end
 
 """
-Initialize truncated bond tensors for 2-site ALS
+Approximately split `benv` into two separate positive parts
 """
-function _als_init_truncate(
+function _split_benv(benv::BondEnv)
+    # leading `s` carries zero charge due to posdefness of `benv`
+    u, s, vh = svd_trunc!(permute(benv, ((1, 3), (2, 4)); copy = true); trunc = truncrank(1))
+    # two positive parts
+    ga = project_hermitian!(permute(removeunit(u * sqrt(s), 3), ((1,), (2,))))
+    gb = project_hermitian!(permute(removeunit(sqrt(s) * vh, 1), ((1,), (2,))))
+    return ga, gb
+end
+
+"""
+Initial truncation for 2-site ALS using environment assisted truncation (EAT).
+
+Reference: Physical Review B 106, 195105 (2022)
+"""
+function _als_init_truncate_eat(
+        benv::BondEnv, ket2::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
+    ) where {T, S}
+    ga, gb = _split_benv(benv)
+    Da, Va = eigh_full(ga)
+    Db, Vb = eigh_full(gb)
+    Da, Db = sqrt(Da), sqrt(Db)
+    ga, gb = Va * Da * Va', Vb * Db * Vb'
+    # attach environment
+    @tensor ket2_with_env[-1 -2; -3 -4] :=
+        ket2[1 2; -2 -3] * ga[-1 1] * gb[-4 2]
+    # SVD truncation
+    a, s_bond, b = svd_trunc!(ket2_with_env; trunc)
+    a, b = absorb_s(a, s_bond, b)
+    # remove environment from a, b
+    Da, Db = inv(Da), inv(Db)
+    ga, gb = Va * Da * Va', Vb * Db * Vb'
+    @tensor a[-1 -2; -3] := ga[-1 1] * a[1 -2 -3]
+    @tensor b[-1 -2; -3] := gb[-3 1] * b[-1 -2 1]
+    xs = [a, b]
+    return xs, s_bond
+end
+
+"""
+Initial truncation for 2-site ALS using a simple SVD not involving the environment.
+
+Reference: Physical Review B 106, 195105 (2022)
+"""
+function _als_init_truncate_svd(
         ket2::AbstractTensorMap{T, S, 2, 2}, trunc::TruncationStrategy
     ) where {T, S}
-    a, s0, b = svd_trunc!(permute(ket2, ((1, 3), (4, 2)); copy = true); trunc)
-    a, b = absorb_s(a, s0, b)
+    a, s_bond, b = svd_trunc!(permute(ket2, ((1, 3), (4, 2)); copy = true); trunc)
+    a, b = absorb_s(a, s_bond, b)
     # put b in MPS axis order
     b = permute(b, ((1, 2), (3,)))
     xs = [a, b]
-    return xs, s0
+    return xs, s_bond
 end
 
 """
@@ -71,10 +115,10 @@ The index order of `a` or `b` follows `MPSTensor` convention.
 ```
 """
 function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::ALSTruncation)
-    # dual check of physical index
+    # TODO: allow dual physical index for iPEPO
     @assert !isdual(space(a, 2))
     @assert !isdual(space(b, 2))
-    @assert codomain(benv) == domain(benv)
+    isposdef(benv) || error("Bond environment `benv` must be positive definite.")
     need_flip = isdual(space(b, 1))
     time00 = time()
     verbose = (alg.check_interval > 0)
@@ -85,7 +129,13 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::ALSTrunca
     b22 = real(_als_norm(ket2, benv_ket2))
 
     # initialize truncated bond tensors and bond weight
-    xs, s0 = _als_init_truncate(ket2, alg.trunc)
+    xs, s0 = if alg.init == :svd
+        _als_init_truncate_svd(ket2, alg.trunc)
+    elseif alg.init == :eat
+        _als_init_truncate_eat(benv, ket2, alg.trunc)
+    else
+        error("Invalid algorithm symbol for ALS initial truncation.")
+    end
 
     # initialize ALS cache
     Rs = [_als_tensor_R(benv, xs, i) for i in 1:2]
