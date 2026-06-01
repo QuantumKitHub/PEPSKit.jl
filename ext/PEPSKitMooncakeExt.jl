@@ -1,13 +1,14 @@
 module PEPSKitMooncakeExt
 
 using PEPSKit, TensorKit, Mooncake, MatrixAlgebraKit
-using PEPSKit: SVDAdjoint
+using PEPSKit: SVDAdjoint, EighAdjoint
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, primal, rrule!!, arrayify, @is_primitive
 
 _warn_pullback_truncerror(dϵ::Real; tol = MatrixAlgebraKit.defaulttol(dϵ)) =
     abs(dϵ) ≤ tol || @warn "Pullback ignores non-zero tangents for truncation error"
 
 Mooncake.tangent_type(::Type{<:PEPSKit.SVDAdjoint}) = Mooncake.NoTangent
+Mooncake.tangent_type(::Type{<:PEPSKit.EighAdjoint}) = Mooncake.NoTangent
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), TensorKit.AbstractTensorMap, SVDAdjoint}
 function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.svd_trunc)}, t_dt::CoDual{<:TensorKit.AbstractTensorMap}, alg_dalg::CoDual{SVDAdjoint{F, R}}) where {F, R <: PEPSKit.FullPullback}
@@ -56,6 +57,56 @@ function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.svd_trunc)}, t_dt::Co
         return NoRData(), NoRData(), NoRData()
     end
     return output_codual, svd_trunc!_trunc_pullback
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(eigh_trunc), TensorKit.AbstractTensorMap, EighAdjoint}
+function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eigh_trunc)}, t_dt::CoDual{<:TensorKit.AbstractTensorMap}, alg_dalg::CoDual{EighAdjoint{F, R}}) where {F, R <: PEPSKit.FullPullback}
+    t, dt = arrayify(t_dt)
+    alg = primal(alg_dalg)
+    
+    D, V = eigh_full!(t; alg.fwd_alg.alg)
+    (D̃, Ṽ), inds = MatrixAlgebraKit.truncate(eigh_trunc!, (D, V), alg.fwd_alg.trunc)
+    ϵ = MatrixAlgebraKit.truncation_error(diagview(D), inds)
+    
+    DVtrunc = (D̃, Ṽ)
+    # pack output
+    DVtrunc_dDVtrunc = Mooncake.zero_fcodual((DVtrunc..., ϵ))
+
+    # define pullback
+    dDVtrunc = last.(arrayify.(DVtrunc, Base.front(Mooncake.tangent(DVtrunc_dDVtrunc))))
+
+    gtol = PEPSKit._get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    function eigh_trunc!_full_pullback((_, _, dϵ)::Tuple{NoRData, NoRData, Real})
+        _warn_pullback_truncerror(dϵ)
+        MatrixAlgebraKit.eigh_pullback!(dt, t, (D, V), dDVtrunc, inds; gauge_atol = gtol(dDVtrunc), degeneracy_atol = alg.rrule_alg.degeneracy_atol)
+        MatrixAlgebraKit.zero!.(dDVtrunc) # since this is allocated in this function this is probably not required
+        return ntuple(Returns(NoRData()), 3)
+    end
+    return DVtrunc_dDVtrunc, eigh_trunc!_full_pullback
+end
+
+function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eigh_trunc)}, t_dt::CoDual{<:TensorKit.AbstractTensorMap}, alg_dalg::CoDual{EighAdjoint{F, R}}) where {F, R <: PEPSKit.TruncPullback}
+    t, dt = arrayify(t_dt)
+    alg = primal(alg_dalg)
+    
+    D, V, truncerror = eigh_trunc(t, alg)
+    gtol = PEPSKit._get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    output = (D, V, truncerror)
+    output_codual = CoDual(output, Mooncake.fdata(Mooncake.zero_tangent(output)))
+
+    gtol = PEPSKit._get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+    function eigh_trunc!_trunc_pullback((_, _, dϵ)::Tuple{NoRData, NoRData, Real})
+        _warn_pullback_truncerror(dϵ)
+        Dtrunc, Vtrunc, ϵ = Mooncake.primal(output_codual)
+        dDtrunc_, dVtrunc_, dϵ = Mooncake.tangent(output_codual)
+        D, dD = arrayify(Dtrunc, dDtrunc_)
+        V, dV = arrayify(Vtrunc, dVtrunc_)
+        MatrixAlgebraKit.eigh_trunc_pullback!(dt, t, (D, V), (dD, dV); gauge_atol = gtol((dD, dV)), degeneracy_atol = alg.rrule_alg.degeneracy_atol)
+        MatrixAlgebraKit.zero!(dD) # since this is allocated in this function this is probably not required
+        MatrixAlgebraKit.zero!(dV) # since this is allocated in this function this is probably not required
+        return ntuple(Returns(NoRData()), 3)
+    end
+    return output_codual, eigh_trunc!_trunc_pullback
 end
 
 end
