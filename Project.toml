@@ -37,12 +37,12 @@ Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 PEPSKitMooncakeExt = "Mooncake"
 
 [sources]
-BlockTensorKit = {path = "/Users/khyatt/.julia/dev/BlockTensorKit"}
-TensorKit = {path = "/Users/khyatt/.julia/dev/TensorKit"}
+BlockTensorKit = {url = "https://github.com/quantumkithub/BlockTensorKit.jl", rev = "main"}
+TensorKit = {url = "https://github.com/quantumkithub/TensorKit.jl", rev = "main"}
 MPSKit = {url = "https://github.com/quantumkithub/mpskit.jl", rev = "main"}
 OptimKit = {url = "https://github.com/kshyatt/optimkit.jl", rev = "patch-1"}
 KrylovKit = {url = "https://github.com/kshyatt/krylovkit.jl", rev = "patch-1"}
-VectorInterface = {path = "/Users/khyatt/.julia/dev/VectorInterface"}
+VectorInterface = {url = "https://github.com/quantumkithub/vectorinterface.jl", rev = "main"}
 
 [compat]
 Accessors = "0.1"
