@@ -6,7 +6,7 @@ using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
 
-using MatrixAlgebraKit: TruncatedAlgorithm, diagview
+using MatrixAlgebraKit: TruncatedAlgorithm, diagview, svd_trunc_no_error
 
 # Gauge-invariant loss function
 function lossfun(svd_trunc_f, A, alg, R = randn(space(A)), trunc = notrunc())
@@ -80,7 +80,7 @@ symm_trspace = truncspace(Z2Space(0 => symm_m ÷ 2, 1 => symm_n ÷ 3))
 symm_r = randn(dtype, symm_space, symm_space)
 symm_R = randn(dtype, space(symm_r))
 
-@testset "IterSVD of symmetric tensors $f" for f in (svd_trunc, svd_trunc_no_error) 
+@testset "IterSVD of symmetric tensors $f" for f in (svd_trunc, svd_trunc_no_error)
     l_full, g_full = withgradient(A -> lossfun(f, A, full_alg, symm_R), symm_r)
     l_trunc, g_trunc = withgradient(A -> lossfun(f, A, trunc_alg, symm_R), symm_r)
     l_iter, g_iter = withgradient(A -> lossfun(f, A, iter_alg, symm_R), symm_r)
