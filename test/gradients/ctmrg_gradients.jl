@@ -20,22 +20,23 @@ gradtol = 1.0e-4
 ctmrg_verbosity = 0
 ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
 projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
-svd_rrule_algs = [[:full, :trunc, :Arnoldi], [:full, :Arnoldi]]
-gradient_algs = [
-    [nothing, :GeomSum, :ManualIter, :LinSolver, :EigSolver],
-    [:GeomSum, :ManualIter, :LinSolver, :EigSolver],
+svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
+gradient_algs = [[nothing, :FixedPointGradient], [:FixedPointGradient]]
+gradient_solver_algs = [
+    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
+    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
 ]
 steps = -0.01:0.005:0.01
 
 # don't check naive AD gradients for all algorithm combinations, since it's slow
 naive_gradient_combinations = [
-    (:SimultaneousCTMRG, :HalfInfiniteProjector, :full),
-    (:SimultaneousCTMRG, :FullInfiniteProjector, :full),
-    (:SequentialCTMRG, :HalfInfiniteProjector, :full),
+    (:SimultaneousCTMRG, :HalfInfiniteProjector, :FullPullback),
+    (:SimultaneousCTMRG, :FullInfiniteProjector, :FullPullback),
+    (:SequentialCTMRG, :HalfInfiniteProjector, :FullPullback),
 ]
 naive_gradient_done = Set()
 
-# :fixed iterscheme is incompatible with sequential CTMRG
+# fixed-point differentiation is incompatible with sequential CTMRG
 function _check_disallowed_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
@@ -57,10 +58,11 @@ end
     palgs = projector_algs[i]
     salgs = svd_rrule_algs[i]
     galgs = gradient_algs[i]
-    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=:$gradient_alg" for (
-            ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg,
+    gsalgs = gradient_solver_algs[i]
+    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg))" for (
+            ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_solver_alg,
         ) in Iterators.product(
-            calgs, palgs, salgs, galgs
+            calgs, palgs, salgs, galgs, gsalgs
         )
 
         # filter disallowed algorithm combinations
@@ -70,7 +72,7 @@ end
             # but verify that its use would throw an error
             @test_throws ArgumentError PEPSOptimize(;
                 boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg))),
-                gradient_alg = (; alg = gradient_alg, tol = gradtol, iterscheme = :fixed),
+                gradient_alg = (; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)),
             )
             continue
         end
@@ -81,9 +83,10 @@ end
             combo in naive_gradient_combinations || continue
             combo in naive_gradient_done && continue
             push!(naive_gradient_done, combo)
+            gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
         end
 
-        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=:$gradient_alg on $(names[i])"
+        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
         Random.seed!(42039482030)
         dir = InfinitePEPS(Pspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace)
@@ -96,9 +99,11 @@ end
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
-            nothing # TODO: add this to the PEPSKit.GradMode selector?
+            nothing # TODO: add this to the PEPSKit.GradientAlgorithm selector?
         else
-            PEPSKit.GradMode(; alg = gradient_alg, tol = gradtol)
+            PEPSKit.GradientAlgorithm(;
+                alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)
+            )
         end
         env, = leading_boundary(CTMRGEnv(psi, Espace), psi, contrete_ctmrg_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
@@ -130,7 +135,7 @@ end
     Random.seed!(1234)
 
     boundary_alg = PEPSKit.CTMRGAlgorithm(; tol = 1.0e-10)
-    gradient_alg = PEPSKit.GradMode(; alg = :LinSolver, tol = 5.0e-8)
+    gradient_alg = PEPSKit.GradientAlgorithm(; tol = 5.0e-8)
 
     function fg((peps, env))
         E, g = Zygote.withgradient(peps) do ψ

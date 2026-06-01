@@ -23,8 +23,9 @@ gradtol = 1.0e-4
 ctmrg_verbosity = 1
 ctmrg_algs = [[:C4vCTMRG]]
 projector_algs = [[:C4vEighProjector, :C4vQRProjector]]
-decomposition_rrule_algs = [[:full, :trunc, :qr]]
-gradient_algs = [[nothing, :GeomSum, :ManualIter, :LinSolver, :EigSolver]] # they all use :fixed mode by default (except for nothing)
+decomposition_rrule_algs = [[:FullPullback, :TruncPullback]]
+gradient_algs = [[nothing, :FixedPointGradient]]
+gradient_solver_algs = [[:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi]]
 steps = -0.01:0.005:0.01
 
 # record which rrule alg is compatible with which projector alg
@@ -34,7 +35,7 @@ allowed_rrule_algs = Dict(
 )
 
 # be selective on which configurations to test the naive gradient for
-naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :full), (:C4vCTMRG, :C4vQRProjector, :qr)]
+naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :FullPullback), (:C4vCTMRG, :C4vQRProjector, :FullPullback)]
 naive_gradient_done = Set()
 
 ## Tests
@@ -50,10 +51,11 @@ naive_gradient_done = Set()
     palgs = projector_algs[i]
     dalgs = decomposition_rrule_algs[i]
     galgs = gradient_algs[i]
-    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=:$gradient_alg" for (
-            ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg,
+    gsalgs = gradient_solver_algs[i]
+    @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=(alg = :$gradient_alg, solver_alg = :$gradient_solver_alg)" for (
+            ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_solver_alg,
         ) in Iterators.product(
-            calgs, palgs, dalgs, galgs
+            calgs, palgs, dalgs, galgs, gsalgs
         )
 
         # check for allowed algorithm combinations when testing naive gradient
@@ -62,6 +64,7 @@ naive_gradient_done = Set()
             combo in naive_gradient_combinations || continue
             combo in naive_gradient_done && continue
             push!(naive_gradient_done, combo)
+            gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
         end
 
         # check for allowed combinations of projector alg and decomposition rrule alg
@@ -76,7 +79,7 @@ naive_gradient_done = Set()
             error("unknown projector alg: $projector_alg")
         end
 
-        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=:$gradient_alg on $(names[i])"
+        @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
         Random.seed!(sd)
         dir = InfinitePEPS(Pspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace)
@@ -91,9 +94,11 @@ naive_gradient_done = Set()
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
-            nothing # TODO: add this to the PEPSKit.GradMode selector?
+            nothing # TODO: add this to the PEPSKit.GradientAlgorithm selector?
         else
-            PEPSKit.GradMode(; alg = gradient_alg, tol = gradtol)
+            PEPSKit.GradientAlgorithm(;
+                alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)
+            )
         end
         env0 = PEPSKit.initialize_random_c4v_env(psi, Espace)
         env, = leading_boundary(env0, psi, contrete_ctmrg_alg)
