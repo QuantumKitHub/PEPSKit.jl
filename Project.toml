@@ -8,6 +8,7 @@ projects = ["test", "docs", "benchmark"]
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
+BlockTensorKit = "5f87ffc2-9cf1-4a46-8172-465d160bd8cd"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
@@ -29,6 +30,20 @@ TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
+[weakdeps]
+Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+
+[extensions]
+PEPSKitMooncakeExt = "Mooncake"
+
+[sources]
+BlockTensorKit = {path = "/Users/khyatt/.julia/dev/BlockTensorKit"}
+TensorKit = {path = "/Users/khyatt/.julia/dev/TensorKit"}
+MPSKit = {url = "https://github.com/quantumkithub/mpskit.jl", rev = "main"}
+OptimKit = {url = "https://github.com/kshyatt/optimkit.jl", rev = "patch-1"}
+KrylovKit = {url = "https://github.com/kshyatt/krylovkit.jl", rev = "patch-1"}
+VectorInterface = {path = "/Users/khyatt/.julia/dev/VectorInterface"}
+
 [compat]
 Accessors = "0.1"
 ChainRulesCore = "1.0"
@@ -41,14 +56,15 @@ LoggingExtras = "1"
 MPSKit = "0.13.9"
 MPSKitModels = "0.4"
 MatrixAlgebraKit = "0.6.5"
+Mooncake = "0.5.27"
 OhMyThreads = "0.7, 0.8"
 OptimKit = "0.4"
 Printf = "1"
 Random = "1"
 Statistics = "1"
-TensorKit = "0.16.5"
+TensorKit = "0.16.5, 0.17"
 TensorOperations = "5"
 TupleTools = "1.6.0"
-VectorInterface = "0.4, 0.5, 0.6"
+VectorInterface = "0.6"
 Zygote = "0.6, 0.7"
 julia = "1.10"
