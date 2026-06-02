@@ -1,7 +1,7 @@
 module PEPSKitMooncakeExt
 
 using PEPSKit, TensorKit, Mooncake, MatrixAlgebraKit
-using PEPSKit: SVDAdjoint, EighAdjoint
+using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint
 using Mooncake: DefaultCtx, CoDual, Dual, NoRData, primal, rrule!!, arrayify, @is_primitive
 
 _warn_pullback_truncerror(dϵ::Real; tol = MatrixAlgebraKit.defaulttol(dϵ)) =
@@ -9,6 +9,7 @@ _warn_pullback_truncerror(dϵ::Real; tol = MatrixAlgebraKit.defaulttol(dϵ)) =
 
 Mooncake.tangent_type(::Type{<:PEPSKit.SVDAdjoint}) = Mooncake.NoTangent
 Mooncake.tangent_type(::Type{<:PEPSKit.EighAdjoint}) = Mooncake.NoTangent
+Mooncake.tangent_type(::Type{<:PEPSKit.QRAdjoint}) = Mooncake.NoTangent
 
 @is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(svd_trunc), TensorKit.AbstractTensorMap, SVDAdjoint}
 function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.svd_trunc)}, t_dt::CoDual{<:TensorKit.AbstractTensorMap}, alg_dalg::CoDual{SVDAdjoint{F, R}}) where {F, R <: PEPSKit.FullPullback}
@@ -107,6 +108,25 @@ function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.eigh_trunc)}, t_dt::C
         return ntuple(Returns(NoRData()), 3)
     end
     return output_codual, eigh_trunc!_trunc_pullback
+end
+
+@is_primitive Mooncake.DefaultCtx Mooncake.ReverseMode Tuple{typeof(left_orth), TensorKit.AbstractTensorMap, QRAdjoint}
+function Mooncake.rrule!!(::CoDual{typeof(MatrixAlgebraKit.left_orth)}, t_dt::CoDual{<:TensorKit.AbstractTensorMap}, alg_dalg::CoDual{QRAdjoint})
+    t, dt = arrayify(t_dt)
+    alg = primal(alg_dalg)
+
+    QR = left_orth(t, alg)
+    gtol = PEPSKit._get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+
+    output_codual = Mooncake.zero_fcodual(QR)
+    dQ_, dR_ = Mooncake.tangent(output_codual)
+    Q, dQ = arrayify(Q, dQ_)
+    R, dR = arrayify(R, dR_)
+    function left_orth_pullback(::NoRData)
+        MatrixAlgebraKit.qr_pullback!(dt, t, QR, (dQ, dR); gauge_atol = gtol(dQR))
+        return ntuple(Returns(NoRData()), 3)
+    end
+    return output_codual, left_orth_pullback
 end
 
 end
