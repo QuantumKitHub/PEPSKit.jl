@@ -12,7 +12,8 @@ Neighbourhood tensor update with N-site MPO `gate` (N ≥ 2).
 """
 function _ntu_iter(
         state::InfiniteState, gate::Vector{T}, wts::SUWeight,
-        sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate
+        sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate;
+        reverse_trunc::Bool = false
     ) where {T <: AbstractTensorMap}
     truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites)
     state, wts = copy(state), deepcopy(wts)
@@ -29,13 +30,23 @@ function _ntu_iter(
     end
 
     # truncate each bond sequentially along the path
+    # if reverse_trunc, truncate in the reverse order
     info = (; fid = 1.0)
     nbond = length(sites) - 1
-    for (i, bondsites) in enumerate(zip(sites, Iterators.drop(sites, 1)))
-        trunc = truncs[i]
-        alg′ = (@set alg.opt_alg.trunc = trunc)
+    for i in 1:nbond
         stype1 = (i == 1) ? :first : :middle
         stype2 = (i == nbond) ? :last : :middle
+        # the bond to be updated
+        bond_id = reverse_trunc ? (nbond + 1 - i) : i
+        # the sites involved
+        bondsites = if reverse_trunc
+            (sites[bond_id + 1], sites[bond_id])
+        else
+            (sites[bond_id], sites[bond_id + 1])
+        end
+        # truncate the bond
+        trunc = truncs[bond_id]
+        alg′ = (@set alg.opt_alg.trunc = trunc)
         state, wts, info′ = _bond_truncate(state, wts, bondsites, (stype1, stype2), alg′)
         # record the worst fidelity
         (info′.fid < info.fid) && (info = info′)
@@ -46,9 +57,6 @@ end
 """
 Truncate a nearest neighbor bond between `site1` and `site2`
 after rotating the bond to standard x direction `A ← B`.
-
-`bondtype` takes values in (1, 2, 3), meaning that the current bond is
-(the first, a middle, the last) bond in the updated cluster.
 """
 function _bond_truncate(
         state::InfiniteState, wts::SUWeight,

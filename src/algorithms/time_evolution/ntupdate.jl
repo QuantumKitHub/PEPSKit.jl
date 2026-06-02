@@ -85,7 +85,8 @@ end
 One round of neighbourhood tensor update
 """
 function ntu_iter(
-        state::InfiniteState, circuit::LocalCircuit, alg::NeighbourUpdate
+        state::InfiniteState, circuit::LocalCircuit, alg::NeighbourUpdate;
+        reverse_trunc::Bool = false
     )
     state2, wts = copy(state), SUWeight(state)
     info = (; fid = 1.0)
@@ -113,7 +114,7 @@ function ntu_iter(
         else
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
-            state2, wts, info′ = _ntu_iter(state2, gate, wts, sites, alg)
+            state2, wts, info′ = _ntu_iter(state2, gate, wts, sites, alg; reverse_trunc)
         end
         # record the worst fidelity
         (info′.fid < info.fid) && (info = info′)
@@ -124,7 +125,9 @@ end
 function Base.iterate(it::TimeEvolver{<:NeighbourUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    psi, wts, info = ntu_iter(state.psi, it.circuit, it.alg)
+    # reverse bond truncation order at even steps
+    reverse_trunc = isodd(iter)
+    psi, wts, info = ntu_iter(state.psi, it.circuit, it.alg; reverse_trunc)
     iter, t = iter + 1, t + it.dt
     # update internal state
     it.state = NTUState(iter, t, psi)
