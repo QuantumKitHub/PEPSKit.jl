@@ -80,23 +80,23 @@ env_random_c4v = initialize_random_c4v_env(peps₀, ComplexSpace(χ));
 
 md"""
 Then contracting the PEPS using $C_{4v}$ CTMRG is as easy as just calling [`leading_boundary`](@ref)
-but passing the initial PEPS and environment as well as the `alg = :c4v` keyword argument:
+but passing the initial PEPS and environment as well as the `alg = :C4vCTMRG` keyword argument:
 """
 
-env₀, = leading_boundary(env_random_c4v, peps₀; alg = :c4v, tol = 1.0e-10);
+env₀, = leading_boundary(env_random_c4v, peps₀; alg = :C4vCTMRG, tol = 1.0e-10);
 
 md"""
 ## C₄ᵥ-symmetric optimization
 
 We now take `peps₀` and `env₀` as a starting point for a gradient-based energy
 minimization where we contract using $C_{4v}$ CTMRG such that the energy gradient will also
-exhibit $C_{4v}$ symmetry. For that, we call `fixedpoint` and specify `alg = :c4v`
+exhibit $C_{4v}$ symmetry. For that, we call `fixedpoint` and specify `alg = :C4vCTMRG`
 as the boundary contraction algorithm:
 """
 
 H = real(heisenberg_XYZ_c4v(InfiniteSquare())) # make Hamiltonian real-valued
 peps, env, E, = fixedpoint(
-    H, peps₀, env₀; optimizer_alg = (; tol = 1.0e-4), boundary_alg = (; alg = :c4v),
+    H, peps₀, env₀; optimizer_alg = (; tol = 1.0e-4), boundary_alg = (; alg = :C4vCTMRG),
 );
 
 md"""
@@ -134,17 +134,17 @@ and optimization times, and also has vastly improved GPU performance. Notably, i
 that QR-CTMRG converges to the same fixed point as regular $C_{4v}$ CTMRG.
 
 In PEPSKit terms, using QR-CTMRG just amounts to switching out the projector algorithm that is
-used by the [`C4vCTMRG`](@ref) algorithm to `projector_alg = :c4v_qr` (as opposed to `:c4v_eigh`).
+used by the [`C4vCTMRG`](@ref) algorithm to `projector_alg = :C4vQRProjector` (as opposed to `:C4vEighProjector`).
 QR-CTMRG tends to need significantly more iterations to converge while still being much faster,
 hence we need to increase `maxiter`:
 """
 
 env_qr₀, = leading_boundary(
-    env_random_c4v, peps; alg = :c4v, projector_alg = :c4v_qr, maxiter = 500,
+    env_random_c4v, peps; alg = :C4vCTMRG, projector_alg = :C4vQRProjector, maxiter = 500,
 );
 
 md"""
-To optimize using QR-CTMRG we proceed analogously by specifiying `projector_alg = :c4v_qr` and
+To optimize using QR-CTMRG we proceed analogously by specifiying `projector_alg = :C4vQRProjector` and
 increasing the `maxiter` when setting the boundary algorithm parameters. We make sure to supply
 the `env_qr₀` initial environment because it does not use `DiagonalTensorMap`s as its corner
 type (only regular `eigh`-based $C_{4v}$ CTMRG produces diagonal corners):
@@ -153,7 +153,7 @@ type (only regular `eigh`-based $C_{4v}$ CTMRG produces diagonal corners):
 peps_qr, env_qr, E_qr, = fixedpoint(
     H, peps₀, env_qr₀;
     optimizer_alg = (; tol = 1.0e-4),
-    boundary_alg = (; alg = :c4v, projector_alg = :c4v_qr, maxiter = 500),
-    gradient_alg = (; alg = :linsolver)
+    boundary_alg = (; alg = :C4vCTMRG, projector_alg = :C4vQRProjector, maxiter = 500),
+    gradient_alg = (; solver_alg = (; alg = :GMRES))
 );
 @show (E_qr - E_ref) / E_ref;

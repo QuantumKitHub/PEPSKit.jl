@@ -15,7 +15,7 @@ Construct a PEPS optimization algorithm struct based on keyword arguments.
 For a full description, see [`fixedpoint`](@ref). The supported keywords are:
 
 * `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm,...}`
-* `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
+* `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
 * `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 * `reuse_env::Bool=$(Defaults.reuse_env)`
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing`
@@ -41,7 +41,7 @@ function PEPSOptimize(;
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
-    gradient_algorithm = _alg_or_nt(GradMode, gradient_alg)
+    gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
 
     return PEPSOptimize(
@@ -51,9 +51,9 @@ function PEPSOptimize(;
 end
 
 const OPTIMIZATION_SYMBOLS = IdDict{Symbol, Type{<:OptimKit.OptimizationAlgorithm}}(
-    :gradientdescent => GradientDescent,
-    :conjugategradient => ConjugateGradient,
-    :lbfgs => LBFGS,
+    :GradientDescent => GradientDescent,
+    :ConjugateGradient => ConjugateGradient,
+    :LBFGS => LBFGS,
 )
 
 # Should be OptimizationAlgorithm but piracy
@@ -120,23 +120,18 @@ By default, a CTMRG tolerance of `tol=1e-4tol` and is used.
 
 ### Gradient algorithm
 
-Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,Nothing,<:GradMode}`
-using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradMode` struct directly.
+Supply gradient algorithm parameters via `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
+using either a `NamedTuple` of keyword arguments, `nothing`, or a `GradientAlgorithm` struct directly.
 Pass `nothing` to fully differentiate the CTMRG run, meaning that all iterations will be
 taken into account, instead of differentiating the fixed point. The supported `NamedTuple`
 keyword arguments are:
 
 * `tol::Real=1e-2tol` : Convergence tolerance for the fixed-point gradient iteration.
 * `maxiter::Int=$(Defaults.gradient_maxiter)` : Maximal number of gradient problem iterations.
-* `alg::Symbol=:$(Defaults.gradient_alg)` : Gradient algorithm variant, can be one of the following:
-    - `:geomsum` : Compute gradient directly from the geometric sum, see [`GeomSum`](@ref)
-    - `:manualiter` : Iterate gradient geometric sum manually, see [`ManualIter`](@ref)
-    - `:linsolver` : Solve fixed-point gradient linear problem using iterative solver, see [`LinSolver`](@ref)
-    - `:eigsolver` : Determine gradient via eigenvalue formulation of its Sylvester equation, see [`EigSolver`](@ref)
 * `verbosity::Int` : Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
-* `iterscheme::Symbol=:$(Defaults.gradient_iterscheme)` : CTMRG iteration scheme determining mode of differentiation. This can be:
-    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-    - `:diffgauge` : the differentiated iteration consists of a CTMRG iteration and a subsequent gauge-fixing step such that the gauge-fixing procedure is differentiated as well
+* `alg::Symbol=:$(Defaults.gradient_alg)` : Implicit gradient algorithm variant, can be one of the following:
+    - `:FixedPointGradient` : Compute the gradient via fixed-point differentiation, see [`FixedPointGradient`](@ref)
+* `solver_alg::`Union{Algorithm,NamedTuple}`: Solver algorithm for computing the implicit gradient; see [`FixedPointGradient`](@ref) for supported algorithms.
 
 ### Optimizer settings
 
@@ -146,9 +141,9 @@ using either a `NamedTuple` of keyword arguments or a `OptimKit.OptimizationAlgo
 keyword arguments are:
 
 * `alg::Symbol=:$(Defaults.optimizer_alg)` : Optimizer algorithm, can be one of the following:
-    - `:gradientdescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:conjugategradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:lbfgs` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:GradientDescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:ConjugateGradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:LBFGS` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
 * `tol::Real=tol` : Gradient norm tolerance of the optimizer.
 * `maxiter::Int=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
 * `verbosity::Int=$(Defaults.optimizer_verbosity)` : Optimizer output verbosity.
@@ -240,12 +235,10 @@ end
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) end
-function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:GradMode{:fixed}})
+function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:FixedPointGradient})
     if scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
-        since :fixed mode generally produces complex gauges; use :diffgauge mode \
-        instead by passing gradient_alg=(; iterscheme=:diffgauge) to the fixedpoint \
-        keyword arguments to work with purely real environments and asymmetric CTMRG"
+        since :fixed mode generally produces complex gauges"
         throw(ArgumentError(msg))
     end
     return nothing

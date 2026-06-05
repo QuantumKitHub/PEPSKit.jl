@@ -11,7 +11,8 @@ struct LocalCircuit{O, S}
     "lattice of physical spaces on which the gates act"
     lattice::Matrix{S}
 
-    "list of `sites => gate` pairs that make up the circuit"
+    "list of `sites => gate` pairs that make up the circuit.
+    `sites` is not required to be sorted."
     gates::Vector{Pair{Vector{CartesianIndex{2}}, O}}
 
     LocalCircuit{O, S}(lattice::Matrix{S}) where {O, S} =
@@ -45,16 +46,7 @@ function add_factor!(operator::LocalCircuit, inds::Vector{CartesianIndex{2}}, te
         physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
             throw(SpaceMismatch("Incompatible physical spaces at $(ind)."))
     end
-    # permute input
-    if !issorted(inds)
-        I = sortperm(inds)
-        inds = inds[I]
-        term = permute(term, (Tuple(I), Tuple(I) .+ numout(term)))
-    end
-    # translate coordinates
-    I1 = first(inds)
-    I1_mod = CartesianIndex(mod1.(Tuple(I1), size(operator)))
-    inds .-= (I1 - I1_mod)
+    _shift_into_unitcell!(inds, size(operator))
     push!(operator.gates, inds => term)
     return operator
 end
@@ -78,7 +70,7 @@ function add_factor!(
             sum(Tuple(ind - ind_prev) .^ 2) == 1 || throw(ArgumentError("Two consecutive sites in `inds` must be nearest neighbours for MPO terms."))
         end
     end
-    # for MPO term, `inds` should not be sorted
+    _shift_into_unitcell!(inds, size(operator))
     push!(operator.gates, inds => term)
     return operator
 end
@@ -105,7 +97,9 @@ end
 Return lattice of physical spaces on which the `LocalCircuit` is defined.
 """
 physicalspace(gates::LocalCircuit) = gates.lattice
-physicalspace(gates::LocalCircuit, args...) = physicalspace(gates)[args...]
+Base.@propagate_inbounds physicalspace(gate::LocalCircuit, I...) =
+    periodic_getindex(gate, gate.lattice, I)
+
 Base.size(gates::LocalCircuit) = size(physicalspace(gates))
 
 # Equality

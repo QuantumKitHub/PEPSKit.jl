@@ -55,8 +55,8 @@ O, M, E = three_dimensional_classical_ising(; beta)
 χenv = ℂ^12
 
 # cover all different flavors
-ctm_styles = [:sequential, :simultaneous]
-projector_algs = [:halfinfinite, :fullinfinite]
+ctm_styles = [:SequentialCTMRG, :SimultaneousCTMRG]
+projector_algs = [:HalfInfiniteProjector, :FullInfiniteProjector]
 
 @testset "PEPO CTMRG runthroughs for unitcell=$(unitcell)" for unitcell in
     [(1, 1, 1), (1, 1, 2)]
@@ -85,9 +85,8 @@ end
 
     # prep
     ctm_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 2)
-    alg_rrule = EigSolver(;
+    gradient_alg = FixedPointGradient(;
         solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true),
-        iterscheme = :diffgauge,
     )
     opt_alg = LBFGS(32; maxiter = 50, gradtol = 1.0e-5, verbosity = 3)
     function pepo_retract(x, η, α)
@@ -116,11 +115,11 @@ end
         E, gs = withgradient(psi) do ψ
             n2 = InfiniteSquareNetwork(ψ)
             env2′, info = PEPSKit.hook_pullback(
-                leading_boundary, env2, n2, ctm_alg; alg_rrule
+                leading_boundary, env2, n2, ctm_alg; alg_rrule = gradient_alg
             )
             n3 = InfiniteSquareNetwork(ψ, T)
             env3′, info = PEPSKit.hook_pullback(
-                leading_boundary, env3, n3, ctm_alg; alg_rrule
+                leading_boundary, env3, n3, ctm_alg; alg_rrule = gradient_alg
             )
             PEPSKit.ignore_derivatives() do
                 PEPSKit.update!(env2, env2′)

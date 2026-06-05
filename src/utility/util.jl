@@ -1,41 +1,3 @@
-# Get next and previous directional CTMRG environment index, respecting periodicity
-_next(i, total) = mod1(i + 1, total)
-_prev(i, total) = mod1(i - 1, total)
-
-# Get next and previous coordinate (direction, row, column), given a direction and going around the environment clockwise
-function _next_coordinate((dir, row, col), rowsize, colsize)
-    if dir == 1
-        return (_next(dir, 4), row, _next(col, colsize))
-    elseif dir == 2
-        return (_next(dir, 4), _next(row, rowsize), col)
-    elseif dir == 3
-        return (_next(dir, 4), row, _prev(col, colsize))
-    elseif dir == 4
-        return (_next(dir, 4), _prev(row, rowsize), col)
-    end
-end
-function _prev_coordinate((dir, row, col), rowsize, colsize)
-    if dir == 1
-        return (_prev(dir, 4), _next(row, rowsize), col)
-    elseif dir == 2
-        return (_prev(dir, 4), row, _prev(col, colsize))
-    elseif dir == 3
-        return (_prev(dir, 4), _prev(row, rowsize), col)
-    elseif dir == 4
-        return (_prev(dir, 4), row, _next(col, colsize))
-    end
-end
-
-# iterator over each coordinates
-"""
-    eachcoordinate(x, [dirs=1:4])
-
-Enumerate all (dir, row, col) pairs.
-"""
-function eachcoordinate end
-
-@non_differentiable eachcoordinate(args...)
-
 # Element-wise multiplication of TensorMaps respecting block structure
 function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
     dst = similar(a₁)
@@ -117,6 +79,23 @@ function twistdual!(t::AbstractTensorMap, is)
     return twist!(t, is′)
 end
 twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
+
+# lifted from #311, to be removed once that's merged
+"""
+    twistnondual(t::AbstractTensorMap, i)
+    twistnondual!(t::AbstractTensorMap, i)
+
+Twist the i-th leg of a tensor `t` if it represents a non-dual space.
+"""
+function twistnondual!(t::AbstractTensorMap, i::Int)
+    !isdual(space(t, i)) || return t
+    return twist!(t, i)
+end
+function twistnondual!(t::AbstractTensorMap, is)
+    is′ = filter(i -> !isdual(space(t, i)), is)
+    return twist!(t, is′)
+end
+twistnondual(t::AbstractTensorMap, is) = twistnondual!(copy(t), is)
 
 """
     str(t)
@@ -214,4 +193,18 @@ function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpac
         (rand() < p) && (Vs[i] = V')
     end
     return Vs
+end
+
+"""
+    _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
+
+Returns `(1, 2, ..., N)` but with `ax` moved to the end,
+and the corresponding permutation for `axes` (with `ax` as the only domain index).
+"""
+function _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
+    codomain_axes = TupleTools.deleteat(ntuple(identity, N), ax)
+    q = invperm(axes)
+    biperm = (map(i -> q[i], codomain_axes), (q[ax],))
+    new_axes = (ntuple(i -> axes[biperm[1][i]], N - 1)..., ax)
+    return new_axes, biperm
 end

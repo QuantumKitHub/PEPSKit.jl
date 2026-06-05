@@ -53,7 +53,7 @@ end
 end
 
 @testset "C4v AD optimization with scalartype T=$T and projector_alg=$projector_alg" for (T, projector_alg) in
-    Iterators.product([Float64, ComplexF64], [:c4v_eigh, :c4v_qr])
+    Iterators.product([Float64, ComplexF64], [:C4vEighProjector, :C4vQRProjector])
     # initialize symmetric states
     Random.seed!(123456789)
     symm = RotateReflect()
@@ -62,13 +62,13 @@ end
     peps₀ = InfinitePEPS(randn, T, ComplexSpace(2), ComplexSpace(Dbond))
     peps₀ = peps_normalize(symmetrize!(peps₀, symm))
     e₀ = initialize_random_c4v_env(peps₀, ComplexSpace(χenv))
-    env₀, = leading_boundary(e₀, peps₀; alg = :c4v, projector_alg)
+    env₀, = leading_boundary(e₀, peps₀; alg = :C4vCTMRG, projector_alg)
 
     # optimize energy and compute correlation lengths
     peps, env, E, = fixedpoint(
         H, peps₀, env₀;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
-        boundary_alg = (; alg = :c4v, projector_alg, maxiter = 500),
+        boundary_alg = (; alg = :C4vCTMRG, projector_alg, maxiter = 500),
     )
     ξ_h, ξ_v, = correlation_length(peps, env)
     @info "Optimized energy = $E."
@@ -142,7 +142,7 @@ end
         ham, peps, complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
-        gradient_alg = (; alg = :linsolver, solver_alg = (; alg = :gmres)),
+        gradient_alg = (; solver_alg = (; alg = :GMRES)),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)

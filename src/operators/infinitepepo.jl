@@ -56,9 +56,9 @@ function InfinitePEPO(
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
-    Sspaces = adjoint.(circshift(Nspaces, (1, 0, 0)))
-    Wspaces = adjoint.(circshift(Espaces, (0, -1, 0)))
-    Ppspaces = adjoint.(circshift(Pspaces, (0, 0, -1)))
+    Sspaces = adjoint.(circshift(Nspaces, (-1, 0, 0)))
+    Wspaces = adjoint.(circshift(Espaces, (0, 1, 0)))
+    Ppspaces = adjoint.(circshift(Pspaces, (0, 0, 1)))
 
     P = map(Pspaces, Ppspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, Pp, N, E, S, W
         return f(T, P * Pp ← N * E * S * W)
@@ -138,8 +138,10 @@ function Base.similar(A::InfinitePEPO, T::Type{TorA} = scalartype(A)) where {Tor
 end
 Base.repeat(A::InfinitePEPO, counts...) = InfinitePEPO(repeat(unitcell(A), counts...))
 
-Base.getindex(A::InfinitePEPO, args...) = Base.getindex(unitcell(A), args...)
-Base.setindex!(A::InfinitePEPO, args...) = (Base.setindex!(unitcell(A), args...); A)
+Base.@propagate_inbounds Base.getindex(A::InfinitePEPO, I...) =
+    periodic_getindex(A, unitcell(A), I)
+Base.@propagate_inbounds Base.setindex!(A::InfinitePEPO, v, I...) =
+    periodic_setindex!(A, unitcell(A), v, I)
 Base.axes(A::InfinitePEPO, args...) = axes(unitcell(A), args...)
 eachcoordinate(A::InfinitePEPO) = collect(Iterators.product(axes(A)...))
 function eachcoordinate(A::InfinitePEPO, dirs)
@@ -149,18 +151,12 @@ end
 ## Spaces
 
 TensorKit.spacetype(::Type{P}) where {P <: InfinitePEPO} = spacetype(eltype(P))
-function virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir)
-    Nr, Nc, Nh = size(T)
-    return virtualspace(T[mod1(r, Nr), mod1(c, Nc), mod1(h, Nh)], dir)
-end
-function domain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
-    Nr, Nc, = size(T)
-    return domain_physicalspace(T[mod1(r, Nr), mod1(c, Nc), 1])
-end
-function codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int)
-    Nr, Nc, = size(T)
-    return codomain_physicalspace(T[mod1(r, Nr), mod1(c, Nc), end])
-end
+virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) =
+    virtualspace(T[r, c, h], dir)
+domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) =
+    domain_physicalspace(T[r, c, 1])
+codomain_physicalspace(T::InfinitePEPO, r::Int, c::Int) =
+    codomain_physicalspace(T[r, c, size(T, 3)])
 physicalspace(T::InfinitePEPO) = [physicalspace(T, row, col) for row in axes(T, 1), col in axes(T, 2)]
 function physicalspace(T::InfinitePEPO, r::Int, c::Int)
     codomain_physicalspace(T, r, c) == domain_physicalspace(T, r, c) || throw(
@@ -202,6 +198,14 @@ function InfinitePEPS(ρ::InfinitePEPO)
     )
 end
 
+## Bipartite check for PEPS/PEPO
+function _is_bipartite(psi::InfiniteState)
+    (size(psi, 1) == size(psi, 2) == 2) || (return false)
+    for (c, h) in Iterators.product(1:2, 1:size(psi, 3))
+        (psi[1, c, h] == psi[2, c + 1, h]) || (return false)
+    end
+    return true
+end
 
 ## Vector interface
 

@@ -145,7 +145,10 @@ end
 
 Base.eltype(::Type{BPEnv{T}}) where {T} = T
 Base.size(env::BPEnv, args...) = size(env.messages, args...)
-Base.getindex(env::BPEnv, args...) = Base.getindex(env.messages, args...)
+Base.@propagate_inbounds Base.getindex(env::BPEnv, I...) =
+    periodic_getindex(env, env.messages, I)
+Base.@propagate_inbounds Base.setindex!(env::BPEnv, v, I...) =
+    periodic_setindex!(env, env.messages, v, I)
 Base.axes(env::BPEnv, args...) = Base.axes(env.messages, args...)
 Base.eachindex(env::BPEnv) = eachindex(IndexCartesian(), env.messages)
 VectorInterface.scalartype(::Type{BPEnv{T}}) where {T} = scalartype(T)
@@ -156,6 +159,15 @@ function eachcoordinate(x::BPEnv)
 end
 function eachcoordinate(x::BPEnv, dirs)
     return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
+end
+
+## Bipartite check
+function _is_bipartite(env::BPEnv)
+    (size(env, 2) == size(env, 3) == 2) || (return false)
+    for (d, c) in Iterators.product(axes(env, 1), axes(env, 3))
+        (env[d, 1, c] == env[d, 2, c + 1]) || (return false)
+    end
+    return true
 end
 
 # conversion to CTMRGEnv

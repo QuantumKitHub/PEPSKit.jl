@@ -43,16 +43,16 @@ function _contract_corner_expr(rowrange, colrange)
     cmin, cmax = extrema(colrange)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
-    C_NW = :(env.corners[NORTHWEST, mod1($(rmin - 1), end), mod1($(cmin - 1), end)])
+    C_NW = :(corner(env, NORTHWEST, $(rmin - 1), $(cmin - 1)))
     corner_NW = tensorexpr(C_NW, envlabel(WEST, 0), envlabel(NORTH, 0))
 
-    C_NE = :(env.corners[NORTHEAST, mod1($(rmin - 1), end), mod1($(cmax + 1), end)])
+    C_NE = :(corner(env, NORTHEAST, $(rmin - 1), $(cmax + 1)))
     corner_NE = tensorexpr(C_NE, envlabel(NORTH, gridsize[2]), envlabel(EAST, 0))
 
-    C_SE = :(env.corners[SOUTHEAST, mod1($(rmax + 1), end), mod1($(cmax + 1), end)])
+    C_SE = :(corner(env, SOUTHEAST, $(rmax + 1), $(cmax + 1)))
     corner_SE = tensorexpr(C_SE, envlabel(EAST, gridsize[1]), envlabel(SOUTH, gridsize[2]))
 
-    C_SW = :(env.corners[SOUTHWEST, mod1($(rmax + 1), end), mod1($(cmin - 1), end)])
+    C_SW = :(corner(env, SOUTHWEST, $(rmax + 1), $(cmin - 1)))
     corner_SW = tensorexpr(C_SW, envlabel(SOUTH, 0), envlabel(WEST, gridsize[1]))
 
     return corner_NW, corner_NE, corner_SE, corner_SW
@@ -64,7 +64,7 @@ function _contract_edge_expr(rowrange, colrange, height)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
     edges_N = map(1:gridsize[2]) do i
-        E_N = :(env.edges[NORTH, mod1($(rmin - 1), end), mod1($(cmin + i - 1), end)])
+        E_N = :(edge(env, NORTH, $(rmin - 1), $(cmin + i - 1)))
         return tensorexpr(
             E_N,
             (envlabel(NORTH, i - 1), virtuallabel.(NORTH, ntuple(identity, height), i)...),
@@ -73,7 +73,7 @@ function _contract_edge_expr(rowrange, colrange, height)
     end
 
     edges_E = map(1:gridsize[1]) do i
-        E_E = :(env.edges[EAST, mod1($(rmin + i - 1), end), mod1($(cmax + 1), end)])
+        E_E = :(edge(env, EAST, $(rmin + i - 1), $(cmax + 1)))
         return tensorexpr(
             E_E,
             (envlabel(EAST, i - 1), virtuallabel.(EAST, ntuple(identity, height), i)...),
@@ -82,7 +82,7 @@ function _contract_edge_expr(rowrange, colrange, height)
     end
 
     edges_S = map(1:gridsize[2]) do i
-        E_S = :(env.edges[SOUTH, mod1($(rmax + 1), end), mod1($(cmin + i - 1), end)])
+        E_S = :(edge(env, SOUTH, $(rmax + 1), $(cmin + i - 1)))
         return tensorexpr(
             E_S,
             (envlabel(SOUTH, i), virtuallabel.(SOUTH, ntuple(identity, height), i)...),
@@ -91,7 +91,7 @@ function _contract_edge_expr(rowrange, colrange, height)
     end
 
     edges_W = map(1:gridsize[1]) do i
-        E_W = :(env.edges[WEST, mod1($(rmin + i - 1), end), mod1($(cmin - 1), end)])
+        E_W = :(edge(env, WEST, $(rmin + i - 1), $(cmin - 1)))
         return tensorexpr(
             E_W,
             (envlabel(WEST, i), virtuallabel.(WEST, ntuple(identity, height), i)...),
@@ -120,7 +120,7 @@ function _contract_state_expr(rowrange, colrange, height, cartesian_inds = nothi
                 physicallabel(:O, side, inds_id)
             end
             return tensorexpr(
-                :(state[$(side)][mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)]),
+                :(state[$(side)][$(rmin + i - 1), $(cmin + j - 1)]),
                 (physical_label,),
                 (
                     if i == 1
@@ -172,7 +172,7 @@ function _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds = 
                 else
                     physicallabel(:O, 1, inds_id)
                 end
-                tensor_name = :(twistdual(state[1][mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)], 2))
+                tensor_name = :(twistdual(state[1][$(rmin + i - 1), $(cmin + j - 1)], 2))
             else
                 physical_label_in = if isnothing(inds_id)
                     physicallabel(:in, i, j)
@@ -185,9 +185,9 @@ function _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds = 
                     physicallabel(:O, side, inds_id)
                 end
                 tensor_name = if side == 2
-                    :(state[2][mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)])
+                    :(state[2][$(rmin + i - 1), $(cmin + j - 1)])
                 else
-                    :(twistdual(state[1][mod1($(rmin + i - 1), end), mod1($(cmin + j - 1), end)], (1, 2)))
+                    :(twistdual(state[1][$(rmin + i - 1), $(cmin + j - 1)], (1, 2)))
                 end
             end
 
@@ -396,21 +396,21 @@ function reduced_densitymatrix1x1(
     row, col = Tuple(inds)
 
     # Unpack variables and absorb corners
-    A = ket[mod1(row, end), mod1(col, end)]
-    Ā = bra[mod1(row, end), mod1(col, end)]
+    A = ket[row, col]
+    Ā = bra[row, col]
 
     E_north =
-        env.edges[NORTH, mod1(row - 1, end), mod1(col, end)] *
-        twistdual(env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)], 1)
+        edge(env, NORTH, row - 1, col) *
+        twistdual(corner(env, NORTHEAST, row - 1, col + 1), 1)
     E_east =
-        env.edges[EAST, mod1(row, end), mod1(col + 1, end)] *
-        twistdual(env.corners[SOUTHEAST, mod1(row + 1, end), mod1(col + 1, end)], 1)
+        edge(env, EAST, row, col + 1) *
+        twistdual(corner(env, SOUTHEAST, row + 1, col + 1), 1)
     E_south =
-        env.edges[SOUTH, mod1(row + 1, end), mod1(col, end)] *
-        twistdual(env.corners[SOUTHWEST, mod1(row + 1, end), mod1(col - 1, end)], 1)
+        edge(env, SOUTH, row + 1, col) *
+        twistdual(corner(env, SOUTHWEST, row + 1, col - 1), 1)
     E_west =
-        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
-        twistdual(env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)], 1)
+        edge(env, WEST, row, col - 1) *
+        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
 
     @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
         E_south[χSE DSt DSb; χSW] * E_west[χSW DWt DWb; χNW]
@@ -450,25 +450,25 @@ function reduced_densitymatrix2x1(
     row, col = Tuple(ind)
 
     # Unpack variables and absorb corners
-    A_north = ket[mod1(row, end), mod1(col, end)]
-    Ā_north = bra[mod1(row, end), mod1(col, end)]
-    A_south = ket[mod1(row + 1, end), mod1(col, end)]
-    Ā_south = bra[mod1(row + 1, end), mod1(col, end)]
+    A_north = ket[row, col]
+    Ā_north = bra[row, col]
+    A_south = ket[row + 1, col]
+    Ā_south = bra[row + 1, col]
 
     E_north =
-        env.edges[NORTH, mod1(row - 1, end), mod1(col, end)] *
-        twistdual(env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 1, end)], 1)
-    E_northeast = env.edges[EAST, mod1(row, end), mod1(col + 1, end)]
+        edge(env, NORTH, row - 1, col) *
+        twistdual(corner(env, NORTHEAST, row - 1, col + 1), 1)
+    E_northeast = edge(env, EAST, row, col + 1)
     E_southeast =
-        env.edges[EAST, mod1(row + 1, end), mod1(col + 1, end)] *
-        twistdual(env.corners[SOUTHEAST, mod1(row + 2, end), mod1(col + 1, end)], 1)
+        edge(env, EAST, row + 1, col + 1) *
+        twistdual(corner(env, SOUTHEAST, row + 2, col + 1), 1)
     E_south =
-        env.edges[SOUTH, mod1(row + 2, end), mod1(col, end)] *
-        twistdual(env.corners[SOUTHWEST, mod1(row + 2, end), mod1(col - 1, end)], 1)
-    E_southwest = env.edges[WEST, mod1(row + 1, end), mod1(col - 1, end)]
+        edge(env, SOUTH, row + 2, col) *
+        twistdual(corner(env, SOUTHWEST, row + 2, col - 1), 1)
+    E_southwest = edge(env, WEST, row + 1, col - 1)
     E_northwest =
-        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
-        twistdual(env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)], 1)
+        edge(env, WEST, row, col - 1) *
+        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
 
     @tensor EE_NW[χW χNE DNWt DNt; DNWb DNb] :=
         E_northwest[χW DNWt DNWb; χNW] * E_north[χNW DNt DNb; χNE]
@@ -500,25 +500,25 @@ function reduced_densitymatrix1x2(
     row, col = Tuple(ind)
 
     # Unpack variables and absorb corners
-    A_west = ket[mod1(row, end), mod1(col, end)]
-    Ā_west = bra[mod1(row, end), mod1(col, end)]
-    A_east = ket[mod1(row, end), mod1(col + 1, end)]
-    Ā_east = bra[mod1(row, end), mod1(col + 1, end)]
+    A_west = ket[row, col]
+    Ā_west = bra[row, col]
+    A_east = ket[row, col + 1]
+    Ā_east = bra[row, col + 1]
 
-    E_northwest = env.edges[NORTH, mod1(row - 1, end), mod1(col, end)]
+    E_northwest = edge(env, NORTH, row - 1, col)
     E_northeast =
-        env.edges[NORTH, mod1(row - 1, end), mod1(col + 1, end)] *
-        twistdual(env.corners[NORTHEAST, mod1(row - 1, end), mod1(col + 2, end)], 1)
+        edge(env, NORTH, row - 1, col + 1) *
+        twistdual(corner(env, NORTHEAST, row - 1, col + 2), 1)
     E_east =
-        env.edges[EAST, mod1(row, end), mod1(col + 2, end)] *
-        twistdual(env.corners[SOUTHEAST, mod1(row + 1, end), mod1(col + 2, end)], 1)
-    E_southeast = env.edges[SOUTH, mod1(row + 1, end), mod1(col + 1, end)]
+        edge(env, EAST, row, col + 2) *
+        twistdual(corner(env, SOUTHEAST, row + 1, col + 2), 1)
+    E_southeast = edge(env, SOUTH, row + 1, col + 1)
     E_southwest =
-        env.edges[SOUTH, mod1(row + 1, end), mod1(col, end)] *
-        twistdual(env.corners[SOUTHWEST, mod1(row + 1, end), mod1(col - 1, end)], 1)
+        edge(env, SOUTH, row + 1, col) *
+        twistdual(corner(env, SOUTHWEST, row + 1, col - 1), 1)
     E_west =
-        env.edges[WEST, mod1(row, end), mod1(col - 1, end)] *
-        twistdual(env.corners[NORTHWEST, mod1(row - 1, end), mod1(col - 1, end)], 1)
+        edge(env, WEST, row, col - 1) *
+        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
 
     @tensor EE_SW[χS χNW DSWt DWt; DSWb DWb] :=
         E_southwest[χS DSWt DSWb; χSW] * E_west[χSW DWt DWb; χNW]

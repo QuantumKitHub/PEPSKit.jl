@@ -76,9 +76,7 @@ function add_term!(
     end
 
     # translate coordinates
-    I1 = first(inds)
-    I1_mod = CartesianIndex(mod1.(Tuple(I1), size(operator)))
-    inds .-= (I1 - I1_mod)
+    _shift_into_unitcell!(inds, size(operator))
 
     if haskey(operator.terms, inds)
         operator.terms[inds] = VI.add!!(operator.terms[inds], term)
@@ -147,7 +145,8 @@ end
 Return lattice of physical spaces on which the `LocalOperator` is defined.
 """
 physicalspace(O::LocalOperator) = O.lattice
-physicalspace(O::LocalOperator, args...) = physicalspace(O)[args...]
+Base.@propagate_inbounds physicalspace(O::LocalOperator, I...) =
+    periodic_getindex(O, O.lattice, I)
 
 Base.size(O::LocalOperator, args...) = size(physicalspace(O), args...)
 Base.eltype(::Type{LocalOperator{O, S}}) where {O, S} = O

@@ -52,7 +52,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Changed
 
 - A unified interface for Trotter-based time evolution algorithms. The old `su_iter`, `simpleupdate` functions should be replaced by `timestep`, `time_evolve` respectively
-- Default fixed-point gradient algorithm changed to `:eigsolver`
+- Default fixed-point gradient algorithm changed to `:EigSolver`
 - BoundaryMPS methods now have their own custom transfer functions, avoiding a double conjugation and twist issues for fermions
 - `physicalspace` and related functions now correctly handle periodic indexing for infinite networks
 - Updated compatibility with TensorKit v0.15

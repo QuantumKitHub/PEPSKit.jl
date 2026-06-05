@@ -8,10 +8,10 @@ using VectorInterface
 import VectorInterface as VI
 
 using MatrixAlgebraKit
-using MatrixAlgebraKit: LAPACK_DivideAndConquer, LAPACK_QRIteration
 using MatrixAlgebraKit:
     TruncationStrategy, NoTruncation, truncate, findtruncated, truncation_error, diagview
-using MatrixAlgebraKit: LAPACK_EighAlgorithm, eigh_pullback!, eigh_trunc_pullback!
+using MatrixAlgebraKit: TruncatedAlgorithm
+using MatrixAlgebraKit: eigh_pullback!, eigh_trunc_pullback!
 using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 
 using TensorKit
@@ -25,6 +25,7 @@ using KrylovKit: Lanczos, BlockLanczos
 using TensorOperations, OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
+import TupleTools
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
@@ -40,6 +41,7 @@ using DocStringExtensions
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
 include("utility/util.jl")
+include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
@@ -83,6 +85,7 @@ include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/contract_site.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
 
+include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
@@ -105,11 +108,13 @@ include("algorithms/ctmrg/initialization.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
+include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
-include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
+include("algorithms/time_evolution/get_cluster.jl")
+include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
@@ -133,6 +138,7 @@ export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization
+export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
@@ -142,7 +148,7 @@ export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
-export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
+export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter
 export fixedpoint
 
 export absorb_weight

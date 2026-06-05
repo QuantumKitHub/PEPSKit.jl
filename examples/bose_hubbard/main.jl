@@ -87,9 +87,9 @@ optimization framework in the usual way to find the ground state. So, we first s
 algorithms and their tolerances:
 """
 
-boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
-gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :linsolver, iterscheme = :fixed)
-optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 150, ls_maxiter = 2, ls_maxfg = 2);
+boundary_alg = (; tol = 1.0e-8, alg = :SimultaneousCTMRG, trunc = (; alg = :FixedSpaceTruncation))
+gradient_alg = (; tol = 1.0e-6, maxiter = 10, solver_alg = (; alg = :GMRES))
+optimizer_alg = (; tol = 1.0e-4, alg = :LBFGS, maxiter = 150, ls_maxiter = 2, ls_maxfg = 2);
 
 md"""
 !!! note
@@ -98,12 +98,10 @@ md"""
     the `boundary_alg`, `gradient_alg` and `optimizer_alg` settings. There rarely is a
     general-purpose set of settings which will always work, so instead one has to adjust
     the simulation settings for each specific application. For example, it might help to
-    switch between the CTMRG flavors `alg=:simultaneous` and `alg=:sequential` to
-    improve convergence. The evaluation of the CTMRG gradient can be instable, so there it
-    is advised to try the different `iterscheme=:diffgauge` and `iterscheme=:fixed` schemes
-    as well as different `alg` keywords. Of course the tolerances of the algorithms and
-    their subalgorithms also have to be compatible. For more details on the available
-    options, see the [`fixedpoint`](@ref) docstring.
+    switch between the CTMRG flavors `alg=:SimultaneousCTMRG` and `alg=:SequentialCTMRG` to
+    improve convergence. Of course the tolerances of the algorithms and their subalgorithms
+    also have to be compatible. For more details on the available options, see the
+    [`fixedpoint`](@ref) docstring.
 
 Keep in mind that the PEPS is constructed from a unit cell of spaces, so we have to make a
 matrix of `V_peps` spaces:

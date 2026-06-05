@@ -67,8 +67,8 @@ else
 end
 
 peps = InfinitePEPS(rand, Float64, physical_space, bond_space; unitcell = (Nr, Nc));
-peps.A[2, 2] = copy(peps.A[1, 1]) ## make initial random state bipartite
-peps.A[2, 1] = copy(peps.A[1, 2])
+peps[2, 2] = copy(peps[1, 1]) ## make initial random state bipartite
+peps[2, 1] = copy(peps[1, 2])
 wts = SUWeight(peps);
 ````
 
@@ -91,42 +91,45 @@ end
 ````
 
 ````
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.683e+00. Time = 18.251 s/it
+[ Info: SU iter 1      : E ≈ 0.49739, |Δλ| = 1.683e+00. Time = 15.386 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.01, |Δλ| = 3.917e-06. Time = 0.002 s/it
+[ Info: SU iter 500    : E ≈ -0.64895, |Δλ| = 3.917e-06. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.002 s/it
+[ Info: SU iter 597    : E ≈ -0.65038, |Δλ| = 9.938e-07. Time = 0.002 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 19.73 s
+[ Info: Time evolution finished in 17.88 s
+[ Info: --- Time evolution (simple update), dt = 0.001 ---
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.002 s/it
+[ Info: SU iter 1      : E ≈ -0.65215, |Δλ| = 2.135e-03. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.001, |Δλ| = 9.631e-07. Time = 0.002 s/it
+[ Info: SU iter 500    : E ≈ -0.65248, |Δλ| = 9.631e-07. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   : dt = 0.001, |Δλ| = 2.415e-07. Time = 0.002 s/it
+[ Info: SU iter 1000   : E ≈ -0.65261, |Δλ| = 2.415e-07. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   : dt = 0.001, |Δλ| = 6.291e-08. Time = 0.002 s/it
+[ Info: SU iter 1500   : E ≈ -0.65268, |Δλ| = 6.291e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.683e-08. Time = 0.002 s/it
+[ Info: SU iter 2000   : E ≈ -0.65271, |Δλ| = 1.683e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.002 s/it
+[ Info: SU iter 2205   : E ≈ -0.65271, |Δλ| = 9.981e-09. Time = 0.002 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 5.31 s
+[ Info: Time evolution finished in 7.67 s
+[ Info: --- Time evolution (simple update), dt = 0.0004 ---
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.002 s/it
+[ Info: SU iter 1      : E ≈ -0.65284, |Δλ| = 1.418e-04. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.0004, |Δλ| = 6.377e-08. Time = 0.002 s/it
+[ Info: SU iter 500    : E ≈ -0.65285, |Δλ| = 6.377e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   : dt = 0.0004, |Δλ| = 3.544e-08. Time = 0.002 s/it
+[ Info: SU iter 1000   : E ≈ -0.65285, |Δλ| = 3.544e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   : dt = 0.0004, |Δλ| = 2.013e-08. Time = 0.002 s/it
+[ Info: SU iter 1500   : E ≈ -0.65285, |Δλ| = 2.013e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.157e-08. Time = 0.002 s/it
+[ Info: SU iter 2000   : E ≈ -0.65286, |Δλ| = 1.157e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.002 s/it
+[ Info: SU iter 2133   : E ≈ -0.65286, |Δλ| = 9.999e-09. Time = 0.002 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 5.05 s
+[ Info: Time evolution finished in 5.62 s
 
 ````
 
@@ -142,16 +145,16 @@ trunc_env = truncerror(; atol = 1.0e-10) & truncrank(χenv)
 env, = leading_boundary(
     env₀,
     peps;
-    alg = :sequential,
-    projector_alg = :fullinfinite,
+    alg = :SequentialCTMRG,
+    projector_alg = :FullInfiniteProjector,
     tol = 1.0e-10,
     trunc = trunc_env,
 );
 ````
 
 ````
-[ Info: CTMRG init:	obj = +1.852686271623e-15	err = 1.0000e+00
-[ Info: CTMRG conv 14:	obj = +1.297823093604e+00	err = 5.1362926971e-11	time = 5.06 sec
+[ Info: CTMRG init:	obj = +6.831146883259e-16	err = 1.0000e+00
+[ Info: CTMRG conv 13:	obj = +1.297823093603e+00	err = 6.2102244366e-11	time = 9.59 sec
 
 ````
 
@@ -185,9 +188,9 @@ M_norms = map(
 ````
 
 ````
-E = -0.6674685370436856
-Ms = [0.027287162575913397 -0.02508741980582664; -0.025087419895358266 0.027287162545533143;;; -2.398913533097069e-11 2.64958523871206e-11; -4.82742162216665e-11 4.5509172819091503e-11;;; 0.37596759542522507 -0.37612078302041296; -0.37612078301296187 0.37596759542924413]
-M_norms = [0.3769565254127723 0.3769565254142742; 0.37695652541279817 0.37695652541458163]
+E = -0.6674685370436877
+Ms = [0.02728716246512403 -0.02508741959404704; -0.025087419828279812 0.02728716237745967;;; 1.5705857794867661e-10 -2.3803439601344234e-10; 1.3576939919546227e-11 6.754641464212785e-11;;; 0.37596759543330344 -0.376120783034371; -0.3761207830173624 0.3759675954415181]
+M_norms = [0.37695652541280966 0.37695652541410685; 0.37695652541272473 0.3769565254146569]
 
 ````
 
@@ -206,8 +209,8 @@ M_ref = 0.3767
 ````
 
 ````
-(E - E_ref) / abs(E_ref) = 4.7135515077750805e-5
-(mean(M_norms) - M_ref) / M_ref = 0.0006809806573044887
+(E - E_ref) / abs(E_ref) = 4.713551507459062e-5
+(mean(M_norms) - M_ref) / M_ref = 0.0006809806572194609
 
 ````
 

@@ -25,16 +25,16 @@ function ProjectorAlgorithm(;
 
     # parse SVD forward & rrule algorithm
 
-    decomposition_algorithm = if alg in [:halfinfinite, :fullinfinite]
+    decomposition_algorithm = if alg in [:HalfInfiniteProjector, :FullInfiniteProjector]
         _alg_or_nt(SVDAdjoint, decomposition_alg)
-    elseif alg in [:c4v_eigh]
+    elseif alg in [:C4vEighProjector]
         _alg_or_nt(EighAdjoint, decomposition_alg)
-    elseif alg in [:c4v_qr]
+    elseif alg in [:C4vQRProjector]
         _alg_or_nt(QRAdjoint, decomposition_alg)
     end # TODO: how do we solve this in a proper way?
 
     # qr-ctmrg does not need truncation or degeneracy checks
-    if alg in [:c4v_qr]
+    if alg in [:C4vQRProjector]
         return alg_type(decomposition_algorithm)
     end
 
@@ -52,34 +52,10 @@ end
 
 """
     decomposition_algorithm(alg::ProjectorAlgorithm)
-    decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
 
 Return the tensor decomposition algorithm of the `alg` projector algorithm.
-Additionally, the multi-index `(dir, r, c)` can be supplied which will return the
-decomposition performed at that index, e.g. when using [`FixedEig`](@ref) or [`FixedSVD`](@ref).
 """
 decomposition_algorithm(alg::ProjectorAlgorithm) = alg.decomposition_alg
-function decomposition_algorithm(alg::ProjectorAlgorithm, (dir, r, c))
-    decomposition_alg = decomposition_algorithm(alg)
-    if decomposition_alg isa SVDAdjoint{<:FixedSVD}
-        fwd_alg = decomposition_alg.fwd_alg
-        fix_svd = if isfullsvd(decomposition_alg.fwd_alg)
-            FixedSVD(
-                fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
-                fwd_alg.U_full[dir, r, c], fwd_alg.S_full[dir, r, c], fwd_alg.V_full[dir, r, c],
-                fwd_alg.truncation_indices[dir, r, c],
-            )
-        else
-            FixedSVD(
-                fwd_alg.U[dir, r, c], fwd_alg.S[dir, r, c], fwd_alg.V[dir, r, c],
-                nothing, nothing, nothing, nothing,
-            )
-        end
-        return SVDAdjoint(; fwd_alg = fix_svd, rrule_alg = decomposition_alg.rrule_alg)
-    else
-        return decomposition_alg
-    end
-end
 
 function truncation_strategy(alg::ProjectorAlgorithm, edge)
     if alg.trunc isa FixedSpaceTruncation
@@ -97,8 +73,22 @@ Update the truncation strategy of a given projector algorithm, keeping all other
 the same.
 """
 function _set_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
-    alg´ = @set alg.trunc = trunc
-    return alg´
+    alg = @set alg.trunc = trunc
+    return alg
+end
+
+"""
+    _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+
+Set the truncation strategy of the decomposition algorithm within a given projector
+algorithm, keeping all other settings the same.
+"""
+function _set_decomposition_truncation(alg::ProjectorAlgorithm, trunc::TruncationStrategy)
+    decomp_alg = decomposition_algorithm(alg)
+    truncated_fwd_alg = TruncatedAlgorithm(decomp_alg.fwd_alg, trunc)
+    decomp_alg = @set decomp_alg.fwd_alg = truncated_fwd_alg
+    alg = @set alg.decomposition_alg = decomp_alg
+    return alg
 end
 
 """
@@ -118,7 +108,7 @@ Construct the half-infinite projector algorithm based on the following keyword a
 
 * `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
@@ -134,10 +124,10 @@ struct HalfInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     verbosity::Int
 end
 function HalfInfiniteProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg = :halfinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg = :HalfInfiniteProjector, kwargs...)
 end
 
-PROJECTOR_SYMBOLS[:halfinfinite] = HalfInfiniteProjector
+PROJECTOR_SYMBOLS[:HalfInfiniteProjector] = HalfInfiniteProjector
 
 """
 $(TYPEDEF)
@@ -156,7 +146,7 @@ Construct the full-infinite projector algorithm based on the following keyword a
 
 * `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}=SVDAdjoint()` : SVD algorithm including the reverse rule. See [`SVDAdjoint`](@ref).
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation scheme for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
-    - `:fixedspace` : Keep virtual spaces fixed during projection
+    - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
     - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
@@ -172,22 +162,25 @@ struct FullInfiniteProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     verbosity::Int
 end
 function FullInfiniteProjector(; kwargs...)
-    return ProjectorAlgorithm(; alg = :fullinfinite, kwargs...)
+    return ProjectorAlgorithm(; alg = :FullInfiniteProjector, kwargs...)
 end
 
-PROJECTOR_SYMBOLS[:fullinfinite] = FullInfiniteProjector
+PROJECTOR_SYMBOLS[:FullInfiniteProjector] = FullInfiniteProjector
 
 """
-    compute_projector(enlarged_corners, coordinate, alg::ProjectorAlgorithm)
+    compute_projector(enlarged_corners, alg::ProjectorAlgorithm)
 
 Determine left and right projectors at the bond given determined by the enlarged corners
-and the given coordinate using the specified `alg`.
+using the specified `alg`.
 """
-function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjector)
+function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
-    svd_alg = decomposition_algorithm(alg, coordinate)
-    U, S, V, info = svd_trunc!(halfinf / norm(halfinf), svd_alg; trunc = alg.trunc)
+    svd_alg = decomposition_algorithm(alg)
+    U, S, V, truncation_error = svd_trunc!(halfinf / norm(halfinf), svd_alg)
+
+    # get some decomposition info
+    truncation_error = truncation_error / norm(S) # normalize truncation error
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -197,18 +190,20 @@ function compute_projector(enlarged_corners, coordinate, alg::HalfInfiniteProjec
         end
     end
 
-    @reset info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
-    return (P_left, P_right), (; U, S, V, info...)
+    return (P_left, P_right), (; U, S, V, truncation_error)
 end
-function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjector)
+function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
     halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
 
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
-    svd_alg = decomposition_algorithm(alg, coordinate)
-    U, S, V, info = svd_trunc!(fullinf / norm(fullinf), svd_alg; trunc = alg.trunc)
+    svd_alg = decomposition_algorithm(alg)
+    U, S, V, truncation_error = svd_trunc!(fullinf / norm(fullinf), svd_alg)
+
+    # get some decomposition info
+    truncation_error = truncation_error / norm(S) # normalize truncation error
 
     # Check for degenerate singular values
     Zygote.isderiving() && ignore_derivatives() do
@@ -218,7 +213,6 @@ function compute_projector(enlarged_corners, coordinate, alg::FullInfiniteProjec
         end
     end
 
-    @reset info.truncation_error = info.truncation_error / norm(S) # normalize truncation error
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
-    return (P_left, P_right), (; U, S, V, info...)
+    return (P_left, P_right), (; U, S, V, truncation_error)
 end

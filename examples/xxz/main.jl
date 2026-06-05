@@ -71,9 +71,9 @@ From this point onwards it's business as usual: Create an initial PEPS and envir
 (using the symmetric spaces), specify the algorithmic parameters and optimize:
 """
 
-boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
-gradient_alg = (; tol = 1.0e-6, alg = :eigsolver, maxiter = 10, iterscheme = :diffgauge)
-optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 85, ls_maxiter = 3, ls_maxfg = 3)
+boundary_alg = (; tol = 1.0e-8, alg = :SimultaneousCTMRG, trunc = (; alg = :FixedSpaceTruncation))
+gradient_alg = (; tol = 1.0e-6, maxiter = 10, solver_alg = (; alg = :Arnoldi))
+optimizer_alg = (; tol = 1.0e-4, alg = :LBFGS, maxiter = 85, ls_maxiter = 3, ls_maxfg = 3)
 
 peps₀ = InfinitePEPS(randn, ComplexF64, physical_spaces, virtual_spaces)
 env₀, = leading_boundary(CTMRGEnv(peps₀, V_env), peps₀; boundary_alg...);
