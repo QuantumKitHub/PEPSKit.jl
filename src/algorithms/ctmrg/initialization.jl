@@ -37,7 +37,7 @@ function initialize_ctmrg_environment(
         alg::ApplicationInitialization,
         env0::ProductStateEnv = ProductStateEnv(alg.f, elt, n)
     )
-    dummy_alg = CTMRGAlgorithm(; alg = :simultaneous, trunc = (; alg = :notrunc))
+    dummy_alg = SimultaneousCTMRG(trunc = (; alg = :notrunc))
     env, = ctmrg_iteration(n, CTMRGEnv(env0), dummy_alg)
     return env
 end
