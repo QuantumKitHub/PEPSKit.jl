@@ -74,6 +74,7 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- Fix undefined `dir` variable in error message in `TensorMap(::EnlargedCorner)` (#392)
 - Ensure MPSKit overloads accept all keywords to intercept all dispatches (#374)
 - `FixedSpaceTruncation` for simple update (#360)
 - Stack overflow in `renormalize_southwest_corner` (#344)
