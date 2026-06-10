@@ -81,45 +81,45 @@ end
 ````
 [ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 2, 1 => 2)
-[ Info: SU iter 1      : E ≈ -1.45315, |Δλ| = 1.314e+00. Time = 32.087 s/it
+[ Info: SU iter 1      : E ≈ -1.45198, |Δλ| = 1.308e+00. Time = 34.074 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 2, 1 => 2)
-[ Info: SU iter 982    : E ≈ -3.67046, |Δλ| = 9.978e-08. Time = 0.007 s/it
+[ Info: SU iter 981    : E ≈ -3.67048, |Δλ| = 9.864e-08. Time = 0.008 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Time evolution finished in 106.57 s
+[ Info: Time evolution finished in 116.48 s
 [ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 6, 1 => 6)
-[ Info: SU iter 1      : E ≈ -3.67192, |Δλ| = 2.047e-03. Time = 0.479 s/it
+[ Info: SU iter 1      : E ≈ -3.67194, |Δλ| = 2.047e-03. Time = 0.138 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 6, 1 => 6)
-[ Info: SU iter 584    : E ≈ -3.68642, |Δλ| = 9.946e-08. Time = 0.073 s/it
+[ Info: SU iter 584    : E ≈ -3.68643, |Δλ| = 9.946e-08. Time = 0.161 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Time evolution finished in 80.60 s
+[ Info: Time evolution finished in 90.59 s
 [ Info: --- Time evolution (simple update), dt = 0.001 ---
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 1      : E ≈ -3.69034, |Δλ| = 1.720e-02. Time = 0.094 s/it
+[ Info: SU iter 1      : E ≈ -3.69020, |Δλ| = 1.724e-02. Time = 0.126 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 2000   : E ≈ -3.69206, |Δλ| = 1.473e-07. Time = 0.026 s/it
+[ Info: SU iter 2000   : E ≈ -3.69206, |Δλ| = 1.611e-07. Time = 0.037 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 3816   : E ≈ -3.69206, |Δλ| = 9.988e-09. Time = 0.025 s/it
+[ Info: SU iter 3893   : E ≈ -3.69206, |Δλ| = 9.986e-09. Time = 0.049 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Time evolution finished in 144.03 s
+[ Info: Time evolution finished in 192.95 s
 [ Info: --- Time evolution (simple update), dt = 0.0004 ---
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 1      : E ≈ -3.69262, |Δλ| = 3.239e-04. Time = 0.025 s/it
+[ Info: SU iter 1      : E ≈ -3.69262, |Δλ| = 3.303e-04. Time = 0.079 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 2000   : E ≈ -3.69263, |Δλ| = 1.902e-08. Time = 0.024 s/it
+[ Info: SU iter 2000   : E ≈ -3.69263, |Δλ| = 2.128e-08. Time = 0.062 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 3035   : E ≈ -3.69263, |Δλ| = 9.995e-09. Time = 0.025 s/it
+[ Info: SU iter 3243   : E ≈ -3.69263, |Δλ| = 9.997e-09. Time = 0.079 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Time evolution finished in 116.11 s
+[ Info: Time evolution finished in 151.95 s
 [ Info: --- Time evolution (simple update), dt = 0.0001 ---
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 1      : E ≈ -3.69291, |Δλ| = 1.619e-04. Time = 0.024 s/it
+[ Info: SU iter 1      : E ≈ -3.69291, |Δλ| = 1.650e-04. Time = 0.048 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 2000   : E ≈ -3.69292, |Δλ| = 1.582e-08. Time = 0.024 s/it
+[ Info: SU iter 2000   : E ≈ -3.69292, |Δλ| = 1.723e-08. Time = 0.064 s/it
 [ Info: Space of x-weight at [1, 1] = Vect[FermionParity](0 => 3, 1 => 5)
-[ Info: SU iter 2992   : E ≈ -3.69292, |Δλ| = 9.996e-09. Time = 0.024 s/it
+[ Info: SU iter 3180   : E ≈ -3.69292, |Δλ| = 1.000e-08. Time = 0.033 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Time evolution finished in 111.09 s
+[ Info: Time evolution finished in 154.26 s
 
 ````
 
@@ -144,10 +144,10 @@ end
 ````
 
 ````
-[ Info: CTMRG init:	obj = +2.013336877050e+00	err = 1.0000e+00
-[ Info: CTMRG conv 7:	obj = +1.786512545441e+00	err = 1.7886034501e-09	time = 9.10 sec
-[ Info: CTMRG init:	obj = +1.786512545441e+00	err = 1.0000e+00
-[ Info: CTMRG conv 7:	obj = +1.789897407320e+00	err = 3.2428564433e-10	time = 32.81 sec
+[ Info: CTMRG init:	obj = +2.008742904726e+00	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.784002050099e+00	err = 1.9824329904e-09	time = 9.11 sec
+[ Info: CTMRG init:	obj = +1.784002050099e+00	err = 1.0000e+00
+[ Info: CTMRG conv 7:	obj = +1.788552507317e+00	err = 3.7523657235e-10	time = 35.67 sec
 
 ````
 
@@ -160,7 +160,7 @@ E = expectation_value(peps, H, env) / (Nr * Nc)
 ````
 
 ````
-E = -3.6524975267322732
+E = -3.652295654459533
 
 ````
 
@@ -175,7 +175,7 @@ E_exact = Es_exact[U] - U / 2
 ````
 
 ````
-(E - E_exact) / abs(E_exact) = 0.001149252951493588
+(E - E_exact) / abs(E_exact) = 0.0012044590861889082
 
 ````
 

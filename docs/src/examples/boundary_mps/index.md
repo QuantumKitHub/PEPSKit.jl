@@ -163,7 +163,7 @@ mps, env, ϵ = leading_boundary(mps₀, T, VUMPS(; tol = 1.0e-6, verbosity = 2))
 
 ````
 [ Info: VUMPS init:	obj = +1.674563752306e+00 +3.035692829590e+00im	err = 7.5576e-01
-[ Info: VUMPS conv 120:	obj = +6.831610878219e+00 -9.723041888467e-09im	err = 9.5233523833e-07	time = 6.10 sec
+[ Info: VUMPS conv 120:	obj = +6.831610878219e+00 -9.723042752603e-09im	err = 9.5233523847e-07	time = 14.39 sec
 
 ````
 
@@ -189,8 +189,8 @@ norm_ctmrg = abs(norm(ψ, env_ctmrg))
 
 ````
 [ Info: CTMRG init:	obj = -1.495741317009e+01 +3.091851579630e-01im	err = 1.0000e+00
-[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595115e-07	time = 0.20 sec
-abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.0674719949350553e-6
+[ Info: CTMRG conv 30:	obj = +6.831603585666e+00	err = 6.2262595179e-07	time = 1.01 sec
+abs(norm_vumps - norm_ctmrg) / norm_vumps = 1.067471991814813e-6
 
 ````
 
@@ -230,11 +230,11 @@ norm_2x2_ctmrg = abs(norm(ψ_2x2, env_ctmrg_2x2))
 
 ````
 [ Info: VUMPS init:	obj = +8.149302834396e+02 -8.860408249120e+01im	err = 8.6172e-01
-┌ Warning: VUMPS cancel 200:	obj = +1.046766793317e+05 -1.493448261103e+02im	err = 3.7375841028e-02	time = 11.59 sec
-└ @ MPSKit ~/.julia/packages/MPSKit/9ITGf/src/algorithms/groundstate/vumps.jl:76
-[ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510262e+01im	err = 1.0000e+00
-[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6993512829e-07	time = 0.76 sec
-abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.00012815051487696121
+┌ Warning: VUMPS cancel 200:	obj = +1.049032581091e+05 -2.158153745842e+01im	err = 5.7518793386e-02	time = 34.35 sec
+└ @ MPSKit ~/.julia/packages/MPSKit/7FTCR/src/algorithms/groundstate/vumps.jl:77
+[ Info: CTMRG init:	obj = -1.240261729401e+02 -1.672150510263e+01im	err = 1.0000e+00
+[ Info: CTMRG conv 47:	obj = +1.046633714846e+05	err = 1.6991865433e-07	time = 5.37 sec
+abs(norm_2x2_vumps - norm_2x2_ctmrg) / norm_2x2_vumps = 0.00228676252455718
 
 ````
 
@@ -297,9 +297,9 @@ norm_pepo = abs(prod(expectation_value(mps_pepo, transfer_pepo)));
 
 ````
 [ Info: VUMPS init:	obj = +2.655321432467e+01 +3.760603778362e-01im	err = 8.9759e-01
-┌ Warning: VUMPS cancel 200:	obj = +9.515362005489e+01 -2.503860489548e+00im	err = 2.3598739398e-01	time = 33.35 sec
-└ @ MPSKit ~/.julia/packages/MPSKit/9ITGf/src/algorithms/groundstate/vumps.jl:76
-norm_pepo = 95.18655749054498
+┌ Warning: VUMPS cancel 200:	obj = +6.799417836786e+01 -5.270670403327e+00im	err = 6.1890626663e-01	time = 1.40 min
+└ @ MPSKit ~/.julia/packages/MPSKit/7FTCR/src/algorithms/groundstate/vumps.jl:77
+norm_pepo = 68.19815436227469
 
 ````
 
