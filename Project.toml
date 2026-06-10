@@ -66,6 +66,4 @@ Zygote = "0.6, 0.7"
 julia = "1.10"
 
 [sources]
-TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev="main"}
 MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev="ksh/cu2"}
-MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev="ksh/bump"}
