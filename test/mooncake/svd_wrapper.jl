@@ -119,7 +119,7 @@ symm_R = randn(dtype, space(symm_r))
     @test g_full[2] ≈ g_trunc[2] rtol = rtol
     @test g_full[2] ≈ g_iter[2] rtol = rtol
     @test g_trunc[2] ≈ g_iter[2] rtol = rtol
-    
+
     full_lossfun = A -> lossfun(A, full_alg, symm_R, symm_trspace)
     trunc_lossfun = A -> lossfun(A, trunc_alg, symm_R, symm_trspace)
     iter_lossfun = A -> lossfun(A, iter_alg, symm_R, symm_trspace)
@@ -137,7 +137,7 @@ symm_R = randn(dtype, space(symm_r))
     @test g_trunc_tr[2] ≈ g_iter_tr[2] rtol = rtol
 
     iter_alg_fallback = @set iter_alg.fwd_alg.fallback_threshold = 0.4  # Do dense decomposition in one block, sparse one in the other
-    
+
     fb_lossfun = A -> lossfun(A, iter_alg_fallback, symm_R, symm_trspace)
     fb_rrule = Mooncake.build_rrule(fb_lossfun, symm_r)
     l_iter_fb, g_iter_fb = Mooncake.value_and_gradient!!(fb_rrule, fb_lossfun, symm_r)
@@ -159,7 +159,7 @@ end
 
     no_broadening_no_cutoff_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-30
     small_broadening_alg = @set alg.rrule_alg.degeneracy_atol = 1.0e-13
-    
+
     only_lossfun = A -> lossfun(A, alg, symm_R, symm_trspace)
     no_broadening_lossfun = A -> lossfun(A, no_broadening_no_cutoff_alg, symm_R, symm_trspace)
     small_broadening_lossfun = A -> lossfun(A, small_broadening_alg, symm_R, symm_trspace)
