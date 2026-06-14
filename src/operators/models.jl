@@ -186,15 +186,17 @@ end
 """
     pwave_superconductor([T=ComplexF64,] lattice::InfiniteSquare; t=1, μ=2, Δ=1)
 
-Square lattice ``p``-wave superconductor model, defined by the Hamiltonian
+Square lattice ``(p + ip)``-wave superconductor model, defined by the Hamiltonian
 
 ```math
     H = -\\sum_{\\langle i,j \\rangle} \\left( t c_i^\\dagger c_j +
-    \\Delta c_i c_j + \\text{h.c.} \\right) - \\mu \\sum_i n_i,
+    \\Delta_{ij} c_i c_j + \\text{h.c.} \\right) - \\mu \\sum_i n_i,
 ```
 
-where ``t`` is the hopping amplitude, ``\\Delta`` specifies the superconducting gap, ``\\mu``
+where ``t`` is the hopping amplitude, ``\\Delta_{ij}`` specifies the superconducting gap, ``\\mu``
 is the chemical potential, and ``n_i = c_i^\\dagger c_i`` is the fermionic number operator.
+For ``p + ip``-wave, ``\\Delta_{ij} = \\Delta`` on horizontal bonds,
+and ``i \\Delta`` on vertical bonds.
 """
 function pwave_superconductor(lattice::InfiniteSquare; kwargs...)
     return pwave_superconductor(ComplexF64, lattice; kwargs...)
@@ -203,22 +205,19 @@ function pwave_superconductor(
         T::Type{<:Number}, lattice::InfiniteSquare;
         t::Number = 1, μ::Number = 2, Δ::Number = 1
     )
-    physical_space = Vect[FermionParity](0 => 1, 1 => 1)
+    physical_space = FO.fermion_space(Trivial)
     spaces = fill(physical_space, (lattice.Nrows, lattice.Ncols))
+    # hopping and pairing operators
+    hopp = -t * FO.f_hopping(T, Trivial)
+    pair = FO.f_min_f_min(T, Trivial)
+    pair_x, pair_y = Δ * pair, im * Δ * pair
 
     # on-site
-    h0 = zeros(T, physical_space ← physical_space)
-    block(h0, FermionParity(1)) .= -μ
-
+    h0 = -μ * FO.f_num(T, Trivial)
     # two-site (x-direction)
-    hx = zeros(T, physical_space^2 ← physical_space^2)
-    block(hx, FermionParity(0)) .= [0 -Δ; -Δ 0]
-    block(hx, FermionParity(1)) .= [0 -t; -t 0]
-
+    hx = hopp + (pair_x + pair_x')
     # two-site (y-direction)
-    hy = zeros(T, physical_space^2 ← physical_space^2)
-    block(hy, FermionParity(0)) .= [0 Δ * im; -Δ * im 0]
-    block(hy, FermionParity(1)) .= [0 -t; -t 0]
+    hx = hopp + (pair_y + pair_y')
 
     x_neighbors = filter(n -> n[2].I[2] > n[1].I[2], nearest_neighbours(lattice))
     y_neighbors = filter(n -> n[2].I[1] > n[1].I[1], nearest_neighbours(lattice))
