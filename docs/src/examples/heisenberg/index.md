@@ -40,8 +40,7 @@ using TensorKit, PEPSKit
 ## Defining the Heisenberg Hamiltonian
 
 To create the sublattice rotated Heisenberg Hamiltonian on an infinite square lattice, we use
-the `heisenberg_XYZ` method from [MPSKitModels](https://quantumkithub.github.io/MPSKitModels.jl/dev/)
-which is redefined for the `InfiniteSquare` and reexported in PEPSKit:
+the `heisenberg_XYZ` model defined in PEPSKit for the `InfiniteSquare` lattice:
 
 ````julia
 H = heisenberg_XYZ(InfiniteSquare(); Jx = -1, Jy = 1, Jz = -1)

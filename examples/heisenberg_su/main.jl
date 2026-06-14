@@ -19,7 +19,7 @@ Let's get started by seeding the RNG and importing all required modules:
 using Random
 import Statistics: mean
 using TensorKit, PEPSKit
-import MPSKitModels: S_x, S_y, S_z, S_exchange
+import TensorKitTensors.SpinOperators as SO
 Random.seed!(0);
 
 md"""
@@ -112,9 +112,9 @@ function compute_mags(peps::InfinitePEPS, env::CTMRGEnv)
     ## detect symmetry on physical axis
     symm = sectortype(space(peps.A[1, 1]))
     if symm == Trivial
-        S_ops = real.([S_x(symm), im * S_y(symm), S_z(symm)])
+        S_ops = real.([SO.S_x(symm), im * SO.S_y(symm), SO.S_z(symm)])
     elseif symm == U1Irrep
-        S_ops = real.([S_z(symm)]) ## only Sz preserves <Sz>
+        S_ops = real.([SO.S_z(symm)]) ## only Sz preserves <Sz>
     end
 
     return map(Iterators.product(axes(peps, 1), axes(peps, 2), S_ops)) do (r, c, S)

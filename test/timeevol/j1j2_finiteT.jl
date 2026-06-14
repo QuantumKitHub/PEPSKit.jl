@@ -1,7 +1,7 @@
 using Test
 using LinearAlgebra
 using TensorKit
-import MPSKitModels: σˣ, σᶻ
+import TensorKitTensors.SpinOperators as SO
 using PEPSKit
 
 # Benchmark energy from high-temperature expansion

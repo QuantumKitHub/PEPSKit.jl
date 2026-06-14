@@ -22,15 +22,15 @@ function nearest_neighbour_hamiltonian(
 end
 
 #
-## MPSKitModels.jl re-exports
+## Model definitions
 #
 
-function MPSKitModels.transverse_field_ising(
+function transverse_field_ising(
         T::Type{<:Number}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
         J = 1.0, g = 1.0,
     )
-    ZZ = rmul!(σᶻᶻ(T, S), -J)
-    X = rmul!(σˣ(T, S), g * -J)
+    ZZ = rmul!(4 * SO.S_z_S_z(T, S), -J)
+    X = rmul!(SO.σˣ(T, S), g * -J)
     spaces = fill(domain(X)[1], (lattice.Nrows, lattice.Ncols))
     return LocalOperator(
         spaces,
@@ -39,31 +39,31 @@ function MPSKitModels.transverse_field_ising(
     )
 end
 
-function MPSKitModels.heisenberg_XYZ(lattice::InfiniteSquare; kwargs...)
+function heisenberg_XYZ(lattice::InfiniteSquare; kwargs...)
     return heisenberg_XYZ(ComplexF64, Trivial, lattice; kwargs...)
 end
-function MPSKitModels.heisenberg_XYZ(
+function heisenberg_XYZ(
         T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
         Jx = -1.0, Jy = 1.0, Jz = -1.0, spin = 1 // 2,
     )
     term =
-        rmul!(S_xx(T, S; spin = spin), Jx) +
-        rmul!(S_yy(T, S; spin = spin), Jy) +
-        rmul!(S_zz(T, S; spin = spin), Jz)
+        rmul!(SO.S_x_S_x(T, S; spin = spin), Jx) +
+        rmul!(SO.S_y_S_y(T, S; spin = spin), Jy) +
+        rmul!(SO.S_z_S_z(T, S; spin = spin), Jz)
     spaces = fill(domain(term)[1], (lattice.Nrows, lattice.Ncols))
     return LocalOperator(
         spaces, (neighbor => term for neighbor in nearest_neighbours(lattice))...
     )
 end
 
-function MPSKitModels.heisenberg_XXZ(
+function heisenberg_XXZ(
         T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
         J = 1.0, Delta = 1.0, spin = 1
     )
     h =
         J * (
-        (S_plusmin(T, S; spin = spin) + S_minplus(T, S; spin = spin)) / 2 +
-            Delta * S_zz(T, S; spin = spin)
+        (SO.S_plus_S_min(T, S; spin = spin) + SO.S_min_S_plus(T, S; spin = spin)) / 2 +
+            Delta * SO.S_z_S_z(T, S; spin = spin)
     )
     spaces = fill(domain(h)[1], (lattice.Nrows, lattice.Ncols))
     return LocalOperator(
@@ -71,33 +71,34 @@ function MPSKitModels.heisenberg_XXZ(
     )
 end
 
-function MPSKitModels.hubbard_model(
+function hubbard_model(
         T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
         t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
     )
     # TODO: just add this
     @assert n == 0 "Currently no support for imposing a fixed particle number"
-    N = MPSKitModels.e_number(T, particle_symmetry, spin_symmetry)
+    N = Hub.e_num(T, particle_symmetry, spin_symmetry)
     pspace = space(N, 1)
     unit = TensorKit.id(pspace)
     hopping =
-        MPSKitModels.e⁺e⁻(T, particle_symmetry, spin_symmetry) +
-        MPSKitModels.e⁻e⁺(T, particle_symmetry, spin_symmetry)
-    interaction_term = MPSKitModels.nꜛnꜜ(T, particle_symmetry, spin_symmetry)
+        Hub.e_plus_e_min(T, particle_symmetry, spin_symmetry) +
+        Hub.e_min_e_plus(T, particle_symmetry, spin_symmetry)
+    interaction_term = Hub.ud_num(T, particle_symmetry, spin_symmetry)
     site_term = U * interaction_term - mu * N
     h = (-t) * hopping + (1 / 4) * (site_term ⊗ unit + unit ⊗ site_term)
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
 end
 
-function MPSKitModels.bose_hubbard_model(
+function bose_hubbard_model(
         elt::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
         cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
     )
     hopping_term =
-        a_plusmin(elt, symmetry; cutoff = cutoff) + a_minplus(elt, symmetry; cutoff = cutoff)
-    N = a_number(elt, symmetry; cutoff = cutoff)
-    interaction_term = MPSKitModels.contract_onesite(N, N - id(domain(N)))
+        BO.b_plus_b_min(elt, symmetry; cutoff = cutoff) +
+        BO.b_min_b_plus(elt, symmetry; cutoff = cutoff)
+    N = BO.b_num(elt, symmetry; cutoff = cutoff)
+    interaction_term = N * (N - id(domain(N)))
 
     spaces = fill(space(N, 1), (lattice.Nrows, lattice.Ncols))
 
@@ -120,7 +121,7 @@ function MPSKitModels.bose_hubbard_model(
     return H
 end
 
-function MPSKitModels.tj_model(
+function tj_model(
         T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
         t = 2.5, J = 1.0, mu = 0.0, slave_fermion::Bool = false,
@@ -142,7 +143,7 @@ function MPSKitModels.tj_model(
 end
 
 #
-## Models not yet defined in MPSKitModels
+## Additional models
 #
 
 """
@@ -168,9 +169,9 @@ function j1_j2_model(
         T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
         J1 = 1.0, J2 = 1.0, spin = 1 // 2, sublattice = true,
     )
-    term_AA = S_exchange(T, S; spin)
+    term_AA = SO.S_exchange(T, S; spin)
     term_AB = if sublattice
-        -S_xx(T, S; spin) + S_yy(T, S; spin) - S_zz(T, S; spin)  # Apply sublattice rotation
+        -SO.S_x_S_x(T, S; spin) + SO.S_y_S_y(T, S; spin) - SO.S_z_S_z(T, S; spin)  # Apply sublattice rotation
     else
         term_AA
     end

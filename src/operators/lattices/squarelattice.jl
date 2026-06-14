@@ -13,7 +13,7 @@ $(TYPEDFIELDS)
 
 By default, an infinite square with a (1, 1)-unitcell is constructed.
 """
-struct InfiniteSquare <: AbstractLattice{2}
+struct InfiniteSquare
     Nrows::Int
     Ncols::Int
     function InfiniteSquare(Nrows::Integer = 1, Ncols::Integer = 1)
