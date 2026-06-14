@@ -38,6 +38,9 @@ where ``\\sigma^i`` are the spin-1/2 Pauli operators.
 
 By default, the model is defined with `Trivial` symmetry and with `ComplexF64` entries.
 """
+function transverse_field_ising(lattice::InfiniteSquare; kwargs...)
+    return transverse_field_ising(ComplexF64, Trivial, lattice; kwargs...)
+end
 function transverse_field_ising(
         T::Type{<:Number}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
         J = 1.0, g = 1.0,
@@ -97,6 +100,9 @@ By default, the model is defined with `Trivial` symmetry and with `ComplexF64` e
 
 See also [`heisenberg_XYZ`](@ref).
 """
+function heisenberg_XXZ(lattice::InfiniteSquare; kwargs...)
+    return heisenberg_XXZ(ComplexF64, Trivial, lattice; kwargs...)
+end
 function heisenberg_XXZ(
         T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
         J = 1.0, Delta = 1.0, spin = 1
@@ -127,6 +133,9 @@ fermionic number operator.
 
 By default, the model is defined without any symmetries and with `ComplexF64` entries.
 """
+function hubbard_model(lattice::InfiniteSquare; kwargs...)
+    return hubbard_model(ComplexF64, Trivial, Trivial, lattice; kwargs...)
+end
 function hubbard_model(
         T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
@@ -160,6 +169,9 @@ If `symmetry` is `U1Irrep`, a fixed (half-integer) particle number density `n` c
 
 By default, the model is defined with `Trivial` symmetry and `ComplexF64` entries.
 """
+function bose_hubbard_model(lattice::InfiniteSquare; kwargs...)
+    return bose_hubbard_model(ComplexF64, Trivial, lattice; kwargs...)
+end
 function bose_hubbard_model(
         T::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
         cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
@@ -206,13 +218,16 @@ the no-double-occupancy subspace.
 
 By default, the model is defined without any symmetries and with `ComplexF64` entries.
 """
+function tj_model(lattice::InfiniteSquare; kwargs...)
+    return tj_model(ComplexF64, Trivial, Trivial, lattice; kwargs...)
+end
 function tj_model(
         T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
         t = 2.5, J = 1.0, mu = 0.0, slave_fermion::Bool = false,
     )
     hopping = tJ.e_hopping(T, particle_symmetry, spin_symmetry; slave_fermion)
-    num = tJ.e_number(T, particle_symmetry, spin_symmetry; slave_fermion)
+    num = tJ.e_num(T, particle_symmetry, spin_symmetry; slave_fermion)
     heis = tJ.S_exchange(T, particle_symmetry, spin_symmetry; slave_fermion) -
         (1 / 4) * (num ⊗ num)
     pspace = space(num, 1)
