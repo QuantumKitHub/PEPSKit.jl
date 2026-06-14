@@ -25,6 +25,19 @@ end
 ## Model definitions
 #
 
+"""
+    transverse_field_ising([T::Type{<:Number}], [S::Union{Type{Trivial}, Type{Z2Irrep}}],
+                           lattice::InfiniteSquare; J=1.0, g=1.0)
+
+`LocalOperator` for the [transverse-field Ising model](https://en.wikipedia.org/wiki/Transverse-field_Ising_model)
+on an infinite square lattice, as defined by
+```math
+H = -J\\left(\\sum_{\\langle i,j \\rangle} \\sigma^z_i \\sigma^z_j + g \\sum_{i} \\sigma^x_i \\right)
+```
+where ``\\sigma^i`` are the spin-1/2 Pauli operators.
+
+By default, the model is defined with `Trivial` symmetry and with `ComplexF64` entries.
+"""
 function transverse_field_ising(
         T::Type{<:Number}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
         J = 1.0, g = 1.0,
@@ -39,6 +52,21 @@ function transverse_field_ising(
     )
 end
 
+"""
+    heisenberg_XYZ([T::Type{<:Number}], [S::Type{<:Sector}], lattice::InfiniteSquare;
+                   Jx=-1.0, Jy=1.0, Jz=-1.0, spin=1//2)
+
+`LocalOperator` for the XYZ Heisenberg model on an infinite square lattice, as defined by
+```math
+H = \\sum_{\\langle i,j \\rangle} \\left( J_x S_i^x S_j^x + J_y S_i^y S_j^y + J_z S_i^z S_j^z \\right)
+```
+
+By default, the model uses the antiferromagnetic convention ``(J_x, J_y, J_z) = (-1, 1, -1)``
+which is suitable for a single-site unit cell ground state after a sublattice rotation.
+It is defined with `Trivial` symmetry and with `ComplexF64` entries.
+
+See also [`heisenberg_XXZ`](@ref).
+"""
 function heisenberg_XYZ(lattice::InfiniteSquare; kwargs...)
     return heisenberg_XYZ(ComplexF64, Trivial, lattice; kwargs...)
 end
@@ -56,6 +84,19 @@ function heisenberg_XYZ(
     )
 end
 
+"""
+    heisenberg_XXZ([T::Type{<:Number}], [S::Type{<:Sector}], lattice::InfiniteSquare;
+                   J=1.0, Delta=1.0, spin=1)
+
+`LocalOperator` for the XXZ Heisenberg model on an infinite square lattice, as defined by
+```math
+H = J \\sum_{\\langle i,j \\rangle} \\left( S_i^x S_j^x + S_i^y S_j^y + \\Delta S_i^z S_j^z \\right)
+```
+
+By default, the model is defined with `Trivial` symmetry and with `ComplexF64` entries.
+
+See also [`heisenberg_XYZ`](@ref).
+"""
 function heisenberg_XXZ(
         T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
         J = 1.0, Delta = 1.0, spin = 1
@@ -71,6 +112,21 @@ function heisenberg_XXZ(
     )
 end
 
+"""
+    hubbard_model([T::Type{<:Number}], [particle_symmetry::Type{<:Sector}],
+                  [spin_symmetry::Type{<:Sector}], lattice::InfiniteSquare;
+                  t=1.0, U=1.0, mu=0.0, n=0)
+
+`LocalOperator` for the Hubbard model on an infinite square lattice, as defined by
+```math
+H = -t \\sum_{\\langle i,j \\rangle} \\sum_{\\sigma} \\left( e_{i,\\sigma}^\\dagger e_{j,\\sigma} + e_{j,\\sigma}^\\dagger e_{i,\\sigma} \\right)
+    + U \\sum_i n_{i,\\uparrow} n_{i,\\downarrow} - \\mu \\sum_i n_i
+```
+where ``\\sigma \\in \\{\\uparrow, \\downarrow\\}`` is a spin index and ``n`` is the
+fermionic number operator.
+
+By default, the model is defined without any symmetries and with `ComplexF64` entries.
+"""
 function hubbard_model(
         T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
@@ -88,6 +144,22 @@ function hubbard_model(
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
 end
 
+"""
+    bose_hubbard_model([elt::Type{<:Number}], [symmetry::Type{<:Sector}],
+                       lattice::InfiniteSquare; cutoff=5, t=1.0, U=1.0, mu=0.0, n=0)
+
+`LocalOperator` for the Bose-Hubbard model on an infinite square lattice, as defined by
+```math
+H = -t \\sum_{\\langle i,j \\rangle} \\left( a_i^\\dagger a_j + a_j^\\dagger a_i \\right)
+    - \\mu \\sum_i N_i + \\frac{U}{2} \\sum_i N_i(N_i - 1)
+```
+where ``N = a^\\dagger a`` is the bosonic number operator.
+
+The Hilbert space is truncated such that at maximum `cutoff` bosons can occupy a single site.
+If `symmetry` is `U1Irrep`, a fixed (half-integer) particle number density `n` can be imposed.
+
+By default, the model is defined with `Trivial` symmetry and `ComplexF64` entries.
+"""
 function bose_hubbard_model(
         T::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
         cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
@@ -117,6 +189,23 @@ function bose_hubbard_model(
     return H
 end
 
+"""
+    tj_model([T::Type{<:Number}], [particle_symmetry::Type{<:Sector}],
+             [spin_symmetry::Type{<:Sector}], lattice::InfiniteSquare;
+             t=2.5, J=1.0, mu=0.0, slave_fermion=false)
+
+`LocalOperator` for the t-J model on an infinite square lattice, as defined by
+```math
+H = -t \\sum_{\\langle i,j \\rangle, \\sigma}
+    (\\tilde{e}^\\dagger_{i,\\sigma} \\tilde{e}_{j,\\sigma} + h.c.)
+    + J \\sum_{\\langle i,j \\rangle}(\\mathbf{S}_i \\cdot \\mathbf{S}_j - \\frac{1}{4} n_i n_j)
+    - \\mu \\sum_i n_i
+```
+where ``\\tilde{e}_{i,\\sigma}`` is the electron operator with spin ``\\sigma`` restricted to
+the no-double-occupancy subspace.
+
+By default, the model is defined without any symmetries and with `ComplexF64` entries.
+"""
 function tj_model(
         T::Type{<:Number}, particle_symmetry::Type{<:Sector}, spin_symmetry::Type{<:Sector},
         lattice::InfiniteSquare;
@@ -207,7 +296,7 @@ function pwave_superconductor(
     # two-site (x-direction)
     hx = hopp + (pair_x + pair_x')
     # two-site (y-direction)
-    hx = hopp + (pair_y + pair_y')
+    hy = hopp + (pair_y + pair_y')
 
     x_neighbors = filter(n -> n[2].I[2] > n[1].I[2], nearest_neighbours(lattice))
     y_neighbors = filter(n -> n[2].I[1] > n[1].I[1], nearest_neighbours(lattice))
