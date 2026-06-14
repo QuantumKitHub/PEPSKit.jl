@@ -9,11 +9,6 @@ already implemented models.
 In order to define custom Hamiltonians, we leverage the operator building blocks provided by
 [TensorKitTensors.jl](https://quantumkithub.github.io/TensorKitTensors.jl/stable/), which offers
 pre-defined symmetric tensors for spin, boson, fermion, and Hubbard systems.
-In particular, we use the submodules [`SpinOperators`](@extref TensorKitTensors SpinOperators),
-[`BosonOperators`](@extref TensorKitTensors BosonOperators),
-[`FermionOperators`](@extref TensorKitTensors FermionOperators),
-[`HubbardOperators`](@extref TensorKitTensors HubbardOperators), and
-[`TJOperators`](@extref TensorKitTensors TJOperators) to construct the local interaction tensors.
 In order to specify the lattice on which the Hamiltonian is defined, we construct
 two-dimensional lattice types such as `InfiniteSquare`.
 Note that so far, all models are defined on infinite square lattices, see [`InfiniteSquare`](@ref),
@@ -46,7 +41,7 @@ end
 
 This provides a good recipe for defining a model:
 
-1. Define the locally-acting tensors as `TensorMap`s using [`TensorKitTensors`](@extref) operators.
+1. Define the locally-acting tensors as `TensorMap`s using `TensorKitTensors` operators.
 2. Construct a matrix of the physical spaces these `TensorMap`s act on based on the lattice geometry.
 3. Return a `LocalOperator` where we specify on which sites (e.g. on-site, nearest neighbor, etc.) the local tensors act.
 
