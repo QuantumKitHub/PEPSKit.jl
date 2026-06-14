@@ -103,8 +103,10 @@ unitcells = [(1, 1), (2, 3), (3, 3), (4, 3)]
 end
 
 op_1x1 = LocalOperator([ℂ^2;;], ((1, 1), (1, 2)) => randn(ℂ^2, ℂ^2) ⊗ randn(ℂ^2, ℂ^2))
+# J1-J2 only has spin U(1) symmetry without sub-lattice rotation
+# See https://github.com/QuantumKitHub/MPSKitModels.jl/issues/57
 op_2x2 = add_physical_charge(
-    j1_j2_model(ComplexF64, U1Irrep, InfiniteSquare(2, 2)),
+    j1_j2_model(ComplexF64, U1Irrep, InfiniteSquare(2, 2); sublattice = false),
     [
         U1Irrep(-1 // 2) U1Irrep(1 // 2)
         U1Irrep(1 // 2) U1Irrep(-1 // 2)
