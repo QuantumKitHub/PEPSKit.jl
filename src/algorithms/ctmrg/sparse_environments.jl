@@ -76,7 +76,7 @@ function TensorKit.TensorMap(Q::EnlargedCorner)
     elseif Q.dir == SOUTHWEST
         return enlarge_southwest_corner(Q.E_1, Q.C, Q.E_2, Q.A)
     else
-        throw(ArgumentError(lazy"Invalid direction $dir"))
+        throw(ArgumentError(lazy"Invalid direction $(Q.dir)"))
     end
 end
 
