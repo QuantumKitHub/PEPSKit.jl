@@ -81,9 +81,7 @@ function hubbard_model(
     N = Hub.e_num(T, particle_symmetry, spin_symmetry)
     pspace = space(N, 1)
     unit = TensorKit.id(pspace)
-    hopping =
-        Hub.e_plus_e_min(T, particle_symmetry, spin_symmetry) +
-        Hub.e_min_e_plus(T, particle_symmetry, spin_symmetry)
+    hopping = Hub.e_hopping(T, particle_symmetry, spin_symmetry)
     interaction_term = Hub.ud_num(T, particle_symmetry, spin_symmetry)
     site_term = U * interaction_term - mu * N
     h = (-t) * hopping + (1 / 4) * (site_term ⊗ unit + unit ⊗ site_term)
@@ -91,13 +89,11 @@ function hubbard_model(
 end
 
 function bose_hubbard_model(
-        elt::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
+        T::Type{<:Number}, symmetry::Type{<:Sector}, lattice::InfiniteSquare;
         cutoff::Integer = 5, t = 1.0, U = 1.0, mu = 0.0, n::Integer = 0,
     )
-    hopping_term =
-        BO.b_plus_b_min(elt, symmetry; cutoff = cutoff) +
-        BO.b_min_b_plus(elt, symmetry; cutoff = cutoff)
-    N = BO.b_num(elt, symmetry; cutoff = cutoff)
+    hopping_term = BO.b_hopping(T, symmetry; cutoff)
+    N = BO.b_num(T, symmetry; cutoff = cutoff)
     interaction_term = N * (N - id(domain(N)))
 
     spaces = fill(space(N, 1), (lattice.Nrows, lattice.Ncols))
@@ -126,19 +122,13 @@ function tj_model(
         lattice::InfiniteSquare;
         t = 2.5, J = 1.0, mu = 0.0, slave_fermion::Bool = false,
     )
-    hopping =
-        TJOperators.e_plusmin(particle_symmetry, spin_symmetry; slave_fermion) +
-        TJOperators.e_minplus(particle_symmetry, spin_symmetry; slave_fermion)
-    num = TJOperators.e_number(particle_symmetry, spin_symmetry; slave_fermion)
-    heis =
-        TJOperators.S_exchange(particle_symmetry, spin_symmetry; slave_fermion) -
+    hopping = tJ.e_hopping(T, particle_symmetry, spin_symmetry; slave_fermion)
+    num = tJ.e_number(T, particle_symmetry, spin_symmetry; slave_fermion)
+    heis = tJ.S_exchange(T, particle_symmetry, spin_symmetry; slave_fermion) -
         (1 / 4) * (num ⊗ num)
     pspace = space(num, 1)
     unit = TensorKit.id(pspace)
     h = (-t) * hopping + J * heis - (mu / 4) * (num ⊗ unit + unit ⊗ num)
-    if T <: Real
-        h = real(h)
-    end
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
 end
 
@@ -147,7 +137,7 @@ end
 #
 
 """
-    j1_j2_model([elt::Type{T}, symm::Type{S},] lattice::InfiniteSquare;
+    j1_j2_model([T::Type{T}, symm::Type{S},] lattice::InfiniteSquare;
                 J1=1.0, J2=1.0, spin=1//2, sublattice=true)
 
 Square lattice ``J_1\\text{-}J_2`` model, defined by the Hamiltonian
