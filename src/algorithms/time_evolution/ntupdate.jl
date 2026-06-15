@@ -126,6 +126,7 @@ function Base.iterate(it::TimeEvolver{<:NeighbourUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
     # reverse bond truncation order at even steps
+    # (isodd is used because iter is updated after applying the gate)
     reverse_trunc = isodd(iter)
     psi, wts, info = ntu_iter(state.psi, it.circuit, it.alg; reverse_trunc)
     iter, t = iter + 1, t + it.dt
