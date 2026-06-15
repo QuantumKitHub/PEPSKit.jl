@@ -202,11 +202,9 @@ function c4v_projector!(enlarged_corner, alg::C4vEighProjector)
     D, V, truncation_error = eigh_trunc!(enlarged_corner, eigh_alg)
 
     # Check for degenerate eigenvalues
-    Zygote.isderiving() && ignore_derivatives() do
-        if alg.verbosity > 0 && is_degenerate_spectrum(D)
-            vals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(D))
-            @warn("degenerate eigenvalues detected: ", vals)
-        end
+    if alg.verbosity > 0 && is_degenerate_spectrum(D)
+        vals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(D))
+        @warn("degenerate eigenvalues detected: ", vals)
     end
 
     return D / norm(D), V, (; D, V, truncation_error)

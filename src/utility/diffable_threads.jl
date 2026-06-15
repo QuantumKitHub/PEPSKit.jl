@@ -62,11 +62,7 @@ macro fwdthreads(ex)
     @assert ex.head === :for "@fwdthreads expects a for loop:\n$ex"
 
     diffable_ex = quote
-        if Zygote.isderiving()
-            $ex
-        else
-            Threads.@threads $ex
-        end
+        Threads.@threads $ex
     end
 
     return esc(diffable_ex)

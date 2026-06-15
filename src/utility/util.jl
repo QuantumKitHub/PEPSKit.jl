@@ -168,23 +168,6 @@ function ChainRulesCore.rrule(::typeof(rotr90), a::AbstractMatrix)
     return rotr90(a), rotr90_pullback
 end
 
-# TODO: link to Zygote.showgrad once they update documenter.jl
-"""
-    @showtypeofgrad(x)
-
-Macro utility to show to type of the gradient that is about to accumulate for `x`.
-
-See also `Zygote.@showgrad`.
-"""
-macro showtypeofgrad(x)
-    return :(
-        Zygote.hook($(esc(x))) do x̄
-            println($"∂($x) = ", repr(typeof(x̄)))
-            x̄
-        end
-    )
-end
-
 """
 Randomly take the dual of `ElementarySpace`s in `Vs` with propability `p`
 """

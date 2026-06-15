@@ -1,9 +1,8 @@
-
 using Test
 using Random
 using LinearAlgebra
 using TensorKit
-using Mooncake 
+using Mooncake
 using Accessors
 using PEPSKit
 
@@ -35,7 +34,7 @@ iter_alg = EighAdjoint(; fwd_alg = (; alg = :Lanczos), rrule_alg = (; alg = :Tru
     full_lossfun = A -> lossfun(A, full_alg, R)
     trunc_lossfun = A -> lossfun(A, trunc_alg, R)
     iter_lossfun = A -> lossfun(A, iter_alg, R)
-    
+
     full_rrule = Mooncake.build_rrule(full_lossfun, r)
     trunc_rrule = Mooncake.build_rrule(trunc_lossfun, r)
     iter_rrule = Mooncake.build_rrule(iter_lossfun, r)
