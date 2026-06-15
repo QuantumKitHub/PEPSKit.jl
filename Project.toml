@@ -32,10 +32,12 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [weakdeps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 
 [extensions]
 PEPSKitAdaptExt = "Adapt"
 PEPSKitGPUArraysExt = "GPUArrays"
+PEPSKitEnzymeExt = "Enzyme"
 
 [compat]
 Accessors = "0.1"
@@ -43,6 +45,7 @@ Adapt = "4"
 ChainRulesCore = "1.0"
 Compat = "3.46, 4.2"
 DocStringExtensions = "0.9.3"
+Enzyme = "0.13.196"
 FiniteDifferences = "0.12"
 GPUArrays = "11, 12"
 KrylovKit = "0.9.5, 0.10"
