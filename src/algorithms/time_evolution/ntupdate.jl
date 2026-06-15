@@ -231,7 +231,7 @@ function MPSKit.time_evolve(
             # bond weight change
             Δλ = hasproperty(info0, :wts) ? compare_weights(info.wts, info0.wts) : NaN
             # reconverge environment
-            if all(space(t) == space(t0) for (t, t0) in zip(psi.A, psi0.A))
+            if !all(space(t) == space(t0) for (t, t0) in zip(psi.A, psi0.A))
                 # recreate `env` from bond weights if psi virtual space changed
                 env = CTMRGEnv(info.wts)
             end
