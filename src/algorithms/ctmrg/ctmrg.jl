@@ -217,7 +217,7 @@ Spectra of the tensors that [`convergence_tensors`](@ref) selects.
 """
 function convergence_spectra(env::CTMRGEnv, alg)
     corners, edges = convergence_tensors(env, alg)
-    return map(C -> corner_spectrum(C, alg), corners), map(T -> edge_spectrum(T, alg), edges)
+    return stablemap(C -> corner_spectrum(C, alg), corners), stablemap(T -> edge_spectrum(T, alg), edges)
 end
 
 """
@@ -246,10 +246,10 @@ This determined either from the previous corner and edge spectra
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
 function calc_convergence(env, CS_old, TS_old)
-    CS_new = map(svd_vals, env.corners)
+    CS_new = stablemap(svd_vals, env.corners)
     ΔCS = maximum(splat(_singular_value_distance), zip(CS_old, CS_new))
 
-    TS_new = map(svd_vals, env.edges)
+    TS_new = stablemap(svd_vals, env.edges)
     ΔTS = maximum(splat(_singular_value_distance), zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
@@ -257,8 +257,8 @@ function calc_convergence(env, CS_old, TS_old)
     return max(ΔCS, ΔTS), CS_new, TS_new
 end
 function calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
-    CS_old = map(svd_vals, env_old.corners)
-    TS_old = map(svd_vals, env_old.edges)
+    CS_old = stablemap(svd_vals, env_old.corners)
+    TS_old = stablemap(svd_vals, env_old.edges)
     return calc_convergence(env_new, CS_old, TS_old)
 end
 @non_differentiable calc_convergence(args...)

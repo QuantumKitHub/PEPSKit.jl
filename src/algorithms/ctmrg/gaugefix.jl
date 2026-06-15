@@ -37,7 +37,7 @@ function compute_gauge_fix_gauge(
         envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::G
     ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
     # Check if spaces in envprev and envfinal are the same
-    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    same_spaces = stablemap(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
             space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
     end
@@ -64,7 +64,7 @@ function compute_relative_phases(
         envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
 
-    signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    signs = stablemap(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         # Gather edge tensors and pretend they're InfiniteMPSs
         if dir == NORTH
             Tsprev = circshift(envprev.edges[dir, r, :], 1 - c)
@@ -81,7 +81,7 @@ function compute_relative_phases(
         end
 
         # Random MPS of same bond dimension
-        M = map(Tsfinal) do t
+        M = stablemap(Tsfinal) do t
             randn(scalartype(t), codomain(t) ← domain(t))
         end
 
@@ -166,7 +166,7 @@ end
 
 # Explicit fixing of relative phases (doing this compactly in a loop is annoying)
 function fix_relative_phases(envfinal::CTMRGEnv, signs)
-    corners_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    corners_fixed = stablemap(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         Cf = if dir == NORTHWEST
             fix_gauge_northwest_corner((r, c), envfinal, signs)
         elseif dir == NORTHEAST
@@ -179,7 +179,7 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
         return Cf
     end
 
-    edges_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+    edges_fixed = stablemap(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         Ef = if dir == NORTHWEST
             fix_gauge_north_edge((r, c), envfinal, signs)
         elseif dir == NORTHEAST
@@ -197,7 +197,7 @@ end
 function fix_relative_phases(
         U::Array{Ut, 3}, V::Array{Vt, 3}, signs
     ) where {Ut <: AbstractTensorMap, Vt <: AbstractTensorMap}
-    U_fixed = map(eachindex(IndexCartesian(), U)) do I
+    U_fixed = stablemap(eachindex(IndexCartesian(), U)) do I
         dir, r, c = Tuple(I)
         Uf = if dir == NORTHWEST
             fix_gauge_north_left_vecs((r, c), U, signs)
@@ -211,7 +211,7 @@ function fix_relative_phases(
         return Uf
     end
 
-    V_fixed = map(eachindex(IndexCartesian(), V)) do I
+    V_fixed = stablemap(eachindex(IndexCartesian(), V)) do I
         dir, r, c = Tuple(I)
         Vf = if dir == NORTHWEST
             fix_gauge_north_right_vecs((r, c), V, signs)
