@@ -66,4 +66,4 @@ Zygote = "0.6, 0.7"
 julia = "1.10"
 
 [sources]
-MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev="ksh/cu2"}
+MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev="main"}
