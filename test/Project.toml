@@ -4,6 +4,8 @@ name = "PEPSKitTests"
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+EnzymeTestUtils = "12d8515a-0907-448a-8884-5fe00fdf1c5a"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPSKit = "bb1c41ca-d63c-52ed-829e-0820dda26502"
@@ -25,6 +27,7 @@ PEPSKit = {path = ".."}
 
 [compat]
 ChainRulesTestUtils = "1.13"
+EnzymeTestUtils = "0.2.8"
 ParallelTestRunner = "2.6.0"
 QuadGK = "2.11.1"
 Test = "1"
