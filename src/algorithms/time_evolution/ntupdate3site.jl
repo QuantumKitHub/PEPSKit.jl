@@ -64,15 +64,14 @@ function _bond_truncate(
         (stype1, stype2)::NTuple{2, Symbol},
         alg::NeighbourUpdate; gate::Union{NNGate, Nothing} = nothing
     )
-    # rotate bond to standard x direction `A ← B`
+    # get bond direction and rotate state to standard x-direction `A ← B`
+    (dir, _, _) = _nn_bonddir(site1, site2)
     ucell = size(state)[1:2]
-    bond, rev = _nn_bondrev(site1, site2)
-    dir = first(bond)
-    state2 = _bond_rotation(state, dir, rev; inv = false)
-    wts2 = _bond_rotation(wts, dir, rev; inv = false)
+    state2 = _bond_rotation(state, dir, EAST)
+    wts2 = _bond_rotation(wts, dir, EAST)
 
-    # rotated bond tensors
-    siteA = _bond_rotation(site1, dir, rev, ucell)
+    # site1 position in the rotated frame
+    siteA = _bond_rotation(site1, dir, EAST, ucell)
     row, col = siteA[1], siteA[2]
     A, B = state2[row, col], state2[row, col + 1]
 
@@ -123,8 +122,8 @@ function _bond_truncate(
     state2[row, col + 1] = normalize!(B, Inf)
     wts2[1, row, col] = normalize!(s, Inf)
 
-    # rotate back tensors and bond weight
-    state2 = _bond_rotation(state2, dir, rev; inv = true)
-    wts2 = _bond_rotation(wts2, dir, rev; inv = true)
+    # rotate back state and weights
+    state2 = _bond_rotation(state2, EAST, dir)
+    wts2 = _bond_rotation(wts2, EAST, dir)
     return state2, wts2, info
 end

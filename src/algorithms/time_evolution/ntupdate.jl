@@ -98,7 +98,8 @@ function ntu_iter(
             state2[site] = _apply_sitegate(state2[site], gate)
             info′ = (; fid = 1.0)
         elseif length(sites) == 2
-            (d, r, c), = _nn_bondrev(sites...)
+            (dir, r, c) = _nn_bonddir(sites...)
+            d = dir in (EAST, WEST) ? 1 : 2
             alg.bipartite && iseven(r) && continue
             state2, wts, info′ = _ntu_iter(state2, gate, wts, sites, alg)
             (!alg.bipartite) && continue
