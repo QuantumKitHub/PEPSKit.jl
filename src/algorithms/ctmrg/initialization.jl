@@ -1,18 +1,9 @@
-abstract type InitializationStyle end
-struct ProductStateInitialization{F} <: InitializationStyle
-    f::F
-    ProductStateInitialization(f::F = ones) where {F} = new{F}(f)
-end
-struct RandomInitialization{F} <: InitializationStyle
-    f::F
-    RandomInitialization(f::F = randn) where {F} = new{F}(f)
-end
-struct ApplicationInitialization{F} <: InitializationStyle
-    f::F
-    ApplicationInitialization(f::F = ones) where {F} = new{F}(f)
-end
+"""
+    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization, virtual_spaces...)
 
-# initialize randomly, using same virtual space specification as the CTMRGEnv constructor
+Initialize a fully random `CTMRGEnv` using the given environment virtual spaces. See
+[`CTMRGEnv`](@ref) for details on the expected format of the virtual spaces.
+"""
 function initialize_ctmrg_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
@@ -22,6 +13,12 @@ function initialize_ctmrg_environment(
     return CTMRGEnv(alg.f, elt, n, virtual_spaces...)
 end
 
+"""
+    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization)
+
+Initialize a `CTMRGEnv` corresponding to a product state with trivial virtual spaces and
+corners. The product state edge tensors are initialized as `alg.f(elt, V::ProductSpace)`.
+"""
 function initialize_ctmrg_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
@@ -31,14 +28,54 @@ function initialize_ctmrg_environment(
     return env
 end
 
+_CTMRGEnv(env) = CTMRGEnv(env)
+_CTMRGEnv(env::CTMRGEnv) = env
+
+"""
+    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization, [env0])
+
+Initialize a `CTMRGEnv` by applying a single untruncated iteration of
+[`SimultaneousCTMRG`](@ref) to a given initial environment. By default, the starting
+environment is chosen as a random product state.
+"""
 function initialize_ctmrg_environment(
         elt::Type{<:Number},
         n::InfiniteSquareNetwork,
         alg::ApplicationInitialization,
-        env0::ProductStateEnv = ProductStateEnv(alg.f, elt, n)
+        env0 = ProductStateEnv(alg.f, elt, n)
     )
     dummy_alg = SimultaneousCTMRG(trunc = (; alg = :notrunc))
-    env, = ctmrg_iteration(n, CTMRGEnv(env0), dummy_alg)
+    env, = ctmrg_iteration(n, _CTMRGEnv(env0), dummy_alg)
+    return env
+end
+
+_check_two_layer(::InfiniteSquareNetwork) = false
+_check_two_layer(::InfiniteSquareNetwork{<:PEPSSandwich}) = true
+
+"""
+    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization, [env0])
+
+Initialize a `CTMRGEnv` corresponding to a product state acting as an identity between the
+virtual spaces of a two-layer network, for example
+```
+         ╱      
+┌-----ket----- 
+|    ╱ |        
+|      |   
+|      | ╱      
+└-----bra----- 
+     ╱          
+```
+"""
+function initialize_ctmrg_environment(
+        elt::Type{<:Number},
+        n::InfiniteSquareNetwork,
+        ::IdentityInitialization,
+    )
+    _check_two_layer(n) ||
+        throw(ArgumentError("Identity initialization is only defined for two-layer networks."))
+    bp_env = BPEnv(isomorphism, elt, n)
+    env = CTMRGEnv(bp_env)
     return env
 end
 

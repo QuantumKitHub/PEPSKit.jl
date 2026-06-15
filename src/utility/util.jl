@@ -208,17 +208,3 @@ function _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
     new_axes = (ntuple(i -> axes[biperm[1][i]], N - 1)..., ax)
     return new_axes, biperm
 end
-
-"""
-    bipartite_id([T::Type=Float64], V::ProductSpace{S, 2}) where {S}
-
-Constructs a tensor corresonding to the (permutation of) the identity operator between
-two componens of a bipartite product space.
-"""
-bipartite_id(V::ProductSpace) = bipartite_id(Float64, V)
-function bipartite_id(T::Type, V::ProductSpace)
-    throw(ArgumentError("bipartite_id is only defined for ProductSpace with 2 components, but got $(length(V)) components."))
-end
-function bipartite_id(T::Type, V::ProductSpace{S, 2}) where {S}
-    return permute(isomorphism(T, V[1] ← V[2]'), ((1, 2), ()))
-end

@@ -49,10 +49,10 @@ boundary_alg = (; alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter)
 
     # PEPS-specific identity initialization; should throw when used on partition functions
     Random.seed!(sd)
-    @test_throws ArgumentError env0_prod_id = initialize_ctmrg_environment(n, ProductStateInitialization(bipartite_id))
+    @test_throws ArgumentError env0_prod_id = initialize_ctmrg_environment(n, IdentityInitialization())
 end
 
-@testset "CTMRG environment initialization for PEPS with $S symmetry (#255)" for S in symmetries
+@testset "CTMRG environment initialization for PEPS with $S symmetry" for S in symmetries
     # initialize
     P = make_space(S, d)
     Vpeps = make_space(S, D)
@@ -74,8 +74,8 @@ end
 
     # embedded product state as identity from ket to bra, converges
     Random.seed!(sd)
-    env0_prod = initialize_ctmrg_environment(n, ProductStateInitialization(bipartite_id))
-    env_prod, info = leading_boundary(env0_prod, n; boundary_alg...)
+    env0_prod_id = initialize_ctmrg_environment(n, IdentityInitialization())
+    env_prod, info = leading_boundary(env0_prod_id, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 
     # grown product state, converges
