@@ -18,24 +18,78 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/quantumkithub/pepskit.jl/compare/v0.7.0...HEAD)
+## [Unreleased](https://github.com/quantumkithub/pepskit.jl/compare/v0.8.0...HEAD)
 
 ### Added
 
 ### Changed
 
-- Bump OptimKit.jl compatibility to v0.4
-- Move `info.truncation_error` and `info.condition_number` into the `info.contraction_metrics` named tuple for `leading_boundary` and `fixedpoint`
-
 ### Deprecated
 
 ### Removed
 
-- Unused implementations of `LinearAlgebra` methods for `CTRMGEnv` and `InfinitePEPS`
-
 ### Fixed
 
 ### Performance
+
+## [0.8.0](https://github.com/quantumkithub/pepskit.jl/compare/v0.7.0...v0.8.0) - 2026-06-05
+
+### Added
+
+- `FullPullback` and `TruncPullback` to specify pullbacks using a full untruncated or only truncated decomposition respectively (#382)
+- `FixedPointGradient` type, containing a specific solver for solving the fixed-point gradient linear problem (#386)
+- CTMRG benchmark suite (#384)
+- Rotation of `LocalCircuit` (#349)
+- `LocalCircuit` operator type, alongside refactor of `LocalOperator` operator types (#347)
+- N-site Simple Update (#339)
+- C4v CTMRG support, including QR-CTMRG variant (#321, #329)
+- Belief propagation gauge fixing, with bipartite specialization and support for purified iPEPO (#223, #318, #319)
+
+### Changed
+
+- Bump VectorInterface compat to include v0.6 (#389)
+- Make checks on rotation and reflection symmetry when using C4v CTMRG into warnings (#385)
+- Allow unsorted site indices in `LocalCircuit` (#387)
+- Periodic indexing improvements (#377)
+- Rename algorithm symbols (#376)
+- Update decomposition handling (#364)
+- Return `info.converged` flag and `info.convergence_error` in `leading_boundary` named tuple (#365)
+- Improve Vidal gauge conversion and CTM bond env for PEPO (#348)
+- Rename `bondenv_fu` to `bondenv_ctm` (#343)
+- Refactor simple update / reorganize trotter and apply_gate code (#338, #346). Each term of the input Hamiltonian `LocalOperator` is now exponentiated individually when constructing the Trotter gates in the resulting `LocalCircuit`.
+- Move `info.truncation_error` and `info.condition_number` into the `info.contraction_metrics` named tuple for `leading_boundary` and `fixedpoint` (#337)
+- `fixedpoint` improvements; relax `env₀` type restriction in `select_algorithm` (#337, #345)
+- Use MatrixAlgebraKit SVD pullbacks (#335)
+- Bump TensorKit compat to 0.16 (#314)
+- Make `SUWeight` axis order definite (#315)
+- Bump OptimKit.jl compatibility to v0.4 (#307)
+- Improve bond truncation algorithms (#303). In particular, the 3-leg reduced bond tensors now follows the leg order convention of an MPS.
+
+### Removed
+
+- `FullEighPullback`, `TruncEighPullback`, `FullSVDPullback`, `TruncSVDPullback` and `QRPullback` types, in favor of more generic pullback specification across algorithms (#382)
+- `LinSolver` and `EigSolver` types, and `iterscheme` keyword for specifying the style of and solver for fixed-point differentiation (#386)
+- `:diffgauge` differentiation mode, also for eigh-based C4v CTMRG (#334, #370)
+- Unused implementations of `LinearAlgebra` methods for `CTRMGEnv` and `InfinitePEPS` (#307)
+
+### Fixed
+
+- Fix undefined `dir` variable in error message in `TensorMap(::EnlargedCorner)` (#392)
+- Ensure MPSKit overloads accept all keywords to intercept all dispatches (#374)
+- `FixedSpaceTruncation` for simple update (#360)
+- Stack overflow in `renormalize_southwest_corner` (#344)
+- Broken gradients for C4v eigh-CTMRG (#333)
+- CTMRG contraction inconsistencies (#327)
+- Typo in `SimpleUpdate` info (#313)
+- Typo in `edge_transfer_right` (#310)
+- MPS cluster truncation with standard virtual arrows (#309)
+- Small fixes for `InfiniteSquareNetwork` and `InfinitePartitionFunction` (#306)
+- Zero gate returned by `get_gateterm` (#300)
+
+### Performance
+
+- Improve simple update performance (#361)
+- Improve efficiency of bond truncation (#366)
 
 ## [0.7.0](https://github.com/quantumkithub/pepskit.jl/compare/v0.6.1...v0.7.0) - 2025-11-17
 
