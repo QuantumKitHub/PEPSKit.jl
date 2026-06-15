@@ -5,7 +5,7 @@ using PEPSKit
 using TensorKit
 using KrylovKit
 using OptimKit
-using Zygote
+using Enzyme 
 
 ## Setup
 
@@ -112,15 +112,11 @@ end
         retract = pepo_retract,
         (transport!) = (pepo_transport!),
     ) do (psi, env2, env3)
-        E, gs = withgradient(psi) do ψ
+        function energ(ψ)
             n2 = InfiniteSquareNetwork(ψ)
-            env2′, info = PEPSKit.hook_pullback(
-                leading_boundary, env2, n2, ctm_alg; alg_rrule = gradient_alg
-            )
+            env2′, info = leading_boundary(env2, n2, ctm_alg)
             n3 = InfiniteSquareNetwork(ψ, T)
-            env3′, info = PEPSKit.hook_pullback(
-                leading_boundary, env3, n3, ctm_alg; alg_rrule = gradient_alg
-            )
+            env3′, info = leading_boundary(env3, n3, ctm_alg)
             PEPSKit.ignore_derivatives() do
                 PEPSKit.update!(env2, env2′)
                 PEPSKit.update!(env3, env3′)
@@ -129,6 +125,7 @@ end
             λ2 = network_value(n2, env2)
             return -log(real(λ3 / λ2))
         end
+        E, gs = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(psi, zerovector(psi)))
         g = only(gs)
         return E, g
     end
