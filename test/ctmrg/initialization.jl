@@ -47,6 +47,15 @@ boundary_alg = (; alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter)
     env_appl, info = leading_boundary(env0_appl, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 
+    # specific custom starting product state
+    p_data = ComplexF64[1 0]
+    p = Tensor(p_data, P)
+    prod_env0 = ProductStateEnv(reshape([p, p, flip(p, 1), flip(p, 1)], 4, 1, 1))
+    env0_custom = initialize_ctmrg_environment(n, ApplicationInitialization(), prod_env0)
+    # or just CTMRGEnv(prod_env0)
+    env_custom, info = leading_boundary(env0_custom, n; boundary_alg...)
+    @test info.convergence_error ≤ tol
+
     # PEPS-specific identity initialization; should throw when used on partition functions
     Random.seed!(sd)
     @test_throws ArgumentError env0_prod_id = initialize_ctmrg_environment(n, IdentityInitialization())

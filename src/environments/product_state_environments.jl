@@ -21,6 +21,21 @@ struct ProductStateEnv{T}
     "4 x rows x cols array of edge tensors making up a product state environment, where the
     first dimension specifies the spatial direction"
     edges::Array{T, 3}
+    ProductStateEnv{T}(edges::Array{T, 3}) where {T} = new{T}(edges)
+    function ProductStateEnv(edges::Array{T, 3}) where {T}
+        foreach(Iterators.product(axes(edges)[2:3]...)) do (d, w)
+            codomain(edges[NORTH, d, w]) == _elementwise_dual(codomain(edges[SOUTH, _prev(d, end), w])) ||
+                throw(
+                SpaceMismatch("North virtual space at site $((d, w)) does not match: $(space(edges[NORTH, d, w])) vs $(space(edges[SOUTH, _prev(d, end), w])).")
+            )
+            codomain(edges[EAST, d, w]) == _elementwise_dual(codomain(edges[WEST, d, _next(w, end)])) ||
+                throw(SpaceMismatch("East virtual space at site $((d, w)) does not match: $(space(edges[EAST, d, w])) vs $(space(edges[WEST, d, _next(w, end)]))."))
+        end
+        foreach(Iterators.product(axes(edges)...)) do (dir, d, w)
+            dim(space(edges[dir, d, w])) > 0 || @warn "no fusion channels for edge ($dir, $d, $w)"
+        end
+        return new{T}(edges)
+    end
 end
 
 """
@@ -35,11 +50,6 @@ Each entry of the `Ds_north` and `Ds_east` matrices corresponds to an effective 
 of the network, and can be represented as a `ProductSpace` (e.g.
 for the case of a network representing overlaps of PEPSs).
 """
-function ProductStateEnv(
-        Ds_north::A, Ds_east::A
-    ) where {A <: AbstractMatrix{<:ProductSpace}}
-    return ProductStateEnv(randn, ComplexF64, N, Ds_north, Ds_east)
-end
 function ProductStateEnv(
         f, T, Ds_north::A, Ds_east::A
     ) where {A <: AbstractMatrix{<:ProductSpace}}
@@ -60,32 +70,12 @@ function ProductStateEnv(
     normalize!.(edges)
     return ProductStateEnv(edges)
 end
-
-"""
-    ProductStateEnv(
-        [f=randn, T=ComplexF64], D_north::P, D_east::P;
-        unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {P <: ProductSpace}
-
-Construct a product state environment by specifying the north and east virtual spaces of the
-corresponding [`InfiniteSquareNetwork`](@ref). The network unit cell can be specified
-by the `unitcell` keyword argument.
-"""
-function ProductStateEnv(
-        D_north::P, D_east::P;
-        unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {P <: ProductSpace}
-    return ProductStateEnv(randn, ComplexF64, D_north, D_east; unitcell)
-end
-function ProductStateEnv(
-        f, T, D_north::P, D_east::P;
-        unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {P <: ProductSpace}
-    return ProductStateEnv(f, T, N, fill(D_north, unitcell), fill(D_east, unitcell))
+function ProductStateEnv(Ds_north::A, args...; kwargs...) where {A <: AbstractMatrix{<:VectorSpace}}
+    return ProductStateEnv(randn, ComplexF64, Ds_north, args...; kwargs...)
 end
 
 """
-    ProductStateEnv([f=ones, T=ComplexF64], network::InfiniteSquareNetwork)
+    ProductStateEnv([f=randn, T=ComplexF64], network::InfiniteSquareNetwork)
 
 Construct a product state environment by specifying a corresponding [`InfiniteSquareNetwork`](@ref).
 """
@@ -94,34 +84,19 @@ function ProductStateEnv(f, T, network::InfiniteSquareNetwork)
     Ds_east = _east_edge_physical_spaces(network)
     return ProductStateEnv(f, T, Ds_north, Ds_east)
 end
-function ProductStateEnv(network::InfiniteSquareNetwork)
-    return ProductStateEnv(ones, scalartype(network), network) # TODO: do we want to use a different default function?
+function ProductStateEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS})
+    return ProductStateEnv(randn, scalartype(network), network)
 end
-
-function ProductStateEnv(state::Union{InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
-    return ProductStateEnv(InfiniteSquareNetwork(state), args...; kwargs...)
-end
-function ProductStateEnv(state::Union{InfinitePEPS, InfinitePEPO}, args...; kwargs...)
-    return ProductStateEnv(InfiniteSquareNetwork(state), args...; kwargs...)
-end
-function ProductStateEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
-    return ProductStateEnv(f, T, InfiniteSquareNetwork(state), args...; kwargs...)
+function ProductStateEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
+    return ProductStateEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
 Base.eltype(::Type{ProductStateEnv{T}}) where {T} = T
 Base.size(env::ProductStateEnv, args...) = size(env.edges, args...)
 Base.getindex(env::ProductStateEnv, args...) = Base.getindex(env.edges, args...)
-Base.axes(env::ProductStateEnv, args...) = Base.axes(env.edges, args...)
-Base.eachindex(env::ProductStateEnv) = eachindex(IndexCartesian(), env.edges)
+Base.eachindex(index_style, env::ProductStateEnv) = eachindex(index_style, env.edges)
 VectorInterface.scalartype(::Type{ProductStateEnv{T}}) where {T} = scalartype(T)
 TensorKit.spacetype(::Type{ProductStateEnv{T}}) where {T} = spacetype(T)
-
-function eachcoordinate(x::ProductStateEnv)
-    return collect(Iterators.product(axes(x, 2), axes(x, 3)))
-end
-function eachcoordinate(x::ProductStateEnv, dirs)
-    return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
-end
 
 # conversion to CTMRGEnv
 """
@@ -131,10 +106,10 @@ Construct a CTMRG environment with a trivial virtual space of bond dimension χ 
 from the product state environment `prod_env`.
 """
 function CTMRGEnv(prod_env::ProductStateEnv)
-    edges = map(CartesianIndices(prod_env.edges)) do idx
-        return insertleftunit(insertleftunit(prod_env.edges[idx]), 1)
+    edges = map(eachindex(IndexCartesian(), prod_env)) do idx
+        return insertleftunit(insertleftunit(prod_env[idx]), 1)
     end
-    corners = map(CartesianIndices(edges)) do _
+    corners = map(eachindex(IndexCartesian(), prod_env)) do _
         return TensorKit.id(scalartype(prod_env), oneunit(spacetype(prod_env)))
     end
     return CTMRGEnv(corners, edges)
