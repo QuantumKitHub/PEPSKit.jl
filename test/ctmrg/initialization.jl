@@ -64,6 +64,7 @@ end
 
 @testset "CTMRG environment initialization for PEPS with $S symmetry" for S in symmetries
     # initialize
+    Random.seed!(sd)
     P = make_space(S, d)
     Vpeps = make_space(S, D)
     Venv = make_space(S, χ)
