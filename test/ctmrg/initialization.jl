@@ -48,7 +48,7 @@ boundary_alg = (; alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter)
     @test info.convergence_error ≤ tol
 
     # specific custom starting product state
-    p_data = ComplexF64[1 0]
+    p_data = ComplexF64[1; 0;;]
     p = Tensor(p_data, P)
     prod_env0 = ProductStateEnv(reshape([p, p, flip(p, 1), flip(p, 1)], 4, 1, 1))
     env0_custom = initialize_ctmrg_environment(n, ApplicationInitialization(), prod_env0)
