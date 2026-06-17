@@ -4,6 +4,7 @@ using PEPSKit
 using Random
 
 using MPSKitModels: classical_ising
+using PEPSKit: ProductStateEnv
 
 sd = 12345
 
