@@ -24,6 +24,7 @@ boundary_alg = (; alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter)
 
 @testset "CTMRG environment initialization for critical ising with $S symmetry (#255)" for S in symmetries
     # initialize
+    Random.seed!(sd)
     T = classical_ising(S)
     O = T[1]
     n = InfinitePartitionFunction([O O; O O])
@@ -31,19 +32,16 @@ boundary_alg = (; alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter)
     P = space(O, 2)
 
     # random, doesn't converge
-    Random.seed!(sd)
     env0_rand = initialize_ctmrg_environment(n, RandomInitialization(), Venv)
     env_rand, info = leading_boundary(env0_rand, n; boundary_alg...)
     @test_broken info.convergence_error ≤ tol
 
     # embedded random product state, converges
-    Random.seed!(sd)
     env0_prod = initialize_ctmrg_environment(n, ProductStateInitialization())
     env_prod, info = leading_boundary(env0_prod, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 
     # grown product state, converges
-    Random.seed!(sd)
     env0_appl = initialize_ctmrg_environment(n, ApplicationInitialization())
     env_appl, info = leading_boundary(env0_appl, n; boundary_alg...)
     @test info.convergence_error ≤ tol
@@ -58,7 +56,6 @@ boundary_alg = (; alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter)
     @test info.convergence_error ≤ tol
 
     # PEPS-specific identity initialization; should throw when used on partition functions
-    Random.seed!(sd)
     @test_throws ArgumentError env0_prod_id = initialize_ctmrg_environment(n, IdentityInitialization())
 end
 
@@ -72,25 +69,21 @@ end
     n = InfiniteSquareNetwork(peps)
 
     # random, converges
-    Random.seed!(sd)
     env0_rand = initialize_ctmrg_environment(n, RandomInitialization(), Venv)
     env_rand, info = leading_boundary(env0_rand, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 
     # embedded random product state, converges
-    Random.seed!(sd)
     env0_prod = initialize_ctmrg_environment(n, ProductStateInitialization())
     env_prod, info = leading_boundary(env0_prod, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 
     # embedded product state as identity from ket to bra, converges
-    Random.seed!(sd)
     env0_prod_id = initialize_ctmrg_environment(n, IdentityInitialization())
     env_prod, info = leading_boundary(env0_prod_id, n; boundary_alg...)
     @test info.convergence_error ≤ tol
 
     # grown product state, converges
-    Random.seed!(sd)
     env0_appl = initialize_ctmrg_environment(n, ApplicationInitialization())
     env_appl, info = leading_boundary(env0_appl, n; boundary_alg...)
     @test info.convergence_error ≤ tol
