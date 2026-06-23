@@ -96,6 +96,7 @@ Base.size(env::ProductStateEnv, args...) = size(env.edges, args...)
 Base.getindex(env::ProductStateEnv, args...) = Base.getindex(env.edges, args...)
 Base.eachindex(index_style, env::ProductStateEnv) = eachindex(index_style, env.edges)
 VectorInterface.scalartype(::Type{ProductStateEnv{T}}) where {T} = scalartype(T)
+TensorKit.storagetype(::Type{ProductStateEnv{T}}) where {T} = storagetype(T)
 TensorKit.spacetype(::Type{ProductStateEnv{T}}) where {T} = spacetype(T)
 
 # conversion to CTMRGEnv
