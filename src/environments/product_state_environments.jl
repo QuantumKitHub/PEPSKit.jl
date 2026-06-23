@@ -110,7 +110,7 @@ function CTMRGEnv(prod_env::ProductStateEnv)
         return insertleftunit(insertleftunit(prod_env[idx]), 1)
     end
     corners = map(eachindex(IndexCartesian(), prod_env)) do _
-        return TensorKit.id(scalartype(prod_env), oneunit(spacetype(prod_env)))
+        return TensorKit.id(storagetype(prod_env), oneunit(spacetype(prod_env)))
     end
     return CTMRGEnv(corners, edges)
 end
