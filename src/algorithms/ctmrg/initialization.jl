@@ -28,9 +28,6 @@ function initialize_ctmrg_environment(
     return env
 end
 
-_CTMRGEnv(env) = CTMRGEnv(env)
-_CTMRGEnv(env::CTMRGEnv) = env
-
 """
     initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization, [env0])
 
@@ -45,7 +42,7 @@ function initialize_ctmrg_environment(
         env0 = ProductStateEnv(alg.f, elt, n)
     )
     dummy_alg = SimultaneousCTMRG(trunc = (; alg = :notrunc))
-    env, = ctmrg_iteration(n, _CTMRGEnv(env0), dummy_alg)
+    env, = ctmrg_iteration(n, CTMRGEnv(env0), dummy_alg)
     return env
 end
 
