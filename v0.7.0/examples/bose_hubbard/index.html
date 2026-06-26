@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Optimizing the U(1)-symmetric Bose-Hubbard model · PEPSKit.jl</title><meta name="title" content="Optimizing the U(1)-symmetric Bose-Hubbard model · PEPSKit.jl"/><meta property="og:title" content="Optimizing the U(1)-symmetric Bose-Hubbard model · PEPSKit.jl"/><meta property="twitter:title" content="Optimizing the U(1)-symmetric Bose-Hubbard model · PEPSKit.jl"/><meta name="description" content="Documentation for PEPSKit.jl."/><meta property="og:description" content="Documentation for PEPSKit.jl."/><meta property="twitter:description" content="Documentation for PEPSKit.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="PEPSKit.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PEPSKit.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../man/models/">Models</a></li><li><a class="tocitem" href="../../man/multithreading/">Multithreading</a></li><li><a class="tocitem" href="../../man/precompilation/">Precompilation using PrecompileTools.jl</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><input class="collapse-toggle" id="menuitem-3-2" type="checkbox" checked/><label class="tocitem" for="menuitem-3-2"><span class="docs-label">Optimization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg/">Optimizing the 2D Heisenberg model</a></li><li class="is-active"><a class="tocitem" href>Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a><ul class="internal"><li><a class="tocitem" href="#Defining-the-model"><span>Defining the model</span></a></li><li><a class="tocitem" href="#Characterizing-the-virtual-spaces"><span>Characterizing the virtual spaces</span></a></li><li><a class="tocitem" href="#Finding-the-ground-state"><span>Finding the ground state</span></a></li></ul></li><li><a class="tocitem" href="../xxz/">Néel order in the <span>$U(1)$</span>-symmetric XXZ model</a></li><li><a class="tocitem" href="../fermi_hubbard/">Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-3" type="checkbox"/><label class="tocitem" for="menuitem-3-3"><span class="docs-label">Time Evolution</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg_su/">Simple update for the Heisenberg model</a></li><li><a class="tocitem" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling</a></li><li><a class="tocitem" href="../j1j2_su/">Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-4" type="checkbox"/><label class="tocitem" for="menuitem-3-4"><span class="docs-label">Partition Functions</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG</a></li><li><a class="tocitem" href="../3d_ising_partition_function/">The 3D classical Ising model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-5" type="checkbox"/><label class="tocitem" for="menuitem-3-5"><span class="docs-label">Boundary MPS</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../boundary_mps/">Boundary MPS contractions of 2D networks</a></li></ul></li></ul></li><li><a class="tocitem" href="../../lib/lib/">Library</a></li><li><a class="tocitem" href="../../changelog/">Changelog</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Optimization</a></li><li class="is-active"><a href>Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/examples/bose_hubbard/main.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p><a href="https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/bose_hubbard/main.ipynb"><img src="https://mybinder.org/badge_logo.svg" alt/></a> <a href="https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/bose_hubbard/main.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a> <a href="https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/bose_hubbard"><img src="https://img.shields.io/badge/download-project-orange" alt/></a></p><h1 id="Optimizing-the-U(1)-symmetric-Bose-Hubbard-model"><a class="docs-heading-anchor" href="#Optimizing-the-U(1)-symmetric-Bose-Hubbard-model">Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a><a id="Optimizing-the-U(1)-symmetric-Bose-Hubbard-model-1"></a><a class="docs-heading-anchor-permalink" href="#Optimizing-the-U(1)-symmetric-Bose-Hubbard-model" title="Permalink"></a></h1><p>This example demonstrates the simulation of the two-dimensional Bose-Hubbard model. In particular, the point will be to showcase the use of internal symmetries and finite particle densities in PEPS ground state searches. As we will see, incorporating symmetries into the simulation consists of initializing a symmetric Hamiltonian, PEPS state and CTM environment - made possible through TensorKit.</p><p>But first let&#39;s seed the RNG and import the required modules:</p><pre><code class="language-julia hljs">using Random
+using TensorKit, PEPSKit
+using MPSKit: add_physical_charge
+Random.seed!(2928528935);</code></pre><h2 id="Defining-the-model"><a class="docs-heading-anchor" href="#Defining-the-model">Defining the model</a><a id="Defining-the-model-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-model" title="Permalink"></a></h2><p>We will construct the Bose-Hubbard model Hamiltonian through the <a href="https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.bose_hubbard_model"><code>bose_hubbard_model</code></a>, function from MPSKitModels as reexported by PEPSKit. We&#39;ll simulate the model in its Mott-insulating phase where the ratio <span>$U/t$</span> is large, since in this phase we expect the ground state to be well approximated by a PEPS with a manifest global <span>$U(1)$</span> symmetry. Furthermore, we&#39;ll impose a cutoff at 2 bosons per site, set the chemical potential to zero and use a simple <span>$1 \times 1$</span> unit cell:</p><pre><code class="language-julia hljs">t = 1.0
+U = 30.0
+cutoff = 2
+mu = 0.0
+lattice = InfiniteSquare(1, 1);</code></pre><p>Next, we impose an explicit global <span>$U(1)$</span> symmetry as well as a fixed particle number density in our simulations. We can do this by setting the <code>symmetry</code> argument of the Hamiltonian constructor to <code>U1Irrep</code> and passing one as the particle number density keyword argument <code>n</code>:</p><pre><code class="language-julia hljs">symmetry = U1Irrep
+n = 1
+H = bose_hubbard_model(ComplexF64, symmetry, lattice; cutoff, t, U, n);</code></pre><p>Before we continue, it might be interesting to inspect the corresponding lattice physical spaces (which is here just a <span>$1 \times 1$</span> matrix due to the single-site unit cell):</p><pre><code class="language-julia hljs">physical_spaces = physicalspace(H)</code></pre><pre><code class="nohighlight hljs">1×1 Matrix{TensorKit.GradedSpace{TensorKitSectors.U1Irrep, TensorKit.SortedVectorDict{TensorKitSectors.U1Irrep, Int64}}}:
+ (0 =&gt; 1, 1 =&gt; 1, -1 =&gt; 1)</code></pre><p>Note that the physical space contains <span>$U(1)$</span> charges -1, 0 and +1. Indeed, imposing a particle number density of +1 corresponds to shifting the physical charges by -1 to &#39;re-center&#39; the physical charges around the desired density. When we do this with a cutoff of two bosons per site, i.e. starting from <span>$U(1)$</span> charges 0, 1 and 2 on the physical level, we indeed get the observed charges.</p><h2 id="Characterizing-the-virtual-spaces"><a class="docs-heading-anchor" href="#Characterizing-the-virtual-spaces">Characterizing the virtual spaces</a><a id="Characterizing-the-virtual-spaces-1"></a><a class="docs-heading-anchor-permalink" href="#Characterizing-the-virtual-spaces" title="Permalink"></a></h2><p>When running PEPS simulations with explicit internal symmetries, specifying the structure of the virtual spaces of the PEPS and its environment becomes a bit more involved. For the environment, one could in principle allow the virtual space to be chosen dynamically during the boundary contraction using CTMRG by using a truncation scheme that allows for this (e.g. using <code>alg=:truncrank</code> or <code>alg=:trunctol</code> to truncate to a fixed total bond dimension or singular value cutoff respectively). For the PEPS virtual space however, the structure has to be specified before the optimization.</p><p>While there are a host of techniques to do this in an informed way (e.g. starting from a simple update result), here we just specify the virtual space manually. Since we&#39;re dealing with a model at unit filling our physical space only contains integer <span>$U(1)$</span> irreps. Therefore, we&#39;ll build our PEPS and environment spaces using integer <span>$U(1)$</span> irreps centered around the zero charge:</p><pre><code class="language-julia hljs">V_peps = U1Space(0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+V_env = U1Space(0 =&gt; 6, 1 =&gt; 4, -1 =&gt; 4, 2 =&gt; 2, -2 =&gt; 2);</code></pre><h2 id="Finding-the-ground-state"><a class="docs-heading-anchor" href="#Finding-the-ground-state">Finding the ground state</a><a id="Finding-the-ground-state-1"></a><a class="docs-heading-anchor-permalink" href="#Finding-the-ground-state" title="Permalink"></a></h2><p>Having defined our Hamiltonian and spaces, it is just a matter of plugging this into the optimization framework in the usual way to find the ground state. So, we first specify all algorithms and their tolerances:</p><pre><code class="language-julia hljs">boundary_alg = (; tol = 1.0e-8, alg = :simultaneous, trunc = (; alg = :fixedspace))
+gradient_alg = (; tol = 1.0e-6, maxiter = 10, alg = :eigsolver, iterscheme = :diffgauge)
+optimizer_alg = (; tol = 1.0e-4, alg = :lbfgs, maxiter = 150, ls_maxiter = 2, ls_maxfg = 2);</code></pre><div class="admonition is-info" id="Note-194dc3d429dd5994"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-194dc3d429dd5994" title="Permalink"></a></header><div class="admonition-body"><p>Taking CTMRG gradients and optimizing symmetric tensors tends to be more problematic than with dense tensors. In particular, this means that one frequently needs to tweak the <code>boundary_alg</code>, <code>gradient_alg</code> and <code>optimizer_alg</code> settings. There rarely is a general-purpose set of settings which will always work, so instead one has to adjust the simulation settings for each specific application. For example, it might help to switch between the CTMRG flavors <code>alg=:simultaneous</code> and <code>alg=:sequential</code> to improve convergence. The evaluation of the CTMRG gradient can be instable, so there it is advised to try the different <code>iterscheme=:diffgauge</code> and <code>iterscheme=:fixed</code> schemes as well as different <code>alg</code> keywords. Of course the tolerances of the algorithms and their subalgorithms also have to be compatible. For more details on the available options, see the <a href="../../lib/lib/#PEPSKit.fixedpoint-Tuple{Any, InfinitePEPS, CTMRGEnv}"><code>fixedpoint</code></a> docstring.</p></div></div><p>Keep in mind that the PEPS is constructed from a unit cell of spaces, so we have to make a matrix of <code>V_peps</code> spaces:</p><pre><code class="language-julia hljs">virtual_spaces = fill(V_peps, size(lattice)...)
+peps₀ = InfinitePEPS(randn, ComplexF64, physical_spaces, virtual_spaces)
+env₀, = leading_boundary(CTMRGEnv(peps₀, V_env), peps₀; boundary_alg...);</code></pre><pre><code class="nohighlight hljs">[ Info: CTMRG init:	obj = +1.693461429863e+00 +8.390974048721e-02im	err = 1.0000e+00
+[ Info: CTMRG conv 19:	obj = +1.181834754305e+01 -1.514938309052e-11im	err = 3.6943029323e-09	time = 11.53 sec
+</code></pre><p>And at last, we optimize (which might take a bit):</p><pre><code class="language-julia hljs">peps, env, E, info = fixedpoint(
+    H, peps₀, env₀; boundary_alg, gradient_alg, optimizer_alg, verbosity = 3
+)
+@show E;</code></pre><pre><code class="nohighlight hljs">[ Info: LBFGS: initializing with f = 9.360531870693e+00, ‖∇f‖ = 1.6944e+01
+[ Info: LBFGS: iter    1, Δt  1.77 m: f = 1.243260264922e-01, ‖∇f‖ = 6.2855e+00, α = 1.56e+02, m = 0, nfg = 7
+┌ Warning: `eigsolve` cotangents sensitive to gauge choice: (|Δgauge| = 1.5631940186722204e-12)
+└ @ KrylovKitChainRulesCoreExt ~/.julia/packages/KrylovKit/ZcdRg/ext/KrylovKitChainRulesCoreExt/eigsolve.jl:212
+[ Info: LBFGS: iter    2, Δt 39.80 s: f = 6.539120686695e-02, ‖∇f‖ = 9.5385e+00, α = 5.34e-01, m = 1, nfg = 2
+[ Info: LBFGS: iter    3, Δt  3.13 s: f = -2.708528946074e-02, ‖∇f‖ = 1.8037e+00, α = 1.00e+00, m = 2, nfg = 1
+[ Info: LBFGS: iter    4, Δt  3.55 s: f = -6.192494042461e-02, ‖∇f‖ = 1.5587e+00, α = 1.00e+00, m = 3, nfg = 1
+[ Info: LBFGS: iter    5, Δt  7.09 s: f = -1.124692496698e-01, ‖∇f‖ = 1.4258e+00, α = 2.19e-01, m = 4, nfg = 2
+┌ Warning: Linesearch not converged after 2 iterations and 3 function evaluations:
+│ α = 3.94e-02, dϕ = -4.49e-01, ϕ - ϕ₀ = -1.84e-02
+└ @ OptimKit ~/.julia/packages/OptimKit/dRsBo/src/linesearches.jl:148
+[ Info: LBFGS: iter    6, Δt 11.03 s: f = -1.309032710952e-01, ‖∇f‖ = 1.3707e+00, α = 3.94e-02, m = 5, nfg = 3
+┌ Warning: Linesearch not converged after 2 iterations and 4 function evaluations:
+│ α = 2.57e-02, dϕ = -3.20e-01, ϕ - ϕ₀ = -8.38e-03
+└ @ OptimKit ~/.julia/packages/OptimKit/dRsBo/src/linesearches.jl:148
+[ Info: LBFGS: iter    7, Δt 15.96 s: f = -1.392843682240e-01, ‖∇f‖ = 1.3391e+00, α = 2.57e-02, m = 6, nfg = 4
+┌ Warning: Linesearch not converged after 2 iterations and 4 function evaluations:
+│ α = 2.68e-02, dϕ = -3.37e-01, ϕ - ϕ₀ = -9.18e-03
+└ @ OptimKit ~/.julia/packages/OptimKit/dRsBo/src/linesearches.jl:148
+[ Info: LBFGS: iter    8, Δt 14.36 s: f = -1.484598935358e-01, ‖∇f‖ = 1.3021e+00, α = 2.68e-02, m = 7, nfg = 4
+┌ Warning: Linesearch not converged after 2 iterations and 3 function evaluations:
+│ α = 3.65e-02, dϕ = -3.92e-01, ϕ - ϕ₀ = -1.48e-02
+└ @ OptimKit ~/.julia/packages/OptimKit/dRsBo/src/linesearches.jl:148
+[ Info: LBFGS: iter    9, Δt 10.44 s: f = -1.632810531195e-01, ‖∇f‖ = 1.2272e+00, α = 3.65e-02, m = 8, nfg = 3
+┌ Warning: Linesearch not converged after 2 iterations and 3 function evaluations:
+│ α = 2.76e-02, dϕ = -2.97e-01, ϕ - ϕ₀ = -8.38e-03
+└ @ OptimKit ~/.julia/packages/OptimKit/dRsBo/src/linesearches.jl:148
+[ Info: LBFGS: iter   10, Δt 10.55 s: f = -1.716592494485e-01, ‖∇f‖ = 1.1736e+00, α = 2.76e-02, m = 9, nfg = 3
+[ Info: LBFGS: iter   11, Δt 14.00 s: f = -1.826457590505e-01, ‖∇f‖ = 2.4735e+00, α = 3.85e-01, m = 10, nfg = 4
+[ Info: LBFGS: iter   12, Δt  4.18 s: f = -2.064083431847e-01, ‖∇f‖ = 7.6299e-01, α = 1.00e+00, m = 11, nfg = 1
+[ Info: LBFGS: iter   13, Δt  2.89 s: f = -2.162126950757e-01, ‖∇f‖ = 5.5939e-01, α = 1.00e+00, m = 12, nfg = 1
+[ Info: LBFGS: iter   14, Δt  2.87 s: f = -2.254856786317e-01, ‖∇f‖ = 8.5453e-01, α = 1.00e+00, m = 13, nfg = 1
+[ Info: LBFGS: iter   15, Δt  3.13 s: f = -2.311620542835e-01, ‖∇f‖ = 5.0252e-01, α = 1.00e+00, m = 14, nfg = 1
+[ Info: LBFGS: iter   16, Δt  2.36 s: f = -2.399420522249e-01, ‖∇f‖ = 3.2750e-01, α = 1.00e+00, m = 15, nfg = 1
+[ Info: LBFGS: iter   17, Δt  2.12 s: f = -2.481363618858e-01, ‖∇f‖ = 2.2685e-01, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   18, Δt  2.64 s: f = -2.562994698651e-01, ‖∇f‖ = 3.0926e-01, α = 1.00e+00, m = 17, nfg = 1
+[ Info: LBFGS: iter   19, Δt  1.78 s: f = -2.649856856868e-01, ‖∇f‖ = 2.7617e-01, α = 1.00e+00, m = 18, nfg = 1
+[ Info: LBFGS: iter   20, Δt  1.56 s: f = -2.683582580828e-01, ‖∇f‖ = 1.3450e-01, α = 1.00e+00, m = 19, nfg = 1
+[ Info: LBFGS: iter   21, Δt  2.08 s: f = -2.691261600416e-01, ‖∇f‖ = 1.0939e-01, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   22, Δt  1.51 s: f = -2.696623293951e-01, ‖∇f‖ = 9.1215e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   23, Δt  1.54 s: f = -2.702859675414e-01, ‖∇f‖ = 7.9156e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   24, Δt  2.12 s: f = -2.707509817413e-01, ‖∇f‖ = 7.4977e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   25, Δt  1.51 s: f = -2.711576093720e-01, ‖∇f‖ = 6.1069e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   26, Δt  1.55 s: f = -2.715380802075e-01, ‖∇f‖ = 6.7125e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   27, Δt  2.08 s: f = -2.717339606082e-01, ‖∇f‖ = 4.1048e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   28, Δt  1.51 s: f = -2.718487460362e-01, ‖∇f‖ = 3.5424e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   29, Δt  1.55 s: f = -2.722072392974e-01, ‖∇f‖ = 4.0213e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   30, Δt  2.11 s: f = -2.722439668172e-01, ‖∇f‖ = 7.1999e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   31, Δt  1.51 s: f = -2.723699154079e-01, ‖∇f‖ = 2.9087e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   32, Δt  1.50 s: f = -2.724342986384e-01, ‖∇f‖ = 1.7378e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   33, Δt  2.10 s: f = -2.725306249305e-01, ‖∇f‖ = 2.3958e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   34, Δt  1.56 s: f = -2.726223101417e-01, ‖∇f‖ = 2.4508e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   35, Δt  1.50 s: f = -2.727454537974e-01, ‖∇f‖ = 1.6125e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   36, Δt  2.12 s: f = -2.728727321968e-01, ‖∇f‖ = 2.3678e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   37, Δt  1.54 s: f = -2.729237733613e-01, ‖∇f‖ = 2.8241e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   38, Δt  1.55 s: f = -2.729791702466e-01, ‖∇f‖ = 1.7025e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   39, Δt  2.25 s: f = -2.730285586841e-01, ‖∇f‖ = 1.1314e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   40, Δt  1.63 s: f = -2.730488129466e-01, ‖∇f‖ = 9.9527e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   41, Δt  1.54 s: f = -2.730623447009e-01, ‖∇f‖ = 1.2306e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   42, Δt  2.17 s: f = -2.730716419408e-01, ‖∇f‖ = 6.6281e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   43, Δt  1.52 s: f = -2.730778245503e-01, ‖∇f‖ = 6.1449e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   44, Δt  1.51 s: f = -2.730838518419e-01, ‖∇f‖ = 5.1229e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   45, Δt  2.10 s: f = -2.730895662464e-01, ‖∇f‖ = 8.2164e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   46, Δt  1.59 s: f = -2.730958799236e-01, ‖∇f‖ = 8.6062e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   47, Δt  1.57 s: f = -2.731035516065e-01, ‖∇f‖ = 8.4505e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   48, Δt  2.19 s: f = -2.731178809183e-01, ‖∇f‖ = 1.1336e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   49, Δt  1.55 s: f = -2.731261391867e-01, ‖∇f‖ = 1.3382e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   50, Δt  1.48 s: f = -2.731343691618e-01, ‖∇f‖ = 8.2222e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   51, Δt  2.11 s: f = -2.731480054714e-01, ‖∇f‖ = 7.7324e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   52, Δt  1.56 s: f = -2.731587193225e-01, ‖∇f‖ = 8.6622e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   53, Δt  3.73 s: f = -2.731635819333e-01, ‖∇f‖ = 1.1039e-02, α = 3.44e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   54, Δt  1.59 s: f = -2.731716220961e-01, ‖∇f‖ = 4.3834e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   55, Δt  1.50 s: f = -2.731747338371e-01, ‖∇f‖ = 3.3324e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   56, Δt  2.12 s: f = -2.731771231498e-01, ‖∇f‖ = 4.7862e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   57, Δt  1.54 s: f = -2.731790392649e-01, ‖∇f‖ = 4.8080e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   58, Δt  1.52 s: f = -2.731804414997e-01, ‖∇f‖ = 2.1500e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   59, Δt  2.17 s: f = -2.731815373905e-01, ‖∇f‖ = 2.8117e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   60, Δt  1.60 s: f = -2.731826327105e-01, ‖∇f‖ = 4.4664e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   61, Δt  1.51 s: f = -2.731849541596e-01, ‖∇f‖ = 6.1122e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   62, Δt  2.11 s: f = -2.731880740800e-01, ‖∇f‖ = 6.6791e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   63, Δt  1.52 s: f = -2.731902005238e-01, ‖∇f‖ = 6.6581e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   64, Δt  1.53 s: f = -2.731927985872e-01, ‖∇f‖ = 2.4370e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   65, Δt  2.16 s: f = -2.731943262018e-01, ‖∇f‖ = 3.2011e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   66, Δt  1.55 s: f = -2.731957978659e-01, ‖∇f‖ = 4.4978e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   67, Δt  1.54 s: f = -2.731987676894e-01, ‖∇f‖ = 6.3647e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   68, Δt  2.14 s: f = -2.732009902493e-01, ‖∇f‖ = 8.7994e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   69, Δt  1.53 s: f = -2.732045313641e-01, ‖∇f‖ = 3.9474e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   70, Δt  1.52 s: f = -2.732074828919e-01, ‖∇f‖ = 3.8933e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   71, Δt  2.08 s: f = -2.732095999551e-01, ‖∇f‖ = 5.1625e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   72, Δt  1.54 s: f = -2.732137224912e-01, ‖∇f‖ = 5.2307e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   73, Δt  3.60 s: f = -2.732147607346e-01, ‖∇f‖ = 6.8682e-03, α = 2.19e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   74, Δt  1.52 s: f = -2.732175934360e-01, ‖∇f‖ = 3.0811e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   75, Δt  1.46 s: f = -2.732185990605e-01, ‖∇f‖ = 2.0362e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   76, Δt  2.08 s: f = -2.732190483159e-01, ‖∇f‖ = 2.2154e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   77, Δt  1.49 s: f = -2.732193561301e-01, ‖∇f‖ = 1.9100e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   78, Δt  1.46 s: f = -2.732201314365e-01, ‖∇f‖ = 1.7894e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   79, Δt  2.06 s: f = -2.732208329599e-01, ‖∇f‖ = 2.3035e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   80, Δt  1.49 s: f = -2.732213654101e-01, ‖∇f‖ = 3.1563e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   81, Δt  1.47 s: f = -2.732219948849e-01, ‖∇f‖ = 1.6658e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   82, Δt  2.10 s: f = -2.732225315237e-01, ‖∇f‖ = 1.8094e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   83, Δt  1.48 s: f = -2.732233367859e-01, ‖∇f‖ = 2.5051e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   84, Δt  1.46 s: f = -2.732247002697e-01, ‖∇f‖ = 3.3721e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   85, Δt  2.05 s: f = -2.732258314846e-01, ‖∇f‖ = 3.6046e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   86, Δt  1.48 s: f = -2.732269279088e-01, ‖∇f‖ = 1.9356e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   87, Δt  1.46 s: f = -2.732276502460e-01, ‖∇f‖ = 2.0305e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   88, Δt  2.05 s: f = -2.732281742297e-01, ‖∇f‖ = 2.6686e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   89, Δt  1.53 s: f = -2.732291570490e-01, ‖∇f‖ = 3.4663e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   90, Δt  1.52 s: f = -2.732301136721e-01, ‖∇f‖ = 3.8554e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   91, Δt  3.55 s: f = -2.732306714243e-01, ‖∇f‖ = 2.8588e-03, α = 5.17e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   92, Δt  1.49 s: f = -2.732312852356e-01, ‖∇f‖ = 1.4790e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   93, Δt  2.08 s: f = -2.732316922511e-01, ‖∇f‖ = 1.6855e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   94, Δt  1.56 s: f = -2.732320780387e-01, ‖∇f‖ = 2.0239e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   95, Δt  1.49 s: f = -2.732330290872e-01, ‖∇f‖ = 2.4026e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   96, Δt  3.62 s: f = -2.732333807603e-01, ‖∇f‖ = 2.8123e-03, α = 3.38e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   97, Δt  1.51 s: f = -2.732338653294e-01, ‖∇f‖ = 1.4864e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   98, Δt  2.10 s: f = -2.732342403446e-01, ‖∇f‖ = 1.2667e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   99, Δt  1.49 s: f = -2.732345680255e-01, ‖∇f‖ = 1.8206e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  100, Δt  1.53 s: f = -2.732352955624e-01, ‖∇f‖ = 2.3087e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  101, Δt  2.12 s: f = -2.732355485420e-01, ‖∇f‖ = 4.8509e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  102, Δt  1.48 s: f = -2.732362652809e-01, ‖∇f‖ = 1.7593e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  103, Δt  1.47 s: f = -2.732365365963e-01, ‖∇f‖ = 1.0574e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  104, Δt  2.07 s: f = -2.732367158285e-01, ‖∇f‖ = 1.3546e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  105, Δt  1.52 s: f = -2.732371359877e-01, ‖∇f‖ = 1.8413e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  106, Δt  1.49 s: f = -2.732380177513e-01, ‖∇f‖ = 1.9804e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  107, Δt  3.59 s: f = -2.732382612440e-01, ‖∇f‖ = 3.4353e-03, α = 1.81e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter  108, Δt  1.48 s: f = -2.732390883236e-01, ‖∇f‖ = 2.1448e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  109, Δt  2.14 s: f = -2.732396898628e-01, ‖∇f‖ = 1.2799e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  110, Δt  1.51 s: f = -2.732401266812e-01, ‖∇f‖ = 1.6453e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  111, Δt  1.46 s: f = -2.732405228514e-01, ‖∇f‖ = 1.9341e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  112, Δt  2.11 s: f = -2.732411475475e-01, ‖∇f‖ = 1.7568e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  113, Δt  3.02 s: f = -2.732415107932e-01, ‖∇f‖ = 2.5606e-03, α = 4.15e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter  114, Δt  2.06 s: f = -2.732420174516e-01, ‖∇f‖ = 1.0164e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  115, Δt  1.50 s: f = -2.732422573578e-01, ‖∇f‖ = 1.2282e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  116, Δt  1.48 s: f = -2.732425209380e-01, ‖∇f‖ = 1.6224e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  117, Δt  2.07 s: f = -2.732428864048e-01, ‖∇f‖ = 2.7709e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  118, Δt  1.49 s: f = -2.732433322047e-01, ‖∇f‖ = 1.4803e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  119, Δt  1.48 s: f = -2.732437270443e-01, ‖∇f‖ = 1.0819e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  120, Δt  2.05 s: f = -2.732439320538e-01, ‖∇f‖ = 1.4563e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  121, Δt  1.52 s: f = -2.732443671345e-01, ‖∇f‖ = 1.6560e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  122, Δt  1.52 s: f = -2.732451061345e-01, ‖∇f‖ = 3.2331e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  123, Δt  2.10 s: f = -2.732459561589e-01, ‖∇f‖ = 1.9674e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  124, Δt  1.53 s: f = -2.732464830731e-01, ‖∇f‖ = 1.5142e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  125, Δt  1.48 s: f = -2.732467057592e-01, ‖∇f‖ = 9.9866e-04, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  126, Δt  2.07 s: f = -2.732469018571e-01, ‖∇f‖ = 1.2486e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  127, Δt  1.53 s: f = -2.732473593602e-01, ‖∇f‖ = 1.6548e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  128, Δt  1.55 s: f = -2.732475911101e-01, ‖∇f‖ = 2.3968e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  129, Δt  2.15 s: f = -2.732478298586e-01, ‖∇f‖ = 8.8893e-04, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  130, Δt  1.56 s: f = -2.732479433206e-01, ‖∇f‖ = 7.8718e-04, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  131, Δt  1.49 s: f = -2.732480328924e-01, ‖∇f‖ = 1.0602e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  132, Δt  2.08 s: f = -2.732483542017e-01, ‖∇f‖ = 1.8891e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  133, Δt  1.56 s: f = -2.732487865904e-01, ‖∇f‖ = 2.5342e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  134, Δt  1.52 s: f = -2.732493436489e-01, ‖∇f‖ = 1.9991e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  135, Δt  2.07 s: f = -2.732498544914e-01, ‖∇f‖ = 1.3038e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  136, Δt  1.52 s: f = -2.732501499793e-01, ‖∇f‖ = 1.7802e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  137, Δt  1.49 s: f = -2.732504109741e-01, ‖∇f‖ = 1.6813e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  138, Δt  2.09 s: f = -2.732508321319e-01, ‖∇f‖ = 2.0211e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  139, Δt  1.53 s: f = -2.732516319156e-01, ‖∇f‖ = 2.3433e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  140, Δt  1.53 s: f = -2.732523608932e-01, ‖∇f‖ = 3.2668e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  141, Δt  2.11 s: f = -2.732531859672e-01, ‖∇f‖ = 1.7859e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  142, Δt  1.54 s: f = -2.732536476701e-01, ‖∇f‖ = 1.3889e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  143, Δt  1.55 s: f = -2.732538445802e-01, ‖∇f‖ = 2.7700e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  144, Δt  2.09 s: f = -2.732541822672e-01, ‖∇f‖ = 1.2978e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  145, Δt  1.50 s: f = -2.732544133083e-01, ‖∇f‖ = 9.2642e-04, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  146, Δt  1.50 s: f = -2.732547253465e-01, ‖∇f‖ = 1.5108e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  147, Δt  2.11 s: f = -2.732549899420e-01, ‖∇f‖ = 1.6387e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter  148, Δt  3.12 s: f = -2.732551982409e-01, ‖∇f‖ = 1.3520e-03, α = 5.44e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter  149, Δt  2.12 s: f = -2.732554318758e-01, ‖∇f‖ = 6.9278e-04, α = 1.00e+00, m = 20, nfg = 1
+┌ Warning: LBFGS: not converged to requested tol after 150 iterations and time 14.76 m: f = -2.732557334552e-01, ‖∇f‖ = 1.4594e-03
+└ @ OptimKit ~/.julia/packages/OptimKit/dRsBo/src/lbfgs.jl:199
+E = -0.273255733455233
+</code></pre><p>We can compare our PEPS result to the energy obtained using a cylinder-MPS calculation using a cylinder circumference of <span>$L_y = 7$</span> and a bond dimension of 446, which yields <span>$E = -0.273284888$</span>:</p><pre><code class="language-julia hljs">E_ref = -0.273284888
+@show (E - E_ref) / E_ref;</code></pre><pre><code class="nohighlight hljs">(E - E_ref) / E_ref = -0.00010668187685147442
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../heisenberg/">« Optimizing the 2D Heisenberg model</a><a class="docs-footer-nextpage" href="../xxz/">Néel order in the <span>$U(1)$</span>-symmetric XXZ model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.0 on <span class="colophon-date" title="Friday 21 November 2025 15:11">Friday 21 November 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
