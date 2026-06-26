@@ -109,7 +109,9 @@ The optimization parameters can be supplied via the keyword arguments or directl
     4. Debug info including AD outputs
 * `reuse_env::Bool=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing` : Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
-* `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(peps, env), f, g = finalize!((peps, env), f, g, numiter)`.
+* `hasconverged=OptimKit.DefaultHasConverged(optimizer_alg.tol)` : Function specifying the convergence criterion with signature `bool = hasconverged(state, cost, grad, gradnorm)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics.
+* `shouldstop=OptimKit.DefaultShouldStop(optimizer_alg.maxiter)` : Function specifying the stopping criterion with signature `bool = shouldstop(state, cost, grad, numfg, iter, timespent)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics.
+* `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(state, env), f, g = finalize!((state, env), cost, grad, numiter)`.
 
 ### Boundary algorithm
 
@@ -131,7 +133,7 @@ keyword arguments are:
 * `verbosity::Int` : Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
 * `alg::Symbol=:$(Defaults.gradient_alg)` : Implicit gradient algorithm variant, can be one of the following:
     - `:FixedPointGradient` : Compute the gradient via fixed-point differentiation, see [`FixedPointGradient`](@ref)
-* `solver_alg::`Union{Algorithm,NamedTuple}`: Solver algorithm for computing the implicit gradient; see [`FixedPointGradient`](@ref) for supported algorithms.
+* `solver_alg::Union{Algorithm,NamedTuple}`: Solver algorithm for computing the implicit gradient; see [`FixedPointGradient`](@ref) for supported algorithms.
 
 ### Optimizer settings
 
@@ -165,13 +167,24 @@ information `NamedTuple` which contains the following entries:
 * `times` : History of optimization step execution times.
 """
 function fixedpoint(
-        operator, peps₀::InfinitePEPS, env₀; (finalize!) = OptimKit._finalize!, kwargs...,
+        operator, peps₀::InfinitePEPS, env₀;
+        (finalize!) = OptimKit._finalize!,
+        hasconverged = nothing, shouldstop = nothing, kwargs...,
     )
+    # select OptimizationAlgorithm from kwargs
     alg = select_algorithm(fixedpoint, env₀; kwargs...)
-    return fixedpoint(operator, peps₀, env₀, alg; finalize!)
+
+    # default stopping criteria initialized on alg parameters that have to be select first
+    isnothing(hasconverged) && (hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.tol))
+    isnothing(shouldstop) && (shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter))
+
+    return fixedpoint(operator, peps₀, env₀, alg; finalize!, hasconverged, shouldstop)
 end
 function fixedpoint(
-        operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize; (finalize!) = OptimKit._finalize!,
+        operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize;
+        (finalize!) = OptimKit._finalize!,
+        hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.tol),
+        shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter),
     )
     # validate inputs
     check_input(fixedpoint, peps₀, env₀, alg)
@@ -197,7 +210,8 @@ function fixedpoint(
     # optimize operator cost function
     (peps_final, env_final), cost_final, ∂cost, numfg, convergence_history = optimize(
         (peps₀, env₀), alg.optimizer_alg;
-        retract, inner = real_inner, finalize!, (transport!) = (peps_transport!),
+        retract, inner = real_inner, (transport!) = (peps_transport!),
+        hasconverged, shouldstop, finalize!,
     ) do (peps, env)
         start_time = time_ns()
         E, gs = withgradient(peps) do ψ
