@@ -40,8 +40,8 @@ Module containing default algorithm parameter values and arguments.
 * `svd_rrule_min_krylovdim=$(Defaults.svd_rrule_min_krylovdim)` : Minimal Krylov dimension of the reverse-rule algorithm (if it is a Krylov algorithm).
 * `svd_rrule_verbosity=$(Defaults.svd_rrule_verbosity)` : SVD gradient output verbosity.
 * `svd_rrule_alg=:$(Defaults.svd_rrule_alg)` : Reverse-rule algorithm for the SVD gradient.
-    - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
+    - `:FullPullback` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
+    - `:TruncPullback` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
     - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref)
@@ -58,8 +58,8 @@ Module containing default algorithm parameter values and arguments.
     - `:Lanczos` : Lanczos algorithm for symmetric/Hermitian matrices, see [`KrylovKit.Lanczos`](@extref)
     - `:BlockLanczos` : Block version of `:Lanczos` for repeated extremal eigenvalues, see [`KrylovKit.BlockLanczos`](@extref)
 * `eigh_rrule_alg=:$(Defaults.eigh_rrule_alg)` : Reverse-rule algorithm for the `eigh` gradient.
-    - `:full` : Full pullback algorithm for eigendecompositions, see [`PEPSKit.FullEighPullback`](@ref).
-    - `:trunc` : Truncated reverse-mode algorithm for eigendecompositions, see [`PEPSKit.TruncEighPullback`](@ref).
+    - `:FullPullback` : MatrixAlgebraKit's [`eigh_pullback!`](@extref MatrixAlgebraKit.eigh_pullback!) that requires access to the full spectrum
+    - `:TruncPullback` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) solving a Sylvester equation on the truncated subspace
 * `eigh_rrule_verbosity=$(Defaults.eigh_rrule_verbosity)` : eigh gradient output verbosity.
 
 ## Projectors
@@ -74,18 +74,17 @@ Module containing default algorithm parameter values and arguments.
 
 ## Fixed-point gradient
 
-* `gradient_tol=$(Defaults.gradient_tol)` : Convergence tolerance for the fixed-point gradient iteration.
-* `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for computing the CTMRG fixed-point gradient.
+* `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the implicit gradient of the contraction routine.
+* `gradient_tol=$(Defaults.gradient_tol)` : Convergence tolerance for the gradient algorithm.
+* `gradient_maxiter=$(Defaults.gradient_maxiter)` : Maximal number of iterations for the gradient computation.
 * `gradient_verbosity=$(Defaults.gradient_verbosity)` : Gradient output information verbosity.
-* `gradient_linsolver=:$(Defaults.gradient_linsolver)` : Default linear solver for the `LinSolver` gradient algorithm.
+* `gradient_fixedpoint_solver_alg=:$(Defaults.gradient_fixedpoint_solver_alg)` : Default solver algorithm for the `FixedPointGradient` gradient algorithm.
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
-* `gradient_eigsolver=:$(Defaults.gradient_eigsolver)` : Default eigensolver for the `EigSolver` gradient algorithm.
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
-* `gradient_eigsolver_eager=$(Defaults.gradient_eigsolver_eager)` : Enables `EigSolver` algorithm to finish before the full Krylov dimension is reached.
-* `gradient_iterscheme=:$(Defaults.gradient_iterscheme)` : Scheme for differentiating one CTMRG iteration.
-    - `:fixed` : the differentiated CTMRG iteration uses a pre-computed SVD with a fixed set of gauges
-* `gradient_alg=:$(Defaults.gradient_alg)` : Algorithm variant for computing the gradient fixed-point.
+    - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
+    - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
+* `gradient_fixedpoint_solver_eager=$(Defaults.gradient_fixedpoint_solver_eager)` : Enables `:Arnoldi` solver algorithm to finish before the full Krylov dimension is reached.
 
 ## Optimization
 
@@ -126,18 +125,18 @@ const svd_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.SVDAlgorithms>, 
 const svd_rrule_tol = ctmrg_tol
 const svd_rrule_min_krylovdim = 48
 const svd_rrule_verbosity = -1
-const svd_rrule_alg = :full # ∈ {:full, :trunc, :GMRES, :BiCGStab, :Arnoldi}
+const svd_rrule_alg = :FullPullback # ∈ {:FullPullback, :TruncPullback, :GMRES, :BiCGStab, :Arnoldi}
 const krylovdim_factor = 1.4
 
 # eigh forward & reverse
 const eigh_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.EighAlgorithms>, :Lanczos, :BlockLanczos}
-const eigh_rrule_alg = :full # ∈ {:full, :trunc}
+const eigh_rrule_alg = :FullPullback # ∈ {:FullPullback, :TruncPullback}
 const eigh_rrule_verbosity = 0
 
 # QR forward & reverse
-const qr_fwd_alg = :Householder
+const qr_fwd_alg = :DefaultAlgorithm
 const qr_fwd_positive = true
-const qr_rrule_alg = :qr
+const qr_rrule_alg = :FullPullback
 const qr_rrule_verbosity = 0
 
 # Projectors
@@ -149,11 +148,9 @@ const projector_alg_c4v = :C4vEighProjector # ∈ {:C4vEighProjector, :C4vQRProj
 const gradient_tol = 1.0e-6
 const gradient_maxiter = 30
 const gradient_verbosity = -1
-const gradient_linsolver = :BiCGStab # ∈ {:GMRES, :BiCGStab}
-const gradient_eigsolver = :Arnoldi
-const gradient_eigsolver_eager = true
-const gradient_iterscheme = :fixed
-const gradient_alg = :EigSolver # ∈ {:GeomSum, :ManualIter, :LinSolver, :EigSolver}
+const gradient_alg = :FixedPointGradient
+const gradient_fixedpoint_solver_alg = :Arnoldi # ∈ {:GMRES, :BiCGStab, :Arnoldi, :GeomSum, :ManualIter}
+const gradient_fixedpoint_solver_eager = true
 
 # Optimization
 const reuse_env = true

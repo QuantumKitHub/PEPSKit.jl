@@ -91,42 +91,45 @@ end
 ````
 
 ````
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.683e+00. Time = 18.251 s/it
+[ Info: SU iter 1      : E ≈ 0.49737, |Δλ| = 1.683e+00. Time = 16.236 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.01, |Δλ| = 3.917e-06. Time = 0.002 s/it
+[ Info: SU iter 500    : E ≈ -0.64898, |Δλ| = 3.879e-06. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.002 s/it
+[ Info: SU iter 596    : E ≈ -0.65038, |Δλ| = 9.933e-07. Time = 0.002 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 19.73 s
+[ Info: Time evolution finished in 19.31 s
+[ Info: --- Time evolution (simple update), dt = 0.001 ---
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.002 s/it
+[ Info: SU iter 1      : E ≈ -0.65215, |Δλ| = 2.135e-03. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.001, |Δλ| = 9.631e-07. Time = 0.002 s/it
+[ Info: SU iter 500    : E ≈ -0.65248, |Δλ| = 9.632e-07. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   : dt = 0.001, |Δλ| = 2.415e-07. Time = 0.002 s/it
+[ Info: SU iter 1000   : E ≈ -0.65261, |Δλ| = 2.415e-07. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   : dt = 0.001, |Δλ| = 6.291e-08. Time = 0.002 s/it
+[ Info: SU iter 1500   : E ≈ -0.65268, |Δλ| = 6.291e-08. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.683e-08. Time = 0.002 s/it
+[ Info: SU iter 2000   : E ≈ -0.65271, |Δλ| = 1.683e-08. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.002 s/it
+[ Info: SU iter 2205   : E ≈ -0.65272, |Δλ| = 9.978e-09. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 5.31 s
+[ Info: Time evolution finished in 7.14 s
+[ Info: --- Time evolution (simple update), dt = 0.0004 ---
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.002 s/it
+[ Info: SU iter 1      : E ≈ -0.65284, |Δλ| = 1.418e-04. Time = 0.004 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 500    : dt = 0.0004, |Δλ| = 6.377e-08. Time = 0.002 s/it
+[ Info: SU iter 500    : E ≈ -0.65285, |Δλ| = 6.377e-08. Time = 0.002 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1000   : dt = 0.0004, |Δλ| = 3.544e-08. Time = 0.002 s/it
+[ Info: SU iter 1000   : E ≈ -0.65285, |Δλ| = 3.544e-08. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 1500   : dt = 0.0004, |Δλ| = 2.013e-08. Time = 0.002 s/it
+[ Info: SU iter 1500   : E ≈ -0.65285, |Δλ| = 2.013e-08. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.157e-08. Time = 0.002 s/it
+[ Info: SU iter 2000   : E ≈ -0.65286, |Δλ| = 1.157e-08. Time = 0.003 s/it
 [ Info: Space of x-weight at [1, 1] = ℂ^4
-[ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.002 s/it
+[ Info: SU iter 2133   : E ≈ -0.65286, |Δλ| = 9.999e-09. Time = 0.003 s/it
 [ Info: SU: bond weights have converged.
-[ Info: Simple update finished. Total time elapsed: 5.05 s
+[ Info: Time evolution finished in 6.59 s
 
 ````
 
@@ -150,8 +153,8 @@ env, = leading_boundary(
 ````
 
 ````
-[ Info: CTMRG init:	obj = +1.852686271623e-15	err = 1.0000e+00
-[ Info: CTMRG conv 14:	obj = +1.297823093604e+00	err = 5.1362926971e-11	time = 5.06 sec
+[ Info: CTMRG init:	obj = +6.853977357765e-16	err = 1.0000e+00
+[ Info: CTMRG conv 13:	obj = +1.300293120452e+00	err = 6.1878669077e-11	time = 8.08 sec
 
 ````
 
@@ -185,9 +188,9 @@ M_norms = map(
 ````
 
 ````
-E = -0.6674685370436856
-Ms = [0.027287162575913397 -0.02508741980582664; -0.025087419895358266 0.027287162545533143;;; -2.398913533097069e-11 2.64958523871206e-11; -4.82742162216665e-11 4.5509172819091503e-11;;; 0.37596759542522507 -0.37612078302041296; -0.37612078301296187 0.37596759542924413]
-M_norms = [0.3769565254127723 0.3769565254142742; 0.37695652541279817 0.37695652541458163]
+E = -0.6674685583160874
+Ms = [0.03199644968307137 -0.02980262049211579; -0.029802620725989104 0.03199644959546846;;; 1.573600069693093e-10 -2.3817596506159333e-10; 1.3793997194477825e-11 6.715037553783887e-11;;; 0.375596109051991 -0.3757765476189344; -0.3757765475994436 0.37559610906239854]
+M_norms = [0.3769565093314034 0.3769565093331091; 0.3769565093321696 0.3769565093343376]
 
 ````
 
@@ -206,8 +209,8 @@ M_ref = 0.3767
 ````
 
 ````
-(E - E_ref) / abs(E_ref) = 4.7135515077750805e-5
-(mean(M_norms) - M_ref) / M_ref = 0.0006809806573044887
+(E - E_ref) / abs(E_ref) = 4.710364631094927e-5
+(mean(M_norms) - M_ref) / M_ref = 0.0006809379685557489
 
 ````
 

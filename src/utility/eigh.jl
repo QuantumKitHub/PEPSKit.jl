@@ -1,7 +1,8 @@
 """
 $(TYPEDEF)
 
-Eigh reverse-rule algorithm which wraps MatrixAlgebraKit's `eigh_pullback!`.
+Reverse-rule algorithm which wraps MatrixAlgebraKit's full pullback methods,
+see [`eigh_pullback!`](@extref MatrixAlgebraKit.eigh_pullback!), [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!), [`qr_pullback!`](@extref MatrixAlgebraKit.qr_pullback!).
 
 ## Fields
 
@@ -9,13 +10,14 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    FullEighPullback(; kwargs...)
+    FullPullback(; kwargs...)
 
-Construct a `FullEighPullback` algorithm struct from the following keyword arguments:
+Construct a `FullPullback` algorithm struct from the following keyword arguments:
 
+* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for idendifying degenerate subspaces.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
-@kwdef struct FullEighPullback
+@kwdef struct FullPullback
     degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
@@ -23,21 +25,22 @@ end
 """
 $(TYPEDEF)
 
-Truncated eigh reverse-rule algorithm which wraps MatrixAlgebraKit's `eigh_trunc_pullback!`.
-
+Truncated reverse-rule algorithm which wraps MatrixAlgebraKit's truncated pullback methods,
+see [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) and [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!).
 ## Fields
 
 $(TYPEDFIELDS)
 
 ## Constructors
 
-    TruncEighPullback(; kwargs...)
+    TruncPullback(; kwargs...)
 
-Construct a `TruncEighPullback` algorithm struct from the following keyword arguments:
+Construct a `TruncPullback` algorithm struct from the following keyword arguments:
 
+* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Absolute tolerance for idendifying degenerate subspaces.
 * `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
 """
-@kwdef struct TruncEighPullback
+@kwdef struct TruncPullback
     degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
     verbosity::Int = 0
 end
@@ -78,8 +81,8 @@ Construct a `EighAdjoint` algorithm struct based on the following keyword argume
   Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied
   by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the
   following:
-    - `:full` : MatrixAlgebraKit's [`eigh_pullback!`](@extref MatrixAlgebraKit.eigh_pullback!) that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) solving a Sylvester equation on the truncated subspace
+    - `:FullPullback` : MatrixAlgebraKit's [`eigh_pullback!`](@extref MatrixAlgebraKit.eigh_pullback!) that requires access to the full spectrum
+    - `:TruncPullback` : MatrixAlgebraKit's [`eigh_trunc_pullback!`](@extref MatrixAlgebraKit.eigh_trunc_pullback!) solving a Sylvester equation on the truncated subspace
 
 !!! note
     Manually specifying a `rrule_alg` is considered expert-mode usage, and should only be done when full control over the implementation is desired.
@@ -101,10 +104,10 @@ const EIGH_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :BlockLanczos => (; tol = 1.0e-14, krylovdim = 30, kwargs...) -> IterEigh(; alg = BlockLanczos(; tol, krylovdim), kwargs...),
 )
 const EIGH_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :full => FullEighPullback, :trunc => TruncEighPullback,
+    :FullPullback => FullPullback, :TruncPullback => TruncPullback,
 )
 
-_default_eigh_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full
+_default_eigh_rrule_alg(::MatrixAlgebraKit.Algorithm) = :FullPullback
 
 function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse forward algorithm
@@ -131,7 +134,7 @@ function EighAdjoint(; fwd_alg = (;), rrule_alg = (;))
         haskey(EIGH_RRULE_SYMBOLS, rrule_kwargs.alg) ||
             throw(ArgumentError("unknown rrule algorithm: $(rrule_kwargs.alg)"))
         rrule_type = EIGH_RRULE_SYMBOLS[rrule_kwargs.alg]
-        if rrule_type <: Union{FullEighPullback, TruncEighPullback}
+        if rrule_type <: Union{FullPullback, TruncPullback}
             rrule_kwargs = (; rrule_kwargs.degeneracy_atol, rrule_kwargs.verbosity)
         end
 
@@ -191,7 +194,7 @@ Construct an `IterEigh` algorithm struct based on the following keyword argument
     fallback_threshold::Float64 = Inf
     start_vector = deterministic_start_vector
 end
-_default_eigh_rrule_alg(::IterEigh) = :trunc
+_default_eigh_rrule_alg(::IterEigh) = :TruncPullback
 
 # Compute eigh data block-wise using KrylovKit algorithm
 function MatrixAlgebraKit.eigh_trunc!(f, alg::TruncatedAlgorithm{<:IterEigh})
@@ -300,11 +303,11 @@ end
 function ChainRulesCore.rrule(
         ::typeof(eigh_trunc!),
         t::AbstractTensorMap,
-        alg::EighAdjoint{<:TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, <:FullEighPullback}
+        alg::EighAdjoint{<:TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, <:FullPullback}
     )
 
     D, V = eigh_full!(t; alg.fwd_alg.alg)
-    (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.fwd_alg.trunc)
+    (D̃, Ṽ), inds = truncate(eigh_trunc!, (D, V), alg.fwd_alg.trunc)
     truncerror = truncation_error(diagview(D), inds)
 
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
@@ -329,7 +332,7 @@ function ChainRulesCore.rrule(
         ::typeof(eigh_trunc!),
         t,
         alg::EighAdjoint{F, R}
-    ) where {F, R <: TruncEighPullback}
+    ) where {F, R <: TruncPullback}
     D, V, truncerror = eigh_trunc(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 

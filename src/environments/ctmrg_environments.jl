@@ -230,6 +230,9 @@ function CTMRGEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, a
     return CTMRGEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
+# copy-like constructor
+CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
+
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation

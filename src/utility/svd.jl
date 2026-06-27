@@ -3,52 +3,6 @@ const KrylovKitCRCExt = Base.get_extension(KrylovKit, :KrylovKitChainRulesCoreEx
 """
 $(TYPEDEF)
 
-SVD reverse-rule algorithm which wraps MatrixAlgebraKit's `svd_pullback!`.
-
-## Fields
-
-$(TYPEDFIELDS)
-
-## Constructors
-
-    FullSVDPullback(; kwargs...)
-
-Construct a `FullSVDPullback` algorithm struct from the following keyword arguments:
-
-* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
-* `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
-"""
-@kwdef struct FullSVDPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
-    verbosity::Int = 0
-end
-
-"""
-$(TYPEDEF)
-
-SVD reverse-rule algorithm which wraps MatrixAlgebraKit's `svd_trunc_pullback!`.
-
-## Fields
-
-$(TYPEDFIELDS)
-
-## Constructors
-
-    TruncSVDPullback(; kwargs...)
-
-Construct a `TruncSVDPullback` algorithm struct from the following keyword arguments:
-
-* `degeneracy_atol::Real=$(Defaults.rrule_degeneracy_atol)` : Broadening amplitude for smoothing divergent term in SVD derivative in case of (pseudo) degenerate singular values.
-* `verbosity::Int=0` : Suppresses all output if `≤0`, prints gauge dependency warnings if `1`, and always prints gauge dependency if `≥2`.
-"""
-@kwdef struct TruncSVDPullback
-    degeneracy_atol::Real = Defaults.rrule_degeneracy_atol
-    verbosity::Int = 0
-end
-
-"""
-$(TYPEDEF)
-
 Wrapper for a SVD algorithm `fwd_alg` with a defined reverse rule `rrule_alg`.
 
 ## Fields
@@ -82,8 +36,8 @@ Construct a `SVDAdjoint` algorithm struct based on the following keyword argumen
 * `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.svd_rrule_alg))`:
   Reverse-rule algorithm for differentiating the SVD. Can be supplied by an `Algorithm`
   instance directly or as a `NamedTuple` where `alg` is one of the following:
-    - `:full` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
-    - `:trunc` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
+    - `:FullPullback` : MatrixAlgebraKit's [`svd_pullback!`](@extref MatrixAlgebraKit.svd_pullback!) that requires access to the full spectrum
+    - `:TruncPullback` : MatrixAlgebraKit's [`svd_trunc_pullback!`](@extref MatrixAlgebraKit.svd_trunc_pullback!) solving a Sylvester equation on the truncated subspace
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref)
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref)
     - `:Arnoldi` : Arnoldi Krylov algorithm, see the [`KrylovKit.Arnoldi`](@extref KrylovKit.Arnoldi)
@@ -108,11 +62,11 @@ const SVD_FWD_SYMBOLS = IdDict{Symbol, Any}(
     :GKL => (; tol = 1.0e-14, krylovdim = 25, kwargs...) -> IterSVD(; alg = GKL(; tol, krylovdim), kwargs...),
 )
 const SVD_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :full => FullSVDPullback, :trunc => TruncSVDPullback,
+    :FullPullback => FullPullback, :TruncPullback => TruncPullback,
     :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi
 )
 
-_default_svd_rrule_alg(::MatrixAlgebraKit.Algorithm) = :full
+_default_svd_rrule_alg(::MatrixAlgebraKit.Algorithm) = :FullPullback
 
 function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
     # parse forward SVD algorithm
@@ -143,11 +97,11 @@ function SVDAdjoint(; fwd_alg = (;), rrule_alg = (;))
         rrule_type = SVD_RRULE_SYMBOLS[rrule_kwargs.alg]
 
         # IterSVD is incompatible with tsvd rrule -> default to Arnoldi
-        if rrule_type <: FullSVDPullback && fwd_algorithm isa IterSVD
+        if rrule_type <: FullPullback && fwd_algorithm isa IterSVD
             rrule_type = Arnoldi
         end
 
-        if rrule_type <: Union{FullSVDPullback, TruncSVDPullback}
+        if rrule_type <: Union{FullPullback, TruncPullback}
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, tol = 0.0, krylovdim = 0)) # remove `alg`, `tol` and `krylovdim` keyword arguments
         else
             rrule_kwargs = Base.structdiff(rrule_kwargs, (; alg = nothing, degeneracy_atol = 0.0)) # remove `alg` and `degeneracy_atol` keyword arguments
@@ -177,6 +131,24 @@ end
 function MatrixAlgebraKit.svd_trunc!(t::AdjointTensorMap, alg::SVDAdjoint)
     u, s, vt, ϵ = svd_trunc!(adjoint(t), alg)
     return adjoint(vt), adjoint(s), adjoint(u), ϵ
+end
+
+"""
+    svd_trunc_no_error(t, alg::SVDAdjoint)
+    svd_trunc_no_error!(t, alg::SVDAdjoint)
+
+Wrapper around `svd_trunc_no_error(!)` which dispatches on the `SVDAdjoint` algorithm.
+This is needed since a custom adjoint may be defined, depending on the `alg`.
+E.g., for `IterSVD` the adjoint for a truncated SVD from `KrylovKit.svdsolve` is used.
+The `_no_error(!)` versions of `svd_trunc(!)` do not compute the truncation error.
+"""
+MatrixAlgebraKit.svd_trunc_no_error(t, alg::SVDAdjoint) = svd_trunc_no_error!(copy(t), alg)
+function MatrixAlgebraKit.svd_trunc_no_error!(t, alg::SVDAdjoint)
+    return svd_trunc_no_error!(t, alg.fwd_alg)
+end
+function MatrixAlgebraKit.svd_trunc_no_error!(t::AdjointTensorMap, alg::SVDAdjoint)
+    u, s, vt = svd_trunc_no_error!(adjoint(t), alg)
+    return adjoint(vt), adjoint(s), adjoint(u)
 end
 
 #
@@ -211,29 +183,31 @@ Construct an `IterSVD` algorithm struct based on the following keyword arguments
     fallback_threshold::Float64 = Inf
     start_vector = deterministic_start_vector
 end
-_default_svd_rrule_alg(::IterSVD) = :trunc
+_default_svd_rrule_alg(::IterSVD) = :TruncPullback
 
 random_start_vector(t::AbstractMatrix) = randn(scalartype(t), size(t, 1))
 deterministic_start_vector(t::AbstractMatrix) = ones(scalartype(t), size(t, 1))
 
 # Compute SVD data block-wise using KrylovKit algorithm
 # TODO: redefine _empty_svdtensors, _create_svdtensors
-function MatrixAlgebraKit.svd_trunc!(f, alg::TruncatedAlgorithm{<:IterSVD})
+function MatrixAlgebraKit.svd_trunc_no_error!(f, alg::TruncatedAlgorithm{<:IterSVD})
     fwd_alg = alg.alg
     trunc = alg.trunc
     U, S, V = if isempty(blocksectors(f))
         # early return
-        truncation_error = zero(real(scalartype(f)))
         MatrixAlgebraKit.initialize_output(svd_compact!, f, DefaultAlgorithm()) # specified algorithm doesn't matter here
     else
         SVDdata, dims = _compute_svddata!(f, fwd_alg, trunc)
         _create_svdtensors(f, SVDdata, dims)
     end
+    return U, S, V
+end
 
+function MatrixAlgebraKit.svd_trunc!(f, alg::TruncatedAlgorithm{<:IterSVD})
+    U, S, Vᴴ = svd_trunc_no_error!(f, alg)
     truncation_error =
-        trunc isa NoTruncation ? abs(zero(scalartype(f))) : norm(U * S * V - f)
-
-    return U, S, V, truncation_error
+        (trunc isa NoTruncation || isempty(blocksectors(f))) ? abs(zero(scalartype(f))) : norm(U * S * Vᴴ - f)
+    return U, S, Vᴴ, truncation_error
 end
 
 # Copy from TensorKit v0.14 internal functions
@@ -316,7 +290,7 @@ function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t::AbstractTensorMap,
         alg::SVDAdjoint{F, R}
-    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullSVDPullback}
+    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
     # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
 
     # requires access to the full decomposition
@@ -341,13 +315,43 @@ function ChainRulesCore.rrule(
     return (Ũ, S̃, Ṽ⁺, truncerror), svd_trunc!_full_pullback
 end
 
+# svd_trunc_no_error! rrule wrapping MatrixAlgebraKit's svd_pullback!
+# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L33
+function ChainRulesCore.rrule(
+        ::typeof(svd_trunc_no_error!),
+        t::AbstractTensorMap,
+        alg::SVDAdjoint{F, R}
+    ) where {F <: TruncatedAlgorithm{<:MatrixAlgebraKit.Algorithm}, R <: FullPullback}
+    # TODO: filter out any decomposition algorithm that doesn't give access to the full spectrum
+
+    # requires access to the full decomposition
+    U, S, V⁺ = svd_compact!(t, alg.fwd_alg.alg)
+    (Ũ, S̃, Ṽ⁺), inds = truncate(svd_trunc!, (U, S, V⁺), alg.fwd_alg.trunc)
+
+    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+
+    function svd_trunc!_full_pullback(ΔUSV′)
+        ΔUSV = unthunk.(ΔUSV′)
+        Δt = svd_pullback!(
+            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
+            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+        )
+        return NoTangent(), Δt, NoTangent()
+    end
+    function svd_trunc!_full_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
+    end
+
+    return (Ũ, S̃, Ṽ⁺), svd_trunc!_full_pullback
+end
+
 # svd_trunc! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
 # https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L143
 function ChainRulesCore.rrule(
         ::typeof(svd_trunc!),
         t,
         alg::SVDAdjoint{F, R},
-    ) where {F, R <: TruncSVDPullback}
+    ) where {F, R <: TruncPullback}
     U, S, V⁺, ϵ = svd_trunc(t, alg)
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
@@ -364,6 +368,31 @@ function ChainRulesCore.rrule(
     end
 
     return (U, S, V⁺, ϵ), svd_trunc!_trunc_pullback
+end
+
+# svd_trunc_no_error! rrule wrapping MatrixAlgebraKit's svd_trunc_pullback! (also works for IterSVD)
+# https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/svd.jl#L143
+function ChainRulesCore.rrule(
+        ::typeof(svd_trunc_no_error!),
+        t,
+        alg::SVDAdjoint{F, R},
+    ) where {F, R <: TruncPullback}
+    U, S, V⁺ = svd_trunc_no_error(t, alg)
+    gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
+
+    function svd_trunc!_trunc_pullback(ΔUSV′)
+        ΔUSV = unthunk.(ΔUSV′)
+        Δf = svd_trunc_pullback!(
+            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
+            gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
+        )
+        return NoTangent(), Δf, NoTangent()
+    end
+    function svd_trunc!_trunc_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
+    end
+
+    return (U, S, V⁺), svd_trunc!_trunc_pullback
 end
 
 # KrylovKit rrule compatible with TensorMaps & function handles
@@ -433,4 +462,73 @@ function ChainRulesCore.rrule(
     end
 
     return (U, S, V, ϵ), svd_trunc!_itersvd_pullback
+end
+
+# KrylovKit rrule compatible with TensorMaps & function handles
+function ChainRulesCore.rrule(
+        ::typeof(svd_trunc_no_error!),
+        f,
+        alg::SVDAdjoint{F, R}
+    ) where {F, R <: Union{GMRES, BiCGStab, Arnoldi}}
+    U, S, V = svd_trunc_no_error(f, alg)
+
+    # update rrule_alg tolerance to be compatible with smallest singular value
+    rrule_alg = alg.rrule_alg
+    smallest_sval = minimum(((_, b),) -> minimum(diag(b)), blocks(S))
+    proper_tol = clamp(rrule_alg.tol, eps(scalartype(S))^(3 / 4), 1.0e-2 * smallest_sval)
+    rrule_alg = @set rrule_alg.tol = proper_tol
+
+    function svd_trunc!_itersvd_pullback(ΔUSVi)
+        Δf = similar(f)
+        ΔU, ΔS, ΔV, = unthunk.(ΔUSVi)
+
+        for (c, b) in blocks(Δf)
+            Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
+            ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
+            Sdc = view(Sc, diagind(Sc))
+            ΔSdc = ΔSc isa AbstractZero ? ΔSc : view(ΔSc, diagind(ΔSc))
+
+            n_vals = length(Sdc)
+            lvecs = Vector{Vector{scalartype(f)}}(eachcol(Uc))
+            rvecs = Vector{Vector{scalartype(f)}}(eachcol(Vc'))
+
+            # Dummy objects only used for warnings
+            minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
+            minimal_alg = GKL(; tol = rrule_alg.tol, verbosity = 1)  # Tolerance is used for gauge sensitivity, verbosity is used for warnings
+
+            if ΔUc isa AbstractZero && ΔVc isa AbstractZero  # Handle ZeroTangent singular vectors
+                Δlvecs = fill(ZeroTangent(), n_vals)
+                Δrvecs = fill(ZeroTangent(), n_vals)
+            else
+                Δlvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔUc))
+                Δrvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔVc'))
+            end
+
+            xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
+                ΔSc isa AbstractZero ? fill(zero(Sc[1]), n_vals) : ΔSdc,
+                Δlvecs,
+                Δrvecs,
+                Sdc,
+                lvecs,
+                rvecs,
+                minimal_info,
+                block(f, c),
+                :LR,
+                minimal_alg,
+                rrule_alg,
+            )
+            copyto!(
+                b,
+                KrylovKitCRCExt.construct∂f_svd(
+                    HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys
+                ),
+            )
+        end
+        return NoTangent(), Δf, NoTangent()
+    end
+    function svd_trunc!_itersvd_pullback(::Tuple{ZeroTangent, ZeroTangent, ZeroTangent})
+        return NoTangent(), ZeroTangent(), NoTangent()
+    end
+
+    return (U, S, V), svd_trunc!_itersvd_pullback
 end

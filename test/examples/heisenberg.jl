@@ -142,7 +142,7 @@ end
         ham, peps, complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
-        gradient_alg = (; alg = :LinSolver, solver_alg = (; alg = :GMRES)),
+        gradient_alg = (; solver_alg = (; alg = :GMRES)),
     )  # sensitivity warnings and degeneracies due to SU(2)?
     ξ_h, ξ_v, = correlation_length(peps_final, env_final)
     e_site2 = E_final / (N1 * N2)

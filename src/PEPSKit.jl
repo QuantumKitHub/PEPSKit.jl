@@ -50,6 +50,7 @@ include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 include("utility/retractions.jl")
+include("utility/initialization.jl")
 
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
@@ -71,6 +72,7 @@ include("environments/ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
+include("environments/product_state_environments.jl")
 
 include("algorithms/contractions/ctmrg/types.jl")
 include("algorithms/contractions/ctmrg/expr.jl")
@@ -103,6 +105,7 @@ include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/ctmrg/c4v.jl")
+include("algorithms/ctmrg/initialization.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
@@ -136,6 +139,8 @@ using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export initialize_ctmrg_environment,
+    RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization
 export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
@@ -146,7 +151,7 @@ export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
-export PEPSOptimize, GeomSum, ManualIter, LinSolver, EigSolver
+export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter
 export fixedpoint
 
 export LocalTruncation
