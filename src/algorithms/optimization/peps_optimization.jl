@@ -109,7 +109,7 @@ The optimization parameters can be supplied via the keyword arguments or directl
     4. Debug info including AD outputs
 * `reuse_env::Bool=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing` : Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
-* `hasconverged=OptimKit.DefaultHasConverged(optimizer_alg.tol)` : Function specifying the convergence criterion with signature `bool = hasconverged(state, cost, grad, gradnorm)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics.
+* `hasconverged=OptimKit.DefaultHasConverged(optimizer_alg.gradtol)` : Function specifying the convergence criterion with signature `bool = hasconverged(state, cost, grad, gradnorm)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics.
 * `shouldstop=OptimKit.DefaultShouldStop(optimizer_alg.maxiter)` : Function specifying the stopping criterion with signature `bool = shouldstop(state, cost, grad, numfg, iter, timespent)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics.
 * `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(state, env), f, g = finalize!((state, env), cost, grad, numiter)`.
 
