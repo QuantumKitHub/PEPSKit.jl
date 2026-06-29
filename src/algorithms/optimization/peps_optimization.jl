@@ -175,7 +175,7 @@ function fixedpoint(
     alg = select_algorithm(fixedpoint, env₀; kwargs...)
 
     # default stopping criteria initialized on alg parameters that have to be select first
-    isnothing(hasconverged) && (hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.tol))
+    isnothing(hasconverged) && (hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.gradtol))
     isnothing(shouldstop) && (shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter))
 
     return fixedpoint(operator, peps₀, env₀, alg; finalize!, hasconverged, shouldstop)
@@ -183,7 +183,7 @@ end
 function fixedpoint(
         operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize;
         (finalize!) = OptimKit._finalize!,
-        hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.tol),
+        hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.gradtol),
         shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter),
     )
     # validate inputs

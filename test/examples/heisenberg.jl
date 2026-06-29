@@ -150,3 +150,51 @@ end
     @test e_site2 ≈ E_ref atol = 1.0e-2
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
+
+@kwdef mutable struct ΔEnergyShouldStop{T <: Real}
+    E_last::T = 0.0
+    tol::T = 1.0e-12
+end
+function (es::ΔEnergyShouldStop)(x, f, g, numfg, numiter, t)
+    Δenergy = f - es.E_last
+    es.E_last = f
+    return abs(Δenergy) <= es.tol
+end
+
+@kwdef mutable struct ΔEnergyHasConverged{T <: Real}
+    E_last::T = 0.0
+    tol::T = 1.0e-12
+end
+function (es::ΔEnergyHasConverged)(x, f, g, normgrad)
+    Δenergy = f - es.E_last
+    es.E_last = f
+    return abs(Δenergy) <= es.tol
+end
+
+@testset "Early stopping with hasconverged and shouldstop" begin
+    maxiter = 100
+    Random.seed!(123)
+    H = heisenberg_XYZ(InfiniteSquare())
+    peps₀ = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
+
+    # should converge when energy difference becomes small enough
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenv)), peps₀)
+    ΔEconverged = ΔEnergyHasConverged(; tol = 1.0e-4)
+    peps, env, E, info = fixedpoint(
+        H, peps₀, env₀;
+        optimizer_alg = (; maxiter, tol = 0),
+        hasconverged = ΔEconverged,
+    )
+    @test length(info.costs) < maxiter
+
+    # should stop when linesearching fails and returns α = 0 (i.e. ΔE = 0)
+    χenvsmall = 2
+    env₀, = leading_boundary(CTMRGEnv(peps₀, ComplexSpace(χenvsmall)), peps₀)
+    ΔEstop = ΔEnergyShouldStop(; tol = 1.0e-8)
+    peps, env, E, info = fixedpoint(
+        H, peps₀, env₀;
+        optimizer_alg = (; maxiter, ls_maxfg = 2, ls_maxiter = 2),
+        shouldstop = ΔEstop,
+    )
+    @test length(info.costs) < maxiter
+end
