@@ -154,11 +154,12 @@ end
 @kwdef mutable struct ΔEnergyShouldStop{T <: Real}
     E_last::T = 0.0
     tol::T = 1.0e-12
+    maxiter::Int = 100
 end
 function (es::ΔEnergyShouldStop)(x, f, g, numfg, numiter, t)
     Δenergy = f - es.E_last
     es.E_last = f
-    return abs(Δenergy) <= es.tol
+    return (abs(Δenergy) <= es.tol) || numiter >= es.maxiter
 end
 
 @kwdef mutable struct ΔEnergyHasConverged{T <: Real}
