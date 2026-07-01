@@ -12,11 +12,17 @@ function _correlator_horizontal_pos(
     _issorted_correlator_sites(i, js)
     O = FiniteMPO(operator)
     length(O) == 2 || throw(ArgumentError("Operator must act on two sites"))
+    # preallocate with correct scalartype
+    G = similar(
+        js, TensorOperations.promote_contract(
+            scalartype(bra), scalartype(ket), scalartype(env), scalartype.(O)...
+        ),
+    )
     # left start for operator and norm contractions
     c = i # current column being handled
     Vn, Vo = start_correlator_left(c, bra, O[1], ket, env)
     j_last = last(js)
-    return map(enumerate(js)) do (_, j)
+    for (k, j) in enumerate(js)
         local numerator
         while j > c
             c += CartesianIndex(0, 1)
@@ -29,8 +35,9 @@ function _correlator_horizontal_pos(
         end
         # compute overlap without operator
         denominator = end_correlator_right_denominator(j, Vn, env)
-        return numerator / denominator
+        G[k] = numerator / denominator
     end
+    return G
 end
 
 function correlator_vertical(
@@ -92,11 +99,17 @@ function _correlator_horizontal_pos(
     _issorted_correlator_sites(i, js)
     O = FiniteMPO(operator)
     length(O) == 2 || throw(ArgumentError("Operator must act on two sites"))
+    # preallocate with correct scalartype
+    G = similar(
+        js, TensorOperations.promote_contract(
+            scalartype(ρ), scalartype(env), scalartype.(O)...
+        ),
+    )
     # left start for operator and norm contractions
     c = i # current column being handled
     Vn, Vo = start_correlator_left(c, ρ, O[1], env)
     j_last = last(js)
-    return map(enumerate(js)) do (_, j)
+    for (k, j) in enumerate(js)
         local numerator
         while j > c
             c += CartesianIndex(0, 1)
@@ -109,8 +122,9 @@ function _correlator_horizontal_pos(
         end
         # compute overlap without operator
         denominator = end_correlator_right_denominator(j, Vn, env)
-        return numerator / denominator
+        G[k] = numerator / denominator
     end
+    return G
 end
 
 function correlator_vertical(
