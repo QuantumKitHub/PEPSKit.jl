@@ -17,9 +17,8 @@ function get_spaces(sym::Type{<:Sector})
 end
 
 site0 = CartesianIndex(1, 1)
-maxsep = 6
-site1xs = collect(site0 + CartesianIndex(0, i) for i in 2:2:maxsep)
-site1ys = collect(site0 + CartesianIndex(i, 0) for i in 2:2:maxsep)
+site1xs = collect(site0 + CartesianIndex(0, i) for i in [1, 3, 4])
+site1ys = collect(site0 + CartesianIndex(i, 0) for i in [1, 3, 4])
 
 @testset "Correlator in InfinitePEPS ($(sym))" for sym in syms
     Random.seed!(100)

@@ -13,25 +13,20 @@ function _correlator_horizontal_pos(
     O = FiniteMPO(operator)
     length(O) == 2 || throw(ArgumentError("Operator must act on two sites"))
     # left start for operator and norm contractions
-    Vn, Vo = start_correlator_left(i, bra, O[1], ket, env)
-    i += CartesianIndex(0, 1)
+    c = i # current column being handled
+    Vn, Vo = start_correlator_left(c, bra, O[1], ket, env)
+    j_last = last(js)
     return map(enumerate(js)) do (k, j)
-        # transfer until left of site j
-        while j > i
-            T = _edge_transfermatrix(i[1], i[2], bra, ket, env)
-            Vo = Vo * T
+        local numerator
+        while j > c
+            c += CartesianIndex(0, 1)
+            if c == j
+                numerator = end_correlator_right_numerator(j, Vo, bra, O[2], ket, env)
+            end
+            T = _edge_transfermatrix(c[1], c[2], bra, ket, env)
+            c != j_last && (Vo = Vo * T)
             Vn = Vn * T
-            i += CartesianIndex(0, 1)
         end
-        # compute overlap with operator
-        numerator = end_correlator_right_numerator(j, Vo, bra, O[2], ket, env)
-        # transfer right of site j
-        T = _edge_transfermatrix(i[1], i[2], bra, ket, env)
-        if k < length(js)
-            Vo = Vo * T
-        end
-        Vn = Vn * T
-        i += CartesianIndex(0, 1)
         # compute overlap without operator
         denominator = end_correlator_right_denominator(j, Vn, env)
         return numerator / denominator
@@ -98,25 +93,20 @@ function _correlator_horizontal_pos(
     O = FiniteMPO(operator)
     length(O) == 2 || throw(ArgumentError("Operator must act on two sites"))
     # left start for operator and norm contractions
-    Vn, Vo = start_correlator_left(i, ρ, O[1], env)
-    i += CartesianIndex(0, 1)
+    c = i # current column being handled
+    Vn, Vo = start_correlator_left(c, ρ, O[1], env)
+    j_last = last(js)
     return map(enumerate(js)) do (k, j)
-        # transfer until left of site j
-        while j > i
-            T = _edge_transfermatrix(i[1], i[2], ρ, env)
-            Vo = Vo * T
+        local numerator
+        while j > c
+            c += CartesianIndex(0, 1)
+            if c == j
+                numerator = end_correlator_right_numerator(j, Vo, ρ, O[2], env)
+            end
+            T = _edge_transfermatrix(c[1], c[2], ρ, env)
+            c != j_last && (Vo = Vo * T)
             Vn = Vn * T
-            i += CartesianIndex(0, 1)
         end
-        # compute overlap with operator
-        numerator = end_correlator_right_numerator(j, Vo, ρ, O[2], env)
-        # transfer right of site j
-        T = _edge_transfermatrix(i[1], i[2], ρ, env)
-        if k < length(js)
-            Vo = Vo * T
-        end
-        Vn = Vn * T
-        i += CartesianIndex(0, 1)
         # compute overlap without operator
         denominator = end_correlator_right_denominator(j, Vn, env)
         return numerator / denominator
