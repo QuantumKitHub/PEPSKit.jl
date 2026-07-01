@@ -38,9 +38,8 @@ function edge_transfermatrix(a::AbstractVector, b, c::AbstractVector, isflipped 
 end
 
 function _edge_transfermatrix(
-        row::Int, col::Int,
-        bra::InfinitePEPS, ket::InfinitePEPS, env::CTMRGEnv
-    )
+        row::Int, col::Int, bra::S, ket::S, env::CTMRGEnv
+    ) where {S <: InfiniteState}
     Etop = edge(env, NORTH, row - 1, col)
     Ebot = edge(env, SOUTH, row + 1, col)
     sandwich = (ket[row, col], bra[row, col])

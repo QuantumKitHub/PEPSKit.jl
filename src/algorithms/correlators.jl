@@ -1,24 +1,24 @@
 const CoordCollection{N} = Union{AbstractVector{CartesianIndex{N}}, CartesianIndices{N}}
 
-# Correlators in InfinitePEPS
+# Correlators in InfinitePEPS or purified InfinitePEPO
 
 function MPSKit.correlator(
-        bra::InfinitePEPS,
+        bra::S,
         O,
         i::CartesianIndex{2}, js::CoordCollection{2},
-        ket::InfinitePEPS,
+        ket::S,
         env::CTMRGEnv,
-    )
-    return _correlator(_PEPSCorrelator(bra, ket, env), O, i, vec(js))
+    ) where {S <: InfiniteState}
+    return _correlator(_braket_correlator(bra, ket, env), O, i, vec(js))
 end
 
 function MPSKit.correlator(
-        bra::InfinitePEPS,
+        bra::S,
         O,
         i::CartesianIndex{2}, j::CartesianIndex{2},
-        ket::InfinitePEPS,
+        ket::S,
         env::CTMRGEnv,
-    )
+    ) where {S <: InfiniteState}
     return only(correlator(bra, O, i, j:j, ket, env))
 end
 
@@ -44,5 +44,3 @@ function MPSKit.correlator(
     )
     return only(correlator(ρ, O, i, j:j, env))
 end
-
-# TODO: Correlators in InfinitePEPO (⟨ρ|O|ρ⟩)

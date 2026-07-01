@@ -96,6 +96,7 @@ include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
 include("algorithms/contractions/correlator/peps.jl")
+include("algorithms/contractions/correlator/pepo_purified.jl")
 include("algorithms/contractions/correlator/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")

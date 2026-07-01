@@ -64,3 +64,26 @@ end
         end
     end
 end
+
+@testset "Correlator in purified InfinitePEPO ($(sym))" for sym in syms
+    Random.seed!(100)
+    Vphy, Venv, Nspaces, Espaces = get_spaces(sym)
+    # TODO: test dual physical space
+    for Vp in [Vphy]
+        op = randn(ComplexF64, Vp ⊗ Vp → Vp ⊗ Vp)
+        Pspaces = fill(Vp, size(Nspaces))
+        pepo = InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+        peps = InfinitePEPS(pepo)
+        env = CTMRGEnv(randn, ComplexF64, peps, Venv)
+        for site1s in (site1xs, site1ys)
+            vals1 = correlator(pepo, op, site0, site1s, pepo, env)
+            vals2 = map(site1s) do site1
+                O = LocalOperator(Pspaces, (site0, site1) => op)
+                return expectation_value(pepo, O, pepo, env)
+            end
+            @info vals1
+            @info vals2
+            @test vals1 ≈ vals2
+        end
+    end
+end

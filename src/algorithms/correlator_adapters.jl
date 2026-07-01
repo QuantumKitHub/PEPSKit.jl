@@ -12,6 +12,27 @@ struct _PEPSCorrelator{B <: InfinitePEPS, K <: InfinitePEPS, E <: CTMRGEnv}
     end
 end
 
+struct _PEPOPurifiedCorrelator{B <: InfinitePEPO, K <: InfinitePEPO, E <: CTMRGEnv}
+    bra::B
+    ket::K
+    env::E
+
+    function _PEPOPurifiedCorrelator(bra::B, ket::K, env::E) where {B, K, E}
+        size(ket) == size(bra) ||
+            throw(DimensionMismatch("The ket and bra must have the same unit cell."))
+        size(ket, 3) == size(bra, 3) == 1 ||
+            throw(ArgumentError("Purified PEPO correlators require one-layer PEPOs."))
+        return new{B, K, E}(bra, ket, env)
+    end
+end
+
+const _BraketCorrelator = Union{_PEPSCorrelator, _PEPOPurifiedCorrelator}
+
+_braket_correlator(bra::InfinitePEPS, ket::InfinitePEPS, env::CTMRGEnv) =
+    _PEPSCorrelator(bra, ket, env)
+_braket_correlator(bra::InfinitePEPO, ket::InfinitePEPO, env::CTMRGEnv) =
+    _PEPOPurifiedCorrelator(bra, ket, env)
+
 struct _PEPOTraceCorrelator{P <: InfinitePEPO, E <: CTMRGEnv}
     ρ::P
     env::E
@@ -23,7 +44,7 @@ struct _PEPOTraceCorrelator{P <: InfinitePEPO, E <: CTMRGEnv}
     end
 end
 
-function _correlator_scalartype(context::_PEPSCorrelator, O::FiniteMPO)
+function _correlator_scalartype(context::_BraketCorrelator, O::FiniteMPO)
     return TensorOperations.promote_contract(
         scalartype(context.bra), scalartype(context.ket),
         scalartype(context.env), scalartype.(O)...
@@ -36,7 +57,7 @@ function _correlator_scalartype(context::_PEPOTraceCorrelator, O::FiniteMPO)
     )
 end
 
-_correlator_unitcell(context::_PEPSCorrelator) = size(context.bra)
+_correlator_unitcell(context::_BraketCorrelator) = size(context.bra)[1:2]
 _correlator_unitcell(context::_PEPOTraceCorrelator) = size(context.ρ)[1:2]
 
 function Base.rotl90(context::_PEPSCorrelator)
@@ -45,11 +66,17 @@ function Base.rotl90(context::_PEPSCorrelator)
     return _PEPSCorrelator(rotated_bra, rotated_ket, rotl90(context.env))
 end
 
+function Base.rotl90(context::_PEPOPurifiedCorrelator)
+    rotated_bra = rotl90(context.bra)
+    rotated_ket = context.bra === context.ket ? rotated_bra : rotl90(context.ket)
+    return _PEPOPurifiedCorrelator(rotated_bra, rotated_ket, rotl90(context.env))
+end
+
 Base.rotl90(context::_PEPOTraceCorrelator) =
     _PEPOTraceCorrelator(rotl90(context.ρ), rotl90(context.env))
 
 function _start_correlator(
-        i::CartesianIndex{2}, context::_PEPSCorrelator, O::MPOTensor
+        i::CartesianIndex{2}, context::_BraketCorrelator, O::MPOTensor
     )
     return start_correlator(i, context.bra, O, context.ket, context.env)
 end
@@ -63,7 +90,7 @@ end
 function _end_correlator_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
-        context::_PEPSCorrelator,
+        context::_BraketCorrelator,
         O::MPOTensor,
     ) where {T, S}
     return end_correlator_numerator(j, V, context.bra, O, context.ket, context.env)
@@ -78,7 +105,7 @@ function _end_correlator_numerator(
     return end_correlator_numerator(j, V, context.ρ, O, context.env)
 end
 
-function _edge_transfermatrix(row::Int, col::Int, context::_PEPSCorrelator)
+function _edge_transfermatrix(row::Int, col::Int, context::_BraketCorrelator)
     return _edge_transfermatrix(row, col, context.bra, context.ket, context.env)
 end
 
@@ -87,8 +114,7 @@ function _edge_transfermatrix(row::Int, col::Int, context::_PEPOTraceCorrelator)
 end
 
 function _correlator_horizontal(
-        context,
-        operator,
+        context, operator,
         i::CartesianIndex{2}, js::AbstractVector{CartesianIndex{2}},
     )
     _issorted_correlator_sites(i, js)

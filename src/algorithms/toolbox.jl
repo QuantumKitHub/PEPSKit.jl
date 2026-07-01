@@ -8,9 +8,8 @@ In the latter case the first signature corresponds to a single layer PEPO contra
 the second signature yields a bilayer contraction instead.
 """
 function MPSKit.expectation_value(
-        bra::Union{InfinitePEPS, InfinitePEPO}, O::LocalOperator,
-        ket::Union{InfinitePEPS, InfinitePEPO}, env::CTMRGEnv
-    )
+        bra::S, O::LocalOperator, ket::S, env::CTMRGEnv
+    ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, ket, bra, env)
