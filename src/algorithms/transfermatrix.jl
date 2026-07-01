@@ -12,7 +12,7 @@ end
 
 Base.:*(tm1::T, tm2::T) where {T <: EdgeTransferMatrix} = ProductTransferMatrix([tm1, tm2])
 
-# TODO: really not sure it TensorKit.flip is the suitable method for this...
+# TODO: really not sure if TensorKit.flip is the suitable method for this...
 function TensorKit.flip(tm::EdgeTransferMatrix)
     return EdgeTransferMatrix(tm.top, tm.mid, tm.bot, !tm.isflipped)
 end
@@ -35,4 +35,23 @@ end
 function edge_transfermatrix(a::AbstractVector, b, c::AbstractVector, isflipped = false)
     tot = ProductTransferMatrix(convert(Vector, edge_transfermatrix.(a, b, c)))
     return isflipped ? flip(tot) : tot
+end
+
+function _edge_transfermatrix(
+        row::Int, col::Int,
+        bra::InfinitePEPS, ket::InfinitePEPS, env::CTMRGEnv
+    )
+    Etop = edge(env, NORTH, row - 1, col)
+    Ebot = edge(env, SOUTH, row + 1, col)
+    sandwich = (ket[row, col], bra[row, col])
+    return edge_transfermatrix(Etop, sandwich, Ebot)
+end
+
+function _edge_transfermatrix(
+        row::Int, col::Int, ρ::InfinitePEPO, env::CTMRGEnv
+    )
+    Etop = edge(env, NORTH, row - 1, col)
+    Ebot = edge(env, SOUTH, row + 1, col)
+    Omid = trace_physicalspaces(ρ[row, col])
+    return edge_transfermatrix(Etop, Omid, Ebot)
 end

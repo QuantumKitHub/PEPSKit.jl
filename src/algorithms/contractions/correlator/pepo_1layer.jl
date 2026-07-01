@@ -1,4 +1,4 @@
-function start_correlator(
+function start_correlator_left(
         i::CartesianIndex{2}, ρ::InfinitePEPO,
         O::PFTensor, env::CTMRGEnv
     )
@@ -25,7 +25,7 @@ function start_correlator(
     return Vn, Vo
 end
 
-function end_correlator_numerator(
+function end_correlator_right_numerator(
         j::CartesianIndex{2}, V::CTMRGEdgeTensor{T, S, 3},
         ρ::InfinitePEPO, O::PFTensor, env::CTMRGEnv
     ) where {T, S}
@@ -44,7 +44,7 @@ function end_correlator_numerator(
         t[d1 d2; DN DE DS DW] * removeunit(O, 4)[dstring d2; d1]
 end
 
-function end_correlator_denominator(
+function end_correlator_right_denominator(
         j::CartesianIndex{2}, V::CTMRGEdgeTensor{T, S, 2}, env::CTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
