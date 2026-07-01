@@ -28,6 +28,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Removed
 
+- `edge_transfer_right` are not used anywhere and removed (#399)
+
 ### Fixed
 
 ### Performance
