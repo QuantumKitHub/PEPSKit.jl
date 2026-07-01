@@ -48,34 +48,34 @@ end
 Base.rotl90(context::_PEPOTraceCorrelator) =
     _PEPOTraceCorrelator(rotl90(context.ρ), rotl90(context.env))
 
-function _start_correlator_left(
+function _start_correlator(
         i::CartesianIndex{2}, context::_PEPSCorrelator, O::MPOTensor
     )
-    return start_correlator_left(i, context.bra, O, context.ket, context.env)
+    return start_correlator(i, context.bra, O, context.ket, context.env)
 end
 
-function _start_correlator_left(
+function _start_correlator(
         i::CartesianIndex{2}, context::_PEPOTraceCorrelator, O::PFTensor
     )
-    return start_correlator_left(i, context.ρ, O, context.env)
+    return start_correlator(i, context.ρ, O, context.env)
 end
 
-function _end_correlator_right_numerator(
+function _end_correlator_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         context::_PEPSCorrelator,
         O::MPOTensor,
     ) where {T, S}
-    return end_correlator_right_numerator(j, V, context.bra, O, context.ket, context.env)
+    return end_correlator_numerator(j, V, context.bra, O, context.ket, context.env)
 end
 
-function _end_correlator_right_numerator(
+function _end_correlator_numerator(
         j::CartesianIndex{2},
         V::CTMRGEdgeTensor{T, S, 3},
         context::_PEPOTraceCorrelator,
         O::PFTensor,
     ) where {T, S}
-    return end_correlator_right_numerator(j, V, context.ρ, O, context.env)
+    return end_correlator_numerator(j, V, context.ρ, O, context.env)
 end
 
 function _edge_transfermatrix(row::Int, col::Int, context::_PEPSCorrelator)
@@ -98,21 +98,21 @@ function _correlator_horizontal(
     G = similar(js, _correlator_scalartype(context, O))
     # left start for operator and norm contractions
     c = i # current column being handled
-    Vn, Vo = _start_correlator_left(c, context, O[1])
+    Vn, Vo = _start_correlator(c, context, O[1])
     j_last = last(js)
     for (k, j) in enumerate(js)
         local numerator
         while j > c
             c += CartesianIndex(0, 1)
             if c == j
-                numerator = _end_correlator_right_numerator(j, Vo, context, O[2])
+                numerator = _end_correlator_numerator(j, Vo, context, O[2])
             end
             T = _edge_transfermatrix(c[1], c[2], context)
             c != j_last && (Vo = Vo * T)
             Vn = Vn * T
         end
         # compute overlap without operator
-        denominator = end_correlator_right_denominator(j, Vn, context.env)
+        denominator = end_correlator_denominator(j, Vn, context.env)
         G[k] = numerator / denominator
     end
     return G

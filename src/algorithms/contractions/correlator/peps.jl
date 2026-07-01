@@ -1,4 +1,4 @@
-function start_correlator_left(
+function start_correlator(
         i::CartesianIndex{2},
         below::InfinitePEPS,
         O::MPOTensor,
@@ -37,7 +37,7 @@ function start_correlator_left(
     return Vn, Vo
 end
 
-function end_correlator_right_numerator(
+function end_correlator_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         above::InfinitePEPS,
@@ -64,7 +64,7 @@ function end_correlator_right_numerator(
         removeunit(O, 4)[dstring db; dt]
 end
 
-function end_correlator_right_denominator(
+function end_correlator_denominator(
         j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
         env::CTMRGEnv
     ) where {T, S}
