@@ -23,7 +23,7 @@ function select_algorithm(
         tol = Defaults.optimizer_tol, # top-level tolerance
         verbosity = 3, # top-level verbosity
         boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
-        symmetrization = nothing, hasconverged = nothing, shouldstop = nothing, kwargs...,
+        symmetrization = nothing, kwargs...,
     )
     # adjust CTMRG tols and verbosity
     if boundary_alg isa NamedTuple

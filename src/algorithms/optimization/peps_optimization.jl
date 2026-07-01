@@ -166,19 +166,10 @@ information `NamedTuple` which contains the following entries:
 * `gradnorms_unitcell` : History of gradient norms for each respective unit cell entry.
 * `times` : History of optimization step execution times.
 """
-function fixedpoint(
-        operator, peps₀::InfinitePEPS, env₀;
-        (finalize!) = OptimKit._finalize!,
-        hasconverged = nothing, shouldstop = nothing, kwargs...,
-    )
-    # select OptimizationAlgorithm from kwargs
-    alg = select_algorithm(fixedpoint, env₀; kwargs...)
-
-    # default stopping criteria initialized on alg parameters that have to be select first
-    isnothing(hasconverged) && (hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.gradtol))
-    isnothing(shouldstop) && (shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter))
-
-    return fixedpoint(operator, peps₀, env₀, alg; finalize!, hasconverged, shouldstop)
+function fixedpoint(operator, peps₀::InfinitePEPS, env₀; kwargs...)
+    extra_kwarg_keys = (:finalize!, :hasconverged, :shouldstop) # these will not be passed to `select_algorithm`, only to the 2nd `fixedpoint` call
+    alg = select_algorithm(fixedpoint, env₀; filter(kw -> !(first(kw) in extra_kwarg_keys), kwargs)...)
+    return fixedpoint(operator, peps₀, env₀, alg; filter(kw -> first(kw) in extra_kwarg_keys, kwargs)...)
 end
 function fixedpoint(
         operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize;
