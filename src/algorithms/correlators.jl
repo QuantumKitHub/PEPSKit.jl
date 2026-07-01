@@ -16,7 +16,7 @@ function _correlator_horizontal_pos(
     c = i # current column being handled
     Vn, Vo = start_correlator_left(c, bra, O[1], ket, env)
     j_last = last(js)
-    return map(enumerate(js)) do (k, j)
+    return map(enumerate(js)) do (_, j)
         local numerator
         while j > c
             c += CartesianIndex(0, 1)
@@ -96,7 +96,7 @@ function _correlator_horizontal_pos(
     c = i # current column being handled
     Vn, Vo = start_correlator_left(c, ρ, O[1], env)
     j_last = last(js)
-    return map(enumerate(js)) do (k, j)
+    return map(enumerate(js)) do (_, j)
         local numerator
         while j > c
             c += CartesianIndex(0, 1)
