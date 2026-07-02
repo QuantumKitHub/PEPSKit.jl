@@ -12,10 +12,11 @@ end
 Random.seed!(1457860)
 Nr, Nc = 2, 2
 H = j1_j2_model(
-    Float64, Trivial, InfiniteSquare(Nr, Nc);
+    Float64, U1Irrep, InfiniteSquare(Nr, Nc);
     J1 = 1.0, J2 = 0.0, sublattice = false
 )
-Pspace, Vspace = ℂ^2, ℂ^4
+Pspace = U1Space(1 // 2 => 1, -1 // 2 => 1)
+Vspace = U1Space(0 => 2, 1 // 2 => 1, -1 // 2 => 1)
 ψ0 = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc))
 trunc = truncerror(; atol = 1.0e-10) & truncrank(4)
 ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trunc = truncerror(; atol = 1.0e-10) & truncrank(16))
@@ -30,8 +31,8 @@ e0 = expectation_value(ψ0, H, env0) / (Nr * Nc)
 
 # continue with NTU
 @testset "NTU for ground state" begin
-    ntu_alg = NeighbourUpdate()
-    evolver = TimeEvolver(ψ0, H, 0.01, 5000, ntu_alg)
+    ntu_alg = NeighbourUpdate(; bondenv_alg = NNpEnv())
+    evolver = TimeEvolver(ψ0, H, 0.01, 100, ntu_alg)
     ψ, info = time_evolve(evolver, H, env0, ctm_alg)
     env = info.env
     e = expectation_value(ψ, H, env) / (Nr * Nc)
