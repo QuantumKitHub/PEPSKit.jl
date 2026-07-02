@@ -21,6 +21,7 @@ For a simple example on how to implement a custom model, let's look at the imple
 [`transverse_field_ising`](@ref) model:
 
 ```julia
+import TensorKitTensors.SpinOperators as SO
 function transverse_field_ising(
     T::Type{<:Number},
     S::Union{Type{Trivial},Type{Z2Irrep}},
@@ -28,8 +29,8 @@ function transverse_field_ising(
     J=1.0,
     g=1.0,
 )
-    ZZ = rmul!(4 * SpinOperators.S_z_S_z(T, S), -J)
-    X = rmul!(SpinOperators.σˣ(T, S), g * -J)
+    ZZ = rmul!(SO.S_z_S_z(T, S), -4 * J)
+    X = rmul!(SO.σˣ(T, S), g * -J)
     spaces = fill(domain(X)[1], (lattice.Nrows, lattice.Ncols))
     return LocalOperator(
         spaces,
