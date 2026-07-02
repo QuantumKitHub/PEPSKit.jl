@@ -32,6 +32,19 @@ function collect_neighbors(
     )
 end
 
+function _hair_axes(open_axs::NTuple{N, Int}) where {N}
+    @assert all(Base.Fix2(in, 2:5), open_axs) && allunique(open_axs)
+    return ntuple(Val(4 - N)) do i
+        n = 0
+        for ax in 2:5
+            ax in open_axs && continue
+            n += 1
+            n == i && return ax
+        end
+        throw(ArgumentError("invalid open axes"))
+    end
+end
+
 """
     benv_tensor(ket::PEPSTensor, bra::PEPSTensor, open_axs::NTuple{N, Int}) where {N}
     benv_tensor(ket::PEPSTensor, bra::PEPSTensor, open_axs::NTuple{N, Int}, hairs::NTuple{Nh, H}) where {N, Nh, H <: Union{Nothing, Hair}}
@@ -90,7 +103,7 @@ function benv_tensor(
     @assert 1 <= N <= 3 && Nh == 4 - N
     open_axs = open_vaxs .+ 1
     # axes to be contracted
-    hair_axs = Tuple(ax for ax in 2:5 if ax ∉ open_axs)
+    hair_axs = _hair_axes(open_axs)
     # attach hairs to ket
     ket = twistdual(ket, 1)
     axes = ntuple(identity, Val(5))
