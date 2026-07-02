@@ -17,8 +17,8 @@ function get_spaces(sym::Type{<:Sector})
 end
 
 site0 = CartesianIndex(1, 1)
-site1xs = collect(site0 + CartesianIndex(0, i) for i in [1, 3, 4])
-site1ys = collect(site0 + CartesianIndex(i, 0) for i in [1, 3, 4])
+site1xs = collect(site0 + CartesianIndex(0, i) for i in [1, -1, 3, -2])
+site1ys = collect(site0 + CartesianIndex(i, 0) for i in [1, -1, 3, -2])
 
 @testset "Correlator in InfinitePEPS ($(sym))" for sym in syms
     Random.seed!(100)
@@ -39,29 +39,7 @@ site1ys = collect(site0 + CartesianIndex(i, 0) for i in [1, 3, 4])
             @info vals2
             @test vals1 ≈ vals2
         end
-    end
-end
-
-@testset "Correlator in 1-layer InfinitePEPO ($(sym))" for sym in syms
-    Random.seed!(100)
-    Vphy, Venv, Nspaces, Espaces = get_spaces(sym)
-    # TODO: test dual physical space
-    for Vp in [Vphy]
-        op = randn(ComplexF64, Vp ⊗ Vp → Vp ⊗ Vp)
-        Pspaces = fill(Vp, size(Nspaces))
-        pepo = InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
-        pf = InfinitePartitionFunction(pepo)
-        env = CTMRGEnv(randn, ComplexF64, pf, Venv)
-        for site1s in (site1xs, site1ys)
-            vals1 = correlator(pepo, op, site0, site1s, env)
-            vals2 = map(site1s) do site1
-                O = LocalOperator(Pspaces, (site0, site1) => op)
-                return expectation_value(pepo, O, env)
-            end
-            @info vals1
-            @info vals2
-            @test vals1 ≈ vals2
-        end
+        @test_throws ArgumentError correlator(peps, op, site0, site0, env)
     end
 end
 
@@ -85,5 +63,30 @@ end
             @info vals2
             @test vals1 ≈ vals2
         end
+        @test_throws ArgumentError correlator(pepo, op, site0, site0, pepo, env)
+    end
+end
+
+@testset "Correlator in 1-layer InfinitePEPO ($(sym))" for sym in syms
+    Random.seed!(100)
+    Vphy, Venv, Nspaces, Espaces = get_spaces(sym)
+    # TODO: test dual physical space
+    for Vp in [Vphy]
+        op = randn(ComplexF64, Vp ⊗ Vp → Vp ⊗ Vp)
+        Pspaces = fill(Vp, size(Nspaces))
+        pepo = InfinitePEPO(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+        pf = InfinitePartitionFunction(pepo)
+        env = CTMRGEnv(randn, ComplexF64, pf, Venv)
+        for site1s in (site1xs, site1ys)
+            vals1 = correlator(pepo, op, site0, site1s, env)
+            vals2 = map(site1s) do site1
+                O = LocalOperator(Pspaces, (site0, site1) => op)
+                return expectation_value(pepo, O, env)
+            end
+            @info vals1
+            @info vals2
+            @test vals1 ≈ vals2
+        end
+        @test_throws ArgumentError correlator(pepo, op, site0, site0, env)
     end
 end
