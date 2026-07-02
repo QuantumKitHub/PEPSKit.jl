@@ -11,7 +11,6 @@ using Documenter
 using DocumenterCitations
 using DocumenterInterLinks
 using PEPSKit
-using MPSKitModels: MPSKitModels # used for docstrings
 
 # bibliography
 bibpath = joinpath(@__DIR__, "src", "assets", "pepskit.bib")
@@ -23,7 +22,7 @@ links = InterLinks(
     "TensorKit" => "https://quantumkithub.github.io/TensorKit.jl/stable/",
     "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
     "MPSKit" => "https://quantumkithub.github.io/MPSKit.jl/stable/",
-    "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/dev/",
+    "TensorKitTensors" => "https://quantumkithub.github.io/TensorKitTensors.jl/stable/",
     # "Zygote" => "https://fluxml.ai/Zygote.jl/stable/",
     "ChainRulesCore" => "https://juliadiff.org/ChainRulesCore.jl/stable/",
     "MatrixAlgebraKit" => "https://quantumkithub.github.io/MatrixAlgebraKit.jl/stable/",
@@ -54,7 +53,7 @@ examples_partition_functions = joinpath.(
 examples_boundary_mps = joinpath.(["boundary_mps"], Ref("index.md"))
 
 makedocs(;
-    modules = [PEPSKit, MPSKitModels],
+    modules = [PEPSKit],
     sitename = "PEPSKit.jl",
     format = Documenter.HTML(;
         prettyurls = true, mathengine, assets = ["assets/custom.css"], size_threshold = 1024000
@@ -75,7 +74,6 @@ makedocs(;
         "References" => "references.md",
     ],
     checkdocs = :none,
-    # checkdocs_ignored_modules=[MPSKitModels], # doesn't seem to work...
     plugins = [bib, links],
 )
 

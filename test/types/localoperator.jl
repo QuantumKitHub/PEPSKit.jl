@@ -2,7 +2,8 @@ using TensorKit
 using PEPSKit
 using PEPSKit: siterotl90, siterotr90, siterot180
 using MPSKit: add_physical_charge
-using MPSKitModels: a_number, nꜛnꜜ, contract_onesite
+import TensorKitTensors.BosonOperators as BO
+import TensorKitTensors.HubbardOperators as Hub
 using Test
 
 vds = (ℂ^2, Rep[U₁](1 => 1, -1 => 1), Rep[SU₂](1 / 2 => 1))
@@ -54,8 +55,8 @@ end
 
     # bosonic case
     cutoff = 2
-    N = a_number(elt, U1Irrep; cutoff)
-    H_U = U / 2 * contract_onesite(N, N - id(domain(N)))
+    N = BO.b_num(elt, U1Irrep; cutoff)
+    H_U = U / 2 * N * (N - id(domain(N)))
     spaces = fill(space(H_U, 1), (lattice.Nrows, lattice.Ncols))
     H = LocalOperator(spaces, ((1, 1),) => H_U)
     tr_before = tr(last(only(H.terms)))
@@ -72,7 +73,7 @@ end
 
     # fermionic case
     symmetry = FermionParity ⊠ U1Irrep
-    H_U = U * nꜛnꜜ(elt, U1Irrep, Trivial)
+    H_U = U * Hub.ud_num(elt, U1Irrep, Trivial)
     spaces = fill(space(H_U, 1), (lattice.Nrows, lattice.Ncols))
     H = LocalOperator(spaces, ((1, 1),) => H_U)
     tr_before = tr(last(only(H.terms)))
@@ -102,8 +103,10 @@ unitcells = [(1, 1), (2, 3), (3, 3), (4, 3)]
 end
 
 op_1x1 = LocalOperator([ℂ^2;;], ((1, 1), (1, 2)) => randn(ℂ^2, ℂ^2) ⊗ randn(ℂ^2, ℂ^2))
+# J1-J2 only has spin U(1) symmetry without sub-lattice rotation
+# See https://github.com/QuantumKitHub/MPSKitModels.jl/issues/57
 op_2x2 = add_physical_charge(
-    j1_j2_model(ComplexF64, U1Irrep, InfiniteSquare(2, 2)),
+    j1_j2_model(ComplexF64, U1Irrep, InfiniteSquare(2, 2); sublattice = false),
     [
         U1Irrep(-1 // 2) U1Irrep(1 // 2)
         U1Irrep(1 // 2) U1Irrep(-1 // 2)

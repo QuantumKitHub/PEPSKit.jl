@@ -13,7 +13,7 @@ $(TYPEDFIELDS)
 
 By default, an infinite square with a (1, 1)-unitcell is constructed.
 """
-struct InfiniteSquare <: AbstractLattice{2}
+struct InfiniteSquare
     Nrows::Int
     Ncols::Int
     function InfiniteSquare(Nrows::Integer = 1, Ncols::Integer = 1)
@@ -24,10 +24,20 @@ end
 
 Base.size(lattice::InfiniteSquare) = (lattice.Nrows, lattice.Ncols)
 
+"""
+    vertices(lattice::InfiniteSquare)
+
+Return an iterator over all vertices in the unit cell.
+"""
 function vertices(lattice::InfiniteSquare)
     return CartesianIndices((1:(lattice.Nrows), 1:(lattice.Ncols)))
 end
 
+"""
+    nearest_neighbours(lattice::InfiniteSquare)
+
+Return an iterator over all pairs of nearest neighbours.
+"""
 function nearest_neighbours(lattice::InfiniteSquare)
     neighbors = Vector{CartesianIndex{2}}[]
     for idx in vertices(lattice)
@@ -37,6 +47,11 @@ function nearest_neighbours(lattice::InfiniteSquare)
     return neighbors
 end
 
+"""
+    next_nearest_neighbours(lattice::InfiniteSquare)
+
+Return an iterator over all pairs of next-nearest neighbours.
+"""
 function next_nearest_neighbours(lattice::InfiniteSquare)
     neighbors = Vector{CartesianIndex{2}}[]
     for idx in vertices(lattice)
