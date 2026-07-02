@@ -213,6 +213,19 @@ end
 VI.scalartype(::Type{NT}) where {NT <: InfinitePEPO} = scalartype(eltype(NT))
 VI.zerovector(A::InfinitePEPO) = InfinitePEPO(zerovector(unitcell(A)))
 
+## Math
+
+"""
+    ρ1 * ρ2
+
+Lazily multiply two infinite PEPOs by stacking the layers of `ρ1` under those of `ρ2`.
+"""
+function Base.:*(ρ1::InfinitePEPO, ρ2::InfinitePEPO)
+    size(ρ1)[1:2] == size(ρ2)[1:2] ||
+        throw(ArgumentError("Input PEPOs have different unit cell sizes."))
+    return InfinitePEPO(cat(unitcell(ρ2), unitcell(ρ1); dims = 3))
+end
+
 ## (Approximate) equality
 function Base.:(==)(A₁::InfinitePEPO, A₂::InfinitePEPO)
     return all(zip(unitcell(A₁), unitcell(A₂))) do (p₁, p₂)

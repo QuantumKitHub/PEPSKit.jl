@@ -65,7 +65,7 @@ dt, nstep = 1.0e-3, 400
     @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
 
     # use `compress` to reach 2β, or T = 1.25
-    pepo2, = compress(pepo, pepo, LocalTruncation(trunc_pepo))
+    pepo2, = compress(pepo * pepo, LocalTruncation(trunc_pepo))
     normalize!.(pepo2.A)
     env2 = converge_env(InfinitePartitionFunction(pepo2), 16)
     result_2β = measure_mag(pepo2, env2)
