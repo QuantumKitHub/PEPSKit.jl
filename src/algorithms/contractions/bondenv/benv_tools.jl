@@ -131,19 +131,8 @@ end
                         |
                        H_s
 =#
-const open_axs_hair = Dict(:n => (SOUTH,), :e => (WEST,), :s => (NORTH,), :w => (EAST,))
-const open_axs_cor = Dict(
-    :nw => (EAST, SOUTH), :ne => (SOUTH, WEST), :se => (NORTH, WEST), :sw => (NORTH, EAST)
-)
-const open_axs_edge = Dict(
-    :n => (EAST, SOUTH, WEST),
-    :e => (NORTH, SOUTH, WEST),
-    :s => (NORTH, EAST, WEST),
-    :w => (NORTH, EAST, SOUTH),
-)
-
 # construction of hairs
-for (dir, open_axs) in open_axs_hair
+for (dir, open_axs) in [:n => (SOUTH,), :e => (WEST,), :s => (NORTH,), :w => (EAST,)]
     fname = Symbol("hair_", dir)
     @eval begin
         $(fname)(ket) = benv_tensor(ket, ket, $open_axs)
@@ -152,7 +141,10 @@ for (dir, open_axs) in open_axs_hair
 end
 
 # construction of corners
-for (dir, open_axs) in open_axs_cor
+for (dir, open_axs) in [
+        :nw => (EAST, SOUTH), :ne => (SOUTH, WEST),
+        :se => (NORTH, WEST), :sw => (NORTH, EAST),
+    ]
     fname = Symbol("cor_", dir)
     @eval begin
         $(fname)(ket) = benv_tensor(ket, ket, $open_axs)
@@ -161,7 +153,10 @@ for (dir, open_axs) in open_axs_cor
 end
 
 # construction of edges
-for (dir, open_axs) in open_axs_edge
+for (dir, open_axs) in [
+        :n => (EAST, SOUTH, WEST), :e => (NORTH, SOUTH, WEST),
+        :s => (NORTH, EAST, WEST), :w => (NORTH, EAST, SOUTH),
+    ]
     fname = Symbol("edge_", dir)
     @eval begin
         $(fname)(ket) = benv_tensor(ket, ket, $open_axs)
