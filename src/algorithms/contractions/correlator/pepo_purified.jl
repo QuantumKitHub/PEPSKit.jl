@@ -2,9 +2,9 @@
 
 function start_correlator_left(
         i::CartesianIndex{2},
-        below::InfinitePEPS,
+        below::InfinitePEPO,
         O::MPOTensor,
-        above::InfinitePEPS,
+        above::InfinitePEPO,
         env::CTMRGEnv,
     )
     r, c = Tuple(i)
@@ -13,17 +13,16 @@ function start_correlator_left(
     E_west = edge(env, WEST, r, c - 1)
     C_northwest = corner(env, NORTHWEST, r - 1, c - 1)
     C_southwest = corner(env, SOUTHWEST, r + 1, c - 1)
-    sandwich = (below[r, c], above[r, c])
+    ket = twistdual(below[r, c], (1, 2))
+    bra = above[r, c]
 
-    # TODO: part of these contractions is duplicated between the two output tensors,
-    # so could be optimized further
     @autoopt @tensor Vn[χSE Detop Debot; χNE] :=
         E_south[χSE Dstop Dsbot; χSW2] *
         C_southwest[χSW2; χSW] *
         E_west[χSW Dwtop Dwbot; χNW] *
         C_northwest[χNW; χN] *
-        conj(bra(sandwich)[d; Dnbot Debot Dsbot Dwbot]) *
-        ket(sandwich)[d; Dntop Detop Dstop Dwtop] *
+        conj(bra[d a; Dnbot Debot Dsbot Dwbot]) *
+        ket[d a; Dntop Detop Dstop Dwtop] *
         E_north[χN Dntop Dnbot; χNE]
 
     @autoopt @tensor Vo[χSE Detop dstring Debot; χNE] :=
@@ -31,9 +30,9 @@ function start_correlator_left(
         C_southwest[χSW2; χSW] *
         E_west[χSW Dwtop Dwbot; χNW] *
         C_northwest[χNW; χN] *
-        conj(bra(sandwich)[d1; Dnbot Debot Dsbot Dwbot]) *
+        conj(bra[d1 a; Dnbot Debot Dsbot Dwbot]) *
         removeunit(O, 1)[d1; d2 dstring] *
-        ket(sandwich)[d2; Dntop Detop Dstop Dwtop] *
+        ket[d2 a; Dntop Detop Dstop Dwtop] *
         E_north[χN Dntop Dnbot; χNE]
 
     return Vn, Vo
@@ -42,9 +41,9 @@ end
 function end_correlator_right_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
-        above::InfinitePEPS,
+        above::InfinitePEPO,
         O::MPOTensor,
-        below::InfinitePEPS,
+        below::InfinitePEPO,
         env::CTMRGEnv,
     ) where {T, S}
     r, c = Tuple(j)
@@ -53,7 +52,8 @@ function end_correlator_right_numerator(
     E_south = edge(env, SOUTH, r + 1, c)
     C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
     C_southeast = corner(env, SOUTHEAST, r + 1, c + 1)
-    sandwich = (above[r, c], below[r, c])
+    ket = twistdual(above[r, c], (1, 2))
+    bra = below[r, c]
 
     return @autoopt @tensor V[χSW DWt dstring DWb; χNW] *
         E_south[χSSE DSt DSb; χSW] *
@@ -61,33 +61,18 @@ function end_correlator_right_numerator(
         E_north[χNW DNt DNb; χNNE] *
         C_northeast[χNNE; χNEE] *
         C_southeast[χSEE; χSSE] *
-        conj(bra(sandwich)[db; DNb DEb DSb DWb]) *
-        ket(sandwich)[dt; DNt DEt DSt DWt] *
+        conj(bra[db a; DNb DEb DSb DWb]) *
+        ket[dt a; DNt DEt DSt DWt] *
         removeunit(O, 4)[dstring db; dt]
-end
-
-function end_correlator_right_denominator(
-        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
-        env::CTMRGEnv
-    ) where {T, S}
-    r, c = Tuple(j)
-    C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
-    E_east = edge(env, EAST, r, c + 1)
-    C_southeast = corner(env, SOUTHEAST, r + 1, c + 1)
-
-    return @autoopt @tensor V[χS DEt DEb; χN] *
-        C_northeast[χN; χNE] *
-        E_east[χNE DEt DEb; χSE] *
-        C_southeast[χSE; χS]
 end
 
 # -------- For right-to-left correlator contraction --------
 
 function start_correlator_right(
         i::CartesianIndex{2},
-        below::InfinitePEPS,
+        below::InfinitePEPO,
         O::MPOTensor,
-        above::InfinitePEPS,
+        above::InfinitePEPO,
         env::CTMRGEnv,
     )
     r, c = Tuple(i)
@@ -96,7 +81,8 @@ function start_correlator_right(
     E_south = edge(env, SOUTH, r + 1, c)
     C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
     C_southeast = corner(env, SOUTHEAST, r + 1, c + 1)
-    sandwich = (below[r, c], above[r, c])
+    ket = twistdual(below[r, c], (1, 2))
+    bra = above[r, c]
 
     @autoopt @tensor Vn[χNW DWtop DWbot; χSW] :=
         E_south[χSSE Dstop Dsbot; χSW] *
@@ -104,8 +90,8 @@ function start_correlator_right(
         E_north[χNW Dntop Dnbot; χNNE] *
         C_northeast[χNNE; χNEE] *
         C_southeast[χSEE; χSSE] *
-        conj(bra(sandwich)[d; Dnbot Debot Dsbot DWbot]) *
-        ket(sandwich)[d; Dntop Detop Dstop DWtop]
+        conj(bra[d a; Dnbot Debot Dsbot DWbot]) *
+        ket[d a; Dntop Detop Dstop DWtop]
 
     @autoopt @tensor Vo[χNW DWtop dstring DWbot; χSW] :=
         E_south[χSSE Dstop Dsbot; χSW] *
@@ -113,9 +99,9 @@ function start_correlator_right(
         E_north[χNW Dntop Dnbot; χNNE] *
         C_northeast[χNNE; χNEE] *
         C_southeast[χSEE; χSSE] *
-        conj(bra(sandwich)[d1; Dnbot Debot Dsbot DWbot]) *
+        conj(bra[d1 a; Dnbot Debot Dsbot DWbot]) *
         removeunit(O, 1)[d1; d2 dstring] *
-        ket(sandwich)[d2; Dntop Detop Dstop DWtop]
+        ket[d2 a; Dntop Detop Dstop DWtop]
 
     return Vn, Vo
 end
@@ -123,9 +109,9 @@ end
 function end_correlator_left_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
-        above::InfinitePEPS,
+        above::InfinitePEPO,
         O::MPOTensor,
-        below::InfinitePEPS,
+        below::InfinitePEPO,
         env::CTMRGEnv,
     ) where {T, S}
     r, c = Tuple(j)
@@ -134,7 +120,8 @@ function end_correlator_left_numerator(
     E_west = edge(env, WEST, r, c - 1)
     C_northwest = corner(env, NORTHWEST, r - 1, c - 1)
     C_southwest = corner(env, SOUTHWEST, r + 1, c - 1)
-    sandwich = (above[r, c], below[r, c])
+    ket = twistdual(above[r, c], (1, 2))
+    bra = below[r, c]
 
     return @autoopt @tensor V[χNE DEt dstring DEb; χSE] *
         E_south[χSE DSt DSb; χSW2] *
@@ -142,22 +129,7 @@ function end_correlator_left_numerator(
         E_west[χSW DWt DWb; χNW] *
         C_northwest[χNW; χN] *
         E_north[χN DNt DNb; χNE] *
-        conj(bra(sandwich)[db; DNb DEb DSb DWb]) *
-        ket(sandwich)[dt; DNt DEt DSt DWt] *
+        conj(bra[db a; DNb DEb DSb DWb]) *
+        ket[dt a; DNt DEt DSt DWt] *
         removeunit(O, 4)[dstring db; dt]
-end
-
-function end_correlator_left_denominator(
-        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
-        env::CTMRGEnv
-    ) where {T, S}
-    r, c = Tuple(j)
-    C_northwest = corner(env, NORTHWEST, r - 1, c - 1)
-    E_west = edge(env, WEST, r, c - 1)
-    C_southwest = corner(env, SOUTHWEST, r + 1, c - 1)
-
-    return @autoopt @tensor V[χN DEt DEb; χS] *
-        C_southwest[χS; χSW] *
-        E_west[χSW DEt DEb; χNW] *
-        C_northwest[χNW; χN]
 end
