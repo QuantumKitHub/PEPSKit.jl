@@ -34,8 +34,8 @@ Calculate the bond environment within "NTU-NN" approximation.
 ```
 """
 function bondenv_ntu(
-        row::Int, col::Int, X, Y, state::S, alg::NNEnv
-    ) where {S <: InfiniteState}
+        row::Int, col::Int, X, Y, state::InfiniteState, alg::NNEnv
+    )
     neighbors = [(-1, 0), (0, -1), (1, 0), (1, 1), (0, 2), (-1, 1)]
     m = collect_neighbors(state, row, col, neighbors)
     X, Y = _prepare_site_tensor(X), _prepare_site_tensor(Y)
@@ -78,8 +78,8 @@ Calculate the bond environment within "NTU-NN+" approximation.
 Dotted lines and ○ are splitted using SVD with `truncrank(1)`.
 """
 function bondenv_ntu(
-        row::Int, col::Int, X, Y, state::S, alg::NNpEnv
-    ) where {S <: InfiniteState}
+        row::Int, col::Int, X, Y, state::InfiniteState, alg::NNpEnv
+    )
     neighbors = [
         (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (1, 2), (0, 2), (-1, 2),
         (-1, 1), (-1, 0), (0, -2), (2, 0), (2, 1), (0, 3), (-2, 1), (-2, 0),
@@ -191,8 +191,8 @@ Calculates the bond environment within "NTU-NNN" approximation.
 ```
 """
 function bondenv_ntu(
-        row::Int, col::Int, X, Y, state::S, alg::NNNEnv
-    ) where {S <: InfiniteState}
+        row::Int, col::Int, X, Y, state::InfiniteState, alg::NNNEnv
+    )
     neighbors = [
         (-1, -1), (0, -1), (1, -1),
         (1, 0), (1, 1), (1, 2), (0, 2),
