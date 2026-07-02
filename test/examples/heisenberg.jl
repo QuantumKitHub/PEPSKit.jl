@@ -151,9 +151,9 @@ end
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
-@kwdef mutable struct ΔEnergyShouldStop{T <: Real}
-    E_last::T = 0.0
-    tol::T = 1.0e-12
+@kwdef mutable struct ΔEnergyShouldStop
+    E_last::Float64 = 0.0
+    tol::Float64 = 1.0e-12
     maxiter::Int = 100
 end
 function (es::ΔEnergyShouldStop)(x, f, g, numfg, numiter, t)
@@ -162,9 +162,9 @@ function (es::ΔEnergyShouldStop)(x, f, g, numfg, numiter, t)
     return (abs(Δenergy) <= es.tol) || numiter >= es.maxiter
 end
 
-@kwdef mutable struct ΔEnergyHasConverged{T <: Real}
-    E_last::T = 0.0
-    tol::T = 1.0e-12
+@kwdef mutable struct ΔEnergyHasConverged
+    E_last::Float64 = 0.0
+    tol::Float64 = 1.0e-12
 end
 function (es::ΔEnergyHasConverged)(x, f, g, normgrad)
     Δenergy = f - es.E_last
