@@ -140,7 +140,7 @@ end
 """
     timestep(
         it::TimeEvolver{<:NeighbourUpdate}, psi::InfiniteState;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
+        iter::Int = it.state.iter, t::Number = it.state.t
     ) -> (psi, info)
 
 Given the TimeEvolver iterator `it`, perform one step of NTU time evolution
@@ -151,7 +151,7 @@ on the input state `psi`.
 """
 function MPSKit.timestep(
         it::TimeEvolver{<:NeighbourUpdate}, psi::InfiniteState;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
+        iter::Int = it.state.iter, t::Number = it.state.t
     )
     _timeevol_sanity_check(psi, physicalspace(it.state.psi), it.alg)
     state = NTUState(iter, t, psi)

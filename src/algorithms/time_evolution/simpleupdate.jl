@@ -171,7 +171,7 @@ end
 """
     timestep(
         it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
+        iter::Int = it.state.iter, t::Number = it.state.t
     ) -> (psi, env, info)
 
 Given the `TimeEvolver` iterator `it`, perform one step of time evolution
@@ -182,7 +182,7 @@ on the input state `psi` and its environment `env`.
 """
 function MPSKit.timestep(
         it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight;
-        iter::Int = it.state.iter, t::Float64 = it.state.t
+        iter::Int = it.state.iter, t::Number = it.state.t
     )
     _timeevol_sanity_check(psi, physicalspace(it.state.psi), it.alg)
     state = SUState(iter, t, psi, env)
