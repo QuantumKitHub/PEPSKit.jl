@@ -133,11 +133,10 @@ function compress(ρ1::InfinitePEPO, ρ2::InfinitePEPO, alg::LocalTruncation)
         )
     end
     # y-bond projectors: [r, c] on bond [r, c]--[r-1, c]
+    ρ1′, ρ2′ = rotr90.(unitcell(ρ1)), rotr90.(unitcell(ρ2))
     Pys_info = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
-        # TODO: reduce repeated rotations
         return virtual_projector(
-            rotr90(ρ1[r, c]), rotr90(ρ2[r, c]),
-            rotr90(ρ1[_prev(r, Nr), c]), rotr90(ρ2[_prev(r, Nr), c]);
+            ρ1′[r, c], ρ2′[r, c], ρ1′[_prev(r, Nr), c], ρ2′[_prev(r, Nr), c];
             trunc = alg.trunc
         )
     end
