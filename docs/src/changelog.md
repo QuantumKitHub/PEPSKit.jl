@@ -24,11 +24,11 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Changed
 
+- In `correlator`, sites `js` are allowed on either side of the reference site `i` by adding right-to-left contractions (#399)
+
 ### Deprecated
 
 ### Removed
-
-- `edge_transfer_right` are not used anywhere and removed (#399)
 
 ### Fixed
 
