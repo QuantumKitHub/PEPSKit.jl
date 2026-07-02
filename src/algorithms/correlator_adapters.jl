@@ -108,7 +108,7 @@ end
 
 function _end_correlator_right_numerator(
         j::CartesianIndex{2},
-        V::CTMRGEdgeTensor{T, S, 3},
+        V::AbstractTensorMap{T, S, 3, 1},
         context::_PEPOTraceCorrelator,
         O::PFTensor,
     ) where {T, S}
@@ -169,7 +169,7 @@ end
 
 function _end_correlator_left_numerator(
         j::CartesianIndex{2},
-        V::CTMRGEdgeTensor{T, S, 3},
+        V::AbstractTensorMap{T, S, 3, 1},
         context::_PEPOTraceCorrelator,
         O::PFTensor,
     ) where {T, S}

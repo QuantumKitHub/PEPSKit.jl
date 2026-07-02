@@ -28,7 +28,7 @@ function start_correlator_left(
 end
 
 function end_correlator_right_numerator(
-        j::CartesianIndex{2}, V::CTMRGEdgeTensor{T, S, 3},
+        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
         ρ::InfinitePEPO, O::PFTensor, env::CTMRGEnv
     ) where {T, S}
     (size(ρ, 3) == 1) ||
@@ -47,7 +47,7 @@ function end_correlator_right_numerator(
 end
 
 function end_correlator_right_denominator(
-        j::CartesianIndex{2}, V::CTMRGEdgeTensor{T, S, 2}, env::CTMRGEnv
+        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 2, 1}, env::CTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
     C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
@@ -86,7 +86,7 @@ end
 
 
 function end_correlator_left_numerator(
-        j::CartesianIndex{2}, V::CTMRGEdgeTensor{T, S, 3},
+        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
         ρ::InfinitePEPO, O::PFTensor, env::CTMRGEnv
     ) where {T, S}
     (size(ρ, 3) == 1) ||
@@ -106,7 +106,7 @@ function end_correlator_left_numerator(
 end
 
 function end_correlator_left_denominator(
-        j::CartesianIndex{2}, V::CTMRGEdgeTensor{T, S, 2}, env::CTMRGEnv
+        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 2, 1}, env::CTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
     C_northwest = corner(env, NORTHWEST, r - 1, c - 1)

@@ -70,7 +70,7 @@ Apply an edge transfer matrix to the left.
 ```
 """
 function edge_transfer_left(
-        v::CTMRGEdgeTensor{<:Any, S, 3}, O::PEPSSandwich,
+        v::AbstractTensorMap{<:Any, S, 3, 1}, O::PEPSSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     return @autoopt @tensor v′[χ_SE D_E_above D_E_below; χ_NE] :=
@@ -81,7 +81,7 @@ function edge_transfer_left(
         conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_left(
-        v::CTMRGEdgeTensor{<:Any, S, 3}, O::PEPOPurifiedSandwich,
+        v::AbstractTensorMap{<:Any, S, 3, 1}, O::PEPOPurifiedSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     ket_tensor = twistdual(ket(O), (1, 2))
@@ -94,7 +94,7 @@ function edge_transfer_left(
         conj(bra_tensor[d a; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_left(
-        v::CTMRGEdgeTensor{<:Any, S, 2}, O::PFTensor,
+        v::AbstractTensorMap{<:Any, S, 2, 1}, O::PFTensor,
         Etop::CTMRGEdgeTensor{<:Any, S, 2}, Ebot::CTMRGEdgeTensor{<:Any, S, 2},
     ) where {S}
     return @autoopt @tensor v′[χ_SE D_E; χ_NE] :=
@@ -118,7 +118,7 @@ Apply an edge transfer matrix to the right.
 ```
 """
 function edge_transfer_right(
-        v::CTMRGEdgeTensor{<:Any, S, 3}, O::PEPSSandwich,
+        v::AbstractTensorMap{<:Any, S, 3, 1}, O::PEPSSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     return @autoopt @tensor v′[χ_NW D_W_above D_W_below; χ_SW] :=
@@ -129,7 +129,7 @@ function edge_transfer_right(
         conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_right(
-        v::CTMRGEdgeTensor{<:Any, S, 3}, O::PEPOPurifiedSandwich,
+        v::AbstractTensorMap{<:Any, S, 3, 1}, O::PEPOPurifiedSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     ket_tensor = twistdual(ket(O), (1, 2))
@@ -142,7 +142,7 @@ function edge_transfer_right(
         conj(bra_tensor[d a; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_right(
-        v::CTMRGEdgeTensor{<:Any, S, 2}, O::PFTensor,
+        v::AbstractTensorMap{<:Any, S, 2, 1}, O::PFTensor,
         Etop::CTMRGEdgeTensor{<:Any, S, 2}, Ebot::CTMRGEdgeTensor{<:Any, S, 2},
     ) where {S}
     return @autoopt @tensor v′[χ_NW D_W; χ_SW] :=
@@ -166,7 +166,7 @@ Apply an edge transfer matrix to the left on an excited vector.
 ```
 """
 function edge_transfer_left(
-        v::CTMRGEdgeTensor{<:Any, S, 4}, O::PEPSSandwich,
+        v::AbstractTensorMap{<:Any, S, 4, 1}, O::PEPSSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     return @autoopt @tensor v′[χ_SE D_E_above d_string D_E_below; χ_NE] :=
@@ -177,7 +177,7 @@ function edge_transfer_left(
         conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_left(
-        v::CTMRGEdgeTensor{<:Any, S, 4}, O::PEPOPurifiedSandwich,
+        v::AbstractTensorMap{<:Any, S, 4, 1}, O::PEPOPurifiedSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     ket_tensor = twistdual(ket(O), (1, 2))
@@ -190,7 +190,7 @@ function edge_transfer_left(
         conj(bra_tensor[d a; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_left(
-        v::CTMRGEdgeTensor{<:Any, S, 3}, O::PFTensor,
+        v::AbstractTensorMap{<:Any, S, 3, 1}, O::PFTensor,
         Etop::CTMRGEdgeTensor{<:Any, S, 2}, Ebot::CTMRGEdgeTensor{<:Any, S, 2},
     ) where {S}
     return @autoopt @tensor v′[χ_SE D_E d_string; χ_NE] :=
@@ -214,7 +214,7 @@ Apply an edge transfer matrix to the right on an excited vector..
 ```
 """
 function edge_transfer_right(
-        v::CTMRGEdgeTensor{<:Any, S, 4}, O::PEPSSandwich,
+        v::AbstractTensorMap{<:Any, S, 4, 1}, O::PEPSSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     return @autoopt @tensor v′[χ_NW D_W_above d_string D_W_below; χ_SW] :=
@@ -225,7 +225,7 @@ function edge_transfer_right(
         conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_right(
-        v::CTMRGEdgeTensor{<:Any, S, 4}, O::PEPOPurifiedSandwich,
+        v::AbstractTensorMap{<:Any, S, 4, 1}, O::PEPOPurifiedSandwich,
         Etop::CTMRGEdgeTensor{<:Any, S, 3}, Ebot::CTMRGEdgeTensor{<:Any, S, 3},
     ) where {S}
     ket_tensor = twistdual(ket(O), (1, 2))
@@ -238,7 +238,7 @@ function edge_transfer_right(
         conj(bra_tensor[d a; D_N_below D_E_below D_S_below D_W_below])
 end
 function edge_transfer_right(
-        v::CTMRGEdgeTensor{<:Any, S, 3}, O::PFTensor,
+        v::AbstractTensorMap{<:Any, S, 3, 1}, O::PFTensor,
         Etop::CTMRGEdgeTensor{<:Any, S, 2}, Ebot::CTMRGEdgeTensor{<:Any, S, 2},
     ) where {S}
     return @autoopt @tensor v′[χ_NW D_W d_string; χ_SW] :=
