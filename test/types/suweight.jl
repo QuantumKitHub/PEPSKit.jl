@@ -21,16 +21,16 @@ end
 function test_rotation(state::Union{InfinitePEPS, InfinitePEPO}, wts::SUWeight)
     InfiniteState = (state isa InfinitePEPS) ? InfinitePEPS : InfinitePEPO
     A1 = InfiniteState(
-        map(CartesianIndices(state.A)) do idx
-            return absorb_weight(state.A[idx], wts, idx[1], idx[2], Tuple(1:4))
+        map(eachindex(state)) do idx
+            return absorb_weight(state[idx], wts, idx[1], idx[2], Tuple(1:4))
         end
     )
     for n in 1:4
         rot = compose_n(rotl90, n)
         state2, wts2 = rot(state), rot(wts)
         A2 = InfiniteState(
-            map(CartesianIndices(state2.A)) do idx
-                return absorb_weight(state2.A[idx], wts2, idx[1], idx[2], Tuple(1:4))
+            map(eachindex(state2)) do idx
+                return absorb_weight(state2[idx], wts2, idx[1], idx[2], Tuple(1:4))
             end
         )
         @test A2 ≈ rot(A1)
