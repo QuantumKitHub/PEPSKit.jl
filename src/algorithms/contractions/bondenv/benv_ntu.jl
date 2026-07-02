@@ -11,11 +11,11 @@ Algorithms to construct bond environment for Neighborhood Tensor Update (NTU).
 abstract type NeighbourEnv end
 
 """
-SVD with `truncrank(1)`.
+SVD which truncion only keeping the leading singular value in the trivial sector.
 """
 function _svd_cut!(t::AbstractTensorMap)
-    t1, s, t2 = svd_trunc!(t; trunc = truncrank(1))
-    return absorb_s(t1, s, t2)
+    A, B = left_orth!(t; trunc = truncspace(oneunit(spacetype(t))))
+    return removeunit(A, numind(A)), removeunit(B, 1)
 end
 
 """
@@ -108,60 +108,60 @@ function bondenv_ntu(
     se1, se2 = _svd_cut!(se)
 
     m = ms[0, -1]
-    @tensoropt hW[anw DXw1 DXw0 asw] :=
+    @tensoropt hW[DXw1 DXw0] :=
         hair_w(ms[0, -2])[Dw21 Dw20] *
-        nw1[Dnw11 Dnw10 anw] * sw1[Dsw11 Dsw10 asw] *
+        nw1[Dnw11 Dnw10] * sw1[Dsw11 Dsw10] *
         twistdual(m, 1)[p Dnw10 DXw0 Dsw10 Dw20] *
         conj(m[p Dnw11 DXw1 Dsw11 Dw21])
 
     m = ms[0, 2]
-    @tensoropt hE[ane DYe1 DYe0 ase] :=
+    @tensoropt hE[DYe1 DYe0] :=
         hair_e(ms[0, 3])[De21 De20] *
-        ne2[ane Dne21 Dne20] * se2[ase Dse21 Dse20] *
+        ne2[Dne21 Dne20] * se2[Dse21 Dse20] *
         twistdual(m, 1)[p Dne20 De20 Dse20 DYe0] *
         conj(m[p Dne21 De21 Dse21 DYe1])
 
     # ---- corners (size D^4) with a 1D auxiliary leg ----
 
     m = ms[-1, 0]
-    @tensoropt NW[at Dn1 Dn0 DXn1 DXn0 anw] :=
-        tl[Dtl1 Dtl0 at] * nw2[anw Dnw21 Dnw20] *
+    @tensoropt NW[Dn1 Dn0 DXn1 DXn0] :=
+        tl[Dtl1 Dtl0] * nw2[Dnw21 Dnw20] *
         twistdual(m, 1)[p Dtl0 Dn0 DXn0 Dnw20] *
         conj(m[p Dtl1 Dn1 DXn1 Dnw21])
 
     m = ms[-1, 1]
-    @tensoropt NE[at Dn1 Dn0 DYn1 DYn0 ane] :=
-        tr[at Dtr1 Dtr0] * ne1[Dne11 Dne10 ane] *
+    @tensoropt NE[Dn1 Dn0 DYn1 DYn0] :=
+        tr[Dtr1 Dtr0] * ne1[Dne11 Dne10] *
         twistdual(m, 1)[p Dtr0 Dne10 DYn0 Dn0] *
         conj(m[p Dtr1 Dne11 DYn1 Dn1])
 
     m = ms[1, 0]
-    @tensoropt SW[asw DXs1 DXs0 Ds1 Ds0 ab] :=
-        bl[Dbl1 Dbl0 ab] * sw2[asw Dsw21 Dsw20] *
+    @tensoropt SW[DXs1 DXs0 Ds1 Ds0] :=
+        bl[Dbl1 Dbl0] * sw2[Dsw21 Dsw20] *
         twistdual(m, 1)[p DXs0 Ds0 Dbl0 Dsw20] *
         conj(m[p DXs1 Ds1 Dbl1 Dsw21])
 
     m = ms[1, 1]
-    @tensoropt SE[ase DYs1 DYs0 Ds1 Ds0 ab] :=
-        br[ab Dbr1 Dbr0] * se1[Dse11 Dse10 ase] *
+    @tensoropt SE[DYs1 DYs0 Ds1 Ds0] :=
+        br[Dbr1 Dbr0] * se1[Dse11 Dse10] *
         twistdual(m, 1)[p DYs0 Dse10 Dbr0 Ds0] *
         conj(m[p DYs1 Dse11 Dbr1 Ds1])
 
     # ---- left half ----
-    @tensoropt benvL[at Dn1 Dn0 Dw1 Dw0 Ds1 Ds0 ab] :=
-        hW[anw DXw1 DXw0 asw] *
-        NW[at Dn1 Dn0 DXn1 DXn0 anw] *
-        SW[asw DXs1 DXs0 Ds1 Ds0 ab] *
+    @tensoropt benvL[Dn1 Dn0 Dw1 Dw0 Ds1 Ds0] :=
+        hW[DXw1 DXw0] *
+        NW[Dn1 Dn0 DXn1 DXn0] *
+        SW[DXs1 DXs0 Ds1 Ds0] *
         twistdual(X, 1)[p DXn0 Dw0 DXs0 DXw0] *
         conj(X[p DXn1 Dw1 DXs1 DXw1])
     normalize!(benvL, Inf)
 
     # ---- right half ----
 
-    @tensoropt benvR[at Dn1 Dn0 De1 De0 Ds1 Ds0 ab] :=
-        hE[ane DYe1 DYe0 ase] *
-        NE[at Dn1 Dn0 DYn1 DYn0 ane] *
-        SE[ase DYs1 DYs0 Ds1 Ds0 ab] *
+    @tensoropt benvR[Dn1 Dn0 De1 De0 Ds1 Ds0] :=
+        hE[DYe1 DYe0] *
+        NE[Dn1 Dn0 DYn1 DYn0] *
+        SE[DYs1 DYs0 Ds1 Ds0] *
         twistdual(Y, 1)[p DYn0 DYe0 DYs0 De0] *
         conj(Y[p DYn1 DYe1 DYs1 De1])
     normalize!(benvR, Inf)
@@ -169,8 +169,8 @@ function bondenv_ntu(
     # ---- the full NN+ environment ----
 
     @tensor benv[Dw1, De1; Dw0, De0] :=
-        benvL[at Dn1 Dn0 Dw1 Dw0 Ds1 Ds0 ab] *
-        benvR[at Dn1 Dn0 De1 De0 Ds1 Ds0 ab]
+        benvL[Dn1 Dn0 Dw1 Dw0 Ds1 Ds0] *
+        benvR[Dn1 Dn0 De1 De0 Ds1 Ds0]
     normalize!(benv, Inf)
     return benv
 end
