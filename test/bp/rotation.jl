@@ -20,7 +20,7 @@ function meas_sites(
         op::O, ψ::InfinitePEPS, env::Union{BPEnv, CTMRGEnv}
     ) where {O <: AbstractTensorMap{<:Any, <:Any, 1, 1}}
     lattice = physicalspace(ψ)
-    return map(CartesianIndices(ψ.A)) do site1
+    return map(eachindex(ψ)) do site1
         lo = LocalOperator(lattice, (site1,) => op)
         return expectation_value(ψ, lo, env)
     end

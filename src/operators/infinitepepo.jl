@@ -143,6 +143,7 @@ Base.@propagate_inbounds Base.getindex(A::InfinitePEPO, I...) =
 Base.@propagate_inbounds Base.setindex!(A::InfinitePEPO, v, I...) =
     periodic_setindex!(A, unitcell(A), v, I)
 Base.axes(A::InfinitePEPO, args...) = axes(unitcell(A), args...)
+Base.eachindex(A::InfinitePEPO) = eachindex(IndexCartesian(), unitcell(A))
 eachcoordinate(A::InfinitePEPO) = collect(Iterators.product(axes(A)...))
 function eachcoordinate(A::InfinitePEPO, dirs)
     return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
@@ -263,11 +264,11 @@ end
 Checks if `state` follow the standard virtual arrow convention,
 i.e. north and east domains are non-dual spaces.
 """
-function _check_virtual_dualness(state::Union{InfinitePEPS, InfinitePEPO})
-    isdual_easts = map(CartesianIndices(state.A)) do idx
+function _check_virtual_dualness(state::InfiniteState)
+    isdual_easts = map(eachindex(state)) do idx
         return isdual(virtualspace(state[idx], EAST))
     end
-    isdual_norths = map(CartesianIndices(state.A)) do idx
+    isdual_norths = map(eachindex(state)) do idx
         return isdual(virtualspace(state[idx], NORTH))
     end
     return isdual_easts, isdual_norths

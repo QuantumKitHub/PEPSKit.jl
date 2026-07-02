@@ -25,6 +25,9 @@ sizes = [(1, 1), (3, 3)]
     pf = InfinitePartitionFunction(pf_tensor; unitcell = sz)
     pepo = InfinitePEPO(pepo_tensor; unitcell = (sz..., 2))
 
+    @test eachindex(peps) == CartesianIndices(size(peps))
+    @test eachindex(pepo) == CartesianIndices(size(pepo))
+
     peps_n = InfiniteSquareNetwork(peps)
     pf_n = InfiniteSquareNetwork(pf)
     pepo_n = InfiniteSquareNetwork(peps, pepo)

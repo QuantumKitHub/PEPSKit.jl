@@ -131,6 +131,7 @@ Base.@propagate_inbounds Base.getindex(A::InfinitePartitionFunction, I...) =
 Base.@propagate_inbounds Base.setindex!(A::InfinitePartitionFunction, v, I...) =
     periodic_setindex!(A, unitcell(A), v, I)
 Base.axes(A::InfinitePartitionFunction, args...) = axes(unitcell(A), args...)
+Base.eachindex(A::InfinitePartitionFunction) = eachindex(IndexCartesian(), unitcell(A))
 eachcoordinate(A::InfinitePartitionFunction) = collect(Iterators.product(axes(A)...))
 function eachcoordinate(A::InfinitePartitionFunction, dirs)
     return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
