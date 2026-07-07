@@ -113,26 +113,31 @@ function virtual_projector(
 end
 
 """
-    compress(ρ::InfinitePEPO, alg::LocalTruncation)
+    compress((ρ1, ρ2), alg::LocalTruncation)
 
-Compress a 2-layer iPEPO into a 1-layer iPEPO by
-truncating the virtual bonds with `LocalTruncation`.
+Compress two 1-layer iPEPOs into a 1-layer iPEPO by truncating the virtual bonds
+with `LocalTruncation`. In the tuple `(ρ1, ρ2)`, `ρ1` is the lower layer and
+`ρ2` is the upper layer.
 """
-function compress(ρ::InfinitePEPO, alg::LocalTruncation)
+function compress(ρs::Tuple{InfinitePEPO, InfinitePEPO}, alg::LocalTruncation)
+    ρ1, ρ2 = ρs
     # sanity checks
-    size(ρ, 3) == 2 || error("Input PEPO should have two layers.")
-    all(all.(_check_virtual_dualness(ρ))) || error("East and north virtual spaces in ρ should be dual spaces.")
+    size(ρ1) == size(ρ2) || error("Input PEPOs have different unit cell sizes.")
+    size(ρ1, 3) == 1 || error("ρ1 should have only one layer.")
+    size(ρ2, 3) == 1 || error("ρ2 should have only one layer.")
+    all(all.(_check_virtual_dualness(ρ1))) || error("East and north virtual spaces in ρ1 should be dual spaces.")
+    all(all.(_check_virtual_dualness(ρ2))) || error("East and north virtual spaces in ρ2 should be dual spaces.")
     # x-bond projectors: [r, c] on bond [r, c]--[r, c+1]
-    Nr, Nc, = size(ρ)
+    Nr, Nc, = size(ρ1)
     Pxs_info = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
         # TODO: support SiteDependentTruncation
         return virtual_projector(
-            ρ[r, c, 2], ρ[r, c, 1], ρ[r, _next(c, Nc), 2], ρ[r, _next(c, Nc), 1];
+            ρ1[r, c], ρ2[r, c], ρ1[r, _next(c, Nc)], ρ2[r, _next(c, Nc)];
             trunc = alg.trunc
         )
     end
     # y-bond projectors: [r, c] on bond [r, c]--[r-1, c]
-    ρ1′, ρ2′ = rotr90.(unitcell(ρ)[:, :, 2]), rotr90.(unitcell(ρ)[:, :, 1])
+    ρ1′, ρ2′ = rotr90.(unitcell(ρ1)), rotr90.(unitcell(ρ2))
     Pys_info = map(Iterators.product(1:Nr, 1:Nc)) do (r, c)
         return virtual_projector(
             ρ1′[r, c], ρ2′[r, c], ρ1′[_prev(r, Nr), c], ρ2′[_prev(r, Nr), c];
@@ -144,7 +149,7 @@ function compress(ρ::InfinitePEPO, alg::LocalTruncation)
         Pw, Pe = Pxs_info[r, _prev(c, Nc)][2], Pxs_info[r, c][1]
         Pn, Ps = Pys_info[r, c][1], Pys_info[_next(r, Nr), c][2]
         @tensoropt A[p1 p2; n e s w] :=
-            (ρ[r, c, 2])[p1 p; n1 e1 s1 w1] * (ρ[r, c, 1])[p p2; n2 e2 s2 w2] *
+            (ρ1[r, c])[p1 p; n1 e1 s1 w1] * (ρ2[r, c])[p p2; n2 e2 s2 w2] *
             Pn[n1 n2; n] * Pe[e1 e2; e] * Ps[s; s1 s2] * Pw[w; w1 w2]
         return A
     end
