@@ -208,6 +208,20 @@ function _is_bipartite(psi::InfiniteState)
     return true
 end
 
+"""
+Checks if `state` follow the standard virtual arrow convention,
+i.e. north and east domains are non-dual spaces.
+"""
+function _check_virtual_dualness(state::InfiniteState)
+    isdual_easts = map(eachindex(state)) do idx
+        return isdual(virtualspace(state[idx], EAST))
+    end
+    isdual_norths = map(eachindex(state)) do idx
+        return isdual(virtualspace(state[idx], NORTH))
+    end
+    return isdual_easts, isdual_norths
+end
+
 ## Vector interface
 
 VI.scalartype(::Type{NT}) where {NT <: InfinitePEPO} = scalartype(eltype(NT))
@@ -271,18 +285,4 @@ function _stack_tuples(A::Matrix{NTuple{N, T}}) where {N, T}
         out[r, c, :] .= A[r, c]
     end
     return out
-end
-
-"""
-Checks if `state` follow the standard virtual arrow convention,
-i.e. north and east domains are non-dual spaces.
-"""
-function _check_virtual_dualness(state::InfiniteState)
-    isdual_easts = map(eachindex(state)) do idx
-        return isdual(virtualspace(state[idx], EAST))
-    end
-    isdual_norths = map(eachindex(state)) do idx
-        return isdual(virtualspace(state[idx], NORTH))
-    end
-    return isdual_easts, isdual_norths
 end
