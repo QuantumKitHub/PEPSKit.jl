@@ -119,7 +119,7 @@ Compress two 1-layer iPEPOs into a 1-layer iPEPO by truncating the virtual bonds
 with `LocalTruncation`. In the tuple `(ρ1, ρ2)`, `ρ1` is the lower layer and
 `ρ2` is the upper layer.
 """
-function compress(ρs::Tuple{InfinitePEPO, InfinitePEPO}, alg::LocalTruncation)
+function compress(ρs::Tuple{<:InfinitePEPO, <:InfinitePEPO}, alg::LocalTruncation)
     ρ1, ρ2 = ρs
     # sanity checks
     size(ρ1) == size(ρ2) || error("Input PEPOs have different unit cell sizes.")
