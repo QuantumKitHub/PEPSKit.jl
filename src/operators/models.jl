@@ -26,8 +26,10 @@ end
 #
 
 """
-    transverse_field_ising([T::Type{<:Number}], [S::Type{<:Sector}],
-                           lattice::InfiniteSquare; J=1.0, g=1.0)
+    transverse_field_ising(
+        [T::Type{<:Number}], [S::Union{Type{Trivial}, Type{Z2Irrep}}],
+        lattice::InfiniteSquare; J=1.0, g=1.0
+    )
 
 `LocalOperator` for the [transverse-field Ising model](https://en.wikipedia.org/wiki/Transverse-field_Ising_model)
 Hamiltonian on the square lattice,
@@ -42,7 +44,7 @@ function transverse_field_ising(lattice::InfiniteSquare; kwargs...)
     return transverse_field_ising(ComplexF64, Trivial, lattice; kwargs...)
 end
 function transverse_field_ising(
-        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
+        T::Type{<:Number}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
         J = 1.0, g = 1.0,
     )
     ZZ = rmul!(SO.S_z_S_z(T, S), -4 * J)
