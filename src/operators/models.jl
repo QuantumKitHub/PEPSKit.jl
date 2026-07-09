@@ -6,7 +6,7 @@
     nearest_neighbour_hamiltonian(lattice::Matrix{S}, h::AbstractTensorMap{T,S,2,2}) where {S,T}
 
 Create a nearest neighbor `LocalOperator` by specifying the 2-site interaction term `h`
-which acts both on horizontal and vertical bonds.
+which acts both in horizontal and vertical direction.
 """
 function nearest_neighbour_hamiltonian(
         lattice::Matrix{S}, h::AbstractTensorMap{T, S, 2, 2}
@@ -26,7 +26,7 @@ end
 #
 
 """
-    transverse_field_ising([T::Type{<:Number}], [S::Union{Type{Trivial}, Type{Z2Irrep}}],
+    transverse_field_ising([T::Type{<:Number}], [S::Type{<:Sector}],
                            lattice::InfiniteSquare; J=1.0, g=1.0)
 
 `LocalOperator` for the [transverse-field Ising model](https://en.wikipedia.org/wiki/Transverse-field_Ising_model)
@@ -42,7 +42,7 @@ function transverse_field_ising(lattice::InfiniteSquare; kwargs...)
     return transverse_field_ising(ComplexF64, Trivial, lattice; kwargs...)
 end
 function transverse_field_ising(
-        T::Type{<:Number}, S::Union{Type{Trivial}, Type{Z2Irrep}}, lattice::InfiniteSquare;
+        T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
         J = 1.0, g = 1.0,
     )
     ZZ = rmul!(SO.S_z_S_z(T, S), -4 * J)
@@ -142,11 +142,11 @@ function hubbard_model(
     )
     # TODO: just add this
     @assert n == 0 "Currently no support for imposing a fixed particle number"
-    N = Hub.e_num(T, particle_symmetry, spin_symmetry)
+    N = HO.e_num(T, particle_symmetry, spin_symmetry)
     pspace = space(N, 1)
     unit = TensorKit.id(pspace)
-    hopping = Hub.e_hopping(T, particle_symmetry, spin_symmetry)
-    interaction_term = Hub.ud_num(T, particle_symmetry, spin_symmetry)
+    hopping = HO.e_hopping(T, particle_symmetry, spin_symmetry)
+    interaction_term = HO.ud_num(T, particle_symmetry, spin_symmetry)
     site_term = U * interaction_term - mu * N
     h = (-t) * hopping + (1 / 4) * (site_term ⊗ unit + unit ⊗ site_term)
     return nearest_neighbour_hamiltonian(fill(pspace, size(lattice)), h)
@@ -225,9 +225,9 @@ function tj_model(
         lattice::InfiniteSquare;
         t = 2.5, J = 1.0, mu = 0.0, slave_fermion::Bool = false,
     )
-    hopping = tJ.e_hopping(T, particle_symmetry, spin_symmetry; slave_fermion)
-    num = tJ.e_num(T, particle_symmetry, spin_symmetry; slave_fermion)
-    heis = tJ.S_exchange(T, particle_symmetry, spin_symmetry; slave_fermion) -
+    hopping = TJ.e_hopping(T, particle_symmetry, spin_symmetry; slave_fermion)
+    num = TJ.e_num(T, particle_symmetry, spin_symmetry; slave_fermion)
+    heis = TJ.S_exchange(T, particle_symmetry, spin_symmetry; slave_fermion) -
         (1 / 4) * (num ⊗ num)
     pspace = space(num, 1)
     unit = TensorKit.id(pspace)
