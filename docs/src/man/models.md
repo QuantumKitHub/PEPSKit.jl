@@ -9,13 +9,9 @@ already implemented models.
 In order to define custom Hamiltonians, we leverage the operator building blocks provided by
 [TensorKitTensors.jl](https://quantumkithub.github.io/TensorKitTensors.jl/stable/), which offers
 pre-defined symmetric tensors for spin, boson, fermion, and Hubbard systems.
-In order to specify the lattice on which the Hamiltonian is defined, we construct
-two-dimensional lattice types such as `InfiniteSquare`.
-Note that so far, all models are defined on infinite square lattices, see [`InfiniteSquare`](@ref),
-but in the future, we plan to support other lattice geometries as well.
-In order to specify tensors acting on particular lattice sites, there are a couple of handy methods
-that we want to point to: see `vertices`, `nearest_neighbors` and `next_nearest_neighbors` defined
-[here](https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/src/operators/lattices/squarelattice.jl).
+In order to specify the lattice on which the Hamiltonian is defined, we construct two-dimensional lattices as subtypes of [`MPSKitModels.AbstractLattice`](@extref).
+Note that so far, all models are defined on infinite square lattices, see [`InfiniteSquare`](@ref), but in the future, we plan to support other lattice geometries as well.
+In order to specify tensors acting on particular lattice sites, there are a couple of handy methods that we want to point to: see `vertices`, `nearest_neighbors` and `next_nearest_neighbors` defined [here](https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/src/operators/lattices/squarelattice.jl).
 
 For a simple example on how to implement a custom model, let's look at the implementation of the
 [`transverse_field_ising`](@ref) model:
