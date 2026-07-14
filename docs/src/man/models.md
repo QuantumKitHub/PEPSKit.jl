@@ -38,7 +38,7 @@ end
 
 This provides a good recipe for defining a model:
 
-1. Define the locally-acting tensors as `TensorMap`s using `TensorKitTensors` operators.
+1. Define the locally-acting tensors as `TensorMap`s.
 2. Construct a matrix of the physical spaces these `TensorMap`s act on based on the lattice geometry.
 3. Return a `LocalOperator` where we specify on which sites (e.g. on-site, nearest neighbor, etc.) the local tensors act.
 
