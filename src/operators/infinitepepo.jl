@@ -143,6 +143,7 @@ Base.@propagate_inbounds Base.getindex(A::InfinitePEPO, I...) =
 Base.@propagate_inbounds Base.setindex!(A::InfinitePEPO, v, I...) =
     periodic_setindex!(A, unitcell(A), v, I)
 Base.axes(A::InfinitePEPO, args...) = axes(unitcell(A), args...)
+Base.eachindex(A::InfinitePEPO) = eachindex(IndexCartesian(), unitcell(A))
 eachcoordinate(A::InfinitePEPO) = collect(Iterators.product(axes(A)...))
 function eachcoordinate(A::InfinitePEPO, dirs)
     return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
@@ -207,10 +208,37 @@ function _is_bipartite(psi::InfiniteState)
     return true
 end
 
+"""
+Checks if `state` follow the standard virtual arrow convention,
+i.e. north and east domains are non-dual spaces.
+"""
+function _check_virtual_dualness(state::InfiniteState)
+    isdual_easts = map(eachindex(state)) do idx
+        return isdual(virtualspace(state[idx], EAST))
+    end
+    isdual_norths = map(eachindex(state)) do idx
+        return isdual(virtualspace(state[idx], NORTH))
+    end
+    return isdual_easts, isdual_norths
+end
+
 ## Vector interface
 
 VI.scalartype(::Type{NT}) where {NT <: InfinitePEPO} = scalartype(eltype(NT))
 VI.zerovector(A::InfinitePEPO) = InfinitePEPO(zerovector(unitcell(A)))
+
+## Math
+
+"""
+    ρ1 * ρ2
+
+Lazily multiply two infinite PEPOs by stacking the layers of `ρ1` under those of `ρ2`.
+"""
+function Base.:*(ρ1::InfinitePEPO, ρ2::InfinitePEPO)
+    size(ρ1)[1:2] == size(ρ2)[1:2] ||
+        throw(ArgumentError("Input PEPOs have different unit cell sizes."))
+    return InfinitePEPO(cat(unitcell(ρ2), unitcell(ρ1); dims = 3))
+end
 
 ## (Approximate) equality
 function Base.:(==)(A₁::InfinitePEPO, A₂::InfinitePEPO)

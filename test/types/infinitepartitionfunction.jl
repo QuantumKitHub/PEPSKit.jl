@@ -24,4 +24,5 @@ sizes = [(1, 1), (3, 3)]
     @test (rotl90 ∘ rotl90)(pf) ≈ rot180(pf)
     @test (rotr90 ∘ rotr90 ∘ rotr90)(pf) ≈ rotl90(pf)
     @test length(pf) == prod(sz)
+    @test eachindex(pf) == CartesianIndices(size(pf))
 end
