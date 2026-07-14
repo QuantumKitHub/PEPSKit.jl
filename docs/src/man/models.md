@@ -49,13 +49,20 @@ For more model implementations, check the [PEPSKit repository](https://github.co
 PEPSKit provides a number of pre-defined models. The following model constructors are available
 and can be used directly with an [`InfiniteSquare`](@ref) lattice:
 
+### Models inherited from MPSKitModels.jl
+
+```@docs; canonical=false
+transverse_field_ising(::InfiniteSquare)
+heisenberg_XYZ(::InfiniteSquare)
+heisenberg_XXZ(::InfiniteSquare)
+hubbard_model(::InfiniteSquare)
+bose_hubbard_model(::InfiniteSquare)
+tj_model(::InfiniteSquare)
+```
+
+### Models introduced by PEPSKit.jl
+
 ```@docs
-transverse_field_ising
-heisenberg_XYZ
-heisenberg_XXZ
-hubbard_model
-bose_hubbard_model
-tj_model
 j1_j2_model
 pwave_superconductor
 ```

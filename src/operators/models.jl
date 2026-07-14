@@ -214,7 +214,7 @@ H = -t \\sum_{\\langle i,j \\rangle, \\sigma}
     + J \\sum_{\\langle i,j \\rangle}(\\mathbf{S}_i \\cdot \\mathbf{S}_j - \\frac{1}{4} n_i n_j)
     - \\mu \\sum_i n_i
 ```
-where ``\\tilde{e}_{i,\\sigma}`` is the electron operator with spin ``\\sigma`` restricted to
+where ``\\tilde{e}_{i,\\sigma}`` is the electron operator with spin ``\\sigma`` projected to
 the no-double-occupancy subspace.
 
 By default, it is defined without any symmetries and with `ComplexF64` entries.
@@ -238,7 +238,7 @@ function tj_model(
 end
 
 """
-    j1_j2_model([T::Type{T}, symm::Type{S},] lattice::InfiniteSquare;
+    j1_j2_model([T::Type{<:Number}, S::Type{<:Sector},] lattice::InfiniteSquare;
                 J1=1.0, J2=1.0, spin=1//2, sublattice=true)
 
 `LocalOperator` for the ``J_1\\text{-}J_2`` model Hamiltonian on the square lattice,
@@ -281,7 +281,7 @@ end
 ```
 where ``t`` is the hopping amplitude, ``\\Delta_{ij}`` specifies the superconducting gap, ``\\mu``
 is the chemical potential, and ``n_i = c_i^\\dagger c_i`` is the fermionic number operator.
-For ``p - ip``-wave, ``\\Delta_{ij} = \\Delta`` on horizontal bonds,
+For ``(p - ip)``-wave, ``\\Delta_{ij} = \\Delta`` on horizontal bonds,
 and ``-i \\Delta`` on vertical bonds.
 """
 function pwave_superconductor(lattice::InfiniteSquare; kwargs...)
