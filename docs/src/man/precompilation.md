@@ -40,7 +40,7 @@ module Startup
 using Random
 using TensorKit, KrylovKit, OptimKit
 using ChainRulesCore, Zygote
-using MPSKit, MPSKitModels
+using MPSKit
 using PEPSKit
 using PrecompileTools
 

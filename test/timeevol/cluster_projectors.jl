@@ -3,7 +3,7 @@ using TensorKit
 using PEPSKit
 using LinearAlgebra
 using Random
-import MPSKitModels: hubbard_space
+import TensorKitTensors.HubbardOperators as HO
 using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
 using MPSKit: GenericMPSTensor, MPSBondTensor
 
@@ -223,7 +223,7 @@ end
     ctmrg_tol = 1.0e-9
     Random.seed!(1459)
     # with U(1) spin rotation symmetry
-    Pspace = hubbard_space(Trivial, U1Irrep)
+    Pspace = HO.hubbard_space(Trivial, U1Irrep)
     Vspace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     Espace = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 8, (1, 1 // 2) => 4, (1, -1 // 2) => 4)
     truncs_env = collect(truncerror(; atol = 1.0e-12) & truncrank(χ) for χ in [8, 16])

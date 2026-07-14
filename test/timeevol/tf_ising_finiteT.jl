@@ -1,7 +1,7 @@
 using Test
 using LinearAlgebra
 using TensorKit
-import MPSKitModels: σˣ, σᶻ
+import TensorKitTensors.SpinOperators as SO
 using PEPSKit
 
 # Benchmark data of [σx, σz] from HOTRG
@@ -21,8 +21,8 @@ end
 function measure_mag(pepo::InfinitePEPO, env::CTMRGEnv; purified::Bool = false)
     r, c = 1, 1
     lattice = physicalspace(pepo)
-    Mx = LocalOperator(lattice, ((r, c),) => σˣ(Float64, Trivial))
-    Mz = LocalOperator(lattice, ((r, c),) => σᶻ(Float64, Trivial))
+    Mx = LocalOperator(lattice, ((r, c),) => SO.σˣ(Float64, Trivial))
+    Mz = LocalOperator(lattice, ((r, c),) => SO.σᶻ(Float64, Trivial))
     if purified
         magx = expectation_value(pepo, Mx, pepo, env)
         magz = expectation_value(pepo, Mz, pepo, env)

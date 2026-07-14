@@ -33,7 +33,15 @@ using MPSKit: InfiniteEnvironments
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
+import TensorKitTensors.SpinOperators as SO
+import TensorKitTensors.FermionOperators as FO
+import TensorKitTensors.HubbardOperators as HO
+import TensorKitTensors.TJOperators as TJ
+import TensorKitTensors.BosonOperators as BO
 using MPSKitModels
+import MPSKitModels:
+    transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ,
+    hubbard_model, bose_hubbard_model, tj_model
 using FiniteDifferences
 using OhMyThreads: tmap, tmap!
 using DocStringExtensions

@@ -24,6 +24,7 @@ links = InterLinks(
     "KrylovKit" => "https://jutho.github.io/KrylovKit.jl/stable/",
     "MPSKit" => "https://quantumkithub.github.io/MPSKit.jl/stable/",
     "MPSKitModels" => "https://quantumkithub.github.io/MPSKitModels.jl/dev/",
+    "TensorKitTensors" => "https://quantumkithub.github.io/TensorKitTensors.jl/stable/",
     # "Zygote" => "https://fluxml.ai/Zygote.jl/stable/",
     "ChainRulesCore" => "https://juliadiff.org/ChainRulesCore.jl/stable/",
     "MatrixAlgebraKit" => "https://quantumkithub.github.io/MatrixAlgebraKit.jl/stable/",
