@@ -112,6 +112,8 @@ include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
 
+include("algorithms/compress/local.jl")
+
 include("algorithms/time_evolution/apply_gate.jl")
 include("algorithms/time_evolution/apply_mpo.jl")
 include("algorithms/time_evolution/get_cluster.jl")
@@ -151,6 +153,9 @@ export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter
 export fixedpoint
+
+export LocalTruncation
+export compress
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
