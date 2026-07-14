@@ -23,7 +23,7 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
-using ChainRulesCore, Zygote
+using ChainRulesCore
 using LoggingExtras
 import TupleTools
 

@@ -1,7 +1,6 @@
 using Test
 using Random
 using Accessors
-using Zygote
 using TensorKit, KrylovKit, PEPSKit
 using PEPSKit:
     ctmrg_iteration, compute_gauge_fix_gauge, fix_phases, ScramblingEnvGauge
