@@ -11,9 +11,15 @@ Algorithms to construct bond environment for Neighborhood Tensor Update (NTU).
 abstract type NeighbourEnv end
 
 """
-SVD which truncion only keeping the leading singular value in the trivial sector.
+For a rank-(2,2) tensor `T_{ik;jl}`, approximately decompose it to the
+product of two rank-2 tensors `A_{ik;} * B_{;jl}` using truncated SVD
+that keeps only the largest singular value in the charge-neutral sector.
+
+The kept singular value is the largest in the entire SVD spectrum if:
+- `permute(T, ((1, 3), (2, 4)))` is positive semi-definite, and
+- `space(T, 1) == space(T, 2)'` and `space(T, 3) == space(T, 4)`,
 """
-function _svd_cut!(t::AbstractTensorMap)
+function _svd_cut!(t::AbstractTensorMap{<:Any, <:Any, 2, 2})
     A, B = left_orth!(t; trunc = truncspace(oneunit(spacetype(t))))
     return removeunit(A, numind(A)), removeunit(B, 1)
 end
