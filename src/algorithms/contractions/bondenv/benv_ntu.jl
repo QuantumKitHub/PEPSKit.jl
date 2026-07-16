@@ -39,20 +39,16 @@ function bondenv_ntu(
     neighbors = [(-1, 0), (0, -1), (1, 0), (1, 1), (0, 2), (-1, 1)]
     m = collect_neighbors(state, row, col, neighbors)
     X, Y = _prepare_site_tensor(X), _prepare_site_tensor(Y)
-    # southwest half
-    @autoopt @tensor benv_sw[Dse1 Dse0 Dw1 Dw0 Dnw1 Dnw0] :=
+    @tensoropt benv[Dw1 De1; Dw0 De0] :=
+        ( # southwest half
         cor_se(m[1, 1])[Dse1 Dse0 Ds1 Ds0] *
-        cor_sw(m[1, 0])[Dsw1 Dsw0 Ds1 Ds0] *
-        edge_w(X, hair_w(m[0, -1]))[Dnw1 Dnw0 Dw1 Dw0 Dsw1 Dsw0]
-    normalize!(benv_sw, Inf)
-    # northeast half
-    @autoopt @tensor benv_ne[Dnw1 Dnw0 De1 De0 Dse1 Dse0] :=
+            cor_sw(m[1, 0])[Dsw1 Dsw0 Ds1 Ds0] *
+            edge_w(X, hair_w(m[0, -1]))[Dnw1 Dnw0 Dw1 Dw0 Dsw1 Dsw0]
+    ) * ( # northeast half
         cor_nw(m[-1, 0])[Dn1 Dn0 Dnw1 Dnw0] *
-        cor_ne(m[-1, 1])[Dne1 Dne0 Dn1 Dn0] *
-        edge_e(Y, hair_e(m[0, 2]))[Dne1 Dne0 Dse1 Dse0 De1 De0]
-    normalize!(benv_ne, Inf)
-    @tensor benv[Dw1 De1; Dw0 De0] :=
-        benv_sw[Dse1 Dse0 Dw1 Dw0 Dnw1 Dnw0] * benv_ne[Dnw1 Dnw0 De1 De0 Dse1 Dse0]
+            cor_ne(m[-1, 1])[Dne1 Dne0 Dn1 Dn0] *
+            edge_e(Y, hair_e(m[0, 2]))[Dne1 Dne0 Dse1 Dse0 De1 De0]
+    )
     normalize!(benv, Inf)
     return benv
 end
@@ -107,70 +103,37 @@ function bondenv_ntu(
     se = permute(cor_se(ms[1, 2]), ((3, 4), (1, 2)))
     se1, se2 = _svd_cut!(se)
 
-    m = ms[0, -1]
-    @tensoropt hW[DXw1 DXw0] :=
+    @tensoropt benv[Dw1, De1; Dw0, De0] :=
+        ( # hW
         hair_w(ms[0, -2])[Dw21 Dw20] *
-        nw1[Dnw11 Dnw10] * sw1[Dsw11 Dsw10] *
-        twistdual(m, 1)[p Dnw10 DXw0 Dsw10 Dw20] *
-        conj(m[p Dnw11 DXw1 Dsw11 Dw21])
-
-    m = ms[0, 2]
-    @tensoropt hE[DYe1 DYe0] :=
+            nw1[Dnw11 Dnw10] * sw1[Dsw11 Dsw10] *
+            twistdual(ms[0, -1], 1)[phW Dnw10 DXw0 Dsw10 Dw20] *
+            conj(ms[0, -1][phW Dnw11 DXw1 Dsw11 Dw21])
+    ) * ( # hE
         hair_e(ms[0, 3])[De21 De20] *
-        ne2[Dne21 Dne20] * se2[Dse21 Dse20] *
-        twistdual(m, 1)[p Dne20 De20 Dse20 DYe0] *
-        conj(m[p Dne21 De21 Dse21 DYe1])
-
-    # ---- corners (size D^4) with a 1D auxiliary leg ----
-
-    m = ms[-1, 0]
-    @tensoropt NW[Dn1 Dn0 DXn1 DXn0] :=
+            ne2[Dne21 Dne20] * se2[Dse21 Dse20] *
+            twistdual(ms[0, 2], 1)[phE Dne20 De20 Dse20 DYe0] *
+            conj(ms[0, 2][phE Dne21 De21 Dse21 DYe1])
+    ) * ( # NW
         tl[Dtl1 Dtl0] * nw2[Dnw21 Dnw20] *
-        twistdual(m, 1)[p Dtl0 Dn0 DXn0 Dnw20] *
-        conj(m[p Dtl1 Dn1 DXn1 Dnw21])
-
-    m = ms[-1, 1]
-    @tensoropt NE[Dn1 Dn0 DYn1 DYn0] :=
+            twistdual(ms[-1, 0], 1)[pNW Dtl0 Dn0 DXn0 Dnw20] *
+            conj(ms[-1, 0][pNW Dtl1 Dn1 DXn1 Dnw21])
+    ) * ( # NE
         tr[Dtr1 Dtr0] * ne1[Dne11 Dne10] *
-        twistdual(m, 1)[p Dtr0 Dne10 DYn0 Dn0] *
-        conj(m[p Dtr1 Dne11 DYn1 Dn1])
-
-    m = ms[1, 0]
-    @tensoropt SW[DXs1 DXs0 Ds1 Ds0] :=
+            twistdual(ms[-1, 1], 1)[pNE Dtr0 Dne10 DYn0 Dn0] *
+            conj(ms[-1, 1][pNE Dtr1 Dne11 DYn1 Dn1])
+    ) * ( # SW
         bl[Dbl1 Dbl0] * sw2[Dsw21 Dsw20] *
-        twistdual(m, 1)[p DXs0 Ds0 Dbl0 Dsw20] *
-        conj(m[p DXs1 Ds1 Dbl1 Dsw21])
-
-    m = ms[1, 1]
-    @tensoropt SE[DYs1 DYs0 Ds1 Ds0] :=
+            twistdual(ms[1, 0], 1)[pSW DXs0 Ds0 Dbl0 Dsw20] *
+            conj(ms[1, 0][pSW DXs1 Ds1 Dbl1 Dsw21])
+    ) * ( # SE
         br[Dbr1 Dbr0] * se1[Dse11 Dse10] *
-        twistdual(m, 1)[p DYs0 Dse10 Dbr0 Ds0] *
-        conj(m[p DYs1 Dse11 Dbr1 Ds1])
-
-    # ---- left half ----
-    @tensoropt benvL[Dn1 Dn0 Dw1 Dw0 Ds1 Ds0] :=
-        hW[DXw1 DXw0] *
-        NW[Dn1 Dn0 DXn1 DXn0] *
-        SW[DXs1 DXs0 Ds1 Ds0] *
-        twistdual(X, 1)[p DXn0 Dw0 DXs0 DXw0] *
-        conj(X[p DXn1 Dw1 DXs1 DXw1])
-    normalize!(benvL, Inf)
-
-    # ---- right half ----
-
-    @tensoropt benvR[Dn1 Dn0 De1 De0 Ds1 Ds0] :=
-        hE[DYe1 DYe0] *
-        NE[Dn1 Dn0 DYn1 DYn0] *
-        SE[DYs1 DYs0 Ds1 Ds0] *
-        twistdual(Y, 1)[p DYn0 DYe0 DYs0 De0] *
-        conj(Y[p DYn1 DYe1 DYs1 De1])
-    normalize!(benvR, Inf)
-
-    # ---- the full NN+ environment ----
-
-    @tensor benv[Dw1, De1; Dw0, De0] :=
-        benvL[Dn1 Dn0 Dw1 Dw0 Ds1 Ds0] *
-        benvR[Dn1 Dn0 De1 De0 Ds1 Ds0]
+            twistdual(ms[1, 1], 1)[pSE DYs0 Dse10 Dbr0 Ds0] *
+            conj(ms[1, 1][pSE DYs1 Dse11 Dbr1 Ds1])
+    ) * conj(X[pX DXn1 Dw1 DXs1 DXw1]) *
+        twistdual(X, 1)[pX DXn0 Dw0 DXs0 DXw0] *
+        conj(Y[pY DYn1 DYe1 DYs1 De1]) *
+        twistdual(Y, 1)[pY DYn0 DYe0 DYs0 De0]
     normalize!(benv, Inf)
     return benv
 end
@@ -200,40 +163,25 @@ function bondenv_ntu(
     ]
     m = collect_neighbors(state, row, col, neighbors)
     X, Y = _prepare_site_tensor(X), _prepare_site_tensor(Y)
-    #= left half
-    -1  ●======●=== -1/-2
-        ║      ║
-    0   ●======X=== -3/-4
-        ║      ║
-    ....D1.....D2...
-        ║      ║
-    1   ●==D3==●=== -5/-6
-        -1     0
-    =#
-    vecl = enlarge_corner_nw(cor_nw(m[-1, -1]), edge_n(m[-1, 0]), edge_w(m[0, -1]), X)
-    @tensor vecl[:] :=
-        cor_sw(m[1, -1])[D11 D10 D31 D30] *
-        edge_s(m[1, 0])[D21 D20 -5 -6 D31 D30] *
-        vecl[D11 D10 D21 D20 -1 -2 -3 -4]
-    normalize!(vecl, Inf)
-    #= right half
-    -1  -1/-2===●==D1==●
-                ║      ║
-        ........D2.....D3...
-                ║      ║
-    0   -3/-4===Y======●
-                ║      ║     
-    1   -5/-6===●======●
-                1      2
-    =#
-    vecr = enlarge_corner_se(cor_se(m[1, 2]), edge_s(m[1, 1]), edge_e(m[0, 2]), Y)
-    @tensor vecr[:] :=
-        edge_n(m[-1, 1])[D11 D10 D21 D20 -1 -2] *
-        cor_ne(m[-1, 2])[D31 D30 D11 D10] *
-        vecr[D21 D20 D31 D30 -3 -4 -5 -6]
-    normalize!(vecr, Inf)
-    # combine left and right part
-    @tensor benv[-1 -2; -3 -4] := vecl[1 2 -1 -3 3 4] * vecr[1 2 -2 -4 3 4]
+    @tensoropt benv[Dw1 De1; Dw0 De0] :=
+        ( # NW corner
+        cor_nw(m[-1, -1])[χnw1 χnw0 χwn1 χwn0] *
+            edge_n(m[-1, 0])[χn1 χn0 Dnw1 Dnw0 χnw1 χnw0] *
+            edge_w(m[0, -1])[χwn1 χwn0 Dww1 Dww0 χws1 χws0] *
+            conj(X[dX Dnw1 Dw1 Dsw1 Dww1]) *
+            twistdual(X, 1)[dX Dnw0 Dw0 Dsw0 Dww0]
+    ) * ( # SE corner
+        cor_se(m[1, 2])[χes1 χes0 χse1 χse0] *
+            edge_s(m[1, 1])[Dse1 Dse0 χse1 χse0 χs1 χs0] *
+            edge_e(m[0, 2])[χen1 χen0 χes1 χes0 Dee1 Dee0] *
+            conj(Y[dY Dne1 Dee1 Dse1 De1]) *
+            twistdual(Y, 1)[dY Dne0 Dee0 Dse0 De0]
+    ) * # NE edge
+        edge_n(m[-1, 1])[χne1 χne0 Dne1 Dne0 χn1 χn0] *
+        cor_ne(m[-1, 2])[χen1 χen0 χne1 χne0] *
+        # SW edge
+        cor_sw(m[1, -1])[χws1 χws0 χsw1 χsw0] *
+        edge_s(m[1, 0])[Dsw1 Dsw0 χs1 χs0 χsw1 χsw0]
     normalize!(benv, Inf)
     return benv
 end

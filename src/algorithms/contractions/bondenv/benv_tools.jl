@@ -111,6 +111,7 @@ function benv_tensor(
         twistdual!(ket, ax)
         h === nothing && continue
         axes, biperm = _permute_to_first(axes, ax)
+        # TODO: choose a better axis convention for hairs
         ket = permute(h, ((1,), (2,))) * permute(ket, biperm)
     end
     perm_back = invperm(axes)
@@ -175,48 +176,4 @@ for (dir, open_axs) in [
         $(fname)(ket) = benv_tensor(ket, ket, $open_axs)
         $(fname)(ket, h) = benv_tensor(ket, ket, $open_axs, (h,))
     end
-end
-
-"""
-Enlarge the northwest corner
-```
-    ctl══ D1 ══ et ══ -5/-6
-    ║           ║
-    D2          D3
-    ║           ║
-    el ══ D4 ══ X ═══ -7/-8
-    ║           ║
-    -1/-2       -3/-4
-```
-"""
-function enlarge_corner_nw(
-        ctl::AbstractTensor{E, S, 4},
-        et::AbstractTensor{E, S, 6}, el::AbstractTensor{E, S, 6},
-        ket::PEPSTensor, bra::PEPSTensor = ket
-    ) where {E, S}
-    return @tensoropt ctl2[:] := ctl[D11 D10 D21 D20] *
-        et[-5 -6 D31 D30 D11 D10] * el[D21 D20 D41 D40 -1 -2] *
-        conj(bra[d D31 -7 -3 D41]) * twistdual(ket, 1)[d D30 -8 -4 D40]
-end
-
-"""
-Enlarge the southeast corner
-```
-              -1/-2       -3/-4
-                ║           ║
-    -5/-6 ═════ Y ══ D1 ═══ er
-                ║           ║
-                D2          D3
-                ║           ║
-    -7/-8 ═════ eb ═ D4 ══ cbr
-```
-"""
-function enlarge_corner_se(
-        cbr::AbstractTensor{E, S, 4},
-        eb::AbstractTensor{E, S, 6}, er::AbstractTensor{E, S, 6},
-        ket::PEPSTensor, bra::PEPSTensor = ket
-    ) where {E, S}
-    return @tensoropt cbr2[:] := cbr[D31 D30 D41 D40] *
-        eb[D21 D20 D41 D40 -7 -8] * er[-3 -4 D31 D30 D11 D10] *
-        conj(bra[d -1 D11 D21 -5]) * twistdual(ket, 1)[d -2 D10 D20 -6]
 end
