@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simple update for the Heisenberg model · PEPSKit.jl</title><meta name="title" content="Simple update for the Heisenberg model · PEPSKit.jl"/><meta property="og:title" content="Simple update for the Heisenberg model · PEPSKit.jl"/><meta property="twitter:title" content="Simple update for the Heisenberg model · PEPSKit.jl"/><meta name="description" content="Documentation for PEPSKit.jl."/><meta property="og:description" content="Documentation for PEPSKit.jl."/><meta property="twitter:description" content="Documentation for PEPSKit.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="PEPSKit.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PEPSKit.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../man/models/">Models</a></li><li><a class="tocitem" href="../../man/multithreading/">Multithreading</a></li><li><a class="tocitem" href="../../man/precompilation/">Precompilation using PrecompileTools.jl</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><input class="collapse-toggle" id="menuitem-3-2" type="checkbox"/><label class="tocitem" for="menuitem-3-2"><span class="docs-label">Optimization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg/">Optimizing the 2D Heisenberg model</a></li><li><a class="tocitem" href="../bose_hubbard/">Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a></li><li><a class="tocitem" href="../xxz/">Néel order in the <span>$U(1)$</span>-symmetric XXZ model</a></li><li><a class="tocitem" href="../fermi_hubbard/">Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-3" type="checkbox" checked/><label class="tocitem" for="menuitem-3-3"><span class="docs-label">Time Evolution</span><i class="docs-chevron"></i></label><ul class="collapsed"><li class="is-active"><a class="tocitem" href>Simple update for the Heisenberg model</a><ul class="internal"><li><a class="tocitem" href="#Defining-the-Hamiltonian"><span>Defining the Hamiltonian</span></a></li><li><a class="tocitem" href="#Simple-updating"><span>Simple updating</span></a></li><li><a class="tocitem" href="#Computing-the-ground-state-energy-and-magnetizations"><span>Computing the ground-state energy and magnetizations</span></a></li></ul></li><li><a class="tocitem" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling</a></li><li><a class="tocitem" href="../j1j2_su/">Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-4" type="checkbox"/><label class="tocitem" for="menuitem-3-4"><span class="docs-label">Partition Functions</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG</a></li><li><a class="tocitem" href="../3d_ising_partition_function/">The 3D classical Ising model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-5" type="checkbox"/><label class="tocitem" for="menuitem-3-5"><span class="docs-label">Boundary MPS</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../boundary_mps/">Boundary MPS contractions of 2D networks</a></li></ul></li></ul></li><li><a class="tocitem" href="../../lib/lib/">Library</a></li><li><a class="tocitem" href="../../changelog/">Changelog</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Time Evolution</a></li><li class="is-active"><a href>Simple update for the Heisenberg model</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simple update for the Heisenberg model</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/examples/heisenberg_su/main.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p><a href="https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/heisenberg_su/main.ipynb"><img src="https://mybinder.org/badge_logo.svg" alt/></a> <a href="https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/heisenberg_su/main.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a> <a href="https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/heisenberg_su"><img src="https://img.shields.io/badge/download-project-orange" alt/></a></p><h1 id="Simple-update-for-the-Heisenberg-model"><a class="docs-heading-anchor" href="#Simple-update-for-the-Heisenberg-model">Simple update for the Heisenberg model</a><a id="Simple-update-for-the-Heisenberg-model-1"></a><a class="docs-heading-anchor-permalink" href="#Simple-update-for-the-Heisenberg-model" title="Permalink"></a></h1><p>In this example, we will use <a href="../../lib/lib/#PEPSKit.SimpleUpdate"><code>SimpleUpdate</code></a> imaginary time evolution to treat the two-dimensional Heisenberg model once again:</p><p class="math-container">\[H = \sum_{\langle i,j \rangle} J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S^{z}_i S^{z}_j.\]</p><p>In order to simulate the antiferromagnetic order of the Hamiltonian on a single-site unit cell one typically applies a unitary sublattice rotation. Here, we will instead use a <span>$2 \times 2$</span> unit cell and set <span>$J_x = J_y = J_z = 1$</span>.</p><p>Let&#39;s get started by seeding the RNG and importing all required modules:</p><pre><code class="language-julia hljs">using Random
+import Statistics: mean
+using TensorKit, PEPSKit
+import MPSKitModels: S_x, S_y, S_z, S_exchange
+Random.seed!(0);</code></pre><h2 id="Defining-the-Hamiltonian"><a class="docs-heading-anchor" href="#Defining-the-Hamiltonian">Defining the Hamiltonian</a><a id="Defining-the-Hamiltonian-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-Hamiltonian" title="Permalink"></a></h2><p>To construct the Heisenberg Hamiltonian as just discussed, we&#39;ll use <code>heisenberg_XYZ</code> and, in addition, make it real (<code>real</code> and <code>imag</code> works for <code>LocalOperator</code>s) since we want to use PEPS and environments with real entries. We can either initialize the Hamiltonian with no internal symmetries (<code>symm = Trivial</code>) or use the global spin <span>$U(1)$</span> symmetry (<code>symm = U1Irrep</code>):</p><pre><code class="language-julia hljs">symm = Trivial ## ∈ {Trivial, U1Irrep}
+Nr, Nc = 2, 2
+H = real(heisenberg_XYZ(ComplexF64, symm, InfiniteSquare(Nr, Nc); Jx = 1, Jy = 1, Jz = 1));</code></pre><h2 id="Simple-updating"><a class="docs-heading-anchor" href="#Simple-updating">Simple updating</a><a id="Simple-updating-1"></a><a class="docs-heading-anchor-permalink" href="#Simple-updating" title="Permalink"></a></h2><p>We proceed by initializing a random PEPS that will be evolved. The weights used for simple update are initialized as identity matrices. First though, we need to define the appropriate (symmetric) spaces:</p><pre><code class="language-julia hljs">Dbond = 4
+χenv = 16
+if symm == Trivial
+    physical_space = ℂ^2
+    bond_space = ℂ^Dbond
+    env_space = ℂ^χenv
+elseif symm == U1Irrep
+    physical_space = ℂ[U1Irrep](1 // 2 =&gt; 1, -1 // 2 =&gt; 1)
+    bond_space = ℂ[U1Irrep](0 =&gt; Dbond ÷ 2, 1 // 2 =&gt; Dbond ÷ 4, -1 // 2 =&gt; Dbond ÷ 4)
+    env_space = ℂ[U1Irrep](0 =&gt; χenv ÷ 2, 1 // 2 =&gt; χenv ÷ 4, -1 // 2 =&gt; χenv ÷ 4)
+else
+    error(&quot;not implemented&quot;)
+end
+
+peps = InfinitePEPS(rand, Float64, physical_space, bond_space; unitcell = (Nr, Nc));
+wts = SUWeight(peps);</code></pre><p>Next, we can start the <code>SimpleUpdate</code> routine, successively decreasing the time intervals and singular value convergence tolerances. Note that TensorKit allows to combine SVD truncation schemes, which we use here to set a maximal bond dimension and at the same time fix a truncation error (if that can be reached by remaining below <code>Dbond</code>):</p><pre><code class="language-julia hljs">dts = [1.0e-2, 1.0e-3, 4.0e-4]
+tols = [1.0e-6, 1.0e-8, 1.0e-8]
+nstep = 10000
+trunc_peps = truncerror(; atol = 1.0e-10) &amp; truncrank(Dbond)
+alg = SimpleUpdate(; trunc = trunc_peps, bipartite = true)
+for (dt, tol) in zip(dts, tols)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval = 500)
+end</code></pre><pre><code class="nohighlight hljs">[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1      : dt = 0.01, |Δλ| = 1.683e+00. Time = 16.029 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 500    : dt = 0.01, |Δλ| = 3.917e-06. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 597    : dt = 0.01, |Δλ| = 9.938e-07. Time = 0.003 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elasped: 18.10 s
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1      : dt = 0.001, |Δλ| = 2.135e-03. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 500    : dt = 0.001, |Δλ| = 9.631e-07. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1000   : dt = 0.001, |Δλ| = 2.415e-07. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1500   : dt = 0.001, |Δλ| = 6.291e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 2000   : dt = 0.001, |Δλ| = 1.683e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 2205   : dt = 0.001, |Δλ| = 9.981e-09. Time = 0.003 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elasped: 7.01 s
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1      : dt = 0.0004, |Δλ| = 1.418e-04. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 500    : dt = 0.0004, |Δλ| = 6.377e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1000   : dt = 0.0004, |Δλ| = 3.544e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 1500   : dt = 0.0004, |Δλ| = 2.013e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 2000   : dt = 0.0004, |Δλ| = 1.157e-08. Time = 0.003 s/it
+[ Info: Space of x-weight at [1, 1] = ℂ^4
+[ Info: SU iter 2133   : dt = 0.0004, |Δλ| = 9.999e-09. Time = 0.003 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Simple update finished. Total time elasped: 6.74 s
+</code></pre><h2 id="Computing-the-ground-state-energy-and-magnetizations"><a class="docs-heading-anchor" href="#Computing-the-ground-state-energy-and-magnetizations">Computing the ground-state energy and magnetizations</a><a id="Computing-the-ground-state-energy-and-magnetizations-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-the-ground-state-energy-and-magnetizations" title="Permalink"></a></h2><p>In order to compute observable expectation values, we need to converge a CTMRG environment on the evolved PEPS. Let&#39;s do so:</p><pre><code class="language-julia hljs">normalize!.(peps.A, Inf)
+env₀ = CTMRGEnv(rand, Float64, peps, env_space)
+trunc_env = truncerror(; atol = 1.0e-10) &amp; truncrank(χenv)
+env, = leading_boundary(
+    env₀,
+    peps;
+    alg = :sequential,
+    projector_alg = :fullinfinite,
+    tol = 1.0e-10,
+    trunc = trunc_env,
+);</code></pre><pre><code class="nohighlight hljs">[ Info: CTMRG init:	obj = +1.852686271621e-15	err = 1.0000e+00
+[ Info: CTMRG conv 14:	obj = +1.297823093603e+00	err = 4.2791045109e-11	time = 7.73 sec
+</code></pre><p>Finally, we&#39;ll measure the energy and different magnetizations. For the magnetizations, the plan is to compute the expectation values unit cell entry-wise in different spin directions:</p><pre><code class="language-julia hljs">function compute_mags(peps::InfinitePEPS, env::CTMRGEnv)
+    lattice = collect(space(t, 1) for t in peps.A)
+
+    # detect symmetry on physical axis
+    symm = sectortype(space(peps.A[1, 1]))
+    if symm == Trivial
+        S_ops = real.([S_x(symm), im * S_y(symm), S_z(symm)])
+    elseif symm == U1Irrep
+        S_ops = real.([S_z(symm)]) ## only Sz preserves &lt;Sz&gt;
+    end
+
+    return map(Iterators.product(axes(peps, 1), axes(peps, 2), S_ops)) do (r, c, S)
+        expectation_value(peps, LocalOperator(lattice, (CartesianIndex(r, c),) =&gt; S), env)
+    end
+end
+
+E = expectation_value(peps, H, env) / (Nr * Nc)
+Ms = compute_mags(peps, env)
+M_norms = map(
+    rc -&gt; norm(Ms[rc[1], rc[2], :]), Iterators.product(axes(peps, 1), axes(peps, 2))
+)
+@show E Ms M_norms;</code></pre><pre><code class="nohighlight hljs">E = -0.667468537043687
+Ms = [0.02728716257542508 -0.025087419805416306; -0.025087419894948337 0.027287162545045957;;; -2.3992008033046908e-11 2.6495396154846418e-11; -4.827289089293085e-11 4.5508758220180745e-11;;; 0.37596759542523767 -0.3761207830204173; -0.37612078301296753 0.37596759542925773]
+M_norms = [0.37695652541274954 0.3769565254142512; 0.3769565254127766 0.37695652541455993]
+</code></pre><p>To assess the results, we will benchmark against data from <a href="../../references/#corboz_variational_2016">Corboz</a>, which use manual gradients to perform a variational optimization of the Heisenberg model. In particular, for the energy and magnetization they find <span>$E_\text{ref} = -0.6675$</span> and <span>$M_\text{ref} = 0.3767$</span>. Looking at the relative errors, we find general agreement, although the accuracy is limited by the methodological limitations of the simple update algorithm as well as finite bond dimension effects and a lacking extrapolation:</p><pre><code class="language-julia hljs">E_ref = -0.6675
+M_ref = 0.3767
+@show (E - E_ref) / abs(E_ref)
+@show (mean(M_norms) - M_ref) / M_ref;</code></pre><pre><code class="nohighlight hljs">(E - E_ref) / abs(E_ref) = 4.7135515075588574e-5
+(mean(M_norms) - M_ref) / M_ref = 0.0006809806572453966
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../fermi_hubbard/">« Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a><a class="docs-footer-nextpage" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.0 on <span class="colophon-date" title="Friday 21 November 2025 15:11">Friday 21 November 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
