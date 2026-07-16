@@ -113,3 +113,101 @@ function undo_bond_tensor_last(b::MPSTensor, Y::PEPOOrth; gate_ax::Integer = 1)
         return @tensor A[-1 -2; -3 -4 -5 -6] := b[-6 -2 1] * Y[-1 -3 -4 -5 1]
     end
 end
+
+"""
+Given a middle tensor `A` in the cluster acted on by a gate,
+obtain reduced tensor on its next bond.
+
+For PEPSTensor,
+```
+        2
+        |
+    5 - X ← 3   1 ← a - 3
+        | ↘          ↘
+        4   1         (2)
+```
+For PEPOTensor,
+```
+    2   3
+      ↘ |
+    6 - X ← 4   1 ← a - 3
+        | ↘          ↘
+        5   1         (2)
+```
+
+Here the physical leg on `a` is an auxiliary trivial leg.
+"""
+function bond_tensor_midnext(A::PEPSTensor; kwargs...)
+    X, a = left_orth!(permute(A, ((1, 2, 4, 5), (3,)); copy = true); kwargs...)
+    X = permute(X, ((1,), (2, 5, 3, 4)))
+    a = insertrightunit(a, 1)
+    return a, X
+end
+function bond_tensor_midnext(A::PEPOTensor; kwargs...)
+    X, a = left_orth!(permute(A, ((1, 2, 3, 5, 6), (4,)); copy = true); kwargs...)
+    X = permute(X, ((1, 2), (3, 6, 4, 5)))
+    a = insertrightunit(a, 1)
+    return a, X
+end
+
+"""
+Undo the decomposition in `bond_tensor_midprev`.
+"""
+function undo_bond_tensor_midnext(a::MPSTensor, X::PEPSTensor)
+    a = removeunit(a, 2)
+    return @tensor A[-1; -2 -3 -4 -5] := X[-1; -2 1 -4 -5] * a[1; -3]
+end
+function undo_bond_tensor_midnext(a::MPSTensor, X::PEPOTensor)
+    a = removeunit(a, 2)
+    return @tensor A[-1 -2; -3 -4 -5 -6] := X[-1 -2; -3 1 -5 -6] * a[1; -4]
+end
+
+"""
+Given a middle tensor `A` in the cluster acted on by a gate,
+obtain reduced tensor on its previous bond.
+
+For PEPSTensor,
+```
+                    2
+                    |
+    1 - b → 3   5 → Y - 3
+          ↘         | ↘  
+           (2)      4   1
+```
+For PEPOTensor,
+```
+                2   3
+                  ↘ |
+    1 - b → 3   6 → Y - 4
+          ↘         | ↘  
+           (2)      5   1
+```
+
+Here the physical leg on `a` is an auxiliary trivial leg.
+"""
+function bond_tensor_midprev(A::PEPSTensor; kwargs...)
+    Y, b = left_orth!(permute(A, ((1, 2, 3, 4), (5,)); copy = true); kwargs...)
+    Y = permute(Y, ((1,), (2, 3, 4, 5)))
+    b = permute(b, ((2,), (1,)))
+    b = insertrightunit(b, 1)
+    return b, Y
+end
+function bond_tensor_midprev(A::PEPOTensor; kwargs...)
+    Y, b = left_orth!(permute(A, ((1, 2, 3, 4, 5), (6,)); copy = true); kwargs...)
+    Y = permute(Y, ((1, 2), (3, 4, 5, 6)))
+    b = permute(b, ((2,), (1,)))
+    b = insertrightunit(b, 1)
+    return b, Y
+end
+
+"""
+Undo the decomposition in `bond_tensor_midprev`.
+"""
+function undo_bond_tensor_midprev(b::MPSTensor, Y::PEPSTensor)
+    b = removeunit(b, 2)
+    return @tensor A[-1; -2 -3 -4 -5] := b[-5; 1] * Y[-1; -2 -3 -4 1]
+end
+function undo_bond_tensor_midprev(b::MPSTensor, Y::PEPOTensor)
+    b = removeunit(b, 2)
+    return @tensor A[-1 -2; -3 -4 -5 -6] := b[-6; 1] * Y[-1 -2; -3 -4 -5 1]
+end
