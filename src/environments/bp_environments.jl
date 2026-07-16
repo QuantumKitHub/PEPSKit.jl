@@ -51,7 +51,7 @@ end
 
 """
     BPEnv(
-        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A; posdef::Bool = true
+        [f=isomorphism, T=ComplexF64], Ds_north::A, Ds_east::A; posdef::Bool = true
     ) where {A <: AbstractMatrix{<:ProductSpace}}
 
 Construct a BP environment by specifying matrices of north and east virtual spaces of the
@@ -65,14 +65,8 @@ of the network, and can be represented as a `ProductSpace` (e.g.
 for the case of a network representing overlaps of PEPSs).
 """
 function BPEnv(
-        Ds_north::A, Ds_east::A; posdef::Bool = true
-    ) where {A <: AbstractMatrix{<:ProductSpace}}
-    return BPEnv(randn, ComplexF64, N, Ds_north, Ds_east; posdef)
-end
-function BPEnv(
         f, T, Ds_north::A, Ds_east::A; posdef::Bool = true
     ) where {A <: AbstractMatrix{<:ProductSpace}}
-    # no recursive broadcasting?
     Ds_south = _elementwise_dual.(circshift(Ds_north, (-1, 0)))
     Ds_west = _elementwise_dual.(circshift(Ds_east, (0, 1)))
     messages = map(Iterators.product(1:4, axes(Ds_north, 1), axes(Ds_north, 2))) do (dir, r, c)
@@ -93,10 +87,15 @@ function BPEnv(
     normalize!.(messages)
     return BPEnv(messages)
 end
+function BPEnv(
+        D_north::P, args...; kwargs...
+    ) where {P <: Union{Matrix{ProductSpace}, ProductSpace}}
+    return BPEnv(isomorphism, ComplexF64, D_north, args...; kwargs...)
+end
 
 """
     BPEnv(
-        [f=randn, T=ComplexF64], D_north::P, D_east::P;
+        [f=isomorphism, T=ComplexF64], D_north::P, D_east::P;
         unitcell::Tuple{Int, Int} = (1, 1), posdef::Bool = true
     ) where {P <: ProductSpace}
 
@@ -105,20 +104,14 @@ corresponding [`InfiniteSquareNetwork`](@ref). The network unit cell can be spec
 by the `unitcell` keyword argument.
 """
 function BPEnv(
-        D_north::P, D_east::P;
-        unitcell::Tuple{Int, Int} = (1, 1), posdef::Bool = true
-    ) where {P <: ProductSpace}
-    return BPEnv(randn, ComplexF64, D_north, D_east; unitcell, posdef)
-end
-function BPEnv(
         f, T, D_north::P, D_east::P;
         unitcell::Tuple{Int, Int} = (1, 1), posdef::Bool = true
     ) where {P <: ProductSpace}
-    return BPEnv(f, T, N, fill(D_north, unitcell), fill(D_east, unitcell); posdef)
+    return BPEnv(f, T, N, _fill_edge_physical_spaces(D_north, D_east; unitcell)...; posdef)
 end
 
 """
-    BPEnv([f=randn, T=ComplexF64], network::InfiniteSquareNetwork; posdef::Bool = true)
+    BPEnv([f=isomorphism, T=ComplexF64], network::InfiniteSquareNetwork; posdef::Bool = true)
 
 Construct a BP environment by specifying a corresponding [`InfiniteSquareNetwork`](@ref).
 """
@@ -127,17 +120,8 @@ function BPEnv(f, T, network::InfiniteSquareNetwork; posdef::Bool = true)
     Ds_east = _east_edge_physical_spaces(network)
     return BPEnv(f, T, Ds_north, Ds_east; posdef)
 end
-function BPEnv(network::InfiniteSquareNetwork; posdef::Bool = true)
-    return BPEnv(randn, scalartype(network), network; posdef)
-end
-
-function BPEnv(state::InfinitePartitionFunction, args...; kwargs...)
-    return BPEnv(InfiniteSquareNetwork(state), args...; kwargs...)
-end
-function BPEnv(state::Union{InfinitePEPS, InfinitePEPO}, args...; kwargs...)
-    bp_env = BPEnv(InfiniteSquareNetwork(state), args...; kwargs...)
-    TensorKit.id!.(bp_env.messages)
-    return bp_env
+function BPEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
+    return BPEnv(isomorphism, scalartype(network), network, args...; kwargs...)
 end
 function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...; kwargs...)

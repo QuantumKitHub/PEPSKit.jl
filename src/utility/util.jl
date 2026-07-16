@@ -80,7 +80,6 @@ function twistdual!(t::AbstractTensorMap, is)
 end
 twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
 
-# lifted from #311, to be removed once that's merged
 """
     twistnondual(t::AbstractTensorMap, i)
     twistnondual!(t::AbstractTensorMap, i)
