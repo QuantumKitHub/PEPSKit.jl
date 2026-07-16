@@ -37,6 +37,7 @@ struct NTUState{S <: InfiniteState, N <: Number}
     t::N
     "PEPS/PEPO"
     psi::S
+    # TODO: include BPEnv when incorporating BP
 end
 
 """
@@ -231,6 +232,7 @@ function MPSKit.time_evolve(
             showinfo = (iter == 1) || (iter % check_interval == 0) || (iter == it.nstep)
             !showinfo && continue
             # bond weight change
+            # TODO: change to BPEnv change when incorporating BP
             Δλ = hasproperty(info0, :wts) ? compare_weights(info.wts, info0.wts) : NaN
             # reconverge environment
             if !all(space(t) == space(t0) for (t, t0) in zip(psi.A, psi0.A))
