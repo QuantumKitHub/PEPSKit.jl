@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Three-site simple update for the J_1-J_2 model · PEPSKit.jl</title><meta name="title" content="Three-site simple update for the J_1-J_2 model · PEPSKit.jl"/><meta property="og:title" content="Three-site simple update for the J_1-J_2 model · PEPSKit.jl"/><meta property="twitter:title" content="Three-site simple update for the J_1-J_2 model · PEPSKit.jl"/><meta name="description" content="Documentation for PEPSKit.jl."/><meta property="og:description" content="Documentation for PEPSKit.jl."/><meta property="twitter:description" content="Documentation for PEPSKit.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="PEPSKit.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PEPSKit.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../man/models/">Models</a></li><li><a class="tocitem" href="../../man/multithreading/">Multithreading</a></li><li><a class="tocitem" href="../../man/precompilation/">Precompilation using PrecompileTools.jl</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><input class="collapse-toggle" id="menuitem-3-2" type="checkbox"/><label class="tocitem" for="menuitem-3-2"><span class="docs-label">Optimization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg/">Optimizing the 2D Heisenberg model</a></li><li><a class="tocitem" href="../bose_hubbard/">Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a></li><li><a class="tocitem" href="../xxz/">Néel order in the <span>$U(1)$</span>-symmetric XXZ model</a></li><li><a class="tocitem" href="../fermi_hubbard/">Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a></li><li><a class="tocitem" href="../c4v_ctmrg/">C₄ᵥ CTMRG and QR-CTMRG</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-3" type="checkbox" checked/><label class="tocitem" for="menuitem-3-3"><span class="docs-label">Time Evolution</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg_su/">Simple update for the Heisenberg model</a></li><li><a class="tocitem" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling</a></li><li class="is-active"><a class="tocitem" href>Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model</a><ul class="internal"><li><a class="tocitem" href="#Simple-updating-a-challenging-phase"><span>Simple updating a challenging phase</span></a></li><li><a class="tocitem" href="#Computing-the-simple-update-energy-estimate"><span>Computing the simple update energy estimate</span></a></li><li><a class="tocitem" href="#Variational-PEPS-optimization-using-AD"><span>Variational PEPS optimization using AD</span></a></li></ul></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-4" type="checkbox"/><label class="tocitem" for="menuitem-3-4"><span class="docs-label">Partition Functions</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG</a></li><li><a class="tocitem" href="../3d_ising_partition_function/">The 3D classical Ising model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-5" type="checkbox"/><label class="tocitem" for="menuitem-3-5"><span class="docs-label">Boundary MPS</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../boundary_mps/">Boundary MPS contractions of 2D networks</a></li></ul></li></ul></li><li><a class="tocitem" href="../../lib/lib/">Library</a></li><li><a class="tocitem" href="../../changelog/">Changelog</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Time Evolution</a></li><li class="is-active"><a href>Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl/blob/main/examples/j1j2_su/main.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p><a href="https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/j1j2_su/main.ipynb"><img src="https://mybinder.org/badge_logo.svg" alt/></a> <a href="https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/j1j2_su/main.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a> <a href="https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/j1j2_su"><img src="https://img.shields.io/badge/download-project-orange" alt/></a></p><h1 id="Three-site-simple-update-for-the-J_1-J_2-model"><a class="docs-heading-anchor" href="#Three-site-simple-update-for-the-J_1-J_2-model">Three-site simple update for the <span>$J_1$</span>-<span>$J_2$</span> model</a><a id="Three-site-simple-update-for-the-J_1-J_2-model-1"></a><a class="docs-heading-anchor-permalink" href="#Three-site-simple-update-for-the-J_1-J_2-model" title="Permalink"></a></h1><p>In this example, we will use <a href="../../lib/lib/#PEPSKit.SimpleUpdate"><code>SimpleUpdate</code></a> imaginary time evolution to treat the two-dimensional <span>$J_1$</span>-<span>$J_2$</span> model, which contains next-nearest-neighbour interactions:</p><p class="math-container">\[H = J_1 \sum_{\langle i,j \rangle} \mathbf{S}_i \cdot \mathbf{S}_j
++ J_2 \sum_{\langle \langle i,j \rangle \rangle} \mathbf{S}_i \cdot \mathbf{S}_j\]</p><p>Here we will exploit the <span>$U(1)$</span> spin rotation symmetry in the <span>$J_1$</span>-<span>$J_2$</span> model. The goal will be to calculate the energy at <span>$J_1 = 1$</span> and <span>$J_2 = 1/2$</span>, first using the simple update algorithm and then, to refine the energy estimate, using AD-based variational PEPS optimization.</p><p>We first import all required modules and seed the RNG:</p><pre><code class="language-julia hljs">using Random
+using TensorKit, PEPSKit
+Random.seed!(29385294);</code></pre><h2 id="Simple-updating-a-challenging-phase"><a class="docs-heading-anchor" href="#Simple-updating-a-challenging-phase">Simple updating a challenging phase</a><a id="Simple-updating-a-challenging-phase-1"></a><a class="docs-heading-anchor-permalink" href="#Simple-updating-a-challenging-phase" title="Permalink"></a></h2><p>Let&#39;s start by initializing an <code>InfinitePEPS</code> for which we set the required parameters as well as physical and virtual vector spaces. The <code>SUWeight</code> used by simple update will be initialized to identity matrices. We use the minimal unit cell size (<span>$2 \times 2$</span>) required by the simple update algorithm for Hamiltonians with next-nearest-neighbour interactions:</p><pre><code class="language-julia hljs">Dbond, symm = 4, U1Irrep
+Nr, Nc, J1 = 2, 2, 1.0
+
+# random initialization of 2x2 iPEPS (using real numbers) and SUWeight
+Pspace = Vect[U1Irrep](1 // 2 =&gt; 1, -1 // 2 =&gt; 1)
+Vspace = Vect[U1Irrep](0 =&gt; 2, 1 // 2 =&gt; 1, -1 // 2 =&gt; 1)
+peps = InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc));
+wts = SUWeight(peps);</code></pre><p>The value <span>$J_2 / J_1 = 0.5$</span> corresponds to a <a href="../../references/#liu_gapless_2022">possible spin liquid phase</a>, which is challenging for SU to produce a relatively good state from random initialization. Therefore, we shall gradually increase <span>$J_2 / J_1$</span> from 0.1 to 0.5, each time initializing on the previously evolved PEPS:</p><pre><code class="language-julia hljs">dt, tol, nstep = 1.0e-2, 1.0e-8, 30000
+check_interval = 4000
+trunc_peps = truncerror(; atol = 1.0e-10) &amp; truncrank(Dbond)
+alg = SimpleUpdate(; trunc = trunc_peps)
+for J2 in 0.1:0.1:0.5
+    # convert Hamiltonian `LocalOperator` to real floats
+    H = real(
+        j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false),
+    )
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol, check_interval)
+end</code></pre><pre><code class="nohighlight hljs">[ Info: --- Time evolution (simple update), dt = 0.01 ---
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1/2 =&gt; 1, -1/2 =&gt; 1)
+[ Info: SU iter 1      : E ≈ 0.14706, |Δλ| = 1.190e+00. Time = 69.040 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1374   : E ≈ -0.61097, |Δλ| = 9.866e-09. Time = 0.060 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Time evolution finished in 286.32 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1      : E ≈ -0.57017, |Δλ| = 3.480e-04. Time = 0.059 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 523    : E ≈ -0.56974, |Δλ| = 9.975e-09. Time = 0.069 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Time evolution finished in 34.00 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1      : E ≈ -0.53075, |Δλ| = 3.611e-04. Time = 0.132 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 611    : E ≈ -0.52914, |Δλ| = 9.905e-09. Time = 0.057 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Time evolution finished in 39.44 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1      : E ≈ -0.49230, |Δλ| = 3.764e-04. Time = 0.057 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 745    : E ≈ -0.48891, |Δλ| = 9.975e-09. Time = 0.064 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Time evolution finished in 49.24 s
+[ Info: --- Time evolution (simple update), dt = 0.01 ---
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1      : E ≈ -0.45461, |Δλ| = 3.952e-04. Time = 0.065 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1222   : E ≈ -0.44908, |Δλ| = 9.994e-09. Time = 0.056 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Time evolution finished in 81.42 s
+</code></pre><p>After we reach <span>$J_2 / J_1 = 0.5$</span>, we gradually decrease the evolution time step to obtain a more accurately evolved PEPS:</p><pre><code class="language-julia hljs">dts = [1.0e-3, 1.0e-4]
+tols = [1.0e-9, 1.0e-9]
+J2 = 0.5
+H = real(j1_j2_model(ComplexF64, symm, InfiniteSquare(Nr, Nc); J1, J2, sublattice = false))
+for (dt, tol) in zip(dts, tols)
+    global peps, wts, = time_evolve(peps, H, dt, nstep, alg, wts; tol)
+end</code></pre><pre><code class="nohighlight hljs">[ Info: --- Time evolution (simple update), dt = 0.001 ---
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1      : E ≈ -0.44882, |Δλ| = 4.709e-04. Time = 0.059 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 500    : E ≈ -0.44900, |Δλ| = 2.118e-06. Time = 0.057 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1000   : E ≈ -0.44909, |Δλ| = 1.516e-06. Time = 0.058 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1500   : E ≈ -0.44913, |Δλ| = 1.112e-06. Time = 0.058 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 2000   : E ≈ -0.44916, |Δλ| = 8.229e-07. Time = 0.068 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 2500   : E ≈ -0.44917, |Δλ| = 6.123e-07. Time = 0.114 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 3000   : E ≈ -0.44918, |Δλ| = 4.569e-07. Time = 0.062 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 3500   : E ≈ -0.44918, |Δλ| = 3.414e-07. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 4000   : E ≈ -0.44918, |Δλ| = 2.553e-07. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 4500   : E ≈ -0.44918, |Δλ| = 1.910e-07. Time = 0.060 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 5000   : E ≈ -0.44919, |Δλ| = 1.430e-07. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 5500   : E ≈ -0.44919, |Δλ| = 1.070e-07. Time = 0.056 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 6000   : E ≈ -0.44919, |Δλ| = 8.008e-08. Time = 0.057 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 6500   : E ≈ -0.44919, |Δλ| = 5.994e-08. Time = 0.065 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 7000   : E ≈ -0.44919, |Δλ| = 4.486e-08. Time = 0.109 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 7500   : E ≈ -0.44919, |Δλ| = 3.358e-08. Time = 0.075 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 8000   : E ≈ -0.44919, |Δλ| = 2.513e-08. Time = 0.060 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 8500   : E ≈ -0.44919, |Δλ| = 1.881e-08. Time = 0.062 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 9000   : E ≈ -0.44919, |Δλ| = 1.407e-08. Time = 0.071 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 9500   : E ≈ -0.44919, |Δλ| = 1.053e-08. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 10000  : E ≈ -0.44919, |Δλ| = 7.878e-09. Time = 0.058 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 10500  : E ≈ -0.44919, |Δλ| = 5.894e-09. Time = 0.058 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 11000  : E ≈ -0.44919, |Δλ| = 4.409e-09. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 11500  : E ≈ -0.44919, |Δλ| = 3.297e-09. Time = 0.072 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 12000  : E ≈ -0.44919, |Δλ| = 2.466e-09. Time = 0.060 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 12500  : E ≈ -0.44919, |Δλ| = 1.844e-09. Time = 0.059 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 13000  : E ≈ -0.44919, |Δλ| = 1.378e-09. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 13500  : E ≈ -0.44919, |Δλ| = 1.030e-09. Time = 0.067 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 13552  : E ≈ -0.44919, |Δλ| = 9.996e-10. Time = 0.062 s/it
+[ Info: SU: bond weights have converged.
+[ Info: Time evolution finished in 891.27 s
+[ Info: --- Time evolution (simple update), dt = 0.0001 ---
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1      : E ≈ -0.44916, |Δλ| = 4.740e-05. Time = 0.063 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 500    : E ≈ -0.44916, |Δλ| = 3.379e-08. Time = 0.063 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1000   : E ≈ -0.44916, |Δλ| = 3.134e-08. Time = 0.059 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 1500   : E ≈ -0.44917, |Δλ| = 2.926e-08. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 2000   : E ≈ -0.44917, |Δλ| = 2.751e-08. Time = 0.059 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 2500   : E ≈ -0.44917, |Δλ| = 2.607e-08. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 3000   : E ≈ -0.44917, |Δλ| = 2.486e-08. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 3500   : E ≈ -0.44917, |Δλ| = 2.380e-08. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 4000   : E ≈ -0.44917, |Δλ| = 2.285e-08. Time = 0.060 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 4500   : E ≈ -0.44918, |Δλ| = 2.199e-08. Time = 0.060 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 5000   : E ≈ -0.44918, |Δλ| = 2.118e-08. Time = 0.060 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 5500   : E ≈ -0.44918, |Δλ| = 2.043e-08. Time = 0.062 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 6000   : E ≈ -0.44918, |Δλ| = 1.972e-08. Time = 0.058 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 6500   : E ≈ -0.44918, |Δλ| = 1.905e-08. Time = 0.067 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 7000   : E ≈ -0.44918, |Δλ| = 1.841e-08. Time = 0.059 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 7500   : E ≈ -0.44918, |Δλ| = 1.781e-08. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 8000   : E ≈ -0.44918, |Δλ| = 1.723e-08. Time = 0.067 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 8500   : E ≈ -0.44918, |Δλ| = 1.668e-08. Time = 0.063 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 9000   : E ≈ -0.44918, |Δλ| = 1.614e-08. Time = 0.074 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 9500   : E ≈ -0.44919, |Δλ| = 1.563e-08. Time = 0.078 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 10000  : E ≈ -0.44919, |Δλ| = 1.514e-08. Time = 0.062 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 10500  : E ≈ -0.44919, |Δλ| = 1.467e-08. Time = 0.116 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 11000  : E ≈ -0.44919, |Δλ| = 1.422e-08. Time = 0.112 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 11500  : E ≈ -0.44919, |Δλ| = 1.378e-08. Time = 0.113 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 12000  : E ≈ -0.44919, |Δλ| = 1.336e-08. Time = 0.142 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 12500  : E ≈ -0.44919, |Δλ| = 1.295e-08. Time = 0.145 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 13000  : E ≈ -0.44919, |Δλ| = 1.255e-08. Time = 0.135 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 13500  : E ≈ -0.44919, |Δλ| = 1.217e-08. Time = 0.126 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 14000  : E ≈ -0.44919, |Δλ| = 1.181e-08. Time = 0.138 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 14500  : E ≈ -0.44919, |Δλ| = 1.145e-08. Time = 0.121 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 15000  : E ≈ -0.44919, |Δλ| = 1.111e-08. Time = 0.078 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 15500  : E ≈ -0.44919, |Δλ| = 1.078e-08. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 16000  : E ≈ -0.44919, |Δλ| = 1.046e-08. Time = 0.063 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 16500  : E ≈ -0.44919, |Δλ| = 1.015e-08. Time = 0.066 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 17000  : E ≈ -0.44919, |Δλ| = 9.844e-09. Time = 0.062 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 17500  : E ≈ -0.44919, |Δλ| = 9.553e-09. Time = 0.069 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 18000  : E ≈ -0.44919, |Δλ| = 9.272e-09. Time = 0.070 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 18500  : E ≈ -0.44919, |Δλ| = 8.999e-09. Time = 0.067 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 19000  : E ≈ -0.44919, |Δλ| = 8.734e-09. Time = 0.065 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 19500  : E ≈ -0.44919, |Δλ| = 8.478e-09. Time = 0.065 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 20000  : E ≈ -0.44919, |Δλ| = 8.230e-09. Time = 0.066 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 20500  : E ≈ -0.44919, |Δλ| = 7.989e-09. Time = 0.059 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 21000  : E ≈ -0.44919, |Δλ| = 7.756e-09. Time = 0.066 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 21500  : E ≈ -0.44919, |Δλ| = 7.530e-09. Time = 0.077 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 22000  : E ≈ -0.44919, |Δλ| = 7.311e-09. Time = 0.071 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 22500  : E ≈ -0.44919, |Δλ| = 7.098e-09. Time = 0.068 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 23000  : E ≈ -0.44919, |Δλ| = 6.892e-09. Time = 0.078 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 23500  : E ≈ -0.44919, |Δλ| = 6.693e-09. Time = 0.066 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 24000  : E ≈ -0.44919, |Δλ| = 6.499e-09. Time = 0.068 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 24500  : E ≈ -0.44919, |Δλ| = 6.311e-09. Time = 0.061 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 25000  : E ≈ -0.44919, |Δλ| = 6.128e-09. Time = 0.067 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 25500  : E ≈ -0.44919, |Δλ| = 5.951e-09. Time = 0.067 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 26000  : E ≈ -0.44919, |Δλ| = 5.779e-09. Time = 0.062 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 26500  : E ≈ -0.44920, |Δλ| = 5.613e-09. Time = 0.064 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 27000  : E ≈ -0.44920, |Δλ| = 5.451e-09. Time = 0.063 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 27500  : E ≈ -0.44920, |Δλ| = 5.294e-09. Time = 0.080 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 28000  : E ≈ -0.44920, |Δλ| = 5.142e-09. Time = 0.112 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 28500  : E ≈ -0.44920, |Δλ| = 4.994e-09. Time = 0.066 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 29000  : E ≈ -0.44920, |Δλ| = 4.850e-09. Time = 0.068 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 29500  : E ≈ -0.44920, |Δλ| = 4.711e-09. Time = 0.064 s/it
+[ Info: Space of x-weight at [1, 1] = Rep[U₁](0 =&gt; 2, 1 =&gt; 1, -1 =&gt; 1)
+[ Info: SU iter 30000  : E ≈ -0.44920, |Δλ| = 4.576e-09. Time = 0.067 s/it
+┌ Warning: SU: bond weights have not converged.
+└ @ PEPSKit ~/git/PEPSKit.jl/src/algorithms/time_evolution/simpleupdate.jl:267
+[ Info: Time evolution finished in 2152.17 s
+</code></pre><h2 id="Computing-the-simple-update-energy-estimate"><a class="docs-heading-anchor" href="#Computing-the-simple-update-energy-estimate">Computing the simple update energy estimate</a><a id="Computing-the-simple-update-energy-estimate-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-the-simple-update-energy-estimate" title="Permalink"></a></h2><p>Finally, we measure the ground-state energy by converging a CTMRG environment and computing the expectation value, where we first normalize tensors in the PEPS:</p><pre><code class="language-julia hljs">normalize!.(peps.A, Inf) ## normalize each PEPS tensor by largest element
+χenv = 32
+trunc_env = truncerror(; atol = 1.0e-10) &amp; truncrank(χenv)
+Espace = Vect[U1Irrep](0 =&gt; χenv ÷ 2, 1 // 2 =&gt; χenv ÷ 4, -1 // 2 =&gt; χenv ÷ 4)
+env₀ = CTMRGEnv(rand, Float64, peps, Espace)
+env, = leading_boundary(env₀, peps; tol = 1.0e-10, alg = :SequentialCTMRG, trunc = trunc_env);
+E = expectation_value(peps, H, env) / (Nr * Nc)</code></pre><pre><code class="nohighlight hljs">-0.49084500240097584</code></pre><p>Let us compare that estimate with benchmark data obtained from the <a href="https://github.com/jurajHasik/j1j2_ipeps_states/blob/ea4140fbd7da0fc1b75fac2871f75bda125189a8/single-site_pg-C4v-A1_internal-U1/j20.5/state_1s_A1_U1B_j20.5_D4_chi_opt96.dat">YASTN/peps-torch package</a>. which utilizes AD-based PEPS optimization to find <span>$E_\text{ref}=-0.49425$</span>:</p><pre><code class="language-julia hljs">E_ref = -0.49425
+@show (E - E_ref) / abs(E_ref);</code></pre><pre><code class="nohighlight hljs">(E - E_ref) / abs(E_ref) = 0.006889221242335223
+</code></pre><h2 id="Variational-PEPS-optimization-using-AD"><a class="docs-heading-anchor" href="#Variational-PEPS-optimization-using-AD">Variational PEPS optimization using AD</a><a id="Variational-PEPS-optimization-using-AD-1"></a><a class="docs-heading-anchor-permalink" href="#Variational-PEPS-optimization-using-AD" title="Permalink"></a></h2><p>As a last step, we will use the SU-evolved PEPS as a starting point for a <a href="../../lib/lib/#PEPSKit.fixedpoint-Tuple{Any, InfinitePEPS, Any}"><code>fixedpoint</code></a> PEPS optimization. Note that we could have also used a sublattice-rotated version of <code>H</code> to fit the Hamiltonian onto a single-site unit cell which would require us to optimize fewer parameters and hence lead to a faster optimization. But here we instead take advantage of the already evolved <code>peps</code>, thus giving us a physical initial guess for the optimization. In order to break some of the <span>$C_{4v}$</span> symmetry of the PEPS, we will add a bit of noise to it. This is conviently done using MPSKit&#39;s <code>randomize!</code> function. (Breaking some of the spatial symmetry can be advantageous for obtaining lower energies.)</p><p>In our optimization, we will use the default fixed-point differentiation scheme which requires a gauge fixing of the contraction environment. Since this gauge fixing involves potentially complex phases, we have to convert our real-valued contraction environment to complex numbers before the optimization.</p><pre><code class="language-julia hljs">using MPSKit: randomize!
+
+noise_peps = InfinitePEPS(randomize!.(deepcopy(peps.A)))
+peps₀ = peps + 1.0e-1noise_peps
+peps_opt, env_opt, E_opt, = fixedpoint(
+    H, peps₀, complex(env);
+    optimizer_alg = (; tol = 1.0e-4, maxiter = 80),
+);</code></pre><pre><code class="nohighlight hljs">[ Info: LBFGS: initializing with f = -1.887592851169e+00, ‖∇f‖ = 7.8750e-01
+[ Info: LBFGS: iter    1, Δt  2.59 m: f = -1.926397202950e+00, ‖∇f‖ = 4.7074e-01, α = 1.19e+01, m = 0, nfg = 4
+[ Info: LBFGS: iter    2, Δt 40.53 s: f = -1.936549667949e+00, ‖∇f‖ = 2.1793e-01, α = 1.00e+00, m = 1, nfg = 1
+[ Info: LBFGS: iter    3, Δt 29.91 s: f = -1.942720304333e+00, ‖∇f‖ = 2.0271e-01, α = 1.00e+00, m = 2, nfg = 1
+[ Info: LBFGS: iter    4, Δt 34.49 s: f = -1.952875854973e+00, ‖∇f‖ = 1.6720e-01, α = 1.00e+00, m = 3, nfg = 1
+[ Info: LBFGS: iter    5, Δt 28.82 s: f = -1.958623058785e+00, ‖∇f‖ = 1.5842e-01, α = 1.00e+00, m = 4, nfg = 1
+[ Info: LBFGS: iter    6, Δt 29.05 s: f = -1.961561675475e+00, ‖∇f‖ = 9.2629e-02, α = 1.00e+00, m = 5, nfg = 1
+[ Info: LBFGS: iter    7, Δt 30.20 s: f = -1.962817807328e+00, ‖∇f‖ = 6.7823e-02, α = 1.00e+00, m = 6, nfg = 1
+[ Info: LBFGS: iter    8, Δt 30.02 s: f = -1.965006052823e+00, ‖∇f‖ = 5.5874e-02, α = 1.00e+00, m = 7, nfg = 1
+[ Info: LBFGS: iter    9, Δt 30.80 s: f = -1.966395232377e+00, ‖∇f‖ = 5.8410e-02, α = 1.00e+00, m = 8, nfg = 1
+[ Info: LBFGS: iter   10, Δt 32.01 s: f = -1.967594232211e+00, ‖∇f‖ = 1.1241e-01, α = 1.00e+00, m = 9, nfg = 1
+[ Info: LBFGS: iter   11, Δt 28.60 s: f = -1.968966180475e+00, ‖∇f‖ = 4.1491e-02, α = 1.00e+00, m = 10, nfg = 1
+[ Info: LBFGS: iter   12, Δt 27.24 s: f = -1.969388993162e+00, ‖∇f‖ = 3.6687e-02, α = 1.00e+00, m = 11, nfg = 1
+[ Info: LBFGS: iter   13, Δt 28.89 s: f = -1.970337819041e+00, ‖∇f‖ = 3.8976e-02, α = 1.00e+00, m = 12, nfg = 1
+[ Info: LBFGS: iter   14, Δt 42.50 s: f = -1.971411293246e+00, ‖∇f‖ = 4.5978e-02, α = 1.00e+00, m = 13, nfg = 1
+[ Info: LBFGS: iter   15, Δt 36.10 s: f = -1.972265787588e+00, ‖∇f‖ = 3.2885e-02, α = 1.00e+00, m = 14, nfg = 1
+[ Info: LBFGS: iter   16, Δt 39.52 s: f = -1.972986780226e+00, ‖∇f‖ = 3.5999e-02, α = 1.00e+00, m = 15, nfg = 1
+[ Info: LBFGS: iter   17, Δt 32.35 s: f = -1.973425053895e+00, ‖∇f‖ = 3.4021e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   18, Δt 36.51 s: f = -1.973768542702e+00, ‖∇f‖ = 2.5748e-02, α = 1.00e+00, m = 17, nfg = 1
+[ Info: LBFGS: iter   19, Δt 31.22 s: f = -1.974140572137e+00, ‖∇f‖ = 2.3168e-02, α = 1.00e+00, m = 18, nfg = 1
+[ Info: LBFGS: iter   20, Δt 30.31 s: f = -1.974602727280e+00, ‖∇f‖ = 2.2690e-02, α = 1.00e+00, m = 19, nfg = 1
+[ Info: LBFGS: iter   21, Δt 27.52 s: f = -1.975148275188e+00, ‖∇f‖ = 2.4639e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   22, Δt 34.37 s: f = -1.975272536360e+00, ‖∇f‖ = 4.8876e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   23, Δt 29.84 s: f = -1.975724325797e+00, ‖∇f‖ = 1.5530e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   24, Δt 30.59 s: f = -1.975836556095e+00, ‖∇f‖ = 1.7418e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   25, Δt 30.28 s: f = -1.975931969197e+00, ‖∇f‖ = 1.7287e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   26, Δt 33.71 s: f = -1.976016386227e+00, ‖∇f‖ = 1.2991e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   27, Δt 32.12 s: f = -1.976195516184e+00, ‖∇f‖ = 1.3365e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   28, Δt 57.08 s: f = -1.976253827887e+00, ‖∇f‖ = 2.4645e-02, α = 4.43e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   29, Δt 32.54 s: f = -1.976339892096e+00, ‖∇f‖ = 1.7700e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   30, Δt 30.31 s: f = -1.976472000131e+00, ‖∇f‖ = 1.1852e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   31, Δt 32.52 s: f = -1.976582451638e+00, ‖∇f‖ = 1.4408e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   32, Δt 28.71 s: f = -1.976679327115e+00, ‖∇f‖ = 1.4448e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   33, Δt 31.73 s: f = -1.976767985045e+00, ‖∇f‖ = 1.0465e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   34, Δt 29.57 s: f = -1.976824529098e+00, ‖∇f‖ = 1.3560e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   35, Δt 29.34 s: f = -1.976885511020e+00, ‖∇f‖ = 1.0799e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   36, Δt 28.48 s: f = -1.976954461197e+00, ‖∇f‖ = 9.5812e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   37, Δt 30.47 s: f = -1.977053005526e+00, ‖∇f‖ = 1.5700e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   38, Δt 25.66 s: f = -1.977109515790e+00, ‖∇f‖ = 1.2006e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   39, Δt 28.31 s: f = -1.977148442708e+00, ‖∇f‖ = 1.1305e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   40, Δt 28.81 s: f = -1.977242295288e+00, ‖∇f‖ = 1.0649e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   41, Δt 29.91 s: f = -1.977270846201e+00, ‖∇f‖ = 2.1560e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   42, Δt 28.96 s: f = -1.977338488777e+00, ‖∇f‖ = 9.6596e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   43, Δt 30.65 s: f = -1.977388945548e+00, ‖∇f‖ = 7.5571e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   44, Δt 31.88 s: f = -1.977459650207e+00, ‖∇f‖ = 9.8540e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   45, Δt 28.54 s: f = -1.977548872468e+00, ‖∇f‖ = 1.3152e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   46, Δt  1.02 m: f = -1.977585683269e+00, ‖∇f‖ = 1.7937e-02, α = 3.28e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   47, Δt 25.25 s: f = -1.977656807779e+00, ‖∇f‖ = 8.4861e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   48, Δt 26.17 s: f = -1.977696286035e+00, ‖∇f‖ = 7.6274e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   49, Δt 28.92 s: f = -1.977778124369e+00, ‖∇f‖ = 9.6178e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   50, Δt  1.09 m: f = -1.977808641832e+00, ‖∇f‖ = 1.4319e-02, α = 3.68e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   51, Δt 28.53 s: f = -1.977854885672e+00, ‖∇f‖ = 9.2993e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   52, Δt 31.41 s: f = -1.977902264820e+00, ‖∇f‖ = 7.2639e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   53, Δt 33.15 s: f = -1.977950499353e+00, ‖∇f‖ = 9.2869e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   54, Δt 29.11 s: f = -1.977998508291e+00, ‖∇f‖ = 9.4699e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   55, Δt 29.40 s: f = -1.978020283211e+00, ‖∇f‖ = 2.7457e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   56, Δt 28.27 s: f = -1.978076959037e+00, ‖∇f‖ = 7.8115e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   57, Δt 27.70 s: f = -1.978095917294e+00, ‖∇f‖ = 6.8677e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   58, Δt 30.60 s: f = -1.978130577151e+00, ‖∇f‖ = 6.6796e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   59, Δt 32.50 s: f = -1.978148262737e+00, ‖∇f‖ = 1.4865e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   60, Δt 30.47 s: f = -1.978193158578e+00, ‖∇f‖ = 1.1867e-02, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   61, Δt 27.46 s: f = -1.978219848255e+00, ‖∇f‖ = 8.7459e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   62, Δt 29.28 s: f = -1.978265004992e+00, ‖∇f‖ = 5.8301e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   63, Δt  2.38 m: f = -1.978274295272e+00, ‖∇f‖ = 5.1157e-03, α = 2.05e-01, m = 20, nfg = 5
+[ Info: LBFGS: iter   64, Δt 28.40 s: f = -1.978284031229e+00, ‖∇f‖ = 7.6300e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   65, Δt 57.05 s: f = -1.978296386119e+00, ‖∇f‖ = 8.4068e-03, α = 5.21e-01, m = 20, nfg = 2
+[ Info: LBFGS: iter   66, Δt 31.50 s: f = -1.978319196942e+00, ‖∇f‖ = 5.5410e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   67, Δt 28.81 s: f = -1.978335220065e+00, ‖∇f‖ = 4.1135e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   68, Δt 33.61 s: f = -1.978353663191e+00, ‖∇f‖ = 7.2956e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   69, Δt 28.16 s: f = -1.978372863806e+00, ‖∇f‖ = 5.1774e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   70, Δt 29.82 s: f = -1.978389035968e+00, ‖∇f‖ = 5.4952e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   71, Δt 30.24 s: f = -1.978405397671e+00, ‖∇f‖ = 5.6872e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   72, Δt 31.31 s: f = -1.978416544927e+00, ‖∇f‖ = 7.7593e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   73, Δt 30.24 s: f = -1.978427249525e+00, ‖∇f‖ = 5.0304e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   74, Δt 34.89 s: f = -1.978439953640e+00, ‖∇f‖ = 3.8485e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   75, Δt 25.72 s: f = -1.978452146827e+00, ‖∇f‖ = 4.9022e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   76, Δt 27.90 s: f = -1.978470755987e+00, ‖∇f‖ = 5.7707e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   77, Δt 28.80 s: f = -1.978485172856e+00, ‖∇f‖ = 6.0307e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   78, Δt 27.58 s: f = -1.978497426787e+00, ‖∇f‖ = 3.7404e-03, α = 1.00e+00, m = 20, nfg = 1
+[ Info: LBFGS: iter   79, Δt 28.57 s: f = -1.978507829189e+00, ‖∇f‖ = 6.5656e-03, α = 1.00e+00, m = 20, nfg = 1
+┌ Warning: LBFGS: not converged to requested tol after 80 iterations and time 56.70 m: f = -1.978530243368e+00, ‖∇f‖ = 8.5459e-03
+└ @ OptimKit ~/.julia/packages/OptimKit/OEwMx/src/lbfgs.jl:199
+</code></pre><p>Finally, we compare the variationally optimized energy against the reference energy. Indeed, we find that the additional AD-based optimization improves the SU-evolved PEPS and leads to a more accurate energy estimate.</p><pre><code class="language-julia hljs">E_opt /= (Nr * Nc)
+@show E_opt
+@show (E_opt - E_ref) / abs(E_ref);</code></pre><pre><code class="nohighlight hljs">E_opt = -0.4946325608418964
+(E_opt - E_ref) / abs(E_ref) = -0.0007740229476911728
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../hubbard_su/">« Simple update for the Fermi-Hubbard model at half-filling</a><a class="docs-footer-nextpage" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Friday 17 July 2026 15:07">Friday 17 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
