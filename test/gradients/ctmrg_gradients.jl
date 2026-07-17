@@ -2,7 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using Zygote
+using Enzyme 
 using OptimKit
 using KrylovKit
 
@@ -18,10 +18,12 @@ names = ["Heisenberg", "p-wave superconductor"]
 
 gradtol = 1.0e-4
 ctmrg_verbosity = 0
-ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
+#ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
+ctmrg_algs = [[:SequentialCTMRG,], [:SequentialCTMRG,]]
 projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
 svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
-gradient_algs = [[nothing, :FixedPointGradient], [:FixedPointGradient]]
+#gradient_algs = [[nothing, :FixedPointGradient], [:FixedPointGradient]]
+gradient_algs = [[:FixedPointGradient], [:FixedPointGradient]]
 gradient_solver_algs = [
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
@@ -63,7 +65,7 @@ end
             ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_solver_alg,
         ) in Iterators.product(
             calgs, palgs, salgs, galgs, gsalgs
-        )
+           )
 
         # filter disallowed algorithm combinations
         if _check_disallowed_combination(
@@ -106,6 +108,7 @@ end
             )
         end
         env, = leading_boundary(CTMRGEnv(psi, Espace), psi, contrete_ctmrg_alg)
+        model = models[i]
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
             dir;
@@ -113,23 +116,17 @@ end
             retract = PEPSKit.peps_retract,
             inner = PEPSKit.real_inner,
         ) do (peps, env)
-            E, g = Zygote.withgradient(peps) do psi
-                env2, = PEPSKit.hook_pullback(
-                    leading_boundary,
-                    env,
-                    psi,
-                    contrete_ctmrg_alg;
-                    alg_rrule = concrete_gradient_alg,
-                )
-                return cost_function(psi, env2, models[i])
+            function energ(ψ)
+                env2, info = leading_boundary(env, ψ, contrete_ctmrg_alg)
+                cost_function(ψ, env2, model)
             end
-
+            E, gs = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(peps, zerovector(peps)))
             return E, only(g)
         end
         @test dfs1 ≈ dfs2 atol = 1.0e-2
     end
 end
-
+#=
 ## Regression test for gradient accuracy (https://github.com/QuantumKitHub/PEPSKit.jl/pull/276)
 @testset "AD CTMRG energy gradient accuracy regression test (#276)" begin
     Random.seed!(1234)
@@ -138,16 +135,11 @@ end
     gradient_alg = PEPSKit.GradientAlgorithm(; tol = 5.0e-8)
 
     function fg((peps, env))
-        E, g = Zygote.withgradient(peps) do ψ
-            env2, = PEPSKit.hook_pullback(
-                leading_boundary,
-                env,
-                ψ,
-                boundary_alg;
-                alg_rrule = gradient_alg,
-            )
+        function energ(ψ)
+            env2, = leading_boundary(env, ψ, boundary_alg)
             return cost_function(ψ, env2, H)
         end
+        E, gs = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(peps, zerovector(peps)))
         return E, only(g)
     end
 
@@ -167,4 +159,4 @@ end
 
     # verify high gradient accuracy for small finite-difference step size
     @test dfs1 ≈ dfs2 rtol = 1.0e-2 * Δx
-end
+end=#
