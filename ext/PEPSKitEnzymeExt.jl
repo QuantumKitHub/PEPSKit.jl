@@ -69,7 +69,6 @@ function EnzymeRules.augmented_primal(
     f::Const,
     args::Annotation...) where {RT}
     alg_rrule = get(kw.val, :alg_rrule, nothing)
-    println("IN AUGMENTED PRIMAL")
     primal, rrule_func = PEPSKit._rrule(alg_rrule, f.val, map(arg -> getfield(arg, :val), args)...)
     shadow = Enzyme.make_zero(primal)
     return EnzymeRules.AugmentedReturn(primal, shadow, (shadow, rrule_func))
@@ -97,12 +96,13 @@ function EnzymeRules.augmented_primal(
     state::Annotation,
     alg::Const{<:CTMRGAlgorithm}) where {RT}
     #PEPSKit._check_algorithm_combination(alg, gradmode)
-    env, = MPSKit.leading_boundary(envinit.val, state.val, alg.val)
+    env, info = MPSKit.leading_boundary(envinit.val, state.val, alg.val)
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = PEPSKit._set_fixed_truncation(alg.val) # fix spaces during differentiation
     alg_gauge = PEPSKit._scrambling_env_gauge(alg.val) # select appropriate gauge-fixing algorithm
-    env_conv, info = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(state.val), env.val, alg_fixed)
-    shadow = Enzyne.make_zero((env, info))
+    env_conv, _ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(state.val), env, alg_fixed)
+    shadow = EnzymeRules.needs_shadow(config) ? Enzyme.make_zero((env, info)) : nothing
+    primal = EnzymeRules.needs_primal(config) ? (env, info) : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (env_conv, alg_gauge, alg_fixed))
 end
 
@@ -123,7 +123,6 @@ function EnzymeRules.reverse(
     # prepare its pullback
     sig = Tuple{typeof(gauge_fixed_iteration), typeof(state), typeof(env)}
     rule = Mooncake.build_rrule(gauge_fixed_iteration, state, env)
-    println("RUN AUTODIFF IN RRULE")
     env_vjp = Enzyme.autodiff(rule, gauge_fixed_iteration, state, env)
     # split off state and environment parts
     ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
