@@ -20,10 +20,15 @@ sizes = [(1, 1), (3, 3)]
     peps_tensor = PEPSTensor(randn, T, P, V)
     pf_tensor = PFTensor(randn, T, V)
     pepo_tensor = randn(T, P ⊗ P' ← V ⊗ V ⊗ V' ⊗ V')
+    pepo_tensor2 = randn(T, P ⊗ P' ← V ⊗ V ⊗ V' ⊗ V')
 
     peps = InfinitePEPS(peps_tensor; unitcell = sz)
     pf = InfinitePartitionFunction(pf_tensor; unitcell = sz)
     pepo = InfinitePEPO(pepo_tensor; unitcell = (sz..., 2))
+    pepo2 = InfinitePEPO(pepo_tensor2; unitcell = (sz..., 1))
+
+    @test eachindex(peps) == CartesianIndices(size(peps))
+    @test eachindex(pepo) == CartesianIndices(size(pepo))
 
     peps_n = InfiniteSquareNetwork(peps)
     pf_n = InfiniteSquareNetwork(pf)
@@ -50,6 +55,14 @@ sizes = [(1, 1), (3, 3)]
 
     @test pf_n + pf_n ≈ 2 * pf_n
     @test (rotr90 ∘ rotr90)(pf_n) ≈ rot180(pf_n)
+
+    pepo_product = pepo2 * pepo
+    @test size(pepo_product) == (sz..., 3)
+    @test all(pepo_product[I] == pepo[I] for I in CartesianIndices(size(pepo)))
+    @test all(
+        pepo_product[r, c, size(pepo, 3) + h] == pepo2[r, c, h] for
+            r in axes(pepo2, 1), c in axes(pepo2, 2), h in axes(pepo2, 3)
+    )
 
     @test length(peps_n) == prod(sz)
 end

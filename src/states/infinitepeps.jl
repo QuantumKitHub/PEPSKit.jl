@@ -136,6 +136,7 @@ Base.@propagate_inbounds Base.getindex(A::InfinitePEPS, I...) =
 Base.@propagate_inbounds Base.setindex!(A::InfinitePEPS, v, I...) =
     periodic_setindex!(A, unitcell(A), v, I)
 Base.axes(A::InfinitePEPS, args...) = axes(unitcell(A), args...)
+Base.eachindex(A::InfinitePEPS) = eachindex(IndexCartesian(), unitcell(A))
 eachcoordinate(A::InfinitePEPS) = collect(Iterators.product(axes(A)...))
 function eachcoordinate(A::InfinitePEPS, dirs)
     return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
