@@ -210,6 +210,11 @@ function _set_fixed_truncation(alg::CTMRGAlgorithm)
     return alg_fixed
 end
 
+function gauge_fixed_iteration(A, x, alg_fixed, signs, corner_phases, edge_phases)
+    x′ = ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
+    return fix_phases(x′, signs, corner_phases, edge_phases)
+end
+
 # compute the CTMRG gradient through fixed-point differentiation
 function _rrule(
         gradmode::FixedPointGradient,
@@ -228,12 +233,12 @@ function _rrule(
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    function gauge_fixed_iteration(A, x)
+    #=function gauge_fixed_iteration(A, x)
         return fix_phases(
             ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1],
             signs, corner_phases, edge_phases,
         )
-    end
+    end=#
     # prepare its pullback
     _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
     # split off state and environment parts

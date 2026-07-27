@@ -124,8 +124,8 @@ end
 Renormalize one column of the CTMRG environment.
 """
 function renormalize_sequentially(col::Int, projectors, network, env)
-    corners = Zygote.Buffer(env.corners)
-    edges = Zygote.Buffer(env.edges)
+    corners = env.corners
+    edges = env.edges
 
     for (dir, r, c) in eachcoordinate(network, 1:4)
         (c == col && dir in [SOUTHWEST, NORTHWEST]) && continue

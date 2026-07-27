@@ -81,9 +81,13 @@ Return the value (per unit cell) of a given contractible network contracted usin
 CTMRG environment.
 """
 function network_value(network::InfiniteSquareNetwork, env::CTMRGEnv)
-    return prod(Iterators.product(axes(network)...)) do (r, c)
-        return _contract_site((r, c), network, env) * _contract_corners((r, c), env) /
-            _contract_vertical_edges((r, c), env) / _contract_horizontal_edges((r, c), env)
+    ax_prod = collect(Iterators.product(axes(network)...))
+    return prod(ax_prod) do (r, c)
+        site_val = _contract_site((r, c), network, env)
+        corner_val = _contract_corners((r, c), env)
+        vertical_val = _contract_vertical_edges((r, c), env)
+        horizontal_val = _contract_horizontal_edges((r, c), env)
+        return site_val * corner_val / vertical_val / horizontal_val
     end
 end
 network_value(state, env::CTMRGEnv) = network_value(InfiniteSquareNetwork(state), env)

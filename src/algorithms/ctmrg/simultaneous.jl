@@ -37,16 +37,10 @@ end
 CTMRG_SYMBOLS[:SimultaneousCTMRG] = SimultaneousCTMRG
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
-    coordinates = eachcoordinate(network, 1:4)
-    T_corners = Base.promote_op(
-        TensorMap ∘ EnlargedCorner, typeof(network), typeof(env), eltype(coordinates)
-    )
-    enlarged_corners′ = similar(coordinates, T_corners)
-    enlarged_corners::typeof(enlarged_corners′) =
-        dtmap!!(enlarged_corners′, eachcoordinate(network, 1:4)) do idx
-        return TensorMap(EnlargedCorner(network, env, idx))
-    end  # expand environment
+    coords = eachcoordinate(network, 1:4)
+    enlarged_corners = [TensorMap(EnlargedCorner(network, env, idx)) for idx in coords] # expand environment
     projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
+    # problem is here!
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)  # renormalize enlarged corners
     info = (;
         contraction_metrics = (; info.truncation_error),
@@ -79,13 +73,7 @@ function simultaneous_projectors(
         enlarged_corners::Array{E, 3}, env::CTMRGEnv, alg::ProjectorAlgorithm
     ) where {E}
     coordinates = eachcoordinate(env, 1:4)
-    T_dst = Base.promote_op(
-        simultaneous_projectors,
-        NTuple{3, Int}, typeof(enlarged_corners), typeof(env), typeof(alg),
-    )
-    proj_and_info′ = similar(coordinates, T_dst)
-    proj_and_info::typeof(proj_and_info′) =
-        dtmap!!(proj_and_info′, coordinates) do coordinate
+    proj_and_info = map(coordinates) do coordinate
         return simultaneous_projectors(coordinate, enlarged_corners, env, alg)
     end
     return _split_proj_and_info(proj_and_info)
@@ -93,8 +81,8 @@ end
 function simultaneous_projectors(
         coordinate, enlarged_corners::Array{E, 3}, env, alg::HalfInfiniteProjector
     ) where {E}
-    coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
-    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    coordinate′ = _next_coordinate(coordinate, size(env, 2), size(env, 3))
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2], coordinate′[3]])
     alg′ = _set_decomposition_truncation(alg, trunc)
     ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     return compute_projector(ec, alg′)
@@ -126,25 +114,26 @@ function renormalize_simultaneously(enlarged_corners, projectors, network, env)
     P_left, P_right = projectors
     coordinates = eachcoordinate(env, 1:4)
     T_CE = Tuple{cornertype(env), edgetype(env)}
-    corners_edges′ = similar(coordinates, T_CE)
-    corners_edges::typeof(corners_edges′) =
-        dtmap!!(corners_edges′, coordinates) do (dir, r, c)
-        if dir == NORTH
+    corners_edges = similar(coordinates, T_CE)
+    #dtmap!!(corners_edges, coordinates) do coord
+    map!(corners_edges, coordinates) do coord
+        direction, r, c = coord
+        if direction == NORTH
             corner = renormalize_northwest_corner(
                 (r, c), enlarged_corners, P_left, P_right
             )
             edge = renormalize_north_edge((r, c), env, P_left, P_right, network)
-        elseif dir == EAST
+        elseif direction == EAST
             corner = renormalize_northeast_corner(
                 (r, c), enlarged_corners, P_left, P_right
             )
             edge = renormalize_east_edge((r, c), env, P_left, P_right, network)
-        elseif dir == SOUTH
+        elseif direction == SOUTH
             corner = renormalize_southeast_corner(
                 (r, c), enlarged_corners, P_left, P_right
             )
             edge = renormalize_south_edge((r, c), env, P_left, P_right, network)
-        elseif dir == WEST
+        elseif direction == WEST
             corner = renormalize_southwest_corner(
                 (r, c), enlarged_corners, P_left, P_right
             )
@@ -152,6 +141,5 @@ function renormalize_simultaneously(enlarged_corners, projectors, network, env)
         end
         return corner / norm(corner), edge / norm(edge)
     end
-
     return CTMRGEnv(map(first, corners_edges), map(last, corners_edges))
 end

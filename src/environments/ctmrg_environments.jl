@@ -332,10 +332,8 @@ end
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C, T}) where {C, T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(
-        Array{C, 3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
-    )
-    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
+    corners′ = Array{C, 3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
+    edges′ = Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2))
     for dir in 1:4
         dir2 = _prev(dir, 4)
         corners′[dir2, :, :] = rotl90(env.corners[dir, :, :])
@@ -347,10 +345,8 @@ end
 # Rotate corners & edges clockwise
 function Base.rotr90(env::CTMRGEnv{C, T}) where {C, T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(
-        Array{C, 3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
-    )
-    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
+    corners′ = Array{C, 3}(undef, 4, size(env.corners, 3), size(env.corners, 2))
+    edges′ = Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2))
     for dir in 1:4
         dir2 = _next(dir, 4)
         corners′[dir2, :, :] = rotr90(env.corners[dir, :, :])
@@ -362,10 +358,8 @@ end
 # Rotate corners & edges by 180 degrees
 function Base.rot180(env::CTMRGEnv{C, T}) where {C, T}
     # Initialize rotated corners & edges with rotated sizes
-    corners′ = Zygote.Buffer(
-        Array{C, 3}(undef, 4, size(env.corners, 2), size(env.corners, 3))
-    )
-    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 2), size(env.edges, 3)))
+    corners′ = Array{C, 3}(undef, 4, size(env.corners, 2), size(env.corners, 3))
+    edges′ = Array{T, 3}(undef, 4, size(env.edges, 2), size(env.edges, 3))
     for dir in 1:4
         dir2 = _next(_next(dir, 4), 4)
         corners′[dir2, :, :] = rot180(env.corners[dir, :, :])

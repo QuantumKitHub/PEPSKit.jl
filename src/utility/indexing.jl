@@ -71,6 +71,8 @@ function _next_coordinate((dir, row, col), rowsize, colsize)
         return (_next(dir, 4), row, _prev(col, colsize))
     elseif dir == 4
         return (_next(dir, 4), _prev(row, rowsize), col)
+    else
+        error(lazy"invalid dir $dir")
     end
 end
 function _prev_coordinate((dir, row, col), rowsize, colsize)

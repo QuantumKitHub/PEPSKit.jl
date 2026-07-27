@@ -183,11 +183,9 @@ function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
     truncation_error = truncation_error / norm(S) # normalize truncation error
 
     # Check for degenerate singular values
-    Zygote.isderiving() && ignore_derivatives() do
-        if alg.verbosity > 0 && is_degenerate_spectrum(S)
-            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-            @warn("degenerate singular values detected: ", svals)
-        end
+    if alg.verbosity > 0 && is_degenerate_spectrum(S)
+        svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+        @warn("degenerate singular values detected: ", svals)
     end
 
     P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
@@ -206,11 +204,9 @@ function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
     truncation_error = truncation_error / norm(S) # normalize truncation error
 
     # Check for degenerate singular values
-    Zygote.isderiving() && ignore_derivatives() do
-        if alg.verbosity > 0 && is_degenerate_spectrum(S)
-            svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
-            @warn("degenerate singular values detected: ", svals)
-        end
+    if alg.verbosity > 0 && is_degenerate_spectrum(S)
+        svals = TensorKit.SectorDict(c => diag(b) for (c, b) in blocks(S))
+        @warn("degenerate singular values detected: ", svals)
     end
 
     P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)

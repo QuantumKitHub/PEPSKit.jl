@@ -1,11 +1,25 @@
 using Test
 using Random
 using LinearAlgebra
-using PEPSKit
+using PEPSKit, MPSKit
 using TensorKit
 using KrylovKit
 using OptimKit
-using Zygote
+using Mooncake
+using MatrixAlgebraKit
+using PEPSKit: LoggingExtras
+
+const MCExt = Base.get_extension(PEPSKit, :PEPSKitMooncakeExt)
+@assert !isnothing(MCExt)
+
+Mooncake.@zero_derivative Mooncake.MinimalCtx Tuple{typeof(Core.current_scope)}
+Mooncake.@zero_derivative Mooncake.MinimalCtx Tuple{typeof(time)}
+Mooncake.@zero_derivative Mooncake.MinimalCtx Tuple{typeof(Base.CoreLogging.with_logstate), Any, Any}
+Mooncake.@zero_derivative Mooncake.MinimalCtx Tuple{typeof(Base.CoreLogging._invoked_min_enabled_level), Any}
+Mooncake.@zero_derivative Mooncake.MinimalCtx Tuple{typeof(PEPSKit.LoggingExtras.withlevel), Any, Int}
+
+Mooncake.tangent_type(::Type{<:Base.HashArrayMappedTries.HAMT}) = Mooncake.NoTangent
+Mooncake.tangent_type(::Type{Base.HashArrayMappedTries.Leaf}) = Mooncake.NoTangent
 
 ## Setup
 
@@ -80,6 +94,12 @@ projector_algs = [:HalfInfiniteProjector, :FullInfiniteProjector]
     end
 end
 
+#=f1=Mooncake.zero_fcodual
+rule_tester=Mooncake.build_rrule(Complex,1.0,1.0)
+rule_tester(f1(Complex),f1(1.0),f1(1.0))=#
+
+#@show Mooncake.is_primitive(Mooncake.DefaultCtx, Mooncake.ReverseMode, Tuple{Complex, Float64, Float64}, Base.get_world_counter())
+#@show Base.which(Mooncake.rrule!!, (Complex,Float64, Float64))
 @testset "Fixed-point computation for 3D classical ising model" begin
     Random.seed!(81812781144)
 
@@ -104,6 +124,23 @@ end
     env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), χenv)
     env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), χenv)
 
+    function energ_test(ψ, env2, env3)
+        n2 = InfiniteSquareNetwork(ψ)
+        env2′, info = PEPSKit.hook_pullback(
+            leading_boundary, env2, n2, ctm_alg; alg_rrule = gradient_alg
+        )
+        n3 = InfiniteSquareNetwork(ψ, T)
+        env3′, info = PEPSKit.hook_pullback(
+            leading_boundary, env3, n3, ctm_alg; alg_rrule = gradient_alg
+        )
+        PEPSKit.update!(env2, env2′)
+        PEPSKit.update!(env3, env3′)
+        λ3 = network_value(n3, env3)
+        λ2 = network_value(n2, env2)
+        return -log(abs(λ3 / λ2))
+    end
+    @show energ_test(psi0, env2_0, env3_0)
+
     # optimize free energy per site
     (psi_final, env2_final, env3_final), f, = optimize(
         (psi0, env2_0, env3_0),
@@ -112,24 +149,27 @@ end
         retract = pepo_retract,
         (transport!) = (pepo_transport!),
     ) do (psi, env2, env3)
-        E, gs = withgradient(psi) do ψ
+        function energ(ψ)
             n2 = InfiniteSquareNetwork(ψ)
-            env2′, info = PEPSKit.hook_pullback(
+            #=env2′, info = PEPSKit.hook_pullback(
                 leading_boundary, env2, n2, ctm_alg; alg_rrule = gradient_alg
             )
             n3 = InfiniteSquareNetwork(ψ, T)
             env3′, info = PEPSKit.hook_pullback(
                 leading_boundary, env3, n3, ctm_alg; alg_rrule = gradient_alg
-            )
-            PEPSKit.ignore_derivatives() do
-                PEPSKit.update!(env2, env2′)
-                PEPSKit.update!(env3, env3′)
-            end
+            )=#
+            env2′, info = PEPSKit.leading_boundary(env2, n2, ctm_alg)
+            n3 = InfiniteSquareNetwork(ψ, T)
+            env3′, info = PEPSKit.leading_boundary(env3, n3, ctm_alg)
+            PEPSKit.update!(env2, env2′)
+            PEPSKit.update!(env3, env3′)
             λ3 = network_value(n3, env3)
             λ2 = network_value(n2, env2)
-            return -log(real(λ3 / λ2))
+            return -log(abs(λ3 / λ2))
         end
-        g = only(gs)
+        cache = prepare_gradient_cache(energ, psi)
+        E, gs = value_and_gradient!!(cache, energ, psi)
+        _, g = Mooncake.arrayify(psi, gs[2])
         return E, g
     end
 
