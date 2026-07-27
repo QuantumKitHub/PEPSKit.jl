@@ -3,7 +3,7 @@
 function start_correlator_left(
         i::CartesianIndex{2},
         below::InfinitePEPO,
-        O::MPOTensor,
+        O::PFTensor,
         above::InfinitePEPO,
         env::CTMRGEnv,
     )
@@ -42,7 +42,7 @@ function end_correlator_right_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         above::InfinitePEPO,
-        O::MPOTensor,
+        O::PFTensor,
         below::InfinitePEPO,
         env::CTMRGEnv,
     ) where {T, S}
@@ -71,7 +71,7 @@ end
 function start_correlator_right(
         i::CartesianIndex{2},
         below::InfinitePEPO,
-        O::MPOTensor,
+        O::PFTensor,
         above::InfinitePEPO,
         env::CTMRGEnv,
     )
@@ -110,7 +110,7 @@ function end_correlator_left_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         above::InfinitePEPO,
-        O::MPOTensor,
+        O::PFTensor,
         below::InfinitePEPO,
         env::CTMRGEnv,
     ) where {T, S}

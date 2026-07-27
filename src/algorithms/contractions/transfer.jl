@@ -105,7 +105,7 @@ function edge_transfer_left(
 end
 
 """
-    transfer_right(v, Et, Eb)
+    edge_transfer_right(v, Et, Eb)
     
 Apply an edge transfer matrix to the right.
 
@@ -201,9 +201,9 @@ function edge_transfer_left(
 end
 
 """
-    transfer_right(v, O, Et, Eb)
+    edge_transfer_right(v, O, Et, Eb)
     
-Apply an edge transfer matrix to the right on an excited vector..
+Apply an edge transfer matrix to the right on an excited vector.
 
 ```
 ──Et─┐

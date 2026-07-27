@@ -108,7 +108,7 @@ end
 
 ## PEPO
 
-const PEPOPurifiedSandwich{K <: PEPOTensor, B <: PEPOTensor} = Tuple{K, B}
+const PEPOPurifiedSandwich{P <: PEPOTensor} = Tuple{P, P}
 ket(O::PEPOPurifiedSandwich) = O[1]
 bra(O::PEPOPurifiedSandwich) = O[2]
 

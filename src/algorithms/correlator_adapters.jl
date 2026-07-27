@@ -86,7 +86,7 @@ Base.rotl90(context::_PEPOTraceCorrelator) =
 # -------- For left-to-right correlator contraction --------
 
 function _start_correlator_left(
-        i::CartesianIndex{2}, context::_BraketCorrelator, O::MPOTensor
+        i::CartesianIndex{2}, context::_BraketCorrelator, O::PFTensor
     )
     return start_correlator_left(i, context.bra, O, context.ket, context.env)
 end
@@ -101,7 +101,7 @@ function _end_correlator_right_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         context::_BraketCorrelator,
-        O::MPOTensor,
+        O::PFTensor,
     ) where {T, S}
     return end_correlator_right_numerator(j, V, context.bra, O, context.ket, context.env)
 end
@@ -147,7 +147,7 @@ end
 # -------- For right-to-left correlator contraction --------
 
 function _start_correlator_right(
-        i::CartesianIndex{2}, context::_BraketCorrelator, O::MPOTensor
+        i::CartesianIndex{2}, context::_BraketCorrelator, O::PFTensor
     )
     return start_correlator_right(i, context.bra, O, context.ket, context.env)
 end
@@ -162,7 +162,7 @@ function _end_correlator_left_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         context::_BraketCorrelator,
-        O::MPOTensor,
+        O::PFTensor,
     ) where {T, S}
     return end_correlator_left_numerator(j, V, context.bra, O, context.ket, context.env)
 end
