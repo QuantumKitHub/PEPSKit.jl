@@ -1,7 +1,7 @@
 module PEPSKitEnzymeExt
 
 using PEPSKit, MPSKit, TensorKit, MatrixAlgebraKit
-using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGradient, sdiag_pow
+using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGradient, sdiag_pow, dtmap
 import PEPSKit: real_inner
 using Enzyme
 using Enzyme.EnzymeCore: EnzymeRules
@@ -10,6 +10,8 @@ using Enzyme.EnzymeCore: EnzymeRules
 @inline EnzymeRules.inactive_type(::Type{QRAdjoint}) = true
 @inline EnzymeRules.inactive_type(::Type{EighAdjoint}) = true
 @inline EnzymeRules.inactive_type(::Type{CTMRGAlgorithm}) = true
+
+@inline EnzymeRules.inactive(::typeof(PEPSKit.checklattice), args...) = nothing
 
 function EnzymeRules.augmented_primal(
     config::EnzymeRules.RevConfigWidth{1},
@@ -82,7 +84,6 @@ function EnzymeRules.reverse(
     kw::Const{<:NamedTuple},
     ::Const{typeof(PEPSKit.hook_pullback)},
     args::Annotation...) where {RT}
-    println("IN REVERSE")
     shadow, rrule_func = cache
     rrule_func(shadow) 
     return ntuple(Returns(nothing), 2 + length(args))
@@ -122,14 +123,47 @@ function EnzymeRules.reverse(
     end
     # prepare its pullback
     sig = Tuple{typeof(gauge_fixed_iteration), typeof(state), typeof(env)}
-    rule = Mooncake.build_rrule(gauge_fixed_iteration, state, env)
-    env_vjp = Enzyme.autodiff(rule, gauge_fixed_iteration, state, env)
+    env_vjp = Enzyme.autodiff_thunk(ReverseWithPrimal, Duplicated, gauge_fixed_iteration, state, env)
     # split off state and environment parts
     ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
     ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
     # evaluate the geometric sum
     PEPSKit.fixedpoint_gradient(env.dval, ∂f∂x, ∂f∂A, env.dval, gradmode.solver_alg)
     return ntuple(Returns(NoRData()), 4)
+end
+
+function EnzymeRules.augmented_primal(
+    config::EnzymeRules.RevConfigWidth{1},
+    ::Const{typeof(dtmap)},
+    ::Type{RT},
+    f::Const,
+    A::Annotation{<:AbstractArray},
+    scheduler::Annotation
+    ) where {RT}
+    el_rrules = tmap(A.val, A.dval; scheduler.val) do a, da
+        Enzyme.autodiff_thunk(ReverseWithPrimal, Duplicated, f, Duplicated(a, da))
+    end
+    y = map(first, el_rrules)
+    dy = map(Enzyme.make_zero, y)
+    shadow = EnzymeRules.needs_shadow(config) ? dy : nothing
+    primal = EnzymeRules.needs_primal(config) ? y : nothing
+    return EnzymeRules.AugmentedReturn(primal, shadow, (y, dy, el_rrules))
+end
+
+function EnzymeRules.reverse(
+    config::EnzymeRules.RevConfigWidth{1},
+    ::Const{typeof(dtmap)},
+    ::Type{RT},
+    cache,
+    f::Const,
+    A::Annotation{<:AbstractArray},
+    scheduler::Annotation
+    ) where {RT}
+    ys, dys, el_rrules = cache
+    backevals = tmap(el_rrules, dys; scheduler.val) do el_rrule, dy
+        last(el_rrule)(dy)
+    end
+    return (nothing, nothing, nothing) 
 end
 
 end
