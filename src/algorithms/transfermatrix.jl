@@ -37,7 +37,7 @@ function edge_transfermatrix(a::AbstractVector, b, c::AbstractVector, isflipped 
     return isflipped ? flip(tot) : tot
 end
 
-function _edge_transfermatrix(
+function edge_transfermatrix(
         row::Int, col::Int, bra::S, ket::S, env::CTMRGEnv
     ) where {S <: InfiniteState}
     Etop = edge(env, NORTH, row - 1, col)
@@ -46,7 +46,7 @@ function _edge_transfermatrix(
     return edge_transfermatrix(Etop, sandwich, Ebot)
 end
 
-function _edge_transfermatrix(
+function edge_transfermatrix(
         row::Int, col::Int, ρ::InfinitePEPO, env::CTMRGEnv
     )
     Etop = edge(env, NORTH, row - 1, col)

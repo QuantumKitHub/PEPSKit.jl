@@ -44,12 +44,12 @@ struct PEPOTraceCorrelator{P <: InfinitePEPO, E <: CTMRGEnv}
     end
 end
 
-function _edge_transfermatrix(row::Int, col::Int, context::BraketCorrelator)
-    return _edge_transfermatrix(row, col, context.bra, context.ket, context.env)
+function edge_transfermatrix(row::Int, col::Int, context::BraketCorrelator)
+    return edge_transfermatrix(row, col, context.bra, context.ket, context.env)
 end
 
-function _edge_transfermatrix(row::Int, col::Int, context::PEPOTraceCorrelator)
-    return _edge_transfermatrix(row, col, context.ρ, context.env)
+function edge_transfermatrix(row::Int, col::Int, context::PEPOTraceCorrelator)
+    return edge_transfermatrix(row, col, context.ρ, context.env)
 end
 
 function _correlator_scalartype(context::BraketCorrelator, O::FiniteMPO)
@@ -133,7 +133,7 @@ function _correlator_horizontal_right!(G, targets, context, O::FiniteMPO, i::Car
             if c == j
                 numerator = _end_correlator_right_numerator(j, Vo, context, O[2])
             end
-            T = _edge_transfermatrix(c[1], c[2], context)
+            T = edge_transfermatrix(c[1], c[2], context)
             c != j_last && (Vo = Vo * T)
             Vn = Vn * T
         end
@@ -194,7 +194,7 @@ function _correlator_horizontal_left!(G, targets, context, O::FiniteMPO, i::Cart
             if c == j
                 numerator = _end_correlator_left_numerator(j, Vo, context, O[2])
             end
-            T = _edge_transfermatrix(c[1], c[2], context)
+            T = edge_transfermatrix(c[1], c[2], context)
             c != j_last && (Vo = T * Vo)
             Vn = T * Vn
         end
