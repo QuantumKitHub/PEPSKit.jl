@@ -34,7 +34,7 @@ function MPSKit.correlator(
         i::CartesianIndex{2}, js::CoordCollection{2},
         env::CTMRGEnv,
     )
-    return _correlator(_PEPOTraceCorrelator(ρ, env), O, i, vec(js))
+    return _correlator(PEPOTraceCorrelator(ρ, env), O, i, vec(js))
 end
 
 function MPSKit.correlator(
