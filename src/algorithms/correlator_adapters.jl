@@ -85,19 +85,19 @@ Base.rotl90(context::PEPOTraceCorrelator) =
 
 # -------- For left-to-right correlator contraction --------
 
-function _start_correlator_left(
+function start_correlator_left(
         i::CartesianIndex{2}, context::BraketCorrelator, O::PFTensor
     )
     return start_correlator_left(i, context.bra, O, context.ket, context.env)
 end
 
-function _start_correlator_left(
+function start_correlator_left(
         i::CartesianIndex{2}, context::PEPOTraceCorrelator, O::PFTensor
     )
     return start_correlator_left(i, context.ρ, O, context.env)
 end
 
-function _end_correlator_right_numerator(
+function end_correlator_right_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         context::BraketCorrelator,
@@ -106,7 +106,7 @@ function _end_correlator_right_numerator(
     return end_correlator_right_numerator(j, V, context.bra, O, context.ket, context.env)
 end
 
-function _end_correlator_right_numerator(
+function end_correlator_right_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 3, 1},
         context::PEPOTraceCorrelator,
@@ -115,7 +115,7 @@ function _end_correlator_right_numerator(
     return end_correlator_right_numerator(j, V, context.ρ, O, context.env)
 end
 
-function _end_correlator_right_denominator(
+function end_correlator_right_denominator(
         j::CartesianIndex{2}, V::AbstractTensorMap, context
     )
     return end_correlator_right_denominator(j, V, context.env)
@@ -124,21 +124,21 @@ end
 function _correlator_horizontal_right!(G, targets, context, O::FiniteMPO, i::CartesianIndex{2})
     # left start for operator and norm contractions
     c = i # current column being handled
-    Vn, Vo = _start_correlator_left(c, context, O[1])
+    Vn, Vo = start_correlator_left(c, context, O[1])
     j_last = last(targets)[2]
     for (k, j) in targets
         local numerator
         while j > c
             c += CartesianIndex(0, 1)
             if c == j
-                numerator = _end_correlator_right_numerator(j, Vo, context, O[2])
+                numerator = end_correlator_right_numerator(j, Vo, context, O[2])
             end
             T = edge_transfermatrix(c[1], c[2], context)
             c != j_last && (Vo = Vo * T)
             Vn = Vn * T
         end
         # compute overlap without operator
-        denominator = _end_correlator_right_denominator(j, Vn, context)
+        denominator = end_correlator_right_denominator(j, Vn, context)
         G[k] = numerator / denominator
     end
     return G
@@ -146,19 +146,19 @@ end
 
 # -------- For right-to-left correlator contraction --------
 
-function _start_correlator_right(
+function start_correlator_right(
         i::CartesianIndex{2}, context::BraketCorrelator, O::PFTensor
     )
     return start_correlator_right(i, context.bra, O, context.ket, context.env)
 end
 
-function _start_correlator_right(
+function start_correlator_right(
         i::CartesianIndex{2}, context::PEPOTraceCorrelator, O::PFTensor
     )
     return start_correlator_right(i, context.ρ, O, context.env)
 end
 
-function _end_correlator_left_numerator(
+function end_correlator_left_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 4, 1},
         context::BraketCorrelator,
@@ -167,7 +167,7 @@ function _end_correlator_left_numerator(
     return end_correlator_left_numerator(j, V, context.bra, O, context.ket, context.env)
 end
 
-function _end_correlator_left_numerator(
+function end_correlator_left_numerator(
         j::CartesianIndex{2},
         V::AbstractTensorMap{T, S, 3, 1},
         context::PEPOTraceCorrelator,
@@ -176,7 +176,7 @@ function _end_correlator_left_numerator(
     return end_correlator_left_numerator(j, V, context.ρ, O, context.env)
 end
 
-function _end_correlator_left_denominator(
+function end_correlator_left_denominator(
         j::CartesianIndex{2}, V::AbstractTensorMap, context
     )
     return end_correlator_left_denominator(j, V, context.env)
@@ -185,21 +185,21 @@ end
 function _correlator_horizontal_left!(G, targets, context, O::FiniteMPO, i::CartesianIndex{2})
     # right start for operator and norm contractions
     c = i # current column being handled
-    Vn, Vo = _start_correlator_right(c, context, O[1])
+    Vn, Vo = start_correlator_right(c, context, O[1])
     j_last = last(targets)[2]
     for (k, j) in targets
         local numerator
         while j < c
             c -= CartesianIndex(0, 1)
             if c == j
-                numerator = _end_correlator_left_numerator(j, Vo, context, O[2])
+                numerator = end_correlator_left_numerator(j, Vo, context, O[2])
             end
             T = edge_transfermatrix(c[1], c[2], context)
             c != j_last && (Vo = T * Vo)
             Vn = T * Vn
         end
         # compute overlap without operator
-        denominator = _end_correlator_left_denominator(j, Vn, context)
+        denominator = end_correlator_left_denominator(j, Vn, context)
         G[k] = numerator / denominator
     end
     return G
