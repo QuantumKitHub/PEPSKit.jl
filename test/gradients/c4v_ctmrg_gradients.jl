@@ -25,7 +25,7 @@ ctmrg_algs = [[:C4vCTMRG]]
 projector_algs = [[:C4vEighProjector, :C4vQRProjector]]
 decomposition_rrule_algs = [[:FullPullback, :TruncPullback]]
 gradient_algs = [[nothing, :FixedPointGradient]]
-gradient_solver_algs = [[:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi]]
+gradient_solver_algs = [[:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi, :AndersonMixing]]
 steps = -0.01:0.005:0.01
 
 # record which rrule alg is compatible with which projector alg

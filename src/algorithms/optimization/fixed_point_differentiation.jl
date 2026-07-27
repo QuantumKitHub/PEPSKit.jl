@@ -93,8 +93,12 @@ end
 FixedPointGradient(; kwargs...) = GradientAlgorithm(; alg = :FixedPointGradient, kwargs...)
 GRADIENT_ALGORITHM_SYMBOLS[:FixedPointGradient] = FixedPointGradient
 
-const FIXEDPOINT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
-    :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi,
+const FIXEDPOINT_SOLVER_SYMBOLS = IdDict{Symbol, Any}(
+    :GMRES => GMRES,
+    :BiCGStab => BiCGStab,
+    :Arnoldi => Arnoldi,
+    :AndersonMixing => AndersonMixing,
+    :SimpleIteration => SimpleIteration,
 )
 
 _default_solver_alg(::Type{<:FixedPointGradient}) = Defaults.gradient_fixedpoint_solver_alg
@@ -105,6 +109,15 @@ function _pad_solver_kwargs(::Type{<:Arnoldi}, solver_kwargs)
         eager = Defaults.gradient_fixedpoint_solver_eager,
         solver_kwargs...,
     )
+    return solver_kwargs
+end
+function _pad_solver_kwargs(::Type{<:OptimKit.FixedPointAlgorithm}, solver_kwargs)
+    solver_kwargs = (;
+        gradtol = solver_kwargs.tol, # patch for OptimKit.FixedPointAlgorithm gradient tolerance kwarg name
+        solver_kwargs...,
+    )
+    solver_kwargs = Base.structdiff(solver_kwargs, (; tol = nothing))
+
     return solver_kwargs
 end
 
@@ -359,4 +372,14 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
     end
 
     return ∂f∂A(y)
+end
+
+function fixedpoint_gradient(x̆, ∂ₓf, ∂ₚf, y₀, alg::OptimKit.FixedPointAlgorithm)
+    fp(y) = x̆ + ∂ₓf(y) # fixed-point condition for geometric sum
+    y, g, = OptimKit.fixedpoint(fp, y₀, alg)
+    if alg.verbosity > 0 && norm(g) > alg.gradtol
+        @warn("gradient fixed-point iteration reached maximal number of iterations without converging: ‖g‖ = $(norm(g))")
+    end
+
+    return ∂ₚf(y)
 end

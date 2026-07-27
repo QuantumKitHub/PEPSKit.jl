@@ -23,7 +23,7 @@ projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfini
 svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
 gradient_algs = [[nothing, :FixedPointGradient], [:FixedPointGradient]]
 gradient_solver_algs = [
-    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
+    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi, :AndersonMixing],
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
 ]
 steps = -0.01:0.005:0.01
