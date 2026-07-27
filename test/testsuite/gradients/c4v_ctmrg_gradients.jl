@@ -54,6 +54,7 @@ function gradient_cases(projector_alg)
             ("fixed point, ManualIter", :FullPullback, gradient_alg(:FixedPointGradient, :ManualIter)),
             ("fixed point, BiCGStab", :FullPullback, gradient_alg(:FixedPointGradient, :BiCGStab)),
             ("fixed point, Arnoldi", :FullPullback, gradient_alg(:FixedPointGradient, :Arnoldi)),
+            ("fixed point, AndersonMixing", :FullPullback, gradient_alg(:FixedPointGradient, :AndersonMixing)),
             ("implicit, BiCGStab", :FullPullback, gradient_alg(:ImplicitGradient, :BiCGStab)),
         ]
     )

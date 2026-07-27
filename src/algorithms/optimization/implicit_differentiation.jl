@@ -90,6 +90,8 @@ The supported keywords are:
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
+    - `:AndersonMixing` : Anderson-accelerated fixed-point iteration, see `OptimKit.AndersonMixing` for details
+    - `:SimpleIteration` : Plain fixed-point iteration, see `OptimKit.SimpleIteration` for details
 
 See also [`fixedpoint_gradient`](@ref) for details on the underlying procedure.
 """
@@ -101,6 +103,7 @@ GRADIENT_ALGORITHM_SYMBOLS[:FixedPointGradient] = FixedPointGradient
 
 const FIXEDPOINT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi,
+    :AndersonMixing => AndersonMixing, :SimpleIteration => SimpleIteration,
 )
 
 _default_solver_alg(::Type{<:FixedPointGradient}) = Defaults.gradient_fixedpoint_solver_alg
@@ -113,6 +116,15 @@ function _pad_solver_kwargs(::Type{<:Arnoldi}, solver_kwargs)
     )
     return solver_kwargs
 end
+function _pad_solver_kwargs(::Type{<:OptimKit.FixedPointAlgorithm}, solver_kwargs)
+    solver_kwargs = (;
+        gradtol = solver_kwargs.tol, # patch for OptimKit.FixedPointAlgorithm gradient tolerance kwarg name
+        solver_kwargs...,
+    )
+    return Base.structdiff(solver_kwargs, (; tol = nothing))
+end
+_updatetol(alg::FixedPointGradient{<:OptimKit.FixedPointAlgorithm}, tol::Real) =
+    @set alg.solver_alg.gradtol = tol
 
 """
 $(TYPEDEF)
@@ -352,6 +364,17 @@ function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::KrylovKit.KrylovAlgorith
         return fixedpoint_gradient(∂E∂x, ∂f, y₀, backup_ls_alg)
     else
         y = VI.scale!!(y, inv(s))
+    end
+    return ∂f∂p(y)
+end
+
+function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::OptimKit.FixedPointAlgorithm)
+    ∂f∂p(x) = ∂f(x)[2]
+    ∂f∂x(x) = ∂f(x)[3]
+    fp(y) = ∂E∂x + ∂f∂x(y) # fixed-point condition for geometric sum
+    y, g, = OptimKit.fixedpoint(fp, y₀, alg)
+    if alg.verbosity > 0 && norm(g) > alg.gradtol
+        @warn("gradient fixed-point iteration reached maximal number of iterations without converging: ‖g‖ = $(norm(g))")
     end
     return ∂f∂p(y)
 end
