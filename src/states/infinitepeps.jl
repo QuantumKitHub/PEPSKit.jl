@@ -46,8 +46,8 @@ Create an `InfinitePEPS` by specifying the physical, north virtual and east virt
 of the PEPS tensor at each site in the unit cell as a matrix.
 """
 function InfinitePEPS(
-      f, ::Type{TorA}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
-     ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
+        f, ::Type{TorA}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
