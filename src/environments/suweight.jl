@@ -102,7 +102,8 @@ end
 Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
 as `ElementarySpace`s) and unit cell size.
 """
-function SUWeight(::Type{TorA},
+function SUWeight(
+        ::Type{TorA},
         Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return SUWeight(ComplexF64, fill(Nspace, unitcell), fill(Espace, unitcell))
