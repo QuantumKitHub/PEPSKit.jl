@@ -62,7 +62,8 @@ end
 
 Create a trivial `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
 """
-function SUWeight(::Type{TorA},
+function SUWeight(
+        ::Type{TorA},
         Nspaces::M, Espaces::M = Nspaces
     ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
     @assert size(Nspaces) == size(Espaces)
@@ -86,7 +87,8 @@ end
 Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
 as `ElementarySpace`s) and unit cell size.
 """
-function SUWeight(::Type{TorA},
+function SUWeight(
+        ::Type{TorA},
         Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace, TorA}
     return SUWeight(TorA, fill(Nspace, unitcell), fill(Espace, unitcell))
