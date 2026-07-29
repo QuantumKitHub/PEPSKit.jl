@@ -71,7 +71,7 @@ function which corresponds to the expectation value of an `InfinitePEPO` between
 """
 const InfiniteTransferPEPO{H, T <: PEPSTensor, O <: PEPOTensor} = InfiniteMPO{PEPOSandwich{H, T, O}}
 
-TensorKit.storagetype(::InfiniteTransferPEPO{H,T,O}) where {H,T,O} = storagetype(T)
+TensorKit.storagetype(::InfiniteTransferPEPO{H, T, O}) where {H, T, O} = storagetype(T)
 
 function InfiniteTransferPEPO(
         top::PeriodicArray{T, 1}, mid::PeriodicArray{O, 2}, bot::PeriodicArray{T, 1}

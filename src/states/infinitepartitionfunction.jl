@@ -50,7 +50,7 @@ of the PEPS tensor at each site in the unit cell as a matrix. Each individual sp
 specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePartitionFunction(
-       f, ::Type{T}, ::Type{TA}, Nspaces::M, Espaces::M = Nspaces
+        f, ::Type{T}, ::Type{TA}, Nspaces::M, Espaces::M = Nspaces
     ) where {M <: AbstractMatrix{<:ElementarySpace}, T <: Number, TA <: AbstractArray{T}}
     size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
