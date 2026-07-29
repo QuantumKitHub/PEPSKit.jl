@@ -49,13 +49,13 @@ end
 
 function _corner_tensor(
         f, ::Type{TorA}, left_vspace::S, right_vspace::S = left_vspace
-   ) where {TorA, S <: ElementarySpace}
+    ) where {TorA, S <: ElementarySpace}
     return f(TorA, left_vspace ← right_vspace)
 end
 
 function _edge_tensor(
-      f, ::Type{TA}, left_vspace::S, pspaces::P, right_vspace::S = left_vspace
-   ) where {TA, S <: ElementarySpace, P <: ProductSpace}
+        f, ::Type{TA}, left_vspace::S, pspaces::P, right_vspace::S = left_vspace
+    ) where {TA, S <: ElementarySpace, P <: ProductSpace}
     return f(TA, left_vspace ⊗ pspaces, right_vspace)
 end
 
@@ -179,7 +179,7 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-                  f, ::Type{TorA},
+        f, ::Type{TorA},
         D_north::S, D_east::S, virtual_spaces...; unitcell::Tuple{Int, Int} = (1, 1),
     ) where {S <: VectorSpace, TorA}
     return CTMRGEnv(
