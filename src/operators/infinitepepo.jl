@@ -169,6 +169,8 @@ function physicalspace(T::InfinitePEPO, r::Int, c::Int)
     return codomain_physicalspace(T, r, c)
 end
 
+TensorKit.storagetype(::Type{InfinitePEPO{T}}) where {T} = storagetype(T)
+
 ## InfiniteSquareNetwork interface
 
 function InfiniteSquareNetwork(top::InfinitePEPS, mid::InfinitePEPO, bot::InfinitePEPS = top)

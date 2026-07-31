@@ -48,15 +48,15 @@ function check_environment_virtualspace(E::CTMRGEdgeTensor)
 end
 
 function _corner_tensor(
-        f, ::Type{TorA}, left_vspace::S, right_vspace::S = left_vspace
-    ) where {TorA, S <: ElementarySpace}
-    return f(TorA, left_vspace ← right_vspace)
+        f, ::Type{T}, left_vspace::S, right_vspace::S = left_vspace
+    ) where {T, S <: ElementarySpace}
+    return f(T, left_vspace ← right_vspace)
 end
 
 function _edge_tensor(
-        f, ::Type{TA}, left_vspace::S, pspaces::P, right_vspace::S = left_vspace
-    ) where {TA, S <: ElementarySpace, P <: ProductSpace}
-    return f(TA, left_vspace ⊗ pspaces, right_vspace)
+        f, ::Type{T}, left_vspace::S, pspaces::P, right_vspace::S = left_vspace
+    ) where {T, S <: ElementarySpace, P <: ProductSpace}
+    return f(T, left_vspace ⊗ pspaces, right_vspace)
 end
 
 """
@@ -82,11 +82,11 @@ of a partition function defined in terms of local rank-4 tensors) or a `ProductS
 for the case of a network representing overlaps of PEPSs and PEPOs).
 """
 function CTMRGEnv(
-        f, ::Type{TorA}, Ds_north::A, Ds_east::A, chis_north::B, chis_east::B = chis_north,
+        f, ::Type{T}, Ds_north::A, Ds_east::A, chis_north::B, chis_east::B = chis_north,
         chis_south::B = chis_north, chis_west::B = chis_north,
     ) where {
         A <: AbstractMatrix{<:ProductSpace}, B <: AbstractMatrix{<:ElementarySpace},
-        TorA,
+        T,
     }
     # check all of the sizes
     size(Ds_north) == size(Ds_east) == size(chis_north) == size(chis_east) ==
@@ -99,8 +99,8 @@ function CTMRGEnv(
     # do the whole thing
     N = length(first(Ds_north))
     st = spacetype(first(Ds_north))
-    C_type = tensormaptype(st, 1, 1, TorA)
-    T_type = tensormaptype(st, N + 1, 1, TorA)
+    C_type = tensormaptype(st, 1, 1, T)
+    T_type = tensormaptype(st, N + 1, 1, T)
 
     # First index is direction
     corners = Array{C_type}(undef, 4, size(Ds_north)...)
@@ -109,28 +109,28 @@ function CTMRGEnv(
     for I in CartesianIndices(Ds_north)
         r, c = I.I
         edges[NORTH, r, c] = _edge_tensor(
-            f, TorA, chis_north[r, _prev(c, end)], Ds_north[_next(r, end), c], chis_north[r, c]
+            f, T, chis_north[r, _prev(c, end)], Ds_north[_next(r, end), c], chis_north[r, c]
         )
         edges[EAST, r, c] = _edge_tensor(
-            f, TorA, chis_east[r, c], Ds_east[r, _prev(c, end)], chis_east[_next(r, end), c]
+            f, T, chis_east[r, c], Ds_east[r, _prev(c, end)], chis_east[_next(r, end), c]
         )
         edges[SOUTH, r, c] = _edge_tensor(
-            f, TorA, chis_south[r, c], Ds_south[_prev(r, end), c], chis_south[r, _prev(c, end)]
+            f, T, chis_south[r, c], Ds_south[_prev(r, end), c], chis_south[r, _prev(c, end)]
         )
         edges[WEST, r, c] = _edge_tensor(
-            f, TorA, chis_west[_next(r, end), c], Ds_west[r, _next(c, end)], chis_west[r, c]
+            f, T, chis_west[_next(r, end), c], Ds_west[r, _next(c, end)], chis_west[r, c]
         )
 
         corners[NORTHWEST, r, c] = _corner_tensor(
-            f, TorA, chis_west[_next(r, end), c], chis_north[r, c]
+            f, T, chis_west[_next(r, end), c], chis_north[r, c]
         )
         corners[NORTHEAST, r, c] = _corner_tensor(
-            f, TorA, chis_north[r, _prev(c, end)], chis_east[_next(r, end), c]
+            f, T, chis_north[r, _prev(c, end)], chis_east[_next(r, end), c]
         )
         corners[SOUTHEAST, r, c] = _corner_tensor(
-            f, TorA, chis_east[r, c], chis_south[r, _prev(c, end)]
+            f, T, chis_east[r, c], chis_south[r, _prev(c, end)]
         )
-        corners[SOUTHWEST, r, c] = _corner_tensor(f, TorA, chis_south[r, c], chis_west[r, c])
+        corners[SOUTHWEST, r, c] = _corner_tensor(f, T, chis_south[r, c], chis_west[r, c])
     end
 
     corners[:, :, :] ./= norm.(corners[:, :, :])
@@ -138,7 +138,7 @@ function CTMRGEnv(
     return CTMRGEnv(corners, edges)
 end
 function CTMRGEnv(D_north::P, args...; kwargs...) where {P <: Union{Matrix{VectorSpace}, VectorSpace}}
-    return CTMRGEnv(randn, Matrix{ComplexF64}, D_north, args...; kwargs...)
+    return CTMRGEnv(randn, ComplexF64, D_north, args...; kwargs...)
 end
 
 # expand physical edge spaces to unit cell size
@@ -179,11 +179,11 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-        f, ::Type{TorA},
+        f, ::Type{T},
         D_north::S, D_east::S, virtual_spaces...; unitcell::Tuple{Int, Int} = (1, 1),
-    ) where {S <: VectorSpace, TorA}
+    ) where {S <: VectorSpace, T}
     return CTMRGEnv(
-        f, TorA,
+        f, T,
         _fill_edge_physical_spaces(D_north, D_east; unitcell)...,
         _fill_environment_virtual_spaces(virtual_spaces...; unitcell)...,
     )
@@ -216,11 +216,11 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 `chis_south[r, c]` corresponds to the east space of the south edge tensor, and
 `chis_west[r, c]` corresponds to the north space of the west edge tensor.
 """
-function CTMRGEnv(f, ::Type{TorA}, network::N, virtual_spaces...) where {TorA, N <: InfiniteSquareNetwork}
+function CTMRGEnv(f, ::Type{T}, network::N, virtual_spaces...) where {T, N <: InfiniteSquareNetwork}
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
     virtual_spaces = _fill_environment_virtual_spaces(virtual_spaces...; unitcell = size(network))
-    return CTMRGEnv(f, TorA, Ds_north, Ds_east, virtual_spaces...)
+    return CTMRGEnv(f, T, Ds_north, Ds_east, virtual_spaces...)
 end
 function CTMRGEnv(network::InfiniteSquareNetwork{O}, virtual_spaces...) where {O}
     return CTMRGEnv(randn, storagetype(O), network, virtual_spaces...)
@@ -230,14 +230,16 @@ function CTMRGEnv(network::Union{<:InfinitePartitionFunction{T}, <:InfinitePEPS{
 end
 
 # allow constructing environments for implicitly defined contractible networks
-function CTMRGEnv(f, ::Type{TA}, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...) where {TA}
-    return CTMRGEnv(f, TA, InfiniteSquareNetwork(state), args...)
+function CTMRGEnv(f, ::Type{T}, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...) where {T}
+    return CTMRGEnv(f, T, InfiniteSquareNetwork(state), args...)
 end
 
 # copy-like constructor
 CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
 
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
+
+TensorKit.storagetype(::Type{CTMRGEnv{C, E}}) where {C, E} = storagetype(C) == storagetype(E) ? storagetype(C) : error("mismatched storage types for CTMRGEnvironment")
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(
