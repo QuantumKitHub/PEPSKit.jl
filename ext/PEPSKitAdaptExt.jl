@@ -13,4 +13,15 @@ function Adapt.adapt_structure(to, x::PEPSKit.InfinitePEPS{T}) where {T}
     return InfinitePEPS{eltype(A′)}(A′)
 end
 
+function Adapt.adapt_structure(to, x::PEPSKit.InfinitePEPO{T}) where {T}
+    A′ = map(a -> adapt(to, a), x.A)
+    return InfinitePEPO{eltype(A′)}(A′)
+end
+
+function Adapt.adapt_structure(to, x::PEPSKit.CTMRGEnv{C, T}) where {C, T}
+    C′ = map(c -> adapt(to, c), x.corners)
+    T′ = map(t -> adapt(to, t), x.edges)
+    return CTMRGEnv{eltype(C′), eltype(T′)}(C′, T′)
+end
+
 end
