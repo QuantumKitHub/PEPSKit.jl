@@ -62,7 +62,16 @@ function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorM
     return U * sqrt_S, sqrt_S * V
 end
 
-_fliptwist_s(s::DiagonalTensorMap) = twist!(DiagonalTensorMap(flip(s, 1:2)), 1)
+# returns new but destroys old S
+function _fliptwist_s!(s::DiagonalTensorMap)
+    for (f₁, f₂) in fusiontrees(s)
+        data = s[f₁, f₂]
+        _, θ = only(flip((f₁, f₂), (1, 2)))
+        θ *= twist(f₁.uncoupled[1])
+        scale!(data, θ)
+    end
+    return DiagonalTensorMap(s.data, flip(s.domain))
+end
 
 """
     twistdual(t::AbstractTensorMap, i)
