@@ -18,13 +18,11 @@ When making changes to this project, please update the "Unreleased" section with
 
 When releasing a new version, move the "Unreleased" changes to a new version section with the release date.
 
-## [Unreleased](https://github.com/quantumkithub/pepskit.jl/compare/v0.8.0...HEAD)
+## [Unreleased](https://github.com/quantumkithub/pepskit.jl/compare/v0.8.1...HEAD)
 
 ### Added
 
 ### Changed
-
-- In `correlator`, sites `js` are allowed on either side of the reference site `i` by adding right-to-left contractions (#399)
 
 ### Deprecated
 
@@ -33,6 +31,21 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Fixed
 
 ### Performance
+
+## [0.8.1](https://github.com/quantumkithub/pepskit.jl/compare/v0.8.0...v0.8.1) - 2026-07-30
+
+### Added
+
+- Basic support for `MatrixAlgebraKit.svd_trunc_no_error` with custom adjoints (#390)
+- Dedicated environment initialization for CTMRG (`initialize_ctmrg_environment) with several initialization styles (#264)
+- `ProductStateEnv` type representing product state environments of generic square contractible networks (#264)
+- Compression of a 2-layer `InfinitePEPO` to a single-layer network using local truncation (#311)
+
+### Changed
+
+- TensorKit.jl compat bumped to include v0.17 (#393)
+- In `correlator`, sites `js` are allowed on either side of the reference site `i` by adding right-to-left contractions (#399)
+- Added additional keyword arguments `hasconverged` and `shouldstop` to `fixedpoint`, in line with OptimKit.jl conventions (#397)
 
 ## [0.8.0](https://github.com/quantumkithub/pepskit.jl/compare/v0.7.0...v0.8.0) - 2026-06-05
 
