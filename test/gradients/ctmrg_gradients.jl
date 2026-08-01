@@ -91,7 +91,7 @@ end
         dir = InfinitePEPS(Pspace, Vspace)
         psi = InfinitePEPS(Pspace, Vspace)
         # instantiate to avoid having to type this twice...
-        contrete_ctmrg_alg = PEPSKit.CTMRGAlgorithm(;
+        concrete_ctmrg_alg = PEPSKit.CTMRGAlgorithm(;
             alg = ctmrg_alg,
             verbosity = ctmrg_verbosity,
             projector_alg = projector_alg,
@@ -105,7 +105,7 @@ end
                 alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)
             )
         end
-        env, = leading_boundary(CTMRGEnv(psi, Espace), psi, contrete_ctmrg_alg)
+        env, = leading_boundary(CTMRGEnv(psi, Espace), psi, concrete_ctmrg_alg)
         alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
             (psi, env),
             dir;
@@ -118,7 +118,7 @@ end
                     leading_boundary,
                     env,
                     psi,
-                    contrete_ctmrg_alg;
+                    concrete_ctmrg_alg;
                     alg_rrule = concrete_gradient_alg,
                 )
                 return cost_function(psi, env2, models[i])
