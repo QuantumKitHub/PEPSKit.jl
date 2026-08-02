@@ -2,8 +2,8 @@ using TensorKit
 using PEPSKit
 using PEPSKit: siterotl90, siterotr90, siterot180
 using MPSKit: add_physical_charge
-import TensorKitTensors.BosonOperators as BO
-import TensorKitTensors.HubbardOperators as HO
+using TensorKitTensors.BosonOperators: b_num
+using TensorKitTensors.HubbardOperators: ud_num
 using Test
 
 vds = (ℂ^2, Rep[U₁](1 => 1, -1 => 1), Rep[SU₂](1 / 2 => 1))
@@ -55,7 +55,7 @@ end
 
     # bosonic case
     cutoff = 2
-    N = BO.b_num(elt, U1Irrep; cutoff)
+    N = b_num(elt, U1Irrep; cutoff)
     H_U = U / 2 * N * (N - id(domain(N)))
     spaces = fill(space(H_U, 1), (lattice.Nrows, lattice.Ncols))
     H = LocalOperator(spaces, ((1, 1),) => H_U)
@@ -73,7 +73,7 @@ end
 
     # fermionic case
     symmetry = FermionParity ⊠ U1Irrep
-    H_U = U * HO.ud_num(elt, U1Irrep, Trivial)
+    H_U = U * ud_num(elt, U1Irrep, Trivial)
     spaces = fill(space(H_U, 1), (lattice.Nrows, lattice.Ncols))
     H = LocalOperator(spaces, ((1, 1),) => H_U)
     tr_before = tr(last(only(H.terms)))

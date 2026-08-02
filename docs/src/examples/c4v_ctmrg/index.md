@@ -40,7 +40,7 @@ by evaluating only half of the terms and multiplying by 2. In practice, we imple
 using a specialized [`LocalOperator`](@ref) that contains only the relevant terms:
 
 ````julia
-import TensorKitTensors.SpinOperators as SO
+using TensorKitTensors.SpinOperators
 
 # Heisenberg model assuming C4v symmetric PEPS and environment, which only evaluates necessary term
 function heisenberg_XYZ_c4v(lattice::InfiniteSquare; kwargs...)
@@ -52,9 +52,9 @@ function heisenberg_XYZ_c4v(
     )
     @assert size(lattice) == (1, 1) "only trivial unit cells supported by C4v-symmetric Hamiltonians"
     term =
-        SO.S_x_S_x(T, S; spin = spin) * Jx +
-        SO.S_y_S_y(T, S; spin = spin) * Jy +
-        SO.S_z_S_z(T, S; spin = spin) * Jz
+        S_x_S_x(T, S; spin = spin) * Jx +
+        S_y_S_y(T, S; spin = spin) * Jy +
+        S_z_S_z(T, S; spin = spin) * Jz
     spaces = fill(domain(term)[1], (1, 1))
     return LocalOperator( # horizontal and vertical contributions are identical
         spaces, (CartesianIndex(1, 1), CartesianIndex(1, 2)) => 2 * term
