@@ -3,7 +3,7 @@ using TensorKit
 using PEPSKit
 using LinearAlgebra
 using Random
-import MPSKitModels: hubbard_space
+using TensorKitTensors.HubbardOperators
 using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
 using MPSKit: GenericMPSTensor, MPSBondTensor
 

@@ -1,7 +1,6 @@
 using Test
 using LinearAlgebra
 using TensorKit
-import MPSKitModels: σˣ, σᶻ
 using PEPSKit
 
 # Benchmark energy from high-temperature expansion

@@ -26,7 +26,7 @@ Let's get started by seeding the RNG and importing all required modules:
 using Random
 import Statistics: mean
 using TensorKit, PEPSKit
-import MPSKitModels: S_x, S_y, S_z, S_exchange
+using TensorKitTensors.SpinOperators
 Random.seed!(0);
 ````
 
