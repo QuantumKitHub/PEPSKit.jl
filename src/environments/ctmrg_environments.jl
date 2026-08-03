@@ -230,7 +230,7 @@ end
 
 # allow constructing environments for implicitly defined contractible networks
 function CTMRGEnv(f, ::Type{T}, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...) where {T}
-    return CTMRGEnv(f, similarstoragetype(eltype(state), T), InfiniteSquareNetwork(state), args...)
+    return CTMRGEnv(f, similarstoragetype(eltype(state), eltype(T)), InfiniteSquareNetwork(state), args...)
 end
 
 # copy-like constructor
