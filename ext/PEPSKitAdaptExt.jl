@@ -18,6 +18,11 @@ function Adapt.adapt_structure(to, x::PEPSKit.InfinitePEPO{T}) where {T}
     return InfinitePEPO{eltype(A′)}(A′)
 end
 
+function Adapt.adapt_structure(to, x::PEPSKit.InfinitePartitionFunction{T}) where {T}
+    A′ = map(a -> adapt(to, a), x.A)
+    return InfinitePartitionFunction{eltype(A′)}(A′)
+end
+
 function Adapt.adapt_structure(to, x::PEPSKit.CTMRGEnv{C, T}) where {C, T}
     C′ = map(c -> adapt(to, c), x.corners)
     T′ = map(t -> adapt(to, t), x.edges)
