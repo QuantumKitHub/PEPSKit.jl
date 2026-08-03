@@ -2,7 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using AMDGPU, Adapt
+using CUDA, Adapt
 
 using PEPSKit: eachcoordinate, _next_coordinate
 using PEPSKit: EnlargedCorner, HalfInfiniteEnv, FullInfiniteEnv
@@ -26,37 +26,37 @@ function test_ctmrg_contractions(
     )
 
     @testset "CTMRG PEPS contractions" begin
-        peps = adapt(ROCArray, InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces))
+        peps = adapt(CuArray, InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces))
         env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
         n = InfiniteSquareNetwork(peps)
 
-        @test storagetype(peps) <: ROCArray
-        @test storagetype(env) <: ROCArray
-        @test storagetype(n) <: ROCArray
+        @test storagetype(peps) <: CuArray
+        @test storagetype(env) <: CuArray
+        @test storagetype(n) <: CuArray
         test_contractions(n, env)
     end
 
     @testset "CTMRG PartitionFunction contractions" begin
-        pf = adapt(ROCArray, InfinitePartitionFunction(randn, stype, Nspaces, Espaces))
+        pf = adapt(CuArray, InfinitePartitionFunction(randn, stype, Nspaces, Espaces))
         env = CTMRGEnv(randn, stype, pf, chis_north, chis_east, chis_south, chis_west)
         n = InfiniteSquareNetwork(pf)
-        @test storagetype(pf) <: ROCArray
-        @test storagetype(env) <: ROCArray
-        @test storagetype(n) <: ROCArray
+        @test storagetype(pf) <: CuArray
+        @test storagetype(env) <: CuArray
+        @test storagetype(n) <: CuArray
 
         test_contractions(n, env)
     end
 
     @testset "CTMRG PEPO contractions" begin
-        pepo = adapt(ROCArray, InfinitePEPO(randn, stype, Pspaces, Pspaces, Pspaces))
-        peps = adapt(ROCArray, InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces))
+        pepo = adapt(CuArray, InfinitePEPO(randn, stype, Pspaces, Pspaces, Pspaces))
+        peps = adapt(CuArray, InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces))
         n = InfiniteSquareNetwork(peps, pepo)
-        env = adapt(ROCArray, CTMRGEnv(randn, stype, n, chis_north, chis_east, chis_south, chis_west))
-        @test storagetype(peps) <: ROCArray
-        @test storagetype(pepo) <: ROCArray
-        @test storagetype(env) <: ROCArray
-        @test storagetype(n) <: ROCArray
+        env = adapt(CuArray, CTMRGEnv(randn, stype, n, chis_north, chis_east, chis_south, chis_west))
+        @test storagetype(peps) <: CuArray
+        @test storagetype(pepo) <: CuArray
+        @test storagetype(env) <: CuArray
+        @test storagetype(n) <: CuArray
 
         test_contractions(n, env)
     end

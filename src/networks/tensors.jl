@@ -156,7 +156,7 @@ herm_depth(t::PEPOTensor) = permute(t', ((5, 6), (3, 2, 1, 4)))
 Fuse the physical indices of a PEPO tensor, obtaining a PEPS tensor.
 """
 function fuse_physicalspaces(O::PEPOTensor)
-    F = isomorphism(Int, fuse(codomain(O)), codomain(O))
+    F = isomorphism(TensorKit.similarstoragetype(O, Int), fuse(codomain(O)), codomain(O))
     return F * O, F
 end
 

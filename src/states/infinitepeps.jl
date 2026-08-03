@@ -104,15 +104,15 @@ function _fill_state_virtual_spaces(
 end
 
 """
-    InfinitePEPS([f=randn, TorA=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 """
 function InfinitePEPS(
-        f, ::Type{TorA}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpace, TorA}
+        f, ::Type{T}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace, T}
     return InfinitePEPS(
-        f, TorA,
+        f, T,
         _fill_state_physical_spaces(Pspace; unitcell),
         _fill_state_virtual_spaces(vspaces...; unitcell)...,
     )
@@ -127,7 +127,7 @@ Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
 Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
 
 Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
-function Base.similar(A::InfinitePEPS, T::Type{TorA} = scalartype(A)) where {TorA}
+function Base.similar(A::InfinitePEPS, T::Type = scalartype(A))
     return InfinitePEPS(map(t -> similar(t, T), unitcell(A)))
 end
 Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))

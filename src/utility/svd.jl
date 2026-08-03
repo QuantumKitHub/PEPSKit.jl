@@ -186,7 +186,7 @@ end
 _default_svd_rrule_alg(::IterSVD) = :TruncPullback
 
 random_start_vector(t::AbstractMatrix) = randn(scalartype(t), size(t, 1))
-deterministic_start_vector(t::AbstractMatrix) = ones(scalartype(t), size(t, 1))
+deterministic_start_vector(t::AbstractMatrix) = fill!(similar(t, size(t, 1)), one(scalartype(t)))
 
 # Compute SVD data block-wise using KrylovKit algorithm
 # TODO: redefine _empty_svdtensors, _create_svdtensors
