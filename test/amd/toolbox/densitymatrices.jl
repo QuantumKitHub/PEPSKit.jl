@@ -42,7 +42,7 @@ end
     d = ds[I]
     D = Ds[I]
     χ = χs[I]
-    ρ = adapt(ROCARray, InfinitePEPO(d, D; unitcell = (2, 2, 1)))
+    ρ = adapt(ROCArray, InfinitePEPO(d, D; unitcell = (2, 2, 1)))
 
     ρ_peps = @constinferred InfinitePEPS(ρ)
     env = CTMRGEnv(adapt(ROCArray, ρ_peps), χ)
