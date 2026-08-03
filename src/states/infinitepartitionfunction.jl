@@ -25,6 +25,7 @@ struct InfinitePartitionFunction{T <: PartitionFunctionTensor}
         return new{T}(A)
     end
 end
+TensorKit.storagetype(::Type{InfinitePartitionFunction{T}}) where {T} = storagetype(T)
 
 const InfinitePF{T} = InfinitePartitionFunction{T}
 
@@ -59,7 +60,7 @@ function InfinitePartitionFunction(
     Wspaces = circshift(Espaces, (0, 1))
 
     A = map(Nspaces, Espaces, Sspaces, Wspaces) do N, E, S, W
-        return PartitionFunctionTensor(f, T, TA, N, E, S, W)
+        return PartitionFunctionTensor(f, T, N, E, S, W)
     end
 
     return InfinitePartitionFunction(A)
