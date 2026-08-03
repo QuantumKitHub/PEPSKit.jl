@@ -45,7 +45,7 @@ function _apply_gate(a::MPSTensor, b::MPSTensor, gate::NNGate, trunc::Truncation
     a, s, b, ϵ = svd_trunc!(a2b2; trunc)
     a, b = absorb_s(a, s, b)
     if need_flip
-        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
+        a, s, b = flip(a, numind(a)), _fliptwist_s!(s), flip(b, 1)
     end
     b = permute(b, ((1, 2), (3,)))
     return a, s, b, ϵ
