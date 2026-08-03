@@ -104,7 +104,6 @@ function CTMRGEnv(
     st = spacetype(first(Ds_north))
     C_type = tensormaptype(st, 1, 1, T)
     T_type = tensormaptype(st, N + 1, 1, T)
-
     # First index is direction
     corners = Array{C_type}(undef, 4, size(Ds_north)...)
     edges = Array{T_type}(undef, 4, size(Ds_north)...)

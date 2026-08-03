@@ -104,7 +104,7 @@ function _fill_state_virtual_spaces(
 end
 
 """
-    InfinitePEPS([f=randn, TorA=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPS([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
 
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 """
