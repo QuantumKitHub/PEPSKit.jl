@@ -41,7 +41,7 @@ function test_ctmrg_contractions(
         pf = adapt(ROCArray, InfinitePartitionFunction(randn, stype, Nspaces, Espaces))
         env = CTMRGEnv(randn, stype, pf, chis_north, chis_east, chis_south, chis_west)
         n = InfiniteSquareNetwork(pf)
-        @test storagetype(peps) <: ROCArray
+        @test storagetype(pf) <: ROCArray
         @test storagetype(env) <: ROCArray
         @test storagetype(n) <: ROCArray
 
@@ -53,6 +53,7 @@ function test_ctmrg_contractions(
         peps = adapt(ROCArray, InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces))
         n = InfiniteSquareNetwork(peps, pepo)
         env = adapt(ROCArray, CTMRGEnv(randn, stype, n, chis_north, chis_east, chis_south, chis_west))
+        @test storagetype(peps) <: ROCArray
         @test storagetype(pepo) <: ROCArray
         @test storagetype(env) <: ROCArray
         @test storagetype(n) <: ROCArray
