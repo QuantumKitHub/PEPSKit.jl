@@ -299,7 +299,7 @@ function _apply_gatempo!(
     fusers = map(Iterators.drop(Ms, 1), Iterators.drop(gs, 1)) do M, g
         V1, V2 = space(M, 1), space(g, 1)
         @assert !isdual(V1) && !isdual(V2)
-        return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
+        return isomorphism(storagetype(T1), fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPS
            -3                         -3                          -3

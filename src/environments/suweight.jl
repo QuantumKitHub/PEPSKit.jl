@@ -336,7 +336,7 @@ which has the same real scalartype as ``wts`.
 """
 function CTMRGEnv(wts::SUWeight)
     _, Nr, Nc = size(wts)
-    elt = scalartype(wts)
+    elt = storagetype(wts)
     V_env = oneunit(spacetype(wts))
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH
