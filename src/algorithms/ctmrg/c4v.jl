@@ -359,7 +359,7 @@ Initialize a C₄ᵥ-symmetric `CTMRGEnv` on virtual spaces `Venv` with random e
 by `f` and scalartype `T`.
 """
 function initialize_random_c4v_env(state, Venv::ElementarySpace)
-    return initialize_random_c4v_env(randn, scalartype(state), state, Venv)
+    return initialize_random_c4v_env(randn, storagetype(state), state, Venv)
 end
 function initialize_random_c4v_env(f, T, state::InfinitePEPS, Venv::ElementarySpace)
     Vpeps = north_virtualspace(state, 1, 1)'
@@ -370,7 +370,7 @@ function initialize_random_c4v_env(f, T, state::InfinitePartitionFunction, Venv:
     return initialize_random_c4v_env(f, T, Vpf, Venv)
 end
 function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
-    corner₀ = DiagonalTensorMap(randn(real(T), Venv ← Venv))
+    corner₀ = DiagonalTensorMap(randn(similarstoragetype(T, real(eltype(T))), Venv ← Venv))
     edge₀ = f(T, Venv ⊗ Vstate ← Venv)
     edge₀ = _project_hermitian(edge₀)
     return CTMRGEnv(corner₀, edge₀)
@@ -383,7 +383,7 @@ Initialize a C₄ᵥ-symmetric `CTMRGEnv` with a singlet corner of dimension `di
 identity edge from `id(T, Venv ⊗ Vpeps)`.
 """
 function initialize_singlet_c4v_env(state::InfinitePEPS, Venv::ElementarySpace)
-    return initialize_singlet_c4v_env(scalartype(state), state, Venv)
+    return initialize_singlet_c4v_env(storagetype(state), state, Venv)
 end
 function initialize_singlet_c4v_env(T, state::InfinitePEPS, Venv::ElementarySpace)
     Vpeps = north_virtualspace(state, 1, 1)'
