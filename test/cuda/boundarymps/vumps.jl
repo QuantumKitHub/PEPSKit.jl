@@ -38,10 +38,10 @@ end
     Vpeps = ComplexSpace(2)
     psi = adapt(CuArray, InfinitePEPS(Vpeps, Vpeps; unitcell = (2, 2)))
     T = adapt(CuArray, PEPSKit.MultilineTransferPEPS(psi, 1))
-    @test storagetype(T) <: ROCArray
+    @test storagetype(T) <: CuArray
     # foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T)) # TODO: MPSKit.physicalspace(::MultilineMPO) isn't implemented...
     mps = adapt(CuArray, initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2)))
-    @test storagetype(mps) <: ROCArray
+    @test storagetype(mps) <: CuArray
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(prod(expectation_value(mps, T)))
 
