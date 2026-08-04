@@ -126,7 +126,7 @@ function BPEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, 
     return BPEnv(isomorphism, storagetype(network), network, args...; kwargs...)
 end
 function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
-    return BPEnv(f, T, InfiniteSquareNetwork(state), args...; kwargs...)
+    return BPEnv(f, similarstoragetype(eltype(state), eltype(T)), InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
 Base.eltype(::Type{BPEnv{T}}) where {T} = T
