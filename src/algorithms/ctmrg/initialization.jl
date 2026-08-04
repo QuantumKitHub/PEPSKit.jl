@@ -80,7 +80,7 @@ function initialize_ctmrg_environment(
         A::Union{InfiniteSquareNetwork, InfinitePEPS, InfinitePartitionFunction}, args...;
         kwargs...
     )
-    return initialize_ctmrg_environment(storagetype(A), A, args...; kwargs...)
+    return initialize_ctmrg_environment(scalartype(A), A, args...; kwargs...)
 end
 function initialize_ctmrg_environment(
         elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;

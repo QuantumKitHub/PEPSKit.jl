@@ -27,6 +27,8 @@ struct BPEnv{T}
     "4 x rows x cols array of message tensors, where the first dimension specifies the spatial direction"
     messages::Array{T, 3}
 end
+TensorKit.storagetype(::Type{BPEnv{T}}) where {T} = storagetype(T)
+
 
 """
 Construct a message tensor on a certain bond of a network,
@@ -121,7 +123,7 @@ function BPEnv(f, T, network::InfiniteSquareNetwork; posdef::Bool = true)
     return BPEnv(f, T, Ds_north, Ds_east; posdef)
 end
 function BPEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
-    return BPEnv(isomorphism, scalartype(network), network, args...; kwargs...)
+    return BPEnv(isomorphism, storagetype(network), network, args...; kwargs...)
 end
 function BPEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
     return BPEnv(f, T, InfiniteSquareNetwork(state), args...; kwargs...)
