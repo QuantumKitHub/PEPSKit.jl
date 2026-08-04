@@ -1,6 +1,46 @@
 _alg_or_nt(::Type{T}, alg::NamedTuple) where {T} = T(; alg...)
 _alg_or_nt(::Type{T}, alg::A) where {T, A <: T} = alg
+_alg_or_nt(::Type{T}, alg::DynamicTol{<:T}) where {T} = alg
 _alg_or_nt(T, alg) = throw(ArgumentError("unkown $T: $alg"))
+
+"""
+    parent_alg(alg)
+
+Unwrap an algorithm from a `MPSKit.DynamicTol` wrapper, if present, returning the
+algorithm it wraps. Falls back to returning `alg` unchanged for any other input,
+including `nothing`.
+"""
+parent_alg(alg) = alg
+parent_alg(alg::DynamicTol) = parent_alg(alg.alg)
+
+"""
+    _dynamic_tol_or_alg(alg; dynamic_tols::Bool, tol_min::Real, tol_max::Real, tol_factor::Real)
+
+Wrap `alg` in a `MPSKit.DynamicTol` with the given tolerance-scaling settings if
+`dynamic_tols` is `true`, otherwise return `alg` unchanged.
+"""
+function _dynamic_tol_or_alg(alg; dynamic_tols::Bool, tol_min::Real, tol_max::Real, tol_factor::Real)
+    return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
+end
+
+const DYNAMIC_TOL_KWARGS = (; dynamic_tols = nothing, tol_min = nothing, tol_max = nothing, tol_factor = nothing)
+
+"""
+    _pop_dynamic_tol_kwargs(kwargs::NamedTuple) -> dynamic_tol_kwargs, remaining_kwargs
+
+Split off the `dynamic_tols`/`tol_min`/`tol_max`/`tol_factor` entries from `kwargs`,
+returning them separately (to be passed on to [`_dynamic_tol_or_alg`](@ref)) from the
+remaining keyword arguments (to be passed on to the algorithm constructor).
+"""
+function _pop_dynamic_tol_kwargs(kwargs::NamedTuple)
+    dynamic_tol_kwargs = (;
+        dynamic_tols = kwargs.dynamic_tols,
+        tol_min = kwargs.tol_min,
+        tol_max = kwargs.tol_max,
+        tol_factor = kwargs.tol_factor,
+    )
+    return dynamic_tol_kwargs, Base.structdiff(kwargs, DYNAMIC_TOL_KWARGS)
+end
 
 """
     select_algorithm(func_or_alg, args...; kwargs...) -> Algorithm
@@ -27,24 +67,41 @@ function select_algorithm(
     )
     # adjust CTMRG tols and verbosity
     if boundary_alg isa NamedTuple
-        defaults = (; verbosity = verbosity ≤ 3 ? -1 : 3, tol = 1.0e-4tol)
+        defaults = (;
+            verbosity = verbosity ≤ 3 ? -1 : 3, tol = 1.0e-4tol,
+            dynamic_tols = Defaults.ctmrg_dynamic_tols,
+            tol_min = Defaults.ctmrg_tol_min,
+            tol_max = Defaults.ctmrg_tol_max,
+            tol_factor = Defaults.ctmrg_tol_factor,
+        )
         boundary_kwargs = merge(defaults, boundary_alg)
+        dynamic_tol_kwargs, boundary_kwargs = _pop_dynamic_tol_kwargs(boundary_kwargs)
         boundary_alg = select_algorithm(leading_boundary, env₀; boundary_kwargs...)
+        boundary_alg = _dynamic_tol_or_alg(boundary_alg; dynamic_tol_kwargs...)
     end
 
     # C4vCTMRG-specific defaults
-    if boundary_alg isa C4vCTMRG
+    if parent_alg(boundary_alg) isa C4vCTMRG
         # symmetrize state and gradient
         if isnothing(symmetrization)
             symmetrization = RotateReflect()
         end
     end
 
-    # adjust gradient verbosity
+    # adjust gradient verbosity and construct the gradient algorithm
     if gradient_alg isa NamedTuple
         # TODO: check this:
-        defaults = (; verbosity = verbosity ≤ 3 ? -1 : 3, tol = 1.0e-2tol)
-        gradient_alg = merge(defaults, gradient_alg)
+        defaults = (;
+            verbosity = verbosity ≤ 3 ? -1 : 3, tol = 1.0e-2tol,
+            dynamic_tols = Defaults.gradient_dynamic_tols,
+            tol_min = Defaults.gradient_tol_min,
+            tol_max = Defaults.gradient_tol_max,
+            tol_factor = Defaults.gradient_tol_factor,
+        )
+        gradient_kwargs = merge(defaults, gradient_alg)
+        dynamic_tol_kwargs, gradient_kwargs = _pop_dynamic_tol_kwargs(gradient_kwargs)
+        gradient_alg = GradientAlgorithm(; gradient_kwargs...)
+        gradient_alg = _dynamic_tol_or_alg(gradient_alg; dynamic_tol_kwargs...)
     end
 
     # adjust optimizer tol and verbosity

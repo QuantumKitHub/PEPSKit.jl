@@ -31,7 +31,9 @@ struct PEPSOptimize{B, G}
             boundary_alg::B, gradient_alg::G, optimizer_alg,
             reuse_env, symmetrization,
         ) where {B, G}
-        _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization)
+        _check_algorithm_combination(
+            parent_alg(boundary_alg), parent_alg(gradient_alg), symmetrization
+        )
         return new{B, G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
     end
 end
@@ -189,11 +191,26 @@ function fixedpoint(
         )
     end
 
-    # initialize info collection vectors
     T = promote_type(real(scalartype(peps₀)), real(scalartype(env₀)))
+
+    # `tol_state` tracks (iter, gradnorm) of the last accepted optimization step
+    # (updated only in `finalize!`), used to adjust `alg.boundary_alg`/`alg.gradient_alg`
+    # via `MPSKit.updatetol` if they are wrapped in a `MPSKit.DynamicTol`. `latest_*`
+    # hold the values produced by the current `fg` call, and are only recorded into
+    # their respective history vectors once a step is accepted.
+    tol_state = Ref((iter = 0, gradnorm = one(T)))
+    latest_metrics = Ref{NamedTuple}()
+    latest_gradnorms = Ref{Matrix{T}}()
+    latest_time = Ref(0.0)
+
+    # initialize info collection vectors
     contraction_metrics = Vector{NamedTuple}()
     gradnorms_unitcell = Vector{Matrix{T}}()
     times = Vector{Float64}()
+    finalize! = track_state_and_finalize!(
+        tol_state, latest_metrics, latest_gradnorms, latest_time,
+        contraction_metrics, gradnorms_unitcell, times, finalize!,
+    )
 
     # normalize the initial guess
     peps₀ = peps_normalize(peps₀)
@@ -205,20 +222,24 @@ function fixedpoint(
         hasconverged, shouldstop, finalize!,
     ) do (peps, env)
         start_time = time_ns()
+        boundary_alg = updatetol(alg.boundary_alg, tol_state[].iter, tol_state[].gradnorm)
+        # gradient tolerance is scaled relative to the boundary algorithm's own
+        # (just-updated) effective tolerance, not directly to the gradient norm
+        gradient_alg = updatetol(alg.gradient_alg, tol_state[].iter, boundary_alg.tol)
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
-                leading_boundary, env, ψ, alg.boundary_alg;
-                alg_rrule = alg.gradient_alg,
+                leading_boundary, env, ψ, boundary_alg;
+                alg_rrule = gradient_alg,
             )
             ignore_derivatives() do
                 alg.reuse_env && update!(env, env′)
-                push!(contraction_metrics, info.contraction_metrics)
+                latest_metrics[] = info.contraction_metrics
             end
             return cost_function(ψ, env′, operator)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-        push!(gradnorms_unitcell, norm.(g.A))
-        push!(times, (time_ns() - start_time) * 1.0e-9)
+        latest_gradnorms[] = norm.(g.A)
+        latest_time[] = (time_ns() - start_time) * 1.0e-9
         return E, g
     end
 
@@ -235,13 +256,14 @@ function fixedpoint(
 end
 
 """
-    check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG})
+    check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
 
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
-function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) end
-function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:FixedPointGradient})
-    if scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
+function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
+    if parent_alg(alg.boundary_alg) isa SimultaneousCTMRG &&
+            parent_alg(alg.gradient_alg) isa FixedPointGradient &&
+            scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
         since :fixed mode generally produces complex gauges"
         throw(ArgumentError(msg))
@@ -337,4 +359,37 @@ function symmetrize_retract_and_finalize!(
         return (peps´_symm, env´), ξ_symm
     end
     return retract_then_symmetrize, symmetrize_then_finalize!
+end
+
+"""
+    track_state_and_finalize!(
+        tol_state::Base.RefValue, latest_metrics::Base.RefValue, latest_gradnorms::Base.RefValue,
+        latest_time::Base.RefValue, contraction_metrics::Vector, gradnorms_unitcell::Vector,
+        times::Vector, [finalize!],
+    )
+
+Return a `finalize!` function that, after calling `finalize!` (defaulting to
+`OptimKit._finalize!`):
+* updates `tol_state[]` to the `(iter, gradnorm)` of the now-accepted optimization step,
+  used to drive `MPSKit.updatetol` for any `alg.boundary_alg`/`alg.gradient_alg` wrapped
+  in a `MPSKit.DynamicTol`
+* records `latest_metrics[]`/`latest_gradnorms[]`/`latest_time[]`, i.e. the values
+  produced by the `fg` call corresponding to the accepted step, into
+  `contraction_metrics`/`gradnorms_unitcell`/`times`
+"""
+function track_state_and_finalize!(
+        tol_state::Base.RefValue, latest_metrics::Base.RefValue, latest_gradnorms::Base.RefValue,
+        latest_time::Base.RefValue, contraction_metrics::Vector, gradnorms_unitcell::Vector,
+        times::Vector, (finalize!) = OptimKit._finalize!,
+    )
+    function commit_state_and_finalize!((peps, env), E, grad, numiter)
+        (peps, env), E, grad = finalize!((peps, env), E, grad, numiter)
+        gradnorm = sqrt(real_inner((peps, env), grad, grad))
+        tol_state[] = (; iter = numiter, gradnorm)
+        push!(contraction_metrics, latest_metrics[])
+        push!(gradnorms_unitcell, latest_gradnorms[])
+        push!(times, latest_time[])
+        return (peps, env), E, grad
+    end
+    return commit_state_and_finalize!
 end
