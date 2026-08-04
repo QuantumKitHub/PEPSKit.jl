@@ -238,7 +238,7 @@ function fixedpoint(
             return cost_function(ψ, env′, operator)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-        latest_gradnorms[] = norm.(g.A)
+        latest_gradnorms[] = norm.(unitcell(g))
         latest_time[] = (time_ns() - start_time) * 1.0e-9
         return E, g
     end
