@@ -5,7 +5,7 @@ using PEPSKit
 
 # Benchmark energy from high-temperature expansion
 # at β = 0.3, 0.6
-# Physical Review B 86, 045139 (2012) Fig. 15-16
+# Physical Review B 67, 014416 (2003)
 bm = [-0.1235, -0.213]
 
 function converge_env(state, χ::Int)
