@@ -219,7 +219,7 @@ function CTMRGEnv(f, ::Type{T}, network::N, virtual_spaces...) where {T, N <: In
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
     virtual_spaces = _fill_environment_virtual_spaces(virtual_spaces...; unitcell = size(network))
-    return CTMRGEnv(f, promote_storagetype(storagetype(network), T), Ds_north, Ds_east, virtual_spaces...)
+    return CTMRGEnv(f, similarstoragetype(storagetype(network), eltype(T)), Ds_north, Ds_east, virtual_spaces...)
 end
 function CTMRGEnv(network::InfiniteSquareNetwork{O}, virtual_spaces...) where {O}
     return CTMRGEnv(randn, storagetype(O), network, virtual_spaces...)
