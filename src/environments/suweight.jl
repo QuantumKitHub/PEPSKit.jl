@@ -71,10 +71,11 @@ function SUWeight(
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
         if TorA <: AbstractArray
-            diag = TorA(undef, reduceddim(V))
+            realTorA = similarstoragetype(TorA, real(eltype(TorA)))
+            diag = realTorA(undef, reduceddim(V))
             fill!(diag, 1)
         else
-            diag = ones(TorA, reduceddim(V))
+            diag = ones(real(TorA), reduceddim(V))
         end
         DiagonalTensorMap(diag, V)
     end
@@ -147,6 +148,8 @@ TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
 TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
 TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
+
+TensorKit.storagetype(::Type{SUWeight{T}}) where {T} = storagetype(T)
 
 ## Bipartite check
 function _is_bipartite(wts::SUWeight)
