@@ -377,7 +377,7 @@ function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySp
 end
 
 """
-    initialize_singlet_c4v_env([T=scalartype(state)], state::InfinitePEPS, Venv::ElementarySpace)
+    initialize_singlet_c4v_env([T=storagetype(state)], state::InfinitePEPS, Venv::ElementarySpace)
 
 Initialize a C₄ᵥ-symmetric `CTMRGEnv` with a singlet corner of dimension `dim(Venv)` and an
 identity edge from `id(T, Venv ⊗ Vpeps)`.
@@ -387,11 +387,22 @@ function initialize_singlet_c4v_env(state::InfinitePEPS, Venv::ElementarySpace)
 end
 function initialize_singlet_c4v_env(T, state::InfinitePEPS, Venv::ElementarySpace)
     Vpeps = north_virtualspace(state, 1, 1)'
-    return initialize_singlet_c4v_env(T, Vpeps, Venv)
+    return initialize_singlet_c4v_env(similarstoragetype(storagetype(state), real(eltype(T))), Vpeps, Venv)
 end
-function initialize_singlet_c4v_env(T, Vpeps::ElementarySpace, Venv::ElementarySpace)
-    corner₀ = DiagonalTensorMap(zeros(real(T), Venv ← Venv))
+function initialize_singlet_c4v_env(T::Type{<:Number}, Vpeps::ElementarySpace, Venv::ElementarySpace)
+    realT = real(T)
+    diag = zeros(realT, dim(Venv))
+    corner₀ = DiagonalTensorMap(diag, Venv)
     corner₀.data[1] = one(real(T))
+    edge₀ = permute(id(T, Venv ⊗ Vpeps), ((1, 2, 4), (3,)))
+    return CTMRGEnv(corner₀, edge₀)
+end
+function initialize_singlet_c4v_env(T::Type{<:AbstractArray}, Vpeps::ElementarySpace, Venv::ElementarySpace)
+    realT = similarstoragetype(T, real(eltype(T)))
+    diag = realT(undef, dim(Venv))
+    fill!(diag, 1)
+    corner₀ = DiagonalTensorMap(diag, Venv)
+    corner₀.data[2:end] .= zero(real(eltype(T)))
     edge₀ = permute(id(T, Venv ⊗ Vpeps), ((1, 2, 4), (3,)))
     return CTMRGEnv(corner₀, edge₀)
 end
