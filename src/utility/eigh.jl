@@ -224,6 +224,7 @@ function _compute_eighdata!(
     I = sectortype(f)
     dims = SectorDict{I, Int}()
 
+    Dtype = similarstoragetype(f, real(scalartype(f)))
     sectors = trunc isa NoTruncation ? blocksectors(f) : blocksectors(trunc.space)
     generator = Base.Iterators.map(sectors) do c
         b = block(f, c)
@@ -251,13 +252,12 @@ function _compute_eighdata!(
                 V = stack(view(lvecs, 1:howmany))
             end
         end
-
         # make it deterministic-ish
         MatrixAlgebraKit.gaugefix!(eigh_full!, V)
 
         resize!(D, howmany)
         dims[c] = length(D)
-        return c => (D, V)
+        return c => (Dtype(D), V)
     end
 
     eigdata = SectorDict(generator)
