@@ -238,7 +238,7 @@ CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
 
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
-TensorKit.storagetype(::Type{CTMRGEnv{C, E}}) where {C, E} = storagetype(C) == storagetype(E) ? storagetype(C) : error("mismatched storage types for CTMRGEnvironment")
+TensorKit.storagetype(::Type{CTMRGEnv{C, E}}) where {C, E} = storagetype(C) == storagetype(E) ? storagetype(C) : promote_type(storagetype(C), storagetype(E)) 
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(
@@ -264,9 +264,7 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
             zvs = CTMRGEnv(zerovector.(e.corners), Δedges)
             return NoTangent(), zvs, NoTangent()
         end
-        return result, edge_pullback
-    else
-        # this should never happen because already errored in forwards pass
+        return result, edge_pullback else # this should never happen because already errored in forwards pass
         throw(ArgumentError("No rrule for getproperty of $name"))
     end
 end
