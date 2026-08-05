@@ -86,5 +86,5 @@ function initialize_ctmrg_environment(
         elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
         kwargs...
     )
-    return initialize_ctmrg_environment(similarstoragetype(eltype(A), elt), InfiniteSquareNetwork(A), args...; kwargs...)
+    return initialize_ctmrg_environment(similarstoragetype(storagetype(A), elt), InfiniteSquareNetwork(A), args...; kwargs...)
 end
