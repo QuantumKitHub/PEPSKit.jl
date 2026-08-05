@@ -113,7 +113,7 @@ args = [
 ]
 
 # Basic properties
-@test storagetype(Z) <: ROCArray 
+@test storagetype(Z) <: ROCArray
 @test spacetype(typeof(Z)) === ComplexSpace
 @test spacetype(Z) === ComplexSpace
 @test sectortype(typeof(Z)) === Trivial
