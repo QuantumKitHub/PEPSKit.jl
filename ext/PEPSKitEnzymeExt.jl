@@ -25,11 +25,10 @@ function EnzymeRules.augmented_primal(
     (Ũ, S̃, Ṽ⁺), inds = MatrixAlgebraKit.truncate(svd_trunc!, (U, S, V⁺), alg.val.fwd_alg.trunc)
     truncerror = MatrixAlgebraKit.truncation_error(diagview(S), inds)
 
-    gtol = PEPSKit._get_pullback_gauge_tol(alg.val.rrule_alg.verbosity)
     output = (Ũ, S̃, Ṽ⁺, truncerror)
     USVᴴtrunc = (Ũ, S̃, Ṽ⁺)
-    primal = EnzymeRules.needs_primal(config) ? USVᴴ′ : nothing
-    # This creates new output shadow matrices, we use USVᴴ′ to ensure the
+    primal = EnzymeRules.needs_primal(config) ? USVᴴtrunc : nothing
+    # This creates new output shadow matrices, we use USVᴴtrunc to ensure the
     # eltypes and dimensions are correct.
     # These new shadow matrices are "filled in" with the accumulated
     # results from earlier in reverse-mode AD after this function exits
@@ -52,7 +51,8 @@ function EnzymeRules.reverse(
     ) where {RT, F, R <: PEPSKit.FullPullback}
     dUSVᴴtrunc, USV⁺, ind = cache
     U, S, V⁺ = USV⁺
-    _warn_pullback_truncerror(dϵ)
+    MatrixAlgebraKit._warn_pullback_truncerror(dϵ)
+    gtol = PEPSKit._get_pullback_gauge_tol(alg.val.rrule_alg.verbosity)
     if !isa(t, Const)
         t.dval = MatrixAlgebraKit.svd_pullback!(
             t.dval, t.val, (U, S, V⁺), ΔUSVᴴtrunc, ind;
@@ -104,7 +104,7 @@ function EnzymeRules.augmented_primal(
     env_conv, _ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(state.val), env, alg_fixed)
     shadow = EnzymeRules.needs_shadow(config) ? Enzyme.make_zero((env, info)) : nothing
     primal = EnzymeRules.needs_primal(config) ? (env, info) : nothing
-    return EnzymeRules.AugmentedReturn(primal, shadow, (env_conv, alg_gauge, alg_fixed))
+    return EnzymeRules.AugmentedReturn(primal, shadow, (env_conv, env, alg_gauge, alg_fixed))
 end
 
 function EnzymeRules.reverse(
@@ -115,7 +115,7 @@ function EnzymeRules.reverse(
     envinit::Annotation,
     state::Annotation,
     alg::Const{<:CTMRGAlgorithm}) where {RT}
-    env_conv, alg_gauge, alg_fixed = cache
+    env_conv, env, alg_gauge, alg_fixed = cache
     signs, corner_phases, edge_phases = PEPSKit.compute_gauge_fix_gauge(env_conv, env.val, alg_gauge)
     function gauge_fixed_iteration(A, x)
         x′ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
