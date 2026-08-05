@@ -121,7 +121,7 @@ function initializePEPS(
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
-    return InfinitePEPS(Pspaces, Nspaces, Espaces)
+    return InfinitePEPS(randn, storagetype(T), Pspaces, Nspaces, Espaces)
 end
 
 ## Unit cell interface
