@@ -18,10 +18,12 @@ function converge_env(state, χ::Int)
 end
 
 Nr, Nc = 2, 2
-ham = adapt(CuArray, j1_j2_model(
-    Float64, SU2Irrep, InfiniteSquare(Nr, Nc);
-    J1 = 1.0, J2 = 0.5, sublattice = false
-   ))
+ham = adapt(
+    CuArray, j1_j2_model(
+        Float64, SU2Irrep, InfiniteSquare(Nr, Nc);
+        J1 = 1.0, J2 = 0.5, sublattice = false
+    )
+)
 @test storagetype(ham) <: CuArray
 pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
 @test storagetype(pepo0) <: CuArray
