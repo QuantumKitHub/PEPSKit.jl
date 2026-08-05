@@ -120,7 +120,7 @@ Construct a BP environment by specifying a corresponding [`InfiniteSquareNetwork
 function BPEnv(f, T, network::InfiniteSquareNetwork; posdef::Bool = true)
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
-    return BPEnv(f, T, Ds_north, Ds_east; posdef)
+    return BPEnv(f, similarstoragetype(storagetype(network), eltype(T)), Ds_north, Ds_east; posdef)
 end
 function BPEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS, InfinitePEPO}, args...; kwargs...)
     return BPEnv(isomorphism, storagetype(network), network, args...; kwargs...)
@@ -174,7 +174,7 @@ function CTMRGEnv(bp_env::BPEnv)
         return insertleftunit(insertleftunit(M), 1)
     end
     corners = map(CartesianIndices(edges)) do _
-        return TensorKit.id(scalartype(bp_env), oneunit(spacetype(bp_env)))
+        return TensorKit.id(storagetype(bp_env), oneunit(spacetype(bp_env)))
     end
     return CTMRGEnv(corners, edges)
 end
