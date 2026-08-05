@@ -239,6 +239,7 @@ function _compute_svddata!(
     I = sectortype(f)
     dims = SectorDict{I, Int}()
 
+    Stype = similarstoragetype(f, real(scalartype(f)))
     sectors = trunc isa NoTruncation ? blocksectors(f) : blocksectors(trunc.space)
     generator = Base.Iterators.map(sectors) do c
         b = block(f, c)
@@ -273,7 +274,7 @@ function _compute_svddata!(
 
         resize!(S, howmany)
         dims[c] = length(S)
-        return c => (U, S, V)
+        return c => (U, Stype(S), V)
     end
 
     SVDdata = SectorDict(generator)
