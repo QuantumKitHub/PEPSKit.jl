@@ -164,6 +164,8 @@ TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
 TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
 TensorKit.storagetype(::Type{SUWeight{T}}) where {T} = storagetype(T)
 
+TensorKit.storagetype(::Type{SUWeight{T}}) where {T} = storagetype(T)
+
 ## Bipartite check
 function _is_bipartite(wts::SUWeight)
     (size(wts, 2) == size(wts, 3) == 2) || (return false)
