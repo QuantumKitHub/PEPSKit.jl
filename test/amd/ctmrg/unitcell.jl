@@ -27,15 +27,17 @@ function test_unitcell(
     env″, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env′, ctm_alg) # another iteration to fix spaces
 
     # compute random expecation value to test matching bonds
-    random_op = adapt(ROCArray, LocalOperator(
-        Pspaces,
-        [
-            (c,) => randn(
-                    scalartype(peps),
-                    Pspaces[c], Pspaces[c],
-                ) for c in CartesianIndices(unitcell)
-        ]...,
-       ))
+    random_op = adapt(
+        ROCArray, LocalOperator(
+            Pspaces,
+            [
+                (c,) => randn(
+                        scalartype(peps),
+                        Pspaces[c], Pspaces[c],
+                    ) for c in CartesianIndices(unitcell)
+            ]...,
+        )
+    )
     @test expectation_value(peps, random_op, env) isa Number
     @test expectation_value(peps, random_op, env′) isa Number
 
