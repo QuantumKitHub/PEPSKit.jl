@@ -248,7 +248,7 @@ function initialize_singlet_c4v_env(state::InfinitePEPS, Venv::ElementarySpace)
 end
 function initialize_singlet_c4v_env(T, state::InfinitePEPS, Venv::ElementarySpace)
     Vpeps = north_virtualspace(state, 1, 1)'
-    return initialize_singlet_c4v_env(similarstoragetype(storagetype(state), eltype(T)), Vpeps, Venv)
+    return initialize_singlet_c4v_env(similarstoragetype(storagetype(state), real(eltype(T))), Vpeps, Venv)
 end
 function initialize_singlet_c4v_env(T, Vpeps::ElementarySpace, Venv::ElementarySpace)
     realT = similarstoragetype(similarstoragetype(T), real(eltype(T)))
