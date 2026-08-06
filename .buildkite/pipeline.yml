@@ -6,7 +6,8 @@ steps:
     plugins:
       - JuliaCI/julia#v1:
           version: "{{matrix.julia}}"
-      - JuliaCI/julia-test#v1: ~
+      - JuliaCI/julia-test#v1:
+          test_args: "{{matrix.group}}"
       - JuliaCI/julia-coverage#v1:
           dirs:
             - src
@@ -23,3 +24,10 @@ steps:
         queue:
           - "cuda"
           - "rocm"
+        group:
+          - "boundarymps"
+          - "bp"
+          - "ctmrg"
+          - "timeevol"
+          - "toolbox"
+
