@@ -350,7 +350,7 @@ function product_peps(peps_args...; unitcell = (1, 1), noise_amp = 1.0e-2, state
         error("symmetric tensors not generically supported")
     if isnothing(state_vector)
         state_vector = map(noise_peps.A) do t
-            randn(storagetype(t), dim(space(t, 1)))
+            randn(scalartype(t), dim(space(t, 1)))
         end
     else
         all(dim.(space.(noise_peps.A, 1)) .== length.(state_vector)) ||
