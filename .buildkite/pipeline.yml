@@ -26,6 +26,7 @@ steps:
           - "rocm"
         group:
           - "boundarymps"
+          - "bondenv"
           - "bp"
           - "compress"
           - "ctmrg"
