@@ -85,6 +85,9 @@ Module containing default algorithm parameter values and arguments.
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
 * `gradient_fixedpoint_solver_eager=$(Defaults.gradient_fixedpoint_solver_eager)` : Enables `:Arnoldi` solver algorithm to finish before the full Krylov dimension is reached.
+* `gradient_implicit_solver_alg=:$(Defaults.gradient_implicit_solver_alg)` : Default solver algorithm for the `ImplicitGradient` gradient algorithm.
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 
 ## Optimization
 
@@ -151,6 +154,7 @@ const gradient_verbosity = -1
 const gradient_alg = :FixedPointGradient
 const gradient_fixedpoint_solver_alg = :Arnoldi # ∈ {:GMRES, :BiCGStab, :Arnoldi, :GeomSum, :ManualIter}
 const gradient_fixedpoint_solver_eager = true
+const gradient_implicit_solver_alg = :GMRES # ∈ {:GMRES, :BiCGStab}
 
 # Optimization
 const reuse_env = true

@@ -24,7 +24,7 @@ ctmrg_verbosity = 1
 ctmrg_algs = [[:C4vCTMRG]]
 projector_algs = [[:C4vEighProjector, :C4vQRProjector]]
 decomposition_rrule_algs = [[:FullPullback, :TruncPullback]]
-gradient_algs = [[nothing, :FixedPointGradient]]
+gradient_algs = [[nothing, :FixedPointGradient, :ImplicitGradient]]
 gradient_solver_algs = [[:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi]]
 steps = -0.01:0.005:0.01
 
@@ -65,6 +65,11 @@ naive_gradient_done = Set()
             combo in naive_gradient_done && continue
             push!(naive_gradient_done, combo)
             gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
+        end
+
+        # only run GMRES for the implicit gradient
+        if gradient_alg == :ImplicitGradient
+            gradient_solver_alg == :GMRES || continue
         end
 
         # check for allowed combinations of projector alg and decomposition rrule alg

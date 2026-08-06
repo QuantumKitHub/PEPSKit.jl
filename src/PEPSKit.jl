@@ -93,6 +93,7 @@ include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/contract_site.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
+include("algorithms/contractions/ctmrg/characteristic_equations.jl")
 
 include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
@@ -140,7 +141,7 @@ include("algorithms/toolbox.jl")
 include("algorithms/correlator_adapters.jl")
 include("algorithms/correlators.jl")
 
-include("algorithms/optimization/fixed_point_differentiation.jl")
+include("algorithms/optimization/implicit_differentiation.jl")
 include("algorithms/optimization/peps_optimization.jl")
 
 include("algorithms/select_algorithm.jl")
@@ -161,7 +162,7 @@ export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
-export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter
+export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter, ImplicitGradient
 export fixedpoint
 
 export LocalTruncation

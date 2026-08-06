@@ -360,3 +360,173 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
 
     return ∂f∂A(y)
 end
+
+#
+# Implicit gradient computation
+#
+
+
+"""
+$(TYPEDEF)
+
+Gradient algorithm for computing the gradient of an optimization procedure by
+differentiating an implicit algebraic characterization of the solution.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    ImplicitGradient(; kwargs...)
+
+Construct an implicit gradient algorithm struct based on keyword arguments.
+The supported keywords are:
+
+* `tol::Real=$(Defaults.gradient_tol)`
+* `maxiter::Int=$(Defaults.gradient_maxiter)`
+* `verbosity::Int=$(Defaults.gradient_verbosity)`
+* `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_fixedpoint_solver_alg))`: solver algorithm for the `ImplicitGradient` gradient algorithm.
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+"""
+struct ImplicitGradient{A} <: GradientAlgorithm{A}
+    solver_alg::A
+end
+ImplicitGradient(; kwargs...) = GradientAlgorithm(; alg = :ImplicitGradient, kwargs...)
+GRADIENT_ALGORITHM_SYMBOLS[:ImplicitGradient] = ImplicitGradient
+
+const IMPLICIT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
+    :GMRES => GMRES, :BiCGStab => BiCGStab,
+)
+
+_default_solver_alg(::Type{<:ImplicitGradient}) = Defaults.gradient_implicit_solver_alg
+_select_solver_alg_symbol(::Type{<:ImplicitGradient}, solver_alg) =
+    IMPLICIT_SOLVER_SYMBOLS[solver_alg]
+
+function _check_algorithm_combination(::CTMRGAlgorithm, ::ImplicitGradient)
+    msg = "The `:ImplicitGradient` algorithm is currently only implemented for the `C4vCTMRG` algorithm."
+    throw(ArgumentError(msg))
+end
+_check_algorithm_combination(::C4vCTMRG, ::ImplicitGradient) = nothing
+
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs, info)
+    return info.V * signs[1]'
+end
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs, info)
+    return info.Q * signs[1]'
+end
+
+# compute the CTMRG gradient through implicit differentiation
+function _rrule(
+        gradmode::ImplicitGradient,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit,
+        state,
+        alg::C4vCTMRG,
+    )
+    _check_algorithm_combination(alg, gradmode)
+
+    env, = leading_boundary(envinit, state, alg)
+
+    # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
+
+    # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
+    C, E = env_fixed.corners[1], env_fixed.edges[1]
+
+    # gauge-fix projector accordingly
+    U = _gauge_fix_c4v_projector(alg, signs, info)
+
+    # get the projector nullspace
+    UL = left_null(U)
+
+    # instantiate the differentiable variables corresponding to the intermediate projector of the contraction algorithm
+    u = zeros(scalartype(U), space(UL, numind(UL))' ← space(U, numind(U))')
+
+    # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
+    _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
+
+    # initialize the partial pullbacks of the characteristic equations
+    F = generate_symmetric_characteristic_equation(C, E, U, UL)
+
+    # get the partial pullback of the characteristic equations
+    _, F_vjp = rrule_via_ad(config, F, state, C, E, u)
+    vjp_env(x) = F_vjp(x)[3:end] # environment and isometry pullback
+    vjp_state(x) = F_vjp(x)[2] # state pullback
+
+    function leading_boundary_implicit_pullback((_Δenv, _Δinfo))
+        Δenv, Δinfo = unthunk(_Δenv), unthunk(_Δinfo)
+
+        # accumulate adjoints from all corners & edges through _c4v_env constructor
+        _, ΔC, ΔE = c4v_env_vjp(Δenv)
+
+        # apply Hermitian projectors to edge and corner cotangents
+        ΔE = _project_hermitian(ΔE)
+        ΔC = _project_hermitian(ΔC)
+
+        # extract cotengent of the isometry variable and verify that it is trivial
+        ΔU = isa(Δinfo.U, AbstractZero) ? zerovector(U) : unthunk(Δinfo.U)
+        Δu = UL' * ΔU
+        norm(Δu) < 1.0e4 * alg.tol || @warn "Nonzero Δu cotangent: norm(Δu)=$(norm(Δu))"
+
+        # collect cotangents of characteristic equation
+        Δy = (ΔC, ΔE, Δu)
+
+        # evaluate the implicit gradient
+        Δstate = implicit_gradient(Δy, vjp_env, vjp_state, Δy, gradmode.solver_alg)
+
+        return NoTangent(), ZeroTangent(), Δstate, NoTangent()
+    end
+
+    # HACK: return gauge-fixed environment with potentially non-diagonal and complex corners
+    # this ensures that backpropagation through any subsequent observable evaluations will
+    # give non-diagonal and complex corner adjoints, which is required for root
+    # differentiation to work here
+    # NOTE: this very bad practice, since the return type here is manifestly different from
+    # what you would get from a regular forward run without differentiation
+    return (env_fixed, info), leading_boundary_implicit_pullback
+end
+
+@doc raw"""
+    implicit_gradient(x̆, ∂ₓF, ∂ₚF, y₀, alg)
+
+Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
+which satisfies the characteristic equation ``F(x, p) = 0``, given the VJP actions ``∂ₓF``
+and ``∂ₚF`` of the function ``F`` encoding the characteristic equation.
+
+More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
+variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
+``x \equiv x(p)``, the gradient of the cost function is given by
+
+```math
+dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
+```
+
+Given the characteristic equation ``F(x, p) = 0``, the VJP action of the Jacobian ``∂ₚx``` on
+the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through
+implicit differentiation of the characteristic equation as
+```math
+x̆ ∂ₚx = x̆ (∂ₓF)⁻¹ (-∂ₚF).
+```
+
+This can be used to differentiate contraction routines, where ``p`` are the variational
+parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
+derivative of the cost function with respect to the contraction environment ``x``, and ``F``
+is an algebraic function characterizing the convergence of the algorithm.
+"""
+implicit_gradient
+
+function implicit_gradient(∂E∂x, ∂F∂x, ∂F∂A, y₀, alg::KrylovKit.LinearSolver)
+    y, info = reallinsolve(∂F∂x, ∂E∂x, y₀, alg)
+    if alg.verbosity > 0 && info.converged != 1
+        @warn("Implicit gradient linear solve reached maximal number of iterations:", info)
+    end
+
+    return (-1) * ∂F∂A(y)
+end
