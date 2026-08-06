@@ -14,11 +14,11 @@ using Enzyme.EnzymeCore: EnzymeRules
 @inline EnzymeRules.inactive(::typeof(PEPSKit.checklattice), args...) = nothing
 
 function EnzymeRules.augmented_primal(
-    config::EnzymeRules.RevConfigWidth{1},
-    func::Const{typeof(MatrixAlgebraKit.svd_trunc)},
-    ::Type{RT},
-    t::Annotation,
-    alg::Const{<:SVDAdjoint{F, R}}
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(MatrixAlgebraKit.svd_trunc)},
+        ::Type{RT},
+        t::Annotation,
+        alg::Const{<:SVDAdjoint{F, R}}
     ) where {RT, F, R <: PEPSKit.FullPullback}
     # requires access to the full decomposition
     U, S, V⁺ = svd_compact(t.val, alg.val.fwd_alg.alg)
@@ -42,12 +42,12 @@ function EnzymeRules.augmented_primal(
 end
 
 function EnzymeRules.reverse(
-    config::EnzymeRules.RevConfigWidth{1},
-    func::Const{typeof(MatrixAlgebraKit.svd_trunc)},
-    ::Type{RT},
-    cache,
-    t::Annotation,
-    alg::Const{<:SVDAdjoint{F, R}}
+        config::EnzymeRules.RevConfigWidth{1},
+        func::Const{typeof(MatrixAlgebraKit.svd_trunc)},
+        ::Type{RT},
+        cache,
+        t::Annotation,
+        alg::Const{<:SVDAdjoint{F, R}}
     ) where {RT, F, R <: PEPSKit.FullPullback}
     dUSVᴴtrunc, USV⁺, ind = cache
     U, S, V⁺ = USV⁺
@@ -59,17 +59,18 @@ function EnzymeRules.reverse(
             gauge_atol = gtol(dUSVᴴtrunc), degeneracy_atol = alg.val.rrule_alg.degeneracy_atol,
         )
     end
-    return ntuple(Returns(nothing), 3) 
+    return ntuple(Returns(nothing), 3)
 end
 
 function EnzymeRules.augmented_primal(
-    config::EnzymeRules.RevConfigWidth{1},
-    ::Const{typeof(Core.kwcall)},
-    ::Type{RT},
-    kw::Const{<:NamedTuple},
-    ::Const{typeof(PEPSKit.hook_pullback)},
-    f::Const,
-    args::Annotation...) where {RT}
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(Core.kwcall)},
+        ::Type{RT},
+        kw::Const{<:NamedTuple},
+        ::Const{typeof(PEPSKit.hook_pullback)},
+        f::Const,
+        args::Annotation...
+    ) where {RT}
     alg_rrule = get(kw.val, :alg_rrule, nothing)
     primal, rrule_func = PEPSKit._rrule(alg_rrule, f.val, map(arg -> getfield(arg, :val), args)...)
     shadow = Enzyme.make_zero(primal)
@@ -77,25 +78,27 @@ function EnzymeRules.augmented_primal(
 end
 
 function EnzymeRules.reverse(
-    config::EnzymeRules.RevConfigWidth{1},
-    ::Const{typeof(Core.kwcall)},
-    ::Type{RT},
-    cache,
-    kw::Const{<:NamedTuple},
-    ::Const{typeof(PEPSKit.hook_pullback)},
-    args::Annotation...) where {RT}
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(Core.kwcall)},
+        ::Type{RT},
+        cache,
+        kw::Const{<:NamedTuple},
+        ::Const{typeof(PEPSKit.hook_pullback)},
+        args::Annotation...
+    ) where {RT}
     shadow, rrule_func = cache
-    rrule_func(shadow) 
+    rrule_func(shadow)
     return ntuple(Returns(nothing), 2 + length(args))
 end
 
 function EnzymeRules.augmented_primal(
-    config::EnzymeRules.RevConfigWidth{1},
-    ::Const{typeof(MPSKit.leading_boundary)},
-    ::Type{RT},
-    envinit::Annotation,
-    state::Annotation,
-    alg::Const{<:CTMRGAlgorithm}) where {RT}
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(MPSKit.leading_boundary)},
+        ::Type{RT},
+        envinit::Annotation,
+        state::Annotation,
+        alg::Const{<:CTMRGAlgorithm}
+    ) where {RT}
     #PEPSKit._check_algorithm_combination(alg, gradmode)
     env, info = MPSKit.leading_boundary(envinit.val, state.val, alg.val)
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
@@ -108,13 +111,14 @@ function EnzymeRules.augmented_primal(
 end
 
 function EnzymeRules.reverse(
-    config::EnzymeRules.RevConfigWidth{1},
-    ::Const{typeof(MPSKit.leading_boundary)},
-    ::Type{RT},
-    cache,
-    envinit::Annotation,
-    state::Annotation,
-    alg::Const{<:CTMRGAlgorithm}) where {RT}
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(MPSKit.leading_boundary)},
+        ::Type{RT},
+        cache,
+        envinit::Annotation,
+        state::Annotation,
+        alg::Const{<:CTMRGAlgorithm}
+    ) where {RT}
     env_conv, env, denv, alg_gauge, alg_fixed = cache
     signs, corner_phases, edge_phases = PEPSKit.compute_gauge_fix_gauge(env_conv, env.val, alg_gauge)
     function gauge_fixed_iteration(A, x)
@@ -133,12 +137,12 @@ function EnzymeRules.reverse(
 end
 
 function EnzymeRules.augmented_primal(
-    config::EnzymeRules.RevConfigWidth{1},
-    ::Const{typeof(dtmap)},
-    ::Type{RT},
-    f::Const,
-    A::Annotation{<:AbstractArray},
-    scheduler::Annotation
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(dtmap)},
+        ::Type{RT},
+        f::Const,
+        A::Annotation{<:AbstractArray},
+        scheduler::Annotation
     ) where {RT}
     if !isa(A, Const)
         el_rrules = tmap(A.val, A.dval; scheduler.val) do a, da
@@ -146,7 +150,7 @@ function EnzymeRules.augmented_primal(
         end
         y = map(first, el_rrules)
     else
-        y = map(a->a.val, A)
+        y = map(a -> a.val, A)
     end
     dy = map(Enzyme.make_zero, y)
     shadow = EnzymeRules.needs_shadow(config) ? dy : nothing
@@ -155,19 +159,19 @@ function EnzymeRules.augmented_primal(
 end
 
 function EnzymeRules.reverse(
-    config::EnzymeRules.RevConfigWidth{1},
-    ::Const{typeof(dtmap)},
-    ::Type{RT},
-    cache,
-    f::Const,
-    A::Annotation{<:AbstractArray},
-    scheduler::Annotation
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(dtmap)},
+        ::Type{RT},
+        cache,
+        f::Const,
+        A::Annotation{<:AbstractArray},
+        scheduler::Annotation
     ) where {RT}
     ys, dys, el_rrules = cache
     backevals = tmap(el_rrules, dys; scheduler.val) do el_rrule, dy
         last(el_rrule)(dy)
     end
-    return (nothing, nothing, nothing) 
+    return (nothing, nothing, nothing)
 end
 
 end

@@ -2,7 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using Enzyme 
+using Enzyme
 using OptimKit
 using KrylovKit
 
@@ -67,7 +67,7 @@ end
             ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_solver_alg,
         ) in Iterators.product(
             calgs, palgs, salgs, galgs, gsalgs
-           )
+        )
 
         # filter disallowed algorithm combinations
         if _check_disallowed_combination(
