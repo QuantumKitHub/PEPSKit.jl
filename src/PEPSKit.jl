@@ -23,7 +23,9 @@ import TensorKit: storagetype
 using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
-using TensorOperations, OptimKit
+using TensorOperations
+using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator
+using OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
 import TupleTools

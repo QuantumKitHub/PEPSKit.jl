@@ -120,46 +120,46 @@ end
 const PEPS_C_Hamiltonian{S, N} = MPSKit.MPO_C_Hamiltonian{
     <:GenericMPSTensor{S, N}, <:GenericMPSTensor{S, N},
 } # this one is technically type-piracy
-PEPS_C_Hamiltonian(GL, GR) = MPSKit.MPODerivativeOperator(GL, (), GR)
+PEPS_C_Hamiltonian(GL, GR, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()) = MPSKit.MPODerivativeOperator(GL, (), GR, backend, allocator)
 
 const PEPS_AC_Hamiltonian{S, N} = MPSKit.MPO_AC_Hamiltonian{
     <:GenericMPSTensor{S, N}, <:PEPSSandwich, <:GenericMPSTensor{S, N},
 }
-PEPS_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
+PEPS_AC_Hamiltonian(GL, O, GR, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()) = MPSKit.MPODerivativeOperator(GL, (O,), GR, backend, allocator)
 
 const PEPS_AC2_Hamiltonian{S, N} = MPSKit.MPO_AC2_Hamiltonian{
     <:GenericMPSTensor{S, N}, <:PEPSSandwich, <:PEPSSandwich, <:GenericMPSTensor{S, N},
 }
-PEPS_AC2_Hamiltonian(GL, O1, O2, GR) = MPSKit.MPODerivativeOperator(GL, (O1, O2), GR)
+PEPS_AC2_Hamiltonian(GL, O1, O2, GR, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()) = MPSKit.MPODerivativeOperator(GL, (O1, O2), GR, backend, allocator)
 
 # Constructors
 #
-function MPSKit.C_hamiltonian(site::Int, below, ::InfiniteTransferMatrix, above, envs; kwargs...)
+function MPSKit.C_hamiltonian(site::Int, below, ::InfiniteTransferMatrix, above, envs; backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator(), kwargs...)
     GL = leftenv(envs, site + 1, below)
     GL = twistdual(GL, 1)
     GR = rightenv(envs, site, below)
     GR = twistdual(GR, numind(GR))
-    return PEPS_C_Hamiltonian(GL, GR)
+    return PEPS_C_Hamiltonian(GL, GR, backend, allocator)
 end
 
 function MPSKit.AC_hamiltonian(
-        site::Int, below, operator::InfiniteTransferPEPS, above, envs; kwargs...
+        site::Int, below, operator::InfiniteTransferPEPS, above, envs; backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator(), kwargs...
     )
     GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
     GR = rightenv(envs, site, below)
     GR = twistdual(GR, numind(GR))
-    return PEPS_AC_Hamiltonian(GL, operator[site], GR)
+    return PEPS_AC_Hamiltonian(GL, operator[site], GR, backend, allocator)
 end
 
 function MPSKit.AC2_hamiltonian(
-        site::Int, below, operator::InfiniteTransferPEPS, above, envs; kwargs...
+        site::Int, below, operator::InfiniteTransferPEPS, above, envs; backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator(), kwargs...
     )
     GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
     GR = rightenv(envs, site + 1, below)
     GR = twistdual(GR, numind(GR))
-    return PEPS_AC2_Hamiltonian(GL, operator[site], operator[site + 1], GR)
+    return PEPS_AC2_Hamiltonian(GL, operator[site], operator[site + 1], GR, backend, allocator)
 end
 
 # Actions
@@ -213,16 +213,16 @@ end
 const PEPO_AC_Hamiltonian{S, N, H} = MPSKit.MPO_AC_Hamiltonian{
     <:GenericMPSTensor{S, N}, <:PEPOSandwich{H}, <:GenericMPSTensor{S, N},
 }
-PEPO_AC_Hamiltonian(GL, O, GR) = MPSKit.MPODerivativeOperator(GL, (O,), GR)
+PEPO_AC_Hamiltonian(GL, O, GR, backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator()) = MPSKit.MPODerivativeOperator(GL, (O,), GR, backend, allocator)
 
 function MPSKit.AC_hamiltonian(
-        site::Int, below, operator::InfiniteTransferPEPO, above, envs; kwargs...
+        site::Int, below, operator::InfiniteTransferPEPO, above, envs; backend::AbstractBackend = DefaultBackend(), allocator = DefaultAllocator(), kwargs...
     )
     GL = leftenv(envs, site, below)
     GL = twistdual(GL, 1)
     GR = rightenv(envs, site, below)
     GR = twistdual(GR, numind(GR))
-    return PEPO_AC_Hamiltonian(GL, operator[site], GR)
+    return PEPO_AC_Hamiltonian(GL, operator[site], GR, backend, allocator)
 end
 
 @generated function (h::PEPO_AC_Hamiltonian{S, N, H})(AC::GenericMPSTensor{S, N}) where {S, N, H}
