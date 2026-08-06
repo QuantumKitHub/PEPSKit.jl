@@ -94,6 +94,20 @@ Module containing default algorithm parameter values and arguments.
 * `gradient_tol_max=$(Defaults.gradient_tol_max)` : Maximal gradient algorithm tolerance used by `gradient_dynamic_tols`.
 * `gradient_tol_factor=$(Defaults.gradient_tol_factor)` : Tolerance scaling factor relative to the boundary algorithm's tolerance, used by `gradient_dynamic_tols` (e.g. `10` makes the gradient tolerance ~10x looser than the boundary tolerance).
 
+## Preconditioning
+
+* `precondition_alg=:$(Defaults.precondition_alg)` : Algorithm variant used for preconditioning the PEPS gradient.
+    - `:LocalPreconditioner` : Precondition using the leading (local) term of the PEPS metric, see [`LocalPreconditioner`](@ref).
+* `precondition_tol=$(Defaults.precondition_tol)` : Convergence tolerance for the linear problem in the preconditioning step.
+* `precondition_maxiter=$(Defaults.precondition_maxiter)` : Maximal number of iterations for the linear problem in the preconditioning step.
+* `precondition_verbosity=$(Defaults.precondition_verbosity)` : Preconditioning output information verbosity.
+* `precondition_krylovdim=$(Defaults.precondition_krylovdim)` : Krylov dimensionfor the linear problem in the preconditioning step.
+* `precondition_regularization=$(Defaults.precondition_regularization)` : Prefactor setting the regularization strength of the local linear problem, see [`LocalPreconditioner`](@ref).
+* `precondition_dynamic_tols=$(Defaults.precondition_dynamic_tols)` : If `true`, wrap the preconditioner algorithm in a `MPSKit.DynamicTol` that rescales its tolerance based on the current PEPS optimization gradient norm, see [`PEPSOptimize`](@ref).
+* `precondition_tol_min=$(Defaults.precondition_tol_min)` : Minimal preconditioner tolerance used by `precondition_dynamic_tols`.
+* `precondition_tol_max=$(Defaults.precondition_tol_max)` : Maximal preconditioner tolerance used by `precondition_dynamic_tols`.
+* `precondition_tol_factor=$(Defaults.precondition_tol_factor)` : Tolerance scaling factor used by `precondition_dynamic_tols`.
+
 ## Optimization
 
 * `reuse_env=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
@@ -167,6 +181,18 @@ const gradient_dynamic_tols = true
 const gradient_tol_min = 1.0e-10
 const gradient_tol_max = 1.0e-1
 const gradient_tol_factor = 1.0e1
+
+# Preconditioning
+const precondition_alg = :LocalPreconditioner
+const precondition_tol = 1.0e-6
+const precondition_maxiter = 1
+const precondition_verbosity = -1
+const precondition_krylovdim = 30
+const precondition_regularization = 1.0
+const precondition_dynamic_tols = true
+const precondition_tol_min = 1.0e-12
+const precondition_tol_max = 1.0e-4
+const precondition_tol_factor = 1.0e-2
 
 # Optimization
 const reuse_env = true

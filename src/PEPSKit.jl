@@ -143,6 +143,7 @@ include("algorithms/correlator_adapters.jl")
 include("algorithms/correlators.jl")
 
 include("algorithms/optimization/fixed_point_differentiation.jl")
+include("algorithms/optimization/preconditioning.jl")
 include("algorithms/optimization/peps_optimization.jl")
 
 include("algorithms/select_algorithm.jl")
