@@ -24,6 +24,7 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
+using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator
 import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
 import TupleTools
