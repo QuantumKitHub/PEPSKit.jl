@@ -23,8 +23,8 @@ Ves2 = [
 Venv = U1Space(0 => 2, 1 => 1, -1 => 1)
 Random.seed!(48736)
 states = (
-          adapt(CuArray, InfinitePEPS(randn, elt, Vps, Vns, Ves1)),
-          adapt(CuArray, InfinitePEPO(randn, elt, Vps, Vns, Ves2)),
+    adapt(CuArray, InfinitePEPS(randn, elt, Vps, Vns, Ves1)),
+    adapt(CuArray, InfinitePEPO(randn, elt, Vps, Vns, Ves2)),
 )
 
 @testset "Rotation of SiteDependentTruncation" begin

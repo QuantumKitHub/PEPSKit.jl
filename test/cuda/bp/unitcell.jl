@@ -21,12 +21,14 @@ function test_unitcell(unitcell, Pspaces, Nspaces, Espaces)
     env1 = bp_iteration(network, env1, alg)
 
     # compute random expecation value to test matching bonds
-    random_op = adapt(CuArray, LocalOperator(
-        Pspaces, (
-            (c,) => randn(elt, Pspaces[c], Pspaces[c])
-                for c in CartesianIndices(unitcell)
-        )...,
-       ))
+    random_op = adapt(
+        CuArray, LocalOperator(
+            Pspaces, (
+                (c,) => randn(elt, Pspaces[c], Pspaces[c])
+                    for c in CartesianIndices(unitcell)
+            )...,
+        )
+    )
     @test storagetype(random_op) <: CuArray
     @test expectation_value(peps, random_op, env0) isa Number
     @test expectation_value(peps, random_op, env1) isa Number
