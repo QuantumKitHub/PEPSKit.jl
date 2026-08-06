@@ -115,7 +115,7 @@ function EnzymeRules.reverse(
     envinit::Annotation,
     state::Annotation,
     alg::Const{<:CTMRGAlgorithm}) where {RT}
-    env_conv, env, alg_gauge, alg_fixed = cache
+    env_conv, env, denv, alg_gauge, alg_fixed = cache
     signs, corner_phases, edge_phases = PEPSKit.compute_gauge_fix_gauge(env_conv, env.val, alg_gauge)
     function gauge_fixed_iteration(A, x)
         x′ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
@@ -123,13 +123,13 @@ function EnzymeRules.reverse(
     end
     # prepare its pullback
     sig = Tuple{typeof(gauge_fixed_iteration), typeof(state), typeof(env)}
-    env_vjp = Enzyme.autodiff_thunk(ReverseWithPrimal, Duplicated, gauge_fixed_iteration, state, env)
+    env_vjp = Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Duplicated, gauge_fixed_iteration, state, Duplicated(env, denv))
     # split off state and environment parts
     ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
     ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
     # evaluate the geometric sum
-    PEPSKit.fixedpoint_gradient(env.dval, ∂f∂x, ∂f∂A, env.dval, gradmode.solver_alg)
-    return ntuple(Returns(NoRData()), 4)
+    PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, gradmode.solver_alg)
+    return ntuple(Returns(nothing), 4)
 end
 
 function EnzymeRules.augmented_primal(
@@ -140,10 +140,14 @@ function EnzymeRules.augmented_primal(
     A::Annotation{<:AbstractArray},
     scheduler::Annotation
     ) where {RT}
-    el_rrules = tmap(A.val, A.dval; scheduler.val) do a, da
-        Enzyme.autodiff_thunk(ReverseWithPrimal, Duplicated, f, Duplicated(a, da))
+    if !isa(A, Const)
+        el_rrules = tmap(A.val, A.dval; scheduler.val) do a, da
+            Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Duplicated, f, Duplicated(a, da))
+        end
+        y = map(first, el_rrules)
+    else
+        y = map(a->a.val, A)
     end
-    y = map(first, el_rrules)
     dy = map(Enzyme.make_zero, y)
     shadow = EnzymeRules.needs_shadow(config) ? dy : nothing
     primal = EnzymeRules.needs_primal(config) ? y : nothing
