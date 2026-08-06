@@ -108,8 +108,11 @@ end
 
 ## PEPO
 
-const PEPOSandwich{N, T <: PEPSTensor, P <: PEPOTensor} = Tuple{T, T, Vararg{P, N}}
+const PEPOPurifiedSandwich{P <: PEPOTensor} = Tuple{P, P}
+ket(O::PEPOPurifiedSandwich) = O[1]
+bra(O::PEPOPurifiedSandwich) = O[2]
 
+const PEPOSandwich{N, T <: PEPSTensor, P <: PEPOTensor} = Tuple{T, T, Vararg{P, N}}
 ket(O::PEPOSandwich) = O[1]
 bra(O::PEPOSandwich) = O[2]
 pepo(O::PEPOSandwich) = O[3:end]

@@ -1,7 +1,7 @@
 using Test
 using LinearAlgebra
 using TensorKit
-import MPSKitModels: σˣ, σᶻ
+using TensorKitTensors.SpinOperators
 using PEPSKit
 
 # Benchmark data of [σx, σz] from HOTRG

@@ -27,8 +27,7 @@ Random.seed!(2928528935);
 ## Defining the model
 
 We will construct the Bose-Hubbard model Hamiltonian through the
-[`bose_hubbard_model`](https://quantumkithub.github.io/MPSKitModels.jl/dev/man/models/#MPSKitModels.bose_hubbard_model),
-function from MPSKitModels as reexported by PEPSKit. We'll simulate the model in its
+[`bose_hubbard_model`](@ref) defined in PEPSKit. We'll simulate the model in its
 Mott-insulating phase where the ratio $U/t$ is large, since in this phase we expect the
 ground state to be well approximated by a PEPS with a manifest global $U(1)$ symmetry.
 Furthermore, we'll impose a cutoff at 2 bosons per site, set the chemical potential to zero

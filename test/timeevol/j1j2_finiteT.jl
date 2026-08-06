@@ -1,10 +1,10 @@
 using Test
 using LinearAlgebra
 using TensorKit
-import MPSKitModels: σˣ, σᶻ
 using PEPSKit
 
 # Benchmark energy from high-temperature expansion
+# Physical Review B 67, 014416 (2003)
 const βs = [0.2, 0.4, 0.6]
 const bm = [-0.08624893, -0.15688984, -0.21300888]
 
