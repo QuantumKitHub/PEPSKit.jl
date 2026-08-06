@@ -23,7 +23,7 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
-using TensorOperations: DefaultAllocator, DefaultBackend, tensoralloc_add, tensoralloc_contract
+using TensorOperations: AbstractBackend, DefaultAllocator, DefaultBackend, tensoralloc_add, tensoralloc_contract
 using TensorKit.Strided: StridedView, sreshape
 import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
