@@ -21,7 +21,7 @@ ctmrg_verbosity = 0
 ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
 projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
 svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
-gradient_algs = [[nothing, :FixedPointGradient], [:FixedPointGradient]]
+gradient_algs = [[nothing, :FixedPointGradient, ImplicitGradient], [:FixedPointGradient, ImplicitGradient]]
 gradient_solver_algs = [
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
@@ -84,6 +84,12 @@ end
             combo in naive_gradient_done && continue
             push!(naive_gradient_done, combo)
             gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
+        end
+
+        # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
+        if gradient_alg == :ImplicitGradient
+            gradient_solver_alg == :GMRES || continue
+            svd_rrule_alg == first(salgs) || continue
         end
 
         @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
