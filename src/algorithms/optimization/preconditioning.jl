@@ -62,7 +62,7 @@ keywords are:
 * `krylovdim::Int=$(Defaults.precondition_krylovdim)` : Krylov dimension of the local linear problem.
 * `regularization::Real=$(Defaults.precondition_regularization)` : Prefactor setting the regularization strength ``δ``, see above.
 
-Reference: [Phys. Rev. B 113, 125111](https://doi.org/10.1103/h396-yc28), [arXiv:2511.09546](https://arxiv.org/abs/2511.09546)
+Reference: [Phys. Rev. B 113, 125111](@cite zhang_accelerating_2026)
 """
 struct LocalPreconditioner{A} <: PreconditionAlgorithm
     "solver algorithm used for the local linear problem"
