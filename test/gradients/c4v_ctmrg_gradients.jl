@@ -67,9 +67,10 @@ naive_gradient_done = Set()
             gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
         end
 
-        # only run GMRES for the implicit gradient
+        # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
         if gradient_alg == :ImplicitGradient
             gradient_solver_alg == :GMRES || continue
+            decomposition_rrule_alg == first(dalgs) || continue
         end
 
         # check for allowed combinations of projector alg and decomposition rrule alg

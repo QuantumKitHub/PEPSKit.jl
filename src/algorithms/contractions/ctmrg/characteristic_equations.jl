@@ -13,29 +13,6 @@ const RightProjector{S, N} = AbstractTensorMap{T, S, 1, N} where {T}
 
 # partial contractions for different networks
 
-# west edge and its right projector, including the corner
-function contract_UdEwC(
-        C::CornerTensor{S}, Ew::EdgeTensor{S, 3}, Ud::RightProjector{S, 3}, O::PEPSSandwich
-    ) where {S}
-    @tensor UdEwC[χ_S; χ_NNW D_N_a D_N_b D_E_a D_E_b] :=
-        Ud[χ_S; χ_WSW D_S_a D_S_b] *
-        Ew[χ_WSW D_W_a D_W_b; χ_WNW] *
-        C[χ_WNW; χ_NNW] * # already include the corner
-        ket(O)[4; D_N_a D_E_a D_S_a D_W_a] *
-        conj(bra(O)[4; D_N_b D_E_b D_S_b D_W_b])
-    return UdEwC
-end
-function contract_UdEwC(
-        C::CornerTensor{S}, Ew::EdgeTensor{S, 2}, Ud::RightProjector{S, 2}, O::PartitionFunctionTensor
-    ) where {S}
-    @tensor UdEwC[χ_S; χ_NNW D_N D_E] :=
-        Ud[χ_S; χ_WSW D_S] *
-        Ew[χ_WSW D_W; χ_WNW] *
-        C[χ_WNW; χ_NNW] * # already include the corner
-        O[D_W D_S; D_N D_E]
-    return UdEwC
-end
-
 # north edge and its left projector
 function contract_EnVd(
         En::EdgeTensor{S, 3}, Vd::LeftProjector{S, 3}, O::PEPSSandwich
@@ -55,16 +32,6 @@ function contract_EnVd(
         En[χ_NNW D_N; χ_NNE] *
         O[D_W D_S; D_N D_E]
     return EnVd
-end
-
-# northwest enlarged corner with its right projector
-function contract_UdEwCEn(UdEwC::RightProjector{S, 5}, En::EdgeTensor{S, 3}) where {S}
-    @tensor UdEwCEn[-1; -2 -3 -4] := UdEwC[-1; 1 2 3 -3 -4] * En[1 2 3; -2]
-    return UdEwCEn
-end
-function contract_UdEwCEn(UdEwC::RightProjector{S, 3}, En::EdgeTensor{S, 2}) where {S}
-    @tensor UdEwCEn[-1; -2 -3] := UdEwC[-1; 1 2 -3] * En[1 2; -2]
-    return UdEwCEn
 end
 
 # northwest enlarged corner with its left projector
@@ -93,37 +60,49 @@ function contract_E´(Ud::RightProjector{S, 2}, EnVd::LeftProjector{S, 3}) where
     return E´
 end
 
-# north edge and its left projector, contracted with the rest of the northwest enlarged
-# corner and the nullspace of the right projector
-function contract_ULdEwCEnVd(
-        Ew::EdgeTensor{S, 3},
-        C::CornerTensor{S},
-        EnVd::LeftProjector{S, 5},
-        ULd::RightProjector{S, 3},
-    ) where {S}
-    @autoopt @tensor ULdEwCEnVd[χ_S; χ_E] :=
-        EnVd[χ_NNW D_W_a D_W_b D_S_a D_S_b; χ_E] *
-        C[χ_WNW; χ_NNW] *
-        Ew[χ_WSW D_W_a D_W_b; χ_WNW] *
-        ULd[χ_S; χ_WSW D_S_a D_S_b]
-    return ULdEwCEnVd
-end
-function contract_ULdEwCEnVd(
-        Ew::EdgeTensor{S, 2},
-        C::CornerTensor{S},
-        EnVd::LeftProjector{S, 3},
-        ULd::RightProjector{S, 2},
-    ) where {S}
-    @autoopt @tensor ULdEwCEnVd[χ_S; χ_E] :=
-        EnVd[χ_NNW D_W D_S; χ_E] *
-        C[χ_WNW; χ_NNW] *
-        Ew[χ_WSW D_W; χ_WNW] *
-        ULd[χ_S; χ_WSW D_S]
-    return ULdEwCEnVd
-end
-
 """
-# TODO: docstring with diagrams
+    generate_symmetric_characteristic_equation(
+        Cfp::CornerTensor,
+        Efp::EdgeTensor, # unused
+        Ufp::LeftProjector,
+        ULfp::LeftProjector,
+    )
+
+Takes the fixed-point values of the corner tensor `Cfp`, edge tensor `Efp`, left isometry
+`Ufp` and its left null space `ULfp` corresponding to a converged C4v CTMRG contraction, and
+generates a function ``F(s, C, E, u)`` which characterizes the convergence of the C4v CTMRG
+algorithm in terms of the characteristic equation ``F(s, C, E, u) = 0``.
+Here, ``s`` corresponds to a state variable (e.g. an `InfinitePEPS` that is being optimized),
+and ``(C, E, u)`` represents a C4v symmetric contraction environment.
+``C`` and ``E`` directly represent the corner and edge tensors, while ``u`` parametrizes
+a differentiable projector ``U`` as ``U = U_{fp} + U_{L,fp} * u``.
+
+``F`` returns a tuple of three tensors, corresponding to an equation for ``C``, ``E`` and
+``u`` respectively:
+```
+    C---E---|~~~|
+    |   |   | U |---  - λC * --C-- 
+    E---O---|~~~|
+    |   |
+    [ U†]
+      |
+```
+```
+    |~~~|---E---|~~~|
+ ---| U†|   |   | U |---  - λE *  --E--
+    |~~~|---O---|~~~|               |
+            |
+```
+```
+    C---E---|~~~|
+    |   |   | U |---Cfp^{-1}  - λC * --u-- 
+    E---O---|~~~|
+    |   |
+    [ ULfp†]
+      |
+```
+where ``λ_C`` and ``λ_E`` which are defined as the inner product of the first term in the
+first two contractions given here with ``C`` and ``E`` respectively.
 """
 function generate_symmetric_characteristic_equation(
         Cfp::CornerTensor,
