@@ -96,7 +96,7 @@ function apply_local_preconditioner(g_rc::PEPSTensor, env::CTMRGEnv, δ, (r, c),
         edge(env, SOUTH, r + 1, c)[χ_SSE D_S_above D_S_below; χ_SSW] *
         corner(env, SOUTHWEST, r + 1, c - 1)[χ_SSW; χ_WSW] *
         edge(env, WEST, r, c - 1)[χ_WSW D_W_above D_W_below; χ_WNW]
-    # TODO: figure out if this needs additional twists?
+    g_rc_prec = twistdual(g_rc_prec, 2:5)
     return g_rc_prec / norm_pref + δ * g_rc
 end
 
