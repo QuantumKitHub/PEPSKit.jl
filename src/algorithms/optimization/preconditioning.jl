@@ -113,7 +113,7 @@ peps_precondition(x, g, tol_state::Base.RefValue, alg::Nothing) = g
 
 function peps_precondition(x, g, tol_state::Base.RefValue, alg::LocalPreconditioner)
     peps, env = x
-    δ = alg.regularization * tol_state[].gradnorm^2 / max(tol_state[].iter, 1)^2
+    δ = alg.regularization * tol_state[].gradnorm^2 / max(tol_state[].iter, 1)
     g_prec_unitcell = map(eachcoordinate(g)) do (r, c)
         nf = _contract_site((r, c), InfiniteSquareNetwork(peps), env)
         g_rc_prec, = linsolve(g[r, c], g[r, c], alg.solver_alg) do g_in
