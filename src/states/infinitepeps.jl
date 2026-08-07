@@ -142,6 +142,9 @@ function eachcoordinate(A::InfinitePEPS, dirs)
     return collect(Iterators.product(dirs, axes(A, 1), axes(A, 2)))
 end
 
+Base.real(A::InfinitePEPS) = InfinitePEPS(real.(unitcell(A)))
+Base.complex(A::InfinitePEPS) = InfinitePEPS(complex.(unitcell(A)))
+
 ## Spaces
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePEPS} = spacetype(eltype(T))

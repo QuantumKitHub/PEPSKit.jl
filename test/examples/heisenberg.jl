@@ -139,7 +139,7 @@ end
 
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
-        ham, peps, complex(env); # make environment complex explicitly
+        ham, complex(peps), complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
         gradient_alg = (; solver_alg = (; alg = :GMRES)),
