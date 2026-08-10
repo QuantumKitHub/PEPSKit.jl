@@ -21,7 +21,7 @@ ctmrg_verbosity = 0
 ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
 projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
 svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
-gradient_algs = [[nothing, :FixedPointGradient, ImplicitGradient], [:FixedPointGradient, ImplicitGradient]]
+gradient_algs = [[nothing, :FixedPointGradient, :ImplicitGradient], [:FixedPointGradient, :ImplicitGradient]]
 gradient_solver_algs = [
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
