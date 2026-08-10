@@ -215,7 +215,7 @@ function _rrule(
         gradmode::FixedPointGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit,
+        envinit::CTMRGEnv,
         state,
         alg::CTMRGAlgorithm,
     )
@@ -461,7 +461,7 @@ function _rrule(
         gradmode::ImplicitGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit,
+        envinit::CTMRGEnv,
         state,
         alg::C4vCTMRG,
     )
@@ -477,7 +477,7 @@ function _rrule(
     env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
 
     # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
-    C, E = env_fixed.corners[1], env_fixed.edges[1]
+    C, E = only(env_fixed.corners), only(env_fixed.edges)
 
     # gauge-fix projector accordingly
     U = _gauge_fix_c4v_projector(alg, signs, info)
@@ -599,11 +599,11 @@ function PEPSKit._rrule(
         gradmode::ImplicitGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        env₀::CTMRGEnv,
+        envinit::CTMRGEnv,
         state,
         alg::CTMRGAlgorithm,
     )
-    env, = leading_boundary(env₀, state, alg)
+    env, = leading_boundary(envinit, state, alg)
 
     # gauge-fix SVD isometries
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
