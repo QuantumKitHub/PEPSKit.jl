@@ -36,11 +36,13 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
-# fixed-point differentiation is incompatible with sequential CTMRG
 function _check_disallowed_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
-    ctmrg_alg == :SequentialCTMRG && !isnothing(gradient_alg) && return true
+    # characteristic equations for full infinite projector are not implemented
+    projector_alg == :FullInfiniteProjector && gradient_alg == :ImplicitGradient && return true
+    # sequential CTMRG doesn't give access to the SVD decompositions
+    ctmrg_alg == :SequentialCTMRG && gradient_alg == :ImplicitGradient && return true
     return false
 end
 

@@ -180,12 +180,6 @@ function _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization
     _check_algorithm_combination(boundary_alg, symmetrization)
     return nothing
 end
-function _check_algorithm_combination(::SequentialCTMRG, ::FixedPointGradient)
-    msg = "The `:FixedPointGradient` algorithm is not compatible with `SequentialCTMRG` since the sequential \
-          application of SVDs does not allow to differentiate through a fixed set of \
-          gauges; select SimultaneousCTMRG instead to use :fixed mode"
-    throw(ArgumentError(msg))
-end
 function _check_algorithm_combination(::C4vCTMRG, symm::Union{Nothing, <:SymmetrizationStyle})
     if !(symm isa RotateReflect)
         msg = "C4vCTMRG optimization is compatible only with combined Hermitian reflection and rotation symmetrization. \
@@ -417,6 +411,20 @@ function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs, info)
     return info.Q * signs[1]'
 end
 
+function _check_algorithm_combination(::SequentialCTMRG, ::ImplicitGradient)
+    msg = "The `:ImplicitGradient` algorithm is not yet compatible with the `SequentialCTMRG` algorithm; select \
+          SimultaneousCTMRG instead to use :ImplicitGradient"
+    throw(ArgumentError(msg))
+end
+
+function _check_algorithm_combination(::SimultaneousCTMRG{<:FullInfiniteProjector}, ::ImplicitGradient)
+    msg = "The `:ImplicitGradient` algorithm is not yet compatible with the `FullInfiniteProjector` scheme, \
+          since the corresponding charageristic equations have not yet been implemented; select \
+          SimultaneousCTMRG with HalfInfiniteProjector instead to use :ImplicitGradient"
+    throw(ArgumentError(msg))
+end
+
+
 @doc raw"""
     implicit_gradient(x̆, ∂ₓF, ∂ₚF, y₀, alg)
 
@@ -601,7 +609,7 @@ function PEPSKit._rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit::CTMRGEnv,
         state,
-        alg::CTMRGAlgorithm,
+        alg::SimultaneousCTMRG{<:HalfInfiniteProjector}, # SequentialCTMRG doesn't return U, S, V (yet)
     )
     env, = leading_boundary(envinit, state, alg)
 
@@ -638,7 +646,7 @@ function PEPSKit._rrule(
     is = sdiag_pow.(s, -1) # also treat them as general complex tensors
 
     # generate the characteristic equations
-    F = generate_asymmetric_characteristic_equation(is, U, V, UL, VR)
+    F = generate_halfinfinite_characteristic_equation(is, U, V, UL, VR)
 
     # check if characteristic equations are actually satisfied
     FS = F(state, C̃, Ẽ, u, s, v)

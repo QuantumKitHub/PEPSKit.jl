@@ -502,7 +502,7 @@ function _contract_PR_M(PR::RightProjector{S, N}, M::AbstractTensorMap{T, S, N, 
 end
 
 # computation of characteristic equations by constructing full enlarged corners
-function contract_asymmetric_characteristic_equation(
+function contract_halfinfinite_characteristic_equation(
         C::CornerTensors, E::EdgeTensors,
         is::CornerTensors, s::CornerTensors,
         u::CornerTensors, v::CornerTensors,
@@ -591,7 +591,8 @@ end
 # -------------------------------------
 
 """
-    generate_asymmetric_characteristic_equation(
+    generate_halfinfinite_characteristic_equation(
+        ::CTMRGAlgorithm{<:HalfInfiniteProjector},
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
         Vfp::RightProjectors,
@@ -600,44 +601,8 @@ end
     )
 
 TODO: write this up.
-
-Takes the fixed-point values of the corner tensor `Cfp`, edge tensor `Efp`, left isometry
-`Ufp` and its left null space `ULfp` corresponding to a converged C4v CTMRG contraction, and
-generates a function ``F(s, C, E, u)`` which characterizes the convergence of the C4v CTMRG
-algorithm in terms of the characteristic equation ``F(s, C, E, u) = 0``.
-Here, ``s`` corresponds to a state variable (e.g. an `InfinitePEPS` that is being optimized),
-and ``(C, E, u)`` represents a C4v symmetric contraction environment.
-``C`` and ``E`` directly represent the corner and edge tensors, while ``u`` parametrizes
-a differentiable projector ``U`` as ``U = U_{fp} + U_{L,fp} * u``.
-
-``F`` returns a tuple of three tensors, corresponding to an equation for ``C``, ``E`` and
-``u`` respectively:
-```
-    C---E---|~~~|
-    |   |   | U |---  - λC * --C-- 
-    E---O---|~~~|
-    |   |
-    [ U†]
-      |
-```
-```
-    |~~~|---E---|~~~|
- ---| U†|   |   | U |---  - λE *  --E--
-    |~~~|---O---|~~~|               |
-            |
-```
-```
-    C---E---|~~~|
-    |   |   | U |---Cfp^{-1}  - λC * --u-- 
-    E---O---|~~~|
-    |   |
-    [ ULfp†]
-      |
-```
-where ``λ_C`` and ``λ_E`` which are defined as the inner product of the first term in the
-first two contractions given here with ``C`` and ``E`` respectively.
 """
-function generate_asymmetric_characteristic_equation(
+function generate_halfinfinite_characteristic_equation(
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
         Vfp::RightProjectors,
@@ -690,7 +655,7 @@ function generate_asymmetric_characteristic_equation(
         end
 
         ## Perform the actual contractions
-        F1, F2, F3, F4, F5 = contract_asymmetric_characteristic_equation(
+        F1, F2, F3, F4, F5 = contract_halfinfinite_characteristic_equation(
             C, E,
             is, s,
             u, v,
@@ -705,4 +670,15 @@ function generate_asymmetric_characteristic_equation(
     end
 
     return asymmetric_characteristic_equation
+end
+
+function generate_fullinfinite_characteristic_equation(
+        iSfp::CornerTensors,
+        Ufp::LeftProjectors,
+        Vfp::RightProjectors,
+        ULfp::LeftProjectors,
+        VRfp::RightProjectors,
+    )
+
+    throw(ArgumentError("Characteristic equations for CTMRGAlgorithm{<:FullInfiniteProjector} are not yet implemented."))
 end
