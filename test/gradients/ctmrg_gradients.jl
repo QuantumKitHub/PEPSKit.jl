@@ -65,16 +65,10 @@ end
             calgs, palgs, salgs, galgs, gsalgs
         )
 
-        # filter disallowed algorithm combinations
-        if _check_disallowed_combination(
-                ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg
-            )
-            # but verify that its use would throw an error
-            @test_throws ArgumentError PEPSOptimize(;
-                boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg))),
-                gradient_alg = (; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)),
-            )
-            continue
+        # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
+        if gradient_alg == :ImplicitGradient
+            gradient_solver_alg == :GMRES || continue
+            svd_rrule_alg == first(salgs) || continue
         end
 
         # check for allowed algorithm combinations when testing naive gradient
@@ -86,10 +80,16 @@ end
             gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
         end
 
-        # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
-        if gradient_alg == :ImplicitGradient
-            gradient_solver_alg == :GMRES || continue
-            svd_rrule_alg == first(salgs) || continue
+        # filter disallowed algorithm combinations
+        if _check_disallowed_combination(
+                ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg
+            )
+            # but verify that its use would throw an error
+            @test_throws ArgumentError PEPSOptimize(;
+                boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg))),
+                gradient_alg = (; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)),
+            )
+            continue
         end
 
         @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
