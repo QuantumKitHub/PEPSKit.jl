@@ -155,6 +155,22 @@ keyword arguments are:
 * `ls_maxfg::Int=$(Defaults.ls_maxfg)` : Maximal number of function-gradient evaluations during linesearch.
 * `lbfgs_memory::Int=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
 
+### Dynamic tolerances
+
+The boundary and gradient algorithms each additionally accept the keyword arguments below,
+which wrap the corresponding algorithm in an `MPSKit.DynamicTols.DynamicTol` that
+rescales its tolerance over the course of the optimization. This allows the intermediate
+problems to be solved only as accurately as the current optimization step requires, which
+can significantly reduce the total runtime. The boundary tolerance is scaled relative to the
+current gradient norm, while the gradient tolerance is in turn scaled relative to the
+effective boundary tolerance. These settings are only available within a
+variational optimization, not for standalone [`leading_boundary`](@ref) calls.
+
+* `dynamic_tols::Bool` : Enable dynamic tolerance scaling for this algorithm. Defaults to `$(Defaults.ctmrg_dynamic_tols)` and `$(Defaults.gradient_dynamic_tols)` for the boundary and gradient algorithm respectively.
+* `tol_min::Real` : Lower clamp on the dynamically scaled tolerance.
+* `tol_max::Real` : Upper clamp on the dynamically scaled tolerance.
+* `tol_factor::Real` : Prefactor of the dynamically scaled tolerance.
+
 ## Return values
 
 The function returns the final PEPS, CTMRG environment and cost value, as well as an
