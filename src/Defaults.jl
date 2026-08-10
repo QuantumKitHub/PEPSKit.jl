@@ -97,13 +97,13 @@ Module containing default algorithm parameter values and arguments.
 ## Preconditioning
 
 * `precondition_alg=:$(Defaults.precondition_alg)` : Algorithm variant used for preconditioning the PEPS gradient.
-    - `:LocalPreconditioner` : Precondition using the leading (local) term of the PEPS metric, see [`LocalPreconditioner`](@ref).
+    - `:LocalPreconditioner` : Precondition using the leading (local) term of the PEPS metric, see [`PEPSKit.LocalPreconditioner`](@ref).
 * `precondition_tol=$(Defaults.precondition_tol)` : Convergence tolerance for the linear problem in the preconditioning step.
 * `precondition_maxiter=$(Defaults.precondition_maxiter)` : Maximal number of iterations for the linear problem in the preconditioning step.
 * `precondition_verbosity=$(Defaults.precondition_verbosity)` : Preconditioning output information verbosity.
 * `precondition_krylovdim=$(Defaults.precondition_krylovdim)` : Krylov dimensionfor the linear problem in the preconditioning step.
-* `precondition_regularization=$(Defaults.precondition_regularization)` : Prefactor setting the regularization strength of the local linear problem, see [`LocalPreconditioner`](@ref).
-* `precondition_dynamic_tols=$(Defaults.precondition_dynamic_tols)` : If `true`, wrap the preconditioner algorithm in a `MPSKit.DynamicTol` that rescales its tolerance based on the current PEPS optimization gradient norm, see [`PEPSOptimize`](@ref).
+* `precondition_regularization=$(Defaults.precondition_regularization)` : Prefactor setting the regularization strength of the local linear problem, see [`PEPSKit.LocalPreconditioner`](@ref).
+* `precondition_dynamic_tols=$(Defaults.precondition_dynamic_tols)` : If `true`, wrap the preconditioner algorithm in a `MPSKit.DynamicTol` that rescales its tolerance based on the current PEPS optimization gradient norm, see [`PEPSKit.PEPSOptimize`](@ref).
 * `precondition_tol_min=$(Defaults.precondition_tol_min)` : Minimal preconditioner tolerance used by `precondition_dynamic_tols`.
 * `precondition_tol_max=$(Defaults.precondition_tol_max)` : Maximal preconditioner tolerance used by `precondition_dynamic_tols`.
 * `precondition_tol_factor=$(Defaults.precondition_tol_factor)` : Tolerance scaling factor used by `precondition_dynamic_tols`.
