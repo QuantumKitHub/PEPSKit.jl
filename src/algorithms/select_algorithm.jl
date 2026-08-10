@@ -7,9 +7,9 @@ _alg_or_nt(T, alg) = throw(ArgumentError("unkown $T: $alg"))
 """
     parent_alg(alg)
 
-Unwrap an algorithm from a `MPSKit.DynamicTol` wrapper, if present, returning the
-algorithm it wraps. Falls back to returning `alg` unchanged for any other input,
-including `nothing`.
+Unwrap an algorithm from a `MPSKit.DynamicTols.DynamicTol` wrapper, if
+present, returning the algorithm it wraps. Falls back to returning `alg` unchanged for any
+other input, including `nothing`.
 """
 parent_alg(alg) = alg
 parent_alg(alg::DynamicTol) = parent_alg(alg.alg)
@@ -17,8 +17,8 @@ parent_alg(alg::DynamicTol) = parent_alg(alg.alg)
 """
     _dynamic_tol_or_alg(alg; dynamic_tols::Bool, tol_min::Real, tol_max::Real, tol_factor::Real)
 
-Wrap `alg` in a `MPSKit.DynamicTol` with the given tolerance-scaling settings if
-`dynamic_tols` is `true`, otherwise return `alg` unchanged.
+Wrap `alg` in a `MPSKit.DynamicTols.DynamicTol` with the given
+tolerance-scaling settings if `dynamic_tols` is `true`, otherwise return `alg` unchanged.
 """
 function _dynamic_tol_or_alg(alg; dynamic_tols::Bool, tol_min::Real, tol_max::Real, tol_factor::Real)
     return dynamic_tols ? DynamicTol(alg, tol_min, tol_max, tol_factor) : alg
