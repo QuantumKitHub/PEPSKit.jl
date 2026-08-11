@@ -600,7 +600,16 @@ end
         VRfp::RightProjectors,
     )
 
-TODO: write this up.
+Takes the fixed-point values of the inverse singular values `iSfp`, the left and right isometries `Ufp`
+and `Vfp`, and their null spaces `ULfp` and `VRfp` corresponding to a converged CTMRG contraction,
+and generates a function ``F(s, C, E, u, S, v)`` which characterizes the convergence of the CTMRG algorithm in terms of the characteristic equation ``F(s, C, E, u, S, v) = 0``. Here, ``s`` corresponds to a
+state variable (e.g. an `InfinitePEPS` that is being optimized), and ``(C, E, u, S, v)`` represents a CTMRG
+contraction environment on a generic unit cell meaning that all tensors have a directional and
+unit cell index. ``C`` and ``E`` directly represent the corner and edge tensors, while ``u`` and ``v``
+parametrize differentiable projectors ``U = U_{fp} + U_{L,fp} u`` and ``V = V_{fp} + V_{L,fp} V``, and ``S`` denotes the singular values of the decomposed environment.
+
+``F`` returns a tuple of five tensor arrays, corresponding to equations for ``C``, ``E``, ``u``, ``S`` and
+``v``, respectively, as shown in Eqs. (76)-(80) in [arXiv:2607.15030](@cite burgelman_implicit_2026).
 """
 function generate_halfinfinite_characteristic_equation(
         iSfp::CornerTensors,
