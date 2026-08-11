@@ -517,7 +517,7 @@ function _rrule(
         ΔE = _project_hermitian(ΔE)
         ΔC = _project_hermitian(ΔC)
 
-        # extract cotengent of the isometry variable and verify that it is trivial
+        # extract cotangent of the isometry variable and verify that it is trivial
         ΔU = isa(Δinfo.U, AbstractZero) ? zerovector(U) : unthunk(Δinfo.U)
         Δu = UL' * ΔU
         norm(Δu) < 1.0e4 * alg.tol || @warn "Nonzero Δu cotangent: norm(Δu)=$(norm(Δu))"
