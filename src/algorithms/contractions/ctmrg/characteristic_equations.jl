@@ -125,17 +125,17 @@ function generate_symmetric_characteristic_equation(
         C´ = Ud * EwCEnVd
         C´ = project_hermitian(C´) # project output
         λ_C = dot(C, C´)
-        F1 = add!!(C´, C, -1, inv(λ_C))
+        F1 = VI.add!!(C´, C, -1, inv(λ_C))
 
         # F2: edge
         E´ = contract_E´(Ud, EnVd)
         E´ = _project_hermitian(E´) # project output
         λ_E = dot(E, E´)
-        F2 = add!!(E´, E, -1, inv(λ_E))
+        F2 = VI.add!!(E´, E, -1, inv(λ_E))
 
         # F3: u
         ULdEwCEnVd = ULd * EwCEnVd
-        F3 = add!!(ULdEwCEnVd * iC, u, -1, inv(λ_C))
+        F3 = VI.add!!(ULdEwCEnVd * iC, u, -1, inv(λ_C))
 
         return F1, F2, F3
     end
@@ -474,25 +474,25 @@ function contract_halfinfinite_characteristic_equation(
         co´ = _prev_coordinate(co, nrows, ncols)
         C´ = _contract_PR_PL(PR[co´...], EiCiEPL[co...])
         λC = dot(C[co...], C´)
-        return add!!(C´, C[co...], -1, inv(λC))
+        return VI.add!!(C´, C[co...], -1, inv(λC))
     end
 
     # edges
     F2 = map(coordinates) do co
         E´ = contract_PREPL(PR[_left_projector(co, nrows, ncols)...], EPL[co...])
         λ_E = dot(E[co...], E´)
-        return add!!(E´, E[co...], -1, inv(λ_E))
+        return VI.add!!(E´, E[co...], -1, inv(λ_E))
     end
 
     # halfinfinite environment
     F345 = map(coordinates) do co
         s´ = _contract_PR_PL(PR[co...], PLpart[co...])
         λs = dot(s[co...], s´)
-        fp4 = add!!(s´, s[co...], -1, inv(λs))
+        fp4 = VI.add!!(s´, s[co...], -1, inv(λs))
 
         co´ = _next_coordinate(co, nrows, ncols)
-        fp3 = add!!((ULd[co...] * EiCiEPL[co...]) * iSfp[co...], u[co...], -1, inv(λs))
-        fp5 = add!!(iSfp[co...] * (_contract_PR_M(PR[co...], EC[co´...]) * VRd[co...]), v[co...], -1, inv(λs))
+        fp3 = VI.add!!((ULd[co...] * EiCiEPL[co...]) * iSfp[co...], u[co...], -1, inv(λs))
+        fp5 = VI.add!!(iSfp[co...] * (_contract_PR_M(PR[co...], EC[co´...]) * VRd[co...]), v[co...], -1, inv(λs))
 
         return fp3, fp4, fp5
     end
