@@ -621,7 +621,7 @@ function PEPSKit._rrule(
 
     # pretend the singular values matrices are just arbitrary complex tensors
     s = TensorMap.(S)
-    if real(scalartype(state)) != scalartype(state)
+    if !(scalartype(state) <: Real)
         # complex network, complex things, required to make the derivatives work...
         s = complex.(s)
     end
