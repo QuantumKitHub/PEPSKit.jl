@@ -11,7 +11,7 @@ function MPSKit.expectation_value(
         bra::S, O::LocalOperator, ket::S, env::CTMRGEnv
     ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
-    term_vals = dtmap(O.terms) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+    term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, ket, bra, env)
         return trmul(operator, ρ)
     end
@@ -22,7 +22,7 @@ function MPSKit.expectation_value(
         state::InfinitePEPO, O::LocalOperator, env::CTMRGEnv
     )
     checklattice(state, O)
-    term_vals = dtmap(O.terms) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+    term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, state, env)
         return trmul(operator, ρ)
     end
