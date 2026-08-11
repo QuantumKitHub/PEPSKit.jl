@@ -292,7 +292,7 @@ function ChainRulesCore.rrule(
 end
 function _squareroot_pullback(C::AbstractMatrix)
     Fdata = similar(C)
-    for i in axes(Fdata, 1), j in axes(Fdata, 2)
+    for j in axes(Fdata, 2), i in axes(Fdata, 1)
         # Taking the diagonal only is okay, when dA is diagonal anyway: Fdata[i, i] = 1 / (2 * conj(C[i, i]))
         Fdata[i, j] = 1 / conj(C[i, i] + C[j, j])
     end
