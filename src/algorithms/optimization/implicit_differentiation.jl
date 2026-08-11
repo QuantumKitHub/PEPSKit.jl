@@ -515,7 +515,7 @@ function _rrule(
 
         # apply Hermitian projectors to edge and corner cotangents
         ΔE = _project_hermitian(ΔE)
-        ΔC = _project_hermitian(ΔC)
+        ΔC = project_hermitian(ΔC)
 
         # extract cotangent of the isometry variable and verify that it is trivial
         ΔU = isa(Δinfo.U, AbstractZero) ? zerovector(U) : unthunk(Δinfo.U)

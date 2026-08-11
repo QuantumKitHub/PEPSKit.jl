@@ -283,7 +283,7 @@ function c4v_qr_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, R)
     ER = edge′ * twistdual(R, 1)
     # contract (edge, R) with projector
     new_corner = contract_edges(ER, projector)
-    new_corner = _project_hermitian(new_corner)
+    new_corner = project_hermitian(new_corner)
     return new_corner / norm(new_corner)
 end
 
@@ -328,11 +328,6 @@ function _project_hermitian(E::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     E´ = (E + physical_flip(_dag(E))) / 2
     return E´
 end
-function _project_hermitian(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
-    C´ = (C + C') / 2
-    return C´
-end
-
 
 #
 ## environment initialization

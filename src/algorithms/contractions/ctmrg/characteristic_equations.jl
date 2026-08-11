@@ -30,15 +30,6 @@ function contract_EnVd(
         conj(bra(O)[d; D_N_b D_E_b D_S_b D_W_b])
     return EnVd
 end
-function contract_EnVd(
-        En::EdgeTensor{S, 2}, Vd::LeftProjector{S, 2}, O::PartitionFunctionTensor
-    ) where {S}
-    @autoopt @tensor EnVd[χ_NNW D_W D_S; χ_E] :=
-        Vd[χ_NNE D_E; χ_E] *
-        En[χ_NNW D_N; χ_NNE] *
-        O[D_W D_S; D_N D_E]
-    return EnVd
-end
 
 # northwest enlarged corner with its left projector
 function contract_EwCEnVd(Ew::EdgeTensor{S, 3}, C::CornerTensor{S}, EnVd::LeftProjector{S, 5}) where {S}
@@ -48,21 +39,10 @@ function contract_EwCEnVd(Ew::EdgeTensor{S, 3}, C::CornerTensor{S}, EnVd::LeftPr
         EnVd[χ_NNW D_W_a D_W_b D_S_a D_S_b; χ_E]
     return EwCEnVd
 end
-function contract_EwCEnVd(Ew::EdgeTensor{S, 2}, C::CornerTensor{S}, EnVd::LeftProjector{S, 3}) where {S}
-    @autoopt @tensor EwCEnVd[χ_WSW D_S; χ_E] :=
-        Ew[χ_WSW D_W; χ_WNW] *
-        C[χ_WNW; χ_NNW] *
-        EnVd[χ_NNW D_W D_S; χ_E]
-    return EwCEnVd
-end
 
 # north edge renormalization
 function contract_E´(Ud::RightProjector{S, 3}, EnVd::LeftProjector{S, 5}) where {S}
     @tensor E´[-1 -2 -3; -4] := Ud[-1; 1 2 3] * EnVd[1 2 3 -2 -3; -4]
-    return E´
-end
-function contract_E´(Ud::RightProjector{S, 2}, EnVd::LeftProjector{S, 3}) where {S}
-    @tensor E´[-1 -2; -3] := Ud[-1; 1 2] * EnVd[1 2 -2; -3]
     return E´
 end
 
@@ -125,7 +105,7 @@ function generate_symmetric_characteristic_equation(
         O = network[1, 1]
 
         # project input
-        C = _project_hermitian(C)
+        C = project_hermitian(C)
         E = _project_hermitian(E)
 
         # assuming 'eigenvalue decomposition' of enlarged corner as ECE = U * S * V
@@ -143,7 +123,7 @@ function generate_symmetric_characteristic_equation(
 
         # F1: corner
         C´ = Ud * EwCEnVd
-        C´ = _project_hermitian(C´) # project output
+        C´ = project_hermitian(C´) # project output
         λ_C = dot(C, C´)
         F1 = add!!(C´, C, -1, inv(λ_C))
 
@@ -151,11 +131,11 @@ function generate_symmetric_characteristic_equation(
         E´ = contract_E´(Ud, EnVd)
         E´ = _project_hermitian(E´) # project output
         λ_E = dot(E, E´)
-        F2 = E´ / λ_E - E
+        F2 = add!!(E´, E, -1, inv(λ_E))
 
         # F3: u
         ULdEwCEnVd = ULd * EwCEnVd
-        F3 = (ULdEwCEnVd * iC) / λ_C - u
+        F3 = add!!(ULdEwCEnVd * iC, u, -1, inv(λ_C))
 
         return F1, F2, F3
     end
@@ -386,14 +366,7 @@ function absorb_right(
     return tensorcontract(P, pP, false, C, pC, false, pPC)
 end
 # specialized versions; TODO: probably remove, this is a terrible idea for fermionic tensors...
-function absorb_left(
-        P::RightProjector{S}, C::CornerTensor{S}
-    ) where {S}
-    return C * P
-end
-function absorb_right(
-        E::EdgeTensor{S}, C::CornerTensor{S}
-    ) where {S}
+function absorb_right(E::EdgeTensor{S}, C::CornerTensor{S}) where {S}
     return E * C
 end
 function absorb_left_right(T::AbstractTensorMap, CL::CornerTensor, CR::CornerTensor)
@@ -402,38 +375,6 @@ end
 
 # Partial contractions
 # --------------------
-
-# corner eigenvalue equation
-function _corners_fixed_point(coordinate, env, EC, PL, PR)
-    dir, r, c = coordinate
-    C′ = if dir == NORTHWEST
-        renormalize_northwest_corner((r, c), EC, PL, PR)
-    elseif dir == NORTHEAST
-        renormalize_northeast_corner((r, c), EC, PL, PR)
-    elseif dir == SOUTHEAST
-        renormalize_southeast_corner((r, c), EC, PL, PR)
-    elseif dir == SOUTHWEST
-        renormalize_southwest_corner((r, c), EC, PL, PR)
-    end
-    C′ /= dot(env.corners[coordinate...], C′)
-    return C′ - env.corners[coordinate...]
-end
-
-# edge eigenvalue equation
-function _edges_fixed_point(coordinate, env, O, PL, PR)
-    dir, r, c = coordinate
-    E′ = if dir == NORTH
-        renormalize_north_edge((r, c), env, PL, PR, O)
-    elseif dir == EAST
-        renormalize_east_edge((r, c), env, PL, PR, O)
-    elseif dir == SOUTH
-        renormalize_south_edge((r, c), env, PL, PR, O)
-    elseif dir == WEST
-        renormalize_west_edge((r, c), env, PL, PR, O)
-    end
-    E′ /= dot(env.edges[coordinate...], E′)
-    return E′ - env.edges[coordinate...]
-end
 
 function contract_EPL(
         E::EdgeTensor{S, 3}, PL::LeftProjector{S, 3}, O::PEPSSandwich,
@@ -445,15 +386,6 @@ function contract_EPL(
         conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
     return eipl
 end
-function contract_EPL(
-        E::EdgeTensor{S, 2}, PL::LeftProjector{S, 2}, O::PartitionFunctionTensor,
-    ) where {S}
-    @autoopt @tensor eipl[χ_W D_W D_S; χ_S] :=
-        PL[χ_N D_E; χ_S] *
-        E[χ_W D_N; χ_N] *
-        O[D_W D_S; D_N D_E]
-    return eipl
-end
 
 function contract_EiCiEPL(
         EiCi::EdgeTensor{S, 3}, EPL::LeftProjector{S, 5},
@@ -463,27 +395,12 @@ function contract_EiCiEPL(
         EiCi[-1 2 3; 1]
     return ecepl
 end
-function contract_EiCiEPL(
-        EiCi::EdgeTensor{S, 2}, EPL::LeftProjector{S, 3},
-    ) where {S}
-    @tensor ecepl[-1 -2; -4] :=
-        EPL[1 2 -2; -4] *
-        EiCi[-1 2; 1]
-    return ecepl
-end
 
 function contract_PREPL(
         PR::RightProjector{S, 3}, EPL::LeftProjector{S, 5},
     ) where {S}
     @tensor E´[-1 -2 -3; -4] :=
         PR[-1; 1 2 3] * EPL[1 2 3 -2 -3; -4]
-    return E´
-end
-function contract_PREPL(
-        PR::RightProjector{S, 2}, EPL::LeftProjector{S, 3},
-    ) where {S}
-    @tensor E´[-1 -2; -4] :=
-        PR[-1; 1 2] * EPL[1 2 -2; -4]
     return E´
 end
 
@@ -557,25 +474,25 @@ function contract_halfinfinite_characteristic_equation(
         co´ = _prev_coordinate(co, nrows, ncols)
         C´ = _contract_PR_PL(PR[co´...], EiCiEPL[co...])
         λC = dot(C[co...], C´)
-        return C´ / λC - C[co...]
+        return add!!(C´, C[co...], -1, inv(λC))
     end
 
     # edges
     F2 = map(coordinates) do co
         E´ = contract_PREPL(PR[_left_projector(co, nrows, ncols)...], EPL[co...])
         λ_E = dot(E[co...], E´)
-        return E´ / λ_E - E[co...]
+        return add!!(E´, E[co...], -1, inv(λ_E))
     end
 
     # halfinfinite environment
     F345 = map(coordinates) do co
         s´ = _contract_PR_PL(PR[co...], PLpart[co...])
         λs = dot(s[co...], s´)
-        fp4 = s´ / λs - s[co...]
+        fp4 = add!!(s´, s[co...], -1, inv(λs))
 
         co´ = _next_coordinate(co, nrows, ncols)
-        fp3 = (ULd[co...] * EiCiEPL[co...]) * iSfp[co...] / λs - u[co...]
-        fp5 = iSfp[co...] * (_contract_PR_M(PR[co...], EC[co´...]) * VRd[co...]) / λs - v[co...]
+        fp3 = add!!((ULd[co...] * EiCiEPL[co...]) * iSfp[co...], u[co...], -1, inv(λs))
+        fp5 = add!!(iSfp[co...] * (_contract_PR_M(PR[co...], EC[co´...]) * VRd[co...]), v[co...], -1, inv(λs))
 
         return fp3, fp4, fp5
     end
