@@ -145,7 +145,7 @@ function generate_symmetric_characteristic_equation(
         C´ = Ud * EwCEnVd
         C´ = _project_hermitian(C´) # project output
         λ_C = dot(C, C´)
-        F1 = C´ / λ_C - C
+        F1 = add!!(C´, C, -1, inv(λ_C))
 
         # F2: edge
         E´ = contract_E´(Ud, EnVd)
