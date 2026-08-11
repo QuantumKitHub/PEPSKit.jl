@@ -86,6 +86,8 @@ The supported keywords are:
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
+
+See also [`fixedpoint_gradient`](@ref) for details on the underlying procedure.
 """
 struct FixedPointGradient{A} <: GradientAlgorithm{A}
     solver_alg::A
@@ -383,6 +385,8 @@ The supported keywords are:
 * `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_fixedpoint_solver_alg))`: solver algorithm for the `ImplicitGradient` gradient algorithm.
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+
+See also [`implicit_gradient`](@ref) for details on the underlying procedure.
 """
 struct ImplicitGradient{A} <: GradientAlgorithm{A}
     solver_alg::A

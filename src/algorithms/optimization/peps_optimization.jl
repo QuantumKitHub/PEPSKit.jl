@@ -133,6 +133,7 @@ keyword arguments are:
 * `verbosity::Int` : Gradient output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
 * `alg::Symbol=:$(Defaults.gradient_alg)` : Implicit gradient algorithm variant, can be one of the following:
     - `:FixedPointGradient` : Compute the gradient via fixed-point differentiation, see [`FixedPointGradient`](@ref)
+    - `:ImplicitGradient` : Compute the gradient via implicit differentiation of a characteristic set of equations, see [`ImplicitGradient`](@ref)
 * `solver_alg::Union{Algorithm,NamedTuple}`: Solver algorithm for computing the implicit gradient; see [`FixedPointGradient`](@ref) for supported algorithms.
 
 ### Optimizer settings
