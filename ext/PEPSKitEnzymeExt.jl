@@ -2,6 +2,7 @@ module PEPSKitEnzymeExt
 
 using PEPSKit, MPSKit, TensorKit, MatrixAlgebraKit
 using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGradient, sdiag_pow, dtmap
+using ChainRulesCore: ignore_derivatives
 import PEPSKit: real_inner
 using Enzyme
 using Enzyme.EnzymeCore: EnzymeRules
@@ -13,9 +14,12 @@ using Enzyme.EnzymeCore: EnzymeRules
 
 @inline EnzymeRules.inactive(::typeof(PEPSKit.checklattice), args...) = nothing
 
+# Without this, Enzyme differentiates through `ignore_derivatives`
+@inline EnzymeRules.inactive(::typeof(ignore_derivatives), args...) = nothing
+
 function EnzymeRules.augmented_primal(
         config::EnzymeRules.RevConfigWidth{1},
-        func::Const{typeof(MatrixAlgebraKit.svd_trunc)},
+        func::Const{typeof(MatrixAlgebraKit.svd_trunc_no_error)},
         ::Type{RT},
         t::Annotation,
         alg::Const{<:SVDAdjoint{F, R}}
@@ -43,7 +47,7 @@ end
 
 function EnzymeRules.reverse(
         config::EnzymeRules.RevConfigWidth{1},
-        func::Const{typeof(MatrixAlgebraKit.svd_trunc)},
+        func::Const{typeof(MatrixAlgebraKit.svd_trunc_no_error)},
         ::Type{RT},
         cache,
         t::Annotation,
@@ -51,11 +55,10 @@ function EnzymeRules.reverse(
     ) where {RT, F, R <: PEPSKit.FullPullback}
     dUSVᴴtrunc, USV⁺, ind = cache
     U, S, V⁺ = USV⁺
-    MatrixAlgebraKit._warn_pullback_truncerror(dϵ)
     gtol = PEPSKit._get_pullback_gauge_tol(alg.val.rrule_alg.verbosity)
     if !isa(t, Const)
         t.dval = MatrixAlgebraKit.svd_pullback!(
-            t.dval, t.val, (U, S, V⁺), ΔUSVᴴtrunc, ind;
+            t.dval, t.val, (U, S, V⁺), dUSVᴴtrunc, ind;
             gauge_atol = gtol(dUSVᴴtrunc), degeneracy_atol = alg.val.rrule_alg.degeneracy_atol,
         )
     end
@@ -106,8 +109,9 @@ function EnzymeRules.augmented_primal(
     alg_gauge = PEPSKit._scrambling_env_gauge(alg.val) # select appropriate gauge-fixing algorithm
     env_conv, _ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(state.val), env, alg_fixed)
     shadow = EnzymeRules.needs_shadow(config) ? Enzyme.make_zero((env, info)) : nothing
+    denv = isnothing(shadow) ? nothing : shadow[2]
     primal = EnzymeRules.needs_primal(config) ? (env, info) : nothing
-    return EnzymeRules.AugmentedReturn(primal, shadow, (env_conv, env, alg_gauge, alg_fixed))
+    return EnzymeRules.AugmentedReturn(primal, shadow, (env_conv, env, denv, alg_gauge, alg_fixed))
 end
 
 function EnzymeRules.reverse(
@@ -120,7 +124,7 @@ function EnzymeRules.reverse(
         alg::Const{<:CTMRGAlgorithm}
     ) where {RT}
     env_conv, env, denv, alg_gauge, alg_fixed = cache
-    signs, corner_phases, edge_phases = PEPSKit.compute_gauge_fix_gauge(env_conv, env.val, alg_gauge)
+    signs, corner_phases, edge_phases = PEPSKit.compute_gauge_fix_gauge(env_conv, env, alg_gauge)
     function gauge_fixed_iteration(A, x)
         x′ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
         return PEPSKit.fix_phases(x′, signs, corner_phases, edge_phases)
@@ -150,6 +154,7 @@ function EnzymeRules.augmented_primal(
         end
         y = map(first, el_rrules)
     else
+        el_rrules = nothing
         y = map(a -> a.val, A)
     end
     dy = map(Enzyme.make_zero, y)
