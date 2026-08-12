@@ -59,15 +59,21 @@ end
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(network)))
-    for _ in 1:4 # rotate
+    U = Array{LeftProjector, 3}(undef, 4, size(network)...)
+    S = Array{CornerTensor, 3}(undef, 4, size(network)...)
+    V = Array{RightProjector, 3}(undef, 4, size(network)...)
+    for dir in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
             env, info = ctmrg_leftmove(col, network, env, alg)
             truncation_error = max(truncation_error, info.truncation_error)
+            U[dir, :, col] = info.U
+            S[dir, :, col] = info.S
+            V[dir, :, col] = info.V
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
     end
-    return env, (; contraction_metrics = (; truncation_error))
+    return env, (; contraction_metrics = (; truncation_error), U, S, V)
 end
 
 """
