@@ -82,7 +82,9 @@ end
 # initialize empty unit cell array of SVD tensors from CTMRG environment
 function _initialize_decomposition_unit_cell(env::CTMRGEnv)
     U = map(similar, env.edges)
-    S = map(similar ∘ DiagonalTensorMap, env.corners)
+    S = map(
+        e -> DiagonalTensorMap(zeros(real(scalartype(env)), only(domain(e)), only(domain(e)))), env.edges
+    )
     V = map(similar ∘ transpose, env.edges)
     return U, S, V
 end
