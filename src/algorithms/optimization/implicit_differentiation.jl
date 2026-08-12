@@ -613,7 +613,7 @@ function PEPSKit._rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit::CTMRGEnv,
         state,
-        alg::SimultaneousCTMRG{<:HalfInfiniteProjector}, # SequentialCTMRG doesn't return U, S, V (yet)
+        alg::CTMRGAlgorithm,
     )
     env, = leading_boundary(envinit, state, alg)
 

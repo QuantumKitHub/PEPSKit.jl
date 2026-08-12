@@ -59,21 +59,46 @@ end
 
 function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     truncation_error = zero(real(scalartype(network)))
-    U = Array{LeftProjector, 3}(undef, 4, size(network)...)
-    S = Array{CornerTensor, 3}(undef, 4, size(network)...)
-    V = Array{RightProjector, 3}(undef, 4, size(network)...)
-    for dir in 1:4 # rotate
+    U, S, V = _initialize_decomposition_unit_cell(env)
+    for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
             env, info = ctmrg_leftmove(col, network, env, alg)
-            truncation_error = max(truncation_error, info.truncation_error)
-            U[dir, :, col] = info.U
-            S[dir, :, col] = info.S
-            V[dir, :, col] = info.V
+            ignore_derivatives() do
+                truncation_error = max(truncation_error, info.truncation_error)
+                U[WEST, :, col] .= info.U
+                S[WEST, :, col] .= info.S
+                V[WEST, :, col] .= info.V
+            end
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)
+        ignore_derivatives() do
+            U, S, V = _rotl90_decomposition_unit_cell(U, S, V)
+        end
     end
     return env, (; contraction_metrics = (; truncation_error), U, S, V)
+end
+
+# initialize empty unit cell array of SVD tensors from CTMRG environment
+function _initialize_decomposition_unit_cell(env::CTMRGEnv)
+    U = map(similar, env.edges)
+    S = map(similar ∘ DiagonalTensorMap, env.corners)
+    V = map(similar ∘ transpose, env.edges)
+    return U, S, V
+end
+
+# adapted Base.rotl90(::CTMRGEnv) for SVD tensor arrays
+function _rotl90_decomposition_unit_cell(U::Array{Ut}, S::Array{St}, V::Array{Vt}) where {Ut, St, Vt}
+    U′ = Array{Ut, 3}(undef, 4, size(U, 3), size(U, 2))
+    S′ = Array{St, 3}(undef, 4, size(S, 3), size(S, 2))
+    V′ = Array{Vt, 3}(undef, 4, size(V, 3), size(V, 2))
+    for dir in 1:4
+        dir2 = _prev(dir, 4)
+        U′[dir2, :, :] = rotl90(U[dir, :, :])
+        S′[dir2, :, :] = rotl90(S[dir, :, :])
+        V′[dir2, :, :] = rotl90(V[dir, :, :])
+    end
+    return U′, S′, V′
 end
 
 """

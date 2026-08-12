@@ -488,7 +488,7 @@ function contract_halfinfinite_characteristic_equation(
     F345 = map(coordinates) do co
         s´ = _contract_PR_PL(PR[co...], PLpart[co...])
         λs = dot(s[co...], s´)
-        fp4 = VI.s´ / λs - s[co...]
+        fp4 = s´ / λs - s[co...]
 
         co´ = _next_coordinate(co, nrows, ncols)
         fp3 = ((ULd[co...] * EiCiEPL[co...]) * iSfp[co...]) / λs - u[co...]
