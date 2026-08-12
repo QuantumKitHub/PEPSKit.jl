@@ -7,6 +7,7 @@ AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPSKit = "bb1c41ca-d63c-52ed-829e-0820dda26502"
@@ -26,6 +27,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [sources]
 PEPSKit = {path = ".."}
+GPUArrays = {url = "https://github.com/JuliaGPU/GPUArrays.jl", rev = "ksh/more_diag"}
 
 [compat]
 AMDGPU = "2"
