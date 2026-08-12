@@ -14,7 +14,7 @@ unitcells = [(1, 1), (3, 4)]
 projector_algs_asymm = [:HalfInfiniteProjector, :FullInfiniteProjector]
 projector_algs_c4v = [
     (:C4vQRProjector, :Householder),
-    (:C4vEighProjector, :QRIteration), (:C4vEighProjector, :Lanczos),
+    (:C4vEighProjector, :DivideAndConquer), (:C4vEighProjector, :Lanczos),
 ]
 Ts = [Float64, ComplexF64]
 
