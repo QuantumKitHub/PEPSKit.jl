@@ -2,15 +2,18 @@ module PEPSKitEnzymeExt
 
 using PEPSKit, MPSKit, TensorKit, MatrixAlgebraKit
 using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGradient, sdiag_pow, dtmap
+using PEPSKit: InfiniteSquareNetwork, InfinitePEPS, InfinitePEPO, _stack_tuples
+using PEPSKit: unitcell, ket, bra, pepo
 using ChainRulesCore: ignore_derivatives
+using VectorInterface: add!, One
 import PEPSKit: real_inner
 using Enzyme
 using Enzyme.EnzymeCore: EnzymeRules
 
-@inline EnzymeRules.inactive_type(::Type{SVDAdjoint}) = true
-@inline EnzymeRules.inactive_type(::Type{QRAdjoint}) = true
-@inline EnzymeRules.inactive_type(::Type{EighAdjoint}) = true
-@inline EnzymeRules.inactive_type(::Type{CTMRGAlgorithm}) = true
+@inline EnzymeRules.inactive_type(::Type{<:SVDAdjoint}) = true
+@inline EnzymeRules.inactive_type(::Type{<:QRAdjoint}) = true
+@inline EnzymeRules.inactive_type(::Type{<:EighAdjoint}) = true
+@inline EnzymeRules.inactive_type(::Type{<:CTMRGAlgorithm}) = true
 
 @inline EnzymeRules.inactive(::typeof(PEPSKit.checklattice), args...) = nothing
 
@@ -109,7 +112,7 @@ function EnzymeRules.augmented_primal(
     alg_gauge = PEPSKit._scrambling_env_gauge(alg.val) # select appropriate gauge-fixing algorithm
     env_conv, _ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(state.val), env, alg_fixed)
     shadow = EnzymeRules.needs_shadow(config) ? Enzyme.make_zero((env, info)) : nothing
-    denv = isnothing(shadow) ? nothing : shadow[2]
+    denv = isnothing(shadow) ? nothing : shadow[1]
     primal = EnzymeRules.needs_primal(config) ? (env, info) : nothing
     return EnzymeRules.AugmentedReturn(primal, shadow, (env_conv, env, denv, alg_gauge, alg_fixed))
 end
@@ -130,13 +133,24 @@ function EnzymeRules.reverse(
         return PEPSKit.fix_phases(x′, signs, corner_phases, edge_phases)
     end
     # prepare its pullback
-    sig = Tuple{typeof(gauge_fixed_iteration), typeof(state), typeof(env)}
-    env_vjp = Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Duplicated, gauge_fixed_iteration, state, Duplicated(env, denv))
+    fwd, rev = Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Const{typeof(gauge_fixed_iteration)}, Duplicated, typeof(state), Duplicated{typeof(env)})
+    # implement the VJP-getting
+    state_dup = isa(state, Const) ? Duplicated(state.val, Enzyme.make_zero(state.val)) : state
+    env_dup = Duplicated(env, denv)
+    tape, _, out_shadow = fwd(Const(gauge_fixed_iteration), state_dup, env_dup)
+    function vjp(Δ)
+        Enzyme.make_zero!(state_dup.dval)
+        Enzyme.make_zero!(env_dup.dval)
+        copyto!(out_shadow, Δ)          # seed the output shadow
+        rev(Const(gauge_fixed_iteration), state_dup, env_dup, tape)
+        return state_dup.dval, env_dup.dval
+    end
     # split off state and environment parts
-    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
+    ∂f∂A(x)::typeof(state.val) = vjp(x)[1]
+    ∂f∂x(x)::typeof(env) = vjp(x)[2]
     # evaluate the geometric sum
-    PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, gradmode.solver_alg)
+    #PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, gradmode.solver_alg)
+    PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, PEPSKit.Defaults.gradient_fixedpoint_solver_alg)
     return ntuple(Returns(nothing), 4)
 end
 
@@ -150,7 +164,7 @@ function EnzymeRules.augmented_primal(
     ) where {RT}
     if !isa(A, Const)
         el_rrules = tmap(A.val, A.dval; scheduler.val) do a, da
-            Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Duplicated, f, Duplicated(a, da))
+            Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Const{typeof(f)}, Duplicated, Duplicated{typeof(a)})
         end
         y = map(first, el_rrules)
     else
@@ -176,6 +190,36 @@ function EnzymeRules.reverse(
     backevals = tmap(el_rrules, dys; scheduler.val) do el_rrule, dy
         last(el_rrule)(dy)
     end
+    return (nothing, nothing, nothing)
+end
+
+function EnzymeRules.augmented_primal(
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{Type{InfiniteSquareNetwork}},
+        ::Type{RT},
+        top::Annotation{<:InfinitePEPS},
+        mid::Annotation{<:InfinitePEPO},
+        bot::Annotation{<:InfinitePEPS},
+    ) where {RT}
+    netw = InfiniteSquareNetwork(top.val, mid.val, bot.val)
+    primal = EnzymeRules.needs_primal(config) ? netw : nothing
+    shadow = EnzymeRules.needs_shadow(config) ? Enzyme.make_zero(netw) : nothing
+    return EnzymeRules.augmented_rule_return_type(config, RT)(primal, shadow, shadow)
+end
+
+function EnzymeRules.reverse(
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{Type{InfiniteSquareNetwork}},
+        ::Type{RT},
+        cache,
+        top::Annotation{<:InfinitePEPS},
+        mid::Annotation{<:InfinitePEPO},
+        bot::Annotation{<:InfinitePEPS},
+    ) where {RT}
+    Δnetwork = cache
+    !isa(top, Const) && add!(top.dval, InfinitePEPS(map(ket, unitcell(Δnetwork))), One(), One())
+    !isa(bot, Const) && add!(bot.dval, InfinitePEPS(map(bra, unitcell(Δnetwork))), One(), One())
+    !isa(mid, Const) && add!(mid.dval, InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork)))), One(), One())
     return (nothing, nothing, nothing)
 end
 

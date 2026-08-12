@@ -7,6 +7,11 @@ using KrylovKit
 using OptimKit
 using Enzyme
 
+# Enzyme names basic blocks after Julia types (e.g. `zeroType.<T>`); the tape types
+# here exceed LLVM's default 1024-char cap on non-global value names, which its
+# textual IR parser rejects when Enzyme round-trips the module in `check_ir!`.
+Enzyme.LLVM.clopts("--non-global-value-max-name-size=1048576")
+
 ## Setup
 
 function three_dimensional_classical_ising(; beta, J = 1.0)
@@ -115,14 +120,20 @@ end
         function energ(ψ)
             n2 = InfiniteSquareNetwork(ψ)
             env2′, info = leading_boundary(env2, n2, ctm_alg)
-            n3 = InfiniteSquareNetwork(ψ, T)
+            n3 = InfiniteSquareNetwork(ψ, T)::InfiniteSquareNetwork{
+                Tuple{
+                    TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}},
+                    TensorMap{ComplexF64, ComplexSpace, 1, 4, Vector{ComplexF64}},
+                    TensorMap{ComplexF64, ComplexSpace, 2, 4, Vector{ComplexF64}},
+                },
+            }
             env3′, info = leading_boundary(env3, n3, ctm_alg)
             PEPSKit.ignore_derivatives() do
                 PEPSKit.update!(env2, env2′)
                 PEPSKit.update!(env3, env3′)
             end
-            λ3 = network_value(n3, env3)
-            λ2 = network_value(n2, env2)
+            λ3 = network_value(n3, env3′)
+            λ2 = network_value(n2, env2′)
             return -log(real(λ3 / λ2))
         end
         E, gs = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(psi, zerovector(psi)))
