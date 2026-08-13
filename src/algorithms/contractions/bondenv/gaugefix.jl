@@ -21,9 +21,9 @@ function positive_approx(benv::AbstractTensorMap{T, S, N, N}) where {T, S, N}
     # If `benv` is negative (e.g. obtained approximately from CTMRG),
     # we can multiply it by (-1).
     data = D.data
-    @inbounds for i in eachindex(data)
-        d = (sgn == -1) ? -data[i] : data[i]
-        data[i] = (d > 0) ? sqrt(d) : zero(d)
+    map!(data, data) do d
+        d2 = (sgn < 0) ? -d : d
+        return (d2 > 0) ? sqrt(d2) : zero(d2)
     end
     Z = D * U'
     return Z
