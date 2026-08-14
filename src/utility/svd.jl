@@ -399,15 +399,21 @@ end
 # `block(::AdjointTensorMap, c)` hands back a `LinearAlgebra.Adjoint`
 # Some backends will need to materialize this to avoid scalar indexing
 _materialize_block(m::AbstractMatrix) = m
+#_materialize_block(m::Union{Adjoint, Transpose}) = copyto!(similar(m, size(m)), m)
 
 # Columns of `m` as a vector of `A`-typed vectors
 function _column_vectors(::Type{A}, m::AbstractMatrix) where {A}
     return Vector{A}(eachcol(_materialize_block(m)))
 end
+#function _column_vectors(::Type{A}, m::AbstractMatrix) where {A}
+#    m̃ = _materialize_block(m)
+#    return A[m̃[:, j] for j in axes(m̃, 2)]
+#end
 
 # Diagonal of `m` for `compute_svdsolve_pullback_data`, which reads it element-wise
 # Some backends will need to copy this to the host to avoid scalar indexing
 _indexable_diagview(m::AbstractMatrix) = diagview(m)
+#_indexable_diagview(m::AbstractMatrix) = collect(diagview(m))
 
 # KrylovKit rrule compatible with TensorMaps & function handles
 function ChainRulesCore.rrule(
