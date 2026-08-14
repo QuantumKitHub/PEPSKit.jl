@@ -61,4 +61,4 @@ Zygote = "0.6, 0.7"
 julia = "1.10"
 
 [sources]
-Enzyme = {url = "https://github.com/EnzymeAD/Enzyme.jl/", rev = "ksh/icc"}
+Enzyme = {path = "/Users/khyatt/.julia/dev/Enzyme"}

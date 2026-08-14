@@ -6,7 +6,10 @@ using Enzyme
 using OptimKit
 using KrylovKit
 
-Enzyme.Compiler.VERBOSE_ERRORS[] = true
+# Enzyme names basic blocks after Julia types (e.g. `zeroType.<T>`); the tape types
+# here exceed LLVM's default 1024-char cap on non-global value names, which its
+# textual IR parser rejects when Enzyme round-trips the module in `check_ir!`.
+Enzyme.LLVM.clopts("--non-global-value-max-name-size=1048576")
 
 ## Test models, gradmodes and CTMRG algorithm
 # -------------------------------------------
