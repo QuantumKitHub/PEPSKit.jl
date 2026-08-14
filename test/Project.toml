@@ -27,7 +27,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [sources]
 PEPSKit = {path = ".."}
-GPUArrays = {url = "https://github.com/JuliaGPU/GPUArrays.jl", rev = "ksh/more_diag"}
+GPUArrays = {url = "https://github.com/JuliaGPU/GPUArrays.jl", rev = "main"}
 
 [compat]
 AMDGPU = "2"
