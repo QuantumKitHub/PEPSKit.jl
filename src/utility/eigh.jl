@@ -234,7 +234,7 @@ function _compute_eighdata!(
             D, V = eigh_full!(b)
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
-            V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
+            V = V[:, view(lm_ordering, 1:howmany)]
         else
             x₀ = alg.start_vector(b)
             eig_alg = alg.alg
@@ -247,7 +247,7 @@ function _compute_eighdata!(
                 D, V = eigh_full!(b)
                 lm_ordering = sortperm(abs.(D.diag); rev = true)
                 D = D.diag[lm_ordering]
-                V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
+                V = V[:, view(lm_ordering, 1:howmany)]
             else  # Slice in case more values were converged than requested
                 V = stack(view(lvecs, 1:howmany))
             end
@@ -314,7 +314,7 @@ function ChainRulesCore.rrule(
 
     function eigh_trunc!_full_pullback(ΔDV)
         Δt = eigh_pullback!(
-            zeros(scalartype(t), space(t)), t, (D, V), ΔDV, inds;
+            zeros(storagetype(t), space(t)), t, (D, V), ΔDV, inds;
             gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
@@ -338,7 +338,7 @@ function ChainRulesCore.rrule(
 
     function eigh_trunc!_trunc_pullback(ΔDV)
         Δf = eigh_trunc_pullback!(
-            zeros(scalartype(t), space(t)), t, (D, V), ΔDV;
+            zeros(storagetype(t), space(t)), t, (D, V), ΔDV;
             gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
