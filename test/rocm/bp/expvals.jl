@@ -3,7 +3,7 @@ using Random
 using TensorKit
 using PEPSKit
 using PEPSKit: random_dual!
-using CUDA, Adapt
+using AMDGPU, Adapt
 
 ds = Dict(
     U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))),
@@ -20,7 +20,7 @@ Random.seed!(41973582)
     ψds = fill(d, uc)
     ψDNs = random_dual!(fill(D, uc))
     ψDEs = random_dual!(fill(D, uc))
-    ψ0 = adapt(CuArray, InfinitePEPS(ψds, ψDNs, ψDEs))
+    ψ0 = adapt(ROCArray, InfinitePEPS(ψds, ψDNs, ψDEs))
 
     ψ, wts, _ = gauge_fix(ψ0, SUGauge(; maxiter = 100, tol = 1.0e-10))
     for (a0, a) in zip(ψ0.A, ψ.A)
@@ -37,7 +37,7 @@ Random.seed!(41973582)
 
     op = randn(d → d)
     for site in CartesianIndices(size(ψ))
-        lo = adapt(CuArray, LocalOperator(ψds, (site,) => op))
+        lo = adapt(ROCArray, LocalOperator(ψds, (site,) => op))
         val1 = expectation_value(ψ, lo, bp_env)
         val2 = expectation_value(ψ, lo, ctm_env)
         @test val1 ≈ val2
@@ -47,7 +47,7 @@ Random.seed!(41973582)
     vs = [CartesianIndex(1, 0), CartesianIndex(0, 1)]
     for site1 in CartesianIndices(size(ψ)), v in vs
         site2 = site1 + v
-        lo = adapt(CuArray, LocalOperator(ψds, (site1, site2) => op))
+        lo = adapt(ROCArray, LocalOperator(ψds, (site1, site2) => op))
         val1 = expectation_value(ψ, lo, bp_env)
         val2 = expectation_value(ψ, lo, ctm_env)
         @test val1 ≈ val2
