@@ -30,6 +30,7 @@ steps:
           - "bp"
           - "compress"
           - "ctmrg"
+          - "gradients"
           - "timeevol"
           - "toolbox"
           - "utility"
