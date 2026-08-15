@@ -7,7 +7,7 @@ testsuite = find_tests(@__DIR__)
 # remove testsuite
 filter!(!(startswith("testsuite") ∘ first), testsuite)
 # CUDA tests: only run if CUDA is functional
-using CUDA: CUDA
+using CUDA
 CUDA.functional() || filter!(!startswith("cuda") ∘ first, testsuite)
 # AMDGPU tests: only run if AMDGPU is functional
 using AMDGPU
