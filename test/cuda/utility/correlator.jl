@@ -2,7 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using CUDA, Adapt
+using CUDACore, Adapt
 
 const syms = (Z2Irrep, FermionParity)
 
