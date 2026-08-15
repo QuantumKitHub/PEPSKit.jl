@@ -3,7 +3,7 @@ using Random
 using TensorKit
 using PEPSKit
 using PEPSKit: random_dual!
-using CUDA, Adapt
+using CUDACore, Adapt
 
 ds = Dict(
     Trivial => ℂ^2,
