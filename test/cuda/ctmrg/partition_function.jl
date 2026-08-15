@@ -5,7 +5,7 @@ using PEPSKit
 using TensorKit
 using QuadGK
 using Test
-using CUDA, Adapt
+using CUDACore, Adapt
 
 @testset "Check spaces in partition function CTMRG" begin
     zA = randn(ℂ^6 ⊗ ℂ^8 ← ℂ^4 ⊗ ℂ^2)

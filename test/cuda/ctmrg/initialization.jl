@@ -2,7 +2,7 @@ using Test
 using TensorKit
 using PEPSKit
 using Random
-using Adapt, CUDA
+using Adapt, CUDACore
 using MPSKitModels: classical_ising
 using PEPSKit: ProductStateEnv
 

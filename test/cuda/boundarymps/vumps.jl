@@ -4,7 +4,7 @@ using PEPSKit
 using TensorKit
 using MPSKit
 using LinearAlgebra
-using Adapt, CUDA
+using Adapt, CUDACore
 
 Random.seed!(29384293742893)
 
