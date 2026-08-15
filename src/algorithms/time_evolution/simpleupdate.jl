@@ -215,12 +215,12 @@ function MPSKit.time_evolve(
         env0, time0 = it.state.env, time()
         for (psi, env, info) in it
             iter = it.state.iter
-            diff = compare_weights(env0, env)
             stop = (iter == it.nstep)
             showinfo = (check_interval > 0) &&
                 ((iter % check_interval == 0) || (iter == 1) || stop)
             time1 = time()
             if showinfo
+                diff = compare_weights(env0, env)
                 @infov 2 "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
                 @infov 2 @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, diff, time1 - time0)
             end
