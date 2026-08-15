@@ -2,7 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using CUDA, Adapt
+using CUDACore, Adapt
 using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
 using PEPSKit: ScramblingEnvGauge, ScramblingEnvGaugeC4v
 using PEPSKit: peps_normalize
