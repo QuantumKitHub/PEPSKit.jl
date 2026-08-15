@@ -220,9 +220,8 @@ function MPSKit.time_evolve(
                 ((iter % check_interval == 0) || (iter == 1) || stop)
             time1 = time()
             if showinfo
-                diff = compare_weights(env0, env)
-                @infov 2 "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-                @infov 2 @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, diff, time1 - time0)
+@infov 2 "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
+@infov 2 @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, compare_weights(env0, env), time1 - time0)
             end
             if stop
                 time_end = time()
