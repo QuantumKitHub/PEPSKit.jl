@@ -3,7 +3,7 @@ using TensorKit
 using PEPSKit
 using LinearAlgebra
 using Random
-using CUDA, Adapt
+using CUDACore, Adapt
 
 Random.seed!(100)
 Nr, Nc = 2, 2

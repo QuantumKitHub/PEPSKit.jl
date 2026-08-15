@@ -4,7 +4,7 @@ using MatrixAlgebraKit
 using TensorKit
 using MPSKit
 using PEPSKit
-using CUDA, Adapt
+using CUDACore, Adapt
 using PEPSKit: peps_normalize
 
 # initialize parameters

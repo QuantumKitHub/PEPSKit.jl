@@ -2,7 +2,7 @@ using Test
 using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
-using PEPSKit, CUDA, Adapt
+using PEPSKit, CUDACore, Adapt
 
 # Benchmark data of [σx, σz] from HOTRG
 # Physical Review B 86, 045139 (2012) Fig. 15-16

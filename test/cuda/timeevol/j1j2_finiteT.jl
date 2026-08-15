@@ -3,7 +3,7 @@ using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-using CUDA, Adapt
+using CUDACore, Adapt
 
 # Benchmark energy from high-temperature expansion
 # at β = 0.3, 0.6

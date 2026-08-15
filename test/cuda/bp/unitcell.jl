@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using PEPSKit: bp_iteration
 using TensorKit
-using CUDA, Adapt
+using CUDACore, Adapt
 
 # settings
 Random.seed!(91283219347)

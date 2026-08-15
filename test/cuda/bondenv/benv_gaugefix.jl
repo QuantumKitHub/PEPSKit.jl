@@ -3,7 +3,7 @@ using TensorKit
 using PEPSKit
 using LinearAlgebra
 using Random
-using CUDA, Adapt
+using CUDACore, Adapt
 
 Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1) => 1, (1, -1) => 2)
 Vin = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1) => 3, (1, -1) => 2)
