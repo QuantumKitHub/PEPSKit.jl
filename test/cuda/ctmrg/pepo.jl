@@ -6,7 +6,7 @@ using TensorKit
 using KrylovKit
 using OptimKit
 using Zygote
-using CUDA, Adapt
+using CUDACore, Adapt
 ## Setup
 
 function three_dimensional_classical_ising(; beta, J = 1.0)
