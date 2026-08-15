@@ -6,7 +6,7 @@ using Random
 import MPSKitModels: hubbard_space
 using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
 using MPSKit: GenericMPSTensor, MPSBondTensor
-using CUDA, Adapt
+using CUDACore, Adapt
 
 # Utility setup
 # -------------

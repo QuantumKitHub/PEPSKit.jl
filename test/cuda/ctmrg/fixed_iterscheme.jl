@@ -5,7 +5,7 @@ using Random
 using LinearAlgebra
 using TensorKit, KrylovKit
 using PEPSKit
-using CUDA, Adapt
+using CUDACore, Adapt
 using PEPSKit:
     ctmrg_iteration,
     compute_gauge_fix_gauge,

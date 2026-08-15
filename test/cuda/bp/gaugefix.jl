@@ -4,7 +4,7 @@ using TensorKit
 using PEPSKit
 using PEPSKit: compare_weights, random_dual!, twistdual
 using PEPSKit: _next, _is_bipartite
-using CUDA, Adapt
+using CUDACore, Adapt
 
 @testset "BP vs SU ($S, bipartite = $(bipartite), posdef msgs = $h)" for
     (S, bipartite, h) in Iterators.product(

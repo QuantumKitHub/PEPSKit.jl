@@ -3,7 +3,7 @@ using Random
 using PEPSKit
 using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
 using TensorKit
-using CUDA, Adapt
+using CUDACore, Adapt
 
 # settings
 Random.seed!(91283219347)
