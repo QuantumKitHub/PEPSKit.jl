@@ -4,10 +4,10 @@
 """
 $(SIGNATURES)
 
-Approximately measure a dense two-site operator on one or more ordered pairs of sites in a
-single-layer PEPO. The first and second operator legs act on the first and second sites of
-each pair, respectively. Multiple pairs are evaluated in one shared window and reuse
-open-string boundary contractions. Ordered pairs in a batched call must be unique.
+Approximately measure a dense two-site operator on one or more ordered pairs of sites in a single-layer PEPO.
+The first and second operator legs act on the first and second sites of each pair, respectively.
+Multiple pairs are evaluated in one shared window and reuse open-string boundary contractions.
+Ordered pairs in a batched call must be unique.
 """
 function correlator_approx(
         ρ::InfinitePEPO, op::AbstractTensorMap, bond::Tuple, env::CTMRGEnv;

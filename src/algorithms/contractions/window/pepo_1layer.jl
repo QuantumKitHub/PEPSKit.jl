@@ -11,6 +11,44 @@ function _check_window_inputs(ρ::InfinitePEPO, direction::Symbol)
 end
 
 """
+Return a PEPO and CTMRG environment with standard virtual-space dualness without mutating the inputs.
+"""
+function standardize_dualness(ρ::InfinitePEPO, env::CTMRGEnv)
+    isdual_easts, isdual_norths = _check_virtual_dualness(ρ)
+    all(isdual_easts) && all(isdual_norths) && return ρ, env
+
+    nrows, ncols = size(ρ, 1), size(ρ, 2)
+    tensors = map(CartesianIndices(unitcell(ρ))) do site
+        row, col, layer = Tuple(site)
+        directions = Int[]
+        !isdual_norths[row, col, layer] && push!(directions, NORTH)
+        !isdual_easts[row, col, layer] && push!(directions, EAST)
+        !isdual_norths[_next(row, nrows), col, layer] && push!(directions, SOUTH)
+        !isdual_easts[row, _prev(col, ncols), layer] && push!(directions, WEST)
+        A = unitcell(ρ)[site]
+        return isempty(directions) ? A : flip_virtualspace(A, directions)
+    end
+    ρ′ = InfinitePEPO(tensors)
+
+    edges = map(CartesianIndices(env.edges)) do index
+        direction, row, col = Tuple(index)
+        should_flip = if direction == NORTH
+            !isdual_norths[_next(row, nrows), col, 1]
+        elseif direction == EAST
+            !isdual_easts[row, _prev(col, ncols), 1]
+        elseif direction == SOUTH
+            !isdual_norths[row, col, 1]
+        else
+            !isdual_easts[row, col, 1]
+        end
+        E = env.edges[index]
+        return should_flip ? flip(E, 2) : E
+    end
+    env′ = CTMRGEnv(copy(env.corners), edges)
+    return ρ′, env′
+end
+
+"""
 Contract an MPO observable in its enclosing window, rotating column sweeps into row sweeps.
 """
 function _expectation_value_approx(
@@ -90,6 +128,7 @@ function _expectation_value_approx_rows(
         ρ::InfinitePEPO, observable::MPOObservable, env::CTMRGEnv,
         rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::WindowApprox,
     )
+    ρ, env = standardize_dualness(ρ, env)
     numerator = _contract_window_rows(ρ, observable, env, rowrange, colrange, alg)
     norm = _contract_window_rows(ρ, nothing, env, rowrange, colrange, alg)
     return numerator / norm

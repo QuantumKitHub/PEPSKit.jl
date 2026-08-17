@@ -46,6 +46,7 @@ function _correlator_approx_rows(
         bonds::Vector{NTuple{2, CartesianIndex{2}}}, env::CTMRGEnv,
         rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::WindowApprox,
     )
+    ρ, env = standardize_dualness(ρ, env)
     cache = _window_row_cache(ρ, env, rowrange, colrange, alg)
     groups = _twosite_source_groups(bonds)
     mpo = gate_to_mpo(op; trunc = notrunc())
