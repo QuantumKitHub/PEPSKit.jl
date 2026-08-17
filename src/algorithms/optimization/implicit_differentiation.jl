@@ -402,12 +402,6 @@ _default_solver_alg(::Type{<:ImplicitGradient}) = Defaults.gradient_implicit_sol
 _select_solver_alg_symbol(::Type{<:ImplicitGradient}, solver_alg) =
     IMPLICIT_SOLVER_SYMBOLS[solver_alg]
 
-function _check_algorithm_combination(::CTMRGAlgorithm, ::ImplicitGradient)
-    msg = "The `:ImplicitGradient` algorithm is currently only implemented for the `C4vCTMRG` algorithm."
-    throw(ArgumentError(msg))
-end
-_check_algorithm_combination(::C4vCTMRG, ::ImplicitGradient) = nothing
-
 function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs, info)
     return info.V * signs[1]'
 end
@@ -613,12 +607,13 @@ function PEPSKit._rrule(
         ::typeof(MPSKit.leading_boundary),
         envinit::CTMRGEnv,
         state,
-        alg::CTMRGAlgorithm,
+        alg::SimultaneousCTMRG{<:HalfInfiniteProjector},
     )
     env, = leading_boundary(envinit, state, alg)
 
     # gauge-fix SVD isometries
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg)
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge())
     S = normalize.(info.S)
     U, V = fix_relative_phases(info.U, info.V, signs)
