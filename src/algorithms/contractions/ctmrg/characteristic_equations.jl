@@ -294,20 +294,19 @@ function ChainRulesCore.rrule(
         ΔC = unthunk(ΔC_)
         F = similar(t)
         for (c, b) in blocks(C)
-            copyto!(block(F, c), _fourthroot_pullback(b))
+            copyto!(block(F, c), _fourthroot_pullback(block(ΔC, c), b))
         end
-        return NoTangent(), P_t(_elementwise_mult(ΔC, F))
+        return NoTangent(), P_t(F)
     end
     return C, fourthroot_pullback
 end
-function _fourthroot_pullback(C::AbstractMatrix)
-    Fdata = similar(C)
-    for i in axes(Fdata, 1), j in axes(Fdata, 2)
-        # Taking the diagonal only is okay, when dA is diagonal anyway: Fdata[i, i] = 1 / (4 * conj(C[i, i]^3))
-        # However, for Q-deformed CTMRG, we need the full version:
-        Fdata[i, j] = 1 / conj(C[i, i]^3 + C[i, i] * C[j, j]^2 + C[i, i]^2 * C[j, j] + C[j, j]^3)
-    end
-    return Fdata
+function _fourthroot_pullback(ΔC::AbstractMatrix, C::AbstractMatrix)
+    # Taking the diagonal only is okay, when dA is diagonal anyway: Fdata[i, i] = 1 / (4 * conj(C[i, i]^3))
+    # However, for Q-deformed CTMRG, we need the full version:
+    Cd = diagview(C) # column
+    Cdt = transpose(Cd) # row
+    F = @. ΔC / conj(Cd^3 + Cd * Cdt^2 + Cd^2 * Cdt + Cdt^3)
+    return F
 end
 
 # Util
