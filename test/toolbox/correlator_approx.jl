@@ -39,6 +39,19 @@ bonds = [
     (CI(1, 2), CI(2, 0)), (CI(1, 2), CI(2, 2)),
 ]
 
+spaces = Dict(
+    U1Irrep => (
+        U1Space(1 => 2, -1 => 1),
+        U1Space(1 => 1, 0 => 1, -1 => 2),
+        U1Space(1 => 1, 0 => 1, -1 => 2),
+    ),
+    FermionParity => (
+        Vect[FermionParity](0 => 1, 1 => 1),
+        Vect[FermionParity](0 => 1, 1 => 2),
+        Vect[FermionParity](0 => 2, 1 => 2),
+    )
+)
+
 @testset "Two-site source grouping" begin
     groups = PEPSKit._twosite_source_groups(bonds)
     @test length(groups) == 3 &&
@@ -46,12 +59,9 @@ bonds = [
         haskey(groups, (CI(1, 1), true))
 end
 
-@testset "Single-layer PEPO" begin
+@testset "Single-layer PEPO ($S)" for S in keys(spaces)
     Random.seed!(1234)
-
-    d = ℂ^2
-    D = ℂ^3
-    χ = ℂ^4
+    d, D, χ = spaces[S]
     ρ = InfinitePEPO(d, D; unitcell = (2, 2, 1))
     lattice = physicalspace(ρ)
     env = CTMRGEnv(InfinitePartitionFunction(ρ), χ)
@@ -95,4 +105,8 @@ end
     @test all(eachindex(cache.north_prefixes)) do k
         dot(cache.south_suffixes[k], cache.north_prefixes[k]) ≈ cache.norm
     end
+
+    W = cache.row_mpos[first(cache.rowrange)]
+    W_adjoint = PEPSKit._adjoint_mpo(W)
+    @test convert(TensorMap, W_adjoint) ≈ convert(TensorMap, W)'
 end
