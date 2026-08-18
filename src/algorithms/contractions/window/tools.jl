@@ -8,9 +8,11 @@ struct WindowApprox{Z, D}
 end
 
 """
-Convert a south-boundary MPS tensor into the stored bra representation expected by `dot`.
+Convert a south-boundary MPS tensor into the stored bra representation expected by `dot` using a planar transpose.
 """
-_bra_mps_tensor(A::GenericMPSTensor) = copy(permute(A', ((2, 3), (1,))))
+function _bra_mps_tensor(A::MPSTensor)
+    return transpose(A', ((1, 3), (2,)); copy = true)
+end
 
 """
 Construct the planar adjoint of a finite MPO while restoring MPSKit's local MPO leg partition.
