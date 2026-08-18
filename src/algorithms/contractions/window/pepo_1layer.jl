@@ -174,7 +174,7 @@ function _north_boundary_mps(
     tensors = [Cwest]
     append!(tensors, (edge(env, NORTH, r, col) for col in colrange))
     # Closing the right boundary is a planar bend
-    Ceast = transpose(corner(env, NORTHEAST, r, cmax + 1), ((1, 2), ()))
+    Ceast = repartition(corner(env, NORTHEAST, r, cmax + 1), 2, 0)
     push!(tensors, insertleftunit(Ceast, 3))
     return FiniteMPS(tensors)
 end
@@ -190,7 +190,7 @@ function _south_boundary_mps(
     Cwest = insertleftunit(corner(env, SOUTHWEST, r, cmin - 1)', 1)
     tensors = [Cwest]
     append!(tensors, (_bra_mps_tensor(edge(env, SOUTH, r, col)) for col in colrange))
-    Ceast = transpose(corner(env, SOUTHEAST, r, cmax + 1)', ((1, 2), ()); copy = true)
+    Ceast = repartition(corner(env, SOUTHEAST, r, cmax + 1)', 2, 0; copy = true)
     # The planar bend of the adjointed southeast corner carries a twist.
     push!(tensors, insertleftunit(twist!(Ceast, 1), 3))
     return FiniteMPS(tensors)
@@ -205,7 +205,7 @@ function _row_mpo(
     )
     cmin, cmax = first(colrange), last(colrange)
     # Opening the left boundary is a planar bend, not a braid.
-    W = transpose(edge(env, WEST, row, cmin - 1), ((1,), (3, 2)))
+    W = repartition(edge(env, WEST, row, cmin - 1), 1, 2)
     tensors = [insertleftunit(W, 1)]
     append!(
         tensors,

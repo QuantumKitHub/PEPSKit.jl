@@ -8,10 +8,10 @@ struct WindowApprox{Z, D}
 end
 
 """
-Convert a south-boundary MPS tensor into the stored bra representation expected by `dot` using a planar transpose.
+Convert a south-boundary MPS tensor into the stored bra representation expected by `dot` using a planar repartition.
 """
 function _bra_mps_tensor(A::MPSTensor)
-    return transpose(A', ((1, 3), (2,)); copy = true)
+    return repartition(A', 2, 1; copy = true)
 end
 
 """
