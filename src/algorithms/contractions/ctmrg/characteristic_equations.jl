@@ -41,6 +41,7 @@ function contract_EwCEnVd(Ew::EdgeTensor{S, 3}, C::CornerTensor{S}, EnVd::LeftPr
 end
 
 # north edge renormalization
+# NOTE: will need to be rewritten in terms of tensor multiplication for (future) fermion support
 function contract_E´(Ud::RightProjector{S, 3}, EnVd::LeftProjector{S, 5}) where {S}
     @tensor E´[-1 -2 -3; -4] := Ud[-1; 1 2 3] * EnVd[1 2 3 -2 -3; -4]
     return E´
