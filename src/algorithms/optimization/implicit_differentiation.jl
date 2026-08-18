@@ -483,7 +483,7 @@ function _rrule(
     env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
 
     # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
-    C, E = only(env_fixed.corners[NORTHWEST, :, :]), only(env_fixed.edges[NORTH, :, :])
+    C, E = env_fixed.corners[NORTHWEST, 1, 1], env_fixed.edges[NORTH, 1, 1]
 
     # gauge-fix projector accordingly
     U = _gauge_fix_c4v_projector(alg, signs, info)
