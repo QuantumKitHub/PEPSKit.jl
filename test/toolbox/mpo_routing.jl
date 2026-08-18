@@ -71,7 +71,7 @@ end
     ρ = InfinitePEPO(d, D; unitcell = (1, 1, 1))
     op = rand(ComplexF64, d^2 → d^2)
     mpo = PEPSKit.gate_to_mpo(op; trunc = notrunc())
-    
+
     A = ρ[1, 1, 1]
     for direction in directions
         first_tensor = PEPSKit.mpo_path_first(A, first(mpo), Val(direction))

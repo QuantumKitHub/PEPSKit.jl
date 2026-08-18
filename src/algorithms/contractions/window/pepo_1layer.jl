@@ -135,16 +135,6 @@ function _expectation_value_approx_rows(
 end
 
 """
-Apply a finite MPO to a finite MPS with zip-up truncation and optional DMRG refinement.
-"""
-function _approximate_window_step(W::FiniteMPO, ψ::FiniteMPS, alg::WindowApprox)
-    ψ′, = approximate((W, ψ), alg.zipup)
-    isnothing(alg.dmrg) && return ψ′
-    ψ′, = approximate(ψ′, (W, ψ), alg.dmrg)
-    return ψ′
-end
-
-"""
 Contract a complete PEPO window row by row from north to south,
 optionally inserting an MPO observable.
 """
@@ -160,40 +150,6 @@ function _contract_window_rows(
     end
     south = _south_boundary_mps(env, last(rowrange), colrange)
     return dot(south, ψ)
-end
-
-"""
-Build the finite MPS representing the north CTMRG boundary of a window.
-"""
-function _north_boundary_mps(
-        env::CTMRGEnv, row::Int, colrange::UnitRange{Int},
-    )
-    r = row - 1
-    cmin, cmax = first(colrange), last(colrange)
-    Cwest = insertleftunit(corner(env, NORTHWEST, r, cmin - 1), 1)
-    tensors = [Cwest]
-    append!(tensors, (edge(env, NORTH, r, col) for col in colrange))
-    # Closing the right boundary is a planar bend
-    Ceast = repartition(corner(env, NORTHEAST, r, cmax + 1), 2, 0)
-    push!(tensors, insertleftunit(Ceast, 3))
-    return FiniteMPS(tensors)
-end
-
-"""
-Build the finite MPS representing the adjointed south CTMRG boundary of a window.
-"""
-function _south_boundary_mps(
-        env::CTMRGEnv, row::Int, colrange::UnitRange{Int},
-    )
-    r = row + 1
-    cmin, cmax = first(colrange), last(colrange)
-    Cwest = insertleftunit(corner(env, SOUTHWEST, r, cmin - 1)', 1)
-    tensors = [Cwest]
-    append!(tensors, (_bra_mps_tensor(edge(env, SOUTH, r, col)) for col in colrange))
-    Ceast = repartition(corner(env, SOUTHEAST, r, cmax + 1)', 2, 0; copy = true)
-    # The planar bend of the adjointed southeast corner carries a twist.
-    push!(tensors, insertleftunit(twist!(Ceast, 1), 3))
-    return FiniteMPS(tensors)
 end
 
 """
