@@ -44,6 +44,24 @@ function _mpo_path_virtual_label(direction::Symbol)
 end
 
 """
+Canonicalize an incoming MPO fuser so its fused PEPO leg has standard dualness.
+"""
+function _mpo_path_incoming_fuser(F, direction::Int)
+    direction in (NORTH, EAST) && return F
+    direction in (SOUTH, WEST) && return twist(flip(F, 1), 1)
+    throw(ArgumentError("invalid MPO path direction index: $direction"))
+end
+
+"""
+Canonicalize an outgoing MPO fuser so its fused PEPO leg has standard dualness and braiding.
+"""
+function _mpo_path_outgoing_fuser(F, direction::Int)
+    direction in (NORTH, EAST) && return twist(flip(F, 1), 1)
+    direction in (SOUTH, WEST) && return twist(F, 3)
+    throw(ArgumentError("invalid MPO path direction index: $direction"))
+end
+
+"""
 Build the `@tensor` labels from `(direction, suffix)` pairs
 used to fuse MPO virtual strings.
 
@@ -85,7 +103,10 @@ outgoing MPO string with the virtual space of `A` along `direction`.
     return quote
         _check_pepo_first_physicalspace(A, op)
         A′ = twistdual(A, 2)
-        F = fuser(storagetype(A), domain(A, $direction_index)', space(op, 3))
+        F = _mpo_path_outgoing_fuser(
+            fuser(storagetype(A), domain(A, $direction_index)', space(op, 3)),
+            $direction_index,
+        )
         $contraction
     end
 end
@@ -111,7 +132,10 @@ incoming MPO string with the virtual space of `A` along `direction`.
     return quote
         _check_pepo_last_physicalspace(A, op)
         A′ = twistdual(A, 2)
-        F = fuser(storagetype(A), domain(A, $direction_index), space(op, 1)')
+        F = _mpo_path_incoming_fuser(
+            fuser(storagetype(A), domain(A, $direction_index), space(op, 1)'),
+            $direction_index,
+        )
         $contraction
     end
 end
@@ -153,8 +177,14 @@ incoming and the outgoing MPO string with the virtual space of `A` along
     return quote
         _check_pepo_middle_physicalspace(A, op)
         A′ = twistdual(A, 2)
-        Fin = fuser(storagetype(A), domain(A, $incoming_index), space(op, 1)')
-        Fout = fuser(storagetype(A), domain(A, $outgoing_index)', space(op, 4))
+        Fin = _mpo_path_incoming_fuser(
+            fuser(storagetype(A), domain(A, $incoming_index), space(op, 1)'),
+            $incoming_index,
+        )
+        Fout = _mpo_path_outgoing_fuser(
+            fuser(storagetype(A), domain(A, $outgoing_index)', space(op, 4)),
+            $outgoing_index,
+        )
         $contraction
     end
 end
@@ -195,8 +225,14 @@ along `directions = (incoming, outgoing)`.
     return quote
         O = trace_physicalspaces(A)
         I = id(storagetype(A), stringspace)
-        Fin = fuser(storagetype(A), domain(A, $incoming_index), stringspace')
-        Fout = fuser(storagetype(A), domain(A, $outgoing_index)', stringspace')
+        Fin = _mpo_path_incoming_fuser(
+            fuser(storagetype(A), domain(A, $incoming_index), stringspace'),
+            $incoming_index,
+        )
+        Fout = _mpo_path_outgoing_fuser(
+            fuser(storagetype(A), domain(A, $outgoing_index)', stringspace'),
+            $outgoing_index,
+        )
         $contraction
     end
 end
