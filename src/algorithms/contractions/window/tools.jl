@@ -13,8 +13,8 @@ Convert a south-boundary MPS tensor into the stored bra representation expected 
 _bra_mps_tensor(A::GenericMPSTensor) = copy(permute(A', ((2, 3), (1,))))
 
 """
-Construct the adjoint of a finite MPO while restoring MPSKit's local MPO leg partition.
+Construct the planar adjoint of a finite MPO while restoring MPSKit's local MPO leg partition.
 """
 function _adjoint_mpo(W::FiniteMPO)
-    return FiniteMPO(map(A -> permute(A', ((3, 1), (4, 2))), parent(W)))
+    return FiniteMPO(map(A -> transpose(A', ((3, 1), (4, 2)); copy = true), parent(W)))
 end

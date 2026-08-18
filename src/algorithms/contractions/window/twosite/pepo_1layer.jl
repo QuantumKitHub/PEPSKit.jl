@@ -242,5 +242,6 @@ Contract the left and right transfer-matrix environments to a scalar.
 ```
 """
 function _contract_transfer_boundaries(left, right)
-    return @tensoropt left[1 2; 3] * right[3 2; 1]
+    # The three bonds close around the window without crossing
+    return @plansor left[1 2; 3] * right[3 2; 1]
 end

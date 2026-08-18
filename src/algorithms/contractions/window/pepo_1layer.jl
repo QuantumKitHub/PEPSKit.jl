@@ -189,7 +189,8 @@ function _south_boundary_mps(
     Cwest = permute(corner(env, SOUTHWEST, r, cmin - 1), ((2,), (1,)))
     tensors = [insertleftunit(Cwest, 1; dual = true)]
     append!(tensors, (permute(edge(env, SOUTH, r, col), ((3, 2), (1,))) for col in colrange))
-    Ceast = permute(corner(env, SOUTHEAST, r, cmax + 1), ((2, 1), ()))
+    # Closing the right boundary is a planar bend, not a braid.
+    Ceast = transpose(corner(env, SOUTHEAST, r, cmax + 1), ((2, 1), ()))
     push!(tensors, insertleftunit(Ceast, 3; dual = true))
     return FiniteMPS(_bra_mps_tensor.(tensors))
 end
@@ -202,7 +203,8 @@ function _row_mpo(
         env::CTMRGEnv, row::Int, colrange::UnitRange{Int},
     )
     cmin, cmax = first(colrange), last(colrange)
-    W = permute(edge(env, WEST, row, cmin - 1), ((1,), (3, 2)))
+    # Opening the left boundary is a planar bend, not a braid.
+    W = transpose(edge(env, WEST, row, cmin - 1), ((1,), (3, 2)))
     tensors = [insertleftunit(W, 1)]
     append!(
         tensors,
@@ -211,7 +213,8 @@ function _row_mpo(
                 for col in colrange
         ),
     )
-    E = permute(edge(env, EAST, row, cmax + 1), ((2, 3), (1,)))
+    # Closing the right boundary is a planar bend, not a braid.
+    E = transpose(edge(env, EAST, row, cmax + 1), ((2, 3), (1,)))
     push!(tensors, insertrightunit(E, 3))
     return FiniteMPO(tensors)
 end
