@@ -76,7 +76,7 @@ function _expectation_value_approx(
 end
 
 """
-Build an ordinary local row-MPO tensor by tracing the PEPO physical legs.
+Build a local tensor for row MPOs without observables by tracing the PEPO physical legs.
 """
 function _window_site_tensor(
         ρ::InfinitePEPO, ::Nothing, row::Int, col::Int,

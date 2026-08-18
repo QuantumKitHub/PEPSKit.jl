@@ -65,22 +65,34 @@ function _twosite_targets_by_row(targets::Dict{CartesianIndex{2}, Int})
 end
 
 """
-Precompute the row MPOs (without observables) and
-north/south boundary contractions reused when measuring on
-many two-site bonds in one window.
+Cache the row MPOs without observables and boundary contractions shared by measurements in one window.
 
-The returned named tuple contains:
+The fields contain:
 
 - `rowrange` and `colrange`: the coordinate ranges defining the window.
-- `row_mpos`: the ordinary finite MPO for each row, including the west and east CTMRG edges.
-- `north_prefixes`: `nrows + 1` north boundary MPSs. Entry `k` is above row `k` in the window.
-- `south_suffixes`: `nrows + 1` adjointed south boundary MPSs. Entry `k + 1` is below row `k` in the window.
+- `row_mpos`: the row MPOs without observables, one per row and including the west and east CTMRG edges.
+- `north_prefixes`: `nrows + 1` north boundary MPSs.
+  Entry `k` is above row `k` in the window.
+- `south_suffixes`: `nrows + 1` adjointed south boundary MPSs.
+  Entry `k + 1` is below row `k` in the window.
 - `norm`: the approximate contraction of the window with no observable inserted.
+"""
+struct WindowRowCache{M <: FiniteMPO, N <: FiniteMPS, S <: FiniteMPS, T <: Number}
+    rowrange::UnitRange{Int}
+    colrange::UnitRange{Int}
+    row_mpos::Dict{Int, M}
+    north_prefixes::Vector{N}
+    south_suffixes::Vector{S}
+    norm::T
+end
+
+"""
+Precompute the row MPOs without observables and north/south boundary contractions reused when measuring many two-site bonds in one window.
 """
 function _window_row_cache(
         ρ::InfinitePEPO, env::CTMRGEnv,
         rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::WindowApprox,
-    )
+    )::WindowRowCache
     row_mpos = Dict(
         row => _row_mpo(ρ, nothing, env, row, colrange)
             for row in rowrange
@@ -106,5 +118,7 @@ function _window_row_cache(
         )
     end
     norm = dot(south, north_prefixes[end])
-    return (; rowrange, colrange, row_mpos, north_prefixes, south_suffixes, norm)
+    return WindowRowCache(
+        rowrange, colrange, row_mpos, north_prefixes, south_suffixes, norm
+    )
 end

@@ -38,8 +38,7 @@ function _correlator_approx(
 end
 
 """
-Measure all ordered bonds in one row-oriented window using shared ordinary boundaries and
-one exactly decomposed MPO for each operator-leg ordering.
+Measure all ordered bonds in one row-oriented window using shared row MPOs without observables, shared boundaries, and one exactly decomposed MPO for each operator-leg ordering.
 """
 function _correlator_approx_rows(
         ρ::InfinitePEPO, op::AbstractTensorMap,
@@ -71,9 +70,10 @@ Contract the correlator numerator for all targets associated with the same sourc
 and one ordering of the dense operator, writing each result into `numerators`.
 """
 function _contract_twosite_source!(
-        numerators::Vector{<:Number}, ρ::InfinitePEPO, mpo,
+        numerators::Vector{<:Number}, ρ::InfinitePEPO,
+        mpo::AbstractVector{<:AbstractTensorMap},
         source::CartesianIndex{2}, targets::Dict{CartesianIndex{2}, Int},
-        env::CTMRGEnv, cache, alg::WindowApprox,
+        env::CTMRGEnv, cache::WindowRowCache, alg::WindowApprox,
     )
     # grouping targets by which row they are in
     targets_by_row = _twosite_targets_by_row(targets)
@@ -118,9 +118,10 @@ Contract the correlator numerator for all targets in one row with a
 shared open-string north state, writing the results into `numerators`.
 """
 function _contract_twosite_target_row!(
-        numerators::Vector{<:Number}, ρ::InfinitePEPO, mpo,
+        numerators::Vector{<:Number}, ρ::InfinitePEPO,
+        mpo::AbstractVector{<:AbstractTensorMap},
         source::CartesianIndex{2}, targets::Dict{CartesianIndex{2}, Int},
-        north, cache
+        north::FiniteMPS, cache::WindowRowCache,
     )
     row = first(keys(targets))[1]
     row_idx = row - first(cache.rowrange) + 1
@@ -203,16 +204,16 @@ function _contract_twosite_target_row!(
 end
 
 """
-Map a PEPO column coordinate to its finite-MPS site,
+Map a PEPO column coordinate to its finite-MPS site number,
 which includes an additional west edge CTM tensor.
 """
 _window_mps_site(col::Int, colrange::UnitRange{Int}) = col - first(colrange) + 2
 
 """
-Build an ordinary finite row MPO with one PEPO site tensor replaced by a supplied tensor.
+Build a finite row MPO by replacing one site tensor in one of the row MPOs without observables.
 """
 function _row_mpo_with_site(
-        ρ::InfinitePEPO, tensor, env::CTMRGEnv,
+        ρ::InfinitePEPO, tensor::MPOTensor, env::CTMRGEnv,
         row::Int, col::Int, colrange::UnitRange{Int},
     )
     W = _row_mpo(ρ, nothing, env, row, colrange)
@@ -223,7 +224,10 @@ end
 """
 Contract one modified row site between precomputed left and right MPS environments.
 """
-function _contract_window_site(envs, north, south, site::Int, tensor)
+function _contract_window_site(
+        envs::MPSKit.FiniteEnvironments, north::FiniteMPS, south::FiniteMPS,
+        site::Int, tensor::MPOTensor,
+    )
     left = leftenv(envs, site, south) *
         TransferMatrix(north.AC[site], tensor, south.AC[site])
     return _contract_transfer_boundaries(left, rightenv(envs, site, south))
@@ -241,7 +245,7 @@ Contract the left and right transfer-matrix environments to a scalar.
     (south)
 ```
 """
-function _contract_transfer_boundaries(left, right)
+function _contract_transfer_boundaries(left::MPSTensor, right::MPSTensor)
     # The three bonds close around the window without crossing
     return @plansor left[1 2; 3] * right[3 2; 1]
 end
