@@ -52,7 +52,7 @@ Module containing default algorithm parameter values and arguments.
 
 ## `eigh` forward & reverse
 
-* `eigh_fwd_alg=:$(Defaults.eigh_fwd_alg)` : `eigh` algorithm that is used in the forward pass.
+* `eigh_fwd_alg=:$(Defaults.eigh_fwd_alg)` : `eigh` algorithm that is used in the forward pass. **Note** that on GPU, `DivideAndConquer` is much more performant than `QRIteration`.
     - `:DefaultAlgorithm` : MatrixAlgebraKit's default Eigh algorithm for a given matrix type.
     - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
     - `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref MatrixAlgebraKit.QRIteration)
