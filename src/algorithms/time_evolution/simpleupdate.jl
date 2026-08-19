@@ -158,7 +158,9 @@ end
 function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    psi, env, ϵ = su_iter(state.psi, it.circuit, it.alg, state.env)
+    psi, env, ϵ = with_alloc_cache(storagetype(state.psi), :su, iter) do
+        su_iter(state.psi, it.circuit, it.alg, state.env)
+    end
     # update internal state
     iter += 1
     t += it.dt
