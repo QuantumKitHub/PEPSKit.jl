@@ -62,7 +62,7 @@ end
 # test same thing for C4v CTMRG
 c4v_algs = [
     (:C4vQRProjector, (; alg = :Householder)),
-    (:C4vEighProjector, (; alg = :QRIteration)),
+    (:C4vEighProjector, (; alg = :DivideAndConquer)),
     (:C4vEighProjector, (; alg = :Lanczos)),
 ]
 @testset "$(decomposition_alg.alg) and $projector_alg" for
