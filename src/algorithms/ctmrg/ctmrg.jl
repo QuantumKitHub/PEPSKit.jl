@@ -121,7 +121,9 @@ function leading_boundary(
         converged = false
         for iter in 1:(alg.maxiter)
             env_prev = env
-            env, info_iter = ctmrg_iteration(network, env, alg)
+            env, info_iter = with_alloc_cache(storagetype(env), :ctmrg, iter) do
+                ctmrg_iteration(network, env, alg)
+            end
             η, CS, TS = calc_convergence_lazy(env, env_prev, CS, TS, alg; exact = iter == alg.maxiter)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
