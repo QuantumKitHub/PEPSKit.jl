@@ -154,13 +154,23 @@ end
 
 """
 Build one finite row MPO from west/east CTMRG edges and the PEPO tensors inside the window.
+
+Convention of west, east CTM edges and the PF tensors:
+```
+    [1 2; 3]    [1 2; 3 4]     [1 2; 3]
+    3               3               1
+    ↓               ↓               ↑
+    E₄-←-2      1-←-O-←-4       2-←-C₂
+    ↓               ↓               ↑
+    1               2               3
+```
+Legs 1, 3 need to be flipped to match standard MPS convention
 """
 function _row_mpo(
         ρ::InfinitePEPO, observable::Union{Nothing, MPOObservable},
         env::CTMRGEnv, row::Int, colrange::UnitRange{Int},
     )
     cmin, cmax = first(colrange), last(colrange)
-    # Opening the left boundary is a planar bend, not a braid.
     W = repartition(edge(env, WEST, row, cmin - 1), 1, 2)
     tensors = [insertleftunit(W, 1)]
     append!(
@@ -170,8 +180,10 @@ function _row_mpo(
                 for col in colrange
         ),
     )
-    # Closing the right boundary is a planar bend, not a braid.
-    E = transpose(edge(env, EAST, row, cmax + 1), ((2, 3), (1,)))
+    E = permute(
+        flip(edge(env, EAST, row, cmax + 1), (1, 3)),
+        ((2, 3), (1,))
+    )
     push!(tensors, insertrightunit(E, 3))
     return FiniteMPO(tensors)
 end

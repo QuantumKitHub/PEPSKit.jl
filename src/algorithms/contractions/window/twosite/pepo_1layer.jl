@@ -237,11 +237,11 @@ end
 Contract the left and right transfer-matrix environments to a scalar.
 ```
     (north)
-    ┌---- 3 ----┐
+    ┌-←-- 3 --←-┐
     |           |
-    L---- 2 ----R
+    L-←-- 2 --←-R
     |           |
-    └---- 1 ----┘
+    └-→-- 1 --→-┘
     (south)
 ```
 """

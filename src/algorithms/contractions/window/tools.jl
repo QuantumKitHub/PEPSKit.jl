@@ -40,9 +40,10 @@ Convention of CTM tensors on the north boundary is
 ```
     [1; 2]      [1 2; 3]        [1; 2]
     C₁-←-2      1-←-E₁-←-3      1-←-C₂
-    ↓               ↓               ↑
+    ↓               ↓               ↓
     1               2               2
 ```
+Leg 2 of C₂ needs to be flipped to match standard MPS convention.
 """
 function _north_boundary_mps(
         env::CTMRGEnv, row::Int, colrange::UnitRange{Int},
@@ -52,7 +53,9 @@ function _north_boundary_mps(
     Cwest = insertleftunit(corner(env, NORTHWEST, r, cmin - 1), 1)
     tensors = [Cwest]
     append!(tensors, (edge(env, NORTH, r, col) for col in colrange))
-    Ceast = repartition(corner(env, NORTHEAST, r, cmax + 1), 2, 0)
+    Ceast = repartition(
+        flip(corner(env, NORTHEAST, r, cmax + 1), 2), 2, 0
+    )
     push!(tensors, insertleftunit(Ceast, 3))
     return FiniteMPS(tensors)
 end
@@ -67,11 +70,12 @@ Convention of CTM tensors on the south boundary is
     ↓               ↓               ↑
     C₄-→-1      3-→-E₃-→-1      2-→-C₃
 ```
-Their adjoints are
+Leg 1 of C₃ needs to be flipped to match standard MPS convention.
+Then, their adjoints are
 ```
     [1; 2]      [1; 2 3]        [1; 2]
     C̄₄-←-2      1-←-Ē₃-←-2      1-←-C̄₃
-    ↓               ↓               ↑
+    ↓               ↓               ↓
     1               3               2
 ```
 The edge tensors then need a further repartition of indices.
@@ -84,8 +88,9 @@ function _south_boundary_mps(
     Cwest = insertleftunit(corner(env, SOUTHWEST, r, cmin - 1)', 1)
     tensors = [Cwest]
     append!(tensors, (_bra_mps_tensor(edge(env, SOUTH, r, col)) for col in colrange))
-    Ceast = repartition(corner(env, SOUTHEAST, r, cmax + 1)', 2, 0; copy = true)
-    # The planar bend of the adjointed southeast corner carries a twist
-    push!(tensors, insertleftunit(twist!(Ceast, 1), 3))
+    Ceast = repartition(
+        flip(corner(env, SOUTHEAST, r, cmax + 1), 1)', 2, 0
+    )
+    push!(tensors, insertleftunit(Ceast, 3))
     return FiniteMPS(tensors)
 end
