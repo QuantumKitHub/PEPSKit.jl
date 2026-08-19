@@ -38,16 +38,6 @@ cuSPARSE = "b26da814-b3bc-49ef-b0ee-c816305aa060"
 PEPSKit = {path = ".."}
 GPUArrays = {url = "https://github.com/JuliaGPU/GPUArrays.jl", rev = "main"}
 AMDGPU = {url = "https://github.com/JuliaGPU/AMDGPU.jl", rev = "ksh/zerodim"}
-CUDA = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main"}
-CUDACore = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "CUDACore"}
-CUDATools ={url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "CUDATools"}
-CUPTI = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "lib/cupti"}
-NVML = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "lib/nvml"}
-cuBLAS = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "lib/cublas"}
-cuFFT = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "lib/cufft"}
-cuRAND = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "lib/curand"}
-cuSOLVER = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "lib/cusolver"}
-cuSPARSE = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main", subdir = "lib/cusparse"}
 
 [compat]
 AMDGPU = "2"
