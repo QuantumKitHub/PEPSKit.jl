@@ -37,6 +37,12 @@ end
 
 CTMRG_SYMBOLS[:SequentialCTMRG] = SequentialCTMRG
 
+# A sequential sweep updates *one( direction at a time, then hands off the not-yet-updated
+# directions, so those tensors can stay live for a full cycle of the
+# *four* directions. This means we need 5 total cache elements to avoid overwriting something
+# still in use.
+alloc_cache_depth(::SequentialCTMRG) = 5
+
 """
     ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
 
