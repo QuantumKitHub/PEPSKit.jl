@@ -39,6 +39,7 @@ function leading_boundary(env₀::BPEnv, network::InfiniteSquareNetwork, alg::Be
         ϵ = Inf
         @infov 1 loginit!(log, ϵ)
         for iter in 1:(alg.maxiter)
+            # TODO investigate why caching doesn't help here and actually makes things worse
             env′ = bp_iteration(network, env, alg)
             ϵ = oftype(ϵ, tr_distance(env, env′))
             env = env′
