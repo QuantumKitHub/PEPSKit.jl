@@ -37,7 +37,7 @@ cuSPARSE = "b26da814-b3bc-49ef-b0ee-c816305aa060"
 [sources]
 PEPSKit = {path = ".."}
 GPUArrays = {url = "https://github.com/JuliaGPU/GPUArrays.jl", rev = "main"}
-AMDGPU = {url = "https://github.com/JuliaGPU/AMDGPU.jl", rev = "ksh/zerodim"}
+AMDGPU = {url = "https://github.com/JuliaGPU/AMDGPU.jl", rev = "main"}
 
 [compat]
 AMDGPU = "2"
