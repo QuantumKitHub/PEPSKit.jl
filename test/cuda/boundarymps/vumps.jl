@@ -4,7 +4,7 @@ using PEPSKit
 using TensorKit
 using MPSKit
 using LinearAlgebra
-using Adapt, CUDACore
+using Adapt, CUDA
 
 Random.seed!(29384293742893)
 
@@ -28,7 +28,9 @@ const vumps_alg = VUMPS(;
     N2 = abs(sum(expectation_value(mps2, T)))
     @test N ≈ N2 rtol = 1.0e-2
 
-    ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
+    ctm, = leading_boundary(
+        CTMRGEnv(psi, ComplexSpace(20)), psi; decomposition_alg = (; alg = :SVDViaPolar)
+    )
     N´ = abs(norm(psi, ctm))
 
     @test N ≈ N´ atol = 1.0e-3
@@ -45,7 +47,9 @@ end
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N = abs(prod(expectation_value(mps, T)))
 
-    ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
+    ctm, = leading_boundary(
+        CTMRGEnv(psi, ComplexSpace(20)), psi; decomposition_alg = (; alg = :SVDViaPolar)
+    )
     N´ = abs(norm(psi, ctm))
 
     @test N ≈ N´ rtol = 1.0e-2
@@ -66,7 +70,9 @@ end
     mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
     N_vumps = abs(prod(expectation_value(mps, T)))
 
-    ctm, = leading_boundary(CTMRGEnv(psi, χ), psi)
+    ctm, = leading_boundary(
+        CTMRGEnv(psi, χ), psi; decomposition_alg = (; alg = :SVDViaPolar)
+    )
     N_ctm = abs(norm(psi, ctm))
 
     @test N_vumps ≈ N_ctm rtol = 1.0e-2
@@ -80,7 +86,9 @@ end
     mps´, env´, ϵ = leading_boundary(mps´, T´, vumps_alg)
     N_vumps´ = abs(prod(expectation_value(mps´, T´)))
 
-    ctm´, = leading_boundary(CTMRGEnv(n´, χ), n´)
+    ctm´, = leading_boundary(
+        CTMRGEnv(n´, χ), n´; decomposition_alg = (; alg = :SVDViaPolar)
+    )
     N_ctm´ = abs(network_value(n´, ctm´))
 
     @show N_vumps´

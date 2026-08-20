@@ -2,7 +2,7 @@ using Test
 using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
-using PEPSKit, CUDACore, Adapt
+using PEPSKit, CUDA, Adapt
 
 # Benchmark data of [σx, σz] from HOTRG
 # Physical Review B 86, 045139 (2012) Fig. 15-16
@@ -12,9 +12,15 @@ bm_2β = [0.5297, 0.8265]
 function converge_env(state, χ::Int)
     trunc1 = truncrank(4) & truncerror(; atol = 1.0e-12)
     env0 = initialize_ctmrg_environment(state, ProductStateInitialization())
-    env, = leading_boundary(env0, state; alg = :SequentialCTMRG, trunc = trunc1, tol = 1.0e-10)
+    env, = leading_boundary(
+        env0, state; alg = :SequentialCTMRG, trunc = trunc1, tol = 1.0e-10,
+        decomposition_alg = (; alg = :SVDViaPolar)
+    )
     trunc2 = truncrank(χ) & truncerror(; atol = 1.0e-12)
-    env, = leading_boundary(env, state; alg = :SequentialCTMRG, trunc = trunc2, tol = 1.0e-10)
+    env, = leading_boundary(
+        env, state; alg = :SequentialCTMRG, trunc = trunc2, tol = 1.0e-10,
+        decomposition_alg = (; alg = :SVDViaPolar)
+    )
     return env
 end
 
