@@ -3,7 +3,7 @@ using TensorKit
 using PEPSKit
 using LinearAlgebra
 using Random
-using CUDACore, Adapt
+using CUDA, Adapt
 
 Random.seed!(100)
 Nr, Nc = 2, 2
@@ -11,7 +11,10 @@ Envspace = Vect[FermionParity ⊠ U1Irrep](
     (0, 0) => 4, (1, 1 // 2) => 1, (1, -1 // 2) => 1, (0, 1) => 1, (0, -1) => 1
 )
 trunc_state = truncerror(; atol = 1.0e-10) & truncrank(4)
-ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trunc = truncerror(; atol = 1.0e-10) & truncrank(8))
+ctm_alg = SequentialCTMRG(;
+    tol = 1.0e-10, verbosity = 2, trunc = truncerror(; atol = 1.0e-10) & truncrank(8),
+    decomposition_alg = (; alg = :SVDViaPolar),
+)
 # create Hubbard iPEPS using simple update
 function get_hubbard_peps(t::Float64 = 1.0, U::Float64 = 8.0)
     H = adapt(CuArray, hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu = U / 2))

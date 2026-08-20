@@ -4,7 +4,7 @@ using MatrixAlgebraKit
 using TensorKit
 using MPSKit
 using PEPSKit
-using CUDACore, Adapt
+using CUDA, Adapt
 using PEPSKit: peps_normalize
 
 # initialize parameters
@@ -24,10 +24,12 @@ Ts = [Float64, ComplexF64]
     Random.seed!(32350283290358)
     psi = adapt(CuArray, InfinitePEPS(ComplexSpace(2), ComplexSpace(D); unitcell))
     env_sequential, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :SequentialCTMRG, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :SequentialCTMRG, projector_alg,
+        decomposition_alg = (; alg = :SVDViaPolar)
     )
     env_simultaneous, = leading_boundary(
-        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :SimultaneousCTMRG, projector_alg
+        CTMRGEnv(psi, ComplexSpace(χ)), psi; alg = :SimultaneousCTMRG, projector_alg,
+        decomposition_alg = (; alg = :SVDViaPolar)
     )
 
     # compare norms
@@ -59,7 +61,8 @@ end
     psi = adapt(CuArray, InfinitePEPS(Ds, Ds, Ds))
     env = CTMRGEnv(psi, ComplexSpace.(rand(10:20, 3, 3)), ComplexSpace.(rand(10:20, 3, 3)))
     env2, = leading_boundary(
-        env, psi; alg, maxiter = 1, trunc = FixedSpaceTruncation(), projector_alg
+        env, psi; alg, maxiter = 1, trunc = FixedSpaceTruncation(), projector_alg,
+        decomposition_alg = (; alg = :SVDViaPolar)
     )
 
     # check that the space is fixed

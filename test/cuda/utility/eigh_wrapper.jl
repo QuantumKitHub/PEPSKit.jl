@@ -5,7 +5,7 @@ using TensorKit
 using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
-using CUDACore, Adapt
+using CUDA, Adapt
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview
 
 # Gauge-invariant loss function
