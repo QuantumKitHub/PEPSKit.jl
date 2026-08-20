@@ -61,10 +61,56 @@ _with_alloc_cache(f, ::Type, ::Symbol, ::Int, ::Int) = f()
 
 """
     free_alloc_caches!(storage)
+    free_alloc_caches!(storage, caller::Symbol)
 
-Release memory held by the allocation caches for storage type `storage`. Does nothing 
-unless the `PEPSKitGPUArraysExt` extension is loaded and `storage` is a GPU array type.
-It's worth calling this when the bond dimension changes, because the cache keys depend on
-buffer size.
+Release memory held by the allocation caches for storage type `storage`, either for every
+`caller` (if none is provided) or only for the given one. Does nothing unless the
+`PEPSKitGPUArraysExt` extension is loaded and `storage` is a GPU array type.
+This should be called when the bond dimension changes, because the cache keys depend on
+buffer size and the caches can't be reused when the bond dimension has changed.
+
+!!! warning
+    This releases the underlying device memory, so it is only safe to call when nothing
+    still references a buffer that was allocated inside a [`with_alloc_cache`](@ref) block.
+    Results that escape such a block must have been copied out with [`uncache`](@ref)
+    first, otherwise freeing the cache leaves them undefined.
 """
 free_alloc_caches!(::Type) = nothing
+free_alloc_caches!(::Type, ::Symbol) = nothing
+
+# last buffer-shape signature seen per caller, used to detect when cached buffer sizes
+# have gone stale because a bond dimension changed
+const ALLOC_CACHE_SIGNATURES = Dict{Symbol, UInt}()
+const ALLOC_CACHE_SIGNATURES_LOCK = ReentrantLock()
+
+"""
+    free_stale_alloc_caches!(storage, caller::Symbol, signature::UInt)
+
+Release `caller`'s allocation caches when `signature` differs from the one seen on the
+previous call, and record `signature` as the current one.
+
+The caches are keyed by buffer size, so that when the size changes the old, unusable caches
+can be freed and new ones allocated, corresponding to the new size. This avoids the cache
+size growing unboundedly.
+
+Like [`free_alloc_caches!`](@ref) this is a no-op without a GPU storage type, and it is
+skipped while `Zygote.jl` is differentiating, since caching is disabled there anyway.
+"""
+function free_stale_alloc_caches!(storage::Type, caller::Symbol, signature::UInt)
+    Zygote.isderiving() && return nothing
+    stale = Base.@lock ALLOC_CACHE_SIGNATURES_LOCK begin
+        previous = get(ALLOC_CACHE_SIGNATURES, caller, nothing)
+        ALLOC_CACHE_SIGNATURES[caller] = signature
+        !isnothing(previous) && previous != signature
+    end
+    stale && free_alloc_caches!(storage, caller)
+    return nothing
+end
+
+"""
+    alloc_cache_signature(tensors) -> UInt
+
+Hash the spaces of `tensors`, for use as a [`free_stale_alloc_caches!`](@ref) signature.
+Two states whose tensors live in the same spaces allocate the same buffer sizes.
+"""
+alloc_cache_signature(tensors) = hash(map(space, tensors))
