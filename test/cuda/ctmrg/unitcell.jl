@@ -3,16 +3,16 @@ using Random
 using PEPSKit
 using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
 using TensorKit
-using CUDACore, Adapt
+using CUDA, Adapt
 
 # settings
 Random.seed!(91283219347)
 stype = ComplexF64
 ctm_algs = [
-    SequentialCTMRG(; projector_alg = :HalfInfiniteProjector),
-    SequentialCTMRG(; projector_alg = :FullInfiniteProjector),
-    SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector),
-    SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector),
+    SequentialCTMRG(; projector_alg = :HalfInfiniteProjector, decomposition_alg = (; alg = :SVDViaPolar)),
+    SequentialCTMRG(; projector_alg = :FullInfiniteProjector, decomposition_alg = (; alg = :SVDViaPolar)),
+    SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector, decomposition_alg = (; alg = :SVDViaPolar)),
+    SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector, decomposition_alg = (; alg = :SVDViaPolar)),
 ]
 
 function test_unitcell(

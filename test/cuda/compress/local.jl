@@ -4,7 +4,7 @@ using LinearAlgebra
 using TensorKit
 using PEPSKit
 using PEPSKit: virtual_projector
-using CUDACore, Adapt
+using CUDA, Adapt
 
 """
 Cost function of LocalTruncation.

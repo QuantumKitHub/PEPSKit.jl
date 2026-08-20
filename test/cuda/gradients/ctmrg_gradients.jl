@@ -99,7 +99,9 @@ end
             alg = ctmrg_alg,
             verbosity = ctmrg_verbosity,
             projector_alg = projector_alg,
-            decomposition_alg = SVDAdjoint(; rrule_alg = (; alg = svd_rrule_alg)),
+            decomposition_alg = SVDAdjoint(;
+                fwd_alg = (; alg = :SVDViaPolar), rrule_alg = (; alg = svd_rrule_alg)
+            ),
         )
         # instantiate because hook_pullback doesn't go through the keyword selector...
         concrete_gradient_alg = if isnothing(gradient_alg)
@@ -139,7 +141,9 @@ end
 @testset "AD CTMRG energy gradient accuracy regression test (#276)" begin
     Random.seed!(1234)
 
-    boundary_alg = PEPSKit.CTMRGAlgorithm(; tol = 1.0e-10)
+    boundary_alg = PEPSKit.CTMRGAlgorithm(;
+        tol = 1.0e-10, decomposition_alg = (; alg = :SVDViaPolar)
+    )
     gradient_alg = PEPSKit.GradientAlgorithm(; tol = 5.0e-8)
 
     function fg((peps, env))

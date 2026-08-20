@@ -2,7 +2,7 @@ using Test
 using TensorKit
 using PEPSKit
 using Random
-using Adapt, CUDACore
+using Adapt, CUDA
 using MPSKitModels: classical_ising
 using PEPSKit: ProductStateEnv
 
@@ -20,7 +20,10 @@ tol = 1.0e-4
 maxiter = 1000
 verbosity = 2
 trunc = truncrank(χ)
-boundary_alg = (; alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter)
+boundary_alg = (;
+    alg = :SimultaneousCTMRG, tol, verbosity, trunc, maxiter,
+    decomposition_alg = (; alg = :SVDViaPolar),
+)
 
 @testset "CTMRG environment initialization for critical ising with $S symmetry (#255)" for S in symmetries
     # initialize
