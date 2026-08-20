@@ -53,6 +53,7 @@ dt, nstep = 1.0e-3, 400
 
 # when g = 2, β = 0.4 and 2β = 0.8 belong to two phases (without and with nonzero σᶻ)
 @testset "Finite-T SU (force_mpo = $(force_mpo))" for force_mpo in (false, true)
+    GC.gc(); CUDA.reclaim()  # release the previous iteration's device pool
     # use second order Trotter decomposition
     symmetrize_gates = true
     bipartite = true
