@@ -38,6 +38,7 @@ dt, nstep = 1.0e-3, 600
 
 # PEPO approach
 alg = SimpleUpdate(; trunc = trunc_pepo, purified = false)
+GC.gc(); CUDA.reclaim()  # release the previous phase's device pool
 evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
 pepo, wts, info = time_evolve(evolver; check_interval)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
@@ -48,6 +49,7 @@ energy = expectation_value(pepo, ham, env) / (Nr * Nc)
 
 # PEPS (purified PEPO) approach
 alg = SimpleUpdate(; trunc = trunc_pepo, purified = true)
+GC.gc(); CUDA.reclaim()  # release the previous phase's device pool
 evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
 pepo, wts, info = time_evolve(evolver; check_interval)
 env = converge_env(InfinitePartitionFunction(pepo), 16)
