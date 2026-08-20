@@ -20,7 +20,7 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [(; alg = :QRIteration), (; alg = :GKL)]
+svd_algs = [(; alg = :Jacobi), (; alg = :GKL)]
 projector_algs_asymm = [:HalfInfiniteProjector] #, :FullInfiniteProjector]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
