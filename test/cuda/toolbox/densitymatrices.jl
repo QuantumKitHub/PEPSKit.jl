@@ -3,7 +3,7 @@ using PEPSKit
 using PEPSKit: contract_local_operator, contract_local_norm
 using Test
 using TestExtras
-using CUDACore, Adapt
+using CUDA, Adapt
 
 ds = Dict(Trivial => ℂ^2, U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))), FermionParity => Vect[FermionParity](0 => 2, 1 => 1))
 Ds = Dict(Trivial => ℂ^3, U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (1, 2, 2))), FermionParity => Vect[FermionParity](0 => 3, 1 => 2))
