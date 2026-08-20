@@ -5,7 +5,7 @@ using PEPSKit
 using LinearAlgebra
 using PEPSKit: bond_truncate, cost_function_als
 using PEPSKit: _combine_ket, _combine_ket_for_svd
-using CUDACore, Adapt
+using CUDA, Adapt
 
 Random.seed!(0)
 maxiter = 600

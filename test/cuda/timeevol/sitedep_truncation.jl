@@ -3,7 +3,7 @@ using Random
 using TensorKit
 using PEPSKit
 using PEPSKit: _is_bipartite, _get_fixedspacetrunc
-using CUDACore, Adapt
+using CUDA, Adapt
 
 elt = Float64
 Nr, Nc = 2, 2
