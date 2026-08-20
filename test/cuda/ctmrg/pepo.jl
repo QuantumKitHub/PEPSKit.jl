@@ -6,7 +6,7 @@ using TensorKit
 using KrylovKit
 using OptimKit
 using Zygote
-using CUDACore, Adapt
+using CUDA, Adapt
 ## Setup
 
 function three_dimensional_classical_ising(; beta, J = 1.0)
@@ -77,7 +77,10 @@ projector_algs = [:HalfInfiniteProjector, :FullInfiniteProjector]
     @testset "PEPO CTMRG contraction using $alg with $projector_alg" for (
             alg, projector_alg,
         ) in Iterators.product(ctm_styles, projector_algs)
-        env, = leading_boundary(env0, n; alg, maxiter = 150, projector_alg)
+        env, = leading_boundary(
+            env0, n; alg, maxiter = 150, projector_alg,
+            decomposition_alg = (; alg = :SVDViaPolar)
+        )
     end
 end
 
@@ -85,7 +88,10 @@ end
     Random.seed!(81812781144)
 
     # prep
-    ctm_alg = SimultaneousCTMRG(; maxiter = 150, tol = 1.0e-8, verbosity = 2)
+    ctm_alg = SimultaneousCTMRG(;
+        maxiter = 150, tol = 1.0e-8, verbosity = 2,
+        decomposition_alg = (; alg = :SVDViaPolar),
+    )
     gradient_alg = FixedPointGradient(;
         solver_alg = KrylovKit.Arnoldi(; maxiter = 30, tol = 1.0e-6, eager = true),
     )

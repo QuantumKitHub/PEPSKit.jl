@@ -3,13 +3,13 @@ using Random
 using Accessors
 using Zygote
 using TensorKit, KrylovKit, PEPSKit
-using CUDACore, Adapt
+using CUDA, Adapt
 using PEPSKit:
     ctmrg_iteration, compute_gauge_fix_gauge, fix_phases, ScramblingEnvGauge
 
 algs = [
-    SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector),
-    SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector), # TODO: why are the errors quite a bit larger for :FullInfiniteProjector?
+    SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector, decomposition_alg = (; alg = :SVDViaPolar)),
+    SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector, decomposition_alg = (; alg = :SVDViaPolar)), # TODO: why are the errors quite a bit larger for :FullInfiniteProjector?
 ]
 Dbond, χenv = 2, 16
 alg_gauge = ScramblingEnvGauge()
