@@ -5,7 +5,7 @@ using Random
 using LinearAlgebra
 using TensorKit, KrylovKit
 using PEPSKit
-using CUDACore, Adapt
+using CUDA, Adapt
 using PEPSKit:
     ctmrg_iteration,
     compute_gauge_fix_gauge,
@@ -20,7 +20,7 @@ using PEPSKit.Defaults: ctmrg_tol
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [(; alg = :QRIteration), (; alg = :GKL)]
+svd_algs = [(; alg = :SVDViaPolar), (; alg = :GKL)]
 projector_algs_asymm = [:HalfInfiniteProjector] #, :FullInfiniteProjector]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5

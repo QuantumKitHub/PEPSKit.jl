@@ -6,7 +6,7 @@ using Random
 import MPSKitModels: hubbard_space
 using PEPSKit: sdiag_pow, _cluster_truncate!, _flip_virtuals!
 using MPSKit: GenericMPSTensor, MPSBondTensor
-using CUDACore, Adapt
+using CUDA, Adapt
 
 # Utility setup
 # -------------
@@ -247,7 +247,10 @@ end
         normalize!.(peps.A, Inf)
         env = CTMRGEnv(wts)
         for trunc in truncs_env
-            env, = leading_boundary(env, peps; alg = :SequentialCTMRG, tol = ctmrg_tol, trunc)
+            env, = leading_boundary(
+                env, peps; alg = :SequentialCTMRG, tol = ctmrg_tol, trunc,
+                decomposition_alg = (; alg = :SVDViaPolar)
+            )
         end
         e_site = cost_function(peps, env, ham) / (Nr * Nc)
         @info "Energy (force_mpo = $(force_mpo)): $e_site"

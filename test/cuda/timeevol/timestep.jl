@@ -2,7 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using CUDACore, Adapt
+using CUDA, Adapt
 
 @testset "SimpleUpdate timestep" begin
     Nr, Nc = 2, 2

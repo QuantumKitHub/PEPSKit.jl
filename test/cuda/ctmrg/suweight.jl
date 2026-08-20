@@ -1,7 +1,7 @@
 using Test
 using Random
 using TensorKit
-using CUDACore, Adapt
+using CUDA, Adapt
 using PEPSKit
 using PEPSKit: str, twistdual, unitcell
 

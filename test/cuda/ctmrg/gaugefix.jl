@@ -2,7 +2,7 @@ using Test
 using Random
 using PEPSKit
 using TensorKit
-using CUDACore, Adapt
+using CUDA, Adapt
 using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
 using PEPSKit: ScramblingEnvGauge, ScramblingEnvGaugeC4v
 using PEPSKit: peps_normalize
@@ -33,7 +33,9 @@ function _pre_converge_env(
         CTMRGEnv(psi, env_space)
     end
     @test storagetype(env₀) <: CuArray
-    env_conv, = leading_boundary(env₀, psi; alg, tol)
+    # C4v projectors decompose with `eigh`/`qr`, so only the SVD-based flavors take `:SVDViaPolar`
+    svd_kwargs = alg == :C4vCTMRG ? (;) : (; decomposition_alg = (; alg = :SVDViaPolar))
+    env_conv, = leading_boundary(env₀, psi; alg, tol, svd_kwargs...)
     return env_conv, psi
 end
 
@@ -68,7 +70,7 @@ end
     ) in Iterators.product(
         spacetypes, scalartypes, unitcells, ctmrg_algs_asymm, projector_algs_asymm, gauge_algs_asymm
     )
-    alg = ctmrg_alg(; tol, projector_alg)
+    alg = ctmrg_alg(; tol, projector_alg, decomposition_alg = (; alg = :SVDViaPolar))
     env_pre, psi = preconv[(S, T, unitcell)]
     n = InfiniteSquareNetwork(psi)
     @test storagetype(n) <: CuArray
