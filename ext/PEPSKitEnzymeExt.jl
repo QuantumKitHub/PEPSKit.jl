@@ -114,7 +114,11 @@ function EnzymeRules.augmented_primal(
     shadow = EnzymeRules.needs_shadow(config) ? Enzyme.make_zero((env, info)) : nothing
     denv = isnothing(shadow) ? nothing : shadow[1]
     primal = EnzymeRules.needs_primal(config) ? (env, info) : nothing
-    return EnzymeRules.AugmentedReturn(primal, shadow, (env_conv, env, denv, alg_gauge, alg_fixed))
+    signs, corner_phases, edge_phases = PEPSKit.compute_gauge_fix_gauge(
+        env_conv, env, alg_gauge,
+    )
+    cache = (env, denv, alg_fixed, signs, corner_phases, edge_phases)
+    return EnzymeRules.AugmentedReturn(primal, shadow, cache)
 end
 
 function EnzymeRules.reverse(
@@ -126,8 +130,7 @@ function EnzymeRules.reverse(
         state::Annotation,
         alg::Const{<:CTMRGAlgorithm}
     ) where {RT}
-    env_conv, env, denv, alg_gauge, alg_fixed = cache
-    signs, corner_phases, edge_phases = PEPSKit.compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    env, denv, alg_fixed, signs, corner_phases, edge_phases = cache
     function gauge_fixed_iteration(A, x)
         x′ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
         return PEPSKit.fix_phases(x′, signs, corner_phases, edge_phases)
