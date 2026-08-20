@@ -137,6 +137,7 @@ function leading_boundary(
                 ctmrg_logiter!(log, iter, η, network, env, isnothing(TS))
             end
         end
+        env = uncache(env, storagetype(env))
         info = (;
             converged,
             convergence_error = η,
