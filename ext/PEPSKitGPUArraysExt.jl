@@ -26,6 +26,20 @@ end
 
 PEPSKit._uncache(x, ::Type{<:AnyGPUArray}) = deepcopy(x)
 
+function PEPSKit.free_alloc_caches!(::Type{<:AnyGPUArray}, caller::Symbol)
+    Base.@lock ALLOC_CACHES_LOCK begin
+        # collect first: freeing mutates ALLOC_CACHES
+        stale = [key for key in keys(ALLOC_CACHES) if first(key) === caller]
+        for key in stale
+            for cache in ALLOC_CACHES[key]
+                GPUArrays.unsafe_free!(cache)
+            end
+            delete!(ALLOC_CACHES, key)
+        end
+    end
+    return nothing
+end
+
 function PEPSKit.free_alloc_caches!(::Type{<:AnyGPUArray})
     Base.@lock ALLOC_CACHES_LOCK begin
         for caches in values(ALLOC_CACHES), cache in caches
