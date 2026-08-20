@@ -141,7 +141,6 @@ end
 # the same information. For the QR projector, off-diagonal elements are still
 # present until CTMRG converges, so we need a fallback for the non-diagonal case.
 corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG) = eigh_vals(C)
-corner_spectrum(C::DiagonalTensorMap, ::C4vCTMRG) = svd_vals(C)
 
 """
     convergence_tensors(env::CTMRGEnv, alg::C4vCTMRG) -> (corners, edges)
