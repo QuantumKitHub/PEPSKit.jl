@@ -3,7 +3,7 @@ using LinearAlgebra
 using TensorKit
 import MPSKitModels: σˣ, σᶻ
 using PEPSKit
-using CUDACore, Adapt
+using CUDA, Adapt
 
 # Benchmark energy from high-temperature expansion
 # at β = 0.3, 0.6
@@ -13,7 +13,10 @@ bm = [-0.1235, -0.213]
 function converge_env(state, χ::Int)
     env0 = initialize_ctmrg_environment(state, ProductStateInitialization())
     trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
-    env, = leading_boundary(env0, state; alg = :SequentialCTMRG, trunc = trunc1, tol = 1.0e-10)
+    env, = leading_boundary(
+        env0, state; alg = :SequentialCTMRG, trunc = trunc1, tol = 1.0e-10,
+        decomposition_alg = (; alg = :SVDViaPolar)
+    )
     return env
 end
 
