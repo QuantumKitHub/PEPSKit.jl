@@ -38,7 +38,7 @@ GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 
 [sources]
 MPSKit = {rev = "main", url = "https://github.com/QuantumKitHub/MPSKit.jl"}
-MatrixAlgebraKit = {rev = "ksh/svd_trunc_gpu", url = "https://github.com/QuantumKitHub/MatrixAlgebraKit.jl"}
+MatrixAlgebraKit = {rev = "main", url = "https://github.com/QuantumKitHub/MatrixAlgebraKit.jl"}
 TensorOperations = {rev = "main", url = "https://github.com/QuantumKitHub/TensorOperations.jl"}
 TensorKit = {rev = "ksh/add_transform", url = "https://github.com/QuantumKitHub/TensorKit.jl"}
 

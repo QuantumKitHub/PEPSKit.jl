@@ -40,6 +40,7 @@ end
 
 @testset "Simple update on $(typeof(state0).name.wrapper), bipartite = $(bipartite)" for
     (state0, bipartite) in Iterators.product(states, (true, false))
+    GC.gc(); CUDA.reclaim()  # release the previous iteration's device pool
     J2 = 0.5
     if bipartite
         state0[2, 1] = copy(state0[1, 2])
