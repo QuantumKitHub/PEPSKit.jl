@@ -24,6 +24,8 @@ function PEPSKit._with_alloc_cache(f, ::Type{<:AnyGPUArray}, site::Symbol, iter:
     return GPUArrays.@cached cache f()
 end
 
+PEPSKit._uncache(x, ::Type{<:AnyGPUArray}) = deepcopy(x)
+
 function PEPSKit.free_alloc_caches!(::Type{<:AnyGPUArray})
     Base.@lock ALLOC_CACHES_LOCK begin
         for caches in values(ALLOC_CACHES), cache in caches
