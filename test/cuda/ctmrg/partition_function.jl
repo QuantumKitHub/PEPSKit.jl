@@ -5,7 +5,7 @@ using PEPSKit
 using TensorKit
 using QuadGK
 using Test
-using CUDACore, Adapt
+using CUDA, Adapt
 
 @testset "Check spaces in partition function CTMRG" begin
     zA = randn(ℂ^6 ⊗ ℂ^8 ← ℂ^4 ⊗ ℂ^2)
@@ -16,7 +16,10 @@ using CUDACore, Adapt
     Z = adapt(CuArray, InfinitePartitionFunction([zA zB; zC zD]))
     χenv = ℂ^12
     env0 = CTMRGEnv(Z, χenv)
-    env, = leading_boundary(env0, Z; alg = :SimultaneousCTMRG, maxiter = 3, projector_alg = :FullInfiniteProjector)
+    env, = leading_boundary(
+        env0, Z; alg = :SimultaneousCTMRG, maxiter = 3,
+        projector_alg = :FullInfiniteProjector, decomposition_alg = (; alg = :SVDViaPolar)
+    )
     @test env isa CTMRGEnv
 end
 
@@ -130,7 +133,10 @@ args = [
         alg, projector_alg,
     ) in args
     env₀₀ = alg == :C4vCTMRG ? env₀_c4v : env₀
-    env, = leading_boundary(env₀₀, Z; alg, maxiter = 300, projector_alg)
+    env, = leading_boundary(
+        env₀₀, Z; alg, maxiter = 300, projector_alg,
+        decomposition_alg = (; alg = :SVDViaPolar)
+    )
 
     # check observables
     λ = network_value(Z, env)
