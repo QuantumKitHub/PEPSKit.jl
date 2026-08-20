@@ -142,6 +142,7 @@ Vspaces = [
     Random.seed!(0)
     N, n = 5, 2
     for (Vphy, Vns, V) in Vspaces
+        GC.gc(); CUDA.reclaim()  # release the previous iteration's device pool
         Vvirs = fill(Vns, N + 1)
         Vvirs[n + 1] = V
         Ms1 = map(1:N) do i
@@ -179,6 +180,7 @@ end
 @testset "Identity gate on 3-site cluster" begin
     N, n = 3, 1
     for (Vphy, Vns, V) in Vspaces
+        GC.gc(); CUDA.reclaim()  # release the previous iteration's device pool
         Vvirs = fill(Vns, N + 1)
         Vvirs[n + 1] = V
         Ms1 = map(1:N) do i
@@ -196,6 +198,7 @@ end
         @test fid ≈ 1.0
     end
     for (Vphy, Vns, V) in Vspaces
+        GC.gc(); CUDA.reclaim()  # release the previous iteration's device pool
         Vvirs = fill(Vns, N + 1)
         Vvirs[n + 1] = V
         Ms1 = map(1:N) do i
@@ -238,6 +241,7 @@ end
     # applying 2-site gates decomposed to MPO or not,
     # resulting energy should be almost the same
     e_sites = map((true, false)) do force_mpo
+    GC.gc(); CUDA.reclaim()  # release the previous iteration's device pool
         peps, wts = deepcopy(peps0), deepcopy(wts0)
         trunc = truncerror(; atol = 1.0e-10) & truncrank(4)
         alg = SimpleUpdate(; trunc, force_mpo)
