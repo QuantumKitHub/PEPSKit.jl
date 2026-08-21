@@ -155,6 +155,29 @@ function su_iter(
     return state2, env2, ϵ
 end
 
+"""
+    check_su_state(psi, iter)
+
+Check that a simple-update step did not produce a degenerate state.
+
+Without this check, later CTMRG can "converge" immediately because a `NaN`
+objective compares equal to itself, reports `converged = true`, and the run finishes with
+a `NaN` energy and a suspiciously fast wall time.
+
+Only vector-space dimensions are inspected, never tensor data, so this is quick and inexpensive.
+"""
+function check_su_state(psi, iter)
+    for (idx, t) in pairs(unitcell(psi))
+        dim(space(t)) > 0 || throw(
+            ErrorException(
+                "simple update produced a degenerate state at iteration $iter: tensor $idx \
+                has an empty space ($(space(t)))."
+            )
+        )
+    end
+    return nothing
+end
+
 function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
@@ -163,6 +186,7 @@ function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
         su_iter(state.psi, it.circuit, it.alg, state.env)
     end
     psi, env = uncache(psi, storage), uncache(env, storage)
+    check_su_state(psi, iter + 1)
     # update internal state
     iter += 1
     t += it.dt
