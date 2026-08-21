@@ -4,7 +4,7 @@
 Algorithm for gauging PEPS with belief propagation fixed point messages.
 
 Arguments:
-- `svd_fwd_alg`: Algorithm to use for the SVD on the forward pass. Default is [`Defaults.svd_fwd_alg`](@ref).
+- `svd_fwd_alg`: Algorithm to use for the SVD on the forward pass. Default is $(Defaults.svd_fwd_alg).
 """
 @kwdef struct BPGauge
     svd_fwd_alg = Defaults.svd_fwd_alg
