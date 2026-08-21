@@ -1,7 +1,7 @@
 module PEPSKitEnzymeExt
 
 using PEPSKit, MPSKit, TensorKit, MatrixAlgebraKit
-using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGradient, sdiag_pow, dtmap
+using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGradient, sdiag_pow, dtmap, dtmap!!
 using PEPSKit: InfiniteSquareNetwork, InfinitePEPS, InfinitePEPO, _stack_tuples
 using PEPSKit: unitcell, ket, bra, pepo
 using ChainRulesCore: ignore_derivatives
@@ -157,44 +157,95 @@ function EnzymeRules.reverse(
     return ntuple(Returns(nothing), 4)
 end
 
+# --- dtmap / dtmap!! -------------------------------------------------------
+#
+# `dtmap!!(f, dst, src)` is `tmap!`; `dtmap(f, A)` is `tmap`. Both take their
+# scheduler as a *keyword*, so a rule with a positional `scheduler` argument can
+# never match -- which is why the previous rules here never fired.
+#
+# Differentiating them generically is not merely slow, it is wrong: Enzyme
+# allocates the shadow for the result array without carrying each element's
+# space, and for TensorMaps whose spaces differ per element (the four CTMRG
+# directions) that yields zero-dimensional spaces and a `SpaceMismatch` on the
+# reverse sweep. Going element by element keeps every shadow tied to the value
+# it belongs to.
+#
+# The scheduler is dropped while differentiating: these run serially, as the
+# `@fwdthreads` macro already does for the backward pass.
+
+@inline _dtmap_elem(src::Const, i) = Const(src.val[i])
+@inline _dtmap_elem(src::Annotation, i) = Duplicated(src.val[i], src.dval[i])
+
+"""
+Run the augmented forward of `f` over every element of `src`, writing primals
+into `dst.val` and each element's Enzyme-allocated shadow into `dst.dval`, so
+that downstream accumulation lands directly on the object the reverse sweep
+will read back.
+"""
+function _dtmap_augmented!(f::FA, dst, src) where {FA <: Annotation}
+    ET = eltype(src.val)
+    SA = src isa Const ? Const{ET} : Duplicated{ET}
+    fwd, rev = Enzyme.autodiff_thunk(ReverseSplitWithPrimal, FA, Duplicated, SA)
+
+    inds = collect(eachindex(src.val))
+    tapes = Vector{Any}(undef, length(inds))
+    elems = Vector{Any}(undef, length(inds))
+    for (k, i) in enumerate(inds)
+        arg = _dtmap_elem(src, i)
+        tape, primal, shadow = fwd(f, arg)
+        dst.val[i] = primal
+        isa(dst, Const) || (dst.dval[i] = shadow)
+        tapes[k] = tape
+        elems[k] = arg
+    end
+    return (rev, inds, tapes, elems)
+end
+
+function _dtmap_reverse!(f::FA, cache) where {FA <: Annotation}
+    rev, inds, tapes, elems = cache
+    for k in eachindex(tapes)
+        rev(f, elems[k], tapes[k])
+    end
+    return nothing
+end
+
 function EnzymeRules.augmented_primal(
         config::EnzymeRules.RevConfigWidth{1},
-        ::Const{typeof(dtmap)},
+        ::Const{typeof(dtmap!!)},
         ::Type{RT},
-        f::Const,
-        A::Annotation{<:AbstractArray},
-        scheduler::Annotation
-    ) where {RT}
-    if !isa(A, Const)
-        el_rrules = tmap(A.val, A.dval; scheduler.val) do a, da
-            Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Const{typeof(f)}, Duplicated, Duplicated{typeof(a)})
-        end
-        y = map(first, el_rrules)
+        f::FA,
+        dst::Annotation{<:AbstractArray},
+        src::Annotation{<:AbstractArray},
+    ) where {RT, FA <: Annotation}
+    cache = _dtmap_augmented!(f, dst, src)
+    primal = EnzymeRules.needs_primal(config) ? dst.val : nothing
+    shadow = if EnzymeRules.needs_shadow(config) && !isa(dst, Const)
+        dst.dval
     else
-        el_rrules = nothing
-        y = map(a -> a.val, A)
+        nothing
     end
-    dy = map(Enzyme.make_zero, y)
-    shadow = EnzymeRules.needs_shadow(config) ? dy : nothing
-    primal = EnzymeRules.needs_primal(config) ? y : nothing
-    return EnzymeRules.AugmentedReturn(primal, shadow, (y, dy, el_rrules))
+    return EnzymeRules.AugmentedReturn(primal, shadow, cache)
 end
 
 function EnzymeRules.reverse(
         config::EnzymeRules.RevConfigWidth{1},
-        ::Const{typeof(dtmap)},
+        ::Const{typeof(dtmap!!)},
         ::Type{RT},
         cache,
-        f::Const,
-        A::Annotation{<:AbstractArray},
-        scheduler::Annotation
-    ) where {RT}
-    ys, dys, el_rrules = cache
-    backevals = tmap(el_rrules, dys; scheduler.val) do el_rrule, dy
-        last(el_rrule)(dy)
-    end
+        f::FA,
+        dst::Annotation{<:AbstractArray},
+        src::Annotation{<:AbstractArray},
+    ) where {RT, FA <: Annotation}
+    _dtmap_reverse!(f, cache)
     return (nothing, nothing, nothing)
 end
+
+# No rule for `dtmap` itself: it is `tmap`, which Enzyme already differentiates
+# correctly (verified against finite differences), and the rules that used to
+# live here could never fire -- they took `scheduler` as a positional argument
+# while it is only ever a keyword. Adding a rule here is not free: an earlier
+# version of this patch did, and it broke `dtmap` with an
+# `AugmentedRuleReturnError` where the generic path had worked.
 
 function EnzymeRules.augmented_primal(
         config::EnzymeRules.RevConfigWidth{1},
