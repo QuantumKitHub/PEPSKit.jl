@@ -3,11 +3,29 @@
 
 Algorithm for gauging PEPS with belief propagation fixed point messages.
 
-Arguments:
-- `svd_fwd_alg`: Algorithm to use for the SVD on the forward pass. Default is $(Defaults.svd_fwd_alg).
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    BPGauge(; svd_fwd_alg=:$(Defaults.svd_fwd_alg))
+
+The SVD algorithm of the forward pass can either be specified as a `Symbol`, or be passed
+as a `MatrixAlgebraKit.Algorithm` instance directly. Note that the algorithm needs to
+support a full `svd_compact!` decomposition, such that the "sparse" `:GKL` algorithm is not
+supported here. The available algorithms are:
+
+- `:DefaultAlgorithm` : MatrixAlgebraKit's [default SVD algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
+- `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
+- `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref MatrixAlgebraKit.QRIteration)
+- `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref MatrixAlgebraKit.Bisection)
+- `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref MatrixAlgebraKit.Jacobi)
+- `:SVDViaPolar` : MatrixAlgebraKit's [`SVDViaPolar`](@extref MatrixAlgebraKit.SVDViaPolar)
+- `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref MatrixAlgebraKit.SafeDivideAndConquer)
 """
-@kwdef struct BPGauge
-    svd_fwd_alg = Defaults.svd_fwd_alg
+@kwdef struct BPGauge{F}
+    svd_fwd_alg::F = Defaults.svd_fwd_alg
 end
 
 """
