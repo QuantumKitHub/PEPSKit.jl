@@ -4,6 +4,8 @@ using PEPSKit, MPSKit, TensorKit, MatrixAlgebraKit
 using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGradient, sdiag_pow, dtmap, dtmap!!
 using PEPSKit: InfiniteSquareNetwork, InfinitePEPS, InfinitePEPO, _stack_tuples
 using PEPSKit: unitcell, ket, bra, pepo
+using PEPSKit: _periodic_getindex_dispatch
+using TensorKit: AbstractTensorMap
 using ChainRulesCore: ignore_derivatives
 using VectorInterface: add!, One
 import PEPSKit: real_inner
@@ -136,7 +138,13 @@ function EnzymeRules.reverse(
         return PEPSKit.fix_phases(x′, signs, corner_phases, edge_phases)
     end
     # prepare its pullback
-    fwd, rev = Enzyme.autodiff_thunk(ReverseSplitWithPrimal, Const{typeof(gauge_fixed_iteration)}, Duplicated, typeof(state), Duplicated{typeof(env)})
+    # Propagate the caller's runtime-activity setting into the nested thunk.
+    # Without it the inner differentiation runs with static activity even when the
+    # outer one has runtime activity enabled, and Enzyme rejects `fix_relative_phases`
+    # (a `Const` environment reaching a differentiable variable) with an
+    # EnzymeRuntimeActivityError that no top-level setting can silence.
+    inner_mode = Enzyme.set_runtime_activity(ReverseSplitWithPrimal, config)
+    fwd, rev = Enzyme.autodiff_thunk(inner_mode, Const{typeof(gauge_fixed_iteration)}, Duplicated, typeof(state), Duplicated{typeof(env)})
     # implement the VJP-getting
     state_dup = isa(state, Const) ? Duplicated(state.val, Enzyme.make_zero(state.val)) : state
     env_dup = Duplicated(env, denv)
@@ -144,7 +152,9 @@ function EnzymeRules.reverse(
     function vjp(Δ)
         Enzyme.make_zero!(state_dup.dval)
         Enzyme.make_zero!(env_dup.dval)
-        copyto!(out_shadow, Δ)          # seed the output shadow
+        # seed the output shadow (`copyto!` is not defined for CTMRGEnv)
+        Enzyme.make_zero!(out_shadow)
+        add!(out_shadow, Δ, One(), One())
         rev(Const(gauge_fixed_iteration), state_dup, env_dup, tape)
         return state_dup.dval, env_dup.dval
     end
@@ -153,7 +163,11 @@ function EnzymeRules.reverse(
     ∂f∂x(x)::typeof(env) = vjp(x)[2]
     # evaluate the geometric sum
     #PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, gradmode.solver_alg)
-    PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, PEPSKit.Defaults.gradient_fixedpoint_solver_alg)
+    # `Defaults.gradient_fixedpoint_solver_alg` is a *Symbol* (`:Arnoldi`), not an
+    # algorithm instance, so passing it here matched no `fixedpoint_gradient`
+    # method. Build the default gradient algorithm and use its resolved solver.
+    # TODO: thread the caller's `FixedPointGradient` through instead of defaulting.
+    PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, PEPSKit.FixedPointGradient().solver_alg)
     return ntuple(Returns(nothing), 4)
 end
 
@@ -182,10 +196,14 @@ into `dst.val` and each element's Enzyme-allocated shadow into `dst.dval`, so
 that downstream accumulation lands directly on the object the reverse sweep
 will read back.
 """
-function _dtmap_augmented!(f::FA, dst, src) where {FA <: Annotation}
+function _dtmap_augmented!(config, f::FA, dst, src) where {FA <: Annotation}
     ET = eltype(src.val)
     SA = src isa Const ? Const{ET} : Duplicated{ET}
-    fwd, rev = Enzyme.autodiff_thunk(ReverseSplitWithPrimal, FA, Duplicated, SA)
+    # Propagate the caller's runtime-activity setting into the nested thunk.
+    # Without this the inner differentiation runs with static activity while the
+    # outer one does not, and derivative contributions are silently dropped.
+    mode = Enzyme.set_runtime_activity(ReverseSplitWithPrimal, config)
+    fwd, rev = Enzyme.autodiff_thunk(mode, FA, Duplicated, SA)
 
     inds = collect(eachindex(src.val))
     tapes = Vector{Any}(undef, length(inds))
@@ -217,7 +235,7 @@ function EnzymeRules.augmented_primal(
         dst::Annotation{<:AbstractArray},
         src::Annotation{<:AbstractArray},
     ) where {RT, FA <: Annotation}
-    cache = _dtmap_augmented!(f, dst, src)
+    cache = _dtmap_augmented!(config, f, dst, src)
     primal = EnzymeRules.needs_primal(config) ? dst.val : nothing
     shadow = if EnzymeRules.needs_shadow(config) && !isa(dst, Const)
         dst.dval
@@ -274,6 +292,60 @@ function EnzymeRules.reverse(
     !isa(top, Const) && add!(top.dval, InfinitePEPS(map(ket, unitcell(Δnetwork))), One(), One())
     !isa(bot, Const) && add!(bot.dval, InfinitePEPS(map(bra, unitcell(Δnetwork))), One(), One())
     !isa(mid, Const) && add!(mid.dval, InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork)))), One(), One())
+    return (nothing, nothing, nothing)
+end
+
+
+# --- periodic indexing: declare activity instead of letting Enzyme infer it
+#
+# `corner(env, I...)` / `edge(env, I...)` are `Base.@propagate_inbounds` (hence
+# inlined), so the call that actually survives is `_periodic_getindex_dispatch`.
+# It is a real, non-inlined call returning a `TensorMap` through an
+# sret/`return_roots` slot, and Enzyme cannot prove that value inactive when the
+# container is `Const`. It therefore falls back to runtime activity -- where the
+# shadow of such a constant *aliases the primal*, so the reverse sweep
+# accumulates into the environment and silently destroys it.
+#
+# The derivative of an index read is just a scatter into the same slot of the
+# shadow container, so it can be stated exactly: return the matching entry of
+# `data.dval`, which aliases it, and let accumulation land there. When the
+# container is `Const` the shadow is a throwaway zero -- that is what `Const`
+# already means; the point is only to stop Enzyme aliasing onto the primal.
+function EnzymeRules.augmented_primal(
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(_periodic_getindex_dispatch)},
+        ::Type{RT},
+        A::Annotation,
+        data::Annotation{<:AbstractArray{<:AbstractTensorMap}},
+        J::Annotation,
+    ) where {RT}
+    primal = _periodic_getindex_dispatch(A.val, data.val, J.val)
+    shadow = if EnzymeRules.needs_shadow(config)
+        # `data.dval === data.val` means Enzyme shared the container between
+        # primal and shadow because it considers it inactive. Accumulating into
+        # it would write the primal, so hand back a throwaway zero instead.
+        if isa(data, Const) || data.dval === data.val
+            Enzyme.make_zero(primal)
+        else
+            _periodic_getindex_dispatch(A.val, data.dval, J.val)
+        end
+    else
+        nothing
+    end
+    p = EnzymeRules.needs_primal(config) ? primal : nothing
+    return EnzymeRules.AugmentedReturn(p, shadow, nothing)
+end
+
+function EnzymeRules.reverse(
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(_periodic_getindex_dispatch)},
+        ::Type{RT},
+        cache,
+        A::Annotation,
+        data::Annotation{<:AbstractArray{<:AbstractTensorMap}},
+        J::Annotation,
+    ) where {RT}
+    # the shadow aliases `data.dval`, so accumulation already happened in place
     return (nothing, nothing, nothing)
 end
 
