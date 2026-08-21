@@ -46,6 +46,11 @@ pepo0 = adapt(CuArray, PEPSKit.infinite_temperature_density_matrix(ham))
 @test TensorKit.storagetype(pepo0) <: CuVector
 wts0 = SUWeight(pepo0)
 
+# Buildkite's GPU has less memory (~4GB) than most workstations,
+# so the most memory-hungry block below # is skipped there;
+# see the comment on the purification block for the details.
+const CI_GPU = get(ENV, "BUILDKITE", "false") == "true"
+
 trunc_pepo = truncrank(8) & truncerror(; atol = 1.0e-12)
 
 dt, nstep = 1.0e-3, 400
@@ -75,6 +80,7 @@ dt, nstep = 1.0e-3, 400
     @info "tr(σ(x,z)ρ) at T = $(1 / β): $(result_β)."
     @test β ≈ info.t
     @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
+    GC.gc(); CUDA.reclaim()  # release the previous block's device pool
 
     # use `compress` to reach 2β, or T = 1.25
     pepo2, = compress((pepo, pepo), LocalTruncation(trunc_pepo))
@@ -83,13 +89,26 @@ dt, nstep = 1.0e-3, 400
     result_2β = measure_mag(pepo2, env2)
     @info "tr(σ(x,z)ρ) at T = $(1 / (2β)): $(result_2β)."
     @test isapprox(abs.(result_2β), bm_2β, rtol = 5.0e-3)
+    GC.gc(); CUDA.reclaim()  # release the previous block's device pool
 
-    # Purification approach: results at 2β, or T = 1.25
-    alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite, force_mpo)
-    pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0; symmetrize_gates)
-    env = converge_env(InfinitePEPS(pepo), 8)
-    result_2β′ = measure_mag(pepo, env; purified = true)
-    @info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)): $(result_2β′)."
-    @test 2 * β ≈ info.t
-    @test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)
+    # Purification approach: results at 2β, or T = 1.25.
+    #
+    # Skipped on Buildkite + CUDA: `converge_env` here contracts an `InfinitePEPS`, which is a
+    # *double-layer* network carrying both a ket and a bra virtual index per leg. With the
+    # PEPO bond dimension at `trunc_pepo` = 8 that makes the enlarged corners 512x512
+    # (2.0 MiB) rather than the 128x128 (0.12 MiB) of the `InfinitePartitionFunction`
+    # contractions above, so one CTMRG iteration allocates ~1.5 GiB against ~160 MiB, and
+    # the block peaks around 13 GiB — more than the 4GiB CI GPU has! Lowering χ here
+    # wouldn't help much: it is already the smallest χ in this file, and the cost is
+    # dominated by the D² network legs rather than by χ.
+    if !CI_GPU
+        alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite, force_mpo)
+        pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0; symmetrize_gates)
+        env = converge_env(InfinitePEPS(pepo), 8)
+        result_2β′ = measure_mag(pepo, env; purified = true)
+        @info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)): $(result_2β′)."
+        @test 2 * β ≈ info.t
+        @test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)
+        GC.gc(); CUDA.reclaim()  # release the previous block's device pool
+    end
 end
