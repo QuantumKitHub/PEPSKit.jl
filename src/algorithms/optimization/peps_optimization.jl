@@ -209,23 +209,19 @@ function fixedpoint(
 
     T = promote_type(real(scalartype(peps₀)), real(scalartype(env₀)))
 
-    # `tol_state` tracks (iter, gradnorm) of the last accepted optimization step
-    # (updated only in `finalize!`), used to adjust `alg.boundary_alg`/`alg.gradient_alg`
-    # via `MPSKit.updatetol` if they are wrapped in a `MPSKit.DynamicTol`. `latest_*`
-    # hold the values produced by the current `fg` call, and are only recorded into
-    # their respective history vectors once a step is accepted.
-    tol_state = Ref((iter = 0, gradnorm = one(T)))
-    latest_metrics = Ref{NamedTuple}()
-    latest_gradnorms = Ref{Matrix{T}}()
-    latest_time = Ref(0.0)
-
     # initialize info collection vectors
-    contraction_metrics = Vector{NamedTuple}()
-    gradnorms_unitcell = Vector{Matrix{T}}()
-    times = Vector{Float64}()
-    finalize! = track_state_and_finalize!(
-        tol_state, latest_metrics, latest_gradnorms, latest_time,
-        contraction_metrics, gradnorms_unitcell, times, finalize!,
+    contraction_metrics = Vector{NamedTuple}(undef, 1)
+    gradnorms_unitcell = Vector{Matrix{T}}(undef, 1)
+    times = Vector{Float64}(undef, 1)
+
+    # `tol_state` tracks (iter, gradnorm) of the last accepted optimization step, used to
+    # adjust `alg.boundary_alg`/`alg.gradient_alg` via `MPSKit.updatetol` if they are
+    # wrapped in a `MPSKit.DynamicTol`.
+    tol_state = (iter = 0, gradnorm = one(T))
+
+    # set up finalizer to update `tol_state` and record info after each accepted optimization step
+    tracked_finalizer = TrackedFinalizer(
+        tol_state, contraction_metrics, gradnorms_unitcell, times, finalize!,
     )
 
     # normalize the initial guess
@@ -235,13 +231,19 @@ function fixedpoint(
     (peps_final, env_final), cost_final, ∂cost, numfg, convergence_history = optimize(
         (peps₀, env₀), alg.optimizer_alg;
         retract, inner = real_inner, (transport!) = (peps_transport!),
-        hasconverged, shouldstop, finalize!,
+        hasconverged, shouldstop, (finalize!) = tracked_finalizer,
     ) do (peps, env)
-        start_time = time_ns()
-        boundary_alg = updatetol(alg.boundary_alg, tol_state[].iter, tol_state[].gradnorm)
+        start_time = time()
+        boundary_alg = updatetol(
+            alg.boundary_alg,
+            tracked_finalizer.tol_state.iter,
+            tracked_finalizer.tol_state.gradnorm
+        )
         # gradient tolerance is scaled relative to the boundary algorithm's own
         # (just-updated) effective tolerance, not directly to the gradient norm
-        gradient_alg = updatetol(alg.gradient_alg, tol_state[].iter, boundary_alg.tol)
+        gradient_alg = updatetol(
+            alg.gradient_alg, tracked_finalizer.tol_state.iter, boundary_alg.tol
+        )
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
                 leading_boundary, env, ψ, boundary_alg;
@@ -249,24 +251,29 @@ function fixedpoint(
             )
             ignore_derivatives() do
                 alg.reuse_env && update!(env, env′)
-                latest_metrics[] = info.contraction_metrics
+                tracked_finalizer.contraction_metrics[end] = info.contraction_metrics
             end
             return cost_function(ψ, env′, operator)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-        latest_gradnorms[] = norm.(unitcell(g))
-        latest_time[] = (time_ns() - start_time) * 1.0e-9
+        tracked_finalizer.gradnorms_unitcell[end] = norm.(unitcell(g))
+        tracked_finalizer.times[end] = time() - start_time
         return E, g
     end
+
+    # remove potential undefined placeholders from end of info collection vectors
+    resize!(tracked_finalizer.contraction_metrics, tracked_finalizer.tol_state.iter)
+    resize!(tracked_finalizer.gradnorms_unitcell, tracked_finalizer.tol_state.iter)
+    resize!(tracked_finalizer.times, tracked_finalizer.tol_state.iter)
 
     info = (;
         last_gradient = ∂cost,
         fg_evaluations = numfg,
         costs = convergence_history[:, 1],
         gradnorms = convergence_history[:, 2],
-        contraction_metrics,
-        gradnorms_unitcell,
-        times,
+        contraction_metrics = tracked_finalizer.contraction_metrics,
+        gradnorms_unitcell = tracked_finalizer.gradnorms_unitcell,
+        times = tracked_finalizer.times,
     )
     return peps_final, env_final, cost_final, info
 end
@@ -277,7 +284,8 @@ end
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
-    if parent_alg(alg.gradient_alg) isa FixedPointGradient &&
+    if typeof(parent_alg(alg.boundary_alg)) <: Union{SimultaneousCTMRG, SequentialCTMRG} &&
+            parent_alg(alg.gradient_alg) isa FixedPointGradient &&
             scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
         since :fixed mode generally produces complex gauges"
@@ -377,34 +385,39 @@ function symmetrize_retract_and_finalize!(
 end
 
 """
-    track_state_and_finalize!(
-        tol_state::Base.RefValue, latest_metrics::Base.RefValue, latest_gradnorms::Base.RefValue,
-        latest_time::Base.RefValue, contraction_metrics::Vector, gradnorms_unitcell::Vector,
-        times::Vector, [finalize!],
-    )
+$(TYPEDEF)
 
-Return a `finalize!` function that, after calling `finalize!` (defaulting to
-`OptimKit._finalize!`):
-* updates `tol_state[]` to the `(iter, gradnorm)` of the now-accepted optimization step,
-  used to drive `MPSKit.updatetol` for any `alg.boundary_alg`/`alg.gradient_alg` wrapped
-  in a `MPSKit.DynamicTol`
-* records `latest_metrics[]`/`latest_gradnorms[]`/`latest_time[]`, i.e. the values
-  produced by the `fg` call corresponding to the accepted step, into
-  `contraction_metrics`/`gradnorms_unitcell`/`times`
+Callable that acts as the `finalize!` function passed to `OptimKit.optimize`.
+Keeps track of the optimization iteration number and gradient norm of the last accepted
+optimization step, and records the contraction metrics, gradient norms and execution times
+of each optimization step.
+
+## Fields
+
+$(TYPEDFIELDS)
 """
-function track_state_and_finalize!(
-        tol_state::Base.RefValue, latest_metrics::Base.RefValue, latest_gradnorms::Base.RefValue,
-        latest_time::Base.RefValue, contraction_metrics::Vector, gradnorms_unitcell::Vector,
-        times::Vector, (finalize!) = OptimKit._finalize!,
-    )
-    function commit_state_and_finalize!((peps, env), E, grad, numiter)
-        (peps, env), E, grad = finalize!((peps, env), E, grad, numiter)
-        gradnorm = sqrt(real_inner((peps, env), grad, grad))
-        tol_state[] = (; iter = numiter, gradnorm)
-        push!(contraction_metrics, latest_metrics[])
-        push!(gradnorms_unitcell, latest_gradnorms[])
-        push!(times, latest_time[])
-        return (peps, env), E, grad
-    end
-    return commit_state_and_finalize!
+mutable struct TrackedFinalizer{A, B, C}
+    tol_state::A
+    const contraction_metrics::Vector{B}
+    const gradnorms_unitcell::Vector{C}
+    const times::Vector{Float64}
+    const finalize!
+end
+
+"""
+    (tf::TrackedFinalizer)((peps, env), E, grad, numiter)
+
+Finalize the accepted optimization step. This calls `tf.finalize!`, updates `tf.tol_state`
+to the (; iter, gradnorm) of the last accepted optimization step, and extends
+`tf.contraction_metrics`, `tf.gradnorms_unitcell` and `tf.times` to make room for the next
+step.
+"""
+function (tf::TrackedFinalizer)((peps, env), E, grad, numiter)
+    (peps, env), E, grad = tf.finalize!((peps, env), E, grad, numiter)
+    gradnorm = sqrt(real_inner((peps, env), grad, grad))
+    tf.tol_state = (; iter = numiter, gradnorm)
+    resize!(tf.contraction_metrics, numiter + 1)
+    resize!(tf.gradnorms_unitcell, numiter + 1)
+    resize!(tf.times, numiter + 1)
+    return (peps, env), E, grad
 end
