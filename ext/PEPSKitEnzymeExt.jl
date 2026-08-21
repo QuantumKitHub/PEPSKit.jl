@@ -149,6 +149,17 @@ function EnzymeRules.reverse(
     state_dup = isa(state, Const) ? Duplicated(state.val, Enzyme.make_zero(state.val)) : state
     env_dup = Duplicated(env, denv)
     tape, _, out_shadow = fwd(Const(gauge_fixed_iteration), state_dup, env_dup)
+
+    # Enzyme allocates the shadow for a `Duplicated` return without carrying the
+    # element spaces, so `out_shadow`'s tensors come back zero-dimensional
+    # (`ℂ^0`) and seeding it throws a SpaceMismatch. Its arrays are mutable, so
+    # replace the entries with correctly-spaced zeros taken from the primal.
+    for i in eachindex(out_shadow.corners)
+        out_shadow.corners[i] = Enzyme.make_zero(env.corners[i])
+    end
+    for i in eachindex(out_shadow.edges)
+        out_shadow.edges[i] = Enzyme.make_zero(env.edges[i])
+    end
     function vjp(Δ)
         Enzyme.make_zero!(state_dup.dval)
         Enzyme.make_zero!(env_dup.dval)
