@@ -2,9 +2,12 @@
     struct BPGauge
 
 Algorithm for gauging PEPS with belief propagation fixed point messages.
+
+Arguments:
+- `svd_fwd_alg`: Algorithm to use for the SVD on the forward pass. Default is [`Defaults.svd_fwd_alg`](@ref).
 """
 @kwdef struct BPGauge
-    # TODO: add options
+    svd_fwd_alg = Defaults.svd_fwd_alg
 end
 
 """
@@ -18,7 +21,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
     bipartite = _is_bipartite(psi) && _is_bipartite(env)
     psi′ = copy(psi)
     XXinv = map(eachcoordinate(psi, 1:2)) do I
-        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env)
+        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env, alg)
         return X, Xinv
     end
     if bipartite
@@ -76,12 +79,12 @@ along the canonical direction of the PEPS arrows (`SOUTH ← NORTH` or `WEST ←
 Which are then used to update the gauge of `psi`. Thus, by convention `X` is attached to the `SOUTH`/`WEST` directions
 and `X⁻¹` is attached to the `NORTH`/`EAST` directions.
 """
-function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv)
+function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv, alg::BPGauge)
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
 
     sqrtM12, isqrtM12, sqrtM21, isqrtM21 = _sqrt_bp_messages(I, env)
-    U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21; alg = Defaults.svd_fwd_alg)
+    U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21; alg = alg.svd_fwd_alg)
     sqrtΛ = sdiag_pow(Λ, 1 / 2)
     X = isqrtM12 * U * sqrtΛ
     invX = sqrtΛ * Vᴴ * isqrtM21
