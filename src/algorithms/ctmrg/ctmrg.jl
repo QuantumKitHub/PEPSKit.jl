@@ -120,7 +120,7 @@ function leading_boundary(
     # cached buffer sizes are set by the corner/edge spaces, and the edges carry the network
     # bond dimension too, so a change here means every pooled buffer has gone stale
     ignore_derivatives() do
-        free_stale_alloc_caches!(storagetype(env₀), :ctmrg, _ctmrg_cache_signature(env₀))
+        free_stale_alloc_caches!(storagetype(env₀), :ctmrg, :enter, _ctmrg_cache_signature(env₀))
     end
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return LoggingExtras.withlevel(; alg.verbosity) do
@@ -156,7 +156,7 @@ function leading_boundary(
         # the signature keeps the pool warm for the repeated fixed-space calls of an
         # optimization loop, where the spaces do not move.
         ignore_derivatives() do
-            free_stale_alloc_caches!(storagetype(env), :ctmrg, _ctmrg_cache_signature(env))
+            free_stale_alloc_caches!(storagetype(env), :ctmrg, :exit, _ctmrg_cache_signature(env))
         end
         info = (;
             converged,
@@ -238,8 +238,26 @@ Spectra of the tensors that [`convergence_tensors`](@ref) selects.
 """
 function convergence_spectra(env::CTMRGEnv, alg)
     corners, edges = convergence_tensors(env, alg)
-    return map(C -> corner_spectrum(C, alg), corners), map(T -> edge_spectrum(T, alg), edges)
+    return corner_spectra(corners, alg), edge_spectra(edges, alg)
 end
+
+"""
+    corner_spectra(Cs, alg)
+    edge_spectra(Ts, alg)
+
+Spectra of a whole collection of corners or edges.
+
+Separate from [`corner_spectrum`](@ref) so that a backend can decompose the entire
+collection in one go rather than one tensor at a time. That matters on GPU: each tensor
+here carries only a handful of sector blocks, so decomposing them individually is dominated
+by per-call overhead, while a corner or edge array holds tens of tensors whose blocks share
+sizes and can be batched.
+
+The defaults just map [`corner_spectrum`](@ref) / [`edge_spectrum`](@ref) over the
+collection, so any algorithm that overrides those keeps its behaviour.
+"""
+corner_spectra(Cs, alg) = map(C -> corner_spectrum(C, alg), Cs)
+edge_spectra(Ts, alg) = map(T -> edge_spectrum(T, alg), Ts)
 
 """
     corner_spectrum(C, alg)
