@@ -80,27 +80,35 @@ free_alloc_caches!(::Type, ::Symbol) = nothing
 
 # last buffer-shape signature seen per caller, used to detect when cached buffer sizes
 # have gone stale because a bond dimension changed
-const ALLOC_CACHE_SIGNATURES = Dict{Symbol, UInt}()
+const ALLOC_CACHE_SIGNATURES = Dict{Tuple{Symbol, Symbol}, UInt}()
 const ALLOC_CACHE_SIGNATURES_LOCK = ReentrantLock()
 
 """
-    free_stale_alloc_caches!(storage, caller::Symbol, signature::UInt)
+    free_stale_alloc_caches!(storage, caller::Symbol, phase::Symbol, signature::UInt)
 
-Release `caller`'s allocation caches when `signature` differs from the one seen on the
-previous call, and record `signature` as the current one.
+Release `caller`'s allocation caches when `signature` differs from the one seen at the same
+`phase` of the previous call, and record `signature` as the current one for that phase.
 
 The caches are keyed by buffer size, so that when the size changes the old, unusable caches
 can be freed and new ones allocated, corresponding to the new size. This avoids the cache
-size growing unboundedly.
+size growing without bound.
 
-Like [`free_alloc_caches!`](@ref) this is a no-op without a GPU storage type, and it is
+`phase` distinguishes the points a caller checks from. For example, CTMRG grows the
+corner and edge spaces as it converges, so its incoming and outgoing environments differ
+whenever the truncation is *not* fixed-space. Recording both under one key makes the stored
+signature alternate between them, so every check reports stale and the pool is freed on every
+call. Comparing each phase only against itself keeps the pool across repeated calls while
+still invalidating it when the spaces genuinely change.
+
+Like [`free_alloc_caches!`](@ref) this is a no-op without a GPU storage type, and it's
 skipped while `Zygote.jl` is differentiating, since caching is disabled there anyway.
 """
-function free_stale_alloc_caches!(storage::Type, caller::Symbol, signature::UInt)
+function free_stale_alloc_caches!(storage::Type, caller::Symbol, phase::Symbol, signature::UInt)
     Zygote.isderiving() && return nothing
     stale = Base.@lock ALLOC_CACHE_SIGNATURES_LOCK begin
-        previous = get(ALLOC_CACHE_SIGNATURES, caller, nothing)
-        ALLOC_CACHE_SIGNATURES[caller] = signature
+        key = (caller, phase)
+        previous = get(ALLOC_CACHE_SIGNATURES, key, nothing)
+        ALLOC_CACHE_SIGNATURES[key] = signature
         !isnothing(previous) && previous != signature
     end
     stale && free_alloc_caches!(storage, caller)
