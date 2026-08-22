@@ -118,7 +118,7 @@ function leading_boundary(
     # cached buffer sizes are set by the corner/edge spaces, and the edges carry the network
     # bond dimension too, so a change here means every pooled buffer has gone stale
     ignore_derivatives() do
-        free_stale_alloc_caches!(storagetype(env₀), :ctmrg, _ctmrg_cache_signature(env₀))
+        free_stale_alloc_caches!(storagetype(env₀), :ctmrg, :enter, _ctmrg_cache_signature(env₀))
     end
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return with_verbosity(; alg.verbosity) do
@@ -154,7 +154,7 @@ function leading_boundary(
         # the signature keeps the pool warm for the repeated fixed-space calls of an
         # optimization loop, where the spaces do not move.
         ignore_derivatives() do
-            free_stale_alloc_caches!(storagetype(env), :ctmrg, _ctmrg_cache_signature(env))
+            free_stale_alloc_caches!(storagetype(env), :ctmrg, :exit, _ctmrg_cache_signature(env))
         end
         info = (;
             converged,
@@ -263,6 +263,7 @@ edge_spectra(Ts, alg) = map(T -> edge_spectrum(T, alg), Ts)
 The spectrum of a corner, used to measure CTMRG convergence.
 """
 corner_spectrum(C, alg) = svd_vals(C)
+
 """
     edge_spectrum(T, alg)
 
