@@ -8,6 +8,24 @@ function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
 end
 
 _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
+# Same cutoff, but with the relative tolerance and the scale kept as separate arguments so
+# that the scale doesn't need to be copied back to the CPU memory.
+# `mx` is either a plain number or a 0-dimensional array, which broadcasts as a scalar.
+_safe_pow(a::Number, pow::Real, tol::Real, mx::Number) = _safe_pow(a, pow, tol * mx)
+
+"""
+    _maxabs(data)
+
+Largest absolute value in `data`, equal to `norm(_, Inf)` for the diagonal storage of a
+`DiagonalTensorMap`.
+
+Returns a scalar by default. GPU backends override this to return a 0-dimensional
+array, to avoid a copy back to the CPU memory.
+"""
+function _maxabs(data::AbstractArray)
+    isempty(data) && return zero(real(eltype(data)))
+    return LinearAlgebra.normInf(data)
+end
 
 """
     sdiag_pow(s, pow::Real; tol::Real=eps(real(scalartype(s)))^(3 / 4))
@@ -15,10 +33,7 @@ _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a)
 Compute `s^pow` for a diagonal matrix `s`.
 """
 function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4))
-    # Relative tol w.r.t. largest abs value of `s` (use norm(∘, Inf) to make differentiable)
-    tol *= norm(s, Inf)
-    spow = DiagonalTensorMap(_safe_pow.(s.data, pow, tol), space(s, 1))
-    return spow
+    return DiagonalTensorMap(_safe_pow.(s.data, pow, tol, _maxabs(s.data)), space(s, 1))
 end
 function sdiag_pow(
         s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
