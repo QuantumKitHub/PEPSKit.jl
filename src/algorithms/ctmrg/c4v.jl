@@ -135,9 +135,23 @@ function check_input(
     return nothing
 end
 
-#
-## C4v-symmetric CTMRG iteration (called through `leading_boundary`)
-#
+# The corners in C₄ᵥ CTMRG are identical and the four edges are related by
+# rotation, so all edges produce the same singular values. `eigh_vals` is about
+# as expensive as `svd_vals` on CPU but much cheaper on GPU, and gives effectively
+# the same information. For the QR projector, off-diagonal elements are still
+# present until CTMRG converges, so we need a fallback for the non-diagonal case.
+corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG) = eigh_vals(C)
+
+"""
+    convergence_tensors(env::CTMRGEnv, alg::C4vCTMRG) -> (corners, edges)
+
+The corners and edges whose singular values determine convergence.
+
+For C₄ᵥ-symmetric CTMRG, only one corner and one edge are needed since
+the corners are identical, and the edges have identical singular values.
+"""
+convergence_tensors(env::CTMRGEnv, ::C4vCTMRG) =
+    (view(env.corners, 1:1, :, :), view(env.edges, 1:1, :, :))
 
 function ctmrg_iteration(network, env::CTMRGEnv, ::C4vCTMRG{P}) where {P}
     throw(ArgumentError("Unknown C4v projector algorithm $P"))
