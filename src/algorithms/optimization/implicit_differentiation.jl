@@ -619,10 +619,9 @@ function PEPSKit._rrule(
     U, V = fix_relative_phases(info.U, info.V, signs)
 
     # pretend the singular values matrices are just arbitrary complex tensors
-    s = TensorMap.(S)
-    if !(scalartype(state) <: Real)
-        # complex network, complex things, required to make the derivatives work...
-        s = complex.(s)
+    s = map(S) do s
+        dst = similar(s, scalartype(state), space(s)) # TensorMap
+        return copy!(dst, s)
     end
 
     # remove the inverse square roots here to obtain modified corners and edges
