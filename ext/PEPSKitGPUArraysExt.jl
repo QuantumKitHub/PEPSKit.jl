@@ -33,8 +33,9 @@ end
 # come back to the host. Returning a number here would force a device sync on every call, and
 # `sdiag_pow` runs once per bond per weight absorption in simple update.
 function PEPSKit._maxabs(data::AnyGPUArray)
-    acc = similar(data, ())
-    fill!(acc, zero(eltype(data)))
+    T = real(eltype(data))
+    acc = similar(data, T, ())
+    fill!(acc, zero(T))
     Base.mapreducedim!(abs, max, acc, data)
     return acc
 end
