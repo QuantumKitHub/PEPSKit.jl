@@ -254,7 +254,7 @@ function fixedpoint(
         precondition_alg = updatetol(
             alg.precondition_alg, tracked_finalizer.tol_state.iter, tracked_finalizer.tol_state.gradnorm
         )
-        return peps_precondition(x, g, tol_state, precondition_alg)
+        return peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
     end
 
     # optimize operator cost function

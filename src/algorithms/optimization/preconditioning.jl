@@ -101,7 +101,7 @@ function apply_local_preconditioner(g_rc::PEPSTensor, env::CTMRGEnv, δ, (r, c),
 end
 
 """
-    peps_precondition(x, g, tol_state::Base.RefValue, alg)
+    peps_precondition(x, g, tol_state::NamedTuple, alg)
 
 Precondition the PEPS gradient `g` at the point `x = (peps, env)` according to the
 preconditioner algorithm `alg`. Passing `alg = nothing` disables preconditioning and returns
@@ -109,11 +109,11 @@ preconditioner algorithm `alg`. Passing `alg = nothing` disables preconditioning
 preconditioner, and note that its regularization strength is set based on the current
 gradient norm and iteration count tracked in `tol_state`.
 """
-peps_precondition(x, g, tol_state::Base.RefValue, alg::Nothing) = g
+peps_precondition(x, g, tol_state::NamedTuple, alg::Nothing) = g
 
-function peps_precondition(x, g, tol_state::Base.RefValue, alg::LocalPreconditioner)
+function peps_precondition(x, g, tol_state::NamedTuple, alg::LocalPreconditioner)
     peps, env = x
-    δ = alg.regularization * tol_state[].gradnorm^2 / max(tol_state[].iter, 1)
+    δ = alg.regularization * tol_state.gradnorm^2 / max(tol_state.iter, 1)
     g_prec_unitcell = map(eachcoordinate(g)) do (r, c)
         nf = _contract_site((r, c), InfiniteSquareNetwork(peps), env)
         g_rc_prec, = linsolve(g[r, c], g[r, c], alg.solver_alg) do g_in
