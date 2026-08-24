@@ -89,10 +89,16 @@ Module containing default algorithm parameter values and arguments.
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
 * `gradient_fixedpoint_solver_eager=$(Defaults.gradient_fixedpoint_solver_eager)` : Enables `:Arnoldi` solver algorithm to finish before the full Krylov dimension is reached.
+<<<<<<< HEAD
+* `gradient_implicit_solver_alg=:$(Defaults.gradient_implicit_solver_alg)` : Default solver algorithm for the `ImplicitGradient` gradient algorithm.
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+=======
 * `gradient_dynamic_tols=$(Defaults.gradient_dynamic_tols)` : If `true`, wrap the gradient algorithm used during variational optimization in an `MPSKit.DynamicTols.DynamicTol` that rescales its tolerance based on the effective (possibly dynamically-scaled) tolerance of the boundary algorithm, see [`PEPSKit.PEPSOptimize`](@ref).
 * `gradient_tol_min=$(Defaults.gradient_tol_min)` : Minimal gradient algorithm tolerance used by `gradient_dynamic_tols`.
 * `gradient_tol_max=$(Defaults.gradient_tol_max)` : Maximal gradient algorithm tolerance used by `gradient_dynamic_tols`.
 * `gradient_tol_factor=$(Defaults.gradient_tol_factor)` : Tolerance scaling factor relative to the boundary algorithm's tolerance, used by `gradient_dynamic_tols` (e.g. `10` makes the gradient tolerance ~10x looser than the boundary tolerance).
+>>>>>>> main
 
 ## Optimization
 
@@ -163,6 +169,7 @@ const gradient_verbosity = -1
 const gradient_alg = :FixedPointGradient
 const gradient_fixedpoint_solver_alg = :Arnoldi # ∈ {:GMRES, :BiCGStab, :Arnoldi, :GeomSum, :ManualIter}
 const gradient_fixedpoint_solver_eager = true
+const gradient_implicit_solver_alg = :GMRES # ∈ {:GMRES, :BiCGStab}
 const gradient_dynamic_tols = true
 const gradient_tol_min = 1.0e-10
 const gradient_tol_max = 1.0e-1
