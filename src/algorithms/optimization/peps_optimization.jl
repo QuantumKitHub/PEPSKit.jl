@@ -31,7 +31,9 @@ struct PEPSOptimize{B, G}
             boundary_alg::B, gradient_alg::G, optimizer_alg,
             reuse_env, symmetrization,
         ) where {B, G}
-        _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization)
+        _check_algorithm_combination(
+            parent_alg(boundary_alg), parent_alg(gradient_alg), symmetrization
+        )
         return new{B, G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
     end
 end
@@ -135,6 +137,22 @@ keyword arguments are:
     - `:FixedPointGradient` : Compute the gradient via fixed-point differentiation, see [`FixedPointGradient`](@ref)
 * `solver_alg::Union{Algorithm,NamedTuple}`: Solver algorithm for computing the implicit gradient; see [`FixedPointGradient`](@ref) for supported algorithms.
 
+### Dynamic tolerances
+
+The boundary and gradient algorithms each additionally accept the keyword arguments below,
+which wrap the corresponding algorithm in an `MPSKit.DynamicTols.DynamicTol` that
+rescales its tolerance over the course of the optimization. This allows the intermediate
+problems to be solved only as accurately as the current optimization step requires, which
+can significantly reduce the total runtime. The boundary tolerance is scaled relative to the
+current gradient norm, while the gradient tolerance is in turn scaled relative to the
+effective boundary tolerance. These settings are only available within a
+variational optimization, not for standalone [`leading_boundary`](@ref) calls.
+
+* `dynamic_tols::Bool` : Enable dynamic tolerance scaling for this algorithm. Defaults to `$(Defaults.ctmrg_dynamic_tols)` and `$(Defaults.gradient_dynamic_tols)` for the boundary and gradient algorithm respectively.
+* `tol_min::Real` : Lower clamp on the dynamically scaled tolerance.
+* `tol_max::Real` : Upper clamp on the dynamically scaled tolerance.
+* `tol_factor::Real` : Prefactor of the dynamically scaled tolerance.
+
 ### Optimizer settings
 
 Supply the optimizer algorithm via `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
@@ -189,11 +207,22 @@ function fixedpoint(
         )
     end
 
-    # initialize info collection vectors
     T = promote_type(real(scalartype(peps₀)), real(scalartype(env₀)))
-    contraction_metrics = Vector{NamedTuple}()
-    gradnorms_unitcell = Vector{Matrix{T}}()
-    times = Vector{Float64}()
+
+    # initialize info collection vectors
+    contraction_metrics = Vector{NamedTuple}(undef, 1)
+    gradnorms_unitcell = Vector{Matrix{T}}(undef, 1)
+    times = Vector{Float64}(undef, 1)
+
+    # `tol_state` tracks (iter, gradnorm) of the last accepted optimization step, used to
+    # adjust `alg.boundary_alg`/`alg.gradient_alg` via `MPSKit.updatetol` if they are
+    # wrapped in a `MPSKit.DynamicTol`.
+    tol_state = (iter = 0, gradnorm = one(T))
+
+    # set up finalizer to update `tol_state` and record info after each accepted optimization step
+    tracked_finalizer = TrackedFinalizer(
+        tol_state, contraction_metrics, gradnorms_unitcell, times, finalize!,
+    )
 
     # normalize the initial guess
     peps₀ = peps_normalize(peps₀)
@@ -202,46 +231,62 @@ function fixedpoint(
     (peps_final, env_final), cost_final, ∂cost, numfg, convergence_history = optimize(
         (peps₀, env₀), alg.optimizer_alg;
         retract, inner = real_inner, (transport!) = (peps_transport!),
-        hasconverged, shouldstop, finalize!,
+        hasconverged, shouldstop, (finalize!) = tracked_finalizer,
     ) do (peps, env)
-        start_time = time_ns()
+        start_time = time()
+        boundary_alg = updatetol(
+            alg.boundary_alg,
+            tracked_finalizer.tol_state.iter,
+            tracked_finalizer.tol_state.gradnorm
+        )
+        # gradient tolerance is scaled relative to the boundary algorithm's own
+        # (just-updated) effective tolerance, not directly to the gradient norm
+        gradient_alg = updatetol(
+            alg.gradient_alg, tracked_finalizer.tol_state.iter, boundary_alg.tol
+        )
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
-                leading_boundary, env, ψ, alg.boundary_alg;
-                alg_rrule = alg.gradient_alg,
+                leading_boundary, env, ψ, boundary_alg;
+                alg_rrule = gradient_alg,
             )
             ignore_derivatives() do
                 alg.reuse_env && update!(env, env′)
-                push!(contraction_metrics, info.contraction_metrics)
+                tracked_finalizer.contraction_metrics[end] = info.contraction_metrics
             end
             return cost_function(ψ, env′, operator)
         end
         g = only(gs)  # `withgradient` returns tuple of gradients `gs`
-        push!(gradnorms_unitcell, norm.(g.A))
-        push!(times, (time_ns() - start_time) * 1.0e-9)
+        tracked_finalizer.gradnorms_unitcell[end] = norm.(unitcell(g))
+        tracked_finalizer.times[end] = time() - start_time
         return E, g
     end
+
+    # remove potential undefined placeholders from end of info collection vectors
+    resize!(tracked_finalizer.contraction_metrics, tracked_finalizer.tol_state.iter)
+    resize!(tracked_finalizer.gradnorms_unitcell, tracked_finalizer.tol_state.iter)
+    resize!(tracked_finalizer.times, tracked_finalizer.tol_state.iter)
 
     info = (;
         last_gradient = ∂cost,
         fg_evaluations = numfg,
         costs = convergence_history[:, 1],
         gradnorms = convergence_history[:, 2],
-        contraction_metrics,
-        gradnorms_unitcell,
-        times,
+        contraction_metrics = tracked_finalizer.contraction_metrics,
+        gradnorms_unitcell = tracked_finalizer.gradnorms_unitcell,
+        times = tracked_finalizer.times,
     )
     return peps_final, env_final, cost_final, info
 end
 
 """
-    check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG})
+    check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
 
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
-function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize) end
-function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize{<:SimultaneousCTMRG, <:FixedPointGradient})
-    if scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
+function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
+    if typeof(parent_alg(alg.boundary_alg)) <: Union{SimultaneousCTMRG, SequentialCTMRG} &&
+            parent_alg(alg.gradient_alg) isa FixedPointGradient &&
+            scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
         since :fixed mode generally produces complex gauges"
         throw(ArgumentError(msg))
@@ -337,4 +382,42 @@ function symmetrize_retract_and_finalize!(
         return (peps´_symm, env´), ξ_symm
     end
     return retract_then_symmetrize, symmetrize_then_finalize!
+end
+
+"""
+$(TYPEDEF)
+
+Callable that acts as the `finalize!` function passed to `OptimKit.optimize`.
+Keeps track of the optimization iteration number and gradient norm of the last accepted
+optimization step, and records the contraction metrics, gradient norms and execution times
+of each optimization step.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
+mutable struct TrackedFinalizer{A, B, C}
+    tol_state::A
+    const contraction_metrics::Vector{B}
+    const gradnorms_unitcell::Vector{C}
+    const times::Vector{Float64}
+    const finalize!
+end
+
+"""
+    (tf::TrackedFinalizer)((peps, env), E, grad, numiter)
+
+Finalize the accepted optimization step. This calls `tf.finalize!`, updates `tf.tol_state`
+to the (; iter, gradnorm) of the last accepted optimization step, and extends
+`tf.contraction_metrics`, `tf.gradnorms_unitcell` and `tf.times` to make room for the next
+step.
+"""
+function (tf::TrackedFinalizer)((peps, env), E, grad, numiter)
+    (peps, env), E, grad = tf.finalize!((peps, env), E, grad, numiter)
+    gradnorm = sqrt(real_inner((peps, env), grad, grad))
+    tf.tol_state = (; iter = numiter, gradnorm)
+    resize!(tf.contraction_metrics, numiter + 1)
+    resize!(tf.gradnorms_unitcell, numiter + 1)
+    resize!(tf.times, numiter + 1)
+    return (peps, env), E, grad
 end
