@@ -17,37 +17,43 @@ For a full description, see [`fixedpoint`](@ref). The supported keywords are:
 * `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm,...}`
 * `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
 * `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
+* `precondition_alg::Union{NamedTuple,Nothing,<:PreconditionAlgorithm}`
 * `reuse_env::Bool=$(Defaults.reuse_env)`
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing`
 """
-struct PEPSOptimize{B, G}
+struct PEPSOptimize{B, G, P}
     boundary_alg::B
     gradient_alg::G
     optimizer_alg::OptimKit.OptimizationAlgorithm
+    precondition_alg::P
     reuse_env::Bool
     symmetrization::Union{Nothing, SymmetrizationStyle}
 
     function PEPSOptimize(  # Inner constructor to prohibit illegal setting combinations
-            boundary_alg::B, gradient_alg::G, optimizer_alg,
+            boundary_alg::B, gradient_alg::G, optimizer_alg, precondition_alg::P,
             reuse_env, symmetrization,
-        ) where {B, G}
+        ) where {B, G, P}
         _check_algorithm_combination(
             parent_alg(boundary_alg), parent_alg(gradient_alg), symmetrization
         )
-        return new{B, G}(boundary_alg, gradient_alg, optimizer_alg, reuse_env, symmetrization)
+        return new{B, G, P}(
+            boundary_alg, gradient_alg, optimizer_alg, precondition_alg,
+            reuse_env, symmetrization,
+        )
     end
 end
 
 function PEPSOptimize(;
-        boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
+        boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;), precondition_alg = (;),
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
     gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
+    precondition_algorithm = _alg_or_nt(PreconditionAlgorithm, precondition_alg)
 
     return PEPSOptimize(
-        boundary_algorithm, gradient_algorithm, optimizer_algorithm,
+        boundary_algorithm, gradient_algorithm, optimizer_algorithm, precondition_algorithm,
         reuse_env, symmetrization,
     )
 end
@@ -138,18 +144,34 @@ keyword arguments are:
     - `:ImplicitGradient` : Compute the gradient via implicit differentiation of a characteristic set of equations, see [`ImplicitGradient`](@ref)
 * `solver_alg::Union{Algorithm,NamedTuple}`: Solver algorithm for computing the implicit gradient; see [`FixedPointGradient`](@ref) for supported algorithms.
 
+### Preconditioner algorithm
+
+Supply preconditioner parameters via `precondition_alg::Union{NamedTuple,Nothing,<:PreconditionAlgorithm}`
+using either a `NamedTuple` of keyword arguments, `nothing`, or a `PreconditionAlgorithm`
+struct directly. By default, the gradient is preconditioned with the local PEPS metric, see
+[`LocalPreconditioner`](@ref); pass `nothing` to disable preconditioning and optimize using
+the raw Euclidean gradient. The supported `NamedTuple` keyword arguments are:
+
+* `alg::Symbol=:$(Defaults.precondition_alg)` : Preconditioner algorithm variant, can be one of the following:
+    - `:LocalPreconditioner` : Precondition using the leading (local) term of the PEPS metric, see [`LocalPreconditioner`](@ref)
+* `tol::Real=$(Defaults.precondition_tol)` : Convergence tolerance of the local linear problem.
+* `maxiter::Int=$(Defaults.precondition_maxiter)` : Maximal number of iterations of the local linear problem.
+* `verbosity::Int` : Preconditioner output verbosity, ≤0 by default to disable too verbose printing. Should only be >0 for debug purposes.
+* `krylovdim::Int=$(Defaults.precondition_krylovdim)` : Krylov dimension of the local linear problem.
+* `regularization::Real=$(Defaults.precondition_regularization)` : Prefactor setting the regularization strength of the local linear problem.
+
 ### Dynamic tolerances
 
-The boundary and gradient algorithms each additionally accept the keyword arguments below,
-which wrap the corresponding algorithm in an `MPSKit.DynamicTols.DynamicTol` that
+The boundary, gradient and preconditioner algorithms each additionally accept the keyword
+arguments below, which wrap the corresponding algorithm in an `MPSKit.DynamicTols.DynamicTol` that
 rescales its tolerance over the course of the optimization. This allows the intermediate
 problems to be solved only as accurately as the current optimization step requires, which
-can significantly reduce the total runtime. The boundary tolerance is scaled relative to the
-current gradient norm, while the gradient tolerance is in turn scaled relative to the
-effective boundary tolerance. These settings are only available within a
+can significantly reduce the total runtime. The boundary and preconditioner tolerances are
+scaled relative to the current gradient norm, while the gradient tolerance is in turn scaled
+relative to the effective boundary tolerance. These settings are only available within a
 variational optimization, not for standalone [`leading_boundary`](@ref) calls.
 
-* `dynamic_tols::Bool` : Enable dynamic tolerance scaling for this algorithm. Defaults to `$(Defaults.ctmrg_dynamic_tols)` and `$(Defaults.gradient_dynamic_tols)` for the boundary and gradient algorithm respectively.
+* `dynamic_tols::Bool` : Enable dynamic tolerance scaling for this algorithm. Defaults to `$(Defaults.ctmrg_dynamic_tols)`, `$(Defaults.gradient_dynamic_tols)` and `$(Defaults.precondition_dynamic_tols)` for the boundary, gradient and preconditioner algorithm respectively.
 * `tol_min::Real` : Lower clamp on the dynamically scaled tolerance.
 * `tol_max::Real` : Upper clamp on the dynamically scaled tolerance.
 * `tol_factor::Real` : Prefactor of the dynamically scaled tolerance.
@@ -228,10 +250,18 @@ function fixedpoint(
     # normalize the initial guess
     peps₀ = peps_normalize(peps₀)
 
+    # initialize the preconditioner
+    function precondition(x, g)
+        precondition_alg = updatetol(
+            alg.precondition_alg, tracked_finalizer.tol_state.iter, tracked_finalizer.tol_state.gradnorm
+        )
+        return peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+    end
+
     # optimize operator cost function
     (peps_final, env_final), cost_final, ∂cost, numfg, convergence_history = optimize(
         (peps₀, env₀), alg.optimizer_alg;
-        retract, inner = real_inner, (transport!) = (peps_transport!),
+        retract, inner = real_inner, (transport!) = (peps_transport!), precondition,
         hasconverged, shouldstop, (finalize!) = tracked_finalizer,
     ) do (peps, env)
         start_time = time()

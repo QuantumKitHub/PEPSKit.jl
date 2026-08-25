@@ -1,6 +1,7 @@
 _alg_or_nt(::Type{T}, alg::NamedTuple) where {T} = T(; alg...)
 _alg_or_nt(::Type{T}, alg::A) where {T, A <: T} = alg
 _alg_or_nt(::Type{T}, alg::DynamicTol{<:T}) where {T} = alg
+_alg_or_nt(::Type, ::Nothing) = nothing
 _alg_or_nt(T, alg) = throw(ArgumentError("unkown $T: $alg"))
 
 """
@@ -62,7 +63,7 @@ function select_algorithm(
         env₀;
         tol = Defaults.optimizer_tol, # top-level tolerance
         verbosity = 3, # top-level verbosity
-        boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;),
+        boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;), precondition_alg = (;),
         symmetrization = nothing, kwargs...,
     )
     # adjust CTMRG tols and verbosity
@@ -104,13 +105,31 @@ function select_algorithm(
         gradient_alg = _dynamic_tol_or_alg(gradient_alg; dynamic_tol_kwargs...)
     end
 
+    # adjust preconditioner verbosity and construct the preconditioner algorithm
+    if precondition_alg isa NamedTuple
+        defaults = (;
+            verbosity = verbosity ≤ 3 ? -1 : 3,
+            dynamic_tols = Defaults.precondition_dynamic_tols,
+            tol_min = Defaults.precondition_tol_min,
+            tol_max = Defaults.precondition_tol_max,
+            tol_factor = Defaults.precondition_tol_factor,
+        )
+        precondition_kwargs = merge(defaults, precondition_alg)
+        dynamic_tol_kwargs, precondition_kwargs = _pop_dynamic_tol_kwargs(precondition_kwargs)
+        precondition_alg = PreconditionAlgorithm(; precondition_kwargs...)
+        precondition_alg = _dynamic_tol_or_alg(precondition_alg; dynamic_tol_kwargs...)
+    end
+
     # adjust optimizer tol and verbosity
     if optimizer_alg isa NamedTuple
         defaults = (; tol, verbosity)
         optimizer_alg = merge(defaults, optimizer_alg)
     end
 
-    return PEPSOptimize(; boundary_alg, gradient_alg, optimizer_alg, symmetrization, kwargs...)
+    return PEPSOptimize(;
+        boundary_alg, gradient_alg, optimizer_alg, precondition_alg,
+        symmetrization, kwargs...,
+    )
 end
 
 function select_algorithm(
