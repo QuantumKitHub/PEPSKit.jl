@@ -46,8 +46,8 @@ Create an `InfinitePEPS` by specifying the physical, north virtual and east virt
 of the PEPS tensor at each site in the unit cell as a matrix.
 """
 function InfinitePEPS(
-        f, T::Type{<:Number}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+        f, ::Type{TorA}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
@@ -55,7 +55,7 @@ function InfinitePEPS(
     Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
     A = map(Pspaces, Nspaces, Espaces, Sspaces, Wspaces) do P, N, E, S, W
-        return PEPSTensor(f, T, P, N, E, S, W)
+        return PEPSTensor(f, TorA, P, N, E, S, W)
     end
 
     return InfinitePEPS(A)
@@ -63,8 +63,9 @@ end
 function InfinitePEPS(
         Pspaces::A, virtual_spaces...; kwargs...
     ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
-    return InfinitePEPS(randn, ComplexF64, Pspaces, virtual_spaces...; kwargs...)
+    return InfinitePEPS(randn, Vector{ComplexF64}, Pspaces, virtual_spaces...; kwargs...)
 end
+TensorKit.storagetype(::Type{InfinitePEPS{T}}) where {T} = storagetype(T)
 
 """
     InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))
@@ -108,8 +109,8 @@ end
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 """
 function InfinitePEPS(
-        f, T::Type{<:Number}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpace}
+        f, ::Type{T}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace, T}
     return InfinitePEPS(
         f, T,
         _fill_state_physical_spaces(Pspace; unitcell),
@@ -126,7 +127,7 @@ Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
 Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
 
 Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
-function Base.similar(A::InfinitePEPS, T::Type{TorA} = scalartype(A)) where {TorA}
+function Base.similar(A::InfinitePEPS, T::Type = scalartype(A))
     return InfinitePEPS(map(t -> similar(t, T), unitcell(A)))
 end
 Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))

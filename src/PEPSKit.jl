@@ -18,11 +18,14 @@ using TensorKit
 using TensorKit: AdjointTensorMap, SectorDict
 using TensorKit: throw_invalid_innerproduct, similarstoragetype
 using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
+import TensorKit: storagetype
 
 using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
-using TensorOperations, OptimKit
+using TensorOperations
+using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator
+using OptimKit
 using ChainRulesCore, Zygote
 using LoggingExtras
 import TupleTools
@@ -51,6 +54,7 @@ using DocStringExtensions
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
 include("utility/util.jl")
+include("utility/alloc_cache.jl")
 include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
 include("utility/eigh.jl")

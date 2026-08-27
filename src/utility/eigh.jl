@@ -224,6 +224,7 @@ function _compute_eighdata!(
     I = sectortype(f)
     dims = SectorDict{I, Int}()
 
+    Dtype = similarstoragetype(f, real(scalartype(f)))
     sectors = trunc isa NoTruncation ? blocksectors(f) : blocksectors(trunc.space)
     generator = Base.Iterators.map(sectors) do c
         b = block(f, c)
@@ -233,7 +234,7 @@ function _compute_eighdata!(
             D, V = eigh_full!(b)
             lm_ordering = sortperm(abs.(D.diag); rev = true) # order values and vectors consistently with eigsolve
             D = D.diag[lm_ordering] # extracts diagonal as Vector instead of Diagonal to make compatible with D of svdsolve
-            V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
+            V = V[:, view(lm_ordering, 1:howmany)]
         else
             x₀ = alg.start_vector(b)
             eig_alg = alg.alg
@@ -246,18 +247,17 @@ function _compute_eighdata!(
                 D, V = eigh_full!(b)
                 lm_ordering = sortperm(abs.(D.diag); rev = true)
                 D = D.diag[lm_ordering]
-                V = stack(eachcol(V)[lm_ordering])[:, 1:howmany]
+                V = V[:, view(lm_ordering, 1:howmany)]
             else  # Slice in case more values were converged than requested
                 V = stack(view(lvecs, 1:howmany))
             end
         end
-
         # make it deterministic-ish
         MatrixAlgebraKit.gaugefix!(eigh_full!, V)
 
         resize!(D, howmany)
         dims[c] = length(D)
-        return c => (D, V)
+        return c => (Dtype(D), V)
     end
 
     eigdata = SectorDict(generator)
@@ -314,7 +314,7 @@ function ChainRulesCore.rrule(
 
     function eigh_trunc!_full_pullback(ΔDV)
         Δt = eigh_pullback!(
-            zeros(scalartype(t), space(t)), t, (D, V), ΔDV, inds;
+            zeros(storagetype(t), space(t)), t, (D, V), ΔDV, inds;
             gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
@@ -338,7 +338,7 @@ function ChainRulesCore.rrule(
 
     function eigh_trunc!_trunc_pullback(ΔDV)
         Δf = eigh_trunc_pullback!(
-            zeros(scalartype(t), space(t)), t, (D, V), ΔDV;
+            zeros(storagetype(t), space(t)), t, (D, V), ΔDV;
             gauge_atol = gtol(ΔDV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
