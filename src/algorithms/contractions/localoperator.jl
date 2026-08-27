@@ -399,18 +399,18 @@ function reduced_densitymatrix1x1(
     A = ket[row, col]
     Ā = bra[row, col]
 
-    E_north =
-        edge(env, NORTH, row - 1, col) *
-        twistdual(corner(env, NORTHEAST, row - 1, col + 1), 1)
-    E_east =
-        edge(env, EAST, row, col + 1) *
-        twistdual(corner(env, SOUTHEAST, row + 1, col + 1), 1)
-    E_south =
-        edge(env, SOUTH, row + 1, col) *
-        twistdual(corner(env, SOUTHWEST, row + 1, col - 1), 1)
-    E_west =
-        edge(env, WEST, row, col - 1) *
-        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
+    E_north = absorb_right(
+        edge(env, NORTH, row - 1, col), corner(env, NORTHEAST, row - 1, col + 1)
+    )
+    E_east = absorb_right(
+        edge(env, EAST, row, col + 1), corner(env, SOUTHEAST, row + 1, col + 1)
+    )
+    E_south = absorb_right(
+        edge(env, SOUTH, row + 1, col), corner(env, SOUTHWEST, row + 1, col - 1)
+    )
+    E_west = absorb_right(
+        edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
+    )
 
     @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
         E_south[χSE DSt DSb; χSW] * E_west[χSW DWt DWb; χNW]
@@ -455,20 +455,20 @@ function reduced_densitymatrix2x1(
     A_south = ket[row + 1, col]
     Ā_south = bra[row + 1, col]
 
-    E_north =
-        edge(env, NORTH, row - 1, col) *
-        twistdual(corner(env, NORTHEAST, row - 1, col + 1), 1)
+    E_north = absorb_right(
+        edge(env, NORTH, row - 1, col), corner(env, NORTHEAST, row - 1, col + 1)
+    )
     E_northeast = edge(env, EAST, row, col + 1)
-    E_southeast =
-        edge(env, EAST, row + 1, col + 1) *
-        twistdual(corner(env, SOUTHEAST, row + 2, col + 1), 1)
-    E_south =
-        edge(env, SOUTH, row + 2, col) *
-        twistdual(corner(env, SOUTHWEST, row + 2, col - 1), 1)
+    E_southeast = absorb_right(
+        edge(env, EAST, row + 1, col + 1), corner(env, SOUTHEAST, row + 2, col + 1)
+    )
+    E_south = absorb_right(
+        edge(env, SOUTH, row + 2, col), corner(env, SOUTHWEST, row + 2, col - 1)
+    )
     E_southwest = edge(env, WEST, row + 1, col - 1)
-    E_northwest =
-        edge(env, WEST, row, col - 1) *
-        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
+    E_northwest = absorb_right(
+        edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
+    )
 
     @tensor EE_NW[χW χNE DNWt DNt; DNWb DNb] :=
         E_northwest[χW DNWt DNWb; χNW] * E_north[χNW DNt DNb; χNE]
@@ -506,19 +506,19 @@ function reduced_densitymatrix1x2(
     Ā_east = bra[row, col + 1]
 
     E_northwest = edge(env, NORTH, row - 1, col)
-    E_northeast =
-        edge(env, NORTH, row - 1, col + 1) *
-        twistdual(corner(env, NORTHEAST, row - 1, col + 2), 1)
-    E_east =
-        edge(env, EAST, row, col + 2) *
-        twistdual(corner(env, SOUTHEAST, row + 1, col + 2), 1)
+    E_northeast = absorb_right(
+        edge(env, NORTH, row - 1, col + 1), corner(env, NORTHEAST, row - 1, col + 2)
+    )
+    E_east = absorb_right(
+        edge(env, EAST, row, col + 2), corner(env, SOUTHEAST, row + 1, col + 2)
+    )
     E_southeast = edge(env, SOUTH, row + 1, col + 1)
-    E_southwest =
-        edge(env, SOUTH, row + 1, col) *
-        twistdual(corner(env, SOUTHWEST, row + 1, col - 1), 1)
-    E_west =
-        edge(env, WEST, row, col - 1) *
-        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
+    E_southwest = absorb_right(
+        edge(env, SOUTH, row + 1, col), corner(env, SOUTHWEST, row + 1, col - 1)
+    )
+    E_west = absorb_right(
+        edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
+    )
 
     @tensor EE_SW[χS χNW DSWt DWt; DSWb DWb] :=
         E_southwest[χS DSWt DSWb; χSW] * E_west[χSW DWt DWb; χNW]
