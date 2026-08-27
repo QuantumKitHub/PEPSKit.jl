@@ -104,39 +104,6 @@ function _contract_site(ind::Tuple{Int, Int}, network, env::CTMRGEnv)
         network[r, c],
     )
 end
-function _contract_site(
-        C_northwest, C_northeast, C_southeast, C_southwest,
-        E_north::CTMRG_PEPS_EdgeTensor, E_east::CTMRG_PEPS_EdgeTensor,
-        E_south::CTMRG_PEPS_EdgeTensor, E_west::CTMRG_PEPS_EdgeTensor,
-        O::PEPSSandwich,
-    )
-    return @autoopt @tensor E_west[χ_WSW D_W_above D_W_below; χ_WNW] *
-        C_northwest[χ_WNW; χ_NNW] *
-        E_north[χ_NNW D_N_above D_N_below; χ_NNE] *
-        C_northeast[χ_NNE; χ_ENE] *
-        E_east[χ_ENE D_E_above D_E_below; χ_ESE] *
-        C_southeast[χ_ESE; χ_SSE] *
-        E_south[χ_SSE D_S_above D_S_below; χ_SSW] *
-        C_southwest[χ_SSW; χ_WSW] *
-        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
-        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
-end
-function _contract_site(
-        C_northwest, C_northeast, C_southeast, C_southwest,
-        E_north::CTMRG_PF_EdgeTensor, E_east::CTMRG_PF_EdgeTensor,
-        E_south::CTMRG_PF_EdgeTensor, E_west::CTMRG_PF_EdgeTensor,
-        O::PFTensor,
-    )
-    return @autoopt @tensor E_west[χ_WSW D_W; χ_WNW] *
-        C_northwest[χ_WNW; χ_NNW] *
-        E_north[χ_NNW D_N; χ_NNE] *
-        C_northeast[χ_NNE; χ_ENE] *
-        E_east[χ_ENE D_E; χ_ESE] *
-        C_southeast[χ_ESE; χ_SSE] *
-        E_south[χ_SSE D_S; χ_SSW] *
-        C_southwest[χ_SSW; χ_WSW] *
-        O[D_W D_S; D_N D_E]
-end
 
 """
     _contract_corners(ind::Tuple{Int,Int}, env::CTMRGEnv)
@@ -146,11 +113,12 @@ environment `env`.
 """
 function _contract_corners(ind::Tuple{Int, Int}, env::CTMRGEnv)
     r, c = ind
-    C_NW = corner(env, NORTHWEST, r - 1, c - 1)
-    C_NE = corner(env, NORTHEAST, r - 1, c)
-    C_SE = corner(env, SOUTHEAST, r, c)
-    C_SW = corner(env, SOUTHWEST, r, c - 1)
-    return @tensor C_NW[1; 2] * C_NE[2; 3] * C_SE[3; 4] * C_SW[4; 1]
+    return _contract_corners(
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c),
+        corner(env, SOUTHEAST, r, c),
+        corner(env, SOUTHWEST, r, c - 1),
+    )
 end
 
 """
@@ -170,31 +138,6 @@ function _contract_vertical_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
         edge(env, WEST, r, c - 1),
     )
 end
-@generated function _contract_vertical_edges(
-        C_northwest::CTMRGCornerTensor, C_northeast::CTMRGCornerTensor,
-        C_southeast::CTMRGCornerTensor, C_southwest::CTMRGCornerTensor,
-        E_east::CTMRGEdgeTensor{T, S, N},
-        E_west::CTMRGEdgeTensor{T, S, N},
-    ) where {T, S, N}
-    C_northwest_e = tensorexpr(:C_northwest, (envlabel(:NW),), (envlabel(:N),))
-    C_northeast_e = tensorexpr(:C_northeast, (envlabel(:N),), (envlabel(:NE),))
-    C_southeast_e = tensorexpr(:C_southeast, (envlabel(:SE),), (envlabel(:S),))
-    C_southwest_e = tensorexpr(:C_southwest, (envlabel(:S),), (envlabel(:SW),))
-
-    E_east_e = tensorexpr(
-        :E_east, (envlabel(:NE), ntuple(i -> virtuallabel(i), N - 1)...), (envlabel(:SE),)
-    )
-    E_west_e = tensorexpr(
-        :E_west, (envlabel(:SW), ntuple(i -> virtuallabel(i), N - 1)...), (envlabel(:NW),)
-    )
-
-    rhs = Expr(
-        :call, :*,
-        E_west_e, C_northwest_e, C_northeast_e, E_east_e, C_southeast_e, C_southwest_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
-end
 
 """
     _contract_horizontal_edges(ind::Tuple{Int,Int}, env::CTMRGEnv)
@@ -213,31 +156,6 @@ function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
         edge(env, SOUTH, r, c),
     )
 end
-@generated function _contract_horizontal_edges(
-        C_northwest::CTMRGCornerTensor, C_northeast::CTMRGCornerTensor,
-        C_southeast::CTMRGCornerTensor, C_southwest::CTMRGCornerTensor,
-        E_north::CTMRGEdgeTensor{T, S, N}, E_south::CTMRGEdgeTensor{T, S, N},
-    ) where {T, S, N}
-    C_northwest_e = tensorexpr(:C_northwest, (envlabel(:W),), (envlabel(:NW),))
-    C_northeast_e = tensorexpr(:C_northeast, (envlabel(:NE),), (envlabel(:E),))
-    C_southeast_e = tensorexpr(:C_southeast, (envlabel(:E),), (envlabel(:SE),))
-    C_southwest_e = tensorexpr(:C_southwest, (envlabel(:SW),), (envlabel(:W),))
-
-    E_north_e = tensorexpr(
-        :E_north, (envlabel(:NW), ntuple(i -> virtuallabel(i), N - 1)...), (envlabel(:NE),)
-    )
-    E_south_e = tensorexpr(
-        :E_south, (envlabel(:SE), ntuple(i -> virtuallabel(i), N - 1)...), (envlabel(:SW),)
-    )
-
-    rhs = Expr(
-        :call, :*,
-        C_northwest_e, E_north_e, C_northeast_e, C_southeast_e, E_south_e, C_southwest_e,
-    )
-
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
-end
-
 """
     edge_transfer_spectrum(top::Vector{E}, bot::Vector{E}; tol=Defaults.tol, num_vals=20,
                            sector=one(sectortype(E))) where {E<:CTMRGEdgeTensor}
