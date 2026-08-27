@@ -12,8 +12,7 @@ function MPSKit.expectation_value(
     ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        ρ = reduced_densitymatrix(inds, ket, bra, env)
-        return trmul(operator, ρ)
+        return local_expectation_value(inds, bra, operator, ket, env)
     end
     return sum(term_vals)
 end
@@ -21,10 +20,31 @@ MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env) = expectatio
 function MPSKit.expectation_value(state::InfinitePEPO, O::LocalOperator, env)
     checklattice(state, O)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
-        ρ = reduced_densitymatrix(inds, state, env)
-        return trmul(operator, ρ)
+        return local_expectation_value(inds, state, operator, env)
     end
     return sum(term_vals)
+end
+
+"""
+    local_expectation_value(inds, bra, operator, ket, env)
+    local_expectation_value(inds, state, operator, env)
+
+Compute the contribution of a single term of a [`LocalOperator`](@ref) to the expectation
+value ⟨bra|O|ket⟩ / ⟨bra|ket⟩ or tr(O * state) / tr(state), where `operator` is the local
+term acting on the sites `inds`.
+
+The implementation is overloaded based on the type of operator to be evaluated
+"""
+function local_expectation_value end
+
+# AbstractTensorMap evaluation goes through reduced density matrix
+function local_expectation_value(inds, bra, operator::AbstractTensorMap, ket, env)
+    ρ = reduced_densitymatrix(inds, ket, bra, env)
+    return trmul(operator, ρ)
+end
+function local_expectation_value(inds, state, operator::AbstractTensorMap, env)
+    ρ = reduced_densitymatrix(inds, state, env)
+    return trmul(operator, ρ)
 end
 
 """
