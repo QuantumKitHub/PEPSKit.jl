@@ -55,6 +55,10 @@ function GradientAlgorithm(;
     return alg_type(solver)
 end
 
+# a `GradientAlgorithm` has no top-level `tol` field (it lives on `solver_alg`), so the
+# default `MPSKit.DynamicTols._updatetol` (which sets `alg.tol`) doesn't apply
+_updatetol(alg::GradientAlgorithm, tol::Real) = @set alg.solver_alg.tol = tol
+
 #
 # Fixed-point gradient computation
 #
@@ -94,10 +98,6 @@ struct FixedPointGradient{A} <: GradientAlgorithm{A}
 end
 FixedPointGradient(; kwargs...) = GradientAlgorithm(; alg = :FixedPointGradient, kwargs...)
 GRADIENT_ALGORITHM_SYMBOLS[:FixedPointGradient] = FixedPointGradient
-
-# `FixedPointGradient` has no top-level `tol` field (it lives on `solver_alg`), so the
-# default `MPSKit.DynamicTols._updatetol` (which sets `alg.tol`) doesn't apply
-_updatetol(alg::FixedPointGradient, tol::Real) = @set alg.solver_alg.tol = tol
 
 const FIXEDPOINT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :GMRES => GMRES, :BiCGStab => BiCGStab, :Arnoldi => Arnoldi,
