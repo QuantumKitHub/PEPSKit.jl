@@ -1,6 +1,6 @@
 """
-    expectation_value(state, O::LocalOperator, env::CTMRGEnv)
-    expectation_value(bra, O::LocalOperator, ket, env::CTMRGEnv)
+    expectation_value(state, O::LocalOperator, env)
+    expectation_value(bra, O::LocalOperator, ket, env)
 
 Compute the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩ of a [`LocalOperator`](@ref) `O`.
 This can be done either for a PEPS, or alternatively for a density matrix PEPO.
@@ -8,7 +8,7 @@ In the latter case the first signature corresponds to a single layer PEPO contra
 the second signature yields a bilayer contraction instead.
 """
 function MPSKit.expectation_value(
-        bra::S, O::LocalOperator, ket::S, env::CTMRGEnv
+        bra::S, O::LocalOperator, ket::S, env
     ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
@@ -17,10 +17,8 @@ function MPSKit.expectation_value(
     end
     return sum(term_vals)
 end
-MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env::CTMRGEnv) = expectation_value(peps, O, peps, env)
-function MPSKit.expectation_value(
-        state::InfinitePEPO, O::LocalOperator, env::CTMRGEnv
-    )
+MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env) = expectation_value(peps, O, peps, env)
+function MPSKit.expectation_value(state::InfinitePEPO, O::LocalOperator, env)
     checklattice(state, O)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         ρ = reduced_densitymatrix(inds, state, env)
