@@ -12,6 +12,10 @@ Module containing default algorithm parameter values and arguments.
     - `:SimultaneousCTMRG` : Simultaneous expansion and renormalization of all sides.
     - `:SequentialCTMRG` : Sequential application of left moves and rotations.
 * `ctmrg_verbosity=$(Defaults.ctmrg_verbosity)` : CTMRG output information verbosity
+* `ctmrg_dynamic_tols=$(Defaults.ctmrg_dynamic_tols)` : If `true`, wrap the CTMRG algorithm used during variational optimization in an `MPSKit.DynamicTols.DynamicTol` that rescales its tolerance based on the current PEPS optimization gradient norm, see [`PEPSKit.PEPSOptimize`](@ref).
+* `ctmrg_tol_min=$(Defaults.ctmrg_tol_min)` : Minimal CTMRG tolerance used by `ctmrg_dynamic_tols`.
+* `ctmrg_tol_max=$(Defaults.ctmrg_tol_max)` : Maximal CTMRG tolerance used by `ctmrg_dynamic_tols`.
+* `ctmrg_tol_factor=$(Defaults.ctmrg_tol_factor)` : Tolerance scaling factor used by `ctmrg_dynamic_tols`.
 
 ## SVD forward & reverse
 
@@ -85,6 +89,30 @@ Module containing default algorithm parameter values and arguments.
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
 * `gradient_fixedpoint_solver_eager=$(Defaults.gradient_fixedpoint_solver_eager)` : Enables `:Arnoldi` solver algorithm to finish before the full Krylov dimension is reached.
+<<<<<<< HEAD
+* `gradient_implicit_solver_alg=:$(Defaults.gradient_implicit_solver_alg)` : Default solver algorithm for the `ImplicitGradient` gradient algorithm.
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+=======
+* `gradient_dynamic_tols=$(Defaults.gradient_dynamic_tols)` : If `true`, wrap the gradient algorithm used during variational optimization in an `MPSKit.DynamicTols.DynamicTol` that rescales its tolerance based on the effective (possibly dynamically-scaled) tolerance of the boundary algorithm, see [`PEPSKit.PEPSOptimize`](@ref).
+* `gradient_tol_min=$(Defaults.gradient_tol_min)` : Minimal gradient algorithm tolerance used by `gradient_dynamic_tols`.
+* `gradient_tol_max=$(Defaults.gradient_tol_max)` : Maximal gradient algorithm tolerance used by `gradient_dynamic_tols`.
+* `gradient_tol_factor=$(Defaults.gradient_tol_factor)` : Tolerance scaling factor relative to the boundary algorithm's tolerance, used by `gradient_dynamic_tols` (e.g. `10` makes the gradient tolerance ~10x looser than the boundary tolerance).
+>>>>>>> main
+
+## Preconditioning
+
+* `precondition_alg=:$(Defaults.precondition_alg)` : Algorithm variant used for preconditioning the PEPS gradient.
+    - `:LocalPreconditioner` : Precondition using the leading (local) term of the PEPS metric, see [`PEPSKit.LocalPreconditioner`](@ref).
+* `precondition_tol=$(Defaults.precondition_tol)` : Convergence tolerance for the linear problem in the preconditioning step.
+* `precondition_maxiter=$(Defaults.precondition_maxiter)` : Maximal number of iterations for the linear problem in the preconditioning step.
+* `precondition_verbosity=$(Defaults.precondition_verbosity)` : Preconditioning output information verbosity.
+* `precondition_krylovdim=$(Defaults.precondition_krylovdim)` : Krylov dimension for the linear problem in the preconditioning step.
+* `precondition_regularization=$(Defaults.precondition_regularization)` : Prefactor setting the regularization strength of the local linear problem, see [`PEPSKit.LocalPreconditioner`](@ref).
+* `precondition_dynamic_tols=$(Defaults.precondition_dynamic_tols)` : If `true`, wrap the preconditioner algorithm in a `MPSKit.DynamicTol` that rescales its tolerance based on the current PEPS optimization gradient norm, see [`PEPSKit.PEPSOptimize`](@ref).
+* `precondition_tol_min=$(Defaults.precondition_tol_min)` : Minimal preconditioner tolerance used by `precondition_dynamic_tols`.
+* `precondition_tol_max=$(Defaults.precondition_tol_max)` : Maximal preconditioner tolerance used by `precondition_dynamic_tols`.
+* `precondition_tol_factor=$(Defaults.precondition_tol_factor)` : Tolerance scaling factor used by `precondition_dynamic_tols`.
 
 ## Optimization
 
@@ -117,6 +145,10 @@ const ctmrg_miniter = 4
 const ctmrg_alg = :SimultaneousCTMRG # ∈ {:SimultaneousCTMRG, :SequentialCTMRG}
 const ctmrg_verbosity = 2
 const sparse = false # TODO: implement sparse CTMRG
+const ctmrg_dynamic_tols = true
+const ctmrg_tol_min = 1.0e-12
+const ctmrg_tol_max = 1.0e-4
+const ctmrg_tol_factor = 1.0e-3
 
 # SVD forward & reverse
 const trunc = :FixedSpaceTruncation # ∈ {:FixedSpaceTruncation, :notrunc, :truncerror, :truncspace, :trunctol}
@@ -151,6 +183,23 @@ const gradient_verbosity = -1
 const gradient_alg = :FixedPointGradient
 const gradient_fixedpoint_solver_alg = :Arnoldi # ∈ {:GMRES, :BiCGStab, :Arnoldi, :GeomSum, :ManualIter}
 const gradient_fixedpoint_solver_eager = true
+const gradient_implicit_solver_alg = :GMRES # ∈ {:GMRES, :BiCGStab}
+const gradient_dynamic_tols = true
+const gradient_tol_min = 1.0e-10
+const gradient_tol_max = 1.0e-1
+const gradient_tol_factor = 1.0e1
+
+# Preconditioning
+const precondition_alg = :LocalPreconditioner
+const precondition_tol = 1.0e-6
+const precondition_maxiter = 1
+const precondition_verbosity = -1
+const precondition_krylovdim = 30
+const precondition_regularization = 100.0
+const precondition_dynamic_tols = true
+const precondition_tol_min = 1.0e-12
+const precondition_tol_max = 1.0e-4
+const precondition_tol_factor = 1.0e-2
 
 # Optimization
 const reuse_env = true

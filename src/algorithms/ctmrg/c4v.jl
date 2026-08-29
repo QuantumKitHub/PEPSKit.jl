@@ -135,9 +135,23 @@ function check_input(
     return nothing
 end
 
-#
-## C4v-symmetric CTMRG iteration (called through `leading_boundary`)
-#
+# The corners in C₄ᵥ CTMRG are identical and the four edges are related by
+# rotation, so all edges produce the same singular values. `eigh_vals` is about
+# as expensive as `svd_vals` on CPU but much cheaper on GPU, and gives effectively
+# the same information. For the QR projector, off-diagonal elements are still
+# present until CTMRG converges, so we need a fallback for the non-diagonal case.
+corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG) = eigh_vals(C)
+
+"""
+    convergence_tensors(env::CTMRGEnv, alg::C4vCTMRG) -> (corners, edges)
+
+The corners and edges whose singular values determine convergence.
+
+For C₄ᵥ-symmetric CTMRG, only one corner and one edge are needed since
+the corners are identical, and the edges have identical singular values.
+"""
+convergence_tensors(env::CTMRGEnv, ::C4vCTMRG) =
+    (view(env.corners, 1:1, :, :), view(env.edges, 1:1, :, :))
 
 function ctmrg_iteration(network, env::CTMRGEnv, ::C4vCTMRG{P}) where {P}
     throw(ArgumentError("Unknown C4v projector algorithm $P"))
@@ -283,7 +297,7 @@ function c4v_qr_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, R)
     ER = edge′ * twistdual(R, 1)
     # contract (edge, R) with projector
     new_corner = contract_edges(ER, projector)
-    new_corner = _project_hermitian(new_corner)
+    new_corner = project_hermitian(new_corner)
     return new_corner / norm(new_corner)
 end
 
@@ -328,11 +342,6 @@ function _project_hermitian(E::AbstractTensorMap{T, S, N, 1}) where {T, S, N}
     E´ = (E + physical_flip(_dag(E))) / 2
     return E´
 end
-function _project_hermitian(C::AbstractTensorMap{T, S, 1, 1}) where {T, S}
-    C´ = (C + C') / 2
-    return C´
-end
-
 
 #
 ## environment initialization

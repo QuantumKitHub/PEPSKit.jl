@@ -55,6 +55,10 @@ function GradientAlgorithm(;
     return alg_type(solver)
 end
 
+# a `GradientAlgorithm` has no top-level `tol` field (it lives on `solver_alg`), so the
+# default `MPSKit.DynamicTols._updatetol` (which sets `alg.tol`) doesn't apply
+_updatetol(alg::GradientAlgorithm, tol::Real) = @set alg.solver_alg.tol = tol
+
 #
 # Fixed-point gradient computation
 #
@@ -86,6 +90,8 @@ The supported keywords are:
     - `:Arnoldi` : Arnoldi Krylov algorithm, see [`KrylovKit.Arnoldi`](@extref) for details
     - `:GeomSum` : Geometric sum approximation of the Neumann series of the inverse Jacobian, see [`PEPSKit.GeomSum`](@ref) for details
     - `:ManualIter` : Manual fixed-point iteration, see [`PEPSKit.ManualIter`](@ref) for details
+
+See also [`fixedpoint_gradient`](@ref) for details on the underlying procedure.
 """
 struct FixedPointGradient{A} <: GradientAlgorithm{A}
     solver_alg::A
@@ -180,12 +186,6 @@ function _check_algorithm_combination(boundary_alg, gradient_alg, symmetrization
     _check_algorithm_combination(boundary_alg, symmetrization)
     return nothing
 end
-function _check_algorithm_combination(::SequentialCTMRG, ::FixedPointGradient)
-    msg = "The `:FixedPointGradient` algorithm is not compatible with `SequentialCTMRG` since the sequential \
-          application of SVDs does not allow to differentiate through a fixed set of \
-          gauges; select SimultaneousCTMRG instead to use :fixed mode"
-    throw(ArgumentError(msg))
-end
 function _check_algorithm_combination(::C4vCTMRG, symm::Union{Nothing, <:SymmetrizationStyle})
     if !(symm isa RotateReflect)
         msg = "C4vCTMRG optimization is compatible only with combined Hermitian reflection and rotation symmetrization. \
@@ -215,7 +215,7 @@ function _rrule(
         gradmode::FixedPointGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit,
+        envinit::CTMRGEnv,
         state,
         alg::CTMRGAlgorithm,
     )
@@ -359,4 +359,328 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
     end
 
     return ∂f∂A(y)
+end
+
+#
+# Implicit gradient computation
+#
+
+
+"""
+$(TYPEDEF)
+
+Gradient algorithm for computing the gradient of an optimization procedure by
+differentiating an implicit algebraic characterization of the solution.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    ImplicitGradient(; kwargs...)
+
+Construct an implicit gradient algorithm struct based on keyword arguments.
+The supported keywords are:
+
+* `tol::Real=$(Defaults.gradient_tol)`
+* `maxiter::Int=$(Defaults.gradient_maxiter)`
+* `verbosity::Int=$(Defaults.gradient_verbosity)`
+* `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_fixedpoint_solver_alg))`: solver algorithm for the `ImplicitGradient` gradient algorithm.
+    - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
+    - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
+
+See also [`implicit_gradient`](@ref) for details on the underlying procedure.
+"""
+struct ImplicitGradient{A} <: GradientAlgorithm{A}
+    solver_alg::A
+end
+ImplicitGradient(; kwargs...) = GradientAlgorithm(; alg = :ImplicitGradient, kwargs...)
+GRADIENT_ALGORITHM_SYMBOLS[:ImplicitGradient] = ImplicitGradient
+
+const IMPLICIT_SOLVER_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
+    :GMRES => GMRES, :BiCGStab => BiCGStab,
+)
+
+_default_solver_alg(::Type{<:ImplicitGradient}) = Defaults.gradient_implicit_solver_alg
+_select_solver_alg_symbol(::Type{<:ImplicitGradient}, solver_alg) =
+    IMPLICIT_SOLVER_SYMBOLS[solver_alg]
+
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs, info)
+    return info.V * signs[1]'
+end
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs, info)
+    return info.Q * signs[1]'
+end
+
+function _check_algorithm_combination(::SequentialCTMRG, ::ImplicitGradient)
+    msg = "The `:ImplicitGradient` algorithm is not yet compatible with the `SequentialCTMRG` algorithm; select \
+          SimultaneousCTMRG instead to use :ImplicitGradient"
+    throw(ArgumentError(msg))
+end
+
+function _check_algorithm_combination(::SimultaneousCTMRG{<:FullInfiniteProjector}, ::ImplicitGradient)
+    msg = "The `:ImplicitGradient` algorithm is not yet compatible with the `FullInfiniteProjector` scheme, \
+          since the corresponding charageristic equations have not yet been implemented; select \
+          SimultaneousCTMRG with HalfInfiniteProjector instead to use :ImplicitGradient"
+    throw(ArgumentError(msg))
+end
+
+
+@doc raw"""
+    implicit_gradient(x̆, ∂ₓF, ∂ₚF, y₀, alg)
+
+Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
+which satisfies the characteristic equation ``F(x, p) = 0``, given the VJP actions ``∂ₓF``
+and ``∂ₚF`` of the function ``F`` encoding the characteristic equation.
+
+More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
+variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
+``x \equiv x(p)``, the gradient of the cost function is given by
+
+```math
+dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
+```
+
+Given the characteristic equation ``F(x, p) = 0``, the VJP action of the Jacobian ``∂ₚx``` on
+the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through
+implicit differentiation of the characteristic equation as
+```math
+x̆ ∂ₚx = x̆ (∂ₓF)⁻¹ (-∂ₚF).
+```
+
+This can be used to differentiate contraction routines, where ``p`` are the variational
+parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
+derivative of the cost function with respect to the contraction environment ``x``, and ``F``
+is an algebraic function characterizing the convergence of the algorithm.
+"""
+implicit_gradient
+
+function implicit_gradient(∂E∂x, ∂F∂x, ∂F∂A, y₀, alg::KrylovKit.LinearSolver)
+    y, info = reallinsolve(∂F∂x, ∂E∂x, y₀, alg)
+    if alg.verbosity > 0 && info.converged != 1
+        @warn("Implicit gradient linear solve reached maximal number of iterations:", info)
+    end
+
+    return (-1) * ∂F∂A(y)
+end
+
+## C4vCTMRG gradient through implicit differentiation
+
+function _rrule(
+        gradmode::ImplicitGradient,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit::CTMRGEnv,
+        state,
+        alg::C4vCTMRG,
+    )
+    _check_algorithm_combination(alg, gradmode)
+
+    env, = leading_boundary(envinit, state, alg)
+
+    # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
+
+    # NOTE: explicitly keeping corner non-diagonal and (possibly) complex, for use in the backwards pass
+    C, E = env_fixed.corners[NORTHWEST, 1, 1], env_fixed.edges[NORTH, 1, 1]
+
+    # gauge-fix projector accordingly
+    U = _gauge_fix_c4v_projector(alg, signs, info)
+
+    # get the projector nullspace
+    UL = left_null(U)
+
+    # instantiate the differentiable variables corresponding to the intermediate projector of the contraction algorithm
+    u = zeros(scalartype(U), space(UL, numind(UL))' ← space(U, numind(U))')
+
+    # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
+    _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
+
+    # initialize the partial pullbacks of the characteristic equations
+    F = generate_symmetric_characteristic_equation(C, E, U, UL)
+
+    # get the partial pullback of the characteristic equations
+    _, F_vjp = rrule_via_ad(config, F, state, C, E, u)
+    vjp_env(x) = F_vjp(x)[3:end] # environment and isometry pullback
+    vjp_state(x) = F_vjp(x)[2] # state pullback
+
+    function leading_boundary_implicit_pullback((_Δenv, _Δinfo))
+        Δenv, Δinfo = unthunk(_Δenv), unthunk(_Δinfo)
+
+        # accumulate adjoints from all corners & edges through _c4v_env constructor
+        _, ΔC, ΔE = c4v_env_vjp(Δenv)
+
+        # apply Hermitian projectors to edge and corner cotangents
+        ΔE = _project_hermitian(ΔE)
+        ΔC = project_hermitian(ΔC)
+
+        # extract cotangent of the isometry variable and verify that it is trivial
+        ΔU = isa(Δinfo.U, AbstractZero) ? zerovector(U) : unthunk(Δinfo.U)
+        Δu = UL' * ΔU
+        norm(Δu) < 1.0e4 * alg.tol || @warn "Nonzero Δu cotangent: norm(Δu)=$(norm(Δu))"
+
+        # collect cotangents of characteristic equation
+        Δy = (ΔC, ΔE, Δu)
+
+        # evaluate the implicit gradient
+        Δstate = implicit_gradient(Δy, vjp_env, vjp_state, Δy, gradmode.solver_alg)
+
+        return NoTangent(), ZeroTangent(), Δstate, NoTangent()
+    end
+
+    # HACK: return gauge-fixed environment with potentially non-diagonal and complex corners
+    # this ensures that backpropagation through any subsequent observable evaluations will
+    # give non-diagonal and complex corner adjoints, which is required for root
+    # differentiation to work here
+    # NOTE: this very bad practice, since the return type here is manifestly different from
+    # what you would get from a regular forward run without differentiation
+    return (env_fixed, info), leading_boundary_implicit_pullback
+end
+
+
+## CTMRG gradient through implicit differentiation
+
+# removing inverse roots of singular values from corners and edges
+# i.e. what we actually do to get the modified corners and edges
+function remove_inverse_roots(
+        C::CornerTensors, E::EdgeTensors, S::CornerTensors
+    )
+    sqS = sdiag_pow.(S, 0.5)
+    coordinates = eachcoordinate(C)
+    nrows, ncols = size(C)[2:3]
+    C′ = map(coordinates) do co
+        co′ = _prev_coordinate(co, nrows, ncols)
+        return sqS[co′...] * C[co...] * sqS[co...]
+    end
+    E′ = map(coordinates) do co
+        co′ = _edge_sinv_indices(co, nrows, ncols)
+        return absorb_left_right(
+            E[co...], sqS[co′...], sqS[co...]
+        )
+    end
+    return C′ ./ norm.(C′), E′ ./ norm.(E′)
+end
+
+# absorbing inverse roots of singular values into modified corners and edges to obtain
+# regular corners and edges
+# i.e. the thing we pretend we did right before the cost function evaluation
+function absorb_inverse_roots(
+        C::CornerTensors, E::EdgeTensors, S::CornerTensors
+    )
+    # absorb inverse roots
+    is = map(inv, S)
+    isqS = map(squareroot, is) # do this instead of sdiag_pow(S, -0.5) since dS may be non-diagonal
+    coordinates = eachcoordinate(C)
+    nrows, ncols = size(C)[2:3]
+    C′ = map(coordinates) do co
+        co′ = _prev_coordinate(co, nrows, ncols)
+        return isqS[co′...] * C[co...] * isqS[co...]
+    end
+    E′ = map(coordinates) do co
+        co′ = _edge_sinv_indices(co, nrows, ncols)
+        return absorb_left_right(E[co...], isqS[co′...], isqS[co...])
+    end
+    return C′ ./ norm.(C′), E′ ./ norm.(E′)
+end
+
+# unit cell indices for absorbing square roots of S or S⁻¹ into corners and edges
+function _edge_sinv_indices(coordinate, nrows, ncols)
+    dir, r, c = coordinate
+    r, c = if dir == NORTH
+        r, _prev(c, ncols)
+    elseif dir == EAST
+        _prev(r, nrows), c
+    elseif dir == SOUTH
+        r, _next(c, ncols)
+    elseif dir == WEST
+        _next(r, nrows), c
+    end
+    return (dir, r, c)
+end
+
+# characteristic equation for asymmetric simultaneous CTMRG with generic unit cells and sparse SVD,
+# i.e. where computation of the pullback requires solving a Sylvester equation for dU and dV
+function PEPSKit._rrule(
+        gradmode::ImplicitGradient,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit::CTMRGEnv,
+        state,
+        alg::SimultaneousCTMRG{<:HalfInfiniteProjector},
+    )
+    env, = leading_boundary(envinit, state, alg)
+
+    # gauge-fix SVD isometries
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge())
+    S = normalize.(info.S)
+    U, V = fix_relative_phases(info.U, info.V, signs)
+
+    # pretend the singular values matrices are just arbitrary complex tensors
+    s = map(S) do s
+        dst = similar(s, scalartype(state), space(s)) # TensorMap
+        return copy!(dst, s)
+    end
+
+    # remove the inverse square roots here to obtain modified corners and edges
+    C̃, Ẽ = remove_inverse_roots(env.corners, env.edges, S)
+    # which is fine as long as we pretend we did the absorption as the last step in the
+    # forward pass, and then explicitly backpropagate through that in the pullback here
+    _, absorb_inverse_roots_vjp = rrule_via_ad(config, absorb_inverse_roots, C̃, Ẽ, s)
+
+    # get the projector nullspaces
+    UL = left_null.(U)
+    VR = right_null.(V)
+
+    # instantiate the variables used in the characteristic equations
+    u = map(zip(U, UL)) do (Uc, ULc)
+        return zeros(scalartype(Uc), space(ULc, numind(ULc))' ← space(Uc, numind(Uc))')
+    end
+    v = map(zip(V, VR)) do (Vc, VRc)
+        return zeros(scalartype(Vc), space(Vc, 1) ← space(VRc, 1))
+    end
+    is = sdiag_pow.(s, -1) # also treat them as general complex tensors
+
+    # generate the characteristic equations
+    F = generate_halfinfinite_characteristic_equation(is, U, V, UL, VR)
+
+    # check if characteristic equations are actually satisfied
+    FS = F(state, C̃, Ẽ, u, s, v)
+    F_nrms = norm.(FS)
+    any(F_nrms .> 1.0e2 * alg.tol) &&
+        @warn "Characteristic equations not satisfied, still using the gradient: $F_nrms"
+
+    # get the partial gradients of the characteristic equations
+    _, F_vjp = rrule_via_ad(config, F, state, C̃, Ẽ, u, s, v) # full automatic pullback
+    vjp_env(x) = F_vjp(x)[3:end] # environment and SVD pullback
+    vjp_state(x) = F_vjp(x)[2] # state pullback
+
+    function leading_boundary_characteristic_pullback((_Δenv, _Δinfo))
+        # unpack incoming cotangents
+        Δenv = unthunk(_Δenv)
+
+        # apply pullback of the dummy inverse root absorption to get adjoints of modified
+        # corners and edges and singular values
+        _, ΔC̃, ΔẼ, Δs = absorb_inverse_roots_vjp((Δenv.corners, Δenv.edges))
+
+        # U and V should have zero cotangents
+        Δu = zerovector.(u)
+        Δv = zerovector.(v)
+
+        # collect cotangents of characteristic equation
+        Δy = (ΔC̃, ΔẼ, Δu, Δs, Δv)
+
+        # evaluate the implicit gradient
+        Δstate = implicit_gradient(Δy, vjp_env, vjp_state, Δy, gradmode.solver_alg)
+
+        return NoTangent(), ZeroTangent(), Δstate, NoTangent()
+    end
+
+    return (env, info), leading_boundary_characteristic_pullback
 end
