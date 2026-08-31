@@ -253,7 +253,7 @@ specified by `inds`. The result is normalized such that `tr(ρ) = 1`.
 """ reduced_densitymatrix
 
 function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env
     )
     length(inds) == 1 && return reduced_densitymatrix1x1(only(inds), ket, bra, env)
 
@@ -269,57 +269,57 @@ function reduced_densitymatrix(
     return _contract_densitymatrix(static_inds, (ket, bra), env)
 end
 function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env::CTMRGEnv
+        inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env
     )
     size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     static_inds = Tuple(Val.(inds))
     return _contract_densitymatrix(static_inds, (state,), env)
 end
 function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env
     )
     size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
     size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
     static_inds = Tuple(Val.(inds))
     return _contract_densitymatrix(static_inds, (ket, bra), env)
 end
-reduced_densitymatrix(inds, ket::InfinitePEPS, env::CTMRGEnv) =
+reduced_densitymatrix(inds, ket::InfinitePEPS, env) =
     reduced_densitymatrix(inds, ket, ket, env)
 
 Base.@deprecate(
     reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env
     ) where {N},
     reduced_densitymatrix(collect(inds), ket, bra, env)
 )
 Base.@deprecate(
     reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, state::InfinitePEPO, env::CTMRGEnv
+        inds::NTuple{N, CartesianIndex{2}}, state::InfinitePEPO, env
     ) where {N},
     reduced_densitymatrix(collect(inds), state, env)
 )
 Base.@deprecate(
     reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
+        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env
     ) where {N},
     reduced_densitymatrix(collect(inds), ket, bra, env)
 )
 
 Base.@deprecate(
     reduced_densitymatrix(
-        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env
     ) where {N},
     reduced_densitymatrix(collect(CartesianIndex.(inds)), ket, bra, env)
 )
 Base.@deprecate(
     reduced_densitymatrix(
-        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
+        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPO, bra::InfinitePEPO, env
     ) where {N},
     reduced_densitymatrix(collect(CartesianIndex.(inds)), ket, bra, env)
 )
 Base.@deprecate(
     reduced_densitymatrix(
-        inds::NTuple{N, Tuple{Int, Int}}, state::InfinitePEPO, env::CTMRGEnv
+        inds::NTuple{N, Tuple{Int, Int}}, state::InfinitePEPO, env
     ) where {N},
     reduced_densitymatrix(collect(CartesianIndex.(inds)), state, env)
 )
