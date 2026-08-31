@@ -25,7 +25,7 @@ supported here. The available algorithms are:
 - `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref MatrixAlgebraKit.SafeDivideAndConquer)
 """
 @kwdef struct BPGauge{F}
-    svd_fwd_alg::F = Defaults.svd_fwd_alg
+    svd_alg::F = Defaults.svd_fwd_alg
 end
 
 """
