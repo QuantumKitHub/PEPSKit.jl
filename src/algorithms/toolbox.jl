@@ -174,6 +174,7 @@ function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
         edge(env, SOUTH, r, c),
     )
 end
+
 """
     edge_transfer_spectrum(top::Vector{E}, bot::Vector{E}; tol=Defaults.tol, num_vals=20,
                            sector=one(sectortype(E))) where {E<:CTMRGEdgeTensor}
