@@ -61,24 +61,24 @@ convention.
 function MPSKit.expectation_value(
         pf::InfinitePartitionFunction,
         op::Pair{CartesianIndex{2}, <:AbstractTensorMap{T, S, 2, 2}},
-        env::CTMRGEnv,
+        env,
     ) where {T, S}
     return contract_local_tensor(op[1], op[2], env) /
         contract_local_tensor(op[1], pf[op[1]], env)
 end
 function MPSKit.expectation_value(
-        pf::InfinitePartitionFunction, op::Pair{Tuple{Int, Int}}, env::CTMRGEnv
+        pf::InfinitePartitionFunction, op::Pair{Tuple{Int, Int}}, env
     )
     return expectation_value(pf, CartesianIndex(op[1]) => op[2], env)
 end
 
 """
-    cost_function(peps::InfinitePEPS, env::CTMRGEnv, O::LocalOperator)
+    cost_function(peps::InfinitePEPS, env, O::LocalOperator)
 
 Real part of expectation value of `O`. Prints a warning if the expectation value
 yields a finite imaginary part (up to a tolerance).
 """
-function cost_function(peps::InfinitePEPS, env::CTMRGEnv, O::LocalOperator)
+function cost_function(peps::InfinitePEPS, env, O::LocalOperator)
     E = MPSKit.expectation_value(peps, O, env)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol = sqrt(eps(real(E)))) ||
