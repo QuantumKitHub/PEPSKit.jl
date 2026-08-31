@@ -54,6 +54,49 @@ function local_expectation_value(inds, state, operator::AbstractTensorMap, env)
     return trmul(operator, ρ)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the contribution of a tensor product term, given as one rank-2 operator per site in
+`inds`, to the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩.
+
+Rather than forming the tensor product and tracing it against a reduced density matrix, the
+operators are absorbed into the physical indices of the `ket` tensors at the corresponding
+sites, after which the ratio of the local norm of the modified and of the original state
+gives the expectation value.
+"""
+function local_expectation_value(inds, bra, operator::TensorProductTerm, ket, env)
+    ket′ = _absorb_product(inds, operator, ket)
+    return contract_local_norm(inds, ket′, bra, env) /
+        contract_local_norm(inds, ket, bra, env)
+end
+
+"""
+$(SIGNATURES)
+
+Absorb a [`TensorProductTerm`](@ref) into the physical indices of the `ket` tensors at the
+sites `inds`.
+
+The unit cell of the returned state is enlarged just enough for the sites in `inds` to
+address distinct tensors. Without this, sites of a single patch which are equivalent modulo
+the unit cell - such as the two sites of a nearest neighbor bond on a 1x1 unit cell - would
+map onto the same tensor and could not carry different operators.
+"""
+function _absorb_product(inds, product, ket::InfinitePEPS)
+    rows, cols = getindex.(inds, 1), getindex.(inds, 2)
+    m = cld(maximum(rows) - minimum(rows) + 1, size(ket, 1))
+    n = cld(maximum(cols) - minimum(cols) + 1, size(ket, 2))
+    ket′ = repeat(ket, m, n) # also copies, so the original is left untouched
+    for (ind, O) in zip(inds, product)
+        r, c = Tuple(ind)
+        ket′[r, c] = _absorb_onsite(O, ket′[r, c])
+    end
+    return ket′
+end
+
+_absorb_onsite(O::AbstractTensorMap, A::PEPSTensor) =
+    @tensor A′[dout; N E S W] := O[dout; din] * A[din; N E S W]
+
 
 # Local patch contractions
 # ------------------------

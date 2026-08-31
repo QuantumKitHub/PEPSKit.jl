@@ -87,6 +87,66 @@ function add_term!(
     return operator
 end
 
+# Tensor product terms
+# --------------------
+# A term given as one rank-2 operator per site, i.e. an explicit tensor product which is
+# never actually formed.
+
+"""
+    TensorProductTerm
+
+A single term of a [`LocalOperator`](@ref) given as a tensor product of one rank-2 operator
+per site acted on, rather than as the rank-`2N` tensor product itself.
+
+Only operators whose terms are individually tensor products can be represented this way. In
+particular several such terms acting on the same set of sites cannot be combined, since a
+sum of tensor products is not itself a tensor product.
+"""
+const TensorProductTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
+
+add_term!(operator::LocalOperator, inds::Tuple, term::TensorProductTerm) =
+    add_term!(operator, collect(inds), term)
+add_term!(operator::LocalOperator, inds::Vector, term::TensorProductTerm) =
+    add_term!(operator, map(CartesianIndex{2}, inds), term)
+function add_term!(
+        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::TensorProductTerm;
+        atol = zero(real(scalartype(first(term)))),
+    )
+    # input checks
+    length(inds) == length(term) ||
+        throw(ArgumentError("Incompatible number of indices and tensor product factors"))
+    allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
+    for (i, ind) in enumerate(inds)
+        numin(term[i]) == numout(term[i]) == 1 ||
+            throw(ArgumentError("Tensor product factors should be single-site operators"))
+        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
+        physicalspace(operator, ind_translated) == domain(term[i])[1] == codomain(term[i])[1] ||
+            throw(SpaceMismatch("Incompatible physical spaces"))
+    end
+    prod(norm, term) <= atol && return operator # skip adding negligible terms
+
+    # permute input, which for a product just reorders the factors along with their sites
+    if !issorted(inds)
+        I = sortperm(inds)
+        inds = inds[I]
+        term = term[I]
+    end
+
+    # translate coordinates
+    _shift_into_unitcell!(inds, size(operator))
+
+    # a sum of tensor products is not a tensor product, so terms cannot be accumulated here
+    haskey(operator.terms, inds) && throw(
+        ArgumentError(
+            "A term acting on $inds is already present. Tensor product terms cannot be \
+            summed, since a sum of tensor products is not itself a tensor product."
+        )
+    )
+    operator.terms[inds] = collect(term)
+
+    return operator
+end
+
 
 """
     checklattice(Bool, args...)
@@ -153,8 +213,21 @@ Base.eltype(::Type{LocalOperator{O, S}}) where {O, S} = O
 
 # Real and imaginary part
 # -----------------------
+"""
+$(SIGNATURES)
+
+Take the real part of a single term of a [`LocalOperator`](@ref).
+
+A [`TensorProductTerm`](@ref) is made real factor by factor, so that the real part of a
+tensor product is the tensor product of the real parts of its factors.
+"""
+_real_local_term(term) = real(term)
+_real_local_term(term::TensorProductTerm) = map(real, term)
+
 function Base.real(O::LocalOperator)
-    return LocalOperator(O.lattice, (sites => real(op) for (sites, op) in O.terms)...)
+    return LocalOperator(
+        O.lattice, (sites => _real_local_term(op) for (sites, op) in O.terms)...
+    )
 end
 function Base.imag(O::LocalOperator)
     return LocalOperator(O.lattice, (sites => imag(op) for (sites, op) in O.terms)...)
@@ -162,8 +235,25 @@ end
 
 # Linear Algebra
 # --------------
-Base.:*(α::Number, O::LocalOperator) =
-    LocalOperator(physicalspace(O), inds => α * operator for (inds, operator) in O.terms)
+"""
+$(SIGNATURES)
+
+Scale a single term of a [`LocalOperator`](@ref) by `α`.
+
+Terms which are not plain tensors need not scale by plain multiplication: a
+[`TensorProductTerm`](@ref) is scaled by scaling one of its factors, since multiplying every
+factor would scale the term it represents by `α^n`.
+"""
+_scale_local_term(term, α::Number) = α * term
+function _scale_local_term(term::TensorProductTerm, α::Number)
+    scaled = collect(term)
+    scaled[1] = α * scaled[1]
+    return scaled
+end
+
+Base.:*(α::Number, O::LocalOperator) = LocalOperator(
+    physicalspace(O), inds => _scale_local_term(operator, α) for (inds, operator) in O.terms
+)
 Base.:*(O::LocalOperator, α::Number) = α * O
 
 Base.:/(O::LocalOperator, α::Number) = O * inv(α)
