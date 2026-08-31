@@ -94,6 +94,25 @@ function _absorb_product(inds, product, ket::InfinitePEPS)
     return ket′
 end
 
+"""
+$(SIGNATURES)
+
+Compute the contribution of an [`MPOTerm`](@ref), given as one MPO tensor per site in `inds`,
+to the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩.
+
+Rather than forming the dense operator and tracing it against a reduced density matrix, the
+MPO tensors are inserted into the patch contraction directly, with their bonds contracted
+between neighbouring sites, and the result is divided by the local norm of the same patch.
+
+Unlike the reduced density matrix, this leaves no physical index open, which is what makes it
+usable on patches where the dense form is not: the cost of compiling the generated
+contraction grows steeply in the number of open physical legs.
+"""
+function local_expectation_value(inds, bra, operator::MPOTerm, ket, env)
+    return contract_local_operator(inds, operator, ket, bra, env) /
+        contract_local_norm(inds, ket, bra, env)
+end
+
 _absorb_onsite(O::AbstractTensorMap, A::PEPSTensor) =
     @tensor A′[dout; N E S W] := O[dout; din] * A[din; N E S W]
 
@@ -192,6 +211,15 @@ function contract_local_operator(
     )
     size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
     size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
+    static_inds = Tuple(Val.(inds))
+    return _contract_local_operator(static_inds, O, (ket, bra), env)
+end
+function contract_local_operator(
+        inds::Vector{CartesianIndex{2}}, O::MPOTerm,
+        ket::InfinitePEPS, bra::InfinitePEPS, env
+    )
+    length(inds) == length(O) ||
+        throw(ArgumentError("Got $(length(inds)) sites but $(length(O)) MPO factors."))
     static_inds = Tuple(Val.(inds))
     return _contract_local_operator(static_inds, O, (ket, bra), env)
 end

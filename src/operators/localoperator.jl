@@ -101,8 +101,12 @@ per site acted on, rather than as the rank-`2N` tensor product itself.
 Only operators whose terms are individually tensor products can be represented this way. In
 particular several such terms acting on the same set of sites cannot be combined, since a
 sum of tensor products is not itself a tensor product.
+
+The factors are rank-2, carrying no bond indices, which is what distinguishes this from the
+more general [`MPOTerm`](@ref): both are vectors of tensors, but a tensor product term is the
+narrower type and therefore wins on dispatch wherever it applies.
 """
-const TensorProductTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
+const TensorProductTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap{<:Any, <:Any, 1, 1}}
 
 add_term!(operator::LocalOperator, inds::Tuple, term::TensorProductTerm) =
     add_term!(operator, collect(inds), term)
@@ -140,6 +144,133 @@ function add_term!(
         ArgumentError(
             "A term acting on $inds is already present. Tensor product terms cannot be \
             summed, since a sum of tensor products is not itself a tensor product."
+        )
+    )
+    operator.terms[inds] = collect(term)
+
+    return operator
+end
+
+# MPO terms
+# ---------
+# A term given as a chain of MPO tensors, one per site, linked by virtual bonds which are
+# contracted directly between neighbours rather than being fused into the PEPS bonds. This
+# generalizes a tensor product term, which is the special case of bond dimension 1.
+
+"""
+    MPOTerm{T}
+
+A single term of a [`LocalOperator`](@ref) given as a matrix product operator with one
+tensor per site acted on, rather than as the dense rank-`2N` tensor.
+
+The factors are ordered along the chain and carry the index conventions
+
+    W₁ : P₁ ← P₁ ⊗ B₁
+    Wᵢ : Pᵢ ← Bᵢ₋₁' ⊗ Pᵢ ⊗ Bᵢ
+    W_N : P_N ← B_{N-1}' ⊗ P_N
+
+so that the first index of each factor is the bra index and the physical index in the domain
+is the ket index, matching the convention of a dense term. A single-site term is just a
+rank-2 operator.
+
+Unlike a [`TensorProductTerm`](@ref), an `MPOTerm` can represent any operator: the bond
+dimension is the operator's Schmidt rank across each cut. It is worth using in place of the
+dense form when that rank is small compared to `d^2`, which is the case for the sums of few
+product terms that physical Hamiltonians are built from.
+
+A [`TensorProductTerm`](@ref) is the special case in which every bond has dimension 1, so its
+factors carry no bond indices and are rank-2. That is exactly what separates the two on
+dispatch: a vector of rank-2 operators is a tensor product term, anything else is an MPO. The
+tensor product form is preferred where it applies, since it can be absorbed into the ket
+instead of inserted into the contraction.
+
+Construct one from a dense operator with [`mpo_term`](@ref).
+"""
+const MPOTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
+
+"""
+$(SIGNATURES)
+
+Bond dimension of an [`MPOTerm`](@ref), i.e. the largest Schmidt rank across its cuts.
+"""
+function mpobond(term::MPOTerm)
+    length(term) == 1 && return 1
+    return maximum(1:(length(term) - 1)) do i
+        W = term[i]
+        return dim(space(W, numind(W)))   # the outgoing bond is the last domain index
+    end
+end
+
+"""
+$(SIGNATURES)
+
+Split a dense `N`-site operator into an [`MPOTerm`](@ref) by successive SVDs along the chain,
+distributing the singular values symmetrically over each cut.
+
+Singular values below `rtol` relative to the largest are discarded, so that the bond carries
+only the operator's actual Schmidt rank rather than the full `d^2` a compact SVD would
+return.
+"""
+function mpo_term(O::AbstractTensorMap{T, S, N, N}; rtol = 1.0e-12) where {T, S, N}
+    N == 1 && return [O]
+    factors = Vector{Any}(undef, N)
+
+    # split site 1 off: group (bra₁, ket₁) against everything else
+    cod = (1, N + 1)
+    dom = (ntuple(k -> 1 + k, N - 1)..., ntuple(k -> N + 1 + k, N - 1)...)
+    U, Σ, V = svd_trunc(permute(O, (cod, dom)); trunc = trunctol(; rtol))
+    sΣ = sqrt(Σ)
+    factors[1] = permute(U * sΣ, ((1,), (2, 3)))
+    rest = sΣ * V
+
+    # `rest` always holds: index 1 the bond, then the bra sides of the remaining m sites,
+    # then their ket sides
+    for i in 2:(N - 1)
+        m = N - i + 1
+        cod = (1, 2, m + 2)
+        dom = (ntuple(k -> 2 + k, m - 1)..., ntuple(k -> m + 2 + k, m - 1)...)
+        U, Σ, V = svd_trunc(permute(rest, (cod, dom)); trunc = trunctol(; rtol))
+        sΣ = sqrt(Σ)
+        factors[i] = permute(U * sΣ, ((2,), (1, 3, 4)))
+        rest = sΣ * V
+    end
+
+    factors[N] = permute(rest, ((2,), (1, 3)))
+    return [factors...]
+end
+
+add_term!(operator::LocalOperator, inds::Tuple, term::MPOTerm) =
+    add_term!(operator, collect(inds), term)
+add_term!(operator::LocalOperator, inds::Vector, term::MPOTerm) =
+    add_term!(operator, map(CartesianIndex{2}, inds), term)
+function add_term!(
+        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::MPOTerm
+    )
+    # input checks
+    length(inds) == length(term) ||
+        throw(ArgumentError("Incompatible number of indices and MPO factors"))
+    allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
+    issorted(inds) || throw(
+        ArgumentError(
+            "`inds` should be sorted: the MPO factors are ordered along the chain, so \
+            reordering the sites would require re-splitting the operator."
+        )
+    )
+    for (i, ind) in enumerate(inds)
+        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
+        physicalspace(operator, ind_translated) == codomain(term[i])[1] ||
+            throw(SpaceMismatch("Incompatible physical spaces"))
+    end
+
+    # translate coordinates
+    _shift_into_unitcell!(inds, size(operator))
+
+    # as for tensor products, a sum of MPOs of fixed bond dimension is not one of the same
+    # bond dimension, so terms are not accumulated here
+    haskey(operator.terms, inds) && throw(
+        ArgumentError(
+            "A term acting on $inds is already present. MPO terms cannot be summed in \
+            place; combine the operators before splitting them."
         )
     )
     operator.terms[inds] = collect(term)
@@ -219,10 +350,11 @@ $(SIGNATURES)
 Take the real part of a single term of a [`LocalOperator`](@ref).
 
 A [`TensorProductTerm`](@ref) is made real factor by factor, so that the real part of a
-tensor product is the tensor product of the real parts of its factors.
+tensor product is the tensor product of the real parts of its factors. An [`MPOTerm`](@ref)
+is treated the same way, factor by factor.
 """
 _real_local_term(term) = real(term)
-_real_local_term(term::TensorProductTerm) = map(real, term)
+_real_local_term(term::MPOTerm) = map(real, term)
 
 function Base.real(O::LocalOperator)
     return LocalOperator(
@@ -240,12 +372,12 @@ $(SIGNATURES)
 
 Scale a single term of a [`LocalOperator`](@ref) by `α`.
 
-Terms which are not plain tensors need not scale by plain multiplication: a
-[`TensorProductTerm`](@ref) is scaled by scaling one of its factors, since multiplying every
-factor would scale the term it represents by `α^n`.
+Terms which are not plain tensors need not scale by plain multiplication: an
+[`MPOTerm`](@ref) - and hence also a [`TensorProductTerm`](@ref) - is scaled by scaling one
+of its factors, since multiplying every factor would scale the term it represents by `α^n`.
 """
 _scale_local_term(term, α::Number) = α * term
-function _scale_local_term(term::TensorProductTerm, α::Number)
+function _scale_local_term(term::MPOTerm, α::Number)
     scaled = collect(term)
     scaled[1] = α * scaled[1]
     return scaled

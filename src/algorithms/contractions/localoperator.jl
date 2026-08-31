@@ -367,6 +367,30 @@ function operator_contraction_expr(::Type{<:AbstractTensorMap}, nsites)
     ]
 end
 
+# The MPO bond is small - the operator's Schmidt rank, e.g. 3 for Heisenberg XYZ - so it is
+# labelled as a physical rather than a virtual dimension, which gives `@autoopt` the right
+# order of magnitude when it searches for a contraction order.
+mpolabel(args...) = physicallabel(:mpo, args...)
+
+function operator_contraction_expr(::Type{<:MPOTerm}, nsites)
+    # one factor per site, linked by a chain of bonds:
+    #   W_1 : bra_1 <- ket_1 (x) b_1,  W_i : bra_i <- b_{i-1} (x) ket_i (x) b_i,
+    #   W_N : bra_N <- b_{N-1} (x) ket_N
+    return map(1:nsites) do i
+        out = (physicallabel(:O, 2, i),)
+        ins = if nsites == 1
+            (physicallabel(:O, 1, i),)
+        elseif i == 1
+            (physicallabel(:O, 1, i), mpolabel(1))
+        elseif i == nsites
+            (mpolabel(nsites - 1), physicallabel(:O, 1, i))
+        else
+            (mpolabel(i - 1), physicallabel(:O, 1, i), mpolabel(i))
+        end
+        return tensorexpr(:(operator[$i]), out, ins)
+    end
+end
+
 
 # Low-level patch contractions using generated contraction expressions
 # --------------------------------------------------------------------
