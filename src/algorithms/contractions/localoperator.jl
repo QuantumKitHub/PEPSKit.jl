@@ -366,19 +366,6 @@ function reduced_densitymatrix1x1(
     return ρ / str(ρ)
 end
 
-function reduced_densitymatrix(
-        inds::NTuple{2, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    )
-    if inds[2] - inds[1] == CartesianIndex(1, 0)
-        return reduced_densitymatrix2x1(inds[1], ket, bra, env)
-    elseif inds[2] - inds[1] == CartesianIndex(0, 1)
-        return reduced_densitymatrix1x2(inds[1], ket, bra, env)
-    else
-        static_inds = Val.(inds)
-        return _contract_densitymatrix(static_inds, (ket, bra), env)
-    end
-end
-
 # Special case 2x1 density matrix:
 # Keep contraction order but try to optimize intermediate permutations:
 function reduced_densitymatrix2x1(
