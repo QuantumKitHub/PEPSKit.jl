@@ -163,81 +163,30 @@ end
 A single term of a [`LocalOperator`](@ref) given as a matrix product operator with one
 tensor per site acted on, rather than as the dense rank-`2N` tensor.
 
-The factors are ordered along the chain and carry the index conventions
+The factors are ordered along the chain and follow the usual MPO convention, rank-2 at the
+ends and rank-4 in the bulk:
 
-    W₁ : P₁ ← P₁ ⊗ B₁
-    Wᵢ : Pᵢ ← Bᵢ₋₁' ⊗ Pᵢ ⊗ Bᵢ
-    W_N : P_N ← B_{N-1}' ⊗ P_N
+    W₁  : P₁ ← P₁ ⊗ B₁
+    Wᵢ  : Bᵢ₋₁ ⊗ Pᵢ ← Pᵢ ⊗ Bᵢ
+    W_N : B_{N-1} ⊗ P_N ← P_N
 
-so that the first index of each factor is the bra index and the physical index in the domain
-is the ket index, matching the convention of a dense term. A single-site term is just a
-rank-2 operator.
+so the physical index in the codomain is the bra index and the one in the domain is the ket
+index, matching the convention of a dense term, and the bonds run left to right. This is what
+[`gate_to_mpo`](@ref) produces, which is the way to obtain an `MPOTerm` from a dense operator.
+A single-site term is just a rank-2 operator.
 
 Unlike a [`TensorProductTerm`](@ref), an `MPOTerm` can represent any operator: the bond
 dimension is the operator's Schmidt rank across each cut. It is worth using in place of the
 dense form when that rank is small compared to `d^2`, which is the case for the sums of few
 product terms that physical Hamiltonians are built from.
 
-A [`TensorProductTerm`](@ref) is the special case in which every bond has dimension 1, so its
-factors carry no bond indices and are rank-2. That is exactly what separates the two on
-dispatch: a vector of rank-2 operators is a tensor product term, anything else is an MPO. The
-tensor product form is preferred where it applies, since it can be absorbed into the ket
-instead of inserted into the contraction.
-
-Construct one from a dense operator with [`mpo_term`](@ref).
+A [`TensorProductTerm`](@ref) is the special case in which every bond is trivial, so its
+factors carry no bond indices and are rank-2 throughout. That is exactly what separates the
+two on dispatch: a vector of rank-2 operators is a tensor product term, anything else is an
+MPO.
 """
 const MPOTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
 
-"""
-$(SIGNATURES)
-
-Bond dimension of an [`MPOTerm`](@ref), i.e. the largest Schmidt rank across its cuts.
-"""
-function mpobond(term::MPOTerm)
-    length(term) == 1 && return 1
-    return maximum(1:(length(term) - 1)) do i
-        W = term[i]
-        return dim(space(W, numind(W)))   # the outgoing bond is the last domain index
-    end
-end
-
-"""
-$(SIGNATURES)
-
-Split a dense `N`-site operator into an [`MPOTerm`](@ref) by successive SVDs along the chain,
-distributing the singular values symmetrically over each cut.
-
-Singular values below `rtol` relative to the largest are discarded, so that the bond carries
-only the operator's actual Schmidt rank rather than the full `d^2` a compact SVD would
-return.
-"""
-function mpo_term(O::AbstractTensorMap{T, S, N, N}; rtol = 1.0e-12) where {T, S, N}
-    N == 1 && return [O]
-    factors = Vector{Any}(undef, N)
-
-    # split site 1 off: group (bra₁, ket₁) against everything else
-    cod = (1, N + 1)
-    dom = (ntuple(k -> 1 + k, N - 1)..., ntuple(k -> N + 1 + k, N - 1)...)
-    U, Σ, V = svd_trunc(permute(O, (cod, dom)); trunc = trunctol(; rtol))
-    sΣ = sqrt(Σ)
-    factors[1] = permute(U * sΣ, ((1,), (2, 3)))
-    rest = sΣ * V
-
-    # `rest` always holds: index 1 the bond, then the bra sides of the remaining m sites,
-    # then their ket sides
-    for i in 2:(N - 1)
-        m = N - i + 1
-        cod = (1, 2, m + 2)
-        dom = (ntuple(k -> 2 + k, m - 1)..., ntuple(k -> m + 2 + k, m - 1)...)
-        U, Σ, V = svd_trunc(permute(rest, (cod, dom)); trunc = trunctol(; rtol))
-        sΣ = sqrt(Σ)
-        factors[i] = permute(U * sΣ, ((2,), (1, 3, 4)))
-        rest = sΣ * V
-    end
-
-    factors[N] = permute(rest, ((2,), (1, 3)))
-    return [factors...]
-end
 
 add_term!(operator::LocalOperator, inds::Tuple, term::MPOTerm) =
     add_term!(operator, collect(inds), term)
@@ -256,9 +205,23 @@ function add_term!(
             reordering the sites would require re-splitting the operator."
         )
     )
+    n = length(inds)
     for (i, ind) in enumerate(inds)
+        # a factor carries its physical pair plus a bond towards each neighbour it has, so it
+        # is rank-2 for a lone site, rank-3 at the ends of a chain and rank-4 in the bulk
+        nout = (n == 1 || i == 1) ? 1 : 2
+        nin = (n == 1 || i == n) ? 1 : 2
+        (numout(term[i]) == nout && numin(term[i]) == nin) || throw(
+            ArgumentError(
+                "MPO factor $i of $n should have $nout index(es) out and $nin in, got \
+                $(numout(term[i])) and $(numin(term[i]))."
+            )
+        )
+        # the bra index is the physical one in the codomain: last for a bulk factor, which
+        # carries the incoming bond first, and only for an end factor
+        bra = codomain(term[i])[nout]
         ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
-        physicalspace(operator, ind_translated) == codomain(term[i])[1] ||
+        physicalspace(operator, ind_translated) == bra ||
             throw(SpaceMismatch("Incompatible physical spaces"))
     end
 

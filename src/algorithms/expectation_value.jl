@@ -57,64 +57,19 @@ end
 """
 $(SIGNATURES)
 
-Compute the contribution of a tensor product term, given as one rank-2 operator per site in
-`inds`, to the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩.
-
-Rather than forming the tensor product and tracing it against a reduced density matrix, the
-operators are absorbed into the physical indices of the `ket` tensors at the corresponding
-sites, after which the ratio of the local norm of the modified and of the original state
-gives the expectation value.
-"""
-function local_expectation_value(inds, bra, operator::TensorProductTerm, ket, env)
-    ket′ = _absorb_product(inds, operator, ket)
-    return contract_local_norm(inds, ket′, bra, env) /
-        contract_local_norm(inds, ket, bra, env)
-end
-
-"""
-$(SIGNATURES)
-
-Absorb a [`TensorProductTerm`](@ref) into the physical indices of the `ket` tensors at the
-sites `inds`.
-
-The unit cell of the returned state is enlarged just enough for the sites in `inds` to
-address distinct tensors. Without this, sites of a single patch which are equivalent modulo
-the unit cell - such as the two sites of a nearest neighbor bond on a 1x1 unit cell - would
-map onto the same tensor and could not carry different operators.
-"""
-function _absorb_product(inds, product, ket::InfinitePEPS)
-    rows, cols = getindex.(inds, 1), getindex.(inds, 2)
-    m = cld(maximum(rows) - minimum(rows) + 1, size(ket, 1))
-    n = cld(maximum(cols) - minimum(cols) + 1, size(ket, 2))
-    ket′ = repeat(ket, m, n) # also copies, so the original is left untouched
-    for (ind, O) in zip(inds, product)
-        r, c = Tuple(ind)
-        ket′[r, c] = _absorb_onsite(O, ket′[r, c])
-    end
-    return ket′
-end
-
-"""
-$(SIGNATURES)
-
-Compute the contribution of an [`MPOTerm`](@ref), given as one MPO tensor per site in `inds`,
-to the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩.
+Compute the contribution of an [`MPOTerm`](@ref) - and hence also of a
+[`TensorProductTerm`](@ref) - given as one tensor per site
+in `inds`, to the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩.
 
 Rather than forming the dense operator and tracing it against a reduced density matrix, the
-MPO tensors are inserted into the patch contraction directly, with their bonds contracted
-between neighbouring sites, and the result is divided by the local norm of the same patch.
-
-Unlike the reduced density matrix, this leaves no physical index open, which is what makes it
-usable on patches where the dense form is not: the cost of compiling the generated
-contraction grows steeply in the number of open physical legs.
+factors are inserted into the patch contraction directly, and the result is divided by the
+local norm of the same patch.
 """
 function local_expectation_value(inds, bra, operator::MPOTerm, ket, env)
     return contract_local_operator(inds, operator, ket, bra, env) /
         contract_local_norm(inds, ket, bra, env)
 end
 
-_absorb_onsite(O::AbstractTensorMap, A::PEPSTensor) =
-    @tensor A′[dout; N E S W] := O[dout; din] * A[din; N E S W]
 
 
 # Local patch contractions
@@ -220,6 +175,15 @@ function contract_local_operator(
     )
     length(inds) == length(O) ||
         throw(ArgumentError("Got $(length(inds)) sites but $(length(O)) MPO factors."))
+    static_inds = Tuple(Val.(inds))
+    return _contract_local_operator(static_inds, O, (ket, bra), env)
+end
+function contract_local_operator(
+        inds::Vector{CartesianIndex{2}}, O::TensorProductTerm,
+        ket::InfinitePEPS, bra::InfinitePEPS, env
+    )
+    length(inds) == length(O) ||
+        throw(ArgumentError("Got $(length(inds)) sites but $(length(O)) product factors."))
     static_inds = Tuple(Val.(inds))
     return _contract_local_operator(static_inds, O, (ket, bra), env)
 end

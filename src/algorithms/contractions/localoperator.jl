@@ -373,21 +373,34 @@ end
 mpolabel(args...) = physicallabel(:mpo, args...)
 
 function operator_contraction_expr(::Type{<:MPOTerm}, nsites)
-    # one factor per site, linked by a chain of bonds:
-    #   W_1 : bra_1 <- ket_1 (x) b_1,  W_i : bra_i <- b_{i-1} (x) ket_i (x) b_i,
-    #   W_N : bra_N <- b_{N-1} (x) ket_N
+    # one factor per site, linked by a chain of bonds running left to right, rank-2 at the
+    # ends of the chain and rank-4 in the bulk:
+    #   W₁  : bra₁ ← ket₁ ⊗ b₁
+    #   Wᵢ  : bᵢ₋₁ ⊗ braᵢ ← ketᵢ ⊗ bᵢ
+    #   W_N : b_{N-1} ⊗ bra_N ← ket_N
     return map(1:nsites) do i
-        out = (physicallabel(:O, 2, i),)
-        ins = if nsites == 1
-            (physicallabel(:O, 1, i),)
+        bra, ket = physicallabel(:O, 2, i), physicallabel(:O, 1, i)
+        out, ins = if nsites == 1
+            (bra,), (ket,)
         elseif i == 1
-            (physicallabel(:O, 1, i), mpolabel(1))
+            (bra,), (ket, mpolabel(1))
         elseif i == nsites
-            (mpolabel(nsites - 1), physicallabel(:O, 1, i))
+            (mpolabel(nsites - 1), bra), (ket,)
         else
-            (mpolabel(i - 1), physicallabel(:O, 1, i), mpolabel(i))
+            (mpolabel(i - 1), bra), (ket, mpolabel(i))
         end
         return tensorexpr(:(operator[$i]), out, ins)
+    end
+end
+
+# A tensor product term is the special case in which every bond has dimension 1, so its
+# factors carry no bonds at all: each simply sits between the ket and bra index of its site.
+# This method is more specific than the `MPOTerm` one above, so it takes precedence.
+function operator_contraction_expr(::Type{<:TensorProductTerm}, nsites)
+    return map(1:nsites) do i
+        return tensorexpr(
+            :(operator[$i]), (physicallabel(:O, 2, i),), (physicallabel(:O, 1, i),)
+        )
     end
 end
 
