@@ -29,7 +29,7 @@ $(TYPEDFIELDS)
 Construct a PEPS optimization algorithm struct based on keyword arguments.
 For a full description, see [`fixedpoint`](@ref). The supported keywords are:
 
-* `boundary_alg::Union{NamedTuple,<:CTMRGAlgorithm,...}`
+* `boundary_alg::Union{NamedTuple,<:BoundaryAlgorithm}`
 * `gradient_alg::Union{NamedTuple,Nothing,<:GradientAlgorithm}`
 * `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 * `precondition_alg::Union{NamedTuple,Nothing,<:PreconditionAlgorithm}`
@@ -62,7 +62,7 @@ function PEPSOptimize(;
         boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;), precondition_alg = (;),
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
-    boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
+    boundary_algorithm = _alg_or_nt(BoundaryAlgorithm, boundary_alg)
     gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
     precondition_algorithm = _alg_or_nt(PreconditionAlgorithm, precondition_alg)
@@ -288,7 +288,7 @@ function fixedpoint(
         # gradient tolerance is scaled relative to the boundary algorithm's own
         # (just-updated) effective tolerance, not directly to the gradient norm
         gradient_alg = updatetol(
-            alg.gradient_alg, tracked_finalizer.tol_state.iter, boundary_alg.tol
+            alg.gradient_alg, tracked_finalizer.tol_state.iter, _tol(boundary_alg)
         )
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(

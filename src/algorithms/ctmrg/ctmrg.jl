@@ -4,7 +4,7 @@ $(TYPEDEF)
 Abstract super type for the corner transfer matrix renormalization group (CTMRG) algorithm
 for contracting infinite PEPS.
 """
-abstract type CTMRGAlgorithm end
+abstract type CTMRGAlgorithm <: BoundaryAlgorithm end
 
 const CTMRG_SYMBOLS = IdDict{Symbol, Type{<:CTMRGAlgorithm}}()
 
