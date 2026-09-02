@@ -19,14 +19,14 @@ PEPS-operator sandwich is surrounded with the appropriate environment tensors.
 """
 function contract_local_operator(
         inds::Vector{CartesianIndex{2}}, O::AbstractTensorMap,
-        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+        ket::InfinitePEPS, bra::InfinitePEPS, env,
     )
     static_inds = Tuple(Val.(inds))
     return _contract_local_operator(static_inds, O, (ket, bra), env)
 end
 function contract_local_operator(
         inds::Vector{Tuple{Int, Int}}, O::AbstractTensorMap,
-        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+        ket::InfinitePEPS, bra::InfinitePEPS, env,
     )
     return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
 end
@@ -34,7 +34,7 @@ end
 Base.@deprecate(
     contract_local_operator(
         inds::NTuple, O::AbstractTensorMap,
-        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+        ket::InfinitePEPS, bra::InfinitePEPS, env,
     ),
     contract_local_operator(collect(inds), O, ket, bra, env)
 )
@@ -269,13 +269,13 @@ on a rectangular patch based on `inds` but replacing the operator with an identi
 that the PEPS norm is computed. (Note that this is not the physical norm of the state.)
 """
 function contract_local_norm(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env
     )
     static_inds = Tuple(Val.(inds))
     return _contract_local_norm(static_inds, (ket, bra), env)
 end
 function contract_local_norm(
-        inds::Vector{Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        inds::Vector{Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env
     )
     return contract_local_norm(CartesianIndex.(inds), ket, bra, env)
 end
@@ -305,7 +305,7 @@ end
 end
 
 Base.@deprecate(
-    contract_local_norm(inds::NTuple, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv),
+    contract_local_norm(inds::NTuple, ket::InfinitePEPS, bra::InfinitePEPS, env),
     contract_local_norm(collect(inds), ket, bra, env)
 )
 

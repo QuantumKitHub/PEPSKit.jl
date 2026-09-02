@@ -51,28 +51,25 @@ absorb_west_message(A::PEPSTensor, M::PEPSMessage) =
 # Belief Propagation reduced density matrices
 # -------------------------------------------
 # BP messages live on the bonds of the network, so there is no analogue of the generated
-# rectangular-patch contraction used for a `CTMRGEnv`: only single sites and nearest
-# neighbor pairs can be contracted without introducing loop corrections.
-function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}},
-        ket::InfinitePEPS,
-        bra::InfinitePEPS,
-        env::BPEnv,
-    )
-    length(inds) == 1 && return reduced_densitymatrix1x1(only(inds), ket, bra, env)
+# rectangular-patch contraction used for a `CTMRGEnv`: only single sites and nearest neighbor
+# pairs can be contracted without introducing loop corrections.
 
-    if length(inds) == 2
-        ind_relative = inds[2] - inds[1]
-        if ind_relative == CartesianIndex(1, 0)
-            return reduced_densitymatrix2x1(inds[1], ket, bra, env)
-        elseif ind_relative == CartesianIndex(0, 1)
-            return reduced_densitymatrix1x2(inds[1], ket, bra, env)
-        end
-    end
-    error("No implementation for contractions for BP environments with $inds")
+function _contract_densitymatrix(inds::NTuple{N, Val}, state::Tuple, env::BPEnv) where {N}
+    sites = map(v -> typeof(v).parameters[1], inds)
+    return throw(
+        ArgumentError(
+            "Cannot contract a $(_patch_shape_string(sites)) patch using a `BPEnv`;
+            only 1x1, 2x1, 1x2 patches are supported."
+        )
+    )
 end
-reduced_densitymatrix(inds, ket::InfinitePEPS, env::BPEnv) =
-    reduced_densitymatrix(inds, ket, ket, env)
+
+function _patch_shape_string(sites)
+    rows, cols = getindex.(sites, 1), getindex.(sites, 2)
+    nrows = maximum(rows) - minimum(rows) + 1
+    ncols = maximum(cols) - minimum(cols) + 1
+    return "$(nrows)x$(ncols)"
+end
 
 function reduced_densitymatrix1x1(
         ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BPEnv
