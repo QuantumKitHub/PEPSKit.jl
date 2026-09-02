@@ -7,7 +7,39 @@ envlabel(args...) = tensorlabel(:χ, args...)
 virtuallabel(args...) = tensorlabel(:D, args...)
 physicallabel(args...) = tensorlabel(:d, args...)
 
-# This implements the contractions on a rectangular patch spanned by the sites `inds`.
+"""
+$(SIGNATURES)
+
+Contract a local operator `O` on the PEPS `ket`, `bra` at the indices `inds` using the
+environment `env`.
+
+This works by generating the appropriate contraction on a rectangular patch with its corners
+specified by `inds`. The `ket` and `bra` are contracted with `O` in between, and the
+PEPS-operator sandwich is surrounded with the appropriate environment tensors.
+"""
+function contract_local_operator(
+        inds::Vector{CartesianIndex{2}}, O::AbstractTensorMap,
+        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+    )
+    static_inds = Tuple(Val.(inds))
+    return _contract_local_operator(static_inds, O, (ket, bra), env)
+end
+function contract_local_operator(
+        inds::Vector{Tuple{Int, Int}}, O::AbstractTensorMap,
+        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+    )
+    return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
+end
+
+Base.@deprecate(
+    contract_local_operator(
+        inds::NTuple, O::AbstractTensorMap,
+        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+    ),
+    contract_local_operator(collect(inds), O, ket, bra, env)
+)
+
+# This implements the contraction of an operator acting on sites `inds`.
 # The generated function ensures that we can use @tensor to write dynamic contractions (and maximize performance).
 
 function _contract_corner_expr(rowrange, colrange)
@@ -192,13 +224,48 @@ function _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds = 
     end
 end
 
+@generated function _contract_local_operator(
+        inds::NTuple{N, Val},
+        O::AbstractTensorMap{T, S, N, N},
+        state::Tuple{InfinitePEPS, InfinitePEPS},
+        env::CTMRGEnv,
+    ) where {T, S, N}
+    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
+    allunique(cartesian_inds) ||
+        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
+    rowrange = getindex.(cartesian_inds, 1)
+    colrange = getindex.(cartesian_inds, 2)
+
+    corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
+    edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, 2)
+    operator = tensorexpr(
+        :O,
+        ntuple(i -> physicallabel(:O, 2, i), N),
+        ntuple(i -> physicallabel(:O, 1, i), N),
+    )
+    ket, bra = _contract_state_expr(rowrange, colrange, 2, cartesian_inds)
+
+    multiplication_ex = Expr(
+        :call, :*,
+        corner_NW, corner_NE, corner_SE, corner_SW,
+        edges_N..., edges_E..., edges_S..., edges_W...,
+        ket..., map(x -> Expr(:call, :conj, x), bra)...,
+        operator,
+    )
+
+    returnex = quote
+        @autoopt @tensor $multiplication_ex
+    end
+    return macroexpand(@__MODULE__, returnex)
+end
+
 """
 $(SIGNATURES)
 
-Contract a local norm of the PEPS `peps` around indices `inds`.
+Contract a local norm of the PEPS `ket`, `bra` around indices `inds`.
 
-This works by generating the appropriate contraction on a rectangular patch with its
-corners specified by `inds`, contracting the `peps` with itself from above and below such
+This works analogously to [`contract_local_operator`](@ref) by generating the contraction
+on a rectangular patch based on `inds` but replacing the operator with an identity such
 that the PEPS norm is computed. (Note that this is not the physical norm of the state.)
 """
 function contract_local_norm(
