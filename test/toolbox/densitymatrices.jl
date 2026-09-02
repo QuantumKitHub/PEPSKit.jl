@@ -21,10 +21,16 @@ Ds = Dict(Trivial => ℂ^3, U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (1
     @plansor O_pf[W S; N E] := O[p'; p] * ρ[1, 1, 1][p p'; N E S W]
 
     # Single site
-    O_singlesite = LocalOperator(physicalspace(ρ), ((1, 1),) => O)
+    site = (1, 1)
+    O_singlesite = LocalOperator(physicalspace(ρ), (site,) => O)
     E1 = expectation_value(ρ, O_singlesite, env)
     E2 = expectation_value(ρ_pf, CartesianIndex(1, 1) => O_pf, env)
     @test E1 ≈ E2
+    # the operator/norm route agrees with the density matrix one; a single layer is passed
+    # to the contractions bare rather than wrapped in a tuple
+    val = contract_local_operator([site], O, ρ, env)
+    nrm = contract_local_norm([site], ρ, env)
+    @test E1 ≈ val / nrm
 
     # two sites
     for inds in zip(
@@ -34,6 +40,9 @@ Ds = Dict(Trivial => ℂ^3, U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (1
         O_twosite = LocalOperator(physicalspace(ρ), inds => O ⊗ O)
         E3 = expectation_value(ρ, O_twosite, env)
         # TODO: not defined for partition functions...
+        val = contract_local_operator(collect(inds), O ⊗ O, ρ, env)
+        nrm = contract_local_norm(collect(inds), ρ, env)
+        @test E3 ≈ val / nrm
     end
 end
 
@@ -61,6 +70,10 @@ end
     nrm = contract_local_norm([site], ρ_peps, ρ_peps, env)
     @test nrm ≈ _contract_site(site, InfiniteSquareNetwork(ρ_peps), env)
     @test E1 ≈ val / nrm
+    # same through the two-layer PEPO sandwich rather than its fused PEPS view
+    val_pepo = contract_local_operator([site], O, ρ, ρ, env)
+    nrm_pepo = contract_local_norm([site], ρ, ρ, env)
+    @test E1 ≈ val_pepo / nrm_pepo
 
     # two sites
     for inds in zip(
@@ -75,5 +88,16 @@ end
         val = contract_local_operator(collect(inds), O_doubled ⊗ O_doubled, ρ_peps, ρ_peps, env)
         nrm = contract_local_norm(collect(inds), ρ_peps, ρ_peps, env)
         @test E1 ≈ val / nrm
+        val_pepo = contract_local_operator(collect(inds), O ⊗ O, ρ, ρ, env)
+        nrm_pepo = contract_local_norm(collect(inds), ρ, ρ, env)
+        @test E1 ≈ val_pepo / nrm_pepo
     end
+end
+
+@testset "Three or more PEPO layers are rejected" begin
+    d, D, χ = ds[Trivial], Ds[Trivial], χs[Trivial]
+    ρ = InfinitePEPO(d, D; unitcell = (2, 2, 1))
+    env = CTMRGEnv(InfinitePEPS(ρ), χ)
+    inds = Tuple(Val.([CartesianIndex(1, 1)]))
+    @test_throws ArgumentError PEPSKit._contract_densitymatrix(inds, (ρ, ρ, ρ), env)
 end

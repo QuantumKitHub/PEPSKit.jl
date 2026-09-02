@@ -54,21 +54,14 @@ absorb_west_message(A::PEPSTensor, M::PEPSMessage) =
 # rectangular-patch contraction used for a `CTMRGEnv`: only single sites and nearest neighbor
 # pairs can be contracted without introducing loop corrections.
 
-function _contract_densitymatrix(inds::NTuple{N, Val}, state::Tuple, env::BPEnv) where {N}
-    sites = map(v -> typeof(v).parameters[1], inds)
+function _contract_densitymatrix(inds::NTuple{N, Val}, state, env::BPEnv) where {N}
+    sites = _patch_inds(inds)
     return throw(
         ArgumentError(
             "Cannot contract a $(_patch_shape_string(sites)) patch using a `BPEnv`;
             only 1x1, 2x1, 1x2 patches are supported."
         )
     )
-end
-
-function _patch_shape_string(sites)
-    rows, cols = getindex.(sites, 1), getindex.(sites, 2)
-    nrows = maximum(rows) - minimum(rows) + 1
-    ncols = maximum(cols) - minimum(cols) + 1
-    return "$(nrows)x$(ncols)"
 end
 
 function reduced_densitymatrix1x1(

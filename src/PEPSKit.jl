@@ -140,6 +140,7 @@ include("algorithms/bp/beliefpropagation.jl")
 include("algorithms/bp/gaugefix.jl")
 
 include("algorithms/transfermatrix.jl")
+include("algorithms/expectation_value.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/correlator_adapters.jl")
 include("algorithms/correlators.jl")
