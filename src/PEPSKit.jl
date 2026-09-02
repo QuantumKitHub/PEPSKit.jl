@@ -35,6 +35,7 @@ import MPSKit.DynamicTols: _updatetol
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
+using TensorKitTensors: fuse_charge
 import TensorKitTensors.SpinOperators as SO
 import TensorKitTensors.FermionOperators as FO
 import TensorKitTensors.HubbardOperators as HO
