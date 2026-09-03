@@ -175,11 +175,6 @@ index, matching the convention of a dense term, and the bonds run left to right.
 [`gate_to_mpo`](@ref) produces, which is the way to obtain an `MPOTerm` from a dense operator.
 A single-site term is just a rank-2 operator.
 
-Unlike a [`TensorProductTerm`](@ref), an `MPOTerm` can represent any operator: the bond
-dimension is the operator's Schmidt rank across each cut. It is worth using in place of the
-dense form when that rank is small compared to `d^2`, which is the case for the sums of few
-product terms that physical Hamiltonians are built from.
-
 A [`TensorProductTerm`](@ref) is the special case in which every bond is trivial, so its
 factors carry no bond indices and are rank-2 throughout. That is exactly what separates the
 two on dispatch: a vector of rank-2 operators is a tensor product term, anything else is an
@@ -199,12 +194,6 @@ function add_term!(
     length(inds) == length(term) ||
         throw(ArgumentError("Incompatible number of indices and MPO factors"))
     allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
-    issorted(inds) || throw(
-        ArgumentError(
-            "`inds` should be sorted: the MPO factors are ordered along the chain, so \
-            reordering the sites would require re-splitting the operator."
-        )
-    )
     n = length(inds)
     for (i, ind) in enumerate(inds)
         # a factor carries its physical pair plus a bond towards each neighbour it has, so it
@@ -224,6 +213,9 @@ function add_term!(
         physicalspace(operator, ind_translated) == bra ||
             throw(SpaceMismatch("Incompatible physical spaces"))
     end
+
+    # NOTE: `inds` is deliberately *not* sorted here, unlike for dense and tensor product
+    # terms, since permuting MPOs is not straightforward.
 
     # translate coordinates
     _shift_into_unitcell!(inds, size(operator))
