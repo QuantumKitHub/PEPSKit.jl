@@ -71,7 +71,6 @@ function local_expectation_value(inds, bra, operator::MPOTerm, ket, env)
 end
 
 
-
 # Local patch contractions
 # ------------------------
 

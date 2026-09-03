@@ -75,6 +75,11 @@ end
         ("NN vertical", [(1, 1), (2, 1)], -(X ⊗ X) + Z ⊗ Z),
         ("NNN diagonal", [(1, 1), (2, 2)], X ⊗ Z),
         ("3 site line", [(1, 1), (1, 2), (1, 3)], X ⊗ X ⊗ X + Z ⊗ Z ⊗ Z),
+        # sites are taken in the order given, not sorted, so an unsorted or reversed order
+        # has to agree with the dense term written the same way round. `X ⊗ Z` is asymmetric
+        # under exchange, so this would catch a silently transposed pairing.
+        ("NNN anti-diagonal", [(1, 2), (2, 1)], X ⊗ Z),
+        ("reversed sites", [(1, 2), (1, 1)], X ⊗ Z),
     )
     Random.seed!(2985721)
     peps = InfinitePEPS(ComplexSpace(2), ComplexSpace(Dbond))
@@ -113,10 +118,17 @@ end
 end
 
 @testset "MPO term bookkeeping" begin
-    # the factors are ordered along the chain, so the sites may not be permuted
-    @test_throws ArgumentError LocalOperator(
-        lattice11, [(1, 2), (1, 1)] => gate_to_mpo(X ⊗ Z)
-    )
+    # sites are stored in the order given, and are *not* canonicalized by sorting the way
+    # dense and tensor product terms are: an MPO's bonds are the Schmidt cuts of one
+    # particular chain ordering, so its factors cannot be permuted after the fact. Factor i
+    # therefore acts on site inds[i], and the caller owns that pairing.
+    O_fwd = LocalOperator(lattice11, [(1, 1), (1, 2)] => gate_to_mpo(X ⊗ Z))
+    O_rev = LocalOperator(lattice11, [(1, 2), (1, 1)] => gate_to_mpo(X ⊗ Z))
+    # the sites are shifted into the unit cell as a block, anchored on the first of them, so
+    # absolute coordinates depend on which site comes first; what is preserved, and what
+    # encodes the chain order, is the displacement between consecutive sites
+    @test diff(only(keys(O_fwd.terms))) == [CartesianIndex(0, 1)]
+    @test diff(only(keys(O_rev.terms))) == [CartesianIndex(0, -1)]
 
     # a mismatch between sites and factors is caught
     @test_throws ArgumentError LocalOperator(
