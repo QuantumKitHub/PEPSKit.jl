@@ -102,7 +102,7 @@ function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv, alg
     @assert dir == NORTH || dir == EAST
 
     sqrtM12, isqrtM12, sqrtM21, isqrtM21 = _sqrt_bp_messages(I, env)
-    U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21; alg = alg.svd_fwd_alg)
+    U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21; alg = alg.svd_alg)
     sqrtΛ = sdiag_pow(Λ, 1 / 2)
     X = isqrtM12 * U * sqrtΛ
     invX = sqrtΛ * Vᴴ * isqrtM21
