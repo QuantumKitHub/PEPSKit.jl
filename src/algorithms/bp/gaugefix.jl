@@ -9,12 +9,12 @@ $(TYPEDFIELDS)
 
 ## Constructors
 
-    BPGauge(; svd_fwd_alg=:$(Defaults.svd_fwd_alg))
+    BPGauge(; svd_alg=:$(Defaults.svd_fwd_alg))
 
-The SVD algorithm of the forward pass can either be specified as a `Symbol`, or be passed
-as a `MatrixAlgebraKit.Algorithm` instance directly. Note that the algorithm needs to
-support a full `svd_compact!` decomposition, such that the "sparse" `:GKL` algorithm is not
-supported here. The available algorithms are:
+The SVD algorithm can either be specified as a `Symbol`, or be passed as a
+`MatrixAlgebraKit.Algorithm` instance directly. Note that the algorithm needs to support a
+full `svd_compact!` decomposition, such that the "sparse" `:GKL` algorithm is not supported
+here. The available algorithms are:
 
 - `:DefaultAlgorithm` : MatrixAlgebraKit's [default SVD algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
 - `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
