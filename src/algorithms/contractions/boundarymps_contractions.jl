@@ -27,7 +27,7 @@ repartition_left(A::RightProjector; copy = true) = repartition(A, numind(A) - 1;
 """
     _repartition(t::AbstractTensorMap, N₁::Int, N₂::Int=numind(t) - N₁; copy=false)
 
-Differentiable stand-in for [`TensorKit.repartition`](@extref). Identical to it, except that
+Differentiable stand-in for [`repartition`](@extref `TensorKit.repartition-Tuple{AbstractTensorMap, Int64, Int64}`). Identical to it, except that
 it avoids a bug with the `backend` and `allocator` keyword arguments in the TensorKit
 `rrule` implementation.
 
@@ -66,8 +66,8 @@ end
 
 Apply the effective bond operator defined by the left and right environments `GL` and `GR`
 to a bond tensor `C`.
-This is exactly equivalent to the action of an [`MPSKit.C_Hamiltonian`](@extref), but avoids
-issues with AD through an [`MPSKit.DerivativeOperator`](@extref) and planar contractions.
+This is exactly equivalent to the action of a [`MPSKit.C_hamiltonian`](@extref), but avoids
+issues with AD through an [`MPSKit.MPODerivativeOperator`](@extref) and planar contractions.
 """
 function ∂C(C::CornerTensor{S}, GL::EdgeTensor{S}, GR::EdgeTensor{S}) where {S}
     GR = twistdual(GR, numind(GR))
@@ -88,8 +88,8 @@ end
 
 Apply the effective site operator defined by the left and right environments `GL` and `GR`
 and the local network tensor `O` to a center-gauged MPS tensor `AC`.
-This is exactly equivalent to the action of an [`MPSKit.AC_Hamiltonian`](@extref), but
-avoids issues with AD through an [`MPSKit.DerivativeOperator`](@extref) and planar
+This is exactly equivalent to the action of an [`MPSKit.AC_hamiltonian`](@extref), but
+avoids issues with AD through an [`MPSKit.MPODerivativeOperator`](@extref) and planar
 contractions.
 """
 function ∂AC(AC::E, GL::E, O, GR::E) where {E <: EdgeTensor}
