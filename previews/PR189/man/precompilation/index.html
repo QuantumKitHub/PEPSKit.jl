@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Precompilation using PrecompileTools.jl · PEPSKit.jl</title><meta name="title" content="Precompilation using PrecompileTools.jl · PEPSKit.jl"/><meta property="og:title" content="Precompilation using PrecompileTools.jl · PEPSKit.jl"/><meta property="twitter:title" content="Precompilation using PrecompileTools.jl · PEPSKit.jl"/><meta name="description" content="Documentation for PEPSKit.jl."/><meta property="og:description" content="Documentation for PEPSKit.jl."/><meta property="twitter:description" content="Documentation for PEPSKit.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img class="docs-light-only" src="../../assets/logo.svg" alt="PEPSKit.jl logo"/><img class="docs-dark-only" src="../../assets/logo-dark.svg" alt="PEPSKit.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PEPSKit.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../models/">Models</a></li><li><a class="tocitem" href="../multithreading/">Multithreading</a></li><li class="is-active"><a class="tocitem" href>Precompilation using PrecompileTools.jl</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples/">Overview</a></li><li><input class="collapse-toggle" id="menuitem-3-2" type="checkbox"/><label class="tocitem" for="menuitem-3-2"><span class="docs-label">Optimization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../examples/heisenberg/">Optimizing the 2D Heisenberg model</a></li><li><a class="tocitem" href="../../examples/bose_hubbard/">Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a></li><li><a class="tocitem" href="../../examples/xxz/">Néel order in the <span>$U(1)$</span>-symmetric XXZ model</a></li><li><a class="tocitem" href="../../examples/fermi_hubbard/">Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-3" type="checkbox"/><label class="tocitem" for="menuitem-3-3"><span class="docs-label">Time Evolution</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../examples/heisenberg_su/">Simple update for the Heisenberg model</a></li><li><a class="tocitem" href="../../examples/hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-4" type="checkbox"/><label class="tocitem" for="menuitem-3-4"><span class="docs-label">Partition Functions</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../examples/2d_ising_partition_function/">The 2D classical Ising model using CTMRG</a></li><li><a class="tocitem" href="../../examples/3d_ising_partition_function/">The 3D classical Ising model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-5" type="checkbox"/><label class="tocitem" for="menuitem-3-5"><span class="docs-label">Boundary MPS</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../examples/boundary_mps/">Boundary MPS contractions of 2D networks</a></li></ul></li></ul></li><li><a class="tocitem" href="../../lib/lib/">Library</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Manual</a></li><li class="is-active"><a href>Precompilation using PrecompileTools.jl</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Precompilation using PrecompileTools.jl</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/docs/src/man/precompilation.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Precompilation-using-PrecompileTools.jl"><a class="docs-heading-anchor" href="#Precompilation-using-PrecompileTools.jl">Precompilation using PrecompileTools.jl</a><a id="Precompilation-using-PrecompileTools.jl-1"></a><a class="docs-heading-anchor-permalink" href="#Precompilation-using-PrecompileTools.jl" title="Permalink"></a></h1><p>For certain PEPSKit applications, the &quot;time to first execution&quot; (TTFX) can be quite long. If frequent recompilation is required this can become a significant time sink. Especially in simulations involving AD code, the precompilation times of Zygote tend to be particularly bad.</p><p>Fortunately, there is an easy way out using <a href="https://julialang.github.io/PrecompileTools.jl/stable/">PrecompileTools</a>. By writing a precompilation script that executes and precompiles a toy problem which is suited to one&#39;s personal problem, one can cut down significantly on the TTFX. To see how that works in the context of PEPSKit, we will closely follow the PrecompileTools <a href="https://julialang.github.io/PrecompileTools.jl/stable/#Tutorial:-local-%22Startup%22-packages">docs</a>.</p><p>Let&#39;s say we have a project where we want to speed up the TTFX, located in a project environment called <code>YourProject</code>. Inside that project folder, we generate a <code>Startup</code> module which will contain the toy problem that we want to precompile:</p><pre><code class="nohighlight hljs">(YourProject) pkg&gt; generate Startup
+  Generating  project Startup:
+    Startup/Project.toml
+    Startup/src/Startup.jl
+
+(YourProject) pkg&gt; dev ./Startup
+   Resolving package versions...
+    Updating `/YourProject/Project.toml`
+  [e9c42744] + Startup v0.1.0 `Startup`
+    Updating `/tmp/Project1/Manifest.toml`
+  [e9c42744] + Startup v0.1.0 `Startup`
+
+(YourProject) pkg&gt; activate Startup/
+  Activating project at `/YourProject/Startup`
+
+(Startup) pkg&gt; add PrecompileTools YourPackages...</code></pre><p>The <code>Startup</code> module should depend on <code>PrecompileTools</code> as well as all the packages (<code>YourPackages...</code>) that are required to run the precompilation toy problem. Next, we edit the <code>Startup/src/Startup.jl</code> file and add to it all the code which we want PrecompileTools to compile. We will here provide a basic example featuring Zygote AD code on various algorithmic combinations:</p><pre><code class="language-julia hljs">module Startup
+
+using Random
+using TensorKit, KrylovKit, OptimKit
+using ChainRulesCore, Zygote
+using MPSKit, MPSKitModels
+using PEPSKit
+using PrecompileTools
+
+@setup_workload begin
+    t₀ = time_ns()
+    Random.seed!(20918352394)
+
+    # Hyperparameters
+    Dbond = 2
+    χenv = 4
+    gradtol = 1e-3
+    maxiter = 4
+    verbosity = -1
+    H = heisenberg_XYZ(InfiniteSquare())
+
+    # Algorithmic settings
+    ctmrg_algs = [
+        SimultaneousCTMRG(; maxiter, projector_alg=:halfinfinite, verbosity),
+        SequentialCTMRG(; maxiter, projector_alg=:halfinfinite, verbosity),
+    ]
+    gradient_algs = [
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:fixed),
+        LinSolver(; solver_alg=BiCGStab(; tol=gradtol), iterscheme=:diffgauge),
+        EigSolver(; solver_alg=Arnoldi(; tol=gradtol, eager=true), iterscheme=:fixed),
+    ]
+
+    # Initialize OhMyThreads scheduler (precompilation occurs before __init__ call)
+    set_scheduler!()
+
+    @compile_workload begin
+        # Initialize PEPS and environments with different unit cells, number types and symmetries
+        @info &quot;Precompiling workload: initializing PEPSs and environments&quot;
+        peps = InfinitePEPS(randn, ComplexF64, ComplexSpace(Dbond), ComplexSpace(Dbond))
+
+        env, = leading_boundary(CTMRGEnv(peps, ComplexSpace(χenv)), peps; verbosity)
+
+        # CTMRG
+        @info &quot;Precompiling workload: CTMRG leading_boundary&quot;
+        for ctmrg_alg in ctmrg_algs
+            leading_boundary(env, peps, ctmrg_alg)
+        end
+
+        # Differentiate CTMRG leading_boundary
+        @info &quot;Precompiling workload: backpropagation of leading_boundary&quot;
+        for alg_rrule in gradient_algs
+            Zygote.withgradient(peps) do ψ
+                env′, = PEPSKit.hook_pullback(
+                    leading_boundary, env, ψ, SimultaneousCTMRG(; verbosity); alg_rrule
+                )
+                return cost_function(ψ, env′, H)
+            end
+        end
+
+        # Optimize via fixedpoint using LBFGS
+        @info &quot;Precompiling workload: LBFGS fixedpoint optimization&quot;
+        fixedpoint(H, peps, env, opt_alg; tol=gradtol, maxiter, verbosity)
+
+        # Compute correlation length
+        @info &quot;Precompiling workload: correlation_length&quot;
+        correlation_length(peps, env)
+    end
+
+    duration = round((time_ns() - t₀) * 1e-9 / 60; digits=2) # minutes
+    @info &quot;Precompiling workload: finished after $duration min&quot;
+end
+
+end</code></pre><p>Finally, activate <code>YourProject</code> again - where we want to benefit from the shortened execution times - and run <code>using Startup</code>. That way, all packages will be loaded with their precompiled code. Of course, we may also have multiple start-up routines where the precompiled code is tailored towards the needs of the respective projects.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../multithreading/">« Multithreading</a><a class="docs-footer-nextpage" href="../../examples/">Overview »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.2 on <span class="colophon-date" title="Tuesday 6 May 2025 11:49">Tuesday 6 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

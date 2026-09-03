@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Optimizing the 2D Heisenberg model · PEPSKit.jl</title><meta name="title" content="Optimizing the 2D Heisenberg model · PEPSKit.jl"/><meta property="og:title" content="Optimizing the 2D Heisenberg model · PEPSKit.jl"/><meta property="twitter:title" content="Optimizing the 2D Heisenberg model · PEPSKit.jl"/><meta name="description" content="Documentation for PEPSKit.jl."/><meta property="og:description" content="Documentation for PEPSKit.jl."/><meta property="twitter:description" content="Documentation for PEPSKit.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img class="docs-light-only" src="../../assets/logo.svg" alt="PEPSKit.jl logo"/><img class="docs-dark-only" src="../../assets/logo-dark.svg" alt="PEPSKit.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PEPSKit.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../man/models/">Models</a></li><li><a class="tocitem" href="../../man/multithreading/">Multithreading</a></li><li><a class="tocitem" href="../../man/precompilation/">Precompilation using PrecompileTools.jl</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><input class="collapse-toggle" id="menuitem-3-2" type="checkbox" checked/><label class="tocitem" for="menuitem-3-2"><span class="docs-label">Optimization</span><i class="docs-chevron"></i></label><ul class="collapsed"><li class="is-active"><a class="tocitem" href>Optimizing the 2D Heisenberg model</a><ul class="internal"><li><a class="tocitem" href="#Defining-the-Heisenberg-Hamiltonian"><span>Defining the Heisenberg Hamiltonian</span></a></li><li><a class="tocitem" href="#Setting-up-the-algorithms-and-initial-guesses"><span>Setting up the algorithms and initial guesses</span></a></li><li><a class="tocitem" href="#Ground-state-search"><span>Ground state search</span></a></li><li><a class="tocitem" href="#Compute-the-correlation-lengths-and-transfer-matrix-spectra"><span>Compute the correlation lengths and transfer matrix spectra</span></a></li><li><a class="tocitem" href="#Computing-observables"><span>Computing observables</span></a></li></ul></li><li><a class="tocitem" href="../bose_hubbard/">Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model</a></li><li><a class="tocitem" href="../xxz/">Néel order in the <span>$U(1)$</span>-symmetric XXZ model</a></li><li><a class="tocitem" href="../fermi_hubbard/">Fermi-Hubbard model with <span>$f\mathbb{Z}_2 \boxtimes U(1)$</span> symmetry, at large <span>$U$</span> and half-filling</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-3" type="checkbox"/><label class="tocitem" for="menuitem-3-3"><span class="docs-label">Time Evolution</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../heisenberg_su/">Simple update for the Heisenberg model</a></li><li><a class="tocitem" href="../hubbard_su/">Simple update for the Fermi-Hubbard model at half-filling</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-4" type="checkbox"/><label class="tocitem" for="menuitem-3-4"><span class="docs-label">Partition Functions</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../2d_ising_partition_function/">The 2D classical Ising model using CTMRG</a></li><li><a class="tocitem" href="../3d_ising_partition_function/">The 3D classical Ising model</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-3-5" type="checkbox"/><label class="tocitem" for="menuitem-3-5"><span class="docs-label">Boundary MPS</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../boundary_mps/">Boundary MPS contractions of 2D networks</a></li></ul></li></ul></li><li><a class="tocitem" href="../../lib/lib/">Library</a></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Optimization</a></li><li class="is-active"><a href>Optimizing the 2D Heisenberg model</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Optimizing the 2D Heisenberg model</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/QuantumKitHub/PEPSKit.jl/blob/master/examples/heisenberg/main.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p><a href="https://mybinder.org/v2/gh/QuantumKitHub/PEPSKit.jl/gh-pages?filepath=dev/examples/heisenberg/main.ipynb"><img src="https://mybinder.org/badge_logo.svg" alt/></a> <a href="https://nbviewer.jupyter.org/github/QuantumKitHub/PEPSKit.jl/blob/gh-pages/dev/examples/heisenberg/main.ipynb"><img src="https://img.shields.io/badge/show-nbviewer-579ACA.svg" alt/></a> <a href="https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/QuantumKitHub/PEPSKit.jl/examples/tree/gh-pages/dev/examples/heisenberg"><img src="https://img.shields.io/badge/download-project-orange" alt/></a></p><h1 id="examples_heisenberg"><a class="docs-heading-anchor" href="#examples_heisenberg">Optimizing the 2D Heisenberg model</a><a id="examples_heisenberg-1"></a><a class="docs-heading-anchor-permalink" href="#examples_heisenberg" title="Permalink"></a></h1><p>In this example we want to provide a basic rundown of PEPSKit&#39;s optimization workflow for PEPS. To that end, we will consider the two-dimensional Heisenberg model on a square lattice</p><p class="math-container">\[H = \sum_{\langle i,j \rangle} \left ( J_x S^{x}_i S^{x}_j + J_y S^{y}_i S^{y}_j + J_z S^{z}_i S^{z}_j \right )\]</p><p>Here, we want to set <span>$J_x = J_y = J_z = 1$</span> where the Heisenberg model is in the antiferromagnetic regime. Due to the bipartite sublattice structure of antiferromagnetic order one needs a PEPS ansatz with a <span>$2 \times 2$</span> unit cell. This can be circumvented by performing a unitary sublattice rotation on all B-sites resulting in a change of parameters to <span>$(J_x, J_y, J_z)=(-1, 1, -1)$</span>. This gives us a unitarily equivalent Hamiltonian (with the same spectrum) with a ground state on a single-site unit cell.</p><p>Let us get started by fixing the random seed of this example to make it deterministic:</p><pre><code class="language-julia hljs">using Random
+Random.seed!(123456789);</code></pre><p>We&#39;re going to need only two packages: <code>TensorKit</code>, since we use that for all the underlying tensor operations, and <code>PEPSKit</code> itself. So let us import these:</p><pre><code class="language-julia hljs">using TensorKit, PEPSKit</code></pre><h2 id="Defining-the-Heisenberg-Hamiltonian"><a class="docs-heading-anchor" href="#Defining-the-Heisenberg-Hamiltonian">Defining the Heisenberg Hamiltonian</a><a id="Defining-the-Heisenberg-Hamiltonian-1"></a><a class="docs-heading-anchor-permalink" href="#Defining-the-Heisenberg-Hamiltonian" title="Permalink"></a></h2><p>To create the sublattice rotated Heisenberg Hamiltonian on an infinite square lattice, we use the <code>heisenberg_XYZ</code> method from <a href="https://quantumkithub.github.io/MPSKitModels.jl/dev/">MPSKitModels</a> which is redefined for the <code>InfiniteSquare</code> and reexported in PEPSKit:</p><pre><code class="language-julia hljs">H = heisenberg_XYZ(InfiniteSquare(); Jx=-1, Jy=1, Jz=-1)</code></pre><pre><code class="nohighlight hljs">LocalOperator{Tuple{Pair{Tuple{CartesianIndex{2}, CartesianIndex{2}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}}, Pair{Tuple{CartesianIndex{2}, CartesianIndex{2}}, TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 2, 2, Vector{ComplexF64}}}}, TensorKit.ComplexSpace}(TensorKit.ComplexSpace[ℂ^2;;], ((CartesianIndex(1, 1), CartesianIndex(1, 2)) =&gt; TensorMap((ℂ^2 ⊗ ℂ^2) ← (ℂ^2 ⊗ ℂ^2)):
+[:, :, 1, 1] =
+ -0.25 + 0.0im   0.0 + 0.0im
+   0.0 + 0.0im  -0.5 + 0.0im
+
+[:, :, 2, 1] =
+  0.0 + 0.0im  0.0 + 0.0im
+ 0.25 + 0.0im  0.0 + 0.0im
+
+[:, :, 1, 2] =
+ 0.0 + 0.0im  0.25 + 0.0im
+ 0.0 + 0.0im   0.0 + 0.0im
+
+[:, :, 2, 2] =
+ -0.5 + 0.0im    0.0 + 0.0im
+  0.0 + 0.0im  -0.25 + 0.0im
+, (CartesianIndex(1, 1), CartesianIndex(2, 1)) =&gt; TensorMap((ℂ^2 ⊗ ℂ^2) ← (ℂ^2 ⊗ ℂ^2)):
+[:, :, 1, 1] =
+ -0.25 + 0.0im   0.0 + 0.0im
+   0.0 + 0.0im  -0.5 + 0.0im
+
+[:, :, 2, 1] =
+  0.0 + 0.0im  0.0 + 0.0im
+ 0.25 + 0.0im  0.0 + 0.0im
+
+[:, :, 1, 2] =
+ 0.0 + 0.0im  0.25 + 0.0im
+ 0.0 + 0.0im   0.0 + 0.0im
+
+[:, :, 2, 2] =
+ -0.5 + 0.0im    0.0 + 0.0im
+  0.0 + 0.0im  -0.25 + 0.0im
+))</code></pre><h2 id="Setting-up-the-algorithms-and-initial-guesses"><a class="docs-heading-anchor" href="#Setting-up-the-algorithms-and-initial-guesses">Setting up the algorithms and initial guesses</a><a id="Setting-up-the-algorithms-and-initial-guesses-1"></a><a class="docs-heading-anchor-permalink" href="#Setting-up-the-algorithms-and-initial-guesses" title="Permalink"></a></h2><p>Next, we set the simulation parameters. During optimization, the PEPS will be contracted using CTMRG and the PEPS gradient will be computed by differentiating through the CTMRG routine using AD. Since the algorithmic stack that implements this is rather elaborate, the amount of settings one can configure is also quite large. To reduce this complexity, PEPSKit defaults to (presumably) reasonable settings which also dynamically adapts to the user-specified parameters.</p><p>First, we set the bond dimension <code>Dbond</code> of the virtual PEPS indices and the environment dimension <code>χenv</code> of the virtual corner and transfer matrix indices.</p><pre><code class="language-julia hljs">Dbond = 2
+χenv = 16;</code></pre><p>To configure the CTMRG algorithm, we create a <code>NamedTuple</code> containing different keyword arguments. To see a description of all arguments, see the docstring of <a href="../../lib/lib/#MPSKit.leading_boundary-Tuple{Any, Any, Any}"><code>leading_boundary</code></a>. Here, we want to converge the CTMRG environments up to a specific tolerance and during the CTMRG run keep all index dimensions fixed:</p><pre><code class="language-julia hljs">boundary_alg = (; tol=1e-10, trscheme=(; alg=:fixedspace));</code></pre><p>Let us also configure the optimizer algorithm. We are going to optimize the PEPS using the L-BFGS optimizer from <a href="https://github.com/Jutho/OptimKit.jl">OptimKit</a>. Again, we specify the convergence tolerance (for the gradient norm) as well as the maximal number of iterations and the BFGS memory size (which is used to approximate the Hessian):</p><pre><code class="language-julia hljs">optimizer_alg = (; alg=:lbfgs, tol=1e-4, maxiter=100, lbfgs_memory=16);</code></pre><p>Additionally, during optimization, we want to reuse the previous CTMRG environment to initialize the CTMRG run of the current optimization step using the <code>reuse_env</code> argument. And to control the output information, we set the <code>verbosity</code>:</p><pre><code class="language-julia hljs">reuse_env = true
+verbosity = 3;</code></pre><p>Next, we initialize a random PEPS which will be used as an initial guess for the optimization. To get a PEPS with physical dimension 2 (since we have a spin-1/2 Hamiltonian) with complex-valued random Gaussian entries, we set:</p><pre><code class="language-julia hljs">peps₀ = InfinitePEPS(randn, ComplexF64, 2, Dbond)</code></pre><pre><code class="nohighlight hljs">InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}(TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}[TensorMap(ℂ^2 ← (ℂ^2 ⊗ ℂ^2 ⊗ (ℂ^2)&#39; ⊗ (ℂ^2)&#39;)):
+[:, :, 1, 1, 1] =
+ 0.07382174258286094 + 0.12820373667088403im   0.7897519397510839 + 0.9113654266438473im
+  0.2553716885006697 - 0.4358399804354269im   -1.0272416446076236 - 0.12635062198157215im
+
+[:, :, 2, 1, 1] =
+ 0.16833628450178303 - 0.10088950122180829im  -0.9702030532300809 + 0.010730752411986726im
+ -1.6804460553576506 + 0.29081053879369084im   0.6844811667615024 + 0.09101537356941222im
+
+[:, :, 1, 2, 1] =
+  0.5085938050744258 + 0.3786892551842583im   1.0020057959636561 - 1.4704891009758718im
+ -0.6153328223084331 + 0.10417896606055738im  0.6024931811537675 - 1.0348374874397468im
+
+[:, :, 2, 2, 1] =
+ -0.027201695938305456 + 0.5778042099380925im  0.09232089635078945 + 0.6143070126937361im
+    1.0707115218777772 - 0.5747168579241235im  -0.5819741818511422 - 0.9842624134267605im
+
+[:, :, 1, 1, 2] =
+ 1.2332543810053822 - 1.7783531996396438im  0.8887723728085348 + 0.7809798723615474im
+ 1.2251189302516847 - 0.6853683793073324im  1.5333834584675397 - 0.13856216581406375im
+
+[:, :, 2, 1, 2] =
+ 0.1406381347783769 + 0.6630243440357264im   -0.7294596235434386 + 0.40327909254711103im
+ 0.7212056487788236 + 0.24320971945037498im   0.9991347929322827 + 0.0017902515981375842im
+
+[:, :, 1, 2, 2] =
+ 0.34282910982693904 - 0.4865238029567361im   0.9380949844871762 - 0.6985342237892025im
+ -0.7437083517319159 - 0.6895708849529253im  -0.8981092940164176 + 0.9720706252141459im
+
+[:, :, 2, 2, 2] =
+ -0.8897079923413616 - 0.7145412189457411im  0.07771261045117502 - 0.6400190994609709im
+ -1.6099412157243007 + 0.8855200965611144im   0.7357380595021633 + 0.4626916850143416im
+;;])</code></pre><p>The last thing we need before we can start the optimization is an initial CTMRG environment. Typically, a random environment which we converge on <code>peps₀</code> serves as a good starting point. To contract a PEPS starting from an environment using CTMRG, we call <a href="../../lib/lib/#MPSKit.leading_boundary-Tuple{Any, Any, Any}"><code>leading_boundary</code></a>:</p><pre><code class="language-julia hljs">env_random = CTMRGEnv(randn, ComplexF64, peps₀, ℂ^χenv);
+env₀, info_ctmrg = leading_boundary(env_random, peps₀; boundary_alg...);</code></pre><pre><code class="nohighlight hljs">[ Info: CTMRG init:	obj = -2.749614463601e+00 +3.639628057806e+00im	err = 1.0000e+00
+[ Info: CTMRG conv 27:	obj = +9.727103564786e+00	err = 2.6201184615e-11	time = 0.17 sec
+</code></pre><p>Besides the converged environment, <code>leading_boundary</code> also returns a <code>NamedTuple</code> of informational quantities such as the last maximal truncation error - that is, the SVD approximation error incurred in the last CTMRG iteration, maximized over all spatial directions and unit cell entries:</p><pre><code class="language-julia hljs">@show info_ctmrg.truncation_error;</code></pre><pre><code class="nohighlight hljs">info_ctmrg.truncation_error = 0.0017032153529848298
+</code></pre><h2 id="Ground-state-search"><a class="docs-heading-anchor" href="#Ground-state-search">Ground state search</a><a id="Ground-state-search-1"></a><a class="docs-heading-anchor-permalink" href="#Ground-state-search" title="Permalink"></a></h2><p>Finally, we can start the optimization by calling <a href="../../lib/lib/#PEPSKit.fixedpoint-Tuple{Any, InfinitePEPS, CTMRGEnv}"><code>fixedpoint</code></a> on <code>H</code> with our settings for the boundary (CTMRG) algorithm and the optimizer. This might take a while (especially the precompilation of AD code in this case):</p><pre><code class="language-julia hljs">peps, env, E, info_opt = fixedpoint(
+    H, peps₀, env₀; boundary_alg, optimizer_alg, reuse_env, verbosity
+);</code></pre><pre><code class="nohighlight hljs">[ Info: LBFGS: initializing with f = 0.000601645310, ‖∇f‖ = 9.3548e-01
+┌ Warning: The function `scale!!` is not implemented for (values of) type `Tuple{InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}, Float64}`;
+│ this fallback will disappear in future versions of VectorInterface.jl
+└ @ VectorInterface ~/.julia/packages/VectorInterface/J6qCR/src/fallbacks.jl:91
+[ Info: LBFGS: iter    1, time  643.37 s: f = -0.489783740840, ‖∇f‖ = 6.0020e-01, α = 5.94e+01, m = 0, nfg = 5
+┌ Warning: The function `add!!` is not implemented for (values of) type `Tuple{InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}, InfinitePEPS{TensorKit.TensorMap{ComplexF64, TensorKit.ComplexSpace, 1, 4, Vector{ComplexF64}}}, Int64, VectorInterface.One}`;
+│ this fallback will disappear in future versions of VectorInterface.jl
+└ @ VectorInterface ~/.julia/packages/VectorInterface/J6qCR/src/fallbacks.jl:163
+[ Info: LBFGS: iter    2, time  645.02 s: f = -0.501971411096, ‖∇f‖ = 5.3738e-01, α = 2.80e-01, m = 1, nfg = 2
+[ Info: LBFGS: iter    3, time  645.36 s: f = -0.523152816264, ‖∇f‖ = 3.9922e-01, α = 1.00e+00, m = 2, nfg = 1
+[ Info: LBFGS: iter    4, time  646.10 s: f = -0.538652145758, ‖∇f‖ = 4.1551e-01, α = 2.29e-01, m = 3, nfg = 2
+[ Info: LBFGS: iter    5, time  648.50 s: f = -0.549861364689, ‖∇f‖ = 4.4015e-01, α = 6.94e-02, m = 4, nfg = 4
+[ Info: LBFGS: iter    6, time  649.35 s: f = -0.568951023367, ‖∇f‖ = 4.8339e-01, α = 2.24e-01, m = 5, nfg = 2
+[ Info: LBFGS: iter    7, time  649.72 s: f = -0.586980871663, ‖∇f‖ = 4.2463e-01, α = 1.00e+00, m = 6, nfg = 1
+[ Info: LBFGS: iter    8, time  650.06 s: f = -0.599970185661, ‖∇f‖ = 2.1955e-01, α = 1.00e+00, m = 7, nfg = 1
+[ Info: LBFGS: iter    9, time  650.38 s: f = -0.606725496115, ‖∇f‖ = 1.9384e-01, α = 1.00e+00, m = 8, nfg = 1
+[ Info: LBFGS: iter   10, time  650.70 s: f = -0.624986498009, ‖∇f‖ = 2.9776e-01, α = 1.00e+00, m = 9, nfg = 1
+[ Info: LBFGS: iter   11, time  651.00 s: f = -0.638747320059, ‖∇f‖ = 2.3382e-01, α = 1.00e+00, m = 10, nfg = 1
+[ Info: LBFGS: iter   12, time  651.32 s: f = -0.645577148853, ‖∇f‖ = 2.9937e-01, α = 1.00e+00, m = 11, nfg = 1
+[ Info: LBFGS: iter   13, time  651.60 s: f = -0.650891062410, ‖∇f‖ = 1.4746e-01, α = 1.00e+00, m = 12, nfg = 1
+[ Info: LBFGS: iter   14, time  651.90 s: f = -0.654569099868, ‖∇f‖ = 7.0690e-02, α = 1.00e+00, m = 13, nfg = 1
+[ Info: LBFGS: iter   15, time  652.20 s: f = -0.655949603239, ‖∇f‖ = 5.0977e-02, α = 1.00e+00, m = 14, nfg = 1
+[ Info: LBFGS: iter   16, time  652.51 s: f = -0.657146001976, ‖∇f‖ = 5.8056e-02, α = 1.00e+00, m = 15, nfg = 1
+[ Info: LBFGS: iter   17, time  652.83 s: f = -0.658558478454, ‖∇f‖ = 5.0388e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   18, time  653.13 s: f = -0.659302065828, ‖∇f‖ = 4.0776e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   19, time  653.42 s: f = -0.659633838354, ‖∇f‖ = 2.2380e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   20, time  653.72 s: f = -0.659776177694, ‖∇f‖ = 2.1511e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   21, time  654.01 s: f = -0.659916031911, ‖∇f‖ = 2.0498e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   22, time  654.30 s: f = -0.660181523751, ‖∇f‖ = 1.7235e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   23, time  654.62 s: f = -0.660350536401, ‖∇f‖ = 1.8928e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   24, time  654.91 s: f = -0.660447076769, ‖∇f‖ = 1.0330e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   25, time  655.21 s: f = -0.660521574522, ‖∇f‖ = 1.0448e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   26, time  655.52 s: f = -0.660656071716, ‖∇f‖ = 1.8768e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   27, time  655.85 s: f = -0.660756412995, ‖∇f‖ = 3.2183e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   28, time  656.18 s: f = -0.660925447420, ‖∇f‖ = 1.3371e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   29, time  656.60 s: f = -0.661000634324, ‖∇f‖ = 9.8866e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   30, time  657.36 s: f = -0.661046316490, ‖∇f‖ = 9.1513e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   31, time  657.70 s: f = -0.661128304094, ‖∇f‖ = 9.6895e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   32, time  658.08 s: f = -0.661169144566, ‖∇f‖ = 1.3492e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   33, time  658.37 s: f = -0.661204525845, ‖∇f‖ = 9.6996e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   34, time  658.65 s: f = -0.661224003573, ‖∇f‖ = 6.2892e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   35, time  658.94 s: f = -0.661247137140, ‖∇f‖ = 4.4514e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   36, time  659.24 s: f = -0.661266456453, ‖∇f‖ = 5.3015e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   37, time  659.53 s: f = -0.661280686254, ‖∇f‖ = 9.2298e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   38, time  659.83 s: f = -0.661298851672, ‖∇f‖ = 5.9013e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   39, time  660.12 s: f = -0.661320547122, ‖∇f‖ = 6.2443e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   40, time  660.41 s: f = -0.661344887326, ‖∇f‖ = 9.9129e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   41, time  660.71 s: f = -0.661398950542, ‖∇f‖ = 1.6285e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   42, time  661.03 s: f = -0.661483277766, ‖∇f‖ = 1.6233e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   43, time  661.34 s: f = -0.661583013010, ‖∇f‖ = 2.8186e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   44, time  661.66 s: f = -0.661670888522, ‖∇f‖ = 3.9725e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   45, time  661.98 s: f = -0.661865434012, ‖∇f‖ = 1.3200e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   46, time  662.29 s: f = -0.661977354471, ‖∇f‖ = 1.5881e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   47, time  662.60 s: f = -0.662102076782, ‖∇f‖ = 2.0290e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   48, time  663.24 s: f = -0.662190125548, ‖∇f‖ = 2.2873e-02, α = 4.61e-01, m = 16, nfg = 2
+[ Info: LBFGS: iter   49, time  663.55 s: f = -0.662306892721, ‖∇f‖ = 1.3813e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   50, time  663.87 s: f = -0.662376465537, ‖∇f‖ = 1.9902e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   51, time  664.17 s: f = -0.662419493776, ‖∇f‖ = 1.2249e-02, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   52, time  664.48 s: f = -0.662439251412, ‖∇f‖ = 7.3806e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   53, time  664.79 s: f = -0.662463629284, ‖∇f‖ = 5.1806e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   54, time  665.10 s: f = -0.662484473404, ‖∇f‖ = 4.6461e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   55, time  665.71 s: f = -0.662490501784, ‖∇f‖ = 6.3694e-03, α = 4.07e-01, m = 16, nfg = 2
+[ Info: LBFGS: iter   56, time  666.01 s: f = -0.662497687998, ‖∇f‖ = 2.9285e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   57, time  666.32 s: f = -0.662500949854, ‖∇f‖ = 2.1234e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   58, time  666.62 s: f = -0.662503723196, ‖∇f‖ = 4.1203e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   59, time  666.93 s: f = -0.662505780051, ‖∇f‖ = 3.0872e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   60, time  667.22 s: f = -0.662507116565, ‖∇f‖ = 1.9618e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   61, time  667.52 s: f = -0.662509290310, ‖∇f‖ = 1.5747e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   62, time  667.82 s: f = -0.662510568937, ‖∇f‖ = 1.3099e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   63, time  668.65 s: f = -0.662511109974, ‖∇f‖ = 2.7217e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   64, time  668.96 s: f = -0.662511878793, ‖∇f‖ = 1.0320e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   65, time  669.34 s: f = -0.662512042147, ‖∇f‖ = 5.9753e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   66, time  669.65 s: f = -0.662512275118, ‖∇f‖ = 6.6602e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   67, time  669.93 s: f = -0.662512678161, ‖∇f‖ = 9.0498e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   68, time  670.21 s: f = -0.662513114911, ‖∇f‖ = 1.8006e-03, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   69, time  670.51 s: f = -0.662513454844, ‖∇f‖ = 9.5988e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   70, time  670.80 s: f = -0.662513639773, ‖∇f‖ = 5.2576e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   71, time  671.09 s: f = -0.662513713403, ‖∇f‖ = 4.0696e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   72, time  671.39 s: f = -0.662513818843, ‖∇f‖ = 4.8084e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   73, time  671.70 s: f = -0.662513978848, ‖∇f‖ = 6.8463e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   74, time  672.29 s: f = -0.662514066816, ‖∇f‖ = 5.2125e-04, α = 5.38e-01, m = 16, nfg = 2
+[ Info: LBFGS: iter   75, time  672.57 s: f = -0.662514122809, ‖∇f‖ = 3.2924e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   76, time  672.86 s: f = -0.662514184291, ‖∇f‖ = 2.7038e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   77, time  673.17 s: f = -0.662514214654, ‖∇f‖ = 4.6682e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   78, time  673.46 s: f = -0.662514242510, ‖∇f‖ = 2.7698e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   79, time  673.74 s: f = -0.662514253309, ‖∇f‖ = 1.6244e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   80, time  674.02 s: f = -0.662514263613, ‖∇f‖ = 1.2004e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   81, time  674.30 s: f = -0.662514271751, ‖∇f‖ = 1.4760e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   82, time  674.58 s: f = -0.662514281056, ‖∇f‖ = 1.6558e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: iter   83, time  674.87 s: f = -0.662514283704, ‖∇f‖ = 2.1824e-04, α = 1.00e+00, m = 16, nfg = 1
+[ Info: LBFGS: converged after 84 iterations and time 675.15 s: f = -0.662514288424, ‖∇f‖ = 5.9513e-05
+</code></pre><p>Note that <code>fixedpoint</code> returns the final optimized PEPS, the last converged environment, the final energy estimate as well as a <code>NamedTuple</code> of diagnostics. This allows us to, e.g., analyze the number of cost function calls or the history of gradient norms to evaluate the convergence rate:</p><pre><code class="language-julia hljs">@show info_opt.fg_evaluations info_opt.gradnorms[1:10:end];</code></pre><pre><code class="nohighlight hljs">info_opt.fg_evaluations = 98
+info_opt.gradnorms[1:10:end] = [0.9354758925982428, 0.2977564979129917, 0.021510752143210195, 0.009151302712640632, 0.009912940904896769, 0.019901533415930574, 0.0019617677308353, 0.0005257609002981095, 0.00012003941670625574]
+</code></pre><p>Let&#39;s now compare the optimized energy against an accurate Quantum Monte Carlo estimate by <a href="../../references/#sandvik_computational_2011">Sandvik</a>, where the energy per site was found to be <span>$E_{\text{ref}}=−0.6694421$</span>. From our simple optimization we find:</p><pre><code class="language-julia hljs">@show E;</code></pre><pre><code class="nohighlight hljs">E = -0.6625142884244373
+</code></pre><p>While this energy is in the right ballpark, there is still quite some deviation from the accurate reference energy. This, however, can be attributed to the small bond dimension - an optimization with larger bond dimension would approach this value much more closely.</p><p>A more reasonable comparison would be against another finite bond dimension PEPS simulation. For example, Juraj Hasik&#39;s data from <span>$J_1\text{-}J_2$</span> <a href="https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat">PEPS simulations</a> yields <span>$E_{D=2,\chi=16}=-0.660231\dots$</span> which is more in line with what we find here.</p><h2 id="Compute-the-correlation-lengths-and-transfer-matrix-spectra"><a class="docs-heading-anchor" href="#Compute-the-correlation-lengths-and-transfer-matrix-spectra">Compute the correlation lengths and transfer matrix spectra</a><a id="Compute-the-correlation-lengths-and-transfer-matrix-spectra-1"></a><a class="docs-heading-anchor-permalink" href="#Compute-the-correlation-lengths-and-transfer-matrix-spectra" title="Permalink"></a></h2><p>In practice, in order to obtain an accurate and variational energy estimate, one would need to compute multiple energies at different environment dimensions and extrapolate in, e.g., the correlation length or the second gap of the transfer matrix spectrum. For that, we would need the <a href="../../lib/lib/#MPSKit.correlation_length-Tuple{Any, CTMRGEnv}"><code>correlation_length</code></a> function, which computes the horizontal and vertical correlation lengths and transfer matrix spectra for all unit cell coordinates:</p><pre><code class="language-julia hljs">ξ_h, ξ_v, λ_h, λ_v = correlation_length(peps, env)
+@show ξ_h ξ_v;</code></pre><pre><code class="nohighlight hljs">ξ_h = [1.034117934253177]
+ξ_v = [1.0240816290840877]
+</code></pre><h2 id="Computing-observables"><a class="docs-heading-anchor" href="#Computing-observables">Computing observables</a><a id="Computing-observables-1"></a><a class="docs-heading-anchor-permalink" href="#Computing-observables" title="Permalink"></a></h2><p>As a last thing, we want to see how we can compute expectation values of observables, given the optimized PEPS and its CTMRG environment. To compute, e.g., the magnetization, we first need to define the observable as a <code>TensorMap</code>:</p><pre><code class="language-julia hljs">σ_z = TensorMap([1.0 0.0; 0.0 -1.0], ℂ^2, ℂ^2)</code></pre><pre><code class="nohighlight hljs">TensorMap(ℂ^2 ← ℂ^2):
+ 1.0   0.0
+ 0.0  -1.0
+</code></pre><p>In order to be able to contract it with the PEPS and environment, we define need to define a <code>LocalOperator</code> and specify on which physical spaces and sites the observable acts. That way, the PEPS-environment-operator contraction gets automatically generated (also works for multi-site operators!). See the <a href="../../lib/lib/#PEPSKit.LocalOperator"><code>LocalOperator</code></a> docstring for more details. The magnetization is just a single-site observable, so we have:</p><pre><code class="language-julia hljs">M = LocalOperator(fill(ℂ^2, 1, 1), (CartesianIndex(1, 1),) =&gt; σ_z)</code></pre><pre><code class="nohighlight hljs">LocalOperator{Tuple{Pair{Tuple{CartesianIndex{2}}, TensorKit.TensorMap{Float64, TensorKit.ComplexSpace, 1, 1, Vector{Float64}}}}, TensorKit.ComplexSpace}(TensorKit.ComplexSpace[ℂ^2;;], ((CartesianIndex(1, 1),) =&gt; TensorMap(ℂ^2 ← ℂ^2):
+ 1.0   0.0
+ 0.0  -1.0
+,))</code></pre><p>Finally, to evaluate the expecation value on the <code>LocalOperator</code>, we call:</p><pre><code class="language-julia hljs">@show expectation_value(peps, M, env);</code></pre><pre><code class="nohighlight hljs">expectation_value(peps, M, env) = -0.7554296202981441 + 2.541461125039123e-16im
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Overview</a><a class="docs-footer-nextpage" href="../bose_hubbard/">Optimizing the <span>$U(1)$</span>-symmetric Bose-Hubbard model »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.2 on <span class="colophon-date" title="Tuesday 6 May 2025 11:49">Tuesday 6 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
