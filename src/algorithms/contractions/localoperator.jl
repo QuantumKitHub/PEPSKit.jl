@@ -1,5 +1,10 @@
 # Contraction of local operators on arbitrary lattice locations
 # -------------------------------------------------------------
+
+
+# Contraction label helpers
+# -------------------------
+
 function tensorlabel(args...)
     return Symbol(ntuple(i -> iseven(i) ? :_ : args[(i + 1) >> 1], 2 * length(args) - 1)...)
 end
@@ -10,35 +15,141 @@ physicallabel(args...) = tensorlabel(:d, args...)
 """
 $(SIGNATURES)
 
-Contract a local operator `O` on the PEPS `peps` at the indices `inds` using the environment `env`.
-
-This works by generating the appropriate contraction on a rectangular patch with its corners
-specified by `inds`. The `peps` is contracted with `O` from above and below, and the PEPS-operator
-sandwich is surrounded with the appropriate environment tensors.
+Returns which slot of `open` the patch position `(r, c)` occupies, or `nothing` if that site
+carries no open physical leg. `open` itself may be `nothing`, meaning no site does.
 """
-function contract_local_operator(
-        inds::Vector{CartesianIndex{2}}, O::AbstractTensorMap,
-        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
+_open_slot(open, r, c) = isnothing(open) ? nothing : findfirst(==(CartesianIndex(r, c)), open)
+
+"""
+$(SIGNATURES)
+
+Returns the virtual leg labels of the bulk factor at patch position `(i, j)` of `layer`, in
+domain order `(N, E, S, W)`.
+
+This is the bulk half of the label protocol, and is the same for every state type: legs facing
+the perimeter of a `gridsize` patch take the `virtuallabel(SIDE, layer, ...)` labels that
+[`boundary_contraction_expr`](@ref) consumes, while legs facing another site take an interior
+`:horizontal` or `:vertical` label shared with that neighbour.
+"""
+function _bulk_virtuallabels(i, j, layer, gridsize)
+    return (
+        i == 1 ? virtuallabel(NORTH, layer, j) : virtuallabel(:vertical, layer, i - 1, j),
+        j == gridsize[2] ? virtuallabel(EAST, layer, i) :
+            virtuallabel(:horizontal, layer, i, j),
+        i == gridsize[1] ? virtuallabel(SOUTH, layer, j) : virtuallabel(:vertical, layer, i, j),
+        j == 1 ? virtuallabel(WEST, layer, i) : virtuallabel(:horizontal, layer, i, j - 1),
     )
-    static_inds = Tuple(Val.(inds))
-    return _contract_local_operator(static_inds, O, (ket, bra), env)
-end
-function contract_local_operator(
-        inds::Vector{Tuple{Int, Int}}, O::AbstractTensorMap,
-        ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv,
-    )
-    return contract_local_operator(CartesianIndex.(inds), O, ket, bra, env)
 end
 
-Base.@deprecate(
-    contract_local_operator(inds::NTuple, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv),
-    contract_local_operator(collect(inds), ket, bra, env)
+
+# Patch geometry
+# --------------
+
+"""
+$(SIGNATURES)
+
+Recover the patch coordinates from `Val`-encoded indices, checking that they do not overlap.
+Uses an implementation in the type domain, so that the patch geometry is available to the
+generated contraction expressions.
+"""
+function _patch_inds(inds::Type)
+    sites = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters))
+    allunique(sites) || throw(ArgumentError("Indices should not overlap: $sites."))
+    return sites
+end
+_patch_inds(inds::Tuple{Vararg{Val}}) = _patch_inds(typeof(inds))
+
+"""
+$(SIGNATURES)
+
+Row and column ranges of the rectangular patch spanned by `sites`.
+"""
+function _patch_ranges(sites)
+    rows, cols = getindex.(sites, 1), getindex.(sites, 2)
+    return UnitRange(extrema(rows)...), UnitRange(extrema(cols)...)
+end
+
+"""
+$(SIGNATURES)
+
+Number of rows and columns of the rectangular patch spanned by `sites`.
+"""
+function _patch_gridsize(sites)
+    rowrange, colrange = _patch_ranges(sites)
+    return length(rowrange), length(colrange)
+end
+
+"""
+$(SIGNATURES)
+
+Shape of the patch spanned by `sites` as a string, e.g. `"2x2"`. For error messages and shape
+guards of environments which only support a restricted patch geometry.
+"""
+function _patch_shape_string(sites)
+    nrows, ncols = _patch_gridsize(sites)
+    return "$(nrows)x$(ncols)"
+end
+
+
+# Assembly helpers
+# ----------------
+
+"""
+$(SIGNATURES)
+
+Check whether the `@tensor` contraction for a given state type should be emitted with
+`contractcheck = true`. Enabled for PEPO sandwiches, disabled for other state types,
+in order to preserve the legacy behavior for different state types.
+"""
+contractcheck(state::Type) = false
+contractcheck(::Type{<:InfinitePEPO}) = true
+contractcheck(::Type{<:Tuple{Vararg{InfinitePEPO}}}) = true
+
+"""
+$(SIGNATURES)
+
+Wrap an assembled product in `@autoopt @tensor`, with `lhs` on the left if given and as a
+scalar otherwise, emitting `contractcheck = true` only when `check` is set.
+"""
+function _tensor_expr(prod, lhs, check::Bool)
+    return if isnothing(lhs)
+        check ? :(@autoopt @tensor contractcheck = true $prod) : :(@autoopt @tensor $prod)
+    else
+        check ? :(@autoopt @tensor contractcheck = true $lhs := $prod) :
+            :(@autoopt @tensor $lhs := $prod)
+    end
+end
+
+
+# Contraction expression generators
+# ---------------------------------
+
+## Boundary: environment
+
+"""
+    boundary_contraction_expr(::Type{Env}, rowrange, colrange)
+
+Build the contraction expressions for the environment factors surrounding the patch spanned
+by `rowrange` and `colrange`, dispatching on the type of the environment.
+
+The returned factors must consume exactly the perimeter labels the bulk exposes -
+`virtuallabel(NORTH, layer, j)`, `virtuallabel(EAST, layer, i)`,
+`virtuallabel(SOUTH, layer, j)` and `virtuallabel(WEST, layer, i)`, one per layer - and must
+close every label they introduce themselves among their own factors.
+
+!!! note
+    The expression generator assumes the environment variable name is `env`.
+"""
+boundary_contraction_expr(env::Type, rowrange, colrange) = throw(
+    ArgumentError("No patch boundary contraction defined for environments of type $env.")
 )
 
-# This implements the contraction of an operator acting on sites `inds`.
-# The generated function ensures that we can use @tensor to write dynamic contractions (and maximize performance).
-
-function _contract_corner_expr(rowrange, colrange)
+function boundary_contraction_expr(
+        ::Type{<:CTMRGEnv{C, T}}, rowrange, colrange
+    ) where {C, T}
+    # the edges carry one virtual leg per layer of the sandwich, on top of the two environment
+    # indices threading the ring, so the height follows from the edge tensor type
+    height = numout(T) - 1
     rmin, rmax = extrema(rowrange)
     cmin, cmax = extrema(colrange)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
@@ -54,14 +165,6 @@ function _contract_corner_expr(rowrange, colrange)
 
     C_SW = :(corner(env, SOUTHWEST, $(rmax + 1), $(cmin - 1)))
     corner_SW = tensorexpr(C_SW, envlabel(SOUTH, 0), envlabel(WEST, gridsize[1]))
-
-    return corner_NW, corner_NE, corner_SE, corner_SW
-end
-
-function _contract_edge_expr(rowrange, colrange, height)
-    rmin, rmax = extrema(rowrange)
-    cmin, cmax = extrema(colrange)
-    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
     edges_N = map(1:gridsize[2]) do i
         E_N = :(edge(env, NORTH, $(rmin - 1), $(cmin + i - 1)))
@@ -99,21 +202,46 @@ function _contract_edge_expr(rowrange, colrange, height)
         )
     end
 
-    return edges_N, edges_E, edges_S, edges_W
+    return [
+        corner_NW, corner_NE, corner_SE, corner_SW,
+        edges_N..., edges_E..., edges_S..., edges_W...,
+    ]
 end
 
-function _contract_state_expr(rowrange, colrange, height, cartesian_inds = nothing)
+
+## Bulk: state
+
+"""
+    bulk_contraction_expr(::Type{State}, rowrange, colrange, open)
+
+Build the contraction expressions for the factors inside the patch spanned by `rowrange`
+and `colrange`, dispatching on the type of the state.
+
+`open` is the vector of sites whose physical legs are left open, or `nothing` when every
+physical leg is contracted within the bulk. Open sites are labelled
+`physicallabel(:O, layer, slot)`, where `slot` is the position of the site in `open`; closed
+sites share a label between the layers. Physical labels are this generator's business alone.
+
+Interior bonds must be closed among the returned factors, which must expose their
+perimeter-facing virtual legs under the labels [`boundary_contraction_expr`](@ref) consumes.
+
+!!! note
+    The expression generator assumes the state variable name is `state`.
+"""
+bulk_contraction_expr(state::Type, rowrange, colrange, open) = throw(
+    ArgumentError("No patch bulk contraction defined for states of type $state.")
+)
+
+function bulk_contraction_expr(
+        ::Type{<:Tuple{InfinitePEPS, InfinitePEPS}}, rowrange, colrange, open
+    )
     rmin, rmax = extrema(rowrange)
     cmin, cmax = extrema(colrange)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
-    return map(1:height) do side
+    layers = map(1:2) do side
         return map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
-            inds_id = if isnothing(cartesian_inds)
-                nothing
-            else
-                findfirst(==(CartesianIndex(rmin + i - 1, cmin + j - 1)), cartesian_inds)
-            end
+            inds_id = _open_slot(open, rmin + i - 1, cmin + j - 1)
             physical_label = if isnothing(inds_id)
                 physicallabel(i, j)
             else
@@ -122,270 +250,221 @@ function _contract_state_expr(rowrange, colrange, height, cartesian_inds = nothi
             return tensorexpr(
                 :(state[$(side)][$(rmin + i - 1), $(cmin + j - 1)]),
                 (physical_label,),
-                (
-                    if i == 1
-                        virtuallabel(NORTH, side, j)
-                    else
-                        virtuallabel(:vertical, side, i - 1, j)
-                    end,
-                    if j == gridsize[2]
-                        virtuallabel(EAST, side, i)
-                    else
-                        virtuallabel(:horizontal, side, i, j)
-                    end,
-                    if i == gridsize[1]
-                        virtuallabel(SOUTH, side, j)
-                    else
-                        virtuallabel(:vertical, side, i, j)
-                    end,
-                    if j == 1
-                        virtuallabel(WEST, side, i)
-                    else
-                        virtuallabel(:horizontal, side, i, j - 1)
-                    end,
-                ),
+                _bulk_virtuallabels(i, j, side, gridsize),
             )
         end
     end
+
+    ket, bra = layers
+    return [ket..., map(x -> Expr(:call, :conj, x), bra)...]
 end
 
-function _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds = nothing)
-    @assert height == 1 || height == 2 "Contraction with more than 2 layers of PEPO is unintended."
+function bulk_contraction_expr(::Type{<:InfinitePEPO}, rowrange, colrange, open)
     rmin, rmax = extrema(rowrange)
     cmin, cmax = extrema(colrange)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
-    return map(1:height) do side
-        return map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
-            inds_id = if isnothing(cartesian_inds)
-                nothing
-            else
-                findfirst(==(CartesianIndex(rmin + i - 1, cmin + j - 1)), cartesian_inds)
-            end
-            if height == 1
-                physical_label_in = if isnothing(inds_id)
-                    physicallabel(i, j)
-                else
-                    physicallabel(:O, 2, inds_id)
-                end
-                physical_label_out = if isnothing(inds_id)
-                    physicallabel(i, j)
-                else
-                    physicallabel(:O, 1, inds_id)
-                end
-                tensor_name = :(twistdual(state[1][$(rmin + i - 1), $(cmin + j - 1)], 2))
-            else
-                physical_label_in = if isnothing(inds_id)
-                    physicallabel(:in, i, j)
-                else
-                    physicallabel(:Oopen, inds_id)
-                end
-                physical_label_out = if isnothing(inds_id)
-                    physicallabel(:out, i, j)
-                else
-                    physicallabel(:O, side, inds_id)
-                end
-                tensor_name = if side == 2
-                    :(state[2][$(rmin + i - 1), $(cmin + j - 1)])
-                else
-                    :(twistdual(state[1][$(rmin + i - 1), $(cmin + j - 1)], (1, 2)))
-                end
-            end
 
+    # a single layer is not wrapped in a tuple, so it is indexed directly
+    layer = map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
+        inds_id = _open_slot(open, rmin + i - 1, cmin + j - 1)
+        physical_label_out = if isnothing(inds_id)
+            physicallabel(i, j)     # traced over the layer
+        else
+            physicallabel(:O, 1, inds_id)
+        end
+        physical_label_in = if isnothing(inds_id)
+            physicallabel(i, j)
+        else
+            physicallabel(:O, 2, inds_id)
+        end
+        return tensorexpr(
+            :(twistdual(state[$(rmin + i - 1), $(cmin + j - 1)], 2)),
+            (physical_label_out, physical_label_in),
+            _bulk_virtuallabels(i, j, 1, gridsize),
+        )
+    end
+
+    return vec(layer)
+end
+
+function bulk_contraction_expr(
+        ::Type{<:Tuple{InfinitePEPO, InfinitePEPO}}, rowrange, colrange, open
+    )
+    rmin, rmax = extrema(rowrange)
+    cmin, cmax = extrema(colrange)
+    gridsize = (rmax - rmin + 1, cmax - cmin + 1)
+
+    layers = map(1:2) do side
+        return map(Iterators.product(1:gridsize[1], 1:gridsize[2])) do (i, j)
+            inds_id = _open_slot(open, rmin + i - 1, cmin + j - 1)
+            physical_label_out = if isnothing(inds_id)
+                physicallabel(:out, i, j)
+            else
+                physicallabel(:O, side, inds_id)
+            end
+            # the two layers are linked through a shared label on the open sites
+            physical_label_in = if isnothing(inds_id)
+                physicallabel(:in, i, j)
+            else
+                physicallabel(:Oopen, inds_id)
+            end
+            tensor_name = if side == 2
+                :(state[2][$(rmin + i - 1), $(cmin + j - 1)])
+            else
+                :(twistdual(state[1][$(rmin + i - 1), $(cmin + j - 1)], (1, 2)))
+            end
             return tensorexpr(
                 tensor_name, (physical_label_out, physical_label_in),
-                (
-                    if i == 1
-                        virtuallabel(NORTH, side, j)
-                    else
-                        virtuallabel(:vertical, side, i - 1, j)
-                    end,
-                    if j == gridsize[2]
-                        virtuallabel(EAST, side, i)
-                    else
-                        virtuallabel(:horizontal, side, i, j)
-                    end,
-                    if i == gridsize[1]
-                        virtuallabel(SOUTH, side, j)
-                    else
-                        virtuallabel(:vertical, side, i, j)
-                    end,
-                    if j == 1
-                        virtuallabel(WEST, side, i)
-                    else
-                        virtuallabel(:horizontal, side, i, j - 1)
-                    end,
-                ),
+                _bulk_virtuallabels(i, j, side, gridsize),
             )
         end
     end
+
+    ket, bra = layers
+    return [ket..., map(x -> Expr(:call, :conj, x), bra)...]
 end
 
+function bulk_contraction_expr(
+        state::Type{<:Tuple{Vararg{InfinitePEPO}}}, rowrange, colrange, open
+    )
+    return throw(
+        ArgumentError(
+            "Cannot contract a patch of $(length(state.parameters)) PEPO layers; only a \
+            single layer or a two-layer sandwich are supported."
+        )
+    )
+end
+
+
+## Operator
+
+"""
+    operator_contraction_expr(::Type{Operator}, nsites)
+
+Build the contraction expressions for the operator factors inserted into a patch acting on
+`nsites` sites, dispatching on the type of the operator.
+
+The factors refer to the enclosing generated function's `operator` argument by name, and
+attach to the open physical legs of the bulk: `physicallabel(:O, 2, k)` is the bra index of
+site `k` and `physicallabel(:O, 1, k)` its ket index. Every state type labels its open legs
+with that same pair, so this generator does not depend on the state. Any label it introduces
+itself must be closed among its own factors.
+
+!!! note
+    The expression generator assumes the operator variable name is `operator`.
+"""
+operator_contraction_expr(operator::Type, nsites) = throw(
+    ArgumentError("No patch operator contraction defined for operators of type $operator.")
+)
+
+function operator_contraction_expr(::Type{<:AbstractTensorMap}, nsites)
+    return [
+        tensorexpr(
+            :operator,
+            ntuple(i -> physicallabel(:O, 2, i), nsites),
+            ntuple(i -> physicallabel(:O, 1, i), nsites),
+        ),
+    ]
+end
+
+
+# Low-level patch contractions using generated contraction expressions
+# --------------------------------------------------------------------
+
+"""
+$(SIGNATURES)
+
+Contract the rectangular patch spanned by `inds` with `operator` inserted on those sites,
+leaving no physical leg open, and return the resulting scalar.
+
+The sites are carried as `Val` parameters so that the patch geometry is available while the
+contraction is generated, and `state` is the tuple of layers making up the sandwich. The
+expression is assembled from [`boundary_contraction_expr`](@ref),
+[`bulk_contraction_expr`](@ref) and [`operator_contraction_expr`](@ref), which dispatch on the
+types of `env`, `state` and `operator` respectively, so this single method covers every
+combination those three have methods for.
+"""
 @generated function _contract_local_operator(
-        inds::NTuple{N, Val},
-        O::AbstractTensorMap{T, S, N, N},
-        state::Tuple{InfinitePEPS, InfinitePEPS},
-        env::CTMRGEnv,
-    ) where {T, S, N}
-    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
-    allunique(cartesian_inds) ||
-        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
-    rowrange = getindex.(cartesian_inds, 1)
-    colrange = getindex.(cartesian_inds, 2)
-
-    corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
-    edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, 2)
-    operator = tensorexpr(
-        :O,
-        ntuple(i -> physicallabel(:O, 2, i), N),
-        ntuple(i -> physicallabel(:O, 1, i), N),
-    )
-    ket, bra = _contract_state_expr(rowrange, colrange, 2, cartesian_inds)
-
-    multiplication_ex = Expr(
-        :call, :*,
-        corner_NW, corner_NE, corner_SE, corner_SW,
-        edges_N..., edges_E..., edges_S..., edges_W...,
-        ket..., map(x -> Expr(:call, :conj, x), bra)...,
-        operator,
-    )
-
-    returnex = quote
-        @autoopt @tensor $multiplication_ex
-    end
-    return macroexpand(@__MODULE__, returnex)
-end
-
-"""
-$(SIGNATURES)
-
-Contract a local norm of the PEPS `peps` around indices `inds`.
-
-This works analogously to [`contract_local_operator`](@ref) by generating the contraction
-on a rectangular patch based on `inds` but replacing the operator with an identity such
-that the PEPS norm is computed. (Note that this is not the physical norm of the state.)
-"""
-function contract_local_norm(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    )
-    static_inds = Tuple(Val.(inds))
-    return _contract_local_norm(static_inds, (ket, bra), env)
-end
-function contract_local_norm(
-        inds::Vector{Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    )
-    return contract_local_norm(CartesianIndex.(inds), ket, bra, env)
-end
-@generated function _contract_local_norm(
-        inds::NTuple{N, Val}, state::Tuple{InfinitePEPS, InfinitePEPS}, env::CTMRGEnv
+        inds::NTuple{N, Val}, operator, state, env
     ) where {N}
-    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
-    allunique(cartesian_inds) || throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
-    rowrange = getindex.(cartesian_inds, 1)
-    colrange = getindex.(cartesian_inds, 2)
-
-    corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
-    edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, 2)
-    ket, bra = _contract_state_expr(rowrange, colrange, 2)
+    sites = _patch_inds(inds)
+    rowrange, colrange = _patch_ranges(sites)
 
     multiplication_ex = Expr(
         :call, :*,
-        corner_NW, corner_NE, corner_SE, corner_SW,
-        edges_N..., edges_E..., edges_S..., edges_W...,
-        ket..., map(x -> Expr(:call, :conj, x), bra)...,
+        boundary_contraction_expr(env, rowrange, colrange)...,
+        bulk_contraction_expr(state, rowrange, colrange, sites)...,
+        operator_contraction_expr(operator, N)...,
     )
 
-    returnex = quote
-        @autoopt @tensor $multiplication_ex
-    end
+    returnex = _tensor_expr(multiplication_ex, nothing, contractcheck(state))
     return macroexpand(@__MODULE__, returnex)
 end
 
-Base.@deprecate(
-    contract_local_norm(inds::NTuple, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv),
-    contract_local_norm(collect(inds), ket, bra, env)
-)
-
-@doc """
+"""
 $(SIGNATURES)
 
-Construct the reduced density matrix `ρ` of PEPS or PEPO (representing PEPS with ancilla legs) `ket`, `bra` with open indices `inds` using the environment `env`.
-Alternatively, construct the reduced density matrix `ρ` of a mixed state specified by the density matrix PEPO `state` with open indices `inds` using the environment `env`.
+Contract the rectangular patch spanned by `inds` with no operator inserted, pairing the
+physical legs of the layers on every site, and return the resulting scalar.
 
-This works by generating the appropriate contraction on a rectangular patch with its corners
-specified by `inds`. The result is normalized such that `tr(ρ) = 1`. 
-""" reduced_densitymatrix
+Assembled as [`_contract_local_operator`](@ref), except that
+[`bulk_contraction_expr`](@ref) is passed `nothing` in place of the open sites, so no physical
+leg is left open and no operator factor is needed. Note this is the norm of the patch within
+the given environment, not the physical norm of the state.
+"""
+@generated function _contract_local_norm(
+        inds::NTuple{N, Val}, state, env
+    ) where {N}
+    sites = _patch_inds(inds)
+    rowrange, colrange = _patch_ranges(sites)
 
-function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+    multiplication_ex = Expr(
+        :call, :*,
+        boundary_contraction_expr(env, rowrange, colrange)...,
+        bulk_contraction_expr(state, rowrange, colrange, nothing)...,   # legs paired, not open
     )
-    length(inds) == 1 && return reduced_densitymatrix1x1(only(inds), ket, bra, env)
 
-    if length(inds) == 2
-        if inds[2] - inds[1] == CartesianIndex(1, 0)
-            return reduced_densitymatrix2x1(inds[1], ket, bra, env)
-        elseif inds[2] - inds[1] == CartesianIndex(0, 1)
-            return reduced_densitymatrix1x2(inds[1], ket, bra, env)
-        end
+    returnex = _tensor_expr(multiplication_ex, nothing, contractcheck(state))
+    return macroexpand(@__MODULE__, returnex)
+end
+
+"""
+$(SIGNATURES)
+
+Contract the rectangular patch spanned by `inds` leaving the physical legs of those sites
+open, and return the resulting reduced density matrix, normalized by its supertrace.
+
+Assembled as [`_contract_local_operator`](@ref) but without an operator factor, so the open
+legs become the indices of `ρ`: `physicallabel(:O, 1, k)` in its codomain and
+`physicallabel(:O, 2, k)` in its domain, for each site `k`. Normalization uses `str` rather
+than `tr`, since the supertrace carries the fermionic signs.
+"""
+@generated function _contract_densitymatrix(
+        inds::NTuple{N, Val}, state, env
+    ) where {N}
+    sites = _patch_inds(inds)
+    rowrange, colrange = _patch_ranges(sites)
+
+    multiplication_ex = Expr(
+        :call, :*,
+        boundary_contraction_expr(env, rowrange, colrange)...,
+        bulk_contraction_expr(state, rowrange, colrange, sites)...,
+    )
+    result = tensorexpr(
+        :ρ,
+        ntuple(i -> physicallabel(:O, 1, i), N),
+        ntuple(i -> physicallabel(:O, 2, i), N),
+    )
+
+    multex = _tensor_expr(multiplication_ex, result, contractcheck(state))
+    return quote
+        $(macroexpand(@__MODULE__, multex))
+        return ρ / str(ρ)
     end
-
-    static_inds = Tuple(Val.(inds))
-    return _contract_densitymatrix(static_inds, (ket, bra), env)
 end
-function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, state::InfinitePEPO, env::CTMRGEnv
-    )
-    size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
-    static_inds = Tuple(Val.(inds))
-    return _contract_densitymatrix(static_inds, (state,), env)
-end
-function reduced_densitymatrix(
-        inds::Vector{CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
-    )
-    size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
-    size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
-    static_inds = Tuple(Val.(inds))
-    return _contract_densitymatrix(static_inds, (ket, bra), env)
-end
-reduced_densitymatrix(inds, ket::InfinitePEPS, env::CTMRGEnv) =
-    reduced_densitymatrix(inds, ket, ket, env)
 
-Base.@deprecate(
-    reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    ) where {N},
-    reduced_densitymatrix(collect(inds), ket, bra, env)
-)
-Base.@deprecate(
-    reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, state::InfinitePEPO, env::CTMRGEnv
-    ) where {N},
-    reduced_densitymatrix(collect(inds), state, env)
-)
-Base.@deprecate(
-    reduced_densitymatrix(
-        inds::NTuple{N, CartesianIndex{2}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
-    ) where {N},
-    reduced_densitymatrix(collect(inds), ket, bra, env)
-)
-
-Base.@deprecate(
-    reduced_densitymatrix(
-        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    ) where {N},
-    reduced_densitymatrix(collect(CartesianIndex.(inds)), ket, bra, env)
-)
-Base.@deprecate(
-    reduced_densitymatrix(
-        inds::NTuple{N, Tuple{Int, Int}}, ket::InfinitePEPO, bra::InfinitePEPO, env::CTMRGEnv
-    ) where {N},
-    reduced_densitymatrix(collect(CartesianIndex.(inds)), ket, bra, env)
-)
-Base.@deprecate(
-    reduced_densitymatrix(
-        inds::NTuple{N, Tuple{Int, Int}}, state::InfinitePEPO, env::CTMRGEnv
-    ) where {N},
-    reduced_densitymatrix(collect(CartesianIndex.(inds)), state, env)
-)
+# Fast path specializations
+# -------------------------
 
 # Special case 1x1 density matrix:
 # Keep contraction order but try to optimize intermediate permutations:
@@ -399,18 +478,18 @@ function reduced_densitymatrix1x1(
     A = ket[row, col]
     Ā = bra[row, col]
 
-    E_north =
-        edge(env, NORTH, row - 1, col) *
-        twistdual(corner(env, NORTHEAST, row - 1, col + 1), 1)
-    E_east =
-        edge(env, EAST, row, col + 1) *
-        twistdual(corner(env, SOUTHEAST, row + 1, col + 1), 1)
-    E_south =
-        edge(env, SOUTH, row + 1, col) *
-        twistdual(corner(env, SOUTHWEST, row + 1, col - 1), 1)
-    E_west =
-        edge(env, WEST, row, col - 1) *
-        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
+    E_north = absorb_right(
+        edge(env, NORTH, row - 1, col), corner(env, NORTHEAST, row - 1, col + 1)
+    )
+    E_east = absorb_right(
+        edge(env, EAST, row, col + 1), corner(env, SOUTHEAST, row + 1, col + 1)
+    )
+    E_south = absorb_right(
+        edge(env, SOUTH, row + 1, col), corner(env, SOUTHWEST, row + 1, col - 1)
+    )
+    E_west = absorb_right(
+        edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
+    )
 
     @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
         E_south[χSE DSt DSb; χSW] * E_west[χSW DWt DWb; χNW]
@@ -429,19 +508,6 @@ function reduced_densitymatrix1x1(
     return ρ / str(ρ)
 end
 
-function reduced_densitymatrix(
-        inds::NTuple{2, CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
-    )
-    if inds[2] - inds[1] == CartesianIndex(1, 0)
-        return reduced_densitymatrix2x1(inds[1], ket, bra, env)
-    elseif inds[2] - inds[1] == CartesianIndex(0, 1)
-        return reduced_densitymatrix1x2(inds[1], ket, bra, env)
-    else
-        static_inds = Val.(inds)
-        return _contract_densitymatrix(static_inds, (ket, bra), env)
-    end
-end
-
 # Special case 2x1 density matrix:
 # Keep contraction order but try to optimize intermediate permutations:
 function reduced_densitymatrix2x1(
@@ -455,20 +521,20 @@ function reduced_densitymatrix2x1(
     A_south = ket[row + 1, col]
     Ā_south = bra[row + 1, col]
 
-    E_north =
-        edge(env, NORTH, row - 1, col) *
-        twistdual(corner(env, NORTHEAST, row - 1, col + 1), 1)
+    E_north = absorb_right(
+        edge(env, NORTH, row - 1, col), corner(env, NORTHEAST, row - 1, col + 1)
+    )
     E_northeast = edge(env, EAST, row, col + 1)
-    E_southeast =
-        edge(env, EAST, row + 1, col + 1) *
-        twistdual(corner(env, SOUTHEAST, row + 2, col + 1), 1)
-    E_south =
-        edge(env, SOUTH, row + 2, col) *
-        twistdual(corner(env, SOUTHWEST, row + 2, col - 1), 1)
+    E_southeast = absorb_right(
+        edge(env, EAST, row + 1, col + 1), corner(env, SOUTHEAST, row + 2, col + 1)
+    )
+    E_south = absorb_right(
+        edge(env, SOUTH, row + 2, col), corner(env, SOUTHWEST, row + 2, col - 1)
+    )
     E_southwest = edge(env, WEST, row + 1, col - 1)
-    E_northwest =
-        edge(env, WEST, row, col - 1) *
-        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
+    E_northwest = absorb_right(
+        edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
+    )
 
     @tensor EE_NW[χW χNE DNWt DNt; DNWb DNb] :=
         E_northwest[χW DNWt DNWb; χNW] * E_north[χNW DNt DNb; χNE]
@@ -506,19 +572,19 @@ function reduced_densitymatrix1x2(
     Ā_east = bra[row, col + 1]
 
     E_northwest = edge(env, NORTH, row - 1, col)
-    E_northeast =
-        edge(env, NORTH, row - 1, col + 1) *
-        twistdual(corner(env, NORTHEAST, row - 1, col + 2), 1)
-    E_east =
-        edge(env, EAST, row, col + 2) *
-        twistdual(corner(env, SOUTHEAST, row + 1, col + 2), 1)
+    E_northeast = absorb_right(
+        edge(env, NORTH, row - 1, col + 1), corner(env, NORTHEAST, row - 1, col + 2)
+    )
+    E_east = absorb_right(
+        edge(env, EAST, row, col + 2), corner(env, SOUTHEAST, row + 1, col + 2)
+    )
     E_southeast = edge(env, SOUTH, row + 1, col + 1)
-    E_southwest =
-        edge(env, SOUTH, row + 1, col) *
-        twistdual(corner(env, SOUTHWEST, row + 1, col - 1), 1)
-    E_west =
-        edge(env, WEST, row, col - 1) *
-        twistdual(corner(env, NORTHWEST, row - 1, col - 1), 1)
+    E_southwest = absorb_right(
+        edge(env, SOUTH, row + 1, col), corner(env, SOUTHWEST, row + 1, col - 1)
+    )
+    E_west = absorb_right(
+        edge(env, WEST, row, col - 1), corner(env, NORTHWEST, row - 1, col - 1)
+    )
 
     @tensor EE_SW[χS χNW DSWt DWt; DSWb DWb] :=
         E_southwest[χS DSWt DSWb; χSW] * E_west[χSW DWt DWb; χNW]
@@ -542,80 +608,4 @@ function reduced_densitymatrix1x2(
         EEEAA_W[dWt dWb; χS DMt DMb χN] * EEEAA_E[χS DMt DMb χN; dEt dEb]
 
     return ρ / str(ρ)
-end
-
-@generated function _contract_densitymatrix(
-        inds::NTuple{N, Val}, state::Tuple{InfinitePEPS, InfinitePEPS}, env::CTMRGEnv
-    ) where {N}
-    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
-    allunique(cartesian_inds) ||
-        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
-    rowrange = getindex.(cartesian_inds, 1)
-    colrange = getindex.(cartesian_inds, 2)
-
-    corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
-    edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, 2)
-    result = tensorexpr(
-        :ρ,
-        ntuple(i -> physicallabel(:O, 1, i), N),
-        ntuple(i -> physicallabel(:O, 2, i), N),
-    )
-    ket, bra = _contract_state_expr(rowrange, colrange, 2, cartesian_inds)
-
-    multiplication_ex = Expr(
-        :call, :*,
-        corner_NW, corner_NE, corner_SE, corner_SW,
-        edges_N..., edges_E..., edges_S..., edges_W...,
-        ket..., map(x -> Expr(:call, :conj, x), bra)...,
-    )
-    multex = :(@autoopt @tensor $result := $multiplication_ex)
-    return quote
-        $(macroexpand(@__MODULE__, multex))
-        return ρ / str(ρ)
-    end
-end
-
-@generated function _contract_densitymatrix(
-        inds::NTuple{N, Val}, state::Tuple{InfinitePEPO, Vararg{InfinitePEPO, M}}, env::CTMRGEnv
-    ) where {N, M}
-    height = M + 1
-    @assert height == 1 || height == 2 "Contraction with more than 2 layers of PEPO is unintended."
-    cartesian_inds = collect(CartesianIndex{2}, map(x -> x.parameters[1], inds.parameters)) # weird hack to extract information from Val
-    allunique(cartesian_inds) ||
-        throw(ArgumentError("Indices should not overlap: $cartesian_inds."))
-    rowrange = getindex.(cartesian_inds, 1)
-    colrange = getindex.(cartesian_inds, 2)
-
-    corner_NW, corner_NE, corner_SE, corner_SW = _contract_corner_expr(rowrange, colrange)
-    edges_N, edges_E, edges_S, edges_W = _contract_edge_expr(rowrange, colrange, height)
-    result = tensorexpr(
-        :ρ,
-        ntuple(i -> physicallabel(:O, 1, i), N),
-        ntuple(i -> physicallabel(:O, 2, i), N),
-    )
-
-    pepos = _contract_pepo_state_expr(rowrange, colrange, height, cartesian_inds)
-
-    if height == 2
-        ket, bra = pepos
-        multiplication_ex = Expr(
-            :call, :*,
-            corner_NW, corner_NE, corner_SE, corner_SW,
-            edges_N..., edges_E..., edges_S..., edges_W...,
-            ket..., map(x -> Expr(:call, :conj, x), bra)...,
-        )
-    else
-        multiplication_ex = Expr(
-            :call, :*,
-            corner_NW, corner_NE, corner_SE, corner_SW,
-            edges_N..., edges_E..., edges_S..., edges_W...,
-            pepos[1]...
-        )
-    end
-
-    multex = :(@autoopt @tensor contractcheck = true $result := $multiplication_ex)
-    return quote
-        $(macroexpand(@__MODULE__, multex))
-        return ρ / str(ρ)
-    end
 end

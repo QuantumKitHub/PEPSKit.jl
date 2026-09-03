@@ -349,30 +349,6 @@ function ChainRulesCore.rrule(
     return tout, twistnondual_pullback
 end
 
-function absorb_left(
-        E::AbstractTensorMap{T, S}, C::CornerTensor{S}
-    ) where {T, S}
-    pC = (codomainind(C), domainind(C))
-    pE = ((codomainind(E)[1],), (codomainind(E)[2:end]..., domainind(E)...))
-    pCE = (codomainind(E), domainind(E))
-    return tensorcontract(C, pC, false, E, pE, false, pCE)
-end
-function absorb_right(
-        P::AbstractTensorMap{T, S}, C::CornerTensor{S}
-    ) where {T, S}
-    pP = ((codomainind(P)..., domainind(P)[2:end]...), (domainind(P)[1],))
-    pC = (codomainind(C), domainind(C))
-    pPC = (codomainind(P), (domainind(P)[end], domainind(P)[1:(end - 1)]...))
-    return tensorcontract(P, pP, false, C, pC, false, pPC)
-end
-# specialized versions; TODO: probably remove, this is a terrible idea for fermionic tensors...
-function absorb_right(E::EdgeTensor{S}, C::CornerTensor{S}) where {S}
-    return E * C
-end
-function absorb_left_right(T::AbstractTensorMap, CL::CornerTensor, CR::CornerTensor)
-    return absorb_right(absorb_left(T, CL), CR)
-end
-
 # Partial contractions
 # --------------------
 
