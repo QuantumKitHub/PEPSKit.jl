@@ -13,7 +13,7 @@ struct ScramblingEnvGauge end
 """
 $(TYPEDEF)
 
-C4v-symmetric equivalent of the [ScramblingEnvGauge`](@ref) environment gauge fixing
+C4v-symmetric equivalent of the [`ScramblingEnvGauge`](@ref) environment gauge fixing
 algorithm.
 """
 struct ScramblingEnvGaugeC4v end

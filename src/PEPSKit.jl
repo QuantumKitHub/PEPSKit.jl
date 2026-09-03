@@ -30,9 +30,12 @@ import TupleTools
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
 using MPSKit: InfiniteEnvironments
+using MPSKit: DynamicTol, updatetol
+import MPSKit.DynamicTols: _updatetol
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
+using TensorKitTensors: fuse_charge
 import TensorKitTensors.SpinOperators as SO
 import TensorKitTensors.FermionOperators as FO
 import TensorKitTensors.HubbardOperators as HO
@@ -93,6 +96,7 @@ include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/contract_site.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
+include("algorithms/contractions/ctmrg/characteristic_equations.jl")
 
 include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
@@ -140,7 +144,8 @@ include("algorithms/toolbox.jl")
 include("algorithms/correlator_adapters.jl")
 include("algorithms/correlators.jl")
 
-include("algorithms/optimization/fixed_point_differentiation.jl")
+include("algorithms/optimization/implicit_differentiation.jl")
+include("algorithms/optimization/preconditioning.jl")
 include("algorithms/optimization/peps_optimization.jl")
 
 include("algorithms/select_algorithm.jl")
@@ -161,7 +166,7 @@ export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
-export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter
+export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter, ImplicitGradient
 export fixedpoint
 
 export LocalTruncation
