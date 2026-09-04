@@ -28,12 +28,15 @@ using LoggingExtras
 import TupleTools
 
 using MPSKit
-using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
+using MPSKit:
+    MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor,
+    ProductTransferMatrix, TransferMatrix
 using MPSKit: InfiniteEnvironments
 using MPSKit: DynamicTol, updatetol
 import MPSKit.DynamicTols: _updatetol
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
+import MPSKit: fuser
 
 using TensorKitTensors: fuse_charge
 import TensorKitTensors.SpinOperators as SO
@@ -77,6 +80,8 @@ include("operators/infinitepepo.jl")
 include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
 include("operators/localcircuit.jl")
+include("operators/mpo_observable.jl")
+
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
@@ -112,6 +117,12 @@ include("algorithms/contractions/correlator/peps.jl")
 include("algorithms/contractions/correlator/pepo_purified.jl")
 include("algorithms/contractions/correlator/pepo_1layer.jl")
 
+include("algorithms/contractions/mpo_path/pepo_1layer.jl")
+include("algorithms/contractions/window/tools.jl")
+include("algorithms/contractions/window/pepo_1layer.jl")
+include("algorithms/contractions/window/twosite/caching.jl")
+include("algorithms/contractions/window/twosite/pepo_1layer.jl")
+
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/projectors.jl")
@@ -144,6 +155,8 @@ include("algorithms/transfermatrix.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/correlator_adapters.jl")
 include("algorithms/correlators.jl")
+include("algorithms/expval_approx.jl")
+include("algorithms/correlator_approx.jl")
 
 include("algorithms/optimization/implicit_differentiation.jl")
 include("algorithms/optimization/preconditioning.jl")
@@ -162,9 +175,10 @@ export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
-export LocalOperator, physicalspace
+export LocalOperator, MPOObservable, physicalspace
 export product_peps
-export reduced_densitymatrix, expectation_value, network_value, cost_function
+export reduced_densitymatrix, expectation_value_approx, correlator_approx
+export expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter, ImplicitGradient
