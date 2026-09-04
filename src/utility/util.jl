@@ -64,10 +64,10 @@ end
 
 """
     absorb_left(
-        E::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
+        A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
 
-Absorb a matrix `C` into the left of a tensor `E` by contracting the first leg of `E`
+Absorb a matrix `C` into the left of a tensor map `A` by contracting the first leg of `A`
 with the second leg of `C`.
 """
 function absorb_left(
@@ -89,7 +89,7 @@ end
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
 
-Absorb a matrix `C` into the right of a tensor `A` by contracting the last leg of `A`
+Absorb a matrix `C` into the right of a tensor map `A` by contracting the last leg of `A`
 with the first leg of `C`.
 """
 function absorb_right(
@@ -108,18 +108,21 @@ end
 
 """
     absorb_left_right(
-        A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
-    ) where {S}
-
-Absorb a matrix `C` into the right of a tensor `A` by contracting the last leg of `A`
-with the first leg of `C`.
-"""
-function absorb_left_right(
-        T::AbstractTensorMap{<:Any, S},
+        A::AbstractTensorMap{<:Any, S},
         CL::AbstractTensorMap{<:Any, S, 1, 1},
         CR::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
-    return absorb_right(absorb_left(T, CL), CR)
+
+Absorb matrices `CL` and `CR` into the left and right of a tensor map `A` by contracting the
+first leg of `A` with the second leg of `CL` and the last leg of `A` with the first leg of
+`CR`.
+"""
+function absorb_left_right(
+        A::AbstractTensorMap{<:Any, S},
+        CL::AbstractTensorMap{<:Any, S, 1, 1},
+        CR::AbstractTensorMap{<:Any, S, 1, 1}
+    ) where {S}
+    return absorb_right(absorb_left(A, CL), CR)
 end
 
 _fliptwist_s(s::DiagonalTensorMap) = twist!(DiagonalTensorMap(flip(s, 1:2)), 1)
