@@ -33,7 +33,7 @@ end
 # ---------------------------------------------
 
 """
-    local_expectation_value(inds, (bra, ket), operator, env)
+    local_expectation_value(inds, bra, operator, ket, env)
     local_expectation_value(inds, state, operator, env)
 
 Compute the contribution of a single term of a [`LocalOperator`](@ref) to the expectation
