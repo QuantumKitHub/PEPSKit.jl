@@ -17,18 +17,20 @@ $(SIGNATURES)
 
 Twist the i-th leg of a tensor `t` if it represents a dual space.
 """
-function twistdual(t::AbstractTensorMap, i::Int)
+twistdual(t::AbstractTensorMap, i) = _twistdual(t, i)
+# add rrule through dummy versions
+function _twistdual(t::AbstractTensorMap, i::Int)
     isdual(space(t, i)) || return t
     return twist(t, i)
 end
-function twistdual(t::AbstractTensorMap, is)
+function _twistdual(t::AbstractTensorMap, is)
     is′ = filter(i -> isdual(space(t, i)), is)
     return twist(t, is′)
 end
 function ChainRulesCore.rrule(
         config::RuleConfig, ::typeof(twistdual), t::AbstractTensorMap, i
     )
-    tout, twistdual_pullback = rrule_via_ad(config, twistdual, t, i)
+    tout, twistdual_pullback = rrule_via_ad(config, _twistdual, t, i)
     return tout, twistdual_pullback
 end
 
@@ -51,18 +53,20 @@ $(SIGNATURES)
 
 Twist the i-th leg of a tensor `t` if it represents a non-dual space.
 """
-function twistnondual(t::AbstractTensorMap, i::Int)
+twistnondual(t::AbstractTensorMap, i) = _twistnondual(t, i)
+# add rrule through dummy versions
+function _twistnondual(t::AbstractTensorMap, i::Int)
     !isdual(space(t, i)) || return t
     return twist(t, i)
 end
-function twistnondual(t::AbstractTensorMap, is)
+function _twistnondual(t::AbstractTensorMap, is)
     is′ = filter(i -> !isdual(space(t, i)), is)
     return twist(t, is′)
 end
 function ChainRulesCore.rrule(
         config::RuleConfig, ::typeof(twistnondual), t::AbstractTensorMap, i
     )
-    tout, twistnondual_pullback = rrule_via_ad(config, twistnondual, t, i)
+    tout, twistnondual_pullback = rrule_via_ad(config, _twistnondual, t, i)
     return tout, twistnondual_pullback
 end
 
