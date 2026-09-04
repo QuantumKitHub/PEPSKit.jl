@@ -52,21 +52,6 @@ function inner_prod(
     return @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
 end
 
-"""
-$(SIGNATURES)
-
-Apply a twist to domain or codomain indices that correspond to dual spaces
-"""
-function _linearmap_twist!(t::AbstractTensorMap)
-    for ax in 1:numout(t)
-        isdual(codomain(t, ax)) && twist!(t, ax)
-    end
-    for ax in 1:numin(t)
-        isdual(domain(t, ax)) && twist!(t, numout(t) + ax)
-    end
-    return nothing
-end
-
 function _fet_message(
         iter::Int, fid::Float64, Δfid::Float64, Δwt::Float64, time_elapsed::Float64
     )
@@ -222,8 +207,8 @@ function fullenv_truncate(
         @tensor r[-1 -2] := s[-1; 1] * vh[1; -2]
         @tensor p[-1 -2] := conj(u[1; -1]) * benv_b0[1 -2]
         @tensor B[-1 -2; -3 -4] := conj(u[1; -1]) * benv[1 -2; 3 -4] * u[3; -3]
-        _linearmap_twist!(p)
-        _linearmap_twist!(B)
+        twist_linearmap!(p)
+        twist_linearmap!(B)
         r, info_r = linsolve(Base.Fix1(*, B), p, r, 0, 1)
         @tensor b1[-1; -2] = u[-1; 1] * r[1 -2]
         u, s, vh = svd_trunc(b1; trunc = alg.trunc)
@@ -231,8 +216,8 @@ function fullenv_truncate(
         @tensor l[-1 -2] := u[-1; 1] * s[1; -2]
         @tensor p[-1 -2] := conj(vh[-2; 2]) * benv_b0[-1 2]
         @tensor B[-1 -2; -3 -4] := conj(vh[-2; 2]) * benv[-1 2; -3 4] * vh[-4; 4]
-        _linearmap_twist!(p)
-        _linearmap_twist!(B)
+        twist_linearmap!(p)
+        twist_linearmap!(B)
         l, info_l = linsolve(Base.Fix1(*, B), p, l, 0, 1)
         @debug "Bond truncation info" info_l info_r
         @tensor b1[-1; -2] = l[-1 1] * vh[1; -2]
