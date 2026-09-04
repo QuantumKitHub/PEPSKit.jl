@@ -67,7 +67,9 @@ Construct the reduced density matrix `ρ` of `|ket⟩⟨bra|`, where both `ket` 
 correspond to either a PEPS or a PEPO representing a PEPS with ancillary legs.
 Alternatively, construct the reduced density matrix `ρ` of a mixed state specified by the 
 density matrix PEPO `state`. The reduced density matrix is contracted around the open
-indices `inds` using the environment `env`, and is normalized such that `tr(ρ) = 1`.
+indices `inds` using the environment `env`, and is normalized such that `str(ρ) = 1`.
+
+See also [`str`](@ref).
 """ reduced_densitymatrix
 
 # PEPS case has fast-path specializations
