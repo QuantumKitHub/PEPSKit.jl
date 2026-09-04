@@ -66,8 +66,9 @@ end
 Construct the reduced density matrix `ρ` of `|ket⟩⟨bra|`, where both `ket` and `bra`
 correspond to either a PEPS or a PEPO representing a PEPS with ancillary legs.
 Alternatively, construct the reduced density matrix `ρ` of a mixed state specified by the 
-density matrix PEPO `state`. The reduced density matrix is contracted around the open
-indices `inds` using the environment `env`, and is normalized such that `str(ρ) = 1`.
+density matrix PEPO `state`. The reduced density matrix is contracted over the virtual
+indices surrounding the open physical indices at sites `inds` using the environment `env`,
+and is normalized such that `str(ρ) = 1`.
 
 See also [`str`](@ref).
 """ reduced_densitymatrix
@@ -129,8 +130,8 @@ Base.@deprecate(
 Contract a local operator `O` between `ket` and `bra` states, computing `⟨bra|O|ket⟩`, where
 `ket` and `bra` correspond to either a PEPS or a PEPO representing a PEPS with ancillary
 legs. Alternatively, contract a local operator `O` with a density matrix PEPO `state`,
-computing `tr(O * state)`. `O` is applied to the open indices `inds`, and the result is
-contracted using the environment `env`.
+computing `tr(O * state)`. `O` is applied to the open phyisical indices at sites `inds`, and
+the result is contracted over the surrounding virtual indices using the environment `env`.
 """
 function contract_local_operator(
         inds::Vector{CartesianIndex{2}}, O,
@@ -173,8 +174,10 @@ Base.@deprecate(
 Contract a local norm corresponding to the overlap `ket` and `bra` states, computing a patch
 of `⟨bra|ket⟩`, where `ket` and `bra` correspond to either a PEPS or a PEPO representing a
 PEPS with ancillary legs. Alternatively, contract a local norm patch of a density matrix
-PEPO `state`, computing a patch of `tr(state)`. The norm patch is contracted around the open
-indices `inds` using the environment `env`.
+PEPO `state`, computing a patch of `tr(state)`. The contracted rectangular norm patch is
+determined by the open physical indices `inds` and is contracted over the surrounding virtual
+indices using the environment `env`. In particular, the patch location is precisely the same
+as that of the patch used in [`contract_local_operator`](@ref).
 """
 function contract_local_norm(
         inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env
