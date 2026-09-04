@@ -52,21 +52,6 @@ function inner_prod(
     return @tensor conj(b1[1; 2]) * benv[1 2; 3 4] * b2[3; 4]
 end
 
-"""
-$(SIGNATURES)
-
-Apply a twist to domain or codomain indices that correspond to dual spaces
-"""
-function _linearmap_twist!(t::AbstractTensorMap)
-    for ax in 1:numout(t)
-        isdual(codomain(t, ax)) && twist!(t, ax)
-    end
-    for ax in 1:numin(t)
-        isdual(domain(t, ax)) && twist!(t, numout(t) + ax)
-    end
-    return nothing
-end
-
 function _fet_message(
         iter::Int, fid::Float64, Δfid::Float64, Δwt::Float64, time_elapsed::Float64
     )
