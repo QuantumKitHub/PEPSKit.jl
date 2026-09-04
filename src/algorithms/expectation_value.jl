@@ -253,7 +253,7 @@ network_value(state, env::CTMRGEnv) = network_value(InfiniteSquareNetwork(state)
 
 Contract around a single site `ind` of a square network using a given CTMRG environment.
 """
-function _contract_site(ind::Tuple{Int, Int}, network, env::CTMRGEnv)
+function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::CTMRGEnv)
     r, c = ind
     return _contract_site(
         corner(env, NORTHWEST, r - 1, c - 1),
