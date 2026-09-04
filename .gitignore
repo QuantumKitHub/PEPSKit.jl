@@ -4,3 +4,4 @@ examples/.ipynb_checkpoints
 .vscode/
 .DS_Store
 **/dev/
+tmp/

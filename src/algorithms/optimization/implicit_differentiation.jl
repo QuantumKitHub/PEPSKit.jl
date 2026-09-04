@@ -426,6 +426,30 @@ function _check_algorithm_combination(::SimultaneousCTMRG{<:FullInfiniteProjecto
     throw(ArgumentError(msg))
 end
 
+"""Reject gradient algorithms until SI-CTMRG has a defined differentiation rule."""
+function _reject_subspace_iteration_gradient()
+    throw(ArgumentError("SubspaceIterationProjector does not currently support automatic differentiation or PEPS optimization workflows."))
+end
+function _check_algorithm_combination(
+        ::Union{
+            SequentialCTMRG{<:SubspaceIterationProjector},
+            SimultaneousCTMRG{<:SubspaceIterationProjector},
+        },
+        ::FixedPointGradient,
+    )
+    return _reject_subspace_iteration_gradient()
+end
+function _check_algorithm_combination(
+        ::SequentialCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
+    )
+    return _reject_subspace_iteration_gradient()
+end
+function _check_algorithm_combination(
+        ::SimultaneousCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
+    )
+    return _reject_subspace_iteration_gradient()
+end
+
 
 @doc raw"""
     implicit_gradient(x̆, ∂ₓF, ∂ₚF, y₀, alg)

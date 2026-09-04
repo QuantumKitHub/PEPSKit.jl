@@ -85,6 +85,15 @@ This is needed since a custom adjoint may be defined, depending on the `alg`.
 MatrixAlgebraKit.left_orth(t, alg::QRAdjoint) = left_orth!(copy(t), alg)
 MatrixAlgebraKit.left_orth!(t, alg::QRAdjoint) = left_orth!(t, alg.fwd_alg)
 
+"""
+    right_orth(t, alg::QRAdjoint)
+    right_orth!(t, alg::QRAdjoint)
+
+Wrapper around `right_orth(!)` which dispatches on the `QRAdjoint` algorithm.
+"""
+MatrixAlgebraKit.right_orth(t, alg::QRAdjoint) = right_orth!(copy(t), alg)
+MatrixAlgebraKit.right_orth!(t, alg::QRAdjoint) = right_orth!(t, alg.fwd_alg)
+
 # left_orth! rrule wrapping MatrixAlgebraKit's qr_pullback!
 # https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/blob/b76c7bb60014ecfead6925d0df6cb4b8d7c2668a/src/pullbacks/qr.jl#L49
 function ChainRulesCore.rrule(
