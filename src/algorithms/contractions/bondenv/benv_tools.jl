@@ -105,7 +105,7 @@ function benv_tensor(
     # axes to be contracted
     hair_axs = _hair_axes(open_axs)
     # attach hairs to ket
-    ket = twistdual(ket, 1)
+    ket = twistdual!(copy(ket), 1)
     axes = ntuple(identity, Val(5))
     for (h, ax) in zip(hairs, hair_axs)
         twistdual!(ket, ax)
