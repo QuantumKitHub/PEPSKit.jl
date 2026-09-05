@@ -86,9 +86,8 @@ function _su_iter!(
     Ms, open_vaxs, = _get_cluster(state, sites)
     _absorb_weight!(Ms, sites, open_vaxs, env)
     # rotate
-    bond, rev = _nn_bondrev(sites...)
-    dir = first(bond)
-    A, B = _bond_rotation.(Ms, dir, rev; inv = false)
+    (dir, r, c) = _nn_bonddir(sites...)
+    A, B = _bond_rotation.(Ms, dir, EAST)
     # apply gate
     ϵ = 0.0
     local s
@@ -102,9 +101,9 @@ function _su_iter!(
         alg.purified && break # only apply gate to 1st physical leg
     end
     # rotate back
-    A = _bond_rotation(A, dir, rev; inv = true)
-    B = _bond_rotation(B, dir, rev; inv = true)
-    rev && (s = transpose(s))
+    A = _bond_rotation(A, EAST, dir)
+    B = _bond_rotation(B, EAST, dir)
+    (dir in (WEST, SOUTH)) && (s = transpose(s))
     # remove environment weights
     siteA, siteB = sites
     A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs[1]; inv = true)
@@ -112,7 +111,8 @@ function _su_iter!(
     # update tensor dict and weight on current bond
     state[siteA] = normalize!(A, Inf)
     state[siteB] = normalize!(B, Inf)
-    env[bond...] = normalize!(s, Inf)
+    d = dir in (EAST, WEST) ? 1 : 2
+    env[d, r, c] = normalize!(s, Inf)
     return ϵ
 end
 
@@ -128,10 +128,11 @@ function su_iter(
         if length(sites) == 1
             # 1-site gate
             # TODO: special treatment for bipartite state
-            site = sites[1]
+            site = only(sites)
             state2[site] = _apply_sitegate(state2[site], gate; alg.purified)
         elseif length(sites) == 2
-            (d, r, c), = _nn_bondrev(sites...)
+            (dir, r, c) = _nn_bonddir(sites...)
+            d = dir in (EAST, WEST) ? 1 : 2
             alg.bipartite && iseven(r) && continue
             ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
             ϵ = max(ϵ, ϵ′)
@@ -169,17 +170,22 @@ end
 
 """
     timestep(
-        it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight
+        it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight;
+        iter::Int = it.state.iter, t::Number = it.state.t
     ) -> (psi, env, info)
 
 Given the `TimeEvolver` iterator `it`, perform one step of time evolution
 on the input state `psi` and its environment `env`.
+
+- Using `iter` and `t` to reset the current iteration number and evolved time
+    respectively of the TimeEvolver `it`.
 """
 function MPSKit.timestep(
-        it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight
+        it::TimeEvolver{<:SimpleUpdate}, psi::InfiniteState, env::SUWeight;
+        iter::Int = it.state.iter, t::Number = it.state.t
     )
     _timeevol_sanity_check(psi, physicalspace(it.state.psi), it.alg)
-    state = SUState(it.state.iter, it.state.t, psi, env)
+    state = SUState(iter, t, psi, env)
     result = iterate(it, state)
     if result === nothing
         @warn "TimeEvolver `it` has already reached the end."
