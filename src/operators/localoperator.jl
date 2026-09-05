@@ -230,43 +230,6 @@ end
 # ---------------
 TensorKit.spacetype(::Type{<:LocalOperator{<:Any, S}}) where {S} = S
 
-@generated function _fuse_isomorphisms(
-        op::AbstractTensorMap{<:Any, S, N, N}, fs::Vector{<:AbstractTensorMap{<:Any, S, 1, 2}}
-    ) where {S, N}
-    op_out_e = tensorexpr(:op_out, -(1:N), -((1:N) .+ N))
-    op_e = tensorexpr(:op, 1:3:(3 * N), 2:3:(3 * N))
-    f_es = map(1:N) do i
-        j = 3 * (i - 1) + 1
-        return tensorexpr(:(fs[$i]), -i, (j, j + 2))
-    end
-    f_dag_es = map(1:N) do i
-        j = 3 * (i - 1) + 1
-        return tensorexpr(:(twistdual(fs[$i]', 1:2)), (j + 1, j + 2), -(N + i))
-    end
-    multiplication_ex = Expr(
-        :call, :*, op_e, f_es..., f_dag_es...
-    )
-    return macroexpand(@__MODULE__, :(return @tensor $op_out_e := $multiplication_ex))
-end
-
-"""
-    _fuse_ids(op::AbstractTensorMap{T, S, N, N}, [Ps::NTuple{N, S}]) where {T, S, N}
-
-Fuse identities on auxiliary physical spaces `Ps` into a given operator `op`.
-When `Ps` is not specified, it defaults to the domain spaces of `op`.
-"""
-function _fuse_ids(op::AbstractTensorMap{T, S, N, N}, Ps::NTuple{N, S}) where {T, S, N}
-    # make isomorphisms
-    fs = map(1:N) do i
-        return isomorphism(fuse(space(op, i), Ps[i]), space(op, i) ⊗ Ps[i])
-    end
-    # and fuse them into the operator
-    return _fuse_isomorphisms(op, fs)
-end
-function _fuse_ids(op::AbstractTensorMap{T, S, N, N}) where {T, S, N}
-    return _fuse_ids(op, Tuple(domain(op)))
-end
-
 """
     add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
 
@@ -281,14 +244,16 @@ function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:
 
     # auxiliary spaces will be fused into codomain, so need to dualize the space to fuse
     # the charge into the domain as desired
-    # also, make indexing periodic for convenience
-    Paux = PeriodicArray(map(c -> spacetype(H)(c => 1)', charges))
+    dual_charges = map(dual, charges)
+    periodic_charges = PeriodicArray(dual_charges)
 
     # new physical spaces
-    Pspaces = map(fuse, physicalspace(H), Paux)
+    Pspaces = map(physicalspace(H), dual_charges) do P, charge
+        return fuse(P, spacetype(H)(charge => 1))
+    end
 
     return LocalOperator(
         Pspaces,
-        inds => _fuse_ids(op, Tuple(map(Base.Fix1(getindex, Paux), inds))) for (inds, op) in H.terms
+        inds => fuse_charge(op, Tuple(map(Base.Fix1(getindex, periodic_charges), inds))) for (inds, op) in H.terms
     )
 end

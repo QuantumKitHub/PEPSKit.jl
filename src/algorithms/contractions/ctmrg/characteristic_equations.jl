@@ -317,38 +317,6 @@ function eachcoordinate(tensor_unitcell::Array{<:AbstractTensorMap, 3})
     return collect(Iterators.product(axes(tensor_unitcell)...))
 end
 
-# add rrule for twistdual through dummy out-of-place function
-function _twistdual(t::AbstractTensorMap, i::Int)
-    isdual(space(t, i)) || return t
-    return twist(t, i)
-end
-function _twistdual(t::AbstractTensorMap, is)
-    is′ = filter(i -> isdual(space(t, i)), is)
-    return twist(t, is′)
-end
-function ChainRulesCore.rrule(
-        config::RuleConfig, ::typeof(twistdual), t::AbstractTensorMap, i
-    )
-    tout, twistdual_pullback = rrule_via_ad(config, _twistdual, t, i)
-    return tout, twistdual_pullback
-end
-
-# add rrule for twistnondual through dummy out-of-place function
-function _twistnondual(t::AbstractTensorMap, i::Int)
-    !isdual(space(t, i)) || return t
-    return twist(t, i)
-end
-function _twistnondual(t::AbstractTensorMap, is)
-    is′ = filter(i -> !isdual(space(t, i)), is)
-    return twist(t, is′)
-end
-function ChainRulesCore.rrule(
-        config::RuleConfig, ::typeof(twistnondual), t::AbstractTensorMap, i
-    )
-    tout, twistnondual_pullback = rrule_via_ad(config, _twistnondual, t, i)
-    return tout, twistnondual_pullback
-end
-
 function absorb_left(
         E::AbstractTensorMap{T, S}, C::CornerTensor{S}
     ) where {T, S}
