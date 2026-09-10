@@ -54,6 +54,7 @@ include("Defaults.jl")  # Include first to allow for docstring interpolation wit
 include("utility/util.jl")
 include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
+include("utility/twistdual.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
 include("utility/qr.jl")
