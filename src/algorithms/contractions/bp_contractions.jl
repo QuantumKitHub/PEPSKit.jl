@@ -50,9 +50,9 @@ absorb_west_message(A::PEPSTensor, M::PEPSMessage) =
 
 # Belief Propagation reduced density matrices
 # -------------------------------------------
-# BP messages live on the bonds of the network, so there is no analogue of the generated
-# rectangular-patch contraction used for a `CTMRGEnv`: only single sites and nearest neighbor
-# pairs can be contracted without introducing loop corrections.
+
+# NOTE: currently restricted to 1x1, 2x1, and 1x2 patches, since evaluating larger patches
+# without including loop corrections tends to be a crude and not very useful appoximation.
 
 function _contract_densitymatrix(inds::NTuple{N, Val}, state, env::BPEnv) where {N}
     sites = _patch_inds(inds)
