@@ -97,27 +97,11 @@ end
 """
 $(SIGNATURES)
 
-Check whether the `@tensor` contraction for a given state type should be emitted with
-`contractcheck = true`. Enabled for PEPO sandwiches, disabled for other state types,
-in order to preserve the legacy behavior for different state types.
-"""
-contractcheck(state::Type) = false
-contractcheck(::Type{<:InfinitePEPO}) = true
-contractcheck(::Type{<:Tuple{Vararg{InfinitePEPO}}}) = true
-
-"""
-$(SIGNATURES)
-
 Wrap an assembled product in `@autoopt @tensor`, with `lhs` on the left if given and as a
-scalar otherwise, emitting `contractcheck = true` only when `check` is set.
+scalar otherwise.
 """
-function _tensor_expr(prod, lhs, check::Bool)
-    return if isnothing(lhs)
-        check ? :(@autoopt @tensor contractcheck = true $prod) : :(@autoopt @tensor $prod)
-    else
-        check ? :(@autoopt @tensor contractcheck = true $lhs := $prod) :
-            :(@autoopt @tensor $lhs := $prod)
-    end
+function _tensor_expr(prod, lhs = nothing)
+    return isnothing(lhs) ? :(@autoopt @tensor $prod) : :(@autoopt @tensor $lhs := $prod)
 end
 
 
@@ -397,7 +381,7 @@ combination those three have methods for.
         operator_contraction_expr(operator, N)...,
     )
 
-    returnex = _tensor_expr(multiplication_ex, nothing, contractcheck(state))
+    returnex = _tensor_expr(multiplication_ex)
     return macroexpand(@__MODULE__, returnex)
 end
 
@@ -425,7 +409,7 @@ the given environment, not the physical norm of the state.
         bulk_contraction_expr(state, rowrange, colrange, nothing)...,   # legs paired, not open
     )
 
-    returnex = _tensor_expr(multiplication_ex, nothing, contractcheck(state))
+    returnex = _tensor_expr(multiplication_ex)
     return macroexpand(@__MODULE__, returnex)
 end
 
@@ -457,7 +441,7 @@ than `tr`, since the supertrace carries the fermionic signs.
         ntuple(i -> physicallabel(:O, 2, i), N),
     )
 
-    multex = _tensor_expr(multiplication_ex, result, contractcheck(state))
+    multex = _tensor_expr(multiplication_ex, result)
     return quote
         $(macroexpand(@__MODULE__, multex))
         return ρ / str(ρ)
