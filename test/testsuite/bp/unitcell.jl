@@ -9,7 +9,9 @@ elt = ComplexF64
 
 function test_unitcell(AT, unitcell, Pspaces, Nspaces, Espaces)
     peps = adapt(AT, InfinitePEPS(randn, elt, Pspaces, Nspaces, Espaces))
+    @test storagetype(peps) <: AT
     env0 = BPEnv(ones, elt, peps)
+    @test storagetype(env0) <: AT
     alg = BeliefPropagation()
 
     # apply one BP iteration

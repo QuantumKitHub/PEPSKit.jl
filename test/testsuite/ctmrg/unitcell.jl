@@ -29,11 +29,11 @@ function test_unitcell(
         Pspaces,
         [
             (c,) => adapt(
-                AT, randn(
-                    scalartype(peps),
-                    Pspaces[c], Pspaces[c],
-                )
-            ) for c in CartesianIndices(unitcell)
+                    AT, randn(
+                        scalartype(peps),
+                        Pspaces[c], Pspaces[c],
+                    )
+                ) for c in CartesianIndices(unitcell)
         ]...,
     )
     @test expectation_value(peps, random_op, env) isa Number

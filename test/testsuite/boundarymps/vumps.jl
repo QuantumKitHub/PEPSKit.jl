@@ -15,10 +15,12 @@ function boundary_mps_one_one_peps(AT)
     return @testset "(1, 1) PEPS ($AT)" begin
         Vpeps = ComplexSpace(2)
         psi = adapt(AT, InfinitePEPS(Vpeps, Vpeps))
+        @test storagetype(psi) <: AT
         T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
-        @test TensorKit.storagetype(T) <: AT
+        @test storagetype(T) <: AT
         foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T))
         mps = initialize_mps(T, [ComplexSpace(20)])
+        @test storagetype(mps) <: AT
 
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N = abs(sum(expectation_value(mps, T)))
@@ -40,9 +42,12 @@ function boundary_mps_two_two_peps(AT)
     return @testset "(2, 2) PEPS ($AT)" begin
         Vpeps = ComplexSpace(2)
         psi = adapt(AT, InfinitePEPS(Vpeps, Vpeps; unitcell = (2, 2)))
+        @test storagetype(psi) <: AT
         T = PEPSKit.MultilineTransferPEPS(psi, 1)
+        @test storagetype(T) <: AT
         # foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T)) # TODO: MPSKit.physicalspace(::MultilineMPO) isn't implemented...
         mps = initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2))
+        @test storagetype(mps) <: AT
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N = abs(leading_eigenvalue(mps, T))
 
@@ -61,12 +66,16 @@ function boundary_mps_fermionic_peps(AT)
         χ = Vect[fℤ₂](0 => 10, 1 => 10)
 
         psi = adapt(AT, InfinitePEPS(D, d; unitcell = (1, 1)))
+        @test storagetype(psi) <: AT
         n = InfiniteSquareNetwork(psi)
+        @test storagetype(n) <: AT
         T = InfiniteTransferPEPS(psi, 1, 1)
+        @test storagetype(T) <: AT
         foreach(V -> (@test V == D ⊗ D'), physicalspace(T))
 
         # compare boundary MPS contraction to CTMRG contraction
         mps = initialize_mps(T, [χ])
+        @test storagetype(mps) <: AT
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N_vumps = abs(prod(expectation_value(mps, T)))
 
@@ -122,6 +131,7 @@ function boundary_mps_pepo_runthrough(AT)
         foreach(V -> (@test V == Vpeps ⊗ Vpepo ⊗ Vpeps'), physicalspace(T))
 
         mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(10)])
+        @test storagetype(mps) <: AT
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         f = abs(prod(expectation_value(mps, T)))
 
