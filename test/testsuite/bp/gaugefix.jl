@@ -51,9 +51,11 @@ function bp_gaugefix_bp_vs_su(AT)
                 peps0[2, c] = copy(peps0[1, c + 1])
             end
         end
+        @test storagetype(peps0) <: AT
 
         # start by gauging with SU
         peps1, wts1 = gauge_fix(peps0, SUGauge(; maxiter, tol))
+        @test storagetype(peps1) <: AT
         for (a0, a1) in zip(peps0.A, peps1.A)
             @test space(a0) == space(a1)
         end
@@ -66,6 +68,7 @@ function bp_gaugefix_bp_vs_su(AT)
         # find BP fixed point and SUWeight
         bp_alg = BeliefPropagation(; maxiter, tol, bipartite, project_hermitian = h)
         env = BPEnv(randn, elt, peps1; posdef = h)
+        @test storagetype(env) <: AT
         env, err = leading_boundary(env, peps1, bp_alg)
         if bipartite
             @test _is_bipartite(env)
