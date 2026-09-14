@@ -70,6 +70,24 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
 end
 
+"""
+    _contract_site(ind::Tuple{Int,Int}, network::InfiniteSquareNetwork, env::CTMRGEnv)
+
+Contract around a single site `ind` of a square network using a given CTMRG environment.
+"""
+function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::CTMRGEnv)
+    r, c = ind
+    return _contract_site(
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c + 1),
+        corner(env, SOUTHEAST, r + 1, c + 1),
+        corner(env, SOUTHWEST, r + 1, c - 1),
+        edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
+        edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
+        network[r, c],
+    )
+end
+
 ## Normalization contractions
 function _contract_corners(
         C_northwest::CTMRGCornerTensor, C_northeast::CTMRGCornerTensor,
@@ -77,6 +95,22 @@ function _contract_corners(
     )
     return @tensor C_northwest[1; 2] * C_northeast[2; 3] *
         C_southeast[3; 4] * C_southwest[4; 1]
+end
+
+"""
+    _contract_corners(ind::Tuple{Int,Int}, env::CTMRGEnv)
+
+Contract all corners around the south-east at position `ind` of the CTMRG
+environment `env`.
+"""
+function _contract_corners(ind::Tuple{Int, Int}, env::CTMRGEnv)
+    r, c = ind
+    return _contract_corners(
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c),
+        corner(env, SOUTHEAST, r, c),
+        corner(env, SOUTHWEST, r, c - 1),
+    )
 end
 
 @generated function _contract_vertical_edges(
@@ -105,6 +139,24 @@ end
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
 end
 
+"""
+    _contract_vertical_edges(ind::Tuple{Int,Int}, env::CTMRGEnv)
+
+Contract the vertical edges and corners around the east edge at position `ind` of the
+CTMRG environment `env`.
+"""
+function _contract_vertical_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
+    r, c = ind
+    return _contract_vertical_edges(
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c),
+        corner(env, SOUTHEAST, r + 1, c),
+        corner(env, SOUTHWEST, r + 1, c - 1),
+        edge(env, EAST, r, c),
+        edge(env, WEST, r, c - 1),
+    )
+end
+
 @generated function _contract_horizontal_edges(
         C_northwest::CTMRGCornerTensor, C_northeast::CTMRGCornerTensor,
         C_southeast::CTMRGCornerTensor, C_southwest::CTMRGCornerTensor,
@@ -128,4 +180,22 @@ end
     )
 
     return macroexpand(@__MODULE__, :(return @autoopt @tensor $rhs))
+end
+
+"""
+    _contract_horizontal_edges(ind::Tuple{Int,Int}, env::CTMRGEnv)
+
+Contract the horizontal edges and corners around the south edge at position `ind` of the
+CTMRG environment `env`.
+"""
+function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
+    r, c = ind
+    return _contract_horizontal_edges(
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c + 1),
+        corner(env, SOUTHEAST, r, c + 1),
+        corner(env, SOUTHWEST, r, c - 1),
+        edge(env, NORTH, r - 1, c),
+        edge(env, SOUTH, r, c),
+    )
 end

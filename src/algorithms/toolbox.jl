@@ -1,7 +1,3 @@
-function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
-    return network_value(InfiniteSquareNetwork(peps), env)
-end
-
 """
     edge_transfer_spectrum(top::Vector{E}, bot::Vector{E}; tol=Defaults.tol, num_vals=20,
                            sector=one(sectortype(E))) where {E<:CTMRGEdgeTensor}
@@ -128,56 +124,4 @@ function product_peps(peps_args...; unitcell = (1, 1), noise_amp = 1.0e-2, state
     prod_peps = InfinitePEPS(prod_tensors)
     ψ = prod_peps + noise_amp * noise_peps
     return ψ / norm(ψ)
-end
-
-# Contract local tensors
-
-"""
-    contract_local_tensor(inds, O::PFTensor, env)
-
-Contract a local tensor `O` inserted into a partition function `pf` at position `inds`,
-using the environment `env`.
-"""
-function contract_local_tensor(
-        inds::Tuple{Int, Int}, O::PFTensor, env::CTMRGEnv{C, <:CTMRG_PF_EdgeTensor}
-    ) where {C}
-    r, c = inds
-    return _contract_site(
-        corner(env, NORTHWEST, r - 1, c - 1),
-        corner(env, NORTHEAST, r - 1, c + 1),
-        corner(env, SOUTHEAST, r + 1, c + 1),
-        corner(env, SOUTHWEST, r + 1, c - 1),
-        edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
-        edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
-        O,
-    )
-end
-
-"""
-    contract_local_tensor(inds, O::PEPOTensor, network, env)
-
-Contract a local tensor `O` inserted into the PEPO of a given `network` at position `inds`,
-using the environment `env`.
-"""
-function contract_local_tensor(
-        ind::Tuple{Int, Int, Int},
-        O::PEPOTensor,
-        network::InfiniteSquareNetwork{<:PEPOSandwich},
-        env::CTMRGEnv,
-    )
-    r, c, h = ind
-    sandwich´ = Base.setindex(network[r, c], O, h + 2)
-    return _contract_site(
-        corner(env, NORTHWEST, r - 1, c - 1),
-        corner(env, NORTHEAST, r - 1, c + 1),
-        corner(env, SOUTHEAST, r + 1, c + 1),
-        corner(env, SOUTHWEST, r + 1, c - 1),
-        edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
-        edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
-        sandwich´,
-    )
-end
-
-function contract_local_tensor(inds::CartesianIndex, O::AbstractTensorMap, env::CTMRGEnv)
-    return contract_local_tensor(Tuple(inds), O, env)
 end
