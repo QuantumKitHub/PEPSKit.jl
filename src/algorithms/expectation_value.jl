@@ -130,7 +130,7 @@ Base.@deprecate(
 Contract a local operator `O` between `ket` and `bra` states, computing `⟨bra|O|ket⟩`, where
 `ket` and `bra` correspond to either a PEPS or a PEPO representing a PEPS with ancillary
 legs. Alternatively, contract a local operator `O` with a density matrix PEPO `state`,
-computing `tr(O * state)`. `O` is applied to the open phyisical indices at sites `inds`, and
+computing `tr(O * state)`. `O` is applied to the open physical indices at sites `inds`, and
 the result is contracted over the surrounding virtual indices using the environment `env`.
 """
 function contract_local_operator(
