@@ -6,8 +6,6 @@ using PEPSKit
 using TensorKit
 using TensorKit: MatrixAlgebraKit as MAK
 
-const BATCH_THRESHOLD = 4
-
 # Each caller (such as `su_iter`) gets a pair of caches. This makes sense to do on a per-caller basis
 # because what is being cached varies between algorithms.
 # For each caller we also store several caches, for SimultaneousCTMRG and SU,
@@ -67,8 +65,6 @@ function PEPSKit.free_alloc_caches!(::Type{<:AnyGPUArray})
 end
 
 
-const Factorizations = TensorKit.Factorizations
-
 # Batched truncated SVD of a whole cluster's internal bonds to avoid multiple small kernel launches.
 function PEPSKit.bond_svds(
         ::Type{<:AnyGPUArray}, rls::AbstractVector, truncs::AbstractVector
@@ -84,7 +80,15 @@ function PEPSKit.bond_svds(
             MAK.svd_compact!(rl, F, alg)
         end
     else
-        _cluster_svd_compact!(rls, Fs, balg, alg)
+        # Pool every (bond, sector) block into one ragged batch. MatrixAlgebraKit batches
+        # blocks of equal size together even across different bonds, since the decomposition
+        # does not care which bond a block came from, and zero-pads the leftovers.
+        items = [(i, c) for i in eachindex(rls) for c in blocksectors(rls[i])]
+        As = [block(rls[i], c) for (i, c) in items]
+        Us = [block(Fs[i][1], c) for (i, c) in items]
+        Ss = [TensorKit.diagview(block(Fs[i][2], c)) for (i, c) in items]
+        Vᴴs = [block(Fs[i][3], c) for (i, c) in items]
+        MAK.batched_svd_compact!(As, (Us, Ss, Vᴴs), balg)
     end
     return map(Fs, truncs) do F, trunc
         (U, S, Vᴴ) = F
@@ -94,9 +98,6 @@ function PEPSKit.bond_svds(
     end
 end
 
-# Pool every (bond, sector) block, group by block size, and hand each group to the batched
-# driver. Blocks of equal size batch together even across different bonds, since the
-# decomposition does not care which bond a block came from.
 """
     CLUSTER_BATCHED_SVD[]
 
@@ -114,68 +115,6 @@ function _cluster_batched_alg(rls::AbstractVector)
     return nothing
 end
 
-function _cluster_svd_compact!(rls::AbstractVector, Fs, alg)
-    I = eltype(eachindex(rls))
-    C = sectortype(eltype(rls))
-    groups = Dict{Tuple{Int, Int}, Vector{Tuple{I, C}}}()
-    for i in eachindex(rls), c in blocksectors(rls[i])
-        push!(get!(() -> Tuple{I, C}[], groups, size(block(rls[i], c))), (i, c))
-    end
-    lim = Factorizations.max_batched_blocksize(alg, TensorKit.storagetype(eltype(rls)))
-    tall = Factorizations.batched_requires_tall(alg)
-
-    small = Tuple{I, C}[]
-    for ((m, n), items) in groups
-        if length(items) >= BATCH_THRESHOLD && (!tall || m >= n) && max(m, n) <= lim
-            _batch_svd_compact!(rls, Fs, items, (m, n), false, alg)
-        else
-            append!(small, items)
-        end
-    end
-
-    # Everything left over goes into one zero-padded batch. A compact decomposition only reads
-    # back the leading `min(m, n)` columns of each block, and zero padding leaves those
-    # untouched, so padding is safe here (unlike a full decomposition).
-    mm = maximum(((i, c),) -> size(block(rls[i], c), 1), small; init = 0)
-    nn = maximum(((i, c),) -> size(block(rls[i], c), 2), small; init = 0)
-    padded = tall ? (max(mm, nn), max(mm, nn)) : (mm, nn)
-    if length(small) >= BATCH_THRESHOLD && maximum(padded) <= lim
-        _batch_svd_compact!(rls, Fs, small, padded, true, alg)
-    else
-        for (i, c) in small
-            U, S, Vᴴ = Fs[i]
-            MAK.svd_compact!(
-                block(rls[i], c), (block(U, c), block(S, c), block(Vᴴ, c)), alg
-            )
-        end
-    end
-    return Fs
-end
-
-function _batch_svd_compact!(rls, Fs, items, (m, n), pad::Bool, alg)
-    i1, c1 = first(items)
-    nb, minmn = length(items), min(m, n)
-    A = similar(block(rls[i1], c1), m, n, nb)
-    pad && fill!(A, zero(eltype(A)))
-    for (j, (i, c)) in enumerate(items)
-        b = block(rls[i], c)
-        copyto!(view(A, axes(b, 1), axes(b, 2), j), b)
-    end
-    Ub = similar(A, m, minmn, nb)
-    Vb = similar(A, minmn, n, nb)
-    Sb = similar(TensorKit.diagview(block(Fs[i1][2], c1)), minmn, nb)
-    MAK.svd_compact!(A, (Ub, Sb, Vb), alg)
-    for (j, (i, c)) in enumerate(items)
-        U, S, Vᴴ = Fs[i]
-        u, sv, v = block(U, c), block(S, c), block(Vᴴ, c)
-        copyto!(u, view(Ub, axes(u, 1), axes(u, 2), j))
-        dv = TensorKit.diagview(sv)
-        copyto!(dv, view(Sb, axes(dv, 1), j))
-        copyto!(v, view(Vb, axes(v, 1), axes(v, 2), j))
-    end
-    return nothing
-end
-
 """
     _batched_spectra_alg(proto) -> alg or nothing
 
@@ -188,31 +127,7 @@ function _batched_spectra_alg(proto)
     catch
         return nothing
     end
-    return alg isa Factorizations.AbstractAlgorithm ? alg : nothing
-end
-
-# `calc_convergence` decomposes every corner and every edge of the environment
-# for regular CTMRG, which is expensive, at *least* 8 separate `svd_vals` calls.
-# Across *multiple tensors* the situation is much better than within *one*,
-# because the corners have to all share a space,
-# so for a given sector their blocks have identical sizes and can be batched with no
-# padding at all.
-function _batch_svd_vals!(ts, Ss, items, (m, n), pad::Bool, alg)
-    b1 = block(ts[first(items)[1]], first(items)[2])
-    A = similar(b1, m, n, length(items))
-    pad && fill!(A, zero(eltype(A)))
-    for (j, (i, c)) in enumerate(items)
-        b = block(ts[i], c)
-        copyto!(view(A, axes(b, 1), axes(b, 2), j), b)
-    end
-    o1 = block(Ss[first(items)[1]], first(items)[2])
-    Sb = similar(o1, min(m, n), length(items))
-    MAK.batched_svd_vals!(A, Sb, alg)
-    for (j, (i, c)) in enumerate(items)
-        o = block(Ss[i], c)
-        copyto!(o, view(Sb, axes(o, 1), j))
-    end
-    return nothing
+    return alg isa MAK.AbstractAlgorithm ? alg : nothing
 end
 
 # Hook into the collection-level convergence API. Deliberately restricted to the generic
@@ -231,19 +146,18 @@ function PEPSKit.edge_spectra(
     return _batched_spectra(Ts)
 end
 
+# `calc_convergence` decomposes every corner and every edge of the environment
+# for regular CTMRG, which is expensive, at *least* 8 separate `svd_vals` calls.
+# Across *multiple tensors* the situation is much better than within *one*,
+# because the corners have to all share a space,
+# so for a given sector their blocks have identical sizes and batch with no padding at all.
 function _batched_spectra(ts::AbstractArray{T}) where {T <: AbstractTensorMap}
     # TODO BAD FIND A BETTER DISPATCH HERE
     (isempty(ts) || !(TensorKit.storagetype(T) <: AnyGPUArray)) && return map(svd_vals, ts)
-    proto = nothing
-    for i in eachindex(ts), c in blocksectors(ts[i])
-        proto = block(ts[i], c)
-        break
-    end
-    isnothing(proto) && return map(svd_vals, ts)
-    alg = _batched_spectra_alg(proto)
+    items = [(i, c) for i in eachindex(ts) for c in blocksectors(ts[i])]
+    isempty(items) && return map(svd_vals, ts)
+    alg = _batched_spectra_alg(block(ts[first(items)[1]], first(items)[2]))
     isnothing(alg) && return map(svd_vals, ts)
-    tall = Factorizations.batched_requires_tall(alg)
-    lim = Factorizations.max_batched_blocksize(alg, TensorKit.storagetype(T))
 
     Ss = map(
         t -> MAK.initialize_output(
@@ -253,47 +167,12 @@ function _batched_spectra(ts::AbstractArray{T}) where {T <: AbstractTensorMap}
             )
         ), ts
     )
-
-    # Group by block size because the decomposition doesn't care which sector a block came
-    # from, so blocks of equal size can batch together even *across* sectors and tensors.
-    # Each entry records the (tensor index, sector) it came from so the spectrum can be written back.
-    I = eltype(eachindex(ts))
-    C = sectortype(eltype(ts))
-    groups = Dict{Tuple{Int, Int}, Vector{Tuple{I, C}}}()
-    for i in eachindex(ts), c in blocksectors(ts[i])
-        push!(get!(() -> Tuple{I, C}[], groups, size(block(ts[i], c))), (i, c))
-    end
-
-    # Groups that the solver can't work with, due to too few blocks, wider than
-    # tall for an algo that needs m >= n, or larger than the solver's block limit,
-    # join the padded batch below.
-    small = Tuple{I, C}[]
-    for ((m, n), items) in groups
-        if length(items) >= BATCH_THRESHOLD && (!tall || m >= n) && max(m, n) <= lim
-            _batch_svd_vals!(ts, Ss, items, (m, n), false, alg)
-        else
-            append!(small, items)
-        end
-    end
-
-    # Groups too small to batch on their own are merged into one padded batch: zero padding
-    # leaves a block's leading min(m, n) singular values untouched.
-    mm = maximum(((i, c),) -> size(block(ts[i], c), 1), small; init = 0)
-    nn = maximum(((i, c),) -> size(block(ts[i], c), 2), small; init = 0)
-    # pad to a square only when the algo demands m >= n
-    padded = tall ? (max(mm, nn), max(mm, nn)) : (mm, nn)
-    if length(small) >= BATCH_THRESHOLD && maximum(padded) <= lim
-        _batch_svd_vals!(ts, Ss, small, padded, true, alg)
-    else
-        for (i, c) in small
-            # `svd_vals!` destroys its input, and `block(ts[i], c)` is a view into the live
-            # environment tensor. Computing the convergence spectra must not damage the
-            # environment it is measuring, so let's hand the driver a copy. (The batched branch is
-            # already safe: `_batch_svd_vals!` packs the blocks into a fresh array.)
-            b = copy(block(ts[i], c))
-            MAK.svd_vals!(b, block(Ss[i], c), MAK.default_svd_algorithm(typeof(b)))
-        end
-    end
+    # `batched_svd_vals!` destroys the blocks it has to decompose one at a time, but `ts` is the
+    # live environment, and computing the convergence spectra must not damage the environment
+    # it is measuring. Copying whole tensors costs one copy per tensor instead of one per block.
+    ts′ = map(copy, ts)
+    As = [block(ts′[i], c) for (i, c) in items]
+    MAK.batched_svd_vals!(As, [block(Ss[i], c) for (i, c) in items], alg)
     return Ss
 end
 
