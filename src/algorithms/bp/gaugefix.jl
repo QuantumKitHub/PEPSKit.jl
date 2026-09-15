@@ -2,9 +2,30 @@
     struct BPGauge
 
 Algorithm for gauging PEPS with belief propagation fixed point messages.
+
+## Fields
+
+$(TYPEDFIELDS)
+
+## Constructors
+
+    BPGauge(; svd_alg=:$(Defaults.svd_fwd_alg))
+
+The SVD algorithm can either be specified as a `Symbol`, or be passed as a
+`MatrixAlgebraKit.Algorithm` instance directly. Note that the algorithm needs to support a
+full `svd_compact!` decomposition, such that the "sparse" `:GKL` algorithm is not supported
+here. The available algorithms are:
+
+- `:DefaultAlgorithm` : MatrixAlgebraKit's [default SVD algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
+- `:DivideAndConquer` : MatrixAlgebraKit's [`DivideAndConquer`](@extref MatrixAlgebraKit.DivideAndConquer)
+- `:QRIteration` : MatrixAlgebraKit's [`QRIteration`](@extref MatrixAlgebraKit.QRIteration)
+- `:Bisection` : MatrixAlgebraKit's [`Bisection`](@extref MatrixAlgebraKit.Bisection)
+- `:Jacobi` : MatrixAlgebraKit's [`Jacobi`](@extref MatrixAlgebraKit.Jacobi)
+- `:SVDViaPolar` : MatrixAlgebraKit's [`SVDViaPolar`](@extref MatrixAlgebraKit.SVDViaPolar)
+- `:SafeDivideAndConquer` : MatrixAlgebraKit's [`SafeDivideAndConquer`](@extref MatrixAlgebraKit.SafeDivideAndConquer)
 """
-@kwdef struct BPGauge
-    # TODO: add options
+@kwdef struct BPGauge{F}
+    svd_alg::F = Defaults.svd_fwd_alg
 end
 
 """
@@ -18,7 +39,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
     bipartite = _is_bipartite(psi) && _is_bipartite(env)
     psi′ = copy(psi)
     XXinv = map(eachcoordinate(psi, 1:2)) do I
-        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env)
+        _, X, Xinv = _bp_gauge_fix!(CartesianIndex(I), psi′, env, alg)
         return X, Xinv
     end
     if bipartite
@@ -76,12 +97,12 @@ along the canonical direction of the PEPS arrows (`SOUTH ← NORTH` or `WEST ←
 Which are then used to update the gauge of `psi`. Thus, by convention `X` is attached to the `SOUTH`/`WEST` directions
 and `X⁻¹` is attached to the `NORTH`/`EAST` directions.
 """
-function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv)
+function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv, alg::BPGauge)
     dir, row, col = Tuple(I)
     @assert dir == NORTH || dir == EAST
 
     sqrtM12, isqrtM12, sqrtM21, isqrtM21 = _sqrt_bp_messages(I, env)
-    U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21)
+    U, Λ, Vᴴ = svd_compact!(sqrtM12 * sqrtM21; alg = alg.svd_alg)
     sqrtΛ = sdiag_pow(Λ, 1 / 2)
     X = isqrtM12 * U * sqrtΛ
     invX = sqrtΛ * Vᴴ * isqrtM21

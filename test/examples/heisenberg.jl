@@ -52,8 +52,8 @@ end
     @test all(@. ξ_h > 0 && ξ_v > 0)
 end
 
-@testset "C4v AD optimization with scalartype T=$T and projector_alg=$projector_alg" for (T, projector_alg) in
-    Iterators.product([Float64, ComplexF64], [:C4vEighProjector, :C4vQRProjector])
+@testset "C4v AD optimization with scalartype T=$T, projector_alg=$projector_alg and gradient_alg=$gradient_alg" for (T, projector_alg, gradient_alg) in
+    Iterators.product([Float64, ComplexF64], [:C4vEighProjector, :C4vQRProjector], [:FixedPointGradient, :ImplicitGradient])
     # initialize symmetric states
     Random.seed!(123456789)
     symm = RotateReflect()
@@ -69,6 +69,7 @@ end
         H, peps₀, env₀;
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; alg = :C4vCTMRG, projector_alg, maxiter = 500),
+        gradient_alg = (; alg = gradient_alg),
     )
     ξ_h, ξ_v, = correlation_length(peps, env)
     @info "Optimized energy = $E."
@@ -139,7 +140,7 @@ end
 
     # continue with auto differentiation
     peps_final, env_final, E_final, = fixedpoint(
-        ham, peps, complex(env); # make environment complex explicitly
+        ham, complex(peps), complex(env); # make environment complex explicitly
         optimizer_alg = (; tol = gradtol, maxiter = 25),
         boundary_alg = (; maxiter = ctmrg_maxiter),
         gradient_alg = (; solver_alg = (; alg = :GMRES)),

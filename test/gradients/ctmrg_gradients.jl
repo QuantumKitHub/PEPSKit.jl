@@ -21,7 +21,7 @@ ctmrg_verbosity = 0
 ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
 projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
 svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
-gradient_algs = [[nothing, :FixedPointGradient], [:FixedPointGradient]]
+gradient_algs = [[nothing, :FixedPointGradient, :ImplicitGradient], [:FixedPointGradient, :ImplicitGradient]]
 gradient_solver_algs = [
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
     [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
@@ -36,11 +36,13 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
-# fixed-point differentiation is incompatible with sequential CTMRG
 function _check_disallowed_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
-    ctmrg_alg == :SequentialCTMRG && !isnothing(gradient_alg) && return true
+    # characteristic equations for full infinite projector are not implemented
+    projector_alg == :FullInfiniteProjector && gradient_alg == :ImplicitGradient && return true
+    # sequential CTMRG doesn't give access to the SVD decompositions
+    ctmrg_alg == :SequentialCTMRG && gradient_alg == :ImplicitGradient && return true
     return false
 end
 
@@ -65,6 +67,21 @@ end
             calgs, palgs, salgs, galgs, gsalgs
         )
 
+        # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
+        if gradient_alg == :ImplicitGradient
+            gradient_solver_alg == :GMRES || continue
+            svd_rrule_alg == first(salgs) || continue
+        end
+
+        # check for allowed algorithm combinations when testing naive gradient
+        if isnothing(gradient_alg)
+            combo = (ctmrg_alg, projector_alg, svd_rrule_alg)
+            combo in naive_gradient_combinations || continue
+            combo in naive_gradient_done && continue
+            push!(naive_gradient_done, combo)
+            gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
+        end
+
         # filter disallowed algorithm combinations
         if _check_disallowed_combination(
                 ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg
@@ -75,15 +92,6 @@ end
                 gradient_alg = (; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)),
             )
             continue
-        end
-
-        # check for allowed algorithm combinations when testing naive gradient
-        if isnothing(gradient_alg)
-            combo = (ctmrg_alg, projector_alg, svd_rrule_alg)
-            combo in naive_gradient_combinations || continue
-            combo in naive_gradient_done && continue
-            push!(naive_gradient_done, combo)
-            gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
         end
 
         @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"

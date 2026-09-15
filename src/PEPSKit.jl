@@ -32,10 +32,13 @@ using MPSKit:
     MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor,
     ProductTransferMatrix, TransferMatrix
 using MPSKit: InfiniteEnvironments
+using MPSKit: DynamicTol, updatetol
+import MPSKit.DynamicTols: _updatetol
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 import MPSKit: fuser
 
+using TensorKitTensors: fuse_charge
 import TensorKitTensors.SpinOperators as SO
 import TensorKitTensors.FermionOperators as FO
 import TensorKitTensors.HubbardOperators as HO
@@ -54,6 +57,7 @@ include("Defaults.jl")  # Include first to allow for docstring interpolation wit
 include("utility/util.jl")
 include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
+include("utility/twistdual.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
 include("utility/qr.jl")
@@ -98,6 +102,7 @@ include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/contract_site.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
+include("algorithms/contractions/ctmrg/characteristic_equations.jl")
 
 include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
@@ -120,7 +125,11 @@ include("algorithms/contractions/window/twosite/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
-include("algorithms/ctmrg/projectors.jl")
+include("algorithms/ctmrg/projectors/projectors.jl")
+include("algorithms/ctmrg/projectors/halfinfinite.jl")
+include("algorithms/ctmrg/projectors/fullinfinite.jl")
+include("algorithms/ctmrg/projectors/c4v_eigh.jl")
+include("algorithms/ctmrg/projectors/c4v_qr.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
@@ -153,7 +162,8 @@ include("algorithms/correlators.jl")
 include("algorithms/expval_approx.jl")
 include("algorithms/correlator_approx.jl")
 
-include("algorithms/optimization/fixed_point_differentiation.jl")
+include("algorithms/optimization/implicit_differentiation.jl")
+include("algorithms/optimization/preconditioning.jl")
 include("algorithms/optimization/peps_optimization.jl")
 
 include("algorithms/select_algorithm.jl")
@@ -175,7 +185,7 @@ export reduced_densitymatrix, expectation_value_approx, correlator_approx
 export expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
-export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter
+export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter, ImplicitGradient
 export fixedpoint
 
 export LocalTruncation

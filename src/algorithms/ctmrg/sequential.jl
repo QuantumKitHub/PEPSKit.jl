@@ -62,7 +62,9 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
             env, info = ctmrg_leftmove(col, network, env, alg)
-            truncation_error = max(truncation_error, info.truncation_error)
+            ignore_derivatives() do
+                truncation_error = max(truncation_error, info.truncation_error)
+            end
         end
         network = rotate_north(network, EAST)
         env = rotate_north(env, EAST)

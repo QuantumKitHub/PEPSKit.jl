@@ -328,6 +328,17 @@ function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C, T}) where {C, T}
     env.edges .= env´.edges
     return env
 end
+# patch for the case where the corners are of a different type, which happens when running
+# variational optimization using an implicit gradient
+function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C´, T}) where {C, C´, T}
+    env.corners .= _convert_cornertype.(C, env´.corners)
+    env.edges .= env´.edges
+    return env
+end
+function _convert_cornertype(::Type{C}, c) where {C <: DiagonalTensorMap}
+    d = DiagonalTensorMap(c)
+    return scalartype(C) <: Real ? real(d) : d
+end
 
 # Rotate corners & edges counter-clockwise
 function Base.rotl90(env::CTMRGEnv{C, T}) where {C, T}

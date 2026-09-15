@@ -115,7 +115,7 @@ function leading_boundary(
     return LoggingExtras.withlevel(; alg.verbosity) do
         env = deepcopy(env₀)
         CS, TS = ignore_derivatives() do
-            return map(svd_vals, env₀.corners), map(svd_vals, env₀.edges)
+            return convergence_spectra(env₀, alg)
         end
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
@@ -123,7 +123,7 @@ function leading_boundary(
         converged = false
         for iter in 1:(alg.maxiter)
             env, info_iter = ctmrg_iteration(network, env, alg)
-            η, CS, TS = calc_convergence(env, CS, TS)
+            η, CS, TS = calc_convergence(env, CS, TS, alg)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
                 ctmrg_logfinish!(log, iter, η, network, env)
@@ -202,11 +202,47 @@ _singular_value_distance(S₁::DiagonalTensorMap, S₂::DiagonalTensorMap) =
     _singular_value_distance(diagview(S₁), diagview(S₂))
 
 """
+    convergence_tensors(env, alg) -> (corners, edges)
+
+The corners and edges whose spectra determine convergence.
+
+For generic CTMRG, we need all corners and edges.
+"""
+convergence_tensors(env::CTMRGEnv, alg) = (env.corners, env.edges)
+
+"""
+    convergence_spectra(env, alg)
+
+Spectra of the tensors that [`convergence_tensors`](@ref) selects.
+"""
+function convergence_spectra(env::CTMRGEnv, alg)
+    corners, edges = convergence_tensors(env, alg)
+    return map(C -> corner_spectrum(C, alg), corners), map(T -> edge_spectrum(T, alg), edges)
+end
+
+"""
+    corner_spectrum(C, alg)
+    edge_spectrum(T, alg)
+
+The spectrum of a corner or edge, used to measure CTMRG convergence.
+"""
+corner_spectrum(C, alg) = svd_vals(C)
+edge_spectrum(T, alg) = svd_vals(T)
+
+function calc_convergence(env, CS_old, TS_old, alg)
+    CS_new, TS_new = convergence_spectra(env, alg)
+    ΔCS = maximum(splat(_singular_value_distance), zip(CS_old, CS_new))
+    ΔTS = maximum(splat(_singular_value_distance), zip(TS_old, TS_new))
+    @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
+    return max(ΔCS, ΔTS), CS_new, TS_new
+end
+
+"""
     calc_convergence(env, CS_old, TS_old)
     calc_convergence(env_new, env_old)
 
-Given a new environment `env`, compute the maximal singular value distance.
-This determined either from the previous corner and edge singular values
+Given a new environment `env`, compute the maximal spectral distance.
+This determined either from the previous corner and edge spectra
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
 function calc_convergence(env, CS_old, TS_old)
