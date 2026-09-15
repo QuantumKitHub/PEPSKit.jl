@@ -69,7 +69,7 @@ function _timeevol_sanity_check(
 end
 
 function MPSKit.infinite_temperature_density_matrix(H::LocalOperator)
-    T = scalartype(H)
+    T = storagetype(H)
     A = map(physicalspace(H)) do Vp
         ψ = permute(TensorKit.id(T, Vp), (1, 2))
         Vv = oneunit(Vp) # trivial (1D) virtual space

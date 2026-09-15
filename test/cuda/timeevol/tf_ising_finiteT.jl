@@ -1,0 +1,114 @@
+using Test
+using LinearAlgebra
+using TensorKit
+import MPSKitModels: σˣ, σᶻ
+using PEPSKit, CUDA, Adapt
+
+# Benchmark data of [σx, σz] from HOTRG
+# Physical Review B 86, 045139 (2012) Fig. 15-16
+bm_β = [0.5632, 0.0]
+bm_2β = [0.5297, 0.8265]
+
+function converge_env(state, χ::Int)
+    trunc1 = truncrank(4) & truncerror(; atol = 1.0e-12)
+    env0 = initialize_ctmrg_environment(state, ProductStateInitialization())
+    env, = leading_boundary(
+        env0, state; alg = :SequentialCTMRG, trunc = trunc1, tol = 1.0e-10,
+        decomposition_alg = (; alg = :SVDViaPolar)
+    )
+    trunc2 = truncrank(χ) & truncerror(; atol = 1.0e-12)
+    env, = leading_boundary(
+        env, state; alg = :SequentialCTMRG, trunc = trunc2, tol = 1.0e-10,
+        decomposition_alg = (; alg = :SVDViaPolar)
+    )
+    return env
+end
+
+function measure_mag(pepo::InfinitePEPO, env::CTMRGEnv; purified::Bool = false)
+    r, c = 1, 1
+    lattice = physicalspace(pepo)
+    Mx = adapt(CuArray, LocalOperator(lattice, ((r, c),) => σˣ(Float64, Trivial)))
+    Mz = adapt(CuArray, LocalOperator(lattice, ((r, c),) => σᶻ(Float64, Trivial)))
+    if purified
+        magx = expectation_value(pepo, Mx, pepo, env)
+        magz = expectation_value(pepo, Mz, pepo, env)
+    else
+        magx = expectation_value(pepo, Mx, env)
+        magz = expectation_value(pepo, Mz, env)
+    end
+    return [magx, magz]
+end
+
+Nr, Nc = 2, 2
+ham = adapt(CuArray, transverse_field_ising(Float64, Trivial, InfiniteSquare(Nr, Nc); J = 1.0, g = 2.0))
+pepo0 = adapt(CuArray, PEPSKit.infinite_temperature_density_matrix(ham))
+@test TensorKit.storagetype(ham) <: CuVector
+@test TensorKit.storagetype(pepo0) <: CuVector
+wts0 = SUWeight(pepo0)
+
+# Buildkite's GPU has less memory (~4GB) than most workstations,
+# so the most memory-hungry block below # is skipped there;
+# see the comment on the purification block for the details.
+const CI_GPU = get(ENV, "BUILDKITE", "false") == "true"
+
+trunc_pepo = truncrank(8) & truncerror(; atol = 1.0e-12)
+
+dt, nstep = 1.0e-3, 400
+β = dt * nstep
+
+# when g = 2, β = 0.4 and 2β = 0.8 belong to two phases (without and with nonzero σᶻ)
+@testset "Finite-T SU (force_mpo = $(force_mpo))" for force_mpo in (false, true)
+    GC.gc(); CUDA.reclaim()  # release the previous iteration's device pool
+    # use second order Trotter decomposition
+    symmetrize_gates = true
+    bipartite = true
+
+    # PEPO approach: results at β, or T = 2.5
+    alg = SimpleUpdate(; trunc = trunc_pepo, purified = false, bipartite, force_mpo)
+    pepo, wts, info = time_evolve(pepo0, ham, dt, nstep, alg, wts0; symmetrize_gates)
+    @test storagetype(pepo) <: CuArray
+
+    ## BP gauge fixing
+    bp_alg = BeliefPropagation(; maxiter = 100, tol = 1.0e-9, bipartite)
+    bp_env₀ = BPEnv(ones, Float64, pepo)
+    @test storagetype(bp_env₀) <: CuArray
+    bp_env, = leading_boundary(bp_env₀, pepo, bp_alg)
+    pepo, = gauge_fix(pepo, BPGauge(), bp_env)
+
+    env = converge_env(InfinitePartitionFunction(pepo), 16)
+    result_β = measure_mag(pepo, env)
+    @info "tr(σ(x,z)ρ) at T = $(1 / β): $(result_β)."
+    @test β ≈ info.t
+    @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
+    GC.gc(); CUDA.reclaim()  # release the previous block's device pool
+
+    # use `compress` to reach 2β, or T = 1.25
+    pepo2, = compress((pepo, pepo), LocalTruncation(trunc_pepo))
+    normalize!.(pepo2.A)
+    env2 = converge_env(InfinitePartitionFunction(pepo2), 16)
+    result_2β = measure_mag(pepo2, env2)
+    @info "tr(σ(x,z)ρ) at T = $(1 / (2β)): $(result_2β)."
+    @test isapprox(abs.(result_2β), bm_2β, rtol = 5.0e-3)
+    GC.gc(); CUDA.reclaim()  # release the previous block's device pool
+
+    # Purification approach: results at 2β, or T = 1.25.
+    #
+    # Skipped on Buildkite + CUDA: `converge_env` here contracts an `InfinitePEPS`, which is a
+    # *double-layer* network carrying both a ket and a bra virtual index per leg. With the
+    # PEPO bond dimension at `trunc_pepo` = 8 that makes the enlarged corners 512x512
+    # (2.0 MiB) rather than the 128x128 (0.12 MiB) of the `InfinitePartitionFunction`
+    # contractions above, so one CTMRG iteration allocates ~1.5 GiB against ~160 MiB, and
+    # the block peaks around 13 GiB — more than the 4GiB CI GPU has! Lowering χ here
+    # wouldn't help much: it is already the smallest χ in this file, and the cost is
+    # dominated by the D² network legs rather than by χ.
+    if !CI_GPU
+        alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite, force_mpo)
+        pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0; symmetrize_gates)
+        env = converge_env(InfinitePEPS(pepo), 8)
+        result_2β′ = measure_mag(pepo, env; purified = true)
+        @info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)): $(result_2β′)."
+        @test 2 * β ≈ info.t
+        @test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)
+        GC.gc(); CUDA.reclaim()  # release the previous block's device pool
+    end
+end

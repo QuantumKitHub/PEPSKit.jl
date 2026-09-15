@@ -253,7 +253,7 @@ function edge_transfer_spectrum(
         sector = one(sectortype(E))
     ) where {E <: CTMRGEdgeTensor}
     init = randn(
-        scalartype(E),
+        storagetype(E),
         space(first(bot), numind(first(bot)))' ← ℂ[typeof(sector)](sector => 1)' ⊗ space(first(top), 1),
     )
 

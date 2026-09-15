@@ -63,13 +63,21 @@ end
 Create a trivial `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
 """
 function SUWeight(
+        ::Type{TorA},
         Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+    ) where {M <: AbstractMatrix{<:ElementarySpace}, TorA}
     @assert size(Nspaces) == size(Espaces)
     Nr, Nc = size(Nspaces)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
-        DiagonalTensorMap(ones(reduceddim(V)), V)
+        if TorA <: AbstractArray
+            realTorA = similarstoragetype(TorA, real(eltype(TorA)))
+            diag = realTorA(undef, reduceddim(V))
+            fill!(diag, 1)
+        else
+            diag = ones(real(TorA), reduceddim(V))
+        end
+        DiagonalTensorMap(diag, V)
     end
     return SUWeight(weights)
 end
@@ -81,9 +89,10 @@ Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (e
 as `ElementarySpace`s) and unit cell size.
 """
 function SUWeight(
+        ::Type{TorA},
         Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpace}
-    return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell))
+    ) where {S <: ElementarySpace, TorA}
+    return SUWeight(TorA, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
 """
@@ -94,7 +103,7 @@ Create a trivial `SUWeight` for a given InfinitePEPS.
 function SUWeight(peps::InfinitePEPS)
     Nspaces = map(Base.Fix2(domain, NORTH), unitcell(peps))
     Espaces = map(Base.Fix2(domain, EAST), unitcell(peps))
-    return SUWeight(Nspaces, Espaces)
+    return SUWeight(storagetype(peps), Nspaces, Espaces)
 end
 
 """
@@ -106,7 +115,7 @@ function SUWeight(pepo::InfinitePEPO)
     @assert size(pepo, 3) == 1
     Nspaces = map(Base.Fix2(domain, NORTH), @view(unitcell(pepo)[:, :, 1]))
     Espaces = map(Base.Fix2(domain, EAST), @view(unitcell(pepo)[:, :, 1]))
-    return SUWeight(Nspaces, Espaces)
+    return SUWeight(storagetype(pepo), Nspaces, Espaces)
 end
 
 Random.rand!(wts::SUWeight) = rand!(Random.default_rng(), wts)
@@ -139,6 +148,8 @@ TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
 TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
 TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
+
+TensorKit.storagetype(::Type{SUWeight{T}}) where {T} = storagetype(T)
 
 ## Bipartite check
 function _is_bipartite(wts::SUWeight)
@@ -328,7 +339,7 @@ which has the same real scalartype as ``wts`.
 """
 function CTMRGEnv(wts::SUWeight)
     _, Nr, Nc = size(wts)
-    elt = scalartype(wts)
+    elt = storagetype(wts)
     V_env = oneunit(spacetype(wts))
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH

@@ -25,6 +25,7 @@ struct InfinitePartitionFunction{T <: PartitionFunctionTensor}
         return new{T}(A)
     end
 end
+TensorKit.storagetype(::Type{InfinitePartitionFunction{T}}) where {T} = storagetype(T)
 
 const InfinitePF{T} = InfinitePartitionFunction{T}
 
@@ -50,8 +51,8 @@ of the PEPS tensor at each site in the unit cell as a matrix. Each individual sp
 specified as either an `Int` or an `ElementarySpace`.
 """
 function InfinitePartitionFunction(
-        f, T, Nspaces::M, Espaces::M = Nspaces
-    ) where {M <: AbstractMatrix{<:ElementarySpace}}
+        f, ::Type{T}, Nspaces::M, Espaces::M = Nspaces
+    ) where {M <: AbstractMatrix{<:ElementarySpace}, T <: Number}
     size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 

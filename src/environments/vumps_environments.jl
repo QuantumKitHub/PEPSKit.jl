@@ -25,10 +25,11 @@ function MPSKit.allocate_GL(
         bra::InfiniteMPS, mpo::InfiniteTransferMatrix, ket::InfiniteMPS, i::Int
     )
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
+    TA = similarstoragetype(storagetype(mpo), T)
     V =
         left_virtualspace(bra, i) ⊗ _elementwise_dual(left_virtualspace(mpo, i)) ←
         left_virtualspace(ket, i)
-    TT = TensorMap{T}
+    TT = TensorKit.TensorMapWithStorage{T, TA}
     return TT(undef, V)
 end
 
@@ -36,7 +37,8 @@ function MPSKit.allocate_GR(
         bra::InfiniteMPS, mpo::InfiniteTransferMatrix, ket::InfiniteMPS, i::Int
     )
     T = Base.promote_type(scalartype(bra), scalartype(mpo), scalartype(ket))
+    TA = similarstoragetype(storagetype(mpo), T)
     V = right_virtualspace(ket, i) ⊗ right_virtualspace(mpo, i) ← right_virtualspace(bra, i)
-    TT = TensorMap{T}
+    TT = TensorKit.TensorMapWithStorage{T, TA}
     return TT(undef, V)
 end

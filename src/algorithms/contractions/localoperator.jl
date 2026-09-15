@@ -425,7 +425,6 @@ function reduced_densitymatrix1x1(
         EE_NE[DNb DEb; χSE χNW DNt DEt] * EE_SWA[χSE χNW DNt DEt; dt DSb DWb]
 
     @tensor ρ[dt; db] := EEAEE[dt; DNb DEb DSb DWb] * conj(Ā[db; DNb DEb DSb DWb])
-
     return ρ / str(ρ)
 end
 

@@ -3,9 +3,16 @@ using PEPSKit
 
 testsuite = ParallelTestRunner.find_tests(@__DIR__)
 
+# CUDA tests: only run if CUDA is functional
+using CUDA
+CUDA.functional() || filter!(!startswith("cuda") ∘ first, testsuite)
+# AMDGPU tests: only run if AMDGPU is functional
+using AMDGPU
+AMDGPU.functional() || filter!(!startswith("rocm") ∘ first, testsuite)
+
 # On Buildkite (GPU CI runner): only run CUDA and AMDGPU tests
 if get(ENV, "BUILDKITE", "false") == "true"
-    f(str) = startswith(first(str), "cuda") || startswith(first(str), "amd")
+    f(str) = startswith(first(str), "cuda") || startswith(first(str), "rocm")
     filter!(f, testsuite)
 end
 
