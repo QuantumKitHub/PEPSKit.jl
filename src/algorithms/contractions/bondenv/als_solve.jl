@@ -225,3 +225,21 @@ function _solve_als(
     x1, info = linsolve(f, Sx, x0, 0, 1; kwargs...)
     return x1, info
 end
+
+"""
+$(SIGNATURES)
+
+Solve the equations `Rx x = Sx` with pseudo-inversion.
+"""
+function _solve_als_pinv(
+        Rx::AbstractTensorMap{T, S, N, N},
+        Sx::GenericMPSTensor{S, N}; kwargs...
+    ) where {T, S, N}
+    @assert N >= 2
+    perm = ((1, (3:(N + 1))...), (2,))
+    perminv = ((1, N + 1, (2:(N - 1))...), (N,))
+    Rx_inv = pinv(Rx; kwargs...)
+    x = Rx_inv * permute(Sx, perm)
+    twistdual!(x, 1:numout(x))
+    return permute(x, perminv)
+end
