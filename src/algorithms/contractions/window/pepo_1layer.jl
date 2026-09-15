@@ -146,7 +146,7 @@ function _contract_window_rows(
     ψ = _north_boundary_mps(env, first(rowrange), colrange)
     for row in rowrange
         W = _row_mpo(ρ, observable, env, row, colrange)
-        ψ = _approximate_window_step(W, ψ, alg)
+        ψ = _approximate(W, ψ, alg)
     end
     south = _south_boundary_mps(env, last(rowrange), colrange)
     return dot(south, ψ)

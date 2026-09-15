@@ -104,7 +104,7 @@ function _window_row_cache(
     north_boundaries = Vector{typeof(north)}(undef, nrows + 1)
     north_boundaries[1] = north
     for (k, row) in enumerate(rowrange)
-        north_boundaries[k + 1] = _approximate_window_step(
+        north_boundaries[k + 1] = _approximate(
             row_mpos[row], north_boundaries[k], alg
         )
     end
@@ -113,7 +113,7 @@ function _window_row_cache(
     south_boundaries[end] = south
     for (k, row) in Iterators.reverse(enumerate(rowrange))
         W = _adjoint_mpo(row_mpos[row])
-        south_boundaries[k] = _approximate_window_step(
+        south_boundaries[k] = _approximate(
             W, south_boundaries[k + 1], alg
         )
     end

@@ -93,7 +93,7 @@ function _contract_twosite_source!(
     A = ρ[source[1], source[2], 1]
     source_tensor = mpo_path_first(A, mpo[1], Val(:south))
     W = _row_mpo_with_site(ρ, source_tensor, env, source[1], source[2], cache.colrange)
-    north = _approximate_window_step(W, north, alg)
+    north = _approximate(W, north, alg)
 
     stringspace = space(mpo[2], 1)
     for row in (source[1] + 1):last_target_row
@@ -108,7 +108,7 @@ function _contract_twosite_source!(
         A = ρ[row, source[2], 1]
         string_tensor = mpo_path_string(A, stringspace, Val((:north, :south)))
         W = _row_mpo_with_site(ρ, string_tensor, env, row, source[2], cache.colrange)
-        north = _approximate_window_step(W, north, alg)
+        north = _approximate(W, north, alg)
     end
     return numerators
 end

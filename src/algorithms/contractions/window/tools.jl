@@ -12,7 +12,7 @@ end
 """
 Apply a finite MPO to a finite MPS with zip-up truncation and optional DMRG refinement.
 """
-function _approximate_window_step(W::FiniteMPO, ψ::FiniteMPS, alg::WindowApprox)
+function _approximate(W::FiniteMPO, ψ::FiniteMPS, alg::WindowApprox)
     ψ′, = approximate((W, ψ), alg.zipup)
     isnothing(alg.dmrg) && return ψ′
     ψ′, = approximate(ψ′, (W, ψ), alg.dmrg)
