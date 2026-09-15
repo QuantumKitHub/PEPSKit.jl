@@ -7,20 +7,17 @@ using Random
 const CI = CartesianIndex
 
 """
-Contract `⟨op⟩` between `i` and each site in `js` independently without caching, using one shared window.
+Contract `⟨op⟩` between `i` and each site in `js` independently without caching, using fixed width and a window ending at each target row.
 """
-function _shared_window_reference(op::AbstractTensorMap, i::CI{2}, js, ρ, env)
+function _adaptive_window_reference(op::AbstractTensorMap, i::CI{2}, js, ρ, env)
     lattice = physicalspace(ρ)
     observables = [MPOObservable([i, j], op, lattice) for j in js]
-    rowrange, colrange = PEPSKit._window_ranges([i; js])
+    _, colrange = PEPSKit._window_ranges([i; js])
     alg = PEPSKit.WindowApprox(Zipup(; trunc = notrunc()), nothing)
-    norm = PEPSKit._contract_window_rows(
-        ρ, nothing, env, rowrange, colrange, alg
-    )
-    return map(observables) do observable
-        numerator = PEPSKit._contract_window_rows(
-            ρ, observable, env, rowrange, colrange, alg
-        )
+    return map(observables, js) do observable, j
+        rowrange = i[1]:j[1]
+        norm = PEPSKit._contract_window_rows(ρ, nothing, env, rowrange, colrange, alg)
+        numerator = PEPSKit._contract_window_rows(ρ, observable, env, rowrange, colrange, alg)
         return numerator / norm
     end
 end
@@ -58,7 +55,7 @@ spaces = Dict(
     # This target distribution only permits row sweeps.
     # Compare against independent contractions in target order.
     O² = rand(ComplexF64, d^2, d^2)
-    vals_ref = _shared_window_reference(O², i, js, ρ, env)
+    vals_ref = _adaptive_window_reference(O², i, js, ρ, env)
     vals_rows = correlator_approx(ρ, O², i, js, env; trunc, maxiter = 0)
     @test vals_rows ≈ vals_ref
 
@@ -75,6 +72,12 @@ spaces = Dict(
     ρc, envc = rotr90(ρ), rotr90(env)
     @test correlator_approx(ρc, O², ic, jcs, envc; trunc, maxiter = 0) ≈ vals_rows
 
+    # Identity normalization must survive truncation for every target row and both sweep orientations.
+    for maxiter in (0, 1)
+        @test correlator_approx(ρ, id², i, js, env; trunc = truncrank(2), maxiter) ≈ ones(length(js))
+        @test correlator_approx(ρc, id², ic, jcs, envc; trunc = truncrank(2), maxiter) ≈ ones(length(js))
+    end
+
     # Test auto sweep direction choice in for southwest targets.
     selection_trunc = truncrank(2)
     selection_alg = PEPSKit.WindowApprox(Zipup(; trunc = selection_trunc), nothing)
@@ -84,27 +87,12 @@ spaces = Dict(
         @test correlator_approx(ρ, O², i, j, env; trunc = selection_trunc, maxiter = 0) == expected
     end
 
-    # Check the cached normalization against a full contraction without observables.
-    alg = PEPSKit.WindowApprox(Zipup(; trunc), nothing)
-    rowrange, colrange = PEPSKit._window_ranges([i; js])
-    cache = PEPSKit._window_row_cache(ρ, env, rowrange, colrange, alg)
-    @test cache.norm ≈ PEPSKit._contract_window_rows(ρ, nothing, env, rowrange, colrange, alg)
-
-    # Verify that south_boundaries[k] closes the north state after row k, catching indexing errors.
-    north = cache.north_boundary
-    for k in eachindex(cache.row_mpos)
-        north = PEPSKit._approximate(cache.row_mpos[k], north, alg)
-        @test dot(cache.south_boundaries[k], north) ≈ cache.norm
-    end
-
-    # Replacing a site must modify the returned MPO while leaving the cached row intact.
-    W = first(cache.row_mpos)
-    W_before = deepcopy(parent(W))
-    replacement = 2 * parent(W)[2]
-    modified = PEPSKit._row_mpo_with_site(cache, replacement, first(rowrange), first(colrange))
-    @test parent(W) == W_before
-    @test parent(modified)[2] == replacement
-
-    # Check that the planar row-MPO adjoint agrees with the full tensor adjoint.
-    @test convert(TensorMap, PEPSKit._adjoint_mpo(W)) ≈ convert(TensorMap, W)'
+    # Extending the depth must preserve earlier values when the width and selected direction stay fixed.
+    extended_js = [js; CI(2, 0)]
+    baseline = correlator_approx(ρ, O², i, js, env; trunc = selection_trunc, maxiter = 0)
+    extended = correlator_approx(ρ, O², i, extended_js, env; trunc = selection_trunc, maxiter = 0)
+    @test extended[1:length(js)] ≈ baseline
+    extended_jcs = PEPSKit.siterotr90.(extended_js, Ref(cell))
+    extended_columns = correlator_approx(ρc, O², ic, extended_jcs, envc; trunc = selection_trunc, maxiter = 0)
+    @test extended_columns ≈ extended
 end

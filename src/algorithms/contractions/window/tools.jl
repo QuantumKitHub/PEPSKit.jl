@@ -27,13 +27,6 @@ function _bra_mps_tensor(A::MPSTensor)
 end
 
 """
-Construct the planar adjoint of a finite MPO while restoring MPSKit's local MPO leg partition.
-"""
-function _adjoint_mpo(W::FiniteMPO)
-    return FiniteMPO(map(A -> transpose(A', ((3, 1), (4, 2)); copy = true), parent(W)))
-end
-
-"""
 Build the finite MPS representing the north CTMRG boundary of a window.
 
 Convention of CTM tensors on the north boundary is

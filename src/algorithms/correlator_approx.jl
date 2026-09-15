@@ -7,13 +7,18 @@ $(SIGNATURES)
 Approximately measure a dense two-site operator between a fixed first site `i` and second sites `js` in a single-layer PEPO.
 
 - Operator leg 1 acts at `i`, and leg 2 acts at each second site.
-- The sweep direction is selected automatically: north-to-south requires every `j[1] ≥ i[1]`, and east-to-west requires every `j[2] ≤ i[2]`.
-    If both sweeps are valid, use north-to-south for a square or wide window, and east-to-west for a tall window.
-    If neither sweep is valid, throw an `ArgumentError`.
-- `js` must be nonempty, unique, and distinct from `i`.
+- The contraction direction is chosen automatically.
+    Row-by-row contraction proceeds southward and requires every `j[1] ≥ i[1]`; column-by-column contraction proceeds westward and requires every `j[2] ≤ i[2]`.
+    If both are possible, consider the smallest rectangle containing `i` and all sites in `js`: use rows if it is square or wider than tall, and columns otherwise.
+    If neither direction is possible, throw an `ArgumentError`.
+- The collection `js` must be nonempty, contain no duplicates, and exclude `i`.
     A collection returns a vector in `vec(js)` order; a single second site returns a scalar.
-    All targets share the smallest enclosing rectangular window and its normalization, calculated once by a full sweep without observables.
-- Boundary-MPS truncation uses `trunc` (defaulting to the largest CTMRG boundary dimension), with `maxiter` DMRG refinement sweeps after each zipup step (default 1; 0 disables refinement).
+- For row-by-row contraction, all windows have the same width, covering the columns of `i` and all sites in `js`, but each window ends at the row of the measured site `j`.
+    For column-by-column contraction, all windows cover the same rows, but each window ends at the column of `j`.
+    Each window has its own normalization, calculated without the operator using the same contraction arrangement.
+    The last row or column is contracted without further truncation against the CTMRG boundary immediately beyond it.
+- `trunc` controls boundary-MPS truncation; by default, it limits the rank to the largest CTMRG boundary dimension.
+    After each zipup step, `maxiter` DMRG sweeps refine the result (default 1; use 0 to disable refinement).
 """
 function correlator_approx(
         ρ::InfinitePEPO, op::AbstractTensorMap,
@@ -39,4 +44,16 @@ function correlator_approx(
         ρ, op, i, collect(vec(js)), env,
         WindowApprox(Zipup(; trunc), _approx_dmrg(maxiter)), direction
     )
+end
+
+"""
+Group targets by row, retaining each target's original result position.
+"""
+function _twosite_targets_by_row(targets::Vector{CartesianIndex{2}})
+    targets_by_row = Dict{Int, Dict{CartesianIndex{2}, Int}}()
+    for (position, target) in enumerate(targets)
+        row_targets = get!(Dict{CartesianIndex{2}, Int}, targets_by_row, target[1])
+        row_targets[target] = position
+    end
+    return targets_by_row
 end

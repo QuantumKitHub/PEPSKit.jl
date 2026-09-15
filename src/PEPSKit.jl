@@ -120,7 +120,6 @@ include("algorithms/contractions/correlator/pepo_1layer.jl")
 include("algorithms/contractions/mpo_path/pepo_1layer.jl")
 include("algorithms/contractions/window/tools.jl")
 include("algorithms/contractions/window/pepo_1layer.jl")
-include("algorithms/contractions/window/twosite/caching.jl")
 include("algorithms/contractions/window/twosite/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")

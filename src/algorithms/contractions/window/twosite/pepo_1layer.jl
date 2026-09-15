@@ -24,7 +24,7 @@ function _correlator_approx(
 end
 
 """
-Measure all targets with one MPO decomposition and a single open string propagated south from the fixed source.
+Measure targets in windows of fixed width ending at each target row, propagating observable-free and open-string north states together.
 """
 function _correlator_approx_rows(
         ρ::InfinitePEPO, op::AbstractTensorMap,
@@ -33,42 +33,48 @@ function _correlator_approx_rows(
     )
     ρ, env = standardize_dualness(ρ, env)
     rowrange, colrange = _window_ranges([source; targets])
-    cache = _window_row_cache(ρ, env, rowrange, colrange, alg)
     targets_by_row = _twosite_targets_by_row(targets)
     mpo = gate_to_mpo(op; trunc = notrunc())
     stringspace = space(mpo[2], 1)
-    numerators = zeros(promote_type(scalartype(op), typeof(cache.norm)), length(targets))
-    north = cache.north_boundary
+    values = zeros(promote_type(scalartype(op), scalartype(ρ), scalartype(env)), length(targets))
+    north = _north_boundary_mps(env, source[1], colrange)
+    plain_north = north
     for row in rowrange
+        W = _row_mpo(ρ, nothing, env, row, colrange)
         if haskey(targets_by_row, row)
+            south = _south_boundary_mps(env, row, colrange)
+            norm = dot(south, W, plain_north)
             _contract_twosite_target_row!(
-                numerators, ρ, mpo, source, targets_by_row[row], north, cache
+                values, ρ, mpo, source, targets_by_row[row], north, south, W, colrange
             )
+            for k in Base.values(targets_by_row[row])
+                values[k] /= norm
+            end
         end
         row == last(rowrange) && break
         A = ρ[row, source[2], 1]
         tensor = row == source[1] ? mpo_path_first(A, mpo[1], Val(:south)) :
             mpo_path_string(A, stringspace, Val((:north, :south)))
-        W = _row_mpo_with_site(cache, tensor, row, source[2])
+        plain_north = _approximate(W, plain_north, alg)
+        parent(W)[_window_mps_site(source[2], colrange)] = tensor
         north = _approximate(W, north, alg)
     end
-    return numerators ./ cache.norm
+    return values
 end
 
 """
-Contract all targets in one row with a shared north state, writing results into `numerators`.
+Contract all targets in one row `W` with a shared `north` and `south` boundary MPS, writing results into `numerators`.
+
 """
 function _contract_twosite_target_row!(
         numerators::Vector{<:Number}, ρ::InfinitePEPO,
         mpo::AbstractVector{<:AbstractTensorMap},
         source::CartesianIndex{2}, targets::Dict{CartesianIndex{2}, Int},
-        north::FiniteMPS, cache::WindowRowCache,
+        north::FiniteMPS, south::FiniteMPS, W::FiniteMPO, colrange::UnitRange{Int},
     )
     row = first(keys(targets))[1]
-    row_idx = row - first(cache.rowrange) + 1
-    south = cache.south_boundaries[row_idx]
-    envs = environments(south, cache.row_mpos[row_idx], north)
-    source_site = _window_mps_site(source[2], cache.colrange)
+    envs = environments(south, W, north)
+    source_site = _window_mps_site(source[2], colrange)
     stringspace = space(mpo[2], 1)
 
     # close the target right at the column of the incoming string
@@ -95,12 +101,12 @@ function _contract_twosite_target_row!(
         for target in right_targets
             target_col = target[2]
             for col in (previous_col + 1):(target_col - 1)
-                site = _window_mps_site(col, cache.colrange)
+                site = _window_mps_site(col, colrange)
                 string_tensor = mpo_path_string(ρ[row, col, 1], stringspace, Val((:west, :east)))
                 left = left * TransferMatrix(north.AR[site], string_tensor, south.AR[site])
             end
 
-            target_site = _window_mps_site(target_col, cache.colrange)
+            target_site = _window_mps_site(target_col, colrange)
             target_tensor = mpo_path_last(ρ[row, target_col, 1], mpo[2], Val(:west))
             target_left = left * TransferMatrix(north.AR[target_site], target_tensor, south.AR[target_site])
             value = _contract_transfer_boundaries(target_left, rightenv(envs, target_site, south))
@@ -129,12 +135,12 @@ function _contract_twosite_target_row!(
         for target in left_targets
             target_col = target[2]
             for col in (previous_col - 1):-1:(target_col + 1)
-                site = _window_mps_site(col, cache.colrange)
+                site = _window_mps_site(col, colrange)
                 string_tensor = mpo_path_string(ρ[row, col, 1], stringspace, Val((:east, :west)))
                 right = TransferMatrix(north.AL[site], string_tensor, south.AL[site]) * right
             end
 
-            target_site = _window_mps_site(target_col, cache.colrange)
+            target_site = _window_mps_site(target_col, colrange)
             target_tensor = mpo_path_last(ρ[row, target_col, 1], mpo[2], Val(:east))
             target_right = TransferMatrix(north.AL[target_site], target_tensor, south.AL[target_site]) * right
             value = _contract_transfer_boundaries(leftenv(envs, target_site, south), target_right)
@@ -152,17 +158,6 @@ end
 Map a PEPO column to its finite-MPS site, accounting for the additional west CTM edge.
 """
 _window_mps_site(col::Int, colrange::UnitRange{Int}) = col - first(colrange) + 2
-
-"""
-Replace one site in a copied row-MPO tensor container, leaving the cached row unchanged.
-"""
-function _row_mpo_with_site(
-        cache::WindowRowCache, tensor::MPOTensor, row::Int, col::Int,
-    )
-    tensors = copy(parent(cache.row_mpos[row - first(cache.rowrange) + 1]))
-    tensors[_window_mps_site(col, cache.colrange)] = tensor
-    return FiniteMPO(tensors)
-end
 
 """
 Contract one modified row site between precomputed left and right MPS environments.
