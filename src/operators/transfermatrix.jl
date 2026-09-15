@@ -154,7 +154,7 @@ function initialize_mps(
     return InfiniteMPS(
         [
             f(
-                    TorA,
+                TorA,
                     virtualspaces[_prev(i, end)] * _elementwise_dual(north_virtualspace(O, i)),
                     virtualspaces[mod1(i, end)],
                 ) for i in 1:length(O)
