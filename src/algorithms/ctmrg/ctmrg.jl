@@ -261,11 +261,15 @@ edge_spectra(Ts, alg) = map(T -> edge_spectrum(T, alg), Ts)
 
 """
     corner_spectrum(C, alg)
-    edge_spectrum(T, alg)
 
-The spectrum of a corner or edge, used to measure CTMRG convergence.
+The spectrum of a corner, used to measure CTMRG convergence.
 """
 corner_spectrum(C, alg) = svd_vals(C)
+"""
+    edge_spectrum(T, alg)
+
+The spectrum of an edge, used to measure CTMRG convergence.
+"""
 edge_spectrum(T, alg) = svd_vals(T)
 
 function calc_convergence(env, CS_old, TS_old, alg)
