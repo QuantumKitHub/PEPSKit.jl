@@ -39,8 +39,9 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
-# fixed-point differentiation is incompatible with sequential CTMRG
-function _check_disallowed_combination(
+# fixed-point gradients with sequential CTMRG are covered by the CPU test,
+# so skip them here since GPU gradients are slow
+function _skip_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
     ctmrg_alg == :SequentialCTMRG && !isnothing(gradient_alg) && return true
@@ -68,17 +69,8 @@ end
             calgs, palgs, salgs, galgs, gsalgs
         )
 
-        # filter disallowed algorithm combinations
-        if _check_disallowed_combination(
-                ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg
-            )
-            # but verify that its use would throw an error
-            @test_throws ArgumentError PEPSOptimize(;
-                boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg))),
-                gradient_alg = (; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)),
-            )
-            continue
-        end
+        # skip slow combinations that the CPU test already covers
+        _skip_combination(ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg) && continue
 
         # check for allowed algorithm combinations when testing naive gradient
         if isnothing(gradient_alg)
