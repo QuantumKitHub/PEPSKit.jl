@@ -78,7 +78,7 @@ function _contract_twosite_source!(
     # grouping targets by which row they are in
     targets_by_row = _twosite_targets_by_row(targets)
     source_idx = source[1] - first(cache.rowrange) + 1
-    north = cache.north_prefixes[source_idx]
+    north = cache.north_boundaries[source_idx]
 
     # Close targets in the same row as the source
     if haskey(targets_by_row, source[1])
@@ -125,7 +125,7 @@ function _contract_twosite_target_row!(
     )
     row = first(keys(targets))[1]
     row_idx = row - first(cache.rowrange) + 1
-    south = cache.south_suffixes[row_idx + 1]
+    south = cache.south_boundaries[row_idx + 1]
     envs = environments(south, cache.row_mpos[row], north)
     source_site = _window_mps_site(source[2], cache.colrange)
     stringspace = space(mpo[2], 1)

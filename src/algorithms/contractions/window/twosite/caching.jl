@@ -71,9 +71,9 @@ The fields contain:
 
 - `rowrange` and `colrange`: the coordinate ranges defining the window.
 - `row_mpos`: the row MPOs without observables, one per row and including the west and east CTMRG edges.
-- `north_prefixes`: `nrows + 1` north boundary MPSs.
+- `north_boundaries`: `nrows + 1` north boundary MPSs.
   Entry `k` is above row `k` in the window.
-- `south_suffixes`: `nrows + 1` adjointed south boundary MPSs.
+- `south_boundaries`: `nrows + 1` adjointed south boundary MPSs.
   Entry `k + 1` is below row `k` in the window.
 - `norm`: the approximate contraction of the window with no observable inserted.
 """
@@ -81,8 +81,8 @@ struct WindowRowCache{M <: FiniteMPO, N <: FiniteMPS, S <: FiniteMPS, T <: Numbe
     rowrange::UnitRange{Int}
     colrange::UnitRange{Int}
     row_mpos::Dict{Int, M}
-    north_prefixes::Vector{N}
-    south_suffixes::Vector{S}
+    north_boundaries::Vector{N}
+    south_boundaries::Vector{S}
     norm::T
 end
 
@@ -101,24 +101,24 @@ function _window_row_cache(
     north = _north_boundary_mps(env, first(rowrange), colrange)
     south = _south_boundary_mps(env, last(rowrange), colrange)
 
-    north_prefixes = Vector{typeof(north)}(undef, nrows + 1)
-    north_prefixes[1] = north
+    north_boundaries = Vector{typeof(north)}(undef, nrows + 1)
+    north_boundaries[1] = north
     for (k, row) in enumerate(rowrange)
-        north_prefixes[k + 1] = _approximate_window_step(
-            row_mpos[row], north_prefixes[k], alg
+        north_boundaries[k + 1] = _approximate_window_step(
+            row_mpos[row], north_boundaries[k], alg
         )
     end
 
-    south_suffixes = Vector{typeof(south)}(undef, nrows + 1)
-    south_suffixes[end] = south
+    south_boundaries = Vector{typeof(south)}(undef, nrows + 1)
+    south_boundaries[end] = south
     for (k, row) in Iterators.reverse(enumerate(rowrange))
         W = _adjoint_mpo(row_mpos[row])
-        south_suffixes[k] = _approximate_window_step(
-            W, south_suffixes[k + 1], alg
+        south_boundaries[k] = _approximate_window_step(
+            W, south_boundaries[k + 1], alg
         )
     end
-    norm = dot(south, north_prefixes[end])
+    norm = dot(south, north_boundaries[end])
     return WindowRowCache(
-        rowrange, colrange, row_mpos, north_prefixes, south_suffixes, norm
+        rowrange, colrange, row_mpos, north_boundaries, south_boundaries, norm
     )
 end

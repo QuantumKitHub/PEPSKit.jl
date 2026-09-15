@@ -102,8 +102,8 @@ end
 
     alg = PEPSKit.WindowApprox(Zipup(; trunc), nothing)
     cache = PEPSKit._window_row_cache(ρ, env, 1:2, 1:2, alg)
-    @test all(eachindex(cache.north_prefixes)) do k
-        dot(cache.south_suffixes[k], cache.north_prefixes[k]) ≈ cache.norm
+    @test all(eachindex(cache.north_boundaries)) do k
+        dot(cache.south_boundaries[k], cache.north_boundaries[k]) ≈ cache.norm
     end
 
     W = cache.row_mpos[first(cache.rowrange)]
