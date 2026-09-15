@@ -76,17 +76,15 @@ function PEPSKit.bond_svds(
     isempty(rls) && return map(_ -> nothing, rls)
     # The different GPU libaries offer different batching algos,
     # make sure we have one that actually works.
-    alg_t = MAK.default_algorithm(MAK.svd_compact!, eltype(rls))
-    alg_b = alg_t isa Factorizations.BatchedSVDAlgorithm ?
-        Factorizations.unbatched(alg_t) : alg_t
-    Fs = map(rl -> MAK.initialize_output(MAK.svd_compact!, rl, alg_b), rls)
+    alg = MAK.default_algorithm(MAK.batched_svd_compact!, eltype(rls))
+    Fs = map(rl -> MAK.initialize_output(MAK.svd_compact!, rl, alg), rls)
     balg = _cluster_batched_alg(rls)
     if isnothing(balg)
         for (rl, F) in zip(rls, Fs)
-            MAK.svd_compact!(rl, F, alg_b)
+            MAK.svd_compact!(rl, F, alg)
         end
     else
-        _cluster_svd_compact!(rls, Fs, balg, alg_b)
+        _cluster_svd_compact!(rls, Fs, balg, alg)
     end
     return map(Fs, truncs) do F, trunc
         (U, S, Vᴴ) = F
@@ -116,7 +114,7 @@ function _cluster_batched_alg(rls::AbstractVector)
     return nothing
 end
 
-function _cluster_svd_compact!(rls::AbstractVector, Fs, alg, alg_b)
+function _cluster_svd_compact!(rls::AbstractVector, Fs, alg)
     I = eltype(eachindex(rls))
     C = sectortype(eltype(rls))
     groups = Dict{Tuple{Int, Int}, Vector{Tuple{I, C}}}()
@@ -147,7 +145,7 @@ function _cluster_svd_compact!(rls::AbstractVector, Fs, alg, alg_b)
         for (i, c) in small
             U, S, Vᴴ = Fs[i]
             MAK.svd_compact!(
-                block(rls[i], c), (block(U, c), block(S, c), block(Vᴴ, c)), alg_b
+                block(rls[i], c), (block(U, c), block(S, c), block(Vᴴ, c)), alg
             )
         end
     end
@@ -190,7 +188,7 @@ function _batched_spectra_alg(proto)
     catch
         return nothing
     end
-    return alg isa Factorizations.BatchedSVDAlgorithm ? alg : nothing
+    return alg isa Factorizations.AbstractAlgorithm ? alg : nothing
 end
 
 # `calc_convergence` decomposes every corner and every edge of the environment
@@ -209,7 +207,7 @@ function _batch_svd_vals!(ts, Ss, items, (m, n), pad::Bool, alg)
     end
     o1 = block(Ss[first(items)[1]], first(items)[2])
     Sb = similar(o1, min(m, n), length(items))
-    MAK.svd_vals!(A, Sb, alg)
+    MAK.batched_svd_vals!(A, Sb, alg)
     for (j, (i, c)) in enumerate(items)
         o = block(Ss[i], c)
         copyto!(o, view(Sb, axes(o, 1), j))
@@ -289,8 +287,8 @@ function _batched_spectra(ts::AbstractArray{T}) where {T <: AbstractTensorMap}
     else
         for (i, c) in small
             # `svd_vals!` destroys its input, and `block(ts[i], c)` is a view into the live
-            # environment tensor -- computing the convergence spectra must not damage the
-            # environment it is measuring, so hand the driver a copy. (The batched branch is
+            # environment tensor. Computing the convergence spectra must not damage the
+            # environment it is measuring, so let's hand the driver a copy. (The batched branch is
             # already safe: `_batch_svd_vals!` packs the blocks into a fresh array.)
             b = copy(block(ts[i], c))
             MAK.svd_vals!(b, block(Ss[i], c), MAK.default_svd_algorithm(typeof(b)))
