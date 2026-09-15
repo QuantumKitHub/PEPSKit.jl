@@ -50,6 +50,19 @@ end
 # Default to Any for eltype: needs to be abstract anyways so not that much to gain
 LocalOperator(lattice, terms) = LocalOperator{Any}(lattice, terms)
 LocalOperator(lattice, terms::Pair...) = LocalOperator(lattice, terms)
+
+"""
+Sort operator sites using the default `CartesianIndex` ordering. When the order changes,
+permute the corresponding output and input physical legs by the same ordering.
+"""
+function _sort_op_sites(sites::Vector{CartesianIndex{2}}, op::AbstractTensorMap)
+    issorted(sites) && return sites, op
+    order = sortperm(sites)
+    sites′ = sites[order]
+    op′ = permute(op, (Tuple(order), Tuple(order) .+ numout(op)))
+    return sites′, op′
+end
+
 # TODO: add terms beyond AbstractTensorMap
 # e.g. tensor product of 1-site operators, MPOs
 add_term!(operator::LocalOperator, inds::Tuple, term::AbstractTensorMap) = add_term!(operator, collect(inds), term)
@@ -68,12 +81,7 @@ function add_term!(
     end
     norm(term) <= atol && return operator # skip adding negligible terms
 
-    # permute input
-    if !issorted(inds)
-        I = sortperm(inds)
-        inds = inds[I]
-        term = permute(term, (Tuple(I), Tuple(I) .+ numout(term)))
-    end
+    inds, term = _sort_op_sites(inds, term)
 
     # translate coordinates
     _shift_into_unitcell!(inds, size(operator))
