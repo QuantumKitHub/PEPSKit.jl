@@ -48,5 +48,11 @@ sites_list = (
                 ρ, observable, env; trunc, maxiter = 0, direction
             ) ≈ exact
         end
+        # Square windows must default to row sweeps.
+        if sites == sites_list[3]
+            auto = expectation_value_approx(ρ, observable, env; trunc = truncrank(2), maxiter = 0)
+            rows = expectation_value_approx(ρ, observable, env; trunc = truncrank(2), maxiter = 0, direction = :rows)
+            @test auto == rows
+        end
     end
 end

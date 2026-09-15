@@ -1,121 +1,62 @@
-# Source-cached dense two-site contractions for single-layer PEPO networks.
-
 """
-Validate a dense two-site measurement, choose its sweep orientation, and dispatch to the
-row-oriented source-cached contraction.
+Validate operator spaces and rotate column sweeps into the row-oriented contraction.
 """
 function _correlator_approx(
         ρ::InfinitePEPO, op::AbstractTensorMap,
-        bonds::Vector{NTuple{2, CartesianIndex{2}}},
+        source::CartesianIndex{2}, targets::Vector{CartesianIndex{2}},
         env::CTMRGEnv, alg::WindowApprox, direction::Symbol,
     )
     _check_window_inputs(ρ, direction)
     numout(op) == numin(op) == 2 ||
         throw(ArgumentError("correlator_approx requires a two-site operator"))
-    for bond in bonds, (i, site) in enumerate(bond)
+    for (leg, sites) in enumerate(((source,), targets)), site in sites
         V = physicalspace(ρ, Tuple(site)...)
-        V == codomain(op)[i] == domain(op)[i] ||
+        V == codomain(op)[leg] == domain(op)[leg] ||
             throw(SpaceMismatch("operator physical space does not match PEPO site $site"))
     end
-
-    rowrange, colrange = _window_ranges(bonds)
-    sweep = direction === :auto ? (length(colrange) > length(rowrange) ? :rows : :columns) : direction
-    if sweep === :rows
-        return _correlator_approx_rows(
-            ρ, op, bonds, env, rowrange, colrange, alg
-        )
+    if direction === :columns
+        unitcell = size(ρ)[1:2]
+        source = siterotl90(source, unitcell)
+        targets = siterotl90.(targets, Ref(unitcell))
+        ρ, env = rotl90(ρ), rotl90(env)
     end
-    # rotate column-wise contraction to reuse row-wise code
-    unitcell = size(ρ)[1:2]
-    rotated_bonds = map(bonds) do bond
-        return (siterotl90(bond[1], unitcell), siterotl90(bond[2], unitcell))
-    end
-    rotated_rowrange, rotated_colrange = _window_ranges(rotated_bonds)
-    return _correlator_approx_rows(
-        rotl90(ρ), op, rotated_bonds, rotl90(env),
-        rotated_rowrange, rotated_colrange, alg
-    )
+    return _correlator_approx_rows(ρ, op, source, targets, env, alg)
 end
 
 """
-Measure all ordered bonds in one row-oriented window using shared row MPOs without observables, shared boundaries, and one exactly decomposed MPO for each operator-leg ordering.
+Measure all targets with one MPO decomposition and a single open string propagated south from the fixed source.
 """
 function _correlator_approx_rows(
         ρ::InfinitePEPO, op::AbstractTensorMap,
-        bonds::Vector{NTuple{2, CartesianIndex{2}}}, env::CTMRGEnv,
-        rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::WindowApprox,
+        source::CartesianIndex{2}, targets::Vector{CartesianIndex{2}},
+        env::CTMRGEnv, alg::WindowApprox,
     )
     ρ, env = standardize_dualness(ρ, env)
+    rowrange, colrange = _window_ranges([source; targets])
     cache = _window_row_cache(ρ, env, rowrange, colrange, alg)
-    groups = _twosite_source_groups(bonds)
-    mpo = gate_to_mpo(op; trunc = notrunc())
-    swapped_mpo = if any(key[2] for key in keys(groups))
-        swapped_op = permute(op, ((2, 1), (4, 3)))
-        gate_to_mpo(swapped_op; trunc = notrunc())
-    end
-
-    T = promote_type(scalartype(op), typeof(cache.norm))
-    numerators = zeros(T, length(bonds))
-    for ((source, swapped), targets) in groups
-        source_mpo = swapped ? something(swapped_mpo) : mpo
-        _contract_twosite_source!(
-            numerators, ρ, source_mpo, source, targets, env, cache, alg,
-        )
-    end
-    return numerators ./ cache.norm
-end
-
-"""
-Contract the correlator numerator for all targets associated with the same source
-and one ordering of the dense operator, writing each result into `numerators`.
-"""
-function _contract_twosite_source!(
-        numerators::Vector{<:Number}, ρ::InfinitePEPO,
-        mpo::AbstractVector{<:AbstractTensorMap},
-        source::CartesianIndex{2}, targets::Dict{CartesianIndex{2}, Int},
-        env::CTMRGEnv, cache::WindowRowCache, alg::WindowApprox,
-    )
-    # grouping targets by which row they are in
     targets_by_row = _twosite_targets_by_row(targets)
-    source_idx = source[1] - first(cache.rowrange) + 1
-    north = cache.north_boundaries[source_idx]
-
-    # Close targets in the same row as the source
-    if haskey(targets_by_row, source[1])
-        _contract_twosite_target_row!(
-            numerators, ρ, mpo, source, targets_by_row[source[1]], north, cache
-        )
-    end
-    last_target_row = maximum(keys(targets_by_row))
-    last_target_row == source[1] && return numerators
-
-    # Open the MPO string toward the south for targets in later rows.
-    A = ρ[source[1], source[2], 1]
-    source_tensor = mpo_path_first(A, mpo[1], Val(:south))
-    W = _row_mpo_with_site(ρ, source_tensor, env, source[1], source[2], cache.colrange)
-    north = _approximate(W, north, alg)
-
+    mpo = gate_to_mpo(op; trunc = notrunc())
     stringspace = space(mpo[2], 1)
-    for row in (source[1] + 1):last_target_row
-        # Close every target in this row
+    numerators = zeros(promote_type(scalartype(op), typeof(cache.norm)), length(targets))
+    north = cache.north_boundary
+    for row in rowrange
         if haskey(targets_by_row, row)
             _contract_twosite_target_row!(
                 numerators, ρ, mpo, source, targets_by_row[row], north, cache
             )
         end
-        row == last_target_row && break
-        # Carry the open string down to the next row
+        row == last(rowrange) && break
         A = ρ[row, source[2], 1]
-        string_tensor = mpo_path_string(A, stringspace, Val((:north, :south)))
-        W = _row_mpo_with_site(ρ, string_tensor, env, row, source[2], cache.colrange)
+        tensor = row == source[1] ? mpo_path_first(A, mpo[1], Val(:south)) :
+            mpo_path_string(A, stringspace, Val((:north, :south)))
+        W = _row_mpo_with_site(cache, tensor, row, source[2])
         north = _approximate(W, north, alg)
     end
-    return numerators
+    return numerators ./ cache.norm
 end
 
 """
-Contract the correlator numerator for all targets in one row with a
-shared open-string north state, writing the results into `numerators`.
+Contract all targets in one row with a shared north state, writing results into `numerators`.
 """
 function _contract_twosite_target_row!(
         numerators::Vector{<:Number}, ρ::InfinitePEPO,
@@ -125,8 +66,8 @@ function _contract_twosite_target_row!(
     )
     row = first(keys(targets))[1]
     row_idx = row - first(cache.rowrange) + 1
-    south = cache.south_boundaries[row_idx + 1]
-    envs = environments(south, cache.row_mpos[row], north)
+    south = cache.south_boundaries[row_idx]
+    envs = environments(south, cache.row_mpos[row_idx], north)
     source_site = _window_mps_site(source[2], cache.colrange)
     stringspace = space(mpo[2], 1)
 
@@ -176,7 +117,11 @@ function _contract_twosite_target_row!(
     if !isempty(left_targets)
         sort!(left_targets; by = x -> x[2], rev = true)
         A = ρ[row, source[2], 1]
-        source_tensor = mpo_path_string(A, stringspace, Val((:north, :west)))
+        source_tensor = if row == source[1]
+            mpo_path_first(A, mpo[1], Val(:west))
+        else
+            mpo_path_string(A, stringspace, Val((:north, :west)))
+        end
         right = TransferMatrix(
             north.AC[source_site], source_tensor, south.AC[source_site]
         ) * rightenv(envs, source_site, south)
@@ -204,21 +149,19 @@ function _contract_twosite_target_row!(
 end
 
 """
-Map a PEPO column coordinate to its finite-MPS site number,
-which includes an additional west edge CTM tensor.
+Map a PEPO column to its finite-MPS site, accounting for the additional west CTM edge.
 """
 _window_mps_site(col::Int, colrange::UnitRange{Int}) = col - first(colrange) + 2
 
 """
-Build a finite row MPO by replacing one site tensor in one of the row MPOs without observables.
+Replace one site in a copied row-MPO tensor container, leaving the cached row unchanged.
 """
 function _row_mpo_with_site(
-        ρ::InfinitePEPO, tensor::MPOTensor, env::CTMRGEnv,
-        row::Int, col::Int, colrange::UnitRange{Int},
+        cache::WindowRowCache, tensor::MPOTensor, row::Int, col::Int,
     )
-    W = _row_mpo(ρ, nothing, env, row, colrange)
-    parent(W)[_window_mps_site(col, colrange)] = tensor
-    return W
+    tensors = copy(parent(cache.row_mpos[row - first(cache.rowrange) + 1]))
+    tensors[_window_mps_site(col, cache.colrange)] = tensor
+    return FiniteMPO(tensors)
 end
 
 """

@@ -57,7 +57,11 @@ function _expectation_value_approx(
     )
     _check_window_inputs(ρ, direction)
     rowrange, colrange = _window_ranges(observable)
-    sweep = direction === :auto ? (length(colrange) > length(rowrange) ? :rows : :columns) : direction
+    sweep = if direction === :auto
+        length(colrange) >= length(rowrange) ? :rows : :columns
+    else
+        direction
+    end
     if sweep === :rows
         return _expectation_value_approx_rows(
             ρ, observable, env, rowrange, colrange, alg

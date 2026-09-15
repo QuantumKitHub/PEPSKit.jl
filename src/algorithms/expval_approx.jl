@@ -4,10 +4,13 @@
 """
 $(SIGNATURES)
 
-Approximately measure the expectation value of an open-boundary `MPOObservable` in a single-layer PEPO using finite boundary MPS/MPO zipup sweeps.
-The zipup truncation is controlled by `trunc`, which defaults to `truncrank(χ)` with `χ` the largest CTMRG boundary dimension.
-After each zipup step, the result is refined by a single-site DMRG approximation step with `maxiter` sweeps.
-Set `maxiter = 0` to disable this refinement.
+Approximately measure the expectation value of an open-boundary `MPOObservable` in a single-layer PEPO using finite boundary MPS zipup sweeps.
+
+- By default, `direction = :auto` selects north-to-south sweep for wide and square windows, and east-to-west for tall windows.
+    Specify `direction = :rows` or `:columns` to override this choice.
+- The zipup truncation is controlled by `trunc`, which defaults to `truncrank(χ)` with `χ` the largest CTMRG boundary dimension.
+- After each zipup step, the result is refined by a single-site DMRG approximation step with `maxiter` sweeps.
+    Set `maxiter = 0` to disable this refinement.
 """
 function expectation_value_approx(
         ρ::InfinitePEPO, observable::MPOObservable, env::CTMRGEnv;

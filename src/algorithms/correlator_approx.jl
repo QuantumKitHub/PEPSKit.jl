@@ -4,54 +4,39 @@
 """
 $(SIGNATURES)
 
-Approximately measure a dense two-site operator on one or more ordered pairs of sites in a single-layer PEPO.
-The first and second operator legs act on the first and second sites of each pair, respectively.
-Multiple pairs are evaluated in one shared window and reuse open-string boundary contractions.
-Ordered pairs in a batched call must be unique.
+Approximately measure a dense two-site operator between a fixed first site `i` and second sites `js` in a single-layer PEPO.
+
+- Operator leg 1 acts at `i`, and leg 2 acts at each second site.
+- The sweep direction is selected automatically: north-to-south requires every `j[1] ≥ i[1]`, and east-to-west requires every `j[2] ≤ i[2]`.
+    If both sweeps are valid, use north-to-south for a square or wide window, and east-to-west for a tall window.
+    If neither sweep is valid, throw an `ArgumentError`.
+- `js` must be nonempty, unique, and distinct from `i`.
+    A collection returns a vector in `vec(js)` order; a single second site returns a scalar.
+    All targets share the smallest enclosing rectangular window and its normalization, calculated once by a full sweep without observables.
+- Boundary-MPS truncation uses `trunc` (defaulting to the largest CTMRG boundary dimension), with `maxiter` DMRG refinement sweeps after each zipup step (default 1; 0 disables refinement).
 """
 function correlator_approx(
-        ρ::InfinitePEPO, op::AbstractTensorMap, bond::Tuple, env::CTMRGEnv;
-        trunc = _approx_trunc(env), maxiter::Int = 1, direction::Symbol = :auto,
+        ρ::InfinitePEPO, op::AbstractTensorMap,
+        i::CartesianIndex{2}, j::CartesianIndex{2}, env::CTMRGEnv;
+        trunc = _approx_trunc(env), maxiter::Int = 1,
     )
-    return only(
-        correlator_approx(ρ, op, [bond], env; trunc, maxiter, direction)
-    )
+    return only(correlator_approx(ρ, op, i, j:j, env; trunc, maxiter))
 end
 
 function correlator_approx(
-        ρ::InfinitePEPO, op::AbstractTensorMap, bonds::AbstractVector,
-        env::CTMRGEnv;
-        trunc = _approx_trunc(env), maxiter::Int = 1, direction::Symbol = :auto,
+        ρ::InfinitePEPO, op::AbstractTensorMap,
+        i::CartesianIndex{2}, js::CoordCollection{2}, env::CTMRGEnv;
+        trunc = _approx_trunc(env), maxiter::Int = 1,
     )
-    bonds′ = _approx_twosite_bonds(bonds)
+    isempty(js) && throw(ArgumentError("correlator_approx requires at least one second site"))
+    allunique(js) || throw(ArgumentError("second sites should be unique"))
+    i in js && throw(ArgumentError("second sites should be distinct from the first site"))
+    rowrange, colrange = _window_ranges([i; vec(js)])
+    rows, columns = first(rowrange) == i[1], last(colrange) == i[2]
+    rows || columns || throw(ArgumentError("no valid sweep: second sites must all be at or south of the first row, or all at or west of the first column"))
+    direction = rows && (!columns || length(colrange) >= length(rowrange)) ? :rows : :columns
     return _correlator_approx(
-        ρ, op, bonds′, env,
+        ρ, op, i, collect(vec(js)), env,
         WindowApprox(Zipup(; trunc), _approx_dmrg(maxiter)), direction
     )
-end
-
-"""
-Validate and regularize a nonempty collection of ordered two-site bonds to Cartesian indices.
-"""
-function _approx_twosite_bonds(bonds)
-    isempty(bonds) && throw(ArgumentError("correlator_approx requires at least one bond"))
-    bonds′ = NTuple{2, CartesianIndex{2}}[]
-    sizehint!(bonds′, length(bonds))
-    for bond in bonds
-        length(bond) == 2 || throw(ArgumentError("each bond should contain two sites"))
-        first_site = _mpo_observable_site(bond[1])
-        second_site = _mpo_observable_site(bond[2])
-        first_site != second_site ||
-            throw(ArgumentError("the sites of a bond should be distinct"))
-        push!(bonds′, (first_site, second_site))
-    end
-    allunique(bonds′) || throw(ArgumentError("bonds should be unique"))
-    return bonds′
-end
-
-"""
-Return the row and column ranges enclosing every endpoint in a collection of bonds.
-"""
-function _window_ranges(bonds::Vector{NTuple{2, CartesianIndex{2}}})
-    return _window_ranges(Iterators.flatten(bonds))
 end

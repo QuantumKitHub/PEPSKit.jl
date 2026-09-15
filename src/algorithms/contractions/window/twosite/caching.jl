@@ -1,63 +1,9 @@
 """
-Put 2-site bonds in groups to reuse partial contractions in `correlator_approx`.
-
-For every bond `(first_site, second_site)` in `bonds`:
-
-- After ordering the two sites, `source`/`target` is the first/second site.
-- `swapped` is `false` when `source == first_site`, and `true` otherwise.
-- Bonds with the same `source` and `swapped` are grouped together.
-- In each group, the inner dict records each bond's position in `bonds`.
-
-For example, the ordered bonds
-
-```julia
-CI = CartesianIndex
-bonds = [
-    (CI(1, 1), CI(1, 3)),
-    (CI(1, 1), CI(2, 2)),
-    (CI(1, 2), CI(2, 2)), # another source site
-    (CI(2, 2), CI(1, 1)), # reversed site order
-]
-```
-
-are grouped as
-
-```julia
-(CI(1, 1), false) => Dict(
-    CI(1, 3) => 1,
-    CI(2, 2) => 2,
-)
-(CI(1, 1), true) => Dict(CI(2, 2) => 4)
-(CI(1, 2), false) => Dict(CI(2, 2) => 3)
-```
+Group targets by row, retaining each target's original result position.
 """
-function _twosite_source_groups(
-        bonds::Vector{NTuple{2, CartesianIndex{2}}},
-    )
-    groups = Dict{
-        Tuple{CartesianIndex{2}, Bool},
-        Dict{CartesianIndex{2}, Int},
-    }()
-    for (i, (first_site, second_site)) in enumerate(bonds)
-        swapped = !issorted((first_site, second_site); by = Tuple)
-        source, target = swapped ? (second_site, first_site) : (first_site, second_site)
-        targets = get!(Dict{CartesianIndex{2}, Int}, groups, (source, swapped))
-        targets[target] = i
-    end
-    return groups
-end
-
-"""
-Group the targets associated with one source by their row coordinate. The returned outer
-dictionary maps each target row to a dictionary whose entries retain the original
-`target => result_position` mapping.
-
-This lookup lets the source contraction close all targets in the current row together while
-propagating a single open MPO string between rows.
-"""
-function _twosite_targets_by_row(targets::Dict{CartesianIndex{2}, Int})
+function _twosite_targets_by_row(targets::Vector{CartesianIndex{2}})
     targets_by_row = Dict{Int, Dict{CartesianIndex{2}, Int}}()
-    for (target, position) in targets
+    for (position, target) in enumerate(targets)
         row_targets = get!(Dict{CartesianIndex{2}, Int}, targets_by_row, target[1])
         row_targets[target] = position
     end
@@ -65,60 +11,47 @@ function _twosite_targets_by_row(targets::Dict{CartesianIndex{2}, Int})
 end
 
 """
-Cache the row MPOs without observables and boundary contractions shared by measurements in one window.
+Cache observable-free row MPOs, the initial north boundary, south boundaries, and the window normalization.
 
 The fields contain:
 
 - `rowrange` and `colrange`: the coordinate ranges defining the window.
-- `row_mpos`: the row MPOs without observables, one per row and including the west and east CTMRG edges.
-- `north_boundaries`: `nrows + 1` north boundary MPSs.
-  Entry `k` is above row `k` in the window.
-- `south_boundaries`: `nrows + 1` adjointed south boundary MPSs.
-  Entry `k + 1` is below row `k` in the window.
-- `norm`: the approximate contraction of the window with no observable inserted.
+- `row_mpos`: observable-free row MPOs, including the west and east CTMRG edges, indexed by window-relative row position.
+- `north_boundary`: the initial north boundary MPS above the first window row.
+- `south_boundaries`: adjointed south boundary MPSs, with entry `k` immediately below window row `k`.
+- `norm`: the approximate contraction without observables, calculated by one full north-to-south sweep without retaining intermediate states.
 """
 struct WindowRowCache{M <: FiniteMPO, N <: FiniteMPS, S <: FiniteMPS, T <: Number}
     rowrange::UnitRange{Int}
     colrange::UnitRange{Int}
-    row_mpos::Dict{Int, M}
-    north_boundaries::Vector{N}
+    row_mpos::Vector{M}
+    north_boundary::N
     south_boundaries::Vector{S}
     norm::T
 end
 
 """
-Precompute the row MPOs without observables and north/south boundary contractions reused when measuring many two-site bonds in one window.
+Precompute shared row MPOs and south boundaries, and normalize with one rolling north state.
 """
 function _window_row_cache(
         ρ::InfinitePEPO, env::CTMRGEnv,
         rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::WindowApprox,
     )::WindowRowCache
-    row_mpos = Dict(
-        row => _row_mpo(ρ, nothing, env, row, colrange)
-            for row in rowrange
-    )
-    nrows = length(rowrange)
+    row_mpos = [_row_mpo(ρ, nothing, env, row, colrange) for row in rowrange]
     north = _north_boundary_mps(env, first(rowrange), colrange)
     south = _south_boundary_mps(env, last(rowrange), colrange)
-
-    north_boundaries = Vector{typeof(north)}(undef, nrows + 1)
-    north_boundaries[1] = north
-    for (k, row) in enumerate(rowrange)
-        north_boundaries[k + 1] = _approximate(
-            row_mpos[row], north_boundaries[k], alg
-        )
+    state = north
+    for W in row_mpos
+        state = _approximate(W, state, alg)
     end
+    norm = dot(south, state)
 
-    south_boundaries = Vector{typeof(south)}(undef, nrows + 1)
+    south_boundaries = Vector{typeof(south)}(undef, length(rowrange))
     south_boundaries[end] = south
-    for (k, row) in Iterators.reverse(enumerate(rowrange))
-        W = _adjoint_mpo(row_mpos[row])
-        south_boundaries[k] = _approximate(
-            W, south_boundaries[k + 1], alg
-        )
+    for k in (length(rowrange) - 1):-1:1
+        W = _adjoint_mpo(row_mpos[k + 1])
+        ψ = south_boundaries[k + 1]
+        south_boundaries[k] = _approximate(W, ψ, alg)
     end
-    norm = dot(south, north_boundaries[end])
-    return WindowRowCache(
-        rowrange, colrange, row_mpos, north_boundaries, south_boundaries, norm
-    )
+    return WindowRowCache(rowrange, colrange, row_mpos, north, south_boundaries, norm)
 end

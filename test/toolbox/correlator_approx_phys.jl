@@ -23,16 +23,13 @@ const CI = CartesianIndex
     env_trunc = truncrank(8) & truncerror(; atol = 1.0e-12)
     env, = leading_boundary(env, network; alg = :SequentialCTMRG, trunc = env_trunc)
 
-    bonds = [
-        (CI(1, 1), CI(1, 2)),
-        (CI(1, 1), CI(2, 0)), (CI(1, 1), CI(2, 1)), (CI(1, 1), CI(2, 2)),
-        (CI(1, 1), CI(3, 2)),
-    ]
-    cor_exact = map(bonds) do bond
-        O = LocalOperator(lattice, bond => op)
+    i = CI(1, 1)
+    js = [CI(1, 2), CI(2, 0), CI(2, 1), CI(2, 2), CI(3, 2)]
+    cor_exact = map(js) do j
+        O = LocalOperator(lattice, (i, j) => op)
         return expectation_value(ρ, O, env)
     end
-    cor_trunc = correlator_approx(ρ, op, bonds, env; trunc = env_trunc, maxiter = 1)
+    cor_trunc = correlator_approx(ρ, op, i, js, env; trunc = env_trunc, maxiter = 1)
     @info "Exact:" cor_exact
     @info "Approx:" cor_trunc
     @test cor_trunc ≈ cor_exact rtol = 1.0e-3
