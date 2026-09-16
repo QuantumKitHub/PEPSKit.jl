@@ -136,9 +136,9 @@ end
             λ2 = network_value(n2, env2′)
             return -log(real(λ3 / λ2))
         end
-        E, gs = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(psi, zerovector(psi)))
-        g = only(gs)
-        return E, g
+        dpsi = zerovector(psi)
+        _, E = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(psi, dpsi))
+        return E, dpsi
     end
 
     # check energy

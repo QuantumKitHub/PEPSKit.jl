@@ -118,6 +118,13 @@ function simultaneous_projectors(
 end
 
 """
+Split an array of `(corner, edge)` tuples into separate corner and edge arrays.
+"""
+@noinline function _split_corners_edges(corners_edges)
+    return stablemap(first, corners_edges), stablemap(last, corners_edges)
+end
+
+"""
 $(SIGNATURES)
 
 Renormalize all enlarged corners and edges simultaneously.
@@ -153,5 +160,5 @@ function renormalize_simultaneously(enlarged_corners, projectors, network, env)
         return corner / norm(corner), edge / norm(edge)
     end
 
-    return CTMRGEnv(stablemap(first, corners_edges), stablemap(last, corners_edges))
+    return CTMRGEnv(_split_corners_edges(corners_edges)...)
 end

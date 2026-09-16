@@ -5,6 +5,7 @@ using PEPSKit: SVDAdjoint, EighAdjoint, QRAdjoint, CTMRGAlgorithm, FixedPointGra
 using PEPSKit: InfiniteSquareNetwork, InfinitePEPS, InfinitePEPO, _stack_tuples
 using PEPSKit: unitcell, ket, bra, pepo
 using PEPSKit: _periodic_getindex_dispatch
+using PEPSKit: _split_corners_edges
 using TensorKit: AbstractTensorMap
 using ChainRulesCore: ignore_derivatives
 using VectorInterface: add!, One
@@ -18,8 +19,6 @@ using Enzyme.EnzymeCore: EnzymeRules
 @inline EnzymeRules.inactive_type(::Type{<:CTMRGAlgorithm}) = true
 
 @inline EnzymeRules.inactive(::typeof(PEPSKit.checklattice), args...) = nothing
-
-# Without this, Enzyme differentiates through `ignore_derivatives`
 @inline EnzymeRules.inactive(::typeof(ignore_derivatives), args...) = nothing
 
 function EnzymeRules.augmented_primal(
@@ -37,13 +36,8 @@ function EnzymeRules.augmented_primal(
     output = (Ũ, S̃, Ṽ⁺, truncerror)
     USVᴴtrunc = (Ũ, S̃, Ṽ⁺)
     primal = EnzymeRules.needs_primal(config) ? USVᴴtrunc : nothing
-    # This creates new output shadow matrices, we use USVᴴtrunc to ensure the
-    # eltypes and dimensions are correct.
-    # These new shadow matrices are "filled in" with the accumulated
-    # results from earlier in reverse-mode AD after this function exits
-    # and before `reverse` is called.
     dret = if EnzymeRules.needs_shadow(config)
-        (zero(USVᴴtrunc[1]), Diagonal(zero(USVᴴtrunc[2].diag)), zero(USVᴴtrunc[3]))
+        (zero(USVᴴtrunc[1]), zero(USVᴴtrunc[2]), zero(USVᴴtrunc[3]))
     else
         nothing
     end
@@ -62,12 +56,12 @@ function EnzymeRules.reverse(
     U, S, V⁺ = USV⁺
     gtol = PEPSKit._get_pullback_gauge_tol(alg.val.rrule_alg.verbosity)
     if !isa(t, Const)
-        t.dval = MatrixAlgebraKit.svd_pullback!(
+        MatrixAlgebraKit.svd_pullback!(
             t.dval, t.val, (U, S, V⁺), dUSVᴴtrunc, ind;
             gauge_atol = gtol(dUSVᴴtrunc), degeneracy_atol = alg.val.rrule_alg.degeneracy_atol,
         )
     end
-    return ntuple(Returns(nothing), 3)
+    return ntuple(Returns(nothing), 2)
 end
 
 function EnzymeRules.augmented_primal(
@@ -137,76 +131,177 @@ function EnzymeRules.reverse(
         x′ = PEPSKit.ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1]
         return PEPSKit.fix_phases(x′, signs, corner_phases, edge_phases)
     end
-    # prepare its pullback
-    # Propagate the caller's runtime-activity setting into the nested thunk.
-    # Without it the inner differentiation runs with static activity even when the
-    # outer one has runtime activity enabled, and Enzyme rejects `fix_relative_phases`
-    # (a `Const` environment reaching a differentiable variable) with an
-    # EnzymeRuntimeActivityError that no top-level setting can silence.
     inner_mode = Enzyme.set_runtime_activity(ReverseSplitWithPrimal, config)
     fwd, rev = Enzyme.autodiff_thunk(inner_mode, Const{typeof(gauge_fixed_iteration)}, Duplicated, typeof(state), Duplicated{typeof(env)})
-    # implement the VJP-getting
-    state_dup = isa(state, Const) ? Duplicated(state.val, Enzyme.make_zero(state.val)) : state
-    env_dup = Duplicated(env, denv)
-    tape, _, out_shadow = fwd(Const(gauge_fixed_iteration), state_dup, env_dup)
-
-    # Enzyme allocates the shadow for a `Duplicated` return without carrying the
-    # element spaces, so `out_shadow`'s tensors come back zero-dimensional
-    # (`ℂ^0`) and seeding it throws a SpaceMismatch. Its arrays are mutable, so
-    # replace the entries with correctly-spaced zeros taken from the primal.
-    for i in eachindex(out_shadow.corners)
-        out_shadow.corners[i] = Enzyme.make_zero(env.corners[i])
-    end
-    for i in eachindex(out_shadow.edges)
-        out_shadow.edges[i] = Enzyme.make_zero(env.edges[i])
-    end
+    # NOTE: the vjp MUST NOT touch the caller's shadows.  `denv` is the incoming
+    # cotangent and is simultaneously `∂E∂x` for the fixed-point solve, and
+    # `state.dval` already holds the gradient contributions accumulated by the
+    # rest of the reverse sweep. Zeroing either silently destroys the whole gradient.
+    # Instead we allocate fresh shadows per evaluation. The Krylov solver also retains
+    # the returned vectors, so they MUST NOT alias a buffer we reuse.
     function vjp(Δ)
-        Enzyme.make_zero!(state_dup.dval)
-        Enzyme.make_zero!(env_dup.dval)
+        dstate = Enzyme.make_zero(state.val)
+        denv_scratch = Enzyme.make_zero(env)
+        state_dup = Duplicated(state.val, dstate)
+        env_dup = Duplicated(env, denv_scratch)
+
+        # Enzyme's split-mode tape is single-use, and this vjp is called once per
+        # Krylov iteration, so build a fresh one for each evaluation.
+        tape, _, out_shadow = fwd(Const(gauge_fixed_iteration), state_dup, env_dup)
+
+        # `out_shadow` is the object the tape will read back, so it must not be
+        # replaced with fresh tensors -- doing so orphans the seed and the reverse
+        # sweep returns zero.  Where the space metadata is missing (`ℂ^0`), rebuild
+        # around the *existing* `data` buffer so the identity Enzyme recorded is
+        # preserved.
+        nrep = 0
+        for i in eachindex(out_shadow.corners)
+            sv = space(env.corners[i])
+            space(out_shadow.corners[i]) == sv && continue
+            length(out_shadow.corners[i].data) == length(env.corners[i].data) || continue
+            out_shadow.corners[i] = TensorMap(out_shadow.corners[i].data, sv)
+            nrep += 1
+        end
+        for i in eachindex(out_shadow.edges)
+            sv = space(env.edges[i])
+            space(out_shadow.edges[i]) == sv && continue
+            length(out_shadow.edges[i].data) == length(env.edges[i].data) || continue
+            out_shadow.edges[i] = TensorMap(out_shadow.edges[i].data, sv)
+            nrep += 1
+        end
         # seed the output shadow (`copyto!` is not defined for CTMRGEnv)
-        Enzyme.make_zero!(out_shadow)
         add!(out_shadow, Δ, One(), One())
         rev(Const(gauge_fixed_iteration), state_dup, env_dup, tape)
-        return state_dup.dval, env_dup.dval
+        return dstate, denv_scratch
     end
     # split off state and environment parts
     ∂f∂A(x)::typeof(state.val) = vjp(x)[1]
     ∂f∂x(x)::typeof(env) = vjp(x)[2]
     # evaluate the geometric sum
-    #PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, gradmode.solver_alg)
-    # `Defaults.gradient_fixedpoint_solver_alg` is a *Symbol* (`:Arnoldi`), not an
-    # algorithm instance, so passing it here matched no `fixedpoint_gradient`
-    # method. Build the default gradient algorithm and use its resolved solver.
     # TODO: thread the caller's `FixedPointGradient` through instead of defaulting.
-    PEPSKit.fixedpoint_gradient(denv, ∂f∂x, ∂f∂A, denv, PEPSKit.FixedPointGradient().solver_alg)
-    return ntuple(Returns(nothing), 4)
+    ∂A = PEPSKit.fixedpoint_gradient(
+        denv, ∂f∂x, ∂f∂A, denv, PEPSKit.FixedPointGradient().solver_alg
+    )
+    if !isa(state, Const)
+        _accum!(state.dval, ∂A)
+    end
+    return ntuple(Returns(nothing), 3)
 end
-
-# --- dtmap / dtmap!! -------------------------------------------------------
-#
-# `dtmap!!(f, dst, src)` is `tmap!`; `dtmap(f, A)` is `tmap`. Both take their
-# scheduler as a *keyword*, so a rule with a positional `scheduler` argument can
-# never match -- which is why the previous rules here never fired.
-#
-# Differentiating them generically is not merely slow, it is wrong: Enzyme
-# allocates the shadow for the result array without carrying each element's
-# space, and for TensorMaps whose spaces differ per element (the four CTMRG
-# directions) that yields zero-dimensional spaces and a `SpaceMismatch` on the
-# reverse sweep. Going element by element keeps every shadow tied to the value
-# it belongs to.
-#
-# The scheduler is dropped while differentiating: these run serially, as the
-# `@fwdthreads` macro already does for the backward pass.
 
 @inline _dtmap_elem(src::Const, i) = Const(src.val[i])
 @inline _dtmap_elem(src::Annotation, i) = Duplicated(src.val[i], src.dval[i])
 
+# VectorInterface has no `add!` for `InfiniteSquareNetwork`.
+@noinline function _accum!(@nospecialize(dst), @nospecialize(src), depth = 0)
+    depth > 5 && return nothing
+    if dst isa AbstractTensorMap
+        dst.data .+= src.data
+    elseif dst isa Tuple || dst isa NamedTuple
+        for i in 1:length(dst)
+            _accum!(dst[i], src[i], depth + 1)
+        end
+    elseif dst isa AbstractArray
+        for i in eachindex(dst)
+            (isassigned(dst, i) && isassigned(src, i)) || continue
+            _accum!(dst[i], src[i], depth + 1)
+        end
+    elseif isstructtype(typeof(dst)) && !(dst isa Number) && !(dst isa Type) &&
+            fieldcount(typeof(dst)) > 0
+        for k in 1:fieldcount(typeof(dst))
+            _accum!(getfield(dst, k), getfield(src, k), depth + 1)
+        end
+    end
+    return nothing
+end
+
 """
-Run the augmented forward of `f` over every element of `src`, writing primals
-into `dst.val` and each element's Enzyme-allocated shadow into `dst.dval`, so
-that downstream accumulation lands directly on the object the reverse sweep
-will read back.
+Repair shadow tensors whose space metadata was zeroed.
+
+Enzyme re-boxes shadow tensors of mixed pointer/inline layout when they cross out
+of a nested augmented-forward thunk: the GC-pointer field (`data`) survives, but
+the inline field (`space`) comes back all-zero, so the tensor reads as `ℂ^0`.
+Measured directly: the shadow `data` buffer is the *same object* as the correctly
+spaced shadow produced upstream and has the correct length -- only the metadata is
+gone.  Rebuilding the tensor around that same buffer restores the space without
+disturbing accumulation, which still targets the identical vector.
+
+Field traversal is unrolled through `Val` so every `getfield` stays type stable; a
+runtime loop over `fieldnames` makes this dynamic and blows up compile time inside
+the rule body.
 """
+@inline _repair_one!(@nospecialize(v), @nospecialize(d)) = nothing
+
+function _repair_one!(v::AbstractArray{<:AbstractTensorMap}, d::AbstractArray)
+    @inbounds for i in eachindex(v)
+        (isassigned(v, i) && isassigned(d, i)) || continue
+        sv = space(v[i])
+        space(d[i]) == sv && continue
+        length(d[i].data) == length(v[i].data) || continue
+        d[i] = TensorMap(d[i].data, sv)
+    end
+    return nothing
+end
+
+@inline _repair_fields!(@nospecialize(v), @nospecialize(d), ::Val{0}) = nothing
+@inline function _repair_fields!(@nospecialize(v), @nospecialize(d), ::Val{N}) where {N}
+    _repair_fields!(v, d, Val(N - 1))
+    _repair_one!(getfield(v, N), getfield(d, N))
+    return nothing
+end
+
+@noinline function _repair_pair!(@nospecialize(v), @nospecialize(d))
+    _repair_fields!(v, d, Val(fieldcount(typeof(v))))
+    return nothing
+end
+
+@noinline function _repair_shadow_spaces!(f)
+    isa(f, Const) && return nothing
+    _repair_pair!(f.val, f.dval)
+    return nothing
+end
+
+for pb in (:svd_pullback!, :eig_pullback!, :eigh_pullback!)
+    @eval function MatrixAlgebraKit.$pb(
+            Δt::AbstractTensorMap, ::Nothing, F, ΔF,
+            inds = TensorKit.SectorDict(c => Colon() for c in TensorKit.blocksectors(Δt));
+            kwargs...
+        )
+        for (c, Δb) in TensorKit.blocks(Δt)
+            haskey(inds, c) || continue
+            Fc = TensorKit.block.(F, Ref(c))
+            ΔFc = TensorKit.block.(ΔF, Ref(c))
+            MatrixAlgebraKit.$pb(Δb, nothing, Fc, ΔFc, inds[c]; kwargs...)
+        end
+        return Δt
+    end
+end
+
+function EnzymeRules.augmented_primal(
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(_split_corners_edges)},
+        ::Type{RT},
+        ce::Annotation{<:AbstractArray},
+    ) where {RT}
+    primal_val = (map(first, ce.val), map(last, ce.val))
+    primal = EnzymeRules.needs_primal(config) ? primal_val : nothing
+    shadow = if EnzymeRules.needs_shadow(config) && !isa(ce, Const)
+        (map(first, ce.dval), map(last, ce.dval))
+    else
+        nothing
+    end
+    return EnzymeRules.AugmentedReturn(primal, shadow, nothing)
+end
+
+function EnzymeRules.reverse(
+        config::EnzymeRules.RevConfigWidth{1},
+        ::Const{typeof(_split_corners_edges)},
+        ::Type{RT},
+        cache,
+        ce::Annotation{<:AbstractArray},
+    ) where {RT}
+    return (nothing,)
+end
+
 function _dtmap_augmented!(config, f::FA, dst, src) where {FA <: Annotation}
     ET = eltype(src.val)
     SA = src isa Const ? Const{ET} : Duplicated{ET}
@@ -215,6 +310,8 @@ function _dtmap_augmented!(config, f::FA, dst, src) where {FA <: Annotation}
     # outer one does not, and derivative contributions are silently dropped.
     mode = Enzyme.set_runtime_activity(ReverseSplitWithPrimal, config)
     fwd, rev = Enzyme.autodiff_thunk(mode, FA, Duplicated, SA)
+
+    _repair_shadow_spaces!(f)
 
     inds = collect(eachindex(src.val))
     tapes = Vector{Any}(undef, length(inds))
@@ -269,13 +366,6 @@ function EnzymeRules.reverse(
     return (nothing, nothing, nothing)
 end
 
-# No rule for `dtmap` itself: it is `tmap`, which Enzyme already differentiates
-# correctly (verified against finite differences), and the rules that used to
-# live here could never fire -- they took `scheduler` as a positional argument
-# while it is only ever a keyword. Adding a rule here is not free: an earlier
-# version of this patch did, and it broke `dtmap` with an
-# `AugmentedRuleReturnError` where the generic path had worked.
-
 function EnzymeRules.augmented_primal(
         config::EnzymeRules.RevConfigWidth{1},
         ::Const{Type{InfiniteSquareNetwork}},
@@ -300,34 +390,23 @@ function EnzymeRules.reverse(
         bot::Annotation{<:InfinitePEPS},
     ) where {RT}
     Δnetwork = cache
-    !isa(top, Const) && add!(top.dval, InfinitePEPS(map(ket, unitcell(Δnetwork))), One(), One())
-    !isa(bot, Const) && add!(bot.dval, InfinitePEPS(map(bra, unitcell(Δnetwork))), One(), One())
+    aliased = !isa(top, Const) && !isa(bot, Const) && (top.dval === bot.dval)
+    w = aliased ? 0.5 : 1.0
+    !isa(top, Const) && add!(top.dval, InfinitePEPS(map(ket, unitcell(Δnetwork))), w, One())
+    !isa(bot, Const) && add!(bot.dval, InfinitePEPS(map(bra, unitcell(Δnetwork))), w, One())
     !isa(mid, Const) && add!(mid.dval, InfinitePEPO(_stack_tuples(map(pepo, unitcell(Δnetwork)))), One(), One())
     return (nothing, nothing, nothing)
 end
 
 
-# --- periodic indexing: declare activity instead of letting Enzyme infer it
-#
-# `corner(env, I...)` / `edge(env, I...)` are `Base.@propagate_inbounds` (hence
-# inlined), so the call that actually survives is `_periodic_getindex_dispatch`.
-# It is a real, non-inlined call returning a `TensorMap` through an
-# sret/`return_roots` slot, and Enzyme cannot prove that value inactive when the
-# container is `Const`. It therefore falls back to runtime activity -- where the
-# shadow of such a constant *aliases the primal*, so the reverse sweep
-# accumulates into the environment and silently destroys it.
-#
-# The derivative of an index read is just a scatter into the same slot of the
-# shadow container, so it can be stated exactly: return the matching entry of
-# `data.dval`, which aliases it, and let accumulation land there. When the
-# container is `Const` the shadow is a throwaway zero -- that is what `Const`
-# already means; the point is only to stop Enzyme aliasing onto the primal.
+const _PeriodicElt = Union{AbstractTensorMap, Tuple{Vararg{AbstractTensorMap}}}
+
 function EnzymeRules.augmented_primal(
         config::EnzymeRules.RevConfigWidth{1},
         ::Const{typeof(_periodic_getindex_dispatch)},
         ::Type{RT},
         A::Annotation,
-        data::Annotation{<:AbstractArray{<:AbstractTensorMap}},
+        data::Annotation{<:AbstractArray{<:_PeriodicElt}},
         J::Annotation,
     ) where {RT}
     primal = _periodic_getindex_dispatch(A.val, data.val, J.val)
@@ -353,10 +432,9 @@ function EnzymeRules.reverse(
         ::Type{RT},
         cache,
         A::Annotation,
-        data::Annotation{<:AbstractArray{<:AbstractTensorMap}},
+        data::Annotation{<:AbstractArray{<:_PeriodicElt}},
         J::Annotation,
     ) where {RT}
-    # the shadow aliases `data.dval`, so accumulation already happened in place
     return (nothing, nothing, nothing)
 end
 

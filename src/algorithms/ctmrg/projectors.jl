@@ -177,7 +177,11 @@ function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = decomposition_algorithm(alg)
-    U, S, V, truncation_error = svd_trunc!(halfinf / norm(halfinf), svd_alg)
+    _svd_input_halfinf = halfinf / norm(halfinf)
+    U, S, V = MatrixAlgebraKit.svd_trunc_no_error(_svd_input_halfinf, svd_alg)
+    truncation_error = ignore_derivatives() do
+        last(svd_trunc!(copy(_svd_input_halfinf), svd_alg))
+    end
 
     # get some decomposition info
     truncation_error = truncation_error / norm(S) # normalize truncation error
@@ -200,7 +204,11 @@ function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
     # SVD full-infinite environment
     fullinf = full_infinite_environment(halfinf_left, halfinf_right)
     svd_alg = decomposition_algorithm(alg)
-    U, S, V, truncation_error = svd_trunc!(fullinf / norm(fullinf), svd_alg)
+    _svd_input_fullinf = fullinf / norm(fullinf)
+    U, S, V = MatrixAlgebraKit.svd_trunc_no_error(_svd_input_fullinf, svd_alg)
+    truncation_error = ignore_derivatives() do
+        last(svd_trunc!(copy(_svd_input_fullinf), svd_alg))
+    end
 
     # get some decomposition info
     truncation_error = truncation_error / norm(S) # normalize truncation error
