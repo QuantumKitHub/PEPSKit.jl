@@ -52,17 +52,21 @@ end
         Cfp::CornerTensor,
         Efp::EdgeTensor, # unused
         Ufp::LeftProjector,
-        ULfp::LeftProjector,
+        ULfp::LeftProjector;
+        site = getindex,
     )
 
 Takes the fixed-point values of the corner tensor `Cfp`, edge tensor `Efp`, left isometry
 `Ufp` and its left null space `ULfp` corresponding to a converged C4v CTMRG contraction, and
-generates a function ``F(s, C, E, u)`` which characterizes the convergence of the C4v CTMRG
-algorithm in terms of the characteristic equation ``F(s, C, E, u) = 0``.
-Here, ``s`` corresponds to a state variable (e.g. an `InfinitePEPS` that is being optimized),
-and ``(C, E, u)`` represents a C4v symmetric contraction environment.
-``C`` and ``E`` directly represent the corner and edge tensors, while ``u`` parametrizes
-a differentiable projector ``U`` as ``U = U_{fp} + U_{L,fp} * u``.
+generates a function ``F(n, C, E, u)`` which characterizes the convergence of the C4v CTMRG
+algorithm in terms of the characteristic equation ``F(n, C, E, u) = 0``. Here, ``n`` is the
+`InfiniteSquareNetwork` containing the state variable being optimized, and ``(C, E, u)``
+represents a C4v symmetric contraction environment. ``C`` and ``E`` directly represent the
+corner and edge tensors, while ``u`` parametrizes a differentiable projector ``U`` as ``U =
+U_{fp} + U_{L,fp} * u``.
+
+The local sandwich is read through `site`, so a caller can choose whether it is
+differentiated at all; see [`PEPSKit.constant_site`](@ref).
 
 ``F`` returns a tuple of three tensors, corresponding to an equation for ``C``, ``E`` and
 ``u`` respectively:
@@ -95,15 +99,15 @@ function generate_symmetric_characteristic_equation(
         Cfp::CornerTensor,
         Efp::EdgeTensor, # unused
         Ufp::LeftProjector,
-        ULfp::LeftProjector,
+        ULfp::LeftProjector;
+        site = getindex,
     )
 
     iC = sdiag_pow(real(DiagonalTensorMap(Cfp)), -1)
     ULd = ULfp'
 
-    function symmetric_characteristic_equation(state, C, E, u)
-        network = InfiniteSquareNetwork(state)
-        O = network[1, 1]
+    function symmetric_characteristic_equation(n, C, E, u)
+        O = site(n, 1, 1)
 
         # project input
         C = project_hermitian(C)
@@ -313,6 +317,33 @@ end
 # Util
 # ----
 
+"""
+    constant_site(network, r, c)
+
+Read the local sandwich at `(r, c)` without making it a differentiable value.
+
+`TensorOperations` thunks the cotangents of a contraction's inputs, so an untracked sandwich
+never forces the ket and bra cotangents - which the implicit gradient's linear solve discards
+anyway. The marker has to sit on the outermost read: capturing the network and indexing it
+normally leaves the sandwich tracked.
+"""
+constant_site(network, r, c) = ignore_derivatives() do
+    return network[r, c]
+end
+
+"""
+    _enlarged_corner(network, env, coordinates; site = getindex)
+
+Build an enlarged corner whose local sandwich is read through `site`, without adding an
+implicit-differentiation keyword to `EnlargedCorner` itself. The sandwich the constructor
+reads is discarded, never contracted, and so never picks up a cotangent.
+"""
+function _enlarged_corner(network, env, coordinates; site = getindex)
+    _, r, c = coordinates
+    Q = EnlargedCorner(network, env, coordinates)
+    return EnlargedCorner(Q.C, Q.E_1, Q.E_2, site(network, r, c), Q.dir)
+end
+
 function eachcoordinate(tensor_unitcell::Array{<:AbstractTensorMap, 3})
     return collect(Iterators.product(axes(tensor_unitcell)...))
 end
@@ -395,7 +426,8 @@ function contract_halfinfinite_characteristic_equation(
         Ud::RightProjectors, Vd::LeftProjectors,
         iCi::CornerTensors,
         ULd::RightProjectors, VRd::LeftProjectors,
-        iSfp::CornerTensors,
+        iSfp::CornerTensors;
+        site = getindex,
     )
     coordinates = eachcoordinate(n, 1:4)
     nrows, ncols = size(n)
@@ -403,10 +435,11 @@ function contract_halfinfinite_characteristic_equation(
     # precompute rotated local sandwiches, enlarged corners, and projectors
     Or = map(coordinates) do co
         dir, r, c = co
-        return _rotate_north_localsandwich(n[r, c], dir)
+        return _rotate_north_localsandwich(site(n, r, c), dir)
     end
+    envi = CTMRGEnv(iCi, E)
     EC = map(coordinates) do co
-        return TensorMap(EnlargedCorner(n, CTMRGEnv(iCi, E), co))
+        return TensorMap(_enlarged_corner(n, envi, co; site))
     end
     PR = map(coordinates) do co
         co′ = _proj_sinv_indices(co, nrows, ncols)
@@ -482,16 +515,20 @@ end
         Ufp::LeftProjectors,
         Vfp::RightProjectors,
         ULfp::LeftProjectors,
-        VRfp::RightProjectors,
+        VRfp::RightProjectors;
+        site = getindex,
     )
 
 Takes the fixed-point values of the inverse singular values `iSfp`, the left and right isometries `Ufp`
 and `Vfp`, and their null spaces `ULfp` and `VRfp` corresponding to a converged CTMRG contraction,
-and generates a function ``F(s, C, E, u, S, v)`` which characterizes the convergence of the CTMRG algorithm in terms of the characteristic equation ``F(s, C, E, u, S, v) = 0``. Here, ``s`` corresponds to a
-state variable (e.g. an `InfinitePEPS` that is being optimized), and ``(C, E, u, S, v)`` represents a CTMRG
+and generates a function ``F(n, C, E, u, S, v)`` which characterizes the convergence of the CTMRG algorithm in terms of the characteristic equation ``F(n, C, E, u, S, v) = 0``. Here, ``n`` is the
+`InfiniteSquareNetwork` containing the state variable being optimized, and ``(C, E, u, S, v)`` represents a CTMRG
 contraction environment on a generic unit cell meaning that all tensors have a directional and
 unit cell index. ``C`` and ``E`` directly represent the corner and edge tensors, while ``u`` and ``v``
 parametrize differentiable projectors ``U = U_{fp} + U_{L,fp} u`` and ``V = V_{fp} + V_{L,fp} V``, and ``S`` denotes the singular values of the decomposed environment.
+
+The local sandwiches are read out of ``n`` through `site`, so a caller can choose whether they
+are differentiated at all; see [`PEPSKit.constant_site`](@ref).
 
 ``F`` returns a tuple of five tensor arrays, corresponding to equations for ``C``, ``E``, ``u``, ``S`` and
 ``v``, respectively, as shown in Eqs. (76)-(80) in [arXiv:2607.15030](@cite burgelman_implicit_2026).
@@ -501,7 +538,8 @@ function generate_halfinfinite_characteristic_equation(
         Ufp::LeftProjectors,
         Vfp::RightProjectors,
         ULfp::LeftProjectors,
-        VRfp::RightProjectors,
+        VRfp::RightProjectors;
+        site = getindex,
     )
 
     iSfp = real.(DiagonalTensorMap.(iSfp)) # use as constant preconditioner?
@@ -509,7 +547,7 @@ function generate_halfinfinite_characteristic_equation(
     nrows, ncols = size(iSfp)[2:3]
 
     # the main routine which uses both the singular values and their inverses
-    function asymmetric_characteristic_equation(state, C, E, u, s, v)
+    function asymmetric_characteristic_equation(n, C, E, u, s, v)
         ## Prepare all the objects we need in the right parametrization
         is = map(inv, s)
 
@@ -553,11 +591,12 @@ function generate_halfinfinite_characteristic_equation(
             C, E,
             is, s,
             u, v,
-            InfiniteSquareNetwork(state),
+            n,
             Ud, Vd,
             iCi,
             ULd, VRd,
-            iSfp,
+            iSfp;
+            site,
         )
 
         return F1, F2, F3, F4, F5
