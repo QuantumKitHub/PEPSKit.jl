@@ -9,6 +9,17 @@ using PEPSKit: peps_normalize
 using TensorKitTensors.SpinOperators
 using Adapt
 
+@kwdef mutable struct ΔEnergyShouldStop
+    E_last::Float64 = 0.0
+    tol::Float64 = 1.0e-12
+    maxiter::Int = 100
+end
+        
+@kwdef mutable struct ΔEnergyHasConverged
+    E_last::Float64 = 0.0
+    tol::Float64 = 1.0e-12
+end
+
 function examples_heisenberg(AT)
     return @testset "Heisenberg ($AT)" begin
         # initialize parameters
@@ -155,21 +166,12 @@ function examples_heisenberg(AT)
             @test all(@. ξ_h > 0 && ξ_v > 0)
         end
 
-        @kwdef mutable struct ΔEnergyShouldStop
-            E_last::Float64 = 0.0
-            tol::Float64 = 1.0e-12
-            maxiter::Int = 100
-        end
         function (es::ΔEnergyShouldStop)(x, f, g, numfg, numiter, t)
             Δenergy = f - es.E_last
             es.E_last = f
             return (abs(Δenergy) <= es.tol) || numiter >= es.maxiter
         end
 
-        @kwdef mutable struct ΔEnergyHasConverged
-            E_last::Float64 = 0.0
-            tol::Float64 = 1.0e-12
-        end
         function (es::ΔEnergyHasConverged)(x, f, g, normgrad)
             Δenergy = f - es.E_last
             es.E_last = f
