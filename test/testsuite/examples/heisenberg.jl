@@ -14,10 +14,41 @@ using Adapt
     tol::Float64 = 1.0e-12
     maxiter::Int = 100
 end
-        
+
 @kwdef mutable struct ΔEnergyHasConverged
     E_last::Float64 = 0.0
     tol::Float64 = 1.0e-12
+end
+
+function (es::ΔEnergyShouldStop)(x, f, g, numfg, numiter, t)
+    Δenergy = f - es.E_last
+    es.E_last = f
+    return (abs(Δenergy) <= es.tol) || numiter >= es.maxiter
+end
+
+function (es::ΔEnergyHasConverged)(x, f, g, normgrad)
+    Δenergy = f - es.E_last
+    es.E_last = f
+    return abs(Δenergy) <= es.tol
+end
+
+# Heisenberg model assuming C4v symmetric PEPS and environment, which only evaluates necessary term
+function heisenberg_XYZ_c4v(AT, lattice::InfiniteSquare; kwargs...)
+    return adapt(AT, heisenberg_XYZ_c4v(ComplexF64, Trivial, lattice; kwargs...))
+end
+function heisenberg_XYZ_c4v(
+        AT, T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
+        Jx = -1.0, Jy = 1.0, Jz = -1.0, spin = 1 // 2,
+    )
+    @assert size(lattice) == (1, 1) "only trivial unit cells supported by C4v-symmetric Hamiltonians"
+    term =
+        rmul!(S_x_S_x(T, S; spin = spin), Jx) +
+        rmul!(S_y_S_y(T, S; spin = spin), Jy) +
+        rmul!(S_z_S_z(T, S; spin = spin), Jz)
+    spaces = fill(domain(term)[1], (1, 1))
+    return LocalOperator( # horizontal and vertical contributions are identical
+        spaces, [CartesianIndex(1, 1), CartesianIndex(1, 2)] => 2 * adapt(AT, term)
+    )
 end
 
 function examples_heisenberg(AT)
@@ -29,25 +60,6 @@ function examples_heisenberg(AT)
         # compare against Juraj Hasik's data:
         # https://github.com/jurajHasik/j1j2_ipeps_states/blob/main/single-site_pg-C4v-A1/j20.0/state_1s_A1_j20.0_D2_chi_opt48.dat
         E_ref = -0.6602310934799577
-
-        # Heisenberg model assuming C4v symmetric PEPS and environment, which only evaluates necessary term
-        function heisenberg_XYZ_c4v(lattice::InfiniteSquare; kwargs...)
-            return adapt(AT, heisenberg_XYZ_c4v(ComplexF64, Trivial, lattice; kwargs...))
-        end
-        function heisenberg_XYZ_c4v(
-                T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
-                Jx = -1.0, Jy = 1.0, Jz = -1.0, spin = 1 // 2,
-            )
-            @assert size(lattice) == (1, 1) "only trivial unit cells supported by C4v-symmetric Hamiltonians"
-            term =
-                rmul!(S_x_S_x(T, S; spin = spin), Jx) +
-                rmul!(S_y_S_y(T, S; spin = spin), Jy) +
-                rmul!(S_z_S_z(T, S; spin = spin), Jz)
-            spaces = fill(domain(term)[1], (1, 1))
-            return LocalOperator( # horizontal and vertical contributions are identical
-                spaces, [CartesianIndex(1, 1), CartesianIndex(1, 2)] => 2 * adapt(AT, term)
-            )
-        end
 
         @testset "(1, 1) unit cell AD optimization" begin
             # initialize states
@@ -71,7 +83,7 @@ function examples_heisenberg(AT)
             # initialize symmetric states
             Random.seed!(123456789)
             symm = RotateReflect()
-            H′ = heisenberg_XYZ_c4v(InfiniteSquare())
+            H′ = heisenberg_XYZ_c4v(AT, InfiniteSquare())
             H = T <: Real ? real(H′) : H′
             peps₀ = adapt(AT, InfinitePEPS(randn, T, ComplexSpace(2), ComplexSpace(Dbond)))
             peps₀ = peps_normalize(symmetrize!(peps₀, symm))
@@ -164,18 +176,6 @@ function examples_heisenberg(AT)
             @info "Auto diff energy = $e_site2"
             @test e_site2 ≈ E_ref atol = 1.0e-2
             @test all(@. ξ_h > 0 && ξ_v > 0)
-        end
-
-        function (es::ΔEnergyShouldStop)(x, f, g, numfg, numiter, t)
-            Δenergy = f - es.E_last
-            es.E_last = f
-            return (abs(Δenergy) <= es.tol) || numiter >= es.maxiter
-        end
-
-        function (es::ΔEnergyHasConverged)(x, f, g, normgrad)
-            Δenergy = f - es.E_last
-            es.E_last = f
-            return abs(Δenergy) <= es.tol
         end
 
         @testset "Early stopping with hasconverged and shouldstop" begin
