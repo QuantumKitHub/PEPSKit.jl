@@ -14,6 +14,9 @@ that callers keep using `TestSuite.some_test(AT)`.
 """
 module TestSuite
 
+# Wrap everything in new modules to keep various tests from clobbering each others'
+# variables
+
 # BondEnv
 # -------
 module BondEnvCTM
@@ -147,6 +150,38 @@ module CTMRGUnitCell
     export ctmrg_unitcell_random_cartesian_spaces, ctmrg_unitcell_specific_u1_spaces
 end
 using .CTMRGUnitCell
+
+# Examples
+# --------
+module ExamplesBoseHubbard
+    include("examples/bose_hubbard.jl")
+    export examples_bose_hubbard
+end
+using .ExamplesBoseHubbard
+
+module ExamplesHeisenberg
+    include("examples/heisenberg.jl")
+    export examples_heisenberg
+end
+using .ExamplesHeisenberg
+
+module ExamplesJ1J2
+    include("examples/j1j2_model.jl")
+    export examples_j1j2
+end
+using .ExamplesJ1J2
+
+module ExamplesPWave
+    include("examples/pwave.jl")
+    export examples_pwave
+end
+using .ExamplesPWave
+
+module ExamplesTFIsing
+    include("examples/tf_ising.jl")
+    export examples_tf_ising
+end
+using .ExamplesTFIsing
 
 # Gradients
 # ---------
