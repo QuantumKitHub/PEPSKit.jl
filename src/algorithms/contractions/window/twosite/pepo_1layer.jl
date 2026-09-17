@@ -43,7 +43,7 @@ function _correlator_approx_rows(
         W = _row_mpo(ρ, nothing, env, row, colrange)
         if haskey(targets_by_row, row)
             south = _south_boundary_mps(env, row, colrange)
-            norm = dot(south, W, plain_north)
+            norm = dot_noconj(south, W, plain_north)
             _contract_twosite_target_row!(
                 values, ρ, mpo, source, targets_by_row[row], north, south, W, colrange
             )
@@ -64,7 +64,6 @@ end
 
 """
 Contract all targets in one row `W` with a shared `north` and `south` boundary MPS, writing results into `numerators`.
-
 """
 function _contract_twosite_target_row!(
         numerators::Vector{<:Number}, ρ::InfinitePEPO,
@@ -72,9 +71,10 @@ function _contract_twosite_target_row!(
         source::CartesianIndex{2}, targets::Dict{CartesianIndex{2}, Int},
         north::FiniteMPS, south::FiniteMPS, W::FiniteMPO, colrange::UnitRange{Int},
     )
+    N = length(south)
     row = first(keys(targets))[1]
-    envs = environments(south, W, north)
     source_site = _window_mps_site(source[2], colrange)
+    envs = _window_edge_environments(south, W, north, source_site)
     stringspace = space(mpo[2], 1)
 
     # close the target right at the column of the incoming string
@@ -95,25 +95,25 @@ function _contract_twosite_target_row!(
         else
             mpo_path_string(A, stringspace, Val((:north, :east)))
         end
-        left = leftenv(envs, source_site, south) *
-            TransferMatrix(north.AC[source_site], source_tensor, south.AC[source_site])
+        left = envs.lefts[source_site] *
+            edge_transfermatrix(north.AC[source_site], source_tensor, south.AC[south_site(source_site, N)])
         previous_col = source[2]
         for target in right_targets
             target_col = target[2]
             for col in (previous_col + 1):(target_col - 1)
                 site = _window_mps_site(col, colrange)
                 string_tensor = mpo_path_string(ρ[row, col, 1], stringspace, Val((:west, :east)))
-                left = left * TransferMatrix(north.AR[site], string_tensor, south.AR[site])
+                left = left * edge_transfermatrix(north.AR[site], string_tensor, south.AL[south_site(site, N)])
             end
 
             target_site = _window_mps_site(target_col, colrange)
             target_tensor = mpo_path_last(ρ[row, target_col, 1], mpo[2], Val(:west))
-            target_left = left * TransferMatrix(north.AR[target_site], target_tensor, south.AR[target_site])
-            value = _contract_transfer_boundaries(target_left, rightenv(envs, target_site, south))
+            target_left = left * edge_transfermatrix(north.AR[target_site], target_tensor, south.AL[south_site(target_site, N)])
+            value = _contract_transfer_boundaries(target_left, envs.rights[target_site - source_site + 1])
             numerators[targets[target]] = value
 
             string_tensor = mpo_path_string(ρ[row, target_col, 1], stringspace, Val((:west, :east)))
-            left = left * TransferMatrix(north.AR[target_site], string_tensor, south.AR[target_site])
+            left = left * edge_transfermatrix(north.AR[target_site], string_tensor, south.AL[south_site(target_site, N)])
             previous_col = target_col
         end
     end
@@ -128,26 +128,26 @@ function _contract_twosite_target_row!(
         else
             mpo_path_string(A, stringspace, Val((:north, :west)))
         end
-        right = TransferMatrix(
-            north.AC[source_site], source_tensor, south.AC[source_site]
-        ) * rightenv(envs, source_site, south)
+        right = edge_transfermatrix(
+            north.AC[source_site], source_tensor, south.AC[south_site(source_site, N)]
+        ) * first(envs.rights)
         previous_col = source[2]
         for target in left_targets
             target_col = target[2]
             for col in (previous_col - 1):-1:(target_col + 1)
                 site = _window_mps_site(col, colrange)
                 string_tensor = mpo_path_string(ρ[row, col, 1], stringspace, Val((:east, :west)))
-                right = TransferMatrix(north.AL[site], string_tensor, south.AL[site]) * right
+                right = edge_transfermatrix(north.AL[site], string_tensor, south.AR[south_site(site, N)]) * right
             end
 
             target_site = _window_mps_site(target_col, colrange)
             target_tensor = mpo_path_last(ρ[row, target_col, 1], mpo[2], Val(:east))
-            target_right = TransferMatrix(north.AL[target_site], target_tensor, south.AL[target_site]) * right
-            value = _contract_transfer_boundaries(leftenv(envs, target_site, south), target_right)
+            target_right = edge_transfermatrix(north.AL[target_site], target_tensor, south.AR[south_site(target_site, N)]) * right
+            value = _contract_transfer_boundaries(envs.lefts[target_site], target_right)
             numerators[targets[target]] = value
 
             string_tensor = mpo_path_string(ρ[row, target_col, 1], stringspace, Val((:east, :west)))
-            right = TransferMatrix(north.AL[target_site], string_tensor, south.AL[target_site]) * right
+            right = edge_transfermatrix(north.AL[target_site], string_tensor, south.AR[south_site(target_site, N)]) * right
             previous_col = target_col
         end
     end
@@ -163,27 +163,11 @@ _window_mps_site(col::Int, colrange::UnitRange{Int}) = col - first(colrange) + 2
 Contract one modified row site between precomputed left and right MPS environments.
 """
 function _contract_window_site(
-        envs::MPSKit.FiniteEnvironments, north::FiniteMPS, south::FiniteMPS,
+        envs::NamedTuple, north::FiniteMPS, south::FiniteMPS,
         site::Int, tensor::MPOTensor,
     )
-    left = leftenv(envs, site, south) *
-        TransferMatrix(north.AC[site], tensor, south.AC[site])
-    return _contract_transfer_boundaries(left, rightenv(envs, site, south))
-end
-
-"""
-Contract the left and right transfer-matrix environments to a scalar.
-```
-    (north)
-    ┌-←-- 3 --←-┐
-    |           |
-    L-←-- 2 --←-R
-    |           |
-    └-→-- 1 --→-┘
-    (south)
-```
-"""
-function _contract_transfer_boundaries(left::MPSTensor, right::MPSTensor)
-    # The three bonds close around the window without crossing
-    return @plansor left[1 2; 3] * right[3 2; 1]
+    N = length(south)
+    left = envs.lefts[site] *
+        edge_transfermatrix(north.AC[site], tensor, south.AC[south_site(site, N)])
+    return _contract_transfer_boundaries(left, envs.rights[site - length(envs.lefts) + 1])
 end

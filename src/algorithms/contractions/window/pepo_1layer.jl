@@ -153,7 +153,7 @@ function _contract_window_rows(
         ψ = _approximate(W, ψ, alg)
     end
     south = _south_boundary_mps(env, last(rowrange), colrange)
-    return dot(south, ψ)
+    return dot_noconj(south, ψ)
 end
 
 """
