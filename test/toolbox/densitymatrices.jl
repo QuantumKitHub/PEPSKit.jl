@@ -101,3 +101,31 @@ end
     inds = Tuple(Val.([CartesianIndex(1, 1)]))
     @test_throws ArgumentError PEPSKit._contract_densitymatrix(inds, (ρ, ρ, ρ), env)
 end
+
+@testset "Fixed-size fast paths agree with the generic fallback ($I)" for I in keys(ds)
+    d, D, χ = ds[I], Ds[I], χs[I]
+    peps = InfinitePEPS(d, D; unitcell = (2, 2))
+    env = CTMRGEnv(peps, χ)
+
+    # environments without a hand-optimized contraction of a given shape fall through to
+    # `_contract_densitymatrix`, which should agree with the specializations that do exist
+    for ind in CartesianIndices((2, 2))
+        ρ_fast = reduced_densitymatrix([ind], peps, env)
+        ρ_generic = invoke(
+            PEPSKit.reduced_densitymatrix1x1, Tuple{Any, Any, Any, Any}, ind, peps, peps, env
+        )
+        @test ρ_fast ≈ ρ_generic
+
+        ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(1, 0)], peps, env)
+        ρ_generic = invoke(
+            PEPSKit.reduced_densitymatrix2x1, Tuple{Any, Any, Any, Any}, ind, peps, peps, env
+        )
+        @test ρ_fast ≈ ρ_generic
+
+        ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(0, 1)], peps, env)
+        ρ_generic = invoke(
+            PEPSKit.reduced_densitymatrix1x2, Tuple{Any, Any, Any, Any}, ind, peps, peps, env
+        )
+        @test ρ_fast ≈ ρ_generic
+    end
+end

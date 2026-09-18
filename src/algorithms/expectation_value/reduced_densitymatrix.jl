@@ -69,41 +69,39 @@ Base.@deprecate(
 # Fixed-size fast paths
 # ---------------------
 #
-# These carry the docstrings and reject unsupported environments; the implementations live in
-# `algorithms/contractions/local_patch/densitymatrix/`.
+# These carry the docstrings and provide the generic fallback; the optimized implementations
+# live in `algorithms/contractions/local_patch/densitymatrix/`.
+#
+# The fallbacks defer to the generic patch contraction instead of erroring, so that an
+# environment only needs to define the specializations for the patch shapes where a
+# hand-optimized contraction actually pays off.
 
 """
     reduced_densitymatrix1x1(ind, ket, bra, env)
 
 Construct the reduced density matrix of `|ket⟩⟨bra|` on the single site `ind`, using an
-optimized contraction for the environment `env`.
+optimized contraction for the environment `env`. Falls back to
+[`_contract_densitymatrix`](@ref) for environments without such a specialization.
 """
-reduced_densitymatrix1x1(ind, ket, bra, env) = throw(
-    ArgumentError(
-        "No 1x1 reduced density matrix contraction defined for environments of type $(typeof(env))."
-    )
-)
+reduced_densitymatrix1x1(ind, ket, bra, env) =
+    _contract_densitymatrix((Val(ind),), (ket, bra), env)
 
 """
     reduced_densitymatrix2x1(ind, ket, bra, env)
 
 Construct the reduced density matrix of `|ket⟩⟨bra|` on the vertical pair of sites starting
-at `ind`, using an optimized contraction for the environment `env`.
+at `ind`, using an optimized contraction for the environment `env`. Falls back to
+[`_contract_densitymatrix`](@ref) for environments without such a specialization.
 """
-reduced_densitymatrix2x1(ind, ket, bra, env) = throw(
-    ArgumentError(
-        "No 2x1 reduced density matrix contraction defined for environments of type $(typeof(env))."
-    )
-)
+reduced_densitymatrix2x1(ind, ket, bra, env) =
+    _contract_densitymatrix((Val(ind), Val(ind + CartesianIndex(1, 0))), (ket, bra), env)
 
 """
     reduced_densitymatrix1x2(ind, ket, bra, env)
 
 Construct the reduced density matrix of `|ket⟩⟨bra|` on the horizontal pair of sites starting
-at `ind`, using an optimized contraction for the environment `env`.
+at `ind`, using an optimized contraction for the environment `env`. Falls back to
+[`_contract_densitymatrix`](@ref) for environments without such a specialization.
 """
-reduced_densitymatrix1x2(ind, ket, bra, env) = throw(
-    ArgumentError(
-        "No 1x2 reduced density matrix contraction defined for environments of type $(typeof(env))."
-    )
-)
+reduced_densitymatrix1x2(ind, ket, bra, env) =
+    _contract_densitymatrix((Val(ind), Val(ind + CartesianIndex(0, 1))), (ket, bra), env)
