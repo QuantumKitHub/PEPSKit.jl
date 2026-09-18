@@ -16,7 +16,9 @@ end
 """
     trmul(H, ρ)
 
-Compute `tr(H * ρ)` without forming `H * ρ`.
+Compute `str(H * ρ)` without forming `H * ρ`.
+
+See also [`str`](@ref).
 """
 @generated function trmul(
         H::AbstractTensorMap{<:Any, S, N, N}, ρ::AbstractTensorMap{<:Any, S, N, N}
