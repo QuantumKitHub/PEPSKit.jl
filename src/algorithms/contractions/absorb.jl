@@ -6,8 +6,9 @@
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
 
-Absorb a matrix `C` into the left of a tensor map `A` by contracting the first leg of `A`
-with the second leg of `C`.
+Absorb a matrix `C` into the left of a tensor map `A` by contracting the first index in the codomain of `A`
+with the (only) index in the domain of `C`. This can be interpreted as contracting the first
+leg of `A` with the last leg of `C`.
 """
 function absorb_left(
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
@@ -28,7 +29,9 @@ end
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
 
-Absorb a matrix `C` into the right of a tensor map `A` by contracting the last leg of `A`
+Absorb a matrix `C` into the right of a tensor map `A` by contracting the first index in
+the domain of `A` with the (only) index in the codomain of `C`. In the case where `A` has
+only one space in its domain, this can be interpreted as contracting the last leg of `A`
 with the first leg of `C`.
 """
 function absorb_right(
