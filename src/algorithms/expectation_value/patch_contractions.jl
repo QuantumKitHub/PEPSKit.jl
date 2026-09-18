@@ -2,7 +2,7 @@
 # -------------------------------
 
 """
-    contract_local_operator(inds, O, ket::InfinitePEPS, bra::InfinitePEPS = ket, env)
+    contract_local_operator(inds, O, ket::InfinitePEPS, bra::InfinitePEPS, env)
     contract_local_operator(inds, O, ket::InfinitePEPO, bra::InfinitePEPO, env)
     contract_local_operator(inds, O, state::InfinitePEPO, env)
 
