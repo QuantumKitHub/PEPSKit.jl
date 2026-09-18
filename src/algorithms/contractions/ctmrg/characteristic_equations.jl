@@ -421,11 +421,11 @@ end
 function contract_halfinfinite_characteristic_equation(
         C::CornerTensors, E::EdgeTensors,
         is::CornerTensors, s::CornerTensors,
-        u::CornerTensors, v::CornerTensors,
+        u::LeftProjectors, v::RightProjectors,
         n::InfiniteSquareNetwork,
         Ud::RightProjectors, Vd::LeftProjectors,
         iCi::CornerTensors,
-        ULd::RightProjectors, VRd::LeftProjectors,
+        proj_u, proj_v,
         iSfp::CornerTensors;
         site = getindex,
     )
@@ -492,8 +492,8 @@ function contract_halfinfinite_characteristic_equation(
         fp4 = s´ / λs - s[co...]
 
         co´ = _next_coordinate(co, nrows, ncols)
-        fp3 = ((ULd[co...] * EiCiEPL[co...]) * iSfp[co...]) / λs - u[co...]
-        fp5 = (iSfp[co...] * (_contract_PR_M(PR[co...], EC[co´...]) * VRd[co...])) / λs - v[co...]
+        fp3 = (proj_u(co, EiCiEPL[co...]) * iSfp[co...]) / λs - u[co...]
+        fp5 = (iSfp[co...] * proj_v(co, _contract_PR_M(PR[co...], EC[co´...]))) / λs - v[co...]
 
         return fp3, fp4, fp5
     end
@@ -513,19 +513,34 @@ end
         ::CTMRGAlgorithm{<:HalfInfiniteProjector},
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
-        Vfp::RightProjectors,
-        ULfp::LeftProjectors,
-        VRfp::RightProjectors;
+        Vfp::RightProjectors;
         site = getindex,
     )
 
-Takes the fixed-point values of the inverse singular values `iSfp`, the left and right isometries `Ufp`
-and `Vfp`, and their null spaces `ULfp` and `VRfp` corresponding to a converged CTMRG contraction,
-and generates a function ``F(n, C, E, u, S, v)`` which characterizes the convergence of the CTMRG algorithm in terms of the characteristic equation ``F(n, C, E, u, S, v) = 0``. Here, ``n`` is the
-`InfiniteSquareNetwork` containing the state variable being optimized, and ``(C, E, u, S, v)`` represents a CTMRG
-contraction environment on a generic unit cell meaning that all tensors have a directional and
-unit cell index. ``C`` and ``E`` directly represent the corner and edge tensors, while ``u`` and ``v``
-parametrize differentiable projectors ``U = U_{fp} + U_{L,fp} u`` and ``V = V_{fp} + V_{L,fp} V``, and ``S`` denotes the singular values of the decomposed environment.
+Takes the fixed-point values of the inverse singular values `iSfp` and the left and right
+isometries `Ufp` and `Vfp` corresponding to a converged CTMRG contraction, and generates a
+function ``F(n, C, E, u, S, v)`` which characterizes the convergence of the CTMRG algorithm
+in terms of the characteristic equation ``F(n, C, E, u, S, v) = 0``. Here, ``n`` is the
+`InfiniteSquareNetwork` containing the state variable being optimized, and ``(C, E, u, S,
+v)`` represents a CTMRG contraction environment on a generic unit cell meaning that all
+tensors have a directional and unit cell index. ``C`` and ``E`` directly represent the
+corner and edge tensors, while ``u`` and ``v`` parametrize differentiable projectors ``U =
+U_{fp} + P_\\perp^U u`` and ``V = V_{fp} + v P_\\perp^V``, and ``S`` denotes the singular
+values of the decomposed environment. Here ``P_\\perp^U = 1 - U_{fp} U_{fp}^\\dagger`` and
+``P_\\perp^V = 1 - V_{fp}^\\dagger V_{fp}`` are projectors onto the null spaces of the
+fixed-point isometries. Thefore, while ``u`` and ``v`` formally live in the full projector
+spaces, they only contain contributions along the null spaces as they are subject to
+``U_{fp}^\\dagger u = 0`` and ``v V_{fp}^\\dagger = 0``.
+
+One could equivalently parametrize the differentiable projectors as ``U = U_{fp} + U_{L,fp}
+u`` and ``V = V_{fp} + v V_{R,fp}``, where ``U_{L,fp}`` and ``V_{R,fp}`` are the left and
+right null spaces of the fixed-point isometries. In this parametrization, ``u`` and ``v``
+are smaller matrix variables whose variations directly encode the variations of ``U`` and
+``V`` along the respective null spaces. While this alternative approach leads to smaller vectors,
+and therefore a smaller linear system to solve in the context of implicit differentiation,
+the approach using implicit null space projectors without materializing `U_{L,fp}`` and
+``V_{R,fp}``allows for a more efficient evaluation of the characteristic equations themselves.
+
 
 The local sandwiches are read out of ``n`` through `site`, so a caller can choose whether they
 are differentiated at all; see [`PEPSKit.constant_site`](@ref).
@@ -536,9 +551,7 @@ are differentiated at all; see [`PEPSKit.constant_site`](@ref).
 function generate_halfinfinite_characteristic_equation(
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
-        Vfp::RightProjectors,
-        ULfp::LeftProjectors,
-        VRfp::RightProjectors;
+        Vfp::RightProjectors;
         site = getindex,
     )
 
@@ -546,17 +559,24 @@ function generate_halfinfinite_characteristic_equation(
     coordinates = eachcoordinate(iSfp)
     nrows, ncols = size(iSfp)[2:3]
 
+    # Orthogonal complements without forming a null space: `U_L U_L^† = 1 - U_{fp} U_{fp}^†`.
+    # Avoids materializing `ULd`/`VRd` on every evaluation, each as large as an enlarged
+    # corner.
+    perp_u(co, x) = x - Ufp[co...] * (Ufp[co...]' * x)
+    perp_v(co, x) = x - (x * Vfp[co...]') * Vfp[co...]
+
     # the main routine which uses both the singular values and their inverses
     function asymmetric_characteristic_equation(n, C, E, u, s, v)
         ## Prepare all the objects we need in the right parametrization
         is = map(inv, s)
 
-        # outspace variation parametrization of isometries
+        # Outspace variation parametrization. Projecting on input keeps the component along
+        # the isometry a decoupled identity block, so the adjoint preserves the constraint.
         U = map(coordinates) do co
-            return Ufp[co...] + ULfp[co...] * u[co...]
+            return Ufp[co...] + perp_u(co, u[co...])
         end
         V = map(coordinates) do co
-            return Vfp[co...] + v[co...] * VRfp[co...]
+            return Vfp[co...] + perp_v(co, v[co...])
         end
 
         isqsR = map(fourthroot, adjoint.(is) .* is) # root that goes into the left projector
@@ -571,13 +591,14 @@ function generate_halfinfinite_characteristic_equation(
             co′ = _rightvec_invfroot_indices(co, nrows, ncols)
             absorb_left(V[co...]', isqsL[co′...])
         end
-        ULd = map(coordinates) do co
+        # the fourth roots now ride on the objects `ULd`/`VRd` were contracted with
+        function proj_u(co, x)
             co′ = _leftvec_invfroot_indices(co, nrows, ncols)
-            absorb_right(ULfp[co...]', isqsR[co′...])
+            return perp_u(co, absorb_left(x, isqsR[co′...]))
         end
-        VRd = map(coordinates) do co
+        function proj_v(co, x)
             co′ = _rightvec_invfroot_indices(co, nrows, ncols)
-            absorb_left(VRfp[co...]', isqsL[co′...])
+            return perp_v(co, absorb_right(x, isqsL[co′...]))
         end
 
         # pre-contract full inverses into corners from both sides
@@ -594,7 +615,7 @@ function generate_halfinfinite_characteristic_equation(
             n,
             Ud, Vd,
             iCi,
-            ULd, VRd,
+            proj_u, proj_v,
             iSfp;
             site,
         )
@@ -609,8 +630,6 @@ function generate_fullinfinite_characteristic_equation(
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
         Vfp::RightProjectors,
-        ULfp::LeftProjectors,
-        VRfp::RightProjectors,
     )
 
     throw(ArgumentError("Characteristic equations for CTMRGAlgorithm{<:FullInfiniteProjector} are not yet implemented."))

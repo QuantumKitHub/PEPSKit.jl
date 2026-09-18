@@ -643,25 +643,19 @@ function PEPSKit._rrule(
     # forward pass, and then explicitly backpropagate through that in the pullback here
     _, absorb_inverse_roots_vjp = rrule_via_ad(config, absorb_inverse_roots, C̃, Ẽ, s)
 
-    # get the projector nullspaces
-    UL = left_null.(U)
-    VR = right_null.(V)
-
-    # instantiate the variables used in the characteristic equations
-    u = map(zip(U, UL)) do (Uc, ULc)
-        return zeros(scalartype(Uc), space(ULc, numind(ULc))' ← space(Uc, numind(Uc))')
-    end
-    v = map(zip(V, VR)) do (Vc, VRc)
-        return zeros(scalartype(Vc), space(Vc, 1) ← space(VRc, 1))
-    end
+    # variables of the characteristic equations, living in the full projector spaces and
+    # constrained to the orthogonal complements of the isometries inside the characteristic
+    # equations
+    u = zerovector.(U)
+    v = zerovector.(V)
     is = sdiag_pow.(s, -1) # also treat them as general complex tensors
 
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
     # sandwiches through `constant_site` leaves the ket and bra cotangents unforced. The
     # state pullback runs once, after the solve, and gets its own tape.
-    F_tracked = generate_halfinfinite_characteristic_equation(is, U, V, UL, VR)
+    F_tracked = generate_halfinfinite_characteristic_equation(is, U, V)
     F_untracked = generate_halfinfinite_characteristic_equation(
-        is, U, V, UL, VR; site = constant_site
+        is, U, V; site = constant_site
     )
     network = InfiniteSquareNetwork(state)
 
