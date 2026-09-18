@@ -1,16 +1,6 @@
 # Contraction expression utilities for local patches
 # --------------------------------------------------
 
-# Contraction label helpers
-# -------------------------
-
-function tensorlabel(args...)
-    return Symbol(ntuple(i -> iseven(i) ? :_ : args[(i + 1) >> 1], 2 * length(args) - 1)...)
-end
-envlabel(args...) = tensorlabel(:χ, args...)
-virtuallabel(args...) = tensorlabel(:D, args...)
-physicallabel(args...) = tensorlabel(:d, args...)
-
 """
 $(SIGNATURES)
 

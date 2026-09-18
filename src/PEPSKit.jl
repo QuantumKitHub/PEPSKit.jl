@@ -52,6 +52,7 @@ using DocStringExtensions
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
 include("utility/util.jl")
+include("utility/contraction_labels.jl")
 include("utility/tensor_traces.jl")
 include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
