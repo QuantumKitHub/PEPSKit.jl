@@ -34,7 +34,7 @@ end
 
 # Heisenberg model assuming C4v symmetric PEPS and environment, which only evaluates necessary term
 function heisenberg_XYZ_c4v(AT, lattice::InfiniteSquare; kwargs...)
-    return adapt(AT, heisenberg_XYZ_c4v(ComplexF64, Trivial, lattice; kwargs...))
+    return heisenberg_XYZ_c4v(AT, ComplexF64, Trivial, lattice; kwargs...)
 end
 function heisenberg_XYZ_c4v(
         AT, T::Type{<:Number}, S::Type{<:Sector}, lattice::InfiniteSquare;
