@@ -35,7 +35,6 @@ naive_gradient_combinations = [
     (:SimultaneousCTMRG, :FullInfiniteProjector, :FullPullback),
     (:SequentialCTMRG, :HalfInfiniteProjector, :FullPullback),
 ]
-naive_gradient_done = Set()
 
 function _check_disallowed_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
@@ -48,6 +47,7 @@ function _check_disallowed_combination(
 end
 
 function gradients_asymmetric(AT)
+    naive_gradient_done = Set()
     return @testset "AD CTMRG energy gradients for $(names[i]) model ($AT)" verbose = true for i in
         eachindex(
             models

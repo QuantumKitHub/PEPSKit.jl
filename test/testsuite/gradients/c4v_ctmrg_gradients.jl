@@ -37,9 +37,9 @@ allowed_rrule_algs = Dict(
 
 # be selective on which configurations to test the naive gradient for
 naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :FullPullback), (:C4vCTMRG, :C4vQRProjector, :FullPullback)]
-naive_gradient_done = Set()
 
 function gradients_c4v(AT)
+    naive_gradient_done = Set()
     return @testset "AD C4v CTMRG energy gradients for $(names[i]) model ($AT)" verbose = true for i in
         eachindex(
             models
