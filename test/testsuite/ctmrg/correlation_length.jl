@@ -1,4 +1,5 @@
 using Test: @test, @testset
+using Adapt: adapt
 using TensorKit
 using MPSKit: correlation_length, leading_boundary
 using PEPSKit: CTMRGEnv, InfinitePEPS
