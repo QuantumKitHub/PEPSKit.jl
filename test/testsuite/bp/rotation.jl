@@ -14,7 +14,6 @@ Ds = Dict(
     U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (1, 3, 2))),
     FermionParity => Vect[FermionParity](0 => 3, 1 => 2)
 )
-Random.seed!(41973582)
 
 function meas_sites(
         op::O, ψ::InfinitePEPS, env::Union{BPEnv, CTMRGEnv}
@@ -27,6 +26,7 @@ function meas_sites(
 end
 
 function bp_rotations(AT)
+    Random.seed!(41973582)
     return @testset "Rotation of BPEnv ($AT) ($S)" for S in keys(ds)
         d, D, unitcell = ds[S], Ds[S], (2, 3)
         ψds = fill(d, unitcell)

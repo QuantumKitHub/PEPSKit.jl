@@ -12,9 +12,9 @@ Ds = Dict(
     U1Irrep => U1Space(i => D for (i, D) in zip(-1:1, (1, 3, 2))),
     FermionParity => Vect[FermionParity](0 => 3, 1 => 2)
 )
-Random.seed!(41973582)
 
 function bp_expvals(AT)
+    Random.seed!(41973582)
     return @testset "Expectation values of BPEnv ($AT) ($S)" for S in keys(ds)
         d, D, uc = ds[S], Ds[S], (2, 3)
         ψds = fill(d, uc)

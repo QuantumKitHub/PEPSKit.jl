@@ -21,9 +21,9 @@ Ves2 = [
     U1Space(0 => 1, 1 => 1, -1 => 2) U1Space(0 => 1, 1 => 2, -1 => 1)'
 ]
 Venv = U1Space(0 => 2, 1 => 1, -1 => 1)
-Random.seed!(48736)
 
 function timeevol_sitedep_rotation(AT)
+    Random.seed!(48736)
     return @testset "Rotation of SiteDependentTruncation ($AT)" begin
         state = adapt(AT, InfinitePEPS(randn, elt, Vps, Vns, Ves1))
         for f in (rotl90, rotr90, rot180)
@@ -37,6 +37,7 @@ function timeevol_sitedep_rotation(AT)
 end
 
 function timeevol_sitedep_su(AT)
+    Random.seed!(48736)
     states = (
         adapt(AT, InfinitePEPS(randn, elt, Vps, Vns, Ves1)),
         adapt(AT, InfinitePEPO(randn, elt, Vps, Vns, Ves2)),

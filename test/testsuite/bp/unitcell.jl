@@ -5,7 +5,6 @@ using PEPSKit: bp_iteration
 using TensorKit
 
 # settings
-Random.seed!(91283219347)
 elt = ComplexF64
 
 function test_unitcell(AT, unitcell, Pspaces, Nspaces, Espaces)
@@ -32,6 +31,7 @@ function test_unitcell(AT, unitcell, Pspaces, Nspaces, Espaces)
 end
 
 function bp_unitcell_random_cartesian_spaces(AT)
+    Random.seed!(91283219347)
     return @testset "Random Cartesian spaces with BP ($AT)" begin
         unitcell = (3, 3)
 
@@ -44,6 +44,7 @@ function bp_unitcell_random_cartesian_spaces(AT)
 end
 
 function bp_unitcell_specific_u1_spaces(AT)
+    Random.seed!(91283219347)
     return @testset "Specific U1 spaces with BP ($AT)" begin
         unitcell = (2, 2)
 

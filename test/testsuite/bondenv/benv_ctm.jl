@@ -5,7 +5,6 @@ using LinearAlgebra
 using Random
 using Adapt
 
-Random.seed!(100)
 Nr, Nc = 2, 2
 Envspace = Vect[FermionParity ⊠ U1Irrep](
     (0, 0) => 4, (1, 1 // 2) => 1, (1, -1 // 2) => 1, (0, 1) => 1, (0, -1) => 1
@@ -63,6 +62,7 @@ function test_benv_ctm(AT, state::Union{InfinitePEPS, InfinitePEPO})
 end
 
 function bondenv_ctm(AT)
+    Random.seed!(100)
     peps = get_hubbard_peps(AT)
     pepo = get_hubbard_pepo(AT)
     return @testset "$AT" for state in (peps, pepo)

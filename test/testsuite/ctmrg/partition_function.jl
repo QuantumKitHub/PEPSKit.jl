@@ -100,7 +100,6 @@ end
 
 beta = 0.6
 Venv = ℂ^12
-Random.seed!(81812781143)
 # cover all different flavors
 args = [
     (:SequentialCTMRG, :HalfInfiniteProjector), (:SequentialCTMRG, :FullInfiniteProjector),
@@ -108,6 +107,7 @@ args = [
     (:C4vCTMRG, :C4vEighProjector), (:C4vCTMRG, :C4vQRProjector),
 ]
 function ctmrg_partition_function(AT)
+    Random.seed!(81812781143)
     return @testset "Classical Ising partition function ($AT)" begin
         # initialize
         O, M, E = two_dimensional_classical_ising(AT; beta)

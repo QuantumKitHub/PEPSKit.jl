@@ -5,7 +5,6 @@ using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
 using TensorKit
 
 # settings
-Random.seed!(91283219347)
 stype = ComplexF64
 ctm_algs = [
     SequentialCTMRG(; projector_alg = :HalfInfiniteProjector),
@@ -49,6 +48,7 @@ function test_unitcell(
 end
 
 function ctmrg_unitcell_random_cartesian_spaces(AT)
+    Random.seed!(91283219347)
     return @testset "Random Cartesian spaces with $ctm_alg ($AT)" for ctm_alg in ctm_algs
         unitcell = (3, 3)
 
@@ -68,6 +68,7 @@ function ctmrg_unitcell_random_cartesian_spaces(AT)
 end
 
 function ctmrg_unitcell_specific_u1_spaces(AT)
+    Random.seed!(91283219347)
     return @testset "Specific U1 spaces with $ctm_alg" for ctm_alg in ctm_algs
         unitcell = (2, 2)
 

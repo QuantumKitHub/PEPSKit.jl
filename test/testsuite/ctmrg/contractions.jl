@@ -12,7 +12,6 @@ using PEPSKit: renormalize_northwest_corner, renormalize_northeast_corner,
 using PEPSKit: random_start_vector
 
 # settings
-Random.seed!(91283219348)
 stype = ComplexF64
 
 renormalize_corner_fns = (
@@ -212,6 +211,7 @@ function test_contractions(n::InfiniteSquareNetwork, env::CTMRGEnv)
 end
 
 function ctmrg_contractions_random_cartesian_spaces(AT)
+    Random.seed!(91283219348)
     return @testset "Random Cartesian spaces ($AT)" begin
         unitcell = (3, 3)
 
@@ -230,6 +230,7 @@ function ctmrg_contractions_random_cartesian_spaces(AT)
 end
 
 function ctmrg_contractions_specific_u1_spaces(AT)
+    Random.seed!(91283219348)
     return @testset "Specific U1 spaces ($AT)" begin
         unitcell = (2, 2)
 
@@ -290,6 +291,7 @@ function ctmrg_contractions_specific_u1_spaces(AT)
 end
 
 function ctmrg_contractions_random_fermionic_spaces(AT)
+    Random.seed!(91283219348)
     return @testset "Random fermionic spaces ($AT)" begin
         unitcell = (3, 3)
 

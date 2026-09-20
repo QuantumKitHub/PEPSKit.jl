@@ -6,13 +6,12 @@ using MPSKit
 using LinearAlgebra
 using Adapt
 
-Random.seed!(29384293742893)
-
 const vumps_alg = VUMPS(;
     tol = 1.0e-6, alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false), verbosity = 2
 )
 
 function boundary_mps_one_one_peps(AT)
+    Random.seed!(29384293742893)
     return @testset "(1, 1) PEPS ($AT)" begin
         Vpeps = ComplexSpace(2)
         psi = adapt(AT, InfinitePEPS(Vpeps, Vpeps))
@@ -36,6 +35,7 @@ function boundary_mps_one_one_peps(AT)
 end
 
 function boundary_mps_two_two_peps(AT)
+    Random.seed!(29384293742893)
     return @testset "(2, 2) PEPS ($AT)" begin
         Vpeps = ComplexSpace(2)
         psi = adapt(AT, InfinitePEPS(Vpeps, Vpeps; unitcell = (2, 2)))
@@ -53,6 +53,7 @@ function boundary_mps_two_two_peps(AT)
 end
 
 function boundary_mps_fermionic_peps(AT)
+    Random.seed!(29384293742893)
     return @testset "Fermionic PEPS ($AT)" begin
         D = Vect[fℤ₂](0 => 1, 1 => 1)
         d = Vect[fℤ₂](0 => 1, 1 => 1)
@@ -92,6 +93,7 @@ function boundary_mps_fermionic_peps(AT)
 end
 
 function boundary_mps_pepo_runthrough(AT)
+    Random.seed!(29384293742893)
     return @testset "PEPO runthrough($AT)" begin
         function ising_pepo(beta; unitcell = (1, 1, 1))
             t = ComplexF64[exp(beta) exp(-beta); exp(-beta) exp(beta)]
