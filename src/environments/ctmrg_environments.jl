@@ -321,6 +321,9 @@ edgetype(env::CTMRGEnv) = edgetype(typeof(env))
 edgetype(::Type{CTMRGEnv{C, E}}) where {C, E} = E
 
 TensorKit.spacetype(::Type{E}) where {E <: CTMRGEnv} = spacetype(cornertype(E))
+function TensorKit.storagetype(::Type{E}) where {E <: CTMRGEnv}
+    return TensorKit.promote_storagetype(cornertype(E), edgetype(E))
+end
 
 # In-place update of environment
 function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C, T}) where {C, T}
