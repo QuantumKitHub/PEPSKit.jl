@@ -242,7 +242,7 @@ function ctmrg_contractions_specific_u1_spaces(AT)
         Nspaces = [Vpeps Vpeps'; Vpeps' Vpeps]
         chis = [Venv Venv; Venv Venv]
 
-        test_ctmrg_contractions(Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
+        test_ctmrg_contractions(AT, Pspaces, Nspaces, Nspaces, chis, chis, chis, chis)
 
         # 4x4 unit cell with all 32 inequivalent bonds
         #
