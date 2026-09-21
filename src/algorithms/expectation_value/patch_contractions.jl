@@ -46,21 +46,19 @@ Base.@deprecate(
 )
 
 """
-    contract_local_norm(inds, ket::InfinitePEPS, bra::InfinitePEPS = ket, env)
+    contract_local_norm(inds, ket::InfinitePEPS, bra::InfinitePEPS, env)
     contract_local_norm(inds, ket::InfinitePEPO, bra::InfinitePEPO, env)
     contract_local_norm(inds, state::InfinitePEPO, env)
 
 Contract a local norm corresponding to the overlap `ket` and `bra` states, computing a patch
 of `⟨bra|ket⟩`, where `ket` and `bra` correspond to either a PEPS or a PEPO representing a
 PEPS with ancillary legs.
-Alternatively, contract a local norm patch of a density matrix PEPO `state`, computing a
-patch of `str(state)`, where [`str`](@ref) is the fermionic supertrace.
+Alternatively, contract a local norm patch of a density matrix PEPO `state`, computing a patch of `tr(state)`.
 
 The contracted rectangular norm patch is determined by the open physical indices `inds` and
 is contracted over the surrounding virtual indices using the environment `env`. In
 particular, the patch location is precisely the same as that of the patch used in
 [`contract_local_operator`](@ref).
-
 """
 function contract_local_norm(
         inds::Vector{CartesianIndex{2}}, ket::InfinitePEPS, bra::InfinitePEPS, env

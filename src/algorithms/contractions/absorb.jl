@@ -6,9 +6,7 @@
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
 
-Absorb a matrix `C` into the left of a tensor map `A` by contracting the first index in the codomain of `A`
-with the (only) index in the domain of `C`. This can be interpreted as contracting the first
-leg of `A` with the last leg of `C`.
+Absorb a matrix `C` into the left of a tensor map `A` by contracting the first index of `A` with the last index of `C`.
 """
 function absorb_left(
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
@@ -29,10 +27,8 @@ end
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
 
-Absorb a matrix `C` into the right of a tensor map `A` by contracting the first index in
-the domain of `A` with the (only) index in the codomain of `C`. In the case where `A` has
-only one space in its domain, this can be interpreted as contracting the last leg of `A`
-with the first leg of `C`.
+Absorb a matrix `C` into the right of a tensor map `A` by contracting the first index in the domain of `A` with the first index of `C`.
+In the case where `A` has only one space in its domain, this can be interpreted as contracting the last leg of `A` with the first leg of `C`.
 """
 function absorb_right(
         A::AbstractTensorMap{<:Any, S}, C::AbstractTensorMap{<:Any, S, 1, 1}
@@ -55,9 +51,7 @@ end
         CR::AbstractTensorMap{<:Any, S, 1, 1}
     ) where {S}
 
-Absorb matrices `CL` and `CR` into the left and right of a tensor map `A` by contracting the
-first leg of `A` with the second leg of `CL` and the last leg of `A` with the first leg of
-`CR`.
+Absorb matrices `CL` and `CR` into the left and right of a tensor map `A` by contracting the first leg of `A` with the second leg of `CL` and the first domain index of `A` with the first leg of `CR`.
 """
 function absorb_left_right(
         A::AbstractTensorMap{<:Any, S},
