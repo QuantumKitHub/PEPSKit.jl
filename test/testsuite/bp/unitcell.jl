@@ -23,7 +23,7 @@ function test_unitcell(AT, unitcell, Pspaces, Nspaces, Espaces)
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(
         Pspaces, (
-            (c,) => randn(elt, Pspaces[c], Pspaces[c])
+            (c,) => adapt(AT, randn(elt, Pspaces[c], Pspaces[c]))
                 for c in CartesianIndices(unitcell)
         )...,
     )
