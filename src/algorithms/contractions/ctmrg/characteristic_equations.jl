@@ -53,7 +53,7 @@ end
         Efp::EdgeTensor, # unused
         Ufp::LeftProjector,
         ULfp::LeftProjector;
-        site = getindex,
+        getsite = getindex,
     )
 
 Takes the fixed-point values of the corner tensor `Cfp`, edge tensor `Efp`, left isometry
@@ -65,7 +65,7 @@ represents a C4v symmetric contraction environment. ``C`` and ``E`` directly rep
 corner and edge tensors, while ``u`` parametrizes a differentiable projector ``U`` as ``U =
 U_{fp} + U_{L,fp} * u``.
 
-The local sandwich is read through `site`, so a caller can choose whether it is
+The local sandwich is read through `getsite`, so a caller can choose whether it is
 differentiated at all; see [`PEPSKit.constant_site`](@ref).
 
 ``F`` returns a tuple of three tensors, corresponding to an equation for ``C``, ``E`` and
@@ -100,14 +100,14 @@ function generate_symmetric_characteristic_equation(
         Efp::EdgeTensor, # unused
         Ufp::LeftProjector,
         ULfp::LeftProjector;
-        site = getindex,
+        getsite = getindex,
     )
 
     iC = sdiag_pow(real(DiagonalTensorMap(Cfp)), -1)
     ULd = ULfp'
 
     function symmetric_characteristic_equation(n, C, E, u)
-        O = site(n, 1, 1)
+        O = getsite(n, 1, 1)
 
         # project input
         C = project_hermitian(C)
@@ -332,16 +332,16 @@ constant_site(network, r, c) = ignore_derivatives() do
 end
 
 """
-    _enlarged_corner(network, env, coordinates; site = getindex)
+    _enlarged_corner(network, env, coordinates; getsite = getindex)
 
-Build an enlarged corner whose local sandwich is read through `site`, without adding an
+Build an enlarged corner whose local sandwich is read through `getsite`, without adding an
 implicit-differentiation keyword to `EnlargedCorner` itself. The sandwich the constructor
 reads is discarded, never contracted, and so never picks up a cotangent.
 """
-function _enlarged_corner(network, env, coordinates; site = getindex)
+function _enlarged_corner(network, env, coordinates; getsite = getindex)
     _, r, c = coordinates
     Q = EnlargedCorner(network, env, coordinates)
-    return EnlargedCorner(Q.C, Q.E_1, Q.E_2, site(network, r, c), Q.dir)
+    return EnlargedCorner(Q.C, Q.E_1, Q.E_2, getsite(network, r, c), Q.dir)
 end
 
 function eachcoordinate(tensor_unitcell::Array{<:AbstractTensorMap, 3})
@@ -427,7 +427,7 @@ function contract_halfinfinite_characteristic_equation(
         iCi::CornerTensors,
         proj_u, proj_v,
         iSfp::CornerTensors;
-        site = getindex,
+        getsite = getindex,
     )
     coordinates = eachcoordinate(n, 1:4)
     nrows, ncols = size(n)
@@ -435,11 +435,11 @@ function contract_halfinfinite_characteristic_equation(
     # precompute rotated local sandwiches, enlarged corners, and projectors
     Or = map(coordinates) do co
         dir, r, c = co
-        return _rotate_north_localsandwich(site(n, r, c), dir)
+        return _rotate_north_localsandwich(getsite(n, r, c), dir)
     end
     envi = CTMRGEnv(iCi, E)
     EC = map(coordinates) do co
-        return TensorMap(_enlarged_corner(n, envi, co; site))
+        return TensorMap(_enlarged_corner(n, envi, co; getsite))
     end
     PR = map(coordinates) do co
         co′ = _proj_sinv_indices(co, nrows, ncols)
@@ -514,7 +514,7 @@ end
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
         Vfp::RightProjectors;
-        site = getindex,
+        getsite = getindex,
     )
 
 Takes the fixed-point values of the inverse singular values `iSfp` and the left and right
@@ -542,7 +542,7 @@ the approach using implicit null space projectors without materializing `U_{L,fp
 ``V_{R,fp}``allows for a more efficient evaluation of the characteristic equations themselves.
 
 
-The local sandwiches are read out of ``n`` through `site`, so a caller can choose whether they
+The local sandwiches are read out of ``n`` through `getsite`, so a caller can choose whether they
 are differentiated at all; see [`PEPSKit.constant_site`](@ref).
 
 ``F`` returns a tuple of five tensor arrays, corresponding to equations for ``C``, ``E``, ``u``, ``S`` and
@@ -552,7 +552,7 @@ function generate_halfinfinite_characteristic_equation(
         iSfp::CornerTensors,
         Ufp::LeftProjectors,
         Vfp::RightProjectors;
-        site = getindex,
+        getsite = getindex,
     )
 
     iSfp = real.(DiagonalTensorMap.(iSfp)) # use as constant preconditioner?
@@ -617,7 +617,7 @@ function generate_halfinfinite_characteristic_equation(
             iCi,
             proj_u, proj_v,
             iSfp;
-            site,
+            getsite,
         )
 
         return F1, F2, F3, F4, F5

@@ -506,7 +506,7 @@ function _rrule(
     # pullback runs once, after the solve, and gets its own tape.
     F_tracked = generate_symmetric_characteristic_equation(C, E, U, UL)
     F_untracked = generate_symmetric_characteristic_equation(
-        C, E, U, UL; site = constant_site
+        C, E, U, UL; getsite = constant_site
     )
     network = InfiniteSquareNetwork(state)
 
@@ -655,7 +655,7 @@ function PEPSKit._rrule(
     # state pullback runs once, after the solve, and gets its own tape.
     F_tracked = generate_halfinfinite_characteristic_equation(is, U, V)
     F_untracked = generate_halfinfinite_characteristic_equation(
-        is, U, V; site = constant_site
+        is, U, V; getsite = constant_site
     )
     network = InfiniteSquareNetwork(state)
 
