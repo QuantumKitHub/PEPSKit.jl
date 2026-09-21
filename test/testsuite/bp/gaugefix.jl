@@ -88,7 +88,7 @@ function bp_gaugefix_bp_vs_su(AT)
         for (X, Xinv) in XXinv
             # X, Xinv should contract to identity
             @tensor tmp[-1; -2] := X[-1; 1] * Xinv[1; -2]
-            @test tmp ≈ twistdual(TensorKit.id(space(X, 1)), 1)
+            @test tmp ≈ twistdual(adapt(AT, TensorKit.id(space(X, 1))), 1)
             # BP should differ from SU only by a unitary gauge transformation
             @test inv(X) ≈ adjoint(X) ≈ Xinv
         end
