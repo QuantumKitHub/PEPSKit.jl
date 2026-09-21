@@ -528,7 +528,7 @@ corner and edge tensors, while ``u`` and ``v`` parametrize differentiable projec
 U_{fp} + P_\\perp^U u`` and ``V = V_{fp} + v P_\\perp^V``, and ``S`` denotes the singular
 values of the decomposed environment. Here ``P_\\perp^U = 1 - U_{fp} U_{fp}^\\dagger`` and
 ``P_\\perp^V = 1 - V_{fp}^\\dagger V_{fp}`` are projectors onto the null spaces of the
-fixed-point isometries. Thefore, while ``u`` and ``v`` formally live in the full projector
+fixed-point isometries. Therefore, while ``u`` and ``v`` formally live in the full projector
 spaces, they only contain contributions along the null spaces as they are subject to
 ``U_{fp}^\\dagger u = 0`` and ``v V_{fp}^\\dagger = 0``.
 
