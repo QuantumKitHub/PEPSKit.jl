@@ -2,7 +2,6 @@ using TensorKit
 using PEPSKit
 using PEPSKit: contract_local_operator, contract_local_norm
 using Test
-using TestExtras
 using TestExtras: @testinferred
 using Adapt
 
