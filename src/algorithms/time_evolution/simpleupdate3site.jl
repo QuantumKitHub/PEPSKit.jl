@@ -1,6 +1,6 @@
 function _fuse_physicalspaces(O::GenericMPSTensor{S, 5}) where {S <: ElementarySpace}
     V1, V2 = codomain(O, 2), codomain(O, 3)
-    F = isomorphism(Int, fuse(V1, V2), V1 ⊗ V2)
+    F = isomorphism(similarstoragetype(O, Int), fuse(V1, V2), V1 ⊗ V2)
     @plansor O_fused[-1 -2 -4 -5; -6] := F[-2; 2 3] * O[-1 2 3 -4 -5; -6]
     return O_fused, F
 end
@@ -8,7 +8,7 @@ end
 function _unfuse_physicalspace(
         O::GenericMPSTensor{S, 4}, Vout::ElementarySpace, Vin::ElementarySpace = Vout'
     ) where {S <: ElementarySpace}
-    F = isomorphism(Int, Vout ⊗ Vin, fuse(Vout ⊗ Vin))
+    F = isomorphism(similarstoragetype(O, Int), Vout ⊗ Vin, fuse(Vout ⊗ Vin))
     @plansor O_unfused[-1 -2 -3 -4 -5; -6] := F[-2 -3; 1] * O[-1 1 -4 -5; -6]
     return O_unfused, F
 end

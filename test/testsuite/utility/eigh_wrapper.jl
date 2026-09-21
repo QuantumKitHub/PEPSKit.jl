@@ -15,7 +15,7 @@ function lossfun(A, alg, R = randn(space(A)), trunc = notrunc())
     return real(dot(R, V * V')) + dot(D, D)  # Overlap with random tensor R is gauge-invariant and differentiable
 end
 
-function utility_eigh_wrapper(AT)
+function utility_eigh_wrapper(AT; default_alg = :QRIteration)
     return @testset "eigh_wrapper ($AT)" begin
         dtype = ComplexF64
         n = 20
@@ -28,8 +28,8 @@ function utility_eigh_wrapper(AT)
         R = adapt(AT, randn(space(r)))
         R = 0.5 * (R + R')
 
-        full_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :FullPullback))
-        trunc_alg = EighAdjoint(; fwd_alg = (; alg = :QRIteration), rrule_alg = (; alg = :TruncPullback))
+        full_alg = EighAdjoint(; fwd_alg = (; alg = default_alg), rrule_alg = (; alg = :FullPullback))
+        trunc_alg = EighAdjoint(; fwd_alg = (; alg = default_alg), rrule_alg = (; alg = :TruncPullback))
         iter_alg = EighAdjoint(; fwd_alg = (; alg = :Lanczos), rrule_alg = (; alg = :TruncPullback))
 
         @testset "Non-truncated eigh" begin

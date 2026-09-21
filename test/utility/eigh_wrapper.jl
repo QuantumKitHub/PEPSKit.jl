@@ -11,7 +11,8 @@ if !is_buildkite
 end
 
 if CUDA.functional()
-    TestSuite.utility_eigh_wrapper(CuArray)
+    # CUSOLVER doesn't provide QRIteration for eigh
+    TestSuite.utility_eigh_wrapper(CuArray; default_alg = :DivideAndConquer)
 end
 
 if AMDGPU.functional()

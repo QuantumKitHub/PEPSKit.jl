@@ -95,6 +95,7 @@ function gradients_asymmetric(AT)
 
             @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
             Random.seed!(42039482030)
+            model = adapt(AT, models[i])
             dir = adapt(AT, InfinitePEPS(Pspace, Vspace))
             psi = adapt(AT, InfinitePEPS(Pspace, Vspace))
             # instantiate to avoid having to type this twice...
@@ -128,7 +129,7 @@ function gradients_asymmetric(AT)
                         concrete_ctmrg_alg;
                         alg_rrule = concrete_gradient_alg,
                     )
-                    return cost_function(psi, env2, models[i])
+                    return cost_function(psi, env2, model)
                 end
 
                 return E, only(g)
