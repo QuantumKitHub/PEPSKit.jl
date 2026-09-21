@@ -70,7 +70,7 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor backend = $backend allocator = $allocator $GL´_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor backend = backend allocator = allocator $GL´_e := $rhs))
 end
 
 @generated function mps_transfer_right(
@@ -95,7 +95,7 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor backend = $backend allocator = $allocator $GR´_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor backend = backend allocator = allocator $GR´_e := $rhs))
 end
 
 @generated function environment_overlap(

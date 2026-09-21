@@ -50,7 +50,7 @@ function boundary_mps_two_two_peps(AT)
         T = PEPSKit.MultilineTransferPEPS(psi, 1)
         @test storagetype(T) <: AT
         # foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T)) # TODO: MPSKit.physicalspace(::MultilineMPO) isn't implemented...
-        mps = initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2))
+        mps = adapt(AT, initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2)))
         @test storagetype(mps) <: AT
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N = abs(prod(expectation_value(mps, T)))
@@ -78,7 +78,7 @@ function boundary_mps_fermionic_peps(AT)
         foreach(V -> (@test V == D ⊗ D'), physicalspace(T))
 
         # compare boundary MPS contraction to CTMRG contraction
-        mps = initialize_mps(T, [χ])
+        mps = adapt(AT, initialize_mps(T, [χ]))
         @test storagetype(mps) <: AT
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N_vumps = abs(prod(expectation_value(mps, T)))
@@ -130,21 +130,25 @@ function boundary_mps_pepo_runthrough(AT)
         # single-layer PEPO
         O = ising_pepo(1)
         psi = adapt(AT, PEPSKit.initializePEPS(O, Vpeps))
-        T = InfiniteTransferPEPO(psi, O, 1, 1)
+        @test storagetype(psi) <: AT
+        T = InfiniteTransferPEPO(psi, adapt(AT, O), 1, 1)
+        @test storagetype(T) <: AT
         foreach(V -> (@test V == Vpeps ⊗ Vpepo ⊗ Vpeps'), physicalspace(T))
 
-        mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(10)])
+        mps = adapt(AT, initialize_mps(rand, scalartype(T), T, [ComplexSpace(10)]))
         @test storagetype(mps) <: AT
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         f = abs(prod(expectation_value(mps, T)))
 
         # double-layer PEPO
         O2 = repeat(O, 1, 1, 2)
-        psi2 = initializePEPS(O2, Vpeps)
+        psi2 = adapt(AT, initializePEPS(O2, Vpeps))
+        @test storagetype(psi2) <: AT
         T2 = InfiniteTransferPEPO(psi, O2, 1, 1)
         foreach(V -> (@test V == Vpeps ⊗ Vpepo ⊗ Vpepo ⊗ Vpeps'), physicalspace(T2))
 
-        mps2 = initialize_mps(rand, scalartype(T2), T2, [ComplexSpace(8)])
+        mps2 = adapt(AT, initialize_mps(rand, scalartype(T2), T2, [ComplexSpace(8)]))
+        @test storagetype(mps2) <: AT
         mps2, env2, ϵ = leading_boundary(mps2, T2, vumps_alg)
         f = abs(prod(expectation_value(mps2, T2)))
     end
