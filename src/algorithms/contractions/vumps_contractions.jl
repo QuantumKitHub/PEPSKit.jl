@@ -4,27 +4,28 @@
 
 function MPSKit.transfer_left(
         GL::GenericMPSTensor{S, N}, O::Union{PEPSSandwich, PEPOSandwich},
-        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N}; kwargs...
     ) where {S, N}
     Ā = twistdual(Ā, 2:N)
-    return mps_transfer_left(GL, O, A, Ā)
+    return mps_transfer_left(GL, O, A, Ā; kwargs...)
 end
 
 function MPSKit.transfer_right(
         GR::GenericMPSTensor{S, N}, O::Union{PEPSSandwich, PEPOSandwich},
-        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N}; kwargs...
     ) where {S, N}
     Ā = twistdual(Ā, 2:N)
-    return mps_transfer_right(GR, O, A, Ā)
+    return mps_transfer_right(GR, O, A, Ā; kwargs...)
 end
 
 ## PEPS
 
 function mps_transfer_left(
         GL::GenericMPSTensor{S, 3}, O::PEPSSandwich,
-        A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3},
+        A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3};
+        backend = DefaultBackend(), allocator = DefaultAllocator()
     ) where {S}
-    return @autoopt @tensor GL′[χ_SE D_E_above D_E_below; χ_NE] :=
+    return @autoopt @tensor backend = backend allocator = allocator GL′[χ_SE D_E_above D_E_below; χ_NE] :=
         GL[χ_SW D_W_above D_W_below; χ_NW] *
         conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
         ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
@@ -34,9 +35,10 @@ end
 
 function mps_transfer_right(
         GR::GenericMPSTensor{S, 3}, O::PEPSSandwich,
-        A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3},
+        A::GenericMPSTensor{S, 3}, Ā::GenericMPSTensor{S, 3};
+        backend = DefaultBackend(), allocator = DefaultAllocator()
     ) where {S}
-    return @autoopt @tensor GR′[χ_NW D_W_above D_W_below; χ_SW] :=
+    return @autoopt @tensor backend = backend allocator = allocator GR′[χ_NW D_W_above D_W_below; χ_SW] :=
         GR[χ_NE D_E_above D_E_below; χ_SE] *
         conj(Ā[χ_SW D_S_above D_S_below; χ_SE]) *
         ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
@@ -48,7 +50,8 @@ end
 
 @generated function mps_transfer_left(
         GL::GenericMPSTensor{S, N}, O::PEPOSandwich{H},
-        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N};
+        backend = DefaultBackend(), allocator = DefaultAllocator()
     ) where {S, N, H}
     # sanity check
     @assert H == N - 3
@@ -67,12 +70,13 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $GL´_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor backend = $backend allocator = $allocator $GL´_e := $rhs))
 end
 
 @generated function mps_transfer_right(
         GR::GenericMPSTensor{S, N}, O::PEPOSandwich{H},
-        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N},
+        A::GenericMPSTensor{S, N}, Ā::GenericMPSTensor{S, N};
+        backend = DefaultBackend(), allocator = DefaultAllocator()
     ) where {S, N, H}
     # sanity check
     @assert H == N - 3
@@ -91,7 +95,7 @@ end
         pepo_es...,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $GR´_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor backend = $backend allocator = $allocator $GR´_e := $rhs))
 end
 
 @generated function environment_overlap(
