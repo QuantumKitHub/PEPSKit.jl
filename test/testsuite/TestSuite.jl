@@ -235,6 +235,7 @@ using .TimeEvolTFIsingFiniteT
 module ToolboxDensityMatrices
     include("toolbox/densitymatrices.jl")
     export toolbox_single_layer_densitymatrix, toolbox_double_layer_densitymatrix
+    export toolbox_densitymatrix_too_many_layers, toolbox_densitymatrix_generic_fallback
 end
 using .ToolboxDensityMatrices
 
