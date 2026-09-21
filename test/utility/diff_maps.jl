@@ -1,7 +1,10 @@
-using ChainRulesTestUtils
-using PEPSKit: dtmap
+using Test
 
-# Can the rrule of dtmap be made inferable? (if check_inferred=true, tests error at the moment)
-@testset "Differentiable tmap" begin
-    test_rrule(dtmap, x -> x^3, randn(5, 5); check_inferred = false)
+@isdefined(TestSuite) || include("../testsuite/TestSuite.jl")
+using .TestSuite
+
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
+
+if !is_buildkite
+    TestSuite.utility_diff_maps(Vector)
 end
