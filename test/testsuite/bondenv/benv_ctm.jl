@@ -13,7 +13,7 @@ trunc_state = truncerror(; atol = 1.0e-10) & truncrank(4)
 ctm_alg = SequentialCTMRG(; tol = 1.0e-10, verbosity = 2, trunc = truncerror(; atol = 1.0e-10) & truncrank(8))
 # create Hubbard iPEPS using simple update
 function get_hubbard_peps(AT, t::Float64 = 1.0, U::Float64 = 8.0)
-    H = hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu = U / 2)
+    H = adapt(AT, hubbard_model(ComplexF64, Trivial, U1Irrep, InfiniteSquare(Nr, Nc); t, U, mu = U / 2))
     Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 1)
     peps = adapt(AT, InfinitePEPS(rand, ComplexF64, Vphy, Vphy; unitcell = (Nr, Nc)))
     wts = SUWeight(peps)
