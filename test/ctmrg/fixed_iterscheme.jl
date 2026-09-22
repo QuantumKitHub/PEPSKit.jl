@@ -13,7 +13,7 @@ end
 
 if CUDA.functional()
     TestSuite.ctmrg_fixed_iterscheme_asymmetric(CuArray; svd_alg = :QRIteration)
-    # CUSOLVER doesn't provide heev 
+    # CUSOLVER doesn't provide heev
     TestSuite.ctmrg_fixed_iterscheme_c4v(CuArray; eigh_alg = :DivideAndConquer)
     # CUSOLVER doesn't provide gesdd
     #TestSuite.ctmrg_fixed_iterscheme_divide_and_conquer(CuArray)
