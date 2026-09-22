@@ -14,7 +14,8 @@ end
 if CUDA.functional()
     TestSuite.ctmrg_flavors_unitcells(CuArray)
     TestSuite.ctmrg_flavors_fixedspace_truncation(CuArray)
-    TestSuite.ctmrg_flavors_c4v(CuArray)
+    # CUSOLVER doesn't provide heev
+    TestSuite.ctmrg_flavors_c4v(CuArray; eigh_alg = :DivideAndConquer)
 end
 
 if AMDGPU.functional()
