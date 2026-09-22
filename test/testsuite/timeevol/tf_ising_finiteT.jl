@@ -19,11 +19,11 @@ function converge_env(state, χ::Int)
     return env
 end
 
-function measure_mag(pepo::InfinitePEPO, env::CTMRGEnv; purified::Bool = false)
+function measure_mag(AT, pepo::InfinitePEPO, env::CTMRGEnv; purified::Bool = false)
     r, c = 1, 1
     lattice = physicalspace(pepo)
-    Mx = LocalOperator(lattice, ((r, c),) => σˣ(Float64, Trivial))
-    Mz = LocalOperator(lattice, ((r, c),) => σᶻ(Float64, Trivial))
+    Mx = LocalOperator(lattice, ((r, c),) => adapt(AT, σˣ(Float64, Trivial)))
+    Mz = LocalOperator(lattice, ((r, c),) => adapt(AT, σᶻ(Float64, Trivial)))
     if purified
         magx = expectation_value(pepo, Mx, pepo, env)
         magz = expectation_value(pepo, Mz, pepo, env)
@@ -61,7 +61,7 @@ function timeevol_ising_finiteT(AT)
         pepo, = gauge_fix(pepo, BPGauge(), bp_env)
 
         env = converge_env(InfinitePartitionFunction(pepo), 16)
-        result_β = measure_mag(pepo, env)
+        result_β = measure_mag(AT, pepo, env)
         @info "tr(σ(x,z)ρ) at T = $(1 / β): $(result_β)."
         @test β ≈ info.t
         @test isapprox(abs.(result_β), bm_β, rtol = 1.0e-2)
@@ -70,7 +70,7 @@ function timeevol_ising_finiteT(AT)
         pepo2, = compress((pepo, pepo), LocalTruncation(trunc_pepo))
         normalize!.(pepo2.A)
         env2 = converge_env(InfinitePartitionFunction(pepo2), 16)
-        result_2β = measure_mag(pepo2, env2)
+        result_2β = measure_mag(AT, pepo2, env2)
         @info "tr(σ(x,z)ρ) at T = $(1 / (2β)): $(result_2β)."
         @test isapprox(abs.(result_2β), bm_2β, rtol = 5.0e-3)
 
@@ -78,7 +78,7 @@ function timeevol_ising_finiteT(AT)
         alg = SimpleUpdate(; trunc = trunc_pepo, purified = true, bipartite, force_mpo)
         pepo, wts, info = time_evolve(pepo0, ham, dt, 2 * nstep, alg, wts0; symmetrize_gates)
         env = converge_env(InfinitePEPS(pepo), 8)
-        result_2β′ = measure_mag(pepo, env; purified = true)
+        result_2β′ = measure_mag(AT, pepo, env; purified = true)
         @info "⟨ρ|σ(x,z)|ρ⟩ at T = $(1 / (2β)): $(result_2β′)."
         @test 2 * β ≈ info.t
         @test isapprox(abs.(result_2β′), bm_2β, rtol = 1.0e-2)
