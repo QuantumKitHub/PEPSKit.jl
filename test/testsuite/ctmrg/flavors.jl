@@ -11,10 +11,6 @@ D = 2
 χ = 16
 unitcells = [(1, 1), (3, 4)]
 projector_algs_asymm = [:HalfInfiniteProjector, :FullInfiniteProjector]
-projector_algs_c4v = [
-    (:C4vQRProjector, :Householder),
-    (:C4vEighProjector, :QRIteration), (:C4vEighProjector, :Lanczos),
-]
 Ts = [Float64, ComplexF64]
 
 function ctmrg_flavors_unitcells(AT)
@@ -70,7 +66,11 @@ function ctmrg_flavors_fixedspace_truncation(AT)
     end
 end
 
-function ctmrg_flavors_c4v(AT)
+function ctmrg_flavors_c4v(AT; eigh_alg = :QRIteration)
+    projector_algs_c4v = [
+        (:C4vQRProjector, :Householder),
+        (:C4vEighProjector, eigh_alg), (:C4vEighProjector, :Lanczos),
+    ]
     return @testset "C4v with ($T) - ($projector_alg, $decomp_alg) ($AT)" for (T, (projector_alg, decomp_alg)) in
         Iterators.product(Ts, projector_algs_c4v)
 
