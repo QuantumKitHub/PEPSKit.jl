@@ -89,6 +89,7 @@ function gradients_c4v(AT)
             Random.seed!(sd)
             dir = adapt(AT, InfinitePEPS(Pspace, Vspace))
             psi = adapt(AT, InfinitePEPS(Pspace, Vspace))
+            model = adapt(AT, models[i])
             symmetrize!(psi, symmetry)
             symmetrize!(dir, symmetry)
             # instantiate to avoid having to type this twice...
@@ -123,7 +124,7 @@ function gradients_c4v(AT)
                         contrete_ctmrg_alg;
                         alg_rrule = concrete_gradient_alg,
                     )
-                    return cost_function(psi, env2, models[i])
+                    return cost_function(psi, env2, model)
                 end
                 g = only(g)
                 symmetrize!(g, symmetry)
