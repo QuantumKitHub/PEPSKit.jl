@@ -136,6 +136,7 @@ function leading_boundary(
             env, info_iter = with_alloc_cache(storagetype(env), :ctmrg, iter, alloc_cache_depth(alg)) do
                 ctmrg_iteration(network, env, alg)
             end
+            env = uncache(env, storagetype(env))
             η, CS, TS = calc_convergence(env, CS, TS, alg)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
