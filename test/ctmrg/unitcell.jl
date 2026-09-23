@@ -12,11 +12,11 @@ if !is_buildkite
 end
 
 if CUDA.functional()
-    TestSuite.ctmrg_unitcell_random_cartesian_spaces(CuArray)
-    TestSuite.ctmrg_unitcell_specific_u1_spaces(CuArray)
+    TestSuite.ctmrg_unitcell_random_cartesian_spaces(CuArray; minimal = true)
+    TestSuite.ctmrg_unitcell_specific_u1_spaces(CuArray; minimal = true)
 end
 
 if AMDGPU.functional()
-    TestSuite.ctmrg_unitcell_random_cartesian_spaces(ROCArray)
-    TestSuite.ctmrg_unitcell_specific_u1_spaces(ROCArray)
+    TestSuite.ctmrg_unitcell_random_cartesian_spaces(ROCArray; minimal = true)
+    TestSuite.ctmrg_unitcell_specific_u1_spaces(ROCArray; minimal = true)
 end

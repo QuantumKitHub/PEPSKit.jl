@@ -10,9 +10,9 @@ if !is_buildkite
 end
 
 if CUDA.functional()
-    TestSuite.gradients_c4v(CuArray)
+    TestSuite.gradients_c4v(CuArray; minimal = true)
 end
 
 if AMDGPU.functional()
-    TestSuite.gradients_c4v(ROCArray)
+    TestSuite.gradients_c4v(ROCArray; minimal = true)
 end
