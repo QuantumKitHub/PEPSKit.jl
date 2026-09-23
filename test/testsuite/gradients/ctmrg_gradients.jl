@@ -29,6 +29,23 @@ gradient_solver_algs = [
 ]
 steps = -0.01:0.005:0.01
 
+# minimal subset of (ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_solver_alg)
+# combinations which still covers every option value at least once per model
+minimal_combinations = [
+    [
+        (:SimultaneousCTMRG, :HalfInfiniteProjector, :FullPullback, nothing, nothing),
+        (:SimultaneousCTMRG, :HalfInfiniteProjector, :FullPullback, :ImplicitGradient, :GMRES),
+        (:SequentialCTMRG, :FullInfiniteProjector, :TruncPullback, :FixedPointGradient, :GeomSum),
+        (:SimultaneousCTMRG, :FullInfiniteProjector, :Arnoldi, :FixedPointGradient, :ManualIter),
+        (:SequentialCTMRG, :HalfInfiniteProjector, :FullPullback, :FixedPointGradient, :BiCGStab),
+        (:SimultaneousCTMRG, :HalfInfiniteProjector, :Arnoldi, :FixedPointGradient, :Arnoldi),
+    ],
+    [
+        (:SimultaneousCTMRG, :HalfInfiniteProjector, :FullPullback, :ImplicitGradient, :GMRES),
+        (:SequentialCTMRG, :FullInfiniteProjector, :Arnoldi, :FixedPointGradient, :GeomSum),
+    ],
+]
+
 # don't check naive AD gradients for all algorithm combinations, since it's slow
 naive_gradient_combinations = [
     (:SimultaneousCTMRG, :HalfInfiniteProjector, :FullPullback),
@@ -46,7 +63,7 @@ function _check_disallowed_combination(
     return false
 end
 
-function gradients_asymmetric(AT)
+function gradients_asymmetric(AT; minimal::Bool = false)
     naive_gradient_done = Set()
     return @testset "AD CTMRG energy gradients for $(names[i]) model ($AT)" verbose = true for i in
         eachindex(
@@ -62,8 +79,9 @@ function gradients_asymmetric(AT)
         gsalgs = gradient_solver_algs[i]
         @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg))" for (
                 ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_solver_alg,
-            ) in Iterators.product(
-                calgs, palgs, salgs, galgs, gsalgs
+            ) in (
+                minimal ? minimal_combinations[i] :
+                    Iterators.product(calgs, palgs, salgs, galgs, gsalgs)
             )
 
             # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
