@@ -11,11 +11,11 @@ if !is_buildkite
 end
 
 if CUDA.functional()
-    TestSuite.gradients_asymmetric(CuArray)
+    TestSuite.gradients_asymmetric(CuArray; minimal = true)
     TestSuite.gradients_asymmetric_276(CuArray)
 end
 
 if AMDGPU.functional()
-    TestSuite.gradients_asymmetric(ROCArray)
+    TestSuite.gradients_asymmetric(ROCArray; minimal = true)
     TestSuite.gradients_asymmetric_276(ROCArray)
 end

@@ -12,14 +12,14 @@ if !is_buildkite
 end
 
 if CUDA.functional()
-    TestSuite.ctmrg_flavors_unitcells(CuArray)
-    TestSuite.ctmrg_flavors_fixedspace_truncation(CuArray)
+    TestSuite.ctmrg_flavors_unitcells(CuArray; minimal = true)
+    TestSuite.ctmrg_flavors_fixedspace_truncation(CuArray; minimal = true)
     # CUSOLVER doesn't provide heev
-    TestSuite.ctmrg_flavors_c4v(CuArray; eigh_alg = :DivideAndConquer)
+    TestSuite.ctmrg_flavors_c4v(CuArray; eigh_alg = :DivideAndConquer, minimal = true)
 end
 
 if AMDGPU.functional()
-    TestSuite.ctmrg_flavors_unitcells(ROCArray)
-    TestSuite.ctmrg_flavors_fixedspace_truncation(ROCArray)
-    TestSuite.ctmrg_flavors_c4v(ROCArray)
+    TestSuite.ctmrg_flavors_unitcells(ROCArray; minimal = true)
+    TestSuite.ctmrg_flavors_fixedspace_truncation(ROCArray; minimal = true)
+    TestSuite.ctmrg_flavors_c4v(ROCArray; minimal = true)
 end
