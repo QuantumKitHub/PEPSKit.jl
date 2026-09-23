@@ -22,6 +22,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- `TensorKit.storagetype` for `InfinitePEPS`, `InfinitePEPO`, `InfinitePartitionFunction`, `InfiniteSquareNetwork` and `CTMRGEnv` (#429)
+
 ### Changed
 
 ### Deprecated

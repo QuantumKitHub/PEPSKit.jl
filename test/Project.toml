@@ -2,6 +2,7 @@ name = "PEPSKitTests"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
@@ -26,6 +27,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 PEPSKit = {path = ".."}
 
 [compat]
+Adapt = "4"
 ChainRulesTestUtils = "1.13"
 ParallelTestRunner = "2.6.0"
 QuadGK = "2.11.1"
