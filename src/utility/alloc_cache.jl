@@ -15,11 +15,19 @@ only the ones with repeated iterations.
 
 Belief propagation seems to not benefit from the caching as much, so it's currently unused there.
 
-`iter` selects between two alternating caches per `caller`. A buffer allocated during iteration
-`i` can't become reusable until later iterations have completely used and discarded its output.
-For `:SimultaneousCTMRG` and simple update, that occurs after 2 iterations, while for `:SequentialCTMRG`,
-it occurs after 5. With too few caches, it would be possible to overwrite the state
-at later iterations while it's still being used.
+`iter` selects between `depth` alternating caches per `caller`. A buffer allocated during
+iteration `i` can't become reusable until later iterations have completely used and discarded
+its output, so with too few caches it would be possible to overwrite state that is still in
+use. A caller that copies its result out with [`uncache`](@ref) before the next iteration
+begins needs only a single cache; simple update keeps 2, since it hands its result off after
+the following step.
+
+!!! note
+    Buffers are only returned to the cache when the enclosing block exits, so a single
+    block retains *everything* it allocated rather than just its maximum live block.
+    Keeping more caches in the rotation multiplies this effect, which matters for
+    algorithms like (esp. sequential) CTMRG whose iterations allocate many
+    short-lived temporaries.
 
 Caching is skipped while `Zygote.jl` is differentiating, because the reverse-mode tape holds references
 to intermediates, and recycling those could silently corrupt gradients.
@@ -53,10 +61,9 @@ _uncache(x, ::Type) = x
 """
     alloc_cache_depth(alg)
 
-How many iterations a buffer must go unused before it may be recycled.
-For SimultaneousCTMRG and SU, 2 is enough, but not necessarily for other algorithms.
+How many iterations a buffer must go unused for before it may be recycled.
 """
-alloc_cache_depth(alg) = 2
+alloc_cache_depth(alg) = 1
 _with_alloc_cache(f, ::Type, ::Symbol, ::Int, ::Int) = f()
 
 """
