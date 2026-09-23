@@ -25,6 +25,12 @@ module BondEnvCTM
 end
 using .BondEnvCTM
 
+module BondEnvNTU
+    include("bondenv/benv_ntu.jl")
+    export bondenv_ntu
+end
+using .BondEnvNTU
+
 module BondEnvGaugeFix
     include("bondenv/benv_gaugefix.jl")
     export bondenv_gaugefix
