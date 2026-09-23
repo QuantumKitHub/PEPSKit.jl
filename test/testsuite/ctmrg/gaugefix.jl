@@ -89,8 +89,8 @@ function ctmrg_gaugefix_asymmetric(AT; minimal::Bool = false)
         ) in (
             minimal ? minimal_combinations_asymm :
                 Iterators.product(
-                spacetypes, scalartypes, unitcells, ctmrg_algs_asymm, projector_algs_asymm, gauge_algs_asymm
-            )
+                    spacetypes, scalartypes, unitcells, ctmrg_algs_asymm, projector_algs_asymm, gauge_algs_asymm
+                )
         )
         alg = ctmrg_alg(; tol, projector_alg)
         env_pre, psi = _preconverged_env(S, T, unitcell)
