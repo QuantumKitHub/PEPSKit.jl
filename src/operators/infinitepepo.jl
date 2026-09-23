@@ -78,8 +78,8 @@ function InfinitePEPO(
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
     Pspaces = reshape(Pspaces, (size(Pspaces)..., 1))
-    Nspaces = reshape(Pspaces, (size(Nspaces)..., 1))
-    Espaces = reshape(Pspaces, (size(Espaces)..., 1))
+    Nspaces = reshape(Nspaces, (size(Nspaces)..., 1))
+    Espaces = reshape(Espaces, (size(Espaces)..., 1))
     return InfinitePEPO(f, T, Pspaces, Nspaces, Espaces)
 end
 
