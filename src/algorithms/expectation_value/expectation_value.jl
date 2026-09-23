@@ -54,6 +54,22 @@ function local_expectation_value(inds, state, operator::AbstractTensorMap, env)
     return trmul(operator, ρ)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the contribution of an [`MPOTerm`](@ref) - and hence also of a
+[`TensorProductTerm`](@ref) - given as one tensor per site
+in `inds`, to the expectation value ⟨bra|O|ket⟩ / ⟨bra|ket⟩.
+
+Rather than forming the dense operator and tracing it against a reduced density matrix, the
+factors are inserted into the patch contraction directly, and the result is divided by the
+local norm of the same patch.
+"""
+function local_expectation_value(inds, bra, operator::MPOTerm, ket, env)
+    return contract_local_operator(inds, operator, ket, bra, env) /
+        contract_local_norm(inds, ket, bra, env)
+end
+
 # Expectation value of a local partition function tensor
 # ------------------------------------------------------
 
