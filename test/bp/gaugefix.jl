@@ -14,5 +14,7 @@ if CUDA.functional()
 end
 
 if AMDGPU.functional()
-    TestSuite.bp_gaugefix_bp_vs_su(ROCArray)
+    # rocSOLVER doesn't offer a general eigensolver yet,
+    # only Hermitian
+    TestSuite.bp_gaugefix_bp_vs_su(ROCArray; posdef_msgs = [true])
 end
