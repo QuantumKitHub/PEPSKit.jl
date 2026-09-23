@@ -20,10 +20,12 @@ function timeevol_j1j2_finiteT(AT)
     bm = [-0.08624893, -0.15688984, -0.21300888]
 
     Nr, Nc = 2, 2
-    ham = adapt(AT, j1_j2_model(
-        Float64, SU2Irrep, InfiniteSquare(Nr, Nc);
-        J1 = 1.0, J2 = 0.5, sublattice = false
-    ))
+    ham = adapt(
+        AT, j1_j2_model(
+            Float64, SU2Irrep, InfiniteSquare(Nr, Nc);
+            J1 = 1.0, J2 = 0.5, sublattice = false
+        )
+    )
     pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
     wts0 = SUWeight(pepo0)
     dt, nstep, check_interval = 5.0e-3, 40, 40
