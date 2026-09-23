@@ -9,7 +9,7 @@ using PEPSKit: _next, _is_bipartite
 function bp_gaugefix_bp_vs_su(AT; posdef_msgs = [true, false])
     return @testset "BP vs SU ($AT) ($S, bipartite = $(bipartite), posdef msgs = $h)" for
         (S, bipartite, h) in Iterators.product(
-            [U1Irrep, FermionParity], [true, false], posdef_msgs 
+            [U1Irrep, FermionParity], [true, false], posdef_msgs
         )
         unitcell = bipartite ? (2, 2) : (2, 3)
         elt = ComplexF64
