@@ -81,8 +81,8 @@ function select_algorithm(
         boundary_alg = _dynamic_tol_or_alg(boundary_alg; dynamic_tol_kwargs...)
     end
 
-    # C4vCTMRG-specific defaults
-    if parent_alg(boundary_alg) isa C4vCTMRG
+    # defaults specific to fully symmetric contraction algorithms
+    if parent_alg(boundary_alg) isa Union{C4vCTMRG, SymmetricBoundaryMPS}
         # symmetrize state and gradient
         if isnothing(symmetrization)
             symmetrization = RotateReflect()
@@ -130,6 +130,16 @@ function select_algorithm(
         boundary_alg, gradient_alg, optimizer_alg, precondition_alg,
         symmetrization, kwargs...,
     )
+end
+
+function select_algorithm(
+        ::typeof(leading_boundary), ::SymmetricBoundaryMPSEnv;
+        tol = Defaults.ctmrg_tol,
+        maxiter = Defaults.ctmrg_maxiter,
+        verbosity = Defaults.ctmrg_verbosity,
+        mps_alg = (;),
+    )
+    return SymmetricBoundaryMPS(; tol, maxiter, verbosity, mps_alg)
 end
 
 function select_algorithm(

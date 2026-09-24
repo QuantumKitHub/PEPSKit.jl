@@ -194,6 +194,21 @@ function _check_algorithm_combination(::C4vCTMRG, symm::Union{Nothing, <:Symmetr
     end
     return nothing
 end
+function _check_algorithm_combination(
+        ::SymmetricBoundaryMPS, symm::Union{Nothing, <:SymmetrizationStyle}
+    )
+    if !(symm isa RotateReflect)
+        msg = "SymmetricBoundaryMPS optimization is compatible only with combined Hermitian reflection and rotation symmetrization. \
+            Make sure to set `symmetrization = RotateReflect()` or implement an equivalent custom symmetrization scheme."
+        @warn msg
+    end
+    return nothing
+end
+function _check_algorithm_combination(::SymmetricBoundaryMPS, ::FixedPointGradient)
+    msg = "The `:FixedPointGradient` algorithm is not implemented for `SymmetricBoundaryMPS`; \
+          select `:ImplicitGradient` instead"
+    throw(ArgumentError(msg))
+end
 
 #=
 Evaluating the gradient of the cost function for CTMRG:
@@ -683,4 +698,88 @@ function PEPSKit._rrule(
     end
 
     return (env, info), leading_boundary_characteristic_pullback
+end
+
+
+## Symmetric boundary MPS gradient through implicit differentiation
+
+# extract a cotangent from an environment `Tangent`, filling in explicit zeros where needed
+_env_cotangent(Δ, t) = Δ isa AbstractZero ? zerovector(t) : unthunk(Δ)
+
+"""
+    _rrule(
+        gradmode::ImplicitGradient,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        env₀::SymmetricBoundaryMPSEnv,
+        state,
+        alg::SymmetricBoundaryMPS,
+    )
+
+Reverse rule for a boundary MPS contraction of a network with a single-site unit cell which
+is invariant under rotations and Hermitian reflections. Uses an implicit differentiation
+approach based on the algebraic characteristic equations which characterize convergence of
+the contraction algorithm.
+
+See [`generate_boundary_mps_characteristic_equation`](@ref).
+"""
+function _rrule(
+        gradmode::ImplicitGradient,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        env₀::SymmetricBoundaryMPSEnv,
+        state,
+        alg::SymmetricBoundaryMPS,
+    )
+    # the forward computation can be used as is
+    env, info = MPSKit.leading_boundary(env₀, state, alg)
+    AL, AR, C, GL, GR = _unpack(env)
+
+    # null spaces of the left- and right-gauged MPS tensors
+    VL = left_null(AL)
+    VR = right_null(repartition_right(AR))
+
+    # instantiate the differentiable variables parametrizing the MPS tensors
+    l = zeros(scalartype(AL), space(VL, numind(VL))' ← space(AL, numind(AL))')
+    r = zeros(scalartype(AR), space(AR, 1) ← space(VR, 1))
+
+    # initialize the characteristic equations and check that they are actually satisfied
+    F = generate_boundary_mps_characteristic_equation(env, (VL, VR))
+    F_norms = norm.(F(state, l, r, C, GL, GR))
+    # the equations for `l` and `r` are the only ones containing an inverse bond tensor, so
+    # their residuals are amplified by its condition number; scale their tolerances to match
+    amplification = norm(sdiag_pow(real(DiagonalTensorMap(C)), -1), Inf)
+    F_tols = (1.0e2 * _tol(alg)) .* (amplification, amplification, 1, 1, 1)
+    any(F_norms .> F_tols) && @warn(
+        "Characteristic equations not satisfied, still using the gradient: $F_norms"
+    )
+
+    # get the partial pullbacks of the characteristic equations
+    _, F_vjp = rrule_via_ad(config, F, state, l, r, C, GL, GR)
+    vjp_env(x) = F_vjp(x)[3:end] # MPS tensor, bond tensor and environment pullback
+    vjp_state(x) = F_vjp(x)[2] # state pullback
+
+    function leading_boundary_implicit_pullback((_Δenv, _Δinfo))
+        Δenv = unthunk(_Δenv)
+        Δenv isa AbstractZero && return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+
+        # extract the environment cotangents and map them onto the parametrization
+        ΔAL = _env_cotangent(Δenv.AL, AL)
+        ΔAR = _env_cotangent(Δenv.AR, AR)
+        Δc = _env_cotangent(Δenv.C, C)
+        Δgl = _env_cotangent(Δenv.GL, GL)
+        Δgr = _env_cotangent(Δenv.GR, GR)
+        Δl = VL' * ΔAL
+        Δr = repartition_right(ΔAR) * VR'
+
+        # collect cotangents of the characteristic equations
+        Δy = (Δl, Δr, Δc, Δgl, Δgr)
+
+        # evaluate the implicit gradient
+        Δstate = implicit_gradient(Δy, vjp_env, vjp_state, Δy, gradmode.solver_alg)
+
+        return NoTangent(), ZeroTangent(), Δstate, NoTangent()
+    end
+
+    return (env, info), leading_boundary_implicit_pullback
 end
