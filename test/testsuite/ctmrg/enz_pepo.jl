@@ -1,9 +1,12 @@
 using Test
+using Random
+using LinearAlgebra
 using PEPSKit
 using TensorKit
 using KrylovKit
 using OptimKit
 using Enzyme
+using Adapt
 
 # Enzyme names basic blocks after Julia types (e.g. `zeroType.<T>`); the tape types
 # here exceed LLVM's default 1024-char cap on non-global value names, which its
