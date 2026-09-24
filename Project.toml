@@ -63,3 +63,4 @@ julia = "1.10"
 [sources]
 Enzyme = {url = "https://github.com/EnzymeAD/Enzyme.jl", rev = "vc/rule-overwritten-roots"}
 TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "ksh/diagctor"}
+MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev = "main"}
