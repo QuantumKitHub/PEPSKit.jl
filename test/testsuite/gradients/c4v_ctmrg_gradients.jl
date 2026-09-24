@@ -29,6 +29,19 @@ gradient_algs = [[nothing, :FixedPointGradient, :ImplicitGradient]]
 gradient_solver_algs = [[:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi]]
 steps = -0.01:0.005:0.01
 
+# minimal subset of (ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_solver_alg)
+# combinations which still covers every option value at least once per model
+minimal_combinations = [
+    [
+        (:C4vCTMRG, :C4vEighProjector, :FullPullback, nothing, nothing),
+        (:C4vCTMRG, :C4vQRProjector, :FullPullback, :ImplicitGradient, :GMRES),
+        (:C4vCTMRG, :C4vEighProjector, :TruncPullback, :FixedPointGradient, :GeomSum),
+        (:C4vCTMRG, :C4vQRProjector, :FullPullback, :FixedPointGradient, :ManualIter),
+        (:C4vCTMRG, :C4vEighProjector, :TruncPullback, :FixedPointGradient, :BiCGStab),
+        (:C4vCTMRG, :C4vQRProjector, :FullPullback, :FixedPointGradient, :Arnoldi),
+    ],
+]
+
 # record which rrule alg is compatible with which projector alg
 allowed_rrule_algs = Dict(
     :C4vEighProjector => keys(PEPSKit.EIGH_RRULE_SYMBOLS),
@@ -38,7 +51,7 @@ allowed_rrule_algs = Dict(
 # be selective on which configurations to test the naive gradient for
 naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :FullPullback), (:C4vCTMRG, :C4vQRProjector, :FullPullback)]
 
-function gradients_c4v(AT)
+function gradients_c4v(AT; minimal::Bool = false)
     naive_gradient_done = Set()
     return @testset "AD C4v CTMRG energy gradients for $(names[i]) model ($AT)" verbose = true for i in
         eachindex(
@@ -54,8 +67,9 @@ function gradients_c4v(AT)
         gsalgs = gradient_solver_algs[i]
         @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=(alg = :$gradient_alg, solver_alg = :$gradient_solver_alg)" for (
                 ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_solver_alg,
-            ) in Iterators.product(
-                calgs, palgs, dalgs, galgs, gsalgs
+            ) in (
+                minimal ? minimal_combinations[i] :
+                    Iterators.product(calgs, palgs, dalgs, galgs, gsalgs)
             )
 
             # check for allowed algorithm combinations when testing naive gradient
@@ -89,6 +103,7 @@ function gradients_c4v(AT)
             Random.seed!(sd)
             dir = adapt(AT, InfinitePEPS(Pspace, Vspace))
             psi = adapt(AT, InfinitePEPS(Pspace, Vspace))
+            model = adapt(AT, models[i])
             symmetrize!(psi, symmetry)
             symmetrize!(dir, symmetry)
             # instantiate to avoid having to type this twice...
@@ -123,7 +138,7 @@ function gradients_c4v(AT)
                         contrete_ctmrg_alg;
                         alg_rrule = concrete_gradient_alg,
                     )
-                    return cost_function(psi, env2, models[i])
+                    return cost_function(psi, env2, model)
                 end
                 g = only(g)
                 symmetrize!(g, symmetry)

@@ -61,7 +61,7 @@ end
 
 """
     CTMRGEnv(
-        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
+    [f=randn, T=ComplexF64, TA=Matrix{ComplexF64},] Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
     ) where {A<:AbstractMatrix{<:VectorSpace}, B<:AbstractMatrix{<:ElementarySpace}}
 
 Construct a CTMRG environment by specifying matrices of north and east virtual spaces of the
@@ -82,10 +82,11 @@ of a partition function defined in terms of local rank-4 tensors) or a `ProductS
 for the case of a network representing overlaps of PEPSs and PEPOs).
 """
 function CTMRGEnv(
-        f, T, Ds_north::A, Ds_east::A, chis_north::B, chis_east::B = chis_north,
+        f, ::Type{T}, Ds_north::A, Ds_east::A, chis_north::B, chis_east::B = chis_north,
         chis_south::B = chis_north, chis_west::B = chis_north,
     ) where {
         A <: AbstractMatrix{<:ProductSpace}, B <: AbstractMatrix{<:ElementarySpace},
+        T,
     }
     # check all of the sizes
     size(Ds_north) == size(Ds_east) == size(chis_north) == size(chis_east) ==
@@ -100,7 +101,6 @@ function CTMRGEnv(
     st = spacetype(first(Ds_north))
     C_type = tensormaptype(st, 1, 1, T)
     T_type = tensormaptype(st, N + 1, 1, T)
-
     # First index is direction
     corners = Array{C_type}(undef, 4, size(Ds_north)...)
     edges = Array{T_type}(undef, 4, size(Ds_north)...)
@@ -178,9 +178,9 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-        f, T,
+        f, ::Type{T},
         D_north::S, D_east::S, virtual_spaces...; unitcell::Tuple{Int, Int} = (1, 1),
-    ) where {S <: VectorSpace}
+    ) where {S <: VectorSpace, T}
     return CTMRGEnv(
         f, T,
         _fill_edge_physical_spaces(D_north, D_east; unitcell)...,
@@ -215,25 +215,30 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 `chis_south[r, c]` corresponds to the east space of the south edge tensor, and
 `chis_west[r, c]` corresponds to the north space of the west edge tensor.
 """
-function CTMRGEnv(f, T, network::InfiniteSquareNetwork, virtual_spaces...)
+function CTMRGEnv(f, ::Type{T}, network::N, virtual_spaces...) where {T, N <: InfiniteSquareNetwork}
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
     virtual_spaces = _fill_environment_virtual_spaces(virtual_spaces...; unitcell = size(network))
-    return CTMRGEnv(f, T, Ds_north, Ds_east, virtual_spaces...)
+    return CTMRGEnv(f, similarstoragetype(storagetype(network), eltype(T)), Ds_north, Ds_east, virtual_spaces...)
 end
-function CTMRGEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS}, virtual_spaces...)
-    return CTMRGEnv(randn, scalartype(network), network, virtual_spaces...)
+function CTMRGEnv(network::InfiniteSquareNetwork{O}, virtual_spaces...) where {O}
+    return CTMRGEnv(randn, storagetype(O), network, virtual_spaces...)
+end
+function CTMRGEnv(network::Union{<:InfinitePartitionFunction{T}, <:InfinitePEPS{T}}, virtual_spaces...) where {T}
+    return CTMRGEnv(randn, storagetype(T), network, virtual_spaces...)
 end
 
 # allow constructing environments for implicitly defined contractible networks
-function CTMRGEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
-    return CTMRGEnv(f, T, InfiniteSquareNetwork(state), args...)
+function CTMRGEnv(f, ::Type{T}, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...) where {T}
+    return CTMRGEnv(f, similarstoragetype(eltype(state), eltype(T)), InfiniteSquareNetwork(state), args...)
 end
 
 # copy-like constructor
 CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
 
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
+
+TensorKit.storagetype(::Type{CTMRGEnv{C, E}}) where {C, E} = storagetype(C) == storagetype(E) ? storagetype(C) : promote_type(storagetype(C), storagetype(E))
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(
@@ -249,17 +254,18 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     if name === :corners
         function corner_pullback(Δcorners_)
             Δcorners = unthunk(Δcorners_)
-            return NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
+            zvs = CTMRGEnv(Δcorners, zerovector.(e.edges))
+            return NoTangent(), zvs, NoTangent()
         end
         return result, corner_pullback
     elseif name === :edges
         function edge_pullback(Δedges_)
             Δedges = unthunk(Δedges_)
-            return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
+            zvs = CTMRGEnv(zerovector.(e.corners), Δedges)
+            return NoTangent(), zvs, NoTangent()
         end
         return result, edge_pullback
-    else
-        # this should never happen because already errored in forwards pass
+    else # this should never happen because already errored in forwards pass
         throw(ArgumentError("No rrule for getproperty of $name"))
     end
 end

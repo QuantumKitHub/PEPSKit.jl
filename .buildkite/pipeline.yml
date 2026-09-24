@@ -1,59 +1,37 @@
 env:
-  SECRET_CODECOV_TOKEN: "MH6hHjQi7vG2V1Yfotv5/z5Dkx1k5SdyGYlGTFXiQr22XksJgsXaBuvFKUrjC7JwcpBsOVU8103LuMKl3m7VJ35WzHZrOssYycVbdGcb2kloc6xvUOsN2R5BrhCQ4Pii0l6ZeVRjCnZVkcmb0Rf4glGFyfibCrqniry8RLhblsuFKFsijRK4OxiWYEs1IvUulN+ER8tEsEtw4+ZqC5nbLGMSnUG/saPkDQOVIBscvikbKEnBcCXBheGPktF+Y/cy/1Xa+FiBPoZcypwTeAjKG1g0MqyHXjaYekb/7fekaj+hukGaeJSCXxY8KEb2IZCh+Y36Tp6y6qsIp/AdtEnCpQ==;U2FsdGVkX18WQxvGLspPwzC4aDe+U7TXU+itebTbgh8LUkE6GukxxReHYiDZ6IrBiVvSGTVJMquW0c8KsOI1pw=="
+  SECRET_CODECOV_TOKEN: "yXWVfuSYtwx4ksmqquaMEj0TWi42b1QZxPEwJccOBQ0fSZqNdkqGS/Z2fZ4bEPOoUGEzFPlqn75ZVe9nwf4XlbZCN0mPyYcA3DQiqAwO+9SskfwolCYBfI2RsBsVlZy7YXDHRH5KTGvelU0/fuuCt/DAk2j+Xk9HOZr4kx5RxEG1dKvBzUGB8q5phgJjvm0DUQ3w12iJMVeQVWU02P6dmrDPdiUJzoTzF0Gqpo4ZaKBfK9u58WP5Ao6vwNcffVoOiy4fiH93oXExOKoc2dqlKeAyLBHVXAy6wtKxZvNOrigyqKp0UEdmhkIe4iNNzo3bg3o0AIaS3HbkvPaU0ttg7Q==;U2FsdGVkX18oOnMGdD2pf5EYcmGkA11S5cIoWyXhsCDO9HMj9r0sNxou8l5EkreJ2FZDJs1AaIMf1X9tHs3WnQ=="
 
 steps:
-  - label: "Julia v1 -- CUDA"
+  - label: "Julia {{matrix.julia}} -- {{matrix.queue}} / {{matrix.group}}"
     plugins:
       - JuliaCI/julia#v1:
-          version: "1"
-      - JuliaCI/julia-test#v1: ~
+          version: "{{matrix.julia}}"
+      - JuliaCI/julia-test#v1:
+          test_args: "{{matrix.group}}"
       - JuliaCI/julia-coverage#v1:
           dirs:
             - src
             - ext
     agents:
-      queue: "cuda"
+      queue: "{{matrix.queue}}"
     if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 60
+    timeout_in_minutes: 120
+    matrix:
+      setup:
+        julia:
+          - "1.10"
+          - "1.13"
+        queue:
+          - "cuda"
+          - "rocm"
+        group:
+          - "boundarymps"
+          - "bondenv"
+          - "bp"
+          - "compress"
+          - "ctmrg"
+          - "gradients"
+          - "timeevol"
+          - "toolbox"
+          - "utility"
 
-  - label: "Julia LTS -- CUDA"
-    plugins:
-      - JuliaCI/julia#v1:
-          version: "1.10" # "lts" isn't valid
-      - JuliaCI/julia-test#v1: ~
-      - JuliaCI/julia-coverage#v1:
-          dirs:
-            - src
-            - ext
-    agents:
-      queue: "cuda"
-    if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 60
-  
-  - label: "Julia v1 -- AMDGPU"
-    plugins:
-      - JuliaCI/julia#v1:
-          version: "1"
-      - JuliaCI/julia-test#v1: ~
-      - JuliaCI/julia-coverage#v1:
-          dirs:
-            - src
-            - ext
-    agents:
-      queue: "rocm"
-    if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 60
-
-  - label: "Julia LTS -- AMDGPU"
-    plugins:
-      - JuliaCI/julia#v1:
-          version: "1.10" # "lts" isn't valid
-      - JuliaCI/julia-test#v1: ~
-      - JuliaCI/julia-coverage#v1:
-          dirs:
-            - src
-            - ext
-    agents:
-      queue: "rocm"
-    if: build.message !~ /\[skip tests\]/
-    timeout_in_minutes: 60

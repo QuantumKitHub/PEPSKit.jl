@@ -272,12 +272,10 @@ function ChainRulesCore.rrule(
     return C, squareroot_pullback
 end
 function _squareroot_pullback(C::AbstractMatrix)
-    Fdata = similar(C)
-    for j in axes(Fdata, 2), i in axes(Fdata, 1)
-        # Taking the diagonal only is okay, when dA is diagonal anyway: Fdata[i, i] = 1 / (2 * conj(C[i, i]))
-        Fdata[i, j] = 1 / conj(C[i, i] + C[j, j])
-    end
-    return Fdata
+    # Taking the diagonal only is okay, when dA is diagonal anyway: Fdata[i, i] = 1 / (2 * conj(C[i, i]))
+    Cd = diagview(C)
+    Cdt = transpose(Cd)
+    return @. 1 / conj(Cd + Cdt)
 end
 
 # take fourth root of diagonal TensorMap, but with complex non-diagonal adjoint

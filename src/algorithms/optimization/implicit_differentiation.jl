@@ -496,7 +496,7 @@ function _rrule(
     UL = left_null(U)
 
     # instantiate the differentiable variables corresponding to the intermediate projector of the contraction algorithm
-    u = zeros(scalartype(U), space(UL, numind(UL))' ← space(U, numind(U))')
+    u = zeros(storagetype(U), space(UL, numind(UL))' ← space(U, numind(U))')
 
     # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
     _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
@@ -640,10 +640,10 @@ function PEPSKit._rrule(
 
     # instantiate the variables used in the characteristic equations
     u = map(zip(U, UL)) do (Uc, ULc)
-        return zeros(scalartype(Uc), space(ULc, numind(ULc))' ← space(Uc, numind(Uc))')
+        return zeros(storagetype(Uc), space(ULc, numind(ULc))' ← space(Uc, numind(Uc))')
     end
     v = map(zip(V, VR)) do (Vc, VRc)
-        return zeros(scalartype(Vc), space(Vc, 1) ← space(VRc, 1))
+        return zeros(storagetype(Vc), space(Vc, 1) ← space(VRc, 1))
     end
     is = sdiag_pow.(s, -1) # also treat them as general complex tensors
 
