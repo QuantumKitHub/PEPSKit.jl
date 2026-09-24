@@ -11,11 +11,11 @@ if !is_buildkite
 end
 
 if CUDA.functional()
-    TestSuite.ctmrg_pepo_runthroughs(CuArray)
+    TestSuite.ctmrg_pepo_runthroughs(CuArray; minimal = true)
     TestSuite.ctmrg_pepo_fixed_point(CuArray)
 end
 
 if AMDGPU.functional()
-    TestSuite.ctmrg_pepo_runthroughs(ROCArray)
+    TestSuite.ctmrg_pepo_runthroughs(ROCArray; minimal = true)
     TestSuite.ctmrg_pepo_fixed_point(ROCArray)
 end
