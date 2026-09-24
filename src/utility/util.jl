@@ -173,3 +173,10 @@ keeps the same semantics without the widening machinery.
     end
     return dst
 end
+
+# the fill loop above mutates `dst`, which Zygote cannot differentiate
+function ChainRulesCore.rrule(
+        config::RuleConfig{>:HasReverseMode}, ::typeof(stablemap), f, A
+    )
+    return rrule_via_ad(config, map, f, A)
+end
