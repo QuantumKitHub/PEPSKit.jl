@@ -14,18 +14,42 @@ function MPSKit.expectation_value(
         bra::S, O::LocalOperator, ket::S, env
     ) where {S <: InfiniteState}
     checklattice(bra, O, ket)
+    # protect against needing runtime activity
+    T = ignore_derivatives(() -> promote_type(scalartype(O), scalartype(bra), scalartype(ket), scalartype(env)))
+    total = zero(T)
+    for (inds, operator) in O.terms
+        # the copy here is necessary to avoid RT activity
+        # until dtmap!! can be used
+        total += local_expectation_value(inds, bra, copy(operator), ket, env)
+    end
+    return total
+end
+# TEMPORARY - block use of dtmap until https://github.com/EnzymeAD/Enzyme/pull/3152 is merged
+#=function MPSKit.expectation_value(
+        bra::S, O::LocalOperator, ket::S, env
+    ) where {S <: InfiniteState}
+    checklattice(bra, O, ket)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         return local_expectation_value(inds, bra, operator, ket, env)
     end
     return sum(term_vals)
-end
+end=#
 MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env) = expectation_value(peps, O, peps, env)
 function MPSKit.expectation_value(state::InfinitePEPO, O::LocalOperator, env)
     checklattice(state, O)
-    term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
+    #=term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
         return local_expectation_value(inds, state, operator, env)
     end
-    return sum(term_vals)
+    return sum(term_vals)=#
+    # protect against needing runtime activity
+    T = ignore_derivatives(() -> promote_type(scalartype(O), scalartype(state), scalartype(env)))
+    total = zero(T)
+    for (inds, operator) in O.terms
+        # the copy here is necessary to avoid RT activity
+        # until dtmap!! can be used
+        total += local_expectation_value(inds, state, copy(operator), env)
+    end
+    return total
 end
 
 
