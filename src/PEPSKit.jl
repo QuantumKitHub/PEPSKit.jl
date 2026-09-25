@@ -194,7 +194,7 @@ export compress
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
-export NNEnv, NNpEnv, NNNEnv
+export NNEnv, NNpEnv
 export SimpleUpdate, NeighbourUpdate
 export TimeEvolver, timestep, time_evolve
 

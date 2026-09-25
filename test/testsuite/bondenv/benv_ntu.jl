@@ -71,7 +71,7 @@ function bondenv_ntu(AT)
             ]
             state = adapt(AT, state)
             normalize!.(state.A, Inf)
-            for env_alg in (NNEnv(), NNpEnv(), NNNEnv())
+            for env_alg in (NNEnv(), NNpEnv())
                 test_ntu_env(state, env_alg)
             end
         end
