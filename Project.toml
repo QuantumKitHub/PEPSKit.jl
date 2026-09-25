@@ -61,6 +61,6 @@ Zygote = "0.6, 0.7"
 julia = "1.10"
 
 [sources]
-Enzyme = {url = "https://github.com/EnzymeAD/Enzyme.jl", rev = "vc/rule-overwritten-roots"}
-TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "ksh/diagctor"}
+Enzyme = {url = "https://github.com/EnzymeAD/Enzyme.jl", rev = "main"}
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
 MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev = "main"}
