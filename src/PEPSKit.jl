@@ -3,7 +3,7 @@ module PEPSKit
 using LinearAlgebra, Statistics, Base.Threads, Base.Iterators, Printf
 using Random
 using Compat
-using Accessors: @set, @reset
+using Accessors: @set, @reset, @insert
 using VectorInterface
 import VectorInterface as VI
 
@@ -115,6 +115,7 @@ include("algorithms/contractions/local_patch/densitymatrix/bp.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
+include("algorithms/contractions/bondenv/benv_ntu.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
 include("algorithms/contractions/correlator/peps.jl")
 include("algorithms/contractions/correlator/pepo_purified.jl")
@@ -147,6 +148,8 @@ include("algorithms/time_evolution/trotter_gate.jl")
 include("algorithms/time_evolution/time_evolve.jl")
 include("algorithms/time_evolution/simpleupdate.jl")
 include("algorithms/time_evolution/simpleupdate3site.jl")
+include("algorithms/time_evolution/ntupdate.jl")
+include("algorithms/time_evolution/ntupdate3site.jl")
 include("algorithms/time_evolution/gaugefix_su.jl")
 
 include("algorithms/bp/beliefpropagation.jl")
@@ -191,7 +194,8 @@ export compress
 
 export absorb_weight
 export ALSTruncation, FullEnvTruncation
-export SimpleUpdate
+export NNEnv, NNpEnv
+export SimpleUpdate, NeighbourUpdate
 export TimeEvolver, timestep, time_evolve
 
 export InfiniteSquareNetwork
