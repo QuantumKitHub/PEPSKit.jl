@@ -117,7 +117,8 @@ function leading_boundary(
         CS, TS = ignore_derivatives() do
             return convergence_spectra(env₀, alg)
         end
-        η = one(real(scalartype(network)))
+        Tη = real(scalartype(network))
+        η::Tη = one(Tη)
         ctmrg_loginit!(log, η, network, env₀)
         local info_iter
         converged = false
