@@ -62,6 +62,9 @@ VectorInterface = "0.4, 0.5, 0.6, 0.7"
 Zygote = "0.6, 0.7"
 julia = "1.10"
 
+[extras]
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+
 [sources]
 Enzyme = {url = "https://github.com/EnzymeAD/Enzyme.jl", rev = "ksh/jl113-closure-memcpy"}
 TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
