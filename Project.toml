@@ -41,7 +41,7 @@ Accessors = "0.1"
 ChainRulesCore = "1.0"
 Compat = "3.46, 4.2"
 DocStringExtensions = "0.9.3"
-Enzyme = "0.13.196"
+Enzyme = "0.13.208"
 FiniteDifferences = "0.12"
 KrylovKit = "0.9.5, 0.10"
 LinearAlgebra = "1"
@@ -62,10 +62,6 @@ VectorInterface = "0.4, 0.5, 0.6, 0.7"
 Zygote = "0.6, 0.7"
 julia = "1.10"
 
-[extras]
-Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
-
 [sources]
-Enzyme = {url = "https://github.com/EnzymeAD/Enzyme.jl", rev = "ksh/jl113-closure-memcpy"}
 TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
 MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev = "main"}
