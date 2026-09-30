@@ -27,10 +27,9 @@ ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :Simult
 projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
 svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
 gradient_algs = [[nothing, :FixedPointGradient], [:FixedPointGradient]]
-gradient_solver_algs = [
-    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
-    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
-]
+# the solver only affects the linear solve inside the fixed-point rule, which is
+# already covered by the Zygote tests; one solver suffices to exercise Enzyme here
+gradient_solver_algs = [[:GMRES], [:GMRES]]
 steps = -0.01:0.005:0.01
 
 # don't check naive AD gradients for all algorithm combinations, since it's slow
