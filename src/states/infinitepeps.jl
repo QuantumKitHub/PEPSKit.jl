@@ -148,6 +148,7 @@ Base.complex(A::InfinitePEPS) = InfinitePEPS(complex.(unitcell(A)))
 ## Spaces
 
 TensorKit.spacetype(::Type{T}) where {T <: InfinitePEPS} = spacetype(eltype(T))
+TensorKit.storagetype(::Type{T}) where {T <: InfinitePEPS} = storagetype(eltype(T))
 virtualspace(n::InfinitePEPS, dir) = virtualspace.(unitcell(n), dir)
 virtualspace(n::InfinitePEPS, r::Int, c::Int, dir) = virtualspace(n[r, c], dir)
 physicalspace(n::InfinitePEPS) = physicalspace.(unitcell(n))

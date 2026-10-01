@@ -10,59 +10,63 @@ Vs = [ComplexSpace(3), U1Space(0 => 2, -1 => 1, 1 => 1)]
 
 sizes = [(1, 1), (3, 3)]
 
-@testset "$(sz) InfiniteSquareNetwork with $(Ss[i]) symmetry" for (i, sz) in
-    Iterators.product(eachindex(Ss), sizes)
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
-    S = Ss[i]
-    P = Ps[i]
-    V = Vs[i]
+if !is_buildkite
+    @testset "$(sz) InfiniteSquareNetwork with $(Ss[i]) symmetry" for (i, sz) in
+        Iterators.product(eachindex(Ss), sizes)
 
-    peps_tensor = PEPSTensor(randn, T, P, V)
-    pf_tensor = PFTensor(randn, T, V)
-    pepo_tensor = randn(T, P ⊗ P' ← V ⊗ V ⊗ V' ⊗ V')
-    pepo_tensor2 = randn(T, P ⊗ P' ← V ⊗ V ⊗ V' ⊗ V')
+        S = Ss[i]
+        P = Ps[i]
+        V = Vs[i]
 
-    peps = InfinitePEPS(peps_tensor; unitcell = sz)
-    pf = InfinitePartitionFunction(pf_tensor; unitcell = sz)
-    pepo = InfinitePEPO(pepo_tensor; unitcell = (sz..., 2))
-    pepo2 = InfinitePEPO(pepo_tensor2; unitcell = (sz..., 1))
+        peps_tensor = PEPSTensor(randn, T, P, V)
+        pf_tensor = PFTensor(randn, T, V)
+        pepo_tensor = randn(T, P ⊗ P' ← V ⊗ V ⊗ V' ⊗ V')
+        pepo_tensor2 = randn(T, P ⊗ P' ← V ⊗ V ⊗ V' ⊗ V')
 
-    @test eachindex(peps) == CartesianIndices(size(peps))
-    @test eachindex(pepo) == CartesianIndices(size(pepo))
+        peps = InfinitePEPS(peps_tensor; unitcell = sz)
+        pf = InfinitePartitionFunction(pf_tensor; unitcell = sz)
+        pepo = InfinitePEPO(pepo_tensor; unitcell = (sz..., 2))
+        pepo2 = InfinitePEPO(pepo_tensor2; unitcell = (sz..., 1))
 
-    peps_n = InfiniteSquareNetwork(peps)
-    pf_n = InfiniteSquareNetwork(pf)
-    pepo_n = InfiniteSquareNetwork(peps, pepo)
+        @test eachindex(peps) == CartesianIndices(size(peps))
+        @test eachindex(pepo) == CartesianIndices(size(pepo))
 
-    @test scalartype(peps_n) == T
-    @test eltype(peps_n) == PEPSSandwich{typeof(peps_tensor)}
-    @test spacetype(peps_n) == typeof(P)
-    @test sectortype(peps_n) == S
+        peps_n = InfiniteSquareNetwork(peps)
+        pf_n = InfiniteSquareNetwork(pf)
+        pepo_n = InfiniteSquareNetwork(peps, pepo)
 
-    @test scalartype(pf_n) == T
-    @test eltype(pf_n) == typeof(pf_tensor)
-    @test spacetype(pf_n) == typeof(V)
-    @test sectortype(pf_n) == S
+        @test scalartype(peps_n) == T
+        @test eltype(peps_n) == PEPSSandwich{typeof(peps_tensor)}
+        @test spacetype(peps_n) == typeof(P)
+        @test sectortype(peps_n) == S
 
-    @test scalartype(pepo_n) == T
-    @test eltype(pepo_n) == PEPOSandwich{2, typeof(peps_tensor), typeof(pepo_tensor)}
-    @test spacetype(pepo_n) == typeof(P)
-    @test sectortype(pepo_n) == S
+        @test scalartype(pf_n) == T
+        @test eltype(pf_n) == typeof(pf_tensor)
+        @test spacetype(pf_n) == typeof(V)
+        @test sectortype(pf_n) == S
 
-    @test peps_n + peps_n ≈ 2 * peps_n
-    @test repeat(InfiniteSquareNetwork(InfinitePEPS(peps_tensor)), sz...) == peps_n
-    @test (rotl90 ∘ rotl90)(peps_n) ≈ rot180(peps_n)
+        @test scalartype(pepo_n) == T
+        @test eltype(pepo_n) == PEPOSandwich{2, typeof(peps_tensor), typeof(pepo_tensor)}
+        @test spacetype(pepo_n) == typeof(P)
+        @test sectortype(pepo_n) == S
 
-    @test pf_n + pf_n ≈ 2 * pf_n
-    @test (rotr90 ∘ rotr90)(pf_n) ≈ rot180(pf_n)
+        @test peps_n + peps_n ≈ 2 * peps_n
+        @test repeat(InfiniteSquareNetwork(InfinitePEPS(peps_tensor)), sz...) == peps_n
+        @test (rotl90 ∘ rotl90)(peps_n) ≈ rot180(peps_n)
 
-    pepo_product = pepo2 * pepo
-    @test size(pepo_product) == (sz..., 3)
-    @test all(pepo_product[I] == pepo[I] for I in CartesianIndices(size(pepo)))
-    @test all(
-        pepo_product[r, c, size(pepo, 3) + h] == pepo2[r, c, h] for
-            r in axes(pepo2, 1), c in axes(pepo2, 2), h in axes(pepo2, 3)
-    )
+        @test pf_n + pf_n ≈ 2 * pf_n
+        @test (rotr90 ∘ rotr90)(pf_n) ≈ rot180(pf_n)
 
-    @test length(peps_n) == prod(sz)
+        pepo_product = pepo2 * pepo
+        @test size(pepo_product) == (sz..., 3)
+        @test all(pepo_product[I] == pepo[I] for I in CartesianIndices(size(pepo)))
+        @test all(
+            pepo_product[r, c, size(pepo, 3) + h] == pepo2[r, c, h] for
+                r in axes(pepo2, 1), c in axes(pepo2, 2), h in axes(pepo2, 3)
+        )
+
+        @test length(peps_n) == prod(sz)
+    end
 end

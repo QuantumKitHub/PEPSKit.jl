@@ -501,13 +501,22 @@ function _rrule(
     # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
     _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
 
-    # initialize the partial pullbacks of the characteristic equations
-    F = generate_symmetric_characteristic_equation(C, E, U, UL)
+    # Two tapes: the linear solve only uses the environment cotangents, so reading the
+    # sandwich through `constant_site` leaves the ket and bra cotangents unforced. The state
+    # pullback runs once, after the solve, and gets its own tape.
+    F_tracked = generate_symmetric_characteristic_equation(C, E, U, UL)
+    F_untracked = generate_symmetric_characteristic_equation(
+        C, E, U, UL; getsite = constant_site
+    )
+    network = InfiniteSquareNetwork(state)
 
-    # get the partial pullback of the characteristic equations
-    _, F_vjp = rrule_via_ad(config, F, state, C, E, u)
-    vjp_env(x) = F_vjp(x)[3:end] # environment and isometry pullback
-    vjp_state(x) = F_vjp(x)[2] # state pullback
+    F_environment(C′, E′, u′) = F_untracked(network, C′, E′, u′)
+    F_full(A, C′, E′, u′) = F_tracked(InfiniteSquareNetwork(A), C′, E′, u′)
+
+    _, F_vjp_environment = rrule_via_ad(config, F_environment, C, E, u)
+    _, F_vjp_full = rrule_via_ad(config, F_full, state, C, E, u)
+    vjp_env(x) = F_vjp_environment(x)[2:end] # environment and isometry pullback
+    vjp_state(x) = F_vjp_full(x)[2] # state pullback
 
     function leading_boundary_implicit_pullback((_Δenv, _Δinfo))
         Δenv, Δinfo = unthunk(_Δenv), unthunk(_Δinfo)
@@ -634,32 +643,38 @@ function PEPSKit._rrule(
     # forward pass, and then explicitly backpropagate through that in the pullback here
     _, absorb_inverse_roots_vjp = rrule_via_ad(config, absorb_inverse_roots, C̃, Ẽ, s)
 
-    # get the projector nullspaces
-    UL = left_null.(U)
-    VR = right_null.(V)
-
-    # instantiate the variables used in the characteristic equations
-    u = map(zip(U, UL)) do (Uc, ULc)
-        return zeros(scalartype(Uc), space(ULc, numind(ULc))' ← space(Uc, numind(Uc))')
-    end
-    v = map(zip(V, VR)) do (Vc, VRc)
-        return zeros(scalartype(Vc), space(Vc, 1) ← space(VRc, 1))
-    end
+    # variables of the characteristic equations, living in the full projector spaces and
+    # constrained to the orthogonal complements of the isometries inside the characteristic
+    # equations
+    u = zerovector.(U)
+    v = zerovector.(V)
     is = sdiag_pow.(s, -1) # also treat them as general complex tensors
 
-    # generate the characteristic equations
-    F = generate_halfinfinite_characteristic_equation(is, U, V, UL, VR)
+    # Two tapes: the linear solve only uses the environment cotangents, so reading the
+    # sandwiches through `constant_site` leaves the ket and bra cotangents unforced. The
+    # state pullback runs once, after the solve, and gets its own tape.
+    F_tracked = generate_halfinfinite_characteristic_equation(is, U, V)
+    F_untracked = generate_halfinfinite_characteristic_equation(
+        is, U, V; getsite = constant_site
+    )
+    network = InfiniteSquareNetwork(state)
+
+    F_environment(C′, E′, u′, s′, v′) = F_untracked(network, C′, E′, u′, s′, v′)
+    function F_full(A, C′, E′, u′, s′, v′)
+        return F_tracked(InfiniteSquareNetwork(A), C′, E′, u′, s′, v′)
+    end
 
     # check if characteristic equations are actually satisfied
-    FS = F(state, C̃, Ẽ, u, s, v)
+    FS = F_environment(C̃, Ẽ, u, s, v)
     F_nrms = norm.(FS)
     any(F_nrms .> 1.0e2 * alg.tol) &&
         @warn "Characteristic equations not satisfied, still using the gradient: $F_nrms"
 
     # get the partial gradients of the characteristic equations
-    _, F_vjp = rrule_via_ad(config, F, state, C̃, Ẽ, u, s, v) # full automatic pullback
-    vjp_env(x) = F_vjp(x)[3:end] # environment and SVD pullback
-    vjp_state(x) = F_vjp(x)[2] # state pullback
+    _, F_vjp_environment = rrule_via_ad(config, F_environment, C̃, Ẽ, u, s, v)
+    _, F_vjp_full = rrule_via_ad(config, F_full, state, C̃, Ẽ, u, s, v)
+    vjp_env(x) = F_vjp_environment(x)[2:end] # environment and SVD pullback
+    vjp_state(x) = F_vjp_full(x)[2] # state pullback
 
     function leading_boundary_characteristic_pullback((_Δenv, _Δinfo))
         # unpack incoming cotangents

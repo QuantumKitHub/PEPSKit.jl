@@ -9,20 +9,24 @@ Vs = [ComplexSpace(3), U1Space(0 => 2, -1 => 1, 1 => 1)]
 
 sizes = [(1, 1), (3, 3)]
 
-@testset "$(sz) InfinitePartitionFunction with $(Ss[i]) symmetry" for (i, sz) in
-    Iterators.product(eachindex(Ss), sizes)
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
-    S = Ss[i]
-    V = Vs[i]
+if !is_buildkite
+    @testset "$(sz) InfinitePartitionFunction with $(Ss[i]) symmetry" for (i, sz) in
+        Iterators.product(eachindex(Ss), sizes)
 
-    pf = InfinitePartitionFunction(randn, T, V; unitcell = sz)
+        S = Ss[i]
+        V = Vs[i]
 
-    @test scalartype(pf) == T
-    @test eltype(pf) <: PFTensor{typeof(V)}
-    @test spacetype(pf) == typeof(V)
+        pf = InfinitePartitionFunction(randn, T, V; unitcell = sz)
 
-    @test (rotl90 ∘ rotl90)(pf) ≈ rot180(pf)
-    @test (rotr90 ∘ rotr90 ∘ rotr90)(pf) ≈ rotl90(pf)
-    @test length(pf) == prod(sz)
-    @test eachindex(pf) == CartesianIndices(size(pf))
+        @test scalartype(pf) == T
+        @test eltype(pf) <: PFTensor{typeof(V)}
+        @test spacetype(pf) == typeof(V)
+
+        @test (rotl90 ∘ rotl90)(pf) ≈ rot180(pf)
+        @test (rotr90 ∘ rotr90 ∘ rotr90)(pf) ≈ rotl90(pf)
+        @test length(pf) == prod(sz)
+        @test eachindex(pf) == CartesianIndices(size(pf))
+    end
 end

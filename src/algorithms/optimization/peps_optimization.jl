@@ -1,4 +1,19 @@
 """
+    cost_function(peps::InfinitePEPS, env, O::LocalOperator)
+
+Real part of expectation value of `O`, used as the cost function in variational PEPS optimization.
+Prints a warning if the expectation value yields a finite imaginary part (up to a tolerance).
+"""
+function cost_function(peps::InfinitePEPS, env, O::LocalOperator)
+    E = MPSKit.expectation_value(peps, O, env)
+    ignore_derivatives() do
+        isapprox(imag(E), 0; atol = sqrt(eps(real(E)))) ||
+            @warn "Expectation value is not real: $E."
+    end
+    return real(E)
+end
+
+"""
 $(TYPEDEF)
 
 Algorithm struct for PEPS ground-state optimization using AD. See [`fixedpoint`](@ref) for details.
