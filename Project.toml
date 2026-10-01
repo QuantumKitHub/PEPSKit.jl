@@ -30,11 +30,18 @@ TupleTools = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
+[weakdeps]
+Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+
+[extensions]
+PEPSKitEnzymeExt = "Enzyme"
+
 [compat]
 Accessors = "0.1"
 ChainRulesCore = "1.0"
 Compat = "3.46, 4.2"
 DocStringExtensions = "0.9.3"
+Enzyme = "0.13.208"
 FiniteDifferences = "0.12"
 KrylovKit = "0.9.5, 0.10"
 LinearAlgebra = "1"
@@ -51,6 +58,10 @@ TensorKit = "0.16.5, 0.17"
 TensorKitTensors = "0.3.1"
 TensorOperations = "5"
 TupleTools = "1.6.0"
-VectorInterface = "0.4, 0.5, 0.6"
+VectorInterface = "0.4, 0.5, 0.6, 0.7"
 Zygote = "0.6, 0.7"
 julia = "1.10"
+
+[sources]
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
+MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev = "main"}

@@ -150,3 +150,33 @@ function _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
     new_axes = (ntuple(i -> axes[biperm[1][i]], N - 1)..., ax)
     return new_axes, biperm
 end
+
+"""
+    stablemap(f, A)
+
+Type-stable replacement for `map(f, A)` on the CTMRG differentiation path.
+
+`Base.map` builds a `Base.Generator` whose element type is unknown, so `_collect`
+falls back to a type-widening loop over untyped storage. Enzyme cannot statically
+prove the element type through that and bails out with an `EnzymeNoTypeError`.
+Inferring the element type up front and filling a concretely typed destination
+keeps the same semantics without the widening machinery.
+"""
+@inline function stablemap(f::F, A) where {F}
+    T = Base.promote_op(f, eltype(A))
+    if !isconcretetype(T)              # inference failed: fall back to Base
+        return map(f, A)
+    end
+    dst = similar(A, T)
+    @inbounds for (i, a) in zip(eachindex(dst), A)
+        dst[i] = f(a)
+    end
+    return dst
+end
+
+# the fill loop above mutates `dst`, which Zygote cannot differentiate
+function ChainRulesCore.rrule(
+        config::RuleConfig{>:HasReverseMode}, ::typeof(stablemap), f, A
+    )
+    return rrule_via_ad(config, map, f, A)
+end
