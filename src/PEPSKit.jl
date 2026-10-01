@@ -190,7 +190,7 @@ export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
-export LocalOperator, MPOObservable, physicalspace
+export LocalOperator, MPOTerm, MPOObservable, physicalspace
 export product_peps
 export reduced_densitymatrix, expectation_value_approx, correlator_approx
 export expectation_value, network_value, cost_function
