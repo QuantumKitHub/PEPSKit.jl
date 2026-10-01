@@ -210,7 +210,7 @@ end
 using .GradientsCTMRG
 
 module EnzymeGradientsCTMRG
-    include("gradients/enz_ctmrg_gradients.jl")
+    include("enzyme_gradients/enz_ctmrg_gradients.jl")
     export enzyme_gradients_asymmetric, enzyme_gradients_asymmetric_276
 end
 using .EnzymeGradientsCTMRG
