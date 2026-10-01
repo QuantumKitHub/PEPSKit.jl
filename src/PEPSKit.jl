@@ -82,7 +82,6 @@ include("operators/infinitepepo.jl")
 include("operators/transfermatrix.jl")
 include("operators/localoperator.jl")
 include("operators/localcircuit.jl")
-include("operators/mpo_observable.jl")
 
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
@@ -125,6 +124,7 @@ include("algorithms/contractions/correlator/peps.jl")
 include("algorithms/contractions/correlator/pepo_purified.jl")
 include("algorithms/contractions/correlator/pepo_1layer.jl")
 
+include("algorithms/contractions/mpo_path/routing.jl")
 include("algorithms/contractions/mpo_path/pepo_1layer.jl")
 include("algorithms/contractions/window/tools.jl")
 include("algorithms/contractions/window/pepo_1layer.jl")
@@ -190,7 +190,7 @@ export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
-export LocalOperator, MPOTerm, MPOObservable, physicalspace
+export LocalOperator, MPOTerm, physicalspace
 export product_peps
 export reduced_densitymatrix, expectation_value_approx, correlator_approx
 export expectation_value, network_value, cost_function

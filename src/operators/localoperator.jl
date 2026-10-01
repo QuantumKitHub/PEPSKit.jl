@@ -4,7 +4,7 @@
 An open-boundary MPO represented by an ordered vector of tensor maps.
 The endpoint partitions are `(1, 2)` and `(2, 1)`, with `(2, 2)` tensors in between; a one-site MPO has partition `(1, 1)`.
 Dense tensors can be converted with `gate_to_mpo`.
-Evaluation of MPO terms and vectors of tensor-product factors is not implemented.
+MPO terms are supported by `expectation_value_approx`; exact expectation values and vectors of tensor-product factors are not implemented.
 """
 const MPOTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
 

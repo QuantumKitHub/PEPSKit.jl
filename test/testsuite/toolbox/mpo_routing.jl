@@ -102,3 +102,52 @@ function toolbox_mpo_routing_identities(AT)
         end
     end
 end
+
+"""
+Check routing choices, dense leg permutations, and periodic string insertion.
+"""
+function toolbox_mpo_routing_paths(AT)
+    return @testset "MPO paths ($AT)" begin
+        Random.seed!(1234)
+        CI = CartesianIndex
+
+        # The first horizontal L crosses a later operator site, so routing must try the vertical L.
+        # Conversely, a collinear out-of-order MPO cannot be connected by either supported L path.
+        fallback_sites = CI.([(1, 1), (3, 3), (1, 2)])
+        @test PEPSKit._ordered_mpo_path(fallback_sites) ==
+            CI.([(1, 1), (2, 1), (3, 1), (3, 2), (3, 3), (2, 3), (1, 3), (1, 2)])
+        @test_throws r"routing this MPO ordering is not implemented" PEPSKit._ordered_mpo_path(
+            CI.([(1, 1), (1, 3), (1, 2)])
+        )
+
+        # Reconstructing on unequal physical spaces catches mismatches between the snake order and either group of permuted physical legs.
+        lattice = [ℂ^2 ℂ^3; ℂ^1 ℂ^2]
+        sites = CI.([(2, 2), (1, 1), (1, 2), (2, 1)])
+        physical = foldl(⊗, lattice[sites])
+        op = adapt(AT, randn(ComplexF64, physical ← physical))
+        path, expanded = PEPSKit._route_mpo_term(sites, op, lattice)
+        @test path == sites[[2, 4, 1, 3]]
+        @tensor reconstructed[p1 p2 p3 p4; q1 q2 q3 q4] :=
+            expanded[1][p1; q1 a] * expanded[2][a p2; q2 b] *
+            expanded[3][b p3; q3 c] * expanded[4][c p4; q4]
+        @test reconstructed ≈ permute(op, ((2, 4, 1, 3), (6, 8, 5, 7)))
+
+        # Intermediate sites have different physical spaces from the endpoints and lie outside the unit cell.
+        # Each inserted braid must therefore use periodic lookup and the MPO's storage type.
+        @testset "Periodic strings ($S)" for S in keys(spaces)
+            physical, _, _ = spaces[S]
+            intermediate = physical ⊕ physical
+            lattice = [physical intermediate; intermediate physical]
+            op = adapt(AT, randn(ComplexF64, physical^2 ← physical^2))
+            mpo = PEPSKit.gate_to_mpo(op; trunc = notrunc())
+            path, expanded = PEPSKit._route_mpo_term(CI.([(0, 0), (2, 2)]), mpo, lattice)
+            for k in 2:(length(path) - 1)
+                site = path[k]
+                V = lattice[mod1(site[1], 2), mod1(site[2], 2)]
+                braid = adapt(AT, TensorMap(TensorKit.BraidingTensor{ComplexF64}(V, space(mpo[2], 1))))
+                @test expanded[k] ≈ braid
+            end
+            @test all(t -> storagetype(t) == storagetype(mpo[1]), expanded)
+        end
+    end
+end

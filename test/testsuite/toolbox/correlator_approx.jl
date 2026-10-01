@@ -12,7 +12,7 @@ Contract `⟨op⟩` between `i` and each site in `js` independently without cach
 """
 function _adaptive_window_reference(op::AbstractTensorMap, i::CI{2}, js, ρ, env)
     lattice = physicalspace(ρ)
-    observables = [MPOObservable([i, j], op, lattice) for j in js]
+    observables = [PEPSKit._route_mpo_term([i, j], op, lattice) for j in js]
     _, colrange = PEPSKit._window_ranges([i; js])
     alg = PEPSKit.WindowApprox(Zipup(; trunc = notrunc()), nothing)
     return map(observables, js) do observable, j

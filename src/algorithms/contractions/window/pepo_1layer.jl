@@ -49,14 +49,14 @@ function standardize_dualness(ρ::InfinitePEPO, env::CTMRGEnv)
 end
 
 """
-Contract an MPO observable in its enclosing window, rotating column sweeps into row sweeps.
+Contract a routed MPO term in its enclosing window, rotating column sweeps into row sweeps.
 """
 function _expectation_value_approx(
-        ρ::InfinitePEPO, observable::MPOObservable, env::CTMRGEnv,
+        ρ::InfinitePEPO, routed::RoutedMPOTerm, env::CTMRGEnv,
         alg::WindowApprox, direction::Symbol,
     )
     _check_window_inputs(ρ, direction)
-    rowrange, colrange = _window_ranges(observable)
+    rowrange, colrange = _window_ranges(first(routed))
     sweep = if direction === :auto
         length(colrange) >= length(rowrange) ? :rows : :columns
     else
@@ -64,16 +64,15 @@ function _expectation_value_approx(
     end
     if sweep === :rows
         return _expectation_value_approx_rows(
-            ρ, observable, env, rowrange, colrange, alg
+            ρ, routed, env, rowrange, colrange, alg
         )
     else
         unitcell = size(ρ)[1:2]
-        sites = siterotl90.(observable.sites, Ref(unitcell))
-        path = siterotl90.(observable.path, Ref(unitcell))
-        rotated_observable = MPOObservable(sites, path, observable.mpo)
-        rotated_rowrange, rotated_colrange = _window_ranges(rotated_observable)
+        path, mpo = routed
+        rotated = siterotl90.(path, Ref(unitcell)) => mpo
+        rotated_rowrange, rotated_colrange = _window_ranges(first(rotated))
         return _expectation_value_approx_rows(
-            rotl90(ρ), rotated_observable, rotl90(env),
+            rotl90(ρ), rotated, rotl90(env),
             rotated_rowrange, rotated_colrange, alg
         )
     end
@@ -89,67 +88,54 @@ function _window_site_tensor(
 end
 
 """
-Build the local row-MPO tensor at one window site, inserting the observable tensor or routed
-string when the site lies on the MPO path and tracing the PEPO physical legs otherwise.
+Insert the MPO factor at a path site, or trace the PEPO physical legs at an off-path site.
 """
 function _window_site_tensor(
-        ρ::InfinitePEPO, observable::MPOObservable, row::Int, col::Int,
+        ρ::InfinitePEPO, routed::RoutedMPOTerm,
+        row::Int, col::Int,
     )
     A = ρ[row, col, 1]
-    site = CartesianIndex(row, col)
-    path_index = findfirst(==(site), observable.path)
-    isnothing(path_index) && return trace_physicalspaces(A)
+    path, mpo = routed
+    k = findfirst(==(CartesianIndex(row, col)), path)
+    isnothing(k) && return trace_physicalspaces(A)
 
-    mpo_index = findfirst(==(site), observable.sites)
-    # sites with string passing by (cannot be first/last site)
-    if isnothing(mpo_index)
-        incoming = _step_direction(observable.path[path_index], observable.path[path_index - 1])
-        outgoing = _step_direction(observable.path[path_index], observable.path[path_index + 1])
-        next_mpo_index = count(in(observable.sites), @view observable.path[1:path_index]) + 1
-        stringspace = space(observable.mpo[next_mpo_index], 1)
-        return mpo_path_string(A, stringspace, Val((incoming, outgoing)))
-    end
-
-    # sites acted on by the MPO
-    op = observable.mpo[mpo_index]
-    if mpo_index == 1
-        direction = _step_direction(observable.path[1], observable.path[2])
-        return mpo_path_first(A, op, Val(direction))
-    elseif mpo_index == length(observable.mpo)
-        direction = _step_direction(observable.path[end], observable.path[end - 1])
-        return mpo_path_last(A, op, Val(direction))
+    if k == 1
+        direction = _step_direction(path[1], path[2])
+        return mpo_path_first(A, mpo[k], Val(direction))
+    elseif k == length(path)
+        direction = _step_direction(path[end], path[end - 1])
+        return mpo_path_last(A, mpo[k], Val(direction))
     else
-        incoming = _step_direction(observable.path[path_index], observable.path[path_index - 1])
-        outgoing = _step_direction(observable.path[path_index], observable.path[path_index + 1])
-        return mpo_path_middle(A, op, Val((incoming, outgoing)))
+        incoming = _step_direction(path[k], path[k - 1])
+        outgoing = _step_direction(path[k], path[k + 1])
+        return mpo_path_middle(A, mpo[k], Val((incoming, outgoing)))
     end
 end
 
 """
-Contract and normalize an MPO observable using row-oriented window boundary contractions.
+Contract and normalize a routed MPO term using row-oriented window boundary contractions.
 """
 function _expectation_value_approx_rows(
-        ρ::InfinitePEPO, observable::MPOObservable, env::CTMRGEnv,
+        ρ::InfinitePEPO, routed::RoutedMPOTerm, env::CTMRGEnv,
         rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::WindowApprox,
     )
     ρ, env = standardize_dualness(ρ, env)
-    numerator = _contract_window_rows(ρ, observable, env, rowrange, colrange, alg)
+    numerator = _contract_window_rows(ρ, routed, env, rowrange, colrange, alg)
     norm = _contract_window_rows(ρ, nothing, env, rowrange, colrange, alg)
     return numerator / norm
 end
 
 """
-Contract a complete PEPO window row by row from north to south,
-optionally inserting an MPO observable.
+Contract a complete PEPO window row by row from north to south, optionally inserting a routed MPO term.
 """
 function _contract_window_rows(
-        ρ::InfinitePEPO, observable::Union{Nothing, MPOObservable},
+        ρ::InfinitePEPO, routed::Union{Nothing, RoutedMPOTerm},
         env::CTMRGEnv, rowrange::UnitRange{Int}, colrange::UnitRange{Int},
         alg::WindowApprox,
     )
     ψ = _north_boundary_mps(env, first(rowrange), colrange)
     for row in rowrange
-        W = _row_mpo(ρ, observable, env, row, colrange)
+        W = _row_mpo(ρ, routed, env, row, colrange)
         ψ = _approximate(W, ψ, alg)
     end
     south = _south_boundary_mps(env, last(rowrange), colrange)
@@ -171,7 +157,7 @@ Convention of west, east CTM edges and the PF tensors:
 Legs 1, 3 need to be flipped to match standard MPS convention
 """
 function _row_mpo(
-        ρ::InfinitePEPO, observable::Union{Nothing, MPOObservable},
+        ρ::InfinitePEPO, routed::Union{Nothing, RoutedMPOTerm},
         env::CTMRGEnv, row::Int, colrange::UnitRange{Int},
     )
     cmin, cmax = first(colrange), last(colrange)
@@ -180,7 +166,7 @@ function _row_mpo(
     append!(
         tensors,
         (
-            _window_site_tensor(ρ, observable, row, col)
+            _window_site_tensor(ρ, routed, row, col)
                 for col in colrange
         ),
     )
