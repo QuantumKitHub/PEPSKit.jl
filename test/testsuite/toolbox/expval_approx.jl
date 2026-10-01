@@ -1,0 +1,64 @@
+using TensorKit
+using PEPSKit
+using MPSKit
+using Test
+using Adapt
+using Random
+
+const CI = CartesianIndex
+
+spaces = Dict(
+    U1Irrep => (
+        U1Space(1 => 2, -1 => 1),
+        U1Space(1 => 1, 0 => 1, -1 => 2),
+        U1Space(1 => 1, 0 => 1, -1 => 2),
+    ),
+    FermionParity => (
+        Vect[FermionParity](0 => 1, 1 => 1),
+        Vect[FermionParity](0 => 1, 1 => 2),
+        Vect[FermionParity](0 => 2, 1 => 2),
+    ),
+)
+
+sites_list = (
+    [CI(1, 1), CI(1, 2)], # horizontal
+    [CI(1, 1), CI(2, 1)], # vertical
+    [CI(1, 1), CI(2, 2)], # turned
+    [CI(2, 2), CI(1, 1)], # reversed turned
+    [CI(2, 1), CI(1, 1), CI(1, 2), CI(2, 2)], # U-shaped
+)
+
+"""
+Check approximate expectation values against exact single-layer PEPO contractions.
+"""
+function toolbox_expval_approx(AT)
+    return @testset "Single-layer PEPO ($S) ($AT)" for S in keys(spaces)
+        Random.seed!(1234)
+
+        d, D, χ = spaces[S]
+        ρ = adapt(AT, InfinitePEPO(d, D; unitcell = (2, 2, 1)))
+        env = CTMRGEnv(InfinitePartitionFunction(ρ), χ)
+        trunc = notrunc()
+
+        for sites in sites_list
+            n = length(sites)
+            op = adapt(AT, randn(ComplexF64, d^n → d^n))
+            mpo = PEPSKit.gate_to_mpo(op; trunc)
+            observable = MPOObservable(sites, mpo)
+            exact = expectation_value(
+                ρ, LocalOperator(physicalspace(ρ), sites => op), env
+            )
+            for direction in (:rows, :columns)
+                @test expectation_value_approx(
+                    ρ, observable, env; trunc, maxiter = 0, direction
+                ) ≈ exact
+            end
+            # Square windows must default to row sweeps.
+            if sites == sites_list[3]
+                auto = expectation_value_approx(ρ, observable, env; trunc = truncrank(2), maxiter = 0)
+                rows = expectation_value_approx(ρ, observable, env; trunc = truncrank(2), maxiter = 0, direction = :rows)
+                @test auto == rows
+            end
+        end
+    end
+end
