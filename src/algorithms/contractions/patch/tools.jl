@@ -1,8 +1,8 @@
 """
 Bundle the zip-up contraction and optional DMRG refinement
-algorithms used after each finite window MPO-MPS contraction.
+algorithms used after each finite patch MPO-MPS contraction.
 """
-struct WindowApprox{Z, D}
+struct PatchApprox{Z, D}
     zipup::Z
     dmrg::D
 end
@@ -12,7 +12,7 @@ end
 """
 Apply a finite MPO to a finite MPS with zip-up truncation and optional DMRG refinement.
 """
-function _approximate(W::FiniteMPO, ψ::FiniteMPS, alg::WindowApprox)
+function _approximate(W::FiniteMPO, ψ::FiniteMPS, alg::PatchApprox)
     ψ′, = approximate((W, ψ), alg.zipup)
     isnothing(alg.dmrg) && return ψ′
     ψ′, = approximate(ψ′, (W, ψ), alg.dmrg)
@@ -20,7 +20,7 @@ function _approximate(W::FiniteMPO, ψ::FiniteMPS, alg::WindowApprox)
 end
 
 """
-Build the finite MPS representing the north CTMRG boundary of a window.
+Build the finite MPS representing the north CTMRG boundary of a patch.
 
 Convention of CTM tensors on the north boundary is
 ```
@@ -47,7 +47,7 @@ function _north_boundary_mps(
 end
 
 """
-Build the finite MPS representing the south CTMRG boundary of a window,
+Build the finite MPS representing the south CTMRG boundary of a patch,
 but with dual physical legs, and sites ordered from east to west.
 
 Convention of CTM tensors on the south boundary is
@@ -66,7 +66,7 @@ North site `k` pairs with south site `N + 1 - k`.
     south:  N → … → 2     → 1
 ```
 Viewed after a 180° rotation of the entire network, this is a north boundary ordered from west to east as usual, only with dual physical legs.
-Because of this reversed site order, `AL` tensors lie to the right (east) of the canonical center in the window, while `AR` tensors lie to its left (west).
+Because of this reversed site order, `AL` tensors lie to the right (east) of the canonical center in the patch, while `AR` tensors lie to its left (west).
 """
 function _south_boundary_mps(env::CTMRGEnv, row::Int, colrange::UnitRange{Int})
     r = row + 1

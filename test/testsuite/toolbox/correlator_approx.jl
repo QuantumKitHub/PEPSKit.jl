@@ -8,17 +8,17 @@ using Random
 const CI = CartesianIndex
 
 """
-Contract `⟨op⟩` between `i` and each site in `js` independently without caching, using fixed width and a window ending at each target row.
+Contract `⟨op⟩` between `i` and each site in `js` independently without caching, using fixed width and a patch ending at each target row.
 """
-function _adaptive_window_reference(op::AbstractTensorMap, i::CI{2}, js, ρ, env)
+function _adaptive_patch_reference(op::AbstractTensorMap, i::CI{2}, js, ρ, env)
     lattice = physicalspace(ρ)
     observables = [PEPSKit._route_mpo_term([i, j], op, lattice) for j in js]
-    _, colrange = PEPSKit._window_ranges([i; js])
-    alg = PEPSKit.WindowApprox(Zipup(; trunc = notrunc()), nothing)
+    _, colrange = PEPSKit._patch_ranges([i; js])
+    alg = PEPSKit.PatchApprox(Zipup(; trunc = notrunc()), nothing)
     return map(observables, js) do observable, j
         rowrange = i[1]:j[1]
-        norm = PEPSKit._contract_window_rows(ρ, nothing, env, rowrange, colrange, alg)
-        numerator = PEPSKit._contract_window_rows(ρ, observable, env, rowrange, colrange, alg)
+        norm = PEPSKit._contract_patch_rows(ρ, nothing, env, rowrange, colrange, alg)
+        numerator = PEPSKit._contract_patch_rows(ρ, observable, env, rowrange, colrange, alg)
         return numerator / norm
     end
 end
@@ -38,7 +38,7 @@ spaces = Dict(
 )
 
 """
-Check approximate correlators, sweep selection, and adaptive window normalization.
+Check approximate correlators, sweep selection, and adaptive patch normalization.
 """
 function toolbox_correlator_approx(AT)
     return @testset "Single-layer PEPO ($S) ($AT)" for S in keys(spaces)
@@ -60,7 +60,7 @@ function toolbox_correlator_approx(AT)
         # This target distribution only permits row sweeps.
         # Compare against independent contractions in target order.
         O² = adapt(AT, rand(ComplexF64, d^2, d^2))
-        vals_ref = _adaptive_window_reference(O², i, js, ρ, env)
+        vals_ref = _adaptive_patch_reference(O², i, js, ρ, env)
         vals_rows = correlator_approx(ρ, O², i, js, env; trunc, maxiter = 0)
         @test vals_rows ≈ vals_ref
 
@@ -85,7 +85,7 @@ function toolbox_correlator_approx(AT)
 
         # Test auto sweep direction choice in for southwest targets.
         selection_trunc = truncrank(2)
-        selection_alg = PEPSKit.WindowApprox(Zipup(; trunc = selection_trunc), nothing)
+        selection_alg = PEPSKit.PatchApprox(Zipup(; trunc = selection_trunc), nothing)
         for (offset, direction) in ((CI(1, -2), :rows), (CI(2, -1), :columns), (CI(1, -1), :rows))
             j = i + offset
             expected = only(PEPSKit._correlator_approx(ρ, O², i, [j], env, selection_alg, direction))

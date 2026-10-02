@@ -126,9 +126,9 @@ include("algorithms/contractions/correlator/pepo_1layer.jl")
 
 include("algorithms/contractions/mpo_path/routing.jl")
 include("algorithms/contractions/mpo_path/pepo_1layer.jl")
-include("algorithms/contractions/window/tools.jl")
-include("algorithms/contractions/window/pepo_1layer.jl")
-include("algorithms/contractions/window/twosite/pepo_1layer.jl")
+include("algorithms/contractions/patch/tools.jl")
+include("algorithms/contractions/patch/pepo_1layer.jl")
+include("algorithms/contractions/patch/twosite/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")

@@ -55,7 +55,7 @@ function toolbox_expval_approx(AT)
                     ρ, observable, env; trunc, maxiter = 0, direction
                 ) ≈ exact
             end
-            # Square windows must default to row sweeps.
+            # Square patches must default to row sweeps.
             if sites == sites_list[3]
                 auto = expectation_value_approx(ρ, dense, env; trunc = truncrank(2), maxiter = 0)
                 rows = expectation_value_approx(ρ, dense, env; trunc = truncrank(2), maxiter = 0, direction = :rows)
@@ -93,7 +93,7 @@ function toolbox_expval_approx_localoperator(AT)
         @test expectation_value_approx(ρ, snake, env; trunc, maxiter = 0) ≈
             expectation_value(ρ, snake, env)
 
-        # These terms use different normalization windows; the gapped MPO also inserts a string.
+        # These terms use different normalization patches; the gapped MPO also inserts a string.
         # Non-unit-cell coordinates and both sweeps exercise translation and rotation of the expanded path.
         op2 = adapt(AT, randn(ComplexF64, d^2 → d^2))
         sites2 = [CI(-1, 0), CI(-1, 2)]

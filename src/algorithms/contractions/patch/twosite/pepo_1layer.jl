@@ -4,9 +4,9 @@ Validate operator spaces and rotate column sweeps into the row-oriented contract
 function _correlator_approx(
         ρ::InfinitePEPO, op::AbstractTensorMap,
         source::CartesianIndex{2}, targets::Vector{CartesianIndex{2}},
-        env::CTMRGEnv, alg::WindowApprox, direction::Symbol,
+        env::CTMRGEnv, alg::PatchApprox, direction::Symbol,
     )
-    _check_window_inputs(ρ, direction)
+    _check_patch_inputs(ρ, direction)
     numout(op) == numin(op) == 2 ||
         throw(ArgumentError("correlator_approx requires a two-site operator"))
     for (leg, sites) in enumerate(((source,), targets)), site in sites
@@ -24,15 +24,15 @@ function _correlator_approx(
 end
 
 """
-Measure targets in windows of fixed width ending at each target row, propagating observable-free and open-string north states together.
+Measure targets in patches of fixed width ending at each target row, propagating observable-free and open-string north states together.
 """
 function _correlator_approx_rows(
         ρ::InfinitePEPO, op::AbstractTensorMap,
         source::CartesianIndex{2}, targets::Vector{CartesianIndex{2}},
-        env::CTMRGEnv, alg::WindowApprox,
+        env::CTMRGEnv, alg::PatchApprox,
     )
     ρ, env = standardize_dualness(ρ, env)
-    rowrange, colrange = _window_ranges([source; targets])
+    rowrange, colrange = _patch_ranges([source; targets])
     targets_by_row = _twosite_targets_by_row(targets)
     mpo = gate_to_mpo(op; trunc = notrunc())
     stringspace = space(mpo[2], 1)
@@ -56,7 +56,7 @@ function _correlator_approx_rows(
         tensor = row == source[1] ? mpo_path_first(A, mpo[1], Val(:south)) :
             mpo_path_string(A, stringspace, Val((:north, :south)))
         plain_north = _approximate(W, plain_north, alg)
-        parent(W)[_window_mps_site(source[2], colrange)] = tensor
+        parent(W)[_patch_mps_site(source[2], colrange)] = tensor
         north = _approximate(W, north, alg)
     end
     return values
@@ -73,15 +73,15 @@ function _contract_twosite_target_row!(
     )
     N = length(south)
     row = first(keys(targets))[1]
-    source_site = _window_mps_site(source[2], colrange)
-    envs = _window_edge_environments(south, W, north, source_site)
+    source_site = _patch_mps_site(source[2], colrange)
+    envs = _patch_edge_environments(south, W, north, source_site)
     stringspace = space(mpo[2], 1)
 
     # close the target right at the column of the incoming string
     same_col = get(targets, CartesianIndex(row, source[2]), nothing)
     if !isnothing(same_col)
         target_tensor = mpo_path_last(ρ[row, source[2], 1], mpo[2], Val(:north))
-        value = _contract_window_site(envs, north, south, source_site, target_tensor)
+        value = _contract_patch_site(envs, north, south, source_site, target_tensor)
         numerators[same_col] = value
     end
 
@@ -101,12 +101,12 @@ function _contract_twosite_target_row!(
         for target in right_targets
             target_col = target[2]
             for col in (previous_col + 1):(target_col - 1)
-                site = _window_mps_site(col, colrange)
+                site = _patch_mps_site(col, colrange)
                 string_tensor = mpo_path_string(ρ[row, col, 1], stringspace, Val((:west, :east)))
                 left = left * edge_transfermatrix(north.AR[site], string_tensor, south.AL[south_site(site, N)])
             end
 
-            target_site = _window_mps_site(target_col, colrange)
+            target_site = _patch_mps_site(target_col, colrange)
             target_tensor = mpo_path_last(ρ[row, target_col, 1], mpo[2], Val(:west))
             target_left = left * edge_transfermatrix(north.AR[target_site], target_tensor, south.AL[south_site(target_site, N)])
             value = _contract_transfer_boundaries(target_left, envs.rights[target_site - source_site + 1])
@@ -135,12 +135,12 @@ function _contract_twosite_target_row!(
         for target in left_targets
             target_col = target[2]
             for col in (previous_col - 1):-1:(target_col + 1)
-                site = _window_mps_site(col, colrange)
+                site = _patch_mps_site(col, colrange)
                 string_tensor = mpo_path_string(ρ[row, col, 1], stringspace, Val((:east, :west)))
                 right = edge_transfermatrix(north.AL[site], string_tensor, south.AR[south_site(site, N)]) * right
             end
 
-            target_site = _window_mps_site(target_col, colrange)
+            target_site = _patch_mps_site(target_col, colrange)
             target_tensor = mpo_path_last(ρ[row, target_col, 1], mpo[2], Val(:east))
             target_right = edge_transfermatrix(north.AL[target_site], target_tensor, south.AR[south_site(target_site, N)]) * right
             value = _contract_transfer_boundaries(envs.lefts[target_site], target_right)
@@ -157,12 +157,12 @@ end
 """
 Map a PEPO column to its finite-MPS site, accounting for the additional west CTM edge.
 """
-_window_mps_site(col::Int, colrange::UnitRange{Int}) = col - first(colrange) + 2
+_patch_mps_site(col::Int, colrange::UnitRange{Int}) = col - first(colrange) + 2
 
 """
 Contract one modified row site between precomputed left and right MPS environments.
 """
-function _contract_window_site(
+function _contract_patch_site(
         envs::NamedTuple, north::FiniteMPS, south::FiniteMPS,
         site::Int, tensor::MPOTensor,
     )

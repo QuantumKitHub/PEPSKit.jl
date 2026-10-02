@@ -1,9 +1,9 @@
-# Approximate finite-window contractions for single-layer PEPO networks.
+# Approximate finite-patch contractions for single-layer PEPO networks.
 
 """
 Validate that the network is a single-layer PEPO and that the sweep direction is supported.
 """
-function _check_window_inputs(ρ::InfinitePEPO, direction::Symbol)
+function _check_patch_inputs(ρ::InfinitePEPO, direction::Symbol)
     size(ρ, 3) == 1 || throw(DimensionMismatch("only single-layer PEPO contractions are supported"))
     direction in (:auto, :rows, :columns) ||
         throw(ArgumentError("invalid sweep direction: $direction"))
@@ -49,14 +49,14 @@ function standardize_dualness(ρ::InfinitePEPO, env::CTMRGEnv)
 end
 
 """
-Contract a routed MPO term in its enclosing window, rotating column sweeps into row sweeps.
+Contract a routed MPO term in its enclosing patch, rotating column sweeps into row sweeps.
 """
 function _expectation_value_approx(
         ρ::InfinitePEPO, routed::RoutedMPOTerm, env::CTMRGEnv,
-        alg::WindowApprox, direction::Symbol,
+        alg::PatchApprox, direction::Symbol,
     )
-    _check_window_inputs(ρ, direction)
-    rowrange, colrange = _window_ranges(first(routed))
+    _check_patch_inputs(ρ, direction)
+    rowrange, colrange = _patch_ranges(first(routed))
     sweep = if direction === :auto
         length(colrange) >= length(rowrange) ? :rows : :columns
     else
@@ -70,7 +70,7 @@ function _expectation_value_approx(
         unitcell = size(ρ)[1:2]
         path, mpo = routed
         rotated = siterotl90.(path, Ref(unitcell)) => mpo
-        rotated_rowrange, rotated_colrange = _window_ranges(first(rotated))
+        rotated_rowrange, rotated_colrange = _patch_ranges(first(rotated))
         return _expectation_value_approx_rows(
             rotl90(ρ), rotated, rotl90(env),
             rotated_rowrange, rotated_colrange, alg
@@ -81,7 +81,7 @@ end
 """
 Build a local tensor for row MPOs without observables by tracing the PEPO physical legs.
 """
-function _window_site_tensor(
+function _patch_site_tensor(
         ρ::InfinitePEPO, ::Nothing, row::Int, col::Int,
     )
     return trace_physicalspaces(ρ[row, col, 1])
@@ -90,7 +90,7 @@ end
 """
 Insert the MPO factor at a path site, or trace the PEPO physical legs at an off-path site.
 """
-function _window_site_tensor(
+function _patch_site_tensor(
         ρ::InfinitePEPO, routed::RoutedMPOTerm,
         row::Int, col::Int,
     )
@@ -113,25 +113,25 @@ function _window_site_tensor(
 end
 
 """
-Contract and normalize a routed MPO term using row-oriented window boundary contractions.
+Contract and normalize a routed MPO term using row-oriented patch boundary contractions.
 """
 function _expectation_value_approx_rows(
         ρ::InfinitePEPO, routed::RoutedMPOTerm, env::CTMRGEnv,
-        rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::WindowApprox,
+        rowrange::UnitRange{Int}, colrange::UnitRange{Int}, alg::PatchApprox,
     )
     ρ, env = standardize_dualness(ρ, env)
-    numerator = _contract_window_rows(ρ, routed, env, rowrange, colrange, alg)
-    norm = _contract_window_rows(ρ, nothing, env, rowrange, colrange, alg)
+    numerator = _contract_patch_rows(ρ, routed, env, rowrange, colrange, alg)
+    norm = _contract_patch_rows(ρ, nothing, env, rowrange, colrange, alg)
     return numerator / norm
 end
 
 """
-Contract a complete PEPO window row by row from north to south, optionally inserting a routed MPO term.
+Contract a complete PEPO patch row by row from north to south, optionally inserting a routed MPO term.
 """
-function _contract_window_rows(
+function _contract_patch_rows(
         ρ::InfinitePEPO, routed::Union{Nothing, RoutedMPOTerm},
         env::CTMRGEnv, rowrange::UnitRange{Int}, colrange::UnitRange{Int},
-        alg::WindowApprox,
+        alg::PatchApprox,
     )
     ψ = _north_boundary_mps(env, first(rowrange), colrange)
     for row in rowrange
@@ -143,7 +143,7 @@ function _contract_window_rows(
 end
 
 """
-Build one finite row MPO from west/east CTMRG edges and the PEPO tensors inside the window.
+Build one finite row MPO from west/east CTMRG edges and the PEPO tensors inside the patch.
 
 Convention of west, east CTM edges and the PF tensors:
 ```
@@ -166,7 +166,7 @@ function _row_mpo(
     append!(
         tensors,
         (
-            _window_site_tensor(ρ, routed, row, col)
+            _patch_site_tensor(ρ, routed, row, col)
                 for col in colrange
         ),
     )

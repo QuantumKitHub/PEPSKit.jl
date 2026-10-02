@@ -1,4 +1,4 @@
-# Approximate finite-window two-site correlators
+# Approximate finite-patch two-site correlators
 # ----------------------------------------------
 
 """
@@ -13,9 +13,9 @@ Approximately measure a dense two-site operator between a fixed first site `i` a
     If neither direction is possible, throw an `ArgumentError`.
 - The collection `js` must be nonempty, contain no duplicates, and exclude `i`.
     A collection returns a vector in `vec(js)` order; a single second site returns a scalar.
-- For row-by-row contraction, all windows have the same width, covering the columns of `i` and all sites in `js`, but each window ends at the row of the measured site `j`.
-    For column-by-column contraction, all windows cover the same rows, but each window ends at the column of `j`.
-    Each window has its own normalization, calculated without the operator using the same contraction arrangement.
+- For row-by-row contraction, all patches have the same width, covering the columns of `i` and all sites in `js`, but each patch ends at the row of the measured site `j`.
+    For column-by-column contraction, all patches cover the same rows, but each patch ends at the column of `j`.
+    Each patch has its own normalization, calculated without the operator using the same contraction arrangement.
     The last row or column is contracted without further truncation against the CTMRG boundary immediately beyond it.
 - `trunc` controls boundary-MPS truncation; by default, it limits the rank to the largest CTMRG boundary dimension.
     After each zipup step, `maxiter` DMRG sweeps refine the result (default 1; use 0 to disable refinement).
@@ -36,13 +36,13 @@ function correlator_approx(
     isempty(js) && throw(ArgumentError("correlator_approx requires at least one second site"))
     allunique(js) || throw(ArgumentError("second sites should be unique"))
     i in js && throw(ArgumentError("second sites should be distinct from the first site"))
-    rowrange, colrange = _window_ranges([i; vec(js)])
+    rowrange, colrange = _patch_ranges([i; vec(js)])
     rows, columns = first(rowrange) == i[1], last(colrange) == i[2]
     rows || columns || throw(ArgumentError("no valid sweep: second sites must all be at or south of the first row, or all at or west of the first column"))
     direction = rows && (!columns || length(colrange) >= length(rowrange)) ? :rows : :columns
     return _correlator_approx(
         ρ, op, i, collect(vec(js)), env,
-        WindowApprox(Zipup(; trunc), _approx_dmrg(maxiter)), direction
+        PatchApprox(Zipup(; trunc), _approx_dmrg(maxiter)), direction
     )
 end
 

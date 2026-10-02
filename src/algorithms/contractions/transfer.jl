@@ -250,7 +250,7 @@ end
 
 """
 Map north-boundary site `k` to the corresponding site in the east-to-west south boundary.
-`N` is the finite window length, including the two boundary sites.
+`N` is the finite patch length, including the two boundary sites.
 """
 south_site(k::Int, N::Int) = N + 1 - k
 
@@ -264,7 +264,7 @@ Construct the endpoint identities for a finite north-W-south sandwich.
     └-→-- south --→-┘
 ```
 """
-function _window_edge_boundaries(south::FiniteMPS, W::FiniteMPO, north::FiniteMPS)
+function _patch_edge_boundaries(south::FiniteMPS, W::FiniteMPO, north::FiniteMPS)
     N = length(north)
     length(south) == length(W) == N || throw(DimensionMismatch("row and boundary lengths must match"))
     left = isomorphism(
@@ -283,8 +283,8 @@ Only valid entries are stored, with lengths `site` and `length(north) - site + 1
 
 Note that sites in `south` are ordered from right (east) to left (west).
 """
-function _window_edge_environments(south::FiniteMPS, W::FiniteMPO, north::FiniteMPS, site::Int)
-    left, right = _window_edge_boundaries(south, W, north)
+function _patch_edge_environments(south::FiniteMPS, W::FiniteMPO, north::FiniteMPS, site::Int)
+    left, right = _patch_edge_boundaries(south, W, north)
     N = length(north)
     lefts, rights = [left], [right]
     for k in 1:(site - 1)
@@ -317,7 +317,7 @@ end
 Contract a row MPO between opposite-oriented boundary MPSs without conjugation.
 """
 function dot_noconj(south::FiniteMPS, W::FiniteMPO, north::FiniteMPS)
-    left, right = _window_edge_boundaries(south, W, north)
+    left, right = _patch_edge_boundaries(south, W, north)
     N = length(north)
     for k in N:-1:1
         top = k == 1 ? north.AC[k] : north.AR[k]
@@ -340,6 +340,6 @@ Contract the left and right transfer-matrix environments to a scalar.
 ```
 """
 function _contract_transfer_boundaries(left::MPSTensor, right::MPSTensor)
-    # The three bonds close around the window without crossing
+    # The three bonds close around the patch without crossing
     return @tensor left[1 2; 3] * right[3 2; 1]
 end
