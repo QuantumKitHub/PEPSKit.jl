@@ -239,6 +239,19 @@ module ToolboxDensityMatrices
 end
 using .ToolboxDensityMatrices
 
+module ToolboxTensorProductTerms
+    include("toolbox/tensorproduct_terms.jl")
+    export toolbox_tensorproduct_ising, toolbox_tensorproduct_bookkeeping
+end
+using .ToolboxTensorProductTerms
+
+module ToolboxMPOTerms
+    include("toolbox/mpo_terms.jl")
+    export toolbox_mpo_terms_dense, toolbox_mpo_bookkeeping, toolbox_mpo_validation
+    export toolbox_mpo_pepo
+end
+using .ToolboxMPOTerms
+
 # Utility
 # -------
 module UtilityCorrelator
