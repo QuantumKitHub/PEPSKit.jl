@@ -40,6 +40,20 @@ function toolbox_mpo_terms_dense(AT)
         α = 2 + 3im
         @test expectation_value(peps, α * H_mpo, env) ≈
             α * expectation_value(peps, LocalOperator(lattice11, inds => O), env) rtol = 1.0e-9
+
+        # The BP fallback must agree with the existing dense BP contractions.
+        bp_env = BPEnv(peps)
+        x, z = adapt.(Ref(AT), (X, Z))
+        @testset "BP ($name)" for (name, sites, dense, factors) in (
+                ("one-site product", [(1, 1)], x, [x]),
+                ("two-site product", [(1, 1), (1, 2)], x ⊗ z, [x, z]),
+                ("MPO", inds, O, gate_to_mpo(O)),
+            )
+            H_dense = LocalOperator(lattice11, sites => dense)
+            H_factors = LocalOperator(lattice11, sites => factors)
+            @test expectation_value(peps, H_factors, bp_env) ≈
+                expectation_value(peps, H_dense, bp_env) rtol = 1.0e-9
+        end
     end
 end
 

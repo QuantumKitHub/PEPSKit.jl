@@ -70,6 +70,10 @@ function local_expectation_value(inds, state, operator::MPOTerm, env)
         contract_local_norm(inds, state, env)
 end
 
+# TODO: Implement boundary_contraction_expr for BPEnv to contract its messages directly.
+local_expectation_value(inds, bra, operator::MPOTerm, ket, env::BPEnv) =
+    local_expectation_value(inds, bra, operator, ket, CTMRGEnv(env))
+
 # Expectation value of a local partition function tensor
 # ------------------------------------------------------
 
