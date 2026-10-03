@@ -43,6 +43,28 @@ function toolbox_mpo_terms_dense(AT)
     end
 end
 
+function toolbox_mpo_pepo(AT)
+    return @testset "Factored PEPO observables ($p, purified=$purified) ($AT)" for p in (ℂ^2, Vect[FermionParity](0 => 1, 1 => 1)), purified in (false, true)
+        Random.seed!(425)
+        rho = adapt(AT, InfinitePEPO(p, p; unitcell = (1, 1, 1)))
+        env = CTMRGEnv(purified ? InfinitePEPS(rho) : InfinitePartitionFunction(rho), p)
+        # The purified form supplies rho as both bra and ket.
+        args = purified ? (rho, env) : (env,)
+        a, b = ntuple(_ -> adapt(AT, randn(ComplexF64, p ← p)), 2)
+        gate = adapt(AT, randn(ComplexF64, p ⊗ p ← p ⊗ p))
+        @testset "$name" for (name, sites, dense, factors) in (
+                ("one-site product", [(1, 1)], a, [a]),
+                ("two-site product", [(1, 1), (1, 2)], a ⊗ b, [a, b]),
+                ("MPO", [(1, 1), (1, 2)], gate, gate_to_mpo(gate; trunc = notrunc())),
+            )
+            H_dense = LocalOperator(physicalspace(rho), sites => dense)
+            H_factors = LocalOperator(physicalspace(rho), sites => factors)
+            @test expectation_value(rho, H_factors, args...) ≈
+                expectation_value(rho, H_dense, args...) rtol = 1.0e-9
+        end
+    end
+end
+
 function toolbox_mpo_bookkeeping(AT)
     Random.seed!(2985721)
     return @testset "MPO bookkeeping ($AT)" begin
