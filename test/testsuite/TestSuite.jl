@@ -247,8 +247,7 @@ using .ToolboxTensorProductTerms
 
 module ToolboxMPOTerms
     include("toolbox/mpo_terms.jl")
-    export toolbox_mpo_convention, toolbox_mpo_dispatch, toolbox_mpo_terms_dense
-    export toolbox_mpo_heisenberg, toolbox_mpo_bookkeeping
+    export toolbox_mpo_terms_dense, toolbox_mpo_bookkeeping, toolbox_mpo_validation
 end
 using .ToolboxMPOTerms
 

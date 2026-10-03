@@ -50,10 +50,8 @@ end
 # Default to Any for eltype: needs to be abstract anyways so not that much to gain
 LocalOperator(lattice, terms) = LocalOperator{Any}(lattice, terms)
 LocalOperator(lattice, terms::Pair...) = LocalOperator(lattice, terms)
-# TODO: add terms beyond AbstractTensorMap
-# e.g. tensor product of 1-site operators, MPOs
-add_term!(operator::LocalOperator, inds::Tuple, term::AbstractTensorMap) = add_term!(operator, collect(inds), term)
-add_term!(operator::LocalOperator, inds::Vector, term::AbstractTensorMap) = add_term!(operator, map(CartesianIndex{2}, inds), term)
+add_term!(operator::LocalOperator, inds::Tuple, term::AbstractTensorMap; kwargs...) = add_term!(operator, collect(inds), term; kwargs...)
+add_term!(operator::LocalOperator, inds::AbstractVector, term::AbstractTensorMap; kwargs...) = add_term!(operator, CartesianIndex{2}[CartesianIndex{2}(ind) for ind in inds], term; kwargs...)
 function add_term!(
         operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::AbstractTensorMap;
         atol = zero(real(scalartype(term))),
@@ -76,9 +74,11 @@ function add_term!(
     end
 
     # translate coordinates
-    _shift_into_unitcell!(inds, size(operator))
+    inds = _shift_into_unitcell!(copy(inds), size(operator))
 
     if haskey(operator.terms, inds)
+        operator.terms[inds] isa MPOTerm &&
+            throw(ArgumentError("Accumulating terms with the same sites is not implemented for MPO or tensor product terms."))
         operator.terms[inds] = VI.add!!(operator.terms[inds], term)
     else
         operator.terms[inds] = term
@@ -106,17 +106,18 @@ The factors are rank-2, carrying no bond indices, which is what distinguishes th
 more general [`MPOTerm`](@ref): both are vectors of tensors, but a tensor product term is the
 narrower type and therefore wins on dispatch wherever it applies.
 """
-const TensorProductTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap{<:Any, <:Any, 1, 1}}
+const TensorProductTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap{<:Number, <:IndexSpace, 1, 1}}
 
-add_term!(operator::LocalOperator, inds::Tuple, term::TensorProductTerm) =
-    add_term!(operator, collect(inds), term)
-add_term!(operator::LocalOperator, inds::Vector, term::TensorProductTerm) =
-    add_term!(operator, map(CartesianIndex{2}, inds), term)
+add_term!(operator::LocalOperator, inds::Tuple, term::TensorProductTerm; kwargs...) =
+    add_term!(operator, collect(inds), term; kwargs...)
+add_term!(operator::LocalOperator, inds::AbstractVector, term::TensorProductTerm; kwargs...) =
+    add_term!(operator, CartesianIndex{2}[CartesianIndex{2}(ind) for ind in inds], term; kwargs...)
 function add_term!(
         operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::TensorProductTerm;
-        atol = zero(real(scalartype(first(term)))),
+        atol = 0,
     )
     # input checks
+    isempty(term) && throw(ArgumentError("A tensor product term should contain at least one tensor."))
     length(inds) == length(term) ||
         throw(ArgumentError("Incompatible number of indices and tensor product factors"))
     allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
@@ -137,7 +138,7 @@ function add_term!(
     end
 
     # translate coordinates
-    _shift_into_unitcell!(inds, size(operator))
+    inds = _shift_into_unitcell!(copy(inds), size(operator))
 
     # a sum of tensor products is not a tensor product, so terms cannot be accumulated here
     haskey(operator.terms, inds) && throw(
@@ -163,8 +164,7 @@ end
 A single term of a [`LocalOperator`](@ref) given as a matrix product operator with one
 tensor per site acted on, rather than as the dense rank-`2N` tensor.
 
-The factors are ordered along the chain and follow the usual MPO convention, rank-2 at the
-ends and rank-4 in the bulk:
+The factors are ordered along the chain and follow the usual MPO convention, rank-3 at the ends and rank-4 in the bulk:
 
     W₁  : P₁ ← P₁ ⊗ B₁
     Wᵢ  : Bᵢ₋₁ ⊗ Pᵢ ← Pᵢ ⊗ Bᵢ
@@ -183,14 +183,11 @@ MPO.
 const MPOTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
 
 
-add_term!(operator::LocalOperator, inds::Tuple, term::MPOTerm) =
-    add_term!(operator, collect(inds), term)
-add_term!(operator::LocalOperator, inds::Vector, term::MPOTerm) =
-    add_term!(operator, map(CartesianIndex{2}, inds), term)
-function add_term!(
-        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::MPOTerm
-    )
-    # input checks
+"""
+Validate an ordered MPO's sites, tensor partitions, physical spaces, and adjacent bond spaces.
+"""
+function _validate_mpo_term(inds, term::MPOTerm, lattice::AbstractMatrix{<:ElementarySpace})
+    isempty(term) && throw(ArgumentError("An MPO term should contain at least one tensor."))
     length(inds) == length(term) ||
         throw(ArgumentError("Incompatible number of indices and MPO factors"))
     allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
@@ -209,16 +206,32 @@ function add_term!(
         # the bra index is the physical one in the codomain: last for a bulk factor, which
         # carries the incoming bond first, and only for an end factor
         bra = codomain(term[i])[nout]
-        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
-        physicalspace(operator, ind_translated) == bra ||
+        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(lattice)))
+        lattice[ind_translated] == bra == domain(term[i])[1] ||
             throw(SpaceMismatch("Incompatible physical spaces"))
     end
+    for i in 1:(n - 1)
+        domain(term[i])[numin(term[i])] == codomain(term[i + 1])[1] ||
+            throw(SpaceMismatch("Incompatible MPO bond spaces between tensors $i and $(i + 1)."))
+    end
+    return nothing
+end
+
+add_term!(operator::LocalOperator, inds::Tuple, term::MPOTerm) =
+    add_term!(operator, collect(inds), term)
+add_term!(operator::LocalOperator, inds::AbstractVector, term::MPOTerm) =
+    add_term!(operator, CartesianIndex{2}[CartesianIndex{2}(ind) for ind in inds], term)
+function add_term!(
+        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::MPOTerm
+    )
+    _validate_mpo_term(inds, term, physicalspace(operator))
+    _local_term_iszero(term) && return operator
 
     # NOTE: `inds` is deliberately *not* sorted here, unlike for dense and tensor product
     # terms, since permuting MPOs is not straightforward.
 
     # translate coordinates
-    _shift_into_unitcell!(inds, size(operator))
+    inds = _shift_into_unitcell!(copy(inds), size(operator))
 
     # as for tensor products, a sum of MPOs of fixed bond dimension is not one of the same
     # bond dimension, so terms are not accumulated here
@@ -232,6 +245,12 @@ function add_term!(
 
     return operator
 end
+
+"""
+Detect an identically zero dense tensor or an MPO containing a zero factor.
+"""
+_local_term_iszero(term::AbstractTensorMap) = iszero(norm(term))
+_local_term_iszero(term::MPOTerm) = any(_local_term_iszero, term)
 
 
 """
@@ -299,43 +318,33 @@ Base.eltype(::Type{LocalOperator{O, S}}) where {O, S} = O
 
 # Real and imaginary part
 # -----------------------
-"""
-$(SIGNATURES)
-
-Take the real part of a single term of a [`LocalOperator`](@ref).
-
-A [`TensorProductTerm`](@ref) is made real factor by factor, so that the real part of a
-tensor product is the tensor product of the real parts of its factors. An [`MPOTerm`](@ref)
-is treated the same way, factor by factor.
-"""
-_real_local_term(term) = real(term)
-_real_local_term(term::MPOTerm) = map(real, term)
-
 function Base.real(O::LocalOperator)
-    return LocalOperator(
-        O.lattice, (sites => _real_local_term(op) for (sites, op) in O.terms)...
-    )
+    any(term -> term isa MPOTerm, values(O.terms)) &&
+        throw(ArgumentError("Taking the real part is not implemented for MPO or tensor product terms."))
+    return LocalOperator(O.lattice, (sites => real(op) for (sites, op) in O.terms)...)
 end
 function Base.imag(O::LocalOperator)
+    any(term -> term isa MPOTerm, values(O.terms)) &&
+        throw(ArgumentError("Taking the imaginary part is not implemented for MPO or tensor product terms."))
     return LocalOperator(O.lattice, (sites => imag(op) for (sites, op) in O.terms)...)
 end
 
 # Linear Algebra
 # --------------
 """
-$(SIGNATURES)
-
 Scale a single term of a [`LocalOperator`](@ref) by `α`.
 
-Terms which are not plain tensors need not scale by plain multiplication: an
-[`MPOTerm`](@ref) - and hence also a [`TensorProductTerm`](@ref) - is scaled by scaling one
-of its factors, since multiplying every factor would scale the term it represents by `α^n`.
+An [`MPOTerm`](@ref), including a [`TensorProductTerm`](@ref), is scaled by scaling its first factor only.
+The factor container may widen its element type when the scalar type changes, while retaining tensor-product dispatch.
 """
 _scale_local_term(term, α::Number) = α * term
 function _scale_local_term(term::MPOTerm, α::Number)
-    scaled = collect(term)
-    scaled[1] = α * scaled[1]
-    return scaled
+    return AbstractTensorMap[i == 1 ? α * tensor : tensor for (i, tensor) in enumerate(term)]
+end
+function _scale_local_term(term::TensorProductTerm, α::Number)
+    return AbstractTensorMap{<:Number, <:IndexSpace, 1, 1}[
+        i == 1 ? α * tensor : tensor for (i, tensor) in enumerate(term)
+    ]
 end
 
 Base.:*(α::Number, O::LocalOperator) = LocalOperator(
@@ -348,7 +357,16 @@ Base.:\(α::Number, O::LocalOperator) = inv(α) * O
 
 function Base.:+(O1::LocalOperator, O2::LocalOperator)
     checklattice(O1, O2)
-    return LocalOperator(physicalspace(O1), mergewith(VI.add, O1.terms, O2.terms))
+    return LocalOperator(physicalspace(O1), mergewith(_add_local_terms, O1.terms, O2.terms))
+end
+
+"""
+Accumulate dense terms while rejecting addition involving an MPO or tensor product at the same sites.
+"""
+function _add_local_terms(term1, term2)
+    (term1 isa MPOTerm || term2 isa MPOTerm) &&
+        throw(ArgumentError("Accumulating terms with the same sites is not implemented for MPO or tensor product terms."))
+    return VI.add(term1, term2)
 end
 
 Base.:-(O::LocalOperator) = -1 * O
@@ -359,9 +377,14 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 
 # Since we allow abstract types in T, value and type domain might not match
 function VI.scalartype(operator::LocalOperator)
-    return promote_type((scalartype(term[2]) for term in operator.terms)...)
+    return promote_type((_local_term_scalartype(term) for term in values(operator.terms))...)
 end
 
+"""
+Return the promoted scalar type of a dense tensor or the factors of an MPO.
+"""
+_local_term_scalartype(term::AbstractTensorMap) = scalartype(term)
+_local_term_scalartype(term::MPOTerm) = promote_type((scalartype(tensor) for tensor in term)...)
 
 # Equivalence
 # -----------
