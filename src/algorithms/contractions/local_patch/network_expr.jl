@@ -267,7 +267,7 @@ end
 mpolabel(args...) = physicallabel(:mpo, args...)
 
 function operator_contraction_expr(::Type{<:MPOTerm}, nsites)
-    # one factor per site, linked by a chain of bonds running left to right, rank-2 at the
+    # one factor per site, linked by a chain of bonds running left to right, rank-3 at the
     # ends of the chain and rank-4 in the bulk:
     #   W₁  : bra₁ ← ket₁ ⊗ b₁
     #   Wᵢ  : bᵢ₋₁ ⊗ braᵢ ← ketᵢ ⊗ bᵢ
