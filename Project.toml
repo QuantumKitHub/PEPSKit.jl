@@ -46,7 +46,7 @@ FiniteDifferences = "0.12"
 KrylovKit = "0.9.5, 0.10"
 LinearAlgebra = "1"
 LoggingExtras = "1"
-MPSKit = "0.13.9"
+MPSKit = "0.14"
 MPSKitModels = "0.4"
 MatrixAlgebraKit = "0.6.5"
 OhMyThreads = "0.7, 0.8"
@@ -64,4 +64,4 @@ julia = "1.10"
 
 [sources]
 TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
-MPSKit = {url = "https://github.com/QuantumKitHub/MPSKit.jl", rev = "main"}
+MPSKitModels = {url = "https://github.com/QuantumKitHub/MPSKitModels.jl", rev = "ksh/mpskitbump"}
