@@ -127,6 +127,12 @@ module CTMRGGaugeFix
 end
 using .CTMRGGaugeFix
 
+module CTMRGGaugeTrans
+    include("ctmrg/gaugetrans.jl")
+    export ctmrg_gaugetrans
+end
+using .CTMRGGaugeTrans
+
 module CTMRGPartitionFunction
     include("ctmrg/partition_function.jl")
     export ctmrg_partition_function, ctmrg_partition_function_spaces
