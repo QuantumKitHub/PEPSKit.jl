@@ -63,3 +63,6 @@ TupleTools = "1.6.0"
 VectorInterface = "0.4, 0.5, 0.6, 0.7"
 Zygote = "0.6, 0.7"
 julia = "1.10"
+
+[sources]
+TensorKit = {url = "https://github.com/QuantumKitHub/TensorKit.jl", rev = "main"}
