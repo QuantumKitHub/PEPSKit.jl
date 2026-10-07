@@ -275,30 +275,20 @@ end
 ## Gauge transform
 
 """
-    gauge_transform(ψ::InfinitePEPS, XXinv)
+    gauge_transform(ψ::InfinitePEPS, gauge::VirtualGaugeTransform)
 
-Transform the InfinitePEPS `ψ` with gauge transformations `XXinv` on its virtual bonds.
-
-`XXinv` consists of `(X, X⁻¹)` pairs on each virtual bond of `ψ`.
-```
-    T[r-1,c]
-    |
-    X⁻¹
-    |   [NORTH,r,c]
-    X
-    |
-    T[r,c]----X---X⁻¹----T[r,c+1]
-            [EAST,r,c]
-```
+Transform the virtual bonds of `ψ` using a gauge with shape `(2, rows, cols)`.
+See [`VirtualGaugeTransform`](@ref) for the bond convention.
 """
-function gauge_transform(ψ::InfinitePEPS, XXinv)
+function gauge_transform(ψ::InfinitePEPS, gauge::VirtualGaugeTransform{3})
+    _check_gauge_size(gauge, size(ψ))
     A2 = map(eachcoordinate(ψ)) do (r, c)
-        Xn = XXinv[NORTH, r, c][1]
-        Xe = XXinv[EAST, r, c][1]
-        Xs = XXinv[NORTH, _next(r, end), c][2]
-        Xw = XXinv[EAST, r, _prev(c, end)][2]
+        Xn, Xe, Xs, Xw = _virtual_gauge_factors(gauge, r, c)
         return @tensor t[p; n e s w] := ψ[r, c][p; n′ e′ s′ w′] *
             Xn[n′; n] * Xe[e′; e] * Xs[s; s′] * Xw[w; w′]
     end
     return InfinitePEPS(A2)
 end
+
+gauge_transform(ψ::InfinitePEPS, pairs::AbstractArray{<:Tuple{MPSBondTensor, MPSBondTensor}, 3}) =
+    gauge_transform(ψ, VirtualGaugeTransform(pairs))

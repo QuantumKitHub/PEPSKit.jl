@@ -129,7 +129,7 @@ using .CTMRGGaugeFix
 
 module CTMRGGaugeTrans
     include("ctmrg/gaugetrans.jl")
-    export ctmrg_gaugetrans
+    export ctmrg_gaugetrans, ctmrg_gaugetrans_pepo, ctmrg_gaugetrans_stacked_env
 end
 using .CTMRGGaugeTrans
 

@@ -69,6 +69,7 @@ include("utility/initialization.jl")
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
+include("networks/gaugetransforms.jl")
 
 include("states/infinitepeps.jl")
 include("states/infinitepartitionfunction.jl")
@@ -204,6 +205,7 @@ export InfinitePEPO, InfiniteTransferPEPO
 export BPEnv, BeliefPropagation
 export BPGauge, SUGauge
 export gauge_fix, gauge_transform
+export VirtualGaugeTransform, CTMRGEnvGaugeTransform
 
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect
