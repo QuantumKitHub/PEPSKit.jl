@@ -209,12 +209,6 @@ module GradientsCTMRG
 end
 using .GradientsCTMRG
 
-module EnzymeGradientsCTMRG
-    include("enzyme_gradients/enz_ctmrg_gradients.jl")
-    export enzyme_gradients_asymmetric, enzyme_gradients_asymmetric_276
-end
-using .EnzymeGradientsCTMRG
-
 # Optimization
 # ------------
 module OptimizationNormPreservation
@@ -222,6 +216,20 @@ module OptimizationNormPreservation
     export optimization_tangent_projection, optimization_norm_preservation
 end
 using .OptimizationNormPreservation
+
+# Enzyme gradients 
+# ----------------
+module EnzymeGradientsCTMRG
+    include("enzyme_gradients/enz_ctmrg_gradients.jl")
+    export enzyme_gradients_asymmetric, enzyme_gradients_asymmetric_276
+end
+using .EnzymeGradientsCTMRG
+
+module EnzymeGradientsC4vCTMRG
+    include("enzyme_gradients/enz_c4v_ctmrg_gradients.jl")
+    export enzyme_gradients_c4v
+end
+using .EnzymeGradientsC4vCTMRG
 
 # Time evolution
 # --------------
