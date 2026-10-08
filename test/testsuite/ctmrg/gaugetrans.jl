@@ -43,6 +43,10 @@ function ctmrg_gaugetrans(AT)
         )
         ψg, envg = gauge_transform(ψ, gauge), gauge_transform(env, gauge)
         envb = gauge_transform(env, boundary_gauge)
+        for R in (rotl90, rotr90, rot180), (state, g, transformed) in
+                ((ψ, gauge, ψg), (env, gauge, envg), (env, boundary_gauge, envb))
+            @test R(transformed) ≈ gauge_transform(R(state), R(g))
+        end
         for (r, c) in eachcoordinate(ψ)
             inds = [CartesianIndex(r, c)]
             ρ = reduced_densitymatrix(inds, ψ, env)
@@ -69,7 +73,11 @@ function ctmrg_gaugetrans_pepo(AT)
         X = map(Iterators.product(1:2, axes(P)...)) do (dir, r, c, h)
             return _random_gauge_matrix(AT, dir == NORTH ? N[r, c, h] : E[r, c, h])
         end
-        ρg = gauge_transform(ρ, VirtualGaugeTransform(X))
+        gauge = VirtualGaugeTransform(X)
+        ρg = gauge_transform(ρ, gauge)
+        for R in (rotl90, rotr90, rot180)
+            @test R(ρg) ≈ gauge_transform(R(ρ), R(gauge))
+        end
         for h in axes(P, 3)
             layer, layerg = InfinitePEPO(ρ.A[:, :, h:h]), InfinitePEPO(ρg.A[:, :, h:h])
             env = adapt(AT, CTMRGEnv(InfinitePartitionFunction(layer), χ))

@@ -79,6 +79,100 @@ CTMRGEnvGaugeTransform(pairs::AbstractArray{<:Tuple{MPSBondTensor, MPSBondTensor
 Base.inv(gauge::VirtualGaugeTransform) = VirtualGaugeTransform(gauge.inverses, gauge.matrices)
 Base.inv(gauge::CTMRGEnvGaugeTransform) = CTMRGEnvGaugeTransform(gauge.inverses, gauge.matrices)
 
+"""Rotate virtual bonds counterclockwise, reversing the old north bonds into new east bonds."""
+function _rotl90_virtual_gauge(
+        matrices::AbstractArray{<:MPSBondTensor}, inverses::AbstractArray{<:MPSBondTensor}
+    )
+    nr, nc = size(matrices)[2:3]
+    return map(CartesianIndices((2, nc, nr, size(matrices)[4:end]...))) do I
+        d, r, c = Tuple(I)[1:3]
+        layer = Tuple(I)[4:end]
+        # Match the leg permutation in state rotations, including fermionic signs.
+        return d == NORTH ? matrices[EAST, c, nc + 1 - r, layer...] :
+            permute(inverses[NORTH, _next(c, nr), nc + 1 - r, layer...], ((2,), (1,)))
+    end
+end
+
+"""Rotate virtual bonds clockwise, reversing the old east bonds into new north bonds."""
+function _rotr90_virtual_gauge(
+        matrices::AbstractArray{<:MPSBondTensor}, inverses::AbstractArray{<:MPSBondTensor}
+    )
+    nr, nc = size(matrices)[2:3]
+    return map(CartesianIndices((2, nc, nr, size(matrices)[4:end]...))) do I
+        d, r, c = Tuple(I)[1:3]
+        layer = Tuple(I)[4:end]
+        return d == NORTH ?
+            permute(inverses[EAST, nr + 1 - c, _prev(r, nc), layer...], ((2,), (1,))) :
+            matrices[NORTH, nr + 1 - c, r, layer...]
+    end
+end
+
+"""Rotate virtual bonds by a half turn, reversing both bond directions using inverse maps."""
+function _rot180_virtual_gauge(inverses::AbstractArray{<:MPSBondTensor})
+    nr, nc = size(inverses)[2:3]
+    return map(CartesianIndices(inverses)) do I
+        d, r, c = Tuple(I)[1:3]
+        layer = Tuple(I)[4:end]
+        r, c = nr + 1 - r, nc + 1 - c
+        Xinv = d == NORTH ? inverses[NORTH, _next(r, nr), c, layer...] :
+            inverses[EAST, r, _prev(c, nc), layer...]
+        return permute(Xinv, ((2,), (1,)))
+    end
+end
+
+"""Rotate boundary gauge directions and unit-cell coordinates counterclockwise."""
+function _rotl90_boundary_gauge(matrices::AbstractArray{<:MPSBondTensor, 3})
+    return map(CartesianIndices((4, size(matrices, 3), size(matrices, 2)))) do I
+        d, r, c = Tuple(I)
+        return matrices[_next(d, 4), c, size(matrices, 3) + 1 - r]
+    end
+end
+
+"""Rotate boundary gauge directions and unit-cell coordinates clockwise."""
+function _rotr90_boundary_gauge(matrices::AbstractArray{<:MPSBondTensor, 3})
+    return map(CartesianIndices((4, size(matrices, 3), size(matrices, 2)))) do I
+        d, r, c = Tuple(I)
+        return matrices[_prev(d, 4), size(matrices, 2) + 1 - c, r]
+    end
+end
+
+"""Rotate boundary gauge directions and unit-cell coordinates by a half turn."""
+function _rot180_boundary_gauge(matrices::AbstractArray{<:MPSBondTensor, 3})
+    return map(CartesianIndices(matrices)) do I
+        d, r, c = Tuple(I)
+        return matrices[mod1(d + 2, 4), size(matrices, 2) + 1 - r, size(matrices, 3) + 1 - c]
+    end
+end
+
+"""
+    rotl90(gauge::Union{VirtualGaugeTransform, CTMRGEnvGaugeTransform})
+    rotr90(gauge::Union{VirtualGaugeTransform, CTMRGEnvGaugeTransform})
+    rot180(gauge::Union{VirtualGaugeTransform, CTMRGEnvGaugeTransform})
+
+Rotate a gauge consistently with its state or CTMRG environment, leaving PEPO layers in place.
+For each rotation `R`, `R(gauge_transform(state, gauge)) ≈ gauge_transform(R(state), R(gauge))`.
+"""
+Base.rotl90(gauge::VirtualGaugeTransform) = VirtualGaugeTransform(
+    _rotl90_virtual_gauge(gauge.matrices, gauge.inverses),
+    _rotl90_virtual_gauge(gauge.inverses, gauge.matrices)
+)
+Base.rotl90(gauge::CTMRGEnvGaugeTransform) = CTMRGEnvGaugeTransform(
+    _rotl90_boundary_gauge(gauge.matrices), _rotl90_boundary_gauge(gauge.inverses)
+)
+Base.rotr90(gauge::VirtualGaugeTransform) = VirtualGaugeTransform(
+    _rotr90_virtual_gauge(gauge.matrices, gauge.inverses),
+    _rotr90_virtual_gauge(gauge.inverses, gauge.matrices)
+)
+Base.rotr90(gauge::CTMRGEnvGaugeTransform) = CTMRGEnvGaugeTransform(
+    _rotr90_boundary_gauge(gauge.matrices), _rotr90_boundary_gauge(gauge.inverses)
+)
+Base.rot180(gauge::VirtualGaugeTransform) = VirtualGaugeTransform(
+    _rot180_virtual_gauge(gauge.inverses), _rot180_virtual_gauge(gauge.matrices)
+)
+Base.rot180(gauge::CTMRGEnvGaugeTransform) = CTMRGEnvGaugeTransform(
+    _rot180_boundary_gauge(gauge.matrices), _rot180_boundary_gauge(gauge.inverses)
+)
+
 """Check that a gauge array has the expected unit cell and layer count."""
 function _check_gauge_size(gauge::Union{VirtualGaugeTransform, CTMRGEnvGaugeTransform}, dims::Tuple)
     size(gauge.matrices)[2:end] == dims || throw(DimensionMismatch("Gauge unit cell does not match the object being transformed"))
