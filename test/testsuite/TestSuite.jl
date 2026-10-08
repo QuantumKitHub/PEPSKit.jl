@@ -209,6 +209,12 @@ module EnzymeGradientsCTMRG
 end
 using .EnzymeGradientsCTMRG
 
+module EnzymeGradientsC4vCTMRG
+    include("enzyme_gradients/enz_c4v_ctmrg_gradients.jl")
+    export enzyme_gradients_c4v
+end
+using .EnzymeGradientsC4vCTMRG
+
 # Time evolution
 # --------------
 module TimeEvolClusterProjectors
