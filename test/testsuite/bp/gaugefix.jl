@@ -75,19 +75,37 @@ function bp_gaugefix_bp_vs_su(AT)
         @test compare_weights(wts1, wts2) < 1.0e-9
 
         bpg_alg = BPGauge()
-        peps2, XXinv = @testinferred gauge_fix(peps1, bpg_alg, env)
+        peps2, gauge = @testinferred gauge_fix(peps1, bpg_alg, env)
+        @test gauge_transform(peps1, gauge) ≈ peps2
         if bipartite
             @test _is_bipartite(peps2)
         end
         for (a1, a2) in zip(peps1.A, peps2.A)
             @test space(a1) == space(a2)
         end
-        for (X, Xinv) in XXinv
+        for (X, Xinv) in zip(gauge.matrices, gauge.inverses)
             # X, Xinv should contract to identity
             @tensor tmp[-1; -2] := X[-1; 1] * Xinv[1; -2]
             @test tmp ≈ twistdual(TensorKit.id(space(X, 1)), 1)
             # BP should differ from SU only by a unitary gauge transformation
             @test inv(X) ≈ adjoint(X) ≈ Xinv
         end
+    end
+end
+
+"""Test that the BP gauge reproduces a PEPO and preserves its CTMRG density matrices."""
+function bp_gaugefix_pepo(AT)
+    return @testset "BP gauge of PEPO ($AT) ($S)" for S in (U1Irrep, FermionParity)
+        P = Vect[S](0 => 1, 1 => 1)
+        V = S == U1Irrep ? Vect[S](-1 => 1, 0 => 2, 1 => 1) : Vect[S](0 => 2, 1 => 1)
+        N, E = random_dual!(fill(V, 2, 3)), random_dual!(fill(V, 2, 3))
+        ρ = adapt(AT, InfinitePEPO(fill(P, 2, 3), N, E))
+        bp_env = adapt(AT, BPEnv(randn, ComplexF64, ρ))
+        ρg, gauge = gauge_fix(ρ, BPGauge(), bp_env)
+        @test gauge_transform(ρ, gauge) ≈ ρg
+        env = adapt(AT, CTMRGEnv(InfinitePEPS(ρ), V))
+        envg = gauge_transform(env, gauge)
+        inds = [CartesianIndex(1, 1)]
+        @test reduced_densitymatrix(inds, ρ, ρ, env) ≈ reduced_densitymatrix(inds, ρg, ρg, envg)
     end
 end

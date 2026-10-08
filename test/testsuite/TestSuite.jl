@@ -56,7 +56,7 @@ using .BPExpVals
 
 module BPGaugeFix
     include("bp/gaugefix.jl")
-    export bp_gaugefix_bp_vs_su
+    export bp_gaugefix_bp_vs_su, bp_gaugefix_pepo
 end
 using .BPGaugeFix
 
