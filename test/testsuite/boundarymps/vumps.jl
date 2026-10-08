@@ -43,7 +43,7 @@ function boundary_mps_two_two_peps(AT)
         # foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T)) # TODO: MPSKit.physicalspace(::MultilineMPO) isn't implemented...
         mps = initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2))
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
-        N = abs(prod(expectation_value(mps, T)))
+        N = abs(leading_eigenvalue(mps, T))
 
         ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
         N´ = abs(norm(psi, ctm))
