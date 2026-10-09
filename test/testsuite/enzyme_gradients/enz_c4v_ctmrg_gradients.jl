@@ -42,7 +42,7 @@ allowed_rrule_algs = Dict(
 # be selective on which configurations to test the naive gradient for
 naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :FullPullback), (:C4vCTMRG, :C4vQRProjector, :FullPullback)]
 
-function enz_gradients_c4v(AT)
+function enzyme_gradients_c4v(AT)
     naive_gradient_done = Set()
     return @testset "Enzyme AD C4v CTMRG energy gradients for $(names[i]) model ($AT)" verbose = true for i in
         eachindex(
