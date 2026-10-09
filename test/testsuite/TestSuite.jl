@@ -121,6 +121,12 @@ module CTMRGFlavors
 end
 using .CTMRGFlavors
 
+module CTMRGC4vSignBranches
+    include("ctmrg/c4v_sign_branches.jl")
+    export ctmrg_c4v_sign_branches
+end
+using .CTMRGC4vSignBranches
+
 module CTMRGGaugeFix
     include("ctmrg/gaugefix.jl")
     export ctmrg_gaugefix_asymmetric, ctmrg_gaugefix_c4v
