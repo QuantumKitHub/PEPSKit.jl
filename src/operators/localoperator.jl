@@ -47,8 +47,23 @@ function LocalOperator{O}(lattice, terms) where {O}
     return operator
 end
 
-# Default to Any for eltype: needs to be abstract anyways so not that much to gain
-LocalOperator(lattice, terms) = LocalOperator{Any}(lattice, terms)
+"""
+Narrowest element type that holds every term.
+"""
+function _term_eltype(terms)
+    T = Union{}
+    for (_, term) in terms
+        T = typejoin(T, typeof(term))
+    end
+    return T === Union{} ? Any : T
+end
+
+# `terms` may be a generator (`real`, `imag` and `*` build one), so collect before the
+# two passes over it.
+function LocalOperator(lattice, terms)
+    collected = collect(terms)
+    return LocalOperator{_term_eltype(collected)}(lattice, collected)
+end
 LocalOperator(lattice, terms::Pair...) = LocalOperator(lattice, terms)
 # TODO: add terms beyond AbstractTensorMap
 # e.g. tensor product of 1-site operators, MPOs
