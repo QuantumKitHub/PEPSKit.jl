@@ -46,6 +46,18 @@ module BoundaryMPSVUMPS
 end
 using .BoundaryMPSVUMPS
 
+module BoundaryMPSSymmetricGradients
+    include("boundarymps/symmetric_gradients.jl")
+    export boundary_mps_symmetric_gradients
+end
+using .BoundaryMPSSymmetricGradients
+
+module BoundaryMPSSymmetricObservables
+    include("boundarymps/symmetric_observables.jl")
+    export boundary_mps_symmetric_observables
+end
+using .BoundaryMPSSymmetricObservables
+
 # BP
 # --------------
 module BPExpVals
