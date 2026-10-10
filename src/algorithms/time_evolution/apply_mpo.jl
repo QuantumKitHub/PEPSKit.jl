@@ -214,9 +214,32 @@ function _proj_from_RL(
     @assert isdual(domain(l, 1)) == isdual(codomain(l, 1)) == false
     rl = r * l
     u, s, vh, ϵ = svd_trunc!(rl; trunc)
+    return _proj_from_svd(r, l, u, s, vh, ϵ)
+end
+
+# Second half of `_proj_from_RL`, split off so that the decomposition can be
+# done for the whole cluster at once (see `bond_svds`).
+function _proj_from_svd(r::MPSBondTensor, l::MPSBondTensor, u, s, vh, ϵ)
     sinv = sdiag_pow(s, -1 / 2)
     Pa, Pb = l * vh' * sinv, sinv * u' * r
     return Pa, s, Pb, ϵ
+end
+
+"""
+    bond_svds(rls, truncs)
+
+Truncated SVD of every internal bond of a cluster, returning `(u, s, vh, ϵ)` per bond.
+
+Separate from [`_proj_from_RL`](@ref) so that *all* bonds of the cluster can be decomposed 
+in a single batched call.
+"""
+function bond_svds(rls::AbstractVector, truncs::AbstractVector)
+    return bond_svds(storagetype(eltype(rls)), rls, truncs)
+end
+function bond_svds(::Type, rls::AbstractVector, truncs::AbstractVector)
+    return map(rls, truncs) do rl, trunc
+        return svd_trunc!(rl; trunc)
+    end
 end
 
 """
@@ -229,8 +252,14 @@ function _get_allprojs(
     N = length(Ms)
     Rs, Ls = _get_allRLs(Ms)
     @assert length(truncs) == N - 1
-    projs_errs = map(Rs, Ls, truncs) do R, L, trunc
-        return _proj_from_RL(R, L; trunc)
+    for (R, L) in zip(Rs, Ls)
+        @assert isdual(domain(R, 1)) == isdual(codomain(R, 1)) == false
+        @assert isdual(domain(L, 1)) == isdual(codomain(L, 1)) == false
+    end
+    # decompose every bond of the cluster in one go, then finish each projector locally
+    svds = bond_svds(map(*, Rs, Ls), truncs)
+    projs_errs = map(Rs, Ls, svds) do R, L, (u, s, vh, ϵ)
+        return _proj_from_svd(R, L, u, s, vh, ϵ)
     end
     Pas = map(Base.Fix2(getindex, 1), projs_errs)
     wts = map(Base.Fix2(getindex, 2), projs_errs)
@@ -299,7 +328,7 @@ function _apply_gatempo!(
     fusers = map(Iterators.drop(Ms, 1), Iterators.drop(gs, 1)) do M, g
         V1, V2 = space(M, 1), space(g, 1)
         @assert !isdual(V1) && !isdual(V2)
-        return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
+        return isomorphism(storagetype(T1), fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPS
            -3                         -3                          -3
@@ -336,7 +365,7 @@ function _apply_gatempo!(
     fusers = map(Iterators.drop(Ms, 1), Iterators.drop(gs, 1)) do M, g
         V1, V2 = space(M, 1), space(g, 1)
         @assert !isdual(V1) && !isdual(V2)
-        return isomorphism(fuse(V1, V2) ← V1 ⊗ V2)
+        return isomorphism(storagetype(M), fuse(V1, V2) ← V1 ⊗ V2)
     end
     #= gate on codomain of PEPO (gate_ax = 1)
 

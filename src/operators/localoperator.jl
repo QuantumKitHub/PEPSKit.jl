@@ -86,6 +86,7 @@ function add_term!(
 
     return operator
 end
+TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S} = storagetype(first(lo.terms)[2]) # horrible!
 
 
 """

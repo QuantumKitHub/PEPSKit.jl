@@ -186,7 +186,7 @@ end
 _default_svd_rrule_alg(::IterSVD) = :TruncPullback
 
 random_start_vector(t::AbstractMatrix) = randn(scalartype(t), size(t, 1))
-deterministic_start_vector(t::AbstractMatrix) = ones(scalartype(t), size(t, 1))
+deterministic_start_vector(t::AbstractMatrix) = fill!(similar(t, size(t, 1)), one(scalartype(t)))
 
 # Compute SVD data block-wise using KrylovKit algorithm
 # TODO: redefine _empty_svdtensors, _create_svdtensors
@@ -206,7 +206,7 @@ end
 function MatrixAlgebraKit.svd_trunc!(f, alg::TruncatedAlgorithm{<:IterSVD})
     U, S, Vᴴ = svd_trunc_no_error!(f, alg)
     truncation_error =
-        (trunc isa NoTruncation || isempty(blocksectors(f))) ? abs(zero(scalartype(f))) : norm(U * S * Vᴴ - f)
+        (alg.trunc isa NoTruncation || isempty(blocksectors(f))) ? abs(zero(scalartype(f))) : norm(U * S * Vᴴ - f)
     return U, S, Vᴴ, truncation_error
 end
 
@@ -239,6 +239,7 @@ function _compute_svddata!(
     I = sectortype(f)
     dims = SectorDict{I, Int}()
 
+    Stype = similarstoragetype(f, real(scalartype(f)))
     sectors = trunc isa NoTruncation ? blocksectors(f) : blocksectors(trunc.space)
     generator = Base.Iterators.map(sectors) do c
         b = block(f, c)
@@ -273,7 +274,7 @@ function _compute_svddata!(
 
         resize!(S, howmany)
         dims[c] = length(S)
-        return c => (U, S, V)
+        return c => (U, Stype(S), V)
     end
 
     SVDdata = SectorDict(generator)
@@ -303,7 +304,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_full_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
@@ -333,7 +334,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_full_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
@@ -358,7 +359,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_trunc_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δf = svd_trunc_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
@@ -383,7 +384,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_trunc_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δf = svd_trunc_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
@@ -393,6 +394,20 @@ function ChainRulesCore.rrule(
     end
 
     return (U, S, V⁺), svd_trunc!_trunc_pullback
+end
+
+# `block(::AdjointTensorMap, c)` hands back a `LinearAlgebra.Adjoint`, and GPU array
+# packages only recognize a single layer of array wrappers (see the `WrappedArray` union in
+# Adapt). Slicing a doubly-wrapped array -- as `eachcol(V')` does -- therefore escapes the
+# device fast paths and falls back to scalar indexing on the host, so materialize the
+# wrapper before slicing.
+_materialize_block(m::AbstractMatrix) = m
+_materialize_block(m::Union{Adjoint, Transpose}) = copyto!(similar(m, size(m)), m)
+
+# Columns of `m` as a vector of `A`-typed vectors, keeping the data on its original device.
+function _column_vectors(::Type{A}, m::AbstractMatrix) where {A}
+    m̃ = _materialize_block(m)
+    return A[m̃[:, j] for j in axes(m̃, 2)]
 end
 
 # KrylovKit rrule compatible with TensorMaps & function handles
@@ -416,12 +431,15 @@ function ChainRulesCore.rrule(
         for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
-            Sdc = view(Sc, diagind(Sc))
-            ΔSdc = ΔSc isa AbstractZero ? ΔSc : view(ΔSc, diagind(ΔSc))
+            # `compute_svdsolve_pullback_data` reads the singular values element-wise and
+            # combines them with dense `n_vals × n_vals` host matrices, so keep these on
+            # the CPU; the bulk data (`lvecs`, `rvecs`, `block(f, c)`) stays on device.
+            Sdc = collect(diagview(Sc))
+            ΔSdc = ΔSc isa AbstractZero ? zero(Sdc) : collect(diagview(ΔSc))
 
             n_vals = length(Sdc)
-            lvecs = Vector{Vector{scalartype(f)}}(eachcol(Uc))
-            rvecs = Vector{Vector{scalartype(f)}}(eachcol(Vc'))
+            lvecs = _column_vectors(storagetype(f), Uc)
+            rvecs = _column_vectors(storagetype(f), Vc')
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
@@ -431,12 +449,12 @@ function ChainRulesCore.rrule(
                 Δlvecs = fill(ZeroTangent(), n_vals)
                 Δrvecs = fill(ZeroTangent(), n_vals)
             else
-                Δlvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔUc))
-                Δrvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔVc'))
+                Δlvecs = _column_vectors(storagetype(f), ΔUc)
+                Δrvecs = _column_vectors(storagetype(f), ΔVc')
             end
 
             xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
-                ΔSc isa AbstractZero ? fill(zero(Sc[1]), n_vals) : ΔSdc,
+                ΔSdc,
                 Δlvecs,
                 Δrvecs,
                 Sdc,
@@ -448,10 +466,14 @@ function ChainRulesCore.rrule(
                 minimal_alg,
                 rrule_alg,
             )
+            # `construct∂f_svd` hands back an `InplaceableThunk`; copying from it directly
+            # would fall back to iterating it element-wise, so unthunk it first.
             copyto!(
                 b,
-                KrylovKitCRCExt.construct∂f_svd(
-                    HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys
+                unthunk(
+                    KrylovKitCRCExt.construct∂f_svd(
+                        HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys
+                    )
                 ),
             )
         end
@@ -485,12 +507,15 @@ function ChainRulesCore.rrule(
         for (c, b) in blocks(Δf)
             Uc, Sc, Vc = block(U, c), block(S, c), block(V, c)
             ΔUc, ΔSc, ΔVc = block(ΔU, c), block(ΔS, c), block(ΔV, c)
-            Sdc = view(Sc, diagind(Sc))
-            ΔSdc = ΔSc isa AbstractZero ? ΔSc : view(ΔSc, diagind(ΔSc))
+            # `compute_svdsolve_pullback_data` reads the singular values element-wise and
+            # combines them with dense `n_vals × n_vals` host matrices, so keep these on
+            # the CPU; the bulk data (`lvecs`, `rvecs`, `block(f, c)`) stays on device.
+            Sdc = collect(diagview(Sc))
+            ΔSdc = ΔSc isa AbstractZero ? zero(Sdc) : collect(diagview(ΔSc))
 
             n_vals = length(Sdc)
-            lvecs = Vector{Vector{scalartype(f)}}(eachcol(Uc))
-            rvecs = Vector{Vector{scalartype(f)}}(eachcol(Vc'))
+            lvecs = _column_vectors(storagetype(f), Uc)
+            rvecs = _column_vectors(storagetype(f), Vc')
 
             # Dummy objects only used for warnings
             minimal_info = KrylovKit.ConvergenceInfo(n_vals, nothing, nothing, -1, -1)  # Only num. converged is used
@@ -500,12 +525,12 @@ function ChainRulesCore.rrule(
                 Δlvecs = fill(ZeroTangent(), n_vals)
                 Δrvecs = fill(ZeroTangent(), n_vals)
             else
-                Δlvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔUc))
-                Δrvecs = Vector{Vector{scalartype(f)}}(eachcol(ΔVc'))
+                Δlvecs = _column_vectors(storagetype(f), ΔUc)
+                Δrvecs = _column_vectors(storagetype(f), ΔVc')
             end
 
             xs, ys = KrylovKitCRCExt.compute_svdsolve_pullback_data(
-                ΔSc isa AbstractZero ? fill(zero(Sc[1]), n_vals) : ΔSdc,
+                ΔSdc,
                 Δlvecs,
                 Δrvecs,
                 Sdc,
@@ -517,10 +542,14 @@ function ChainRulesCore.rrule(
                 minimal_alg,
                 rrule_alg,
             )
+            # `construct∂f_svd` hands back an `InplaceableThunk`; copying from it directly
+            # would fall back to iterating it element-wise, so unthunk it first.
             copyto!(
                 b,
-                KrylovKitCRCExt.construct∂f_svd(
-                    HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys
+                unthunk(
+                    KrylovKitCRCExt.construct∂f_svd(
+                        HasReverseMode(), block(f, c), lvecs, rvecs, xs, ys
+                    )
                 ),
             )
         end

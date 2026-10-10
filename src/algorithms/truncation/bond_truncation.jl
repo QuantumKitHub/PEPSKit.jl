@@ -141,7 +141,7 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::ALSTrunca
     a, b = absorb_s(a, s, b)
     b = permute(b, ((1, 2), (3,)))
     if need_flip
-        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
+        a, s, b = flip(a, numind(a)), _fliptwist_s!(s), flip(b, 1)
     end
     return a, s, b, (; fid, Δfid, Δs)
 end
@@ -182,7 +182,7 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::FullEnvTr
     @tensor a[-1 -2; -3] := Qa[-1 -2 3] * u[3 -3]
     @tensor b[-1 -2; -3] := vh[-1 1] * Qb[1 -2 -3]
     if need_flip
-        a, s, b = flip(a, numind(a)), _fliptwist_s(s), flip(b, 1)
+        a, s, b = flip(a, numind(a)), _fliptwist_s!(s), flip(b, 1)
     end
     return a, s, b, info
 end

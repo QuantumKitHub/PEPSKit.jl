@@ -5,7 +5,7 @@ Initialize a fully random `CTMRGEnv` using the given environment virtual spaces.
 [`CTMRGEnv`](@ref) for details on the expected format of the virtual spaces.
 """
 function initialize_ctmrg_environment(
-        elt::Type{<:Number},
+        elt::Type,
         n::InfiniteSquareNetwork,
         alg::RandomInitialization,
         virtual_spaces... = oneunit(spacetype(n)),
@@ -20,7 +20,7 @@ Initialize a `CTMRGEnv` corresponding to a product state with trivial virtual sp
 corners. The product state edge tensors are initialized as `alg.f(elt, V::ProductSpace)`.
 """
 function initialize_ctmrg_environment(
-        elt::Type{<:Number},
+        elt::Type,
         n::InfiniteSquareNetwork,
         alg::ProductStateInitialization,
     )
@@ -36,7 +36,7 @@ Initialize a `CTMRGEnv` by applying a single untruncated iteration of
 environment is chosen as a random product state.
 """
 function initialize_ctmrg_environment(
-        elt::Type{<:Number},
+        elt::Type,
         n::InfiniteSquareNetwork,
         alg::ApplicationInitialization,
         env0 = ProductStateEnv(alg.f, elt, n)
@@ -65,7 +65,7 @@ virtual spaces of a two-layer network, for example
 ```
 """
 function initialize_ctmrg_environment(
-        elt::Type{<:Number},
+        elt::Type,
         n::InfiniteSquareNetwork,
         ::IdentityInitialization,
     )
@@ -86,5 +86,5 @@ function initialize_ctmrg_environment(
         elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
         kwargs...
     )
-    return initialize_ctmrg_environment(elt, InfiniteSquareNetwork(A), args...; kwargs...)
+    return initialize_ctmrg_environment(similarstoragetype(storagetype(A), elt), InfiniteSquareNetwork(A), args...; kwargs...)
 end
