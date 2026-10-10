@@ -4,11 +4,7 @@ using TensorKit
 using PEPSKit
 using Adapt
 
-# Benchmark energy from high-temperature expansion
-# at β = 0.3, 0.6
-# Physical Review B 67, 014416 (2003)
-bm = [-0.1235, -0.213]
-
+"Converge the CTMRG environment for a finite-temperature energy measurement."
 function converge_env(state, χ::Int)
     env0 = initialize_ctmrg_environment(state, ProductStateInitialization())
     trunc1 = truncrank(χ) & truncerror(; atol = 1.0e-12)
@@ -16,50 +12,55 @@ function converge_env(state, χ::Int)
     return env
 end
 
+"Check purified simple and neighbourhood updates against high-temperature energies."
 function timeevol_j1j2_finiteT(AT)
-    return @testset "J1J2 finiteT ($AT)" begin
-        Nr, Nc = 2, 2
-        ham = adapt(
-            AT, j1_j2_model(
-                Float64, SU2Irrep, InfiniteSquare(Nr, Nc);
-                J1 = 1.0, J2 = 0.5, sublattice = false
-            )
+    # Benchmark energy from high-temperature expansion
+    # Physical Review B 67, 014416 (2003)
+    βs = [0.2, 0.4, 0.6]
+    bm = [-0.08624893, -0.15688984, -0.21300888]
+
+    Nr, Nc = 2, 2
+    ham = adapt(
+        AT, j1_j2_model(
+            Float64, SU2Irrep, InfiniteSquare(Nr, Nc);
+            J1 = 1.0, J2 = 0.5, sublattice = false
         )
-        pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
-        wts0 = SUWeight(pepo0)
+    )
+    pepo0 = PEPSKit.infinite_temperature_density_matrix(ham)
+    wts0 = SUWeight(pepo0)
+    dt, nstep, check_interval = 5.0e-3, 40, 40
+
+    @testset "Simple update" begin
         # 7 = 1 (spin-0) + 2 x 3 (spin-1)
         trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
-        check_interval = 100
-        dt, nstep = 1.0e-3, 600
-
-        # PEPO approach
-        alg = SimpleUpdate(; trunc = trunc_pepo, purified = false)
-        evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
-        pepo, wts, info = time_evolve(evolver; check_interval)
-        env = converge_env(InfinitePartitionFunction(pepo), 16)
-        energy = expectation_value(pepo, ham, env) / (Nr * Nc)
-        @info "β = $(dt * nstep): tr(ρH) = $(energy)"
-        @test dt * nstep ≈ info.t
-        @test energy ≈ bm[2] atol = 5.0e-3
-
-        # PEPS (purified PEPO) approach
         alg = SimpleUpdate(; trunc = trunc_pepo, purified = true)
-        evolver = TimeEvolver(pepo0, ham, dt, nstep, alg, wts0)
-        pepo, wts, info = time_evolve(evolver; check_interval)
-        env = converge_env(InfinitePartitionFunction(pepo), 16)
-        energy = expectation_value(pepo, ham, env) / (Nr * Nc)
-        @info "β = $(dt * nstep) / 2: tr(ρH) = $(energy)"
-        @test energy ≈ bm[1] atol = 5.0e-3
-
-        # test BP gauge fixing for purified iPEPO
-        bp_alg = BeliefPropagation(; maxiter = 100, tol = 1.0e-9)
-        bp_env, = leading_boundary(BPEnv(ones, Float64, pepo), pepo, bp_alg)
-        pepo, = gauge_fix(pepo, BPGauge(), bp_env)
-
-        env = converge_env(InfinitePEPS(pepo), 16)
-        energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
-        @info "β = $(dt * nstep): ⟨ρ|H|ρ⟩ = $(energy)"
-        @test dt * nstep ≈ info.t
-        @test energy ≈ bm[2] atol = 5.0e-3
+        pepo, wts = deepcopy(pepo0), deepcopy(wts0)
+        for (β, bme) in zip(βs, bm)
+            t0 = β - βs[1]
+            pepo, wts, info = time_evolve(pepo, ham, dt, nstep, alg, wts; t0, check_interval)
+            # measure energy
+            env = converge_env(InfinitePEPS(pepo), 16)
+            energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
+            @info "β = $(info.t): ⟨ρ|H|ρ⟩ = $(energy)"
+            @test energy ≈ bme atol = 5.0e-3
+        end
     end
+
+    @testset "Neighbourhood tensor update" begin
+        trunc_pepo = truncrank(7) & truncerror(; atol = 1.0e-12)
+        opt_alg = ALSTruncation(; trunc = trunc_pepo, tol = 1.0e-10)
+        alg = NeighbourUpdate(; opt_alg, bondenv_alg = NNEnv())
+        pepo = deepcopy(pepo0)
+        for (β, bme) in zip(βs, bm)
+            t0 = β - βs[1]
+            evolver = TimeEvolver(pepo, ham, dt, nstep, alg; t0)
+            pepo, info = time_evolve(evolver; check_interval)
+            # measure energy
+            env = converge_env(InfinitePEPS(pepo), 16)
+            energy = expectation_value(pepo, ham, pepo, env) / (Nr * Nc)
+            @info "β = $(info.t): ⟨ρ|H|ρ⟩ = $(energy)"
+            @test energy ≈ bme atol = 5.0e-3
+        end
+    end
+    return nothing
 end

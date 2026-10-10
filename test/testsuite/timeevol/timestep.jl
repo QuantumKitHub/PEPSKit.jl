@@ -34,3 +34,37 @@ function timeevol_timestep(AT)
         @test info1 == info2 == info3
     end
 end
+
+"Check that all neighbourhood-update iteration interfaces agree exactly."
+function timeevol_timestep_ntu(AT)
+    Nr, Nc = 2, 2
+    H = adapt(AT, real(heisenberg_XYZ(ComplexF64, Trivial, InfiniteSquare(Nr, Nc); Jx = 1, Jy = 1, Jz = 1)))
+    Pspace, Vspace = ℂ^2, ℂ^4
+    ψ0 = adapt(AT, InfinitePEPS(rand, Float64, Pspace, Vspace; unitcell = (Nr, Nc)))
+    dt, nstep = 0.1, 20
+    trunc = truncerror(; atol = 1.0e-10) & truncrank(4)
+
+    @testset "NeighbourUpdate timestep" begin
+        alg = NeighbourUpdate(; opt_alg = ALSTruncation(; trunc))
+        # manual timestep
+        evolver = TimeEvolver(ψ0, H, dt, nstep, alg)
+        ψ1, info1 = deepcopy(ψ0), nothing
+        for iter in 0:(nstep - 1)
+            ψ1, info1 = timestep(evolver, ψ1)
+        end
+        # time_evolve
+        evolver = TimeEvolver(ψ0, H, dt, nstep, alg)
+        ψ2, info2 = time_evolve(evolver)
+        # for-loop syntax
+        ## manually reset internal state of evolver
+        evolver.state = PEPSKit.NTUState(0, 0.0, ψ0)
+        ψ3, info3 = nothing, nothing, nothing
+        for state in evolver
+            ψ3, info3 = state
+        end
+        # results should be *exactly* the same
+        @test ψ1 == ψ2 == ψ3
+        @test info1 == info2 == info3
+    end
+    return nothing
+end

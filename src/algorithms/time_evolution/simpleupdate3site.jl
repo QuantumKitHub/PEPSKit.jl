@@ -47,13 +47,14 @@ function _su_iter!(
     # restore virtual arrows in `Ms`
     _flip_virtuals!(Ms, flips)
     # update env weights
-    bond_revs = map(sites, Iterators.drop(sites, 1)) do site1, site2
-        _nn_bondrev(site1, site2)
+    bond_dirs = map(sites, Iterators.drop(sites, 1)) do site1, site2
+        _nn_bonddir(site1, site2)
     end
-    for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
+    for (wt, (dir, r, c), flip) in zip(wts, bond_dirs, flips)
         wt_new = flip ? _fliptwist_s(wt) : wt
-        wt_new = rev ? transpose(wt_new) : wt_new
-        env[CartesianIndex(bond)] = normalize!(wt_new, Inf)
+        wt_new = (dir in (WEST, SOUTH)) ? transpose(wt_new) : wt_new
+        d = dir in (EAST, WEST) ? 1 : 2
+        env[d, r, c] = normalize!(wt_new, Inf)
     end
     # update state tensors
     for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
@@ -72,9 +73,10 @@ function _get_cluster_trunc(
         trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}}
     )
     return map(sites, Iterators.drop(sites, 1)) do site1, site2
-        (d, r, c), rev = _nn_bondrev(site1, site2)
+        (dir, r, c) = _nn_bonddir(site1, site2)
+        d = dir in (EAST, WEST) ? 1 : 2
         t = truncation_strategy(trunc, d, r, c)
-        if rev && isa(t, TruncationSpace)
+        if (dir in (WEST, SOUTH)) && isa(t, TruncationSpace)
             t = truncspace(flip(t.space)')
         end
         return t

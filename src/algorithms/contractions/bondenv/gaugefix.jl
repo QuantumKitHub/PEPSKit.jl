@@ -108,6 +108,15 @@ to `X`. For example, when `X` is a `PEPSTensor`,
 function _fixgauge_benvX(X::PEPSOrth, Rinv::MPSBondTensor)
     return @plansor X[-1 -2 -3 -4] := X[-1 1 -3 -4] * Rinv[1; -2]
 end
+function _fixgauge_benvX(X::PEPSTensor, Rinv::MPSBondTensor)
+    return @plansor X[-1; -2 -3 -4 -5] := X[-1; -2 1 -4 -5] * Rinv[1; -3]
+end
+function _fixgauge_benvX(X::PEPOOrth, Rinv::MPSBondTensor)
+    return @plansor X[-1 -2 -3 -4 -5] := X[-1 -2 1 -4 -5] * Rinv[1; -3]
+end
+function _fixgauge_benvX(X::PEPOTensor, Rinv::MPSBondTensor)
+    return @plansor X[-1 -2; -3 -4 -5 -6] := X[-1 -2; -3 1 -5 -6] * Rinv[1; -4]
+end
 
 """
 Apply the gauge transformation `Linv` for `Z`
@@ -127,4 +136,13 @@ to `Y`. For example, when `Y` is a `PEPSTensor`,
 """
 function _fixgauge_benvY(Y::PEPSOrth, Linv::MPSBondTensor)
     return @plansor Y[-1 -2 -3 -4] := Y[-1 -2 -3 1] * Linv[1; -4]
+end
+function _fixgauge_benvY(Y::PEPSTensor, Linv::MPSBondTensor)
+    return @plansor Y[-1; -2 -3 -4 -5] := Y[-1; -2 -3 -4 1] * Linv[1; -5]
+end
+function _fixgauge_benvY(Y::PEPOOrth, Linv::MPSBondTensor)
+    return @plansor Y[-1 -2 -3 -4 -5] := Y[-1 -2 -3 -4 1] * Linv[1; -5]
+end
+function _fixgauge_benvY(Y::PEPOTensor, Linv::MPSBondTensor)
+    return @plansor Y[-1 -2; -3 -4 -5 -6] := Y[-1 -2; -3 -4 -5 1] * Linv[1; -6]
 end

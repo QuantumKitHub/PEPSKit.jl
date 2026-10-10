@@ -51,39 +51,66 @@ end
 
 """
 Given `site1`, `site2` connected by a nearest neighbor bond,
-return the bond index and whether it is reversed from the
-standard orientation (`site1` on the west/south of `site2`).
+return `(dir, r, c)` where `dir` ∈ {NORTH, EAST, SOUTH, WEST}
+is the direction from `site1` to `site2`.
+`(r, c)` is the position of the source endpoint:
+the west site for x-bonds (`dir == EAST` or `dir == WEST`),
+the south site for y-bonds (`dir == NORTH` or `dir == SOUTH`).
 """
-function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2})
-    diff = site1 - site2
-    if diff == CartesianIndex(0, -1)
+function _nn_bonddir(site1::CartesianIndex{2}, site2::CartesianIndex{2})
+    diff = site2 - site1
+    if diff == CartesianIndex(0, 1)
         r, c = site1[1], site1[2]
-        return (1, r, c), false
-    elseif diff == CartesianIndex(0, 1)
-        r, c = site2[1], site2[2]
-        return (1, r, c), true
-    elseif diff == CartesianIndex(1, 0)
-        r, c = site1[1], site1[2]
-        return (2, r, c), false
+        return (EAST, r, c)
     elseif diff == CartesianIndex(-1, 0)
+        r, c = site1[1], site1[2]
+        return (NORTH, r, c)
+    elseif diff == CartesianIndex(1, 0)
         r, c = site2[1], site2[2]
-        return (2, r, c), true
+        return (SOUTH, r, c)
+    elseif diff == CartesianIndex(0, -1)
+        r, c = site2[1], site2[2]
+        return (WEST, r, c)
     else
         error("`site1` and `site2` are not nearest neighbors.")
     end
 end
 
-function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
-    return if bonddir == 1 # x-bond
-        rev ? rot180(x) : x
-    elseif bonddir == 2 # y-bond
-        if rev
-            inv ? rotr90(x) : rotl90(x)
-        else
-            inv ? rotl90(x) : rotr90(x)
-        end
-    else
-        error("`bonddir` must be 1 (for x-bonds) or 2 (for y-bonds).")
+"""
+Apply the tensor rotation that maps a bond from orientation `dir_from`
+to orientation `dir_to`, where the directions are one of
+`NORTH`, `EAST`, `SOUTH`, `WEST`.
+"""
+function _bond_rotation(x, dir_from::Int, dir_to::Int)
+    delta = mod(dir_to - dir_from, 4)
+    return if delta == 0
+        x
+    elseif delta == 1
+        rotr90(x)
+    elseif delta == 2
+        rot180(x)
+    else # delta == 3
+        rotl90(x)
+    end
+end
+
+"""
+Map a site coordinate from the lattice frame where the bond has orientation
+`dir_from` to the frame where the bond has orientation `dir_to`.
+"""
+function _bond_rotation(
+        site::CartesianIndex{2}, dir_from::Int, dir_to::Int,
+        unitcell::NTuple{2, Int}
+    )
+    delta = mod(dir_to - dir_from, 4)
+    return if delta == 0
+        site
+    elseif delta == 1
+        siterotr90(site, unitcell)
+    elseif delta == 2
+        siterot180(site, unitcell)
+    else # delta == 3
+        siterotl90(site, unitcell)
     end
 end
 
