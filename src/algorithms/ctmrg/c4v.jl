@@ -71,7 +71,18 @@ end
 # as expensive as `svd_vals` on CPU but much cheaper on GPU, and gives effectively
 # the same information. For the QR projector, off-diagonal elements are still
 # present until CTMRG converges, so we need a fallback for the non-diagonal case.
-corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG) = eigh_vals(C)
+# gauge fix sign of spectrum such that the eigenvalue of largest magnitude is positive
+function corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG)
+    S = eigh_vals(C)
+    λmin = minimum(minimum, (b for (_, b) in blocks(S)))
+    λmax = maximum(maximum, (b for (_, b) in blocks(S)))
+    if -λmin > λmax
+        for (_, b) in blocks(S)
+            b .= .-reverse(b) # spectrum of -C: negated and, to stay ascending, reversed
+        end
+    end
+    return S
+end
 
 """
     convergence_tensors(env::CTMRGEnv, alg::C4vCTMRG) -> (corners, edges)
