@@ -53,6 +53,7 @@ end
         Efp::EdgeTensor, # unused
         Ufp::LeftProjector,
         ULfp::LeftProjector;
+        projector_alg,
         getsite = getindex,
     )
 
@@ -66,7 +67,9 @@ corner and edge tensors, while ``u`` parametrizes a differentiable projector ``U
 U_{fp} + U_{L,fp} * u``.
 
 The local sandwich is read through `getsite`, so a caller can choose whether it is
-differentiated at all; see [`PEPSKit.constant_site`](@ref).
+differentiated at all; see [`PEPSKit.constant_site`](@ref). The projector algorithm
+`projector_alg` of the contraction selects how ``C_{fp}^{-1}`` is computed: the corner is
+diagonal for [`C4vEighProjector`](@ref), but only Hermitian for [`C4vQRProjector`](@ref).
 
 ``F`` returns a tuple of three tensors, corresponding to an equation for ``C``, ``E`` and
 ``u`` respectively:
@@ -100,10 +103,11 @@ function generate_symmetric_characteristic_equation(
         Efp::EdgeTensor, # unused
         Ufp::LeftProjector,
         ULfp::LeftProjector;
+        projector_alg,
         getsite = getindex,
     )
 
-    iC = sdiag_pow(real(DiagonalTensorMap(Cfp)), -1)
+    iC = _c4v_corner_inverse(projector_alg, Cfp)
     ULd = ULfp'
 
     function symmetric_characteristic_equation(n, C, E, u)

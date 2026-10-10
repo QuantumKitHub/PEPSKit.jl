@@ -26,6 +26,12 @@ PROJECTOR_SYMBOLS[:C4vQRProjector] = C4vQRProjector
 
 decomposition_algorithm(alg::C4vQRProjector) = alg.decomposition_alg
 
+# full inverse for non-diagonal Hermitian corner
+function _c4v_corner_inverse(::C4vQRProjector, C)
+    D, V = eigh_full(C)
+    return V * sdiag_pow(D, -1) * V'
+end
+
 # no truncation
 _set_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
 _set_decomposition_truncation(alg::C4vQRProjector, ::TruncationStrategy) = alg
