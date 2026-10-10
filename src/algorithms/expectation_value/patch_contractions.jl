@@ -20,6 +20,24 @@ function contract_local_operator(
     return _contract_local_operator(static_inds, O, (ket, bra), env)
 end
 function contract_local_operator(
+        inds::Vector{CartesianIndex{2}}, O::MPOTerm,
+        ket::InfinitePEPS, bra::InfinitePEPS, env
+    )
+    length(inds) == length(O) ||
+        throw(ArgumentError("Got $(length(inds)) sites but $(length(O)) MPO factors."))
+    static_inds = Tuple(Val.(inds))
+    return _contract_local_operator(static_inds, O, (ket, bra), env)
+end
+function contract_local_operator(
+        inds::Vector{CartesianIndex{2}}, O::TensorProductTerm,
+        ket::InfinitePEPS, bra::InfinitePEPS, env
+    )
+    length(inds) == length(O) ||
+        throw(ArgumentError("Got $(length(inds)) sites but $(length(O)) product factors."))
+    static_inds = Tuple(Val.(inds))
+    return _contract_local_operator(static_inds, O, (ket, bra), env)
+end
+function contract_local_operator(
         inds::Vector{CartesianIndex{2}}, O, state::InfinitePEPO, env
     )
     size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))

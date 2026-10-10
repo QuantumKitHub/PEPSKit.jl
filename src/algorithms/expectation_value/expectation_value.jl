@@ -54,6 +54,26 @@ function local_expectation_value(inds, state, operator::AbstractTensorMap, env)
     return trmul(operator, ρ)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the contribution of an [`MPOTerm`](@ref), including a [`TensorProductTerm`](@ref), given as one tensor per site in `inds`.
+For a PEPS or purified PEPO, compute ``⟨bra|O|ket⟩ / ⟨bra|ket⟩``; for a single-layer density matrix PEPO, compute ``tr(O * state) / tr(state)``.
+Insert the factors into the patch contraction directly and divide by the local norm of the same patch.
+"""
+function local_expectation_value(inds, bra, operator::MPOTerm, ket, env)
+    return contract_local_operator(inds, operator, ket, bra, env) /
+        contract_local_norm(inds, ket, bra, env)
+end
+function local_expectation_value(inds, state, operator::MPOTerm, env)
+    return contract_local_operator(inds, operator, state, env) /
+        contract_local_norm(inds, state, env)
+end
+
+# TODO: Implement boundary_contraction_expr for BPEnv to contract its messages directly.
+local_expectation_value(inds, bra, operator::MPOTerm, ket, env::BPEnv) =
+    local_expectation_value(inds, bra, operator, ket, CTMRGEnv(env))
+
 # Expectation value of a local partition function tensor
 # ------------------------------------------------------
 
