@@ -56,7 +56,7 @@ using .BPExpVals
 
 module BPGaugeFix
     include("bp/gaugefix.jl")
-    export bp_gaugefix_bp_vs_su
+    export bp_gaugefix_bp_vs_su, bp_gaugefix_pepo
 end
 using .BPGaugeFix
 
@@ -126,6 +126,12 @@ module CTMRGGaugeFix
     export ctmrg_gaugefix_asymmetric, ctmrg_gaugefix_c4v
 end
 using .CTMRGGaugeFix
+
+module CTMRGGaugeTrans
+    include("ctmrg/gaugetrans.jl")
+    export ctmrg_gaugetrans, ctmrg_gaugetrans_pepo, ctmrg_gaugetrans_stacked_env
+end
+using .CTMRGGaugeTrans
 
 module CTMRGPartitionFunction
     include("ctmrg/partition_function.jl")

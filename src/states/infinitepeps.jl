@@ -271,3 +271,24 @@ function ChainRulesCore.rrule(
     end
     return network, InfiniteSquareNetwork_pullback
 end
+
+## Gauge transform
+
+"""
+    gauge_transform(ψ::InfinitePEPS, gauge::VirtualGaugeTransform)
+
+Transform the virtual bonds of `ψ` using a gauge with shape `(2, rows, cols)`.
+See [`VirtualGaugeTransform`](@ref) for the bond convention.
+"""
+function gauge_transform(ψ::InfinitePEPS, gauge::VirtualGaugeTransform{3})
+    _check_gauge_size(gauge, size(ψ))
+    A2 = map(eachcoordinate(ψ)) do (r, c)
+        Xn, Xe, Xs, Xw = _virtual_gauge_factors(gauge, r, c)
+        return @tensor t[p; n e s w] := ψ[r, c][p; n′ e′ s′ w′] *
+            Xn[n′; n] * Xe[e′; e] * Xs[s; s′] * Xw[w; w′]
+    end
+    return InfinitePEPS(A2)
+end
+
+gauge_transform(ψ::InfinitePEPS, pairs::AbstractArray{<:Tuple{MPSBondTensor, MPSBondTensor}, 3}) =
+    gauge_transform(ψ, VirtualGaugeTransform(pairs))
