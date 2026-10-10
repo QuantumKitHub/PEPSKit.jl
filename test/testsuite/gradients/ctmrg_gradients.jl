@@ -1,5 +1,6 @@
 using Test
 using Random
+using LinearAlgebra
 using PEPSKit
 using TensorKit
 using Zygote
@@ -7,133 +8,112 @@ using OptimKit
 using KrylovKit
 using Adapt
 
-## Test models, gradmodes and CTMRG algorithm
+include("gradient_utility.jl")
+
+## Test CTMRG gradients
 # -------------------------------------------
-χbond = 2
-χenv = 6
-Pspaces = [ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1)]
-Vspaces = [ComplexSpace(χbond), Vect[FermionParity](0 => χbond / 2, 1 => χbond / 2)]
-Espaces = [ComplexSpace(χenv), Vect[FermionParity](0 => χenv / 2, 1 => χenv / 2)]
-models = [heisenberg_XYZ(InfiniteSquare()), pwave_superconductor(InfiniteSquare())]
-names = ["Heisenberg", "p-wave superconductor"]
+# Every gradient algorithm is compared with a converged fixed-point reference gradient, which is
+# checked against finite differences. Each option is covered once, not every combination.
 
-gradtol = 1.0e-4
+ctmrg_tol = 1.0e-12
+solver_tol = 1.0e-10
 ctmrg_verbosity = 0
-ctmrg_algs = [[:SequentialCTMRG, :SimultaneousCTMRG], [:SequentialCTMRG, :SimultaneousCTMRG]]
-projector_algs = [[:HalfInfiniteProjector, :FullInfiniteProjector], [:HalfInfiniteProjector, :FullInfiniteProjector]]
-svd_rrule_algs = [[:FullPullback, :TruncPullback, :Arnoldi], [:FullPullback, :Arnoldi]]
-gradient_algs = [[nothing, :FixedPointGradient, :ImplicitGradient], [:FixedPointGradient, :ImplicitGradient]]
-gradient_solver_algs = [
-    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
-    [:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi],
-]
-steps = -0.01:0.005:0.01
+rtol = 1.0e-7 # gradient errors and finite differences
+naive_miniter = 30 # CTMRG iterations naive AD differentiates through
 
-# don't check naive AD gradients for all algorithm combinations, since it's slow
-naive_gradient_combinations = [
-    (:SimultaneousCTMRG, :HalfInfiniteProjector, :FullPullback),
-    (:SimultaneousCTMRG, :FullInfiniteProjector, :FullPullback),
-    (:SequentialCTMRG, :HalfInfiniteProjector, :FullPullback),
+models = [
+    (
+        name = "Heisenberg", H = heisenberg_XYZ(InfiniteSquare()),
+        Pspace = ComplexSpace(2), Vspace = ComplexSpace(2), Espace = ComplexSpace(6),
+        svd_rrule_algs = [:TruncPullback, :Arnoldi], naive = true,
+    ),
+    (
+        name = "p-wave superconductor", H = pwave_superconductor(InfiniteSquare()),
+        Pspace = Vect[FermionParity](0 => 1, 1 => 1), Vspace = Vect[FermionParity](0 => 1, 1 => 1),
+        Espace = Vect[FermionParity](0 => 3, 1 => 3), svd_rrule_algs = [:Arnoldi], naive = false,
+    ),
+]
+forward_algs = [
+    (:SimultaneousCTMRG, :HalfInfiniteProjector),
+    (:SimultaneousCTMRG, :FullInfiniteProjector),
+    (:SequentialCTMRG, :HalfInfiniteProjector),
+    (:SequentialCTMRG, :FullInfiniteProjector),
 ]
 
-function _check_disallowed_combination(
-        ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
-    )
-    # characteristic equations for full infinite projector are not implemented
-    projector_alg == :FullInfiniteProjector && gradient_alg == :ImplicitGradient && return true
-    # sequential CTMRG doesn't give access to the SVD decompositions
-    ctmrg_alg == :SequentialCTMRG && gradient_alg == :ImplicitGradient && return true
-    return false
+ctmrg_algorithm(ctmrg_alg, projector_alg, rrule_alg = :FullPullback; kwargs...) = PEPSKit.CTMRGAlgorithm(;
+    alg = ctmrg_alg, projector_alg, decomposition_alg = SVDAdjoint(; rrule_alg = (; alg = rrule_alg)),
+    tol = ctmrg_tol, verbosity = ctmrg_verbosity, kwargs...,
+)
+gradient_alg(alg, solver) = PEPSKit.GradientAlgorithm(; alg, solver_alg = (; alg = solver, tol = solver_tol))
+
+# only the simultaneous scheme with the half-infinite projector exposes the SVD it needs
+implicit_allowed(ctmrg_alg, projector_alg) =
+    ctmrg_alg == :SimultaneousCTMRG && projector_alg == :HalfInfiniteProjector
+
+# (label, SVD rrule, gradient algorithm or nothing for naive AD)
+function gradient_cases(model, ctmrg_alg, projector_alg)
+    cases = Any[("fixed point, $r", r, gradient_alg(:FixedPointGradient, :GMRES)) for r in model.svd_rrule_algs]
+    if model.naive && (ctmrg_alg, projector_alg) != (:SequentialCTMRG, :FullInfiniteProjector)
+        push!(cases, ("naive AD", :FullPullback, nothing))
+    end
+    if implicit_allowed(ctmrg_alg, projector_alg)
+        push!(cases, ("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES)))
+    end
+    if (ctmrg_alg, projector_alg) == first(forward_algs)
+        for solver in (:GeomSum, :ManualIter, :BiCGStab, :Arnoldi)
+            push!(cases, ("fixed point, $solver", :FullPullback, gradient_alg(:FixedPointGradient, solver)))
+        end
+        push!(cases, ("implicit, BiCGStab", :FullPullback, gradient_alg(:ImplicitGradient, :BiCGStab)))
+    end
+    return cases
+end
+
+function test_ctmrg_gradients(AT, model, ctmrg_alg, projector_alg, cases; D = nothing, χ = nothing)
+    Vspace = isnothing(D) ? model.Vspace : ComplexSpace(D)
+    Espace = isnothing(χ) ? model.Espace : ComplexSpace(χ)
+    Random.seed!(42039482030)
+    dir = adapt(AT, InfinitePEPS(model.Pspace, Vspace))
+    psi = adapt(AT, InfinitePEPS(model.Pspace, Vspace))
+    alg = ctmrg_algorithm(ctmrg_alg, projector_alg)
+    env, = leading_boundary(CTMRGEnv(psi, Espace), psi, alg)
+    tag = "$(model.name), $ctmrg_alg, $projector_alg, $(dim(Vspace)):$(dim(Espace))"
+
+    _, gref = energy_and_gradient(psi, env, alg, gradient_alg(:FixedPointGradient, :GMRES), model.H)
+    @testset "reference against finite differences" begin
+        dE_fd = finite_difference_derivative(psi, env, dir, alg, model.H)
+        dE = gradient_derivative(psi, env, dir, gref)
+        @info "$tag: reference vs finite differences" abs(dE - dE_fd) / abs(dE_fd)
+        @test dE ≈ dE_fd rtol = rtol
+    end
+    for (label, rrule_alg, galg) in cases
+        @testset "$label" begin
+            kwargs = isnothing(galg) ? (; miniter = naive_miniter) : (;)
+            calg = ctmrg_algorithm(ctmrg_alg, projector_alg, rrule_alg; kwargs...)
+            _, g = energy_and_gradient(psi, env, calg, galg, model.H)
+            err = gradient_error(g, gref)
+            @info "$tag: $label" err
+            @test err < rtol
+        end
+    end
+    return nothing
 end
 
 function gradients_asymmetric(AT)
-    naive_gradient_done = Set()
-    return @testset "AD CTMRG energy gradients for $(names[i]) model ($AT)" verbose = true for i in
-        eachindex(
-            models
-        )
-        Pspace = Pspaces[i]
-        Vspace = Vspaces[i]
-        Espace = Espaces[i]
-        calgs = ctmrg_algs[i]
-        palgs = projector_algs[i]
-        salgs = svd_rrule_algs[i]
-        galgs = gradient_algs[i]
-        gsalgs = gradient_solver_algs[i]
-        @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg, gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg))" for (
-                ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg, gradient_solver_alg,
-            ) in Iterators.product(
-                calgs, palgs, salgs, galgs, gsalgs
-            )
-
-            # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
-            if gradient_alg == :ImplicitGradient
-                gradient_solver_alg == :GMRES || continue
-                svd_rrule_alg == first(salgs) || continue
-            end
-
-            # check for allowed algorithm combinations when testing naive gradient
-            if isnothing(gradient_alg)
-                combo = (ctmrg_alg, projector_alg, svd_rrule_alg)
-                combo in naive_gradient_combinations || continue
-                combo in naive_gradient_done && continue
-                push!(naive_gradient_done, combo)
-                gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
-            end
-
-            # filter disallowed algorithm combinations
-            if _check_disallowed_combination(
-                    ctmrg_alg, projector_alg, svd_rrule_alg, gradient_alg
-                )
-                # but verify that its use would throw an error
+    return @testset "CTMRG gradients ($AT)" verbose = true begin
+        @testset "$(model.name), $calg, $palg" for model in models, (calg, palg) in forward_algs
+            test_ctmrg_gradients(AT, model, calg, palg, gradient_cases(model, calg, palg))
+            # the implicit gradient is rejected where it is not defined
+            if !implicit_allowed(calg, palg)
                 @test_throws ArgumentError PEPSOptimize(;
-                    boundary_alg = (; alg = ctmrg_alg, projector_alg, decomposition_alg = (; rrule_alg = (; alg = svd_rrule_alg))),
-                    gradient_alg = (; alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)),
-                )
-                continue
-            end
-
-            @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, svd_rrule_alg=:$svd_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
-            Random.seed!(42039482030)
-            dir = adapt(AT, InfinitePEPS(Pspace, Vspace))
-            psi = adapt(AT, InfinitePEPS(Pspace, Vspace))
-            # instantiate to avoid having to type this twice...
-            concrete_ctmrg_alg = PEPSKit.CTMRGAlgorithm(;
-                alg = ctmrg_alg,
-                verbosity = ctmrg_verbosity,
-                projector_alg = projector_alg,
-                decomposition_alg = SVDAdjoint(; rrule_alg = (; alg = svd_rrule_alg)),
-            )
-            # instantiate because hook_pullback doesn't go through the keyword selector...
-            concrete_gradient_alg = if isnothing(gradient_alg)
-                nothing # TODO: add this to the PEPSKit.GradientAlgorithm selector?
-            else
-                PEPSKit.GradientAlgorithm(;
-                    alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)
+                    boundary_alg = (; alg = calg, projector_alg = palg),
+                    gradient_alg = (; alg = :ImplicitGradient),
                 )
             end
-            env, = leading_boundary(CTMRGEnv(psi, Espace), psi, concrete_ctmrg_alg)
-            alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
-                (psi, env),
-                dir;
-                alpha = steps,
-                retract = PEPSKit.peps_retract,
-                inner = PEPSKit.real_inner,
-            ) do (peps, env)
-                E, g = Zygote.withgradient(peps) do psi
-                    env2, = PEPSKit.hook_pullback(
-                        leading_boundary,
-                        env,
-                        psi,
-                        concrete_ctmrg_alg;
-                        alg_rrule = concrete_gradient_alg,
-                    )
-                    return cost_function(psi, env2, models[i])
-                end
-
-                return E, only(g)
-            end
-            @test dfs1 ≈ dfs2 atol = 1.0e-2
+        end
+        # larger state, where truncation effects are visible
+        @testset "Heisenberg, SimultaneousCTMRG, HalfInfiniteProjector, D = 3, χ = 16" begin
+            cases = [("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES))]
+            test_ctmrg_gradients(AT, first(models), first(forward_algs)..., cases; D = 3, χ = 16)
         end
     end
 end
