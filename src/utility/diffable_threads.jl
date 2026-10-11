@@ -16,6 +16,11 @@ function ChainRulesCore.rrule(
         config::RuleConfig{>:HasReverseMode}, ::typeof(dtmap), f, A::AbstractArray;
         scheduler = Defaults.scheduler[]
     )
+    # only infer the pullback for the concrete scheduler, inferring it for an abstract
+    # `Scheduler` makes the first Zygote call compile for tens of minutes
+    return Base.inferencebarrier(_dtmap_rrule)(config, f, A, scheduler)
+end
+function _dtmap_rrule(config, f, A, scheduler)
     el_rrules = tmap(A; scheduler) do a
         rrule_via_ad(config, f, a)
     end
