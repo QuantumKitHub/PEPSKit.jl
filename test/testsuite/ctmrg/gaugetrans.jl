@@ -4,7 +4,7 @@ using TensorKit
 using PEPSKit
 using Adapt
 using PEPSKit: random_dual!, eachcoordinate, NORTH
-using PEPSKit: fix_relative_phases, _contract_site
+using PEPSKit: _contract_site
 
 ds = Dict(
     U1Irrep => U1Space(i => d for (i, d) in zip(-1:1, (1, 1, 2))),
@@ -24,7 +24,7 @@ function _random_gauge_matrix(AT, V::ElementarySpace)
     return adapt(AT, id(ComplexF64, V) + 0.1 * randn(ComplexF64, V ← V))
 end
 
-"""Test virtual and boundary gauge invariance and the unitary gauge-fixing convention."""
+"""Test virtual and boundary gauge invariance."""
 function ctmrg_gaugetrans(AT)
     return @testset "CTMRGEnv of InfinitePEPS ($S) ($AT)" for S in keys(ds)
         d, D, χ, uc = ds[S], Ds[S], χs[S], (2, 3)
@@ -53,12 +53,6 @@ function ctmrg_gaugetrans(AT)
             @test reduced_densitymatrix(inds, ψg, envg) ≈ ρ
             @test reduced_densitymatrix(inds, ψ, envb) ≈ ρ
         end
-        signs = map(boundary_gauge.matrices) do X
-            Q, = left_orth(X)
-            return Q
-        end
-        @test gauge_transform(env, CTMRGEnvGaugeTransform(signs, adjoint.(signs))) ≈
-            fix_relative_phases(env, signs)
     end
 end
 

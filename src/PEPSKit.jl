@@ -99,7 +99,6 @@ include("algorithms/contractions/ctmrg/fullinf_env.jl")
 include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/network_value.jl")
-include("algorithms/contractions/ctmrg/gaugefix.jl")
 include("algorithms/contractions/ctmrg/characteristic_equations.jl")
 
 include("algorithms/contractions/absorb.jl")

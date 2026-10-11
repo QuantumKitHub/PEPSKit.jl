@@ -31,9 +31,6 @@ function gauge_transform(env::CTMRGEnv, gauge::VirtualGaugeTransform{4})
     )
 end
 
-gauge_transform(env::CTMRGEnv, pairs::AbstractArray{<:Tuple{MPSBondTensor, MPSBondTensor}, 3}) =
-    gauge_transform(env, VirtualGaugeTransform(pairs))
-
 """Apply a compensating virtual gauge to a single-layer or double-layer edge tensor."""
 function _gauge_transform_virtual_edge(edge::CTMRGEdgeTensor, X::MPSBondTensor, incoming::Bool)
     if numout(edge) == 2
@@ -81,4 +78,53 @@ function _environment_gauge_neighbor(d::Int, r::Int, c::Int, nr::Int, nc::Int)
     d == EAST && return _next(r, nr), c
     d == SOUTH && return r, _prev(c, nc)
     return _prev(r, nr), c
+end
+
+"""
+$(SIGNATURES)
+
+Multiply corner tensor with incoming and outgoing gauge signs.
+
+```
+    corner -- σ_in --in
+      |
+     σ_out
+      |
+     out
+```
+"""
+function fix_gauge_corner(
+        corner::CTMRGCornerTensor, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor
+    )
+    return @autoopt @tensor corner_fix[χ_out; χ_in] :=
+        σ_out[χ_out; χ1] * corner[χ1; χ2] * conj(σ_in[χ_in; χ2])
+end
+
+"""
+$(SIGNATURES)
+
+Multiply edge tensor with incoming and outgoing gauge signs.
+
+```
+    out-- σ_out -- edge -- σ_in --in
+                    |
+```
+"""
+@generated function fix_gauge_edge(
+        edge::CTMRGEdgeTensor{T, S, N}, σ_out::CTMRGCornerTensor, σ_in::CTMRGCornerTensor
+    ) where {T, S, N}
+    edge_fix_e = tensorexpr(
+        :edge_fix,
+        (envlabel(:out), ntuple(i -> virtuallabel(i), N - 1)...),
+        (envlabel(:in),),
+    )
+    edge_e = tensorexpr(
+        :edge, (envlabel(1), ntuple(i -> virtuallabel(i), N - 1)...), (envlabel(2),)
+    )
+    σ_out_e = tensorexpr(:σ_out, (envlabel(:out),), (envlabel(1),))
+    σ_in_e = tensorexpr(:σ_in, (envlabel(:in),), (envlabel(2),))
+    return macroexpand(
+        @__MODULE__,
+        :(return @autoopt @tensor $edge_fix_e := $σ_out_e * $edge_e * conj($σ_in_e)),
+    )
 end

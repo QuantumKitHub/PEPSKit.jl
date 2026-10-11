@@ -289,6 +289,3 @@ function gauge_transform(ψ::InfinitePEPS, gauge::VirtualGaugeTransform{3})
     end
     return InfinitePEPS(A2)
 end
-
-gauge_transform(ψ::InfinitePEPS, pairs::AbstractArray{<:Tuple{MPSBondTensor, MPSBondTensor}, 3}) =
-    gauge_transform(ψ, VirtualGaugeTransform(pairs))
