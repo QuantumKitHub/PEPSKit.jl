@@ -386,7 +386,7 @@ The supported keywords are:
 * `tol::Real=$(Defaults.gradient_tol)`
 * `maxiter::Int=$(Defaults.gradient_maxiter)`
 * `verbosity::Int=$(Defaults.gradient_verbosity)`
-* `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_fixedpoint_solver_alg))`: solver algorithm for the `ImplicitGradient` gradient algorithm.
+* `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_implicit_solver_alg))`: solver algorithm for the `ImplicitGradient` gradient algorithm.
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 
