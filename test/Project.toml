@@ -37,6 +37,7 @@ cuSPARSE = "b26da814-b3bc-49ef-b0ee-c816305aa060"
 
 [sources]
 PEPSKit = {path = ".."}
+CUDA = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "ksh/uncached-handles"}
 
 [compat]
 AMDGPU = "2"
