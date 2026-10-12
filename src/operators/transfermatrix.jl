@@ -116,7 +116,7 @@ function MultilineTransferPEPO(T::InfinitePEPS, O::InfinitePEPO, dir)
 end
 
 TensorKit.storagetype(::Type{InfiniteTransferPEPS{T}}) where {T} = storagetype(T)
-TensorKit.storagetype(::Type{InfiniteTransferPEPO{H, T, O}}) where {H, T, O} = storagetype(T)
+TensorKit.storagetype(::Type{InfiniteTransferPEPO{H, T, O}}) where {H, T, O} = TensorKit.promote_storagetype(T, O)
 
 #
 # Common interface
