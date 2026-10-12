@@ -111,6 +111,10 @@ gradient norm and iteration count tracked in `tol_state`.
 """
 peps_precondition(x, g, tol_state::NamedTuple, alg::Nothing) = g
 
+function peps_precondition(x::Tuple{<:InfinitePEPS, <:SplitCTMRGEnv}, g, tol_state::NamedTuple, alg::LocalPreconditioner)
+    return peps_precondition((x[1], CTMRGEnv(x[2])), g, tol_state, alg)
+end
+
 function peps_precondition(x, g, tol_state::NamedTuple, alg::LocalPreconditioner)
     peps, env = x
     δ = alg.regularization * tol_state.gradnorm^2 / max(tol_state.iter, 1)

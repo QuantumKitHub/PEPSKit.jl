@@ -21,7 +21,8 @@ function CTMRGAlgorithm(;
         verbosity = Defaults.ctmrg_verbosity,
         trunc = (; alg = Defaults.trunc),
         decomposition_alg = (;),
-        projector_alg = Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
+        projector_alg = alg == :SplitCTMRG ? :SplitProjector : Defaults.projector_alg, # only allows for Symbol/NamedTuple to expose projector kwargs
+        interlayer_trunc = trunc,
     )
     # replace symbol with projector alg type
     haskey(CTMRG_SYMBOLS, alg) || throw(ArgumentError("unknown CTMRG algorithm: $alg"))
@@ -39,6 +40,11 @@ function CTMRGAlgorithm(;
         alg = projector_alg, decomposition_alg, trunc, verbosity
     )
 
+    if alg == :SplitCTMRG
+        projector_algorithm isa SplitProjector || throw(ArgumentError("SplitCTMRG requires SplitProjector."))
+        interlayer_strategy = interlayer_trunc isa NamedTuple ? _TruncationStrategy(; interlayer_trunc...) : interlayer_trunc
+        return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm, interlayer_strategy)
+    end
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
 end
 
@@ -74,6 +80,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:SimultaneousCTMRG` : Simultaneous expansion and renormalization of all sides.
     - `:SequentialCTMRG` : Sequential application of left moves and rotations.
     - `:C4vCTMRG` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
+    - `:SplitCTMRG` : Sequential ket and bra absorption using [`SplitCTMRGEnv`](@ref) and full split projectors.
 
 ### Projector algorithm
 
@@ -87,6 +94,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:HalfInfiniteProjector` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:SplitProjector` : Projection via SVDs of the split environments, works only for [`SplitCTMRG`](@ref) and is its default.
     - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
     - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
 * `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:QRAdjoint}` : Tensor
@@ -103,12 +111,12 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `info.convergence_error::Real` : The final convergence error at the end of the contraction procedure.
     - `info.contraction_metrics::NamedTuple` : A `NamedTuple` containing metrics which characterize the contraction. The precise contents depend on `alg`.
 """
-function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
+function leading_boundary(env₀::Union{CTMRGEnv, SplitCTMRGEnv}, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
     return leading_boundary(env₀, network, alg)
 end
 function leading_boundary(
-        env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+        env₀::Union{CTMRGEnv, SplitCTMRGEnv}, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
@@ -144,7 +152,7 @@ function leading_boundary(
         return env, info
     end
 end
-function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
+function leading_boundary(env₀::Union{CTMRGEnv, SplitCTMRGEnv}, state, args...; kwargs...)
     return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
@@ -215,7 +223,7 @@ convergence_tensors(env::CTMRGEnv, alg) = (env.corners, env.edges)
 
 Spectra of the tensors that [`convergence_tensors`](@ref) selects.
 """
-function convergence_spectra(env::CTMRGEnv, alg)
+function convergence_spectra(env::Union{CTMRGEnv, SplitCTMRGEnv}, alg)
     corners, edges = convergence_tensors(env, alg)
     return map(C -> corner_spectrum(C, alg), corners), map(T -> edge_spectrum(T, alg), edges)
 end

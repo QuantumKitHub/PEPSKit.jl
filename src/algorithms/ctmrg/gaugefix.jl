@@ -80,24 +80,20 @@ function compute_relative_phases(
             Tsfinal = circshift(reverse(envfinal.edges[dir, :, c]), r)
         end
 
-        # Random MPS of same bond dimension
-        M = map(Tsfinal) do t
-            randn(scalartype(t), codomain(t) ← domain(t))
-        end
-
-        # Find right fixed points of mixed transfer matrices
-        eigsolve_alg = Arnoldi()
-        ρprev = right_transfermatrix_fixedpoint(Tsprev, M, eigsolve_alg)
-        ρfinal = right_transfermatrix_fixedpoint(Tsfinal, M, eigsolve_alg)
-
-        # Decompose and multiply
-        Qprev, = left_orth!(ρprev; positive = true)
-        Qfinal, = left_orth!(ρfinal; positive = true)
-
-        return Qprev * Qfinal'
+        return _scrambling_gauge(Tsfinal, Tsprev)
     end
 
     return signs
+end
+
+"""Extract a boundary-bond gauge using the same random MPS for both environments."""
+function _scrambling_gauge(final::AbstractVector, previous::AbstractVector)
+    M = map(t -> randn(scalartype(t), codomain(t) ← domain(t)), final)
+    ρprev = right_transfermatrix_fixedpoint(previous, M, Arnoldi())
+    ρfinal = right_transfermatrix_fixedpoint(final, M, Arnoldi())
+    Qprev, = left_orth!(ρprev; positive = true)
+    Qfinal, = left_orth!(ρfinal; positive = true)
+    return Qprev * Qfinal'
 end
 
 function compute_relative_phases(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}

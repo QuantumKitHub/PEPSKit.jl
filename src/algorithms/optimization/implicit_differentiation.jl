@@ -210,16 +210,24 @@ function _set_fixed_truncation(alg::CTMRGAlgorithm)
     return alg_fixed
 end
 
+"""Freeze both outer and interlayer spaces in the split fixed-point iteration."""
+function _set_fixed_truncation(alg::SplitCTMRG)
+    alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    return @set alg_fixed.interlayer_trunc = FixedSpaceTruncation()
+end
+
 # compute the CTMRG gradient through fixed-point differentiation
 function _rrule(
         gradmode::FixedPointGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::CTMRGEnv,
+        envinit::Union{CTMRGEnv, SplitCTMRGEnv},
         state,
         alg::CTMRGAlgorithm,
     )
     _check_algorithm_combination(alg, gradmode)
+    envinit isa SplitCTMRGEnv && scalartype(envinit) <: Real &&
+        throw(ArgumentError("Split fixed-point gradients require a complex environment; use complex(envinit)."))
 
     env, = leading_boundary(envinit, state, alg)
 
@@ -417,6 +425,9 @@ function _check_algorithm_combination(::SequentialCTMRG, ::ImplicitGradient)
     msg = "The `:ImplicitGradient` algorithm is not yet compatible with the `SequentialCTMRG` algorithm; select \
           SimultaneousCTMRG instead to use :ImplicitGradient"
     throw(ArgumentError(msg))
+end
+function _check_algorithm_combination(::SplitCTMRG, ::ImplicitGradient)
+    throw(ArgumentError("SplitCTMRG supports FixedPointGradient; ImplicitGradient is not implemented."))
 end
 
 function _check_algorithm_combination(::SimultaneousCTMRG{<:FullInfiniteProjector}, ::ImplicitGradient)

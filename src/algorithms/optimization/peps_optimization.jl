@@ -330,7 +330,7 @@ end
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
-    if typeof(parent_alg(alg.boundary_alg)) <: Union{SimultaneousCTMRG, SequentialCTMRG} &&
+    if typeof(parent_alg(alg.boundary_alg)) <: Union{SimultaneousCTMRG, SequentialCTMRG, SplitCTMRG} &&
             parent_alg(alg.gradient_alg) isa FixedPointGradient &&
             scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \

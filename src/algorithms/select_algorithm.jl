@@ -158,3 +158,8 @@ function select_algorithm(
 
     return CTMRGAlgorithm(; alg, tol, verbosity, decomposition_alg, kwargs...)
 end
+
+function select_algorithm(::typeof(leading_boundary), env₀::SplitCTMRGEnv; alg = :SplitCTMRG, kwargs...)
+    alg === :SplitCTMRG || throw(ArgumentError("SplitCTMRGEnv requires SplitCTMRG."))
+    return SplitCTMRG(; kwargs...)
+end

@@ -117,6 +117,18 @@ end
 
 ## Chainrules
 
+"""Materialize unused sandwich layers and project cotangents to their tensor storage."""
+function _project_network_cotangent(delta, primal)
+    delta = unthunk(delta)
+    delta isa AbstractZero && return zerovector(primal)
+    primal isa Tuple || return ProjectTo(primal)(delta)
+    components = delta isa Tangent ? ChainRulesCore.backing(delta) : delta
+    return map(primal, components) do tensor, component
+        component = unthunk(component)
+        return component isa AbstractZero ? zerovector(tensor) : ProjectTo(tensor)(component)
+    end
+end
+
 # generic implementation
 function ChainRulesCore.rrule(
         ::typeof(Base.getindex), network::InfiniteSquareNetwork, r::Int, c::Int
@@ -124,10 +136,9 @@ function ChainRulesCore.rrule(
     O = network[r, c]
 
     function getindex_pullback(ΔO_)
-        ΔO = map(unthunk, ΔO_)
-        if ΔO isa Tangent
-            ΔO = ChainRulesCore.construct(typeof(O), ChainRulesCore.backing(ΔO))
-        end
+        ΔO = unthunk(ΔO_)
+        ΔO isa AbstractZero && return NoTangent(), ZeroTangent(), NoTangent(), NoTangent()
+        ΔO = _project_network_cotangent(ΔO, O)
         Δnetwork = zerovector(network)
         Δnetwork[r, c] = ΔO
         return NoTangent(), Δnetwork, NoTangent(), NoTangent()

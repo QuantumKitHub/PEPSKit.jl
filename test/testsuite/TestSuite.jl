@@ -83,6 +83,13 @@ using .CompressLocal
 
 # CTMRG
 # -----
+module CTMRGSplit
+    include("ctmrg/split.jl")
+    export ctmrg_split_projectors
+    export ctmrg_split_environment, ctmrg_split_unitcell, ctmrg_split_expectation_values
+end
+using .CTMRGSplit
+
 module CTMRGContractions
     include("ctmrg/contractions.jl")
     export ctmrg_contractions_random_cartesian_spaces, ctmrg_contractions_specific_u1_spaces
@@ -196,6 +203,12 @@ module GradientsCTMRG
     export gradients_asymmetric, gradients_asymmetric_276
 end
 using .GradientsCTMRG
+
+module GradientsSplitCTMRG
+    include("gradients/split_ctmrg_gradients.jl")
+    export gradients_split_gauge, gradients_split_sweep, gradients_split_fixedpoint
+end
+using .GradientsSplitCTMRG
 
 # Time evolution
 # --------------
