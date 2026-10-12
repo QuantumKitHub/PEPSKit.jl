@@ -59,7 +59,7 @@ function gradient_cases(model, ctmrg_alg, projector_alg)
     if implicit_allowed(ctmrg_alg, projector_alg)
         push!(cases, ("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES)))
     end
-    if (ctmrg_alg, projector_alg) == first(forward_algs)
+    if (ctmrg_alg, projector_alg) == (:SimultaneousCTMRG, :HalfInfiniteProjector)
         for solver in (:GeomSum, :ManualIter, :BiCGStab, :Arnoldi)
             push!(cases, ("fixed point, $solver", :FullPullback, gradient_alg(:FixedPointGradient, solver)))
         end
@@ -113,7 +113,7 @@ function gradients_asymmetric(AT)
         # larger state, where truncation effects are visible
         @testset "Heisenberg, SimultaneousCTMRG, HalfInfiniteProjector, D = 3, χ = 16" begin
             cases = [("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES))]
-            test_ctmrg_gradients(AT, first(models), first(forward_algs)..., cases; D = 3, χ = 16)
+            test_ctmrg_gradients(AT, first(models), :SimultaneousCTMRG, :HalfInfiniteProjector, cases; D = 3, χ = 16)
         end
     end
 end
