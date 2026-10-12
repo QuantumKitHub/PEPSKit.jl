@@ -25,7 +25,6 @@ struct InfinitePartitionFunction{T <: PartitionFunctionTensor}
         return new{T}(A)
     end
 end
-TensorKit.storagetype(::Type{InfinitePartitionFunction{T}}) where {T} = storagetype(T)
 
 const InfinitePF{T} = InfinitePartitionFunction{T}
 
