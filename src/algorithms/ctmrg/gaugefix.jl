@@ -7,6 +7,7 @@ https://arxiv.org/abs/2311.11894. This works by constructing a transfer matrix c
 of an edge tensor and a random MPS, thus scrambling potential degeneracies, and then
 performing a QR decomposition to extract the gauge signs. This is adapted accordingly for
 asymmetric CTMRG algorithms using multi-site unit cell transfer matrices.
+Ordinary edges form one MPS site each; split edges form two alternating sites with outer and interlayer bonds.
 """
 struct ScramblingEnvGauge end
 
@@ -27,60 +28,62 @@ Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
 function gauge_fix(
-        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::G
-    ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
+        envfinal::Union{CTMRGEnv, SplitCTMRGEnv}, envprev::Union{CTMRGEnv, SplitCTMRGEnv},
+        alg::Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}
+    )
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(envfinal, envprev, alg)
     return fix_phases(envfinal, signs, corner_phases, edge_phases)
 end
 
 function compute_gauge_fix_gauge(
-        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::G
-    ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
-    # Check if spaces in envprev and envfinal are the same
+        envfinal::Union{CTMRGEnv, SplitCTMRGEnv}, envprev::Union{CTMRGEnv, SplitCTMRGEnv},
+        alg::Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}
+    )
+    _check_gauge_compatibility(envfinal, envprev)
+    signs = compute_relative_phases(envfinal, envprev, alg)
+    corner_phases, edge_phases = compute_global_phases(
+        fix_relative_phases(envfinal, signs), envprev
+    )
+    return signs, corner_phases, edge_phases
+end
+
+"""Check that ordinary environments have matching spaces for gauge alignment."""
+function _check_gauge_compatibility(envfinal::CTMRGEnv, envprev::CTMRGEnv)
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
             space(envfinal.corners[dir, r, c]) == space(envprev.corners[dir, r, c])
     end
     all(same_spaces) || throw(ArgumentError("Spaces of envfinal and envprev are not the same"))
 
-    # find relative phases
-    signs = compute_relative_phases(envfinal, envprev, alg)
-
-    # find additional global phases
-    corner_phases, edge_phases = compute_global_phases(
-        fix_relative_phases(envfinal, signs), envprev
-    )
-
-    return signs, corner_phases, edge_phases
+    return nothing
 end
 
-function fix_phases(env::CTMRGEnv, signs, corner_phases, edge_phases)
-    env_fixed_relative = fix_relative_phases(env, signs)
-    env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases)
-    return env_fixed_global
+"""Apply relative gauge rotations followed by global phase corrections."""
+function fix_phases(env::Union{CTMRGEnv, SplitCTMRGEnv}, signs, corner_phases, edge_phases)
+    return fix_global_phases(fix_relative_phases(env, signs), corner_phases, edge_phases)
+end
+
+"""Return the row and column increments for clockwise boundary traversal."""
+_boundary_step(dir::Int) = dir == EAST ? (1, 0) : dir == WEST ? (-1, 0) : dir == NORTH ? (0, 1) : (0, -1)
+
+"""List boundary edge coordinates clockwise, starting at the specified outer bond."""
+function _boundary_coordinates(env::Union{CTMRGEnv, SplitCTMRGEnv}, (dir, r, c))
+    dr, dc = _boundary_step(dir)
+    count = iszero(dr) ? size(env, 3) : size(env, 2)
+    return [(dir, mod1(r + i * dr, size(env, 2)), mod1(c + i * dc, size(env, 3))) for i in 0:(count - 1)]
+end
+
+"""Represent an ordinary boundary as an MPS with one edge tensor per site."""
+function _boundary_chain(env::CTMRGEnv, coordinate)
+    return [edge(env, I...) for I in _boundary_coordinates(env, coordinate)]
 end
 
 function compute_relative_phases(
         envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
 
-    signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        # Gather edge tensors and pretend they're InfiniteMPSs
-        if dir == NORTH
-            Tsprev = circshift(envprev.edges[dir, r, :], 1 - c)
-            Tsfinal = circshift(envfinal.edges[dir, r, :], 1 - c)
-        elseif dir == EAST
-            Tsprev = circshift(envprev.edges[dir, :, c], 1 - r)
-            Tsfinal = circshift(envfinal.edges[dir, :, c], 1 - r)
-        elseif dir == SOUTH
-            Tsprev = circshift(reverse(envprev.edges[dir, r, :]), c)
-            Tsfinal = circshift(reverse(envfinal.edges[dir, r, :]), c)
-        elseif dir == WEST
-            Tsprev = circshift(reverse(envprev.edges[dir, :, c]), r)
-            Tsfinal = circshift(reverse(envfinal.edges[dir, :, c]), r)
-        end
-
-        return _scrambling_gauge(Tsfinal, Tsprev)
+    signs = map(eachcoordinate(envfinal, 1:4)) do coordinate
+        return _scrambling_gauge(_boundary_chain(envfinal, coordinate), _boundary_chain(envprev, coordinate))
     end
 
     return signs
@@ -160,21 +163,16 @@ function right_transfermatrix_fixedpoint(
     return first(vecs)
 end
 
-# Explicit fixing of relative phases (doing this compactly in a loop is annoying)
-function fix_relative_phases(envfinal::CTMRGEnv, signs)
-    corners_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
-        Cf = if dir == NORTHWEST
-            fix_gauge_northwest_corner((r, c), envfinal, signs)
-        elseif dir == NORTHEAST
-            fix_gauge_northeast_corner((r, c), envfinal, signs)
-        elseif dir == SOUTHEAST
-            fix_gauge_southeast_corner((r, c), envfinal, signs)
-        else # dir == SOUTHWEST
-            fix_gauge_southwest_corner((r, c), envfinal, signs)
-        end
-        return Cf
+"""Apply outer boundary gauges to the four corner tensors at each unit-cell site."""
+function _fix_gauge_corners(env::Union{CTMRGEnv, SplitCTMRGEnv}, signs)
+    corner_fns = (fix_gauge_northwest_corner, fix_gauge_northeast_corner, fix_gauge_southeast_corner, fix_gauge_southwest_corner)
+    return map(eachcoordinate(env, 1:4)) do (dir, r, c)
+        return corner_fns[dir]((r, c), env, signs)
     end
+end
 
+function fix_relative_phases(envfinal::CTMRGEnv, signs)
+    corners_fixed = _fix_gauge_corners(envfinal, signs)
     edges_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         Ef = if dir == NORTHWEST
             fix_gauge_north_edge((r, c), envfinal, signs)

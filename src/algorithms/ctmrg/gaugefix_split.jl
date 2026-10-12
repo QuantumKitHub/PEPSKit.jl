@@ -1,17 +1,17 @@
-"""List alternating edge factors clockwise, starting at a specified outer bond."""
-function _split_boundary_chain(env::SplitCTMRGEnv, (dir, r, c))
-    dr, dc = dir == EAST ? (1, 0) : dir == WEST ? (-1, 0) : dir == NORTH ? (0, 1) : (0, -1)
-    count = iszero(dr) ? size(env, 3) : size(env, 2)
+"""Represent a split boundary as a doubled MPS chain of alternating ket and bra factors, starting at an outer bond."""
+function _boundary_chain(env::SplitCTMRGEnv, coordinate)
+    dir = first(coordinate)
     firstlayer, secondlayer = env.ket_first[dir] ? (:ket, :bra) : (:bra, :ket)
-    return [edge(env, layer, dir, r + i * dr, c + i * dc) for i in 0:(count - 1) for layer in (firstlayer, secondlayer)]
+    return [edge(env, layer, I...) for I in _boundary_coordinates(env, coordinate) for layer in (firstlayer, secondlayer)]
 end
 
 """Determine outer and interlayer basis rotations relative to the previous split environment."""
 function compute_relative_phases(final::SplitCTMRGEnv, previous::SplitCTMRGEnv, ::ScramblingEnvGauge)
     gauges = map(eachcoordinate(final, 1:4)) do coordinate
-        current = _split_boundary_chain(final, coordinate)
-        old = _split_boundary_chain(previous, coordinate)
+        current = _boundary_chain(final, coordinate)
+        old = _boundary_chain(previous, coordinate)
         outer = _scrambling_gauge(current, old)
+        # The same method on the doubled chain, shifted to the interlayer cut.
         interlayer = _scrambling_gauge(circshift(current, -1), circshift(old, -1))
         return outer, interlayer
     end
@@ -20,12 +20,9 @@ end
 
 """Apply the outer gauges to corners and paired outer and interlayer gauges to edge factors."""
 function fix_relative_phases(env::SplitCTMRGEnv, signs)
-    corner_fns = (fix_gauge_northwest_corner, fix_gauge_northeast_corner, fix_gauge_southeast_corner, fix_gauge_southwest_corner)
-    corners = dtmap(eachcoordinate(env, 1:4)) do (dir, r, c)
-        return corner_fns[dir]((r, c), env, signs.outer)
-    end
+    corners = _fix_gauge_corners(env, signs.outer)
     factors = dtmap(eachcoordinate(env, 1:4)) do (dir, r, c)
-        dr, dc = dir == EAST ? (1, 0) : dir == WEST ? (-1, 0) : dir == NORTH ? (0, 1) : (0, -1)
+        dr, dc = _boundary_step(dir)
         next = (dir, mod1(r + dr, size(env, 2)), mod1(c + dc, size(env, 3)))
         outer, interlayer = signs.outer[dir, r, c], signs.interlayer[dir, r, c]
         outer_next = signs.outer[next...]
@@ -57,24 +54,12 @@ function fix_global_phases(env::SplitCTMRGEnv, corner_phases, edge_phases)
     )
 end
 
-"""Check split environment compatibility and determine relative gauges and global phases."""
-function compute_gauge_fix_gauge(final::SplitCTMRGEnv, previous::SplitCTMRGEnv, alg::ScramblingEnvGauge)
+"""Check that split environments have matching orientations and spaces for gauge alignment."""
+function _check_gauge_compatibility(final::SplitCTMRGEnv, previous::SplitCTMRGEnv)
     final.ket_first == previous.ket_first || throw(ArgumentError("Split-edge orientations must match."))
     for field in (:corners, :edges_ket, :edges_bra)
         space.(getproperty(final, field)) == space.(getproperty(previous, field)) ||
             throw(ArgumentError("Split environment spaces must match for gauge fixing."))
     end
-    signs = compute_relative_phases(final, previous, alg)
-    corner_phases, edge_phases = compute_global_phases(fix_relative_phases(final, signs), previous)
-    return signs, corner_phases, edge_phases
-end
-
-"""Apply relative gauge rotations and global phase corrections to a split environment."""
-function fix_phases(env::SplitCTMRGEnv, signs, corner_phases, edge_phases)
-    return fix_global_phases(fix_relative_phases(env, signs), corner_phases, edge_phases)
-end
-
-"""Align a split environment with the outer and interlayer gauges of the previous environment."""
-function gauge_fix(final::SplitCTMRGEnv, previous::SplitCTMRGEnv, alg::ScramblingEnvGauge)
-    return fix_phases(final, compute_gauge_fix_gauge(final, previous, alg)...)
+    return nothing
 end
