@@ -23,12 +23,14 @@ function check_input(::typeof(leading_boundary), network, env::SplitCTMRGEnv, al
     alg isa SplitCTMRG || throw(ArgumentError("SplitCTMRGEnv requires SplitCTMRG."))
     eltype(network) <: PEPSSandwich || throw(ArgumentError("SplitCTMRG currently supports PEPS overlap networks only."))
     size(env)[2:3] == size(network) || throw(DimensionMismatch("Network and environment unit cells must match."))
-    env.ket_first == (true, true, false, false) || throw(ArgumentError(
-        "SplitCTMRG requires ket_first == (true, true, false, false); got $(env.ket_first). " *
-        "For a rotated standard environment, apply the same rotl90, rotr90, or rot180 transformation " *
-        "to both the environment and the PEPS state/network to restore this orientation before calling " *
-        "`leading_boundary`, then rotate the returned environment back."
-    ))
+    env.ket_first == (true, true, false, false) || throw(
+        ArgumentError(
+            "SplitCTMRG requires ket_first == (true, true, false, false); got $(env.ket_first). " *
+                "For a rotated standard environment, apply the same rotl90, rotr90, or rot180 transformation " *
+                "to both the environment and the PEPS state/network to restore this orientation before calling " *
+                "`leading_boundary`, then rotate the returned environment back."
+        )
+    )
     alg.maxiter > 0 || throw(ArgumentError("maxiter must be positive."))
     return nothing
 end
