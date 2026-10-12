@@ -34,6 +34,8 @@ end
 
 # generic local interface
 _add_localsandwich(O1, O2) = O1 .+ O2
+# in-place: the sandwich tuple itself is immutable, but its tensors are not
+_add_localsandwich!(O1, O2, α, β) = (foreach((x, y) -> add!(x, y, α, β), O1, O2); O1)
 _subtract_localsandwich(O1, O2) = O1 .- O2
 _mul_localsandwich(α::Number, O) = α .* O
 _isapprox_localsandwich(O1, O2; kwargs...) = all(isapprox.(O1, O2; kwargs...))
@@ -47,6 +49,7 @@ _rot180_localsandwich(O::PFTensor) = rot180(O)
 
 # specialized local math interface
 _add_localsandwich(O1::PFTensor, O2::PFTensor) = O1 + O2
+_add_localsandwich!(O1::PFTensor, O2::PFTensor, α, β) = add!(O1, O2, α, β)
 _subtract_localsandwich(O1::PFTensor, O2::PFTensor) = O1 - O2
 _mul_localsandwich(α::Number, O::PFTensor) = α * O
 _isapprox_localsandwich(O1::PFTensor, O2::PFTensor; kwargs...) = isapprox(O1, O2; kwargs...)

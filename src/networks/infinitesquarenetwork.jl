@@ -69,6 +69,19 @@ end
 function VectorInterface.zerovector(A::InfiniteSquareNetwork)
     return InfiniteSquareNetwork(zerovector(unitcell(A)))
 end
+function VI.add!(
+        A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork, α::Number, β::Number
+    )
+    _add!(O1, O2) = _add_localsandwich!(O1, O2, α, β)
+    foreach(_add!, unitcell(A₁), unitcell(A₂))
+    return A₁
+end
+VI.add!(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork) = VI.add!(A₁, A₂, One(), One())
+function VI.add!!(
+        A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork, α::Number, β::Number
+    )
+    return add!(A₁, A₂, α, β)
+end
 
 ## Math (for Zygote accumulation)
 
