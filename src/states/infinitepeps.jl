@@ -65,7 +65,6 @@ function InfinitePEPS(
     ) where {A <: Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
     return InfinitePEPS(randn, Vector{ComplexF64}, Pspaces, virtual_spaces...; kwargs...)
 end
-TensorKit.storagetype(::Type{InfinitePEPS{T}}) where {T} = storagetype(T)
 
 """
     InfinitePEPS(A::PEPSTensor; unitcell=(1, 1))

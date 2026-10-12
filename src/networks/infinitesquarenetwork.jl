@@ -25,7 +25,6 @@ struct InfiniteSquareNetwork{O}
     end
 end
 InfiniteSquareNetwork(n::InfiniteSquareNetwork) = n
-TensorKit.storagetype(::Type{InfiniteSquareNetwork{O}}) where {O} = storagetype(O)
 
 ## Unit cell interface
 
