@@ -253,8 +253,8 @@ function fixedpoint(
     times = Vector{Float64}(undef, 1)
 
     # `tol_state` tracks (iter, gradnorm) of the last accepted optimization step, used to
-    # adjust `alg.boundary_alg`/`alg.gradient_alg` via `MPSKit.updatetol` if they are
-    # wrapped in a `MPSKit.DynamicTol`.
+    # adjust `alg.boundary_alg`/`alg.gradient_alg` via `MPSKit.DynamicTols.adapt_solver`
+    # if they are wrapped in a `MPSKit.DynamicTol`.
     tol_state = (iter = 0, gradnorm = one(T))
 
     # set up finalizer to update `tol_state` and record info after each accepted optimization step
@@ -267,8 +267,9 @@ function fixedpoint(
 
     # initialize the preconditioner
     function precondition(x, g)
-        precondition_alg = updatetol(
-            alg.precondition_alg, tracked_finalizer.tol_state.iter, tracked_finalizer.tol_state.gradnorm
+        precondition_alg = adapt_solver(
+            alg.precondition_alg;
+            iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
         )
         return peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
     end
@@ -280,15 +281,15 @@ function fixedpoint(
         hasconverged, shouldstop, (finalize!) = tracked_finalizer,
     ) do (peps, env)
         start_time = time()
-        boundary_alg = updatetol(
-            alg.boundary_alg,
-            tracked_finalizer.tol_state.iter,
-            tracked_finalizer.tol_state.gradnorm
+        boundary_alg = adapt_solver(
+            alg.boundary_alg;
+            iter = tracked_finalizer.tol_state.iter,
+            g_global = tracked_finalizer.tol_state.gradnorm
         )
         # gradient tolerance is scaled relative to the boundary algorithm's own
         # (just-updated) effective tolerance, not directly to the gradient norm
-        gradient_alg = updatetol(
-            alg.gradient_alg, tracked_finalizer.tol_state.iter, boundary_alg.tol
+        gradient_alg = adapt_solver(
+            alg.gradient_alg; iter = tracked_finalizer.tol_state.iter, g_global = boundary_alg.tol
         )
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
