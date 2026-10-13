@@ -191,6 +191,12 @@ module GradientsC4vCTMRG
 end
 using .GradientsC4vCTMRG
 
+module GradientsC4vEnvTangent
+    include("gradients/c4v_env_tangent.jl")
+    export gradients_c4v_env_tangent
+end
+using .GradientsC4vEnvTangent
+
 module GradientsCTMRG
     include("gradients/ctmrg_gradients.jl")
     export gradients_asymmetric, gradients_asymmetric_276

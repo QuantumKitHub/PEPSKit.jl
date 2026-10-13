@@ -252,6 +252,107 @@ function _rrule(
     return (env, info), leading_boundary_fixed_pullback
 end
 
+"""
+    C4vEnvTangent(corner, edge)
+
+The independent corner and edge of a C₄ᵥ-symmetric environment, used as the vector type in
+the fixed-point gradient solvers.
+"""
+struct C4vEnvTangent{C, T}
+    corner::C
+    edge::T
+end
+
+function VI.scalartype(::Type{C4vEnvTangent{C, T}}) where {C, T}
+    return promote_type(scalartype(C), scalartype(T))
+end
+
+VI.zerovector(x::C4vEnvTangent, ::Type{S}) where {S <: Number} =
+    C4vEnvTangent(zerovector(x.corner, S), zerovector(x.edge, S))
+function VI.zerovector!(x::C4vEnvTangent)
+    zerovector!(x.corner)
+    zerovector!(x.edge)
+    return x
+end
+VI.zerovector!!(x::C4vEnvTangent) = zerovector!(x)
+
+VI.scale(x::C4vEnvTangent, α::Number) = C4vEnvTangent(scale(x.corner, α), scale(x.edge, α))
+function VI.scale!(x::C4vEnvTangent, α::Number)
+    scale!(x.corner, α)
+    scale!(x.edge, α)
+    return x
+end
+function VI.scale!(y::C4vEnvTangent, x::C4vEnvTangent, α::Number)
+    scale!(y.corner, x.corner, α)
+    scale!(y.edge, x.edge, α)
+    return y
+end
+VI.scale!!(x::C4vEnvTangent, α::Number) = scale!(x, α)
+VI.scale!!(y::C4vEnvTangent, x::C4vEnvTangent, α::Number) = scale!(y, x, α)
+
+function VI.add(y::C4vEnvTangent, x::C4vEnvTangent, α::Number, β::Number)
+    return C4vEnvTangent(add(y.corner, x.corner, α, β), add(y.edge, x.edge, α, β))
+end
+function VI.add!(y::C4vEnvTangent, x::C4vEnvTangent, α::Number, β::Number)
+    add!(y.corner, x.corner, α, β)
+    add!(y.edge, x.edge, α, β)
+    return y
+end
+VI.add!!(y::C4vEnvTangent, x::C4vEnvTangent, α::Number, β::Number) = add!(y, x, α, β)
+
+VI.inner(x::C4vEnvTangent, y::C4vEnvTangent) = inner((x.corner, x.edge), (y.corner, y.edge))
+VI.norm(x::C4vEnvTangent) = norm((x.corner, x.edge))
+
+# C₄ᵥ-symmetric version: the environment is fully determined by a single corner and edge,
+# so we only need to diff the fixed-point iteration is differentiated with respect to those.
+function _rrule(
+        gradmode::FixedPointGradient,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit::CTMRGEnv,
+        state,
+        alg::C4vCTMRG,
+    )
+    _check_algorithm_combination(alg, gradmode)
+
+    env, = leading_boundary(envinit, state, alg)
+
+    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
+    alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    function gauge_fixed_iteration(A, C, E)
+        env′ = fix_phases(
+            ctmrg_iteration(InfiniteSquareNetwork(A), CTMRGEnv(C, E), alg_fixed)[1],
+            signs, corner_phases, edge_phases,
+        )
+        return env′.corners[NORTHWEST, 1, 1], env′.edges[NORTH, 1, 1]
+    end
+    C, E = env.corners[NORTHWEST, 1, 1], env.edges[NORTH, 1, 1]
+    _, iteration_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, C, E)
+    _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
+    ∂f∂A(x)::typeof(state) = iteration_vjp((x.corner, x.edge))[2]
+    function ∂f∂x(x)::typeof(C4vEnvTangent(C, E))
+        _, _, ΔC, ΔE = iteration_vjp((x.corner, x.edge))
+        return C4vEnvTangent(ΔC, ΔE)
+    end
+
+    function leading_boundary_fixed_pullback((Δenv′, Δinfo))
+        Δenv = unthunk(Δenv′)
+
+        # accumulate adjoints from all corners & edges through the C4v env constructor
+        _, ΔC, ΔE = c4v_env_vjp(Δenv)
+        Δx = C4vEnvTangent(unthunk(ΔC), unthunk(ΔE))
+
+        # evaluate the geometric sum
+        ∂F∂env = fixedpoint_gradient(Δx, ∂f∂x, ∂f∂A, Δx, gradmode.solver_alg)
+
+        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
+    end
+
+    return (env, info), leading_boundary_fixed_pullback
+end
+
 @doc raw"""
     fixedpoint_gradient(x̆, ∂ₓf, ∂ₚf, y₀, alg)
 
@@ -310,7 +411,7 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter
     dx = ∂f∂A(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
-        y′ = ∂E∂x + ∂f∂x(y)
+        y′ = VI.add(∂f∂x(y), ∂E∂x)
 
         dxnew = ∂f∂A(y′)
         ϵnew = norm(dxnew - dx)
