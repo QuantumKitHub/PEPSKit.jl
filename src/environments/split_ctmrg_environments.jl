@@ -9,6 +9,7 @@ By default, initialization uses the outer environment space for this bond; conve
 
 Use `edge(env, :ket, dir, r, c)` and `edge(env, :bra, dir, r, c)` to access the factors, or `CTMRGEnv(env)` to contract them for existing observable routines.
 This environment supports [`SplitCTMRG`](@ref) and its fixed-point gradient.
+Raw reverse-mode pullbacks may return structural cotangents; `ChainRulesCore.ProjectTo(env)(Δenv)` materializes a concrete environment for vector operations.
 """
 struct SplitCTMRGEnv{C, E}
     corners::Array{C, 3}
@@ -35,7 +36,8 @@ function ChainRulesCore.rrule(
     function split_env_pullback(Δenv_)
         Δenv = unthunk(Δenv_)
         Δenv isa AbstractZero && return NoTangent(), ZeroTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
-        return NoTangent(), Δenv.corners, Δenv.edges_ket, Δenv.edges_bra, NoTangent()
+        return NoTangent(), _split_tangent_field(Δenv, :corners),
+            _split_tangent_field(Δenv, :edges_ket), _split_tangent_field(Δenv, :edges_bra), NoTangent()
     end
     return env, split_env_pullback
 end
@@ -51,22 +53,51 @@ function ChainRulesCore.rrule(::typeof(getproperty), env::SplitCTMRGEnv, name::S
     function split_property_pullback(Δ_)
         Δ = unthunk(Δ_)
         Δ isa AbstractZero && return NoTangent(), ZeroTangent(), NoTangent()
-        Δ = _project_split_array(Δ, result)
-        corners = name === :corners ? Δ : zerovector.(env.corners)
-        edges_ket = name === :edges_ket ? Δ : zerovector.(env.edges_ket)
-        edges_bra = name === :edges_bra ? Δ : zerovector.(env.edges_bra)
-        return NoTangent(), SplitCTMRGEnv(corners, edges_ket, edges_bra, env.ket_first), NoTangent()
+        field = NamedTuple{(name,)}((Δ,))
+        return NoTangent(), Tangent{typeof(env)}(; field..., ket_first = NoTangent()), NoTangent()
     end
     return result, split_property_pullback
 end
 
-"""Project array cotangents and materialize zero entries in the primal tensor storage."""
-function _project_split_array(Δ, primal)
-    return map(primal, Δ) do tensor, delta
-        delta = unthunk(delta)
-        return delta isa AbstractZero ? zerovector(tensor) : ProjectTo(tensor)(delta)
-    end
+"""Read a cotangent field, treating omitted fields and Zygote's nothing markers as zero."""
+function _split_tangent_field(Δ, name::Symbol)
+    Δ = unthunk(Δ)
+    (Δ === nothing || Δ isa AbstractZero) && return ZeroTangent()
+    fields = Δ isa Tangent ? ChainRulesCore.backing(Δ) : Δ
+    return fields isa NamedTuple ? get(fields, name, ZeroTangent()) : getfield(fields, name)
 end
+
+"""Project accumulated array cotangents into fresh tensor storage, materializing zero entries once."""
+function _project_split_array(Δ, primal::Array{<:AbstractTensorMap, 3})
+    Δ = unthunk(Δ)
+    output = similar(primal)
+    if Δ === nothing || Δ isa AbstractZero
+        return map!(zerovector, output, primal)
+    end
+    axes(Δ) == axes(primal) || throw(DimensionMismatch("Split cotangent array axes must match the primal."))
+    for I in eachindex(primal)
+        delta = unthunk(Δ[I])
+        output[I] = delta === nothing || delta isa AbstractZero ?
+            zerovector(primal[I]) : copy(ProjectTo(primal[I])(delta))
+    end
+    return output
+end
+
+"""Materialize an owned split cotangent where differentiation or the fixed-point solver requires a concrete environment."""
+function _project_split_tangent(Δ, primal::SplitCTMRGEnv)::typeof(primal)
+    return SplitCTMRGEnv(
+        _project_split_array(_split_tangent_field(Δ, :corners), getfield(primal, :corners)),
+        _project_split_array(_split_tangent_field(Δ, :edges_ket), getfield(primal, :edges_ket)),
+        _project_split_array(_split_tangent_field(Δ, :edges_bra), getfield(primal, :edges_bra)),
+        getfield(primal, :ket_first),
+    )
+end
+
+ChainRulesCore.ProjectTo(env::SplitCTMRGEnv) = ProjectTo{SplitCTMRGEnv}(; primal = env)
+(project::ProjectTo{SplitCTMRGEnv})(Δ::Union{NamedTuple, SplitCTMRGEnv}) = _project_split_tangent(Δ, project.primal)
+(project::ProjectTo{SplitCTMRGEnv})(Δ::Tangent) = _project_split_tangent(Δ, project.primal)
+# Resolve ChainRulesCore's identity projection for a tangent of the same primal type.
+(project::ProjectTo{SplitCTMRGEnv})(Δ::Tangent{<:SplitCTMRGEnv}) = _project_split_tangent(Δ, project.primal)
 
 """Factor an edge across its interlayer bond, distributing the singular values symmetrically."""
 function _split_edge(E::CTMRGEdgeTensor{T, S, 3}, ket_first::Bool, trunc::TruncationStrategy) where {T, S}

@@ -216,6 +216,65 @@ function _set_fixed_truncation(alg::SplitCTMRG)
     return @set alg_fixed.interlayer_trunc = FixedSpaceTruncation()
 end
 
+"""Prepare the joint pullback of a fixed-space, gauge-aligned CTMRG iteration."""
+function _fixedpoint_vjp(config::RuleConfig, state, env, alg::CTMRGAlgorithm)
+    alg_fixed = _set_fixed_truncation(alg)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, _scrambling_env_gauge(alg))
+    function gauge_fixed_iteration(A, x)
+        return fix_phases(
+            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1],
+            signs, corner_phases, edge_phases,
+        )
+    end
+    _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
+    return info, env_vjp
+end
+
+"""Reuse the tracked split sweep for gauge selection and compose its phase pullback."""
+function _fixedpoint_vjp(config::RuleConfig, state, env::SplitCTMRGEnv, alg::SplitCTMRG)
+    alg_fixed = _set_fixed_truncation(alg)
+    iteration(A, x) = ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)
+    (env_conv, info), sweep_vjp = rrule_via_ad(config, iteration, state, env)
+    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, _scrambling_env_gauge(alg))
+    align(x) = fix_phases(x, signs, corner_phases, edge_phases)
+    _, phase_vjp = rrule_via_ad(config, align, env_conv)
+    env_vjp(x) = sweep_vjp((phase_vjp(x)[2], ZeroTangent()))
+    return info, env_vjp
+end
+
+"""Separate the environment and state actions of a joint iteration pullback."""
+function _fixedpoint_vjps(env_vjp, state, env)
+    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
+    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+    return ∂f∂x, ∂f∂A
+end
+
+"""Reuse the state cotangent for an exactly matching split seed, owning all cached storage."""
+function _fixedpoint_vjps(env_vjp, state, env::SplitCTMRGEnv)
+    cache = Ref{Union{Nothing, Tuple{typeof(env), typeof(state)}}}(nothing)
+    function ∂f∂x(x)::typeof(env)
+        cache[] = nothing
+        seed = deepcopy(x)
+        result = env_vjp(x)
+        cache[] = (seed, deepcopy(result[2]))
+        # Krylov solvers mutate the environment result, so retain only the state part.
+        return _project_split_tangent(result[3], env)
+    end
+    function ∂f∂A(x)::typeof(state)
+        cached = cache[]
+        if !isnothing(cached)
+            seed, gradient = cached
+            if x.ket_first == seed.ket_first && x.corners == seed.corners &&
+                    x.edges_ket == seed.edges_ket && x.edges_bra == seed.edges_bra
+                return deepcopy(gradient)
+            end
+        end
+        return deepcopy(env_vjp(x)[2])
+    end
+    return ∂f∂x, ∂f∂A
+end
+
 # compute the CTMRG gradient through fixed-point differentiation
 function _rrule(
         gradmode::FixedPointGradient,
@@ -231,25 +290,13 @@ function _rrule(
 
     env, = leading_boundary(envinit, state, alg)
 
-    # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
-    alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    function gauge_fixed_iteration(A, x)
-        return fix_phases(
-            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1],
-            signs, corner_phases, edge_phases,
-        )
-    end
-    # prepare its pullback
-    _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
-    # split off state and environment parts
-    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
+    info, env_vjp = _fixedpoint_vjp(config, state, env, alg)
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
+        Δenv isa AbstractZero && return NoTangent(), ZeroTangent(), ZeroTangent(), NoTangent()
+        Δenv = env isa SplitCTMRGEnv ? _project_split_tangent(Δenv, env) : Δenv
+        ∂f∂x, ∂f∂A = _fixedpoint_vjps(env_vjp, state, env)
 
         # evaluate the geometric sum
         ∂F∂env = fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode.solver_alg)

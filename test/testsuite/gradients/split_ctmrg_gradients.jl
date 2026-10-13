@@ -1,6 +1,20 @@
 using Test, Random, LinearAlgebra
 using TensorKit, PEPSKit, Zygote, Adapt
+using ChainRulesCore: ProjectTo
 using PEPSKit: ctmrg_iteration, hook_pullback
+
+"""Check public environment gradients against an analytic corner derivative."""
+function _split_environment_gradient(env::SplitCTMRGEnv)
+    """Read one corner so all other environment derivatives vanish."""
+    loss(x) = real(dot(env.corners[1], x.corners[1]))
+    gradient = only(Zygote.withgradient(loss, env).grad)
+    @test gradient isa typeof(env)
+    @test only(Zygote.gradient(loss, env)) isa typeof(env)
+    @test gradient.corners[1] ≈ env.corners[1]
+    @test all(C -> iszero(norm(C)), gradient.corners[2:end])
+    @test iszero(norm(gradient.edges_ket)) && iszero(norm(gradient.edges_bra))
+    return nothing
+end
 
 function gradients_split_gauge(AT)
     return @testset "Split outer and interlayer gauge ($AT)" begin
@@ -18,6 +32,10 @@ function gradients_split_gauge(AT)
         transformed = PEPSKit.fix_relative_phases(env, signs)
         restored = gauge_fix(transformed, env, PEPSKit.ScramblingEnvGauge())
         @test norm(restored - env) / norm(env) < 1.0e-10
+        _split_environment_gradient(env)
+        S = Vect[FermionParity](0 => 1, 1 => 1)
+        fermionic = adapt(AT, InfinitePEPS(S, S; unitcell = (2, 3)))
+        _split_environment_gradient(SplitCTMRGEnv(fermionic, S))
     end
 end
 
@@ -42,6 +60,7 @@ function gradients_split_sweep(AT)
         loss(A, x) = real(expectation_value(A, H, ctmrg_iteration(InfiniteSquareNetwork(A), x, alg)[1]))
         _, back = Zygote.pullback(loss, psi, env)
         dpsi, denv = back(1.0)
+        denv = ProjectTo(env)(denv)
         direction = adapt(AT, InfinitePEPS(ComplexSpace(2), ComplexSpace(2)))
         direction_env = SplitCTMRGEnv(psi, ComplexSpace(2))
         epsilon = 1.0e-6
@@ -61,10 +80,13 @@ function gradients_split_fixedpoint(AT)
         aligned = gauge_fix(next, env, PEPSKit.ScramblingEnvGauge())
         @test norm(aligned - env) / norm(env) < 1.0e-7
         gradalg = FixedPointGradient(; solver_alg = (; alg = :GMRES, tol = 1.0e-8, maxiter = 100))
-        E, gs = Zygote.withgradient(psi) do A
+        E, back = Zygote.pullback(psi) do A
             boundary, = hook_pullback(leading_boundary, env, A, alg; alg_rrule = gradalg)
             return cost_function(A, boundary, H)
         end
+        gs = back(1.0)
+        @test only(back(2.0)) ≈ 2 * only(gs) atol = 1.0e-6 rtol = 1.0e-5
+        @test only(back(1.0)) ≈ only(gs) atol = 1.0e-6 rtol = 1.0e-5
         direction = adapt(AT, InfinitePEPS(ComplexSpace(2), ComplexSpace(2)))
         epsilon = 1.0e-5
         energy(A) = cost_function(A, leading_boundary(env, A, alg)[1], H)
