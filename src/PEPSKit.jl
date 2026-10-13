@@ -23,6 +23,7 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
+import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
 using LoggingExtras
 import TupleTools
