@@ -35,6 +35,9 @@ function C4vEighProjector(; kwargs...)
 end
 PROJECTOR_SYMBOLS[:C4vEighProjector] = C4vEighProjector
 
+# diagonal inverse for diagonal corner
+_c4v_corner_inverse(::C4vEighProjector, C) = sdiag_pow(real(DiagonalTensorMap(C)), -1)
+
 """
 Compute the normalized and Hermitian-symmetrized C₄ᵥ enlarged corner.
 ```
