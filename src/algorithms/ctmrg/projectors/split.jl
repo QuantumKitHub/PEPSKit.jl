@@ -183,11 +183,11 @@ function sequential_projectors(
     yellow_east, eye = _split_projectors_from_halves(col + 1, yellow_east_halves, env, alg, interlayer_trunc, Val(true), Val(true))
 
     # Teal refines the outer cut using environments with green projectors inserted.
-    teal_halves = dtmap(r -> _split_teal_environment((r, col), network, env, green, green_east), axes(env, 2))
-    teals = dtmap(r -> _split_teal_projector((r, col), teal_halves, env, alg), axes(env, 2))
+    teal_halves = Base.inferencebarrier(dtmap)(r -> _split_teal_environment((r, col), network, env, green, green_east), axes(env, 2))
+    teals = Base.inferencebarrier(dtmap)(r -> _split_teal_projector((r, col), teal_halves, env, alg), axes(env, 2))
 
     # Red refines the interlayer cut using environments with yellow projectors inserted.
-    reds = dtmap(axes(env, 2)) do r
+    reds = Base.inferencebarrier(dtmap)(axes(env, 2)) do r
         quarters = _split_red_quarters((r, col), network, env, yellow, yellow_east)
         return _split_red_projector((r, col), quarters, env, alg; trunc = interlayer_trunc)
     end
