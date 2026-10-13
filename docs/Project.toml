@@ -11,4 +11,4 @@ TensorKitTensors = "41b62e7d-e9d1-4e23-942c-79a97adf954b"
 
 [compat]
 Documenter = "1"
-DocumenterInterLinks = "~1.0"
+DocumenterInterLinks = "~1.0, 1.1"

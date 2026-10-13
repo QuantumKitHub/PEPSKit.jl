@@ -22,7 +22,7 @@ function boundary_mps_one_one_peps(AT)
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N = abs(sum(expectation_value(mps, T)))
 
-        mps2, = changebonds(mps, T, OptimalExpand(; trscheme = truncrank(30))) # TODO: update `trscheme` to `trunc` once MPSKit does
+        mps2, = changebonds(mps, T, OptimalExpand(; trunc = truncrank(30)))
         mps2, env2, ϵ = leading_boundary(mps2, T, vumps_alg)
         N2 = abs(sum(expectation_value(mps2, T)))
         @test N ≈ N2 rtol = 1.0e-2
@@ -43,7 +43,7 @@ function boundary_mps_two_two_peps(AT)
         # foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T)) # TODO: MPSKit.physicalspace(::MultilineMPO) isn't implemented...
         mps = initialize_mps(rand, scalartype(T), T, fill(ComplexSpace(20), 2, 2))
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
-        N = abs(prod(expectation_value(mps, T)))
+        N = abs(leading_eigenvalue(mps, T))
 
         ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
         N´ = abs(norm(psi, ctm))
