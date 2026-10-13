@@ -54,27 +54,27 @@ function _split_yellow_environment((r, c), network, env::SplitCTMRGEnv)
     return top, bottom
 end
 
-"""Build the two halves of the environment for the red projectors (Fig. 9)."""
-function _split_red_environment((r, c), network, env::SplitCTMRGEnv, yellow_west, yellow_east)
+"""Build the quarter-environments for the red projectors before multiplying their factors (Fig. 9)."""
+function _split_red_quarters((r, c), network, env::SplitCTMRGEnv, yellow_west, yellow_east)
     l = _split_local_environment((r, c), network, env)
     h = _split_local_environment((r, c + 1), network, env)
     Ywl, Ywr = yellow_west[1][r], yellow_west[2][r]
     Yel, Yer = yellow_east[1][r], yellow_east[2][r]
     C1, N, Wk, A = l.C1, l.N, l.Wk, l.A
-    NW = @autoopt @tensor Q[χout d Dnb; χne Dek] :=
+    @autoopt @tensor NW[χout d Dnb; χne Dek] :=
         Ywr[χout; χiw Dsk] * Wk[χiw Dwk; χnw] * C1[χnw; χnnw] * N[χnnw Dnk Dnb; χne] *
         ket(A)[d; Dnk Dek Dsk Dwk]
     C2, N, Ek, A = h.C2, h.N, h.Ek, h.A
-    NE = @autoopt @tensor Q[χnw Dwk; χout d Dnb] :=
+    @autoopt @tensor NE[χnw Dwk; χout d Dnb] :=
         N[χnw Dnk Dnb; χnne] * C2[χnne; χne] * Ek[χne Dek; χie] * Yel[χie Dsk; χout] *
         ket(A)[d; Dnk Dek Dsk Dwk]
     C4, S, Wb, A = l.C4, l.S, l.Wb, l.A
-    SW = @autoopt @tensor Q[χse Deb; χout d Dnb] :=
+    @autoopt @tensor SW[χse Deb; χout d Dnb] :=
         S[χse Dsk Dsb; χssw] * C4[χssw; χsw] * Wb[χsw Dwb; χiw] * Ywl[χiw Dsk; χout] *
         conj(bra(A)[d; Dnb Deb Dsb Dwb])
     C3, S, Eb, A = h.C3, h.S, h.Eb, h.A
-    SE = @autoopt @tensor Q[χout d Dnb; χsw Dwb] :=
+    @autoopt @tensor SE[χout d Dnb; χsw Dwb] :=
         Yer[χout; χie Dsk] * Eb[χie Deb; χse] * C3[χse; χsse] * S[χsse Dsk Dsb; χsw] *
         conj(bra(A)[d; Dnb Deb Dsb Dwb])
-    return NW * NE, SE * SW
+    return (; NW, NE, SE, SW)
 end

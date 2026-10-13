@@ -25,7 +25,7 @@ When omitted, `interlayer_trunc` inherits `trunc`; the default `FixedSpaceTrunca
 This version supports PEPS overlap networks, full projectors, and automatic differentiation through finite sweeps or [`FixedPointGradient`](@ref).
 For comparisons with variPEPS, select its `Projector_Method.FULL` option; its default `FISHMAN` construction reweights the environment halves and uses different projectors.
 
-Fixed-point differentiation uses [`ScramblingEnvGauge`](@ref) on the alternating ket and bra boundary factors to align both outer and interlayer gauges.
+Fixed-point differentiation uses [`ScramblingEnvGauge`](@ref PEPSKit.ScramblingEnvGauge) on the alternating ket and bra boundary factors to align both outer and interlayer gauges.
 The ordinary and split environments use the same boundary-MPS gauge method, with each split edge contributing two MPS sites instead of one.
 Both sets of bond spaces are held fixed in the differentiated iteration, including when the forward run uses other truncation strategies.
 Use a complex environment for fixed-point gradients, as for conventional asymmetric CTMRG.

@@ -1,9 +1,9 @@
 """
 $(TYPEDEF)
 
-Projector algorithm for [`SplitCTMRG`](@ref), using the green, teal, yellow, and red environments of Naumann et al., Phys. Rev. B **111**, 235116 (2025).
+Projector algorithm for [`SplitCTMRG`](@ref), constructing the green (Fig. 3), teal (Fig. 7), yellow (Fig. 8), and red (Fig. 9) projector pairs of [Naumann et al.](@cite naumann_variationally_2025).
 Each projector pair is constructed from a truncated SVD of the product of its environment halves.
-The yellow and red halves are QR-compressed before multiplication.
+QR compression is applied to the environment halves for the yellow projectors and, when the truncation permits, the quarter-environments for the red projectors before multiplication.
 
 ## Fields
 
@@ -14,7 +14,7 @@ $(TYPEDFIELDS)
     SplitProjector(; kwargs...)
 
 Construct a split projector algorithm with `decomposition_alg`, `trunc`, and `verbosity`, following [`FullInfiniteProjector`](@ref).
-`trunc` controls the outer cuts; [`SplitCTMRG`](@ref) supplies `interlayer_trunc` for the yellow and red cuts.
+`trunc` controls the green and teal projectors; [`SplitCTMRG`](@ref) supplies `interlayer_trunc` for the yellow and red projectors.
 """
 struct SplitProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     decomposition_alg::S
@@ -27,7 +27,7 @@ end
 
 PROJECTOR_SYMBOLS[:SplitProjector] = SplitProjector
 
-"""Compute a split projector pair, optionally QR-compressing the yellow or red environment halves."""
+"""Compute a split projector pair, optionally QR-compressing the environment halves for the yellow or red projectors."""
 function compute_projector(
         halves, alg::SplitProjector;
         trunc::TruncationStrategy = alg.trunc, compress::Bool = false,
@@ -37,10 +37,8 @@ function compute_projector(
     Q = Q / norm(Q)
     Q_next = Q_next / norm(Q_next)
     if compress
-        qr_alg = QRAdjoint()
-        _, Q = left_orth(Q, qr_alg)
-        _, Q_next = left_orth(Q_next', qr_alg)
-        Q_next = Q_next'
+        _, Q = left_orth(Q, QRAdjoint())
+        Q_next, _ = right_orth(Q_next, LQAdjoint())
     end
 
     # All four colors use an SVD of the product of their prepared halves.
@@ -60,73 +58,138 @@ function compute_projector(
     return (P_left, P_right), (; U, S, V, truncation_error)
 end
 
-"""Resolve fixed-space truncation at an outer or interlayer cut."""
+"""Resolve fixed-space truncation for the green and teal projectors or the yellow and red projectors."""
 function _split_truncation(trunc::TruncationStrategy, V::ElementarySpace)
     return trunc isa FixedSpaceTruncation ? truncspace(isdual(V) ? flip(V) : V) : trunc
 end
 
-"""Compute green or yellow projector pairs before constructing the teal or red environments."""
-function _split_initial_projectors(
-        col::Int, network, env::SplitCTMRGEnv, alg::SplitProjector, trunc::TruncationStrategy,
-        ::Val{interlayer}, ::Val{east}
-    ) where {interlayer, east}
-    halves = dtmap(axes(env, 2)) do r
+"""Construct the half-environments for the green or yellow projectors for each row of a directional move."""
+function _split_initial_halves(
+        col::Int, network, env::SplitCTMRGEnv, ::Val{interlayer}
+    ) where {interlayer}
+    return dtmap(axes(env, 2)) do r
         return interlayer ? _split_yellow_environment((r, col), network, env) :
             _split_green_environment((r, col), network, env)
     end
+end
+
+"""Compute a green projector pair at one cut from prepared half-environments."""
+function _split_green_projector(
+        (r, col), halves, env::SplitCTMRGEnv, alg::SplitProjector, ::Val{E} = Val(false);
+        trunc::TruncationStrategy = alg.trunc,
+    ) where {E}
+    top = halves[_prev(r, size(env, 2))][1]
+    bottom = halves[r][2]
+    if E
+        top = permute(top, ((1, 4), (3, 2)))
+        bottom = permute(bottom, ((1, 4), (3, 2)))
+    end
+    K = edge(env, :ket, E ? EAST : WEST, r, E ? col + 1 : col)
+    V = E ? codomain(K)[1] : domain(K)[1]
+    Q, Q_next = E ? (top, bottom) : (bottom, top)
+    return compute_projector((Q, Q_next), alg; trunc = _split_truncation(trunc, V))
+end
+
+"""Compute a yellow projector pair at one cut using QR/LQ compression of prepared half-environments."""
+function _split_yellow_projector(
+        (r, col), halves, env::SplitCTMRGEnv, alg::SplitProjector, ::Val{E} = Val(false);
+        trunc::TruncationStrategy = alg.trunc,
+    ) where {E}
+    top, bottom = halves[r]
+    if E
+        top = permute(top, ((1, 4, 5), (3, 2)))
+        bottom = permute(bottom, ((1, 5), (4, 2, 3)))
+    end
+    K = edge(env, :ket, E ? EAST : WEST, r, E ? col + 1 : col)
+    V = E ? domain(K)[1] : codomain(K)[1]
+    Q, Q_next = E ? (top, bottom) : (bottom, top)
+    return compute_projector((Q, Q_next), alg; trunc = _split_truncation(trunc, V), compress = true)
+end
+
+"""Collect green or yellow projector pairs for one side of a column from prepared half-environments."""
+function _split_projectors_from_halves(
+        col::Int, halves, env::SplitCTMRGEnv, alg::SplitProjector, trunc::TruncationStrategy,
+        ::Val{interlayer}, east::Val,
+    ) where {interlayer}
     results = dtmap(axes(env, 2)) do r
-        if interlayer
-            top, bottom = halves[r]
-            if east
-                top = permute(top, ((1, 4, 5), (3, 2)))
-                bottom = permute(bottom, ((1, 5), (4, 2, 3)))
-            end
-            Q, Q_next = east ? (top, bottom) : (bottom, top)
-            K = edge(env, :ket, east ? EAST : WEST, r, east ? col + 1 : col)
-            V = east ? domain(K)[1] : codomain(K)[1]
-        else
-            top = halves[_prev(r, size(env, 2))][1]
-            bottom = halves[r][2]
-            if east
-                top = permute(top, ((1, 4), (3, 2)))
-                bottom = permute(bottom, ((1, 4), (3, 2)))
-            end
-            Q, Q_next = east ? (top, bottom) : (bottom, top)
-            K = edge(env, :ket, east ? EAST : WEST, r, east ? col + 1 : col)
-            V = east ? codomain(K)[1] : domain(K)[1]
-        end
-        return compute_projector((Q, Q_next), alg; trunc = _split_truncation(trunc, V), compress = interlayer)
+        return interlayer ? _split_yellow_projector((r, col), halves, env, alg, east; trunc) :
+            _split_green_projector((r, col), halves, env, alg, east; trunc)
     end
     projectors, info = _split_proj_and_info(results)
     return projectors, info.truncation_error
 end
 
-"""Construct the green, teal, yellow, and red projector pairs for a split-CTMRG left move."""
+"""Compute a teal projector pair from adjacent-row green-projected halves using the outer truncation strategy."""
+function _split_teal_projector(
+        (r, col), halves, env::SplitCTMRGEnv, alg::SplitProjector;
+        trunc::TruncationStrategy = alg.trunc,
+    )
+    top = halves[_prev(r, size(env, 2))][1]
+    bottom = halves[r][2]
+    V = domain(edge(env, :ket, WEST, r, col))[1]
+    trunc = _split_truncation(trunc, V)
+    return compute_projector((bottom, top), alg; trunc)
+end
+
+"""Check whether the reduced environment spectrum for the red projectors can supply the requested largest singular values."""
+function _split_reduce_red(quarters::NamedTuple, trunc::TruncationStrategy)
+    trunc isa TruncationSpace && trunc.by === abs && trunc.rev || return false
+    (; NW, NE, SE, SW) = quarters
+    # Respect both the reduced quarter ranks and the original half-QR dimensions.
+    return all(blocksectors(trunc.space)) do c
+        return blockdim(trunc.space, c) <= min(
+            blockdim(codomain(SE), c), blockdim(domain(SE), c),
+            blockdim(domain(NE), c), blockdim(codomain(NE), c),
+            blockdim(domain(SW), c), blockdim(codomain(NW), c),
+        )
+    end
+end
+
+"""Compute the red projector pair using quarter QR factors when its truncation fits the reduced spectrum."""
+function _split_red_projector(
+        (r, col), quarters::NamedTuple, env::SplitCTMRGEnv, alg::SplitProjector;
+        trunc::TruncationStrategy = alg.trunc,
+    )
+    V = codomain(edge(env, :ket, WEST, r, col))[1]
+    trunc = _split_truncation(trunc, V)
+    (; NW, NE, SE, SW) = quarters
+    reduce = ignore_derivatives() do
+        _split_reduce_red(quarters, trunc)
+    end
+    if reduce
+        # SE = Qb * Rb and NE = Lt * Qt with isometric Qb and Qt.
+        # Their factors retain the norms and nonzero spectrum of (SE * SW) * (NW * NE).
+        _, Rb = left_orth(SE, QRAdjoint())
+        Lt, _ = right_orth(NE, LQAdjoint())
+        return compute_projector((Rb * SW, NW * Lt), alg; trunc)
+    end
+    # Preserve zero-spectrum dimensions and custom truncation ordering on the full halves.
+    return compute_projector((SE * SW, NW * NE), alg; trunc, compress = true)
+end
+
+"""Construct the split projector pairs for a split-CTMRG left move."""
 function sequential_projectors(
         col::Int, network, env::SplitCTMRGEnv, alg::SplitProjector, interlayer_trunc::TruncationStrategy
     )
-    # Initial projectors on both sides of the two-site refinement environments.
-    green, eg = _split_initial_projectors(col, network, env, alg, alg.trunc, Val(false), Val(false))
-    green_east, ege = _split_initial_projectors(col + 1, network, env, alg, alg.trunc, Val(false), Val(true))
-    yellow, ey = _split_initial_projectors(col, network, env, alg, interlayer_trunc, Val(true), Val(false))
-    yellow_east, eye = _split_initial_projectors(col + 1, network, env, alg, interlayer_trunc, Val(true), Val(true))
+    # Prepare each side once; a one-column cell shares the same periodic halves.
+    single_column = size(env, 3) == 1
+    green_halves = _split_initial_halves(col, network, env, Val(false))
+    green, eg = _split_projectors_from_halves(col, green_halves, env, alg, alg.trunc, Val(false), Val(false))
+    green_east_halves = single_column ? green_halves : _split_initial_halves(col + 1, network, env, Val(false))
+    green_east, ege = _split_projectors_from_halves(col + 1, green_east_halves, env, alg, alg.trunc, Val(false), Val(true))
+    yellow_halves = _split_initial_halves(col, network, env, Val(true))
+    yellow, ey = _split_projectors_from_halves(col, yellow_halves, env, alg, interlayer_trunc, Val(true), Val(false))
+    yellow_east_halves = single_column ? yellow_halves : _split_initial_halves(col + 1, network, env, Val(true))
+    yellow_east, eye = _split_projectors_from_halves(col + 1, yellow_east_halves, env, alg, interlayer_trunc, Val(true), Val(true))
 
     # Teal refines the outer cut using environments with green projectors inserted.
     teal_halves = dtmap(r -> _split_teal_environment((r, col), network, env, green, green_east), axes(env, 2))
-    teals = dtmap(axes(env, 2)) do r
-        top = teal_halves[_prev(r, size(env, 2))][1]
-        bottom = teal_halves[r][2]
-        V = domain(edge(env, :ket, WEST, r, col))[1]
-        trunc = _split_truncation(alg.trunc, V)
-        return compute_projector((bottom, top), alg; trunc)
-    end
+    teals = dtmap(r -> _split_teal_projector((r, col), teal_halves, env, alg), axes(env, 2))
 
     # Red refines the interlayer cut using environments with yellow projectors inserted.
     reds = dtmap(axes(env, 2)) do r
-        top, bottom = _split_red_environment((r, col), network, env, yellow, yellow_east)
-        V = codomain(edge(env, :ket, WEST, r, col))[1]
-        trunc = _split_truncation(interlayer_trunc, V)
-        return compute_projector((bottom, top), alg; trunc, compress = true)
+        quarters = _split_red_quarters((r, col), network, env, yellow, yellow_east)
+        return _split_red_projector((r, col), quarters, env, alg; trunc = interlayer_trunc)
     end
     teal, teal_info = _split_proj_and_info(teals)
     red, red_info = _split_proj_and_info(reds)

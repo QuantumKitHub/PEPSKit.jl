@@ -19,7 +19,8 @@ Construct a `QRAdjoint` algorithm struct based on the following keyword argument
   The available algorithms are provided through MatrixAlgebraKit and include:
     - `:DefaultAlgorithm` : MatrixAlgebraKit's [default QR algorithm](@extref MatrixAlgebraKit.DefaultAlgorithm) for a given matrix type.
     - `:Householder` : MatrixAlgebraKit's [`Householder`](@extref MatrixAlgebraKit.Householder)
-* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_rrule_alg))`: Reverse-rule algorithm for differentiating the eigenvalue decomposition. Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
+* `rrule_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=$(Defaults.qr_rrule_alg))`: Reverse-rule algorithm for differentiating the QR decomposition.
+  Can be supplied by an `Algorithm` instance directly or as a `NamedTuple` where `alg` is one of the following:
     - `:FullPullback` : MatrixAlgebraKit's [`qr_pullback!`](@extref MatrixAlgebraKit.qr_pullback!)
 
 !!! note
@@ -39,7 +40,10 @@ const QR_RRULE_SYMBOLS = IdDict{Symbol, Type{<:Any}}(
     :FullPullback => FullPullback
 )
 
-function QRAdjoint(; fwd_alg = (;), rrule_alg = (;))
+QRAdjoint(; kwargs...) = QRAdjoint(_orthogonalization_algorithms(; kwargs...)...)
+
+"""Parse the shared forward and reverse algorithm options for QR and LQ decompositions."""
+function _orthogonalization_algorithms(; fwd_alg = (;), rrule_alg = (;))
     # parse forward algorithm
     fwd_algorithm = if fwd_alg isa NamedTuple
         fwd_kwargs = (;
@@ -72,7 +76,7 @@ function QRAdjoint(; fwd_alg = (;), rrule_alg = (;))
         rrule_alg
     end
 
-    return QRAdjoint(fwd_algorithm, rrule_algorithm)
+    return fwd_algorithm, rrule_algorithm
 end
 
 """

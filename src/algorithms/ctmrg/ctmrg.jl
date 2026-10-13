@@ -80,7 +80,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:SimultaneousCTMRG` : Simultaneous expansion and renormalization of all sides.
     - `:SequentialCTMRG` : Sequential application of left moves and rotations.
     - `:C4vCTMRG` : CTMRG assuming C₄ᵥ-symmetric PEPS and environment.
-    - `:SplitCTMRG` : Sequential ket and bra absorption using [`SplitCTMRGEnv`](@ref) and full split projectors.
+    - `:SplitCTMRG` : Sequential ket and bra absorption using [`SplitCTMRGEnv`](@ref) and the split projectors of [`SplitProjector`](@ref).
 
 ### Projector algorithm
 
@@ -94,7 +94,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
     - `:HalfInfiniteProjector` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
-    - `:SplitProjector` : Projection via SVDs of the split environments, works only for [`SplitCTMRG`](@ref) and is its default.
+    - `:SplitProjector` : Split projector pairs constructed via SVDs of their environments, works only for [`SplitCTMRG`](@ref) and is its default.
     - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
     - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
 * `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:QRAdjoint}` : Tensor

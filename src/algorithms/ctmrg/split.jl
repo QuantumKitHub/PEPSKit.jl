@@ -1,11 +1,11 @@
 """
     SplitCTMRG(; kwargs...)
 
-Sequential split-CTMRG introduced in Naumann et al., Phys. Rev. B **111**, 235116 (2025), Figs. 3 and 7–9.
+Sequential split-CTMRG introduced in [Naumann et al.](@cite naumann_variationally_2025).
 Uses [`SplitCTMRGEnv`](@ref), with independently truncated outer and interlayer environment bonds.
 The common iteration, `trunc`, and `decomposition_alg` keywords follow [`SequentialCTMRG`](@ref).
-`interlayer_trunc` controls the interlayer projectors and defaults to `trunc`; specify it separately to override the outer truncation strategy.
-Uses [`SplitProjector`](@ref) to construct the green, teal, yellow, and red projector pairs.
+`trunc` controls the green and teal projectors; `interlayer_trunc` controls the yellow and red projectors and defaults to `trunc`.
+Uses [`SplitProjector`](@ref) to construct the split projector pairs.
 The fixed-point gradient aligns the outer and interlayer gauges and holds both environment spaces fixed.
 """
 struct SplitCTMRG{P <: SplitProjector, I <: TruncationStrategy} <: CTMRGAlgorithm
