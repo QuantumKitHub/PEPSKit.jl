@@ -62,7 +62,7 @@ function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorM
     return U * sqrt_S, sqrt_S * V
 end
 
-# avoids a conversion to a dense TensorMap by flip 
+# avoids a conversion to a dense TensorMap by flip
 function _fliptwist_s!(s::DiagonalTensorMap)
     for (f₁, f₂) in fusiontrees(s)
         data = s[f₁, f₂]
