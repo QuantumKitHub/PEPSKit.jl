@@ -117,10 +117,10 @@ Module containing default algorithm parameter values and arguments.
 * `optimizer_tol=$(Defaults.optimizer_tol)` : Gradient norm tolerance of the optimizer.
 * `optimizer_maxiter=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
 * `optimizer_verbosity=$(Defaults.optimizer_verbosity)` : Optimizer output information verbosity.
-* `optimizer_alg=:$(Defaults.optimizer_alg)` : Default `OptimKit.OptimizerAlgorithm` for PEPS optimization.
-    - `:GradientDescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:ConjugateGradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:LBFGS` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+* `optimizer_alg=:$(Defaults.optimizer_alg)` : Default `OptimKit.OptimizationAlgorithm` for PEPS optimization.
+    - `:GradientDescent` : Gradient descent algorithm, OptimKit's [`GradientDescent`](@extref OptimKit.GradientDescent)
+    - `:ConjugateGradient` : Conjugate gradient algorithm, OptimKit's [`ConjugateGradient`](@extref OptimKit.ConjugateGradient)
+    - `:LBFGS` : L-BFGS algorithm, OptimKit's [`LBFGS`](@extref OptimKit.LBFGS)
 * `ls_maxiter=$(Defaults.ls_maxiter)` : Maximum number of iterations for the line search in each step of the optimization.
 * `ls_maxfg=$(Defaults.ls_maxfg)` : Maximum number of function evaluations for the line search in each step of the optimization.
 * `lbfgs_memory=$(Defaults.lbfgs_memory)` : Size of limited memory representation of BFGS Hessian matrix.
