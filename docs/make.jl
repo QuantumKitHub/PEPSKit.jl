@@ -28,6 +28,7 @@ links = InterLinks(
     # "Zygote" => "https://fluxml.ai/Zygote.jl/stable/",
     "ChainRulesCore" => "https://juliadiff.org/ChainRulesCore.jl/stable/",
     "MatrixAlgebraKit" => "https://quantumkithub.github.io/MatrixAlgebraKit.jl/stable/",
+    "OptimKit" => "https://jutho.github.io/OptimKit.jl/stable/",
 )
 
 # explicitly set math engine

@@ -132,9 +132,9 @@ The optimization parameters can be supplied via the keyword arguments or directl
     4. Debug info including AD outputs
 * `reuse_env::Bool=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing` : Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
-* `hasconverged=OptimKit.DefaultHasConverged(optimizer_alg.gradtol)` : Function specifying the convergence criterion with signature `bool = hasconverged(state, cost, grad, gradnorm)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics. Note that this overrides the default convergence criterion.
-* `shouldstop=OptimKit.DefaultShouldStop(optimizer_alg.maxiter)` : Function specifying the stopping criterion with signature `bool = shouldstop(state, cost, grad, numfg, iter, timespent)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics. Note that this overrides the default stopping criterion.
-* `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(state, env), f, g = finalize!((state, env), cost, grad, numiter)`.
+* `hasconverged=OptimKit.DefaultHasConverged(optimizer_alg.gradtol)` : Function specifying the convergence criterion with signature `bool = hasconverged(state, cost, grad, gradnorm)`, see [`OptimKit.optimize`](@extref) for specifics. Note that this overrides the default convergence criterion.
+* `shouldstop=OptimKit.DefaultShouldStop(optimizer_alg.maxiter)` : Function specifying the stopping criterion with signature `bool = shouldstop(state, cost, grad, numfg, iter, timespent)`, see [`OptimKit.optimize`](@extref) for specifics. Note that this overrides the default stopping criterion.
+* `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of [`OptimKit.optimize`](@extref). The function maps `(state, env), f, g = finalize!((state, env), cost, grad, numiter)`.
 
 ### Boundary algorithm
 
@@ -195,13 +195,13 @@ variational optimization, not for standalone [`leading_boundary`](@ref) calls.
 
 Supply the optimizer algorithm via `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 using either a `NamedTuple` of keyword arguments or a `OptimKit.OptimizationAlgorithm` directly. By default,
-`OptimKit.LBFGS` is used in combination with a `HagerZhangLineSearch`. The supported
+[`OptimKit.LBFGS`](@extref) is used in combination with a [`HagerZhangLineSearch`](@extref OptimKit :jl:type:`OptimKit.HagerZhangLineSearch`). The supported
 keyword arguments are:
 
 * `alg::Symbol=:$(Defaults.optimizer_alg)` : Optimizer algorithm, can be one of the following:
-    - `:GradientDescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:ConjugateGradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:LBFGS` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:GradientDescent` : Gradient descent algorithm, OptimKit's [`GradientDescent`](@extref OptimKit.GradientDescent)
+    - `:ConjugateGradient` : Conjugate gradient algorithm, OptimKit's [`ConjugateGradient`](@extref OptimKit.ConjugateGradient)
+    - `:LBFGS` : L-BFGS algorithm, OptimKit's [`LBFGS`](@extref OptimKit.LBFGS)
 * `tol::Real=tol` : Gradient norm tolerance of the optimizer.
 * `maxiter::Int=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
 * `verbosity::Int=$(Defaults.optimizer_verbosity)` : Optimizer output verbosity.
@@ -433,7 +433,7 @@ end
 """
 $(TYPEDEF)
 
-Callable that acts as the `finalize!` function passed to `OptimKit.optimize`.
+Callable that acts as the `finalize!` function passed to [`OptimKit.optimize`](@extref).
 Keeps track of the optimization iteration number and gradient norm of the last accepted
 optimization step, and records the contraction metrics, gradient norms and execution times
 of each optimization step.
