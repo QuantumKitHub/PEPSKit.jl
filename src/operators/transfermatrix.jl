@@ -149,7 +149,7 @@ function initialize_mps(O::Union{InfiniteTransferMatrix, MultilineTransferMatrix
 end
 function initialize_mps(
         f, T, O::InfiniteTransferMatrix, virtualspaces::AbstractArray{S, 1}; kwargs...
-       ) where {S}
+    ) where {S}
     return InfiniteMPS(
         [
             f(
