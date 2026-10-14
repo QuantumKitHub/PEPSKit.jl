@@ -59,7 +59,6 @@ function _promote_term_scalars(term::AbstractVector)
     T = promote_type(map(scalartype, term)...)
     return map(t -> scalartype(t) === T ? t : VI.scale(t, one(T)), term)
 end
-TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S} = storagetype(first(lo.terms)[2]) # horrible!
 
 """
 Return the tensor factors of a dense or factored local term.
