@@ -74,7 +74,7 @@ function SUWeight(
         V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
         realT = similarstoragetype(T, real(eltype(T)))
         diag = realT(undef, reduceddim(V))
-        fill!(diag, real(eltype(T)))
+        fill!(diag, one(real(eltype(T))))
         DiagonalTensorMap(diag, V)
     end
     return SUWeight(weights)
