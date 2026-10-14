@@ -52,6 +52,89 @@ if !is_buildkite
         @test length(op5.terms) == 2
     end
 
+    @testset "LocalOperator MPO bookkeeping" begin
+        d = ℂ^2
+        lattice = fill(d, 2, 2)
+        dense = randn(Float64, d ⊗ d ← d ⊗ d)
+        mpo = PEPSKit.gate_to_mpo(dense; trunc = notrunc())
+        sites = CartesianIndex.([(3, 4), (3, 3)])
+        original_sites, original_mpo = copy(sites), copy(mpo)
+        operator = LocalOperator(lattice, sites => mpo)
+        stored_sites, stored_mpo = only(operator.terms)
+
+        # Construction translates a copy of the coordinates and must retain the caller's MPO order.
+        # Mutating either input container afterwards must not alter the stored term.
+        @test sites == original_sites
+        reverse!(sites)
+        reverse!(mpo)
+        @test stored_sites == CartesianIndex.([(1, 2), (1, 1)])
+        @test stored_mpo == original_mpo
+
+        # Scaling every factor would multiply the operator by α^N; only one factor may change.
+        # A complex coefficient must also widen the container without mutating the original tensors.
+        α = 2 + 3im
+        snapshot = deepcopy(stored_mpo)
+        scaled_mpo = last(only((α * operator).terms))
+        @test first(scaled_mpo) ≈ α * first(stored_mpo)
+        @test last(scaled_mpo) === last(stored_mpo)
+        @test stored_mpo == snapshot
+        onsite = randn(ComplexF64, d ← d)
+        mixed = operator + LocalOperator(lattice, ((2, 1),) => onsite)
+        @test scalartype(mixed) == ComplexF64
+
+        # Taking real/imaginary parts factorwise does not give the real/imaginary part of an MPO.
+        @test_throws ArgumentError real(mixed)
+        @test_throws ArgumentError imag(mixed)
+
+        # Insertion and operator addition use different accumulation paths; both must reject MPO sums.
+        # Dense terms sharing the same sites must still accumulate normally.
+        inds = CartesianIndex.([(1, 1), (1, 2)])
+        dense_operator = LocalOperator(lattice, inds => dense)
+        mpo_operator = LocalOperator(lattice, inds => original_mpo)
+        @test_throws ArgumentError PEPSKit.add_term!(mpo_operator, inds, dense)
+        @test_throws ArgumentError PEPSKit.add_term!(dense_operator, inds, original_mpo)
+        @test_throws ArgumentError mpo_operator + mpo_operator
+        @test_throws ArgumentError mpo_operator + dense_operator
+        @test_throws ArgumentError dense_operator + mpo_operator
+        @test last(only((dense_operator + dense_operator).terms)) ≈ 2 * dense
+
+        # Drop zero factors before they reach boundary-MPS normalization, where they could cause 0/0.
+        @test isempty(LocalOperator(lattice, inds => [zero(first(original_mpo)), last(original_mpo)]).terms)
+
+        # Unequal physical spaces expose accidental factor reordering during coordinate transformations.
+        lattice = [ℂ^2 ℂ^3 ℂ^4; ℂ^5 ℂ^6 ℂ^7]
+        dense = randn(Float64, ℂ^6 ⊗ ℂ^2 ← ℂ^6 ⊗ ℂ^2)
+        mpo = PEPSKit.gate_to_mpo(dense; trunc = notrunc())
+        operator = LocalOperator(lattice, ((2, 2), (1, 1)) => mpo)
+        @test rotr90(rotl90(operator)) == operator
+        @test last(only(rotr90(operator).terms)) == mpo
+        sites, term = only(operator.terms)
+        @test repeat(operator, 2, 1).terms == Dict(sites => term, (sites .+ CartesianIndex(2, 0)) => term)
+    end
+
+    @testset "MPO validation" begin
+        d, b1, b2 = ℂ^2, ℂ^3, ℂ^4
+        lattice = fill(d, 2, 2)
+        first_tensor = randn(Float64, d ← d ⊗ b1)
+        last_tensor = randn(Float64, b1 ⊗ d ← d)
+        mpo = [first_tensor, last_tensor]
+        sites = ((1, 1), (1, 2))
+
+        # Reject malformed chains at construction, before any routing or contraction is attempted.
+        @test_throws ArgumentError LocalOperator(lattice, CartesianIndex{2}[] => AbstractTensorMap[])
+        @test_throws ArgumentError LocalOperator(lattice, ((1, 1),) => mpo)
+        @test_throws ArgumentError LocalOperator(lattice, ((1, 1), (1, 1)) => mpo)
+        @test_throws ArgumentError LocalOperator(lattice, sites => reverse(mpo))
+
+        # Bond matching and the two physical legs are independent constraints.
+        wrong_bond = randn(Float64, b2 ⊗ d ← d)
+        wrong_input = randn(Float64, b1 ⊗ d ← ℂ^3)
+        wrong_output = randn(Float64, b1 ⊗ ℂ^3 ← d)
+        @test_throws SpaceMismatch LocalOperator(lattice, sites => [first_tensor, wrong_bond])
+        @test_throws SpaceMismatch LocalOperator(lattice, sites => [first_tensor, wrong_input])
+        @test_throws SpaceMismatch LocalOperator(lattice, sites => [first_tensor, wrong_output])
+    end
+
     @testset "Charge shifting" begin
         lattice = InfiniteSquare(1, 1)
         elt = ComplexF64

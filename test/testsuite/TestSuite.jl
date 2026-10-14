@@ -239,6 +239,30 @@ module ToolboxDensityMatrices
 end
 using .ToolboxDensityMatrices
 
+module ToolboxExpvalApprox
+    include("toolbox/expval_approx.jl")
+    export toolbox_expval_approx, toolbox_expval_approx_localoperator
+end
+using .ToolboxExpvalApprox
+
+module ToolboxCorrelatorApprox
+    include("toolbox/correlator_approx.jl")
+    export toolbox_correlator_approx
+end
+using .ToolboxCorrelatorApprox
+
+module ToolboxCorrelatorApproxPhys
+    include("toolbox/correlator_approx_phys.jl")
+    export toolbox_correlator_approx_phys
+end
+using .ToolboxCorrelatorApproxPhys
+
+module ToolboxMPORouting
+    include("toolbox/mpo_routing.jl")
+    export toolbox_mpo_routing_fusers, toolbox_mpo_routing_identities, toolbox_mpo_routing_paths
+end
+using .ToolboxMPORouting
+
 # Utility
 # -------
 module UtilityCorrelator
