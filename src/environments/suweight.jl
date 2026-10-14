@@ -95,6 +95,18 @@ function SUWeight(
 end
 
 """
+    SUWeight(Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
+
+Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
+as `ElementarySpace`s) and unit cell size.
+"""
+function SUWeight(
+        Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace}
+    return SUWeight(ComplexF64, fill(Nspace, unitcell), fill(Espace, unitcell))
+end
+
+"""
     SUWeight(peps::InfinitePEPS)
 
 Create a trivial `SUWeight` for a given InfinitePEPS.
