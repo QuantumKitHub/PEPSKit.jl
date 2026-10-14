@@ -25,13 +25,15 @@ using KrylovKit: Lanczos, BlockLanczos
 using TensorOperations, OptimKit
 import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
-using LoggingExtras
 import TupleTools
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
 using MPSKit: InfiniteEnvironments
-using MPSKit: DynamicTol, updatetol
+using MPSKit: DynamicTol
+using MPSKit.DynamicTols: adapt_solver
+using MPSKit: @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
+using MPSKit.IterativeLoggers: with_verbosity
 import MPSKit.DynamicTols: _updatetol
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
