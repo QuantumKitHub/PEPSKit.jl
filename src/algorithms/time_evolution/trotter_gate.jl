@@ -157,7 +157,9 @@ function _trotterize_nnn2site!(gates::Vector, H::LocalOperator, dt::Number)
             term = permute(term, ((2, 1), (4, 3)))
         end
         gate = gate_to_mpo(exp(term * -dt / 2))
-        b = TensorKit.BraidingTensor{T}(physicalspace(H, x2), left_virtualspace(gate[2]))
+        A = similarstoragetype(term, T)
+        S = spacetype(TensorKit.promote(physicalspace(H, x2), left_virtualspace(gate[2]))[1])
+        b = TensorKit.BraidingTensor{T, S, A}(physicalspace(H, x2), left_virtualspace(gate[2]))
         insert!(gate, 2, TensorMap(b))
         push!(gates, [x1, x2, x3] => gate)
     end
