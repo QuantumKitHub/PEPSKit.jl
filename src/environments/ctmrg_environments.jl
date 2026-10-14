@@ -235,6 +235,11 @@ CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
 
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
+function TensorKit.storagetype(::Type{CTMRGEnv{C, E}}) where {C, E}
+    T = promote_type(scalartype(C), scalartype(E))
+    return TensorKit.promote_storagetype(T, C, E)
+end
+
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(
         ::Type{CTMRGEnv}, corners::Array{C, 3}, edges::Array{T, 3}

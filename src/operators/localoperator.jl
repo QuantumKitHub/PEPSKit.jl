@@ -87,6 +87,7 @@ function add_term!(
     return operator
 end
 
+TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S} = TensorKit.promote_storagetype(values(lo.terms)...)
 
 """
     checklattice(Bool, args...)
