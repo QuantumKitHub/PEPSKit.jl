@@ -16,6 +16,7 @@ function boundary_mps_one_one_peps(AT)
         Vpeps = ComplexSpace(2)
         psi = adapt(AT, InfinitePEPS(Vpeps, Vpeps))
         T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
+        @test TensorKit.storagetype(T) <: AT
         foreach(V -> (@test V == Vpeps ⊗ Vpeps'), physicalspace(T))
         mps = initialize_mps(T, [ComplexSpace(20)])
 
@@ -117,6 +118,7 @@ function boundary_mps_pepo_runthrough(AT)
         O = ising_pepo(1)
         psi = adapt(AT, PEPSKit.initializePEPS(O, Vpeps))
         T = InfiniteTransferPEPO(psi, O, 1, 1)
+        @test TensorKit.storagetype(T) <: AT
         foreach(V -> (@test V == Vpeps ⊗ Vpepo ⊗ Vpeps'), physicalspace(T))
 
         mps = initialize_mps(rand, scalartype(T), T, [ComplexSpace(10)])

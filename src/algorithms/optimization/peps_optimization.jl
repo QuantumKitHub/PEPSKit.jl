@@ -132,9 +132,9 @@ The optimization parameters can be supplied via the keyword arguments or directl
     4. Debug info including AD outputs
 * `reuse_env::Bool=$(Defaults.reuse_env)` : If `true`, the current optimization step is initialized on the previous environment, otherwise a random environment is used.
 * `symmetrization::Union{Nothing,SymmetrizationStyle}=nothing` : Accepts `nothing` or a `SymmetrizationStyle`, in which case the PEPS and PEPS gradient are symmetrized after each optimization iteration.
-* `hasconverged=OptimKit.DefaultHasConverged(optimizer_alg.gradtol)` : Function specifying the convergence criterion with signature `bool = hasconverged(state, cost, grad, gradnorm)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics. Note that this overrides the default convergence criterion.
-* `shouldstop=OptimKit.DefaultShouldStop(optimizer_alg.maxiter)` : Function specifying the stopping criterion with signature `bool = shouldstop(state, cost, grad, numfg, iter, timespent)`, see [OptimKit.optimize](https://github.com/Jutho/OptimKit.jl/blob/master/src/OptimKit.jl) for specifics. Note that this overrides the default stopping criterion.
-* `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of `OptimKit.optimize`. The function maps `(state, env), f, g = finalize!((state, env), cost, grad, numiter)`.
+* `hasconverged=OptimKit.DefaultHasConverged(optimizer_alg.gradtol)` : Function specifying the convergence criterion with signature `bool = hasconverged(state, cost, grad, gradnorm)`, see [`OptimKit.optimize`](@extref) for specifics. Note that this overrides the default convergence criterion.
+* `shouldstop=OptimKit.DefaultShouldStop(optimizer_alg.maxiter)` : Function specifying the stopping criterion with signature `bool = shouldstop(state, cost, grad, numfg, iter, timespent)`, see [`OptimKit.optimize`](@extref) for specifics. Note that this overrides the default stopping criterion.
+* `(finalize!)=OptimKit._finalize!` : Inserts a `finalize!` function call after each optimization step by utilizing the `finalize!` kwarg of [`OptimKit.optimize`](@extref). The function maps `(state, env), f, g = finalize!((state, env), cost, grad, numiter)`.
 
 ### Boundary algorithm
 
@@ -195,13 +195,13 @@ variational optimization, not for standalone [`leading_boundary`](@ref) calls.
 
 Supply the optimizer algorithm via `optimizer_alg::Union{NamedTuple,<:OptimKit.OptimizationAlgorithm}`
 using either a `NamedTuple` of keyword arguments or a `OptimKit.OptimizationAlgorithm` directly. By default,
-`OptimKit.LBFGS` is used in combination with a `HagerZhangLineSearch`. The supported
+[`OptimKit.LBFGS`](@extref) is used in combination with a [`HagerZhangLineSearch`](@extref OptimKit :jl:type:`OptimKit.HagerZhangLineSearch`). The supported
 keyword arguments are:
 
 * `alg::Symbol=:$(Defaults.optimizer_alg)` : Optimizer algorithm, can be one of the following:
-    - `:GradientDescent` : Gradient descent algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:ConjugateGradient` : Conjugate gradient algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
-    - `:LBFGS` : L-BFGS algorithm, see the [OptimKit README](https://github.com/Jutho/OptimKit.jl)
+    - `:GradientDescent` : Gradient descent algorithm, OptimKit's [`GradientDescent`](@extref OptimKit.GradientDescent)
+    - `:ConjugateGradient` : Conjugate gradient algorithm, OptimKit's [`ConjugateGradient`](@extref OptimKit.ConjugateGradient)
+    - `:LBFGS` : L-BFGS algorithm, OptimKit's [`LBFGS`](@extref OptimKit.LBFGS)
 * `tol::Real=tol` : Gradient norm tolerance of the optimizer.
 * `maxiter::Int=$(Defaults.optimizer_maxiter)` : Maximal number of optimization steps.
 * `verbosity::Int=$(Defaults.optimizer_verbosity)` : Optimizer output verbosity.
@@ -253,8 +253,8 @@ function fixedpoint(
     times = Vector{Float64}(undef, 1)
 
     # `tol_state` tracks (iter, gradnorm) of the last accepted optimization step, used to
-    # adjust `alg.boundary_alg`/`alg.gradient_alg` via `MPSKit.updatetol` if they are
-    # wrapped in a `MPSKit.DynamicTol`.
+    # adjust `alg.boundary_alg`/`alg.gradient_alg` via `MPSKit.DynamicTols.adapt_solver`
+    # if they are wrapped in a `MPSKit.DynamicTol`.
     tol_state = (iter = 0, gradnorm = one(T))
 
     # set up finalizer to update `tol_state` and record info after each accepted optimization step
@@ -267,8 +267,9 @@ function fixedpoint(
 
     # initialize the preconditioner
     function precondition(x, g)
-        precondition_alg = updatetol(
-            alg.precondition_alg, tracked_finalizer.tol_state.iter, tracked_finalizer.tol_state.gradnorm
+        precondition_alg = adapt_solver(
+            alg.precondition_alg;
+            iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
         )
         return peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
     end
@@ -280,15 +281,15 @@ function fixedpoint(
         hasconverged, shouldstop, (finalize!) = tracked_finalizer,
     ) do (peps, env)
         start_time = time()
-        boundary_alg = updatetol(
-            alg.boundary_alg,
-            tracked_finalizer.tol_state.iter,
-            tracked_finalizer.tol_state.gradnorm
+        boundary_alg = adapt_solver(
+            alg.boundary_alg;
+            iter = tracked_finalizer.tol_state.iter,
+            g_global = tracked_finalizer.tol_state.gradnorm
         )
         # gradient tolerance is scaled relative to the boundary algorithm's own
         # (just-updated) effective tolerance, not directly to the gradient norm
-        gradient_alg = updatetol(
-            alg.gradient_alg, tracked_finalizer.tol_state.iter, boundary_alg.tol
+        gradient_alg = adapt_solver(
+            alg.gradient_alg; iter = tracked_finalizer.tol_state.iter, g_global = boundary_alg.tol
         )
         E, gs = withgradient(peps) do ψ
             env′, info = hook_pullback(
@@ -433,7 +434,7 @@ end
 """
 $(TYPEDEF)
 
-Callable that acts as the `finalize!` function passed to `OptimKit.optimize`.
+Callable that acts as the `finalize!` function passed to [`OptimKit.optimize`](@extref).
 Keeps track of the optimization iteration number and gradient norm of the last accepted
 optimization step, and records the contraction metrics, gradient norms and execution times
 of each optimization step.
