@@ -367,15 +367,15 @@ end
 """
 $(SIGNATURES)
 
-Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step size `α`, giving a new PEPS `A´`,
+Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step size `α`, giving a new PEPS ``A′``,
 ```math
-A' ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
+A′ ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
 ```
 and corresponding directional derivative `ξ`,
 ```math
 ξ = \\cos ( α ‖η‖ / ‖A‖ ) η - \\sin ( α ‖η‖ / ‖A‖ ) ‖η‖ A / ‖A‖,
 ```
-such that ``\\operatorname{Re} ⟨ A', ξ ⟩ = 0`` and ``‖A'‖ = ‖A‖``.
+such that ``\\operatorname{Re} ⟨ A′, ξ ⟩ = 0`` and ``‖A′‖ = ‖A‖``.
 Each tensor and its direction must satisfy ``\\operatorname{Re} ⟨ A, η ⟩ = 0``.
 """
 function peps_retract(x, η, α)
@@ -383,16 +383,16 @@ function peps_retract(x, η, α)
     env = deepcopy(x[2])
 
     retractions = norm_preserving_retract.(unitcell(peps), unitcell(η), α)
-    peps´ = InfinitePEPS(map(first, retractions))
+    peps′ = InfinitePEPS(map(first, retractions))
     ξ = InfinitePEPS(map(last, retractions))
 
-    return (peps´, env), ξ
+    return (peps′, env), ξ
 end
 
 """
 $(SIGNATURES)
 
-Transports a direction at `A = x[1]` to a valid direction at `A´ = x´[1]` corresponding to the norm-preserving retraction of `A` along `η` with step size `α`.
+Transports a direction at `A = x[1]` to a valid direction at ``A′ = x′[1]`` corresponding to the norm-preserving retraction of `A` along `η` with step size `α`.
 In particular, starting from a direction `ξ` of the form
 ```math
 ξ = \\operatorname{Re} ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
@@ -401,15 +401,15 @@ where ``\\operatorname{Re} ⟨ Δξ, A ⟩ = \\operatorname{Re} ⟨ Δξ, η ⟩
 ```math
 ξ(α) = \\operatorname{Re} ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
 ```
-such that ``‖ξ(α)‖ = ‖ξ‖, \\operatorname{Re} ⟨ A', ξ(α) ⟩ = 0``.
+such that ``‖ξ(α)‖ = ‖ξ‖, \\operatorname{Re} ⟨ A′, ξ(α) ⟩ = 0``.
 Each tensor and its directions `η` and `ξ` must satisfy ``\\operatorname{Re} ⟨ A, η ⟩ = \\operatorname{Re} ⟨ A, ξ ⟩ = 0``.
 """
-function peps_transport!(ξ, x, η, α, x´)
+function peps_transport!(ξ, x, η, α, x′)
     peps = x[1]
-    peps´ = x´[1]
+    peps′ = x′[1]
 
     norm_preserving_transport!.(
-        unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps´)
+        unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps′)
     )
 
     return ξ
@@ -434,11 +434,11 @@ function symmetrize_retract_and_finalize!(
     end
     function retract_then_symmetrize((peps, env), η, α)
         # retract
-        (peps´, env´), ξ = retract((peps, env), η, α)
+        (peps′, env′), ξ = retract((peps, env), η, α)
         # symmetrize retracted point and directional derivative
-        peps´_symm = symmetrize!(peps´, symm)
+        peps′_symm = symmetrize!(peps′, symm)
         ξ_symm = symmetrize!(ξ, symm)
-        return (peps´_symm, env´), ξ_symm
+        return (peps′_symm, env′), ξ_symm
     end
     return retract_then_symmetrize, symmetrize_then_finalize!
 end
