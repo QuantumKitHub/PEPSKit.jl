@@ -268,6 +268,7 @@ function fixedpoint(
 
     # initialize the preconditioner
     function precondition(x, g)
+        isnothing(alg.precondition_alg) && return g
         precondition_alg = adapt_solver(
             alg.precondition_alg;
             iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
@@ -359,7 +360,7 @@ Project each direction onto the real tangent space of its fixed-norm PEPS tensor
 """
 function peps_project_tangent(η::InfinitePEPS, peps::InfinitePEPS)
     tangents = map(unitcell(η), unitcell(peps)) do direction, A
-        return add(direction, A, -real(inner(A, direction)) / norm(A)^2)
+        return add(direction, A, -real(inner(A, direction)) / real(inner(A, A)))
     end
     return InfinitePEPS(tangents)
 end
