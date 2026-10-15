@@ -28,13 +28,13 @@ function utility_retractions(AT)
         add!(η, normalized_A, -real(inner(normalized_A, η)))
         add!(ζ, normalized_A, -real(inner(normalized_A, ζ)))
 
-        A´, ξ = PEPSKit.norm_preserving_retract(A, η, α)
-        @test norm(A´) ≈ norm(A) rtol = 1.0e-12
+        A′, ξ = PEPSKit.norm_preserving_retract(A, η, α)
+        @test norm(A′) ≈ norm(A) rtol = 1.0e-12
 
-        @test real(inner(A´, ξ)) ≈ 0 atol = 1.0e-12
+        @test real(inner(A′, ξ)) ≈ 0 atol = 1.0e-12
         norm_ζ = norm(ζ)
-        PEPSKit.norm_preserving_transport!(ζ, A, η, α, A´)
-        @test real(inner(ζ, A´)) ≈ 0 atol = 1.0e-12
+        PEPSKit.norm_preserving_transport!(ζ, A, η, α, A′)
+        @test real(inner(ζ, A′)) ≈ 0 atol = 1.0e-12
         @test norm(ζ) ≈ norm_ζ rtol = 1.0e-12
 
         for point in (A, [A], VectorInterface.MinimalMVec([A]))
