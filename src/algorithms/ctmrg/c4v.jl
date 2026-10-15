@@ -206,7 +206,7 @@ end
 #
 
 """
-    initialize_random_c4v_env([f=randn, T=scalartype(state)], state, Venv::ElementarySpace)
+    initialize_random_c4v_env([f=randn, T=storagetype(state)], state, Venv::ElementarySpace)
 
 Initialize a C₄ᵥ-symmetric `CTMRGEnv` on virtual spaces `Venv` with random entries created
 by `f` and scalartype `T`.
@@ -223,7 +223,7 @@ function initialize_random_c4v_env(f, T, state::InfinitePartitionFunction, Venv:
     return initialize_random_c4v_env(f, T, Vpf, Venv)
 end
 function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
-    corner₀ = DiagonalTensorMap(randn(similarstoragetype(similarstoragetype(T), real(eltype(T))), Venv ← Venv))
+    corner₀ = DiagonalTensorMap(f(similarstoragetype(similarstoragetype(T), real(eltype(T))), Venv ← Venv))
     edge₀ = f(T, Venv ⊗ Vstate ← Venv)
     edge₀ = _project_hermitian(edge₀)
     return CTMRGEnv(corner₀, edge₀)
