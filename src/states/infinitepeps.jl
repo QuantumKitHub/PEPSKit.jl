@@ -108,8 +108,8 @@ end
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 """
 function InfinitePEPS(
-        f, T, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
-    ) where {S <: ElementarySpace}
+        f, ::Type{T}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {T <: Union{Number, AbstractArray{<:Number}}, S <: ElementarySpace}
     return InfinitePEPS(
         f, T,
         _fill_state_physical_spaces(Pspace; unitcell),
