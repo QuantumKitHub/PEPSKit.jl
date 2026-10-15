@@ -115,6 +115,7 @@ end
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
 to the supplied optimization parameters. The initial environment `env₀` serves as an
 initial guess for the first boundary contraction run. By default, a random initial environment is used.
+Each local tensor is normalized initially, and optimization preserves its Euclidean norm by projecting gradients and preconditioned directions onto its real tangent space.
 
 The optimization parameters can be supplied via the keyword arguments or directly as a
 `PEPSOptimize` struct. The following keyword arguments are supported:
@@ -271,7 +272,8 @@ function fixedpoint(
             alg.precondition_alg;
             iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
         )
-        return peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+        g_prec = peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+        return peps_project_tangent(g_prec, x[1])
     end
 
     # optimize operator cost function
@@ -302,7 +304,7 @@ function fixedpoint(
             end
             return cost_function(ψ, env′, operator)
         end
-        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        g = peps_project_tangent(only(gs), peps)
         tracked_finalizer.gradnorms_unitcell[end] = norm.(unitcell(g))
         tracked_finalizer.times[end] = time() - start_time
         return E, g
@@ -353,6 +355,16 @@ function peps_normalize(A::InfinitePEPS)
 end
 
 """
+Project each direction onto the real tangent space of its fixed-norm PEPS tensor without mutating the inputs.
+"""
+function peps_project_tangent(η::InfinitePEPS, peps::InfinitePEPS)
+    tangents = map(unitcell(η), unitcell(peps)) do direction, A
+        return add(direction, A, -real(inner(A, direction)) / norm(A)^2)
+    end
+    return InfinitePEPS(tangents)
+end
+
+"""
 $(SIGNATURES)
 
 Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step
@@ -364,7 +376,7 @@ and corresponding directional derivative `ξ`,
 ```math
 ξ = \\cos ( α ‖η‖ / ‖A‖ ) η - \\sin ( α ‖η‖ / ‖A‖ ) ‖η‖ A / ‖A‖,
 ```
-such that ``⟨ A', ξ ⟩ = 0`` and ``‖A'‖ = ‖A‖``.
+such that ``\\operatorname{Re} ⟨ A', ξ ⟩ = 0`` and ``‖A'‖ = ‖A‖``.
 """
 function peps_retract(x, η, α)
     peps = x[1]
@@ -384,13 +396,13 @@ Transports a direction at `A = x[1]` to a valid direction at `A´ = x´[1]` corr
 the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
 from a direction `η` of the form
 ```math
-ξ = ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
+ξ = \\operatorname{Re} ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
 ```
-where ``⟨ Δξ, A ⟩ = ⟨ Δξ, η ⟩ = 0``, it returns
+where ``\\operatorname{Re} ⟨ Δξ, A ⟩ = \\operatorname{Re} ⟨ Δξ, η ⟩ = 0``, it returns
 ```math
-ξ(α) = ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
+ξ(α) = \\operatorname{Re} ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
 ```
-such that ``‖ξ(α)‖ = ‖ξ‖, ⟨ A', ξ(α) ⟩ = 0``.
+such that ``‖ξ(α)‖ = ‖ξ‖, \\operatorname{Re} ⟨ A', ξ(α) ⟩ = 0``.
 """
 function peps_transport!(ξ, x, η, α, x´)
     peps = x[1]
