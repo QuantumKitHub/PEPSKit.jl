@@ -58,7 +58,7 @@ function SUWeight(wts_mats::AbstractMatrix{E}...) where {E <: PEPSWeight}
 end
 
 """
-    SUWeight(T, Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:ElementarySpace}}
+    SUWeight([T = ComplexF64,] Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:ElementarySpace}}
 
 Create a trivial `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
 `T` is either a scalar type (like `ComplexF32`) or an array type (like `Vector{Float64}`) that
@@ -72,13 +72,15 @@ function SUWeight(
     Nr, Nc = size(Nspaces)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
-        realT = similarstoragetype(T, real(eltype(T)))
+        realT = similarstoragetype(similarstoragetype(T), real(eltype(T)))
         diag = realT(undef, reduceddim(V))
         fill!(diag, one(real(eltype(T))))
         DiagonalTensorMap(diag, V)
     end
     return SUWeight(weights)
 end
+SUWeight(Nspaces::M, Espaces::M = Nspaces) where {M <: AbstractMatrix{<:ElementarySpace}} =
+    SUWeight(ComplexF64, Nspaces, Espaces)
 
 """
     SUWeight(T, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}

@@ -50,7 +50,7 @@ _check_two_layer(::InfiniteSquareNetwork) = false
 _check_two_layer(::InfiniteSquareNetwork{<:PEPSSandwich}) = true
 
 """
-    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization, [env0])
+    initialize_ctmrg_environment([elt::Type,] n::InfiniteSquareNetwork, alg::RandomInitialization, [env0])
 
 Initialize a `CTMRGEnv` corresponding to a product state acting as an identity between the
 virtual spaces of a two-layer network, for example
@@ -83,7 +83,7 @@ function initialize_ctmrg_environment(
     return initialize_ctmrg_environment(scalartype(A), A, args...; kwargs...)
 end
 function initialize_ctmrg_environment(
-        elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
+        elt::Type, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
         kwargs...
     )
     return initialize_ctmrg_environment(similarstoragetype(storagetype(A), elt), InfiniteSquareNetwork(A), args...; kwargs...)

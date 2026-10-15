@@ -108,7 +108,7 @@ function BPEnv(
         f, T, D_north::P, D_east::P;
         unitcell::Tuple{Int, Int} = (1, 1), posdef::Bool = true
     ) where {P <: ProductSpace}
-    return BPEnv(f, T, N, _fill_edge_physical_spaces(D_north, D_east; unitcell)...; posdef)
+    return BPEnv(f, T, _fill_edge_physical_spaces(D_north, D_east; unitcell)...; posdef)
 end
 
 """
