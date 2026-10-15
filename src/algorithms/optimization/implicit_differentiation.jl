@@ -386,7 +386,7 @@ The supported keywords are:
 * `tol::Real=$(Defaults.gradient_tol)`
 * `maxiter::Int=$(Defaults.gradient_maxiter)`
 * `verbosity::Int=$(Defaults.gradient_verbosity)`
-* `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_fixedpoint_solver_alg))`: solver algorithm for the `ImplicitGradient` gradient algorithm.
+* `solver_alg::Union{Algorithm,NamedTuple}=(; alg::Symbol=:$(Defaults.gradient_implicit_solver_alg))`: solver algorithm for the `ImplicitGradient` gradient algorithm.
     - `:GMRES` : GMRES iterative linear solver, see [`KrylovKit.GMRES`](@extref) for details
     - `:BiCGStab` : BiCGStab iterative linear solver, see [`KrylovKit.BiCGStab`](@extref) for details
 
@@ -504,9 +504,11 @@ function _rrule(
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
     # sandwich through `constant_site` leaves the ket and bra cotangents unforced. The state
     # pullback runs once, after the solve, and gets its own tape.
-    F_tracked = generate_symmetric_characteristic_equation(C, E, U, UL)
+    F_tracked = generate_symmetric_characteristic_equation(
+        C, E, U, UL; projector_alg = alg.projector_alg
+    )
     F_untracked = generate_symmetric_characteristic_equation(
-        C, E, U, UL; getsite = constant_site
+        C, E, U, UL; projector_alg = alg.projector_alg, getsite = constant_site
     )
     network = InfiniteSquareNetwork(state)
 

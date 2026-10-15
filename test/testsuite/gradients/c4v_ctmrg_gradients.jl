@@ -1,135 +1,102 @@
 using Test
 using Adapt
 using Random
+using LinearAlgebra
 using PEPSKit
 using TensorKit
 using Zygote
-using OptimKit
 using KrylovKit
 
-sd = 42039482052
+include("gradient_utility.jl")
 
 ## Test C4v CTMRG gradients
 # -------------------------------------------
-χbond = 2
-χenv = 6
+# Every gradient algorithm is compared with a converged fixed-point reference gradient, which is
+# checked against finite differences. Gradients are C4v-symmetrized before comparing.
+
+sd = 42039482052
 symmetry = RotateReflect()
-Pspaces = [ComplexSpace(2)]
-Vspaces = [ComplexSpace(χbond)]
-Espaces = [ComplexSpace(χenv)]
-models = [heisenberg_XYZ(InfiniteSquare())]
-names = ["Heisenberg"]
-
-gradtol = 1.0e-4
+H = heisenberg_XYZ(InfiniteSquare())
+Pspace = ComplexSpace(2)
+ctmrg_tol = 1.0e-12
+ctmrg_maxiter = 300 # QR needs about 250 iterations at D = 3, χ = 16
+solver_tol = 1.0e-10
 ctmrg_verbosity = 1
-ctmrg_algs = [[:C4vCTMRG]]
-projector_algs = [[:C4vEighProjector, :C4vQRProjector]]
-decomposition_rrule_algs = [[:FullPullback, :TruncPullback]]
-gradient_algs = [[nothing, :FixedPointGradient, :ImplicitGradient]]
-gradient_solver_algs = [[:GeomSum, :ManualIter, :GMRES, :BiCGStab, :Arnoldi]]
-steps = -0.01:0.005:0.01
+rtol = 1.0e-7 # gradient errors and finite differences
+naive_miniter = 30 # CTMRG iterations naive AD differentiates through
+projector_algs = (:C4vEighProjector, :C4vQRProjector)
 
-# record which rrule alg is compatible with which projector alg
-allowed_rrule_algs = Dict(
-    :C4vEighProjector => keys(PEPSKit.EIGH_RRULE_SYMBOLS),
-    :C4vQRProjector => keys(PEPSKit.QR_RRULE_SYMBOLS),
+decomposition_alg(projector_alg, rrule_alg) = if projector_alg == :C4vEighProjector
+    EighAdjoint(; rrule_alg = (; alg = rrule_alg))
+elseif projector_alg == :C4vQRProjector
+    QRAdjoint(; rrule_alg = (; alg = rrule_alg))
+else
+    error("unknown projector alg: $projector_alg")
+end
+
+c4v_ctmrg_alg(projector_alg, rrule_alg = :FullPullback; kwargs...) = PEPSKit.CTMRGAlgorithm(;
+    alg = :C4vCTMRG, projector_alg, decomposition_alg = decomposition_alg(projector_alg, rrule_alg),
+    tol = ctmrg_tol, maxiter = ctmrg_maxiter, verbosity = ctmrg_verbosity, kwargs...,
 )
+gradient_alg(alg, solver) = PEPSKit.GradientAlgorithm(; alg, solver_alg = (; alg = solver, tol = solver_tol))
 
-# be selective on which configurations to test the naive gradient for
-naive_gradient_combinations = [(:C4vCTMRG, :C4vEighProjector, :FullPullback), (:C4vCTMRG, :C4vQRProjector, :FullPullback)]
+# (label, decomposition rrule, gradient algorithm or nothing for naive AD)
+function gradient_cases(projector_alg)
+    cases = Any[
+        ("naive AD", :FullPullback, nothing),
+        ("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES)),
+    ]
+    projector_alg == :C4vEighProjector || return cases
+    return append!(
+        cases, Any[
+            ("fixed point, TruncPullback", :TruncPullback, gradient_alg(:FixedPointGradient, :GMRES)),
+            ("fixed point, GeomSum", :FullPullback, gradient_alg(:FixedPointGradient, :GeomSum)),
+            ("fixed point, ManualIter", :FullPullback, gradient_alg(:FixedPointGradient, :ManualIter)),
+            ("fixed point, BiCGStab", :FullPullback, gradient_alg(:FixedPointGradient, :BiCGStab)),
+            ("fixed point, Arnoldi", :FullPullback, gradient_alg(:FixedPointGradient, :Arnoldi)),
+            ("implicit, BiCGStab", :FullPullback, gradient_alg(:ImplicitGradient, :BiCGStab)),
+        ]
+    )
+end
+
+function test_c4v_gradients(AT, projector_alg, D, χ, cases; seed = sd)
+    Random.seed!(seed)
+    psi = symmetrize!(adapt(AT, InfinitePEPS(Pspace, ComplexSpace(D))), symmetry)
+    dir = symmetrize!(adapt(AT, InfinitePEPS(Pspace, ComplexSpace(D))), symmetry)
+    alg = c4v_ctmrg_alg(projector_alg)
+    env, = leading_boundary(PEPSKit.initialize_random_c4v_env(psi, ComplexSpace(χ)), psi, alg)
+    tag = "C4v $projector_alg D=$D χ=$χ"
+
+    _, gref = energy_and_gradient(psi, env, alg, gradient_alg(:FixedPointGradient, :GMRES), H)
+    symmetrize!(gref, symmetry)
+    @testset "reference against finite differences" begin
+        dE_fd = finite_difference_derivative(psi, env, dir, alg, H)
+        dE = gradient_derivative(psi, env, dir, gref)
+        @info "$tag: reference vs finite differences" abs(dE - dE_fd) / abs(dE_fd)
+        @test dE ≈ dE_fd rtol = rtol
+    end
+    for (label, rrule_alg, galg) in cases
+        @testset "$label" begin
+            kwargs = isnothing(galg) ? (; miniter = naive_miniter) : (;)
+            _, g = energy_and_gradient(psi, env, c4v_ctmrg_alg(projector_alg, rrule_alg; kwargs...), galg, H)
+            err = gradient_error(symmetrize!(g, symmetry), gref)
+            @info "$tag: $label" err
+            @test err < rtol
+        end
+    end
+    return nothing
+end
 
 function gradients_c4v(AT)
-    naive_gradient_done = Set()
-    return @testset "AD C4v CTMRG energy gradients for $(names[i]) model ($AT)" verbose = true for i in
-        eachindex(
-            models
-        )
-        Pspace = Pspaces[i]
-        Vspace = Vspaces[i]
-        Espace = Espaces[i]
-        calgs = ctmrg_algs[i]
-        palgs = projector_algs[i]
-        dalgs = decomposition_rrule_algs[i]
-        galgs = gradient_algs[i]
-        gsalgs = gradient_solver_algs[i]
-        @testset "ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=(alg = :$gradient_alg, solver_alg = :$gradient_solver_alg)" for (
-                ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg, gradient_solver_alg,
-            ) in Iterators.product(
-                calgs, palgs, dalgs, galgs, gsalgs
-            )
-
-            # check for allowed algorithm combinations when testing naive gradient
-            if isnothing(gradient_alg)
-                combo = (ctmrg_alg, projector_alg, decomposition_rrule_alg)
-                combo in naive_gradient_combinations || continue
-                combo in naive_gradient_done && continue
-                push!(naive_gradient_done, combo)
-                gradient_solver_alg = nothing # unused in naive gradient, so set to nothing to avoid confusion
-            end
-
-            # only run GMRES for the implicit gradient, and skip distinction between decomposition rrule algs
-            if gradient_alg == :ImplicitGradient
-                gradient_solver_alg == :GMRES || continue
-                decomposition_rrule_alg == first(dalgs) || continue
-            end
-
-            # check for allowed combinations of projector alg and decomposition rrule alg
-            decomposition_rrule_alg in allowed_rrule_algs[projector_alg] || continue
-
-            # construct appropriate decomposition struct to pass custom rrule alg
-            decomposition_alg = if projector_alg == :C4vEighProjector
-                EighAdjoint(; rrule_alg = (; alg = decomposition_rrule_alg))
-            elseif projector_alg == :C4vQRProjector
-                QRAdjoint(; rrule_alg = (; alg = decomposition_rrule_alg))
-            else
-                error("unknown projector alg: $projector_alg")
-            end
-
-            @info "optimtest of ctmrg_alg=:$ctmrg_alg, projector_alg=:$projector_alg, decomposition_rrule_alg=:$decomposition_rrule_alg and gradient_alg=(; alg = :$gradient_alg, solver_alg = (; alg = :$gradient_solver_alg)) on $(names[i])"
-            Random.seed!(sd)
-            dir = adapt(AT, InfinitePEPS(Pspace, Vspace))
-            psi = adapt(AT, InfinitePEPS(Pspace, Vspace))
-            symmetrize!(psi, symmetry)
-            symmetrize!(dir, symmetry)
-            # instantiate to avoid having to type this twice...
-            contrete_ctmrg_alg = PEPSKit.CTMRGAlgorithm(;
-                alg = ctmrg_alg,
-                verbosity = ctmrg_verbosity,
-                projector_alg = projector_alg,
-                decomposition_alg,
-            )
-            # instantiate because hook_pullback doesn't go through the keyword selector...
-            concrete_gradient_alg = if isnothing(gradient_alg)
-                nothing # TODO: add this to the PEPSKit.GradientAlgorithm selector?
-            else
-                PEPSKit.GradientAlgorithm(;
-                    alg = gradient_alg, solver_alg = (; alg = gradient_solver_alg, tol = gradtol)
-                )
-            end
-            env0 = PEPSKit.initialize_random_c4v_env(psi, Espace)
-            env, = leading_boundary(env0, psi, contrete_ctmrg_alg)
-            alphas, fs, dfs1, dfs2 = OptimKit.optimtest(
-                (psi, env),
-                dir;
-                alpha = steps,
-                retract = PEPSKit.peps_retract,
-                inner = PEPSKit.real_inner,
-            ) do (peps, env)
-                E, g = Zygote.withgradient(peps) do psi
-                    env2, = PEPSKit.hook_pullback(
-                        leading_boundary,
-                        env,
-                        psi,
-                        contrete_ctmrg_alg;
-                        alg_rrule = concrete_gradient_alg,
-                    )
-                    return cost_function(psi, env2, models[i])
-                end
-                g = only(g)
-                symmetrize!(g, symmetry)
-                return E, g
-            end
-            @test dfs1 ≈ dfs2 atol = 1.0e-2
+    return @testset "C4v CTMRG gradients ($AT)" verbose = true begin
+        @testset "$palg, D = 2, χ = 6" for palg in projector_algs
+            test_c4v_gradients(AT, palg, 2, 6, gradient_cases(palg))
+        end
+        # larger state, where truncation effects are visible
+        @testset "$palg, D = 3, χ = 16" for palg in projector_algs
+            cases = [("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES))]
+            # sd lands on a sign-flipping eigh fixed point here, see #436
+            test_c4v_gradients(AT, palg, 3, 16, cases; seed = 11)
         end
     end
 end

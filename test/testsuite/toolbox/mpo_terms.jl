@@ -100,6 +100,10 @@ function toolbox_mpo_bookkeeping(AT)
         onsite = adapt(AT, randn(ComplexF64, d ← d))
         @test scalartype(operator + LocalOperator(lattice, ((2, 1),) => onsite)) == ComplexF64
         @test scalartype(scaled) == ComplexF64
+        @test TensorKit.storagetype(operator) == TensorKit.storagetype(dense)
+        @test TensorKit.storagetype(
+            scaled + LocalOperator(lattice, ((2, 1),) => [onsite])
+        ) == TensorKit.storagetype(onsite)
         @test_throws ArgumentError real(scaled)
         @test_throws ArgumentError imag(scaled)
 

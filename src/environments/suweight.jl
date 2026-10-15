@@ -139,6 +139,7 @@ TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
 TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
 TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
+TensorKit.storagetype(::Type{SUWeight{T}}) where {T} = storagetype(T)
 
 ## Bipartite check
 function _is_bipartite(wts::SUWeight)

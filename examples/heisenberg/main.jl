@@ -66,7 +66,7 @@ boundary_alg = (; tol = 1.0e-10, trunc = (; alg = :FixedSpaceTruncation));
 
 md"""
 Let us also configure the optimizer algorithm. We are going to optimize the PEPS using the
-L-BFGS optimizer from [OptimKit](https://github.com/Jutho/OptimKit.jl). Again, we specify
+[L-BFGS optimizer](@extref OptimKit.LBFGS) from [OptimKit](https://github.com/Jutho/OptimKit.jl). Again, we specify
 the convergence tolerance (for the gradient norm) as well as the maximal number of iterations
 and the BFGS memory size (which is used to approximate the Hessian):
 """

@@ -252,6 +252,20 @@ Detect an identically zero dense tensor or an MPO containing a zero factor.
 _local_term_iszero(term::AbstractTensorMap) = iszero(norm(term))
 _local_term_iszero(term::MPOTerm) = any(_local_term_iszero, term)
 
+function TensorKit.storagetype(lo::LocalOperator)
+    T = scalartype(lo)
+    return mapreduce(
+        term -> _local_term_storagetype(term, T), TensorKit.promote_storagetype, values(lo.terms)
+    )
+end
+
+"""
+Return the storage type of a dense tensor or MPO with a common scalar type.
+"""
+_local_term_storagetype(term::AbstractTensorMap, ::Type{T}) where {T <: Number} =
+    TensorKit.similarstoragetype(term, T)
+_local_term_storagetype(term::MPOTerm, ::Type{T}) where {T <: Number} =
+    mapreduce(tensor -> TensorKit.similarstoragetype(tensor, T), TensorKit.promote_storagetype, term)
 
 """
     checklattice(Bool, args...)
