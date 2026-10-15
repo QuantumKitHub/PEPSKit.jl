@@ -223,7 +223,7 @@ function initialize_random_c4v_env(f, T, state::InfinitePartitionFunction, Venv:
     return initialize_random_c4v_env(f, T, Vpf, Venv)
 end
 function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
-    corner₀ = DiagonalTensorMap(randn(similarstoragetype(T, real(eltype(T))), Venv ← Venv))
+    corner₀ = DiagonalTensorMap(randn(similarstoragetype(similarstoragetype(T), real(eltype(T))), Venv ← Venv))
     edge₀ = f(T, Venv ⊗ Vstate ← Venv)
     edge₀ = _project_hermitian(edge₀)
     return CTMRGEnv(corner₀, edge₀)
@@ -240,11 +240,11 @@ function initialize_singlet_c4v_env(state::InfinitePEPS, Venv::ElementarySpace)
 end
 function initialize_singlet_c4v_env(T, state::InfinitePEPS, Venv::ElementarySpace)
     Vpeps = north_virtualspace(state, 1, 1)'
-    return initialize_singlet_c4v_env(similarstoragetype(storagetype(state), real(eltype(T))), Vpeps, Venv)
+    return initialize_singlet_c4v_env(similarstoragetype(storagetype(state), eltype(T)), Vpeps, Venv)
 end
 function initialize_singlet_c4v_env(T, Vpeps::ElementarySpace, Venv::ElementarySpace)
-    realT = similarstoragetype(T, real(eltype(T)))
-    diag = realT(undef, dim(Venv))
+    realT = similarstoragetype(similarstoragetype(T), real(eltype(T)))
+    diag = realT(undef, reduceddim(Venv))
     fill!(diag, 1)
     corner₀ = DiagonalTensorMap(diag, Venv)
     corner₀.data[2:end] .= zero(real(eltype(T)))

@@ -61,7 +61,7 @@ end
 
 """
     CTMRGEnv(
-    [f=randn, T=ComplexF64] Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
+        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
     ) where {A<:AbstractMatrix{<:VectorSpace}, B<:AbstractMatrix{<:ElementarySpace}}
 
 Construct a CTMRG environment by specifying matrices of north and east virtual spaces of the
@@ -257,15 +257,13 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     if name === :corners
         function corner_pullback(Δcorners_)
             Δcorners = unthunk(Δcorners_)
-            zvs = CTMRGEnv(Δcorners, zerovector.(e.edges))
-            return NoTangent(), zvs, NoTangent()
+            return NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
         end
         return result, corner_pullback
     elseif name === :edges
         function edge_pullback(Δedges_)
             Δedges = unthunk(Δedges_)
-            zvs = CTMRGEnv(zerovector.(e.corners), Δedges)
-            return NoTangent(), zvs, NoTangent()
+            return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
         end
         return result, edge_pullback
     else # this should never happen because already errored in forwards pass
