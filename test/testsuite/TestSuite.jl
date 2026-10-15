@@ -197,6 +197,14 @@ module GradientsCTMRG
 end
 using .GradientsCTMRG
 
+# Optimization
+# ------------
+module OptimizationNormPreservation
+    include("optimization/norm_preservation.jl")
+    export optimization_tangent_projection, optimization_norm_preservation
+end
+using .OptimizationNormPreservation
+
 # Time evolution
 # --------------
 module TimeEvolClusterProjectors
