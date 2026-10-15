@@ -216,11 +216,11 @@ function initialize_random_c4v_env(state, Venv::ElementarySpace)
 end
 function initialize_random_c4v_env(f, T, state::InfinitePEPS, Venv::ElementarySpace)
     Vpeps = north_virtualspace(state, 1, 1)'
-    return initialize_random_c4v_env(f, T, Vpeps ⊗ Vpeps', Venv)
+    return initialize_random_c4v_env(f, similarstoragetype(storagetype(state), eltype(T)), Vpeps ⊗ Vpeps', Venv)
 end
 function initialize_random_c4v_env(f, T, state::InfinitePartitionFunction, Venv::ElementarySpace)
     Vpf = north_virtualspace(state, 1, 1)'
-    return initialize_random_c4v_env(f, T, Vpf, Venv)
+    return initialize_random_c4v_env(f, similarstoragetype(storagetype(state), eltype(T)), Vpf, Venv)
 end
 function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySpace)
     corner₀ = DiagonalTensorMap(f(similarstoragetype(similarstoragetype(T), real(eltype(T))), Venv ← Venv))
