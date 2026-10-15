@@ -2,8 +2,9 @@
 $(TYPEDEF)
 
 Projector algorithm for [`SplitCTMRG`](@ref), constructing the green (Fig. 3), teal (Fig. 7), yellow (Fig. 8), and red (Fig. 9) projector pairs of [Naumann et al.](@cite naumann_variationally_2025).
-Each projector pair is constructed from a truncated SVD of the product of its environment halves.
-QR compression is applied to the environment halves for the yellow projectors and, when the truncation permits, the quarter-environments for the red projectors before multiplication.
+Each projector pair follows [Fishman et al.](@cite fishman_faster_2018), Appendix A: SVD-factorize each environment half, keep its square-root-weighted factor facing the cut, and truncate the product of these factors.
+The half-environment singular values are weighted by direct square roots; the final projector pseudoinverse uses the relative cutoff of [`sdiag_pow`](@ref).
+QR compression is applied to the environment halves for the yellow projectors and, when the truncation permits, the quarter-environments for the red projectors before factorization.
 
 ## Fields
 
@@ -15,6 +16,7 @@ $(TYPEDFIELDS)
 
 Construct a split projector algorithm with `decomposition_alg`, `trunc`, and `verbosity`, following [`FullInfiniteProjector`](@ref).
 `trunc` controls the green and teal projectors; [`SplitCTMRG`](@ref) supplies `interlayer_trunc` for the yellow and red projectors.
+The half-environment SVDs are untruncated; when `decomposition_alg` uses [`IterSVD`](@ref), these preliminary SVDs use the default dense algorithm instead.
 """
 struct SplitProjector{S <: SVDAdjoint, T} <: ProjectorAlgorithm
     decomposition_alg::S
@@ -26,6 +28,18 @@ function SplitProjector(; kwargs...)
 end
 
 PROJECTOR_SYMBOLS[:SplitProjector] = SplitProjector
+
+"""Factor split environment halves into square-root-weighted Fishman factors facing their shared cut."""
+function _split_fishman_halves(Q::AbstractTensorMap, Q_next::AbstractTensorMap, alg::SplitProjector)
+    half_alg = decomposition_algorithm(alg)
+    half_alg.fwd_alg isa IterSVD && (half_alg = SVDAdjoint())
+    half_alg = @set half_alg.fwd_alg = TruncatedAlgorithm(half_alg.fwd_alg, notrunc())
+    _, S, V = svd_trunc_no_error(Q, half_alg)
+    U_next, S_next, _ = svd_trunc_no_error(Q_next, half_alg)
+    Q = sdiag_pow(S, 0.5) * V
+    Q_next = U_next * sdiag_pow(S_next, 0.5)
+    return Q / norm(Q), Q_next / norm(Q_next)
+end
 
 """Compute a split projector pair, optionally QR-compressing the environment halves for the yellow or red projectors."""
 function compute_projector(
@@ -41,7 +55,8 @@ function compute_projector(
         Q_next, _ = right_orth(Q_next, LQAdjoint())
     end
 
-    # All four colors use an SVD of the product of their prepared halves.
+    # All four colors use Fishman factors before the final truncated SVD.
+    Q, Q_next = _split_fishman_halves(Q, Q_next, alg)
     environment = Q * Q_next
     svd_alg = decomposition_algorithm(_set_decomposition_truncation(alg, trunc))
     U, S, V, truncation_error = svd_trunc!(environment / norm(environment), svd_alg)

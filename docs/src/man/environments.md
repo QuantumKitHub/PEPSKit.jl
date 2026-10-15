@@ -7,7 +7,8 @@
 
 [`SplitCTMRGEnv`](@ref) stores separate ket and bra factors for each CTMRG edge, connected by an interlayer bond.
 [`SplitCTMRG`](@ref) absorbs and projects the two layers sequentially using the full projectors of [Naumann et al., Phys. Rev. B 111, 235116 (2025)](https://doi.org/10.1103/PhysRevB.111.235116).
-Its default [`SplitProjector`](@ref) constructs the four projector types directly from their split environment halves.
+[`SplitProjector`](@ref) uses the Fishman construction for all four projector types, factorizing each environment half by SVD and keeping its square-root-weighted factor facing the cut before computing the projectors.
+This improves the conditioning of the projector calculation at the cost of two additional SVDs per projector pair, following [Fishman et al.](@cite fishman_faster_2018), Appendix A.
 The outer and interlayer spaces can be chosen independently:
 
 ```julia
@@ -23,7 +24,7 @@ When omitted, `interlayer_trunc` inherits `trunc`; the default `FixedSpaceTrunca
 `SplitCTMRGEnv(env::CTMRGEnv)` factorizes an existing environment exactly, while its `trunc` keyword can reduce the interlayer spaces.
 `CTMRGEnv(env::SplitCTMRGEnv)` contracts the interlayer bonds so the existing expectation-value routines can be reused.
 This version supports PEPS overlap networks, full projectors, and automatic differentiation through finite sweeps or [`FixedPointGradient`](@ref).
-For comparisons with variPEPS, select its `Projector_Method.FULL` option; its default `FISHMAN` construction reweights the environment halves and uses different projectors.
+The half-environment factors use direct square roots of their singular values; the projector pseudoinverse masks singular values below the relative cutoff `eps(real(scalartype(ψ)))^(3 / 4)`.
 
 Fixed-point differentiation uses [`ScramblingEnvGauge`](@ref PEPSKit.ScramblingEnvGauge) on the alternating ket and bra boundary factors to align both outer and interlayer gauges.
 The ordinary and split environments use the same boundary-MPS gauge method, with each split edge contributing two MPS sites instead of one.

@@ -6,6 +6,7 @@ Uses [`SplitCTMRGEnv`](@ref), with independently truncated outer and interlayer 
 The common iteration, `trunc`, and `decomposition_alg` keywords follow [`SequentialCTMRG`](@ref).
 `trunc` controls the green and teal projectors; `interlayer_trunc` controls the yellow and red projectors and defaults to `trunc`.
 Uses [`SplitProjector`](@ref) to construct the split projector pairs.
+All four projector types use the square-root factorization of [Fishman et al.](@cite fishman_faster_2018), Appendix A, for numerical stability.
 The fixed-point gradient aligns the outer and interlayer gauges and holds both environment spaces fixed.
 """
 struct SplitCTMRG{P <: SplitProjector, I <: TruncationStrategy} <: CTMRGAlgorithm

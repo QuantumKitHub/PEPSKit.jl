@@ -2,16 +2,29 @@ using Test, Random, LinearAlgebra
 using TensorKit, MatrixAlgebraKit, PEPSKit, Adapt
 using PEPSKit: ctmrg_iteration, WEST
 
+"""Construct a dense Fishman cut projector independently from fourth roots of the Gram matrices."""
+function _split_fishman_reference(Q::AbstractMatrix, Q_next::AbstractMatrix, rank::Int)
+    A = normalize(Matrix(Hermitian(Q' * Q)^0.25))
+    B = normalize(Matrix(Hermitian(Q_next * Q_next')^0.25))
+    U, S, V = svd(normalize(A * B))
+    return B * V[:, 1:rank] * Diagonal(1 ./ S[1:rank]) * U[:, 1:rank]' * A
+end
+
 function ctmrg_split_projectors(AT)
     Random.seed!(37913)
     return @testset "Split projector stability ($AT)" begin
         alg = SplitCTMRG(; verbosity = 0).projector_alg
+        iterative = SplitProjector(; decomposition_alg = (; fwd_alg = (; alg = :GKL, krylovdim = 10)), verbosity = 0)
         trunc = truncspace(ComplexSpace(3))
         # Cover the two-index yellow and three-index red cuts.
         for cut in (ComplexSpace(3) ⊗ ComplexSpace(2), ComplexSpace(3) ⊗ ComplexSpace(2) ⊗ ComplexSpace(2))
             Q = adapt(AT, randn(ComplexF64, ComplexSpace(12) ← cut))
             Q_next = adapt(AT, randn(ComplexF64, cut ← ComplexSpace(12)))
             reference, refinfo = PEPSKit.compute_projector((Q, Q_next), alg; trunc)
+            dense = _split_fishman_reference(
+                reshape(convert(Array, Q), 12, :), reshape(convert(Array, Q_next), :, 12), 3,
+            )
+            @test reshape(convert(Array, reference[1] * reference[2]), size(dense)) ≈ dense
             compressed, info = PEPSKit.compute_projector((Q, Q_next), alg; trunc, compress = true)
             # QR compression preserves the cut projector and the nonzero singular spectrum.
             @test compressed[1] * compressed[2] ≈ reference[1] * reference[2]
@@ -20,6 +33,20 @@ function ctmrg_split_projectors(AT)
                 scaled, = PEPSKit.compute_projector((scale * Q, scale * Q_next), alg; trunc, compress)
                 @test scaled[1] * scaled[2] ≈ reference[1] * reference[2]
             end
+        end
+
+        # Check conditioning, projector pseudoinverse masking, and fixed output spaces with both final solvers.
+        V = ComplexSpace(4)
+        spectra = (([1.0, 1.0e-3, 1.0e-6, 1.0e-9], 4), ([1.0, 1.0e-6, 1.0e-15, 0.0], 2))
+        for (values, retained) in spectra, (solver, rank) in ((alg, 4), (iterative, 1))
+            Q = adapt(AT, TensorMap(Matrix(Diagonal(values)), V ← V))
+            projectors, info = PEPSKit.compute_projector((Q, Q), solver; trunc = truncspace(ComplexSpace(rank)))
+            spectrum = values
+            support = [ones(min(retained, rank)); zeros(4 - min(retained, rank))]
+            @test Array(info.S.data) ≈ normalize(spectrum)[1:rank]
+            @test count(!iszero, info.S.data) == min(count(!iszero, values), rank)
+            @test convert(Array, projectors[1] * projectors[2]) ≈ (norm(spectrum) / sum(spectrum)) * Diagonal(support)
+            @test all(P -> isfinite(norm(P)), projectors)
         end
     end
 end
