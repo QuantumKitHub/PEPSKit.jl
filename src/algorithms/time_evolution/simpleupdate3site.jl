@@ -51,7 +51,7 @@ function _su_iter!(
         _nn_bondrev(site1, site2)
     end
     for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
-        wt_new = flip ? _fliptwist_s(wt) : wt
+        wt_new = flip ? _fliptwist_s!(wt) : wt
         wt_new = rev ? transpose(wt_new) : wt_new
         env[CartesianIndex(bond)] = normalize!(wt_new, Inf)
     end
