@@ -1,5 +1,5 @@
 """
-    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization, virtual_spaces...)
+    initialize_ctmrg_environment([elt::Type,] n::InfiniteSquareNetwork, alg::RandomInitialization, virtual_spaces...)
 
 Initialize a fully random `CTMRGEnv` using the given environment virtual spaces. See
 [`CTMRGEnv`](@ref) for details on the expected format of the virtual spaces.
@@ -14,7 +14,7 @@ function initialize_ctmrg_environment(
 end
 
 """
-    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization)
+    initialize_ctmrg_environment([elt::Type,] n::InfiniteSquareNetwork, alg::RandomInitialization)
 
 Initialize a `CTMRGEnv` corresponding to a product state with trivial virtual spaces and
 corners. The product state edge tensors are initialized as `alg.f(elt, V::ProductSpace)`.
@@ -29,7 +29,7 @@ function initialize_ctmrg_environment(
 end
 
 """
-    initialize_ctmrg_environment([elt::Type{<:Number},] n::InfiniteSquareNetwork, alg::RandomInitialization, [env0])
+    initialize_ctmrg_environment([elt::Type,] n::InfiniteSquareNetwork, alg::RandomInitialization, [env0])
 
 Initialize a `CTMRGEnv` by applying a single untruncated iteration of
 [`SimultaneousCTMRG`](@ref) to a given initial environment. By default, the starting
@@ -83,8 +83,15 @@ function initialize_ctmrg_environment(
     return initialize_ctmrg_environment(scalartype(A), A, args...; kwargs...)
 end
 function initialize_ctmrg_environment(
-        elt::Type, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
+        elt::Type{<:Number}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
         kwargs...
     )
     return initialize_ctmrg_environment(similarstoragetype(storagetype(A), elt), InfiniteSquareNetwork(A), args...; kwargs...)
+end
+
+function initialize_ctmrg_environment(
+        elt::Type{<:AbstractArray}, A::Union{InfinitePEPS, InfinitePartitionFunction}, args...;
+        kwargs...
+    )
+    return initialize_ctmrg_environment(similarstoragetype(elt, scalartype(A)), InfiniteSquareNetwork(A), args...; kwargs...)
 end
