@@ -496,7 +496,7 @@ function _rrule(
     UL = left_null(U)
 
     # instantiate the differentiable variables corresponding to the intermediate projector of the contraction algorithm
-    u = zeros(scalartype(U), space(UL, numind(UL))' ← space(U, numind(U))')
+    u = zeros(storagetype(U), space(UL, numind(UL))' ← space(U, numind(U))')
 
     # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
     _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
