@@ -32,6 +32,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Fixed
 
+- `initializePEPS` now returns a real-valued PEPS if given a real-valued input PEPO, rather than always returning a complex-valued PEPS
+
 ### Performance
 
 ## [0.8.1](https://github.com/quantumkithub/pepskit.jl/compare/v0.8.0...v0.8.1) - 2026-07-30

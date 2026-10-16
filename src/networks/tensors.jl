@@ -24,10 +24,11 @@ const PFTensor = PartitionFunctionTensor
 
 """
     PartitionFunctionTensor(f, ::Type{T}, Pspace::S, Nspace::S,
-               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
+               [Espace::S], [Sspace::S], [Wspace::S]) where {T, S<:Union{Int,ElementarySpace}}
                 
-Construct a PartitionFunctionTensor tensor based on the north, east, west and south spaces.
-The tensor elements are generated based on `f` and the element type is specified in `T`.
+Construct a `PartitionFunctionTensor` tensor based on the north, east, west and south spaces.
+The tensor elements are generated based on `f` and the element type and storage type is
+specified in `T`.
 """
 function PartitionFunctionTensor(
         f, ::Type{T},
@@ -80,13 +81,15 @@ const PEPSTensor{S <: ElementarySpace} = AbstractTensorMap{<:Any, S, 1, 4}
 
 """
     PEPSTensor(f, ::Type{T}, Pspace::S, Nspace::S,
-               [Espace::S], [Sspace::S], [Wspace::S]) where {T,S<:Union{Int,ElementarySpace}}
+               [Espace::S], [Sspace::S], [Wspace::S]) where {T, S<:Union{Int,ElementarySpace}}
                 
 Construct a PEPS tensor based on the physical, north, east, south and west spaces.
-The tensor elements are generated based on `f` and the element type is specified in `T`.
+The tensor elements are generated based on `f` and the element type and storage type
+is specified in `T`.
 """
 function PEPSTensor(
-        f, ::Type{T},
+        f,
+        ::Type{T},
         Pspace::S,
         Nspace::S, Espace::S = Nspace, Sspace::S = Nspace', Wspace::S = Espace',
     ) where {T, S <: ElementarySpace}
@@ -155,7 +158,7 @@ herm_depth(t::PEPOTensor) = permute(t', ((5, 6), (3, 2, 1, 4)))
 Fuse the physical indices of a PEPO tensor, obtaining a PEPS tensor.
 """
 function fuse_physicalspaces(O::PEPOTensor)
-    F = isomorphism(Int, fuse(codomain(O)), codomain(O))
+    F = isomorphism(TensorKit.similarstoragetype(O, Int), fuse(codomain(O)), codomain(O))
     return F * O, F
 end
 
