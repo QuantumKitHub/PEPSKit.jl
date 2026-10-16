@@ -216,7 +216,7 @@ function _create_svdtensors(t::TensorMap, SVDdata, dims)
     S = spacetype(t)
     W = S(dims)
 
-    Tr = real(T)
+    Tr = real(scalartype(T))
     A = similarstoragetype(t, Tr)
     Σ = DiagonalTensorMap{Tr, S, A}(undef, W)
 
