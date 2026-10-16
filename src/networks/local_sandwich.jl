@@ -140,3 +140,5 @@ TensorKit.spacetype(::Type{P}) where {P <: PEPOSandwich} = spacetype(eltype(P))
 function TensorKit.storagetype(::Type{PEPOSandwich{N, T, P}}) where {N, T, P}
     return TensorKit.promote_storagetype(T, P)
 end
+# N = 0 leaves P unbound, so this is just a PEPSSandwich
+TensorKit.storagetype(::Type{PEPOSandwich{0, T}}) where {T} = storagetype(T)

@@ -91,7 +91,7 @@ end
 
 """Extract a boundary-bond gauge using the same random MPS for both environments."""
 function _scrambling_gauge(final::AbstractVector, previous::AbstractVector)
-    M = map(t -> randn(scalartype(t), codomain(t) ← domain(t)), final)
+    M = map(t -> randn(storagetype(t), codomain(t) ← domain(t)), final)
     ρprev = right_transfermatrix_fixedpoint(previous, M, Arnoldi())
     ρfinal = right_transfermatrix_fixedpoint(final, M, Arnoldi())
     Qprev, = left_orth!(ρprev; positive = true)
@@ -106,7 +106,7 @@ function compute_relative_phases(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, 
 
     # Random Hermitian MPS of same bond dimension
     # (make Hermitian such that T-M transfer matrix has real eigenvalues)
-    M = _project_hermitian(randn(scalartype(Tfinal), space(Tfinal)))
+    M = _project_hermitian(randn(storagetype(Tfinal), space(Tfinal)))
 
     # Find right fixed points of mixed transfer matrices
     eigsolve_alg = Lanczos() # real eigenvalues
@@ -144,7 +144,7 @@ end
 
 function initialize_right_fixedpoint(tops, bottoms)
     ρ0 = randn(
-        scalartype(tops), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
+        TensorKit.promote_storagetype(tops...), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
     )
     return ρ0
 end
