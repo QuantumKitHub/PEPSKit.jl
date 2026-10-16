@@ -64,7 +64,7 @@ end
 
 """
     CTMRGEnv(
-    [f=randn, T=ComplexF64, TA=Matrix{ComplexF64},] Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
+        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A, chis_north::B, [chis_east::B], [chis_south::B], [chis_west::B]
     ) where {A<:AbstractMatrix{<:VectorSpace}, B<:AbstractMatrix{<:ElementarySpace}}
 
 Construct a CTMRG environment by specifying matrices of north and east virtual spaces of the
@@ -85,11 +85,10 @@ of a partition function defined in terms of local rank-4 tensors) or a `ProductS
 for the case of a network representing overlaps of PEPSs and PEPOs).
 """
 function CTMRGEnv(
-        f, ::Type{T}, Ds_north::A, Ds_east::A, chis_north::B, chis_east::B = chis_north,
+        f, T, Ds_north::A, Ds_east::A, chis_north::B, chis_east::B = chis_north,
         chis_south::B = chis_north, chis_west::B = chis_north,
     ) where {
         A <: AbstractMatrix{<:ProductSpace}, B <: AbstractMatrix{<:ElementarySpace},
-        T,
     }
     # check all of the sizes
     size(Ds_north) == size(Ds_east) == size(chis_north) == size(chis_east) ==
@@ -104,6 +103,7 @@ function CTMRGEnv(
     st = spacetype(first(Ds_north))
     C_type = tensormaptype(st, 1, 1, T)
     T_type = tensormaptype(st, N + 1, 1, T)
+
     # First index is direction
     corners = Array{C_type}(undef, 4, size(Ds_north)...)
     edges = Array{T_type}(undef, 4, size(Ds_north)...)
@@ -181,9 +181,9 @@ The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function CTMRGEnv(
-        f, ::Type{T},
+        f, T,
         D_north::S, D_east::S, virtual_spaces...; unitcell::Tuple{Int, Int} = (1, 1),
-    ) where {S <: VectorSpace, T}
+    ) where {S <: VectorSpace}
     return CTMRGEnv(
         f, T,
         _fill_edge_physical_spaces(D_north, D_east; unitcell)...,
@@ -218,7 +218,7 @@ of the corresponding edge tensor for each direction. Specifically, for a given s
 `chis_south[r, c]` corresponds to the east space of the south edge tensor, and
 `chis_west[r, c]` corresponds to the north space of the west edge tensor.
 """
-function CTMRGEnv(f, ::Type{T}, network::N, virtual_spaces...) where {T, N <: InfiniteSquareNetwork}
+function CTMRGEnv(f, T, network::InfiniteSquareNetwork, virtual_spaces...)
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
     virtual_spaces = _fill_environment_virtual_spaces(virtual_spaces...; unitcell = size(network))
@@ -260,15 +260,13 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     if name === :corners
         function corner_pullback(Δcorners_)
             Δcorners = unthunk(Δcorners_)
-            zvs = CTMRGEnv(Δcorners, zerovector.(e.edges))
-            return NoTangent(), zvs, NoTangent()
+            return NoTangent(), CTMRGEnv(Δcorners, zerovector.(e.edges)), NoTangent()
         end
         return result, corner_pullback
     elseif name === :edges
         function edge_pullback(Δedges_)
             Δedges = unthunk(Δedges_)
-            zvs = CTMRGEnv(zerovector.(e.corners), Δedges)
-            return NoTangent(), zvs, NoTangent()
+            return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
         end
         return result, edge_pullback
     else # this should never happen because already errored in forwards pass
