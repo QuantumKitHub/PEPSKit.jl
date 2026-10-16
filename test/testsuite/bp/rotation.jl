@@ -33,7 +33,9 @@ function bp_rotations(AT)
         ψDNs = random_dual!(fill(D, unitcell))
         ψDEs = random_dual!(fill(D, unitcell))
         ψ = adapt(AT, InfinitePEPS(ψds, ψDNs, ψDEs))
+        @test storagetype(ψ) <: AT
         env = BPEnv(ψ)
+        @test storagetype(env) <: AT
 
         op = adapt(AT, randn(d → d))
         meas1 = meas_sites(op, ψ, env)
