@@ -46,7 +46,7 @@ Create an `InfinitePEPS` by specifying the physical, north virtual and east virt
 of the PEPS tensor at each site in the unit cell as a matrix.
 """
 function InfinitePEPS(
-        f, T::Type{<:Number}, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
+        f, T::Type, Pspaces::M, Nspaces::M, Espaces::M = Nspaces
     ) where {M <: AbstractMatrix{<:ElementarySpace}}
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
@@ -108,7 +108,7 @@ end
 Create an InfinitePEPS by specifying its physical, north and east spaces and unit cell.
 """
 function InfinitePEPS(
-        f, T::Type{<:Number}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
+        f, T::Type, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
     return InfinitePEPS(
         f, T,
@@ -126,7 +126,7 @@ Base.eltype(::Type{InfinitePEPS{T}}) where {T} = T
 Base.eltype(A::InfinitePEPS) = eltype(typeof(A))
 
 Base.copy(A::InfinitePEPS) = InfinitePEPS(copy(unitcell(A)))
-function Base.similar(A::InfinitePEPS, T::Type{TorA} = scalartype(A)) where {TorA}
+function Base.similar(A::InfinitePEPS, T::Type = storagetype(A))
     return InfinitePEPS(map(t -> similar(t, T), unitcell(A)))
 end
 Base.repeat(A::InfinitePEPS, counts...) = InfinitePEPS(repeat(unitcell(A), counts...))
