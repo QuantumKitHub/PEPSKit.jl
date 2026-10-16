@@ -183,9 +183,9 @@ function MPSKit.time_evolve(
         it::TimeEvolver{<:NeighbourUpdate};
         verbosity::Int = 2, check_interval::Int = 10
     )
-    return LoggingExtras.withlevel(; verbosity) do
+    return with_verbosity(; verbosity) do
         time_start = time0 = time()
-        @infov 1 "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
+        @log_initialization "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
         info0 = nothing
         for (psi, info) in it
             iter = it.state.iter
@@ -194,14 +194,14 @@ function MPSKit.time_evolve(
             time1 = time()
             if showinfo
                 Δλ = (info0 === nothing) ? NaN : compare_weights(info.wts, info0.wts)
-                @infov 2 @sprintf(
+                @log_convergence @sprintf(
                     "NTU iter %d: t = %.2e, |Δλ| = %.3e. Time: %.2f s",
                     it.state.iter, it.state.t, Δλ, time1 - time0
                 )
             end
             if stop
                 time_end = time()
-                @infov 1 @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+                @log_convergence @sprintf("Time evolution finished in %.2f s", time_end - time_start)
                 return psi, info
             end
             info0, time0 = info, time()
@@ -214,15 +214,15 @@ function MPSKit.time_evolve(
         H::LocalOperator, env::CTMRGEnv, ctm_alg::CTMRGAlgorithm;
         tol::Float64 = 1.0e-7, verbosity::Int = 2, check_interval::Int = 10
     ) where {G, S <: NTUState{<:InfinitePEPS}}
-    return LoggingExtras.withlevel(; verbosity) do
-        @infov 1 "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
+    return with_verbosity(; verbosity) do
+        @log_initialization "--- Time evolution (neighbourhood tensor update), dt = $(it.dt) ---"
         time_start = time0 = time()
         psi0 = copy(it.state.psi)
         @assert it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
         # initial energy
         env, = leading_boundary(env, psi0, ctm_alg)
         energy = real(expectation_value(psi0, H, env)) / prod(size(psi0))
-        @infov 2 @sprintf("NTU iter 0: E = %.4e", energy)
+        @log_convergence @sprintf("NTU iter 0: E = %.4e", energy)
         info0 = (; energy, env)
         # start evolving
         energy0, ΔE = energy, 0.0
@@ -247,7 +247,7 @@ function MPSKit.time_evolve(
             info = @insert info.env = env
             # show information
             time1 = time()
-            @infov 2 @sprintf(
+            @log_convergence @sprintf(
                 "NTU iter %-6d: E = %.5f, ΔE = %.3e, |Δλ| = %.3e. Time: %.2f s",
                 it.state.iter, energy, ΔE, Δλ, time1 - time0
             )
@@ -255,7 +255,7 @@ function MPSKit.time_evolve(
             stop = false
             if (ΔE <= 0 && abs(ΔE) < tol)
                 stop = true
-                @infov 2 "NTU: energy has converged."
+                @log_convergence "NTU: energy has converged."
             end
             if ΔE > 0
                 stop = true
@@ -269,7 +269,7 @@ function MPSKit.time_evolve(
             end
             if stop
                 time_end = time()
-                @infov 1 @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+                @log_convergence @sprintf("Time evolution finished in %.2f s", time_end - time_start)
                 return psi, info
             else
                 iter0, t0 = it.state.iter, it.state.t

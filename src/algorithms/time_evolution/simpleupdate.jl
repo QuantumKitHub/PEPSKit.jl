@@ -215,9 +215,9 @@ function MPSKit.time_evolve(
         verbosity::Int = 2, check_interval::Int = 500
     )
     @assert check_interval >= 0
-    return LoggingExtras.withlevel(; verbosity) do
+    return with_verbosity(; verbosity) do
         time_start = time()
-        @infov 1 "--- Time evolution (simple update), dt = $(it.dt) ---"
+        @log_initialization "--- Time evolution (simple update), dt = $(it.dt) ---"
         env0, time0 = it.state.env, time()
         for (psi, env, info) in it
             iter = it.state.iter
@@ -226,12 +226,12 @@ function MPSKit.time_evolve(
                 ((iter % check_interval == 0) || (iter == 1) || stop)
             time1 = time()
             if showinfo
-                @infov 2 "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-                @infov 2 @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, compare_weights(env0, env), time1 - time0)
+                @log_convergence "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
+                @log_convergence @sprintf("SU iter %-7d: |Δλ| = %.3e. Time = %.3f s/it", iter, compare_weights(env0, env), time1 - time0)
             end
             if stop
                 time_end = time()
-                @infov 1 @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+                @log_convergence @sprintf("Time evolution finished in %.2f s", time_end - time_start)
                 return psi, env, info
             else
                 env0 = env
@@ -246,9 +246,9 @@ function MPSKit.time_evolve(
         tol::Float64 = 1.0e-8, verbosity::Int = 2, check_interval::Int = 500
     ) where {G, S <: SUState{<:InfinitePEPS}}
     @assert check_interval >= 0
-    return LoggingExtras.withlevel(; verbosity) do
+    return with_verbosity(; verbosity) do
         time_start = time()
-        @infov 1 "--- Time evolution (simple update), dt = $(it.dt) ---"
+        @log_initialization "--- Time evolution (simple update), dt = $(it.dt) ---"
         @assert it.alg.imaginary_time "Only imaginary time evolution of InfinitePEPS allows convergence checking."
         env0, time0 = it.state.env, time()
         for (psi, env, info) in it
@@ -262,8 +262,8 @@ function MPSKit.time_evolve(
                 # TODO: convert to BPEnv instead
                 ctmenv = CTMRGEnv(env)
                 energy = real(expectation_value(psi, H, ctmenv)) / prod(size(psi))
-                @infov 2 "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
-                @infov 2 @sprintf(
+                @log_convergence "Space of x-weight at [1, 1] = $(space(env[1, 1, 1], 1))"
+                @log_convergence @sprintf(
                     "SU iter %-7d: E ≈ %.5f, |Δλ| = %.3e. Time = %.3f s/it",
                     iter, energy, diff, time1 - time0
                 )
@@ -272,11 +272,11 @@ function MPSKit.time_evolve(
                 @warn "SU: bond weights have not converged."
             end
             if diff < tol
-                @infov 2 "SU: bond weights have converged."
+                @log_convergence "SU: bond weights have converged."
             end
             if stop
                 time_end = time()
-                @infov 1 @sprintf("Time evolution finished in %.2f s", time_end - time_start)
+                @log_convergence @sprintf("Time evolution finished in %.2f s", time_end - time_start)
                 return psi, env, info
             else
                 env0 = env
