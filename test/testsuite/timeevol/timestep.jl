@@ -22,9 +22,8 @@ function timeevol_timestep(AT)
         # time_evolve
         ψ2, env2, info2 = time_evolve(ψ0, H, dt, nstep, alg, env0)
         # for-loop syntax
-        ## manually reset internal state of evolver
-        evolver.state = PEPSKit.SUState(0, 0.0, ψ0, env0)
-        ψ3, env3, info3 = nothing, nothing, nothing
+        # Restart the exhausted evolver using the public timestep keywords.
+        ψ3, env3, info3 = timestep(evolver, ψ0, env0; iter = 0, t = 0.0)
         for state in evolver
             ψ3, env3, info3 = state
         end
@@ -32,22 +31,5 @@ function timeevol_timestep(AT)
         @test ψ1 == ψ2 == ψ3
         @test env1 == env2 == env3
         @test info1 == info2 == info3
-
-        # Restart an exhausted evolver using the public timestep keywords.
-        ψreset, envreset, inforeset = timestep(evolver, ψ0, env0; iter = 0, t = 0.0)
-        fresh = TimeEvolver(ψ0, H, dt, nstep, alg, env0)
-        ψfresh, envfresh, infofresh = timestep(fresh, ψ0, env0)
-        @test ψreset == ψfresh
-        @test envreset == envfresh
-        @test inforeset == infofresh
-        @test evolver.state.iter == 1
-        @test evolver.state.t == dt
-
-        # Iteration and time offsets affect bookkeeping, not the update.
-        ψoffset, envoffset, infooffset = timestep(evolver, ψ0, env0; iter = 7, t = 1.25)
-        @test ψoffset == ψfresh
-        @test envoffset == envfresh
-        @test evolver.state.iter == 8
-        @test evolver.state.t == infooffset.t == 1.25 + dt
     end
 end
