@@ -124,7 +124,7 @@ function leading_boundary(
     )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
-    return LoggingExtras.withlevel(; alg.verbosity) do
+    return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)
         CS, TS = ignore_derivatives() do
             return convergence_spectra(env₀, alg)
@@ -171,16 +171,16 @@ function check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorit
 
 # custom CTMRG logging
 function ctmrg_loginit!(log, η, network, env)
-    return @infov 2 loginit!(log, η, network_value(network, env))
+    return @log_initialization loginit!(log, η, network_value(network, env))
 end
 function ctmrg_logiter!(log, iter, η, network, env)
-    return @infov 3 logiter!(log, iter, η, network_value(network, env))
+    return @log_iteration logiter!(log, iter, η, network_value(network, env))
 end
 function ctmrg_logfinish!(log, iter, η, network, env)
-    return @infov 2 logfinish!(log, iter, η, network_value(network, env))
+    return @log_convergence logfinish!(log, iter, η, network_value(network, env))
 end
 function ctmrg_logcancel!(log, iter, η, network, env)
-    return @warnv 1 logcancel!(log, iter, η, network_value(network, env))
+    return @log_nonconvergence logcancel!(log, iter, η, network_value(network, env))
 end
 
 @non_differentiable ctmrg_loginit!(args...)

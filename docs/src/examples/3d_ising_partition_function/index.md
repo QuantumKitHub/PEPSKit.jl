@@ -205,7 +205,7 @@ end;
 ````
 
 There are a few things to note about this cost function definition. Since we will pass it to
-the `OptimKit.optimize`, we require it to return both our cost function and the
+[`OptimKit.optimize`](@extref), we require it to return both our cost function and the
 corresponding gradient. To do this, we simply use the `withgradient` method from Zygote.jl
 to automatically compute the gradient of the cost function straight from the primal
 computation. Since our cost function involves contractions using `leading_boundary`, we also
@@ -231,12 +231,12 @@ contractions and we don't need to think about them much, optimizing over the man
 
 In particular, we need to define two kinds of operations on this manifold: a retraction and
 a transport. The retraction, corresponding to the `retract` keyword argument of
-`OptimKit.optimize`, specifies how to move from a point on a manifold along a given descent
+[`OptimKit.optimize`](@extref), specifies how to move from a point on a manifold along a given descent
 direction to obtain a new manifold point. The transport, corresponding to the `transport!`
-keyword argument of `OptimKit.optimize`, specifies how to transport a descent direction at a
+keyword argument of [`OptimKit.optimize`](@extref), specifies how to transport a descent direction at a
 given manifold point to a valid descent direction at a different manifold point according to
 the appropriate metric. For a more detailed explanation we refer to the
-[OptimKit.jl README](https://github.com/Jutho/OptimKit.jl). In PEPSKit.jl, these two
+[OptimKit.jl documentation](@extref OptimKit Optimization-API). In PEPSKit.jl, these two
 procedures are defined through the [`PEPSKit.peps_retract`](@ref) and
 [`PEPSKit.peps_transport!`](@ref) methods. While it is instructive to read the corresponding
 docstrings in order to understand what these actually do, here we can just blindly reuse
@@ -267,7 +267,7 @@ end;
 
 All that is left then is to specify the virtual spaces of the PEPS and the two environments,
 initialize them in the appropriate way, choose an optimization algortithm and call the
-`optimize` function from OptimKit.jl to get our desired PEPS fixed point.
+[`optimize`](@extref OptimKit.optimize) function from OptimKit.jl to get our desired PEPS fixed point.
 
 ````julia
 Vpeps = ℂ^2

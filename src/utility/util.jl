@@ -62,63 +62,15 @@ function absorb_s(U::AbstractTensorMap, S::DiagonalTensorMap, V::AbstractTensorM
     return U * sqrt_S, sqrt_S * V
 end
 
-_fliptwist_s(s::DiagonalTensorMap) = twist!(DiagonalTensorMap(flip(s, 1:2)), 1)
-
-"""
-    twistdual(t::AbstractTensorMap, i)
-    twistdual!(t::AbstractTensorMap, i)
-
-Twist the i-th leg of a tensor `t` if it represents a dual space.
-"""
-function twistdual!(t::AbstractTensorMap, i::Int)
-    isdual(space(t, i)) || return t
-    return twist!(t, i)
-end
-function twistdual!(t::AbstractTensorMap, is)
-    is′ = filter(i -> isdual(space(t, i)), is)
-    return twist!(t, is′)
-end
-twistdual(t::AbstractTensorMap, is) = twistdual!(copy(t), is)
-
-"""
-    twistnondual(t::AbstractTensorMap, i)
-    twistnondual!(t::AbstractTensorMap, i)
-
-Twist the i-th leg of a tensor `t` if it represents a non-dual space.
-"""
-function twistnondual!(t::AbstractTensorMap, i::Int)
-    !isdual(space(t, i)) || return t
-    return twist!(t, i)
-end
-function twistnondual!(t::AbstractTensorMap, is)
-    is′ = filter(i -> !isdual(space(t, i)), is)
-    return twist!(t, is′)
-end
-twistnondual(t::AbstractTensorMap, is) = twistnondual!(copy(t), is)
-
-"""
-    str(t)
-
-Fermionic supertrace by using `@tensor`.
-"""
-str(t::AbstractTensorMap) = _str(BraidingStyle(sectortype(t)), t)
-_str(::Bosonic, t::AbstractTensorMap) = tr(t)
-@generated function _str(::Fermionic, t::AbstractTensorMap{<:Any, <:Any, N, N}) where {N}
-    tex = tensorexpr(:t, ntuple(identity, N), ntuple(identity, N))
-    return macroexpand(@__MODULE__, :(@tensor $tex))
-end
-
-"""
-    trmul(H, ρ)
-
-Compute `tr(H * ρ)` without forming `H * ρ`.
-"""
-@generated function trmul(
-        H::AbstractTensorMap{<:Any, S, N, N}, ρ::AbstractTensorMap{<:Any, S, N, N}
-    ) where {S, N}
-    Hex = tensorexpr(:H, ntuple(identity, N), ntuple(i -> i + N, N))
-    ρex = tensorexpr(:ρ, ntuple(i -> i + N, N), ntuple(identity, N))
-    return macroexpand(@__MODULE__, :(@tensor $Hex * $ρex))
+# avoids a conversion to a dense TensorMap by flip
+function _fliptwist_s!(s::DiagonalTensorMap)
+    for (f₁, f₂) in fusiontrees(s)
+        data = s[f₁, f₂]
+        _, θ = only(flip((f₁, f₂), (1, 2)))
+        θ *= twist(f₁.uncoupled[1])
+        scale!(data, θ)
+    end
+    return DiagonalTensorMap(s.data, flip(s.domain))
 end
 
 # Check whether diagonals contain degenerate values up to absolute or relative tolerance

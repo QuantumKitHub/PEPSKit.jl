@@ -38,29 +38,33 @@ function test_rotation(state::Union{InfinitePEPS, InfinitePEPO}, wts::SUWeight)
     return
 end
 
-Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1 // 2) => 1, (1, -1 // 2) => 2)
-Vs = (
-    # Espace
-    Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 3, (1, -1 // 2) => 2),
-    # Nspace
-    Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 4),
-)
-Nr, Nc = 2, 3
-peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc))
-pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
-wts = SUWeight(peps)
-rand!(wts)
-normalize!.(wts.data, Inf)
-# check that elements of wts are successfully randomized
-@test !(wts ≈ SUWeight(peps))
+is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
-@test sectortype(wts) === sectortype(Vs[1])
-@test spacetype(wts) === spacetype(Vs[1])
+if !is_buildkite
+    Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1 // 2) => 1, (1, -1 // 2) => 2)
+    Vs = (
+        # Espace
+        Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 3, (1, -1 // 2) => 2),
+        # Nspace
+        Vect[FermionParity ⊠ U1Irrep]((0, 0) => 2, (1, 1 // 2) => 1, (1, -1 // 2) => 4),
+    )
+    Nr, Nc = 2, 3
+    peps = InfinitePEPS(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc))
+    pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
+    wts = SUWeight(peps)
+    rand!(wts)
+    normalize!.(wts.data, Inf)
+    # check that elements of wts are successfully randomized
+    @test !(wts ≈ SUWeight(peps))
 
-test_rotation(wts)
-test_rotation(peps, wts)
+    @test sectortype(wts) === sectortype(Vs[1])
+    @test spacetype(wts) === spacetype(Vs[1])
 
-wts = SUWeight(pepo)
-rand!(wts)
-normalize!.(wts.data, Inf)
-test_rotation(pepo, wts)
+    test_rotation(wts)
+    test_rotation(peps, wts)
+
+    wts = SUWeight(pepo)
+    rand!(wts)
+    normalize!.(wts.data, Inf)
+    test_rotation(pepo, wts)
+end

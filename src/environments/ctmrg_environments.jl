@@ -219,21 +219,29 @@ function CTMRGEnv(f, T, network::InfiniteSquareNetwork, virtual_spaces...)
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
     virtual_spaces = _fill_environment_virtual_spaces(virtual_spaces...; unitcell = size(network))
-    return CTMRGEnv(f, T, Ds_north, Ds_east, virtual_spaces...)
+    return CTMRGEnv(f, similarstoragetype(storagetype(network), eltype(T)), Ds_north, Ds_east, virtual_spaces...)
 end
-function CTMRGEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS}, virtual_spaces...)
-    return CTMRGEnv(randn, scalartype(network), network, virtual_spaces...)
+function CTMRGEnv(network::InfiniteSquareNetwork{O}, virtual_spaces...) where {O}
+    return CTMRGEnv(randn, storagetype(O), network, virtual_spaces...)
+end
+function CTMRGEnv(network::Union{<:InfinitePartitionFunction, <:InfinitePEPS}, virtual_spaces...)
+    return CTMRGEnv(randn, storagetype(network), network, virtual_spaces...)
 end
 
 # allow constructing environments for implicitly defined contractible networks
 function CTMRGEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
-    return CTMRGEnv(f, T, InfiniteSquareNetwork(state), args...)
+    return CTMRGEnv(f, similarstoragetype(eltype(state), eltype(T)), InfiniteSquareNetwork(state), args...)
 end
 
 # copy-like constructor
 CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
 
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
+
+function TensorKit.storagetype(::Type{CTMRGEnv{C, E}}) where {C, E}
+    T = promote_type(scalartype(C), scalartype(E))
+    return TensorKit.promote_storagetype(T, C, E)
+end
 
 # Custom adjoint for CTMRGEnv constructor, needed for fixed-point differentiation
 function ChainRulesCore.rrule(
@@ -258,8 +266,7 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
             return NoTangent(), CTMRGEnv(zerovector.(e.corners), Δedges), NoTangent()
         end
         return result, edge_pullback
-    else
-        # this should never happen because already errored in forwards pass
+    else # this should never happen because already errored in forwards pass
         throw(ArgumentError("No rrule for getproperty of $name"))
     end
 end
@@ -321,12 +328,26 @@ edgetype(env::CTMRGEnv) = edgetype(typeof(env))
 edgetype(::Type{CTMRGEnv{C, E}}) where {C, E} = E
 
 TensorKit.spacetype(::Type{E}) where {E <: CTMRGEnv} = spacetype(cornertype(E))
+function TensorKit.storagetype(::Type{E}) where {E <: CTMRGEnv}
+    return TensorKit.promote_storagetype(cornertype(E), edgetype(E))
+end
 
 # In-place update of environment
 function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C, T}) where {C, T}
     env.corners .= env´.corners
     env.edges .= env´.edges
     return env
+end
+# patch for the case where the corners are of a different type, which happens when running
+# variational optimization using an implicit gradient
+function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C´, T}) where {C, C´, T}
+    env.corners .= _convert_cornertype.(C, env´.corners)
+    env.edges .= env´.edges
+    return env
+end
+function _convert_cornertype(::Type{C}, c) where {C <: DiagonalTensorMap}
+    d = DiagonalTensorMap(c)
+    return scalartype(C) <: Real ? real(d) : d
 end
 
 # Rotate corners & edges counter-clockwise

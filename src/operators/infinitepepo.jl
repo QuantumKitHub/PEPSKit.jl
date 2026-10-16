@@ -78,8 +78,8 @@ function InfinitePEPO(
     size(Pspaces) == size(Nspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
     Pspaces = reshape(Pspaces, (size(Pspaces)..., 1))
-    Nspaces = reshape(Pspaces, (size(Nspaces)..., 1))
-    Espaces = reshape(Pspaces, (size(Espaces)..., 1))
+    Nspaces = reshape(Nspaces, (size(Nspaces)..., 1))
+    Espaces = reshape(Espaces, (size(Espaces)..., 1))
     return InfinitePEPO(f, T, Pspaces, Nspaces, Espaces)
 end
 
@@ -121,7 +121,7 @@ function initializePEPS(
     end
     Nspaces = repeat([vspace], size(T, 1), size(T, 2))
     Espaces = repeat([vspace], size(T, 1), size(T, 2))
-    return InfinitePEPS(Pspaces, Nspaces, Espaces)
+    return InfinitePEPS(randn, storagetype(T), Pspaces, Nspaces, Espaces)
 end
 
 ## Unit cell interface
@@ -152,6 +152,7 @@ end
 ## Spaces
 
 TensorKit.spacetype(::Type{P}) where {P <: InfinitePEPO} = spacetype(eltype(P))
+TensorKit.storagetype(::Type{P}) where {P <: InfinitePEPO} = storagetype(eltype(P))
 virtualspace(T::InfinitePEPO, r::Int, c::Int, h::Int, dir) =
     virtualspace(T[r, c, h], dir)
 domain_physicalspace(T::InfinitePEPO, r::Int, c::Int) =

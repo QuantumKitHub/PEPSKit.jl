@@ -23,18 +23,22 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
+import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
-using LoggingExtras
 import TupleTools
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
 using MPSKit: InfiniteEnvironments
-using MPSKit: DynamicTol, updatetol
+using MPSKit: DynamicTol
+using MPSKit.DynamicTols: adapt_solver
+using MPSKit: @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
+using MPSKit.IterativeLoggers: with_verbosity
 import MPSKit.DynamicTols: _updatetol
 import MPSKit: tensorexpr, leading_boundary, loginit!, logiter!, logfinish!, logcancel!, physicalspace
 import MPSKit: infinite_temperature_density_matrix
 
+using TensorKitTensors: fuse_charge
 import TensorKitTensors.SpinOperators as SO
 import TensorKitTensors.FermionOperators as FO
 import TensorKitTensors.HubbardOperators as HO
@@ -51,8 +55,11 @@ using DocStringExtensions
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
 
 include("utility/util.jl")
+include("utility/contraction_labels.jl")
+include("utility/tensor_traces.jl")
 include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
+include("utility/twistdual.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
 include("utility/qr.jl")
@@ -93,15 +100,21 @@ include("algorithms/contractions/ctmrg/halfinf_env.jl")
 include("algorithms/contractions/ctmrg/fullinf_env.jl")
 include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
-include("algorithms/contractions/ctmrg/contract_site.jl")
+include("algorithms/contractions/ctmrg/network_value.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
 include("algorithms/contractions/ctmrg/characteristic_equations.jl")
 
+include("algorithms/contractions/absorb.jl")
 include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
-include("algorithms/contractions/localoperator.jl")
 include("algorithms/contractions/vumps_contractions.jl")
-include("algorithms/contractions/bp_contractions.jl")
+include("algorithms/contractions/bp_messages.jl")
+include("algorithms/contractions/local_patch/expr_utils.jl")
+include("algorithms/contractions/local_patch/network_expr.jl")
+include("algorithms/contractions/local_patch/patch_contractions.jl")
+include("algorithms/contractions/local_patch/densitymatrix/generic.jl")
+include("algorithms/contractions/local_patch/densitymatrix/ctmrg.jl")
+include("algorithms/contractions/local_patch/densitymatrix/bp.jl")
 include("algorithms/contractions/bondenv/benv_tools.jl")
 include("algorithms/contractions/bondenv/gaugefix.jl")
 include("algorithms/contractions/bondenv/als_solve.jl")
@@ -117,6 +130,8 @@ include("algorithms/ctmrg/projectors/cache.jl")
 include("algorithms/ctmrg/projectors/halfinfinite.jl")
 include("algorithms/ctmrg/projectors/fullinfinite.jl")
 include("algorithms/ctmrg/projectors/subspaceiter.jl")
+include("algorithms/ctmrg/projectors/c4v_eigh.jl")
+include("algorithms/ctmrg/projectors/c4v_qr.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
@@ -143,9 +158,13 @@ include("algorithms/bp/beliefpropagation.jl")
 include("algorithms/bp/gaugefix.jl")
 
 include("algorithms/transfermatrix.jl")
+include("algorithms/expectation_value/expectation_value.jl")
+include("algorithms/expectation_value/reduced_densitymatrix.jl")
+include("algorithms/expectation_value/patch_contractions.jl")
+include("algorithms/expectation_value/network_value.jl")
+include("algorithms/expectation_value/correlator_adapters.jl")
+include("algorithms/expectation_value/correlators.jl")
 include("algorithms/toolbox.jl")
-include("algorithms/correlator_adapters.jl")
-include("algorithms/correlators.jl")
 
 include("algorithms/optimization/implicit_differentiation.jl")
 include("algorithms/optimization/preconditioning.jl")

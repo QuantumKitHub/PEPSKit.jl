@@ -58,20 +58,42 @@ function SUWeight(wts_mats::AbstractMatrix{E}...) where {E <: PEPSWeight}
 end
 
 """
-    SUWeight(Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:ElementarySpace}}
+    SUWeight([T = ComplexF64,] Nspaces::M, [Espaces::M]) where {M<:AbstractMatrix{<:ElementarySpace}}
 
 Create a trivial `SUWeight` by specifying the vertical (north) or horizontal (east) virtual bond spaces.
+`T` is either a scalar type (like `ComplexF32`) or an array type (like `Vector{Float64}`) that
+specifies the storage type. If `T <: Number` the default storage type is `Vector{T}`.
 """
 function SUWeight(
+        T,
         Nspaces::M, Espaces::M = Nspaces
     ) where {M <: AbstractMatrix{<:ElementarySpace}}
     @assert size(Nspaces) == size(Espaces)
     Nr, Nc = size(Nspaces)
     weights = map(Iterators.product(1:2, 1:Nr, 1:Nc)) do (d, r, c)
         V = (d == 1 ? Espaces[r, c] : Nspaces[r, c])
-        DiagonalTensorMap(ones(reduceddim(V)), V)
+        realT = similarstoragetype(similarstoragetype(T), real(eltype(T)))
+        diag = realT(undef, reduceddim(V))
+        fill!(diag, one(real(eltype(T))))
+        DiagonalTensorMap(diag, V)
     end
     return SUWeight(weights)
+end
+SUWeight(Nspaces::M, Espaces::M = Nspaces) where {M <: AbstractMatrix{<:ElementarySpace}} =
+    SUWeight(ComplexF64, Nspaces, Espaces)
+
+"""
+    SUWeight(T, Nspace::S, Espace::S=Nspace; unitcell::Tuple{Int,Int}=(1, 1)) where {S<:ElementarySpace}
+
+Create a trivial `SUWeight` by specifying its vertical (north) and horizontal (east)
+as `ElementarySpace`s) and unit cell size. `T` is either a scalar type (like `ComplexF32`)
+or an array type (like `Vector{Float64}`) that specifies the storage type.
+If `T <: Number` the default storage type is `Vector{T}`.
+"""
+function SUWeight(
+        T, Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
+    ) where {S <: ElementarySpace}
+    return SUWeight(T, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
 """
@@ -83,7 +105,7 @@ as `ElementarySpace`s) and unit cell size.
 function SUWeight(
         Nspace::S, Espace::S = Nspace; unitcell::Tuple{Int, Int} = (1, 1)
     ) where {S <: ElementarySpace}
-    return SUWeight(fill(Nspace, unitcell), fill(Espace, unitcell))
+    return SUWeight(ComplexF64, fill(Nspace, unitcell), fill(Espace, unitcell))
 end
 
 """
@@ -94,7 +116,7 @@ Create a trivial `SUWeight` for a given InfinitePEPS.
 function SUWeight(peps::InfinitePEPS)
     Nspaces = map(Base.Fix2(domain, NORTH), unitcell(peps))
     Espaces = map(Base.Fix2(domain, EAST), unitcell(peps))
-    return SUWeight(Nspaces, Espaces)
+    return SUWeight(storagetype(peps), Nspaces, Espaces)
 end
 
 """
@@ -106,7 +128,7 @@ function SUWeight(pepo::InfinitePEPO)
     @assert size(pepo, 3) == 1
     Nspaces = map(Base.Fix2(domain, NORTH), @view(unitcell(pepo)[:, :, 1]))
     Espaces = map(Base.Fix2(domain, EAST), @view(unitcell(pepo)[:, :, 1]))
-    return SUWeight(Nspaces, Espaces)
+    return SUWeight(storagetype(pepo), Nspaces, Espaces)
 end
 
 Random.rand!(wts::SUWeight) = rand!(Random.default_rng(), wts)
@@ -139,6 +161,7 @@ TensorKit.spacetype(w::SUWeight) = spacetype(typeof(w))
 TensorKit.spacetype(::Type{T}) where {E, T <: SUWeight{E}} = spacetype(E)
 TensorKit.sectortype(w::SUWeight) = sectortype(typeof(w))
 TensorKit.sectortype(::Type{<:SUWeight{T}}) where {T} = sectortype(spacetype(T))
+TensorKit.storagetype(::Type{SUWeight{T}}) where {T} = storagetype(T)
 
 ## Bipartite check
 function _is_bipartite(wts::SUWeight)
@@ -328,7 +351,7 @@ which has the same real scalartype as ``wts`.
 """
 function CTMRGEnv(wts::SUWeight)
     _, Nr, Nc = size(wts)
-    elt = scalartype(wts)
+    elt = storagetype(wts)
     V_env = oneunit(spacetype(wts))
     edges = map(Iterators.product(1:4, 1:Nr, 1:Nc)) do (d, r, c)
         wt_idx = if d == NORTH

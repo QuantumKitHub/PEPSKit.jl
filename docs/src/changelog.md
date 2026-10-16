@@ -22,6 +22,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 
 ### Added
 
+- `TensorKit.storagetype` for `InfinitePEPS`, `InfinitePEPO`, `InfinitePartitionFunction`, `InfiniteSquareNetwork` and `CTMRGEnv` (#429)
+
 ### Changed
 
 ### Deprecated
@@ -29,6 +31,8 @@ When releasing a new version, move the "Unreleased" changes to a new version sec
 ### Removed
 
 ### Fixed
+
+- `initializePEPS` now returns a real-valued PEPS if given a real-valued input PEPO, rather than always returning a complex-valued PEPS
 
 ### Performance
 

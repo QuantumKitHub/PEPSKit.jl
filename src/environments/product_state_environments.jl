@@ -82,13 +82,13 @@ Construct a product state environment by specifying a corresponding [`InfiniteSq
 function ProductStateEnv(f, T, network::InfiniteSquareNetwork)
     Ds_north = _north_edge_physical_spaces(network)
     Ds_east = _east_edge_physical_spaces(network)
-    return ProductStateEnv(f, T, Ds_north, Ds_east)
+    return ProductStateEnv(f, similarstoragetype(storagetype(network), eltype(T)), Ds_north, Ds_east)
 end
 function ProductStateEnv(network::Union{InfiniteSquareNetwork, InfinitePartitionFunction, InfinitePEPS})
-    return ProductStateEnv(randn, scalartype(network), network)
+    return ProductStateEnv(randn, storagetype(network), network)
 end
 function ProductStateEnv(f, T, state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
-    return ProductStateEnv(f, T, InfiniteSquareNetwork(state), args...)
+    return ProductStateEnv(f, similarstoragetype(eltype(state), eltype(T)), InfiniteSquareNetwork(state), args...)
 end
 
 Base.eltype(::Type{ProductStateEnv{T}}) where {T} = T
