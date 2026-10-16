@@ -13,11 +13,13 @@ _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a)
     sdiag_pow(s, pow::Real; tol::Real=eps(real(scalartype(s)))^(3 / 4))
 
 Compute `s^pow` for a diagonal matrix `s`.
+The result preserves the scalar and storage types of `s`.
 """
 function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4))
     # Relative tol w.r.t. largest abs value of `s` (use norm(∘, Inf) to make differentiable)
     tol *= norm(s, Inf)
-    spow = DiagonalTensorMap(_safe_pow.(s.data, pow, tol), space(s, 1))
+    spow = similar(s)
+    spow.data .= _safe_pow.(s.data, pow, tol)
     return spow
 end
 function sdiag_pow(
@@ -43,7 +45,7 @@ function ChainRulesCore.rrule(
     spow_minus1_conj = scale!(sdiag_pow(s', pow - 1; tol), pow)
     function sdiag_pow_pullback(c̄_)
         c̄ = unthunk(c̄_)
-        return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj))
+        return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj), ChainRulesCore.NoTangent())
     end
     return spow, sdiag_pow_pullback
 end
