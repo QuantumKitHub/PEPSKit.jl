@@ -19,7 +19,7 @@ if !is_buildkite
             jl_op = adapt(JLArray, op)
             jl_t = adapt(JLArray, t)
             @test TensorKit.storagetype(jl_op) == TensorKit.storagetype(jl_t)
-            @test TensorKit.storagetype(jl_op) <: JLArray 
+            @test TensorKit.storagetype(jl_op) <: JLArray
         end
         @testset "InfinitePEPS/InfinitePEPO" begin
             Vphy = Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1 // 2) => 1, (1, -1 // 2) => 2)
@@ -34,8 +34,8 @@ if !is_buildkite
             pepo = InfinitePEPO(rand, Float64, Vphy, Vs[2], Vs[1]'; unitcell = (Nr, Nc, 1))
             jl_peps = adapt(JLArray, peps)
             jl_pepo = adapt(JLArray, pepo)
-            @test TensorKit.storagetype(jl_peps) <: JLArray 
-            @test TensorKit.storagetype(jl_pepo) <: JLArray 
+            @test TensorKit.storagetype(jl_peps) <: JLArray
+            @test TensorKit.storagetype(jl_pepo) <: JLArray
         end
         @testset "InfinitePartitionFunction" begin
             S = Trivial
@@ -43,7 +43,7 @@ if !is_buildkite
             sz = (1, 1)
             pf = InfinitePartitionFunction(randn, ComplexF64, V; unitcell = sz)
             jl_pf = adapt(JLArray, pf)
-            @test TensorKit.storagetype(jl_pf) <: JLArray 
+            @test TensorKit.storagetype(jl_pf) <: JLArray
         end
         @testset "CTMRGEnv" begin
             function get_spaces(sym::Type{<:Sector})
@@ -61,7 +61,7 @@ if !is_buildkite
             peps = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
             env = CTMRGEnv(randn, ComplexF64, peps, Venv)
             jl_env = adapt(JLArray, env)
-            @test TensorKit.storagetype(jl_env) <: JLArray 
+            @test TensorKit.storagetype(jl_env) <: JLArray
         end
     end
 end
