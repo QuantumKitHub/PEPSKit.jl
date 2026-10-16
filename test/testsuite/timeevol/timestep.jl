@@ -32,5 +32,22 @@ function timeevol_timestep(AT)
         @test ψ1 == ψ2 == ψ3
         @test env1 == env2 == env3
         @test info1 == info2 == info3
+
+        # Restart an exhausted evolver using the public timestep keywords.
+        ψreset, envreset, inforeset = timestep(evolver, ψ0, env0; iter = 0, t = 0.0)
+        fresh = TimeEvolver(ψ0, H, dt, nstep, alg, env0)
+        ψfresh, envfresh, infofresh = timestep(fresh, ψ0, env0)
+        @test ψreset == ψfresh
+        @test envreset == envfresh
+        @test inforeset == infofresh
+        @test evolver.state.iter == 1
+        @test evolver.state.t == dt
+
+        # Iteration and time offsets affect bookkeeping, not the update.
+        ψoffset, envoffset, infooffset = timestep(evolver, ψ0, env0; iter = 7, t = 1.25)
+        @test ψoffset == ψfresh
+        @test envoffset == envfresh
+        @test evolver.state.iter == 8
+        @test evolver.state.t == infooffset.t == 1.25 + dt
     end
 end
