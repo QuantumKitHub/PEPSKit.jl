@@ -74,9 +74,7 @@ end
 # gauge fix sign of spectrum such that the eigenvalue of largest magnitude is positive
 function corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG)
     S = eigh_vals(C)
-    λmin = minimum(minimum, (b for (_, b) in blocks(S)))
-    λmax = maximum(maximum, (b for (_, b) in blocks(S)))
-    if -λmin > λmax
+    if -minimum(S) > maximum(S)
         for (_, b) in blocks(S)
             b .= .-reverse(b) # spectrum of -C: negated and, to stay ascending, reversed
         end
