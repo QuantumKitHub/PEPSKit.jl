@@ -82,7 +82,7 @@ function compute_relative_phases(
 
         # Random MPS of same bond dimension
         M = map(Tsfinal) do t
-            randn(scalartype(t), codomain(t) ← domain(t))
+            randn(storagetype(T), codomain(t) ← domain(t))
         end
 
         return _scrambling_gauge_matrix(Tsprev, Tsfinal, M, Arnoldi())
@@ -98,7 +98,7 @@ function compute_relative_phases(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, 
 
     # Random Hermitian MPS of same bond dimension
     # (make Hermitian such that T-M transfer matrix has real eigenvalues)
-    M = _project_hermitian(randn(scalartype(Tfinal), space(Tfinal)))
+    M = _project_hermitian(randn(storagetype(Tfinal), space(Tfinal)))
 
     σ = _scrambling_gauge_matrix([Tprev], [Tfinal], [M], Lanczos())
     return CTMRGEnvGaugeTransform(fill(σ, (4, 1, 1)), fill(σ', (4, 1, 1)))
@@ -133,7 +133,7 @@ end
 
 function initialize_right_fixedpoint(tops, bottoms)
     ρ0 = randn(
-        scalartype(tops), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
+        TensorKit.promote_storagetype(tops...), space(tops[end], numind(tops[end]))' ← space(bottoms[end], numind(bottoms[end]))'
     )
     return ρ0
 end

@@ -17,7 +17,7 @@ $(TYPEDFIELDS)
     maxiter::Int = 100
 end
 
-function _trivial_gates(elt::Type{<:Number}, lattice::Matrix{S}) where {S <: ElementarySpace}
+function _trivial_gates(elt::Type, lattice::Matrix{S}) where {S <: ElementarySpace}
     Nr, Nc = size(lattice)
     gates = map(Iterators.product(1:2, 1:Nc, 1:Nr)) do (d, c, r)
         site1 = CartesianIndex(r, c)
@@ -38,7 +38,7 @@ Fix the gauge of `psi` using trivial simple update.
 """
 function gauge_fix(psi::InfiniteState, alg::SUGauge)
     time0 = time()
-    gates = _trivial_gates(scalartype(psi), physicalspace(psi))
+    gates = _trivial_gates(storagetype(psi), physicalspace(psi))
     trunc = _get_fixedspacetrunc(psi)
     su_alg = SimpleUpdate(; trunc, bipartite = _is_bipartite(psi))
     wts0 = SUWeight(psi)
