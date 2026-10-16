@@ -22,8 +22,8 @@ Module containing default algorithm parameter values and arguments.
 * `trunc=:$(Defaults.trunc)` : Truncation scheme for SVDs and other decompositions.
     - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncerror` : Additionally supply error threshold `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate to the maximal virtual dimension of `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 
@@ -148,7 +148,7 @@ const ctmrg_tol_max = 1.0e-4
 const ctmrg_tol_factor = 1.0e-3
 
 # SVD forward & reverse
-const trunc = :FixedSpaceTruncation # ∈ {:FixedSpaceTruncation, :notrunc, :truncerror, :truncspace, :trunctol}
+const trunc = :FixedSpaceTruncation # ∈ {:FixedSpaceTruncation, :notrunc, :truncerror, :truncrank, :truncspace, :trunctol}
 const rrule_degeneracy_atol = 1.0e-13
 const svd_fwd_alg = :DefaultAlgorithm # ∈ {:<MatrixAlgebraKit.SVDAlgorithms>, :GKL}
 const svd_rrule_tol = ctmrg_tol
