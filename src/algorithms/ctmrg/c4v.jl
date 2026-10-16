@@ -257,5 +257,6 @@ function initialize_singlet_c4v_env(T, Vpeps::ElementarySpace, Venv::ElementaryS
     fill!(diag, 1)
     corner₀ = DiagonalTensorMap(diag, Venv)
     corner₀.data[2:end] .= zero(real(eltype(T)))
-    return initialize_singlet_c4v_env(similarstoragetype(storagetype(state), real(eltype(T))), Vpeps, Venv)
+    edge₀ = permute(id(T, Venv ⊗ Vpeps), ((1, 2, 4), (3,)))
+    return CTMRGEnv(corner₀, edge₀)
 end
