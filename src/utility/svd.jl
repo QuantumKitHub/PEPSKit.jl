@@ -185,8 +185,8 @@ Construct an `IterSVD` algorithm struct based on the following keyword arguments
 end
 _default_svd_rrule_alg(::IterSVD) = :TruncPullback
 
-random_start_vector(t::AbstractMatrix) = randn(scalartype(t), size(t, 1))
-deterministic_start_vector(t::AbstractMatrix) = ones(scalartype(t), size(t, 1))
+random_start_vector(t::AbstractMatrix) = randn(storagetype(t), size(t, 1))
+deterministic_start_vector(t::AbstractMatrix) = fill!(similar(t, size(t, 1)), one(scalartype(t)))
 
 # Compute SVD data block-wise using KrylovKit algorithm
 # TODO: redefine _empty_svdtensors, _create_svdtensors
@@ -206,13 +206,13 @@ end
 function MatrixAlgebraKit.svd_trunc!(f, alg::TruncatedAlgorithm{<:IterSVD})
     U, S, Vᴴ = svd_trunc_no_error!(f, alg)
     truncation_error =
-        (trunc isa NoTruncation || isempty(blocksectors(f))) ? abs(zero(scalartype(f))) : norm(U * S * Vᴴ - f)
+        (alg.trunc isa NoTruncation || isempty(blocksectors(f))) ? abs(zero(scalartype(f))) : norm(U * S * Vᴴ - f)
     return U, S, Vᴴ, truncation_error
 end
 
 # Copy from TensorKit v0.14 internal functions
 function _create_svdtensors(t::TensorMap, SVDdata, dims)
-    T = scalartype(t)
+    T = storagetype(t)
     S = spacetype(t)
     W = S(dims)
 
@@ -303,7 +303,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_full_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
@@ -333,7 +333,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_full_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δt = svd_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV, inds;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δt, NoTangent()
@@ -358,7 +358,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_trunc_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δf = svd_trunc_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()
@@ -383,7 +383,7 @@ function ChainRulesCore.rrule(
     function svd_trunc!_trunc_pullback(ΔUSV′)
         ΔUSV = unthunk.(ΔUSV′)
         Δf = svd_trunc_pullback!(
-            zeros(scalartype(t), space(t)), t, (U, S, V⁺), ΔUSV;
+            zeros(storagetype(t), space(t)), t, (U, S, V⁺), ΔUSV;
             gauge_atol = gtol(ΔUSV), degeneracy_atol = alg.rrule_alg.degeneracy_atol,
         )
         return NoTangent(), Δf, NoTangent()

@@ -96,7 +96,7 @@ function ChainRulesCore.rrule(
     gtol = _get_pullback_gauge_tol(alg.rrule_alg.verbosity)
 
     function left_orth!_pullback(ΔQR)
-        Δt = zeros(scalartype(t), space(t))
+        Δt = zeros(storagetype(t), space(t))
         MatrixAlgebraKit.qr_pullback!(Δt, t, QR, unthunk.(ΔQR); gauge_atol = gtol(ΔQR))
         return NoTangent(), Δt, NoTangent()
     end
