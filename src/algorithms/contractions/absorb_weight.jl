@@ -48,18 +48,41 @@ function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
         row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
-    Np = numout(t)
+    return _absorb_weight(t, weights, row, col, virt_axes; inv)
+end
+
+"""
+Absorb weights on the virtual directions in `virt_axes`, or remove them when `inv = true`.
+
+- `virt_axes` selects virtual directions using `1 = NORTH`, `2 = EAST`, etc., regardless of the current leg order.
+- `input_axes` specifies how the legs of the input `t` are already permuted with respect to the standard order.
+  For example, `input_axes = (5, 1, 2, 4, 3)` for a PEPS tensor means the legs are currently ordered as west, physical, north, south, east.
+- `output_perm` specifies how the returned tensor should permute the legs with respect to the standard order.
+  For example, `output_perm = ((5, 1, 2, 4), (3,))` puts west, physical, north, south in the codomain and east in the domain.
+- There are always four virtual legs on the square lattice, so the physical leg count is `numind(t) - 4`.
+"""
+function _absorb_weight(
+        t::AbstractTensorMap, weights::SUWeight, row::Int, col::Int,
+        virt_axes::NTuple{N, Int}; inv::Bool = false,
+        input_axes::Tuple = ntuple(identity, numind(t)),
+        output_perm::Tuple{Tuple, Tuple} = (
+            ntuple(identity, numind(t) - 4), ntuple(i -> numind(t) - 4 + i, 4),
+        )
+    ) where {N}
+    Np = numind(t) - 4
     vax = first(virt_axes)
+    axes, biperm = _permute_to_last(input_axes, vax + Np)
     wt = weight_to_absorb(weights, row, col, vax; inv)
-    axes, t2 = absorb_first_weight(t, wt, vax)
+    # Allocate the first result to preserve the input and allow scalar promotion.
+    t2 = permute(t, biperm) * wt
     for vax in Base.tail(virt_axes)
         axes, biperm = _permute_to_last(axes, vax + Np)
         wt = weight_to_absorb(weights, row, col, vax; inv)
-        # use `*` to make absorption/removal twist-free
-        t2 = permute(t2, biperm) * wt
+        # Diagonal composition is twist-free and only mutates the intermediate.
+        t2 = rmul!(permute(t2, biperm), wt)
     end
     perm_back = invperm(axes)
-    return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
+    return permute(t2, map(p -> map(i -> perm_back[i], p), output_perm))
 end
 
 """
@@ -85,14 +108,4 @@ function weight_to_absorb(
     )
     (ax == SOUTH || ax == WEST) && return transpose(wt)
     return wt
-end
-
-function absorb_first_weight(
-        t::Union{PEPSTensor, PEPOTensor}, wt::DiagonalTensorMap, vax::Int
-    )
-    Np = numout(t)
-    axes, biperm = _permute_to_last(ntuple(identity, numind(t)), vax + Np)
-    # use `*` to make absorption/removal twist-free
-    t2 = permute(t, biperm) * wt
-    return axes, t2
 end

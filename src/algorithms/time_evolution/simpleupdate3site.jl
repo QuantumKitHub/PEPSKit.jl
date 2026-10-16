@@ -13,14 +13,19 @@ function _unfuse_physicalspace(
     return O_unfused, F
 end
 
+"""
+Absorb open-leg weights directly into the cluster's MPS layout.
+"""
 function _get_cluster_with_weights(
         state::InfiniteState, sites::Vector{CartesianIndex{2}}, env::SUWeight
     )
     Ms, open_vaxs, perms = _get_cluster(state, sites)
-    _absorb_weight!(Ms, sites, open_vaxs, env; inv = false)
     Np = (state isa InfinitePEPS) ? Val(1) : Val(2)
+    Ms_mps = map(Ms, sites, open_vaxs, perms) do M, site, vaxs, perm
+        return _absorb_weight(M, env, site[1], site[2], vaxs; output_perm = perm)
+    end
     invperms = map(p -> _inv_mpo_perm(p, Np), perms)
-    return _permute_cluster(Ms, perms), open_vaxs, invperms
+    return Ms_mps, open_vaxs, invperms
 end
 
 """
@@ -57,9 +62,10 @@ function _su_iter!(
         env[d, r, c] = normalize!(wt_new, Inf)
     end
     # update state tensors
-    for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
-        # restore original axes order and remove weights on open axes of the cluster
-        M′ = absorb_weight(permute(M, invperm), env, s, vaxs; inv = true)
+    for (M, s, perm_back, vaxs) in zip(Ms, sites, invperms, open_vaxs)
+        # Remove weights directly from MPS order, then restore the site's layout.
+        input_axes = invperm((perm_back[1]..., perm_back[2]...))
+        M′ = _absorb_weight(M, env, s[1], s[2], vaxs; inv = true, input_axes)
         state[s] = normalize!(M′, Inf)
     end
     return ϵ
