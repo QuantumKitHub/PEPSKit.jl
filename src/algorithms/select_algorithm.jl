@@ -14,6 +14,19 @@ other input, including `nothing`.
 parent_alg(alg) = alg
 parent_alg(alg::DynamicTol) = parent_alg(alg.alg)
 
+"""Construct a gradient algorithm with split-CTMRG solver defaults, preserving explicit choices."""
+function _gradient_algorithm(gradient_alg, boundary_alg)
+    if boundary_alg isa SplitCTMRG && gradient_alg isa NamedTuple &&
+            get(gradient_alg, :alg, Defaults.gradient_alg) === :FixedPointGradient
+        solver_alg = get(gradient_alg, :solver_alg, (;))
+        if solver_alg isa NamedTuple
+            solver_alg = merge((; alg = :GMRES), solver_alg)
+            gradient_alg = merge(gradient_alg, (; solver_alg))
+        end
+    end
+    return _alg_or_nt(GradientAlgorithm, gradient_alg)
+end
+
 """
     _dynamic_tol_or_alg(alg; dynamic_tols::Bool, tol_min::Real, tol_max::Real, tol_factor::Real)
 
@@ -101,7 +114,7 @@ function select_algorithm(
         )
         gradient_kwargs = merge(defaults, gradient_alg)
         dynamic_tol_kwargs, gradient_kwargs = _pop_dynamic_tol_kwargs(gradient_kwargs)
-        gradient_alg = GradientAlgorithm(; gradient_kwargs...)
+        gradient_alg = _gradient_algorithm(gradient_kwargs, parent_alg(boundary_alg))
         gradient_alg = _dynamic_tol_or_alg(gradient_alg; dynamic_tol_kwargs...)
     end
 

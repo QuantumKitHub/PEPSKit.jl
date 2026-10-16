@@ -1,5 +1,5 @@
 using Test, Random, LinearAlgebra
-using TensorKit, MatrixAlgebraKit, PEPSKit, Adapt
+using TensorKit, MatrixAlgebraKit, PEPSKit, Adapt, Zygote
 using PEPSKit: ctmrg_iteration, WEST
 
 """Construct a dense Fishman cut projector independently from fourth roots of the Gram matrices."""
@@ -44,9 +44,92 @@ function ctmrg_split_projectors(AT)
             spectrum = values
             support = [ones(min(retained, rank)); zeros(4 - min(retained, rank))]
             @test Array(info.S.data) ≈ normalize(spectrum)[1:rank]
-            @test count(!iszero, info.S.data) == min(count(!iszero, values), rank)
+            @test count(!iszero, info.S.data) == min(retained, rank)
             @test convert(Array, projectors[1] * projectors[2]) ≈ (norm(spectrum) / sum(spectrum)) * Diagonal(support)
             @test all(P -> isfinite(norm(P)), projectors)
+        end
+    end
+end
+
+"""Check that Fishman square roots suppress subthreshold modes in both values and derivatives."""
+function ctmrg_split_fishman_cutoff(AT)
+    Random.seed!(37914)
+    return @testset "Fishman half-spectrum cutoff ($AT)" begin
+        V = ComplexSpace(4)
+        values = [1.0, 1.0e-6, 1.0e-15, 0.0]
+        expected = [1.0, 1.0e-3, 0.0, 0.0]
+        for scale in (1.0, 1.0e200, 1.0e-200)
+            S = adapt(AT, DiagonalTensorMap(scale * values, V))
+            root = PEPSKit._split_fishman_sqrt(S)
+            @test Array(root.data) / sqrt(scale) ≈ expected
+            @test space(root) == space(S)
+        end
+        input = adapt(AT, values)
+        loss(x) = sum(abs2, PEPSKit._split_fishman_sqrt(DiagonalTensorMap(x, V)).data)
+        gradient = only(Zygote.gradient(loss, input))
+        @test Array(gradient) ≈ [1.0, 1.0, 0.0, 0.0]
+        @test all(isfinite, gradient)
+
+        # Tensor contractions send a dense cotangent into the diagonal square root.
+        S = adapt(AT, DiagonalTensorMap(values, V))
+        weight = adapt(AT, randn(ComplexF64, V ← V))
+        weight += weight'
+        gradient = only(Zygote.gradient(X -> real(dot(weight, PEPSKit._split_fishman_sqrt(X))), S))
+        expected = real.(diag(convert(Array, weight))) .* [0.5, 500.0, 0.0, 0.0]
+        @test gradient ≈ adapt(AT, DiagonalTensorMap(expected, V))
+        @test all(isfinite, gradient.data)
+    end
+end
+
+"""Check split compression and its pullback when unpivoted QR/LQ has internal zero pivots."""
+function ctmrg_split_compression(AT)
+    Random.seed!(37915)
+    return @testset "Rank-deficient split compression ($AT)" begin
+        alg = SplitCTMRG(; verbosity = 0).projector_alg
+        for T in (Float64, ComplexF64), left in (true, false), deficient in (false, true)
+            dense = randn(T, 8, 6)
+            if deficient
+                dense[:, 2] .= 0
+                dense[:, 4] .= 0
+            end
+            left || (dense = Matrix(dense'))
+            A = adapt(AT, TensorMap(dense, ComplexSpace(size(dense, 1)) ← ComplexSpace(size(dense, 2))))
+            factor = PEPSKit._split_compress_half(A, alg, Val(left))
+            gram(X) = left ? X' * X : X * X'
+            @test gram(factor) ≈ gram(A)
+            if !deficient
+                reference = left ? last(left_orth(A, QRAdjoint())) : first(right_orth(A, LQAdjoint()))
+                @test factor == reference
+            end
+            V = left ? domain(A)[1] : codomain(A)[1]
+            H = adapt(AT, randn(T, V ← V))
+            H += H'
+            loss(X) = real(dot(H, gram(PEPSKit._split_compress_half(X, alg, Val(left)))))
+            gradient = only(Zygote.gradient(loss, A))
+            exact = left ? 2 * A * H : 2 * H * A
+            @test isfinite(norm(gradient))
+            @test gradient ≈ exact atol = 1.0e-10 rtol = 1.0e-10
+            direction = normalize(adapt(AT, randn(T, space(A))))
+            epsilon = 1.0e-5
+            finite = (loss(A + epsilon * direction) - loss(A - epsilon * direction)) / (2 * epsilon)
+            @test real(dot(gradient, direction)) ≈ finite atol = 1.0e-7 rtol = 1.0e-7
+            if deficient
+                trunc = truncspace(ComplexSpace(3))
+                direct, = PEPSKit.compute_projector((A, A'), alg; trunc)
+                compressed, = PEPSKit.compute_projector((A, A'), alg; trunc, compress = true)
+                @test compressed[1] * compressed[2] ≈ direct[1] * direct[2]
+                W = domain(A)[1]
+                weight = adapt(AT, randn(T, W ← W))
+                weight += weight'
+                cut_loss = X -> begin
+                    pair, = PEPSKit.compute_projector((X, X'), alg; trunc, compress = true)
+                    return real(dot(weight, pair[1] * pair[2]))
+                end
+                gradient = only(Zygote.gradient(cut_loss, A))
+                finite = (cut_loss(A + epsilon * direction) - cut_loss(A - epsilon * direction)) / (2 * epsilon)
+                @test isfinite(norm(gradient))
+                @test real(dot(gradient, direction)) ≈ finite atol = 1.0e-6 rtol = 1.0e-5
+            end
         end
     end
 end

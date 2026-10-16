@@ -85,10 +85,16 @@ using .CompressLocal
 # -----
 module CTMRGSplit
     include("ctmrg/split.jl")
-    export ctmrg_split_projectors
+    export ctmrg_split_projectors, ctmrg_split_compression, ctmrg_split_fishman_cutoff
     export ctmrg_split_environment, ctmrg_split_unitcell, ctmrg_split_expectation_values
 end
 using .CTMRGSplit
+
+module CTMRGConvergence
+    include("ctmrg/convergence.jl")
+    export ctmrg_split_gradient_defaults, ctmrg_fixedpoint_forward_info
+end
+using .CTMRGConvergence
 
 module CTMRGContractions
     include("ctmrg/contractions.jl")

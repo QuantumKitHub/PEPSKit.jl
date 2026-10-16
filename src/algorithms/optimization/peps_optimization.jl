@@ -63,7 +63,7 @@ function PEPSOptimize(;
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
-    gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
+    gradient_algorithm = _gradient_algorithm(gradient_alg, parent_alg(boundary_algorithm))
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
     precondition_algorithm = _alg_or_nt(PreconditionAlgorithm, precondition_alg)
 

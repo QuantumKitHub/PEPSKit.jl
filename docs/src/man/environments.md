@@ -23,8 +23,10 @@ Use `trunc` for the outer projectors and `interlayer_trunc` for the interlayer p
 When omitted, `interlayer_trunc` inherits `trunc`; the default `FixedSpaceTruncation()` preserves the existing spaces of each bond independently.
 `SplitCTMRGEnv(env::CTMRGEnv)` factorizes an existing environment exactly, while its `trunc` keyword can reduce the interlayer spaces.
 `CTMRGEnv(env::SplitCTMRGEnv)` contracts the interlayer bonds so the existing expectation-value routines can be reused.
-This version supports PEPS overlap networks, full projectors, and automatic differentiation through finite sweeps or [`FixedPointGradient`](@ref).
-The half-environment factors use direct square roots of their singular values; the projector pseudoinverse masks singular values below the relative cutoff `eps(real(scalartype(ψ)))^(3 / 4)`.
+This version supports PEPS overlap networks, Fishman projectors, and automatic differentiation through finite sweeps or [`FixedPointGradient`](@ref).
+The half-environment factors use direct square roots of their singular values, masking weights whose original singular values fall below the relative cutoff `eps(real(scalartype(ψ)))^(3 / 4)`; the projector pseudoinverse uses the same cutoff.
+
+GMRES is the default solver for `FixedPointGradient` when optimization uses `SplitCTMRG`; select another solver with `gradient_alg = (; solver_alg = (; alg = :Arnoldi))` or supply a gradient-algorithm instance.
 
 Fixed-point differentiation uses [`ScramblingEnvGauge`](@ref PEPSKit.ScramblingEnvGauge) on the alternating ket and bra boundary factors to align both outer and interlayer gauges.
 The ordinary and split environments use the same boundary-MPS gauge method, with each split edge contributing two MPS sites instead of one.

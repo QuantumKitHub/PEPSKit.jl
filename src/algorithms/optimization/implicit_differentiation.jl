@@ -288,9 +288,9 @@ function _rrule(
     envinit isa SplitCTMRGEnv && scalartype(envinit) <: Real &&
         throw(ArgumentError("Split fixed-point gradients require a complex environment; use complex(envinit)."))
 
-    env, = leading_boundary(envinit, state, alg)
+    env, info = leading_boundary(envinit, state, alg)
 
-    info, env_vjp = _fixedpoint_vjp(config, state, env, alg)
+    _, env_vjp = _fixedpoint_vjp(config, state, env, alg)
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)

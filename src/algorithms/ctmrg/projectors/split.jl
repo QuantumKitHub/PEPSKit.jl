@@ -3,8 +3,9 @@ $(TYPEDEF)
 
 Projector algorithm for [`SplitCTMRG`](@ref), constructing the green (Fig. 3), teal (Fig. 7), yellow (Fig. 8), and red (Fig. 9) projector pairs of [Naumann et al.](@cite naumann_variationally_2025).
 Each projector pair follows [Fishman et al.](@cite fishman_faster_2018), Appendix A: SVD-factorize each environment half, keep its square-root-weighted factor facing the cut, and truncate the product of these factors.
-The half-environment singular values are weighted by direct square roots; the final projector pseudoinverse uses the relative cutoff of [`sdiag_pow`](@ref).
+The square-root weights of the half-environment singular values are masked using the relative cutoff of [`sdiag_pow`](@ref); the final projector pseudoinverse uses the same cutoff.
 QR compression is applied to the environment halves for the yellow projectors and, when the truncation permits, the quarter-environments for the red projectors before factorization.
+SVD compression is used instead when a QR/LQ triangular factor is numerically rank deficient.
 
 ## Fields
 
@@ -29,15 +30,45 @@ end
 
 PROJECTOR_SYMBOLS[:SplitProjector] = SplitProjector
 
-"""Factor split environment halves into square-root-weighted Fishman factors facing their shared cut."""
-function _split_fishman_halves(Q::AbstractTensorMap, Q_next::AbstractTensorMap, alg::SplitProjector)
+"""Use an untruncated dense decomposition for split environment factors."""
+function _split_half_svd_algorithm(alg::SplitProjector)
     half_alg = decomposition_algorithm(alg)
     half_alg.fwd_alg isa IterSVD && (half_alg = SVDAdjoint())
-    half_alg = @set half_alg.fwd_alg = TruncatedAlgorithm(half_alg.fwd_alg, notrunc())
+    return @set half_alg.fwd_alg = TruncatedAlgorithm(half_alg.fwd_alg, notrunc())
+end
+
+"""Compress a split environment with QR/LQ, falling back to SVD for a rank-deficient triangular factor."""
+function _split_compress_half(t::AbstractTensorMap, alg::SplitProjector, ::Val{left}) where {left}
+    factor = left ? last(left_orth(t, QRAdjoint())) : first(right_orth(t, LQAdjoint()))
+    fullrank = ignore_derivatives() do
+        all(blocks(factor)) do (_, b)
+            tolerance = MatrixAlgebraKit.default_pullback_rank_atol(b)
+            return all(d -> abs(d) > tolerance, diagview(b))
+        end
+    end
+    fullrank && return factor
+    # Unpivoted QR/LQ can have internal zero pivots followed by nonzero pivots.
+    # Its triangular pullback solve is then singular even when the last pivot is nonzero.
+    U, S, V = svd_trunc_no_error(t, _split_half_svd_algorithm(alg))
+    return left ? S * V : U * S
+end
+
+"""Mask negligible half-environment square-root weights to suppress amplified roundoff."""
+function _split_fishman_sqrt(S::DiagonalTensorMap)
+    mask = ignore_derivatives() do
+        cutoff = eps(real(scalartype(S)))^(3 / 4) * norm(S, Inf)
+        DiagonalTensorMap(ifelse.(S.data .>= cutoff, one(scalartype(S)), zero(scalartype(S))), space(S, 1))
+    end
+    return sdiag_pow(S, 0.5) * mask
+end
+
+"""Factor split environment halves into square-root-weighted Fishman factors facing their shared cut."""
+function _split_fishman_halves(Q::AbstractTensorMap, Q_next::AbstractTensorMap, alg::SplitProjector)
+    half_alg = _split_half_svd_algorithm(alg)
     _, S, V = svd_trunc_no_error(Q, half_alg)
     U_next, S_next, _ = svd_trunc_no_error(Q_next, half_alg)
-    Q = sdiag_pow(S, 0.5) * V
-    Q_next = U_next * sdiag_pow(S_next, 0.5)
+    Q = _split_fishman_sqrt(S) * V
+    Q_next = U_next * _split_fishman_sqrt(S_next)
     return Q / norm(Q), Q_next / norm(Q_next)
 end
 
@@ -51,8 +82,8 @@ function compute_projector(
     Q = Q / norm(Q)
     Q_next = Q_next / norm(Q_next)
     if compress
-        _, Q = left_orth(Q, QRAdjoint())
-        Q_next, _ = right_orth(Q_next, LQAdjoint())
+        Q = _split_compress_half(Q, alg, Val(true))
+        Q_next = _split_compress_half(Q_next, alg, Val(false))
     end
 
     # All four colors use Fishman factors before the final truncated SVD.
@@ -174,8 +205,8 @@ function _split_red_projector(
     if reduce
         # SE = Qb * Rb and NE = Lt * Qt with isometric Qb and Qt.
         # Their factors retain the norms and nonzero spectrum of (SE * SW) * (NW * NE).
-        _, Rb = left_orth(SE, QRAdjoint())
-        Lt, _ = right_orth(NE, LQAdjoint())
+        Rb = _split_compress_half(SE, alg, Val(true))
+        Lt = _split_compress_half(NE, alg, Val(false))
         return compute_projector((Rb * SW, NW * Lt), alg; trunc)
     end
     # Preserve zero-spectrum dimensions and custom truncation ordering on the full halves.
