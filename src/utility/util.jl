@@ -45,6 +45,7 @@ function ChainRulesCore.rrule(
     spow_minus1_conj = scale!(sdiag_pow(s', pow - 1; tol), pow)
     function sdiag_pow_pullback(c̄_)
         c̄ = unthunk(c̄_)
+        # pow is a fixed algorithm parameter in PEPSKit, so we omit its derivative.
         return (ChainRulesCore.NoTangent(), _elementwise_mult(c̄, spow_minus1_conj), ChainRulesCore.NoTangent())
     end
     return spow, sdiag_pow_pullback
