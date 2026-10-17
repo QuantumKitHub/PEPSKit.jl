@@ -56,11 +56,13 @@ if !is_buildkite
                 return Vphy, Venv, Nspaces, Espaces
             end
             Vphy, Venv, Nspaces, Espaces = get_spaces(Z2Irrep)
-            Pspaces = fill(Vp, size(Nspaces))
-            peps = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
-            env = CTMRGEnv(randn, ComplexF64, peps, Venv)
-            jl_env = adapt(JLArray, env)
-            @test TensorKit.storagetype(jl_env) <: JLArray
+            for Vp in [Vphy]
+                Pspaces = fill(Vp, size(Nspaces))
+                peps = InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces)
+                env = CTMRGEnv(randn, ComplexF64, peps, Venv)
+                jl_env = adapt(JLArray, env)
+                @test TensorKit.storagetype(jl_env) <: JLArray
+            end
         end
     end
 end
