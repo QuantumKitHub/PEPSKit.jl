@@ -247,13 +247,24 @@ function _flip_virtuals!(
         Ms::Vector{T}, flips::Vector{Bool}; inv::Bool = false
     ) where {T <: GenericMPSTensor}
     @assert length(flips) == length(Ms) - 1
-    for (n, flip) in enumerate(flips)
-        !flip && continue
+    for (n, fl) in enumerate(flips)
+        !fl && continue
         M1, M2 = Ms[n], Ms[n + 1]
-        Ms[n] = TensorKit.flip(M1, numind(M1); inv)
-        Ms[n + 1] = TensorKit.flip(M2, 1; inv)
+        Ms[n] = flip(M1, numind(M1); inv)
+        Ms[n + 1] = flip(M2, 1; inv)
     end
     return Ms
+end
+
+function _apply_proj_left(Pb::MPSBondTensor, m::GenericMPSTensor{S, N}) where {S, N}
+    pP = ((1,), (2,))
+    pM = ((1,), ntuple(i -> i + 1, N))
+    pPM = (codomainind(m), domainind(m))
+    return tensorcontract(Pb, pP, false, m, pM, false, pPM)
+end
+
+function _apply_proj_right(m::GenericMPSTensor, Pa::MPSBondTensor)
+    return m * twistdual(Pa, 1)
 end
 
 """
@@ -266,11 +277,8 @@ function _cluster_truncate!(
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
-        Ms[i] = Ms[i] * twistdual(Pa, 1)
-        pP = ((1,), (2,))
-        pM = ((1,), ntuple(i -> i + 1, numind(eltype(Ms)) - 1))
-        pPM = (codomainind(Ms[i + 1]), domainind(Ms[i + 1]))
-        Ms[i + 1] = tensorcontract(Pb, pP, false, Ms[i + 1], pM, false, pPM)
+        Ms[i] = _apply_proj_right(Ms[i], Pa)
+        Ms[i + 1] = _apply_proj_left(Pb, Ms[i + 1])
     end
     return wts, ϵs, Pas, Pbs
 end

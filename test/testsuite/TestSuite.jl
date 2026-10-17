@@ -25,6 +25,12 @@ module BondEnvCTM
 end
 using .BondEnvCTM
 
+module BondEnvNTU
+    include("bondenv/benv_ntu.jl")
+    export bondenv_ntu
+end
+using .BondEnvNTU
+
 module BondEnvGaugeFix
     include("bondenv/benv_gaugefix.jl")
     export bondenv_gaugefix
@@ -214,7 +220,7 @@ using .TimeEvolClusterProjectors
 
 module TimeEvolSiteDepTruncation
     include("timeevol/sitedep_truncation.jl")
-    export timeevol_sitedep_rotation, timeevol_sitedep_su
+    export timeevol_sitedep_rotation, timeevol_sitedep_su, timeevol_sitedep_ntu
 end
 using .TimeEvolSiteDepTruncation
 
@@ -226,7 +232,7 @@ using .TimeEvolJ1J2FiniteT
 
 module TimeEvolTimestep
     include("timeevol/timestep.jl")
-    export timeevol_timestep
+    export timeevol_timestep, timeevol_timestep_ntu
 end
 using .TimeEvolTimestep
 
