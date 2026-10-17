@@ -7,7 +7,10 @@ function utility_qr_wrapper(AT)
     Random.seed!(73194)
     qr_alg, lq_alg = QRAdjoint(), LQAdjoint()
     factorize = X -> right_orth(X, lq_alg)
-    reference = X -> reverse(adjoint.(left_orth(X', qr_alg)))
+    # Explicit tuple adjoints avoid costly inference in the broadcast pullback.
+    reference = X -> let (q, r) = left_orth(X', qr_alg)
+        (r', q')
+    end
     spaces = (ComplexSpace(2), Vect[FermionParity](0 => 1, 1 => 1), Vect[FermionNumber](-1 => 1, 0 => 1, 1 => 1))
     return @testset "QR/LQ wrapper ($(sectortype(V)), $nout ← $nin, $AT)" for V in spaces, (nout, nin) in ((2, 3), (3, 2))
         output, input = (prod(ntuple(i -> isodd(i) ? V : V', n)) for n in (nout, nin))
