@@ -47,7 +47,6 @@ if !is_buildkite
         end
         @testset "CTMRGEnv" begin
             function get_spaces(sym::Type{<:Sector})
-                @assert sym in syms
                 Nr, Nc = 2, 2
                 Vphy = Vect[sym](0 => 1, 1 => 1)
                 V = Vect[sym](0 => 1, 1 => 2)
