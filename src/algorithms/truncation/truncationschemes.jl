@@ -37,24 +37,27 @@ Base.@propagate_inbounds Base.getindex(trunc::SiteDependentTruncation, I...) =
 
 # TODO: _is_bipartite(trunc::SiteDependentTruncation)
 
-const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Type{<:TruncationStrategy}}(
-    :notrunc => MatrixAlgebraKit.NoTruncation,
-    :truncerror => MatrixAlgebraKit.TruncationByError,
-    :truncrank => MatrixAlgebraKit.TruncationByOrder,
-    :trunctol => MatrixAlgebraKit.TruncationByValue,
-    :truncspace => TruncationSpace,
+const TRUNCATION_STRATEGY_SYMBOLS = IdDict{Symbol, Base.Callable}(
+    :notrunc => notrunc,
+    :truncerror => (η::Real) -> truncerror(; atol = η),
+    :truncrank => truncrank,
+    :trunctol => (η::Real) -> trunctol(; atol = η),
+    :truncspace => truncspace,
     :FixedSpaceTruncation => FixedSpaceTruncation,
     :SiteDependentTruncation => SiteDependentTruncation,
 )
 
 # Should be TruncationStrategy but rename to avoid type piracy
 function _TruncationStrategy(; alg = Defaults.trunc, η = nothing)
-    # replace Symbol with TruncationStrategy type
+    # replace Symbol with TruncationStrategy constructor
     haskey(TRUNCATION_STRATEGY_SYMBOLS, alg) ||
         throw(ArgumentError("unknown truncation strategy: $alg"))
-    alg_type = TRUNCATION_STRATEGY_SYMBOLS[alg]
+    f = TRUNCATION_STRATEGY_SYMBOLS[alg]
 
-    return isnothing(η) ? alg_type() : alg_type(η)
+    args = isnothing(η) ? () : (η,)
+    applicable(f, args...) ||
+        throw(ArgumentError("invalid truncation parameter for $alg: η = $η"))
+    return f(args...)
 end
 
 function truncation_strategy(
