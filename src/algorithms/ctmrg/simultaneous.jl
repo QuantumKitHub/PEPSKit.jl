@@ -117,6 +117,27 @@ function simultaneous_projectors(
     return compute_projector(ec, alg′)
 end
 
+"""Compute the randomized projector with the current truncation and previous sector dimensions."""
+function simultaneous_projectors(
+        coordinate, enlarged_corners::Array{E, 3}, env, alg::RandomizedProjector
+    ) where {E}
+    coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    alg′ = _set_decomposition_truncation(alg, trunc)
+    rowsize, colsize = size(enlarged_corners)[2:3]
+    coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
+    coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
+    coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
+    fq = FourQuadrants(
+        enlarged_corners[coordinate4...],
+        enlarged_corners[coordinate...],
+        enlarged_corners[coordinate2...],
+        enlarged_corners[coordinate3...],
+    )
+    last_space = space(env.edges[coordinate[1], coordinate′[2:3]...], 1)
+    return compute_projector(fq, last_space, alg′)
+end
+
 """
 $(SIGNATURES)
 
