@@ -28,7 +28,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northwest corner with appropriate row and column indices.
 """
-function fix_gauge_northwest_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_northwest_corner((row, col), env::Union{CTMRGEnv, SplitCTMRGEnv}, signs)
     return fix_gauge_corner(
         corner(env, NORTHWEST, row, col),
         signs[WEST, row, col],
@@ -41,7 +41,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northeast corner with appropriate row and column indices.
 """
-function fix_gauge_northeast_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_northeast_corner((row, col), env::Union{CTMRGEnv, SplitCTMRGEnv}, signs)
     return fix_gauge_corner(
         corner(env, NORTHEAST, row, col),
         signs[NORTH, row, col],
@@ -54,7 +54,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southeast corner with appropriate row and column indices.
 """
-function fix_gauge_southeast_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_southeast_corner((row, col), env::Union{CTMRGEnv, SplitCTMRGEnv}, signs)
     return fix_gauge_corner(
         corner(env, SOUTHEAST, row, col),
         signs[EAST, row, col],
@@ -67,7 +67,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southwest corner with appropriate row and column indices.
 """
-function fix_gauge_southwest_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_southwest_corner((row, col), env::Union{CTMRGEnv, SplitCTMRGEnv}, signs)
     return fix_gauge_corner(
         corner(env, SOUTHWEST, row, col),
         signs[SOUTH, row, col],

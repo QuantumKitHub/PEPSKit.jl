@@ -20,6 +20,9 @@ function MPSKit.expectation_value(
     return sum(term_vals)
 end
 MPSKit.expectation_value(peps::InfinitePEPS, O::LocalOperator, env) = expectation_value(peps, O, peps, env)
+function MPSKit.expectation_value(bra::InfinitePEPS, O::LocalOperator, ket::InfinitePEPS, env::SplitCTMRGEnv)
+    return expectation_value(bra, O, ket, CTMRGEnv(env))
+end
 function MPSKit.expectation_value(state::InfinitePEPO, O::LocalOperator, env)
     checklattice(state, O)
     term_vals = dtmap(collect(O.terms)) do (inds, operator)  # OhMyThreads can't iterate over O.terms directly
