@@ -42,8 +42,8 @@ exactly, and decays during the optimization according to
 ```math
 δ = \\texttt{regularization} × ‖∇f‖^2 / \\max(\\texttt{iter}, 1)
 ```
-so that the preconditioner acts conservatively far from the minimum and becomes
-increasingly aggressive as the optimization converges.
+Here `iter` counts accepted optimization steps (starting from 0) and `∇f` is the most recently tracked gradient.
+The preconditioner acts conservatively far from the minimum and becomes increasingly aggressive as the optimization converges.
 
 ## Fields
 
