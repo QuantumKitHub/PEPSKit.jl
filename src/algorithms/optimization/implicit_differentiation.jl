@@ -648,17 +648,8 @@ function PEPSKit._rrule(
     # variables of the characteristic equations, living in the full projector spaces and
     # constrained to the orthogonal complements of the isometries inside the characteristic
     # equations
-    # get the projector nullspaces
-    UL = left_null.(U)
-    VR = right_null.(V)
-
-    # instantiate the variables used in the characteristic equations
-    u = map(zip(U, UL)) do (Uc, ULc)
-        return zeros(storagetype(Uc), space(ULc, numind(ULc))' ← space(Uc, numind(Uc))')
-    end
-    v = map(zip(V, VR)) do (Vc, VRc)
-        return zeros(storagetype(Vc), space(Vc, 1) ← space(VRc, 1))
-    end
+    u = zerovector.(U)
+    v = zerovector.(V)
     is = sdiag_pow.(s, -1) # also treat them as general complex tensors
 
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
