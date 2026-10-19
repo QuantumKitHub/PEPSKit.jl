@@ -31,13 +31,13 @@ function utility_retractions(AT)
         add!(ζ, normalized_A, -real_inner(normalized_A, ζ))
 
         # Retraction preserves the tensor norm and gives a tangent path derivative.
-        A′, ξ = PEPSKit.norm_preserving_retract(A, η, α)
+        A′, ξ = PEPSKit.norm_preserving_retract(A, η, α; inner = real_inner)
         @test norm(A′) ≈ norm(A) rtol = 1.0e-12
         @test real_inner(A′, ξ) ≈ 0 atol = 1.0e-12
 
         # Transport preserves the direction norm and makes it tangent at A′.
         norm_ζ = norm(ζ)
-        PEPSKit.norm_preserving_transport!(ζ, A, η, α, A′)
+        PEPSKit.norm_preserving_transport!(ζ, A, η, α, A′; inner = real_inner)
         @test real_inner(ζ, A′) ≈ 0 atol = 1.0e-12
         @test norm(ζ) ≈ norm_ζ rtol = 1.0e-12
 
@@ -45,7 +45,7 @@ function utility_retractions(AT)
         # even for minimal VectorInterface vectors.
         for point in (A, [A], VectorInterface.MinimalMVec([A]))
             norm_point = norm(point)
-            unchanged_A, zero_derivative = PEPSKit.norm_preserving_retract(point, zerovector(point), α)
+            unchanged_A, zero_derivative = PEPSKit.norm_preserving_retract(point, zerovector(point), α; inner = real_inner)
             @test norm(unchanged_A) ≈ norm_point
             @test norm(zero_derivative) == 0
             # Mutating the returned copy must not change the input.
@@ -53,14 +53,14 @@ function utility_retractions(AT)
             @test norm(point) ≈ norm_point
         end
         # Zero-step transport returns the original direction.
-        @test PEPSKit.norm_preserving_transport!(ζ, A, zerovector(A), α, A) === ζ
+        @test PEPSKit.norm_preserving_transport!(ζ, A, zerovector(A), α, A; inner = real_inner) === ζ
 
         # Make η Hermitian-orthogonal to A so ζ has purely imaginary overlaps with both.
         η = add(η, normalized_A, -inner(normalized_A, η))
         # Such overlaps must leave ζ unchanged under real-sphere transport.
         ζ = scale(add(A, η), im)
         α = 0.3
-        A′, = PEPSKit.norm_preserving_retract(A, η, α)
-        @test PEPSKit.norm_preserving_transport!(copy(ζ), A, η, α, A′) ≈ ζ
+        A′, = PEPSKit.norm_preserving_retract(A, η, α; inner = real_inner)
+        @test PEPSKit.norm_preserving_transport!(copy(ζ), A, η, α, A′; inner = real_inner) ≈ ζ
     end
 end

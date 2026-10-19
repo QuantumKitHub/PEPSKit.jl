@@ -195,6 +195,7 @@ function VI.add!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Numbe
     return ψ₁
 end
 VI.add!!(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS, α::Number, β::Number) = add!(ψ₁, ψ₂, α, β)
+VI.inner(ψ₁::InfinitePEPS, ψ₂::InfinitePEPS) = inner(unitcell(ψ₁), unitcell(ψ₂))
 
 ## Math
 
@@ -207,7 +208,7 @@ end
 Base.:*(α::Number, A::InfinitePEPS) = InfinitePEPS(α * unitcell(A))
 Base.:*(A::InfinitePEPS, α::Number) = α * A
 Base.:/(A::InfinitePEPS, α::Number) = InfinitePEPS(unitcell(A) / α)
-LinearAlgebra.dot(A₁::InfinitePEPS, A₂::InfinitePEPS) = dot(unitcell(A₁), unitcell(A₂))
+LinearAlgebra.dot(A₁::InfinitePEPS, A₂::InfinitePEPS) = inner(A₁, A₂)
 LinearAlgebra.norm(A::InfinitePEPS) = norm(unitcell(A))
 
 ## (Approximate) equality
