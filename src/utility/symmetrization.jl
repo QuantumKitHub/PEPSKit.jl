@@ -52,7 +52,7 @@ function _fit_spaces(
     ) where {T, S <: IndexSpace, N₁, N₂}
     for i in 1:(N₁ + N₂)
         if space(x, i) ≠ space(y, i)
-            f = unitary(space(x, i) ← space(y, i))
+            f = unitary(TensorKit.promote_storagetype(y, x), space(x, i) ← space(y, i))
             y = permute(
                 ncon([f, y], [[-i, 1], [-(1:(i - 1))..., 1, -((i + 1):(N₁ + N₂))...]]),
                 (Tuple(1:N₁), Tuple((N₁ + 1):(N₁ + N₂))),
