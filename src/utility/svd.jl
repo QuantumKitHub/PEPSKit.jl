@@ -185,7 +185,7 @@ Construct an `IterSVD` algorithm struct based on the following keyword arguments
 end
 _default_svd_rrule_alg(::IterSVD) = :TruncPullback
 
-random_start_vector(t::AbstractMatrix) = randn(storagetype(t), size(t, 1))
+random_start_vector(t::AbstractMatrix) = randn!(similar(t, size(t, 1)))
 deterministic_start_vector(t::AbstractMatrix) = fill!(similar(t, size(t, 1)), one(scalartype(t)))
 
 # Compute SVD data block-wise using KrylovKit algorithm

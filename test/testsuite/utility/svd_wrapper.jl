@@ -23,6 +23,11 @@ function utility_svd_wrapper(AT)
         χ = 12
         trunc = truncspace(ℂ^χ)
         rtol = 1.0e-9
+
+        # test start vector initialization works at all
+        @test PEPSKit.deterministic_start_vector(adapt(AT, rand(m, n))) isa AT
+        @test PEPSKit.random_start_vector(adapt(AT, rand(m, n))) isa AT
+
         Random.seed!(12345678)
         r = adapt(AT, randn(dtype, ℂ^m, ℂ^n))
         R = adapt(AT, randn(space(r)))
