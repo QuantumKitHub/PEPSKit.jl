@@ -8,10 +8,6 @@ function _elementwise_mult(a₁::AbstractTensorMap, a₂::AbstractTensorMap)
 end
 
 _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
-# Same cutoff, but with the relative tolerance and the scale kept as separate arguments so
-# that the scale doesn't need to be copied back to the CPU memory.
-# `mx` is either a plain number or a 0-dimensional array, which broadcasts as a scalar.
-_safe_pow(a::Number, pow::Real, tol::Real, mx::Number) = _safe_pow(a, pow, tol * mx)
 
 """
     _maxabs(data)

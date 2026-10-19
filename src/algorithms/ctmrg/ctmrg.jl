@@ -216,6 +216,7 @@ function _singular_value_distance(S₁::SV, S₂::SV) where {SV <: TensorKit.Sec
     for (c, b) in blocks(S₂)
         diff[c][1:length(b)] .-= b
     end
+
     return norm(diff)
 end
 _singular_value_distance(S₁::DiagonalTensorMap, S₂::DiagonalTensorMap) =
