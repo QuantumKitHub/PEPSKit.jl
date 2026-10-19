@@ -217,16 +217,38 @@ Spectra of the tensors that [`convergence_tensors`](@ref) selects.
 """
 function convergence_spectra(env::CTMRGEnv, alg)
     corners, edges = convergence_tensors(env, alg)
-    return map(C -> corner_spectrum(C, alg), corners), map(T -> edge_spectrum(T, alg), edges)
+    return corner_spectra(corners, alg), edge_spectra(edges, alg)
 end
 
 """
-    corner_spectrum(C, alg)
-    edge_spectrum(T, alg)
+    corner_spectra(Cs, alg)
 
-The spectrum of a corner or edge, used to measure CTMRG convergence.
+Spectra of a whole collection of corners. The default
+behaviour of computing a mapped `svd_vals` of each corner
+can be overridden on backends that benefit from batching these calls.
+"""
+corner_spectra(Cs, alg) = map(C -> corner_spectrum(C, alg), Cs)
+
+"""
+    edge_spectra(Ts, alg)
+
+Spectra of a whole collection of edges. The default
+behaviour of computing a mapped `svd_vals` of each edge
+can be overridden on backends that benefit from batching these calls.
+"""
+edge_spectra(Ts, alg) = map(T -> edge_spectrum(T, alg), Ts)
+
+"""
+    corner_spectrum(C, alg)
+
+The spectrum of a corner, used to measure CTMRG convergence.
 """
 corner_spectrum(C, alg) = svd_vals(C)
+"""
+    edge_spectrum(T, alg)
+
+The spectrum of an edge, used to measure CTMRG convergence.
+"""
 edge_spectrum(T, alg) = svd_vals(T)
 
 function calc_convergence(env, CS_old, TS_old, alg)
