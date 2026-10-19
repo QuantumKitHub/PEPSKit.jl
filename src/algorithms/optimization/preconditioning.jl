@@ -40,7 +40,7 @@ which is solved separately for every tensor in the unit cell using an iterative 
 The regularization ``δ`` prevents the (generally singular) metric from being inverted
 exactly, and decays during the optimization according to
 ```math
-δ = \\texttt{regularization} × ‖∇f‖^2 / \\texttt{iter}^2
+δ = \\texttt{regularization} × ‖∇f‖^2 / \\max(\\texttt{iter}, 1)
 ```
 so that the preconditioner acts conservatively far from the minimum and becomes
 increasingly aggressive as the optimization converges.
@@ -110,6 +110,10 @@ preconditioner, and note that its regularization strength is set based on the cu
 gradient norm and iteration count tracked in `tol_state`.
 """
 peps_precondition(x, g, tol_state::NamedTuple, alg::Nothing) = g
+
+function peps_precondition(x::Tuple{<:InfinitePEPS, <:SplitCTMRGEnv}, g, tol_state::NamedTuple, alg::LocalPreconditioner)
+    return peps_precondition((x[1], CTMRGEnv(x[2])), g, tol_state, alg)
+end
 
 function peps_precondition(x, g, tol_state::NamedTuple, alg::LocalPreconditioner)
     peps, env = x

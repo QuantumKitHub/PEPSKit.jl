@@ -63,7 +63,7 @@ function PEPSOptimize(;
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
     boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
-    gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
+    gradient_algorithm = _gradient_algorithm(gradient_alg, parent_alg(boundary_algorithm))
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
     precondition_algorithm = _alg_or_nt(PreconditionAlgorithm, precondition_alg)
 
@@ -115,6 +115,7 @@ end
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
 to the supplied optimization parameters. The initial environment `env₀` serves as an
 initial guess for the first boundary contraction run. By default, a random initial environment is used.
+Each local tensor is normalized initially, and optimization preserves its Euclidean norm by projecting gradients and preconditioned directions onto its real tangent space.
 
 The optimization parameters can be supplied via the keyword arguments or directly as a
 `PEPSOptimize` struct. The following keyword arguments are supported:
@@ -267,11 +268,13 @@ function fixedpoint(
 
     # initialize the preconditioner
     function precondition(x, g)
+        isnothing(alg.precondition_alg) && return g
         precondition_alg = adapt_solver(
             alg.precondition_alg;
             iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
         )
-        return peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+        g_prec = peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+        return peps_project_tangent(g_prec, x[1])
     end
 
     # optimize operator cost function
@@ -302,7 +305,7 @@ function fixedpoint(
             end
             return cost_function(ψ, env′, operator)
         end
-        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        g = peps_project_tangent(only(gs), peps)
         tracked_finalizer.gradnorms_unitcell[end] = norm.(unitcell(g))
         tracked_finalizer.times[end] = time() - start_time
         return E, g
@@ -331,7 +334,7 @@ end
 Check compatibility of an initial PEPS and environment with a specified PEPS optimization algorithm.
 """
 function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
-    if typeof(parent_alg(alg.boundary_alg)) <: Union{SimultaneousCTMRG, SequentialCTMRG} &&
+    if typeof(parent_alg(alg.boundary_alg)) <: Union{SimultaneousCTMRG, SequentialCTMRG, SplitCTMRG} &&
             parent_alg(alg.gradient_alg) isa FixedPointGradient &&
             scalartype(env₀) <: Real # :fixed mode gauge fixing is incompatible with real environments
         msg = "the provided real environment is incompatible with :fixed mode \
@@ -353,51 +356,61 @@ function peps_normalize(A::InfinitePEPS)
 end
 
 """
+Project each direction onto the real tangent space of its fixed-norm PEPS tensor without mutating the inputs.
+"""
+function peps_project_tangent(η::InfinitePEPS, peps::InfinitePEPS)
+    tangents = map(unitcell(η), unitcell(peps)) do direction, A
+        return add(direction, A, -real(inner(A, direction)) / real(inner(A, A)))
+    end
+    return InfinitePEPS(tangents)
+end
+
+"""
 $(SIGNATURES)
 
-Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step
-size `α`, giving a new PEPS `A´`,
+Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step size `α`, giving a new PEPS ``A′``,
 ```math
-A' ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
+A′ ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
 ```
 and corresponding directional derivative `ξ`,
 ```math
 ξ = \\cos ( α ‖η‖ / ‖A‖ ) η - \\sin ( α ‖η‖ / ‖A‖ ) ‖η‖ A / ‖A‖,
 ```
-such that ``⟨ A', ξ ⟩ = 0`` and ``‖A'‖ = ‖A‖``.
+such that ``\\operatorname{Re} ⟨ A′, ξ ⟩ = 0`` and ``‖A′‖ = ‖A‖``.
+Each tensor and its direction must satisfy ``\\operatorname{Re} ⟨ A, η ⟩ = 0``.
 """
 function peps_retract(x, η, α)
     peps = x[1]
     env = deepcopy(x[2])
 
     retractions = norm_preserving_retract.(unitcell(peps), unitcell(η), α)
-    peps´ = InfinitePEPS(map(first, retractions))
+    peps′ = InfinitePEPS(map(first, retractions))
     ξ = InfinitePEPS(map(last, retractions))
 
-    return (peps´, env), ξ
+    return (peps′, env), ξ
 end
 
 """
 $(SIGNATURES)
 
-Transports a direction at `A = x[1]` to a valid direction at `A´ = x´[1]` corresponding to
-the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
-from a direction `η` of the form
+Transports a direction at `A = x[1]` to a valid direction at ``A′ = x′[1]`` corresponding to the norm-preserving retraction of `A` along `η` with step size `α`.
+In particular, starting from a direction `ξ` of the form
 ```math
-ξ = ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
+ξ = \\operatorname{Re} ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
 ```
-where ``⟨ Δξ, A ⟩ = ⟨ Δξ, η ⟩ = 0``, it returns
+where ``\\operatorname{Re} ⟨ Δξ, A ⟩ = \\operatorname{Re} ⟨ Δξ, η ⟩ = 0``, it returns
 ```math
-ξ(α) = ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
+ξ(α) = \\operatorname{Re} ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
 ```
-such that ``‖ξ(α)‖ = ‖ξ‖, ⟨ A', ξ(α) ⟩ = 0``.
+such that ``‖ξ(α)‖ = ‖ξ‖, \\operatorname{Re} ⟨ A′, ξ(α) ⟩ = 0``.
+Each tensor and its directions `η` and `ξ` must satisfy ``\\operatorname{Re} ⟨ A, η ⟩ = \\operatorname{Re} ⟨ A, ξ ⟩ = 0``.
 """
-function peps_transport!(ξ, x, η, α, x´)
+function peps_transport!(ξ, x, η, α, x′)
     peps = x[1]
-    peps´ = x´[1]
+    peps′ = x′[1]
 
     norm_preserving_transport!.(
-        unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps´)
+        unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps′)
     )
 
     return ξ
@@ -422,11 +435,11 @@ function symmetrize_retract_and_finalize!(
     end
     function retract_then_symmetrize((peps, env), η, α)
         # retract
-        (peps´, env´), ξ = retract((peps, env), η, α)
+        (peps′, env′), ξ = retract((peps, env), η, α)
         # symmetrize retracted point and directional derivative
-        peps´_symm = symmetrize!(peps´, symm)
+        peps′_symm = symmetrize!(peps′, symm)
         ξ_symm = symmetrize!(ξ, symm)
-        return (peps´_symm, env´), ξ_symm
+        return (peps′_symm, env′), ξ_symm
     end
     return retract_then_symmetrize, symmetrize_then_finalize!
 end

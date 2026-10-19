@@ -18,6 +18,7 @@ network_value(state, env::CTMRGEnv) = network_value(InfiniteSquareNetwork(state)
 function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
     return network_value(InfiniteSquareNetwork(peps), env)
 end
+LinearAlgebra.norm(peps::InfinitePEPS, env::SplitCTMRGEnv) = network_value(InfiniteSquareNetwork(peps), env)
 
 # Local tensor insertions
 # -----------------------

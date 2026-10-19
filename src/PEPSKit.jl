@@ -63,6 +63,7 @@ include("utility/twistdual.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
 include("utility/qr.jl")
+include("utility/lq.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
@@ -86,6 +87,7 @@ include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
+include("environments/split_ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
@@ -95,11 +97,14 @@ include("algorithms/contractions/ctmrg/types.jl")
 include("algorithms/contractions/ctmrg/expr.jl")
 include("algorithms/contractions/ctmrg/enlarge_corner.jl")
 include("algorithms/contractions/ctmrg/enlarge_corner_column.jl")
+include("algorithms/contractions/ctmrg/enlarge_corner_split.jl")
 include("algorithms/contractions/ctmrg/projector.jl")
 include("algorithms/contractions/ctmrg/halfinf_env.jl")
 include("algorithms/contractions/ctmrg/fullinf_env.jl")
+include("algorithms/contractions/ctmrg/split_env.jl")
 include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
+include("algorithms/contractions/ctmrg/renormalize_split.jl")
 include("algorithms/contractions/ctmrg/network_value.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
 include("algorithms/contractions/ctmrg/characteristic_equations.jl")
@@ -128,11 +133,14 @@ include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/projectors/projectors.jl")
 include("algorithms/ctmrg/projectors/halfinfinite.jl")
 include("algorithms/ctmrg/projectors/fullinfinite.jl")
+include("algorithms/ctmrg/projectors/split.jl")
 include("algorithms/ctmrg/projectors/c4v_eigh.jl")
 include("algorithms/ctmrg/projectors/c4v_qr.jl")
 include("algorithms/ctmrg/simultaneous.jl")
 include("algorithms/ctmrg/sequential.jl")
+include("algorithms/ctmrg/split.jl")
 include("algorithms/ctmrg/gaugefix.jl")
+include("algorithms/ctmrg/gaugefix_split.jl")
 include("algorithms/ctmrg/c4v.jl")
 include("algorithms/ctmrg/initialization.jl")
 
@@ -172,13 +180,14 @@ include("algorithms/select_algorithm.jl")
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint
+export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint, LQAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export SplitCTMRGEnv, SplitCTMRG
 export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization
 export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
-export HalfInfiniteProjector, FullInfiniteProjector
+export HalfInfiniteProjector, FullInfiniteProjector, SplitProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace

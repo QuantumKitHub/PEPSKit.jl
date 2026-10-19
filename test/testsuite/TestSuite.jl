@@ -83,6 +83,19 @@ using .CompressLocal
 
 # CTMRG
 # -----
+module CTMRGSplit
+    include("ctmrg/split.jl")
+    export ctmrg_split_projectors, ctmrg_split_compression, ctmrg_split_fishman_cutoff
+    export ctmrg_split_environment, ctmrg_split_unitcell, ctmrg_split_expectation_values
+end
+using .CTMRGSplit
+
+module CTMRGConvergence
+    include("ctmrg/convergence.jl")
+    export ctmrg_split_gradient_defaults, ctmrg_fixedpoint_forward_info
+end
+using .CTMRGConvergence
+
 module CTMRGContractions
     include("ctmrg/contractions.jl")
     export ctmrg_contractions_random_cartesian_spaces, ctmrg_contractions_specific_u1_spaces
@@ -203,6 +216,20 @@ module GradientsCTMRG
 end
 using .GradientsCTMRG
 
+module GradientsSplitCTMRG
+    include("gradients/split_ctmrg_gradients.jl")
+    export gradients_split_gauge, gradients_split_sweep, gradients_split_fixedpoint
+end
+using .GradientsSplitCTMRG
+
+# Optimization
+# ------------
+module OptimizationNormPreservation
+    include("optimization/norm_preservation.jl")
+    export optimization_tangent_projection, optimization_norm_preservation
+end
+using .OptimizationNormPreservation
+
 # Time evolution
 # --------------
 module TimeEvolClusterProjectors
@@ -265,6 +292,12 @@ module UtilityEighWrapper
     export utility_eigh_wrapper
 end
 using .UtilityEighWrapper
+
+module UtilityQRWrapper
+    include("utility/qr_wrapper.jl")
+    export utility_qr_wrapper
+end
+using .UtilityQRWrapper
 
 module UtilitySVDWrapper
     include("utility/svd_wrapper.jl")

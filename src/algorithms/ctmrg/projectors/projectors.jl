@@ -25,7 +25,7 @@ function ProjectorAlgorithm(;
 
     # parse SVD forward & rrule algorithm
 
-    decomposition_algorithm = if alg in [:HalfInfiniteProjector, :FullInfiniteProjector]
+    decomposition_algorithm = if alg in [:HalfInfiniteProjector, :FullInfiniteProjector, :SplitProjector]
         _alg_or_nt(SVDAdjoint, decomposition_alg)
     elseif alg in [:C4vEighProjector]
         _alg_or_nt(EighAdjoint, decomposition_alg)
