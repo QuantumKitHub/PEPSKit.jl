@@ -263,12 +263,12 @@ function calc_elementwise_convergence(
     Cfinal = (C <: DiagonalTensorMap) ? convert.(TensorMap, envfinal.corners) : envfinal.corners
     Cfix = (C′ <: DiagonalTensorMap) ? convert.(TensorMap, envfix.corners) : envfix.corners
     ΔC = Cfinal .- Cfix
-    ΔCmax = norm(ΔC, Inf)
+    ΔCmax = _maxabs(ΔC)
     ΔCmean = norm(ΔC)
     @debug "maxᵢⱼ|Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmax   mean |Cⁿ⁺¹ - Cⁿ|ᵢⱼ = $ΔCmean"
 
     ΔT = envfinal.edges .- envfix.edges
-    ΔTmax = norm(ΔT, Inf)
+    ΔTmax = _maxabs(ΔT)
     ΔTmean = norm(ΔT)
     @debug "maxᵢⱼ|Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmax   mean |Tⁿ⁺¹ - Tⁿ|ᵢⱼ = $ΔTmean"
 
