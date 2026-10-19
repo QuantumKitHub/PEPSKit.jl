@@ -112,7 +112,7 @@ function bond_truncate(a::MPSTensor, b::MPSTensor, benv::BondEnv, alg::ALSTrunca
         # TODO: replace with truncated svdvals (without calculating u, vh)
         _, s, _ = svd_trunc!(_combine_ket_for_svd(xs...); trunc = alg.trunc)
         # fidelity, cost and normalized bond-s change
-        s_nrm = norm(s0, Inf)
+        s_nrm = _maxabs(s0)
         Δs = _singular_value_distance(s, s0) / s_nrm
         Δcost = abs(cost - cost0) / cost00
         Δfid = abs(fid - fid0)
