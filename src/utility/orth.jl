@@ -111,9 +111,14 @@ function ChainRulesCore.rrule(
     return QR, left_orth!_pullback
 end
 
-"""Compute an LQ decomposition using the forward algorithm and reverse rule configured by `OrthAdjoint`."""
+"""
+    right_orth(t, alg::OrthAdjoint)
+    right_orth!(t, alg::OrthAdjoint)
+
+Wrapper around `right_orth(!)` which dispatches on the `OrthAdjoint` algorithm.
+This is needed since a custom adjoint may be defined, depending on the `alg`.
+"""
 MatrixAlgebraKit.right_orth(t, alg::OrthAdjoint) = right_orth!(copy(t), alg)
-"""Factorize the input in place using the LQ forward algorithm configured by `OrthAdjoint`."""
 MatrixAlgebraKit.right_orth!(t, alg::OrthAdjoint) = right_orth!(t, alg.fwd_alg)
 
 # right_orth! rrule wrapping MatrixAlgebraKit's lq_pullback!
