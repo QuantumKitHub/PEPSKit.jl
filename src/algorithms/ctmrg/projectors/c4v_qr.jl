@@ -13,7 +13,7 @@ $(TYPEDFIELDS)
 
 Construct the C₄ᵥ `qr`-based projector algorithm based on the following keyword arguments:
 
-* `decomposition_alg=QRAdjoint()` : `left_orth` algorithm including the reverse rule. See [`QRAdjoint`](@ref).
+* `decomposition_alg=OrthAdjoint()` : `left_orth` algorithm including the reverse rule. See [`OrthAdjoint`](@ref).
 """
 struct C4vQRProjector{S} <: ProjectorAlgorithm
     # TODO: support all `left_orth` algorithms

@@ -62,8 +62,7 @@ include("utility/diffable_threads.jl")
 include("utility/twistdual.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
-include("utility/qr.jl")
-include("utility/lq.jl")
+include("utility/orth.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
@@ -173,7 +172,7 @@ include("algorithms/select_algorithm.jl")
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, QRAdjoint, LQAdjoint
+export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, OrthAdjoint, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization

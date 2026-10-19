@@ -266,11 +266,11 @@ module UtilityEighWrapper
 end
 using .UtilityEighWrapper
 
-module UtilityQRWrapper
-    include("utility/qr_wrapper.jl")
-    export utility_qr_wrapper
+module UtilityOrthWrapper
+    include("utility/orth_wrapper.jl")
+    export utility_orth_wrapper
 end
-using .UtilityQRWrapper
+using .UtilityOrthWrapper
 
 module UtilitySVDWrapper
     include("utility/svd_wrapper.jl")
