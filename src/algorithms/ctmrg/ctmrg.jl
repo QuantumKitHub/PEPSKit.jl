@@ -222,13 +222,20 @@ end
 
 """
     corner_spectra(Cs, alg)
-    edge_spectra(Ts, alg)
 
-Spectra of a whole collection of corners or edges. The default
-behaviour of computing a mapped `svd_vals` of each corner (edge)
+Spectra of a whole collection of corners. The default
+behaviour of computing a mapped `svd_vals` of each corner
 can be overridden on backends that benefit from batching these calls.
 """
 corner_spectra(Cs, alg) = map(C -> corner_spectrum(C, alg), Cs)
+
+"""
+    edge_spectra(Ts, alg)
+
+Spectra of a whole collection of edges. The default
+behaviour of computing a mapped `svd_vals` of each edge
+can be overridden on backends that benefit from batching these calls.
+"""
 edge_spectra(Ts, alg) = map(T -> edge_spectrum(T, alg), Ts)
 
 """
