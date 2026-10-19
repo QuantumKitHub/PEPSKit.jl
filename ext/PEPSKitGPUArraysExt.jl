@@ -64,57 +64,6 @@ function PEPSKit.free_alloc_caches!(::Type{<:AnyGPUArray})
     return nothing
 end
 
-
-# Batched truncated SVD of a whole cluster's internal bonds to avoid multiple small kernel launches.
-function PEPSKit.bond_svds(
-        ::Type{<:AnyGPUArray}, rls::AbstractVector, truncs::AbstractVector
-    )
-    isempty(rls) && return map(_ -> nothing, rls)
-    # The different GPU libaries offer different batching algos,
-    # make sure we have one that actually works.
-    alg = MAK.default_algorithm(MAK.batched_svd_compact!, eltype(rls))
-    Fs = map(rl -> MAK.initialize_output(MAK.svd_compact!, rl, alg), rls)
-    balg = _cluster_batched_alg(rls)
-    if isnothing(balg)
-        for (rl, F) in zip(rls, Fs)
-            MAK.svd_compact!(rl, F, alg)
-        end
-    else
-        # Pool every (bond, sector) block into one ragged batch. MatrixAlgebraKit batches
-        # blocks of equal size together even across different bonds, since the decomposition
-        # does not care which bond a block came from, and zero-pads the leftovers.
-        items = [(i, c) for i in eachindex(rls) for c in blocksectors(rls[i])]
-        As = [block(rls[i], c) for (i, c) in items]
-        Us = [block(Fs[i][1], c) for (i, c) in items]
-        Ss = [TensorKit.diagview(block(Fs[i][2], c)) for (i, c) in items]
-        Vᴴs = [block(Fs[i][3], c) for (i, c) in items]
-        MAK.batched_svd_compact!(As, (Us, Ss, Vᴴs), balg)
-    end
-    return map(Fs, truncs) do F, trunc
-        (U, S, Vᴴ) = F
-        USVᴴtrunc, ind = MAK.truncate(MAK.svd_trunc!, (U, S, Vᴴ), trunc)
-        ϵ = MAK.truncation_error!(TensorKit.diagview(S), ind)
-        return (USVᴴtrunc..., ϵ)
-    end
-end
-
-"""
-    CLUSTER_BATCHED_SVD[]
-
-Whether simple update batches the SVDs of a cluster's internal bonds into one call.
-Off by default.
-"""
-const CLUSTER_BATCHED_SVD = Ref(false)
-
-# Which batched algorithm the backend offers for the cluster's blocks, or `nothing`.
-function _cluster_batched_alg(rls::AbstractVector)
-    CLUSTER_BATCHED_SVD[] || return nothing
-    for i in eachindex(rls), c in blocksectors(rls[i])
-        return _batched_spectra_alg(block(rls[i], c))
-    end
-    return nothing
-end
-
 """
     _batched_spectra_alg(proto) -> alg or nothing
 
