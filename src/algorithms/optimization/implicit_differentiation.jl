@@ -221,16 +221,17 @@ function _rrule(
     )
     _check_algorithm_combination(alg, gradmode)
 
-    env, = leading_boundary(envinit, state, alg)
+    env, info, projector_cache = _leading_boundary_with_cache(envinit, InfiniteSquareNetwork(state), alg)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    env_conv, _, = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, projector_cache)
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
     function gauge_fixed_iteration(A, x)
         return fix_phases(
-            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1],
+            # Hold incoming SI bases fixed, while differentiating their update within this sweep.
+            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed, projector_cache)[1],
             signs, corner_phases, edge_phases,
         )
     end
@@ -424,6 +425,21 @@ function _check_algorithm_combination(::SimultaneousCTMRG{<:FullInfiniteProjecto
           since the corresponding charageristic equations have not yet been implemented; select \
           SimultaneousCTMRG with HalfInfiniteProjector instead to use :ImplicitGradient"
     throw(ArgumentError(msg))
+end
+
+"""Reject characteristic-equation rules that are not defined for SI projectors."""
+function _reject_subspace_iteration_gradient()
+    throw(ArgumentError("SubspaceIterationProjector supports FixedPointGradient or `gradient_alg=nothing`; its ImplicitGradient characteristic equations are not implemented."))
+end
+function _check_algorithm_combination(
+        ::SequentialCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
+    )
+    return _reject_subspace_iteration_gradient()
+end
+function _check_algorithm_combination(
+        ::SimultaneousCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
+    )
+    return _reject_subspace_iteration_gradient()
 end
 
 

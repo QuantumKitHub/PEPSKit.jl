@@ -126,8 +126,10 @@ include("algorithms/contractions/correlator/pepo_1layer.jl")
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/projectors/projectors.jl")
+include("algorithms/ctmrg/projectors/cache.jl")
 include("algorithms/ctmrg/projectors/halfinfinite.jl")
 include("algorithms/ctmrg/projectors/fullinfinite.jl")
+include("algorithms/ctmrg/projectors/subspaceiter.jl")
 include("algorithms/ctmrg/projectors/c4v_eigh.jl")
 include("algorithms/ctmrg/projectors/c4v_qr.jl")
 include("algorithms/ctmrg/simultaneous.jl")
@@ -178,7 +180,7 @@ export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization
 export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
-export HalfInfiniteProjector, FullInfiniteProjector
+export HalfInfiniteProjector, FullInfiniteProjector, SubspaceIterationProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
 export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace
