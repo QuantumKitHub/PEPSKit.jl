@@ -29,7 +29,7 @@ projector_algs = (:C4vEighProjector, :C4vQRProjector)
 decomposition_alg(projector_alg, rrule_alg) = if projector_alg == :C4vEighProjector
     EighAdjoint(; rrule_alg = (; alg = rrule_alg))
 elseif projector_alg == :C4vQRProjector
-    QRAdjoint(; rrule_alg = (; alg = rrule_alg))
+    OrthAdjoint(; rrule_alg = (; alg = rrule_alg))
 else
     error("unknown projector alg: $projector_alg")
 end

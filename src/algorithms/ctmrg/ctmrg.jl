@@ -89,11 +89,9 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
     - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
     - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
-* `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:QRAdjoint}` : Tensor
-  decomposition algorithm used for computing projectors. When specified as a `NamedTuple`,
-  the settings are passed a the forward algorithm to the appropriate decomposition
-  for the given projector algorithm. For information on which forward algorithms are
-  available, and how to specify them, see [`SVDAdjoint`](@ref), [`EighAdjoint`](@ref) and [`QRAdjoint`](@ref).
+* `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:OrthAdjoint}` : Tensor decomposition algorithm used for computing projectors.
+  When specified as a `NamedTuple`, the settings are passed as the forward algorithm to the appropriate decomposition for the given projector algorithm.
+  For information on which forward algorithms are available, and how to specify them, see [`SVDAdjoint`](@ref), [`EighAdjoint`](@ref) and [`OrthAdjoint`](@ref).
 
 ## Return values
 

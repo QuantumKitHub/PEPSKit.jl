@@ -266,6 +266,12 @@ module UtilityEighWrapper
 end
 using .UtilityEighWrapper
 
+module UtilityOrthWrapper
+    include("utility/orth_wrapper.jl")
+    export utility_orth_wrapper
+end
+using .UtilityOrthWrapper
+
 module UtilitySVDWrapper
     include("utility/svd_wrapper.jl")
     export utility_svd_wrapper

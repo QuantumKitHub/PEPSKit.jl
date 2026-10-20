@@ -30,7 +30,7 @@ function ProjectorAlgorithm(;
     elseif alg in [:C4vEighProjector]
         _alg_or_nt(EighAdjoint, decomposition_alg)
     elseif alg in [:C4vQRProjector]
-        _alg_or_nt(QRAdjoint, decomposition_alg)
+        _alg_or_nt(OrthAdjoint, decomposition_alg)
     end # TODO: how do we solve this in a proper way?
 
     # qr-ctmrg does not need truncation or degeneracy checks
