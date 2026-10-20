@@ -31,7 +31,7 @@ Compute `s^pow` for a diagonal matrix `s`.
 The result preserves the scalar and storage types of `s`.
 """
 function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4))
-    tol *= _maxabs(s) 
+    tol *= _maxabs(s)
     spow = similar(s)
     spow.data .= _safe_pow.(s.data, pow, tol)
     return spow
