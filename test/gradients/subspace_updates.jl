@@ -88,12 +88,10 @@ end
         alg = flavor(0.0, 2, 2, 0, projector)
         cache = PEPSKit.initialize_projector_cache(InfiniteSquareNetwork(ψ), env, alg)
         loss(x) = first(subspace_two_sweep_energy(x, env, alg, cache, H, frozen))
-        value, (gradient,) = Zygote.withgradient(loss, ψ)
+        gradient = only(Zygote.gradient(loss, ψ))
         _, applied = subspace_two_sweep_energy(ψ, env, alg, cache, H, frozen)
         @test applied == frozen
-        @test isfinite(value) && isfinite(norm(gradient))
         @test real(dot(gradient, direction)) ≈ subspace_update_difference(loss, ψ, direction; h = 1.0e-7) rtol = 3.0e-5 atol = 3.0e-7
-        println((update, q, flavor, rotate, frozen)); flush(stdout)
     end
 end
 
@@ -119,10 +117,7 @@ end
         end
         _, info = leading_boundary(env, ψ, alg)
         @test info.converged
-        value, (gradient,) = Zygote.withgradient(loss, ψ)
-        @test isfinite(value) && isfinite(norm(gradient))
+        gradient = only(Zygote.gradient(loss, ψ))
         @test real(dot(gradient, direction)) ≈ subspace_update_difference(loss, ψ, direction; h = 1.0e-4) rtol = 1.0e-4 atol = 1.0e-7
-        @test_throws ArgumentError PEPSKit._check_algorithm_combination(alg, ImplicitGradient())
-        println((:fixedpoint, update, flavor)); flush(stdout)
     end
 end

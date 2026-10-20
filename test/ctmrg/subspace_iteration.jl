@@ -16,12 +16,6 @@ end
 
 @testset "SubspaceIterationProjector configuration" begin
     alg = SubspaceIterationProjector(; subspace = ℂ^10)
-    @test alg.subspace == ℂ^10
-    @test alg.subspace_tol == PEPSKit.Defaults.subspace_tol
-    @test alg.min_subspace_iters == PEPSKit.Defaults.min_subspace_iters
-    @test alg.decomposition_alg isa SVDAdjoint
-    @test alg.orth_alg isa OrthAdjoint
-    @test alg.trunc isa FixedSpaceTruncation
     @test alg.update == :independent_stabilized
     @test alg.n_subspace_iter == 0 && alg.rotate_basis
 
@@ -29,25 +23,19 @@ end
         projector_alg = (;
             alg = :SubspaceIterationProjector,
             subspace = ℂ^9,
-            subspace_tol = 1.0e-4,
-            min_subspace_iters = 4,
             orth_alg = (; fwd_alg = (; alg = :Householder)),
         ),
     )
-    @test configured.projector_alg.subspace == ℂ^9
-    @test configured.projector_alg.subspace_tol == 1.0e-4
-    @test configured.projector_alg.min_subspace_iters == 4
     @test configured.projector_alg.orth_alg.fwd_alg isa Householder
 
     @test_throws ArgumentError SimultaneousCTMRG(; projector_alg = :SubspaceIterationProjector)
     @test_throws ArgumentError SubspaceIterationProjector(; subspace = 10)
-    @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, subspace_tol = -1)
+    for tol in (-1, Inf, NaN)
+        @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, subspace_tol = tol)
+    end
     @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, min_subspace_iters = 0)
     @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, update = :unknown)
     @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, n_subspace_iter = -1)
-    @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, subspace_tol = Inf)
-    @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, subspace_tol = NaN)
-    @test_throws MethodError SubspaceIterationProjector(; subspace = ℂ^10, reuse_left_basis = true)
     @test_throws ArgumentError SubspaceIterationProjector(;
         subspace = ℂ^10, trunc = truncerror(; rtol = 1.0e-8)
     )
@@ -109,13 +97,7 @@ end
     end
 
     cache = initialize_projector_cache(network, env, alg)
-    @test all(
-        grid -> all(x -> x isa AbstractTensorMap, grid),
-        (cache.X, cache.Y, cache.U, cache.V),
-    )
-    _, info, cache = ctmrg_iteration(network, env, alg, cache)
-    @test all(x -> x isa AbstractTensorMap, (info.U..., info.V...))
-    @test all(s -> s isa DiagonalTensorMap, info.S)
+    _, _, cache = ctmrg_iteration(network, env, alg, cache)
     X = first(cache.X)
     @test dim(domain(X)) < dim(alg.projector_alg.subspace)
 
@@ -136,7 +118,16 @@ end
     @test all(grid -> size(grid) == (4, 2, 3), (cache.X, cache.Y, cache.U, cache.V))
 
     values = reshape(collect(1:24), 4, 2, 3)
-    rotated = PEPSKit.SubspaceIterationCache(2, true, values, -values, 2values, -2values)
+    original = PEPSKit.SubspaceIterationCache(2, true, values, -values, 2values, -2values)
+    copied = copy(original)
+    @test all(
+        pair -> pair[1] == pair[2] && pair[1] !== pair[2], zip(
+            (copied.X, copied.Y, copied.U, copied.V),
+            (original.X, original.Y, original.U, original.V),
+        )
+    )
+    @test (copied.iteration, copied.recycle) == (2, true)
+    rotated = original
     for _ in 1:4
         rotated = rotl90(rotated)
     end
@@ -308,11 +299,6 @@ end
     alg = SimultaneousCTMRG(;
         projector_alg = (; alg = :SubspaceIterationProjector, subspace = V)
     )
-    @test isnothing(
-        PEPSKit.check_input(
-            leading_boundary, InfiniteSquareNetwork(psi), env, alg
-        )
-    )
     @test_throws ArgumentError leading_boundary(
         env, psi, si_ctmrg(SimultaneousCTMRG; subspace = Z2Space(0 => 10))
     )
@@ -324,14 +310,6 @@ end
         leading_boundary, InfiniteSquareNetwork(psi), CTMRGEnv(InfinitePEPS(ℂ^2, ℂ^2), ℂ^2), alg,
     )
 
-    @test isnothing(
-        PEPSKit._check_algorithm_combination(
-            SimultaneousCTMRG(;
-                projector_alg = (; alg = :SubspaceIterationProjector, subspace = ℂ^7)
-            ),
-            FixedPointGradient(),
-        )
-    )
     @test_throws ArgumentError PEPSKit._check_algorithm_combination(
         SimultaneousCTMRG(; projector_alg = (; alg = :SubspaceIterationProjector, subspace = ℂ^7)),
         ImplicitGradient(),

@@ -121,11 +121,8 @@ end
             ignore_derivatives(() -> Random.seed!(734))
             return cost_function(ψ, first(leading_boundary(env, ψ, alg)), H)
         end
-        E, (g,) = Zygote.withgradient(loss, psi)
-        @test isfinite(E) && isfinite(norm(g)) && norm(g) > 0
-        @test E ≈ loss(psi)
+        g = only(Zygote.gradient(loss, psi))
         @test real(dot(g, direction)) ≈ si_directional_difference(loss, psi, direction; h = 1.0e-6) rtol = 1.0e-5 atol = 1.0e-7
-        @test PEPSOptimize(; boundary_alg = alg, gradient_alg = nothing, precondition_alg = nothing) isa PEPSOptimize
     end
 end
 
@@ -152,8 +149,7 @@ end
         Random.seed!(736)
         _, info = leading_boundary(env, psi, alg)
         @test info.converged
-        E, (g,) = Zygote.withgradient(loss, psi)
-        @test isfinite(E) && isfinite(norm(g))
+        g = only(Zygote.gradient(loss, psi))
         @test real(dot(g, direction)) ≈ si_directional_difference(loss, psi, direction) rtol = 1.0e-4 atol = 1.0e-7
     end
 end

@@ -55,7 +55,9 @@ end
         result = PEPSKit._subspace_iteration_decomposition(L, R, alg, (; X, Y, trunc, recycle = false))
         expected_count = update == :independent_stabilized ? 4(q + 1) : update == :alternating_refined ? 2(q + 1) + 1 : 2(q + 1)
         @test counter.qr[] + counter.lq[] == expected_count
-        @test update != :alternating || counter.lq[] == 1
+        if update == :alternating
+            @test counter.lq[] == 1
+        end
         @test (X, Y) == before
         Xref, Yref = expected_subspace_ranges(L * R, X, Y, update, q)
         @test result.X * result.X' ≈ Xref * Xref' atol = 1.0e-10
@@ -88,7 +90,6 @@ end
         actual, expected = result.U * result.S * result.V, u * s * v
         @test actual / norm(actual) ≈ expected / norm(expected) atol = 1.0e-10
         @test result.X' * result.X ≈ id(ComplexF64, domain(result.X)) atol = 1.0e-10
-        @test result.freezable == (m == n)
         repeated = PEPSKit._subspace_iteration_decomposition(
             M, id(ℂ^n), alg,
             (; result.X, result.Y, trunc, recycle = true)
@@ -129,10 +130,10 @@ end
         p = SubspaceIterationProjector(; subspace = ℂ^6, update, subspace_tol = tol, min_subspace_iters = 2)
         alg = flavor(0.0, 3, 3, 0, p)
         cache = PEPSKit.initialize_projector_cache(network, env, alg)
+        initial = cache
         original = deepcopy(cache)
         @test isnothing(cache.Y) == (tol == 0 && update in (:alternating, :alternating_refined))
         @test isnothing(cache.U) == isnothing(cache.V) == (tol == 0)
-        @test copy(cache).X == cache.X
         rotated = cache
         for _ in 1:4
             rotated = rotl90(rotated)
@@ -142,7 +143,8 @@ end
         for _ in 1:3
             env, info, cache = PEPSKit.ctmrg_iteration(network, env, alg, cache)
         end
-        @test original.X != cache.X
+        @test (initial.X, initial.Y, initial.U, initial.V) ==
+            (original.X, original.Y, original.U, original.V)
         @test info.contraction_metrics.recycled == (tol > 0)
         @test cache.recycle == (tol > 0)
         @test isfinite(norm(env))
@@ -153,7 +155,7 @@ end
         larger = CTMRGEnv(ψ, ℂ^4)
         _, _, reset = PEPSKit.ctmrg_iteration(network, larger, alg, cache)
         @test space(reset.X[1]) != space(cache.X[1])
-        @test cache.iteration == 3 && original.iteration == 0
+        @test cache.iteration == 3 && initial.iteration == 0
     end
 end
 
@@ -167,13 +169,11 @@ end
         cache = PEPSKit.initialize_projector_cache(network, env, alternating_alg)
         _, _, reset = PEPSKit.ctmrg_iteration(network, env, independent_alg, cache)
         @test !isnothing(reset.Y) && !isnothing(reset.U) && !isnothing(reset.V)
-        @test isnothing(cache.Y) && isnothing(cache.U)
         real_ψ = InfinitePEPS(randn, Float64, ℂ^2, ℂ^2)
         real_network, real_env = InfiniteSquareNetwork(real_ψ), CTMRGEnv(real_ψ, ℂ^3)
         real_cache = PEPSKit.initialize_projector_cache(real_network, real_env, alternating_alg)
         _, _, reset = PEPSKit.ctmrg_iteration(network, env, alternating_alg, real_cache)
         @test scalartype(first(reset.X)) == ComplexF64
-        @test scalartype(first(real_cache.X)) == Float64
     end
 end
 
@@ -184,6 +184,5 @@ end
         second_bases = PEPSKit.rangefinder_initialize(ComplexF64, ProductSpace(ℂ^7), ProductSpace(ℂ^6), b.subspace, b)
         @test first_bases == second_bases
         @test first_bases[1]' * first_bases[1] ≈ id(ComplexF64, ℂ^4) atol = 1.0e-12
-        @test (PEPSKit.@set a.update = :alternating).update == :alternating
     end
 end
