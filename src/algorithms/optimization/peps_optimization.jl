@@ -115,6 +115,7 @@ end
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
 to the supplied optimization parameters. The initial environment `env₀` serves as an
 initial guess for the first boundary contraction run. By default, a random initial environment is used.
+Each local tensor is normalized initially, and optimization preserves its Euclidean norm by projecting gradients and preconditioned directions onto its real tangent space.
 
 The optimization parameters can be supplied via the keyword arguments or directly as a
 `PEPSOptimize` struct. The following keyword arguments are supported:
@@ -266,12 +267,17 @@ function fixedpoint(
     peps₀ = peps_normalize(peps₀)
 
     # initialize the preconditioner
-    function precondition(x, g)
-        precondition_alg = adapt_solver(
-            alg.precondition_alg;
-            iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
-        )
-        return peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+    precondition = if isnothing(alg.precondition_alg)
+        (_, g) -> g
+    else
+        function (x, g)
+            precondition_alg = adapt_solver(
+                alg.precondition_alg;
+                iter = tracked_finalizer.tol_state.iter, g_global = tracked_finalizer.tol_state.gradnorm
+            )
+            g_prec = peps_precondition(x, g, tracked_finalizer.tol_state, precondition_alg)
+            return peps_project_tangent(g_prec, x[1])
+        end
     end
 
     # optimize operator cost function
@@ -302,7 +308,7 @@ function fixedpoint(
             end
             return cost_function(ψ, env′, operator)
         end
-        g = only(gs)  # `withgradient` returns tuple of gradients `gs`
+        g = peps_project_tangent(only(gs), peps)
         tracked_finalizer.gradnorms_unitcell[end] = norm.(unitcell(g))
         tracked_finalizer.times[end] = time() - start_time
         return E, g
@@ -352,37 +358,55 @@ function peps_normalize(A::InfinitePEPS)
     return InfinitePEPS(normalized_tensors)
 end
 
+"""Real part of the Hermitian inner product."""
+real_inner(η₁, η₂) = real(inner(η₁, η₂))
+real_inner(_, η₁, η₂) = real_inner(η₁, η₂)
+
 """
 $(SIGNATURES)
 
-Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step
-size `α`, giving a new PEPS `A´`,
-```math
-A' ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
-```
-and corresponding directional derivative `ξ`,
-```math
-ξ = \\cos ( α ‖η‖ / ‖A‖ ) η - \\sin ( α ‖η‖ / ‖A‖ ) ‖η‖ A / ‖A‖,
-```
-such that ``⟨ A', ξ ⟩ = 0`` and ``‖A'‖ = ‖A‖``.
+Project each direction onto the tangent space of its fixed-norm PEPS tensor using [`project_tangent`](@ref) with the real part of the Hermitian inner product.
+Complex tensors are treated as a real vector space, retaining the tangent phase direction ``i A``.
 """
-function peps_retract(x, η, α)
-    peps = x[1]
-    env = deepcopy(x[2])
-
-    retractions = norm_preserving_retract.(unitcell(peps), unitcell(η), α)
-    peps´ = InfinitePEPS(map(first, retractions))
-    ξ = InfinitePEPS(map(last, retractions))
-
-    return (peps´, env), ξ
+function peps_project_tangent(η::InfinitePEPS, peps::InfinitePEPS)
+    tangents = map(unitcell(η), unitcell(peps)) do direction, A
+        return project_tangent(direction, A; inner = real_inner)
+    end
+    return InfinitePEPS(tangents)
 end
 
 """
 $(SIGNATURES)
 
-Transports a direction at `A = x[1]` to a valid direction at `A´ = x´[1]` corresponding to
-the norm-preserving retraction of `A` along `η` with step size `α`. In particular, starting
-from a direction `η` of the form
+Performs a norm-preserving retraction of an infinite PEPS `A = x[1]` along `η` with step size `α`, giving a new PEPS ``A′``,
+```math
+A′ ← \\cos ( α ‖η‖ / ‖A‖ ) A + \\sin ( α ‖η‖ / ‖A‖ ) ‖A‖ η / ‖η‖,
+```
+and corresponding directional derivative `ξ`,
+```math
+ξ = \\cos ( α ‖η‖ / ‖A‖ ) η - \\sin ( α ‖η‖ / ‖A‖ ) ‖η‖ A / ‖A‖,
+```
+such that ``⟨ A′, ξ ⟩ = 0`` and ``‖A′‖ = ‖A‖``.
+Here ``⟨⋅, ⋅⟩`` denotes the real part of the Hermitian inner product, and ``‖⋅‖`` is its induced norm.
+Complex tensors are treated as a real vector space, retaining the tangent phase direction ``i A``.
+Each tensor and its direction must satisfy ``⟨ A, η ⟩ = 0``.
+"""
+function peps_retract(x, η, α)
+    peps = x[1]
+    env = deepcopy(x[2])
+
+    retractions = norm_preserving_retract.(unitcell(peps), unitcell(η), α; inner = real_inner)
+    peps′ = InfinitePEPS(map(first, retractions))
+    ξ = InfinitePEPS(map(last, retractions))
+
+    return (peps′, env), ξ
+end
+
+"""
+$(SIGNATURES)
+
+Transports a direction at `A = x[1]` to a valid direction at ``A′ = x′[1]`` corresponding to the norm-preserving retraction of `A` along `η` with step size `α`.
+In particular, starting from a direction `ξ` of the form
 ```math
 ξ = ⟨ η / ‖η‖, ξ ⟩ η / ‖η‖ + Δξ
 ```
@@ -390,21 +414,21 @@ where ``⟨ Δξ, A ⟩ = ⟨ Δξ, η ⟩ = 0``, it returns
 ```math
 ξ(α) = ⟨ η / ‖η‖, ξ ⟩ ( \\cos ( α ‖η‖ / ‖A‖ ) η / ‖η‖ - \\sin( α ‖η‖ / ‖A‖ ) A / ‖A‖ ) + Δξ
 ```
-such that ``‖ξ(α)‖ = ‖ξ‖, ⟨ A', ξ(α) ⟩ = 0``.
+such that ``‖ξ(α)‖ = ‖ξ‖, ⟨ A′, ξ(α) ⟩ = 0``.
+Here ``⟨⋅, ⋅⟩`` denotes the real part of the Hermitian inner product, and ``‖⋅‖`` is its induced norm.
+Complex tensors are treated as a real vector space, retaining the tangent phase direction ``i A``.
+Each tensor and its directions `η` and `ξ` must satisfy ``⟨ A, η ⟩ = ⟨ A, ξ ⟩ = 0``.
 """
-function peps_transport!(ξ, x, η, α, x´)
+function peps_transport!(ξ, x, η, α, x′)
     peps = x[1]
-    peps´ = x´[1]
+    peps′ = x′[1]
 
     norm_preserving_transport!.(
-        unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps´)
+        unitcell(ξ), unitcell(peps), unitcell(η), α, unitcell(peps′); inner = real_inner
     )
 
     return ξ
 end
-
-# Take real valued part of dot product
-real_inner(_, η₁, η₂) = real(dot(η₁, η₂))
 
 """
     symmetrize_retract_and_finalize!(symm::SymmetrizationStyle, [retract, finalize!])
@@ -422,11 +446,11 @@ function symmetrize_retract_and_finalize!(
     end
     function retract_then_symmetrize((peps, env), η, α)
         # retract
-        (peps´, env´), ξ = retract((peps, env), η, α)
+        (peps′, env′), ξ = retract((peps, env), η, α)
         # symmetrize retracted point and directional derivative
-        peps´_symm = symmetrize!(peps´, symm)
+        peps′_symm = symmetrize!(peps′, symm)
         ξ_symm = symmetrize!(ξ, symm)
-        return (peps´_symm, env´), ξ_symm
+        return (peps′_symm, env′), ξ_symm
     end
     return retract_then_symmetrize, symmetrize_then_finalize!
 end

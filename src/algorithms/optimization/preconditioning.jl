@@ -40,10 +40,10 @@ which is solved separately for every tensor in the unit cell using an iterative 
 The regularization ``δ`` prevents the (generally singular) metric from being inverted
 exactly, and decays during the optimization according to
 ```math
-δ = \\texttt{regularization} × ‖∇f‖^2 / \\texttt{iter}^2
+δ = \\texttt{regularization} × ‖∇f‖^2 / \\max(\\texttt{iter}, 1)
 ```
-so that the preconditioner acts conservatively far from the minimum and becomes
-increasingly aggressive as the optimization converges.
+Here `iter` counts accepted optimization steps (starting from 0) and `∇f` is the most recently tracked gradient.
+The preconditioner acts conservatively far from the minimum and becomes increasingly aggressive as the optimization converges.
 
 ## Fields
 
