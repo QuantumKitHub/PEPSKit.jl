@@ -80,8 +80,8 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))` : Truncation strategy for the projector computation, which controls the resulting virtual spaces. Here, `alg` can be one of the following:
     - `:FixedSpaceTruncation` : Keep virtual spaces fixed during projection
     - `:notrunc` : No singular values are truncated and the performed SVDs are exact
-    - `:truncerror` : Additionally supply error threshold `η`; truncate to the maximal virtual dimension of `η`
-    - `:truncrank` : Additionally supply truncation dimension `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncerror` : Additionally supply error threshold `η`; truncate such that the 2-norm of the truncated values is smaller than `η`
+    - `:truncrank` : Additionally supply truncation dimension `η`; truncate to the maximal virtual dimension of `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
 * `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
