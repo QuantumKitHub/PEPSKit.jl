@@ -40,12 +40,12 @@ naive_gradient_combinations = [
 ]
 naive_gradient_done = Set()
 
-# fixed-point differentiation is incompatible with sequential CTMRG
+# implicit differentiation is only implemented for SimultaneousCTMRG with HalfInfiniteProjector
 function _check_disallowed_combination(
         ctmrg_alg, projector_alg, decomposition_rrule_alg, gradient_alg
     )
-    ctmrg_alg == :SequentialCTMRG && !isnothing(gradient_alg) && return true
-    return false
+    gradient_alg == :ImplicitGradient || return false
+    return ctmrg_alg == :SequentialCTMRG || projector_alg == :FullInfiniteProjector
 end
 
 
