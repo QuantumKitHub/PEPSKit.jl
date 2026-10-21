@@ -19,7 +19,7 @@ function ProjectorAlgorithm(;
         subspace = nothing,
         subspace_tol = Defaults.subspace_tol,
         min_subspace_iters = Defaults.min_subspace_iters,
-        update::Symbol = :independent_stabilized,
+        update::Symbol = :independent,
         n_subspace_iter::Int = 0,
         rotate_basis::Bool = true,
         rng = Random.default_rng(),
@@ -60,7 +60,7 @@ function ProjectorAlgorithm(;
             throw(ArgumentError("SubspaceIterationProjector only supports FixedSpaceTruncation."))
         subspace isa ElementarySpace ||
             throw(ArgumentError("SubspaceIterationProjector requires an elementary `subspace`."))
-        update in (:independent_stabilized, :independent, :alternating, :alternating_refined) ||
+        update in (:independent, :alternating, :alternating_refined) ||
             throw(ArgumentError("unknown subspace update: $update"))
         n_subspace_iter >= 0 || throw(ArgumentError("n_subspace_iter must be nonnegative."))
         isfinite(subspace_tol) && subspace_tol >= 0 ||

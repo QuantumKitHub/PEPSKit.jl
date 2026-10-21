@@ -10,7 +10,7 @@ function subspace_update_difference(f, x, direction; h = 1.0e-6)
 end
 
 @testset "Unified two-step matrix pullbacks" begin
-    for T in (Float64, ComplexF64), update in (:independent_stabilized, :independent, :alternating, :alternating_refined), q in (0, 1), rotate in (false, true)
+    for T in (Float64, ComplexF64), update in (:independent, :alternating, :alternating_refined), q in (0, 1), rotate in (false, true)
         Random.seed!(84264)
         W, K, χ = ℂ^7, ℂ^4, ℂ^2
         A, direction, target = randn(T, W ← W), randn(T, W ← W), randn(T, W ← W)
@@ -44,7 +44,7 @@ end
         (SU2Space(0 => 3, 1 // 2 => 7), SU2Space(0 => 3, 1 // 2 => 4), SU2Space(0 => 2, 1 // 2 => 2)),
         (Vect[F]((0, 0) => 3, (1, 1) => 7), Vect[F]((0, 0) => 3, (1, 1) => 4), Vect[F]((0, 0) => 2, (1, 1) => 2)),
     )
-    for (W, K, χ) in spaces, update in (:independent_stabilized, :independent, :alternating, :alternating_refined)
+    for (W, K, χ) in spaces, update in (:independent, :alternating, :alternating_refined)
         Random.seed!(84265)
         A, direction, target = randn(ComplexF64, W ← W), randn(ComplexF64, W ← W), randn(ComplexF64, W ← W)
         direction /= norm(direction)
@@ -74,7 +74,7 @@ function subspace_two_sweep_energy(ψ, env, alg, cache, H, frozen)
 end
 
 @testset "Unified active and frozen production pullbacks" begin
-    settings = ((:independent_stabilized, 0), (:independent, 0), (:alternating_refined, 0), (:alternating, 0), (:alternating, 1))
+    settings = ((:independent, 0), (:alternating_refined, 0), (:alternating, 0), (:alternating, 1))
     for (update, q) in settings, flavor in (SimultaneousCTMRG, SequentialCTMRG), rotate in (false, true), frozen in (false, true)
         Random.seed!(84266)
         ψ = InfinitePEPS(ℂ^2, ℂ^2); ψ /= norm(ψ)
@@ -96,7 +96,7 @@ end
 end
 
 @testset "Unified exact-rank fixed-point gradients" begin
-    for update in (:independent_stabilized, :independent, :alternating, :alternating_refined), flavor in (SimultaneousCTMRG, SequentialCTMRG)
+    for update in (:independent, :alternating, :alternating_refined), flavor in (SimultaneousCTMRG, SequentialCTMRG)
         Random.seed!(84267)
         ψ = InfinitePEPS(ℂ^2, ℂ^2); ψ /= norm(ψ)
         direction = InfinitePEPS(ℂ^2, ℂ^2); direction /= norm(direction)

@@ -16,7 +16,7 @@ end
 
 @testset "SubspaceIterationProjector configuration" begin
     alg = SubspaceIterationProjector(; subspace = ℂ^10)
-    @test alg.update == :independent_stabilized
+    @test alg.update == :independent
     @test alg.n_subspace_iter == 0 && alg.rotate_basis
 
     configured = SimultaneousCTMRG(;

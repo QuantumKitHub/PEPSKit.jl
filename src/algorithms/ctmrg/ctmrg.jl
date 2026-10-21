@@ -100,7 +100,7 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:SubspaceIterationProjector` : Stateful projection via recycled subspace iteration of the full-infinite environment, with an explicit symmetry-resolved `subspace` and fixed-space truncation. Supports fixed-point differentiation or backpropagation through the CTMRG sweeps.
     - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
     - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
-  Its `update` selects `:independent_stabilized` (default, stabilized independent updates), `:independent` (independent updates), `:alternating` (alternating QR/LQ), or `:alternating_refined` (with a final left-basis refinement).
+  Its `update` selects `:independent` (default, independent updates), `:alternating` (alternating QR/LQ), or `:alternating_refined` (with a final left-basis refinement).
   For example, use `projector_alg=(; alg=:SubspaceIterationProjector, subspace=ℂ^10, update=:alternating, n_subspace_iter=1, subspace_tol=0)` for active alternating refinement with one extra power step.
   `rotate_basis=true` retains complete trial frames in reduced singular-vector coordinates, and positive `subspace_tol` permits freezing after `min_subspace_iters` sweeps.
 * `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:OrthAdjoint}` : Tensor decomposition algorithm used for computing projectors.

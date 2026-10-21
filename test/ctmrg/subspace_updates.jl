@@ -24,7 +24,7 @@ end
 
 """Evaluate the defining recurrences using an explicit full environment."""
 function expected_subspace_ranges(M, X, Y, update, q)
-    if update in (:independent_stabilized, :independent)
+    if update == :independent
         for _ in 0:q
             X = first(left_orth(M' * M * X))
             Y = last(right_orth(Y * M * M'))
@@ -41,7 +41,7 @@ function expected_subspace_ranges(M, X, Y, update, q)
 end
 
 @testset "Unified range recurrences and factorization counts" begin
-    for T in (Float64, ComplexF64), update in (:independent_stabilized, :independent, :alternating, :alternating_refined), q in (0, 1)
+    for T in (Float64, ComplexF64), update in (:independent, :alternating, :alternating_refined), q in (0, 1)
         Random.seed!(264)
         L, R = randn(T, ℂ^9 ← ℂ^9), randn(T, ℂ^9 ← ℂ^7)
         X, Y = first(left_orth(randn(T, ℂ^7 ← ℂ^4))), last(right_orth(randn(T, ℂ^4 ← ℂ^9)))
@@ -53,7 +53,7 @@ end
         before = deepcopy((X, Y))
         trunc = truncspace(ℂ^2)
         result = PEPSKit._subspace_iteration_decomposition(L, R, alg, (; X, Y, trunc, recycle = false))
-        expected_count = update == :independent_stabilized ? 4(q + 1) : update == :alternating_refined ? 2(q + 1) + 1 : 2(q + 1)
+        expected_count = update == :alternating_refined ? 2(q + 1) + 1 : 2(q + 1)
         @test counter.qr[] + counter.lq[] == expected_count
         if update == :alternating
             @test counter.lq[] == 1
@@ -77,7 +77,7 @@ end
 end
 
 @testset "Unified complete and rectangular sectors" begin
-    for update in (:independent_stabilized, :independent, :alternating, :alternating_refined), (m, n) in ((7, 5), (5, 7), (5, 5)), q in (0, 1)
+    for update in (:independent, :alternating, :alternating_refined), (m, n) in ((7, 5), (5, 7), (5, 5)), q in (0, 1)
         Random.seed!(265)
         M = randn(ComplexF64, ℂ^m ← ℂ^n)
         alg = SubspaceIterationProjector(; subspace = ℂ^20, update, n_subspace_iter = q, rotate_basis = false)
@@ -96,7 +96,7 @@ end
         )
         @test repeated.recycled == (m == n)
     end
-    for S in (U1Irrep, SU2Irrep, A4Irrep, FermionParity ⊠ U1Irrep, FibonacciAnyon), update in (:independent_stabilized, :independent, :alternating, :alternating_refined)
+    for S in (U1Irrep, SU2Irrep, A4Irrep, FermionParity ⊠ U1Irrep, FibonacciAnyon), update in (:independent, :alternating, :alternating_refined)
         charges = S == U1Irrep ? (0, 1) : S == SU2Irrep ? (0, 1 // 2) : S == A4Irrep ? (0, 3) : S == FibonacciAnyon ? (:I, :τ) : ((0, 0), (1, 1))
         W = Vect[S](charges[1] => 3, charges[2] => 7)
         K = Vect[S](charges[1] => 3, charges[2] => 4)
@@ -123,7 +123,7 @@ end
 end
 
 @testset "Unified optional cache grids and freezing" begin
-    for update in (:independent_stabilized, :independent, :alternating, :alternating_refined), flavor in (SimultaneousCTMRG, SequentialCTMRG), tol in (0.0, 2.0)
+    for update in (:independent, :alternating, :alternating_refined), flavor in (SimultaneousCTMRG, SequentialCTMRG), tol in (0.0, 2.0)
         Random.seed!(267)
         ψ = InfinitePEPS(ℂ^2, ℂ^2; unitcell = (2, 1))
         network, env = InfiniteSquareNetwork(ψ), CTMRGEnv(ψ, ℂ^3)
@@ -178,7 +178,7 @@ end
 end
 
 @testset "Unified seeded initialization" begin
-    for update in (:independent_stabilized, :independent, :alternating, :alternating_refined)
+    for update in (:independent, :alternating, :alternating_refined)
         a, b = [SubspaceIterationProjector(; subspace = ℂ^4, update, subspace_tol = 0, rng = Random.Xoshiro(269)) for _ in 1:2]
         first_bases = PEPSKit.rangefinder_initialize(ComplexF64, ProductSpace(ℂ^7), ProductSpace(ℂ^6), a.subspace, a)
         second_bases = PEPSKit.rangefinder_initialize(ComplexF64, ProductSpace(ℂ^7), ProductSpace(ℂ^6), b.subspace, b)

@@ -5,7 +5,7 @@ Recycled subspace approximation of the full-infinite CTMRG environment.
 Supply an elementary `subspace` containing the target multiplicity in every retained symmetry sector, including complete non-Abelian multiplets.
 Only [`FixedSpaceTruncation`](@ref) is supported.
 
-The `update` selector chooses `:independent_stabilized` (default, four QR/LQ factorizations), `:independent` (the paper's two-factorization independent update), `:alternating` (alternating QR/LQ with a reused reduced core), or `:alternating_refined` (three factorizations with a final left-basis refresh).
+The `update` selector chooses `:independent` (default, the paper's two-factorization independent update), `:alternating` (alternating QR/LQ with a reused reduced factor), or `:alternating_refined` (three factorizations with a final left-basis refresh).
 `n_subspace_iter=q` adds `q` independent updates, or `q` stabilized right-basis power steps before the mandatory alternating update.
 `rotate_basis=true` expresses the complete trial bases in the reduced SVD coordinates, retaining all oversampling directions.
 `subspace_tol=0` disables freezing and its principal-angle monitor; otherwise refinement may be skipped after `min_subspace_iters` sweeps.
@@ -23,7 +23,7 @@ $(TYPEDFIELDS)
 
     SubspaceIterationProjector(; subspace, kwargs...)
 
-Defaults are `update=:independent_stabilized`, `n_subspace_iter=0`, `rotate_basis=true`, `subspace_tol=$(Defaults.subspace_tol)`, `min_subspace_iters=$(Defaults.min_subspace_iters)`, `rng=Random.default_rng()`, `decomposition_alg=SVDAdjoint()`, `orth_alg=OrthAdjoint()`, and `trunc=FixedSpaceTruncation()`.
+Defaults are `update=:independent`, `n_subspace_iter=0`, `rotate_basis=true`, `subspace_tol=$(Defaults.subspace_tol)`, `min_subspace_iters=$(Defaults.min_subspace_iters)`, `rng=Random.default_rng()`, `decomposition_alg=SVDAdjoint()`, `orth_alg=OrthAdjoint()`, and `trunc=FixedSpaceTruncation()`.
 """
 struct SubspaceIterationProjector{M, S <: SVDAdjoint, T, Q <: OrthAdjoint, E <: ElementarySpace, R} <: ProjectorAlgorithm
     decomposition_alg::S
@@ -53,7 +53,7 @@ end
 PROJECTOR_SYMBOLS[:SubspaceIterationProjector] = SubspaceIterationProjector
 
 """Report whether the recurrence needs an independent incoming left basis."""
-_independent_subspace_update(::SubspaceIterationProjector{M}) where {M} = M in (:independent_stabilized, :independent)
+_independent_subspace_update(::SubspaceIterationProjector{M}) where {M} = M == :independent
 
 """Retain left trial frames only for independent updates or possible freezing."""
 _retain_subspace_left(alg::SubspaceIterationProjector) = _independent_subspace_update(alg) || alg.subspace_tol > 0
@@ -157,8 +157,14 @@ end
 
 @non_differentiable initialize_subspace_iteration_cache(args...)
 
-"""Perform the selected independent update or the right power steps before a left refresh."""
+"""Update trial ranges, using exact complete independent frames to avoid redundant gauge updates."""
 function rangefinder_update(X::AbstractTensorMap, Y, L, R, alg::SubspaceIterationProjector{M}) where {M}
+    if M == :independent && ignore_derivatives(() -> fuse(domain(X)) == fuse(domain(R)) == fuse(codomain(L)))
+        return ignore_derivatives() do
+            K = domain(X)
+            isometry(storagetype(X), domain(R) ← K), isometry(storagetype(X), K ← codomain(L))
+        end
+    end
     for _ in 0:alg.n_subspace_iter
         MX = L * (R * X)
         if M != :independent
@@ -167,9 +173,6 @@ function rangefinder_update(X::AbstractTensorMap, Y, L, R, alg::SubspaceIteratio
         Xnew = R' * (L' * MX)
         if _independent_subspace_update(alg)
             YM = (Y * L) * R
-            if M == :independent_stabilized
-                _, YM = right_orth!(YM, alg.orth_alg)
-            end
             _, Y = right_orth!((YM * R') * L', alg.orth_alg)
         end
         X, _ = left_orth!(Xnew, alg.orth_alg)
