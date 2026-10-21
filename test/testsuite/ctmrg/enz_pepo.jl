@@ -139,7 +139,7 @@ function enzyme_ctmrg_pepo_fixed_point(AT)
                 return -log(real(λ3 / λ2))
             end
             dpsi = zerovector(psi)
-            _, E = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(psi, dpsi))
+            _, E = Enzyme.autodiff(set_runtime_activity(ReverseWithPrimal), Const(energ), Active, Duplicated(psi, dpsi))
             return E, dpsi
         end
 

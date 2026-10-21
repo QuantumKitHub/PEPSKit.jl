@@ -226,7 +226,7 @@ Spectra of a whole collection of corners. The default
 behaviour of computing a mapped `svd_vals` of each corner
 can be overridden on backends that benefit from batching these calls.
 """
-corner_spectra(Cs, alg) = stablemap(C -> corner_spectrum(C, alg), Cs)
+corner_spectra(Cs, alg) = map(C -> corner_spectrum(C, alg), Cs)
 
 """
     edge_spectra(Ts, alg)
@@ -235,7 +235,7 @@ Spectra of a whole collection of edges. The default
 behaviour of computing a mapped `svd_vals` of each edge
 can be overridden on backends that benefit from batching these calls.
 """
-edge_spectra(Ts, alg) = stablemap(T -> edge_spectrum(T, alg), Ts)
+edge_spectra(Ts, alg) = map(T -> edge_spectrum(T, alg), Ts)
 
 """
     corner_spectrum(C, alg)
@@ -267,10 +267,10 @@ This determined either from the previous corner and edge spectra
 `CS_old` and `TS_old`, or alternatively, directly from the old environment.
 """
 function calc_convergence(env, CS_old, TS_old)
-    CS_new = stablemap(svd_vals, env.corners)
+    CS_new = map(svd_vals, env.corners)
     ΔCS = maximum(splat(_singular_value_distance), zip(CS_old, CS_new))
 
-    TS_new = stablemap(svd_vals, env.edges)
+    TS_new = map(svd_vals, env.edges)
     ΔTS = maximum(splat(_singular_value_distance), zip(TS_old, TS_new))
 
     @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
@@ -278,8 +278,8 @@ function calc_convergence(env, CS_old, TS_old)
     return max(ΔCS, ΔTS), CS_new, TS_new
 end
 function calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
-    CS_old = stablemap(svd_vals, env_old.corners)
-    TS_old = stablemap(svd_vals, env_old.edges)
+    CS_old = map(svd_vals, env_old.corners)
+    TS_old = map(svd_vals, env_old.edges)
     return calc_convergence(env_new, CS_old, TS_old)
 end
 @non_differentiable calc_convergence(args...)
