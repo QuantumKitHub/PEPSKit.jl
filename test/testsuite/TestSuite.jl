@@ -224,7 +224,7 @@ module OptimizationNormPreservation
 end
 using .OptimizationNormPreservation
 
-# Enzyme gradients 
+# Enzyme gradients
 # ----------------
 module EnzymeGradientsCTMRG
     include("enzyme_gradients/enz_ctmrg_gradients.jl")
