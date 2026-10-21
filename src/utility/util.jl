@@ -188,4 +188,3 @@ function _permute_to_last(axes::NTuple{N, Int}, ax::Int) where {N}
     new_axes = (ntuple(i -> axes[biperm[1][i]], N - 1)..., ax)
     return new_axes, biperm
 end
-

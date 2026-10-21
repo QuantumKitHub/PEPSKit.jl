@@ -159,8 +159,9 @@ function enzyme_gradients_asymmetric_276(AT)
                 env2, = leading_boundary(env, ψ, boundary_alg)
                 return cost_function(ψ, env2, H)
             end
-            E, gs = Enzyme.autodiff(ReverseWithPrimal, Const(energ), Active, Duplicated(peps, zerovector(peps)))
-            return E, only(gs)
+            dpeps = zerovector(peps)
+            _, E = Enzyme.autodiff(set_runtime_activity(ReverseWithPrimal), Const(energ), Active, Duplicated(peps, dpeps))
+            return E, dpeps
         end
 
         # initialize randomly

@@ -36,7 +36,7 @@ steps = -0.01:0.005:0.01
 # record which rrule alg is compatible with which projector alg
 allowed_rrule_algs = Dict(
     :C4vEighProjector => keys(PEPSKit.EIGH_RRULE_SYMBOLS),
-    :C4vQRProjector => keys(PEPSKit.QR_RRULE_SYMBOLS),
+    :C4vQRProjector => keys(PEPSKit.ORTH_RRULE_SYMBOLS),
 )
 
 # be selective on which configurations to test the naive gradient for
