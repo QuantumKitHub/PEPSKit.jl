@@ -5,6 +5,7 @@ Recycled subspace approximation of the full-infinite CTMRG environment.
 Supply an elementary `subspace` containing the target multiplicity in every retained symmetry sector, including complete non-Abelian multiplets.
 Only [`FixedSpaceTruncation`](@ref) is supported.
 Both trial bases embed the reduced space into the full environment spaces: ``X^{\\dagger} X = Y^{\\dagger} Y = I`` and ``ρ = Y^{\\dagger} M X``.
+See [Subspace-iteration CTMRG projectors](@ref subspace_iteration) for the update equations, singular-subspace recovery, and freezing criterion.
 
 The `update` selector chooses `:independent` (default, the paper's two-factorization independent update), `:alternating` (alternating QR/LQ with a reused reduced factor), or `:alternating_refined` (three factorizations with a final left-basis refresh).
 `n_subspace_iter=q` adds `q` independent updates, or `q` stabilized right-basis power steps before the mandatory alternating update.
