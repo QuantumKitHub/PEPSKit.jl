@@ -6,6 +6,7 @@ using Compat
 using Accessors: @set, @reset
 using VectorInterface
 import VectorInterface as VI
+import Random
 
 using MatrixAlgebraKit
 using MatrixAlgebraKit:
@@ -128,6 +129,7 @@ include("algorithms/ctmrg/ctmrg.jl")
 include("algorithms/ctmrg/projectors/projectors.jl")
 include("algorithms/ctmrg/projectors/halfinfinite.jl")
 include("algorithms/ctmrg/projectors/fullinfinite.jl")
+include("algorithms/ctmrg/projectors/randomized.jl")
 include("algorithms/ctmrg/projectors/c4v_eigh.jl")
 include("algorithms/ctmrg/projectors/c4v_qr.jl")
 include("algorithms/ctmrg/simultaneous.jl")
