@@ -37,7 +37,7 @@ function sign_twin(env)
     E = env.edges[1]
     g = charge_parity(space(E, 2))
     @tensor Ê[χ_out D_ket D_bra; χ_in] := E[χ_out D_ket′ D_bra; χ_in] * g[D_ket; D_ket′]
-    return CTMRGEnv(env.corners[1], Ê)
+    return C4vCTMRGEnv(env.corners[1], Ê)
 end
 
 function ctmrg_c4v_sign_branches(AT)

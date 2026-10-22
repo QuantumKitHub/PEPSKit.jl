@@ -1,6 +1,6 @@
 # Correlator adapters for InfinitePEPS / InfinitePEPO
 
-struct PEPSCorrelator{B <: InfinitePEPS, K <: InfinitePEPS, E <: CTMRGEnv}
+struct PEPSCorrelator{B <: InfinitePEPS, K <: InfinitePEPS, E <: AbstractCTMRGEnv}
     bra::B
     ket::K
     env::E
@@ -12,7 +12,7 @@ struct PEPSCorrelator{B <: InfinitePEPS, K <: InfinitePEPS, E <: CTMRGEnv}
     end
 end
 
-struct PEPOPurifiedCorrelator{B <: InfinitePEPO, K <: InfinitePEPO, E <: CTMRGEnv}
+struct PEPOPurifiedCorrelator{B <: InfinitePEPO, K <: InfinitePEPO, E <: AbstractCTMRGEnv}
     bra::B
     ket::K
     env::E
@@ -28,12 +28,12 @@ end
 
 const BraketCorrelator = Union{PEPSCorrelator, PEPOPurifiedCorrelator}
 
-_braket_correlator(bra::InfinitePEPS, ket::InfinitePEPS, env::CTMRGEnv) =
+_braket_correlator(bra::InfinitePEPS, ket::InfinitePEPS, env::AbstractCTMRGEnv) =
     PEPSCorrelator(bra, ket, env)
-_braket_correlator(bra::InfinitePEPO, ket::InfinitePEPO, env::CTMRGEnv) =
+_braket_correlator(bra::InfinitePEPO, ket::InfinitePEPO, env::AbstractCTMRGEnv) =
     PEPOPurifiedCorrelator(bra, ket, env)
 
-struct PEPOTraceCorrelator{P <: InfinitePEPO, E <: CTMRGEnv}
+struct PEPOTraceCorrelator{P <: InfinitePEPO, E <: AbstractCTMRGEnv}
     ρ::P
     env::E
 

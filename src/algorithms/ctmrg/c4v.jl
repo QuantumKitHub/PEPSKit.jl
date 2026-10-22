@@ -37,7 +37,7 @@ end
 CTMRG_SYMBOLS[:C4vCTMRG] = C4vCTMRG
 
 function check_input(
-        ::typeof(leading_boundary), network::InfiniteSquareNetwork, env::CTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10
+        ::typeof(leading_boundary), network::InfiniteSquareNetwork, env::C4vCTMRGEnv, alg::C4vCTMRG; atol = 1.0e-10
     )
     # check unit cell size
     length(network) == 1 || throw(ArgumentError("C4v CTMRG is only compatible with single-site unit cells."))
@@ -83,23 +83,23 @@ function corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG)
 end
 
 """
-    convergence_tensors(env::CTMRGEnv, alg::C4vCTMRG) -> (corners, edges)
+    convergence_tensors(env::C4vCTMRGEnv, alg::C4vCTMRG) -> (corners, edges)
 
 The corners and edges whose singular values determine convergence.
 
 For C₄ᵥ-symmetric CTMRG, only one corner and one edge are needed since
 the corners are identical, and the edges have identical singular values.
 """
-convergence_tensors(env::CTMRGEnv, ::C4vCTMRG) =
+convergence_tensors(env::C4vCTMRGEnv, ::C4vCTMRG) =
     (view(env.corners, 1:1, :, :), view(env.edges, 1:1, :, :))
 
-function ctmrg_iteration(network, env::CTMRGEnv, alg::C4vCTMRG)
+function ctmrg_iteration(network, env::C4vCTMRGEnv, alg::C4vCTMRG)
     projector_alg = alg.projector_alg
     enlarged_corner = c4v_enlarge(network, env, projector_alg)
     projector, info = c4v_projector!(enlarged_corner, projector_alg)
     edge′ = c4v_renormalize_edge(network, env, projector)
     corner′ = c4v_renormalize_corner(edge′, projector, info, projector_alg)
-    return CTMRGEnv(corner′, edge′), info
+    return C4vCTMRGEnv(corner′, edge′), info
 end
 
 """Report unsupported projector algorithms when enlarging a C₄ᵥ corner."""
@@ -116,7 +116,7 @@ Renormalize the single C₄ᵥ edge tensor.
                 |
 ```
 """
-function c4v_renormalize_edge(network, env, projector)
+function c4v_renormalize_edge(network, env::C4vCTMRGEnv, projector)
     # TODO: possible missing twists for fermions
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
     # additional Hermitian projection step for numerical stability
@@ -168,7 +168,7 @@ function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4
     return new_corner / norm(new_corner)
 end
 
-"""Contract two CTMRG edge tensors into a corner tensor."""
+"""Contract two C4v CTMRG edge tensors into a corner tensor."""
 @generated function contract_edges(
         EL::CTMRGEdgeTensor{T, S, N}, ER::CTMRGEdgeTensor{T, S, N}
     ) where {T, S, N}
@@ -178,14 +178,13 @@ end
     return macroexpand(@__MODULE__, :(return @tensor $C´_e := $EL_e * $ER_e))
 end
 
-# TODO: this should eventually be the constructor for a new C4vCTMRGEnv type
-function CTMRGEnv(
+function C4vCTMRGEnv(
         corner::AbstractTensorMap{T, S, 1, 1}, edge::AbstractTensorMap{T′, S, N, 1}
     ) where {T, T′, S, N}
-    corners = fill(corner, 4, 1, 1)
+    corners = fill(corner, 1, 1, 1)
     edge_SW = physical_flip(edge)
     edges = reshape([edge, edge, edge_SW, edge_SW], (4, 1, 1))
-    return CTMRGEnv(corners, edges)
+    return C4vCTMRGEnv(corners, edges)
 end
 
 #
@@ -217,7 +216,7 @@ end
 """
     initialize_random_c4v_env([f=randn, T=storagetype(state)], state, Venv::ElementarySpace)
 
-Initialize a C₄ᵥ-symmetric `CTMRGEnv` on virtual spaces `Venv` with random entries created
+Initialize a C₄ᵥ-symmetric `C4vCTMRGEnv` on virtual spaces `Venv` with random entries created
 by `f` and scalartype `T`.
 """
 function initialize_random_c4v_env(state, Venv::ElementarySpace)
@@ -235,13 +234,13 @@ function initialize_random_c4v_env(f, T, Vstate::VectorSpace, Venv::ElementarySp
     corner₀ = DiagonalTensorMap(f(similarstoragetype(similarstoragetype(T), real(eltype(T))), Venv ← Venv))
     edge₀ = f(T, Venv ⊗ Vstate ← Venv)
     edge₀ = _project_hermitian(edge₀)
-    return CTMRGEnv(corner₀, edge₀)
+    return C4vCTMRGEnv(corner₀, edge₀)
 end
 
 """
     initialize_singlet_c4v_env([T=storagetype(state)], state::InfinitePEPS, Venv::ElementarySpace)
 
-Initialize a C₄ᵥ-symmetric `CTMRGEnv` with a singlet corner of dimension `dim(Venv)` and an
+Initialize a C₄ᵥ-symmetric `C4vCTMRGEnv` with a singlet corner of dimension `dim(Venv)` and an
 identity edge from `id(T, Venv ⊗ Vpeps)`.
 """
 function initialize_singlet_c4v_env(state::InfinitePEPS, Venv::ElementarySpace)
@@ -258,5 +257,5 @@ function initialize_singlet_c4v_env(T, Vpeps::ElementarySpace, Venv::ElementaryS
     corner₀ = DiagonalTensorMap(diag, Venv)
     corner₀.data[2:end] .= zero(real(eltype(T)))
     edge₀ = permute(id(T, Venv ⊗ Vpeps), ((1, 2, 4), (3,)))
-    return CTMRGEnv(corner₀, edge₀)
+    return C4vCTMRGEnv(corner₀, edge₀)
 end

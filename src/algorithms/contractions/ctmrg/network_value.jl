@@ -71,11 +71,24 @@ end
 end
 
 """
-    _contract_site(ind::Tuple{Int,Int}, network::InfiniteSquareNetwork, env::CTMRGEnv)
+    _contract_site(ind::Tuple{Int,Int}, network::InfiniteSquareNetwork, env::AbstractCTMRGEnv)
 
 Contract around a single site `ind` of a square network using a given CTMRG environment.
 """
 function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::CTMRGEnv)
+    r, c = ind
+    return _contract_site(
+        corner(env, NORTHWEST, r - 1, c - 1),
+        corner(env, NORTHEAST, r - 1, c + 1),
+        corner(env, SOUTHEAST, r + 1, c + 1),
+        corner(env, SOUTHWEST, r + 1, c - 1),
+        edge(env, NORTH, r - 1, c), edge(env, EAST, r, c + 1),
+        edge(env, SOUTH, r + 1, c), edge(env, WEST, r, c - 1),
+        network[r, c],
+    )
+end
+
+function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::C4vCTMRGEnv)
     r, c = ind
     return _contract_site(
         corner(env, NORTHWEST, r - 1, c - 1),
@@ -103,7 +116,7 @@ end
 Contract all corners around the south-east at position `ind` of the CTMRG
 environment `env`.
 """
-function _contract_corners(ind::Tuple{Int, Int}, env::CTMRGEnv)
+function _contract_corners(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
     r, c = ind
     return _contract_corners(
         corner(env, NORTHWEST, r - 1, c - 1),
@@ -145,7 +158,7 @@ end
 Contract the vertical edges and corners around the east edge at position `ind` of the
 CTMRG environment `env`.
 """
-function _contract_vertical_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
+function _contract_vertical_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
     r, c = ind
     return _contract_vertical_edges(
         corner(env, NORTHWEST, r - 1, c - 1),
@@ -188,7 +201,7 @@ end
 Contract the horizontal edges and corners around the south edge at position `ind` of the
 CTMRG environment `env`.
 """
-function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::CTMRGEnv)
+function _contract_horizontal_edges(ind::Tuple{Int, Int}, env::AbstractCTMRGEnv)
     r, c = ind
     return _contract_horizontal_edges(
         corner(env, NORTHWEST, r - 1, c - 1),

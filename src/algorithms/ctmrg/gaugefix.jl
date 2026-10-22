@@ -27,7 +27,7 @@ Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
 function gauge_fix(
-        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::G
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::G
     ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(envfinal, envprev, alg)
     return fix_phases(envfinal, signs, corner_phases, edge_phases)
@@ -54,14 +54,35 @@ function compute_gauge_fix_gauge(
     return signs, corner_phases, edge_phases
 end
 
-function fix_phases(env::CTMRGEnv, signs, corner_phases, edge_phases)
+function compute_gauge_fix_gauge(
+        envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, alg::G
+    ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
+    # Check if spaces in envprev and envfinal are the same
+    same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+        space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
+            space(envfinal.corners[1, r, c]) == space(envprev.corners[1, r, c])
+    end
+    all(same_spaces) || throw(ArgumentError("Spaces of envfinal and envprev are not the same"))
+
+    # find relative phases
+    signs = compute_relative_phases(envfinal, envprev, alg)
+
+    # find additional global phases
+    corner_phases, edge_phases = compute_global_phases(
+        fix_relative_phases(envfinal, signs), envprev
+    )
+
+    return signs, corner_phases, edge_phases
+end
+
+function fix_phases(env::AbstractCTMRGEnv, signs, corner_phases, edge_phases)
     env_fixed_relative = fix_relative_phases(env, signs)
     env_fixed_global = fix_global_phases(env_fixed_relative, corner_phases, edge_phases)
     return env_fixed_global
 end
 
 function compute_relative_phases(
-        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGauge
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGauge
     ) where {C, T}
 
     signs = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
@@ -100,7 +121,7 @@ function compute_relative_phases(
     return signs
 end
 
-function compute_relative_phases(envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}
+function compute_relative_phases(envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}
     # "general" algorithm from https://arxiv.org/abs/2311.11894
     Tprev = envprev.edges[1, 1, 1]
     Tfinal = envfinal.edges[1, 1, 1]
@@ -194,6 +215,25 @@ function fix_relative_phases(envfinal::CTMRGEnv, signs)
 
     return CTMRGEnv(corners_fixed, edges_fixed)
 end
+function fix_relative_phases(envfinal::C4vCTMRGEnv, signs)
+    # all corners are the same
+    corner_fixed = map(eachcoordinate(envfinal, 1:1)) do (dir, r, c)
+        fix_gauge_northwest_corner((r, c), envfinal, signs)
+    end
+    edges_fixed = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
+        Ef = if dir == NORTHWEST
+            fix_gauge_north_edge((r, c), envfinal, signs)
+        elseif dir == NORTHEAST
+            fix_gauge_east_edge((r, c), envfinal, signs)
+        elseif dir == SOUTHEAST
+            fix_gauge_south_edge((r, c), envfinal, signs)
+        else # dir == SOUTHWEST
+            fix_gauge_west_edge((r, c), envfinal, signs)
+        end
+        return Ef
+    end
+    return C4vCTMRGEnv(corner_fixed, edges_fixed)
+end
 function fix_relative_phases(
         U::Array{Ut, 3}, V::Array{Vt, 3}, signs
     ) where {Ut <: AbstractTensorMap, Vt <: AbstractTensorMap}
@@ -235,7 +275,7 @@ Fix global multiplicative phase of the environment tensors. To that end, the dot
 between all corners and all edges are computed to obtain the global phase which is then
 divided out.
 """
-function fix_global_phases(envfix::CTMRGEnv, envprev::CTMRGEnv)
+function fix_global_phases(envfix::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv)
     corner_phases, edge_phases = compute_global_phases(envfix, envprev)
     return fix_global_phases(envfix, corner_phases, edge_phases)
 end
@@ -244,8 +284,13 @@ function fix_global_phases(env::CTMRGEnv, corner_phases, edge_phases)
     edgesgfix = env.edges .* inv.(edge_phases)
     return CTMRGEnv(cornersgfix, edgesgfix)
 end
+function fix_global_phases(env::C4vCTMRGEnv, corner_phases, edge_phases)
+    cornersgfix = env.corners .* inv.(corner_phases)
+    edgesgfix = env.edges .* inv.(edge_phases)
+    return C4vCTMRGEnv(cornersgfix, edgesgfix)
+end
 
-function compute_global_phases(envfix::CTMRGEnv, envprev::CTMRGEnv)
+function compute_global_phases(envfix::AbstractCTMRGEnv, envprev::AbstractCTMRGEnv)
     corner_phases = dot.(envprev.corners, envfix.corners)
     edge_phases = dot.(envprev.edges, envfix.edges)
     return corner_phases, edge_phases
@@ -258,7 +303,7 @@ Check if the element-wise difference of the corner and edge tensors of the final
 CTMRG environments are below `atol` and return the maximal difference.
 """
 function calc_elementwise_convergence(
-        envfinal::CTMRGEnv{C}, envfix::CTMRGEnv{C′}; atol::Real = 1.0e-6
+        envfinal::AbstractCTMRGEnv{C}, envfix::AbstractCTMRGEnv{C′}; atol::Real = 1.0e-6
     ) where {C, C′}
     Cfinal = (C <: DiagonalTensorMap) ? convert.(TensorMap, envfinal.corners) : envfinal.corners
     Cfix = (C′ <: DiagonalTensorMap) ? convert.(TensorMap, envfix.corners) : envfix.corners

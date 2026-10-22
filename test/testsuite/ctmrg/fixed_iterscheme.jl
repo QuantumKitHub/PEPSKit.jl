@@ -95,7 +95,7 @@ function ctmrg_fixed_iterscheme_c4v(AT)
         # fix gauge of single iteration
         signs, corner_phases, edge_phases =
             compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
-        gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
+        gauge_fixed_iteration(env::PEPSKit.AbstractCTMRGEnv) = fix_phases(
             ctmrg_iteration(n, env, ctm_alg)[1],
             signs, corner_phases, edge_phases,
         )
