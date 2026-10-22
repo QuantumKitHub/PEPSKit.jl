@@ -196,7 +196,7 @@ function _subspace_alternating_range(L, R, X, K, alg)
     return Q0 * E0' + Q * E', true
 end
 
-"""Reuse the native alternating LQ factor as the reduced square core."""
+"""Reuse the native alternating LQ factor as `core`, the reduced matrix ``ρ = Y L R X``."""
 function _subspace_alternating_update(X, L, R, K, alg)
     Q, sampled = _subspace_alternating_range(L, R, X, K, alg)
     for _ in 1:alg.n_subspace_iter
@@ -227,7 +227,10 @@ function _subspace_svd_phase_correction(U::AbstractTensorMap, V::AbstractTensorM
     return U * phases', phases * V
 end
 
-"""Factor the reduced map, retaining complete singular directions when recycling needs them."""
+"""
+Factor `core`, the reduced matrix ``ρ = Y M X``, retaining complete singular directions when recycling needs them.
+The `:alternating` update normalizes this matrix before its SVD.
+"""
 function _subspace_reduced_svd(core, trunc, alg, complete::Bool)
     svd_alg = decomposition_algorithm(alg)
     fwd = svd_alg.fwd_alg
@@ -249,7 +252,10 @@ function _subspace_reduced_svd(core, trunc, alg, complete::Bool)
     return (; u, v, uχ = u, sχ = s, vχ = v, error)
 end
 
-"""Compute shared projectors, singular frames, and the minimal next-sweep trial state."""
+"""
+Compute shared projectors, singular frames, and the minimal next-sweep trial state.
+The internal `core` is the reduced matrix ``ρ = Y M X`` with ``M = L R``, obtained by contraction or a reused QR/LQ factor.
+"""
 function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector{M}, ranges) where {M}
     trunc = ranges.trunc
     K = ignore_derivatives(() -> _subspace_iteration_space(codomain(L), domain(R), alg, trunc))
@@ -268,11 +274,14 @@ function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector
         end
         right = R * X
         if M == :alternating_refined && !recycled
-            Q, _ = left_orth!(L * right, alg.orth_alg)
+            Q, core = left_orth!(L * right, alg.orth_alg)
             Y = Q'
+            left = Y * L
+        else
+            left = Y * L
+            core = left * right
         end
-        left = Y * L
-        (; X, Y, left, right, core = left * right)
+        (; X, Y, left, right, core)
     end
     full = _subspace_reduced_svd(state.core, trunc, alg, alg.rotate_basis || isnothing(state.X))
     U = state.Y' * full.uχ
