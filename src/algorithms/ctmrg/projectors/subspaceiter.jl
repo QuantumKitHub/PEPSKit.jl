@@ -4,6 +4,7 @@ $(TYPEDEF)
 Recycled subspace approximation of the full-infinite CTMRG environment.
 Supply an elementary `subspace` containing the target multiplicity in every retained symmetry sector, including complete non-Abelian multiplets.
 Only [`FixedSpaceTruncation`](@ref) is supported.
+Both trial bases embed the reduced space into the full environment spaces: ``X^{\\dagger} X = Y^{\\dagger} Y = I`` and ``ρ = Y^{\\dagger} M X``.
 
 The `update` selector chooses `:independent` (default, the paper's two-factorization independent update), `:alternating` (alternating QR/LQ with a reused reduced factor), or `:alternating_refined` (three factorizations with a final left-basis refresh).
 `n_subspace_iter=q` adds `q` independent updates, or `q` stabilized right-basis power steps before the mandatory alternating update.
@@ -107,13 +108,13 @@ function _subspace_freezable(left, right, K)
     end
 end
 
-"""Initialize orthonormal right columns and the required left trial rows."""
+"""Initialize right and required left isometries from the trial space into the full spaces."""
 function rangefinder_initialize(::Type{T}, left::ProductSpace, right::ProductSpace, K::ElementarySpace, alg::SubspaceIterationProjector) where {T}
     X, _ = left_orth!(randn(alg.rng, T, right ← K), alg.orth_alg)
     Y = if _independent_subspace_update(alg)
-        last(right_orth!(randn(alg.rng, T, K ← left), alg.orth_alg))
+        last(right_orth!(randn(alg.rng, T, K ← left), alg.orth_alg))'
     elseif _retain_subspace_left(alg)
-        zeros(T, K ← left)
+        zeros(T, K ← left)'
     else
         nothing
     end
@@ -157,12 +158,12 @@ end
 
 @non_differentiable initialize_subspace_iteration_cache(args...)
 
-"""Update trial ranges, using exact complete independent frames to avoid redundant gauge updates."""
+"""Update trial ranges, using exact complete independent bases to avoid redundant gauge updates."""
 function rangefinder_update(X::AbstractTensorMap, Y, L, R, alg::SubspaceIterationProjector{M}) where {M}
     if M == :independent && ignore_derivatives(() -> fuse(domain(X)) == fuse(domain(R)) == fuse(codomain(L)))
         return ignore_derivatives() do
             K = domain(X)
-            isometry(storagetype(X), domain(R) ← K), isometry(storagetype(X), K ← codomain(L))
+            isometry(storagetype(X), domain(R) ← K), isometry(storagetype(X), codomain(L) ← K)
         end
     end
     for _ in 0:alg.n_subspace_iter
@@ -172,8 +173,9 @@ function rangefinder_update(X::AbstractTensorMap, Y, L, R, alg::SubspaceIteratio
         end
         Xnew = R' * (L' * MX)
         if _independent_subspace_update(alg)
-            YM = (Y * L) * R
-            _, Y = right_orth!((YM * R') * L', alg.orth_alg)
+            YadjM = (Y' * L) * R
+            _, Yrow = right_orth!((YadjM * R') * L', alg.orth_alg)
+            Y = Yrow'
         end
         X, _ = left_orth!(Xnew, alg.orth_alg)
     end
@@ -196,7 +198,7 @@ function _subspace_alternating_range(L, R, X, K, alg)
     return Q0 * E0' + Q * E', true
 end
 
-"""Reuse the native alternating LQ factor as `core`, the reduced matrix ``ρ = Y L R X``."""
+"""Reuse the native alternating LQ factor as `core`, the reduced matrix ``ρ = Y^{\\dagger} L R X``."""
 function _subspace_alternating_update(X, L, R, K, alg)
     Q, sampled = _subspace_alternating_range(L, R, X, K, alg)
     for _ in 1:alg.n_subspace_iter
@@ -207,7 +209,7 @@ function _subspace_alternating_update(X, L, R, K, alg)
     left = Q' * L
     B = left * R
     core, Z = sampled ? right_orth!(B, alg.orth_alg) : (B, nothing)
-    return (; X = isnothing(Z) ? nothing : Z', Y = Q', left, right = nothing, core)
+    return (; X = isnothing(Z) ? nothing : Z', Y = Q, left, right = nothing, core)
 end
 
 """
@@ -228,13 +230,15 @@ function _subspace_svd_phase_correction(U::AbstractTensorMap, V::AbstractTensorM
 end
 
 """
-Factor `core`, the reduced matrix ``ρ = Y M X``, retaining complete singular directions when recycling needs them.
+Factor `core`, the reduced matrix ``ρ = Y^{\\dagger} M X``, retaining complete singular directions when recycling needs them.
 The `:alternating` update normalizes this matrix before its SVD.
 """
 function _subspace_reduced_svd(core, trunc, alg, complete::Bool)
     svd_alg = decomposition_algorithm(alg)
     fwd = svd_alg.fwd_alg
     fwd = fwd isa TruncatedAlgorithm ? fwd.alg : fwd
+    # TODO: Unify alternating core normalization with the other updates' half-environment scaling;
+    # verify projector scaling, convergence, and gradients before changing the conventions.
     rho = alg.update == :alternating ? core / norm(core) : core
     if complete
         svd_alg = @set svd_alg.fwd_alg = TruncatedAlgorithm(fwd, notrunc())
@@ -254,7 +258,7 @@ end
 
 """
 Compute shared projectors, singular frames, and the minimal next-sweep trial state.
-The internal `core` is the reduced matrix ``ρ = Y M X`` with ``M = L R``, obtained by contraction or a reused QR/LQ factor.
+The internal `core` is the reduced matrix ``ρ = Y^{\\dagger} M X`` with ``M = L R``, obtained by contraction or a reused QR/LQ factor.
 """
 function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector{M}, ranges) where {M}
     trunc = ranges.trunc
@@ -275,22 +279,23 @@ function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector
         right = R * X
         if M == :alternating_refined && !recycled
             Q, core = left_orth!(L * right, alg.orth_alg)
-            Y = Q'
-            left = Y * L
+            Y = Q
+            left = Y' * L
         else
-            left = Y * L
+            left = Y' * L
             core = left * right
         end
         (; X, Y, left, right, core)
     end
     full = _subspace_reduced_svd(state.core, trunc, alg, alg.rotate_basis || isnothing(state.X))
-    U = state.Y' * full.uχ
+    U = state.Y * full.uχ
     V = isnothing(state.X) ? full.vχ : full.vχ * state.X'
     isqS = sdiag_pow(full.sχ, -0.5)
     P_left = isnothing(state.right) ? R * (V' * isqS) : state.right * (full.vχ' * isqS)
     P_right = (isqS * full.uχ') * state.left
     X = isnothing(state.X) ? copy(full.v') : (alg.rotate_basis ? state.X * full.v' : copy(state.X))
-    Y = _retain_subspace_left(alg) ? (alg.rotate_basis ? full.u' * state.Y : copy(state.Y)) : nothing
+    # Keep the left cache as a lazy adjoint of the existing row-oriented contraction.
+    Y = _retain_subspace_left(alg) ? (alg.rotate_basis ? full.u' * state.Y' : copy(state.Y'))' : nothing
     return (; U, S = full.sχ, V, X, Y, recycled, freezable, truncation_error = full.error, projectors = (P_left, P_right))
 end
 

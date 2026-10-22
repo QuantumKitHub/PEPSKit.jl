@@ -4,7 +4,10 @@ abstract type ProjectorCache end
 """Empty runtime cache used by projector algorithms without recycled data."""
 struct EmptyProjectorCache <: ProjectorCache end
 
-"""Runtime rangefinder and dominant-subspace cache for SI-CTMRG iterations."""
+"""
+Runtime rangefinder and dominant-subspace cache for SI-CTMRG iterations.
+Both `X` and `Y` embed the trial space into the full right and left spaces, respectively.
+"""
 struct SubspaceIterationCache{X, Y, U, V} <: ProjectorCache
     iteration::Int
     recycle::Bool
@@ -42,7 +45,7 @@ function _compatible_rangefinders(
     left = !require_left || (
         !isnothing(Y) &&
             scalartype(Y) == scalartype(halfinf_left) &&
-            space(Y) == (subspace ← codomain(halfinf_left))
+            space(Y) == (codomain(halfinf_left) ← subspace)
     )
     return right && left
 end

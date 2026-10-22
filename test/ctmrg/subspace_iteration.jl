@@ -250,7 +250,7 @@ end
     end
     U, S, V, = svd_trunc(L * R, MatrixAlgebraKit.TruncatedAlgorithm(DefaultAlgorithm(), truncspace(χ)))
     @test space(result.S, 1) == χ
-    @test domain(result.X) == codomain(result.Y) == ProductSpace(K)
+    @test domain(result.X) == domain(result.Y) == ProductSpace(K)
     @test result.U * result.S * result.V ≈ U * S * V rtol = 1.0e-7
     @test result.U' * result.U ≈ id(ComplexF64, χ)
     @test result.V * result.V' ≈ id(ComplexF64, χ)
