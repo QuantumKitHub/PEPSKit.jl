@@ -87,16 +87,19 @@ function test_c4v_gradients(AT, projector_alg, D, χ, cases; seed = sd)
     return nothing
 end
 
-function gradients_c4v(AT)
+function gradients_c4v(AT; minimal::Bool = false)
     return @testset "C4v CTMRG gradients ($AT)" verbose = true begin
         @testset "$palg, D = 2, χ = 6" for palg in projector_algs
             test_c4v_gradients(AT, palg, 2, 6, gradient_cases(palg))
         end
-        # larger state, where truncation effects are visible
-        @testset "$palg, D = 3, χ = 16" for palg in projector_algs
-            cases = [("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES))]
-            # sd lands on a sign-flipping eigh fixed point here, see #436
-            test_c4v_gradients(AT, palg, 3, 16, cases; seed = 11)
+        # larger state, where truncation effects are visible; the D = 2 runs above already
+        # cover every option value, so the minimal set skips these
+        if !minimal
+            @testset "$palg, D = 3, χ = 16" for palg in projector_algs
+                cases = [("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES))]
+                # sd lands on a sign-flipping eigh fixed point here, see #436
+                test_c4v_gradients(AT, palg, 3, 16, cases; seed = 11)
+            end
         end
     end
 end
