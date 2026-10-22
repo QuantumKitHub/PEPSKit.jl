@@ -53,11 +53,8 @@ end
 
 PROJECTOR_SYMBOLS[:SubspaceIterationProjector] = SubspaceIterationProjector
 
-"""Report whether the recurrence needs an independent incoming left basis."""
-_independent_subspace_update(::SubspaceIterationProjector{M}) where {M} = M == :independent
-
-"""Retain left trial frames only for independent updates or possible freezing."""
-_retain_subspace_left(alg::SubspaceIterationProjector) = _independent_subspace_update(alg) || alg.subspace_tol > 0
+"""Retain a left basis only for independent updates or possible freezing."""
+_retain_subspace_left(alg::SubspaceIterationProjector{M}) where {M} = M == :independent || alg.subspace_tol > 0
 
 """Apply a half environment through its enlarged corners without forming their product."""
 struct SIHalfEnvironment{L, R, S}
@@ -109,9 +106,9 @@ function _subspace_freezable(left, right, K)
 end
 
 """Initialize right and required left isometries from the trial space into the full spaces."""
-function rangefinder_initialize(::Type{T}, left::ProductSpace, right::ProductSpace, K::ElementarySpace, alg::SubspaceIterationProjector) where {T}
+function rangefinder_initialize(::Type{T}, left::ProductSpace, right::ProductSpace, K::ElementarySpace, alg::SubspaceIterationProjector{M}) where {T, M}
     X, _ = left_orth!(randn(alg.rng, T, right ← K), alg.orth_alg)
-    Y = if _independent_subspace_update(alg)
+    Y = if M == :independent
         last(right_orth!(randn(alg.rng, T, K ← left), alg.orth_alg))'
     elseif _retain_subspace_left(alg)
         zeros(T, K ← left)'
@@ -127,7 +124,7 @@ function rangefinder_initialize(L, R, K::ElementarySpace, alg::SubspaceIteration
 end
 
 """Initialize one directional cache entry without forming enlarged corners."""
-function _initialize_subspace_iteration_entry(network::InfiniteSquareNetwork, env::CTMRGEnv, coordinate::NTuple{3, Int}, alg::SubspaceIterationProjector)
+function _initialize_subspace_iteration_entry(network::InfiniteSquareNetwork, env::CTMRGEnv, coordinate::NTuple{3, Int}, alg::SubspaceIterationProjector{M}) where {M}
     coordinates, trunc = _enlarged_corner_layout(coordinate, env, alg, Val(4))
     left = codomain(EnlargedCorner(network, env, first(coordinates)))
     right = domain(EnlargedCorner(network, env, last(coordinates)))
@@ -135,7 +132,7 @@ function _initialize_subspace_iteration_entry(network::InfiniteSquareNetwork, en
     T = scalartype(network)
     X, Y = rangefinder_initialize(T, left, right, K, alg)
     U, V = if alg.subspace_tol > 0
-        if _independent_subspace_update(alg)
+        if M == :independent
             u, _ = left_orth!(randn(alg.rng, T, left ← trunc.space), alg.orth_alg)
             _, v = right_orth!(randn(alg.rng, T, trunc.space ← right), alg.orth_alg)
             u, v
@@ -158,30 +155,6 @@ end
 
 @non_differentiable initialize_subspace_iteration_cache(args...)
 
-"""Update trial ranges, using exact complete independent bases to avoid redundant gauge updates."""
-function rangefinder_update(X::AbstractTensorMap, Y, L, R, alg::SubspaceIterationProjector{M}) where {M}
-    if M == :independent && ignore_derivatives(() -> fuse(domain(X)) == fuse(domain(R)) == fuse(codomain(L)))
-        return ignore_derivatives() do
-            K = domain(X)
-            isometry(storagetype(X), domain(R) ← K), isometry(storagetype(X), codomain(L) ← K)
-        end
-    end
-    for _ in 0:alg.n_subspace_iter
-        MX = L * (R * X)
-        if M != :independent
-            MX, _ = left_orth!(MX, alg.orth_alg)
-        end
-        Xnew = R' * (L' * MX)
-        if _independent_subspace_update(alg)
-            YadjM = (Y' * L) * R
-            _, Yrow = right_orth!((YadjM * R') * L', alg.orth_alg)
-            Y = Yrow'
-        end
-        X, _ = left_orth!(Xnew, alg.orth_alg)
-    end
-    return X, Y
-end
-
 """Construct a sampled left range and exact bases for complete left sectors."""
 function _subspace_alternating_range(L, R, X, K, alg)
     W = fuse(codomain(L))
@@ -198,18 +171,63 @@ function _subspace_alternating_range(L, R, X, K, alg)
     return Q0 * E0' + Q * E', true
 end
 
-"""Reuse the native alternating LQ factor as `core`, the reduced matrix ``ρ = Y^{\\dagger} L R X``."""
-function _subspace_alternating_update(X, L, R, K, alg)
-    Q, sampled = _subspace_alternating_range(L, R, X, K, alg)
-    for _ in 1:alg.n_subspace_iter
-        sampled || break
-        X, _ = left_orth!(R' * (L' * Q), alg.orth_alg)
-        Q, _ = _subspace_alternating_range(L, R, X, K, alg)
+"""
+Update the trial bases and construct `core`, the reduced matrix ``ρ = Y^{\\dagger} L R X``.
+Use independent normal-map updates or alternating QR steps with a final LQ or refined QR factor reuse.
+"""
+function rangefinder_update(X::AbstractTensorMap, Y, L, R, K, alg::SubspaceIterationProjector{M}) where {M}
+    if M == :independent
+        if ignore_derivatives(() -> fuse(domain(X)) == fuse(domain(R)) == fuse(codomain(L)))
+            X, Y = ignore_derivatives() do
+                isometry(storagetype(X), domain(R) ← K), isometry(storagetype(X), codomain(L) ← K)
+            end
+        else
+            for _ in 0:alg.n_subspace_iter
+                MX = L * (R * X)
+                Xnew = R' * (L' * MX)
+                # Adjoint LQ evaluates leftorth(M M'Y) in the cached row layout.
+                YadjM = (Y' * L) * R
+                _, Yrow = right_orth!((YadjM * R') * L', alg.orth_alg)
+                Y = Yrow'
+                X, _ = left_orth!(Xnew, alg.orth_alg)
+            end
+        end
+        right = R * X
+        left = Y' * L
+        core = left * right
+    else
+        # Initialize Q, then perform q right/left update pairs.
+        Q, sampled = if M == :alternating
+            _subspace_alternating_range(L, R, X, K, alg)
+        else
+            Q, _ = left_orth!(L * (R * X), alg.orth_alg)
+            Q, true
+        end
+        for _ in 1:alg.n_subspace_iter
+            sampled || break
+            X, _ = left_orth!(R' * (L' * Q), alg.orth_alg)
+            Q, _ = if M == :alternating
+                _subspace_alternating_range(L, R, X, K, alg)
+            else
+                left_orth!(L * (R * X), alg.orth_alg)
+            end
+        end
+        if M == :alternating
+            # The LQ of Q'M is the adjoint of the final QR; its triangular factor is ρ.
+            Y = Q
+            left = Y' * L
+            B = left * R
+            core, Z = sampled ? right_orth!(B, alg.orth_alg) : (B, nothing)
+            X = isnothing(Z) ? nothing : Z'
+            right = nothing
+        else
+            X, _ = left_orth!(R' * (L' * Q), alg.orth_alg)
+            right = R * X
+            Y, core = left_orth!(L * right, alg.orth_alg)
+            left = Y' * L
+        end
     end
-    left = Q' * L
-    B = left * R
-    core, Z = sampled ? right_orth!(B, alg.orth_alg) : (B, nothing)
-    return (; X = isnothing(Z) ? nothing : Z', Y = Q, left, right = nothing, core)
+    return (; X, Y, left, right, core)
 end
 
 """
@@ -270,22 +288,12 @@ function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector
     if M != :alternating && !(compatible && ranges.recycle && freezable)
         L, R = _normalize_subspace_half(L), _normalize_subspace_half(R)
     end
-    state = if M == :alternating && !recycled
-        _subspace_alternating_update(X, L, R, K, alg)
-    else
-        if !recycled
-            X, Y = rangefinder_update(X, Y, L, R, alg)
-        end
+    state = if recycled
         right = R * X
-        if M == :alternating_refined && !recycled
-            Q, core = left_orth!(L * right, alg.orth_alg)
-            Y = Q
-            left = Y' * L
-        else
-            left = Y' * L
-            core = left * right
-        end
-        (; X, Y, left, right, core)
+        left = Y' * L
+        (; X, Y, left, right, core = left * right)
+    else
+        rangefinder_update(X, Y, L, R, K, alg)
     end
     full = _subspace_reduced_svd(state.core, trunc, alg, alg.rotate_basis || isnothing(state.X))
     U = state.Y * full.uχ
