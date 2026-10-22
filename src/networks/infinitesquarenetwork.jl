@@ -61,11 +61,34 @@ virtualspace(n::InfiniteSquareNetwork, r::Int, c::Int, dir) = virtualspace(n[r, 
 
 ## Vector interface
 
-function VectorInterface.scalartype(::Type{T}) where {T <: InfiniteSquareNetwork}
+function VI.scalartype(::Type{T}) where {T <: InfiniteSquareNetwork}
     return scalartype(eltype(T))
 end
-function VectorInterface.zerovector(A::InfiniteSquareNetwork)
+function VI.zerovector(A::InfiniteSquareNetwork)
     return InfiniteSquareNetwork(zerovector(unitcell(A)))
+end
+function _unalias!(A::InfiniteSquareNetwork)
+    seen = Base.IdSet{Any}()
+    cell = unitcell(A)
+    for I in eachindex(cell)
+        cell[I] = _unalias_localsandwich!(seen, cell[I])
+    end
+    return A
+end
+function VI.add!(
+        A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork, α::Number, β::Number
+    )
+    # be careful: the same tensor can appear several times in `A₁` (e.g. ket == bra)
+    _unalias!(A₁)
+    _add!(O1, O2) = _add_localsandwich!(O1, O2, α, β)
+    foreach(_add!, unitcell(A₁), unitcell(A₂))
+    return A₁
+end
+VI.add!(A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork) = VI.add!(A₁, A₂, VI.One(), VI.One())
+function VI.add!!(
+        A₁::InfiniteSquareNetwork, A₂::InfiniteSquareNetwork, α::Number, β::Number
+    )
+    return add!(A₁, A₂, α, β)
 end
 
 ## Math (for Zygote accumulation)
