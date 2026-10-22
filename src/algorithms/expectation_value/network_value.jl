@@ -7,15 +7,15 @@
 Return the value (per unit cell) of a given contractible network contracted using a given
 CTMRG environment.
 """
-function network_value(network::InfiniteSquareNetwork, env::CTMRGEnv)
+function network_value(network::InfiniteSquareNetwork, env::AbstractCTMRGEnv)
     return prod(Iterators.product(axes(network)...)) do (r, c)
         return _contract_site((r, c), network, env) * _contract_corners((r, c), env) /
             _contract_vertical_edges((r, c), env) / _contract_horizontal_edges((r, c), env)
     end
 end
-network_value(state, env::CTMRGEnv) = network_value(InfiniteSquareNetwork(state), env)
+network_value(state, env::AbstractCTMRGEnv) = network_value(InfiniteSquareNetwork(state), env)
 
-function LinearAlgebra.norm(peps::InfinitePEPS, env::CTMRGEnv)
+function LinearAlgebra.norm(peps::InfinitePEPS, env::AbstractCTMRGEnv)
     return network_value(InfiniteSquareNetwork(peps), env)
 end
 
@@ -29,7 +29,7 @@ Contract a local tensor `O` inserted into a partition function `pf` at position 
 using the environment `env`.
 """
 function contract_local_tensor(
-        inds::Tuple{Int, Int}, O::PFTensor, env::CTMRGEnv{C, <:CTMRG_PF_EdgeTensor}
+        inds::Tuple{Int, Int}, O::PFTensor, env::AbstractCTMRGEnv{C, <:CTMRG_PF_EdgeTensor}
     ) where {C}
     r, c = inds
     return _contract_site(
@@ -53,7 +53,7 @@ function contract_local_tensor(
         ind::Tuple{Int, Int, Int},
         O::PEPOTensor,
         network::InfiniteSquareNetwork{<:PEPOSandwich},
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     )
     r, c, h = ind
     sandwich´ = Base.setindex(network[r, c], O, h + 2)
@@ -68,6 +68,6 @@ function contract_local_tensor(
     )
 end
 
-function contract_local_tensor(inds::CartesianIndex, O::AbstractTensorMap, env::CTMRGEnv)
+function contract_local_tensor(inds::CartesianIndex, O::AbstractTensorMap, env::AbstractCTMRGEnv)
     return contract_local_tensor(Tuple(inds), O, env)
 end
