@@ -80,15 +80,17 @@ end
 function is_degenerate_spectrum(
         S; atol::Real = 0, rtol::Real = atol > 0 ? 0 : sqrt(eps(scalartype(S)))
     )
+    approx = (x, y) -> isapprox(real(x), real(y); atol, rtol)
     # we need to distinguish vectors in the subspace
     # to avoid symmetry breaking rotations. vectors in
     # different blocks are safe.
     for (_, b) in blocks(S)
-        s = real(diag(b))
+        s = diagview(b)
         n = length(s)
         n < 2 && continue
-        approx = (x, y) -> isapprox(x, y; atol, rtol)
-        any(approx.(view(s, 1:(n - 1)), view(s, 2:n))) && return true
+        left = view(s, 1:(n - 1))
+        right = view(s, 2:n)
+        mapreduce(approx, |, left, right; init = false) && return true
     end
     return false
 end
