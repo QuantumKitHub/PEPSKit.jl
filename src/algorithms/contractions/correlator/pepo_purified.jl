@@ -5,7 +5,7 @@ function start_correlator_left(
         below::InfinitePEPO,
         O::PFTensor,
         above::InfinitePEPO,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     )
     r, c = Tuple(i)
     E_north = edge(env, NORTH, r - 1, c)
@@ -44,7 +44,7 @@ function end_correlator_right_numerator(
         above::InfinitePEPO,
         O::PFTensor,
         below::InfinitePEPO,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     ) where {T, S}
     r, c = Tuple(j)
     E_north = edge(env, NORTH, r - 1, c)
@@ -73,7 +73,7 @@ function start_correlator_right(
         below::InfinitePEPO,
         O::PFTensor,
         above::InfinitePEPO,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     )
     r, c = Tuple(i)
     E_north = edge(env, NORTH, r - 1, c)
@@ -112,7 +112,7 @@ function end_correlator_left_numerator(
         above::InfinitePEPO,
         O::PFTensor,
         below::InfinitePEPO,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     ) where {T, S}
     r, c = Tuple(j)
     E_north = edge(env, NORTH, r - 1, c)

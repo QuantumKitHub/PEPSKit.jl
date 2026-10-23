@@ -134,7 +134,7 @@ end
 
 function select_algorithm(
         ::typeof(leading_boundary),
-        env₀::CTMRGEnv;
+        env₀::AbstractCTMRGEnv;
         alg = Defaults.ctmrg_alg,
         tol = Defaults.ctmrg_tol,
         verbosity = Defaults.ctmrg_verbosity,

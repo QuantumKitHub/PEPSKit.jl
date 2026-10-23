@@ -101,12 +101,12 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `info.convergence_error::Real` : The final convergence error at the end of the contraction procedure.
     - `info.contraction_metrics::NamedTuple` : A `NamedTuple` containing metrics which characterize the contraction. The precise contents depend on `alg`.
 """
-function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
+function leading_boundary(env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
     return leading_boundary(env₀, network, alg)
 end
 function leading_boundary(
-        env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+        env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
@@ -142,7 +142,7 @@ function leading_boundary(
         return env, info
     end
 end
-function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
+function leading_boundary(env₀::AbstractCTMRGEnv, state, args...; kwargs...)
     return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
@@ -206,14 +206,14 @@ The corners and edges whose spectra determine convergence.
 
 For generic CTMRG, we need all corners and edges.
 """
-convergence_tensors(env::CTMRGEnv, alg) = (env.corners, env.edges)
+convergence_tensors(env::AbstractCTMRGEnv, alg) = (env.corners, env.edges)
 
 """
     convergence_spectra(env, alg)
 
 Spectra of the tensors that [`convergence_tensors`](@ref) selects.
 """
-function convergence_spectra(env::CTMRGEnv, alg)
+function convergence_spectra(env::AbstractCTMRGEnv, alg)
     corners, edges = convergence_tensors(env, alg)
     return corner_spectra(corners, alg), edge_spectra(edges, alg)
 end
@@ -276,7 +276,7 @@ function calc_convergence(env, CS_old, TS_old)
 
     return max(ΔCS, ΔTS), CS_new, TS_new
 end
-function calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
+function calc_convergence(env_new::AbstractCTMRGEnv, env_old::AbstractCTMRGEnv)
     CS_old = map(svd_vals, env_old.corners)
     TS_old = map(svd_vals, env_old.edges)
     return calc_convergence(env_new, CS_old, TS_old)
