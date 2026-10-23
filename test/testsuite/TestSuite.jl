@@ -145,6 +145,12 @@ module CTMRGPEPO
 end
 using .CTMRGPEPO
 
+module CTMRGEnzymePEPO
+    include("ctmrg/enz_pepo.jl")
+    export enzyme_ctmrg_pepo_runthroughs, enzyme_ctmrg_pepo_fixed_point
+end
+using .CTMRGEnzymePEPO
+
 module CTMRGSUWeight
     include("ctmrg/suweight.jl")
     export ctmrg_suweight
@@ -210,6 +216,20 @@ module OptimizationNormPreservation
     export optimization_tangent_projection, optimization_norm_preservation
 end
 using .OptimizationNormPreservation
+
+# Enzyme gradients
+# ----------------
+module EnzymeGradientsCTMRG
+    include("enzyme_gradients/enz_ctmrg_gradients.jl")
+    export enzyme_gradients_asymmetric, enzyme_gradients_asymmetric_276
+end
+using .EnzymeGradientsCTMRG
+
+module EnzymeGradientsC4vCTMRG
+    include("enzyme_gradients/enz_c4v_ctmrg_gradients.jl")
+    export enzyme_gradients_c4v
+end
+using .EnzymeGradientsC4vCTMRG
 
 # Time evolution
 # --------------

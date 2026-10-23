@@ -17,7 +17,7 @@ using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 using TensorKit
 using TensorKit: AdjointTensorMap, SectorDict
 using TensorKit: throw_invalid_innerproduct, similarstoragetype
-using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
+using TensorKit.Factorizations: TruncationSpace
 
 using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos

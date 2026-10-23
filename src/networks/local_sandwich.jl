@@ -34,7 +34,6 @@ end
 
 # generic local interface
 _add_localsandwich!(O1, O2, α, β) = (foreach((a, b) -> add!(a, b, α, β), O1, O2); O1)
-_add_localsandwich!(O1::PFTensor, O2::PFTensor, α, β) = add!(O1, O2, α, β)
 # replace tensors already in `seen` by copies
 _unalias_tensor!(seen, t) = t in seen ? copy(t) : (push!(seen, t); t)
 _unalias_localsandwich!(seen, O) = map(t -> _unalias_tensor!(seen, t), O)
@@ -53,6 +52,7 @@ _rot180_localsandwich(O::PFTensor) = rot180(O)
 
 # specialized local math interface
 _add_localsandwich(O1::PFTensor, O2::PFTensor) = O1 + O2
+_add_localsandwich!(O1::PFTensor, O2::PFTensor, α, β) = add!(O1, O2, α, β)
 _subtract_localsandwich(O1::PFTensor, O2::PFTensor) = O1 - O2
 _mul_localsandwich(α::Number, O::PFTensor) = α * O
 _isapprox_localsandwich(O1::PFTensor, O2::PFTensor; kwargs...) = isapprox(O1, O2; kwargs...)
