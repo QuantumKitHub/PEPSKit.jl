@@ -94,6 +94,11 @@ function toolbox_mpo_bookkeeping(AT)
         reverse!(mpo)
         @test only(operator.terms) == (CartesianIndex.([(1, 2), (1, 1)]) => original_mpo)
 
+        # a term is a vector of factors here, not a single tensor, so `storagetype` has to
+        # flatten before promoting
+        @test TensorKit.storagetype(operator) ==
+            TensorKit.storagetype(first(original_mpo))
+
         snapshot = deepcopy(operator)
         scaled = (2 + 3im) * operator
         @test operator == snapshot

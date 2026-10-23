@@ -58,6 +58,13 @@ function toolbox_tensorproduct_bookkeeping(AT)
         @test_throws ArgumentError add_term!(product, [(1, 1), (1, 2)], [Z, X])
         @test_throws ArgumentError product + product
 
+        # a term is a vector of factors here, not a single tensor, so `storagetype` has to
+        # flatten before promoting
+        @test TensorKit.storagetype(product) == TensorKit.storagetype(X)
+        @test TensorKit.storagetype(
+            LocalOperator(lattice, [(1, 1), (1, 2)] => [X, Z], [(2, 1)] => copy(X))
+        ) == TensorKit.storagetype(X)
+
         # Factorwise real/imaginary parts are incorrect even for tensor products.
         imaginary = LocalOperator(lattice, [(1, 1), (1, 2)] => [im * Z, im * Z])
         @test_throws ArgumentError real(imaginary)

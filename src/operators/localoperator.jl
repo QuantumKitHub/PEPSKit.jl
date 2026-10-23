@@ -87,7 +87,16 @@ function add_term!(
     return operator
 end
 
-TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S} = TensorKit.promote_storagetype(values(lo.terms)...)
+# A term is either a single tensor or, for tensor product and MPO terms, a vector of factors,
+# so the terms are flattened before promoting: `promote_storagetype` only takes tensors.
+_term_tensors(term::AbstractTensorMap) = (term,)
+_term_tensors(term::AbstractVector{<:AbstractTensorMap}) = term
+
+function TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S}
+    return TensorKit.promote_storagetype(
+        Iterators.flatten(Iterators.map(_term_tensors, values(lo.terms)))...
+    )
+end
 
 # Tensor product terms
 # --------------------
@@ -336,17 +345,20 @@ end
 """
 Scale a single term of a [`LocalOperator`](@ref) by `α`.
 
-An [`MPOTerm`](@ref), including a [`TensorProductTerm`](@ref), is scaled by scaling its first factor only.
-The factor container may widen its element type when the scalar type changes, while retaining tensor-product dispatch.
+An [`MPOTerm`](@ref), including a [`TensorProductTerm`](@ref), is scaled by scaling its first
+factor only - scaling the whole container would scale every factor and give `α^N`.
 """
-_scale_local_term(term, α::Number) = α * term
+_scale_local_term(term, α::Number) = VI.scale(term, α)
 function _scale_local_term(term::MPOTerm, α::Number)
-    return AbstractTensorMap[i == 1 ? α * tensor : tensor for (i, tensor) in enumerate(term)]
-end
-function _scale_local_term(term::TensorProductTerm, α::Number)
-    return AbstractTensorMap{<:Number, <:IndexSpace, 1, 1}[
-        i == 1 ? α * tensor : tensor for (i, tensor) in enumerate(term)
-    ]
+    # Every factor is brought to the common scalar type, so the resulting container has a
+    # concrete scalar type even though the factors differ in rank. Leaving the untouched
+    # factors alone instead would give a container whose element type varies in its scalar
+    # parameter, which `scalartype` cannot resolve.
+    T = promote_type(typeof(α), map(scalartype, term)...)
+    return map(enumerate(term)) do (i, tensor)
+        i == 1 && return VI.scale(tensor, α)
+        return scalartype(tensor) === T ? tensor : VI.scale(tensor, one(T))
+    end
 end
 
 Base.:*(α::Number, O::LocalOperator) = LocalOperator(
@@ -377,16 +389,11 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # VectorInterface
 # ---------------
 
-# Since we allow abstract types in T, value and type domain might not match
+# Since we allow abstract types in T, value and type domain might not match. A term is either
+# a tensor or a container of factors sharing one scalar type, and `scalartype` resolves both.
 function VI.scalartype(operator::LocalOperator)
-    return promote_type((_local_term_scalartype(term) for term in values(operator.terms))...)
+    return promote_type((scalartype(term) for term in values(operator.terms))...)
 end
-
-"""
-Return the promoted scalar type of a dense tensor or the factors of an MPO.
-"""
-_local_term_scalartype(term::AbstractTensorMap) = scalartype(term)
-_local_term_scalartype(term::MPOTerm) = promote_type((scalartype(tensor) for tensor in term)...)
 
 # Equivalence
 # -----------
