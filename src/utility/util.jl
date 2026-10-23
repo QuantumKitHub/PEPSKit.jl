@@ -10,6 +10,19 @@ end
 _safe_pow(a::Number, pow::Real, tol::Real) = (pow < 0 && abs(a) < tol) ? zero(a) : a^pow
 
 """
+    _maxabs(data)
+
+Largest absolute value in `data`, equal to `norm(_, Inf)` for the diagonal storage of a
+`DiagonalTensorMap`.
+
+Returns a scalar by default.
+"""
+function _maxabs(data::AbstractArray)
+    isempty(data) && return zero(real(eltype(data)))
+    return norm(data, Inf)
+end
+
+"""
     sdiag_pow(s, pow::Real; tol::Real=eps(real(scalartype(s)))^(3 / 4))
 
 Compute `s^pow` for a diagonal matrix `s`.
@@ -17,7 +30,7 @@ The result preserves the scalar and storage types of `s`.
 """
 function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4))
     # Relative tol w.r.t. largest abs value of `s` (use norm(∘, Inf) to make differentiable)
-    tol *= norm(s, Inf)
+    tol *= _maxabs(s.data) 
     spow = similar(s)
     spow.data .= _safe_pow.(s.data, pow, tol)
     return spow
@@ -81,7 +94,7 @@ function is_degenerate_spectrum(
         S; atol::Real = 0, rtol::Real = atol > 0 ? 0 : sqrt(eps(scalartype(S)))
     )
     for (_, b) in blocks(S)
-        s = real(diag(b))
+        s = real(collect(diag(b)))
         for i in 1:(length(s) - 1)
             isapprox(s[i], s[i + 1]; atol, rtol) && return true
         end

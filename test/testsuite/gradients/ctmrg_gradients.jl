@@ -40,6 +40,14 @@ forward_algs = [
     (:SequentialCTMRG, :FullInfiniteProjector),
 ]
 
+# minimal subset of the (model, forward algorithm) combinations above which still covers every
+# option value at least once: the Heisenberg run carries every gradient case, the p-wave run the
+# fermionic spaces and the other CTMRG scheme and projector
+minimal_combinations = [
+    (models[1], (:SimultaneousCTMRG, :HalfInfiniteProjector)),
+    (models[2], (:SequentialCTMRG, :FullInfiniteProjector)),
+]
+
 ctmrg_algorithm(ctmrg_alg, projector_alg, rrule_alg = :FullPullback; kwargs...) = PEPSKit.CTMRGAlgorithm(;
     alg = ctmrg_alg, projector_alg, decomposition_alg = SVDAdjoint(; rrule_alg = (; alg = rrule_alg)),
     tol = ctmrg_tol, verbosity = ctmrg_verbosity, kwargs...,
@@ -98,9 +106,11 @@ function test_ctmrg_gradients(AT, model, ctmrg_alg, projector_alg, cases; D = no
     return nothing
 end
 
-function gradients_asymmetric(AT)
+function gradients_asymmetric(AT; minimal::Bool = false)
     return @testset "CTMRG gradients ($AT)" verbose = true begin
-        @testset "$(model.name), $calg, $palg" for model in models, (calg, palg) in forward_algs
+        @testset "$(model.name), $calg, $palg" for (model, (calg, palg)) in (
+                minimal ? minimal_combinations : ((m, f) for m in models for f in forward_algs)
+            )
             test_ctmrg_gradients(AT, model, calg, palg, gradient_cases(model, calg, palg))
             # the implicit gradient is rejected where it is not defined
             if !implicit_allowed(calg, palg)
@@ -111,9 +121,11 @@ function gradients_asymmetric(AT)
             end
         end
         # larger state, where truncation effects are visible
-        @testset "Heisenberg, SimultaneousCTMRG, HalfInfiniteProjector, D = 3, χ = 16" begin
-            cases = [("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES))]
-            test_ctmrg_gradients(AT, first(models), :SimultaneousCTMRG, :HalfInfiniteProjector, cases; D = 3, χ = 16)
+        if !minimal
+            @testset "Heisenberg, SimultaneousCTMRG, HalfInfiniteProjector, D = 3, χ = 16" begin
+                cases = [("implicit, GMRES", :FullPullback, gradient_alg(:ImplicitGradient, :GMRES))]
+                test_ctmrg_gradients(AT, first(models), :SimultaneousCTMRG, :HalfInfiniteProjector, cases; D = 3, χ = 16)
+            end
         end
     end
 end
