@@ -175,7 +175,7 @@ include("algorithms/expectation_value/correlator_adapters.jl")
 include("algorithms/expectation_value/correlators.jl")
 include("algorithms/toolbox.jl")
 
-include("algorithms/boundarymps/symmetric_boundarymps.jl")
+include("algorithms/boundarymps/boundarymps.jl")
 include("algorithms/boundarymps/characteristic_equations.jl")
 include("algorithms/boundarymps/observables.jl")
 
@@ -195,7 +195,7 @@ export corner, edge, setcorner!, setedge!
 export FixedSpaceTruncation, SiteDependentTruncation
 export HalfInfiniteProjector, FullInfiniteProjector
 export C4vCTMRG, C4vEighProjector, C4vQRProjector
-export SymmetricBoundaryMPS, SymmetricBoundaryMPSEnv
+export C4vBoundaryMPS, C4vBoundaryMPSEnv, BoundaryMPS, BoundaryMPSEnv
 export initialize_random_c4v_env, initialize_singlet_c4v_env
 export LocalOperator, physicalspace
 export product_peps

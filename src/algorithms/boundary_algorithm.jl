@@ -10,8 +10,6 @@ optimization must belong to.
 """
 abstract type BoundaryAlgorithm end
 
-const BOUNDARY_ALGORITHM_SYMBOLS = IdDict{Symbol, Type{<:BoundaryAlgorithm}}()
-
 """
     _tol(alg::BoundaryAlgorithm)
 
@@ -25,21 +23,19 @@ _tol(alg::BoundaryAlgorithm) = alg.tol
     BoundaryAlgorithm(; alg=:$(Defaults.boundary_alg), kwargs...)
 
 Keyword argument parser returning the appropriate [`BoundaryAlgorithm`](@ref) struct, where
-`alg` selects the boundary contraction *family*:
+`alg` can be one of the following:
 
-* `:SimultaneousCTMRG`, `:SequentialCTMRG`, `:C4vCTMRG` : dispatch to [`CTMRGAlgorithm`](@ref)
-* `:SymmetricBoundaryMPS` : dispatch to [`SymmetricBoundaryMPS`](@ref)
+* `:SimultaneousCTMRG`, `:SequentialCTMRG`, `:C4vCTMRG` : see [`CTMRGAlgorithm`](@ref)
+* `:BoundaryMPS`, `:C4vBoundaryMPS` : see [`BoundaryMPSAlgorithm`](@ref)
 
-All remaining keyword arguments are forwarded to the corresponding parser. Note that the
-underlying MPS optimization algorithm of a boundary MPS contraction is *not* selected here,
-but through that parser's own `mps_alg` keyword, since several boundary MPS families can be
-driven by the same MPS algorithm.
+All remaining keyword arguments are passed on to the corresponding parser. In
+[`leading_boundary`](@ref) and [`fixedpoint`](@ref), the type of the initial environment
+selects between the two families, and `alg` selects the algorithm within that family.
 """
 function BoundaryAlgorithm(; alg = Defaults.boundary_alg, kwargs...)
     # CTMRG variants go through their own parser, which handles the projector and
     # decomposition keyword arguments
     haskey(CTMRG_SYMBOLS, alg) && return CTMRGAlgorithm(; alg, kwargs...)
-    haskey(BOUNDARY_ALGORITHM_SYMBOLS, alg) ||
-        throw(ArgumentError("unknown boundary algorithm: $alg"))
-    return BOUNDARY_ALGORITHM_SYMBOLS[alg](; kwargs...)
+    haskey(BOUNDARY_MPS_SYMBOLS, alg) && return BoundaryMPSAlgorithm(; alg, kwargs...)
+    throw(ArgumentError("unknown boundary algorithm: $alg"))
 end

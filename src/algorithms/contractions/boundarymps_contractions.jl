@@ -117,49 +117,81 @@ function _∂AC(
         O[D_W D_S; D_N D_E]
 end
 
-## Local contractions
+## Center-gauged MPS tensors
 
-"""
-    get_AC(env::SymmetricBoundaryMPSEnv)
+# The center-gauged tensor of a boundary MPS, constructed symmetrically from both gauges. For
+# a top MPS in the positions of a `BoundaryMPSEnv`, `C[r, c]` lies to its right and
+# `C[r, c - 1]` to its left; for a bottom MPS in its own leg order it is the other way around.
+function _center_tensor(AL, AR, C, r, c)
+    return (absorb_right(_at(AL, r, c), _at(C, r, c)) + absorb_left(_at(AR, r, c), _at(C, r, c - 1))) / 2
+end
+function _bottom_center_tensor(AL, AR, C, r, c)
+    return (absorb_right(_at(AL, r, c), _at(C, r, c - 1)) + absorb_left(_at(AR, r, c), _at(C, r, c))) / 2
+end
+_center_tensor(env::C4vBoundaryMPSEnv) = (absorb_right(env.AL, env.C) + absorb_left(env.AR, env.C)) / 2
 
-Construct the center-gauged MPS tensor of a symmetric boundary MPS environment by
-symmetrically combining its left- and right-gauged forms.
-"""
-function get_AC(env::SymmetricBoundaryMPSEnv)
-    return (absorb_right(env.AL, env.C) + absorb_left(env.AR, env.C)) / 2
+# The bottom boundary MPS of a C4v environment is the conjugate of the top one, read
+# from west to east. In the leg order of a south edge, its tensors are the conjugated top
+# tensors with their virtual legs exchanged.
+_south(A::EdgeTensor{S, 3}) where {S} = @tensor A´[χ_E D_a D_b; χ_W] := conj(A[χ_W D_a D_b; χ_E])
+_south(A::EdgeTensor{S, 2}) where {S} = @tensor A´[χ_E D; χ_W] := conj(A[χ_W D; χ_E])
+
+## Tensors surrounding a patch
+
+# The boundary MPS tensors surrounding a patch, in the leg order and at the positions of the
+# CTMRG edges with the corners absorbed:
+#
+# * north of `(r, c)`: the top MPS above row `r`, center-gauged on the west end of the patch
+#   and right-gauged elsewhere;
+# * south of `(r, c)`: the bottom MPS below row `r`, center-gauged on the east end of the
+#   patch and, in its own leg order, right-gauged elsewhere;
+# * east and west of `(r, c)`: the environments of the top MPS for all but the last row of
+#   the patch, and the mixed environments for the last row.
+function _patch_north(env::BoundaryMPSEnv, r, c, west::Bool)
+    return west ? _center_tensor(env.ALt, env.ARt, env.Ct, r - 1, c) : _at(env.ARt, r - 1, c)
+end
+function _patch_south(env::BoundaryMPSEnv, r, c, east::Bool)
+    return east ? _bottom_center_tensor(env.ALb, env.ARb, env.Cb, r + 1, c) : _at(env.ARb, r + 1, c)
+end
+_patch_east(env::BoundaryMPSEnv, r, c, last::Bool) = _at(last ? env.GRm : env.GRt, r, c + 1)
+_patch_west(env::BoundaryMPSEnv, r, c, last::Bool) = _at(last ? env.GLm : env.GLt, r, c - 1)
+
+# for a C4v environment, the bottom MPS is the conjugate of the top one, and all
+# environments coincide
+_patch_north(env::C4vBoundaryMPSEnv, r, c, west::Bool) = west ? _center_tensor(env) : env.AR
+_patch_south(env::C4vBoundaryMPSEnv, r, c, east::Bool) = _south(east ? _center_tensor(env) : env.AL)
+_patch_east(env::C4vBoundaryMPSEnv, r, c, last::Bool) = env.GR
+_patch_west(env::C4vBoundaryMPSEnv, r, c, last::Bool) = env.GL
+
+# the north, east, south and west tensors surrounding a single site
+function _site_edges(env::BoundaryMPSEnvs, r, c)
+    return (
+        _patch_north(env, r, c, true), _patch_east(env, r, c, true),
+        _patch_south(env, r, c, true), _patch_west(env, r, c, true),
+    )
 end
 
-# Accessors emitted by the generated contractions below. The north and south rows carry the
-# gauge center in their westmost slot and right-gauged tensors elsewhere, while a symmetric
-# boundary MPS has a single left and right environment for every row.
-_north_edge(env::SymmetricBoundaryMPSEnv, i::Int) = isone(i) ? get_AC(env) : env.AR
-_south_edge(env::SymmetricBoundaryMPSEnv, i::Int) = isone(i) ? get_AC(env) : env.AR
-_east_edge(env::SymmetricBoundaryMPSEnv, ::Int) = env.GR
-_west_edge(env::SymmetricBoundaryMPSEnv, ::Int) = env.GL
+_edgetype(::Type{<:C4vBoundaryMPSEnv{TC, TE}}) where {TC, TE} = TE
+_edgetype(::Type{<:BoundaryMPSEnv{TC, TE}}) where {TC, TE} = TE
 
 """
-    boundary_contraction_expr(::Type{<:SymmetricBoundaryMPSEnv}, rowrange, colrange)
+    boundary_contraction_expr(::Type{<:BoundaryMPSEnvs}, rowrange, colrange)
 
 Build the contraction expressions for the boundary MPS tensors surrounding the patch spanned
 by `rowrange` and `colrange`.
 
-Two things distinguish it from the CTMRG version. There are no corner tensors, since the
-gauge center of the boundary MPS already absorbs them, so edges of neighboring sides share a
-single environment label. And the boundary MPS acts as its own bra, so the south row is the
-conjugate of the north row traversed in the opposite direction, which flips its codomain and
-domain relative to a CTMRG south edge.
+There are no corner tensors, since the center-gauged tensors of the boundary MPS absorb
+them, so the edges of neighboring sides share a single environment label.
 """
-function boundary_contraction_expr(
-        ::Type{<:SymmetricBoundaryMPSEnv{TC, TE}}, rowrange, colrange
-    ) where {TC, TE}
+function boundary_contraction_expr(::Type{E}, rowrange, colrange) where {E <: BoundaryMPSEnvs}
     # the MPS tensors carry one virtual leg per layer of the sandwich, on top of the two
     # environment indices threading the ring, so the height follows from the tensor type
-    height = numout(TE) - 1
+    height = numout(_edgetype(E)) - 1
     rmin, rmax = extrema(rowrange)
     cmin, cmax = extrema(colrange)
     gridsize = (rmax - rmin + 1, cmax - cmin + 1)
 
-    # corners are absorbed into the gauge center, so neighboring sides share a label
+    # corners are absorbed into the center-gauged tensors, so neighboring sides share a label
     north_labels = [
         envlabel(:NW), (envlabel(NORTH, i) for i in 1:(gridsize[2] - 1))..., envlabel(:NE),
     ]
@@ -175,7 +207,7 @@ function boundary_contraction_expr(
 
     edges_N = map(1:gridsize[2]) do i
         return tensorexpr(
-            :(_north_edge(env, $i)),
+            :(_patch_north(env, $rmin, $(cmin + i - 1), $(i == 1))),
             (north_labels[i], virtuallabel.(NORTH, ntuple(identity, height), i)...),
             north_labels[i + 1],
         )
@@ -183,24 +215,23 @@ function boundary_contraction_expr(
 
     edges_E = map(1:gridsize[1]) do i
         return tensorexpr(
-            :(_east_edge(env, $i)),
+            :(_patch_east(env, $(rmin + i - 1), $cmax, $(i == gridsize[1]))),
             (east_labels[i], virtuallabel.(EAST, ntuple(identity, height), i)...),
             east_labels[i + 1],
         )
     end
 
     edges_S = map(1:gridsize[2]) do i
-        edge = tensorexpr(
-            :(_south_edge(env, $i)),
-            (south_labels[i], virtuallabel.(SOUTH, ntuple(identity, height), i)...),
-            south_labels[i + 1],
+        return tensorexpr(
+            :(_patch_south(env, $rmax, $(cmin + i - 1), $(i == gridsize[2]))),
+            (south_labels[i + 1], virtuallabel.(SOUTH, ntuple(identity, height), i)...),
+            south_labels[i],
         )
-        return Expr(:call, :conj, edge)
     end
 
     edges_W = map(1:gridsize[1]) do i
         return tensorexpr(
-            :(_west_edge(env, $i)),
+            :(_patch_west(env, $(rmin + i - 1), $cmin, $(i == gridsize[1]))),
             (west_labels[i + 1], virtuallabel.(WEST, ntuple(identity, height), i)...),
             west_labels[i],
         )
@@ -209,144 +240,85 @@ function boundary_contraction_expr(
     return [edges_N..., edges_E..., edges_S..., edges_W...]
 end
 
-## Density matrices and local contractions
+## Density matrices
 
-# `reduced_densitymatrix` itself is generic in the environment; only the patch-size special
-# cases it dispatches to need a symmetric boundary MPS implementation.
-
-# Special cases mirroring the corresponding CTMRG density matrices, which keep the same
-# contraction order but avoid unnecessary intermediate permutations. Since the gauge center
-# of the boundary MPS already absorbs the corners, no corner absorption step is needed here;
-# the only structural difference from the CTMRG versions is that the south edges are the
-# conjugates of the north ones, and hence carry swapped codomain and domain.
+# The fast paths use the contractions of the CTMRG density matrices, with the boundary MPS
+# tensors surrounding the patch in place of the edges with absorbed corners.
 
 function reduced_densitymatrix1x1(
-        inds::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS,
-        env::SymmetricBoundaryMPSEnv,
+        ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BoundaryMPSEnvs
     )
-    row, col = Tuple(inds)
-
-    A = ket[row, col]
-    Ā = bra[row, col]
-
-    E_north = _north_edge(env, 1)
-    E_east = _east_edge(env, 1)
-    E_south = _south_edge(env, 1)
-    E_west = _west_edge(env, 1)
-
-    @tensor EE_SW[χSE χNW DSb DWb; DSt DWt] :=
-        conj(E_south[χSW DSt DSb; χSE]) * E_west[χSW DWt DWb; χNW]
-
-    @tensor EE_SWA[χSE χNW DNt DEt; dt DSb DWb] :=
-        EE_SW[χSE χNW DSb DWb; DSt DWt] * A[dt; DNt DEt DSt DWt]
-
-    @tensor EE_NE[DNb DEb; χSE χNW DNt DEt] :=
-        E_north[χNW DNt DNb; χNE] * E_east[χNE DEt DEb; χSE]
-
-    @tensor EEAEE[dt; DNb DEb DSb DWb] :=
-        EE_NE[DNb DEb; χSE χNW DNt DEt] * EE_SWA[χSE χNW DNt DEt; dt DSb DWb]
-
-    @tensor ρ[dt; db] := EEAEE[dt; DNb DEb DSb DWb] * conj(Ā[db; DNb DEb DSb DWb])
-
-    return ρ / str(ρ)
+    r, c = Tuple(ind)
+    return _densitymatrix1x1(_site_edges(env, r, c)..., ket[r, c], bra[r, c])
 end
 
 function reduced_densitymatrix2x1(
-        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS,
-        env::SymmetricBoundaryMPSEnv,
+        ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BoundaryMPSEnvs
     )
-    row, col = Tuple(ind)
-
-    A_north = ket[row, col]
-    Ā_north = bra[row, col]
-    A_south = ket[row + 1, col]
-    Ā_south = bra[row + 1, col]
-
-    E_north = _north_edge(env, 1)
-    E_northeast = _east_edge(env, 1)
-    E_southeast = _east_edge(env, 2)
-    E_south = _south_edge(env, 1)
-    E_southwest = _west_edge(env, 2)
-    E_northwest = _west_edge(env, 1)
-
-    @tensor EE_NW[χW χNE DNWt DNt; DNWb DNb] :=
-        E_northwest[χW DNWt DNWb; χNW] * E_north[χNW DNt DNb; χNE]
-    @tensor EEA_NW[χW DMb dNb χNE DNEb; DNWt DNt] :=
-        EE_NW[χW χNE DNWt DNt; DNWb DNb] * conj(Ā_north[dNb; DNb DNEb DMb DNWb])
-    @tensor EEAA_NW[χW DMb dNb dNt DMt; χNE DNEt DNEb] :=
-        EEA_NW[χW DMb dNb χNE DNEb; DNWt DNt] * A_north[dNt; DNt DNEt DMt DNWt]
-    @tensor EEEAA_N[dNt dNb; χW DMt DMb χE] :=
-        EEAA_NW[χW DMb dNb dNt DMt; χNE DNEt DNEb] * E_northeast[χNE DNEt DNEb; χE]
-
-    @tensor EE_SE[χE χSW DSEt DSt; DSEb DSb] :=
-        E_southeast[χE DSEt DSEb; χSE] * conj(E_south[χSW DSt DSb; χSE])
-    @tensor EEA_SE[χE DMb dSb χSW DSWb; DSEt DSt] :=
-        EE_SE[χE χSW DSEt DSt; DSEb DSb] * conj(Ā_south[dSb; DMb DSEb DSb DSWb])
-    @tensor EEAA_SE[χE DMb dSb dSt DMt; χSW DSWt DSWb] :=
-        EEA_SE[χE DMb dSb χSW DSWb; DSEt DSt] * A_south[dSt; DMt DSEt DSt DSWt]
-    @tensor EEEAA_S[χW DMt DMb χE; dSt dSb] :=
-        EEAA_SE[χE DMb dSb dSt DMt; χSW DSWt DSWb] * E_southwest[χSW DSWt DSWb; χW]
-
-    @tensor ρ[dNt dSt; dNb dSb] :=
-        EEEAA_N[dNt dNb; χW DMt DMb χE] * EEEAA_S[χW DMt DMb χE; dSt dSb]
-
-    return ρ / str(ρ)
+    r, c = Tuple(ind)
+    return _densitymatrix2x1(
+        _patch_north(env, r, c, true),
+        _patch_east(env, r, c, false), _patch_east(env, r + 1, c, true),
+        _patch_south(env, r + 1, c, true),
+        _patch_west(env, r + 1, c, true), _patch_west(env, r, c, false),
+        ket[r, c], bra[r, c], ket[r + 1, c], bra[r + 1, c],
+    )
 end
 
 function reduced_densitymatrix1x2(
-        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS,
-        env::SymmetricBoundaryMPSEnv,
+        ind::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::BoundaryMPSEnvs
     )
-    row, col = Tuple(ind)
-
-    A_west = ket[row, col]
-    Ā_west = bra[row, col]
-    A_east = ket[row, col + 1]
-    Ā_east = bra[row, col + 1]
-
-    E_northwest = _north_edge(env, 1)
-    E_northeast = _north_edge(env, 2)
-    E_east = _east_edge(env, 1)
-    E_southeast = _south_edge(env, 2)
-    E_southwest = _south_edge(env, 1)
-    E_west = _west_edge(env, 1)
-
-    @tensor EE_SW[χS χNW DSWt DWt; DSWb DWb] :=
-        conj(E_southwest[χSW DSWt DSWb; χS]) * E_west[χSW DWt DWb; χNW]
-    @tensor EEA_SW[χS DMb dWb χNW DNWb; DSWt DWt] :=
-        EE_SW[χS χNW DSWt DWt; DSWb DWb] * conj(Ā_west[dWb; DNWb DMb DSWb DWb])
-    @tensor EEAA_SW[χS DMb dWb dWt DMt; χNW DNWt DNWb] :=
-        EEA_SW[χS DMb dWb χNW DNWb; DSWt DWt] * A_west[dWt; DNWt DMt DSWt DWt]
-    @tensor EEEAA_W[dWt dWb; χS DMt DMb χN] :=
-        EEAA_SW[χS DMb dWb dWt DMt; χNW DNWt DNWb] * E_northwest[χNW DNWt DNWb; χN]
-
-    @tensor EE_NE[χN χSE DNEt DEt; DNEb DEb] :=
-        E_northeast[χN DNEt DNEb; χNE] * E_east[χNE DEt DEb; χSE]
-    @tensor EEA_NE[χN DMb dEb χSE DSEb; DNEt DEt] :=
-        EE_NE[χN χSE DNEt DEt; DNEb DEb] * conj(Ā_east[dEb; DNEb DEb DSEb DMb])
-    @tensor EEAA_NE[χN DMb dEb dEt DMt; χSE DSEt DSEb] :=
-        EEA_NE[χN DMb dEb χSE DSEb; DNEt DEt] * A_east[dEt; DNEt DEt DSEt DMt]
-    @tensor EEEAA_E[χS DMt DMb χN; dEt dEb] :=
-        EEAA_NE[χN DMb dEb dEt DMt; χSE DSEt DSEb] * conj(E_southeast[χS DSEt DSEb; χSE])
-
-    @tensor ρ[dWt dEt; dWb dEb] :=
-        EEEAA_W[dWt dWb; χS DMt DMb χN] * EEEAA_E[χS DMt DMb χN; dEt dEb]
-
-    return ρ / str(ρ)
+    r, c = Tuple(ind)
+    return _densitymatrix1x2(
+        _patch_north(env, r, c, true), _patch_north(env, r, c + 1, false),
+        _patch_east(env, r, c + 1, true),
+        _patch_south(env, r, c + 1, true), _patch_south(env, r, c, false),
+        _patch_west(env, r, c, true),
+        ket[r, c], bra[r, c], ket[r, c + 1], bra[r, c + 1],
+    )
 end
 
-## Partition function tensor insertions
+## Local contractions
 
+function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::BoundaryMPSEnvs)
+    return _contract_site(_site_edges(env, ind...)..., network[ind...])
+end
 function _contract_site(
-        AC::EdgeTensor{S, 2}, GL::EdgeTensor{S, 2}, GR::EdgeTensor{S, 2},
+        E_north::EdgeTensor{S, 2}, E_east::EdgeTensor{S, 2},
+        E_south::EdgeTensor{S, 2}, E_west::EdgeTensor{S, 2},
         O::PartitionFunctionTensor,
     ) where {S}
-    @autoopt @tensor o =
-        AC[χ_NW D_N; χ_NE] *
-        GR[χ_NE D_E; χ_SE] *
-        conj(AC[χ_SW D_S; χ_SE]) *
-        GL[χ_SW D_W; χ_NW] *
-        O[D_W D_S; D_N D_E]
+    return @autoopt @tensor E_north[χ_NW D_N; χ_NE] * E_east[χ_NE D_E; χ_SE] *
+        E_south[χ_SE D_S; χ_SW] * E_west[χ_SW D_W; χ_NW] * O[D_W D_S; D_N D_E]
+end
+function _contract_site(
+        E_north::EdgeTensor{S, 3}, E_east::EdgeTensor{S, 3},
+        E_south::EdgeTensor{S, 3}, E_west::EdgeTensor{S, 3},
+        O::PEPSSandwich,
+    ) where {S}
+    return @autoopt @tensor E_north[χ_NW D_N_above D_N_below; χ_NE] *
+        E_east[χ_NE D_E_above D_E_below; χ_SE] *
+        E_south[χ_SE D_S_above D_S_below; χ_SW] *
+        E_west[χ_SW D_W_above D_W_below; χ_NW] *
+        ket(O)[d; D_N_above D_E_above D_S_above D_W_above] *
+        conj(bra(O)[d; D_N_below D_E_below D_S_below D_W_below])
+end
 
-    return o
+function contract_local_tensor(inds::Tuple{Int, Int}, O::PartitionFunctionTensor, env::BoundaryMPSEnvs)
+    return _contract_site(_site_edges(env, inds...)..., O)
+end
+function contract_local_tensor(inds::CartesianIndex{2}, O::AbstractTensorMap, env::BoundaryMPSEnvs)
+    return contract_local_tensor(Tuple(inds), O, env)
+end
+
+function apply_local_preconditioner(g_rc::PEPSTensor, env::BoundaryMPSEnvs, δ, (r, c), norm_pref)
+    E_north, E_east, E_south, E_west = _site_edges(env, r, c)
+    @autoopt @tensor g_rc_prec[d; D_N_below D_E_below D_S_below D_W_below] :=
+        g_rc[d; D_N_above D_E_above D_S_above D_W_above] *
+        E_north[χ_NW D_N_above D_N_below; χ_NE] *
+        E_east[χ_NE D_E_above D_E_below; χ_SE] *
+        E_south[χ_SE D_S_above D_S_below; χ_SW] *
+        E_west[χ_SW D_W_above D_W_below; χ_NW]
+    g_rc_prec = twistdual(g_rc_prec, 2:5)
+    return g_rc_prec / norm_pref + δ * g_rc
 end

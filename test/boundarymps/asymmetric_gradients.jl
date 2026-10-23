@@ -6,5 +6,5 @@ using .TestSuite
 is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
 if !is_buildkite
-    TestSuite.boundary_mps_symmetric_gradients(Vector)
+    TestSuite.boundary_mps_asymmetric_gradients(Vector)
 end
