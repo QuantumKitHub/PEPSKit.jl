@@ -86,9 +86,9 @@ function test_ctmrg_gradients(AT, model, ctmrg_alg, projector_alg, cases; D = no
     env, = leading_boundary(CTMRGEnv(psi, Espace), psi, alg)
     tag = "$(model.name), $ctmrg_alg, $projector_alg, $(dim(Vspace)):$(dim(Espace))"
 
-    _, gref = energy_and_gradient(psi, env, alg, gradient_alg(:FixedPointGradient, :GMRES), model.H)
+    _, gref = energy_and_gradient(psi, env, alg, gradient_alg(:FixedPointGradient, :GMRES), adapt(AT, model.H))
     @testset "reference against finite differences" begin
-        dE_fd = finite_difference_derivative(psi, env, dir, alg, model.H)
+        dE_fd = finite_difference_derivative(psi, env, dir, alg, adapt(AT, model.H))
         dE = gradient_derivative(psi, env, dir, gref)
         @info "$tag: reference vs finite differences" abs(dE - dE_fd) / abs(dE_fd)
         @test dE ≈ dE_fd rtol = rtol
@@ -97,7 +97,7 @@ function test_ctmrg_gradients(AT, model, ctmrg_alg, projector_alg, cases; D = no
         @testset "$label" begin
             kwargs = isnothing(galg) ? (; miniter = naive_miniter) : (;)
             calg = ctmrg_algorithm(ctmrg_alg, projector_alg, rrule_alg; kwargs...)
-            _, g = energy_and_gradient(psi, env, calg, galg, model.H)
+            _, g = energy_and_gradient(psi, env, calg, galg, adapt(AT, model.H))
             err = gradient_error(g, gref)
             @info "$tag: $label" err
             @test err < rtol

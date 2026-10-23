@@ -67,10 +67,10 @@ function test_c4v_gradients(AT, projector_alg, D, χ, cases; seed = sd)
     env, = leading_boundary(PEPSKit.initialize_random_c4v_env(psi, ComplexSpace(χ)), psi, alg)
     tag = "C4v $projector_alg D=$D χ=$χ"
 
-    _, gref = energy_and_gradient(psi, env, alg, gradient_alg(:FixedPointGradient, :GMRES), H)
+    _, gref = energy_and_gradient(psi, env, alg, gradient_alg(:FixedPointGradient, :GMRES), adapt(AT, H))
     symmetrize!(gref, symmetry)
     @testset "reference against finite differences" begin
-        dE_fd = finite_difference_derivative(psi, env, dir, alg, H)
+        dE_fd = finite_difference_derivative(psi, env, dir, alg, adapt(AT, H))
         dE = gradient_derivative(psi, env, dir, gref)
         @info "$tag: reference vs finite differences" abs(dE - dE_fd) / abs(dE_fd)
         @test dE ≈ dE_fd rtol = rtol
@@ -78,7 +78,7 @@ function test_c4v_gradients(AT, projector_alg, D, χ, cases; seed = sd)
     for (label, rrule_alg, galg) in cases
         @testset "$label" begin
             kwargs = isnothing(galg) ? (; miniter = naive_miniter) : (;)
-            _, g = energy_and_gradient(psi, env, c4v_ctmrg_alg(projector_alg, rrule_alg; kwargs...), galg, H)
+            _, g = energy_and_gradient(psi, env, c4v_ctmrg_alg(projector_alg, rrule_alg; kwargs...), galg, adapt(AT, H))
             err = gradient_error(symmetrize!(g, symmetry), gref)
             @info "$tag: $label" err
             @test err < rtol
