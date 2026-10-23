@@ -80,6 +80,9 @@ end
 function is_degenerate_spectrum(
         S; atol::Real = 0, rtol::Real = atol > 0 ? 0 : sqrt(eps(scalartype(S)))
     )
+    # we need to distinguish vectors in the subspace
+    # to avoid symmetry breaking rotations. vectors in
+    # different blocks are safe.
     for (_, b) in blocks(S)
         s = real(diag(b))
         n = length(s)
