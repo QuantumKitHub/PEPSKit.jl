@@ -82,9 +82,10 @@ function is_degenerate_spectrum(
     )
     for (_, b) in blocks(S)
         s = real(diag(b))
-        for i in 1:(length(s) - 1)
-            isapprox(s[i], s[i + 1]; atol, rtol) && return true
-        end
+        n = length(s)
+        n < 2 && continue
+        approx = (x, y) -> isapprox(x, y; atol, rtol)
+        any(approx.(view(s, 1:(n - 1)), view(s, 2:n))) && return true
     end
     return false
 end
