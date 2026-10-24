@@ -138,6 +138,11 @@ function toolbox_mpo_validation(AT)
         mpo = [first_tensor, last_tensor]
         sites = ((1, 1), (1, 2))
 
+        # scalartype unification
+        mixed = LocalOperator(lattice, sites => [first_tensor, im * last_tensor])
+        @test scalartype(mixed) == ComplexF64
+        @test only(values(mixed.terms)) == [complex(first_tensor), im * last_tensor]
+
         @test_throws ArgumentError LocalOperator(lattice, CartesianIndex{2}[] => AbstractTensorMap[])
         @test_throws ArgumentError LocalOperator(lattice, ((1, 1),) => mpo)
         @test_throws ArgumentError LocalOperator(lattice, ((1, 1), (1, 1)) => mpo)

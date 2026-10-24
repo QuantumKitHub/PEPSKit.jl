@@ -58,6 +58,12 @@ function toolbox_tensorproduct_bookkeeping(AT)
         @test_throws ArgumentError add_term!(product, [(1, 1), (1, 2)], [Z, X])
         @test_throws ArgumentError product + product
 
+        # scalartype unification
+        diagonal = adapt(AT, DiagonalTensorMap(im * Z))
+        mixed = LocalOperator(lattice, [(1, 1), (1, 2)] => [X, diagonal])
+        @test scalartype(mixed) == ComplexF64
+        @test only(values(mixed.terms)) == [complex(X), diagonal]
+
         # a term is a vector of factors here, not a single tensor, so `storagetype` has to
         # flatten before promoting
         @test TensorKit.storagetype(product) == TensorKit.storagetype(X)

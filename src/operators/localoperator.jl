@@ -98,6 +98,15 @@ function TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S}
     )
 end
 
+"""
+Promote tensor factors to a common scalar type, reusing vectors whose element type already specifies one.
+"""
+_promote_term_scalars(term::AbstractVector{<:AbstractTensorMap{T}}) where {T <: Number} = term
+function _promote_term_scalars(term::AbstractVector)
+    T = promote_type(map(scalartype, term)...)
+    return map(t -> scalartype(t) === T ? t : VI.scale(t, one(T)), term)
+end
+
 # Tensor product terms
 # --------------------
 # A term given as one rank-2 operator per site, i.e. an explicit tensor product which is
@@ -129,6 +138,7 @@ function add_term!(
     )
     # input checks
     isempty(term) && throw(ArgumentError("A tensor product term should contain at least one tensor."))
+    term = _promote_term_scalars(term)
     length(inds) == length(term) ||
         throw(ArgumentError("Incompatible number of indices and tensor product factors"))
     allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
@@ -193,7 +203,6 @@ MPO.
 """
 const MPOTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
 
-
 """
 Validate an ordered MPO's sites, tensor partitions, physical spaces, and adjacent bond spaces.
 """
@@ -228,13 +237,16 @@ function _validate_mpo_term(inds, term::MPOTerm, lattice::AbstractMatrix{<:Eleme
     return nothing
 end
 
-add_term!(operator::LocalOperator, inds::Tuple, term::MPOTerm) =
+# TODO: Narrow AbstractVector to MPOTerm once TensorMap's scalar type is restricted to Number.
+add_term!(operator::LocalOperator, inds::Tuple, term::AbstractVector) =
     add_term!(operator, collect(inds), term)
-add_term!(operator::LocalOperator, inds::AbstractVector, term::MPOTerm) =
+add_term!(operator::LocalOperator, inds::AbstractVector, term::AbstractVector) =
     add_term!(operator, CartesianIndex{2}[CartesianIndex{2}(ind) for ind in inds], term)
 function add_term!(
-        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::MPOTerm
+        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::AbstractVector
     )
+    isempty(term) && throw(ArgumentError("An MPO term should contain at least one tensor."))
+    term = _promote_term_scalars(term)
     _validate_mpo_term(inds, term, physicalspace(operator))
     _local_term_iszero(term) && return operator
 
