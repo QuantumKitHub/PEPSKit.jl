@@ -14,7 +14,8 @@ function boundary_mps_one_one_peps(AT)
     Random.seed!(29384293742893)
     return @testset "(1, 1) PEPS ($AT)" begin
         Vpeps = ComplexSpace(2)
-        psi = adapt(AT, InfinitePEPS(Vpeps, Vpeps))
+        psi0 = InfinitePEPS(Vpeps, Vpeps)
+        psi = adapt(AT, psi0)
         @test storagetype(psi) <: AT
         T = PEPSKit.InfiniteTransferPEPS(psi, 1, 1)
         @test storagetype(T) <: AT
@@ -30,7 +31,7 @@ function boundary_mps_one_one_peps(AT)
         N2 = abs(sum(expectation_value(mps2, T)))
         @test N ≈ N2 rtol = 1.0e-2
 
-        ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
+        ctm, = leading_boundary(adapt(AT, CTMRGEnv(psi0, ComplexSpace(20))), psi)
         N´ = abs(norm(psi, ctm))
 
         @test N ≈ N´ atol = 1.0e-3
@@ -41,7 +42,8 @@ function boundary_mps_two_two_peps(AT)
     Random.seed!(29384293742893)
     return @testset "(2, 2) PEPS ($AT)" begin
         Vpeps = ComplexSpace(2)
-        psi = adapt(AT, InfinitePEPS(Vpeps, Vpeps; unitcell = (2, 2)))
+        psi0 = InfinitePEPS(Vpeps, Vpeps; unitcell = (2, 2))
+        psi = adapt(AT, psi0)
         @test storagetype(psi) <: AT
         T = PEPSKit.MultilineTransferPEPS(psi, 1)
         @test storagetype(T) <: AT
@@ -51,7 +53,7 @@ function boundary_mps_two_two_peps(AT)
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N = abs(leading_eigenvalue(mps, T))
 
-        ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
+        ctm, = leading_boundary(adapt(AT, CTMRGEnv(psi0, ComplexSpace(20))), psi)
         N´ = abs(norm(psi, ctm))
 
         @test N ≈ N´ rtol = 1.0e-2
@@ -65,7 +67,8 @@ function boundary_mps_fermionic_peps(AT)
         d = Vect[fℤ₂](0 => 1, 1 => 1)
         χ = Vect[fℤ₂](0 => 10, 1 => 10)
 
-        psi = adapt(AT, InfinitePEPS(D, d; unitcell = (1, 1)))
+        psi0 = InfinitePEPS(D, d; unitcell = (1, 1))
+        psi = adapt(AT, psi0)
         @test storagetype(psi) <: AT
         n = InfiniteSquareNetwork(psi)
         @test storagetype(n) <: AT
@@ -79,7 +82,7 @@ function boundary_mps_fermionic_peps(AT)
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N_vumps = abs(prod(expectation_value(mps, T)))
 
-        ctm, = leading_boundary(CTMRGEnv(psi, χ), psi)
+        ctm, = leading_boundary(adapt(AT, CTMRGEnv(psi0, χ)), psi)
         N_ctm = abs(norm(psi, ctm))
 
         @test N_vumps ≈ N_ctm rtol = 1.0e-2
@@ -93,7 +96,7 @@ function boundary_mps_fermionic_peps(AT)
         mps´, env´, ϵ = leading_boundary(mps´, T´, vumps_alg)
         N_vumps´ = abs(prod(expectation_value(mps´, T´)))
 
-        ctm´, = leading_boundary(CTMRGEnv(n´, χ), n´)
+        ctm´, = leading_boundary(adapt(AT, CTMRGEnv(InfiniteSquareNetwork(map(PEPSKit.mpotensor, PEPSKit.unitcell(InfiniteSquareNetwork(psi0)))), χ)), n´)
         N_ctm´ = abs(network_value(n´, ctm´))
 
         @show N_vumps´
