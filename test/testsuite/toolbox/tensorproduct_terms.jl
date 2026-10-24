@@ -68,8 +68,8 @@ function toolbox_tensorproduct_bookkeeping(AT)
         # flatten before promoting
         @test TensorKit.storagetype(product) == TensorKit.storagetype(X)
         @test TensorKit.storagetype(
-            LocalOperator(lattice, [(1, 1), (1, 2)] => [X, Z], [(2, 1)] => copy(X))
-        ) == TensorKit.storagetype(X)
+            LocalOperator(lattice, [(1, 1), (1, 2)] => [X, Z], [(2, 1)] => im * X)
+        ) == TensorKit.storagetype(complex(X))
 
         # Factorwise real/imaginary parts are incorrect even for tensor products.
         imaginary = LocalOperator(lattice, [(1, 1), (1, 2)] => [im * Z, im * Z])

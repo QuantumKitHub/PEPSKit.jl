@@ -104,6 +104,7 @@ function toolbox_mpo_bookkeeping(AT)
         @test operator == snapshot
         onsite = adapt(AT, randn(ComplexF64, d ← d))
         @test scalartype(operator + LocalOperator(lattice, ((2, 1),) => onsite)) == ComplexF64
+        @test TensorKit.storagetype(operator + LocalOperator(lattice, ((2, 1),) => onsite)) == TensorKit.storagetype(onsite)
         @test scalartype(scaled) == ComplexF64
         @test_throws ArgumentError real(scaled)
         @test_throws ArgumentError imag(scaled)

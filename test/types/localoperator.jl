@@ -18,6 +18,7 @@ if !is_buildkite
         terms = ((CartesianIndex(1, 1), CartesianIndex(1, 2)) => t,)
         op = LocalOperator(physical_spaces, terms...)
         @test TensorKit.storagetype(op) == TensorKit.storagetype(t)
+        @test TensorKit.storagetype(op + LocalOperator(physical_spaces, ((2, 1), (2, 2)) => real(t))) == TensorKit.storagetype(t)
 
         @test op isa LocalOperator
         @test length(op.terms) == 1

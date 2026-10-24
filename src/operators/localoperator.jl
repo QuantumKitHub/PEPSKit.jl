@@ -87,15 +87,14 @@ function add_term!(
     return operator
 end
 
-# A term is either a single tensor or, for tensor product and MPO terms, a vector of factors,
-# so the terms are flattened before promoting: `promote_storagetype` only takes tensors.
+# Flatten factored terms and promote their storage types using the operator's common scalar type.
 _term_tensors(term::AbstractTensorMap) = (term,)
 _term_tensors(term::AbstractVector{<:AbstractTensorMap}) = term
 
-function TensorKit.storagetype(lo::LocalOperator{T, S}) where {T, S}
-    return TensorKit.promote_storagetype(
-        Iterators.flatten(Iterators.map(_term_tensors, values(lo.terms)))...
-    )
+function TensorKit.storagetype(lo::LocalOperator)
+    T = scalartype(lo)
+    tensors = Iterators.flatten(Iterators.map(_term_tensors, values(lo.terms)))
+    return mapreduce(t -> similarstoragetype(t, T), TensorKit.promote_storagetype, tensors)
 end
 
 """
