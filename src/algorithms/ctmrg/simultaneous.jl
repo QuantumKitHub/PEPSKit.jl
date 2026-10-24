@@ -21,7 +21,7 @@ For a full description, see [`leading_boundary`](@ref). The supported keywords a
 * `verbosity::Int=$(Defaults.ctmrg_verbosity)`
 * `trunc::Union{TruncationStrategy,NamedTuple}=(; alg::Symbol=:$(Defaults.trunc))`
 * `decomposition_alg::Union{<:SVDAdjoint,NamedTuple}`
-* `projector_alg::Symbol=:$(Defaults.projector_alg)`
+* `projector_alg::Union{Symbol,NamedTuple}=:$(Defaults.projector_alg)`
 """
 struct SimultaneousCTMRG{P <: ProjectorAlgorithm} <: CTMRGAlgorithm
     tol::Float64
@@ -36,7 +36,8 @@ end
 
 CTMRG_SYMBOLS[:SimultaneousCTMRG] = SimultaneousCTMRG
 
-function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
+"""Expand every corner tensor for a simultaneous CTMRG iteration."""
+function _expand_corners_simultaneously(network, env::CTMRGEnv)
     coordinates = eachcoordinate(network, 1:4)
     T_corners = Base.promote_op(
         TensorMap ∘ EnlargedCorner, typeof(network), typeof(env), eltype(coordinates)
@@ -45,14 +46,50 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SimultaneousCTMRG)
     enlarged_corners::typeof(enlarged_corners′) =
         dtmap!!(enlarged_corners′, eachcoordinate(network, 1:4)) do idx
         return TensorMap(EnlargedCorner(network, env, idx))
-    end  # expand environment
+    end
+    return enlarged_corners
+end
+
+function ctmrg_iteration(
+        network, env::CTMRGEnv, alg::SimultaneousCTMRG,
+        cache::EmptyProjectorCache,
+    )
+    enlarged_corners = _expand_corners_simultaneously(network, env)
     projectors, info = simultaneous_projectors(enlarged_corners, env, alg.projector_alg)  # compute projectors on all coordinates
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)  # renormalize enlarged corners
     info = (;
         contraction_metrics = (; info.truncation_error),
         info.U, info.S, info.V,
     )
-    return env′, info
+    return env′, info, cache
+end
+
+function ctmrg_iteration(
+        network, env::CTMRGEnv,
+        alg::SimultaneousCTMRG{<:SubspaceIterationProjector},
+        cache::SubspaceIterationCache,
+    )
+    if !_compatible_subspace_cache(cache, env, alg.projector_alg)
+        cache = initialize_projector_cache(network, env, alg)
+    end
+    enlarged_corners = _expand_corners_simultaneously(network, env)
+    projectors, projector_info = simultaneous_projectors(
+        enlarged_corners, env, alg.projector_alg, cache.X, cache.Y, cache.recycle
+    )
+    env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)
+    cache′, subspace_error = _update_subspace_cache(
+        cache,
+        projector_info.X, projector_info.Y, projector_info.U, projector_info.V,
+        alg.projector_alg, projector_info.freezable
+    )
+    info = (;
+        contraction_metrics = (;
+            projector_info.truncation_error, subspace_error,
+            recycled = projector_info.recycled,
+        ),
+        projector_info.U, projector_info.S, projector_info.V,
+    )
+    return env′, info, cache′
 end
 
 # Work-around to stop Zygote from choking on first execution (sometimes)
@@ -65,8 +102,19 @@ function _split_proj_and_info(proj_and_info)
     S = map(x -> x[2].S, proj_and_info)
     V = map(x -> x[2].V, proj_and_info)
     info = (; truncation_error, U, S, V)
+    if hasproperty(first(proj_and_info)[2], :X)
+        X = map(x -> x[2].X, proj_and_info)
+        Y = map(x -> x[2].Y, proj_and_info)
+        recycled = all(x -> x[2].recycled, proj_and_info)
+        freezable = all(x -> x[2].freezable, proj_and_info)
+        info = (; info..., recycled, freezable, X, Y)
+    end
     return (P_left, P_right), info
 end
+
+"""Select optional recycled bases for one projector coordinate."""
+_projector_arguments(coordinate, X, Y, recycle::Bool) = (X[coordinate...], _subspace_grid_entry(Y, coordinate...), recycle)
+_projector_arguments(coordinate) = ()
 
 """
     simultaneous_projectors(enlarged_corners::Array{E,3}, env::CTMRGEnv, alg::ProjectorAlgorithm)
@@ -76,45 +124,36 @@ Compute CTMRG projectors in the `:SimultaneousCTMRG` scheme either for all provi
 enlarged corners or on a specific `coordinate`.
 """
 function simultaneous_projectors(
-        enlarged_corners::Array{E, 3}, env::CTMRGEnv, alg::ProjectorAlgorithm
+        enlarged_corners::Array{E, 3}, env::CTMRGEnv, alg::ProjectorAlgorithm, args...
     ) where {E}
     coordinates = eachcoordinate(env, 1:4)
     T_dst = Base.promote_op(
         simultaneous_projectors,
         NTuple{3, Int}, typeof(enlarged_corners), typeof(env), typeof(alg),
+        map(typeof, _projector_arguments(first(coordinates), args...))...,
     )
     proj_and_info′ = similar(coordinates, T_dst)
     proj_and_info::typeof(proj_and_info′) =
         dtmap!!(proj_and_info′, coordinates) do coordinate
-        return simultaneous_projectors(coordinate, enlarged_corners, env, alg)
+        return simultaneous_projectors(coordinate, enlarged_corners, env, alg, _projector_arguments(coordinate, args...)...)
     end
     return _split_proj_and_info(proj_and_info)
 end
 function simultaneous_projectors(
-        coordinate, enlarged_corners::Array{E, 3}, env, alg::HalfInfiniteProjector
+        coordinate::NTuple{3, Int}, enlarged_corners::Array{E, 3}, env,
+        alg::Union{HalfInfiniteProjector, FullInfiniteProjector},
     ) where {E}
-    coordinate′ = _next_coordinate(coordinate, size(env)[2:3]...)
-    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate′[2:3]...])
+    ec, trunc = enlarged_corner_inputs(enlarged_corners, coordinate, env, alg, Val(alg isa HalfInfiniteProjector ? 2 : 4))
     alg′ = _set_decomposition_truncation(alg, trunc)
-    ec = (enlarged_corners[coordinate...], enlarged_corners[coordinate′...])
     return compute_projector(ec, alg′)
 end
+
 function simultaneous_projectors(
-        coordinate, enlarged_corners::Array{E, 3}, env, alg::FullInfiniteProjector
+        coordinate::NTuple{3, Int}, enlarged_corners::Array{E, 3}, env,
+        alg::SubspaceIterationProjector, X, Y, recycle::Bool,
     ) where {E}
-    rowsize, colsize = size(env)[2:3]
-    coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
-    coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
-    coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
-    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate2[2:3]...])
-    alg′ = _set_decomposition_truncation(alg, trunc)
-    ec = (
-        enlarged_corners[coordinate4...],
-        enlarged_corners[coordinate...],
-        enlarged_corners[coordinate2...],
-        enlarged_corners[coordinate3...],
-    )
-    return compute_projector(ec, alg′)
+    ec, trunc = enlarged_corner_inputs(enlarged_corners, coordinate, env, alg, Val(4))
+    return compute_projector(ec, alg, (; X, Y, trunc, recycle))
 end
 
 """
