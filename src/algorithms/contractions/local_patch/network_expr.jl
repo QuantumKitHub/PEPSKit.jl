@@ -287,8 +287,8 @@ function operator_contraction_expr(::Type{<:MPOTerm}, nsites)
     end
 end
 
-# A tensor product term is the special case in which every bond has dimension 1, so its
-# factors carry no bonds at all: each simply sits between the ket and bra index of its site.
+# A TensorProductTerm is represented with all trivial MPO bond legs removed.
+# Each factor connects only the ket and bra physical indices of its site.
 # This method is more specific than the `MPOTerm` one above, so it takes precedence.
 function operator_contraction_expr(::Type{<:TensorProductTerm}, nsites)
     return map(1:nsites) do i

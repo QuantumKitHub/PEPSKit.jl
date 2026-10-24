@@ -108,9 +108,6 @@ end
 
 # Tensor product terms
 # --------------------
-# A term given as one rank-2 operator per site, i.e. an explicit tensor product which is
-# never actually formed.
-
 """
     TensorProductTerm
 
@@ -119,11 +116,14 @@ per site acted on, rather than as the rank-`2N` tensor product itself.
 
 Only operators whose terms are individually tensor products can be represented this way. In
 particular several such terms acting on the same set of sites cannot be combined, since a
-sum of tensor products is not itself a tensor product.
+sum of tensor products is generally no longer a tensor product.
 
 The factors are rank-2, carrying no bond indices, which is what distinguishes this from the
 more general [`MPOTerm`](@ref): both are vectors of tensors, but a tensor product term is the
 narrower type and therefore wins on dispatch wherever it applies.
+
+All individual one-site operators are promoted to the same scalar type during construction
+of the `TensorProductTerm` vector.
 """
 const TensorProductTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap{<:Number, <:IndexSpace, 1, 1}}
 
@@ -174,10 +174,6 @@ end
 
 # MPO terms
 # ---------
-# A term given as a chain of MPO tensors, one per site, linked by virtual bonds which are
-# contracted directly between neighbours rather than being fused into the PEPS bonds. This
-# generalizes a tensor product term, which is the special case of bond dimension 1.
-
 """
     MPOTerm{T}
 
@@ -193,12 +189,13 @@ The factors are ordered along the chain and follow the usual MPO convention, ran
 so the physical index in the codomain is the bra index and the one in the domain is the ket
 index, matching the convention of a dense term, and the bonds run left to right. This is what
 [`gate_to_mpo`](@ref) produces, which is the way to obtain an `MPOTerm` from a dense operator.
-A single-site term is just a rank-2 operator.
+A single-site term contains only one rank-2 operator.
+
+When added to a `LocalOperator`, the factors are promoted to a common scalar type.
 
 A [`TensorProductTerm`](@ref) is the special case in which every bond is trivial, so its
-factors carry no bond indices and are rank-2 throughout. That is exactly what separates the
-two on dispatch: a vector of rank-2 operators is a tensor product term, anything else is an
-MPO.
+factors carry no virtual bond indices and are rank-2 throughout. That is exactly what separates the
+two on dispatch: a vector of rank-2 operators is a tensor product term, anything else is an MPO.
 """
 const MPOTerm{T} = AbstractVector{T} where {T <: AbstractTensorMap}
 
@@ -400,8 +397,8 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # VectorInterface
 # ---------------
 
-# Since we allow abstract types in T, value and type domain might not match. A term is either
-# a tensor or a container of factors sharing one scalar type, and `scalartype` resolves both.
+# Terms in a LocalOperator may have different scalar types. Return their promoted scalar type.
+# A term is either a tensor or a container of factors sharing one scalar type, and `scalartype` resolves both.
 function VI.scalartype(operator::LocalOperator)
     return promote_type((scalartype(term) for term in values(operator.terms))...)
 end
