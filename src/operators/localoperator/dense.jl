@@ -43,3 +43,5 @@ Detect an identically zero dense tensor.
 _local_term_iszero(term::AbstractTensorMap) = iszero(norm(term))
 
 _scale_local_term(term::AbstractTensorMap, α::Number) = VI.scale(term, α)
+
+_fuse_charge(term::AbstractTensorMap, charges::Tuple) = fuse_charge(term, charges)

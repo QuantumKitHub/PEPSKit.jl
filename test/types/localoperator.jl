@@ -77,6 +77,13 @@ if !is_buildkite
         tr_after = tr(last(only(H_shifted.terms)))
         @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
 
+        for (sites, term) in (
+                ((1, 1),) => [H_U],
+                ((1, 1), (1, 2)) => PEPSKit.gate_to_mpo(H_U ⊗ H_U),
+            )
+            @test_throws ArgumentError add_physical_charge(LocalOperator(spaces, sites => term), fill(caux, size(spaces)))
+        end
+
         # fermionic case
         symmetry = FermionParity ⊠ U1Irrep
         H_U = U * ud_num(elt, U1Irrep, Trivial)

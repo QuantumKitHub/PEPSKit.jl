@@ -236,10 +236,16 @@ end
 TensorKit.spacetype(::Type{<:LocalOperator{<:Any, S}}) where {S} = S
 
 """
+Fuse auxiliary charges into the physical spaces of a term in `LocalOperator`.
+"""
+function _fuse_charge end
+
+"""
     add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
 
 Change the spaces of a `LocalOperator` by fusing in an auxiliary charge into the domain of
 the operator on every site, according to a given matrix of 'auxiliary' physical charges.
+MPO and tensor-product terms are not yet supported.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
     size(H) == size(charges) ||
@@ -259,6 +265,6 @@ function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:
 
     return LocalOperator(
         Pspaces,
-        inds => fuse_charge(op, Tuple(map(Base.Fix1(getindex, periodic_charges), inds))) for (inds, op) in H.terms
+        inds => _fuse_charge(op, Tuple(map(Base.Fix1(getindex, periodic_charges), inds))) for (inds, op) in H.terms
     )
 end

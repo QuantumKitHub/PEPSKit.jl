@@ -106,3 +106,7 @@ function _scale_local_term(term::MPOTerm, α::Number)
         return scalartype(tensor) === T ? tensor : VI.scale(tensor, one(T))
     end
 end
+
+# TODO: Implement physical charge shifting for MPOTerm and TensorProductTerm.
+_fuse_charge(::MPOTerm, ::Tuple) =
+    throw(ArgumentError("Physical charge shifting is not implemented for MPO or tensor-product terms."))
