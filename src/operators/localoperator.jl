@@ -50,46 +50,26 @@ end
 # Default to Any for eltype: needs to be abstract anyways so not that much to gain
 LocalOperator(lattice, terms) = LocalOperator{Any}(lattice, terms)
 LocalOperator(lattice, terms::Pair...) = LocalOperator(lattice, terms)
-# TODO: add terms beyond AbstractTensorMap
-# e.g. tensor product of 1-site operators, MPOs
-add_term!(operator::LocalOperator, inds::Tuple, term::AbstractTensorMap) = add_term!(operator, collect(inds), term)
-add_term!(operator::LocalOperator, inds::Vector, term::AbstractTensorMap) = add_term!(operator, map(CartesianIndex{2}, inds), term)
-function add_term!(
-        operator::LocalOperator, inds::Vector{CartesianIndex{2}}, term::AbstractTensorMap;
-        atol = zero(real(scalartype(term))),
-    )
-    # input checks
-    length(inds) == numin(term) == numout(term) || throw(ArgumentError("Incompatible number of indices and tensor legs"))
-    allunique(inds) || throw(ArgumentError("`inds` should not contain repeated coordinates."))
-    for (i, ind) in enumerate(inds)
-        ind_translated = CartesianIndex(mod1.(Tuple(ind), size(operator)))
-        physicalspace(operator, ind_translated) == domain(term)[i] == codomain(term)[i] ||
-            throw(SpaceMismatch("Incompatible physical spaces"))
-    end
-    norm(term) <= atol && return operator # skip adding negligible terms
 
-    # permute input
-    if !issorted(inds)
-        I = sortperm(inds)
-        inds = inds[I]
-        term = permute(term, (Tuple(I), Tuple(I) .+ numout(term)))
-    end
-
-    # translate coordinates
-    _shift_into_unitcell!(inds, size(operator))
-
-    if haskey(operator.terms, inds)
-        operator.terms[inds] = VI.add!!(operator.terms[inds], term)
-    else
-        operator.terms[inds] = term
-    end
-
-    return operator
+"""
+Promote tensor factors to a common scalar type, reusing vectors whose element type already specifies one.
+"""
+_promote_term_scalars(term::AbstractVector{<:AbstractTensorMap{T}}) where {T <: Number} = term
+function _promote_term_scalars(term::AbstractVector)
+    T = promote_type(map(scalartype, term)...)
+    return map(t -> scalartype(t) === T ? t : VI.scale(t, one(T)), term)
 end
+
+"""
+Return the tensor factors of a dense or factored local term.
+"""
+_term_tensors(term::AbstractTensorMap) = (term,)
+_term_tensors(term::AbstractVector{<:AbstractTensorMap}) = term
 
 function TensorKit.storagetype(lo::LocalOperator)
     T = scalartype(lo)
-    return mapreduce(t -> similarstoragetype(t, T), TensorKit.promote_storagetype, values(lo.terms))
+    tensors = Iterators.flatten(Iterators.map(_term_tensors, values(lo.terms)))
+    return mapreduce(t -> similarstoragetype(t, T), TensorKit.promote_storagetype, tensors)
 end
 
 """
@@ -158,24 +138,45 @@ Base.eltype(::Type{LocalOperator{O, S}}) where {O, S} = O
 # Real and imaginary part
 # -----------------------
 function Base.real(O::LocalOperator)
+    any(term -> term isa MPOTerm, values(O.terms)) &&
+        throw(ArgumentError("Taking the real part is not implemented for MPO or tensor product terms."))
     return LocalOperator(O.lattice, (sites => real(op) for (sites, op) in O.terms)...)
 end
 function Base.imag(O::LocalOperator)
+    any(term -> term isa MPOTerm, values(O.terms)) &&
+        throw(ArgumentError("Taking the imaginary part is not implemented for MPO or tensor product terms."))
     return LocalOperator(O.lattice, (sites => imag(op) for (sites, op) in O.terms)...)
 end
 
 # Linear Algebra
 # --------------
-Base.:*(α::Number, O::LocalOperator) =
-    LocalOperator(physicalspace(O), inds => α * operator for (inds, operator) in O.terms)
+"""
+Scale a single term of a [`LocalOperator`](@ref) by `α`.
+
+An [`MPOTerm`](@ref), including a [`TensorProductTerm`](@ref), is scaled by scaling its first
+factor only - scaling the whole container would scale every factor and give `α^N`.
+"""
+function _scale_local_term end
+Base.:*(α::Number, O::LocalOperator) = LocalOperator(
+    physicalspace(O), inds => _scale_local_term(operator, α) for (inds, operator) in O.terms
+)
 Base.:*(O::LocalOperator, α::Number) = α * O
 
 Base.:/(O::LocalOperator, α::Number) = O * inv(α)
 Base.:\(α::Number, O::LocalOperator) = inv(α) * O
 
+"""
+Accumulate dense terms while rejecting addition involving an MPO or tensor product at the same sites.
+"""
+function _add_local_terms(term1, term2)
+    (term1 isa MPOTerm || term2 isa MPOTerm) &&
+        throw(ArgumentError("Accumulating terms with the same sites is not implemented for MPO or tensor product terms."))
+    return VI.add(term1, term2)
+end
+
 function Base.:+(O1::LocalOperator, O2::LocalOperator)
     checklattice(O1, O2)
-    return LocalOperator(physicalspace(O1), mergewith(VI.add, O1.terms, O2.terms))
+    return LocalOperator(physicalspace(O1), mergewith(_add_local_terms, O1.terms, O2.terms))
 end
 
 Base.:-(O::LocalOperator) = -1 * O
@@ -184,11 +185,11 @@ Base.:-(O1::LocalOperator, O2::LocalOperator) = O1 + (-O2)
 # VectorInterface
 # ---------------
 
-# Since we allow abstract types in T, value and type domain might not match
+# Terms in a LocalOperator may have different scalar types. Return their promoted scalar type.
+# A term is either a tensor or a container of factors sharing one scalar type, and `scalartype` resolves both.
 function VI.scalartype(operator::LocalOperator)
-    return promote_type((scalartype(term[2]) for term in operator.terms)...)
+    return promote_type((scalartype(term) for term in values(operator.terms))...)
 end
-
 
 # Equivalence
 # -----------
@@ -235,10 +236,16 @@ end
 TensorKit.spacetype(::Type{<:LocalOperator{<:Any, S}}) where {S} = S
 
 """
+Fuse auxiliary charges into the physical spaces of a term in `LocalOperator`.
+"""
+function _fuse_charge end
+
+"""
     add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
 
 Change the spaces of a `LocalOperator` by fusing in an auxiliary charge into the domain of
 the operator on every site, according to a given matrix of 'auxiliary' physical charges.
+MPO and tensor-product terms are not yet supported.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
     size(H) == size(charges) ||
@@ -258,6 +265,6 @@ function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:
 
     return LocalOperator(
         Pspaces,
-        inds => fuse_charge(op, Tuple(map(Base.Fix1(getindex, periodic_charges), inds))) for (inds, op) in H.terms
+        inds => _fuse_charge(op, Tuple(map(Base.Fix1(getindex, periodic_charges), inds))) for (inds, op) in H.terms
     )
 end
