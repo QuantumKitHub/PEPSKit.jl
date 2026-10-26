@@ -253,6 +253,18 @@ module ToolboxDensityMatrices
 end
 using .ToolboxDensityMatrices
 
+module ToolboxExpvalBoundaryMPS
+    include("toolbox/expval_boundary_mps.jl")
+    export toolbox_expval_boundary_mps, toolbox_expval_boundary_mps_localoperator
+end
+using .ToolboxExpvalBoundaryMPS
+
+module ToolboxMPORouting
+    include("toolbox/mpo_routing.jl")
+    export toolbox_mpo_routing_fusers, toolbox_mpo_routing_identities, toolbox_mpo_routing_paths
+end
+using .ToolboxMPORouting
+
 module ToolboxTensorProductTerms
     include("toolbox/tensorproduct_terms.jl")
     export toolbox_tensorproduct_ising, toolbox_tensorproduct_bookkeeping

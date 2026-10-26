@@ -247,3 +247,25 @@ function edge_transfer_right(
         Ebot[χ_SE D_S; χ_SW] *
         O[D_W D_S; D_N D_E]
 end
+
+"""
+Map north-boundary site `k` to the corresponding site in the east-to-west south boundary.
+`N` is the finite patch length, including the two boundary sites.
+"""
+south_site(k::Int, N::Int) = N + 1 - k
+
+"""
+Contract opposite-oriented boundary MPSs without conjugation.
+"""
+function dot_noconj(south::FiniteMPS, north::FiniteMPS)
+    N = length(north)
+    length(south) == N || throw(DimensionMismatch("boundary lengths must match"))
+    right = isomorphism(storagetype(north.AR[N]), domain(north.AR[N]), space(south.AL[1], 1))
+    for k in N:-1:1
+        top = k == 1 ? north.AC[k] : north.AR[k]
+        bottom = k == 1 ? south.AC[N] : south.AL[south_site(k, N)]
+        right = edge_transfermatrix(top, bottom) * right
+    end
+    left = isomorphism(storagetype(right), domain(south.AC[N]), space(north.AC[1], 1))
+    return tr(left * right)
+end
