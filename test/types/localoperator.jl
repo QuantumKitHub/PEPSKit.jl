@@ -18,6 +18,7 @@ if !is_buildkite
         terms = ((CartesianIndex(1, 1), CartesianIndex(1, 2)) => t,)
         op = LocalOperator(physical_spaces, terms...)
         @test TensorKit.storagetype(op) == TensorKit.storagetype(t)
+        @test TensorKit.storagetype(op + LocalOperator(physical_spaces, ((2, 1), (2, 2)) => real(t))) == TensorKit.storagetype(t)
 
         @test op isa LocalOperator
         @test length(op.terms) == 1
@@ -75,6 +76,13 @@ if !is_buildkite
         # check if trace is properly preserved
         tr_after = tr(last(only(H_shifted.terms)))
         @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
+
+        for (sites, term) in (
+                ((1, 1),) => [H_U],
+                ((1, 1), (1, 2)) => PEPSKit.gate_to_mpo(H_U ⊗ H_U),
+            )
+            @test_throws ArgumentError add_physical_charge(LocalOperator(spaces, sites => term), fill(caux, size(spaces)))
+        end
 
         # fermionic case
         symmetry = FermionParity ⊠ U1Irrep

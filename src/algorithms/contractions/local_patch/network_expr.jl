@@ -260,3 +260,40 @@ function operator_contraction_expr(::Type{<:AbstractTensorMap}, nsites)
         ),
     ]
 end
+
+# The MPO bond is small - the operator's Schmidt rank, e.g. 3 for Heisenberg XYZ - so it is
+# labelled as a physical rather than a virtual dimension, which gives `@autoopt` the right
+# order of magnitude when it searches for a contraction order.
+mpolabel(args...) = physicallabel(:mpo, args...)
+
+function operator_contraction_expr(::Type{<:MPOTerm}, nsites)
+    # one factor per site, linked by a chain of bonds running left to right, rank-3 at the
+    # ends of the chain and rank-4 in the bulk:
+    #   W₁  : bra₁ ← ket₁ ⊗ b₁
+    #   Wᵢ  : bᵢ₋₁ ⊗ braᵢ ← ketᵢ ⊗ bᵢ
+    #   W_N : b_{N-1} ⊗ bra_N ← ket_N
+    return map(1:nsites) do i
+        bra, ket = physicallabel(:O, 2, i), physicallabel(:O, 1, i)
+        out, ins = if nsites == 1
+            (bra,), (ket,)
+        elseif i == 1
+            (bra,), (ket, mpolabel(1))
+        elseif i == nsites
+            (mpolabel(nsites - 1), bra), (ket,)
+        else
+            (mpolabel(i - 1), bra), (ket, mpolabel(i))
+        end
+        return tensorexpr(:(operator[$i]), out, ins)
+    end
+end
+
+# A TensorProductTerm is represented with all trivial MPO bond legs removed.
+# Each factor connects only the ket and bra physical indices of its site.
+# This method is more specific than the `MPOTerm` one above, so it takes precedence.
+function operator_contraction_expr(::Type{<:TensorProductTerm}, nsites)
+    return map(1:nsites) do i
+        return tensorexpr(
+            :(operator[$i]), (physicallabel(:O, 2, i),), (physicallabel(:O, 1, i),)
+        )
+    end
+end

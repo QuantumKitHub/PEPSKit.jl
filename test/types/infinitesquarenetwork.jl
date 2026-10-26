@@ -1,5 +1,6 @@
 using Test
 using TensorKit
+using VectorInterface
 using PEPSKit
 using PEPSKit: PEPSTensor, PFTensor, PEPSSandwich, PEPOSandwich
 
@@ -68,5 +69,40 @@ if !is_buildkite
         )
 
         @test length(peps_n) == prod(sz)
+
+        # in-place add! on a network whose bra and ket alias the same tensors
+        peps2 = InfinitePEPS(randn, T, P, V; unitcell = sz)
+        n = InfiniteSquareNetwork(deepcopy(peps))
+        m = InfiniteSquareNetwork(peps2)
+        expected = 2 * n + m
+        @test VectorInterface.add!(n, m, 1, 2) ≈ expected
+
+        peps2 = InfinitePEPS(randn, T, P, V; unitcell = sz)
+        n = InfiniteSquareNetwork(deepcopy(peps))
+        m = InfiniteSquareNetwork(peps2)
+        expected = n + m
+        @test VectorInterface.add!(n, m) ≈ expected
+
+        peps2 = InfinitePEPS(randn, T, P, V; unitcell = sz)
+        n = InfiniteSquareNetwork(deepcopy(peps))
+        m = InfiniteSquareNetwork(peps2)
+        expected = 2 * n + m
+        @test VectorInterface.add!!(n, m, 1, 2) ≈ expected
+
+        # aliased bra/ket updated with a network whose bra and ket differ
+        n = InfiniteSquareNetwork(deepcopy(peps))
+        m = InfiniteSquareNetwork(peps, peps2)
+        expected = 2 * n + m
+        @test VectorInterface.add!(n, m, 1, 2) ≈ expected
+
+        n = InfiniteSquareNetwork(deepcopy(peps))
+        m = InfiniteSquareNetwork(peps, peps2)
+        expected = n + m
+        @test VectorInterface.add!(n, m) ≈ expected
+
+        n = InfiniteSquareNetwork(deepcopy(peps))
+        m = InfiniteSquareNetwork(peps, peps2)
+        expected = 2 * n + m
+        @test VectorInterface.add!!(n, m, 1, 2) ≈ expected
     end
 end
