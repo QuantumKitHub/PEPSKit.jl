@@ -30,7 +30,7 @@ end
 
 
 # TODO: decide on appropriate signature and returns for the more generic case
-# TODO: add a C4v specific method here 
+# TODO: add a C4v specific method here
 """
     correlation_length(state, env::AbstractCTMRGEnv; num_vals=2, kwargs...)
 
