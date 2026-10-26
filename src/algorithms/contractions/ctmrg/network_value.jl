@@ -90,6 +90,7 @@ end
 
 function _contract_site(ind::Tuple{Int, Int}, network::InfiniteSquareNetwork, env::C4vCTMRGEnv)
     r, c = ind
+    @assert r == c == 1 lazy"only trivial unit cells are supported for C4v-CTMRG, ind ($ind) must be (1, 1)"
     return _contract_site(
         corner(env, NORTHWEST, r - 1, c - 1),
         corner(env, NORTHEAST, r - 1, c + 1),

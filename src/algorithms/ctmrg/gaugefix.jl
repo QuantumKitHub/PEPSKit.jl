@@ -11,14 +11,6 @@ asymmetric CTMRG algorithms using multi-site unit cell transfer matrices.
 struct ScramblingEnvGauge end
 
 """
-$(TYPEDEF)
-
-C4v-symmetric equivalent of the [`ScramblingEnvGauge`](@ref) environment gauge fixing
-algorithm.
-"""
-struct ScramblingEnvGaugeC4v end
-
-"""
 $(SIGNATURES)
 
 Fix the gauge of `envfinal` based on the previous environment `envprev`.
@@ -27,15 +19,15 @@ Given that the CTMRG run is converged, the returned environment will be
 element-wise converged to `envprev`.
 """
 function gauge_fix(
-        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::G
-    ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
+        envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, alg::ScramblingEnvGauge
+    ) where {C, T}
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(envfinal, envprev, alg)
     return fix_phases(envfinal, signs, corner_phases, edge_phases)
 end
 
 function compute_gauge_fix_gauge(
-        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::G
-    ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
+        envfinal::CTMRGEnv{C, T}, envprev::CTMRGEnv{C, T}, alg::ScramblingEnvGauge
+    ) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -55,8 +47,8 @@ function compute_gauge_fix_gauge(
 end
 
 function compute_gauge_fix_gauge(
-        envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, alg::G
-    ) where {C, T, G <: Union{ScramblingEnvGauge, ScramblingEnvGaugeC4v}}
+        envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, alg::ScramblingEnvGauge
+    ) where {C, T}
     # Check if spaces in envprev and envfinal are the same
     same_spaces = map(eachcoordinate(envfinal, 1:4)) do (dir, r, c)
         space(envfinal.edges[dir, r, c]) == space(envprev.edges[dir, r, c]) &&
@@ -121,7 +113,7 @@ function compute_relative_phases(
     return signs
 end
 
-function compute_relative_phases(envfinal::AbstractCTMRGEnv{C, T}, envprev::AbstractCTMRGEnv{C, T}, ::ScramblingEnvGaugeC4v) where {C, T}
+function compute_relative_phases(envfinal::C4vCTMRGEnv{C, T}, envprev::C4vCTMRGEnv{C, T}, ::ScramblingEnvGauge) where {C, T}
     # "general" algorithm from https://arxiv.org/abs/2311.11894
     Tprev = envprev.edges[1, 1, 1]
     Tfinal = envfinal.edges[1, 1, 1]

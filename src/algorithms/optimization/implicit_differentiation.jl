@@ -203,7 +203,6 @@ Evaluating the gradient of the cost function for CTMRG:
 =#
 
 _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
-_scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
     alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())

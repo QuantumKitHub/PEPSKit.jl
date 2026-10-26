@@ -3,7 +3,7 @@ $(TYPEDEF)
 
 Corner transfer-matrix environment with C4v symmetry containing unit-cell arrays of corner and edge tensors.
 The last two indices of the arrays correspond to the row and column indices of the unit
-cell, whereas the first index corresponds to the direction of the corner or edge tensor.
+cell, which for C4v CTMRG *must* be 1, whereas the first index corresponds to the direction of the corner or edge tensor.
 Since the corners are all identical due to the C4v symmetry, the corners array has a first dimension of size 1.
 The directions are labeled in clockwise direction, starting from the north edge.
 
@@ -25,9 +25,9 @@ network being contracted.
 $(TYPEDFIELDS)
 """
 struct C4vCTMRGEnv{C, T} <: AbstractCTMRGEnv{C, T}
-    "1 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
+    "1 x 1 x 1 array of corner tensor, kept 3D for compatibility with generic CTMRG methods"
     corners::Array{C, 3}
-    "1 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
+    "4 x 1 x 1 array of edge tensors, where the first dimension specifies the spatial direction"
     edges::Array{T, 3}
     function C4vCTMRGEnv{C, T}(corners::Array{C, 3}, edges::Array{T, 3}) where {C, T}
         return new{C, T}(corners, edges)
@@ -60,6 +60,7 @@ function C4vCTMRGEnv(
     }
     # check all of the sizes
     size(Ds) == size(chis) || throw(ArgumentError("Input spaces should have equal sizes."))
+    length(Ds) == 1 || throw(ArgumentError("C4v CTMRG only supports trivial unit cells."))
 
     # do the whole thing
     N = length(first(Ds))
@@ -69,21 +70,28 @@ function C4vCTMRGEnv(
 
     # All corners are identical
     corners = Array{C_type}(undef, 1, size(Ds)...)
-    # Only need one edge tensor
-    edges = Array{T_type}(undef, 1, size(Ds)...)
+    # Four edge tensors are related with flipped virtual spaces
+    edges = Array{T_type}(undef, 4, size(Ds)...)
 
-    for I in CartesianIndices(Ds)
-        r, c = I.I
-        edges[1, r, c] = _edge_tensor(
-            f, T, chis[r, _prev(c, end)], Ds[_next(r, end), c], chis[r, c]
-        )
-        corners[1, r, c] = _corner_tensor(
-            f, T, chis[_next(r, end), c], chis[r, c]
-        )
-    end
+    r, c = (1, 1)
+    edges[NORTH, r, c] = _edge_tensor(
+        f, T, chis[r, _prev(c, end)], Ds[_next(r, end), c], chis[r, c]
+    )
+    edges[EAST, r, c] = _edge_tensor(
+        f, T, chis[r, c], Ds[r, _prev(c, end)], chis[_next(r, end), c]
+    )
+    edges[SOUTH, r, c] = _edge_tensor(
+        f, T, chis[r, c], Ds[_prev(r, end), c], chis[r, _prev(c, end)]
+    )
+    edges[WEST, r, c] = _edge_tensor(
+        f, T, chis[_next(r, end), c], Ds[r, _next(c, end)], chis[r, c]
+    )
+    corners[1, r, c] = _corner_tensor(
+        f, T, chis[_next(r, end), c], chis[r, c]
+    )
 
     corners[1, :, :] ./= norm.(corners[1, :, :])
-    edges[1, :, :] ./= norm.(edges[1, :, :])
+    edges[:, :, :] ./= norm.(edges[:, :, :])
     return C4vCTMRGEnv(corners, edges)
 end
 function C4vCTMRGEnv(D::P, args...; kwargs...) where {P <: Union{Matrix{VectorSpace}, VectorSpace}}
