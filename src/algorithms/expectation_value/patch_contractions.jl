@@ -2,6 +2,16 @@
 # -------------------------------
 
 """
+Check that a factored operator contains one factor per site.
+"""
+_check_factor_count(inds, O) = nothing
+function _check_factor_count(inds, O::MPOTerm)
+    length(inds) == length(O) ||
+        throw(ArgumentError("Got $(length(inds)) sites but $(length(O)) operator factors."))
+    return nothing
+end
+
+"""
     contract_local_operator(inds, O, ket::InfinitePEPS, bra::InfinitePEPS, env)
     contract_local_operator(inds, O, ket::InfinitePEPO, bra::InfinitePEPO, env)
     contract_local_operator(inds, O, state::InfinitePEPO, env)
@@ -16,6 +26,7 @@ function contract_local_operator(
         inds::Vector{CartesianIndex{2}}, O,
         ket::InfinitePEPS, bra::InfinitePEPS, env,
     )
+    _check_factor_count(inds, O)
     static_inds = Tuple(Val.(inds))
     return _contract_local_operator(static_inds, O, (ket, bra), env)
 end
@@ -23,6 +34,7 @@ function contract_local_operator(
         inds::Vector{CartesianIndex{2}}, O, state::InfinitePEPO, env
     )
     size(state, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
+    _check_factor_count(inds, O)
     static_inds = Tuple(Val.(inds))
     return _contract_local_operator(static_inds, O, state, env)
 end
@@ -31,6 +43,7 @@ function contract_local_operator(
     )
     size(ket) == size(bra) || throw(DimensionMismatch("incompatible bra and ket dimensions"))
     size(ket, 3) == 1 || throw(DimensionMismatch("only single-layer densitymatrices are supported"))
+    _check_factor_count(inds, O)
     static_inds = Tuple(Val.(inds))
     return _contract_local_operator(static_inds, O, (ket, bra), env)
 end
