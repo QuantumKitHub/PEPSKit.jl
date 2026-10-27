@@ -5,6 +5,7 @@ using TensorKit
 using MPSKit
 using LinearAlgebra
 using Adapt
+using StableRNGs
 
 const vumps_alg = VUMPS(;
     tol = 1.0e-6, alg_eigsolve = MPSKit.Defaults.alg_eigsolve(; ishermitian = false), verbosity = 2
@@ -30,7 +31,8 @@ function boundary_mps_one_one_peps(AT)
         N2 = abs(sum(expectation_value(mps2, T)))
         @test N ≈ N2 rtol = 1.0e-2
 
-        ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
+        rng = StableRNG(29384293742893)
+        ctm, = leading_boundary(CTMRGEnv((args...) -> randn(rng, args...), ComplexF64, psi, ComplexSpace(20)), psi)
         N´ = abs(norm(psi, ctm))
 
         @test N ≈ N´ atol = 1.0e-3
@@ -51,7 +53,8 @@ function boundary_mps_two_two_peps(AT)
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N = abs(leading_eigenvalue(mps, T))
 
-        ctm, = leading_boundary(CTMRGEnv(psi, ComplexSpace(20)), psi)
+        rng = StableRNG(29384293742893)
+        ctm, = leading_boundary(CTMRGEnv((args...) -> randn(rng, args...), ComplexF64, psi, ComplexSpace(20)), psi)
         N´ = abs(norm(psi, ctm))
 
         @test N ≈ N´ rtol = 1.0e-2
@@ -79,7 +82,8 @@ function boundary_mps_fermionic_peps(AT)
         mps, env, ϵ = leading_boundary(mps, T, vumps_alg)
         N_vumps = abs(prod(expectation_value(mps, T)))
 
-        ctm, = leading_boundary(CTMRGEnv(psi, χ), psi)
+        rng = StableRNG(29384293742893)
+        ctm, = leading_boundary(CTMRGEnv((args...) -> randn(rng, args...), ComplexF64, psi, χ), psi)
         N_ctm = abs(norm(psi, ctm))
 
         @test N_vumps ≈ N_ctm rtol = 1.0e-2
@@ -93,7 +97,8 @@ function boundary_mps_fermionic_peps(AT)
         mps´, env´, ϵ = leading_boundary(mps´, T´, vumps_alg)
         N_vumps´ = abs(prod(expectation_value(mps´, T´)))
 
-        ctm´, = leading_boundary(CTMRGEnv(n´, χ), n´)
+        rng = StableRNG(29384293742893)
+        ctm´, = leading_boundary(CTMRGEnv((args...) -> randn(rng, args...), ComplexF64, n´, χ), n´)
         N_ctm´ = abs(network_value(n´, ctm´))
 
         @show N_vumps´

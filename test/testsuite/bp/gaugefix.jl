@@ -6,10 +6,10 @@ using PEPSKit, Adapt
 using PEPSKit: compare_weights, random_dual!, twistdual
 using PEPSKit: _next, _is_bipartite
 
-function bp_gaugefix_bp_vs_su(AT)
+function bp_gaugefix_bp_vs_su(AT; posdef_msgs = [true, false])
     return @testset "BP vs SU ($AT) ($S, bipartite = $(bipartite), posdef msgs = $h)" for
         (S, bipartite, h) in Iterators.product(
-            [U1Irrep, FermionParity], [true, false], [true, false]
+            [U1Irrep, FermionParity], [true, false], posdef_msgs
         )
         unitcell = bipartite ? (2, 2) : (2, 3)
         elt = ComplexF64
@@ -51,9 +51,11 @@ function bp_gaugefix_bp_vs_su(AT)
                 peps0[2, c] = copy(peps0[1, c + 1])
             end
         end
+        @test storagetype(peps0) <: AT
 
         # start by gauging with SU
         peps1, wts1 = gauge_fix(peps0, SUGauge(; maxiter, tol))
+        @test storagetype(peps1) <: AT
         for (a0, a1) in zip(peps0.A, peps1.A)
             @test space(a0) == space(a1)
         end
@@ -66,6 +68,7 @@ function bp_gaugefix_bp_vs_su(AT)
         # find BP fixed point and SUWeight
         bp_alg = BeliefPropagation(; maxiter, tol, bipartite, project_hermitian = h)
         env = BPEnv(randn, elt, peps1; posdef = h)
+        @test storagetype(env) <: AT
         env, err = leading_boundary(env, peps1, bp_alg)
         if bipartite
             @test _is_bipartite(env)
@@ -85,7 +88,7 @@ function bp_gaugefix_bp_vs_su(AT)
         for (X, Xinv) in XXinv
             # X, Xinv should contract to identity
             @tensor tmp[-1; -2] := X[-1; 1] * Xinv[1; -2]
-            @test tmp ≈ twistdual(TensorKit.id(space(X, 1)), 1)
+            @test tmp ≈ twistdual(adapt(AT, TensorKit.id(space(X, 1))), 1)
             # BP should differ from SU only by a unitary gauge transformation
             @test inv(X) ≈ adjoint(X) ≈ Xinv
         end

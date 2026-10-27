@@ -12,6 +12,8 @@ ctm_algs = [
     SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector),
     SimultaneousCTMRG(; projector_alg = :FullInfiniteProjector),
 ]
+# minimal subset which still covers both CTMRG and both projector algs
+ctm_algs_minimal = ctm_algs[[1, 4]]
 
 function test_unitcell(
         AT, ctm_alg, unitcell,
@@ -47,9 +49,10 @@ function test_unitcell(
     return nothing
 end
 
-function ctmrg_unitcell_random_cartesian_spaces(AT)
+function ctmrg_unitcell_random_cartesian_spaces(AT; minimal::Bool = false)
     Random.seed!(91283219347)
-    return @testset "Random Cartesian spaces with $ctm_alg ($AT)" for ctm_alg in ctm_algs
+    return @testset "Random Cartesian spaces with $ctm_alg ($AT)" for ctm_alg in
+        (minimal ? ctm_algs_minimal : ctm_algs)
         unitcell = (3, 3)
 
         Pspaces = ComplexSpace.(rand(2:3, unitcell...))
@@ -67,9 +70,10 @@ function ctmrg_unitcell_random_cartesian_spaces(AT)
     end
 end
 
-function ctmrg_unitcell_specific_u1_spaces(AT)
+function ctmrg_unitcell_specific_u1_spaces(AT; minimal::Bool = false)
     Random.seed!(91283219347)
-    return @testset "Specific U1 spaces with $ctm_alg ($AT)" for ctm_alg in ctm_algs
+    return @testset "Specific U1 spaces with $ctm_alg ($AT)" for ctm_alg in
+        (minimal ? ctm_algs_minimal : ctm_algs)
         unitcell = (2, 2)
 
         PA = U1Space(-1 => 1, 0 => 1)

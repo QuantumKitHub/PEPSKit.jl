@@ -57,10 +57,19 @@ beta = 0.2391 # slightly lower temperature than βc ≈ 0.2216544
 # cover all different flavors
 ctm_styles = [:SequentialCTMRG, :SimultaneousCTMRG]
 projector_algs = [:HalfInfiniteProjector, :FullInfiniteProjector]
+unitcells = [(1, 1, 1), (1, 1, 2)]
 
-function ctmrg_pepo_runthroughs(AT)
-    return @testset "PEPO CTMRG runthroughs for unitcell=$(unitcell) ($AT)" for unitcell in
-        [(1, 1, 1), (1, 1, 2)]
+# minimal subset of the combinations tested below which still covers every option value at least once
+minimal_combinations = [
+    ((1, 1, 1), [(:SequentialCTMRG, :FullInfiniteProjector)]),
+    ((1, 1, 2), [(:SimultaneousCTMRG, :HalfInfiniteProjector)]),
+]
+
+function ctmrg_pepo_runthroughs(AT; minimal::Bool = false)
+    return @testset "PEPO CTMRG runthroughs for unitcell=$(unitcell) ($AT)" for (unitcell, algs) in (
+            minimal ? minimal_combinations :
+                [(uc, Iterators.product(ctm_styles, projector_algs)) for uc in unitcells]
+        )
         Random.seed!(81812781144)
 
         O, M, E = three_dimensional_classical_ising(AT; beta)
@@ -77,7 +86,7 @@ function ctmrg_pepo_runthroughs(AT)
 
         @testset "PEPO CTMRG contraction using $alg with $projector_alg" for (
                 alg, projector_alg,
-            ) in Iterators.product(ctm_styles, projector_algs)
+            ) in algs
             env, = leading_boundary(env0, n; alg, maxiter = 150, projector_alg)
         end
     end
