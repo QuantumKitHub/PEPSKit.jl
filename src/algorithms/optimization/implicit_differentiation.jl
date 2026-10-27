@@ -345,7 +345,8 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
         return (VI.add!!(y, ∂E∂x, X[2]), X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg)
+    which = EigSorter(λ -> abs(λ - one(λ)))
+    _, vecs, info = realeigsolve(f, X₀, 1, which, alg)
     if alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
