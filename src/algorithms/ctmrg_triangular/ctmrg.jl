@@ -8,7 +8,7 @@ function leading_boundary(
         env₀::CTMRGEnvTriangular, network::InfiniteTriangularNetwork, alg::CTMRGAlgorithmTriangular
     )
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
-    return LoggingExtras.withlevel(; alg.verbosity) do
+    return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)
         S_old = DiagonalTensorMap.(id.(domain.(env₀.C)))
         η = one(real(scalartype(network)))

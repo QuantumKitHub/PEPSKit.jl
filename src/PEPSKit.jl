@@ -23,17 +23,13 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
+import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
 import TupleTools
 
 using MPSKit
 using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTransferMatrix
 using MPSKit: InfiniteEnvironments
-using MPSKit: DynamicTol
-using MPSKit.DynamicTols: adapt_solver
-using MPSKit: @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
-using MPSKit.IterativeLoggers: with_verbosity
-import MPSKit.DynamicTols: _updatetol
 using MPSKit: DynamicTol
 using MPSKit.DynamicTols: adapt_solver
 using MPSKit: @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
@@ -48,16 +44,7 @@ import TensorKitTensors.FermionOperators as FO
 import TensorKitTensors.HubbardOperators as HO
 import TensorKitTensors.TJOperators as TJ
 import TensorKitTensors.BosonOperators as BO
-using TensorKitTensors: fuse_charge
-import TensorKitTensors.SpinOperators as SO
-import TensorKitTensors.FermionOperators as FO
-import TensorKitTensors.HubbardOperators as HO
-import TensorKitTensors.TJOperators as TJ
-import TensorKitTensors.BosonOperators as BO
 using MPSKitModels
-import MPSKitModels:
-    transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ,
-    hubbard_model, bose_hubbard_model, tj_model
 import MPSKitModels:
     transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ,
     hubbard_model, bose_hubbard_model, tj_model
@@ -255,7 +242,6 @@ export product_peps
 export reduced_densitymatrix, expectation_value, network_value, cost_function
 export correlator, correlation_length
 export leading_boundary
-export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter, ImplicitGradient
 export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter, ImplicitGradient
 export fixedpoint
 
