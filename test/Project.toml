@@ -8,8 +8,6 @@ ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ChainRulesTestUtils = "cdddcdb0-9152-4a09-a978-84456f9df70a"
 JLArrays = "27aeb0d3-9eb9-45fb-866b-73c2ecf80fcb"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
-CUPTI = "9e67e8f6-ba02-4b6c-a7db-3b11ae1e7ab7"
-CUDATools = "9ec180c6-1c07-47c7-9e6e-ebefa4d1f6d0"
 GPUArrays = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
 KrylovKit = "0b1a1467-8014-51b9-945f-bf0ae24f4b77"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -29,21 +27,14 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestExtras = "5ed8adda-3752-4e41-b88a-e8b09835ee3a"
 VectorInterface = "409d34a3-91d5-4945-b6ec-7529ddf182d8"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
-cuBLAS = "182d3088-87b7-4494-8cad-fc6afaa545bc"
-cuFFT = "533571aa-0936-420e-b4be-9c66f5f626ca"
-cuRAND = "20fd9a0b-12d5-4c2f-a8af-7c34e9e60431"
-cuSOLVER = "887afef0-6a32-4de5-add4-7827692ba8fc"
-cuSPARSE = "b26da814-b3bc-49ef-b0ee-c816305aa060"
 
 [sources]
 PEPSKit = {path = ".."}
-CUDA = {url = "https://github.com/JuliaGPU/CUDA.jl", rev = "main"}
 
 [compat]
 AMDGPU = "2"
 ChainRulesTestUtils = "1.13"
 CUDA = "6"
-CUDATools = "6"
 ParallelTestRunner = "2.6.0"
 JLArrays = "0.3, 0.4"
 QuadGK = "2.11.1"
