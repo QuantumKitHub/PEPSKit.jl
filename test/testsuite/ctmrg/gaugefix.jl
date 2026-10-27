@@ -23,8 +23,8 @@ minimal_combinations_asymm = [
     (ComplexSpace, ComplexF64, (3, 2), SimultaneousCTMRG, :HalfInfiniteProjector, ScramblingEnvGauge()),
 ]
 minimal_combinations_c4v = [
-    (ComplexSpace, Float64, :C4vEighProjector, ScramblingEnvGaugeC4v()),
-    (Z2Space, ComplexF64, :C4vQRProjector, ScramblingEnvGaugeC4v()),
+    (ComplexSpace, Float64, :C4vEighProjector, ScramblingEnvGauge()),
+    (Z2Space, ComplexF64, :C4vQRProjector, ScramblingEnvGauge()),
 ]
 
 tol = 1.0e-6  # large tol due to χ=6
