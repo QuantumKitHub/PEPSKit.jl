@@ -287,13 +287,13 @@ function _rrule(
 end
 
 function _rrule(
-    gradmode::GradMode,
-    config::RuleConfig,
-    ::typeof(MPSKit.leading_boundary),
-    envinit,
-    state,
-    alg::CTMRGAlgorithmTriangular,
-)
+        gradmode::GradMode,
+        config::RuleConfig,
+        ::typeof(MPSKit.leading_boundary),
+        envinit,
+        state,
+        alg::CTMRGAlgorithmTriangular,
+    )
     msg = "Fixed-point differentiation is not available for `CTMRGAlgorithmTriangular`, \
             since gauge fixing for triangular CTMRG is currently not implemented."
     throw(ArgumentError(msg))
