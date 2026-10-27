@@ -60,3 +60,7 @@ function add_term!(
 
     return operator
 end
+
+function _fuse_charge(term::TensorProductTerm, charges::Tuple)
+    return map(fuse_charge, term, collect(charges))
+end
