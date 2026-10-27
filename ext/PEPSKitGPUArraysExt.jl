@@ -18,7 +18,7 @@ PEPSKit._indexable_diagview(m::AnyGPUArray) = collect(MAK.diagview(m))
 # Each caller (such as `su_iter`) gets a pair of caches. This makes sense to do on a per-caller basis
 # because what is being cached varies between algorithms.
 # For each caller we can also store several caches. For CTMRG and SU,
-# we currently store one but we retain the ability to store a "stack" if needed in the future. 
+# we currently store one but we retain the ability to store a "stack" if needed in the future.
 # TODO could this be better handled by LRU.jl or MemoizationKit.jl?
 const ALLOC_CACHES = Dict{Tuple{Symbol, Int}, Vector{AllocCache}}()
 const ALLOC_CACHES_LOCK = ReentrantLock()
