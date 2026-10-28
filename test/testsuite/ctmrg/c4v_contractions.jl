@@ -98,12 +98,17 @@ function test_c4v_peps_observables(peps::InfinitePEPS, env::C4vCTMRGEnv)
     O = adapt(storagetype(peps), _random_local_operator(physicalspace(peps, 1, 1)))
     @test expectation_value(peps, O, env) ≈ expectation_value(peps, O, env_ref)
 
-    ξ_h, ξ_v, λ_h, λ_v = correlation_length(peps, env)
-    ξ_h_ref, ξ_v_ref, λ_h_ref, λ_v_ref = correlation_length(peps, env_ref)
+    num_vals = 2
+    ξ_h, ξ_v, λ_h, λ_v = correlation_length(peps, env; num_vals)
+    ξ_h_ref, ξ_v_ref, λ_h_ref, λ_v_ref = correlation_length(peps, env_ref; num_vals)
     @test ξ_h ≈ ξ_h_ref
     @test ξ_v ≈ ξ_v_ref
-    @test λ_h ≈ λ_h_ref
-    @test λ_v ≈ λ_v_ref
+    # eigsolve may return more than `num_vals` eigenvalues depending on the random start
+    # vector, so only the requested leading eigenvalues are comparable; compare magnitudes
+    # since the order within a complex-conjugate pair is not fixed
+    leading(λs) = map(λ -> abs.(λ[1:num_vals]), λs)
+    @test leading(λ_h) ≈ leading(λ_h_ref)
+    @test leading(λ_v) ≈ leading(λ_v_ref)
     return nothing
 end
 
