@@ -8,11 +8,9 @@ using PEPSKit: _contract_site, _contract_corners, _contract_vertical_edges,
     _contract_horizontal_edges
 using PEPSKit: NORTH, EAST, SOUTH, WEST, NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST
 
-# settings
 stype = ComplexF64
 
-# Unpack a C4v environment into the equivalent generic CTMRGEnv, which serves as a reference
-# for all contractions since it stores every corner explicitly
+# Unpack a C4v environment into the equivalent generic CTMRGEnv to use as a reference
 function _expand_c4v_env(env::C4vCTMRGEnv)
     C = convert(TensorMap, only(env.corners))
     return CTMRGEnv(fill(C, 4, 1, 1), copy(env.edges))
@@ -20,11 +18,10 @@ end
 
 function _random_c4v_peps(AT, P, V)
     peps = InfinitePEPS(randn, stype, P, V)
-    symmetrize!(peps, RotateReflect())
+    BraidingStyle(sectortype(P)) isa Bosonic && symmetrize!(peps, RotateReflect())
     return adapt(AT, InfinitePEPS(map(a -> a / norm(a), peps.A)))
 end
 
-# Random local operator with one-site and nearest-neighbor terms in both directions
 function _random_local_operator(P)
     O₁ = randn(stype, P ← P)
     O₂ = randn(stype, P ⊗ P ← P ⊗ P)
@@ -76,8 +73,9 @@ function test_c4v_contractions(n::InfiniteSquareNetwork, env::C4vCTMRGEnv)
 
     @testset "VectorInterface" begin
         α, β = randn(stype), randn(stype)
-        @test norm(env) ≈ norm(env_ref)
-        @test inner(env, env) ≈ inner(env_ref, env_ref)
+        @test norm(env)^2 ≈ norm(only(env.corners))^2 + sum(e -> norm(e)^2, env.edges)
+        @test inner(env, env) ≈ norm(env)^2
+        @test norm(env)^2 ≈ norm(env_ref)^2 - 3 * norm(only(env.corners))^2
         @test norm(scale(env, α)) ≈ abs(α) * norm(env)
         @test scale(env, α) ≈ α * env
         @test add(env, env, α, β) ≈ (α + β) * env

@@ -40,18 +40,18 @@ end
 
 """
     C4vCTMRGEnv(
-        [f=randn, T=ComplexF64], Ds_north::A, Ds_east::A, chis::B
-    ) where {A<:AbstractMatrix{<:VectorSpace}, B<:AbstractMatrix{<:ElementarySpace}}
+        [f=randn, T=ComplexF64], Ds::A, chis::B
+    ) where {A<:AbstractMatrix{<:ProductSpace}, B<:AbstractMatrix{<:ElementarySpace}}
 
-Construct a C4v symmetric CTMRG environment by specifying matrices of north and east virtual spaces of the
-corresponding partition function and the north, east, south and west virtual spaces of the
-environment. Each respective matrix entry corresponds to a site in the unit cell. The virtual
-environment spaces for all directions are taken to be the same.
+Construct a C4v symmetric CTMRG environment by specifying 1 x 1 matrices of the north virtual
+space of the corresponding partition function and the virtual space of the environment. A
+single corner and north edge tensor are generated, from which the remaining edges are
+obtained by symmetry. The virtual environment spaces for all directions are the same.
 
-Each entry of the `Ds_north` and `Ds_east` matrices corresponds to an effective local space
-of the partition function, and can be represented as an `ElementarySpace` (e.g. for the case
-of a partition function defined in terms of local rank-4 tensors) or a `ProductSpace` (e.g.
-for the case of a network representing overlaps of PEPSs and PEPOs).
+The entry of `Ds` corresponds to an effective local space of the partition function, and
+can be represented as an `ElementarySpace` (e.g. for the case of a partition function
+defined in terms of local rank-4 tensors) or a `ProductSpace` (e.g. for the case of a
+network representing overlaps of PEPSs and PEPOs).
 """
 function C4vCTMRGEnv(
         f, T, Ds::A, chis::B,
@@ -62,37 +62,11 @@ function C4vCTMRGEnv(
     size(Ds) == size(chis) || throw(ArgumentError("Input spaces should have equal sizes."))
     length(Ds) == 1 || throw(ArgumentError("C4v CTMRG only supports trivial unit cells."))
 
-    # do the whole thing
-    N = length(first(Ds))
-    st = spacetype(first(Ds))
-    C_type = tensormaptype(st, 1, 1, T)
-    T_type = tensormaptype(st, N + 1, 1, T)
-
-    # All corners are identical
-    corners = Array{C_type}(undef, 1, size(Ds)...)
-    # Four edge tensors are related with flipped virtual spaces
-    edges = Array{T_type}(undef, 4, size(Ds)...)
-
-    r, c = (1, 1)
-    edges[NORTH, r, c] = _edge_tensor(
-        f, T, chis[r, _prev(c, end)], Ds[_next(r, end), c], chis[r, c]
-    )
-    edges[EAST, r, c] = _edge_tensor(
-        f, T, chis[r, c], Ds[r, _prev(c, end)], chis[_next(r, end), c]
-    )
-    edges[SOUTH, r, c] = _edge_tensor(
-        f, T, chis[r, c], Ds[_prev(r, end), c], chis[r, _prev(c, end)]
-    )
-    edges[WEST, r, c] = _edge_tensor(
-        f, T, chis[_next(r, end), c], Ds[r, _next(c, end)], chis[r, c]
-    )
-    corners[1, r, c] = _corner_tensor(
-        f, T, chis[_next(r, end), c], chis[r, c]
-    )
-
-    corners[1, :, :] ./= norm.(corners[1, :, :])
-    edges[:, :, :] ./= norm.(edges[:, :, :])
-    return C4vCTMRGEnv(corners, edges)
+    # All corners are identical, and the remaining edges follow from the north edge
+    D, χ = only(Ds), only(chis)
+    corner = _corner_tensor(f, T, χ, χ)
+    edge = _edge_tensor(f, T, χ, D, χ)
+    return C4vCTMRGEnv(corner / norm(corner), edge / norm(edge))
 end
 function C4vCTMRGEnv(D::P, args...; kwargs...) where {P <: Union{Matrix{VectorSpace}, VectorSpace}}
     return C4vCTMRGEnv(randn, ComplexF64, D, args...; kwargs...)
@@ -106,21 +80,20 @@ end
 
 Construct a C4v-symmetric CTMRG environment by specifying the virtual space of the
 corresponding [`InfiniteSquareNetwork`](@ref) and the virtual
-space of the environment. The network unit cell can be specified by the `unitcell` keyword
-argument. By default, the virtual environment spaces for all directions are taken to be the
-same.
+space of the environment. The `unitcell` keyword argument must be `(1, 1)`. The virtual
+environment spaces for all directions are the same.
 
 The environment virtual spaces for each site correspond to virtual space of the
 corresponding edge tensor for each direction.
 """
 function C4vCTMRGEnv(
         f, T,
-        D::S, virtual_spaces...; unitcell::Tuple{Int, Int} = (1, 1),
+        D::S, chi::ElementarySpace; unitcell::Tuple{Int, Int} = (1, 1),
     ) where {S <: VectorSpace}
     return C4vCTMRGEnv(
         f, T,
-        _fill_edge_physical_spaces(D, D; unitcell)...,
-        _fill_environment_virtual_spaces(virtual_spaces...; unitcell)...,
+        first(_fill_edge_physical_spaces(D; unitcell)),
+        first(_fill_environment_virtual_spaces(chi; unitcell)),
     )
 end
 
@@ -130,25 +103,23 @@ end
     ) where {A<:Union{AbstractMatrix{<:ElementarySpace}, ElementarySpace}}
 
 Construct a C4v-symmetric CTMRG environment by specifying a corresponding
-[`InfiniteSquareNetwork`](@ref), and the virtual spaces of the environment.
-The virtual spaces can either be specified as matrices of `ElementarySpace`s,
-or as individual `ElementarySpace`s which are then filled to match the size of the unit
-cell. Each respective matrix entry corresponds to a site in the unit cell. By default, the
-virtual spaces for all directions are taken to be the same.
+[`InfiniteSquareNetwork`](@ref), and the virtual space of the environment.
+The virtual space can either be specified as a 1 x 1 matrix of `ElementarySpace`s,
+or as an individual `ElementarySpace`. The virtual spaces for all directions are the same.
 
 The environment virtual spaces for each site correspond to the virtual space
 of the corresponding edge tensor for each direction.
 """
-function C4vCTMRGEnv(f, T, network::InfiniteSquareNetwork, virtual_spaces...)
+function C4vCTMRGEnv(f, T, network::InfiniteSquareNetwork, chis)
     Ds = _north_edge_physical_spaces(network)
-    virtual_spaces = _fill_environment_virtual_spaces(virtual_spaces...; unitcell = size(network))
-    return C4vCTMRGEnv(f, similarstoragetype(storagetype(network), eltype(T)), Ds, virtual_spaces...)
+    chis = first(_fill_environment_virtual_spaces(chis; unitcell = size(network)))
+    return C4vCTMRGEnv(f, similarstoragetype(storagetype(network), eltype(T)), Ds, chis)
 end
-function C4vCTMRGEnv(network::InfiniteSquareNetwork{O}, virtual_spaces...) where {O}
-    return C4vCTMRGEnv(randn, storagetype(O), network, virtual_spaces...)
+function C4vCTMRGEnv(network::InfiniteSquareNetwork{O}, chis) where {O}
+    return C4vCTMRGEnv(randn, storagetype(O), network, chis)
 end
-function C4vCTMRGEnv(network::Union{<:InfinitePartitionFunction, <:InfinitePEPS}, virtual_spaces...)
-    return C4vCTMRGEnv(randn, storagetype(network), network, virtual_spaces...)
+function C4vCTMRGEnv(network::Union{<:InfinitePartitionFunction, <:InfinitePEPS}, chis)
+    return C4vCTMRGEnv(randn, storagetype(network), network, chis)
 end
 
 # allow constructing environments for implicitly defined contractible networks
