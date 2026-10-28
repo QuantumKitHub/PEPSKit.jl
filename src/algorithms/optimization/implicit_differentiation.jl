@@ -227,11 +227,12 @@ function _rrule(
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    # fix global phases relative to the fixed point inside the iteration
     function gauge_fixed_iteration(A, x)
-        return fix_phases(
-            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1],
-            signs, corner_phases, edge_phases,
+        return fix_global_phases(
+            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], signs),
+            env,
         )
     end
     # prepare its pullback
@@ -345,8 +346,7 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
         return (VI.add!!(y, ∂E∂x, X[2]), X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    which = EigSorter(λ -> abs(λ - one(λ)))
-    _, vecs, info = realeigsolve(f, X₀, 1, which, alg)
+    _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg)
     if alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
