@@ -15,6 +15,14 @@ Keyword argument parser returning the appropriate `ProjectorAlgorithm` algorithm
 function ProjectorAlgorithm(;
         alg = Defaults.projector_alg,
         decomposition_alg = (;),
+        orth_alg = Defaults.orth_alg,
+        subspace = nothing,
+        subspace_tol = Defaults.subspace_tol,
+        min_subspace_iters = Defaults.min_subspace_iters,
+        update::Symbol = :independent,
+        n_subspace_iter::Int = 0,
+        rotate_basis::Bool = true,
+        rng = Random.default_rng(),
         trunc = (;),
         verbosity = Defaults.projector_verbosity,
     )
@@ -25,7 +33,7 @@ function ProjectorAlgorithm(;
 
     # parse SVD forward & rrule algorithm
 
-    decomposition_algorithm = if alg in [:HalfInfiniteProjector, :FullInfiniteProjector]
+    decomposition_algorithm = if alg in [:HalfInfiniteProjector, :FullInfiniteProjector, :SubspaceIterationProjector]
         _alg_or_nt(SVDAdjoint, decomposition_alg)
     elseif alg in [:C4vEighProjector]
         _alg_or_nt(EighAdjoint, decomposition_alg)
@@ -47,6 +55,34 @@ function ProjectorAlgorithm(;
         throw(ArgumentError("unknown trunc $trunc"))
     end
 
+    if alg == :SubspaceIterationProjector
+        truncation_strategy isa FixedSpaceTruncation ||
+            throw(ArgumentError("SubspaceIterationProjector only supports FixedSpaceTruncation."))
+        subspace isa ElementarySpace ||
+            throw(ArgumentError("SubspaceIterationProjector requires an elementary `subspace`."))
+        update in (:independent, :alternating, :alternating_refined) ||
+            throw(ArgumentError("unknown subspace update: $update"))
+        n_subspace_iter >= 0 || throw(ArgumentError("n_subspace_iter must be nonnegative."))
+        isfinite(subspace_tol) && subspace_tol >= 0 ||
+            throw(ArgumentError("subspace_tol must be finite and nonnegative."))
+        min_subspace_iters >= 1 ||
+            throw(ArgumentError("min_subspace_iters must be positive."))
+        orth_alg = _alg_or_nt(OrthAdjoint, orth_alg)
+        return alg_type(
+            decomposition_algorithm,
+            truncation_strategy,
+            orth_alg,
+            subspace,
+            Float64(subspace_tol),
+            min_subspace_iters,
+            verbosity,
+            update,
+            n_subspace_iter,
+            rotate_basis,
+            rng,
+        )
+    end
+
     return alg_type(decomposition_algorithm, truncation_strategy, verbosity)
 end
 
@@ -64,6 +100,54 @@ function truncation_strategy(alg::ProjectorAlgorithm, edge)
     else
         return alg.trunc
     end
+end
+
+"""
+Collect the cyclic coordinate layout and target truncation for a projector.
+
+``N`` is the number of enlarged corners involved in the construction of each projector.
+- ``N = 2`` for half-infinite environment.
+- ``N = 4`` for full-infinite environment.
+"""
+function _enlarged_corner_layout(
+        coordinate::NTuple{3, Int}, env::CTMRGEnv,
+        alg::ProjectorAlgorithm, ::Val{N},
+    ) where {N}
+    rowsize, colsize = size(env)[2:3]
+    coordinate2 = _next_coordinate(coordinate, rowsize, colsize)
+    trunc = truncation_strategy(alg, env.edges[coordinate[1], coordinate2[2:3]...])
+    coordinates = if N == 2
+        (coordinate, coordinate2)
+    elseif N == 4
+        coordinate3 = _next_coordinate(coordinate2, rowsize, colsize)
+        coordinate4 = _next_coordinate(coordinate3, rowsize, colsize)
+        (coordinate4, coordinate, coordinate2, coordinate3)
+    else
+        throw(ArgumentError("projectors require either two or four enlarged corners"))
+    end
+    return coordinates, trunc
+end
+
+"""Collect precomputed enlarged corners and the target truncation for simultaneous CTMRG."""
+function enlarged_corner_inputs(
+        corner_grid::AbstractArray{E, 3}, coordinate::NTuple{3, Int},
+        env::CTMRGEnv, alg::ProjectorAlgorithm, count::Val{N},
+    ) where {E, N}
+    coordinates, trunc = _enlarged_corner_layout(coordinate, env, alg, count)
+    enlarged_corners = map(coordinate -> corner_grid[coordinate...], coordinates)
+    return enlarged_corners, trunc
+end
+
+"""Construct enlarged corners and collect the target truncation for sequential CTMRG."""
+function enlarged_corner_inputs(
+        network::InfiniteSquareNetwork, coordinate::NTuple{3, Int},
+        env::CTMRGEnv, alg::ProjectorAlgorithm, count::Val{N},
+    ) where {N}
+    coordinates, trunc = _enlarged_corner_layout(coordinate, env, alg, count)
+    enlarged_corners = map(coordinates) do coordinate
+        return TensorMap(EnlargedCorner(network, env, coordinate))
+    end
+    return enlarged_corners, trunc
 end
 
 """
