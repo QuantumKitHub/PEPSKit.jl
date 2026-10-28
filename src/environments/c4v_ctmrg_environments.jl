@@ -240,16 +240,6 @@ end
 Base.real(env::C4vCTMRGEnv) = C4vCTMRGEnv(real.(env.corners), real.(env.edges))
 Base.complex(env::C4vCTMRGEnv) = C4vCTMRGEnv(complex.(env.corners), complex.(env.edges))
 
-cornertype(env::C4vCTMRGEnv) = cornertype(typeof(env))
-cornertype(::Type{C4vCTMRGEnv{C, E}}) where {C, E} = C
-edgetype(env::C4vCTMRGEnv) = edgetype(typeof(env))
-edgetype(::Type{C4vCTMRGEnv{C, E}}) where {C, E} = E
-
-TensorKit.spacetype(::Type{E}) where {E <: C4vCTMRGEnv} = spacetype(cornertype(E))
-function TensorKit.storagetype(::Type{E}) where {E <: C4vCTMRGEnv}
-    return TensorKit.promote_storagetype(cornertype(E), edgetype(E))
-end
-
 # In-place update of environment
 function update!(env::C4vCTMRGEnv{C, T}, env´::C4vCTMRGEnv{C, T}) where {C, T}
     env.corners .= env´.corners
@@ -270,9 +260,12 @@ function Base.rotl90(env::C4vCTMRGEnv{C, T}) where {C, T}
     corners′ = Zygote.Buffer(
         Array{C, 3}(undef, 1, size(env.corners, 3), size(env.corners, 2))
     )
-    edges′ = Zygote.Buffer(Array{T, 3}(undef, 1, size(env.edges, 3), size(env.edges, 2)))
-    corners′[1, :, :] = env.corners[1, :, :] # all corners are identical!
-    edges′[1, :, :] = rotl90(env.edges[1, :, :])
+    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
+    corners′[1, :, :] = rotl90(env.corners[1, :, :]) # all corners are identical!
+    for dir in 1:4
+        dir2 = _prev(dir, 4)
+        edges′[dir2, :, :] = rotl90(env.edges[dir, :, :])
+    end
     return C4vCTMRGEnv(copy(corners′), copy(edges′))
 end
 
@@ -282,9 +275,12 @@ function Base.rotr90(env::C4vCTMRGEnv{C, T}) where {C, T}
     corners′ = Zygote.Buffer(
         Array{C, 3}(undef, 1, size(env.corners, 3), size(env.corners, 2))
     )
-    edges′ = Zygote.Buffer(Array{T, 3}(undef, 1, size(env.edges, 3), size(env.edges, 2)))
+    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 3), size(env.edges, 2)))
     corners′[1, :, :] = rotr90(env.corners[1, :, :]) # all corners are identical!
-    edges′[1, :, :] = rotr90(env.edges[1, :, :])
+    for dir in 1:4
+        dir2 = _next(dir, 4)
+        edges′[dir2, :, :] = rotr90(env.edges[dir, :, :])
+    end
     return C4vCTMRGEnv(copy(corners′), copy(edges′))
 end
 
@@ -294,9 +290,12 @@ function Base.rot180(env::C4vCTMRGEnv{C, T}) where {C, T}
     corners′ = Zygote.Buffer(
         Array{C, 3}(undef, 1, size(env.corners, 2), size(env.corners, 3))
     )
-    edges′ = Zygote.Buffer(Array{T, 3}(undef, 1, size(env.edges, 2), size(env.edges, 3)))
+    edges′ = Zygote.Buffer(Array{T, 3}(undef, 4, size(env.edges, 2), size(env.edges, 3)))
     corners′[1, :, :] = rot180(env.corners[1, :, :]) # all corners are identical!
-    edges′[1, :, :] = rot180(env.edges[1, :, :])
+    for dir in 1:4
+        dir2 = _next(_next(dir, 4), 4)
+        edges′[dir2, :, :] = rot180(env.edges[dir, :, :])
+    end
     return C4vCTMRGEnv(copy(corners′), copy(edges′))
 end
 

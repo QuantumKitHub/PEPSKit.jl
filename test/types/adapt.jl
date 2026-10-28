@@ -64,5 +64,19 @@ if !is_buildkite
                 @test TensorKit.storagetype(jl_env) <: JLArray
             end
         end
+        @testset "C4vCTMRGEnv" begin
+            Vphy = Z2Space(0 => 1, 1 => 1)
+            V = Z2Space(0 => 1, 1 => 2)
+            Venv = Z2Space(0 => 2, 1 => 2)
+            peps = InfinitePEPS(randn, ComplexF64, Vphy, V)
+            symmetrize!(peps, RotateReflect())
+            env = initialize_random_c4v_env(peps, Venv)
+            jl_env = adapt(JLArray, env)
+            @test jl_env isa C4vCTMRGEnv
+            @test size(jl_env.corners) == (1, 1, 1)
+            @test size(jl_env.edges) == (4, 1, 1)
+            @test TensorKit.storagetype(jl_env) <: JLArray
+            @test adapt(Array, jl_env) ≈ env
+        end
     end
 end

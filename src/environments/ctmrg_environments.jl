@@ -241,7 +241,7 @@ CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
 
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
-function TensorKit.storagetype(::Type{AbstractCTMRGEnv{C, E}}) where {C, E}
+function TensorKit.storagetype(::Type{<:AbstractCTMRGEnv{C, E}}) where {C, E}
     T = promote_type(scalartype(C), scalartype(E))
     return TensorKit.promote_storagetype(T, C, E)
 end
@@ -331,9 +331,6 @@ edgetype(env::AbstractCTMRGEnv) = edgetype(typeof(env))
 edgetype(::Type{<:AbstractCTMRGEnv{C, E}}) where {C, E} = E
 
 TensorKit.spacetype(::Type{E}) where {E <: AbstractCTMRGEnv} = spacetype(cornertype(E))
-function TensorKit.storagetype(::Type{E}) where {E <: AbstractCTMRGEnv}
-    return TensorKit.promote_storagetype(cornertype(E), edgetype(E))
-end
 
 # In-place update of environment
 function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C, T}) where {C, T}
