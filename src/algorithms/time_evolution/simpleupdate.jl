@@ -76,43 +76,44 @@ end
 """
 Simple update optimized for nearest neighbor gates
 utilizing reduced bond tensors with the physical leg.
+
+The tensors are updated in their native leg order, without rotating them.
+Temporary tensors are allocated with `allocator`.
 """
 function _su_iter!(
         state::InfiniteState, gate::NNGate, env::SUWeight,
-        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
+        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate;
+        allocator = DefaultAllocator()
     )
-    @assert length(sites) == 2
-    trunc = only(_get_cluster_trunc(alg.trunc, sites))
-    Ms, open_vaxs, = _get_cluster(state, sites)
-    _absorb_weight!(Ms, sites, open_vaxs, env)
-    # rotate
-    (dir, r, c) = _nn_bonddir(sites...)
-    A, B = _bond_rotation.(Ms, dir, EAST)
+    (s₁, k₁), (s₂, k₂), gate = _orient_bond(state, sites, gate)
+    trunc = only(_get_cluster_trunc(alg.trunc, [s₁, s₂]))
+    open₁ = TupleTools.deleteat((1, 2, 3, 4), k₁)
+    open₂ = TupleTools.deleteat((1, 2, 3, 4), k₂)
+    # absorb environment weights
+    T₁ = absorb_weight(state[s₁], env, s₁, open₁)
+    T₂ = absorb_weight(state[s₂], env, s₂, open₂)
     # apply gate
     ϵ = 0.0
-    local s
-    for gate_ax in 1:2
-        a, X = bond_tensor_first(A; gate_ax, positive = true)
-        b, Y = bond_tensor_last(B; gate_ax, positive = true)
-        a, s, b, ϵ′ = _apply_gate(a, b, gate, trunc)
+    local S
+    for gate_ax in 1:numout(T₁)
+        Q₁, R₁, p₁ = _bond_qr(T₁, k₁, gate_ax, allocator)
+        Q₂, R₂, p₂ = _bond_qr(T₂, k₂, gate_ax, allocator)
+        U, S, Vᴴ, ϵ′ = _apply_bond_gate(R₁, R₂, gate, trunc, allocator)
         ϵ = max(ϵ, ϵ′)
-        A = undo_bond_tensor_first(a, X; gate_ax)
-        B = undo_bond_tensor_last(b, Y; gate_ax)
+        T₁ = _undo_bond_qr(Q₁, U, ((1,), (2, 3)), p₁, allocator)
+        T₂ = _undo_bond_qr(Q₂, Vᴴ, ((2,), (3, 1)), p₂, allocator)
         alg.purified && break # only apply gate to 1st physical leg
     end
-    # rotate back
-    A = _bond_rotation(A, EAST, dir)
-    B = _bond_rotation(B, EAST, dir)
-    (dir in (WEST, SOUTH)) && (s = transpose(s))
     # remove environment weights
-    siteA, siteB = sites
-    A = absorb_weight(A, env, siteA[1], siteA[2], open_vaxs[1]; inv = true)
-    B = absorb_weight(B, env, siteB[1], siteB[2], open_vaxs[2]; inv = true)
-    # update tensor dict and weight on current bond
-    state[siteA] = normalize!(A, Inf)
-    state[siteB] = normalize!(B, Inf)
+    absorb_weight!(T₁, env, s₁, open₁; inv = true)
+    absorb_weight!(T₂, env, s₂, open₂; inv = true)
+    # update tensor dict and weight on current bond,
+    # which lives on the EAST (NORTH) leg of the west (south) site
+    state[s₁] = normalize!(T₁, Inf)
+    state[s₂] = normalize!(T₂, Inf)
+    dir, r, c = _nn_bonddir(s₁, s₂)
     d = dir in (EAST, WEST) ? 1 : 2
-    env[d, r, c] = normalize!(s, Inf)
+    env[d, r, c] = normalize!(dir in (EAST, NORTH) ? S : transpose(S), Inf)
     return ϵ
 end
 
@@ -124,6 +125,8 @@ function su_iter(
         alg::SimpleUpdate, env::SUWeight
     )
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
+    # the gates are applied one after another, so a single allocator serves all of them
+    allocator = default_allocator(state, SerialScheduler())
     for (sites, gate) in circuit.gates
         if length(sites) == 1
             # 1-site gate
@@ -134,7 +137,7 @@ function su_iter(
             (dir, r, c) = _nn_bonddir(sites...)
             d = dir in (EAST, WEST) ? 1 : 2
             alg.bipartite && iseven(r) && continue
-            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter!(state2, gate, env2, sites, alg; allocator)
             ϵ = max(ϵ, ϵ′)
             (!alg.bipartite) && continue
             if d == 1

@@ -73,22 +73,6 @@ function _nn_bonddir(site1::CartesianIndex{2}, site2::CartesianIndex{2})
 end
 
 """
-Apply the tensor rotation that maps a bond from orientation `dir_from` to orientation `dir_to`, where the directions are one of `NORTH`, `EAST`, `SOUTH`, `WEST`.
-"""
-function _bond_rotation(x, dir_from::Int, dir_to::Int)
-    delta = mod(dir_to - dir_from, 4)
-    return if delta == 0
-        x
-    elseif delta == 1
-        rotr90(x)
-    elseif delta == 2
-        rot180(x)
-    else # delta == 3
-        rotl90(x)
-    end
-end
-
-"""
 Obtain the cluster `Ms` along the (open) path `sites` in `state`.
 
 ## Returns
@@ -135,28 +119,4 @@ function _get_cluster(
     end
     Ms = map(site -> state[site], sites)
     return Ms, open_vaxs, perms
-end
-
-"""
-Absorb weights into the open virtual legs of
-the cluster `Ms` of PEPS/PEPO tensors.
-"""
-function _absorb_weight!(
-        Ms::Vector{T}, sites::Vector{CartesianIndex{2}},
-        open_vaxs::Vector{<:Tuple}, env::SUWeight; inv::Bool = false
-    ) where {T}
-    for (idx, (M, site, vaxs)) in enumerate(zip(Ms, sites, open_vaxs))
-        Ms[idx] = absorb_weight(M, env, site, vaxs; inv)
-    end
-    return Ms
-end
-
-"""
-Given a vector `Ms` of `AbstractTensorMap`s,
-apply permutations `perms` to each tensor.
-"""
-function _permute_cluster(Ms::Vector{<:AbstractTensorMap}, perms::Vector{<:Tuple})
-    return map(Ms, perms) do M, perm
-        return permute(M, perm)
-    end
 end

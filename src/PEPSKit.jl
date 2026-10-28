@@ -23,6 +23,8 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
+using TensorOperations: DefaultAllocator, DefaultBackend, tensoralloc_add
+using TensorKit.Strided: StridedView, sreshape
 import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
 import TupleTools
@@ -32,6 +34,7 @@ using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTran
 using MPSKit: InfiniteEnvironments
 using MPSKit: DynamicTol
 using MPSKit.DynamicTols: adapt_solver
+using MPSKit: default_allocator
 using MPSKit: @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
 using MPSKit.IterativeLoggers: with_verbosity
 import MPSKit.DynamicTols: _updatetol
@@ -49,7 +52,7 @@ import MPSKitModels:
     transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ,
     hubbard_model, bose_hubbard_model, tj_model
 using FiniteDifferences
-using OhMyThreads: tmap, tmap!
+using OhMyThreads: tmap, tmap!, SerialScheduler
 using DocStringExtensions
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values

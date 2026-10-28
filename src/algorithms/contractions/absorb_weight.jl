@@ -48,41 +48,52 @@ function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
         row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
-    return _absorb_weight(t, weights, row, col, virt_axes; inv)
+    wts = map(ax -> weight_to_absorb(weights, row, col, ax; inv), virt_axes)
+    T = promote_type(scalartype(t), map(scalartype, wts)...)
+    return _absorb_weights!(similar(t, T), t, wts, virt_axes)
 end
 
 """
-Absorb weights on the virtual directions in `virt_axes`, or remove them when `inv = true`.
+    absorb_weight!(t, weights::SUWeight, rowcol::CartesianIndex{2}, virt_axes; inv = false)
 
-- `virt_axes` selects virtual directions using `1 = NORTH`, `2 = EAST`, etc., regardless of the current leg order.
-- `input_axes` specifies how the legs of the input `t` are already permuted with respect to the standard order.
-  For example, `input_axes = (5, 1, 2, 4, 3)` for a PEPS tensor means the legs are currently ordered as west, physical, north, south, east.
-- `output_perm` specifies how the returned tensor should permute the legs with respect to the standard order.
-  For example, `output_perm = ((5, 1, 2, 4), (3,))` puts west, physical, north, south in the codomain and east in the domain.
-- There are always four virtual legs on the square lattice, so the physical leg count is `numind(t) - 4`.
+In-place version of [`absorb_weight`](@ref).
 """
-function _absorb_weight(
-        t::AbstractTensorMap, weights::SUWeight, row::Int, col::Int,
-        virt_axes::NTuple{N, Int}; inv::Bool = false,
-        input_axes::Tuple = ntuple(identity, numind(t)),
-        output_perm::Tuple{Tuple, Tuple} = (
-            ntuple(identity, numind(t) - 4), ntuple(i -> numind(t) - 4 + i, 4),
-        )
+function absorb_weight!(
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        rowcol::CartesianIndex{2}, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
-    Np = numind(t) - 4
-    vax = first(virt_axes)
-    axes, biperm = _permute_to_last(input_axes, vax + Np)
-    wt = weight_to_absorb(weights, row, col, vax; inv)
-    # Allocate the first result to preserve the input and allow scalar promotion.
-    t2 = permute(t, biperm) * wt
-    for vax in Base.tail(virt_axes)
-        axes, biperm = _permute_to_last(axes, vax + Np)
-        wt = weight_to_absorb(weights, row, col, vax; inv)
-        # Diagonal composition is twist-free and only mutates the intermediate.
-        t2 = rmul!(permute(t2, biperm), wt)
+    wts = map(ax -> weight_to_absorb(weights, rowcol[1], rowcol[2], ax; inv), virt_axes)
+    return _absorb_weights!(t, t, wts, virt_axes)
+end
+
+# Write `src` into `dst` with `weights[i]` absorbed into virtual axis `virtual_axes[i]`,
+# where `domain(weights[i]) == domain(src)[virtual_axes[i]]`; `dst === src` is allowed.
+# A diagonal weight only rescales the basis vectors of its leg, by a factor that depends on
+# the sector of the leg and the index within it. This commutes with any permutation, so it is
+# applied directly on each fusion-tree block of `src` in its own leg order; it is equivalent
+# to `permute(src, ...) * wt` followed by the inverse permutation.
+# Since the domain of `wt` is the space of the leg itself (dual legs get `transpose(wt)` from
+# `weight_to_absorb`), `wt` is composed onto the leg without bending it, so even for dual legs
+# no twist is involved.
+function _absorb_weights!(
+        dst::AbstractTensorMap, src::AbstractTensorMap,
+        weights::NTuple{N, DiagonalTensorMap}, virtual_axes::NTuple{N, Int}
+    ) where {N}
+    Np, M = numout(src), numind(src)
+    space(dst) == space(src) ||
+        throw(SpaceMismatch(lazy"destination $(space(dst)) does not match source $(space(src))"))
+    for (wt, ax) in zip(weights, virtual_axes)
+        domain(wt)[1] == domain(src)[ax] ||
+            throw(SpaceMismatch(lazy"weight $(space(wt)) does not match virtual axis $ax of $(space(src))"))
     end
-    perm_back = invperm(axes)
-    return permute(t2, map(p -> map(i -> perm_back[i], p), output_perm))
+    for (f₁, f₂) in fusiontrees(src)
+        λs = map(weights, virtual_axes) do wt, ax
+            λ = StridedView(block(wt, f₂.uncoupled[ax]).diag)
+            return sreshape(λ, ntuple(i -> i == Np + ax ? length(λ) : 1, M))
+        end
+        @. dst[f₁, f₂] = *(src[f₁, f₂], λs...)
+    end
+    return dst
 end
 
 """

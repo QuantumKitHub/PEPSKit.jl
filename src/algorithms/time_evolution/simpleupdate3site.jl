@@ -14,7 +14,8 @@ function _unfuse_physicalspace(
 end
 
 """
-Absorb open-leg weights directly into the cluster's MPS layout.
+Obtain the cluster along `sites` with weights absorbed into its open virtual legs,
+and permuted to MPS axis order.
 """
 function _get_cluster_with_weights(
         state::InfiniteState, sites::Vector{CartesianIndex{2}}, env::SUWeight
@@ -22,7 +23,7 @@ function _get_cluster_with_weights(
     Ms, open_vaxs, perms = _get_cluster(state, sites)
     Np = (state isa InfinitePEPS) ? Val(1) : Val(2)
     Ms_mps = map(Ms, sites, open_vaxs, perms) do M, site, vaxs, perm
-        return _absorb_weight(M, env, site[1], site[2], vaxs; output_perm = perm)
+        return permute(absorb_weight(M, env, site, vaxs), perm)
     end
     invperms = map(p -> _inv_mpo_perm(p, Np), perms)
     return Ms_mps, open_vaxs, invperms
@@ -30,10 +31,14 @@ end
 
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
+
+The `allocator` is accepted for compatibility with the nearest neighbor update,
+but is not used yet.
 """
 function _su_iter!(
         state::InfiniteState, gate::Vector{T}, env::SUWeight,
-        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
+        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate;
+        allocator = DefaultAllocator()
     ) where {T <: AbstractTensorMap}
     truncs = _get_cluster_trunc(alg.trunc, sites)
     Ms, open_vaxs, invperms = _get_cluster_with_weights(state, sites, env)
@@ -62,10 +67,9 @@ function _su_iter!(
         env[d, r, c] = normalize!(wt_new, Inf)
     end
     # update state tensors
-    for (M, s, perm_back, vaxs) in zip(Ms, sites, invperms, open_vaxs)
-        # Remove weights directly from MPS order, then restore the site's layout.
-        input_axes = invperm((perm_back[1]..., perm_back[2]...))
-        M′ = _absorb_weight(M, env, s[1], s[2], vaxs; inv = true, input_axes)
+    for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
+        # restore original axes order and remove weights on open axes of the cluster
+        M′ = absorb_weight!(permute(M, invperm), env, s, vaxs; inv = true)
         state[s] = normalize!(M′, Inf)
     end
     return ϵ
