@@ -1,3 +1,9 @@
+"""
+An ordered sequence of sites on a two-dimensional lattice.
+Nearest-neighbor connectivity and nonintersection are checked by routing functions, not enforced by this alias.
+"""
+const LatticePath = AbstractVector{CartesianIndex{2}}
+
 # Get next and previous directional CTMRG environment index, respecting periodicity
 _next(i, total) = mod1(i + 1, total)
 _prev(i, total) = mod1(i - 1, total)
