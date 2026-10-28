@@ -77,13 +77,6 @@ if !is_buildkite
         tr_after = tr(last(only(H_shifted.terms)))
         @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
 
-        for (sites, term) in (
-                ((1, 1),) => [H_U],
-                ((1, 1), (1, 2)) => PEPSKit.gate_to_mpo(H_U ⊗ H_U),
-            )
-            @test_throws ArgumentError add_physical_charge(LocalOperator(spaces, sites => term), fill(caux, size(spaces)))
-        end
-
         # fermionic case
         symmetry = FermionParity ⊠ U1Irrep
         H_U = U * ud_num(elt, U1Irrep, Trivial)
@@ -100,6 +93,54 @@ if !is_buildkite
         # check if trace is properly preserved
         tr_after = tr(last(only(H_shifted.terms)))
         @test abs(tr_before - tr_after) / abs(tr_before) < 1.0e-12
+    end
+
+    # Cover bosonic, fermionic, combined, and non-Abelian symmetries.
+    @testset "Factored charge shifting ($(sectortype(p)))" for (p, charges) in (
+            (Vect[U1Irrep](-1 => 1, 0 => 1, 1 => 1), (1, -1, 2)),
+            (Vect[FermionParity](0 => 1, 1 => 1), (1, 0, 1)),
+            (Vect[FermionParity ⊠ U1Irrep]((0, 0) => 1, (1, 1) => 1), ((1, 1), (1, 0), (0, -1))),
+            (Vect[SU2Irrep](1 / 2 => 1), (1 / 2, 0, 1)),
+        )
+        spaces = fill(p, 1, 3)
+        charge_lattice = reshape(sectortype(p).(collect(charges)), 1, 3)
+        allsites = CartesianIndex.([(1, 3), (1, 1), (1, 2)])
+        # Exercise one-site terms, MPO endpoints, and an interior MPO factor.
+        @testset "$n sites" for n in 1:3
+            # Unsorted sites check that each factor receives its site's charge.
+            sites = allsites[1:n]
+            product = [randn(ComplexF64, p ← p) for _ in 1:n]
+            gate = randn(ComplexF64, p^n ← p^n)
+            mpo = n == 1 ? [gate] : PEPSKit.gate_to_mpo(gate; trunc = notrunc())
+            @testset "$name" for (name, dense, factors) in (
+                    ("Tensor product", foldl(⊗, product), product), ("MPO", gate, mpo),
+                )
+                H = LocalOperator(spaces, sites => factors)
+                snapshot = deepcopy(H)
+                shifted = add_physical_charge(H, charge_lattice)
+                expected = add_physical_charge(LocalOperator(spaces, sites => dense), charge_lattice)
+                shifted_sites, ws = only(shifted.terms)
+                actual = if ws isa PEPSKit.TensorProductTerm
+                    foldl(⊗, ws)
+                elseif n == 2
+                    @tensor O[a b; c d] := ws[1][a; c x] * ws[2][x b; d]
+                else
+                    @tensor O[a b c; d e f] := ws[1][a; d x] * ws[2][x b; e y] * ws[3][y c; f]
+                end
+                reconstructed = LocalOperator(physicalspace(shifted), shifted_sites => actual)
+                # Physical spaces must match the dense charge shift.
+                @test physicalspace(shifted) == physicalspace(expected)
+                # Contracted factors must reproduce the dense result, including fermionic signs.
+                @test only(values(reconstructed.terms)) ≈ only(values(expected.terms))
+                # Charge shifting must leave the input operator unchanged.
+                @test H == snapshot
+                if n > 1 && !(ws isa PEPSKit.TensorProductTerm)
+                    # Preserve virtual bond spaces on both sides of each MPO bond.
+                    @test all(i -> domain(ws[i])[2] == domain(factors[i])[2], 1:(n - 1))
+                    @test all(i -> codomain(ws[i])[1] == codomain(factors[i])[1], 2:n)
+                end
+            end
+        end
     end
 
     unitcells = [(1, 1), (2, 3), (3, 3), (4, 3)]

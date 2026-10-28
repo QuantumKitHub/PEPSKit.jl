@@ -107,6 +107,25 @@ function _scale_local_term(term::MPOTerm, α::Number)
     end
 end
 
-# TODO: Implement physical charge shifting for MPOTerm and TensorProductTerm.
-_fuse_charge(::MPOTerm, ::Tuple) =
-    throw(ArgumentError("Physical charge shifting is not implemented for MPO or tensor-product terms."))
+function _fuse_charge(term::MPOTerm, charges::Tuple)
+    return map(_fuse_mpo_charge, term, collect(charges))
+end
+
+"""
+Fuse an auxiliary charge into an MPO factor's physical legs while preserving its virtual bond spaces.
+"""
+function _fuse_mpo_charge(tensor::AbstractTensorMap, charge::Sector)
+    nout, nin = numout(tensor), numin(tensor)
+    P = codomain(tensor)[nout]
+    C = spacetype(tensor)(charge => 1)
+    A = storagetype(tensor)
+    fuser = isomorphism(A, fuse(P, C) ← P ⊗ C)
+    left = nout == 1 ? fuser : id(A, codomain(tensor)[1]) ⊗ fuser
+    right = nin == 1 ? fuser : fuser ⊗ id(A, domain(tensor)[2])
+    # Move the auxiliary input next to the physical input, including any required braiding.
+    order = (
+        ntuple(identity, nout + 1),
+        (nout + 2, nout + nin + 2, ntuple(i -> nout + 2 + i, nin - 1)...),
+    )
+    return left * permute(tensor ⊗ id(A, C), order) * right'
+end
