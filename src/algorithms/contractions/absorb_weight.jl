@@ -79,19 +79,25 @@ function _absorb_weights!(
         dst::AbstractTensorMap, src::AbstractTensorMap,
         weights::NTuple{N, DiagonalTensorMap}, virtual_axes::NTuple{N, Int}
     ) where {N}
-    Np, M = numout(src), numind(src)
+    Np, M = numout(src), Val(numind(src)) # static rank, so the reshaped weights are inferred
     space(dst) == space(src) ||
         throw(SpaceMismatch(lazy"destination $(space(dst)) does not match source $(space(src))"))
     for (wt, ax) in zip(weights, virtual_axes)
         domain(wt)[1] == domain(src)[ax] ||
             throw(SpaceMismatch(lazy"weight $(space(wt)) does not match virtual axis $ax of $(space(src))"))
     end
-    for (f₁, f₂) in fusiontrees(src)
-        λs = map(weights, virtual_axes) do wt, ax
-            λ = StridedView(block(wt, f₂.uncoupled[ax]).diag)
-            return sreshape(λ, ntuple(i -> i == Np + ax ? length(λ) : 1, M))
-        end
-        @. dst[f₁, f₂] = *(src[f₁, f₂], λs...)
+    # Look up every block of the weights only once, reshaped to broadcast along their leg, and
+    # iterate over the subblocks of `dst` and `src` (which have the same order) with `subblocks`,
+    # as the per-block `block(wt, c)` and `t[f₁, f₂]` would both redo the structure lookups.
+    λdicts = map(weights, virtual_axes) do wt, ax
+        return Dict(
+            c => sreshape(StridedView(b.diag), ntuple(i -> i == Np + ax ? length(b.diag) : 1, M))
+                for (c, b) in blocks(wt)
+        )
+    end
+    for (((f₁, f₂), d), (_, s)) in zip(subblocks(dst), subblocks(src))
+        λs = map((λdict, ax) -> λdict[f₂.uncoupled[ax]], λdicts, virtual_axes)
+        @. d = *(s, λs...)
     end
     return dst
 end
