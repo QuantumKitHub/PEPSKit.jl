@@ -406,11 +406,11 @@ _default_solver_alg(::Type{<:ImplicitGradient}) = Defaults.gradient_implicit_sol
 _select_solver_alg_symbol(::Type{<:ImplicitGradient}, solver_alg) =
     IMPLICIT_SOLVER_SYMBOLS[solver_alg]
 
-function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs, info)
-    return info.V * signs[1]'
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vEighProjector}, signs::CTMRGEnvGaugeTransform, info)
+    return info.V * signs.inverses[1]
 end
-function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs, info)
-    return info.Q * signs[1]'
+function _gauge_fix_c4v_projector(::C4vCTMRG{<:C4vQRProjector}, signs::CTMRGEnvGaugeTransform, info)
+    return info.Q * signs.inverses[1]
 end
 
 function _check_algorithm_combination(::SequentialCTMRG, ::ImplicitGradient)

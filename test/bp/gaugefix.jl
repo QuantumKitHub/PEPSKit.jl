@@ -7,6 +7,7 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 
 if !is_buildkite
     TestSuite.bp_gaugefix_bp_vs_su(Vector)
+    TestSuite.bp_gaugefix_pepo(Vector)
 end
 
 if CUDA.functional()

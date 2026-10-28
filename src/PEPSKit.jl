@@ -72,6 +72,7 @@ include("utility/initialization.jl")
 include("networks/tensors.jl")
 include("networks/local_sandwich.jl")
 include("networks/infinitesquarenetwork.jl")
+include("networks/gaugetransforms.jl")
 
 include("states/infinitepeps.jl")
 include("states/infinitepartitionfunction.jl")
@@ -104,7 +105,6 @@ include("algorithms/contractions/ctmrg/fullinf_env.jl")
 include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/network_value.jl")
-include("algorithms/contractions/ctmrg/gaugefix.jl")
 include("algorithms/contractions/ctmrg/characteristic_equations.jl")
 
 include("algorithms/contractions/absorb.jl")
@@ -138,6 +138,7 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/ctmrg/c4v.jl")
 include("algorithms/ctmrg/initialization.jl")
+include("algorithms/ctmrg/gaugetrans.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
@@ -208,7 +209,8 @@ export InfinitePEPO, InfiniteTransferPEPO
 
 export BPEnv, BeliefPropagation
 export BPGauge, SUGauge
-export gauge_fix
+export gauge_fix, gauge_transform
+export VirtualGaugeTransform, CTMRGEnvGaugeTransform
 
 export initialize_mps, initializePEPS
 export ReflectDepth, ReflectWidth, Rotate, RotateReflect

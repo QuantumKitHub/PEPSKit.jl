@@ -29,7 +29,7 @@ here. The available algorithms are:
 end
 
 """
-    gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::BPGauge, env::BPEnv)
+    gauge_fix(psi::Union{InfinitePEPS, InfinitePEPO}, alg::BPGauge, env::BPEnv) -> psi′, gauge
 
 Fix the gauge of `psi` (which can be an [`InfinitePEPS`](@ref), or
 an [`InfinitePEPO`](@ref) interpreted as purified state with two physical legs) 
@@ -49,7 +49,7 @@ function gauge_fix(psi::InfinitePEPS, alg::BPGauge, env::BPEnv)
             psi′[r + 1, 2] = copy(psi′[r, 1])
         end
     end
-    return psi′, XXinv
+    return psi′, VirtualGaugeTransform(XXinv)
 end
 function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
     # convert to iPEPS, and store physical leg fusers
@@ -61,13 +61,17 @@ function gauge_fix(psi::InfinitePEPO, alg::BPGauge, env::BPEnv)
     psi_Fs = reshape(psi_Fs, (Nr, Nc))
     psi′ = map(Base.Fix2(getindex, 1), psi_Fs)
     Fs = map(Base.Fix2(getindex, 2), psi_Fs)
-    psi′, XXinv = gauge_fix(InfinitePEPS(psi′), alg, env)
+    psi′, gauge = gauge_fix(InfinitePEPS(psi′), alg, env)
     # convert back to iPEPO
     psi′ = map(psi′.A, Fs) do t, F
         return F' * t
     end
     psi′ = reshape(psi′, (Nr, Nc, 1))
-    return InfinitePEPO(psi′), XXinv
+    gauge_dims = (2, Nr, Nc, 1)
+    gauge = VirtualGaugeTransform(
+        reshape(gauge.matrices, gauge_dims), reshape(gauge.inverses, gauge_dims)
+    )
+    return InfinitePEPO(psi′), gauge
 end
 
 function _sqrt_bp_messages(I::CartesianIndex{3}, env::BPEnv)
@@ -94,8 +98,8 @@ along the canonical direction of the PEPS arrows (`SOUTH ← NORTH` or `WEST ←
       = X X⁻¹
 ```
 
-Which are then used to update the gauge of `psi`. Thus, by convention `X` is attached to the `SOUTH`/`WEST` directions
-and `X⁻¹` is attached to the `NORTH`/`EAST` directions.
+These matrices update the gauge of `psi` using the [`VirtualGaugeTransform`](@ref) convention.
+`X` is attached to the `NORTH`/`EAST` leg at the indexed site, and `X⁻¹` to the neighboring `SOUTH`/`WEST` leg.
 """
 function _bp_gauge_fix!(I::CartesianIndex{3}, psi::InfinitePEPS, env::BPEnv, alg::BPGauge)
     dir, row, col = Tuple(I)
