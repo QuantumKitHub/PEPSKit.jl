@@ -13,22 +13,32 @@ function _unfuse_physicalspace(
     return O_unfused, F
 end
 
+"""
+Obtain the cluster along `sites` with weights absorbed into its open virtual legs,
+and permuted to MPS axis order.
+"""
 function _get_cluster_with_weights(
         state::InfiniteState, sites::Vector{CartesianIndex{2}}, env::SUWeight
     )
     Ms, open_vaxs, perms = _get_cluster(state, sites)
-    _absorb_weight!(Ms, sites, open_vaxs, env; inv = false)
     Np = (state isa InfinitePEPS) ? Val(1) : Val(2)
+    Ms_mps = map(Ms, sites, open_vaxs, perms) do M, site, vaxs, perm
+        return permute(absorb_weight(M, env, site, vaxs), perm)
+    end
     invperms = map(p -> _inv_mpo_perm(p, Np), perms)
-    return _permute_cluster(Ms, perms), open_vaxs, invperms
+    return Ms_mps, open_vaxs, invperms
 end
 
 """
 Simple update with an N-site MPO `gate` (N ≥ 2).
+
+The `allocator` is accepted for compatibility with the nearest neighbor update,
+but is not used yet.
 """
 function _su_iter!(
         state::InfiniteState, gate::Vector{T}, env::SUWeight,
-        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate
+        sites::Vector{CartesianIndex{2}}, alg::SimpleUpdate;
+        allocator = DefaultAllocator()
     ) where {T <: AbstractTensorMap}
     truncs = _get_cluster_trunc(alg.trunc, sites)
     Ms, open_vaxs, invperms = _get_cluster_with_weights(state, sites, env)
@@ -47,18 +57,19 @@ function _su_iter!(
     # restore virtual arrows in `Ms`
     _flip_virtuals!(Ms, flips)
     # update env weights
-    bond_revs = map(sites, Iterators.drop(sites, 1)) do site1, site2
-        _nn_bondrev(site1, site2)
+    bond_dirs = map(sites, Iterators.drop(sites, 1)) do site1, site2
+        _nn_bonddir(site1, site2)
     end
-    for (wt, (bond, rev), flip) in zip(wts, bond_revs, flips)
+    for (wt, (dir, r, c), flip) in zip(wts, bond_dirs, flips)
         wt_new = flip ? _fliptwist_s!(wt) : wt
-        wt_new = rev ? transpose(wt_new) : wt_new
-        env[CartesianIndex(bond)] = normalize!(wt_new, Inf)
+        wt_new = (dir in (WEST, SOUTH)) ? transpose(wt_new) : wt_new
+        d = dir in (EAST, WEST) ? 1 : 2
+        env[d, r, c] = normalize!(wt_new, Inf)
     end
     # update state tensors
     for (M, s, invperm, vaxs) in zip(Ms, sites, invperms, open_vaxs)
         # restore original axes order and remove weights on open axes of the cluster
-        M′ = absorb_weight(permute(M, invperm), env, s, vaxs; inv = true)
+        M′ = absorb_weight!(permute(M, invperm), env, s, vaxs; inv = true)
         state[s] = normalize!(M′, Inf)
     end
     return ϵ
@@ -72,9 +83,10 @@ function _get_cluster_trunc(
         trunc::TruncationStrategy, sites::Vector{CartesianIndex{2}}
     )
     return map(sites, Iterators.drop(sites, 1)) do site1, site2
-        (d, r, c), rev = _nn_bondrev(site1, site2)
+        (dir, r, c) = _nn_bonddir(site1, site2)
+        d = dir in (EAST, WEST) ? 1 : 2
         t = truncation_strategy(trunc, d, r, c)
-        if rev && isa(t, TruncationSpace)
+        if (dir in (WEST, SOUTH)) && isa(t, TruncationSpace)
             t = truncspace(flip(t.space)')
         end
         return t

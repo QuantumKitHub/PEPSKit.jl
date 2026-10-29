@@ -1,9 +1,13 @@
 # PEPSKit benchmarks
 
 A [BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)-based suite that exercises
-performance-critical paths in PEPSKit. The suite is organised into modules; the only module
-currently registered is `ctmrg`, which times a single `ctmrg_iteration` across several CTMRG
-algorithms, problem scenarios, and symmetry sectors.
+performance-critical paths in PEPSKit. The suite is organised into modules:
+
+- `ctmrg` times a single `ctmrg_iteration` across several CTMRG algorithms, problem scenarios,
+  and symmetry sectors.
+- `timeevol` times a single simple update iteration (`su_iter`, i.e. one sweep of all Trotter
+  gates over a 2 x 2 unit cell) for PEPS and PEPO time evolution, across models, symmetry sectors
+  and bond dimensions.
 
 ## Layout
 
@@ -16,11 +20,13 @@ bench/benchmark/
 └── PEPSKitBenchmarks/
     ├── PEPSKitBenchmarks.jl      # module registry (MODULES), load!, loadall!
     ├── utils/BenchUtils.jl       # TOML <-> VectorSpace conversion helpers
-    └── ctmrg/
-        ├── CTMRGBenchmarks.jl    # populates SUITE["ctmrg"]
-        ├── ctmrg_iteration_benchmarks.jl
-        ├── default.toml          # Trivial + NonUniform scenarios
-        └── su3_hubbard.toml      # SU(3) fermionic scenarios
+    ├── ctmrg/
+    │   ├── CTMRGBenchmarks.jl    # populates SUITE["ctmrg"]
+    │   ├── ctmrg_iteration_benchmarks.jl
+    │   ├── default.toml          # Trivial + NonUniform scenarios
+    │   └── su3_hubbard.toml      # SU(3) fermionic scenarios
+    └── timeevol/
+        └── TimeEvolBenchmarks.jl # populates SUITE["timeevol"]
 ```
 
 New modules are registered in the `MODULES` dict in `PEPSKitBenchmarks.jl`.
@@ -53,6 +59,18 @@ julia --project=bench/benchmark bench/benchmark/benchmarks.jl --modules=ctmrg
 
 The script only populates `SUITE`; call `run(SUITE)` afterwards (e.g. from an interactive
 session) to execute. Available IDs are the keys of `MODULES` in `PEPSKitBenchmarks.jl`.
+
+### Simple update
+
+`SUITE["timeevol"]` is indexed as `"su_iter" → model → symmetry → "D<D>"`, e.g.
+
+```julia
+include("bench/benchmark/benchmarks.jl")
+run(SUITE["timeevol"]["su_iter"]["Hubbard PEPS"]["fZ2xU1"]["D16"])
+```
+
+The scenarios are defined in the `SCENARIOS` list in `timeevol/TimeEvolBenchmarks.jl`; each
+entry maps its group keys to a function that builds the Hamiltonian and initial state.
 
 ### By group key
 

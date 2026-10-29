@@ -22,9 +22,8 @@ function timeevol_timestep(AT)
         # time_evolve
         ψ2, env2, info2 = time_evolve(ψ0, H, dt, nstep, alg, env0)
         # for-loop syntax
-        ## manually reset internal state of evolver
-        evolver.state = PEPSKit.SUState(0, 0.0, ψ0, env0)
-        ψ3, env3, info3 = nothing, nothing, nothing
+        # Restart the exhausted evolver using the public timestep keywords.
+        ψ3, env3, info3 = timestep(evolver, ψ0, env0; iter = 0, t = 0.0)
         for state in evolver
             ψ3, env3, info3 = state
         end

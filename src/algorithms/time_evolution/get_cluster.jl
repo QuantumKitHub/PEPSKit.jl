@@ -50,40 +50,25 @@ function _nn_vec_direction(nn_vec::CartesianIndex{2})
 end
 
 """
-Given `site1`, `site2` connected by a nearest neighbor bond,
-return the bond index and whether it is reversed from the
-standard orientation (`site1` on the west/south of `site2`).
+Given `site1`, `site2` connected by a nearest neighbor bond, return `(dir, r, c)` where `dir` ∈ {NORTH, EAST, SOUTH, WEST} is the direction from `site1` to `site2`.
+`(r, c)` is the position of the west site for x-bonds (`dir == EAST` or `dir == WEST`) and the south site for y-bonds (`dir == NORTH` or `dir == SOUTH`).
 """
-function _nn_bondrev(site1::CartesianIndex{2}, site2::CartesianIndex{2})
-    diff = site1 - site2
-    if diff == CartesianIndex(0, -1)
+function _nn_bonddir(site1::CartesianIndex{2}, site2::CartesianIndex{2})
+    diff = site2 - site1
+    if diff == CartesianIndex(0, 1)
         r, c = site1[1], site1[2]
-        return (1, r, c), false
-    elseif diff == CartesianIndex(0, 1)
-        r, c = site2[1], site2[2]
-        return (1, r, c), true
-    elseif diff == CartesianIndex(1, 0)
-        r, c = site1[1], site1[2]
-        return (2, r, c), false
+        return (EAST, r, c)
     elseif diff == CartesianIndex(-1, 0)
+        r, c = site1[1], site1[2]
+        return (NORTH, r, c)
+    elseif diff == CartesianIndex(1, 0)
         r, c = site2[1], site2[2]
-        return (2, r, c), true
+        return (SOUTH, r, c)
+    elseif diff == CartesianIndex(0, -1)
+        r, c = site2[1], site2[2]
+        return (WEST, r, c)
     else
         error("`site1` and `site2` are not nearest neighbors.")
-    end
-end
-
-function _bond_rotation(x, bonddir::Int, rev::Bool; inv::Bool = false)
-    return if bonddir == 1 # x-bond
-        rev ? rot180(x) : x
-    elseif bonddir == 2 # y-bond
-        if rev
-            inv ? rotr90(x) : rotl90(x)
-        else
-            inv ? rotl90(x) : rotr90(x)
-        end
-    else
-        error("`bonddir` must be 1 (for x-bonds) or 2 (for y-bonds).")
     end
 end
 
@@ -134,28 +119,4 @@ function _get_cluster(
     end
     Ms = map(site -> state[site], sites)
     return Ms, open_vaxs, perms
-end
-
-"""
-Absorb weights into the open virtual legs of
-the cluster `Ms` of PEPS/PEPO tensors.
-"""
-function _absorb_weight!(
-        Ms::Vector{T}, sites::Vector{CartesianIndex{2}},
-        open_vaxs::Vector{<:Tuple}, env::SUWeight; inv::Bool = false
-    ) where {T}
-    for (idx, (M, site, vaxs)) in enumerate(zip(Ms, sites, open_vaxs))
-        Ms[idx] = absorb_weight(M, env, site, vaxs; inv)
-    end
-    return Ms
-end
-
-"""
-Given a vector `Ms` of `AbstractTensorMap`s,
-apply permutations `perms` to each tensor.
-"""
-function _permute_cluster(Ms::Vector{<:AbstractTensorMap}, perms::Vector{<:Tuple})
-    return map(Ms, perms) do M, perm
-        return permute(M, perm)
-    end
 end
