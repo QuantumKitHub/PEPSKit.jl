@@ -174,4 +174,3 @@ function random_dual!(Vs::AbstractMatrix{E}; p = 0.7) where {E <: ElementarySpac
     end
     return Vs
 end
-
