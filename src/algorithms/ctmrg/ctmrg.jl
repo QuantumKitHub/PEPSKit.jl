@@ -51,7 +51,7 @@ function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
 # Signature of the buffer sizes a CTMRG run allocates: the corner and edge spaces fix them,
 # and the edges carry the network bond dimension as well as the environment dimension.
-function _ctmrg_cache_signature(env::CTMRGEnv)
+function _ctmrg_cache_signature(env::AbstractCTMRGEnv)
     return hash((alloc_cache_signature(env.corners), alloc_cache_signature(env.edges)))
 end
 
