@@ -23,7 +23,7 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
-using TensorOperations: DefaultAllocator, DefaultBackend, tensoralloc_add
+using TensorOperations: AbstractBackend, DefaultBackend, DefaultAllocator, tensoralloc_add
 using TensorKit.Strided: StridedView, sreshape
 import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
@@ -60,6 +60,7 @@ include("Defaults.jl")  # Include first to allow for docstring interpolation wit
 include("utility/util.jl")
 include("utility/contraction_labels.jl")
 include("utility/tensor_traces.jl")
+include("utility/alloc_cache.jl")
 include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
 include("utility/twistdual.jl")
