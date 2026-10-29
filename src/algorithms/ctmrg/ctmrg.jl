@@ -49,6 +49,12 @@ Perform a single CTMRG iteration in which all directions are being grown and ren
 """
 function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
 
+# Signature of the buffer sizes a CTMRG run allocates: the corner and edge spaces fix them,
+# and the edges carry the network bond dimension as well as the environment dimension.
+function _ctmrg_cache_signature(env::AbstractCTMRGEnv)
+    return hash((alloc_cache_signature(env.corners), alloc_cache_signature(env.edges)))
+end
+
 """
     leading_boundary(env₀, network; kwargs...) -> env, info
     # expert version:
@@ -109,6 +115,11 @@ function leading_boundary(
         env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
     check_input(leading_boundary, network, env₀, alg)
+    # cached buffer sizes are set by the corner/edge spaces, and the edges carry the network
+    # bond dimension too, so a change here means every pooled buffer has gone stale
+    ignore_derivatives() do
+        free_stale_alloc_caches!(storagetype(env₀), :ctmrg, :enter, _ctmrg_cache_signature(env₀))
+    end
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)
@@ -120,7 +131,10 @@ function leading_boundary(
         local info_iter
         converged = false
         for iter in 1:(alg.maxiter)
-            env, info_iter = ctmrg_iteration(network, env, alg)
+            env, info_iter = with_alloc_cache(storagetype(env), :ctmrg, iter, alloc_cache_depth(alg)) do
+                ctmrg_iteration(network, env, alg)
+            end
+            env = uncache(env, storagetype(env))
             η, CS, TS = calc_convergence(env, CS, TS, alg)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
@@ -133,6 +147,15 @@ function leading_boundary(
             else
                 ctmrg_logiter!(log, iter, η, network, env)
             end
+        end
+        env = uncache(env, storagetype(env))
+        # a truncation that is not fixed-space grows the corner/edge spaces as the loop runs,
+        # leaving one pooled buffer set per intermediate shape. `env` is copied out by now, so
+        # nothing live is backed by the cache and it is safe to drop those here. Re-checking
+        # the signature keeps the pool warm for the repeated fixed-space calls of an
+        # optimization loop, where the spaces do not move.
+        ignore_derivatives() do
+            free_stale_alloc_caches!(storagetype(env), :ctmrg, :exit, _ctmrg_cache_signature(env))
         end
         info = (;
             converged,
@@ -242,6 +265,7 @@ edge_spectra(Ts, alg) = map(T -> edge_spectrum(T, alg), Ts)
 The spectrum of a corner, used to measure CTMRG convergence.
 """
 corner_spectrum(C, alg) = svd_vals(C)
+
 """
     edge_spectrum(T, alg)
 
