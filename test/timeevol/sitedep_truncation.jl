@@ -8,6 +8,7 @@ is_buildkite = get(ENV, "BUILDKITE", "false") == "true"
 if !is_buildkite
     TestSuite.timeevol_sitedep_rotation(Vector)
     TestSuite.timeevol_sitedep_su(Vector)
+    TestSuite.timeevol_sitedep_ntu(Vector)
 end
 
 if CUDA.functional()
