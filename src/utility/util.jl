@@ -37,7 +37,7 @@ function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalart
     return spow
 end
 function sdiag_pow(
-        s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
+       s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
     ) where {T, S}
     tol *= _maxabs(s)
     spow = similar(s)
@@ -53,7 +53,7 @@ function ChainRulesCore.rrule(
         ::typeof(sdiag_pow), s::AbstractTensorMap, pow::Real;
         tol::Real = eps(real(scalartype(s)))^(3 / 4),
     )
-    tol *= _maxabs(s)
+    tol *= norm(s, Inf)
     spow = sdiag_pow(s, pow; tol)
     spow_minus1_conj = scale!(sdiag_pow(s', pow - 1; tol), pow)
     function sdiag_pow_pullback(c̄_)
