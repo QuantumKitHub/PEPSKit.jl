@@ -5,7 +5,7 @@ function start_correlator_left(
         below::InfinitePEPS,
         O::MPOTensor,
         above::InfinitePEPS,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     )
     r, c = Tuple(i)
     E_north = edge(env, NORTH, r - 1, c)
@@ -45,7 +45,7 @@ function end_correlator_right_numerator(
         above::InfinitePEPS,
         O::MPOTensor,
         below::InfinitePEPS,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     ) where {T, S}
     r, c = Tuple(j)
     E_north = edge(env, NORTH, r - 1, c)
@@ -68,7 +68,7 @@ end
 
 function end_correlator_right_denominator(
         j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
-        env::CTMRGEnv
+        env::AbstractCTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
     C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
@@ -88,7 +88,7 @@ function start_correlator_right(
         below::InfinitePEPS,
         O::MPOTensor,
         above::InfinitePEPS,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     )
     r, c = Tuple(i)
     E_north = edge(env, NORTH, r - 1, c)
@@ -126,7 +126,7 @@ function end_correlator_left_numerator(
         above::InfinitePEPS,
         O::MPOTensor,
         below::InfinitePEPS,
-        env::CTMRGEnv,
+        env::AbstractCTMRGEnv,
     ) where {T, S}
     r, c = Tuple(j)
     E_north = edge(env, NORTH, r - 1, c)
@@ -149,7 +149,7 @@ end
 
 function end_correlator_left_denominator(
         j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
-        env::CTMRGEnv
+        env::AbstractCTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
     C_northwest = corner(env, NORTHWEST, r - 1, c - 1)

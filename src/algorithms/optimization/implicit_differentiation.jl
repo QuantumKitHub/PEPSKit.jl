@@ -203,7 +203,6 @@ Evaluating the gradient of the cost function for CTMRG:
 =#
 
 _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
-_scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
     alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
@@ -215,7 +214,7 @@ function _rrule(
         gradmode::FixedPointGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::CTMRGEnv,
+        envinit::AbstractCTMRGEnv,
         state,
         alg::CTMRGAlgorithm,
     )
@@ -472,7 +471,7 @@ function _rrule(
         gradmode::ImplicitGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::CTMRGEnv,
+        envinit::C4vCTMRGEnv,
         state,
         alg::C4vCTMRG,
     )
@@ -500,7 +499,7 @@ function _rrule(
     u = zeros(storagetype(U), space(UL, numind(UL))' ← space(U, numind(U))')
 
     # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
-    _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
+    _, c4v_env_vjp = rrule_via_ad(config, C4vCTMRGEnv, C, E)
 
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
     # sandwich through `constant_site` leaves the ket and bra cotangents unforced. The state
@@ -621,7 +620,7 @@ function PEPSKit._rrule(
         gradmode::ImplicitGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::CTMRGEnv,
+        envinit::AbstractCTMRGEnv,
         state,
         alg::SimultaneousCTMRG{<:HalfInfiniteProjector},
     )

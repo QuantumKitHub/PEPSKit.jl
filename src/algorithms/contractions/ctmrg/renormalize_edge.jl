@@ -16,7 +16,7 @@ environment tensors.
 ```
 """
 function renormalize_north_edge(
-        (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
     )
     return renormalize_north_edge(
         edge(env, NORTH, row - 1, col),
@@ -87,7 +87,7 @@ environment tensors.
 ```
 """
 function renormalize_east_edge(
-        (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
     )
     return renormalize_east_edge(
         edge(env, EAST, row, col + 1),
@@ -152,7 +152,7 @@ environment tensors.
 ```
 """
 function renormalize_south_edge(
-        (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
     )
     return renormalize_south_edge(
         edge(env, SOUTH, row + 1, col),
@@ -222,7 +222,7 @@ environment tensors.
 ```
 """
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
-        (row, col), env::CTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork,
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork,
     )
     return renormalize_west_edge(
         edge(env, WEST, row, col - 1),
@@ -232,7 +232,7 @@ function renormalize_west_edge(  # For simultaneous CTMRG scheme
     )
 end
 function renormalize_west_edge(  # For sequential CTMRG scheme
-        (row, col), env::CTMRGEnv, projectors, network::InfiniteSquareNetwork,
+        (row, col), env::AbstractCTMRGEnv, projectors, network::InfiniteSquareNetwork,
     )
     return renormalize_west_edge(
         edge(env, WEST, row, col - 1),

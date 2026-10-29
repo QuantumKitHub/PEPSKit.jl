@@ -39,7 +39,7 @@ boundary_contraction_expr(env::Type, rowrange, colrange) = throw(
 )
 
 function boundary_contraction_expr(
-        ::Type{<:CTMRGEnv{C, T}}, rowrange, colrange
+        ::Type{<:AbstractCTMRGEnv{C, T}}, rowrange, colrange
     ) where {C, T}
     # the edges carry one virtual leg per layer of the sandwich, on top of the two environment
     # indices threading the ring, so the height follows from the edge tensor type
