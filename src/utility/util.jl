@@ -19,19 +19,6 @@ Returns a scalar by default.
 """
 function _maxabs(data::AbstractArray)
     isempty(data) && return zero(real(eltype(data)))
-    return norm(data, Inf)
-end
-
-"""
-    _maxabs(data)
-
-Largest absolute value in `data`, equal to `norm(_, Inf)` for the diagonal storage of a
-`DiagonalTensorMap`.
-
-Returns a scalar by default.
-"""
-function _maxabs(data::AbstractArray)
-    isempty(data) && return zero(real(eltype(data)))
     # Largest abs value of `data` (use norm(∘, Inf) to make differentiable)
     return norm(data, Inf)
 end
