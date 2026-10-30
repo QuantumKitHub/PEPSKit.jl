@@ -2,6 +2,7 @@ using Test
 using Random
 using LinearAlgebra
 using PEPSKit
+using PEPSKit: default_allocator, SerialScheduler
 using TensorKit
 using QuadGK
 using Test
@@ -134,7 +135,8 @@ function ctmrg_partition_function(AT)
             env, = leading_boundary(env₀₀, Z; alg, maxiter = 300, projector_alg)
 
             # check observables
-            λ = network_value(Z, env)
+            allocator = default_allocator(Z, SerialScheduler())
+            λ = network_value(Z, env, allocator)
             m = expectation_value(Z, (1, 1) => M, env)
             e = expectation_value(Z, (1, 1) => E, env)
             f_exact, m_exact, e_exact = classical_ising_exact(; beta)

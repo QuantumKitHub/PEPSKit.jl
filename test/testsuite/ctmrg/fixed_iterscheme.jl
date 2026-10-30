@@ -9,11 +9,13 @@ using PEPSKit
 using PEPSKit:
     ctmrg_iteration,
     compute_gauge_fix_gauge,
+    default_allocator,
     fix_phases,
     fix_relative_phases,
     calc_elementwise_convergence,
     peps_normalize,
-    ScramblingEnvGauge
+    ScramblingEnvGauge,
+    SerialScheduler
 using PEPSKit.Defaults: ctmrg_tol
 
 # initialize parameters
@@ -40,17 +42,18 @@ function ctmrg_fixed_iterscheme_asymmetric(AT; svd_alg = :DivideAndConquer)
 
         env_conv1, = leading_boundary(CTMRGEnv(psi, ComplexSpace(χ)), psi, ctm_alg)
 
+        allocator = default_allocator(n, SerialScheduler())
         # do extra iteration and gauge fix
-        env_conv2, = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg)
-        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
+        env_conv2, = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg, allocator)
+        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge(), allocator)
         @test calc_elementwise_convergence(env_conv1, env_fixed) ≈ 0 atol = atol
 
         # fix gauge of single iteration
         signs, corner_phases, edge_phases =
-            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge())
+            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge(), allocator)
         gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg)[1],
-            signs, corner_phases, edge_phases,
+            ctmrg_iteration(n, env, ctm_alg, allocator)[1],
+            signs, corner_phases, edge_phases, allocator
         )
 
         # do gauge-fixed iteration
@@ -84,19 +87,20 @@ function ctmrg_fixed_iterscheme_c4v(AT; eigh_alg = :QRIteration)
         env_conv1, info = leading_boundary(env₀, psi, ctm_alg)
 
         # do extra iteration to check gauge fixing
-        env_conv2, info = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
+        allocator = default_allocator(n, SerialScheduler())
+        env_conv2, info = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg, allocator) # CHECK
 
-        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
+        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge(), allocator)
         env_diff = calc_elementwise_convergence(env_conv1, env_fixed)
         @info "Diff between iters = $(env_diff)"
         @test env_diff ≈ 0 atol = atol
 
         # fix gauge of single iteration
         signs, corner_phases, edge_phases =
-            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge())
+            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge(), allocator)
         gauge_fixed_iteration(env::PEPSKit.AbstractCTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg)[1],
-            signs, corner_phases, edge_phases,
+            ctmrg_iteration(n, env, ctm_alg, allocator)[1],
+            signs, corner_phases, edge_phases, allocator
         )
 
         # do gauge-fixed iteration
@@ -120,27 +124,28 @@ function ctmrg_fixed_iterscheme_divide_and_conquer(AT)
         env₀ = CTMRGEnv(psi, ComplexSpace(χ))
         env_conv1, = leading_boundary(env₀, psi, ctm_alg_iter)
 
+        allocator = default_allocator(n, SerialScheduler())
         # do extra iteration to get gauge fixing
-        env_conv2_iter, info_iter = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_iter)
-        env_fix_iter = gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge())
+        env_conv2_iter, info_iter = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_iter, allocator)
+        env_fix_iter = gauge_fix(env_conv2_iter, env_conv1, ScramblingEnvGauge(), allocator)
         @test calc_elementwise_convergence(env_conv1, env_fix_iter) ≈ 0 atol = atol
 
-        env_conv2_full, info_full = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_full)
-        env_fix_full = gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge())
+        env_conv2_full, info_full = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg_full, allocator)
+        env_fix_full = gauge_fix(env_conv2_full, env_conv1, ScramblingEnvGauge(), allocator)
         @test calc_elementwise_convergence(env_conv1, env_fix_full) ≈ 0 atol = atol
 
         # fix gauge of single iteration
         signs_iter, corner_phases_iter, edge_phases_iter =
-            compute_gauge_fix_gauge(env_conv2_iter, env_conv1, ScramblingEnvGauge())
+            compute_gauge_fix_gauge(env_conv2_iter, env_conv1, ScramblingEnvGauge(), allocator)
         gauge_fixed_iteration_iter(env::CTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg_iter)[1],
-            signs_iter, corner_phases_iter, edge_phases_iter,
+            ctmrg_iteration(n, env, ctm_alg_iter, allocator)[1],
+            signs_iter, corner_phases_iter, edge_phases_iter, allocator
         )
         signs_full, corner_phases_full, edge_phases_full =
-            compute_gauge_fix_gauge(env_conv2_full, env_conv1, ScramblingEnvGauge())
+            compute_gauge_fix_gauge(env_conv2_full, env_conv1, ScramblingEnvGauge(), allocator)
         gauge_fixed_iteration_full(env::CTMRGEnv) = fix_phases(
-            ctmrg_iteration(n, env, ctm_alg_full)[1],
-            signs_full, corner_phases_full, edge_phases_full,
+            ctmrg_iteration(n, env, ctm_alg_full, allocator)[1],
+            signs_full, corner_phases_full, edge_phases_full, allocator
         )
 
         # do gauge-fixed iteration
@@ -167,8 +172,8 @@ function ctmrg_fixed_iterscheme_divide_and_conquer(AT)
         @test svalues_check
 
         # gauge-fix the isometries using computed relative signs
-        U_iter_fix, V_iter_fix = fix_relative_phases(info_iter.U, info_iter.V, signs_iter)
-        U_full_fix, V_full_fix = fix_relative_phases(info_full.U, info_full.V, signs_full)
+        U_iter_fix, V_iter_fix = fix_relative_phases(info_iter.U, info_iter.V, signs_iter, allocator)
+        U_full_fix, V_full_fix = fix_relative_phases(info_full.U, info_full.V, signs_full, allocator)
 
         # check normalization of U's and V's
         Us = [info_iter.U, U_iter_fix, info_full.U, U_full_fix]

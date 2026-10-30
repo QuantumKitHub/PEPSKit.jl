@@ -39,10 +39,12 @@ function initialize_ctmrg_environment(
         elt::Type,
         n::InfiniteSquareNetwork,
         alg::ApplicationInitialization,
-        env0 = ProductStateEnv(alg.f, elt, n)
+        env0 = ProductStateEnv(alg.f, elt, n);
+        scheduler = Defaults.scheduler[],
+        allocator = default_allocator(n, scheduler)
     )
     dummy_alg = SimultaneousCTMRG(trunc = (; alg = :notrunc))
-    env, = ctmrg_iteration(n, CTMRGEnv(env0), dummy_alg)
+    env, = ctmrg_iteration(n, CTMRGEnv(env0), dummy_alg, allocator)
     return env
 end
 
