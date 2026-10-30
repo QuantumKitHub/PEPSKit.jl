@@ -13,7 +13,7 @@ legs become the indices of `ρ`: `physicallabel(:O, 1, k)` in its codomain and
 than `tr`, since the supertrace carries the fermionic signs.
 """
 @generated function _contract_densitymatrix(
-        inds::NTuple{N, Val}, state, env
+        inds::NTuple{N, Val}, state, env, allocator
     ) where {N}
     sites = _patch_inds(inds)
     rowrange, colrange = _patch_ranges(sites)
@@ -29,7 +29,7 @@ than `tr`, since the supertrace carries the fermionic signs.
         ntuple(i -> physicallabel(:O, 2, i), N),
     )
 
-    multex = _tensor_expr(multiplication_ex, result)
+    multex = _tensor_expr(multiplication_ex, allocator, result)
     return quote
         $(macroexpand(@__MODULE__, multex))
         return ρ / str(ρ)

@@ -85,8 +85,8 @@ Apply the regularized local metric ``N / ⟨ψ|ψ⟩ + δ`` to a single PEPS ten
 ``N`` is obtained by contracting the CTMRG environment `env` around the unit-cell site
 `(r, c)` and `norm_pref` is the corresponding local norm ``⟨ψ|ψ⟩``.
 """
-function apply_local_preconditioner(g_rc::PEPSTensor, env::AbstractCTMRGEnv, δ, (r, c), norm_pref)
-    @autoopt @tensor g_rc_prec[d; D_N_below D_E_below D_S_below D_W_below] :=
+function apply_local_preconditioner(g_rc::PEPSTensor, env::AbstractCTMRGEnv, δ, (r, c), norm_pref, allocator)
+    @autoopt @tensor allocator = allocator g_rc_prec[d; D_N_below D_E_below D_S_below D_W_below] :=
         g_rc[d; D_N_above D_E_above D_S_above D_W_above] *
         corner(env, NORTHWEST, r - 1, c - 1)[χ_WNW; χ_NNW] *
         edge(env, NORTH, r - 1, c)[χ_NNW D_N_above D_N_below; χ_NNE] *
@@ -101,7 +101,7 @@ function apply_local_preconditioner(g_rc::PEPSTensor, env::AbstractCTMRGEnv, δ,
 end
 
 """
-    peps_precondition(x, g, tol_state::NamedTuple, alg)
+    peps_precondition(x, g, tol_state::NamedTuple, alg, allocator)
 
 Precondition the PEPS gradient `g` at the point `x = (peps, env)` according to the
 preconditioner algorithm `alg`. Passing `alg = nothing` disables preconditioning and returns
@@ -109,15 +109,15 @@ preconditioner algorithm `alg`. Passing `alg = nothing` disables preconditioning
 preconditioner, and note that its regularization strength is set based on the current
 gradient norm and iteration count tracked in `tol_state`.
 """
-peps_precondition(x, g, tol_state::NamedTuple, alg::Nothing) = g
+peps_precondition(x, g, tol_state::NamedTuple, alg::Nothing, allocator) = g
 
-function peps_precondition(x, g, tol_state::NamedTuple, alg::LocalPreconditioner)
+function peps_precondition(x, g, tol_state::NamedTuple, alg::LocalPreconditioner, allocator)
     peps, env = x
     δ = alg.regularization * tol_state.gradnorm^2 / max(tol_state.iter, 1)
     g_prec_unitcell = dtmap(eachcoordinate(g)) do (r, c)
-        nf = _contract_site((r, c), InfiniteSquareNetwork(peps), env)
+        nf = _contract_site((r, c), InfiniteSquareNetwork(peps), env, allocator)
         g_rc_prec, = linsolve(g[r, c], g[r, c], alg.solver_alg) do g_in
-            return apply_local_preconditioner(g_in, env, δ, (r, c), nf)
+            return apply_local_preconditioner(g_in, env, δ, (r, c), nf, allocator)
         end
         return g_rc_prec
     end

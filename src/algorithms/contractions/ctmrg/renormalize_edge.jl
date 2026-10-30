@@ -2,8 +2,8 @@
 # ----------
 
 """
-    renormalize_north_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
-    renormalize_north_edge(E_north, P_left, P_right, A::P)
+    renormalize_north_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P}, allocator)
+    renormalize_north_edge(E_north, P_left, P_right, A::P, allocator)
 
 Absorb a local effective tensor `A` into the north edge using the given projectors and
 environment tensors.
@@ -16,22 +16,22 @@ environment tensors.
 ```
 """
 function renormalize_north_edge(
-        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork, allocator
     )
     return renormalize_north_edge(
         edge(env, NORTH, row - 1, col),
         P_left[NORTH, row, col],
         P_right[NORTH, row, _prev(col, end)],
-        network[row, col], # so here it's fine
+        network[row, col], allocator
     )
 end
-function renormalize_north_edge(E_north, P_left, P_right, A)
+function renormalize_north_edge(E_north, P_left, P_right, A, allocator)
     A_west = _rotl90_localsandwich(A)
-    return renormalize_west_edge(E_north, P_left, P_right, A_west)
+    return renormalize_west_edge(E_north, P_left, P_right, A_west, allocator)
 end
 # specialize PartitionFunction to avoid permute(A)
-function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @tensor begin
+function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
+    return @tensor allocator = allocator begin
         temp = permute(E_north, ((2, 1), (3,))) # impose D_N as 1st leg
         PE[D_N D_E; χNW χ_E] := temp[D_N χNW; χNE] * P_left[χNE D_E; χ_E]
         PEA[D_W χNW; D_S χ_E] := A[D_W D_S; D_N D_E] * PE[D_N D_E; χNW χ_E]
@@ -41,7 +41,7 @@ function renormalize_north_edge(E_north::CTMRG_PF_EdgeTensor, P_left, P_right, A
 end
 
 @generated function renormalize_north_edge(
-        E_north::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
+        E_north::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -61,15 +61,15 @@ end
         P_left_e,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $E_out_e := $rhs))
 end
 
 # East edge
 # ---------
 
 """
-    renormalize_east_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
-    renormalize_east_edge(E_east, P_left, P_right, A::P)
+    renormalize_east_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P}, allocator)
+    renormalize_east_edge(E_east, P_left, P_right, A::P, allocator)
 
 Absorb a local effective tensor into the east edge using the given projectors and
 environment tensors.
@@ -87,22 +87,22 @@ environment tensors.
 ```
 """
 function renormalize_east_edge(
-        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork, allocator
     )
     return renormalize_east_edge(
         edge(env, EAST, row, col + 1),
         P_left[EAST, row, col],
         P_right[EAST, _prev(row, end), col],
-        network[row, col],
+        network[row, col], allocator
     )
 end
-function renormalize_east_edge(E_east, P_left, P_right, A)
+function renormalize_east_edge(E_east, P_left, P_right, A, allocator)
     A_west = _rot180_localsandwich(A)
-    return renormalize_west_edge(E_east, P_left, P_right, A_west)
+    return renormalize_west_edge(E_east, P_left, P_right, A_west, allocator)
 end
 # specialize PartitionFunction to avoid permute(A)
-function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @tensor begin
+function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
+    return @tensor allocator = allocator begin
         temp = permute(P_right, ((3, 1), (2,)))  # impose D_N as 1st leg
         PE[D_N D_E; χN χSE] := temp[D_N χN; χNE] * E_east[χNE D_E; χSE]
         PEA[D_W χN; χSE D_S] := A[D_W D_S; D_N D_E] * PE[D_N D_E; χN χSE]
@@ -111,7 +111,7 @@ function renormalize_east_edge(E_east::CTMRG_PF_EdgeTensor, P_left, P_right, A::
 end
 
 @generated function renormalize_east_edge(
-        E_east::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
+        E_east::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -131,15 +131,15 @@ end
         P_left_e,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $E_out_e := $rhs))
 end
 
 # South edge
 # ----------
 
 """
-    renormalize_south_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
-    renormalize_south_edge(E_south, P_left, P_right, A::P)
+    renormalize_south_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P}, allocator)
+    renormalize_south_edge(E_south, P_left, P_right, A::P, allocator)
 
 Absorb a local effective tensor into the south edge using the given projectors and
 environment tensors.
@@ -152,22 +152,22 @@ environment tensors.
 ```
 """
 function renormalize_south_edge(
-        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork, allocator
     )
     return renormalize_south_edge(
         edge(env, SOUTH, row + 1, col),
         P_left[SOUTH, row, col],
         P_right[SOUTH, row, _next(col, end)],
-        network[row, col],
+        network[row, col], allocator
     )
 end
-function renormalize_south_edge(E_south, P_left, P_right, A)
+function renormalize_south_edge(E_south, P_left, P_right, A, allocator)
     A_west = _rotr90_localsandwich(A)
-    return renormalize_west_edge(E_south, P_left, P_right, A_west)
+    return renormalize_west_edge(E_south, P_left, P_right, A_west, allocator)
 end
 # specialize PartitionFunction to avoid permute(A)
-function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @tensor begin
+function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
+    return @tensor allocator = allocator begin
         P_leftp = permute(P_left, ((3, 2), (1,)))  # impose χ_W as 1st leg
         PE[χ_W χSE; D_W D_S] := P_leftp[χ_W D_W; χSW] * E_south[χSE D_S; χSW]
         PEA[χ_W D_N; χSE D_E] := PE[χ_W χSE; D_W D_S] * A[D_W D_S; D_N D_E]
@@ -176,7 +176,7 @@ function renormalize_south_edge(E_south::CTMRG_PF_EdgeTensor, P_left, P_right, A
 end
 
 @generated function renormalize_south_edge(
-        E_south::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
+        E_south::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -196,15 +196,15 @@ end
         P_left_e,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $E_out_e := $rhs))
 end
 
 # West edge
 # ---------
 
 """
-    renormalize_west_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P})
-    renormalize_west_edge(E_west, P_left, P_right, A::P)
+    renormalize_west_edge((row, col), env, P_left, P_right, network::InfiniteSquareNetwork{P}, allocator)
+    renormalize_west_edge(E_west, P_left, P_right, A::P, allocator)
 
 Absorb a local effective tensor into the west edge using the given projectors and
 environment tensors.
@@ -222,30 +222,30 @@ environment tensors.
 ```
 """
 function renormalize_west_edge(  # For simultaneous CTMRG scheme
-        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork,
+        (row, col), env::AbstractCTMRGEnv, P_left, P_right, network::InfiniteSquareNetwork, allocator
     )
     return renormalize_west_edge(
         edge(env, WEST, row, col - 1),
         P_left[WEST, row, col],
         P_right[WEST, _next(row, end), col],
-        network[row, col],
+        network[row, col], allocator
     )
 end
 function renormalize_west_edge(  # For sequential CTMRG scheme
-        (row, col), env::AbstractCTMRGEnv, projectors, network::InfiniteSquareNetwork,
+        (row, col), env::AbstractCTMRGEnv, projectors, network::InfiniteSquareNetwork, allocator
     )
     return renormalize_west_edge(
         edge(env, WEST, row, col - 1),
         projectors[1][row],
         projectors[2][_next(row, end)],
-        network[row, col],
+        network[row, col], allocator
     )
 end
 function renormalize_west_edge(
-        E_west::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich
+        E_west::CTMRG_PEPS_EdgeTensor, P_left, P_right, A::PEPSSandwich, allocator
     )
     # starting with P_bottom to save one permute in the end
-    return @tensor begin
+    return @tensor allocator = allocator begin
         # already putting χE in front here to make next permute cheaper
         PE[χS χNW DSb DWb; DSt DWt] := P_right[χS; χSW DSt DSb] * E_west[χSW DWt DWb; χNW]
         PEket[χS χNW DNt DEt; DSb DWb d] :=
@@ -255,8 +255,8 @@ function renormalize_west_edge(
         edge[χS DEt DEb; χN] := corner[χS DEt DEb; χNW DNt DNb] * P_left[χNW DNt DNb; χN]
     end
 end
-function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor)
-    return @tensor begin
+function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_left, P_right, A::PFTensor, allocator)
+    return @tensor allocator = allocator begin
         PE[χ_S χNW; D_W D_S] := P_right[χ_S; χSW D_S] * E_west[χSW D_W; χNW]
         PEA[χ_S D_E; χNW D_N] := PE[χ_S χNW; D_W D_S] * A[D_W D_S; D_N D_E]
         edge[χ_S D_E; χ_N] := PEA[χ_S D_E; χNW D_N] * P_left[χNW D_N; χ_N]
@@ -264,7 +264,7 @@ function renormalize_west_edge(E_west::CTMRG_PF_EdgeTensor, P_left, P_right, A::
 end
 
 @generated function renormalize_west_edge(
-        E_west::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}
+        E_west::CTMRGEdgeTensor{T, S, N}, P_left, P_right, A::PEPOSandwich{H}, allocator
     ) where {T, S, N, H}
     @assert N == H + 3
 
@@ -284,5 +284,5 @@ end
         P_left_e,
     )
 
-    return macroexpand(@__MODULE__, :(return @autoopt @tensor $E_out_e := $rhs))
+    return macroexpand(@__MODULE__, :(return @autoopt @tensor allocator = allocator $E_out_e := $rhs))
 end

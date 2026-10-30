@@ -80,17 +80,17 @@ function TensorKit.TensorMap(Q::EnlargedCorner)
     end
 end
 
-function renormalize_northwest_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_northwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
+function renormalize_northwest_corner(ec::EnlargedCorner, P_left, P_right, allocator)
+    return renormalize_northwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A, allocator)
 end
-function renormalize_northeast_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_northeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
+function renormalize_northeast_corner(ec::EnlargedCorner, P_left, P_right, allocator)
+    return renormalize_northeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A, allocator)
 end
-function renormalize_southeast_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_southeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
+function renormalize_southeast_corner(ec::EnlargedCorner, P_left, P_right, allocator)
+    return renormalize_southeast_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A, allocator)
 end
-function renormalize_southwest_corner(ec::EnlargedCorner, P_left, P_right)
-    return renormalize_southwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A)
+function renormalize_southwest_corner(ec::EnlargedCorner, P_left, P_right, allocator)
+    return renormalize_southwest_corner(ec.E_1, ec.C, ec.E_2, P_left, P_right, ec.A, allocator)
 end
 
 # Wrapper around half_infinite_environment contraction using EnlargedCorners (used in ctmrg_projectors)
@@ -99,12 +99,12 @@ function half_infinite_environment(ec_1::EnlargedCorner, ec_2::EnlargedCorner)
 end
 
 # Compute left and right projectors sparsely without constructing enlarged corners explicitly
-function contract_projectors(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner)
+function contract_projectors(U, S, V, Q::EnlargedCorner, Q_next::EnlargedCorner, allocator)
     Ar = _rotate_north_localsandwich(Q.A, _prev(Q.dir, 4))
     Ar_next = _rotate_north_localsandwich(Q_next.A, Q_next.dir)
     isqS = sdiag_pow(S, -0.5)
-    P_left = left_projector(Q_next.E_1, Q_next.C, Q_next.E_2, V, isqS, Ar_next)
-    P_right = right_projector(Q.E_1, Q.C, Q.E_2, U, isqS, Ar)
+    P_left = left_projector(Q_next.E_1, Q_next.C, Q_next.E_2, V, isqS, Ar_next, allocator)
+    P_right = right_projector(Q.E_1, Q.C, Q.E_2, U, isqS, Ar, allocator)
     return P_left, P_right
 end
 
@@ -185,23 +185,23 @@ function (env::HalfInfiniteEnv)(x, ::Val{true})  # Adjoint linear map: env()' * 
     )
 end
 
-function contract_projectors(U, S, V, env::HalfInfiniteEnv)
+function contract_projectors(U, S, V, env::HalfInfiniteEnv, allocator)
     Q = EnlargedCorner(env.C_1, env.E_1, env.E_2, env.A_1, env.dir)
     Q_next = EnlargedCorner(env.C_2, env.E_3, env.E_4, env.A_2, _next(env.dir, 4))
-    return contract_projectors(U, S, V, Q, Q_next)
+    return contract_projectors(U, S, V, Q, Q_next, allocator)
 end
 
-function contract_projectors(U, S, V, henv::HalfInfiniteEnv, henv_next::HalfInfiniteEnv)
+function contract_projectors(U, S, V, henv::HalfInfiniteEnv, henv_next::HalfInfiniteEnv, allocator)
     isqS = sdiag_pow(S, -0.5)
     P_left = left_projector(
         henv_next.E_1, henv_next.C_1, henv_next.E_2, henv_next.E_3, henv_next.C_2, henv_next.E_4,
         V, isqS,
-        henv_next.A_1r, henv_next.A_2r
+        henv_next.A_1r, henv_next.A_2r, allocator
     )
     P_right = right_projector(
         henv.E_1, henv.C_1, henv.E_2, henv.E_3, henv.C_2, henv.E_4,
         U, isqS,
-        henv.A_1r, henv.A_2r
+        henv.A_1r, henv.A_2r, allocator
     )
     return P_left, P_right
 end
@@ -346,7 +346,7 @@ function full_infinite_environment(
     return FullInfiniteEnv(ec_1, ec_2, ec_3, ec_4)
 end
 
-function contract_projectors(U, S, V, env::FullInfiniteEnv)
+function contract_projectors(U, S, V, env::FullInfiniteEnv, allocator)
     ndir = _next(env.dir, 4)
     nndir = _next(ndir, 4)
     henv = HalfInfiniteEnv(
@@ -359,7 +359,7 @@ function contract_projectors(U, S, V, env::FullInfiniteEnv)
         env.E_5, env.E_6, env.E_7, env.E_8,
         env.A_3, env.A_4, nndir,
     )
-    return contract_projectors(U, S, V, henv, henv_next)
+    return contract_projectors(U, S, V, henv, henv_next, allocator)
 end
 
 

@@ -36,7 +36,7 @@ end
 
 PROJECTOR_SYMBOLS[:FullInfiniteProjector] = FullInfiniteProjector
 
-function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
+function compute_projector(enlarged_corners, alg::FullInfiniteProjector, allocator)
     halfinf_left = half_infinite_environment(enlarged_corners[1], enlarged_corners[2])
     halfinf_right = half_infinite_environment(enlarged_corners[3], enlarged_corners[4])
 
@@ -56,6 +56,6 @@ function compute_projector(enlarged_corners, alg::FullInfiniteProjector)
         end
     end
 
-    P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right)
+    P_left, P_right = contract_projectors(U, S, V, halfinf_left, halfinf_right, allocator)
     return (P_left, P_right), (; U, S, V, truncation_error)
 end
