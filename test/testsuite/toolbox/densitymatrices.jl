@@ -1,6 +1,6 @@
 using TensorKit
 using PEPSKit
-using PEPSKit: contract_local_operator, contract_local_norm, _contract_site
+using PEPSKit: contract_local_operator, contract_local_norm, _contract_site, default_allocator, SerialScheduler
 using Test
 using TestExtras: @testinferred
 using Adapt
@@ -22,6 +22,7 @@ function toolbox_single_layer_densitymatrix(AT)
         O = adapt(AT, rand(d, d))
         @plansor O_pf[W S; N E] := O[p'; p] * ρ[1, 1, 1][p p'; N E S W]
 
+        allocator = default_allocator(ρ, SerialScheduler())
         # Single site
         site = (1, 1)
         O_singlesite = LocalOperator(physicalspace(ρ), (site,) => O)
@@ -30,8 +31,8 @@ function toolbox_single_layer_densitymatrix(AT)
         @test E1 ≈ E2
         # the operator/norm route agrees with the density matrix one; a single layer is
         # passed to the contractions bare rather than wrapped in a tuple
-        val = contract_local_operator([site], O, ρ, env)
-        nrm = contract_local_norm([site], ρ, env)
+        val = contract_local_operator([site], O, ρ, env, allocator)
+        nrm = contract_local_norm([site], ρ, env, allocator)
         @test E1 ≈ val / nrm
 
         # two sites
@@ -40,10 +41,10 @@ function toolbox_single_layer_densitymatrix(AT)
                 [(2, 1), (1, 2), (2, 2), (2, 1), (3, 1)]
             )
             O_twosite = LocalOperator(physicalspace(ρ), inds => O ⊗ O)
-            E3 = expectation_value(ρ, O_twosite, env)
+            E3 = expectation_value(ρ, O_twosite, env; allocator)
             # TODO: not defined for partition functions...
-            val = contract_local_operator(collect(inds), O ⊗ O, ρ, env)
-            nrm = contract_local_norm(collect(inds), ρ, env)
+            val = contract_local_operator(collect(inds), O ⊗ O, ρ, env, allocator)
+            nrm = contract_local_norm(collect(inds), ρ, env, allocator)
             @test E3 ≈ val / nrm
         end
     end
@@ -59,9 +60,10 @@ function toolbox_double_layer_densitymatrix(AT)
         ρ_peps = @testinferred InfinitePEPS(ρ)
         env = CTMRGEnv(ρ_peps, χ)
 
+        allocator = default_allocator(ρ, SerialScheduler())
         O = adapt(AT, rand(d, d))
         F = adapt(AT, isomorphism(fuse(d ⊗ d'), d ⊗ d'))
-        @tensor O_doubled[-1; -2] := F[-1; 1 2] * O[1; 3] * twist(F', 2)[3 2; -2]
+        @tensor allocator = allocator O_doubled[-1; -2] := F[-1; 1 2] * O[1; 3] * twist(F', 2)[3 2; -2]
 
         # Single site
         site = (1, 1)
@@ -70,13 +72,13 @@ function toolbox_double_layer_densitymatrix(AT)
         O_doubled_singlesite = LocalOperator(physicalspace(ρ_peps), (site,) => O_doubled)
         E2 = expectation_value(ρ_peps, O_doubled_singlesite, ρ_peps, env)
         @test E1 ≈ E2
-        val = contract_local_operator([site], O_doubled, ρ_peps, ρ_peps, env)
-        nrm = contract_local_norm([site], ρ_peps, ρ_peps, env)
-        @test nrm ≈ _contract_site(site, InfiniteSquareNetwork(ρ_peps), env)
+        val = contract_local_operator([site], O_doubled, ρ_peps, ρ_peps, env, allocator)
+        nrm = contract_local_norm([site], ρ_peps, ρ_peps, env, allocator)
+        @test nrm ≈ _contract_site(site, InfiniteSquareNetwork(ρ_peps), env, allocator)
         @test E1 ≈ val / nrm
         # same through the two-layer PEPO sandwich rather than its fused PEPS view
-        val_pepo = contract_local_operator([site], O, ρ, ρ, env)
-        nrm_pepo = contract_local_norm([site], ρ, ρ, env)
+        val_pepo = contract_local_operator([site], O, ρ, ρ, env, allocator)
+        nrm_pepo = contract_local_norm([site], ρ, ρ, env, allocator)
         @test E1 ≈ val_pepo / nrm_pepo
 
         # two sites
@@ -89,11 +91,11 @@ function toolbox_double_layer_densitymatrix(AT)
             O_doubled_twosite = LocalOperator(physicalspace(ρ_peps), inds => O_doubled ⊗ O_doubled)
             E2 = expectation_value(ρ_peps, O_doubled_twosite, ρ_peps, env)
             @test E1 ≈ E2
-            val = contract_local_operator(collect(inds), O_doubled ⊗ O_doubled, ρ_peps, ρ_peps, env)
-            nrm = contract_local_norm(collect(inds), ρ_peps, ρ_peps, env)
+            val = contract_local_operator(collect(inds), O_doubled ⊗ O_doubled, ρ_peps, ρ_peps, env, allocator)
+            nrm = contract_local_norm(collect(inds), ρ_peps, ρ_peps, env, allocator)
             @test E1 ≈ val / nrm
-            val_pepo = contract_local_operator(collect(inds), O ⊗ O, ρ, ρ, env)
-            nrm_pepo = contract_local_norm(collect(inds), ρ, ρ, env)
+            val_pepo = contract_local_operator(collect(inds), O ⊗ O, ρ, ρ, env, allocator)
+            nrm_pepo = contract_local_norm(collect(inds), ρ, ρ, env, allocator)
             @test E1 ≈ val_pepo / nrm_pepo
         end
     end
@@ -105,7 +107,8 @@ function toolbox_densitymatrix_too_many_layers(AT)
         ρ = adapt(AT, InfinitePEPO(d, D; unitcell = (2, 2, 1)))
         env = CTMRGEnv(InfinitePEPS(ρ), χ)
         inds = Tuple(Val.([CartesianIndex(1, 1)]))
-        @test_throws ArgumentError PEPSKit._contract_densitymatrix(inds, (ρ, ρ, ρ), env)
+        allocator = default_allocator(ρ, SerialScheduler())
+        @test_throws ArgumentError PEPSKit._contract_densitymatrix(inds, (ρ, ρ, ρ), env, allocator)
     end
 end
 
@@ -115,25 +118,26 @@ function toolbox_densitymatrix_generic_fallback(AT)
         peps = adapt(AT, InfinitePEPS(d, D; unitcell = (2, 2)))
         env = CTMRGEnv(peps, χ)
 
+        allocator = default_allocator(peps, SerialScheduler())
         # environments without a hand-optimized contraction of a given shape fall through
         # to `_contract_densitymatrix`, which should agree with the specializations that
         # do exist
         for ind in CartesianIndices((2, 2))
-            ρ_fast = reduced_densitymatrix([ind], peps, env)
+            ρ_fast = reduced_densitymatrix([ind], peps, env, allocator)
             ρ_generic = invoke(
-                PEPSKit.reduced_densitymatrix1x1, Tuple{Any, Any, Any, Any}, ind, peps, peps, env
+                PEPSKit.reduced_densitymatrix1x1, Tuple{Any, Any, Any, Any, Any}, ind, peps, peps, env, allocator,
             )
             @test ρ_fast ≈ ρ_generic
 
-            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(1, 0)], peps, env)
+            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(1, 0)], peps, env, allocator)
             ρ_generic = invoke(
-                PEPSKit.reduced_densitymatrix2x1, Tuple{Any, Any, Any, Any}, ind, peps, peps, env
+                PEPSKit.reduced_densitymatrix2x1, Tuple{Any, Any, Any, Any, Any}, ind, peps, peps, env, allocator,
             )
             @test ρ_fast ≈ ρ_generic
 
-            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(0, 1)], peps, env)
+            ρ_fast = reduced_densitymatrix([ind, ind + CartesianIndex(0, 1)], peps, env, allocator)
             ρ_generic = invoke(
-                PEPSKit.reduced_densitymatrix1x2, Tuple{Any, Any, Any, Any}, ind, peps, peps, env
+                PEPSKit.reduced_densitymatrix1x2, Tuple{Any, Any, Any, Any, Any}, ind, peps, peps, env, allocator,
             )
             @test ρ_fast ≈ ρ_generic
         end

@@ -15,7 +15,7 @@ types of `env`, `state` and `operator` respectively, so this single method cover
 combination those three have methods for.
 """
 @generated function _contract_local_operator(
-        inds::NTuple{N, Val}, operator, state, env
+        inds::NTuple{N, Val}, operator, state, env, allocator
     ) where {N}
     sites = _patch_inds(inds)
     rowrange, colrange = _patch_ranges(sites)
@@ -27,7 +27,7 @@ combination those three have methods for.
         operator_contraction_expr(operator, N)...,
     )
 
-    returnex = _tensor_expr(multiplication_ex)
+    returnex = _tensor_expr(multiplication_ex, allocator)
     return macroexpand(@__MODULE__, returnex)
 end
 
@@ -44,7 +44,7 @@ leg is left open and no operator factor is needed. Note this is the norm of the 
 the given environment, not the physical norm of the state.
 """
 @generated function _contract_local_norm(
-        inds::NTuple{N, Val}, state, env
+        inds::NTuple{N, Val}, state, env, allocator
     ) where {N}
     sites = _patch_inds(inds)
     rowrange, colrange = _patch_ranges(sites)
@@ -55,6 +55,6 @@ the given environment, not the physical norm of the state.
         bulk_contraction_expr(state, rowrange, colrange, nothing)...,   # legs paired, not open
     )
 
-    returnex = _tensor_expr(multiplication_ex)
+    returnex = _tensor_expr(multiplication_ex, allocator)
     return macroexpand(@__MODULE__, returnex)
 end

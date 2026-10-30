@@ -2,6 +2,9 @@ using Test
 using Random
 using LinearAlgebra
 using PEPSKit
+using PEPSKit:
+    default_allocator,
+    SerialScheduler
 using TensorKit
 using KrylovKit
 using OptimKit
@@ -117,6 +120,7 @@ function ctmrg_pepo_fixed_point(AT)
         psi0 = initializePEPS(T, χpeps)
         env2_0 = CTMRGEnv(InfiniteSquareNetwork(psi0), χenv)
         env3_0 = CTMRGEnv(InfiniteSquareNetwork(psi0, T), χenv)
+        allocator = default_allocator(psi0, SerialScheduler())
 
         # optimize free energy per site
         (psi_final, env2_final, env3_final), f, = optimize(
@@ -139,8 +143,8 @@ function ctmrg_pepo_fixed_point(AT)
                     PEPSKit.update!(env2, env2′)
                     PEPSKit.update!(env3, env3′)
                 end
-                λ3 = network_value(n3, env3)
-                λ2 = network_value(n2, env2)
+                λ3 = network_value(n3, env3, allocator)
+                λ2 = network_value(n2, env2, allocator)
                 return -log(real(λ3 / λ2))
             end
             g = only(gs)
@@ -149,8 +153,8 @@ function ctmrg_pepo_fixed_point(AT)
 
         # check energy
         n3_final = InfiniteSquareNetwork(psi_final, T)
-        m = PEPSKit.contract_local_tensor((1, 1, 1), M, n3_final, env3_final)
-        nrm3 = PEPSKit._contract_site((1, 1), n3_final, env3_final)
+        m = PEPSKit.contract_local_tensor((1, 1, 1), M, n3_final, env3_final, allocator)
+        nrm3 = PEPSKit._contract_site((1, 1), n3_final, env3_final, allocator)
 
         # compare to Monte-Carlo result from https://www.worldscientific.com/doi/abs/10.1142/S0129183101002383
         @test abs(m / nrm3) ≈ 0.667162 rtol = 1.0e-2

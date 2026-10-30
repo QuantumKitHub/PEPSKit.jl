@@ -2,7 +2,7 @@ using Test
 using Random
 using TensorKit
 using PEPSKit
-using PEPSKit: str, twistdual, unitcell
+using PEPSKit: str, twistdual, unitcell, default_allocator, SerialScheduler
 using Adapt
 
 Vps = Dict(
@@ -39,6 +39,7 @@ function ctmrg_suweight(AT)
         Espaces = [Vv Vv Vv'; Vv Vv' Vv']
         Pspaces = fill(Vp, size(Nspaces))
         peps = adapt(AT, InfinitePEPS(randn, ComplexF64, Pspaces, Nspaces, Espaces))
+        allocator = default_allocator(peps, SerialScheduler())
         wts = SUWeight(peps)
         if init != :trivial
             rand!(wts)
@@ -51,7 +52,7 @@ function ctmrg_suweight(AT)
             if init == :trivial
                 @test ρ1 ≈ su_rdm_1x1(r, c, peps, nothing)
             end
-            ρ2 = reduced_densitymatrix([idx], peps, env)
+            ρ2 = reduced_densitymatrix([idx], peps, env, allocator)
             @test ρ1 ≈ ρ2
         end
     end
