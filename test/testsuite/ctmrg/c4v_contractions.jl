@@ -5,7 +5,7 @@ using TensorKit
 using Adapt
 using PEPSKit: EnlargedCorner, c4v_enlarge, c4v_projector!
 using PEPSKit: _contract_site, _contract_corners, _contract_vertical_edges,
-    _contract_horizontal_edges
+    _contract_horizontal_edges, default_allocator, SerialScheduler
 using PEPSKit: NORTH, EAST, SOUTH, WEST, NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST
 
 stype = ComplexF64
