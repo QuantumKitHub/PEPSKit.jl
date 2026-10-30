@@ -128,7 +128,8 @@ One iteration of simple update. Pass `allocator` to reuse contraction scratch;
 function su_iter(
         state::InfiniteState, circuit::LocalCircuit,
         alg::SimpleUpdate, env::SUWeight;
-        allocator = default_allocator(state, SerialScheduler())
+        scheduler = Defaults.scheduler[],
+        allocator = default_allocator(state, scheduler)
     )
     state2, env2, ϵ = deepcopy(state), deepcopy(env), 0.0
     # Gates are applied sequentially and share the same scratch allocator.

@@ -10,8 +10,8 @@ $(SIGNATURES)
 Wrap an assembled product in `@autoopt @tensor`, with `lhs` on the left if given and as a
 scalar otherwise.
 """
-function _tensor_expr(prod, lhs = nothing)
-    return isnothing(lhs) ? :(@autoopt @tensor $prod) : :(@autoopt @tensor $lhs := $prod)
+function _tensor_expr(prod, allocator, lhs = nothing)
+    return isnothing(lhs) ? :(@autoopt @tensor allocator = allocator $prod) : :(@autoopt @tensor allocator = allocator $lhs := $prod)
 end
 
 
