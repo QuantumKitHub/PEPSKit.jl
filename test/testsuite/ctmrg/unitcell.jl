@@ -1,7 +1,7 @@
 using Test
 using Random
 using PEPSKit, Adapt
-using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge
+using PEPSKit: ctmrg_iteration, compute_gauge_fix_gauge, ScramblingEnvGauge, default_allocator, SerialScheduler
 using TensorKit
 
 # settings
@@ -22,9 +22,10 @@ function test_unitcell(
     peps = adapt(AT, InfinitePEPS(randn, stype, Pspaces, Nspaces, Espaces))
     env = CTMRGEnv(randn, stype, peps, chis_north, chis_east, chis_south, chis_west)
 
+    allocator = default_allocator(n, SerialScheduler())
     # apply one CTMRG iteration with fixeds
-    env′, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env, ctm_alg)
-    env″, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env′, ctm_alg) # another iteration to fix spaces
+    env′, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env, ctm_alg, allocator)
+    env″, info = ctmrg_iteration(InfiniteSquareNetwork(peps), env′, ctm_alg, allocator) # another iteration to fix spaces
 
     # compute random expecation value to test matching bonds
     random_op = LocalOperator(

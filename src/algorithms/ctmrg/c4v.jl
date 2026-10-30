@@ -93,12 +93,12 @@ the corners are identical, and the edges have identical singular values.
 convergence_tensors(env::C4vCTMRGEnv, ::C4vCTMRG) =
     (view(env.corners, 1:1, :, :), view(env.edges, 1:1, :, :))
 
-function ctmrg_iteration(network, env::C4vCTMRGEnv, alg::C4vCTMRG)
+function ctmrg_iteration(network, env::C4vCTMRGEnv, alg::C4vCTMRG, allocator)
     projector_alg = alg.projector_alg
     enlarged_corner = c4v_enlarge(network, env, projector_alg)
     projector, info = c4v_projector!(enlarged_corner, projector_alg)
-    edge′ = c4v_renormalize_edge(network, env, projector)
-    corner′ = c4v_renormalize_corner(edge′, projector, info, projector_alg)
+    edge′ = c4v_renormalize_edge(network, env, projector, allocator)
+    corner′ = c4v_renormalize_corner(edge′, projector, info, projector_alg, allocator)
     return C4vCTMRGEnv(corner′, edge′), info
 end
 
@@ -116,9 +116,9 @@ Renormalize the single C₄ᵥ edge tensor.
                 |
 ```
 """
-function c4v_renormalize_edge(network, env::C4vCTMRGEnv, projector)
+function c4v_renormalize_edge(network, env::C4vCTMRGEnv, projector, allocator)
     # TODO: possible missing twists for fermions
-    new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
+    new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1], allocator)
     # additional Hermitian projection step for numerical stability
     new_edge = _project_hermitian(new_edge)
     return new_edge / norm(new_edge)
@@ -154,28 +154,28 @@ to rewrite the renormalized corner as
 which reuses the renormalized edge `E′` (`new_edge`).
 (Credit: https://github.com/qiyang-ustc/QRCTM/blob/dd160116c3d7b02076691ceaf0a9833511ae532d/heisenberg.py#L80)
 """
-function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4vEighProjector)
+function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4vEighProjector, allocator)
     return info.D / norm(info.D)
 end
-function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4vQRProjector)
+function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4vQRProjector, allocator)
     # TODO: possible missing twists for fermions
     # contract updated edge and R
     edge′ = physical_flip(new_edge)
     ER = edge′ * twistdual(info.R, 1)
     # contract (edge′, R) with projector
-    new_corner = contract_edges(ER, projector)
+    new_corner = contract_edges(ER, projector, allocator)
     new_corner = project_hermitian(new_corner)
     return new_corner / norm(new_corner)
 end
 
 """Contract two C4v CTMRG edge tensors into a corner tensor."""
 @generated function contract_edges(
-        EL::CTMRGEdgeTensor{T, S, N}, ER::CTMRGEdgeTensor{T, S, N}
+        EL::CTMRGEdgeTensor{T, S, N}, ER::CTMRGEdgeTensor{T, S, N}, allocator
     ) where {T, S, N}
     C´_e = tensorexpr(:C´, -1, -2)
     EL_e = tensorexpr(:EL, (-1, (2:N)...), 1)
     ER_e = tensorexpr(:ER, 1:N, -2)
-    return macroexpand(@__MODULE__, :(return @tensor $C´_e := $EL_e * $ER_e))
+    return macroexpand(@__MODULE__, :(return @tensor allocator = allocator $C´_e := $EL_e * $ER_e))
 end
 
 function C4vCTMRGEnv(

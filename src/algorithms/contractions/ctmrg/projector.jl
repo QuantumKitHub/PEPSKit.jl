@@ -14,23 +14,23 @@ Contract the CTMRG left projector with the higher-dimensional subspace facing to
     out
 ```
 """
-function left_projector(E_1, C, E_2, V, isqS, A)
+function left_projector(E_1, C, E_2, V, isqS, A, allocator)
     Vdt_isqS = twistdual(V', 1:(numind(V) - 1)) * isqS
-    return _left_projector(E_1, C, E_2, Vdt_isqS, A)
+    return _left_projector(E_1, C, E_2, Vdt_isqS, A, allocator)
 end
-function _left_projector(E_1, C, E_2, Vd, A::PEPSSandwich)
-    return @autoopt @tensor P_left[χ_out D_outabove D_outbelow; χ_in] :=
+function _left_projector(E_1, C, E_2, Vd, A::PEPSSandwich, allocator)
+    return @autoopt @tensor allocator = allocator P_left[χ_out D_outabove D_outbelow; χ_in] :=
         E_1[χ_out D1 D2; χ1] * C[χ1; χ2] * E_2[χ2 D3 D4; χ3] *
         ket(A)[d; D3 D5 D_outabove D1] * conj(bra(A)[d; D4 D6 D_outbelow D2]) *
         Vd[χ3 D5 D6; χ_in]
 end
-function _left_projector(E_1, C, E_2, Vd, A::PFTensor)
-    return @autoopt @tensor P_left[χ_out D_out; χ_in] :=
+function _left_projector(E_1, C, E_2, Vd, A::PFTensor, allocator)
+    return @autoopt @tensor allocator = allocator  P_left[χ_out D_out; χ_in] :=
         E_1[χ_out D1; χ1] * C[χ1; χ2] * E_2[χ2 D2; χ3] *
         A[D1 D_out; D2 D3] * Vd[χ3 D3; χ_in]
 end
 @generated function _left_projector(
-        E_1, C, E_2, Vd, A::PEPOSandwich{H}
+        E_1, C, E_2, Vd, A::PEPOSandwich{H}, allocator
     ) where {H}
 
     E_west_e = _pepo_edge_expr(:E_1, :out, :WNW, :W, H)
@@ -51,7 +51,7 @@ end
     )
 
     return macroexpand(
-        @__MODULE__, :(return @autoopt @tensor $P_left_e := $rhs)
+        @__MODULE__, :(return @autoopt @tensor allocator = allocator $P_left_e := $rhs)
     )
 end
 
@@ -72,14 +72,14 @@ Contract the CTMRG left projector with the higher-dimensional subspace facing to
                        in
 ```
 """
-function left_projector(E_1, C_1, E_2, E_3, C_2, E_4, V, isqS, A_1, A_2)
+function left_projector(E_1, C_1, E_2, E_3, C_2, E_4, V, isqS, A_1, A_2, allocator)
     Vdt_isqS = twistdual(V', 1:(numind(V) - 1)) * isqS
-    return _left_projector(E_1, C_1, E_2, E_3, C_2, E_4, Vdt_isqS, A_1, A_2)
+    return _left_projector(E_1, C_1, E_2, E_3, C_2, E_4, Vdt_isqS, A_1, A_2, allocator)
 end
 function _left_projector(
-        E_1, C_1, E_2, E_3, C_2, E_4, Vd, A_1::PEPSSandwich, A_2::PEPSSandwich
+        E_1, C_1, E_2, E_3, C_2, E_4, Vd, A_1::PEPSSandwich, A_2::PEPSSandwich, allocator
     )
-    return @autoopt @tensor P_left[χ_out D_outa D_outb; χ_in] :=
+    return @autoopt @tensor allocator = allocator P_left[χ_out D_outa D_outb; χ_in] :=
         E_1[χ_out D_W1a D_W1b; χ_WNW] * C_1[χ_WNW; χ_NNW] * E_2[χ_NNW D_N1a D_N1b; χ_N] *
         ket(A_1)[d1; D_N1a D_Ca D_outa D_W1a] * conj(bra(A_1)[d1; D_N1b D_Cb D_outb D_W1b]) *
         E_3[χ_N D_N2a D_N2b; χ_NNE] * C_2[χ_NNE; χ_ENE] * E_4[χ_ENE D_E2a D_E2b; χ_SE] *
@@ -87,9 +87,9 @@ function _left_projector(
         Vd[χ_SE D_S2a D_S2b; χ_in]
 end
 function _left_projector(
-        E_1, C_1, E_2, E_3, C_2, E_4, Vd, A_1::PFTensor, A_2::PFTensor
+        E_1, C_1, E_2, E_3, C_2, E_4, Vd, A_1::PFTensor, A_2::PFTensor, allocator
     )
-    return @autoopt @tensor P_left[χ_out D_out; χ_in] :=
+    return @autoopt @tensor allocator = allocator P_left[χ_out D_out; χ_in] :=
         E_1[χ_out D_W1; χ_WNW] * C_1[χ_WNW; χ_NNW] * E_2[χ_NNW D_N1; χ_N] *
         A_1[D_W1 D_out; D_N1 D_C] *
         E_3[χ_N D_N2; χ_NNE] * C_2[χ_NNE; χ_ENE] * E_4[χ_ENE D_E2; χ_SE] *
@@ -97,7 +97,7 @@ function _left_projector(
         Vd[χ_SE D_S2; χ_in]
 end
 @generated function _left_projector(
-        E_1, C_1, E_2, E_3, C_2, E_4, Vd, A_1::PEPOSandwich{H}, A_2::PEPOSandwich{H}
+        E_1, C_1, E_2, E_3, C_2, E_4, Vd, A_1::PEPOSandwich{H}, A_2::PEPOSandwich{H}, allocator
     ) where {H}
 
     Vd_e = _pepo_domain_projector_expr(:Vd, :SE, :S, :in, H, 2)
@@ -105,7 +105,7 @@ end
     P_left_e = _pepo_domain_projector_expr(:P_left, :SW, :S, :in, H, 1)
 
     return macroexpand(
-        @__MODULE__, :(return @autoopt @tensor $P_left_e := $proj_expr * $Vd_e)
+        @__MODULE__, :(return @autoopt @tensor allocator = allocator $P_left_e := $proj_expr * $Vd_e)
     )
 end
 
@@ -122,24 +122,24 @@ Contract the CTMRG right projector with the higher-dimensional subspace facing t
                                       in
 ```
 """
-function right_projector(E_1, C, E_2, U, isqS, A)
+function right_projector(E_1, C, E_2, U, isqS, A, allocator)
     isqS_Udt = isqS * twistnondual(U', 2:numind(U))
-    return _right_projector(E_1, C, E_2, isqS_Udt, A)
+    return _right_projector(E_1, C, E_2, isqS_Udt, A, allocator)
 end
-function _right_projector(E_1, C, E_2, Ud, A::PEPSSandwich)
-    return @autoopt @tensor P_right[χ_out; χ_in D_inabove D_inbelow] :=
-        Ud[χ_out; χ2 D1 D2] *
-        ket(A)[d; D3 D5 D_inabove D1] * conj(bra(A)[d; D4 D6 D_inbelow D2]) *
+function _right_projector(E_1, C, E_2, Ud, A::PEPSSandwich, allocator)
+    return @autoopt @tensor allocator = allocator P_right[χ_out; χ_in D_inabove D_inbelow] :=
+        Ud[χ_out; χ2 D1 D2] * ket(A)[d; D3 D5 D_inabove D1] *
+        conj(bra(A)[d; D4 D6 D_inbelow D2]) *
         E_1[χ2 D3 D4; χ3] * C[χ3; χ4] * E_2[χ4 D5 D6; χ_in]
 end
-function _right_projector(E_1, C, E_2, Ud, A::PFTensor)
-    return @autoopt @tensor P_right[χ_out; χ_in D_in] :=
+function _right_projector(E_1, C, E_2, Ud, A::PFTensor, allocator)
+    return @autoopt @tensor allocator = allocator P_right[χ_out; χ_in D_in] :=
         Ud[χ_out; χ2 D1] *
         A[D1 D_in; D2 D3] *
         E_1[χ2 D2; χ3] * C[χ3; χ4] * E_2[χ4 D3; χ_in]
 end
 @generated function _right_projector(
-        E_1, C, E_2, Ud, A::PEPOSandwich{H}
+        E_1, C, E_2, Ud, A::PEPOSandwich{H}, allocator
     ) where {H}
 
     E_north_e = _pepo_edge_expr(:E_1, :NW, :NNE, :N, H)
@@ -160,7 +160,7 @@ end
     )
 
     return macroexpand(
-        @__MODULE__, :(return @autoopt @tensor $P_right_e := $rhs)
+        @__MODULE__, :(return @autoopt @tensor allocator = allocator $P_right_e := $rhs)
     )
 end
 
@@ -181,14 +181,14 @@ Contract the CTMRG left projector with the higher-dimensional subspace facing to
         out
 ```
 """
-function right_projector(E_1, C_1, E_2, E_3, C_2, E_4, U, isqS, A_1, A_2)
+function right_projector(E_1, C_1, E_2, E_3, C_2, E_4, U, isqS, A_1, A_2, allocator)
     isqS_Udt = isqS * twistnondual(U', 2:numind(U))
-    return _right_projector(E_1, C_1, E_2, E_3, C_2, E_4, isqS_Udt, A_1, A_2)
+    return _right_projector(E_1, C_1, E_2, E_3, C_2, E_4, isqS_Udt, A_1, A_2, allocator)
 end
 function _right_projector(
-        E_1, C_1, E_2, E_3, C_2, E_4, Ud, A_1::PEPSSandwich, A_2::PEPSSandwich
+        E_1, C_1, E_2, E_3, C_2, E_4, Ud, A_1::PEPSSandwich, A_2::PEPSSandwich, allocator
     )
-    return @autoopt @tensor P_right[χ_out; χ_in D_ina D_inb] :=
+    return @autoopt @tensor allocator = allocator P_right[χ_out; χ_in D_ina D_inb] :=
         E_1[χ_SW D_W1a D_W1b; χ_WNW] * C_1[χ_WNW; χ_NNW] * E_2[χ_NNW D_N1a D_N1b; χ_N] *
         ket(A_1)[d1; D_N1a D_Ca D_S1a D_W1a] * conj(bra(A_1)[d1; D_N1b D_Cb D_S1b D_W1b]) *
         E_3[χ_N D_N2a D_N2b; χ_NNE] * C_2[χ_NNE; χ_ENE] * E_4[χ_ENE D_E2a D_E2b; χ_in] *
@@ -196,9 +196,9 @@ function _right_projector(
         Ud[χ_out; χ_SW D_S1a D_S1b]
 end
 function _right_projector(
-        E_1, C_1, E_2, E_3, C_2, E_4, Ud, A_1::PFTensor, A_2::PFTensor
+        E_1, C_1, E_2, E_3, C_2, E_4, Ud, A_1::PFTensor, A_2::PFTensor, allocator
     )
-    return @autoopt @tensor P_right[χ_out; χ_in D_in] :=
+    return @autoopt @tensor allocator = allocator P_right[χ_out; χ_in D_in] :=
         E_1[χ_SW D_W1; χ_WNW] * C_1[χ_WNW; χ_NNW] * E_2[χ_NNW D_N1; χ_N] *
         A_1[D_W1 D_S1; D_N1 D_C] *
         E_3[χ_N D_N2; χ_NNE] * C_2[χ_NNE; χ_ENE] * E_4[χ_ENE D_E2; χ_in] *
@@ -206,7 +206,7 @@ function _right_projector(
         Ud[χ_out; χ_SW D_S1]
 end
 @generated function _right_projector(
-        E_1, C_1, E_2, E_3, C_2, E_4, Ud, A_1::PEPOSandwich{H}, A_2::PEPOSandwich{H}
+        E_1, C_1, E_2, E_3, C_2, E_4, Ud, A_1::PEPOSandwich{H}, A_2::PEPOSandwich{H}, allocator
     ) where {H}
 
     Ud_e = _pepo_codomain_projector_expr(:Ud, :out, :SW, :S, H, 1)
@@ -214,7 +214,7 @@ end
     P_right_e = _pepo_codomain_projector_expr(:P_right, :out, :SE, :S, H, 2)
 
     return macroexpand(
-        @__MODULE__, :(return @autoopt @tensor $P_right_e := $Ud_e * $proj_expr)
+        @__MODULE__, :(return @autoopt @tensor allocator = allocator $P_right_e := $Ud_e * $proj_expr)
     )
 end
 
@@ -238,7 +238,7 @@ Right projector:
                |~~| == |~~~| ==
 ```
 """
-function contract_projectors(U, S, V, Q, Q_next)
+function contract_projectors(U, S, V, Q, Q_next, allocator)
     isqS = sdiag_pow(S, -0.5)
     P_left = Q_next * V' * isqS  # use * to respect fermionic case
     P_right = isqS * U' * Q

@@ -42,7 +42,7 @@ CTMRG_SYMBOLS[:SequentialCTMRG] = SequentialCTMRG
 
 Perform sequential CTMRG left move on the `col`-th column.
 """
-function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
+function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG, allocator)
     #=
         ----> left move
         C1 ← T1 ←   r-1
@@ -52,16 +52,16 @@ function ctmrg_leftmove(col::Int, network, env::CTMRGEnv, alg::SequentialCTMRG)
         C4 → T3 →   r+1
         c-1  c 
     =#
-    projectors, info = sequential_projectors(col, network, env, alg.projector_alg)
-    env = renormalize_sequentially(col, projectors, network, env)
+    projectors, info = sequential_projectors(col, network, env, alg.projector_alg, allocator)
+    env = renormalize_sequentially(col, projectors, network, env, allocator)
     return env, info
 end
 
-function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
+function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG, allocator)
     truncation_error = zero(real(scalartype(network)))
     for _ in 1:4 # rotate
         for col in 1:size(network, 2) # left move column-wise
-            env, info = ctmrg_leftmove(col, network, env, alg)
+            env, info = ctmrg_leftmove(col, network, env, alg, allocator)
             ignore_derivatives() do
                 truncation_error = max(truncation_error, info.truncation_error)
             end
@@ -73,26 +73,26 @@ function ctmrg_iteration(network, env::CTMRGEnv, alg::SequentialCTMRG)
 end
 
 """
-    sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
-    sequential_projectors(coordinate::NTuple{3,Int}, network::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm)
+    sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm, allocator)
+    sequential_projectors(coordinate::NTuple{3,Int}, network::InfiniteSquareNetwork, env::CTMRGEnv, alg::ProjectorAlgorithm, allocator)
 
 Compute CTMRG projectors in the `:SequentialCTMRG` scheme either for an entire column `col` or
 for a specific `coordinate` (where `dir=WEST` is already implied in the `:SequentialCTMRG` scheme).
 """
-function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm)
+function sequential_projectors(col::Int, network, env::CTMRGEnv, alg::ProjectorAlgorithm, allocator)
     coordinates = eachcoordinate(env)[:, col]
     T_dst = Base.promote_op(
-        sequential_projectors, NTuple{3, Int}, typeof(network), typeof(env), typeof(alg)
+        sequential_projectors, NTuple{3, Int}, typeof(network), typeof(env), typeof(alg), typeof(allocator)
     )
     proj_and_info = similar(coordinates, T_dst)
     proj_and_info′::typeof(proj_and_info) = dtmap!!(proj_and_info, coordinates) do (r, c)
-        proj, info = sequential_projectors((WEST, r, c), network, env, alg)
+        proj, info = sequential_projectors((WEST, r, c), network, env, alg, allocator)
         return proj, info
     end
     return _split_proj_and_info(proj_and_info′)
 end
 function sequential_projectors(
-        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector
+        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::HalfInfiniteProjector, allocator
     )
     _, r, c = coordinate
     r′ = r - 1
@@ -100,10 +100,10 @@ function sequential_projectors(
     alg´ = _set_decomposition_truncation(alg, trunc)
     Q1 = TensorMap(EnlargedCorner(network, env, (SOUTHWEST, r, c)))
     Q2 = TensorMap(EnlargedCorner(network, env, (NORTHWEST, r′, c)))
-    return compute_projector((Q1, Q2), alg´)
+    return compute_projector((Q1, Q2), alg´, allocator)
 end
 function sequential_projectors(
-        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector
+        coordinate::NTuple{3, Int}, network, env::CTMRGEnv, alg::FullInfiniteProjector, allocator
     )
     rowsize, colsize = size(env)[2:3]
     coordinate_nw = _next_coordinate(coordinate, rowsize, colsize)
@@ -117,15 +117,15 @@ function sequential_projectors(
         TensorMap(EnlargedCorner(network, env, coordinate_nw)),
         TensorMap(EnlargedCorner(network, env, coordinate_ne)),
     )
-    return compute_projector(ec, alg´)
+    return compute_projector(ec, alg´, allocator)
 end
 
 """
-    renormalize_sequentially(col::Int, projectors, network, env)
+    renormalize_sequentially(col::Int, projectors, network, env, allocator)
 
 Renormalize one column of the CTMRG environment.
 """
-function renormalize_sequentially(col::Int, projectors, network, env)
+function renormalize_sequentially(col::Int, projectors, network, env, allocator)
     corners = Zygote.Buffer(env.corners)
     edges = Zygote.Buffer(env.edges)
 
@@ -140,13 +140,13 @@ function renormalize_sequentially(col::Int, projectors, network, env)
 
     # Apply projectors to renormalize corners and edge
     for row in axes(env.corners, 2)
-        C_southwest = renormalize_southwest_corner((row, col), env, projectors)
+        C_southwest = renormalize_southwest_corner((row, col), env, projectors, allocator)
         corners[SOUTHWEST, row, col] = C_southwest / norm(C_southwest)
 
-        C_northwest = renormalize_northwest_corner((row, col), env, projectors)
+        C_northwest = renormalize_northwest_corner((row, col), env, projectors, allocator)
         corners[NORTHWEST, row, col] = C_northwest / norm(C_northwest)
 
-        E_west = renormalize_west_edge((row, col), env, projectors, network)
+        E_west = renormalize_west_edge((row, col), env, projectors, network, allocator)
         edges[WEST, row, col] = E_west / norm(E_west)
     end
 

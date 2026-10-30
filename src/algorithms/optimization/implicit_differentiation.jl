@@ -222,15 +222,16 @@ function _rrule(
 
     env, = leading_boundary(envinit, state, alg)
 
+    allocator = default_allocator(state, SerialScheduler())
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, allocator)
     signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
     # fix global phases relative to the fixed point inside the iteration
     function gauge_fixed_iteration(A, x)
         return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], signs),
+            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed, allocator)[1], signs),
             env,
         )
     end
@@ -479,10 +480,11 @@ function _rrule(
 
     env, = leading_boundary(envinit, state, alg)
 
+    allocator = default_allocator(state, SerialScheduler())
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, allocator)
     signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
     env_fixed = fix_phases(env_conv, signs, corner_phases, edge_phases)
 
@@ -626,9 +628,10 @@ function PEPSKit._rrule(
     )
     env, = leading_boundary(envinit, state, alg)
 
+    allocator = default_allocator(state, SerialScheduler())
     # gauge-fix SVD isometries
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
+    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, allocator)
     signs, = compute_gauge_fix_gauge(env_conv, env, ScramblingEnvGauge())
     S = normalize.(info.S)
     U, V = fix_relative_phases(info.U, info.V, signs)
