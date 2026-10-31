@@ -5,7 +5,8 @@ using Zygote
 using Adapt
 using TensorKit, KrylovKit, PEPSKit
 using PEPSKit:
-    ctmrg_iteration, compute_gauge_fix_gauge, fix_phases, ScramblingEnvGauge
+    ctmrg_iteration, compute_gauge_fix_gauge, fix_phases, ScramblingEnvGauge,
+    default_allocator, SerialScheduler
 
 algs = [
     SimultaneousCTMRG(; projector_alg = :HalfInfiniteProjector),
@@ -22,11 +23,12 @@ function ctmrg_jacobian_real_linear(AT)
         env, = leading_boundary(CTMRGEnv(state, ComplexSpace(χenv)), state, ctm_alg)
 
         # follow code of _rrule
-        env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg)
+        allocator = default_allocator(state, SerialScheduler())
+        env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, ctm_alg, allocator)
         signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
 
         _, env_vjp = pullback(state, env_conv) do A, x
-            e, = ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg)
+            e, = ctmrg_iteration(InfiniteSquareNetwork(A), x, ctm_alg, allocator)
             return fix_phases(e, signs, corner_phases, edge_phases)
         end
 

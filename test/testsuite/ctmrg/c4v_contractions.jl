@@ -5,7 +5,7 @@ using TensorKit
 using Adapt
 using PEPSKit: EnlargedCorner, c4v_enlarge, c4v_projector!
 using PEPSKit: _contract_site, _contract_corners, _contract_vertical_edges,
-    _contract_horizontal_edges
+    _contract_horizontal_edges, default_allocator, SerialScheduler
 using PEPSKit: NORTH, EAST, SOUTH, WEST, NORTHWEST, NORTHEAST, SOUTHEAST, SOUTHWEST
 
 stype = ComplexF64
@@ -151,10 +151,11 @@ function test_c4v_ctmrg_contractions(AT, P, V, Venv)
     @testset "C4v environment after one CTMRG iteration" begin
         peps = _random_c4v_peps(AT, P, V)
         n = InfiniteSquareNetwork(peps)
+        allocator = PEPSKit.default_allocator(n, SerialScheduler())
         env₀ = initialize_random_c4v_env(peps, Venv)
         for projector_alg in (:C4vEighProjector, :C4vQRProjector)
             alg = C4vCTMRG(; projector_alg)
-            env, = PEPSKit.ctmrg_iteration(n, env₀, alg)
+            env, = PEPSKit.ctmrg_iteration(n, env₀, alg, allocator)
             @test env isa C4vCTMRGEnv
             test_c4v_contractions(n, env)
         end

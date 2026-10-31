@@ -43,11 +43,11 @@ function CTMRGAlgorithm(;
 end
 
 """
-    ctmrg_iteration(network, env, alg::CTMRGAlgorithm) -> env′, info
+    ctmrg_iteration(network, env, alg::CTMRGAlgorithm, allocator) -> env′, info
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
 """
-function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
+function ctmrg_iteration(network, env, alg::CTMRGAlgorithm, allocator) end
 
 """
     leading_boundary(env₀, network; kwargs...) -> env, info
@@ -110,6 +110,7 @@ function leading_boundary(
     )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
+    allocator = default_allocator(network, SerialScheduler())
     return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)
         CS, TS = ignore_derivatives() do
@@ -120,7 +121,7 @@ function leading_boundary(
         local info_iter
         converged = false
         for iter in 1:(alg.maxiter)
-            env, info_iter = ctmrg_iteration(network, env, alg)
+            env, info_iter = ctmrg_iteration(network, env, alg, allocator)
             η, CS, TS = calc_convergence(env, CS, TS, alg)
 
             if η ≤ alg.tol && iter ≥ alg.miniter

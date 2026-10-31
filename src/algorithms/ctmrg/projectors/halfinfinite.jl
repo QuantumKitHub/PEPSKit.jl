@@ -37,12 +37,12 @@ end
 PROJECTOR_SYMBOLS[:HalfInfiniteProjector] = HalfInfiniteProjector
 
 """
-    compute_projector(enlarged_corners, alg::ProjectorAlgorithm)
+    compute_projector(enlarged_corners, alg::ProjectorAlgorithm, allocator)
 
 Determine left and right projectors at the bond given determined by the enlarged corners
 using the specified `alg`.
 """
-function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
+function compute_projector(enlarged_corners, alg::HalfInfiniteProjector, allocator)
     # SVD half-infinite environment
     halfinf = half_infinite_environment(enlarged_corners...)
     svd_alg = decomposition_algorithm(alg)
@@ -59,6 +59,6 @@ function compute_projector(enlarged_corners, alg::HalfInfiniteProjector)
         end
     end
 
-    P_left, P_right = contract_projectors(U, S, V, enlarged_corners...)
+    P_left, P_right = contract_projectors(U, S, V, enlarged_corners..., allocator)
     return (P_left, P_right), (; U, S, V, truncation_error)
 end
