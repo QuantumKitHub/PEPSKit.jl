@@ -116,16 +116,13 @@ Fuse an auxiliary charge into an MPO factor's physical legs while preserving its
 """
 function _fuse_mpo_charge(tensor::AbstractTensorMap, charge::Sector)
     nout, nin = numout(tensor), numin(tensor)
-    P = codomain(tensor)[nout]
-    C = spacetype(tensor)(charge => 1)
-    A = storagetype(tensor)
-    fuser = isomorphism(A, fuse(P, C) ← P ⊗ C)
-    left = nout == 1 ? fuser : id(A, codomain(tensor)[1]) ⊗ fuser
-    right = nin == 1 ? fuser : fuser ⊗ id(A, domain(tensor)[2])
-    # Move the auxiliary input next to the physical input, including any required braiding.
-    order = (
-        ntuple(identity, nout + 1),
-        (nout + 2, nout + nin + 2, ntuple(i -> nout + 2 + i, nin - 1)...),
-    )
-    return left * permute(tensor ⊗ id(A, C), order) * right'
+    # MPSKit expects both virtual legs, including trivial legs at MPO endpoints.
+    # TODO: adapt for PBC MPOTerm
+    nout == 1 && (tensor = insertleftunit(tensor, 1))
+    nin == 1 && (tensor = insertrightunit(tensor, numind(tensor)))
+    # MPSKit dualizes its charge argument; LocalOperator has already done so.
+    tensor = MPSKit.add_physical_charge(tensor, dual(charge))
+    nin == 1 && (tensor = removeunit(tensor, 4))
+    nout == 1 && (tensor = removeunit(tensor, 1))
+    return tensor
 end
