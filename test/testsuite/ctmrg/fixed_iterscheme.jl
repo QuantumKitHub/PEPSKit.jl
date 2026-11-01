@@ -13,19 +13,18 @@ using PEPSKit:
     fix_relative_phases,
     calc_elementwise_convergence,
     peps_normalize,
-    ScramblingEnvGauge,
-    ScramblingEnvGaugeC4v
+    ScramblingEnvGauge
 using PEPSKit.Defaults: ctmrg_tol
 
 # initialize parameters
 D = 2
 χ = 16
-svd_algs = [(; alg = :DivideAndConquer), (; alg = :GKL)]
 projector_algs_asymm = [:HalfInfiniteProjector] #, :FullInfiniteProjector]
 unitcells = [(1, 1), (3, 4)]
 atol = 1.0e-5
 
-function ctmrg_fixed_iterscheme_asymmetric(AT)
+function ctmrg_fixed_iterscheme_asymmetric(AT; svd_alg = :DivideAndConquer)
+    svd_algs = [(; alg = svd_alg), (; alg = :GKL)]
     # test for element-wise convergence after application of fixed step
     return @testset "$unitcell unit cell with $(decomposition_alg.alg) and $projector_alg ($AT)" for (
             unitcell, decomposition_alg, projector_alg,
@@ -61,12 +60,12 @@ function ctmrg_fixed_iterscheme_asymmetric(AT)
 end
 
 # test same thing for C4v CTMRG
-c4v_algs = [
-    (:C4vQRProjector, (; alg = :Householder)),
-    (:C4vEighProjector, (; alg = :QRIteration)),
-    (:C4vEighProjector, (; alg = :Lanczos)),
-]
-function ctmrg_fixed_iterscheme_c4v(AT)
+function ctmrg_fixed_iterscheme_c4v(AT; eigh_alg = :QRIteration)
+    c4v_algs = [
+        (:C4vQRProjector, (; alg = :Householder)),
+        (:C4vEighProjector, (; alg = eigh_alg)),
+        (:C4vEighProjector, (; alg = :Lanczos)),
+    ]
     return @testset "$(decomposition_alg.alg) and $projector_alg ($AT)" for
         (projector_alg, decomposition_alg) in c4v_algs
         # initialize states
@@ -87,15 +86,15 @@ function ctmrg_fixed_iterscheme_c4v(AT)
         # do extra iteration to check gauge fixing
         env_conv2, info = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
 
-        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
+        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
         env_diff = calc_elementwise_convergence(env_conv1, env_fixed)
         @info "Diff between iters = $(env_diff)"
         @test env_diff ≈ 0 atol = atol
 
         # fix gauge of single iteration
         signs, corner_phases, edge_phases =
-            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
-        gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
+            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge())
+        gauge_fixed_iteration(env::PEPSKit.AbstractCTMRGEnv) = fix_phases(
             ctmrg_iteration(n, env, ctm_alg)[1],
             signs, corner_phases, edge_phases,
         )

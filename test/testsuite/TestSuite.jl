@@ -90,6 +90,13 @@ module CTMRGContractions
 end
 using .CTMRGContractions
 
+module CTMRGC4vContractions
+    include("ctmrg/c4v_contractions.jl")
+    export c4v_ctmrg_contractions_cartesian_spaces, c4v_ctmrg_contractions_u1_spaces
+    export c4v_ctmrg_contractions_fermionic_spaces
+end
+using .CTMRGC4vContractions
+
 module CTMRGCorrelationLength
     include("ctmrg/correlation_length.jl")
     export ctmrg_correlation_length

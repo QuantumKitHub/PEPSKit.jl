@@ -22,7 +22,7 @@ function gate_to_mpo(
     # convert to Vidal gauge
     _cluster_truncate!(Os, fill(notrunc(), N - 1))
     # evenly distribute the (Inf) norm
-    nrms = norm.(Os, Inf)
+    nrms = _maxabs.(Os)
     fac = prod(nrms)^(1 / N)
     scale!.(Os, fac ./ nrms)
     # remove trivial legs in first/last tensor, and restore MPO convention

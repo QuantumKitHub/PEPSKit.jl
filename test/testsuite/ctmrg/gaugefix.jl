@@ -4,7 +4,7 @@ using PEPSKit
 using TensorKit
 using Adapt
 using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
-using PEPSKit: ScramblingEnvGauge, ScramblingEnvGaugeC4v
+using PEPSKit: ScramblingEnvGauge
 using PEPSKit: peps_normalize
 
 spacetypes = [ComplexSpace, Z2Space]
@@ -14,7 +14,19 @@ ctmrg_algs_asymm = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs_asymm = [:HalfInfiniteProjector, :FullInfiniteProjector]
 projector_algs_c4v = [:C4vEighProjector, :C4vQRProjector]
 gauge_algs_asymm = [ScramblingEnvGauge()]
-gauge_algs_c4v = [ScramblingEnvGaugeC4v()]
+gauge_algs_c4v = [ScramblingEnvGauge()]
+
+# minimal subsets of the combinations above which still cover every option value at least once
+minimal_combinations_asymm = [
+    (ComplexSpace, Float64, (1, 1), SequentialCTMRG, :HalfInfiniteProjector, ScramblingEnvGauge()),
+    (Z2Space, ComplexF64, (2, 2), SimultaneousCTMRG, :FullInfiniteProjector, ScramblingEnvGauge()),
+    (ComplexSpace, ComplexF64, (3, 2), SimultaneousCTMRG, :HalfInfiniteProjector, ScramblingEnvGauge()),
+]
+minimal_combinations_c4v = [
+    (ComplexSpace, Float64, :C4vEighProjector, ScramblingEnvGauge()),
+    (Z2Space, ComplexF64, :C4vQRProjector, ScramblingEnvGauge()),
+]
+
 tol = 1.0e-6  # large tol due to χ=6
 χ = 6
 atol = 1.0e-4
@@ -72,11 +84,14 @@ function _preconverged_env_c4v(S, ::Type{T}) where {T}
     end
 end
 
-function ctmrg_gaugefix_asymmetric(AT)
+function ctmrg_gaugefix_asymmetric(AT; minimal::Bool = false)
     return @testset "($S) - ($T) - ($unitcell) - ($ctmrg_alg) - ($projector_alg) - ($gauge_alg) - ($AT)" for (
             S, T, unitcell, ctmrg_alg, projector_alg, gauge_alg,
-        ) in Iterators.product(
-            spacetypes, scalartypes, unitcells, ctmrg_algs_asymm, projector_algs_asymm, gauge_algs_asymm
+        ) in (
+            minimal ? minimal_combinations_asymm :
+                Iterators.product(
+                    spacetypes, scalartypes, unitcells, ctmrg_algs_asymm, projector_algs_asymm, gauge_algs_asymm
+                )
         )
         alg = ctmrg_alg(; tol, projector_alg)
         env_pre, psi = _preconverged_env(S, T, unitcell)
@@ -92,11 +107,12 @@ function ctmrg_gaugefix_asymmetric(AT)
     end
 end
 
-function ctmrg_gaugefix_c4v(AT)
+function ctmrg_gaugefix_c4v(AT; minimal::Bool = false)
     return @testset "($S) - ($T) - ($projector_alg) - ($gauge_alg) - ($AT)" for (
             S, T, projector_alg, gauge_alg,
-        ) in Iterators.product(
-            spacetypes, scalartypes, projector_algs_c4v, gauge_algs_c4v
+        ) in (
+            minimal ? minimal_combinations_c4v :
+                Iterators.product(spacetypes, scalartypes, projector_algs_c4v, gauge_algs_c4v)
         )
         alg = C4vCTMRG(; tol, projector_alg)
         env_pre, psi = _preconverged_env_c4v(S, T)

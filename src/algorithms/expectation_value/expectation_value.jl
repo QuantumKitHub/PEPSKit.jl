@@ -78,7 +78,7 @@ local_expectation_value(inds, bra, operator::MPOTerm, ket, env::BPEnv) =
 # ------------------------------------------------------
 
 """
-    expectation_value(pf::InfinitePartitionFunction, inds => O, env::CTMRGEnv)
+    expectation_value(pf::InfinitePartitionFunction, inds => O, env::AbstractCTMRGEnv)
 
 Compute the expectation value corresponding to inserting a local tensor(s) `O` at
 position `inds` in the partition function `pf` and contracting the whole using a given CTMRG

@@ -48,18 +48,58 @@ function absorb_weight(
         t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
         row::Int, col::Int, virt_axes::NTuple{N, Int}; inv::Bool = false
     ) where {N}
-    Np = numout(t)
-    vax = first(virt_axes)
-    wt = weight_to_absorb(weights, row, col, vax; inv)
-    axes, t2 = absorb_first_weight(t, wt, vax)
-    for vax in Base.tail(virt_axes)
-        axes, biperm = _permute_to_last(axes, vax + Np)
-        wt = weight_to_absorb(weights, row, col, vax; inv)
-        # use `*` to make absorption/removal twist-free
-        t2 = permute(t2, biperm) * wt
+    wts = map(ax -> weight_to_absorb(weights, row, col, ax; inv), virt_axes)
+    T = promote_type(scalartype(t), map(scalartype, wts)...)
+    return _absorb_weights!(similar(t, T), t, wts, virt_axes)
+end
+
+"""
+    absorb_weight!(t, weights::SUWeight, rowcol::CartesianIndex{2}, virt_axes; inv = false)
+
+In-place version of [`absorb_weight`](@ref).
+"""
+function absorb_weight!(
+        t::Union{PEPSTensor, PEPOTensor}, weights::SUWeight,
+        rowcol::CartesianIndex{2}, virt_axes::NTuple{N, Int}; inv::Bool = false
+    ) where {N}
+    wts = map(ax -> weight_to_absorb(weights, rowcol[1], rowcol[2], ax; inv), virt_axes)
+    return _absorb_weights!(t, t, wts, virt_axes)
+end
+
+# Write `src` into `dst` with `weights[i]` absorbed into virtual axis `virtual_axes[i]`,
+# where `domain(weights[i]) == domain(src)[virtual_axes[i]]`; `dst === src` is allowed.
+# A diagonal weight only rescales the basis vectors of its leg, by a factor that depends on
+# the sector of the leg and the index within it. This commutes with any permutation, so it is
+# applied directly on each fusion-tree block of `src` in its own leg order; it is equivalent
+# to `permute(src, ...) * wt` followed by the inverse permutation.
+# Since the domain of `wt` is the space of the leg itself (dual legs get `transpose(wt)` from
+# `weight_to_absorb`), `wt` is composed onto the leg without bending it, so even for dual legs
+# no twist is involved.
+function _absorb_weights!(
+        dst::AbstractTensorMap, src::AbstractTensorMap,
+        weights::NTuple{N, DiagonalTensorMap}, virtual_axes::NTuple{N, Int}
+    ) where {N}
+    Np, M = numout(src), Val(numind(src)) # static rank, so the reshaped weights are inferred
+    space(dst) == space(src) ||
+        throw(SpaceMismatch(lazy"destination $(space(dst)) does not match source $(space(src))"))
+    for (wt, ax) in zip(weights, virtual_axes)
+        domain(wt)[1] == domain(src)[ax] ||
+            throw(SpaceMismatch(lazy"weight $(space(wt)) does not match virtual axis $ax of $(space(src))"))
     end
-    perm_back = invperm(axes)
-    return permute(t2, (perm_back[begin:numout(t)], perm_back[(numout(t) + 1):end]))
+    # Look up every block of the weights only once, reshaped to broadcast along their leg, and
+    # iterate over the subblocks of `dst` and `src` (which have the same order) with `subblocks`,
+    # as the per-block `block(wt, c)` and `t[f₁, f₂]` would both redo the structure lookups.
+    λdicts = map(weights, virtual_axes) do wt, ax
+        return Dict(
+            c => sreshape(StridedView(b.diag), ntuple(i -> i == Np + ax ? length(b.diag) : 1, M))
+                for (c, b) in blocks(wt)
+        )
+    end
+    for (((f₁, f₂), d), (_, s)) in zip(subblocks(dst), subblocks(src))
+        λs = map((λdict, ax) -> λdict[f₂.uncoupled[ax]], λdicts, virtual_axes)
+        @. d = *(s, λs...)
+    end
+    return dst
 end
 
 """
@@ -85,14 +125,4 @@ function weight_to_absorb(
     )
     (ax == SOUTH || ax == WEST) && return transpose(wt)
     return wt
-end
-
-function absorb_first_weight(
-        t::Union{PEPSTensor, PEPOTensor}, wt::DiagonalTensorMap, vax::Int
-    )
-    Np = numout(t)
-    axes, biperm = _permute_to_last(ntuple(identity, numind(t)), vax + Np)
-    # use `*` to make absorption/removal twist-free
-    t2 = permute(t, biperm) * wt
-    return axes, t2
 end

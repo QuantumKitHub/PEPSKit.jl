@@ -1,6 +1,9 @@
 const CTMRGEdgeTensor{T, S, N} = AbstractTensorMap{T, S, N, 1}
 const CTMRGCornerTensor{T, S} = AbstractTensorMap{T, S, 1, 1}
 
+
+abstract type AbstractCTMRGEnv{C, T} end
+
 """
 $(TYPEDEF)
 
@@ -27,7 +30,7 @@ network being contracted.
 
 $(TYPEDFIELDS)
 """
-struct CTMRGEnv{C, T}
+struct CTMRGEnv{C, T} <: AbstractCTMRGEnv{C, T}
     "4 x rows x cols array of corner tensors, where the first dimension specifies the spatial direction"
     corners::Array{C, 3}
     "4 x rows x cols array of edge tensors, where the first dimension specifies the spatial direction"
@@ -238,7 +241,7 @@ CTMRGEnv(env::CTMRGEnv) = CTMRGEnv(env.corners, env.edges)
 
 @non_differentiable CTMRGEnv(state::Union{InfinitePartitionFunction, InfinitePEPS}, args...)
 
-function TensorKit.storagetype(::Type{CTMRGEnv{C, E}}) where {C, E}
+function TensorKit.storagetype(::Type{<:AbstractCTMRGEnv{C, E}}) where {C, E}
     T = promote_type(scalartype(C), scalartype(E))
     return TensorKit.promote_storagetype(T, C, E)
 end
@@ -271,8 +274,8 @@ function ChainRulesCore.rrule(::typeof(getproperty), e::CTMRGEnv, name::Symbol)
     end
 end
 
-Base.size(env::CTMRGEnv, args...) = size(env.corners, args...)
-Base.axes(x::CTMRGEnv, args...) = axes(x.corners, args...)
+Base.size(env::AbstractCTMRGEnv, args...) = size(env.corners, args...)
+Base.axes(x::AbstractCTMRGEnv, args...) = axes(x.corners, args...)
 
 """
     corner(env::CTMRGEnv, dir, i, j)
@@ -282,7 +285,7 @@ Return the corner tensor of `env` at direction `dir` and unit-cell coordinates
 passed through unchanged. Mixed `Int`/`CartesianIndex` arguments are supported via
 `Base.to_indices`, e.g. `corner(env, NORTHWEST, CartesianIndex(r, c))`.
 """
-Base.@propagate_inbounds corner(env::CTMRGEnv, I...) =
+Base.@propagate_inbounds corner(env::AbstractCTMRGEnv, I...) =
     periodic_getindex(env, env.corners, I)
 
 """
@@ -293,7 +296,7 @@ Return the edge tensor of `env` at direction `dir` and unit-cell coordinates
 passed through unchanged. Mixed `Int`/`CartesianIndex` arguments are supported via
 `Base.to_indices`.
 """
-Base.@propagate_inbounds edge(env::CTMRGEnv, I...) =
+Base.@propagate_inbounds edge(env::AbstractCTMRGEnv, I...) =
     periodic_getindex(env, env.edges, I)
 
 """
@@ -302,7 +305,7 @@ Base.@propagate_inbounds edge(env::CTMRGEnv, I...) =
 Store `value` as the corner tensor of `env` at direction `dir` and unit-cell
 coordinates `(i, j)`, with periodic wrapping on `(i, j)`. Returns `value`.
 """
-Base.@propagate_inbounds setcorner!(env::CTMRGEnv, v, I...) =
+Base.@propagate_inbounds setcorner!(env::AbstractCTMRGEnv, v, I...) =
     periodic_setindex!(env, env.corners, v, I)
 
 """
@@ -311,26 +314,23 @@ Base.@propagate_inbounds setcorner!(env::CTMRGEnv, v, I...) =
 Store `value` as the edge tensor of `env` at direction `dir` and unit-cell
 coordinates `(i, j)`, with periodic wrapping on `(i, j)`. Returns `value`.
 """
-Base.@propagate_inbounds setedge!(env::CTMRGEnv, v, I...) =
+Base.@propagate_inbounds setedge!(env::AbstractCTMRGEnv, v, I...) =
     periodic_setindex!(env, env.edges, v, I)
-function eachcoordinate(x::CTMRGEnv)
+function eachcoordinate(x::AbstractCTMRGEnv)
     return collect(Iterators.product(axes(x, 2), axes(x, 3)))
 end
-function eachcoordinate(x::CTMRGEnv, dirs)
+function eachcoordinate(x::AbstractCTMRGEnv, dirs)
     return collect(Iterators.product(dirs, axes(x, 2), axes(x, 3)))
 end
 Base.real(env::CTMRGEnv) = CTMRGEnv(real.(env.corners), real.(env.edges))
 Base.complex(env::CTMRGEnv) = CTMRGEnv(complex.(env.corners), complex.(env.edges))
 
-cornertype(env::CTMRGEnv) = cornertype(typeof(env))
-cornertype(::Type{CTMRGEnv{C, E}}) where {C, E} = C
-edgetype(env::CTMRGEnv) = edgetype(typeof(env))
-edgetype(::Type{CTMRGEnv{C, E}}) where {C, E} = E
+cornertype(env::AbstractCTMRGEnv) = cornertype(typeof(env))
+cornertype(::Type{<:AbstractCTMRGEnv{C, E}}) where {C, E} = C
+edgetype(env::AbstractCTMRGEnv) = edgetype(typeof(env))
+edgetype(::Type{<:AbstractCTMRGEnv{C, E}}) where {C, E} = E
 
-TensorKit.spacetype(::Type{E}) where {E <: CTMRGEnv} = spacetype(cornertype(E))
-function TensorKit.storagetype(::Type{E}) where {E <: CTMRGEnv}
-    return TensorKit.promote_storagetype(cornertype(E), edgetype(E))
-end
+TensorKit.spacetype(::Type{E}) where {E <: AbstractCTMRGEnv} = spacetype(cornertype(E))
 
 # In-place update of environment
 function update!(env::CTMRGEnv{C, T}, env´::CTMRGEnv{C, T}) where {C, T}
@@ -425,7 +425,7 @@ end
 # big vector. In other words, the associated vector space is not the natural one associated
 # to the original (physical) system, and addition, scaling, etc. are performed element-wise.
 
-function VI.scalartype(::Type{CTMRGEnv{C, T}}) where {C, T}
+function VI.scalartype(::Type{<:AbstractCTMRGEnv{C, T}}) where {C, T}
     S₁ = scalartype(C)
     S₂ = scalartype(T)
     return promote_type(S₁, S₂)
@@ -435,48 +435,48 @@ function VI.zerovector(env::CTMRGEnv, ::Type{S}) where {S <: Number}
     _zerovector = Base.Fix2(zerovector, S)
     return CTMRGEnv(map(_zerovector, env.corners), map(_zerovector, env.edges))
 end
-function VI.zerovector!(env::CTMRGEnv)
+function VI.zerovector!(env::AbstractCTMRGEnv)
     foreach(zerovector!, env.corners)
     foreach(zerovector!, env.edges)
     return env
 end
-VI.zerovector!!(env::CTMRGEnv) = zerovector!(env)
+VI.zerovector!!(env::AbstractCTMRGEnv) = zerovector!(env)
 
 function VI.scale(env::CTMRGEnv, α::Number)
     _scale = Base.Fix2(scale, α)
     return CTMRGEnv(map(_scale, env.corners), map(_scale, env.edges))
 end
-function VI.scale!(env::CTMRGEnv, α::Number)
+function VI.scale!(env::AbstractCTMRGEnv, α::Number)
     _scale! = Base.Fix2(scale!, α)
     foreach(_scale!, env.corners)
     foreach(_scale!, env.edges)
     return env
 end
-function VI.scale!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number)
+function VI.scale!(env₁::AbstractCTMRGEnv, env₂::AbstractCTMRGEnv, α::Number)
     _scale!(x, y) = scale!(x, y, α)
     foreach(_scale!, env₁.corners, env₂.corners)
     foreach(_scale!, env₁.edges, env₂.edges)
     return env₁
 end
-VI.scale!!(env::CTMRGEnv, α::Number) = scale!(env, α)
-VI.scale!!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number) = scale!(env₁, env₂, α)
+VI.scale!!(env::AbstractCTMRGEnv, α::Number) = scale!(env, α)
+VI.scale!!(env₁::AbstractCTMRGEnv, env₂::AbstractCTMRGEnv, α::Number) = scale!(env₁, env₂, α)
 
-function VI.add(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
+function VI.add(env₁::AbstractCTMRGEnv, env₂::AbstractCTMRGEnv, α::Number, β::Number)
     _add(x, y) = add(x, y, α, β)
     return CTMRGEnv(
         map(_add, env₁.corners, env₂.corners), map(_add, env₁.edges, env₂.edges)
     )
 end
-function VI.add!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number)
+function VI.add!(env₁::AbstractCTMRGEnv, env₂::AbstractCTMRGEnv, α::Number, β::Number)
     _add!(x, y) = add!(x, y, α, β)
     foreach(_add!, env₁.corners, env₂.corners)
     foreach(_add!, env₁.edges, env₂.edges)
     return env₁
 end
-VI.add!!(env₁::CTMRGEnv, env₂::CTMRGEnv, α::Number, β::Number) = add!(env₁, env₂, α, β)
+VI.add!!(env₁::AbstractCTMRGEnv, env₂::AbstractCTMRGEnv, α::Number, β::Number) = add!(env₁, env₂, α, β)
 
 # Exploiting the fact that VectorInterface works for tuples:
-function VI.inner(env₁::CTMRGEnv, env₂::CTMRGEnv)
+function VI.inner(env₁::AbstractCTMRGEnv, env₂::AbstractCTMRGEnv)
     return inner((env₁.corners, env₁.edges), (env₂.corners, env₂.edges))
 end
-VI.norm(env::CTMRGEnv) = norm((env.corners, env.edges))
+VI.norm(env::AbstractCTMRGEnv) = norm((env.corners, env.edges))
