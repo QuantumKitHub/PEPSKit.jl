@@ -30,7 +30,8 @@ function _get_cluster_with_weights(
 end
 
 """
-Factor spectator legs out of the cluster endpoints, retaining unit legs to preserve the MPS tensor layout.
+Factor out irrelevant virtual legs out of the cluster endpoints
+for more efficient application of gate MPOs.
 """
 function _reduce_mpo_endpoints!(Ms::Vector{<:GenericMPSTensor})
     N = numout(first(Ms))
@@ -44,7 +45,7 @@ function _reduce_mpo_endpoints!(Ms::Vector{<:GenericMPSTensor})
 end
 
 """
-Restore the spectator legs of the reduced cluster endpoints after MPO application and truncation.
+Restore virtual legs of the cluster endpoints after gate MPO application.
 """
 function _restore_mpo_endpoints!(Ms::Vector{<:GenericMPSTensor}, Ql, Qr)
     N = numout(first(Ms))
