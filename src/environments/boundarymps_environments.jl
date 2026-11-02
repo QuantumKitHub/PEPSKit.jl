@@ -31,7 +31,7 @@ from a product state, for example using [`ProductStateInitialization`](@ref), av
 subdominant fixed points that a boundary MPS contraction started from a random MPS can
 converge to.
 """
-struct C4vBoundaryMPSEnv{TC, TE}
+struct C4vBoundaryMPSEnv{TC, TE, TG}
     "left-gauged MPS tensor"
     AL::TE
     "right-gauged MPS tensor"
@@ -39,9 +39,9 @@ struct C4vBoundaryMPSEnv{TC, TE}
     "MPS bond tensor"
     C::TC
     "left environment"
-    GL::TE
+    GL::TG
     "right environment"
-    GR::TE
+    GR::TG
 end
 
 """
@@ -90,7 +90,7 @@ that was grown from a product state, for example using [`ProductStateInitializat
 avoids the subdominant fixed points that a boundary MPS contraction started from random MPS
 can converge to.
 """
-struct BoundaryMPSEnv{TC, TE}
+struct BoundaryMPSEnv{TC, TE, TG}
     "left-gauged tensors of the top MPS"
     ALt::Matrix{TE}
     "right-gauged tensors of the top MPS"
@@ -98,9 +98,9 @@ struct BoundaryMPSEnv{TC, TE}
     "bond tensors of the top MPS"
     Ct::Matrix{TC}
     "left environments of the top MPS"
-    GLt::Matrix{TE}
+    GLt::Matrix{TG}
     "right environments of the top MPS"
-    GRt::Matrix{TE}
+    GRt::Matrix{TG}
     "left-gauged tensors of the bottom MPS"
     ALb::Matrix{TE}
     "right-gauged tensors of the bottom MPS"
@@ -108,13 +108,13 @@ struct BoundaryMPSEnv{TC, TE}
     "bond tensors of the bottom MPS"
     Cb::Matrix{TC}
     "left environments of the bottom MPS"
-    GLb::Matrix{TE}
+    GLb::Matrix{TG}
     "right environments of the bottom MPS"
-    GRb::Matrix{TE}
+    GRb::Matrix{TG}
     "left mixed environments between the top and bottom MPS"
-    GLm::Matrix{TE}
+    GLm::Matrix{TG}
     "right mixed environments between the top and bottom MPS"
-    GRm::Matrix{TE}
+    GRm::Matrix{TG}
 end
 
 const BoundaryMPSEnvs = Union{C4vBoundaryMPSEnv, BoundaryMPSEnv}
@@ -375,8 +375,8 @@ end
 ## VectorInterface
 #
 
-function VI.scalartype(::Type{<:Union{C4vBoundaryMPSEnv{TC, TE}, BoundaryMPSEnv{TC, TE}}}) where {TC, TE}
-    return promote_type(scalartype(TC), scalartype(TE))
+function VI.scalartype(::Type{<:Union{C4vBoundaryMPSEnv{TC, TE, TG}, BoundaryMPSEnv{TC, TE, TG}}}) where {TC, TE, TG}
+    return promote_type(scalartype(TC), scalartype(TE), scalartype(TG))
 end
 
 function VI.zerovector(env::BoundaryMPSEnvs, ::Type{S}) where {S <: Number}

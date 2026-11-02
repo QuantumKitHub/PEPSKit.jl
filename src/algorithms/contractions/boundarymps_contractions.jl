@@ -92,7 +92,7 @@ This is exactly equivalent to the action of an [`MPSKit.AC_hamiltonian`](@extref
 avoids issues with AD through an [`MPSKit.MPODerivativeOperator`](@extref) and planar
 contractions.
 """
-function ∂AC(AC::E, GL::E, O, GR::E) where {E <: EdgeTensor}
+function ∂AC(AC::EdgeTensor, GL::EdgeTensor, O, GR::EdgeTensor)
     GR = twistdual(GR, numind(GR))
     return _∂AC(AC, GL, O, GR)
 end

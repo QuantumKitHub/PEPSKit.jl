@@ -192,8 +192,8 @@ Gauge a boundary MPS, given as matrices of tensors in the positions of a
 diagonal, by absorbing the singular vectors of the bond tensors into the neighboring tensors.
 """
 function diagonalize_center(
-        AL::Matrix{TE}, AR::Matrix{TE}, C::Matrix{TC}, GL::Matrix{TE}, GR::Matrix{TE}
-    ) where {TE <: EdgeTensor, TC <: CornerTensor}
+        AL::Matrix{TE}, AR::Matrix{TE}, C::Matrix{TC}, GL::Matrix{TG}, GR::Matrix{TG}
+    ) where {TE <: EdgeTensor, TC <: CornerTensor, TG <: EdgeTensor}
     USV = map(svd_compact, C)
     U, C´, V = map(first, USV), map(x -> x[2], USV), map(last, USV)
     AL´ = _cellmap((r, c) -> absorb_left_right(AL[r, c], _at(U, r, c - 1)', U[r, c]), size(AL))
