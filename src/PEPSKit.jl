@@ -17,7 +17,7 @@ using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 using TensorKit
 using TensorKit: AdjointTensorMap, SectorDict
 using TensorKit: throw_invalid_innerproduct, similarstoragetype
-using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
+using TensorKit.Factorizations: TruncationSpace
 
 using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
@@ -92,6 +92,7 @@ include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
+include("environments/c4v_ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
@@ -179,7 +180,7 @@ include("algorithms/select_algorithm.jl")
 using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, OrthAdjoint, QRAdjoint
-export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
+export C4vCTMRGEnv, CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization
 export corner, edge, setcorner!, setedge!

@@ -4,7 +4,7 @@
 # Keep contraction order but try to optimize intermediate permutations:
 # EE_SWA is largest object so keep largest legs to the front there
 function reduced_densitymatrix1x1(
-        inds::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        inds::CartesianIndex{2}, ket::InfinitePEPS, bra::InfinitePEPS, env::AbstractCTMRGEnv
     )
     row, col = Tuple(inds)
 
@@ -45,7 +45,7 @@ end
 # Special case 2x1 density matrix:
 # Keep contraction order but try to optimize intermediate permutations:
 function reduced_densitymatrix2x1(
-        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::AbstractCTMRGEnv
     )
     row, col = Tuple(ind)
 
@@ -95,7 +95,7 @@ function reduced_densitymatrix2x1(
 end
 
 function reduced_densitymatrix1x2(
-        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::CTMRGEnv
+        ind::CartesianIndex, ket::InfinitePEPS, bra::InfinitePEPS, env::AbstractCTMRGEnv
     )
     row, col = Tuple(ind)
 

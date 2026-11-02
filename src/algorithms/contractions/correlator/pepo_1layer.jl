@@ -2,7 +2,7 @@
 
 function start_correlator_left(
         i::CartesianIndex{2}, ρ::InfinitePEPO,
-        O::PFTensor, env::CTMRGEnv
+        O::PFTensor, env::AbstractCTMRGEnv
     )
     (size(ρ, 3) == 1) ||
         throw(ArgumentError("The input PEPO ρ must have only one layer."))
@@ -29,7 +29,7 @@ end
 
 function end_correlator_right_numerator(
         j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
-        ρ::InfinitePEPO, O::PFTensor, env::CTMRGEnv
+        ρ::InfinitePEPO, O::PFTensor, env::AbstractCTMRGEnv
     ) where {T, S}
     (size(ρ, 3) == 1) ||
         throw(ArgumentError("The input PEPO ρ must have only one layer."))
@@ -47,7 +47,7 @@ function end_correlator_right_numerator(
 end
 
 function end_correlator_right_denominator(
-        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 2, 1}, env::CTMRGEnv
+        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 2, 1}, env::AbstractCTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
     C_northeast = corner(env, NORTHEAST, r - 1, c + 1)
@@ -61,7 +61,7 @@ end
 
 function start_correlator_right(
         i::CartesianIndex{2}, ρ::InfinitePEPO,
-        O::PFTensor, env::CTMRGEnv
+        O::PFTensor, env::AbstractCTMRGEnv
     )
     (size(ρ, 3) == 1) ||
         throw(ArgumentError("The input PEPO ρ must have only one layer."))
@@ -87,7 +87,7 @@ end
 
 function end_correlator_left_numerator(
         j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 3, 1},
-        ρ::InfinitePEPO, O::PFTensor, env::CTMRGEnv
+        ρ::InfinitePEPO, O::PFTensor, env::AbstractCTMRGEnv
     ) where {T, S}
     (size(ρ, 3) == 1) ||
         throw(ArgumentError("The input PEPO ρ must have only one layer."))
@@ -106,7 +106,7 @@ function end_correlator_left_numerator(
 end
 
 function end_correlator_left_denominator(
-        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 2, 1}, env::CTMRGEnv
+        j::CartesianIndex{2}, V::AbstractTensorMap{T, S, 2, 1}, env::AbstractCTMRGEnv
     ) where {T, S}
     r, c = Tuple(j)
     C_northwest = corner(env, NORTHWEST, r - 1, c - 1)
