@@ -30,10 +30,36 @@ function _get_cluster_with_weights(
 end
 
 """
+Factor spectator legs out of the cluster endpoints, retaining unit legs to preserve the MPS tensor layout.
+"""
+function _reduce_mpo_endpoints!(Ms::Vector{<:GenericMPSTensor})
+    N = numout(first(Ms))
+    physical = ntuple(i -> i + 1, N - 3)
+    Ql, R = left_orth!(permute(first(Ms), ((1, N - 1, N), (physical..., N + 1))); positive = true)
+    R = permute(R, ((1, physical...), (N - 1,)))
+    L, Qr = right_orth!(permute(last(Ms), ((1, physical...), (N - 1, N, N + 1))); positive = true)
+    Ms[1] = insertrightunit(insertrightunit(R, Val(N - 2)), Val(N - 1))
+    Ms[end] = insertrightunit(insertrightunit(L, Val(N - 2)), Val(N - 1))
+    return Ql, Qr
+end
+
+"""
+Restore the spectator legs of the reduced cluster endpoints after MPO application and truncation.
+"""
+function _restore_mpo_endpoints!(Ms::Vector{<:GenericMPSTensor}, Ql, Qr)
+    N = numout(first(Ms))
+    R = removeunit(removeunit(first(Ms), Val(N)), Val(N - 1))
+    L = removeunit(removeunit(last(Ms), Val(N)), Val(N - 1))
+    p = ((1, ntuple(i -> i + 3, N - 3)..., 2, 3), (N + 1,))
+    Ms[1] = tensorcontract(Ql, ((1, 2, 3), (4,)), false, R, ((1,), Tuple(2:(N - 1))), false, p)
+    Ms[end] = tensorcontract(L, (codomainind(L), domainind(L)), false, Qr, (codomainind(Qr), domainind(Qr)), false, (ntuple(identity, N), (N + 1,)))
+    return Ms
+end
+
+"""
 Simple update with an N-site MPO `gate` (N ≥ 2).
 
-The `allocator` is accepted for compatibility with the nearest neighbor update,
-but is not used yet.
+Temporary MPO contractions and QR/LQ inputs use `allocator`.
 """
 function _su_iter!(
         state::InfiniteState, gate::Vector{T}, env::SUWeight,
@@ -45,15 +71,17 @@ function _su_iter!(
     # flip virtual arrows in `Ms` to ←
     flips = [isdual(space(M, 1)) for M in Iterators.drop(Ms, 1)]
     _flip_virtuals!(Ms, flips)
+    Ql, Qr = _reduce_mpo_endpoints!(Ms)
     # apply gate MPOs and truncate
     ϵ = 0.0
     local wts
     for gate_ax in 1:2
-        _apply_gatempo!(Ms, gate; gate_ax)
-        wts, ϵs, = _cluster_truncate!(Ms, truncs)
+        _apply_gatempo!(Ms, gate; gate_ax, allocator)
+        wts, ϵs, = _cluster_truncate!(Ms, truncs; allocator)
         ϵ = max(ϵ, maximum(ϵs))
         alg.purified && break
     end
+    _restore_mpo_endpoints!(Ms, Ql, Qr)
     # restore virtual arrows in `Ms`
     _flip_virtuals!(Ms, flips)
     # update env weights

@@ -152,7 +152,7 @@ function su_iter(
         else
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
-            ϵ′ = _su_iter!(state2, gate, env2, sites, alg)
+            ϵ′ = _su_iter!(state2, gate, env2, sites, alg; allocator)
             ϵ = max(ϵ, ϵ′)
         end
     end
