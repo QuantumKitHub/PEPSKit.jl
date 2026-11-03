@@ -37,7 +37,7 @@ function sdiag_pow(s::DiagonalTensorMap, pow::Real; tol::Real = eps(real(scalart
     return spow
 end
 function sdiag_pow(
-       s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
+        s::AbstractTensorMap{T, S, 1, 1}, pow::Real; tol::Real = eps(real(scalartype(s)))^(3 / 4)
     ) where {T, S}
     tol *= _maxabs(s)
     spow = similar(s)
