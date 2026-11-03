@@ -120,21 +120,26 @@ Perform QR decomposition through a `GenericMPSTensor`
 ```
 """
 function qr_through(
-        R0::MPSBondTensor, M::GenericMPSTensor{S, N}; normalize::Bool = true
+        R0::MPSBondTensor, M::GenericMPSTensor{S, N}; normalize::Bool = true, allocator = DefaultAllocator()
     ) where {S, N}
     @assert !isdual(codomain(R0, 1))
     @assert !isdual(domain(M, 1)) && !isdual(codomain(M, 1))
     pR = (codomainind(R0), domainind(R0))
     pM = ((1,), Tuple(2:(N + 1)))
     pRM = (codomainind(M), domainind(M))
-    A = tensorcontract(R0, pR, false, M, pM, false, pRM)
+    cp = allocator_checkpoint!(allocator)
+    TC = promote_type(scalartype(R0), scalartype(M))
+    A = tensoralloc_contract(TC, R0, pR, false, M, pM, false, pRM, Val(true), allocator)
+    tensorcontract!(A, R0, pR, false, M, pM, false, pRM, One(), Zero(), DefaultBackend(), allocator)
     _, r = left_orth!(A; positive = true)
+    tensorfree!(A, allocator)
+    allocator_reset!(allocator, cp)
     normalize && normalize!(r, Inf)
     return r
 end
 # for `M` at the left end of the MPS
 function qr_through(
-        ::Nothing, M::GenericMPSTensor{S, N}; normalize::Bool = true
+        ::Nothing, M::GenericMPSTensor{S, N}; normalize::Bool = true, allocator = DefaultAllocator()
     ) where {S, N}
     @assert !isdual(domain(M, 1))
     _, r = left_orth(M; positive = true)
@@ -151,21 +156,26 @@ Perform LQ decomposition through a `GenericMPSTensor`
 ```
 """
 function lq_through(
-        M::GenericMPSTensor{S, N}, L1::MPSBondTensor; normalize::Bool = true
+        M::GenericMPSTensor{S, N}, L1::MPSBondTensor; normalize::Bool = true, allocator = DefaultAllocator()
     ) where {S, N}
     @assert !isdual(domain(L1, 1))
     @assert !isdual(codomain(M, 1)) && !isdual(domain(M, 1))
     pM = (codomainind(M), domainind(M))
     pL = (codomainind(L1), domainind(L1))
     pML = ((1,), ntuple(i -> i + 1, N))
-    A = tensorcontract(M, pM, false, L1, pL, false, pML)
+    cp = allocator_checkpoint!(allocator)
+    TC = promote_type(scalartype(M), scalartype(L1))
+    A = tensoralloc_contract(TC, M, pM, false, L1, pL, false, pML, Val(true), allocator)
+    tensorcontract!(A, M, pM, false, L1, pL, false, pML, One(), Zero(), DefaultBackend(), allocator)
     l, _ = right_orth!(A; positive = true)
+    tensorfree!(A, allocator)
+    allocator_reset!(allocator, cp)
     normalize && normalize!(l, Inf)
     return l
 end
 # for `M` at the right end of the MPS
 function lq_through(
-        M::GenericMPSTensor{S, N}, ::Nothing; normalize::Bool = true
+        M::GenericMPSTensor{S, N}, ::Nothing; normalize::Bool = true, allocator = DefaultAllocator()
     ) where {S, N}
     @assert !isdual(codomain(M, 1))
     A = permute(M, ((1,), ntuple(i -> i + 1, N)); copy = true)
@@ -177,20 +187,20 @@ end
 """
 Given a cluster `Ms`, find all `R`, `L` matrices on each internal bond
 """
-function _get_allRLs(Ms::Vector{T}) where {T <: GenericMPSTensor}
+function _get_allRLs(Ms::Vector{T}; allocator = DefaultAllocator()) where {T <: GenericMPSTensor}
     # M1 -- (R1,L1) -- M2 -- (R2,L2) -- M3
     N = length(Ms)
     # get the first R and the last L
-    R_first = qr_through(nothing, first(Ms); normalize = true)
-    L_last = lq_through(last(Ms), nothing; normalize = true)
+    R_first = qr_through(nothing, first(Ms); normalize = true, allocator)
+    L_last = lq_through(last(Ms), nothing; normalize = true, allocator)
     Rs = Vector{typeof(R_first)}(undef, N - 1)
     Ls = Vector{typeof(L_last)}(undef, N - 1)
     Rs[1], Ls[end] = R_first, L_last
     # get remaining R, L matrices
     for n in 2:(N - 1)
         m = N - n + 1
-        Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true)
-        Ls[m - 1] = lq_through(Ms[m], Ls[m]; normalize = true)
+        Rs[n] = qr_through(Rs[n - 1], Ms[n]; normalize = true, allocator)
+        Ls[m - 1] = lq_through(Ms[m], Ls[m]; normalize = true, allocator)
     end
     return Rs, Ls
 end
@@ -224,10 +234,10 @@ Given a cluster `Ms`, find all projectors `Pa`, `Pb`
 and Schmidt weights `wts` on internal bonds.
 """
 function _get_allprojs(
-        Ms::Vector{T}, truncs::Vector{E}
+        Ms::Vector{T}, truncs::Vector{E}; allocator = DefaultAllocator()
     ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
     N = length(Ms)
-    Rs, Ls = _get_allRLs(Ms)
+    Rs, Ls = _get_allRLs(Ms; allocator)
     @assert length(truncs) == N - 1
     projs_errs = map(Rs, Ls, truncs) do R, L, trunc
         return _proj_from_RL(R, L; trunc)
@@ -273,9 +283,9 @@ end
 Find projectors to truncate internal bonds of the cluster `Ms`.
 """
 function _cluster_truncate!(
-        Ms::Vector{T}, truncs::Vector{E}
+        Ms::Vector{T}, truncs::Vector{E}; allocator = DefaultAllocator()
     ) where {T <: GenericMPSTensor, E <: TruncationStrategy}
-    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, truncs)
+    Pas, Pbs, wts, ϵs = _get_allprojs(Ms, truncs; allocator)
     # apply projectors
     # M1 -- (Pa1,wt1,Pb1) -- M2 -- (Pa2,wt2,Pb2) -- M3
     for (i, (Pa, Pb)) in enumerate(zip(Pas, Pbs))
@@ -300,7 +310,8 @@ e.g. Cluster in PEPS with `gate_ax = 1`:
 ```
 """
 function _apply_gatempo!(
-        Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
+        Ms::Vector{T1}, gs::Vector{T2};
+        gate_ax::Int = 1, allocator = DefaultAllocator()
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 4}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1
@@ -324,20 +335,21 @@ function _apply_gatempo!(
         @assert !isdual(space(M, 2))
         if i == 1
             fr = fusers[i]
-            @tensor (Ms[i])[-1 -2 -3 -4; -5] := M[-1 1 -3 -4; 2] * g[-2 1 3] * fr'[2 3; -5]
+            @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4; -5] := M[-1 1 -3 -4; 2] * g[-2 1 3] * fr'[2 3; -5]
         elseif i == length(Ms)
             fl = fusers[i - 1]
-            @tensor (Ms[i])[-1 -2 -3 -4; -5] := fl[-1; 2 3] * M[2 1 -3 -4; -5] * g[3 -2 1]
+            @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4; -5] := fl[-1; 2 3] * M[2 1 -3 -4; -5] * g[3 -2 1]
         else
             fl, fr = fusers[i - 1], fusers[i]
-            @tensor (Ms[i])[-1 -2 -3 -4; -5] := fl[-1; 2 3] * M[2 1 -3 -4; 4] * g[3 -2 1 5] * fr'[4 5; -5]
+            @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4; -5] := fl[-1; 2 3] * M[2 1 -3 -4; 4] * g[3 -2 1 5] * fr'[4 5; -5]
         end
     end
     return Ms
 end
 
 function _apply_gatempo!(
-        Ms::Vector{T1}, gs::Vector{T2}; gate_ax::Int = 1
+        Ms::Vector{T1}, gs::Vector{T2};
+        gate_ax::Int = 1, allocator = DefaultAllocator()
     ) where {T1 <: GenericMPSTensor{<:ElementarySpace, 5}, T2 <: AbstractTensorMap}
     @assert length(Ms) == length(gs)
     @assert gate_ax == 1 || gate_ax == 2
@@ -373,23 +385,23 @@ function _apply_gatempo!(
         if i == 1
             fr = fusers[i]
             if gate_ax == 1
-                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := M[-1 1 -3 -4 -5; 2] * g[-2 1 3] * fr'[2 3; -6]
+                @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4 -5; -6] := M[-1 1 -3 -4 -5; 2] * g[-2 1 3] * fr'[2 3; -6]
             else
-                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := M[-1 -2 1 -4 -5; 2] * g[1 -3 3] * fr'[2 3; -6]
+                @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4 -5; -6] := M[-1 -2 1 -4 -5; 2] * g[1 -3 3] * fr'[2 3; -6]
             end
         elseif i == length(Ms)
             fl = fusers[i - 1]
             if gate_ax == 1
-                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 1 -3 -4 -5; -6] * g[3 -2 1]
+                @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 1 -3 -4 -5; -6] * g[3 -2 1]
             else
-                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 -2 1 -4 -5; -6] * g[3 1 -3]
+                @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 -2 1 -4 -5; -6] * g[3 1 -3]
             end
         else
             fl, fr = fusers[i - 1], fusers[i]
             if gate_ax == 1
-                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 1 -3 -4 -5; 4] * g[3 -2 1 5] * fr'[4 5; -6]
+                @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 1 -3 -4 -5; 4] * g[3 -2 1 5] * fr'[4 5; -6]
             else
-                @tensor (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 -2 1 -4 -5; 4] * g[3 1 -3 5] * fr'[4 5; -6]
+                @tensor allocator = allocator (Ms[i])[-1 -2 -3 -4 -5; -6] := fl[-1; 2 3] * M[2 -2 1 -4 -5; 4] * g[3 1 -3 5] * fr'[4 5; -6]
             end
         end
     end
