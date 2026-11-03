@@ -2,8 +2,13 @@
 $(TYPEDEF)
 
 Recycled subspace approximation of the full-infinite CTMRG environment.
-Supply an elementary `subspace` containing the target multiplicity in every retained symmetry sector, including complete non-Abelian multiplets.
-Only [`FixedSpaceTruncation`](@ref) is supported.
+Supply `subspace` as an elementary space with explicit charge multiplicities, or as a positive integer specifying the total trial dimension.
+An integer budget selects its charge distribution from the sampled singular spectrum, preserving complete multiplets.
+`trunc` independently selects the retained environment: [`FixedSpaceTruncation`](@ref), `truncspace`, or `truncrank`.
+With fixed target sectors, the trial allocation reserves their required multiplicities.
+Integer allocations are explored initially and every `charge_refresh=$(Defaults.charge_refresh)` sweeps, even if range finders are frozen.
+Set `charge_refresh=0` to disable periodic exploration; incompatible cached spaces still trigger exploration.
+Refreshes select trial directions in reduced SVD coordinates even when ordinary basis rotations are disabled.
 Both trial bases embed the reduced space into the full environment spaces: ``X^{\\dagger} X = Y^{\\dagger} Y = I`` and ``ρ = Y^{\\dagger} M X``.
 See [Subspace-iteration CTMRG projectors](@ref subspace_iteration) for the update equations, singular-subspace recovery, and freezing criterion.
 
@@ -13,7 +18,7 @@ The `update` selector chooses `:independent` (default, the paper's two-factoriza
 `subspace_tol=0` disables freezing and its principal-angle monitor; otherwise refinement may be skipped after `min_subspace_iters` sweeps.
 Active alternating updates without freezing retain only the right basis.
 
-[`FixedPointGradient`](@ref) holds incoming recycled bases fixed while differentiating the sweep.
+[`FixedPointGradient`](@ref) holds incoming recycled bases and their charge allocation fixed while differentiating the sweep.
 Use `gradient_alg=nothing` in [`PEPSOptimize`](@ref) to differentiate through all sweeps and recycled bases.
 Use `subspace_tol=0` to retain refinement within a fixed-point differentiated sweep.
 
@@ -27,11 +32,12 @@ $(TYPEDFIELDS)
 
 Defaults are `update=:independent`, `n_subspace_iter=0`, `rotate_basis=true`, `subspace_tol=$(Defaults.subspace_tol)`, `min_subspace_iters=$(Defaults.min_subspace_iters)`, `rng=Random.default_rng()`, `decomposition_alg=SVDAdjoint()`, `orth_alg=OrthAdjoint()`, and `trunc=FixedSpaceTruncation()`.
 """
-struct SubspaceIterationProjector{M, S <: SVDAdjoint, T, Q <: OrthAdjoint, E <: ElementarySpace, R} <: ProjectorAlgorithm
+struct SubspaceIterationProjector{M, S <: SVDAdjoint, T, Q <: OrthAdjoint, E <: Union{ElementarySpace, Integer}, R} <: ProjectorAlgorithm
     decomposition_alg::S
     trunc::T
     orth_alg::Q
     subspace::E
+    charge_refresh::Int
     subspace_tol::Float64
     min_subspace_iters::Int
     verbosity::Int
@@ -46,9 +52,9 @@ function SubspaceIterationProjector(; kwargs...)
 end
 
 """Specialize the range kernel on the selected update without additional public algorithm types."""
-function SubspaceIterationProjector(svd, trunc, orth, space, tol, miniter, verbosity, update::Symbol, q::Int, rotate::Bool, rng)
+function SubspaceIterationProjector(svd, trunc, orth, space, refresh, tol, miniter, verbosity, update::Symbol, q::Int, rotate::Bool, rng)
     return SubspaceIterationProjector{update, typeof(svd), typeof(trunc), typeof(orth), typeof(space), typeof(rng)}(
-        svd, trunc, orth, space, tol, miniter, verbosity, update, q, rotate, rng
+        svd, trunc, orth, space, refresh, tol, miniter, verbosity, update, q, rotate, rng
     )
 end
 
@@ -80,19 +86,21 @@ Base.:*(x::AbstractTensorMap, h::SIHalfEnvironment{<:Any, <:Any, Nothing}) = (x 
 _normalize_subspace_half(h) = h
 _normalize_subspace_half(h::SIHalfEnvironment{<:Any, <:Any, Nothing}) = SIHalfEnvironment(h.left, h.right)
 
-"""Check fixed truncation and compatible network, environment, and trial sectors."""
+"""Check compatible network, environment, and explicitly specified trial sectors."""
 function _check_subspace_iteration_input(network, env, alg::SubspaceIterationProjector)
-    alg.trunc isa FixedSpaceTruncation || throw(ArgumentError("SubspaceIterationProjector only supports FixedSpaceTruncation."))
     sector = sectortype(spacetype(network))
-    sectortype(spacetype(env)) === sector === sectortype(alg.subspace) ||
+    sectortype(spacetype(env)) === sector &&
+        (!(alg.subspace isa ElementarySpace) || sectortype(alg.subspace) === sector) ||
         throw(ArgumentError("Network, environment, and subspace must use the same symmetry sectors."))
     return nothing
 end
 
-"""Clip trial multiplicities to both map dimensions and check the target space."""
+"""Select trial multiplicities from retained charges or an explicit space, clipped to both map dimensions."""
 function _subspace_iteration_space(left, right, alg, trunc)
-    K = infimum(alg.subspace, fuse(left), fuse(right))
-    infimum(trunc.space, K) == trunc.space ||
+    available = infimum(fuse(left), fuse(right))
+    _adaptive_subspace(alg) && return _subspace_probe_space(available, alg, trunc)
+    K = infimum(alg.subspace, available)
+    !(trunc isa TruncationSpace) || infimum(trunc.space, K) == trunc.space ||
         throw(ArgumentError("Subspace must contain the target truncation space."))
     return K
 end
@@ -132,13 +140,14 @@ function _initialize_subspace_iteration_entry(network::InfiniteSquareNetwork, en
     K = _subspace_iteration_space(left, right, alg, trunc)
     T = scalartype(network)
     X, Y = rangefinder_initialize(T, left, right, K, alg)
+    target = trunc isa TruncationSpace ? trunc.space : zero(K)
     U, V = if alg.subspace_tol > 0
-        if M == :independent
-            u, _ = left_orth!(randn(alg.rng, T, left ← trunc.space), alg.orth_alg)
-            _, v = right_orth!(randn(alg.rng, T, trunc.space ← right), alg.orth_alg)
+        if M == :independent && !_adaptive_subspace(alg) && trunc isa TruncationSpace
+            u, _ = left_orth!(randn(alg.rng, T, left ← target), alg.orth_alg)
+            _, v = right_orth!(randn(alg.rng, T, target ← right), alg.orth_alg)
             u, v
         else
-            zeros(T, left ← trunc.space), zeros(T, trunc.space ← right)
+            zeros(T, left ← target), zeros(T, target ← right)
         end
     else
         nothing, nothing
@@ -263,16 +272,16 @@ function _subspace_reduced_svd(core, trunc, alg, complete::Bool)
         svd_alg = @set svd_alg.fwd_alg = TruncatedAlgorithm(fwd, notrunc())
         u, s, v = svd_trunc_no_error!(rho, svd_alg)
         u, v = _subspace_svd_phase_correction(u, v)
-        E = ignore_derivatives(() -> isometry(scalartype(core), space(s, 1) ← trunc.space))
+        E = ignore_derivatives(() -> _subspace_truncation_isometry(s, trunc, scalartype(core)))
         uχ, sχ, vχ = u * E, DiagonalTensorMap(E' * s * E), E' * v
         error = ignore_derivatives(() -> norm(s - E * sχ * E') / norm(sχ))
-        return (; u, v, uχ, sχ, vχ, error)
+        return (; u, s, v, uχ, sχ, vχ, error)
     end
     svd_alg = @set svd_alg.fwd_alg = TruncatedAlgorithm(fwd, trunc)
     u, s, v, error = svd_trunc!(rho, svd_alg)
     u, v = _subspace_svd_phase_correction(u, v)
     error = ignore_derivatives(() -> error / norm(s))
-    return (; u, v, uχ = u, sχ = s, vχ = v, error)
+    return (; u, s, v, uχ = u, sχ = s, vχ = v, error)
 end
 
 """
@@ -281,12 +290,21 @@ The internal `core` is the reduced matrix ``ρ = Y^{\\dagger} M X`` with ``M = L
 """
 function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector{M}, ranges) where {M}
     trunc = ranges.trunc
-    K = ignore_derivatives(() -> _subspace_iteration_space(codomain(L), domain(R), alg, trunc))
+    K, refresh = ignore_derivatives() do
+        return _adaptive_subspace(alg) ? _adaptive_subspace_space(L, R, alg, ranges) :
+            (_subspace_iteration_space(codomain(L), domain(R), alg, trunc), false)
+    end
     compatible = _compatible_rangefinders(ranges.X, ranges.Y, L, R, K, _retain_subspace_left(alg))
-    X, Y = compatible ? (ranges.X, ranges.Y) : ignore_derivatives(() -> rangefinder_initialize(L, R, K, alg))
+    X, Y = if refresh
+        X = _resize_subspace_basis(ranges.X, domain(R), K, alg, scalartype(L))
+        Y = _retain_subspace_left(alg) ? copy(_resize_subspace_basis(ranges.Y, codomain(L), K, alg, scalartype(L))')' : nothing
+        X, Y
+    else
+        compatible ? (ranges.X, ranges.Y) : ignore_derivatives(() -> rangefinder_initialize(L, R, K, alg))
+    end
     freezable = ignore_derivatives(() -> _subspace_freezable(codomain(L), domain(R), K))
-    recycled = compatible && ranges.recycle && freezable && !isnothing(Y)
-    if M != :alternating && !(compatible && ranges.recycle && freezable)
+    recycled = !refresh && compatible && ranges.recycle && freezable && !isnothing(Y)
+    if M != :alternating && (refresh || !(compatible && ranges.recycle && freezable))
         L, R = _normalize_subspace_half(L), _normalize_subspace_half(R)
     end
     state = if recycled
@@ -296,15 +314,21 @@ function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector
     else
         rangefinder_update(X, Y, L, R, K, alg)
     end
-    full = _subspace_reduced_svd(state.core, trunc, alg, alg.rotate_basis || isnothing(state.X))
+    full = _subspace_reduced_svd(state.core, trunc, alg, refresh || alg.rotate_basis || isnothing(state.X))
     U = state.Y * full.uχ
     V = isnothing(state.X) ? full.vχ : full.vχ * state.X'
     isqS = sdiag_pow(full.sχ, -0.5)
     P_left = isnothing(state.right) ? R * (V' * isqS) : state.right * (full.vχ' * isqS)
     P_right = (isqS * full.uχ') * state.left
-    X = isnothing(state.X) ? copy(full.v') : (alg.rotate_basis ? state.X * full.v' : copy(state.X))
+    rotate = refresh || alg.rotate_basis
+    X = isnothing(state.X) ? copy(full.v') : (rotate ? state.X * full.v' : copy(state.X))
     # Keep the left cache as a lazy adjoint of the existing row-oriented contraction.
-    Y = _retain_subspace_left(alg) ? (alg.rotate_basis ? full.u' * state.Y' : copy(state.Y'))' : nothing
+    Y = _retain_subspace_left(alg) ? (rotate ? full.u' * state.Y' : copy(state.Y'))' : nothing
+    if refresh
+        E = ignore_derivatives(() -> _adaptive_subspace_isometry(full.s, alg, trunc, scalartype(state.core)))
+        X = X * E
+        Y = isnothing(Y) ? nothing : (E' * Y')'
+    end
     return (; U, S = full.sχ, V, X, Y, recycled, freezable, truncation_error = full.error, projectors = (P_left, P_right))
 end
 

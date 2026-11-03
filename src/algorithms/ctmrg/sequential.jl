@@ -119,7 +119,8 @@ function ctmrg_iteration(
         columns = ()
         for col in 1:size(network, 2)
             env, info = ctmrg_leftmove(
-                col, network, env, alg, Xdirection, Ydirection, cache.recycle
+                col, network, env, alg, Xdirection, Ydirection, cache.recycle,
+                _subspace_charge_refresh(cache, alg.projector_alg)
             )
             columns = (columns..., info)
             recycled &= info.recycled
@@ -176,10 +177,10 @@ end
 
 function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv,
-        alg::SubspaceIterationProjector, X, Y, recycle::Bool,
+        alg::SubspaceIterationProjector, X, Y, recycle::Bool, refresh::Bool = false,
     )
     ec, trunc = enlarged_corner_inputs(network, coordinate, env, alg, Val(4))
-    return compute_projector(ec, alg, (; X, Y, trunc, recycle))
+    return compute_projector(ec, alg, (; X, Y, trunc, recycle, refresh))
 end
 
 """

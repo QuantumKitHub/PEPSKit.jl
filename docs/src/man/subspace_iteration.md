@@ -32,6 +32,27 @@ such that the leading ``\chi`` singular directions of ``M`` can be recovered fro
 
     Since ``m`` is usually much larger than ``k``, it is cheaper to compute ``M X = L(R X)``, ``M^{\dagger} Y = R^{\dagger}(L^{\dagger} Y)``, and ``\rho = (Y^{\dagger} L)(R X)``.
 
+## Trial-space selection
+
+| `subspace` | Charge allocation |
+|:--|:--|
+| Elementary space | Explicit multiplicities, clipped to the available spaces. |
+| Positive integer | A total dimension budget allocated using the sampled singular spectrum. |
+
+`trunc` independently selects the retained space: `subspace=24, trunc=truncrank(16)` allows both charge distributions to change.
+Complete multiplets are preserved, so integer budgets may not be filled exactly.
+Fixed-space truncation reserves its required multiplicities in the trial allocation.
+
+For integer budgets:
+
+1. Initially and every `charge_refresh=10` sweeps, probe every shared charge, reusing compatible cached directions and adding orthogonal Gaussian directions.
+   Exploration temporarily uses up to the trial budget per sector.
+2. Apply the selected range update and reduced SVD, then keep the strongest trial directions within the total budget.
+3. Between refreshes, recycle the selected space normally.
+
+Refreshes override freezing and select directions in reduced SVD coordinates; convergence is confirmed on a refresh sweep.
+Set `charge_refresh=0` for initial and incompatible-cache exploration only.
+
 ## Updating range finders
 
 Introduce notations to describe how ``X, Y`` are updated during CTMRG:

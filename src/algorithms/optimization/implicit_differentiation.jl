@@ -206,7 +206,12 @@ _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
 _scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
-    alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    projector = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    if projector isa SubspaceIterationProjector && _adaptive_subspace(alg.projector_alg)
+        # Hold the converged charge allocation fixed together with the incoming bases.
+        projector = @set projector.charge_refresh = 0
+    end
+    alg_fixed = @set alg.projector_alg = projector
     return alg_fixed
 end
 

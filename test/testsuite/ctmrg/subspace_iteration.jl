@@ -32,7 +32,13 @@ function ctmrg_subspace_iteration_configuration(AT)
         @test configured.projector_alg.orth_alg.fwd_alg isa Householder
 
         @test_throws ArgumentError SimultaneousCTMRG(; projector_alg = :SubspaceIterationProjector)
-        @test_throws ArgumentError SubspaceIterationProjector(; subspace = 10)
+        @test SubspaceIterationProjector(; subspace = 10).subspace == 10
+        for subspace in (0, -1, true, truncrank(24))
+            @test_throws ArgumentError SubspaceIterationProjector(; subspace)
+        end
+        @test_throws ArgumentError SubspaceIterationProjector(; subspace = 12, trunc = truncrank(16))
+        @test_throws ArgumentError SubspaceIterationProjector(; subspace = 24, trunc = truncrank(16; rev = false))
+        @test_throws ArgumentError SubspaceIterationProjector(; subspace = 24, charge_refresh = -1)
         for tol in (-1, Inf, NaN)
             @test_throws ArgumentError SubspaceIterationProjector(; subspace = ℂ^10, subspace_tol = tol)
         end

@@ -4,6 +4,9 @@ abstract type ProjectorCache end
 """Empty runtime cache used by projector algorithms without recycled data."""
 struct EmptyProjectorCache <: ProjectorCache end
 
+"""Allow convergence unless an adaptive projector still needs a charge-allocation check."""
+_projector_convergence_ready(cache, alg) = true
+
 """
 Runtime rangefinder and dominant-subspace cache for SI-CTMRG iterations.
 Both `X` and `Y` embed the trial space into the full right and left spaces, respectively.

@@ -17,6 +17,7 @@ function ProjectorAlgorithm(;
         decomposition_alg = (;),
         orth_alg = Defaults.orth_alg,
         subspace = nothing,
+        charge_refresh::Int = Defaults.charge_refresh,
         subspace_tol = Defaults.subspace_tol,
         min_subspace_iters = Defaults.min_subspace_iters,
         update::Symbol = :independent,
@@ -56,10 +57,20 @@ function ProjectorAlgorithm(;
     end
 
     if alg == :SubspaceIterationProjector
-        truncation_strategy isa FixedSpaceTruncation ||
-            throw(ArgumentError("SubspaceIterationProjector only supports FixedSpaceTruncation."))
-        subspace isa ElementarySpace ||
-            throw(ArgumentError("SubspaceIterationProjector requires an elementary `subspace`."))
+        truncation_strategy isa Union{FixedSpaceTruncation, TruncationSpace, MatrixAlgebraKit.TruncationByOrder} ||
+            throw(ArgumentError("SubspaceIterationProjector supports fixed-space, truncspace, or truncrank truncation."))
+        subspace isa ElementarySpace || (subspace isa Integer && !(subspace isa Bool) && 0 < subspace <= typemax(Int)) ||
+            throw(ArgumentError("subspace must be an elementary space or a positive integer dimension."))
+        charge_refresh >= 0 || throw(ArgumentError("charge_refresh must be nonnegative."))
+        if truncation_strategy isa Union{TruncationSpace, MatrixAlgebraKit.TruncationByOrder}
+            truncation_strategy.by === abs && truncation_strategy.rev ||
+                throw(ArgumentError("SubspaceIterationProjector retains the largest singular values."))
+        end
+        if truncation_strategy isa MatrixAlgebraKit.TruncationByOrder
+            truncation_strategy.howmany > 0 || throw(ArgumentError("The retained rank must be positive."))
+            subspace isa Integer && subspace < truncation_strategy.howmany &&
+                throw(ArgumentError("The trial dimension must be at least the retained rank."))
+        end
         update in (:independent, :alternating, :alternating_refined) ||
             throw(ArgumentError("unknown subspace update: $update"))
         n_subspace_iter >= 0 || throw(ArgumentError("n_subspace_iter must be nonnegative."))
@@ -73,6 +84,7 @@ function ProjectorAlgorithm(;
             truncation_strategy,
             orth_alg,
             subspace,
+            charge_refresh,
             Float64(subspace_tol),
             min_subspace_iters,
             verbosity,
