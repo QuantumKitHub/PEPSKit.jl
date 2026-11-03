@@ -18,6 +18,7 @@ function ProjectorAlgorithm(;
         orth_alg = Defaults.orth_alg,
         subspace = nothing,
         charge_refresh::Int = Defaults.charge_refresh,
+        charge_probe = nothing,
         update::Symbol = :independent,
         n_subspace_iter::Int = 0,
         rotate_basis::Bool = true,
@@ -60,6 +61,8 @@ function ProjectorAlgorithm(;
         subspace isa ElementarySpace || (subspace isa Integer && !(subspace isa Bool) && 0 < subspace <= typemax(Int)) ||
             throw(ArgumentError("subspace must be an elementary space or a positive integer dimension."))
         charge_refresh >= 0 || throw(ArgumentError("charge_refresh must be nonnegative."))
+        isnothing(charge_probe) || (charge_probe isa Int && charge_probe > 0) ||
+            throw(ArgumentError("charge_probe must be nothing or a positive Int."))
         if truncation_strategy isa Union{TruncationSpace, MatrixAlgebraKit.TruncationByOrder}
             truncation_strategy.by === abs && truncation_strategy.rev ||
                 throw(ArgumentError("SubspaceIterationProjector retains the largest singular values."))
@@ -79,6 +82,7 @@ function ProjectorAlgorithm(;
             orth_alg,
             subspace,
             charge_refresh,
+            charge_probe,
             verbosity,
             update,
             n_subspace_iter,

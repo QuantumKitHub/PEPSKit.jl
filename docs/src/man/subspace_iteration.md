@@ -51,6 +51,14 @@ For integer budgets:
 3. Between refreshes, recycle the selected space normally.
 
 Refreshes select directions in reduced SVD coordinates; convergence is confirmed on a refresh sweep.
+`charge_probe=nothing` preserves broad exploration. Set `charge_probe=p` to add at
+most `p` multiplicities per shared sector on refreshes of a compatible cache,
+clipped to the same per-sector budget cap. Previously absent charges receive up to
+`p` trial directions. Required fixed-space multiplicities remain reserved.
+Initialization and incompatible-cache recovery always use broad exploration.
+A sufficiently large `p` recovers the broad probe; small values can require several
+refreshes to move many directions into a newly important charge.
+
 Set `charge_refresh=0` for initial and incompatible-cache exploration only.
 
 ## Updating range finders

@@ -1,13 +1,23 @@
 """Identify trial spaces whose charge allocation is selected from a sampled spectrum."""
 _adaptive_subspace(alg::SubspaceIterationProjector) = alg.subspace isa Integer
 
-"""Probe shared sectors up to the integer budget, preserving required fixed-space multiplicities."""
-function _subspace_probe_space(available, alg, trunc)
+"""Probe shared sectors broadly or add bounded multiplicities to a compatible allocation."""
+function _subspace_probe_space(available, alg, trunc, current = nothing)
     budget = Int(alg.subspace)
     required = trunc isa TruncationSpace ? trunc.space : zero(available)
     infimum(required, available) == required || throw(ArgumentError("The environment cannot contain the target truncation space."))
     dim(required) <= budget || throw(ArgumentError("The trial dimension must contain the target truncation space."))
-    K = typeof(available)(s => min(dim(available, s), floor(Int, budget / dim(s))) for s in sectors(available))
+    K = typeof(available)(
+        s => begin
+            cap = min(dim(available, s), floor(Int, budget / dim(s)))
+            if isnothing(current) || isnothing(alg.charge_probe)
+                cap
+            else
+                n = dim(current, s)
+                max(dim(required, s), n + min(alg.charge_probe, cap - n))
+            end
+        end for s in sectors(available)
+    )
     dim(K) > 0 || throw(ArgumentError("The trial budget cannot fit an available symmetry multiplet."))
     return K
 end
@@ -32,7 +42,7 @@ function _adaptive_subspace_space(L, R, alg, ranges)
     end
     refresh = !valid || get(ranges, :refresh, true)
     if refresh
-        K = _subspace_probe_space(available, alg, ranges.trunc)
+        K = _subspace_probe_space(available, alg, ranges.trunc, valid ? K : nothing)
     end
     return K, refresh
 end
@@ -46,7 +56,7 @@ function _resize_subspace_basis(X, output, K, alg, ::Type{T}) where {T}
     old, keep, added, extra = ignore_derivatives() do
         common = infimum(fuse(domain(X)), K)
         extra = K ⊖ common
-        isometry(T, domain(X) ← common), isometry(T, K ← common), isometry(T, K ← extra), extra
+        isometry(T, domain(X) ← common), isometry(T, K ← common), left_null(isometry(T, K ← common)), extra
     end
     U = X * old
     dim(extra) == 0 && return U * keep'

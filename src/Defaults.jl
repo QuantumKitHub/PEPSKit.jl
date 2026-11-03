@@ -74,6 +74,7 @@ Module containing default algorithm parameter values and arguments.
     - `:SubspaceIterationProjector` : Projection via recycled subspace iteration of the full-infinite environment.
 * `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
 * `orth_alg=$(Defaults.orth_alg)` : QR/LQ algorithm configuration used by the subspace-iteration projector.
+* `charge_probe=nothing` : Positive integers limit added trial multiplicities per sector on compatible-cache refreshes; `nothing` probes broadly.
 * `charge_refresh=$(Defaults.charge_refresh)` : Sweep interval for exploring trial charges when `subspace` is an integer; zero disables periodic exploration.
 * `projector_alg_c4v=:$(Defaults.projector_alg_c4v)` : Default variant of the C4v CTMRG projector algorithm.
     - `:C4vEighProjector` : Projection via truncated Eigh of an enlarged corner.

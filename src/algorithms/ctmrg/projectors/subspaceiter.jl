@@ -6,6 +6,8 @@ Supply `subspace` as an elementary space with explicit charge multiplicities, or
 An integer budget selects its charge distribution from the sampled singular spectrum, preserving complete multiplets.
 `trunc` independently selects the retained environment: [`FixedSpaceTruncation`](@ref), `truncspace`, or `truncrank`.
 With fixed target sectors, the trial allocation reserves their required multiplicities.
+`charge_probe=nothing` uses broad exploration; a positive integer limits added multiplicities per sector on compatible-cache refreshes.
+Initialization and incompatible-cache recovery remain broad.
 Integer allocations are explored initially and every `charge_refresh=$(Defaults.charge_refresh)` sweeps.
 Set `charge_refresh=0` to disable periodic exploration; incompatible cached spaces still trigger exploration.
 Refreshes select trial directions in reduced SVD coordinates even when ordinary basis rotations are disabled.
@@ -35,6 +37,7 @@ struct SubspaceIterationProjector{M, S <: SVDAdjoint, T, Q <: OrthAdjoint, E <: 
     orth_alg::Q
     subspace::E
     charge_refresh::Int
+    charge_probe::Union{Nothing, Int}
     verbosity::Int
     update::Symbol
     n_subspace_iter::Int
@@ -47,9 +50,9 @@ function SubspaceIterationProjector(; kwargs...)
 end
 
 """Specialize the range kernel on the selected update without additional public algorithm types."""
-function SubspaceIterationProjector(svd, trunc, orth, space, refresh, verbosity, update::Symbol, q::Int, rotate::Bool, rng)
+function SubspaceIterationProjector(svd, trunc, orth, space, refresh, probe, verbosity, update::Symbol, q::Int, rotate::Bool, rng)
     return SubspaceIterationProjector{update, typeof(svd), typeof(trunc), typeof(orth), typeof(space), typeof(rng)}(
-        svd, trunc, orth, space, refresh, verbosity, update, q, rotate, rng
+        svd, trunc, orth, space, refresh, probe, verbosity, update, q, rotate, rng
     )
 end
 

@@ -51,13 +51,13 @@ end
 """Compare rank-changing sweeps with full SVD and check refresh and fixed-point policies."""
 function ctmrg_subspace_dimensions_sweeps(AT)
     return @testset "Adaptive CTMRG sweeps" begin
-        @testset "$flavor, $update" for flavor in (SimultaneousCTMRG, SequentialCTMRG), update in (:independent, :alternating, :alternating_refined)
+        @testset "$flavor, $update, probe=$probe" for flavor in (SimultaneousCTMRG, SequentialCTMRG), update in (:independent, :alternating, :alternating_refined), probe in (nothing, 1)
             Random.seed!(274)
             P, V = U1Space(-1 => 1, 0 => 1, 1 => 1), U1Space(0 => 1, 1 => 1)
             ψ = adapt(AT, InfinitePEPS(P, V; unitcell = (2, 1)))
             network = InfiniteSquareNetwork(ψ)
             env = CTMRGEnv(ψ, U1Space(0 => 2))
-            projector = SubspaceIterationProjector(; subspace = 4, trunc = truncrank(2), update, charge_refresh = 1)
+            projector = SubspaceIterationProjector(; subspace = 4, trunc = truncrank(2), update, charge_refresh = 1, charge_probe = probe)
             alg = flavor(0.0, 2, 2, 0, projector)
             reference = flavor(; projector_alg = :FullInfiniteProjector, trunc = truncrank(2), verbosity = 0)
             cache = PEPSKit.initialize_projector_cache(network, env, alg)
@@ -79,9 +79,62 @@ function ctmrg_subspace_dimensions_sweeps(AT)
     end
 end
 
+"""Discover absent charges incrementally and recover broad probing when requested."""
+function ctmrg_subspace_dimensions_hybrid(AT)
+    return @testset "Hybrid charge probes" begin
+        @test isnothing(SubspaceIterationProjector(; subspace = 6).charge_probe)
+        for probe in (0, -1, true, 1.5)
+            @test_throws ArgumentError SubspaceIterationProjector(; subspace = 6, charge_probe = probe)
+        end
+        W = U1Space(0 => 3, 1 => 3, 2 => 3)
+        A = zeros(ComplexF64, W ← W)
+        for (c, b) in blocks(A)
+            b[diagind(b)] .= c == U1Irrep(1) ? [100, 90, 80] : c == U1Irrep(0) ? [6, 5, 4] : [3, 2, 1]
+        end
+        A = adapt(AT, A)
+        initial = U1Space(0 => 3, 2 => 3)
+        @testset "$update" for update in (:independent, :alternating, :alternating_refined)
+            alg = SubspaceIterationProjector(; subspace = 6, trunc = truncrank(4), charge_probe = 1, update)
+            Random.seed!(277)
+            X, Y = PEPSKit.rangefinder_initialize(A, id(W), initial, alg)
+            incoming = (; X, Y, trunc = alg.trunc, refresh = true)
+            K, refresh = PEPSKit._adaptive_subspace_space(A, id(W), alg, incoming)
+            @test refresh && K == U1Space(0 => 3, 1 => 1, 2 => 3)
+            broad = PEPSKit.@set alg.charge_probe = nothing
+            large = PEPSKit.@set alg.charge_probe = 6
+            @test first(PEPSKit._adaptive_subspace_space(A, id(W), broad, incoming)) == W
+            @test first(PEPSKit._adaptive_subspace_space(A, id(W), large, incoming)) == W
+            @test first(PEPSKit._adaptive_subspace_space(A, id(W), alg, (; incoming..., X = nothing))) == W
+            @test first(PEPSKit._adaptive_subspace_space(A, id(W), alg, (; incoming..., X = real(X)))) == W
+            local result
+            for n in 1:3
+                probe, = PEPSKit._adaptive_subspace_space(A, id(W), alg, incoming)
+                expanded = PEPSKit._resize_subspace_basis(incoming.X, codomain(A), probe, alg, ComplexF64)
+                @test expanded' * expanded ≈ id(ComplexF64, domain(expanded)) atol = 1.0e-12
+                result = PEPSKit._subspace_iteration_decomposition(A, id(W), alg, incoming)
+                selected = fuse(domain(result.X))
+                @test dim(selected, U1Irrep(1)) == n
+                @test dim(selected) <= 6
+                incoming = (; result.X, result.Y, trunc = alg.trunc, refresh = true)
+            end
+            @test fuse(domain(result.X)) == U1Space(0 => 3, 1 => 3)
+            u, s, v, = svd_trunc(A, TruncatedAlgorithm(DefaultAlgorithm(), alg.trunc))
+            actual, expected = result.U * result.S * result.V, u * s * v
+            @test actual / norm(actual) ≈ expected / norm(expected) atol = 1.0e-10
+            fixed = truncspace(U1Space(0 => 2, 1 => 2))
+            @test first(PEPSKit._adaptive_subspace_space(A, id(W), alg, (; incoming..., X, Y, trunc = fixed))) == W
+        end
+        W = SU2Space(0 => 6, 1 // 2 => 4)
+        alg = SubspaceIterationProjector(; subspace = 6, charge_probe = 1)
+        current = SU2Space(0 => 2, 1 // 2 => 1)
+        @test PEPSKit._subspace_probe_space(W, alg, truncrank(3), current) == SU2Space(0 => 3, 1 // 2 => 2)
+    end
+end
+
 """Run focused checks for automatically allocated integer trial dimensions."""
 function ctmrg_subspace_dimensions(AT)
     return @testset "Subspace dimensions ($AT)" begin
+        ctmrg_subspace_dimensions_hybrid(AT)
         ctmrg_subspace_dimensions_selection(AT)
         ctmrg_subspace_dimensions_sweeps(AT)
     end
