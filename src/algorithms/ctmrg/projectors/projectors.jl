@@ -18,8 +18,6 @@ function ProjectorAlgorithm(;
         orth_alg = Defaults.orth_alg,
         subspace = nothing,
         charge_refresh::Int = Defaults.charge_refresh,
-        subspace_tol = Defaults.subspace_tol,
-        min_subspace_iters = Defaults.min_subspace_iters,
         update::Symbol = :independent,
         n_subspace_iter::Int = 0,
         rotate_basis::Bool = true,
@@ -74,10 +72,6 @@ function ProjectorAlgorithm(;
         update in (:independent, :alternating, :alternating_refined) ||
             throw(ArgumentError("unknown subspace update: $update"))
         n_subspace_iter >= 0 || throw(ArgumentError("n_subspace_iter must be nonnegative."))
-        isfinite(subspace_tol) && subspace_tol >= 0 ||
-            throw(ArgumentError("subspace_tol must be finite and nonnegative."))
-        min_subspace_iters >= 1 ||
-            throw(ArgumentError("min_subspace_iters must be positive."))
         orth_alg = _alg_or_nt(OrthAdjoint, orth_alg)
         return alg_type(
             decomposition_algorithm,
@@ -85,8 +79,6 @@ function ProjectorAlgorithm(;
             orth_alg,
             subspace,
             charge_refresh,
-            Float64(subspace_tol),
-            min_subspace_iters,
             verbosity,
             update,
             n_subspace_iter,

@@ -106,11 +106,9 @@ function ctmrg_iteration(
     if !_compatible_subspace_cache(cache, env, alg.projector_alg)
         cache = initialize_projector_cache(network, env, alg)
     end
-    grids = (cache.X, cache.Y, cache.U, cache.V)
+    grids = (cache.X, cache.Y)
 
     # Perform four directional moves, expressing each one as a column left-move.
-    recycled = true
-    freezable = true
     for _ in 1:4
         # Select the rangefinders aligned with the current left-move direction.
         Xdirection = grids[1][WEST, :, :]
@@ -119,12 +117,10 @@ function ctmrg_iteration(
         columns = ()
         for col in 1:size(network, 2)
             env, info = ctmrg_leftmove(
-                col, network, env, alg, Xdirection, Ydirection, cache.recycle,
+                col, network, env, alg, Xdirection, Ydirection,
                 _subspace_charge_refresh(cache, alg.projector_alg)
             )
             columns = (columns..., info)
-            recycled &= info.recycled
-            freezable &= info.freezable
             ignore_derivatives() do
                 truncation_error = max(truncation_error, info.truncation_error)
             end
@@ -132,7 +128,7 @@ function ctmrg_iteration(
 
         grids = map(
             (grid, key) -> _rotate_subspace_grid(_replace_subspace_phase(grid, columns, key)),
-            grids, (:X, :Y, :U, :V),
+            grids, (:X, :Y),
         )
 
         # Rotate the network, environment, and cache into the frame of the next left move.
@@ -141,10 +137,9 @@ function ctmrg_iteration(
     end
 
     cache′, subspace_error = _update_subspace_cache(
-        cache, grids...,
-        alg.projector_alg, freezable
+        cache, grids...
     )
-    info = (; contraction_metrics = (; truncation_error, subspace_error, recycled))
+    info = (; contraction_metrics = (; truncation_error, subspace_error))
     return env, info, cache′
 end
 
@@ -177,10 +172,10 @@ end
 
 function sequential_projectors(
         coordinate::NTuple{3, Int}, network, env::CTMRGEnv,
-        alg::SubspaceIterationProjector, X, Y, recycle::Bool, refresh::Bool = false,
+        alg::SubspaceIterationProjector, X, Y, refresh::Bool = false,
     )
     ec, trunc = enlarged_corner_inputs(network, coordinate, env, alg, Val(4))
-    return compute_projector(ec, alg, (; X, Y, trunc, recycle, refresh))
+    return compute_projector(ec, alg, (; X, Y, trunc, refresh))
 end
 
 """

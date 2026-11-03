@@ -101,9 +101,9 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
     - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
   Its `update` selects `:independent` (default, independent updates), `:alternating` (alternating QR/LQ), or `:alternating_refined` (with a final left-basis refinement).
-  For example, use `projector_alg=(; alg=:SubspaceIterationProjector, subspace=ℂ^10, update=:alternating, n_subspace_iter=1, subspace_tol=0)` for active alternating refinement with one extra power step.
+  For example, use `projector_alg=(; alg=:SubspaceIterationProjector, subspace=ℂ^10, update=:alternating, n_subspace_iter=1)` for active alternating refinement with one extra power step.
   Use `subspace=24, trunc=truncrank(16)` to adapt both trial and retained charge distributions; `charge_refresh` controls the exploration interval.
-  `rotate_basis=true` retains complete trial directions in reduced singular-vector coordinates, and positive `subspace_tol` permits freezing after `min_subspace_iters` sweeps.
+  `rotate_basis=true` expresses all trial directions in reduced singular-vector coordinates.
 * `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:OrthAdjoint}` : Tensor decomposition algorithm used for computing projectors.
   When specified as a `NamedTuple`, the settings are passed as the forward algorithm to the appropriate decomposition for the given projector algorithm.
   For information on which forward algorithms are available, and how to specify them, see [`SVDAdjoint`](@ref), [`EighAdjoint`](@ref) and [`OrthAdjoint`](@ref).
@@ -144,8 +144,13 @@ function _leading_boundary_with_cache(
         projector_cache = initialize_projector_cache(network, env, alg)
         converged = false
         for iter in 1:(alg.maxiter)
+            previous = env
             env, info_iter, projector_cache = ctmrg_iteration(network, env, alg, projector_cache)
             η, CS, TS = calc_convergence(env, CS, TS, alg)
+            η = max(η, get(info_iter.contraction_metrics, :subspace_error, zero(η)))
+            if projector_cache isa SubspaceIterationCache
+                η = max(η, ignore_derivatives(() -> norm(fix_global_phases(env, previous) - previous) / norm(previous)))
+            end
 
             if η ≤ alg.tol && iter ≥ alg.miniter && _projector_convergence_ready(projector_cache, alg.projector_alg)
                 ctmrg_logfinish!(log, iter, η, network, env)

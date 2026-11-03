@@ -12,7 +12,7 @@ function _subspace_probe_space(available, alg, trunc)
     return K
 end
 
-"""Refresh shared charges periodically, including when the cached range finders are frozen."""
+"""Refresh shared charges periodically."""
 _subspace_charge_refresh(cache, alg) = _adaptive_subspace(alg) && (cache.iteration == 0 || (alg.charge_refresh > 0 && cache.iteration % alg.charge_refresh == 0))
 
 """Confirm convergence on a charge-refresh sweep when periodic exploration is enabled."""

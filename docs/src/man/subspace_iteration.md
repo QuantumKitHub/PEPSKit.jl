@@ -50,7 +50,7 @@ For integer budgets:
 2. Apply the selected range update and reduced SVD, then keep the strongest trial directions within the total budget.
 3. Between refreshes, recycle the selected space normally.
 
-Refreshes override freezing and select directions in reduced SVD coordinates; convergence is confirmed on a refresh sweep.
+Refreshes select directions in reduced SVD coordinates; convergence is confirmed on a refresh sweep.
 Set `charge_refresh=0` for initial and incompatible-cache exploration only.
 
 ## Updating range finders
@@ -256,37 +256,34 @@ X_n \leftarrow X_n v_n = \widehat{V}_n, \qquad Y_n \leftarrow Y_n u_n = \widehat
 The rotated range finders directly give ``Y_n^{\dagger} M_n X_n = s_n``.
 The range recurrence relations are unchanged.
 
-- **Cache:** alternating variants need only ``X_n`` for active updates; retain ``Y_n`` when freezing is enabled.
+- **Cache:** independent updates retain ``X_n,Y_n``; alternating variants retain only ``X_n``.
 
-## Freezing range finders
+## Convergence and differentiation
 
-At each unit-cell position and contraction direction, compare the leading ``\chi`` lifted directions ``B_n = \widehat{U}_{\chi,n}`` or ``\widehat{V}_{\chi,n}`` with those from the previous sweep.
-
-For these orthonormal bases, the principal angles satisfy ``\sigma_i(B_{n-1}^{\dagger} B_n) = \cos(\theta_i)``.
-The squared Frobenius norm is the sum of squared singular values, so
+Range finders are updated every sweep. In addition to the environment spectra,
+convergence checks elementwise environment changes (up to global tensor phases)
+and the complete trial subspaces at every position and direction:
 
 ```math
-\begin{aligned}
-    \|B_{n-1}^{\dagger} B_n\|_F^2 &= \sum_{i=1}^{\chi} \cos^2(\theta_i), \\
-    \epsilon_n(B) &= 1 - \frac{\|B_{n-1}^{\dagger} B_n\|_F^2}{\chi}
-    = \frac{1}{\chi} \sum_{i=1}^{\chi} \sin^2(\theta_i).
-\end{aligned}
+\epsilon(B_{n-1}, B_n)
+= \frac{\|B_n-B_{n-1}(B_{n-1}^{\dagger}B_n)\|_F}{\sqrt{k}}.
 ```
 
-This measures subspace changes independently of basis rotations.
-Take the maximum error over both left/right subspaces, all unit-cell positions, and all CTMRG move directions.
+For orthonormal bases this is the RMS sine of the principal angles. The residual
+form avoids subtracting nearly equal norms. Its maximum over the cached bases
+must satisfy the CTMRG tolerance, including oversampling directions.
 
-- **Decision:** freeze the next sweep's range updates only if this maximum is below the chosen positive tolerance and the minimum sweep count has been reached.
-- **Frozen sweep:** reuse ``X,Y``, but still recompute ``\rho``, its SVD, and optional basis rotations.
-  Reevaluate the monitor every sweep and reactivate range updates if the criterion fails.
-  Zero tolerance disables freezing and the monitor.
+`FixedPointGradient` differentiates the joint fixed point of the environment and
+cached range finders. Charge allocations are held fixed during differentiation.
+Global environment phases and trial-basis frames are aligned before solving the coupled
+adjoint equations. `gradient_alg=nothing` instead differentiates through all sweeps.
 
 ## Computational and memory costs
 
 For square half environments of dimension ``m``, the table counts active range updates and construction of ``\rho`` per unit-cell position and CTMRG move direction, at fixed ``k,q`` in sampled sectors.
 One half-environment application to ``k`` directions costs ``O(m^2 k)``; thin QR/LQ costs ``O(m k^2)``; the reduced SVD costs ``O(k^3)``.
 
-| Variant | Half-environment applications | QR/LQ count | Basis cache, freezing disabled |
+| Variant | Half-environment applications | QR/LQ count | Basis cache |
 | --- | ---: | ---: | ---: |
 | Independent | ``8(q + 1) + 2`` | ``2(q + 1)`` | ``2mk`` |
 | Alternating | ``4(q + 1)`` | ``2(q + 1)`` | ``mk`` |
@@ -294,6 +291,5 @@ One half-environment application to ``k`` directions costs ``O(m^2 k)``; thin QR
 
 - **Projector construction:** excluded above; standard alternating additionally applies ``R`` to ``\chi`` directions, costing ``O(m^2\chi)``.
 - **Memory:** all require ``O(mk + k^2)`` temporary workspace, excluding shared corner tensors.
-  With freezing enabled, all cache ``X,Y`` and both leading-``\chi`` singular bases, totaling approximately ``2mk + 2m\chi`` entries.
-- **Comparison:** alternating reduces operation counts and, when freezing is disabled, the basis cache; all retain the same asymptotic scaling.
+- **Comparison:** alternating reduces operation counts and the basis cache; all retain the same asymptotic scaling.
   Iteration counts at matched accuracy can differ.

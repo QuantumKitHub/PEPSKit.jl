@@ -15,12 +15,11 @@ function subspace_update_difference(f, x, direction; h = 1.0e-6)
 end
 
 """Contract two production sweeps with the first sweep's cache retained in the graph."""
-function subspace_two_sweep_energy(ψ, env, alg, cache, H, frozen)
+function subspace_two_sweep_energy(ψ, env, alg, cache, H)
     network = InfiniteSquareNetwork(ψ)
     env1, _, cache1 = PEPSKit.ctmrg_iteration(network, env, alg, cache)
-    cache1 = PEPSKit.SubspaceIterationCache(cache1.iteration, frozen, cache1.X, cache1.Y, cache1.U, cache1.V)
     env2, info, _ = PEPSKit.ctmrg_iteration(network, env1, alg, cache1)
-    return cost_function(ψ, env2, H), info.contraction_metrics.recycled
+    return cost_function(ψ, env2, H)
 end
 
 """Check matrix for the subspace iteration projector."""
@@ -33,15 +32,15 @@ function gradients_subspace_updates_matrix(AT)
             direction /= norm(direction)
             alg = SubspaceIterationProjector(;
                 subspace = K, update, n_subspace_iter = q,
-                rotate_basis = rotate, subspace_tol = 0
+                rotate_basis = rotate,
             )
             X, Y = PEPSKit.rangefinder_initialize(A, id(T, W), K, alg)
-            initial = (; X, Y, trunc = truncspace(χ), recycle = false)
+            initial = (; X, Y, trunc = truncspace(χ))
             function loss(t)
                 step = PEPSKit._subspace_iteration_decomposition(t, id(T, W), alg, initial)
                 result = PEPSKit._subspace_iteration_decomposition(
                     t, id(T, W), alg,
-                    (; step.X, step.Y, initial.trunc, recycle = false)
+                    (; step.X, step.Y, initial.trunc)
                 )
                 return real(dot(target, result.U * result.S * result.V))
             end
@@ -67,14 +66,14 @@ function gradients_subspace_updates_symmetric(AT)
             Random.seed!(84265)
             A, direction, target = adapt(AT, randn(ComplexF64, W ← W)), adapt(AT, randn(ComplexF64, W ← W)), adapt(AT, randn(ComplexF64, W ← W))
             direction /= norm(direction)
-            alg = SubspaceIterationProjector(; subspace = K, update, n_subspace_iter = 1, subspace_tol = 0)
+            alg = SubspaceIterationProjector(; subspace = K, update, n_subspace_iter = 1)
             X, Y = PEPSKit.rangefinder_initialize(A, id(ComplexF64, W), K, alg)
-            initial = (; X, Y, trunc = truncspace(χ), recycle = false)
+            initial = (; X, Y, trunc = truncspace(χ))
             function loss(t)
                 step = PEPSKit._subspace_iteration_decomposition(t, id(ComplexF64, W), alg, initial)
                 result = PEPSKit._subspace_iteration_decomposition(
                     t, id(ComplexF64, W), alg,
-                    (; step.X, step.Y, initial.trunc, recycle = false)
+                    (; step.X, step.Y, initial.trunc)
                 )
                 return real(dot(target, result.U * result.S * result.V))
             end
@@ -84,11 +83,11 @@ function gradients_subspace_updates_symmetric(AT)
     end
 end
 
-"""Check frozen for the subspace iteration projector."""
-function gradients_subspace_updates_frozen(AT)
-    return @testset "Active and frozen production pullbacks" begin
+"""Check differentiation through consecutive production sweeps."""
+function gradients_subspace_updates_sweeps(AT)
+    return @testset "Two-sweep production pullbacks" begin
         settings = ((:independent, 0), (:alternating_refined, 0), (:alternating, 0), (:alternating, 1))
-        @testset "$update, q=$q, $flavor, rotate=$rotate, frozen=$frozen" for (update, q) in settings, flavor in (SimultaneousCTMRG, SequentialCTMRG), rotate in (false, true), frozen in (false, true)
+        @testset "$update, q=$q, $flavor, rotate=$rotate" for (update, q) in settings, flavor in (SimultaneousCTMRG, SequentialCTMRG), rotate in (false, true)
             Random.seed!(84266)
             ψ = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2))
             ψ /= norm(ψ)
@@ -98,14 +97,12 @@ function gradients_subspace_updates_frozen(AT)
             H = adapt(AT, heisenberg_XYZ(InfiniteSquare()))
             projector = SubspaceIterationProjector(;
                 subspace = ℂ^4, update, n_subspace_iter = q,
-                rotate_basis = rotate, subspace_tol = frozen ? 1.0e-3 : 0.0
+                rotate_basis = rotate
             )
             alg = flavor(0.0, 2, 2, 0, projector)
             cache = PEPSKit.initialize_projector_cache(InfiniteSquareNetwork(ψ), env, alg)
-            loss(x) = first(subspace_two_sweep_energy(x, env, alg, cache, H, frozen))
+            loss(x) = subspace_two_sweep_energy(x, env, alg, cache, H)
             gradient = only(Zygote.gradient(loss, ψ))
-            _, applied = subspace_two_sweep_energy(ψ, env, alg, cache, H, frozen)
-            @test applied == frozen
             @test real(dot(gradient, direction)) ≈ subspace_update_difference(loss, ψ, direction; h = 1.0e-7) rtol = 3.0e-5 atol = 3.0e-7
         end
     end
@@ -113,20 +110,21 @@ end
 
 """Check fixed point for the subspace iteration projector."""
 function gradients_subspace_updates_fixed_point(AT)
-    return @testset "Exact-rank fixed-point gradients" begin
-        @testset "$update, $flavor" for update in (:independent, :alternating, :alternating_refined), flavor in (SimultaneousCTMRG, SequentialCTMRG)
+    references = Dict()
+    return @testset "Compressed fixed-point gradients" begin
+        @testset "$update, $flavor, $unitcell" for update in (:independent, :alternating, :alternating_refined), flavor in (SimultaneousCTMRG, SequentialCTMRG), unitcell in ((1, 1), (2, 1))
             Random.seed!(84267)
-            ψ = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2))
+            ψ = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2; unitcell))
             ψ /= norm(ψ)
-            direction = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2))
+            direction = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2; unitcell))
             direction /= norm(direction)
-            env = CTMRGEnv(ψ, ℂ^2)
-            H = adapt(AT, heisenberg_XYZ(InfiniteSquare()))
+            env = CTMRGEnv(ψ, ℂ^4)
+            H = adapt(AT, heisenberg_XYZ(InfiniteSquare(unitcell...)))
             alg = flavor(;
-                tol = 1.0e-11, miniter = 20, maxiter = 200, verbosity = 0,
+                tol = 1.0e-11, miniter = 20, maxiter = 500, verbosity = 0,
                 projector_alg = (;
-                    alg = :SubspaceIterationProjector, subspace = ℂ^8, update,
-                    n_subspace_iter = update == :alternating ? 1 : 0, subspace_tol = 0,
+                    alg = :SubspaceIterationProjector, subspace = ℂ^6, update,
+                    n_subspace_iter = update == :alternating ? 1 : 0,
                 )
             )
             mode = FixedPointGradient(; solver_alg = (; alg = :GMRES, tol = 1.0e-10, maxiter = 100))
@@ -138,7 +136,20 @@ function gradients_subspace_updates_fixed_point(AT)
             _, info = leading_boundary(env, ψ, alg)
             @test info.converged
             gradient = only(Zygote.gradient(loss, ψ))
-            @test real(dot(gradient, direction)) ≈ subspace_update_difference(loss, ψ, direction; h = 1.0e-4) rtol = 1.0e-4 atol = 1.0e-7
+            reference = get!(references, (flavor, unitcell)) do
+                full = flavor(; tol = 1.0e-12, maxiter = 500, verbosity = 0, projector_alg = :FullInfiniteProjector)
+                f(x) = cost_function(x, first(PEPSKit.hook_pullback(leading_boundary, env, x, full; alg_rrule = mode)), H)
+                only(Zygote.gradient(f, ψ))
+            end
+            @test norm(gradient - reference) / norm(reference) < 1.0e-7
+            if update == :independent && flavor == SimultaneousCTMRG && unitcell == (1, 1)
+                for solver in (:Arnoldi, :BiCGStab, :GeomSum, :ManualIter)
+                    other = FixedPointGradient(; solver_alg = (; alg = solver, tol = 1.0e-10, maxiter = 200))
+                    f(x) = cost_function(x, first(PEPSKit.hook_pullback(leading_boundary, env, x, alg; alg_rrule = other)), H)
+                    @test norm(only(Zygote.gradient(f, ψ)) - reference) / norm(reference) < 1.0e-7
+                end
+            end
+            @test real(dot(gradient, direction)) ≈ subspace_update_difference(loss, ψ, direction; h = 1.0e-4) rtol = 1.0e-7 atol = 1.0e-9
         end
     end
 end
@@ -148,7 +159,7 @@ function gradients_subspace_updates(AT)
     return @testset "Subspace update gradients ($AT)" begin
         gradients_subspace_updates_matrix(AT)
         gradients_subspace_updates_symmetric(AT)
-        gradients_subspace_updates_frozen(AT)
+        gradients_subspace_updates_sweeps(AT)
         gradients_subspace_updates_fixed_point(AT)
     end
 end

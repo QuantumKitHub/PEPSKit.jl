@@ -6,21 +6,18 @@ Supply `subspace` as an elementary space with explicit charge multiplicities, or
 An integer budget selects its charge distribution from the sampled singular spectrum, preserving complete multiplets.
 `trunc` independently selects the retained environment: [`FixedSpaceTruncation`](@ref), `truncspace`, or `truncrank`.
 With fixed target sectors, the trial allocation reserves their required multiplicities.
-Integer allocations are explored initially and every `charge_refresh=$(Defaults.charge_refresh)` sweeps, even if range finders are frozen.
+Integer allocations are explored initially and every `charge_refresh=$(Defaults.charge_refresh)` sweeps.
 Set `charge_refresh=0` to disable periodic exploration; incompatible cached spaces still trigger exploration.
 Refreshes select trial directions in reduced SVD coordinates even when ordinary basis rotations are disabled.
+See [Subspace-iteration CTMRG projectors](@ref subspace_iteration) for update equations and convergence.
 Both trial bases embed the reduced space into the full environment spaces: ``X^{\\dagger} X = Y^{\\dagger} Y = I`` and ``ρ = Y^{\\dagger} M X``.
-See [Subspace-iteration CTMRG projectors](@ref subspace_iteration) for the update equations, singular-subspace recovery, and freezing criterion.
 
 The `update` selector chooses `:independent` (default, the paper's two-factorization independent update), `:alternating` (alternating QR/LQ with a reused reduced factor), or `:alternating_refined` (three factorizations with a final left-basis refresh).
 `n_subspace_iter=q` adds `q` independent updates, or `q` stabilized right-basis power steps before the mandatory alternating update.
 `rotate_basis=true` expresses the complete trial bases in the reduced SVD coordinates, retaining all oversampling directions.
-`subspace_tol=0` disables freezing and its principal-angle monitor; otherwise refinement may be skipped after `min_subspace_iters` sweeps.
-Active alternating updates without freezing retain only the right basis.
 
-[`FixedPointGradient`](@ref) holds incoming recycled bases and their charge allocation fixed while differentiating the sweep.
+[`FixedPointGradient`](@ref) differentiates the joint environment/rangefinder fixed point, holding only the charge allocation fixed.
 Use `gradient_alg=nothing` in [`PEPSOptimize`](@ref) to differentiate through all sweeps and recycled bases.
-Use `subspace_tol=0` to retain refinement within a fixed-point differentiated sweep.
 
 ## Fields
 
@@ -30,7 +27,7 @@ $(TYPEDFIELDS)
 
     SubspaceIterationProjector(; subspace, kwargs...)
 
-Defaults are `update=:independent`, `n_subspace_iter=0`, `rotate_basis=true`, `subspace_tol=$(Defaults.subspace_tol)`, `min_subspace_iters=$(Defaults.min_subspace_iters)`, `rng=Random.default_rng()`, `decomposition_alg=SVDAdjoint()`, `orth_alg=OrthAdjoint()`, and `trunc=FixedSpaceTruncation()`.
+Defaults are `update=:independent`, `n_subspace_iter=0`, `rotate_basis=true`, `rng=Random.default_rng()`, `decomposition_alg=SVDAdjoint()`, `orth_alg=OrthAdjoint()`, and `trunc=FixedSpaceTruncation()`.
 """
 struct SubspaceIterationProjector{M, S <: SVDAdjoint, T, Q <: OrthAdjoint, E <: Union{ElementarySpace, Integer}, R} <: ProjectorAlgorithm
     decomposition_alg::S
@@ -38,8 +35,6 @@ struct SubspaceIterationProjector{M, S <: SVDAdjoint, T, Q <: OrthAdjoint, E <: 
     orth_alg::Q
     subspace::E
     charge_refresh::Int
-    subspace_tol::Float64
-    min_subspace_iters::Int
     verbosity::Int
     update::Symbol
     n_subspace_iter::Int
@@ -52,16 +47,15 @@ function SubspaceIterationProjector(; kwargs...)
 end
 
 """Specialize the range kernel on the selected update without additional public algorithm types."""
-function SubspaceIterationProjector(svd, trunc, orth, space, refresh, tol, miniter, verbosity, update::Symbol, q::Int, rotate::Bool, rng)
+function SubspaceIterationProjector(svd, trunc, orth, space, refresh, verbosity, update::Symbol, q::Int, rotate::Bool, rng)
     return SubspaceIterationProjector{update, typeof(svd), typeof(trunc), typeof(orth), typeof(space), typeof(rng)}(
-        svd, trunc, orth, space, refresh, tol, miniter, verbosity, update, q, rotate, rng
+        svd, trunc, orth, space, refresh, verbosity, update, q, rotate, rng
     )
 end
 
 PROJECTOR_SYMBOLS[:SubspaceIterationProjector] = SubspaceIterationProjector
 
-"""Retain a left basis only for independent updates or possible freezing."""
-_retain_subspace_left(alg::SubspaceIterationProjector{M}) where {M} = M == :independent || alg.subspace_tol > 0
+_retain_subspace_left(alg::SubspaceIterationProjector{M}) where {M} = M == :independent
 
 """Apply a half environment through its enlarged corners without forming their product."""
 struct SIHalfEnvironment{L, R, S}
@@ -105,22 +99,11 @@ function _subspace_iteration_space(left, right, alg, trunc)
     return K
 end
 
-"""Keep rectangular complete sectors active so their exact range follows the current map."""
-function _subspace_freezable(left, right, K)
-    L, R = fuse(left), fuse(right)
-    return all(sectors(K)) do s
-        m, n, k = dim(L, s), dim(R, s), dim(K, s)
-        return k < min(m, n) || m == n
-    end
-end
-
 """Initialize right and required left isometries from the trial space into the full spaces."""
 function rangefinder_initialize(::Type{T}, left::ProductSpace, right::ProductSpace, K::ElementarySpace, alg::SubspaceIterationProjector{M}) where {T, M}
     X, _ = left_orth!(randn(alg.rng, T, right ← K), alg.orth_alg)
     Y = if M == :independent
         last(right_orth!(randn(alg.rng, T, K ← left), alg.orth_alg))'
-    elseif _retain_subspace_left(alg)
-        zeros(T, K ← left)'
     else
         nothing
     end
@@ -133,34 +116,21 @@ function rangefinder_initialize(L, R, K::ElementarySpace, alg::SubspaceIteration
 end
 
 """Initialize one directional cache entry without forming enlarged corners."""
-function _initialize_subspace_iteration_entry(network::InfiniteSquareNetwork, env::CTMRGEnv, coordinate::NTuple{3, Int}, alg::SubspaceIterationProjector{M}) where {M}
+function _initialize_subspace_iteration_entry(network::InfiniteSquareNetwork, env::CTMRGEnv, coordinate::NTuple{3, Int}, alg::SubspaceIterationProjector)
     coordinates, trunc = _enlarged_corner_layout(coordinate, env, alg, Val(4))
     left = codomain(EnlargedCorner(network, env, first(coordinates)))
     right = domain(EnlargedCorner(network, env, last(coordinates)))
     K = _subspace_iteration_space(left, right, alg, trunc)
     T = scalartype(network)
     X, Y = rangefinder_initialize(T, left, right, K, alg)
-    target = trunc isa TruncationSpace ? trunc.space : zero(K)
-    U, V = if alg.subspace_tol > 0
-        if M == :independent && !_adaptive_subspace(alg) && trunc isa TruncationSpace
-            u, _ = left_orth!(randn(alg.rng, T, left ← target), alg.orth_alg)
-            _, v = right_orth!(randn(alg.rng, T, target ← right), alg.orth_alg)
-            u, v
-        else
-            zeros(T, left ← target), zeros(T, target ← right)
-        end
-    else
-        nothing, nothing
-    end
-    return (; X, Y, U, V)
+    return (; X, Y)
 end
 
-"""Initialize only the trial and monitoring grids required by the selected update."""
+"""Initialize only the trial grids required by the selected update."""
 function initialize_subspace_iteration_cache(network::InfiniteSquareNetwork, env::CTMRGEnv, alg::SubspaceIterationProjector)
     entries = map(c -> _initialize_subspace_iteration_entry(network, env, c, alg), eachcoordinate(env, 1:4))
     Y = _retain_subspace_left(alg) ? map(x -> x.Y, entries) : nothing
-    U, V = alg.subspace_tol > 0 ? (map(x -> x.U, entries), map(x -> x.V, entries)) : (nothing, nothing)
-    return SubspaceIterationCache(0, false, map(x -> x.X, entries), Y, U, V)
+    return SubspaceIterationCache(0, map(x -> x.X, entries), Y)
 end
 
 @non_differentiable initialize_subspace_iteration_cache(args...)
@@ -302,18 +272,10 @@ function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector
     else
         compatible ? (ranges.X, ranges.Y) : ignore_derivatives(() -> rangefinder_initialize(L, R, K, alg))
     end
-    freezable = ignore_derivatives(() -> _subspace_freezable(codomain(L), domain(R), K))
-    recycled = !refresh && compatible && ranges.recycle && freezable && !isnothing(Y)
-    if M != :alternating && (refresh || !(compatible && ranges.recycle && freezable))
+    if M != :alternating
         L, R = _normalize_subspace_half(L), _normalize_subspace_half(R)
     end
-    state = if recycled
-        right = R * X
-        left = Y' * L
-        (; X, Y, left, right, core = left * right)
-    else
-        rangefinder_update(X, Y, L, R, K, alg)
-    end
+    state = rangefinder_update(X, Y, L, R, K, alg)
     full = _subspace_reduced_svd(state.core, trunc, alg, refresh || alg.rotate_basis || isnothing(state.X))
     U = state.Y * full.uχ
     V = isnothing(state.X) ? full.vχ : full.vχ * state.X'
@@ -329,7 +291,7 @@ function _subspace_iteration_decomposition(L, R, alg::SubspaceIterationProjector
         X = X * E
         Y = isnothing(Y) ? nothing : (E' * Y')'
     end
-    return (; U, S = full.sχ, V, X, Y, recycled, freezable, truncation_error = full.error, projectors = (P_left, P_right))
+    return (; U, S = full.sχ, V, X, Y, truncation_error = full.error, projectors = (P_left, P_right))
 end
 
 """Build factorized half environments using the established scaling for each update."""

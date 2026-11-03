@@ -74,19 +74,17 @@ function ctmrg_iteration(
     end
     enlarged_corners = _expand_corners_simultaneously(network, env)
     projectors, projector_info = simultaneous_projectors(
-        enlarged_corners, env, alg.projector_alg, cache.X, cache.Y, cache.recycle,
+        enlarged_corners, env, alg.projector_alg, cache.X, cache.Y,
         _subspace_charge_refresh(cache, alg.projector_alg)
     )
     env′ = renormalize_simultaneously(enlarged_corners, projectors, network, env)
     cache′, subspace_error = _update_subspace_cache(
         cache,
-        projector_info.X, projector_info.Y, projector_info.U, projector_info.V,
-        alg.projector_alg, projector_info.freezable
+        projector_info.X, projector_info.Y
     )
     info = (;
         contraction_metrics = (;
             projector_info.truncation_error, subspace_error,
-            recycled = projector_info.recycled,
         ),
         projector_info.U, projector_info.S, projector_info.V,
     )
@@ -105,17 +103,14 @@ function _split_proj_and_info(proj_and_info)
     info = (; truncation_error, U, S, V)
     if hasproperty(first(proj_and_info)[2], :X)
         X = map(x -> x[2].X, proj_and_info)
-        Y = map(x -> x[2].Y, proj_and_info)
-        recycled = all(x -> x[2].recycled, proj_and_info)
-        freezable = all(x -> x[2].freezable, proj_and_info)
-        info = (; info..., recycled, freezable, X, Y)
+        Y = isnothing(first(proj_and_info)[2].Y) ? nothing : map(x -> x[2].Y, proj_and_info)
+        info = (; info..., X, Y)
     end
     return (P_left, P_right), info
 end
 
 """Select optional recycled bases for one projector coordinate."""
-_projector_arguments(coordinate, X, Y, recycle::Bool) = (X[coordinate...], _subspace_grid_entry(Y, coordinate...), recycle)
-_projector_arguments(coordinate, X, Y, recycle::Bool, refresh::Bool) = (_projector_arguments(coordinate, X, Y, recycle)..., refresh)
+_projector_arguments(coordinate, X, Y, refresh::Bool) = (X[coordinate...], _subspace_grid_entry(Y, coordinate...), refresh)
 _projector_arguments(coordinate) = ()
 
 """
@@ -152,10 +147,10 @@ end
 
 function simultaneous_projectors(
         coordinate::NTuple{3, Int}, enlarged_corners::Array{E, 3}, env,
-        alg::SubspaceIterationProjector, X, Y, recycle::Bool, refresh::Bool = false,
+        alg::SubspaceIterationProjector, X, Y, refresh::Bool = false,
     ) where {E}
     ec, trunc = enlarged_corner_inputs(enlarged_corners, coordinate, env, alg, Val(4))
-    return compute_projector(ec, alg, (; X, Y, trunc, recycle, refresh))
+    return compute_projector(ec, alg, (; X, Y, trunc, refresh))
 end
 
 """

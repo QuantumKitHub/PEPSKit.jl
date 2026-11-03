@@ -92,10 +92,10 @@ function gradients_subspace_iteration_recycled_basis(AT)
             direction, target = adapt(AT, randn(ComplexF64, space(L))), adapt(AT, randn(ComplexF64, space(L)))
             alg = SubspaceIterationProjector(; subspace = K)
             X, Y = PEPSKit.rangefinder_initialize(L, R, alg.subspace, alg)
-            inputs = (; X, Y, trunc = truncspace(χ), recycle = false)
+            inputs = (; X, Y, trunc = truncspace(χ))
             function loss(t)
                 first_step = PEPSKit._subspace_iteration_decomposition(t, R, alg, inputs)
-                next_inputs = (; first_step.X, first_step.Y, inputs.trunc, recycle = false)
+                next_inputs = (; first_step.X, first_step.Y, inputs.trunc)
                 result = PEPSKit._subspace_iteration_decomposition(t, R, alg, next_inputs)
                 return real(dot(target, result.U * result.S * result.V))
             end
@@ -124,7 +124,7 @@ function gradients_subspace_iteration_energy(AT)
             H = si_test_operator(AT, T, P)
             alg = flavor(;
                 miniter = 2, maxiter = 2, tol = 0.0, verbosity = 0,
-                projector_alg = (; alg = :SubspaceIterationProjector, subspace = K, subspace_tol = 0.0),
+                projector_alg = (; alg = :SubspaceIterationProjector, subspace = K),
             )
             function loss(ψ)
                 ignore_derivatives(() -> Random.seed!(734))
@@ -150,7 +150,7 @@ function gradients_subspace_iteration_fixed_point(AT)
             H = si_test_operator(AT, ComplexF64, P)
             alg = flavor(;
                 miniter = 20, maxiter = 200, tol = 1.0e-12, verbosity = 0,
-                projector_alg = (; alg = :SubspaceIterationProjector, subspace = K, subspace_tol = 0.0),
+                projector_alg = (; alg = :SubspaceIterationProjector, subspace = K),
             )
             gradmode = FixedPointGradient(; solver_alg = (; alg = :GMRES, tol = 1.0e-10, maxiter = 100))
             function loss(ψ)

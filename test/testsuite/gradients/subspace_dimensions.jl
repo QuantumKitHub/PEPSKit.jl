@@ -7,10 +7,10 @@ using Zygote
 using Adapt
 using ChainRulesCore: ignore_derivatives
 
-"""Check cache feedback through active, frozen, and charge-refresh sweeps."""
+"""Check cache feedback through active and charge-refresh sweeps."""
 function gradients_subspace_dimensions(AT)
     return @testset "Adaptive subspace gradients ($AT)" begin
-        @testset "$update, q=$q, $mode" for update in (:independent, :alternating, :alternating_refined), q in (0, 1), mode in (:active, :frozen, :refresh)
+        @testset "$update, q=$q, $mode" for update in (:independent, :alternating, :alternating_refined), q in (0, 1), mode in (:active, :refresh)
             Random.seed!(275)
             W = U1Space(0 => 6, 1 => 6, 2 => 6)
             A, direction, target = (adapt(AT, randn(ComplexF64, W ← W)) for _ in 1:3)
@@ -19,8 +19,8 @@ function gradients_subspace_dimensions(AT)
             X, Y = PEPSKit.rangefinder_initialize(A, id(W), W, alg)
             function loss(t)
                 ignore_derivatives(() -> Random.seed!(276))
-                first_step = PEPSKit._subspace_iteration_decomposition(t, id(W), alg, (; X, Y, trunc = alg.trunc, recycle = false))
-                result = PEPSKit._subspace_iteration_decomposition(t, id(W), alg, (; first_step.X, first_step.Y, trunc = alg.trunc, recycle = mode == :frozen, refresh = mode == :refresh))
+                first_step = PEPSKit._subspace_iteration_decomposition(t, id(W), alg, (; X, Y, trunc = alg.trunc))
+                result = PEPSKit._subspace_iteration_decomposition(t, id(W), alg, (; first_step.X, first_step.Y, trunc = alg.trunc, refresh = mode == :refresh))
                 return real(dot(target, result.U * result.S * result.V))
             end
             gradient = only(Zygote.gradient(loss, A))
