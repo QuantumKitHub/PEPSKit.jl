@@ -99,6 +99,6 @@ function ctmrg_flavors_c4v(AT; eigh_alg = :QRIteration, minimal::Bool = false)
             env₀, peps; alg = :C4vCTMRG, projector_alg,
             decomposition_alg = (; alg = decomp_alg)
         )
-        @test env isa CTMRGEnv
+        @test env isa C4vCTMRGEnv
     end
 end

@@ -28,7 +28,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northwest corner with appropriate row and column indices.
 """
-function fix_gauge_northwest_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_northwest_corner((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_corner(
         corner(env, NORTHWEST, row, col),
         signs[WEST, row, col],
@@ -41,7 +41,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the northeast corner with appropriate row and column indices.
 """
-function fix_gauge_northeast_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_northeast_corner((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_corner(
         corner(env, NORTHEAST, row, col),
         signs[NORTH, row, col],
@@ -54,7 +54,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southeast corner with appropriate row and column indices.
 """
-function fix_gauge_southeast_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_southeast_corner((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_corner(
         corner(env, SOUTHEAST, row, col),
         signs[EAST, row, col],
@@ -67,7 +67,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_corner` to the southwest corner with appropriate row and column indices.
 """
-function fix_gauge_southwest_corner((row, col), env::CTMRGEnv, signs)
+function fix_gauge_southwest_corner((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_corner(
         corner(env, SOUTHWEST, row, col),
         signs[SOUTH, row, col],
@@ -111,7 +111,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the north edge with appropriate row and column indices.
 """
-function fix_gauge_north_edge((row, col), env::CTMRGEnv, signs)
+function fix_gauge_north_edge((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_edge(
         edge(env, NORTH, row, col), signs[NORTH, row, col], signs[NORTH, row, _next(col, end)],
     )
@@ -122,7 +122,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the east edge with appropriate row and column indices.
 """
-function fix_gauge_east_edge((row, col), env::CTMRGEnv, signs)
+function fix_gauge_east_edge((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_edge(
         edge(env, EAST, row, col), signs[EAST, row, col], signs[EAST, _next(row, end), col]
     )
@@ -133,7 +133,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the south edge with appropriate row and column indices.
 """
-function fix_gauge_south_edge((row, col), env::CTMRGEnv, signs)
+function fix_gauge_south_edge((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_edge(
         edge(env, SOUTH, row, col), signs[SOUTH, row, col], signs[SOUTH, row, _prev(col, end)],
     )
@@ -144,7 +144,7 @@ $(SIGNATURES)
 
 Apply `fix_gauge_edge` to the west edge with appropriate row and column indices.
 """
-function fix_gauge_west_edge((row, col), env::CTMRGEnv, signs)
+function fix_gauge_west_edge((row, col), env::AbstractCTMRGEnv, signs)
     return fix_gauge_edge(
         edge(env, WEST, row, col), signs[WEST, row, col], signs[WEST, _prev(row, end), col]
     )

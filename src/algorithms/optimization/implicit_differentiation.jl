@@ -203,7 +203,6 @@ Evaluating the gradient of the cost function for CTMRG:
 =#
 
 _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
-_scrambling_env_gauge(::C4vCTMRG) = ScramblingEnvGaugeC4v()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
     projector = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
@@ -220,7 +219,7 @@ function _rrule(
         gradmode::FixedPointGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::CTMRGEnv,
+        envinit::AbstractCTMRGEnv,
         state,
         alg::CTMRGAlgorithm,
     )
@@ -232,12 +231,13 @@ function _rrule(
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, _, = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, projector_cache)
-    signs, corner_phases, edge_phases = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
+    # fix global phases relative to the fixed point inside the iteration
     function gauge_fixed_iteration(A, x)
-        return fix_phases(
+        return fix_global_phases(
             # Hold incoming SI bases fixed, while differentiating their update within this sweep.
-            ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed, projector_cache)[1],
-            signs, corner_phases, edge_phases,
+            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed, projector_cache)[1], signs),
+            env,
         )
     end
     # prepare its pullback
@@ -493,7 +493,7 @@ function _rrule(
         gradmode::ImplicitGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::CTMRGEnv,
+        envinit::C4vCTMRGEnv,
         state,
         alg::C4vCTMRG,
     )
@@ -521,7 +521,7 @@ function _rrule(
     u = zeros(storagetype(U), space(UL, numind(UL))' ← space(U, numind(U))')
 
     # prepare pullback of C4v CTMRG environment constructor (artefact of reusing asymmetric environment type for C4v symmetric contraction)
-    _, c4v_env_vjp = rrule_via_ad(config, CTMRGEnv, C, E)
+    _, c4v_env_vjp = rrule_via_ad(config, C4vCTMRGEnv, C, E)
 
     # Two tapes: the linear solve only uses the environment cotangents, so reading the
     # sandwich through `constant_site` leaves the ket and bra cotangents unforced. The state
@@ -642,7 +642,7 @@ function PEPSKit._rrule(
         gradmode::ImplicitGradient,
         config::RuleConfig,
         ::typeof(MPSKit.leading_boundary),
-        envinit::CTMRGEnv,
+        envinit::AbstractCTMRGEnv,
         state,
         alg::SimultaneousCTMRG{<:HalfInfiniteProjector},
     )

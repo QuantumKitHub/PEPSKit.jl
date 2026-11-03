@@ -13,8 +13,7 @@ using PEPSKit:
     fix_relative_phases,
     calc_elementwise_convergence,
     peps_normalize,
-    ScramblingEnvGauge,
-    ScramblingEnvGaugeC4v
+    ScramblingEnvGauge
 using PEPSKit.Defaults: ctmrg_tol
 
 # initialize parameters
@@ -87,15 +86,15 @@ function ctmrg_fixed_iterscheme_c4v(AT; eigh_alg = :QRIteration)
         # do extra iteration to check gauge fixing
         env_conv2, info = @testinferred ctmrg_iteration(n, env_conv1, ctm_alg) # CHECK
 
-        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
+        env_fixed = gauge_fix(env_conv2, env_conv1, ScramblingEnvGauge())
         env_diff = calc_elementwise_convergence(env_conv1, env_fixed)
         @info "Diff between iters = $(env_diff)"
         @test env_diff ≈ 0 atol = atol
 
         # fix gauge of single iteration
         signs, corner_phases, edge_phases =
-            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGaugeC4v())
-        gauge_fixed_iteration(env::CTMRGEnv) = fix_phases(
+            compute_gauge_fix_gauge(env_conv2, env_conv1, ScramblingEnvGauge())
+        gauge_fixed_iteration(env::PEPSKit.AbstractCTMRGEnv) = fix_phases(
             ctmrg_iteration(n, env, ctm_alg)[1],
             signs, corner_phases, edge_phases,
         )
