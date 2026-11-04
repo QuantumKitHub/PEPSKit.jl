@@ -129,3 +129,32 @@ function _apply_bond_gate(
     absorb_s!(U, S, Vᴴ)
     return U, S, Vᴴ, ϵ
 end
+
+"""
+$(SIGNATURES)
+
+Apply 2-site `gate` on the reduced bond tensors `a`, `b`
+```
+    -1← a --- 3 --- b ← -4          -2         -3
+        ↓           ↓               ↓           ↓
+        1           2               |----gate---|
+        ↓           ↓       or      ↓           ↓
+        |----gate---|               1           2
+        ↓           ↓               ↓           ↓
+        -2         -3           -1← a --- 3 --- b ← -4
+```
+"""
+function _apply_bond_gate(
+        a::MPSTensor, b::MPSTensor, gate::NNGate,
+        trunc::TruncationStrategy, allocator = DefaultAllocator()
+    )
+    need_flip = isdual(space(b, 1))
+    # The common kernel expects both reduced tensors in QR order: x ← p ⊗ v.
+    R₁ = permute(a, ((1,), (2, 3)))
+    R₂ = permute(b, ((3,), (2, 1)))
+    a, s, b, ϵ = _apply_bond_gate(R₁, R₂, gate, trunc, allocator)
+    if need_flip
+        a, s, b = flip(a, numind(a)), _fliptwist_s!(s), flip(b, 1)
+    end
+    return a, s, permute(b, ((1, 3), (2,))), ϵ
+end
