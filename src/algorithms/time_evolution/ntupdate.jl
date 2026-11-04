@@ -74,12 +74,13 @@ utilizing reduced bond tensors with the physical leg.
 """
 function _ntu_iter!(
         state::InfiniteState, gate::NNGate, wts::SUWeight,
-        sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate
+        sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate;
+        allocator = DefaultAllocator()
     )
     @assert length(sites) == 2
     trunc = only(_get_cluster_trunc(alg.opt_alg.trunc, sites))
     alg′ = (@set alg.opt_alg.trunc = trunc)
-    return _bond_truncate!(state, wts, Tuple(sites), (:first, :last), alg′; gate)
+    return _bond_truncate!(state, wts, Tuple(sites), (:first, :last), alg′; gate, allocator)
 end
 
 """
@@ -90,6 +91,8 @@ function ntu_iter(
         reverse_trunc::Bool = false
     )
     state2, wts = copy(state), SUWeight(state)
+    # TODO: Reuse contraction scratch owned by TimeEvolver across timesteps.
+    allocator = default_allocator(state, SerialScheduler())
     info = (; fid = 1.0)
     for (sites, gate) in circuit.gates
         if length(sites) == 1
@@ -102,7 +105,7 @@ function ntu_iter(
             (dir, r, c) = _nn_bonddir(sites...)
             d = dir in (EAST, WEST) ? 1 : 2
             alg.bipartite && iseven(r) && continue
-            state2, wts, info′ = _ntu_iter!(state2, gate, wts, sites, alg)
+            state2, wts, info′ = _ntu_iter!(state2, gate, wts, sites, alg; allocator)
             (!alg.bipartite) && continue
             if d == 1
                 state2[r + 1, c + 1] = copy(state2[r, c])
@@ -116,7 +119,7 @@ function ntu_iter(
         else
             # N-site MPO gate (N ≥ 2)
             alg.bipartite && error("Multi-site MPO gates are not compatible with bipartite states.")
-            state2, wts, info′ = _ntu_iter!(state2, gate, wts, sites, alg; reverse_trunc)
+            state2, wts, info′ = _ntu_iter!(state2, gate, wts, sites, alg; reverse_trunc, allocator)
         end
         # record the worst fidelity
         (info′.fid < info.fid) && (info = info′)

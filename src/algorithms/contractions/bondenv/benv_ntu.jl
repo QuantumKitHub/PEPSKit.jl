@@ -34,6 +34,7 @@ Calculate the bond environment within "NTU-NN" approximation.
 `dir` is the direction from X to `Y` (`NORTH`, `EAST`, `SOUTH`, or `WEST`).
 `X` and `Y` must be obtained from already rotated site tensors,
 while `state` stays in its original orientation.
+`allocator` supplies temporary storage for the common environment contraction.
 ```
     -1      ●=======●
             ║       ║
@@ -44,14 +45,15 @@ while `state` stays in its original orientation.
 ```
 """
 function bondenv_ntu(
-        row::Int, col::Int, dir::Int, X, Y, state::InfiniteState, alg::NNEnv
+        row::Int, col::Int, dir::Int, X, Y, state::InfiniteState, alg::NNEnv;
+        allocator = DefaultAllocator()
     )
     neighbors = [(-1, 0), (0, -1), (1, 0), (1, 1), (0, 2), (-1, 1)]
     m = collect_neighbors(state, row, col, neighbors; direction = dir)
     X, Y = _prepare_site_tensor(X), _prepare_site_tensor(Y)
     return _contract_ntu_NNEnv(
         X, Y, hair_w(m[0, -1]), hair_e(m[0, 2]),
-        cor_nw(m[-1, 0]), cor_ne(m[-1, 1]), cor_sw(m[1, 0]), cor_se(m[1, 1])
+        cor_nw(m[-1, 0]), cor_ne(m[-1, 1]), cor_sw(m[1, 0]), cor_se(m[1, 1]); allocator
     )
 end
 
@@ -65,6 +67,7 @@ Calculate the bond environment within "NTU-NN+" approximation.
 `dir` is the direction from X to `Y` (`NORTH`, `EAST`, `SOUTH`, or `WEST`).
 `X` and `Y` must be obtained from already rotated site tensors,
 while `state` stays in its original orientation.
+`allocator` supplies temporary storage for the common environment contraction.
 ```
     -2          ●.......●
                 ║       ║
@@ -80,7 +83,8 @@ while `state` stays in its original orientation.
 Dotted lines and ○ are splitted using SVD with `truncrank(1)`.
 """
 function bondenv_ntu(
-        row::Int, col::Int, dir::Int, X, Y, state::InfiniteState, alg::NNpEnv
+        row::Int, col::Int, dir::Int, X, Y, state::InfiniteState, alg::NNpEnv;
+        allocator = DefaultAllocator()
     )
     neighbors = [
         (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (1, 2), (0, 2), (-1, 2),
@@ -135,7 +139,7 @@ function bondenv_ntu(
         br[Dbr1 Dbr0] * se1[Dse11 Dse10] *
         twistdual(ms[1, 1], 1)[pSE DYs0 Dse10 Dbr0 Ds0] *
         conj(ms[1, 1][pSE DYs1 Dse11 Dbr1 Ds1])
-    return _contract_ntu_NNEnv(X, Y, hW, hE, NW, NE, SW, SE)
+    return _contract_ntu_NNEnv(X, Y, hW, hE, NW, NE, SW, SE; allocator)
 end
 
 # Common NN/NN+ network; each virtual bond has a bra and a ket index.
@@ -190,12 +194,15 @@ end
 """
 Compile the selected order to ordinary `@tensor` contractions with statically known ranks.
 Specializations depend on the contraction order and tensor types, not on leg dimensions.
+Only temporaries use `allocator`; the returned environment owns its storage.
 """
-@generated function _contract_ntu_kernel(::Val{Order}, tensors::NamedTuple) where {Order}
+@generated function _contract_ntu_kernel(
+        ::Val{Order}, tensors::NamedTuple, allocator
+    ) where {Order}
     order = Expr(:tuple, Order...)
     return macroexpand(
         @__MODULE__, :(
-            @tensor order = $order benv[Xq1 Yq1; Xq0 Yq0] :=
+            @tensor allocator = allocator order = $order benv[Xq1 Yq1; Xq0 Yq0] :=
                 tensors.hW[Xw1 Xw0] * tensors.hE[Ye1 Ye0] *
                 tensors.NW[N1 N0 Xn1 Xn0] * tensors.NE[Yn1 Yn0 N1 N0] *
                 tensors.SW[Xs1 Xs0 S1 S0] * tensors.SE[Ys1 Ys0 S1 S0] *
@@ -208,7 +215,10 @@ Specializations depend on the contraction order and tensor types, not on leg dim
 end
 
 "Contract an NN or NN+ boundary while keeping the central bra and ket layers separate."
-function _contract_ntu_NNEnv(X::PEPSTensor, Y::PEPSTensor, hW, hE, NW, NE, SW, SE)
+function _contract_ntu_NNEnv(
+        X::PEPSTensor, Y::PEPSTensor, hW, hE, NW, NE, SW, SE;
+        allocator = DefaultAllocator()
+    )
     # Bra factors are conjugated in the kernel; ket factors carry the physical-leg twist.
     tensors = (;
         hW, hE, NW, NE, SW, SE, Xbra = X, Xket = twistdual(X, 1),
@@ -217,6 +227,6 @@ function _contract_ntu_NNEnv(X::PEPSTensor, Y::PEPSTensor, hW, hE, NW, NE, SW, S
     order = _ntu_contraction_order(tensors)
     # The runtime-selected kernel always returns the same concrete rank-(2,2) type.
     T = tensormaptype(spacetype(X), 2, 2, TensorKit.promote_storagetype(tensors...))
-    benv = _contract_ntu_kernel(Val(Tuple(order)), tensors)::T
+    benv = _contract_ntu_kernel(Val(Tuple(order)), tensors, allocator)::T
     return normalize!(benv, Inf)
 end

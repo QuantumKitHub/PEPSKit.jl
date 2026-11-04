@@ -13,7 +13,7 @@ Apply an N-site MPO `gate` (N ≥ 2) to the owned NTU working state and weights.
 function _ntu_iter!(
         state::InfiniteState, gate::Vector{T}, wts::SUWeight,
         sites::Vector{CartesianIndex{2}}, alg::NeighbourUpdate;
-        reverse_trunc::Bool = false
+        reverse_trunc::Bool = false, allocator = DefaultAllocator()
     ) where {T <: AbstractTensorMap}
     truncs = _get_cluster_trunc(alg.opt_alg.trunc, sites)
 
@@ -46,7 +46,7 @@ function _ntu_iter!(
         # truncate the bond
         trunc = truncs[bond_id]
         alg′ = (@set alg.opt_alg.trunc = trunc)
-        state, wts, info′ = _bond_truncate!(state, wts, bondsites, (stype1, stype2), alg′)
+        state, wts, info′ = _bond_truncate!(state, wts, bondsites, (stype1, stype2), alg′; allocator)
         # record the worst fidelity
         (info′.fid < info.fid) && (info = info′)
     end
@@ -61,7 +61,8 @@ function _bond_truncate!(
         state::InfiniteState, wts::SUWeight,
         (site1, site2)::NTuple{2, CartesianIndex{2}},
         (stype1, stype2)::NTuple{2, Symbol},
-        alg::NeighbourUpdate; gate::Union{NNGate, Nothing} = nothing
+        alg::NeighbourUpdate; gate::Union{NNGate, Nothing} = nothing,
+        allocator = DefaultAllocator()
     )
     # Rotate only the endpoints; environment neighbors are rotated when collected.
     (dir, r, c) = _nn_bonddir(site1, site2)
@@ -82,7 +83,7 @@ function _bond_truncate!(
         @assert stype2 == :middle
         bond_tensor_midprev(B; trunc = qrtrunc)
     end
-    benv = bondenv_ntu(site1[1], site1[2], dir, X, Y, state, alg.bondenv_alg)
+    benv = bondenv_ntu(site1[1], site1[2], dir, X, Y, state, alg.bondenv_alg; allocator)
     @debug "cond(benv) before gauge fix: $(LinearAlgebra.cond(benv))"
     if alg.fixgauge
         Z = positive_approx(benv)
