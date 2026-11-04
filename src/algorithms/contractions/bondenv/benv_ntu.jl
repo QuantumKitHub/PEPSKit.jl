@@ -161,19 +161,30 @@ const _NTU_ENV_NETWORK = [
     [:pY, :Yn0, :Ye0, :Ys0, :Yq0],
 ]
 
+const _NTU_ORDER_CACHE = Dict{Tuple, Tuple}()
+const _NTU_ORDER_CACHE_LOCK = ReentrantLock()
+
 """
 Choose the common environment's contraction order using actual leg dimensions.
 The fixed ten-tensor network is independent of the MPO path and its length.
 Floating-point costs avoid integer overflow; dense dimensions approximate symmetry-block costs.
+Orders are cached by leg dimensions.
 """
 function _ntu_contraction_order(tensors::NamedTuple)
-    costs = Dict(
-        label => Float64(dim(space(t, axis)))
-            for (t, labels) in zip(tensors, _NTU_ENV_NETWORK)
-            for (axis, label) in enumerate(labels)
-    )
-    tree, _ = TensorOperations.optimaltree(_NTU_ENV_NETWORK, costs)
-    return first(TensorOperations.tree2indexorder(tree, _NTU_ENV_NETWORK))
+    dims = Tuple(dim(space(t, axis)) for t in tensors for axis in 1:numind(t))
+    return lock(_NTU_ORDER_CACHE_LOCK) do
+        order = get(_NTU_ORDER_CACHE, dims, nothing)
+        isnothing(order) || return order
+        # Bound the number of retained dimension signatures.
+        length(_NTU_ORDER_CACHE) >= 64 && empty!(_NTU_ORDER_CACHE)
+        costs = Dict(
+            label => Float64(dim(space(t, axis)))
+                for (t, labels) in zip(tensors, _NTU_ENV_NETWORK)
+                for (axis, label) in enumerate(labels)
+        )
+        tree, _ = TensorOperations.optimaltree(_NTU_ENV_NETWORK, costs)
+        return _NTU_ORDER_CACHE[dims] = Tuple(first(TensorOperations.tree2indexorder(tree, _NTU_ENV_NETWORK)))
+    end
 end
 
 """
