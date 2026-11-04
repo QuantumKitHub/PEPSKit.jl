@@ -229,13 +229,13 @@ function _fixedpoint_iteration(env, alg, cache::EmptyProjectorCache, signs)
     return env, iteration, identity
 end
 
-function _fixedpoint_iteration(env, alg, cache::SubspaceIterationCache, _)
+function _fixedpoint_iteration(env, alg, cache::SubspaceIterationCache, signs)
     # Krylov vectors and AD cotangents must use the same concrete tensor storage.
     bases = isnothing(cache.Y) ? (cache.X,) : (cache.X, map(copy, cache.Y))
     function iteration(A, x)
         incoming = SubspaceIterationCache(cache.iteration, x[2][1], isnothing(cache.Y) ? nothing : x[2][2])
         en, _, next = ctmrg_iteration(InfiniteSquareNetwork(A), x[1], alg, incoming)
-        en = fix_global_phases(en, env)
+        en = fix_global_phases(fix_relative_phases(en, signs), env)
         nextbases = isnothing(next.Y) ? (next.X,) : (next.X, next.Y)
         # Fix column-frame freedom and remove normal-to-isometry perturbations.
         aligned = map(nextbases, bases) do grid, refs
@@ -266,12 +266,8 @@ function _rrule(
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    signs = if projector_cache isa EmptyProjectorCache
-        env_conv, _, = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, projector_cache)
-        first(compute_gauge_fix_gauge(env_conv, env, alg_gauge))
-    else
-        nothing
-    end
+    env_conv, _, = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, projector_cache)
+    signs = first(compute_gauge_fix_gauge(env_conv, env, alg_gauge))
     x, gauge_fixed_iteration, rhs = _fixedpoint_iteration(env, alg_fixed, projector_cache, signs)
     # prepare its pullback
     _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, x)

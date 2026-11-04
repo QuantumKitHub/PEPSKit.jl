@@ -143,16 +143,23 @@ function _leading_boundary_with_cache(
         local info_iter
         projector_cache = initialize_projector_cache(network, env, alg)
         converged = false
+        align_gauge = false
         for iter in 1:(alg.maxiter)
             previous = env
             env, info_iter, projector_cache = ctmrg_iteration(network, env, alg, projector_cache)
             η, CS, TS = calc_convergence(env, CS, TS, alg)
-            η = max(η, get(info_iter.contraction_metrics, :subspace_error, zero(η)))
-            if projector_cache isa SubspaceIterationCache
-                η = max(η, ignore_derivatives(() -> norm(fix_global_phases(env, previous) - previous) / norm(previous)))
+            ready = iter ≥ alg.miniter && _projector_convergence_ready(projector_cache, alg.projector_alg)
+            if projector_cache isa SubspaceIterationCache &&
+                    (align_gauge || (η ≤ alg.tol && ready))
+                align_gauge = true
+                signs = ignore_derivatives(() -> first(compute_gauge_fix_gauge(env, previous, _scrambling_env_gauge(alg))))
+                # New rangefinders live in the input frame; align the output to that frame.
+                env = fix_global_phases(fix_relative_phases(env, signs), previous)
+                η = max(η, ignore_derivatives(() -> norm(env - previous) / norm(previous)))
             end
+            η = max(η, get(info_iter.contraction_metrics, :subspace_error, zero(η)))
 
-            if η ≤ alg.tol && iter ≥ alg.miniter && _projector_convergence_ready(projector_cache, alg.projector_alg)
+            if η ≤ alg.tol && ready
                 ctmrg_logfinish!(log, iter, η, network, env)
                 converged = true
                 break

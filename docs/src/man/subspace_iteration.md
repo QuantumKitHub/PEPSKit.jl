@@ -268,9 +268,11 @@ The range recurrence relations are unchanged.
 
 ## Convergence and differentiation
 
-Range finders are updated every sweep. In addition to the environment spectra,
-convergence checks elementwise environment changes (up to global tensor phases)
-and the complete trial subspaces at every position and direction:
+Range finders are updated every sweep. Corner and edge spectra provide the initial
+convergence check, as in ordinary CTMRG. Once these converge, scrambled bond-gauge
+alignment is applied on the remaining sweeps. Convergence additionally requires
+elementwise changes of the aligned environment and changes of the complete trial
+subspaces at every position and direction to satisfy the CTMRG tolerance:
 
 ```math
 \epsilon(B_{n-1}, B_n)
@@ -283,8 +285,11 @@ must satisfy the CTMRG tolerance, including oversampling directions.
 
 `FixedPointGradient` differentiates the joint fixed point of the environment and
 cached range finders. Charge allocations are held fixed during differentiation.
-Global environment phases and trial-basis frames are aligned before solving the coupled
-adjoint equations. `gradient_alg=nothing` instead differentiates through all sweeps.
+The new range finders are expressed in the input environment's enlarged spaces;
+aligning the output environment back to that frame keeps the pair consistent.
+The adjoint uses the same bond-gauge alignment and fixes trial-basis frames before
+solving the coupled equations. `gradient_alg=nothing` instead differentiates through
+all sweeps.
 
 ## Computational and memory costs
 

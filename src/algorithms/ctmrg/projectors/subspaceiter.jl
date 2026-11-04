@@ -140,7 +140,7 @@ end
 
 """Construct a sampled left range and exact bases for complete left sectors."""
 function _subspace_alternating_range(L, R, X, K, alg)
-    W = fuse(codomain(L))
+    W = ignore_derivatives(() -> fuse(codomain(L)))
     sampled = ignore_derivatives(() -> Vect[sectortype(K)](s => dim(K, s) for s in sectors(K) if dim(K, s) < dim(W, s)))
     dim(sampled) == 0 && return ignore_derivatives(() -> isometry(scalartype(L), codomain(L) ← K)), false
     E = sampled == K ? nothing : ignore_derivatives(() -> isometry(scalartype(X), K ← sampled))

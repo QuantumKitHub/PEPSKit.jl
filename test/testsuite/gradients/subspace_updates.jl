@@ -111,9 +111,12 @@ end
 """Check fixed point for the subspace iteration projector."""
 function gradients_subspace_updates_fixed_point(AT)
     references = Dict()
-    return @testset "Compressed fixed-point gradients" begin
-        @testset "$update, $flavor, $unitcell" for update in (:independent, :alternating, :alternating_refined), flavor in (SimultaneousCTMRG, SequentialCTMRG), unitcell in ((1, 1), (2, 1))
-            Random.seed!(84267)
+    cases = [(update, flavor, unitcell, false) for update in (:independent, :alternating, :alternating_refined) for flavor in (SimultaneousCTMRG, SequentialCTMRG) for unitcell in ((1, 1), (2, 1))]
+    # Complete-range regressions for the two updates with drifting bond gauges.
+    append!(cases, ((update, SimultaneousCTMRG, (1, 1), true) for update in (:independent, :alternating)))
+    return @testset "Subspace fixed-point gradients" begin
+        @testset "$update, $flavor, $unitcell, complete=$complete" for (update, flavor, unitcell, complete) in cases
+            Random.seed!(complete ? 5 : 84267)
             ψ = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2; unitcell))
             ψ /= norm(ψ)
             direction = adapt(AT, InfinitePEPS(ℂ^2, ℂ^2; unitcell))
@@ -123,7 +126,7 @@ function gradients_subspace_updates_fixed_point(AT)
             alg = flavor(;
                 tol = 1.0e-11, miniter = 20, maxiter = 500, verbosity = 0,
                 projector_alg = (;
-                    alg = :SubspaceIterationProjector, subspace = ℂ^6, update,
+                    alg = :SubspaceIterationProjector, subspace = ℂ^(complete ? 16 : 6), update,
                     n_subspace_iter = update == :alternating ? 1 : 0,
                 )
             )
@@ -136,18 +139,25 @@ function gradients_subspace_updates_fixed_point(AT)
             _, info = leading_boundary(env, ψ, alg)
             @test info.converged
             gradient = only(Zygote.gradient(loss, ψ))
-            reference = get!(references, (flavor, unitcell)) do
+            reference = get!(references, (flavor, unitcell, complete)) do
                 full = flavor(; tol = 1.0e-12, maxiter = 500, verbosity = 0, projector_alg = :FullInfiniteProjector)
                 f(x) = cost_function(x, first(PEPSKit.hook_pullback(leading_boundary, env, x, full; alg_rrule = mode)), H)
                 only(Zygote.gradient(f, ψ))
             end
             @test norm(gradient - reference) / norm(reference) < 1.0e-7
-            if update == :independent && flavor == SimultaneousCTMRG && unitcell == (1, 1)
+            if !complete && update == :independent && flavor == SimultaneousCTMRG && unitcell == (1, 1)
                 for solver in (:Arnoldi, :BiCGStab, :GeomSum, :ManualIter)
                     other = FixedPointGradient(; solver_alg = (; alg = solver, tol = 1.0e-10, maxiter = 200))
                     f(x) = cost_function(x, first(PEPSKit.hook_pullback(leading_boundary, env, x, alg; alg_rrule = other)), H)
                     @test norm(only(Zygote.gradient(f, ψ)) - reference) / norm(reference) < 1.0e-7
                 end
+            end
+            if complete && update == :independent
+                function unrolled(x)
+                    ignore_derivatives(() -> Random.seed!(84268))
+                    return cost_function(x, first(leading_boundary(env, x, alg)), H)
+                end
+                @test norm(only(Zygote.gradient(unrolled, ψ)) - reference) / norm(reference) < 1.0e-7
             end
             @test real(dot(gradient, direction)) ≈ subspace_update_difference(loss, ψ, direction; h = 1.0e-4) rtol = 1.0e-7 atol = 1.0e-9
         end
