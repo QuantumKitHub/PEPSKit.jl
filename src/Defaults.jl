@@ -71,7 +71,11 @@ Module containing default algorithm parameter values and arguments.
 * `projector_alg=:$(Defaults.projector_alg)` : Default variant of the CTMRG projector algorithm.
     - `:HalfInfiniteProjector` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:SubspaceIterationProjector` : Projection via recycled subspace iteration of the full-infinite environment.
 * `projector_verbosity=$(Defaults.projector_verbosity)` : Projector output information verbosity.
+* `orth_alg=$(Defaults.orth_alg)` : QR/LQ algorithm configuration used by the subspace-iteration projector.
+* `charge_probe=nothing` : Positive integers limit added trial multiplicities per sector on compatible-cache refreshes; `nothing` probes broadly.
+* `charge_refresh=$(Defaults.charge_refresh)` : Sweep interval for exploring trial charges when `subspace` is an integer; zero disables periodic exploration.
 * `projector_alg_c4v=:$(Defaults.projector_alg_c4v)` : Default variant of the C4v CTMRG projector algorithm.
     - `:C4vEighProjector` : Projection via truncated Eigh of an enlarged corner.
     - `:C4vQRProjector` : Projection via QR decomposition of a column-enlarged corner.
@@ -169,8 +173,10 @@ const orth_rrule_alg = :FullPullback
 const orth_rrule_verbosity = 0
 
 # Projectors
-const projector_alg = :HalfInfiniteProjector # ∈ {:HalfInfiniteProjector, :FullInfiniteProjector}
+const projector_alg = :HalfInfiniteProjector # ∈ {:HalfInfiniteProjector, :FullInfiniteProjector, :SubspaceIterationProjector}
 const projector_verbosity = 0
+const orth_alg = (;)
+const charge_refresh = 10
 const projector_alg_c4v = :C4vEighProjector # ∈ {:C4vEighProjector, :C4vQRProjector}
 
 # Fixed-point gradient

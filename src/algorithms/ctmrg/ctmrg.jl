@@ -35,19 +35,29 @@ function CTMRGAlgorithm(;
     if decomposition_alg isa NamedTuple
         decomposition_alg = (; fwd_alg = decomposition_alg)
     end
-    projector_algorithm = ProjectorAlgorithm(;
-        alg = projector_alg, decomposition_alg, trunc, verbosity
-    )
+    projector_alg = projector_alg isa Symbol ? (; alg = projector_alg) : projector_alg
+    projector_alg isa NamedTuple ||
+        throw(ArgumentError("projector_alg must be a Symbol or NamedTuple."))
+    projector_kwargs = merge((; decomposition_alg, trunc, verbosity), projector_alg)
+    projector_algorithm = ProjectorAlgorithm(; projector_kwargs...)
 
     return alg_type(tol, maxiter, miniter, verbosity, projector_algorithm)
 end
 
 """
     ctmrg_iteration(network, env, alg::CTMRGAlgorithm) -> env′, info
+    ctmrg_iteration(network, env, alg::CTMRGAlgorithm, cache) -> env′, info, cache′
 
 Perform a single CTMRG iteration in which all directions are being grown and renormalized.
+
+The four-argument form threads projector-specific runtime data between iterations.
 """
-function ctmrg_iteration(network, env, alg::CTMRGAlgorithm) end
+function ctmrg_iteration(network, env, alg::CTMRGAlgorithm)
+    cache = initialize_projector_cache(network, env, alg)
+    env′, info, = ctmrg_iteration(network, env, alg, cache)
+    return env′, info
+end
+function ctmrg_iteration(network, env, alg::CTMRGAlgorithm, cache) end
 
 """
     leading_boundary(env₀, network; kwargs...) -> env, info
@@ -84,11 +94,16 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `:truncrank` : Additionally supply truncation dimension `η`; truncate to the maximal virtual dimension of `η`
     - `:truncspace` : Additionally supply truncation space `η`; truncate according to the supplied vector space 
     - `:trunctol` : Additionally supply singular value cutoff `η`; truncate such that every retained singular value is larger than `η`
-* `projector_alg::Symbol=:$(Defaults.projector_alg)` : Variant of the projector algorithm. See also [`ProjectorAlgorithm`](@ref).
+* `projector_alg::Union{Symbol,NamedTuple}=:$(Defaults.projector_alg)` : Variant of the projector algorithm, optionally supplied as a `NamedTuple` containing projector-specific keyword arguments. See also [`ProjectorAlgorithm`](@ref).
     - `:HalfInfiniteProjector` : Projection via SVDs of half-infinite (two enlarged corners) CTMRG environments.
     - `:FullInfiniteProjector` : Projection via SVDs of full-infinite (all four enlarged corners) CTMRG environments.
+    - `:SubspaceIterationProjector` : Stateful projection via recycled subspace iteration of the full-infinite environment, with `subspace` specified as a symmetry-resolved space or an integer trial-dimension budget. Supports fixed-point differentiation or backpropagation through the CTMRG sweeps.
     - `:C4vEighProjector` : Projection via `eigh` of the Hermitian enlarged corner, works only for [`C4vCTMRG`](@ref).
     - `:C4vQRProjector` : Projection via QR decomposition of the lower-rank column-enlarged corner, works only for [`C4vCTMRG`](@ref).
+  Its `update` selects `:independent` (default, independent updates), `:alternating` (alternating QR/LQ), or `:alternating_refined` (with a final left-basis refinement).
+  For example, use `projector_alg=(; alg=:SubspaceIterationProjector, subspace=ℂ^10, update=:alternating, n_subspace_iter=1)` for active alternating refinement with one extra power step.
+  Use `subspace=24, trunc=truncrank(16)` to adapt both trial and retained charge distributions; `charge_refresh` controls the exploration interval.
+  `rotate_basis=true` expresses all trial directions in reduced singular-vector coordinates.
 * `decomposition_alg::Union{NamedTuple,<:SVDAdjoint,<:EighAdjoint,<:OrthAdjoint}` : Tensor decomposition algorithm used for computing projectors.
   When specified as a `NamedTuple`, the settings are passed as the forward algorithm to the appropriate decomposition for the given projector algorithm.
   For information on which forward algorithms are available, and how to specify them, see [`SVDAdjoint`](@ref), [`EighAdjoint`](@ref) and [`OrthAdjoint`](@ref).
@@ -108,6 +123,14 @@ end
 function leading_boundary(
         env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
+    env, info, = _leading_boundary_with_cache(env₀, network, alg)
+    return env, info
+end
+
+"""Contract the boundary and retain its final projector cache for fixed-point differentiation."""
+function _leading_boundary_with_cache(
+        env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+    )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return with_verbosity(; alg.verbosity) do
@@ -118,12 +141,25 @@ function leading_boundary(
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
         local info_iter
+        projector_cache = initialize_projector_cache(network, env, alg)
         converged = false
+        align_gauge = false
         for iter in 1:(alg.maxiter)
-            env, info_iter = ctmrg_iteration(network, env, alg)
+            previous = env
+            env, info_iter, projector_cache = ctmrg_iteration(network, env, alg, projector_cache)
             η, CS, TS = calc_convergence(env, CS, TS, alg)
+            ready = iter ≥ alg.miniter && _projector_convergence_ready(projector_cache, alg.projector_alg)
+            if projector_cache isa SubspaceIterationCache &&
+                    (align_gauge || (η ≤ alg.tol && ready))
+                align_gauge = true
+                signs = ignore_derivatives(() -> first(compute_gauge_fix_gauge(env, previous, _scrambling_env_gauge(alg))))
+                # New rangefinders live in the input frame; align the output to that frame.
+                env = fix_global_phases(fix_relative_phases(env, signs), previous)
+                η = max(η, ignore_derivatives(() -> norm(env - previous) / norm(previous)))
+            end
+            η = max(η, get(info_iter.contraction_metrics, :subspace_error, zero(η)))
 
-            if η ≤ alg.tol && iter ≥ alg.miniter
+            if η ≤ alg.tol && ready
                 ctmrg_logfinish!(log, iter, η, network, env)
                 converged = true
                 break
@@ -139,7 +175,7 @@ function leading_boundary(
             convergence_error = η,
             contraction_metrics = info_iter.contraction_metrics,
         )
-        return env, info
+        return env, info, projector_cache
     end
 end
 function leading_boundary(env₀::AbstractCTMRGEnv, state, args...; kwargs...)

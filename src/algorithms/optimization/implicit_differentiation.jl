@@ -205,8 +205,49 @@ Evaluating the gradient of the cost function for CTMRG:
 _scrambling_env_gauge(::CTMRGAlgorithm) = ScramblingEnvGauge()
 
 function _set_fixed_truncation(alg::CTMRGAlgorithm)
-    alg_fixed = @set alg.projector_alg = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    projector = _set_truncation(alg.projector_alg, FixedSpaceTruncation())
+    if projector isa SubspaceIterationProjector && _adaptive_subspace(alg.projector_alg)
+        # Hold the discrete charge allocation fixed during the joint response solve.
+        projector = @set projector.charge_refresh = 0
+    end
+    alg_fixed = @set alg.projector_alg = projector
     return alg_fixed
+end
+
+"""Convert structured AD cotangents to the vectors used by the fixed-point solver."""
+function _fixedpoint_tangent(x, dx)
+    dx = unthunk(dx)
+    dx isa AbstractZero && return VI.zerovector(x)
+    return x isa Tuple ? ntuple(i -> _fixedpoint_tangent(x[i], dx[i]), length(x)) : dx
+end
+
+"""Prepare the differentiable fixed-point state and gauge-fixed iteration."""
+function _fixedpoint_iteration(env, alg, cache::EmptyProjectorCache, signs)
+    iteration(A, x) = fix_global_phases(
+        fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg, cache)[1], signs), env
+    )
+    return env, iteration, identity
+end
+
+function _fixedpoint_iteration(env, alg, cache::SubspaceIterationCache, signs)
+    # Krylov vectors and AD cotangents must use the same concrete tensor storage.
+    bases = isnothing(cache.Y) ? (cache.X,) : (cache.X, map(copy, cache.Y))
+    function iteration(A, x)
+        incoming = SubspaceIterationCache(cache.iteration, x[2][1], isnothing(cache.Y) ? nothing : x[2][2])
+        en, _, next = ctmrg_iteration(InfiniteSquareNetwork(A), x[1], alg, incoming)
+        en = fix_global_phases(fix_relative_phases(en, signs), env)
+        nextbases = isnothing(next.Y) ? (next.X,) : (next.X, next.Y)
+        # Fix column-frame freedom and remove normal-to-isometry perturbations.
+        aligned = map(nextbases, bases) do grid, refs
+            map(grid, refs) do b, ref
+                out = b * (b' * ref)
+                ref + out - ref * (ref' * out)
+            end
+        end
+        return en, aligned
+    end
+    rhs(Δenv) = (Δenv, VI.zerovector(bases))
+    return (env, bases), iteration, rhs
 end
 
 # compute the CTMRG gradient through fixed-point differentiation
@@ -220,31 +261,26 @@ function _rrule(
     )
     _check_algorithm_combination(alg, gradmode)
 
-    env, = leading_boundary(envinit, state, alg)
+    env, info, projector_cache = _leading_boundary_with_cache(envinit, InfiniteSquareNetwork(state), alg)
 
     # prepare iterating function corresponding to a single gauge-fixed CTMRG iteration
     alg_fixed = _set_fixed_truncation(alg) # fix spaces during differentiation
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
-    env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
-    signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    # fix global phases relative to the fixed point inside the iteration
-    function gauge_fixed_iteration(A, x)
-        return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], signs),
-            env,
-        )
-    end
+    env_conv, _, = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed, projector_cache)
+    signs = first(compute_gauge_fix_gauge(env_conv, env, alg_gauge))
+    x, gauge_fixed_iteration, rhs = _fixedpoint_iteration(env, alg_fixed, projector_cache, signs)
     # prepare its pullback
-    _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
+    _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, x)
     # split off state and environment parts
     ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
-    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
+    ∂f∂x(y) = _fixedpoint_tangent(x, env_vjp(y)[3])
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
         # evaluate the geometric sum
-        ∂F∂env = fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode.solver_alg)
+        Δx = rhs(Δenv)
+        ∂F∂env = fixedpoint_gradient(Δx, ∂f∂x, ∂f∂A, Δx, gradmode.solver_alg)
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
@@ -310,7 +346,7 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter
     dx = ∂f∂A(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
-        y′ = ∂E∂x + ∂f∂x(y)
+        y′ = VI.add(∂E∂x, ∂f∂x(y))
 
         dxnew = ∂f∂A(y′)
         ϵnew = norm(dxnew - dx)
@@ -345,7 +381,8 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
         return (VI.add!!(y, ∂E∂x, X[2]), X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
-    _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg)
+    which = EigSorter(λ -> abs(λ - one(λ)))
+    _, vecs, info = realeigsolve(f, X₀, 1, which, alg)
     if alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
@@ -424,6 +461,21 @@ function _check_algorithm_combination(::SimultaneousCTMRG{<:FullInfiniteProjecto
           since the corresponding charageristic equations have not yet been implemented; select \
           SimultaneousCTMRG with HalfInfiniteProjector instead to use :ImplicitGradient"
     throw(ArgumentError(msg))
+end
+
+"""Reject characteristic-equation rules that are not defined for SI projectors."""
+function _reject_subspace_iteration_gradient()
+    throw(ArgumentError("SubspaceIterationProjector supports FixedPointGradient or `gradient_alg=nothing`; its ImplicitGradient characteristic equations are not implemented."))
+end
+function _check_algorithm_combination(
+        ::SequentialCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
+    )
+    return _reject_subspace_iteration_gradient()
+end
+function _check_algorithm_combination(
+        ::SimultaneousCTMRG{<:SubspaceIterationProjector}, ::ImplicitGradient
+    )
+    return _reject_subspace_iteration_gradient()
 end
 
 

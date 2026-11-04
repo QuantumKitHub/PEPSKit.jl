@@ -164,6 +164,24 @@ module CTMRGUnitCell
 end
 using .CTMRGUnitCell
 
+module CTMRGSubspaceDimensions
+    include("ctmrg/subspace_dimensions.jl")
+    export ctmrg_subspace_dimensions
+end
+using .CTMRGSubspaceDimensions
+
+module CTMRGSubspaceIteration
+    include("ctmrg/subspace_iteration.jl")
+    export ctmrg_subspace_iteration
+end
+using .CTMRGSubspaceIteration
+
+module CTMRGSubspaceUpdates
+    include("ctmrg/subspace_updates.jl")
+    export ctmrg_subspace_updates
+end
+using .CTMRGSubspaceUpdates
+
 # Examples
 # --------
 module ExamplesBoseHubbard
@@ -209,6 +227,24 @@ module GradientsCTMRG
     export gradients_asymmetric, gradients_asymmetric_276
 end
 using .GradientsCTMRG
+
+module GradientsSubspaceDimensions
+    include("gradients/subspace_dimensions.jl")
+    export gradients_subspace_dimensions
+end
+using .GradientsSubspaceDimensions
+
+module GradientsSubspaceIteration
+    include("gradients/subspace_iteration.jl")
+    export gradients_subspace_iteration
+end
+using .GradientsSubspaceIteration
+
+module GradientsSubspaceUpdates
+    include("gradients/subspace_updates.jl")
+    export gradients_subspace_updates
+end
+using .GradientsSubspaceUpdates
 
 # Optimization
 # ------------

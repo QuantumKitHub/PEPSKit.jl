@@ -61,6 +61,18 @@ function EnlargedCorner(network::InfiniteSquareNetwork, env, coordinates)
     end
 end
 
+"""Return the domain of an enlarged corner without materializing its contraction."""
+function TensorKit.domain(Q::EnlargedCorner)
+    A = _rotate_north_localsandwich(Q.A, Q.dir)
+    return domain(Q.E_2) * _elementwise_dual(east_virtualspace(A))
+end
+
+"""Return the codomain of an enlarged corner without materializing its contraction."""
+function TensorKit.codomain(Q::EnlargedCorner)
+    A = _rotate_north_localsandwich(Q.A, Q.dir)
+    return first(codomain(Q.E_1)) * south_virtualspace(A)
+end
+
 """
     TensorMap(Q::EnlargedCorner)
 
