@@ -7,7 +7,6 @@ using OptimKit
 using Zygote
 using LinearAlgebra
 using KrylovKit
-using Logging
 
 using PEPSKit: unitcell, norm_preserving_retract
 
@@ -129,7 +128,7 @@ end
             Ea, Eb, = PEPSKit._truncate_edge(mat, L, R, truncrank(2), decomposition_alg)
             return real(dot(target, Eb * permute(Ea, ((1,), (3, 2)))))
         end
-        result = @test_logs min_level = Logging.Warn withgradient(loss, tensors...)
+        result = @test_logs min_level = Base.CoreLogging.Warn withgradient(loss, tensors...)
         ε = 1.0e-5
         for i in 1:3
             plus = Base.setindex(tensors, tensors[i] + ε * directions[i], i)

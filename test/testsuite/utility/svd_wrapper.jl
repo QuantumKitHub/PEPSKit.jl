@@ -6,7 +6,6 @@ using ChainRulesCore, Zygote
 using Accessors
 using PEPSKit
 using Adapt
-using Logging
 using MatrixAlgebraKit: TruncatedAlgorithm, diagview, svd_trunc_no_error
 
 function utility_svd_wrapper(AT)
@@ -49,7 +48,7 @@ function utility_svd_wrapper(AT)
                 alg = SVDAdjoint(; rrule_alg = (; verbosity))
                 (U, S, V), back = rrule(svd_full!, copy(A), alg)
                 if verbosity == 0
-                    @test_logs min_level = Logging.Warn back((im * U, zero(S), zero(V)))
+                    @test_logs min_level = Base.CoreLogging.Warn back((im * U, zero(S), zero(V)))
                 else
                     @test_logs (:warn, r"`svd` cotangents sensitive to gauge choice") back((im * U, zero(S), zero(V)))
                 end
