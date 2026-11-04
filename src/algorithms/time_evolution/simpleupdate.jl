@@ -167,12 +167,7 @@ end
 function Base.iterate(it::TimeEvolver{<:SimpleUpdate}, state = it.state)
     iter, t = state.iter, state.t
     (iter == it.nstep) && return nothing
-    cp = allocator_checkpoint!(it.allocator)
-    psi, env, ϵ = try
-        su_iter(state.psi, it.circuit, it.alg, state.env; allocator = it.allocator)
-    finally
-        allocator_reset!(it.allocator, cp)
-    end
+    psi, env, ϵ = su_iter(state.psi, it.circuit, it.alg, state.env; allocator = it.allocator)
     # update internal state
     iter += 1
     t += it.dt
