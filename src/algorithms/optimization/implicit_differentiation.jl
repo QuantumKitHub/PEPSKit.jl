@@ -244,7 +244,11 @@ function _rrule(
         Δenv = unthunk(Δenv′)
 
         # evaluate the geometric sum
-        ∂F∂env = fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode.solver_alg)
+        ∂F∂env = if gradmode.solver_alg isa Union{GeomSum, ManualIter}
+            fixedpoint_gradient(Δenv, env_vjp, Δenv, gradmode.solver_alg)
+        else
+            fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode.solver_alg)
+        end
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
@@ -254,10 +258,9 @@ end
 
 @doc raw"""
     fixedpoint_gradient(x̆, ∂ₓf, ∂ₚf, y₀, alg)
+    fixedpoint_gradient(x̆, vjp, y₀, alg::Union{GeomSum, ManualIter})
 
-Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
-which satisfies the fixed-point equation ``x = f(x, p)``, given the VJP actions ``∂ₓf``
-and ``∂ₚf`` of the iterating function ``f``.
+Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)`` which satisfies the fixed-point equation ``x = f(x, p)``, given either the separate VJP actions ``∂ₓf`` and ``∂ₚf`` of the iterating function ``f`` or a shared pullback `vjp`.
 
 More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
 variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
@@ -278,18 +281,18 @@ This can be used to differentiate contraction routines, where ``p`` are the vari
 parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
 derivative of the cost function with respect to the contraction environment ``x``, and ``f``
 is a single iteration of the contraction algorithm.
+
+`GeomSum` and `ManualIter` require the positional argument `vjp` in place of the separate VJP actions.
+The shared pullback `vjp(y)` must return `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`; the first entry is ignored.
+The solver reuses both cotangents to avoid evaluating the same reverse pass twice.
 """
 fixedpoint_gradient
 
-# TODO: can we construct an implementation that does not need to evaluate the vjp
-# twice if both ∂f∂A and ∂f∂x are needed?
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
-    g = ∂E∂x
-    dx = ∂f∂A(g) # n = 0 term: ∂F∂x ∂f∂A
+function fixedpoint_gradient(∂E∂x, vjp, _, alg::GeomSum)
+    _, dx, g = vjp(∂E∂x) # n = 0 term: ∂F∂x ∂f∂A
     ϵ = 2 * alg.tol
     for i in 1:(alg.maxiter)
-        g = ∂f∂x(g)
-        Σₙ = ∂f∂A(g)
+        _, Σₙ, g = vjp(g)
         dx += Σₙ
         ϵnew = norm(Σₙ)  # TODO: normalize this error?
         Δϵ = ϵ - ϵnew
@@ -305,20 +308,18 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, _, alg::GeomSum)
     return dx
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::ManualIter)
+function fixedpoint_gradient(∂E∂x, vjp, y₀, alg::ManualIter)
     y = deepcopy(y₀)  # Do not mutate y₀
-    dx = ∂f∂A(y)
+    _, dx, dy = vjp(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
-        y′ = ∂E∂x + ∂f∂x(y)
-
-        dxnew = ∂f∂A(y′)
+        y′ = ∂E∂x + dy
+        _, dxnew, dy = vjp(y′)
         ϵnew = norm(dxnew - dx)
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 && @printf(
             "Gradient iter: %3d   ‖Cᵢ₊₁-Cᵢ‖/N: %.2e   Δ‖Cᵢ₊₁-Cᵢ‖/N: %.2e\n", i, ϵnew, Δϵ
         )
-        y = y′
         dx = dxnew
         ϵ = ϵnew
 
