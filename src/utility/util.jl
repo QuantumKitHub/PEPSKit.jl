@@ -53,7 +53,6 @@ function ChainRulesCore.rrule(
         ::typeof(sdiag_pow), s::AbstractTensorMap, pow::Real;
         tol::Real = eps(real(scalartype(s)))^(3 / 4),
     )
-    tol *= norm(s, Inf)
     spow = sdiag_pow(s, pow; tol)
     spow_minus1_conj = scale!(sdiag_pow(s', pow - 1; tol), pow)
     function sdiag_pow_pullback(c̄_)
