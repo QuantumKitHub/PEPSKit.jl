@@ -1,5 +1,6 @@
 using Test
 using Random
+using StableRNGs
 using TensorKit
 using MPSKit
 using PEPSKit
@@ -548,9 +549,9 @@ end
 end
 
 @testset "Triangular AF Heisenberg optimization" begin
-    Random.seed!(48631)
+    rng = StableRNG(48631)
     V = ComplexSpace(2)
-    state = InfinitePEPSTriangular(randn, ComplexF64, V, V)
+    state = InfinitePEPSTriangular((args...) -> randn(rng, args...), ComplexF64, V, V)
     Sx = TensorMap(ComplexF64[0 1; 1 0] / 2, V, V)
     Sy = TensorMap(ComplexF64[0 -im; im 0] / 2, V, V)
     Sz = TensorMap(ComplexF64[1 0; 0 -1] / 2, V, V)
