@@ -237,7 +237,7 @@ function _rrule(
     # prepare its pullback
     _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
     # split off state and environment parts
-    ∂f∂A(x)::typeof(state) = env_vjp(x)[2]
+    ∂f∂p(x)::typeof(state) = env_vjp(x)[2]
     ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
@@ -247,7 +247,7 @@ function _rrule(
         ∂F∂env = if gradmode.solver_alg isa Union{GeomSum, ManualIter}
             fixedpoint_gradient(Δenv, env_vjp, Δenv, gradmode.solver_alg)
         else
-            fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂A, Δenv, gradmode.solver_alg)
+            fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂p, Δenv, gradmode.solver_alg)
         end
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
@@ -289,7 +289,7 @@ The solver reuses both cotangents to avoid evaluating the same reverse pass twic
 fixedpoint_gradient
 
 function fixedpoint_gradient(∂E∂x, vjp, _, alg::GeomSum)
-    _, dx, g = vjp(∂E∂x) # n = 0 term: ∂F∂x ∂f∂A
+    _, dx, g = vjp(∂E∂x) # n = 0 term: ∂F∂x ∂f∂p
     ϵ = 2 * alg.tol
     for i in 1:(alg.maxiter)
         _, Σₙ, g = vjp(g)
@@ -331,16 +331,16 @@ function fixedpoint_gradient(∂E∂x, vjp, y₀, alg::ManualIter)
     return dx
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, y₀, alg::KrylovKit.LinearSolver)
+function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂p, y₀, alg::KrylovKit.LinearSolver)
     y, info = reallinsolve(∂f∂x, ∂E∂x, y₀, alg, 1, -1)
     if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 
-    return ∂f∂A(y)
+    return ∂f∂p(y)
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.KrylovAlgorithm)
+function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂p, x₀, alg::KrylovKit.KrylovAlgorithm)
     function f(X)
         y = ∂f∂x(X[1])
         return (VI.add!!(y, ∂E∂x, X[2]), X[2])
@@ -354,12 +354,12 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, alg::KrylovKit.
         @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(vecs[1][2])\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
         @info "Falling back to linear solver for fixed-point gradient computation."
         backup_ls_alg = GMRES(; tol = alg.tol, maxiter = alg.maxiter, verbosity = alg.verbosity)
-        return fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂A, x₀, backup_ls_alg)
+        return fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂p, x₀, backup_ls_alg)
     else
         y = VI.scale!!(vecs[1][1], inv(vecs[1][2]))
     end
 
-    return ∂f∂A(y)
+    return ∂f∂p(y)
 end
 
 #
