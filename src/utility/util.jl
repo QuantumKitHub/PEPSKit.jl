@@ -23,6 +23,7 @@ function _maxabs(data::AbstractArray)
     return norm(data, Inf)
 end
 _maxabs(s::AbstractTensorMap) = _maxabs(s.data)
+_maxabs(s::AdjointTensorMap) = _maxabs(adjoint(s))
 
 """
     sdiag_pow(s, pow::Real; tol::Real=eps(real(scalartype(s)))^(3 / 4))

@@ -1,5 +1,5 @@
 """
-    struct InfinitePEPSTriangular{T<:PEPSTensorTriangularTriangular}
+    struct InfinitePEPSTriangular{T<:PEPSTensorTriangular}
 
 Represents an infinite projected entangled-pair state on a 2D triangular lattice.
 
@@ -12,7 +12,17 @@ struct InfinitePEPSTriangular{T <: PEPSTensorTriangular}
     InfinitePEPSTriangular{T}(A::Matrix{T}) where {T <: PEPSTensorTriangular} = new{T}(A)
     function InfinitePEPSTriangular(A::Array{T, 2}) where {T <: PEPSTensorTriangular}
         bosonic_braiding = BraidingStyle(sectortype(T)) === Bosonic()
-        # TODO: check braiding and spaces
+        for (r, c) in Tuple.(CartesianIndices(A))
+            (bosonic_braiding || !isdual(physicalspace(A[r, c]))) ||
+                throw(ArgumentError("Dual physical spaces for symmetry sectors with non-trivial twists are not allowed (for now)."))
+            northwest_virtualspace(A[r, c]) == southeast_virtualspace(A[_prev(r, end), c])' ||
+                throw(SpaceMismatch("Northwest virtual space at site $((r, c)) does not match."))
+            northeast_virtualspace(A[r, c]) == southwest_virtualspace(A[_prev(r, end), _next(c, end)])' ||
+                throw(SpaceMismatch("Northeast virtual space at site $((r, c)) does not match."))
+            east_virtualspace(A[r, c]) == west_virtualspace(A[r, _next(c, end)])' ||
+                throw(SpaceMismatch("East virtual space at site $((r, c)) does not match."))
+            dim(space(A[r, c])) > 0 || @warn "no fusion channels at site ($r, $c)"
+        end
         return new{T}(A)
     end
 end
@@ -30,19 +40,20 @@ function InfinitePEPSTriangular(A::AbstractMatrix{<:PEPSTensorTriangular})
 end
 
 """
-    InfinitePEPSTriangular([f=randn, T=ComplexF64,] Pspaces::A, Nspaces::A, [Espaces::A]) where {A<:AbstractMatrix{ElementarySpace}}
+    InfinitePEPSTriangular([f=randn, T=ComplexF64,] Pspaces::A, NWspaces::A, [NEspaces::A], [Espaces::A]) where {A<:AbstractMatrix{ElementarySpace}}
 
-Create an `InfinitePEPSTriangular` by specifying the physical, north virtual and east virtual spaces
-of the PEPS tensor at each site in the unit cell as a matrix.
+Create an `InfinitePEPSTriangular` by specifying matrices of physical, northwest, northeast
+and east virtual spaces. Omitted virtual spaces default to `NWspaces`; the opposite
+spaces are the duals of the corresponding neighboring spaces, with periodic boundaries.
 """
 function InfinitePEPSTriangular(
         f, T::Type{<:Number}, Pspaces::M, NWspaces::M, NEspaces::M = NWspaces, Espaces::M = NWspaces
     ) where {M <: AbstractMatrix{<:ElementarySpace}}
-    size(Pspaces) == size(NEspaces) == size(NEspaces) == size(Espaces) ||
+    size(Pspaces) == size(NWspaces) == size(NEspaces) == size(Espaces) ||
         throw(ArgumentError("Input spaces should have equal sizes."))
 
     SEspaces = adjoint.(circshift(NWspaces, (-1, 0)))
-    SWspaces = adjoint.(NEspaces)
+    SWspaces = adjoint.(circshift(NEspaces, (-1, 1)))
     Wspaces = adjoint.(circshift(Espaces, (0, 1)))
 
     A = map(Pspaces, NWspaces, NEspaces, Espaces, SEspaces, SWspaces, Wspaces) do P, NW, NE, E, SE, SW, W
@@ -62,14 +73,11 @@ end
 
 Create an `InfinitePEPSTriangular` by specifying a tensor and unit cell.
 
-The unit cell is labeled as a matrix which means that any tensor in the unit cell,
-regardless if PEPS tensor or environment tensor, is obtained by shifting the row
-and column index `[r, c]` by one, respectively:
-```
-TODO: diagram
-```
-The unit cell has periodic boundary conditions, so `[r, c]` is indexed modulo the
-size of the unit cell.
+The unit cell uses one-based matrix coordinates `[r, c]`. The virtual legs are ordered
+`NW, NE, E, SE, SW, W`, connecting to neighbors at offsets
+`(-1, 0), (-1, 1), (0, 1), (1, 0), (1, -1), (0, -1)`, respectively.
+Contractions wrap these coordinates periodically; direct `peps[r, c]` indexing follows
+ordinary matrix bounds. A three-sublattice cell is `[A B C; C A B; B C A]`.
 """
 function InfinitePEPSTriangular(A::T; unitcell::Tuple{Int, Int} = (1, 1)) where {T <: PEPSTensorTriangular}
     return InfinitePEPSTriangular(fill(A, unitcell))
@@ -83,9 +91,10 @@ function _fill_state_virtual_spaces_triangular(
 end
 
 """
-    InfinitePEPSTriangular([f=randn, T=ComplexF64,] Pspace, Nspace, [Espace]; unitcell=(1,1))
+    InfinitePEPSTriangular([f=randn, T=ComplexF64,] Pspace, NWspace, [NEspace], [Espace]; unitcell=(1,1))
 
-Create an InfinitePEPSTriangular by specifying its physical, north and east spaces and unit cell.
+Create an `InfinitePEPSTriangular` with uniform physical, northwest, northeast and east
+virtual spaces and the given unit-cell size. Omitted virtual spaces default to `NWspace`.
 """
 function InfinitePEPSTriangular(
         f, T::Type{<:Number}, Pspace::S, vspaces...; unitcell::Tuple{Int, Int} = (1, 1)
@@ -174,6 +183,7 @@ function VI.add!(ψ₁::InfinitePEPSTriangular, ψ₂::InfinitePEPSTriangular, �
     return ψ₁
 end
 VI.add!!(ψ₁::InfinitePEPSTriangular, ψ₂::InfinitePEPSTriangular, α::Number, β::Number) = add!(ψ₁, ψ₂, α, β)
+VI.inner(ψ₁::InfinitePEPSTriangular, ψ₂::InfinitePEPSTriangular) = inner(unitcell(ψ₁), unitcell(ψ₂))
 
 ## Math
 
@@ -186,7 +196,7 @@ end
 Base.:*(α::Number, A::InfinitePEPSTriangular) = InfinitePEPSTriangular(α * unitcell(A))
 Base.:*(A::InfinitePEPSTriangular, α::Number) = α * A
 Base.:/(A::InfinitePEPSTriangular, α::Number) = InfinitePEPSTriangular(unitcell(A) / α)
-LinearAlgebra.dot(A₁::InfinitePEPSTriangular, A₂::InfinitePEPSTriangular) = dot(unitcell(A₁), unitcell(A₂))
+LinearAlgebra.dot(A₁::InfinitePEPSTriangular, A₂::InfinitePEPSTriangular) = inner(A₁, A₂)
 LinearAlgebra.norm(A::InfinitePEPSTriangular) = norm(unitcell(A))
 
 ## (Approximate) equality

@@ -17,7 +17,7 @@ using MatrixAlgebraKit: svd_pullback!, svd_trunc_pullback!
 using TensorKit
 using TensorKit: AdjointTensorMap, SectorDict
 using TensorKit: throw_invalid_innerproduct, similarstoragetype
-using TensorKit.Factorizations: TruncationSpace, _notrunc_ind
+using TensorKit.Factorizations: TruncationSpace
 
 using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
@@ -57,21 +57,16 @@ include("Defaults.jl")  # Include first to allow for docstring interpolation wit
 include("utility/util.jl")
 include("utility/contraction_labels.jl")
 include("utility/tensor_traces.jl")
-include("utility/contraction_labels.jl")
-include("utility/tensor_traces.jl")
 include("utility/indexing.jl")
 include("utility/diffable_threads.jl")
 include("utility/twistdual.jl")
-include("utility/twistdual.jl")
 include("utility/eigh.jl")
 include("utility/svd.jl")
-include("utility/orth.jl")
 include("utility/orth.jl")
 include("utility/rotations.jl")
 include("utility/hook_pullback.jl")
 include("utility/autoopt.jl")
 include("utility/retractions.jl")
-include("utility/initialization.jl")
 include("utility/initialization.jl")
 
 include("networks/tensors.jl")
@@ -93,9 +88,6 @@ include("operators/localoperator.jl")
 include("operators/localoperator/dense.jl")
 include("operators/localoperator/tensorproduct.jl")
 include("operators/localoperator/mpo.jl")
-include("operators/localoperator/dense.jl")
-include("operators/localoperator/tensorproduct.jl")
-include("operators/localoperator/mpo.jl")
 include("operators/localcircuit.jl")
 include("operators/lattices/squarelattice.jl")
 include("operators/models.jl")
@@ -105,7 +97,6 @@ include("environments/ctmrg_environments_triangular.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
-include("environments/product_state_environments.jl")
 include("environments/product_state_environments.jl")
 
 include("algorithms/contractions/ctmrg/types.jl")
@@ -118,23 +109,13 @@ include("algorithms/contractions/ctmrg/fullinf_env.jl")
 include("algorithms/contractions/ctmrg/renormalize_corner.jl")
 include("algorithms/contractions/ctmrg/renormalize_edge.jl")
 include("algorithms/contractions/ctmrg/network_value.jl")
-include("algorithms/contractions/ctmrg/network_value.jl")
 include("algorithms/contractions/ctmrg/gaugefix.jl")
 include("algorithms/contractions/ctmrg/characteristic_equations.jl")
-include("algorithms/contractions/ctmrg/characteristic_equations.jl")
 
-include("algorithms/contractions/absorb.jl")
 include("algorithms/contractions/absorb.jl")
 include("algorithms/contractions/absorb_weight.jl")
 include("algorithms/contractions/transfer.jl")
 include("algorithms/contractions/vumps_contractions.jl")
-include("algorithms/contractions/bp_messages.jl")
-include("algorithms/contractions/local_patch/expr_utils.jl")
-include("algorithms/contractions/local_patch/network_expr.jl")
-include("algorithms/contractions/local_patch/patch_contractions.jl")
-include("algorithms/contractions/local_patch/densitymatrix/generic.jl")
-include("algorithms/contractions/local_patch/densitymatrix/ctmrg.jl")
-include("algorithms/contractions/local_patch/densitymatrix/bp.jl")
 include("algorithms/contractions/bp_messages.jl")
 include("algorithms/contractions/local_patch/expr_utils.jl")
 include("algorithms/contractions/local_patch/network_expr.jl")
@@ -148,16 +129,10 @@ include("algorithms/contractions/bondenv/als_solve.jl")
 include("algorithms/contractions/bondenv/benv_ctm.jl")
 include("algorithms/contractions/correlator/peps.jl")
 include("algorithms/contractions/correlator/pepo_purified.jl")
-include("algorithms/contractions/correlator/pepo_purified.jl")
 include("algorithms/contractions/correlator/pepo_1layer.jl")
 
 include("algorithms/ctmrg/sparse_environments.jl")
 include("algorithms/ctmrg/ctmrg.jl")
-include("algorithms/ctmrg/projectors/projectors.jl")
-include("algorithms/ctmrg/projectors/halfinfinite.jl")
-include("algorithms/ctmrg/projectors/fullinfinite.jl")
-include("algorithms/ctmrg/projectors/c4v_eigh.jl")
-include("algorithms/ctmrg/projectors/c4v_qr.jl")
 include("algorithms/ctmrg/projectors/projectors.jl")
 include("algorithms/ctmrg/projectors/halfinfinite.jl")
 include("algorithms/ctmrg/projectors/fullinfinite.jl")
@@ -168,23 +143,22 @@ include("algorithms/ctmrg/sequential.jl")
 include("algorithms/ctmrg/gaugefix.jl")
 include("algorithms/ctmrg/c4v.jl")
 include("algorithms/ctmrg/initialization.jl")
-include("algorithms/ctmrg/initialization.jl")
-
-include("algorithms/truncation/truncationschemes.jl")
-include("algorithms/truncation/fullenv_truncation.jl")
-include("algorithms/truncation/bond_truncation.jl")
-
-include("algorithms/compress/local.jl")
-
-include("algorithms/contractions/ctmrg_contractions_triangular.jl")
-include("algorithms/ctmrg_triangular/ctmrg.jl")
-include("algorithms/ctmrg_triangular/utility.jl")
-include("algorithms/ctmrg_triangular/simultaneous.jl")
 
 include("algorithms/truncation/truncationschemes.jl")
 include("algorithms/truncation/fullenv_truncation.jl")
 include("algorithms/truncation/bond_tensor.jl")
 include("algorithms/truncation/bond_truncation.jl")
+
+include("algorithms/contractions/triangular_ctmrg/double_corner.jl")
+include("algorithms/contractions/triangular_ctmrg/renormalize_edge.jl")
+include("algorithms/contractions/triangular_ctmrg/halfinf_env.jl")
+include("algorithms/contractions/triangular_ctmrg/renormalize_corner.jl")
+include("algorithms/contractions/triangular_ctmrg/network_value.jl")
+include("algorithms/contractions/triangular_ctmrg/expectation_value.jl")
+include("algorithms/ctmrg_triangular/ctmrg.jl")
+include("algorithms/ctmrg_triangular/utility.jl")
+include("algorithms/ctmrg_triangular/simultaneous.jl")
+include("algorithms/ctmrg_triangular/gaugefix.jl")
 
 include("algorithms/compress/local.jl")
 
@@ -207,17 +181,9 @@ include("algorithms/expectation_value/patch_contractions.jl")
 include("algorithms/expectation_value/network_value.jl")
 include("algorithms/expectation_value/correlator_adapters.jl")
 include("algorithms/expectation_value/correlators.jl")
-include("algorithms/expectation_value/expectation_value.jl")
-include("algorithms/expectation_value/reduced_densitymatrix.jl")
-include("algorithms/expectation_value/patch_contractions.jl")
-include("algorithms/expectation_value/network_value.jl")
-include("algorithms/expectation_value/correlator_adapters.jl")
-include("algorithms/expectation_value/correlators.jl")
 include("algorithms/toolbox.jl")
 include("algorithms/toolbox_triangular.jl")
 
-include("algorithms/optimization/implicit_differentiation.jl")
-include("algorithms/optimization/preconditioning.jl")
 include("algorithms/optimization/implicit_differentiation.jl")
 include("algorithms/optimization/preconditioning.jl")
 include("algorithms/optimization/peps_optimization.jl")
@@ -226,7 +192,6 @@ include("algorithms/select_algorithm.jl")
 
 using .Defaults: set_scheduler!
 export set_scheduler!
-export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, OrthAdjoint, QRAdjoint
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, OrthAdjoint, QRAdjoint
 export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export CTMRGEnvTriangular, SimultaneousCTMRGTriangular # CTMRGTriaEnv, SimultaneousCTMRGTria
@@ -244,9 +209,6 @@ export correlator, correlation_length
 export leading_boundary
 export PEPSOptimize, FixedPointGradient, GeomSum, ManualIter, ImplicitGradient
 export fixedpoint
-
-export LocalTruncation
-export compress
 
 export LocalTruncation
 export compress

@@ -1,10 +1,10 @@
 """
-    cost_function(peps::InfinitePEPS, env, O::LocalOperator)
+    cost_function(peps::Union{InfinitePEPS, InfinitePEPSTriangular}, env, O::LocalOperator)
 
 Real part of expectation value of `O`, used as the cost function in variational PEPS optimization.
 Prints a warning if the expectation value yields a finite imaginary part (up to a tolerance).
 """
-function cost_function(peps::InfinitePEPS, env, O::LocalOperator)
+function cost_function(peps::Union{InfinitePEPS, InfinitePEPSTriangular}, env, O::LocalOperator)
     E = MPSKit.expectation_value(peps, O, env)
     ignore_derivatives() do
         isapprox(imag(E), 0; atol = sqrt(eps(real(E)))) ||
@@ -62,7 +62,13 @@ function PEPSOptimize(;
         boundary_alg = (;), gradient_alg = (;), optimizer_alg = (;), precondition_alg = (;),
         reuse_env = Defaults.reuse_env, symmetrization = nothing,
     )
-    boundary_algorithm = _alg_or_nt(CTMRGAlgorithm, boundary_alg)
+    boundary_type = if parent_alg(boundary_alg) isa CTMRGAlgorithmTriangular ||
+            (boundary_alg isa NamedTuple && get(boundary_alg, :alg, nothing) == :SimultaneousCTMRGTriangular)
+        CTMRGAlgorithmTriangular
+    else
+        CTMRGAlgorithm
+    end
+    boundary_algorithm = _alg_or_nt(boundary_type, boundary_alg)
     gradient_algorithm = _alg_or_nt(GradientAlgorithm, gradient_alg)
     optimizer_algorithm = _alg_or_nt(OptimKit.OptimizationAlgorithm, optimizer_alg)
     precondition_algorithm = _alg_or_nt(PreconditionAlgorithm, precondition_alg)
@@ -108,9 +114,9 @@ function _OptimizationAlgorithm(;
 end
 
 """
-    fixedpoint(operator, peps₀::InfinitePEPS, env₀; kwargs...) -> peps_final, env_final, cost_final, info
+    fixedpoint(operator, peps₀::Union{InfinitePEPS, InfinitePEPSTriangular}, env₀; kwargs...) -> peps_final, env_final, cost_final, info
     # expert version:
-    fixedpoint(operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize; finalize!=OptimKit._finalize!)
+    fixedpoint(operator, peps₀::Union{InfinitePEPS, InfinitePEPSTriangular}, env₀, alg::PEPSOptimize; finalize!=OptimKit._finalize!)
     
 Find the fixed point of `operator` (i.e. the ground state) starting from `peps₀` according
 to the supplied optimization parameters. The initial environment `env₀` serves as an
@@ -118,7 +124,11 @@ initial guess for the first boundary contraction run. By default, a random initi
 Each local tensor is normalized initially, and optimization preserves its Euclidean norm by projecting gradients and preconditioned directions onto its real tangent space.
 
 The optimization parameters can be supplied via the keyword arguments or directly as a
-`PEPSOptimize` struct. The following keyword arguments are supported:
+`PEPSOptimize` struct. Triangular PEPS support `FixedPointGradient` with a complex
+environment, or `gradient_alg = nothing` to differentiate the CTMRG iterations.
+They require `precondition_alg = nothing`; symmetrization is not yet supported.
+
+The following keyword arguments are supported:
 
 ## Keyword arguments
 
@@ -223,13 +233,13 @@ information `NamedTuple` which contains the following entries:
 * `gradnorms_unitcell` : History of gradient norms for each respective unit cell entry.
 * `times` : History of optimization step execution times.
 """
-function fixedpoint(operator, peps₀::InfinitePEPS, env₀; kwargs...)
+function fixedpoint(operator, peps₀::Union{InfinitePEPS, InfinitePEPSTriangular}, env₀; kwargs...)
     extra_kwarg_keys = (:finalize!, :hasconverged, :shouldstop) # these will not be passed to `select_algorithm`, only to the 2nd `fixedpoint` call
     alg = select_algorithm(fixedpoint, env₀; filter(kw -> !(first(kw) in extra_kwarg_keys), kwargs)...)
     return fixedpoint(operator, peps₀, env₀, alg; filter(kw -> first(kw) in extra_kwarg_keys, kwargs)...)
 end
 function fixedpoint(
-        operator, peps₀::InfinitePEPS, env₀, alg::PEPSOptimize;
+        operator, peps₀::Union{InfinitePEPS, InfinitePEPSTriangular}, env₀, alg::PEPSOptimize;
         (finalize!) = OptimKit._finalize!,
         hasconverged = OptimKit.DefaultHasConverged(alg.optimizer_alg.gradtol),
         shouldstop = OptimKit.DefaultShouldStop(alg.optimizer_alg.maxiter),
@@ -347,15 +357,30 @@ function check_input(::typeof(fixedpoint), peps₀, env₀, alg::PEPSOptimize)
     return nothing
 end
 
-"""
-    peps_normalize(A::InfinitePEPS)
+function check_input(::typeof(fixedpoint), peps₀::InfinitePEPSTriangular, env₀, alg::PEPSOptimize)
+    env₀ isa CTMRGEnvTriangular ||
+        throw(ArgumentError("triangular PEPS optimization requires a CTMRGEnvTriangular environment"))
+    parent_alg(alg.boundary_alg) isa CTMRGAlgorithmTriangular ||
+        throw(ArgumentError("triangular PEPS optimization requires a triangular CTMRG algorithm"))
+    if parent_alg(alg.gradient_alg) isa FixedPointGradient && scalartype(env₀) <: Real
+        throw(ArgumentError("triangular fixed-point differentiation requires a complex environment because gauge fixing generally produces complex gauges"))
+    end
+    isnothing(alg.precondition_alg) ||
+        throw(ArgumentError("triangular preconditioning is not supported; set precondition_alg = nothing"))
+    isnothing(alg.symmetrization) ||
+        throw(ArgumentError("triangular symmetrization is not supported; set symmetrization = nothing"))
+    return nothing
+end
 
-Normalize the individual tensors in the unit cell of an `InfinitePEPS` such that they each
+"""
+    peps_normalize(A::Union{InfinitePEPS, InfinitePEPSTriangular})
+
+Normalize the individual tensors in the PEPS unit cell such that they each
 have unit Euclidean norm.
 """
-function peps_normalize(A::InfinitePEPS)
+function peps_normalize(A::Union{InfinitePEPS, InfinitePEPSTriangular})
     normalized_tensors = normalize.(unitcell(A))
-    return InfinitePEPS(normalized_tensors)
+    return typeof(A)(normalized_tensors)
 end
 
 """Real part of the Hermitian inner product."""
@@ -368,11 +393,11 @@ $(SIGNATURES)
 Project each direction onto the tangent space of its fixed-norm PEPS tensor using [`project_tangent`](@ref) with the real part of the Hermitian inner product.
 Complex tensors are treated as a real vector space, retaining the tangent phase direction ``i A``.
 """
-function peps_project_tangent(η::InfinitePEPS, peps::InfinitePEPS)
+function peps_project_tangent(η::Union{InfinitePEPS, InfinitePEPSTriangular}, peps::Union{InfinitePEPS, InfinitePEPSTriangular})
     tangents = map(unitcell(η), unitcell(peps)) do direction, A
         return project_tangent(direction, A; inner = real_inner)
     end
-    return InfinitePEPS(tangents)
+    return typeof(peps)(tangents)
 end
 
 """
@@ -396,8 +421,8 @@ function peps_retract(x, η, α)
     env = deepcopy(x[2])
 
     retractions = norm_preserving_retract.(unitcell(peps), unitcell(η), α; inner = real_inner)
-    peps′ = InfinitePEPS(map(first, retractions))
-    ξ = InfinitePEPS(map(last, retractions))
+    peps′ = typeof(peps)(map(first, retractions))
+    ξ = typeof(peps)(map(last, retractions))
 
     return (peps′, env), ξ
 end

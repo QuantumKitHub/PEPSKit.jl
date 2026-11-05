@@ -16,7 +16,7 @@ function _coordinates(dir::Int, rot::Int, r::Int, c::Int, unitcell::Tuple{Int, I
 end
 
 function _coordinates(dir::Int, r::Int, c::Int, unitcell::Tuple{Int, Int})
-    return _coordinates(dir, 0, r, c; unitcell)[2:3]
+    return _coordinates(dir, 0, r, c, unitcell)[2:3]
 end
 
 function _truncway(trunctype::Symbol, D::E) where {E <: ElementarySpace}
