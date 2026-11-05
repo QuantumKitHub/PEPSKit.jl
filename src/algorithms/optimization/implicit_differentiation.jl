@@ -292,17 +292,17 @@ function fixedpoint_gradient(∂E∂x, vjp, _, alg::GeomSum)
     _, dx, g = vjp(∂E∂x) # n = 0 term: ∂F∂x ∂f∂p
     ϵ = 2 * alg.tol
     for i in 1:(alg.maxiter)
-        _, Σₙ, g = vjp(g)
-        dx += Σₙ
-        ϵnew = norm(Σₙ)  # TODO: normalize this error?
+        _, Σᵢ, g = vjp(g)
+        dx += Σᵢ
+        ϵnew = norm(Σᵢ)  # TODO: normalize this error?
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 &&
-            @printf("Gradient iter: %3d   ‖Σₙ‖: %.2e   Δ‖Σₙ‖: %.2e\n", i, ϵnew, Δϵ)
+            @printf("Gradient iter: %3d   ‖Σᵢ‖: %.2e   Δ‖Σᵢ‖: %.2e\n", i, ϵnew, Δϵ)
         ϵ = ϵnew
 
         ϵ < alg.tol && break
         if alg.verbosity > 0 && i == alg.maxiter
-            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Σₙ‖ = $ϵ"
+            @warn "gradient fixed-point iteration reached maximal number of iterations at ‖Σᵢ‖ = $ϵ"
         end
     end
     return dx
