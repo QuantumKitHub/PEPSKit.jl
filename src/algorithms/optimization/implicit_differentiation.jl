@@ -289,7 +289,7 @@ The solver reuses both cotangents to avoid evaluating the same reverse pass twic
 fixedpoint_gradient
 
 function fixedpoint_gradient(∂E∂x, vjp, _, alg::GeomSum)
-    _, dx, g = vjp(∂E∂x) # n = 0 term: ∂F∂x ∂f∂p
+    _, dx, g = vjp(∂E∂x) # i = 0 term: ∂E∂x ∂f∂p
     ϵ = 2 * alg.tol
     for i in 1:(alg.maxiter)
         _, Σᵢ, g = vjp(g)
