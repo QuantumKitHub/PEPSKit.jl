@@ -236,19 +236,12 @@ function _rrule(
     end
     # prepare its pullback
     _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
-    # split off state and environment parts
-    ∂f∂p(x)::typeof(state) = env_vjp(x)[2]
-    ∂f∂x(x)::typeof(env) = env_vjp(x)[3]
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
 
-        # evaluate the geometric sum
-        ∂F∂env = if gradmode.solver_alg isa Union{GeomSum, ManualIter}
-            fixedpoint_gradient(Δenv, env_vjp, Δenv, gradmode.solver_alg)
-        else
-            fixedpoint_gradient(Δenv, ∂f∂x, ∂f∂p, Δenv, gradmode.solver_alg)
-        end
+        # evaluate the fixed-point gradient
+        ∂F∂env = fixedpoint_gradient(Δenv, env_vjp, Δenv, gradmode.solver_alg)
 
         return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
     end
@@ -257,10 +250,10 @@ function _rrule(
 end
 
 @doc raw"""
-    fixedpoint_gradient(x̆, ∂ₓf, ∂ₚf, y₀, alg)
-    fixedpoint_gradient(x̆, vjp, y₀, alg::Union{GeomSum, ManualIter})
+    fixedpoint_gradient(x̆, vjp, y₀, alg)
 
-Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)`` which satisfies the fixed-point equation ``x = f(x, p)``, given either the separate VJP actions ``∂ₓf`` and ``∂ₚf`` of the iterating function ``f`` or a shared pullback `vjp`.
+Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)`` which satisfies the fixed-point equation ``x = f(x, p)``.
+The shared pullback `vjp(y)` of the iterating function ``f`` returns `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`.
 
 More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
 variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
@@ -282,9 +275,7 @@ parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
 derivative of the cost function with respect to the contraction environment ``x``, and ``f``
 is a single iteration of the contraction algorithm.
 
-`GeomSum` and `ManualIter` require the positional argument `vjp` in place of the separate VJP actions.
-The shared pullback `vjp(y)` must return `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`; the first entry is ignored.
-The solver reuses both cotangents to avoid evaluating the same reverse pass twice.
+`GeomSum` and `ManualIter` reuse both cotangents at each step; the Krylov solvers use the environment cotangent during the solve and evaluate the parameter cotangent once afterward.
 """
 fixedpoint_gradient
 
@@ -331,18 +322,19 @@ function fixedpoint_gradient(∂E∂x, vjp, y₀, alg::ManualIter)
     return dx
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂p, y₀, alg::KrylovKit.LinearSolver)
+function fixedpoint_gradient(∂E∂x, vjp, y₀, alg::KrylovKit.LinearSolver)
+    ∂f∂x(x) = vjp(x)[3]
     y, info = reallinsolve(∂f∂x, ∂E∂x, y₀, alg, 1, -1)
     if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
 
-    return ∂f∂p(y)
+    return vjp(y)[2]
 end
 
-function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂p, x₀, alg::KrylovKit.KrylovAlgorithm)
+function fixedpoint_gradient(∂E∂x, vjp, x₀, alg::KrylovKit.KrylovAlgorithm)
     function f(X)
-        y = ∂f∂x(X[1])
+        y = vjp(X[1])[3]
         return (VI.add!!(y, ∂E∂x, X[2]), X[2])
     end
     X₀ = (x₀, one(scalartype(x₀)))
@@ -354,12 +346,12 @@ function fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂p, x₀, alg::KrylovKit.
         @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(vecs[1][2])\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
         @info "Falling back to linear solver for fixed-point gradient computation."
         backup_ls_alg = GMRES(; tol = alg.tol, maxiter = alg.maxiter, verbosity = alg.verbosity)
-        return fixedpoint_gradient(∂E∂x, ∂f∂x, ∂f∂p, x₀, backup_ls_alg)
+        return fixedpoint_gradient(∂E∂x, vjp, x₀, backup_ls_alg)
     else
         y = VI.scale!!(vecs[1][1], inv(vecs[1][2]))
     end
 
-    return ∂f∂p(y)
+    return vjp(y)[2]
 end
 
 #
