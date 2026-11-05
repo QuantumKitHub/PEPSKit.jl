@@ -40,6 +40,11 @@ struct NTUState{S <: InfiniteState, N <: Number}
     # TODO: include BPEnv when incorporating BP
 end
 
+function TimeEvolver(alg::NeighbourUpdate, dt::Number, nstep::Int, circuit, state::NTUState)
+    allocator = default_allocator(state.psi, SerialScheduler())
+    return TimeEvolver(alg, dt, nstep, circuit, state, allocator)
+end
+
 """
     TimeEvolver(
         psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int, 
@@ -51,6 +56,7 @@ starting from the initial state `psi0`.
 
 - The initial time is specified by `t0`.
 - Use `symmetrize_gates = true` for second-order Trotter decomposition.
+- Contraction scratch is owned by the evolver and reused across timesteps and resets.
 """
 function TimeEvolver(
         psi0::InfiniteState, H::LocalOperator, dt::Number, nstep::Int,
@@ -88,11 +94,10 @@ One round of neighbourhood tensor update, preserving the input state.
 """
 function ntu_iter(
         state::InfiniteState, circuit::LocalCircuit, alg::NeighbourUpdate;
-        reverse_trunc::Bool = false
+        reverse_trunc::Bool = false,
+        allocator = default_allocator(state, SerialScheduler())
     )
     state2, wts = copy(state), SUWeight(state)
-    # TODO: Reuse contraction scratch owned by TimeEvolver across timesteps.
-    allocator = default_allocator(state, SerialScheduler())
     info = (; fid = 1.0)
     for (sites, gate) in circuit.gates
         if length(sites) == 1
@@ -133,7 +138,7 @@ function Base.iterate(it::TimeEvolver{<:NeighbourUpdate}, state = it.state)
     # reverse bond truncation order at even steps
     # (isodd is used because iter is updated after applying the gate)
     reverse_trunc = isodd(iter)
-    psi, wts, info = ntu_iter(state.psi, it.circuit, it.alg; reverse_trunc)
+    psi, wts, info = ntu_iter(state.psi, it.circuit, it.alg; reverse_trunc, allocator = it.allocator)
     iter, t = iter + 1, t + it.dt
     # update internal state
     it.state = NTUState(iter, t, psi)

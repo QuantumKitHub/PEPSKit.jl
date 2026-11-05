@@ -15,7 +15,7 @@ Iterator for Trotter-based time evolution of InfinitePEPS or InfinitePEPO.
 $(TYPEDFIELDS)
 """
 mutable struct TimeEvolver{TE <: TimeEvolution, C, S, N <: Number, A}
-    "Time evolution algorithm (currently supported: `SimpleUpdate`)"
+    "Time evolution algorithm"
     alg::TE
     "Trotter time step"
     dt::N
