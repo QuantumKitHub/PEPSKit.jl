@@ -23,6 +23,8 @@ using KrylovKit
 using KrylovKit: Lanczos, BlockLanczos
 
 using TensorOperations, OptimKit
+using TensorOperations: DefaultAllocator, DefaultBackend, tensoralloc_add, tensoralloc_contract
+using TensorKit.Strided: StridedView, sreshape
 import OptimKit: fixedpoint
 using ChainRulesCore, Zygote
 import TupleTools
@@ -32,6 +34,7 @@ using MPSKit: MPSTensor, MPOTensor, GenericMPSTensor, MPSBondTensor, ProductTran
 using MPSKit: InfiniteEnvironments
 using MPSKit: DynamicTol
 using MPSKit.DynamicTols: adapt_solver
+using MPSKit: default_allocator
 using MPSKit: @log_initialization, @log_iteration, @log_convergence, @log_nonconvergence
 using MPSKit.IterativeLoggers: with_verbosity
 import MPSKit.DynamicTols: _updatetol
@@ -49,7 +52,7 @@ import MPSKitModels:
     transverse_field_ising, heisenberg_XYZ, heisenberg_XXZ,
     hubbard_model, bose_hubbard_model, tj_model
 using FiniteDifferences
-using OhMyThreads: tmap, tmap!
+using OhMyThreads: tmap, tmap!, SerialScheduler
 using DocStringExtensions
 
 include("Defaults.jl")  # Include first to allow for docstring interpolation with Defaults values
@@ -94,6 +97,7 @@ include("operators/models.jl")
 
 include("environments/ctmrg_environments.jl")
 include("environments/ctmrg_environments_triangular.jl")
+include("environments/c4v_ctmrg_environments.jl")
 include("environments/vumps_environments.jl")
 include("environments/suweight.jl")
 include("environments/bp_environments.jl")
@@ -193,8 +197,8 @@ include("algorithms/select_algorithm.jl")
 using .Defaults: set_scheduler!
 export set_scheduler!
 export EighAdjoint, IterEigh, SVDAdjoint, IterSVD, OrthAdjoint, QRAdjoint
-export CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
-export CTMRGEnvTriangular, SimultaneousCTMRGTriangular # CTMRGTriaEnv, SimultaneousCTMRGTria
+export CTMRGEnvTriangular, SimultaneousCTMRGTriangular
+export C4vCTMRGEnv, CTMRGEnv, SequentialCTMRG, SimultaneousCTMRG
 export initialize_ctmrg_environment,
     RandomInitialization, ProductStateInitialization, ApplicationInitialization, IdentityInitialization
 export corner, edge, setcorner!, setedge!

@@ -30,8 +30,9 @@ end
 
 
 # TODO: decide on appropriate signature and returns for the more generic case
+# TODO: add a C4v specific method here
 """
-    correlation_length(state, env::CTMRGEnv; num_vals=2, kwargs...)
+    correlation_length(state, env::AbstractCTMRGEnv; num_vals=2, kwargs...)
 
 Compute the correlation length associated to `state` as contracted using the environment
 `env`, based on the spectrum of the horizontal and vertical transfer matrices associated to
@@ -41,12 +42,12 @@ passed through to `MPSKit.transfer_spectrum` (e.g. allowing to target the correl
 in a specific symmetry sector).
 
 """
-function MPSKit.correlation_length(state, env::CTMRGEnv; num_vals = 2, kwargs...)
+function MPSKit.correlation_length(state, env::AbstractCTMRGEnv; num_vals = 2, kwargs...)
     return _correlation_length(env; num_vals, kwargs...)
 end
 
 function _correlation_length(
-        env::CTMRGEnv; num_vals = 2, sector = one(sectortype(env)), kwargs...
+        env::AbstractCTMRGEnv; num_vals = 2, sector = one(sectortype(env)), kwargs...
     )
     _, n_rows, n_cols = size(env)
 

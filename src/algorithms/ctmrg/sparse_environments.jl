@@ -422,7 +422,7 @@ struct ColumnEnlargedCorner{TC, TE}
     E::TE
     dir::Int
 end
-function ColumnEnlargedCorner(env::CTMRGEnv, coordinates)
+function ColumnEnlargedCorner(env::AbstractCTMRGEnv, coordinates)
     dir, row, col = coordinates
     if dir == NORTHWEST
         return ColumnEnlargedCorner(

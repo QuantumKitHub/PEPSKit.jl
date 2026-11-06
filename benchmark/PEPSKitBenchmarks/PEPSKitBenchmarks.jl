@@ -14,9 +14,11 @@ const PARAMS_PATH = joinpath(@__DIR__, "etc", "params.json")
 const SUITE = BenchmarkGroup()
 const MODULES = Dict{String, Symbol}(
     "ctmrg" => :CTMRGBenchmarks,
+    "timeevol" => :TimeEvolBenchmarks,
 )
 
 include("ctmrg/CTMRGBenchmarks.jl")
+include("timeevol/TimeEvolBenchmarks.jl")
 
 load!(id::AbstractString; kwargs...) = load!(SUITE, id; kwargs...)
 

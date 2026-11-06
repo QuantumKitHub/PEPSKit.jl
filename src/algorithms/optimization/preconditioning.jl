@@ -85,7 +85,7 @@ Apply the regularized local metric ``N / ⟨ψ|ψ⟩ + δ`` to a single PEPS ten
 ``N`` is obtained by contracting the CTMRG environment `env` around the unit-cell site
 `(r, c)` and `norm_pref` is the corresponding local norm ``⟨ψ|ψ⟩``.
 """
-function apply_local_preconditioner(g_rc::PEPSTensor, env::CTMRGEnv, δ, (r, c), norm_pref)
+function apply_local_preconditioner(g_rc::PEPSTensor, env::AbstractCTMRGEnv, δ, (r, c), norm_pref)
     @autoopt @tensor g_rc_prec[d; D_N_below D_E_below D_S_below D_W_below] :=
         g_rc[d; D_N_above D_E_above D_S_above D_W_above] *
         corner(env, NORTHWEST, r - 1, c - 1)[χ_WNW; χ_NNW] *

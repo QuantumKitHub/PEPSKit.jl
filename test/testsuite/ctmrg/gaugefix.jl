@@ -4,7 +4,7 @@ using PEPSKit
 using TensorKit
 using Adapt
 using PEPSKit: ctmrg_iteration, calc_elementwise_convergence
-using PEPSKit: ScramblingEnvGauge, ScramblingEnvGaugeC4v
+using PEPSKit: ScramblingEnvGauge
 using PEPSKit: peps_normalize
 
 spacetypes = [ComplexSpace, Z2Space]
@@ -14,7 +14,7 @@ ctmrg_algs_asymm = [SequentialCTMRG, SimultaneousCTMRG]
 projector_algs_asymm = [:HalfInfiniteProjector, :FullInfiniteProjector]
 projector_algs_c4v = [:C4vEighProjector, :C4vQRProjector]
 gauge_algs_asymm = [ScramblingEnvGauge()]
-gauge_algs_c4v = [ScramblingEnvGaugeC4v()]
+gauge_algs_c4v = [ScramblingEnvGauge()]
 
 # minimal subsets of the combinations above which still cover every option value at least once
 minimal_combinations_asymm = [
@@ -23,9 +23,10 @@ minimal_combinations_asymm = [
     (ComplexSpace, ComplexF64, (3, 2), SimultaneousCTMRG, :HalfInfiniteProjector, ScramblingEnvGauge()),
 ]
 minimal_combinations_c4v = [
-    (ComplexSpace, Float64, :C4vEighProjector, ScramblingEnvGaugeC4v()),
-    (Z2Space, ComplexF64, :C4vQRProjector, ScramblingEnvGaugeC4v()),
+    (ComplexSpace, Float64, :C4vEighProjector, ScramblingEnvGauge()),
+    (Z2Space, ComplexF64, :C4vQRProjector, ScramblingEnvGauge()),
 ]
+
 tol = 1.0e-6  # large tol due to χ=6
 χ = 6
 atol = 1.0e-4

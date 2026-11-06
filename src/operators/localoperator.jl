@@ -245,7 +245,6 @@ function _fuse_charge end
 
 Change the spaces of a `LocalOperator` by fusing in an auxiliary charge into the domain of
 the operator on every site, according to a given matrix of 'auxiliary' physical charges.
-MPO and tensor-product terms are not yet supported.
 """
 function MPSKit.add_physical_charge(H::LocalOperator, charges::AbstractMatrix{<:Sector})
     size(H) == size(charges) ||

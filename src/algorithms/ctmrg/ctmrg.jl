@@ -101,27 +101,28 @@ supplied via the keyword arguments or directly as an [`CTMRGAlgorithm`](@ref) st
     - `info.convergence_error::Real` : The final convergence error at the end of the contraction procedure.
     - `info.contraction_metrics::NamedTuple` : A `NamedTuple` containing metrics which characterize the contraction. The precise contents depend on `alg`.
 """
-function leading_boundary(env₀::CTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
+function leading_boundary(env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork; kwargs...)
     alg = select_algorithm(leading_boundary, env₀; kwargs...)
     return leading_boundary(env₀, network, alg)
 end
 function leading_boundary(
-        env₀::CTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
+        env₀::AbstractCTMRGEnv, network::InfiniteSquareNetwork, alg::CTMRGAlgorithm
     )
     check_input(leading_boundary, network, env₀, alg)
     log = ignore_derivatives(() -> MPSKit.IterLog("CTMRG"))
     return with_verbosity(; alg.verbosity) do
         env = deepcopy(env₀)
         CS, TS = ignore_derivatives() do
-            return convergence_spectra(env₀, alg)
+            return corner_spectra(first(convergence_tensors(env₀, alg)), alg), nothing
         end
         η = one(real(scalartype(network)))
         ctmrg_loginit!(log, η, network, env₀)
         local info_iter
         converged = false
         for iter in 1:(alg.maxiter)
+            env_prev = env
             env, info_iter = ctmrg_iteration(network, env, alg)
-            η, CS, TS = calc_convergence(env, CS, TS, alg)
+            η, CS, TS = calc_convergence_lazy(env, env_prev, CS, TS, alg; exact = iter == alg.maxiter)
 
             if η ≤ alg.tol && iter ≥ alg.miniter
                 ctmrg_logfinish!(log, iter, η, network, env)
@@ -131,7 +132,7 @@ function leading_boundary(
             if iter == alg.maxiter
                 ctmrg_logcancel!(log, iter, η, network, env)
             else
-                ctmrg_logiter!(log, iter, η, network, env)
+                ctmrg_logiter!(log, iter, η, network, env, isnothing(TS))
             end
         end
         info = (;
@@ -142,7 +143,7 @@ function leading_boundary(
         return env, info
     end
 end
-function leading_boundary(env₀::CTMRGEnv, state, args...; kwargs...)
+function leading_boundary(env₀::AbstractCTMRGEnv, state, args...; kwargs...)
     return leading_boundary(env₀, InfiniteSquareNetwork(state), args...; kwargs...)
 end
 
@@ -158,9 +159,13 @@ function check_input(::typeof(leading_boundary), network, env, alg::CTMRGAlgorit
 function ctmrg_loginit!(log, η, network, env)
     return @log_initialization loginit!(log, η, network_value(network, env))
 end
-function ctmrg_logiter!(log, iter, η, network, env)
-    return @log_iteration logiter!(log, iter, η, network_value(network, env))
+function ctmrg_logiter!(log, iter, η, network, env, lower_bound::Bool = false)
+    return @log_iteration _iterlog_message(
+        logiter!(log, iter, η, network_value(network, env)), lower_bound
+    )
 end
+_iterlog_message(log, lower_bound::Bool) =
+    lower_bound ? replace(sprint(show, log), "err = " => "err ≥ ") : log
 function ctmrg_logfinish!(log, iter, η, network, env)
     return @log_convergence logfinish!(log, iter, η, network_value(network, env))
 end
@@ -206,14 +211,14 @@ The corners and edges whose spectra determine convergence.
 
 For generic CTMRG, we need all corners and edges.
 """
-convergence_tensors(env::CTMRGEnv, alg) = (env.corners, env.edges)
+convergence_tensors(env::AbstractCTMRGEnv, alg) = (env.corners, env.edges)
 
 """
     convergence_spectra(env, alg)
 
 Spectra of the tensors that [`convergence_tensors`](@ref) selects.
 """
-function convergence_spectra(env::CTMRGEnv, alg)
+function convergence_spectra(env::AbstractCTMRGEnv, alg)
     corners, edges = convergence_tensors(env, alg)
     return corner_spectra(corners, alg), edge_spectra(edges, alg)
 end
@@ -258,6 +263,30 @@ function calc_convergence(env, CS_old, TS_old, alg)
 end
 
 """
+    calc_convergence_lazy(env, env_prev, CS_old, TS_old, alg; exact = false)
+
+Like `calc_convergence(env, CS_old, TS_old, alg)`, but only computes the edge spectra
+if the corner distance is within `alg.tol` or `exact == true`. 
+"""
+function calc_convergence_lazy(env, env_prev, CS_old, TS_old, alg; exact::Bool = false)
+    corners, edges = convergence_tensors(env, alg)
+    CS_new = corner_spectra(corners, alg)
+    ΔCS = maximum(splat(_singular_value_distance), zip(CS_old, CS_new))
+    if ΔCS > alg.tol && !exact
+        @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   (edges skipped)"
+        return ΔCS, CS_new, nothing
+    end
+    if isnothing(TS_old)
+        TS_old = edge_spectra(last(convergence_tensors(env_prev, alg)), alg)
+    end
+    TS_new = edge_spectra(edges, alg)
+    ΔTS = maximum(splat(_singular_value_distance), zip(TS_old, TS_new))
+    @debug "maxᵢ|Cⁿ⁺¹ - Cⁿ|ᵢ = $ΔCS   maxᵢ|Tⁿ⁺¹ - Tⁿ|ᵢ = $ΔTS"
+    return max(ΔCS, ΔTS), CS_new, TS_new
+end
+@non_differentiable calc_convergence_lazy(args...)
+
+"""
     calc_convergence(env, CS_old, TS_old)
     calc_convergence(env_new, env_old)
 
@@ -276,7 +305,7 @@ function calc_convergence(env, CS_old, TS_old)
 
     return max(ΔCS, ΔTS), CS_new, TS_new
 end
-function calc_convergence(env_new::CTMRGEnv, env_old::CTMRGEnv)
+function calc_convergence(env_new::AbstractCTMRGEnv, env_old::AbstractCTMRGEnv)
     CS_old = map(svd_vals, env_old.corners)
     TS_old = map(svd_vals, env_old.edges)
     return calc_convergence(env_new, CS_old, TS_old)
