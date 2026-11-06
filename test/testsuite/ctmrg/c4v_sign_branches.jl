@@ -16,9 +16,9 @@ Venv = U1Space(0 => 2, 1 // 2 => 2, -1 // 2 => 2, 1 => 1, -1 => 1)
 tol = 1.0e-10
 maxiter = 400
 
-# (-1)^{2Q} on a U(1) space
-function charge_parity(W)
-    X = id(W)
+# (-1)^{2Q} on a U(1) space, with storage type `A`
+function charge_parity(A, W)
+    X = id(A, W)
     for (c, b) in blocks(X)
         b .*= (-1)^Int(2 * c.charge)
     end
@@ -35,7 +35,7 @@ end
 
 function sign_twin(env)
     E = env.edges[1]
-    g = charge_parity(space(E, 2))
+    g = charge_parity(storagetype(E), space(E, 2))
     @tensor Ê[χ_out D_ket D_bra; χ_in] := E[χ_out D_ket′ D_bra; χ_in] * g[D_ket; D_ket′]
     return C4vCTMRGEnv(env.corners[1], Ê)
 end
@@ -56,6 +56,7 @@ function ctmrg_c4v_sign_branches(AT)
         @test iteration_sign(network, env_twin, alg) == -iteration_sign(network, env, alg)
         env_twin, info_twin = leading_boundary(env_twin, peps, alg)
         @test info_twin.converged
-        @test expectation_value(peps, H, env_twin) ≈ expectation_value(peps, H, env) atol = 1.0e-8
+        H_AT = adapt(AT, H)
+        @test expectation_value(peps, H_AT, env_twin) ≈ expectation_value(peps, H_AT, env) atol = 1.0e-8
     end
 end
