@@ -20,7 +20,7 @@ function PEPSKit.corner_spectrum(C::GPUTensorMap, ::PEPSKit.C4vCTMRG)
     S = eigh_vals(C)
     x = parent(S)
     isempty(x) && return S
-    m = mapreduce(identity, _maxabs_signed, x; dims = 1, init = zero(eltype(x)))
+    m = reduce(_maxabs_signed, x; dims = 1, init = zero(eltype(x)))
     starts = sort!(Int32[first(r) for r in values(S.structure)])
     push!(starts, length(x) + 1)
     offsets = copyto!(similar(x, Int32, length(starts)), starts)
