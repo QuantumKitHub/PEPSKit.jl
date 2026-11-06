@@ -227,35 +227,38 @@ function _rrule(
     alg_gauge = _scrambling_env_gauge(alg) # select appropriate gauge-fixing algorithm
     env_conv, info = ctmrg_iteration(InfiniteSquareNetwork(state), env, alg_fixed)
     signs, = compute_gauge_fix_gauge(env_conv, env, alg_gauge)
-    # fix global phases relative to the fixed point inside the iteration
-    function gauge_fixed_iteration(A, x)
+    # `p` for state, `x` for environment
+    function gauge_fixed_iteration(p, x)
+        # fix global phases relative to the fixed point inside the iteration
         return fix_global_phases(
-            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(A), x, alg_fixed)[1], signs),
+            fix_relative_phases(ctmrg_iteration(InfiniteSquareNetwork(p), x, alg_fixed)[1], signs),
             env,
         )
     end
     # prepare its pullback
-    _, env_vjp = rrule_via_ad(config, gauge_fixed_iteration, state, env)
+    _, ∂f = rrule_via_ad(config, gauge_fixed_iteration, state, env)
+
+    # TODO: try partial-argument VJPs after Enzyme support is added.
+    # fₚ = Base.Fix1(gauge_fixed_iteration, state) # fix state `p`
+    # fₓ = Base.Fix2(gauge_fixed_iteration, env)   # fix environment `x`
 
     function leading_boundary_fixed_pullback((Δenv′, Δinfo))
         Δenv = unthunk(Δenv′)
-
         # evaluate the fixed-point gradient
-        ∂F∂env = fixedpoint_gradient(Δenv, env_vjp, Δenv, gradmode.solver_alg)
-
-        return NoTangent(), ZeroTangent(), ∂F∂env, NoTangent()
+        ∂E∂env = fixedpoint_gradient(Δenv, ∂f, Δenv, gradmode.solver_alg)
+        return NoTangent(), ZeroTangent(), ∂E∂env, NoTangent()
     end
 
     return (env, info), leading_boundary_fixed_pullback
 end
 
 @doc raw"""
-    fixedpoint_gradient(x̆, vjp, y₀, alg)
+    fixedpoint_gradient(x̆, ∂f, y₀, alg)
 
-Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)`` which satisfies the fixed-point equation ``x = f(x, p)``.
-The shared pullback `vjp(y)` of the iterating function ``f`` returns `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`.
+Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)`` which satisfies the fixed-point equation ``x = f(p, x)``.
+The shared pullback `∂f(y)` of the iterating function ``f`` returns `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`.
 
-More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
+More specifically, given a cost function ``E(p, x(p))`` defined in terms of a set of
 variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
 ``x \equiv x(p)``, the gradient of the cost function is given by
 
@@ -263,9 +266,7 @@ variational parameters ``p`` and a set of intermediate variables ``x`` that depe
 dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
 ```
 
-Given the fixed-point equation ``x = f(x, p)``, the VJP action of the Jacobian ``∂ₚx``` on
-the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through
-implicit differentiation of the fixed-point condition as
+Given the fixed-point equation ``x = f(p, x)``, the VJP action of the Jacobian ``∂ₚx`` on the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through implicit differentiation of the fixed-point condition as
 ```math
 x̆ ∂ₚx = x̆ (1 - ∂ₓf)⁻¹ ∂ₚf = ∑ₙ x̆ (∂ₓf)ⁿ ∂ₚf.
 ```
@@ -274,16 +275,14 @@ This can be used to differentiate contraction routines, where ``p`` are the vari
 parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
 derivative of the cost function with respect to the contraction environment ``x``, and ``f``
 is a single iteration of the contraction algorithm.
-
-`GeomSum` and `ManualIter` reuse both cotangents at each step; the Krylov solvers use the environment cotangent during the solve and evaluate the parameter cotangent once afterward.
 """
 fixedpoint_gradient
 
-function fixedpoint_gradient(∂E∂x, vjp, _, alg::GeomSum)
-    _, dx, g = vjp(∂E∂x) # i = 0 term: ∂E∂x ∂f∂p
+function fixedpoint_gradient(∂E∂x, ∂f, _, alg::GeomSum)
+    _, dx, g = ∂f(∂E∂x) # i = 0 term: ∂E∂x ∂f∂p
     ϵ = 2 * alg.tol
     for i in 1:(alg.maxiter)
-        _, Σᵢ, g = vjp(g)
+        _, Σᵢ, g = ∂f(g)
         dx += Σᵢ
         ϵnew = norm(Σᵢ)  # TODO: normalize this error?
         Δϵ = ϵ - ϵnew
@@ -299,13 +298,13 @@ function fixedpoint_gradient(∂E∂x, vjp, _, alg::GeomSum)
     return dx
 end
 
-function fixedpoint_gradient(∂E∂x, vjp, y₀, alg::ManualIter)
+function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::ManualIter)
     y = deepcopy(y₀)  # Do not mutate y₀
-    _, dx, dy = vjp(y)
+    _, dx, dy = ∂f(y)
     ϵ = 1.0
     for i in 1:(alg.maxiter)
         y′ = ∂E∂x + dy
-        _, dxnew, dy = vjp(y′)
+        _, dxnew, dy = ∂f(y′)
         ϵnew = norm(dxnew - dx)
         Δϵ = ϵ - ϵnew
         alg.verbosity > 1 && @printf(
@@ -322,36 +321,38 @@ function fixedpoint_gradient(∂E∂x, vjp, y₀, alg::ManualIter)
     return dx
 end
 
-function fixedpoint_gradient(∂E∂x, vjp, y₀, alg::KrylovKit.LinearSolver)
-    ∂f∂x(x) = vjp(x)[3]
+function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::KrylovKit.LinearSolver)
+    ∂f∂p(x) = ∂f(x)[2]
+    ∂f∂x(x) = ∂f(x)[3]
     y, info = reallinsolve(∂f∂x, ∂E∂x, y₀, alg, 1, -1)
     if alg.verbosity > 0 && info.converged != 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-
-    return vjp(y)[2]
+    return ∂f∂p(y)
 end
 
-function fixedpoint_gradient(∂E∂x, vjp, x₀, alg::KrylovKit.KrylovAlgorithm)
-    function f(X)
-        y = vjp(X[1])[3]
-        return (VI.add!!(y, ∂E∂x, X[2]), X[2])
+function fixedpoint_gradient(∂E∂x, ∂f, y₀, alg::KrylovKit.KrylovAlgorithm)
+    ∂f∂p(x) = ∂f(x)[2]
+    ∂f∂x(x) = ∂f(x)[3]
+    function augmented_map(Y)
+        local y, s = Y
+        return (VI.add!!(∂f∂x(y), ∂E∂x, s), s)
     end
-    X₀ = (x₀, one(scalartype(x₀)))
-    _, vecs, info = realeigsolve(f, X₀, 1, :LM, alg)
+    Y₀ = (y₀, one(scalartype(y₀)))
+    _, Ys, info = realeigsolve(augmented_map, Y₀, 1, :LM, alg)
     if alg.verbosity > 0 && info.converged < 1
         @warn("gradient fixed-point iteration reached maximal number of iterations:", info)
     end
-    if norm(vecs[1][2]) < 1.0e-2 * alg.tol
-        @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(vecs[1][2])\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
+    y, s = first(Ys)
+    if norm(s) < 1.0e-2 * alg.tol
+        @warn "Fixed-point gradient computation using Arnoldi failed:\n\tauxiliary component should be finite but was $(s)\n\tpossibly the Jacobian does not have a unique eigenvalue 1"
         @info "Falling back to linear solver for fixed-point gradient computation."
         backup_ls_alg = GMRES(; tol = alg.tol, maxiter = alg.maxiter, verbosity = alg.verbosity)
-        return fixedpoint_gradient(∂E∂x, vjp, x₀, backup_ls_alg)
+        return fixedpoint_gradient(∂E∂x, ∂f, y₀, backup_ls_alg)
     else
-        y = VI.scale!!(vecs[1][1], inv(vecs[1][2]))
+        y = VI.scale!!(y, inv(s))
     end
-
-    return vjp(y)[2]
+    return ∂f∂p(y)
 end
 
 #
@@ -423,11 +424,11 @@ end
 @doc raw"""
     implicit_gradient(x̆, ∂ₓF, ∂ₚF, y₀, alg)
 
-Evaluates the VJP action  ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
-which satisfies the characteristic equation ``F(x, p) = 0``, given the VJP actions ``∂ₓF``
+Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)``
+which satisfies the characteristic equation ``F(p, x) = 0``, given the VJP actions ``∂ₓF``
 and ``∂ₚF`` of the function ``F`` encoding the characteristic equation.
 
-More specifically, given a cost function ``E(x(p), p)`` defined in terms of a set of
+More specifically, given a cost function ``E(p, x(p))`` defined in terms of a set of
 variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
 ``x \equiv x(p)``, the gradient of the cost function is given by
 
@@ -435,7 +436,7 @@ variational parameters ``p`` and a set of intermediate variables ``x`` that depe
 dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
 ```
 
-Given the characteristic equation ``F(x, p) = 0``, the VJP action of the Jacobian ``∂ₚx``` on
+Given the characteristic equation ``F(p, x) = 0``, the VJP action of the Jacobian ``∂ₚx``` on
 the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through
 implicit differentiation of the characteristic equation as
 ```math
@@ -449,13 +450,13 @@ is an algebraic function characterizing the convergence of the algorithm.
 """
 implicit_gradient
 
-function implicit_gradient(∂E∂x, ∂F∂x, ∂F∂A, y₀, alg::KrylovKit.LinearSolver)
+function implicit_gradient(∂E∂x, ∂F∂x, ∂F∂p, y₀, alg::KrylovKit.LinearSolver)
     y, info = reallinsolve(∂F∂x, ∂E∂x, y₀, alg)
     if alg.verbosity > 0 && info.converged != 1
         @warn("Implicit gradient linear solve reached maximal number of iterations:", info)
     end
 
-    return (-1) * ∂F∂A(y)
+    return (-1) * ∂F∂p(y)
 end
 
 ## C4vCTMRG gradient through implicit differentiation
