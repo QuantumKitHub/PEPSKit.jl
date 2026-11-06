@@ -237,7 +237,7 @@ function _rrule(
     end
     # prepare its pullback
     _, pullback = rrule_via_ad(config, gauge_fixed_iteration, state, env)
-    ∂f = x -> pullback(x)::Tuple{Any, typeof(state), typeof(env)}
+    ∂f(y)::Tuple{Any, typeof(state), typeof(env)} = pullback(y)
 
     # TODO: try partial-argument VJPs after Enzyme support is added.
     # fₚ = Base.Fix1(gauge_fixed_iteration, state) # fix state `p`
