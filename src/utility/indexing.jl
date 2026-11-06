@@ -71,6 +71,8 @@ function _next_coordinate((dir, row, col), rowsize, colsize)
         return (_next(dir, 4), row, _prev(col, colsize))
     elseif dir == 4
         return (_next(dir, 4), _prev(row, rowsize), col)
+    else
+        throw(ArgumentError(lazy"invalid direction $dir"))
     end
 end
 function _prev_coordinate((dir, row, col), rowsize, colsize)
@@ -82,6 +84,8 @@ function _prev_coordinate((dir, row, col), rowsize, colsize)
         return (_prev(dir, 4), _prev(row, rowsize), col)
     elseif dir == 4
         return (_prev(dir, 4), row, _next(col, colsize))
+    else
+        throw(ArgumentError(lazy"invalid direction $dir"))
     end
 end
 
