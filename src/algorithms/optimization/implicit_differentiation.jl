@@ -267,12 +267,12 @@ dE/dp = x̆ ∂ₚx + p̆.
 Implicit differentiation of the fixed-point equation gives
 
 ```math
-x̆ ∂ₚx = y ∂ₚf, \quad y = x̆ (1 - ∂ₓf)⁻¹.
+x̆ ∂ₚx = y ∂ₚf, \quad y = x̆ (1 - ∂ₓf)⁻¹ = ∑ₙ x̆ (∂ₓf)ⁿ.
 ```
 
 - The pullback `∂f(y)` returns `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`.
 - `alg` is the algorithm to solve ``y`` from the equation ``y (1 - ∂ₓf) = x̆``, with initial guess `y₀` (unused by `GeomSum` algorithm).
-- The contribution ``p̆ = ∂ₚE`` should be added separately.
+- The contribution ``p̆ = ∂ₚE`` in ``dE/dp`` should be added separately.
 
 For tensor-network contraction, ``p`` are the variational parameters, ``x`` is the contraction environment, and ``f`` is one iteration of the contraction algorithm.
 """
