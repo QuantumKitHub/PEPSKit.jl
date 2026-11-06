@@ -74,12 +74,24 @@ end
 # gauge fix sign of spectrum such that the eigenvalue of largest magnitude is positive
 function corner_spectrum(C::AbstractTensorMap, ::C4vCTMRG)
     S = eigh_vals(C)
-    if -minimum(S) > maximum(S)
-        for (_, b) in blocks(S)
-            b .= .-reverse(b) # spectrum of -C: negated and, to stay ascending, reversed
-        end
+    flip = _spectrum_sign_flip(S)
+    for (_, b) in blocks(S)
+        b .= ifelse.(flip, .-reverse(b), b)
     end
     return S
+end
+
+# Compute whether `-minimum(S) > maximum(S)`, but keep the result as a 1-element array
+# with the same storage type as `S`. Avoids synchronizing copies.
+function _spectrum_sign_flip(S)
+    lo = hi = nothing
+    for (_, b) in blocks(S)
+        isempty(b) && continue
+        l, h = view(b, firstindex(b):firstindex(b)), view(b, lastindex(b):lastindex(b))
+        lo = isnothing(lo) ? copy(l) : min.(lo, l)
+        hi = isnothing(hi) ? copy(h) : max.(hi, h)
+    end
+    return .-lo .> hi
 end
 
 """
