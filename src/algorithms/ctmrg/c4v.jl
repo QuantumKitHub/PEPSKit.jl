@@ -120,8 +120,7 @@ function c4v_renormalize_edge(network, env::C4vCTMRGEnv, projector)
     # TODO: possible missing twists for fermions
     new_edge = renormalize_north_edge(env.edges[1], projector, projector', network[1, 1])
     # additional Hermitian projection step for numerical stability
-    new_edge = _project_hermitian(new_edge)
-    return new_edge / norm(new_edge)
+    return normalize(_project_hermitian(new_edge))
 end
 
 """
@@ -155,7 +154,7 @@ which reuses the renormalized edge `E′` (`new_edge`).
 (Credit: https://github.com/qiyang-ustc/QRCTM/blob/dd160116c3d7b02076691ceaf0a9833511ae532d/heisenberg.py#L80)
 """
 function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4vEighProjector)
-    return info.D / norm(info.D)
+    return normalize(info.D)
 end
 function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4vQRProjector)
     # TODO: possible missing twists for fermions
@@ -165,7 +164,7 @@ function c4v_renormalize_corner(new_edge::CTMRGEdgeTensor, projector, info, ::C4
     # contract (edge′, R) with projector
     new_corner = contract_edges(ER, projector)
     new_corner = project_hermitian(new_corner)
-    return new_corner / norm(new_corner)
+    return normalize(new_corner)
 end
 
 """Contract two C4v CTMRG edge tensors into a corner tensor."""

@@ -66,7 +66,7 @@ function C4vCTMRGEnv(
     D, χ = only(Ds), only(chis)
     corner = _corner_tensor(f, T, χ, χ)
     edge = _edge_tensor(f, T, χ, D, χ)
-    return C4vCTMRGEnv(corner / norm(corner), edge / norm(edge))
+    return C4vCTMRGEnv(normalize(corner), normalize(edge))
 end
 function C4vCTMRGEnv(D::P, args...; kwargs...) where {P <: Union{Matrix{VectorSpace}, VectorSpace}}
     return C4vCTMRGEnv(randn, ComplexF64, D, args...; kwargs...)
