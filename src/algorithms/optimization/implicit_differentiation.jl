@@ -255,26 +255,26 @@ end
 @doc raw"""
     fixedpoint_gradient(x̆, ∂f, y₀, alg)
 
-Evaluates the VJP action ``x̆ ∂ₚx`` for an intermediate variable ``x \equiv x(p)`` which satisfies the fixed-point equation ``x = f(p, x)``.
-The shared pullback `∂f(y)` of the iterating function ``f`` returns `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`.
+Given the iteration function ``f(p, x)``, with ``p`` as parameters and ``x \equiv x(p)`` as the solution of the fixed-point equation ``x = f(p, x)``, evaluates the VJP action ``x̆ ∂ₚx``, where ``x̆`` is a covector.
 
-More specifically, given a cost function ``E(p, x(p))`` defined in terms of a set of
-variational parameters ``p`` and a set of intermediate variables ``x`` that depend on ``p``,
-``x \equiv x(p)``, the gradient of the cost function is given by
+In the context of cost function ``E(p, x(p))`` optimization, let ``x̆ = ∂ₓE``, ``p̆ = ∂ₚE``.
+The gradient of the cost function is given by
 
 ```math
-dE/dp = ∂ₓE ∂ₚx + ∂ₚE.
+dE/dp = x̆ ∂ₚx + p̆.
 ```
 
-Given the fixed-point equation ``x = f(p, x)``, the VJP action of the Jacobian ``∂ₚx`` on the adjoint ``x̆ = ∂ₓE`` in the first term of this expression can be evaluated through implicit differentiation of the fixed-point condition as
+Implicit differentiation of the fixed-point equation gives
+
 ```math
-x̆ ∂ₚx = x̆ (1 - ∂ₓf)⁻¹ ∂ₚf = ∑ₙ x̆ (∂ₓf)ⁿ ∂ₚf.
+x̆ ∂ₚx = y ∂ₚf, \quad y = x̆ (1 - ∂ₓf)⁻¹.
 ```
 
-This can be used to differentiate contraction routines, where ``p`` are the variational
-parameters of a tensor network, ``x̆ = ∂ₓE`` is the partial
-derivative of the cost function with respect to the contraction environment ``x``, and ``f``
-is a single iteration of the contraction algorithm.
+- The pullback `∂f(y)` returns `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`.
+- `alg` is the algorithm to solve ``y`` from the equation ``y (1 - ∂ₓf) = x̆``, with initial guess `y₀` (unused by `GeomSum` algorithm).
+- The contribution ``p̆ = ∂ₚE`` should be added separately.
+
+For tensor-network contraction, ``p`` are the variational parameters, ``x`` is the contraction environment, and ``f`` is one iteration of the contraction algorithm.
 """
 fixedpoint_gradient
 
