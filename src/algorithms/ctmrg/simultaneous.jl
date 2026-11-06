@@ -150,7 +150,7 @@ function renormalize_simultaneously(enlarged_corners, projectors, network, env)
             )
             edge = renormalize_west_edge((r, c), env, P_left, P_right, network)
         end
-        return corner / norm(corner), edge / norm(edge)
+        return normalize(corner), normalize(edge)
     end
 
     return CTMRGEnv(map(first, corners_edges), map(last, corners_edges))
