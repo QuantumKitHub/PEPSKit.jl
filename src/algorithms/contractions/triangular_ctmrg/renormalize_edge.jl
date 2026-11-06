@@ -3,7 +3,7 @@
 function semi_renormalize_edge(network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular, Pas, Pbs, dir, r, c) where {P <: PEPSSandwichTriangular}
     O_r_c = network[r, c]
     @tensor opt = true mat[χW Dt240 Db240; χE Dt300 Db300] :=
-        Pas[dir, r, c][χW; χNW Dt180 Db180] * Pbs[dir, r, c][χNE Dt0 Db0; χE] *
+        Pas[_coordinates(dir, 5, r, c, size(network))...][χW; χNW Dt180 Db180] * Pbs[dir, r, c][χNE Dt0 Db0; χE] *
         env.Ea[_coordinates(dir, 0, r, c, size(network))...][χNW Dt120 Db120; χN] *
         env.Eb[_coordinates(dir, 1, r, c, size(network))...][χN Dt60 Db60; χNE] *
         rotl60(ket(O_r_c), mod(dir - 1, 6))[d; Dt120 Dt60 Dt0 Dt300 Dt240 Dt180] *
@@ -13,7 +13,7 @@ end
 
 function semi_renormalize_edge(network::InfiniteTriangularNetwork{P}, env::CTMRGEnvTriangular, Pas, Pbs, dir, r, c) where {P <: PFTensorTriangular}
     @tensor opt = true mat[χW D240; χE D300] :=
-        Pas[dir, r, c][χW; χNW D180] *
+        Pas[_coordinates(dir, 5, r, c, size(network))...][χW; χNW D180] *
         Pbs[dir, r, c][χNE D0; χE] *
         env.Ea[_coordinates(dir, 0, r, c, size(network))...][χNW D120; χN] *
         env.Eb[_coordinates(dir, 1, r, c, size(network))...][χN D60; χNE] *

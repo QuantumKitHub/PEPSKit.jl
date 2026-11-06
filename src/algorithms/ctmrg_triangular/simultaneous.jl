@@ -103,10 +103,13 @@ end
 
 _normalize_corner_environment(ρ) = ρ / norm(ρ)
 
+# The double corners around the elementary triangle of projector `[dir, r, c]` sit at
+# `(r, c)`, its neighbor in direction `dir + 2` and its neighbor in direction `dir + 3`.
+# `Pb` acts on the leg of `(r, c)`, `Pa` on the leg of its neighbor in direction `dir + 2`.
 function calculate_twothirds_projectors(network::InfiniteTriangularNetwork{P}, env, trunc, decomposition_alg = SVDAdjoint()) where {P}
     projectors = dtmap(eachcoordinate(network, 1:6)) do (dir, r, c)
         ρL = build_double_corner_matrix_triangular(network, env, _prev(dir, 6), r, c)
-        ρR = build_double_corner_matrix_triangular(network, env, _next(dir, 6), r, c)
+        ρR = build_double_corner_matrix_triangular(network, env, _next(dir, 6), _coordinates(dir, 2, r, c, size(network))[2:3]...)
         ρL = _normalize_corner_environment(ρL)
         ρR = _normalize_corner_environment(ρR)
         ρρ = _normalize_corner_environment(ρL * ρR)
@@ -127,8 +130,8 @@ end
 function calculate_full_projectors(network::InfiniteTriangularNetwork{P}, env, trunc, decomposition_alg = SVDAdjoint()) where {P}
     projectors = dtmap(eachcoordinate(network, 1:6)) do (dir, r, c)
         ρL = build_double_corner_matrix_triangular(network, env, mod1(dir - 1, 6), r, c)
-        ρR = build_double_corner_matrix_triangular(network, env, mod1(dir + 1, 6), r, c)
-        ρ̄ = build_double_corner_matrix_triangular(network, env, mod1(dir + 3, 6), r, c)
+        ρR = build_double_corner_matrix_triangular(network, env, mod1(dir + 1, 6), _coordinates(dir, 2, r, c, size(network))[2:3]...)
+        ρ̄ = build_double_corner_matrix_triangular(network, env, mod1(dir + 3, 6), _coordinates(dir, 3, r, c, size(network))[2:3]...)
         ρ̄ = _normalize_corner_environment(ρ̄)
         Ū, S̄, V̄ᴴ = svd_full(ρ̄, decomposition_alg)
         sqrtS̄ = sdiag_pow(S̄, 0.5)
