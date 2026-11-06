@@ -52,4 +52,16 @@ function _batched_spectra(ts::AbstractArray{<:AbstractTensorMap})
     return Ss
 end
 
+# Reduce into a 0-dimensional device array instead of returning a host scalar. `sdiag_pow` only
+# feeds this into a broadcast, and a 0-dim array broadcasts as a scalar, so the value never has to
+# come back to the CPU. Returning a scalar here would force a device sync on every call, and
+# `sdiag_pow` runs once per bond per weight absorption in simple update.
+function PEPSKit._maxabs(data::AnyGPUArray)
+    T = real(eltype(data))
+    acc = similar(data, T, ())
+    fill!(acc, zero(T))
+    Base.mapreducedim!(abs, max, acc, data)
+    return acc
+end
+
 end
