@@ -271,7 +271,7 @@ Implicit differentiation of the fixed-point equation gives
 x̆ ∂ₚx = y ∂ₚf, \quad y = x̆ (1 - ∂ₓf)⁻¹ = ∑ₙ x̆ (∂ₓf)ⁿ.
 ```
 
-- The pullback `∂f(y)` returns `(NoTangent(), ∂ₚf(y), ∂ₓf(y))`.
+- The second and third components of the pullback `∂f(y)` are the VJP actions ``y ∂ₚf`` and ``y ∂ₓf``, respectively. The first component is ignored.
 - `alg` is the algorithm to solve ``y`` from the equation ``y (1 - ∂ₓf) = x̆``, with initial guess `y₀` (unused by `GeomSum` algorithm).
 - The contribution ``p̆ = ∂ₚE`` in ``dE/dp`` should be added separately.
 
